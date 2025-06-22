@@ -1,25 +1,33 @@
 {
-  "name": "effect-ui",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "effect-ui-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Effect-UI: Elm-inspired UI framework powered by Effect-TS",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "packageManager": "pnpm@10.12.1",
-  "dependencies": {
-    "effect": "^3.16.8"
+    "format": "prettier -w ."
   },
   "devDependencies": {
-    "@types/node": "^24.0.3",
-    "typescript": "^5.8.3",
-    "vite": "^6.3.5"
+    "@eslint/js": "^9.29.0",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.34.1",
+    "@typescript-eslint/parser": "^8.34.1",
+    "eslint": "^9.29.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.3.0",
+    "vite": "^5.0.0"
   },
-  "scripts": {
-    "build": "tsc && vite build",
-    "dev": "vite"
-  }
+  "engines": {
+    "node": ">=18",
+    "pnpm": ">=8"
+  },
+  "keywords": [
+    "effect",
+    "ui",
+    "elm",
+    "functional",
+    "typescript",
+    "framework"
+  ],
+  "author": "Devin Jameson",
+  "license": "MIT"
 }

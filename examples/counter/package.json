@@ -1,0 +1,13 @@
+{
+  "name": "counter-example",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite"
+  },
+  "dependencies": {
+    "@effect-ui/core": "workspace:*",
+    "effect": "^3.16.8"
+  }
+}
