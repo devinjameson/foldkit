@@ -17,10 +17,9 @@
   ],
   "scripts": {
     "clean": "rimraf dist *.tsbuildinfo",
-    "build": "pnpm run clean && tsc -p tsconfig.build.json",
-    "dev": "tsc -w -p tsconfig.json",
-    "watch": "vite build --watch & tsc -p tsconfig.build.json --watch",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "build": "pnpm run clean && tsc -b",
+    "watch": "tsc -b --watch",
+    "typecheck": "tsc -b --noEmit"
   },
   "peerDependencies": {
     "effect": "^3.16.8"

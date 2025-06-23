@@ -1,11 +1,13 @@
 {
+  "references": [{ "path": "packages/foldkit" }],
+  "files": [],
   "compilerOptions": {
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "target": "ES2020",
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "jsx": "preserve",
 
     "strict": true,
@@ -24,7 +26,11 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
 
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+
+    "paths": {
+      "@foldkit/core": ["packages/foldkit/src"]
+    }
   },
   "include": ["**/*.ts", "**/*.tsx"],
   "exclude": ["dist", "node_modules"]

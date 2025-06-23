@@ -1,7 +1,11 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "noEmit": true,
-    "allowImportingTsExtensions": true
-  }
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "dist"
+  },
+  "include": ["src"],
+  "exclude": ["dist", "node_modules"]
 }
