@@ -1,6 +1,6 @@
 import { Effect, Context, Ref, Equal, Queue, Option } from 'effect'
 
-export class Dispatch extends Context.Tag('@effect-ui/Dispatch')<
+export class Dispatch extends Context.Tag('@foldkit/Dispatch')<
   Dispatch,
   {
     readonly dispatch: (message: unknown) => Effect.Effect<void>

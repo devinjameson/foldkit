@@ -1,8 +1,8 @@
 {
-  "name": "effect-ui-monorepo",
+  "name": "foldkit-monorepo",
   "version": "0.1.0",
   "private": true,
-  "description": "Effect-UI: Elm-inspired UI framework powered by Effect-TS",
+  "description": "foldkit: Elm-inspired UI framework powered by Effect-TS",
   "scripts": {
     "format": "prettier -w ."
   },

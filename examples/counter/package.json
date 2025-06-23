@@ -7,7 +7,7 @@
     "dev": "vite"
   },
   "dependencies": {
-    "@effect-ui/core": "workspace:*",
+    "@foldkit/core": "workspace:*",
     "effect": "^3.16.8"
   }
 }

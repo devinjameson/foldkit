@@ -1,5 +1,5 @@
 {
-  "name": "@effect-ui/core",
+  "name": "@foldkit/core",
   "version": "0.1.0-canary.1",
   "description": "Elm-inspired UI framework powered by Effect",
   "type": "module",
@@ -42,7 +42,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/devinjameson/effect-ui.git",
-    "directory": "packages/effect-ui"
+    "url": "https://github.com/devinjameson/foldkit.git",
+    "directory": "packages/foldkit"
   }
 }

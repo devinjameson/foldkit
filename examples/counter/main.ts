@@ -1,5 +1,5 @@
 import { Data, Match, Option } from 'effect'
-import { button, Cmd, div, OnClick, runApp, text } from '@effect-ui/core'
+import { button, Cmd, div, OnClick, runApp, text } from '@foldkit/core'
 
 type Model = {
   count: number
@@ -26,8 +26,8 @@ const view = (model: Model) =>
     [],
     [
       text(String(model.count)),
-      button([OnClick(Message.Increment())], ['+']),
       button([OnClick(Message.Decrement())], ['-']),
+      button([OnClick(Message.Increment())], ['+']),
     ],
   )
 
