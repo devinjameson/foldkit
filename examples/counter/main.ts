@@ -1,5 +1,5 @@
-import { Data, Effect, Match, Option } from 'effect'
-import { button, Command, div, OnClick, runApp, text } from '@foldkit/core'
+import { Data, Effect, Option } from 'effect'
+import { button, Command, div, OnClick, runApp, text, match } from '@foldkit/core'
 
 type Model = {
   count: number
@@ -13,15 +13,11 @@ type Message = Data.TaggedEnum<{
 
 const { Decrement, Increment, IncrementLater } = Data.taggedEnum<Message>()
 
-const update = (model: Model) =>
-  Match.type<Message>().pipe(
-    Match.withReturnType<[Model, Option.Option<Command<Message>>]>(),
-    Match.tagsExhaustive({
-      Decrement: () => [{ count: model.count - 1 }, Option.none()],
-      Increment: () => [{ count: model.count + 1 }, Option.none()],
-      IncrementLater: () => [model, Option.some(incrementLater)],
-    }),
-  )
+const update = match<Model, Message>({
+  Decrement: (model) => [{ count: model.count - 1 }, Option.none()],
+  Increment: (model) => [{ count: model.count + 1 }, Option.none()],
+  IncrementLater: (model) => [model, Option.some(incrementLater)],
+})
 
 const incrementLater: Command<Message> = Effect.sleep('1 second').pipe(Effect.map(Increment))
 

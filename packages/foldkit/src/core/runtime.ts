@@ -11,7 +11,7 @@ export type Command<Message> = Effect.Effect<Message, never, never>
 
 export interface RuntimeConfig<Model, Message> {
   readonly init: Model
-  readonly update: (model: Model) => (message: Message) => [Model, Option.Option<Command<Message>>]
+  readonly update: (model: Model, message: Message) => [Model, Option.Option<Command<Message>>]
   readonly view: (model: Model) => Effect.Effect<HTMLElement, never, Dispatch>
   readonly container: HTMLElement
 }
@@ -48,7 +48,7 @@ export const makeRuntime = <Model, Message>({
 
         const currentModel = yield* Ref.get(modelRef)
 
-        const [nextModel, command] = update(currentModel)(message)
+        const [nextModel, command] = update(currentModel, message)
 
         yield* Option.match(command, {
           onNone: () => Effect.void,
