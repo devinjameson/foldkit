@@ -65,5 +65,5 @@ export const makeRuntime = <Model, Message>({
 
 export const runApp = <Model, Message>(config: RuntimeConfig<Model, Message>): void => {
   const runtime = makeRuntime(config)
-  Effect.runSync(runtime)
+  Effect.runFork(runtime)
 }
