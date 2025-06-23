@@ -29,33 +29,37 @@ Apps built with Foldkit unfold through messages — each one folded into state, 
 ## Example
 
 ```ts
+import { Data, Effect, Option } from 'effect'
+import { button, Command, div, OnClick, runApp, text, match } from '@foldkit/core'
+
 type Model = {
   count: number
 }
 
 type Message = Data.TaggedEnum<{
-  Increment: {}
   Decrement: {}
+  Increment: {}
+  IncrementLater: {}
 }>
 
-const Message = Data.taggedEnum<Message>()
+const { Decrement, Increment, IncrementLater } = Data.taggedEnum<Message>()
 
-const update = (model: Model) =>
-  Match.type<Message>().pipe(
-    Match.withReturnType<[Model, Option.Option<Cmd<Message>>]>(),
-    Match.tagsExhaustive({
-      Increment: () => [{ count: model.count + 1 }, Option.none()],
-      Decrement: () => [{ count: model.count - 1 }, Option.none()],
-    }),
-  )
+const update = match<Model, Message>({
+  Decrement: (model) => [{ count: model.count - 1 }, Option.none()],
+  Increment: (model) => [{ count: model.count + 1 }, Option.none()],
+  IncrementLater: (model) => [model, Option.some(incrementLater)],
+})
+
+const incrementLater: Command<Message> = Effect.sleep('1 second').pipe(Effect.map(Increment))
 
 const view = (model: Model) =>
   div(
     [],
     [
       text(String(model.count)),
-      button([OnClick(Message.Decrement())], ['-']),
-      button([OnClick(Message.Increment())], ['+']),
+      button([OnClick(Decrement())], ['-']),
+      button([OnClick(Increment())], ['+']),
+      button([OnClick(IncrementLater())], ['+ in 1s']),
     ],
   )
 
