@@ -7,11 +7,11 @@ export class Dispatch extends Context.Tag('@foldkit/Dispatch')<
   }
 >() {}
 
-export type Cmd<Message> = Effect.Effect<Message, never, never>
+export type Command<Message> = Effect.Effect<Message, never, never>
 
 export interface RuntimeConfig<Model, Message> {
   readonly init: Model
-  readonly update: (model: Model) => (message: Message) => [Model, Option.Option<Cmd<Message>>]
+  readonly update: (model: Model) => (message: Message) => [Model, Option.Option<Command<Message>>]
   readonly view: (model: Model) => Effect.Effect<HTMLElement, never, Dispatch>
   readonly container: HTMLElement
 }
@@ -21,11 +21,9 @@ export const makeRuntime = <Model, Message>(
 ): Effect.Effect<void, never, never> =>
   Effect.gen(function* () {
     const messageQueue = yield* Queue.unbounded<Message>()
+    const enqueue = (message: Message) => Queue.offer(messageQueue, message)
 
     const modelRef = yield* Ref.make<Model>(config.init)
-
-    const internalDispatch = (message: Message): Effect.Effect<void> =>
-      Queue.offer(messageQueue, message)
 
     const render = (model: Model): Effect.Effect<void> =>
       Effect.gen(function* () {
@@ -35,7 +33,7 @@ export const makeRuntime = <Model, Message>(
       }).pipe(
         Effect.provideService(Dispatch, {
           /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-          dispatch: (message: unknown) => internalDispatch(message as Message),
+          dispatch: (message: unknown) => enqueue(message as Message),
         }),
       )
 
@@ -47,13 +45,15 @@ export const makeRuntime = <Model, Message>(
 
         const currentModel = yield* Ref.get(modelRef)
 
-        const [nextModel] = config.update(currentModel)(message)
+        const [nextModel, command] = config.update(currentModel)(message)
 
-        const shouldUpdate = !Equal.equals(currentModel, nextModel)
+        yield* Option.match(command, {
+          onNone: () => Effect.void,
+          onSome: (command) => Effect.fork(command.pipe(Effect.flatMap(enqueue))),
+        })
 
-        if (shouldUpdate) {
+        if (!Equal.equals(currentModel, nextModel)) {
           yield* Ref.set(modelRef, nextModel)
-
           yield* render(nextModel)
         }
       }),
