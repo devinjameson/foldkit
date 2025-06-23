@@ -72,6 +72,7 @@ runApp<Model, Message>({
 ## Status
 
 > ⚠️ Foldkit is in active development.
+
 > Expect rapid iteration and breaking changes.
 
 We’re building in the open — feedback, issues, and contributions are welcome.
