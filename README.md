@@ -8,14 +8,6 @@ It draws inspiration from Elm, React, and functional architecture principles —
 
 ---
 
-## Packages
-
-Foldkit is a modular monorepo of small, focused packages.
-
-More details coming soon.
-
----
-
 ## Philosophy
 
 Apps built with Foldkit unfold through messages — each one folded into state, predictably and purely.
