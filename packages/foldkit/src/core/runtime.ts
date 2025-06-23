@@ -16,20 +16,23 @@ export interface RuntimeConfig<Model, Message> {
   readonly container: HTMLElement
 }
 
-export const makeRuntime = <Model, Message>(
-  config: RuntimeConfig<Model, Message>,
-): Effect.Effect<void, never, never> =>
+export const makeRuntime = <Model, Message>({
+  init,
+  update,
+  view,
+  container,
+}: RuntimeConfig<Model, Message>): Effect.Effect<void, never, never> =>
   Effect.gen(function* () {
     const messageQueue = yield* Queue.unbounded<Message>()
     const enqueue = (message: Message) => Queue.offer(messageQueue, message)
 
-    const modelRef = yield* Ref.make<Model>(config.init)
+    const modelRef = yield* Ref.make<Model>(init)
 
     const render = (model: Model): Effect.Effect<void> =>
       Effect.gen(function* () {
-        const view = yield* config.view(model)
-        config.container.innerHTML = ''
-        config.container.appendChild(view)
+        const htmlElement = yield* view(model)
+        container.innerHTML = ''
+        container.appendChild(htmlElement)
       }).pipe(
         Effect.provideService(Dispatch, {
           /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
@@ -37,7 +40,7 @@ export const makeRuntime = <Model, Message>(
         }),
       )
 
-    yield* render(config.init)
+    yield* render(init)
 
     yield* Effect.forever(
       Effect.gen(function* () {
@@ -45,7 +48,7 @@ export const makeRuntime = <Model, Message>(
 
         const currentModel = yield* Ref.get(modelRef)
 
-        const [nextModel, command] = config.update(currentModel)(message)
+        const [nextModel, command] = update(currentModel)(message)
 
         yield* Option.match(command, {
           onNone: () => Effect.void,
