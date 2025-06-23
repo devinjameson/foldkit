@@ -102,9 +102,6 @@ pnpm install @foldkit/core
 - [ ] Optimized DOM rendering (minimal diffs, efficient updates)
 - [ ] Router integration
 - [ ] Devtools + tracing
-- [ ] JSX/HTML support
-- [ ] Suspense / async loading
-- [ ] SSR target
 
 ---
 
