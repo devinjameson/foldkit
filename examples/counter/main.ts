@@ -5,6 +5,10 @@ type Model = {
   count: number
 }
 
+const init: Model = {
+  count: 0,
+}
+
 type Message = Data.TaggedEnum<{
   Decrement: {}
   Increment: {}
@@ -37,7 +41,7 @@ const view = (model: Model) =>
   )
 
 runApp<Model, Message>({
-  init: { count: 0 },
+  init,
   update,
   view,
   container: document.body,
