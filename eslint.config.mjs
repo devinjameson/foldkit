@@ -11,7 +11,14 @@ export default [
       parserOptions: {
         ecmaVersion: 'latest',
         sourceType: 'module',
-        project: ['./tsconfig.json', './packages/*/tsconfig.json', './examples/*/tsconfig.json'],
+
+        project: [
+          './tsconfig.json',
+          './packages/foldkit/tsconfig.json',
+          './examples/counter/tsconfig.json',
+        ],
+
+        projectService: true,
       },
       globals: {
         window: 'readonly',
@@ -39,7 +46,6 @@ export default [
       ],
     },
   },
-
   {
     ignores: [
       'dist/',
