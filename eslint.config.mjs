@@ -1,33 +1,21 @@
 import js from '@eslint/js'
-import typescript from '@typescript-eslint/eslint-plugin'
-import typescriptParser from '@typescript-eslint/parser'
+import tsPlugin from '@typescript-eslint/eslint-plugin'
+import tsParser from '@typescript-eslint/parser'
 
 export default [
-  js.configs.recommended,
   {
-    files: ['**/*.{ts,tsx}'],
+    ...js.configs.recommended,
+    files: ['**/*.ts', '**/*.js'],
+    ignores: ['packages/foldkit/src/**/*.ts'],
     languageOptions: {
-      parser: typescriptParser,
+      parser: tsParser,
       parserOptions: {
         ecmaVersion: 'latest',
         sourceType: 'module',
-
-        project: [
-          './tsconfig.json',
-          './packages/foldkit/tsconfig.json',
-          './examples/counter/tsconfig.json',
-        ],
-
-        projectService: true,
-      },
-      globals: {
-        window: 'readonly',
-        document: 'readonly',
-        console: 'readonly',
       },
     },
     plugins: {
-      '@typescript-eslint': typescript,
+      '@typescript-eslint': tsPlugin,
     },
     rules: {
       'no-redeclare': 'off',
@@ -46,6 +34,39 @@ export default [
       ],
     },
   },
+
+  {
+    files: ['packages/foldkit/src/**/*.ts'],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+        project: ['./tsconfig.json', './packages/foldkit/tsconfig.json'],
+        projectService: true,
+      },
+    },
+    plugins: {
+      '@typescript-eslint': tsPlugin,
+    },
+    rules: {
+      'no-redeclare': 'off',
+      'no-undef': 'off',
+      'no-unused-vars': 'off',
+      '@typescript-eslint/consistent-type-assertions': ['error', { assertionStyle: 'never' }],
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+          destructuredArrayIgnorePattern: '^_',
+        },
+      ],
+    },
+  },
+
   {
     ignores: [
       'dist/',

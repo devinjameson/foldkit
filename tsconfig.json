@@ -5,10 +5,9 @@
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "module": "ESNext",
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "target": "ES2022",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "jsx": "preserve",
 
     "strict": true,
     "noUncheckedIndexedAccess": true,
@@ -28,10 +27,13 @@
 
     "types": ["vite/client"],
 
+    "baseUrl": ".",
+
     "paths": {
-      "@foldkit/core": ["packages/foldkit/src"]
+      "@foldkit/core": ["packages/foldkit/src/index.ts"],
+      "@foldkit/core/*": ["packages/foldkit/src/*"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx"],
+  "include": [],
   "exclude": ["dist", "node_modules"]
 }

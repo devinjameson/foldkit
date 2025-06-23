@@ -9,5 +9,8 @@
   "dependencies": {
     "@foldkit/core": "workspace:*",
     "effect": "^3.16.8"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
   }
 }

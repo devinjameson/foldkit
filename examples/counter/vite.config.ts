@@ -6,11 +6,10 @@ export default defineConfig({
     alias: {
       '@foldkit/core': path.resolve(__dirname, '../../packages/foldkit/src'),
     },
-    extensions: ['.mjs', '.js', '.ts', '.tsx', '.json'],
   },
   server: {
     fs: {
-      allow: ['../packages/foldkit'],
+      allow: ['../../packages/foldkit'],
     },
   },
 })
