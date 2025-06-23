@@ -21,7 +21,7 @@ Apps built with Foldkit unfold through messages — each one folded into state, 
 ## Example
 
 ```ts
-import { Data, Effect, Option } from 'effect'
+import { Console, Data, Effect, Option } from 'effect'
 import { button, Command, div, OnClick, runApp, text, match } from '@foldkit/core'
 
 type Model = {
@@ -36,13 +36,17 @@ type Message = Data.TaggedEnum<{
 
 const { Decrement, Increment, IncrementLater } = Data.taggedEnum<Message>()
 
+const incrementLater: Command<Message> = Effect.gen(function* () {
+  yield* Console.log('Just a sec!')
+  yield* Effect.sleep('1 second')
+  return Increment()
+})
+
 const update = match<Model, Message>({
   Decrement: (model) => [{ count: model.count - 1 }, Option.none()],
   Increment: (model) => [{ count: model.count + 1 }, Option.none()],
   IncrementLater: (model) => [model, Option.some(incrementLater)],
 })
-
-const incrementLater: Command<Message> = Effect.sleep('1 second').pipe(Effect.map(Increment))
 
 const view = (model: Model) =>
   div(
