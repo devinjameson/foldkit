@@ -52,7 +52,7 @@ export const makeRuntime = <Model, Message>({
 
         yield* Option.match(command, {
           onNone: () => Effect.void,
-          onSome: (command) => Effect.fork(command.pipe(Effect.flatMap(enqueue))),
+          onSome: (command) => Effect.forkDaemon(command.pipe(Effect.flatMap(enqueue))),
         })
 
         if (!Equal.equals(currentModel, nextModel)) {
