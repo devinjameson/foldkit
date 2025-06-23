@@ -37,12 +37,12 @@ importers:
     dependencies:
       '@foldkit/core':
         specifier: workspace:*
-        version: link:../../packages/effect-ui
+        version: link:../../packages/foldkit
       effect:
         specifier: ^3.16.8
         version: 3.16.8
 
-  packages/effect-ui:
+  packages/foldkit:
     devDependencies:
       effect:
         specifier: ^3.16.8
