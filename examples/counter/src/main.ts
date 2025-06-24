@@ -97,17 +97,17 @@ const logSaveSuccess = (savedCount: number): Command<Message> =>
 
 const view = (model: Model): Html =>
   div(
-    [pageStyle],
+    [Class(pageStyle)],
     [
-      div([countStyle], [text(String(model.count))]),
+      div([Class(countStyle)], [text(String(model.count))]),
       div(
-        [buttonRowStyle],
+        [Class(buttonRowStyle)],
         [
-          button([OnClick(Message.Decrement()), buttonStyle], ['-']),
-          button([OnClick(Message.SetCount({ count: 0 })), buttonStyle], ['Reset']),
-          button([OnClick(Message.SaveCount()), buttonStyle], ['Save']),
-          button([OnClick(Message.IncrementLater()), buttonStyle], ['+ in 1s']),
-          button([OnClick(Message.Increment()), buttonStyle], ['+']),
+          button([OnClick(Message.Decrement()), Class(buttonStyle)], ['-']),
+          button([OnClick(Message.SetCount({ count: 0 })), Class(buttonStyle)], ['Reset']),
+          button([OnClick(Message.SaveCount()), Class(buttonStyle)], ['Save']),
+          button([OnClick(Message.IncrementLater()), Class(buttonStyle)], ['+ in 1s']),
+          button([OnClick(Message.Increment()), Class(buttonStyle)], ['+']),
         ],
       ),
     ],
@@ -117,17 +117,14 @@ const view = (model: Model): Html =>
 // STYLE
 //
 
-const pageStyle = Class(
-  'min-h-screen bg-gradient-to-br from-indigo-100 via-sky-100 to-emerald-100 flex flex-col items-center justify-center gap-6 p-6',
-)
+const pageStyle =
+  'min-h-screen bg-gradient-to-br from-indigo-100 via-sky-100 to-emerald-100 flex flex-col items-center justify-center gap-6 p-6'
 
-const countStyle = Class('text-6xl font-bold text-gray-800')
+const countStyle = 'text-6xl font-bold text-gray-800'
 
-const buttonRowStyle = Class('flex flex-wrap justify-center gap-4')
+const buttonRowStyle = 'flex flex-wrap justify-center gap-4'
 
-const buttonStyle = Class(
-  'bg-black text-white hover:bg-gray-900 px-4 py-2 rounded-lg shadow transition',
-)
+const buttonStyle = 'bg-black text-white hover:bg-gray-900 px-4 py-2 rounded-lg shadow transition'
 
 //
 // RUN
