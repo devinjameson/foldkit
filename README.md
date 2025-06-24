@@ -31,10 +31,10 @@ import {
   OnClick,
   runApp,
   text,
-  match,
+  fold,
   pure,
-  effect,
-  pureEffect,
+  command,
+  pureCommand,
   Class,
   Html,
 } from '@foldkit/core'
@@ -63,20 +63,20 @@ type Message = Data.TaggedEnum<{
 }>
 const Message = Data.taggedEnum<Message>()
 
-type SetCount = { count: number }
-type LogAndSetCount = { count: number; id: string }
+type SetCount = { nextCount: number }
+type LogAndSetCount = { nextCount: number; id: string }
 type SaveSuccess = { savedCount: number }
 
-const update = match<Model, Message>({
+const update = fold<Model, Message>({
   Decrement: ({ count }) => pure({ count: count - 1 }),
   Increment: ({ count }) => pure({ count: count + 1 }),
-  IncrementLater: effect(() => incrementLater('1 second')),
-  SetCount: (_, { count }) => pure({ count }),
-  LogAndSetCount: (_, { count, id }) =>
-    pureEffect({ count }, () => logCount({ count, id })),
-  SaveCount: ({ count }) => pureEffect({ count }, () => saveToServer(count)),
-  SaveSuccess: (_, { savedCount }) =>
-    pureEffect({ count: savedCount }, () => logSaveSuccess(savedCount)),
+  IncrementLater: command(() => incrementLater('1 second')),
+  SetCount: (_model, { nextCount }) => pure({ count: nextCount }),
+  LogAndSetCount: (_model, { nextCount, id }) =>
+    pureCommand({ count: nextCount }, () => logCount({ count: nextCount, id })),
+  SaveCount: ({ count }) => pureCommand({ count }, () => saveToServer(count)),
+  SaveSuccess: (_model, { savedCount }) =>
+    pureCommand({ count: savedCount }, () => logSaveSuccess(savedCount)),
   None: pure,
 })
 
@@ -119,10 +119,7 @@ const view = (model: Model): Html =>
         [Class(buttonRowStyle)],
         [
           button([OnClick(Message.Decrement()), Class(buttonStyle)], ['-']),
-          button(
-            [OnClick(Message.SetCount({ count: 0 })), Class(buttonStyle)],
-            ['Reset'],
-          ),
+          button([OnClick(Message.SetCount({ nextCount: 0 })), Class(buttonStyle)], ['Reset']),
           button([OnClick(Message.SaveCount()), Class(buttonStyle)], ['Save']),
           button([OnClick(Message.IncrementLater()), Class(buttonStyle)], ['+ in 1s']),
           button([OnClick(Message.Increment()), Class(buttonStyle)], ['+']),
