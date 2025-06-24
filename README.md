@@ -72,7 +72,8 @@ const update = match<Model, Message>({
   Increment: ({ count }) => pure({ count: count + 1 }),
   IncrementLater: effect(() => incrementLater('1 second')),
   SetCount: (_, { count }) => pure({ count }),
-  LogAndSetCount: (_, { count, id }) => pureEffect({ count }, () => logCount({ count, id })),
+  LogAndSetCount: (_, { count, id }) =>
+    pureEffect({ count }, () => logCount({ count, id })),
   SaveCount: ({ count }) => pureEffect({ count }, () => saveToServer(count)),
   SaveSuccess: (_, { savedCount }) =>
     pureEffect({ count: savedCount }, () => logSaveSuccess(savedCount)),
@@ -118,7 +119,10 @@ const view = (model: Model): Html =>
         [Class(buttonRowStyle)],
         [
           button([OnClick(Message.Decrement()), Class(buttonStyle)], ['-']),
-          button([OnClick(Message.SetCount({ count: 0 })), Class(buttonStyle)], ['Reset']),
+          button(
+            [OnClick(Message.SetCount({ count: 0 })), Class(buttonStyle)],
+            ['Reset'],
+          ),
           button([OnClick(Message.SaveCount()), Class(buttonStyle)], ['Save']),
           button([OnClick(Message.IncrementLater()), Class(buttonStyle)], ['+ in 1s']),
           button([OnClick(Message.Increment()), Class(buttonStyle)], ['+']),
