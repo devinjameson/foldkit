@@ -9,7 +9,7 @@ export default defineConfig({
   },
   server: {
     fs: {
-      allow: ['../../packages/foldkit'],
+      allow: ['../../'],
     },
   },
 })

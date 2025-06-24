@@ -2,6 +2,25 @@ import { Option } from 'effect'
 import { Command } from './runtime'
 import { ExtractTag, Tags } from 'effect/Types'
 
+type PayloadOf<E, Tag extends Tags<E>> = Omit<ExtractTag<E, Tag>, '_tag'>
+
+export type Payloads<E extends { _tag: string }> = {
+  [K in Tags<E>]: PayloadOf<E, K>
+}
+
+export const pure = <Model, Message = never>(
+  model: Model,
+): [Model, Option.Option<Command<Message>>] => [model, Option.none()]
+
+export const effect =
+  <Message>(command: Command<Message>) =>
+  <Model>(model: Model): [Model, Option.Option<Command<Message>>] => [model, Option.some(command)]
+
+export const pureEffect = <Model, Message>(
+  model: Model,
+  command: Command<Message>,
+): [Model, Option.Option<Command<Message>>] => [model, Option.some(command)]
+
 export function match<Model, E extends { readonly _tag: string }>(handlers: {
   [K in Tags<E>]: (model: Model, message: ExtractTag<E, K>) => [Model, Option.Option<Command<E>>]
 }): (model: Model, message: E) => [Model, Option.Option<Command<E>>] {
