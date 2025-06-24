@@ -1,4 +1,4 @@
-import { Console, Data, Effect } from 'effect'
+import { Console, Data, Duration, Effect } from 'effect'
 import {
   button,
   Command,
@@ -13,7 +13,6 @@ import {
   Class,
   Html,
 } from '@foldkit/core'
-import { DurationInput } from 'effect/Duration'
 
 //
 // MODEL
@@ -66,7 +65,7 @@ const update = match<Model, Message>({
 // COMMAND
 //
 
-const incrementLater = (duration: DurationInput): Command<Message> =>
+const incrementLater = (duration: Duration.DurationInput): Command<Message> =>
   Effect.gen(function* () {
     yield* Console.log('Hold, please!')
     yield* Effect.sleep(duration)
