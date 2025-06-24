@@ -8,7 +8,9 @@
   },
   "dependencies": {
     "@foldkit/core": "workspace:*",
-    "effect": "^3.16.8"
+    "@tailwindcss/vite": "^4.1.10",
+    "effect": "^3.16.8",
+    "tailwindcss": "^4.1.10"
   },
   "devDependencies": {
     "vite": "^5.0.0"

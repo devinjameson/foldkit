@@ -5,7 +5,7 @@ export type Html = Effect.Effect<HTMLElement, never, Dispatch>
 export type Child = Html | string
 
 export type Attribute<Message> = Data.TaggedEnum<{
-  ClassName: { readonly value: string }
+  Class: { readonly value: string }
   Id: { readonly value: string }
   OnClick: { readonly message: Message }
   Value: { readonly value: string }
@@ -18,7 +18,7 @@ interface AttributeDefinition extends Data.TaggedEnum.WithGenerics<1> {
 }
 
 export const {
-  ClassName,
+  Class: Class_,
   Id,
   OnClick: OnClick_,
   Value,
@@ -26,6 +26,7 @@ export const {
   Disabled,
 } = Data.taggedEnum<AttributeDefinition>()
 
+export const Class = (value: string) => Class_({ value })
 export const OnClick = <Message>(message: Message) => OnClick_({ message })
 
 export const applyAttributes = <Message>(
@@ -38,7 +39,7 @@ export const applyAttributes = <Message>(
     yield* Effect.forEach(attributes, (attr) =>
       Match.value(attr).pipe(
         Match.tagsExhaustive({
-          ClassName: ({ value }) =>
+          Class: ({ value }) =>
             Effect.sync(() => {
               element.className = value
             }),
