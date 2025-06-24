@@ -13,11 +13,11 @@ export const pure = <Model, Message = never>(
   model: Model,
 ): [Model, Option.Option<Command<Message>>] => [model, Option.none()]
 
-export const effect =
+export const command =
   <Message>(command: LazyArg<Command<Message>>) =>
   <Model>(model: Model): [Model, Option.Option<Command<Message>>] => [model, Option.some(command())]
 
-export const pureEffect = <Model, Message>(
+export const pureCommand = <Model, Message>(
   model: Model,
   command: LazyArg<Command<Message>>,
 ): [Model, Option.Option<Command<Message>>] => [model, Option.some(command())]
