@@ -2,6 +2,7 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "noEmit": true,
+    "module": "nodenext",
     "moduleResolution": "nodenext"
   },
   "include": ["src/**/*.{ts}", "vite.config.ts"],

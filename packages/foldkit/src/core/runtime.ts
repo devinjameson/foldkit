@@ -1,4 +1,9 @@
 import { Effect, Context, Ref, Equal, Queue, Option } from 'effect'
+import { Covariant } from 'effect/Types'
+import { FoldReturn } from './fold'
+import { Html } from './html'
+
+export type WithDefault<R> = R | Dispatch
 
 export class Dispatch extends Context.Tag('@foldkit/Dispatch')<
   Dispatch,
@@ -7,33 +12,48 @@ export class Dispatch extends Context.Tag('@foldkit/Dispatch')<
   }
 >() {}
 
-export type Command<Message> = Effect.Effect<Message, never, never>
+export interface CommandT<Message, R> {
+  readonly effect: Effect.Effect<Message, never, R>
+  readonly _Message: Covariant<Message>
+}
 
-export interface RuntimeConfig<Model, Message> {
+/* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+const phantomCovariant = <T>(): Covariant<T> => undefined as any
+
+export const makeCommand = <Message, R>(
+  effect: Effect.Effect<Message, never, R>,
+): CommandT<Message, R> => ({
+  effect,
+  _Message: phantomCovariant<Message>(),
+})
+
+export interface RuntimeConfig<Model, Message, R> {
   readonly init: Model
-  readonly update: (model: Model, message: Message) => [Model, Option.Option<Command<Message>>]
-  readonly view: (model: Model) => Effect.Effect<HTMLElement, never, Dispatch>
+  readonly update: FoldReturn<Model, Message, R>
+  readonly view: (model: Model) => Html<R>
   readonly container: HTMLElement
 }
 
-export const makeRuntime = <Model, Message>({
+export const makeRuntime = <Model, Message, R>({
   init,
   update,
   view,
   container,
-}: RuntimeConfig<Model, Message>): Effect.Effect<void, never, never> =>
+}: RuntimeConfig<Model, Message, R>): Effect.Effect<void, never, Exclude<R, Dispatch>> =>
   Effect.gen(function* () {
     const messageQueue = yield* Queue.unbounded<Message>()
     const enqueue = (message: Message) => Queue.offer(messageQueue, message)
 
     const modelRef = yield* Ref.make<Model>(init)
 
-    const render = (model: Model): Effect.Effect<void> =>
-      Effect.gen(function* () {
-        const htmlElement = yield* view(model)
-        container.innerHTML = ''
-        container.appendChild(htmlElement)
-      }).pipe(
+    const render = (model: Model) =>
+      view(model).pipe(
+        Effect.tap((htmlElement) =>
+          Effect.sync(() => {
+            container.innerHTML = ''
+            container.appendChild(htmlElement)
+          }),
+        ),
         Effect.provideService(Dispatch, {
           /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
           dispatch: (message: unknown) => enqueue(message as Message),
@@ -42,6 +62,7 @@ export const makeRuntime = <Model, Message>({
 
     yield* render(init)
 
+    /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
     yield* Effect.forever(
       Effect.gen(function* () {
         const message = yield* Queue.take(messageQueue)
@@ -52,7 +73,7 @@ export const makeRuntime = <Model, Message>({
 
         yield* Option.match(command, {
           onNone: () => Effect.void,
-          onSome: (command) => Effect.forkDaemon(command.pipe(Effect.flatMap(enqueue))),
+          onSome: (command) => Effect.forkDaemon(command.effect.pipe(Effect.flatMap(enqueue))),
         })
 
         if (!Equal.equals(currentModel, nextModel)) {
@@ -60,10 +81,9 @@ export const makeRuntime = <Model, Message>({
           yield* render(nextModel)
         }
       }),
-    )
+    ) as Effect.Effect<void, never, Exclude<R, Dispatch>>
   })
 
-export const runApp = <Model, Message>(config: RuntimeConfig<Model, Message>): void => {
-  const runtime = makeRuntime(config)
-  Effect.runFork(runtime)
-}
+export const makeApp = <Model, Message extends { _tag: string }, R>(
+  config: RuntimeConfig<Model, Message, R>,
+): Effect.Effect<void, never, Exclude<R, Dispatch>> => makeRuntime(config)

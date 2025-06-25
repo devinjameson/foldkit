@@ -1,18 +1,20 @@
 import { Console, Data, Duration, Effect } from 'effect'
 import {
-  button,
-  Command,
-  div,
-  OnClick,
-  runApp,
-  text,
-  fold,
-  pure,
-  command,
-  pureCommand,
   Class,
+  Command,
+  CommandT,
   Html,
+  OnClick,
+  Pure,
+  PureCommand,
+  button,
+  div,
+  fold,
+  makeApp,
+  makeCommand,
+  text,
 } from '@foldkit/core'
+import { ExtractTag } from 'effect/Types'
 
 // MODEL
 
@@ -42,46 +44,62 @@ type SetCount = { nextCount: number }
 type LogAndSetCount = { nextCount: number; id: string }
 type SaveSuccess = { savedCount: number }
 
-const update = fold<Model, Message>({
-  Decrement: ({ count }) => pure({ count: count - 1 }),
-  Increment: ({ count }) => pure({ count: count + 1 }),
-  IncrementLater: command(() => incrementLater('1 second')),
-  SetCount: (_model, { nextCount }) => pure({ count: nextCount }),
-  LogAndSetCount: (_model, { nextCount, id }) =>
-    pureCommand({ count: nextCount }, () => logCount({ count: nextCount, id })),
-  SaveCount: ({ count }) => pureCommand({ count }, () => saveToServer(count)),
-  SaveSuccess: (_model, { savedCount }) =>
-    pureCommand({ count: savedCount }, () => logSaveSuccess(savedCount)),
-  None: pure,
+const SaveCount = PureCommand<Model, ExtractTag<Message, 'SaveCount'>, Message, Requirements>(
+  ({ count }) => [{ count }, saveToServer(count)],
+)
+
+const update = fold<Model, Message, Requirements>({
+  Decrement: Pure(({ count }) => ({ count: count - 1 })),
+  Increment: Pure(({ count }) => ({ count: count + 1 })),
+  IncrementLater: Command(() => incrementLater('1 second')),
+  SetCount: Pure((_, { nextCount }) => ({ count: nextCount })),
+  LogAndSetCount: PureCommand((_, { nextCount, id }) => [
+    { count: nextCount },
+    logCount({ count: nextCount, id }),
+  ]),
+  SaveCount,
+  SaveSuccess: PureCommand((_, { savedCount }) => [
+    { count: savedCount },
+    logSaveSuccess(savedCount),
+  ]),
+  None: Pure((model) => model),
 })
 
 // COMMAND
 
-const incrementLater = (duration: Duration.DurationInput): Command<Message> =>
-  Effect.gen(function* () {
-    yield* Console.log('Hold, please!')
-    yield* Effect.sleep(duration)
-    return Message.Increment()
-  })
+const incrementLater = (duration: Duration.DurationInput): CommandT<Message, Requirements> =>
+  makeCommand(
+    Effect.gen(function* () {
+      yield* Console.log('Hold, please!')
+      yield* Effect.sleep(duration)
+      return Message.Increment()
+    }),
+  )
 
-const logCount = ({ count, id }: { count: number; id: string }): Command<Message> =>
-  Effect.gen(function* () {
-    yield* Console.log(`${id}-${count}`)
-    return Message.None()
-  })
+const logCount = ({ count, id }: { count: number; id: string }): CommandT<Message, Requirements> =>
+  makeCommand(
+    Effect.gen(function* () {
+      yield* Console.log(`${id}-${count}`)
+      return Message.None()
+    }),
+  )
 
-const saveToServer = (count: number): Command<Message> =>
-  Effect.gen(function* () {
-    yield* Console.log(`Saving count...`)
-    yield* Effect.sleep('2 seconds')
-    return Message.SaveSuccess({ savedCount: count })
-  })
+const saveToServer = (count: number): CommandT<Message, Requirements> =>
+  makeCommand(
+    Effect.gen(function* () {
+      yield* Console.log(`Saving count...`)
+      yield* Effect.sleep('2 seconds')
+      return Message.SaveSuccess({ savedCount: count })
+    }),
+  )
 
-const logSaveSuccess = (savedCount: number): Command<Message> =>
-  Effect.gen(function* () {
-    yield* Console.log(`Saved ${savedCount}`)
-    return Message.None()
-  })
+const logSaveSuccess = (savedCount: number): CommandT<Message, Requirements> =>
+  makeCommand(
+    Effect.gen(function* () {
+      yield* Console.log(`Saved ${savedCount}`)
+      return Message.None()
+    }),
+  )
 
 // VIEW
 
@@ -116,9 +134,13 @@ const buttonStyle = 'bg-black text-white hover:bg-gray-900 px-4 py-2 rounded-lg 
 
 // RUN
 
-runApp<Model, Message>({
+type Requirements = never
+
+const app = makeApp({
   init,
   update,
   view,
   container: document.body,
 })
+
+Effect.runFork(app)

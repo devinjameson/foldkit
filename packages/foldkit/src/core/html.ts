@@ -1,8 +1,8 @@
 import { Effect, Match, Data, Predicate } from 'effect'
 import { Dispatch } from './runtime'
 
-export type Html = Effect.Effect<HTMLElement, never, Dispatch>
-export type Child = Html | string
+export type Html<R = Dispatch> = Effect.Effect<HTMLElement, never, R>
+export type Child<R> = Html<R> | string
 
 export type Attribute<Message> = Data.TaggedEnum<{
   Class: { readonly value: string }
@@ -76,11 +76,13 @@ export const applyAttributes = <Message>(
     )
   })
 
-export const createElement = <Message>(
+type Requirements<R> = R | Dispatch
+
+export const createElement = <Message, R>(
   tagName: string,
   attributes: ReadonlyArray<Attribute<Message>> = [],
-  children: ReadonlyArray<Child> = [],
-): Html =>
+  children: ReadonlyArray<Child<R>> = [],
+): Html<Requirements<R>> =>
   Effect.gen(function* () {
     const element = document.createElement(tagName)
 
@@ -102,105 +104,107 @@ export const createElement = <Message>(
     return element
   })
 
-export const div = <Message>(
+export const div = <Message, R>(
   attributes: ReadonlyArray<Attribute<Message>> = [],
-  children: ReadonlyArray<Child> = [],
-): Html => createElement('div', attributes, children)
+  children: ReadonlyArray<Child<R>> = [],
+): Html<Requirements<R>> => createElement('div', attributes, children)
 
-export const span = <Message>(
+export const span = <Message, R>(
   attributes: ReadonlyArray<Attribute<Message>> = [],
-  children: ReadonlyArray<Child> = [],
-): Html => createElement('span', attributes, children)
+  children: ReadonlyArray<Child<R>> = [],
+): Html<Requirements<R>> => createElement('span', attributes, children)
 
-export const button = <Message>(
+export const button = <Message, R>(
   attributes: ReadonlyArray<Attribute<Message>> = [],
-  children: ReadonlyArray<Child> = [],
-): Html => createElement('button', attributes, children)
+  children: ReadonlyArray<Child<R>> = [],
+): Html<Requirements<R>> => createElement('button', attributes, children)
 
-export const input = <Message>(attributes: ReadonlyArray<Attribute<Message>> = []): Html =>
-  createElement('input', attributes, [])
-
-export const h1 = <Message>(
+export const input = <Message, R>(
   attributes: ReadonlyArray<Attribute<Message>> = [],
-  children: ReadonlyArray<Child> = [],
-): Html => createElement('h1', attributes, children)
+): Html<Requirements<R>> => createElement('input', attributes, [])
 
-export const h2 = <Message>(
+export const h1 = <Message, R>(
   attributes: ReadonlyArray<Attribute<Message>> = [],
-  children: ReadonlyArray<Child> = [],
-): Html => createElement('h2', attributes, children)
+  children: ReadonlyArray<Child<R>> = [],
+): Html<Requirements<R>> => createElement('h1', attributes, children)
 
-export const h3 = <Message>(
+export const h2 = <Message, R>(
   attributes: ReadonlyArray<Attribute<Message>> = [],
-  children: ReadonlyArray<Child> = [],
-): Html => createElement('h3', attributes, children)
+  children: ReadonlyArray<Child<R>> = [],
+): Html<Requirements<R>> => createElement('h2', attributes, children)
 
-export const h4 = <Message>(
+export const h3 = <Message, R>(
   attributes: ReadonlyArray<Attribute<Message>> = [],
-  children: ReadonlyArray<Child> = [],
-): Html => createElement('h4', attributes, children)
+  children: ReadonlyArray<Child<R>> = [],
+): Html<Requirements<R>> => createElement('h3', attributes, children)
 
-export const h5 = <Message>(
+export const h4 = <Message, R>(
   attributes: ReadonlyArray<Attribute<Message>> = [],
-  children: ReadonlyArray<Child> = [],
-): Html => createElement('h5', attributes, children)
+  children: ReadonlyArray<Child<R>> = [],
+): Html<Requirements<R>> => createElement('h4', attributes, children)
 
-export const h6 = <Message>(
+export const h5 = <Message, R>(
   attributes: ReadonlyArray<Attribute<Message>> = [],
-  children: ReadonlyArray<Child> = [],
-): Html => createElement('h6', attributes, children)
+  children: ReadonlyArray<Child<R>> = [],
+): Html<Requirements<R>> => createElement('h5', attributes, children)
 
-export const p = <Message>(
+export const h6 = <Message, R>(
   attributes: ReadonlyArray<Attribute<Message>> = [],
-  children: ReadonlyArray<Child> = [],
-): Html => createElement('p', attributes, children)
+  children: ReadonlyArray<Child<R>> = [],
+): Html<Requirements<R>> => createElement('h6', attributes, children)
 
-export const ul = <Message>(
+export const p = <Message, R>(
   attributes: ReadonlyArray<Attribute<Message>> = [],
-  children: ReadonlyArray<Child> = [],
-): Html => createElement('ul', attributes, children)
+  children: ReadonlyArray<Child<R>> = [],
+): Html<Requirements<R>> => createElement('p', attributes, children)
 
-export const ol = <Message>(
+export const ul = <Message, R>(
   attributes: ReadonlyArray<Attribute<Message>> = [],
-  children: ReadonlyArray<Child> = [],
-): Html => createElement('ol', attributes, children)
+  children: ReadonlyArray<Child<R>> = [],
+): Html<Requirements<R>> => createElement('ul', attributes, children)
 
-export const li = <Message>(
+export const ol = <Message, R>(
   attributes: ReadonlyArray<Attribute<Message>> = [],
-  children: ReadonlyArray<Child> = [],
-): Html => createElement('li', attributes, children)
+  children: ReadonlyArray<Child<R>> = [],
+): Html<Requirements<R>> => createElement('ol', attributes, children)
 
-export const a = <Message>(
+export const li = <Message, R>(
   attributes: ReadonlyArray<Attribute<Message>> = [],
-  children: ReadonlyArray<Child> = [],
-): Html => createElement('a', attributes, children)
+  children: ReadonlyArray<Child<R>> = [],
+): Html<Requirements<R>> => createElement('li', attributes, children)
 
-export const img = <Message>(attributes: ReadonlyArray<Attribute<Message>> = []): Html =>
-  createElement('img', attributes, [])
-
-export const form = <Message>(
+export const a = <Message, R>(
   attributes: ReadonlyArray<Attribute<Message>> = [],
-  children: ReadonlyArray<Child> = [],
-): Html => createElement('form', attributes, children)
+  children: ReadonlyArray<Child<R>> = [],
+): Html<Requirements<R>> => createElement('a', attributes, children)
 
-export const label = <Message>(
+export const img = <Message, R>(
   attributes: ReadonlyArray<Attribute<Message>> = [],
-  children: ReadonlyArray<Child> = [],
-): Html => createElement('label', attributes, children)
+): Html<Requirements<R>> => createElement('img', attributes, [])
 
-export const textarea = <Message>(
+export const form = <Message, R>(
   attributes: ReadonlyArray<Attribute<Message>> = [],
-  children: ReadonlyArray<Child> = [],
-): Html => createElement('textarea', attributes, children)
+  children: ReadonlyArray<Child<R>> = [],
+): Html<Requirements<R>> => createElement('form', attributes, children)
 
-export const select = <Message>(
+export const label = <Message, R>(
   attributes: ReadonlyArray<Attribute<Message>> = [],
-  children: ReadonlyArray<Child> = [],
-): Html => createElement('select', attributes, children)
+  children: ReadonlyArray<Child<R>> = [],
+): Html<Requirements<R>> => createElement('label', attributes, children)
 
-export const option = <Message>(
+export const textarea = <Message, R>(
   attributes: ReadonlyArray<Attribute<Message>> = [],
-  children: ReadonlyArray<Child> = [],
-): Html => createElement('option', attributes, children)
+  children: ReadonlyArray<Child<R>> = [],
+): Html<Requirements<R>> => createElement('textarea', attributes, children)
+
+export const select = <Message, R>(
+  attributes: ReadonlyArray<Attribute<Message>> = [],
+  children: ReadonlyArray<Child<R>> = [],
+): Html<Requirements<R>> => createElement('select', attributes, children)
+
+export const option = <Message, R>(
+  attributes: ReadonlyArray<Attribute<Message>> = [],
+  children: ReadonlyArray<Child<R>> = [],
+): Html<Requirements<R>> => createElement('option', attributes, children)
 
 export const text = (content: string): string => content

@@ -1,33 +1,47 @@
-import { Option } from 'effect'
+import { Option, pipe, Tuple } from 'effect'
 import { ExtractTag, Tags } from 'effect/Types'
-import { LazyArg } from 'effect/Function'
 
-import { Command } from './runtime'
+import { CommandT } from './runtime'
 
-export const pure = <Model, Message = never>(
+type Update<Model, Message, R> = [Model, Option.Option<CommandT<Message, R>>]
+
+export const Pure =
+  <Model, R, Message = never>(f: (model: Model, message: Message) => Model) =>
+  (model: Model, message: Message): Update<Model, Message, R> => [f(model, message), Option.none()]
+
+export const Command =
+  <Model, R, Message = never>(f: (model: Model, message: Message) => CommandT<Message, R>) =>
+  (model: Model, message: Message): Update<Model, Message, R> => [
+    model,
+    Option.some(f(model, message)),
+  ]
+
+export const PureCommand =
+  <Model, Message extends AllMessage, AllMessage, R>(
+    f: (model: Model, message: Message) => [Model, CommandT<AllMessage, R>],
+  ) =>
+  (model: Model, message: Message): [Model, Option.Option<CommandT<AllMessage, R>>] =>
+    pipe(f(model, message), Tuple.mapSecond(Option.some))
+
+export type FoldReturn<Model, Message, R> = (
   model: Model,
-): [Model, Option.Option<Command<Message>>] => [model, Option.none()]
+  message: Message,
+) => [Model, Option.Option<CommandT<Message, R>>]
 
-export const command =
-  <Message>(command: LazyArg<Command<Message>>) =>
-  <Model>(model: Model): [Model, Option.Option<Command<Message>>] => [model, Option.some(command())]
-
-export const pureCommand = <Model, Message>(
-  model: Model,
-  command: LazyArg<Command<Message>>,
-): [Model, Option.Option<Command<Message>>] => [model, Option.some(command())]
-
-export function fold<Model, E extends { readonly _tag: string }>(handlers: {
-  [K in Tags<E>]: (model: Model, message: ExtractTag<E, K>) => [Model, Option.Option<Command<E>>]
-}): (model: Model, message: E) => [Model, Option.Option<Command<E>>] {
+export function fold<Model, Message extends { readonly _tag: string }, R>(handlers: {
+  [K in Tags<Message>]: (
+    model: Model,
+    message: ExtractTag<Message, K>,
+  ) => [Model, Option.Option<CommandT<Message, R>>]
+}): FoldReturn<Model, Message, R> {
   return (model, message) => {
     /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-    const tag = message._tag as Tags<E>
+    const tag = message._tag as Tags<Message>
 
     return handlers[tag](
       model,
       /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-      message as ExtractTag<E, typeof tag>,
+      message as ExtractTag<Message, typeof tag>,
     )
   }
 }
