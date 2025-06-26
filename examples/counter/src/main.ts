@@ -1,12 +1,12 @@
 import { Console, Data, Duration, Effect } from 'effect'
 import {
   Class,
+  command,
   Command,
-  CommandT,
   Html,
   OnClick,
-  Pure,
-  PureCommand,
+  pure,
+  pureCommand,
   button,
   div,
   fold,
@@ -44,25 +44,25 @@ type LogAndSetCount = { nextCount: number; id: string }
 type SaveSuccess = { savedCount: number }
 
 const update = fold<Model, Message>({
-  Decrement: Pure(({ count }) => ({ count: count - 1 })),
-  Increment: Pure(({ count }) => ({ count: count + 1 })),
-  IncrementLater: Command(() => incrementLater('1 second')),
-  SetCount: Pure((_, { nextCount }) => ({ count: nextCount })),
-  LogAndSetCount: PureCommand((_, { nextCount, id }) => [
+  Decrement: pure(({ count }) => ({ count: count - 1 })),
+  Increment: pure(({ count }) => ({ count: count + 1 })),
+  IncrementLater: command(() => incrementLater('1 second')),
+  SetCount: pure((_, { nextCount }) => ({ count: nextCount })),
+  LogAndSetCount: pureCommand((_, { nextCount, id }) => [
     { count: nextCount },
     logCount({ count: nextCount, id }),
   ]),
-  SaveCount: PureCommand(({ count }) => [{ count }, saveToServer(count)]),
-  SaveSuccess: PureCommand((_, { savedCount }) => [
+  SaveCount: pureCommand(({ count }) => [{ count }, saveToServer(count)]),
+  SaveSuccess: pureCommand((_, { savedCount }) => [
     { count: savedCount },
     logSaveSuccess(savedCount),
   ]),
-  None: Pure((model) => model),
+  None: pure((model) => model),
 })
 
 // COMMAND
 
-const incrementLater = (duration: Duration.DurationInput): CommandT<Message> =>
+const incrementLater = (duration: Duration.DurationInput): Command<Message> =>
   makeCommand(
     Effect.gen(function* () {
       yield* Console.log('Hold, please!')
@@ -71,7 +71,7 @@ const incrementLater = (duration: Duration.DurationInput): CommandT<Message> =>
     }),
   )
 
-const logCount = ({ count, id }: { count: number; id: string }): CommandT<Message> =>
+const logCount = ({ count, id }: { count: number; id: string }): Command<Message> =>
   makeCommand(
     Effect.gen(function* () {
       yield* Console.log(`${id}-${count}`)
@@ -79,7 +79,7 @@ const logCount = ({ count, id }: { count: number; id: string }): CommandT<Messag
     }),
   )
 
-const saveToServer = (count: number): CommandT<Message> =>
+const saveToServer = (count: number): Command<Message> =>
   makeCommand(
     Effect.gen(function* () {
       yield* Console.log(`Saving count...`)
@@ -88,7 +88,7 @@ const saveToServer = (count: number): CommandT<Message> =>
     }),
   )
 
-const logSaveSuccess = (savedCount: number): CommandT<Message> =>
+const logSaveSuccess = (savedCount: number): Command<Message> =>
   makeCommand(
     Effect.gen(function* () {
       yield* Console.log(`Saved ${savedCount}`)

@@ -10,7 +10,7 @@ export class Dispatch extends Context.Tag('@foldkit/Dispatch')<
   }
 >() {}
 
-export interface CommandT<Message> {
+export interface Command<Message> {
   readonly effect: Effect.Effect<Message>
   readonly _Message: Covariant<Message>
 }
@@ -18,7 +18,7 @@ export interface CommandT<Message> {
 /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
 const phantomCovariant = <T>(): Covariant<T> => undefined as any
 
-export const makeCommand = <Message>(effect: Effect.Effect<Message>): CommandT<Message> => ({
+export const makeCommand = <Message>(effect: Effect.Effect<Message>): Command<Message> => ({
   effect,
   _Message: phantomCovariant<Message>(),
 })
