@@ -14,7 +14,6 @@ import {
   makeCommand,
   text,
 } from '@foldkit/core'
-import { ExtractTag } from 'effect/Types'
 
 // MODEL
 
@@ -44,11 +43,7 @@ type SetCount = { nextCount: number }
 type LogAndSetCount = { nextCount: number; id: string }
 type SaveSuccess = { savedCount: number }
 
-const SaveCount = PureCommand<Model, ExtractTag<Message, 'SaveCount'>, Message, Requirements>(
-  ({ count }) => [{ count }, saveToServer(count)],
-)
-
-const update = fold<Model, Message, Requirements>({
+const update = fold<Model, Message>({
   Decrement: Pure(({ count }) => ({ count: count - 1 })),
   Increment: Pure(({ count }) => ({ count: count + 1 })),
   IncrementLater: Command(() => incrementLater('1 second')),
@@ -57,7 +52,7 @@ const update = fold<Model, Message, Requirements>({
     { count: nextCount },
     logCount({ count: nextCount, id }),
   ]),
-  SaveCount,
+  SaveCount: PureCommand(({ count }) => [{ count }, saveToServer(count)]),
   SaveSuccess: PureCommand((_, { savedCount }) => [
     { count: savedCount },
     logSaveSuccess(savedCount),
@@ -67,7 +62,7 @@ const update = fold<Model, Message, Requirements>({
 
 // COMMAND
 
-const incrementLater = (duration: Duration.DurationInput): CommandT<Message, Requirements> =>
+const incrementLater = (duration: Duration.DurationInput): CommandT<Message> =>
   makeCommand(
     Effect.gen(function* () {
       yield* Console.log('Hold, please!')
@@ -76,7 +71,7 @@ const incrementLater = (duration: Duration.DurationInput): CommandT<Message, Req
     }),
   )
 
-const logCount = ({ count, id }: { count: number; id: string }): CommandT<Message, Requirements> =>
+const logCount = ({ count, id }: { count: number; id: string }): CommandT<Message> =>
   makeCommand(
     Effect.gen(function* () {
       yield* Console.log(`${id}-${count}`)
@@ -84,7 +79,7 @@ const logCount = ({ count, id }: { count: number; id: string }): CommandT<Messag
     }),
   )
 
-const saveToServer = (count: number): CommandT<Message, Requirements> =>
+const saveToServer = (count: number): CommandT<Message> =>
   makeCommand(
     Effect.gen(function* () {
       yield* Console.log(`Saving count...`)
@@ -93,7 +88,7 @@ const saveToServer = (count: number): CommandT<Message, Requirements> =>
     }),
   )
 
-const logSaveSuccess = (savedCount: number): CommandT<Message, Requirements> =>
+const logSaveSuccess = (savedCount: number): CommandT<Message> =>
   makeCommand(
     Effect.gen(function* () {
       yield* Console.log(`Saved ${savedCount}`)
@@ -133,8 +128,6 @@ const buttonRowStyle = 'flex flex-wrap justify-center gap-4'
 const buttonStyle = 'bg-black text-white hover:bg-gray-900 px-4 py-2 rounded-lg shadow transition'
 
 // RUN
-
-type Requirements = never
 
 const app = makeApp({
   init,

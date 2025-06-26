@@ -3,8 +3,6 @@ import { Covariant } from 'effect/Types'
 import { FoldReturn } from './fold'
 import { Html } from './html'
 
-export type WithDefault<R> = R | Dispatch
-
 export class Dispatch extends Context.Tag('@foldkit/Dispatch')<
   Dispatch,
   {
@@ -12,34 +10,32 @@ export class Dispatch extends Context.Tag('@foldkit/Dispatch')<
   }
 >() {}
 
-export interface CommandT<Message, R> {
-  readonly effect: Effect.Effect<Message, never, R>
+export interface CommandT<Message> {
+  readonly effect: Effect.Effect<Message>
   readonly _Message: Covariant<Message>
 }
 
 /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
 const phantomCovariant = <T>(): Covariant<T> => undefined as any
 
-export const makeCommand = <Message, R>(
-  effect: Effect.Effect<Message, never, R>,
-): CommandT<Message, R> => ({
+export const makeCommand = <Message>(effect: Effect.Effect<Message>): CommandT<Message> => ({
   effect,
   _Message: phantomCovariant<Message>(),
 })
 
-export interface RuntimeConfig<Model, Message, R> {
+export interface RuntimeConfig<Model, Message> {
   readonly init: Model
-  readonly update: FoldReturn<Model, Message, R>
-  readonly view: (model: Model) => Html<R>
+  readonly update: FoldReturn<Model, Message>
+  readonly view: (model: Model) => Html
   readonly container: HTMLElement
 }
 
-export const makeRuntime = <Model, Message, R>({
+export const makeRuntime = <Model, Message>({
   init,
   update,
   view,
   container,
-}: RuntimeConfig<Model, Message, R>): Effect.Effect<void, never, Exclude<R, Dispatch>> =>
+}: RuntimeConfig<Model, Message>): Effect.Effect<void> =>
   Effect.gen(function* () {
     const messageQueue = yield* Queue.unbounded<Message>()
     const enqueue = (message: Message) => Queue.offer(messageQueue, message)
@@ -62,7 +58,6 @@ export const makeRuntime = <Model, Message, R>({
 
     yield* render(init)
 
-    /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
     yield* Effect.forever(
       Effect.gen(function* () {
         const message = yield* Queue.take(messageQueue)
@@ -81,9 +76,9 @@ export const makeRuntime = <Model, Message, R>({
           yield* render(nextModel)
         }
       }),
-    ) as Effect.Effect<void, never, Exclude<R, Dispatch>>
+    )
   })
 
-export const makeApp = <Model, Message extends { _tag: string }, R>(
-  config: RuntimeConfig<Model, Message, R>,
-): Effect.Effect<void, never, Exclude<R, Dispatch>> => makeRuntime(config)
+export const makeApp = <Model, Message extends { _tag: string }>(
+  config: RuntimeConfig<Model, Message>,
+): Effect.Effect<void, never, never> => makeRuntime(config)
