@@ -1,5 +1,5 @@
 import { Effect, Context, Ref, Equal, Queue, Option } from 'effect'
-import { Covariant } from 'effect/Types'
+
 import { FoldReturn } from './fold'
 import { Html } from './html'
 
@@ -12,15 +12,10 @@ export class Dispatch extends Context.Tag('@foldkit/Dispatch')<
 
 export interface Command<Message> {
   readonly effect: Effect.Effect<Message>
-  readonly _Message: Covariant<Message>
 }
-
-/* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-const phantomCovariant = <T>(): Covariant<T> => undefined as any
 
 export const makeCommand = <Message>(effect: Effect.Effect<Message>): Command<Message> => ({
   effect,
-  _Message: phantomCovariant<Message>(),
 })
 
 export interface RuntimeConfig<Model, Message> {
