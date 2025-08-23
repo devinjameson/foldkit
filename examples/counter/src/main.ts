@@ -33,15 +33,12 @@ type Message = Data.TaggedEnum<{
   IncrementLater: {}
   SetCount: SetCount
   LogAndSetCount: LogAndSetCount
-  SaveCount: {}
-  SaveSuccess: SaveSuccess
   None: {}
 }>
 const Message = Data.taggedEnum<Message>()
 
 type SetCount = { nextCount: number }
 type LogAndSetCount = { nextCount: number; id: string }
-type SaveSuccess = { savedCount: number }
 
 const update = fold<Model, Message>({
   Decrement: pure(({ count }) => ({ count: count - 1 })),
@@ -51,11 +48,6 @@ const update = fold<Model, Message>({
   LogAndSetCount: pureCommand((_, { nextCount, id }) => [
     { count: nextCount },
     logCount({ count: nextCount, id }),
-  ]),
-  SaveCount: pureCommand(({ count }) => [{ count }, saveToServer(count)]),
-  SaveSuccess: pureCommand((_, { savedCount }) => [
-    { count: savedCount },
-    logSaveSuccess(savedCount),
   ]),
   None: pure((model) => model),
 })
@@ -79,23 +71,6 @@ const logCount = ({ count, id }: { count: number; id: string }): Command<Message
     }),
   )
 
-const saveToServer = (count: number): Command<Message> =>
-  makeCommand(
-    Effect.gen(function* () {
-      yield* Console.log(`Saving count...`)
-      yield* Effect.sleep('2 seconds')
-      return Message.SaveSuccess({ savedCount: count })
-    }),
-  )
-
-const logSaveSuccess = (savedCount: number): Command<Message> =>
-  makeCommand(
-    Effect.gen(function* () {
-      yield* Console.log(`Saved ${savedCount}`)
-      return Message.None()
-    }),
-  )
-
 // VIEW
 
 const view = (model: Model): Html =>
@@ -108,7 +83,6 @@ const view = (model: Model): Html =>
         [
           button([OnClick(Message.Decrement()), Class(buttonStyle)], ['-']),
           button([OnClick(Message.SetCount({ nextCount: 0 })), Class(buttonStyle)], ['Reset']),
-          button([OnClick(Message.SaveCount()), Class(buttonStyle)], ['Save']),
           button([OnClick(Message.IncrementLater()), Class(buttonStyle)], ['+ in 1s']),
           button([OnClick(Message.Increment()), Class(buttonStyle)], ['+']),
         ],
