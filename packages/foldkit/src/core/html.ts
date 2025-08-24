@@ -8,9 +8,12 @@ export type Attribute<Message> = Data.TaggedEnum<{
   Class: { readonly value: string }
   Id: { readonly value: string }
   OnClick: { readonly message: Message }
+  OnChange: { readonly f: (value: string) => Message }
   Value: { readonly value: string }
   Placeholder: { readonly value: string }
   Disabled: { readonly value: boolean }
+  Type: { readonly value: string }
+  Min: { readonly value: string }
 }>
 
 interface AttributeDefinition extends Data.TaggedEnum.WithGenerics<1> {
@@ -19,15 +22,23 @@ interface AttributeDefinition extends Data.TaggedEnum.WithGenerics<1> {
 
 export const {
   Class: Class_,
-  Id,
+  Id: Id_,
   OnClick: OnClick_,
-  Value,
+  OnChange: OnChange_,
+  Value: Value_,
   Placeholder,
   Disabled,
+  Type: Type_,
+  Min: Min_,
 } = Data.taggedEnum<AttributeDefinition>()
 
 export const Class = (value: string) => Class_({ value })
 export const OnClick = <Message>(message: Message) => OnClick_({ message })
+export const Id = (value: string) => Id_({ value })
+export const OnChange = <Message>(f: (value: string) => Message) => OnChange_({ f })
+export const Value = (value: string) => Value_({ value })
+export const Type = (value: string) => Type_({ value })
+export const Min = (value: string) => Min_({ value })
 
 export const applyAttributes = <Message>(
   element: HTMLElement,
@@ -53,6 +64,16 @@ export const applyAttributes = <Message>(
                 Effect.runSync(dispatch(message))
               })
             }),
+          OnChange: ({ f }) =>
+            Effect.sync(() => {
+              if (element instanceof HTMLInputElement) {
+                element.addEventListener('input', (event) => {
+                  /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+                  const target = event.target as HTMLInputElement
+                  Effect.runSync(dispatch(f(target.value)))
+                })
+              }
+            }),
           Value: ({ value }) =>
             Effect.sync(() => {
               if (element instanceof HTMLInputElement) {
@@ -69,6 +90,18 @@ export const applyAttributes = <Message>(
             Effect.sync(() => {
               if (element instanceof HTMLInputElement || element instanceof HTMLButtonElement) {
                 element.disabled = value
+              }
+            }),
+          Type: ({ value }) =>
+            Effect.sync(() => {
+              if (element instanceof HTMLInputElement) {
+                element.type = value
+              }
+            }),
+          Min: ({ value }) =>
+            Effect.sync(() => {
+              if (element instanceof HTMLInputElement) {
+                element.min = value
               }
             }),
         }),

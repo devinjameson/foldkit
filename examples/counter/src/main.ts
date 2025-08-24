@@ -1,4 +1,4 @@
-import { Console, Data, Duration, Effect } from 'effect'
+import { Console, Data, Duration, Effect, Function, Stream } from 'effect'
 import {
   Class,
   command,
@@ -13,16 +13,27 @@ import {
   makeApp,
   makeCommand,
   text,
+  input,
+  Id,
+  OnChange,
+  Value,
+  CommandStreams,
+  Type,
+  Min,
 } from '@foldkit/core'
 
 // MODEL
 
 type Model = {
   count: number
+  incrementIntervalSeconds: number
+  decrementIntervalSeconds: number
 }
 
 const init: Model = {
   count: 0,
+  incrementIntervalSeconds: 0,
+  decrementIntervalSeconds: 0,
 }
 
 // UPDATE
@@ -33,6 +44,8 @@ type Message = Data.TaggedEnum<{
   IncrementLater: {}
   SetCount: SetCount
   LogAndSetCount: LogAndSetCount
+  ChangeIncrementInterval: { incrementIntervalSeconds: number }
+  ChangeDecrementInterval: { decrementIntervalSeconds: number }
   None: {}
 }>
 const Message = Data.taggedEnum<Message>()
@@ -41,15 +54,23 @@ type SetCount = { nextCount: number }
 type LogAndSetCount = { nextCount: number; id: string }
 
 const update = fold<Model, Message>({
-  Decrement: pure(({ count }) => ({ count: count - 1 })),
-  Increment: pure(({ count }) => ({ count: count + 1 })),
+  Decrement: pure((model) => ({ ...model, count: model.count - 1 })),
+  Increment: pure((model) => ({ ...model, count: model.count + 1 })),
   IncrementLater: command(() => incrementLater('1 second')),
-  SetCount: pure((_, { nextCount }) => ({ count: nextCount })),
-  LogAndSetCount: pureCommand((_, { nextCount, id }) => [
-    { count: nextCount },
+  SetCount: pure((model, { nextCount }) => ({ ...model, count: nextCount })),
+  LogAndSetCount: pureCommand((model, { nextCount, id }) => [
+    { ...model, count: nextCount },
     logCount({ count: nextCount, id }),
   ]),
-  None: pure((model) => model),
+  ChangeIncrementInterval: pure((model, { incrementIntervalSeconds }) => ({
+    ...model,
+    incrementIntervalSeconds,
+  })),
+  ChangeDecrementInterval: pure((model, { decrementIntervalSeconds }) => ({
+    ...model,
+    decrementIntervalSeconds,
+  })),
+  None: pure(Function.identity),
 })
 
 // COMMAND
@@ -71,13 +92,48 @@ const logCount = ({ count, id }: { count: number; id: string }): Command<Message
     }),
   )
 
+// COMMAND STREAM
+
+const changeCountStream =
+  (message: Message) =>
+  (incrementIntervalSeconds: number): Stream.Stream<Command<Message>> =>
+    Stream.when(
+      Stream.tick(Duration.seconds(incrementIntervalSeconds)).pipe(
+        Stream.drop(1),
+        Stream.map(() => makeCommand(Effect.succeed(message))),
+      ),
+      () => incrementIntervalSeconds > 0,
+    )
+
+type StreamDepsMap = {
+  incrementTimer: number
+  decrementTimer: number
+}
+
+const commandStreams: CommandStreams<Model, Message, StreamDepsMap> = {
+  incrementTimer: {
+    deps: (model: Model) => model.incrementIntervalSeconds,
+    stream: changeCountStream(Message.Increment()),
+  },
+  decrementTimer: {
+    deps: (model: Model) => model.decrementIntervalSeconds,
+    stream: changeCountStream(Message.Decrement()),
+  },
+}
+
 // VIEW
+
+const handleChangeIncrementInterval = (value: string): Message =>
+  Message.ChangeIncrementInterval({ incrementIntervalSeconds: parseInt(value) })
+
+const handleChangeDecrementInterval = (value: string): Message =>
+  Message.ChangeDecrementInterval({ decrementIntervalSeconds: parseInt(value) })
 
 const view = (model: Model): Html =>
   div(
     [Class(pageStyle)],
     [
-      div([Class(countStyle)], [text(String(model.count))]),
+      div([Class(countStyle)], [text(model.count.toString())]),
       div(
         [Class(buttonRowStyle)],
         [
@@ -85,6 +141,34 @@ const view = (model: Model): Html =>
           button([OnClick(Message.SetCount({ nextCount: 0 })), Class(buttonStyle)], ['Reset']),
           button([OnClick(Message.IncrementLater()), Class(buttonStyle)], ['+ in 1s']),
           button([OnClick(Message.Increment()), Class(buttonStyle)], ['+']),
+        ],
+      ),
+      div(
+        [Class('flex flex-col gap-2')],
+        [
+          text('Auto-increment every (seconds):'),
+          input([
+            Id('increment-interval'),
+            Value(model.incrementIntervalSeconds.toString()),
+            OnChange(handleChangeIncrementInterval),
+            Class('border p-2 rounded'),
+            Type('number'),
+            Min('0'),
+          ]),
+        ],
+      ),
+      div(
+        [Class('flex flex-col gap-2')],
+        [
+          text('Auto-decrement every (seconds):'),
+          input([
+            Id('decrement-interval'),
+            Value(model.decrementIntervalSeconds.toString()),
+            OnChange(handleChangeDecrementInterval),
+            Class('border p-2 rounded'),
+            Type('number'),
+            Min('0'),
+          ]),
         ],
       ),
     ],
@@ -107,6 +191,7 @@ const app = makeApp({
   init,
   update,
   view,
+  commandStreams,
   container: document.body,
 })
 

@@ -1,4 +1,4 @@
-import { Effect, Context, Ref, Equal, Queue, Option } from 'effect'
+import { Effect, Context, Ref, Equal, Queue, Option, Stream, Record, pipe, PubSub } from 'effect'
 
 import { FoldReturn } from './fold'
 import { Html } from './html'
@@ -18,24 +18,56 @@ export const makeCommand = <Message>(effect: Effect.Effect<Message>): Command<Me
   effect,
 })
 
-export interface RuntimeConfig<Model, Message> {
+export interface RuntimeConfig<Model, Message, StreamDepsMap extends Record<string, unknown>> {
   readonly init: Model
   readonly update: FoldReturn<Model, Message>
   readonly view: (model: Model) => Html
+  readonly commandStreams?: CommandStreams<Model, Message, StreamDepsMap>
   readonly container: HTMLElement
 }
 
-export const makeRuntime = <Model, Message>({
+export type CommandStreamConfig<Model, Message, StreamDeps> = {
+  readonly deps: (model: Model) => StreamDeps
+  readonly stream: (deps: StreamDeps) => Stream.Stream<Command<Message>>
+}
+
+export type CommandStreams<Model, Message, StreamDepsMap extends Record<string, unknown>> = {
+  readonly [K in keyof StreamDepsMap]: CommandStreamConfig<Model, Message, StreamDepsMap[K]>
+}
+
+export const makeRuntime = <Model, Message, StreamDepsMap extends Record<string, unknown>>({
   init,
   update,
   view,
+  commandStreams,
   container,
-}: RuntimeConfig<Model, Message>): Effect.Effect<void> =>
+}: RuntimeConfig<Model, Message, StreamDepsMap>): Effect.Effect<void> =>
   Effect.gen(function* () {
     const messageQueue = yield* Queue.unbounded<Message>()
-    const enqueue = (message: Message) => Queue.offer(messageQueue, message)
+    const enqueueMessage = (message: Message) => Queue.offer(messageQueue, message)
+
+    const modelPubSub = yield* PubSub.unbounded<Model>()
+    const publishModel = (model: Model) => PubSub.publish(modelPubSub, model)
+
+    const modelStream = Stream.fromPubSub(modelPubSub)
 
     const modelRef = yield* Ref.make<Model>(init)
+
+    if (commandStreams) {
+      yield* pipe(
+        Record.toEntries(commandStreams),
+        Effect.forEach(([_key, { deps, stream }]) =>
+          Effect.forkDaemon(
+            modelStream.pipe(
+              Stream.map(deps),
+              Stream.changes,
+              Stream.flatMap(stream, { switch: true }),
+              Stream.runForEach(({ effect }) => effect.pipe(Effect.flatMap(enqueueMessage))),
+            ),
+          ),
+        ),
+      )
+    }
 
     const render = (model: Model) =>
       view(model).pipe(
@@ -47,7 +79,7 @@ export const makeRuntime = <Model, Message>({
         ),
         Effect.provideService(Dispatch, {
           /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-          dispatch: (message: unknown) => enqueue(message as Message),
+          dispatch: (message: unknown) => enqueueMessage(message as Message),
         }),
       )
 
@@ -63,17 +95,23 @@ export const makeRuntime = <Model, Message>({
 
         yield* Option.match(command, {
           onNone: () => Effect.void,
-          onSome: (command) => Effect.forkDaemon(command.effect.pipe(Effect.flatMap(enqueue))),
+          onSome: (command) =>
+            Effect.forkDaemon(command.effect.pipe(Effect.flatMap(enqueueMessage))),
         })
 
         if (!Equal.equals(currentModel, nextModel)) {
           yield* Ref.set(modelRef, nextModel)
           yield* render(nextModel)
+          yield* publishModel(nextModel)
         }
       }),
     )
   })
 
-export const makeApp = <Model, Message extends { _tag: string }>(
-  config: RuntimeConfig<Model, Message>,
+export const makeApp = <
+  Model,
+  Message extends { _tag: string },
+  StreamDepsMap extends Record<string, unknown>,
+>(
+  config: RuntimeConfig<Model, Message, StreamDepsMap>,
 ): Effect.Effect<void, never, never> => makeRuntime(config)
