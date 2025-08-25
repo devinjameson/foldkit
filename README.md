@@ -170,7 +170,7 @@ pnpm install @foldkit/core
 
 - [x] Core program loop with ADT-based update
 - [x] DOM rendering
-- [ ] Optimized DOM rendering (minimal diffs, efficient updates)
+- [x] Optimized DOM rendering (minimal diffs, efficient updates)
 - [ ] Router integration
 - [ ] Devtools + tracing
 

@@ -12,7 +12,6 @@ import {
   fold,
   makeApp,
   makeCommand,
-  text,
   input,
   Id,
   OnChange,
@@ -133,7 +132,7 @@ const view = (model: Model): Html =>
   div(
     [Class(pageStyle)],
     [
-      div([Class(countStyle)], [text(model.count.toString())]),
+      div([Class(countStyle)], [model.count.toString()]),
       div(
         [Class(buttonRowStyle)],
         [
@@ -146,7 +145,7 @@ const view = (model: Model): Html =>
       div(
         [Class('flex flex-col gap-2')],
         [
-          text('Auto-increment every (seconds):'),
+          'Auto-increment every (seconds):',
           input([
             Id('increment-interval'),
             Value(model.incrementIntervalSeconds.toString()),
@@ -160,7 +159,7 @@ const view = (model: Model): Html =>
       div(
         [Class('flex flex-col gap-2')],
         [
-          text('Auto-decrement every (seconds):'),
+          'Auto-decrement every (seconds):',
           input([
             Id('decrement-interval'),
             Value(model.decrementIntervalSeconds.toString()),

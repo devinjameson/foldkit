@@ -2,6 +2,7 @@ import { Effect, Context, Ref, Equal, Queue, Option, Stream, Record, pipe, PubSu
 
 import { FoldReturn } from './fold'
 import { Html } from './html'
+import { VNode, patch } from './vdom'
 
 export class Dispatch extends Context.Tag('@foldkit/Dispatch')<
   Dispatch,
@@ -53,6 +54,8 @@ export const makeRuntime = <Model, Message, StreamDepsMap extends Record<string,
 
     const modelRef = yield* Ref.make<Model>(init)
 
+    const previousVNodeRef = yield* Ref.make<Option.Option<VNode>>(Option.none())
+
     if (commandStreams) {
       yield* pipe(
         Record.toEntries(commandStreams),
@@ -71,10 +74,18 @@ export const makeRuntime = <Model, Message, StreamDepsMap extends Record<string,
 
     const render = (model: Model) =>
       view(model).pipe(
-        Effect.tap((htmlElement) =>
-          Effect.sync(() => {
-            container.innerHTML = ''
-            container.appendChild(htmlElement)
+        Effect.flatMap((newVNode) =>
+          Effect.gen(function* () {
+            const previousVNode = yield* Ref.get(previousVNodeRef)
+
+            const patchedVNode = yield* Effect.sync(() =>
+              Option.match(previousVNode, {
+                onNone: () => patch(container, newVNode),
+                onSome: (prev) => patch(prev, newVNode),
+              }),
+            )
+
+            yield* Ref.set(previousVNodeRef, Option.some(patchedVNode))
           }),
         ),
         Effect.provideService(Dispatch, {
