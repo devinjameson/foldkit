@@ -99,7 +99,7 @@ const changeCountStream =
     Stream.when(
       Stream.tick(Duration.seconds(incrementIntervalSeconds)).pipe(
         Stream.drop(1),
-        Stream.map(() => makeCommand(Effect.succeed(message))),
+        Stream.map(() => makeCommand(Effect.sync(() => message))),
       ),
       () => incrementIntervalSeconds > 0,
     )
