@@ -103,26 +103,23 @@ const floorAndPad = flow(Math.floor, (v) => v.toString(), String.padStart(2, '0'
 
 const view = (model: Model): Html =>
   div(
-    [Class('min-h-screen bg-gray-100 flex items-center justify-center')],
+    [Class('min-h-screen bg-gray-200 flex items-center justify-center')],
     [
       div(
-        [Class('bg-white rounded-lg shadow-lg p-8 text-center')],
+        [Class('bg-white text-center')],
         [
           div(
-            [Class('text-6xl font-mono font-bold text-gray-800 mb-8')],
+            [Class('text-6xl font-mono font-bold text-gray-800 p-8')],
             [formatTime(model.elapsedMs)],
           ),
           div(
-            [Class('flex gap-4 justify-center')],
+            [Class('flex')],
             [
-              startStopButton(model.isRunning),
               button(
-                [
-                  OnClick(Message.Reset()),
-                  Class(buttonStyle + ' bg-gray-500 hover:bg-gray-600 text-white'),
-                ],
+                [OnClick(Message.Reset()), Class(buttonStyle + ' bg-gray-500 hover:bg-gray-600')],
                 ['Reset'],
               ),
+              startStopButton(model.isRunning),
             ],
           ),
         ],
@@ -133,20 +130,17 @@ const view = (model: Model): Html =>
 const startStopButton = (isRunning: boolean): Html =>
   isRunning
     ? button(
-        [OnClick(Message.Stop()), Class(buttonStyle + ' bg-red-500 hover:bg-red-600 text-white')],
+        [OnClick(Message.Stop()), Class(buttonStyle + ' bg-red-500 hover:bg-red-600')],
         ['Stop'],
       )
     : button(
-        [
-          OnClick(Message.Start()),
-          Class(buttonStyle + ' bg-green-500 hover:bg-green-600 text-white'),
-        ],
+        [OnClick(Message.Start()), Class(buttonStyle + ' bg-green-500 hover:bg-green-600')],
         ['Start'],
       )
 
 // STYLE
 
-const buttonStyle = 'px-6 py-3 rounded-lg font-semibold transition-colors'
+const buttonStyle = 'px-6 py-4 flex-1 font-semibold text-white transition-colors'
 
 // RUN
 
