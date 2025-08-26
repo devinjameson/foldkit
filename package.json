@@ -6,7 +6,7 @@
   "scripts": {
     "format": "prettier -w .",
     "dev:core": "pnpm --filter @foldkit/core run watch",
-    "dev:demo": "pnpm --filter counter-example run dev"
+    "dev:example:counter": "pnpm --filter counter-example run dev"
   },
   "devDependencies": {
     "eslint": "^9.29.0",
