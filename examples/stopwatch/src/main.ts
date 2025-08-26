@@ -47,6 +47,9 @@ const update = fold<Model, Message>({
   })),
   Stop: pure((model) => ({ ...model, isRunning: false })),
   Reset: pure(
+    // TODO: We should not have to explicity type this. It should be able to
+    // widen the type to Model. Right now it's upset about isRunning being false
+    // and not boolean.
     (): Model => ({
       elapsedMs: 0,
       isRunning: false,
