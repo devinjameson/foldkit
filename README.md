@@ -18,9 +18,23 @@ Apps built with Foldkit unfold through messages — each one folded into state, 
 
 ---
 
-## Example
+## Examples
 
-See the full example at [examples/counter/src/main.ts](https://github.com/devinjameson/foldkit/blob/main/examples/counter/src/main.ts)
+Current examples:
+- **[Counter](examples/counter/src/main.ts)** - Simple increment/decrement with reset
+- **[Stopwatch](examples/stopwatch/src/main.ts)** - Timer with start/stop/reset functionality
+- **[Weather](examples/weather/src/main.ts)** - HTTP requests with async state handling
+
+### Coming Next
+
+1. **Todo List** - CRUD operations with localStorage persistence
+1. **Form with Validation** - Multiple input types with client-side validation
+1. **Multi-page App** - URL routing with navigation and route parameters
+1. **Data Table** - API-driven table with sorting, filtering, and pagination
+
+### Simple Counter Example
+
+See the full example at [examples/counter/src/main.ts](examples/counter/src/main.ts)
 
 ```ts
 import { Data, Effect } from 'effect'
