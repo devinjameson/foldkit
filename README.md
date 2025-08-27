@@ -1,6 +1,6 @@
 # Foldkit
 
-**Foldkit** is a composable toolkit for building structured user interfaces with [Effect](https://effect.website/) and TypeScript.
+**Foldkit** is a functional UI framework built on [Effect](https://effect.website/) and TypeScript.
 
 It draws inspiration from Elm, React, and functional architecture principles — enabling clear state transitions, precise side effects, and predictable UI.
 
@@ -10,11 +10,11 @@ It draws inspiration from Elm, React, and functional architecture principles —
 
 ## Philosophy
 
-Apps built with Foldkit unfold through messages — each one folded into state, predictably and purely.
+Foldkit applies functional programming principles to UI development:
 
-- **Model first** — State is explicit, local, and testable.
-- **Precise effects** — Side effects are described, not performed, using [Effect](https://effect.website/).
-- **Composability > configuration** — Everything is just a value.
+- **Pure update functions** — State transitions are deterministic functions: `(model: Model, message: Message): Model` is the only way to change state.
+- **Controlled side effects** — Side effects are described as `Command<Message>` values and executed by the runtime, not performed directly in update functions.
+- **Explicit state transitions** — Every state change is modeled as a specific message type. Every state change is captured in the update function.
 
 ---
 
