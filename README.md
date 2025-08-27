@@ -23,119 +23,64 @@ Apps built with Foldkit unfold through messages — each one folded into state, 
 See the full example at [examples/counter/src/main.ts](https://github.com/devinjameson/foldkit/blob/main/examples/counter/src/main.ts)
 
 ```ts
-import { Console, Data, Duration, Effect } from 'effect'
-import {
-  button,
-  Command,
-  div,
-  OnClick,
-  runApp,
-  text,
-  fold,
-  pure,
-  command,
-  pureCommand,
-  Class,
-  Html,
-} from '@foldkit/core'
+import { Data, Effect } from 'effect'
+import { Class, Html, OnClick, button, div, fold, makeApp, updateConstructors } from '@foldkit/core'
 
 // MODEL
 
-type Model = {
-  count: number
-}
+type Model = number
 
-const init: Model = {
-  count: 0,
-}
+const init: Model = 0
 
 // UPDATE
 
 type Message = Data.TaggedEnum<{
   Decrement: {}
   Increment: {}
-  IncrementLater: {}
-  SetCount: SetCount
-  LogAndSetCount: LogAndSetCount
-  SaveCount: {}
-  SaveSuccess: SaveSuccess
-  None: {}
+  Reset: {}
 }>
 const Message = Data.taggedEnum<Message>()
 
-type SetCount = { nextCount: number }
-type LogAndSetCount = { nextCount: number; id: string }
-type SaveSuccess = { savedCount: number }
+const { pure } = updateConstructors<Model, Message>()
 
 const update = fold<Model, Message>({
-  Decrement: ({ count }) => pure({ count: count - 1 }),
-  Increment: ({ count }) => pure({ count: count + 1 }),
-  IncrementLater: command(() => incrementLater('1 second')),
-  SetCount: (_model, { nextCount }) => pure({ count: nextCount }),
-  LogAndSetCount: (_model, { nextCount, id }) =>
-    pureCommand({ count: nextCount }, () => logCount({ count: nextCount, id })),
-  SaveCount: ({ count }) => pureCommand({ count }, () => saveToServer(count)),
-  SaveSuccess: (_model, { savedCount }) =>
-    pureCommand({ count: savedCount }, () => logSaveSuccess(savedCount)),
-  None: pure,
+  Decrement: pure((count) => count - 1),
+  Increment: pure((count) => count + 1),
+  Reset: pure(() => 0),
 })
-
-// COMMAND
-
-const incrementLater = (duration: Duration.DurationInput): Command<Message> =>
-  Effect.gen(function* () {
-    yield* Console.log('Hold, please!')
-    yield* Effect.sleep(duration)
-    return Message.Increment()
-  })
-
-const logCount = ({ count, id }: { count: number; id: string }): Command<Message> =>
-  Effect.gen(function* () {
-    yield* Console.log(`${id}-${count}`)
-    return Message.None()
-  })
-
-const saveToServer = (count: number): Command<Message> =>
-  Effect.gen(function* () {
-    yield* Console.log(`Saving count...`)
-    yield* Effect.sleep('2 seconds')
-    return Message.SaveSuccess({ savedCount: count })
-  })
-
-const logSaveSuccess = (savedCount: number): Command<Message> =>
-  Effect.gen(function* () {
-    yield* Console.log(`Saved ${savedCount}`)
-    return Message.None()
-  })
 
 // VIEW
 
-const view = (model: Model): Html =>
+const view = (count: Model): Html =>
   div(
-    [Class(pageStyle)],
+    [Class('min-h-screen bg-white flex flex-col items-center justify-center gap-6 p-6')],
     [
-      div([Class(countStyle)], [text(String(model.count))]),
+      div([Class('text-6xl font-bold text-gray-800')], [count.toString()]),
       div(
-        [Class(buttonRowStyle)],
+        [Class('flex flex-wrap justify-center gap-4')],
         [
           button([OnClick(Message.Decrement()), Class(buttonStyle)], ['-']),
-          button([OnClick(Message.SetCount({ nextCount: 0 })), Class(buttonStyle)], ['Reset']),
-          button([OnClick(Message.SaveCount()), Class(buttonStyle)], ['Save']),
-          button([OnClick(Message.IncrementLater()), Class(buttonStyle)], ['+ in 1s']),
+          button([OnClick(Message.Reset()), Class(buttonStyle)], ['Reset']),
           button([OnClick(Message.Increment()), Class(buttonStyle)], ['+']),
         ],
       ),
     ],
   )
 
+// STYLE
+
+const buttonStyle = 'bg-black text-white hover:bg-gray-700 px-4 py-2 transition'
+
 // RUN
 
-runApp<Model, Message>({
+const app = makeApp({
   init,
   update,
   view,
   container: document.body,
 })
+
+Effect.runFork(app)
 ```
 
 ---
