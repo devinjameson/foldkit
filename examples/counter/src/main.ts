@@ -1,12 +1,9 @@
 import { Console, Data, Duration, Effect, Function, Stream } from 'effect'
 import {
   Class,
-  command,
   Command,
   Html,
   OnClick,
-  pure,
-  pureCommand,
   button,
   div,
   fold,
@@ -19,6 +16,7 @@ import {
   CommandStreams,
   Type,
   Min,
+  updateConstructors,
 } from '@foldkit/core'
 
 // MODEL
@@ -51,6 +49,8 @@ const Message = Data.taggedEnum<Message>()
 
 type SetCount = { nextCount: number }
 type LogAndSetCount = { nextCount: number; id: string }
+
+const { pure, command, pureCommand } = updateConstructors<Model, Message>()
 
 const update = fold<Model, Message>({
   Decrement: pure((model) => ({ ...model, count: model.count - 1 })),

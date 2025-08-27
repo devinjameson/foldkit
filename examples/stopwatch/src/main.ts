@@ -6,7 +6,7 @@ import {
   button,
   OnClick,
   fold,
-  pure,
+  updateConstructors,
   makeApp,
   makeCommand,
   CommandStreams,
@@ -39,6 +39,8 @@ type Message = Data.TaggedEnum<{
 
 const Message = Data.taggedEnum<Message>()
 
+const { pure } = updateConstructors<Model, Message>()
+
 const update = fold<Model, Message>({
   Start: pure((model) => ({
     ...model,
@@ -46,16 +48,11 @@ const update = fold<Model, Message>({
     startTime: Option.some(Date.now() - model.elapsedMs),
   })),
   Stop: pure((model) => ({ ...model, isRunning: false })),
-  Reset: pure(
-    // TODO: We should not have to explicity type this. It should be able to
-    // widen the type to Model. Right now it's upset about isRunning being false
-    // and not boolean.
-    (): Model => ({
-      elapsedMs: 0,
-      isRunning: false,
-      startTime: Option.none(),
-    }),
-  ),
+  Reset: pure(() => ({
+    elapsedMs: 0,
+    isRunning: false,
+    startTime: Option.none(),
+  })),
   Tick: pure((model, { currentTime }) =>
     Option.match(model.startTime, {
       onNone: () => model,
