@@ -1,0 +1,19 @@
+{
+  "name": "weather-example",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@foldkit/core": "workspace:*",
+    "@tailwindcss/vite": "^4.1.10",
+    "effect": "^3.16.8",
+    "tailwindcss": "^4.1.10"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}

@@ -4,7 +4,7 @@ import { VNode } from './vdom'
 import { h } from 'snabbdom'
 import type { VNodeData } from 'snabbdom'
 
-export type Html = Effect.Effect<VNode, never, Dispatch>
+export type Html = Effect.Effect<VNode | null, never, Dispatch>
 export type Child = Html | string
 
 export type Attribute<Message> = Data.TaggedEnum<{
@@ -29,7 +29,7 @@ export const {
   OnClick: OnClick_,
   OnChange: OnChange_,
   Value: Value_,
-  Placeholder,
+  Placeholder: Placeholder_,
   Disabled,
   Type: Type_,
   Min: Min_,
@@ -40,6 +40,7 @@ export const OnClick = <Message>(message: Message) => OnClick_({ message })
 export const Id = (value: string) => Id_({ value })
 export const OnChange = <Message>(f: (value: string) => Message) => OnChange_({ f })
 export const Value = (value: string) => Value_({ value })
+export const Placeholder = (value: string) => Placeholder_({ value })
 export const Type = (value: string) => Type_({ value })
 export const Min = (value: string) => Min_({ value })
 
@@ -125,9 +126,9 @@ const processVNodeChildren = (
 ): Effect.Effect<(VNode | string)[], never, Dispatch> =>
   Effect.forEach(
     children,
-    (child): Effect.Effect<VNode | string, never, Dispatch> =>
+    (child): Effect.Effect<VNode | string | null, never, Dispatch> =>
       Predicate.isString(child) ? Effect.succeed(child) : child,
-  )
+  ).pipe(Effect.map(Array.filter(Predicate.isNotNull)))
 
 export const createElement = <Message>(
   tagName: string,
@@ -176,3 +177,5 @@ export const option = element('option')
 
 export const input = voidElement('input')
 export const img = voidElement('img')
+
+export const empty: Html = Effect.succeed(null)

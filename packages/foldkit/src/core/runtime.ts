@@ -1,8 +1,21 @@
-import { Effect, Context, Ref, Equal, Queue, Option, Stream, Record, pipe, PubSub } from 'effect'
+import {
+  Effect,
+  Context,
+  Ref,
+  Equal,
+  Queue,
+  Option,
+  Stream,
+  Record,
+  pipe,
+  PubSub,
+  Predicate,
+} from 'effect'
 
 import { FoldReturn } from './fold'
 import { Html } from './html'
 import { VNode, patch } from './vdom'
+import { h } from 'snabbdom'
 
 export class Dispatch extends Context.Tag('@foldkit/Dispatch')<
   Dispatch,
@@ -78,12 +91,13 @@ export const makeRuntime = <Model, Message, StreamDepsMap extends Record<string,
           Effect.gen(function* () {
             const previousVNode = yield* Ref.get(previousVNodeRef)
 
-            const patchedVNode = yield* Effect.sync(() =>
-              Option.match(previousVNode, {
-                onNone: () => patch(container, newVNode),
-                onSome: (prev) => patch(prev, newVNode),
-              }),
-            )
+            const patchedVNode = yield* Effect.sync(() => {
+              const vnode = Predicate.isNotNull(newVNode) ? newVNode : h('#text', {}, '')
+              return Option.match(previousVNode, {
+                onNone: () => patch(container, vnode),
+                onSome: (prev) => patch(prev, vnode),
+              })
+            })
 
             yield* Ref.set(previousVNodeRef, Option.some(patchedVNode))
           }),
