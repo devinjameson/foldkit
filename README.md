@@ -1,6 +1,6 @@
 # Foldkit
 
-**Foldkit** is a functional UI framework built on [Effect](https://effect.website/) and TypeScript.
+**Foldkit** is a functional UI library powered by [Effect](https://effect.website/).
 
 It draws inspiration from Elm, React, and functional architecture principles — enabling clear state transitions, precise side effects, and predictable UI.
 
