@@ -1,39 +1,4 @@
 {
   "references": [{ "path": "packages/foldkit" }],
-  "files": [],
-  "compilerOptions": {
-    "noEmit": true,
-    "allowImportingTsExtensions": true,
-    "module": "ESNext",
-    "moduleResolution": "node",
-    "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
-    "noImplicitReturns": true,
-    "noImplicitOverride": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noPropertyAccessFromIndexSignature": true,
-
-    "resolveJsonModule": true,
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-
-    "types": ["vite/client"],
-
-    "baseUrl": ".",
-
-    "paths": {
-      "@foldkit/core": ["packages/foldkit/src/index.ts"],
-      "@foldkit/core/*": ["packages/foldkit/src/*"]
-    }
-  },
-  "include": [],
-  "exclude": ["dist", "node_modules"]
+  "files": []
 }
