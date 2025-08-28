@@ -1,4 +1,4 @@
-import { Array, Data, Effect, String } from 'effect'
+import { Array, Data, Effect, Option, String } from 'effect'
 import {
   Class,
   Html,
@@ -22,6 +22,7 @@ import {
   updateConstructors,
   Command,
   empty,
+  Init,
 } from '@foldkit/core'
 
 // MODEL
@@ -46,11 +47,6 @@ const WeatherAsyncResult = Data.taggedEnum<WeatherAsyncResult>()
 type Model = {
   locationInput: string
   weather: WeatherAsyncResult
-}
-
-const init: Model = {
-  locationInput: '',
-  weather: WeatherAsyncResult.Init(),
 }
 
 // UPDATE
@@ -86,6 +82,16 @@ const update = fold<Model, Message>({
     weather: WeatherAsyncResult.Failure({ error }),
   })),
 })
+
+// INIT
+
+const init: Init<Model, Message> = () => [
+  {
+    locationInput: '',
+    weather: WeatherAsyncResult.Init(),
+  },
+  Option.none(),
+]
 
 // COMMAND
 

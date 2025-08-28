@@ -10,6 +10,7 @@ import {
   makeApp,
   makeCommand,
   CommandStreams,
+  Init,
 } from '@foldkit/core'
 
 const TICK_INTERVAL_MS = 10
@@ -20,12 +21,6 @@ type Model = {
   elapsedMs: number
   isRunning: boolean
   startTime: Option.Option<number>
-}
-
-const init: Model = {
-  elapsedMs: 0,
-  isRunning: false,
-  startTime: Option.none(),
 }
 
 // UPDATE
@@ -60,6 +55,17 @@ const update = fold<Model, Message>({
     }),
   ),
 })
+
+// INIT
+
+const init: Init<Model, Message> = () => [
+  {
+    elapsedMs: 0,
+    isRunning: false,
+    startTime: Option.none(),
+  },
+  Option.none(),
+]
 
 // COMMAND STREAM
 

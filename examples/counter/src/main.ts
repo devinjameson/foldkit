@@ -1,11 +1,20 @@
-import { Data, Effect } from 'effect'
-import { Class, Html, OnClick, button, div, fold, makeApp, updateConstructors } from '@foldkit/core'
+import { Data, Effect, Option } from 'effect'
+import {
+  Class,
+  Html,
+  Init,
+  OnClick,
+  Update,
+  button,
+  div,
+  fold,
+  makeApp,
+  updateConstructors,
+} from '@foldkit/core'
 
 // MODEL
 
 type Model = number
-
-const init: Model = 0
 
 // UPDATE
 
@@ -23,6 +32,10 @@ const update = fold<Model, Message>({
   Increment: pure((count) => count + 1),
   Reset: pure(() => 0),
 })
+
+// INIT
+
+const init: Init<Model, Message> = () => [0, Option.none()]
 
 // VIEW
 

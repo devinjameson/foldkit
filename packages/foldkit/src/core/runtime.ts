@@ -33,7 +33,7 @@ export const makeCommand = <Message>(effect: Effect.Effect<Message>): Command<Me
 })
 
 export interface RuntimeConfig<Model, Message, StreamDepsMap extends Record<string, unknown>> {
-  readonly init: Model
+  readonly init: () => [Model, Option.Option<Command<Message>>]
   readonly update: FoldReturn<Model, Message>
   readonly view: (model: Model) => Html
   readonly commandStreams?: CommandStreams<Model, Message, StreamDepsMap>
@@ -65,7 +65,14 @@ export const makeRuntime = <Model, Message, StreamDepsMap extends Record<string,
 
     const modelStream = Stream.fromPubSub(modelPubSub)
 
-    const modelRef = yield* Ref.make<Model>(init)
+    const [initModel, initCommand] = init()
+
+    yield* Option.match(initCommand, {
+      onNone: () => Effect.void,
+      onSome: (command) => Effect.forkDaemon(command.effect.pipe(Effect.flatMap(enqueueMessage))),
+    })
+
+    const modelRef = yield* Ref.make<Model>(initModel)
 
     const previousVNodeRef = yield* Ref.make<Option.Option<VNode>>(Option.none())
 
@@ -108,7 +115,7 @@ export const makeRuntime = <Model, Message, StreamDepsMap extends Record<string,
         }),
       )
 
-    yield* render(init)
+    yield* render(initModel)
 
     yield* Effect.forever(
       Effect.gen(function* () {

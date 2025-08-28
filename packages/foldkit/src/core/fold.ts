@@ -4,6 +4,7 @@ import { ExtractTag, Tags } from 'effect/Types'
 import { Command } from './runtime'
 
 type Update<Model, Message> = [Model, Option.Option<Command<Message>>]
+export type Init<Model, Message> = () => Update<Model, Message>
 
 export type FoldReturn<Model, Message> = (
   model: Model,
