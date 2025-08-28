@@ -21,6 +21,7 @@ Foldkit applies functional programming principles to UI development:
 ## Examples
 
 Current examples:
+
 - **[Counter](examples/counter/src/main.ts)** - Simple increment/decrement with reset
 - **[Stopwatch](examples/stopwatch/src/main.ts)** - Timer with start/stop/reset functionality
 - **[Weather](examples/weather/src/main.ts)** - HTTP requests with async state handling

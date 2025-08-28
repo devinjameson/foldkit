@@ -2,13 +2,20 @@ import { Array, Data, Effect, String } from 'effect'
 import {
   Class,
   Html,
-  OnClick,
   OnChange,
+  OnSubmit,
   Placeholder,
+  Id,
+  For,
+  Type,
+  Disabled,
   button,
   div,
   input,
   h1,
+  h2,
+  form,
+  label,
   fold,
   makeApp,
   makeCommand,
@@ -137,10 +144,15 @@ const view = (model: Model): Html =>
     [
       h1([Class('text-4xl font-bold text-blue-900 mb-8')], ['Weather App']),
 
-      div(
-        [Class('flex flex-col gap-4 items-center w-full max-w-md')],
+      form(
         [
+          Class('flex flex-col gap-4 items-center w-full max-w-md'),
+          OnSubmit(Message.FetchWeather()),
+        ],
+        [
+          label([For('location-input'), Class('sr-only')], ['Location']),
           input([
+            Id('location-input'),
             Class(
               'w-full px-4 py-2 rounded-lg border-2 border-blue-300 focus:border-blue-500 outline-none',
             ),
@@ -149,7 +161,8 @@ const view = (model: Model): Html =>
           ]),
           button(
             [
-              OnClick(Message.FetchWeather()),
+              Type('submit'),
+              Disabled(WeatherAsyncResult.$is('Loading')(model.weather)),
               Class(
                 'px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition disabled:opacity-50',
               ),
@@ -173,7 +186,7 @@ const weatherView = (weather: WeatherData): Html =>
   div(
     [Class('bg-white rounded-xl shadow-lg p-8 max-w-md w-full')],
     [
-      h1([Class('text-2xl font-bold text-gray-800 mb-6 text-center')], [weather.location]),
+      h2([Class('text-2xl font-bold text-gray-800 mb-6 text-center')], [weather.location]),
 
       div(
         [Class('text-center mb-6')],

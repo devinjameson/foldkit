@@ -12,11 +12,13 @@ export type Attribute<Message> = Data.TaggedEnum<{
   Id: { readonly value: string }
   OnClick: { readonly message: Message }
   OnChange: { readonly f: (value: string) => Message }
+  OnSubmit: { readonly message: Message }
   Value: { readonly value: string }
   Placeholder: { readonly value: string }
   Disabled: { readonly value: boolean }
   Type: { readonly value: string }
   Min: { readonly value: string }
+  For: { readonly value: string }
 }>
 
 interface AttributeDefinition extends Data.TaggedEnum.WithGenerics<1> {
@@ -28,21 +30,26 @@ export const {
   Id: Id_,
   OnClick: OnClick_,
   OnChange: OnChange_,
+  OnSubmit: OnSubmit_,
   Value: Value_,
   Placeholder: Placeholder_,
-  Disabled,
+  Disabled: Disabled_,
   Type: Type_,
   Min: Min_,
+  For: For_,
 } = Data.taggedEnum<AttributeDefinition>()
 
 export const Class = (value: string) => Class_({ value })
 export const OnClick = <Message>(message: Message) => OnClick_({ message })
 export const Id = (value: string) => Id_({ value })
 export const OnChange = <Message>(f: (value: string) => Message) => OnChange_({ f })
+export const OnSubmit = <Message>(message: Message) => OnSubmit_({ message })
 export const Value = (value: string) => Value_({ value })
 export const Placeholder = (value: string) => Placeholder_({ value })
 export const Type = (value: string) => Type_({ value })
 export const Min = (value: string) => Min_({ value })
+export const For = (value: string) => For_({ value })
+export const Disabled = (value: boolean) => Disabled_({ value })
 
 const buildVNodeData = <Message>(
   attributes: ReadonlyArray<Attribute<Message>>,
@@ -89,6 +96,17 @@ const buildVNodeData = <Message>(
                 },
               },
             })),
+          OnSubmit: ({ message }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              on: {
+                ...data.on,
+                submit: (event: Event) => {
+                  event.preventDefault()
+                  Effect.runSync(dispatch(message))
+                },
+              },
+            })),
           Value: ({ value }) =>
             Ref.update(dataRef, (data) => ({
               ...data,
@@ -113,6 +131,11 @@ const buildVNodeData = <Message>(
             Ref.update(dataRef, (data) => ({
               ...data,
               props: { ...data.props, min: value },
+            })),
+          For: ({ value }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              props: { ...data.props, for: value },
             })),
         }),
       ),
