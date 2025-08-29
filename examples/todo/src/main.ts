@@ -44,17 +44,16 @@ type Filter = 'All' | 'Active' | 'Completed'
 // TODO: Should making the model fields Readonly be a convention?
 type Model = Readonly<{
   todos: Array<Todo>
-  previousTodos: Option.Option<Array<Todo>>
   newTodoText: string
   filter: Filter
   editingId: Option.Option<string>
   editingText: string
-  error: Option.Option<string>
 }>
 
 // MESSAGE
 
 type Message = Data.TaggedEnum<{
+  NoOp: {}
   UpdateNewTodo: { text: string }
   UpdateEditingTodo: { text: string }
 
@@ -72,7 +71,6 @@ type Message = Data.TaggedEnum<{
 
   TodosLoaded: { todos: Array<Todo> }
   TodosSaved: { todos: Array<Todo> }
-  TodosRolledBack: { error: string }
 }>
 const Message = Data.taggedEnum<Message>()
 
@@ -92,26 +90,16 @@ const loadTodos = makeCommand(
     const decoded = yield* Schema.decodeUnknown(Schema.Array(TodoSchema))(parsed)
 
     return Message.TodosLoaded({ todos: Array.fromIterable(decoded) })
-  }).pipe(
-    Effect.catchAll((error) =>
-      Effect.succeed(
-        Message.TodosRolledBack({
-          error: `Failed to load todos: ${error}`,
-        }),
-      ),
-    ),
-  ),
+  }).pipe(Effect.catchAll(() => Effect.succeed(Message.TodosLoaded({ todos: [] })))),
 )
 
 const init: Init<Model, Message> = () => [
   {
     todos: [],
-    previousTodos: Option.none(),
     newTodoText: '',
     filter: 'All',
     editingId: Option.none(),
     editingText: '',
-    error: Option.none(),
   },
   Option.some(loadTodos),
 ]
@@ -121,6 +109,8 @@ const generateId = (): string => Math.random().toString(36).substring(2, 15)
 // UPDATE
 
 const update = fold<Model, Message>({
+  NoOp: pure((model) => model),
+
   UpdateNewTodo: pure((model, { text }) => ({
     ...model,
     newTodoText: text,
@@ -133,12 +123,7 @@ const update = fold<Model, Message>({
 
   AddTodo: pureCommand((model) => {
     if (String.isEmpty(String.trim(model.newTodoText))) {
-      return [
-        model,
-        makeCommand(
-          Effect.succeed(Message.TodosRolledBack({ error: 'Todo text cannot be empty' })),
-        ),
-      ]
+      return [model, makeCommand(Effect.succeed(Message.NoOp()))]
     }
 
     const newTodo: Todo = {
@@ -154,9 +139,7 @@ const update = fold<Model, Message>({
       {
         ...model,
         todos: updatedTodos,
-        previousTodos: Option.some(model.todos),
         newTodoText: '',
-        error: Option.none(),
       },
       saveTodos(updatedTodos),
     ]
@@ -169,7 +152,6 @@ const update = fold<Model, Message>({
       {
         ...model,
         todos: updatedTodos,
-        previousTodos: Option.some(model.todos),
       },
       saveTodos(updatedTodos),
     ]
@@ -184,7 +166,6 @@ const update = fold<Model, Message>({
       {
         ...model,
         todos: updatedTodos,
-        previousTodos: Option.some(model.todos),
       },
       saveTodos(updatedTodos),
     ]
@@ -204,6 +185,7 @@ const update = fold<Model, Message>({
 
   SaveEdit: pureCommand((model) => {
     const editingId = Option.getOrNull(model.editingId)
+
     if (!editingId || String.trim(model.editingText) === '') {
       return [
         {
@@ -211,9 +193,7 @@ const update = fold<Model, Message>({
           editingId: Option.none(),
           editingText: '',
         },
-        makeCommand(
-          Effect.succeed(Message.TodosRolledBack({ error: 'Todo text cannot be empty' })),
-        ),
+        makeCommand(Effect.succeed(Message.NoOp())),
       ]
     }
 
@@ -225,7 +205,6 @@ const update = fold<Model, Message>({
       {
         ...model,
         todos: updatedTodos,
-        previousTodos: Option.some(model.todos),
         editingId: Option.none(),
         editingText: '',
       },
@@ -250,7 +229,6 @@ const update = fold<Model, Message>({
       {
         ...model,
         todos: updatedTodos,
-        previousTodos: Option.some(model.todos),
       },
       saveTodos(updatedTodos),
     ]
@@ -263,7 +241,6 @@ const update = fold<Model, Message>({
       {
         ...model,
         todos: updatedTodos,
-        previousTodos: Option.some(model.todos),
       },
       saveTodos(updatedTodos),
     ]
@@ -277,22 +254,11 @@ const update = fold<Model, Message>({
   TodosLoaded: pure((model, { todos }) => ({
     ...model,
     todos,
-    previousTodos: Option.none(),
-    error: Option.none(),
   })),
 
   TodosSaved: pure((model, { todos }) => ({
     ...model,
     todos,
-    previousTodos: Option.none(),
-    error: Option.none(),
-  })),
-
-  TodosRolledBack: pure((model, { error }) => ({
-    ...model,
-    todos: Option.getOrElse(model.previousTodos, () => model.todos),
-    previousTodos: Option.none(),
-    error: Option.some(error),
   })),
 })
 
@@ -302,27 +268,8 @@ const saveTodos = (todos: Array<Todo>): Command<Message> =>
   makeCommand(
     Effect.gen(function* () {
       localStorage.setItem('todos', JSON.stringify(todos))
-
-      const stored = localStorage.getItem('todos')
-
-      if (!stored) {
-        return Message.TodosRolledBack({ error: 'Failed to verify save' })
-      }
-
-      const parsed = yield* Effect.try(() => JSON.parse(stored))
-      const decoded = yield* Schema.decodeUnknown(Schema.Array(TodoSchema))(parsed)
-
-      // TODO: Figure out why we can't just pass decoded directly
-      return Message.TodosSaved({ todos: Array.fromIterable(decoded) })
-    }).pipe(
-      Effect.catchAll((error) =>
-        Effect.succeed(
-          Message.TodosRolledBack({
-            error: `Failed to save todos: ${error}`,
-          }),
-        ),
-      ),
-    ),
+      return Message.TodosSaved({ todos })
+    }).pipe(Effect.catchAll(() => Effect.succeed(Message.TodosSaved({ todos })))),
   )
 
 // VIEW
@@ -516,15 +463,6 @@ const view = (model: Model): Html => {
               ),
             ],
           ),
-
-          Option.match(model.error, {
-            onNone: () => empty,
-            onSome: (error) =>
-              div(
-                [Class('mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg')],
-                [error],
-              ),
-          }),
 
           Array.match(filteredTodos, {
             onEmpty: () =>
