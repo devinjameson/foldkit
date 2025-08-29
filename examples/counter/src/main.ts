@@ -4,7 +4,6 @@ import {
   Html,
   Init,
   OnClick,
-  Update,
   button,
   div,
   fold,

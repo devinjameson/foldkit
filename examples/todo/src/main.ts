@@ -41,13 +41,18 @@ type Todo = Schema.Schema.Type<typeof TodoSchema>
 
 type Filter = 'All' | 'Active' | 'Completed'
 
-// TODO: Should making the model fields Readonly be a convention?
+type EditingState = Data.TaggedEnum<{
+  NotEditing: {}
+  Editing: { id: string; text: string }
+}>
+
+const EditingState = Data.taggedEnum<EditingState>()
+
 type Model = Readonly<{
   todos: Array<Todo>
   newTodoText: string
   filter: Filter
-  editingId: Option.Option<string>
-  editingText: string
+  editing: EditingState
 }>
 
 // MESSAGE
@@ -76,17 +81,19 @@ const Message = Data.taggedEnum<Message>()
 
 const { pure, pureCommand } = updateConstructors<Model, Message>()
 
+const noOp = makeCommand(Effect.succeed(Message.NoOp()))
+
 // INIT
 
 const loadTodos = makeCommand(
   Effect.gen(function* () {
-    const stored = localStorage.getItem('todos')
+    const storedTodos = yield* Effect.sync(() => localStorage.getItem('todos'))
 
-    if (!stored) {
+    if (!storedTodos) {
       return Message.TodosLoaded({ todos: [] })
     }
 
-    const parsed = yield* Effect.try(() => JSON.parse(stored))
+    const parsed = yield* Effect.try(() => JSON.parse(storedTodos))
     const decoded = yield* Schema.decodeUnknown(Schema.Array(TodoSchema))(parsed)
 
     return Message.TodosLoaded({ todos: Array.fromIterable(decoded) })
@@ -98,8 +105,7 @@ const init: Init<Model, Message> = () => [
     todos: [],
     newTodoText: '',
     filter: 'All',
-    editingId: Option.none(),
-    editingText: '',
+    editing: EditingState.NotEditing(),
   },
   Option.some(loadTodos),
 ]
@@ -118,12 +124,15 @@ const update = fold<Model, Message>({
 
   UpdateEditingTodo: pure((model, { text }) => ({
     ...model,
-    editingText: text,
+    editing: EditingState.$match(model.editing, {
+      NotEditing: () => model.editing,
+      Editing: ({ id }) => EditingState.Editing({ id, text }),
+    }),
   })),
 
   AddTodo: pureCommand((model) => {
     if (String.isEmpty(String.trim(model.newTodoText))) {
-      return [model, makeCommand(Effect.succeed(Message.NoOp()))]
+      return [model, noOp]
     }
 
     const newTodo: Todo = {
@@ -175,47 +184,49 @@ const update = fold<Model, Message>({
     const todo = Array.findFirst(model.todos, (t) => t.id === id)
     return {
       ...model,
-      editingId: Option.some(id),
-      editingText: Option.getOrElse(
-        Option.map(todo, (t) => t.text),
-        () => '',
-      ),
+      editing: EditingState.Editing({
+        id,
+        text: Option.match(todo, {
+          onNone: () => '',
+          onSome: (t) => t.text,
+        }),
+      }),
     }
   }),
 
-  SaveEdit: pureCommand((model) => {
-    const editingId = Option.getOrNull(model.editingId)
+  SaveEdit: pureCommand((model): [Model, Command<Message>] => {
+    return EditingState.$match(model.editing, {
+      NotEditing: (): [Model, Command<Message>] => [model, noOp],
+      Editing: ({ id, text }): [Model, Command<Message>] => {
+        if (String.isEmpty(String.trim(text))) {
+          return [
+            {
+              ...model,
+              editing: EditingState.NotEditing(),
+            },
+            noOp,
+          ]
+        }
 
-    if (!editingId || String.trim(model.editingText) === '') {
-      return [
-        {
-          ...model,
-          editingId: Option.none(),
-          editingText: '',
-        },
-        makeCommand(Effect.succeed(Message.NoOp())),
-      ]
-    }
+        const updatedTodos = Array.map(model.todos, (todo) =>
+          todo.id === id ? { ...todo, text: String.trim(text) } : todo,
+        )
 
-    const updatedTodos = Array.map(model.todos, (todo) =>
-      todo.id === editingId ? { ...todo, text: String.trim(model.editingText) } : todo,
-    )
-
-    return [
-      {
-        ...model,
-        todos: updatedTodos,
-        editingId: Option.none(),
-        editingText: '',
+        return [
+          {
+            ...model,
+            todos: updatedTodos,
+            editing: EditingState.NotEditing(),
+          },
+          saveTodos(updatedTodos),
+        ]
       },
-      saveTodos(updatedTodos),
-    ]
+    })
   }),
 
   CancelEdit: pure((model) => ({
     ...model,
-    editingId: Option.none(),
-    editingText: '',
+    editing: EditingState.NotEditing(),
   })),
 
   ToggleAll: pureCommand((model) => {
@@ -267,7 +278,7 @@ const update = fold<Model, Message>({
 const saveTodos = (todos: Array<Todo>): Command<Message> =>
   makeCommand(
     Effect.gen(function* () {
-      localStorage.setItem('todos', JSON.stringify(todos))
+      yield* Effect.sync(() => localStorage.setItem('todos', JSON.stringify(todos)))
       return Message.TodosSaved({ todos })
     }).pipe(Effect.catchAll(() => Effect.succeed(Message.TodosSaved({ todos })))),
   )
@@ -277,67 +288,72 @@ const saveTodos = (todos: Array<Todo>): Command<Message> =>
 const todoItemView =
   (model: Model) =>
   (todo: Todo): Html => {
-    const isEditing = Option.exists(model.editingId, (id) => id === todo.id)
+    return EditingState.$match(model.editing, {
+      NotEditing: () => nonEditingTodoView(todo),
+      Editing: ({ id, text }) =>
+        id === todo.id ? editingTodoView(todo, text) : nonEditingTodoView(todo),
+    })
+  }
 
-    if (isEditing) {
-      return li(
-        [Class('flex items-center gap-3 p-3 bg-gray-50 rounded-lg')],
+const editingTodoView = (todo: Todo, text: string): Html =>
+  li(
+    [Class('flex items-center gap-3 p-3 bg-gray-50 rounded-lg')],
+    [
+      input([
+        Type('text'),
+        Id(`edit-${todo.id}`),
+        Value(text),
+        Class(
+          'flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500',
+        ),
+        OnChange((text) => Message.UpdateEditingTodo({ text })),
+      ]),
+      button(
         [
-          input([
-            Id(`edit-${todo.id}`),
-            Value(model.editingText),
-            Class(
-              'flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500',
-            ),
-            OnChange((text) => Message.UpdateEditingTodo({ text })),
-          ]),
-          button(
-            [
-              OnClick(Message.SaveEdit()),
-              Class('px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600'),
-            ],
-            ['Save'],
-          ),
-          button(
-            [
-              OnClick(Message.CancelEdit()),
-              Class('px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600'),
-            ],
-            ['Cancel'],
+          OnClick(Message.SaveEdit()),
+          Class('px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600'),
+        ],
+        ['Save'],
+      ),
+      button(
+        [
+          OnClick(Message.CancelEdit()),
+          Class('px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600'),
+        ],
+        ['Cancel'],
+      ),
+    ],
+  )
+
+const nonEditingTodoView = (todo: Todo): Html =>
+  li(
+    [Class('flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg group')],
+    [
+      input([
+        Type('checkbox'),
+        Id(`todo-${todo.id}`),
+        Value(todo.completed ? 'on' : ''),
+        Class('w-4 h-4 text-blue-600 rounded focus:ring-blue-500'),
+        OnClick(Message.ToggleTodo({ id: todo.id })),
+      ]),
+      span(
+        [
+          Class(`flex-1 ${todo.completed ? 'line-through text-gray-500' : 'text-gray-900'}`),
+          OnClick(Message.StartEditing({ id: todo.id })),
+        ],
+        [todo.text],
+      ),
+      button(
+        [
+          OnClick(Message.DeleteTodo({ id: todo.id })),
+          Class(
+            'px-2 py-1 text-red-600 opacity-0 group-hover:opacity-100 hover:bg-red-100 rounded transition-opacity',
           ),
         ],
-      )
-    }
-
-    return li(
-      [Class('flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg group')],
-      [
-        input([
-          Type('checkbox'),
-          Id(`todo-${todo.id}`),
-          Value(todo.completed ? 'on' : ''),
-          Class('w-4 h-4 text-blue-600 rounded focus:ring-blue-500'),
-          OnClick(Message.ToggleTodo({ id: todo.id })),
-        ]),
-        span(
-          [
-            Class(`flex-1 ${todo.completed ? 'line-through text-gray-500' : 'text-gray-900'}`),
-            OnClick(Message.StartEditing({ id: todo.id })),
-          ],
-          [todo.text],
-        ),
-        button(
-          [
-            OnClick(Message.DeleteTodo({ id: todo.id })),
-            Class(
-              'px-2 py-1 text-red-600 opacity-0 group-hover:opacity-100 hover:bg-red-100 rounded transition-opacity',
-            ),
-          ],
-          ['×'],
-        ),
-      ],
-    )
-  }
+        ['×'],
+      ),
+    ],
+  )
 
 const filterButtonView =
   (model: Model) =>
@@ -469,11 +485,12 @@ const view = (model: Model): Html => {
               div(
                 [Class('text-center text-gray-500 py-8')],
                 [
-                  model.filter === 'All'
-                    ? 'No todos yet. Add one above!'
-                    : model.filter === 'Active'
-                      ? 'No active todos'
-                      : 'No completed todos',
+                  Match.value(model.filter).pipe(
+                    Match.when('All', () => 'No todos yet. Add one above!'),
+                    Match.when('Active', () => 'No active todos'),
+                    Match.when('Completed', () => 'No completed todos'),
+                    Match.exhaustive,
+                  ),
                 ],
               ),
             onNonEmpty: (todos) =>

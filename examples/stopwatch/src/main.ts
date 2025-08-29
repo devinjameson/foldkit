@@ -17,11 +17,11 @@ const TICK_INTERVAL_MS = 10
 
 // MODEL
 
-type Model = {
+type Model = Readonly<{
   elapsedMs: number
   isRunning: boolean
   startTime: Option.Option<number>
-}
+}>
 
 // UPDATE
 

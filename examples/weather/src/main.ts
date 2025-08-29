@@ -44,10 +44,10 @@ type WeatherAsyncResult = Data.TaggedEnum<{
 
 const WeatherAsyncResult = Data.taggedEnum<WeatherAsyncResult>()
 
-type Model = {
+type Model = Readonly<{
   locationInput: string
   weather: WeatherAsyncResult
-}
+}>
 
 // UPDATE
 
