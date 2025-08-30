@@ -45,10 +45,8 @@ const Submission = Data.taggedEnum<Submission>()
 
 type Model = Readonly<{
   name: Field<string>
-  username: Field<string>
-  usernameValidationId: number
   email: Field<string>
-  subject: Field<string>
+  emailValidationId: number
   message: Field<string>
   submission: Submission
 }>
@@ -58,10 +56,8 @@ type Model = Readonly<{
 type Message = Data.TaggedEnum<{
   NoOp: {}
   UpdateName: { value: string }
-  UpdateUsername: { value: string }
-  UsernameValidated: { validationId: number; field: Field<string> }
   UpdateEmail: { value: string }
-  UpdateSubject: { value: string }
+  EmailValidated: { validationId: number; field: Field<string> }
   UpdateMessage: { value: string }
 
   SubmitForm: {}
@@ -79,10 +75,8 @@ const noOp = makeCommand(Effect.succeed(Message.NoOp()))
 const init: Init<Model, Message> = () => [
   {
     name: Field.NotValidated({ value: '' }),
-    username: Field.NotValidated({ value: '' }),
-    usernameValidationId: 0,
     email: Field.NotValidated({ value: '' }),
-    subject: Field.NotValidated({ value: '' }),
+    emailValidationId: 0,
     message: Field.NotValidated({ value: '' }),
     submission: Submission.NotSubmitted(),
   },
@@ -95,11 +89,6 @@ const nameValidations: FieldValidation<string>[] = [
   minLength(2, (min) => `Name must be at least ${min} characters`),
 ]
 
-const usernameValidations: FieldValidation<string>[] = [
-  required('Username'),
-  minLength(3, (min) => `Username must be at least ${min} characters`),
-]
-
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const emailValidations: FieldValidation<string>[] = [
@@ -107,24 +96,37 @@ const emailValidations: FieldValidation<string>[] = [
   regex(emailRegex, 'Please enter a valid email address'),
 ]
 
-const subjectValidations: FieldValidation<string>[] = [required('Subject')]
+const EMAILS_ON_WAITLIST = ['test@example.com', 'demo@email.com', 'admin@test.com']
 
-const messageValidations: FieldValidation<string>[] = [
-  required('Message'),
-  minLength(10, (min) => `Message must be at least ${min} characters`),
-]
+const isEmailOnWaitlist = (email: string): Effect.Effect<boolean> =>
+  Effect.gen(function* () {
+    yield* Effect.sleep(Duration.millis(FAKE_API_DELAY_MS))
+    return Array.contains(EMAILS_ON_WAITLIST, email.toLowerCase())
+  })
+
+const validateEmailNotOnWaitlist = (email: string, validationId: number): Command<Message> =>
+  Effect.gen(function* () {
+    if (yield* isEmailOnWaitlist(email)) {
+      return Message.EmailValidated({
+        validationId,
+        field: Field.Invalid({ value: email, error: 'This email is already on our waitlist' }),
+      })
+    } else {
+      return Message.EmailValidated({
+        validationId,
+        field: Field.Valid({ value: email }),
+      })
+    }
+  }).pipe(makeCommand)
+
+const messageValidations: FieldValidation<string>[] = []
 
 const validateName = validateField(nameValidations)
-const validateUsername = validateField(usernameValidations)
 const validateEmail = validateField(emailValidations)
-const validateSubject = validateField(subjectValidations)
 const validateMessage = validateField(messageValidations)
 
 const isFormValid = (model: Model): boolean =>
-  Array.every(
-    [model.name, model.username, model.email, model.subject, model.message],
-    Field.$is('Valid'),
-  )
+  Array.every([model.name, model.email], Field.$is('Valid'))
 
 // UPDATE
 
@@ -136,40 +138,27 @@ const update = fold<Model, Message>({
     name: validateName(value),
   })),
 
-  UpdateUsername: pureCommand((model, { value }) => {
-    const validateUsernameResult = validateUsername(value)
-    const validationId = Number.increment(model.usernameValidationId)
+  UpdateEmail: pureCommand((model, { value }) => {
+    const validateEmailResult = validateEmail(value)
+    const validationId = Number.increment(model.emailValidationId)
 
-    if (Field.$is('Valid')(validateUsernameResult)) {
+    if (Field.$is('Valid')(validateEmailResult)) {
       return [
-        { ...model, username: Field.Validating({ value }), usernameValidationId: validationId },
-        validateUsernameAvailabilty(value, validationId),
+        { ...model, email: Field.Validating({ value }), emailValidationId: validationId },
+        validateEmailNotOnWaitlist(value, validationId),
       ]
     } else {
-      return [
-        { ...model, username: validateUsernameResult, usernameValidationId: validationId },
-        noOp,
-      ]
+      return [{ ...model, email: validateEmailResult, emailValidationId: validationId }, noOp]
     }
   }),
 
-  UsernameValidated: pure((model, { validationId, field }) => {
-    if (validationId === model.usernameValidationId) {
-      return { ...model, username: field }
+  EmailValidated: pure((model, { validationId, field }) => {
+    if (validationId === model.emailValidationId) {
+      return { ...model, email: field }
     } else {
       return model
     }
   }),
-
-  UpdateEmail: pure((model, { value }) => ({
-    ...model,
-    email: validateEmail(value),
-  })),
-
-  UpdateSubject: pure((model, { value }) => ({
-    ...model,
-    subject: validateSubject(value),
-  })),
 
   UpdateMessage: pure((model, { value }) => ({
     ...model,
@@ -204,36 +193,12 @@ const update = fold<Model, Message>({
 // COMMAND
 
 const FAKE_API_DELAY_MS = 500
-const TAKEN_USERNAMES = ['admin', 'user', 'test', 'demo', 'root']
-
-const isUsernameAvailable = (username: string): Effect.Effect<boolean> =>
-  Effect.gen(function* () {
-    yield* Effect.sleep(Duration.millis(FAKE_API_DELAY_MS))
-    return !Array.contains(TAKEN_USERNAMES, username.toLowerCase())
-  })
-
-const validateUsernameAvailabilty = (username: string, validationId: number): Command<Message> =>
-  Effect.gen(function* () {
-    if (yield* isUsernameAvailable(username)) {
-      return Message.UsernameValidated({
-        validationId,
-        field: Field.Valid({ value: username }),
-      })
-    } else {
-      return Message.UsernameValidated({
-        validationId,
-        field: Field.Invalid({ value: username, error: 'Username is already taken' }),
-      })
-    }
-  }).pipe(makeCommand)
 
 const submitForm = (model: Model): Command<Message> =>
   Effect.gen(function* () {
     const formData = {
       name: model.name.value,
-      username: model.username.value,
       email: model.email.value,
-      subject: model.subject.value,
       message: model.message.value,
     }
 
@@ -244,11 +209,11 @@ const submitForm = (model: Model): Command<Message> =>
 
     if (success) {
       return Message.FormSubmitted({
-        message: `Thank you, ${formData.name}! Your message was sent successfully.`,
+        message: `Welcome to the waitlist, ${formData.name}! We'll be in touch soon.`,
       })
     } else {
       return Message.FormSubmitError({
-        error: 'Sorry, there was an error sending your message. Please try again.',
+        error: 'Sorry, there was an error adding you to the waitlist. Please try again.',
       })
     }
   }).pipe(makeCommand)
@@ -295,7 +260,7 @@ const fieldView = (
 
       Field.$match(field, {
         NotValidated: () => empty,
-        Validating: () => div([Class('text-blue-600 text-sm mt-1')], ['Checking availability...']),
+        Validating: () => div([Class('text-blue-600 text-sm mt-1')], ['Checking...']),
         Valid: () => empty,
         Invalid: ({ error }) => div([Class('text-red-600 text-sm mt-1')], [error]),
       }),
@@ -312,15 +277,12 @@ const view = (model: Model): Html => {
       div(
         [Class('max-w-md mx-auto bg-white rounded-xl shadow-lg p-6')],
         [
-          h1([Class('text-3xl font-bold text-gray-800 text-center mb-8')], ['Contact Us']),
+          h1([Class('text-3xl font-bold text-gray-800 text-center mb-8')], ['Join Our Waitlist']),
 
           form(
             [Class('space-y-4'), OnSubmit(Message.SubmitForm())],
             [
               fieldView('name', 'Name', model.name, (value) => Message.UpdateName({ value })),
-              fieldView('username', 'Username', model.username, (value) =>
-                Message.UpdateUsername({ value }),
-              ),
               fieldView(
                 'email',
                 'Email',
@@ -328,12 +290,9 @@ const view = (model: Model): Html => {
                 (value) => Message.UpdateEmail({ value }),
                 'email',
               ),
-              fieldView('subject', 'Subject', model.subject, (value) =>
-                Message.UpdateSubject({ value }),
-              ),
               fieldView(
                 'message',
-                'Message',
+                "Anything you'd like to share with us?",
                 model.message,
                 (value) => Message.UpdateMessage({ value }),
                 'textarea',
@@ -351,7 +310,7 @@ const view = (model: Model): Html => {
                     }`,
                   ),
                 ],
-                [Submission.$is('Submitting')(model.submission) ? 'Sending...' : 'Send Message'],
+                [Submission.$is('Submitting')(model.submission) ? 'Joining...' : 'Join Waitlist'],
               ),
             ],
           ),
