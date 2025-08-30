@@ -6,7 +6,8 @@
 ## Problem
 
 When building larger applications with multiple pages/components, we need a way to:
-- Keep page-specific state isolated  
+
+- Keep page-specific state isolated
 - Handle page-specific updates without polluting the main update function
 - Compose child update functions into the parent update function
 
@@ -30,35 +31,25 @@ update msg model =
 
 ## Proposed foldkit Solution
 
-### Option 1: Update.map helper
-
 ```typescript
-const update = fold<Model, Message>({
-  HomeMessage: ({ msg }) => 
-    Update.map(
-      (model: Model) => model.homeModel,           // Lens to child model
-      (model: Model, newHome: HomeModel) => ({ ...model, homeModel: newHome }), 
-      (childMsg: HomeMessage) => Message.HomeMessage({ msg: childMsg }),
-      homeUpdate                                   // Child update function
-    ),
-})
-```
+const nested =
+  <ParentModel, ChildModel, ChildMessage>(
+    extract: (parent: ParentModel) => ChildModel,
+    merge: (parent: ParentModel, child: ChildModel) => ParentModel,
+    childUpdate: Update<ChildModel, ChildMessage>,
+  ) =>
+  (parentModel: ParentModel, childMsg: ChildMessage) => {
+    const [newChild, childCmd] = childUpdate(extract(parentModel), childMsg)
 
-### Option 2: nested helper
+    return [merge(parentModel, newChild), childCmd.pipe(Effect.map((msg) => ParentMsg(msg)))]
+  }
 
-```typescript
-const nested = <ParentModel, ChildModel, ChildMessage>(
-  lens: (parent: ParentModel) => ChildModel,
-  setter: (parent: ParentModel, child: ChildModel) => ParentModel,
-  childUpdate: Update<ChildModel, ChildMessage>
-) => // ... implementation
-
-// Usage
+// Usage - simple and readable!
 const update = fold<Model, Message>({
   HomeMessage: nested(
-    model => model.homeModel,
-    (model, home) => ({ ...model, homeModel: home }),
-    homeUpdate
+    (model) => model.homeModel, // extract
+    (model, home) => ({ ...model, homeModel: home }), // merge
+    homeUpdate,
   ),
 })
 ```
@@ -66,7 +57,7 @@ const update = fold<Model, Message>({
 ## Benefits
 
 - **Isolation**: Each page/component manages its own state and logic
-- **Composition**: Child updates compose cleanly into parent updates  
+- **Composition**: Child updates compose cleanly into parent updates
 - **Scalability**: Large apps can be broken into manageable pieces
 - **Reusability**: Child components can be reused across different parents
 
