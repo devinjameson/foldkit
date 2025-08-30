@@ -25,11 +25,11 @@ Current examples:
 - **[Counter](examples/counter/src/main.ts)** - Simple increment/decrement with reset
 - **[Stopwatch](examples/stopwatch/src/main.ts)** - Timer with start/stop/reset functionality
 - **[Weather](examples/weather/src/main.ts)** - HTTP requests with async state handling
+- **[Todo](examples/todo/src/main.ts)** - CRUD operations with localStorage persistence
+- **[Contact Form](examples/contact-form/src/main.ts)** - Complex form validation with async username availability checking
 
 ### Coming Next
 
-1. **Todo List** - CRUD operations with localStorage persistence
-1. **Form with Validation** - Multiple input types with client-side validation
 1. **Multi-page App** - URL routing with navigation and route parameters
 1. **Data Table** - API-driven table with sorting, filtering, and pagination
 
