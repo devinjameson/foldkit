@@ -26,7 +26,7 @@ Current examples:
 - **[Stopwatch](examples/stopwatch/src/main.ts)** - Timer with start/stop/reset functionality
 - **[Weather](examples/weather/src/main.ts)** - HTTP requests with async state handling
 - **[Todo](examples/todo/src/main.ts)** - CRUD operations with localStorage persistence
-- **[Contact Form](examples/contact-form/src/main.ts)** - Complex form validation with async username availability checking
+- **[Form](examples/form/src/main.ts)** - Form validation with async email checking
 
 ### Coming Next
 
