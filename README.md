@@ -27,10 +27,10 @@ Current examples:
 - **[Weather](examples/weather/src/main.ts)** - HTTP requests with async state handling
 - **[Todo](examples/todo/src/main.ts)** - CRUD operations with localStorage persistence
 - **[Form](examples/form/src/main.ts)** - Form validation with async email checking
+- **[Routing](examples/routing/src/main.ts)** - URL routing with parser combinators and route parameters
 
 ### Coming Next
 
-1. **Multi-page App** - URL routing with navigation and route parameters
 1. **Data Table** - API-driven table with sorting, filtering, and pagination
 
 ### Simple Counter Example
@@ -131,7 +131,7 @@ pnpm install @foldkit/core
 - [x] Core program loop with ADT-based update
 - [x] DOM rendering
 - [x] Optimized DOM rendering (minimal diffs, efficient updates)
-- [ ] Router integration
+- [x] Router integration
 - [ ] Devtools + tracing
 
 ---

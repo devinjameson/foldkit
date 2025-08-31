@@ -19,6 +19,7 @@ export type Attribute<Message> = Data.TaggedEnum<{
   Type: { readonly value: string }
   Min: { readonly value: string }
   For: { readonly value: string }
+  Href: { readonly value: string }
 }>
 
 interface AttributeDefinition extends Data.TaggedEnum.WithGenerics<1> {
@@ -37,6 +38,7 @@ export const {
   Type: Type_,
   Min: Min_,
   For: For_,
+  Href: Href_,
 } = Data.taggedEnum<AttributeDefinition>()
 
 export const Class = (value: string) => Class_({ value })
@@ -49,6 +51,7 @@ export const Placeholder = (value: string) => Placeholder_({ value })
 export const Type = (value: string) => Type_({ value })
 export const Min = (value: string) => Min_({ value })
 export const For = (value: string) => For_({ value })
+export const Href = (value: string) => Href_({ value })
 export const Disabled = (value: boolean) => Disabled_({ value })
 
 const buildVNodeData = <Message>(
@@ -136,6 +139,11 @@ const buildVNodeData = <Message>(
             Ref.update(dataRef, (data) => ({
               ...data,
               props: { ...data.props, for: value },
+            })),
+          Href: ({ value }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              props: { ...data.props, href: value },
             })),
         }),
       ),

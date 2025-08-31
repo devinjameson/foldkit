@@ -10,6 +10,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./route": {
+      "types": "./dist/core/route.d.ts",
+      "import": "./dist/core/route.js"
     }
   },
   "files": [
