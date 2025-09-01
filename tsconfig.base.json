@@ -22,8 +22,8 @@
 
     "baseUrl": ".",
     "paths": {
-      "@foldkit/core": ["packages/foldkit/src/index.ts"],
-      "@foldkit/core/*": ["packages/foldkit/src/*"]
+      "@foldkit": ["packages/foldkit/src/index.ts"],
+      "@foldkit/*": ["packages/foldkit/src/core/*"]
     }
   },
   "exclude": ["node_modules", "dist"]

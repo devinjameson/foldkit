@@ -38,7 +38,7 @@ importers:
 
   examples/counter:
     dependencies:
-      '@foldkit/core':
+      '@foldkit':
         specifier: workspace:*
         version: link:../../packages/foldkit
       '@tailwindcss/vite':
@@ -57,7 +57,7 @@ importers:
 
   examples/form:
     dependencies:
-      '@foldkit/core':
+      '@foldkit':
         specifier: workspace:*
         version: link:../../packages/foldkit
       '@tailwindcss/vite':
@@ -76,7 +76,7 @@ importers:
 
   examples/routing:
     dependencies:
-      '@foldkit/core':
+      '@foldkit':
         specifier: workspace:*
         version: link:../../packages/foldkit
       '@tailwindcss/vite':
@@ -95,7 +95,7 @@ importers:
 
   examples/stopwatch:
     dependencies:
-      '@foldkit/core':
+      '@foldkit':
         specifier: workspace:*
         version: link:../../packages/foldkit
       '@tailwindcss/vite':
@@ -114,7 +114,7 @@ importers:
 
   examples/todo:
     dependencies:
-      '@foldkit/core':
+      '@foldkit':
         specifier: workspace:*
         version: link:../../packages/foldkit
       '@tailwindcss/vite':
@@ -133,7 +133,7 @@ importers:
 
   examples/weather:
     dependencies:
-      '@foldkit/core':
+      '@foldkit':
         specifier: workspace:*
         version: link:../../packages/foldkit
       '@tailwindcss/vite':

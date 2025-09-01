@@ -1,4 +1,5 @@
 import { Array, Data, Effect, Match, Option, Schema, String } from 'effect'
+import { fold, makeApp, makeCommand, updateConstructors, Command, empty, Init } from '@foldkit'
 import {
   Class,
   Html,
@@ -19,14 +20,7 @@ import {
   ul,
   li,
   span,
-  fold,
-  makeApp,
-  makeCommand,
-  updateConstructors,
-  Command,
-  empty,
-  Init,
-} from '@foldkit/core'
+} from '@foldkit/html'
 
 // MODEL
 

@@ -1,5 +1,5 @@
 {
-  "name": "@foldkit/core",
+  "name": "@foldkit",
   "version": "0.1.0-canary.1",
   "description": "Elm-inspired UI framework powered by Effect",
   "type": "module",
@@ -11,9 +11,25 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./html": {
+      "types": "./dist/core/html.d.ts",
+      "import": "./dist/core/html.js"
+    },
+    "./fold": {
+      "types": "./dist/core/fold.d.ts",
+      "import": "./dist/core/fold.js"
+    },
     "./route": {
       "types": "./dist/core/route.d.ts",
       "import": "./dist/core/route.js"
+    },
+    "./fieldValidation": {
+      "types": "./dist/core/fieldValidation.d.ts",
+      "import": "./dist/core/fieldValidation.js"
+    },
+    "./runtime": {
+      "types": "./dist/core/runtime.d.ts",
+      "import": "./dist/core/runtime.js"
     }
   },
   "files": [

@@ -1,15 +1,6 @@
 import { Data, Effect, Option } from 'effect'
-import {
-  Class,
-  Html,
-  Init,
-  OnClick,
-  button,
-  div,
-  fold,
-  makeApp,
-  updateConstructors,
-} from '@foldkit/core'
+import { fold, makeApp, updateConstructors, Init } from '@foldkit'
+import { Class, Html, OnClick, button, div } from '@foldkit/html'
 
 // MODEL
 

@@ -1,22 +1,6 @@
 import { Array, Data, Effect, Option, pipe } from 'effect'
-import {
-  Class,
-  Html,
-  OnClick,
-  Href,
-  div,
-  h1,
-  h2,
-  p,
-  a,
-  ul,
-  li,
-  fold,
-  makeApp,
-  updateConstructors,
-  Init,
-  Route,
-} from '@foldkit/core'
+import { Route, fold, makeApp, updateConstructors, Init } from '@foldkit'
+import { Class, Html, OnClick, Href, div, h1, h2, p, a, ul, li } from '@foldkit/html'
 
 type AppRoute = Data.TaggedEnum<{
   Home: {}
@@ -51,7 +35,7 @@ const routerParser: Route.Parser<AppRoute> = Route.oneOf<AppRoute>([
 
 // CLAUDE: Should foldkit provide this and if the user wants they can make their
 // own? Elm does that right?
-const parseCurrentUrl = (path: string) =>
+const urlToAppRoute = (path: string) =>
   pipe(
     path,
     Route.parseUrl(routerParser),
@@ -92,7 +76,7 @@ const init: Init<Model, Message> = () => {
   // CLAUDE: We should do this how Elm does it
   const currentPath = window.location.pathname
   // CLAUDE: Also how does Elm do this initial route?
-  const route = parseCurrentUrl(currentPath)
+  const route = urlToAppRoute(currentPath)
 
   return [
     {
@@ -116,14 +100,14 @@ const update = fold<Model, Message>({
 
     return {
       ...model,
-      route: parseCurrentUrl(path),
+      route: urlToAppRoute(path),
       path,
     }
   }),
 
   UrlChanged: pure((model, { path }) => ({
     ...model,
-    route: parseCurrentUrl(path),
+    route: urlToAppRoute(path),
     path,
   })),
 })
@@ -303,8 +287,8 @@ const notFoundView = (path: string): Html =>
 
 const view = (model: Model): Html => {
   const routeContent = AppRoute.$match(model.route, {
-    Home: () => homeView(),
-    People: () => peopleView(),
+    Home: homeView,
+    People: peopleView,
     Person: ({ id }) => personView(id),
     NotFound: ({ path }) => notFoundView(path),
   })

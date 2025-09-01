@@ -2,11 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "moduleResolution": "bundler",
-    "noEmit": true,
-    "paths": {
-      "@foldkit/core": ["../../packages/foldkit/src/index.ts"],
-      "@foldkit/core/*": ["../../packages/foldkit/src/*"]
-    }
+    "noEmit": true
   },
   "include": ["src/**/*.ts", "vite.config.ts"],
   "exclude": ["node_modules", "dist", "../../packages/foldkit/src"]

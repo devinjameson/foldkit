@@ -1,5 +1,20 @@
 import { Array, Data, Duration, Effect, Number, Option } from 'effect'
 import {
+  fold,
+  makeApp,
+  makeCommand,
+  updateConstructors,
+  Command,
+  empty,
+  Init,
+  Field,
+  FieldValidation,
+  required,
+  minLength,
+  regex,
+  validateField,
+} from '@foldkit'
+import {
   Class,
   Html,
   OnChange,
@@ -17,20 +32,7 @@ import {
   form,
   label,
   span,
-  fold,
-  makeApp,
-  makeCommand,
-  updateConstructors,
-  Command,
-  empty,
-  Init,
-  Field,
-  FieldValidation,
-  required,
-  minLength,
-  regex,
-  validateField,
-} from '@foldkit/core'
+} from '@foldkit/html'
 
 // MODEL
 
