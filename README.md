@@ -38,14 +38,14 @@ Current examples:
 See the full example at [examples/counter/src/main.ts](examples/counter/src/main.ts)
 
 ```ts
-import { Data, Effect } from 'effect'
-import { Class, Html, OnClick, button, div, fold, makeApp, updateConstructors } from '@foldkit/core'
+import { Data, Effect, Option } from 'effect'
+
+import { fold, makeElement, updateConstructors, ElementInit } from '@foldkit'
+import { Class, Html, OnClick, button, div } from '@foldkit/html'
 
 // MODEL
 
 type Model = number
-
-const init: Model = 0
 
 // UPDATE
 
@@ -63,6 +63,10 @@ const update = fold<Model, Message>({
   Increment: pure((count) => count + 1),
   Reset: pure(() => 0),
 })
+
+// INIT
+
+const init: ElementInit<Model, Message> = () => [0, Option.none()]
 
 // VIEW
 
@@ -88,7 +92,7 @@ const buttonStyle = 'bg-black text-white hover:bg-gray-700 px-4 py-2 transition'
 
 // RUN
 
-const app = makeApp({
+const app = makeElement({
   init,
   update,
   view,
