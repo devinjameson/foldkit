@@ -1,12 +1,12 @@
 import { Array, Data, Duration, Effect, Number, Option } from 'effect'
 import {
   fold,
-  makeApp,
+  makeElement,
   makeCommand,
   updateConstructors,
   Command,
   empty,
-  Init,
+  ElementInit,
   Field,
   FieldValidation,
   required,
@@ -74,7 +74,7 @@ const noOp = makeCommand(Effect.succeed(Message.NoOp()))
 
 // INIT
 
-const init: Init<Model, Message> = () => [
+const init: ElementInit<Model, Message> = () => [
   {
     name: Field.NotValidated({ value: '' }),
     email: Field.NotValidated({ value: '' }),
@@ -339,7 +339,7 @@ const view = (model: Model): Html => {
 
 // RUN
 
-const app = makeApp({
+const app = makeElement({
   init,
   update,
   view,

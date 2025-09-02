@@ -30,6 +30,10 @@
     "./runtime": {
       "types": "./dist/core/runtime.d.ts",
       "import": "./dist/core/runtime.js"
+    },
+    "./navigation": {
+      "types": "./dist/core/navigation.d.ts",
+      "import": "./dist/core/navigation.js"
     }
   },
   "files": [

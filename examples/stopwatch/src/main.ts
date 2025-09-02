@@ -1,5 +1,12 @@
 import { Data, Duration, Effect, flow, Option, pipe, Stream, String } from 'effect'
-import { fold, updateConstructors, makeApp, makeCommand, CommandStreams, Init } from '@foldkit'
+import {
+  fold,
+  updateConstructors,
+  makeElement,
+  makeCommand,
+  CommandStreams,
+  ElementInit,
+} from '@foldkit'
 import { Html, div, Class, button, OnClick } from '@foldkit/html'
 
 const TICK_INTERVAL_MS = 10
@@ -47,7 +54,7 @@ const update = fold<Model, Message>({
 
 // INIT
 
-const init: Init<Model, Message> = () => [
+const init: ElementInit<Model, Message> = () => [
   {
     elapsedMs: 0,
     isRunning: false,
@@ -139,7 +146,7 @@ const buttonStyle = 'px-6 py-4 flex-1 font-semibold text-white transition-colors
 
 // RUN
 
-const app = makeApp({
+const app = makeElement({
   init,
   update,
   view,

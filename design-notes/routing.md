@@ -269,13 +269,45 @@ This approach provides:
 - **SPA performance** - No page reloads for internal navigation
 - **Elm-like simplicity** - Framework handles browser complexity
 
+## API Design Update
+
+Following Elm's `Browser.element` and `Browser.application` pattern, we should split the app creation functions:
+
+- `makeApp` - For apps with effects but no URL routing (like `Browser.element`)
+- `makeBrowserApp` - For full SPAs with URL routing and browser integration (like `Browser.application`)
+
+This would eliminate the awkward optional URL parameter in `init` functions and make the API more explicit about what kind of app you're building.
+
+```typescript
+// Simple app without routing
+const simpleApp = makeApp({
+  init: () => [initialModel, Option.none()], // No URL parameter
+  update,
+  view,
+  container: document.body,
+})
+
+// Browser app with full routing
+const browserApp = makeBrowserApp({
+  init: (url: Url) => [initialModel, Option.none()], // URL always present
+  update,
+  view,
+  container: document.body,
+  browser: {
+    onUrlRequest: (request) => Message.UrlRequestReceived({ request }),
+    onUrlChange: (url) => Message.UrlChanged({ url }),
+  },
+})
+```
+
 ## Next Steps
 
-1. Implement core routing functionality in foldkit
-2. Add routing helpers and utilities
-3. Create a multi-page example application
-4. Test browser integration (back/forward, bookmarks, etc.)
-5. Add advanced features (query parameters, hash routing, etc.)
+1. ~~Implement core routing functionality in foldkit~~ ✅ DONE
+2. **TODO**: Split `makeApp` and `makeBrowserApp` following Elm's element/application pattern
+3. Add routing helpers and utilities
+4. ~~Create a multi-page example application~~ ✅ DONE
+5. ~~Test browser integration (back/forward, bookmarks, etc.)~~ ✅ DONE
+6. Add advanced features (query parameters, hash routing, etc.)
 
 ## Future Enhancements
 

@@ -1,5 +1,13 @@
 import { Array, Data, Effect, Match, Option, Schema, String } from 'effect'
-import { fold, makeApp, makeCommand, updateConstructors, Command, empty, Init } from '@foldkit'
+import {
+  fold,
+  makeElement,
+  makeCommand,
+  updateConstructors,
+  Command,
+  empty,
+  ElementInit,
+} from '@foldkit'
 import {
   Class,
   Html,
@@ -94,7 +102,7 @@ const loadTodos = makeCommand(
   }).pipe(Effect.catchAll(() => Effect.succeed(Message.TodosLoaded({ todos: [] })))),
 )
 
-const init: Init<Model, Message> = () => [
+const init: ElementInit<Model, Message> = () => [
   {
     todos: [],
     newTodoText: '',
@@ -500,7 +508,7 @@ const view = (model: Model): Html => {
 
 // RUN
 
-const app = makeApp({
+const app = makeElement({
   init,
   update,
   view,

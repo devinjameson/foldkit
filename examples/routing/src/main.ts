@@ -1,11 +1,37 @@
-import { Array, Data, Effect, Option, pipe } from 'effect'
-import { Route, fold, makeApp, updateConstructors, Init } from '@foldkit'
-import { Class, Html, OnClick, Href, div, h1, h2, p, a, ul, li } from '@foldkit/html'
+import { Array, Data, Effect, Option, pipe, Schema, String as S } from 'effect'
+import {
+  Route,
+  fold,
+  makeApplication,
+  updateConstructors,
+  makeCommand,
+  Url,
+  UrlRequest,
+  Command,
+  ApplicationInit,
+} from '@foldkit'
+import { pushUrl, replaceUrl } from '@foldkit/navigation'
+import {
+  Class,
+  Html,
+  Href,
+  Value,
+  Placeholder,
+  OnChange,
+  div,
+  h1,
+  h2,
+  p,
+  a,
+  ul,
+  li,
+  input,
+} from '@foldkit/html'
 
 type AppRoute = Data.TaggedEnum<{
   Home: {}
-  People: {}
-  Person: { id: number }
+  People: { searchText: Option.Option<string> }
+  Person: { personId: number }
   NotFound: { path: string }
 }>
 
@@ -16,30 +42,33 @@ const homeRouteParser = pipe(
   Route.map(() => AppRoute.Home()),
 )
 
+const PeopleQuerySchema = Schema.Struct({
+  searchText: Schema.OptionFromUndefinedOr(Schema.String),
+})
+
 const peopleRouteParser = pipe(
   Route.s('people'),
-  Route.map(() => AppRoute.People()),
+  Route.query(PeopleQuerySchema),
+  Route.map(({ searchText }) => AppRoute.People({ searchText })),
 )
 
 const personRouteParser = pipe(
   Route.s('people'),
-  Route.slash(Route.int),
-  Route.map(([, id]) => AppRoute.Person({ id })),
+  Route.slash(Route.int('personId')),
+  Route.map(({ personId }) => AppRoute.Person({ personId })),
 )
 
-const routerParser: Route.Parser<AppRoute> = Route.oneOf<AppRoute>([
+const routeParser: Route.Parser<AppRoute> = Route.oneOf<AppRoute>([
   personRouteParser,
   peopleRouteParser,
   homeRouteParser,
 ])
 
-// CLAUDE: Should foldkit provide this and if the user wants they can make their
-// own? Elm does that right?
-const urlToAppRoute = (path: string) =>
+const urlToAppRoute = (url: Url) =>
   pipe(
-    path,
-    Route.parseUrl(routerParser),
-    Effect.orElse(() => Effect.succeed(AppRoute.NotFound({ path }))),
+    url,
+    Route.parseUrl(routeParser),
+    Effect.orElse(() => Effect.succeed(AppRoute.NotFound({ path: url.pathname }))),
     Effect.runSync,
   )
 
@@ -53,63 +82,77 @@ const people = [
 
 const findPerson = (id: number) => Array.findFirst(people, (person) => person.id === id)
 
+// TODO: Replace this with a Url bulder
+const buildPeopleUrl = (searchText?: string) =>
+  searchText ? `/people?searchText=${encodeURIComponent(searchText)}` : '/people'
+
 // MODEL
 
 type Model = Readonly<{
   route: AppRoute
-  path: string
 }>
 
 // MESSAGE
 
 type Message = Data.TaggedEnum<{
   NoOp: {}
-  NavigateTo: { path: string }
-  UrlChanged: { path: string }
+  UrlRequestReceived: { request: UrlRequest }
+  UrlChanged: { url: Url }
+  SearchInputChanged: { value: string }
 }>
 
 const Message = Data.taggedEnum<Message>()
 
 // INIT
 
-const init: Init<Model, Message> = () => {
-  // CLAUDE: We should do this how Elm does it
-  const currentPath = window.location.pathname
-  // CLAUDE: Also how does Elm do this initial route?
-  const route = urlToAppRoute(currentPath)
-
-  return [
-    {
-      route,
-      path: currentPath,
-    },
-    Option.none(),
-  ]
+const init: ApplicationInit<Model, Message> = (url: Url) => {
+  return [{ route: urlToAppRoute(url) }, Option.none()]
 }
 
 // UPDATE
 
-const { pure } = updateConstructors<Model, Message>()
+const { pure, pureCommand } = updateConstructors<Model, Message>()
 
 const update = fold<Model, Message>({
   NoOp: pure((model) => model),
 
-  NavigateTo: pure((model, { path }) => {
-    // CLAUDE: This should happen in foldkit internals right?
-    window.history.pushState({}, '', path)
-
-    return {
-      ...model,
-      route: urlToAppRoute(path),
-      path,
-    }
+  UrlRequestReceived: pureCommand((model, { request }): [Model, Command<Message>] => {
+    return UrlRequest.$match(request, {
+      Internal: ({ url }): [Model, Command<Message>] => [
+        {
+          ...model,
+          route: urlToAppRoute(url),
+        },
+        makeCommand(pushUrl(url.pathname).pipe(Effect.map(() => Message.NoOp()))),
+      ],
+      External: ({ href }): [Model, Command<Message>] => [
+        model,
+        // TODO: Export a way to do this from foldkit
+        makeCommand(
+          Effect.sync(() => {
+            window.location.assign(href)
+            return Message.NoOp()
+          }),
+        ),
+      ],
+    })
   }),
 
-  UrlChanged: pure((model, { path }) => ({
+  UrlChanged: pure((model, { url }) => ({
     ...model,
-    route: urlToAppRoute(path),
-    path,
+    route: urlToAppRoute(url),
   })),
+
+  SearchInputChanged: pureCommand((model, { value }): [Model, Command<Message>] => {
+    return [
+      model,
+      makeCommand(
+        replaceUrl(buildPeopleUrl(S.trim(value) || undefined)).pipe(
+          Effect.map(() => Message.NoOp()),
+        ),
+      ),
+    ]
+  }),
 })
 
 // VIEW
@@ -121,22 +164,8 @@ const navigationView = (): Html =>
       div(
         [Class('max-w-4xl mx-auto flex gap-6')],
         [
-          a(
-            [
-              Href('/'),
-              OnClick(Message.NavigateTo({ path: '/' })),
-              Class('hover:underline font-medium'),
-            ],
-            ['Home'],
-          ),
-          a(
-            [
-              Href('/people'),
-              OnClick(Message.NavigateTo({ path: '/people' })),
-              Class('hover:underline font-medium'),
-            ],
-            ['People'],
-          ),
+          a([Href('/'), Class('hover:underline font-medium')], ['Home']),
+          a([Href('/people'), Class('hover:underline font-medium')], ['People']),
         ],
       ),
     ],
@@ -153,33 +182,59 @@ const homeView = (): Html =>
           'This is a routing example built with foldkit. Navigate using the links above to see different routes in action.',
         ],
       ),
-      p(
-        [Class('text-gray-600')],
-        [
-          'The routing system uses Effect-TS parser combinators for composable, type-safe URL parsing with detailed error handling.',
-        ],
-      ),
+      p([Class('text-gray-600')]),
     ],
   )
 
-const peopleView = (): Html =>
-  div(
+const peopleView = (searchText: Option.Option<string>): Html => {
+  const filteredPeople = Option.match(searchText, {
+    onNone: () => people,
+    onSome: (query) =>
+      Array.filter(
+        people,
+        (person) =>
+          person.name.toLowerCase().includes(query.toLowerCase()) ||
+          person.role.toLowerCase().includes(query.toLowerCase()),
+      ),
+  })
+
+  return div(
     [Class('max-w-4xl mx-auto px-4')],
     [
       h1([Class('text-4xl font-bold text-gray-800 mb-6')], ['People']),
-      p([Class('text-lg text-gray-600 mb-6')], ['Click on any person to view their details:']),
+
+      div(
+        [Class('mb-6')],
+        [
+          input([
+            Value(Option.getOrElse(searchText, () => '')),
+            Placeholder('Search by name or role...'),
+            Class(
+              'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
+            ),
+            OnChange((value) => Message.SearchInputChanged({ value })),
+          ]),
+        ],
+      ),
+
+      p(
+        [Class('text-lg text-gray-600 mb-6')],
+        [
+          Option.match(searchText, {
+            onNone: () => 'Click on any person to view their details:',
+            onSome: (query) =>
+              `Searching for "${query}" - ${Array.length(filteredPeople)} results:`,
+          }),
+        ],
+      ),
       ul(
         [Class('space-y-3')],
-        Array.map(people, (person) =>
+        Array.map(filteredPeople, (person) =>
           li(
-            [Class('border border-gray-200 rounded-lg p-4 hover:bg-gray-50')],
+            [Class('border border-gray-200 rounded-lg hover:bg-gray-50')],
             [
               a(
-                [
-                  Href(`/people/${person.id}`),
-                  OnClick(Message.NavigateTo({ path: `/people/${person.id}` })),
-                  Class('block'),
-                ],
+                [Href(`/people/${person.id}`), Class('block p-4 ')],
                 [
                   div(
                     [Class('flex justify-between items-center')],
@@ -196,9 +251,10 @@ const peopleView = (): Html =>
       ),
     ],
   )
+}
 
-const personView = (id: number): Html => {
-  const person = findPerson(id)
+const personView = (personId: number): Html => {
+  const person = findPerson(personId)
 
   return Option.match(person, {
     onNone: () =>
@@ -206,15 +262,8 @@ const personView = (id: number): Html => {
         [Class('max-w-4xl mx-auto px-4')],
         [
           h1([Class('text-4xl font-bold text-red-600 mb-6')], ['Person Not Found']),
-          p([Class('text-lg text-gray-600 mb-4')], [`No person found with ID: ${id}`]),
-          a(
-            [
-              Href('/people'),
-              OnClick(Message.NavigateTo({ path: '/people' })),
-              Class('text-blue-500 hover:underline'),
-            ],
-            ['← Back to People'],
-          ),
+          p([Class('text-lg text-gray-600 mb-4')], [`No person found with ID: ${personId}`]),
+          a([Href('/people'), Class('text-blue-500 hover:underline')], ['← Back to People']),
         ],
       ),
 
@@ -223,11 +272,7 @@ const personView = (id: number): Html => {
         [Class('max-w-4xl mx-auto px-4')],
         [
           a(
-            [
-              Href('/people'),
-              OnClick(Message.NavigateTo({ path: '/people' })),
-              Class('text-blue-500 hover:underline mb-4 inline-block'),
-            ],
+            [Href('/people'), Class('text-blue-500 hover:underline mb-4 inline-block')],
             ['← Back to People'],
           ),
 
@@ -274,22 +319,15 @@ const notFoundView = (path: string): Html =>
     [
       h1([Class('text-4xl font-bold text-red-600 mb-6')], ['404 - Page Not Found']),
       p([Class('text-lg text-gray-600 mb-4')], [`The path "${path}" was not found.`]),
-      a(
-        [
-          Href('/'),
-          OnClick(Message.NavigateTo({ path: '/' })),
-          Class('text-blue-500 hover:underline'),
-        ],
-        ['← Go Home'],
-      ),
+      a([Href('/'), Class('text-blue-500 hover:underline')], ['← Go Home']),
     ],
   )
 
 const view = (model: Model): Html => {
   const routeContent = AppRoute.$match(model.route, {
     Home: homeView,
-    People: peopleView,
-    Person: ({ id }) => personView(id),
+    People: ({ searchText }) => peopleView(searchText),
+    Person: ({ personId }) => personView(personId),
     NotFound: ({ path }) => notFoundView(path),
   })
 
@@ -298,11 +336,15 @@ const view = (model: Model): Html => {
 
 // RUN
 
-const app = makeApp({
+const app = makeApplication({
   init,
   update,
   view,
   container: document.body,
+  browser: {
+    onUrlRequest: (request) => Message.UrlRequestReceived({ request }),
+    onUrlChange: (url) => Message.UrlChanged({ url }),
+  },
 })
 
 Effect.runFork(app)

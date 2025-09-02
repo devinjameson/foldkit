@@ -14,6 +14,7 @@ export default defineConfig({
         '../../packages/foldkit/src/core/fieldValidation',
       ),
       '@foldkit/runtime': path.resolve(__dirname, '../../packages/foldkit/src/core/runtime'),
+      '@foldkit/navigation': path.resolve(__dirname, '../../packages/foldkit/src/core/navigation'),
       '@foldkit': path.resolve(__dirname, '../../packages/foldkit/src/index'),
     },
   },

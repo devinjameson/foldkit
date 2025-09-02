@@ -1,5 +1,13 @@
 import { Array, Data, Effect, Option, String } from 'effect'
-import { fold, makeApp, makeCommand, updateConstructors, Command, empty, Init } from '@foldkit'
+import {
+  fold,
+  makeElement,
+  makeCommand,
+  updateConstructors,
+  Command,
+  empty,
+  ElementInit,
+} from '@foldkit'
 import {
   Class,
   Html,
@@ -79,7 +87,7 @@ const update = fold<Model, Message>({
 
 // INIT
 
-const init: Init<Model, Message> = () => [
+const init: ElementInit<Model, Message> = () => [
   {
     locationInput: '',
     weather: WeatherAsyncResult.Init(),
@@ -220,7 +228,7 @@ const weatherView = (weather: WeatherData): Html =>
 
 // RUN
 
-const app = makeApp({
+const app = makeElement({
   init,
   update,
   view,

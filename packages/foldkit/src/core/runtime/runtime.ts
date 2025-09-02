@@ -10,12 +10,15 @@ import {
   pipe,
   PubSub,
   Predicate,
+  Data,
 } from 'effect'
-
-import { FoldReturn } from './fold'
-import { Html } from './html'
-import { VNode, patch } from './vdom'
 import { h } from 'snabbdom'
+
+import { FoldReturn } from '../fold'
+import { Html } from '../html'
+import { VNode, patch } from '../vdom'
+
+import { addNavigationEventListeners } from './addNavigationEventListeners'
 
 export class Dispatch extends Context.Tag('@foldkit/Dispatch')<
   Dispatch,
@@ -32,12 +35,51 @@ export const makeCommand = <Message>(effect: Effect.Effect<Message>): Command<Me
   effect,
 })
 
+export type Url = {
+  readonly pathname: string
+  readonly search: string
+  readonly hash: string
+}
+
+export type UrlRequest = Data.TaggedEnum<{
+  Internal: { readonly url: Url }
+  External: { readonly href: string }
+}>
+
+export const UrlRequest = Data.taggedEnum<UrlRequest>()
+
+export type BrowserConfig<Message> = {
+  readonly onUrlRequest: (request: UrlRequest) => Message
+  readonly onUrlChange: (url: Url) => Message
+}
+
 export interface RuntimeConfig<Model, Message, StreamDepsMap extends Record<string, unknown>> {
-  readonly init: () => [Model, Option.Option<Command<Message>>]
+  readonly init: (url?: Url) => [Model, Option.Option<Command<Message>>]
   readonly update: FoldReturn<Model, Message>
   readonly view: (model: Model) => Html
   readonly commandStreams?: CommandStreams<Model, Message, StreamDepsMap>
   readonly container: HTMLElement
+  readonly browser?: BrowserConfig<Message>
+}
+
+export type ElementInit<Model, Message> = () => [Model, Option.Option<Command<Message>>]
+export type ApplicationInit<Model, Message> = (url: Url) => [Model, Option.Option<Command<Message>>]
+
+export interface ElementConfig<Model, Message, StreamDepsMap extends Record<string, unknown>> {
+  readonly init: ElementInit<Model, Message>
+  readonly update: FoldReturn<Model, Message>
+  readonly view: (model: Model) => Html
+  readonly commandStreams?: CommandStreams<Model, Message, StreamDepsMap>
+  readonly container: HTMLElement
+}
+
+export interface ApplicationConfig<Model, Message, StreamDepsMap extends Record<string, unknown>> {
+  readonly init: ApplicationInit<Model, Message>
+  readonly update: FoldReturn<Model, Message>
+  readonly view: (model: Model) => Html
+  readonly commandStreams?: CommandStreams<Model, Message, StreamDepsMap>
+  readonly container: HTMLElement
+  readonly browser: BrowserConfig<Message>
 }
 
 export type CommandStreamConfig<Model, Message, StreamDeps> = {
@@ -55,6 +97,7 @@ export const makeRuntime = <Model, Message, StreamDepsMap extends Record<string,
   view,
   commandStreams,
   container,
+  browser: browserConfig,
 }: RuntimeConfig<Model, Message, StreamDepsMap>): Effect.Effect<void> =>
   Effect.gen(function* () {
     const messageQueue = yield* Queue.unbounded<Message>()
@@ -65,12 +108,24 @@ export const makeRuntime = <Model, Message, StreamDepsMap extends Record<string,
 
     const modelStream = Stream.fromPubSub(modelPubSub)
 
-    const [initModel, initCommand] = init()
+    const currentUrl: Option.Option<Url> = Option.fromNullable(browserConfig).pipe(
+      Option.map(() => ({
+        pathname: window.location.pathname,
+        search: window.location.search,
+        hash: window.location.hash,
+      })),
+    )
+
+    const [initModel, initCommand] = init(Option.getOrUndefined(currentUrl))
 
     yield* Option.match(initCommand, {
       onNone: () => Effect.void,
       onSome: (command) => Effect.forkDaemon(command.effect.pipe(Effect.flatMap(enqueueMessage))),
     })
+
+    if (browserConfig) {
+      addNavigationEventListeners(messageQueue, browserConfig)
+    }
 
     const modelRef = yield* Ref.make<Model>(initModel)
 
@@ -140,10 +195,40 @@ export const makeRuntime = <Model, Message, StreamDepsMap extends Record<string,
     )
   })
 
-export const makeApp = <
+export const makeElement = <
   Model,
   Message extends { _tag: string },
   StreamDepsMap extends Record<string, unknown>,
 >(
-  config: RuntimeConfig<Model, Message, StreamDepsMap>,
-): Effect.Effect<void, never, never> => makeRuntime(config)
+  config: ElementConfig<Model, Message, StreamDepsMap>,
+): Effect.Effect<void, never, never> =>
+  makeRuntime({
+    init: () => config.init(),
+    update: config.update,
+    view: config.view,
+    ...(config.commandStreams && { commandStreams: config.commandStreams }),
+    container: config.container,
+  })
+
+export const makeApplication = <
+  Model,
+  Message extends { _tag: string },
+  StreamDepsMap extends Record<string, unknown>,
+>(
+  config: ApplicationConfig<Model, Message, StreamDepsMap>,
+): Effect.Effect<void, never, never> => {
+  const currentUrl: Url = {
+    pathname: window.location.pathname,
+    search: window.location.search,
+    hash: window.location.hash,
+  }
+
+  return makeRuntime({
+    init: (url) => config.init(url || currentUrl),
+    update: config.update,
+    view: config.view,
+    ...(config.commandStreams && { commandStreams: config.commandStreams }),
+    container: config.container,
+    browser: config.browser,
+  })
+}

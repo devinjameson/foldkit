@@ -1,5 +1,5 @@
 import { Data, Effect, Option } from 'effect'
-import { fold, makeApp, updateConstructors, Init } from '@foldkit'
+import { fold, makeElement, updateConstructors, ElementInit } from '@foldkit'
 import { Class, Html, OnClick, button, div } from '@foldkit/html'
 
 // MODEL
@@ -25,7 +25,7 @@ const update = fold<Model, Message>({
 
 // INIT
 
-const init: Init<Model, Message> = () => [0, Option.none()]
+const init: ElementInit<Model, Message> = () => [0, Option.none()]
 
 // VIEW
 
@@ -51,7 +51,7 @@ const buttonStyle = 'bg-black text-white hover:bg-gray-700 px-4 py-2 transition'
 
 // RUN
 
-const app = makeApp({
+const app = makeElement({
   init,
   update,
   view,
