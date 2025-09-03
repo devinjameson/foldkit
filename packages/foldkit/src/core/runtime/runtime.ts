@@ -31,6 +31,9 @@ export interface Command<Message> {
   readonly effect: Effect.Effect<Message>
 }
 
+// TODO: Determine if structuring commands this way buys us anything (even for
+// the future if not now), or if we should just use Effect.Effect<Message>
+// directly.
 export const makeCommand = <Message>(effect: Effect.Effect<Message>): Command<Message> => ({
   effect,
 })

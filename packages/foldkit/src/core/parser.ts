@@ -1,4 +1,4 @@
-import { Array, Data, Effect, flow, pipe, Record, Schema, String } from 'effect'
+import { Array, Data, Effect, flow, pipe, Predicate, Record, Schema, String } from 'effect'
 import { Url } from './runtime'
 
 export class ParseError extends Data.TaggedError('ParseError')<{
@@ -9,19 +9,34 @@ export class ParseError extends Data.TaggedError('ParseError')<{
 }> {}
 
 export type ParseResult<A> = [A, string[]]
-export type Parser<A> = (
-  segments: string[],
-  search?: string,
-) => Effect.Effect<ParseResult<A>, ParseError>
 
-export type TerminalParser<A> = Parser<A> & { readonly __terminal: true }
+type PrintState = {
+  segments: string[]
+  queryParams: URLSearchParams
+}
 
-/* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-const makeTerminalParser = <A>(parser: Parser<A>): TerminalParser<A> => parser as TerminalParser<A>
+export type Biparser<A> = {
+  parse: (segments: string[], search?: string) => Effect.Effect<ParseResult<A>, ParseError>
+  print: (value: A, state: PrintState) => Effect.Effect<PrintState, ParseError>
+}
 
-export const s =
-  (segment: string): Parser<{}> =>
-  (segments) =>
+export type BuildableBiparser<A> = Biparser<A> & {
+  build: (value: A) => string
+}
+
+export type Router<A, B> = {
+  parse: (segments: string[], search?: string) => Effect.Effect<ParseResult<B>, ParseError>
+  build: (value: A) => string
+}
+
+export type TerminalParser<A> = Biparser<A> & { readonly __terminal: true }
+
+const makeTerminalParser = <A>(parser: Biparser<A>): TerminalParser<A> =>
+  /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+  parser as TerminalParser<A>
+
+export const s = (segment: string): Biparser<{}> => ({
+  parse: (segments) =>
     Array.matchLeft(segments, {
       onEmpty: () =>
         Effect.fail(
@@ -43,11 +58,20 @@ export const s =
                 position: 0,
               }),
             ),
-    })
+    }),
+  print: (_, state) =>
+    Effect.succeed({
+      ...state,
+      segments: [...state.segments, segment],
+    }),
+})
 
-export const param =
-  <A>(label: string, parse: (segment: string) => Effect.Effect<A, ParseError>): Parser<A> =>
-  (segments) =>
+export const param = <A>(
+  label: string,
+  parse: (segment: string) => Effect.Effect<A, ParseError>,
+  print: (value: A) => string,
+): Biparser<A> => ({
+  parse: (segments) =>
     Array.matchLeft(segments, {
       onEmpty: () =>
         Effect.fail(
@@ -64,115 +88,305 @@ export const param =
           parse,
           Effect.map((value) => [value, tail]),
         ),
-    })
+    }),
+  print: (value, state) =>
+    Effect.succeed({
+      ...state,
+      segments: [...state.segments, print(value)],
+    }),
+})
 
-export const string = <K extends string>(name: K): Parser<Record<K, string>> =>
-  /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-  param(`string (${name})`, (segment) => Effect.succeed({ [name]: segment } as Record<K, string>))
+export const string = <K extends string>(name: K): Biparser<Record<K, string>> =>
+  param(
+    `string (${name})`,
+    /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+    (segment) => Effect.succeed({ [name]: segment } as Record<K, string>),
+    (record) => record[name],
+  )
 
-export const int = <K extends string>(name: K): Parser<Record<K, number>> =>
-  param(`integer (${name})`, (segment) => {
-    const parsed = parseInt(segment, 10)
+export const int = <K extends string>(name: K): Biparser<Record<K, number>> =>
+  param(
+    `integer (${name})`,
+    (segment) => {
+      const parsed = parseInt(segment, 10)
 
-    return isNaN(parsed) || parsed.toString() !== segment
-      ? Effect.fail(
+      return isNaN(parsed) || parsed.toString() !== segment
+        ? Effect.fail(
+            new ParseError({
+              message: `Expected integer for ${name}`,
+              expected: 'integer',
+              actual: segment,
+            }),
+          )
+        : /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+          Effect.succeed({ [name]: parsed } as Record<K, number>)
+    },
+    (record) => record[name].toString(),
+  )
+
+export const root: Biparser<{}> = {
+  parse: (segments) =>
+    Array.matchLeft(segments, {
+      onEmpty: () => Effect.succeed([{}, []]),
+      onNonEmpty: (_, tail) =>
+        Effect.fail(
           new ParseError({
-            message: `Expected integer for ${name}`,
-            expected: 'integer',
-            actual: segment,
+            message: 'Expected root path',
+            expected: 'root path',
+            actual: `${tail.length + 1} remaining segments`,
           }),
-        )
-      : /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-        Effect.succeed({ [name]: parsed } as Record<K, number>)
-  })
+        ),
+    }),
+  print: (_, state) => Effect.succeed(state),
+}
 
-export const root: Parser<{}> = (segments) =>
-  Array.matchLeft(segments, {
-    onEmpty: () => Effect.succeed([{}, []]),
-    onNonEmpty: (_, tail) =>
-      Effect.fail(
-        new ParseError({
-          message: 'Expected root path',
-          expected: 'root path',
-          actual: `${tail.length + 1} remaining segments`,
-        }),
-      ),
-  })
+export type Parser<A> = {
+  parse: (segments: string[], search?: string) => Effect.Effect<ParseResult<A>, ParseError>
+}
 
-export const oneOf =
-  <A>(parsers: (Parser<A> | TerminalParser<A>)[]): Parser<A> =>
-  (segments, search) =>
-    Array.matchLeft(parsers, {
-      onEmpty: () => {
-        const segmentsStr = '/' + Array.join(segments, '/')
+// Overloaded signatures for oneOf to properly infer union types
+export function oneOf<A>(p1: Biparser<A> | Parser<A>): Parser<A>
+export function oneOf<A, B = never>(
+  p1: Biparser<A> | Parser<A>,
+  p2: Biparser<B> | Parser<B>,
+): Parser<A | B>
+export function oneOf<A, B = never, C = never>(
+  p1: Biparser<A> | Parser<A>,
+  p2: Biparser<B> | Parser<B>,
+  p3: Biparser<C> | Parser<C>,
+): Parser<A | B | C>
+export function oneOf<A, B = never, C = never, D = never>(
+  p1: Biparser<A> | Parser<A>,
+  p2: Biparser<B> | Parser<B>,
+  p3: Biparser<C> | Parser<C>,
+  p4: Biparser<D> | Parser<D>,
+): Parser<A | B | C | D>
+export function oneOf<A, B = never, C = never, D = never, E = never>(
+  p1: Biparser<A> | Parser<A>,
+  p2: Biparser<B> | Parser<B>,
+  p3: Biparser<C> | Parser<C>,
+  p4: Biparser<D> | Parser<D>,
+  p5: Biparser<E> | Parser<E>,
+): Parser<A | B | C | D | E>
+export function oneOf<A, B = never, C = never, D = never, E = never, F = never>(
+  p1: Biparser<A> | Parser<A>,
+  p2: Biparser<B> | Parser<B>,
+  p3: Biparser<C> | Parser<C>,
+  p4: Biparser<D> | Parser<D>,
+  p5: Biparser<E> | Parser<E>,
+  p6: Biparser<F> | Parser<F>,
+): Parser<A | B | C | D | E | F>
+export function oneOf<A, B = never, C = never, D = never, E = never, F = never, G = never>(
+  p1: Biparser<A> | Parser<A>,
+  p2: Biparser<B> | Parser<B>,
+  p3: Biparser<C> | Parser<C>,
+  p4: Biparser<D> | Parser<D>,
+  p5: Biparser<E> | Parser<E>,
+  p6: Biparser<F> | Parser<F>,
+  p7: Biparser<G> | Parser<G>,
+): Parser<A | B | C | D | E | F | G>
+export function oneOf<
+  A,
+  B = never,
+  C = never,
+  D = never,
+  E = never,
+  F = never,
+  G = never,
+  H = never,
+>(
+  p1: Biparser<A> | Parser<A>,
+  p2: Biparser<B> | Parser<B>,
+  p3: Biparser<C> | Parser<C>,
+  p4: Biparser<D> | Parser<D>,
+  p5: Biparser<E> | Parser<E>,
+  p6: Biparser<F> | Parser<F>,
+  p7: Biparser<G> | Parser<G>,
+  p8: Biparser<H> | Parser<H>,
+): Parser<A | B | C | D | E | F | G | H>
+export function oneOf<
+  A,
+  B = never,
+  C = never,
+  D = never,
+  E = never,
+  F = never,
+  G = never,
+  H = never,
+  I = never,
+>(
+  p1: Biparser<A> | Parser<A>,
+  p2: Biparser<B> | Parser<B>,
+  p3: Biparser<C> | Parser<C>,
+  p4: Biparser<D> | Parser<D>,
+  p5: Biparser<E> | Parser<E>,
+  p6: Biparser<F> | Parser<F>,
+  p7: Biparser<G> | Parser<G>,
+  p8: Biparser<H> | Parser<H>,
+  p9: Biparser<I> | Parser<I>,
+): Parser<A | B | C | D | E | F | G | H | I>
+export function oneOf<
+  A,
+  B = never,
+  C = never,
+  D = never,
+  E = never,
+  F = never,
+  G = never,
+  H = never,
+  I = never,
+  J = never,
+>(
+  p1: Biparser<A> | Parser<A>,
+  p2: Biparser<B> | Parser<B>,
+  p3: Biparser<C> | Parser<C>,
+  p4: Biparser<D> | Parser<D>,
+  p5: Biparser<E> | Parser<E>,
+  p6: Biparser<F> | Parser<F>,
+  p7: Biparser<G> | Parser<G>,
+  p8: Biparser<H> | Parser<H>,
+  p9: Biparser<I> | Parser<I>,
+  p10: Biparser<J> | Parser<J>,
+): Parser<A | B | C | D | E | F | G | H | I | J>
+export function oneOf(
+  p1: Biparser<any> | Parser<any>,
+  p2?: Biparser<any> | Parser<any>,
+  p3?: Biparser<any> | Parser<any>,
+  p4?: Biparser<any> | Parser<any>,
+  p5?: Biparser<any> | Parser<any>,
+  p6?: Biparser<any> | Parser<any>,
+  p7?: Biparser<any> | Parser<any>,
+  p8?: Biparser<any> | Parser<any>,
+  p9?: Biparser<any> | Parser<any>,
+  p10?: Biparser<any> | Parser<any>,
+): Parser<any> {
+  const parsers = [p1, p2, p3, p4, p5, p6, p7, p8, p9, p10].filter((p) => p !== undefined)
 
-        return Effect.fail(
-          new ParseError({
-            message: `No parsers provided for path: ${segmentsStr}`,
-          }),
-        )
-      },
-      onNonEmpty: () =>
-        Effect.firstSuccessOf(Array.map(parsers, (parser) => parser(segments, search))),
-    })
+  return {
+    parse: (segments, search) =>
+      Array.matchLeft(parsers, {
+        onEmpty: () => {
+          const segmentsStr = '/' + Array.join(segments, '/')
 
-export const map =
-  <A, B>(f: (a: A) => B) =>
-  (parser: Parser<A>): Parser<B> =>
-  (segments, search) =>
-    pipe(
-      parser(segments, search),
-      Effect.map(([value, remaining]) => [f(value), remaining]),
-    )
+          return Effect.fail(
+            new ParseError({
+              message: `No parsers provided for path: ${segmentsStr}`,
+            }),
+          )
+        },
+        onNonEmpty: () =>
+          Effect.firstSuccessOf(Array.map(parsers, (parser) => parser.parse(segments, search))),
+      }),
+  }
+}
+
+export const bidirectional =
+  <A, B>({ in: to, out: from }: { in: (a: A) => B; out: (b: B) => A }) =>
+  (parser: Biparser<A>): Router<A, B> => {
+    const biparser: Biparser<B> = {
+      parse: (segments, search) =>
+        pipe(
+          parser.parse(segments, search),
+          Effect.map(([value, remaining]) => [to(value), remaining]),
+        ),
+      print: (value, state) => parser.print(from(value), state),
+    }
+    return {
+      parse: biparser.parse,
+      build: buildUrl(parser),
+    }
+  }
+
+export const imap = bidirectional
 
 export const slash =
-  <A extends Record<string, unknown>>(parserB: Parser<A>) =>
-  <B extends Record<string, unknown>>(
-    parserA: Parser<B> & {
+  <A extends Record<string, unknown>, B extends Record<string, unknown>>(parserB: Biparser<A>) =>
+  (
+    parserA: Biparser<B> & {
       readonly __terminal?: never
       readonly 'Cannot use slash after query - query parameters must be terminal'?: never
     },
-  ): Parser<B & A> =>
-  (segments, search) =>
-    pipe(
-      parserA(segments, search),
-      Effect.flatMap(([valueA, remainingA]) =>
-        pipe(
-          parserB(remainingA, search),
-          Effect.map(([valueB, remainingB]) => [{ ...valueA, ...valueB }, remainingB]),
+  ): Biparser<B & A> => ({
+    parse: (segments, search) =>
+      pipe(
+        parserA.parse(segments, search),
+        Effect.flatMap(([valueA, remainingA]) =>
+          pipe(
+            parserB.parse(remainingA, search),
+            Effect.map(([valueB, remainingB]) => [{ ...valueA, ...valueB }, remainingB]),
+          ),
         ),
       ),
-    )
+    print: (value, state) =>
+      pipe(
+        parserA.print(value, state),
+        Effect.flatMap((newState) => parserB.print(value, newState)),
+      ),
+  })
 
 export const query =
-  <A, I>(schema: Schema.Schema<A, I>) =>
-  <B extends Record<string, unknown>>(parser: Parser<B>): TerminalParser<B & A> => {
-    const queryParser = (segments: string[], search?: string) => {
-      return pipe(
-        parser(segments, search),
-        Effect.flatMap(([pathValue, remainingSegments]) => {
-          const searchParams = new URLSearchParams(search ?? '')
-          const queryRecord = Record.fromEntries(searchParams.entries())
+  <A, I extends Record.ReadonlyRecord<string, unknown>>(schema: Schema.Schema<A, I>) =>
+  <B extends Record<string, unknown>>(parser: Biparser<B>): TerminalParser<B & A> => {
+    const queryParser: Biparser<B & A> = {
+      parse: (segments, search) => {
+        return pipe(
+          parser.parse(segments, search),
+          Effect.flatMap(([pathValue, remainingSegments]) => {
+            const searchParams = new URLSearchParams(search ?? '')
+            const queryRecord = Record.fromEntries(searchParams.entries())
 
-          return pipe(
-            queryRecord,
-            Schema.decodeUnknown(schema),
-            Effect.mapError(
-              (error) =>
-                new ParseError({
-                  message: `Query parameter validation failed: ${error.message}`,
-                  expected: 'valid query parameters',
-                  actual: search || 'empty',
-                }),
-            ),
-            Effect.map(
-              (queryValue) =>
-                /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-                [{ ...pathValue, ...queryValue }, remainingSegments] as [B & A, string[]],
-            ),
-          )
-        }),
-      )
+            return pipe(
+              queryRecord,
+              Schema.decodeUnknown(schema),
+              Effect.mapError(
+                (error) =>
+                  new ParseError({
+                    message: `Query parameter validation failed: ${error.message}`,
+                    expected: 'valid query parameters',
+                    actual: search || 'empty',
+                  }),
+              ),
+              Effect.map(
+                (queryValue) =>
+                  /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+                  [{ ...pathValue, ...queryValue }, remainingSegments] as [B & A, string[]],
+              ),
+            )
+          }),
+        )
+      },
+      print: (value, state) =>
+        pipe(
+          parser.print(value, state),
+          Effect.flatMap((newState) => {
+            // Extract query part from value and add to query params
+            return pipe(
+              Schema.encode(schema)(value),
+              Effect.map((queryValue) => {
+                const newQueryParams = new URLSearchParams(newState.queryParams)
+                pipe(
+                  queryValue,
+                  Record.toEntries,
+                  Array.forEach(([key, val]) => {
+                    if (Predicate.isNotNullable(val)) {
+                      newQueryParams.set(key, val.toString())
+                    }
+                  }),
+                )
+                return {
+                  ...newState,
+                  queryParams: newQueryParams,
+                }
+              }),
+              Effect.mapError(
+                (error) =>
+                  new ParseError({
+                    message: `Query parameter encoding failed: ${error.message}`,
+                  }),
+              ),
+            )
+          }),
+        ),
     }
     return makeTerminalParser(queryParser)
   }
@@ -206,11 +420,11 @@ const complete = <A>([value, remaining]: ParseResult<A>) =>
   })
 
 export const parseUrl =
-  <A>(parser: Parser<A> | TerminalParser<A>) =>
+  <A>(parser: Biparser<A> | TerminalParser<A> | Parser<A>) =>
   (url: Url) => {
     return pipe(
       pathToSegments(url.pathname),
-      (segments) => parser(segments, url.search),
+      (segments) => parser.parse(segments, url.search),
       Effect.flatMap(complete),
     )
   }
@@ -230,3 +444,22 @@ export const fromLocation = (location: Location): UrlRequest =>
       hash: location.hash,
     },
   })
+
+const buildUrl =
+  <A>(parser: Biparser<A>) =>
+  (data: A): string => {
+    const initialState: PrintState = {
+      segments: [],
+      queryParams: new URLSearchParams(),
+    }
+
+    return pipe(
+      parser.print(data, initialState),
+      Effect.map((state) => {
+        const path = '/' + Array.join(state.segments, '/')
+        const query = state.queryParams.toString()
+        return query ? `${path}?${query}` : path
+      }),
+      Effect.runSync,
+    )
+  }
