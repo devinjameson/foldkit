@@ -24,9 +24,9 @@ export type BuildableBiparser<A> = Biparser<A> & {
   build: (value: A) => string
 }
 
-export type Router<A, B> = {
-  parse: (segments: string[], search?: string) => Effect.Effect<ParseResult<B>, ParseError>
-  build: (value: A) => string
+export type Router<A> = {
+  parse: (segments: string[], search?: string) => Effect.Effect<ParseResult<A>, ParseError>
+  build: (value: A extends { _tag: string } ? Omit<A, '_tag'> : never) => string
 }
 
 export type TerminalParser<A> = Biparser<A> & { readonly __terminal: true }
@@ -35,7 +35,7 @@ const makeTerminalParser = <A>(parser: Biparser<A>): TerminalParser<A> =>
   /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
   parser as TerminalParser<A>
 
-export const s = (segment: string): Biparser<{}> => ({
+export const literal = (segment: string): Biparser<{}> => ({
   parse: (segments) =>
     Array.matchLeft(segments, {
       onEmpty: () =>
@@ -280,24 +280,25 @@ export function oneOf(
   }
 }
 
-export const bidirectional =
-  <A, B>({ in: to, out: from }: { in: (a: A) => B; out: (b: B) => A }) =>
-  (parser: Biparser<A>): Router<A, B> => {
-    const biparser: Biparser<B> = {
-      parse: (segments, search) =>
+export const mapTo: {
+  <T>(appRouteConstructor: () => T): (parser: Biparser<{}>) => Router<T>
+  <A, T>(appRouteConstructor: (data: A) => T): (parser: Biparser<A>) => Router<T>
+} = (appRouteConstructor: any): any => {
+  return (parser: any) => {
+    return {
+      parse: (segments: string[], search?: string) =>
         pipe(
           parser.parse(segments, search),
-          Effect.map(([value, remaining]) => [to(value), remaining]),
+          Effect.map(([value, remaining]: any) => {
+            const result =
+              appRouteConstructor.length === 0 ? appRouteConstructor() : appRouteConstructor(value)
+            return [result, remaining]
+          }),
         ),
-      print: (value, state) => parser.print(from(value), state),
-    }
-    return {
-      parse: biparser.parse,
       build: buildUrl(parser),
     }
   }
-
-export const imap = bidirectional
+}
 
 export const slash =
   <A extends Record<string, unknown>, B extends Record<string, unknown>>(parserB: Biparser<A>) =>
@@ -419,7 +420,7 @@ const complete = <A>([value, remaining]: ParseResult<A>) =>
     },
   })
 
-export const parseUrl =
+const parseUrl =
   <A>(parser: Biparser<A> | TerminalParser<A> | Parser<A>) =>
   (url: Url) => {
     return pipe(
@@ -428,6 +429,16 @@ export const parseUrl =
       Effect.flatMap(complete),
     )
   }
+
+export const parseUrlWithFallback =
+  <A, B>(parser: Parser<A>, fallback: (data: { path: string }) => B) =>
+  (url: Url): A | B =>
+    pipe(
+      url,
+      parseUrl(parser),
+      Effect.orElse(() => Effect.succeed(fallback({ path: url.pathname }))),
+      Effect.runSync,
+    )
 
 export type UrlRequest = Data.TaggedEnum<{
   Internal: { url: Url }

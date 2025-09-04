@@ -27,6 +27,9 @@ import {
   li,
   input,
 } from '@foldkit/html'
+import { slash, literal, int } from '@foldkit/route'
+
+// ROUTE
 
 type AppRoute = Data.TaggedEnum<{
   Home: {}
@@ -38,24 +41,15 @@ type AppRoute = Data.TaggedEnum<{
 
 const AppRoute = Data.taggedEnum<AppRoute>()
 
-const homeRouter = pipe(
-  Route.root,
-  Route.bidirectional({
-    in: () => AppRoute.Home(),
-    out: () => ({}),
-  }),
-)
+const homeRouter = pipe(Route.root, Route.mapTo(AppRoute.Home))
 
 const nestedRouter = pipe(
-  Route.s('nested'),
-  Route.slash(Route.s('route')),
-  Route.slash(Route.s('is')),
-  Route.slash(Route.s('very')),
-  Route.slash(Route.s('nested')),
-  Route.bidirectional({
-    in: () => AppRoute.Nested(),
-    out: () => ({}),
-  }),
+  literal('nested'),
+  slash(literal('route')),
+  slash(literal('is')),
+  slash(literal('very')),
+  slash(literal('nested')),
+  Route.mapTo(AppRoute.Nested),
 )
 
 const PeopleQuerySchema = Schema.Struct({
@@ -63,34 +57,16 @@ const PeopleQuerySchema = Schema.Struct({
 })
 
 const peopleRouter = pipe(
-  Route.s('people'),
+  literal('people'),
   Route.query(PeopleQuerySchema),
-  Route.bidirectional({
-    in: ({ searchText }) => AppRoute.People({ searchText }),
-    out: (route) => ({ searchText: route.searchText }),
-  }),
+  Route.mapTo(AppRoute.People),
 )
 
-const personRouter = pipe(
-  Route.s('people'),
-  Route.slash(Route.int('personId')),
-  Route.bidirectional({
-    in: ({ personId }) => AppRoute.Person({ personId }),
-    out: (route) => ({ personId: route.personId }),
-  }),
-)
+const personRouter = pipe(literal('people'), slash(int('personId')), Route.mapTo(AppRoute.Person))
 
 const routeParser = Route.oneOf(personRouter, peopleRouter, nestedRouter, homeRouter)
 
-// TODO: Maybe expose a helper for this from FoldKit?
-// Would take a Route.Parser and a fallback AppRoute and return a function (url: Url) => AppRoute
-const urlToAppRoute = (url: Url): AppRoute =>
-  pipe(
-    url,
-    Route.parseUrl(routeParser),
-    Effect.orElse(() => Effect.succeed(AppRoute.NotFound({ path: url.pathname }))),
-    Effect.runSync,
-  )
+const urlToAppRoute = Route.parseUrlWithFallback(routeParser, AppRoute.NotFound)
 
 const people = [
   { id: 1, name: 'Alice Johnson', role: 'Designer' },
