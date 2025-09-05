@@ -376,6 +376,7 @@ const app = makeApplication({
   init,
   update,
   view,
+  // TODO: Should this be document.getElementById('app') instead?
   container: document.body,
   browser: {
     onUrlRequest: (request) => Message.UrlRequestReceived({ request }),
