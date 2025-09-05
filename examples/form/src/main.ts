@@ -2,7 +2,6 @@ import { Array, Data, Duration, Effect, Number, Option } from 'effect'
 import {
   fold,
   makeElement,
-  makeCommand,
   updateConstructors,
   Command,
   empty,
@@ -70,7 +69,7 @@ const Message = Data.taggedEnum<Message>()
 
 const { pure, pureCommand } = updateConstructors<Model, Message>()
 
-const noOp = makeCommand(Effect.succeed(Message.NoOp()))
+const noOp = Effect.succeed(Message.NoOp())
 
 // INIT
 
@@ -119,7 +118,7 @@ const validateEmailNotOnWaitlist = (email: string, validationId: number): Comman
         field: Field.Valid({ value: email }),
       })
     }
-  }).pipe(makeCommand)
+  })
 
 const messageValidations: FieldValidation<string>[] = []
 
@@ -218,7 +217,7 @@ const submitForm = (model: Model): Command<Message> =>
         error: 'Sorry, there was an error adding you to the waitlist. Please try again.',
       })
     }
-  }).pipe(makeCommand)
+  })
 
 // VIEW
 

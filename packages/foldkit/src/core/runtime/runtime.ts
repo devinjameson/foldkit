@@ -27,16 +27,7 @@ export class Dispatch extends Context.Tag('@foldkit/Dispatch')<
   }
 >() {}
 
-export interface Command<Message> {
-  readonly effect: Effect.Effect<Message>
-}
-
-// TODO: Determine if structuring commands this way buys us anything (even for
-// the future if not now), or if we should just use Effect.Effect<Message>
-// directly.
-export const makeCommand = <Message>(effect: Effect.Effect<Message>): Command<Message> => ({
-  effect,
-})
+export type Command<Message> = Effect.Effect<Message>
 
 export type Url = {
   readonly pathname: string
@@ -123,7 +114,7 @@ export const makeRuntime = <Model, Message, StreamDepsMap extends Record<string,
 
     yield* Option.match(initCommand, {
       onNone: () => Effect.void,
-      onSome: (command) => Effect.forkDaemon(command.effect.pipe(Effect.flatMap(enqueueMessage))),
+      onSome: (command) => Effect.forkDaemon(command.pipe(Effect.flatMap(enqueueMessage))),
     })
 
     if (browserConfig) {
@@ -143,7 +134,7 @@ export const makeRuntime = <Model, Message, StreamDepsMap extends Record<string,
               Stream.map(deps),
               Stream.changes,
               Stream.flatMap(stream, { switch: true }),
-              Stream.runForEach(({ effect }) => effect.pipe(Effect.flatMap(enqueueMessage))),
+              Stream.runForEach(Effect.flatMap(enqueueMessage)),
             ),
           ),
         ),
@@ -185,8 +176,7 @@ export const makeRuntime = <Model, Message, StreamDepsMap extends Record<string,
 
         yield* Option.match(command, {
           onNone: () => Effect.void,
-          onSome: (command) =>
-            Effect.forkDaemon(command.effect.pipe(Effect.flatMap(enqueueMessage))),
+          onSome: (command) => Effect.forkDaemon(command.pipe(Effect.flatMap(enqueueMessage))),
         })
 
         if (!Equal.equals(currentModel, nextModel)) {

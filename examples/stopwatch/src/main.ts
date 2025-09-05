@@ -1,12 +1,5 @@
 import { Data, Duration, Effect, flow, Option, pipe, Stream, String } from 'effect'
-import {
-  fold,
-  updateConstructors,
-  makeElement,
-  makeCommand,
-  CommandStreams,
-  ElementInit,
-} from '@foldkit'
+import { fold, updateConstructors, makeElement, CommandStreams, ElementInit } from '@foldkit'
 import { Html, div, Class, button, OnClick } from '@foldkit/html'
 
 const TICK_INTERVAL_MS = 10
@@ -75,9 +68,7 @@ const commandStreams: CommandStreams<Model, Message, StreamDepsMap> = {
     stream: (isRunning: boolean) =>
       Stream.when(
         Stream.tick(Duration.millis(TICK_INTERVAL_MS)).pipe(
-          Stream.map(() =>
-            makeCommand(Effect.sync(() => Message.Tick({ currentTime: Date.now() }))),
-          ),
+          Stream.map(() => Effect.sync(() => Message.Tick({ currentTime: Date.now() }))),
         ),
         () => isRunning,
       ),

@@ -1,13 +1,5 @@
 import { Array, Data, Effect, Match, Option, Schema, String } from 'effect'
-import {
-  fold,
-  makeElement,
-  makeCommand,
-  updateConstructors,
-  Command,
-  empty,
-  ElementInit,
-} from '@foldkit'
+import { fold, makeElement, updateConstructors, Command, empty, ElementInit } from '@foldkit'
 import {
   Class,
   Html,
@@ -83,24 +75,22 @@ const Message = Data.taggedEnum<Message>()
 
 const { pure, pureCommand } = updateConstructors<Model, Message>()
 
-const noOp = makeCommand(Effect.succeed(Message.NoOp()))
+const noOp = Effect.succeed(Message.NoOp())
 
 // INIT
 
-const loadTodos = makeCommand(
-  Effect.gen(function* () {
-    const storedTodos = yield* Effect.sync(() => localStorage.getItem('todos'))
+const loadTodos = Effect.gen(function* () {
+  const storedTodos = yield* Effect.sync(() => localStorage.getItem('todos'))
 
-    if (!storedTodos) {
-      return Message.TodosLoaded({ todos: [] })
-    }
+  if (!storedTodos) {
+    return Message.TodosLoaded({ todos: [] })
+  }
 
-    const parsed = yield* Effect.try(() => JSON.parse(storedTodos))
-    const decoded = yield* Schema.decodeUnknown(Schema.Array(TodoSchema))(parsed)
+  const parsed = yield* Effect.try(() => JSON.parse(storedTodos))
+  const decoded = yield* Schema.decodeUnknown(Schema.Array(TodoSchema))(parsed)
 
-    return Message.TodosLoaded({ todos: Array.fromIterable(decoded) })
-  }).pipe(Effect.catchAll(() => Effect.succeed(Message.TodosLoaded({ todos: [] })))),
-)
+  return Message.TodosLoaded({ todos: Array.fromIterable(decoded) })
+}).pipe(Effect.catchAll(() => Effect.succeed(Message.TodosLoaded({ todos: [] }))))
 
 const init: ElementInit<Model, Message> = () => [
   {
@@ -278,12 +268,10 @@ const update = fold<Model, Message>({
 // COMMAND
 
 const saveTodos = (todos: Array<Todo>): Command<Message> =>
-  makeCommand(
-    Effect.gen(function* () {
-      yield* Effect.sync(() => localStorage.setItem('todos', JSON.stringify(todos)))
-      return Message.TodosSaved({ todos })
-    }).pipe(Effect.catchAll(() => Effect.succeed(Message.TodosSaved({ todos })))),
-  )
+  Effect.gen(function* () {
+    yield* Effect.sync(() => localStorage.setItem('todos', JSON.stringify(todos)))
+    return Message.TodosSaved({ todos })
+  }).pipe(Effect.catchAll(() => Effect.succeed(Message.TodosSaved({ todos }))))
 
 // VIEW
 

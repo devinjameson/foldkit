@@ -4,7 +4,6 @@ import {
   fold,
   makeApplication,
   updateConstructors,
-  makeCommand,
   Url,
   UrlRequest,
   Command,
@@ -115,11 +114,11 @@ const update = fold<Model, Message>({
           ...model,
           route: urlToAppRoute(url),
         },
-        makeCommand(pushUrl(url.pathname).pipe(Effect.map(() => Message.NoOp()))),
+        pushUrl(url.pathname).pipe(Effect.map(() => Message.NoOp())),
       ],
       External: ({ href }): [Model, Command<Message>] => [
         model,
-        makeCommand(load(href).pipe(Effect.map(() => Message.NoOp()))),
+        load(href).pipe(Effect.map(() => Message.NoOp())),
       ],
     })
   }),
@@ -132,10 +131,8 @@ const update = fold<Model, Message>({
   SearchInputChanged: pureCommand((model, { value }): [Model, Command<Message>] => {
     return [
       model,
-      makeCommand(
-        replaceUrl(peopleRouter.build({ searchText: Option.fromNullable(value || null) })).pipe(
-          Effect.map(() => Message.NoOp()),
-        ),
+      replaceUrl(peopleRouter.build({ searchText: Option.fromNullable(value || null) })).pipe(
+        Effect.map(() => Message.NoOp()),
       ),
     ]
   }),

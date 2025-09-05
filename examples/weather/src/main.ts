@@ -1,13 +1,5 @@
 import { Array, Data, Effect, Option, String } from 'effect'
-import {
-  fold,
-  makeElement,
-  makeCommand,
-  updateConstructors,
-  Command,
-  empty,
-  ElementInit,
-} from '@foldkit'
+import { fold, makeElement, updateConstructors, Command, empty, ElementInit } from '@foldkit'
 import {
   Class,
   Html,
@@ -25,16 +17,19 @@ import {
   h2,
   form,
   label,
+  p,
 } from '@foldkit/html'
 
 // MODEL
 
 type WeatherData = {
-  location: string
+  zipCode: string
   temperature: number
   description: string
   humidity: number
   windSpeed: number
+  areaName: string
+  region: string
 }
 
 type WeatherAsyncResult = Data.TaggedEnum<{
@@ -47,14 +42,14 @@ type WeatherAsyncResult = Data.TaggedEnum<{
 const WeatherAsyncResult = Data.taggedEnum<WeatherAsyncResult>()
 
 type Model = Readonly<{
-  locationInput: string
+  zipCodeInput: string
   weather: WeatherAsyncResult
 }>
 
 // UPDATE
 
 type Message = Data.TaggedEnum<{
-  UpdateLocationInput: { value: string }
+  UpdateZipCodeInput: { value: string }
   FetchWeather: {}
   WeatherFetched: { weather: WeatherData }
   WeatherError: { error: string }
@@ -64,16 +59,16 @@ const Message = Data.taggedEnum<Message>()
 const { pure, pureCommand } = updateConstructors<Model, Message>()
 
 const update = fold<Model, Message>({
-  UpdateLocationInput: pure((model, { value }) => ({
+  UpdateZipCodeInput: pure((model, { value }) => ({
     ...model,
-    locationInput: value,
+    zipCodeInput: value,
   })),
   FetchWeather: pureCommand((model) => [
     {
       ...model,
       weather: WeatherAsyncResult.Loading(),
     },
-    fetchWeatherCommand(model.locationInput),
+    fetchWeatherCommand(model.zipCodeInput),
   ]),
   WeatherFetched: pure((model, { weather }) => ({
     ...model,
@@ -89,7 +84,7 @@ const update = fold<Model, Message>({
 
 const init: ElementInit<Model, Message> = () => [
   {
-    locationInput: '',
+    zipCodeInput: '',
     weather: WeatherAsyncResult.Init(),
   },
   Option.none(),
@@ -104,39 +99,45 @@ type WeatherResponseData = {
     windspeedKmph: string
     weatherDesc: Array.NonEmptyReadonlyArray<{ value: string }>
   }>
+  nearest_area: Array.NonEmptyReadonlyArray<{
+    areaName: Array.NonEmptyReadonlyArray<{ value: string }>
+    region: Array.NonEmptyReadonlyArray<{ value: string }>
+  }>
 }
 
-const fetchWeatherCommand = (location: string): Command<Message> =>
-  makeCommand(
-    Effect.gen(function* () {
-      if (String.isEmpty(location.trim())) {
-        return Message.WeatherError({ error: 'Location required' })
-      }
+const fetchWeatherCommand = (zipCode: string): Command<Message> =>
+  Effect.gen(function* () {
+    if (String.isEmpty(zipCode.trim())) {
+      return Message.WeatherError({ error: 'Zip code required' })
+    }
 
-      const response = yield* Effect.tryPromise(() =>
-        fetch(`https://wttr.in/${encodeURIComponent(location)}?format=j1`),
-      )
+    const response = yield* Effect.tryPromise(() =>
+      fetch(`https://wttr.in/${encodeURIComponent(zipCode)},US?format=j1`),
+    )
 
-      if (!response.ok) {
-        return Message.WeatherError({ error: 'Location not found' })
-      }
+    if (!response.ok) {
+      return Message.WeatherError({ error: 'Location not found' })
+    }
 
-      const data: WeatherResponseData = yield* Effect.tryPromise(() => response.json())
-      const current = Array.headNonEmpty(data.current_condition)
+    const data: WeatherResponseData = yield* Effect.tryPromise(() => response.json())
+    const currentCondition = data.current_condition[0]
+    const areaName = data.nearest_area[0].areaName[0].value
+    const region = data.nearest_area[0].region[0].value
 
-      const weather: WeatherData = {
-        location,
-        temperature: parseInt(current.temp_F),
-        description: current.weatherDesc[0].value,
-        humidity: parseInt(current.humidity),
-        windSpeed: parseFloat(current.windspeedKmph),
-      }
+    const weather: WeatherData = {
+      zipCode,
+      temperature: parseInt(currentCondition.temp_F),
+      description: currentCondition.weatherDesc[0].value,
+      humidity: parseInt(currentCondition.humidity),
+      windSpeed: parseFloat(currentCondition.windspeedKmph),
+      areaName,
+      region,
+    }
 
-      return Message.WeatherFetched({ weather })
-    }).pipe(
-      Effect.catchAll(() =>
-        Effect.succeed(Message.WeatherError({ error: 'Failed to fetch weather data' })),
-      ),
+    return Message.WeatherFetched({ weather })
+  }).pipe(
+    Effect.catchAll(() =>
+      Effect.succeed(Message.WeatherError({ error: 'Failed to fetch weather data' })),
     ),
   )
 
@@ -150,7 +151,7 @@ const view = (model: Model): Html =>
       ),
     ],
     [
-      h1([Class('text-4xl font-bold text-blue-900 mb-8')], ['Weather App']),
+      h1([Class('text-4xl font-bold text-blue-900 mb-8')], ['Weather']),
 
       form(
         [
@@ -158,14 +159,14 @@ const view = (model: Model): Html =>
           OnSubmit(Message.FetchWeather()),
         ],
         [
-          label([For('location-input'), Class('sr-only')], ['Location']),
+          label([For('location'), Class('sr-only')], ['Location']),
           input([
-            Id('location-input'),
+            Id('location'),
             Class(
               'w-full px-4 py-2 rounded-lg border-2 border-blue-300 focus:border-blue-500 outline-none',
             ),
-            Placeholder('Enter city, zip code, coordinates...'),
-            OnChange((value) => Message.UpdateLocationInput({ value })),
+            Placeholder('Enter a zip code'),
+            OnChange((value) => Message.UpdateZipCodeInput({ value })),
           ]),
           button(
             [
@@ -194,7 +195,8 @@ const weatherView = (weather: WeatherData): Html =>
   div(
     [Class('bg-white rounded-xl shadow-lg p-8 max-w-md w-full')],
     [
-      h2([Class('text-2xl font-bold text-gray-800 mb-6 text-center')], [weather.location]),
+      h2([Class('text-2xl font-bold text-gray-800 mb-3 text-center')], [weather.zipCode]),
+      p([Class('text-center text-gray-600 mb-6')], [weather.areaName + ', ' + weather.region]),
 
       div(
         [Class('text-center mb-6')],
