@@ -102,10 +102,10 @@ const init: ApplicationInit<Model, Message> = (url: Url) => {
 
 // UPDATE
 
-const { pure, pureCommand } = updateConstructors<Model, Message>()
+const { identity, pure, pureCommand } = updateConstructors<Model, Message>()
 
 const update = fold<Model, Message>({
-  NoOp: pure((model) => model),
+  NoOp: identity,
 
   UrlRequestReceived: pureCommand((model, { request }): [Model, Command<Message>] => {
     return UrlRequest.$match(request, {

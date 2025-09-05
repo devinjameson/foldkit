@@ -68,10 +68,32 @@ const update = fold<Model, Message>({
 - Might want helper functions to reduce boilerplate
 - Should work with both `pure` and `pureCommand` update patterns
 
+## Command Batching Challenge
+
+**Discovered during shopping cart implementation**: When a parent update handler needs to run its own command alongside a child command, there's no clean way to batch them.
+
+Current workaround:
+
+```typescript
+// Only return child command OR parent command, not both
+return [newModel, Option.map(childCommand, Command.map(...))]
+```
+
+**Elm's solution**: `Cmd.batch [cmd1, cmd2, cmd3]` - tells runtime to execute all commands, each potentially producing messages that get fed back to update.
+
+**Problem**: This requires runtime support to enqueue multiple messages, not just a simple helper function.
+
+**Potential solutions**:
+
+1. Modify runtime to support batching multiple commands
+2. Add `Command.batch` helper that uses `Effect.all` + `Effect.forEach` to enqueue each result
+3. Accept current limitation and choose one command per update
+
 ## Next Steps
 
-1. Implement basic routing first
-2. Build a multi-page example without nested updates
-3. Identify pain points and boilerplate
-4. Design and implement the nested update API
-5. Refactor multi-page example to use nested updates
+1. ✅ Implement basic routing
+2. ✅ Build a multi-page example (shopping cart) with nested updates
+3. ✅ Identify pain points and boilerplate
+4. 🚧 Design and implement the nested update API (partially done - using direct functions)
+5. Consider command batching runtime changes
+6. Refactor examples to use finalized nested update patterns

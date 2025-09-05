@@ -17,6 +17,8 @@ export const updateConstructors = <Model, Message = never>() => {
       <M extends Message = Message>(f: (model: Model, message: M) => Model) =>
       (model: Model, message: M): Update<Model, Message> => [f(model, message), Option.none()],
 
+    identity: (model: Model): Update<Model, Message> => [model, Option.none()],
+
     command:
       <M extends Message = Message>(f: (model: Model, message: M) => Command<Message>) =>
       (model: Model, message: M): Update<Model, Message> => [model, Option.some(f(model, message))],

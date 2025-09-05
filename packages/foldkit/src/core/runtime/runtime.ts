@@ -29,6 +29,13 @@ export class Dispatch extends Context.Tag('@foldkit/Dispatch')<
 
 export type Command<Message> = Effect.Effect<Message>
 
+export const Command = {
+  map:
+    <A, B>(f: (a: A) => B) =>
+    (command: Command<A>): Command<B> =>
+      command.pipe(Effect.map(f)),
+}
+
 export type Url = {
   readonly pathname: string
   readonly search: string

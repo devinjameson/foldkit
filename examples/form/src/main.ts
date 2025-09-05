@@ -67,7 +67,7 @@ type Message = Data.TaggedEnum<{
 }>
 const Message = Data.taggedEnum<Message>()
 
-const { pure, pureCommand } = updateConstructors<Model, Message>()
+const { identity, pure, pureCommand } = updateConstructors<Model, Message>()
 
 const noOp = Effect.succeed(Message.NoOp())
 
@@ -132,7 +132,7 @@ const isFormValid = (model: Model): boolean =>
 // UPDATE
 
 const update = fold<Model, Message>({
-  NoOp: pure((model) => model),
+  NoOp: identity,
 
   UpdateName: pure((model, { value }) => ({
     ...model,

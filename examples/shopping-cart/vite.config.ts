@@ -1,0 +1,26 @@
+import { defineConfig } from 'vite'
+import path from 'path'
+import tailwindcss from '@tailwindcss/vite'
+
+export default defineConfig({
+  plugins: [tailwindcss()],
+  resolve: {
+    alias: {
+      '@foldkit/html': path.resolve(__dirname, '../../packages/foldkit/src/core/html'),
+      '@foldkit/route': path.resolve(__dirname, '../../packages/foldkit/src/core/route'),
+      '@foldkit/fold': path.resolve(__dirname, '../../packages/foldkit/src/core/fold'),
+      '@foldkit/fieldValidation': path.resolve(
+        __dirname,
+        '../../packages/foldkit/src/core/fieldValidation',
+      ),
+      '@foldkit/runtime': path.resolve(__dirname, '../../packages/foldkit/src/core/runtime'),
+      '@foldkit/navigation': path.resolve(__dirname, '../../packages/foldkit/src/core/navigation'),
+      '@foldkit': path.resolve(__dirname, '../../packages/foldkit/src/index'),
+    },
+  },
+  server: {
+    fs: {
+      allow: ['../../'],
+    },
+  },
+})
