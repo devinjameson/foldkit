@@ -4,7 +4,6 @@ import {
   fold,
   makeApplication,
   updateConstructors,
-  makeCommand,
   ApplicationInit,
   Url,
   UrlRequest,
@@ -78,11 +77,11 @@ const update = fold<Model, Message>({
           ...model,
           route: urlToAppRoute(url),
         },
-        makeCommand(pushUrl(url.pathname).pipe(Effect.map(() => Message.NoOp()))),
+        pushUrl(url.pathname).pipe(Effect.map(() => Message.NoOp())),
       ],
       External: ({ href }): [Model, Command<Message>] => [
         model,
-        makeCommand(load(href).pipe(Effect.map(() => Message.NoOp()))),
+        load(href).pipe(Effect.map(() => Message.NoOp())),
       ],
     }),
   ),
@@ -299,7 +298,7 @@ const cartView = (model: Model): Html => {
                                 OnClick(
                                   Message.ChangeQuantity({
                                     itemId: cartItem.item.id,
-                                    quantity: cartItem.quantity - 1,
+                                    quantity: Number.decrement(cartItem.quantity),
                                   }),
                                 ),
                               ],
