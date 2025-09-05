@@ -1,4 +1,4 @@
-import { Array, Number, Option, Predicate, Schema } from 'effect'
+import { Array, flow, Number, Option, Predicate, Schema } from 'effect'
 import { CartItem, Item } from './item'
 
 export const Cart = Schema.Array(CartItem)
@@ -33,4 +33,20 @@ export const removeItem =
 export const changeQuantity = (itemId: string, quantity: number) =>
   quantity <= 0
     ? removeItem(itemId)
-    : Array.map((cartItem) => (hasItemId(itemId)(cartItem) ? { ...cartItem, quantity } : cartItem))
+    : Array.map<Cart, CartItem>((cartItem) =>
+        hasItemId(itemId)(cartItem) ? { ...cartItem, quantity } : cartItem,
+      )
+
+export const itemQuantity = (itemId: string) =>
+  flow(
+    Array.findFirst<CartItem>(hasItemId(itemId)),
+    Option.match({
+      onNone: () => 0,
+      onSome: ({ quantity }) => quantity,
+    }),
+  )
+
+export const totalItems = Array.reduce<number, CartItem>(
+  0,
+  (total, { quantity }) => total + quantity,
+)

@@ -110,7 +110,7 @@ const update = fold<Model, Message>({
 
 // VIEW
 
-const navigationView = (currentRoute: AppRoute): Html => {
+const navigationView = (currentRoute: AppRoute, cartCount: number): Html => {
   const navLinkClassName = (isActive: boolean) =>
     `hover:bg-blue-600 font-medium px-3 py-1 rounded transition ${isActive ? 'bg-blue-700 bg-opacity-50' : ''}`
 
@@ -132,7 +132,7 @@ const navigationView = (currentRoute: AppRoute): Html => {
               Href(cartRouter.build({})),
               Class(navLinkClassName(AppRoute.$is('Cart')(currentRoute))),
             ],
-            ['Cart'],
+            cartCount > 0 ? [`Cart (${cartCount})`] : ['Cart'],
           ),
           a(
             [
@@ -168,15 +168,57 @@ const productsView = (model: Model): Html => {
                       p([Class('text-gray-600')], [`$${product.price.toFixed(2)}`]),
                     ],
                   ),
-                  button(
-                    [
-                      Class(
-                        'bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium',
+                  Cart.itemQuantity(product.id)(model.cart) === 0
+                    ? button(
+                        [
+                          Class(
+                            'bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium',
+                          ),
+                          OnClick(Message.AddToCart({ item: product })),
+                        ],
+                        ['Add to Cart'],
+                      )
+                    : div(
+                        [Class('flex items-center gap-2')],
+                        [
+                          button(
+                            [
+                              Class(
+                                'bg-gray-200 hover:bg-gray-300 text-gray-800 w-8 h-8 rounded flex items-center justify-center',
+                              ),
+                              OnClick(
+                                Message.ChangeQuantity({
+                                  itemId: product.id,
+                                  quantity: Number.decrement(
+                                    Cart.itemQuantity(product.id)(model.cart),
+                                  ),
+                                }),
+                              ),
+                            ],
+                            ['-'],
+                          ),
+                          span(
+                            [Class('px-3 py-1 font-medium min-w-[2rem] text-center font-mono')],
+                            [String(Cart.itemQuantity(product.id)(model.cart))],
+                          ),
+                          button(
+                            [
+                              Class(
+                                'bg-gray-200 hover:bg-gray-300 text-gray-800 w-8 h-8 rounded flex items-center justify-center',
+                              ),
+                              OnClick(
+                                Message.ChangeQuantity({
+                                  itemId: product.id,
+                                  quantity: Number.increment(
+                                    Cart.itemQuantity(product.id)(model.cart),
+                                  ),
+                                }),
+                              ),
+                            ],
+                            ['+'],
+                          ),
+                        ],
                       ),
-                      OnClick(() => Message.AddToCart({ item: product })),
-                    ],
-                    ['Add to Cart'],
-                  ),
                 ],
               ),
             ),
@@ -193,7 +235,7 @@ const productsView = (model: Model): Html => {
                 'bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium inline-block',
               ),
             ],
-            [`Go to Cart (${model.cart.length} items)`],
+            [`Go to Cart (${Cart.totalItems(model.cart)} items)`],
           ),
         ],
       ),
@@ -254,7 +296,7 @@ const cartView = (model: Model): Html => {
                                 Class(
                                   'bg-gray-200 hover:bg-gray-300 text-gray-800 w-8 h-8 rounded flex items-center justify-center',
                                 ),
-                                OnClick(() =>
+                                OnClick(
                                   Message.ChangeQuantity({
                                     itemId: cartItem.item.id,
                                     quantity: cartItem.quantity - 1,
@@ -269,7 +311,7 @@ const cartView = (model: Model): Html => {
                                 Class(
                                   'bg-gray-200 hover:bg-gray-300 text-gray-800 w-8 h-8 rounded flex items-center justify-center',
                                 ),
-                                OnClick(() =>
+                                OnClick(
                                   Message.ChangeQuantity({
                                     itemId: cartItem.item.id,
                                     quantity: Number.increment(cartItem.quantity),
@@ -283,7 +325,7 @@ const cartView = (model: Model): Html => {
                                 Class(
                                   'bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded ml-2',
                                 ),
-                                OnClick(() => Message.RemoveFromCart({ itemId: cartItem.item.id })),
+                                OnClick(Message.RemoveFromCart({ itemId: cartItem.item.id })),
                               ],
                               ['Remove'],
                             ),
@@ -424,7 +466,7 @@ const checkoutView = (model: Model): Html => {
                     Class(
                       'bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium',
                     ),
-                    OnClick(() => Message.NoOp()), // TODO: Add checkout functionality
+                    OnClick(Message.NoOp()),
                   ],
                   ['Place Order'],
                 ),
@@ -460,7 +502,10 @@ const view = (model: Model): Html => {
 
   return div(
     [Class('min-h-screen bg-gray-100')],
-    [navigationView(model.route), div([Class('py-8')], [routeContent])],
+    [
+      navigationView(model.route, Cart.totalItems(model.cart)),
+      div([Class('py-8')], [routeContent]),
+    ],
   )
 }
 
