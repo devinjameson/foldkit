@@ -1,4 +1,4 @@
-import { Array, flow, Number, Option, Predicate, Schema } from 'effect'
+import { Array, Number, Option, pipe, Predicate, Schema } from 'effect'
 import { CartItem, Item } from './item'
 
 export const Cart = Schema.Array(CartItem)
@@ -9,6 +9,9 @@ const hasItemId =
   (cartItem: CartItem): boolean =>
     cartItem.item.id === itemId
 
+const mapCartItem = (itemId: string, f: (cartItem: CartItem) => CartItem) =>
+  Array.map<Cart, CartItem>((cartItem) => (hasItemId(itemId)(cartItem) ? f(cartItem) : cartItem))
+
 export const addItem =
   (item: Item) =>
   (cart: Cart): Cart => {
@@ -17,11 +20,10 @@ export const addItem =
     return Option.match(existingCartItem, {
       onNone: () => Array.append(cart, { item, quantity: 1 }),
       onSome: () =>
-        Array.map(cart, (cartItem) =>
-          hasItemId(item.id)(cartItem)
-            ? { ...cartItem, quantity: Number.increment(cartItem.quantity) }
-            : cartItem,
-        ),
+        mapCartItem(item.id, (cartItem) => ({
+          ...cartItem,
+          quantity: Number.increment(cartItem.quantity),
+        }))(cart),
     })
   }
 
@@ -33,20 +35,19 @@ export const removeItem =
 export const changeQuantity = (itemId: string, quantity: number) =>
   quantity <= 0
     ? removeItem(itemId)
-    : Array.map<Cart, CartItem>((cartItem) =>
-        hasItemId(itemId)(cartItem) ? { ...cartItem, quantity } : cartItem,
-      )
+    : mapCartItem(itemId, (cartItem) => ({ ...cartItem, quantity }))
 
-export const itemQuantity = (itemId: string) =>
-  flow(
-    Array.findFirst<CartItem>(hasItemId(itemId)),
-    Option.match({
-      onNone: () => 0,
-      onSome: ({ quantity }) => quantity,
-    }),
-  )
+export const itemQuantity =
+  (itemId: string) =>
+  (cart: Cart): number =>
+    pipe(
+      cart,
+      Array.findFirst<CartItem>(hasItemId(itemId)),
+      Option.match({
+        onNone: () => 0,
+        onSome: ({ quantity }) => quantity,
+      }),
+    )
 
-export const totalItems = Array.reduce<number, CartItem>(
-  0,
-  (total, { quantity }) => total + quantity,
-)
+export const totalItems = (cart: Cart) =>
+  Array.reduce(cart, 0, (total, { quantity }) => total + quantity)
