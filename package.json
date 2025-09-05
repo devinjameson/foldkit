@@ -11,7 +11,8 @@
     "dev:example:weather": "pnpm --filter weather-example run dev",
     "dev:example:todo": "pnpm --filter todo-example run dev",
     "dev:example:form": "pnpm --filter form-example run dev",
-    "dev:example:routing": "pnpm --filter routing-example run dev"
+    "dev:example:routing": "pnpm --filter routing-example run dev",
+    "dev:example:shopping-cart": "pnpm --filter shopping-cart-example run dev"
   },
   "devDependencies": {
     "eslint": "^9.29.0",
