@@ -1,20 +1,47 @@
-import { Array, Data, Effect, Number, Option } from 'effect'
+import { Array, Data, Effect, Number, Option, pipe } from 'effect'
 import {
+  Route,
   fold,
   makeApplication,
   updateConstructors,
+  makeCommand,
   ApplicationInit,
   Url,
   UrlRequest,
+  Command,
 } from '@foldkit'
-import { Class, Html, OnClick, div, h1, h2, h3, p, button, span } from '@foldkit/html'
+import { Class, Html, OnClick, Href, div, h1, h2, h3, p, button, span, a } from '@foldkit/html'
+import { literal } from '@foldkit/route'
+import { pushUrl, load } from '@foldkit/navigation'
 
 import { Cart, Item } from './domain'
 import { products } from './data/products'
 
+// ROUTE
+
+type AppRoute = Data.TaggedEnum<{
+  Products: {}
+  Cart: {}
+  Checkout: {}
+  NotFound: { path: string }
+}>
+
+const AppRoute = Data.taggedEnum<AppRoute>()
+
+const productsRouter = pipe(Route.root, Route.mapTo(AppRoute.Products))
+
+const cartRouter = pipe(literal('cart'), Route.mapTo(AppRoute.Cart))
+
+const checkoutRouter = pipe(literal('checkout'), Route.mapTo(AppRoute.Checkout))
+
+const routeParser = Route.oneOf(checkoutRouter, cartRouter, productsRouter)
+
+const urlToAppRoute = Route.parseUrlWithFallback(routeParser, AppRoute.NotFound)
+
 // MODEL
 
 type Model = Readonly<{
+  route: AppRoute
   cart: Cart.Cart
 }>
 
@@ -33,18 +60,37 @@ const Message = Data.taggedEnum<Message>()
 
 // INIT
 
-const init: ApplicationInit<Model, Message> = (_url: Url) => {
-  return [{ cart: [] }, Option.none()]
+const init: ApplicationInit<Model, Message> = (url: Url) => {
+  return [{ route: urlToAppRoute(url), cart: [] }, Option.none()]
 }
 
 // UPDATE
 
-const { pure } = updateConstructors<Model, Message>()
+const { pure, pureCommand } = updateConstructors<Model, Message>()
 
 const update = fold<Model, Message>({
   NoOp: pure((model) => model),
-  UrlRequestReceived: pure((model) => model),
-  UrlChanged: pure((model) => model),
+
+  UrlRequestReceived: pureCommand((model, { request }): [Model, Command<Message>] =>
+    UrlRequest.$match(request, {
+      Internal: ({ url }): [Model, Command<Message>] => [
+        {
+          ...model,
+          route: urlToAppRoute(url),
+        },
+        makeCommand(pushUrl(url.pathname).pipe(Effect.map(() => Message.NoOp()))),
+      ],
+      External: ({ href }): [Model, Command<Message>] => [
+        model,
+        makeCommand(load(href).pipe(Effect.map(() => Message.NoOp()))),
+      ],
+    }),
+  ),
+
+  UrlChanged: pure((model, { url }) => ({
+    ...model,
+    route: urlToAppRoute(url),
+  })),
 
   AddToCart: pure((model, { item }) => ({
     ...model,
@@ -64,123 +110,323 @@ const update = fold<Model, Message>({
 
 // VIEW
 
-const productsColumn = (): Html => {
+const navigationView = (currentRoute: AppRoute): Html => {
+  const navLinkClassName = (isActive: boolean) =>
+    `hover:bg-blue-600 font-medium px-3 py-1 rounded transition ${isActive ? 'bg-blue-700 bg-opacity-50' : ''}`
+
   return div(
-    [Class('bg-white rounded-lg shadow p-6')],
+    [Class('bg-blue-500 text-white p-4 mb-6')],
     [
-      h2([Class('text-2xl font-bold text-gray-800 mb-4')], ['Products']),
       div(
-        [Class('grid gap-4')],
-        products.map((product) =>
-          div(
-            [Class('flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50')],
+        [Class('max-w-6xl mx-auto flex gap-6 justify-center')],
+        [
+          a(
             [
-              div(
-                [],
-                [
-                  h3([Class('font-semibold text-gray-800')], [product.name]),
-                  p([Class('text-gray-600')], [`$${product.price.toFixed(2)}`]),
-                ],
-              ),
-              button(
-                [
-                  Class(
-                    'bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium',
-                  ),
-                  OnClick(() => Message.AddToCart({ item: product })),
-                ],
-                ['Add to Cart'],
-              ),
+              Href(productsRouter.build({})),
+              Class(navLinkClassName(AppRoute.$is('Products')(currentRoute))),
             ],
+            ['Products'],
           ),
-        ),
+          a(
+            [
+              Href(cartRouter.build({})),
+              Class(navLinkClassName(AppRoute.$is('Cart')(currentRoute))),
+            ],
+            ['Cart'],
+          ),
+          a(
+            [
+              Href(checkoutRouter.build({})),
+              Class(navLinkClassName(AppRoute.$is('Checkout')(currentRoute))),
+            ],
+            ['Checkout'],
+          ),
+        ],
       ),
     ],
   )
 }
 
-const shoppingCartColumn = (model: Model): Html => {
+const productsView = (model: Model): Html => {
   return div(
-    [Class('bg-white rounded-lg shadow p-6')],
+    [Class('max-w-4xl mx-auto px-4')],
     [
-      h2([Class('text-2xl font-bold text-gray-800 mb-4')], ['Your Cart']),
+      h1([Class('text-4xl font-bold text-gray-800 mb-8')], ['Products']),
       div(
-        [],
+        [Class('bg-white rounded-lg shadow p-6')],
+        [
+          div(
+            [Class('grid gap-4')],
+            products.map((product) =>
+              div(
+                [Class('flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50')],
+                [
+                  div(
+                    [],
+                    [
+                      h3([Class('font-semibold text-gray-800')], [product.name]),
+                      p([Class('text-gray-600')], [`$${product.price.toFixed(2)}`]),
+                    ],
+                  ),
+                  button(
+                    [
+                      Class(
+                        'bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium',
+                      ),
+                      OnClick(() => Message.AddToCart({ item: product })),
+                    ],
+                    ['Add to Cart'],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      div(
+        [Class('mt-6 text-center')],
+        [
+          a(
+            [
+              Href(cartRouter.build({})),
+              Class(
+                'bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium inline-block',
+              ),
+            ],
+            [`Go to Cart (${model.cart.length} items)`],
+          ),
+        ],
+      ),
+    ],
+  )
+}
+
+const cartView = (model: Model): Html => {
+  return div(
+    [Class('max-w-4xl mx-auto px-4')],
+    [
+      h1([Class('text-4xl font-bold text-gray-800 mb-8')], ['Shopping Cart']),
+      div(
+        [Class('bg-white rounded-lg shadow p-6')],
+        [
+          div(
+            [],
+            Array.match(model.cart, {
+              onEmpty: () => [
+                p([Class('text-gray-500 text-center py-8')], ['Your cart is empty']),
+                div(
+                  [Class('text-center mt-4')],
+                  [
+                    a(
+                      [
+                        Href(productsRouter.build({})),
+                        Class(
+                          'bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium inline-block',
+                        ),
+                      ],
+                      ['Continue Shopping'],
+                    ),
+                  ],
+                ),
+              ],
+              onNonEmpty: (cart) => [
+                div(
+                  [Class('space-y-4 mb-6')],
+                  cart.map((cartItem) =>
+                    div(
+                      [Class('flex items-center justify-between p-4 border rounded-lg')],
+                      [
+                        div(
+                          [],
+                          [
+                            h3([Class('font-semibold text-gray-800')], [cartItem.item.name]),
+                            p(
+                              [Class('text-gray-600')],
+                              [`$${cartItem.item.price.toFixed(2)} each`],
+                            ),
+                          ],
+                        ),
+                        div(
+                          [Class('flex items-center gap-2')],
+                          [
+                            button(
+                              [
+                                Class(
+                                  'bg-gray-200 hover:bg-gray-300 text-gray-800 w-8 h-8 rounded flex items-center justify-center',
+                                ),
+                                OnClick(() =>
+                                  Message.ChangeQuantity({
+                                    itemId: cartItem.item.id,
+                                    quantity: cartItem.quantity - 1,
+                                  }),
+                                ),
+                              ],
+                              ['-'],
+                            ),
+                            span([Class('px-3 py-1 font-medium')], [String(cartItem.quantity)]),
+                            button(
+                              [
+                                Class(
+                                  'bg-gray-200 hover:bg-gray-300 text-gray-800 w-8 h-8 rounded flex items-center justify-center',
+                                ),
+                                OnClick(() =>
+                                  Message.ChangeQuantity({
+                                    itemId: cartItem.item.id,
+                                    quantity: Number.increment(cartItem.quantity),
+                                  }),
+                                ),
+                              ],
+                              ['+'],
+                            ),
+                            button(
+                              [
+                                Class(
+                                  'bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded ml-2',
+                                ),
+                                OnClick(() => Message.RemoveFromCart({ itemId: cartItem.item.id })),
+                              ],
+                              ['Remove'],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                div(
+                  [Class('border-t pt-4 mb-6')],
+                  [
+                    div(
+                      [Class('flex justify-between items-center')],
+                      [
+                        h3([Class('text-xl font-bold text-gray-800')], ['Total']),
+                        p(
+                          [Class('text-xl font-bold text-gray-800')],
+                          [
+                            `$${cart.reduce((total, item) => total + item.item.price * item.quantity, 0).toFixed(2)}`,
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                div(
+                  [Class('flex gap-4 justify-center')],
+                  [
+                    a(
+                      [
+                        Href(productsRouter.build({})),
+                        Class(
+                          'bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-medium',
+                        ),
+                      ],
+                      ['Continue Shopping'],
+                    ),
+                    a(
+                      [
+                        Href(checkoutRouter.build({})),
+                        Class(
+                          'bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium',
+                        ),
+                      ],
+                      ['Proceed to Checkout'],
+                    ),
+                  ],
+                ),
+              ],
+            }),
+          ),
+        ],
+      ),
+    ],
+  )
+}
+
+const checkoutView = (model: Model): Html => {
+  return div(
+    [Class('max-w-4xl mx-auto px-4')],
+    [
+      h1([Class('text-4xl font-bold text-gray-800 mb-8')], ['Checkout']),
+      div(
+        [Class('bg-white rounded-lg shadow p-6')],
         Array.match(model.cart, {
-          onEmpty: () => [p([Class('text-gray-500 text-center py-8')], ['Your cart is empty'])],
-          onNonEmpty: (cart) => [
+          onEmpty: () => [
+            p([Class('text-gray-500 text-center py-8')], ['Your cart is empty']),
             div(
-              [Class('space-y-4')],
+              [Class('text-center mt-4')],
+              [
+                a(
+                  [
+                    Href(productsRouter.build({})),
+                    Class(
+                      'bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium inline-block',
+                    ),
+                  ],
+                  ['Start Shopping'],
+                ),
+              ],
+            ),
+          ],
+          onNonEmpty: (cart) => [
+            h2([Class('text-2xl font-bold text-gray-800 mb-4')], ['Order Summary']),
+            div(
+              [Class('space-y-2 mb-6')],
               cart.map((cartItem) =>
                 div(
-                  [Class('flex items-center justify-between p-4 border rounded-lg')],
+                  [Class('flex justify-between items-center py-2 border-b')],
                   [
                     div(
                       [],
                       [
-                        h3([Class('font-semibold text-gray-800')], [cartItem.item.name]),
-                        p([Class('text-gray-600')], [`$${cartItem.item.price.toFixed(2)} each`]),
+                        span([Class('font-medium')], [cartItem.item.name]),
+                        span([Class('text-gray-600 ml-2')], [`× ${cartItem.quantity}`]),
                       ],
                     ),
-                    div(
-                      [Class('flex items-center gap-2')],
-                      [
-                        button(
-                          [
-                            Class(
-                              'bg-gray-200 hover:bg-gray-300 text-gray-800 w-8 h-8 rounded flex items-center justify-center',
-                            ),
-                            OnClick(() =>
-                              Message.ChangeQuantity({
-                                itemId: cartItem.item.id,
-                                quantity: cartItem.quantity - 1,
-                              }),
-                            ),
-                          ],
-                          ['-'],
-                        ),
-                        span([Class('px-3 py-1 font-medium')], [String(cartItem.quantity)]),
-                        button(
-                          [
-                            Class(
-                              'bg-gray-200 hover:bg-gray-300 text-gray-800 w-8 h-8 rounded flex items-center justify-center',
-                            ),
-                            OnClick(() =>
-                              Message.ChangeQuantity({
-                                itemId: cartItem.item.id,
-                                quantity: Number.increment(cartItem.quantity),
-                              }),
-                            ),
-                          ],
-                          ['+'],
-                        ),
-                        button(
-                          [
-                            Class('bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded ml-2'),
-                            OnClick(() => Message.RemoveFromCart({ itemId: cartItem.item.id })),
-                          ],
-                          ['Remove'],
-                        ),
-                      ],
+                    span(
+                      [Class('font-medium')],
+                      [`$${(cartItem.item.price * cartItem.quantity).toFixed(2)}`],
                     ),
                   ],
                 ),
               ),
             ),
             div(
-              [Class('border-t pt-4 mt-6')],
+              [Class('border-t pt-4 mb-6')],
               [
                 div(
-                  [Class('flex justify-between items-center')],
+                  [Class('flex justify-between items-center text-xl font-bold')],
                   [
-                    h3([Class('text-xl font-bold text-gray-800')], ['Total']),
-                    p(
-                      [Class('text-xl font-bold text-gray-800')],
+                    span([], ['Total']),
+                    span(
+                      [],
                       [
                         `$${cart.reduce((total, item) => total + item.item.price * item.quantity, 0).toFixed(2)}`,
                       ],
                     ),
                   ],
+                ),
+              ],
+            ),
+            div(
+              [Class('flex gap-4 justify-center')],
+              [
+                a(
+                  [
+                    Href(cartRouter.build({})),
+                    Class(
+                      'bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-medium',
+                    ),
+                  ],
+                  ['Back to Cart'],
+                ),
+                button(
+                  [
+                    Class(
+                      'bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium',
+                    ),
+                    OnClick(() => Message.NoOp()), // TODO: Add checkout functionality
+                  ],
+                  ['Place Order'],
                 ),
               ],
             ),
@@ -191,22 +437,30 @@ const shoppingCartColumn = (model: Model): Html => {
   )
 }
 
-const view = (model: Model): Html => {
-  return div(
-    [Class('min-h-screen bg-gray-100 p-8')],
+const notFoundView = (path: string): Html =>
+  div(
+    [Class('max-w-4xl mx-auto px-4 text-center')],
     [
-      div(
-        [Class('max-w-6xl mx-auto')],
-        [
-          h1([Class('text-4xl font-bold text-gray-800 mb-8 text-center')], ['Shopping Cart']),
-
-          div(
-            [Class('grid grid-cols-1 lg:grid-cols-2 gap-8')],
-            [productsColumn(), shoppingCartColumn(model)],
-          ),
-        ],
+      h1([Class('text-4xl font-bold text-red-600 mb-6')], ['404 - Page Not Found']),
+      p([Class('text-lg text-gray-600 mb-4')], [`The path "${path}" was not found.`]),
+      a(
+        [Href(productsRouter.build({})), Class('text-blue-500 hover:underline')],
+        ['← Go to Products'],
       ),
     ],
+  )
+
+const view = (model: Model): Html => {
+  const routeContent = AppRoute.$match(model.route, {
+    Products: () => productsView(model),
+    Cart: () => cartView(model),
+    Checkout: () => checkoutView(model),
+    NotFound: ({ path }) => notFoundView(path),
+  })
+
+  return div(
+    [Class('min-h-screen bg-gray-100')],
+    [navigationView(model.route), div([Class('py-8')], [routeContent])],
   )
 }
 
