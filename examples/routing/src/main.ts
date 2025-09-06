@@ -93,45 +93,46 @@ const Message = Data.taggedEnum<Message>()
 // INIT
 
 const init: Runtime.ApplicationInit<Model, Message> = (url: Runtime.Url) => {
-  return [{ route: urlToAppRoute(url) }, Option.none()]
+  return [{ route: urlToAppRoute(url) }, []]
 }
 
 // UPDATE
 
-const { identity, pure, pureCommand } = Fold.updateConstructors<Model, Message>()
-
 const update = Fold.fold<Model, Message>({
-  NoOp: identity,
+  NoOp: (model) => [model, []],
 
-  UrlRequestReceived: pureCommand((model, { request }): [Model, Runtime.Command<Message>] => {
+  UrlRequestReceived: (model, { request }): [Model, Runtime.Command<Message>[]] => {
     return Runtime.UrlRequest.$match(request, {
-      Internal: ({ url }): [Model, Runtime.Command<Message>] => [
+      Internal: ({ url }): [Model, Runtime.Command<Message>[]] => [
         {
           ...model,
           route: urlToAppRoute(url),
         },
-        pushUrl(url.pathname).pipe(Effect.map(() => Message.NoOp())),
+        [pushUrl(url.pathname).pipe(Effect.map(() => Message.NoOp()))],
       ],
-      External: ({ href }): [Model, Runtime.Command<Message>] => [
+      External: ({ href }): [Model, Runtime.Command<Message>[]] => [
         model,
-        load(href).pipe(Effect.map(() => Message.NoOp())),
+        [load(href).pipe(Effect.map(() => Message.NoOp()))],
       ],
     })
-  }),
+  },
 
-  UrlChanged: pure((model, { url }) => ({
-    ...model,
-    route: urlToAppRoute(url),
-  })),
+  UrlChanged: (model, { url }) => [
+    {
+      ...model,
+      route: urlToAppRoute(url),
+    },
+    [],
+  ],
 
-  SearchInputChanged: pureCommand((model, { value }): [Model, Runtime.Command<Message>] => {
-    return [
-      model,
+  SearchInputChanged: (model, { value }) => [
+    model,
+    [
       replaceUrl(peopleRouter.build({ searchText: Option.fromNullable(value || null) })).pipe(
-        Effect.map(() => Message.NoOp()),
+        Effect.map(Message.NoOp),
       ),
-    ]
-  }),
+    ],
+  ],
 })
 
 // VIEW

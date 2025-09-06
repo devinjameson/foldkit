@@ -1,5 +1,5 @@
 import { Fold, Runtime } from '@foldkit'
-import { Data, Effect, Option } from 'effect'
+import { Data, Effect } from 'effect'
 
 import { Class, Html, OnClick, button, div } from '@foldkit/html'
 
@@ -16,17 +16,15 @@ type Message = Data.TaggedEnum<{
 }>
 const Message = Data.taggedEnum<Message>()
 
-const { pure } = Fold.updateConstructors<Model, Message>()
-
 const update = Fold.fold<Model, Message>({
-  Decrement: pure((count) => count - 1),
-  Increment: pure((count) => count + 1),
-  Reset: pure(() => 0),
+  Decrement: (count) => [count - 1, []],
+  Increment: (count) => [count + 1, []],
+  Reset: () => [0, []],
 })
 
 // INIT
 
-const init: Runtime.ElementInit<Model, Message> = () => [0, Option.none()]
+const init: Runtime.ElementInit<Model, Message> = () => [0, []]
 
 // VIEW
 

@@ -24,26 +24,34 @@ type Message = Data.TaggedEnum<{
 
 const Message = Data.taggedEnum<Message>()
 
-const { pure } = Fold.updateConstructors<Model, Message>()
-
 const update = Fold.fold<Model, Message>({
-  Start: pure((model) => ({
-    ...model,
-    isRunning: true,
-    startTime: Option.some(Date.now() - model.elapsedMs),
-  })),
-  Stop: pure((model) => ({ ...model, isRunning: false })),
-  Reset: pure(() => ({
-    elapsedMs: 0,
-    isRunning: false,
-    startTime: Option.none(),
-  })),
-  Tick: pure((model, { currentTime }) =>
+  Start: (model) => [
+    {
+      ...model,
+      isRunning: true,
+      startTime: Option.some(Date.now() - model.elapsedMs),
+    },
+    [],
+  ],
+
+  Stop: (model) => [{ ...model, isRunning: false }, []],
+
+  Reset: () => [
+    {
+      elapsedMs: 0,
+      isRunning: false,
+      startTime: Option.none(),
+    },
+    [],
+  ],
+
+  Tick: (model, { currentTime }) => [
     Option.match(model.startTime, {
       onNone: () => model,
       onSome: (startTime) => ({ ...model, elapsedMs: currentTime - startTime }),
     }),
-  ),
+    [],
+  ],
 })
 
 // INIT
@@ -54,7 +62,7 @@ const init: Runtime.ElementInit<Model, Message> = () => [
     isRunning: false,
     startTime: Option.none(),
   },
-  Option.none(),
+  [],
 ]
 
 // COMMAND STREAM

@@ -1,5 +1,5 @@
 import { Fold, FormValidation, Runtime } from '@foldkit'
-import { Array, Data, Duration, Effect, Number, Option } from 'effect'
+import { Array, Data, Duration, Effect, Number } from 'effect'
 
 import {
   Class,
@@ -56,10 +56,6 @@ type Message = Data.TaggedEnum<{
 }>
 const Message = Data.taggedEnum<Message>()
 
-const { identity, pure, pureCommand } = Fold.updateConstructors<Model, Message>()
-
-const noOp = Effect.succeed(Message.NoOp())
-
 // INIT
 
 const init: Runtime.ElementInit<Model, Message> = () => [
@@ -70,7 +66,7 @@ const init: Runtime.ElementInit<Model, Message> = () => [
     message: FormValidation.Field.NotValidated({ value: '' }),
     submission: Submission.NotSubmitted(),
   },
-  Option.none(),
+  [],
 ]
 
 // FIELD VALIDATION
@@ -127,14 +123,17 @@ const isFormValid = (model: Model): boolean =>
 // UPDATE
 
 const update = Fold.fold<Model, Message>({
-  NoOp: identity,
+  NoOp: (model) => [model, []],
 
-  UpdateName: pure((model, { value }) => ({
-    ...model,
-    name: validateName(value),
-  })),
+  UpdateName: (model, { value }) => [
+    {
+      ...model,
+      name: validateName(value),
+    },
+    [],
+  ],
 
-  UpdateEmail: pureCommand((model, { value }) => {
+  UpdateEmail: (model, { value }) => {
     const validateEmailResult = validateEmail(value)
     const validationId = Number.increment(model.emailValidationId)
 
@@ -145,29 +144,32 @@ const update = Fold.fold<Model, Message>({
           email: FormValidation.Field.Validating({ value }),
           emailValidationId: validationId,
         },
-        validateEmailNotOnWaitlist(value, validationId),
+        [validateEmailNotOnWaitlist(value, validationId)],
       ]
     } else {
-      return [{ ...model, email: validateEmailResult, emailValidationId: validationId }, noOp]
+      return [{ ...model, email: validateEmailResult, emailValidationId: validationId }, []]
     }
-  }),
+  },
 
-  EmailValidated: pure((model, { validationId, field }) => {
+  EmailValidated: (model, { validationId, field }) => {
     if (validationId === model.emailValidationId) {
-      return { ...model, email: field }
+      return [{ ...model, email: field }, []]
     } else {
-      return model
+      return [model, []]
     }
-  }),
+  },
 
-  UpdateMessage: pure((model, { value }) => ({
-    ...model,
-    message: validateMessage(value),
-  })),
+  UpdateMessage: (model, { value }) => [
+    {
+      ...model,
+      message: validateMessage(value),
+    },
+    [],
+  ],
 
-  SubmitForm: pureCommand((model) => {
+  SubmitForm: (model) => {
     if (!isFormValid(model)) {
-      return [model, noOp]
+      return [model, []]
     }
 
     return [
@@ -175,19 +177,25 @@ const update = Fold.fold<Model, Message>({
         ...model,
         submission: Submission.Submitting(),
       },
-      submitForm(model),
+      [submitForm(model)],
     ]
-  }),
+  },
 
-  FormSubmitted: pure((model, { message }) => ({
-    ...model,
-    submission: Submission.SubmitSuccess({ message }),
-  })),
+  FormSubmitted: (model, { message }) => [
+    {
+      ...model,
+      submission: Submission.SubmitSuccess({ message }),
+    },
+    [],
+  ],
 
-  FormSubmitError: pure((model, { error }) => ({
-    ...model,
-    submission: Submission.SubmitError({ error }),
-  })),
+  FormSubmitError: (model, { error }) => [
+    {
+      ...model,
+      submission: Submission.SubmitError({ error }),
+    },
+    [],
+  ],
 })
 
 // COMMAND

@@ -75,10 +75,6 @@ type Message = Data.TaggedEnum<{
 }>
 const Message = Data.taggedEnum<Message>()
 
-const { identity, pure, pureCommand } = Fold.updateConstructors<Model, Message>()
-
-const noOp = Effect.succeed(Message.NoOp())
-
 // INIT
 
 const loadTodos = Effect.gen(function* () {
@@ -101,7 +97,7 @@ const init: Runtime.ElementInit<Model, Message> = () => [
     filter: 'All',
     editing: EditingState.NotEditing(),
   },
-  Option.some(loadTodos),
+  [loadTodos],
 ]
 
 const generateId = (): string => Math.random().toString(36).substring(2, 15)
@@ -109,22 +105,28 @@ const generateId = (): string => Math.random().toString(36).substring(2, 15)
 // UPDATE
 
 const update = Fold.fold<Model, Message>({
-  NoOp: identity,
+  NoOp: (model) => [model, []],
 
-  UpdateNewTodo: pure((model, { text }) => ({
-    ...model,
-    newTodoText: text,
-  })),
+  UpdateNewTodo: (model, { text }) => [
+    {
+      ...model,
+      newTodoText: text,
+    },
+    [],
+  ],
 
-  UpdateEditingTodo: pure((model, { text }) => ({
-    ...model,
-    editing: EditingState.$match(model.editing, {
-      NotEditing: () => model.editing,
-      Editing: ({ id }) => EditingState.Editing({ id, text }),
-    }),
-  })),
+  UpdateEditingTodo: (model, { text }) => [
+    {
+      ...model,
+      editing: EditingState.$match(model.editing, {
+        NotEditing: () => model.editing,
+        Editing: ({ id }) => EditingState.Editing({ id, text }),
+      }),
+    },
+    [],
+  ],
 
-  AddTodo: pureCommand((model) => {
+  AddTodo: (model) => {
     if (String.isEmpty(String.trim(model.newTodoText))) {
       return [model, noOp]
     }
@@ -144,11 +146,11 @@ const update = Fold.fold<Model, Message>({
         todos: updatedTodos,
         newTodoText: '',
       },
-      saveTodos(updatedTodos),
+      [saveTodos(updatedTodos)],
     ]
-  }),
+  },
 
-  DeleteTodo: pureCommand((model, { id }) => {
+  DeleteTodo: (model, { id }) => {
     const updatedTodos = Array.filter(model.todos, (todo) => todo.id !== id)
 
     return [
@@ -156,11 +158,11 @@ const update = Fold.fold<Model, Message>({
         ...model,
         todos: updatedTodos,
       },
-      saveTodos(updatedTodos),
+      [saveTodos(updatedTodos)],
     ]
-  }),
+  },
 
-  ToggleTodo: pureCommand((model, { id }) => {
+  ToggleTodo: (model, { id }) => {
     const updatedTodos = Array.map(model.todos, (todo) =>
       todo.id === id ? { ...todo, completed: !todo.completed } : todo,
     )
@@ -170,23 +172,26 @@ const update = Fold.fold<Model, Message>({
         ...model,
         todos: updatedTodos,
       },
-      saveTodos(updatedTodos),
+      [saveTodos(updatedTodos)],
     ]
-  }),
+  },
 
-  StartEditing: pure((model, { id }) => {
+  StartEditing: (model, { id }) => {
     const todo = Array.findFirst(model.todos, (t) => t.id === id)
-    return {
-      ...model,
-      editing: EditingState.Editing({
-        id,
-        text: Option.match(todo, {
-          onNone: () => '',
-          onSome: (t) => t.text,
+    return [
+      {
+        ...model,
+        editing: EditingState.Editing({
+          id,
+          text: Option.match(todo, {
+            onNone: () => '',
+            onSome: (t) => t.text,
+          }),
         }),
-      }),
-    }
-  }),
+      },
+      [],
+    ]
+  },
 
   SaveEdit: pureCommand((model): [Model, Runtime.Command<Message>] => {
     return EditingState.$match(model.editing, {

@@ -54,7 +54,7 @@ export type BrowserConfig<Message> = {
 }
 
 export interface RuntimeConfig<Model, Message, StreamDepsMap extends Record<string, unknown>> {
-  readonly init: (url?: Url) => [Model, Option.Option<Command<Message>>]
+  readonly init: (url?: Url) => [Model, Command<Message>[]]
   readonly update: FoldReturn<Model, Message>
   readonly view: (model: Model) => Html
   readonly commandStreams?: CommandStreams<Model, Message, StreamDepsMap>
@@ -62,8 +62,8 @@ export interface RuntimeConfig<Model, Message, StreamDepsMap extends Record<stri
   readonly browser?: BrowserConfig<Message>
 }
 
-export type ElementInit<Model, Message> = () => [Model, Option.Option<Command<Message>>]
-export type ApplicationInit<Model, Message> = (url: Url) => [Model, Option.Option<Command<Message>>]
+export type ElementInit<Model, Message> = () => [Model, Command<Message>[]]
+export type ApplicationInit<Model, Message> = (url: Url) => [Model, Command<Message>[]]
 
 export interface ElementConfig<Model, Message, StreamDepsMap extends Record<string, unknown>> {
   readonly init: ElementInit<Model, Message>
@@ -116,12 +116,11 @@ export const makeRuntime = <Model, Message, StreamDepsMap extends Record<string,
       })),
     )
 
-    const [initModel, initCommand] = init(Option.getOrUndefined(currentUrl))
+    const [initModel, initCommands] = init(Option.getOrUndefined(currentUrl))
 
-    yield* Option.match(initCommand, {
-      onNone: () => Effect.void,
-      onSome: (command) => Effect.forkDaemon(command.pipe(Effect.flatMap(enqueueMessage))),
-    })
+    yield* Effect.forEach(initCommands, (command) =>
+      Effect.forkDaemon(command.pipe(Effect.flatMap(enqueueMessage))),
+    )
 
     if (browserConfig) {
       addNavigationEventListeners(messageQueue, browserConfig)
@@ -178,12 +177,11 @@ export const makeRuntime = <Model, Message, StreamDepsMap extends Record<string,
 
         const currentModel = yield* Ref.get(modelRef)
 
-        const [nextModel, command] = update(currentModel, message)
+        const [nextModel, commands] = update(currentModel, message)
 
-        yield* Option.match(command, {
-          onNone: () => Effect.void,
-          onSome: (command) => Effect.forkDaemon(command.pipe(Effect.flatMap(enqueueMessage))),
-        })
+        yield* Effect.forEach(commands, (command) =>
+          Effect.forkDaemon(command.pipe(Effect.flatMap(enqueueMessage))),
+        )
 
         if (!Equal.equals(currentModel, nextModel)) {
           yield* Ref.set(modelRef, nextModel)

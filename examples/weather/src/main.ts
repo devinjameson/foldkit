@@ -1,5 +1,5 @@
 import { Fold, Runtime } from '@foldkit'
-import { Array, Data, Effect, Option, String } from 'effect'
+import { Array, Data, Effect, String } from 'effect'
 
 import {
   Class,
@@ -58,28 +58,38 @@ type Message = Data.TaggedEnum<{
 }>
 const Message = Data.taggedEnum<Message>()
 
-const { pure, pureCommand } = Fold.updateConstructors<Model, Message>()
-
 const update = Fold.fold<Model, Message>({
-  UpdateZipCodeInput: pure((model, { value }) => ({
-    ...model,
-    zipCodeInput: value,
-  })),
-  FetchWeather: pureCommand((model) => [
+  UpdateZipCodeInput: (model, { value }) => [
+    {
+      ...model,
+      zipCodeInput: value,
+    },
+    [],
+  ],
+
+  FetchWeather: (model) => [
     {
       ...model,
       weather: WeatherAsyncResult.Loading(),
     },
-    fetchWeatherCommand(model.zipCodeInput),
-  ]),
-  WeatherFetched: pure((model, { weather }) => ({
-    ...model,
-    weather: WeatherAsyncResult.Success({ data: weather }),
-  })),
-  WeatherError: pure((model, { error }) => ({
-    ...model,
-    weather: WeatherAsyncResult.Failure({ error }),
-  })),
+    [fetchWeatherCommand(model.zipCodeInput)],
+  ],
+
+  WeatherFetched: (model, { weather }) => [
+    {
+      ...model,
+      weather: WeatherAsyncResult.Success({ data: weather }),
+    },
+    [],
+  ],
+
+  WeatherError: (model, { error }) => [
+    {
+      ...model,
+      weather: WeatherAsyncResult.Failure({ error }),
+    },
+    [],
+  ],
 })
 
 // INIT
@@ -89,7 +99,7 @@ const init: Runtime.ElementInit<Model, Message> = () => [
     zipCodeInput: '',
     weather: WeatherAsyncResult.Init(),
   },
-  Option.none(),
+  [],
 ]
 
 // COMMAND

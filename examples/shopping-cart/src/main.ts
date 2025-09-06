@@ -72,40 +72,40 @@ const init: Runtime.ApplicationInit<Model, Message> = (url: Runtime.Url) => {
       orderPlaced: false,
       productsPage: Products.init(products),
     },
-    Option.none(),
+    [],
   ]
 }
 
 // UPDATE
 
-const { identity, pure, pureCommand } = Fold.updateConstructors<Model, Message>()
-
 const update = Fold.fold<Model, Message>({
-  NoOp: identity,
+  NoOp: (model) => [model, []],
 
-  UrlRequestReceived: pureCommand((model, { request }) =>
+  UrlRequestReceived: (model, { request }) =>
     Runtime.UrlRequest.$match(request, {
-      Internal: ({ url }): [Model, Runtime.Command<Message>] => [
+      Internal: ({ url }): [Model, Runtime.Command<Message>[]] => [
         {
           ...model,
           route: urlToAppRoute(url),
         },
-        pushUrl(url.pathname).pipe(Effect.map(() => Message.NoOp())),
+        [pushUrl(url.pathname).pipe(Effect.map(Message.NoOp))],
       ],
 
-      External: ({ href }): [Model, Runtime.Command<Message>] => [
+      External: ({ href }): [Model, Runtime.Command<Message>[]] => [
         model,
-        load(href).pipe(Effect.map(() => Message.NoOp())),
+        [load(href).pipe(Effect.map(Message.NoOp))],
       ],
     }),
-  ),
 
-  UrlChanged: pure((model, { url }) => ({
-    ...model,
-    route: urlToAppRoute(url),
-  })),
+  UrlChanged: (model, { url }) => [
+    {
+      ...model,
+      route: urlToAppRoute(url),
+    },
+    [],
+  ],
 
-  ProductsMessage: (model, { message }) => {
+  ProductsMessage: (model, { message }): [Model, Runtime.Command<Message>[]] => {
     const [newProductsModel, productsCommand] = Products.update(productsRouter)(
       model.productsPage,
       message,
@@ -137,10 +137,7 @@ const update = Fold.fold<Model, Message>({
 
     return [
       newModel,
-      // TODO: Make Command.none and drop Option
-      // TODO: Support batch commands
-      Option.map(
-        productsCommand,
+      productsCommand.map(
         Runtime.Command.map((productsMessage) =>
           Message.ProductsMessage({ message: productsMessage }),
         ),
@@ -148,7 +145,7 @@ const update = Fold.fold<Model, Message>({
     ]
   },
 
-  CartMessage: pure((model, { message }) =>
+  CartMessage: (model, { message }) => [
     CartPage.Message.$match(message, {
       ChangeQuantity: ({ itemId, quantity }) => ({
         ...model,
@@ -165,9 +162,10 @@ const update = Fold.fold<Model, Message>({
         cart: [],
       }),
     }),
-  ),
+    [],
+  ],
 
-  CheckoutMessage: pure((model, { message }) =>
+  CheckoutMessage: (model, { message }) => [
     Checkout.Message.$match(message, {
       UpdateDeliveryInstructions: ({ value }) => ({
         ...model,
@@ -181,7 +179,8 @@ const update = Fold.fold<Model, Message>({
         deliveryInstructions: '',
       }),
     }),
-  ),
+    [],
+  ],
 })
 
 // VIEW

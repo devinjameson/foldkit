@@ -1,4 +1,4 @@
-import { Fold, Route, Runtime } from '@foldkit'
+import { Fold, Route } from '@foldkit'
 import { Array, Data, Effect, Option } from 'effect'
 import { ExtractTag } from 'effect/Types'
 
@@ -52,24 +52,24 @@ export const init = (products: Item.Item[]): Model => ({
 
 // UPDATE
 
-const { identity, pureCommand } = Fold.updateConstructors<Model, Message>()
-
 export const update = (productsRouter: Route.default.Router<ExtractTag<AppRoute, 'Products'>>) =>
   Fold.fold<Model, Message>({
-    NoOp: identity,
+    NoOp: (model) => [model, []],
 
-    SearchInputChanged: pureCommand((model, { value }): [Model, Runtime.Command<Message>] => [
+    SearchInputChanged: (model, { value }) => [
       {
         ...model,
         searchText: value,
       },
-      replaceUrl(productsRouter.build({ searchText: Option.fromNullable(value || null) })).pipe(
-        Effect.map(() => Message.NoOp()),
-      ),
-    ]),
+      [
+        replaceUrl(productsRouter.build({ searchText: Option.fromNullable(value || null) })).pipe(
+          Effect.map(Message.NoOp),
+        ),
+      ],
+    ],
 
-    AddToCartClicked: identity,
-    QuantityChangeClicked: identity,
+    AddToCartClicked: (model) => [model, []],
+    QuantityChangeClicked: (model) => [model, []],
   })
 
 // VIEW
