@@ -1,5 +1,5 @@
 import { Array, Data, Effect, Match, Option, Schema, String } from 'effect'
-import { fold, makeElement, updateConstructors, Command, empty, ElementInit } from '@foldkit'
+import { Fold, Runtime } from '@foldkit'
 import {
   Class,
   Html,
@@ -11,6 +11,7 @@ import {
   For,
   Type,
   Value,
+  empty,
   button,
   div,
   input,
@@ -73,7 +74,7 @@ type Message = Data.TaggedEnum<{
 }>
 const Message = Data.taggedEnum<Message>()
 
-const { identity, pure, pureCommand } = updateConstructors<Model, Message>()
+const { identity, pure, pureCommand } = Fold.updateConstructors<Model, Message>()
 
 const noOp = Effect.succeed(Message.NoOp())
 
@@ -92,7 +93,7 @@ const loadTodos = Effect.gen(function* () {
   return Message.TodosLoaded({ todos: Array.fromIterable(decoded) })
 }).pipe(Effect.catchAll(() => Effect.succeed(Message.TodosLoaded({ todos: [] }))))
 
-const init: ElementInit<Model, Message> = () => [
+const init: Runtime.ElementInit<Model, Message> = () => [
   {
     todos: [],
     newTodoText: '',
@@ -106,7 +107,7 @@ const generateId = (): string => Math.random().toString(36).substring(2, 15)
 
 // UPDATE
 
-const update = fold<Model, Message>({
+const update = Fold.fold<Model, Message>({
   NoOp: identity,
 
   UpdateNewTodo: pure((model, { text }) => ({
@@ -186,10 +187,10 @@ const update = fold<Model, Message>({
     }
   }),
 
-  SaveEdit: pureCommand((model): [Model, Command<Message>] => {
+  SaveEdit: pureCommand((model): [Model, Runtime.Command<Message>] => {
     return EditingState.$match(model.editing, {
-      NotEditing: (): [Model, Command<Message>] => [model, noOp],
-      Editing: ({ id, text }): [Model, Command<Message>] => {
+      NotEditing: (): [Model, Runtime.Command<Message>] => [model, noOp],
+      Editing: ({ id, text }): [Model, Runtime.Command<Message>] => {
         if (String.isEmpty(String.trim(text))) {
           return [
             {
@@ -267,7 +268,7 @@ const update = fold<Model, Message>({
 
 // COMMAND
 
-const saveTodos = (todos: Array<Todo>): Command<Message> =>
+const saveTodos = (todos: Array<Todo>): Runtime.Command<Message> =>
   Effect.gen(function* () {
     yield* Effect.sync(() => localStorage.setItem('todos', JSON.stringify(todos)))
     return Message.TodosSaved({ todos })
@@ -496,7 +497,7 @@ const view = (model: Model): Html => {
 
 // RUN
 
-const app = makeElement({
+const app = Runtime.makeElement({
   init,
   update,
   view,

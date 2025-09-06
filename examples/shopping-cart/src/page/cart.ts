@@ -19,8 +19,8 @@ export const Message = Data.taggedEnum<Message>()
 
 export const view = <ParentMessage>(
   cart: Cart.Cart,
-  productsRouter: Route.Router<ExtractTag<AppRoute, 'Products'>>,
-  checkoutRouter: Route.Router<ExtractTag<AppRoute, 'Checkout'>>,
+  productsRouter: Route.default.Router<ExtractTag<AppRoute, 'Products'>>,
+  checkoutRouter: Route.default.Router<ExtractTag<AppRoute, 'Checkout'>>,
   toMessage: (message: Message) => ParentMessage,
 ): Html => {
   return div(

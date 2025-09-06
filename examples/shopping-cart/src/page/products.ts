@@ -1,6 +1,6 @@
 import { Data, Array, Effect, Option } from 'effect'
 import { ExtractTag } from 'effect/Types'
-import { fold, updateConstructors, Command, Route, empty } from '@foldkit'
+import { Fold, Runtime, Route } from '@foldkit'
 import {
   Class,
   Html,
@@ -9,6 +9,7 @@ import {
   OnChange,
   Value,
   Placeholder,
+  empty,
   div,
   h1,
   h3,
@@ -50,13 +51,13 @@ export const init = (products: Item.Item[]): Model => ({
 
 // UPDATE
 
-const { identity, pureCommand } = updateConstructors<Model, Message>()
+const { identity, pureCommand } = Fold.updateConstructors<Model, Message>()
 
-export const update = (productsRouter: Route.Router<ExtractTag<AppRoute, 'Products'>>) =>
-  fold<Model, Message>({
+export const update = (productsRouter: Route.default.Router<ExtractTag<AppRoute, 'Products'>>) =>
+  Fold.fold<Model, Message>({
     NoOp: identity,
 
-    SearchInputChanged: pureCommand((model, { value }): [Model, Command<Message>] => [
+    SearchInputChanged: pureCommand((model, { value }): [Model, Runtime.Command<Message>] => [
       {
         ...model,
         searchText: value,
@@ -75,7 +76,7 @@ export const update = (productsRouter: Route.Router<ExtractTag<AppRoute, 'Produc
 export const view = <ParentMessage>(
   model: Model,
   cart: Cart.Cart,
-  cartRouter: Route.Router<ExtractTag<AppRoute, 'Cart'>>,
+  cartRouter: Route.default.Router<ExtractTag<AppRoute, 'Cart'>>,
   toMessage: (msg: Message) => ParentMessage,
 ): Html => {
   const filteredProducts = model.searchText

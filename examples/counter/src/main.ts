@@ -1,6 +1,6 @@
 import { Data, Effect, Option } from 'effect'
 
-import { fold, makeElement, updateConstructors, ElementInit } from '@foldkit'
+import { Fold, Runtime } from '@foldkit'
 import { Class, Html, OnClick, button, div } from '@foldkit/html'
 
 // MODEL
@@ -16,9 +16,9 @@ type Message = Data.TaggedEnum<{
 }>
 const Message = Data.taggedEnum<Message>()
 
-const { pure } = updateConstructors<Model, Message>()
+const { pure } = Fold.updateConstructors<Model, Message>()
 
-const update = fold<Model, Message>({
+const update = Fold.fold<Model, Message>({
   Decrement: pure((count) => count - 1),
   Increment: pure((count) => count + 1),
   Reset: pure(() => 0),
@@ -26,7 +26,7 @@ const update = fold<Model, Message>({
 
 // INIT
 
-const init: ElementInit<Model, Message> = () => [0, Option.none()]
+const init: Runtime.ElementInit<Model, Message> = () => [0, Option.none()]
 
 // VIEW
 
@@ -52,7 +52,7 @@ const buttonStyle = 'bg-black text-white hover:bg-gray-700 px-4 py-2 transition'
 
 // RUN
 
-const app = makeElement({
+const app = Runtime.makeElement({
   init,
   update,
   view,

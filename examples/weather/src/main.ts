@@ -1,5 +1,5 @@
 import { Array, Data, Effect, Option, String } from 'effect'
-import { fold, makeElement, updateConstructors, Command, empty, ElementInit } from '@foldkit'
+import { Fold, Runtime } from '@foldkit'
 import {
   Class,
   Html,
@@ -10,6 +10,7 @@ import {
   For,
   Type,
   Disabled,
+  empty,
   button,
   div,
   input,
@@ -56,9 +57,9 @@ type Message = Data.TaggedEnum<{
 }>
 const Message = Data.taggedEnum<Message>()
 
-const { pure, pureCommand } = updateConstructors<Model, Message>()
+const { pure, pureCommand } = Fold.updateConstructors<Model, Message>()
 
-const update = fold<Model, Message>({
+const update = Fold.fold<Model, Message>({
   UpdateZipCodeInput: pure((model, { value }) => ({
     ...model,
     zipCodeInput: value,
@@ -82,7 +83,7 @@ const update = fold<Model, Message>({
 
 // INIT
 
-const init: ElementInit<Model, Message> = () => [
+const init: Runtime.ElementInit<Model, Message> = () => [
   {
     zipCodeInput: '',
     weather: WeatherAsyncResult.Init(),
@@ -105,7 +106,7 @@ type WeatherResponseData = {
   }>
 }
 
-const fetchWeatherCommand = (zipCode: string): Command<Message> =>
+const fetchWeatherCommand = (zipCode: string): Runtime.Command<Message> =>
   Effect.gen(function* () {
     if (String.isEmpty(zipCode.trim())) {
       return Message.WeatherError({ error: 'Zip code required' })
@@ -230,7 +231,7 @@ const weatherView = (weather: WeatherData): Html =>
 
 // RUN
 
-const app = makeElement({
+const app = Runtime.makeElement({
   init,
   update,
   view,

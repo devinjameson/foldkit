@@ -15,25 +15,25 @@
       "types": "./dist/core/html.d.ts",
       "import": "./dist/core/html.js"
     },
-    "./fold": {
-      "types": "./dist/core/fold.d.ts",
-      "import": "./dist/core/fold.js"
+    "./navigation": {
+      "types": "./dist/core/navigation.d.ts",
+      "import": "./dist/core/navigation.js"
     },
     "./route": {
       "types": "./dist/core/route.d.ts",
       "import": "./dist/core/route.js"
     },
-    "./fieldValidation": {
+    "./runtime": {
+      "types": "./dist/core/runtime/index.d.ts",
+      "import": "./dist/core/runtime/index.js"
+    },
+    "./fold": {
+      "types": "./dist/core/fold.d.ts",
+      "import": "./dist/core/fold.js"
+    },
+    "./formValidation": {
       "types": "./dist/core/fieldValidation.d.ts",
       "import": "./dist/core/fieldValidation.js"
-    },
-    "./runtime": {
-      "types": "./dist/core/runtime.d.ts",
-      "import": "./dist/core/runtime.js"
-    },
-    "./navigation": {
-      "types": "./dist/core/navigation.d.ts",
-      "import": "./dist/core/navigation.js"
     }
   },
   "files": [

@@ -1,18 +1,5 @@
 import { Array, Data, Duration, Effect, Number, Option } from 'effect'
-import {
-  fold,
-  makeElement,
-  updateConstructors,
-  Command,
-  empty,
-  ElementInit,
-  Field,
-  FieldValidation,
-  required,
-  minLength,
-  regex,
-  validateField,
-} from '@foldkit'
+import { Fold, Runtime, FormValidation } from '@foldkit'
 import {
   Class,
   Html,
@@ -23,6 +10,7 @@ import {
   Type,
   Value,
   Disabled,
+  empty,
   button,
   div,
   input,
@@ -45,10 +33,10 @@ type Submission = Data.TaggedEnum<{
 const Submission = Data.taggedEnum<Submission>()
 
 type Model = Readonly<{
-  name: Field<string>
-  email: Field<string>
+  name: FormValidation.Field<string>
+  email: FormValidation.Field<string>
   emailValidationId: number
-  message: Field<string>
+  message: FormValidation.Field<string>
   submission: Submission
 }>
 
@@ -58,7 +46,7 @@ type Message = Data.TaggedEnum<{
   NoOp: {}
   UpdateName: { value: string }
   UpdateEmail: { value: string }
-  EmailValidated: { validationId: number; field: Field<string> }
+  EmailValidated: { validationId: number; field: FormValidation.Field<string> }
   UpdateMessage: { value: string }
 
   SubmitForm: {}
@@ -67,18 +55,18 @@ type Message = Data.TaggedEnum<{
 }>
 const Message = Data.taggedEnum<Message>()
 
-const { identity, pure, pureCommand } = updateConstructors<Model, Message>()
+const { identity, pure, pureCommand } = Fold.updateConstructors<Model, Message>()
 
 const noOp = Effect.succeed(Message.NoOp())
 
 // INIT
 
-const init: ElementInit<Model, Message> = () => [
+const init: Runtime.ElementInit<Model, Message> = () => [
   {
-    name: Field.NotValidated({ value: '' }),
-    email: Field.NotValidated({ value: '' }),
+    name: FormValidation.Field.NotValidated({ value: '' }),
+    email: FormValidation.Field.NotValidated({ value: '' }),
     emailValidationId: 0,
-    message: Field.NotValidated({ value: '' }),
+    message: FormValidation.Field.NotValidated({ value: '' }),
     submission: Submission.NotSubmitted(),
   },
   Option.none(),
@@ -86,15 +74,15 @@ const init: ElementInit<Model, Message> = () => [
 
 // FIELD VALIDATION
 
-const nameValidations: FieldValidation<string>[] = [
-  minLength(2, (min) => `Name must be at least ${min} characters`),
+const nameValidations: FormValidation.FieldValidation<string>[] = [
+  FormValidation.minLength(2, (min) => `Name must be at least ${min} characters`),
 ]
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-const emailValidations: FieldValidation<string>[] = [
-  required('Email'),
-  regex(emailRegex, 'Please enter a valid email address'),
+const emailValidations: FormValidation.FieldValidation<string>[] = [
+  FormValidation.required('Email'),
+  FormValidation.regex(emailRegex, 'Please enter a valid email address'),
 ]
 
 const EMAILS_ON_WAITLIST = ['test@example.com', 'demo@email.com', 'admin@test.com']
@@ -105,33 +93,39 @@ const isEmailOnWaitlist = (email: string): Effect.Effect<boolean> =>
     return Array.contains(EMAILS_ON_WAITLIST, email.toLowerCase())
   })
 
-const validateEmailNotOnWaitlist = (email: string, validationId: number): Command<Message> =>
+const validateEmailNotOnWaitlist = (
+  email: string,
+  validationId: number,
+): Runtime.Command<Message> =>
   Effect.gen(function* () {
     if (yield* isEmailOnWaitlist(email)) {
       return Message.EmailValidated({
         validationId,
-        field: Field.Invalid({ value: email, error: 'This email is already on our waitlist' }),
+        field: FormValidation.Field.Invalid({
+          value: email,
+          error: 'This email is already on our waitlist',
+        }),
       })
     } else {
       return Message.EmailValidated({
         validationId,
-        field: Field.Valid({ value: email }),
+        field: FormValidation.Field.Valid({ value: email }),
       })
     }
   })
 
-const messageValidations: FieldValidation<string>[] = []
+const messageValidations: FormValidation.FieldValidation<string>[] = []
 
-const validateName = validateField(nameValidations)
-const validateEmail = validateField(emailValidations)
-const validateMessage = validateField(messageValidations)
+const validateName = FormValidation.validateField(nameValidations)
+const validateEmail = FormValidation.validateField(emailValidations)
+const validateMessage = FormValidation.validateField(messageValidations)
 
 const isFormValid = (model: Model): boolean =>
-  Array.every([model.name, model.email], Field.$is('Valid'))
+  Array.every([model.name, model.email], FormValidation.Field.$is('Valid'))
 
 // UPDATE
 
-const update = fold<Model, Message>({
+const update = Fold.fold<Model, Message>({
   NoOp: identity,
 
   UpdateName: pure((model, { value }) => ({
@@ -143,9 +137,13 @@ const update = fold<Model, Message>({
     const validateEmailResult = validateEmail(value)
     const validationId = Number.increment(model.emailValidationId)
 
-    if (Field.$is('Valid')(validateEmailResult)) {
+    if (FormValidation.Field.$is('Valid')(validateEmailResult)) {
       return [
-        { ...model, email: Field.Validating({ value }), emailValidationId: validationId },
+        {
+          ...model,
+          email: FormValidation.Field.Validating({ value }),
+          emailValidationId: validationId,
+        },
         validateEmailNotOnWaitlist(value, validationId),
       ]
     } else {
@@ -195,7 +193,7 @@ const update = fold<Model, Message>({
 
 const FAKE_API_DELAY_MS = 500
 
-const submitForm = (model: Model): Command<Message> =>
+const submitForm = (model: Model): Runtime.Command<Message> =>
   Effect.gen(function* () {
     const formData = {
       name: model.name.value,
@@ -224,14 +222,14 @@ const submitForm = (model: Model): Command<Message> =>
 const fieldView = (
   id: string,
   labelText: string,
-  field: Field<string>,
+  field: FormValidation.Field<string>,
   onUpdate: (value: string) => Message,
   type: 'text' | 'email' | 'textarea' = 'text',
 ): Html => {
   const { value } = field
 
   const getBorderClass = () =>
-    Field.$match(field, {
+    FormValidation.Field.$match(field, {
       NotValidated: () => 'border-gray-300',
       Validating: () => 'border-blue-300',
       Valid: () => 'border-green-500',
@@ -247,7 +245,7 @@ const fieldView = (
         [Class('flex items-center gap-2 mb-2')],
         [
           label([For(id), Class('text-sm font-medium text-gray-700')], [labelText]),
-          Field.$match(field, {
+          FormValidation.Field.$match(field, {
             NotValidated: () => empty,
             Validating: () => span([Class('text-blue-600 text-sm animate-spin')], ['◐']),
             Valid: () => span([Class('text-green-600 text-sm')], ['✓']),
@@ -259,7 +257,7 @@ const fieldView = (
         ? textarea([Id(id), Value(value), Class(inputClass), OnChange(onUpdate)])
         : input([Id(id), Type(type), Value(value), Class(inputClass), OnChange(onUpdate)]),
 
-      Field.$match(field, {
+      FormValidation.Field.$match(field, {
         NotValidated: () => empty,
         Validating: () => div([Class('text-blue-600 text-sm mt-1')], ['Checking...']),
         Valid: () => empty,
@@ -338,7 +336,7 @@ const view = (model: Model): Html => {
 
 // RUN
 
-const app = makeElement({
+const app = Runtime.makeElement({
   init,
   update,
   view,

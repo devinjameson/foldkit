@@ -1,14 +1,5 @@
 import { Array, Data, Effect, Option, pipe, Schema } from 'effect'
-import {
-  Route,
-  fold,
-  makeApplication,
-  updateConstructors,
-  Url,
-  UrlRequest,
-  Command,
-  ApplicationInit,
-} from '@foldkit'
+import { Route, Fold, Runtime } from '@foldkit'
 import { pushUrl, replaceUrl, load } from '@foldkit/navigation'
 import {
   Class,
@@ -40,7 +31,7 @@ type AppRoute = Data.TaggedEnum<{
 
 const AppRoute = Data.taggedEnum<AppRoute>()
 
-const homeRouter = pipe(Route.root, Route.mapTo(AppRoute.Home))
+const homeRouter = pipe(Route.default.root, Route.default.mapTo(AppRoute.Home))
 
 const nestedRouter = pipe(
   literal('nested'),
@@ -48,7 +39,7 @@ const nestedRouter = pipe(
   slash(literal('is')),
   slash(literal('very')),
   slash(literal('nested')),
-  Route.mapTo(AppRoute.Nested),
+  Route.default.mapTo(AppRoute.Nested),
 )
 
 const PeopleQuerySchema = Schema.Struct({
@@ -57,15 +48,19 @@ const PeopleQuerySchema = Schema.Struct({
 
 const peopleRouter = pipe(
   literal('people'),
-  Route.query(PeopleQuerySchema),
-  Route.mapTo(AppRoute.People),
+  Route.default.query(PeopleQuerySchema),
+  Route.default.mapTo(AppRoute.People),
 )
 
-const personRouter = pipe(literal('people'), slash(int('personId')), Route.mapTo(AppRoute.Person))
+const personRouter = pipe(
+  literal('people'),
+  slash(int('personId')),
+  Route.default.mapTo(AppRoute.Person),
+)
 
-const routeParser = Route.oneOf(personRouter, peopleRouter, nestedRouter, homeRouter)
+const routeParser = Route.default.oneOf(personRouter, peopleRouter, nestedRouter, homeRouter)
 
-const urlToAppRoute = Route.parseUrlWithFallback(routeParser, AppRoute.NotFound)
+const urlToAppRoute = Route.default.parseUrlWithFallback(routeParser, AppRoute.NotFound)
 
 const people = [
   { id: 1, name: 'Alice Johnson', role: 'Designer' },
@@ -87,8 +82,8 @@ type Model = Readonly<{
 
 type Message = Data.TaggedEnum<{
   NoOp: {}
-  UrlRequestReceived: { request: UrlRequest }
-  UrlChanged: { url: Url }
+  UrlRequestReceived: { request: Runtime.UrlRequest }
+  UrlChanged: { url: Runtime.Url }
   SearchInputChanged: { value: string }
 }>
 
@@ -96,27 +91,27 @@ const Message = Data.taggedEnum<Message>()
 
 // INIT
 
-const init: ApplicationInit<Model, Message> = (url: Url) => {
+const init: Runtime.ApplicationInit<Model, Message> = (url: Runtime.Url) => {
   return [{ route: urlToAppRoute(url) }, Option.none()]
 }
 
 // UPDATE
 
-const { identity, pure, pureCommand } = updateConstructors<Model, Message>()
+const { identity, pure, pureCommand } = Fold.updateConstructors<Model, Message>()
 
-const update = fold<Model, Message>({
+const update = Fold.fold<Model, Message>({
   NoOp: identity,
 
-  UrlRequestReceived: pureCommand((model, { request }): [Model, Command<Message>] => {
-    return UrlRequest.$match(request, {
-      Internal: ({ url }): [Model, Command<Message>] => [
+  UrlRequestReceived: pureCommand((model, { request }): [Model, Runtime.Command<Message>] => {
+    return Runtime.UrlRequest.$match(request, {
+      Internal: ({ url }): [Model, Runtime.Command<Message>] => [
         {
           ...model,
           route: urlToAppRoute(url),
         },
         pushUrl(url.pathname).pipe(Effect.map(() => Message.NoOp())),
       ],
-      External: ({ href }): [Model, Command<Message>] => [
+      External: ({ href }): [Model, Runtime.Command<Message>] => [
         model,
         load(href).pipe(Effect.map(() => Message.NoOp())),
       ],
@@ -128,7 +123,7 @@ const update = fold<Model, Message>({
     route: urlToAppRoute(url),
   })),
 
-  SearchInputChanged: pureCommand((model, { value }): [Model, Command<Message>] => {
+  SearchInputChanged: pureCommand((model, { value }): [Model, Runtime.Command<Message>] => {
     return [
       model,
       replaceUrl(peopleRouter.build({ searchText: Option.fromNullable(value || null) })).pipe(
@@ -369,7 +364,7 @@ const view = (model: Model): Html => {
 
 // RUN
 
-const app = makeApplication({
+const app = Runtime.makeApplication({
   init,
   update,
   view,

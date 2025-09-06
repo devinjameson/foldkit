@@ -37,8 +37,8 @@ export const view = <ParentMessage>(
   cart: Cart.Cart,
   deliveryInstructions: string,
   orderPlaced: boolean,
-  productsRouter: Route.Router<ExtractTag<AppRoute, 'Products'>>,
-  cartRouter: Route.Router<ExtractTag<AppRoute, 'Cart'>>,
+  productsRouter: Route.default.Router<ExtractTag<AppRoute, 'Products'>>,
+  cartRouter: Route.default.Router<ExtractTag<AppRoute, 'Cart'>>,
   toMessage: (message: Message) => ParentMessage,
 ): Html => {
   if (orderPlaced) {

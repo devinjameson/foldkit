@@ -1,5 +1,5 @@
 import { Data, Duration, Effect, flow, Option, pipe, Stream, String } from 'effect'
-import { fold, updateConstructors, makeElement, CommandStreams, ElementInit } from '@foldkit'
+import { Fold, Runtime } from '@foldkit'
 import { Html, div, Class, button, OnClick } from '@foldkit/html'
 
 const TICK_INTERVAL_MS = 10
@@ -23,9 +23,9 @@ type Message = Data.TaggedEnum<{
 
 const Message = Data.taggedEnum<Message>()
 
-const { pure } = updateConstructors<Model, Message>()
+const { pure } = Fold.updateConstructors<Model, Message>()
 
-const update = fold<Model, Message>({
+const update = Fold.fold<Model, Message>({
   Start: pure((model) => ({
     ...model,
     isRunning: true,
@@ -47,7 +47,7 @@ const update = fold<Model, Message>({
 
 // INIT
 
-const init: ElementInit<Model, Message> = () => [
+const init: Runtime.ElementInit<Model, Message> = () => [
   {
     elapsedMs: 0,
     isRunning: false,
@@ -62,7 +62,7 @@ type StreamDepsMap = {
   tick: boolean
 }
 
-const commandStreams: CommandStreams<Model, Message, StreamDepsMap> = {
+const commandStreams: Runtime.CommandStreams<Model, Message, StreamDepsMap> = {
   tick: {
     deps: (model: Model) => model.isRunning,
     stream: (isRunning: boolean) =>
@@ -137,7 +137,7 @@ const buttonStyle = 'px-6 py-4 flex-1 font-semibold text-white transition-colors
 
 // RUN
 
-const app = makeElement({
+const app = Runtime.makeElement({
   init,
   update,
   view,

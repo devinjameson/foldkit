@@ -1,14 +1,5 @@
 import { Data, Effect, Option, pipe, Schema } from 'effect'
-import {
-  Route,
-  fold,
-  makeApplication,
-  updateConstructors,
-  ApplicationInit,
-  Url,
-  UrlRequest,
-  Command,
-} from '@foldkit'
+import { Route, Fold, Runtime } from '@foldkit'
 import { Class, Html, Href, div, h1, p, a } from '@foldkit/html'
 import { pushUrl, load } from '@foldkit/navigation'
 import { literal } from '@foldkit/route'
@@ -33,18 +24,18 @@ const ProductsQuerySchema = Schema.Struct({
 })
 
 const productsRouter = pipe(
-  Route.root,
-  Route.query(ProductsQuerySchema),
-  Route.mapTo(AppRoute.Products),
+  Route.default.root,
+  Route.default.query(ProductsQuerySchema),
+  Route.default.mapTo(AppRoute.Products),
 )
 
-const cartRouter = pipe(literal('cart'), Route.mapTo(AppRoute.Cart))
+const cartRouter = pipe(literal('cart'), Route.default.mapTo(AppRoute.Cart))
 
-const checkoutRouter = pipe(literal('checkout'), Route.mapTo(AppRoute.Checkout))
+const checkoutRouter = pipe(literal('checkout'), Route.default.mapTo(AppRoute.Checkout))
 
-const routeParser = Route.oneOf(checkoutRouter, cartRouter, productsRouter)
+const routeParser = Route.default.oneOf(checkoutRouter, cartRouter, productsRouter)
 
-const urlToAppRoute = Route.parseUrlWithFallback(routeParser, AppRoute.NotFound)
+const urlToAppRoute = Route.default.parseUrlWithFallback(routeParser, AppRoute.NotFound)
 
 // MODEL
 
@@ -60,8 +51,8 @@ type Model = Readonly<{
 
 type Message = Data.TaggedEnum<{
   NoOp: {}
-  UrlRequestReceived: { request: UrlRequest }
-  UrlChanged: { url: Url }
+  UrlRequestReceived: { request: Runtime.UrlRequest }
+  UrlChanged: { url: Runtime.Url }
   ProductsMessage: { message: Products.Message }
   CartMessage: { message: CartPage.Message }
   CheckoutMessage: { message: Checkout.Message }
@@ -71,7 +62,7 @@ const Message = Data.taggedEnum<Message>()
 
 // INIT
 
-const init: ApplicationInit<Model, Message> = (url: Url) => {
+const init: Runtime.ApplicationInit<Model, Message> = (url: Runtime.Url) => {
   return [
     {
       route: urlToAppRoute(url),
@@ -86,14 +77,14 @@ const init: ApplicationInit<Model, Message> = (url: Url) => {
 
 // UPDATE
 
-const { identity, pure, pureCommand } = updateConstructors<Model, Message>()
+const { identity, pure, pureCommand } = Fold.updateConstructors<Model, Message>()
 
-const update = fold<Model, Message>({
+const update = Fold.fold<Model, Message>({
   NoOp: identity,
 
   UrlRequestReceived: pureCommand((model, { request }) =>
-    UrlRequest.$match(request, {
-      Internal: ({ url }): [Model, Command<Message>] => [
+    Runtime.UrlRequest.$match(request, {
+      Internal: ({ url }): [Model, Runtime.Command<Message>] => [
         {
           ...model,
           route: urlToAppRoute(url),
@@ -101,7 +92,7 @@ const update = fold<Model, Message>({
         pushUrl(url.pathname).pipe(Effect.map(() => Message.NoOp())),
       ],
 
-      External: ({ href }): [Model, Command<Message>] => [
+      External: ({ href }): [Model, Runtime.Command<Message>] => [
         model,
         load(href).pipe(Effect.map(() => Message.NoOp())),
       ],
@@ -149,7 +140,9 @@ const update = fold<Model, Message>({
       // TODO: Support batch commands
       Option.map(
         productsCommand,
-        Command.map((productsMessage) => Message.ProductsMessage({ message: productsMessage })),
+        Runtime.Command.map((productsMessage) =>
+          Message.ProductsMessage({ message: productsMessage }),
+        ),
       ),
     ]
   },
@@ -287,7 +280,7 @@ const view = (model: Model): Html => {
 
 // RUN
 
-const app = makeApplication({
+const app = Runtime.makeApplication({
   init,
   update,
   view,
