@@ -477,7 +477,7 @@ const checkoutView = (model: Model): Html => {
     return div(
       [Class('max-w-4xl mx-auto px-4 text-center')],
       [
-        h1([Class('text-4xl font-bold text-green-600 mb-8')], ['Order Placed Successfully!']),
+        h1([Class('text-4xl font-bold text-green-600 mb-8')], ['Order placed successfully!']),
         div(
           [Class('bg-green-50 border border-green-200 rounded-lg p-6 mb-6')],
           [
