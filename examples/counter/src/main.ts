@@ -1,6 +1,6 @@
+import { Fold, Runtime } from '@foldkit'
 import { Data, Effect, Option } from 'effect'
 
-import { Fold, Runtime } from '@foldkit'
 import { Class, Html, OnClick, button, div } from '@foldkit/html'
 
 // MODEL

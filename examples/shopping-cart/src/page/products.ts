@@ -1,23 +1,24 @@
-import { Data, Array, Effect, Option } from 'effect'
+import { Fold, Route, Runtime } from '@foldkit'
+import { Array, Data, Effect, Option } from 'effect'
 import { ExtractTag } from 'effect/Types'
-import { Fold, Runtime, Route } from '@foldkit'
+
 import {
   Class,
-  Html,
   Href,
-  OnClick,
+  Html,
   OnChange,
-  Value,
+  OnClick,
   Placeholder,
-  empty,
+  Value,
+  a,
+  button,
   div,
+  empty,
   h1,
   h3,
-  p,
-  button,
-  span,
   input,
-  a,
+  p,
+  span,
 } from '@foldkit/html'
 import { replaceUrl } from '@foldkit/navigation'
 

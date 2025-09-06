@@ -1,26 +1,27 @@
-import { Array, Data, Effect, Match, Option, Schema, String } from 'effect'
 import { Fold, Runtime } from '@foldkit'
+import { Array, Data, Effect, Match, Option, Schema, String } from 'effect'
+
 import {
   Class,
-  Html,
-  OnChange,
-  OnSubmit,
-  OnClick,
-  Placeholder,
-  Id,
   For,
+  Html,
+  Id,
+  OnChange,
+  OnClick,
+  OnSubmit,
+  Placeholder,
   Type,
   Value,
-  empty,
   button,
   div,
-  input,
-  h1,
+  empty,
   form,
+  h1,
+  input,
   label,
-  ul,
   li,
   span,
+  ul,
 } from '@foldkit/html'
 
 // MODEL

@@ -1,5 +1,6 @@
-import { Queue, String, Array, pipe } from 'effect'
-import { Url, UrlRequest, BrowserConfig } from './runtime'
+import { Array, Queue, String, pipe } from 'effect'
+
+import { BrowserConfig, Url, UrlRequest } from './runtime'
 
 export const addNavigationEventListeners = <Message>(
   messageQueue: Queue.Queue<Message>,

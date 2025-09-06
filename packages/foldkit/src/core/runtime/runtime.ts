@@ -1,23 +1,22 @@
 import {
-  Effect,
   Context,
-  Ref,
-  Equal,
-  Queue,
-  Option,
-  Stream,
-  Record,
-  pipe,
-  PubSub,
-  Predicate,
   Data,
+  Effect,
+  Equal,
+  Option,
+  Predicate,
+  PubSub,
+  Queue,
+  Record,
+  Ref,
+  Stream,
+  pipe,
 } from 'effect'
 import { h } from 'snabbdom'
 
 import { FoldReturn } from '../fold'
 import { Html } from '../html'
 import { VNode, patch } from '../vdom'
-
 import { addNavigationEventListeners } from './addNavigationEventListeners'
 
 export class Dispatch extends Context.Tag('@foldkit/Dispatch')<

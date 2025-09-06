@@ -2,5 +2,11 @@
   "semi": false,
   "singleQuote": true,
   "trailingComma": "all",
-  "printWidth": 100
+  "printWidth": 100,
+
+  "importOrder": ["<THIRD_PARTY_MODULES>", "^@foldkit/(.*)$", "^[./]"],
+  "importOrderSeparation": true,
+  "importOrderSortSpecifiers": true,
+
+  "plugins": ["@trivago/prettier-plugin-sort-imports"]
 }

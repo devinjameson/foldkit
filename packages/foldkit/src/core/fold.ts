@@ -1,4 +1,4 @@
-import { Option, pipe, Tuple } from 'effect'
+import { Option, Tuple, pipe } from 'effect'
 import { ExtractTag, Tags } from 'effect/Types'
 
 import { Command } from './runtime'

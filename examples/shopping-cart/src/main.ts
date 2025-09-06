@@ -1,12 +1,13 @@
-import { Data, Effect, Option, pipe, Schema } from 'effect'
-import { Route, Fold, Runtime } from '@foldkit'
-import { Class, Html, Href, div, h1, p, a } from '@foldkit/html'
-import { pushUrl, load } from '@foldkit/navigation'
+import { Fold, Route, Runtime } from '@foldkit'
+import { Data, Effect, Option, Schema, pipe } from 'effect'
+
+import { Class, Href, Html, a, div, h1, p } from '@foldkit/html'
+import { load, pushUrl } from '@foldkit/navigation'
 import { literal } from '@foldkit/route'
 
 import { products } from './data/products'
-import { Products, Cart as CartPage, Checkout } from './page'
 import { Cart } from './domain'
+import { Cart as CartPage, Checkout, Products } from './page'
 
 // ROUTE
 

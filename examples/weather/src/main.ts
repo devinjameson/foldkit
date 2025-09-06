@@ -1,22 +1,23 @@
-import { Array, Data, Effect, Option, String } from 'effect'
 import { Fold, Runtime } from '@foldkit'
+import { Array, Data, Effect, Option, String } from 'effect'
+
 import {
   Class,
+  Disabled,
+  For,
   Html,
+  Id,
   OnChange,
   OnSubmit,
   Placeholder,
-  Id,
-  For,
   Type,
-  Disabled,
-  empty,
   button,
   div,
-  input,
+  empty,
+  form,
   h1,
   h2,
-  form,
+  input,
   label,
   p,
 } from '@foldkit/html'

@@ -1,8 +1,9 @@
-import { Effect, Match, Data, Predicate, String, pipe, Array, flow, Ref } from 'effect'
-import { Dispatch } from './runtime'
-import { VNode } from './vdom'
+import { Array, Data, Effect, Match, Predicate, Ref, String, flow, pipe } from 'effect'
 import { h } from 'snabbdom'
 import type { VNodeData } from 'snabbdom'
+
+import { Dispatch } from './runtime'
+import { VNode } from './vdom'
 
 export type Html = Effect.Effect<VNode | null, never, Dispatch>
 export type Child = Html | string

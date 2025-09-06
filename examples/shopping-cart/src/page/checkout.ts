@@ -1,24 +1,26 @@
-import { Data, Array, Option } from 'effect'
-import { ExtractTag } from 'effect/Types'
 import { Route } from '@foldkit'
+import { Array, Data, Option } from 'effect'
+import { ExtractTag } from 'effect/Types'
+
 import {
   Class,
-  Html,
-  OnClick,
-  OnChange,
-  Value,
-  Placeholder,
   Href,
+  Html,
+  OnChange,
+  OnClick,
+  Placeholder,
+  Value,
+  a,
+  button,
   div,
   h1,
   h2,
   h3,
   p,
-  button,
   span,
-  a,
   textarea,
 } from '@foldkit/html'
+
 import { Cart } from '../domain'
 import type { AppRoute } from '../main'
 

@@ -38,9 +38,9 @@ Current examples:
 See the full example at [examples/counter/src/main.ts](examples/counter/src/main.ts)
 
 ```ts
+import { ElementInit, fold, makeElement, updateConstructors } from '@foldkit'
 import { Data, Effect, Option } from 'effect'
 
-import { fold, makeElement, updateConstructors, ElementInit } from '@foldkit'
 import { Class, Html, OnClick, button, div } from '@foldkit/html'
 
 // MODEL

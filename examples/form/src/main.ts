@@ -1,24 +1,25 @@
+import { Fold, FormValidation, Runtime } from '@foldkit'
 import { Array, Data, Duration, Effect, Number, Option } from 'effect'
-import { Fold, Runtime, FormValidation } from '@foldkit'
+
 import {
   Class,
+  Disabled,
+  For,
   Html,
+  Id,
   OnChange,
   OnSubmit,
-  Id,
-  For,
   Type,
   Value,
-  Disabled,
-  empty,
   button,
   div,
-  input,
-  textarea,
-  h1,
+  empty,
   form,
+  h1,
+  input,
   label,
   span,
+  textarea,
 } from '@foldkit/html'
 
 // MODEL

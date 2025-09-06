@@ -1,23 +1,24 @@
-import { Array, Data, Effect, Option, pipe, Schema } from 'effect'
-import { Route, Fold, Runtime } from '@foldkit'
-import { pushUrl, replaceUrl, load } from '@foldkit/navigation'
+import { Fold, Route, Runtime } from '@foldkit'
+import { Array, Data, Effect, Option, Schema, pipe } from 'effect'
+
 import {
   Class,
-  Html,
   Href,
-  Value,
-  Placeholder,
+  Html,
   OnChange,
+  Placeholder,
+  Value,
+  a,
   div,
   h1,
   h2,
-  p,
-  a,
-  ul,
-  li,
   input,
+  li,
+  p,
+  ul,
 } from '@foldkit/html'
-import { slash, literal, int } from '@foldkit/route'
+import { load, pushUrl, replaceUrl } from '@foldkit/navigation'
+import { int, literal, slash } from '@foldkit/route'
 
 // ROUTE
 

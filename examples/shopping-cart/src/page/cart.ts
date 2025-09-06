@@ -1,7 +1,9 @@
+import { Route } from '@foldkit'
 import { Array, Data, Option } from 'effect'
 import { ExtractTag } from 'effect/Types'
-import { Route } from '@foldkit'
-import { Class, Html, OnClick, Href, div, h1, h3, p, button, span, a } from '@foldkit/html'
+
+import { Class, Href, Html, OnClick, a, button, div, h1, h3, p, span } from '@foldkit/html'
+
 import { Cart } from '../domain'
 import type { AppRoute } from '../main'
 

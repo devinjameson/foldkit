@@ -1,4 +1,4 @@
-import { init, classModule, propsModule, styleModule, eventListenersModule, h } from 'snabbdom'
+import { classModule, eventListenersModule, h, init, propsModule, styleModule } from 'snabbdom'
 import type { VNode } from 'snabbdom'
 
 export type { VNode } from 'snabbdom'

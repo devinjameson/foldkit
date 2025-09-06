@@ -1,4 +1,5 @@
-import { Array, Number, Option, pipe, Predicate, Schema } from 'effect'
+import { Array, Number, Option, Predicate, Schema, pipe } from 'effect'
+
 import { CartItem, Item } from './item'
 
 export const Cart = Schema.Array(CartItem)
