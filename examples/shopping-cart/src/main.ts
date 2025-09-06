@@ -1,4 +1,4 @@
-import { Array, Data, Effect, Number, Option, pipe } from 'effect'
+import { Array, Data, Effect, Number, Option, pipe, Schema } from 'effect'
 import {
   Route,
   fold,
@@ -9,9 +9,27 @@ import {
   UrlRequest,
   Command,
 } from '@foldkit'
-import { Class, Html, OnClick, Href, div, h1, h2, h3, p, button, span, a } from '@foldkit/html'
+import {
+  Class,
+  Html,
+  OnClick,
+  OnChange,
+  Href,
+  Value,
+  Placeholder,
+  div,
+  h1,
+  h2,
+  h3,
+  p,
+  button,
+  span,
+  a,
+  input,
+  textarea,
+} from '@foldkit/html'
 import { literal } from '@foldkit/route'
-import { pushUrl, load } from '@foldkit/navigation'
+import { pushUrl, replaceUrl, load } from '@foldkit/navigation'
 
 import { Cart, Item } from './domain'
 import { products } from './data/products'
@@ -19,7 +37,7 @@ import { products } from './data/products'
 // ROUTE
 
 type AppRoute = Data.TaggedEnum<{
-  Products: {}
+  Products: { searchText: Option.Option<string> }
   Cart: {}
   Checkout: {}
   NotFound: { path: string }
@@ -27,7 +45,15 @@ type AppRoute = Data.TaggedEnum<{
 
 const AppRoute = Data.taggedEnum<AppRoute>()
 
-const productsRouter = pipe(Route.root, Route.mapTo(AppRoute.Products))
+const ProductsQuerySchema = Schema.Struct({
+  searchText: Schema.OptionFromUndefinedOr(Schema.String),
+})
+
+const productsRouter = pipe(
+  Route.root,
+  Route.query(ProductsQuerySchema),
+  Route.mapTo(AppRoute.Products),
+)
 
 const cartRouter = pipe(literal('cart'), Route.mapTo(AppRoute.Cart))
 
@@ -42,6 +68,8 @@ const urlToAppRoute = Route.parseUrlWithFallback(routeParser, AppRoute.NotFound)
 type Model = Readonly<{
   route: AppRoute
   cart: Cart.Cart
+  deliveryInstructions: string
+  orderPlaced: boolean
 }>
 
 // MESSAGE
@@ -53,6 +81,10 @@ type Message = Data.TaggedEnum<{
   AddToCart: { item: Item.Item }
   RemoveFromCart: { itemId: string }
   ChangeQuantity: { itemId: string; quantity: number }
+  SearchInputChanged: { value: string }
+  ClearCart: {}
+  UpdateDeliveryInstructions: { value: string }
+  PlaceOrder: {}
 }>
 
 const Message = Data.taggedEnum<Message>()
@@ -60,7 +92,10 @@ const Message = Data.taggedEnum<Message>()
 // INIT
 
 const init: ApplicationInit<Model, Message> = (url: Url) => {
-  return [{ route: urlToAppRoute(url), cart: [] }, Option.none()]
+  return [
+    { route: urlToAppRoute(url), cart: [], deliveryInstructions: '', orderPlaced: false },
+    Option.none(),
+  ]
 }
 
 // UPDATE
@@ -105,6 +140,30 @@ const update = fold<Model, Message>({
     ...model,
     cart: Cart.changeQuantity(itemId, quantity)(model.cart),
   })),
+
+  SearchInputChanged: pureCommand((model, { value }): [Model, Command<Message>] => [
+    model,
+    replaceUrl(productsRouter.build({ searchText: Option.fromNullable(value || null) })).pipe(
+      Effect.map(() => Message.NoOp()),
+    ),
+  ]),
+
+  ClearCart: pure((model) => ({
+    ...model,
+    cart: [],
+  })),
+
+  UpdateDeliveryInstructions: pure((model, { value }) => ({
+    ...model,
+    deliveryInstructions: value,
+  })),
+
+  PlaceOrder: pure((model) => ({
+    ...model,
+    orderPlaced: true,
+    cart: [],
+    deliveryInstructions: '',
+  })),
 })
 
 // VIEW
@@ -121,7 +180,7 @@ const navigationView = (currentRoute: AppRoute, cartCount: number): Html => {
         [
           a(
             [
-              Href(productsRouter.build({})),
+              Href(productsRouter.build({ searchText: Option.none() })),
               Class(navLinkClassName(AppRoute.$is('Products')(currentRoute))),
             ],
             ['Products'],
@@ -147,6 +206,14 @@ const navigationView = (currentRoute: AppRoute, cartCount: number): Html => {
 }
 
 const productsView = (model: Model): Html => {
+  const searchText = AppRoute.$is('Products')(model.route)
+    ? Option.getOrElse(model.route.searchText, () => '')
+    : ''
+
+  const filteredProducts = searchText
+    ? products.filter((product) => product.name.toLowerCase().includes(searchText.toLowerCase()))
+    : products
+
   return div(
     [Class('max-w-4xl mx-auto px-4')],
     [
@@ -155,8 +222,21 @@ const productsView = (model: Model): Html => {
         [Class('bg-white rounded-lg shadow p-6')],
         [
           div(
+            [Class('mb-6')],
+            [
+              input([
+                Value(searchText),
+                Placeholder('Search products...'),
+                Class(
+                  'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
+                ),
+                OnChange((value: string) => Message.SearchInputChanged({ value })),
+              ]),
+            ],
+          ),
+          div(
             [Class('grid gap-4')],
-            products.map((product) =>
+            filteredProducts.map((product) =>
               div(
                 [Class('flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50')],
                 [
@@ -260,7 +340,7 @@ const cartView = (model: Model): Html => {
                   [
                     a(
                       [
-                        Href(productsRouter.build({})),
+                        Href(productsRouter.build({ searchText: Option.none() })),
                         Class(
                           'bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium inline-block',
                         ),
@@ -356,12 +436,21 @@ const cartView = (model: Model): Html => {
                   [
                     a(
                       [
-                        Href(productsRouter.build({})),
+                        Href(productsRouter.build({ searchText: Option.none() })),
                         Class(
                           'bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-medium',
                         ),
                       ],
                       ['Continue Shopping'],
+                    ),
+                    button(
+                      [
+                        Class(
+                          'bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-medium',
+                        ),
+                        OnClick(Message.ClearCart()),
+                      ],
+                      ['Clear Cart'],
                     ),
                     a(
                       [
@@ -384,6 +473,34 @@ const cartView = (model: Model): Html => {
 }
 
 const checkoutView = (model: Model): Html => {
+  if (model.orderPlaced) {
+    return div(
+      [Class('max-w-4xl mx-auto px-4 text-center')],
+      [
+        h1([Class('text-4xl font-bold text-green-600 mb-8')], ['Order Placed Successfully!']),
+        div(
+          [Class('bg-green-50 border border-green-200 rounded-lg p-6 mb-6')],
+          [
+            p(
+              [Class('text-lg text-gray-700 mb-4')],
+              ["Thank you for your order! We'll deliver it soon."],
+            ),
+            p([Class('text-gray-600')], ['You will receive a confirmation email shortly.']),
+          ],
+        ),
+        a(
+          [
+            Href(productsRouter.build({ searchText: Option.none() })),
+            Class(
+              'bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium inline-block',
+            ),
+          ],
+          ['Continue Shopping'],
+        ),
+      ],
+    )
+  }
+
   return div(
     [Class('max-w-4xl mx-auto px-4')],
     [
@@ -398,7 +515,7 @@ const checkoutView = (model: Model): Html => {
               [
                 a(
                   [
-                    Href(productsRouter.build({})),
+                    Href(productsRouter.build({ searchText: Option.none() })),
                     Class(
                       'bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium inline-block',
                     ),
@@ -449,6 +566,20 @@ const checkoutView = (model: Model): Html => {
               ],
             ),
             div(
+              [Class('mb-6')],
+              [
+                h3([Class('text-lg font-semibold text-gray-800 mb-2')], ['Delivery Instructions']),
+                textarea([
+                  Value(model.deliveryInstructions),
+                  Placeholder('Special delivery instructions (optional)...'),
+                  Class(
+                    'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-24 resize-none',
+                  ),
+                  OnChange((value: string) => Message.UpdateDeliveryInstructions({ value })),
+                ]),
+              ],
+            ),
+            div(
               [Class('flex gap-4 justify-center')],
               [
                 a(
@@ -465,7 +596,7 @@ const checkoutView = (model: Model): Html => {
                     Class(
                       'bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium',
                     ),
-                    OnClick(Message.NoOp()),
+                    OnClick(Message.PlaceOrder()),
                   ],
                   ['Place Order'],
                 ),
@@ -485,7 +616,10 @@ const notFoundView = (path: string): Html =>
       h1([Class('text-4xl font-bold text-red-600 mb-6')], ['404 - Page Not Found']),
       p([Class('text-lg text-gray-600 mb-4')], [`The path "${path}" was not found.`]),
       a(
-        [Href(productsRouter.build({})), Class('text-blue-500 hover:underline')],
+        [
+          Href(productsRouter.build({ searchText: Option.none() })),
+          Class('text-blue-500 hover:underline'),
+        ],
         ['← Go to Products'],
       ),
     ],
