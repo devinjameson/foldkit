@@ -138,9 +138,7 @@ const update = Fold.fold<Model, Message>({
     return [
       newModel,
       productsCommand.map(
-        Runtime.Command.map((productsMessage) =>
-          Message.ProductsMessage({ message: productsMessage }),
-        ),
+        Effect.map((productsMessage) => Message.ProductsMessage({ message: productsMessage })),
       ),
     ]
   },
