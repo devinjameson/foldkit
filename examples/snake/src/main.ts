@@ -69,7 +69,7 @@ const update = Fold.fold<Model, Message>({
         'd',
         (moveKey) => {
           const nextDirection = Match.value(moveKey).pipe(
-            Match.withReturnType<Direction.Direction | null>(),
+            Match.withReturnType<Direction.Direction>(),
             Match.whenOr('ArrowUp', 'w', () => 'Up'),
             Match.whenOr('ArrowDown', 's', () => 'Down'),
             Match.whenOr('ArrowLeft', 'a', () => 'Left'),
