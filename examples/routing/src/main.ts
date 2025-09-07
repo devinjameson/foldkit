@@ -1,5 +1,5 @@
-import { Fold, Route, Runtime } from '@foldkit'
-import { Array, Data, Effect, Option, Schema, pipe } from 'effect'
+import { Fold, Route, Runtime, ST, ts } from '@foldkit'
+import { Array, Effect, Match, Option, Schema as S, pipe } from 'effect'
 
 import {
   Class,
@@ -19,20 +19,27 @@ import {
 } from '@foldkit/html'
 import { load, pushUrl, replaceUrl } from '@foldkit/navigation'
 import { int, literal, slash } from '@foldkit/route'
+import { Url, UrlRequest } from '@foldkit/urlRequest'
 
 // ROUTE
 
-type AppRoute = Data.TaggedEnum<{
-  Home: {}
-  Nested: {}
-  People: { searchText: Option.Option<string> }
-  Person: { personId: number }
-  NotFound: { path: string }
-}>
+const HomeRoute = ts('Home')
+const NestedRoute = ts('Nested')
+const PeopleRoute = ts('People', { searchText: S.Option(S.String) })
+const PersonRoute = ts('Person', { personId: S.Number })
+const NotFoundRoute = ts('NotFound', { path: S.String })
 
-const AppRoute = Data.taggedEnum<AppRoute>()
+export const AppRoute = S.Union(HomeRoute, NestedRoute, PeopleRoute, PersonRoute, NotFoundRoute)
 
-const homeRouter = pipe(Route.default.root, Route.default.mapTo(AppRoute.Home))
+type HomeRoute = ST<typeof HomeRoute>
+type NestedRoute = ST<typeof NestedRoute>
+type PeopleRoute = ST<typeof PeopleRoute>
+type PersonRoute = ST<typeof PersonRoute>
+type NotFoundRoute = ST<typeof NotFoundRoute>
+
+export type AppRoute = ST<typeof AppRoute>
+
+const homeRouter = pipe(Route.root, Route.mapTo(HomeRoute))
 
 const nestedRouter = pipe(
   literal('nested'),
@@ -40,28 +47,24 @@ const nestedRouter = pipe(
   slash(literal('is')),
   slash(literal('very')),
   slash(literal('nested')),
-  Route.default.mapTo(AppRoute.Nested),
+  Route.mapTo(NestedRoute),
 )
-
-const PeopleQuerySchema = Schema.Struct({
-  searchText: Schema.OptionFromUndefinedOr(Schema.String),
-})
 
 const peopleRouter = pipe(
   literal('people'),
-  Route.default.query(PeopleQuerySchema),
-  Route.default.mapTo(AppRoute.People),
+  Route.query(
+    S.Struct({
+      searchText: S.OptionFromUndefinedOr(S.String),
+    }),
+  ),
+  Route.mapTo(PeopleRoute),
 )
 
-const personRouter = pipe(
-  literal('people'),
-  slash(int('personId')),
-  Route.default.mapTo(AppRoute.Person),
-)
+const personRouter = pipe(literal('people'), slash(int('personId')), Route.mapTo(PersonRoute))
 
-const routeParser = Route.default.oneOf(personRouter, peopleRouter, nestedRouter, homeRouter)
+const routeParser = Route.oneOf(personRouter, peopleRouter, nestedRouter, homeRouter)
 
-const urlToAppRoute = Route.default.parseUrlWithFallback(routeParser, AppRoute.NotFound)
+const urlToAppRoute = Route.parseUrlWithFallback(routeParser, NotFoundRoute)
 
 const people = [
   { id: 1, name: 'Alice Johnson', role: 'Designer' },
@@ -75,24 +78,31 @@ const findPerson = (id: number) => Array.findFirst(people, (person) => person.id
 
 // MODEL
 
-type Model = Readonly<{
-  route: AppRoute
-}>
+const Model = S.Struct({
+  route: AppRoute,
+})
+
+type Model = ST<typeof Model>
 
 // MESSAGE
 
-type Message = Data.TaggedEnum<{
-  NoOp: {}
-  UrlRequestReceived: { request: Runtime.UrlRequest }
-  UrlChanged: { url: Runtime.Url }
-  SearchInputChanged: { value: string }
-}>
+const NoOp = ts('NoOp')
+const UrlRequestReceived = ts('UrlRequestReceived', { request: UrlRequest })
+const UrlChanged = ts('UrlChanged', { url: Url })
+const SearchInputChanged = ts('SearchInputChanged', { value: S.String })
 
-const Message = Data.taggedEnum<Message>()
+export const Message = S.Union(NoOp, UrlRequestReceived, UrlChanged, SearchInputChanged)
+
+type NoOp = ST<typeof NoOp>
+type UrlRequestReceived = ST<typeof UrlRequestReceived>
+type UrlChanged = ST<typeof UrlChanged>
+type SearchInputChanged = ST<typeof SearchInputChanged>
+
+export type Message = ST<typeof Message>
 
 // INIT
 
-const init: Runtime.ApplicationInit<Model, Message> = (url: Runtime.Url) => {
+const init: Runtime.ApplicationInit<Model, Message> = (url: Url) => {
   return [{ route: urlToAppRoute(url) }, []]
 }
 
@@ -101,21 +111,22 @@ const init: Runtime.ApplicationInit<Model, Message> = (url: Runtime.Url) => {
 const update = Fold.fold<Model, Message>({
   NoOp: (model) => [model, []],
 
-  UrlRequestReceived: (model, { request }): [Model, Runtime.Command<Message>[]] => {
-    return Runtime.UrlRequest.$match(request, {
-      Internal: ({ url }): [Model, Runtime.Command<Message>[]] => [
-        {
-          ...model,
-          route: urlToAppRoute(url),
-        },
-        [pushUrl(url.pathname).pipe(Effect.map(() => Message.NoOp()))],
-      ],
-      External: ({ href }): [Model, Runtime.Command<Message>[]] => [
-        model,
-        [load(href).pipe(Effect.map(() => Message.NoOp()))],
-      ],
-    })
-  },
+  UrlRequestReceived: (model, { request }) =>
+    Match.value(request).pipe(
+      Match.tagsExhaustive({
+        Internal: ({ url }): [Model, Runtime.Command<NoOp>[]] => [
+          {
+            ...model,
+            route: urlToAppRoute(url),
+          },
+          [pushUrl(url.pathname).pipe(Effect.as(NoOp.make()))],
+        ],
+        External: ({ href }): [Model, Runtime.Command<NoOp>[]] => [
+          model,
+          [load(href).pipe(Effect.as(NoOp.make()))],
+        ],
+      }),
+    ),
 
   UrlChanged: (model, { url }) => [
     {
@@ -129,7 +140,7 @@ const update = Fold.fold<Model, Message>({
     model,
     [
       replaceUrl(peopleRouter.build({ searchText: Option.fromNullable(value || null) })).pipe(
-        Effect.map(Message.NoOp),
+        Effect.as(NoOp.make()),
       ),
     ],
   ],
@@ -148,28 +159,20 @@ const navigationView = (currentRoute: AppRoute): Html => {
         [Class('max-w-4xl mx-auto flex gap-6')],
         [
           a(
-            [
-              Href(homeRouter.build({})),
-              Class(navLinkClassName(AppRoute.$is('Home')(currentRoute))),
-            ],
+            [Href(homeRouter.build({})), Class(navLinkClassName(currentRoute._tag === 'Home'))],
             ['Home'],
           ),
           a(
             [
               Href(peopleRouter.build({ searchText: Option.none() })),
               Class(
-                navLinkClassName(
-                  AppRoute.$is('People')(currentRoute) || AppRoute.$is('Person')(currentRoute),
-                ),
+                navLinkClassName(currentRoute._tag === 'People' || currentRoute._tag === 'Person'),
               ),
             ],
             ['People'],
           ),
           a(
-            [
-              Href(nestedRouter.build({})),
-              Class(navLinkClassName(AppRoute.$is('Nested')(currentRoute))),
-            ],
+            [Href(nestedRouter.build({})), Class(navLinkClassName(currentRoute._tag === 'Nested'))],
             ['Nested'],
           ),
         ],
@@ -231,7 +234,7 @@ const peopleView = (searchText: Option.Option<string>): Html => {
             Class(
               'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
             ),
-            OnChange((value) => Message.SearchInputChanged({ value })),
+            OnChange((value) => SearchInputChanged.make({ value })),
           ]),
         ],
       ),
@@ -353,13 +356,15 @@ const notFoundView = (path: string): Html =>
   )
 
 const view = (model: Model): Html => {
-  const routeContent = AppRoute.$match(model.route, {
-    Home: homeView,
-    Nested: nestedView,
-    People: ({ searchText }) => peopleView(searchText),
-    Person: ({ personId }) => personView(personId),
-    NotFound: ({ path }) => notFoundView(path),
-  })
+  const routeContent = Match.value(model.route).pipe(
+    Match.tagsExhaustive({
+      Home: homeView,
+      Nested: nestedView,
+      People: ({ searchText }) => peopleView(searchText),
+      Person: ({ personId }) => personView(personId),
+      NotFound: ({ path }) => notFoundView(path),
+    }),
+  )
 
   return div([Class('min-h-screen bg-gray-100')], [navigationView(model.route), routeContent])
 }
@@ -367,14 +372,15 @@ const view = (model: Model): Html => {
 // RUN
 
 const app = Runtime.makeApplication({
+  Model,
   init,
   update,
   view,
   // TODO: Should this be document.getElementById('app') instead?
   container: document.body,
   browser: {
-    onUrlRequest: (request) => Message.UrlRequestReceived({ request }),
-    onUrlChange: (url) => Message.UrlChanged({ url }),
+    onUrlRequest: (request) => UrlRequestReceived.make({ request }),
+    onUrlChange: (url) => UrlChanged.make({ url }),
   },
 })
 

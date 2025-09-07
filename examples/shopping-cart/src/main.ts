@@ -1,9 +1,10 @@
-import { Fold, Route, Runtime } from '@foldkit'
-import { Data, Effect, Option, Schema, pipe } from 'effect'
+import { Fold, Route, Runtime, ST, ts } from '@foldkit'
+import { Effect, Match, Option, Schema as S, pipe } from 'effect'
 
 import { Class, Href, Html, a, div, h1, p } from '@foldkit/html'
 import { load, pushUrl } from '@foldkit/navigation'
 import { literal } from '@foldkit/route'
+import { Url, UrlRequest } from '@foldkit/urlRequest'
 
 import { products } from './data/products'
 import { Cart } from './domain'
@@ -11,59 +12,71 @@ import { Cart as CartPage, Checkout, Products } from './page'
 
 // ROUTE
 
-export type AppRoute = Data.TaggedEnum<{
-  Products: { searchText: Option.Option<string> }
-  Cart: {}
-  Checkout: {}
-  NotFound: { path: string }
-}>
+export const ProductsRoute = ts('Products', { searchText: S.Option(S.String) })
+export const CartRoute = ts('Cart')
+export const CheckoutRoute = ts('Checkout')
+export const NotFoundRoute = ts('NotFound', { path: S.String })
+export const AppRoute = S.Union(ProductsRoute, CartRoute, CheckoutRoute, NotFoundRoute)
 
-const AppRoute = Data.taggedEnum<AppRoute>()
-
-const ProductsQuerySchema = Schema.Struct({
-  searchText: Schema.OptionFromUndefinedOr(Schema.String),
-})
+export type ProductsRoute = ST<typeof ProductsRoute>
+export type CartRoute = ST<typeof CartRoute>
+export type CheckoutRoute = ST<typeof CheckoutRoute>
+export type NotFoundRoute = ST<typeof NotFoundRoute>
+export type AppRoute = ST<typeof AppRoute>
 
 const productsRouter = pipe(
-  Route.default.root,
-  Route.default.query(ProductsQuerySchema),
-  Route.default.mapTo(AppRoute.Products),
+  Route.root,
+  Route.query(S.Struct({ searchText: S.OptionFromUndefinedOr(S.String) })),
+  Route.mapTo(ProductsRoute),
 )
+const cartRouter = pipe(literal('cart'), Route.mapTo(CartRoute))
+const checkoutRouter = pipe(literal('checkout'), Route.mapTo(CheckoutRoute))
 
-const cartRouter = pipe(literal('cart'), Route.default.mapTo(AppRoute.Cart))
+const routeParser = Route.oneOf(checkoutRouter, cartRouter, productsRouter)
 
-const checkoutRouter = pipe(literal('checkout'), Route.default.mapTo(AppRoute.Checkout))
-
-const routeParser = Route.default.oneOf(checkoutRouter, cartRouter, productsRouter)
-
-const urlToAppRoute = Route.default.parseUrlWithFallback(routeParser, AppRoute.NotFound)
+const urlToAppRoute = Route.parseUrlWithFallback(routeParser, NotFoundRoute)
 
 // MODEL
 
-type Model = Readonly<{
-  route: AppRoute
-  cart: Cart.Cart
-  deliveryInstructions: string
-  orderPlaced: boolean
-  productsPage: Products.Model
-}>
+const Model = S.Struct({
+  route: AppRoute,
+  cart: Cart.Cart,
+  deliveryInstructions: S.String,
+  orderPlaced: S.Boolean,
+  productsPage: Products.Model,
+})
+type Model = S.Schema.Type<typeof Model>
 
 // MESSAGE
 
-type Message = Data.TaggedEnum<{
-  NoOp: {}
-  UrlRequestReceived: { request: Runtime.UrlRequest }
-  UrlChanged: { url: Runtime.Url }
-  ProductsMessage: { message: Products.Message }
-  CartMessage: { message: CartPage.Message }
-  CheckoutMessage: { message: Checkout.Message }
-}>
+const NoOp = ts('NoOp')
+const UrlRequestReceived = ts('UrlRequestReceived', { request: UrlRequest })
+const UrlChanged = ts('UrlChanged', { url: Url })
+const ProductsMessage = ts('ProductsMessage', { message: Products.Message })
+const CartMessage = ts('CartMessage', { message: CartPage.Message })
+const CheckoutMessage = ts('CheckoutMessage', { message: Checkout.Message })
 
-const Message = Data.taggedEnum<Message>()
+export const Message = S.Union(
+  NoOp,
+  UrlRequestReceived,
+  UrlChanged,
+  ProductsMessage,
+  CartMessage,
+  CheckoutMessage,
+)
+
+type NoOp = ST<typeof NoOp>
+type UrlRequestReceived = ST<typeof UrlRequestReceived>
+type UrlChanged = ST<typeof UrlChanged>
+type ProductsMessage = ST<typeof ProductsMessage>
+type CartMessage = ST<typeof CartMessage>
+type CheckoutMessage = ST<typeof CheckoutMessage>
+
+export type Message = ST<typeof Message>
 
 // INIT
 
-const init: Runtime.ApplicationInit<Model, Message> = (url: Runtime.Url) => {
+const init: Runtime.ApplicationInit<Model, Message> = (url: Url) => {
   return [
     {
       route: urlToAppRoute(url),
@@ -82,20 +95,21 @@ const update = Fold.fold<Model, Message>({
   NoOp: (model) => [model, []],
 
   UrlRequestReceived: (model, { request }) =>
-    Runtime.UrlRequest.$match(request, {
-      Internal: ({ url }): [Model, Runtime.Command<Message>[]] => [
-        {
-          ...model,
-          route: urlToAppRoute(url),
-        },
-        [pushUrl(url.pathname).pipe(Effect.map(Message.NoOp))],
-      ],
+    pipe(
+      Match.value(request),
+      Match.withReturnType<[Model, Runtime.Command<NoOp>[]]>(),
+      Match.tagsExhaustive({
+        Internal: ({ url }) => [
+          {
+            ...model,
+            route: urlToAppRoute(url),
+          },
+          [pushUrl(url.pathname).pipe(Effect.as(NoOp.make()))],
+        ],
 
-      External: ({ href }): [Model, Runtime.Command<Message>[]] => [
-        model,
-        [load(href).pipe(Effect.map(Message.NoOp))],
-      ],
-    }),
+        External: ({ href }) => [model, [load(href).pipe(Effect.as(NoOp.make()))]],
+      }),
+    ),
 
   UrlChanged: (model, { url }) => [
     {
@@ -105,78 +119,87 @@ const update = Fold.fold<Model, Message>({
     [],
   ],
 
-  ProductsMessage: (model, { message }): [Model, Runtime.Command<Message>[]] => {
+  ProductsMessage: (model, { message }) => {
     const [newProductsModel, productsCommand] = Products.update(productsRouter)(
       model.productsPage,
       message,
     )
 
-    const newModel = Products.Message.$match(message, {
-      NoOp: () => ({
-        ...model,
-        productsPage: newProductsModel,
-      }),
+    const newModel = pipe(
+      Match.value(message),
+      Match.tagsExhaustive({
+        NoOp: () => ({
+          ...model,
+          productsPage: newProductsModel,
+        }),
 
-      SearchInputChanged: () => ({
-        ...model,
-        productsPage: newProductsModel,
-      }),
+        SearchInputChanged: () => ({
+          ...model,
+          productsPage: newProductsModel,
+        }),
 
-      AddToCartClicked: ({ item }) => ({
-        ...model,
-        productsPage: newProductsModel,
-        cart: Cart.addItem(item)(model.cart),
-      }),
+        AddToCartClicked: ({ item }) => ({
+          ...model,
+          productsPage: newProductsModel,
+          cart: Cart.addItem(item)(model.cart),
+        }),
 
-      QuantityChangeClicked: ({ itemId, quantity }) => ({
-        ...model,
-        productsPage: newProductsModel,
-        cart: Cart.changeQuantity(itemId, quantity)(model.cart),
+        QuantityChangeClicked: ({ itemId, quantity }) => ({
+          ...model,
+          productsPage: newProductsModel,
+          cart: Cart.changeQuantity(itemId, quantity)(model.cart),
+        }),
       }),
-    })
+    )
 
     return [
       newModel,
       productsCommand.map(
-        Effect.map((productsMessage) => Message.ProductsMessage({ message: productsMessage })),
+        Effect.map((productsMessage) => ProductsMessage.make({ message: productsMessage })),
       ),
     ]
   },
 
   CartMessage: (model, { message }) => [
-    CartPage.Message.$match(message, {
-      ChangeQuantity: ({ itemId, quantity }) => ({
-        ...model,
-        cart: Cart.changeQuantity(itemId, quantity)(model.cart),
-      }),
+    pipe(
+      Match.value(message),
+      Match.tagsExhaustive({
+        ChangeQuantity: ({ itemId, quantity }) => ({
+          ...model,
+          cart: Cart.changeQuantity(itemId, quantity)(model.cart),
+        }),
 
-      RemoveFromCart: ({ itemId }) => ({
-        ...model,
-        cart: Cart.removeItem(itemId)(model.cart),
-      }),
+        RemoveFromCart: ({ itemId }) => ({
+          ...model,
+          cart: Cart.removeItem(itemId)(model.cart),
+        }),
 
-      ClearCart: () => ({
-        ...model,
-        cart: [],
+        ClearCart: () => ({
+          ...model,
+          cart: [],
+        }),
       }),
-    }),
+    ),
     [],
   ],
 
   CheckoutMessage: (model, { message }) => [
-    Checkout.Message.$match(message, {
-      UpdateDeliveryInstructions: ({ value }) => ({
-        ...model,
-        deliveryInstructions: value,
-      }),
+    pipe(
+      Match.value(message),
+      Match.tagsExhaustive({
+        UpdateDeliveryInstructions: ({ value }) => ({
+          ...model,
+          deliveryInstructions: value,
+        }),
 
-      PlaceOrder: () => ({
-        ...model,
-        orderPlaced: true,
-        cart: [],
-        deliveryInstructions: '',
+        PlaceOrder: () => ({
+          ...model,
+          orderPlaced: true,
+          cart: [],
+          deliveryInstructions: '',
+        }),
       }),
-    }),
+    ),
     [],
   ],
 })
@@ -196,21 +219,18 @@ const navigationView = (currentRoute: AppRoute, cartCount: number): Html => {
           a(
             [
               Href(productsRouter.build({ searchText: Option.none() })),
-              Class(navLinkClassName(AppRoute.$is('Products')(currentRoute))),
+              Class(navLinkClassName(currentRoute._tag === 'Products')),
             ],
             ['Products'],
           ),
           a(
-            [
-              Href(cartRouter.build({})),
-              Class(navLinkClassName(AppRoute.$is('Cart')(currentRoute))),
-            ],
+            [Href(cartRouter.build({})), Class(navLinkClassName(currentRoute._tag === 'Cart'))],
             cartCount > 0 ? [`Cart (${cartCount})`] : ['Cart'],
           ),
           a(
             [
               Href(checkoutRouter.build({})),
-              Class(navLinkClassName(AppRoute.$is('Checkout')(currentRoute))),
+              Class(navLinkClassName(currentRoute._tag === 'Checkout')),
             ],
             ['Checkout'],
           ),
@@ -222,13 +242,13 @@ const navigationView = (currentRoute: AppRoute, cartCount: number): Html => {
 
 const productsView = (model: Model): Html => {
   return Products.view(model.productsPage, model.cart, cartRouter, (message) =>
-    Message.ProductsMessage({ message }),
+    ProductsMessage.make({ message }),
   )
 }
 
 const cartView = (model: Model): Html => {
   return CartPage.view(model.cart, productsRouter, checkoutRouter, (message) =>
-    Message.CartMessage({ message }),
+    CartMessage.make({ message }),
   )
 }
 
@@ -239,7 +259,7 @@ const checkoutView = (model: Model): Html => {
     model.orderPlaced,
     productsRouter,
     cartRouter,
-    (message) => Message.CheckoutMessage({ message }),
+    (message) => CheckoutMessage.make({ message }),
   )
 }
 
@@ -260,12 +280,14 @@ const notFoundView = (path: string): Html =>
   )
 
 const view = (model: Model): Html => {
-  const routeContent = AppRoute.$match(model.route, {
-    Products: () => productsView(model),
-    Cart: () => cartView(model),
-    Checkout: () => checkoutView(model),
-    NotFound: ({ path }) => notFoundView(path),
-  })
+  const routeContent = Match.value(model.route).pipe(
+    Match.tagsExhaustive({
+      Products: () => productsView(model),
+      Cart: () => cartView(model),
+      Checkout: () => checkoutView(model),
+      NotFound: ({ path }) => notFoundView(path),
+    }),
+  )
 
   return div(
     [Class('min-h-screen bg-gray-100')],
@@ -279,13 +301,14 @@ const view = (model: Model): Html => {
 // RUN
 
 const app = Runtime.makeApplication({
+  Model,
   init,
   update,
   view,
   container: document.body,
   browser: {
-    onUrlRequest: (request) => Message.UrlRequestReceived({ request }),
-    onUrlChange: (url) => Message.UrlChanged({ url }),
+    onUrlRequest: (request) => UrlRequestReceived.make({ request }),
+    onUrlChange: (url) => UrlChanged.make({ url }),
   },
 })
 

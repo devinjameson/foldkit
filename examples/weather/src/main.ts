@@ -1,5 +1,5 @@
-import { Fold, Runtime } from '@foldkit'
-import { Array, Data, Effect, String } from 'effect'
+import { Fold, Runtime, ST, ts } from '@foldkit'
+import { Array, Effect, Match, Schema as S, String } from 'effect'
 
 import {
   Class,
@@ -24,72 +24,67 @@ import {
 
 // MODEL
 
-type WeatherData = {
-  zipCode: string
-  temperature: number
-  description: string
-  humidity: number
-  windSpeed: number
-  areaName: string
-  region: string
-}
+const WeatherData = S.Struct({
+  zipCode: S.String,
+  temperature: S.Number,
+  description: S.String,
+  humidity: S.Number,
+  windSpeed: S.Number,
+  areaName: S.String,
+  region: S.String,
+})
+type WeatherData = ST<typeof WeatherData>
 
-type WeatherAsyncResult = Data.TaggedEnum<{
-  Init: {}
-  Loading: {}
-  Success: { data: WeatherData }
-  Failure: { error: string }
-}>
+const WeatherInit = ts('WeatherInit')
+const WeatherLoading = ts('WeatherLoading')
+const WeatherSuccess = ts('WeatherSuccess', { data: WeatherData })
+const WeatherFailure = ts('WeatherFailure', { error: S.String })
 
-const WeatherAsyncResult = Data.taggedEnum<WeatherAsyncResult>()
+const WeatherAsyncResult = S.Union(WeatherInit, WeatherLoading, WeatherSuccess, WeatherFailure)
 
-type Model = Readonly<{
-  zipCodeInput: string
-  weather: WeatherAsyncResult
-}>
+type WeatherInit = ST<typeof WeatherInit>
+type WeatherLoading = ST<typeof WeatherLoading>
+type WeatherSuccess = ST<typeof WeatherSuccess>
+type WeatherFailure = ST<typeof WeatherFailure>
 
-// UPDATE
+type WeatherAsyncResult = ST<typeof WeatherAsyncResult>
 
-type Message = Data.TaggedEnum<{
-  UpdateZipCodeInput: { value: string }
-  FetchWeather: {}
-  WeatherFetched: { weather: WeatherData }
-  WeatherError: { error: string }
-}>
-const Message = Data.taggedEnum<Message>()
+const Model = S.Struct({
+  zipCodeInput: S.String,
+  weather: WeatherAsyncResult,
+})
+type Model = ST<typeof Model>
+
+// MESSAGE
+
+const UpdateZipCodeInput = ts('UpdateZipCodeInput', { value: S.String })
+const FetchWeather = ts('FetchWeather')
+const WeatherFetched = ts('WeatherFetched', { weather: WeatherData })
+const WeatherError = ts('WeatherError', { error: S.String })
+
+const Message = S.Union(UpdateZipCodeInput, FetchWeather, WeatherFetched, WeatherError)
+
+type UpdateZipCodeInput = ST<typeof UpdateZipCodeInput>
+type FetchWeather = ST<typeof FetchWeather>
+type WeatherFetched = ST<typeof WeatherFetched>
+type WeatherError = ST<typeof WeatherError>
+
+type Message = ST<typeof Message>
 
 const update = Fold.fold<Model, Message>({
-  UpdateZipCodeInput: (model, { value }) => [
-    {
-      ...model,
-      zipCodeInput: value,
-    },
-    [],
-  ],
+  UpdateZipCodeInput: (model, { value }) => [{ ...model, zipCodeInput: value }, []],
 
   FetchWeather: (model) => [
-    {
-      ...model,
-      weather: WeatherAsyncResult.Loading(),
-    },
+    { ...model, weather: WeatherLoading.make() },
     [fetchWeatherCommand(model.zipCodeInput)],
   ],
 
   WeatherFetched: (model, { weather }) => [
-    {
-      ...model,
-      weather: WeatherAsyncResult.Success({ data: weather }),
-    },
+    { ...model, weather: WeatherSuccess.make({ data: weather }) },
     [],
   ],
 
-  WeatherError: (model, { error }) => [
-    {
-      ...model,
-      weather: WeatherAsyncResult.Failure({ error }),
-    },
-    [],
-  ],
+  WeatherError: (model, { error }) => [{ ...model, weather: WeatherFailure.make({ error }) }, []],
 })
 
 // INIT
@@ -97,7 +92,7 @@ const update = Fold.fold<Model, Message>({
 const init: Runtime.ElementInit<Model, Message> = () => [
   {
     zipCodeInput: '',
-    weather: WeatherAsyncResult.Init(),
+    weather: WeatherInit.make(),
   },
   [],
 ]
@@ -117,10 +112,10 @@ type WeatherResponseData = {
   }>
 }
 
-const fetchWeatherCommand = (zipCode: string): Runtime.Command<Message> =>
+const fetchWeatherCommand = (zipCode: string): Runtime.Command<WeatherFetched | WeatherError> =>
   Effect.gen(function* () {
     if (String.isEmpty(zipCode.trim())) {
-      return Message.WeatherError({ error: 'Zip code required' })
+      return WeatherError.make({ error: 'Zip code required' })
     }
 
     const response = yield* Effect.tryPromise(() =>
@@ -128,7 +123,7 @@ const fetchWeatherCommand = (zipCode: string): Runtime.Command<Message> =>
     )
 
     if (!response.ok) {
-      return Message.WeatherError({ error: 'Location not found' })
+      return WeatherError.make({ error: 'Location not found' })
     }
 
     const data: WeatherResponseData = yield* Effect.tryPromise(() => response.json())
@@ -136,7 +131,7 @@ const fetchWeatherCommand = (zipCode: string): Runtime.Command<Message> =>
     const areaName = data.nearest_area[0].areaName[0].value
     const region = data.nearest_area[0].region[0].value
 
-    const weather: WeatherData = {
+    const weather = WeatherData.make({
       zipCode,
       temperature: parseInt(currentCondition.temp_F),
       description: currentCondition.weatherDesc[0].value,
@@ -144,12 +139,12 @@ const fetchWeatherCommand = (zipCode: string): Runtime.Command<Message> =>
       windSpeed: parseFloat(currentCondition.windspeedKmph),
       areaName,
       region,
-    }
+    })
 
-    return Message.WeatherFetched({ weather })
+    return WeatherFetched.make({ weather })
   }).pipe(
     Effect.catchAll(() =>
-      Effect.succeed(Message.WeatherError({ error: 'Failed to fetch weather data' })),
+      Effect.succeed(WeatherError.make({ error: 'Failed to fetch weather data' })),
     ),
   )
 
@@ -166,10 +161,7 @@ const view = (model: Model): Html =>
       h1([Class('text-4xl font-bold text-blue-900 mb-8')], ['Weather']),
 
       form(
-        [
-          Class('flex flex-col gap-4 items-center w-full max-w-md'),
-          OnSubmit(Message.FetchWeather()),
-        ],
+        [Class('flex flex-col gap-4 items-center w-full max-w-md'), OnSubmit(FetchWeather.make())],
         [
           label([For('location'), Class('sr-only')], ['Location']),
           input([
@@ -178,28 +170,31 @@ const view = (model: Model): Html =>
               'w-full px-4 py-2 rounded-lg border-2 border-blue-300 focus:border-blue-500 outline-none',
             ),
             Placeholder('Enter a zip code'),
-            OnChange((value) => Message.UpdateZipCodeInput({ value })),
+            OnChange((value) => UpdateZipCodeInput.make({ value })),
           ]),
           button(
             [
               Type('submit'),
-              Disabled(WeatherAsyncResult.$is('Loading')(model.weather)),
+              Disabled(model.weather._tag === 'WeatherLoading'),
               Class(
                 'px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition disabled:opacity-50',
               ),
             ],
-            [WeatherAsyncResult.$is('Loading')(model.weather) ? 'Loading...' : 'Get Weather'],
+            [model.weather._tag === 'WeatherLoading' ? 'Loading...' : 'Get Weather'],
           ),
         ],
       ),
 
-      WeatherAsyncResult.$match(model.weather, {
-        Init: () => empty,
-        Loading: () => div([Class('text-blue-600 font-semibold')], ['Fetching weather...']),
-        Failure: ({ error }) =>
-          div([Class('p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg')], [error]),
-        Success: ({ data: weather }) => weatherView(weather),
-      }),
+      Match.value(model.weather).pipe(
+        Match.tagsExhaustive({
+          WeatherInit: () => empty,
+          WeatherLoading: () =>
+            div([Class('text-blue-600 font-semibold')], ['Fetching weather...']),
+          WeatherFailure: ({ error }) =>
+            div([Class('p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg')], [error]),
+          WeatherSuccess: ({ data: weather }) => weatherView(weather),
+        }),
+      ),
     ],
   )
 
@@ -243,6 +238,7 @@ const weatherView = (weather: WeatherData): Html =>
 // RUN
 
 const app = Runtime.makeElement({
+  Model,
   init,
   update,
   view,

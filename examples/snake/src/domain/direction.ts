@@ -1,6 +1,8 @@
-import { Match } from 'effect'
+import { ST } from '@foldkit'
+import { Match, Schema } from 'effect'
 
-export type Direction = 'Up' | 'Down' | 'Left' | 'Right'
+export const Direction = Schema.Literal('Up', 'Down', 'Left', 'Right')
+export type Direction = ST<typeof Direction>
 
 export const opposite = (direction: Direction): Direction =>
   Match.value(direction).pipe(

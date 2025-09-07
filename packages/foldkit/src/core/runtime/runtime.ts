@@ -1,14 +1,13 @@
 import {
   Context,
-  Data,
   Effect,
-  Equal,
   Option,
   Predicate,
   PubSub,
   Queue,
   Record,
   Ref,
+  Schema,
   Stream,
   pipe,
 } from 'effect'
@@ -16,6 +15,7 @@ import { h } from 'snabbdom'
 
 import { FoldReturn } from '../fold'
 import { Html } from '../html'
+import { Url, UrlRequest } from '../urlRequest'
 import { VNode, patch } from '../vdom'
 import { addNavigationEventListeners } from './addNavigationEventListeners'
 
@@ -28,25 +28,13 @@ export class Dispatch extends Context.Tag('@foldkit/Dispatch')<
 
 export type Command<Message> = Effect.Effect<Message>
 
-export type Url = {
-  readonly pathname: string
-  readonly search: string
-  readonly hash: string
-}
-
-export type UrlRequest = Data.TaggedEnum<{
-  Internal: { readonly url: Url }
-  External: { readonly href: string }
-}>
-
-export const UrlRequest = Data.taggedEnum<UrlRequest>()
-
 export type BrowserConfig<Message> = {
   readonly onUrlRequest: (request: UrlRequest) => Message
   readonly onUrlChange: (url: Url) => Message
 }
 
 export interface RuntimeConfig<Model, Message, StreamDepsMap extends Record<string, unknown>> {
+  Model: Schema.Schema<Model, any, never>
   readonly init: (url?: Url) => [Model, Command<Message>[]]
   readonly update: FoldReturn<Model, Message>
   readonly view: (model: Model) => Html
@@ -59,6 +47,7 @@ export type ElementInit<Model, Message> = () => [Model, Command<Message>[]]
 export type ApplicationInit<Model, Message> = (url: Url) => [Model, Command<Message>[]]
 
 export interface ElementConfig<Model, Message, StreamDepsMap extends Record<string, unknown>> {
+  readonly Model: Schema.Schema<Model, any, never>
   readonly init: ElementInit<Model, Message>
   readonly update: FoldReturn<Model, Message>
   readonly view: (model: Model) => Html
@@ -67,6 +56,7 @@ export interface ElementConfig<Model, Message, StreamDepsMap extends Record<stri
 }
 
 export interface ApplicationConfig<Model, Message, StreamDepsMap extends Record<string, unknown>> {
+  readonly Model: Schema.Schema<Model, any, never>
   readonly init: ApplicationInit<Model, Message>
   readonly update: FoldReturn<Model, Message>
   readonly view: (model: Model) => Html
@@ -85,6 +75,7 @@ export type CommandStreams<Model, Message, StreamDepsMap extends Record<string, 
 }
 
 export const makeRuntime = <Model, Message, StreamDepsMap extends Record<string, unknown>>({
+  Model,
   init,
   update,
   view,
@@ -93,6 +84,8 @@ export const makeRuntime = <Model, Message, StreamDepsMap extends Record<string,
   browser: browserConfig,
 }: RuntimeConfig<Model, Message, StreamDepsMap>): Effect.Effect<void> =>
   Effect.gen(function* () {
+    const modelEquivalence = Schema.equivalence(Model)
+
     const messageQueue = yield* Queue.unbounded<Message>()
     const enqueueMessage = (message: Message) => Queue.offer(messageQueue, message)
 
@@ -182,7 +175,7 @@ export const makeRuntime = <Model, Message, StreamDepsMap extends Record<string,
           Effect.forkDaemon(command.pipe(Effect.flatMap(enqueueMessage))),
         )
 
-        if (!Equal.equals(currentModel, nextModel)) {
+        if (!modelEquivalence(currentModel, nextModel)) {
           yield* Ref.set(modelRef, nextModel)
           yield* render(nextModel)
           yield* publishModel(nextModel)
@@ -199,6 +192,7 @@ export const makeElement = <
   config: ElementConfig<Model, Message, StreamDepsMap>,
 ): Effect.Effect<void, never, never> =>
   makeRuntime({
+    Model: config.Model,
     init: () => config.init(),
     update: config.update,
     view: config.view,
@@ -220,6 +214,7 @@ export const makeApplication = <
   }
 
   return makeRuntime({
+    Model: config.Model,
     init: (url) => config.init(url || currentUrl),
     update: config.update,
     view: config.view,

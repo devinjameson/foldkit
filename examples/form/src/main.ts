@@ -1,6 +1,8 @@
-import { Fold, FormValidation, Runtime } from '@foldkit'
-import { Array, Data, Duration, Effect, Number } from 'effect'
+import { Fold, Runtime, ST, ts } from '@foldkit'
+import { FormValidation } from '@foldkit'
+import { Array, Duration, Effect, Match, Number, Schema as S } from 'effect'
 
+import { Field, FieldSchema, FieldValidation, validateField } from '@foldkit/fieldValidation'
 import {
   Class,
   Disabled,
@@ -24,60 +26,86 @@ import {
 
 // MODEL
 
-type Submission = Data.TaggedEnum<{
-  NotSubmitted: {}
-  Submitting: {}
-  SubmitSuccess: { message: string }
-  SubmitError: { error: string }
-}>
+const NotSubmitted = ts('NotSubmitted')
+const Submitting = ts('Submitting')
+const SubmitSuccess = ts('SubmitSuccess', { message: S.String })
+const SubmitError = ts('SubmitError', { error: S.String })
 
-const Submission = Data.taggedEnum<Submission>()
+const Submission = S.Union(NotSubmitted, Submitting, SubmitSuccess, SubmitError)
 
-type Model = Readonly<{
-  name: FormValidation.Field<string>
-  email: FormValidation.Field<string>
-  emailValidationId: number
-  message: FormValidation.Field<string>
-  submission: Submission
-}>
+type NotSubmitted = ST<typeof NotSubmitted>
+type Submitting = ST<typeof Submitting>
+type SubmitSuccess = ST<typeof SubmitSuccess>
+type SubmitError = ST<typeof SubmitError>
+type Submission = ST<typeof Submission>
+
+const Model = S.Struct({
+  name: FieldSchema(S.String),
+  email: FieldSchema(S.String),
+  emailValidationId: S.Number,
+  message: FieldSchema(S.String),
+  submission: Submission,
+})
+type Model = ST<typeof Model>
 
 // MESSAGE
 
-type Message = Data.TaggedEnum<{
-  NoOp: {}
-  UpdateName: { value: string }
-  UpdateEmail: { value: string }
-  EmailValidated: { validationId: number; field: FormValidation.Field<string> }
-  UpdateMessage: { value: string }
+const NoOp = ts('NoOp')
+const UpdateName = ts('UpdateName', { value: S.String })
+const UpdateEmail = ts('UpdateEmail', { value: S.String })
+const EmailValidated = ts('EmailValidated', {
+  validationId: S.Number,
+  field: FieldSchema(S.String),
+})
+const UpdateMessage = ts('UpdateMessage', { value: S.String })
+const SubmitForm = ts('SubmitForm')
+const FormSubmitted = ts('FormSubmitted', { message: S.String })
+const FormSubmitError = ts('FormSubmitError', { error: S.String })
 
-  SubmitForm: {}
-  FormSubmitted: { message: string }
-  FormSubmitError: { error: string }
-}>
-const Message = Data.taggedEnum<Message>()
+const Message = S.Union(
+  NoOp,
+  UpdateName,
+  UpdateEmail,
+  EmailValidated,
+  UpdateMessage,
+  SubmitForm,
+  FormSubmitted,
+  FormSubmitError,
+)
+
+type NoOp = ST<typeof NoOp>
+type UpdateName = ST<typeof UpdateName>
+type UpdateEmail = ST<typeof UpdateEmail>
+type EmailValidated = ST<typeof EmailValidated>
+type UpdateMessage = ST<typeof UpdateMessage>
+type SubmitForm = ST<typeof SubmitForm>
+type FormSubmitted = ST<typeof FormSubmitted>
+type FormSubmitError = ST<typeof FormSubmitError>
+
+type Message = ST<typeof Message>
 
 // INIT
 
 const init: Runtime.ElementInit<Model, Message> = () => [
   {
-    name: FormValidation.Field.NotValidated({ value: '' }),
-    email: FormValidation.Field.NotValidated({ value: '' }),
+    name: Field.NotValidated({ value: '' }),
+    email: Field.NotValidated({ value: '' }),
     emailValidationId: 0,
-    message: FormValidation.Field.NotValidated({ value: '' }),
-    submission: Submission.NotSubmitted(),
+    message: Field.NotValidated({ value: '' }),
+    submission: NotSubmitted.make(),
   },
   [],
 ]
 
 // FIELD VALIDATION
 
-const nameValidations: FormValidation.FieldValidation<string>[] = [
+const nameValidations: FieldValidation<string>[] = [
   FormValidation.minLength(2, (min) => `Name must be at least ${min} characters`),
 ]
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-const emailValidations: FormValidation.FieldValidation<string>[] = [
+const emailValidations: FieldValidation<string>[] = [
   FormValidation.required('Email'),
   FormValidation.regex(emailRegex, 'Please enter a valid email address'),
 ]
@@ -93,32 +121,29 @@ const isEmailOnWaitlist = (email: string): Effect.Effect<boolean> =>
 const validateEmailNotOnWaitlist = (
   email: string,
   validationId: number,
-): Runtime.Command<Message> =>
+): Runtime.Command<EmailValidated> =>
   Effect.gen(function* () {
     if (yield* isEmailOnWaitlist(email)) {
-      return Message.EmailValidated({
+      return EmailValidated.make({
         validationId,
-        field: FormValidation.Field.Invalid({
+        field: Field.Invalid({
           value: email,
           error: 'This email is already on our waitlist',
         }),
       })
     } else {
-      return Message.EmailValidated({
+      return EmailValidated.make({
         validationId,
-        field: FormValidation.Field.Valid({ value: email }),
+        field: Field.Valid({ value: email }),
       })
     }
   })
 
-const messageValidations: FormValidation.FieldValidation<string>[] = []
-
-const validateName = FormValidation.validateField(nameValidations)
-const validateEmail = FormValidation.validateField(emailValidations)
-const validateMessage = FormValidation.validateField(messageValidations)
+const validateName = validateField(nameValidations)
+const validateEmail = validateField(emailValidations)
 
 const isFormValid = (model: Model): boolean =>
-  Array.every([model.name, model.email], FormValidation.Field.$is('Valid'))
+  Array.every([model.name, model.email], Field.$is('Valid'))
 
 // UPDATE
 
@@ -137,11 +162,11 @@ const update = Fold.fold<Model, Message>({
     const validateEmailResult = validateEmail(value)
     const validationId = Number.increment(model.emailValidationId)
 
-    if (FormValidation.Field.$is('Valid')(validateEmailResult)) {
+    if (Field.$is('Valid')(validateEmailResult)) {
       return [
         {
           ...model,
-          email: FormValidation.Field.Validating({ value }),
+          email: Field.Validating({ value }),
           emailValidationId: validationId,
         },
         [validateEmailNotOnWaitlist(value, validationId)],
@@ -162,7 +187,7 @@ const update = Fold.fold<Model, Message>({
   UpdateMessage: (model, { value }) => [
     {
       ...model,
-      message: validateMessage(value),
+      message: Field.Valid({ value }),
     },
     [],
   ],
@@ -175,7 +200,7 @@ const update = Fold.fold<Model, Message>({
     return [
       {
         ...model,
-        submission: Submission.Submitting(),
+        submission: Submitting.make(),
       },
       [submitForm(model)],
     ]
@@ -184,7 +209,7 @@ const update = Fold.fold<Model, Message>({
   FormSubmitted: (model, { message }) => [
     {
       ...model,
-      submission: Submission.SubmitSuccess({ message }),
+      submission: SubmitSuccess.make({ message }),
     },
     [],
   ],
@@ -192,7 +217,7 @@ const update = Fold.fold<Model, Message>({
   FormSubmitError: (model, { error }) => [
     {
       ...model,
-      submission: Submission.SubmitError({ error }),
+      submission: SubmitError.make({ error }),
     },
     [],
   ],
@@ -202,7 +227,7 @@ const update = Fold.fold<Model, Message>({
 
 const FAKE_API_DELAY_MS = 500
 
-const submitForm = (model: Model): Runtime.Command<Message> =>
+const submitForm = (model: Model): Runtime.Command<FormSubmitted | FormSubmitError> =>
   Effect.gen(function* () {
     const formData = {
       name: model.name.value,
@@ -216,11 +241,11 @@ const submitForm = (model: Model): Runtime.Command<Message> =>
     const success = yield* random.nextBoolean
 
     if (success) {
-      return Message.FormSubmitted({
+      return FormSubmitted.make({
         message: `Welcome to the waitlist, ${formData.name}! We'll be in touch soon.`,
       })
     } else {
-      return Message.FormSubmitError({
+      return FormSubmitError.make({
         error: 'Sorry, there was an error adding you to the waitlist. Please try again.',
       })
     }
@@ -231,14 +256,14 @@ const submitForm = (model: Model): Runtime.Command<Message> =>
 const fieldView = (
   id: string,
   labelText: string,
-  field: FormValidation.Field<string>,
+  field: Field<string>,
   onUpdate: (value: string) => Message,
   type: 'text' | 'email' | 'textarea' = 'text',
 ): Html => {
   const { value } = field
 
   const getBorderClass = () =>
-    FormValidation.Field.$match(field, {
+    Field.$match(field, {
       NotValidated: () => 'border-gray-300',
       Validating: () => 'border-blue-300',
       Valid: () => 'border-green-500',
@@ -254,7 +279,7 @@ const fieldView = (
         [Class('flex items-center gap-2 mb-2')],
         [
           label([For(id), Class('text-sm font-medium text-gray-700')], [labelText]),
-          FormValidation.Field.$match(field, {
+          Field.$match(field, {
             NotValidated: () => empty,
             Validating: () => span([Class('text-blue-600 text-sm animate-spin')], ['◐']),
             Valid: () => span([Class('text-green-600 text-sm')], ['✓']),
@@ -266,7 +291,7 @@ const fieldView = (
         ? textarea([Id(id), Value(value), Class(inputClass), OnChange(onUpdate)])
         : input([Id(id), Type(type), Value(value), Class(inputClass), OnChange(onUpdate)]),
 
-      FormValidation.Field.$match(field, {
+      Field.$match(field, {
         NotValidated: () => empty,
         Validating: () => div([Class('text-blue-600 text-sm mt-1')], ['Checking...']),
         Valid: () => empty,
@@ -277,7 +302,7 @@ const fieldView = (
 }
 
 const view = (model: Model): Html => {
-  const canSubmit = isFormValid(model) && !Submission.$is('Submitting')(model.submission)
+  const canSubmit = isFormValid(model) && model.submission._tag !== 'Submitting'
 
   return div(
     [Class('min-h-screen bg-gray-100 py-8')],
@@ -288,21 +313,21 @@ const view = (model: Model): Html => {
           h1([Class('text-3xl font-bold text-gray-800 text-center mb-8')], ['Join Our Waitlist']),
 
           form(
-            [Class('space-y-4'), OnSubmit(Message.SubmitForm())],
+            [Class('space-y-4'), OnSubmit(SubmitForm.make())],
             [
-              fieldView('name', 'Name', model.name, (value) => Message.UpdateName({ value })),
+              fieldView('name', 'Name', model.name, (value) => UpdateName.make({ value })),
               fieldView(
                 'email',
                 'Email',
                 model.email,
-                (value) => Message.UpdateEmail({ value }),
+                (value) => UpdateEmail.make({ value }),
                 'email',
               ),
               fieldView(
                 'message',
                 "Anything you'd like to share with us?",
                 model.message,
-                (value) => Message.UpdateMessage({ value }),
+                (value) => UpdateMessage.make({ value }),
                 'textarea',
               ),
 
@@ -318,25 +343,31 @@ const view = (model: Model): Html => {
                     }`,
                   ),
                 ],
-                [Submission.$is('Submitting')(model.submission) ? 'Joining...' : 'Join Waitlist'],
+                [model.submission._tag === 'Submitting' ? 'Joining...' : 'Join Waitlist'],
               ),
             ],
           ),
 
-          Submission.$match(model.submission, {
-            NotSubmitted: () => empty,
-            Submitting: () => empty,
-            SubmitSuccess: ({ message }) =>
-              div(
-                [Class('mt-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg')],
-                [message],
-              ),
-            SubmitError: ({ error }) =>
-              div(
-                [Class('mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg')],
-                [error],
-              ),
-          }),
+          Match.value(model.submission).pipe(
+            Match.tagsExhaustive({
+              NotSubmitted: () => empty,
+              Submitting: () => empty,
+              SubmitSuccess: ({ message }) =>
+                div(
+                  [
+                    Class(
+                      'mt-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg',
+                    ),
+                  ],
+                  [message],
+                ),
+              SubmitError: ({ error }) =>
+                div(
+                  [Class('mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg')],
+                  [error],
+                ),
+            }),
+          ),
         ],
       ),
     ],
@@ -346,6 +377,7 @@ const view = (model: Model): Html => {
 // RUN
 
 const app = Runtime.makeElement({
+  Model,
   init,
   update,
   view,

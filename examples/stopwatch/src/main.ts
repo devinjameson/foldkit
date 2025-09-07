@@ -1,5 +1,5 @@
-import { Fold, Runtime } from '@foldkit'
-import { Data, Duration, Effect, Option, Stream, String, flow, pipe } from 'effect'
+import { Fold, Runtime, ST, ts } from '@foldkit'
+import { Duration, Effect, Option, Schema as S, Stream, String, flow, pipe } from 'effect'
 
 import { Class, Html, OnClick, button, div } from '@foldkit/html'
 
@@ -7,22 +7,30 @@ const TICK_INTERVAL_MS = 10
 
 // MODEL
 
-type Model = Readonly<{
-  elapsedMs: number
-  isRunning: boolean
-  startTime: Option.Option<number>
-}>
+const Model = S.Struct({
+  elapsedMs: S.Number,
+  isRunning: S.Boolean,
+  startTime: S.Option(S.Number),
+})
+type Model = ST<typeof Model>
 
 // UPDATE
 
-type Message = Data.TaggedEnum<{
-  Start: {}
-  Stop: {}
-  Reset: {}
-  Tick: { currentTime: number }
-}>
+const Start = ts('Start')
+const Stop = ts('Stop')
+const Reset = ts('Reset')
+const Tick = ts('Tick', {
+  currentTime: S.Number,
+})
 
-const Message = Data.taggedEnum<Message>()
+export const Message = S.Union(Start, Stop, Reset, Tick)
+
+type Start = ST<typeof Start>
+type Stop = ST<typeof Stop>
+type Reset = ST<typeof Reset>
+type Tick = ST<typeof Tick>
+
+export type Message = ST<typeof Message>
 
 const update = Fold.fold<Model, Message>({
   Start: (model) => [
@@ -77,7 +85,7 @@ const commandStreams: Runtime.CommandStreams<Model, Message, StreamDepsMap> = {
     stream: (isRunning: boolean) =>
       Stream.when(
         Stream.tick(Duration.millis(TICK_INTERVAL_MS)).pipe(
-          Stream.map(() => Effect.sync(() => Message.Tick({ currentTime: Date.now() }))),
+          Stream.map(() => Effect.sync(() => Tick.make({ currentTime: Date.now() }))),
         ),
         () => isRunning,
       ),
@@ -118,7 +126,7 @@ const view = (model: Model): Html =>
             [Class('flex')],
             [
               button(
-                [OnClick(Message.Reset()), Class(buttonStyle + ' bg-gray-500 hover:bg-gray-600')],
+                [OnClick(Reset.make()), Class(buttonStyle + ' bg-gray-500 hover:bg-gray-600')],
                 ['Reset'],
               ),
               startStopButton(model.isRunning),
@@ -131,12 +139,9 @@ const view = (model: Model): Html =>
 
 const startStopButton = (isRunning: boolean): Html =>
   isRunning
-    ? button(
-        [OnClick(Message.Stop()), Class(buttonStyle + ' bg-red-500 hover:bg-red-600')],
-        ['Stop'],
-      )
+    ? button([OnClick(Stop.make()), Class(buttonStyle + ' bg-red-500 hover:bg-red-600')], ['Stop'])
     : button(
-        [OnClick(Message.Start()), Class(buttonStyle + ' bg-green-500 hover:bg-green-600')],
+        [OnClick(Start.make()), Class(buttonStyle + ' bg-green-500 hover:bg-green-600')],
         ['Start'],
       )
 
@@ -147,6 +152,7 @@ const buttonStyle = 'px-6 py-4 flex-1 font-semibold text-white transition-colors
 // RUN
 
 const app = Runtime.makeElement({
+  Model,
   init,
   update,
   view,

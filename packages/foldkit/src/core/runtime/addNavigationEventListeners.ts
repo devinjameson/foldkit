@@ -1,6 +1,7 @@
 import { Array, Queue, String, pipe } from 'effect'
 
-import { BrowserConfig, Url, UrlRequest } from './runtime'
+import { External, Internal, Url } from '../urlRequest'
+import { BrowserConfig } from './runtime'
 
 export const addNavigationEventListeners = <Message>(
   messageQueue: Queue.Queue<Message>,
@@ -43,7 +44,7 @@ const addLinkClickListener = <Message>(
     if (!href) return
 
     if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('//')) {
-      Queue.unsafeOffer(messageQueue, browserConfig.onUrlRequest(UrlRequest.External({ href })))
+      Queue.unsafeOffer(messageQueue, browserConfig.onUrlRequest(External.make({ href })))
       return
     }
 
@@ -69,7 +70,7 @@ const addLinkClickListener = <Message>(
       return { pathname, search, hash }
     })
 
-    Queue.unsafeOffer(messageQueue, browserConfig.onUrlRequest(UrlRequest.Internal({ url })))
+    Queue.unsafeOffer(messageQueue, browserConfig.onUrlRequest(Internal.make({ url })))
   }
 
   document.addEventListener('click', onLinkClick)

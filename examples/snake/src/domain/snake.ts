@@ -1,11 +1,13 @@
-import { Array } from 'effect'
+import { ST } from '@foldkit'
+import { Array, Schema as S } from 'effect'
 
 import type { Direction } from './direction'
 import * as Position from './position'
 
 export const INITIAL_LENGTH = 3
 
-export type Snake = Array.NonEmptyReadonlyArray<Position.Position>
+export const Snake = S.NonEmptyArray(Position.Position)
+export type Snake = ST<typeof Snake>
 
 export const create = (startPos: Position.Position): Snake =>
   Array.makeBy(INITIAL_LENGTH, (i) => ({

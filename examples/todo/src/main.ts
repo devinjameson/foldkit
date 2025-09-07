@@ -1,5 +1,5 @@
-import { Fold, Runtime } from '@foldkit'
-import { Array, Data, Effect, Match, Option, Schema, String } from 'effect'
+import { Fold, Runtime, ST, ts } from '@foldkit'
+import { Array, Effect, Match, Option, Schema as S, String } from 'effect'
 
 import {
   Class,
@@ -26,76 +26,112 @@ import {
 
 // MODEL
 
-const TodoSchema = Schema.Struct({
-  id: Schema.String,
-  text: Schema.String,
-  completed: Schema.Boolean,
-  createdAt: Schema.Number,
+const Todo = S.Struct({
+  id: S.String,
+  text: S.String,
+  completed: S.Boolean,
+  createdAt: S.Number,
 })
+type Todo = ST<typeof Todo>
 
-type Todo = Schema.Schema.Type<typeof TodoSchema>
+const Todos = S.Array(Todo)
+type Todos = ST<typeof Todos>
 
-type Filter = 'All' | 'Active' | 'Completed'
+const Filter = S.Literal('All', 'Active', 'Completed')
+type Filter = ST<typeof Filter>
 
-type EditingState = Data.TaggedEnum<{
-  NotEditing: {}
-  Editing: { id: string; text: string }
-}>
+const NotEditing = ts('NotEditing')
+type NotEditing = ST<typeof NotEditing>
 
-const EditingState = Data.taggedEnum<EditingState>()
+const Editing = ts('Editing', {
+  id: S.String,
+  text: S.String,
+})
+type Editing = ST<typeof Editing>
 
-type Model = Readonly<{
-  todos: Array<Todo>
-  newTodoText: string
-  filter: Filter
-  editing: EditingState
-}>
+const EditingState = S.Union(NotEditing, Editing)
+type EditingState = ST<typeof EditingState>
+
+const Model = S.Struct({
+  todos: Todos,
+  newTodoText: S.String,
+  filter: Filter,
+  editing: EditingState,
+})
+type Model = ST<typeof Model>
 
 // MESSAGE
 
-type Message = Data.TaggedEnum<{
-  NoOp: {}
-  UpdateNewTodo: { text: string }
-  UpdateEditingTodo: { text: string }
+const NoOp = ts('NoOp')
+const UpdateNewTodo = ts('UpdateNewTodo', { text: S.String })
+const UpdateEditingTodo = ts('UpdateEditingTodo', { text: S.String })
+const AddTodo = ts('AddTodo')
+const DeleteTodo = ts('DeleteTodo', { id: S.String })
+const ToggleTodo = ts('ToggleTodo', { id: S.String })
+const StartEditing = ts('StartEditing', { id: S.String })
+const SaveEdit = ts('SaveEdit')
+const CancelEdit = ts('CancelEdit')
+const ToggleAll = ts('ToggleAll')
+const ClearCompleted = ts('ClearCompleted')
+const SetFilter = ts('SetFilter', { filter: Filter })
+const TodosLoaded = ts('TodosLoaded', { todos: Todos })
+const TodosSaved = ts('TodosSaved', { todos: Todos })
 
-  AddTodo: {}
-  DeleteTodo: { id: string }
-  ToggleTodo: { id: string }
-  StartEditing: { id: string }
-  SaveEdit: {}
-  CancelEdit: {}
+export const Message = S.Union(
+  NoOp,
+  UpdateNewTodo,
+  UpdateEditingTodo,
+  AddTodo,
+  DeleteTodo,
+  ToggleTodo,
+  StartEditing,
+  SaveEdit,
+  CancelEdit,
+  ToggleAll,
+  ClearCompleted,
+  SetFilter,
+  TodosLoaded,
+  TodosSaved,
+)
 
-  ToggleAll: {}
-  ClearCompleted: {}
+type NoOp = ST<typeof NoOp>
+type UpdateNewTodo = ST<typeof UpdateNewTodo>
+type UpdateEditingTodo = ST<typeof UpdateEditingTodo>
+type AddTodo = ST<typeof AddTodo>
+type DeleteTodo = ST<typeof DeleteTodo>
+type ToggleTodo = ST<typeof ToggleTodo>
+type StartEditing = ST<typeof StartEditing>
+type SaveEdit = ST<typeof SaveEdit>
+type CancelEdit = ST<typeof CancelEdit>
+type ToggleAll = ST<typeof ToggleAll>
+type ClearCompleted = ST<typeof ClearCompleted>
+type SetFilter = ST<typeof SetFilter>
+type TodosLoaded = ST<typeof TodosLoaded>
+type TodosSaved = ST<typeof TodosSaved>
 
-  SetFilter: { filter: Filter }
-
-  TodosLoaded: { todos: Array<Todo> }
-  TodosSaved: { todos: Array<Todo> }
-}>
-const Message = Data.taggedEnum<Message>()
+export type Message = ST<typeof Message>
 
 // INIT
 
-const loadTodos = Effect.gen(function* () {
+const loadTodos: Runtime.Command<TodosLoaded> = Effect.gen(function* () {
   const storedTodos = yield* Effect.sync(() => localStorage.getItem('todos'))
 
   if (!storedTodos) {
-    return Message.TodosLoaded({ todos: [] })
+    return TodosLoaded.make({ todos: [] })
   }
 
   const parsed = yield* Effect.try(() => JSON.parse(storedTodos))
-  const decoded = yield* Schema.decodeUnknown(Schema.Array(TodoSchema))(parsed)
+  const decoded = yield* S.decodeUnknown(Todos)(parsed)
 
-  return Message.TodosLoaded({ todos: Array.fromIterable(decoded) })
-}).pipe(Effect.catchAll(() => Effect.succeed(Message.TodosLoaded({ todos: [] }))))
+  return TodosLoaded.make({ todos: Array.fromIterable(decoded) })
+}).pipe(Effect.catchAll(() => Effect.succeed(TodosLoaded.make({ todos: [] }))))
 
 const init: Runtime.ElementInit<Model, Message> = () => [
   {
     todos: [],
     newTodoText: '',
     filter: 'All',
-    editing: EditingState.NotEditing(),
+    editing: NotEditing.make(),
   },
   [loadTodos],
 ]
@@ -118,10 +154,12 @@ const update = Fold.fold<Model, Message>({
   UpdateEditingTodo: (model, { text }) => [
     {
       ...model,
-      editing: EditingState.$match(model.editing, {
-        NotEditing: () => model.editing,
-        Editing: ({ id }) => EditingState.Editing({ id, text }),
-      }),
+      editing: Match.value(model.editing).pipe(
+        Match.tagsExhaustive({
+          NotEditing: () => model.editing,
+          Editing: ({ id }) => Editing.make({ id, text }),
+        }),
+      ),
     },
     [],
   ],
@@ -181,7 +219,7 @@ const update = Fold.fold<Model, Message>({
     return [
       {
         ...model,
-        editing: EditingState.Editing({
+        editing: Editing.make({
           id,
           text: Option.match(todo, {
             onNone: () => '',
@@ -193,9 +231,9 @@ const update = Fold.fold<Model, Message>({
     ]
   },
 
-  SaveEdit: (model): [Model, Runtime.Command<Message>[]] =>
+  SaveEdit: (model) =>
     Match.value(model.editing).pipe(
-      Match.withReturnType<[Model, Runtime.Command<Message>[]]>(),
+      Match.withReturnType<[Model, Runtime.Command<TodosSaved>[]]>(),
       Match.tagsExhaustive({
         NotEditing: () => [model, []],
 
@@ -204,7 +242,7 @@ const update = Fold.fold<Model, Message>({
             return [
               {
                 ...model,
-                editing: EditingState.NotEditing(),
+                editing: NotEditing.make(),
               },
               [],
             ]
@@ -218,7 +256,7 @@ const update = Fold.fold<Model, Message>({
             {
               ...model,
               todos: updatedTodos,
-              editing: EditingState.NotEditing(),
+              editing: NotEditing.make(),
             },
             [saveTodos(updatedTodos)],
           ]
@@ -229,7 +267,7 @@ const update = Fold.fold<Model, Message>({
   CancelEdit: (model) => [
     {
       ...model,
-      editing: EditingState.NotEditing(),
+      editing: NotEditing.make(),
     },
     [],
   ],
@@ -289,23 +327,24 @@ const update = Fold.fold<Model, Message>({
 
 // COMMAND
 
-const saveTodos = (todos: Array<Todo>): Runtime.Command<Message> =>
+const saveTodos = (todos: Todos): Runtime.Command<TodosSaved> =>
   Effect.gen(function* () {
     yield* Effect.sync(() => localStorage.setItem('todos', JSON.stringify(todos)))
-    return Message.TodosSaved({ todos })
-  }).pipe(Effect.catchAll(() => Effect.succeed(Message.TodosSaved({ todos }))))
+    return TodosSaved.make({ todos })
+  }).pipe(Effect.catchAll(() => Effect.succeed(TodosSaved.make({ todos }))))
 
 // VIEW
 
 const todoItemView =
   (model: Model) =>
-  (todo: Todo): Html => {
-    return EditingState.$match(model.editing, {
-      NotEditing: () => nonEditingTodoView(todo),
-      Editing: ({ id, text }) =>
-        id === todo.id ? editingTodoView(todo, text) : nonEditingTodoView(todo),
-    })
-  }
+  (todo: Todo): Html =>
+    Match.value(model.editing).pipe(
+      Match.tagsExhaustive({
+        NotEditing: () => nonEditingTodoView(todo),
+        Editing: ({ id, text }) =>
+          id === todo.id ? editingTodoView(todo, text) : nonEditingTodoView(todo),
+      }),
+    )
 
 const editingTodoView = (todo: Todo, text: string): Html =>
   li(
@@ -318,18 +357,18 @@ const editingTodoView = (todo: Todo, text: string): Html =>
         Class(
           'flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500',
         ),
-        OnChange((text) => Message.UpdateEditingTodo({ text })),
+        OnChange((text) => UpdateEditingTodo.make({ text })),
       ]),
       button(
         [
-          OnClick(Message.SaveEdit()),
+          OnClick(SaveEdit.make()),
           Class('px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600'),
         ],
         ['Save'],
       ),
       button(
         [
-          OnClick(Message.CancelEdit()),
+          OnClick(CancelEdit.make()),
           Class('px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600'),
         ],
         ['Cancel'],
@@ -346,18 +385,18 @@ const nonEditingTodoView = (todo: Todo): Html =>
         Id(`todo-${todo.id}`),
         Value(todo.completed ? 'on' : ''),
         Class('w-4 h-4 text-blue-600 rounded focus:ring-blue-500'),
-        OnClick(Message.ToggleTodo({ id: todo.id })),
+        OnClick(ToggleTodo.make({ id: todo.id })),
       ]),
       span(
         [
           Class(`flex-1 ${todo.completed ? 'line-through text-gray-500' : 'text-gray-900'}`),
-          OnClick(Message.StartEditing({ id: todo.id })),
+          OnClick(StartEditing.make({ id: todo.id })),
         ],
         [todo.text],
       ),
       button(
         [
-          OnClick(Message.DeleteTodo({ id: todo.id })),
+          OnClick(DeleteTodo.make({ id: todo.id })),
           Class(
             'px-2 py-1 text-red-600 opacity-0 group-hover:opacity-100 hover:bg-red-100 rounded transition-opacity',
           ),
@@ -372,7 +411,7 @@ const filterButtonView =
   (filter: Filter, label: string): Html =>
     button(
       [
-        OnClick(Message.SetFilter({ filter })),
+        OnClick(SetFilter.make({ filter })),
         Class(
           `px-3 py-1 rounded ${
             model.filter === filter
@@ -413,7 +452,7 @@ const footerView = (model: Model, activeCount: number, completedCount: number): 
                 onNonEmpty: (todos) =>
                   button(
                     [
-                      OnClick(Message.ToggleAll()),
+                      OnClick(ToggleAll.make()),
                       Class(
                         'px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300',
                       ),
@@ -429,7 +468,7 @@ const footerView = (model: Model, activeCount: number, completedCount: number): 
               completedCount > 0
                 ? button(
                     [
-                      OnClick(Message.ClearCompleted()),
+                      OnClick(ClearCompleted.make()),
                       Class('px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200'),
                     ],
                     [`Clear ${completedCount} completed`],
@@ -441,7 +480,7 @@ const footerView = (model: Model, activeCount: number, completedCount: number): 
       ),
   })
 
-const filterTodos = (todos: Array<Todo>, filter: Filter): Array<Todo> =>
+const filterTodos = (todos: Todos, filter: Filter): Todos =>
   Match.value(filter).pipe(
     Match.when('All', () => todos),
     Match.when('Active', () => Array.filter(todos, (todo) => !todo.completed)),
@@ -463,7 +502,7 @@ const view = (model: Model): Html => {
           h1([Class('text-3xl font-bold text-gray-800 text-center mb-8')], ['Todo App']),
 
           form(
-            [Class('mb-6'), OnSubmit(Message.AddTodo())],
+            [Class('mb-6'), OnSubmit(AddTodo.make())],
             [
               label([For('new-todo'), Class('sr-only')], ['New todo']),
               div(
@@ -476,7 +515,7 @@ const view = (model: Model): Html => {
                     Class(
                       'flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
                     ),
-                    OnChange((text) => Message.UpdateNewTodo({ text })),
+                    OnChange((text) => UpdateNewTodo.make({ text })),
                   ]),
                   button(
                     [
@@ -519,6 +558,7 @@ const view = (model: Model): Html => {
 // RUN
 
 const app = Runtime.makeElement({
+  Model,
   init,
   update,
   view,

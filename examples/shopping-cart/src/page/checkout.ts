@@ -1,6 +1,5 @@
-import { Route } from '@foldkit'
-import { Array, Data, Option } from 'effect'
-import { ExtractTag } from 'effect/Types'
+import { Route, ST, ts } from '@foldkit'
+import { Array, Option, Schema as S } from 'effect'
 
 import {
   Class,
@@ -22,16 +21,19 @@ import {
 } from '@foldkit/html'
 
 import { Cart } from '../domain'
-import type { AppRoute } from '../main'
+import type { CartRoute, ProductsRoute } from '../main'
 
 // MESSAGE
 
-export type Message = Data.TaggedEnum<{
-  UpdateDeliveryInstructions: { value: string }
-  PlaceOrder: {}
-}>
+const UpdateDeliveryInstructions = ts('UpdateDeliveryInstructions', { value: S.String })
+const PlaceOrder = ts('PlaceOrder')
 
-export const Message = Data.taggedEnum<Message>()
+export const Message = S.Union(UpdateDeliveryInstructions, PlaceOrder)
+
+type UpdateDeliveryInstructions = ST<typeof UpdateDeliveryInstructions>
+type PlaceOrder = ST<typeof PlaceOrder>
+
+export type Message = ST<typeof Message>
 
 // VIEW
 
@@ -39,8 +41,8 @@ export const view = <ParentMessage>(
   cart: Cart.Cart,
   deliveryInstructions: string,
   orderPlaced: boolean,
-  productsRouter: Route.default.Router<ExtractTag<AppRoute, 'Products'>>,
-  cartRouter: Route.default.Router<ExtractTag<AppRoute, 'Cart'>>,
+  productsRouter: Route.Router<ProductsRoute>,
+  cartRouter: Route.Router<CartRoute>,
   toMessage: (message: Message) => ParentMessage,
 ): Html => {
   if (orderPlaced) {
@@ -141,7 +143,7 @@ export const view = <ParentMessage>(
                     'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-24 resize-none',
                   ),
                   OnChange((value: string) =>
-                    toMessage(Message.UpdateDeliveryInstructions({ value })),
+                    toMessage(UpdateDeliveryInstructions.make({ value })),
                   ),
                 ]),
               ],
@@ -163,7 +165,7 @@ export const view = <ParentMessage>(
                     Class(
                       'bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium',
                     ),
-                    OnClick(toMessage(Message.PlaceOrder())),
+                    OnClick(toMessage(PlaceOrder.make())),
                   ],
                   ['Place Order'],
                 ),

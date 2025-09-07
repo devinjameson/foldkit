@@ -1,28 +1,31 @@
-import { Route } from '@foldkit'
-import { Array, Data, Option } from 'effect'
-import { ExtractTag } from 'effect/Types'
+import { Route, ST, ts } from '@foldkit'
+import { Array, Option, Schema as S } from 'effect'
 
 import { Class, Href, Html, OnClick, a, button, div, h1, h3, p, span } from '@foldkit/html'
 
 import { Cart } from '../domain'
-import type { AppRoute } from '../main'
+import type { CheckoutRoute, ProductsRoute } from '../main'
 
 // MESSAGE
 
-export type Message = Data.TaggedEnum<{
-  ChangeQuantity: { itemId: string; quantity: number }
-  RemoveFromCart: { itemId: string }
-  ClearCart: {}
-}>
+const ChangeQuantity = ts('ChangeQuantity', { itemId: S.String, quantity: S.Number })
+const RemoveFromCart = ts('RemoveFromCart', { itemId: S.String })
+const ClearCart = ts('ClearCart')
 
-export const Message = Data.taggedEnum<Message>()
+export const Message = S.Union(ChangeQuantity, RemoveFromCart, ClearCart)
+
+type ChangeQuantity = ST<typeof ChangeQuantity>
+type RemoveFromCart = ST<typeof RemoveFromCart>
+type ClearCart = ST<typeof ClearCart>
+
+export type Message = ST<typeof Message>
 
 // VIEW
 
 export const view = <ParentMessage>(
   cart: Cart.Cart,
-  productsRouter: Route.default.Router<ExtractTag<AppRoute, 'Products'>>,
-  checkoutRouter: Route.default.Router<ExtractTag<AppRoute, 'Checkout'>>,
+  productsRouter: Route.Router<ProductsRoute>,
+  checkoutRouter: Route.Router<CheckoutRoute>,
   toMessage: (message: Message) => ParentMessage,
 ): Html => {
   return div(
@@ -79,7 +82,7 @@ export const view = <ParentMessage>(
                                 ),
                                 OnClick(
                                   toMessage(
-                                    Message.ChangeQuantity({
+                                    ChangeQuantity.make({
                                       itemId: cartItem.item.id,
                                       quantity: cartItem.quantity - 1,
                                     }),
@@ -96,7 +99,7 @@ export const view = <ParentMessage>(
                                 ),
                                 OnClick(
                                   toMessage(
-                                    Message.ChangeQuantity({
+                                    ChangeQuantity.make({
                                       itemId: cartItem.item.id,
                                       quantity: cartItem.quantity + 1,
                                     }),
@@ -111,7 +114,7 @@ export const view = <ParentMessage>(
                                   'bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded ml-2',
                                 ),
                                 OnClick(
-                                  toMessage(Message.RemoveFromCart({ itemId: cartItem.item.id })),
+                                  toMessage(RemoveFromCart.make({ itemId: cartItem.item.id })),
                                 ),
                               ],
                               ['Remove'],
@@ -156,7 +159,7 @@ export const view = <ParentMessage>(
                         Class(
                           'bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-medium',
                         ),
-                        OnClick(toMessage(Message.ClearCart())),
+                        OnClick(toMessage(ClearCart.make())),
                       ],
                       ['Clear Cart'],
                     ),

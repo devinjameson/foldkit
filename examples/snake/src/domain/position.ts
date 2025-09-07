@@ -1,16 +1,17 @@
+import { ST } from '@foldkit'
 import { Match, Schema } from 'effect'
 
 import { GAME } from '../constants'
 import * as Direction from './direction'
 
-const Position = Schema.Struct({
+export const Position = Schema.Struct({
   x: Schema.Number,
   y: Schema.Number,
 })
 
 export const equivalence = Schema.equivalence(Position)
 
-export type Position = Schema.Schema.Type<typeof Position>
+export type Position = ST<typeof Position>
 
 export const wrap = ({ x, y }: Position): Position => ({
   x: x < 0 ? GAME.GRID_SIZE - 1 : x >= GAME.GRID_SIZE ? 0 : x,

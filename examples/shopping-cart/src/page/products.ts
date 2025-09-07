@@ -1,5 +1,5 @@
-import { Fold, Route } from '@foldkit'
-import { Array, Data, Effect, Option } from 'effect'
+import { Fold, Route, ST, ts } from '@foldkit'
+import { Array, Effect, Option, Schema as S } from 'effect'
 import { ExtractTag } from 'effect/Types'
 
 import {
@@ -23,25 +23,31 @@ import {
 import { replaceUrl } from '@foldkit/navigation'
 
 import { Cart, Item } from '../domain'
-import type { AppRoute } from '../main'
+import type { AppRoute, CartRoute } from '../main'
 
 // MODEL
 
-export type Model = Readonly<{
-  products: Item.Item[]
-  searchText: string
-}>
+export const Model = S.Struct({
+  products: S.Array(Item.Item),
+  searchText: S.String,
+})
+export type Model = S.Schema.Type<typeof Model>
 
 // MESSAGE
 
-export type Message = Data.TaggedEnum<{
-  NoOp: {}
-  SearchInputChanged: { value: string }
-  AddToCartClicked: { item: Item.Item }
-  QuantityChangeClicked: { itemId: string; quantity: number }
-}>
+const NoOp = ts('NoOp')
+const SearchInputChanged = ts('SearchInputChanged', { value: S.String })
+const AddToCartClicked = ts('AddToCartClicked', { item: Item.Item })
+const QuantityChangeClicked = ts('QuantityChangeClicked', { itemId: S.String, quantity: S.Number })
 
-export const Message = Data.taggedEnum<Message>()
+export const Message = S.Union(NoOp, SearchInputChanged, AddToCartClicked, QuantityChangeClicked)
+
+type NoOp = ST<typeof NoOp>
+type SearchInputChanged = ST<typeof SearchInputChanged>
+type AddToCartClicked = ST<typeof AddToCartClicked>
+type QuantityChangeClicked = ST<typeof QuantityChangeClicked>
+
+export type Message = ST<typeof Message>
 
 // INIT
 
@@ -52,7 +58,7 @@ export const init = (products: Item.Item[]): Model => ({
 
 // UPDATE
 
-export const update = (productsRouter: Route.default.Router<ExtractTag<AppRoute, 'Products'>>) =>
+export const update = (productsRouter: Route.Router<ExtractTag<AppRoute, 'Products'>>) =>
   Fold.fold<Model, Message>({
     NoOp: (model) => [model, []],
 
@@ -63,7 +69,7 @@ export const update = (productsRouter: Route.default.Router<ExtractTag<AppRoute,
       },
       [
         replaceUrl(productsRouter.build({ searchText: Option.fromNullable(value || null) })).pipe(
-          Effect.map(Message.NoOp),
+          Effect.as(NoOp.make()),
         ),
       ],
     ],
@@ -77,8 +83,8 @@ export const update = (productsRouter: Route.default.Router<ExtractTag<AppRoute,
 export const view = <ParentMessage>(
   model: Model,
   cart: Cart.Cart,
-  cartRouter: Route.default.Router<ExtractTag<AppRoute, 'Cart'>>,
-  toMessage: (msg: Message) => ParentMessage,
+  cartRouter: Route.Router<CartRoute>,
+  toMessage: (message: Message) => ParentMessage,
 ): Html => {
   const filteredProducts = model.searchText
     ? model.products.filter((product) =>
@@ -102,7 +108,7 @@ export const view = <ParentMessage>(
                 Class(
                   'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
                 ),
-                OnChange((value: string) => toMessage(Message.SearchInputChanged({ value }))),
+                OnChange((value: string) => toMessage(SearchInputChanged.make({ value }))),
               ]),
             ],
           ),
@@ -125,7 +131,7 @@ export const view = <ParentMessage>(
                           Class(
                             'bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium',
                           ),
-                          OnClick(toMessage(Message.AddToCartClicked({ item: product }))),
+                          OnClick(toMessage(AddToCartClicked.make({ item: product }))),
                         ],
                         ['Add to Cart'],
                       )
@@ -139,7 +145,7 @@ export const view = <ParentMessage>(
                               ),
                               OnClick(
                                 toMessage(
-                                  Message.QuantityChangeClicked({
+                                  QuantityChangeClicked.make({
                                     itemId: product.id,
                                     quantity: Cart.itemQuantity(product.id)(cart) - 1,
                                   }),
@@ -159,7 +165,7 @@ export const view = <ParentMessage>(
                               ),
                               OnClick(
                                 toMessage(
-                                  Message.QuantityChangeClicked({
+                                  QuantityChangeClicked.make({
                                     itemId: product.id,
                                     quantity: Cart.itemQuantity(product.id)(cart) + 1,
                                   }),

@@ -1,6 +1,6 @@
 import { Array, Data, Effect, Predicate, Record, Schema, String, flow, pipe } from 'effect'
 
-import { Url } from './runtime'
+import { Url } from './urlRequest'
 
 export class ParseError extends Data.TaggedError('ParseError')<{
   readonly message: string
@@ -9,20 +9,16 @@ export class ParseError extends Data.TaggedError('ParseError')<{
   readonly position?: number
 }> {}
 
-export type ParseResult<A> = [A, string[]]
+type ParseResult<A> = [A, string[]]
 
 type PrintState = {
   segments: string[]
   queryParams: URLSearchParams
 }
 
-export type Biparser<A> = {
+type Biparser<A> = {
   parse: (segments: string[], search?: string) => Effect.Effect<ParseResult<A>, ParseError>
   print: (value: A, state: PrintState) => Effect.Effect<PrintState, ParseError>
-}
-
-export type BuildableBiparser<A> = Biparser<A> & {
-  build: (value: A) => string
 }
 
 export type Router<A> = {
@@ -282,8 +278,8 @@ export function oneOf(
 }
 
 export const mapTo: {
-  <T>(appRouteConstructor: () => T): (parser: Biparser<{}>) => Router<T>
-  <A, T>(appRouteConstructor: (data: A) => T): (parser: Biparser<A>) => Router<T>
+  <T>(appRouteConstructor: { make: () => T }): (parser: Biparser<{}>) => Router<T>
+  <A, T>(appRouteConstructor: { make: (data: A) => T }): (parser: Biparser<A>) => Router<T>
 } = (appRouteConstructor: any): any => {
   return (parser: any) => {
     return {
@@ -292,7 +288,9 @@ export const mapTo: {
           parser.parse(segments, search),
           Effect.map(([value, remaining]: any) => {
             const result =
-              appRouteConstructor.length === 0 ? appRouteConstructor() : appRouteConstructor(value)
+              appRouteConstructor.make.length === 0
+                ? appRouteConstructor.make()
+                : appRouteConstructor.make(value)
             return [result, remaining]
           }),
         ),
@@ -432,12 +430,12 @@ const parseUrl =
   }
 
 export const parseUrlWithFallback =
-  <A, B>(parser: Parser<A>, fallback: (data: { path: string }) => B) =>
+  <A, B>(parser: Parser<A>, notFoundRouteConstructor: { make: (data: { path: string }) => B }) =>
   (url: Url): A | B =>
     pipe(
       url,
       parseUrl(parser),
-      Effect.orElse(() => Effect.succeed(fallback({ path: url.pathname }))),
+      Effect.orElse(() => Effect.succeed(notFoundRouteConstructor.make({ path: url.pathname }))),
       Effect.runSync,
     )
 

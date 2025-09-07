@@ -1,5 +1,5 @@
-import { Fold, Runtime } from '@foldkit'
-import { Array, Data, Duration, Effect, Match, Stream, pipe } from 'effect'
+import { Fold, Runtime, ST, ts } from '@foldkit'
+import { Array, Data, Duration, Effect, Match, Schema as S, Stream, pipe } from 'effect'
 
 import { Class, Html, div, h1, p } from '@foldkit/html'
 
@@ -8,30 +8,55 @@ import { Apple, Direction, Position, Snake } from './domain'
 
 // MODEL
 
-export type GameState = 'NotStarted' | 'Playing' | 'Paused' | 'GameOver'
+export const GameState = S.Literal('NotStarted', 'Playing', 'Paused', 'GameOver')
+export type GameState = ST<typeof GameState>
 
-type Model = Readonly<{
-  snake: Snake.Snake
-  apple: Position.Position
-  direction: Direction.Direction
-  nextDirection: Direction.Direction
-  gameState: GameState
-  points: number
-  highScore: number
-}>
+const Model = S.Struct({
+  snake: Snake.Snake,
+  apple: Position.Position,
+  direction: Direction.Direction,
+  nextDirection: Direction.Direction,
+  gameState: GameState,
+  points: S.Number,
+  highScore: S.Number,
+})
+type Model = ST<typeof Model>
 
 // MESSAGE
 
-type Message = Data.TaggedEnum<{
-  ClockTick: {}
-  KeyPress: { key: string }
-  ChangeDirection: { direction: Direction.Direction }
-  PauseGame: {}
-  RestartGame: {}
-  SetApple: { position: Position.Position }
-}>
+const ClockTick = ts('ClockTick')
+type ClockTick = ST<typeof ClockTick>
 
-const Message = Data.taggedEnum<Message>()
+const KeyPress = ts('KeyPress', {
+  key: S.String,
+})
+type KeyPress = ST<typeof KeyPress>
+
+const ChangeDirection = ts('ChangeDirection', {
+  direction: Direction.Direction,
+})
+type ChangeDirection = ST<typeof ChangeDirection>
+
+const PauseGame = ts('PauseGame')
+type PauseGame = ST<typeof PauseGame>
+
+const RestartGame = ts('RestartGame')
+type RestartGame = ST<typeof RestartGame>
+
+const SetApple = ts('SetApple', {
+  position: Position.Position,
+})
+type SetApple = ST<typeof SetApple>
+
+export const Message = S.Union(
+  ClockTick,
+  KeyPress,
+  ChangeDirection,
+  PauseGame,
+  RestartGame,
+  SetApple,
+)
+export type Message = ST<typeof Message>
 
 // INIT
 
@@ -48,7 +73,7 @@ const init: Runtime.ElementInit<Model, Message> = () => {
       points: 0,
       highScore: 0,
     },
-    [Apple.generatePosition(snake).pipe(Effect.map((position) => Message.SetApple({ position })))],
+    [Apple.generatePosition(snake).pipe(Effect.map((position) => SetApple.make({ position })))],
   ]
 }
 
@@ -109,7 +134,7 @@ const update = Fold.fold<Model, Message>({
           },
           [
             Apple.generatePosition(nextSnake).pipe(
-              Effect.map((position) => Message.SetApple({ position })),
+              Effect.map((position) => SetApple.make({ position })),
             ),
           ],
         ]
@@ -147,7 +172,7 @@ const update = Fold.fold<Model, Message>({
     const commands = willEatApple
       ? [
           Apple.generatePosition(nextSnake).pipe(
-            Effect.map((position) => Message.SetApple({ position })),
+            Effect.map((position) => SetApple.make({ position })),
           ),
         ]
       : []
@@ -194,7 +219,7 @@ const update = Fold.fold<Model, Message>({
       },
       [
         Apple.generatePosition(nextSnake).pipe(
-          Effect.map((position) => Message.SetApple({ position })),
+          Effect.map((position) => SetApple.make({ position })),
         ),
       ],
     ]
@@ -213,7 +238,7 @@ const update = Fold.fold<Model, Message>({
 
 type StreamDepsMap = {
   gameClock: { isPlaying: boolean; interval: number }
-  keyboard: {}
+  keyboard: null
 }
 
 const commandStreams: Runtime.CommandStreams<Model, Message, StreamDepsMap> = {
@@ -226,19 +251,20 @@ const commandStreams: Runtime.CommandStreams<Model, Message, StreamDepsMap> = {
     stream: (deps: { isPlaying: boolean; interval: number }) =>
       Stream.when(
         Stream.tick(Duration.millis(deps.interval)).pipe(
-          Stream.map(() => Effect.sync(() => Message.ClockTick())),
+          Stream.map(() => Effect.sync(() => ClockTick.make())),
         ),
         () => deps.isPlaying,
       ),
   },
+
   keyboard: {
-    deps: () => Data.struct({}),
+    deps: () => null,
     stream: () =>
       Stream.fromEventListener<KeyboardEvent>(document, 'keydown').pipe(
         Stream.map((keyboardEvent) =>
           Effect.sync(() => {
             keyboardEvent.preventDefault()
-            return Message.KeyPress({ key: keyboardEvent.key })
+            return KeyPress.make({ key: keyboardEvent.key })
           }),
         ),
       ),
@@ -317,6 +343,7 @@ const view = (model: Model): Html =>
 // RUN
 
 const app = Runtime.makeElement({
+  Model,
   init,
   update,
   view,
