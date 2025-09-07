@@ -134,7 +134,6 @@ export const makeRuntime = <Model, Message, StreamDepsMap extends Record<string,
               modelStream.pipe(
                 Stream.map(deps),
                 Stream.changes,
-                Stream.tap((foo) => Console.debug('Stream deps changed', foo)),
                 Stream.flatMap(stream, { switch: true }),
                 Stream.runForEach(Effect.flatMap(enqueueMessage)),
               ),
