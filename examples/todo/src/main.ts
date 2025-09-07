@@ -128,7 +128,7 @@ const update = Fold.fold<Model, Message>({
 
   AddTodo: (model) => {
     if (String.isEmpty(String.trim(model.newTodoText))) {
-      return [model, noOp]
+      return [model, []]
     }
 
     const newTodo: Todo = {
@@ -193,42 +193,48 @@ const update = Fold.fold<Model, Message>({
     ]
   },
 
-  SaveEdit: pureCommand((model): [Model, Runtime.Command<Message>] => {
-    return EditingState.$match(model.editing, {
-      NotEditing: (): [Model, Runtime.Command<Message>] => [model, noOp],
-      Editing: ({ id, text }): [Model, Runtime.Command<Message>] => {
-        if (String.isEmpty(String.trim(text))) {
+  SaveEdit: (model): [Model, Runtime.Command<Message>[]] =>
+    Match.value(model.editing).pipe(
+      Match.withReturnType<[Model, Runtime.Command<Message>[]]>(),
+      Match.tagsExhaustive({
+        NotEditing: () => [model, []],
+
+        Editing: ({ id, text }) => {
+          if (String.isEmpty(String.trim(text))) {
+            return [
+              {
+                ...model,
+                editing: EditingState.NotEditing(),
+              },
+              [],
+            ]
+          }
+
+          const updatedTodos = Array.map(model.todos, (todo) =>
+            todo.id === id ? { ...todo, text: String.trim(text) } : todo,
+          )
+
           return [
             {
               ...model,
+              todos: updatedTodos,
               editing: EditingState.NotEditing(),
             },
-            noOp,
+            [saveTodos(updatedTodos)],
           ]
-        }
+        },
+      }),
+    ),
 
-        const updatedTodos = Array.map(model.todos, (todo) =>
-          todo.id === id ? { ...todo, text: String.trim(text) } : todo,
-        )
+  CancelEdit: (model) => [
+    {
+      ...model,
+      editing: EditingState.NotEditing(),
+    },
+    [],
+  ],
 
-        return [
-          {
-            ...model,
-            todos: updatedTodos,
-            editing: EditingState.NotEditing(),
-          },
-          saveTodos(updatedTodos),
-        ]
-      },
-    })
-  }),
-
-  CancelEdit: pure((model) => ({
-    ...model,
-    editing: EditingState.NotEditing(),
-  })),
-
-  ToggleAll: pureCommand((model) => {
+  ToggleAll: (model) => {
     const allCompleted = Array.every(model.todos, (todo) => todo.completed)
     const updatedTodos = Array.map(model.todos, (todo) => ({
       ...todo,
@@ -240,11 +246,11 @@ const update = Fold.fold<Model, Message>({
         ...model,
         todos: updatedTodos,
       },
-      saveTodos(updatedTodos),
+      [saveTodos(updatedTodos)],
     ]
-  }),
+  },
 
-  ClearCompleted: pureCommand((model) => {
+  ClearCompleted: (model) => {
     const updatedTodos = Array.filter(model.todos, (todo) => !todo.completed)
 
     return [
@@ -252,24 +258,33 @@ const update = Fold.fold<Model, Message>({
         ...model,
         todos: updatedTodos,
       },
-      saveTodos(updatedTodos),
+      [saveTodos(updatedTodos)],
     ]
-  }),
+  },
 
-  SetFilter: pure((model, { filter }) => ({
-    ...model,
-    filter,
-  })),
+  SetFilter: (model, { filter }) => [
+    {
+      ...model,
+      filter,
+    },
+    [],
+  ],
 
-  TodosLoaded: pure((model, { todos }) => ({
-    ...model,
-    todos,
-  })),
+  TodosLoaded: (model, { todos }) => [
+    {
+      ...model,
+      todos,
+    },
+    [],
+  ],
 
-  TodosSaved: pure((model, { todos }) => ({
-    ...model,
-    todos,
-  })),
+  TodosSaved: (model, { todos }) => [
+    {
+      ...model,
+      todos,
+    },
+    [],
+  ],
 })
 
 // COMMAND
