@@ -20,27 +20,22 @@ Foldkit applies functional programming principles to UI development:
 
 ## Examples
 
-Current examples:
-
 - **[Counter](examples/counter/src/main.ts)** - Simple increment/decrement with reset
 - **[Stopwatch](examples/stopwatch/src/main.ts)** - Timer with start/stop/reset functionality
 - **[Weather](examples/weather/src/main.ts)** - HTTP requests with async state handling
 - **[Todo](examples/todo/src/main.ts)** - CRUD operations with localStorage persistence
 - **[Form](examples/form/src/main.ts)** - Form validation with async email checking
 - **[Routing](examples/routing/src/main.ts)** - URL routing with parser combinators and route parameters
-
-### Coming Next
-
-1. **Data Table** - API-driven table with sorting, filtering, and pagination
+- **[Shopping Cart](examples/shopping-cart/src/main.ts)** - Complex state management with nested models
 
 ### Simple Counter Example
 
 See the full example at [examples/counter/src/main.ts](examples/counter/src/main.ts)
 
 ```ts
-import { ElementInit, fold, makeElement, updateConstructors } from '@foldkit'
-import { Data, Effect, Option } from 'effect'
+import { Data, Effect } from 'effect'
 
+import { Fold, Runtime } from '@foldkit'
 import { Class, Html, OnClick, button, div } from '@foldkit/html'
 
 // MODEL
@@ -56,17 +51,15 @@ type Message = Data.TaggedEnum<{
 }>
 const Message = Data.taggedEnum<Message>()
 
-const { pure } = updateConstructors<Model, Message>()
-
-const update = fold<Model, Message>({
-  Decrement: pure((count) => count - 1),
-  Increment: pure((count) => count + 1),
-  Reset: pure(() => 0),
+const update = Fold.fold<Model, Message>({
+  Decrement: (count) => [count - 1, []],
+  Increment: (count) => [count + 1, []],
+  Reset: () => [0, []],
 })
 
 // INIT
 
-const init: ElementInit<Model, Message> = () => [0, Option.none()]
+const init: Runtime.ElementInit<Model, Message> = () => [0, []]
 
 // VIEW
 
@@ -92,7 +85,7 @@ const buttonStyle = 'bg-black text-white hover:bg-gray-700 px-4 py-2 transition'
 
 // RUN
 
-const app = makeElement({
+const app = Runtime.makeElement({
   init,
   update,
   view,
