@@ -20,7 +20,7 @@ type Model = Readonly<{
   highScore: number
 }>
 
-// MESSAGES
+// MESSAGE
 
 type Message = Data.TaggedEnum<{
   ClockTick: {}
