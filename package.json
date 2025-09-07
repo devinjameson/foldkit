@@ -12,7 +12,8 @@
     "dev:example:todo": "pnpm --filter todo-example run dev",
     "dev:example:form": "pnpm --filter form-example run dev",
     "dev:example:routing": "pnpm --filter routing-example run dev",
-    "dev:example:shopping-cart": "pnpm --filter shopping-cart-example run dev"
+    "dev:example:shopping-cart": "pnpm --filter shopping-cart-example run dev",
+    "dev:example:snake": "pnpm --filter snake-example run dev"
   },
   "devDependencies": {
     "@eslint/js": "^9.29.0",

@@ -1,5 +1,4 @@
 import {
-  Console,
   Context,
   Data,
   Effect,
