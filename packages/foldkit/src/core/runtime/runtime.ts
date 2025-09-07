@@ -1,4 +1,5 @@
 import {
+  Console,
   Context,
   Data,
   Effect,
@@ -125,16 +126,23 @@ export const makeRuntime = <Model, Message, StreamDepsMap extends Record<string,
 
     if (commandStreams) {
       yield* pipe(
-        Record.toEntries(commandStreams),
-        Effect.forEach(([_key, { deps, stream }]) =>
-          Effect.forkDaemon(
-            modelStream.pipe(
-              Stream.map(deps),
-              Stream.changes,
-              Stream.flatMap(stream, { switch: true }),
-              Stream.runForEach(Effect.flatMap(enqueueMessage)),
+        commandStreams,
+        Record.toEntries,
+        Effect.forEach(
+          ([_key, { deps, stream }]) =>
+            Effect.forkDaemon(
+              modelStream.pipe(
+                Stream.map(deps),
+                Stream.changes,
+                Stream.tap((foo) => Console.debug('Stream deps changed', foo)),
+                Stream.flatMap(stream, { switch: true }),
+                Stream.runForEach(Effect.flatMap(enqueueMessage)),
+              ),
             ),
-          ),
+          {
+            concurrency: 'unbounded',
+            discard: true,
+          },
         ),
       )
     }

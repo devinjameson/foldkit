@@ -33,9 +33,9 @@ Foldkit applies functional programming principles to UI development:
 See the full example at [examples/counter/src/main.ts](examples/counter/src/main.ts)
 
 ```ts
+import { Fold, Runtime } from '@foldkit'
 import { Data, Effect } from 'effect'
 
-import { Fold, Runtime } from '@foldkit'
 import { Class, Html, OnClick, button, div } from '@foldkit/html'
 
 // MODEL
