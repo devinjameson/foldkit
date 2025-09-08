@@ -2,7 +2,8 @@
 
 **Foldkit** is a lightweight framework for building functional UIs in TypeScript powered by [Effect](https://effect.website/).
 
-It draws inspiration from Elm, React, and functional architecture principles — enabling clear state transitions, precise side effects, and predictable UI.
+It draws inspiration from [Elm](https://elm-lang.org/), [React](https://react.dev/), and functional architecture principles — enabling clear state transitions,
+precise side effects, and predictable UI.
 
 > Like origami: simple parts become intricate when folded together.
 
@@ -34,23 +35,31 @@ Foldkit applies functional programming principles to UI development:
 See the full example at [examples/counter/src/main.ts](examples/counter/src/main.ts)
 
 ```ts
-import { Fold, Runtime } from '@foldkit'
-import { Data, Effect } from 'effect'
+import { Fold, Runtime, ST, ts } from '@foldkit'
+import { Effect, Schema } from 'effect'
 
 import { Class, Html, OnClick, button, div } from '@foldkit/html'
 
 // MODEL
 
-type Model = number
+const Model = Schema.Number
+type Model = ST<typeof Model>
+
+// MESSAGE
+
+const Decrement = ts('Decrement')
+const Increment = ts('Increment')
+const Reset = ts('Reset')
+
+const Message = Schema.Union(Decrement, Increment, Reset)
+
+type Decrement = ST<typeof Decrement>
+type Increment = ST<typeof Increment>
+type Reset = ST<typeof Reset>
+
+export type Message = ST<typeof Message>
 
 // UPDATE
-
-type Message = Data.TaggedEnum<{
-  Decrement: {}
-  Increment: {}
-  Reset: {}
-}>
-const Message = Data.taggedEnum<Message>()
 
 const update = Fold.fold<Model, Message>({
   Decrement: (count) => [count - 1, []],
@@ -72,9 +81,9 @@ const view = (count: Model): Html =>
       div(
         [Class('flex flex-wrap justify-center gap-4')],
         [
-          button([OnClick(Message.Decrement()), Class(buttonStyle)], ['-']),
-          button([OnClick(Message.Reset()), Class(buttonStyle)], ['Reset']),
-          button([OnClick(Message.Increment()), Class(buttonStyle)], ['+']),
+          button([OnClick(Decrement.make()), Class(buttonStyle)], ['-']),
+          button([OnClick(Reset.make()), Class(buttonStyle)], ['Reset']),
+          button([OnClick(Increment.make()), Class(buttonStyle)], ['+']),
         ],
       ),
     ],
@@ -87,6 +96,7 @@ const buttonStyle = 'bg-black text-white hover:bg-gray-700 px-4 py-2 transition'
 // RUN
 
 const app = Runtime.makeElement({
+  Model,
   init,
   update,
   view,
