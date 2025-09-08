@@ -1,6 +1,6 @@
 import { Fold, Runtime, ST, ts } from '@foldkit'
 import { FormValidation } from '@foldkit'
-import { Array, Duration, Effect, Match, Number, Schema as S } from 'effect'
+import { Array, Duration, Effect, Match, Number, Random, Schema as S } from 'effect'
 
 import { Field, FieldSchema, FieldValidation, validateField } from '@foldkit/fieldValidation'
 import {
@@ -237,8 +237,7 @@ const submitForm = (model: Model): Runtime.Command<FormSubmitted | FormSubmitErr
 
     yield* Effect.sleep('2 seconds')
 
-    const random = yield* Effect.random
-    const success = yield* random.nextBoolean
+    const success = yield* Random.nextBoolean
 
     if (success) {
       return FormSubmitted.make({
