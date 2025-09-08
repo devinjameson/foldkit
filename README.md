@@ -57,7 +57,7 @@ type Decrement = ST<typeof Decrement>
 type Increment = ST<typeof Increment>
 type Reset = ST<typeof Reset>
 
-export type Message = ST<typeof Message>
+type Message = ST<typeof Message>
 
 // UPDATE
 
