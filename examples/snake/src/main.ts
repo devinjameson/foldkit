@@ -25,28 +25,11 @@ type Model = ST<typeof Model>
 // MESSAGE
 
 const ClockTick = ts('ClockTick')
-type ClockTick = ST<typeof ClockTick>
-
-const KeyPress = ts('KeyPress', {
-  key: S.String,
-})
-type KeyPress = ST<typeof KeyPress>
-
-const ChangeDirection = ts('ChangeDirection', {
-  direction: Direction.Direction,
-})
-type ChangeDirection = ST<typeof ChangeDirection>
-
+const KeyPress = ts('KeyPress', { key: S.String })
+const ChangeDirection = ts('ChangeDirection', { direction: Direction.Direction })
 const PauseGame = ts('PauseGame')
-type PauseGame = ST<typeof PauseGame>
-
 const RestartGame = ts('RestartGame')
-type RestartGame = ST<typeof RestartGame>
-
-const SetApple = ts('SetApple', {
-  position: Position.Position,
-})
-type SetApple = ST<typeof SetApple>
+const SetApple = ts('SetApple', { position: Position.Position })
 
 export const Message = S.Union(
   ClockTick,
@@ -56,6 +39,14 @@ export const Message = S.Union(
   RestartGame,
   SetApple,
 )
+
+type ClockTick = ST<typeof ClockTick>
+type KeyPress = ST<typeof KeyPress>
+type ChangeDirection = ST<typeof ChangeDirection>
+type PauseGame = ST<typeof PauseGame>
+type RestartGame = ST<typeof RestartGame>
+type SetApple = ST<typeof SetApple>
+
 export type Message = ST<typeof Message>
 
 // INIT
