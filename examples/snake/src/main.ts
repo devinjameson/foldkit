@@ -26,23 +26,14 @@ type Model = ST<typeof Model>
 
 const ClockTick = ts('ClockTick')
 const KeyPress = ts('KeyPress', { key: S.String })
-const ChangeDirection = ts('ChangeDirection', { direction: Direction.Direction })
 const PauseGame = ts('PauseGame')
 const RestartGame = ts('RestartGame')
 const SetApple = ts('SetApple', { position: Position.Position })
 
-export const Message = S.Union(
-  ClockTick,
-  KeyPress,
-  ChangeDirection,
-  PauseGame,
-  RestartGame,
-  SetApple,
-)
+export const Message = S.Union(ClockTick, KeyPress, PauseGame, RestartGame, SetApple)
 
 type ClockTick = ST<typeof ClockTick>
 type KeyPress = ST<typeof KeyPress>
-type ChangeDirection = ST<typeof ChangeDirection>
 type PauseGame = ST<typeof PauseGame>
 type RestartGame = ST<typeof RestartGame>
 type SetApple = ST<typeof SetApple>
@@ -178,14 +169,6 @@ const update = Fold.fold<Model, Message>({
       commands,
     ]
   },
-
-  ChangeDirection: (model, { direction }) => [
-    {
-      ...model,
-      nextDirection: direction,
-    },
-    [],
-  ],
 
   PauseGame: (model) => [
     {
