@@ -1,4 +1,4 @@
-import { Fold, Runtime, ST, ts } from '@foldkit'
+import { Fold, Runtime } from '@foldkit'
 import { FormValidation } from '@foldkit'
 import { Array, Duration, Effect, Match, Number, Random, Schema as S } from 'effect'
 
@@ -23,6 +23,7 @@ import {
   span,
   textarea,
 } from '@foldkit/html'
+import { ST, ts } from '@foldkit/schema'
 
 // MODEL
 

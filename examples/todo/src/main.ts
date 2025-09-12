@@ -1,4 +1,4 @@
-import { Fold, Runtime, ST, ts } from '@foldkit'
+import { Fold, Runtime } from '@foldkit'
 import { Array, Effect, Match, Option, Schema as S, String } from 'effect'
 
 import {
@@ -23,6 +23,7 @@ import {
   span,
   ul,
 } from '@foldkit/html'
+import { ST, ts } from '@foldkit/schema'
 
 // MODEL
 

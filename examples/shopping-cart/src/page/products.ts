@@ -1,4 +1,4 @@
-import { Fold, Route, ST, ts } from '@foldkit'
+import { Fold, Route } from '@foldkit'
 import { Array, Effect, Option, Schema as S } from 'effect'
 import { ExtractTag } from 'effect/Types'
 
@@ -21,6 +21,7 @@ import {
   span,
 } from '@foldkit/html'
 import { replaceUrl } from '@foldkit/navigation'
+import { ST, ts } from '@foldkit/schema'
 
 import { Cart, Item } from '../domain'
 import type { AppRoute, CartRoute } from '../main'

@@ -1,4 +1,4 @@
-import { Fold, Route, Runtime, ST, ts } from '@foldkit'
+import { Fold, Route, Runtime } from '@foldkit'
 import { Array, Effect, Match, Option, Schema as S, pipe } from 'effect'
 
 import {
@@ -19,6 +19,7 @@ import {
 } from '@foldkit/html'
 import { load, pushUrl, replaceUrl } from '@foldkit/navigation'
 import { int, literal, slash } from '@foldkit/route'
+import { ST, ts } from '@foldkit/schema'
 import { Url, UrlRequest } from '@foldkit/urlRequest'
 
 // ROUTE

@@ -34,6 +34,10 @@
     "./formValidation": {
       "types": "./dist/core/fieldValidation.d.ts",
       "import": "./dist/core/fieldValidation.js"
+    },
+    "./schema": {
+      "types": "./dist/core/schema.d.ts",
+      "import": "./dist/core/schema.js"
     }
   },
   "files": [

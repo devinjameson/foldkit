@@ -1,4 +1,4 @@
-import { Route, ST, ts } from '@foldkit'
+import { Route } from '@foldkit'
 import { Array, Option, Schema as S } from 'effect'
 
 import {
@@ -19,6 +19,7 @@ import {
   span,
   textarea,
 } from '@foldkit/html'
+import { ST, ts } from '@foldkit/schema'
 
 import { Cart } from '../domain'
 import type { CartRoute, ProductsRoute } from '../main'

@@ -1,5 +1,6 @@
-import { ST } from '@foldkit'
 import { Array, Schema as S } from 'effect'
+
+import { ST } from '@foldkit/schema'
 
 import type { Direction } from './direction'
 import * as Position from './position'

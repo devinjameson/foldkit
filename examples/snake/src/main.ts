@@ -1,7 +1,8 @@
-import { Fold, Runtime, ST, ts } from '@foldkit'
+import { Fold, Runtime } from '@foldkit'
 import { Array, Data, Duration, Effect, Match, Schema as S, Stream, pipe } from 'effect'
 
 import { Class, Html, div, h1, p } from '@foldkit/html'
+import { ST, ts } from '@foldkit/schema'
 
 import { GAME, GAME_SPEED } from './constants'
 import { Apple, Direction, Position, Snake } from './domain'

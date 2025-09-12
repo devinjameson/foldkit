@@ -1,7 +1,8 @@
-import { Fold, Runtime, ST, ts } from '@foldkit'
+import { Fold, Runtime } from '@foldkit'
 import { Duration, Effect, Option, Schema as S, Stream, String, flow, pipe } from 'effect'
 
 import { Class, Html, OnClick, button, div } from '@foldkit/html'
+import { ST, ts } from '@foldkit/schema'
 
 const TICK_INTERVAL_MS = 10
 
