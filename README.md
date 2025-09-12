@@ -1,9 +1,8 @@
 # Foldkit
 
-**Foldkit** is a lightweight framework for building functional UIs in TypeScript powered by [Effect](https://effect.website/).
+> ⚠️ **Experimental**: Foldkit is in canary release for early adopters and experimenters. APIs are incomplete and may change rapidly.
 
-It draws inspiration from [Elm](https://elm-lang.org/), [React](https://react.dev/), and functional architecture principles — enabling clear state transitions,
-precise side effects, and predictable UI.
+**Foldkit** is an [Elm](https://elm-lang.org/)-inspired UI framework powered by [Effect](https://effect.website/).
 
 > Like origami: simple parts become intricate when folded together.
 
@@ -13,9 +12,17 @@ precise side effects, and predictable UI.
 
 Foldkit applies functional programming principles to UI development:
 
-- **Pure update functions** — State transitions are deterministic functions: `(model: Model, message: Message): Model` is the only way to change state.
+- **Pure updates** — State transitions are deterministic functions: `(model: Model, message: Message): Model` is the only way to change state.
 - **Controlled side effects** — Side effects are described as `Command<Message>` values and executed by the runtime, not performed directly in update functions.
-- **Explicit state transitions** — Every state change is modeled as a specific message type. Every state change is captured in the update function.
+- **Explicit state transitions** — Every state change is modeled as a specific message type and is captured in the update function.
+
+---
+
+## Installation
+
+```bash
+npm install @foldkit effect
+```
 
 ---
 
@@ -35,10 +42,11 @@ Foldkit applies functional programming principles to UI development:
 See the full example at [examples/counter/src/main.ts](examples/counter/src/main.ts)
 
 ```ts
-import { Fold, Runtime, ST, ts } from '@foldkit'
+import { Fold, Runtime } from '@foldkit'
 import { Effect, Schema } from 'effect'
 
 import { Class, Html, OnClick, button, div } from '@foldkit/html'
+import { ST, ts } from '@foldkit/schema'
 
 // MODEL
 
@@ -108,29 +116,27 @@ Effect.runFork(app)
 
 ---
 
-## Status
+## Development
 
-> ⚠️ Foldkit is in active development.  
-> Expect rapid iteration and breaking changes.
-
-We’re building in the open — feedback, issues, and contributions are welcome.
-
----
-
-## Getting Started
-
-Foldkit hasn’t been published to npm yet, but you can clone the repo and start exploring:
+Explore the examples locally:
 
 ```bash
 git clone https://github.com/devinjameson/foldkit.git
 cd foldkit
+pnpm install
+
+# In one terminal - build Foldkit in watch mode
+pnpm dev:core
+
+# In another terminal - run the counter example
+pnpm dev:example:counter
 ```
 
-Once published, you'll be able to install it with:
+---
 
-```bash
-pnpm install @foldkit/core
-```
+## Status
+
+We're building in the open. Feedback, issues, and contributions are welcome.
 
 ---
 

@@ -72,5 +72,11 @@
   },
   "dependencies": {
     "snabbdom": "^3.6.2"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
