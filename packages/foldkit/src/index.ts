@@ -1,4 +1,4 @@
-export const VERSION = '0.1.0-canary.1'
+export const VERSION = '0.1.0-canary.2'
 
 export * as Runtime from './core/runtime'
 export * as Html from './core/html'
