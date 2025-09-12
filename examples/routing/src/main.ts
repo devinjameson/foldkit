@@ -1,6 +1,5 @@
 import { Array, Effect, Match, Option, Schema as S, pipe } from 'effect'
-
-import { Fold, Route, Runtime } from '@foldkit/core'
+import { Fold, Route, Runtime } from 'foldkit'
 import {
   Class,
   Href,
@@ -16,11 +15,11 @@ import {
   li,
   p,
   ul,
-} from '@foldkit/html'
-import { load, pushUrl, replaceUrl } from '@foldkit/navigation'
-import { int, literal, slash } from '@foldkit/route'
-import { ST, ts } from '@foldkit/schema'
-import { Url, UrlRequest } from '@foldkit/urlRequest'
+} from 'foldkit/html'
+import { load, pushUrl, replaceUrl } from 'foldkit/navigation'
+import { int, literal, slash } from 'foldkit/route'
+import { ST, ts } from 'foldkit/schema'
+import { Url, UrlRequest } from 'foldkit/urlRequest'
 
 // ROUTE
 

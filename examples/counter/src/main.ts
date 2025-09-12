@@ -1,8 +1,7 @@
 import { Effect, Schema } from 'effect'
-
-import { Fold, Runtime } from '@foldkit/core'
-import { Class, Html, OnClick, button, div } from '@foldkit/html'
-import { ST, ts } from '@foldkit/schema'
+import { Fold, Runtime } from 'foldkit'
+import { Class, Html, OnClick, button, div } from 'foldkit/html'
+import { ST, ts } from 'foldkit/schema'
 
 // MODEL
 

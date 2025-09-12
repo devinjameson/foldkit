@@ -1,7 +1,6 @@
 import { Array, Duration, Effect, Match, Number, Random, Schema as S } from 'effect'
-
-import { Fold, FormValidation, Runtime } from '@foldkit/core'
-import { Field, FieldSchema, FieldValidation, validateField } from '@foldkit/fieldValidation'
+import { Fold, FormValidation, Runtime } from 'foldkit'
+import { Field, FieldSchema, FieldValidation, validateField } from 'foldkit/fieldValidation'
 import {
   Class,
   Disabled,
@@ -21,8 +20,8 @@ import {
   label,
   span,
   textarea,
-} from '@foldkit/html'
-import { ST, ts } from '@foldkit/schema'
+} from 'foldkit/html'
+import { ST, ts } from 'foldkit/schema'
 
 // MODEL
 

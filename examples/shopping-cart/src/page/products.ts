@@ -1,7 +1,6 @@
 import { Array, Effect, Option, Schema as S } from 'effect'
 import { ExtractTag } from 'effect/Types'
-
-import { Fold, Route } from '@foldkit/core'
+import { Fold, Route } from 'foldkit'
 import {
   Class,
   Href,
@@ -19,9 +18,9 @@ import {
   input,
   p,
   span,
-} from '@foldkit/html'
-import { replaceUrl } from '@foldkit/navigation'
-import { ST, ts } from '@foldkit/schema'
+} from 'foldkit/html'
+import { replaceUrl } from 'foldkit/navigation'
+import { ST, ts } from 'foldkit/schema'
 
 import { Cart, Item } from '../domain'
 import type { AppRoute, CartRoute } from '../main'

@@ -20,8 +20,3 @@ This file contains preferences and conventions for Claude when working on this c
 ### General Preferences
 
 - Use `is*` for boolean naming e.g. `isPlaying`, `isValid`
-
-## Project Structure
-
-- Core functionality in `packages/foldkit/src/core/`
-- Examples in `examples/*/src/main.ts`

@@ -8,7 +8,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@foldkit/core": "workspace:*",
+    "foldkit": "workspace:*",
     "@tailwindcss/vite": "^4.1.10",
     "effect": "^3.16.8",
     "tailwindcss": "^4.1.10"

@@ -6,18 +6,18 @@ export default defineConfig({
   plugins: [tailwindcss()],
   resolve: {
     alias: {
-      '@foldkit/fieldValidation': path.resolve(
+      'foldkit/fieldValidation': path.resolve(
         __dirname,
         '../../packages/foldkit/src/core/fieldValidation',
       ),
-      '@foldkit/fold': path.resolve(__dirname, '../../packages/foldkit/src/core/fold'),
-      '@foldkit/html': path.resolve(__dirname, '../../packages/foldkit/src/core/html'),
-      '@foldkit/navigation': path.resolve(__dirname, '../../packages/foldkit/src/core/navigation'),
-      '@foldkit/route': path.resolve(__dirname, '../../packages/foldkit/src/core/route'),
-      '@foldkit/runtime': path.resolve(__dirname, '../../packages/foldkit/src/core/runtime'),
-      '@foldkit/schema': path.resolve(__dirname, '../../packages/foldkit/src/core/schema'),
-      '@foldkit/urlRequest': path.resolve(__dirname, '../../packages/foldkit/src/core/urlRequest'),
-      '@foldkit/core': path.resolve(__dirname, '../../packages/foldkit/src/index'),
+      'foldkit/fold': path.resolve(__dirname, '../../packages/foldkit/src/core/fold'),
+      'foldkit/html': path.resolve(__dirname, '../../packages/foldkit/src/core/html'),
+      'foldkit/navigation': path.resolve(__dirname, '../../packages/foldkit/src/core/navigation'),
+      'foldkit/route': path.resolve(__dirname, '../../packages/foldkit/src/core/route'),
+      'foldkit/runtime': path.resolve(__dirname, '../../packages/foldkit/src/core/runtime'),
+      'foldkit/schema': path.resolve(__dirname, '../../packages/foldkit/src/core/schema'),
+      'foldkit/urlRequest': path.resolve(__dirname, '../../packages/foldkit/src/core/urlRequest'),
+      foldkit: path.resolve(__dirname, '../../packages/foldkit/src/index'),
     },
   },
   server: {

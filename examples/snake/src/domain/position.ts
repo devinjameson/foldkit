@@ -1,6 +1,5 @@
 import { Match, Schema } from 'effect'
-
-import { ST } from '@foldkit/schema'
+import { ST } from 'foldkit/schema'
 
 import { GAME } from '../constants'
 import * as Direction from './direction'

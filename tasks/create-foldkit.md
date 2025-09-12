@@ -60,16 +60,19 @@ packages/create-foldkit/
 ### Phase 1: Basic Scaffolding
 
 1. **Set up package structure**
+
    - Create `packages/create-foldkit/`
    - Configure package.json with bin entry
    - Set up TypeScript configuration
 
 2. **Implement Effect CLI structure**
+
    - Create main command with Effect CLI
    - Add argument parsing for project name
    - Add options for template and style
 
 3. **Create template system**
+
    - Extract counter example as first template
    - Create base template with shared files
    - Implement file copying logic with Effect
@@ -82,11 +85,13 @@ packages/create-foldkit/
 ### Phase 2: Enhanced Templates
 
 5. **Add more templates**
+
    - Todo app template
    - Routing template
    - Full app template (shopping cart)
 
 6. **Style options**
+
    - Tailwind CSS setup
    - Plain CSS option
    - No styles option
@@ -99,12 +104,14 @@ packages/create-foldkit/
 ### Phase 3: Developer Experience
 
 8. **Interactive prompts**
+
    - Project name validation
    - Template selection
    - Style preference
    - Package manager choice
 
 9. **Git integration**
+
    - Initialize git repository
    - Create initial commit
    - Add .gitignore
@@ -167,21 +174,18 @@ my-app/
 ### Main Command
 
 ```typescript
-const create = Command.make('create', {
-  projectName: Args.text({ name: 'project-name' }),
-  template: Options.text('template').pipe(
-    Options.withDefault('counter')
-  ),
-  style: Options.text('style').pipe(
-    Options.withDefault('tailwind')
-  ),
-  packageManager: Options.text('pm').pipe(
-    Options.optional
-  )
-}, ({ projectName, template, style, packageManager }) =>
-  Effect.gen(function* () {
-    // Scaffolding logic here
-  })
+const create = Command.make(
+  'create',
+  {
+    projectName: Args.text({ name: 'project-name' }),
+    template: Options.text('template').pipe(Options.withDefault('counter')),
+    style: Options.text('style').pipe(Options.withDefault('tailwind')),
+    packageManager: Options.text('pm').pipe(Options.optional),
+  },
+  ({ projectName, template, style, packageManager }) =>
+    Effect.gen(function* () {
+      // Scaffolding logic here
+    }),
 )
 ```
 
@@ -201,7 +205,7 @@ const create = Command.make('create', {
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@foldkit/core": "^0.1.0-canary.1",
+    "foldkit": "^0.1.0-canary.4",
     "effect": "^3.16.8"
   },
   "devDependencies": {

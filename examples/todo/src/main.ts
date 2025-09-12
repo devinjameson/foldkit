@@ -1,6 +1,5 @@
 import { Array, Effect, Match, Option, Schema as S, String } from 'effect'
-
-import { Fold, Runtime } from '@foldkit/core'
+import { Fold, Runtime } from 'foldkit'
 import {
   Class,
   For,
@@ -22,8 +21,8 @@ import {
   li,
   span,
   ul,
-} from '@foldkit/html'
-import { ST, ts } from '@foldkit/schema'
+} from 'foldkit/html'
+import { ST, ts } from 'foldkit/schema'
 
 // MODEL
 

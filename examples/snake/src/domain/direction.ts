@@ -1,6 +1,5 @@
 import { Match, Schema } from 'effect'
-
-import { ST } from '@foldkit/schema'
+import { ST } from 'foldkit/schema'
 
 export const Direction = Schema.Literal('Up', 'Down', 'Left', 'Right')
 export type Direction = ST<typeof Direction>

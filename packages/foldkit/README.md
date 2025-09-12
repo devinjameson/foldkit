@@ -7,17 +7,16 @@ An Elm-inspired UI framework powered by Effect-TS, bringing functional programmi
 ## Installation
 
 ```bash
-npm install @foldkit/core effect
+npm install foldkit effect
 ```
 
 ## Quick Start
 
 ```typescript
 import { Effect, Schema } from 'effect'
-
-import { Fold, Runtime } from '@foldkit/core'
-import { Class, Html, OnClick, button, div } from '@foldkit/html'
-import { ST, ts } from '@foldkit/schema'
+import { Fold, Runtime } from 'foldkit'
+import { Class, Html, OnClick, button, div } from 'foldkit/html'
+import { ST, ts } from 'foldkit/schema'
 
 // MODEL
 
@@ -88,7 +87,7 @@ Effect.runFork(element)
 ## Core Concepts
 
 - **Model**: Your application state (Schema)
-- **Messages**: Tagged unions representing events  
+- **Messages**: Tagged unions representing events
 - **Update**: Fold patterns that transform model and return effects
 - **View**: Functions that render model to virtual DOM
 

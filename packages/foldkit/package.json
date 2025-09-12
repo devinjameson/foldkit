@@ -1,5 +1,5 @@
 {
-  "name": "@foldkit/core",
+  "name": "foldkit",
   "version": "0.1.0-canary.4",
   "description": "Elm-inspired UI framework powered by Effect",
   "type": "module",

@@ -1,6 +1,5 @@
 import { Array, Option, Schema as S } from 'effect'
-
-import { Route } from '@foldkit/core'
+import { Route } from 'foldkit'
 import {
   Class,
   Href,
@@ -18,8 +17,8 @@ import {
   p,
   span,
   textarea,
-} from '@foldkit/html'
-import { ST, ts } from '@foldkit/schema'
+} from 'foldkit/html'
+import { ST, ts } from 'foldkit/schema'
 
 import { Cart } from '../domain'
 import type { CartRoute, ProductsRoute } from '../main'

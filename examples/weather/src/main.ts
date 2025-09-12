@@ -1,6 +1,5 @@
 import { Array, Effect, Match, Schema as S, String } from 'effect'
-
-import { Fold, Runtime } from '@foldkit/core'
+import { Fold, Runtime } from 'foldkit'
 import {
   Class,
   Disabled,
@@ -20,8 +19,8 @@ import {
   input,
   label,
   p,
-} from '@foldkit/html'
-import { ST, ts } from '@foldkit/schema'
+} from 'foldkit/html'
+import { ST, ts } from 'foldkit/schema'
 
 // MODEL
 
