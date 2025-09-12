@@ -1,6 +1,6 @@
-import { Fold, Runtime } from '@foldkit'
 import { Duration, Effect, Option, Schema as S, Stream, String, flow, pipe } from 'effect'
 
+import { Fold, Runtime } from '@foldkit'
 import { Class, Html, OnClick, button, div } from '@foldkit/html'
 import { ST, ts } from '@foldkit/schema'
 

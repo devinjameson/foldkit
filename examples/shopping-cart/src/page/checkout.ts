@@ -1,6 +1,6 @@
-import { Route } from '@foldkit'
 import { Array, Option, Schema as S } from 'effect'
 
+import { Route } from '@foldkit'
 import {
   Class,
   Href,
