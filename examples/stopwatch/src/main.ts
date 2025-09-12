@@ -152,13 +152,13 @@ const buttonStyle = 'px-6 py-4 flex-1 font-semibold text-white transition-colors
 
 // RUN
 
-const app = Runtime.makeElement({
+const element = Runtime.makeElement({
   Model,
   init,
   update,
   view,
   commandStreams,
-  container: document.body,
+  container: document.getElementById('root')!,
 })
 
-Effect.runFork(app)
+Effect.runFork(element)

@@ -42,9 +42,9 @@ npm install @foldkit effect
 See the full example at [examples/counter/src/main.ts](examples/counter/src/main.ts)
 
 ```ts
-import { Fold, Runtime } from '@foldkit'
 import { Effect, Schema } from 'effect'
 
+import { Fold, Runtime } from '@foldkit'
 import { Class, Html, OnClick, button, div } from '@foldkit/html'
 import { ST, ts } from '@foldkit/schema'
 
@@ -103,15 +103,15 @@ const buttonStyle = 'bg-black text-white hover:bg-gray-700 px-4 py-2 transition'
 
 // RUN
 
-const app = Runtime.makeElement({
+const element = Runtime.makeElement({
   Model,
   init,
   update,
   view,
-  container: document.body,
+  container: document.getElementById('root')!,
 })
 
-Effect.runFork(app)
+Effect.runFork(element)
 ```
 
 ---

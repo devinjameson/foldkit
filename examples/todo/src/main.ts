@@ -558,12 +558,12 @@ const view = (model: Model): Html => {
 
 // RUN
 
-const app = Runtime.makeElement({
+const element = Runtime.makeElement({
   Model,
   init,
   update,
   view,
-  container: document.body,
+  container: document.getElementById('root')!,
 })
 
-Effect.runFork(app)
+Effect.runFork(element)

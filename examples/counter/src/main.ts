@@ -59,12 +59,12 @@ const buttonStyle = 'bg-black text-white hover:bg-gray-700 px-4 py-2 transition'
 
 // RUN
 
-const app = Runtime.makeElement({
+const element = Runtime.makeElement({
   Model,
   init,
   update,
   view,
-  container: document.body,
+  container: document.getElementById('root')!,
 })
 
-Effect.runFork(app)
+Effect.runFork(element)

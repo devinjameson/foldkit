@@ -317,13 +317,13 @@ const view = (model: Model): Html =>
 
 // RUN
 
-const app = Runtime.makeElement({
+const element = Runtime.makeElement({
   Model,
   init,
   update,
   view,
   commandStreams,
-  container: document.getElementById('app')!,
+  container: document.getElementById('root')!,
 })
 
-Effect.runFork(app)
+Effect.runFork(element)

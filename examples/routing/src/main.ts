@@ -377,7 +377,7 @@ const app = Runtime.makeApplication({
   init,
   update,
   view,
-  // TODO: Should this be document.getElementById('app') instead?
+  // TODO: Should this be document.getElementById('root') instead?
   container: document.body,
   browser: {
     onUrlRequest: (request) => UrlRequestReceived.make({ request }),
