@@ -41,15 +41,15 @@ importers:
 
   examples/counter:
     dependencies:
-      '@foldkit/core':
-        specifier: workspace:*
-        version: link:../../packages/foldkit
       '@tailwindcss/vite':
         specifier: ^4.1.10
         version: 4.1.10(vite@5.4.19(@types/node@20.19.1)(lightningcss@1.30.1))
       effect:
         specifier: ^3.16.8
         version: 3.16.8
+      foldkit:
+        specifier: workspace:*
+        version: link:../../packages/foldkit
       tailwindcss:
         specifier: ^4.1.10
         version: 4.1.10
@@ -60,15 +60,15 @@ importers:
 
   examples/form:
     dependencies:
-      '@foldkit/core':
-        specifier: workspace:*
-        version: link:../../packages/foldkit
       '@tailwindcss/vite':
         specifier: ^4.1.10
         version: 4.1.10(vite@5.4.19(@types/node@20.19.1)(lightningcss@1.30.1))
       effect:
         specifier: ^3.16.8
         version: 3.16.8
+      foldkit:
+        specifier: workspace:*
+        version: link:../../packages/foldkit
       tailwindcss:
         specifier: ^4.1.10
         version: 4.1.10
@@ -79,15 +79,15 @@ importers:
 
   examples/routing:
     dependencies:
-      '@foldkit/core':
-        specifier: workspace:*
-        version: link:../../packages/foldkit
       '@tailwindcss/vite':
         specifier: ^4.1.10
         version: 4.1.10(vite@5.4.19(@types/node@20.19.1)(lightningcss@1.30.1))
       effect:
         specifier: ^3.16.8
         version: 3.16.8
+      foldkit:
+        specifier: workspace:*
+        version: link:../../packages/foldkit
       tailwindcss:
         specifier: ^4.1.10
         version: 4.1.10
@@ -98,15 +98,15 @@ importers:
 
   examples/shopping-cart:
     dependencies:
-      '@foldkit/core':
-        specifier: workspace:*
-        version: link:../../packages/foldkit
       '@tailwindcss/vite':
         specifier: ^4.1.10
         version: 4.1.10(vite@5.4.19(@types/node@20.19.1)(lightningcss@1.30.1))
       effect:
         specifier: ^3.16.8
         version: 3.16.8
+      foldkit:
+        specifier: workspace:*
+        version: link:../../packages/foldkit
       tailwindcss:
         specifier: ^4.1.10
         version: 4.1.10
@@ -117,15 +117,15 @@ importers:
 
   examples/snake:
     dependencies:
-      '@foldkit/core':
-        specifier: workspace:*
-        version: link:../../packages/foldkit
       '@tailwindcss/vite':
         specifier: ^4.1.10
         version: 4.1.10(vite@5.4.19(@types/node@20.19.1)(lightningcss@1.30.1))
       effect:
         specifier: ^3.16.8
         version: 3.16.8
+      foldkit:
+        specifier: workspace:*
+        version: link:../../packages/foldkit
       tailwindcss:
         specifier: ^4.1.10
         version: 4.1.10
@@ -136,15 +136,15 @@ importers:
 
   examples/stopwatch:
     dependencies:
-      '@foldkit/core':
-        specifier: workspace:*
-        version: link:../../packages/foldkit
       '@tailwindcss/vite':
         specifier: ^4.1.10
         version: 4.1.10(vite@5.4.19(@types/node@20.19.1)(lightningcss@1.30.1))
       effect:
         specifier: ^3.16.8
         version: 3.16.8
+      foldkit:
+        specifier: workspace:*
+        version: link:../../packages/foldkit
       tailwindcss:
         specifier: ^4.1.10
         version: 4.1.10
@@ -155,15 +155,15 @@ importers:
 
   examples/todo:
     dependencies:
-      '@foldkit/core':
-        specifier: workspace:*
-        version: link:../../packages/foldkit
       '@tailwindcss/vite':
         specifier: ^4.1.10
         version: 4.1.10(vite@5.4.19(@types/node@20.19.1)(lightningcss@1.30.1))
       effect:
         specifier: ^3.16.8
         version: 3.16.8
+      foldkit:
+        specifier: workspace:*
+        version: link:../../packages/foldkit
       tailwindcss:
         specifier: ^4.1.10
         version: 4.1.10
@@ -174,15 +174,15 @@ importers:
 
   examples/weather:
     dependencies:
-      '@foldkit/core':
-        specifier: workspace:*
-        version: link:../../packages/foldkit
       '@tailwindcss/vite':
         specifier: ^4.1.10
         version: 4.1.10(vite@5.4.19(@types/node@20.19.1)(lightningcss@1.30.1))
       effect:
         specifier: ^3.16.8
         version: 3.16.8
+      foldkit:
+        specifier: workspace:*
+        version: link:../../packages/foldkit
       tailwindcss:
         specifier: ^4.1.10
         version: 4.1.10

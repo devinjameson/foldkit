@@ -1,4 +1,4 @@
-import { Duration, Effect, Option, Schema as S, Stream, String, flow, pipe } from 'effect'
+import { Clock, Duration, Effect, Schema as S, Stream, String, flow, pipe } from 'effect'
 import { Fold, Runtime } from 'foldkit'
 import { Class, Html, OnClick, button, div } from 'foldkit/html'
 import { ST, ts } from 'foldkit/schema'
@@ -10,54 +10,82 @@ const TICK_INTERVAL_MS = 10
 const Model = S.Struct({
   elapsedMs: S.Number,
   isRunning: S.Boolean,
-  startTime: S.Option(S.Number),
+  startTime: S.Number,
 })
 type Model = ST<typeof Model>
 
 // UPDATE
 
-const Start = ts('Start')
+const RequestStart = ts('RequestStart')
+const GotStartTime = ts('GotStartTime', { startTime: S.Number })
 const Stop = ts('Stop')
 const Reset = ts('Reset')
-const Tick = ts('Tick', {
-  currentTime: S.Number,
-})
+const RequestTick = ts('RequestTick')
+const GotTick = ts('GotTick', { elapsedMs: S.Number })
 
-export const Message = S.Union(Start, Stop, Reset, Tick)
+export const Message = S.Union(RequestStart, GotStartTime, Stop, Reset, RequestTick, GotTick)
 
-type Start = ST<typeof Start>
+type RequestStart = ST<typeof RequestStart>
+type GotStartTime = ST<typeof GotStartTime>
 type Stop = ST<typeof Stop>
 type Reset = ST<typeof Reset>
-type Tick = ST<typeof Tick>
+type RequestTick = ST<typeof RequestTick>
+type GotTick = ST<typeof GotTick>
 
 export type Message = ST<typeof Message>
 
 const update = Fold.fold<Model, Message>({
-  Start: (model) => [
+  RequestStart: (model) => [
+    model,
+    [
+      Effect.gen(function* () {
+        const now = yield* Clock.currentTimeMillis
+        return GotStartTime.make({ startTime: now - model.elapsedMs })
+      }),
+    ],
+  ],
+
+  GotStartTime: (model, { startTime }) => [
     {
       ...model,
       isRunning: true,
-      startTime: Option.some(Date.now() - model.elapsedMs),
+      startTime,
     },
     [],
   ],
 
-  Stop: (model) => [{ ...model, isRunning: false }, []],
+  Stop: (model) => [
+    {
+      ...model,
+      isRunning: false,
+    },
+    [],
+  ],
 
   Reset: () => [
     {
       elapsedMs: 0,
       isRunning: false,
-      startTime: Option.none(),
+      startTime: 0,
     },
     [],
   ],
 
-  Tick: (model, { currentTime }) => [
-    Option.match(model.startTime, {
-      onNone: () => model,
-      onSome: (startTime) => ({ ...model, elapsedMs: currentTime - startTime }),
-    }),
+  RequestTick: (model) => [
+    model,
+    [
+      Effect.gen(function* () {
+        const now = yield* Clock.currentTimeMillis
+        return GotTick.make({ elapsedMs: now - model.startTime })
+      }),
+    ],
+  ],
+
+  GotTick: (model, { elapsedMs }) => [
+    {
+      ...model,
+      elapsedMs,
+    },
     [],
   ],
 })
@@ -68,7 +96,7 @@ const init: Runtime.ElementInit<Model, Message> = () => [
   {
     elapsedMs: 0,
     isRunning: false,
-    startTime: Option.none(),
+    startTime: 0,
   },
   [],
 ]
@@ -85,7 +113,7 @@ const commandStreams: Runtime.CommandStreams<Model, Message, StreamDepsMap> = {
     stream: (isRunning: boolean) =>
       Stream.when(
         Stream.tick(Duration.millis(TICK_INTERVAL_MS)).pipe(
-          Stream.map(() => Effect.sync(() => Tick.make({ currentTime: Date.now() }))),
+          Stream.map(() => Effect.succeed(RequestTick.make())),
         ),
         () => isRunning,
       ),
@@ -141,7 +169,7 @@ const startStopButton = (isRunning: boolean): Html =>
   isRunning
     ? button([OnClick(Stop.make()), Class(buttonStyle + ' bg-red-500 hover:bg-red-600')], ['Stop'])
     : button(
-        [OnClick(Start.make()), Class(buttonStyle + ' bg-green-500 hover:bg-green-600')],
+        [OnClick(RequestStart.make()), Class(buttonStyle + ' bg-green-500 hover:bg-green-600')],
         ['Start'],
       )
 

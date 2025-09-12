@@ -1,5 +1,4 @@
 import { Schema as S } from 'effect'
-import { Struct } from 'effect/Schema'
 
 /**
  * A wrapper around Effect Schema.taggedStruct.
@@ -17,11 +16,11 @@ import { Struct } from 'effect/Schema'
  */
 export const ts: {
   <Tag extends string>(tag: Tag): S.TaggedStruct<Tag, {}>
-  <Tag extends string, Fields extends Struct.Fields>(
+  <Tag extends string, Fields extends S.Struct.Fields>(
     tag: Tag,
     fields: Fields,
   ): S.TaggedStruct<Tag, Fields>
-} = <Tag extends string, Fields extends Struct.Fields = {}>(tag: Tag, fields?: Fields) =>
+} = <Tag extends string, Fields extends S.Struct.Fields = {}>(tag: Tag, fields?: Fields) =>
   S.TaggedStruct(tag, fields ?? {})
 
 /**

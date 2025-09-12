@@ -31,7 +31,7 @@
       "types": "./dist/core/fold.d.ts",
       "import": "./dist/core/fold.js"
     },
-    "./formValidation": {
+    "./fieldValidation": {
       "types": "./dist/core/fieldValidation.d.ts",
       "import": "./dist/core/fieldValidation.js"
     },

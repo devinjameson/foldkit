@@ -28,15 +28,17 @@ const ClockTick = ts('ClockTick')
 const KeyPress = ts('KeyPress', { key: S.String })
 const PauseGame = ts('PauseGame')
 const RestartGame = ts('RestartGame')
-const SetApple = ts('SetApple', { position: Position.Position })
+const RequestApple = ts('RequestApple', { snake: Snake.Snake })
+const GotApple = ts('GotApple', { position: Position.Position })
 
-export const Message = S.Union(ClockTick, KeyPress, PauseGame, RestartGame, SetApple)
+export const Message = S.Union(ClockTick, KeyPress, PauseGame, RestartGame, RequestApple, GotApple)
 
 type ClockTick = ST<typeof ClockTick>
 type KeyPress = ST<typeof KeyPress>
 type PauseGame = ST<typeof PauseGame>
 type RestartGame = ST<typeof RestartGame>
-type SetApple = ST<typeof SetApple>
+type RequestApple = ST<typeof RequestApple>
+type GotApple = ST<typeof GotApple>
 
 export type Message = ST<typeof Message>
 
@@ -55,7 +57,7 @@ const init: Runtime.ElementInit<Model, Message> = () => {
       points: 0,
       highScore: 0,
     },
-    [Apple.generatePosition(snake).pipe(Effect.map((position) => SetApple.make({ position })))],
+    [requestAppleCommand(snake)],
   ]
 }
 
@@ -114,11 +116,7 @@ const update = Fold.fold<Model, Message>({
             gameState: 'NotStarted',
             points: 0,
           },
-          [
-            Apple.generatePosition(nextSnake).pipe(
-              Effect.map((position) => SetApple.make({ position })),
-            ),
-          ],
+          [requestAppleCommand(nextSnake)],
         ]
       }),
       Match.orElse(() => [model, []]),
@@ -151,13 +149,7 @@ const update = Fold.fold<Model, Message>({
       ]
     }
 
-    const commands = willEatApple
-      ? [
-          Apple.generatePosition(nextSnake).pipe(
-            Effect.map((position) => SetApple.make({ position })),
-          ),
-        ]
-      : []
+    const commands = willEatApple ? [requestAppleCommand(nextSnake)] : []
 
     return [
       {
@@ -191,15 +183,16 @@ const update = Fold.fold<Model, Message>({
         gameState: 'NotStarted',
         points: 0,
       },
-      [
-        Apple.generatePosition(nextSnake).pipe(
-          Effect.map((position) => SetApple.make({ position })),
-        ),
-      ],
+      [requestAppleCommand(nextSnake)],
     ]
   },
 
-  SetApple: (model, { position }) => [
+  RequestApple: (model, { snake }) => [
+    model,
+    [Apple.generatePosition(snake).pipe(Effect.map((position) => GotApple.make({ position })))],
+  ],
+
+  GotApple: (model, { position }) => [
     {
       ...model,
       apple: position,
@@ -207,6 +200,11 @@ const update = Fold.fold<Model, Message>({
     [],
   ],
 })
+
+// COMMAND
+
+const requestAppleCommand = (snake: Snake.Snake): Runtime.Command<Message> =>
+  Effect.succeed(RequestApple.make({ snake }))
 
 // COMMAND STREAMS
 
@@ -225,7 +223,7 @@ const commandStreams: Runtime.CommandStreams<Model, Message, StreamDepsMap> = {
     stream: (deps: { isPlaying: boolean; interval: number }) =>
       Stream.when(
         Stream.tick(Duration.millis(deps.interval)).pipe(
-          Stream.map(() => Effect.sync(() => ClockTick.make())),
+          Stream.map(() => Effect.succeed(ClockTick.make())),
         ),
         () => deps.isPlaying,
       ),

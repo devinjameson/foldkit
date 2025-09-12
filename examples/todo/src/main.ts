@@ -1,4 +1,4 @@
-import { Array, Effect, Match, Option, Schema as S, String } from 'effect'
+import { Array, Clock, Effect, Match, Option, Random, Schema as S, String } from 'effect'
 import { Fold, Runtime } from 'foldkit'
 import {
   Class,
@@ -66,6 +66,7 @@ const NoOp = ts('NoOp')
 const UpdateNewTodo = ts('UpdateNewTodo', { text: S.String })
 const UpdateEditingTodo = ts('UpdateEditingTodo', { text: S.String })
 const AddTodo = ts('AddTodo')
+const GotNewTodoData = ts('GotNewTodoData', { id: S.String, timestamp: S.Number, text: S.String })
 const DeleteTodo = ts('DeleteTodo', { id: S.String })
 const ToggleTodo = ts('ToggleTodo', { id: S.String })
 const StartEditing = ts('StartEditing', { id: S.String })
@@ -82,6 +83,7 @@ export const Message = S.Union(
   UpdateNewTodo,
   UpdateEditingTodo,
   AddTodo,
+  GotNewTodoData,
   DeleteTodo,
   ToggleTodo,
   StartEditing,
@@ -98,6 +100,7 @@ type NoOp = ST<typeof NoOp>
 type UpdateNewTodo = ST<typeof UpdateNewTodo>
 type UpdateEditingTodo = ST<typeof UpdateEditingTodo>
 type AddTodo = ST<typeof AddTodo>
+type GotNewTodoData = ST<typeof GotNewTodoData>
 type DeleteTodo = ST<typeof DeleteTodo>
 type ToggleTodo = ST<typeof ToggleTodo>
 type StartEditing = ST<typeof StartEditing>
@@ -136,8 +139,6 @@ const init: Runtime.ElementInit<Model, Message> = () => [
   [loadTodos],
 ]
 
-const generateId = (): string => Math.random().toString(36).substring(2, 15)
-
 // UPDATE
 
 const update = Fold.fold<Model, Message>({
@@ -169,11 +170,15 @@ const update = Fold.fold<Model, Message>({
       return [model, []]
     }
 
+    return [model, [generateTodoDataCommand(String.trim(model.newTodoText))]]
+  },
+
+  GotNewTodoData: (model, { id, timestamp, text }) => {
     const newTodo: Todo = {
-      id: generateId(),
-      text: String.trim(model.newTodoText),
+      id,
+      text,
       completed: false,
-      createdAt: Date.now(),
+      createdAt: timestamp,
     }
 
     const updatedTodos = Array.append(model.todos, newTodo)
@@ -324,6 +329,20 @@ const update = Fold.fold<Model, Message>({
     [],
   ],
 })
+
+// COMMAND
+
+const randomId = Effect.gen(function* () {
+  const randomValue = yield* Random.next
+  return randomValue.toString(36).substring(2, 15)
+})
+
+const generateTodoDataCommand = (text: string): Runtime.Command<GotNewTodoData> =>
+  Effect.gen(function* () {
+    const id = yield* randomId
+    const timestamp = yield* Clock.currentTimeMillis
+    return GotNewTodoData.make({ id, timestamp, text })
+  })
 
 // COMMAND
 

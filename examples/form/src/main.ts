@@ -1,6 +1,6 @@
 import { Array, Duration, Effect, Match, Number, Random, Schema as S } from 'effect'
-import { Fold, FormValidation, Runtime } from 'foldkit'
-import { Field, FieldSchema, FieldValidation, validateField } from 'foldkit/fieldValidation'
+import { FieldValidation, Fold, Runtime } from 'foldkit'
+import { Field, FieldSchema, Validation, validateField } from 'foldkit/fieldValidation'
 import {
   Class,
   Disabled,
@@ -58,6 +58,12 @@ const EmailValidated = ts('EmailValidated', {
 })
 const UpdateMessage = ts('UpdateMessage', { value: S.String })
 const SubmitForm = ts('SubmitForm')
+const GotSubmitResult = ts('GotSubmitResult', {
+  success: S.Boolean,
+  name: S.String,
+  email: S.String,
+  message: S.String,
+})
 const FormSubmitted = ts('FormSubmitted', { message: S.String })
 const FormSubmitError = ts('FormSubmitError', { error: S.String })
 
@@ -68,6 +74,7 @@ const Message = S.Union(
   EmailValidated,
   UpdateMessage,
   SubmitForm,
+  GotSubmitResult,
   FormSubmitted,
   FormSubmitError,
 )
@@ -78,6 +85,7 @@ type UpdateEmail = ST<typeof UpdateEmail>
 type EmailValidated = ST<typeof EmailValidated>
 type UpdateMessage = ST<typeof UpdateMessage>
 type SubmitForm = ST<typeof SubmitForm>
+type GotSubmitResult = ST<typeof GotSubmitResult>
 type FormSubmitted = ST<typeof FormSubmitted>
 type FormSubmitError = ST<typeof FormSubmitError>
 
@@ -98,15 +106,15 @@ const init: Runtime.ElementInit<Model, Message> = () => [
 
 // FIELD VALIDATION
 
-const nameValidations: FieldValidation<string>[] = [
-  FormValidation.minLength(2, (min) => `Name must be at least ${min} characters`),
+const nameValidations: Validation<string>[] = [
+  FieldValidation.minLength(2, (min) => `Name must be at least ${min} characters`),
 ]
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-const emailValidations: FieldValidation<string>[] = [
-  FormValidation.required('Email'),
-  FormValidation.regex(emailRegex, 'Please enter a valid email address'),
+const emailValidations: Validation<string>[] = [
+  FieldValidation.required('Email'),
+  FieldValidation.regex(emailRegex, 'Please enter a valid email address'),
 ]
 
 const EMAILS_ON_WAITLIST = ['test@example.com', 'demo@email.com', 'admin@test.com']
@@ -201,8 +209,38 @@ const update = Fold.fold<Model, Message>({
         ...model,
         submission: Submitting.make(),
       },
-      [submitForm(model)],
+      [
+        submitForm({
+          name: model.name.value,
+          email: model.email.value,
+          message: model.message.value,
+        }),
+      ],
     ]
+  },
+
+  GotSubmitResult: (model, { success, name }) => {
+    if (success) {
+      return [
+        {
+          ...model,
+          submission: SubmitSuccess.make({
+            message: `Welcome to the waitlist, ${name}! We'll be in touch soon.`,
+          }),
+        },
+        [],
+      ]
+    } else {
+      return [
+        {
+          ...model,
+          submission: SubmitError.make({
+            error: 'Sorry, there was an error adding you to the waitlist. Please try again.',
+          }),
+        },
+        [],
+      ]
+    }
   },
 
   FormSubmitted: (model, { message }) => [
@@ -226,27 +264,22 @@ const update = Fold.fold<Model, Message>({
 
 const FAKE_API_DELAY_MS = 500
 
-const submitForm = (model: Model): Runtime.Command<FormSubmitted | FormSubmitError> =>
+const submitForm = (formData: {
+  name: string
+  email: string
+  message: string
+}): Runtime.Command<GotSubmitResult> =>
   Effect.gen(function* () {
-    const formData = {
-      name: model.name.value,
-      email: model.email.value,
-      message: model.message.value,
-    }
-
-    yield* Effect.sleep('2 seconds')
+    yield* Effect.sleep(`${FAKE_API_DELAY_MS} millis`)
 
     const success = yield* Random.nextBoolean
 
-    if (success) {
-      return FormSubmitted.make({
-        message: `Welcome to the waitlist, ${formData.name}! We'll be in touch soon.`,
-      })
-    } else {
-      return FormSubmitError.make({
-        error: 'Sorry, there was an error adding you to the waitlist. Please try again.',
-      })
-    }
+    return GotSubmitResult.make({
+      success,
+      name: formData.name,
+      email: formData.email,
+      message: formData.message,
+    })
   })
 
 // VIEW

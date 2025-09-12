@@ -50,25 +50,25 @@ export type Field<T> =
   | { readonly _tag: 'Valid'; readonly value: T }
   | { readonly _tag: 'Invalid'; readonly value: T; readonly error: string }
 
-export type FieldValidation<T> = [Predicate.Predicate<T>, string]
+export type Validation<T> = [Predicate.Predicate<T>, string]
 
-export const required = (fieldName: string): FieldValidation<string> => [
+export const required = (fieldName: string): Validation<string> => [
   String.isNonEmpty,
   `${fieldName} is required`,
 ]
 
-export const minLength = (
-  min: number,
-  message: (min: number) => string,
-): FieldValidation<string> => [flow(String.length, Number.greaterThanOrEqualTo(min)), message(min)]
+export const minLength = (min: number, message: (min: number) => string): Validation<string> => [
+  flow(String.length, Number.greaterThanOrEqualTo(min)),
+  message(min),
+]
 
-export const regex = (regex: RegExp, message: string): FieldValidation<string> => [
+export const regex = (regex: RegExp, message: string): Validation<string> => [
   flow(String.match(regex), Option.isSome),
   message,
 ]
 
 export const validateField =
-  <T>(fieldValidations: FieldValidation<T>[]) =>
+  <T>(fieldValidations: Validation<T>[]) =>
   (value: T): Field<T> => {
     for (const [predicate, message] of fieldValidations) {
       if (!predicate(value)) {
