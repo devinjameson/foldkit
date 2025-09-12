@@ -17,7 +17,7 @@ export default defineConfig({
       '@foldkit/runtime': path.resolve(__dirname, '../../packages/foldkit/src/core/runtime'),
       '@foldkit/schema': path.resolve(__dirname, '../../packages/foldkit/src/core/schema'),
       '@foldkit/urlRequest': path.resolve(__dirname, '../../packages/foldkit/src/core/urlRequest'),
-      '@foldkit': path.resolve(__dirname, '../../packages/foldkit/src/index'),
+      '@foldkit/core': path.resolve(__dirname, '../../packages/foldkit/src/index'),
     },
   },
   server: {

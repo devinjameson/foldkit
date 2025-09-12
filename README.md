@@ -21,7 +21,7 @@ Foldkit applies functional programming principles to UI development:
 ## Installation
 
 ```bash
-npm install @foldkit effect
+npm install @foldkit/core effect
 ```
 
 ---
@@ -44,7 +44,7 @@ See the full example at [examples/counter/src/main.ts](examples/counter/src/main
 ```ts
 import { Effect, Schema } from 'effect'
 
-import { Fold, Runtime } from '@foldkit'
+import { Fold, Runtime } from '@foldkit/core'
 import { Class, Html, OnClick, button, div } from '@foldkit/html'
 import { ST, ts } from '@foldkit/schema'
 

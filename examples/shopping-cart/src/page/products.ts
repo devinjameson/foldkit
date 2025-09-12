@@ -1,7 +1,7 @@
 import { Array, Effect, Option, Schema as S } from 'effect'
 import { ExtractTag } from 'effect/Types'
 
-import { Fold, Route } from '@foldkit'
+import { Fold, Route } from '@foldkit/core'
 import {
   Class,
   Href,

@@ -1,6 +1,6 @@
 import { Effect, Match, Option, Schema as S, pipe } from 'effect'
 
-import { Fold, Route, Runtime } from '@foldkit'
+import { Fold, Route, Runtime } from '@foldkit/core'
 import { Class, Href, Html, a, div, h1, p } from '@foldkit/html'
 import { load, pushUrl } from '@foldkit/navigation'
 import { literal } from '@foldkit/route'

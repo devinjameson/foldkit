@@ -1,6 +1,6 @@
 import { Array, Effect, Match, Option, Schema as S, String } from 'effect'
 
-import { Fold, Runtime } from '@foldkit'
+import { Fold, Runtime } from '@foldkit/core'
 import {
   Class,
   For,

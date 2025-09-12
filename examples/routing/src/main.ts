@@ -1,6 +1,6 @@
 import { Array, Effect, Match, Option, Schema as S, pipe } from 'effect'
 
-import { Fold, Route, Runtime } from '@foldkit'
+import { Fold, Route, Runtime } from '@foldkit/core'
 import {
   Class,
   Href,

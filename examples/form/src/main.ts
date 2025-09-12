@@ -1,6 +1,6 @@
 import { Array, Duration, Effect, Match, Number, Random, Schema as S } from 'effect'
 
-import { Fold, FormValidation, Runtime } from '@foldkit'
+import { Fold, FormValidation, Runtime } from '@foldkit/core'
 import { Field, FieldSchema, FieldValidation, validateField } from '@foldkit/fieldValidation'
 import {
   Class,
