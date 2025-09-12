@@ -1,8 +1,10 @@
 # Foldkit
 
-> ⚠️ **Experimental**: This is a canary release for early adopters and experimenters. APIs may change rapidly.
+> ⚠️ **Experimental**: Foldkit is in canary release for early adopters and experimenters. APIs are incomplete and may change rapidly.
 
-An Elm-inspired UI framework powered by Effect-TS, bringing functional programming patterns to the web.
+**Foldkit** is an [Elm](https://elm-lang.org/)-inspired UI framework powered by [Effect](https://effect.website/).
+
+> Like origami: simple parts become intricate when folded together.
 
 ## Installation
 
@@ -10,7 +12,7 @@ An Elm-inspired UI framework powered by Effect-TS, bringing functional programmi
 npm install foldkit effect
 ```
 
-## Quick Start
+## Counter Example
 
 ```typescript
 import { Effect, Schema } from 'effect'
@@ -83,13 +85,6 @@ const element = Runtime.makeElement({
 
 Effect.runFork(element)
 ```
-
-## Core Concepts
-
-- **Model**: Your application state (Schema)
-- **Messages**: Tagged unions representing events
-- **Update**: Fold patterns that transform model and return effects
-- **View**: Functions that render model to virtual DOM
 
 ---
 
