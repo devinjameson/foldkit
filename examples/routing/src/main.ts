@@ -384,4 +384,4 @@ const app = Runtime.makeApplication({
   },
 })
 
-Effect.runFork(app)
+Runtime.run(app)

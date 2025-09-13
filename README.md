@@ -20,8 +20,12 @@ Foldkit applies functional programming principles to UI development:
 
 ## Installation
 
+The best way to get started with Foldkit is to use `create-foldkit-app`. This
+will guide you through creating a new Foldkit project with your preferred
+package manager and example.
+
 ```bash
-npm install foldkit effect
+npx create-foldkit-app --wizard
 ```
 
 ---
@@ -110,7 +114,7 @@ const element = Runtime.makeElement({
   container: document.getElementById('root')!,
 })
 
-Effect.runFork(element)
+Runtime.run(element)
 ```
 
 ---

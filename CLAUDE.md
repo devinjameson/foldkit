@@ -20,3 +20,6 @@ This file contains preferences and conventions for Claude when working on this c
 ### General Preferences
 
 - Use `is*` for boolean naming e.g. `isPlaying`, `isValid`
+- Don't add comments. If the code is not clear enough and you are adding
+  comments to explain or improve clairty, instead refactor it to make it easier to
+  understand or use better names.
