@@ -255,8 +255,8 @@ const cellView = (x: number, y: number, model: Model): Html => {
   const isApple = Position.equivalence({ x, y }, model.apple)
 
   const cellClass = Match.value({ isSnakeHead, isSnakeTail, isApple }).pipe(
-    Match.when({ isSnakeHead: true }, () => 'bg-green-500'),
-    Match.when({ isSnakeTail: true }, () => 'bg-green-400'),
+    Match.when({ isSnakeHead: true }, () => 'bg-green-700'),
+    Match.when({ isSnakeTail: true }, () => 'bg-green-500'),
     Match.when({ isApple: true }, () => 'bg-red-500'),
     Match.orElse(() => 'bg-gray-800'),
   )
