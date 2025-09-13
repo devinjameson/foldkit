@@ -58,14 +58,12 @@ const EmailValidated = ts('EmailValidated', {
 })
 const UpdateMessage = ts('UpdateMessage', { value: S.String })
 const SubmitForm = ts('SubmitForm')
-const GotSubmitResult = ts('GotSubmitResult', {
+const FormSubmitted = ts('FormSubmitted', {
   success: S.Boolean,
   name: S.String,
   email: S.String,
   message: S.String,
 })
-const FormSubmitted = ts('FormSubmitted', { message: S.String })
-const FormSubmitError = ts('FormSubmitError', { error: S.String })
 
 const Message = S.Union(
   NoOp,
@@ -74,9 +72,7 @@ const Message = S.Union(
   EmailValidated,
   UpdateMessage,
   SubmitForm,
-  GotSubmitResult,
   FormSubmitted,
-  FormSubmitError,
 )
 
 type NoOp = ST<typeof NoOp>
@@ -85,9 +81,7 @@ type UpdateEmail = ST<typeof UpdateEmail>
 type EmailValidated = ST<typeof EmailValidated>
 type UpdateMessage = ST<typeof UpdateMessage>
 type SubmitForm = ST<typeof SubmitForm>
-type GotSubmitResult = ST<typeof GotSubmitResult>
 type FormSubmitted = ST<typeof FormSubmitted>
-type FormSubmitError = ST<typeof FormSubmitError>
 
 type Message = ST<typeof Message>
 
@@ -209,17 +203,11 @@ const update = Fold.fold<Model, Message>({
         ...model,
         submission: Submitting.make(),
       },
-      [
-        submitForm({
-          name: model.name.value,
-          email: model.email.value,
-          message: model.message.value,
-        }),
-      ],
+      [submitForm(model)],
     ]
   },
 
-  GotSubmitResult: (model, { success, name }) => {
+  FormSubmitted: (model, { success, name }) => {
     if (success) {
       return [
         {
@@ -242,43 +230,23 @@ const update = Fold.fold<Model, Message>({
       ]
     }
   },
-
-  FormSubmitted: (model, { message }) => [
-    {
-      ...model,
-      submission: SubmitSuccess.make({ message }),
-    },
-    [],
-  ],
-
-  FormSubmitError: (model, { error }) => [
-    {
-      ...model,
-      submission: SubmitError.make({ error }),
-    },
-    [],
-  ],
 })
 
 // COMMAND
 
 const FAKE_API_DELAY_MS = 500
 
-const submitForm = (formData: {
-  name: string
-  email: string
-  message: string
-}): Runtime.Command<GotSubmitResult> =>
+const submitForm = (model: Model): Runtime.Command<FormSubmitted> =>
   Effect.gen(function* () {
     yield* Effect.sleep(`${FAKE_API_DELAY_MS} millis`)
 
     const success = yield* Random.nextBoolean
 
-    return GotSubmitResult.make({
+    return FormSubmitted.make({
       success,
-      name: formData.name,
-      email: formData.email,
-      message: formData.message,
+      name: model.name.value,
+      email: model.name.value,
+      message: model.message.value,
     })
   })
 
