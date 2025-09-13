@@ -1,4 +1,4 @@
-import { Effect, Schema } from 'effect'
+import { Schema } from 'effect'
 import { Fold, Runtime } from 'foldkit'
 import { Class, Html, OnClick, button, div } from 'foldkit/html'
 import { ST, ts } from 'foldkit/schema'
@@ -66,4 +66,4 @@ const element = Runtime.makeElement({
   container: document.getElementById('root')!,
 })
 
-Effect.runFork(element)
+Runtime.run(element)

@@ -1,3 +1,4 @@
+import { BrowserRuntime } from '@effect/platform-browser'
 import {
   Context,
   Effect,
@@ -222,4 +223,12 @@ export const makeApplication = <
     container: config.container,
     browser: config.browser,
   })
+}
+
+/**
+ * Run a Foldkit application using the browser runtime.
+ * This is a convenience function that wraps BrowserRuntime.runMain.
+ */
+export const run = <E, A>(effect: Effect.Effect<A, E, never>): void => {
+  BrowserRuntime.runMain(effect)
 }

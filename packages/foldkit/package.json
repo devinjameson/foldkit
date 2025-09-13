@@ -38,6 +38,10 @@
     "./schema": {
       "types": "./dist/core/schema.d.ts",
       "import": "./dist/core/schema.js"
+    },
+    "./urlRequest": {
+      "types": "./dist/core/urlRequest.d.ts",
+      "import": "./dist/core/urlRequest.js"
     }
   },
   "files": [
@@ -71,7 +75,8 @@
     "directory": "packages/foldkit"
   },
   "dependencies": {
-    "snabbdom": "^3.6.2"
+    "snabbdom": "^3.6.2",
+    "@effect/platform-browser": "^0.70.0"
   },
   "publishConfig": {
     "access": "public"

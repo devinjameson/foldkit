@@ -383,4 +383,4 @@ const element = Runtime.makeElement({
   container: document.getElementById('root')!,
 })
 
-Effect.runFork(element)
+Runtime.run(element)
