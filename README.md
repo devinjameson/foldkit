@@ -22,7 +22,7 @@ Foldkit applies functional programming principles to UI development:
 
 The best way to get started with Foldkit is to use `create-foldkit-app`. This
 will guide you through creating a new Foldkit project with your preferred
-package manager and example.
+package manager and example template.
 
 ```bash
 npx create-foldkit-app --wizard
