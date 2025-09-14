@@ -221,34 +221,6 @@ importers:
         specifier: ^5.9.2
         version: 5.9.2
 
-  packages/create-foldkit-app/grooby:
-    dependencies:
-      effect:
-        specifier: ^3.16.8
-        version: 3.16.8
-      foldkit:
-        specifier: 0.1.0-canary.7
-        version: 0.1.0-canary.7(@effect/platform@0.90.9(effect@3.16.8))(effect@3.16.8)
-    devDependencies:
-      '@tailwindcss/vite':
-        specifier: ^4.1.10
-        version: 4.1.10(vite@5.4.19(@types/node@20.19.1)(lightningcss@1.30.1))
-      '@trivago/prettier-plugin-sort-imports':
-        specifier: ^5.2.2
-        version: 5.2.2(prettier@3.5.3)
-      prettier:
-        specifier: ^3.5.3
-        version: 3.5.3
-      tailwindcss:
-        specifier: ^4.1.10
-        version: 4.1.10
-      typescript:
-        specifier: ^5.9.2
-        version: 5.9.2
-      vite:
-        specifier: ^5.4.19
-        version: 5.4.19(@types/node@20.19.1)(lightningcss@1.30.1)
-
   packages/foldkit:
     dependencies:
       '@effect/platform-browser':
@@ -1241,12 +1213,6 @@ packages:
 
   flatted@3.3.3:
     resolution: {integrity: sha512-GX+ysw4PBCz0PzosHDepZGANEuFCMLrnRTiEy9McGjmkCQYwRq4A/X786G/fjM/+OjsWSU1ZrY5qyARZmO/uwg==}
-
-  foldkit@0.1.0-canary.7:
-    resolution: {integrity: sha512-gXtmPGXXRauGDca11h98Ykc0qrKXEb9XB8ICjV5T7IqVaWLSE8uu3+ODF/ZVCH8FQas6dC9lFxMfNS1wbb4y2Q==}
-    engines: {node: '>=18.0.0'}
-    peerDependencies:
-      effect: ^3.16.8
 
   foreground-child@3.3.1:
     resolution: {integrity: sha512-gIXjKqtFuWEgzFRJA9WCQeSJLZDjgJUOMCMzxtvFq/37KojM1BFGufqsCy0r4qSQmYLsZYMeyRqzIWOMup03sw==}
@@ -2662,14 +2628,6 @@ snapshots:
       keyv: 4.5.4
 
   flatted@3.3.3: {}
-
-  foldkit@0.1.0-canary.7(@effect/platform@0.90.9(effect@3.16.8))(effect@3.16.8):
-    dependencies:
-      '@effect/platform-browser': 0.70.0(@effect/platform@0.90.9(effect@3.16.8))(effect@3.16.8)
-      effect: 3.16.8
-      snabbdom: 3.6.2
-    transitivePeerDependencies:
-      - '@effect/platform'
 
   foreground-child@3.3.1:
     dependencies:
