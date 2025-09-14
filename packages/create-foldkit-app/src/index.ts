@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 import { Command, HelpDoc, Options } from '@effect/cli'
+import { ValidationError, isValidationError } from '@effect/cli/ValidationError'
 import { FetchHttpClient } from '@effect/platform'
 import { NodeContext, NodeRuntime } from '@effect/platform-node'
+import { PlatformError, isPlatformError } from '@effect/platform/Error'
+import { HttpClientError, isHttpClientError } from '@effect/platform/HttpClientError'
 import { Effect, Match, Option, Schema, String, flow } from 'effect'
+import { ParseError, isParseError } from 'effect/ParseResult'
 
 import { create as create_ } from './commands/create.js'
 
@@ -82,7 +86,19 @@ const cli = Command.run(create, {
   summary: HelpDoc.getSpan(HelpDoc.p('Create a new Foldkit application')),
 })
 
+const handleCliError = (
+  error: PlatformError | HttpClientError | ParseError | ValidationError | string,
+): string =>
+  Match.value(error).pipe(
+    Match.when(isPlatformError, (e) => `PlatformError: ${e.message}`),
+    Match.when(isHttpClientError, (e) => `HttpClientError: ${e.message}`),
+    Match.when(isParseError, (e) => `ParseError: ${e.message}`),
+    Match.when(isValidationError, (e) => `ValidationError:  ${HelpDoc.toAnsiText(e.error)}`),
+    Match.orElse(() => `Error: ${error}`),
+  )
+
 cli(process.argv).pipe(
+  Effect.mapError(handleCliError),
   Effect.provide([FetchHttpClient.layer, NodeContext.layer]),
   NodeRuntime.runMain,
 )
