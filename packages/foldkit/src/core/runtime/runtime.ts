@@ -42,6 +42,7 @@ export interface RuntimeConfig<Model, Message, StreamDepsMap extends Record<stri
   readonly commandStreams?: CommandStreams<Model, Message, StreamDepsMap>
   readonly container: HTMLElement
   readonly browser?: BrowserConfig<Message>
+  readonly debug?: boolean
 }
 
 export type ElementInit<Model, Message> = () => [Model, Command<Message>[]]
@@ -54,6 +55,7 @@ export interface ElementConfig<Model, Message, StreamDepsMap extends Record<stri
   readonly view: (model: Model) => Html
   readonly commandStreams?: CommandStreams<Model, Message, StreamDepsMap>
   readonly container: HTMLElement
+  readonly debug?: boolean
 }
 
 export interface ApplicationConfig<Model, Message, StreamDepsMap extends Record<string, unknown>> {
@@ -64,6 +66,7 @@ export interface ApplicationConfig<Model, Message, StreamDepsMap extends Record<
   readonly commandStreams?: CommandStreams<Model, Message, StreamDepsMap>
   readonly container: HTMLElement
   readonly browser: BrowserConfig<Message>
+  readonly debug?: boolean
 }
 
 export type CommandStreamConfig<Model, Message, StreamDeps> = {
@@ -83,8 +86,15 @@ export const makeRuntime = <Model, Message, StreamDepsMap extends Record<string,
   commandStreams,
   container,
   browser: browserConfig,
+  debug,
 }: RuntimeConfig<Model, Message, StreamDepsMap>): Effect.Effect<void> =>
   Effect.gen(function* () {
+    const isDebug = debug ?? import.meta.env.DEV
+
+    if (isDebug) {
+      console.log('🐛 Foldkit debug mode enabled')
+    }
+
     const modelEquivalence = Schema.equivalence(Model)
 
     const messageQueue = yield* Queue.unbounded<Message>()
@@ -197,8 +207,11 @@ export const makeElement = <
     init: () => config.init(),
     update: config.update,
     view: config.view,
-    ...(config.commandStreams && { commandStreams: config.commandStreams }),
+    ...(Predicate.isNotUndefined(config.commandStreams) && {
+      commandStreams: config.commandStreams,
+    }),
     container: config.container,
+    ...(Predicate.isNotUndefined(config.debug) && { debug: config.debug }),
   })
 
 export const makeApplication = <
@@ -219,9 +232,12 @@ export const makeApplication = <
     init: (url) => config.init(url || currentUrl),
     update: config.update,
     view: config.view,
-    ...(config.commandStreams && { commandStreams: config.commandStreams }),
+    ...(Predicate.isNotUndefined(config.commandStreams) && {
+      commandStreams: config.commandStreams,
+    }),
     container: config.container,
     browser: config.browser,
+    ...(Predicate.isNotUndefined(config.debug) && { debug: config.debug }),
   })
 }
 
