@@ -305,7 +305,7 @@ const app = Runtime.makeApplication({
   init,
   update,
   view,
-  container: document.body,
+  container: document.getElementById('root')!,
   browser: {
     onUrlRequest: (request) => UrlRequestReceived.make({ request }),
     onUrlChange: (url) => UrlChanged.make({ url }),

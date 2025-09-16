@@ -350,7 +350,6 @@ const notFoundView = (path: string): Html =>
     [
       h1([Class('text-4xl font-bold text-red-600 mb-6')], ['404 - Page Not Found']),
       p([Class('text-lg text-gray-600 mb-4')], [`The path "${path}" was not found.`]),
-      // TODO: Can this just be homeRouter.build()? A little cleaner.
       a([Href(homeRouter.build({})), Class('text-blue-500 hover:underline')], ['← Go Home']),
     ],
   )
@@ -376,8 +375,7 @@ const app = Runtime.makeApplication({
   init,
   update,
   view,
-  // TODO: Should this be document.getElementById('root') instead?
-  container: document.body,
+  container: document.getElementById('root')!,
   browser: {
     onUrlRequest: (request) => UrlRequestReceived.make({ request }),
     onUrlChange: (url) => UrlChanged.make({ url }),
