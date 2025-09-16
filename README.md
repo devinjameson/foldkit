@@ -25,7 +25,7 @@ will guide you through creating a new Foldkit project with your preferred
 package manager and example template.
 
 ```bash
-npx create-foldkit-app --wizard
+npx create-foldkit-app@latest --wizard
 ```
 
 ---
