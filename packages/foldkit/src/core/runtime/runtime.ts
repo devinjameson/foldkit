@@ -1,7 +1,8 @@
-import { BrowserRuntime } from '@effect/platform-browser'
+import { BrowserRuntime } from '@effect/platform-browser/index'
 import {
   Context,
   Effect,
+  Either,
   Option,
   Predicate,
   PubSub,
@@ -17,7 +18,7 @@ import { h } from 'snabbdom'
 import { FoldReturn } from '../fold'
 import { Html } from '../html'
 import { Url, UrlRequest } from '../urlRequest'
-import { VNode, patch } from '../vdom'
+import { VNode, patch, toVNode } from '../vdom'
 import { addNavigationEventListeners } from './addNavigationEventListeners'
 
 export class Dispatch extends Context.Tag('@foldkit/Dispatch')<
@@ -75,115 +76,130 @@ export type CommandStreams<Model, Message, StreamDepsMap extends Record<string, 
   readonly [K in keyof StreamDepsMap]: CommandStreamConfig<Model, Message, StreamDepsMap[K]>
 }
 
-export const makeRuntime = <Model, Message, StreamDepsMap extends Record<string, unknown>>({
-  Model,
-  init,
-  update,
-  view,
-  commandStreams,
-  container,
-  browser: browserConfig,
-}: RuntimeConfig<Model, Message, StreamDepsMap>): Effect.Effect<void> =>
-  Effect.gen(function* () {
-    const modelEquivalence = Schema.equivalence(Model)
+type MakeRuntimeReturn = (hmrModel?: unknown) => Effect.Effect<void>
 
-    const messageQueue = yield* Queue.unbounded<Message>()
-    const enqueueMessage = (message: Message) => Queue.offer(messageQueue, message)
+export const makeRuntime =
+  <Model, Message, StreamDepsMap extends Record<string, unknown>>({
+    Model,
+    init,
+    update,
+    view,
+    commandStreams,
+    container,
+    browser: browserConfig,
+  }: RuntimeConfig<Model, Message, StreamDepsMap>): MakeRuntimeReturn =>
+  (hmrModel?: unknown) =>
+    Effect.gen(function* () {
+      const modelEquivalence = Schema.equivalence(Model)
 
-    const modelPubSub = yield* PubSub.unbounded<Model>()
-    const publishModel = (model: Model) => PubSub.publish(modelPubSub, model)
+      const messageQueue = yield* Queue.unbounded<Message>()
+      const enqueueMessage = (message: Message) => Queue.offer(messageQueue, message)
 
-    const modelStream = Stream.fromPubSub(modelPubSub)
+      const modelPubSub = yield* PubSub.unbounded<Model>()
+      const publishModel = (model: Model) => PubSub.publish(modelPubSub, model)
 
-    const currentUrl: Option.Option<Url> = Option.fromNullable(browserConfig).pipe(
-      Option.map(() => ({
-        pathname: window.location.pathname,
-        search: window.location.search,
-        hash: window.location.hash,
-      })),
-    )
+      const modelStream = Stream.fromPubSub(modelPubSub)
 
-    const [initModel, initCommands] = init(Option.getOrUndefined(currentUrl))
+      const currentUrl: Option.Option<Url> = Option.fromNullable(browserConfig).pipe(
+        Option.map(() => ({
+          pathname: window.location.pathname,
+          search: window.location.search,
+          hash: window.location.hash,
+        })),
+      )
 
-    yield* Effect.forEach(initCommands, (command) =>
-      Effect.forkDaemon(command.pipe(Effect.flatMap(enqueueMessage))),
-    )
+      const [initModel, initCommands] = Predicate.isNotUndefined(hmrModel)
+        ? pipe(
+            hmrModel,
+            Schema.decodeUnknownEither(Model),
+            Either.match({
+              onLeft: () => init(Option.getOrUndefined(currentUrl)),
+              onRight: (restoredModel) => [restoredModel, []],
+            }),
+          )
+        : init(Option.getOrUndefined(currentUrl))
 
-    if (browserConfig) {
-      addNavigationEventListeners(messageQueue, browserConfig)
-    }
+      yield* Effect.forEach(initCommands, (command) =>
+        Effect.forkDaemon(command.pipe(Effect.flatMap(enqueueMessage))),
+      )
 
-    const modelRef = yield* Ref.make<Model>(initModel)
+      if (browserConfig) {
+        addNavigationEventListeners(messageQueue, browserConfig)
+      }
 
-    const previousVNodeRef = yield* Ref.make<Option.Option<VNode>>(Option.none())
+      const modelRef = yield* Ref.make<Model>(initModel)
 
-    if (commandStreams) {
-      yield* pipe(
-        commandStreams,
-        Record.toEntries,
-        Effect.forEach(
-          ([_key, { deps, stream }]) =>
-            Effect.forkDaemon(
-              modelStream.pipe(
-                Stream.map(deps),
-                Stream.changes,
-                Stream.flatMap(stream, { switch: true }),
-                Stream.runForEach(Effect.flatMap(enqueueMessage)),
+      const currentVNodeRef = yield* Ref.make<Option.Option<VNode>>(Option.none())
+
+      if (commandStreams) {
+        yield* pipe(
+          commandStreams,
+          Record.toEntries,
+          Effect.forEach(
+            ([_key, { deps, stream }]) =>
+              Effect.forkDaemon(
+                modelStream.pipe(
+                  Stream.map(deps),
+                  Stream.changes,
+                  Stream.flatMap(stream, { switch: true }),
+                  Stream.runForEach(Effect.flatMap(enqueueMessage)),
+                ),
               ),
-            ),
-          {
-            concurrency: 'unbounded',
-            discard: true,
-          },
-        ),
-      )
-    }
+            {
+              concurrency: 'unbounded',
+              discard: true,
+            },
+          ),
+        )
+      }
 
-    const render = (model: Model) =>
-      view(model).pipe(
-        Effect.flatMap((newVNode) =>
-          Effect.gen(function* () {
-            const previousVNode = yield* Ref.get(previousVNodeRef)
+      const render = (model: Model) =>
+        view(model).pipe(
+          Effect.flatMap((newVNode) =>
+            Effect.gen(function* () {
+              const currentVNode = yield* Ref.get(currentVNodeRef)
 
-            const patchedVNode = yield* Effect.sync(() => {
-              const vnode = Predicate.isNotNull(newVNode) ? newVNode : h('#text', {}, '')
-              return Option.match(previousVNode, {
-                onNone: () => patch(container, vnode),
-                onSome: (prev) => patch(prev, vnode),
+              const patchedVNode = yield* Effect.sync(() => {
+                const vnode = Predicate.isNotNull(newVNode) ? newVNode : h('#text', {}, '')
+                return Option.match(currentVNode, {
+                  onNone: () => patch(toVNode(container), vnode),
+                  onSome: (prev) => patch(prev, vnode),
+                })
               })
-            })
 
-            yield* Ref.set(previousVNodeRef, Option.some(patchedVNode))
+              yield* Ref.set(currentVNodeRef, Option.some(patchedVNode))
+            }),
+          ),
+          Effect.provideService(Dispatch, {
+            /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+            dispatch: (message: unknown) => enqueueMessage(message as Message),
           }),
-        ),
-        Effect.provideService(Dispatch, {
-          /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-          dispatch: (message: unknown) => enqueueMessage(message as Message),
-        }),
-      )
-
-    yield* render(initModel)
-
-    yield* Effect.forever(
-      Effect.gen(function* () {
-        const message = yield* Queue.take(messageQueue)
-
-        const currentModel = yield* Ref.get(modelRef)
-
-        const [nextModel, commands] = update(currentModel, message)
-
-        yield* Effect.forEach(commands, (command) =>
-          Effect.forkDaemon(command.pipe(Effect.flatMap(enqueueMessage))),
         )
 
-        if (!modelEquivalence(currentModel, nextModel)) {
-          yield* Ref.set(modelRef, nextModel)
-          yield* render(nextModel)
-          yield* publishModel(nextModel)
-        }
-      }),
-    )
-  })
+      yield* render(initModel)
+      yield* publishModel(initModel)
+
+      yield* Effect.forever(
+        Effect.gen(function* () {
+          const message = yield* Queue.take(messageQueue)
+
+          const currentModel = yield* Ref.get(modelRef)
+
+          const [nextModel, commands] = update(currentModel, message)
+
+          yield* Effect.forEach(commands, (command) =>
+            Effect.forkDaemon(command.pipe(Effect.flatMap(enqueueMessage))),
+          )
+
+          if (!modelEquivalence(currentModel, nextModel)) {
+            yield* Ref.set(modelRef, nextModel)
+            yield* render(nextModel)
+            yield* publishModel(nextModel)
+            preserveModel(nextModel)
+          }
+        }),
+      )
+    })
 
 export const makeElement = <
   Model,
@@ -191,7 +207,7 @@ export const makeElement = <
   StreamDepsMap extends Record<string, unknown>,
 >(
   config: ElementConfig<Model, Message, StreamDepsMap>,
-): Effect.Effect<void, never, never> =>
+): MakeRuntimeReturn =>
   makeRuntime({
     Model: config.Model,
     init: () => config.init(),
@@ -207,7 +223,7 @@ export const makeApplication = <
   StreamDepsMap extends Record<string, unknown>,
 >(
   config: ApplicationConfig<Model, Message, StreamDepsMap>,
-): Effect.Effect<void, never, never> => {
+): MakeRuntimeReturn => {
   const currentUrl: Url = {
     pathname: window.location.pathname,
     search: window.location.search,
@@ -225,10 +241,23 @@ export const makeApplication = <
   })
 }
 
-/**
- * Run a Foldkit application using the browser runtime.
- * This is a convenience function that wraps BrowserRuntime.runMain.
+const preserveModel = (model: unknown): void => {
+  if (import.meta.hot) {
+    import.meta.hot.send('foldkit:preserve-model', model)
+  }
+}
+
+/*
+ * Run a Foldkit application
  */
-export const run = <E, A>(effect: Effect.Effect<A, E, never>): void => {
-  BrowserRuntime.runMain(effect)
+export const run = (foldkitRuntime: MakeRuntimeReturn): void => {
+  if (import.meta.hot) {
+    import.meta.hot.on('foldkit:restore-model', (model) => {
+      BrowserRuntime.runMain(foldkitRuntime(model))
+    })
+
+    import.meta.hot.send('foldkit:request-model')
+  } else {
+    BrowserRuntime.runMain(foldkitRuntime())
+  }
 }
