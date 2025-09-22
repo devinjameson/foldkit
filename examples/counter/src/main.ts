@@ -38,7 +38,7 @@ const init: Runtime.ElementInit<Model, Message> = () => [0, []]
 
 const view = (count: Model): Html =>
   div(
-    [Class('min-h-screen bg-white flex flex-col items-center justify-center gap-6 p-6')],
+    [Class('baz min-h-screen bg-white flex flex-col items-center justify-center gap-6 p-6')],
     [
       div([Class('text-6xl font-bold text-gray-800')], [count.toString()]),
       div(

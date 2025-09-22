@@ -1,0 +1,133 @@
+# Goal
+
+Build a Vite plugin + client runtime helpers for Foldkit that enable hot-module reloading with state preservation.
+
+---
+
+# Milestones
+
+## Milestone 1 — Minimal plugin inline in `vite.config.ts`
+- Add a plugin object directly in `vite.config.ts`.
+- Use `configureServer` to hook into `server.ws`.
+- On every `.ts`/`.tsx` file change, send a custom event (`foldkit:reload`) to the client.
+- On the client, listen with `import.meta.hot.on("foldkit:reload")` and log to console.
+- **Test outcome:** change a file → browser logs “Foldkit reload triggered.”
+
+```ts
+// vite.config.ts
+import { defineConfig } from "vite"
+
+export default defineConfig({
+  plugins: [
+    {
+      name: "foldkit-hmr-prototype",
+      apply: "serve",
+      configureServer(server) {
+        server.watcher.on("change", (file) => {
+          if (/\.(ts|tsx)$/.test(file)) {
+            server.ws.send({
+              type: "custom",
+              event: "foldkit:reload",
+              data: { file },
+            })
+          }
+        })
+      },
+    },
+  ],
+})
+```
+
+```ts
+// In Foldkit
+if (import.meta.hot) {
+  import.meta.hot.on("foldkit:reload", ({ file }) => {
+    console.log("Foldkit reload triggered by:", file)
+  })
+}
+```
+
+---
+
+## Milestone 2 — Client pushes model snapshots
+- In the Foldkit runtime, call `import.meta.hot.send("foldkit:model", model)` every time the model changes.
+- On the Vite server, listen with `server.ws.on("foldkit:model", handler)` and save to a `let latestModel` variable.
+- **Test outcome:** updating model in app → dev server logs latest model.
+
+```ts
+// runtime helper
+export function pushModelToVite(model: unknown) {
+  if (import.meta.hot) {
+    import.meta.hot.send("foldkit:model", model)
+  }
+}
+
+// call inside update()
+function update(message: Message, model: Model): Model {
+  const newModel = reducer(message, model)
+  pushModelToVite(newModel)
+  return newModel
+}
+```
+
+```ts
+// vite.config.ts
+import { defineConfig } from "vite"
+
+let latestModel: unknown = null
+
+export default defineConfig({
+  plugins: [
+    {
+      name: "foldkit-hmr-prototype",
+      apply: "serve",
+      configureServer(server) {
+        server.ws.on("foldkit:model", (model) => {
+          latestModel = model
+          console.log("Stored latest model:", latestModel)
+        })
+
+        server.watcher.on("change", (file) => {
+          if (/\.(ts|tsx)$/.test(file)) {
+            server.ws.send({
+              type: "custom",
+              event: "foldkit:reload",
+              data: { file, model: latestModel },
+            })
+          }
+        })
+      },
+    },
+  ],
+})
+```
+
+---
+
+## Milestone 3 — Reload with preserved model
+- Modify `handleHotUpdate` (or `server.watcher.on("change")`) to include `latestModel` in the reload event payload.
+- On the client, `import.meta.hot.on("foldkit:reload", ({ model }) => startApp({ model }))`.
+- **Test outcome:** reload after code change → app rehydrates with the same state (e.g. counter still at 42).
+
+```ts
+if (import.meta.hot) {
+  import.meta.hot.on("foldkit:reload", ({ model }) => {
+    console.log("Restoring Foldkit model:", model)
+    startApp({ model }) // runtime initializer that accepts a model
+  })
+}
+```
+
+---
+
+## Milestone 4
+- Throttle model pushes (e.g. debounce to 50ms) to avoid spamming on fast updates.
+- Handle schema mismatches (e.g. clear model if keys don’t line up).
+- Publish as `@foldkit/vite-plugin-hmr` (new package)
+
+---
+
+# Constraints
+- Keep each milestone self-contained and testable before moving on.
+- Do not optimize prematurely; just get message flow working.
+- Assume TypeScript + Vite 5.
