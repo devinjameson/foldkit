@@ -2,29 +2,48 @@ import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
 import { Plugin, defineConfig } from 'vite'
 
-let latestModel: unknown = null
+// Store state in Vite server memory
+let preservedState: unknown = undefined
+let isHmrReload = false
 
 const foldkitHmrPlugin: Plugin = {
   name: 'foldkit-hmr-prototype',
   apply: 'serve' as const,
   configureServer(server) {
-    server.ws.on('foldkit:model', (model: unknown) => {
-      latestModel = model
-      console.log('Stored latest model:', latestModel)
+    // Listen for state preservation from client
+    server.ws.on('foldkit:preserve-state', (data) => {
+      preservedState = data.state
+      console.log('Vite server preserved state:', data.state)
     })
 
-    server.watcher.on('change', (file: string) => {
-      if (/\.ts$/.test(file)) {
-        server.ws.send({
-          type: 'custom',
-          event: 'foldkit:reload',
-          data: { file, model: latestModel },
-        })
-      }
+    // Send preserved state when client requests it
+    server.ws.on('foldkit:request-state', () => {
+      console.log('Client requested state, sending:', isHmrReload ? preservedState : undefined)
+      server.ws.send('foldkit:restore-state', { state: isHmrReload ? preservedState : undefined })
+      // Reset the flag after sending
+      isHmrReload = false
     })
   },
+  handleHotUpdate({ server, modules, timestamp }) {
+    // Check if any of the updated modules are main.ts files
+    const hasMainTs = modules.some((mod) => mod.id?.endsWith('main.ts'))
+
+    if (hasMainTs) {
+      // Mark this as an HMR reload so state is preserved
+      isHmrReload = true
+
+      // Invalidate modules manually
+      const invalidatedModules = new Set()
+      for (const mod of modules) {
+        server.moduleGraph.invalidateModule(mod, invalidatedModules, timestamp, true)
+      }
+      // Trigger full reload for Foldkit apps to ensure clean restart
+      server.ws.send({ type: 'full-reload' })
+      return []
+    }
+  },
   transform(code, id) {
-    if (id.endsWith('main.ts') || id.endsWith('main.tsx')) {
+    if (id.endsWith('main.ts')) {
       return {
         code:
           code +

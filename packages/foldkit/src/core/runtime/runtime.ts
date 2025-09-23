@@ -2,7 +2,6 @@ import {
   Context,
   Effect,
   Either,
-  Exit,
   Option,
   Predicate,
   PubSub,
@@ -10,7 +9,6 @@ import {
   Record,
   Ref,
   Schema,
-  Scope,
   Stream,
   pipe,
 } from 'effect'
@@ -19,7 +17,7 @@ import { h } from 'snabbdom'
 import { FoldReturn } from '../fold'
 import { Html } from '../html'
 import { Url, UrlRequest } from '../urlRequest'
-import { VNode, patch } from '../vdom'
+import { VNode, patch, toVNode } from '../vdom'
 import { addNavigationEventListeners } from './addNavigationEventListeners'
 
 export class Dispatch extends Context.Tag('@foldkit/Dispatch')<
@@ -162,26 +160,74 @@ export const makeRuntime =
 
       const render = (model: Model) => {
         console.log('Rendering with view function:', view.toString().slice(0, 100))
+        console.log(
+          'View function identity hash:',
+          view
+            .toString()
+            .slice(0, 200)
+            .split('')
+            .reduce((a, b) => {
+              a = (a << 5) - a + b.charCodeAt(0)
+              return a & a
+            }, 0),
+        )
         return view(model).pipe(
-          Effect.flatMap((newVNode) =>
-            Effect.gen(function* () {
+          Effect.tap((newVNode) =>
+            Effect.sync(() => console.log('RENDER: View function returned VNode:', newVNode?.sel)),
+          ),
+          Effect.flatMap((newVNode) => {
+            console.log('RENDER: Got VNode from view function, entering Effect.gen')
+            return Effect.gen(function* () {
+              console.log('RENDER: Inside Effect.gen, getting currentVNode')
               const currentVNode = yield* Ref.get(currentVNodeRef)
 
+              console.log('RENDER: About to call Effect.sync for patching')
               const patchedVNode = yield* Effect.sync(() => {
                 const vnode = Predicate.isNotNull(newVNode) ? newVNode : h('#text', {}, '')
 
                 console.log(currentVNode)
-                console.log(vnode)
+                console.log('VNode content:', JSON.stringify(vnode, null, 2))
+                console.log('About to call Option.match with currentVNode:', currentVNode)
 
-                return Option.match(currentVNode, {
-                  onNone: () => patch(container, vnode),
-                  onSome: (prev) => patch(prev, vnode),
+                const result = Option.match(currentVNode, {
+                  onNone: () => {
+                    console.log(
+                      'PATCH: Using onNone case - container innerHTML length:',
+                      container.innerHTML.length,
+                    )
+                    try {
+                      const containerVNode = toVNode(container)
+                      console.log('Created containerVNode:', containerVNode)
+                      const result = patch(containerVNode, vnode)
+                      console.log('Patch completed, result:', result)
+                      return result
+                    } catch (error) {
+                      console.error('Patch failed in onNone case:', error)
+                      throw error
+                    }
+                  },
+                  onSome: (prev) => {
+                    console.log('PATCH: Using onSome case - patching previous VNode')
+                    try {
+                      const result = patch(prev, vnode)
+                      console.log('Patch completed in onSome case, result:', result)
+                      return result
+                    } catch (error) {
+                      console.error('Patch failed in onSome case:', error)
+                      throw error
+                    }
+                  },
                 })
+
+                console.log('Option.match completed, result:', result)
+                return result
               })
 
+              console.log('RENDER: About to set currentVNodeRef')
               yield* Ref.set(currentVNodeRef, Option.some(patchedVNode))
-            }),
-          ),
+              console.log('RENDER: Render complete')
+            })
+          }),
           Effect.provideService(Dispatch, {
             /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
             dispatch: (message: unknown) => enqueueMessage(message as Message),
@@ -208,9 +254,8 @@ export const makeRuntime =
             yield* render(nextModel)
             yield* publishModel(nextModel)
 
-            if (typeof import.meta !== 'undefined' && import.meta.hot) {
-              import.meta.hot.send('foldkit:model', nextModel)
-            }
+            // Preserve state for HMR
+            preserveState(nextModel)
           }
         }),
       )
@@ -256,47 +301,32 @@ export const makeApplication = <
   })
 }
 
-const createHmrEventStream = (): Stream.Stream<{ model: unknown }> =>
-  Stream.async<{ model: unknown }>((emit) => {
-    if (typeof import.meta !== 'undefined' && import.meta.hot) {
-      import.meta.hot.on('foldkit:reload', ({ model }) => {
-        console.log('HMR event received in stream with model:', model)
-        emit.single({ model })
-      })
+const preserveState = (model: unknown): void => {
+  console.log('Preserved state for HMR:', model)
 
-      return Effect.void
-    }
+  // Send state to Vite server for persistence across full reloads
+  if (import.meta.hot) {
+    import.meta.hot.send('foldkit:preserve-state', { state: model })
+  }
+}
 
-    return Effect.void
-  })
-
-const withViteHmr = (foldkitRuntime: MakeRuntimeReturn) =>
-  Effect.gen(function* () {
-    const initialScope = yield* Scope.make()
-    const currentScopeRef = yield* Ref.make(initialScope)
-
-    yield* Scope.extend(foldkitRuntime(undefined), initialScope)
-
-    yield* createHmrEventStream().pipe(
-      Stream.runForEach(({ model }) =>
-        Effect.gen(function* () {
-          const currentScope = yield* Ref.get(currentScopeRef)
-
-          yield* Scope.close(currentScope, Exit.void)
-
-          console.log('Starting new runtime with model:', model)
-          const newScope = yield* Scope.make()
-          yield* Ref.set(currentScopeRef, newScope)
-          yield* Scope.extend(foldkitRuntime(model), newScope)
-          console.log('New scope started and stored')
-        }),
-      ),
-    )
-  })
-
-/**
+/*
  * Run a Foldkit application
  */
 export const run = (foldkitRuntime: MakeRuntimeReturn): void => {
-  pipe(foldkitRuntime, withViteHmr, Effect.runFork)
+  if (import.meta.hot) {
+    // Set up listener for state restoration
+    import.meta.hot.on('foldkit:restore-state', (data) => {
+      console.log('Received state from Vite server, starting runtime:', data.state)
+      Effect.runFork(foldkitRuntime(data.state))
+    })
+
+    // Request preserved state from Vite server
+    console.log('Requesting preserved state from Vite server')
+    import.meta.hot.send('foldkit:request-state')
+  } else {
+    // No HMR, start normally
+    console.log('Starting runtime without HMR')
+    Effect.runFork(foldkitRuntime())
+  }
 }

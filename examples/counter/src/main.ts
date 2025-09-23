@@ -3,6 +3,8 @@ import { Fold, Runtime } from 'foldkit'
 import { Class, Html, OnClick, button, div } from 'foldkit/html'
 import { ST, ts } from 'foldkit/schema'
 
+console.log('main.ts module executing at:', Date.now())
+
 // MODEL
 
 const Model = Schema.Number
@@ -46,7 +48,7 @@ const view = (count: Model): Html =>
         [
           button([OnClick(Decrement.make()), Class(buttonStyle)], ['-']),
           button([OnClick(Reset.make()), Class(buttonStyle)], ['Reset']),
-          button([OnClick(Increment.make()), Class(buttonStyle)], ['+']),
+          button([OnClick(Increment.make()), Class(buttonStyle)], ['+++']),
         ],
       ),
     ],

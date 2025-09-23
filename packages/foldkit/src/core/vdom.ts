@@ -6,9 +6,11 @@ import {
   init,
   propsModule,
   styleModule,
+  toVNode,
 } from 'snabbdom'
 
 export type { VNode } from 'snabbdom'
+export { toVNode }
 
 export const patch = init([
   attributesModule,
