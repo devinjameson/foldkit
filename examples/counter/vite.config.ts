@@ -20,6 +20,12 @@ const foldkitHmrPlugin: Plugin = {
     server.ws.on('foldkit:request-state', () => {
       console.log('Client requested state, sending:', isHmrReload ? preservedState : undefined)
       server.ws.send('foldkit:restore-state', { state: isHmrReload ? preservedState : undefined })
+
+      // If this was a manual refresh, clear the preserved state for future HMRs
+      if (!isHmrReload) {
+        preservedState = undefined
+      }
+
       // Reset the flag after sending
       isHmrReload = false
     })

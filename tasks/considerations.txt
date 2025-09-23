@@ -1,0 +1,8 @@
+For hot reloading:
+
+Production considerations:
+- Only enable in development mode
+- Add state size limits?
+- Consider multiple browser tab scenarios
+- Add opt-out mechanism for apps that don't want HMR
+

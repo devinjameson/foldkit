@@ -48,7 +48,7 @@ const view = (count: Model): Html =>
         [
           button([OnClick(Decrement.make()), Class(buttonStyle)], ['-']),
           button([OnClick(Reset.make()), Class(buttonStyle)], ['Reset']),
-          button([OnClick(Increment.make()), Class(buttonStyle)], ['+++']),
+          button([OnClick(Increment.make()), Class(buttonStyle)], ['+']),
         ],
       ),
     ],
