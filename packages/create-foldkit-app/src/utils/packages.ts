@@ -16,7 +16,14 @@ const getInstallArgs = (packageManager: PackageManager, isDev = false): string[]
 export const installDependencies = (projectPath: string, packageManager: PackageManager) =>
   Effect.gen(function* () {
     const installArgs = getInstallArgs(packageManager)
-    const installDeps = Command.make(packageManager, ...installArgs, 'foldkit', 'effect').pipe(
+    const installDeps = Command.make(
+      packageManager,
+      ...installArgs,
+      'foldkit',
+      'effect',
+      '@effect/platform',
+      '@effect/platform-browser',
+    ).pipe(
       Command.workingDirectory(projectPath),
       Command.stdout('inherit'),
       Command.stderr('inherit'),
