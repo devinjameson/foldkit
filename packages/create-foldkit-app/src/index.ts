@@ -78,7 +78,7 @@ const create = Command.make(
 
 const cli = Command.run(create, {
   name: 'Create Foldkit App',
-  version: '0.1.0-canary.7',
+  version: '0.1.0-canary.8',
   summary: HelpDoc.getSpan(HelpDoc.p('Create a new Foldkit application')),
 })
 
