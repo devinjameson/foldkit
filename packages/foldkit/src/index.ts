@@ -1,6 +1,5 @@
-export const VERSION = '0.1.0-canary.7'
+export const VERSION = '0.1.0-canary.8'
 
-// TODO: Should this be called FormValidation or FieldValidation?
 export * as FieldValidation from './core/fieldValidation'
 export * as Fold from './core/fold'
 export * as Html from './core/html'
