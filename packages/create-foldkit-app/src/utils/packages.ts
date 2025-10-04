@@ -36,6 +36,7 @@ export const installDependencies = (projectPath: string, packageManager: Package
       ...installDevArgs,
       'vite',
       'typescript',
+      '@foldkit/vite-plugin',
       '@tailwindcss/vite',
       'tailwindcss',
       '@trivago/prettier-plugin-sort-imports',
