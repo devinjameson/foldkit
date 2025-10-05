@@ -1,6 +1,6 @@
 import { Command, FileSystem, Path } from '@effect/platform'
 import chalk from 'chalk'
-import { Console, Effect } from 'effect'
+import { Console, Effect, Match } from 'effect'
 
 import { createProject } from '../utils/files.js'
 import { installDependencies } from '../utils/packages.js'
@@ -65,13 +65,21 @@ const installProjectDependencies = (projectPath: string, packageManager: Package
     yield* Console.log('')
   })
 
+const runDevServerCommand = (packageManager: PackageManager) =>
+  Match.value(packageManager).pipe(
+    Match.when('pnpm', () => 'pnpm dev'),
+    Match.when('npm', () => 'npm run dev'),
+    Match.when('yarn', () => 'yarn dev'),
+    Match.exhaustive,
+  )
+
 const displaySuccessMessage = (name: string, packageManager: PackageManager) =>
   Effect.gen(function* () {
     yield* Console.log(chalk.bold('🎉 Success! Your Foldkit app is ready.'))
     yield* Console.log('')
     yield* Console.log('Next steps:')
     yield* Console.log(`  ${chalk.cyan('cd')} ${name}`)
-    yield* Console.log(`  ${chalk.cyan(`${packageManager} dev`)}`)
+    yield* Console.log(`  ${chalk.cyan(runDevServerCommand(packageManager))}`)
     yield* Console.log('')
     yield* Console.log('Happy coding! 🎨')
   })
