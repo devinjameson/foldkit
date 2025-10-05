@@ -1,5 +1,3 @@
-export const VERSION = '0.1.0-canary.8'
-
 export * as FieldValidation from './core/fieldValidation'
 export * as Fold from './core/fold'
 export * as Html from './core/html'

@@ -1,6 +1,6 @@
 {
   "name": "create-foldkit-app",
-  "version": "0.1.0-canary.9",
+  "version": "0.1.1",
   "description": "Create Foldkit applications",
   "type": "module",
   "main": "./dist/index.js",
@@ -18,12 +18,12 @@
     "typecheck": "tsc -b --noEmit"
   },
   "dependencies": {
-    "@effect/cli": "^0.69.2",
-    "@effect/platform": "^0.90.9",
-    "@effect/platform-node": "^0.96.1",
+    "@effect/cli": "^0.71.0",
+    "@effect/platform": "^0.92.1",
+    "@effect/platform-node": "^0.98.3",
     "@types/prompts": "^2.4.9",
     "chalk": "^5.6.2",
-    "effect": "^3.16.8",
+    "effect": "^3.18.2",
     "prompts": "^2.4.2",
     "rimraf": "^6.0.1",
     "typescript": "^5.9.2"

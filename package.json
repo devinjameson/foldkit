@@ -16,16 +16,16 @@
     "dev:example:snake": "pnpm --filter snake-example run dev"
   },
   "devDependencies": {
-    "@eslint/js": "^9.29.0",
+    "@eslint/js": "^9.37.0",
     "@trivago/prettier-plugin-sort-imports": "^5.2.2",
-    "@types/node": "^20.0.0",
-    "@typescript-eslint/eslint-plugin": "^8.34.1",
-    "@typescript-eslint/parser": "^8.34.1",
-    "eslint": "^9.29.0",
-    "prettier": "^3.5.3",
+    "@types/node": "^24.6.2",
+    "@typescript-eslint/eslint-plugin": "^8.45.0",
+    "@typescript-eslint/parser": "^8.45.0",
+    "eslint": "^9.37.0",
+    "prettier": "^3.6.2",
     "rimraf": "^6.0.1",
-    "typescript": "^5.3.0",
-    "vite": "^6.0.0"
+    "typescript": "^5.9.3",
+    "vite": "^7.1.9"
   },
   "engines": {
     "node": ">=18",

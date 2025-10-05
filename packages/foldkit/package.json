@@ -1,6 +1,6 @@
 {
   "name": "foldkit",
-  "version": "0.1.0-canary.8",
+  "version": "0.1.0-canary.9",
   "description": "Elm-inspired UI framework powered by Effect",
   "type": "module",
   "main": "./dist/index.js",
@@ -54,10 +54,10 @@
     "typecheck": "tsc -b --noEmit"
   },
   "peerDependencies": {
-    "effect": "^3.16.8"
+    "effect": "^3.18.2"
   },
   "devDependencies": {
-    "effect": "^3.16.8",
+    "effect": "^3.18.2",
     "typescript": "^5.4.0"
   },
   "keywords": [
@@ -75,7 +75,7 @@
     "directory": "packages/foldkit"
   },
   "dependencies": {
-    "@effect/platform-browser": "^0.70.0",
+    "@effect/platform-browser": "^0.72.0",
     "snabbdom": "^3.6.2"
   },
   "publishConfig": {

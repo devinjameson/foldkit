@@ -8,9 +8,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "foldkit": "workspace:*",
     "@tailwindcss/vite": "^4.1.10",
-    "effect": "^3.16.8",
+    "effect": "^3.18.2",
+    "foldkit": "workspace:*",
     "tailwindcss": "^4.1.10"
   },
   "devDependencies": {

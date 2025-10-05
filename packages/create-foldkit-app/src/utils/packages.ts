@@ -19,10 +19,10 @@ export const installDependencies = (projectPath: string, packageManager: Package
     const installDeps = Command.make(
       packageManager,
       ...installArgs,
-      'foldkit',
-      'effect',
-      '@effect/platform',
-      '@effect/platform-browser',
+      'foldkit@0.1.0-canary.8',
+      'effect@^3.18.2',
+      '@tailwindcss/vite@^4.1.10',
+      'tailwindcss@^4.1.10',
     ).pipe(
       Command.workingDirectory(projectPath),
       Command.stdout('inherit'),
@@ -34,13 +34,11 @@ export const installDependencies = (projectPath: string, packageManager: Package
     const installDevDeps = Command.make(
       packageManager,
       ...installDevArgs,
-      'vite',
-      'typescript',
-      '@foldkit/vite-plugin',
-      '@tailwindcss/vite',
-      'tailwindcss',
-      '@trivago/prettier-plugin-sort-imports',
-      'prettier',
+      '@foldkit/vite-plugin@0.2.0',
+      'vite@^7.1.9',
+      'typescript@^5.9.3',
+      'prettier@^3.6.2',
+      '@trivago/prettier-plugin-sort-imports@^5.2.2',
     ).pipe(
       Command.workingDirectory(projectPath),
       Command.stdout('inherit'),
