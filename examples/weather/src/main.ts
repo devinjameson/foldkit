@@ -10,6 +10,7 @@ import {
   OnSubmit,
   Placeholder,
   Type,
+  article,
   button,
   div,
   empty,
@@ -199,7 +200,7 @@ const view = (model: Model): Html =>
   )
 
 const weatherView = (weather: WeatherData): Html =>
-  div(
+  article(
     [Class('bg-white rounded-xl shadow-lg p-8 max-w-md w-full')],
     [
       h2([Class('text-2xl font-bold text-gray-800 mb-3 text-center')], [weather.zipCode]),

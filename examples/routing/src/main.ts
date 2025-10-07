@@ -8,12 +8,17 @@ import {
   Placeholder,
   Value,
   a,
+  article,
   div,
   h1,
   h2,
+  header,
   input,
   li,
+  main,
+  nav,
   p,
+  search,
   ul,
 } from 'foldkit/html'
 import { load, pushUrl, replaceUrl } from 'foldkit/navigation'
@@ -152,28 +157,48 @@ const navigationView = (currentRoute: AppRoute): Html => {
   const navLinkClassName = (isActive: boolean) =>
     `hover:bg-blue-600 font-medium px-3 py-1 rounded transition ${isActive ? 'bg-blue-700 bg-opacity-50' : ''}`
 
-  return div(
+  return nav(
     [Class('bg-blue-500 text-white p-4 mb-6')],
     [
-      div(
-        [Class('max-w-4xl mx-auto flex gap-6')],
+      ul(
+        [Class('max-w-4xl mx-auto flex gap-6 list-none')],
         [
-          a(
-            [Href(homeRouter.build({})), Class(navLinkClassName(currentRoute._tag === 'Home'))],
-            ['Home'],
-          ),
-          a(
+          li(
+            [],
             [
-              Href(peopleRouter.build({ searchText: Option.none() })),
-              Class(
-                navLinkClassName(currentRoute._tag === 'People' || currentRoute._tag === 'Person'),
+              a(
+                [Href(homeRouter.build({})), Class(navLinkClassName(currentRoute._tag === 'Home'))],
+                ['Home'],
               ),
             ],
-            ['People'],
           ),
-          a(
-            [Href(nestedRouter.build({})), Class(navLinkClassName(currentRoute._tag === 'Nested'))],
-            ['Nested'],
+          li(
+            [],
+            [
+              a(
+                [
+                  Href(peopleRouter.build({ searchText: Option.none() })),
+                  Class(
+                    navLinkClassName(
+                      currentRoute._tag === 'People' || currentRoute._tag === 'Person',
+                    ),
+                  ),
+                ],
+                ['People'],
+              ),
+            ],
+          ),
+          li(
+            [],
+            [
+              a(
+                [
+                  Href(nestedRouter.build({})),
+                  Class(navLinkClassName(currentRoute._tag === 'Nested')),
+                ],
+                ['Nested'],
+              ),
+            ],
           ),
         ],
       ),
@@ -225,7 +250,7 @@ const peopleView = (searchText: Option.Option<string>): Html => {
     [
       h1([Class('text-4xl font-bold text-gray-800 mb-6')], ['People']),
 
-      div(
+      search(
         [Class('mb-6')],
         [
           input([
@@ -307,32 +332,37 @@ const personView = (personId: number): Html => {
             ['← Back to People'],
           ),
 
-          h1([Class('text-4xl font-bold text-gray-800 mb-6')], [person.name]),
-
-          div(
-            [Class('bg-gray-50 border border-gray-200 rounded-lg p-6')],
+          article(
+            [],
             [
+              h1([Class('text-4xl font-bold text-gray-800 mb-6')], [person.name]),
+
               div(
-                [Class('grid grid-cols-2 gap-4')],
+                [Class('bg-gray-50 border border-gray-200 rounded-lg p-6')],
                 [
                   div(
-                    [],
+                    [Class('grid grid-cols-2 gap-4')],
                     [
-                      h2(
-                        [Class('text-sm font-medium text-gray-500 uppercase tracking-wide')],
-                        ['ID'],
+                      div(
+                        [],
+                        [
+                          h2(
+                            [Class('text-sm font-medium text-gray-500 uppercase tracking-wide')],
+                            ['ID'],
+                          ),
+                          p([Class('text-lg text-gray-900 mt-1')], [String(person.id)]),
+                        ],
                       ),
-                      p([Class('text-lg text-gray-900 mt-1')], [String(person.id)]),
-                    ],
-                  ),
-                  div(
-                    [],
-                    [
-                      h2(
-                        [Class('text-sm font-medium text-gray-500 uppercase tracking-wide')],
-                        ['Role'],
+                      div(
+                        [],
+                        [
+                          h2(
+                            [Class('text-sm font-medium text-gray-500 uppercase tracking-wide')],
+                            ['Role'],
+                          ),
+                          p([Class('text-lg text-gray-900 mt-1')], [person.role]),
+                        ],
                       ),
-                      p([Class('text-lg text-gray-900 mt-1')], [person.role]),
                     ],
                   ),
                 ],
@@ -365,7 +395,10 @@ const view = (model: Model): Html => {
     }),
   )
 
-  return div([Class('min-h-screen bg-gray-100')], [navigationView(model.route), routeContent])
+  return div(
+    [Class('min-h-screen bg-gray-100')],
+    [header([], [navigationView(model.route)]), main([Class('py-8')], [routeContent])],
+  )
 }
 
 // RUN

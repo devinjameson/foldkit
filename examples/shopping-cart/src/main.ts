@@ -1,6 +1,6 @@
 import { Effect, Match, Option, Schema as S, pipe } from 'effect'
 import { Fold, Route, Runtime } from 'foldkit'
-import { Class, Href, Html, a, div, h1, p } from 'foldkit/html'
+import { Class, Href, Html, a, div, h1, header, li, main, nav, p, ul } from 'foldkit/html'
 import { load, pushUrl } from 'foldkit/navigation'
 import { literal } from 'foldkit/route'
 import { ST, ts } from 'foldkit/schema'
@@ -216,29 +216,44 @@ const navigationView = (currentRoute: AppRoute, cartCount: number): Html => {
   const navLinkClassName = (isActive: boolean) =>
     `hover:bg-blue-600 font-medium px-3 py-1 rounded transition ${isActive ? 'bg-blue-700 bg-opacity-50' : ''}`
 
-  return div(
+  return nav(
     [Class('bg-blue-500 text-white p-4 mb-6')],
     [
-      div(
-        [Class('max-w-6xl mx-auto flex gap-6 justify-center')],
+      ul(
+        [Class('max-w-6xl mx-auto flex gap-6 justify-center list-none')],
         [
-          a(
+          li(
+            [],
             [
-              Href(productsRouter.build({ searchText: Option.none() })),
-              Class(navLinkClassName(currentRoute._tag === 'Products')),
+              a(
+                [
+                  Href(productsRouter.build({ searchText: Option.none() })),
+                  Class(navLinkClassName(currentRoute._tag === 'Products')),
+                ],
+                ['Products'],
+              ),
             ],
-            ['Products'],
           ),
-          a(
-            [Href(cartRouter.build({})), Class(navLinkClassName(currentRoute._tag === 'Cart'))],
-            cartCount > 0 ? [`Cart (${cartCount})`] : ['Cart'],
-          ),
-          a(
+          li(
+            [],
             [
-              Href(checkoutRouter.build({})),
-              Class(navLinkClassName(currentRoute._tag === 'Checkout')),
+              a(
+                [Href(cartRouter.build({})), Class(navLinkClassName(currentRoute._tag === 'Cart'))],
+                cartCount > 0 ? [`Cart (${cartCount})`] : ['Cart'],
+              ),
             ],
-            ['Checkout'],
+          ),
+          li(
+            [],
+            [
+              a(
+                [
+                  Href(checkoutRouter.build({})),
+                  Class(navLinkClassName(currentRoute._tag === 'Checkout')),
+                ],
+                ['Checkout'],
+              ),
+            ],
           ),
         ],
       ),
@@ -309,8 +324,8 @@ const view = (model: Model): Html => {
   return div(
     [Class('min-h-screen bg-gray-100')],
     [
-      navigationView(model.route, Cart.totalItems(model.cart)),
-      div([Class('py-8')], [routeContent]),
+      header([], [navigationView(model.route, Cart.totalItems(model.cart))]),
+      main([Class('py-8')], [routeContent]),
     ],
   )
 }

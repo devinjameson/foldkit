@@ -1,6 +1,20 @@
 import { Array, Option } from 'effect'
 import { Route } from 'foldkit'
-import { Class, Href, Html, OnClick, a, button, div, h1, h3, p, span } from 'foldkit/html'
+import {
+  Class,
+  Href,
+  Html,
+  OnClick,
+  a,
+  article,
+  button,
+  div,
+  h1,
+  h3,
+  p,
+  section,
+  span,
+} from 'foldkit/html'
 
 import { Cart } from '../domain'
 import type { CheckoutRoute, ProductsRoute } from '../main'
@@ -43,10 +57,10 @@ export const view = <ParentMessage>(
                 ),
               ],
               onNonEmpty: (cart) => [
-                div(
+                section(
                   [Class('space-y-4 mb-6')],
                   cart.map((cartItem) =>
-                    div(
+                    article(
                       [Class('flex items-center justify-between p-4 border rounded-lg')],
                       [
                         div(

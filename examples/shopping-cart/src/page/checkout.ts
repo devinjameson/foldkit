@@ -9,12 +9,14 @@ import {
   Placeholder,
   Value,
   a,
+  article,
   button,
   div,
   h1,
   h2,
   h3,
   p,
+  section,
   span,
   textarea,
 } from 'foldkit/html'
@@ -38,7 +40,7 @@ export const view = <ParentMessage>(
       [Class('max-w-4xl mx-auto px-4 text-center')],
       [
         h1([Class('text-4xl font-bold text-green-600 mb-8')], ['Order placed successfully!']),
-        div(
+        article(
           [Class('bg-green-50 border border-green-200 rounded-lg p-6 mb-6')],
           [
             p(
@@ -86,27 +88,32 @@ export const view = <ParentMessage>(
             ),
           ],
           onNonEmpty: (cart) => [
-            h2([Class('text-2xl font-bold text-gray-800 mb-4')], ['Order Summary']),
-            div(
-              [Class('space-y-2 mb-6')],
-              cart.map((cartItem) =>
+            section(
+              [],
+              [
+                h2([Class('text-2xl font-bold text-gray-800 mb-4')], ['Order Summary']),
                 div(
-                  [Class('flex justify-between items-center py-2 border-b')],
-                  [
+                  [Class('space-y-2 mb-6')],
+                  cart.map((cartItem) =>
                     div(
-                      [],
+                      [Class('flex justify-between items-center py-2 border-b')],
                       [
-                        span([Class('font-medium')], [cartItem.item.name]),
-                        span([Class('text-gray-600 ml-2')], [`× ${cartItem.quantity}`]),
+                        div(
+                          [],
+                          [
+                            span([Class('font-medium')], [cartItem.item.name]),
+                            span([Class('text-gray-600 ml-2')], [`× ${cartItem.quantity}`]),
+                          ],
+                        ),
+                        span(
+                          [Class('font-medium')],
+                          [`$${(cartItem.item.price * cartItem.quantity).toFixed(2)}`],
+                        ),
                       ],
                     ),
-                    span(
-                      [Class('font-medium')],
-                      [`$${(cartItem.item.price * cartItem.quantity).toFixed(2)}`],
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
             div(
               [Class('flex justify-between items-center text-xl font-bold mb-6')],

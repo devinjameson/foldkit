@@ -10,6 +10,7 @@ import {
   Placeholder,
   Value,
   a,
+  article,
   button,
   div,
   empty,
@@ -17,6 +18,8 @@ import {
   h3,
   input,
   p,
+  search,
+  section,
   span,
 } from 'foldkit/html'
 import { replaceUrl } from 'foldkit/navigation'
@@ -94,7 +97,7 @@ export const view = <ParentMessage>(
       div(
         [Class('bg-white rounded-lg shadow p-6')],
         [
-          div(
+          search(
             [Class('mb-6')],
             [
               input([
@@ -107,10 +110,10 @@ export const view = <ParentMessage>(
               ]),
             ],
           ),
-          div(
+          section(
             [Class('grid gap-4')],
             filteredProducts.map((product) =>
-              div(
+              article(
                 [Class('flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50')],
                 [
                   div(
