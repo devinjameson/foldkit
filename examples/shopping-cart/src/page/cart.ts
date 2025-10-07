@@ -1,24 +1,9 @@
-import { Array, Option, Schema as S } from 'effect'
+import { Array, Option } from 'effect'
 import { Route } from 'foldkit'
 import { Class, Href, Html, OnClick, a, button, div, h1, h3, p, span } from 'foldkit/html'
-import { ST, ts } from 'foldkit/schema'
 
 import { Cart } from '../domain'
 import type { CheckoutRoute, ProductsRoute } from '../main'
-
-// MESSAGE
-
-const ChangeQuantity = ts('ChangeQuantity', { itemId: S.String, quantity: S.Number })
-const RemoveFromCart = ts('RemoveFromCart', { itemId: S.String })
-const ClearCart = ts('ClearCart')
-
-export const Message = S.Union(ChangeQuantity, RemoveFromCart, ClearCart)
-
-type ChangeQuantity = ST<typeof ChangeQuantity>
-type RemoveFromCart = ST<typeof RemoveFromCart>
-type ClearCart = ST<typeof ClearCart>
-
-export type Message = ST<typeof Message>
 
 // VIEW
 
@@ -26,7 +11,9 @@ export const view = <ParentMessage>(
   cart: Cart.Cart,
   productsRouter: Route.Router<ProductsRoute>,
   checkoutRouter: Route.Router<CheckoutRoute>,
-  toMessage: (message: Message) => ParentMessage,
+  onChangeQuantity: (itemId: string, quantity: number) => ParentMessage,
+  onRemoveFromCart: (itemId: string) => ParentMessage,
+  onClearCart: () => ParentMessage,
 ): Html => {
   return div(
     [Class('max-w-4xl mx-auto px-4')],
@@ -80,14 +67,7 @@ export const view = <ParentMessage>(
                                 Class(
                                   'bg-gray-200 hover:bg-gray-300 text-gray-800 w-8 h-8 rounded flex items-center justify-center',
                                 ),
-                                OnClick(
-                                  toMessage(
-                                    ChangeQuantity.make({
-                                      itemId: cartItem.item.id,
-                                      quantity: cartItem.quantity - 1,
-                                    }),
-                                  ),
-                                ),
+                                OnClick(onChangeQuantity(cartItem.item.id, cartItem.quantity - 1)),
                               ],
                               ['-'],
                             ),
@@ -97,14 +77,7 @@ export const view = <ParentMessage>(
                                 Class(
                                   'bg-gray-200 hover:bg-gray-300 text-gray-800 w-8 h-8 rounded flex items-center justify-center',
                                 ),
-                                OnClick(
-                                  toMessage(
-                                    ChangeQuantity.make({
-                                      itemId: cartItem.item.id,
-                                      quantity: cartItem.quantity + 1,
-                                    }),
-                                  ),
-                                ),
+                                OnClick(onChangeQuantity(cartItem.item.id, cartItem.quantity + 1)),
                               ],
                               ['+'],
                             ),
@@ -113,9 +86,7 @@ export const view = <ParentMessage>(
                                 Class(
                                   'bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded ml-2',
                                 ),
-                                OnClick(
-                                  toMessage(RemoveFromCart.make({ itemId: cartItem.item.id })),
-                                ),
+                                OnClick(onRemoveFromCart(cartItem.item.id)),
                               ],
                               ['Remove'],
                             ),
@@ -159,7 +130,7 @@ export const view = <ParentMessage>(
                         Class(
                           'bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-medium',
                         ),
-                        OnClick(toMessage(ClearCart.make())),
+                        OnClick(onClearCart()),
                       ],
                       ['Clear Cart'],
                     ),

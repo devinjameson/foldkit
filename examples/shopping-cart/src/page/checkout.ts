@@ -1,4 +1,4 @@
-import { Array, Option, Schema as S } from 'effect'
+import { Array, Option } from 'effect'
 import { Route } from 'foldkit'
 import {
   Class,
@@ -18,22 +18,9 @@ import {
   span,
   textarea,
 } from 'foldkit/html'
-import { ST, ts } from 'foldkit/schema'
 
 import { Cart } from '../domain'
 import type { CartRoute, ProductsRoute } from '../main'
-
-// MESSAGE
-
-const UpdateDeliveryInstructions = ts('UpdateDeliveryInstructions', { value: S.String })
-const PlaceOrder = ts('PlaceOrder')
-
-export const Message = S.Union(UpdateDeliveryInstructions, PlaceOrder)
-
-type UpdateDeliveryInstructions = ST<typeof UpdateDeliveryInstructions>
-type PlaceOrder = ST<typeof PlaceOrder>
-
-export type Message = ST<typeof Message>
 
 // VIEW
 
@@ -43,7 +30,8 @@ export const view = <ParentMessage>(
   orderPlaced: boolean,
   productsRouter: Route.Router<ProductsRoute>,
   cartRouter: Route.Router<CartRoute>,
-  toMessage: (message: Message) => ParentMessage,
+  onUpdateDeliveryInstructions: (value: string) => ParentMessage,
+  onPlaceOrder: () => ParentMessage,
 ): Html => {
   if (orderPlaced) {
     return div(
@@ -142,9 +130,7 @@ export const view = <ParentMessage>(
                   Class(
                     'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-24 resize-none',
                   ),
-                  OnChange((value: string) =>
-                    toMessage(UpdateDeliveryInstructions.make({ value })),
-                  ),
+                  OnChange((value: string) => onUpdateDeliveryInstructions(value)),
                 ]),
               ],
             ),
@@ -165,7 +151,7 @@ export const view = <ParentMessage>(
                     Class(
                       'bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium',
                     ),
-                    OnClick(toMessage(PlaceOrder.make())),
+                    OnClick(onPlaceOrder()),
                   ],
                   ['Place Order'],
                 ),

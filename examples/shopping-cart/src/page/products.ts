@@ -37,15 +37,11 @@ export type Model = S.Schema.Type<typeof Model>
 
 const NoOp = ts('NoOp')
 const SearchInputChanged = ts('SearchInputChanged', { value: S.String })
-const AddToCartClicked = ts('AddToCartClicked', { item: Item.Item })
-const QuantityChangeClicked = ts('QuantityChangeClicked', { itemId: S.String, quantity: S.Number })
 
-export const Message = S.Union(NoOp, SearchInputChanged, AddToCartClicked, QuantityChangeClicked)
+export const Message = S.Union(NoOp, SearchInputChanged)
 
 type NoOp = ST<typeof NoOp>
 type SearchInputChanged = ST<typeof SearchInputChanged>
-type AddToCartClicked = ST<typeof AddToCartClicked>
-type QuantityChangeClicked = ST<typeof QuantityChangeClicked>
 
 export type Message = ST<typeof Message>
 
@@ -73,9 +69,6 @@ export const update = (productsRouter: Route.Router<ExtractTag<AppRoute, 'Produc
         ),
       ],
     ],
-
-    AddToCartClicked: (model) => [model, []],
-    QuantityChangeClicked: (model) => [model, []],
   })
 
 // VIEW
@@ -85,6 +78,8 @@ export const view = <ParentMessage>(
   cart: Cart.Cart,
   cartRouter: Route.Router<CartRoute>,
   toMessage: (message: Message) => ParentMessage,
+  onAddToCart: (item: Item.Item) => ParentMessage,
+  onQuantityChange: (itemId: string, quantity: number) => ParentMessage,
 ): Html => {
   const filteredProducts = model.searchText
     ? model.products.filter((product) =>
@@ -131,7 +126,7 @@ export const view = <ParentMessage>(
                           Class(
                             'bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium',
                           ),
-                          OnClick(toMessage(AddToCartClicked.make({ item: product }))),
+                          OnClick(onAddToCart(product)),
                         ],
                         ['Add to Cart'],
                       )
@@ -144,11 +139,9 @@ export const view = <ParentMessage>(
                                 'bg-gray-200 hover:bg-gray-300 text-gray-800 w-8 h-8 rounded flex items-center justify-center',
                               ),
                               OnClick(
-                                toMessage(
-                                  QuantityChangeClicked.make({
-                                    itemId: product.id,
-                                    quantity: Cart.itemQuantity(product.id)(cart) - 1,
-                                  }),
+                                onQuantityChange(
+                                  product.id,
+                                  Cart.itemQuantity(product.id)(cart) - 1,
                                 ),
                               ),
                             ],
@@ -164,11 +157,9 @@ export const view = <ParentMessage>(
                                 'bg-gray-200 hover:bg-gray-300 text-gray-800 w-8 h-8 rounded flex items-center justify-center',
                               ),
                               OnClick(
-                                toMessage(
-                                  QuantityChangeClicked.make({
-                                    itemId: product.id,
-                                    quantity: Cart.itemQuantity(product.id)(cart) + 1,
-                                  }),
+                                onQuantityChange(
+                                  product.id,
+                                  Cart.itemQuantity(product.id)(cart) + 1,
                                 ),
                               ),
                             ],

@@ -7,7 +7,7 @@ import { ST, ts } from 'foldkit/schema'
 import { Url, UrlRequest } from 'foldkit/urlRequest'
 
 import { products } from './data/products'
-import { Cart } from './domain'
+import { Cart, Item } from './domain'
 import { Cart as CartPage, Checkout, Products } from './page'
 
 // ROUTE
@@ -53,24 +53,39 @@ const NoOp = ts('NoOp')
 const UrlRequestReceived = ts('UrlRequestReceived', { request: UrlRequest })
 const UrlChanged = ts('UrlChanged', { url: Url })
 const ProductsMessage = ts('ProductsMessage', { message: Products.Message })
-const CartMessage = ts('CartMessage', { message: CartPage.Message })
-const CheckoutMessage = ts('CheckoutMessage', { message: Checkout.Message })
+const AddToCartClicked = ts('AddToCartClicked', { item: Item.Item })
+const QuantityChangeClicked = ts('QuantityChangeClicked', { itemId: S.String, quantity: S.Number })
+const ChangeCartQuantity = ts('ChangeCartQuantity', { itemId: S.String, quantity: S.Number })
+const RemoveFromCart = ts('RemoveFromCart', { itemId: S.String })
+const ClearCart = ts('ClearCart')
+const UpdateDeliveryInstructions = ts('UpdateDeliveryInstructions', { value: S.String })
+const PlaceOrder = ts('PlaceOrder')
 
 export const Message = S.Union(
   NoOp,
   UrlRequestReceived,
   UrlChanged,
   ProductsMessage,
-  CartMessage,
-  CheckoutMessage,
+  AddToCartClicked,
+  QuantityChangeClicked,
+  ChangeCartQuantity,
+  RemoveFromCart,
+  ClearCart,
+  UpdateDeliveryInstructions,
+  PlaceOrder,
 )
 
 type NoOp = ST<typeof NoOp>
 type UrlRequestReceived = ST<typeof UrlRequestReceived>
 type UrlChanged = ST<typeof UrlChanged>
 type ProductsMessage = ST<typeof ProductsMessage>
-type CartMessage = ST<typeof CartMessage>
-type CheckoutMessage = ST<typeof CheckoutMessage>
+type AddToCartClicked = ST<typeof AddToCartClicked>
+type QuantityChangeClicked = ST<typeof QuantityChangeClicked>
+type ChangeCartQuantity = ST<typeof ChangeCartQuantity>
+type RemoveFromCart = ST<typeof RemoveFromCart>
+type ClearCart = ST<typeof ClearCart>
+type UpdateDeliveryInstructions = ST<typeof UpdateDeliveryInstructions>
+type PlaceOrder = ST<typeof PlaceOrder>
 
 export type Message = ST<typeof Message>
 
@@ -125,81 +140,72 @@ const update = Fold.fold<Model, Message>({
       message,
     )
 
-    const newModel = pipe(
-      Match.value(message),
-      Match.tagsExhaustive({
-        NoOp: () => ({
-          ...model,
-          productsPage: newProductsModel,
-        }),
-
-        SearchInputChanged: () => ({
-          ...model,
-          productsPage: newProductsModel,
-        }),
-
-        AddToCartClicked: ({ item }) => ({
-          ...model,
-          productsPage: newProductsModel,
-          cart: Cart.addItem(item)(model.cart),
-        }),
-
-        QuantityChangeClicked: ({ itemId, quantity }) => ({
-          ...model,
-          productsPage: newProductsModel,
-          cart: Cart.changeQuantity(itemId, quantity)(model.cart),
-        }),
-      }),
-    )
-
     return [
-      newModel,
+      {
+        ...model,
+        productsPage: newProductsModel,
+      },
       productsCommand.map(
         Effect.map((productsMessage) => ProductsMessage.make({ message: productsMessage })),
       ),
     ]
   },
 
-  CartMessage: (model, { message }) => [
-    pipe(
-      Match.value(message),
-      Match.tagsExhaustive({
-        ChangeQuantity: ({ itemId, quantity }) => ({
-          ...model,
-          cart: Cart.changeQuantity(itemId, quantity)(model.cart),
-        }),
-
-        RemoveFromCart: ({ itemId }) => ({
-          ...model,
-          cart: Cart.removeItem(itemId)(model.cart),
-        }),
-
-        ClearCart: () => ({
-          ...model,
-          cart: [],
-        }),
-      }),
-    ),
+  AddToCartClicked: (model, { item }) => [
+    {
+      ...model,
+      cart: Cart.addItem(item)(model.cart),
+    },
     [],
   ],
 
-  CheckoutMessage: (model, { message }) => [
-    pipe(
-      Match.value(message),
-      Match.tagsExhaustive({
-        UpdateDeliveryInstructions: ({ value }) => ({
-          ...model,
-          deliveryInstructions: value,
-        }),
+  QuantityChangeClicked: (model, { itemId, quantity }) => [
+    {
+      ...model,
+      cart: Cart.changeQuantity(itemId, quantity)(model.cart),
+    },
+    [],
+  ],
 
-        PlaceOrder: () => ({
-          ...model,
-          orderPlaced: true,
-          cart: [],
-          deliveryInstructions: '',
-        }),
-      }),
-    ),
+  ChangeCartQuantity: (model, { itemId, quantity }) => [
+    {
+      ...model,
+      cart: Cart.changeQuantity(itemId, quantity)(model.cart),
+    },
+    [],
+  ],
+
+  RemoveFromCart: (model, { itemId }) => [
+    {
+      ...model,
+      cart: Cart.removeItem(itemId)(model.cart),
+    },
+    [],
+  ],
+
+  ClearCart: (model) => [
+    {
+      ...model,
+      cart: [],
+    },
+    [],
+  ],
+
+  UpdateDeliveryInstructions: (model, { value }) => [
+    {
+      ...model,
+      deliveryInstructions: value,
+    },
+    [],
+  ],
+
+  PlaceOrder: (model) => [
+    {
+      ...model,
+      orderPlaced: true,
+      cart: [],
+      deliveryInstructions: '',
+    },
     [],
   ],
 })
@@ -241,25 +247,36 @@ const navigationView = (currentRoute: AppRoute, cartCount: number): Html => {
 }
 
 const productsView = (model: Model): Html => {
-  return Products.view(model.productsPage, model.cart, cartRouter, (message) =>
-    ProductsMessage.make({ message }),
+  return Products.view<Message>(
+    model.productsPage,
+    model.cart,
+    cartRouter,
+    (message) => ProductsMessage.make({ message }),
+    (item) => AddToCartClicked.make({ item }),
+    (itemId, quantity) => QuantityChangeClicked.make({ itemId, quantity }),
   )
 }
 
 const cartView = (model: Model): Html => {
-  return CartPage.view(model.cart, productsRouter, checkoutRouter, (message) =>
-    CartMessage.make({ message }),
+  return CartPage.view<Message>(
+    model.cart,
+    productsRouter,
+    checkoutRouter,
+    (itemId, quantity) => ChangeCartQuantity.make({ itemId, quantity }),
+    (itemId) => RemoveFromCart.make({ itemId }),
+    () => ClearCart.make(),
   )
 }
 
 const checkoutView = (model: Model): Html => {
-  return Checkout.view(
+  return Checkout.view<Message>(
     model.cart,
     model.deliveryInstructions,
     model.orderPlaced,
     productsRouter,
     cartRouter,
-    (message) => CheckoutMessage.make({ message }),
+    (value) => UpdateDeliveryInstructions.make({ value }),
+    () => PlaceOrder.make(),
   )
 }
 
