@@ -19,7 +19,7 @@ export const installDependencies = (projectPath: string, packageManager: Package
     const installDeps = Command.make(
       packageManager,
       ...installArgs,
-      'foldkit@0.1.0-canary.8',
+      'foldkit@0.1.0-canary.10',
       'effect@^3.18.2',
       '@tailwindcss/vite@^4.1.10',
       'tailwindcss@^4.1.10',
