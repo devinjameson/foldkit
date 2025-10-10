@@ -1,3 +1,5 @@
+![npm version](https://img.shields.io/npm/v/foldkit)
+
 # Foldkit
 
 > ⚠️ **Experimental**: Foldkit is in canary release for early adopters and experimenters. APIs are incomplete and may change rapidly.
