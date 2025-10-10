@@ -5,8 +5,8 @@ import {
   For,
   Html,
   Id,
-  OnChange,
   OnClick,
+  OnInput,
   OnSubmit,
   Placeholder,
   Type,
@@ -376,7 +376,7 @@ const editingTodoView = (todo: Todo, text: string): Html =>
         Class(
           'flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500',
         ),
-        OnChange((text) => UpdateEditingTodo.make({ text })),
+        OnInput((text) => UpdateEditingTodo.make({ text })),
       ]),
       button(
         [
@@ -534,7 +534,7 @@ const view = (model: Model): Html => {
                     Class(
                       'flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
                     ),
-                    OnChange((text) => UpdateNewTodo.make({ text })),
+                    OnInput((text) => UpdateNewTodo.make({ text })),
                   ]),
                   button(
                     [

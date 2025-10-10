@@ -5,8 +5,8 @@ import {
   Class,
   Href,
   Html,
-  OnChange,
   OnClick,
+  OnInput,
   Placeholder,
   Value,
   a,
@@ -106,7 +106,7 @@ export const view = <ParentMessage>(
                 Class(
                   'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
                 ),
-                OnChange((value: string) => toMessage(SearchInputChanged.make({ value }))),
+                OnInput((value: string) => toMessage(SearchInputChanged.make({ value }))),
               ]),
             ],
           ),

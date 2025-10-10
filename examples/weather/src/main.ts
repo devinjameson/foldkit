@@ -6,7 +6,7 @@ import {
   For,
   Html,
   Id,
-  OnChange,
+  OnInput,
   OnSubmit,
   Placeholder,
   Type,
@@ -171,7 +171,7 @@ const view = (model: Model): Html =>
               'w-full px-4 py-2 rounded-lg border-2 border-blue-300 focus:border-blue-500 outline-none',
             ),
             Placeholder('Enter a zip code'),
-            OnChange((value) => UpdateZipCodeInput.make({ value })),
+            OnInput((value) => UpdateZipCodeInput.make({ value })),
           ]),
           button(
             [

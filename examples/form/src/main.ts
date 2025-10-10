@@ -7,7 +7,7 @@ import {
   For,
   Html,
   Id,
-  OnChange,
+  OnInput,
   OnSubmit,
   Type,
   Value,
@@ -287,8 +287,8 @@ const fieldView = (
         ],
       ),
       type === 'textarea'
-        ? textarea([Id(id), Value(value), Class(inputClass), OnChange(onUpdate)])
-        : input([Id(id), Type(type), Value(value), Class(inputClass), OnChange(onUpdate)]),
+        ? textarea([Id(id), Value(value), Class(inputClass), OnInput(onUpdate)])
+        : input([Id(id), Type(type), Value(value), Class(inputClass), OnInput(onUpdate)]),
 
       Field.$match(field, {
         NotValidated: () => empty,

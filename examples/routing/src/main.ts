@@ -4,7 +4,7 @@ import {
   Class,
   Href,
   Html,
-  OnChange,
+  OnInput,
   Placeholder,
   Value,
   a,
@@ -259,7 +259,7 @@ const peopleView = (searchText: Option.Option<string>): Html => {
             Class(
               'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
             ),
-            OnChange((value) => SearchInputChanged.make({ value })),
+            OnInput((value) => SearchInputChanged.make({ value })),
           ]),
         ],
       ),
