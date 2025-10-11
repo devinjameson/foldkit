@@ -39,6 +39,10 @@ export const installDependencies = (projectPath: string, packageManager: Package
       'typescript@^5.9.3',
       'prettier@^3.6.2',
       '@trivago/prettier-plugin-sort-imports@^5.2.2',
+      'eslint@^9.37.0',
+      '@eslint/js@^9.37.0',
+      '@typescript-eslint/eslint-plugin@^8.45.0',
+      '@typescript-eslint/parser@^8.45.0',
     ).pipe(
       Command.workingDirectory(projectPath),
       Command.stdout('inherit'),
