@@ -82,7 +82,8 @@ const createBaseFiles = (projectPath: string) =>
       Effect.forEach(
         ([filePath, content]) =>
           Effect.gen(function* () {
-            const fullPath = path.join(projectPath, filePath)
+            const targetPath = filePath === 'gitignore' ? '.gitignore' : filePath
+            const fullPath = path.join(projectPath, targetPath)
             const dirPath = path.dirname(fullPath)
             yield* fs.makeDirectory(dirPath, { recursive: true })
             yield* fs.writeFileString(fullPath, content)
