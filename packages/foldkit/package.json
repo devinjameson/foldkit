@@ -12,32 +12,32 @@
       "import": "./dist/index.js"
     },
     "./html": {
-      "types": "./dist/core/html.d.ts",
-      "import": "./dist/core/html.js"
+      "types": "./dist/html.d.ts",
+      "import": "./dist/html.js"
     },
     "./navigation": {
-      "types": "./dist/core/navigation.d.ts",
-      "import": "./dist/core/navigation.js"
+      "types": "./dist/navigation.d.ts",
+      "import": "./dist/navigation.js"
     },
     "./route": {
-      "types": "./dist/core/route.d.ts",
-      "import": "./dist/core/route.js"
+      "types": "./dist/route.d.ts",
+      "import": "./dist/route.js"
     },
     "./runtime": {
-      "types": "./dist/core/runtime/index.d.ts",
-      "import": "./dist/core/runtime/index.js"
+      "types": "./dist/runtime/index.d.ts",
+      "import": "./dist/runtime/index.js"
     },
     "./fieldValidation": {
-      "types": "./dist/core/fieldValidation.d.ts",
-      "import": "./dist/core/fieldValidation.js"
+      "types": "./dist/fieldValidation.d.ts",
+      "import": "./dist/fieldValidation.js"
     },
     "./schema": {
-      "types": "./dist/core/schema.d.ts",
-      "import": "./dist/core/schema.js"
+      "types": "./dist/schema.d.ts",
+      "import": "./dist/schema.js"
     },
     "./urlRequest": {
-      "types": "./dist/core/urlRequest.d.ts",
-      "import": "./dist/core/urlRequest.js"
+      "types": "./dist/urlRequest.d.ts",
+      "import": "./dist/urlRequest.js"
     }
   },
   "files": [
