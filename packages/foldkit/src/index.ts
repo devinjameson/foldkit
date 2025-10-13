@@ -1,5 +1,4 @@
 export * as FieldValidation from './core/fieldValidation'
-export * as Fold from './core/fold'
 export * as Html from './core/html'
 export * as Navigation from './core/navigation'
 export * as Route from './core/route'

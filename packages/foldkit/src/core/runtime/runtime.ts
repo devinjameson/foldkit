@@ -15,7 +15,6 @@ import {
 } from 'effect'
 import { h } from 'snabbdom'
 
-import { FoldReturn } from '../fold'
 import { Html } from '../html'
 import { Url, UrlRequest } from '../urlRequest'
 import { VNode, patch, toVNode } from '../vdom'
@@ -38,7 +37,7 @@ export type BrowserConfig<Message> = {
 export interface RuntimeConfig<Model, Message, StreamDepsMap extends Record<string, unknown>> {
   Model: Schema.Schema<Model, any, never>
   readonly init: (url?: Url) => [Model, Command<Message>[]]
-  readonly update: FoldReturn<Model, Message>
+  readonly update: (model: Model, message: Message) => [Model, Command<Message>[]]
   readonly view: (model: Model) => Html
   readonly commandStreams?: CommandStreams<Model, Message, StreamDepsMap>
   readonly container: HTMLElement
@@ -51,7 +50,7 @@ export type ApplicationInit<Model, Message> = (url: Url) => [Model, Command<Mess
 export interface ElementConfig<Model, Message, StreamDepsMap extends Record<string, unknown>> {
   readonly Model: Schema.Schema<Model, any, never>
   readonly init: ElementInit<Model, Message>
-  readonly update: FoldReturn<Model, Message>
+  readonly update: (model: Model, message: Message) => [Model, Command<Message>[]]
   readonly view: (model: Model) => Html
   readonly commandStreams?: CommandStreams<Model, Message, StreamDepsMap>
   readonly container: HTMLElement
@@ -60,7 +59,7 @@ export interface ElementConfig<Model, Message, StreamDepsMap extends Record<stri
 export interface ApplicationConfig<Model, Message, StreamDepsMap extends Record<string, unknown>> {
   readonly Model: Schema.Schema<Model, any, never>
   readonly init: ApplicationInit<Model, Message>
-  readonly update: FoldReturn<Model, Message>
+  readonly update: (model: Model, message: Message) => [Model, Command<Message>[]]
   readonly view: (model: Model) => Html
   readonly commandStreams?: CommandStreams<Model, Message, StreamDepsMap>
   readonly container: HTMLElement

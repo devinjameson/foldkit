@@ -27,10 +27,6 @@
       "types": "./dist/core/runtime/index.d.ts",
       "import": "./dist/core/runtime/index.js"
     },
-    "./fold": {
-      "types": "./dist/core/fold.d.ts",
-      "import": "./dist/core/fold.js"
-    },
     "./fieldValidation": {
       "types": "./dist/core/fieldValidation.d.ts",
       "import": "./dist/core/fieldValidation.js"
