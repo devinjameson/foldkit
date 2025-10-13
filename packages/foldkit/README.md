@@ -15,8 +15,8 @@ npm install foldkit effect
 ## Counter Example
 
 ```typescript
-import { Effect, Schema } from 'effect'
-import { Fold, Runtime } from 'foldkit'
+import { Match as M, Schema } from 'effect'
+import { Runtime } from 'foldkit'
 import { Class, Html, OnClick, button, div } from 'foldkit/html'
 import { ST, ts } from 'foldkit/schema'
 
@@ -41,11 +41,15 @@ type Message = ST<typeof Message>
 
 // UPDATE
 
-const update = Fold.fold<Model, Message>({
-  Decrement: (count) => [count - 1, []],
-  Increment: (count) => [count + 1, []],
-  Reset: () => [0, []],
-})
+const update = (count: Model, message: Message): [Model, Runtime.Command<Message>[]] =>
+  M.value(message).pipe(
+    M.withReturnType<[Model, Runtime.Command<Message>[]]>(),
+    M.tagsExhaustive({
+      Decrement: () => [count - 1, []],
+      Increment: () => [count + 1, []],
+      Reset: () => [0, []],
+    }),
+  )
 
 // INIT
 
