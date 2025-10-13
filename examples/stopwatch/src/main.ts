@@ -1,5 +1,15 @@
-import { Clock, Duration, Effect, Schema as S, Stream, String, flow, pipe } from 'effect'
-import { Fold, Runtime } from 'foldkit'
+import {
+  Clock,
+  Duration,
+  Effect,
+  Match as M,
+  Schema as S,
+  Stream,
+  String,
+  flow,
+  pipe,
+} from 'effect'
+import { Runtime } from 'foldkit'
 import { Class, Html, OnClick, button, div } from 'foldkit/html'
 import { ST, ts } from 'foldkit/schema'
 
@@ -34,61 +44,65 @@ type GotTick = ST<typeof GotTick>
 
 export type Message = ST<typeof Message>
 
-const update = Fold.fold<Model, Message>({
-  RequestStart: (model) => [
-    model,
-    [
-      Effect.gen(function* () {
-        const now = yield* Clock.currentTimeMillis
-        return GotStartTime.make({ startTime: now - model.elapsedMs })
-      }),
-    ],
-  ],
+const update = (model: Model, message: Message): [Model, Runtime.Command<Message>[]] =>
+  M.value(message).pipe(
+    M.withReturnType<[Model, Runtime.Command<Message>[]]>(),
+    M.tagsExhaustive({
+      RequestStart: () => [
+        model,
+        [
+          Effect.gen(function* () {
+            const now = yield* Clock.currentTimeMillis
+            return GotStartTime.make({ startTime: now - model.elapsedMs })
+          }),
+        ],
+      ],
 
-  GotStartTime: (model, { startTime }) => [
-    {
-      ...model,
-      isRunning: true,
-      startTime,
-    },
-    [],
-  ],
+      GotStartTime: ({ startTime }) => [
+        {
+          ...model,
+          isRunning: true,
+          startTime,
+        },
+        [],
+      ],
 
-  Stop: (model) => [
-    {
-      ...model,
-      isRunning: false,
-    },
-    [],
-  ],
+      Stop: () => [
+        {
+          ...model,
+          isRunning: false,
+        },
+        [],
+      ],
 
-  Reset: () => [
-    {
-      elapsedMs: 0,
-      isRunning: false,
-      startTime: 0,
-    },
-    [],
-  ],
+      Reset: () => [
+        {
+          elapsedMs: 0,
+          isRunning: false,
+          startTime: 0,
+        },
+        [],
+      ],
 
-  RequestTick: (model) => [
-    model,
-    [
-      Effect.gen(function* () {
-        const now = yield* Clock.currentTimeMillis
-        return GotTick.make({ elapsedMs: now - model.startTime })
-      }),
-    ],
-  ],
+      RequestTick: () => [
+        model,
+        [
+          Effect.gen(function* () {
+            const now = yield* Clock.currentTimeMillis
+            return GotTick.make({ elapsedMs: now - model.startTime })
+          }),
+        ],
+      ],
 
-  GotTick: (model, { elapsedMs }) => [
-    {
-      ...model,
-      elapsedMs,
-    },
-    [],
-  ],
-})
+      GotTick: ({ elapsedMs }) => [
+        {
+          ...model,
+          elapsedMs,
+        },
+        [],
+      ],
+    }),
+  )
 
 // INIT
 

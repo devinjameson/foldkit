@@ -1,5 +1,5 @@
-import { Array, Effect, Match, Schema as S, String } from 'effect'
-import { Fold, Runtime } from 'foldkit'
+import { Array, Effect, Match as M, Schema as S, String } from 'effect'
+import { Runtime } from 'foldkit'
 import {
   Class,
   Disabled,
@@ -72,21 +72,25 @@ type WeatherError = ST<typeof WeatherError>
 
 type Message = ST<typeof Message>
 
-const update = Fold.fold<Model, Message>({
-  UpdateZipCodeInput: (model, { value }) => [{ ...model, zipCodeInput: value }, []],
+const update = (model: Model, message: Message): [Model, Runtime.Command<Message>[]] =>
+  M.value(message).pipe(
+    M.withReturnType<[Model, Runtime.Command<Message>[]]>(),
+    M.tagsExhaustive({
+      UpdateZipCodeInput: ({ value }) => [{ ...model, zipCodeInput: value }, []],
 
-  FetchWeather: (model) => [
-    { ...model, weather: WeatherLoading.make() },
-    [fetchWeatherCommand(model.zipCodeInput)],
-  ],
+      FetchWeather: () => [
+        { ...model, weather: WeatherLoading.make() },
+        [fetchWeatherCommand(model.zipCodeInput)],
+      ],
 
-  WeatherFetched: (model, { weather }) => [
-    { ...model, weather: WeatherSuccess.make({ data: weather }) },
-    [],
-  ],
+      WeatherFetched: ({ weather }) => [
+        { ...model, weather: WeatherSuccess.make({ data: weather }) },
+        [],
+      ],
 
-  WeatherError: (model, { error }) => [{ ...model, weather: WeatherFailure.make({ error }) }, []],
-})
+      WeatherError: ({ error }) => [{ ...model, weather: WeatherFailure.make({ error }) }, []],
+    }),
+  )
 
 // INIT
 
@@ -186,8 +190,8 @@ const view = (model: Model): Html =>
         ],
       ),
 
-      Match.value(model.weather).pipe(
-        Match.tagsExhaustive({
+      M.value(model.weather).pipe(
+        M.tagsExhaustive({
           WeatherInit: () => empty,
           WeatherLoading: () =>
             div([Class('text-blue-600 font-semibold')], ['Fetching weather...']),

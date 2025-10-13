@@ -1,5 +1,5 @@
-import { Array, Effect, Match, Option, Schema as S, pipe } from 'effect'
-import { Fold, Route, Runtime } from 'foldkit'
+import { Array, Effect, Match as M, Option, Schema as S, pipe } from 'effect'
+import { Route, Runtime } from 'foldkit'
 import {
   Class,
   Href,
@@ -113,43 +113,47 @@ const init: Runtime.ApplicationInit<Model, Message> = (url: Url) => {
 
 // UPDATE
 
-const update = Fold.fold<Model, Message>({
-  NoOp: (model) => [model, []],
+const update = (model: Model, message: Message): [Model, Runtime.Command<Message>[]] =>
+  M.value(message).pipe(
+    M.withReturnType<[Model, Runtime.Command<Message>[]]>(),
+    M.tagsExhaustive({
+      NoOp: () => [model, []],
 
-  UrlRequestReceived: (model, { request }) =>
-    Match.value(request).pipe(
-      Match.tagsExhaustive({
-        Internal: ({ url }): [Model, Runtime.Command<NoOp>[]] => [
-          {
-            ...model,
-            route: urlToAppRoute(url),
-          },
-          [pushUrl(url.pathname).pipe(Effect.as(NoOp.make()))],
+      UrlRequestReceived: ({ request }) =>
+        M.value(request).pipe(
+          M.tagsExhaustive({
+            Internal: ({ url }): [Model, Runtime.Command<NoOp>[]] => [
+              {
+                ...model,
+                route: urlToAppRoute(url),
+              },
+              [pushUrl(url.pathname).pipe(Effect.as(NoOp.make()))],
+            ],
+            External: ({ href }): [Model, Runtime.Command<NoOp>[]] => [
+              model,
+              [load(href).pipe(Effect.as(NoOp.make()))],
+            ],
+          }),
+        ),
+
+      UrlChanged: ({ url }) => [
+        {
+          ...model,
+          route: urlToAppRoute(url),
+        },
+        [],
+      ],
+
+      SearchInputChanged: ({ value }) => [
+        model,
+        [
+          replaceUrl(peopleRouter.build({ searchText: Option.fromNullable(value || null) })).pipe(
+            Effect.as(NoOp.make()),
+          ),
         ],
-        External: ({ href }): [Model, Runtime.Command<NoOp>[]] => [
-          model,
-          [load(href).pipe(Effect.as(NoOp.make()))],
-        ],
-      }),
-    ),
-
-  UrlChanged: (model, { url }) => [
-    {
-      ...model,
-      route: urlToAppRoute(url),
-    },
-    [],
-  ],
-
-  SearchInputChanged: (model, { value }) => [
-    model,
-    [
-      replaceUrl(peopleRouter.build({ searchText: Option.fromNullable(value || null) })).pipe(
-        Effect.as(NoOp.make()),
-      ),
-    ],
-  ],
-})
+      ],
+    }),
+  )
 
 // VIEW
 
@@ -385,8 +389,8 @@ const notFoundView = (path: string): Html =>
   )
 
 const view = (model: Model): Html => {
-  const routeContent = Match.value(model.route).pipe(
-    Match.tagsExhaustive({
+  const routeContent = M.value(model.route).pipe(
+    M.tagsExhaustive({
       Home: homeView,
       Nested: nestedView,
       People: ({ searchText }) => peopleView(searchText),

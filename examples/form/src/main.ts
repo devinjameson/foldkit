@@ -1,5 +1,5 @@
-import { Array, Duration, Effect, Match, Number, Random, Schema as S } from 'effect'
-import { FieldValidation, Fold, Runtime } from 'foldkit'
+import { Array, Duration, Effect, Match as M, Number, Random, Schema as S } from 'effect'
+import { FieldValidation, Runtime } from 'foldkit'
 import { Field, FieldSchema, Validation, validateField } from 'foldkit/fieldValidation'
 import {
   Class,
@@ -148,89 +148,93 @@ const isFormValid = (model: Model): boolean =>
 
 // UPDATE
 
-const update = Fold.fold<Model, Message>({
-  NoOp: (model) => [model, []],
+const update = (model: Model, message: Message): [Model, Runtime.Command<Message>[]] =>
+  M.value(message).pipe(
+    M.withReturnType<[Model, Runtime.Command<Message>[]]>(),
+    M.tagsExhaustive({
+      NoOp: () => [model, []],
 
-  UpdateName: (model, { value }) => [
-    {
-      ...model,
-      name: validateName(value),
-    },
-    [],
-  ],
-
-  UpdateEmail: (model, { value }) => {
-    const validateEmailResult = validateEmail(value)
-    const validationId = Number.increment(model.emailValidationId)
-
-    if (Field.$is('Valid')(validateEmailResult)) {
-      return [
+      UpdateName: ({ value }) => [
         {
           ...model,
-          email: Field.Validating({ value }),
-          emailValidationId: validationId,
+          name: validateName(value),
         },
-        [validateEmailNotOnWaitlist(value, validationId)],
-      ]
-    } else {
-      return [{ ...model, email: validateEmailResult, emailValidationId: validationId }, []]
-    }
-  },
+        [],
+      ],
 
-  EmailValidated: (model, { validationId, field }) => {
-    if (validationId === model.emailValidationId) {
-      return [{ ...model, email: field }, []]
-    } else {
-      return [model, []]
-    }
-  },
+      UpdateEmail: ({ value }) => {
+        const validateEmailResult = validateEmail(value)
+        const validationId = Number.increment(model.emailValidationId)
 
-  UpdateMessage: (model, { value }) => [
-    {
-      ...model,
-      message: Field.Valid({ value }),
-    },
-    [],
-  ],
-
-  SubmitForm: (model) => {
-    if (!isFormValid(model)) {
-      return [model, []]
-    }
-
-    return [
-      {
-        ...model,
-        submission: Submitting.make(),
+        if (Field.$is('Valid')(validateEmailResult)) {
+          return [
+            {
+              ...model,
+              email: Field.Validating({ value }),
+              emailValidationId: validationId,
+            },
+            [validateEmailNotOnWaitlist(value, validationId)],
+          ]
+        } else {
+          return [{ ...model, email: validateEmailResult, emailValidationId: validationId }, []]
+        }
       },
-      [submitForm(model)],
-    ]
-  },
 
-  FormSubmitted: (model, { success, name }) => {
-    if (success) {
-      return [
+      EmailValidated: ({ validationId, field }) => {
+        if (validationId === model.emailValidationId) {
+          return [{ ...model, email: field }, []]
+        } else {
+          return [model, []]
+        }
+      },
+
+      UpdateMessage: ({ value }) => [
         {
           ...model,
-          submission: SubmitSuccess.make({
-            message: `Welcome to the waitlist, ${name}! We'll be in touch soon.`,
-          }),
+          message: Field.Valid({ value }),
         },
         [],
-      ]
-    } else {
-      return [
-        {
-          ...model,
-          submission: SubmitError.make({
-            error: 'Sorry, there was an error adding you to the waitlist. Please try again.',
-          }),
-        },
-        [],
-      ]
-    }
-  },
-})
+      ],
+
+      SubmitForm: () => {
+        if (!isFormValid(model)) {
+          return [model, []]
+        }
+
+        return [
+          {
+            ...model,
+            submission: Submitting.make(),
+          },
+          [submitForm(model)],
+        ]
+      },
+
+      FormSubmitted: ({ success, name }) => {
+        if (success) {
+          return [
+            {
+              ...model,
+              submission: SubmitSuccess.make({
+                message: `Welcome to the waitlist, ${name}! We'll be in touch soon.`,
+              }),
+            },
+            [],
+          ]
+        } else {
+          return [
+            {
+              ...model,
+              submission: SubmitError.make({
+                error: 'Sorry, there was an error adding you to the waitlist. Please try again.',
+              }),
+            },
+            [],
+          ]
+        }
+      },
+    }),
+  )
 
 // COMMAND
 
@@ -347,8 +351,8 @@ const view = (model: Model): Html => {
             ],
           ),
 
-          Match.value(model.submission).pipe(
-            Match.tagsExhaustive({
+          M.value(model.submission).pipe(
+            M.tagsExhaustive({
               NotSubmitted: () => empty,
               Submitting: () => empty,
               SubmitSuccess: ({ message }) =>

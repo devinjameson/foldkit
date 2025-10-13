@@ -1,5 +1,5 @@
-import { Effect, Match, Option, Schema as S, pipe } from 'effect'
-import { Fold, Route, Runtime } from 'foldkit'
+import { Effect, Match as M, Option, Schema as S, pipe } from 'effect'
+import { Route, Runtime } from 'foldkit'
 import { Class, Href, Html, a, div, h1, header, li, main, nav, p, ul } from 'foldkit/html'
 import { load, pushUrl } from 'foldkit/navigation'
 import { literal } from 'foldkit/route'
@@ -106,109 +106,113 @@ const init: Runtime.ApplicationInit<Model, Message> = (url: Url) => {
 
 // UPDATE
 
-const update = Fold.fold<Model, Message>({
-  NoOp: (model) => [model, []],
+const update = (model: Model, message: Message): [Model, Runtime.Command<Message>[]] =>
+  M.value(message).pipe(
+    M.withReturnType<[Model, Runtime.Command<Message>[]]>(),
+    M.tagsExhaustive({
+      NoOp: () => [model, []],
 
-  UrlRequestReceived: (model, { request }) =>
-    pipe(
-      Match.value(request),
-      Match.withReturnType<[Model, Runtime.Command<NoOp>[]]>(),
-      Match.tagsExhaustive({
-        Internal: ({ url }) => [
+      UrlRequestReceived: ({ request }) =>
+        pipe(
+          M.value(request),
+          M.withReturnType<[Model, Runtime.Command<NoOp>[]]>(),
+          M.tagsExhaustive({
+            Internal: ({ url }) => [
+              {
+                ...model,
+                route: urlToAppRoute(url),
+              },
+              [pushUrl(url.pathname).pipe(Effect.as(NoOp.make()))],
+            ],
+
+            External: ({ href }) => [model, [load(href).pipe(Effect.as(NoOp.make()))]],
+          }),
+        ),
+
+      UrlChanged: ({ url }) => [
+        {
+          ...model,
+          route: urlToAppRoute(url),
+        },
+        [],
+      ],
+
+      ProductsMessage: ({ message }) => {
+        const [newProductsModel, productsCommand] = Products.update(productsRouter)(
+          model.productsPage,
+          message,
+        )
+
+        return [
           {
             ...model,
-            route: urlToAppRoute(url),
+            productsPage: newProductsModel,
           },
-          [pushUrl(url.pathname).pipe(Effect.as(NoOp.make()))],
-        ],
-
-        External: ({ href }) => [model, [load(href).pipe(Effect.as(NoOp.make()))]],
-      }),
-    ),
-
-  UrlChanged: (model, { url }) => [
-    {
-      ...model,
-      route: urlToAppRoute(url),
-    },
-    [],
-  ],
-
-  ProductsMessage: (model, { message }) => {
-    const [newProductsModel, productsCommand] = Products.update(productsRouter)(
-      model.productsPage,
-      message,
-    )
-
-    return [
-      {
-        ...model,
-        productsPage: newProductsModel,
+          productsCommand.map(
+            Effect.map((productsMessage) => ProductsMessage.make({ message: productsMessage })),
+          ),
+        ]
       },
-      productsCommand.map(
-        Effect.map((productsMessage) => ProductsMessage.make({ message: productsMessage })),
-      ),
-    ]
-  },
 
-  AddToCartClicked: (model, { item }) => [
-    {
-      ...model,
-      cart: Cart.addItem(item)(model.cart),
-    },
-    [],
-  ],
+      AddToCartClicked: ({ item }) => [
+        {
+          ...model,
+          cart: Cart.addItem(item)(model.cart),
+        },
+        [],
+      ],
 
-  QuantityChangeClicked: (model, { itemId, quantity }) => [
-    {
-      ...model,
-      cart: Cart.changeQuantity(itemId, quantity)(model.cart),
-    },
-    [],
-  ],
+      QuantityChangeClicked: ({ itemId, quantity }) => [
+        {
+          ...model,
+          cart: Cart.changeQuantity(itemId, quantity)(model.cart),
+        },
+        [],
+      ],
 
-  ChangeCartQuantity: (model, { itemId, quantity }) => [
-    {
-      ...model,
-      cart: Cart.changeQuantity(itemId, quantity)(model.cart),
-    },
-    [],
-  ],
+      ChangeCartQuantity: ({ itemId, quantity }) => [
+        {
+          ...model,
+          cart: Cart.changeQuantity(itemId, quantity)(model.cart),
+        },
+        [],
+      ],
 
-  RemoveFromCart: (model, { itemId }) => [
-    {
-      ...model,
-      cart: Cart.removeItem(itemId)(model.cart),
-    },
-    [],
-  ],
+      RemoveFromCart: ({ itemId }) => [
+        {
+          ...model,
+          cart: Cart.removeItem(itemId)(model.cart),
+        },
+        [],
+      ],
 
-  ClearCart: (model) => [
-    {
-      ...model,
-      cart: [],
-    },
-    [],
-  ],
+      ClearCart: () => [
+        {
+          ...model,
+          cart: [],
+        },
+        [],
+      ],
 
-  UpdateDeliveryInstructions: (model, { value }) => [
-    {
-      ...model,
-      deliveryInstructions: value,
-    },
-    [],
-  ],
+      UpdateDeliveryInstructions: ({ value }) => [
+        {
+          ...model,
+          deliveryInstructions: value,
+        },
+        [],
+      ],
 
-  PlaceOrder: (model) => [
-    {
-      ...model,
-      orderPlaced: true,
-      cart: [],
-      deliveryInstructions: '',
-    },
-    [],
-  ],
-})
+      PlaceOrder: () => [
+        {
+          ...model,
+          orderPlaced: true,
+          cart: [],
+          deliveryInstructions: '',
+        },
+        [],
+      ],
+    }),
+  )
 
 // VIEW
 
@@ -312,8 +316,8 @@ const notFoundView = (path: string): Html =>
   )
 
 const view = (model: Model): Html => {
-  const routeContent = Match.value(model.route).pipe(
-    Match.tagsExhaustive({
+  const routeContent = M.value(model.route).pipe(
+    M.tagsExhaustive({
       Products: () => productsView(model),
       Cart: () => cartView(model),
       Checkout: () => checkoutView(model),

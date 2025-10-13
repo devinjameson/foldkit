@@ -1,6 +1,6 @@
-import { Array, Effect, Option, Schema as S } from 'effect'
+import { Array, Effect, Match as M, Option, Schema as S } from 'effect'
 import { ExtractTag } from 'effect/Types'
-import { Fold, Route } from 'foldkit'
+import { Route } from 'foldkit'
 import {
   Class,
   Href,
@@ -57,22 +57,27 @@ export const init = (products: Item.Item[]): Model => ({
 
 // UPDATE
 
-export const update = (productsRouter: Route.Router<ExtractTag<AppRoute, 'Products'>>) =>
-  Fold.fold<Model, Message>({
-    NoOp: (model) => [model, []],
+export const update =
+  (productsRouter: Route.Router<ExtractTag<AppRoute, 'Products'>>) =>
+  (model: Model, message: Message): [Model, Effect.Effect<Message>[]] =>
+    M.value(message).pipe(
+      M.withReturnType<[Model, Effect.Effect<Message>[]]>(),
+      M.tagsExhaustive({
+        NoOp: () => [model, []],
 
-    SearchInputChanged: (model, { value }) => [
-      {
-        ...model,
-        searchText: value,
-      },
-      [
-        replaceUrl(productsRouter.build({ searchText: Option.fromNullable(value || null) })).pipe(
-          Effect.as(NoOp.make()),
-        ),
-      ],
-    ],
-  })
+        SearchInputChanged: ({ value }) => [
+          {
+            ...model,
+            searchText: value,
+          },
+          [
+            replaceUrl(
+              productsRouter.build({ searchText: Option.fromNullable(value || null) }),
+            ).pipe(Effect.as(NoOp.make())),
+          ],
+        ],
+      }),
+    )
 
 // VIEW
 

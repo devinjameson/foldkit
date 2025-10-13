@@ -1,5 +1,5 @@
-import { Array, Clock, Effect, Match, Option, Random, Schema as S, String } from 'effect'
-import { Fold, Runtime } from 'foldkit'
+import { Array, Clock, Effect, Match as M, Option, Random, Schema as S, String } from 'effect'
+import { Runtime } from 'foldkit'
 import {
   Class,
   For,
@@ -141,194 +141,198 @@ const init: Runtime.ElementInit<Model, Message> = () => [
 
 // UPDATE
 
-const update = Fold.fold<Model, Message>({
-  NoOp: (model) => [model, []],
+const update = (model: Model, message: Message): [Model, Runtime.Command<Message>[]] =>
+  M.value(message).pipe(
+    M.withReturnType<[Model, Runtime.Command<Message>[]]>(),
+    M.tagsExhaustive({
+      NoOp: () => [model, []],
 
-  UpdateNewTodo: (model, { text }) => [
-    {
-      ...model,
-      newTodoText: text,
-    },
-    [],
-  ],
-
-  UpdateEditingTodo: (model, { text }) => [
-    {
-      ...model,
-      editing: Match.value(model.editing).pipe(
-        Match.tagsExhaustive({
-          NotEditing: () => model.editing,
-          Editing: ({ id }) => Editing.make({ id, text }),
-        }),
-      ),
-    },
-    [],
-  ],
-
-  AddTodo: (model) => {
-    if (String.isEmpty(String.trim(model.newTodoText))) {
-      return [model, []]
-    }
-
-    return [model, [generateTodoDataCommand(String.trim(model.newTodoText))]]
-  },
-
-  GotNewTodoData: (model, { id, timestamp, text }) => {
-    const newTodo: Todo = {
-      id,
-      text,
-      completed: false,
-      createdAt: timestamp,
-    }
-
-    const updatedTodos = Array.append(model.todos, newTodo)
-
-    return [
-      {
-        ...model,
-        todos: updatedTodos,
-        newTodoText: '',
-      },
-      [saveTodos(updatedTodos)],
-    ]
-  },
-
-  DeleteTodo: (model, { id }) => {
-    const updatedTodos = Array.filter(model.todos, (todo) => todo.id !== id)
-
-    return [
-      {
-        ...model,
-        todos: updatedTodos,
-      },
-      [saveTodos(updatedTodos)],
-    ]
-  },
-
-  ToggleTodo: (model, { id }) => {
-    const updatedTodos = Array.map(model.todos, (todo) =>
-      todo.id === id ? { ...todo, completed: !todo.completed } : todo,
-    )
-
-    return [
-      {
-        ...model,
-        todos: updatedTodos,
-      },
-      [saveTodos(updatedTodos)],
-    ]
-  },
-
-  StartEditing: (model, { id }) => {
-    const todo = Array.findFirst(model.todos, (t) => t.id === id)
-    return [
-      {
-        ...model,
-        editing: Editing.make({
-          id,
-          text: Option.match(todo, {
-            onNone: () => '',
-            onSome: (t) => t.text,
-          }),
-        }),
-      },
-      [],
-    ]
-  },
-
-  SaveEdit: (model) =>
-    Match.value(model.editing).pipe(
-      Match.withReturnType<[Model, Runtime.Command<TodosSaved>[]]>(),
-      Match.tagsExhaustive({
-        NotEditing: () => [model, []],
-
-        Editing: ({ id, text }) => {
-          if (String.isEmpty(String.trim(text))) {
-            return [
-              {
-                ...model,
-                editing: NotEditing.make(),
-              },
-              [],
-            ]
-          }
-
-          const updatedTodos = Array.map(model.todos, (todo) =>
-            todo.id === id ? { ...todo, text: String.trim(text) } : todo,
-          )
-
-          return [
-            {
-              ...model,
-              todos: updatedTodos,
-              editing: NotEditing.make(),
-            },
-            [saveTodos(updatedTodos)],
-          ]
+      UpdateNewTodo: ({ text }) => [
+        {
+          ...model,
+          newTodoText: text,
         },
-      }),
-    ),
+        [],
+      ],
 
-  CancelEdit: (model) => [
-    {
-      ...model,
-      editing: NotEditing.make(),
-    },
-    [],
-  ],
+      UpdateEditingTodo: ({ text }) => [
+        {
+          ...model,
+          editing: M.value(model.editing).pipe(
+            M.tagsExhaustive({
+              NotEditing: () => model.editing,
+              Editing: ({ id }) => Editing.make({ id, text }),
+            }),
+          ),
+        },
+        [],
+      ],
 
-  ToggleAll: (model) => {
-    const allCompleted = Array.every(model.todos, (todo) => todo.completed)
-    const updatedTodos = Array.map(model.todos, (todo) => ({
-      ...todo,
-      completed: !allCompleted,
-    }))
+      AddTodo: () => {
+        if (String.isEmpty(String.trim(model.newTodoText))) {
+          return [model, []]
+        }
 
-    return [
-      {
-        ...model,
-        todos: updatedTodos,
+        return [model, [generateTodoDataCommand(String.trim(model.newTodoText))]]
       },
-      [saveTodos(updatedTodos)],
-    ]
-  },
 
-  ClearCompleted: (model) => {
-    const updatedTodos = Array.filter(model.todos, (todo) => !todo.completed)
+      GotNewTodoData: ({ id, timestamp, text }) => {
+        const newTodo: Todo = {
+          id,
+          text,
+          completed: false,
+          createdAt: timestamp,
+        }
 
-    return [
-      {
-        ...model,
-        todos: updatedTodos,
+        const updatedTodos = Array.append(model.todos, newTodo)
+
+        return [
+          {
+            ...model,
+            todos: updatedTodos,
+            newTodoText: '',
+          },
+          [saveTodos(updatedTodos)],
+        ]
       },
-      [saveTodos(updatedTodos)],
-    ]
-  },
 
-  SetFilter: (model, { filter }) => [
-    {
-      ...model,
-      filter,
-    },
-    [],
-  ],
+      DeleteTodo: ({ id }) => {
+        const updatedTodos = Array.filter(model.todos, (todo) => todo.id !== id)
 
-  TodosLoaded: (model, { todos }) => [
-    {
-      ...model,
-      todos,
-    },
-    [],
-  ],
+        return [
+          {
+            ...model,
+            todos: updatedTodos,
+          },
+          [saveTodos(updatedTodos)],
+        ]
+      },
 
-  TodosSaved: (model, { todos }) => [
-    {
-      ...model,
-      todos,
-    },
-    [],
-  ],
-})
+      ToggleTodo: ({ id }) => {
+        const updatedTodos = Array.map(model.todos, (todo) =>
+          todo.id === id ? { ...todo, completed: !todo.completed } : todo,
+        )
+
+        return [
+          {
+            ...model,
+            todos: updatedTodos,
+          },
+          [saveTodos(updatedTodos)],
+        ]
+      },
+
+      StartEditing: ({ id }) => {
+        const todo = Array.findFirst(model.todos, (t) => t.id === id)
+        return [
+          {
+            ...model,
+            editing: Editing.make({
+              id,
+              text: Option.match(todo, {
+                onNone: () => '',
+                onSome: (t) => t.text,
+              }),
+            }),
+          },
+          [],
+        ]
+      },
+
+      SaveEdit: () =>
+        M.value(model.editing).pipe(
+          M.withReturnType<[Model, Runtime.Command<TodosSaved>[]]>(),
+          M.tagsExhaustive({
+            NotEditing: () => [model, []],
+
+            Editing: ({ id, text }) => {
+              if (String.isEmpty(String.trim(text))) {
+                return [
+                  {
+                    ...model,
+                    editing: NotEditing.make(),
+                  },
+                  [],
+                ]
+              }
+
+              const updatedTodos = Array.map(model.todos, (todo) =>
+                todo.id === id ? { ...todo, text: String.trim(text) } : todo,
+              )
+
+              return [
+                {
+                  ...model,
+                  todos: updatedTodos,
+                  editing: NotEditing.make(),
+                },
+                [saveTodos(updatedTodos)],
+              ]
+            },
+          }),
+        ),
+
+      CancelEdit: () => [
+        {
+          ...model,
+          editing: NotEditing.make(),
+        },
+        [],
+      ],
+
+      ToggleAll: () => {
+        const allCompleted = Array.every(model.todos, (todo) => todo.completed)
+        const updatedTodos = Array.map(model.todos, (todo) => ({
+          ...todo,
+          completed: !allCompleted,
+        }))
+
+        return [
+          {
+            ...model,
+            todos: updatedTodos,
+          },
+          [saveTodos(updatedTodos)],
+        ]
+      },
+
+      ClearCompleted: () => {
+        const updatedTodos = Array.filter(model.todos, (todo) => !todo.completed)
+
+        return [
+          {
+            ...model,
+            todos: updatedTodos,
+          },
+          [saveTodos(updatedTodos)],
+        ]
+      },
+
+      SetFilter: ({ filter }) => [
+        {
+          ...model,
+          filter,
+        },
+        [],
+      ],
+
+      TodosLoaded: ({ todos }) => [
+        {
+          ...model,
+          todos,
+        },
+        [],
+      ],
+
+      TodosSaved: ({ todos }) => [
+        {
+          ...model,
+          todos,
+        },
+        [],
+      ],
+    }),
+  )
 
 // COMMAND
 
@@ -357,8 +361,8 @@ const saveTodos = (todos: Todos): Runtime.Command<TodosSaved> =>
 const todoItemView =
   (model: Model) =>
   (todo: Todo): Html =>
-    Match.value(model.editing).pipe(
-      Match.tagsExhaustive({
+    M.value(model.editing).pipe(
+      M.tagsExhaustive({
         NotEditing: () => nonEditingTodoView(todo),
         Editing: ({ id, text }) =>
           id === todo.id ? editingTodoView(todo, text) : nonEditingTodoView(todo),
@@ -500,11 +504,11 @@ const footerView = (model: Model, activeCount: number, completedCount: number): 
   })
 
 const filterTodos = (todos: Todos, filter: Filter): Todos =>
-  Match.value(filter).pipe(
-    Match.when('All', () => todos),
-    Match.when('Active', () => Array.filter(todos, (todo) => !todo.completed)),
-    Match.when('Completed', () => Array.filter(todos, (todo) => todo.completed)),
-    Match.exhaustive,
+  M.value(filter).pipe(
+    M.when('All', () => todos),
+    M.when('Active', () => Array.filter(todos, (todo) => !todo.completed)),
+    M.when('Completed', () => Array.filter(todos, (todo) => todo.completed)),
+    M.exhaustive,
   )
 
 const view = (model: Model): Html => {
@@ -555,11 +559,11 @@ const view = (model: Model): Html => {
               div(
                 [Class('text-center text-gray-500 py-8')],
                 [
-                  Match.value(model.filter).pipe(
-                    Match.when('All', () => 'No todos yet. Add one above!'),
-                    Match.when('Active', () => 'No active todos'),
-                    Match.when('Completed', () => 'No completed todos'),
-                    Match.exhaustive,
+                  M.value(model.filter).pipe(
+                    M.when('All', () => 'No todos yet. Add one above!'),
+                    M.when('Active', () => 'No active todos'),
+                    M.when('Completed', () => 'No completed todos'),
+                    M.exhaustive,
                   ),
                 ],
               ),
