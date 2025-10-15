@@ -1,6 +1,6 @@
 {
   "name": "foldkit",
-  "version": "0.3.0-canary.1",
+  "version": "0.3.0-canary.2",
   "description": "Elm-inspired UI framework powered by Effect",
   "type": "module",
   "main": "./dist/index.js",
