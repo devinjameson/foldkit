@@ -1,0 +1,19 @@
+{
+  "name": "websocket-chat-example",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.1.10",
+    "effect": "^3.18.2",
+    "foldkit": "workspace:*",
+    "tailwindcss": "^4.1.10"
+  },
+  "devDependencies": {
+    "@foldkit/vite-plugin": "workspace:*"
+  }
+}

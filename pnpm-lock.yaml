@@ -191,6 +191,25 @@ importers:
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
 
+  examples/websocket-chat:
+    dependencies:
+      '@tailwindcss/vite':
+        specifier: ^4.1.10
+        version: 4.1.10(vite@7.1.9(@types/node@24.6.2)(jiti@2.4.2)(lightningcss@1.30.1)(yaml@2.8.1))
+      effect:
+        specifier: ^3.18.2
+        version: 3.18.2
+      foldkit:
+        specifier: workspace:*
+        version: link:../../packages/foldkit
+      tailwindcss:
+        specifier: ^4.1.10
+        version: 4.1.10
+    devDependencies:
+      '@foldkit/vite-plugin':
+        specifier: workspace:*
+        version: link:../../packages/vite-plugin-foldkit
+
   packages/create-foldkit-app:
     dependencies:
       '@effect/cli':
