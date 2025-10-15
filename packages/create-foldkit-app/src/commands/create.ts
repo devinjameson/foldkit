@@ -15,6 +15,7 @@ type Example =
   | 'stopwatch'
   | 'todo'
   | 'weather'
+  | 'websocket-chat'
 
 type CreateOptions = {
   name: string

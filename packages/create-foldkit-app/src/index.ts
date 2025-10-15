@@ -45,6 +45,7 @@ const example = Options.choice('example', [
   'snake',
   'routing',
   'shopping-cart',
+  'websocket-chat',
 ]).pipe(
   Options.withAlias('e'),
   Options.withDescription(
@@ -57,7 +58,8 @@ const example = Options.choice('example', [
       '  form - Form validation with async email checking\n' +
       '  snake - Classic game built with command streams\n' +
       '  routing - URL routing with parser combinators and route parameters\n' +
-      '  shopping-cart - Complex state management with nested models and routing',
+      '  shopping-cart - Complex state management with nested models and routing\n' +
+      '  websocket-chat - WebSocket integration',
   ),
 )
 
