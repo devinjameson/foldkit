@@ -9,6 +9,7 @@ export type Html = Effect.Effect<VNode | null, never, Dispatch>
 export type Child = Html | string
 
 export type Attribute<Message> = Data.TaggedEnum<{
+  Key: { readonly value: string }
   Class: { readonly value: string }
   Id: { readonly value: string }
   Title: { readonly value: string }
@@ -93,6 +94,7 @@ interface AttributeDefinition extends Data.TaggedEnum.WithGenerics<1> {
 }
 
 export const {
+  Key: Key_,
   Class: Class_,
   Id: Id_,
   Title: Title_,
@@ -172,6 +174,7 @@ export const {
   Style: Style_,
 } = Data.taggedEnum<AttributeDefinition>()
 
+export const Key = (value: string) => Key_({ value })
 export const Class = (value: string) => Class_({ value })
 export const Id = (value: string) => Id_({ value })
 export const Title = (value: string) => Title_({ value })
@@ -260,6 +263,11 @@ const buildVNodeData = <Message>(
     yield* Effect.forEach(attributes, (attr) =>
       Match.value(attr).pipe(
         Match.tagsExhaustive({
+          Key: ({ value }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              key: value,
+            })),
           Class: ({ value }) =>
             Effect.gen(function* () {
               const classObject = pipe(
