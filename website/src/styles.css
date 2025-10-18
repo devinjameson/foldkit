@@ -1,0 +1,11 @@
+@import 'tailwindcss';
+
+@layer base {
+  body {
+    @apply text-base text-gray-600;
+  }
+
+  pre {
+    @apply p-4 rounded-lg overflow-x-auto leading-relaxed;
+  }
+}
