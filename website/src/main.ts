@@ -110,6 +110,9 @@ const sidebarView = (currentRoute: AppRoute) => {
   const linkClass = (isActive: boolean) =>
     `block px-4 py-2 rounded transition ${isActive ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-700 hover:bg-gray-100'}`
 
+  const navLink = (href: string, isActive: boolean, label: string) =>
+    li([], [a([Href(href), Class(linkClass(isActive))], [label])])
+
   return aside(
     [Class('w-64 bg-white border-r border-gray-200 min-h-screen p-6')],
     [
@@ -123,62 +126,22 @@ const sidebarView = (currentRoute: AppRoute) => {
           ul(
             [Class('space-y-1')],
             [
-              li(
-                [],
-                [
-                  a(
-                    [Href(homeRouter.build({})), Class(linkClass(S.is(HomeRoute)(currentRoute)))],
-                    ['Home'],
-                  ),
-                ],
+              navLink(homeRouter.build({}), S.is(HomeRoute)(currentRoute), 'Home'),
+              navLink(
+                gettingStartedRouter.build({}),
+                S.is(GettingStartedRoute)(currentRoute),
+                'Getting Started',
               ),
-              li(
-                [],
-                [
-                  a(
-                    [
-                      Href(gettingStartedRouter.build({})),
-                      Class(linkClass(S.is(GettingStartedRoute)(currentRoute))),
-                    ],
-                    ['Getting Started'],
-                  ),
-                ],
+              navLink(
+                architectureRouter.build({}),
+                S.is(ArchitectureRoute)(currentRoute),
+                'Architecture & Concepts',
               ),
-              li(
-                [],
-                [
-                  a(
-                    [
-                      Href(architectureRouter.build({})),
-                      Class(linkClass(S.is(ArchitectureRoute)(currentRoute))),
-                    ],
-                    ['Architecture & Concepts'],
-                  ),
-                ],
-              ),
-              li(
-                [],
-                [
-                  a(
-                    [
-                      Href(examplesRouter.build({})),
-                      Class(linkClass(S.is(ExamplesRoute)(currentRoute))),
-                    ],
-                    ['Examples'],
-                  ),
-                ],
-              ),
-              li(
-                [],
-                [
-                  a(
-                    [
-                      Href(bestPracticesRouter.build({})),
-                      Class(linkClass(S.is(BestPracticesRoute)(currentRoute))),
-                    ],
-                    ['Best Practices'],
-                  ),
-                ],
+              navLink(examplesRouter.build({}), S.is(ExamplesRoute)(currentRoute), 'Examples'),
+              navLink(
+                bestPracticesRouter.build({}),
+                S.is(BestPracticesRoute)(currentRoute),
+                'Best Practices',
               ),
             ],
           ),
