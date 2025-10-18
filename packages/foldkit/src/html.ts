@@ -87,6 +87,7 @@ export type Attribute<Message> = Data.TaggedEnum<{
   AriaLive: { readonly value: string }
   DataAttribute: { readonly key: string; readonly value: string }
   Style: { readonly value: Record<string, string> }
+  InnerHTML: { readonly value: string }
 }>
 
 interface AttributeDefinition extends Data.TaggedEnum.WithGenerics<1> {
@@ -172,6 +173,7 @@ export const {
   AriaLive: AriaLive_,
   DataAttribute: DataAttribute_,
   Style: Style_,
+  InnerHTML: InnerHTML_,
 } = Data.taggedEnum<AttributeDefinition>()
 
 export const Key = (value: string) => Key_({ value })
@@ -252,6 +254,7 @@ export const AriaInvalid = (value: boolean) => AriaInvalid_({ value })
 export const AriaLive = (value: string) => AriaLive_({ value })
 export const DataAttr = (key: string, value: string) => DataAttribute_({ key, value })
 export const StyleAttr = (value: Record<string, string>) => Style_({ value })
+export const InnerHTML = (value: string) => InnerHTML_({ value })
 
 const buildVNodeData = <Message>(
   attributes: ReadonlyArray<Attribute<Message>>,
@@ -749,6 +752,11 @@ const buildVNodeData = <Message>(
             Ref.update(dataRef, (data) => ({
               ...data,
               style: value,
+            })),
+          InnerHTML: ({ value }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              props: { ...data.props, innerHTML: value },
             })),
         }),
       ),
