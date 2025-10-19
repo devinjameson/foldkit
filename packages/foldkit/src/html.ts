@@ -88,6 +88,30 @@ export type Attribute<Message> = Data.TaggedEnum<{
   DataAttribute: { readonly key: string; readonly value: string }
   Style: { readonly value: Record<string, string> }
   InnerHTML: { readonly value: string }
+  ViewBox: { readonly value: string }
+  Xmlns: { readonly value: string }
+  Fill: { readonly value: string }
+  Stroke: { readonly value: string }
+  StrokeWidth: { readonly value: string }
+  StrokeLinecap: { readonly value: string }
+  StrokeLinejoin: { readonly value: string }
+  D: { readonly value: string }
+  Cx: { readonly value: string }
+  Cy: { readonly value: string }
+  R: { readonly value: string }
+  X: { readonly value: string }
+  Y: { readonly value: string }
+  Width: { readonly value: string }
+  Height: { readonly value: string }
+  X1: { readonly value: string }
+  Y1: { readonly value: string }
+  X2: { readonly value: string }
+  Y2: { readonly value: string }
+  Points: { readonly value: string }
+  Transform: { readonly value: string }
+  Opacity: { readonly value: string }
+  StrokeDasharray: { readonly value: string }
+  StrokeDashoffset: { readonly value: string }
 }>
 
 interface AttributeDefinition extends Data.TaggedEnum.WithGenerics<1> {
@@ -174,6 +198,30 @@ export const {
   DataAttribute: DataAttribute_,
   Style: Style_,
   InnerHTML: InnerHTML_,
+  ViewBox: ViewBox_,
+  Xmlns: Xmlns_,
+  Fill: Fill_,
+  Stroke: Stroke_,
+  StrokeWidth: StrokeWidth_,
+  StrokeLinecap: StrokeLinecap_,
+  StrokeLinejoin: StrokeLinejoin_,
+  D: D_,
+  Cx: Cx_,
+  Cy: Cy_,
+  R: R_,
+  X: X_,
+  Y: Y_,
+  Width: Width_,
+  Height: Height_,
+  X1: X1_,
+  Y1: Y1_,
+  X2: X2_,
+  Y2: Y2_,
+  Points: Points_,
+  Transform: Transform_,
+  Opacity: Opacity_,
+  StrokeDasharray: StrokeDasharray_,
+  StrokeDashoffset: StrokeDashoffset_,
 } = Data.taggedEnum<AttributeDefinition>()
 
 export const Key = (value: string) => Key_({ value })
@@ -255,6 +303,30 @@ export const AriaLive = (value: string) => AriaLive_({ value })
 export const DataAttr = (key: string, value: string) => DataAttribute_({ key, value })
 export const StyleAttr = (value: Record<string, string>) => Style_({ value })
 export const InnerHTML = (value: string) => InnerHTML_({ value })
+export const ViewBox = (value: string) => ViewBox_({ value })
+export const Xmlns = (value: string) => Xmlns_({ value })
+export const Fill = (value: string) => Fill_({ value })
+export const Stroke = (value: string) => Stroke_({ value })
+export const StrokeWidth = (value: string) => StrokeWidth_({ value })
+export const StrokeLinecap = (value: string) => StrokeLinecap_({ value })
+export const StrokeLinejoin = (value: string) => StrokeLinejoin_({ value })
+export const D = (value: string) => D_({ value })
+export const Cx = (value: string) => Cx_({ value })
+export const Cy = (value: string) => Cy_({ value })
+export const R = (value: string) => R_({ value })
+export const X = (value: string) => X_({ value })
+export const Y = (value: string) => Y_({ value })
+export const Width = (value: string) => Width_({ value })
+export const Height = (value: string) => Height_({ value })
+export const X1 = (value: string) => X1_({ value })
+export const Y1 = (value: string) => Y1_({ value })
+export const X2 = (value: string) => X2_({ value })
+export const Y2 = (value: string) => Y2_({ value })
+export const Points = (value: string) => Points_({ value })
+export const Transform = (value: string) => Transform_({ value })
+export const Opacity = (value: string) => Opacity_({ value })
+export const StrokeDasharray = (value: string) => StrokeDasharray_({ value })
+export const StrokeDashoffset = (value: string) => StrokeDashoffset_({ value })
 
 const buildVNodeData = <Message>(
   attributes: ReadonlyArray<Attribute<Message>>,
@@ -757,6 +829,126 @@ const buildVNodeData = <Message>(
             Ref.update(dataRef, (data) => ({
               ...data,
               props: { ...data.props, innerHTML: value },
+            })),
+          ViewBox: ({ value }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              attrs: { ...data.attrs, viewBox: value },
+            })),
+          Xmlns: ({ value }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              attrs: { ...data.attrs, xmlns: value },
+            })),
+          Fill: ({ value }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              attrs: { ...data.attrs, fill: value },
+            })),
+          Stroke: ({ value }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              attrs: { ...data.attrs, stroke: value },
+            })),
+          StrokeWidth: ({ value }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              attrs: { ...data.attrs, 'stroke-width': value },
+            })),
+          StrokeLinecap: ({ value }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              attrs: { ...data.attrs, 'stroke-linecap': value },
+            })),
+          StrokeLinejoin: ({ value }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              attrs: { ...data.attrs, 'stroke-linejoin': value },
+            })),
+          D: ({ value }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              attrs: { ...data.attrs, d: value },
+            })),
+          Cx: ({ value }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              attrs: { ...data.attrs, cx: value },
+            })),
+          Cy: ({ value }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              attrs: { ...data.attrs, cy: value },
+            })),
+          R: ({ value }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              attrs: { ...data.attrs, r: value },
+            })),
+          X: ({ value }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              attrs: { ...data.attrs, x: value },
+            })),
+          Y: ({ value }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              attrs: { ...data.attrs, y: value },
+            })),
+          Width: ({ value }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              attrs: { ...data.attrs, width: value },
+            })),
+          Height: ({ value }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              attrs: { ...data.attrs, height: value },
+            })),
+          X1: ({ value }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              attrs: { ...data.attrs, x1: value },
+            })),
+          Y1: ({ value }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              attrs: { ...data.attrs, y1: value },
+            })),
+          X2: ({ value }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              attrs: { ...data.attrs, x2: value },
+            })),
+          Y2: ({ value }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              attrs: { ...data.attrs, y2: value },
+            })),
+          Points: ({ value }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              attrs: { ...data.attrs, points: value },
+            })),
+          Transform: ({ value }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              attrs: { ...data.attrs, transform: value },
+            })),
+          Opacity: ({ value }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              attrs: { ...data.attrs, opacity: value },
+            })),
+          StrokeDasharray: ({ value }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              attrs: { ...data.attrs, 'stroke-dasharray': value },
+            })),
+          StrokeDashoffset: ({ value }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              attrs: { ...data.attrs, 'stroke-dashoffset': value },
             })),
         }),
       ),
