@@ -1,4 +1,14 @@
-import { Array, DateTime, Effect, Match as M, Option, Schema as S, Stream, String } from 'effect'
+import {
+  Array,
+  DateTime,
+  Duration,
+  Effect,
+  Match as M,
+  Option,
+  Schema as S,
+  Stream,
+  String,
+} from 'effect'
 import { Runtime, Task } from 'foldkit'
 import {
   Class,
@@ -209,51 +219,44 @@ const sendMessageCommand = (socket: WebSocket, text: string): Runtime.Command<Me
   })
 
 const connectCommand = (): Runtime.Command<Connected | ConnectionFailed> =>
-  Effect.async<Connected | ConnectionFailed>((resume) => {
-    const ws = new WebSocket(WS_URL)
+  Effect.race(
+    Effect.async<Connected | ConnectionFailed>((resume) => {
+      const ws = new WebSocket(WS_URL)
 
-    ws.onopen = () => {
-      clearTimeout(timeout)
-      ws.onopen = null
-      ws.onerror = null
-      resume(Effect.succeed(Connected.make({ socket: ws })))
-    }
-
-    ws.onerror = () => {
-      clearTimeout(timeout)
-      ws.onopen = null
-      ws.onerror = null
-      resume(Effect.succeed(ConnectionFailed.make({ error: 'Failed to connect to WebSocket' })))
-    }
-
-    const timeout = setTimeout(() => {
-      if (ws.readyState !== WebSocket.OPEN) {
-        ws.onopen = null
-        ws.onerror = null
-        resume(Effect.succeed(ConnectionFailed.make({ error: 'Connection timeout' })))
+      const handleOpen = () => {
+        resume(Effect.succeed(Connected.make({ socket: ws })))
       }
-    }, CONNECTION_TIMEOUT_MS)
 
-    return Effect.sync(() => {
-      clearTimeout(timeout)
-      ws.onopen = null
-      ws.onerror = null
-    })
-  })
+      const handleError = () => {
+        resume(Effect.succeed(ConnectionFailed.make({ error: 'Failed to connect to WebSocket' })))
+      }
 
-type StreamDepsMap = {
-  websocket: Option.Option<WebSocket>
-}
+      ws.addEventListener('open', handleOpen)
+      ws.addEventListener('error', handleError)
 
-const commandStreams: Runtime.CommandStreams<Model, Message, StreamDepsMap> = {
+      return Effect.sync(() => {
+        ws.removeEventListener('open', handleOpen)
+        ws.removeEventListener('error', handleError)
+      })
+    }),
+    Effect.sleep(Duration.millis(CONNECTION_TIMEOUT_MS)).pipe(
+      Effect.as(ConnectionFailed.make({ error: 'Connection timeout' })),
+    ),
+  )
+
+const CommandStreamsDeps = S.Struct({
+  websocket: S.OptionFromSelf(S.instanceOf(WebSocket)),
+})
+
+const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Model, Message>({
   websocket: {
-    deps: (model: Model) =>
+    modelToDeps: (model: Model) =>
       M.value(model.connection).pipe(
         M.tag('ConnectionConnected', ({ socket }) => Option.some(socket)),
         M.orElse(() => Option.none()),
       ),
-    stream: (maybeSocket: Option.Option<WebSocket>) =>
-      Option.match(maybeSocket, {
+    depsToStream: (websocket: Option.Option<WebSocket>) =>
+      Option.match(websocket, {
         onNone: () => Stream.empty,
         onSome: (ws: WebSocket) =>
           Stream.async<Runtime.Command<Message>>((emit) => {
@@ -283,7 +286,7 @@ const commandStreams: Runtime.CommandStreams<Model, Message, StreamDepsMap> = {
           }),
       }),
   },
-}
+})
 
 const view = (model: Model): Html =>
   div(

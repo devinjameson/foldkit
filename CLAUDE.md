@@ -23,3 +23,8 @@ This file contains preferences and conventions for Claude when working on this c
 - Don't add comments. If the code is not clear enough and you are adding
   comments to explain or improve clairty, instead refactor it to make it easier to
   understand or use better names.
+
+### Commits and Releases
+
+- Do not coauthor or mention Claude in commit messages.
+- Do not mention Claude in release notes.

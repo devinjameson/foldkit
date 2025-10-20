@@ -212,19 +212,22 @@ const requestAppleCommand = (snake: Snake.Snake): Runtime.Command<Message> =>
 
 // COMMAND STREAMS
 
-type StreamDepsMap = {
-  gameClock: { isPlaying: boolean; interval: number }
-  keyboard: null
-}
+const CommandStreamsDeps = S.Struct({
+  gameClock: S.Struct({
+    isPlaying: S.Boolean,
+    interval: S.Number,
+  }),
+  keyboard: S.Null,
+})
 
-const commandStreams: Runtime.CommandStreams<Model, Message, StreamDepsMap> = {
+const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Model, Message>({
   gameClock: {
-    deps: (model: Model) =>
+    modelToDeps: (model: Model) =>
       Data.struct({
         isPlaying: model.gameState === 'Playing',
         interval: Math.max(GAME_SPEED.MIN_INTERVAL, GAME_SPEED.BASE_INTERVAL - model.points),
       }),
-    stream: (deps: { isPlaying: boolean; interval: number }) =>
+    depsToStream: (deps: { isPlaying: boolean; interval: number }) =>
       Stream.when(
         Stream.tick(Duration.millis(deps.interval)).pipe(
           Stream.map(() => Effect.succeed(ClockTick.make())),
@@ -234,8 +237,8 @@ const commandStreams: Runtime.CommandStreams<Model, Message, StreamDepsMap> = {
   },
 
   keyboard: {
-    deps: () => null,
-    stream: () =>
+    modelToDeps: () => null,
+    depsToStream: () =>
       Stream.fromEventListener<KeyboardEvent>(document, 'keydown').pipe(
         Stream.map((keyboardEvent) =>
           Effect.sync(() => {
@@ -245,7 +248,7 @@ const commandStreams: Runtime.CommandStreams<Model, Message, StreamDepsMap> = {
         ),
       ),
   },
-}
+})
 
 // VIEW
 

@@ -34,7 +34,11 @@ export type BrowserConfig<Message> = {
   readonly onUrlChange: (url: Url) => Message
 }
 
-export interface RuntimeConfig<Model, Message, StreamDepsMap extends Record<string, unknown>> {
+export interface RuntimeConfig<
+  Model,
+  Message,
+  StreamDepsMap extends Record<string, Schema.Schema<any>>,
+> {
   Model: Schema.Schema<Model, any, never>
   readonly init: (url?: Url) => [Model, Command<Message>[]]
   readonly update: (model: Model, message: Message) => [Model, Command<Message>[]]
@@ -47,7 +51,11 @@ export interface RuntimeConfig<Model, Message, StreamDepsMap extends Record<stri
 export type ElementInit<Model, Message> = () => [Model, Command<Message>[]]
 export type ApplicationInit<Model, Message> = (url: Url) => [Model, Command<Message>[]]
 
-export interface ElementConfig<Model, Message, StreamDepsMap extends Record<string, unknown>> {
+export interface ElementConfig<
+  Model,
+  Message,
+  StreamDepsMap extends Record<string, Schema.Schema<any>>,
+> {
   readonly Model: Schema.Schema<Model, any, never>
   readonly init: ElementInit<Model, Message>
   readonly update: (model: Model, message: Message) => [Model, Command<Message>[]]
@@ -56,7 +64,11 @@ export interface ElementConfig<Model, Message, StreamDepsMap extends Record<stri
   readonly container: HTMLElement
 }
 
-export interface ApplicationConfig<Model, Message, StreamDepsMap extends Record<string, unknown>> {
+export interface ApplicationConfig<
+  Model,
+  Message,
+  StreamDepsMap extends Record<string, Schema.Schema<any>>,
+> {
   readonly Model: Schema.Schema<Model, any, never>
   readonly init: ApplicationInit<Model, Message>
   readonly update: (model: Model, message: Message) => [Model, Command<Message>[]]
@@ -67,18 +79,43 @@ export interface ApplicationConfig<Model, Message, StreamDepsMap extends Record<
 }
 
 export type CommandStreamConfig<Model, Message, StreamDeps> = {
-  readonly deps: (model: Model) => StreamDeps
-  readonly stream: (deps: StreamDeps) => Stream.Stream<Command<Message>>
+  readonly schema: Schema.Schema<StreamDeps>
+  readonly modelToDeps: (model: Model) => StreamDeps
+  readonly depsToStream: (deps: StreamDeps) => Stream.Stream<Command<Message>>
 }
 
-export type CommandStreams<Model, Message, StreamDepsMap extends Record<string, unknown>> = {
-  readonly [K in keyof StreamDepsMap]: CommandStreamConfig<Model, Message, StreamDepsMap[K]>
+export type CommandStreams<
+  Model,
+  Message,
+  CommandStreamsDeps extends Record<string, Schema.Schema<any>>,
+> = {
+  readonly [K in keyof CommandStreamsDeps]: CommandStreamConfig<
+    Model,
+    Message,
+    Schema.Schema.Type<CommandStreamsDeps[K]>
+  >
 }
+
+export const makeCommandStreams =
+  <CommandStreamsDeps extends Schema.Struct<any>>(CommandStreamsDeps: CommandStreamsDeps) =>
+  <Model, Message>(configs: {
+    [K in keyof Schema.Schema.Type<CommandStreamsDeps>]: {
+      modelToDeps: (model: Model) => Schema.Schema.Type<CommandStreamsDeps>[K]
+      depsToStream: (
+        deps: Schema.Schema.Type<CommandStreamsDeps>[K],
+      ) => Stream.Stream<Command<Message>>
+    }
+  }) =>
+    Record.map(configs, ({ modelToDeps, depsToStream }, key) => ({
+      schema: CommandStreamsDeps.fields[key],
+      modelToDeps,
+      depsToStream,
+    }))
 
 type MakeRuntimeReturn = (hmrModel?: unknown) => Effect.Effect<void>
 
 export const makeRuntime =
-  <Model, Message, StreamDepsMap extends Record<string, unknown>>({
+  <Model, Message, StreamDepsMap extends Record<string, Schema.Schema<any>>>({
     Model,
     init,
     update,
@@ -135,12 +172,12 @@ export const makeRuntime =
           commandStreams,
           Record.toEntries,
           Effect.forEach(
-            ([_key, { deps, stream }]) =>
+            ([_key, { schema, modelToDeps, depsToStream }]) =>
               Effect.forkDaemon(
                 modelStream.pipe(
-                  Stream.map(deps),
-                  Stream.changes,
-                  Stream.flatMap(stream, { switch: true }),
+                  Stream.map(modelToDeps),
+                  Stream.changesWith(Schema.equivalence(schema)),
+                  Stream.flatMap(depsToStream, { switch: true }),
                   Stream.runForEach(Effect.flatMap(enqueueMessage)),
                 ),
               ),
@@ -203,7 +240,7 @@ export const makeRuntime =
 export const makeElement = <
   Model,
   Message extends { _tag: string },
-  StreamDepsMap extends Record<string, unknown>,
+  StreamDepsMap extends Record<string, Schema.Schema<any>>,
 >(
   config: ElementConfig<Model, Message, StreamDepsMap>,
 ): MakeRuntimeReturn =>
@@ -219,7 +256,7 @@ export const makeElement = <
 export const makeApplication = <
   Model,
   Message extends { _tag: string },
-  StreamDepsMap extends Record<string, unknown>,
+  StreamDepsMap extends Record<string, Schema.Schema<any>>,
 >(
   config: ApplicationConfig<Model, Message, StreamDepsMap>,
 ): MakeRuntimeReturn => {
