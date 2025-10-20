@@ -6,6 +6,10 @@
   }
 
   pre {
-    @apply p-4 rounded-lg overflow-x-auto leading-relaxed;
+    @apply p-4 pr-14 rounded-lg overflow-x-auto leading-relaxed;
+  }
+
+  pre code {
+    @apply block;
   }
 }

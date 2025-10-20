@@ -1,3 +1,4 @@
+import classNames from 'classnames'
 import { Effect, HashSet, Match as M, Schema as S, pipe } from 'effect'
 import { Route, Runtime } from 'foldkit'
 import {
@@ -81,6 +82,7 @@ const urlToAppRoute = Route.parseUrlWithFallback(routeParser, NotFoundRoute)
 const Model = S.Struct({
   route: AppRoute,
   copiedSnippets: S.HashSet(S.String),
+  mobileMenuOpen: S.Boolean,
 })
 
 type Model = ST<typeof Model>
@@ -93,6 +95,7 @@ const UrlChanged = ts('UrlChanged', { url: Url })
 const CopyToClipboard = ts('CopyToClipboard', { text: S.String })
 const CopySuccess = ts('CopySuccess', { text: S.String })
 const HideCopiedIndicator = ts('HideCopiedIndicator', { text: S.String })
+const ToggleMobileMenu = ts('ToggleMobileMenu')
 
 const Message = S.Union(
   NoOp,
@@ -101,6 +104,7 @@ const Message = S.Union(
   CopyToClipboard,
   CopySuccess,
   HideCopiedIndicator,
+  ToggleMobileMenu,
 )
 
 type NoOp = ST<typeof NoOp>
@@ -109,6 +113,7 @@ type UrlChanged = ST<typeof UrlChanged>
 type CopyToClipboard = ST<typeof CopyToClipboard>
 type CopySuccess = ST<typeof CopySuccess>
 type HideCopiedIndicator = ST<typeof HideCopiedIndicator>
+type ToggleMobileMenu = ST<typeof ToggleMobileMenu>
 type Message = ST<typeof Message>
 
 // INIT
@@ -118,6 +123,7 @@ const init: Runtime.ApplicationInit<Model, Message> = (url: Url) => {
     {
       route: urlToAppRoute(url),
       copiedSnippets: HashSet.empty(),
+      mobileMenuOpen: false,
     },
     [],
   ]
@@ -148,7 +154,7 @@ const update = (model: Model, message: Message): [Model, Runtime.Command<Message
           }),
         ),
 
-      UrlChanged: ({ url }) => [{ ...model, route: urlToAppRoute(url) }, []],
+      UrlChanged: ({ url }) => [{ ...model, route: urlToAppRoute(url), mobileMenuOpen: false }, []],
 
       CopyToClipboard: ({ text }) => [model, [copyToClipboardCommand(text)]],
 
@@ -164,6 +170,8 @@ const update = (model: Model, message: Message): [Model, Runtime.Command<Message
         { ...model, copiedSnippets: HashSet.remove(model.copiedSnippets, text) },
         [],
       ],
+
+      ToggleMobileMenu: () => [{ ...model, mobileMenuOpen: !model.mobileMenuOpen }, []],
     }),
   )
 
@@ -185,15 +193,29 @@ const hideIndicatorCommand = (text: string): Runtime.Command<HideCopiedIndicator
 
 // VIEW
 
-const sidebarView = (currentRoute: AppRoute) => {
+const sidebarView = (currentRoute: AppRoute, mobileMenuOpen: boolean) => {
   const linkClass = (isActive: boolean) =>
-    `block px-4 py-2 rounded transition ${isActive ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-700 hover:bg-gray-100'}`
+    classNames('block px-4 py-2 rounded transition', {
+      'bg-blue-100 text-blue-700 font-medium': isActive,
+      'text-gray-700 hover:bg-gray-100': !isActive,
+    })
 
   const navLink = (href: string, isActive: boolean, label: string) =>
     li([], [a([Href(href), Class(linkClass(isActive))], [label])])
 
   return aside(
-    [Class('w-64 bg-white border-r border-gray-200 min-h-screen p-6')],
+    [
+      Class(
+        classNames(
+          'absolute md:static top-0 left-0 bottom-0 z-40',
+          'w-full md:w-64 bg-white border-r border-gray-200 p-6 overflow-y-auto',
+          {
+            'block border-t border-gray-200': mobileMenuOpen,
+            'hidden md:block': !mobileMenuOpen,
+          },
+        ),
+      ),
+    ],
     [
       nav(
         [],
@@ -239,7 +261,7 @@ const homeView = (model: Model) =>
   div(
     [],
     [
-      h1([Class('text-5xl font-bold text-gray-900 mb-4')], ['Foldkit']),
+      h1([Class('text-3xl md:text-5xl font-bold text-gray-900 mb-4')], ['Foldkit']),
       p(
         [Class('mb-4')],
         [
@@ -300,7 +322,7 @@ const homeView = (model: Model) =>
           ),
         ],
       ),
-      h2([Class('text-2xl font-semibold text-gray-900 mb-4')], ['Quick Start']),
+      h2([Class('text-xl md:text-2xl font-semibold text-gray-900 mb-4')], ['Quick Start']),
       p(
         [Class('mb-4')],
         [
@@ -313,35 +335,13 @@ const homeView = (model: Model) =>
           " you would like to start with and the package manager you'd like to use.",
         ],
       ),
-      div(
-        [Class('relative mb-8')],
-        [
-          pre(
-            [Class('bg-gray-900 text-gray-100 rounded-lg text-sm')],
-            [CREATE_FOLDKIT_APP_COMMAND],
-          ),
-          div(
-            [Class('absolute top-2 right-2 flex items-center gap-2')],
-            [
-              HashSet.has(model.copiedSnippets, CREATE_FOLDKIT_APP_COMMAND)
-                ? div(
-                    [Class('text-sm rounded py-1 px-2 font-medium bg-green-700 text-white')],
-                    ['Copied'],
-                  )
-                : empty,
-              button(
-                [
-                  Class('p-2 rounded hover:bg-gray-700 transition text-gray-400 hover:text-white'),
-                  AriaLabel('Copy command to clipboard'),
-                  OnClick(CopyToClipboard.make({ text: CREATE_FOLDKIT_APP_COMMAND })),
-                ],
-                [Icon.copy()],
-              ),
-            ],
-          ),
-        ],
+      codeBlockWithCopy(
+        pre([Class('bg-gray-900 text-gray-100 rounded-lg text-sm')], [CREATE_FOLDKIT_APP_COMMAND]),
+        CREATE_FOLDKIT_APP_COMMAND,
+        'Copy command to clipboard',
+        model,
       ),
-      h2([Class('text-2xl font-semibold text-gray-900 mb-4 mt-8')], ['Counter Example']),
+      h2([Class('text-xl md:text-2xl font-semibold text-gray-900 mb-4 mt-8')], ['Counter Example']),
       p(
         [Class('mb-4')],
         [
@@ -356,30 +356,11 @@ const homeView = (model: Model) =>
           ' (rendering).',
         ],
       ),
-      div(
-        [Class('relative mb-8')],
-        [
-          div([Class('text-sm'), InnerHTML(counterExampleHighlighted)], []),
-          div(
-            [Class('absolute top-2 right-2 flex items-center gap-2')],
-            [
-              HashSet.has(model.copiedSnippets, counterExample)
-                ? div(
-                    [Class('text-sm rounded py-1 px-2 font-medium bg-green-700 text-white')],
-                    ['Copied'],
-                  )
-                : empty,
-              button(
-                [
-                  Class('p-2 rounded hover:bg-gray-700 transition text-gray-400 hover:text-white'),
-                  AriaLabel('Copy counter example to clipboard'),
-                  OnClick(CopyToClipboard.make({ text: counterExample })),
-                ],
-                [Icon.copy()],
-              ),
-            ],
-          ),
-        ],
+      codeBlockWithCopy(
+        div([Class('text-sm'), InnerHTML(counterExampleHighlighted)], []),
+        counterExample,
+        'Copy counter example to clipboard',
+        model,
       ),
       a(
         [Href(gettingStartedRouter.build({})), Class('text-blue-500 hover:underline')],
@@ -392,7 +373,7 @@ const gettingStartedView = () =>
   div(
     [],
     [
-      h1([Class('text-4xl font-bold text-gray-900 mb-6')], ['Getting Started']),
+      h1([Class('text-2xl md:text-4xl font-bold text-gray-900 mb-6')], ['Getting Started']),
       p([], ['Learn how to build type-safe, functional web applications with Foldkit.']),
     ],
   )
@@ -401,7 +382,7 @@ const architectureView = () =>
   div(
     [],
     [
-      h1([Class('text-4xl font-bold text-gray-900 mb-6')], ['Architecture & Concepts']),
+      h1([Class('text-2xl md:text-4xl font-bold text-gray-900 mb-6')], ['Architecture & Concepts']),
       p([], ['Understand the core principles and patterns of Foldkit.']),
     ],
   )
@@ -410,7 +391,7 @@ const examplesView = () =>
   div(
     [],
     [
-      h1([Class('text-4xl font-bold text-gray-900 mb-6')], ['Examples']),
+      h1([Class('text-2xl md:text-4xl font-bold text-gray-900 mb-6')], ['Examples']),
       p([], ['Explore real-world examples built with Foldkit.']),
     ],
   )
@@ -419,7 +400,7 @@ const bestPracticesView = () =>
   div(
     [],
     [
-      h1([Class('text-4xl font-bold text-gray-900 mb-6')], ['Best Practices']),
+      h1([Class('text-2xl md:text-4xl font-bold text-gray-900 mb-6')], ['Best Practices']),
       p([], ['Learn patterns and practices for building maintainable Foldkit applications.']),
     ],
   )
@@ -428,11 +409,33 @@ const notFoundView = (path: string) =>
   div(
     [],
     [
-      h1([Class('text-4xl font-bold text-red-600 mb-6')], ['404 - Page Not Found']),
+      h1([Class('text-2xl md:text-4xl font-bold text-red-600 mb-6')], ['404 - Page Not Found']),
       p([Class('mb-4')], [`The path "${path}" was not found.`]),
       a([Href(homeRouter.build({})), Class('text-blue-500 hover:underline')], ['← Go Home']),
     ],
   )
+
+const codeBlockWithCopy = (content: Html, textToCopy: string, ariaLabel: string, model: Model) => {
+  const copiedIndicator = HashSet.has(model.copiedSnippets, textToCopy)
+    ? div([Class('text-sm rounded py-1 px-2 font-medium bg-green-700 text-white')], ['Copied'])
+    : empty
+
+  const copyButton = button(
+    [
+      Class('p-2 rounded hover:bg-gray-700 transition text-gray-400 hover:text-white bg-gray-800'),
+      AriaLabel(ariaLabel),
+      OnClick(CopyToClipboard.make({ text: textToCopy })),
+    ],
+    [Icon.copy()],
+  )
+
+  const copyButtonWithIndicator = div(
+    [Class('absolute top-2 right-2 flex items-center gap-2')],
+    [copiedIndicator, copyButton],
+  )
+
+  return div([Class('relative mb-8 min-w-0')], [content, copyButtonWithIndicator])
+}
 
 const iconLink = (link: string, ariaLabel: string, icon: Html) =>
   a(
@@ -453,42 +456,63 @@ const view = (model: Model) => {
   )
 
   return div(
-    [],
+    [
+      Class(
+        classNames({
+          'overflow-hidden h-screen md:overflow-auto md:h-auto': model.mobileMenuOpen,
+        }),
+      ),
+    ],
     [
       div(
-        [Class('bg-yellow-500 text-gray-900 text-center py-2 px-4 text-sm font-medium space-x-3')],
+        [
+          Class(
+            'bg-yellow-500 text-gray-900 text-center py-2 px-4 text-xs md:text-sm font-medium space-x-2 md:space-x-3',
+          ),
+        ],
         [
           span([], ['🔧']),
           span([], ['We are building in the open! This site is a work in progress.']),
           span([], ['🪛']),
         ],
       ),
-      div(
-        [Class('flex min-h-screen bg-gray-50')],
+      header(
         [
-          sidebarView(model.route),
-          main(
-            [Class('flex-1')],
+          Class(
+            'bg-white border-b border-gray-200 px-4 md:px-8 py-4 md:py-6 flex items-center justify-between',
+          ),
+        ],
+        [
+          div(
+            [Class('flex items-center gap-4')],
             [
-              header(
+              button(
                 [
-                  Class(
-                    'bg-white border-b border-gray-200 px-8 py-6 flex items-center justify-between',
-                  ),
+                  Class('md:hidden p-2 rounded hover:bg-gray-100 transition text-gray-700'),
+                  AriaLabel('Toggle menu'),
+                  OnClick(ToggleMobileMenu.make()),
                 ],
-                [
-                  h1([Class('text-2xl font-bold text-gray-900')], ['Foldkit']),
-                  div(
-                    [Class('flex items-center gap-4')],
-                    [
-                      iconLink(Link.github, 'GitHub', Icon.github('w-6 h-6')),
-                      iconLink(Link.npm, 'npm', Icon.npm('w-8 h-8')),
-                    ],
-                  ),
-                ],
+                [Icon.menu('w-6 h-6')],
               ),
-              div([Class('p-8 max-w-4xl mx-auto')], [content]),
+              h1([Class('text-xl md:text-2xl font-bold text-gray-900')], ['Foldkit']),
             ],
+          ),
+          div(
+            [Class('flex items-center gap-3 md:gap-4')],
+            [
+              iconLink(Link.github, 'GitHub', Icon.github('w-5 h-5 md:w-6 md:h-6')),
+              iconLink(Link.npm, 'npm', Icon.npm('w-6 h-6 md:w-8 md:h-8')),
+            ],
+          ),
+        ],
+      ),
+      div(
+        [Class('flex min-h-screen bg-gray-50 relative')],
+        [
+          sidebarView(model.route, model.mobileMenuOpen),
+          main(
+            [Class('flex-1 min-w-0')],
+            [div([Class('p-4 md:p-8 max-w-4xl mx-auto min-w-0')], [content])],
           ),
         ],
       ),

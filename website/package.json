@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.10",
+    "classnames": "^2.5.1",
     "effect": "^3.18.2",
     "foldkit": "0.3.0-canary.6",
     "shiki": "^3.13.0",

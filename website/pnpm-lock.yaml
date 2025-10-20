@@ -11,6 +11,9 @@ importers:
       '@tailwindcss/vite':
         specifier: ^4.1.10
         version: 4.1.14(vite@7.1.10(jiti@2.6.1)(lightningcss@1.30.1))
+      classnames:
+        specifier: ^2.5.1
+        version: 2.5.1
       effect:
         specifier: ^3.18.2
         version: 3.18.4
@@ -750,6 +753,9 @@ packages:
   chownr@3.0.0:
     resolution: {integrity: sha512-+IxzY9BZOQd/XuYPRmrvEVjF/nqj5kgT4kEq7VofrDoM1MxoRjEWkrCC3EtLi59TVawxTAn+orJwFQcrqEN1+g==}
     engines: {node: '>=18'}
+
+  classnames@2.5.1:
+    resolution: {integrity: sha512-saHYOzhIQs6wy2sVxTM6bUDsQO4F50V9RQ22qBpEdCW+I+/Wmke2HOl6lS6dTpdxVhb88/I6+Hs+438c3lfUow==}
 
   color-convert@2.0.1:
     resolution: {integrity: sha512-RRECPsj7iu/xb5oKYcsFHSppFNnsj/52OVTRKb4zP5onXwVF3zVmmToNcOfGC+CRDpfK/U584fMg38ZHCaElKQ==}
@@ -1997,6 +2003,8 @@ snapshots:
   character-entities-legacy@3.0.0: {}
 
   chownr@3.0.0: {}
+
+  classnames@2.5.1: {}
 
   color-convert@2.0.1:
     dependencies:
