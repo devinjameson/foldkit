@@ -91,6 +91,8 @@ export type Attribute<Message> = Data.TaggedEnum<{
   ViewBox: { readonly value: string }
   Xmlns: { readonly value: string }
   Fill: { readonly value: string }
+  FillRule: { readonly value: string }
+  ClipRule: { readonly value: string }
   Stroke: { readonly value: string }
   StrokeWidth: { readonly value: string }
   StrokeLinecap: { readonly value: string }
@@ -201,6 +203,8 @@ export const {
   ViewBox: ViewBox_,
   Xmlns: Xmlns_,
   Fill: Fill_,
+  FillRule: FillRule_,
+  ClipRule: ClipRule_,
   Stroke: Stroke_,
   StrokeWidth: StrokeWidth_,
   StrokeLinecap: StrokeLinecap_,
@@ -306,6 +310,8 @@ export const InnerHTML = (value: string) => InnerHTML_({ value })
 export const ViewBox = (value: string) => ViewBox_({ value })
 export const Xmlns = (value: string) => Xmlns_({ value })
 export const Fill = (value: string) => Fill_({ value })
+export const FillRule = (value: string) => FillRule_({ value })
+export const ClipRule = (value: string) => ClipRule_({ value })
 export const Stroke = (value: string) => Stroke_({ value })
 export const StrokeWidth = (value: string) => StrokeWidth_({ value })
 export const StrokeLinecap = (value: string) => StrokeLinecap_({ value })
@@ -844,6 +850,16 @@ const buildVNodeData = <Message>(
             Ref.update(dataRef, (data) => ({
               ...data,
               attrs: { ...data.attrs, fill: value },
+            })),
+          FillRule: ({ value }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              attrs: { ...data.attrs, 'fill-rule': value },
+            })),
+          ClipRule: ({ value }) =>
+            Ref.update(dataRef, (data) => ({
+              ...data,
+              attrs: { ...data.attrs, 'clip-rule': value },
             })),
           Stroke: ({ value }) =>
             Ref.update(dataRef, (data) => ({
