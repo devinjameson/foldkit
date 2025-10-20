@@ -14,6 +14,7 @@
     "@tailwindcss/vite": "^4.1.10",
     "effect": "^3.18.2",
     "foldkit": "0.3.0-canary.5",
+    "shiki": "^3.13.0",
     "tailwindcss": "^4.1.10"
   },
   "devDependencies": {
