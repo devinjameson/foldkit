@@ -8,4 +8,7 @@ export const Link = {
   solid: 'https://solidjs.com',
   foldkitExamples: 'https://github.com/devinjameson/foldkit/tree/main/examples',
   createFoldkitApp: 'https://github.com/devinjameson/foldkit/tree/main/packages/create-foldkit-app',
+  github: 'https://github.com/devinjameson/foldkit',
+  npm: 'https://www.npmjs.com/package/foldkit',
+  websiteSource: 'https://github.com/devinjameson/foldkit/tree/main/website',
 }

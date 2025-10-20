@@ -13,10 +13,10 @@ import {
   svg,
 } from 'foldkit/html'
 
-export const copy = (): Html =>
+export const copy = (className: string = 'w-5 h-5'): Html =>
   svg(
     [
-      Class('w-5 h-5'),
+      Class(className),
       Xmlns('http://www.w3.org/2000/svg'),
       Fill('none'),
       ViewBox('0 0 24 24'),

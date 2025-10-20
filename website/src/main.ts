@@ -4,6 +4,7 @@ import {
   AriaLabel,
   Class,
   Href,
+  Html,
   InnerHTML,
   OnClick,
   a,
@@ -242,12 +243,14 @@ const homeView = (model: Model) =>
       p(
         [Class('mb-4')],
         [
-          'Foldkit is a TypeScript framework for building type-safe, functional web applications. It uses ',
+          'Foldkit is a TypeScript framework for building type-safe, functional web applications (',
+          a([Href(Link.websiteSource), Class('text-blue-500 hover:underline')], ['like this one!']),
+          '). It uses ',
           a(
             [Href(Link.theElmArchitecture), Class('text-blue-500 hover:underline')],
             ['The Elm Architecture'],
           ),
-          ' and is built on top of ',
+          ' and is built with ',
           a([Href(Link.effect), Class('text-blue-500 hover:underline')], ['Effect']),
           '.',
         ],
@@ -431,6 +434,12 @@ const notFoundView = (path: string) =>
     ],
   )
 
+const iconLink = (link: string, ariaLabel: string, icon: Html) =>
+  a(
+    [Href(link), Class('text-gray-700 hover:text-gray-900 transition'), AriaLabel(ariaLabel)],
+    [icon],
+  )
+
 const view = (model: Model) => {
   const content = M.value(model.route).pipe(
     M.tagsExhaustive({
@@ -462,8 +471,21 @@ const view = (model: Model) => {
             [Class('flex-1')],
             [
               header(
-                [Class('bg-white border-b border-gray-200 px-8 py-6')],
-                [h1([Class('text-2xl font-bold text-gray-900')], ['Foldkit'])],
+                [
+                  Class(
+                    'bg-white border-b border-gray-200 px-8 py-6 flex items-center justify-between',
+                  ),
+                ],
+                [
+                  h1([Class('text-2xl font-bold text-gray-900')], ['Foldkit']),
+                  div(
+                    [Class('flex items-center gap-4')],
+                    [
+                      iconLink(Link.github, 'GitHub', Icon.github('w-6 h-6')),
+                      iconLink(Link.npm, 'npm', Icon.npm('w-8 h-8')),
+                    ],
+                  ),
+                ],
               ),
               div([Class('p-8 max-w-4xl mx-auto')], [content]),
             ],
