@@ -118,13 +118,15 @@ const init: Runtime.ElementInit<Model, Message> = () => [
 // COMMAND STREAM
 
 const CommandStreamsDeps = S.Struct({
-  tick: S.Boolean,
+  tick: S.Struct({
+    isRunning: S.Boolean,
+  }),
 })
 
 const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Model, Message>({
   tick: {
-    modelToDeps: (model: Model) => model.isRunning,
-    depsToStream: (isRunning: boolean) =>
+    modelToDeps: (model: Model) => ({ isRunning: model.isRunning }),
+    depsToStream: ({ isRunning }) =>
       Stream.when(
         Stream.tick(Duration.millis(TICK_INTERVAL_MS)).pipe(
           Stream.map(() => Effect.succeed(RequestTick.make())),

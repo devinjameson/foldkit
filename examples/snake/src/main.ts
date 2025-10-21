@@ -1,4 +1,4 @@
-import { Array, Data, Duration, Effect, Match as M, Schema as S, Stream, pipe } from 'effect'
+import { Array, Duration, Effect, Match as M, Schema as S, Stream, pipe } from 'effect'
 import { Runtime } from 'foldkit'
 import { Class, Html, div, h1, p } from 'foldkit/html'
 import { ST, ts } from 'foldkit/schema'
@@ -210,7 +210,7 @@ const update = (model: Model, message: Message): [Model, Runtime.Command<Message
 const requestAppleCommand = (snake: Snake.Snake): Runtime.Command<Message> =>
   Effect.succeed(RequestApple.make({ snake }))
 
-// COMMAND STREAMS
+// COMMAND STREAM
 
 const CommandStreamsDeps = S.Struct({
   gameClock: S.Struct({
@@ -222,11 +222,10 @@ const CommandStreamsDeps = S.Struct({
 
 const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Model, Message>({
   gameClock: {
-    modelToDeps: (model: Model) =>
-      Data.struct({
-        isPlaying: model.gameState === 'Playing',
-        interval: Math.max(GAME_SPEED.MIN_INTERVAL, GAME_SPEED.BASE_INTERVAL - model.points),
-      }),
+    modelToDeps: (model: Model) => ({
+      isPlaying: model.gameState === 'Playing',
+      interval: Math.max(GAME_SPEED.MIN_INTERVAL, GAME_SPEED.BASE_INTERVAL - model.points),
+    }),
     depsToStream: (deps: { isPlaying: boolean; interval: number }) =>
       Stream.when(
         Stream.tick(Duration.millis(deps.interval)).pipe(
