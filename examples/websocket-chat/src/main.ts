@@ -34,6 +34,8 @@ import { ST, ts } from 'foldkit/schema'
 const WS_URL = 'wss://echo.websocket.org'
 const CONNECTION_TIMEOUT_MS = 5000
 
+// MODEL
+
 const ChatMessage = S.Struct({
   text: S.String,
   zoned: S.DateTimeZonedFromSelf,
@@ -69,6 +71,8 @@ const Model = S.Struct({
 })
 
 type Model = ST<typeof Model>
+
+// MESSAGE
 
 const RequestConnect = ts('RequestConnect')
 const Connected = ts('Connected', { socket: WebSocketSchema })
@@ -111,6 +115,8 @@ type MessageReceived = ST<typeof MessageReceived>
 type GotReceivedMessageTime = ST<typeof GotReceivedMessageTime>
 type GotSentMessageTime = ST<typeof GotSentMessageTime>
 type Message = ST<typeof Message>
+
+// UPDATE
 
 const update = (model: Model, message: Message): [Model, Runtime.Command<Message>[]] =>
   M.value(message).pipe(
@@ -203,6 +209,8 @@ const update = (model: Model, message: Message): [Model, Runtime.Command<Message
     }),
   )
 
+// INIT
+
 const init: Runtime.ElementInit<Model, Message> = () => [
   {
     connection: ConnectionDisconnected.make(),
@@ -211,6 +219,8 @@ const init: Runtime.ElementInit<Model, Message> = () => [
   },
   [],
 ]
+
+// COMMAND
 
 const sendMessageCommand = (socket: WebSocket, text: string): Runtime.Command<MessageSent> =>
   Effect.sync(() => {
@@ -244,6 +254,8 @@ const connectCommand = (): Runtime.Command<Connected | ConnectionFailed> =>
     ),
   )
 
+// COMMAND STREAM
+
 const CommandStreamsDeps = S.Struct({
   websocket: S.OptionFromSelf(S.instanceOf(WebSocket)),
 })
@@ -255,38 +267,42 @@ const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Model, Mes
         M.tag('ConnectionConnected', ({ socket }) => Option.some(socket)),
         M.orElse(() => Option.none()),
       ),
-    depsToStream: (websocket: Option.Option<WebSocket>) =>
-      Option.match(websocket, {
+    depsToStream: (maybeWebsocket: Option.Option<WebSocket>) =>
+      Option.match(maybeWebsocket, {
         onNone: () => Stream.empty,
         onSome: (ws: WebSocket) =>
-          Stream.async<Runtime.Command<Message>>((emit) => {
-            const handleMessage = (event: MessageEvent) => {
-              emit.single(Effect.succeed(MessageReceived.make({ text: event.data })))
-            }
+          Stream.async<Runtime.Command<MessageReceived | Disconnected | ConnectionFailed>>(
+            (emit) => {
+              const handleMessage = (event: MessageEvent) => {
+                emit.single(Effect.succeed(MessageReceived.make({ text: event.data })))
+              }
 
-            const handleClose = () => {
-              emit.single(Effect.succeed(Disconnected.make()))
-              emit.end()
-            }
+              const handleClose = () => {
+                emit.single(Effect.succeed(Disconnected.make()))
+                emit.end()
+              }
 
-            const handleError = () => {
-              emit.single(Effect.succeed(ConnectionFailed.make({ error: 'Connection error' })))
-              emit.end()
-            }
+              const handleError = () => {
+                emit.single(Effect.succeed(ConnectionFailed.make({ error: 'Connection error' })))
+                emit.end()
+              }
 
-            ws.addEventListener('message', handleMessage)
-            ws.addEventListener('close', handleClose)
-            ws.addEventListener('error', handleError)
+              ws.addEventListener('message', handleMessage)
+              ws.addEventListener('close', handleClose)
+              ws.addEventListener('error', handleError)
 
-            return Effect.sync(() => {
-              ws.removeEventListener('message', handleMessage)
-              ws.removeEventListener('close', handleClose)
-              ws.removeEventListener('error', handleError)
-            })
-          }),
+              return Effect.sync(() => {
+                ws.removeEventListener('message', handleMessage)
+                ws.removeEventListener('close', handleClose)
+                ws.removeEventListener('error', handleError)
+              })
+            },
+          ),
       }),
   },
 })
+
+// VIEW
 
 const view = (model: Model): Html =>
   div(
@@ -488,6 +504,8 @@ const errorView = (error: string): Html =>
       ),
     ],
   )
+
+// RUN
 
 const element = Runtime.makeElement({
   Model,
