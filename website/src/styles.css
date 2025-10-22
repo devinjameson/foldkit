@@ -6,10 +6,19 @@
   }
 
   pre {
-    @apply p-4 pr-14 rounded-lg overflow-x-auto leading-relaxed;
+    @apply p-4 pr-14 rounded-lg overflow-x-auto;
   }
 
   pre code {
     @apply block;
+  }
+
+  pre code .line {
+    @apply leading-6;
+  }
+
+  pre code .line[data-line]::before {
+    content: attr(data-line);
+    @apply inline-block w-12 mr-4 text-right text-gray-500 select-none border-r border-gray-600 pr-4;
   }
 }

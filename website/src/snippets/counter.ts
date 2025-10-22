@@ -28,7 +28,10 @@ type Message = ST<typeof Message>
 // Returns a tuple of [nextModel, commands]
 // Commands are side effects like HTTP requests (none needed here)
 
-const update = (count: Model, message: Message): [Model, Runtime.Command<Message>[]] =>
+const update = (
+  count: Model,
+  message: Message,
+): [Model, Runtime.Command<Message>[]] =>
   M.value(message).pipe(
     M.withReturnType<[Model, Runtime.Command<Message>[]]>(),
     M.tagsExhaustive({
@@ -49,15 +52,27 @@ const init: Runtime.ElementInit<Model, Message> = () => [0, []]
 
 const view = (count: Model): Html =>
   div(
-    [Class('min-h-screen bg-white flex flex-col items-center justify-center gap-6 p-6')],
+    [Class(containerStyle)],
     [
-      div([Class('text-6xl font-bold text-gray-800')], [count.toString()]),
+      div(
+        [Class('text-6xl font-bold text-gray-800')],
+        [count.toString()],
+      ),
       div(
         [Class('flex flex-wrap justify-center gap-4')],
         [
-          button([OnClick(Decrement.make()), Class(buttonStyle)], ['-']),
-          button([OnClick(Reset.make()), Class(buttonStyle)], ['Reset']),
-          button([OnClick(Increment.make()), Class(buttonStyle)], ['+']),
+          button(
+            [OnClick(Decrement.make()), Class(buttonStyle)],
+            ['-'],
+          ),
+          button(
+            [OnClick(Reset.make()), Class(buttonStyle)],
+            ['Reset'],
+          ),
+          button(
+            [OnClick(Increment.make()), Class(buttonStyle)],
+            ['+'],
+          ),
         ],
       ),
     ],
@@ -65,7 +80,11 @@ const view = (count: Model): Html =>
 
 // STYLE
 
-const buttonStyle = 'bg-black text-white hover:bg-gray-700 px-4 py-2 transition'
+const containerStyle =
+  'min-h-screen bg-white flex flex-col items-center justify-center gap-6 p-6'
+
+const buttonStyle =
+  'bg-black text-white hover:bg-gray-700 px-4 py-2 transition'
 
 // RUN - Wire everything together and start the application
 
