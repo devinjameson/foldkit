@@ -1,6 +1,9 @@
 import { Schema as S } from 'effect'
 
 export const Url = S.Struct({
+  protocol: S.String,
+  host: S.String,
+  port: S.OptionFromNullishOr(S.String, null),
   pathname: S.String,
   search: S.String,
   hash: S.String,

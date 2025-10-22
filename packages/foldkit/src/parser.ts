@@ -393,17 +393,6 @@ export const query =
 
 const pathToSegments = flow(String.split('/'), Array.filter(String.isNonEmpty))
 
-export const parseUrlString = (urlString: string): Url => {
-  const [pathAndQuery, hash] = String.split(urlString, '#')
-  const [pathname, search] = String.split(pathAndQuery, '?')
-
-  return {
-    pathname,
-    search: search ?? '',
-    hash: hash ?? '',
-  }
-}
-
 const complete = <A>([value, remaining]: ParseResult<A>) =>
   Array.match<string, Effect.Effect<A, ParseError>>(remaining, {
     onEmpty: () => Effect.succeed(value),
@@ -445,15 +434,6 @@ export type UrlRequest = Data.TaggedEnum<{
 }>
 
 export const UrlRequest = Data.taggedEnum<UrlRequest>()
-
-export const fromLocation = (location: Location): UrlRequest =>
-  UrlRequest.Internal({
-    url: {
-      pathname: location.pathname,
-      search: location.search,
-      hash: location.hash,
-    },
-  })
 
 const buildUrl =
   <A>(parser: Biparser<A>) =>

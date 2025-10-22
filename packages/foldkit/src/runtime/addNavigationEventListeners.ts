@@ -1,5 +1,6 @@
 import { Array, Queue, String, pipe } from 'effect'
 
+import { OptionExt } from '../effectExtensions'
 import { External, Internal, Url } from '../urlRequest'
 import { BrowserConfig } from './runtime'
 
@@ -18,6 +19,9 @@ const addPopStateListener = <Message>(
 ) => {
   const onPopState = () => {
     const newUrl: Url = {
+      protocol: window.location.protocol,
+      host: window.location.host,
+      port: OptionExt.fromString(window.location.port),
       pathname: window.location.pathname,
       search: window.location.search,
       hash: window.location.hash,
@@ -65,7 +69,14 @@ const addLinkClickListener = <Message>(
         Array.isNonEmptyArray(hashParts) && hashParts.length > 1 ? `#${hashParts[1]}` : '',
       )
 
-      return { pathname, search, hash }
+      return {
+        protocol: window.location.protocol,
+        host: window.location.host,
+        port: OptionExt.fromString(window.location.port),
+        pathname,
+        search,
+        hash,
+      }
     })
 
     const isSamePageHashLink =
@@ -86,6 +97,9 @@ const addProgrammaticNavigationListener = <Message>(
 ) => {
   const onProgrammaticNavigation = () => {
     const newUrl: Url = {
+      protocol: window.location.protocol,
+      host: window.location.host,
+      port: OptionExt.fromString(window.location.port),
       pathname: window.location.pathname,
       search: window.location.search,
       hash: window.location.hash,
