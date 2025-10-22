@@ -173,7 +173,7 @@ const update = (model: Model, message: Message): [Model, Runtime.Command<Message
           return [model, []]
         }
 
-        return [model, [generateTodoDataCommand(String.trim(model.newTodoText))]]
+        return [model, [generateTodoData(String.trim(model.newTodoText))]]
       },
 
       GotNewTodoData: ({ id, timestamp, text }) => {
@@ -341,7 +341,7 @@ const randomId = Effect.gen(function* () {
   return randomValue.toString(36).substring(2, 15)
 })
 
-const generateTodoDataCommand = (text: string): Runtime.Command<GotNewTodoData> =>
+const generateTodoData = (text: string): Runtime.Command<GotNewTodoData> =>
   Effect.gen(function* () {
     const id = yield* randomId
     const timestamp = yield* Clock.currentTimeMillis

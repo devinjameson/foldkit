@@ -138,7 +138,7 @@ const update = (model: Model, message: Message): [Model, Runtime.Command<Message
       ],
 
       ProductsMessage: ({ message }) => {
-        const [newProductsModel, productsCommand] = Products.update(productsRouter)(
+        const [newProductsModel, commands] = Products.update(productsRouter)(
           model.productsPage,
           message,
         )
@@ -148,7 +148,7 @@ const update = (model: Model, message: Message): [Model, Runtime.Command<Message
             ...model,
             productsPage: newProductsModel,
           },
-          productsCommand.map(
+          commands.map(
             Effect.map((productsMessage) => ProductsMessage.make({ message: productsMessage })),
           ),
         ]

@@ -80,7 +80,7 @@ const update = (model: Model, message: Message): [Model, Runtime.Command<Message
 
       FetchWeather: () => [
         { ...model, weather: WeatherLoading.make() },
-        [fetchWeatherCommand(model.zipCodeInput)],
+        [fetchWeather(model.zipCodeInput)],
       ],
 
       WeatherFetched: ({ weather }) => [
@@ -117,7 +117,7 @@ type WeatherResponseData = {
   }>
 }
 
-const fetchWeatherCommand = (zipCode: string): Runtime.Command<WeatherFetched | WeatherError> =>
+const fetchWeather = (zipCode: string): Runtime.Command<WeatherFetched | WeatherError> =>
   Effect.gen(function* () {
     if (String.isEmpty(zipCode.trim())) {
       return WeatherError.make({ error: 'Zip code required' })

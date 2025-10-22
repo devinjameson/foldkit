@@ -122,10 +122,7 @@ const update = (model: Model, message: Message): [Model, Runtime.Command<Message
   M.value(message).pipe(
     M.withReturnType<[Model, Runtime.Command<Message>[]]>(),
     M.tagsExhaustive({
-      RequestConnect: () => [
-        { ...model, connection: ConnectionConnecting.make() },
-        [connectCommand()],
-      ],
+      RequestConnect: () => [{ ...model, connection: ConnectionConnecting.make() }, [connect()]],
 
       Connected: ({ socket }) => [
         { ...model, connection: ConnectionConnected.make({ socket }) },
@@ -159,7 +156,7 @@ const update = (model: Model, message: Message): [Model, Runtime.Command<Message
           M.withReturnType<[Model, Runtime.Command<Message>[]]>(),
           M.tag('ConnectionConnected', ({ socket }) => [
             { ...model, messageInput: '' },
-            [sendMessageCommand(socket, trimmedMessage)],
+            [sendMessage(socket, trimmedMessage)],
           ]),
           M.orElse(() => [model, []]),
         )
@@ -222,13 +219,13 @@ const init: Runtime.ElementInit<Model, Message> = () => [
 
 // COMMAND
 
-const sendMessageCommand = (socket: WebSocket, text: string): Runtime.Command<MessageSent> =>
+const sendMessage = (socket: WebSocket, text: string): Runtime.Command<MessageSent> =>
   Effect.sync(() => {
     socket.send(text)
     return MessageSent.make({ text })
   })
 
-const connectCommand = (): Runtime.Command<Connected | ConnectionFailed> =>
+const connect = (): Runtime.Command<Connected | ConnectionFailed> =>
   Effect.race(
     Effect.async<Connected | ConnectionFailed>((resume) => {
       const ws = new WebSocket(WS_URL)

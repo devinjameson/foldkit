@@ -57,7 +57,7 @@ const init: Runtime.ElementInit<Model, Message> = () => {
       points: 0,
       highScore: 0,
     },
-    [requestAppleCommand(snake)],
+    [requestApple(snake)],
   ]
 }
 
@@ -119,7 +119,7 @@ const update = (model: Model, message: Message): [Model, Runtime.Command<Message
                 gameState: 'NotStarted',
                 points: 0,
               },
-              [requestAppleCommand(nextSnake)],
+              [requestApple(nextSnake)],
             ]
           }),
           M.orElse(() => [model, []]),
@@ -152,7 +152,7 @@ const update = (model: Model, message: Message): [Model, Runtime.Command<Message
           ]
         }
 
-        const commands = willEatApple ? [requestAppleCommand(nextSnake)] : []
+        const commands = willEatApple ? [requestApple(nextSnake)] : []
 
         return [
           {
@@ -186,7 +186,7 @@ const update = (model: Model, message: Message): [Model, Runtime.Command<Message
             gameState: 'NotStarted',
             points: 0,
           },
-          [requestAppleCommand(nextSnake)],
+          [requestApple(nextSnake)],
         ]
       },
 
@@ -207,7 +207,7 @@ const update = (model: Model, message: Message): [Model, Runtime.Command<Message
 
 // COMMAND
 
-const requestAppleCommand = (snake: Snake.Snake): Runtime.Command<Message> =>
+const requestApple = (snake: Snake.Snake): Runtime.Command<Message> =>
   Effect.succeed(RequestApple.make({ snake }))
 
 // COMMAND STREAM
