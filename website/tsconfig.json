@@ -12,5 +12,5 @@
     "noEmit": true
   },
   "include": ["src/**/*", "vite.config.ts"],
-  "exclude": ["src/snippets/**/*"]
+  "exclude": ["src/snippet/**/*"]
 }

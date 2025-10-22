@@ -4,6 +4,7 @@ import {
   Class,
   Href,
   Html,
+  Key,
   OnInput,
   Placeholder,
   Value,
@@ -403,7 +404,10 @@ const view = (model: Model): Html => {
 
   return div(
     [Class('min-h-screen bg-gray-100')],
-    [header([], [navigationView(model.route)]), main([Class('py-8')], [routeContent])],
+    [
+      header([], [navigationView(model.route)]),
+      main([Class('py-8')], [div([Key(model.route._tag)], [routeContent])]),
+    ],
   )
 }
 

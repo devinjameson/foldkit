@@ -1,6 +1,6 @@
 import { Effect, Match as M, Option, Schema as S, pipe } from 'effect'
 import { Route, Runtime } from 'foldkit'
-import { Class, Href, Html, a, div, h1, header, li, main, nav, p, ul } from 'foldkit/html'
+import { Class, Href, Html, Key, a, div, h1, header, li, main, nav, p, ul } from 'foldkit/html'
 import { load, pushUrl } from 'foldkit/navigation'
 import { literal } from 'foldkit/route'
 import { ST, ts } from 'foldkit/schema'
@@ -331,7 +331,7 @@ const view = (model: Model): Html => {
     [Class('min-h-screen bg-gray-100')],
     [
       header([], [navigationView(model.route, Cart.totalItems(model.cart))]),
-      main([Class('py-8')], [routeContent]),
+      main([Class('py-8')], [div([Key(model.route._tag)], [routeContent])]),
     ],
   )
 }

@@ -4,6 +4,7 @@ import {
   Effect,
   HashSet,
   Match as M,
+  Option,
   Schema as S,
   pipe,
 } from 'effect'
@@ -13,14 +14,12 @@ import {
   Class,
   Href,
   Html,
-  InnerHTML,
+  Key,
   OnClick,
   a,
   aside,
   button,
-  code,
   div,
-  em,
   empty,
   h1,
   h2,
@@ -29,27 +28,18 @@ import {
   li,
   main,
   nav,
-  pre,
   span,
-  strong,
   ul,
 } from 'foldkit/html'
 import { load, pushUrl } from 'foldkit/navigation'
 import { literal } from 'foldkit/route'
+import { UrlRequest } from 'foldkit/runtime'
 import { type ST, ts } from 'foldkit/schema'
-import { Url, UrlRequest } from 'foldkit/urlRequest'
+import { Url, toString as urlToString } from 'foldkit/url'
 
 import { Icon } from './icon'
 import { Link } from './link'
-import {
-  bulletPoint,
-  bullets,
-  heading,
-  link,
-  para,
-  section,
-} from './prose'
-import * as Snippets from './snippets'
+import * as Page from './page'
 
 // ROUTE
 
@@ -108,15 +98,23 @@ const urlToAppRoute = Route.parseUrlWithFallback(
   NotFoundRoute,
 )
 
+export type TableOfContentsEntry = {
+  id: string
+  text: string
+  level: 'h2' | 'h3'
+}
+
 // MODEL
 
-const Model = S.Struct({
+export const Model = S.Struct({
   route: AppRoute,
+  url: Url,
   copiedSnippets: S.HashSet(S.String),
   mobileMenuOpen: S.Boolean,
+  activeSection: S.Option(S.String),
 })
 
-type Model = ST<typeof Model>
+export type Model = ST<typeof Model>
 
 // MESSAGE
 
@@ -125,30 +123,40 @@ const UrlRequestReceived = ts('UrlRequestReceived', {
   request: UrlRequest,
 })
 const UrlChanged = ts('UrlChanged', { url: Url })
-const CopyToClipboard = ts('CopyToClipboard', { text: S.String })
+export const CopySnippetToClipboard = ts('CopySnippetToClipboard', {
+  text: S.String,
+})
+export const CopyLinkToClipboard = ts('CopyLinkToClipboard', {
+  hash: S.String,
+})
 const CopySuccess = ts('CopySuccess', { text: S.String })
 const HideCopiedIndicator = ts('HideCopiedIndicator', {
   text: S.String,
 })
 const ToggleMobileMenu = ts('ToggleMobileMenu')
+const SectionChanged = ts('SectionChanged', { sectionId: S.String })
 
 const Message = S.Union(
   NoOp,
   UrlRequestReceived,
   UrlChanged,
-  CopyToClipboard,
+  CopySnippetToClipboard,
+  CopyLinkToClipboard,
   CopySuccess,
   HideCopiedIndicator,
   ToggleMobileMenu,
+  SectionChanged,
 )
 
 type NoOp = ST<typeof NoOp>
 type UrlRequestReceived = ST<typeof UrlRequestReceived>
 type UrlChanged = ST<typeof UrlChanged>
-type CopyToClipboard = ST<typeof CopyToClipboard>
+type CopySnippetToClipboard = ST<typeof CopySnippetToClipboard>
+type CopyLinkToClipboard = ST<typeof CopyLinkToClipboard>
 type CopySuccess = ST<typeof CopySuccess>
 type HideCopiedIndicator = ST<typeof HideCopiedIndicator>
 type ToggleMobileMenu = ST<typeof ToggleMobileMenu>
+type SectionChanged = ST<typeof SectionChanged>
 type Message = ST<typeof Message>
 
 // INIT
@@ -157,10 +165,15 @@ const init: Runtime.ApplicationInit<Model, Message> = (url: Url) => {
   return [
     {
       route: urlToAppRoute(url),
+      url,
       copiedSnippets: HashSet.empty(),
       mobileMenuOpen: false,
+      activeSection: Option.none(),
     },
-    [],
+    Option.match(url.hash, {
+      onNone: () => [],
+      onSome: (hash) => [scrollToHash(hash)],
+    }),
   ]
 }
 
@@ -198,12 +211,25 @@ const update = (
         {
           ...model,
           route: urlToAppRoute(url),
+          url,
           mobileMenuOpen: false,
         },
         [],
       ],
 
-      CopyToClipboard: ({ text }) => [model, [copyToClipboard(text)]],
+      CopySnippetToClipboard: ({ text }) => [
+        model,
+        [copySnippetToClipboard(text)],
+      ],
+
+      CopyLinkToClipboard: ({ hash }) => [
+        model,
+        [
+          copyLinkToClipboard(
+            urlToString({ ...model.url, hash: Option.some(hash) }),
+          ),
+        ],
+      ],
 
       CopySuccess: ({ text }) =>
         HashSet.has(model.copiedSnippets, text)
@@ -231,12 +257,17 @@ const update = (
         { ...model, mobileMenuOpen: !model.mobileMenuOpen },
         [],
       ],
+
+      SectionChanged: ({ sectionId }) => [
+        { ...model, activeSection: Option.some(sectionId) },
+        [],
+      ],
     }),
   )
 
 // COMMAND
 
-const copyToClipboard = (
+const copySnippetToClipboard = (
   text: string,
 ): Runtime.Command<CopySuccess | NoOp> =>
   Effect.tryPromise({
@@ -244,6 +275,15 @@ const copyToClipboard = (
     catch: () => new Error('Failed to copy to clipboard'),
   }).pipe(
     Effect.as(CopySuccess.make({ text })),
+    Effect.catchAll(() => Effect.succeed(NoOp.make())),
+  )
+
+const copyLinkToClipboard = (url: string): Runtime.Command<NoOp> =>
+  Effect.tryPromise({
+    try: () => navigator.clipboard.writeText(url),
+    catch: () => new Error('Failed to copy link to clipboard'),
+  }).pipe(
+    Effect.as(NoOp.make()),
     Effect.catchAll(() => Effect.succeed(NoOp.make())),
   )
 
@@ -256,6 +296,17 @@ const hideIndicator = (
     Effect.as(HideCopiedIndicator.make({ text })),
   )
 
+const scrollToHash = (hash: string): Runtime.Command<NoOp> =>
+  Effect.async((resume) => {
+    requestAnimationFrame(() => {
+      const element = document.getElementById(hash)
+      if (element) {
+        element.scrollIntoView({ behavior: 'instant' })
+      }
+      resume(Effect.succeed(NoOp.make()))
+    })
+  })
+
 // VIEW
 
 const sidebarView = (
@@ -263,8 +314,8 @@ const sidebarView = (
   mobileMenuOpen: boolean,
 ) => {
   const linkClass = (isActive: boolean) =>
-    classNames('block px-4 py-2 rounded transition', {
-      'bg-blue-100 text-blue-700 font-medium': isActive,
+    classNames('block px-2 py-1 rounded transition text-sm', {
+      'bg-blue-100 text-blue-700': isActive,
       'text-gray-700 hover:bg-gray-100': !isActive,
     })
 
@@ -276,7 +327,7 @@ const sidebarView = (
       Class(
         classNames(
           'absolute md:static top-0 left-0 bottom-0 z-40',
-          'w-full md:w-64 bg-white border-r border-gray-200 p-6',
+          'w-full md:w-64 bg-white border-r border-gray-200 p-4',
           'md:h-full md:overflow-y-auto overflow-y-auto',
           {
             block: mobileMenuOpen,
@@ -333,354 +384,6 @@ const sidebarView = (
   )
 }
 
-const CREATE_FOLDKIT_APP_COMMAND =
-  'npx create-foldkit-app@latest --wizard'
-
-type Header = { id: string; text: string }
-type TableOfContentsEntry = Header & { level: 2 | 3 }
-
-const counterExampleHeader: Header = {
-  id: 'counterExample',
-  text: 'A Simple Counter Example',
-}
-const modelHeader: Header = { id: 'model', text: 'Model' }
-const messagesHeader: Header = { id: 'messages', text: 'Messages' }
-const updateHeader: Header = { id: 'update', text: 'Update' }
-const viewHeader: Header = { id: 'view', text: 'View' }
-const commandsHeader: Header = { id: 'commands', text: 'Commands' }
-
-const architectureTableOfContents: TableOfContentsEntry[] = [
-  { level: 2, ...counterExampleHeader },
-  { level: 2, ...modelHeader },
-  { level: 2, ...messagesHeader },
-  { level: 2, ...updateHeader },
-  { level: 2, ...viewHeader },
-  { level: 2, ...commandsHeader },
-]
-
-const homeView = () =>
-  div(
-    [],
-    [
-      heading(1, 'introduction', 'Introduction'),
-      para(
-        'Foldkit is a TypeScript framework for building type-safe, functional web applications (',
-        link(Link.websiteSource, 'like this one!'),
-        '). It uses ',
-        link(Link.theElmArchitecture, 'The Elm Architecture'),
-        ' and is built with ',
-        link(Link.effect, 'Effect'),
-        '.',
-      ),
-      para(
-        "If you're coming from a framework like ",
-        link(Link.react, 'React'),
-        ', ',
-        link(Link.vue, 'Vue'),
-        ', ',
-        link(Link.angular, 'Angular'),
-        ', ',
-        link(Link.svelte, 'Svelte'),
-        ', or ',
-        link(Link.solid, 'Solid'),
-        ', Foldkit may feel unfamiliar at first. However, once you get used to its patterns and principles, you may find it to be a refreshing and enjoyable way to build web applications.',
-      ),
-      para(
-        'The main qualities of Foldkit that differentiate it from other frameworks are:',
-      ),
-      bullets(
-        bulletPoint(
-          'The Elm Architecture',
-          'Foldkit uses the proven Model-View-Update pattern in The Elm Architecture, providing a clear unidirectional data flow that makes applications predictable and easy to reason about.',
-        ),
-        bulletPoint(
-          'Single slice of state',
-          'The entire application state is stored in a single immutable model, making it easier to reason about and manage state changes.',
-        ),
-        bulletPoint(
-          'Controlled side effects',
-          'Side effects are managed explicitly through commands, allowing for better control and testing of asynchronous operations. This quality in particular makes Foldkit applications exceptionally clear.',
-        ),
-        bulletPoint(
-          'Functional',
-          'Foldkit unapologetically embraces a functional style of programming, promoting immutability, pure functions, and declarative code.',
-        ),
-        bulletPoint(
-          'Built with and for Effect',
-          'Foldkit leverages the power of the Effect library to provide a robust and type-safe foundation for building applications.',
-        ),
-      ),
-    ],
-  )
-
-const gettingStartedView = (model: Model) =>
-  div(
-    [],
-    [
-      heading(1, 'gettingStarted', 'Getting Started'),
-      heading(2, 'quickStart', 'Quick Start'),
-      para(
-        link(Link.createFoldkitApp, 'Create Foldkit app'),
-        " is the recommended way to get started with Foldkit. You'll be able to select the ",
-        link(Link.foldkitExamples, 'example'),
-        " you would like to start with and the package manager you'd like to use.",
-      ),
-      codeBlockWithCopy(
-        pre(
-          [Class('bg-gray-900 text-gray-100 rounded-lg text-sm')],
-          [CREATE_FOLDKIT_APP_COMMAND],
-        ),
-        CREATE_FOLDKIT_APP_COMMAND,
-        'Copy command to clipboard',
-        model,
-      ),
-    ],
-  )
-
-const architectureView = (model: Model) =>
-  div(
-    [],
-    [
-      heading(1, 'architecture', 'Architecture & Concepts'),
-      heading(2, counterExampleHeader.id, counterExampleHeader.text),
-      para(
-        'The easiest way to learn how Foldkit works is to first look at examples, then dive deeper to understand each piece in isolation.',
-      ),
-      para(
-        "Here's a simple counter application that demonstrates Foldkit's core concepts: the ",
-        strong([], ['Model']),
-        ' (application state), ',
-        strong([], ['Messages']),
-        ' (model updates), ',
-        strong([], ['Update']),
-        ' (state transitions), and ',
-        strong([], ['View']),
-        ' (rendering). Take a look at the counter example below in full, then continue to see a more detailed explanation of each piece.',
-      ),
-      codeBlockWithCopy(
-        div(
-          [Class('text-sm'), InnerHTML(Snippets.counterHighlighted)],
-          [],
-        ),
-        Snippets.counterRaw,
-        'Copy counter example to clipboard',
-        model,
-      ),
-      section(modelHeader.id, modelHeader.text, [
-        para(
-          'The Model represents your entire application state in a single, immutable data structure. In Foldkit, the Model is defined using ',
-          link(Link.effectSchema, 'Effect Schema'),
-          ', which provides runtime validation, type inference, and a single source of truth for your application state.',
-        ),
-        para('In the counter example, the model is simply a number.'),
-        codeBlockWithCopy(
-          div(
-            [
-              Class('text-sm'),
-              InnerHTML(Snippets.counterModelHighlighted),
-            ],
-            [],
-          ),
-          Snippets.counterModelRaw,
-          'Copy model example to clipboard',
-          model,
-        ),
-      ]),
-      section(messagesHeader.id, messagesHeader.text, [
-        para(
-          'Messages represent all the events that can occur in your application. They describe ',
-          em([], ['what happened']),
-          ', not ',
-          em([], ['how to handle it']),
-          '. Messages are implemented as tagged unions, providing exhaustive pattern matching and type safety.',
-        ),
-        para('The counter example has three simple messages:'),
-        codeBlockWithCopy(
-          div(
-            [
-              Class('text-sm'),
-              InnerHTML(Snippets.counterMessagesHighlighted),
-            ],
-            [],
-          ),
-          Snippets.counterMessagesRaw,
-          'Copy messages example to clipboard',
-          model,
-        ),
-      ]),
-      section(updateHeader.id, updateHeader.text, [
-        para(
-          "The update function is the heart of your application logic. It's a pure function that takes the current model and a message, and returns a new model along with any commands to execute. Commands represent side effects and are covered later on this page.",
-        ),
-        para(
-          'Foldkit uses ',
-          link(Link.effectMatch, 'Effect.Match'),
-          ' for exhaustive pattern matching on messages. The TypeScript compiler will error if you forget to handle a message type.',
-        ),
-        codeBlockWithCopy(
-          div(
-            [
-              Class('text-sm'),
-              InnerHTML(Snippets.counterUpdateHighlighted),
-            ],
-            [],
-          ),
-          Snippets.counterUpdateRaw,
-          'Copy update example to clipboard',
-          model,
-        ),
-      ]),
-      section(viewHeader.id, viewHeader.text, [
-        para(
-          'The view function is a pure function that transforms your model into HTML. Given the same model, it always produces the same HTML output. The view never directly modifies state - instead, it dispatches messages through event handlers like ',
-          code([], ['OnClick']),
-          '.',
-        ),
-        codeBlockWithCopy(
-          div(
-            [
-              Class('text-sm'),
-              InnerHTML(Snippets.counterViewHighlighted),
-            ],
-            [],
-          ),
-          Snippets.counterViewRaw,
-          'Copy view example to clipboard',
-          model,
-        ),
-      ]),
-      section(commandsHeader.id, commandsHeader.text, [
-        para(
-          "You're probably wondering how to handle side effects like HTTP requests, timers, or interacting with the browser API. In Foldkit, side effects are managed through commands returned by the update function. This keeps your update logic pure and testable.",
-        ),
-        para(
-          "Let's start simple. Say we want to wait one second before resetting the count if the user clicks reset. This is how we might implement that:",
-        ),
-        codeBlockWithCopy(
-          div(
-            [
-              Class('text-sm'),
-              InnerHTML(Snippets.counterCommandsHighlighted),
-            ],
-            [],
-          ),
-          Snippets.counterCommandsRaw,
-          'Copy commands example to clipboard',
-          model,
-        ),
-        para(
-          'Now, what if we want to get the next count from an API instead of incrementing locally? We can create a Command that performs the HTTP request and returns a Message when it completes:',
-        ),
-        codeBlockWithCopy(
-          div(
-            [
-              Class('text-sm'),
-              InnerHTML(Snippets.counterHttpCommandHighlighted),
-            ],
-            [],
-          ),
-          Snippets.counterHttpCommandRaw,
-          'Copy HTTP command example to clipboard',
-          model,
-        ),
-        para(
-          "Let's zoom in on ",
-          code([], ['fetchCount']),
-          " to understand what's happening here:",
-        ),
-        codeBlockWithCopy(
-          div(
-            [
-              Class('text-sm'),
-              InnerHTML(
-                Snippets.counterHttpCommandFetchCountHighlighted,
-              ),
-            ],
-            [],
-          ),
-          Snippets.counterHttpCommandFetchCountRaw,
-          'Copy HTTP command fetchCount example to clipboard',
-          model,
-        ),
-      ]),
-    ],
-  )
-
-const examplesView = () =>
-  div(
-    [],
-    [
-      heading(1, 'examples', 'Examples'),
-      para('Explore real-world examples built with Foldkit.'),
-    ],
-  )
-
-const bestPracticesView = () =>
-  div(
-    [],
-    [
-      heading(1, 'bestPractices', 'Best Practices'),
-      para(
-        'Learn patterns and practices for building maintainable Foldkit applications.',
-      ),
-    ],
-  )
-
-const notFoundView = (path: string) =>
-  div(
-    [],
-    [
-      h1(
-        [Class('text-2xl md:text-4xl font-bold text-red-600 mb-6')],
-        ['404 - Page Not Found'],
-      ),
-      para(`The path "${path}" was not found.`),
-      link(homeRouter.build({}), '← Go Home'),
-    ],
-  )
-
-const codeBlockWithCopy = (
-  content: Html,
-  textToCopy: string,
-  ariaLabel: string,
-  model: Model,
-) => {
-  const copiedIndicator = HashSet.has(
-    model.copiedSnippets,
-    textToCopy,
-  )
-    ? div(
-        [
-          Class(
-            'text-sm rounded py-1 px-2 font-medium bg-green-700 text-white',
-          ),
-        ],
-        ['Copied'],
-      )
-    : empty
-
-  const copyButton = button(
-    [
-      Class(
-        'p-2 rounded hover:bg-gray-700 transition text-gray-400 hover:text-white bg-gray-800',
-      ),
-      AriaLabel(ariaLabel),
-      OnClick(CopyToClipboard.make({ text: textToCopy })),
-    ],
-    [Icon.copy()],
-  )
-
-  const copyButtonWithIndicator = div(
-    [Class('absolute top-2 right-2 flex items-center gap-2')],
-    [copiedIndicator, copyButton],
-  )
-
-  return div(
-    [Class('relative mb-8 min-w-0')],
-    [content, copyButtonWithIndicator],
-  )
-}
-
 const iconLink = (link: string, ariaLabel: string, icon: Html) =>
   a(
     [
@@ -695,7 +398,7 @@ const tableOfContentsView = (entries: TableOfContentsEntry[]) =>
   aside(
     [
       Class(
-        'hidden xl:block fixed right-8 top-24 w-64 max-h-[calc(100vh-6rem)] overflow-y-auto',
+        'hidden xl:block w-64 overflow-y-auto border-l border-gray-200 p-4',
       ),
     ],
     [
@@ -714,7 +417,7 @@ const tableOfContentsView = (entries: TableOfContentsEntry[]) =>
             [Class('space-y-2 text-sm')],
             Array.map(entries, ({ level, id, text }) =>
               li(
-                [Class(classNames({ 'ml-4': level === 3 }))],
+                [Class(classNames({ 'ml-4': level === 'h3' }))],
                 [
                   a(
                     [
@@ -737,13 +440,24 @@ const tableOfContentsView = (entries: TableOfContentsEntry[]) =>
 const view = (model: Model) => {
   const content = M.value(model.route).pipe(
     M.tagsExhaustive({
-      Home: homeView,
-      GettingStarted: () => gettingStartedView(model),
-      Architecture: () => architectureView(model),
-      Examples: examplesView,
-      BestPractices: bestPracticesView,
-      NotFound: ({ path }) => notFoundView(path),
+      Home: Page.Home.view,
+      GettingStarted: () => Page.GettingStarted.view(model),
+      Architecture: () => Page.Architecture.view(model),
+      Examples: Page.Examples.view,
+      BestPractices: Page.BestPractices.view,
+      NotFound: ({ path }) =>
+        Page.NotFound.view(path, homeRouter.build({})),
     }),
+  )
+
+  const currentPageTableOfContents = M.value(model.route).pipe(
+    M.tag('GettingStarted', () =>
+      Option.some(Page.GettingStarted.tableOfContents),
+    ),
+    M.tag('Architecture', () =>
+      Option.some(Page.Architecture.tableOfContents),
+    ),
+    M.orElse(() => Option.none()),
   )
 
   return div(
@@ -820,21 +534,25 @@ const view = (model: Model) => {
         ],
       ),
       div(
-        [Class('flex flex-1 bg-gray-50 relative overflow-hidden')],
+        [Class('flex flex-1 overflow-hidden')],
         [
           sidebarView(model.route, model.mobileMenuOpen),
           main(
             [Class('flex-1 min-w-0 overflow-y-auto')],
             [
               div(
-                [Class('p-4 md:p-8 max-w-4xl mx-auto min-w-0')],
+                [
+                  Key(model.route._tag),
+                  Class('p-4 md:p-8 max-w-4xl mx-auto min-w-0'),
+                ],
                 [content],
               ),
             ],
           ),
-          S.is(ArchitectureRoute)(model.route)
-            ? tableOfContentsView(architectureTableOfContents)
-            : empty,
+          Option.match(currentPageTableOfContents, {
+            onSome: tableOfContentsView,
+            onNone: () => empty,
+          }),
         ],
       ),
     ],
