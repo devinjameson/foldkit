@@ -27,7 +27,6 @@ import {
   li,
   main,
   nav,
-  p,
   pre,
   span,
   strong,
@@ -40,20 +39,23 @@ import { Url, UrlRequest } from 'foldkit/urlRequest'
 
 import { Icon } from './icon'
 import { Link } from './link'
-import counterCommandsHighlighted from './snippets/counter-commands.ts?highlighted'
-import counterCommands from './snippets/counter-commands.ts?raw'
-import counterHttpCommandHighlighted from './snippets/counter-http-command.ts?highlighted'
-import counterHttpCommand from './snippets/counter-http-command.ts?raw'
-import counterMessagesHighlighted from './snippets/counter-messages.ts?highlighted'
-import counterMessages from './snippets/counter-messages.ts?raw'
-import counterModelHighlighted from './snippets/counter-model.ts?highlighted'
-import counterModel from './snippets/counter-model.ts?raw'
-import counterUpdateHighlighted from './snippets/counter-update.ts?highlighted'
-import counterUpdate from './snippets/counter-update.ts?raw'
-import counterViewHighlighted from './snippets/counter-view.ts?highlighted'
-import counterView from './snippets/counter-view.ts?raw'
+import { bullets, heading, link, para, section } from './prose'
 import counterExampleHighlighted from './snippets/counter.ts?highlighted'
 import counterExample from './snippets/counter.ts?raw'
+import counterCommandsHighlighted from './snippets/counterCommands.ts?highlighted'
+import counterCommands from './snippets/counterCommands.ts?raw'
+import counterHttpCommandHighlighted from './snippets/counterHttpCommand.ts?highlighted'
+import counterHttpCommand from './snippets/counterHttpCommand.ts?raw'
+import counterHttpCommandFetchCountHighlighted from './snippets/counterHttpCommandFetchCount.ts?highlighted'
+import counterHttpCommandFetchCount from './snippets/counterHttpCommandFetchCount.ts?raw'
+import counterMessagesHighlighted from './snippets/counterMessages.ts?highlighted'
+import counterMessages from './snippets/counterMessages.ts?raw'
+import counterModelHighlighted from './snippets/counterModel.ts?highlighted'
+import counterModel from './snippets/counterModel.ts?raw'
+import counterUpdateHighlighted from './snippets/counterUpdate.ts?highlighted'
+import counterUpdate from './snippets/counterUpdate.ts?raw'
+import counterViewHighlighted from './snippets/counterView.ts?highlighted'
+import counterView from './snippets/counterView.ts?raw'
 
 // ROUTE
 
@@ -347,113 +349,53 @@ const homeView = () =>
   div(
     [],
     [
-      h1(
-        [Class('text-2xl md:text-4xl font-bold text-gray-900 mb-6')],
-        ['Introduction'],
+      heading(1, 'Introduction'),
+      para(
+        'Foldkit is a TypeScript framework for building type-safe, functional web applications (',
+        link(Link.websiteSource, 'like this one!'),
+        '). It uses ',
+        link(Link.theElmArchitecture, 'The Elm Architecture'),
+        ' and is built with ',
+        link(Link.effect, 'Effect'),
+        '.',
       ),
-      p(
-        [Class('mb-4')],
-        [
-          'Foldkit is a TypeScript framework for building type-safe, functional web applications (',
-          a(
-            [
-              Href(Link.websiteSource),
-              Class('text-blue-500 hover:underline'),
-            ],
-            ['like this one!'],
-          ),
-          '). It uses ',
-          a(
-            [
-              Href(Link.theElmArchitecture),
-              Class('text-blue-500 hover:underline'),
-            ],
-            ['The Elm Architecture'],
-          ),
-          ' and is built with ',
-          a(
-            [
-              Href(Link.effect),
-              Class('text-blue-500 hover:underline'),
-            ],
-            ['Effect'],
-          ),
-          '.',
-        ],
+      para(
+        "If you're coming from a framework like ",
+        link(Link.react, 'React'),
+        ', ',
+        link(Link.vue, 'Vue'),
+        ', ',
+        link(Link.angular, 'Angular'),
+        ', ',
+        link(Link.svelte, 'Svelte'),
+        ', or ',
+        link(Link.solid, 'Solid'),
+        ', Foldkit may feel unfamiliar at first. However, once you get used to its patterns and principles, you may find it to be a refreshing and enjoyable way to build web applications.',
       ),
-      p(
-        [Class('mb-4')],
-        [
-          "If you\'re coming from a framework like ",
-          a(
-            [
-              Href(Link.react),
-              Class('text-blue-500 hover:underline'),
-            ],
-            ['React'],
-          ),
-          ', ',
-          a(
-            [Href(Link.vue), Class('text-blue-500 hover:underline')],
-            ['Vue'],
-          ),
-          ', ',
-          a(
-            [
-              Href(Link.angular),
-              Class('text-blue-500 hover:underline'),
-            ],
-            ['Angular'],
-          ),
-          ', ',
-          a(
-            [
-              Href(Link.svelte),
-              Class('text-blue-500 hover:underline'),
-            ],
-            ['Svelte'],
-          ),
-          ', or ',
-          a(
-            [
-              Href(Link.solid),
-              Class('text-blue-500 hover:underline'),
-            ],
-            ['Solid'],
-          ),
-          ', Foldkit may feel unfamiliar at first. However, once you get used to its patterns and principles, you may find it to be a refreshing and enjoyable way to build web applications.',
-        ],
+      para(
+        'The main qualities of Foldkit that differentiate it from other frameworks are:',
       ),
-      p(
-        [Class('mb-4')],
-        [
-          'The main qualities of Foldkit that differentiate it from other frameworks are:',
-        ],
-      ),
-      ul(
-        [Class('list-disc mb-8 space-y-2 ml-4')],
-        [
-          bulletPoint(
-            'The Elm Architecture',
-            'Foldkit uses the proven Model-View-Update pattern in The Elm Architecture, providing a clear unidirectional data flow that makes applications predictable and easy to reason about.',
-          ),
-          bulletPoint(
-            'Single slice of state',
-            'The entire application state is stored in a single immutable model, making it easier to reason about and manage state changes.',
-          ),
-          bulletPoint(
-            'Controlled side effects',
-            'Side effects are managed explicitly through commands, allowing for better control and testing of asynchronous operations. This quality in particular makes Foldkit applications exceptionally clear.',
-          ),
-          bulletPoint(
-            'Functional',
-            'Foldkit unapologetically embraces a functional style of programming, promoting immutability, pure functions, and declarative code.',
-          ),
-          bulletPoint(
-            'Built with and for Effect',
-            'Foldkit leverages the power of the Effect library to provide a robust and type-safe foundation for building applications.',
-          ),
-        ],
+      bullets(
+        bulletPoint(
+          'The Elm Architecture',
+          'Foldkit uses the proven Model-View-Update pattern in The Elm Architecture, providing a clear unidirectional data flow that makes applications predictable and easy to reason about.',
+        ),
+        bulletPoint(
+          'Single slice of state',
+          'The entire application state is stored in a single immutable model, making it easier to reason about and manage state changes.',
+        ),
+        bulletPoint(
+          'Controlled side effects',
+          'Side effects are managed explicitly through commands, allowing for better control and testing of asynchronous operations. This quality in particular makes Foldkit applications exceptionally clear.',
+        ),
+        bulletPoint(
+          'Functional',
+          'Foldkit unapologetically embraces a functional style of programming, promoting immutability, pure functions, and declarative code.',
+        ),
+        bulletPoint(
+          'Built with and for Effect',
+          'Foldkit leverages the power of the Effect library to provide a robust and type-safe foundation for building applications.',
+        ),
       ),
     ],
   )
@@ -462,38 +404,13 @@ const gettingStartedView = (model: Model) =>
   div(
     [],
     [
-      h1(
-        [Class('text-2xl md:text-4xl font-bold text-gray-900 mb-6')],
-        ['Getting Started'],
-      ),
-      h2(
-        [
-          Class(
-            'text-xl md:text-2xl font-semibold text-gray-900 mb-4',
-          ),
-        ],
-        ['Quick Start'],
-      ),
-      p(
-        [Class('mb-4')],
-        [
-          a(
-            [
-              Href(Link.createFoldkitApp),
-              Class('text-blue-500 hover:underline'),
-            ],
-            ['Create Foldkit app'],
-          ),
-          " is the recommended way to get started with Foldkit. You\'ll be able to select the ",
-          a(
-            [
-              Href(Link.foldkitExamples),
-              Class('text-blue-500 hover:underline'),
-            ],
-            ['example'],
-          ),
-          " you would like to start with and the package manager you\'d like to use.",
-        ],
+      heading(1, 'Getting Started'),
+      heading(2, 'Quick Start'),
+      para(
+        link(Link.createFoldkitApp, 'Create Foldkit app'),
+        " is the recommended way to get started with Foldkit. You'll be able to select the ",
+        link(Link.foldkitExamples, 'example'),
+        " you would like to start with and the package manager you'd like to use.",
       ),
       codeBlockWithCopy(
         pre(
@@ -511,37 +428,21 @@ const architectureView = (model: Model) =>
   div(
     [],
     [
-      h1(
-        [Class('text-2xl md:text-4xl font-bold text-gray-900 mb-6')],
-        ['Architecture & Concepts'],
+      heading(1, 'Architecture & Concepts'),
+      heading(2, 'A Simple Counter Example'),
+      para(
+        'The easiest way to learn how Foldkit works is to first look at examples, then dive deeper to understand each piece in isolation.',
       ),
-      h2(
-        [
-          Class(
-            'text-xl md:text-2xl font-semibold text-gray-900 mb-4',
-          ),
-        ],
-        ['A Simple Counter Example'],
-      ),
-      p(
-        [Class('mb-4')],
-        [
-          'The easiest way to learn how Foldkit works is to first look at examples, then dive deeper to understand each piece in isolation.',
-        ],
-      ),
-      p(
-        [Class('mb-4')],
-        [
-          "Here\'s a simple counter application that demonstrates Foldkit\'s core concepts: the ",
-          strong([], ['Model']),
-          ' (application state), ',
-          strong([], ['Messages']),
-          ' (model updates), ',
-          strong([], ['Update']),
-          ' (state transitions), and ',
-          strong([], ['View']),
-          ' (rendering). Take a look at the counter example below in full, then continue to see a more detailed explanation of each piece.',
-        ],
+      para(
+        "Here's a simple counter application that demonstrates Foldkit's core concepts: the ",
+        strong([], ['Model']),
+        ' (application state), ',
+        strong([], ['Messages']),
+        ' (model updates), ',
+        strong([], ['Update']),
+        ' (state transitions), and ',
+        strong([], ['View']),
+        ' (rendering). Take a look at the counter example below in full, then continue to see a more detailed explanation of each piece.',
       ),
       codeBlockWithCopy(
         div(
@@ -552,181 +453,126 @@ const architectureView = (model: Model) =>
         'Copy counter example to clipboard',
         model,
       ),
-      h2(
-        [
-          Class(
-            'text-xl md:text-2xl font-semibold text-gray-900 mb-4 mt-12',
-          ),
-        ],
-        ['Model'],
-      ),
-      p(
-        [Class('mb-4')],
-        [
+      section('Model', [
+        para(
           'The Model represents your entire application state in a single, immutable data structure. In Foldkit, the Model is defined using ',
-          a(
-            [
-              Href(Link.effectSchema),
-              Class('text-blue-500 hover:underline'),
-            ],
-            ['Effect Schema'],
-          ),
+          link(Link.effectSchema, 'Effect Schema'),
           ', which provides runtime validation, type inference, and a single source of truth for your application state.',
-        ],
-      ),
-      p(
-        [Class('mb-4')],
-        ['In the counter example, the model is simply a number.'],
-      ),
-      codeBlockWithCopy(
-        div(
-          [Class('text-sm'), InnerHTML(counterModelHighlighted)],
-          [],
         ),
-        counterModel,
-        'Copy model example to clipboard',
-        model,
-      ),
-      h2(
-        [
-          Class(
-            'text-xl md:text-2xl font-semibold text-gray-900 mb-4 mt-12',
+        para('In the counter example, the model is simply a number.'),
+        codeBlockWithCopy(
+          div(
+            [Class('text-sm'), InnerHTML(counterModelHighlighted)],
+            [],
           ),
-        ],
-        ['Messages'],
-      ),
-      p(
-        [Class('mb-4')],
-        [
+          counterModel,
+          'Copy model example to clipboard',
+          model,
+        ),
+      ]),
+      section('Messages', [
+        para(
           'Messages represent all the events that can occur in your application. They describe ',
           em([], ['what happened']),
           ', not ',
           em([], ['how to handle it']),
           '. Messages are implemented as tagged unions, providing exhaustive pattern matching and type safety.',
-        ],
-      ),
-      p(
-        [Class('mb-4')],
-        ['The counter example has three simple messages:'],
-      ),
-      codeBlockWithCopy(
-        div(
-          [Class('text-sm'), InnerHTML(counterMessagesHighlighted)],
-          [],
         ),
-        counterMessages,
-        'Copy messages example to clipboard',
-        model,
-      ),
-      h2(
-        [
-          Class(
-            'text-xl md:text-2xl font-semibold text-gray-900 mb-4 mt-12',
+        para('The counter example has three simple messages:'),
+        codeBlockWithCopy(
+          div(
+            [Class('text-sm'), InnerHTML(counterMessagesHighlighted)],
+            [],
           ),
-        ],
-        ['Update'],
-      ),
-      p(
-        [Class('mb-4')],
-        [
+          counterMessages,
+          'Copy messages example to clipboard',
+          model,
+        ),
+      ]),
+      section('Update', [
+        para(
           "The update function is the heart of your application logic. It's a pure function that takes the current model and a message, and returns a new model along with any commands to execute. Commands represent side effects and are covered later on this page.",
-        ],
-      ),
-      p(
-        [Class('mb-4')],
-        [
-          'Foldkit uses ',
-          a(
-            [
-              Href(Link.effectMatch),
-              Class('text-blue-500 hover:underline'),
-            ],
-            ['Effect.Match'],
-          ),
-          ' for exhaustive pattern matching on messages. The TypeScript compiler will error if you forget to handle a message type.',
-        ],
-      ),
-      codeBlockWithCopy(
-        div(
-          [Class('text-sm'), InnerHTML(counterUpdateHighlighted)],
-          [],
         ),
-        counterUpdate,
-        'Copy update example to clipboard',
-        model,
-      ),
-      h2(
-        [
-          Class(
-            'text-xl md:text-2xl font-semibold text-gray-900 mb-4 mt-12',
+        para(
+          'Foldkit uses ',
+          link(Link.effectMatch, 'Effect.Match'),
+          ' for exhaustive pattern matching on messages. The TypeScript compiler will error if you forget to handle a message type.',
+        ),
+        codeBlockWithCopy(
+          div(
+            [Class('text-sm'), InnerHTML(counterUpdateHighlighted)],
+            [],
           ),
-        ],
-        ['View'],
-      ),
-      p(
-        [Class('mb-4')],
-        [
+          counterUpdate,
+          'Copy update example to clipboard',
+          model,
+        ),
+      ]),
+      section('View', [
+        para(
           'The view function is a pure function that transforms your model into HTML. Given the same model, it always produces the same HTML output. The view never directly modifies state - instead, it dispatches messages through event handlers like ',
           code([], ['OnClick']),
           '.',
-        ],
-      ),
-      codeBlockWithCopy(
-        div(
-          [Class('text-sm'), InnerHTML(counterViewHighlighted)],
-          [],
         ),
-        counterView,
-        'Copy view example to clipboard',
-        model,
-      ),
-      h2(
-        [
-          Class(
-            'text-xl md:text-2xl font-semibold text-gray-900 mb-4 mt-12',
+        codeBlockWithCopy(
+          div(
+            [Class('text-sm'), InnerHTML(counterViewHighlighted)],
+            [],
           ),
-        ],
-        ['Commands'],
-      ),
-      p(
-        [Class('mb-4')],
-        [
-          "You\'re probably wondering how to handle side effects like HTTP requests, timers, or interacting with the browser API. In Foldkit, side effects are managed through commands returned by the update function. This keeps your update logic pure and testable.",
-        ],
-      ),
-      p(
-        [Class('mb-4')],
-        [
-          "Let\'s start simple. Say we want to wait one second before resetting the count if the user clicks reset. This is how we might implement that:",
-        ],
-      ),
-      codeBlockWithCopy(
-        div(
-          [Class('text-sm'), InnerHTML(counterCommandsHighlighted)],
-          [],
+          counterView,
+          'Copy view example to clipboard',
+          model,
         ),
-        counterCommands,
-        'Copy commands example to clipboard',
-        model,
-      ),
-      p(
-        [Class('mb-4')],
-        [
+      ]),
+      section('Commands', [
+        para(
+          "You're probably wondering how to handle side effects like HTTP requests, timers, or interacting with the browser API. In Foldkit, side effects are managed through commands returned by the update function. This keeps your update logic pure and testable.",
+        ),
+        para(
+          "Let's start simple. Say we want to wait one second before resetting the count if the user clicks reset. This is how we might implement that:",
+        ),
+        codeBlockWithCopy(
+          div(
+            [Class('text-sm'), InnerHTML(counterCommandsHighlighted)],
+            [],
+          ),
+          counterCommands,
+          'Copy commands example to clipboard',
+          model,
+        ),
+        para(
           'Now, what if we want to get the next count from an API instead of incrementing locally? We can create a Command that performs the HTTP request and returns a Message when it completes:',
-        ],
-      ),
-      codeBlockWithCopy(
-        div(
-          [
-            Class('text-sm'),
-            InnerHTML(counterHttpCommandHighlighted),
-          ],
-          [],
         ),
-        counterHttpCommand,
-        'Copy HTTP command example to clipboard',
-        model,
-      ),
+        codeBlockWithCopy(
+          div(
+            [
+              Class('text-sm'),
+              InnerHTML(counterHttpCommandHighlighted),
+            ],
+            [],
+          ),
+          counterHttpCommand,
+          'Copy HTTP command example to clipboard',
+          model,
+        ),
+        para(
+          "Let's zoom in on ",
+          code([], ['fetchCount']),
+          " to understand what's happening here:",
+        ),
+        codeBlockWithCopy(
+          div(
+            [
+              Class('text-sm'),
+              InnerHTML(counterHttpCommandFetchCountHighlighted),
+            ],
+            [],
+          ),
+          counterHttpCommandFetchCount,
+          'Copy HTTP command fetchCount example to clipboard',
+          model,
+        ),
+      ]),
     ],
   )
 
@@ -734,11 +580,8 @@ const examplesView = () =>
   div(
     [],
     [
-      h1(
-        [Class('text-2xl md:text-4xl font-bold text-gray-900 mb-6')],
-        ['Examples'],
-      ),
-      p([], ['Explore real-world examples built with Foldkit.']),
+      heading(1, 'Examples'),
+      para('Explore real-world examples built with Foldkit.'),
     ],
   )
 
@@ -746,15 +589,9 @@ const bestPracticesView = () =>
   div(
     [],
     [
-      h1(
-        [Class('text-2xl md:text-4xl font-bold text-gray-900 mb-6')],
-        ['Best Practices'],
-      ),
-      p(
-        [],
-        [
-          'Learn patterns and practices for building maintainable Foldkit applications.',
-        ],
+      heading(1, 'Best Practices'),
+      para(
+        'Learn patterns and practices for building maintainable Foldkit applications.',
       ),
     ],
   )
@@ -767,14 +604,8 @@ const notFoundView = (path: string) =>
         [Class('text-2xl md:text-4xl font-bold text-red-600 mb-6')],
         ['404 - Page Not Found'],
       ),
-      p([Class('mb-4')], [`The path "${path}" was not found.`]),
-      a(
-        [
-          Href(homeRouter.build({})),
-          Class('text-blue-500 hover:underline'),
-        ],
-        ['← Go Home'],
-      ),
+      para(`The path "${path}" was not found.`),
+      link(homeRouter.build({}), '← Go Home'),
     ],
   )
 
