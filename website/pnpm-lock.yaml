@@ -18,8 +18,8 @@ importers:
         specifier: ^3.18.2
         version: 3.18.4
       foldkit:
-        specifier: 0.4.0-canary.0
-        version: 0.4.0-canary.0(@effect/platform@0.92.1(effect@3.18.4))(effect@3.18.4)
+        specifier: 0.4.0-canary.1
+        version: 0.4.0-canary.1(@effect/platform@0.92.1(effect@3.18.4))(effect@3.18.4)
       shiki:
         specifier: ^3.13.0
         version: 3.13.0
@@ -906,8 +906,8 @@ packages:
   flatted@3.3.3:
     resolution: {integrity: sha512-GX+ysw4PBCz0PzosHDepZGANEuFCMLrnRTiEy9McGjmkCQYwRq4A/X786G/fjM/+OjsWSU1ZrY5qyARZmO/uwg==}
 
-  foldkit@0.4.0-canary.0:
-    resolution: {integrity: sha512-r/Mz2MPhWAj++Ylty8NeU+zRCI/JyRUZbbV0c0vbEgGc7VIpqYjzSG+HpjolPlexQWE4vqZARmZXkatcU2Cc2w==}
+  foldkit@0.4.0-canary.1:
+    resolution: {integrity: sha512-DTckRwZ+jdlC4qfvBx3aAK/xYMRdeFkx8eeel9DMAjoZV2Zc4lPSaYE7PMtt43btKdvQ8at1fX4fPWVH31hzsA==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       effect: ^3.18.2
@@ -2193,7 +2193,7 @@ snapshots:
 
   flatted@3.3.3: {}
 
-  foldkit@0.4.0-canary.0(@effect/platform@0.92.1(effect@3.18.4))(effect@3.18.4):
+  foldkit@0.4.0-canary.1(@effect/platform@0.92.1(effect@3.18.4))(effect@3.18.4):
     dependencies:
       '@effect/platform-browser': 0.72.0(@effect/platform@0.92.1(effect@3.18.4))(effect@3.18.4)
       effect: 3.18.4

@@ -1,5 +1,6 @@
 import classNames from 'classnames'
 import {
+  Array,
   Effect,
   HashSet,
   Match as M,
@@ -23,6 +24,7 @@ import {
   empty,
   h1,
   h2,
+  h3,
   header,
   li,
   main,
@@ -39,23 +41,15 @@ import { Url, UrlRequest } from 'foldkit/urlRequest'
 
 import { Icon } from './icon'
 import { Link } from './link'
-import { bullets, heading, link, para, section } from './prose'
-import counterExampleHighlighted from './snippets/counter.ts?highlighted'
-import counterExample from './snippets/counter.ts?raw'
-import counterCommandsHighlighted from './snippets/counterCommands.ts?highlighted'
-import counterCommands from './snippets/counterCommands.ts?raw'
-import counterHttpCommandHighlighted from './snippets/counterHttpCommand.ts?highlighted'
-import counterHttpCommand from './snippets/counterHttpCommand.ts?raw'
-import counterHttpCommandFetchCountHighlighted from './snippets/counterHttpCommandFetchCount.ts?highlighted'
-import counterHttpCommandFetchCount from './snippets/counterHttpCommandFetchCount.ts?raw'
-import counterMessagesHighlighted from './snippets/counterMessages.ts?highlighted'
-import counterMessages from './snippets/counterMessages.ts?raw'
-import counterModelHighlighted from './snippets/counterModel.ts?highlighted'
-import counterModel from './snippets/counterModel.ts?raw'
-import counterUpdateHighlighted from './snippets/counterUpdate.ts?highlighted'
-import counterUpdate from './snippets/counterUpdate.ts?raw'
-import counterViewHighlighted from './snippets/counterView.ts?highlighted'
-import counterView from './snippets/counterView.ts?raw'
+import {
+  bulletPoint,
+  bullets,
+  heading,
+  link,
+  para,
+  section,
+} from './prose'
+import * as Snippets from './snippets'
 
 // ROUTE
 
@@ -342,14 +336,33 @@ const sidebarView = (
 const CREATE_FOLDKIT_APP_COMMAND =
   'npx create-foldkit-app@latest --wizard'
 
-const bulletPoint = (label: string, description: string) =>
-  li([], [strong([], [`${label}:`]), ` ${description}`])
+type Header = { id: string; text: string }
+type TableOfContentsEntry = Header & { level: 2 | 3 }
+
+const counterExampleHeader: Header = {
+  id: 'counterExample',
+  text: 'A Simple Counter Example',
+}
+const modelHeader: Header = { id: 'model', text: 'Model' }
+const messagesHeader: Header = { id: 'messages', text: 'Messages' }
+const updateHeader: Header = { id: 'update', text: 'Update' }
+const viewHeader: Header = { id: 'view', text: 'View' }
+const commandsHeader: Header = { id: 'commands', text: 'Commands' }
+
+const architectureTableOfContents: TableOfContentsEntry[] = [
+  { level: 2, ...counterExampleHeader },
+  { level: 2, ...modelHeader },
+  { level: 2, ...messagesHeader },
+  { level: 2, ...updateHeader },
+  { level: 2, ...viewHeader },
+  { level: 2, ...commandsHeader },
+]
 
 const homeView = () =>
   div(
     [],
     [
-      heading(1, 'Introduction'),
+      heading(1, 'introduction', 'Introduction'),
       para(
         'Foldkit is a TypeScript framework for building type-safe, functional web applications (',
         link(Link.websiteSource, 'like this one!'),
@@ -404,8 +417,8 @@ const gettingStartedView = (model: Model) =>
   div(
     [],
     [
-      heading(1, 'Getting Started'),
-      heading(2, 'Quick Start'),
+      heading(1, 'gettingStarted', 'Getting Started'),
+      heading(2, 'quickStart', 'Quick Start'),
       para(
         link(Link.createFoldkitApp, 'Create Foldkit app'),
         " is the recommended way to get started with Foldkit. You'll be able to select the ",
@@ -428,8 +441,8 @@ const architectureView = (model: Model) =>
   div(
     [],
     [
-      heading(1, 'Architecture & Concepts'),
-      heading(2, 'A Simple Counter Example'),
+      heading(1, 'architecture', 'Architecture & Concepts'),
+      heading(2, counterExampleHeader.id, counterExampleHeader.text),
       para(
         'The easiest way to learn how Foldkit works is to first look at examples, then dive deeper to understand each piece in isolation.',
       ),
@@ -446,14 +459,14 @@ const architectureView = (model: Model) =>
       ),
       codeBlockWithCopy(
         div(
-          [Class('text-sm'), InnerHTML(counterExampleHighlighted)],
+          [Class('text-sm'), InnerHTML(Snippets.counterHighlighted)],
           [],
         ),
-        counterExample,
+        Snippets.counterRaw,
         'Copy counter example to clipboard',
         model,
       ),
-      section('Model', [
+      section(modelHeader.id, modelHeader.text, [
         para(
           'The Model represents your entire application state in a single, immutable data structure. In Foldkit, the Model is defined using ',
           link(Link.effectSchema, 'Effect Schema'),
@@ -462,15 +475,18 @@ const architectureView = (model: Model) =>
         para('In the counter example, the model is simply a number.'),
         codeBlockWithCopy(
           div(
-            [Class('text-sm'), InnerHTML(counterModelHighlighted)],
+            [
+              Class('text-sm'),
+              InnerHTML(Snippets.counterModelHighlighted),
+            ],
             [],
           ),
-          counterModel,
+          Snippets.counterModelRaw,
           'Copy model example to clipboard',
           model,
         ),
       ]),
-      section('Messages', [
+      section(messagesHeader.id, messagesHeader.text, [
         para(
           'Messages represent all the events that can occur in your application. They describe ',
           em([], ['what happened']),
@@ -481,15 +497,18 @@ const architectureView = (model: Model) =>
         para('The counter example has three simple messages:'),
         codeBlockWithCopy(
           div(
-            [Class('text-sm'), InnerHTML(counterMessagesHighlighted)],
+            [
+              Class('text-sm'),
+              InnerHTML(Snippets.counterMessagesHighlighted),
+            ],
             [],
           ),
-          counterMessages,
+          Snippets.counterMessagesRaw,
           'Copy messages example to clipboard',
           model,
         ),
       ]),
-      section('Update', [
+      section(updateHeader.id, updateHeader.text, [
         para(
           "The update function is the heart of your application logic. It's a pure function that takes the current model and a message, and returns a new model along with any commands to execute. Commands represent side effects and are covered later on this page.",
         ),
@@ -500,15 +519,18 @@ const architectureView = (model: Model) =>
         ),
         codeBlockWithCopy(
           div(
-            [Class('text-sm'), InnerHTML(counterUpdateHighlighted)],
+            [
+              Class('text-sm'),
+              InnerHTML(Snippets.counterUpdateHighlighted),
+            ],
             [],
           ),
-          counterUpdate,
+          Snippets.counterUpdateRaw,
           'Copy update example to clipboard',
           model,
         ),
       ]),
-      section('View', [
+      section(viewHeader.id, viewHeader.text, [
         para(
           'The view function is a pure function that transforms your model into HTML. Given the same model, it always produces the same HTML output. The view never directly modifies state - instead, it dispatches messages through event handlers like ',
           code([], ['OnClick']),
@@ -516,15 +538,18 @@ const architectureView = (model: Model) =>
         ),
         codeBlockWithCopy(
           div(
-            [Class('text-sm'), InnerHTML(counterViewHighlighted)],
+            [
+              Class('text-sm'),
+              InnerHTML(Snippets.counterViewHighlighted),
+            ],
             [],
           ),
-          counterView,
+          Snippets.counterViewRaw,
           'Copy view example to clipboard',
           model,
         ),
       ]),
-      section('Commands', [
+      section(commandsHeader.id, commandsHeader.text, [
         para(
           "You're probably wondering how to handle side effects like HTTP requests, timers, or interacting with the browser API. In Foldkit, side effects are managed through commands returned by the update function. This keeps your update logic pure and testable.",
         ),
@@ -533,10 +558,13 @@ const architectureView = (model: Model) =>
         ),
         codeBlockWithCopy(
           div(
-            [Class('text-sm'), InnerHTML(counterCommandsHighlighted)],
+            [
+              Class('text-sm'),
+              InnerHTML(Snippets.counterCommandsHighlighted),
+            ],
             [],
           ),
-          counterCommands,
+          Snippets.counterCommandsRaw,
           'Copy commands example to clipboard',
           model,
         ),
@@ -547,11 +575,11 @@ const architectureView = (model: Model) =>
           div(
             [
               Class('text-sm'),
-              InnerHTML(counterHttpCommandHighlighted),
+              InnerHTML(Snippets.counterHttpCommandHighlighted),
             ],
             [],
           ),
-          counterHttpCommand,
+          Snippets.counterHttpCommandRaw,
           'Copy HTTP command example to clipboard',
           model,
         ),
@@ -564,11 +592,13 @@ const architectureView = (model: Model) =>
           div(
             [
               Class('text-sm'),
-              InnerHTML(counterHttpCommandFetchCountHighlighted),
+              InnerHTML(
+                Snippets.counterHttpCommandFetchCountHighlighted,
+              ),
             ],
             [],
           ),
-          counterHttpCommandFetchCount,
+          Snippets.counterHttpCommandFetchCountRaw,
           'Copy HTTP command fetchCount example to clipboard',
           model,
         ),
@@ -580,7 +610,7 @@ const examplesView = () =>
   div(
     [],
     [
-      heading(1, 'Examples'),
+      heading(1, 'examples', 'Examples'),
       para('Explore real-world examples built with Foldkit.'),
     ],
   )
@@ -589,7 +619,7 @@ const bestPracticesView = () =>
   div(
     [],
     [
-      heading(1, 'Best Practices'),
+      heading(1, 'bestPractices', 'Best Practices'),
       para(
         'Learn patterns and practices for building maintainable Foldkit applications.',
       ),
@@ -659,6 +689,49 @@ const iconLink = (link: string, ariaLabel: string, icon: Html) =>
       AriaLabel(ariaLabel),
     ],
     [icon],
+  )
+
+const tableOfContentsView = (entries: TableOfContentsEntry[]) =>
+  aside(
+    [
+      Class(
+        'hidden xl:block fixed right-8 top-24 w-64 max-h-[calc(100vh-6rem)] overflow-y-auto',
+      ),
+    ],
+    [
+      h3(
+        [
+          Class(
+            'text-xs font-semibold text-gray-900 uppercase tracking-wider mb-4',
+          ),
+        ],
+        ['On This Page'],
+      ),
+      nav(
+        [],
+        [
+          ul(
+            [Class('space-y-2 text-sm')],
+            Array.map(entries, ({ level, id, text }) =>
+              li(
+                [Class(classNames({ 'ml-4': level === 3 }))],
+                [
+                  a(
+                    [
+                      Href(`#${id}`),
+                      Class(
+                        'text-gray-600 hover:text-gray-900 transition block',
+                      ),
+                    ],
+                    [text],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    ],
   )
 
 const view = (model: Model) => {
@@ -759,6 +832,9 @@ const view = (model: Model) => {
               ),
             ],
           ),
+          S.is(ArchitectureRoute)(model.route)
+            ? tableOfContentsView(architectureTableOfContents)
+            : empty,
         ],
       ),
     ],
