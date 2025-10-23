@@ -427,13 +427,6 @@ export const parseUrlWithFallback =
       Effect.runSync,
     )
 
-export type UrlRequest = Data.TaggedEnum<{
-  Internal: { url: Url }
-  External: { href: string }
-}>
-
-export const UrlRequest = Data.taggedEnum<UrlRequest>()
-
 const buildUrl =
   <A>(parser: Biparser<A>) =>
   (data: A): string => {
