@@ -1,6 +1,6 @@
 import { Array, Data, Effect, Predicate, Record, Schema, String, flow, pipe } from 'effect'
 
-import { Url } from './urlRequest'
+import { Url } from './url'
 
 export class ParseError extends Data.TaggedError('ParseError')<{
   readonly message: string

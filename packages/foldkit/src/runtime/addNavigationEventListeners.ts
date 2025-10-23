@@ -1,8 +1,9 @@
 import { Array, Queue, String, pipe } from 'effect'
 
 import { OptionExt } from '../effectExtensions'
-import { External, Internal, Url } from '../urlRequest'
+import { Url } from '../url'
 import { BrowserConfig } from './runtime'
+import { External, Internal } from './urlRequest'
 
 export const addNavigationEventListeners = <Message>(
   messageQueue: Queue.Queue<Message>,

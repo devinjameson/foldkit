@@ -24,7 +24,7 @@ import {
 import { load, pushUrl, replaceUrl } from 'foldkit/navigation'
 import { int, literal, slash } from 'foldkit/route'
 import { ST, ts } from 'foldkit/schema'
-import { Url, UrlRequest } from 'foldkit/urlRequest'
+import { Url } from 'foldkit/url'
 
 // ROUTE
 
@@ -92,7 +92,9 @@ type Model = ST<typeof Model>
 // MESSAGE
 
 const NoOp = ts('NoOp')
-const UrlRequestReceived = ts('UrlRequestReceived', { request: UrlRequest })
+const UrlRequestReceived = ts('UrlRequestReceived', {
+  request: Runtime.UrlRequest,
+})
 const UrlChanged = ts('UrlChanged', { url: Url })
 const SearchInputChanged = ts('SearchInputChanged', { value: S.String })
 

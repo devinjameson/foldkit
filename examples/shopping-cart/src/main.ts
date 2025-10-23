@@ -4,7 +4,7 @@ import { Class, Href, Html, a, div, h1, header, li, main, nav, p, ul } from 'fol
 import { load, pushUrl } from 'foldkit/navigation'
 import { literal } from 'foldkit/route'
 import { ST, ts } from 'foldkit/schema'
-import { Url, UrlRequest } from 'foldkit/urlRequest'
+import { Url } from 'foldkit/url'
 
 import { products } from './data/products'
 import { Cart, Item } from './domain'
@@ -50,7 +50,9 @@ type Model = S.Schema.Type<typeof Model>
 // MESSAGE
 
 const NoOp = ts('NoOp')
-const UrlRequestReceived = ts('UrlRequestReceived', { request: UrlRequest })
+const UrlRequestReceived = ts('UrlRequestReceived', {
+  request: Runtime.UrlRequest,
+})
 const UrlChanged = ts('UrlChanged', { url: Url })
 const ProductsMessage = ts('ProductsMessage', { message: Products.Message })
 const AddToCartClicked = ts('AddToCartClicked', { item: Item.Item })

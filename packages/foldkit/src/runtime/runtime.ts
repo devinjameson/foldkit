@@ -17,9 +17,10 @@ import { h } from 'snabbdom'
 
 import { OptionExt } from '../effectExtensions'
 import { Html } from '../html'
-import { Url, UrlRequest } from '../urlRequest'
+import { Url } from '../url'
 import { VNode, patch, toVNode } from '../vdom'
 import { addNavigationEventListeners } from './addNavigationEventListeners'
+import { UrlRequest } from './urlRequest'
 
 export class Dispatch extends Context.Tag('@foldkit/Dispatch')<
   Dispatch,

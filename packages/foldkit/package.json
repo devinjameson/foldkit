@@ -35,9 +35,9 @@
       "types": "./dist/schema.d.ts",
       "import": "./dist/schema.js"
     },
-    "./urlRequest": {
-      "types": "./dist/urlRequest.d.ts",
-      "import": "./dist/urlRequest.js"
+    "./url": {
+      "types": "./dist/url.d.ts",
+      "import": "./dist/url.js"
     }
   },
   "files": [

@@ -1,14 +1,6 @@
 import { Schema as S } from 'effect'
 
-export const Url = S.Struct({
-  protocol: S.String,
-  host: S.String,
-  port: S.OptionFromNullishOr(S.String, null),
-  pathname: S.String,
-  search: S.String,
-  hash: S.String,
-})
-export type Url = S.Schema.Type<typeof Url>
+import { Url } from '../url'
 
 export const Internal = S.TaggedStruct('Internal', {
   url: Url,
