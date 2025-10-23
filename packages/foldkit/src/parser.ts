@@ -1,4 +1,4 @@
-import { Array, Data, Effect, Predicate, Record, Schema, String, flow, pipe } from 'effect'
+import { Array, Data, Effect, Option, Predicate, Record, Schema, String, flow, pipe } from 'effect'
 
 import { Url } from './url'
 
@@ -359,7 +359,6 @@ export const query =
         pipe(
           parser.print(value, state),
           Effect.flatMap((newState) => {
-            // Extract query part from value and add to query params
             return pipe(
               Schema.encode(schema)(value),
               Effect.map((queryValue) => {
@@ -413,7 +412,7 @@ const parseUrl =
   (url: Url) => {
     return pipe(
       pathToSegments(url.pathname),
-      (segments) => parser.parse(segments, url.search),
+      (segments) => parser.parse(segments, Option.getOrUndefined(url.search)),
       Effect.flatMap(complete),
     )
   }

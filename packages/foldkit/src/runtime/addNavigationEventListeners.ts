@@ -1,6 +1,6 @@
-import { Array, Queue, String, pipe } from 'effect'
+import { Array, Option, Queue, String, pipe } from 'effect'
 
-import { OptionExt } from '../effectExtensions'
+import { OptionExt, StringExt } from '../effectExtensions'
 import { Url } from '../url'
 import { BrowserConfig } from './runtime'
 import { External, Internal } from './urlRequest'
@@ -19,13 +19,16 @@ const addPopStateListener = <Message>(
   browserConfig: BrowserConfig<Message>,
 ) => {
   const onPopState = () => {
+    const search = StringExt.stripPrefixNonEmpty('?')(window.location.search)
+    const hash = StringExt.stripPrefixNonEmpty('#')(window.location.hash)
+
     const newUrl: Url = {
       protocol: window.location.protocol,
       host: window.location.host,
       port: OptionExt.fromString(window.location.port),
       pathname: window.location.pathname,
-      search: window.location.search,
-      hash: window.location.hash,
+      search,
+      hash,
     }
     Queue.unsafeOffer(messageQueue, browserConfig.onUrlChange(newUrl))
   }
@@ -55,19 +58,22 @@ const addLinkClickListener = <Message>(
 
     const url: Url = pipe(href, String.split('?'), (parts) => {
       const path = Array.headNonEmpty(parts)
-
-      const queryAndHash = Array.tailNonEmpty(parts)
-
-      const pathname = pipe(path, String.split('#'), Array.headNonEmpty)
-
-      const queryPart = Array.isNonEmptyArray(queryAndHash) ? Array.headNonEmpty(queryAndHash) : ''
-
-      const search = pipe(queryPart, String.split('#'), Array.headNonEmpty, (q) =>
-        String.isEmpty(q) ? '' : `?${q}`,
+      const searchAndHash = Array.tailNonEmpty(parts)
+      const pathname = pipe(path, String.split('#'), Array.headNonEmpty) || '/'
+      const searchPart = Array.head(searchAndHash).pipe(
+        Option.match({
+          onNone: () => '',
+          onSome: (s) => s,
+        }),
       )
+      const search = pipe(searchPart, String.split('#'), Array.headNonEmpty, OptionExt.fromString)
 
-      const hash = pipe(href, String.split('#'), (hashParts) =>
-        Array.isNonEmptyArray(hashParts) && hashParts.length > 1 ? `#${hashParts[1]}` : '',
+      const hash = pipe(
+        href,
+        String.split('#'),
+        (hashParts) =>
+          Array.isNonEmptyArray(hashParts) && hashParts.length > 1 ? hashParts[1]! : '',
+        OptionExt.fromString,
       )
 
       return {
@@ -81,7 +87,7 @@ const addLinkClickListener = <Message>(
     })
 
     const isSamePageHashLink =
-      url.hash && (url.pathname === window.location.pathname || href.startsWith('#'))
+      Option.isSome(url.hash) && (url.pathname === window.location.pathname || href.startsWith('#'))
 
     if (!isSamePageHashLink) {
       event.preventDefault()
@@ -97,13 +103,16 @@ const addProgrammaticNavigationListener = <Message>(
   browserConfig: BrowserConfig<Message>,
 ) => {
   const onProgrammaticNavigation = () => {
+    const search = StringExt.stripPrefixNonEmpty('?')(window.location.search)
+    const hash = StringExt.stripPrefixNonEmpty('#')(window.location.hash)
+
     const newUrl: Url = {
       protocol: window.location.protocol,
       host: window.location.host,
       port: OptionExt.fromString(window.location.port),
       pathname: window.location.pathname,
-      search: window.location.search,
-      hash: window.location.hash,
+      search,
+      hash,
     }
     Queue.unsafeOffer(messageQueue, browserConfig.onUrlChange(newUrl))
   }

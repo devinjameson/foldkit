@@ -15,9 +15,8 @@ import {
 } from 'effect'
 import { h } from 'snabbdom'
 
-import { OptionExt } from '../effectExtensions'
 import { Html } from '../html'
-import { Url } from '../url'
+import { Url, fromString as urlFromString } from '../url'
 import { VNode, patch, toVNode } from '../vdom'
 import { addNavigationEventListeners } from './addNavigationEventListeners'
 import { UrlRequest } from './urlRequest'
@@ -139,14 +138,7 @@ export const makeRuntime =
       const modelStream = Stream.fromPubSub(modelPubSub)
 
       const currentUrl: Option.Option<Url> = Option.fromNullable(browserConfig).pipe(
-        Option.map(() => ({
-          protocol: window.location.protocol,
-          host: window.location.host,
-          port: OptionExt.fromString(window.location.port),
-          pathname: window.location.pathname,
-          search: window.location.search,
-          hash: window.location.hash,
-        })),
+        Option.flatMap(() => urlFromString(window.location.href)),
       )
 
       const [initModel, initCommands] = Predicate.isNotUndefined(hmrModel)
@@ -265,14 +257,7 @@ export const makeApplication = <
 >(
   config: ApplicationConfig<Model, Message, StreamDepsMap>,
 ): MakeRuntimeReturn => {
-  const currentUrl: Url = {
-    protocol: window.location.protocol,
-    host: window.location.host,
-    port: OptionExt.fromString(window.location.port),
-    pathname: window.location.pathname,
-    search: window.location.search,
-    hash: window.location.hash,
-  }
+  const currentUrl: Url = Option.getOrThrow(urlFromString(window.location.href))
 
   return makeRuntime({
     Model: config.Model,
