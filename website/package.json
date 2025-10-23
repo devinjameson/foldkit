@@ -14,7 +14,7 @@
     "@tailwindcss/vite": "^4.1.10",
     "classnames": "^2.5.1",
     "effect": "^3.18.2",
-    "foldkit": "0.6.0-canary.1",
+    "foldkit": "0.6.0-canary.2",
     "shiki": "^3.13.0",
     "tailwindcss": "^4.1.10"
   },

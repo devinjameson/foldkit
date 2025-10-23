@@ -14,7 +14,6 @@ import {
   Class,
   Href,
   Html,
-  Key,
   OnClick,
   a,
   aside,
@@ -25,6 +24,7 @@ import {
   h2,
   h3,
   header,
+  keyed,
   li,
   main,
   nav,
@@ -416,7 +416,8 @@ const tableOfContentsView = (entries: TableOfContentsEntry[]) =>
           ul(
             [Class('space-y-2 text-sm')],
             Array.map(entries, ({ level, id, text }) =>
-              li(
+              keyed('li')(
+                id,
                 [Class(classNames({ 'ml-4': level === 'h3' }))],
                 [
                   a(
@@ -540,11 +541,9 @@ const view = (model: Model) => {
           main(
             [Class('flex-1 min-w-0 overflow-y-auto')],
             [
-              div(
-                [
-                  Key(model.route._tag),
-                  Class('p-4 md:p-8 max-w-4xl mx-auto min-w-0'),
-                ],
+              keyed('div')(
+                model.route._tag,
+                [Class('p-4 md:p-8 max-w-4xl mx-auto min-w-0')],
                 [content],
               ),
             ],
