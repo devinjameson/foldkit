@@ -254,11 +254,11 @@ const connect = (): Runtime.Command<Connected | ConnectionFailed> =>
 // COMMAND STREAM
 
 const CommandStreamsDeps = S.Struct({
-  websocket: S.OptionFromSelf(S.instanceOf(WebSocket)),
+  maybeWebsocket: S.OptionFromSelf(WebSocketSchema),
 })
 
 const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Model, Message>({
-  websocket: {
+  maybeWebsocket: {
     modelToDeps: (model: Model) =>
       M.value(model.connection).pipe(
         M.tag('ConnectionConnected', ({ socket }) => Option.some(socket)),
