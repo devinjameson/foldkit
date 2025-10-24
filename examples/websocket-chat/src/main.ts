@@ -365,7 +365,7 @@ const connectionStatusView = (connection: ConnectionState): Html =>
     ],
   )
 
-const messagesView = (messages: readonly ChatMessage[]): Html =>
+const messagesView = (messages: ReadonlyArray<ChatMessage>): Html =>
   Array.match(messages, {
     onEmpty: () =>
       div(
