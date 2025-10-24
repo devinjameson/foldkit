@@ -17,9 +17,11 @@ type GetCountFailure = ST<typeof GetCountFailure>
 const update = (
   model: Model,
   message: Message,
-): [Model, Array<Runtime.Command<Message>>] =>
+): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
   M.value(message).pipe(
-    M.withReturnType<[Model, Array<Runtime.Command<Message>>]>(),
+    M.withReturnType<
+      [Model, ReadonlyArray<Runtime.Command<Message>>]
+    >(),
     M.tagsExhaustive({
       // Tell Foldkit to fetch the count from the API
       GetCountFromAPI: () => [model, [fetchCount]],

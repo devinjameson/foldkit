@@ -1,6 +1,5 @@
-import { Effect, Match as M, Schema } from 'effect'
+import { Effect } from 'effect'
 import { Runtime } from 'foldkit'
-import { ST, ts } from 'foldkit/schema'
 
 const fetchCount: Runtime.Command<GetCountSuccess | GetCountFailure> =
   Effect.gen(function* () {
