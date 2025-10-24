@@ -37,6 +37,7 @@ import { UrlRequest } from 'foldkit/runtime'
 import { type ST, ts } from 'foldkit/schema'
 import { Url, toString as urlToString } from 'foldkit/url'
 
+import * as CommandStream from './commandStream'
 import { Icon } from './icon'
 import { Link } from './link'
 import * as Page from './page'
@@ -134,7 +135,9 @@ const HideCopiedIndicator = ts('HideCopiedIndicator', {
   text: S.String,
 })
 const ToggleMobileMenu = ts('ToggleMobileMenu')
-const SectionChanged = ts('SectionChanged', { sectionId: S.String })
+export const ActiveSectionChanged = ts('ActiveSectionChanged', {
+  sectionId: S.String,
+})
 
 const Message = S.Union(
   NoOp,
@@ -145,7 +148,7 @@ const Message = S.Union(
   CopySuccess,
   HideCopiedIndicator,
   ToggleMobileMenu,
-  SectionChanged,
+  ActiveSectionChanged,
 )
 
 type NoOp = ST<typeof NoOp>
@@ -156,7 +159,7 @@ type CopyLinkToClipboard = ST<typeof CopyLinkToClipboard>
 type CopySuccess = ST<typeof CopySuccess>
 type HideCopiedIndicator = ST<typeof HideCopiedIndicator>
 type ToggleMobileMenu = ST<typeof ToggleMobileMenu>
-type SectionChanged = ST<typeof SectionChanged>
+export type ActiveSectionChanged = ST<typeof ActiveSectionChanged>
 type Message = ST<typeof Message>
 
 // INIT
@@ -218,7 +221,10 @@ const update = (
           url,
           mobileMenuOpen: false,
         },
-        [],
+        Option.match(url.hash, {
+          onNone: () => [],
+          onSome: (hash) => [scrollToHash(hash)],
+        }),
       ],
 
       CopySnippetToClipboard: ({ text }) => [
@@ -262,7 +268,7 @@ const update = (
         [],
       ],
 
-      SectionChanged: ({ sectionId }) => [
+      ActiveSectionChanged: ({ sectionId }) => [
         { ...model, activeSection: Option.some(sectionId) },
         [],
       ],
@@ -400,6 +406,7 @@ const iconLink = (link: string, ariaLabel: string, icon: Html) =>
 
 const tableOfContentsView = (
   entries: ReadonlyArray<TableOfContentsEntry>,
+  maybeActiveSectionId: Option.Option<string>,
 ) =>
   aside(
     [
@@ -411,7 +418,7 @@ const tableOfContentsView = (
       h3(
         [
           Class(
-            'text-xs font-semibold text-gray-900 uppercase tracking-wider mb-4',
+            'text-xs font-semibold text-gray-900 uppercase tracking-wider mb-2',
           ),
         ],
         ['On This Page'],
@@ -420,9 +427,14 @@ const tableOfContentsView = (
         [],
         [
           ul(
-            [Class('space-y-2 text-sm')],
-            Array.map(entries, ({ level, id, text }) =>
-              keyed('li')(
+            [Class('space-y-2 text-sm pl-1')],
+            Array.map(entries, ({ level, id, text }) => {
+              const isActive = Option.match(maybeActiveSectionId, {
+                onNone: () => false,
+                onSome: (activeSectionId) => activeSectionId === id,
+              })
+
+              return keyed('li')(
                 id,
                 [Class(classNames({ 'ml-4': level === 'h3' }))],
                 [
@@ -430,14 +442,18 @@ const tableOfContentsView = (
                     [
                       Href(`#${id}`),
                       Class(
-                        'text-gray-600 hover:text-gray-900 transition block',
+                        classNames('transition block', {
+                          'text-blue-600 underline': isActive,
+                          'text-gray-600 hover:text-gray-900':
+                            !isActive,
+                        }),
                       ),
                     ],
                     [text],
                   ),
                 ],
-              ),
-            ),
+              )
+            }),
           ),
         ],
       ),
@@ -555,7 +571,11 @@ const view = (model: Model) => {
             ],
           ),
           Option.match(currentPageTableOfContents, {
-            onSome: tableOfContentsView,
+            onSome: (tableOfContents) =>
+              tableOfContentsView(
+                tableOfContents,
+                model.activeSection,
+              ),
             onNone: () => empty,
           }),
         ],
@@ -564,6 +584,24 @@ const view = (model: Model) => {
   )
 }
 
+// COMMAND STREAMS
+
+const CommandStreamsDeps = S.Struct({
+  activeSection: S.Struct({
+    pageId: S.String,
+    sections: S.Array(S.String),
+  }),
+})
+
+export type CommandStreamsDeps = ST<typeof CommandStreamsDeps>
+
+const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<
+  Model,
+  Message
+>({
+  activeSection: CommandStream.activeSection,
+})
+
 // RUN
 
 const application = Runtime.makeApplication({
@@ -571,6 +609,7 @@ const application = Runtime.makeApplication({
   init,
   update,
   view,
+  commandStreams,
   container: document.getElementById('root')!,
   browser: {
     onUrlRequest: (request) => UrlRequestReceived.make({ request }),
