@@ -116,23 +116,23 @@ const init: Runtime.ApplicationInit<Model, Message> = (url: Url) => {
 
 // UPDATE
 
-const update = (model: Model, message: Message): [Model, Runtime.Command<Message>[]] =>
+const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
   M.value(message).pipe(
-    M.withReturnType<[Model, Runtime.Command<Message>[]]>(),
+    M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
     M.tagsExhaustive({
       NoOp: () => [model, []],
 
       UrlRequestReceived: ({ request }) =>
         M.value(request).pipe(
           M.tagsExhaustive({
-            Internal: ({ url }): [Model, Runtime.Command<NoOp>[]] => [
+            Internal: ({ url }): [Model, ReadonlyArray<Runtime.Command<NoOp>>] => [
               {
                 ...model,
                 route: urlToAppRoute(url),
               },
               [pushUrl(url.pathname).pipe(Effect.as(NoOp.make()))],
             ],
-            External: ({ href }): [Model, Runtime.Command<NoOp>[]] => [
+            External: ({ href }): [Model, ReadonlyArray<Runtime.Command<NoOp>>] => [
               model,
               [load(href).pipe(Effect.as(NoOp.make()))],
             ],

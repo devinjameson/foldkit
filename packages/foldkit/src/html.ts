@@ -1188,7 +1188,7 @@ const buildVNodeData = <Message>(
 
 const processVNodeChildren = (
   children: ReadonlyArray<Child>,
-): Effect.Effect<(VNode | string)[], never, Dispatch> =>
+): Effect.Effect<ReadonlyArray<VNode | string>, never, Dispatch> =>
   Effect.forEach(
     children,
     (child): Effect.Effect<VNode | string | null, never, Dispatch> =>
@@ -1204,7 +1204,7 @@ export const createElement = <Message>(
     const vnodeData = yield* buildVNodeData(attributes)
     const vnodeChildren = yield* processVNodeChildren(children)
 
-    return h(tagName, vnodeData, vnodeChildren)
+    return h(tagName, vnodeData, Array.fromIterable(vnodeChildren))
   })
 
 const element =

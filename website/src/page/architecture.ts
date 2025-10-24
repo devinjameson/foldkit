@@ -26,7 +26,7 @@ const updateHeader: Header = { id: 'update', text: 'Update' }
 const viewHeader: Header = { id: 'view', text: 'View' }
 const commandsHeader: Header = { id: 'commands', text: 'Commands' }
 
-export const tableOfContents: TableOfContentsEntry[] = [
+export const tableOfContents: ReadonlyArray<TableOfContentsEntry> = [
   { level: 'h2', ...counterExampleHeader },
   { level: 'h2', ...modelHeader },
   { level: 'h2', ...messagesHeader },

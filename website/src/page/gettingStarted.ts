@@ -15,7 +15,7 @@ const quickStartHeader: Header = {
   text: 'Quick Start',
 }
 
-export const tableOfContents: TableOfContentsEntry[] = [
+export const tableOfContents: ReadonlyArray<TableOfContentsEntry> = [
   { level: 'h2', ...quickStartHeader },
 ]
 

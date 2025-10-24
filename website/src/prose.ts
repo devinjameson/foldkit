@@ -60,25 +60,30 @@ export const heading = (
   return div([Class('group relative')], [linkButton, headingElement])
 }
 
-export const para = (...content: Array<string | Html>): Html =>
-  p([Class('mb-4 leading-7')], content)
+export const para = (
+  ...content: ReadonlyArray<string | Html>
+): Html => p([Class('mb-4 leading-7')], content)
 
-export const paragraphs = (...contents: string[]): Html[] =>
+export const paragraphs = (
+  ...contents: ReadonlyArray<string>
+): ReadonlyArray<Html> =>
   Array.map(contents, (text) => p([Class('mb-4')], [text]))
 
 export const section = (
   id: string,
   title: string,
-  content: Html[],
+  content: ReadonlyArray<Html>,
 ): Html => div([], [heading(2, id, title), ...content])
 
 export const subsection = (
   id: string,
   title: string,
-  content: Html[],
+  content: ReadonlyArray<Html>,
 ): Html => div([], [heading(3, id, title), ...content])
 
-export const bullets = (...items: Array<string | Html>): Html =>
+export const bullets = (
+  ...items: ReadonlyArray<string | Html>
+): Html =>
   ul(
     [Class('list-disc mb-8 space-y-2 ml-4')],
     items.map((item) => li([], [item])),

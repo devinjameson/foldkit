@@ -44,9 +44,9 @@ type GotTick = ST<typeof GotTick>
 
 export type Message = ST<typeof Message>
 
-const update = (model: Model, message: Message): [Model, Runtime.Command<Message>[]] =>
+const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
   M.value(message).pipe(
-    M.withReturnType<[Model, Runtime.Command<Message>[]]>(),
+    M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
     M.tagsExhaustive({
       RequestStart: () => [
         model,

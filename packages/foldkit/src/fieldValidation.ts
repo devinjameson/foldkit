@@ -68,7 +68,7 @@ export const regex = (regex: RegExp, message: string): Validation<string> => [
 ]
 
 export const validateField =
-  <T>(fieldValidations: Validation<T>[]) =>
+  <T>(fieldValidations: ReadonlyArray<Validation<T>>) =>
   (value: T): Field<T> => {
     for (const [predicate, message] of fieldValidations) {
       if (!predicate(value)) {

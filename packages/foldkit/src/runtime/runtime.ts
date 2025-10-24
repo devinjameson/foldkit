@@ -41,16 +41,16 @@ export interface RuntimeConfig<
   StreamDepsMap extends Record<string, Schema.Schema<any>>,
 > {
   Model: Schema.Schema<Model, any, never>
-  readonly init: (url?: Url) => [Model, Command<Message>[]]
-  readonly update: (model: Model, message: Message) => [Model, Command<Message>[]]
+  readonly init: (url?: Url) => [Model, ReadonlyArray<Command<Message>>]
+  readonly update: (model: Model, message: Message) => [Model, ReadonlyArray<Command<Message>>]
   readonly view: (model: Model) => Html
   readonly commandStreams?: CommandStreams<Model, Message, StreamDepsMap>
   readonly container: HTMLElement
   readonly browser?: BrowserConfig<Message>
 }
 
-export type ElementInit<Model, Message> = () => [Model, Command<Message>[]]
-export type ApplicationInit<Model, Message> = (url: Url) => [Model, Command<Message>[]]
+export type ElementInit<Model, Message> = () => [Model, ReadonlyArray<Command<Message>>]
+export type ApplicationInit<Model, Message> = (url: Url) => [Model, ReadonlyArray<Command<Message>>]
 
 export interface ElementConfig<
   Model,
@@ -59,7 +59,7 @@ export interface ElementConfig<
 > {
   readonly Model: Schema.Schema<Model, any, never>
   readonly init: ElementInit<Model, Message>
-  readonly update: (model: Model, message: Message) => [Model, Command<Message>[]]
+  readonly update: (model: Model, message: Message) => [Model, ReadonlyArray<Command<Message>>]
   readonly view: (model: Model) => Html
   readonly commandStreams?: CommandStreams<Model, Message, StreamDepsMap>
   readonly container: HTMLElement
@@ -72,7 +72,7 @@ export interface ApplicationConfig<
 > {
   readonly Model: Schema.Schema<Model, any, never>
   readonly init: ApplicationInit<Model, Message>
-  readonly update: (model: Model, message: Message) => [Model, Command<Message>[]]
+  readonly update: (model: Model, message: Message) => [Model, ReadonlyArray<Command<Message>>]
   readonly view: (model: Model) => Html
   readonly commandStreams?: CommandStreams<Model, Message, StreamDepsMap>
   readonly container: HTMLElement

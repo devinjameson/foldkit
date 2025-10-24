@@ -9,20 +9,26 @@ export class ParseError extends Data.TaggedError('ParseError')<{
   readonly position?: number
 }> {}
 
-type ParseResult<A> = [A, string[]]
+type ParseResult<A> = [A, ReadonlyArray<string>]
 
 type PrintState = {
-  segments: string[]
+  segments: ReadonlyArray<string>
   queryParams: URLSearchParams
 }
 
 type Biparser<A> = {
-  parse: (segments: string[], search?: string) => Effect.Effect<ParseResult<A>, ParseError>
+  parse: (
+    segments: ReadonlyArray<string>,
+    search?: string,
+  ) => Effect.Effect<ParseResult<A>, ParseError>
   print: (value: A, state: PrintState) => Effect.Effect<PrintState, ParseError>
 }
 
 export type Router<A> = {
-  parse: (segments: string[], search?: string) => Effect.Effect<ParseResult<A>, ParseError>
+  parse: (
+    segments: ReadonlyArray<string>,
+    search?: string,
+  ) => Effect.Effect<ParseResult<A>, ParseError>
   build: (value: A extends { _tag: string } ? Omit<A, '_tag'> : never) => string
 }
 
@@ -138,7 +144,10 @@ export const root: Biparser<{}> = {
 }
 
 export type Parser<A> = {
-  parse: (segments: string[], search?: string) => Effect.Effect<ParseResult<A>, ParseError>
+  parse: (
+    segments: ReadonlyArray<string>,
+    search?: string,
+  ) => Effect.Effect<ParseResult<A>, ParseError>
 }
 
 // Overloaded signatures for oneOf to properly infer union types
@@ -283,7 +292,7 @@ export const mapTo: {
 } = (appRouteConstructor: any): any => {
   return (parser: any) => {
     return {
-      parse: (segments: string[], search?: string) =>
+      parse: (segments: ReadonlyArray<string>, search?: string) =>
         pipe(
           parser.parse(segments, search),
           Effect.map(([value, remaining]: any) => {
@@ -349,7 +358,10 @@ export const query =
               Effect.map(
                 (queryValue) =>
                   /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-                  [{ ...pathValue, ...queryValue }, remainingSegments] as [B & A, string[]],
+                  [{ ...pathValue, ...queryValue }, remainingSegments] as [
+                    B & A,
+                    ReadonlyArray<string>,
+                  ],
               ),
             )
           }),

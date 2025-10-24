@@ -8,9 +8,9 @@ import { Runtime } from 'foldkit'
 const update = (
   model: Model,
   message: Message,
-): [Model, Runtime.Command<Message>[]] =>
+): [Model, Array<Runtime.Command<Message>>] =>
   M.value(message).pipe(
-    M.withReturnType<[Model, Runtime.Command<Message>[]]>(),
+    M.withReturnType<[Model, Array<Runtime.Command<Message>>]>(),
     M.tagsExhaustive({
       // This means: the next model (application state) is
       // model - 1 and there are no commands to run

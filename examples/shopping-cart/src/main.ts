@@ -108,16 +108,16 @@ const init: Runtime.ApplicationInit<Model, Message> = (url: Url) => {
 
 // UPDATE
 
-const update = (model: Model, message: Message): [Model, Runtime.Command<Message>[]] =>
+const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
   M.value(message).pipe(
-    M.withReturnType<[Model, Runtime.Command<Message>[]]>(),
+    M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
     M.tagsExhaustive({
       NoOp: () => [model, []],
 
       UrlRequestReceived: ({ request }) =>
         pipe(
           M.value(request),
-          M.withReturnType<[Model, Runtime.Command<NoOp>[]]>(),
+          M.withReturnType<[Model, ReadonlyArray<Runtime.Command<NoOp>>]>(),
           M.tagsExhaustive({
             Internal: ({ url }) => [
               {

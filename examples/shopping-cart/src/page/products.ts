@@ -50,7 +50,7 @@ export type Message = ST<typeof Message>
 
 // INIT
 
-export const init = (products: Item.Item[]): Model => ({
+export const init = (products: ReadonlyArray<Item.Item>): Model => ({
   products,
   searchText: '',
 })
@@ -59,9 +59,9 @@ export const init = (products: Item.Item[]): Model => ({
 
 export const update =
   (productsRouter: Route.Router<ExtractTag<AppRoute, 'Products'>>) =>
-  (model: Model, message: Message): [Model, Effect.Effect<Message>[]] =>
+  (model: Model, message: Message): [Model, ReadonlyArray<Effect.Effect<Message>>] =>
     M.value(message).pipe(
-      M.withReturnType<[Model, Effect.Effect<Message>[]]>(),
+      M.withReturnType<[Model, ReadonlyArray<Effect.Effect<Message>>]>(),
       M.tagsExhaustive({
         NoOp: () => [model, []],
 

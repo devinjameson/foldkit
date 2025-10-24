@@ -31,9 +31,9 @@ type Message = ST<typeof Message>
 const update = (
   count: Model,
   message: Message,
-): [Model, Runtime.Command<Message>[]] =>
+): [Model, Array<Runtime.Command<Message>>] =>
   M.value(message).pipe(
-    M.withReturnType<[Model, Runtime.Command<Message>[]]>(),
+    M.withReturnType<[Model, Array<Runtime.Command<Message>>]>(),
     M.tagsExhaustive({
       Decrement: () => [count - 1, []],
       Increment: () => [count + 1, []],

@@ -182,16 +182,18 @@ const init: Runtime.ApplicationInit<Model, Message> = (url: Url) => {
 const update = (
   model: Model,
   message: Message,
-): [Model, Runtime.Command<Message>[]] =>
+): [Model, Array<Runtime.Command<Message>>] =>
   M.value(message).pipe(
-    M.withReturnType<[Model, Runtime.Command<Message>[]]>(),
+    M.withReturnType<[Model, Array<Runtime.Command<Message>>]>(),
     M.tagsExhaustive({
       NoOp: () => [model, []],
 
       UrlRequestReceived: ({ request }) =>
         M.value(request).pipe(
           M.tagsExhaustive({
-            Internal: ({ url }): [Model, Runtime.Command<NoOp>[]] => [
+            Internal: ({
+              url,
+            }): [Model, Array<Runtime.Command<NoOp>>] => [
               {
                 ...model,
                 route: urlToAppRoute(url),
@@ -200,7 +202,7 @@ const update = (
             ],
             External: ({
               href,
-            }): [Model, Runtime.Command<NoOp>[]] => [
+            }): [Model, Array<Runtime.Command<NoOp>>] => [
               model,
               [load(href).pipe(Effect.as(NoOp.make()))],
             ],
@@ -394,7 +396,9 @@ const iconLink = (link: string, ariaLabel: string, icon: Html) =>
     [icon],
   )
 
-const tableOfContentsView = (entries: TableOfContentsEntry[]) =>
+const tableOfContentsView = (
+  entries: ReadonlyArray<TableOfContentsEntry>,
+) =>
   aside(
     [
       Class(

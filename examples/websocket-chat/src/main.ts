@@ -118,9 +118,9 @@ type Message = ST<typeof Message>
 
 // UPDATE
 
-const update = (model: Model, message: Message): [Model, Runtime.Command<Message>[]] =>
+const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
   M.value(message).pipe(
-    M.withReturnType<[Model, Runtime.Command<Message>[]]>(),
+    M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
     M.tagsExhaustive({
       RequestConnect: () => [{ ...model, connection: ConnectionConnecting.make() }, [connect()]],
 
@@ -153,7 +153,7 @@ const update = (model: Model, message: Message): [Model, Runtime.Command<Message
         }
 
         return M.value(model.connection).pipe(
-          M.withReturnType<[Model, Runtime.Command<Message>[]]>(),
+          M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
           M.tag('ConnectionConnected', ({ socket }) => [
             { ...model, messageInput: '' },
             [sendMessage(socket, trimmedMessage)],

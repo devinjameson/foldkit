@@ -3,7 +3,7 @@ import { Effect, Match, pipe } from 'effect'
 
 type PackageManager = 'pnpm' | 'npm' | 'yarn'
 
-const getInstallArgs = (packageManager: PackageManager, isDev = false): string[] =>
+const getInstallArgs = (packageManager: PackageManager, isDev = false): ReadonlyArray<string> =>
   pipe(
     Match.value(packageManager),
     Match.when('npm', () => ['install']),

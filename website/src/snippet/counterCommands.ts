@@ -11,9 +11,9 @@ type ResetNow = ST<typeof ResetNow>
 const update = (
   model: Model,
   message: Message,
-): [Model, Runtime.Command<Message>[]] =>
+): [Model, Array<Runtime.Command<Message>>] =>
   M.value(message).pipe(
-    M.withReturnType<[Model, Runtime.Command<Message>[]]>(),
+    M.withReturnType<[Model, Array<Runtime.Command<Message>>]>(),
     M.tagsExhaustive({
       // When user clicks "Reset", don't reset immediately.
       // Instead, return a Command that sleeps for 1 second

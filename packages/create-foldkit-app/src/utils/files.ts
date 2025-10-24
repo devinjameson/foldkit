@@ -133,7 +133,7 @@ const createExampleFiles = (projectPath: string, example: string) =>
 const fetchExampleFileList = (
   example: string,
 ): Effect.Effect<
-  GitHubFileEntry[],
+  ReadonlyArray<GitHubFileEntry>,
   HttpClientError.HttpClientError | ParseError,
   HttpClient.HttpClient
 > =>
@@ -142,7 +142,10 @@ const fetchExampleFileList = (
 
     const fetchFilesRecursively = (
       apiUrl: string,
-    ): Effect.Effect<GitHubFileEntry[], HttpClientError.HttpClientError | ParseError> =>
+    ): Effect.Effect<
+      ReadonlyArray<GitHubFileEntry>,
+      HttpClientError.HttpClientError | ParseError
+    > =>
       Effect.gen(function* () {
         const request = HttpClientRequest.get(apiUrl)
         const response = yield* client.execute(request)

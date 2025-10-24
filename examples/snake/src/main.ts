@@ -63,13 +63,13 @@ const init: Runtime.ElementInit<Model, Message> = () => {
 
 // UPDATE
 
-const update = (model: Model, message: Message): [Model, Runtime.Command<Message>[]] =>
+const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
   M.value(message).pipe(
-    M.withReturnType<[Model, Runtime.Command<Message>[]]>(),
+    M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
     M.tagsExhaustive({
       KeyPress: ({ key }) =>
         M.value(key).pipe(
-          M.withReturnType<[Model, Runtime.Command<Message>[]]>(),
+          M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
           M.whenOr(
             'ArrowUp',
             'ArrowDown',
