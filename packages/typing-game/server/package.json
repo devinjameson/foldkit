@@ -1,0 +1,25 @@
+{
+  "name": "@typing-game/server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@effect/platform": "^0.92.1",
+    "@effect/platform-node": "^0.98.3",
+    "@effect/rpc": "^0.71.1",
+    "@effect/rpc-http": "^0.52.4",
+    "@typing-game/shared": "workspace:*",
+    "effect": "^3.18.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.6.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.9.3"
+  }
+}
