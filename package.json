@@ -6,6 +6,8 @@
   "scripts": {
     "format": "prettier -w .",
     "dev:core": "pnpm --filter foldkit run watch",
+    "dev:website": "pnpm --filter website run dev",
+    "build:website": "pnpm --filter website run build",
     "dev:example:counter": "pnpm --filter counter-example run dev",
     "dev:example:stopwatch": "pnpm --filter stopwatch-example run dev",
     "dev:example:weather": "pnpm --filter weather-example run dev",
