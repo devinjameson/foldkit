@@ -1,0 +1,28 @@
+name: Deploy Typing Game Server to Fly.io
+
+on:
+  push:
+    branches:
+      - main
+      - devin/typing-game
+    paths:
+      - 'packages/typing-game/server/**'
+      - 'packages/typing-game/shared/**'
+      - 'Dockerfile.typing-game-server'
+      - '.github/workflows/deploy-typing-game-server.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Fly.io CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to Fly.io
+        run: flyctl deploy --config packages/typing-game/server/fly.toml
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

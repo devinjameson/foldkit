@@ -1,0 +1,20 @@
+{
+  "name": "@typing-game/shared",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@effect/rpc": "^0.71.1",
+    "effect": "^3.18.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

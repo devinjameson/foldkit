@@ -1,0 +1,38 @@
+{
+  "name": "@typing-game/client",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier -w .",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@effect/platform": "^0.92.1",
+    "@effect/platform-browser": "^0.72.0",
+    "@effect/rpc": "^0.71.1",
+    "@effect/rpc-http": "^0.52.4",
+    "@tailwindcss/vite": "^4.1.10",
+    "@typing-game/shared": "workspace:*",
+    "classnames": "^2.5.1",
+    "effect": "^3.18.2",
+    "foldkit": "workspace:*",
+    "tailwindcss": "^4.1.10"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.37.0",
+    "@foldkit/vite-plugin": "workspace:*",
+    "@trivago/prettier-plugin-sort-imports": "^5.2.2",
+    "@typescript-eslint/eslint-plugin": "^8.45.0",
+    "@typescript-eslint/parser": "^8.45.0",
+    "eslint": "^9.37.0",
+    "eslint-plugin-unused-imports": "^4.3.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.9"
+  }
+}

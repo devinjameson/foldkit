@@ -257,8 +257,8 @@ const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Model, Mes
   maybeWebsocket: {
     modelToDeps: (model: Model) =>
       M.value(model.connection).pipe(
-        M.tag('ConnectionConnected', ({ socket }) => Option.some(socket)),
-        M.orElse(() => Option.none()),
+        M.tag('ConnectionConnected', ({ socket }) => socket),
+        M.option,
       ),
     depsToStream: (maybeWebsocket: Option.Option<WebSocket>) =>
       Option.match(maybeWebsocket, {

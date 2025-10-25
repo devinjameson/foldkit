@@ -1,0 +1,40 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-terminal-bg: #0a0a0a;
+  --color-terminal-green: #00ff41;
+  --color-terminal-green-dim: #00aa2b;
+  --color-terminal-green-dark: #006622;
+  --color-terminal-red: #ff2200;
+  --color-terminal-red-dim: #aa1500;
+  --font-terminal: 'VT323', monospace;
+}
+
+body {
+  @apply font-terminal bg-terminal-bg text-terminal-green text-3xl m-0 p-0 overflow-hidden;
+}
+
+body::before {
+  @apply fixed top-0 left-0 w-screen h-screen pointer-events-none z-[9999];
+  content: '';
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.5) 0px,
+    rgba(0, 0, 0, 0.5) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  animation: flicker 0.15s infinite;
+}
+
+@keyframes flicker {
+  0% {
+    opacity: 0.97;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.97;
+  }
+}

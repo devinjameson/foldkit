@@ -1,0 +1,50 @@
+name: Deploy Typing Game to Vercel
+
+on:
+  push:
+    branches:
+      - main
+      - devin/typing-game
+    paths:
+      - 'packages/typing-game/client/**'
+      - 'packages/typing-game/shared/**'
+      - 'packages/foldkit/**'
+      - 'packages/foldkit-vite-plugin/**'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/deploy-typing-game.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build typing game client
+        run: pnpm build:typing-game:client
+        env:
+          VITE_SERVER_URL: ${{ secrets.VITE_SERVER_URL }}
+
+      - name: Deploy to Vercel
+        working-directory: packages/typing-game/client
+        run: |
+          npx vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+          npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}

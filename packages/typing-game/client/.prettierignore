@@ -1,4 +1,4 @@
 node_modules
 dist
 *.tsbuildinfo
-.vercel
+pnpm-lock.yaml

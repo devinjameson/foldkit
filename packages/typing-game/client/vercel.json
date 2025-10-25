@@ -1,0 +1,11 @@
+{
+  "buildCommand": "echo 'Build already completed in CI'",
+  "installCommand": "echo 'Dependencies already installed in CI'",
+  "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

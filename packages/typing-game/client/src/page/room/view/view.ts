@@ -1,0 +1,198 @@
+import * as Shared from '@typing-game/shared'
+import { Match as M, Option } from 'effect'
+import { Html } from 'foldkit/html'
+
+import { ROOM_PAGE_USERNAME_INPUT_ID } from '../../../constant'
+import type { Message as ParentMessage } from '../../../message'
+import { RoomRoute } from '../../../route'
+import {
+  AriaLabel,
+  Autocapitalize,
+  Autocomplete,
+  Autocorrect,
+  Class,
+  For,
+  Id,
+  Maxlength,
+  OnBlur,
+  OnClick,
+  OnInput,
+  OnSubmit,
+  Spellcheck,
+  Type,
+  Value,
+  button,
+  div,
+  empty,
+  form,
+  h2,
+  h3,
+  input,
+  label,
+  span,
+} from '../../../view/html'
+import { Icon } from '../../../view/icon'
+import {
+  CopyRoomIdClicked,
+  JoinRoomFromPageSubmitted,
+  RoomPageUsernameInputBlurred,
+  RoomPageUsernameInputted,
+} from '../message'
+import type { Message } from '../message'
+import { Model, RoomPlayerSession } from '../model'
+import { findFirstWrongCharIndex } from '../userGameText'
+import { countdown } from './countdown'
+import { finished } from './finished'
+import { getReady } from './getReady'
+import { playing } from './playing'
+import { waiting } from './waiting'
+
+export const view =
+  (model: Model, toMessage: (message: Message) => ParentMessage) =>
+  ({ roomId }: RoomRoute): Html => {
+    const maybeError = M.value(model.roomRemoteData).pipe(
+      M.tag('Error', ({ error }) => error),
+      M.option,
+    )
+
+    const welcomeText = Option.match(model.maybeSession, {
+      onNone: () => empty,
+      onSome: ({ player }) => h2([Class('mb-6')], [`Welcome, ${player.username}!`]),
+    })
+
+    const copiedIndicator = model.isRoomIdCopyIndicatorVisible
+      ? div(
+          [
+            Class(
+              'text-lg rounded py-1 px-2 font-medium bg-terminal-green-dim text-terminal-bg uppercase',
+            ),
+          ],
+          ['Copied'],
+        )
+      : empty
+
+    const copyButton = button(
+      [
+        Class(
+          'p-2 rounded hover:bg-terminal-green-dim hover:text-terminal-bg transition text-terminal-green',
+        ),
+        AriaLabel('Copy room ID'),
+        OnClick(toMessage(CopyRoomIdClicked.make({ roomId }))),
+      ],
+      [Icon.copy()],
+    )
+
+    const isInLeavableState = M.value(model.roomRemoteData).pipe(
+      M.tag('Ok', ({ data }) => data.status._tag === 'Waiting' || data.status._tag === 'Finished'),
+      M.orElse(() => false),
+    )
+
+    const leaveRoomText = isInLeavableState ? div([], ['< Backspace to leave room']) : empty
+
+    return div(
+      [Class('max-w-4xl flex-1 flex flex-col justify-between')],
+      [
+        div(
+          [],
+          [
+            welcomeText,
+            h3([Class('uppercase')], ['[Room id]']),
+            div(
+              [Class('mb-12 flex items-center gap-2')],
+              [span([], [roomId]), copyButton, copiedIndicator],
+            ),
+            content(model, roomId, toMessage),
+            maybeErrorMessage(maybeError),
+          ],
+        ),
+        div([], [leaveRoomText]),
+      ],
+    )
+  }
+
+const content = (
+  { roomRemoteData, maybeSession, userGameText, username }: Model,
+  roomId: string,
+  toMessage: (message: Message) => ParentMessage,
+): Html =>
+  M.value(roomRemoteData).pipe(
+    M.tagsExhaustive({
+      Idle: () => div([], ['Loading...']),
+      Loading: () => div([], ['Loading...']),
+      Error: () => empty,
+      Ok: ({ data: room }) =>
+        Option.match(maybeSession, {
+          onNone: () => joinForm(username, roomId, toMessage),
+          onSome: () => gameContent(room, maybeSession, userGameText, toMessage),
+        }),
+    }),
+  )
+
+const gameContent = (
+  room: Shared.Room,
+  maybeSession: Option.Option<RoomPlayerSession>,
+  userGameText: string,
+  toMessage: (message: Message) => ParentMessage,
+): Html => {
+  const maybeGameText = Option.map(room.maybeGame, ({ text }) => text)
+  const maybeWrongCharIndex = Option.flatMap(maybeGameText, findFirstWrongCharIndex(userGameText))
+
+  return M.value(room.status).pipe(
+    M.tagsExhaustive({
+      Waiting: () => waiting(room.players, room.hostId, maybeSession),
+      GetReady: () => getReady(maybeGameText),
+      Countdown: ({ secondsLeft }) => countdown(secondsLeft, maybeGameText),
+      Playing: ({ secondsLeft }) =>
+        playing(secondsLeft, maybeGameText, userGameText, maybeWrongCharIndex, toMessage),
+      Finished: () => finished(room.maybeScoreboard, room.hostId, maybeSession),
+    }),
+  )
+}
+
+const joinForm = (
+  username: string,
+  roomId: string,
+  toMessage: (message: Message) => ParentMessage,
+): Html =>
+  form(
+    [OnSubmit(toMessage(JoinRoomFromPageSubmitted.make({ roomId })))],
+    [
+      div(
+        [Class('flex items-center gap-2')],
+        [
+          label([For(ROOM_PAGE_USERNAME_INPUT_ID)], ['Enter username: ']),
+          div(
+            [Class('flex items-center gap-2 flex-1')],
+            [
+              input([
+                Id(ROOM_PAGE_USERNAME_INPUT_ID),
+                Type('text'),
+                Value(username),
+                Class('bg-transparent px-0 py-2 outline-none w-full'),
+                OnInput((value) => toMessage(RoomPageUsernameInputted.make({ value }))),
+                OnBlur(toMessage(RoomPageUsernameInputBlurred.make())),
+                Autocapitalize('none'),
+                Spellcheck(false),
+                Autocorrect('off'),
+                Autocomplete('off'),
+                Maxlength(24),
+              ]),
+            ],
+          ),
+        ],
+      ),
+    ],
+  )
+
+const maybeErrorMessage = (maybeRoomFormError: Option.Option<string>) =>
+  Option.match(maybeRoomFormError, {
+    onNone: () => empty,
+    onSome: (errorMessage) =>
+      div(
+        [Class('mt-6')],
+        [
+          span([Class('text-terminal-red uppercase')], ['[Error] ']),
+          span([Class('text-terminal-red')], [errorMessage]),
+        ],
+      ),
+  })
