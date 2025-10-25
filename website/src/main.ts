@@ -200,7 +200,11 @@ const update = (
               url,
             }): [Model, ReadonlyArray<Runtime.Command<NoOp>>] => [
               model,
-              [pushUrl(url.pathname).pipe(Effect.as(NoOp.make()))],
+              [
+                pushUrl(urlToString(url)).pipe(
+                  Effect.as(NoOp.make()),
+                ),
+              ],
             ],
             External: ({
               href,
