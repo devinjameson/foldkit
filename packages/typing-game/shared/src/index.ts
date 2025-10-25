@@ -3,16 +3,17 @@ import { Schema as S } from 'effect'
 export const GameStatus = S.Literal('waiting', 'countdown', 'playing', 'finished')
 export type GameStatus = typeof GameStatus.Type
 
-export class Player extends S.Class<Player>('Player')({
+export const Player = S.Struct({
   id: S.String,
   name: S.String,
   position: S.Number,
   wpm: S.Number,
   accuracy: S.Number,
   isReady: S.Boolean,
-}) {}
+})
+export type Player = typeof Player.Type
 
-export class Room extends S.Class<Room>('Room')({
+export const Room = S.Struct({
   id: S.String,
   name: S.String,
   maxPlayers: S.Number,
@@ -20,43 +21,50 @@ export class Room extends S.Class<Room>('Room')({
   status: GameStatus,
   text: S.NullOr(S.String),
   createdAt: S.Date,
-}) {}
+})
+export type Room = typeof Room.Type
 
-export class PlayerReady extends S.TaggedClass<PlayerReady>()('PlayerReady', {}) {}
+export const PlayerReady = S.TaggedStruct('PlayerReady', {})
+export type PlayerReady = typeof PlayerReady.Type
 
-export class TypingProgress extends S.TaggedClass<TypingProgress>()('TypingProgress', {
+export const TypingProgress = S.TaggedStruct('TypingProgress', {
   position: S.Number,
   wpm: S.Number,
   accuracy: S.Number,
-}) {}
+})
+export type TypingProgress = typeof TypingProgress.Type
 
-export class PlayerFinished extends S.TaggedClass<PlayerFinished>()('PlayerFinished', {
+export const PlayerFinished = S.TaggedStruct('PlayerFinished', {
   wpm: S.Number,
   accuracy: S.Number,
   completedAt: S.Date,
-}) {}
+})
+export type PlayerFinished = typeof PlayerFinished.Type
 
 export const ClientMessage = S.Union(PlayerReady, TypingProgress, PlayerFinished)
 export type ClientMessage = typeof ClientMessage.Type
 
-export class GameCountdown extends S.TaggedClass<GameCountdown>()('GameCountdown', {
+export const GameCountdown = S.TaggedStruct('GameCountdown', {
   seconds: S.Number,
-}) {}
+})
+export type GameCountdown = typeof GameCountdown.Type
 
-export class GameStart extends S.TaggedClass<GameStart>()('GameStart', {
+export const GameStart = S.TaggedStruct('GameStart', {
   text: S.String,
   startedAt: S.Date,
-}) {}
+})
+export type GameStart = typeof GameStart.Type
 
-export class PlayerUpdate extends S.TaggedClass<PlayerUpdate>()('PlayerUpdate', {
+export const PlayerUpdate = S.TaggedStruct('PlayerUpdate', {
   playerId: S.String,
   playerName: S.String,
   position: S.Number,
   wpm: S.Number,
   accuracy: S.Number,
-}) {}
+})
+export type PlayerUpdate = typeof PlayerUpdate.Type
 
-export class GameEnd extends S.TaggedClass<GameEnd>()('GameEnd', {
+export const GameEnd = S.TaggedStruct('GameEnd', {
   results: S.Array(
     S.Struct({
       playerId: S.String,
@@ -66,7 +74,8 @@ export class GameEnd extends S.TaggedClass<GameEnd>()('GameEnd', {
       rank: S.Number,
     }),
   ),
-}) {}
+})
+export type GameEnd = typeof GameEnd.Type
 
 export const ServerMessage = S.Union(GameCountdown, GameStart, PlayerUpdate, GameEnd)
 export type ServerMessage = typeof ServerMessage.Type
