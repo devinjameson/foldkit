@@ -19,18 +19,7 @@ const addPopStateListener = <Message>(
   browserConfig: BrowserConfig<Message>,
 ) => {
   const onPopState = () => {
-    const search = StringExt.stripPrefixNonEmpty('?')(window.location.search)
-    const hash = StringExt.stripPrefixNonEmpty('#')(window.location.hash)
-
-    const newUrl: Url = {
-      protocol: window.location.protocol,
-      host: window.location.host,
-      port: OptionExt.fromString(window.location.port),
-      pathname: window.location.pathname,
-      search,
-      hash,
-    }
-    Queue.unsafeOffer(messageQueue, browserConfig.onUrlChange(newUrl))
+    Queue.unsafeOffer(messageQueue, browserConfig.onUrlChange(locationToUrl()))
   }
 
   window.addEventListener('popstate', onPopState)
@@ -67,18 +56,10 @@ const addLinkClickListener = <Message>(
       return
     }
 
-    const { protocol, host, port, pathname, search, hash } = linkUrl
-
-    const url: Url = {
-      protocol,
-      host,
-      port: OptionExt.fromString(port),
-      pathname,
-      search: StringExt.stripPrefixNonEmpty('?')(search),
-      hash: StringExt.stripPrefixNonEmpty('#')(hash),
-    }
-
-    Queue.unsafeOffer(messageQueue, browserConfig.onUrlRequest(Internal.make({ url })))
+    Queue.unsafeOffer(
+      messageQueue,
+      browserConfig.onUrlRequest(Internal.make({ url: urlToFoldkitUrl(linkUrl) })),
+    )
   }
 
   document.addEventListener('click', onLinkClick)
@@ -89,23 +70,23 @@ const addProgrammaticNavigationListener = <Message>(
   browserConfig: BrowserConfig<Message>,
 ) => {
   const onProgrammaticNavigation = () => {
-    const search = StringExt.stripPrefixNonEmpty('?')(window.location.search)
-    const hash = StringExt.stripPrefixNonEmpty('#')(window.location.hash)
-
-    const {
-      location: { protocol, host, port, pathname },
-    } = window
-
-    const newUrl: Url = {
-      protocol,
-      host,
-      port: OptionExt.fromString(port),
-      pathname,
-      search,
-      hash,
-    }
-    Queue.unsafeOffer(messageQueue, browserConfig.onUrlChange(newUrl))
+    Queue.unsafeOffer(messageQueue, browserConfig.onUrlChange(locationToUrl()))
   }
 
   window.addEventListener('foldkit:urlchange', onProgrammaticNavigation)
 }
+
+const urlToFoldkitUrl = (url: URL): Url => {
+  const { protocol, hostname, port, pathname, search, hash } = url
+
+  return {
+    protocol,
+    host: hostname,
+    port: OptionExt.fromString(port),
+    pathname,
+    search: StringExt.stripPrefixNonEmpty('?')(search),
+    hash: StringExt.stripPrefixNonEmpty('#')(hash),
+  }
+}
+
+const locationToUrl = (): Url => urlToFoldkitUrl(new URL(window.location.href))
