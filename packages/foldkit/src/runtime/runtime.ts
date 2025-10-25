@@ -161,7 +161,7 @@ export const makeRuntime =
 
       const modelRef = yield* Ref.make<Model>(initModel)
 
-      const currentVNodeRef = yield* Ref.make<Option.Option<VNode>>(Option.none())
+      const maybeCurrentVNodeRef = yield* Ref.make<Option.Option<VNode>>(Option.none())
 
       if (commandStreams) {
         yield* pipe(
@@ -187,19 +187,13 @@ export const makeRuntime =
 
       const render = (model: Model) =>
         view(model).pipe(
-          Effect.flatMap((newVNode) =>
+          Effect.flatMap((nextVNodeNullish) =>
             Effect.gen(function* () {
-              const currentVNode = yield* Ref.get(currentVNodeRef)
-
-              const patchedVNode = yield* Effect.sync(() => {
-                const vnode = Predicate.isNotNull(newVNode) ? newVNode : h('#text', {}, '')
-                return Option.match(currentVNode, {
-                  onNone: () => patch(toVNode(container), vnode),
-                  onSome: (prev) => patch(prev, vnode),
-                })
-              })
-
-              yield* Ref.set(currentVNodeRef, Option.some(patchedVNode))
+              const maybeCurrentVNode = yield* Ref.get(maybeCurrentVNodeRef)
+              const patchedVNode = yield* Effect.sync(() =>
+                patchVNode(maybeCurrentVNode, nextVNodeNullish, container),
+              )
+              yield* Ref.set(maybeCurrentVNodeRef, Option.some(patchedVNode))
             }),
           ),
           Effect.provideService(Dispatch, {
@@ -232,6 +226,19 @@ export const makeRuntime =
         }),
       )
     })
+
+const patchVNode = (
+  maybeCurrentVNode: Option.Option<VNode>,
+  nextVNodeNullish: VNode | null,
+  container: HTMLElement,
+): VNode => {
+  const nextVNode = Predicate.isNotNull(nextVNodeNullish) ? nextVNodeNullish : h('#text', {}, '')
+
+  return Option.match(maybeCurrentVNode, {
+    onNone: () => patch(toVNode(container), nextVNode),
+    onSome: (currentVNode) => patch(currentVNode, nextVNode),
+  })
+}
 
 export const makeElement = <
   Model,
