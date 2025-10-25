@@ -38,7 +38,7 @@ export type BrowserConfig<Message> = {
 export interface RuntimeConfig<
   Model,
   Message,
-  StreamDepsMap extends Record<string, Schema.Schema<any>>,
+  StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
 > {
   Model: Schema.Schema<Model, any, never>
   readonly init: (url?: Url) => [Model, ReadonlyArray<Command<Message>>]
@@ -55,7 +55,7 @@ export type ApplicationInit<Model, Message> = (url: Url) => [Model, ReadonlyArra
 export interface ElementConfig<
   Model,
   Message,
-  StreamDepsMap extends Record<string, Schema.Schema<any>>,
+  StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
 > {
   readonly Model: Schema.Schema<Model, any, never>
   readonly init: ElementInit<Model, Message>
@@ -68,7 +68,7 @@ export interface ElementConfig<
 export interface ApplicationConfig<
   Model,
   Message,
-  StreamDepsMap extends Record<string, Schema.Schema<any>>,
+  StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
 > {
   readonly Model: Schema.Schema<Model, any, never>
   readonly init: ApplicationInit<Model, Message>
@@ -79,21 +79,20 @@ export interface ApplicationConfig<
   readonly browser: BrowserConfig<Message>
 }
 
-export type CommandStreamConfig<Model, Message, StreamDeps> = {
-  readonly schema: Schema.Schema<StreamDeps>
+export type CommandStream<Model, Message, StreamDeps> = {
   readonly modelToDeps: (model: Model) => StreamDeps
   readonly depsToStream: (deps: StreamDeps) => Stream.Stream<Command<Message>>
 }
 
-export type CommandStreams<
-  Model,
-  Message,
-  CommandStreamsDeps extends Record<string, Schema.Schema<any>>,
-> = {
-  readonly [K in keyof CommandStreamsDeps]: CommandStreamConfig<
+type CommandStreamConfig<Model, Message, StreamDeps> = {
+  readonly schema: Schema.Schema<StreamDeps>
+} & CommandStream<Model, Message, StreamDeps>
+
+export type CommandStreams<Model, Message, CommandStreamsDeps extends Schema.Struct<any>> = {
+  readonly [K in keyof Schema.Schema.Type<CommandStreamsDeps>]: CommandStreamConfig<
     Model,
     Message,
-    Schema.Schema.Type<CommandStreamsDeps[K]>
+    Schema.Schema.Type<CommandStreamsDeps>[K]
   >
 }
 
@@ -116,7 +115,7 @@ export const makeCommandStreams =
 type MakeRuntimeReturn = (hmrModel?: unknown) => Effect.Effect<void>
 
 export const makeRuntime =
-  <Model, Message, StreamDepsMap extends Record<string, Schema.Schema<any>>>({
+  <Model, Message, StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>>({
     Model,
     init,
     update,
@@ -237,7 +236,7 @@ export const makeRuntime =
 export const makeElement = <
   Model,
   Message extends { _tag: string },
-  StreamDepsMap extends Record<string, Schema.Schema<any>>,
+  StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
 >(
   config: ElementConfig<Model, Message, StreamDepsMap>,
 ): MakeRuntimeReturn =>
@@ -253,7 +252,7 @@ export const makeElement = <
 export const makeApplication = <
   Model,
   Message extends { _tag: string },
-  StreamDepsMap extends Record<string, Schema.Schema<any>>,
+  StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
 >(
   config: ApplicationConfig<Model, Message, StreamDepsMap>,
 ): MakeRuntimeReturn => {
