@@ -10,7 +10,7 @@ export const Url = S.Struct({
   search: S.OptionFromSelf(S.String),
   hash: S.OptionFromSelf(S.String),
 })
-export type Url = S.Schema.Type<typeof Url>
+export type Url = typeof Url.Type
 
 const LocationAndHref = S.Struct({
   href: S.String,

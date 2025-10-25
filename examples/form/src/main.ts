@@ -21,7 +21,7 @@ import {
   span,
   textarea,
 } from 'foldkit/html'
-import { ST, ts } from 'foldkit/schema'
+import { ts } from 'foldkit/schema'
 
 // MODEL
 
@@ -32,11 +32,11 @@ const SubmitError = ts('SubmitError', { error: S.String })
 
 const Submission = S.Union(NotSubmitted, Submitting, SubmitSuccess, SubmitError)
 
-type NotSubmitted = ST<typeof NotSubmitted>
-type Submitting = ST<typeof Submitting>
-type SubmitSuccess = ST<typeof SubmitSuccess>
-type SubmitError = ST<typeof SubmitError>
-type Submission = ST<typeof Submission>
+type NotSubmitted = typeof NotSubmitted.Type
+type Submitting = typeof Submitting.Type
+type SubmitSuccess = typeof SubmitSuccess.Type
+type SubmitError = typeof SubmitError.Type
+type Submission = typeof Submission.Type
 
 const Model = S.Struct({
   name: FieldSchema(S.String),
@@ -45,7 +45,7 @@ const Model = S.Struct({
   message: FieldSchema(S.String),
   submission: Submission,
 })
-type Model = ST<typeof Model>
+type Model = typeof Model.Type
 
 // MESSAGE
 
@@ -75,15 +75,15 @@ const Message = S.Union(
   FormSubmitted,
 )
 
-type NoOp = ST<typeof NoOp>
-type UpdateName = ST<typeof UpdateName>
-type UpdateEmail = ST<typeof UpdateEmail>
-type EmailValidated = ST<typeof EmailValidated>
-type UpdateMessage = ST<typeof UpdateMessage>
-type SubmitForm = ST<typeof SubmitForm>
-type FormSubmitted = ST<typeof FormSubmitted>
+type NoOp = typeof NoOp.Type
+type UpdateName = typeof UpdateName.Type
+type UpdateEmail = typeof UpdateEmail.Type
+type EmailValidated = typeof EmailValidated.Type
+type UpdateMessage = typeof UpdateMessage.Type
+type SubmitForm = typeof SubmitForm.Type
+type FormSubmitted = typeof FormSubmitted.Type
 
-type Message = ST<typeof Message>
+type Message = typeof Message.Type
 
 // INIT
 

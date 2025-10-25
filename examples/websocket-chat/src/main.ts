@@ -29,7 +29,7 @@ import {
   span,
   ul,
 } from 'foldkit/html'
-import { ST, ts } from 'foldkit/schema'
+import { ts } from 'foldkit/schema'
 
 const WS_URL = 'wss://echo.websocket.org'
 const CONNECTION_TIMEOUT_MS = 5000
@@ -42,7 +42,7 @@ const ChatMessage = S.Struct({
   isSent: S.Boolean,
 })
 
-type ChatMessage = ST<typeof ChatMessage>
+type ChatMessage = typeof ChatMessage.Type
 
 const WebSocketSchema = S.instanceOf(WebSocket)
 
@@ -58,11 +58,11 @@ const ConnectionState = S.Union(
   ConnectionError,
 )
 
-type ConnectionDisconnected = ST<typeof ConnectionDisconnected>
-type ConnectionConnecting = ST<typeof ConnectionConnecting>
-type ConnectionConnected = ST<typeof ConnectionConnected>
-type ConnectionError = ST<typeof ConnectionError>
-type ConnectionState = ST<typeof ConnectionState>
+type ConnectionDisconnected = typeof ConnectionDisconnected.Type
+type ConnectionConnecting = typeof ConnectionConnecting.Type
+type ConnectionConnected = typeof ConnectionConnected.Type
+type ConnectionError = typeof ConnectionError.Type
+type ConnectionState = typeof ConnectionState.Type
 
 const Model = S.Struct({
   connection: ConnectionState,
@@ -70,7 +70,7 @@ const Model = S.Struct({
   messageInput: S.String,
 })
 
-type Model = ST<typeof Model>
+type Model = typeof Model.Type
 
 // MESSAGE
 
@@ -104,17 +104,17 @@ const Message = S.Union(
   GotSentMessageTime,
 )
 
-type RequestConnect = ST<typeof RequestConnect>
-type Connected = ST<typeof Connected>
-type Disconnected = ST<typeof Disconnected>
-type ConnectionFailed = ST<typeof ConnectionFailed>
-type UpdateMessageInput = ST<typeof UpdateMessageInput>
-type SendMessage = ST<typeof SendMessage>
-type MessageSent = ST<typeof MessageSent>
-type MessageReceived = ST<typeof MessageReceived>
-type GotReceivedMessageTime = ST<typeof GotReceivedMessageTime>
-type GotSentMessageTime = ST<typeof GotSentMessageTime>
-type Message = ST<typeof Message>
+type RequestConnect = typeof RequestConnect.Type
+type Connected = typeof Connected.Type
+type Disconnected = typeof Disconnected.Type
+type ConnectionFailed = typeof ConnectionFailed.Type
+type UpdateMessageInput = typeof UpdateMessageInput.Type
+type SendMessage = typeof SendMessage.Type
+type MessageSent = typeof MessageSent.Type
+type MessageReceived = typeof MessageReceived.Type
+type GotReceivedMessageTime = typeof GotReceivedMessageTime.Type
+type GotSentMessageTime = typeof GotSentMessageTime.Type
+type Message = typeof Message.Type
 
 // UPDATE
 

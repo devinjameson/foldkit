@@ -114,7 +114,7 @@ const GitHubFileEntry = Schema.Struct({
   url: Schema.String,
 })
 
-type GitHubFileEntry = Schema.Schema.Type<typeof GitHubFileEntry>
+type GitHubFileEntry = typeof GitHubFileEntry.Type
 
 const createExampleFiles = (projectPath: string, example: string) =>
   Effect.gen(function* () {

@@ -5,12 +5,12 @@ import { Url } from '../url'
 export const Internal = S.TaggedStruct('Internal', {
   url: Url,
 })
-export type Internal = S.Schema.Type<typeof Internal>
+export type Internal = typeof Internal.Type
 
 export const External = S.TaggedStruct('External', {
   href: S.String,
 })
-export type External = S.Schema.Type<typeof External>
+export type External = typeof External.Type
 
 export const UrlRequest = S.Union(Internal, External)
-export type UrlRequest = S.Schema.Type<typeof UrlRequest>
+export type UrlRequest = typeof UrlRequest.Type

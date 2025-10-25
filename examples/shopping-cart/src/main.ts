@@ -3,7 +3,7 @@ import { Route, Runtime } from 'foldkit'
 import { Class, Href, Html, a, div, h1, header, keyed, li, main, nav, p, ul } from 'foldkit/html'
 import { load, pushUrl } from 'foldkit/navigation'
 import { literal } from 'foldkit/route'
-import { ST, ts } from 'foldkit/schema'
+import { ts } from 'foldkit/schema'
 import { Url, toString as urlToString } from 'foldkit/url'
 
 import { products } from './data/products'
@@ -18,11 +18,11 @@ export const CheckoutRoute = ts('Checkout')
 export const NotFoundRoute = ts('NotFound', { path: S.String })
 export const AppRoute = S.Union(ProductsRoute, CartRoute, CheckoutRoute, NotFoundRoute)
 
-export type ProductsRoute = ST<typeof ProductsRoute>
-export type CartRoute = ST<typeof CartRoute>
-export type CheckoutRoute = ST<typeof CheckoutRoute>
-export type NotFoundRoute = ST<typeof NotFoundRoute>
-export type AppRoute = ST<typeof AppRoute>
+export type ProductsRoute = typeof ProductsRoute.Type
+export type CartRoute = typeof CartRoute.Type
+export type CheckoutRoute = typeof CheckoutRoute.Type
+export type NotFoundRoute = typeof NotFoundRoute.Type
+export type AppRoute = typeof AppRoute.Type
 
 const productsRouter = pipe(
   Route.root,
@@ -45,7 +45,7 @@ const Model = S.Struct({
   orderPlaced: S.Boolean,
   productsPage: Products.Model,
 })
-type Model = S.Schema.Type<typeof Model>
+type Model = typeof Model.Type
 
 // MESSAGE
 
@@ -77,19 +77,19 @@ export const Message = S.Union(
   PlaceOrder,
 )
 
-type NoOp = ST<typeof NoOp>
-type LinkClicked = ST<typeof LinkClicked>
-type UrlChanged = ST<typeof UrlChanged>
-type ProductsMessage = ST<typeof ProductsMessage>
-type AddToCartClicked = ST<typeof AddToCartClicked>
-type QuantityChangeClicked = ST<typeof QuantityChangeClicked>
-type ChangeCartQuantity = ST<typeof ChangeCartQuantity>
-type RemoveFromCart = ST<typeof RemoveFromCart>
-type ClearCart = ST<typeof ClearCart>
-type UpdateDeliveryInstructions = ST<typeof UpdateDeliveryInstructions>
-type PlaceOrder = ST<typeof PlaceOrder>
+type NoOp = typeof NoOp.Type
+type LinkClicked = typeof LinkClicked.Type
+type UrlChanged = typeof UrlChanged.Type
+type ProductsMessage = typeof ProductsMessage.Type
+type AddToCartClicked = typeof AddToCartClicked.Type
+type QuantityChangeClicked = typeof QuantityChangeClicked.Type
+type ChangeCartQuantity = typeof ChangeCartQuantity.Type
+type RemoveFromCart = typeof RemoveFromCart.Type
+type ClearCart = typeof ClearCart.Type
+type UpdateDeliveryInstructions = typeof UpdateDeliveryInstructions.Type
+type PlaceOrder = typeof PlaceOrder.Type
 
-export type Message = ST<typeof Message>
+export type Message = typeof Message.Type
 
 // INIT
 

@@ -1,6 +1,6 @@
 import { Effect, Match as M, Schema } from 'effect'
 import { Runtime } from 'foldkit'
-import { ST, ts } from 'foldkit/schema'
+import { ts } from 'foldkit/schema'
 
 const GetCountFromAPI = ts('GetCountFromAPI')
 const GetCountSuccess = ts('GetCountSuccess', {
@@ -10,9 +10,9 @@ const GetCountFailure = ts('GetCountFailure', {
   error: Schema.String,
 })
 
-type GetCountFromAPI = ST<typeof GetCountFromAPI>
-type GetCountSuccess = ST<typeof GetCountSuccess>
-type GetCountFailure = ST<typeof GetCountFailure>
+type GetCountFromAPI = typeof GetCountFromAPI.Type
+type GetCountSuccess = typeof GetCountSuccess.Type
+type GetCountFailure = typeof GetCountFailure.Type
 
 const update = (
   model: Model,

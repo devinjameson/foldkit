@@ -3,7 +3,7 @@ import { Array, Number, Option, Predicate, Schema, pipe } from 'effect'
 import { CartItem, Item } from './item'
 
 export const Cart = Schema.Array(CartItem)
-export type Cart = Schema.Schema.Type<typeof Cart>
+export type Cart = typeof Cart.Type
 
 const hasItemId =
   (itemId: string) =>

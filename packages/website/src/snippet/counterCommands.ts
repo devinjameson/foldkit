@@ -5,8 +5,8 @@ import { Runtime } from 'foldkit'
 const ResetAfterDelay = ts('ResetDelayed')
 const ResetNow = ts('ResetNow')
 
-type ResetAfterDelay = ST<typeof ResetAfterDelay>
-type ResetNow = ST<typeof ResetNow>
+type ResetAfterDelay = typeof ResetAfterDelay.Type
+type ResetNow = typeof ResetNow.Type
 
 const update = (
   model: Model,

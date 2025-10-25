@@ -1,7 +1,7 @@
 import { Array, Duration, Effect, Match as M, Schema as S, Stream, pipe } from 'effect'
 import { Runtime } from 'foldkit'
 import { Class, Html, div, h1, p } from 'foldkit/html'
-import { ST, ts } from 'foldkit/schema'
+import { ts } from 'foldkit/schema'
 
 import { GAME, GAME_SPEED } from './constants'
 import { Apple, Direction, Position, Snake } from './domain'
@@ -9,7 +9,7 @@ import { Apple, Direction, Position, Snake } from './domain'
 // MODEL
 
 export const GameState = S.Literal('NotStarted', 'Playing', 'Paused', 'GameOver')
-export type GameState = ST<typeof GameState>
+export type GameState = typeof GameState.Type
 
 const Model = S.Struct({
   snake: Snake.Snake,
@@ -20,7 +20,7 @@ const Model = S.Struct({
   points: S.Number,
   highScore: S.Number,
 })
-type Model = ST<typeof Model>
+type Model = typeof Model.Type
 
 // MESSAGE
 
@@ -33,14 +33,14 @@ const GotApple = ts('GotApple', { position: Position.Position })
 
 export const Message = S.Union(ClockTick, KeyPress, PauseGame, RestartGame, RequestApple, GotApple)
 
-type ClockTick = ST<typeof ClockTick>
-type KeyPress = ST<typeof KeyPress>
-type PauseGame = ST<typeof PauseGame>
-type RestartGame = ST<typeof RestartGame>
-type RequestApple = ST<typeof RequestApple>
-type GotApple = ST<typeof GotApple>
+type ClockTick = typeof ClockTick.Type
+type KeyPress = typeof KeyPress.Type
+type PauseGame = typeof PauseGame.Type
+type RestartGame = typeof RestartGame.Type
+type RequestApple = typeof RequestApple.Type
+type GotApple = typeof GotApple.Type
 
-export type Message = ST<typeof Message>
+export type Message = typeof Message.Type
 
 // INIT
 

@@ -11,7 +11,7 @@ import {
 } from 'effect'
 import { Runtime } from 'foldkit'
 import { Class, Html, OnClick, button, div } from 'foldkit/html'
-import { ST, ts } from 'foldkit/schema'
+import { ts } from 'foldkit/schema'
 
 const TICK_INTERVAL_MS = 10
 
@@ -22,7 +22,7 @@ const Model = S.Struct({
   isRunning: S.Boolean,
   startTime: S.Number,
 })
-type Model = ST<typeof Model>
+type Model = typeof Model.Type
 
 // UPDATE
 
@@ -35,14 +35,14 @@ const GotTick = ts('GotTick', { elapsedMs: S.Number })
 
 export const Message = S.Union(RequestStart, GotStartTime, Stop, Reset, RequestTick, GotTick)
 
-type RequestStart = ST<typeof RequestStart>
-type GotStartTime = ST<typeof GotStartTime>
-type Stop = ST<typeof Stop>
-type Reset = ST<typeof Reset>
-type RequestTick = ST<typeof RequestTick>
-type GotTick = ST<typeof GotTick>
+type RequestStart = typeof RequestStart.Type
+type GotStartTime = typeof GotStartTime.Type
+type Stop = typeof Stop.Type
+type Reset = typeof Reset.Type
+type RequestTick = typeof RequestTick.Type
+type GotTick = typeof GotTick.Type
 
-export type Message = ST<typeof Message>
+export type Message = typeof Message.Type
 
 const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
   M.value(message).pipe(

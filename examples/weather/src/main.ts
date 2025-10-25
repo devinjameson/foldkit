@@ -21,7 +21,7 @@ import {
   label,
   p,
 } from 'foldkit/html'
-import { ST, ts } from 'foldkit/schema'
+import { ts } from 'foldkit/schema'
 
 // MODEL
 
@@ -34,7 +34,7 @@ const WeatherData = S.Struct({
   areaName: S.String,
   region: S.String,
 })
-type WeatherData = ST<typeof WeatherData>
+type WeatherData = typeof WeatherData.Type
 
 const WeatherInit = ts('WeatherInit')
 const WeatherLoading = ts('WeatherLoading')
@@ -43,18 +43,18 @@ const WeatherFailure = ts('WeatherFailure', { error: S.String })
 
 const WeatherAsyncResult = S.Union(WeatherInit, WeatherLoading, WeatherSuccess, WeatherFailure)
 
-type WeatherInit = ST<typeof WeatherInit>
-type WeatherLoading = ST<typeof WeatherLoading>
-type WeatherSuccess = ST<typeof WeatherSuccess>
-type WeatherFailure = ST<typeof WeatherFailure>
+type WeatherInit = typeof WeatherInit.Type
+type WeatherLoading = typeof WeatherLoading.Type
+type WeatherSuccess = typeof WeatherSuccess.Type
+type WeatherFailure = typeof WeatherFailure.Type
 
-type WeatherAsyncResult = ST<typeof WeatherAsyncResult>
+type WeatherAsyncResult = typeof WeatherAsyncResult.Type
 
 const Model = S.Struct({
   zipCodeInput: S.String,
   weather: WeatherAsyncResult,
 })
-type Model = ST<typeof Model>
+type Model = typeof Model.Type
 
 // MESSAGE
 
@@ -65,12 +65,12 @@ const WeatherError = ts('WeatherError', { error: S.String })
 
 const Message = S.Union(UpdateZipCodeInput, FetchWeather, WeatherFetched, WeatherError)
 
-type UpdateZipCodeInput = ST<typeof UpdateZipCodeInput>
-type FetchWeather = ST<typeof FetchWeather>
-type WeatherFetched = ST<typeof WeatherFetched>
-type WeatherError = ST<typeof WeatherError>
+type UpdateZipCodeInput = typeof UpdateZipCodeInput.Type
+type FetchWeather = typeof FetchWeather.Type
+type WeatherFetched = typeof WeatherFetched.Type
+type WeatherError = typeof WeatherError.Type
 
-type Message = ST<typeof Message>
+type Message = typeof Message.Type
 
 const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
   M.value(message).pipe(

@@ -23,7 +23,7 @@ import {
   span,
 } from 'foldkit/html'
 import { replaceUrl } from 'foldkit/navigation'
-import { ST, ts } from 'foldkit/schema'
+import { ts } from 'foldkit/schema'
 
 import { Cart, Item } from '../domain'
 import type { AppRoute, CartRoute } from '../main'
@@ -34,7 +34,7 @@ export const Model = S.Struct({
   products: S.Array(Item.Item),
   searchText: S.String,
 })
-export type Model = S.Schema.Type<typeof Model>
+export type Model = typeof Model.Type
 
 // MESSAGE
 
@@ -43,10 +43,10 @@ const SearchInputChanged = ts('SearchInputChanged', { value: S.String })
 
 export const Message = S.Union(NoOp, SearchInputChanged)
 
-type NoOp = ST<typeof NoOp>
-type SearchInputChanged = ST<typeof SearchInputChanged>
+type NoOp = typeof NoOp.Type
+type SearchInputChanged = typeof SearchInputChanged.Type
 
-export type Message = ST<typeof Message>
+export type Message = typeof Message.Type
 
 // INIT
 

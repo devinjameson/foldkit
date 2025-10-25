@@ -24,7 +24,7 @@ import {
 } from 'foldkit/html'
 import { load, pushUrl, replaceUrl } from 'foldkit/navigation'
 import { int, literal, slash } from 'foldkit/route'
-import { ST, ts } from 'foldkit/schema'
+import { ts } from 'foldkit/schema'
 import { Url, toString as urlToString } from 'foldkit/url'
 
 // ROUTE
@@ -37,13 +37,13 @@ const NotFoundRoute = ts('NotFound', { path: S.String })
 
 export const AppRoute = S.Union(HomeRoute, NestedRoute, PeopleRoute, PersonRoute, NotFoundRoute)
 
-type HomeRoute = ST<typeof HomeRoute>
-type NestedRoute = ST<typeof NestedRoute>
-type PeopleRoute = ST<typeof PeopleRoute>
-type PersonRoute = ST<typeof PersonRoute>
-type NotFoundRoute = ST<typeof NotFoundRoute>
+type HomeRoute = typeof HomeRoute.Type
+type NestedRoute = typeof NestedRoute.Type
+type PeopleRoute = typeof PeopleRoute.Type
+type PersonRoute = typeof PersonRoute.Type
+type NotFoundRoute = typeof NotFoundRoute.Type
 
-export type AppRoute = ST<typeof AppRoute>
+export type AppRoute = typeof AppRoute.Type
 
 const homeRouter = pipe(Route.root, Route.mapTo(HomeRoute))
 
@@ -88,7 +88,7 @@ const Model = S.Struct({
   route: AppRoute,
 })
 
-type Model = ST<typeof Model>
+type Model = typeof Model.Type
 
 // MESSAGE
 
@@ -101,12 +101,12 @@ const SearchInputChanged = ts('SearchInputChanged', { value: S.String })
 
 export const Message = S.Union(NoOp, LinkClicked, UrlChanged, SearchInputChanged)
 
-type NoOp = ST<typeof NoOp>
-type LinkClicked = ST<typeof LinkClicked>
-type UrlChanged = ST<typeof UrlChanged>
-type SearchInputChanged = ST<typeof SearchInputChanged>
+type NoOp = typeof NoOp.Type
+type LinkClicked = typeof LinkClicked.Type
+type UrlChanged = typeof UrlChanged.Type
+type SearchInputChanged = typeof SearchInputChanged.Type
 
-export type Message = ST<typeof Message>
+export type Message = typeof Message.Type
 
 // INIT
 

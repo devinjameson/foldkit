@@ -34,7 +34,7 @@ import {
 import { load, pushUrl } from 'foldkit/navigation'
 import { literal } from 'foldkit/route'
 import { UrlRequest } from 'foldkit/runtime'
-import { type ST, ts } from 'foldkit/schema'
+import { ts } from 'foldkit/schema'
 import { Url, toString as urlToString } from 'foldkit/url'
 
 import * as CommandStream from './commandStream'
@@ -60,13 +60,13 @@ const AppRoute = S.Union(
   NotFoundRoute,
 )
 
-type HomeRoute = ST<typeof HomeRoute>
-type GettingStartedRoute = ST<typeof GettingStartedRoute>
-type ArchitectureRoute = ST<typeof ArchitectureRoute>
-type ExamplesRoute = ST<typeof ExamplesRoute>
-type BestPracticesRoute = ST<typeof BestPracticesRoute>
-type NotFoundRoute = ST<typeof NotFoundRoute>
-type AppRoute = ST<typeof AppRoute>
+type HomeRoute = typeof HomeRoute.Type
+type GettingStartedRoute = typeof GettingStartedRoute.Type
+type ArchitectureRoute = typeof ArchitectureRoute.Type
+type ExamplesRoute = typeof ExamplesRoute.Type
+type BestPracticesRoute = typeof BestPracticesRoute.Type
+type NotFoundRoute = typeof NotFoundRoute.Type
+type AppRoute = typeof AppRoute.Type
 
 const homeRouter = pipe(Route.root, Route.mapTo(HomeRoute))
 const gettingStartedRouter = pipe(
@@ -115,7 +115,7 @@ export const Model = S.Struct({
   activeSection: S.Option(S.String),
 })
 
-export type Model = ST<typeof Model>
+export type Model = typeof Model.Type
 
 // MESSAGE
 
@@ -151,16 +151,16 @@ const Message = S.Union(
   ActiveSectionChanged,
 )
 
-type NoOp = ST<typeof NoOp>
-type LinkClicked = ST<typeof LinkClicked>
-type UrlChanged = ST<typeof UrlChanged>
-type CopySnippetToClipboard = ST<typeof CopySnippetToClipboard>
-type CopyLinkToClipboard = ST<typeof CopyLinkToClipboard>
-type CopySuccess = ST<typeof CopySuccess>
-type HideCopiedIndicator = ST<typeof HideCopiedIndicator>
-type ToggleMobileMenu = ST<typeof ToggleMobileMenu>
-export type ActiveSectionChanged = ST<typeof ActiveSectionChanged>
-type Message = ST<typeof Message>
+type NoOp = typeof NoOp.Type
+type LinkClicked = typeof LinkClicked.Type
+type UrlChanged = typeof UrlChanged.Type
+type CopySnippetToClipboard = typeof CopySnippetToClipboard.Type
+type CopyLinkToClipboard = typeof CopyLinkToClipboard.Type
+type CopySuccess = typeof CopySuccess.Type
+type HideCopiedIndicator = typeof HideCopiedIndicator.Type
+type ToggleMobileMenu = typeof ToggleMobileMenu.Type
+export type ActiveSectionChanged = typeof ActiveSectionChanged.Type
+type Message = typeof Message.Type
 
 // INIT
 
@@ -594,7 +594,7 @@ const CommandStreamsDeps = S.Struct({
   }),
 })
 
-export type CommandStreamsDeps = ST<typeof CommandStreamsDeps>
+export type CommandStreamsDeps = typeof CommandStreamsDeps.Type
 
 const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<
   Model,

@@ -22,7 +22,7 @@ import {
   span,
   ul,
 } from 'foldkit/html'
-import { ST, ts } from 'foldkit/schema'
+import { ts } from 'foldkit/schema'
 
 // MODEL
 
@@ -32,25 +32,25 @@ const Todo = S.Struct({
   completed: S.Boolean,
   createdAt: S.Number,
 })
-type Todo = ST<typeof Todo>
+type Todo = typeof Todo.Type
 
 const Todos = S.Array(Todo)
-type Todos = ST<typeof Todos>
+type Todos = typeof Todos.Type
 
 const Filter = S.Literal('All', 'Active', 'Completed')
-type Filter = ST<typeof Filter>
+type Filter = typeof Filter.Type
 
 const NotEditing = ts('NotEditing')
-type NotEditing = ST<typeof NotEditing>
+type NotEditing = typeof NotEditing.Type
 
 const Editing = ts('Editing', {
   id: S.String,
   text: S.String,
 })
-type Editing = ST<typeof Editing>
+type Editing = typeof Editing.Type
 
 const EditingState = S.Union(NotEditing, Editing)
-type EditingState = ST<typeof EditingState>
+type EditingState = typeof EditingState.Type
 
 const Model = S.Struct({
   todos: Todos,
@@ -58,7 +58,7 @@ const Model = S.Struct({
   filter: Filter,
   editing: EditingState,
 })
-type Model = ST<typeof Model>
+type Model = typeof Model.Type
 
 // MESSAGE
 
@@ -96,23 +96,23 @@ export const Message = S.Union(
   TodosSaved,
 )
 
-type NoOp = ST<typeof NoOp>
-type UpdateNewTodo = ST<typeof UpdateNewTodo>
-type UpdateEditingTodo = ST<typeof UpdateEditingTodo>
-type AddTodo = ST<typeof AddTodo>
-type GotNewTodoData = ST<typeof GotNewTodoData>
-type DeleteTodo = ST<typeof DeleteTodo>
-type ToggleTodo = ST<typeof ToggleTodo>
-type StartEditing = ST<typeof StartEditing>
-type SaveEdit = ST<typeof SaveEdit>
-type CancelEdit = ST<typeof CancelEdit>
-type ToggleAll = ST<typeof ToggleAll>
-type ClearCompleted = ST<typeof ClearCompleted>
-type SetFilter = ST<typeof SetFilter>
-type TodosLoaded = ST<typeof TodosLoaded>
-type TodosSaved = ST<typeof TodosSaved>
+type NoOp = typeof NoOp.Type
+type UpdateNewTodo = typeof UpdateNewTodo.Type
+type UpdateEditingTodo = typeof UpdateEditingTodo.Type
+type AddTodo = typeof AddTodo.Type
+type GotNewTodoData = typeof GotNewTodoData.Type
+type DeleteTodo = typeof DeleteTodo.Type
+type ToggleTodo = typeof ToggleTodo.Type
+type StartEditing = typeof StartEditing.Type
+type SaveEdit = typeof SaveEdit.Type
+type CancelEdit = typeof CancelEdit.Type
+type ToggleAll = typeof ToggleAll.Type
+type ClearCompleted = typeof ClearCompleted.Type
+type SetFilter = typeof SetFilter.Type
+type TodosLoaded = typeof TodosLoaded.Type
+type TodosSaved = typeof TodosSaved.Type
 
-export type Message = ST<typeof Message>
+export type Message = typeof Message.Type
 
 // INIT
 

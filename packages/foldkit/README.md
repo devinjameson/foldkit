@@ -8,22 +8,26 @@
 
 ## Installation
 
+The best way to get started with Foldkit is to use `create-foldkit-app`. This
+will guide you through creating a new Foldkit project with your preferred
+package manager and example template.
+
 ```bash
-npm install foldkit effect
+npx create-foldkit-app@latest --wizard
 ```
 
 ## Counter Example
 
-```typescript
+```ts
 import { Match as M, Schema } from 'effect'
 import { Runtime } from 'foldkit'
 import { Class, Html, OnClick, button, div } from 'foldkit/html'
-import { ST, ts } from 'foldkit/schema'
+import { ts } from 'foldkit/schema'
 
 // MODEL
 
 const Model = Schema.Number
-type Model = ST<typeof Model>
+type Model = typeof Model.Type
 
 // MESSAGE
 
@@ -33,11 +37,11 @@ const Reset = ts('Reset')
 
 const Message = Schema.Union(Decrement, Increment, Reset)
 
-type Decrement = ST<typeof Decrement>
-type Increment = ST<typeof Increment>
-type Reset = ST<typeof Reset>
+type Decrement = typeof Decrement.Type
+type Increment = typeof Increment.Type
+type Reset = typeof Reset.Type
 
-type Message = ST<typeof Message>
+type Message = typeof Message.Type
 
 // UPDATE
 
