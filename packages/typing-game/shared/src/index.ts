@@ -1,6 +1,6 @@
 import { Schema as S } from 'effect'
 
-export const GameStatus = S.Literal('waiting', 'countdown', 'playing', 'finished')
+export const GameStatus = S.Literal('Waiting', 'Countdown', 'Playing', 'Finished')
 export type GameStatus = typeof GameStatus.Type
 
 export const Player = S.Struct({
