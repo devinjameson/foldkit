@@ -57,6 +57,8 @@ const addLinkClickListener = <Message>(
     }
 
     const url: Url = pipe(href, String.split('?'), (parts) => {
+      event.preventDefault()
+
       const path = Array.headNonEmpty(parts)
       const searchAndHash = Array.tailNonEmpty(parts)
       const pathname = pipe(path, String.split('#'), Array.headNonEmpty) || '/'
@@ -86,13 +88,7 @@ const addLinkClickListener = <Message>(
       }
     })
 
-    const isSamePageHashLink =
-      Option.isSome(url.hash) && (url.pathname === window.location.pathname || href.startsWith('#'))
-
-    if (!isSamePageHashLink) {
-      event.preventDefault()
-      Queue.unsafeOffer(messageQueue, browserConfig.onUrlRequest(Internal.make({ url })))
-    }
+    Queue.unsafeOffer(messageQueue, browserConfig.onUrlRequest(Internal.make({ url })))
   }
 
   document.addEventListener('click', onLinkClick)
