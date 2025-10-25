@@ -6,15 +6,23 @@ import {
   Match as M,
   MutableRef,
   Option,
-  Runtime,
   Stream,
 } from 'effect'
+import { Runtime } from 'foldkit'
+import { CommandStream } from 'foldkit/runtime'
 
-import { ActiveSectionChanged, Model } from '../main'
+import {
+  ActiveSectionChanged,
+  CommandStreamsDeps,
+  Model,
+} from '../main'
 import * as Page from '../page'
 
-// CLAUDE: We need to be able to type these?
-export const activeSectionCommandStream = {
+export const activeSection: CommandStream<
+  Model,
+  ActiveSectionChanged,
+  CommandStreamsDeps['activeSection']
+> = {
   modelToDeps: (model: Model) => {
     const currentPageTableOfContents = M.value(model.route).pipe(
       M.tag(

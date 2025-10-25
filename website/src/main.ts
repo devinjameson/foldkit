@@ -37,7 +37,7 @@ import { UrlRequest } from 'foldkit/runtime'
 import { type ST, ts } from 'foldkit/schema'
 import { Url, toString as urlToString } from 'foldkit/url'
 
-import { activeSectionCommandStream } from './commandStream/activeSectionCommandStream'
+import * as CommandStream from './commandStream'
 import { Icon } from './icon'
 import { Link } from './link'
 import * as Page from './page'
@@ -221,7 +221,10 @@ const update = (
           url,
           mobileMenuOpen: false,
         },
-        [],
+        Option.match(url.hash, {
+          onNone: () => [],
+          onSome: (hash) => [scrollToHash(hash)],
+        }),
       ],
 
       CopySnippetToClipboard: ({ text }) => [
@@ -403,7 +406,7 @@ const iconLink = (link: string, ariaLabel: string, icon: Html) =>
 
 const tableOfContentsView = (
   entries: ReadonlyArray<TableOfContentsEntry>,
-  activeSection: Option.Option<string>,
+  maybeActiveSectionId: Option.Option<string>,
 ) =>
   aside(
     [
@@ -415,7 +418,7 @@ const tableOfContentsView = (
       h3(
         [
           Class(
-            'text-xs font-semibold text-gray-900 uppercase tracking-wider mb-4',
+            'text-xs font-semibold text-gray-900 uppercase tracking-wider mb-2',
           ),
         ],
         ['On This Page'],
@@ -424,9 +427,9 @@ const tableOfContentsView = (
         [],
         [
           ul(
-            [Class('space-y-2 text-sm')],
+            [Class('space-y-2 text-sm pl-1')],
             Array.map(entries, ({ level, id, text }) => {
-              const isActive = Option.match(activeSection, {
+              const isActive = Option.match(maybeActiveSectionId, {
                 onNone: () => false,
                 onSome: (activeSectionId) => activeSectionId === id,
               })
@@ -440,7 +443,7 @@ const tableOfContentsView = (
                       Href(`#${id}`),
                       Class(
                         classNames('transition block', {
-                          'text-blue-600 font-semibold': isActive,
+                          'text-blue-600 underline': isActive,
                           'text-gray-600 hover:text-gray-900':
                             !isActive,
                         }),
@@ -590,11 +593,13 @@ const CommandStreamsDeps = S.Struct({
   }),
 })
 
+export type CommandStreamsDeps = ST<typeof CommandStreamsDeps>
+
 const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<
   Model,
   Message
 >({
-  activeSection: activeSectionCommandStream,
+  activeSection: CommandStream.activeSection,
 })
 
 // RUN
