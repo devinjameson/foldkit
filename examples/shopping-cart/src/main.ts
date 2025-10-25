@@ -4,7 +4,7 @@ import { Class, Href, Html, a, div, h1, header, keyed, li, main, nav, p, ul } fr
 import { load, pushUrl } from 'foldkit/navigation'
 import { literal } from 'foldkit/route'
 import { ST, ts } from 'foldkit/schema'
-import { Url } from 'foldkit/url'
+import { Url, toString as urlToString } from 'foldkit/url'
 
 import { products } from './data/products'
 import { Cart, Item } from './domain'
@@ -50,7 +50,7 @@ type Model = S.Schema.Type<typeof Model>
 // MESSAGE
 
 const NoOp = ts('NoOp')
-const UrlRequestReceived = ts('UrlRequestReceived', {
+const LinkClicked = ts('LinkClicked', {
   request: Runtime.UrlRequest,
 })
 const UrlChanged = ts('UrlChanged', { url: Url })
@@ -65,7 +65,7 @@ const PlaceOrder = ts('PlaceOrder')
 
 export const Message = S.Union(
   NoOp,
-  UrlRequestReceived,
+  LinkClicked,
   UrlChanged,
   ProductsMessage,
   AddToCartClicked,
@@ -78,7 +78,7 @@ export const Message = S.Union(
 )
 
 type NoOp = ST<typeof NoOp>
-type UrlRequestReceived = ST<typeof UrlRequestReceived>
+type LinkClicked = ST<typeof LinkClicked>
 type UrlChanged = ST<typeof UrlChanged>
 type ProductsMessage = ST<typeof ProductsMessage>
 type AddToCartClicked = ST<typeof AddToCartClicked>
@@ -114,17 +114,13 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
     M.tagsExhaustive({
       NoOp: () => [model, []],
 
-      UrlRequestReceived: ({ request }) =>
-        pipe(
-          M.value(request),
+      LinkClicked: ({ request }) =>
+        M.value(request).pipe(
           M.withReturnType<[Model, ReadonlyArray<Runtime.Command<NoOp>>]>(),
           M.tagsExhaustive({
             Internal: ({ url }) => [
-              {
-                ...model,
-                route: urlToAppRoute(url),
-              },
-              [pushUrl(url.pathname).pipe(Effect.as(NoOp.make()))],
+              model,
+              [pushUrl(urlToString(url)).pipe(Effect.as(NoOp.make()))],
             ],
 
             External: ({ href }) => [model, [load(href).pipe(Effect.as(NoOp.make()))]],
@@ -345,7 +341,7 @@ const app = Runtime.makeApplication({
   view,
   container: document.getElementById('root')!,
   browser: {
-    onUrlRequest: (request) => UrlRequestReceived.make({ request }),
+    onUrlRequest: (request) => LinkClicked.make({ request }),
     onUrlChange: (url) => UrlChanged.make({ url }),
   },
 })

@@ -25,7 +25,7 @@ import {
 import { load, pushUrl, replaceUrl } from 'foldkit/navigation'
 import { int, literal, slash } from 'foldkit/route'
 import { ST, ts } from 'foldkit/schema'
-import { Url } from 'foldkit/url'
+import { Url, toString as urlToString } from 'foldkit/url'
 
 // ROUTE
 
@@ -93,16 +93,16 @@ type Model = ST<typeof Model>
 // MESSAGE
 
 const NoOp = ts('NoOp')
-const UrlRequestReceived = ts('UrlRequestReceived', {
+const LinkClicked = ts('LinkClicked', {
   request: Runtime.UrlRequest,
 })
 const UrlChanged = ts('UrlChanged', { url: Url })
 const SearchInputChanged = ts('SearchInputChanged', { value: S.String })
 
-export const Message = S.Union(NoOp, UrlRequestReceived, UrlChanged, SearchInputChanged)
+export const Message = S.Union(NoOp, LinkClicked, UrlChanged, SearchInputChanged)
 
 type NoOp = ST<typeof NoOp>
-type UrlRequestReceived = ST<typeof UrlRequestReceived>
+type LinkClicked = ST<typeof LinkClicked>
 type UrlChanged = ST<typeof UrlChanged>
 type SearchInputChanged = ST<typeof SearchInputChanged>
 
@@ -122,15 +122,12 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
     M.tagsExhaustive({
       NoOp: () => [model, []],
 
-      UrlRequestReceived: ({ request }) =>
+      LinkClicked: ({ request }) =>
         M.value(request).pipe(
           M.tagsExhaustive({
             Internal: ({ url }): [Model, ReadonlyArray<Runtime.Command<NoOp>>] => [
-              {
-                ...model,
-                route: urlToAppRoute(url),
-              },
-              [pushUrl(url.pathname).pipe(Effect.as(NoOp.make()))],
+              model,
+              [pushUrl(urlToString(url)).pipe(Effect.as(NoOp.make()))],
             ],
             External: ({ href }): [Model, ReadonlyArray<Runtime.Command<NoOp>>] => [
               model,
@@ -420,7 +417,7 @@ const app = Runtime.makeApplication({
   view,
   container: document.getElementById('root')!,
   browser: {
-    onUrlRequest: (request) => UrlRequestReceived.make({ request }),
+    onUrlRequest: (request) => LinkClicked.make({ request }),
     onUrlChange: (url) => UrlChanged.make({ url }),
   },
 })

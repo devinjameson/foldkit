@@ -1,4 +1,4 @@
-import { Array, Option, Queue, String, pipe } from 'effect'
+import { Option, Queue, String } from 'effect'
 
 import { OptionExt, StringExt } from '../effectExtensions'
 import { Url } from '../url'
@@ -42,51 +42,41 @@ const addLinkClickListener = <Message>(
 ) => {
   const onLinkClick = (event: Event) => {
     const target = event.target
-    if (!target || !('closest' in target)) return
+    if (!target || !('closest' in target)) {
+      return
+    }
 
     /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-    const link = (target as Element).closest('a')
-    if (!link) return
+    const maybeLink = Option.fromNullable((target as Element).closest('a'))
+    if (Option.isNone(maybeLink)) {
+      return
+    }
 
-    const href = link.getAttribute('href')
-    if (!href) return
+    const { href } = maybeLink.value
+    if (String.isEmpty(href)) {
+      return
+    }
 
-    if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('//')) {
+    event.preventDefault()
+
+    const linkUrl = new URL(href)
+    const currentUrl = new URL(window.location.href)
+
+    if (linkUrl.origin !== currentUrl.origin) {
       Queue.unsafeOffer(messageQueue, browserConfig.onUrlRequest(External.make({ href })))
       return
     }
 
-    const url: Url = pipe(href, String.split('?'), (parts) => {
-      event.preventDefault()
+    const { protocol, host, port, pathname, search, hash } = linkUrl
 
-      const path = Array.headNonEmpty(parts)
-      const searchAndHash = Array.tailNonEmpty(parts)
-      const pathname = pipe(path, String.split('#'), Array.headNonEmpty) || '/'
-      const searchPart = Array.head(searchAndHash).pipe(
-        Option.match({
-          onNone: () => '',
-          onSome: (s) => s,
-        }),
-      )
-      const search = pipe(searchPart, String.split('#'), Array.headNonEmpty, OptionExt.fromString)
-
-      const hash = pipe(
-        href,
-        String.split('#'),
-        (hashParts) =>
-          Array.isNonEmptyArray(hashParts) && hashParts.length > 1 ? hashParts[1]! : '',
-        OptionExt.fromString,
-      )
-
-      return {
-        protocol: window.location.protocol,
-        host: window.location.host,
-        port: OptionExt.fromString(window.location.port),
-        pathname,
-        search,
-        hash,
-      }
-    })
+    const url: Url = {
+      protocol,
+      host,
+      port: OptionExt.fromString(port),
+      pathname,
+      search: StringExt.stripPrefixNonEmpty('?')(search),
+      hash: StringExt.stripPrefixNonEmpty('#')(hash),
+    }
 
     Queue.unsafeOffer(messageQueue, browserConfig.onUrlRequest(Internal.make({ url })))
   }
@@ -102,11 +92,15 @@ const addProgrammaticNavigationListener = <Message>(
     const search = StringExt.stripPrefixNonEmpty('?')(window.location.search)
     const hash = StringExt.stripPrefixNonEmpty('#')(window.location.hash)
 
+    const {
+      location: { protocol, host, port, pathname },
+    } = window
+
     const newUrl: Url = {
-      protocol: window.location.protocol,
-      host: window.location.host,
-      port: OptionExt.fromString(window.location.port),
-      pathname: window.location.pathname,
+      protocol,
+      host,
+      port: OptionExt.fromString(port),
+      pathname,
       search,
       hash,
     }

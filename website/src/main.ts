@@ -120,7 +120,7 @@ export type Model = ST<typeof Model>
 // MESSAGE
 
 const NoOp = ts('NoOp')
-const UrlRequestReceived = ts('UrlRequestReceived', {
+const LinkClicked = ts('LinkClicked', {
   request: UrlRequest,
 })
 const UrlChanged = ts('UrlChanged', { url: Url })
@@ -141,7 +141,7 @@ export const ActiveSectionChanged = ts('ActiveSectionChanged', {
 
 const Message = S.Union(
   NoOp,
-  UrlRequestReceived,
+  LinkClicked,
   UrlChanged,
   CopySnippetToClipboard,
   CopyLinkToClipboard,
@@ -152,7 +152,7 @@ const Message = S.Union(
 )
 
 type NoOp = ST<typeof NoOp>
-type UrlRequestReceived = ST<typeof UrlRequestReceived>
+type LinkClicked = ST<typeof LinkClicked>
 type UrlChanged = ST<typeof UrlChanged>
 type CopySnippetToClipboard = ST<typeof CopySnippetToClipboard>
 type CopyLinkToClipboard = ST<typeof CopyLinkToClipboard>
@@ -193,16 +193,13 @@ const update = (
     M.tagsExhaustive({
       NoOp: () => [model, []],
 
-      UrlRequestReceived: ({ request }) =>
+      LinkClicked: ({ request }) =>
         M.value(request).pipe(
           M.tagsExhaustive({
             Internal: ({
               url,
             }): [Model, ReadonlyArray<Runtime.Command<NoOp>>] => [
-              {
-                ...model,
-                route: urlToAppRoute(url),
-              },
+              model,
               [pushUrl(url.pathname).pipe(Effect.as(NoOp.make()))],
             ],
             External: ({
@@ -612,7 +609,7 @@ const application = Runtime.makeApplication({
   commandStreams,
   container: document.getElementById('root')!,
   browser: {
-    onUrlRequest: (request) => UrlRequestReceived.make({ request }),
+    onUrlRequest: (request) => LinkClicked.make({ request }),
     onUrlChange: (url) => UrlChanged.make({ url }),
   },
 })
