@@ -26,5 +26,5 @@ This file contains preferences and conventions for Claude when working on this c
 
 ### Commits and Releases
 
-- Do not coauthor or mention Claude in commit messages.
-- Do not mention Claude in release notes.
+- Do not co-author or mention Claude in commit messages
+- Do not mention Claude in release notes
