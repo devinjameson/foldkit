@@ -1,3 +1,4 @@
+import { Rpc, RpcGroup } from '@effect/rpc'
 import { Schema as S } from 'effect'
 
 export const GameStatus = S.Literal('Waiting', 'Countdown', 'Playing', 'Finished')
@@ -15,11 +16,8 @@ export type Player = typeof Player.Type
 
 export const Room = S.Struct({
   id: S.String,
-  name: S.String,
-  maxPlayers: S.Number,
   currentPlayers: S.Number,
   status: GameStatus,
-  text: S.NullOr(S.String),
   createdAt: S.Date,
 })
 export type Room = typeof Room.Type
@@ -79,3 +77,24 @@ export type GameEnd = typeof GameEnd.Type
 
 export const ServerMessage = S.Union(GameCountdown, GameStart, PlayerUpdate, GameEnd)
 export type ServerMessage = typeof ServerMessage.Type
+
+export class RoomNotFoundError extends S.TaggedError<RoomNotFoundError>()('RoomNotFoundError', {
+  roomId: S.String,
+}) {}
+
+export class RoomRpcs extends RpcGroup.make(
+  Rpc.make('createRoom', {
+    payload: S.Struct({ username: S.String }),
+    success: Room,
+  }),
+  Rpc.make('joinRoom', {
+    payload: S.Struct({ username: S.String, roomId: S.String }),
+    success: Room,
+    error: RoomNotFoundError,
+  }),
+  Rpc.make('getRoomById', {
+    payload: S.Struct({ roomId: S.String }),
+    success: Room,
+    error: RoomNotFoundError,
+  }),
+) {}
