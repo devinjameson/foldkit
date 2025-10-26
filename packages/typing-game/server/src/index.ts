@@ -86,14 +86,24 @@ const RoomLive = Shared.RoomRpcs.toLayer(
         }),
 
       subscribeToRoom: ({ roomId }) =>
-        // CLAUDE: This will result in the client not receiving anything until
-        // there's a change in the room.
-        roomsRef.changes.pipe(
-          Stream.mapEffect((rooms) =>
-            HashMap.get(rooms, roomId).pipe(
-              Effect.mapError(() => new Shared.RoomNotFoundError({ roomId })),
+        Stream.concat(
+          Stream.fromEffect(
+            SubscriptionRef.get(roomsRef).pipe(
+              Effect.flatMap((rooms) =>
+                HashMap.get(rooms, roomId).pipe(
+                  Effect.mapError(() => new Shared.RoomNotFoundError({ roomId })),
+                ),
+              ),
             ),
           ),
+          roomsRef.changes.pipe(
+            Stream.mapEffect((rooms) =>
+              HashMap.get(rooms, roomId).pipe(
+                Effect.mapError(() => new Shared.RoomNotFoundError({ roomId })),
+              ),
+            ),
+          ),
+        ).pipe(
           Stream.throttle({
             cost: () => 1,
             duration: Duration.millis(100),
