@@ -1,6 +1,16 @@
 import * as Shared from '@typing-game/shared'
 import classNames from 'classnames'
-import { Array, Effect, Match as M, Number, Option, Schema as S, Stream, pipe } from 'effect'
+import {
+  Array,
+  Effect,
+  Match as M,
+  Number,
+  Option,
+  Schema as S,
+  Stream,
+  Struct,
+  pipe,
+} from 'effect'
 import { FieldValidation, Route, Runtime, Url } from 'foldkit'
 import { Field, FieldSchema, Validation, validateField } from 'foldkit/fieldValidation'
 import {
@@ -56,14 +66,11 @@ const urlToAppRoute = Route.parseUrlWithFallback(routeParser, NotFoundRoute)
 
 const Model = S.Struct({
   route: AppRoute,
-  username: FieldSchema(S.String),
-  // CLAUDE: MAybe we should call this formRoomId or something else that makes
-  // it clear its the string typed into the form? And maybe username should also
-  // be formUsername? Maybe there are better names.
-  roomId: FieldSchema(S.String),
+  usernameInput: FieldSchema(S.String),
+  roomIdInput: FieldSchema(S.String),
   roomIdValidationId: S.Number,
-  // CLAUDE: I think this can just be S.Option(Shared.Room)?
-  room: S.OptionFromNullOr(Shared.Room),
+  maybeRoom: S.Option(Shared.Room),
+  error: S.Option(S.String),
 })
 type Model = typeof Model.Type
 
@@ -124,10 +131,11 @@ type Message = typeof Message.Type
 const init: Runtime.ApplicationInit<Model, Message> = (url: Url.Url) => [
   {
     route: urlToAppRoute(url),
-    username: Field.NotValidated({ value: '' }),
-    roomId: Field.NotValidated({ value: '' }),
+    usernameInput: Field.NotValidated({ value: '' }),
+    roomIdInput: Field.NotValidated({ value: '' }),
     roomIdValidationId: 0,
-    room: Option.none(),
+    maybeRoom: Option.none(),
+    error: Option.none(),
   },
   [],
 ]
@@ -170,18 +178,17 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         ),
 
       UrlChanged: ({ url }) => [
-        {
-          ...model,
-          route: urlToAppRoute(url),
-        },
+        Struct.evolve(model, {
+          route: () => urlToAppRoute(url),
+        }),
         [],
       ],
 
       UpdateUsername: ({ value }) => [
-        {
-          ...model,
-          username: validateField(usernameValidations)(value),
-        },
+        Struct.evolve(model, {
+          usernameInput: () => validateField(usernameValidations)(value),
+          error: () => Option.none(),
+        }),
         [],
       ],
 
@@ -191,19 +198,19 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
 
         if (Field.$is('Valid')(validateRoomIdResult)) {
           return [
-            {
-              ...model,
-              roomIdValidationId: validationId,
-            },
+            Struct.evolve(model, {
+              roomIdValidationId: () => validationId,
+              error: () => Option.none(),
+            }),
             [validateRoomJoinable(value, validationId)],
           ]
         } else {
           return [
-            {
-              ...model,
-              roomId: validateRoomIdResult,
-              roomIdValidationId: validationId,
-            },
+            Struct.evolve(model, {
+              roomIdInput: () => validateRoomIdResult,
+              roomIdValidationId: () => validationId,
+              error: () => Option.none(),
+            }),
             [],
           ]
         }
@@ -211,48 +218,53 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
 
       RoomIdValidated: ({ validationId, field }) => {
         if (validationId === model.roomIdValidationId) {
-          // CLAUDE: I wonder if we should use Struct.evolve as a convention
-          // for model updates in Foldkit?
-          return [{ ...model, roomId: field }, []]
+          return [
+            Struct.evolve(model, {
+              roomIdInput: () => field,
+            }),
+            [],
+          ]
         } else {
           return [model, []]
         }
       },
 
       CreateRoomClicked: () => {
-        if (isAnyFieldNotValid([model.username])) {
+        if (isAnyFieldNotValid([model.usernameInput])) {
           return [model, []]
         }
 
-        return [model, [createRoom(model.username.value)]]
+        return [model, [createRoom(model.usernameInput.value)]]
       },
 
       JoinRoomClicked: () => {
-        if (isAnyFieldNotValid([model.username, model.roomId])) {
+        if (isAnyFieldNotValid([model.usernameInput, model.roomIdInput])) {
           return [model, []]
         }
 
-        return [model, [joinRoom(model.username.value, model.roomId.value)]]
+        return [model, [joinRoom(model.usernameInput.value, model.roomIdInput.value)]]
       },
 
       RoomCreated: ({ roomId }) => [model, [navigateToRoom(roomId)]],
 
       RoomJoined: ({ roomId }) => [model, [navigateToRoom(roomId)]],
 
-      RoomError: ({ error }) => {
-        // CLAUDE: We should update this to show the error in the UI
-        console.error('Room error:', error)
-        return [model, []]
-      },
-
-      RoomUpdated: ({ room }) => [
-        {
-          ...model,
-          room: Option.some(room),
-        },
+      RoomError: ({ error }) => [
+        Struct.evolve(model, {
+          error: () => Option.some(error),
+        }),
         [],
       ],
 
+      RoomUpdated: ({ room }) => [
+        Struct.evolve(model, {
+          maybeRoom: () => Option.some(room),
+        }),
+        [],
+      ],
+
+      // CLAUDE: If we hit this, does this mean the stream has ended? Should we
+      // reconnect?
       RoomStreamError: ({ error }) => {
         console.error('Room stream error:', error)
         return [model, []]
@@ -261,7 +273,7 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
   )
 
 // COMMAND
-//
+
 const validateRoomJoinable = (
   roomId: string,
   validationId: number,
@@ -396,8 +408,8 @@ const fieldView = (params: {
 }
 
 const homeView = (model: Model): Html => {
-  const canCreateRoom = isEveryFieldValid([model.username])
-  const canJoinRoom = isEveryFieldValid([model.username, model.roomId])
+  const canCreateRoom = isEveryFieldValid([model.usernameInput])
+  const canJoinRoom = isEveryFieldValid([model.usernameInput, model.roomIdInput])
 
   return div(
     [Class('min-h-screen bg-gray-100 flex items-center justify-center p-4')],
@@ -416,7 +428,7 @@ const homeView = (model: Model): Html => {
               fieldView({
                 id: 'username',
                 labelText: 'Username',
-                field: model.username,
+                field: model.usernameInput,
                 onInput: (value) => UpdateUsername.make({ value }),
                 containerClassName: 'max-w-md mx-auto',
               }),
@@ -456,7 +468,7 @@ const homeView = (model: Model): Html => {
                       fieldView({
                         id: 'roomId',
                         labelText: 'Room ID',
-                        field: model.roomId,
+                        field: model.roomIdInput,
                         onInput: (value) => UpdateRoomId.make({ value }),
                         containerClassName: 'w-full',
                       }),
@@ -478,6 +490,14 @@ const homeView = (model: Model): Html => {
                   ),
                 ],
               ),
+              Option.match(model.error, {
+                onNone: () => empty,
+                onSome: (errorMessage) =>
+                  div(
+                    [Class('mt-4 p-3 bg-red-50 border border-red-200 rounded-md text-center')],
+                    [span([Class('text-red-600')], [errorMessage])],
+                  ),
+              }),
             ],
           ),
         ],
@@ -486,42 +506,39 @@ const homeView = (model: Model): Html => {
   )
 }
 
-const roomView = (model: Model): Html =>
-  M.value(model.route).pipe(
-    M.tag('Room', ({ roomId }) =>
+const maybeRoomView = (maybeRoom: Option.Option<Shared.Room>): Html =>
+  Option.match(maybeRoom, {
+    onNone: () => div([Class('text-gray-600')], ['Loading room...']),
+    onSome: (room: Shared.Room) =>
       div(
-        [Class('min-h-screen bg-gray-100 flex items-center justify-center p-4')],
+        [],
         [
+          h2([Class('text-xl font-semibold text-gray-700 mb-4')], ['Players']),
           div(
-            [Class('bg-white rounded-lg p-8 max-w-4xl w-full')],
-            [
-              h1([Class('text-2xl font-bold text-gray-800 mb-6')], ['Room: ', roomId]),
-              // CLAUDE: Let's extract a fn for  this part
-              Option.match(model.room, {
-                onNone: () => div([Class('text-gray-600')], ['Loading room...']),
-                onSome: (room: Shared.Room) =>
-                  div(
-                    [],
-                    [
-                      h2([Class('text-xl font-semibold text-gray-700 mb-4')], ['Players']),
-                      div(
-                        [Class('space-y-2')],
-                        Array.map(room.players, (player) =>
-                          div(
-                            [Class('p-3 bg-gray-50 rounded border border-gray-200')],
-                            [span([Class('font-medium')], [player.username])],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-              }),
-            ],
+            [Class('space-y-2')],
+            Array.map(room.players, (player) =>
+              div(
+                [Class('p-3 bg-gray-50 rounded border border-gray-200')],
+                [span([Class('font-medium')], [player.username])],
+              ),
+            ),
           ),
         ],
       ),
-    ),
-    M.orElse(() => div([], ['Invalid route'])),
+  })
+
+const roomRouteView = (model: Model, roomId: string): Html =>
+  div(
+    [Class('min-h-screen bg-gray-100 flex items-center justify-center p-4')],
+    [
+      div(
+        [Class('bg-white rounded-lg p-8 max-w-4xl w-full')],
+        [
+          h1([Class('text-2xl font-bold text-gray-800 mb-6')], ['Room: ', roomId]),
+          maybeRoomView(model.maybeRoom),
+        ],
+      ),
+    ],
   )
 
 const notFoundView = (path: string): Html =>
@@ -546,7 +563,7 @@ const view = (model: Model): Html =>
   M.value(model.route).pipe(
     M.tagsExhaustive({
       Home: () => homeView(model),
-      Room: () => roomView(model),
+      Room: ({ roomId }) => roomRouteView(model, roomId),
       NotFound: ({ path }) => notFoundView(path),
     }),
   )
