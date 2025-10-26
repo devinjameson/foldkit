@@ -6,7 +6,7 @@ export type GameStatus = typeof GameStatus.Type
 
 export const Player = S.Struct({
   id: S.String,
-  name: S.String,
+  username: S.String,
   position: S.Number,
   wpm: S.Number,
   accuracy: S.Number,
@@ -16,7 +16,7 @@ export type Player = typeof Player.Type
 
 export const Room = S.Struct({
   id: S.String,
-  currentPlayers: S.Number,
+  players: S.Array(Player),
   status: GameStatus,
   createdAt: S.Date,
 })
@@ -55,7 +55,7 @@ export type GameStart = typeof GameStart.Type
 
 export const PlayerUpdate = S.TaggedStruct('PlayerUpdate', {
   playerId: S.String,
-  playerName: S.String,
+  username: S.String,
   position: S.Number,
   wpm: S.Number,
   accuracy: S.Number,
@@ -66,7 +66,7 @@ export const GameEnd = S.TaggedStruct('GameEnd', {
   results: S.Array(
     S.Struct({
       playerId: S.String,
-      playerName: S.String,
+      username: S.String,
       wpm: S.Number,
       accuracy: S.Number,
       rank: S.Number,
@@ -96,5 +96,11 @@ export class RoomRpcs extends RpcGroup.make(
     payload: S.Struct({ roomId: S.String }),
     success: Room,
     error: RoomNotFoundError,
+  }),
+  Rpc.make('subscribeToRoom', {
+    payload: S.Struct({ roomId: S.String }),
+    success: Room,
+    error: RoomNotFoundError,
+    stream: true,
   }),
 ) {}

@@ -1,4 +1,4 @@
-import { Array, Data, Effect, HashMap, Random, Ref, pipe } from 'effect'
+import { Array, Data, Effect, HashMap, Random, SubscriptionRef, pipe } from 'effect'
 
 import { RoomsStore } from './index.js'
 
@@ -12,7 +12,7 @@ export const generateUniqueRoomId = (
 ): Effect.Effect<string, never, RoomsStore> =>
   Effect.gen(function* () {
     const roomsStoreRef = yield* RoomsStore
-    const roomsStore = yield* Ref.get(roomsStoreRef)
+    const roomsStore = yield* SubscriptionRef.get(roomsStoreRef)
 
     return yield* generateRoomId(words).pipe(
       Effect.filterOrFail(
