@@ -12,6 +12,10 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@effect/platform": "^0.92.1",
+    "@effect/platform-browser": "^0.72.0",
+    "@effect/rpc": "^0.71.1",
+    "@effect/rpc-http": "^0.52.4",
     "@tailwindcss/vite": "^4.1.10",
     "@typing-game/shared": "workspace:*",
     "classnames": "^2.5.1",

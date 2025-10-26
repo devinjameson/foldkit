@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@effect/rpc": "^0.71.1",
     "effect": "^3.18.2"
   },
   "devDependencies": {

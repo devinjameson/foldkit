@@ -6,17 +6,20 @@ import {
   Class,
   Disabled,
   For,
+  Href,
   Html,
   Id,
   OnClick,
   OnInput,
   Type,
   Value,
+  a,
   button,
   div,
   empty,
   form,
   h1,
+  h2,
   input,
   label,
   span,
@@ -25,6 +28,8 @@ import {
 import { load, pushUrl } from 'foldkit/navigation'
 import { literal, slash, string } from 'foldkit/route'
 import { ts } from 'foldkit/schema'
+
+import { RoomsClient } from './rpc.js'
 
 // ROUTE
 
@@ -71,6 +76,9 @@ const RoomIdValidated = ts('RoomIdValidated', {
 })
 const CreateRoomClicked = ts('CreateRoomClicked')
 const JoinRoomClicked = ts('JoinRoomClicked')
+const RoomCreated = ts('RoomCreated', { roomId: S.String })
+const RoomJoined = ts('RoomJoined', { roomId: S.String })
+const RoomError = ts('RoomError', { error: S.String })
 
 type NoOp = typeof NoOp.Type
 type LinkClicked = typeof LinkClicked.Type
@@ -80,6 +88,9 @@ type UpdateRoomId = typeof UpdateRoomId.Type
 type RoomIdValidated = typeof RoomIdValidated.Type
 type CreateRoomClicked = typeof CreateRoomClicked.Type
 type JoinRoomClicked = typeof JoinRoomClicked.Type
+type RoomCreated = typeof RoomCreated.Type
+type RoomJoined = typeof RoomJoined.Type
+type RoomError = typeof RoomError.Type
 
 const Message = S.Union(
   NoOp,
@@ -90,6 +101,9 @@ const Message = S.Union(
   RoomIdValidated,
   CreateRoomClicked,
   JoinRoomClicked,
+  RoomCreated,
+  RoomJoined,
+  RoomError,
 )
 type Message = typeof Message.Type
 
@@ -114,35 +128,11 @@ const usernameValidations: ReadonlyArray<Validation<string>> = [
 
 const roomIdValidations: ReadonlyArray<Validation<string>> = [FieldValidation.required('Room ID')]
 
-const validateRoomJoinable = (
-  roomId: string,
-  validationId: number,
-): Runtime.Command<RoomIdValidated> =>
-  Effect.gen(function* () {
-    // Just succeed for now, needs real implementation
-    return RoomIdValidated.make({
-      validationId,
-      field: Field.Valid({ value: roomId }),
-    })
+const isEveryFieldValid = (fields: ReadonlyArray<Field<unknown>>): boolean =>
+  Array.every(fields, Field.$is('Valid'))
 
-    // RPC call to check if room is joinable
-    // Below is ewxample implementation from form example
-    //
-    // if (yield* isEmailOnWaitlist(email)) {
-    //   return EmailValidated.make({
-    //     validationId,
-    //     field: Field.Invalid({
-    //       value: email,
-    //       error: 'This email is already on our waitlist',
-    //     }),
-    //   })
-    // } else {
-    //   return EmailValidated.make({
-    //     validationId,
-    //     field: Field.Valid({ value: email }),
-    //   })
-    // }
-  })
+const isAnyFieldNotValid = (fields: ReadonlyArray<Field<unknown>>): boolean =>
+  Array.some(fields, (field) => !Field.$is('Valid')(field))
 
 // UPDATE
 
@@ -190,7 +180,6 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
           return [
             {
               ...model,
-              roomId: Field.Validating({ value }),
               roomIdValidationId: validationId,
             },
             [validateRoomJoinable(value, validationId)],
@@ -216,26 +205,94 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
       },
 
       CreateRoomClicked: () => {
-        // TODO: Implement room creation
-        return [model, []]
+        if (isAnyFieldNotValid([model.username])) {
+          return [model, []]
+        }
+
+        return [model, [createRoom(model.username.value)]]
       },
 
       JoinRoomClicked: () => {
-        // TODO: Implement room joining
+        if (isAnyFieldNotValid([model.username, model.roomId])) {
+          return [model, []]
+        }
+
+        return [model, [joinRoom(model.username.value, model.roomId.value)]]
+      },
+
+      RoomCreated: ({ roomId }) => [model, [navigateToRoom(roomId)]],
+
+      RoomJoined: ({ roomId }) => [model, [navigateToRoom(roomId)]],
+
+      RoomError: ({ error }) => {
+        console.error('Room error:', error)
         return [model, []]
       },
     }),
   )
 
+// COMMAND
+//
+const validateRoomJoinable = (
+  roomId: string,
+  validationId: number,
+): Runtime.Command<RoomIdValidated> =>
+  Effect.gen(function* () {
+    const client = yield* RoomsClient
+    return yield* client.getRoomById({ roomId })
+  }).pipe(
+    Effect.match({
+      onSuccess: () =>
+        RoomIdValidated.make({
+          validationId,
+          field: Field.Valid({ value: roomId }),
+        }),
+      onFailure: () =>
+        RoomIdValidated.make({
+          validationId,
+          field: Field.Invalid({
+            value: roomId,
+            error: 'Room not found',
+          }),
+        }),
+    }),
+    Effect.provide(RoomsClient.Default),
+  )
+
+const createRoom = (username: string): Runtime.Command<RoomCreated | RoomError> =>
+  Effect.gen(function* () {
+    const client = yield* RoomsClient
+    const room = yield* client.createRoom({ username })
+    return RoomCreated.make({ roomId: room.id })
+  }).pipe(
+    Effect.catchAll((error) => Effect.succeed(RoomError.make({ error: String(error) }))),
+    Effect.provide(RoomsClient.Default),
+  )
+
+const joinRoom = (username: string, roomId: string): Runtime.Command<RoomJoined | RoomError> =>
+  Effect.gen(function* () {
+    const client = yield* RoomsClient
+    const room = yield* client.joinRoom({ username, roomId })
+    return RoomJoined.make({ roomId: room.id })
+  }).pipe(
+    Effect.catchAll((error) => Effect.succeed(RoomError.make({ error: String(error) }))),
+    Effect.provide(RoomsClient.Default),
+  )
+
+const navigateToRoom = (roomId: string): Runtime.Command<NoOp> =>
+  pushUrl(roomRouter.build({ roomId })).pipe(Effect.as(NoOp.make()))
+
 // VIEW
 
-const fieldView = (
-  id: string,
-  labelText: string,
-  field: Field<string>,
-  onInput: (value: string) => Message,
-  type: 'text' | 'email' | 'textarea' = 'text',
-): Html => {
+const fieldView = (params: {
+  id: string
+  labelText: string
+  field: Field<string>
+  onInput: (value: string) => Message
+  type?: 'text' | 'email' | 'textarea'
+  containerClassName?: string
+}): Html => {
+  const { id, labelText, field, onInput, type = 'text', containerClassName } = params
   const { value } = field
 
   const getBorderClass = () =>
@@ -249,7 +306,7 @@ const fieldView = (
   const inputClass = `w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${getBorderClass()}`
 
   return div(
-    [Class('mb-4')],
+    [Class(classNames('mb-4', containerClassName))],
     [
       div(
         [Class('flex items-center gap-2 mb-2')],
@@ -257,7 +314,7 @@ const fieldView = (
           label([For(id), Class('text-sm font-medium text-gray-700')], [labelText]),
           Field.$match(field, {
             NotValidated: () => empty,
-            Validating: () => span([Class('text-blue-600 text-sm animate-spin')], ['◐']),
+            Validating: () => empty,
             Valid: () => span([Class('text-green-600 text-sm')], ['✓']),
             Invalid: () => empty,
           }),
@@ -268,71 +325,97 @@ const fieldView = (
         : input([Id(id), Type(type), Value(value), Class(inputClass), OnInput(onInput)]),
 
       Field.$match(field, {
-        NotValidated: () => empty,
+        NotValidated: () => div([Class('invisible')], ['Not validated']),
         Validating: () => div([Class('text-blue-600 text-sm mt-1')], ['Checking...']),
-        Valid: () => empty,
+        Valid: () => div([Class('invisible')], ['Valid']),
         Invalid: ({ error }) => div([Class('text-red-600 text-sm mt-1')], [error]),
       }),
     ],
   )
 }
 
-const areFieldsValid = (fields: ReadonlyArray<Field<unknown>>): boolean =>
-  Array.every(fields, Field.$is('Valid'))
-
-const view = (model: Model): Html => {
-  const canCreateRoom = areFieldsValid([model.username])
-  const canJoinRoom = areFieldsValid([model.username, model.roomId])
+const homeView = (model: Model): Html => {
+  const canCreateRoom = isEveryFieldValid([model.username])
+  const canJoinRoom = isEveryFieldValid([model.username, model.roomId])
 
   return div(
-    [Class('min-h-screen bg-gray-100 flex items-center justify-center')],
+    [Class('min-h-screen bg-gray-100 flex items-center justify-center p-4')],
     [
       div(
-        [Class('bg-white rounded-lg shadow-lg p-8')],
+        [Class('bg-white rounded-lg p-8 max-w-4xl w-full')],
         [
-          h1([Class('text-3xl font-bold text-gray-800 mb-4')], ['Welcome to typing game!']),
+          h1(
+            [Class('text-3xl font-bold text-gray-800 mb-6 text-center max-w-lg mx-auto')],
+            ["Welcome to Pastor Herickson's Miney Niney Tiny Type Town!"],
+          ),
 
           form(
-            [Class('space-y-4')],
+            [Class('space-y-6')],
             [
-              fieldView('username', 'Username', model.username, (value) =>
-                UpdateUsername.make({ value }),
-              ),
+              fieldView({
+                id: 'username',
+                labelText: 'Username',
+                field: model.username,
+                onInput: (value) => UpdateUsername.make({ value }),
+                containerClassName: 'max-w-md mx-auto',
+              }),
 
-              div([Class('w-8 h-px bg-gray-300 mx-auto')], []),
-
-              button(
+              div(
+                [Class('grid grid-cols-1 md:grid-cols-2 gap-8')],
                 [
-                  Type('button'),
-                  Disabled(!canCreateRoom),
-                  Class(
-                    classNames('w-full py-2 px-4 rounded-md transition', {
-                      'bg-blue-500 text-white hover:bg-blue-600': canCreateRoom,
-                      'bg-gray-300 text-gray-500 cursor-not-allowed': !canCreateRoom,
-                    }),
+                  div(
+                    [Class('space-y-4 flex flex-col items-center justify-center py-8')],
+                    [
+                      h2([Class('text-xl font-semibold text-gray-700')], ['Create a Room']),
+                      button(
+                        [
+                          Type('button'),
+                          Disabled(!canCreateRoom),
+                          Class(
+                            classNames('w-full py-2 px-4 rounded-md transition', {
+                              'bg-blue-500 text-white hover:bg-blue-600': canCreateRoom,
+                              'bg-gray-300 text-gray-500 cursor-not-allowed': !canCreateRoom,
+                            }),
+                          ),
+                          OnClick(CreateRoomClicked.make()),
+                        ],
+                        ['Create Room'],
+                      ),
+                    ],
                   ),
-                  OnClick(CreateRoomClicked.make()),
-                ],
-                ['Create Room'],
-              ),
 
-              div([Class('uppercase mx-auto w-fit font-medium text-gray-500')], ['Or']),
-
-              fieldView('roomId', 'Room ID', model.roomId, (value) => UpdateRoomId.make({ value })),
-
-              button(
-                [
-                  Type('button'),
-                  Disabled(!canJoinRoom),
-                  Class(
-                    classNames('w-full py-2 px-4 rounded-md transition', {
-                      'bg-blue-500 text-white hover:bg-blue-600': canJoinRoom,
-                      'bg-gray-300 text-gray-500 cursor-not-allowed': !canJoinRoom,
-                    }),
+                  div(
+                    [
+                      Class(
+                        'space-y-4 md:border-l md:border-gray-300 md:pl-8 flex flex-col items-center justify-center py-8',
+                      ),
+                    ],
+                    [
+                      h2([Class('text-xl font-semibold text-gray-700')], ['Join a Room']),
+                      fieldView({
+                        id: 'roomId',
+                        labelText: 'Room ID',
+                        field: model.roomId,
+                        onInput: (value) => UpdateRoomId.make({ value }),
+                        containerClassName: 'w-full',
+                      }),
+                      button(
+                        [
+                          Type('button'),
+                          Disabled(!canJoinRoom),
+                          Class(
+                            classNames('w-full py-2 px-4 rounded-md transition', {
+                              'bg-blue-500 text-white hover:bg-blue-600': canJoinRoom,
+                              'bg-gray-300 text-gray-500 cursor-not-allowed': !canJoinRoom,
+                            }),
+                          ),
+                          OnClick(JoinRoomClicked.make()),
+                        ],
+                        ['Join Room'],
+                      ),
+                    ],
                   ),
-                  OnClick(JoinRoomClicked.make()),
                 ],
-                ['Join Room'],
               ),
             ],
           ),
@@ -341,6 +424,47 @@ const view = (model: Model): Html => {
     ],
   )
 }
+
+const roomView = (roomId: string): Html =>
+  div(
+    [Class('min-h-screen bg-gray-100 flex items-center justify-center')],
+    [
+      div(
+        [Class('bg-white rounded-lg p-8')],
+        [
+          h1([Class('text-2xl font-bold text-gray-800 mb-4')], ['Room: ', roomId]),
+          div([Class('text-gray-600')], ['Game room view coming soon...']),
+        ],
+      ),
+    ],
+  )
+
+const notFoundView = (path: string): Html =>
+  div(
+    [Class('min-h-screen bg-gray-100 flex items-center justify-center')],
+    [
+      div(
+        [Class('bg-white rounded-lg p-8 text-center')],
+        [
+          h1([Class('text-2xl font-bold text-gray-800 mb-4')], ['404 - Page Not Found']),
+          div([Class('text-gray-600 mb-4')], [`The path "${path}" does not exist.`]),
+          a(
+            [Href(homeRouter.build({})), Class('text-blue-500 hover:text-blue-700')],
+            ['Go back to home'],
+          ),
+        ],
+      ),
+    ],
+  )
+
+const view = (model: Model): Html =>
+  M.value(model.route).pipe(
+    M.tagsExhaustive({
+      Home: () => homeView(model),
+      Room: ({ roomId }) => roomView(roomId),
+      NotFound: ({ path }) => notFoundView(path),
+    }),
+  )
 
 // RUN
 
