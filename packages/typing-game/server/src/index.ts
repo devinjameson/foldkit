@@ -86,6 +86,8 @@ const RoomLive = Shared.RoomRpcs.toLayer(
         }),
 
       subscribeToRoom: ({ roomId }) =>
+        // CLAUDE: This will result in the client not receiving anything until
+        // there's a change in the room.
         roomsRef.changes.pipe(
           Stream.mapEffect((rooms) =>
             HashMap.get(rooms, roomId).pipe(
