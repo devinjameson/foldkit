@@ -323,7 +323,7 @@ const joinRoom = (username: string, roomId: string): Runtime.Command<RoomJoined 
 const navigateToRoom = (roomId: string): Runtime.Command<NoOp> =>
   pushUrl(roomRouter.build({ roomId })).pipe(Effect.as(NoOp.make()))
 
-// COMMAND STREAMS
+// COMMAND STREAM
 
 const CommandStreamsDeps = S.Struct({
   roomId: S.OptionFromSelf(S.String),
@@ -349,8 +349,8 @@ const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Model, Mes
                   Stream.make(Effect.succeed(RoomStreamError.make({ error: String(error) }))),
                 ),
               )
-            }).pipe(Effect.provide(RoomsClient.Default)),
-          ),
+            }),
+          ).pipe(Stream.provideLayer(RoomsClient.Default)),
       }),
   },
 })
