@@ -2,7 +2,17 @@ import { HttpMiddleware, HttpRouter } from '@effect/platform'
 import { NodeHttpServer, NodeRuntime } from '@effect/platform-node'
 import { RpcSerialization, RpcServer } from '@effect/rpc'
 import * as Shared from '@typing-game/shared'
-import { Array, Context, Duration, Effect, HashMap, Layer, Stream, SubscriptionRef } from 'effect'
+import {
+  Array,
+  Context,
+  Duration,
+  Effect,
+  HashMap,
+  Layer,
+  Stream,
+  Struct,
+  SubscriptionRef,
+} from 'effect'
 import { randomUUID } from 'node:crypto'
 import { createServer } from 'node:http'
 
@@ -67,10 +77,9 @@ const RoomLive = Shared.RoomRpcs.toLayer(
             isReady: false,
           }
 
-          const updatedRoom: Shared.Room = {
-            ...room,
-            players: Array.append(room.players, newPlayer),
-          }
+          const updatedRoom: Shared.Room = Struct.evolve(room, {
+            players: (players) => Array.append(players, newPlayer),
+          })
 
           yield* SubscriptionRef.update(roomsRef, HashMap.set(roomId, updatedRoom))
 
@@ -86,24 +95,17 @@ const RoomLive = Shared.RoomRpcs.toLayer(
         }),
 
       subscribeToRoom: ({ roomId }) =>
-        Stream.concat(
-          Stream.fromEffect(
-            SubscriptionRef.get(roomsRef).pipe(
-              Effect.flatMap((rooms) =>
-                HashMap.get(rooms, roomId).pipe(
-                  Effect.mapError(() => new Shared.RoomNotFoundError({ roomId })),
-                ),
-              ),
+        // TODO: Add playerId to payload and verify player is in room before allowing subscription
+        // TODO: On stream interruption (browser close, network drop), remove player from room
+        // Currently players stay in room forever after disconnect
+        // TODO: On browser refresh, player loses their playerId but stays in room on server
+        // Need to either persist playerId in localStorage or implement rejoin logic
+        roomsRef.changes.pipe(
+          Stream.mapEffect((rooms) =>
+            HashMap.get(rooms, roomId).pipe(
+              Effect.mapError(() => new Shared.RoomNotFoundError({ roomId })),
             ),
           ),
-          roomsRef.changes.pipe(
-            Stream.mapEffect((rooms) =>
-              HashMap.get(rooms, roomId).pipe(
-                Effect.mapError(() => new Shared.RoomNotFoundError({ roomId })),
-              ),
-            ),
-          ),
-        ).pipe(
           Stream.throttle({
             cost: () => 1,
             duration: Duration.millis(100),

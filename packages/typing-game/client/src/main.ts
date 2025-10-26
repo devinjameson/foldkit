@@ -263,8 +263,9 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         [],
       ],
 
-      // CLAUDE: If we hit this, does this mean the stream has ended? Should we
-      // reconnect?
+      // TODO: We need to show an error message if the room stream errors, and ideally
+      // we can make this error the actual possible errors that can happen in
+      // the stream (right now just room not found)
       RoomStreamError: ({ error }) => {
         console.error('Room stream error:', error)
         return [model, []]
@@ -326,7 +327,7 @@ const navigateToRoom = (roomId: string): Runtime.Command<NoOp> =>
 // COMMAND STREAM
 
 const CommandStreamsDeps = S.Struct({
-  roomId: S.OptionFromSelf(S.String),
+  roomId: S.Option(S.String),
 })
 
 const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Model, Message>({
@@ -340,17 +341,15 @@ const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Model, Mes
       Option.match(maybeRoomId, {
         onNone: () => Stream.empty,
         onSome: (roomId: string) =>
-          Stream.unwrap(
-            Effect.gen(function* () {
-              const client = yield* RoomsClient
-              return client.subscribeToRoom({ roomId }).pipe(
-                Stream.map((room) => Effect.succeed(RoomUpdated.make({ room }))),
-                Stream.catchAll((error) =>
-                  Stream.make(Effect.succeed(RoomStreamError.make({ error: String(error) }))),
-                ),
-              )
-            }),
-          ).pipe(Stream.provideLayer(RoomsClient.Default)),
+          Effect.gen(function* () {
+            const client = yield* RoomsClient
+            return client.subscribeToRoom({ roomId }).pipe(
+              Stream.map((room) => Effect.succeed(RoomUpdated.make({ room }))),
+              Stream.catchAll((error) =>
+                Stream.make(Effect.succeed(RoomStreamError.make({ error: String(error) }))),
+              ),
+            )
+          }).pipe(Stream.unwrap, Stream.provideLayer(RoomsClient.Default)),
       }),
   },
 })
