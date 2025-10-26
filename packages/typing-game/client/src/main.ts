@@ -1,5 +1,6 @@
+import * as Shared from '@typing-game/shared'
 import classNames from 'classnames'
-import { Array, Effect, Match as M, Number, Schema as S, pipe } from 'effect'
+import { Array, Effect, Match as M, Number, Option, Schema as S, Stream, pipe } from 'effect'
 import { FieldValidation, Route, Runtime, Url } from 'foldkit'
 import { Field, FieldSchema, Validation, validateField } from 'foldkit/fieldValidation'
 import {
@@ -29,7 +30,7 @@ import { load, pushUrl } from 'foldkit/navigation'
 import { literal, slash, string } from 'foldkit/route'
 import { ts } from 'foldkit/schema'
 
-import { RoomsClient } from './rpc.js'
+import { RoomsClient } from './rpc'
 
 // ROUTE
 
@@ -56,8 +57,13 @@ const urlToAppRoute = Route.parseUrlWithFallback(routeParser, NotFoundRoute)
 const Model = S.Struct({
   route: AppRoute,
   username: FieldSchema(S.String),
+  // CLAUDE: MAybe we should call this formRoomId or something else that makes
+  // it clear its the string typed into the form? And maybe username should also
+  // be formUsername? Maybe there are better names.
   roomId: FieldSchema(S.String),
   roomIdValidationId: S.Number,
+  // CLAUDE: I think this can just be S.Option(Shared.Room)?
+  room: S.OptionFromNullOr(Shared.Room),
 })
 type Model = typeof Model.Type
 
@@ -79,6 +85,8 @@ const JoinRoomClicked = ts('JoinRoomClicked')
 const RoomCreated = ts('RoomCreated', { roomId: S.String })
 const RoomJoined = ts('RoomJoined', { roomId: S.String })
 const RoomError = ts('RoomError', { error: S.String })
+const RoomUpdated = ts('RoomUpdated', { room: Shared.Room })
+const RoomStreamError = ts('RoomStreamError', { error: S.String })
 
 type NoOp = typeof NoOp.Type
 type LinkClicked = typeof LinkClicked.Type
@@ -91,6 +99,8 @@ type JoinRoomClicked = typeof JoinRoomClicked.Type
 type RoomCreated = typeof RoomCreated.Type
 type RoomJoined = typeof RoomJoined.Type
 type RoomError = typeof RoomError.Type
+type RoomUpdated = typeof RoomUpdated.Type
+type RoomStreamError = typeof RoomStreamError.Type
 
 const Message = S.Union(
   NoOp,
@@ -104,6 +114,8 @@ const Message = S.Union(
   RoomCreated,
   RoomJoined,
   RoomError,
+  RoomUpdated,
+  RoomStreamError,
 )
 type Message = typeof Message.Type
 
@@ -115,6 +127,7 @@ const init: Runtime.ApplicationInit<Model, Message> = (url: Url.Url) => [
     username: Field.NotValidated({ value: '' }),
     roomId: Field.NotValidated({ value: '' }),
     roomIdValidationId: 0,
+    room: Option.none(),
   },
   [],
 ]
@@ -198,6 +211,8 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
 
       RoomIdValidated: ({ validationId, field }) => {
         if (validationId === model.roomIdValidationId) {
+          // CLAUDE: I wonder if we should use Struct.evolve as a convention
+          // for model updates in Foldkit?
           return [{ ...model, roomId: field }, []]
         } else {
           return [model, []]
@@ -225,7 +240,21 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
       RoomJoined: ({ roomId }) => [model, [navigateToRoom(roomId)]],
 
       RoomError: ({ error }) => {
+        // CLAUDE: We should update this to show the error in the UI
         console.error('Room error:', error)
+        return [model, []]
+      },
+
+      RoomUpdated: ({ room }) => [
+        {
+          ...model,
+          room: Option.some(room),
+        },
+        [],
+      ],
+
+      RoomStreamError: ({ error }) => {
+        console.error('Room stream error:', error)
         return [model, []]
       },
     }),
@@ -281,6 +310,38 @@ const joinRoom = (username: string, roomId: string): Runtime.Command<RoomJoined 
 
 const navigateToRoom = (roomId: string): Runtime.Command<NoOp> =>
   pushUrl(roomRouter.build({ roomId })).pipe(Effect.as(NoOp.make()))
+
+// COMMAND STREAMS
+
+const CommandStreamsDeps = S.Struct({
+  roomId: S.OptionFromSelf(S.String),
+})
+
+const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Model, Message>({
+  roomId: {
+    modelToDeps: (model: Model) =>
+      M.value(model.route).pipe(
+        M.tag('Room', ({ roomId }) => roomId),
+        M.option,
+      ),
+    depsToStream: (maybeRoomId: Option.Option<string>) =>
+      Option.match(maybeRoomId, {
+        onNone: () => Stream.empty,
+        onSome: (roomId: string) =>
+          Stream.unwrap(
+            Effect.gen(function* () {
+              const client = yield* RoomsClient
+              return client.subscribeToRoom({ roomId }).pipe(
+                Stream.map((room) => Effect.succeed(RoomUpdated.make({ room }))),
+                Stream.catchAll((error) =>
+                  Stream.make(Effect.succeed(RoomStreamError.make({ error: String(error) }))),
+                ),
+              )
+            }).pipe(Effect.provide(RoomsClient.Default)),
+          ),
+      }),
+  },
+})
 
 // VIEW
 
@@ -425,18 +486,42 @@ const homeView = (model: Model): Html => {
   )
 }
 
-const roomView = (roomId: string): Html =>
-  div(
-    [Class('min-h-screen bg-gray-100 flex items-center justify-center')],
-    [
+const roomView = (model: Model): Html =>
+  M.value(model.route).pipe(
+    M.tag('Room', ({ roomId }) =>
       div(
-        [Class('bg-white rounded-lg p-8')],
+        [Class('min-h-screen bg-gray-100 flex items-center justify-center p-4')],
         [
-          h1([Class('text-2xl font-bold text-gray-800 mb-4')], ['Room: ', roomId]),
-          div([Class('text-gray-600')], ['Game room view coming soon...']),
+          div(
+            [Class('bg-white rounded-lg p-8 max-w-4xl w-full')],
+            [
+              h1([Class('text-2xl font-bold text-gray-800 mb-6')], ['Room: ', roomId]),
+              // CLAUDE: Let's extract a fn for  this part
+              Option.match(model.room, {
+                onNone: () => div([Class('text-gray-600')], ['Loading room...']),
+                onSome: (room: Shared.Room) =>
+                  div(
+                    [],
+                    [
+                      h2([Class('text-xl font-semibold text-gray-700 mb-4')], ['Players']),
+                      div(
+                        [Class('space-y-2')],
+                        Array.map(room.players, (player) =>
+                          div(
+                            [Class('p-3 bg-gray-50 rounded border border-gray-200')],
+                            [span([Class('font-medium')], [player.username])],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+              }),
+            ],
+          ),
         ],
       ),
-    ],
+    ),
+    M.orElse(() => div([], ['Invalid route'])),
   )
 
 const notFoundView = (path: string): Html =>
@@ -461,7 +546,7 @@ const view = (model: Model): Html =>
   M.value(model.route).pipe(
     M.tagsExhaustive({
       Home: () => homeView(model),
-      Room: ({ roomId }) => roomView(roomId),
+      Room: () => roomView(model),
       NotFound: ({ path }) => notFoundView(path),
     }),
   )
@@ -473,6 +558,7 @@ const application = Runtime.makeApplication({
   init,
   update,
   view,
+  commandStreams,
   container: document.getElementById('root')!,
   browser: {
     onUrlRequest: (request) => LinkClicked.make({ request }),
