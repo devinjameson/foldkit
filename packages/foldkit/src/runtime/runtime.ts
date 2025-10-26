@@ -5,12 +5,12 @@ import {
   Either,
   Option,
   Predicate,
-  PubSub,
   Queue,
   Record,
   Ref,
   Schema,
   Stream,
+  SubscriptionRef,
   pipe,
 } from 'effect'
 import { h } from 'snabbdom'
@@ -131,11 +131,6 @@ export const makeRuntime =
       const messageQueue = yield* Queue.unbounded<Message>()
       const enqueueMessage = (message: Message) => Queue.offer(messageQueue, message)
 
-      const modelPubSub = yield* PubSub.unbounded<Model>()
-      const publishModel = (model: Model) => PubSub.publish(modelPubSub, model)
-
-      const modelStream = Stream.fromPubSub(modelPubSub)
-
       const currentUrl: Option.Option<Url> = Option.fromNullable(browserConfig).pipe(
         Option.flatMap(() => urlFromString(window.location.href)),
       )
@@ -150,6 +145,8 @@ export const makeRuntime =
             }),
           )
         : init(Option.getOrUndefined(currentUrl))
+
+      const modelSubscriptionRef = yield* SubscriptionRef.make(initModel)
 
       yield* Effect.forEach(initCommands, (command) =>
         Effect.forkDaemon(command.pipe(Effect.flatMap(enqueueMessage))),
@@ -170,7 +167,7 @@ export const makeRuntime =
           Effect.forEach(
             ([_key, { schema, modelToDeps, depsToStream }]) =>
               Effect.forkDaemon(
-                modelStream.pipe(
+                modelSubscriptionRef.changes.pipe(
                   Stream.map(modelToDeps),
                   Stream.changesWith(Schema.equivalence(schema)),
                   Stream.flatMap(depsToStream, { switch: true }),
@@ -203,7 +200,6 @@ export const makeRuntime =
         )
 
       yield* render(initModel)
-      yield* publishModel(initModel)
 
       yield* Effect.forever(
         Effect.gen(function* () {
@@ -220,7 +216,7 @@ export const makeRuntime =
           if (!modelEquivalence(currentModel, nextModel)) {
             yield* Ref.set(modelRef, nextModel)
             yield* render(nextModel)
-            yield* publishModel(nextModel)
+            yield* SubscriptionRef.set(modelSubscriptionRef, nextModel)
             preserveModel(nextModel)
           }
         }),
