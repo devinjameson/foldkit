@@ -1,16 +1,6 @@
 import * as Shared from '@typing-game/shared'
 import classNames from 'classnames'
-import {
-  Array,
-  Effect,
-  Match as M,
-  Number,
-  Option,
-  Schema as S,
-  Stream,
-  Struct,
-  pipe,
-} from 'effect'
+import { Array, Effect, Match as M, Number, Option, Schema as S, Stream, pipe } from 'effect'
 import { FieldValidation, Route, Runtime, Url } from 'foldkit'
 import { Field, FieldSchema, Validation, validateField } from 'foldkit/fieldValidation'
 import {
@@ -39,6 +29,7 @@ import {
 import { load, pushUrl } from 'foldkit/navigation'
 import { literal, slash, string } from 'foldkit/route'
 import { ts } from 'foldkit/schema'
+import { evo } from 'foldkit/struct'
 
 import { RoomsClient } from './rpc'
 
@@ -178,14 +169,14 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         ),
 
       UrlChanged: ({ url }) => [
-        Struct.evolve(model, {
+        evo(model, {
           route: () => urlToAppRoute(url),
         }),
         [],
       ],
 
       UpdateUsername: ({ value }) => [
-        Struct.evolve(model, {
+        evo(model, {
           usernameInput: () => validateField(usernameValidations)(value),
           error: () => Option.none(),
         }),
@@ -198,7 +189,7 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
 
         if (Field.$is('Valid')(validateRoomIdResult)) {
           return [
-            Struct.evolve(model, {
+            evo(model, {
               roomIdValidationId: () => validationId,
               error: () => Option.none(),
             }),
@@ -206,7 +197,7 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
           ]
         } else {
           return [
-            Struct.evolve(model, {
+            evo(model, {
               roomIdInput: () => validateRoomIdResult,
               roomIdValidationId: () => validationId,
               error: () => Option.none(),
@@ -219,7 +210,7 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
       RoomIdValidated: ({ validationId, field }) => {
         if (validationId === model.roomIdValidationId) {
           return [
-            Struct.evolve(model, {
+            evo(model, {
               roomIdInput: () => field,
             }),
             [],
@@ -250,14 +241,14 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
       RoomJoined: ({ roomId }) => [model, [navigateToRoom(roomId)]],
 
       RoomError: ({ error }) => [
-        Struct.evolve(model, {
+        evo(model, {
           error: () => Option.some(error),
         }),
         [],
       ],
 
       RoomUpdated: ({ room }) => [
-        Struct.evolve(model, {
+        evo(model, {
           maybeRoom: () => Option.some(room),
         }),
         [],
