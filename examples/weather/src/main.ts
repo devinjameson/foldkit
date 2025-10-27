@@ -22,6 +22,7 @@ import {
   p,
 } from 'foldkit/html'
 import { ts } from 'foldkit/schema'
+import { evo } from 'foldkit/struct'
 
 // MODEL
 
@@ -76,19 +77,33 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
   M.value(message).pipe(
     M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
     M.tagsExhaustive({
-      UpdateZipCodeInput: ({ value }) => [{ ...model, zipCodeInput: value }, []],
+      UpdateZipCodeInput: ({ value }) => [
+        evo(model, {
+          zipCodeInput: () => value,
+        }),
+        [],
+      ],
 
       FetchWeather: () => [
-        { ...model, weather: WeatherLoading.make() },
+        evo(model, {
+          weather: () => WeatherLoading.make(),
+        }),
         [fetchWeather(model.zipCodeInput)],
       ],
 
       WeatherFetched: ({ weather }) => [
-        { ...model, weather: WeatherSuccess.make({ data: weather }) },
+        evo(model, {
+          weather: () => WeatherSuccess.make({ data: weather }),
+        }),
         [],
       ],
 
-      WeatherError: ({ error }) => [{ ...model, weather: WeatherFailure.make({ error }) }, []],
+      WeatherError: ({ error }) => [
+        evo(model, {
+          weather: () => WeatherFailure.make({ error }),
+        }),
+        [],
+      ],
     }),
   )
 

@@ -1,4 +1,5 @@
 import { Array, Number, Option, Predicate, Schema, pipe } from 'effect'
+import { evo } from 'foldkit/struct'
 
 import { CartItem, Item } from './item'
 
@@ -19,12 +20,14 @@ export const addItem =
     const existingCartItem = Array.findFirst(cart, hasItemId(item.id))
 
     return Option.match(existingCartItem, {
-      onNone: () => Array.append(cart, { item, quantity: 1 }),
+      onNone: () => [...cart, { item, quantity: 1 }],
       onSome: () =>
-        mapCartItem(item.id, (cartItem) => ({
-          ...cartItem,
-          quantity: Number.increment(cartItem.quantity),
-        }))(cart),
+        mapCartItem(
+          item.id,
+          evo({
+            quantity: Number.increment,
+          }),
+        )(cart),
     })
   }
 
@@ -36,7 +39,12 @@ export const removeItem =
 export const changeQuantity = (itemId: string, quantity: number) =>
   quantity <= 0
     ? removeItem(itemId)
-    : mapCartItem(itemId, (cartItem) => ({ ...cartItem, quantity }))
+    : mapCartItem(
+        itemId,
+        evo({
+          quantity: () => quantity,
+        }),
+      )
 
 export const itemQuantity =
   (itemId: string) =>

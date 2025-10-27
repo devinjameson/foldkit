@@ -35,6 +35,10 @@
       "types": "./dist/schema.d.ts",
       "import": "./dist/schema.js"
     },
+    "./struct": {
+      "types": "./dist/struct.d.ts",
+      "import": "./dist/struct.js"
+    },
     "./url": {
       "types": "./dist/url.d.ts",
       "import": "./dist/url.js"

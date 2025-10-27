@@ -23,6 +23,7 @@ import {
   ul,
 } from 'foldkit/html'
 import { ts } from 'foldkit/schema'
+import { evo } from 'foldkit/struct'
 
 // MODEL
 
@@ -148,23 +149,22 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
       NoOp: () => [model, []],
 
       UpdateNewTodo: ({ text }) => [
-        {
-          ...model,
-          newTodoText: text,
-        },
+        evo(model, {
+          newTodoText: () => text,
+        }),
         [],
       ],
 
       UpdateEditingTodo: ({ text }) => [
-        {
-          ...model,
-          editing: M.value(model.editing).pipe(
-            M.tagsExhaustive({
-              NotEditing: () => model.editing,
-              Editing: ({ id }) => Editing.make({ id, text }),
-            }),
-          ),
-        },
+        evo(model, {
+          editing: () =>
+            M.value(model.editing).pipe(
+              M.tagsExhaustive({
+                NotEditing: () => model.editing,
+                Editing: ({ id }) => Editing.make({ id, text }),
+              }),
+            ),
+        }),
         [],
       ],
 
@@ -184,14 +184,13 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
           createdAt: timestamp,
         }
 
-        const updatedTodos = Array.append(model.todos, newTodo)
+        const updatedTodos = [...model.todos, newTodo]
 
         return [
-          {
-            ...model,
-            todos: updatedTodos,
-            newTodoText: '',
-          },
+          evo(model, {
+            todos: () => updatedTodos,
+            newTodoText: () => '',
+          }),
           [saveTodos(updatedTodos)],
         ]
       },
@@ -200,24 +199,22 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         const updatedTodos = Array.filter(model.todos, (todo) => todo.id !== id)
 
         return [
-          {
-            ...model,
-            todos: updatedTodos,
-          },
+          evo(model, {
+            todos: () => updatedTodos,
+          }),
           [saveTodos(updatedTodos)],
         ]
       },
 
       ToggleTodo: ({ id }) => {
         const updatedTodos = Array.map(model.todos, (todo) =>
-          todo.id === id ? { ...todo, completed: !todo.completed } : todo,
+          todo.id === id ? evo(todo, { completed: (completed) => !completed }) : todo,
         )
 
         return [
-          {
-            ...model,
-            todos: updatedTodos,
-          },
+          evo(model, {
+            todos: () => updatedTodos,
+          }),
           [saveTodos(updatedTodos)],
         ]
       },
@@ -225,16 +222,16 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
       StartEditing: ({ id }) => {
         const todo = Array.findFirst(model.todos, (t) => t.id === id)
         return [
-          {
-            ...model,
-            editing: Editing.make({
-              id,
-              text: Option.match(todo, {
-                onNone: () => '',
-                onSome: (t) => t.text,
+          evo(model, {
+            editing: () =>
+              Editing.make({
+                id,
+                text: Option.match(todo, {
+                  onNone: () => '',
+                  onSome: (t) => t.text,
+                }),
               }),
-            }),
-          },
+          }),
           [],
         ]
       },
@@ -248,24 +245,22 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
             Editing: ({ id, text }) => {
               if (String.isEmpty(String.trim(text))) {
                 return [
-                  {
-                    ...model,
-                    editing: NotEditing.make(),
-                  },
+                  evo(model, {
+                    editing: () => NotEditing.make(),
+                  }),
                   [],
                 ]
               }
 
               const updatedTodos = Array.map(model.todos, (todo) =>
-                todo.id === id ? { ...todo, text: String.trim(text) } : todo,
+                todo.id === id ? evo(todo, { text: () => String.trim(text) }) : todo,
               )
 
               return [
-                {
-                  ...model,
-                  todos: updatedTodos,
-                  editing: NotEditing.make(),
-                },
+                evo(model, {
+                  todos: () => updatedTodos,
+                  editing: () => NotEditing.make(),
+                }),
                 [saveTodos(updatedTodos)],
               ]
             },
@@ -273,25 +268,24 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         ),
 
       CancelEdit: () => [
-        {
-          ...model,
-          editing: NotEditing.make(),
-        },
+        evo(model, {
+          editing: () => NotEditing.make(),
+        }),
         [],
       ],
 
       ToggleAll: () => {
         const allCompleted = Array.every(model.todos, (todo) => todo.completed)
-        const updatedTodos = Array.map(model.todos, (todo) => ({
-          ...todo,
-          completed: !allCompleted,
-        }))
+        const updatedTodos = Array.map(model.todos, (todo) =>
+          evo(todo, {
+            completed: () => !allCompleted,
+          }),
+        )
 
         return [
-          {
-            ...model,
-            todos: updatedTodos,
-          },
+          evo(model, {
+            todos: () => updatedTodos,
+          }),
           [saveTodos(updatedTodos)],
         ]
       },
@@ -300,35 +294,31 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         const updatedTodos = Array.filter(model.todos, (todo) => !todo.completed)
 
         return [
-          {
-            ...model,
-            todos: updatedTodos,
-          },
+          evo(model, {
+            todos: () => updatedTodos,
+          }),
           [saveTodos(updatedTodos)],
         ]
       },
 
       SetFilter: ({ filter }) => [
-        {
-          ...model,
-          filter,
-        },
+        evo(model, {
+          filter: () => filter,
+        }),
         [],
       ],
 
       TodosLoaded: ({ todos }) => [
-        {
-          ...model,
-          todos,
-        },
+        evo(model, {
+          todos: () => todos,
+        }),
         [],
       ],
 
       TodosSaved: ({ todos }) => [
-        {
-          ...model,
-          todos,
-        },
+        evo(model, {
+          todos: () => todos,
+        }),
         [],
       ],
     }),

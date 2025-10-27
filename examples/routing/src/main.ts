@@ -25,6 +25,7 @@ import {
 import { load, pushUrl, replaceUrl } from 'foldkit/navigation'
 import { int, literal, slash } from 'foldkit/route'
 import { ts } from 'foldkit/schema'
+import { evo } from 'foldkit/struct'
 import { Url, toString as urlToString } from 'foldkit/url'
 
 // ROUTE
@@ -137,10 +138,9 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         ),
 
       UrlChanged: ({ url }) => [
-        {
-          ...model,
-          route: urlToAppRoute(url),
-        },
+        evo(model, {
+          route: () => urlToAppRoute(url),
+        }),
         [],
       ],
 

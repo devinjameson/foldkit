@@ -24,6 +24,7 @@ import {
 } from 'foldkit/html'
 import { replaceUrl } from 'foldkit/navigation'
 import { ts } from 'foldkit/schema'
+import { evo } from 'foldkit/struct'
 
 import { Cart, Item } from '../domain'
 import type { AppRoute, CartRoute } from '../main'
@@ -66,10 +67,9 @@ export const update =
         NoOp: () => [model, []],
 
         SearchInputChanged: ({ value }) => [
-          {
-            ...model,
-            searchText: value,
-          },
+          evo(model, {
+            searchText: () => value,
+          }),
           [
             replaceUrl(
               productsRouter.build({ searchText: Option.fromNullable(value || null) }),

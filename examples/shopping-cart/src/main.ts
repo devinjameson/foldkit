@@ -4,6 +4,7 @@ import { Class, Href, Html, a, div, h1, header, keyed, li, main, nav, p, ul } fr
 import { load, pushUrl } from 'foldkit/navigation'
 import { literal } from 'foldkit/route'
 import { ts } from 'foldkit/schema'
+import { evo } from 'foldkit/struct'
 import { Url, toString as urlToString } from 'foldkit/url'
 
 import { products } from './data/products'
@@ -128,10 +129,9 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         ),
 
       UrlChanged: ({ url }) => [
-        {
-          ...model,
-          route: urlToAppRoute(url),
-        },
+        evo(model, {
+          route: () => urlToAppRoute(url),
+        }),
         [],
       ],
 
@@ -142,10 +142,9 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         )
 
         return [
-          {
-            ...model,
-            productsPage: newProductsModel,
-          },
+          evo(model, {
+            productsPage: () => newProductsModel,
+          }),
           commands.map(
             Effect.map((productsMessage) => ProductsMessage.make({ message: productsMessage })),
           ),
@@ -153,60 +152,53 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
       },
 
       AddToCartClicked: ({ item }) => [
-        {
-          ...model,
-          cart: Cart.addItem(item)(model.cart),
-        },
+        evo(model, {
+          cart: () => Cart.addItem(item)(model.cart),
+        }),
         [],
       ],
 
       QuantityChangeClicked: ({ itemId, quantity }) => [
-        {
-          ...model,
-          cart: Cart.changeQuantity(itemId, quantity)(model.cart),
-        },
+        evo(model, {
+          cart: () => Cart.changeQuantity(itemId, quantity)(model.cart),
+        }),
         [],
       ],
 
       ChangeCartQuantity: ({ itemId, quantity }) => [
-        {
-          ...model,
-          cart: Cart.changeQuantity(itemId, quantity)(model.cart),
-        },
+        evo(model, {
+          cart: () => Cart.changeQuantity(itemId, quantity)(model.cart),
+        }),
         [],
       ],
 
       RemoveFromCart: ({ itemId }) => [
-        {
-          ...model,
-          cart: Cart.removeItem(itemId)(model.cart),
-        },
+        evo(model, {
+          cart: () => Cart.removeItem(itemId)(model.cart),
+        }),
         [],
       ],
 
       ClearCart: () => [
-        {
-          ...model,
-          cart: [],
-        },
+        evo(model, {
+          cart: () => [],
+        }),
         [],
       ],
 
       UpdateDeliveryInstructions: ({ value }) => [
-        {
-          ...model,
-          deliveryInstructions: value,
-        },
+        evo(model, {
+          deliveryInstructions: () => value,
+        }),
         [],
       ],
 
       PlaceOrder: () => [
-        {
-          ...model,
-          orderPlaced: true,
-          cart: [],
-          deliveryInstructions: '',
-        },
+        evo(model, {
+          orderPlaced: () => true,
+          cart: () => [],
+          deliveryInstructions: () => '',
+        }),
         [],
       ],
     }),

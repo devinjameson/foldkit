@@ -12,6 +12,7 @@ import {
 import { Runtime } from 'foldkit'
 import { Class, Html, OnClick, button, div } from 'foldkit/html'
 import { ts } from 'foldkit/schema'
+import { evo } from 'foldkit/struct'
 
 const TICK_INTERVAL_MS = 10
 
@@ -59,28 +60,26 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
       ],
 
       GotStartTime: ({ startTime }) => [
-        {
-          ...model,
-          isRunning: true,
-          startTime,
-        },
+        evo(model, {
+          isRunning: () => true,
+          startTime: () => startTime,
+        }),
         [],
       ],
 
       Stop: () => [
-        {
-          ...model,
-          isRunning: false,
-        },
+        evo(model, {
+          isRunning: () => false,
+        }),
         [],
       ],
 
       Reset: () => [
-        {
-          elapsedMs: 0,
-          isRunning: false,
-          startTime: 0,
-        },
+        evo(model, {
+          elapsedMs: () => 0,
+          isRunning: () => false,
+          startTime: () => 0,
+        }),
         [],
       ],
 
@@ -95,10 +94,9 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
       ],
 
       GotTick: ({ elapsedMs }) => [
-        {
-          ...model,
-          elapsedMs,
-        },
+        evo(model, {
+          elapsedMs: () => elapsedMs,
+        }),
         [],
       ],
     }),

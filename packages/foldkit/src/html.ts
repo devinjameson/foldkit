@@ -1,6 +1,6 @@
-import { Array, Data, Effect, Match, Predicate, Ref, String, flow, pipe } from 'effect'
+import { Array, Data, Effect, Match, Predicate, Record, Ref, String, flow, pipe } from 'effect'
 import { h } from 'snabbdom'
-import type { VNodeData } from 'snabbdom'
+import type { Attrs, On, Props, VNodeData } from 'snabbdom'
 
 import { Dispatch } from './runtime'
 import { VNode } from './vdom'
@@ -554,14 +554,23 @@ const buildVNodeData = <Message>(
     const { dispatch } = yield* Dispatch
     const dataRef = yield* Ref.make<VNodeData>({})
 
+    const setData = <K extends keyof VNodeData>(key: K, value: VNodeData[K]) =>
+      Ref.update(dataRef, (data) => ({ ...data, [key]: value }))
+
+    const updateData = <K extends keyof VNodeData>(key: K, value: Partial<VNodeData[K]>) =>
+      Ref.update(dataRef, (data) => ({
+        ...data,
+        [key]: { ...data[key], ...value },
+      }))
+
+    const updateDataProps = (props: Props) => updateData('props', props)
+    const updateDataOn = (on: On) => updateData('on', on)
+    const updateDataAttrs = (attrs: Attrs) => updateData('attrs', attrs)
+
     yield* Effect.forEach(attributes, (attr) =>
       Match.value(attr).pipe(
         Match.tagsExhaustive({
-          Key: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              key: value,
-            })),
+          Key: ({ value }) => setData('key', value),
           Class: ({ value }) =>
             Effect.gen(function* () {
               const classObject = pipe(
@@ -570,615 +579,187 @@ const buildVNodeData = <Message>(
                 Array.filter(flow(String.trim, String.isNonEmpty)),
                 Array.reduce({}, (acc, className) => ({ ...acc, [className]: true })),
               )
-              yield* Ref.update(dataRef, (data) => ({ ...data, class: classObject }))
+              yield* setData('class', classObject)
             }),
-          Id: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, id: value },
-            })),
-          Title: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, title: value },
-            })),
-          Lang: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, lang: value },
-            })),
-          Dir: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, dir: value },
-            })),
-          Tabindex: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, tabIndex: value },
-            })),
-          Hidden: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, hidden: value },
-            })),
+          Id: ({ value }) => updateDataProps({ id: value }),
+          Title: ({ value }) => updateDataProps({ title: value }),
+          Lang: ({ value }) => updateDataProps({ lang: value }),
+          Dir: ({ value }) => updateDataProps({ dir: value }),
+          Tabindex: ({ value }) => updateDataProps({ tabIndex: value }),
+          Hidden: ({ value }) => updateDataProps({ hidden: value }),
           OnClick: ({ message }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              on: {
-                ...data.on,
-                click: () => Effect.runSync(dispatch(message)),
-              },
-            })),
+            updateDataOn({
+              click: () => Effect.runSync(dispatch(message)),
+            }),
           OnDblClick: ({ message }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              on: {
-                ...data.on,
-                dblclick: () => Effect.runSync(dispatch(message)),
-              },
-            })),
+            updateDataOn({
+              dblclick: () => Effect.runSync(dispatch(message)),
+            }),
           OnMouseDown: ({ message }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              on: {
-                ...data.on,
-                mousedown: () => Effect.runSync(dispatch(message)),
-              },
-            })),
+            updateDataOn({
+              mousedown: () => Effect.runSync(dispatch(message)),
+            }),
           OnMouseUp: ({ message }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              on: {
-                ...data.on,
-                mouseup: () => Effect.runSync(dispatch(message)),
-              },
-            })),
+            updateDataOn({
+              mouseup: () => Effect.runSync(dispatch(message)),
+            }),
           OnMouseEnter: ({ message }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              on: {
-                ...data.on,
-                mouseenter: () => Effect.runSync(dispatch(message)),
-              },
-            })),
+            updateDataOn({
+              mouseenter: () => Effect.runSync(dispatch(message)),
+            }),
           OnMouseLeave: ({ message }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              on: {
-                ...data.on,
-                mouseleave: () => Effect.runSync(dispatch(message)),
-              },
-            })),
+            updateDataOn({
+              mouseleave: () => Effect.runSync(dispatch(message)),
+            }),
           OnMouseOver: ({ message }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              on: {
-                ...data.on,
-                mouseover: () => Effect.runSync(dispatch(message)),
-              },
-            })),
+            updateDataOn({
+              mouseover: () => Effect.runSync(dispatch(message)),
+            }),
           OnMouseOut: ({ message }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              on: {
-                ...data.on,
-                mouseout: () => Effect.runSync(dispatch(message)),
-              },
-            })),
+            updateDataOn({
+              mouseout: () => Effect.runSync(dispatch(message)),
+            }),
           OnMouseMove: ({ message }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              on: {
-                ...data.on,
-                mousemove: () => Effect.runSync(dispatch(message)),
-              },
-            })),
+            updateDataOn({
+              mousemove: () => Effect.runSync(dispatch(message)),
+            }),
           OnKeyDown: ({ f }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              on: {
-                ...data.on,
-                keydown: (event: Event) => {
-                  /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-                  const keyEvent = event as KeyboardEvent
-                  Effect.runSync(dispatch(f(keyEvent.key)))
-                },
-              },
-            })),
+            updateDataOn({
+              keydown: ({ key }: KeyboardEvent) => Effect.runSync(dispatch(f(key))),
+            }),
           OnKeyUp: ({ f }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              on: {
-                ...data.on,
-                keyup: (event: Event) => {
-                  /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-                  const keyEvent = event as KeyboardEvent
-                  Effect.runSync(dispatch(f(keyEvent.key)))
-                },
-              },
-            })),
+            updateDataOn({
+              keyup: ({ key }: KeyboardEvent) => Effect.runSync(dispatch(f(key))),
+            }),
           OnKeyPress: ({ f }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              on: {
-                ...data.on,
-                keypress: (event: Event) => {
-                  /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-                  const keyEvent = event as KeyboardEvent
-                  Effect.runSync(dispatch(f(keyEvent.key)))
-                },
-              },
-            })),
+            updateDataOn({
+              keypress: ({ key }: KeyboardEvent) => Effect.runSync(dispatch(f(key))),
+            }),
           OnFocus: ({ message }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              on: {
-                ...data.on,
-                focus: () => Effect.runSync(dispatch(message)),
-              },
-            })),
+            updateDataOn({
+              focus: () => Effect.runSync(dispatch(message)),
+            }),
           OnBlur: ({ message }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              on: {
-                ...data.on,
-                blur: () => Effect.runSync(dispatch(message)),
-              },
-            })),
+            updateDataOn({
+              blur: () => Effect.runSync(dispatch(message)),
+            }),
           OnInput: ({ f }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              on: {
-                ...data.on,
-                input: (event: Event) => {
-                  /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-                  const target = event.target as HTMLInputElement
-                  Effect.runSync(dispatch(f(target.value)))
-                },
-              },
-            })),
+            updateDataOn({
+              input: (event: Event) =>
+                /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+                Effect.runSync(dispatch(f((event.target as HTMLInputElement).value))),
+            }),
           OnChange: ({ f }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              on: {
-                ...data.on,
-                change: (event: Event) => {
-                  /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-                  const target = event.target as HTMLInputElement
-                  Effect.runSync(dispatch(f(target.value)))
-                },
-              },
-            })),
+            updateDataOn({
+              change: (event: Event) =>
+                /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+                Effect.runSync(dispatch(f((event.target as HTMLInputElement).value))),
+            }),
           OnSubmit: ({ message }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              on: {
-                ...data.on,
-                submit: (event: Event) => {
-                  event.preventDefault()
-                  Effect.runSync(dispatch(message))
-                },
+            updateDataOn({
+              submit: (event: Event) => {
+                event.preventDefault()
+                Effect.runSync(dispatch(message))
               },
-            })),
+            }),
           OnReset: ({ message }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              on: {
-                ...data.on,
-                reset: () => Effect.runSync(dispatch(message)),
-              },
-            })),
+            updateDataOn({
+              reset: () => Effect.runSync(dispatch(message)),
+            }),
           OnScroll: ({ message }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              on: {
-                ...data.on,
-                scroll: () => Effect.runSync(dispatch(message)),
-              },
-            })),
+            updateDataOn({
+              scroll: () => Effect.runSync(dispatch(message)),
+            }),
           OnWheel: ({ message }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              on: {
-                ...data.on,
-                wheel: () => Effect.runSync(dispatch(message)),
-              },
-            })),
+            updateDataOn({
+              wheel: () => Effect.runSync(dispatch(message)),
+            }),
           OnCopy: ({ message }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              on: {
-                ...data.on,
-                copy: () => Effect.runSync(dispatch(message)),
-              },
-            })),
+            updateDataOn({
+              copy: () => Effect.runSync(dispatch(message)),
+            }),
           OnCut: ({ message }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              on: {
-                ...data.on,
-                cut: () => Effect.runSync(dispatch(message)),
-              },
-            })),
+            updateDataOn({
+              cut: () => Effect.runSync(dispatch(message)),
+            }),
           OnPaste: ({ message }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              on: {
-                ...data.on,
-                paste: () => Effect.runSync(dispatch(message)),
-              },
-            })),
-          Value: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, value },
-            })),
-          Checked: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, checked: value },
-            })),
-          Selected: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, selected: value },
-            })),
-          Placeholder: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, placeholder: value },
-            })),
-          Name: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, name: value },
-            })),
-          Disabled: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, disabled: value },
-            })),
-          Readonly: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, readOnly: value },
-            })),
-          Required: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, required: value },
-            })),
-          Autofocus: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, autofocus: value },
-            })),
-          Multiple: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, multiple: value },
-            })),
-          Type: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, type: value },
-            })),
-          Accept: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, accept: value },
-            })),
-          Autocomplete: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, autocomplete: value },
-            })),
-          Pattern: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, pattern: value },
-            })),
-          Maxlength: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, maxLength: value },
-            })),
-          Minlength: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, minLength: value },
-            })),
-          Size: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, size: value },
-            })),
-          Cols: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, cols: value },
-            })),
-          Rows: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, rows: value },
-            })),
-          Max: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, max: value },
-            })),
-          Min: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, min: value },
-            })),
-          Step: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, step: value },
-            })),
-          For: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, for: value },
-            })),
-          Href: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, href: value },
-            })),
-          Src: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, src: value },
-            })),
-          Alt: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, alt: value },
-            })),
-          Target: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, target: value },
-            })),
-          Rel: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, rel: value },
-            })),
-          Download: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, download: value },
-            })),
-          Action: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, action: value },
-            })),
-          Method: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, method: value },
-            })),
-          Enctype: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, enctype: value },
-            })),
-          Novalidate: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, noValidate: value },
-            })),
-          Role: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, role: value },
-            })),
-          AriaLabel: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, 'aria-label': value },
-            })),
-          AriaLabelledBy: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, 'aria-labelledby': value },
-            })),
-          AriaDescribedBy: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, 'aria-describedby': value },
-            })),
-          AriaHidden: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, 'aria-hidden': value.toString() },
-            })),
-          AriaExpanded: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, 'aria-expanded': value.toString() },
-            })),
-          AriaSelected: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, 'aria-selected': value.toString() },
-            })),
-          AriaChecked: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, 'aria-checked': value.toString() },
-            })),
-          AriaDisabled: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, 'aria-disabled': value.toString() },
-            })),
-          AriaRequired: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, 'aria-required': value.toString() },
-            })),
-          AriaInvalid: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, 'aria-invalid': value.toString() },
-            })),
-          AriaLive: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, 'aria-live': value },
-            })),
-          DataAttribute: ({ key, value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, [`data-${key}`]: value },
-            })),
-          Style: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              style: value,
-            })),
-          InnerHTML: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              props: { ...data.props, innerHTML: value },
-            })),
-          ViewBox: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, viewBox: value },
-            })),
-          Xmlns: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, xmlns: value },
-            })),
-          Fill: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, fill: value },
-            })),
-          FillRule: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, 'fill-rule': value },
-            })),
-          ClipRule: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, 'clip-rule': value },
-            })),
-          Stroke: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, stroke: value },
-            })),
-          StrokeWidth: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, 'stroke-width': value },
-            })),
-          StrokeLinecap: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, 'stroke-linecap': value },
-            })),
-          StrokeLinejoin: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, 'stroke-linejoin': value },
-            })),
-          D: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, d: value },
-            })),
-          Cx: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, cx: value },
-            })),
-          Cy: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, cy: value },
-            })),
-          R: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, r: value },
-            })),
-          X: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, x: value },
-            })),
-          Y: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, y: value },
-            })),
-          Width: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, width: value },
-            })),
-          Height: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, height: value },
-            })),
-          X1: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, x1: value },
-            })),
-          Y1: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, y1: value },
-            })),
-          X2: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, x2: value },
-            })),
-          Y2: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, y2: value },
-            })),
-          Points: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, points: value },
-            })),
-          Transform: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, transform: value },
-            })),
-          Opacity: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, opacity: value },
-            })),
-          StrokeDasharray: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, 'stroke-dasharray': value },
-            })),
-          StrokeDashoffset: ({ value }) =>
-            Ref.update(dataRef, (data) => ({
-              ...data,
-              attrs: { ...data.attrs, 'stroke-dashoffset': value },
-            })),
+            updateDataOn({
+              paste: () => Effect.runSync(dispatch(message)),
+            }),
+          Value: ({ value }) => updateDataProps({ value: value }),
+          Checked: ({ value }) => updateDataProps({ checked: value }),
+          Selected: ({ value }) => updateDataProps({ selected: value }),
+          Placeholder: ({ value }) => updateDataProps({ placeholder: value }),
+          Name: ({ value }) => updateDataProps({ name: value }),
+          Disabled: ({ value }) => updateDataProps({ disabled: value }),
+          Readonly: ({ value }) => updateDataProps({ readOnly: value }),
+          Required: ({ value }) => updateDataProps({ required: value }),
+          Autofocus: ({ value }) => updateDataProps({ autofocus: value }),
+          Multiple: ({ value }) => updateDataProps({ multiple: value }),
+          Type: ({ value }) => updateDataProps({ type: value }),
+          Accept: ({ value }) => updateDataProps({ accept: value }),
+          Autocomplete: ({ value }) => updateDataProps({ autocomplete: value }),
+          Pattern: ({ value }) => updateDataProps({ pattern: value }),
+          Maxlength: ({ value }) => updateDataProps({ maxLength: value }),
+          Minlength: ({ value }) => updateDataProps({ minLength: value }),
+          Size: ({ value }) => updateDataProps({ size: value }),
+          Cols: ({ value }) => updateDataProps({ cols: value }),
+          Rows: ({ value }) => updateDataProps({ rows: value }),
+          Max: ({ value }) => updateDataProps({ max: value }),
+          Min: ({ value }) => updateDataProps({ min: value }),
+          Step: ({ value }) => updateDataProps({ step: value }),
+          For: ({ value }) => updateDataProps({ for: value }),
+          Href: ({ value }) => updateDataProps({ href: value }),
+          Src: ({ value }) => updateDataProps({ src: value }),
+          Alt: ({ value }) => updateDataProps({ alt: value }),
+          Target: ({ value }) => updateDataProps({ target: value }),
+          Rel: ({ value }) => updateDataProps({ rel: value }),
+          Download: ({ value }) => updateDataProps({ download: value }),
+          Action: ({ value }) => updateDataProps({ action: value }),
+          Method: ({ value }) => updateDataProps({ method: value }),
+          Enctype: ({ value }) => updateDataProps({ enctype: value }),
+          Novalidate: ({ value }) => updateDataProps({ noValidate: value }),
+          Role: ({ value }) => updateDataAttrs({ role: value }),
+          AriaLabel: ({ value }) => updateDataAttrs({ 'aria-label': value }),
+          AriaLabelledBy: ({ value }) => updateDataAttrs({ 'aria-labelledby': value }),
+          AriaDescribedBy: ({ value }) => updateDataAttrs({ 'aria-describedby': value }),
+          AriaHidden: ({ value }) => updateDataAttrs({ 'aria-hidden': value.toString() }),
+          AriaExpanded: ({ value }) => updateDataAttrs({ 'aria-expanded': value.toString() }),
+          AriaSelected: ({ value }) => updateDataAttrs({ 'aria-selected': value.toString() }),
+          AriaChecked: ({ value }) => updateDataAttrs({ 'aria-checked': value.toString() }),
+          AriaDisabled: ({ value }) => updateDataAttrs({ 'aria-disabled': value.toString() }),
+          AriaRequired: ({ value }) => updateDataAttrs({ 'aria-required': value.toString() }),
+          AriaInvalid: ({ value }) => updateDataAttrs({ 'aria-invalid': value.toString() }),
+          AriaLive: ({ value }) => updateDataAttrs({ 'aria-live': value }),
+          DataAttribute: ({ key, value }) => updateDataAttrs({ [`data-${key}`]: value }),
+          Style: ({ value }) => setData('style', value),
+          InnerHTML: ({ value }) => updateDataProps({ innerHTML: value }),
+          ViewBox: ({ value }) => updateDataAttrs({ viewBox: value }),
+          Xmlns: ({ value }) => updateDataAttrs({ xmlns: value }),
+          Fill: ({ value }) => updateDataAttrs({ fill: value }),
+          FillRule: ({ value }) => updateDataAttrs({ 'fill-rule': value }),
+          ClipRule: ({ value }) => updateDataAttrs({ 'clip-rule': value }),
+          Stroke: ({ value }) => updateDataAttrs({ stroke: value }),
+          StrokeWidth: ({ value }) => updateDataAttrs({ 'stroke-width': value }),
+          StrokeLinecap: ({ value }) => updateDataAttrs({ 'stroke-linecap': value }),
+          StrokeLinejoin: ({ value }) => updateDataAttrs({ 'stroke-linejoin': value }),
+          D: ({ value }) => updateDataAttrs({ d: value }),
+          Cx: ({ value }) => updateDataAttrs({ cx: value }),
+          Cy: ({ value }) => updateDataAttrs({ cy: value }),
+          R: ({ value }) => updateDataAttrs({ r: value }),
+          X: ({ value }) => updateDataAttrs({ x: value }),
+          Y: ({ value }) => updateDataAttrs({ y: value }),
+          Width: ({ value }) => updateDataAttrs({ width: value }),
+          Height: ({ value }) => updateDataAttrs({ height: value }),
+          X1: ({ value }) => updateDataAttrs({ x1: value }),
+          Y1: ({ value }) => updateDataAttrs({ y1: value }),
+          X2: ({ value }) => updateDataAttrs({ x2: value }),
+          Y2: ({ value }) => updateDataAttrs({ y2: value }),
+          Points: ({ value }) => updateDataAttrs({ points: value }),
+          Transform: ({ value }) => updateDataAttrs({ transform: value }),
+          Opacity: ({ value }) => updateDataAttrs({ opacity: value }),
+          StrokeDasharray: ({ value }) => updateDataAttrs({ 'stroke-dasharray': value }),
+          StrokeDashoffset: ({ value }) => updateDataAttrs({ 'stroke-dashoffset': value }),
         }),
       ),
     )

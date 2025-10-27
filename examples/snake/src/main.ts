@@ -2,6 +2,7 @@ import { Array, Duration, Effect, Match as M, Schema as S, Stream, pipe } from '
 import { Runtime } from 'foldkit'
 import { Class, Html, div, h1, p } from 'foldkit/html'
 import { ts } from 'foldkit/schema'
+import { evo } from 'foldkit/struct'
 
 import { GAME, GAME_SPEED } from './constants'
 import { Apple, Direction, Position, Snake } from './domain'
@@ -90,7 +91,12 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
               )
 
               if (model.gameState === 'Playing') {
-                return [{ ...model, nextDirection }, []]
+                return [
+                  evo(model, {
+                    nextDirection: () => nextDirection,
+                  }),
+                  [],
+                ]
               } else {
                 return [model, []]
               }
@@ -105,20 +111,24 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
               M.when('GameOver', () => 'GameOver'),
               M.exhaustive,
             )
-            return [{ ...model, gameState: nextGameState }, []]
+            return [
+              evo(model, {
+                gameState: () => nextGameState,
+              }),
+              [],
+            ]
           }),
           M.when('r', () => {
             const nextSnake = Snake.create(GAME.INITIAL_POSITION)
 
             return [
-              {
-                ...model,
-                snake: nextSnake,
-                direction: GAME.INITIAL_DIRECTION,
-                nextDirection: GAME.INITIAL_DIRECTION,
-                gameState: 'NotStarted',
-                points: 0,
-              },
+              evo(model, {
+                snake: () => nextSnake,
+                direction: () => GAME.INITIAL_DIRECTION,
+                nextDirection: () => GAME.INITIAL_DIRECTION,
+                gameState: () => 'NotStarted' as const,
+                points: () => 0,
+              }),
               [requestApple(nextSnake)],
             ]
           }),
@@ -143,11 +153,10 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
 
         if (Snake.hasCollision(nextSnake)) {
           return [
-            {
-              ...model,
-              gameState: 'GameOver',
-              highScore: Math.max(model.points, model.highScore),
-            },
+            evo(model, {
+              gameState: () => 'GameOver' as const,
+              highScore: (highScore) => Math.max(model.points, highScore),
+            }),
             [],
           ]
         }
@@ -155,21 +164,19 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         const commands = willEatApple ? [requestApple(nextSnake)] : []
 
         return [
-          {
-            ...model,
-            snake: nextSnake,
-            direction: currentDirection,
-            points: willEatApple ? model.points + GAME.POINTS_PER_APPLE : model.points,
-          },
+          evo(model, {
+            snake: () => nextSnake,
+            direction: () => currentDirection,
+            points: (points) => (willEatApple ? points + GAME.POINTS_PER_APPLE : points),
+          }),
           commands,
         ]
       },
 
       PauseGame: () => [
-        {
-          ...model,
-          gameState: model.gameState === 'Playing' ? 'Paused' : 'Playing',
-        },
+        evo(model, {
+          gameState: (gameState) => (gameState === 'Playing' ? 'Paused' : 'Playing'),
+        }),
         [],
       ],
 
@@ -178,14 +185,13 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         const nextSnake = Snake.create(startPos)
 
         return [
-          {
-            ...model,
-            snake: nextSnake,
-            direction: 'Right',
-            nextDirection: 'Right',
-            gameState: 'NotStarted',
-            points: 0,
-          },
+          evo(model, {
+            snake: () => nextSnake,
+            direction: () => 'Right' as const,
+            nextDirection: () => 'Right' as const,
+            gameState: () => 'NotStarted' as const,
+            points: () => 0,
+          }),
           [requestApple(nextSnake)],
         ]
       },
@@ -196,10 +202,9 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
       ],
 
       GotApple: ({ position }) => [
-        {
-          ...model,
-          apple: position,
-        },
+        evo(model, {
+          apple: () => position,
+        }),
         [],
       ],
     }),

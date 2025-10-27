@@ -22,6 +22,7 @@ import {
   textarea,
 } from 'foldkit/html'
 import { ts } from 'foldkit/schema'
+import { evo } from 'foldkit/struct'
 
 // MODEL
 
@@ -155,10 +156,9 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
       NoOp: () => [model, []],
 
       UpdateName: ({ value }) => [
-        {
-          ...model,
-          name: validateName(value),
-        },
+        evo(model, {
+          name: () => validateName(value),
+        }),
         [],
       ],
 
@@ -168,31 +168,40 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
 
         if (Field.$is('Valid')(validateEmailResult)) {
           return [
-            {
-              ...model,
-              email: Field.Validating({ value }),
-              emailValidationId: validationId,
-            },
+            evo(model, {
+              email: () => Field.Validating({ value }),
+              emailValidationId: () => validationId,
+            }),
             [validateEmailNotOnWaitlist(value, validationId)],
           ]
         } else {
-          return [{ ...model, email: validateEmailResult, emailValidationId: validationId }, []]
+          return [
+            evo(model, {
+              email: () => validateEmailResult,
+              emailValidationId: () => validationId,
+            }),
+            [],
+          ]
         }
       },
 
       EmailValidated: ({ validationId, field }) => {
         if (validationId === model.emailValidationId) {
-          return [{ ...model, email: field }, []]
+          return [
+            evo(model, {
+              email: () => field,
+            }),
+            [],
+          ]
         } else {
           return [model, []]
         }
       },
 
       UpdateMessage: ({ value }) => [
-        {
-          ...model,
-          message: Field.Valid({ value }),
-        },
+        evo(model, {
+          message: () => Field.Valid({ value }),
+        }),
         [],
       ],
 
@@ -202,10 +211,9 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         }
 
         return [
-          {
-            ...model,
-            submission: Submitting.make(),
-          },
+          evo(model, {
+            submission: () => Submitting.make(),
+          }),
           [submitForm(model)],
         ]
       },
@@ -213,22 +221,22 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
       FormSubmitted: ({ success, name }) => {
         if (success) {
           return [
-            {
-              ...model,
-              submission: SubmitSuccess.make({
-                message: `Welcome to the waitlist, ${name}! We'll be in touch soon.`,
-              }),
-            },
+            evo(model, {
+              submission: () =>
+                SubmitSuccess.make({
+                  message: `Welcome to the waitlist, ${name}! We'll be in touch soon.`,
+                }),
+            }),
             [],
           ]
         } else {
           return [
-            {
-              ...model,
-              submission: SubmitError.make({
-                error: 'Sorry, there was an error adding you to the waitlist. Please try again.',
-              }),
-            },
+            evo(model, {
+              submission: () =>
+                SubmitError.make({
+                  error: 'Sorry, there was an error adding you to the waitlist. Please try again.',
+                }),
+            }),
             [],
           ]
         }

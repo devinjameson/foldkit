@@ -35,6 +35,7 @@ import { load, pushUrl } from 'foldkit/navigation'
 import { literal } from 'foldkit/route'
 import { UrlRequest } from 'foldkit/runtime'
 import { ts } from 'foldkit/schema'
+import { evo } from 'foldkit/struct'
 import { Url, toString as urlToString } from 'foldkit/url'
 
 import * as CommandStream from './commandStream'
@@ -216,12 +217,11 @@ const update = (
         ),
 
       UrlChanged: ({ url }) => [
-        {
-          ...model,
-          route: urlToAppRoute(url),
-          url,
-          mobileMenuOpen: false,
-        },
+        evo(model, {
+          route: () => urlToAppRoute(url),
+          url: () => url,
+          mobileMenuOpen: () => false,
+        }),
         Option.match(url.hash, {
           onNone: () => [],
           onSome: (hash) => [scrollToHash(hash)],
@@ -246,31 +246,30 @@ const update = (
         HashSet.has(model.copiedSnippets, text)
           ? [model, []]
           : [
-              {
-                ...model,
-                copiedSnippets: HashSet.add(
-                  model.copiedSnippets,
-                  text,
-                ),
-              },
+              evo(model, {
+                copiedSnippets: HashSet.add(text),
+              }),
               [hideIndicator(text)],
             ],
 
       HideCopiedIndicator: ({ text }) => [
-        {
-          ...model,
-          copiedSnippets: HashSet.remove(model.copiedSnippets, text),
-        },
+        evo(model, {
+          copiedSnippets: HashSet.remove(text),
+        }),
         [],
       ],
 
       ToggleMobileMenu: () => [
-        { ...model, mobileMenuOpen: !model.mobileMenuOpen },
+        evo(model, {
+          mobileMenuOpen: (mobileMenuOpen) => !mobileMenuOpen,
+        }),
         [],
       ],
 
       ActiveSectionChanged: ({ sectionId }) => [
-        { ...model, activeSection: Option.some(sectionId) },
+        evo(model, {
+          activeSection: () => Option.some(sectionId),
+        }),
         [],
       ],
     }),

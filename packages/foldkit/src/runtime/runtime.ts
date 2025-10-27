@@ -114,7 +114,7 @@ export const makeCommandStreams =
 
 type MakeRuntimeReturn = (hmrModel?: unknown) => Effect.Effect<void>
 
-export const makeRuntime =
+const makeRuntime =
   <Model, Message, StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>>({
     Model,
     init,

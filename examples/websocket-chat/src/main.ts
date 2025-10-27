@@ -30,6 +30,7 @@ import {
   ul,
 } from 'foldkit/html'
 import { ts } from 'foldkit/schema'
+import { evo } from 'foldkit/struct'
 
 const WS_URL = 'wss://echo.websocket.org'
 const CONNECTION_TIMEOUT_MS = 5000
@@ -122,28 +123,41 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
   M.value(message).pipe(
     M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
     M.tagsExhaustive({
-      RequestConnect: () => [{ ...model, connection: ConnectionConnecting.make() }, [connect()]],
+      RequestConnect: () => [
+        evo(model, {
+          connection: () => ConnectionConnecting.make(),
+        }),
+        [connect()],
+      ],
 
       Connected: ({ socket }) => [
-        { ...model, connection: ConnectionConnected.make({ socket }) },
+        evo(model, {
+          connection: () => ConnectionConnected.make({ socket }),
+        }),
         [],
       ],
 
       Disconnected: () => [
-        {
-          ...model,
-          connection: ConnectionDisconnected.make(),
-          messages: [],
-        },
+        evo(model, {
+          connection: () => ConnectionDisconnected.make(),
+          messages: () => [],
+        }),
         [],
       ],
 
       ConnectionFailed: ({ error }) => [
-        { ...model, connection: ConnectionError.make({ error }) },
+        evo(model, {
+          connection: () => ConnectionError.make({ error }),
+        }),
         [],
       ],
 
-      UpdateMessageInput: ({ value }) => [{ ...model, messageInput: value }, []],
+      UpdateMessageInput: ({ value }) => [
+        evo(model, {
+          messageInput: () => value,
+        }),
+        [],
+      ],
 
       SendMessage: () => {
         const trimmedMessage = model.messageInput.trim()
@@ -155,7 +169,9 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         return M.value(model.connection).pipe(
           M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
           M.tag('ConnectionConnected', ({ socket }) => [
-            { ...model, messageInput: '' },
+            evo(model, {
+              messageInput: () => '',
+            }),
             [sendMessage(socket, trimmedMessage)],
           ]),
           M.orElse(() => [model, []]),
@@ -175,10 +191,9 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         })
 
         return [
-          {
-            ...model,
-            messages: [...model.messages, newMessage],
-          },
+          evo(model, {
+            messages: (messages) => [...messages, newMessage],
+          }),
           [],
         ]
       },
@@ -196,10 +211,9 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         })
 
         return [
-          {
-            ...model,
-            messages: [...model.messages, newMessage],
-          },
+          evo(model, {
+            messages: (messages) => [...messages, newMessage],
+          }),
           [],
         ]
       },
