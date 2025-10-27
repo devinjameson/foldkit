@@ -8,9 +8,8 @@ type StrictKeys<O, T> =
   T extends Record<string, any>
     ? Exclude<keyof T, keyof O> extends never
       ? T
-      : {
-          ERROR_INVALID_KEYS: Exclude<keyof T, keyof O>
-          VALID_KEYS: keyof O
+      : T & {
+          [K in `Invalid key: ${Exclude<keyof T, keyof O> & string}`]: never
         }
     : never
 
