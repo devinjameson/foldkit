@@ -126,7 +126,7 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
                 snake: () => nextSnake,
                 direction: () => GAME.INITIAL_DIRECTION,
                 nextDirection: () => GAME.INITIAL_DIRECTION,
-                gameState: () => 'NotStarted' as const,
+                gameState: () => 'NotStarted',
                 points: () => 0,
               }),
               [requestApple(nextSnake)],
@@ -154,7 +154,7 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         if (Snake.hasCollision(nextSnake)) {
           return [
             evo(model, {
-              gameState: () => 'GameOver' as const,
+              gameState: () => 'GameOver',
               highScore: (highScore) => Math.max(model.points, highScore),
             }),
             [],
@@ -187,9 +187,9 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         return [
           evo(model, {
             snake: () => nextSnake,
-            direction: () => 'Right' as const,
-            nextDirection: () => 'Right' as const,
-            gameState: () => 'NotStarted' as const,
+            direction: () => 'Right',
+            nextDirection: () => 'Right',
+            gameState: () => 'NotStarted',
             points: () => 0,
           }),
           [requestApple(nextSnake)],
