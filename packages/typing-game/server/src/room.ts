@@ -7,7 +7,7 @@ const DELIMITER = '-'
 
 class RoomIdExists extends Data.TaggedError('RoomIdExists')<{}> {}
 
-export const generateUniqueRoomId = (
+export const generateUniqueId = (
   words: ReadonlyArray<string>,
 ): Effect.Effect<string, never, RoomsStore> =>
   Effect.gen(function* () {
@@ -19,7 +19,7 @@ export const generateUniqueRoomId = (
         (id) => !HashMap.has(roomsStore, id),
         () => new RoomIdExists(),
       ),
-      Effect.catchAll(() => generateUniqueRoomId(words)),
+      Effect.catchAll(() => generateUniqueId(words)),
     )
   })
 
