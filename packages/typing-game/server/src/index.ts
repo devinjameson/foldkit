@@ -17,7 +17,8 @@ import { randomUUID } from 'node:crypto'
 import { createServer } from 'node:http'
 
 import { ROOM_ID_WORDS } from './constants.js'
-import { generateUniqueRoomId } from './roomId.js'
+import * as Room from './room.js'
+import * as Rooms from './rooms.js'
 
 export class RoomsStore extends Context.Tag('RoomsStore')<
   RoomsStore,
@@ -36,7 +37,7 @@ const RoomLive = Shared.RoomRpcs.toLayer(
     return {
       createRoom: ({ username }) =>
         Effect.gen(function* () {
-          const id = yield* generateUniqueRoomId(ROOM_ID_WORDS)
+          const id = yield* Room.generateUniqueId(ROOM_ID_WORDS)
           const playerId = yield* Effect.sync(() => randomUUID())
           const player: Shared.Player = {
             id: playerId,
@@ -62,11 +63,6 @@ const RoomLive = Shared.RoomRpcs.toLayer(
 
       joinRoom: ({ username, roomId }) =>
         Effect.gen(function* () {
-          const rooms = yield* SubscriptionRef.get(roomsRef)
-          const room = yield* HashMap.get(rooms, roomId).pipe(
-            Effect.mapError(() => new Shared.RoomNotFoundError({ roomId })),
-          )
-
           const playerId = yield* Effect.sync(() => randomUUID())
           const newPlayer: Shared.Player = {
             id: playerId,
@@ -77,21 +73,22 @@ const RoomLive = Shared.RoomRpcs.toLayer(
             isReady: false,
           }
 
-          const updatedRoom: Shared.Room = Struct.evolve(room, {
-            players: (players) => Array.append(players, newPlayer),
-          })
-
-          yield* SubscriptionRef.update(roomsRef, HashMap.set(roomId, updatedRoom))
-
-          return updatedRoom
+          return yield* SubscriptionRef.modifyEffect(roomsRef, (rooms) =>
+            Rooms.getById(rooms, roomId).pipe(
+              Effect.map((room) => {
+                const updatedRoom = Struct.evolve(room, {
+                  players: (players) => Array.append(players, newPlayer),
+                })
+                return [updatedRoom, HashMap.set(rooms, roomId, updatedRoom)] as const
+              }),
+            ),
+          )
         }),
 
       getRoomById: ({ roomId }) =>
         Effect.gen(function* () {
           const rooms = yield* SubscriptionRef.get(roomsRef)
-          return yield* HashMap.get(rooms, roomId).pipe(
-            Effect.mapError(() => new Shared.RoomNotFoundError({ roomId })),
-          )
+          return yield* Rooms.getById(rooms, roomId)
         }),
 
       subscribeToRoom: ({ roomId }) =>
@@ -111,6 +108,18 @@ const RoomLive = Shared.RoomRpcs.toLayer(
             duration: Duration.millis(100),
             units: 1,
           }),
+        ),
+
+      startGame: ({ roomId }) =>
+        SubscriptionRef.updateEffect(roomsRef, (rooms) =>
+          Rooms.getById(rooms, roomId).pipe(
+            Effect.map((room) => {
+              const updatedRoom = Struct.evolve(room, {
+                status: () => 'Countdown' as const,
+              })
+              return HashMap.set(rooms, roomId, updatedRoom)
+            }),
+          ),
         ),
     }
   }),

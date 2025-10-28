@@ -85,6 +85,7 @@ const RoomJoined = ts('RoomJoined', { roomId: S.String })
 const RoomError = ts('RoomError', { error: S.String })
 const RoomUpdated = ts('RoomUpdated', { room: Shared.Room })
 const RoomStreamError = ts('RoomStreamError', { error: S.String })
+const StartGameClicked = ts('StartGameClicked', { roomId: S.String })
 
 type NoOp = typeof NoOp.Type
 type LinkClicked = typeof LinkClicked.Type
@@ -99,6 +100,7 @@ type RoomJoined = typeof RoomJoined.Type
 type RoomError = typeof RoomError.Type
 type RoomUpdated = typeof RoomUpdated.Type
 type RoomStreamError = typeof RoomStreamError.Type
+type StartGameClicked = typeof StartGameClicked.Type
 
 const Message = S.Union(
   NoOp,
@@ -114,6 +116,7 @@ const Message = S.Union(
   RoomError,
   RoomUpdated,
   RoomStreamError,
+  StartGameClicked,
 )
 type Message = typeof Message.Type
 
@@ -261,6 +264,8 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         console.error('Room stream error:', error)
         return [model, []]
       },
+
+      StartGameClicked: ({ roomId }) => [model, [startGame(roomId)]],
     }),
   )
 
@@ -309,6 +314,16 @@ const joinRoom = (username: string, roomId: string): Runtime.Command<RoomJoined 
     return RoomJoined.make({ roomId: room.id })
   }).pipe(
     Effect.catchAll((error) => Effect.succeed(RoomError.make({ error: String(error) }))),
+    Effect.provide(RoomsClient.Default),
+  )
+
+const startGame = (roomId: string): Runtime.Command<NoOp> =>
+  Effect.gen(function* () {
+    const client = yield* RoomsClient
+    yield* client.startGame({ roomId })
+    return NoOp.make()
+  }).pipe(
+    Effect.catchAll(() => Effect.succeed(NoOp.make())),
     Effect.provide(RoomsClient.Default),
   )
 
@@ -501,7 +516,7 @@ const maybeRoomView = (maybeRoom: Option.Option<Shared.Room>): Html =>
     onNone: () => div([Class('text-gray-600')], ['Loading room...']),
     onSome: (room: Shared.Room) =>
       div(
-        [],
+        [Class('space-y-8')],
         [
           h2([Class('text-xl font-semibold text-gray-700 mb-4')], ['Players']),
           div(
@@ -512,6 +527,18 @@ const maybeRoomView = (maybeRoom: Option.Option<Shared.Room>): Html =>
                 [span([Class('font-medium')], [player.username])],
               ),
             ),
+          ),
+          button(
+            [
+              Type('button'),
+              Class(
+                classNames(
+                  'w-full py-2 px-4 rounded-md transition bg-blue-500 text-white hover:bg-blue-600',
+                ),
+              ),
+              OnClick(StartGameClicked.make({ roomId: room.id })),
+            ],
+            ['Start Game'],
           ),
         ],
       ),

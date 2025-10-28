@@ -22,6 +22,9 @@ export const Room = S.Struct({
 })
 export type Room = typeof Room.Type
 
+export const Rooms = S.HashMap({ key: S.String, value: Room })
+export type Rooms = typeof Rooms.Type
+
 export const PlayerReady = S.TaggedStruct('PlayerReady', {})
 export type PlayerReady = typeof PlayerReady.Type
 
@@ -102,5 +105,10 @@ export class RoomRpcs extends RpcGroup.make(
     success: Room,
     error: RoomNotFoundError,
     stream: true,
+  }),
+  Rpc.make('startGame', {
+    payload: S.Struct({ roomId: S.String }),
+    success: S.Void,
+    error: RoomNotFoundError,
   }),
 ) {}
