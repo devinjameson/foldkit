@@ -4,6 +4,8 @@ import { RpcSerialization, RpcServer } from '@effect/rpc'
 import * as Shared from '@typing-game/shared'
 import {
   Array,
+  Chunk,
+  Clock,
   Context,
   Duration,
   Effect,
@@ -12,6 +14,7 @@ import {
   Stream,
   Struct,
   SubscriptionRef,
+  pipe,
 } from 'effect'
 import { randomUUID } from 'node:crypto'
 import { createServer } from 'node:http'
@@ -47,11 +50,14 @@ const RoomLive = Shared.RoomRpcs.toLayer(
             accuracy: 0,
             isReady: false,
           }
+
+          const createdAt = yield* Clock.currentTimeMillis
+
           const newRoom: Shared.Room = {
             id,
             players: [player],
-            status: 'Waiting',
-            createdAt: new Date(),
+            status: Shared.Waiting.make({}),
+            createdAt,
           }
 
           yield* SubscriptionRef.update(roomsRef, (rooms) =>
@@ -110,20 +116,68 @@ const RoomLive = Shared.RoomRpcs.toLayer(
           }),
         ),
 
-      startGame: ({ roomId }) =>
-        SubscriptionRef.updateEffect(roomsRef, (rooms) =>
-          Rooms.getById(rooms, roomId).pipe(
-            Effect.map((room) => {
-              const updatedRoom = Struct.evolve(room, {
-                status: () => 'Countdown' as const,
-              })
-              return HashMap.set(rooms, roomId, updatedRoom)
-            }),
+      startGame: ({ roomId }) => {
+        return gameSequence.pipe(
+          Stream.mapEffect((status) =>
+            // TODO: Understand this because this is cool how this is a fire and
+            // forget for updating the room sref instead of waiting for it
+            updateRoomStatus(roomsRef, roomId)(status).pipe(Effect.fork, Effect.asVoid),
           ),
-        ),
+          Stream.runDrain,
+          Effect.forkDaemon,
+          Effect.asVoid,
+        )
+      },
     }
   }),
 ).pipe(Layer.provide(RoomsStoreLive))
+
+const updateRoomStatus =
+  (roomsRef: SubscriptionRef.SubscriptionRef<Shared.Rooms>, roomId: string) =>
+  (status: Shared.GameStatus) =>
+    SubscriptionRef.updateEffect(roomsRef, (rooms) =>
+      Effect.gen(function* () {
+        const room = yield* Rooms.getById(rooms, roomId)
+        const updatedRoom = Struct.evolve(room, { status: () => status })
+        return HashMap.set(rooms, roomId, updatedRoom)
+      }),
+    )
+
+const COUNTDOWN_SECONDS = 3
+const PLAYING_SECONDS = 30
+
+const descendingRange = (top: number, bottom: number) =>
+  pipe(Array.range(bottom, top), Array.reverse)
+
+const descendingRangeStream = (top: number, bottom: number) =>
+  Stream.fromIterable(descendingRange(top, bottom))
+
+const countdownStream: Stream.Stream<Shared.Countdown> = pipe(
+  descendingRangeStream(COUNTDOWN_SECONDS, 1),
+  Stream.map((secondsLeft) => Shared.Countdown.make({ secondsLeft })),
+)
+
+const playingStream: Stream.Stream<Shared.Playing> = pipe(
+  descendingRangeStream(PLAYING_SECONDS, 1),
+  Stream.map((secondsLeft) => Shared.Playing.make({ secondsLeft })),
+)
+
+const finishedStream: Stream.Stream<Shared.Finished> = Stream.make(Shared.Finished.make({}))
+
+const gameSequence = pipe(
+  Stream.tick(Duration.seconds(1)),
+  Stream.zip(
+    pipe(
+      Chunk.make<Array.NonEmptyReadonlyArray<Stream.Stream<Shared.GameStatus>>>(
+        countdownStream,
+        playingStream,
+        finishedStream,
+      ),
+      Stream.concatAll,
+    ),
+  ),
+  Stream.map(([_, status]) => status),
+)
 
 const RpcLayer = RpcServer.layer(Shared.RoomRpcs).pipe(Layer.provide(RoomLive))
 
