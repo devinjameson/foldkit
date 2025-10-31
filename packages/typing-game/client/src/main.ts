@@ -515,32 +515,42 @@ const maybeRoomView = (maybeRoom: Option.Option<Shared.Room>): Html =>
   Option.match(maybeRoom, {
     onNone: () => div([Class('text-gray-600')], ['Loading room...']),
     onSome: (room: Shared.Room) =>
-      div(
-        [Class('space-y-8')],
-        [
-          h2([Class('text-xl font-semibold text-gray-700 mb-4')], ['Players']),
-          div(
-            [Class('space-y-2')],
-            Array.map(room.players, (player) =>
-              div(
-                [Class('p-3 bg-gray-50 rounded border border-gray-200')],
-                [span([Class('font-medium')], [player.username])],
-              ),
-            ),
-          ),
-          button(
-            [
-              Type('button'),
-              Class(
-                classNames(
-                  'w-full py-2 px-4 rounded-md transition bg-blue-500 text-white hover:bg-blue-600',
+      M.value(room.status).pipe(
+        M.tagsExhaustive({
+          Waiting: () =>
+            div(
+              [Class('space-y-8')],
+              [
+                h2([Class('text-xl font-semibold text-gray-700 mb-4')], ['Players']),
+                div(
+                  [Class('space-y-2')],
+                  Array.map(room.players, (player) =>
+                    div(
+                      [Class('p-3 bg-gray-50 rounded border border-gray-200')],
+                      [span([Class('font-medium')], [player.username])],
+                    ),
+                  ),
                 ),
-              ),
-              OnClick(StartGameClicked.make({ roomId: room.id })),
-            ],
-            ['Start Game'],
-          ),
-        ],
+                button(
+                  [
+                    Type('button'),
+                    Class(
+                      classNames(
+                        'w-full py-2 px-4 rounded-md transition bg-blue-500 text-white hover:bg-blue-600',
+                      ),
+                    ),
+                    OnClick(StartGameClicked.make({ roomId: room.id })),
+                  ],
+                  ['Start Game'],
+                ),
+              ],
+            ),
+          Countdown: ({ secondsLeft }) =>
+            div([Class('text-gray-600')], [`Game starting in ${secondsLeft}`]),
+          Playing: ({ secondsLeft }) =>
+            div([Class('text-gray-600')], [`Time left: ${secondsLeft}`]),
+          Finished: () => div([Class('text-gray-600')], ['Game finished.']),
+        }),
       ),
   })
 
