@@ -643,6 +643,7 @@ const maybeRoomView = ({ maybeRoom, maybeSession }: Model): Html =>
             ),
           Countdown: ({ secondsLeft }) =>
             div([Class('text-gray-600')], [`Game starting in ${secondsLeft}`]),
+          GetReady: () => div([Class('text-gray-600')], ['Get ready! The game is about to start.']),
           Playing: ({ secondsLeft }) =>
             div([Class('text-gray-600')], [`Time left: ${secondsLeft}`]),
           Finished: () => div([Class('text-gray-600')], ['Game finished.']),

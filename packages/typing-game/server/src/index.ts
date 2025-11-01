@@ -11,6 +11,7 @@ import {
   Effect,
   HashMap,
   Layer,
+  Schedule,
   Stream,
   Struct,
   SubscriptionRef,
@@ -65,7 +66,7 @@ const createRoomHandler = (
     const newRoom: Shared.Room = {
       id: roomId,
       players: [player],
-      status: Shared.Waiting.make({}),
+      status: Shared.Waiting.make(),
       createdAt,
     }
 
@@ -148,6 +149,8 @@ const updateRoomStatus =
       }),
     )
 
+const getReadyStream = Stream.succeed(Shared.GetReady.make())
+
 const COUNTDOWN_SECONDS = 3
 const PLAYING_SECONDS = 30
 
@@ -167,21 +170,19 @@ const playingStream: Stream.Stream<Shared.Playing> = pipe(
   Stream.map((secondsLeft) => Shared.Playing.make({ secondsLeft })),
 )
 
-const finishedStream: Stream.Stream<Shared.Finished> = Stream.make(Shared.Finished.make({}))
+const finishedStream: Stream.Stream<Shared.Finished> = Stream.make(Shared.Finished.make())
 
 const gameSequence = pipe(
-  Stream.tick(Duration.seconds(1)),
-  Stream.zip(
-    pipe(
+  getReadyStream,
+  Stream.concat(
+    Stream.concatAll(
       Chunk.make<Array.NonEmptyReadonlyArray<Stream.Stream<Shared.GameStatus>>>(
         countdownStream,
         playingStream,
         finishedStream,
       ),
-      Stream.concatAll,
-    ),
+    ).pipe(Stream.schedule(Schedule.fixed(Duration.seconds(1)))),
   ),
-  Stream.map(([_, status]) => status),
 )
 
 const RpcLayer = RpcServer.layer(Shared.RoomRpcs).pipe(Layer.provide(RoomLive))

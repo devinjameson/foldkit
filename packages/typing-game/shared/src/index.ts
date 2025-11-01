@@ -2,16 +2,18 @@ import { Rpc, RpcGroup } from '@effect/rpc'
 import { Schema as S } from 'effect'
 
 export const Waiting = S.TaggedStruct('Waiting', {})
+export const GetReady = S.TaggedStruct('GetReady', {})
 export const Countdown = S.TaggedStruct('Countdown', { secondsLeft: S.Number })
 export const Playing = S.TaggedStruct('Playing', { secondsLeft: S.Number })
 export const Finished = S.TaggedStruct('Finished', {})
 
 export type Waiting = typeof Waiting.Type
+export type GetReady = typeof GetReady.Type
 export type Countdown = typeof Countdown.Type
 export type Playing = typeof Playing.Type
 export type Finished = typeof Finished.Type
 
-export const GameStatus = S.Union(Waiting, Countdown, Playing, Finished)
+export const GameStatus = S.Union(Waiting, GetReady, Countdown, Playing, Finished)
 export type GameStatus = typeof GameStatus.Type
 
 export const Player = S.Struct({
