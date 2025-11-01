@@ -2,7 +2,7 @@ import { Rpc, RpcGroup } from '@effect/rpc'
 import { Schema as S } from 'effect'
 
 export const Waiting = S.TaggedStruct('Waiting', {})
-export const GetReady = S.TaggedStruct('GetReady', {})
+export const GetReady = S.TaggedStruct('GetReady', { text: S.String })
 export const Countdown = S.TaggedStruct('Countdown', { secondsLeft: S.Number })
 export const Playing = S.TaggedStruct('Playing', { secondsLeft: S.Number })
 export const Finished = S.TaggedStruct('Finished', {})

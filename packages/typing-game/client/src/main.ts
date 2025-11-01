@@ -3,7 +3,7 @@ import { BrowserKeyValueStore } from '@effect/platform-browser'
 import * as Shared from '@typing-game/shared'
 import classNames from 'classnames'
 import { Array, Effect, Match as M, Number, Option, Schema as S, Stream, pipe } from 'effect'
-import { FieldValidation, Route, Runtime, Url } from 'foldkit'
+import { FieldValidation, Route, Runtime, Task, Url } from 'foldkit'
 import { Field, FieldSchema, Validation, validateField } from 'foldkit/fieldValidation'
 import {
   Class,
@@ -34,6 +34,10 @@ import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
 import { RoomsClient } from './rpc'
+
+// CONSTANT
+
+const USER_TEXT_INPUT_ID = 'userText'
 
 // ROUTE
 
@@ -73,6 +77,8 @@ const Model = S.Struct({
   roomFormError: S.Option(S.String),
   maybeRoom: S.Option(Shared.Room),
   maybeSession: S.Option(RoomPlayerSession),
+  maybeGameText: S.Option(S.String),
+  userText: S.String,
 })
 type Model = typeof Model.Type
 
@@ -83,8 +89,9 @@ const LinkClicked = ts('LinkClicked', {
   request: Runtime.UrlRequest,
 })
 const UrlChanged = ts('UrlChanged', { url: Url.Url })
-const UpdateUsername = ts('UpdateUsername', { value: S.String })
-const UpdateRoomId = ts('UpdateRoomId', { value: S.String })
+const UsernameInputted = ts('UsernameInputted', { value: S.String })
+const RoomIdInputted = ts('RoomIdInputted', { value: S.String })
+const UserTextInputted = ts('UserTextInputted', { value: S.String })
 const RoomIdValidated = ts('RoomIdValidated', {
   validationId: S.Number,
   field: FieldSchema(S.String),
@@ -102,8 +109,9 @@ const SessionLoaded = ts('SessionLoaded', { session: S.Option(RoomPlayerSession)
 type NoOp = typeof NoOp.Type
 type LinkClicked = typeof LinkClicked.Type
 type UrlChanged = typeof UrlChanged.Type
-type UpdateUsername = typeof UpdateUsername.Type
-type UpdateRoomId = typeof UpdateRoomId.Type
+type UsernameInputted = typeof UsernameInputted.Type
+type RoomIdInputted = typeof RoomIdInputted.Type
+type UserTextInputted = typeof UserTextInputted.Type
 type RoomIdValidated = typeof RoomIdValidated.Type
 type CreateRoomClicked = typeof CreateRoomClicked.Type
 type JoinRoomClicked = typeof JoinRoomClicked.Type
@@ -119,8 +127,9 @@ const Message = S.Union(
   NoOp,
   LinkClicked,
   UrlChanged,
-  UpdateUsername,
-  UpdateRoomId,
+  UsernameInputted,
+  RoomIdInputted,
+  UserTextInputted,
   RoomIdValidated,
   CreateRoomClicked,
   JoinRoomClicked,
@@ -152,6 +161,8 @@ const init: Runtime.ApplicationInit<Model, Message> = (url: Url.Url) => {
       roomFormError: Option.none(),
       maybeRoom: Option.none(),
       maybeSession: Option.none(),
+      maybeGameText: Option.none(),
+      userText: '',
     },
     commands,
   ]
@@ -201,7 +212,7 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         [],
       ],
 
-      UpdateUsername: ({ value }) => [
+      UsernameInputted: ({ value }) => [
         evo(model, {
           usernameInput: () => validateField(usernameValidations)(value),
           roomFormError: () => Option.none(),
@@ -209,7 +220,7 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         [],
       ],
 
-      UpdateRoomId: ({ value }) => {
+      RoomIdInputted: ({ value }) => {
         const validateRoomIdResult = validateField(roomIdValidations)(value)
         const validationId = Number.increment(model.roomIdValidationId)
 
@@ -289,12 +300,27 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         [],
       ],
 
-      RoomUpdated: ({ room }) => [
-        evo(model, {
-          maybeRoom: () => Option.some(room),
-        }),
-        [],
-      ],
+      RoomUpdated: ({ room }) => {
+        const maybeGameText = M.value(room.status).pipe(
+          M.tag('GetReady', ({ text }) => Option.some(text)),
+          M.orElse(() => model.maybeGameText),
+        )
+
+        const isPlayingNow = S.is(Shared.Playing)(room.status)
+        const wasPlayingBefore = Option.exists(model.maybeRoom, ({ status }) =>
+          S.is(Shared.Playing)(status),
+        )
+
+        const commands = isPlayingNow && !wasPlayingBefore ? [focusUserTextInput] : []
+
+        return [
+          evo(model, {
+            maybeRoom: () => Option.some(room),
+            maybeGameText: () => maybeGameText,
+          }),
+          commands,
+        ]
+      },
 
       // TODO: We need to show an error message if the room stream errors, and ideally
       // we can make this error the actual possible errors that can happen in
@@ -309,6 +335,13 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
       SessionLoaded: ({ session }) => [
         evo(model, {
           maybeSession: () => session,
+        }),
+        [],
+      ],
+
+      UserTextInputted: ({ value }) => [
+        evo(model, {
+          userText: () => value,
         }),
         [],
       ],
@@ -375,6 +408,10 @@ const startGame = (roomId: string): Runtime.Command<NoOp> =>
 
 const navigateToRoom = (roomId: string): Runtime.Command<NoOp> =>
   pushUrl(roomRouter.build({ roomId })).pipe(Effect.as(NoOp.make()))
+
+const focusUserTextInput: Runtime.Command<NoOp> = Task.focus(`#${USER_TEXT_INPUT_ID}`, () =>
+  NoOp.make(),
+)
 
 const savePlayerToSessionStorage = (session: RoomPlayerSession): Runtime.Command<NoOp> =>
   Effect.gen(function* () {
@@ -513,7 +550,7 @@ const homeView = (model: Model): Html => {
                 id: 'username',
                 labelText: 'Username',
                 field: model.usernameInput,
-                onInput: (value) => UpdateUsername.make({ value }),
+                onInput: (value) => UsernameInputted.make({ value }),
                 containerClassName: 'max-w-md mx-auto',
               }),
 
@@ -553,7 +590,7 @@ const homeView = (model: Model): Html => {
                         id: 'roomId',
                         labelText: 'Room ID',
                         field: model.roomIdInput,
-                        onInput: (value) => UpdateRoomId.make({ value }),
+                        onInput: (value) => RoomIdInputted.make({ value }),
                         containerClassName: 'w-full',
                       }),
                       button(
@@ -615,7 +652,7 @@ const playerView = (
     )
   })
 
-const maybeRoomView = ({ maybeRoom, maybeSession }: Model): Html =>
+const maybeRoomView = ({ maybeRoom, maybeSession, maybeGameText, userText }: Model): Html =>
   Option.match(maybeRoom, {
     onNone: () => div([Class('text-gray-600')], ['Loading room...']),
     onSome: (room: Shared.Room) =>
@@ -641,15 +678,62 @@ const maybeRoomView = ({ maybeRoom, maybeSession }: Model): Html =>
                 ),
               ],
             ),
+          GetReady: ({ text }) =>
+            div(
+              [Class('space-y-4')],
+              [
+                div([Class('text-gray-600 text-lg')], ['Get ready! The game is about to start.']),
+                div([Class('p-4 bg-gray-100 rounded font-mono text-gray-700')], [text]),
+              ],
+            ),
           Countdown: ({ secondsLeft }) =>
-            div([Class('text-gray-600')], [`Game starting in ${secondsLeft}`]),
-          GetReady: () => div([Class('text-gray-600')], ['Get ready! The game is about to start.']),
-          Playing: ({ secondsLeft }) =>
-            div([Class('text-gray-600')], [`Time left: ${secondsLeft}`]),
+            div(
+              [Class('space-y-4')],
+              [
+                div([Class('text-gray-600 text-lg')], [`Game starting in ${secondsLeft}`]),
+                Option.match(maybeGameText, {
+                  onNone: () => empty,
+                  onSome: (text) =>
+                    div([Class('p-4 bg-gray-100 rounded font-mono text-gray-700')], [text]),
+                }),
+              ],
+            ),
+          Playing: ({ secondsLeft }) => playingView(secondsLeft, maybeGameText, userText),
           Finished: () => div([Class('text-gray-600')], ['Game finished.']),
         }),
       ),
   })
+
+const playingView = (
+  secondsLeft: number,
+  maybeGameText: Option.Option<string>,
+  userText: string,
+): Html =>
+  div(
+    [Class('space-y-8')],
+    [
+      div([Class('text-gray-600')], [`Time left: ${secondsLeft}`]),
+      Option.match(maybeGameText, {
+        onNone: () => empty,
+        onSome: (gameText) => typingView(gameText, userText),
+      }),
+    ],
+  )
+
+const typingView = (text: string, userText: string): Html =>
+  div(
+    [Class('space-y-4')],
+    [
+      fieldView({
+        id: USER_TEXT_INPUT_ID,
+        labelText: 'Your Input',
+        field: Field.NotValidated({ value: userText }),
+        onInput: (value) => UserTextInputted.make({ value }),
+        type: 'textarea',
+      }),
+      div([Class('p-4 bg-gray-100 rounded font-mono text-gray-700')], [text]),
+    ],
+  )
 
 const roomRouteView = (model: Model, roomId: string): Html =>
   div(

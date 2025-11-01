@@ -21,6 +21,7 @@ import { randomUUID } from 'node:crypto'
 import { createServer } from 'node:http'
 
 import { ROOM_ID_WORDS } from './constants.js'
+import { generateGameText } from './gameText.js'
 import * as Room from './room.js'
 import * as Rooms from './rooms.js'
 
@@ -149,7 +150,10 @@ const updateRoomStatus =
       }),
     )
 
-const getReadyStream = Stream.succeed(Shared.GetReady.make())
+const getReadyStream = generateGameText.pipe(
+  Effect.map((text) => Shared.GetReady.make({ text })),
+  Stream.fromEffect,
+)
 
 const COUNTDOWN_SECONDS = 3
 const PLAYING_SECONDS = 30
