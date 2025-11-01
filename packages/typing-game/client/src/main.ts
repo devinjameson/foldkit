@@ -1,3 +1,5 @@
+import { KeyValueStore } from '@effect/platform'
+import { BrowserKeyValueStore } from '@effect/platform-browser'
 import * as Shared from '@typing-game/shared'
 import classNames from 'classnames'
 import { Array, Effect, Match as M, Number, Option, Schema as S, Stream, pipe } from 'effect'
@@ -55,13 +57,22 @@ const urlToAppRoute = Route.parseUrlWithFallback(routeParser, NotFoundRoute)
 
 // MODEL
 
+const ROOM_PLAYER_SESSION_KEY = 'roomPlayerSession'
+
+const RoomPlayerSession = S.Struct({
+  roomId: S.String,
+  player: Shared.Player,
+})
+type RoomPlayerSession = typeof RoomPlayerSession.Type
+
 const Model = S.Struct({
   route: AppRoute,
   usernameInput: FieldSchema(S.String),
   roomIdInput: FieldSchema(S.String),
   roomIdValidationId: S.Number,
+  roomFormError: S.Option(S.String),
   maybeRoom: S.Option(Shared.Room),
-  error: S.Option(S.String),
+  maybeSession: S.Option(RoomPlayerSession),
 })
 type Model = typeof Model.Type
 
@@ -80,12 +91,13 @@ const RoomIdValidated = ts('RoomIdValidated', {
 })
 const CreateRoomClicked = ts('CreateRoomClicked')
 const JoinRoomClicked = ts('JoinRoomClicked')
-const RoomCreated = ts('RoomCreated', { roomId: S.String })
-const RoomJoined = ts('RoomJoined', { roomId: S.String })
+const RoomCreated = ts('RoomCreated', { roomId: S.String, player: Shared.Player })
+const RoomJoined = ts('RoomJoined', { roomId: S.String, player: Shared.Player })
 const RoomError = ts('RoomError', { error: S.String })
 const RoomUpdated = ts('RoomUpdated', { room: Shared.Room })
 const RoomStreamError = ts('RoomStreamError', { error: S.String })
 const StartGameClicked = ts('StartGameClicked', { roomId: S.String })
+const SessionLoaded = ts('SessionLoaded', { session: S.Option(RoomPlayerSession) })
 
 type NoOp = typeof NoOp.Type
 type LinkClicked = typeof LinkClicked.Type
@@ -101,6 +113,7 @@ type RoomError = typeof RoomError.Type
 type RoomUpdated = typeof RoomUpdated.Type
 type RoomStreamError = typeof RoomStreamError.Type
 type StartGameClicked = typeof StartGameClicked.Type
+type SessionLoaded = typeof SessionLoaded.Type
 
 const Message = S.Union(
   NoOp,
@@ -117,22 +130,32 @@ const Message = S.Union(
   RoomUpdated,
   RoomStreamError,
   StartGameClicked,
+  SessionLoaded,
 )
 type Message = typeof Message.Type
 
 // INIT
 
-const init: Runtime.ApplicationInit<Model, Message> = (url: Url.Url) => [
-  {
-    route: urlToAppRoute(url),
-    usernameInput: Field.NotValidated({ value: '' }),
-    roomIdInput: Field.NotValidated({ value: '' }),
-    roomIdValidationId: 0,
-    maybeRoom: Option.none(),
-    error: Option.none(),
-  },
-  [],
-]
+const init: Runtime.ApplicationInit<Model, Message> = (url: Url.Url) => {
+  const route = urlToAppRoute(url)
+  const commands = M.value(route).pipe(
+    M.tag('Room', ({ roomId }) => [loadSessionFromStorage(roomId)]),
+    M.orElse(() => []),
+  )
+
+  return [
+    {
+      route,
+      usernameInput: Field.NotValidated({ value: '' }),
+      roomIdInput: Field.NotValidated({ value: '' }),
+      roomIdValidationId: 0,
+      roomFormError: Option.none(),
+      maybeRoom: Option.none(),
+      maybeSession: Option.none(),
+    },
+    commands,
+  ]
+}
 
 // FIELD VALIDATION
 
@@ -181,7 +204,7 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
       UpdateUsername: ({ value }) => [
         evo(model, {
           usernameInput: () => validateField(usernameValidations)(value),
-          error: () => Option.none(),
+          roomFormError: () => Option.none(),
         }),
         [],
       ],
@@ -194,7 +217,7 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
           return [
             evo(model, {
               roomIdValidationId: () => validationId,
-              error: () => Option.none(),
+              roomFormError: () => Option.none(),
             }),
             [validateRoomJoinable(value, validationId)],
           ]
@@ -203,7 +226,7 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
             evo(model, {
               roomIdInput: () => validateRoomIdResult,
               roomIdValidationId: () => validationId,
-              error: () => Option.none(),
+              roomFormError: () => Option.none(),
             }),
             [],
           ]
@@ -239,13 +262,29 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         return [model, [joinRoom(model.usernameInput.value, model.roomIdInput.value)]]
       },
 
-      RoomCreated: ({ roomId }) => [model, [navigateToRoom(roomId)]],
+      RoomCreated: ({ roomId, player }) => {
+        const session = { roomId, player }
+        return [
+          evo(model, {
+            maybeSession: () => Option.some(session),
+          }),
+          [navigateToRoom(roomId), savePlayerToSessionStorage(session)],
+        ]
+      },
 
-      RoomJoined: ({ roomId }) => [model, [navigateToRoom(roomId)]],
+      RoomJoined: ({ roomId, player }) => {
+        const session = { roomId, player }
+        return [
+          evo(model, {
+            maybeSession: () => Option.some(session),
+          }),
+          [navigateToRoom(roomId), savePlayerToSessionStorage(session)],
+        ]
+      },
 
       RoomError: ({ error }) => [
         evo(model, {
-          error: () => Option.some(error),
+          roomFormError: () => Option.some(error),
         }),
         [],
       ],
@@ -266,6 +305,13 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
       },
 
       StartGameClicked: ({ roomId }) => [model, [startGame(roomId)]],
+
+      SessionLoaded: ({ session }) => [
+        evo(model, {
+          maybeSession: () => session,
+        }),
+        [],
+      ],
     }),
   )
 
@@ -300,8 +346,8 @@ const validateRoomJoinable = (
 const createRoom = (username: string): Runtime.Command<RoomCreated | RoomError> =>
   Effect.gen(function* () {
     const client = yield* RoomsClient
-    const room = yield* client.createRoom({ username })
-    return RoomCreated.make({ roomId: room.id })
+    const { player, room } = yield* client.createRoom({ username })
+    return RoomCreated.make({ roomId: room.id, player })
   }).pipe(
     Effect.catchAll((error) => Effect.succeed(RoomError.make({ error: String(error) }))),
     Effect.provide(RoomsClient.Default),
@@ -310,8 +356,8 @@ const createRoom = (username: string): Runtime.Command<RoomCreated | RoomError> 
 const joinRoom = (username: string, roomId: string): Runtime.Command<RoomJoined | RoomError> =>
   Effect.gen(function* () {
     const client = yield* RoomsClient
-    const room = yield* client.joinRoom({ username, roomId })
-    return RoomJoined.make({ roomId: room.id })
+    const { player, room } = yield* client.joinRoom({ username, roomId })
+    return RoomJoined.make({ roomId: room.id, player })
   }).pipe(
     Effect.catchAll((error) => Effect.succeed(RoomError.make({ error: String(error) }))),
     Effect.provide(RoomsClient.Default),
@@ -329,6 +375,39 @@ const startGame = (roomId: string): Runtime.Command<NoOp> =>
 
 const navigateToRoom = (roomId: string): Runtime.Command<NoOp> =>
   pushUrl(roomRouter.build({ roomId })).pipe(Effect.as(NoOp.make()))
+
+const savePlayerToSessionStorage = (session: RoomPlayerSession): Runtime.Command<NoOp> =>
+  Effect.gen(function* () {
+    const store = yield* KeyValueStore.KeyValueStore
+    const encodeSession = S.encode(S.parseJson(RoomPlayerSession))
+    const sessionJson = yield* encodeSession(session)
+    yield* store.set(ROOM_PLAYER_SESSION_KEY, sessionJson)
+    return NoOp.make()
+  }).pipe(
+    Effect.catchAll(() => Effect.succeed(NoOp.make())),
+    Effect.provide(BrowserKeyValueStore.layerSessionStorage),
+  )
+
+const loadSessionFromStorage = (roomId: string): Runtime.Command<SessionLoaded> =>
+  Effect.gen(function* () {
+    const store = yield* KeyValueStore.KeyValueStore
+    const maybeSessionJson = yield* store.get(ROOM_PLAYER_SESSION_KEY)
+
+    const sessionJson = yield* maybeSessionJson
+    const decodeSession = S.decode(S.parseJson(RoomPlayerSession))
+
+    return yield* decodeSession(sessionJson).pipe(
+      Effect.map((session) =>
+        SessionLoaded.make({
+          session: session.roomId === roomId ? Option.some(session) : Option.none(),
+        }),
+      ),
+      Effect.catchAll(() => Effect.succeed(SessionLoaded.make({ session: Option.none() }))),
+    )
+  }).pipe(
+    Effect.catchAll(() => Effect.succeed(SessionLoaded.make({ session: Option.none() }))),
+    Effect.provide(BrowserKeyValueStore.layerSessionStorage),
+  )
 
 // COMMAND STREAM
 
@@ -495,7 +574,7 @@ const homeView = (model: Model): Html => {
                   ),
                 ],
               ),
-              Option.match(model.error, {
+              Option.match(model.roomFormError, {
                 onNone: () => empty,
                 onSome: (errorMessage) =>
                   div(
@@ -511,7 +590,32 @@ const homeView = (model: Model): Html => {
   )
 }
 
-const maybeRoomView = (maybeRoom: Option.Option<Shared.Room>): Html =>
+const isLocalPlayer = (
+  player: Shared.Player,
+  maybeSession: Option.Option<RoomPlayerSession>,
+): boolean => Option.exists(maybeSession, (session) => session.player.id === player.id)
+
+const playerView = (
+  players: ReadonlyArray<Shared.Player>,
+  maybeSession: Option.Option<RoomPlayerSession>,
+): Html[] =>
+  Array.map(players, (player) => {
+    const isLocal = isLocalPlayer(player, maybeSession)
+
+    return div(
+      [
+        Class(
+          classNames('p-3 rounded', {
+            'bg-gray-200': !isLocal,
+            'bg-green-200': isLocal,
+          }),
+        ),
+      ],
+      [span([Class('font-medium')], [player.username])],
+    )
+  })
+
+const maybeRoomView = ({ maybeRoom, maybeSession }: Model): Html =>
   Option.match(maybeRoom, {
     onNone: () => div([Class('text-gray-600')], ['Loading room...']),
     onSome: (room: Shared.Room) =>
@@ -522,15 +626,7 @@ const maybeRoomView = (maybeRoom: Option.Option<Shared.Room>): Html =>
               [Class('space-y-8')],
               [
                 h2([Class('text-xl font-semibold text-gray-700 mb-4')], ['Players']),
-                div(
-                  [Class('space-y-2')],
-                  Array.map(room.players, (player) =>
-                    div(
-                      [Class('p-3 bg-gray-50 rounded border border-gray-200')],
-                      [span([Class('font-medium')], [player.username])],
-                    ),
-                  ),
-                ),
+                div([Class('space-y-2')], playerView(room.players, maybeSession)),
                 button(
                   [
                     Type('button'),
@@ -562,7 +658,7 @@ const roomRouteView = (model: Model, roomId: string): Html =>
         [Class('bg-white rounded-lg p-8 max-w-4xl w-full')],
         [
           h1([Class('text-2xl font-bold text-gray-800 mb-6')], ['Room: ', roomId]),
-          maybeRoomView(model.maybeRoom),
+          maybeRoomView(model),
         ],
       ),
     ],

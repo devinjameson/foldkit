@@ -38,99 +38,104 @@ const RoomLive = Shared.RoomRpcs.toLayer(
     const roomsRef = yield* RoomsStore
 
     return {
-      createRoom: ({ username }) =>
-        Effect.gen(function* () {
-          const id = yield* Room.generateUniqueId(ROOM_ID_WORDS)
-          const playerId = yield* Effect.sync(() => randomUUID())
-          const player: Shared.Player = {
-            id: playerId,
-            username,
-            position: 0,
-            wpm: 0,
-            accuracy: 0,
-            isReady: false,
-          }
-
-          const createdAt = yield* Clock.currentTimeMillis
-
-          const newRoom: Shared.Room = {
-            id,
-            players: [player],
-            status: Shared.Waiting.make({}),
-            createdAt,
-          }
-
-          yield* SubscriptionRef.update(roomsRef, (rooms) =>
-            HashMap.set(rooms, newRoom.id, newRoom),
-          )
-
-          return newRoom
-        }),
-
-      joinRoom: ({ username, roomId }) =>
-        Effect.gen(function* () {
-          const playerId = yield* Effect.sync(() => randomUUID())
-          const newPlayer: Shared.Player = {
-            id: playerId,
-            username,
-            position: 0,
-            wpm: 0,
-            accuracy: 0,
-            isReady: false,
-          }
-
-          return yield* SubscriptionRef.modifyEffect(roomsRef, (rooms) =>
-            Rooms.getById(rooms, roomId).pipe(
-              Effect.map((room) => {
-                const updatedRoom = Struct.evolve(room, {
-                  players: (players) => Array.append(players, newPlayer),
-                })
-                return [updatedRoom, HashMap.set(rooms, roomId, updatedRoom)] as const
-              }),
-            ),
-          )
-        }),
-
-      getRoomById: ({ roomId }) =>
-        Effect.gen(function* () {
-          const rooms = yield* SubscriptionRef.get(roomsRef)
-          return yield* Rooms.getById(rooms, roomId)
-        }),
-
-      subscribeToRoom: ({ roomId }) =>
-        // TODO: Add playerId to payload and verify player is in room before allowing subscription
-        // TODO: On stream interruption (browser close, network drop), remove player from room
-        // Currently players stay in room forever after disconnect
-        // TODO: On browser refresh, player loses their playerId but stays in room on server
-        // Need to either persist playerId in localStorage or implement rejoin logic
-        roomsRef.changes.pipe(
-          Stream.mapEffect((rooms) =>
-            HashMap.get(rooms, roomId).pipe(
-              Effect.mapError(() => new Shared.RoomNotFoundError({ roomId })),
-            ),
-          ),
-          Stream.throttle({
-            cost: () => 1,
-            duration: Duration.millis(100),
-            units: 1,
-          }),
-        ),
-
-      startGame: ({ roomId }) => {
-        return gameSequence.pipe(
-          Stream.mapEffect((status) =>
-            // TODO: Understand this because this is cool how this is a fire and
-            // forget for updating the room sref instead of waiting for it
-            updateRoomStatus(roomsRef, roomId)(status).pipe(Effect.fork, Effect.asVoid),
-          ),
-          Stream.runDrain,
-          Effect.forkDaemon,
-          Effect.asVoid,
-        )
-      },
+      createRoom: ({ username }) => createRoomHandler(roomsRef, username),
+      joinRoom: ({ username, roomId }) => joinRoomHandler(roomsRef, username, roomId),
+      getRoomById: ({ roomId }) => getRoomByIdHandler(roomsRef, roomId),
+      subscribeToRoom: ({ roomId }) => subscribeToRoomHandler(roomsRef, roomId),
+      startGame: ({ roomId }) => startGameHandler(roomsRef, roomId),
     }
   }),
 ).pipe(Layer.provide(RoomsStoreLive))
+
+const createRoomHandler = (
+  roomsRef: SubscriptionRef.SubscriptionRef<Shared.Rooms>,
+  username: string,
+) =>
+  Effect.gen(function* () {
+    const roomId = yield* Room.generateUniqueId(ROOM_ID_WORDS)
+    const playerId = yield* Effect.sync(() => randomUUID())
+
+    const player: Shared.Player = {
+      id: playerId,
+      username,
+    }
+
+    const createdAt = yield* Clock.currentTimeMillis
+
+    const newRoom: Shared.Room = {
+      id: roomId,
+      players: [player],
+      status: Shared.Waiting.make({}),
+      createdAt,
+    }
+
+    yield* SubscriptionRef.update(roomsRef, (rooms) => HashMap.set(rooms, newRoom.id, newRoom))
+
+    return { player, room: newRoom }
+  })
+
+const joinRoomHandler = (
+  roomsRef: SubscriptionRef.SubscriptionRef<Shared.Rooms>,
+  username: string,
+  roomId: string,
+) =>
+  Effect.gen(function* () {
+    const playerId = yield* Effect.sync(() => randomUUID())
+
+    const player: Shared.Player = {
+      id: playerId,
+      username,
+    }
+
+    const room = yield* SubscriptionRef.modifyEffect(roomsRef, (rooms) =>
+      Rooms.getById(rooms, roomId).pipe(
+        Effect.map((room) => {
+          const updatedRoom = Struct.evolve(room, {
+            players: (players) => Array.append(players, player),
+          })
+          return [updatedRoom, HashMap.set(rooms, roomId, updatedRoom)] as const
+        }),
+      ),
+    )
+
+    return { player, room }
+  })
+
+const getRoomByIdHandler = (
+  roomsRef: SubscriptionRef.SubscriptionRef<Shared.Rooms>,
+  roomId: string,
+) =>
+  Effect.gen(function* () {
+    const rooms = yield* SubscriptionRef.get(roomsRef)
+    return yield* Rooms.getById(rooms, roomId)
+  })
+
+const subscribeToRoomHandler = (
+  roomsRef: SubscriptionRef.SubscriptionRef<Shared.Rooms>,
+  roomId: string,
+) =>
+  roomsRef.changes.pipe(
+    Stream.mapEffect((rooms) =>
+      HashMap.get(rooms, roomId).pipe(
+        Effect.mapError(() => new Shared.RoomNotFoundError({ roomId })),
+      ),
+    ),
+    Stream.throttle({
+      cost: () => 1,
+      duration: Duration.millis(100),
+      units: 1,
+    }),
+  )
+
+const startGameHandler = (
+  roomsRef: SubscriptionRef.SubscriptionRef<Shared.Rooms>,
+  roomId: string,
+) =>
+  gameSequence.pipe(
+    Stream.mapEffect(updateRoomStatus(roomsRef, roomId), { concurrency: 'unbounded' }),
+    Stream.runDrain,
+    Effect.forkDaemon,
+  )
 
 const updateRoomStatus =
   (roomsRef: SubscriptionRef.SubscriptionRef<Shared.Rooms>, roomId: string) =>
