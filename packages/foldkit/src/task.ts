@@ -70,6 +70,8 @@ export const getZonedTimeIn = <Message>(
 /**
  * Creates a command that focuses an element by selector and passes the result to a message constructor.
  * Returns true if the element was found and focused, false otherwise.
+ * Uses requestAnimationFrame to ensure the DOM tree is updated and nodes exist before attempting to focus.
+ * This follows the same approach as Elm's Browser.Dom.focus.
  *
  * @example
  * ```typescript
@@ -80,13 +82,16 @@ export const focus = <Message>(
   selector: string,
   f: (success: boolean) => Message,
 ): Effect.Effect<Message> =>
-  Effect.sync(() => {
-    const element = document.querySelector(selector)
-    if (element instanceof HTMLElement) {
-      element.focus()
-      return f(true)
-    }
-    return f(false)
+  Effect.async<Message>((resume) => {
+    requestAnimationFrame(() => {
+      const element = document.querySelector(selector)
+      if (element instanceof HTMLElement) {
+        element.focus()
+        resume(Effect.succeed(f(true)))
+      } else {
+        resume(Effect.succeed(f(false)))
+      }
+    })
   })
 
 /**

@@ -209,16 +209,16 @@ const makeRuntime =
 
           const [nextModel, commands] = update(currentModel, message)
 
-          yield* Effect.forEach(commands, (command) =>
-            Effect.forkDaemon(command.pipe(Effect.flatMap(enqueueMessage))),
-          )
-
           if (!modelEquivalence(currentModel, nextModel)) {
             yield* Ref.set(modelRef, nextModel)
             yield* render(nextModel)
             yield* SubscriptionRef.set(modelSubscriptionRef, nextModel)
             preserveModel(nextModel)
           }
+
+          yield* Effect.forEach(commands, (command) =>
+            Effect.forkDaemon(command.pipe(Effect.flatMap(enqueueMessage))),
+          )
         }),
       )
     })
