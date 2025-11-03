@@ -2,7 +2,18 @@ import { KeyValueStore } from '@effect/platform'
 import { BrowserKeyValueStore } from '@effect/platform-browser'
 import * as Shared from '@typing-game/shared'
 import classNames from 'classnames'
-import { Array, Effect, Match as M, Number, Option, Schema as S, Stream, pipe } from 'effect'
+import {
+  Array,
+  Effect,
+  Equal,
+  Match as M,
+  Number,
+  Option,
+  Schema as S,
+  String as Str,
+  Stream,
+  pipe,
+} from 'effect'
 import { FieldValidation, Route, Runtime, Task, Url } from 'foldkit'
 import { Field, FieldSchema, Validation, validateField } from 'foldkit/fieldValidation'
 import {
@@ -73,12 +84,13 @@ const Model = S.Struct({
   route: AppRoute,
   usernameInput: FieldSchema(S.String),
   roomIdInput: FieldSchema(S.String),
-  roomIdValidationId: S.Number,
+  roomIdValidationId: S.Positive,
   roomFormError: S.Option(S.String),
   maybeRoom: S.Option(Shared.Room),
   maybeSession: S.Option(RoomPlayerSession),
   maybeGameText: S.Option(S.String),
   userText: S.String,
+  maybeWrongCharacterIndex: S.Option(S.Positive),
 })
 type Model = typeof Model.Type
 
@@ -163,6 +175,7 @@ const init: Runtime.ApplicationInit<Model, Message> = (url: Url.Url) => {
       maybeSession: Option.none(),
       maybeGameText: Option.none(),
       userText: '',
+      maybeWrongCharacterIndex: Option.none(),
     },
     commands,
   ]
@@ -339,12 +352,38 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         [],
       ],
 
-      UserTextInputted: ({ value }) => [
-        evo(model, {
-          userText: () => value,
-        }),
-        [],
-      ],
+      UserTextInputted: ({ value }) => {
+        const userTextLength = Str.length(value)
+        const userTextLastCharacterIndex = userTextLength - 1
+        const maybeUserTextLastCharacter = Str.at(value, userTextLastCharacterIndex)
+
+        const maybeGameTextCharacterAtIndex = model.maybeGameText.pipe(
+          Option.flatMap(Str.at(userTextLastCharacterIndex)),
+        )
+
+        const [nextUserText, maybeWrongCharacterIndex]: [string, Option.Option<number>] =
+          Option.match(maybeUserTextLastCharacter, {
+            onNone: () => ['', Option.none()],
+            onSome: (userTextLastCharacter) =>
+              maybeGameTextCharacterAtIndex.pipe(
+                Option.match({
+                  onNone: () => [model.userText, Option.none()],
+                  onSome: (gameTextCharacterAtIndex) =>
+                    gameTextCharacterAtIndex === userTextLastCharacter
+                      ? [value, Option.none()]
+                      : [model.userText, Option.some(userTextLastCharacterIndex)],
+                }),
+              ),
+          })
+
+        return [
+          evo(model, {
+            userText: () => nextUserText,
+            maybeWrongCharacterIndex: () => maybeWrongCharacterIndex,
+          }),
+          [],
+        ]
+      },
     }),
   )
 
@@ -652,7 +691,13 @@ const playerView = (
     )
   })
 
-const maybeRoomView = ({ maybeRoom, maybeSession, maybeGameText, userText }: Model): Html =>
+const maybeRoomView = ({
+  maybeRoom,
+  maybeSession,
+  maybeGameText,
+  userText,
+  maybeWrongCharacterIndex,
+}: Model): Html =>
   Option.match(maybeRoom, {
     onNone: () => div([Class('text-gray-600')], ['Loading room...']),
     onSome: (room: Shared.Room) =>
@@ -698,7 +743,8 @@ const maybeRoomView = ({ maybeRoom, maybeSession, maybeGameText, userText }: Mod
                 }),
               ],
             ),
-          Playing: ({ secondsLeft }) => playingView(secondsLeft, maybeGameText, userText),
+          Playing: ({ secondsLeft }) =>
+            playingView(secondsLeft, maybeGameText, userText, maybeWrongCharacterIndex),
           Finished: () => div([Class('text-gray-600')], ['Game finished.']),
         }),
       ),
@@ -708,6 +754,7 @@ const playingView = (
   secondsLeft: number,
   maybeGameText: Option.Option<string>,
   userText: string,
+  maybeWrongCharacterIndex: Option.Option<number>,
 ): Html =>
   div(
     [Class('space-y-8')],
@@ -715,12 +762,16 @@ const playingView = (
       div([Class('text-gray-600')], [`Time left: ${secondsLeft}`]),
       Option.match(maybeGameText, {
         onNone: () => empty,
-        onSome: (gameText) => typingView(gameText, userText),
+        onSome: (gameText) => typingView(gameText, userText, maybeWrongCharacterIndex),
       }),
     ],
   )
 
-const typingView = (text: string, userText: string): Html =>
+const typingView = (
+  gameText: string,
+  userText: string,
+  maybeWrongCharacterIndex: Option.Option<number>,
+): Html =>
   div(
     [Class('space-y-4')],
     [
@@ -731,9 +782,34 @@ const typingView = (text: string, userText: string): Html =>
         onInput: (value) => UserTextInputted.make({ value }),
         type: 'textarea',
       }),
-      div([Class('p-4 bg-gray-100 rounded font-mono text-gray-700')], [text]),
+      fooText(gameText, userText, maybeWrongCharacterIndex),
     ],
   )
+
+// CLAUDE: Idk what to name this function
+const fooText = (
+  gameText: string,
+  userText: string,
+  maybeWrongCharacterIndex: Option.Option<number>,
+): Html =>
+  div(
+    [Class('p-4 bg-gray-100 rounded font-mono')],
+    pipe(gameText, Str.split(''), Array.map(characterView(userText, maybeWrongCharacterIndex))),
+  )
+
+const characterView =
+  (userText: string, maybeWrongCharacterIndex: Option.Option<number>) =>
+  (character: string, index: number): Html => {
+    const userTextLength = Str.length(userText)
+
+    const characterClassName = classNames({
+      'text-gray-700': index > userTextLength,
+      'text-green-500': index < userTextLength,
+      'text-red-500 underline': Option.exists(maybeWrongCharacterIndex, Equal.equals(index)),
+    })
+
+    return span([Class(characterClassName)], [character])
+  }
 
 const roomRouteView = (model: Model, roomId: string): Html =>
   div(

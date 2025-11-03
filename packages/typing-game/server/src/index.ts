@@ -156,7 +156,7 @@ const getReadyStream = generateGameText.pipe(
 )
 
 const COUNTDOWN_SECONDS = 3
-const PLAYING_SECONDS = 30
+const PLAYING_SECONDS = 300
 
 const descendingRange = (top: number, bottom: number) =>
   pipe(Array.range(bottom, top), Array.reverse)
