@@ -3,11 +3,13 @@ import {
   Context,
   Effect,
   Either,
+  Function,
   Option,
   Predicate,
   Queue,
   Record,
   Ref,
+  Runtime,
   Schema,
   Stream,
   SubscriptionRef,
@@ -24,7 +26,8 @@ import { UrlRequest } from './urlRequest'
 export class Dispatch extends Context.Tag('@foldkit/Dispatch')<
   Dispatch,
   {
-    readonly dispatch: (message: unknown) => Effect.Effect<void>
+    readonly dispatchAsync: (message: unknown) => Effect.Effect<void>
+    readonly dispatchSync: (message: unknown) => void
   }
 >() {}
 
@@ -182,6 +185,43 @@ const makeRuntime =
         )
       }
 
+      const maybeRuntimeRef = yield* Ref.make<Option.Option<Runtime.Runtime<never>>>(Option.none())
+
+      const processMessage = (message: Message): Effect.Effect<void> =>
+        Effect.gen(function* () {
+          const currentModel = yield* Ref.get(modelRef)
+
+          const [nextModel, commands] = update(currentModel, message)
+
+          yield* Ref.set(modelRef, nextModel)
+          yield* render(nextModel)
+
+          if (!modelEquivalence(currentModel, nextModel)) {
+            yield* SubscriptionRef.set(modelSubscriptionRef, nextModel)
+            preserveModel(nextModel)
+          }
+
+          yield* Effect.forEach(commands, (command) =>
+            Effect.forkDaemon(command.pipe(Effect.flatMap(enqueueMessage))),
+          )
+        })
+
+      const dispatchSync = (message: unknown): void => {
+        const maybeRuntime = Ref.get(maybeRuntimeRef).pipe(Effect.runSync)
+
+        Option.match(maybeRuntime, {
+          onNone: Function.constVoid,
+          onSome: (runtime) => {
+            /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+            Runtime.runSync(runtime)(processMessage(message as Message))
+          },
+        })
+      }
+
+      const dispatchAsync = (message: unknown): Effect.Effect<void> =>
+        /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+        enqueueMessage(message as Message)
+
       const render = (model: Model) =>
         view(model).pipe(
           Effect.flatMap((nextVNodeNullish) =>
@@ -194,31 +234,20 @@ const makeRuntime =
             }),
           ),
           Effect.provideService(Dispatch, {
-            /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-            dispatch: (message: unknown) => enqueueMessage(message as Message),
+            dispatchAsync,
+            dispatchSync,
           }),
         )
 
       yield* render(initModel)
 
+      const runtime = yield* Effect.runtime()
+      yield* Ref.set(maybeRuntimeRef, Option.some(runtime))
+
       yield* Effect.forever(
         Effect.gen(function* () {
           const message = yield* Queue.take(messageQueue)
-
-          const currentModel = yield* Ref.get(modelRef)
-
-          const [nextModel, commands] = update(currentModel, message)
-
-          if (!modelEquivalence(currentModel, nextModel)) {
-            yield* Ref.set(modelRef, nextModel)
-            yield* render(nextModel)
-            yield* SubscriptionRef.set(modelSubscriptionRef, nextModel)
-            preserveModel(nextModel)
-          }
-
-          yield* Effect.forEach(commands, (command) =>
-            Effect.forkDaemon(command.pipe(Effect.flatMap(enqueueMessage))),
-          )
+          yield* processMessage(message)
         }),
       )
     })

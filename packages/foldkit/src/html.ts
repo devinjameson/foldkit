@@ -551,7 +551,7 @@ const buildVNodeData = <Message>(
   attributes: ReadonlyArray<Attribute<Message>>,
 ): Effect.Effect<VNodeData, never, Dispatch> =>
   Effect.gen(function* () {
-    const { dispatch } = yield* Dispatch
+    const { dispatchSync } = yield* Dispatch
     const dataRef = yield* Ref.make<VNodeData>({})
 
     const setData = <K extends keyof VNodeData>(key: K, value: VNodeData[K]) =>
@@ -566,6 +566,24 @@ const buildVNodeData = <Message>(
     const updateDataProps = (props: Props) => updateData('props', props)
     const updateDataOn = (on: On) => updateData('on', on)
     const updateDataAttrs = (attrs: Attrs) => updateData('attrs', attrs)
+
+    const updatePropsWithPostpatch = <K extends string>(propName: K, value: unknown) =>
+      Ref.update(dataRef, (data) => ({
+        ...data,
+        props: {
+          ...data.props,
+          [propName]: value,
+        },
+        hook: {
+          ...data.hook,
+          postpatch: (_oldVnode, vnode) => {
+            if (vnode.elm) {
+              /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+              ;(vnode.elm as any)[propName] = value
+            }
+          },
+        },
+      }))
 
     yield* Effect.forEach(attributes, (attr) =>
       Match.value(attr).pipe(
@@ -589,106 +607,106 @@ const buildVNodeData = <Message>(
           Hidden: ({ value }) => updateDataProps({ hidden: value }),
           OnClick: ({ message }) =>
             updateDataOn({
-              click: () => Effect.runSync(dispatch(message)),
+              click: () => dispatchSync(message),
             }),
           OnDblClick: ({ message }) =>
             updateDataOn({
-              dblclick: () => Effect.runSync(dispatch(message)),
+              dblclick: () => dispatchSync(message),
             }),
           OnMouseDown: ({ message }) =>
             updateDataOn({
-              mousedown: () => Effect.runSync(dispatch(message)),
+              mousedown: () => dispatchSync(message),
             }),
           OnMouseUp: ({ message }) =>
             updateDataOn({
-              mouseup: () => Effect.runSync(dispatch(message)),
+              mouseup: () => dispatchSync(message),
             }),
           OnMouseEnter: ({ message }) =>
             updateDataOn({
-              mouseenter: () => Effect.runSync(dispatch(message)),
+              mouseenter: () => dispatchSync(message),
             }),
           OnMouseLeave: ({ message }) =>
             updateDataOn({
-              mouseleave: () => Effect.runSync(dispatch(message)),
+              mouseleave: () => dispatchSync(message),
             }),
           OnMouseOver: ({ message }) =>
             updateDataOn({
-              mouseover: () => Effect.runSync(dispatch(message)),
+              mouseover: () => dispatchSync(message),
             }),
           OnMouseOut: ({ message }) =>
             updateDataOn({
-              mouseout: () => Effect.runSync(dispatch(message)),
+              mouseout: () => dispatchSync(message),
             }),
           OnMouseMove: ({ message }) =>
             updateDataOn({
-              mousemove: () => Effect.runSync(dispatch(message)),
+              mousemove: () => dispatchSync(message),
             }),
           OnKeyDown: ({ f }) =>
             updateDataOn({
-              keydown: ({ key }: KeyboardEvent) => Effect.runSync(dispatch(f(key))),
+              keydown: ({ key }: KeyboardEvent) => dispatchSync(f(key)),
             }),
           OnKeyUp: ({ f }) =>
             updateDataOn({
-              keyup: ({ key }: KeyboardEvent) => Effect.runSync(dispatch(f(key))),
+              keyup: ({ key }: KeyboardEvent) => dispatchSync(f(key)),
             }),
           OnKeyPress: ({ f }) =>
             updateDataOn({
-              keypress: ({ key }: KeyboardEvent) => Effect.runSync(dispatch(f(key))),
+              keypress: ({ key }: KeyboardEvent) => dispatchSync(f(key)),
             }),
           OnFocus: ({ message }) =>
             updateDataOn({
-              focus: () => Effect.runSync(dispatch(message)),
+              focus: () => dispatchSync(message),
             }),
           OnBlur: ({ message }) =>
             updateDataOn({
-              blur: () => Effect.runSync(dispatch(message)),
+              blur: () => dispatchSync(message),
             }),
           OnInput: ({ f }) =>
             updateDataOn({
               input: (event: Event) =>
                 /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-                Effect.runSync(dispatch(f((event.target as HTMLInputElement).value))),
+                dispatchSync(f((event.target as HTMLInputElement).value)),
             }),
           OnChange: ({ f }) =>
             updateDataOn({
               change: (event: Event) =>
                 /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-                Effect.runSync(dispatch(f((event.target as HTMLInputElement).value))),
+                dispatchSync(f((event.target as HTMLInputElement).value)),
             }),
           OnSubmit: ({ message }) =>
             updateDataOn({
               submit: (event: Event) => {
                 event.preventDefault()
-                Effect.runSync(dispatch(message))
+                dispatchSync(message)
               },
             }),
           OnReset: ({ message }) =>
             updateDataOn({
-              reset: () => Effect.runSync(dispatch(message)),
+              reset: () => dispatchSync(message),
             }),
           OnScroll: ({ message }) =>
             updateDataOn({
-              scroll: () => Effect.runSync(dispatch(message)),
+              scroll: () => dispatchSync(message),
             }),
           OnWheel: ({ message }) =>
             updateDataOn({
-              wheel: () => Effect.runSync(dispatch(message)),
+              wheel: () => dispatchSync(message),
             }),
           OnCopy: ({ message }) =>
             updateDataOn({
-              copy: () => Effect.runSync(dispatch(message)),
+              copy: () => dispatchSync(message),
             }),
           OnCut: ({ message }) =>
             updateDataOn({
-              cut: () => Effect.runSync(dispatch(message)),
+              cut: () => dispatchSync(message),
             }),
           OnPaste: ({ message }) =>
             updateDataOn({
-              paste: () => Effect.runSync(dispatch(message)),
+              paste: () => dispatchSync(message),
             }),
-          Value: ({ value }) => updateDataProps({ value: value }),
-          Checked: ({ value }) => updateDataProps({ checked: value }),
-          Selected: ({ value }) => updateDataProps({ selected: value }),
+          Value: ({ value }) => updatePropsWithPostpatch('value', value),
+          Checked: ({ value }) => updatePropsWithPostpatch('checked', value),
+          Selected: ({ value }) => updatePropsWithPostpatch('selected', value),
           Placeholder: ({ value }) => updateDataProps({ placeholder: value }),
           Name: ({ value }) => updateDataProps({ name: value }),
           Disabled: ({ value }) => updateDataProps({ disabled: value }),
