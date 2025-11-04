@@ -9,6 +9,7 @@ import {
   Match as M,
   Number,
   Option,
+  Order,
   Schema as S,
   String as Str,
   Stream,
@@ -90,7 +91,7 @@ const Model = S.Struct({
   maybeSession: S.Option(RoomPlayerSession),
   maybeGameText: S.Option(S.String),
   userText: S.String,
-  maybeWrongCharacterIndex: S.Option(S.Positive),
+  maybeWrongCharIndex: S.Option(S.Positive),
 })
 type Model = typeof Model.Type
 
@@ -175,7 +176,7 @@ const init: Runtime.ApplicationInit<Model, Message> = (url: Url.Url) => {
       maybeSession: Option.none(),
       maybeGameText: Option.none(),
       userText: '',
-      maybeWrongCharacterIndex: Option.none(),
+      maybeWrongCharIndex: Option.none(),
     },
     commands,
   ]
@@ -195,6 +196,46 @@ const isEveryFieldValid = (fields: ReadonlyArray<Field<unknown>>): boolean =>
 
 const isAnyFieldNotValid = (fields: ReadonlyArray<Field<unknown>>): boolean =>
   Array.some(fields, (field) => !Field.$is('Valid')(field))
+
+const MAX_WRONG_CHARS = 5
+
+const toNonEmptyStringOption = Option.liftPredicate(Str.isNonEmpty)
+
+const validateUserTextInput = (
+  newUserText: string,
+  maybeGameText: Option.Option<string>,
+): { userText: string; maybeWrongCharIndex: Option.Option<number> } =>
+  Effect.gen(function* () {
+    yield* toNonEmptyStringOption(newUserText)
+    const gameText = yield* maybeGameText
+    const firstWrongIndex = yield* findFirstWrongCharIndex(newUserText, gameText)
+
+    const wrongCharCount = Str.length(newUserText) - firstWrongIndex
+    const exceedsMaxWrongChars = wrongCharCount > MAX_WRONG_CHARS
+
+    const userText = exceedsMaxWrongChars
+      ? Str.slice(0, firstWrongIndex + MAX_WRONG_CHARS)(newUserText)
+      : newUserText
+
+    return {
+      userText,
+      maybeWrongCharIndex: Option.some(firstWrongIndex),
+    }
+  }).pipe(
+    Effect.catchAll(() =>
+      Effect.succeed({ userText: newUserText, maybeWrongCharIndex: Option.none() }),
+    ),
+    Effect.runSync,
+  )
+
+const findFirstWrongCharIndex = (userText: string, gameText: string): Option.Option<number> =>
+  pipe(
+    userText,
+    Str.split(''),
+    Array.findFirstIndex((char, index) =>
+      pipe(gameText, Str.at(index), Option.exists(Equal.equals(char))),
+    ),
+  )
 
 // UPDATE
 
@@ -353,33 +394,12 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
       ],
 
       UserTextInputted: ({ value }) => {
-        const userTextLength = Str.length(value)
-        const userTextLastCharacterIndex = userTextLength - 1
-        const maybeUserTextLastCharacter = Str.at(value, userTextLastCharacterIndex)
-
-        const maybeGameTextCharacterAtIndex = model.maybeGameText.pipe(
-          Option.flatMap(Str.at(userTextLastCharacterIndex)),
-        )
-
-        const [nextUserText, maybeWrongCharacterIndex]: [string, Option.Option<number>] =
-          Option.match(maybeUserTextLastCharacter, {
-            onNone: () => ['', Option.none()],
-            onSome: (userTextLastCharacter) =>
-              maybeGameTextCharacterAtIndex.pipe(
-                Option.match({
-                  onNone: () => [model.userText, Option.none()],
-                  onSome: (gameTextCharacterAtIndex) =>
-                    gameTextCharacterAtIndex === userTextLastCharacter
-                      ? [value, Option.none()]
-                      : [model.userText, Option.some(userTextLastCharacterIndex)],
-                }),
-              ),
-          })
+        const { userText, maybeWrongCharIndex } = validateUserTextInput(value, model.maybeGameText)
 
         return [
           evo(model, {
-            userText: () => nextUserText,
-            maybeWrongCharacterIndex: () => maybeWrongCharacterIndex,
+            userText: () => userText,
+            maybeWrongCharIndex: () => maybeWrongCharIndex,
           }),
           [],
         ]
@@ -696,7 +716,7 @@ const maybeRoomView = ({
   maybeSession,
   maybeGameText,
   userText,
-  maybeWrongCharacterIndex,
+  maybeWrongCharIndex,
 }: Model): Html =>
   Option.match(maybeRoom, {
     onNone: () => div([Class('text-gray-600')], ['Loading room...']),
@@ -744,7 +764,7 @@ const maybeRoomView = ({
               ],
             ),
           Playing: ({ secondsLeft }) =>
-            playingView(secondsLeft, maybeGameText, userText, maybeWrongCharacterIndex),
+            playingView(secondsLeft, maybeGameText, userText, maybeWrongCharIndex),
           Finished: () => div([Class('text-gray-600')], ['Game finished.']),
         }),
       ),
@@ -754,7 +774,7 @@ const playingView = (
   secondsLeft: number,
   maybeGameText: Option.Option<string>,
   userText: string,
-  maybeWrongCharacterIndex: Option.Option<number>,
+  maybeWrongCharIndex: Option.Option<number>,
 ): Html =>
   div(
     [Class('space-y-8')],
@@ -762,7 +782,7 @@ const playingView = (
       div([Class('text-gray-600')], [`Time left: ${secondsLeft}`]),
       Option.match(maybeGameText, {
         onNone: () => empty,
-        onSome: (gameText) => typingView(gameText, userText, maybeWrongCharacterIndex),
+        onSome: (gameText) => typingView(gameText, userText, maybeWrongCharIndex),
       }),
     ],
   )
@@ -770,7 +790,7 @@ const playingView = (
 const typingView = (
   gameText: string,
   userText: string,
-  maybeWrongCharacterIndex: Option.Option<number>,
+  maybeWrongCharIndex: Option.Option<number>,
 ): Html =>
   div(
     [Class('space-y-4')],
@@ -781,34 +801,41 @@ const typingView = (
         field: Field.NotValidated({ value: userText }),
         onInput: (value) => UserTextInputted.make({ value }),
         type: 'textarea',
+        containerClassName: 'absolute opacity-0 pointer-events-none',
       }),
-      fooText(gameText, userText, maybeWrongCharacterIndex),
+      gameTextWithProgress(gameText, userText, maybeWrongCharIndex),
     ],
   )
 
-// CLAUDE: Idk what to name this function
-const fooText = (
+const gameTextWithProgress = (
   gameText: string,
   userText: string,
-  maybeWrongCharacterIndex: Option.Option<number>,
+  maybeWrongCharIndex: Option.Option<number>,
 ): Html =>
   div(
     [Class('p-4 bg-gray-100 rounded font-mono')],
-    pipe(gameText, Str.split(''), Array.map(characterView(userText, maybeWrongCharacterIndex))),
+    pipe(gameText, Str.split(''), Array.map(charView(userText, maybeWrongCharIndex))),
   )
 
-const characterView =
-  (userText: string, maybeWrongCharacterIndex: Option.Option<number>) =>
-  (character: string, index: number): Html => {
+const charView =
+  (userText: string, maybeWrongCharIndex: Option.Option<number>) =>
+  (char: string, index: number): Html => {
     const userTextLength = Str.length(userText)
 
-    const characterClassName = classNames({
-      'text-gray-700': index > userTextLength,
-      'text-green-500': index < userTextLength,
-      'text-red-500 underline': Option.exists(maybeWrongCharacterIndex, Equal.equals(index)),
+    const isWrongChar = Option.exists(maybeWrongCharIndex, (wrongIndex) =>
+      Order.between(Number.Order)(index, { minimum: wrongIndex, maximum: userTextLength - 1 }),
+    )
+
+    const isNextChar = index === userTextLength && Option.isNone(maybeWrongCharIndex)
+
+    const charClassName = classNames({
+      'text-gray-700': index >= userTextLength,
+      'text-green-500': index < userTextLength && !isWrongChar,
+      'text-red-500 underline': isWrongChar,
+      underline: isNextChar,
     })
 
-    return span([Class(characterClassName)], [character])
+    return span([Class(charClassName)], [char])
   }
 
 const roomRouteView = (model: Model, roomId: string): Html =>
