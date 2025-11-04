@@ -116,13 +116,13 @@ const JoinRoomClicked = ts('JoinRoomClicked')
 const RoomCreated = ts('RoomCreated', { roomId: S.String, player: Shared.Player })
 const RoomJoined = ts('RoomJoined', { roomId: S.String, player: Shared.Player })
 const RoomError = ts('RoomError', { error: S.String })
-const RoomUpdated = ts('RoomUpdated', { room: Shared.Room })
+const RoomUpdated = ts('RoomUpdated', {
+  room: Shared.Room,
+  maybePlayerProgress: S.Option(Shared.PlayerProgress),
+})
 const RoomStreamError = ts('RoomStreamError', { error: S.String })
 const StartGameClicked = ts('StartGameClicked', { roomId: S.String })
 const SessionLoaded = ts('SessionLoaded', { maybeSession: S.Option(RoomPlayerSession) })
-const PlayerProgressLoaded = ts('PlayerProgressLoaded', {
-  progress: S.Option(Shared.PlayerProgress),
-})
 const GameTextClicked = ts('GameTextClicked')
 const UserTextInputFocused = ts('UserTextInputFocused')
 const UserTextInputBlurred = ts('UserTextInputBlurred')
@@ -143,7 +143,6 @@ type RoomUpdated = typeof RoomUpdated.Type
 type RoomStreamError = typeof RoomStreamError.Type
 type StartGameClicked = typeof StartGameClicked.Type
 type SessionLoaded = typeof SessionLoaded.Type
-type PlayerProgressLoaded = typeof PlayerProgressLoaded.Type
 type GameTextClicked = typeof GameTextClicked.Type
 type UserTextInputFocused = typeof UserTextInputFocused.Type
 type UserTextInputBlurred = typeof UserTextInputBlurred.Type
@@ -165,7 +164,6 @@ const Message = S.Union(
   RoomStreamError,
   StartGameClicked,
   SessionLoaded,
-  PlayerProgressLoaded,
   GameTextClicked,
   UserTextInputFocused,
   UserTextInputBlurred,
@@ -366,28 +364,37 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         [],
       ],
 
-      RoomUpdated: ({ room }) => {
-        const isPlaying = room.status._tag === 'Playing'
-        const wasPlaying = Option.exists(model.maybeRoom, ({ status }) => status._tag === 'Playing')
-        const gameJustStarted = isPlaying && !wasPlaying
+      RoomUpdated: ({ room, maybePlayerProgress }) => {
+        const isStatusPlaying = room.status._tag === 'Playing'
+        const wasStatusPlaying = Option.exists(
+          model.maybeRoom,
+          ({ status }) => status._tag === 'Playing',
+        )
+        const gameJustStarted = isStatusPlaying && !wasStatusPlaying
 
         const maybeFocusUserTextInputCommand = optionWhen(gameJustStarted)(focusUserTextInput)
 
-        const hadGame = pipe(
-          model.maybeRoom,
-          Option.flatMap(({ maybeGame }) => maybeGame),
+        const hadGame = Option.flatMap(model.maybeRoom, ({ maybeGame }) => maybeGame).pipe(
           Option.isSome,
         )
 
-        const maybeLoadProgressCommand = pipe(
-          Option.all([model.maybeSession, room.maybeGame]),
-          Option.filter(() => !hadGame && Str.isEmpty(model.userText)),
-          Option.map(([session, game]) => loadPlayerProgress(session.player.id, game.id)),
-        )
+        const shouldApplyProgress = !hadGame
 
-        const commands = Array.getSomes([maybeFocusUserTextInputCommand, maybeLoadProgressCommand])
-
-        return [evo(model, { maybeRoom: () => Option.some(room) }), commands]
+        return [
+          evo(model, {
+            maybeRoom: () => Option.some(room),
+            userText: (prev) =>
+              pipe(
+                maybePlayerProgress,
+                Option.filter(() => shouldApplyProgress),
+                Option.match({
+                  onSome: ({ userText }) => userText,
+                  onNone: () => prev,
+                }),
+              ),
+          }),
+          Array.getSomes([maybeFocusUserTextInputCommand]),
+        ]
       },
 
       // TODO: We need to show an error message if the room stream errors, and ideally
@@ -403,18 +410,6 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
       SessionLoaded: ({ maybeSession }) => [
         evo(model, {
           maybeSession: () => maybeSession,
-        }),
-        [],
-      ],
-
-      PlayerProgressLoaded: ({ progress }) => [
-        evo(model, {
-          userText: () =>
-            pipe(
-              progress,
-              Option.map(({ userText }) => userText),
-              Option.getOrElse(() => ''),
-            ),
         }),
         [],
       ],
@@ -564,40 +559,31 @@ const updatePlayerProgress = (
     Effect.provide(RoomsClient.Default),
   )
 
-const loadPlayerProgress = (
-  playerId: string,
-  gameId: string,
-): Runtime.Command<PlayerProgressLoaded> =>
-  Effect.gen(function* () {
-    const client = yield* RoomsClient
-    const progress = yield* client.getPlayerProgress({ playerId, gameId })
-    return PlayerProgressLoaded.make({ progress })
-  }).pipe(
-    Effect.catchAll(() => Effect.succeed(PlayerProgressLoaded.make({ progress: Option.none() }))),
-    Effect.provide(RoomsClient.Default),
-  )
-
 // COMMAND STREAM
 
 const CommandStreamsDeps = S.Struct({
-  roomId: S.Option(S.String),
+  roomSubscription: S.Option(S.Struct({ roomId: S.String, playerId: S.String })),
 })
 
 const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Model, Message>({
-  roomId: {
+  roomSubscription: {
     modelToDeps: (model: Model) =>
       M.value(model.route).pipe(
-        M.tag('Room', ({ roomId }) => roomId),
-        M.option,
+        M.tag('Room', ({ roomId }) =>
+          Option.map(model.maybeSession, (session) => ({ roomId, playerId: session.player.id })),
+        ),
+        M.orElse(() => Option.none()),
       ),
-    depsToStream: (maybeRoomId: Option.Option<string>) =>
-      Option.match(maybeRoomId, {
+    depsToStream: (maybeRoomSubscription: Option.Option<{ roomId: string; playerId: string }>) =>
+      Option.match(maybeRoomSubscription, {
         onNone: () => Stream.empty,
-        onSome: (roomId: string) =>
+        onSome: ({ roomId, playerId }) =>
           Effect.gen(function* () {
             const client = yield* RoomsClient
-            return client.subscribeToRoom({ roomId }).pipe(
-              Stream.map((room) => Effect.succeed(RoomUpdated.make({ room }))),
+            return client.subscribeToRoom({ roomId, playerId }).pipe(
+              Stream.map(({ room, maybePlayerProgress }) =>
+                Effect.succeed(RoomUpdated.make({ room, maybePlayerProgress })),
+              ),
               Stream.catchAll((error) =>
                 Stream.make(Effect.succeed(RoomStreamError.make({ error: String(error) }))),
               ),

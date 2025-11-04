@@ -61,6 +61,12 @@ export class RoomNotFoundError extends S.TaggedError<RoomNotFoundError>()('RoomN
 export const RoomAndPlayer = S.Struct({ player: Player, room: Room })
 export type RoomAndPlayer = typeof RoomAndPlayer.Type
 
+export const RoomWithPlayerProgress = S.Struct({
+  room: Room,
+  maybePlayerProgress: S.Option(PlayerProgress),
+})
+export type RoomWithPlayerProgress = typeof RoomWithPlayerProgress.Type
+
 const createRoomRpc = Rpc.make('createRoom', {
   payload: S.Struct({ username: S.String }),
   success: RoomAndPlayer,
@@ -79,8 +85,8 @@ const getRoomByIdRpc = Rpc.make('getRoomById', {
 })
 
 const subscribeToRoomRpc = Rpc.make('subscribeToRoom', {
-  payload: S.Struct({ roomId: S.String }),
-  success: Room,
+  payload: S.Struct({ roomId: S.String, playerId: S.String }),
+  success: RoomWithPlayerProgress,
   error: RoomNotFoundError,
   stream: true,
 })
@@ -96,11 +102,6 @@ const updatePlayerProgressRpc = Rpc.make('updatePlayerProgress', {
   success: S.Void,
 })
 
-const getPlayerProgressRpc = Rpc.make('getPlayerProgress', {
-  payload: S.Struct({ playerId: S.String, gameId: S.String }),
-  success: S.Option(PlayerProgress),
-})
-
 export class RoomRpcs extends RpcGroup.make(
   createRoomRpc,
   joinRoomRpc,
@@ -108,5 +109,4 @@ export class RoomRpcs extends RpcGroup.make(
   subscribeToRoomRpc,
   startGameRpc,
   updatePlayerProgressRpc,
-  getPlayerProgressRpc,
 ) {}
