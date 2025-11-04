@@ -239,10 +239,10 @@ const makeRuntime =
           }),
         )
 
-      yield* render(initModel)
-
       const runtime = yield* Effect.runtime()
       yield* Ref.set(maybeRuntimeRef, Option.some(runtime))
+
+      yield* render(initModel)
 
       yield* Effect.forever(
         Effect.gen(function* () {
