@@ -216,10 +216,10 @@ const MAX_WRONG_CHARS = 5
 
 const toNonEmptyStringOption = Option.liftPredicate(Str.isNonEmpty)
 
-const arrayWhen =
+const optionWhen =
   (condition: boolean) =>
-  <A>(value: A): ReadonlyArray<A> =>
-    condition ? Array.make(value) : Array.empty()
+  <A>(value: A): Option.Option<A> =>
+    condition ? Option.some(value) : Option.none()
 
 const validateUserTextInput = (newUserText: string, maybeGameText: Option.Option<string>): string =>
   Effect.gen(function* () {
@@ -369,10 +369,9 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
       RoomUpdated: ({ room }) => {
         const isPlaying = room.status._tag === 'Playing'
         const wasPlaying = Option.exists(model.maybeRoom, ({ status }) => status._tag === 'Playing')
-
         const gameJustStarted = isPlaying && !wasPlaying
 
-        const maybeFocusUserTextInputCommand = arrayWhen(gameJustStarted)(focusUserTextInput)
+        const maybeFocusUserTextInputCommand = optionWhen(gameJustStarted)(focusUserTextInput)
 
         const hadGame = pipe(
           model.maybeRoom,
@@ -380,14 +379,13 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
           Option.isSome,
         )
 
-        const loadProgressCommand = pipe(
+        const maybeLoadProgressCommand = pipe(
           Option.all([model.maybeSession, room.maybeGame]),
           Option.filter(() => !hadGame && Str.isEmpty(model.userText)),
           Option.map(([session, game]) => loadPlayerProgress(session.player.id, game.id)),
-          Option.toArray,
         )
 
-        const commands = [...maybeFocusUserTextInputCommand, ...loadProgressCommand]
+        const commands = Array.getSomes([maybeFocusUserTextInputCommand, maybeLoadProgressCommand])
 
         return [evo(model, { maybeRoom: () => Option.some(room) }), commands]
       },
