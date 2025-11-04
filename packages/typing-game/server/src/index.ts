@@ -7,10 +7,12 @@ import {
   Chunk,
   Clock,
   Context,
+  Data,
   Duration,
   Effect,
   HashMap,
   Layer,
+  Option,
   Schedule,
   Stream,
   Struct,
@@ -25,32 +27,47 @@ import { generateGameText } from './gameText.js'
 import * as Room from './room.js'
 import * as Rooms from './rooms.js'
 
-export class RoomsStore extends Context.Tag('RoomsStore')<
-  RoomsStore,
+export class RoomByIdStore extends Context.Tag('RoomByIdStore')<
+  RoomByIdStore,
   SubscriptionRef.SubscriptionRef<HashMap.HashMap<string, Shared.Room>>
 >() {}
 
-const RoomsStoreLive = Layer.effect(
-  RoomsStore,
+export class ProgressByGamePlayerStore extends Context.Tag('ProgressByGamePlayerStore')<
+  ProgressByGamePlayerStore,
+  SubscriptionRef.SubscriptionRef<HashMap.HashMap<Shared.GamePlayer, Shared.PlayerProgress>>
+>() {}
+
+const RoomByIdStoreLive = Layer.effect(
+  RoomByIdStore,
   SubscriptionRef.make(HashMap.empty<string, Shared.Room>()),
+)
+
+const ProgressByGamePlayerStoreLive = Layer.effect(
+  ProgressByGamePlayerStore,
+  SubscriptionRef.make(HashMap.empty<Shared.GamePlayer, Shared.PlayerProgress>()),
 )
 
 const RoomLive = Shared.RoomRpcs.toLayer(
   Effect.gen(function* () {
-    const roomsRef = yield* RoomsStore
+    const roomByIdRef = yield* RoomByIdStore
+    const progressByGamePlayerRef = yield* ProgressByGamePlayerStore
 
     return {
-      createRoom: ({ username }) => createRoomHandler(roomsRef, username),
-      joinRoom: ({ username, roomId }) => joinRoomHandler(roomsRef, username, roomId),
-      getRoomById: ({ roomId }) => getRoomByIdHandler(roomsRef, roomId),
-      subscribeToRoom: ({ roomId }) => subscribeToRoomHandler(roomsRef, roomId),
-      startGame: ({ roomId }) => startGameHandler(roomsRef, roomId),
+      createRoom: ({ username }) => createRoomHandler(roomByIdRef, username),
+      joinRoom: ({ username, roomId }) => joinRoomHandler(roomByIdRef, username, roomId),
+      getRoomById: ({ roomId }) => getRoomByIdHandler(roomByIdRef, roomId),
+      subscribeToRoom: ({ roomId }) => subscribeToRoomHandler(roomByIdRef, roomId),
+      startGame: ({ roomId }) => startGameHandler(roomByIdRef, roomId),
+      updatePlayerProgress: ({ playerId, gameId, userText }) =>
+        updatePlayerProgressHandler(progressByGamePlayerRef, playerId, gameId, userText),
+      getPlayerProgress: ({ playerId, gameId }) =>
+        getPlayerProgressHandler(progressByGamePlayerRef, playerId, gameId),
     }
   }),
-).pipe(Layer.provide(RoomsStoreLive))
+)
 
 const createRoomHandler = (
-  roomsRef: SubscriptionRef.SubscriptionRef<Shared.Rooms>,
+  roomByIdRef: SubscriptionRef.SubscriptionRef<Shared.RoomById>,
   username: string,
 ) =>
   Effect.gen(function* () {
@@ -68,16 +85,19 @@ const createRoomHandler = (
       id: roomId,
       players: [player],
       status: Shared.Waiting.make(),
+      maybeGame: Option.none(),
       createdAt,
     }
 
-    yield* SubscriptionRef.update(roomsRef, (rooms) => HashMap.set(rooms, newRoom.id, newRoom))
+    yield* SubscriptionRef.update(roomByIdRef, (roomById) =>
+      HashMap.set(roomById, newRoom.id, newRoom),
+    )
 
     return { player, room: newRoom }
   })
 
 const joinRoomHandler = (
-  roomsRef: SubscriptionRef.SubscriptionRef<Shared.Rooms>,
+  roomByIdRef: SubscriptionRef.SubscriptionRef<Shared.RoomById>,
   username: string,
   roomId: string,
 ) =>
@@ -89,13 +109,13 @@ const joinRoomHandler = (
       username,
     }
 
-    const room = yield* SubscriptionRef.modifyEffect(roomsRef, (rooms) =>
-      Rooms.getById(rooms, roomId).pipe(
+    const room = yield* SubscriptionRef.modifyEffect(roomByIdRef, (roomById) =>
+      Rooms.getById(roomById, roomId).pipe(
         Effect.map((room) => {
           const updatedRoom = Struct.evolve(room, {
             players: (players) => Array.append(players, player),
           })
-          return [updatedRoom, HashMap.set(rooms, roomId, updatedRoom)] as const
+          return [updatedRoom, HashMap.set(roomById, roomId, updatedRoom)] as const
         }),
       ),
     )
@@ -104,21 +124,21 @@ const joinRoomHandler = (
   })
 
 const getRoomByIdHandler = (
-  roomsRef: SubscriptionRef.SubscriptionRef<Shared.Rooms>,
+  roomByIdRef: SubscriptionRef.SubscriptionRef<Shared.RoomById>,
   roomId: string,
 ) =>
   Effect.gen(function* () {
-    const rooms = yield* SubscriptionRef.get(roomsRef)
-    return yield* Rooms.getById(rooms, roomId)
+    const roomById = yield* SubscriptionRef.get(roomByIdRef)
+    return yield* Rooms.getById(roomById, roomId)
   })
 
 const subscribeToRoomHandler = (
-  roomsRef: SubscriptionRef.SubscriptionRef<Shared.Rooms>,
+  roomByIdRef: SubscriptionRef.SubscriptionRef<Shared.RoomById>,
   roomId: string,
 ) =>
-  roomsRef.changes.pipe(
-    Stream.mapEffect((rooms) =>
-      HashMap.get(rooms, roomId).pipe(
+  roomByIdRef.changes.pipe(
+    Stream.mapEffect((roomById) =>
+      HashMap.get(roomById, roomId).pipe(
         Effect.mapError(() => new Shared.RoomNotFoundError({ roomId })),
       ),
     ),
@@ -130,30 +150,85 @@ const subscribeToRoomHandler = (
   )
 
 const startGameHandler = (
-  roomsRef: SubscriptionRef.SubscriptionRef<Shared.Rooms>,
+  roomByIdRef: SubscriptionRef.SubscriptionRef<Shared.RoomById>,
   roomId: string,
 ) =>
-  gameSequence.pipe(
-    Stream.mapEffect(updateRoomStatus(roomsRef, roomId), { concurrency: 'unbounded' }),
-    Stream.runDrain,
-    Effect.forkDaemon,
-  )
+  Effect.gen(function* () {
+    const gameId = yield* Effect.sync(() => randomUUID())
+    const gameText = yield* generateGameText
 
-const updateRoomStatus =
-  (roomsRef: SubscriptionRef.SubscriptionRef<Shared.Rooms>, roomId: string) =>
-  (status: Shared.GameStatus) =>
-    SubscriptionRef.updateEffect(roomsRef, (rooms) =>
+    const game = Shared.Game.make({
+      id: gameId,
+      text: gameText,
+    })
+
+    yield* updateRoom(
+      roomByIdRef,
+      roomId,
+    )((room) => Struct.evolve(room, { maybeGame: () => Option.some(game) }))
+
+    return yield* gameSequence.pipe(
+      Stream.mapEffect(updateRoomStatus(roomByIdRef, roomId), { concurrency: 'unbounded' }),
+      Stream.runDrain,
+      Effect.forkDaemon,
+    )
+  })
+
+const updatePlayerProgressHandler = (
+  progressByGamePlayerRef: SubscriptionRef.SubscriptionRef<
+    HashMap.HashMap<Shared.GamePlayer, Shared.PlayerProgress>
+  >,
+  playerId: string,
+  gameId: string,
+  userText: string,
+) =>
+  Effect.gen(function* () {
+    const updatedAt = yield* Clock.currentTimeMillis
+
+    const gamePlayer = Data.struct(Shared.GamePlayer.make({ gameId, playerId }))
+
+    const progress = Shared.PlayerProgress.make({
+      playerId,
+      gameId,
+      userText,
+      updatedAt,
+    })
+
+    yield* SubscriptionRef.update(progressByGamePlayerRef, (progressByGamePlayer) =>
+      HashMap.set(progressByGamePlayer, gamePlayer, progress),
+    )
+  })
+
+const getPlayerProgressHandler = (
+  progressByGamePlayerRef: SubscriptionRef.SubscriptionRef<
+    HashMap.HashMap<Shared.GamePlayer, Shared.PlayerProgress>
+  >,
+  playerId: string,
+  gameId: string,
+) =>
+  Effect.gen(function* () {
+    const progressByGamePlayer = yield* SubscriptionRef.get(progressByGamePlayerRef)
+    const gamePlayer = Data.struct(Shared.GamePlayer.make({ gameId, playerId }))
+    return HashMap.get(progressByGamePlayer, gamePlayer)
+  })
+
+const updateRoom =
+  (roomByIdRef: SubscriptionRef.SubscriptionRef<Shared.RoomById>, roomId: string) =>
+  (f: (room: Shared.Room) => Shared.Room) =>
+    SubscriptionRef.updateEffect(roomByIdRef, (roomById) =>
       Effect.gen(function* () {
-        const room = yield* Rooms.getById(rooms, roomId)
-        const updatedRoom = Struct.evolve(room, { status: () => status })
-        return HashMap.set(rooms, roomId, updatedRoom)
+        const room = yield* Rooms.getById(roomById, roomId)
+        const updatedRoom = f(room)
+        return HashMap.set(roomById, roomId, updatedRoom)
       }),
     )
 
-const getReadyStream = generateGameText.pipe(
-  Effect.map((text) => Shared.GetReady.make({ text })),
-  Stream.fromEffect,
-)
+const updateRoomStatus =
+  (roomByIdRef: SubscriptionRef.SubscriptionRef<Shared.RoomById>, roomId: string) =>
+  (status: Shared.GameStatus) =>
+    updateRoom(roomByIdRef, roomId)(Struct.evolve({ status: () => status }))
+
+const getReadyStream = Stream.make(Shared.GetReady.make())
 
 const COUNTDOWN_SECONDS = 3
 const PLAYING_SECONDS = 300
@@ -198,6 +273,8 @@ const HttpProtocol = RpcServer.layerProtocolHttp({
 const Main = HttpRouter.Default.serve(HttpMiddleware.cors()).pipe(
   Layer.provide(RpcLayer),
   Layer.provide(HttpProtocol),
+  Layer.provide(RoomByIdStoreLive),
+  Layer.provide(ProgressByGamePlayerStoreLive),
   Layer.provide(NodeHttpServer.layer(createServer, { port: 3001 })),
 )
 

@@ -2,7 +2,7 @@ import { Rpc, RpcGroup } from '@effect/rpc'
 import { Schema as S } from 'effect'
 
 export const Waiting = S.TaggedStruct('Waiting', {})
-export const GetReady = S.TaggedStruct('GetReady', { text: S.String })
+export const GetReady = S.TaggedStruct('GetReady', {})
 export const Countdown = S.TaggedStruct('Countdown', { secondsLeft: S.Number })
 export const Playing = S.TaggedStruct('Playing', { secondsLeft: S.Number })
 export const Finished = S.TaggedStruct('Finished', {})
@@ -22,16 +22,37 @@ export const Player = S.Struct({
 })
 export type Player = typeof Player.Type
 
+export const Game = S.Struct({
+  id: S.String,
+  text: S.String,
+})
+export type Game = typeof Game.Type
+
+export const GamePlayer = S.Struct({
+  gameId: S.String,
+  playerId: S.String,
+})
+export type GamePlayer = typeof GamePlayer.Type
+
+export const PlayerProgress = S.Struct({
+  playerId: S.String,
+  gameId: S.String,
+  userText: S.String,
+  updatedAt: S.Number,
+})
+export type PlayerProgress = typeof PlayerProgress.Type
+
 export const Room = S.Struct({
   id: S.String,
   players: S.Array(Player),
   status: GameStatus,
+  maybeGame: S.Option(Game),
   createdAt: S.Number,
 })
 export type Room = typeof Room.Type
 
-export const Rooms = S.HashMap({ key: S.String, value: Room })
-export type Rooms = typeof Rooms.Type
+export const RoomById = S.HashMap({ key: S.String, value: Room })
+export type RoomById = typeof RoomById.Type
 
 export class RoomNotFoundError extends S.TaggedError<RoomNotFoundError>()('RoomNotFoundError', {
   roomId: S.String,
@@ -70,10 +91,22 @@ const startGameRpc = Rpc.make('startGame', {
   error: RoomNotFoundError,
 })
 
+const updatePlayerProgressRpc = Rpc.make('updatePlayerProgress', {
+  payload: S.Struct({ playerId: S.String, gameId: S.String, userText: S.String }),
+  success: S.Void,
+})
+
+const getPlayerProgressRpc = Rpc.make('getPlayerProgress', {
+  payload: S.Struct({ playerId: S.String, gameId: S.String }),
+  success: S.Option(PlayerProgress),
+})
+
 export class RoomRpcs extends RpcGroup.make(
   createRoomRpc,
   joinRoomRpc,
   getRoomByIdRpc,
   subscribeToRoomRpc,
   startGameRpc,
+  updatePlayerProgressRpc,
+  getPlayerProgressRpc,
 ) {}

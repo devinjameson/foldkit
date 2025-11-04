@@ -1,6 +1,6 @@
 import { Array, Data, Effect, HashMap, Random, SubscriptionRef, pipe } from 'effect'
 
-import { RoomsStore } from './index.js'
+import { RoomByIdStore } from './index.js'
 
 const NUM_WORDS_IN_ID = 3
 const DELIMITER = '-'
@@ -9,14 +9,14 @@ class RoomIdExists extends Data.TaggedError('RoomIdExists')<{}> {}
 
 export const generateUniqueId = (
   words: ReadonlyArray<string>,
-): Effect.Effect<string, never, RoomsStore> =>
+): Effect.Effect<string, never, RoomByIdStore> =>
   Effect.gen(function* () {
-    const roomsStoreRef = yield* RoomsStore
-    const roomsStore = yield* SubscriptionRef.get(roomsStoreRef)
+    const roomByIdStoreRef = yield* RoomByIdStore
+    const roomById = yield* SubscriptionRef.get(roomByIdStoreRef)
 
     return yield* generateRoomId(words).pipe(
       Effect.filterOrFail(
-        (id) => !HashMap.has(roomsStore, id),
+        (id) => !HashMap.has(roomById, id),
         () => new RoomIdExists(),
       ),
       Effect.catchAll(() => generateUniqueId(words)),

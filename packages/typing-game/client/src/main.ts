@@ -10,6 +10,7 @@ import {
   Number,
   Option,
   Order,
+  Predicate,
   Schema as S,
   String as Str,
   Stream,
@@ -24,7 +25,9 @@ import {
   Href,
   Html,
   Id,
+  OnBlur,
   OnClick,
+  OnFocus,
   OnInput,
   Type,
   Value,
@@ -89,9 +92,8 @@ const Model = S.Struct({
   roomFormError: S.Option(S.String),
   maybeRoom: S.Option(Shared.Room),
   maybeSession: S.Option(RoomPlayerSession),
-  maybeGameText: S.Option(S.String),
   userText: S.String,
-  maybeWrongCharIndex: S.Option(S.Positive),
+  isUserTextInputFocused: S.Boolean,
 })
 type Model = typeof Model.Type
 
@@ -117,7 +119,13 @@ const RoomError = ts('RoomError', { error: S.String })
 const RoomUpdated = ts('RoomUpdated', { room: Shared.Room })
 const RoomStreamError = ts('RoomStreamError', { error: S.String })
 const StartGameClicked = ts('StartGameClicked', { roomId: S.String })
-const SessionLoaded = ts('SessionLoaded', { session: S.Option(RoomPlayerSession) })
+const SessionLoaded = ts('SessionLoaded', { maybeSession: S.Option(RoomPlayerSession) })
+const PlayerProgressLoaded = ts('PlayerProgressLoaded', {
+  progress: S.Option(Shared.PlayerProgress),
+})
+const GameTextClicked = ts('GameTextClicked')
+const UserTextInputFocused = ts('UserTextInputFocused')
+const UserTextInputBlurred = ts('UserTextInputBlurred')
 
 type NoOp = typeof NoOp.Type
 type LinkClicked = typeof LinkClicked.Type
@@ -135,6 +143,10 @@ type RoomUpdated = typeof RoomUpdated.Type
 type RoomStreamError = typeof RoomStreamError.Type
 type StartGameClicked = typeof StartGameClicked.Type
 type SessionLoaded = typeof SessionLoaded.Type
+type PlayerProgressLoaded = typeof PlayerProgressLoaded.Type
+type GameTextClicked = typeof GameTextClicked.Type
+type UserTextInputFocused = typeof UserTextInputFocused.Type
+type UserTextInputBlurred = typeof UserTextInputBlurred.Type
 
 const Message = S.Union(
   NoOp,
@@ -153,6 +165,10 @@ const Message = S.Union(
   RoomStreamError,
   StartGameClicked,
   SessionLoaded,
+  PlayerProgressLoaded,
+  GameTextClicked,
+  UserTextInputFocused,
+  UserTextInputBlurred,
 )
 type Message = typeof Message.Type
 
@@ -174,9 +190,8 @@ const init: Runtime.ApplicationInit<Model, Message> = (url: Url.Url) => {
       roomFormError: Option.none(),
       maybeRoom: Option.none(),
       maybeSession: Option.none(),
-      maybeGameText: Option.none(),
       userText: '',
-      maybeWrongCharIndex: Option.none(),
+      isUserTextInputFocused: false,
     },
     commands,
   ]
@@ -201,41 +216,38 @@ const MAX_WRONG_CHARS = 5
 
 const toNonEmptyStringOption = Option.liftPredicate(Str.isNonEmpty)
 
-const validateUserTextInput = (
-  newUserText: string,
-  maybeGameText: Option.Option<string>,
-): { userText: string; maybeWrongCharIndex: Option.Option<number> } =>
+const arrayWhen =
+  (condition: boolean) =>
+  <A>(value: A): ReadonlyArray<A> =>
+    condition ? Array.make(value) : Array.empty()
+
+const validateUserTextInput = (newUserText: string, maybeGameText: Option.Option<string>): string =>
   Effect.gen(function* () {
     yield* toNonEmptyStringOption(newUserText)
     const gameText = yield* maybeGameText
-    const firstWrongIndex = yield* findFirstWrongCharIndex(newUserText, gameText)
+    const firstWrongIndex = yield* findFirstWrongCharIndex(newUserText)(gameText)
 
     const wrongCharCount = Str.length(newUserText) - firstWrongIndex
     const exceedsMaxWrongChars = wrongCharCount > MAX_WRONG_CHARS
 
-    const userText = exceedsMaxWrongChars
+    return exceedsMaxWrongChars
       ? Str.slice(0, firstWrongIndex + MAX_WRONG_CHARS)(newUserText)
       : newUserText
-
-    return {
-      userText,
-      maybeWrongCharIndex: Option.some(firstWrongIndex),
-    }
   }).pipe(
-    Effect.catchAll(() =>
-      Effect.succeed({ userText: newUserText, maybeWrongCharIndex: Option.none() }),
-    ),
+    Effect.catchAll(() => Effect.succeed(newUserText)),
     Effect.runSync,
   )
 
-const findFirstWrongCharIndex = (userText: string, gameText: string): Option.Option<number> =>
-  pipe(
-    userText,
-    Str.split(''),
-    Array.findFirstIndex((char, index) =>
-      pipe(gameText, Str.at(index), Option.exists(Equal.equals(char))),
-    ),
-  )
+const findFirstWrongCharIndex =
+  (userText: string) =>
+  (gameText: string): Option.Option<number> =>
+    pipe(
+      userText,
+      Str.split(''),
+      Array.findFirstIndex((char, index) =>
+        pipe(gameText, Str.at(index), Option.exists(Predicate.not(Equal.equals(char)))),
+      ),
+    )
 
 // UPDATE
 
@@ -355,25 +367,29 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
       ],
 
       RoomUpdated: ({ room }) => {
-        const maybeGameText = M.value(room.status).pipe(
-          M.tag('GetReady', ({ text }) => Option.some(text)),
-          M.orElse(() => model.maybeGameText),
+        const isPlaying = room.status._tag === 'Playing'
+        const wasPlaying = Option.exists(model.maybeRoom, ({ status }) => status._tag === 'Playing')
+
+        const gameJustStarted = isPlaying && !wasPlaying
+
+        const maybeFocusUserTextInputCommand = arrayWhen(gameJustStarted)(focusUserTextInput)
+
+        const hadGame = pipe(
+          model.maybeRoom,
+          Option.flatMap(({ maybeGame }) => maybeGame),
+          Option.isSome,
         )
 
-        const isPlayingNow = S.is(Shared.Playing)(room.status)
-        const wasPlayingBefore = Option.exists(model.maybeRoom, ({ status }) =>
-          S.is(Shared.Playing)(status),
+        const loadProgressCommand = pipe(
+          Option.all([model.maybeSession, room.maybeGame]),
+          Option.filter(() => !hadGame && Str.isEmpty(model.userText)),
+          Option.map(([session, game]) => loadPlayerProgress(session.player.id, game.id)),
+          Option.toArray,
         )
 
-        const commands = isPlayingNow && !wasPlayingBefore ? [focusUserTextInput] : []
+        const commands = [...maybeFocusUserTextInputCommand, ...loadProgressCommand]
 
-        return [
-          evo(model, {
-            maybeRoom: () => Option.some(room),
-            maybeGameText: () => maybeGameText,
-          }),
-          commands,
-        ]
+        return [evo(model, { maybeRoom: () => Option.some(room) }), commands]
       },
 
       // TODO: We need to show an error message if the room stream errors, and ideally
@@ -386,23 +402,54 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
 
       StartGameClicked: ({ roomId }) => [model, [startGame(roomId)]],
 
-      SessionLoaded: ({ session }) => [
+      SessionLoaded: ({ maybeSession }) => [
         evo(model, {
-          maybeSession: () => session,
+          maybeSession: () => maybeSession,
         }),
         [],
       ],
 
-      UserTextInputted: ({ value }) => {
-        const { userText, maybeWrongCharIndex } = validateUserTextInput(value, model.maybeGameText)
+      PlayerProgressLoaded: ({ progress }) => [
+        evo(model, {
+          userText: () =>
+            pipe(
+              progress,
+              Option.map(({ userText }) => userText),
+              Option.getOrElse(() => ''),
+            ),
+        }),
+        [],
+      ],
 
-        return [
-          evo(model, {
-            userText: () => userText,
-            maybeWrongCharIndex: () => maybeWrongCharIndex,
+      GameTextClicked: () => [model, [focusUserTextInput]],
+
+      UserTextInputFocused: () => [evo(model, { isUserTextInputFocused: () => true }), []],
+
+      UserTextInputBlurred: () => [evo(model, { isUserTextInputFocused: () => false }), []],
+
+      UserTextInputted: ({ value }) => {
+        const maybeGameText = pipe(
+          model.maybeRoom,
+          Option.flatMap(({ maybeGame }) => maybeGame),
+          Option.map(({ text }) => text),
+        )
+
+        const userText = validateUserTextInput(value, maybeGameText)
+
+        const commands = pipe(
+          Option.all([
+            model.maybeSession,
+            Option.flatMap(model.maybeRoom, ({ maybeGame }) => maybeGame),
+          ]),
+          Option.match({
+            onNone: () => [],
+            onSome: ([session, game]) => [
+              updatePlayerProgress(session.player.id, game.id, userText),
+            ],
           }),
-          [],
-        ]
+        )
+
+        return [evo(model, { userText: () => userText }), commands]
       },
     }),
   )
@@ -495,14 +542,41 @@ const loadSessionFromStorage = (roomId: string): Runtime.Command<SessionLoaded> 
     return yield* decodeSession(sessionJson).pipe(
       Effect.map((session) =>
         SessionLoaded.make({
-          session: session.roomId === roomId ? Option.some(session) : Option.none(),
+          maybeSession: session.roomId === roomId ? Option.some(session) : Option.none(),
         }),
       ),
-      Effect.catchAll(() => Effect.succeed(SessionLoaded.make({ session: Option.none() }))),
+      Effect.catchAll(() => Effect.succeed(SessionLoaded.make({ maybeSession: Option.none() }))),
     )
   }).pipe(
-    Effect.catchAll(() => Effect.succeed(SessionLoaded.make({ session: Option.none() }))),
+    Effect.catchAll(() => Effect.succeed(SessionLoaded.make({ maybeSession: Option.none() }))),
     Effect.provide(BrowserKeyValueStore.layerSessionStorage),
+  )
+
+const updatePlayerProgress = (
+  playerId: string,
+  gameId: string,
+  userText: string,
+): Runtime.Command<NoOp> =>
+  Effect.gen(function* () {
+    const client = yield* RoomsClient
+    yield* client.updatePlayerProgress({ playerId, gameId, userText })
+    return NoOp.make()
+  }).pipe(
+    Effect.catchAll(() => Effect.succeed(NoOp.make())),
+    Effect.provide(RoomsClient.Default),
+  )
+
+const loadPlayerProgress = (
+  playerId: string,
+  gameId: string,
+): Runtime.Command<PlayerProgressLoaded> =>
+  Effect.gen(function* () {
+    const client = yield* RoomsClient
+    const progress = yield* client.getPlayerProgress({ playerId, gameId })
+    return PlayerProgressLoaded.make({ progress })
+  }).pipe(
+    Effect.catchAll(() => Effect.succeed(PlayerProgressLoaded.make({ progress: Option.none() }))),
+    Effect.provide(RoomsClient.Default),
   )
 
 // COMMAND STREAM
@@ -544,8 +618,19 @@ const fieldView = (params: {
   onInput: (value: string) => Message
   type?: 'text' | 'email' | 'textarea'
   containerClassName?: string
+  onFocus?: Message
+  onBlur?: Message
 }): Html => {
-  const { id, labelText, field, onInput, type = 'text', containerClassName } = params
+  const {
+    id,
+    labelText,
+    field,
+    onInput,
+    type = 'text',
+    containerClassName,
+    onFocus,
+    onBlur,
+  } = params
   const { value } = field
 
   const getBorderClass = () =>
@@ -574,8 +659,23 @@ const fieldView = (params: {
         ],
       ),
       type === 'textarea'
-        ? textarea([Id(id), Value(value), Class(inputClass), OnInput(onInput)])
-        : input([Id(id), Type(type), Value(value), Class(inputClass), OnInput(onInput)]),
+        ? textarea([
+            Id(id),
+            Value(value),
+            Class(inputClass),
+            OnInput(onInput),
+            ...(onFocus ? [OnFocus(onFocus)] : []),
+            ...(onBlur ? [OnBlur(onBlur)] : []),
+          ])
+        : input([
+            Id(id),
+            Type(type),
+            Value(value),
+            Class(inputClass),
+            OnInput(onInput),
+            ...(onFocus ? [OnFocus(onFocus)] : []),
+            ...(onBlur ? [OnBlur(onBlur)] : []),
+          ]),
 
       Field.$match(field, {
         NotValidated: () => div([Class('invisible')], ['Not validated']),
@@ -714,14 +814,16 @@ const playerView = (
 const maybeRoomView = ({
   maybeRoom,
   maybeSession,
-  maybeGameText,
   userText,
-  maybeWrongCharIndex,
+  isUserTextInputFocused,
 }: Model): Html =>
   Option.match(maybeRoom, {
     onNone: () => div([Class('text-gray-600')], ['Loading room...']),
-    onSome: (room: Shared.Room) =>
-      M.value(room.status).pipe(
+    onSome: (room: Shared.Room) => {
+      const maybeGameText = Option.map(room.maybeGame, ({ text }) => text)
+      const maybeWrongCharIndex = Option.flatMap(maybeGameText, findFirstWrongCharIndex(userText))
+
+      return M.value(room.status).pipe(
         M.tagsExhaustive({
           Waiting: () =>
             div(
@@ -743,12 +845,16 @@ const maybeRoomView = ({
                 ),
               ],
             ),
-          GetReady: ({ text }) =>
+          GetReady: () =>
             div(
               [Class('space-y-4')],
               [
                 div([Class('text-gray-600 text-lg')], ['Get ready! The game is about to start.']),
-                div([Class('p-4 bg-gray-100 rounded font-mono text-gray-700')], [text]),
+                Option.match(maybeGameText, {
+                  onNone: () => empty,
+                  onSome: (text) =>
+                    div([Class('p-4 bg-gray-100 rounded font-mono text-gray-700')], [text]),
+                }),
               ],
             ),
           Countdown: ({ secondsLeft }) =>
@@ -764,10 +870,17 @@ const maybeRoomView = ({
               ],
             ),
           Playing: ({ secondsLeft }) =>
-            playingView(secondsLeft, maybeGameText, userText, maybeWrongCharIndex),
+            playingView(
+              secondsLeft,
+              maybeGameText,
+              userText,
+              maybeWrongCharIndex,
+              isUserTextInputFocused,
+            ),
           Finished: () => div([Class('text-gray-600')], ['Game finished.']),
         }),
-      ),
+      )
+    },
   })
 
 const playingView = (
@@ -775,6 +888,7 @@ const playingView = (
   maybeGameText: Option.Option<string>,
   userText: string,
   maybeWrongCharIndex: Option.Option<number>,
+  isFocused: boolean,
 ): Html =>
   div(
     [Class('space-y-8')],
@@ -782,7 +896,7 @@ const playingView = (
       div([Class('text-gray-600')], [`Time left: ${secondsLeft}`]),
       Option.match(maybeGameText, {
         onNone: () => empty,
-        onSome: (gameText) => typingView(gameText, userText, maybeWrongCharIndex),
+        onSome: (gameText) => typingView(gameText, userText, maybeWrongCharIndex, isFocused),
       }),
     ],
   )
@@ -791,6 +905,7 @@ const typingView = (
   gameText: string,
   userText: string,
   maybeWrongCharIndex: Option.Option<number>,
+  isFocused: boolean,
 ): Html =>
   div(
     [Class('space-y-4')],
@@ -802,8 +917,10 @@ const typingView = (
         onInput: (value) => UserTextInputted.make({ value }),
         type: 'textarea',
         containerClassName: 'absolute opacity-0 pointer-events-none',
+        onFocus: UserTextInputFocused.make(),
+        onBlur: UserTextInputBlurred.make(),
       }),
-      gameTextWithProgress(gameText, userText, maybeWrongCharIndex),
+      gameTextWithProgress(gameText, userText, maybeWrongCharIndex, isFocused),
     ],
   )
 
@@ -811,9 +928,18 @@ const gameTextWithProgress = (
   gameText: string,
   userText: string,
   maybeWrongCharIndex: Option.Option<number>,
+  isFocused: boolean,
 ): Html =>
   div(
-    [Class('p-4 bg-gray-100 rounded font-mono')],
+    [
+      Class(
+        classNames('p-4 bg-gray-100 rounded font-mono cursor-pointer ring-2 transition-colors', {
+          'ring-gray-100 hover:ring-gray-400': !isFocused,
+          'ring-blue-500': isFocused,
+        }),
+      ),
+      OnClick(GameTextClicked.make()),
+    ],
     pipe(gameText, Str.split(''), Array.map(charView(userText, maybeWrongCharIndex))),
   )
 
