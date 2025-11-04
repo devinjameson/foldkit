@@ -4,6 +4,7 @@ import * as Shared from '@typing-game/shared'
 import classNames from 'classnames'
 import {
   Array,
+  Data,
   Effect,
   Equal,
   Match as M,
@@ -374,22 +375,16 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
 
         const maybeFocusUserTextInputCommand = optionWhen(gameJustStarted)(focusUserTextInput)
 
-        const hadGame = Option.flatMap(model.maybeRoom, ({ maybeGame }) => maybeGame).pipe(
-          Option.isSome,
-        )
-
-        const shouldApplyProgress = !hadGame
-
         return [
           evo(model, {
             maybeRoom: () => Option.some(room),
-            userText: (prev) =>
+            userText: (currentUserText) =>
               pipe(
-                maybePlayerProgress,
-                Option.filter(() => shouldApplyProgress),
-                Option.match({
-                  onSome: ({ userText }) => userText,
-                  onNone: () => prev,
+                determineUserTextAction(room, currentUserText, maybePlayerProgress),
+                UserTextAction.$match({
+                  Clear: () => Str.empty,
+                  Maintain: ({ userText }) => userText,
+                  Restore: ({ progressText }) => progressText,
                 }),
               ),
           }),
@@ -446,6 +441,33 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
       },
     }),
   )
+
+// USER TEXT ACTION
+
+type UserTextAction = Data.TaggedEnum<{
+  Clear: {}
+  Maintain: { userText: string }
+  Restore: { progressText: string }
+}>
+
+const UserTextAction = Data.taggedEnum<UserTextAction>()
+
+const determineUserTextAction = (
+  room: Shared.Room,
+  currentUserText: string,
+  maybePlayerProgress: Option.Option<Shared.PlayerProgress>,
+): UserTextAction => {
+  if (room.status._tag === 'Finished') {
+    return UserTextAction.Clear()
+  } else if (Str.isNonEmpty(currentUserText)) {
+    return UserTextAction.Maintain({ userText: currentUserText })
+  } else {
+    return Option.match(maybePlayerProgress, {
+      onSome: ({ userText: progressText }) => UserTextAction.Restore({ progressText }),
+      onNone: () => UserTextAction.Clear(),
+    })
+  }
+}
 
 // COMMAND
 
