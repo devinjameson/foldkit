@@ -17,12 +17,16 @@ RUN pnpm --filter @typing-game/server... build
 FROM base
 WORKDIR /app
 
-# Copy built output and dependencies
+# Copy node_modules first to establish the full dependency tree
+COPY --from=build /app/node_modules ./node_modules
+
+# Copy built output and package files
 COPY --from=build /app/packages/typing-game/server/dist ./dist
 COPY --from=build /app/packages/typing-game/server/package.json ./package.json
+
+# Copy shared package build output into node_modules
 COPY --from=build /app/packages/typing-game/shared/dist ./node_modules/@typing-game/shared/dist
 COPY --from=build /app/packages/typing-game/shared/package.json ./node_modules/@typing-game/shared/package.json
-COPY --from=build /app/node_modules ./node_modules
 
 EXPOSE 3001
 CMD ["node", "dist/index.js"]
