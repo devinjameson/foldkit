@@ -17,16 +17,21 @@ RUN pnpm --filter @typing-game/server... build
 FROM base
 WORKDIR /app
 
-# Copy node_modules first to establish the full dependency tree
-COPY --from=build /app/node_modules ./node_modules
-
-# Copy built output and package files
-COPY --from=build /app/packages/typing-game/server/dist ./dist
+# Copy package files
 COPY --from=build /app/packages/typing-game/server/package.json ./package.json
+COPY --from=build /app/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=build /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 
-# Copy shared package build output into node_modules
+# Copy built outputs
+COPY --from=build /app/packages/typing-game/server/dist ./dist
+
+# Set up shared package in node_modules
+RUN mkdir -p ./node_modules/@typing-game/shared
 COPY --from=build /app/packages/typing-game/shared/dist ./node_modules/@typing-game/shared/dist
 COPY --from=build /app/packages/typing-game/shared/package.json ./node_modules/@typing-game/shared/package.json
+
+# Install production dependencies
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile
 
 EXPOSE 3001
 CMD ["node", "dist/index.js"]
