@@ -19,6 +19,8 @@ import {
 import { FieldValidation, Route, Runtime, Url } from 'foldkit'
 import { Field, FieldSchema, Validation, validateField } from 'foldkit/fieldValidation'
 import {
+  Autocapitalize,
+  Autocorrect,
   Autofocus,
   Class,
   Disabled,
@@ -30,6 +32,7 @@ import {
   OnClick,
   OnFocus,
   OnInput,
+  Spellcheck,
   Type,
   Value,
   a,
@@ -911,6 +914,9 @@ const typingView = (
         Class('absolute inset-0 opacity-0 z-10 resize-none'),
         OnInput((value) => UserTextInputted.make({ value })),
         Autofocus(true),
+        Spellcheck(false),
+        Autocorrect('off'),
+        Autocapitalize('none'),
       ]),
       gameTextWithProgress(gameText, userText, maybeWrongCharIndex),
     ],
