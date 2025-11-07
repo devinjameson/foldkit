@@ -39,14 +39,29 @@ export const PlayerProgress = S.Struct({
   gameId: S.String,
   userText: S.String,
   updatedAt: S.Number,
+  charsTyped: S.Number,
 })
 export type PlayerProgress = typeof PlayerProgress.Type
+
+export const PlayerScore = S.Struct({
+  playerId: S.String,
+  username: S.String,
+  wpm: S.Number,
+  accuracy: S.Number,
+  charsTyped: S.Number,
+  correctChars: S.Number,
+})
+export type PlayerScore = typeof PlayerScore.Type
+
+export const Scoreboard = S.Array(PlayerScore)
+export type Scoreboard = typeof Scoreboard.Type
 
 export const Room = S.Struct({
   id: S.String,
   players: S.Array(Player),
   status: GameStatus,
   maybeGame: S.Option(Game),
+  maybeScoreboard: S.Option(Scoreboard),
   createdAt: S.Number,
 })
 export type Room = typeof Room.Type
@@ -98,7 +113,12 @@ const startGameRpc = Rpc.make('startGame', {
 })
 
 const updatePlayerProgressRpc = Rpc.make('updatePlayerProgress', {
-  payload: S.Struct({ playerId: S.String, gameId: S.String, userText: S.String }),
+  payload: S.Struct({
+    playerId: S.String,
+    gameId: S.String,
+    userText: S.String,
+    charsTyped: S.Number,
+  }),
   success: S.Void,
 })
 

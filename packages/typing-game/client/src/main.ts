@@ -39,6 +39,7 @@ import {
   form,
   h1,
   h2,
+  h3,
   input,
   label,
   span,
@@ -94,6 +95,7 @@ const Model = S.Struct({
   maybeRoom: S.Option(Shared.Room),
   maybeSession: S.Option(RoomPlayerSession),
   userText: S.String,
+  charsTyped: S.Number,
   isUserTextInputFocused: S.Boolean,
 })
 type Model = typeof Model.Type
@@ -190,6 +192,7 @@ const init: Runtime.ApplicationInit<Model, Message> = (url: Url.Url) => {
       maybeRoom: Option.none(),
       maybeSession: Option.none(),
       userText: '',
+      charsTyped: 0,
       isUserTextInputFocused: false,
     },
     commands,
@@ -373,20 +376,36 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         )
         const gameJustStarted = isStatusPlaying && !wasStatusPlaying
 
+        const progressAction = determinePlayerProgressAction(
+          room,
+          model.userText,
+          model.charsTyped,
+          maybePlayerProgress,
+        )
+
+        const nextUserText = gameJustStarted
+          ? Str.empty
+          : PlayerProgressAction.$match(progressAction, {
+              Clear: () => Str.empty,
+              Maintain: ({ userText }) => userText,
+              Restore: ({ progress }) => progress.userText,
+            })
+
+        const nextCharsTyped = gameJustStarted
+          ? 0
+          : PlayerProgressAction.$match(progressAction, {
+              Clear: () => 0,
+              Maintain: ({ charsTyped }) => charsTyped,
+              Restore: ({ progress }) => progress.charsTyped,
+            })
+
         const maybeFocusUserTextInputCommand = optionWhen(gameJustStarted)(focusUserTextInput)
 
         return [
           evo(model, {
             maybeRoom: () => Option.some(room),
-            userText: (currentUserText) =>
-              pipe(
-                determineUserTextAction(room, currentUserText, maybePlayerProgress),
-                UserTextAction.$match({
-                  Clear: () => Str.empty,
-                  Maintain: ({ userText }) => userText,
-                  Restore: ({ progressText }) => progressText,
-                }),
-              ),
+            userText: () => nextUserText,
+            charsTyped: () => nextCharsTyped,
           }),
           Array.getSomes([maybeFocusUserTextInputCommand]),
         ]
@@ -424,47 +443,57 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
 
         const userText = validateUserTextInput(value, maybeGameText)
 
+        const newCharsTyped = pipe(Str.length(userText) - Str.length(model.userText), Number.max(0))
+        const nextCharsTyped = model.charsTyped + newCharsTyped
+
         const commands = pipe(
           Option.all([
             model.maybeSession,
             Option.flatMap(model.maybeRoom, ({ maybeGame }) => maybeGame),
           ]),
-          Option.match({
-            onNone: () => [],
-            onSome: ([session, game]) => [
-              updatePlayerProgress(session.player.id, game.id, userText),
-            ],
-          }),
+          Option.map(([session, game]) =>
+            updatePlayerProgress(session.player.id, game.id, userText, nextCharsTyped),
+          ),
         )
 
-        return [evo(model, { userText: () => userText }), commands]
+        return [
+          evo(model, {
+            userText: () => userText,
+            charsTyped: () => nextCharsTyped,
+          }),
+          Array.fromOption(commands),
+        ]
       },
     }),
   )
 
-// USER TEXT ACTION
+// PLAYER PROGRESS ACTION
 
-type UserTextAction = Data.TaggedEnum<{
+type PlayerProgressAction = Data.TaggedEnum<{
   Clear: {}
-  Maintain: { userText: string }
-  Restore: { progressText: string }
+  Maintain: { userText: string; charsTyped: number }
+  Restore: { progress: Shared.PlayerProgress }
 }>
 
-const UserTextAction = Data.taggedEnum<UserTextAction>()
+const PlayerProgressAction = Data.taggedEnum<PlayerProgressAction>()
 
-const determineUserTextAction = (
+const determinePlayerProgressAction = (
   room: Shared.Room,
   currentUserText: string,
+  currentCharsTyped: number,
   maybePlayerProgress: Option.Option<Shared.PlayerProgress>,
-): UserTextAction => {
+): PlayerProgressAction => {
   if (room.status._tag === 'Finished') {
-    return UserTextAction.Clear()
+    return PlayerProgressAction.Clear()
   } else if (Str.isNonEmpty(currentUserText)) {
-    return UserTextAction.Maintain({ userText: currentUserText })
+    return PlayerProgressAction.Maintain({
+      userText: currentUserText,
+      charsTyped: currentCharsTyped,
+    })
   } else {
     return Option.match(maybePlayerProgress, {
-      onSome: ({ userText: progressText }) => UserTextAction.Restore({ progressText }),
-      onNone: () => UserTextAction.Clear(),
+      onSome: (progress) => PlayerProgressAction.Restore({ progress }),
+      onNone: () => PlayerProgressAction.Clear(),
     })
   }
 }
@@ -571,10 +600,11 @@ const updatePlayerProgress = (
   playerId: string,
   gameId: string,
   userText: string,
+  charsTyped: number,
 ): Runtime.Command<NoOp> =>
   Effect.gen(function* () {
     const client = yield* RoomsClient
-    yield* client.updatePlayerProgress({ playerId, gameId, userText })
+    yield* client.updatePlayerProgress({ playerId, gameId, userText, charsTyped })
     return NoOp.make()
   }).pipe(
     Effect.catchAll(() => Effect.succeed(NoOp.make())),
@@ -883,11 +913,73 @@ const maybeRoomView = ({
               maybeWrongCharIndex,
               isUserTextInputFocused,
             ),
-          Finished: () => div([Class('text-gray-600')], ['Game finished.']),
+          Finished: () => finishedView(room.maybeScoreboard),
         }),
       )
     },
   })
+
+const byHighestWpm = pipe(
+  Number.Order,
+  Order.mapInput(({ wpm }: Shared.PlayerScore) => wpm),
+  Order.reverse,
+)
+
+const finishedView = (maybeScoreboard: Option.Option<Shared.Scoreboard>): Html =>
+  div(
+    [Class('space-y-6')],
+    [
+      h2([Class('text-2xl font-bold text-gray-800')], ['Game finished!']),
+      Option.match(maybeScoreboard, {
+        onNone: () => div([Class('text-gray-600')], ['Loading scoreboard...']),
+        onSome: scoreboardView,
+      }),
+    ],
+  )
+
+const scoreboardView = (scoreboard: Shared.Scoreboard) => {
+  const sortedScoreboard = Array.sort(scoreboard, byHighestWpm)
+
+  return div(
+    [Class('space-y-4')],
+    [
+      h3([Class('text-xl font-semibold text-gray-700')], ['Scoreboard']),
+      div(
+        [Class('bg-white rounded-lg shadow overflow-hidden')],
+        [
+          div(
+            [Class('grid grid-cols-4 gap-4 p-4 bg-gray-100 font-semibold text-gray-700')],
+            [
+              div([], ['Player']),
+              div([Class('text-right')], ['WPM']),
+              div([Class('text-right')], ['Accuracy']),
+              div([Class('text-right')], ['Characters']),
+            ],
+          ),
+          ...Array.map(sortedScoreboard, (score, index) => {
+            const isFirst = index === 0
+            return div(
+              [
+                Class(
+                  classNames('grid grid-cols-4 gap-4 p-4 border-t', {
+                    'bg-yellow-50': isFirst,
+                    'bg-white': !isFirst,
+                  }),
+                ),
+              ],
+              [
+                div([Class('font-medium')], [isFirst ? '🏆 ' : '', score.username]),
+                div([Class('text-right')], [score.wpm.toFixed(1)]),
+                div([Class('text-right')], [score.accuracy.toFixed(1) + '%']),
+                div([Class('text-right')], [String(score.charsTyped)]),
+              ],
+            )
+          }),
+        ],
+      ),
+    ],
+  )
+}
 
 const playingView = (
   secondsLeft: number,

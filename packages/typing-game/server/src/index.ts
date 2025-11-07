@@ -12,9 +12,11 @@ import {
   Effect,
   HashMap,
   Layer,
+  Number,
   Option,
   Schedule,
   Stream,
+  String,
   Struct,
   SubscriptionRef,
   pipe,
@@ -32,9 +34,11 @@ export class RoomByIdStore extends Context.Tag('RoomByIdStore')<
   SubscriptionRef.SubscriptionRef<HashMap.HashMap<string, Shared.Room>>
 >() {}
 
+type ProgressByGamePlayer = HashMap.HashMap<Shared.GamePlayer, Shared.PlayerProgress>
+
 export class ProgressByGamePlayerStore extends Context.Tag('ProgressByGamePlayerStore')<
   ProgressByGamePlayerStore,
-  SubscriptionRef.SubscriptionRef<HashMap.HashMap<Shared.GamePlayer, Shared.PlayerProgress>>
+  SubscriptionRef.SubscriptionRef<ProgressByGamePlayer>
 >() {}
 
 const RoomByIdStoreLive = Layer.effect(
@@ -58,9 +62,15 @@ const RoomLive = Shared.RoomRpcs.toLayer(
       getRoomById: ({ roomId }) => getRoomByIdHandler(roomByIdRef, roomId),
       subscribeToRoom: ({ roomId, playerId }) =>
         subscribeToRoomHandler(roomByIdRef, progressByGamePlayerRef, roomId, playerId),
-      startGame: ({ roomId }) => startGameHandler(roomByIdRef, roomId),
-      updatePlayerProgress: ({ playerId, gameId, userText }) =>
-        updatePlayerProgressHandler(progressByGamePlayerRef, playerId, gameId, userText),
+      startGame: ({ roomId }) => startGameHandler(roomByIdRef, progressByGamePlayerRef, roomId),
+      updatePlayerProgress: ({ playerId, gameId, userText, charsTyped }) =>
+        updatePlayerProgressHandler(
+          progressByGamePlayerRef,
+          playerId,
+          gameId,
+          userText,
+          charsTyped,
+        ),
     }
   }),
 )
@@ -85,6 +95,7 @@ const createRoomHandler = (
       players: [player],
       status: Shared.Waiting.make(),
       maybeGame: Option.none(),
+      maybeScoreboard: Option.none(),
       createdAt,
     }
 
@@ -133,9 +144,7 @@ const getRoomByIdHandler = (
 
 const subscribeToRoomHandler = (
   roomByIdRef: SubscriptionRef.SubscriptionRef<Shared.RoomById>,
-  progressByGamePlayerRef: SubscriptionRef.SubscriptionRef<
-    HashMap.HashMap<Shared.GamePlayer, Shared.PlayerProgress>
-  >,
+  progressByGamePlayerRef: SubscriptionRef.SubscriptionRef<ProgressByGamePlayer>,
   roomId: string,
   playerId: string,
 ): Stream.Stream<Shared.RoomWithPlayerProgress, Shared.RoomNotFoundError> =>
@@ -156,13 +165,14 @@ const subscribeToRoomHandler = (
     ),
     Stream.throttle({
       cost: () => 1,
-      duration: Duration.millis(100),
+      duration: Duration.millis(ROOM_UPDATE_THROTTLE_MS),
       units: 1,
     }),
   )
 
 const startGameHandler = (
   roomByIdRef: SubscriptionRef.SubscriptionRef<Shared.RoomById>,
+  progressByGamePlayerRef: SubscriptionRef.SubscriptionRef<ProgressByGamePlayer>,
   roomId: string,
 ) =>
   Effect.gen(function* () {
@@ -182,17 +192,34 @@ const startGameHandler = (
     return yield* gameSequence.pipe(
       Stream.mapEffect(updateRoomStatus(roomByIdRef, roomId), { concurrency: 'unbounded' }),
       Stream.runDrain,
+      Effect.zipRight(finalizeGameScoreboard(roomByIdRef, progressByGamePlayerRef, roomId)),
       Effect.forkDaemon,
     )
   })
 
+const finalizeGameScoreboard = (
+  roomByIdRef: SubscriptionRef.SubscriptionRef<Shared.RoomById>,
+  progressByGamePlayerRef: SubscriptionRef.SubscriptionRef<ProgressByGamePlayer>,
+  roomId: string,
+) =>
+  Effect.gen(function* () {
+    const roomById = yield* SubscriptionRef.get(roomByIdRef)
+    const room = yield* Rooms.getById(roomById, roomId)
+    const progressByGamePlayer = yield* SubscriptionRef.get(progressByGamePlayerRef)
+    const maybeScoreboard = Option.some(calculateScoreboard(room, progressByGamePlayer))
+
+    yield* updateRoom(
+      roomByIdRef,
+      roomId,
+    )(Struct.evolve({ maybeScoreboard: () => maybeScoreboard }))
+  })
+
 const updatePlayerProgressHandler = (
-  progressByGamePlayerRef: SubscriptionRef.SubscriptionRef<
-    HashMap.HashMap<Shared.GamePlayer, Shared.PlayerProgress>
-  >,
+  progressByGamePlayerRef: SubscriptionRef.SubscriptionRef<ProgressByGamePlayer>,
   playerId: string,
   gameId: string,
   userText: string,
+  charsTyped: number,
 ) =>
   Effect.gen(function* () {
     const updatedAt = yield* Clock.currentTimeMillis
@@ -204,6 +231,7 @@ const updatePlayerProgressHandler = (
       gameId,
       userText,
       updatedAt,
+      charsTyped,
     })
 
     yield* SubscriptionRef.update(progressByGamePlayerRef, (progressByGamePlayer) =>
@@ -211,10 +239,65 @@ const updatePlayerProgressHandler = (
     )
   })
 
+const calculatePlayerScore = (
+  player: Shared.Player,
+  maybePlayerProgress: Option.Option<Shared.PlayerProgress>,
+  gameDurationSeconds: number,
+): Shared.PlayerScore => {
+  const charsTyped = Option.match(maybePlayerProgress, {
+    onSome: ({ charsTyped }) => charsTyped,
+    onNone: () => 0,
+  })
+
+  const correctChars = Option.match(maybePlayerProgress, {
+    onSome: ({ userText }) => String.length(userText),
+    onNone: () => 0,
+  })
+
+  const minutes = gameDurationSeconds / 60
+  const wpm = charsTyped / CHARS_PER_WORD / minutes
+  const accuracy = pipe(
+    correctChars,
+    Number.divide(charsTyped),
+    Option.match({ onSome: Number.multiply(100), onNone: () => 0 }),
+  )
+
+  return Shared.PlayerScore.make({
+    playerId: player.id,
+    username: player.username,
+    wpm,
+    accuracy,
+    charsTyped,
+    correctChars,
+  })
+}
+
+const calculateScoreboard = (
+  room: Shared.Room,
+  progressByGamePlayer: ProgressByGamePlayer,
+): Shared.Scoreboard =>
+  Effect.gen(function* () {
+    const game = yield* room.maybeGame
+
+    const scores = Array.map(room.players, (player) => {
+      const gamePlayer = Data.struct(
+        Shared.GamePlayer.make({
+          gameId: game.id,
+          playerId: player.id,
+        }),
+      )
+      const maybeProgress = HashMap.get(progressByGamePlayer, gamePlayer)
+      return calculatePlayerScore(player, maybeProgress, PLAYING_SECONDS)
+    })
+
+    return scores
+  }).pipe(
+    Effect.catchAll(() => Effect.succeed([])),
+    Effect.runSync,
+  )
+
 const getPlayerProgress = (
-  progressByGamePlayerRef: SubscriptionRef.SubscriptionRef<
-    HashMap.HashMap<Shared.GamePlayer, Shared.PlayerProgress>
-  >,
+  progressByGamePlayerRef: SubscriptionRef.SubscriptionRef<ProgressByGamePlayer>,
   playerId: string,
   gameId: string,
 ): Effect.Effect<Option.Option<Shared.PlayerProgress>> =>
@@ -243,7 +326,9 @@ const updateRoomStatus =
 const getReadyStream = Stream.make(Shared.GetReady.make())
 
 const COUNTDOWN_SECONDS = 3
-const PLAYING_SECONDS = 300
+const PLAYING_SECONDS = 30
+const CHARS_PER_WORD = 5
+const ROOM_UPDATE_THROTTLE_MS = 100
 
 const descendingRange = (top: number, bottom: number) =>
   pipe(Array.range(bottom, top), Array.reverse)
