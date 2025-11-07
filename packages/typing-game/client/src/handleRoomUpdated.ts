@@ -1,12 +1,12 @@
 import * as Shared from '@typing-game/shared'
-import { Array, Data, Option, String as Str } from 'effect'
+import { Data, Option, String as Str } from 'effect'
 import { Runtime } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
 import { Message, Model, RoomUpdated } from './main'
 
 export const handleRoomUpdated =
-  (model: Model, focusUserTextInput: Runtime.Command<Message>) =>
+  (model: Model) =>
   ({
     room,
     maybePlayerProgress,
@@ -43,16 +43,13 @@ export const handleRoomUpdated =
           Restore: ({ progress }) => progress.charsTyped,
         })
 
-    const shouldFocusInput = !hadStatusPlaying && isStatusPlaying
-    const maybeFocusUserTextInputCommand = optionWhen(shouldFocusInput)(focusUserTextInput)
-
     return [
       evo(model, {
         maybeRoom: () => Option.some(room),
         userText: () => nextUserText,
         charsTyped: () => nextCharsTyped,
       }),
-      Array.getSomes([maybeFocusUserTextInputCommand]),
+      [],
     ]
   }
 
@@ -84,8 +81,3 @@ const determinePlayerProgressAction = (
     })
   }
 }
-
-const optionWhen =
-  (condition: boolean) =>
-  <A>(value: A): Option.Option<A> =>
-    condition ? Option.some(value) : Option.none()

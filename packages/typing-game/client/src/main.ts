@@ -4,7 +4,6 @@ import * as Shared from '@typing-game/shared'
 import classNames from 'classnames'
 import {
   Array,
-  Data,
   Effect,
   Equal,
   Match as M,
@@ -17,9 +16,10 @@ import {
   Stream,
   pipe,
 } from 'effect'
-import { FieldValidation, Route, Runtime, Task, Url } from 'foldkit'
+import { FieldValidation, Route, Runtime, Url } from 'foldkit'
 import { Field, FieldSchema, Validation, validateField } from 'foldkit/fieldValidation'
 import {
+  Autofocus,
   Class,
   Disabled,
   For,
@@ -97,7 +97,6 @@ export const Model = S.Struct({
   maybeSession: S.Option(RoomPlayerSession),
   userText: S.String,
   charsTyped: S.Number,
-  isUserTextInputFocused: S.Boolean,
 })
 export type Model = typeof Model.Type
 
@@ -127,9 +126,6 @@ export const RoomUpdated = ts('RoomUpdated', {
 const RoomStreamError = ts('RoomStreamError', { error: S.String })
 const StartGameClicked = ts('StartGameClicked', { roomId: S.String })
 const SessionLoaded = ts('SessionLoaded', { maybeSession: S.Option(RoomPlayerSession) })
-const GameTextClicked = ts('GameTextClicked')
-const UserTextInputFocused = ts('UserTextInputFocused')
-const UserTextInputBlurred = ts('UserTextInputBlurred')
 
 type NoOp = typeof NoOp.Type
 type LinkClicked = typeof LinkClicked.Type
@@ -147,9 +143,6 @@ export type RoomUpdated = typeof RoomUpdated.Type
 type RoomStreamError = typeof RoomStreamError.Type
 type StartGameClicked = typeof StartGameClicked.Type
 type SessionLoaded = typeof SessionLoaded.Type
-type GameTextClicked = typeof GameTextClicked.Type
-type UserTextInputFocused = typeof UserTextInputFocused.Type
-type UserTextInputBlurred = typeof UserTextInputBlurred.Type
 
 export const Message = S.Union(
   NoOp,
@@ -168,9 +161,6 @@ export const Message = S.Union(
   RoomStreamError,
   StartGameClicked,
   SessionLoaded,
-  GameTextClicked,
-  UserTextInputFocused,
-  UserTextInputBlurred,
 )
 export type Message = typeof Message.Type
 
@@ -194,7 +184,6 @@ const init: Runtime.ApplicationInit<Model, Message> = (url: Url.Url) => {
       maybeSession: Option.none(),
       userText: '',
       charsTyped: 0,
-      isUserTextInputFocused: false,
     },
     commands,
   ]
@@ -364,7 +353,7 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         [],
       ],
 
-      RoomUpdated: handleRoomUpdated(model, focusUserTextInput),
+      RoomUpdated: handleRoomUpdated(model),
 
       // TODO: We need to show an error message if the room stream errors, and ideally
       // we can make this error the actual possible errors that can happen in
@@ -382,12 +371,6 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         }),
         [],
       ],
-
-      GameTextClicked: () => [model, [focusUserTextInput]],
-
-      UserTextInputFocused: () => [evo(model, { isUserTextInputFocused: () => true }), []],
-
-      UserTextInputBlurred: () => [evo(model, { isUserTextInputFocused: () => false }), []],
 
       UserTextInputted: ({ value }) => {
         const maybeGameText = pipe(
@@ -483,10 +466,6 @@ const startGame = (roomId: string): Runtime.Command<NoOp> =>
 const navigateToRoom = (roomId: string): Runtime.Command<NoOp> =>
   pushUrl(roomRouter.build({ roomId })).pipe(Effect.as(NoOp.make()))
 
-const focusUserTextInput: Runtime.Command<NoOp> = Task.focus(`#${USER_TEXT_INPUT_ID}`, () =>
-  NoOp.make(),
-)
-
 const savePlayerToSessionStorage = (session: RoomPlayerSession): Runtime.Command<NoOp> =>
   Effect.gen(function* () {
     const store = yield* KeyValueStore.KeyValueStore
@@ -578,8 +557,10 @@ const fieldView = (params: {
   onInput: (value: string) => Message
   type?: 'text' | 'email' | 'textarea'
   containerClassName?: string
+  inputClassName?: string
   onFocus?: Message
   onBlur?: Message
+  autofocus?: boolean
 }): Html => {
   const {
     id,
@@ -588,8 +569,10 @@ const fieldView = (params: {
     onInput,
     type = 'text',
     containerClassName,
+    inputClassName,
     onFocus,
     onBlur,
+    autofocus = false,
   } = params
   const { value } = field
 
@@ -601,7 +584,8 @@ const fieldView = (params: {
       Invalid: () => 'border-red-500',
     })
 
-  const inputClass = `w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${getBorderClass()}`
+  const defaultInputClassName = `w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${getBorderClass()}`
+  const inputClass = inputClassName || defaultInputClassName
 
   return div(
     [Class(classNames('mb-4', containerClassName))],
@@ -626,6 +610,7 @@ const fieldView = (params: {
             OnInput(onInput),
             ...(onFocus ? [OnFocus(onFocus)] : []),
             ...(onBlur ? [OnBlur(onBlur)] : []),
+            Autofocus(autofocus),
           ])
         : input([
             Id(id),
@@ -635,6 +620,7 @@ const fieldView = (params: {
             OnInput(onInput),
             ...(onFocus ? [OnFocus(onFocus)] : []),
             ...(onBlur ? [OnBlur(onBlur)] : []),
+            Autofocus(autofocus),
           ]),
 
       Field.$match(field, {
@@ -771,12 +757,7 @@ const playerView = (
     )
   })
 
-const maybeRoomView = ({
-  maybeRoom,
-  maybeSession,
-  userText,
-  isUserTextInputFocused,
-}: Model): Html =>
+const maybeRoomView = ({ maybeRoom, maybeSession, userText }: Model): Html =>
   Option.match(maybeRoom, {
     onNone: () => div([Class('text-gray-600')], ['Loading room...']),
     onSome: (room: Shared.Room) => {
@@ -830,13 +811,7 @@ const maybeRoomView = ({
               ],
             ),
           Playing: ({ secondsLeft }) =>
-            playingView(
-              secondsLeft,
-              maybeGameText,
-              userText,
-              maybeWrongCharIndex,
-              isUserTextInputFocused,
-            ),
+            playingView(secondsLeft, maybeGameText, userText, maybeWrongCharIndex),
           Finished: () => finishedView(room.maybeScoreboard),
         }),
       )
@@ -910,7 +885,6 @@ const playingView = (
   maybeGameText: Option.Option<string>,
   userText: string,
   maybeWrongCharIndex: Option.Option<number>,
-  isFocused: boolean,
 ): Html =>
   div(
     [Class('space-y-8')],
@@ -918,7 +892,7 @@ const playingView = (
       div([Class('text-gray-600')], [`Time left: ${secondsLeft}`]),
       Option.match(maybeGameText, {
         onNone: () => empty,
-        onSome: (gameText) => typingView(gameText, userText, maybeWrongCharIndex, isFocused),
+        onSome: (gameText) => typingView(gameText, userText, maybeWrongCharIndex),
       }),
     ],
   )
@@ -927,22 +901,18 @@ const typingView = (
   gameText: string,
   userText: string,
   maybeWrongCharIndex: Option.Option<number>,
-  isFocused: boolean,
 ): Html =>
   div(
-    [Class('space-y-4')],
+    [Class('relative focus-within:ring-blue-500 focus-within:ring-2 rounded transition-colors')],
     [
-      fieldView({
-        id: USER_TEXT_INPUT_ID,
-        labelText: 'Your Input',
-        field: Field.NotValidated({ value: userText }),
-        onInput: (value) => UserTextInputted.make({ value }),
-        type: 'textarea',
-        containerClassName: 'absolute opacity-0 pointer-events-none',
-        onFocus: UserTextInputFocused.make(),
-        onBlur: UserTextInputBlurred.make(),
-      }),
-      gameTextWithProgress(gameText, userText, maybeWrongCharIndex, isFocused),
+      textarea([
+        Id(USER_TEXT_INPUT_ID),
+        Value(userText),
+        Class('absolute inset-0 opacity-0 z-10 resize-none'),
+        OnInput((value) => UserTextInputted.make({ value })),
+        Autofocus(true),
+      ]),
+      gameTextWithProgress(gameText, userText, maybeWrongCharIndex),
     ],
   )
 
@@ -950,18 +920,9 @@ const gameTextWithProgress = (
   gameText: string,
   userText: string,
   maybeWrongCharIndex: Option.Option<number>,
-  isFocused: boolean,
 ): Html =>
   div(
-    [
-      Class(
-        classNames('p-4 bg-gray-100 rounded font-mono cursor-pointer ring-2 transition-colors', {
-          'ring-gray-100 hover:ring-gray-400': !isFocused,
-          'ring-blue-500': isFocused,
-        }),
-      ),
-      OnClick(GameTextClicked.make()),
-    ],
+    [Class('p-4 bg-gray-100 rounded font-mono')],
     pipe(gameText, Str.split(''), Array.map(charView(userText, maybeWrongCharIndex))),
   )
 
