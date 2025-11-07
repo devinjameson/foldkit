@@ -50,6 +50,7 @@ import { literal, slash, string } from 'foldkit/route'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
+import { handleRoomUpdated } from './handleRoomUpdated'
 import { RoomsClient } from './rpc'
 
 // CONSTANT
@@ -86,7 +87,7 @@ const RoomPlayerSession = S.Struct({
 })
 type RoomPlayerSession = typeof RoomPlayerSession.Type
 
-const Model = S.Struct({
+export const Model = S.Struct({
   route: AppRoute,
   usernameInput: FieldSchema(S.String),
   roomIdInput: FieldSchema(S.String),
@@ -98,7 +99,7 @@ const Model = S.Struct({
   charsTyped: S.Number,
   isUserTextInputFocused: S.Boolean,
 })
-type Model = typeof Model.Type
+export type Model = typeof Model.Type
 
 // MESSAGE
 
@@ -119,7 +120,7 @@ const JoinRoomClicked = ts('JoinRoomClicked')
 const RoomCreated = ts('RoomCreated', { roomId: S.String, player: Shared.Player })
 const RoomJoined = ts('RoomJoined', { roomId: S.String, player: Shared.Player })
 const RoomError = ts('RoomError', { error: S.String })
-const RoomUpdated = ts('RoomUpdated', {
+export const RoomUpdated = ts('RoomUpdated', {
   room: Shared.Room,
   maybePlayerProgress: S.Option(Shared.PlayerProgress),
 })
@@ -142,7 +143,7 @@ type JoinRoomClicked = typeof JoinRoomClicked.Type
 type RoomCreated = typeof RoomCreated.Type
 type RoomJoined = typeof RoomJoined.Type
 type RoomError = typeof RoomError.Type
-type RoomUpdated = typeof RoomUpdated.Type
+export type RoomUpdated = typeof RoomUpdated.Type
 type RoomStreamError = typeof RoomStreamError.Type
 type StartGameClicked = typeof StartGameClicked.Type
 type SessionLoaded = typeof SessionLoaded.Type
@@ -150,7 +151,7 @@ type GameTextClicked = typeof GameTextClicked.Type
 type UserTextInputFocused = typeof UserTextInputFocused.Type
 type UserTextInputBlurred = typeof UserTextInputBlurred.Type
 
-const Message = S.Union(
+export const Message = S.Union(
   NoOp,
   LinkClicked,
   UrlChanged,
@@ -171,7 +172,7 @@ const Message = S.Union(
   UserTextInputFocused,
   UserTextInputBlurred,
 )
-type Message = typeof Message.Type
+export type Message = typeof Message.Type
 
 // INIT
 
@@ -217,11 +218,6 @@ const isAnyFieldNotValid = (fields: ReadonlyArray<Field<unknown>>): boolean =>
 const MAX_WRONG_CHARS = 5
 
 const toNonEmptyStringOption = Option.liftPredicate(Str.isNonEmpty)
-
-const optionWhen =
-  (condition: boolean) =>
-  <A>(value: A): Option.Option<A> =>
-    condition ? Option.some(value) : Option.none()
 
 const validateUserTextInput = (newUserText: string, maybeGameText: Option.Option<string>): string =>
   Effect.gen(function* () {
@@ -368,48 +364,7 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         [],
       ],
 
-      RoomUpdated: ({ room, maybePlayerProgress }) => {
-        const isStatusPlaying = room.status._tag === 'Playing'
-        const wasStatusPlaying = Option.exists(
-          model.maybeRoom,
-          ({ status }) => status._tag === 'Playing',
-        )
-        const gameJustStarted = isStatusPlaying && !wasStatusPlaying
-
-        const progressAction = determinePlayerProgressAction(
-          room,
-          model.userText,
-          model.charsTyped,
-          maybePlayerProgress,
-        )
-
-        const nextUserText = gameJustStarted
-          ? Str.empty
-          : PlayerProgressAction.$match(progressAction, {
-              Clear: () => Str.empty,
-              Maintain: ({ userText }) => userText,
-              Restore: ({ progress }) => progress.userText,
-            })
-
-        const nextCharsTyped = gameJustStarted
-          ? 0
-          : PlayerProgressAction.$match(progressAction, {
-              Clear: () => 0,
-              Maintain: ({ charsTyped }) => charsTyped,
-              Restore: ({ progress }) => progress.charsTyped,
-            })
-
-        const maybeFocusUserTextInputCommand = optionWhen(gameJustStarted)(focusUserTextInput)
-
-        return [
-          evo(model, {
-            maybeRoom: () => Option.some(room),
-            userText: () => nextUserText,
-            charsTyped: () => nextCharsTyped,
-          }),
-          Array.getSomes([maybeFocusUserTextInputCommand]),
-        ]
-      },
+      RoomUpdated: handleRoomUpdated(model, focusUserTextInput),
 
       // TODO: We need to show an error message if the room stream errors, and ideally
       // we can make this error the actual possible errors that can happen in
@@ -466,37 +421,6 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
       },
     }),
   )
-
-// PLAYER PROGRESS ACTION
-
-type PlayerProgressAction = Data.TaggedEnum<{
-  Clear: {}
-  Maintain: { userText: string; charsTyped: number }
-  Restore: { progress: Shared.PlayerProgress }
-}>
-
-const PlayerProgressAction = Data.taggedEnum<PlayerProgressAction>()
-
-const determinePlayerProgressAction = (
-  room: Shared.Room,
-  currentUserText: string,
-  currentCharsTyped: number,
-  maybePlayerProgress: Option.Option<Shared.PlayerProgress>,
-): PlayerProgressAction => {
-  if (room.status._tag === 'Finished') {
-    return PlayerProgressAction.Clear()
-  } else if (Str.isNonEmpty(currentUserText)) {
-    return PlayerProgressAction.Maintain({
-      userText: currentUserText,
-      charsTyped: currentCharsTyped,
-    })
-  } else {
-    return Option.match(maybePlayerProgress, {
-      onSome: (progress) => PlayerProgressAction.Restore({ progress }),
-      onNone: () => PlayerProgressAction.Clear(),
-    })
-  }
-}
 
 // COMMAND
 
