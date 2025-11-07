@@ -11,6 +11,7 @@ on:
       - 'packages/foldkit/**'
       - 'packages/foldkit-vite-plugin/**'
       - 'pnpm-lock.yaml'
+      - '.github/workflows/deploy-typing-game.yml'
 
 jobs:
   deploy:
