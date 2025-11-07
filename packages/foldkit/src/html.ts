@@ -262,6 +262,11 @@ export type Attribute<Message> = Data.TaggedEnum<{
   Readonly: { readonly value: boolean }
   Required: { readonly value: boolean }
   Autofocus: { readonly value: boolean }
+  Spellcheck: { readonly value: boolean }
+  Autocorrect: { readonly value: string }
+  Autocapitalize: { readonly value: string }
+  InputMode: { readonly value: string }
+  EnterKeyHint: { readonly value: string }
   Multiple: { readonly value: boolean }
   Type: { readonly value: string }
   Accept: { readonly value: string }
@@ -298,6 +303,7 @@ export type Attribute<Message> = Data.TaggedEnum<{
   AriaRequired: { readonly value: boolean }
   AriaInvalid: { readonly value: boolean }
   AriaLive: { readonly value: string }
+  Attribute: { readonly key: string; readonly value: string }
   DataAttribute: { readonly key: string; readonly value: string }
   Style: { readonly value: Record<string, string> }
   InnerHTML: { readonly value: string }
@@ -374,6 +380,11 @@ export const {
   Readonly: Readonly_,
   Required: Required_,
   Autofocus: Autofocus_,
+  Spellcheck: Spellcheck_,
+  Autocorrect: Autocorrect_,
+  Autocapitalize: Autocapitalize_,
+  InputMode: InputMode_,
+  EnterKeyHint: EnterKeyHint_,
   Multiple: Multiple_,
   Type: Type_,
   Accept: Accept_,
@@ -410,6 +421,7 @@ export const {
   AriaRequired: AriaRequired_,
   AriaInvalid: AriaInvalid_,
   AriaLive: AriaLive_,
+  Attribute: Attribute_,
   DataAttribute: DataAttribute_,
   Style: Style_,
   InnerHTML: InnerHTML_,
@@ -481,6 +493,11 @@ export const Disabled = (value: boolean) => Disabled_({ value })
 export const Readonly = (value: boolean) => Readonly_({ value })
 export const Required = (value: boolean) => Required_({ value })
 export const Autofocus = (value: boolean) => Autofocus_({ value })
+export const Spellcheck = (value: boolean) => Spellcheck_({ value })
+export const Autocorrect = (value: string) => Autocorrect_({ value })
+export const Autocapitalize = (value: string) => Autocapitalize_({ value })
+export const InputMode = (value: string) => InputMode_({ value })
+export const EnterKeyHint = (value: string) => EnterKeyHint_({ value })
 export const Multiple = (value: boolean) => Multiple_({ value })
 export const Type = (value: string) => Type_({ value })
 export const Accept = (value: string) => Accept_({ value })
@@ -517,6 +534,7 @@ export const AriaDisabled = (value: boolean) => AriaDisabled_({ value })
 export const AriaRequired = (value: boolean) => AriaRequired_({ value })
 export const AriaInvalid = (value: boolean) => AriaInvalid_({ value })
 export const AriaLive = (value: string) => AriaLive_({ value })
+export const Attribute = (key: string, value: string) => Attribute_({ key, value })
 export const DataAttr = (key: string, value: string) => DataAttribute_({ key, value })
 export const StyleAttr = (value: Record<string, string>) => Style_({ value })
 export const InnerHTML = (value: string) => InnerHTML_({ value })
@@ -713,6 +731,11 @@ const buildVNodeData = <Message>(
           Readonly: ({ value }) => updateDataProps({ readOnly: value }),
           Required: ({ value }) => updateDataProps({ required: value }),
           Autofocus: ({ value }) => updateDataProps({ autofocus: value }),
+          Spellcheck: ({ value }) => updateDataAttrs({ spellcheck: value.toString() }),
+          Autocorrect: ({ value }) => updateDataAttrs({ autocorrect: value }),
+          Autocapitalize: ({ value }) => updateDataAttrs({ autocapitalize: value }),
+          InputMode: ({ value }) => updateDataAttrs({ inputmode: value }),
+          EnterKeyHint: ({ value }) => updateDataAttrs({ enterkeyhint: value }),
           Multiple: ({ value }) => updateDataProps({ multiple: value }),
           Type: ({ value }) => updateDataProps({ type: value }),
           Accept: ({ value }) => updateDataProps({ accept: value }),
@@ -749,6 +772,7 @@ const buildVNodeData = <Message>(
           AriaRequired: ({ value }) => updateDataAttrs({ 'aria-required': value.toString() }),
           AriaInvalid: ({ value }) => updateDataAttrs({ 'aria-invalid': value.toString() }),
           AriaLive: ({ value }) => updateDataAttrs({ 'aria-live': value }),
+          Attribute: ({ key, value }) => updateDataAttrs({ [key]: value }),
           DataAttribute: ({ key, value }) => updateDataAttrs({ [`data-${key}`]: value }),
           Style: ({ value }) => setData('style', value),
           InnerHTML: ({ value }) => updateDataProps({ innerHTML: value }),
