@@ -5,6 +5,8 @@
 - [ ] Play again functionality (after game finishes)
 - [ ] More game texts (variety of passages)
 - [ ] Themed UI - retro glowing green with dark background
+- [ ] If someone loads a room page e.g. /room/noble-iron-fair and they are not
+in that room, they should see a username input field and a "Join Room" button
 
 ## Accessibility
 
