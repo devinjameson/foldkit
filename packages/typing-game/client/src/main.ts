@@ -21,16 +21,13 @@ import { Field, FieldSchema, Validation, validateField } from 'foldkit/fieldVali
 import {
   Autocapitalize,
   Autocorrect,
-  Autofocus,
   Class,
   Disabled,
   For,
   Href,
   Html,
   Id,
-  OnBlur,
   OnClick,
-  OnFocus,
   OnInput,
   Spellcheck,
   Type,
@@ -58,7 +55,7 @@ import { RoomsClient } from './rpc'
 
 // CONSTANT
 
-const USER_TEXT_INPUT_ID = 'userText'
+export const USER_TEXT_INPUT_ID = 'userText'
 
 // ROUTE
 
@@ -105,7 +102,7 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-const NoOp = ts('NoOp')
+export const NoOp = ts('NoOp')
 const LinkClicked = ts('LinkClicked', {
   request: Runtime.UrlRequest,
 })
@@ -562,9 +559,6 @@ const fieldView = (params: {
   type?: 'text' | 'email' | 'textarea'
   containerClassName?: string
   inputClassName?: string
-  onFocus?: Message
-  onBlur?: Message
-  autofocus?: boolean
 }): Html => {
   const {
     id,
@@ -574,9 +568,6 @@ const fieldView = (params: {
     type = 'text',
     containerClassName,
     inputClassName,
-    onFocus,
-    onBlur,
-    autofocus = false,
   } = params
   const { value } = field
 
@@ -607,25 +598,8 @@ const fieldView = (params: {
         ],
       ),
       type === 'textarea'
-        ? textarea([
-            Id(id),
-            Value(value),
-            Class(inputClass),
-            OnInput(onInput),
-            ...(onFocus ? [OnFocus(onFocus)] : []),
-            ...(onBlur ? [OnBlur(onBlur)] : []),
-            Autofocus(autofocus),
-          ])
-        : input([
-            Id(id),
-            Type(type),
-            Value(value),
-            Class(inputClass),
-            OnInput(onInput),
-            ...(onFocus ? [OnFocus(onFocus)] : []),
-            ...(onBlur ? [OnBlur(onBlur)] : []),
-            Autofocus(autofocus),
-          ]),
+        ? textarea([Id(id), Value(value), Class(inputClass), OnInput(onInput)])
+        : input([Id(id), Type(type), Value(value), Class(inputClass), OnInput(onInput)]),
 
       Field.$match(field, {
         NotValidated: () => div([Class('invisible')], ['Not validated']),
@@ -914,7 +888,6 @@ const typingView = (
         Value(userText),
         Class('absolute inset-0 opacity-0 z-10 resize-none'),
         OnInput((value) => UserTextInputted.make({ value })),
-        Autofocus(true),
         Spellcheck(false),
         Autocorrect('off'),
         Autocapitalize('none'),

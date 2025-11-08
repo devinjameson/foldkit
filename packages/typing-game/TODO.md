@@ -11,7 +11,7 @@
 ## Bugs
 
 - [ ] Autofocus doesn't work on Safari when the text input appears (works on refresh)
-- [ ] Room ID input with live room ID validation is slow
+- [x] Room ID input with live room ID validation is slow
 
 ## Accessibility
 
