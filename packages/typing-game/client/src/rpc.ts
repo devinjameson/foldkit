@@ -3,10 +3,17 @@ import { RpcClient, RpcSerialization } from '@effect/rpc'
 import { RoomRpcs } from '@typing-game/shared'
 import { Effect, Layer } from 'effect'
 
-const ProtocolLive = RpcClient.layerProtocolHttp({
-  // TODO: Get this URL from Foldkit flags (Elm-style) instead of hardcoding
-  url: 'https://foldkit-typing-game.fly.dev/rpc',
-}).pipe(Layer.provide([FetchHttpClient.layer, RpcSerialization.layerNdjson]))
+import { ViteEnvConfig } from './config'
+
+const ProtocolLive = Effect.gen(function* () {
+  const { VITE_SERVER_URL } = yield* ViteEnvConfig
+  const url = `${VITE_SERVER_URL}/rpc`
+  return RpcClient.layerProtocolHttp({ url })
+}).pipe(
+  Effect.provide(ViteEnvConfig.Default),
+  Layer.unwrapEffect,
+  Layer.provide([FetchHttpClient.layer, RpcSerialization.layerNdjson]),
+)
 
 export class RoomsClient extends Effect.Service<RoomsClient>()('RoomsClient', {
   scoped: RpcClient.make(RoomRpcs),

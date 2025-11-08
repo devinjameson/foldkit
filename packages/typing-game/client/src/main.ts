@@ -790,7 +790,7 @@ const maybeRoomView = ({ maybeRoom, maybeSession, userText }: Model): Html =>
             ),
           Playing: ({ secondsLeft }) =>
             playingView(secondsLeft, maybeGameText, userText, maybeWrongCharIndex),
-          Finished: () => finishedView(room.maybeScoreboard),
+          Finished: () => finishedView(room.id, room.maybeScoreboard),
         }),
       )
     },
@@ -802,7 +802,7 @@ const byHighestWpm = pipe(
   Order.reverse,
 )
 
-const finishedView = (maybeScoreboard: Option.Option<Shared.Scoreboard>): Html =>
+const finishedView = (roomId: string, maybeScoreboard: Option.Option<Shared.Scoreboard>): Html =>
   div(
     [Class('space-y-6')],
     [
@@ -811,6 +811,14 @@ const finishedView = (maybeScoreboard: Option.Option<Shared.Scoreboard>): Html =
         onNone: () => div([Class('text-gray-600')], ['Loading scoreboard...']),
         onSome: scoreboardView,
       }),
+      button(
+        [
+          Type('button'),
+          Class('w-full py-2 px-4 rounded-md transition bg-blue-500 text-white hover:bg-blue-600'),
+          OnClick(StartGameClicked.make({ roomId })),
+        ],
+        ['Play Again'],
+      ),
     ],
   )
 
