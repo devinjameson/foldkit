@@ -8,6 +8,7 @@ build/
 # Environment variables
 .env
 .env.*
+!.env.example
 .env.local
 .env.*.local
 

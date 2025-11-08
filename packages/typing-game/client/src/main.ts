@@ -623,7 +623,7 @@ const homeView = (model: Model): Html => {
         [
           h1(
             [Class('text-3xl font-bold text-gray-800 mb-6 text-center max-w-lg mx-auto')],
-            ["Welcome to Pastor Herickson's Miney Niney Tiny Type Town!"],
+            ['Welcome to the Miney Miney Tiny Type Town!'],
           ),
 
           form(
