@@ -2,7 +2,7 @@
 
 ## Features
 
-- [X] Play again functionality (after game finishes)
+- [x] Play again functionality (after game finishes)
 - [ ] Do not repeat game texts in the same room until all have been used
 - [ ] More game texts (variety of passages)
 - [ ] Themed UI - retro glowing green with dark background

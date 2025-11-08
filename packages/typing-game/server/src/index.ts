@@ -187,7 +187,12 @@ const startGameHandler = (
     yield* updateRoom(
       roomByIdRef,
       roomId,
-    )((room) => Struct.evolve(room, { maybeGame: () => Option.some(game) }))
+    )((room) =>
+      Struct.evolve(room, {
+        maybeGame: () => Option.some(game),
+        maybeScoreboard: () => Option.none(),
+      }),
+    )
 
     return yield* gameSequence.pipe(
       Stream.mapEffect(updateRoomStatus(roomByIdRef, roomId), { concurrency: 'unbounded' }),
