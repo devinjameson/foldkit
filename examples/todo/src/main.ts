@@ -1,3 +1,5 @@
+import { KeyValueStore } from '@effect/platform'
+import { BrowserKeyValueStore } from '@effect/platform-browser'
 import { Array, Clock, Effect, Match as M, Option, Random, Schema as S, String } from 'effect'
 import { Runtime } from 'foldkit'
 import {
@@ -24,6 +26,10 @@ import {
 } from 'foldkit/html'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
+
+// CONSTANT
+
+const TODOS_STORAGE_KEY = 'todos'
 
 // MODEL
 
@@ -76,7 +82,6 @@ const CancelEdit = ts('CancelEdit')
 const ToggleAll = ts('ToggleAll')
 const ClearCompleted = ts('ClearCompleted')
 const SetFilter = ts('SetFilter', { filter: Filter })
-const TodosLoaded = ts('TodosLoaded', { todos: Todos })
 const TodosSaved = ts('TodosSaved', { todos: Todos })
 
 export const Message = S.Union(
@@ -93,7 +98,6 @@ export const Message = S.Union(
   ToggleAll,
   ClearCompleted,
   SetFilter,
-  TodosLoaded,
   TodosSaved,
 )
 
@@ -110,34 +114,27 @@ type CancelEdit = typeof CancelEdit.Type
 type ToggleAll = typeof ToggleAll.Type
 type ClearCompleted = typeof ClearCompleted.Type
 type SetFilter = typeof SetFilter.Type
-type TodosLoaded = typeof TodosLoaded.Type
 type TodosSaved = typeof TodosSaved.Type
 
 export type Message = typeof Message.Type
 
+// FLAGS
+
+const Flags = S.Struct({
+  todos: S.Option(Todos),
+})
+type Flags = typeof Flags.Type
+
 // INIT
 
-const loadTodos: Runtime.Command<TodosLoaded> = Effect.gen(function* () {
-  const storedTodos = yield* Effect.sync(() => localStorage.getItem('todos'))
-
-  if (!storedTodos) {
-    return TodosLoaded.make({ todos: [] })
-  }
-
-  const parsed = yield* Effect.try(() => JSON.parse(storedTodos))
-  const decoded = yield* S.decodeUnknown(Todos)(parsed)
-
-  return TodosLoaded.make({ todos: Array.fromIterable(decoded) })
-}).pipe(Effect.catchAll(() => Effect.succeed(TodosLoaded.make({ todos: [] }))))
-
-const init: Runtime.ElementInit<Model, Message> = () => [
+const init: Runtime.ElementInit<Model, Message, Flags> = (flags) => [
   {
-    todos: [],
+    todos: Option.getOrElse(flags.todos, () => []),
     newTodoText: '',
     filter: 'All',
     editing: NotEditing.make(),
   },
-  [loadTodos],
+  [],
 ]
 
 // UPDATE
@@ -308,13 +305,6 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         [],
       ],
 
-      TodosLoaded: ({ todos }) => [
-        evo(model, {
-          todos: () => todos,
-        }),
-        [],
-      ],
-
       TodosSaved: ({ todos }) => [
         evo(model, {
           todos: () => todos,
@@ -342,9 +332,13 @@ const generateTodoData = (text: string): Runtime.Command<GotNewTodoData> =>
 
 const saveTodos = (todos: Todos): Runtime.Command<TodosSaved> =>
   Effect.gen(function* () {
-    yield* Effect.sync(() => localStorage.setItem('todos', JSON.stringify(todos)))
+    const store = yield* KeyValueStore.KeyValueStore
+    yield* store.set(TODOS_STORAGE_KEY, S.encodeSync(S.parseJson(Todos))(todos))
     return TodosSaved.make({ todos })
-  }).pipe(Effect.catchAll(() => Effect.succeed(TodosSaved.make({ todos }))))
+  }).pipe(
+    Effect.catchAll(() => Effect.succeed(TodosSaved.make({ todos }))),
+    Effect.provide(BrowserKeyValueStore.layerLocalStorage),
+  )
 
 // VIEW
 
@@ -570,8 +564,24 @@ const view = (model: Model): Html => {
 
 // RUN
 
+const flags: Effect.Effect<Flags> = Effect.gen(function* () {
+  const store = yield* KeyValueStore.KeyValueStore
+  const maybeTodosJson = yield* store.get(TODOS_STORAGE_KEY)
+  const todosJson = yield* maybeTodosJson
+
+  const decodeTodos = S.decode(S.parseJson(Todos))
+  const todos = yield* decodeTodos(todosJson)
+
+  return { todos: Option.some(todos) }
+}).pipe(
+  Effect.catchAll(() => Effect.succeed({ todos: Option.none() })),
+  Effect.provide(BrowserKeyValueStore.layerLocalStorage),
+)
+
 const element = Runtime.makeElement({
   Model,
+  Flags,
+  flags,
   init,
   update,
   view,

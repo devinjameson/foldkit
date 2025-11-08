@@ -42,9 +42,12 @@ export interface RuntimeConfig<
   Model,
   Message,
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
+  Flags,
 > {
   Model: Schema.Schema<Model, any, never>
-  readonly init: (url?: Url) => [Model, ReadonlyArray<Command<Message>>]
+  Flags: Schema.Schema<Flags, any, never>
+  readonly flags: Effect.Effect<Flags>
+  readonly init: (flags: Flags, url?: Url) => [Model, ReadonlyArray<Command<Message>>]
   readonly update: (model: Model, message: Message) => [Model, ReadonlyArray<Command<Message>>]
   readonly view: (model: Model) => Html
   readonly commandStreams?: CommandStreams<Model, Message, StreamDepsMap>
@@ -52,35 +55,76 @@ export interface RuntimeConfig<
   readonly browser?: BrowserConfig<Message>
 }
 
-export type ElementInit<Model, Message> = () => [Model, ReadonlyArray<Command<Message>>]
-export type ApplicationInit<Model, Message> = (url: Url) => [Model, ReadonlyArray<Command<Message>>]
-
-export interface ElementConfig<
+interface BaseElementConfig<
   Model,
   Message,
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
 > {
   readonly Model: Schema.Schema<Model, any, never>
-  readonly init: ElementInit<Model, Message>
   readonly update: (model: Model, message: Message) => [Model, ReadonlyArray<Command<Message>>]
   readonly view: (model: Model) => Html
   readonly commandStreams?: CommandStreams<Model, Message, StreamDepsMap>
   readonly container: HTMLElement
 }
 
-export interface ApplicationConfig<
+export interface ElementConfigWithFlags<
+  Model,
+  Message,
+  StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
+  Flags,
+> extends BaseElementConfig<Model, Message, StreamDepsMap> {
+  readonly Flags: Schema.Schema<Flags, any, never>
+  readonly flags: Effect.Effect<Flags>
+  readonly init: (flags: Flags) => [Model, ReadonlyArray<Command<Message>>]
+}
+
+export interface ElementConfigWithoutFlags<
+  Model,
+  Message,
+  StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
+> extends BaseElementConfig<Model, Message, StreamDepsMap> {
+  readonly init: () => [Model, ReadonlyArray<Command<Message>>]
+}
+
+interface BaseApplicationConfig<
   Model,
   Message,
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
 > {
   readonly Model: Schema.Schema<Model, any, never>
-  readonly init: ApplicationInit<Model, Message>
   readonly update: (model: Model, message: Message) => [Model, ReadonlyArray<Command<Message>>]
   readonly view: (model: Model) => Html
   readonly commandStreams?: CommandStreams<Model, Message, StreamDepsMap>
   readonly container: HTMLElement
   readonly browser: BrowserConfig<Message>
 }
+
+export interface ApplicationConfigWithFlags<
+  Model,
+  Message,
+  StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
+  Flags,
+> extends BaseApplicationConfig<Model, Message, StreamDepsMap> {
+  readonly Flags: Schema.Schema<Flags, any, never>
+  readonly flags: Effect.Effect<Flags>
+  readonly init: (flags: Flags, url: Url) => [Model, ReadonlyArray<Command<Message>>]
+}
+
+export interface ApplicationConfigWithoutFlags<
+  Model,
+  Message,
+  StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
+> extends BaseApplicationConfig<Model, Message, StreamDepsMap> {
+  readonly init: (url: Url) => [Model, ReadonlyArray<Command<Message>>]
+}
+
+export type ElementInit<Model, Message, Flags = void> = Flags extends void
+  ? () => [Model, ReadonlyArray<Command<Message>>]
+  : (flags: Flags) => [Model, ReadonlyArray<Command<Message>>]
+
+export type ApplicationInit<Model, Message, Flags = void> = Flags extends void
+  ? (url: Url) => [Model, ReadonlyArray<Command<Message>>]
+  : (flags: Flags, url: Url) => [Model, ReadonlyArray<Command<Message>>]
 
 export type CommandStream<Model, Message, StreamDeps> = {
   readonly modelToDeps: (model: Model) => StreamDeps
@@ -118,17 +162,21 @@ export const makeCommandStreams =
 type MakeRuntimeReturn = (hmrModel?: unknown) => Effect.Effect<void>
 
 const makeRuntime =
-  <Model, Message, StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>>({
+  <Model, Message, StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>, Flags>({
     Model,
+    Flags: _Flags,
+    flags: flags_,
     init,
     update,
     view,
     commandStreams,
     container,
     browser: browserConfig,
-  }: RuntimeConfig<Model, Message, StreamDepsMap>): MakeRuntimeReturn =>
-  (hmrModel?: unknown) =>
+  }: RuntimeConfig<Model, Message, StreamDepsMap, Flags>): MakeRuntimeReturn =>
+  (hmrModel?: unknown): Effect.Effect<void> =>
     Effect.gen(function* () {
+      const flags = yield* flags_
+
       const modelEquivalence = Schema.equivalence(Model)
 
       const messageQueue = yield* Queue.unbounded<Message>()
@@ -143,11 +191,11 @@ const makeRuntime =
             hmrModel,
             Schema.decodeUnknownEither(Model),
             Either.match({
-              onLeft: () => init(Option.getOrUndefined(currentUrl)),
+              onLeft: () => init(flags, Option.getOrUndefined(currentUrl)),
               onRight: (restoredModel) => [restoredModel, []],
             }),
           )
-        : init(Option.getOrUndefined(currentUrl))
+        : init(flags, Option.getOrUndefined(currentUrl))
 
       const modelSubscriptionRef = yield* SubscriptionRef.make(initModel)
 
@@ -265,40 +313,103 @@ const patchVNode = (
   })
 }
 
-export const makeElement = <
+export function makeElement<
   Model,
   Message extends { _tag: string },
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
+  Flags,
+>(config: ElementConfigWithFlags<Model, Message, StreamDepsMap, Flags>): MakeRuntimeReturn
+
+export function makeElement<
+  Model,
+  Message extends { _tag: string },
+  StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
+>(config: ElementConfigWithoutFlags<Model, Message, StreamDepsMap>): MakeRuntimeReturn
+
+export function makeElement<
+  Model,
+  Message extends { _tag: string },
+  StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
+  Flags,
 >(
-  config: ElementConfig<Model, Message, StreamDepsMap>,
-): MakeRuntimeReturn =>
-  makeRuntime({
+  config:
+    | ElementConfigWithFlags<Model, Message, StreamDepsMap, Flags>
+    | ElementConfigWithoutFlags<Model, Message, StreamDepsMap>,
+): MakeRuntimeReturn {
+  const baseConfig = {
     Model: config.Model,
-    init: () => config.init(),
     update: config.update,
     view: config.view,
     ...(config.commandStreams && { commandStreams: config.commandStreams }),
     container: config.container,
-  })
+  }
 
-export const makeApplication = <
+  if ('Flags' in config) {
+    return makeRuntime({
+      ...baseConfig,
+      Flags: config.Flags,
+      flags: config.flags,
+      init: (flags) => config.init(flags),
+    })
+  } else {
+    return makeRuntime({
+      ...baseConfig,
+      Flags: Schema.Void,
+      flags: Effect.succeed(undefined),
+      init: () => config.init(),
+    })
+  }
+}
+
+export function makeApplication<
   Model,
   Message extends { _tag: string },
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
+  Flags,
+>(config: ApplicationConfigWithFlags<Model, Message, StreamDepsMap, Flags>): MakeRuntimeReturn
+
+export function makeApplication<
+  Model,
+  Message extends { _tag: string },
+  StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
+>(config: ApplicationConfigWithoutFlags<Model, Message, StreamDepsMap>): MakeRuntimeReturn
+
+export function makeApplication<
+  Model,
+  Message extends { _tag: string },
+  StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
+  Flags,
 >(
-  config: ApplicationConfig<Model, Message, StreamDepsMap>,
-): MakeRuntimeReturn => {
+  config:
+    | ApplicationConfigWithFlags<Model, Message, StreamDepsMap, Flags>
+    | ApplicationConfigWithoutFlags<Model, Message, StreamDepsMap>,
+): MakeRuntimeReturn {
   const currentUrl: Url = Option.getOrThrow(urlFromString(window.location.href))
 
-  return makeRuntime({
+  const baseConfig = {
     Model: config.Model,
-    init: (url) => config.init(url || currentUrl),
     update: config.update,
     view: config.view,
     ...(config.commandStreams && { commandStreams: config.commandStreams }),
     container: config.container,
     browser: config.browser,
-  })
+  }
+
+  if ('Flags' in config) {
+    return makeRuntime({
+      ...baseConfig,
+      Flags: config.Flags,
+      flags: config.flags,
+      init: (flags, url) => config.init(flags, url ?? currentUrl),
+    })
+  } else {
+    return makeRuntime({
+      ...baseConfig,
+      Flags: Schema.Void,
+      flags: Effect.succeed(undefined),
+      init: (_flags, url) => config.init(url ?? currentUrl),
+    })
+  }
 }
 
 const preserveModel = (model: unknown): void => {
