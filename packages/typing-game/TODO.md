@@ -6,7 +6,12 @@
 - [ ] More game texts (variety of passages)
 - [ ] Themed UI - retro glowing green with dark background
 - [ ] If someone loads a room page e.g. /room/noble-iron-fair and they are not
-in that room, they should see a username input field and a "Join Room" button
+      in that room, they should see a username input field and a "Join Room" button
+
+## Bugs
+
+- [ ] Autofocus doesn't work on Safari when the text input appears (works on refresh)
+- [ ] Room ID input with live room ID validation is slow
 
 ## Accessibility
 
@@ -18,6 +23,6 @@ in that room, they should see a username input field and a "Join Room" button
   - Server URL (instead of hardcoding in `rpc.ts`)
   - Environment-specific configs (dev vs prod)
 - [ ] Add health check route (`/health`) (tried doing this but ran into strange
-issue with getting everything to typecheck, probably need to spend an afternoon
-on this and maybe get some help from the Effect Discord)
-- [ ] Configure Fly.io health checks to use the health check route 
+      issue with getting everything to typecheck, probably need to spend an afternoon
+      on this and maybe get some help from the Effect Discord)
+- [ ] Configure Fly.io health checks to use the health check route

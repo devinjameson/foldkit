@@ -283,6 +283,7 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         if (Field.$is('Valid')(validateRoomIdResult)) {
           return [
             evo(model, {
+              roomIdInput: () => Field.Validating({ value }),
               roomIdValidationId: () => validationId,
               roomFormError: () => Option.none(),
             }),
