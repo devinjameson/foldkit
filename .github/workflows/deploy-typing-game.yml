@@ -37,6 +37,8 @@ jobs:
 
       - name: Build typing game client
         run: pnpm build:typing-game:client
+        env:
+          VITE_SERVER_URL: ${{ secrets.VITE_SERVER_URL }}
 
       - name: Deploy to Vercel
         working-directory: packages/typing-game/client
