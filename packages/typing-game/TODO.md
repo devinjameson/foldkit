@@ -14,8 +14,10 @@ in that room, they should see a username input field and a "Join Room" button
 
 ## Infrastructure
 
-- [ ] Add health check route (`/health`)
-- [ ] Configure Fly.io health checks to use the health check route
 - [ ] Add Foldkit flags for configuration (Elm-style)
   - Server URL (instead of hardcoding in `rpc.ts`)
   - Environment-specific configs (dev vs prod)
+- [ ] Add health check route (`/health`) (tried doing this but ran into strange
+issue with getting everything to typecheck, probably need to spend an afternoon
+on this and maybe get some help from the Effect Discord)
+- [ ] Configure Fly.io health checks to use the health check route 
