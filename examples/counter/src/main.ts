@@ -1,6 +1,6 @@
 import { Match as M, Schema } from 'effect'
 import { Runtime } from 'foldkit'
-import { Class, Html, OnClick, button, div } from 'foldkit/html'
+import { Html, html } from 'foldkit/html'
 import { ts } from 'foldkit/schema'
 
 // MODEL
@@ -20,7 +20,11 @@ type Decrement = typeof Decrement.Type
 type Increment = typeof Increment.Type
 type Reset = typeof Reset.Type
 
-type Message = typeof Message.Type
+export type Message = typeof Message.Type
+
+// HTML
+
+const { div, button, Class, OnClick } = html<Message>()
 
 // UPDATE
 
