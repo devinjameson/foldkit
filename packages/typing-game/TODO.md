@@ -13,6 +13,8 @@
   - Only host can play again after the game is finished
   - If host leaves, assign a new host
 - [ ] Remove user from room when they disconnect (Stream.ensure I think?)
+- [ ] Copy room ID button (use same pattern as Foldkit website)
+- [ ] Add leave room button
 
 ## Bugs
 

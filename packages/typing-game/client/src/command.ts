@@ -2,15 +2,15 @@ import { KeyValueStore } from '@effect/platform'
 import { BrowserKeyValueStore } from '@effect/platform-browser'
 import { Effect, Match as M, Option, Schema as S, Stream } from 'effect'
 import { Runtime } from 'foldkit'
-import { Field } from 'foldkit/fieldValidation'
 import { pushUrl } from 'foldkit/navigation'
 
 import { ROOM_PLAYER_SESSION_KEY } from './constant'
 import {
+  BootCompleted,
+  KeyPressed,
   NoOp,
   RoomCreated,
   RoomError,
-  RoomIdValidated,
   RoomJoined,
   RoomStreamError,
   RoomUpdated,
@@ -21,31 +21,9 @@ import { Model, RoomPlayerSession } from './model'
 import { roomRouter } from './route'
 import { RoomsClient } from './rpc'
 
-export const validateRoomJoinable = (
-  roomId: string,
-  validationId: number,
-): Runtime.Command<RoomIdValidated> =>
-  Effect.gen(function* () {
-    const client = yield* RoomsClient
-    return yield* client.getRoomById({ roomId })
-  }).pipe(
-    Effect.match({
-      onSuccess: () =>
-        RoomIdValidated.make({
-          validationId,
-          field: Field.Valid({ value: roomId }),
-        }),
-      onFailure: () =>
-        RoomIdValidated.make({
-          validationId,
-          field: Field.Invalid({
-            value: roomId,
-            error: 'Room not found',
-          }),
-        }),
-    }),
-    Effect.provide(RoomsClient.Default),
-  )
+export const bootSequence: Runtime.Command<BootCompleted> = Effect.sleep('2500 millis').pipe(
+  Effect.as(BootCompleted.make()),
+)
 
 export const createRoom = (username: string): Runtime.Command<RoomCreated | RoomError> =>
   Effect.gen(function* () {
@@ -133,6 +111,9 @@ export const updatePlayerProgress = (
 
 const CommandStreamsDeps = S.Struct({
   roomSubscription: S.Option(S.Struct({ roomId: S.String, playerId: S.String })),
+  keyboard: S.Struct({
+    isOnSelectActionStep: S.Boolean,
+  }),
 })
 
 export const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Model, Message>({
@@ -160,5 +141,23 @@ export const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Mod
             )
           }).pipe(Stream.unwrap, Stream.provideLayer(RoomsClient.Default)),
       }),
+  },
+
+  keyboard: {
+    modelToDeps: (model: Model) => ({
+      isOnSelectActionStep: model.route._tag === 'Home' && model.homeStep._tag === 'SelectAction',
+    }),
+    depsToStream: (deps: { isOnSelectActionStep: boolean }) =>
+      Stream.when(
+        Stream.fromEventListener<KeyboardEvent>(document, 'keydown').pipe(
+          Stream.map((keyboardEvent) =>
+            Effect.sync(() => {
+              keyboardEvent.preventDefault()
+              return KeyPressed.make({ key: keyboardEvent.key })
+            }),
+          ),
+        ),
+        () => deps.isOnSelectActionStep,
+      ),
   },
 })

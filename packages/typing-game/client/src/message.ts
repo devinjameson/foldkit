@@ -1,7 +1,6 @@
 import * as Shared from '@typing-game/shared'
 import { Schema as S } from 'effect'
 import { Runtime, Url } from 'foldkit'
-import { FieldSchema } from 'foldkit/fieldValidation'
 import { ts } from 'foldkit/schema'
 
 import { RoomPlayerSession } from './model'
@@ -11,13 +10,14 @@ const LinkClicked = ts('LinkClicked', {
   request: Runtime.UrlRequest,
 })
 const UrlChanged = ts('UrlChanged', { url: Url.Url })
+const BootCompleted = ts('BootCompleted')
+const UsernameFormSubmitted = ts('UsernameFormSubmitted')
+const KeyPressed = ts('KeyPressed', { key: S.String })
 const UsernameInputted = ts('UsernameInputted', { value: S.String })
 const RoomIdInputted = ts('RoomIdInputted', { value: S.String })
 const UserTextInputted = ts('UserTextInputted', { value: S.String })
-const RoomIdValidated = ts('RoomIdValidated', {
-  validationId: S.Number,
-  field: FieldSchema(S.String),
-})
+const UsernameInputBlurred = ts('UsernameInputBlurred')
+const SessionIdInputBlurred = ts('SessionIdInputBlurred')
 const CreateRoomClicked = ts('CreateRoomClicked')
 const JoinRoomClicked = ts('JoinRoomClicked')
 const RoomCreated = ts('RoomCreated', { roomId: S.String, player: Shared.Player })
@@ -34,10 +34,14 @@ const SessionLoaded = ts('SessionLoaded', { maybeSession: S.Option(RoomPlayerSes
 export type NoOp = typeof NoOp.Type
 export type LinkClicked = typeof LinkClicked.Type
 export type UrlChanged = typeof UrlChanged.Type
+export type BootCompleted = typeof BootCompleted.Type
+export type UsernameFormSubmitted = typeof UsernameFormSubmitted.Type
+export type KeyPressed = typeof KeyPressed.Type
 export type UsernameInputted = typeof UsernameInputted.Type
 export type RoomIdInputted = typeof RoomIdInputted.Type
 export type UserTextInputted = typeof UserTextInputted.Type
-export type RoomIdValidated = typeof RoomIdValidated.Type
+export type UsernameInputBlurred = typeof UsernameInputBlurred.Type
+export type SessionIdInputBlurred = typeof SessionIdInputBlurred.Type
 export type CreateRoomClicked = typeof CreateRoomClicked.Type
 export type JoinRoomClicked = typeof JoinRoomClicked.Type
 export type RoomCreated = typeof RoomCreated.Type
@@ -52,10 +56,14 @@ export const Message = S.Union(
   NoOp,
   LinkClicked,
   UrlChanged,
+  BootCompleted,
+  UsernameFormSubmitted,
+  KeyPressed,
   UsernameInputted,
   RoomIdInputted,
   UserTextInputted,
-  RoomIdValidated,
+  UsernameInputBlurred,
+  SessionIdInputBlurred,
   CreateRoomClicked,
   JoinRoomClicked,
   RoomCreated,
@@ -69,18 +77,22 @@ export const Message = S.Union(
 export type Message = typeof Message.Type
 
 export {
+  BootCompleted,
   CreateRoomClicked,
   JoinRoomClicked,
+  KeyPressed,
   LinkClicked,
   RoomCreated,
   RoomError,
   RoomIdInputted,
-  RoomIdValidated,
   RoomJoined,
   RoomStreamError,
+  SessionIdInputBlurred,
   SessionLoaded,
   StartGameClicked,
   UrlChanged,
+  UsernameFormSubmitted,
+  UsernameInputBlurred,
   UserTextInputted,
   UsernameInputted,
 }

@@ -1,0 +1,163 @@
+import { Match as M, Option } from 'effect'
+import {
+  Autocapitalize,
+  Autocomplete,
+  Autocorrect,
+  Class,
+  Html,
+  Id,
+  OnBlur,
+  OnInput,
+  OnSubmit,
+  Spellcheck,
+  Type,
+  Value,
+  div,
+  empty,
+  form,
+  input,
+  span,
+} from 'foldkit/html'
+
+import { SESSION_ID_INPUT_ID, USERNAME_INPUT_ID } from '../constant'
+import {
+  JoinRoomClicked,
+  RoomIdInputted,
+  SessionIdInputBlurred,
+  UsernameFormSubmitted,
+  UsernameInputBlurred,
+  UsernameInputted,
+} from '../message'
+import { Model } from '../model'
+
+export const homeView = (model: Model): Html =>
+  div(
+    [Class('min-h-screen bg-terminal-bg font-terminal text-terminal-green p-8')],
+    [
+      div(
+        [Class('max-w-4xl')],
+        [
+          div([Class('text-3xl mb-2 uppercase')], ['TYPING TERMINAL v1.0']),
+
+          M.value(model.homeStep).pipe(
+            M.tagsExhaustive({
+              EnterUsername: ({ username }) =>
+                form(
+                  [OnSubmit(UsernameFormSubmitted.make())],
+                  [
+                    div(
+                      [Class('flex items-center gap-2')],
+                      [
+                        span([Class('text-3xl')], ['Enter username: ']),
+                        div(
+                          [Class('flex items-center gap-2 flex-1')],
+                          [
+                            input([
+                              Id(USERNAME_INPUT_ID),
+                              Type('text'),
+                              Value(username),
+                              Class(
+                                'bg-transparent border-0 text-terminal-green font-terminal text-3xl px-0 py-2 outline-none w-full',
+                              ),
+                              OnInput((value) => UsernameInputted.make({ value })),
+                              OnBlur(UsernameInputBlurred.make()),
+                              Autocapitalize('none'),
+                              Spellcheck(false),
+                              Autocorrect('off'),
+                              Autocomplete('off'),
+                            ]),
+                            span(
+                              [Class('blink-cursor inline-block w-3 h-8 bg-terminal-green')],
+                              [],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+
+              SelectAction: ({ selectedAction }) =>
+                div(
+                  [Class('space-y-2')],
+                  [
+                    div(
+                      [],
+                      [
+                        div(
+                          [Class('text-3xl whitespace-pre-wrap')],
+                          [selectedAction === 'CreateRoom' ? '> ' : '  ', 'Create room'],
+                        ),
+                      ],
+                    ),
+                    div(
+                      [],
+                      [
+                        div(
+                          [Class('text-3xl whitespace-pre-wrap')],
+                          [selectedAction === 'JoinRoom' ? '> ' : '  ', 'Join room'],
+                        ),
+                      ],
+                    ),
+                    div(
+                      [],
+                      [
+                        div(
+                          [Class('text-3xl whitespace-pre-wrap')],
+                          [selectedAction === 'ChangeUsername' ? '> ' : '  ', 'Change username'],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+
+              EnterSessionId: ({ sessionId }) =>
+                div(
+                  [],
+                  [
+                    div([Class('text-3xl uppercase mb-4')], ['Enter room ID:']),
+                    form(
+                      [OnSubmit(JoinRoomClicked.make())],
+                      [
+                        div(
+                          [Class('flex items-center gap-2')],
+                          [
+                            input([
+                              Id(SESSION_ID_INPUT_ID),
+                              Type('text'),
+                              Value(sessionId),
+                              Class(
+                                'bg-transparent border-0 text-terminal-green font-terminal text-3xl px-0 py-2 outline-none w-full',
+                              ),
+                              OnInput((value) => RoomIdInputted.make({ value })),
+                              OnBlur(SessionIdInputBlurred.make()),
+                              Autocapitalize('none'),
+                              Spellcheck(false),
+                              Autocorrect('off'),
+                              Autocomplete('off'),
+                            ]),
+                            span(
+                              [Class('blink-cursor inline-block w-3 h-8 bg-terminal-green')],
+                              [],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+            }),
+          ),
+
+          Option.match(model.roomFormError, {
+            onNone: () => empty,
+            onSome: (errorMessage) =>
+              div(
+                [Class('mt-6 border-2 border-terminal-red p-4')],
+                [span([Class('text-terminal-red text-3xl')], ['[ERROR] ', errorMessage])],
+              ),
+          }),
+        ],
+      ),
+    ],
+  )

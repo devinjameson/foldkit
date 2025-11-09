@@ -1,25 +1,26 @@
-import { Match as M, Option } from 'effect'
+import { Array, Match as M, Option, pipe } from 'effect'
 import { Runtime, Url } from 'foldkit'
-import { Field } from 'foldkit/fieldValidation'
 
-import { loadSessionFromStorage } from './command'
+import { bootSequence, loadSessionFromStorage } from './command'
 import { Message } from './message'
-import { Model } from './model'
+import { EnterUsername, Model } from './model'
 import { urlToAppRoute } from './route'
 
 export const init: Runtime.ApplicationInit<Model, Message> = (url: Url.Url) => {
   const route = urlToAppRoute(url)
-  const commands = M.value(route).pipe(
-    M.tag('Room', ({ roomId }) => [loadSessionFromStorage(roomId)]),
-    M.orElse(() => []),
+
+  const maybeLoadSession = M.value(route).pipe(
+    M.tag('Room', ({ roomId }) => loadSessionFromStorage(roomId)),
+    M.option,
   )
+
+  const commands = pipe(Array.getSomes([maybeLoadSession]), Array.appendAll([bootSequence]))
 
   return [
     {
+      bootStatus: 'Booting',
       route,
-      usernameInput: Field.NotValidated({ value: '' }),
-      roomIdInput: Field.NotValidated({ value: '' }),
-      roomIdValidationId: 0,
+      homeStep: EnterUsername.make({ username: '' }),
       roomFormError: Option.none(),
       maybeRoom: Option.none(),
       maybeSession: Option.none(),
