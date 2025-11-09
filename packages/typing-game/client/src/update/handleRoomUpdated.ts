@@ -3,7 +3,9 @@ import { Array, Data, Function, Option, String as Str } from 'effect'
 import { Runtime, Task } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
-import { Message, Model, NoOp, RoomUpdated, USER_TEXT_INPUT_ID } from './main'
+import { USER_TEXT_INPUT_ID } from '../constant'
+import { Message, NoOp, RoomUpdated } from '../message'
+import { Model } from '../model'
 
 export const handleRoomUpdated =
   (model: Model) =>
