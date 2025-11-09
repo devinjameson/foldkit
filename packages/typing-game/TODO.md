@@ -3,22 +3,22 @@
 ## Features
 
 - [x] Play again functionality (after game finishes)
-- [ ] Do not repeat game texts in the same room until all have been used
-- [ ] More game texts (variety of passages)
+- [X] Do not repeat game texts in the same room until all have been used
+- [X] More game texts (variety of passages)
 - [ ] Themed UI - retro glowing green with dark background
 - [ ] If someone loads a room page e.g. /room/noble-iron-fair and they are not
       in that room, they should see a username input field and a "Join Room" button
 - [ ] Add "host" concept:
-  - Host can start the game when enough players have joined
-  - Host can play again after the game is finished
+  - Only host can start the game when enough players have joined
+  - Only host can play again after the game is finished
   - If host leaves, assign a new host
 - [ ] Remove user from room when they disconnect (Stream.ensure I think?)
-- [ ] Underline showing when you are disappears at end of lines
 
 ## Bugs
 
 - [x] Autofocus doesn't work on Safari when the text input appears (works on refresh)
 - [x] Room ID input with live room ID validation is slow
+- [ ] Underline showing when you are disappears at end of lines
 
 ## Accessibility
 
