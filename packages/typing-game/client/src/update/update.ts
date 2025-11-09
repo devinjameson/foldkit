@@ -13,10 +13,7 @@ import {
   updatePlayerProgress,
   validateRoomJoinable,
 } from '../command'
-import {
-  Message,
-  NoOp,
-} from '../message'
+import { Message, NoOp } from '../message'
 import { Model } from '../model'
 import { urlToAppRoute } from '../route'
 import {

@@ -83,37 +83,37 @@ export const RoomWithPlayerProgress = S.Struct({
 })
 export type RoomWithPlayerProgress = typeof RoomWithPlayerProgress.Type
 
-const createRoomRpc = Rpc.make('createRoom', {
+export const createRoomRpc = Rpc.make('createRoom', {
   payload: S.Struct({ username: S.String }),
   success: RoomAndPlayer,
 })
 
-const joinRoomRpc = Rpc.make('joinRoom', {
+export const joinRoomRpc = Rpc.make('joinRoom', {
   payload: S.Struct({ username: S.String, roomId: S.String }),
   success: RoomAndPlayer,
   error: RoomNotFoundError,
 })
 
-const getRoomByIdRpc = Rpc.make('getRoomById', {
+export const getRoomByIdRpc = Rpc.make('getRoomById', {
   payload: S.Struct({ roomId: S.String }),
   success: Room,
   error: RoomNotFoundError,
 })
 
-const subscribeToRoomRpc = Rpc.make('subscribeToRoom', {
+export const subscribeToRoomRpc = Rpc.make('subscribeToRoom', {
   payload: S.Struct({ roomId: S.String, playerId: S.String }),
   success: RoomWithPlayerProgress,
   error: RoomNotFoundError,
   stream: true,
 })
 
-const startGameRpc = Rpc.make('startGame', {
+export const startGameRpc = Rpc.make('startGame', {
   payload: S.Struct({ roomId: S.String }),
   success: S.Void,
   error: RoomNotFoundError,
 })
 
-const updatePlayerProgressRpc = Rpc.make('updatePlayerProgress', {
+export const updatePlayerProgressRpc = Rpc.make('updatePlayerProgress', {
   payload: S.Struct({
     playerId: S.String,
     gameId: S.String,

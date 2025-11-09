@@ -3,8 +3,8 @@
 ## Features
 
 - [x] Play again functionality (after game finishes)
-- [X] Do not repeat game texts in the same room until all have been used
-- [X] More game texts (variety of passages)
+- [x] Do not repeat game texts in the same room until all have been used
+- [x] More game texts (variety of passages)
 - [ ] Themed UI - retro glowing green with dark background
 - [ ] If someone loads a room page e.g. /room/noble-iron-fair and they are not
       in that room, they should see a username input field and a "Join Room" button

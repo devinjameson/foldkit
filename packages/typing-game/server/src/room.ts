@@ -1,6 +1,6 @@
 import { Array, Data, Effect, HashMap, Random, SubscriptionRef, pipe } from 'effect'
 
-import { RoomByIdStore } from './index.js'
+import { RoomByIdStore } from './store.js'
 
 const NUM_WORDS_IN_ID = 3
 const DELIMITER = '-'
