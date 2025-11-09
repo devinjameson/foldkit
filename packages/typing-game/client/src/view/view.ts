@@ -95,7 +95,7 @@ const maybeRoomView = ({ maybeRoom, maybeSession, userText }: Model): Html =>
                     div(
                       [
                         Class(
-                          'p-6 border-2 border-terminal-green font-terminal text-3xl text-terminal-green-dim leading-relaxed',
+                          'p-6 border-2 border-terminal-green font-terminal text-3xl text-terminal-green-dim',
                         ),
                       ],
                       [text],
@@ -237,7 +237,7 @@ const gameTextWithProgress = (
   maybeWrongCharIndex: Option.Option<number>,
 ): Html =>
   div(
-    [Class('p-6 text-3xl')],
+    [Class('text-3xl')],
     pipe(gameText, Str.split(''), Array.map(charView(userText, maybeWrongCharIndex))),
   )
 
