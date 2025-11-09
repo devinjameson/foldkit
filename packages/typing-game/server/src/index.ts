@@ -25,7 +25,7 @@ import { randomUUID } from 'node:crypto'
 import { createServer } from 'node:http'
 
 import { ROOM_ID_WORDS } from './constants.js'
-import { generateGameText } from './gameText.js'
+import { GAME_TEXTS, generateGameText } from './gameText.js'
 import * as Room from './room.js'
 import * as Rooms from './rooms.js'
 
@@ -97,6 +97,7 @@ const createRoomHandler = (
       maybeGame: Option.none(),
       maybeScoreboard: Option.none(),
       createdAt,
+      usedGameTexts: [],
     }
 
     yield* SubscriptionRef.update(roomByIdRef, (roomById) =>
@@ -176,13 +177,24 @@ const startGameHandler = (
   roomId: string,
 ) =>
   Effect.gen(function* () {
+    const roomById = yield* SubscriptionRef.get(roomByIdRef)
+    const room = yield* Rooms.getById(roomById, roomId)
+
     const gameId = yield* Effect.sync(() => randomUUID())
-    const gameText = yield* generateGameText
+    const gameText = yield* generateGameText(room.usedGameTexts)
 
     const game = Shared.Game.make({
       id: gameId,
       text: gameText,
     })
+
+    const nextUsedGameTexts = pipe(
+      Array.difference(GAME_TEXTS, room.usedGameTexts),
+      Array.match({
+        onEmpty: () => Array.make(gameText),
+        onNonEmpty: () => Array.append(room.usedGameTexts, gameText),
+      }),
+    )
 
     yield* updateRoom(
       roomByIdRef,
@@ -191,6 +203,7 @@ const startGameHandler = (
       Struct.evolve(room, {
         maybeGame: () => Option.some(game),
         maybeScoreboard: () => Option.none(),
+        usedGameTexts: () => nextUsedGameTexts,
       }),
     )
 

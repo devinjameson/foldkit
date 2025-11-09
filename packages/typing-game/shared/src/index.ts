@@ -63,6 +63,7 @@ export const Room = S.Struct({
   maybeGame: S.Option(Game),
   maybeScoreboard: S.Option(Scoreboard),
   createdAt: S.Number,
+  usedGameTexts: S.Array(S.String),
 })
 export type Room = typeof Room.Type
 
