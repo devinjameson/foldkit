@@ -746,7 +746,7 @@ const maybeRoomView = ({ maybeRoom, maybeSession, userText }: Model): Html =>
         M.tagsExhaustive({
           Waiting: () =>
             div(
-              [Class('space-y-8')],
+              [Class('space-y-4')],
               [
                 h2([Class('text-xl font-semibold text-gray-700 mb-4')], ['Players']),
                 div([Class('space-y-2')], playerView(room.players, maybeSession)),
@@ -804,7 +804,7 @@ const byHighestWpm = pipe(
 
 const finishedView = (roomId: string, maybeScoreboard: Option.Option<Shared.Scoreboard>): Html =>
   div(
-    [Class('space-y-6')],
+    [Class('space-y-4')],
     [
       h2([Class('text-2xl font-bold text-gray-800')], ['Game finished!']),
       Option.match(maybeScoreboard, {
@@ -873,9 +873,9 @@ const playingView = (
   maybeWrongCharIndex: Option.Option<number>,
 ): Html =>
   div(
-    [Class('space-y-8')],
+    [Class('space-y-4')],
     [
-      div([Class('text-gray-600')], [`Time left: ${secondsLeft}`]),
+      div([Class('text-gray-600 text-lg')], [`Time left: ${secondsLeft}`]),
       Option.match(maybeGameText, {
         onNone: () => empty,
         onSome: (gameText) => typingView(gameText, userText, maybeWrongCharIndex),

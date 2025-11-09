@@ -1,5 +1,5 @@
 import * as Shared from '@typing-game/shared'
-import { Array, Data, Option, String as Str } from 'effect'
+import { Array, Data, Function, Option, String as Str } from 'effect'
 import { Runtime, Task } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
@@ -43,10 +43,15 @@ export const handleRoomUpdated =
           Restore: ({ progress }) => progress.charsTyped,
         })
 
-    const commands = optionWhen(
-      gameJustStarted,
-      Task.focus(`#${USER_TEXT_INPUT_ID}`, () => NoOp.make()),
-    )
+    const isFirstRoomUpdate = !hadRoom
+    const hasGame = Option.isSome(room.maybeGame)
+
+    const shouldFocus = (gameJustStarted || isFirstRoomUpdate) && hasGame
+
+    const commands = optionWhen(shouldFocus, () => {
+      const userTextInputSelector = `#${USER_TEXT_INPUT_ID}`
+      return Task.focus(userTextInputSelector, () => NoOp.make())
+    })
 
     return [
       evo(model, {
@@ -58,8 +63,8 @@ export const handleRoomUpdated =
     ]
   }
 
-const optionWhen = <T>(condition: boolean, value: T): Option.Option<T> => {
-  return condition ? Option.some(value) : Option.none()
+const optionWhen = <T>(condition: boolean, value: Function.LazyArg<T>): Option.Option<T> => {
+  return condition ? Option.some(value()) : Option.none()
 }
 
 type PlayerProgressAction = Data.TaggedEnum<{
