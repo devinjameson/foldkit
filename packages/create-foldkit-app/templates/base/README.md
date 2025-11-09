@@ -1,6 +1,6 @@
 # My Foldkit App
 
-A Foldkit application built with Effect-TS.
+A Foldkit application built with Effect.
 
 ## Getting Started
 
