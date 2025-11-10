@@ -6,9 +6,9 @@ import { Dispatch } from './runtime'
 import { VNode } from './vdom'
 
 export type Html = Effect.Effect<VNode | null, never, Dispatch>
-export type Child = Html | string
+type Child = Html | string
 
-export type TagName =
+type TagName =
   | 'a'
   | 'abbr'
   | 'address'
@@ -223,7 +223,7 @@ export type TagName =
   | 'munderover'
   | 'semantics'
 
-export type Attribute<Message> = Data.TaggedEnum<{
+type Attribute<Message> = Data.TaggedEnum<{
   Key: { readonly value: string }
   Class: { readonly value: string }
   Id: { readonly value: string }
@@ -341,7 +341,7 @@ interface AttributeDefinition extends Data.TaggedEnum.WithGenerics<1> {
   readonly taggedEnum: Attribute<this['A']>
 }
 
-export const {
+const {
   Key,
   Class,
   Id,
@@ -744,14 +744,14 @@ const keyed =
   ): Html =>
     element<Message>()(tagName)([...attributes, Key({ value: key })], children)
 
-export type ElementFunction<Message> = (
+type ElementFunction<Message> = (
   attributes: ReadonlyArray<Attribute<Message>>,
   children: ReadonlyArray<Child>,
 ) => Html
 
-export type VoidElementFunction<Message> = (attributes: ReadonlyArray<Attribute<Message>>) => Html
+type VoidElementFunction<Message> = (attributes: ReadonlyArray<Attribute<Message>>) => Html
 
-export type HtmlElements<Message> = {
+type HtmlElements<Message> = {
   a: ElementFunction<Message>
   abbr: ElementFunction<Message>
   address: ElementFunction<Message>
@@ -967,7 +967,7 @@ export type HtmlElements<Message> = {
   semantics: ElementFunction<Message>
 }
 
-export const htmlElements = <Message>(): HtmlElements<Message> => {
+const htmlElements = <Message>(): HtmlElements<Message> => {
   const el = element<Message>()
   const voidEl = voidElement<Message>()
 
@@ -1193,7 +1193,7 @@ export const htmlElements = <Message>(): HtmlElements<Message> => {
   }
 }
 
-export type HtmlAttributes<Message> = {
+type HtmlAttributes<Message> = {
   Key: (value: string) => { readonly _tag: 'Key'; readonly value: string }
   Class: (value: string) => { readonly _tag: 'Class'; readonly value: string }
   Id: (value: string) => { readonly _tag: 'Id'; readonly value: string }
@@ -1335,7 +1335,7 @@ export type HtmlAttributes<Message> = {
   StrokeDashoffset: (value: string) => { readonly _tag: 'StrokeDashoffset'; readonly value: string }
 }
 
-export const htmlAttributes = <Message>(): HtmlAttributes<Message> => ({
+const htmlAttributes = <Message>(): HtmlAttributes<Message> => ({
   Key: (value: string) => Key({ value }),
   Class: (value: string) => Class({ value }),
   Id: (value: string) => Id({ value }),
