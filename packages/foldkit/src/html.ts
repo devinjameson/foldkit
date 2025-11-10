@@ -5,19 +5,15 @@ import type { Attrs, On, Props, VNodeData } from 'snabbdom'
 import { Dispatch } from './runtime'
 import { VNode } from './vdom'
 
-// @ts-expect-error - Message is a phantom type parameter
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export type Html<Message = never> = Effect.Effect<VNode | null, never, Dispatch>
-export type Child<Message = never> = Html<Message> | string
+export type Html = Effect.Effect<VNode | null, never, Dispatch>
+export type Child = Html | string
 
 export type ElementFunction<Message> = (
   attributes?: ReadonlyArray<Attribute<Message>>,
-  children?: ReadonlyArray<Child<Message>>,
-) => Html<Message>
+  children?: ReadonlyArray<Child>,
+) => Html
 
-export type VoidElementFunction<Message> = (
-  attributes?: ReadonlyArray<Attribute<Message>>,
-) => Html<Message>
+export type VoidElementFunction<Message> = (attributes?: ReadonlyArray<Attribute<Message>>) => Html
 
 export type TagName =
   | 'a'
@@ -722,8 +718,8 @@ const processVNodeChildren = (
 const createElement = <Message>(
   tagName: TagName,
   attributes: ReadonlyArray<Attribute<Message>> = [],
-  children: ReadonlyArray<Child<Message>> = [],
-): Html<Message> =>
+  children: ReadonlyArray<Child> = [],
+): Html =>
   Effect.gen(function* () {
     const vnodeData = yield* buildVNodeData(attributes)
     const vnodeChildren = yield* processVNodeChildren(children)
@@ -734,16 +730,13 @@ const createElement = <Message>(
 const element =
   <Message>() =>
   (tagName: TagName) =>
-  (
-    attributes: ReadonlyArray<Attribute<Message>> = [],
-    children: ReadonlyArray<Child<Message>> = [],
-  ): Html<Message> =>
+  (attributes: ReadonlyArray<Attribute<Message>> = [], children: ReadonlyArray<Child> = []): Html =>
     createElement(tagName, attributes, children)
 
 const voidElement =
   <Message>() =>
   (tagName: TagName) =>
-  (attributes: ReadonlyArray<Attribute<Message>> = []): Html<Message> =>
+  (attributes: ReadonlyArray<Attribute<Message>> = []): Html =>
     createElement(tagName, attributes, [])
 
 type AttributeWithoutKey<Message> = Exclude<Attribute<Message>, { _tag: 'Key' }>
@@ -754,8 +747,8 @@ const keyed =
   (
     key: string,
     attributes: ReadonlyArray<AttributeWithoutKey<Message>> = [],
-    children: ReadonlyArray<Child<Message>> = [],
-  ): Html<Message> =>
+    children: ReadonlyArray<Child> = [],
+  ): Html =>
     element<Message>()(tagName)([...attributes, Key_({ value: key })], children)
 
 export type HtmlElements<Message> = Record<

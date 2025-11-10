@@ -1,26 +1,7 @@
 import { Array, Duration, Effect, Match as M, Number, Random, Schema as S } from 'effect'
 import { FieldValidation, Runtime } from 'foldkit'
 import { Field, FieldSchema, Validation, validateField } from 'foldkit/fieldValidation'
-import {
-  Class,
-  Disabled,
-  For,
-  Html,
-  Id,
-  OnInput,
-  OnSubmit,
-  Type,
-  Value,
-  button,
-  div,
-  empty,
-  form,
-  h1,
-  input,
-  label,
-  span,
-  textarea,
-} from 'foldkit/html'
+import { Html, html } from 'foldkit/html'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
@@ -264,6 +245,8 @@ const submitForm = (model: Model): Runtime.Command<FormSubmitted> =>
 
 // VIEW
 
+const h = html<Message>()
+
 const fieldView = (
   id: string,
   labelText: string,
@@ -283,30 +266,36 @@ const fieldView = (
 
   const inputClass = `w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${getBorderClass()}`
 
-  return div(
-    [Class('mb-4')],
+  return h.div(
+    [h.Class('mb-4')],
     [
-      div(
-        [Class('flex items-center gap-2 mb-2')],
+      h.div(
+        [h.Class('flex items-center gap-2 mb-2')],
         [
-          label([For(id), Class('text-sm font-medium text-gray-700')], [labelText]),
+          h.label([h.For(id), h.Class('text-sm font-medium text-gray-700')], [labelText]),
           Field.$match(field, {
-            NotValidated: () => empty,
-            Validating: () => span([Class('text-blue-600 text-sm animate-spin')], ['◐']),
-            Valid: () => span([Class('text-green-600 text-sm')], ['✓']),
-            Invalid: () => empty,
+            NotValidated: () => h.empty,
+            Validating: () => h.span([h.Class('text-blue-600 text-sm animate-spin')], ['◐']),
+            Valid: () => h.span([h.Class('text-green-600 text-sm')], ['✓']),
+            Invalid: () => h.empty,
           }),
         ],
       ),
       type === 'textarea'
-        ? textarea([Id(id), Value(value), Class(inputClass), OnInput(onUpdate)])
-        : input([Id(id), Type(type), Value(value), Class(inputClass), OnInput(onUpdate)]),
+        ? h.textarea([h.Id(id), h.Value(value), h.Class(inputClass), h.OnInput(onUpdate)])
+        : h.input([
+            h.Id(id),
+            h.Type(type),
+            h.Value(value),
+            h.Class(inputClass),
+            h.OnInput(onUpdate),
+          ]),
 
       Field.$match(field, {
-        NotValidated: () => empty,
-        Validating: () => div([Class('text-blue-600 text-sm mt-1')], ['Checking...']),
-        Valid: () => empty,
-        Invalid: ({ error }) => div([Class('text-red-600 text-sm mt-1')], [error]),
+        NotValidated: () => h.empty,
+        Validating: () => h.div([h.Class('text-blue-600 text-sm mt-1')], ['Checking...']),
+        Valid: () => h.empty,
+        Invalid: ({ error }) => h.div([h.Class('text-red-600 text-sm mt-1')], [error]),
       }),
     ],
   )
@@ -315,16 +304,19 @@ const fieldView = (
 const view = (model: Model): Html => {
   const canSubmit = isFormValid(model) && model.submission._tag !== 'Submitting'
 
-  return div(
-    [Class('min-h-screen bg-gray-100 py-8')],
+  return h.div(
+    [h.Class('min-h-screen bg-gray-100 py-8')],
     [
-      div(
-        [Class('max-w-md mx-auto bg-white rounded-xl shadow-lg p-6')],
+      h.div(
+        [h.Class('max-w-md mx-auto bg-white rounded-xl shadow-lg p-6')],
         [
-          h1([Class('text-3xl font-bold text-gray-800 text-center mb-8')], ['Join Our Waitlist']),
+          h.h1(
+            [h.Class('text-3xl font-bold text-gray-800 text-center mb-8')],
+            ['Join Our Waitlist'],
+          ),
 
-          form(
-            [Class('space-y-4'), OnSubmit(SubmitForm.make())],
+          h.form(
+            [h.Class('space-y-4'), h.OnSubmit(SubmitForm.make())],
             [
               fieldView('name', 'Name', model.name, (value) => UpdateName.make({ value })),
               fieldView(
@@ -342,11 +334,11 @@ const view = (model: Model): Html => {
                 'textarea',
               ),
 
-              button(
+              h.button(
                 [
-                  Type('submit'),
-                  Disabled(!canSubmit),
-                  Class(
+                  h.Type('submit'),
+                  h.Disabled(!canSubmit),
+                  h.Class(
                     `w-full py-2 px-4 rounded-md transition ${
                       canSubmit
                         ? 'bg-blue-500 text-white hover:bg-blue-600'
@@ -361,20 +353,20 @@ const view = (model: Model): Html => {
 
           M.value(model.submission).pipe(
             M.tagsExhaustive({
-              NotSubmitted: () => empty,
-              Submitting: () => empty,
+              NotSubmitted: () => h.empty,
+              Submitting: () => h.empty,
               SubmitSuccess: ({ message }) =>
-                div(
+                h.div(
                   [
-                    Class(
+                    h.Class(
                       'mt-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg',
                     ),
                   ],
                   [message],
                 ),
               SubmitError: ({ error }) =>
-                div(
-                  [Class('mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg')],
+                h.div(
+                  [h.Class('mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg')],
                   [error],
                 ),
             }),

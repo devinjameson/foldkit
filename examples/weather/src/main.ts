@@ -1,26 +1,6 @@
 import { Array, Effect, Match as M, Schema as S, String } from 'effect'
 import { Runtime } from 'foldkit'
-import {
-  Class,
-  Disabled,
-  For,
-  Html,
-  Id,
-  OnInput,
-  OnSubmit,
-  Placeholder,
-  Type,
-  article,
-  button,
-  div,
-  empty,
-  form,
-  h1,
-  h2,
-  input,
-  label,
-  p,
-} from 'foldkit/html'
+import { Html, empty, html } from 'foldkit/html'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
@@ -170,33 +150,35 @@ const fetchWeather = (zipCode: string): Runtime.Command<WeatherFetched | Weather
 
 // VIEW
 
+const h = html<Message>()
+
 const view = (model: Model): Html =>
-  div(
+  h.div(
     [
-      Class(
+      h.Class(
         'min-h-screen bg-gradient-to-br from-blue-100 to-blue-300 flex flex-col items-center justify-center gap-6 p-6',
       ),
     ],
     [
-      h1([Class('text-4xl font-bold text-blue-900 mb-8')], ['Weather']),
+      h.h1([h.Class('text-4xl font-bold text-blue-900 mb-8')], ['Weather']),
 
-      form(
-        [Class('flex flex-col gap-4 items-center w-full max-w-md'), OnSubmit(FetchWeather.make())],
+      h.form(
+        [h.Class('flex flex-col gap-4 items-center w-full max-w-md'), h.OnSubmit(FetchWeather.make())],
         [
-          label([For('location'), Class('sr-only')], ['Location']),
-          input([
-            Id('location'),
-            Class(
+          h.label([h.For('location'), h.Class('sr-only')], ['Location']),
+          h.input([
+            h.Id('location'),
+            h.Class(
               'w-full px-4 py-2 rounded-lg border-2 border-blue-300 focus:border-blue-500 outline-none',
             ),
-            Placeholder('Enter a zip code'),
-            OnInput((value) => UpdateZipCodeInput.make({ value })),
+            h.Placeholder('Enter a zip code'),
+            h.OnInput((value) => UpdateZipCodeInput.make({ value })),
           ]),
-          button(
+          h.button(
             [
-              Type('submit'),
-              Disabled(model.weather._tag === 'WeatherLoading'),
-              Class(
+              h.Type('submit'),
+              h.Disabled(model.weather._tag === 'WeatherLoading'),
+              h.Class(
                 'px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition disabled:opacity-50',
               ),
             ],
@@ -209,9 +191,9 @@ const view = (model: Model): Html =>
         M.tagsExhaustive({
           WeatherInit: () => empty,
           WeatherLoading: () =>
-            div([Class('text-blue-600 font-semibold')], ['Fetching weather...']),
+            h.div([h.Class('text-blue-600 font-semibold')], ['Fetching weather...']),
           WeatherFailure: ({ error }) =>
-            div([Class('p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg')], [error]),
+            h.div([h.Class('p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg')], [error]),
           WeatherSuccess: ({ data: weather }) => weatherView(weather),
         }),
       ),
@@ -219,35 +201,35 @@ const view = (model: Model): Html =>
   )
 
 const weatherView = (weather: WeatherData): Html =>
-  article(
-    [Class('bg-white rounded-xl shadow-lg p-8 max-w-md w-full')],
+  h.article(
+    [h.Class('bg-white rounded-xl shadow-lg p-8 max-w-md w-full')],
     [
-      h2([Class('text-2xl font-bold text-gray-800 mb-3 text-center')], [weather.zipCode]),
-      p([Class('text-center text-gray-600 mb-6')], [weather.areaName + ', ' + weather.region]),
+      h.h2([h.Class('text-2xl font-bold text-gray-800 mb-3 text-center')], [weather.zipCode]),
+      h.p([h.Class('text-center text-gray-600 mb-6')], [weather.areaName + ', ' + weather.region]),
 
-      div(
-        [Class('text-center mb-6')],
+      h.div(
+        [h.Class('text-center mb-6')],
         [
-          div([Class('text-6xl font-bold text-blue-600')], [`${weather.temperature}°F`]),
-          div([Class('text-xl text-gray-600 mt-2')], [weather.description]),
+          h.div([h.Class('text-6xl font-bold text-blue-600')], [`${weather.temperature}°F`]),
+          h.div([h.Class('text-xl text-gray-600 mt-2')], [weather.description]),
         ],
       ),
 
-      div(
-        [Class('grid grid-cols-2 gap-4 text-center')],
+      h.div(
+        [h.Class('grid grid-cols-2 gap-4 text-center')],
         [
-          div(
-            [Class('bg-blue-50 p-4 rounded-lg')],
+          h.div(
+            [h.Class('bg-blue-50 p-4 rounded-lg')],
             [
-              div([Class('text-sm text-gray-600')], ['Humidity']),
-              div([Class('text-lg font-semibold')], [`${weather.humidity}%`]),
+              h.div([h.Class('text-sm text-gray-600')], ['Humidity']),
+              h.div([h.Class('text-lg font-semibold')], [`${weather.humidity}%`]),
             ],
           ),
-          div(
-            [Class('bg-blue-50 p-4 rounded-lg')],
+          h.div(
+            [h.Class('bg-blue-50 p-4 rounded-lg')],
             [
-              div([Class('text-sm text-gray-600')], ['Wind Speed']),
-              div([Class('text-lg font-semibold')], [`${weather.windSpeed} km/h`]),
+              h.div([h.Class('text-sm text-gray-600')], ['Wind Speed']),
+              h.div([h.Class('text-lg font-semibold')], [`${weather.windSpeed} km/h`]),
             ],
           ),
         ],
