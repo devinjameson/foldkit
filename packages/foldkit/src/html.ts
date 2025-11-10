@@ -8,13 +8,6 @@ import { VNode } from './vdom'
 export type Html = Effect.Effect<VNode | null, never, Dispatch>
 export type Child = Html | string
 
-export type ElementFunction<Message> = (
-  attributes?: ReadonlyArray<Attribute<Message>>,
-  children?: ReadonlyArray<Child>,
-) => Html
-
-export type VoidElementFunction<Message> = (attributes?: ReadonlyArray<Attribute<Message>>) => Html
-
 export type TagName =
   | 'a'
   | 'abbr'
@@ -751,10 +744,228 @@ const keyed =
   ): Html =>
     element<Message>()(tagName)([...attributes, Key({ value: key })], children)
 
-export type HtmlElements<Message> = Record<
-  TagName,
-  ElementFunction<Message> | VoidElementFunction<Message>
->
+export type ElementFunction<Message> = (
+  attributes: ReadonlyArray<Attribute<Message>>,
+  children: ReadonlyArray<Child>,
+) => Html
+
+export type VoidElementFunction<Message> = (attributes: ReadonlyArray<Attribute<Message>>) => Html
+
+export type HtmlElements<Message> = {
+  a: ElementFunction<Message>
+  abbr: ElementFunction<Message>
+  address: ElementFunction<Message>
+  area: VoidElementFunction<Message>
+  article: ElementFunction<Message>
+  aside: ElementFunction<Message>
+  audio: ElementFunction<Message>
+  b: ElementFunction<Message>
+  base: VoidElementFunction<Message>
+  bdi: ElementFunction<Message>
+  bdo: ElementFunction<Message>
+  blockquote: ElementFunction<Message>
+  body: ElementFunction<Message>
+  br: VoidElementFunction<Message>
+  button: ElementFunction<Message>
+  canvas: ElementFunction<Message>
+  caption: ElementFunction<Message>
+  cite: ElementFunction<Message>
+  code: ElementFunction<Message>
+  col: VoidElementFunction<Message>
+  colgroup: ElementFunction<Message>
+  data: ElementFunction<Message>
+  datalist: ElementFunction<Message>
+  dd: ElementFunction<Message>
+  del: ElementFunction<Message>
+  details: ElementFunction<Message>
+  dfn: ElementFunction<Message>
+  dialog: ElementFunction<Message>
+  div: ElementFunction<Message>
+  dl: ElementFunction<Message>
+  dt: ElementFunction<Message>
+  em: ElementFunction<Message>
+  embed: VoidElementFunction<Message>
+  fieldset: ElementFunction<Message>
+  figcaption: ElementFunction<Message>
+  figure: ElementFunction<Message>
+  footer: ElementFunction<Message>
+  form: ElementFunction<Message>
+  h1: ElementFunction<Message>
+  h2: ElementFunction<Message>
+  h3: ElementFunction<Message>
+  h4: ElementFunction<Message>
+  h5: ElementFunction<Message>
+  h6: ElementFunction<Message>
+  head: ElementFunction<Message>
+  header: ElementFunction<Message>
+  hgroup: ElementFunction<Message>
+  hr: VoidElementFunction<Message>
+  html: ElementFunction<Message>
+  i: ElementFunction<Message>
+  iframe: ElementFunction<Message>
+  img: VoidElementFunction<Message>
+  input: VoidElementFunction<Message>
+  ins: ElementFunction<Message>
+  kbd: ElementFunction<Message>
+  label: ElementFunction<Message>
+  legend: ElementFunction<Message>
+  li: ElementFunction<Message>
+  link: VoidElementFunction<Message>
+  main: ElementFunction<Message>
+  map: ElementFunction<Message>
+  mark: ElementFunction<Message>
+  menu: ElementFunction<Message>
+  meta: VoidElementFunction<Message>
+  meter: ElementFunction<Message>
+  nav: ElementFunction<Message>
+  noscript: ElementFunction<Message>
+  object: ElementFunction<Message>
+  ol: ElementFunction<Message>
+  optgroup: ElementFunction<Message>
+  option: ElementFunction<Message>
+  output: ElementFunction<Message>
+  p: ElementFunction<Message>
+  picture: ElementFunction<Message>
+  portal: ElementFunction<Message>
+  pre: ElementFunction<Message>
+  progress: ElementFunction<Message>
+  q: ElementFunction<Message>
+  rp: ElementFunction<Message>
+  rt: ElementFunction<Message>
+  ruby: ElementFunction<Message>
+  s: ElementFunction<Message>
+  samp: ElementFunction<Message>
+  script: ElementFunction<Message>
+  search: ElementFunction<Message>
+  section: ElementFunction<Message>
+  select: ElementFunction<Message>
+  slot: ElementFunction<Message>
+  small: ElementFunction<Message>
+  source: VoidElementFunction<Message>
+  span: ElementFunction<Message>
+  strong: ElementFunction<Message>
+  style: ElementFunction<Message>
+  sub: ElementFunction<Message>
+  summary: ElementFunction<Message>
+  sup: ElementFunction<Message>
+  table: ElementFunction<Message>
+  tbody: ElementFunction<Message>
+  td: ElementFunction<Message>
+  template: ElementFunction<Message>
+  textarea: ElementFunction<Message>
+  tfoot: ElementFunction<Message>
+  th: ElementFunction<Message>
+  thead: ElementFunction<Message>
+  time: ElementFunction<Message>
+  title: ElementFunction<Message>
+  tr: ElementFunction<Message>
+  track: VoidElementFunction<Message>
+  u: ElementFunction<Message>
+  ul: ElementFunction<Message>
+  var: ElementFunction<Message>
+  video: ElementFunction<Message>
+  wbr: VoidElementFunction<Message>
+  svg: ElementFunction<Message>
+  animate: ElementFunction<Message>
+  animateMotion: ElementFunction<Message>
+  animateTransform: ElementFunction<Message>
+  circle: ElementFunction<Message>
+  clipPath: ElementFunction<Message>
+  defs: ElementFunction<Message>
+  desc: ElementFunction<Message>
+  ellipse: ElementFunction<Message>
+  feBlend: ElementFunction<Message>
+  feColorMatrix: ElementFunction<Message>
+  feComponentTransfer: ElementFunction<Message>
+  feComposite: ElementFunction<Message>
+  feConvolveMatrix: ElementFunction<Message>
+  feDiffuseLighting: ElementFunction<Message>
+  feDisplacementMap: ElementFunction<Message>
+  feDistantLight: ElementFunction<Message>
+  feDropShadow: ElementFunction<Message>
+  feFlood: ElementFunction<Message>
+  feFuncA: ElementFunction<Message>
+  feFuncB: ElementFunction<Message>
+  feFuncG: ElementFunction<Message>
+  feFuncR: ElementFunction<Message>
+  feGaussianBlur: ElementFunction<Message>
+  feImage: ElementFunction<Message>
+  feMerge: ElementFunction<Message>
+  feMergeNode: ElementFunction<Message>
+  feMorphology: ElementFunction<Message>
+  feOffset: ElementFunction<Message>
+  fePointLight: ElementFunction<Message>
+  feSpecularLighting: ElementFunction<Message>
+  feSpotLight: ElementFunction<Message>
+  feTile: ElementFunction<Message>
+  feTurbulence: ElementFunction<Message>
+  filter: ElementFunction<Message>
+  foreignObject: ElementFunction<Message>
+  g: ElementFunction<Message>
+  image: ElementFunction<Message>
+  line: ElementFunction<Message>
+  linearGradient: ElementFunction<Message>
+  marker: ElementFunction<Message>
+  mask: ElementFunction<Message>
+  metadata: ElementFunction<Message>
+  mpath: ElementFunction<Message>
+  path: ElementFunction<Message>
+  pattern: ElementFunction<Message>
+  polygon: ElementFunction<Message>
+  polyline: ElementFunction<Message>
+  radialGradient: ElementFunction<Message>
+  rect: ElementFunction<Message>
+  set: ElementFunction<Message>
+  stop: ElementFunction<Message>
+  switch: ElementFunction<Message>
+  symbol: ElementFunction<Message>
+  text: ElementFunction<Message>
+  textPath: ElementFunction<Message>
+  tspan: ElementFunction<Message>
+  use: ElementFunction<Message>
+  view: ElementFunction<Message>
+  math: ElementFunction<Message>
+  annotation: ElementFunction<Message>
+  'annotation-xml': ElementFunction<Message>
+  maction: ElementFunction<Message>
+  menclose: ElementFunction<Message>
+  merror: ElementFunction<Message>
+  mfenced: ElementFunction<Message>
+  mfrac: ElementFunction<Message>
+  mglyph: ElementFunction<Message>
+  mi: ElementFunction<Message>
+  mlabeledtr: ElementFunction<Message>
+  mlongdiv: ElementFunction<Message>
+  mmultiscripts: ElementFunction<Message>
+  mn: ElementFunction<Message>
+  mo: ElementFunction<Message>
+  mover: ElementFunction<Message>
+  mpadded: ElementFunction<Message>
+  mphantom: ElementFunction<Message>
+  mprescripts: ElementFunction<Message>
+  mroot: ElementFunction<Message>
+  mrow: ElementFunction<Message>
+  ms: ElementFunction<Message>
+  mscarries: ElementFunction<Message>
+  mscarry: ElementFunction<Message>
+  msgroup: ElementFunction<Message>
+  msline: ElementFunction<Message>
+  mspace: ElementFunction<Message>
+  msqrt: ElementFunction<Message>
+  msrow: ElementFunction<Message>
+  mstack: ElementFunction<Message>
+  mstyle: ElementFunction<Message>
+  msub: ElementFunction<Message>
+  msubsup: ElementFunction<Message>
+  msup: ElementFunction<Message>
+  mtable: ElementFunction<Message>
+  mtd: ElementFunction<Message>
+  mtext: ElementFunction<Message>
+  mtr: ElementFunction<Message>
+  munder: ElementFunction<Message>
+  munderover: ElementFunction<Message>
+  semantics: ElementFunction<Message>
+}
 
 export const htmlElements = <Message>(): HtmlElements<Message> => {
   const el = element<Message>()

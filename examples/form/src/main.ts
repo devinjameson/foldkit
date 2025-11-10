@@ -300,7 +300,7 @@ const fieldView = (
         ],
       ),
       type === 'textarea'
-        ? textarea([Id(id), Value(value), Class(inputClass), OnInput(onUpdate)])
+        ? textarea([Id(id), Value(value), Class(inputClass), OnInput(onUpdate)], [])
         : input([Id(id), Type(type), Value(value), Class(inputClass), OnInput(onUpdate)]),
 
       Field.$match(field, {

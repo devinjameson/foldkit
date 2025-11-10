@@ -222,7 +222,7 @@ const homeView = (): Html =>
           'This is a routing example built with foldkit. Navigate using the links above to see different routes in action.',
         ],
       ),
-      p([Class('text-gray-600')]),
+      p([Class('text-gray-600')], []),
     ],
   )
 

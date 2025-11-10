@@ -129,14 +129,17 @@ export const view = (
               [Class('mb-6')],
               [
                 h3([Class('text-lg font-semibold text-gray-800 mb-2')], ['Delivery Instructions']),
-                textarea([
-                  Value(deliveryInstructions),
-                  Placeholder('Special delivery instructions (optional)...'),
-                  Class(
-                    'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-24 resize-none',
-                  ),
-                  OnInput((value: string) => UpdateDeliveryInstructions.make({ value })),
-                ]),
+                textarea(
+                  [
+                    Value(deliveryInstructions),
+                    Placeholder('Special delivery instructions (optional)...'),
+                    Class(
+                      'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-24 resize-none',
+                    ),
+                    OnInput((value: string) => UpdateDeliveryInstructions.make({ value })),
+                  ],
+                  [],
+                ),
               ],
             ),
             div(
