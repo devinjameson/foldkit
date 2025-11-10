@@ -1,6 +1,6 @@
 import { Array, Duration, Effect, Match as M, Schema as S, Stream, pipe } from 'effect'
 import { Runtime } from 'foldkit'
-import { Class, Html, div, h1, p } from 'foldkit/html'
+import { Html, html } from 'foldkit/html'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
@@ -255,6 +255,8 @@ const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Model, Mes
 })
 
 // VIEW
+
+const { div, h1, p, Class } = html<Message>()
 
 const cellView = (x: number, y: number, model: Model): Html => {
   const isSnakeHead = Position.equivalence({ x, y }, model.snake[0])

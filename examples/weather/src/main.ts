@@ -1,26 +1,6 @@
 import { Array, Effect, Match as M, Schema as S, String } from 'effect'
 import { Runtime } from 'foldkit'
-import {
-  Class,
-  Disabled,
-  For,
-  Html,
-  Id,
-  OnInput,
-  OnSubmit,
-  Placeholder,
-  Type,
-  article,
-  button,
-  div,
-  empty,
-  form,
-  h1,
-  h2,
-  input,
-  label,
-  p,
-} from 'foldkit/html'
+import { Html, html } from 'foldkit/html'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
@@ -169,6 +149,27 @@ const fetchWeather = (zipCode: string): Runtime.Command<WeatherFetched | Weather
   )
 
 // VIEW
+
+const {
+  article,
+  button,
+  div,
+  empty,
+  form,
+  h1,
+  h2,
+  input,
+  label,
+  p,
+  Class,
+  Disabled,
+  For,
+  Id,
+  OnInput,
+  OnSubmit,
+  Placeholder,
+  Type,
+} = html<Message>()
 
 const view = (model: Model): Html =>
   div(

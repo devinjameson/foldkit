@@ -1,27 +1,6 @@
 import { Array, Effect, Match as M, Option, Schema as S, pipe } from 'effect'
 import { Route, Runtime } from 'foldkit'
-import {
-  Class,
-  Href,
-  Html,
-  OnInput,
-  Placeholder,
-  Value,
-  a,
-  article,
-  div,
-  h1,
-  h2,
-  header,
-  input,
-  keyed,
-  li,
-  main,
-  nav,
-  p,
-  search,
-  ul,
-} from 'foldkit/html'
+import { Html, html } from 'foldkit/html'
 import { load, pushUrl, replaceUrl } from 'foldkit/navigation'
 import { int, literal, slash } from 'foldkit/route'
 import { ts } from 'foldkit/schema'
@@ -156,6 +135,28 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
   )
 
 // VIEW
+
+const {
+  a,
+  article,
+  div,
+  h1,
+  h2,
+  header,
+  input,
+  keyed,
+  li,
+  main,
+  nav,
+  p,
+  search,
+  ul,
+  Class,
+  Href,
+  OnInput,
+  Placeholder,
+  Value,
+} = html<Message>()
 
 const navigationView = (currentRoute: AppRoute): Html => {
   const navLinkClassName = (isActive: boolean) =>
@@ -312,7 +313,7 @@ const personView = (personId: number): Html => {
       div(
         [Class('max-w-4xl mx-auto px-4')],
         [
-          h1([Class('text-4xl font-bold text-red-600 mb-6')], ['Person Not Found']),
+          h2([Class('text-4xl font-bold text-red-600 mb-6')], ['Person Not Found']),
           p([Class('text-lg text-gray-600 mb-4')], [`No person found with ID: ${personId}`]),
           a(
             [
@@ -339,7 +340,7 @@ const personView = (personId: number): Html => {
           article(
             [],
             [
-              h1([Class('text-4xl font-bold text-gray-800 mb-6')], [person.name]),
+              h2([Class('text-4xl font-bold text-gray-800 mb-6')], [person.name]),
 
               div(
                 [Class('bg-gray-50 border border-gray-200 rounded-lg p-6')],

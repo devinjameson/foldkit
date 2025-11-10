@@ -1,9 +1,11 @@
 import { Array, Option } from 'effect'
 import { Route } from 'foldkit'
+import { Html } from 'foldkit/html'
+
+import { Cart } from '../domain'
 import {
   Class,
   Href,
-  Html,
   OnClick,
   OnInput,
   Placeholder,
@@ -19,21 +21,17 @@ import {
   section,
   span,
   textarea,
-} from 'foldkit/html'
-
-import { Cart } from '../domain'
-import type { CartRoute, ProductsRoute } from '../main'
+} from '../html'
+import { type CartRoute, PlaceOrder, type ProductsRoute, UpdateDeliveryInstructions } from '../main'
 
 // VIEW
 
-export const view = <ParentMessage>(
+export const view = (
   cart: Cart.Cart,
   deliveryInstructions: string,
   orderPlaced: boolean,
   productsRouter: Route.Router<ProductsRoute>,
   cartRouter: Route.Router<CartRoute>,
-  onUpdateDeliveryInstructions: (value: string) => ParentMessage,
-  onPlaceOrder: () => ParentMessage,
 ): Html => {
   if (orderPlaced) {
     return div(
@@ -137,7 +135,7 @@ export const view = <ParentMessage>(
                   Class(
                     'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-24 resize-none',
                   ),
-                  OnInput((value: string) => onUpdateDeliveryInstructions(value)),
+                  OnInput((value: string) => UpdateDeliveryInstructions.make({ value })),
                 ]),
               ],
             ),
@@ -158,7 +156,7 @@ export const view = <ParentMessage>(
                     Class(
                       'bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium',
                     ),
-                    OnClick(onPlaceOrder()),
+                    OnClick(PlaceOrder.make()),
                   ],
                   ['Place Order'],
                 ),

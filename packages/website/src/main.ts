@@ -9,11 +9,19 @@ import {
   pipe,
 } from 'effect'
 import { Route, Runtime } from 'foldkit'
+import { Html } from 'foldkit/html'
+import { load, pushUrl } from 'foldkit/navigation'
+import { literal } from 'foldkit/route'
+import { UrlRequest } from 'foldkit/runtime'
+import { ts } from 'foldkit/schema'
+import { evo } from 'foldkit/struct'
+import { Url, toString as urlToString } from 'foldkit/url'
+
+import * as CommandStream from './commandStream'
 import {
   AriaLabel,
   Class,
   Href,
-  Html,
   OnClick,
   a,
   aside,
@@ -30,15 +38,7 @@ import {
   nav,
   span,
   ul,
-} from 'foldkit/html'
-import { load, pushUrl } from 'foldkit/navigation'
-import { literal } from 'foldkit/route'
-import { UrlRequest } from 'foldkit/runtime'
-import { ts } from 'foldkit/schema'
-import { evo } from 'foldkit/struct'
-import { Url, toString as urlToString } from 'foldkit/url'
-
-import * as CommandStream from './commandStream'
+} from './html'
 import { Icon } from './icon'
 import { Link } from './link'
 import * as Page from './page'
@@ -161,7 +161,7 @@ type CopySuccess = typeof CopySuccess.Type
 type HideCopiedIndicator = typeof HideCopiedIndicator.Type
 type ToggleMobileMenu = typeof ToggleMobileMenu.Type
 export type ActiveSectionChanged = typeof ActiveSectionChanged.Type
-type Message = typeof Message.Type
+export type Message = typeof Message.Type
 
 // INIT
 

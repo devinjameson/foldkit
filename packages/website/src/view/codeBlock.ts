@@ -1,14 +1,14 @@
 import { HashSet } from 'effect'
+import { Html } from 'foldkit/html'
+
 import {
   AriaLabel,
   Class,
-  Html,
   OnClick,
   button,
   div,
   empty,
-} from 'foldkit/html'
-
+} from '../html'
 import { Icon } from '../icon'
 import { CopySnippetToClipboard, type Model } from '../main'
 

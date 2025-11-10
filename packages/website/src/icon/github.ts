@@ -1,12 +1,6 @@
-import {
-  Class,
-  D,
-  Fill,
-  Html,
-  ViewBox,
-  path,
-  svg,
-} from 'foldkit/html'
+import { Html } from 'foldkit/html'
+
+import { Class, D, Fill, ViewBox, path, svg } from '../html'
 
 export const github = (className = 'w-5 h-5'): Html =>
   svg(

@@ -10,7 +10,7 @@ import {
   pipe,
 } from 'effect'
 import { Runtime } from 'foldkit'
-import { Class, Html, OnClick, button, div } from 'foldkit/html'
+import { Html, html } from 'foldkit/html'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
@@ -135,6 +135,8 @@ const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Model, Mes
 })
 
 // VIEW
+
+const { div, button, Class, OnClick } = html<Message>()
 
 const formatTime = (ms: number): string => {
   const minutes = pipe(Duration.millis(ms), Duration.toMinutes, floorAndPad)

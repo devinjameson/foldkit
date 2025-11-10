@@ -2,28 +2,7 @@ import { KeyValueStore } from '@effect/platform'
 import { BrowserKeyValueStore } from '@effect/platform-browser'
 import { Array, Clock, Effect, Match as M, Option, Random, Schema as S, String } from 'effect'
 import { Runtime } from 'foldkit'
-import {
-  Class,
-  For,
-  Html,
-  Id,
-  OnClick,
-  OnInput,
-  OnSubmit,
-  Placeholder,
-  Type,
-  Value,
-  button,
-  div,
-  empty,
-  form,
-  h1,
-  input,
-  label,
-  li,
-  span,
-  ul,
-} from 'foldkit/html'
+import { Html, html } from 'foldkit/html'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
@@ -342,6 +321,28 @@ const saveTodos = (todos: Todos): Runtime.Command<TodosSaved> =>
 
 // VIEW
 
+const {
+  button,
+  div,
+  empty,
+  form,
+  h1,
+  input,
+  label,
+  li,
+  span,
+  ul,
+  Class,
+  For,
+  Id,
+  OnClick,
+  OnInput,
+  OnSubmit,
+  Placeholder,
+  Type,
+  Value,
+} = html<Message>()
+
 const todoItemView =
   (model: Model) =>
   (todo: Todo): Html =>
@@ -562,7 +563,7 @@ const view = (model: Model): Html => {
   )
 }
 
-// RUN
+// FLAG
 
 const flags: Effect.Effect<Flags> = Effect.gen(function* () {
   const store = yield* KeyValueStore.KeyValueStore
@@ -577,6 +578,8 @@ const flags: Effect.Effect<Flags> = Effect.gen(function* () {
   Effect.catchAll(() => Effect.succeed({ todos: Option.none() })),
   Effect.provide(BrowserKeyValueStore.layerLocalStorage),
 )
+
+// RUN
 
 const element = Runtime.makeElement({
   Model,

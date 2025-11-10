@@ -1,10 +1,15 @@
 import { Array, Effect, Match as M, Option, Schema as S } from 'effect'
 import { ExtractTag } from 'effect/Types'
 import { Route } from 'foldkit'
+import { Html } from 'foldkit/html'
+import { replaceUrl } from 'foldkit/navigation'
+import { ts } from 'foldkit/schema'
+import { evo } from 'foldkit/struct'
+
+import { Cart, Item } from '../domain'
 import {
   Class,
   Href,
-  Html,
   OnClick,
   OnInput,
   Placeholder,
@@ -21,13 +26,8 @@ import {
   search,
   section,
   span,
-} from 'foldkit/html'
-import { replaceUrl } from 'foldkit/navigation'
-import { ts } from 'foldkit/schema'
-import { evo } from 'foldkit/struct'
-
-import { Cart, Item } from '../domain'
-import type { AppRoute, CartRoute } from '../main'
+} from '../html'
+import type { AppRoute, CartRoute, Message as ParentMessage } from '../main'
 
 // MODEL
 
@@ -81,7 +81,7 @@ export const update =
 
 // VIEW
 
-export const view = <ParentMessage>(
+export const view = (
   model: Model,
   cart: Cart.Cart,
   cartRouter: Route.Router<CartRoute>,

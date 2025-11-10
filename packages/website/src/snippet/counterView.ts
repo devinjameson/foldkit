@@ -1,4 +1,4 @@
-import { Class, Html, OnClick, button, div } from 'foldkit/html'
+import { Class, Html, OnClick, button, div } from '../html'
 
 // VIEW - Renders your state as HTML
 // Pure function: same state always produces the same HTML - no side effects in

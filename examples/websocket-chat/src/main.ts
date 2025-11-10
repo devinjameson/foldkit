@@ -10,25 +10,7 @@ import {
   String,
 } from 'effect'
 import { Runtime, Task } from 'foldkit'
-import {
-  Class,
-  Disabled,
-  Html,
-  OnClick,
-  OnInput,
-  OnSubmit,
-  Placeholder,
-  Type,
-  Value,
-  button,
-  div,
-  form,
-  input,
-  li,
-  p,
-  span,
-  ul,
-} from 'foldkit/html'
+import { Html, html } from 'foldkit/html'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
@@ -314,6 +296,25 @@ const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Model, Mes
 })
 
 // VIEW
+
+const {
+  button,
+  div,
+  form,
+  input,
+  li,
+  p,
+  span,
+  ul,
+  Class,
+  Disabled,
+  OnClick,
+  OnInput,
+  OnSubmit,
+  Placeholder,
+  Type,
+  Value,
+} = html<Message>()
 
 const view = (model: Model): Html =>
   div(

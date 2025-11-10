@@ -1,5 +1,6 @@
-import { Class, Html, div, pre } from 'foldkit/html'
+import { Html } from 'foldkit/html'
 
+import { Class, div, pre } from '../html'
 import { Link } from '../link'
 import type { Model, TableOfContentsEntry } from '../main'
 import { heading, link, para } from '../prose'

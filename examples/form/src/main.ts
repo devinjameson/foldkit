@@ -1,26 +1,7 @@
 import { Array, Duration, Effect, Match as M, Number, Random, Schema as S } from 'effect'
 import { FieldValidation, Runtime } from 'foldkit'
 import { Field, FieldSchema, Validation, validateField } from 'foldkit/fieldValidation'
-import {
-  Class,
-  Disabled,
-  For,
-  Html,
-  Id,
-  OnInput,
-  OnSubmit,
-  Type,
-  Value,
-  button,
-  div,
-  empty,
-  form,
-  h1,
-  input,
-  label,
-  span,
-  textarea,
-} from 'foldkit/html'
+import { Html, html } from 'foldkit/html'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
@@ -263,6 +244,26 @@ const submitForm = (model: Model): Runtime.Command<FormSubmitted> =>
   })
 
 // VIEW
+
+const {
+  button,
+  div,
+  empty,
+  form,
+  h1,
+  input,
+  label,
+  span,
+  textarea,
+  Class,
+  Disabled,
+  For,
+  Id,
+  OnInput,
+  OnSubmit,
+  Type,
+  Value,
+} = html<Message>()
 
 const fieldView = (
   id: string,

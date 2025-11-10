@@ -8,6 +8,13 @@ import { VNode } from './vdom'
 export type Html = Effect.Effect<VNode | null, never, Dispatch>
 export type Child = Html | string
 
+export type ElementFunction<Message> = (
+  attributes?: ReadonlyArray<Attribute<Message>>,
+  children?: ReadonlyArray<Child>,
+) => Html
+
+export type VoidElementFunction<Message> = (attributes?: ReadonlyArray<Attribute<Message>>) => Html
+
 export type TagName =
   | 'a'
   | 'abbr'
@@ -171,6 +178,7 @@ export type TagName =
   | 'polyline'
   | 'radialGradient'
   | 'rect'
+  | 'set'
   | 'stop'
   | 'svg'
   | 'switch'
@@ -198,6 +206,7 @@ export type TagName =
   | 'mover'
   | 'mpadded'
   | 'mphantom'
+  | 'mprescripts'
   | 'mroot'
   | 'mrow'
   | 'ms'
@@ -340,230 +349,118 @@ interface AttributeDefinition extends Data.TaggedEnum.WithGenerics<1> {
 }
 
 export const {
-  Key: Key_,
-  Class: Class_,
-  Id: Id_,
-  Title: Title_,
-  Lang: Lang_,
-  Dir: Dir_,
-  Tabindex: Tabindex_,
-  Hidden: Hidden_,
-  OnClick: OnClick_,
-  OnDblClick: OnDblClick_,
-  OnMouseDown: OnMouseDown_,
-  OnMouseUp: OnMouseUp_,
-  OnMouseEnter: OnMouseEnter_,
-  OnMouseLeave: OnMouseLeave_,
-  OnMouseOver: OnMouseOver_,
-  OnMouseOut: OnMouseOut_,
-  OnMouseMove: OnMouseMove_,
-  OnKeyDown: OnKeyDown_,
-  OnKeyUp: OnKeyUp_,
-  OnKeyPress: OnKeyPress_,
-  OnFocus: OnFocus_,
-  OnBlur: OnBlur_,
-  OnInput: OnInput_,
-  OnChange: OnChange_,
-  OnSubmit: OnSubmit_,
-  OnReset: OnReset_,
-  OnScroll: OnScroll_,
-  OnWheel: OnWheel_,
-  OnCopy: OnCopy_,
-  OnCut: OnCut_,
-  OnPaste: OnPaste_,
-  Value: Value_,
-  Checked: Checked_,
-  Selected: Selected_,
-  Placeholder: Placeholder_,
-  Name: Name_,
-  Disabled: Disabled_,
-  Readonly: Readonly_,
-  Required: Required_,
-  Autofocus: Autofocus_,
-  Spellcheck: Spellcheck_,
-  Autocorrect: Autocorrect_,
-  Autocapitalize: Autocapitalize_,
-  InputMode: InputMode_,
-  EnterKeyHint: EnterKeyHint_,
-  Multiple: Multiple_,
-  Type: Type_,
-  Accept: Accept_,
-  Autocomplete: Autocomplete_,
-  Pattern: Pattern_,
-  Maxlength: Maxlength_,
-  Minlength: Minlength_,
-  Size: Size_,
-  Cols: Cols_,
-  Rows: Rows_,
-  Max: Max_,
-  Min: Min_,
-  Step: Step_,
-  For: For_,
-  Href: Href_,
-  Src: Src_,
-  Alt: Alt_,
-  Target: Target_,
-  Rel: Rel_,
-  Download: Download_,
-  Action: Action_,
-  Method: Method_,
-  Enctype: Enctype_,
-  Novalidate: Novalidate_,
-  Role: Role_,
-  AriaLabel: AriaLabel_,
-  AriaLabelledBy: AriaLabelledBy_,
-  AriaDescribedBy: AriaDescribedBy_,
-  AriaHidden: AriaHidden_,
-  AriaExpanded: AriaExpanded_,
-  AriaSelected: AriaSelected_,
-  AriaChecked: AriaChecked_,
-  AriaDisabled: AriaDisabled_,
-  AriaRequired: AriaRequired_,
-  AriaInvalid: AriaInvalid_,
-  AriaLive: AriaLive_,
-  Attribute: Attribute_,
-  DataAttribute: DataAttribute_,
-  Style: Style_,
-  InnerHTML: InnerHTML_,
-  ViewBox: ViewBox_,
-  Xmlns: Xmlns_,
-  Fill: Fill_,
-  FillRule: FillRule_,
-  ClipRule: ClipRule_,
-  Stroke: Stroke_,
-  StrokeWidth: StrokeWidth_,
-  StrokeLinecap: StrokeLinecap_,
-  StrokeLinejoin: StrokeLinejoin_,
-  D: D_,
-  Cx: Cx_,
-  Cy: Cy_,
-  R: R_,
-  X: X_,
-  Y: Y_,
-  Width: Width_,
-  Height: Height_,
-  X1: X1_,
-  Y1: Y1_,
-  X2: X2_,
-  Y2: Y2_,
-  Points: Points_,
-  Transform: Transform_,
-  Opacity: Opacity_,
-  StrokeDasharray: StrokeDasharray_,
-  StrokeDashoffset: StrokeDashoffset_,
+  Key,
+  Class,
+  Id,
+  Title,
+  Lang,
+  Dir,
+  Tabindex,
+  Hidden,
+  OnClick,
+  OnDblClick,
+  OnMouseDown,
+  OnMouseUp,
+  OnMouseEnter,
+  OnMouseLeave,
+  OnMouseOver,
+  OnMouseOut,
+  OnMouseMove,
+  OnKeyDown,
+  OnKeyUp,
+  OnKeyPress,
+  OnFocus,
+  OnBlur,
+  OnInput,
+  OnChange,
+  OnSubmit,
+  OnReset,
+  OnScroll,
+  OnWheel,
+  OnCopy,
+  OnCut,
+  OnPaste,
+  Value,
+  Checked,
+  Selected,
+  Placeholder,
+  Name,
+  Disabled,
+  Readonly,
+  Required,
+  Autofocus,
+  Spellcheck,
+  Autocorrect,
+  Autocapitalize,
+  InputMode,
+  EnterKeyHint,
+  Multiple,
+  Type,
+  Accept,
+  Autocomplete,
+  Pattern,
+  Maxlength,
+  Minlength,
+  Size,
+  Cols,
+  Rows,
+  Max,
+  Min,
+  Step,
+  For,
+  Href,
+  Src,
+  Alt,
+  Target,
+  Rel,
+  Download,
+  Action,
+  Method,
+  Enctype,
+  Novalidate,
+  Role,
+  AriaLabel,
+  AriaLabelledBy,
+  AriaDescribedBy,
+  AriaHidden,
+  AriaExpanded,
+  AriaSelected,
+  AriaChecked,
+  AriaDisabled,
+  AriaRequired,
+  AriaInvalid,
+  AriaLive,
+  Attribute,
+  DataAttribute,
+  Style,
+  InnerHTML,
+  ViewBox,
+  Xmlns,
+  Fill,
+  FillRule,
+  ClipRule,
+  Stroke,
+  StrokeWidth,
+  StrokeLinecap,
+  StrokeLinejoin,
+  D,
+  Cx,
+  Cy,
+  R,
+  X,
+  Y,
+  Width,
+  Height,
+  X1,
+  Y1,
+  X2,
+  Y2,
+  Points,
+  Transform,
+  Opacity,
+  StrokeDasharray,
+  StrokeDashoffset,
 } = Data.taggedEnum<AttributeDefinition>()
-
-export const Key = (value: string) => Key_({ value })
-export const Class = (value: string) => Class_({ value })
-export const Id = (value: string) => Id_({ value })
-export const Title = (value: string) => Title_({ value })
-export const Lang = (value: string) => Lang_({ value })
-export const Dir = (value: string) => Dir_({ value })
-export const Tabindex = (value: number) => Tabindex_({ value })
-export const Hidden = (value: boolean) => Hidden_({ value })
-export const OnClick = <Message>(message: Message) => OnClick_({ message })
-export const OnDblClick = <Message>(message: Message) => OnDblClick_({ message })
-export const OnMouseDown = <Message>(message: Message) => OnMouseDown_({ message })
-export const OnMouseUp = <Message>(message: Message) => OnMouseUp_({ message })
-export const OnMouseEnter = <Message>(message: Message) => OnMouseEnter_({ message })
-export const OnMouseLeave = <Message>(message: Message) => OnMouseLeave_({ message })
-export const OnMouseOver = <Message>(message: Message) => OnMouseOver_({ message })
-export const OnMouseOut = <Message>(message: Message) => OnMouseOut_({ message })
-export const OnMouseMove = <Message>(message: Message) => OnMouseMove_({ message })
-export const OnKeyDown = <Message>(f: (key: string) => Message) => OnKeyDown_({ f })
-export const OnKeyUp = <Message>(f: (key: string) => Message) => OnKeyUp_({ f })
-export const OnKeyPress = <Message>(f: (key: string) => Message) => OnKeyPress_({ f })
-export const OnFocus = <Message>(message: Message) => OnFocus_({ message })
-export const OnBlur = <Message>(message: Message) => OnBlur_({ message })
-export const OnInput = <Message>(f: (value: string) => Message) => OnInput_({ f })
-export const OnChange = <Message>(f: (value: string) => Message) => OnChange_({ f })
-export const OnSubmit = <Message>(message: Message) => OnSubmit_({ message })
-export const OnReset = <Message>(message: Message) => OnReset_({ message })
-export const OnScroll = <Message>(message: Message) => OnScroll_({ message })
-export const OnWheel = <Message>(message: Message) => OnWheel_({ message })
-export const OnCopy = <Message>(message: Message) => OnCopy_({ message })
-export const OnCut = <Message>(message: Message) => OnCut_({ message })
-export const OnPaste = <Message>(message: Message) => OnPaste_({ message })
-export const Value = (value: string) => Value_({ value })
-export const Checked = (value: boolean) => Checked_({ value })
-export const Selected = (value: boolean) => Selected_({ value })
-export const Placeholder = (value: string) => Placeholder_({ value })
-export const Name = (value: string) => Name_({ value })
-export const Disabled = (value: boolean) => Disabled_({ value })
-export const Readonly = (value: boolean) => Readonly_({ value })
-export const Required = (value: boolean) => Required_({ value })
-export const Autofocus = (value: boolean) => Autofocus_({ value })
-export const Spellcheck = (value: boolean) => Spellcheck_({ value })
-export const Autocorrect = (value: string) => Autocorrect_({ value })
-export const Autocapitalize = (value: string) => Autocapitalize_({ value })
-export const InputMode = (value: string) => InputMode_({ value })
-export const EnterKeyHint = (value: string) => EnterKeyHint_({ value })
-export const Multiple = (value: boolean) => Multiple_({ value })
-export const Type = (value: string) => Type_({ value })
-export const Accept = (value: string) => Accept_({ value })
-export const Autocomplete = (value: string) => Autocomplete_({ value })
-export const Pattern = (value: string) => Pattern_({ value })
-export const Maxlength = (value: number) => Maxlength_({ value })
-export const Minlength = (value: number) => Minlength_({ value })
-export const Size = (value: number) => Size_({ value })
-export const Cols = (value: number) => Cols_({ value })
-export const Rows = (value: number) => Rows_({ value })
-export const Max = (value: string) => Max_({ value })
-export const Min = (value: string) => Min_({ value })
-export const Step = (value: string) => Step_({ value })
-export const For = (value: string) => For_({ value })
-export const Href = (value: string) => Href_({ value })
-export const Src = (value: string) => Src_({ value })
-export const Alt = (value: string) => Alt_({ value })
-export const Target = (value: string) => Target_({ value })
-export const Rel = (value: string) => Rel_({ value })
-export const Download = (value: string) => Download_({ value })
-export const Action = (value: string) => Action_({ value })
-export const Method = (value: string) => Method_({ value })
-export const Enctype = (value: string) => Enctype_({ value })
-export const Novalidate = (value: boolean) => Novalidate_({ value })
-export const Role = (value: string) => Role_({ value })
-export const AriaLabel = (value: string) => AriaLabel_({ value })
-export const AriaLabelledBy = (value: string) => AriaLabelledBy_({ value })
-export const AriaDescribedBy = (value: string) => AriaDescribedBy_({ value })
-export const AriaHidden = (value: boolean) => AriaHidden_({ value })
-export const AriaExpanded = (value: boolean) => AriaExpanded_({ value })
-export const AriaSelected = (value: boolean) => AriaSelected_({ value })
-export const AriaChecked = (value: boolean) => AriaChecked_({ value })
-export const AriaDisabled = (value: boolean) => AriaDisabled_({ value })
-export const AriaRequired = (value: boolean) => AriaRequired_({ value })
-export const AriaInvalid = (value: boolean) => AriaInvalid_({ value })
-export const AriaLive = (value: string) => AriaLive_({ value })
-export const Attribute = (key: string, value: string) => Attribute_({ key, value })
-export const DataAttr = (key: string, value: string) => DataAttribute_({ key, value })
-export const StyleAttr = (value: Record<string, string>) => Style_({ value })
-export const InnerHTML = (value: string) => InnerHTML_({ value })
-export const ViewBox = (value: string) => ViewBox_({ value })
-export const Xmlns = (value: string) => Xmlns_({ value })
-export const Fill = (value: string) => Fill_({ value })
-export const FillRule = (value: string) => FillRule_({ value })
-export const ClipRule = (value: string) => ClipRule_({ value })
-export const Stroke = (value: string) => Stroke_({ value })
-export const StrokeWidth = (value: string) => StrokeWidth_({ value })
-export const StrokeLinecap = (value: string) => StrokeLinecap_({ value })
-export const StrokeLinejoin = (value: string) => StrokeLinejoin_({ value })
-export const D = (value: string) => D_({ value })
-export const Cx = (value: string) => Cx_({ value })
-export const Cy = (value: string) => Cy_({ value })
-export const R = (value: string) => R_({ value })
-export const X = (value: string) => X_({ value })
-export const Y = (value: string) => Y_({ value })
-export const Width = (value: string) => Width_({ value })
-export const Height = (value: string) => Height_({ value })
-export const X1 = (value: string) => X1_({ value })
-export const Y1 = (value: string) => Y1_({ value })
-export const X2 = (value: string) => X2_({ value })
-export const Y2 = (value: string) => Y2_({ value })
-export const Points = (value: string) => Points_({ value })
-export const Transform = (value: string) => Transform_({ value })
-export const Opacity = (value: string) => Opacity_({ value })
-export const StrokeDasharray = (value: string) => StrokeDasharray_({ value })
-export const StrokeDashoffset = (value: string) => StrokeDashoffset_({ value })
 
 const buildVNodeData = <Message>(
   attributes: ReadonlyArray<Attribute<Message>>,
@@ -818,7 +715,7 @@ const processVNodeChildren = (
       Predicate.isString(child) ? Effect.succeed(child) : child,
   ).pipe(Effect.map(Array.filter(Predicate.isNotNull)))
 
-export const createElement = <Message>(
+const createElement = <Message>(
   tagName: TagName,
   attributes: ReadonlyArray<Attribute<Message>> = [],
   children: ReadonlyArray<Child> = [],
@@ -831,249 +728,521 @@ export const createElement = <Message>(
   })
 
 const element =
+  <Message>() =>
   (tagName: TagName) =>
-  <Message>(
-    attributes: ReadonlyArray<Attribute<Message>> = [],
-    children: ReadonlyArray<Child> = [],
-  ): Html =>
+  (attributes: ReadonlyArray<Attribute<Message>> = [], children: ReadonlyArray<Child> = []): Html =>
     createElement(tagName, attributes, children)
 
 const voidElement =
+  <Message>() =>
   (tagName: TagName) =>
-  <Message>(attributes: ReadonlyArray<Attribute<Message>> = []): Html =>
+  (attributes: ReadonlyArray<Attribute<Message>> = []): Html =>
     createElement(tagName, attributes, [])
 
 type AttributeWithoutKey<Message> = Exclude<Attribute<Message>, { _tag: 'Key' }>
 
-export const keyed =
+const keyed =
+  <Message>() =>
   (tagName: TagName) =>
-  <Message>(
+  (
     key: string,
     attributes: ReadonlyArray<AttributeWithoutKey<Message>> = [],
     children: ReadonlyArray<Child> = [],
   ): Html =>
-    element(tagName)([...attributes, Key(key)], children)
+    element<Message>()(tagName)([...attributes, Key({ value: key })], children)
 
-// HTML
+export type HtmlElements<Message> = Record<
+  TagName,
+  ElementFunction<Message> | VoidElementFunction<Message>
+>
 
-export const a = element('a')
-export const abbr = element('abbr')
-export const address = element('address')
-export const area = voidElement('area')
-export const article = element('article')
-export const aside = element('aside')
-export const audio = element('audio')
-export const b = element('b')
-export const base = voidElement('base')
-export const bdi = element('bdi')
-export const bdo = element('bdo')
-export const blockquote = element('blockquote')
-export const body = element('body')
-export const br = voidElement('br')
-export const button = element('button')
-export const canvas = element('canvas')
-export const caption = element('caption')
-export const cite = element('cite')
-export const code = element('code')
-export const col = voidElement('col')
-export const colgroup = element('colgroup')
-export const data = element('data')
-export const datalist = element('datalist')
-export const dd = element('dd')
-export const del = element('del')
-export const details = element('details')
-export const dfn = element('dfn')
-export const dialog = element('dialog')
-export const div = element('div')
-export const dl = element('dl')
-export const dt = element('dt')
-export const em = element('em')
-export const embed = voidElement('embed')
-export const fieldset = element('fieldset')
-export const figcaption = element('figcaption')
-export const figure = element('figure')
-export const footer = element('footer')
-export const form = element('form')
-export const h1 = element('h1')
-export const h2 = element('h2')
-export const h3 = element('h3')
-export const h4 = element('h4')
-export const h5 = element('h5')
-export const h6 = element('h6')
-export const head = element('head')
-export const header = element('header')
-export const hgroup = element('hgroup')
-export const hr = voidElement('hr')
-export const html = element('html')
-export const i = element('i')
-export const iframe = element('iframe')
-export const img = voidElement('img')
-export const input = voidElement('input')
-export const ins = element('ins')
-export const kbd = element('kbd')
-export const label = element('label')
-export const legend = element('legend')
-export const li = element('li')
-export const link = voidElement('link')
-export const main = element('main')
-export const map = element('map')
-export const mark = element('mark')
-export const menu = element('menu')
-export const meta = voidElement('meta')
-export const meter = element('meter')
-export const nav = element('nav')
-export const noscript = element('noscript')
-export const object = element('object')
-export const ol = element('ol')
-export const optgroup = element('optgroup')
-export const option = element('option')
-export const output = element('output')
-export const p = element('p')
-export const picture = element('picture')
-export const portal = element('portal')
-export const pre = element('pre')
-export const progress = element('progress')
-export const q = element('q')
-export const rp = element('rp')
-export const rt = element('rt')
-export const ruby = element('ruby')
-export const s = element('s')
-export const samp = element('samp')
-export const script = element('script')
-export const search = element('search')
-export const section = element('section')
-export const select = element('select')
-export const slot = element('slot')
-export const small = element('small')
-export const source = voidElement('source')
-export const span = element('span')
-export const strong = element('strong')
-export const style = element('style')
-export const sub = element('sub')
-export const summary = element('summary')
-export const sup = element('sup')
-export const table = element('table')
-export const tbody = element('tbody')
-export const td = element('td')
-export const template = element('template')
-export const textarea = element('textarea')
-export const tfoot = element('tfoot')
-export const th = element('th')
-export const thead = element('thead')
-export const time = element('time')
-export const title = element('title')
-export const tr = element('tr')
-export const track = voidElement('track')
-export const u = element('u')
-export const ul = element('ul')
-export const var_ = element('var')
-export const video = element('video')
-export const wbr = voidElement('wbr')
+export const htmlElements = <Message>(): HtmlElements<Message> => {
+  const el = element<Message>()
+  const voidEl = voidElement<Message>()
 
-// SVG
+  return {
+    // HTML
+    a: el('a'),
+    abbr: el('abbr'),
+    address: el('address'),
+    area: voidEl('area'),
+    article: el('article'),
+    aside: el('aside'),
+    audio: el('audio'),
+    b: el('b'),
+    base: voidEl('base'),
+    bdi: el('bdi'),
+    bdo: el('bdo'),
+    blockquote: el('blockquote'),
+    body: el('body'),
+    br: voidEl('br'),
+    button: el('button'),
+    canvas: el('canvas'),
+    caption: el('caption'),
+    cite: el('cite'),
+    code: el('code'),
+    col: voidEl('col'),
+    colgroup: el('colgroup'),
+    data: el('data'),
+    datalist: el('datalist'),
+    dd: el('dd'),
+    del: el('del'),
+    details: el('details'),
+    dfn: el('dfn'),
+    dialog: el('dialog'),
+    div: el('div'),
+    dl: el('dl'),
+    dt: el('dt'),
+    em: el('em'),
+    embed: voidEl('embed'),
+    fieldset: el('fieldset'),
+    figcaption: el('figcaption'),
+    figure: el('figure'),
+    footer: el('footer'),
+    form: el('form'),
+    h1: el('h1'),
+    h2: el('h2'),
+    h3: el('h3'),
+    h4: el('h4'),
+    h5: el('h5'),
+    h6: el('h6'),
+    head: el('head'),
+    header: el('header'),
+    hgroup: el('hgroup'),
+    hr: voidEl('hr'),
+    html: el('html'),
+    i: el('i'),
+    iframe: el('iframe'),
+    img: voidEl('img'),
+    input: voidEl('input'),
+    ins: el('ins'),
+    kbd: el('kbd'),
+    label: el('label'),
+    legend: el('legend'),
+    li: el('li'),
+    link: voidEl('link'),
+    main: el('main'),
+    map: el('map'),
+    mark: el('mark'),
+    menu: el('menu'),
+    meta: voidEl('meta'),
+    meter: el('meter'),
+    nav: el('nav'),
+    noscript: el('noscript'),
+    object: el('object'),
+    ol: el('ol'),
+    optgroup: el('optgroup'),
+    option: el('option'),
+    output: el('output'),
+    p: el('p'),
+    picture: el('picture'),
+    portal: el('portal'),
+    pre: el('pre'),
+    progress: el('progress'),
+    q: el('q'),
+    rp: el('rp'),
+    rt: el('rt'),
+    ruby: el('ruby'),
+    s: el('s'),
+    samp: el('samp'),
+    script: el('script'),
+    search: el('search'),
+    section: el('section'),
+    select: el('select'),
+    slot: el('slot'),
+    small: el('small'),
+    source: voidEl('source'),
+    span: el('span'),
+    strong: el('strong'),
+    style: el('style'),
+    sub: el('sub'),
+    summary: el('summary'),
+    sup: el('sup'),
+    table: el('table'),
+    tbody: el('tbody'),
+    td: el('td'),
+    template: el('template'),
+    textarea: el('textarea'),
+    tfoot: el('tfoot'),
+    th: el('th'),
+    thead: el('thead'),
+    time: el('time'),
+    title: el('title'),
+    tr: el('tr'),
+    track: voidEl('track'),
+    u: el('u'),
+    ul: el('ul'),
+    var: el('var'),
+    video: el('video'),
+    wbr: voidEl('wbr'),
 
-export const animate = element('animate')
-export const animateMotion = element('animateMotion')
-export const animateTransform = element('animateTransform')
-export const circle = element('circle')
-export const clipPath = element('clipPath')
-export const defs = element('defs')
-export const desc = element('desc')
-export const ellipse = element('ellipse')
-export const feBlend = element('feBlend')
-export const feColorMatrix = element('feColorMatrix')
-export const feComponentTransfer = element('feComponentTransfer')
-export const feComposite = element('feComposite')
-export const feConvolveMatrix = element('feConvolveMatrix')
-export const feDiffuseLighting = element('feDiffuseLighting')
-export const feDisplacementMap = element('feDisplacementMap')
-export const feDistantLight = element('feDistantLight')
-export const feDropShadow = element('feDropShadow')
-export const feFlood = element('feFlood')
-export const feFuncA = element('feFuncA')
-export const feFuncB = element('feFuncB')
-export const feFuncG = element('feFuncG')
-export const feFuncR = element('feFuncR')
-export const feGaussianBlur = element('feGaussianBlur')
-export const feImage = element('feImage')
-export const feMerge = element('feMerge')
-export const feMergeNode = element('feMergeNode')
-export const feMorphology = element('feMorphology')
-export const feOffset = element('feOffset')
-export const fePointLight = element('fePointLight')
-export const feSpecularLighting = element('feSpecularLighting')
-export const feSpotLight = element('feSpotLight')
-export const feTile = element('feTile')
-export const feTurbulence = element('feTurbulence')
-export const filter = element('filter')
-export const foreignObject = element('foreignObject')
-export const g = element('g')
-export const image = element('image')
-export const line = element('line')
-export const linearGradient = element('linearGradient')
-export const marker = element('marker')
-export const mask = element('mask')
-export const metadata = element('metadata')
-export const mpath = element('mpath')
-export const path = element('path')
-export const pattern = element('pattern')
-export const polygon = element('polygon')
-export const polyline = element('polyline')
-export const radialGradient = element('radialGradient')
-export const rect = element('rect')
-export const stop = element('stop')
-export const svg = element('svg')
-export const switch_ = element('switch')
-export const symbol = element('symbol')
-export const text = element('text')
-export const textPath = element('textPath')
-export const tspan = element('tspan')
-export const use = element('use')
-export const view = element('view')
+    // SVG
+    svg: el('svg'),
+    animate: el('animate'),
+    animateMotion: el('animateMotion'),
+    animateTransform: el('animateTransform'),
+    circle: el('circle'),
+    clipPath: el('clipPath'),
+    defs: el('defs'),
+    desc: el('desc'),
+    ellipse: el('ellipse'),
+    feBlend: el('feBlend'),
+    feColorMatrix: el('feColorMatrix'),
+    feComponentTransfer: el('feComponentTransfer'),
+    feComposite: el('feComposite'),
+    feConvolveMatrix: el('feConvolveMatrix'),
+    feDiffuseLighting: el('feDiffuseLighting'),
+    feDisplacementMap: el('feDisplacementMap'),
+    feDistantLight: el('feDistantLight'),
+    feDropShadow: el('feDropShadow'),
+    feFlood: el('feFlood'),
+    feFuncA: el('feFuncA'),
+    feFuncB: el('feFuncB'),
+    feFuncG: el('feFuncG'),
+    feFuncR: el('feFuncR'),
+    feGaussianBlur: el('feGaussianBlur'),
+    feImage: el('feImage'),
+    feMerge: el('feMerge'),
+    feMergeNode: el('feMergeNode'),
+    feMorphology: el('feMorphology'),
+    feOffset: el('feOffset'),
+    fePointLight: el('fePointLight'),
+    feSpecularLighting: el('feSpecularLighting'),
+    feSpotLight: el('feSpotLight'),
+    feTile: el('feTile'),
+    feTurbulence: el('feTurbulence'),
+    filter: el('filter'),
+    foreignObject: el('foreignObject'),
+    g: el('g'),
+    image: el('image'),
+    line: el('line'),
+    linearGradient: el('linearGradient'),
+    marker: el('marker'),
+    mask: el('mask'),
+    metadata: el('metadata'),
+    mpath: el('mpath'),
+    path: el('path'),
+    pattern: el('pattern'),
+    polygon: el('polygon'),
+    polyline: el('polyline'),
+    radialGradient: el('radialGradient'),
+    rect: el('rect'),
+    set: el('set'),
+    stop: el('stop'),
+    switch: el('switch'),
+    symbol: el('symbol'),
+    text: el('text'),
+    textPath: el('textPath'),
+    tspan: el('tspan'),
+    use: el('use'),
+    view: el('view'),
 
-// MATH ML
+    // MATH ML
+    math: el('math'),
+    annotation: el('annotation'),
+    'annotation-xml': el('annotation-xml'),
+    maction: el('maction'),
+    menclose: el('menclose'),
+    merror: el('merror'),
+    mfenced: el('mfenced'),
+    mfrac: el('mfrac'),
+    mglyph: el('mglyph'),
+    mi: el('mi'),
+    mlabeledtr: el('mlabeledtr'),
+    mlongdiv: el('mlongdiv'),
+    mmultiscripts: el('mmultiscripts'),
+    mn: el('mn'),
+    mo: el('mo'),
+    mover: el('mover'),
+    mpadded: el('mpadded'),
+    mphantom: el('mphantom'),
+    mprescripts: el('mprescripts'),
+    mroot: el('mroot'),
+    mrow: el('mrow'),
+    ms: el('ms'),
+    mscarries: el('mscarries'),
+    mscarry: el('mscarry'),
+    msgroup: el('msgroup'),
+    msline: el('msline'),
+    mspace: el('mspace'),
+    msqrt: el('msqrt'),
+    msrow: el('msrow'),
+    mstack: el('mstack'),
+    mstyle: el('mstyle'),
+    msub: el('msub'),
+    msubsup: el('msubsup'),
+    msup: el('msup'),
+    mtable: el('mtable'),
+    mtd: el('mtd'),
+    mtext: el('mtext'),
+    mtr: el('mtr'),
+    munder: el('munder'),
+    munderover: el('munderover'),
+    semantics: el('semantics'),
+  }
+}
 
-export const annotation = element('annotation')
-export const annotationXml = element('annotation-xml')
-export const math = element('math')
-export const maction = element('maction')
-export const menclose = element('menclose')
-export const merror = element('merror')
-export const mfenced = element('mfenced')
-export const mfrac = element('mfrac')
-export const mglyph = element('mglyph')
-export const mi = element('mi')
-export const mlabeledtr = element('mlabeledtr')
-export const mlongdiv = element('mlongdiv')
-export const mmultiscripts = element('mmultiscripts')
-export const mn = element('mn')
-export const mo = element('mo')
-export const mover = element('mover')
-export const mpadded = element('mpadded')
-export const mphantom = element('mphantom')
-export const mroot = element('mroot')
-export const mrow = element('mrow')
-export const ms = element('ms')
-export const mscarries = element('mscarries')
-export const mscarry = element('mscarry')
-export const msgroup = element('msgroup')
-export const msline = element('msline')
-export const mspace = element('mspace')
-export const msqrt = element('msqrt')
-export const msrow = element('msrow')
-export const mstack = element('mstack')
-export const mstyle = element('mstyle')
-export const msub = element('msub')
-export const msubsup = element('msubsup')
-export const msup = element('msup')
-export const mtable = element('mtable')
-export const mtd = element('mtd')
-export const mtext = element('mtext')
-export const mtr = element('mtr')
-export const munder = element('munder')
-export const munderover = element('munderover')
-export const semantics = element('semantics')
+export type HtmlAttributes<Message> = {
+  Key: (value: string) => { readonly _tag: 'Key'; readonly value: string }
+  Class: (value: string) => { readonly _tag: 'Class'; readonly value: string }
+  Id: (value: string) => { readonly _tag: 'Id'; readonly value: string }
+  Title: (value: string) => { readonly _tag: 'Title'; readonly value: string }
+  Lang: (value: string) => { readonly _tag: 'Lang'; readonly value: string }
+  Dir: (value: string) => { readonly _tag: 'Dir'; readonly value: string }
+  Tabindex: (value: number) => { readonly _tag: 'Tabindex'; readonly value: number }
+  Hidden: (value: boolean) => { readonly _tag: 'Hidden'; readonly value: boolean }
+  OnClick: (message: Message) => { readonly _tag: 'OnClick'; readonly message: Message }
+  OnDblClick: (message: Message) => { readonly _tag: 'OnDblClick'; readonly message: Message }
+  OnMouseDown: (message: Message) => { readonly _tag: 'OnMouseDown'; readonly message: Message }
+  OnMouseUp: (message: Message) => { readonly _tag: 'OnMouseUp'; readonly message: Message }
+  OnMouseEnter: (message: Message) => { readonly _tag: 'OnMouseEnter'; readonly message: Message }
+  OnMouseLeave: (message: Message) => { readonly _tag: 'OnMouseLeave'; readonly message: Message }
+  OnMouseOver: (message: Message) => { readonly _tag: 'OnMouseOver'; readonly message: Message }
+  OnMouseOut: (message: Message) => { readonly _tag: 'OnMouseOut'; readonly message: Message }
+  OnMouseMove: (message: Message) => { readonly _tag: 'OnMouseMove'; readonly message: Message }
+  OnKeyDown: (f: (key: string) => Message) => {
+    readonly _tag: 'OnKeyDown'
+    readonly f: (key: string) => Message
+  }
+  OnKeyUp: (f: (key: string) => Message) => {
+    readonly _tag: 'OnKeyUp'
+    readonly f: (key: string) => Message
+  }
+  OnKeyPress: (f: (key: string) => Message) => {
+    readonly _tag: 'OnKeyPress'
+    readonly f: (key: string) => Message
+  }
+  OnFocus: (message: Message) => { readonly _tag: 'OnFocus'; readonly message: Message }
+  OnBlur: (message: Message) => { readonly _tag: 'OnBlur'; readonly message: Message }
+  OnInput: (f: (value: string) => Message) => {
+    readonly _tag: 'OnInput'
+    readonly f: (value: string) => Message
+  }
+  OnChange: (f: (value: string) => Message) => {
+    readonly _tag: 'OnChange'
+    readonly f: (value: string) => Message
+  }
+  OnSubmit: (message: Message) => { readonly _tag: 'OnSubmit'; readonly message: Message }
+  OnReset: (message: Message) => { readonly _tag: 'OnReset'; readonly message: Message }
+  OnScroll: (message: Message) => { readonly _tag: 'OnScroll'; readonly message: Message }
+  OnWheel: (message: Message) => { readonly _tag: 'OnWheel'; readonly message: Message }
+  OnCopy: (message: Message) => { readonly _tag: 'OnCopy'; readonly message: Message }
+  OnCut: (message: Message) => { readonly _tag: 'OnCut'; readonly message: Message }
+  OnPaste: (message: Message) => { readonly _tag: 'OnPaste'; readonly message: Message }
+  Value: (value: string) => { readonly _tag: 'Value'; readonly value: string }
+  Checked: (value: boolean) => { readonly _tag: 'Checked'; readonly value: boolean }
+  Selected: (value: boolean) => { readonly _tag: 'Selected'; readonly value: boolean }
+  Placeholder: (value: string) => { readonly _tag: 'Placeholder'; readonly value: string }
+  Name: (value: string) => { readonly _tag: 'Name'; readonly value: string }
+  Disabled: (value: boolean) => { readonly _tag: 'Disabled'; readonly value: boolean }
+  Readonly: (value: boolean) => { readonly _tag: 'Readonly'; readonly value: boolean }
+  Required: (value: boolean) => { readonly _tag: 'Required'; readonly value: boolean }
+  Autofocus: (value: boolean) => { readonly _tag: 'Autofocus'; readonly value: boolean }
+  Spellcheck: (value: boolean) => { readonly _tag: 'Spellcheck'; readonly value: boolean }
+  Autocorrect: (value: string) => { readonly _tag: 'Autocorrect'; readonly value: string }
+  Autocapitalize: (value: string) => { readonly _tag: 'Autocapitalize'; readonly value: string }
+  InputMode: (value: string) => { readonly _tag: 'InputMode'; readonly value: string }
+  EnterKeyHint: (value: string) => { readonly _tag: 'EnterKeyHint'; readonly value: string }
+  Multiple: (value: boolean) => { readonly _tag: 'Multiple'; readonly value: boolean }
+  Type: (value: string) => { readonly _tag: 'Type'; readonly value: string }
+  Accept: (value: string) => { readonly _tag: 'Accept'; readonly value: string }
+  Autocomplete: (value: string) => { readonly _tag: 'Autocomplete'; readonly value: string }
+  Pattern: (value: string) => { readonly _tag: 'Pattern'; readonly value: string }
+  Maxlength: (value: number) => { readonly _tag: 'Maxlength'; readonly value: number }
+  Minlength: (value: number) => { readonly _tag: 'Minlength'; readonly value: number }
+  Size: (value: number) => { readonly _tag: 'Size'; readonly value: number }
+  Cols: (value: number) => { readonly _tag: 'Cols'; readonly value: number }
+  Rows: (value: number) => { readonly _tag: 'Rows'; readonly value: number }
+  Max: (value: string) => { readonly _tag: 'Max'; readonly value: string }
+  Min: (value: string) => { readonly _tag: 'Min'; readonly value: string }
+  Step: (value: string) => { readonly _tag: 'Step'; readonly value: string }
+  For: (value: string) => { readonly _tag: 'For'; readonly value: string }
+  Href: (value: string) => { readonly _tag: 'Href'; readonly value: string }
+  Src: (value: string) => { readonly _tag: 'Src'; readonly value: string }
+  Alt: (value: string) => { readonly _tag: 'Alt'; readonly value: string }
+  Target: (value: string) => { readonly _tag: 'Target'; readonly value: string }
+  Rel: (value: string) => { readonly _tag: 'Rel'; readonly value: string }
+  Download: (value: string) => { readonly _tag: 'Download'; readonly value: string }
+  Action: (value: string) => { readonly _tag: 'Action'; readonly value: string }
+  Method: (value: string) => { readonly _tag: 'Method'; readonly value: string }
+  Enctype: (value: string) => { readonly _tag: 'Enctype'; readonly value: string }
+  Novalidate: (value: boolean) => { readonly _tag: 'Novalidate'; readonly value: boolean }
+  Role: (value: string) => { readonly _tag: 'Role'; readonly value: string }
+  AriaLabel: (value: string) => { readonly _tag: 'AriaLabel'; readonly value: string }
+  AriaLabelledBy: (value: string) => { readonly _tag: 'AriaLabelledBy'; readonly value: string }
+  AriaDescribedBy: (value: string) => { readonly _tag: 'AriaDescribedBy'; readonly value: string }
+  AriaHidden: (value: boolean) => { readonly _tag: 'AriaHidden'; readonly value: boolean }
+  AriaExpanded: (value: boolean) => { readonly _tag: 'AriaExpanded'; readonly value: boolean }
+  AriaSelected: (value: boolean) => { readonly _tag: 'AriaSelected'; readonly value: boolean }
+  AriaChecked: (value: boolean) => { readonly _tag: 'AriaChecked'; readonly value: boolean }
+  AriaDisabled: (value: boolean) => { readonly _tag: 'AriaDisabled'; readonly value: boolean }
+  AriaRequired: (value: boolean) => { readonly _tag: 'AriaRequired'; readonly value: boolean }
+  AriaInvalid: (value: boolean) => { readonly _tag: 'AriaInvalid'; readonly value: boolean }
+  AriaLive: (value: string) => { readonly _tag: 'AriaLive'; readonly value: string }
+  Attribute: (
+    key: string,
+    value: string,
+  ) => { readonly _tag: 'Attribute'; readonly key: string; readonly value: string }
+  DataAttribute: (
+    key: string,
+    value: string,
+  ) => {
+    readonly _tag: 'DataAttribute'
+    readonly key: string
+    readonly value: string
+  }
+  Style: (value: Record<string, string>) => {
+    readonly _tag: 'Style'
+    readonly value: Record<string, string>
+  }
+  InnerHTML: (value: string) => { readonly _tag: 'InnerHTML'; readonly value: string }
+  ViewBox: (value: string) => { readonly _tag: 'ViewBox'; readonly value: string }
+  Xmlns: (value: string) => { readonly _tag: 'Xmlns'; readonly value: string }
+  Fill: (value: string) => { readonly _tag: 'Fill'; readonly value: string }
+  FillRule: (value: string) => { readonly _tag: 'FillRule'; readonly value: string }
+  ClipRule: (value: string) => { readonly _tag: 'ClipRule'; readonly value: string }
+  Stroke: (value: string) => { readonly _tag: 'Stroke'; readonly value: string }
+  StrokeWidth: (value: string) => { readonly _tag: 'StrokeWidth'; readonly value: string }
+  StrokeLinecap: (value: string) => { readonly _tag: 'StrokeLinecap'; readonly value: string }
+  StrokeLinejoin: (value: string) => { readonly _tag: 'StrokeLinejoin'; readonly value: string }
+  D: (value: string) => { readonly _tag: 'D'; readonly value: string }
+  Cx: (value: string) => { readonly _tag: 'Cx'; readonly value: string }
+  Cy: (value: string) => { readonly _tag: 'Cy'; readonly value: string }
+  R: (value: string) => { readonly _tag: 'R'; readonly value: string }
+  X: (value: string) => { readonly _tag: 'X'; readonly value: string }
+  Y: (value: string) => { readonly _tag: 'Y'; readonly value: string }
+  Width: (value: string) => { readonly _tag: 'Width'; readonly value: string }
+  Height: (value: string) => { readonly _tag: 'Height'; readonly value: string }
+  X1: (value: string) => { readonly _tag: 'X1'; readonly value: string }
+  Y1: (value: string) => { readonly _tag: 'Y1'; readonly value: string }
+  X2: (value: string) => { readonly _tag: 'X2'; readonly value: string }
+  Y2: (value: string) => { readonly _tag: 'Y2'; readonly value: string }
+  Points: (value: string) => { readonly _tag: 'Points'; readonly value: string }
+  Transform: (value: string) => { readonly _tag: 'Transform'; readonly value: string }
+  Opacity: (value: string) => { readonly _tag: 'Opacity'; readonly value: string }
+  StrokeDasharray: (value: string) => { readonly _tag: 'StrokeDasharray'; readonly value: string }
+  StrokeDashoffset: (value: string) => { readonly _tag: 'StrokeDashoffset'; readonly value: string }
+}
 
-// EMPTY
+export const htmlAttributes = <Message>(): HtmlAttributes<Message> => ({
+  Key: (value: string) => Key({ value }),
+  Class: (value: string) => Class({ value }),
+  Id: (value: string) => Id({ value }),
+  Title: (value: string) => Title({ value }),
+  Lang: (value: string) => Lang({ value }),
+  Dir: (value: string) => Dir({ value }),
+  Tabindex: (value: number) => Tabindex({ value }),
+  Hidden: (value: boolean) => Hidden({ value }),
+  OnClick: (message: Message) => OnClick({ message }),
+  OnDblClick: (message: Message) => OnDblClick({ message }),
+  OnMouseDown: (message: Message) => OnMouseDown({ message }),
+  OnMouseUp: (message: Message) => OnMouseUp({ message }),
+  OnMouseEnter: (message: Message) => OnMouseEnter({ message }),
+  OnMouseLeave: (message: Message) => OnMouseLeave({ message }),
+  OnMouseOver: (message: Message) => OnMouseOver({ message }),
+  OnMouseOut: (message: Message) => OnMouseOut({ message }),
+  OnMouseMove: (message: Message) => OnMouseMove({ message }),
+  OnKeyDown: (f: (key: string) => Message) => OnKeyDown({ f }),
+  OnKeyUp: (f: (key: string) => Message) => OnKeyUp({ f }),
+  OnKeyPress: (f: (key: string) => Message) => OnKeyPress({ f }),
+  OnFocus: (message: Message) => OnFocus({ message }),
+  OnBlur: (message: Message) => OnBlur({ message }),
+  OnInput: (f: (value: string) => Message) => OnInput({ f }),
+  OnChange: (f: (value: string) => Message) => OnChange({ f }),
+  OnSubmit: (message: Message) => OnSubmit({ message }),
+  OnReset: (message: Message) => OnReset({ message }),
+  OnScroll: (message: Message) => OnScroll({ message }),
+  OnWheel: (message: Message) => OnWheel({ message }),
+  OnCopy: (message: Message) => OnCopy({ message }),
+  OnCut: (message: Message) => OnCut({ message }),
+  OnPaste: (message: Message) => OnPaste({ message }),
+  Value: (value: string) => Value({ value }),
+  Checked: (value: boolean) => Checked({ value }),
+  Selected: (value: boolean) => Selected({ value }),
+  Placeholder: (value: string) => Placeholder({ value }),
+  Name: (value: string) => Name({ value }),
+  Disabled: (value: boolean) => Disabled({ value }),
+  Readonly: (value: boolean) => Readonly({ value }),
+  Required: (value: boolean) => Required({ value }),
+  Autofocus: (value: boolean) => Autofocus({ value }),
+  Spellcheck: (value: boolean) => Spellcheck({ value }),
+  Autocorrect: (value: string) => Autocorrect({ value }),
+  Autocapitalize: (value: string) => Autocapitalize({ value }),
+  InputMode: (value: string) => InputMode({ value }),
+  EnterKeyHint: (value: string) => EnterKeyHint({ value }),
+  Multiple: (value: boolean) => Multiple({ value }),
+  Type: (value: string) => Type({ value }),
+  Accept: (value: string) => Accept({ value }),
+  Autocomplete: (value: string) => Autocomplete({ value }),
+  Pattern: (value: string) => Pattern({ value }),
+  Maxlength: (value: number) => Maxlength({ value }),
+  Minlength: (value: number) => Minlength({ value }),
+  Size: (value: number) => Size({ value }),
+  Cols: (value: number) => Cols({ value }),
+  Rows: (value: number) => Rows({ value }),
+  Max: (value: string) => Max({ value }),
+  Min: (value: string) => Min({ value }),
+  Step: (value: string) => Step({ value }),
+  For: (value: string) => For({ value }),
+  Href: (value: string) => Href({ value }),
+  Src: (value: string) => Src({ value }),
+  Alt: (value: string) => Alt({ value }),
+  Target: (value: string) => Target({ value }),
+  Rel: (value: string) => Rel({ value }),
+  Download: (value: string) => Download({ value }),
+  Action: (value: string) => Action({ value }),
+  Method: (value: string) => Method({ value }),
+  Enctype: (value: string) => Enctype({ value }),
+  Novalidate: (value: boolean) => Novalidate({ value }),
+  Role: (value: string) => Role({ value }),
+  AriaLabel: (value: string) => AriaLabel({ value }),
+  AriaLabelledBy: (value: string) => AriaLabelledBy({ value }),
+  AriaDescribedBy: (value: string) => AriaDescribedBy({ value }),
+  AriaHidden: (value: boolean) => AriaHidden({ value }),
+  AriaExpanded: (value: boolean) => AriaExpanded({ value }),
+  AriaSelected: (value: boolean) => AriaSelected({ value }),
+  AriaChecked: (value: boolean) => AriaChecked({ value }),
+  AriaDisabled: (value: boolean) => AriaDisabled({ value }),
+  AriaRequired: (value: boolean) => AriaRequired({ value }),
+  AriaInvalid: (value: boolean) => AriaInvalid({ value }),
+  AriaLive: (value: string) => AriaLive({ value }),
+  Attribute: (key: string, value: string) => Attribute({ key, value }),
+  DataAttribute: (key: string, value: string) => DataAttribute({ key, value }),
+  Style: (value: Record<string, string>) => Style({ value }),
+  InnerHTML: (value: string) => InnerHTML({ value }),
+  ViewBox: (value: string) => ViewBox({ value }),
+  Xmlns: (value: string) => Xmlns({ value }),
+  Fill: (value: string) => Fill({ value }),
+  FillRule: (value: string) => FillRule({ value }),
+  ClipRule: (value: string) => ClipRule({ value }),
+  Stroke: (value: string) => Stroke({ value }),
+  StrokeWidth: (value: string) => StrokeWidth({ value }),
+  StrokeLinecap: (value: string) => StrokeLinecap({ value }),
+  StrokeLinejoin: (value: string) => StrokeLinejoin({ value }),
+  D: (value: string) => D({ value }),
+  Cx: (value: string) => Cx({ value }),
+  Cy: (value: string) => Cy({ value }),
+  R: (value: string) => R({ value }),
+  X: (value: string) => X({ value }),
+  Y: (value: string) => Y({ value }),
+  Width: (value: string) => Width({ value }),
+  Height: (value: string) => Height({ value }),
+  X1: (value: string) => X1({ value }),
+  Y1: (value: string) => Y1({ value }),
+  X2: (value: string) => X2({ value }),
+  Y2: (value: string) => Y2({ value }),
+  Points: (value: string) => Points({ value }),
+  Transform: (value: string) => Transform({ value }),
+  Opacity: (value: string) => Opacity({ value }),
+  StrokeDasharray: (value: string) => StrokeDasharray({ value }),
+  StrokeDashoffset: (value: string) => StrokeDashoffset({ value }),
+})
 
-export const empty: Html = Effect.succeed(null)
+export const html = <Message>() => {
+  return {
+    ...htmlElements<Message>(),
+    ...htmlAttributes<Message>(),
+    empty: Effect.succeed(null),
+    keyed: keyed<Message>(),
+  }
+}
