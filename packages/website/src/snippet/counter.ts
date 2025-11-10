@@ -1,7 +1,8 @@
 import { Match as M, Schema } from 'effect'
 import { Runtime } from 'foldkit'
-import { Class, Html, OnClick, button, div } from 'foldkit/html'
 import { ts } from 'foldkit/schema'
+
+import { Class, Html, OnClick, button, div } from '../html'
 
 // MODEL - The shape of your application state
 // In this case, our state is just a number representing the count

@@ -349,117 +349,117 @@ interface AttributeDefinition extends Data.TaggedEnum.WithGenerics<1> {
 }
 
 export const {
-  Key: Key_,
-  Class: Class_,
-  Id: Id_,
-  Title: Title_,
-  Lang: Lang_,
-  Dir: Dir_,
-  Tabindex: Tabindex_,
-  Hidden: Hidden_,
-  OnClick: OnClick_,
-  OnDblClick: OnDblClick_,
-  OnMouseDown: OnMouseDown_,
-  OnMouseUp: OnMouseUp_,
-  OnMouseEnter: OnMouseEnter_,
-  OnMouseLeave: OnMouseLeave_,
-  OnMouseOver: OnMouseOver_,
-  OnMouseOut: OnMouseOut_,
-  OnMouseMove: OnMouseMove_,
-  OnKeyDown: OnKeyDown_,
-  OnKeyUp: OnKeyUp_,
-  OnKeyPress: OnKeyPress_,
-  OnFocus: OnFocus_,
-  OnBlur: OnBlur_,
-  OnInput: OnInput_,
-  OnChange: OnChange_,
-  OnSubmit: OnSubmit_,
-  OnReset: OnReset_,
-  OnScroll: OnScroll_,
-  OnWheel: OnWheel_,
-  OnCopy: OnCopy_,
-  OnCut: OnCut_,
-  OnPaste: OnPaste_,
-  Value: Value_,
-  Checked: Checked_,
-  Selected: Selected_,
-  Placeholder: Placeholder_,
-  Name: Name_,
-  Disabled: Disabled_,
-  Readonly: Readonly_,
-  Required: Required_,
-  Autofocus: Autofocus_,
-  Spellcheck: Spellcheck_,
-  Autocorrect: Autocorrect_,
-  Autocapitalize: Autocapitalize_,
-  InputMode: InputMode_,
-  EnterKeyHint: EnterKeyHint_,
-  Multiple: Multiple_,
-  Type: Type_,
-  Accept: Accept_,
-  Autocomplete: Autocomplete_,
-  Pattern: Pattern_,
-  Maxlength: Maxlength_,
-  Minlength: Minlength_,
-  Size: Size_,
-  Cols: Cols_,
-  Rows: Rows_,
-  Max: Max_,
-  Min: Min_,
-  Step: Step_,
-  For: For_,
-  Href: Href_,
-  Src: Src_,
-  Alt: Alt_,
-  Target: Target_,
-  Rel: Rel_,
-  Download: Download_,
-  Action: Action_,
-  Method: Method_,
-  Enctype: Enctype_,
-  Novalidate: Novalidate_,
-  Role: Role_,
-  AriaLabel: AriaLabel_,
-  AriaLabelledBy: AriaLabelledBy_,
-  AriaDescribedBy: AriaDescribedBy_,
-  AriaHidden: AriaHidden_,
-  AriaExpanded: AriaExpanded_,
-  AriaSelected: AriaSelected_,
-  AriaChecked: AriaChecked_,
-  AriaDisabled: AriaDisabled_,
-  AriaRequired: AriaRequired_,
-  AriaInvalid: AriaInvalid_,
-  AriaLive: AriaLive_,
-  Attribute: Attribute_,
-  DataAttribute: DataAttribute_,
-  Style: Style_,
-  InnerHTML: InnerHTML_,
-  ViewBox: ViewBox_,
-  Xmlns: Xmlns_,
-  Fill: Fill_,
-  FillRule: FillRule_,
-  ClipRule: ClipRule_,
-  Stroke: Stroke_,
-  StrokeWidth: StrokeWidth_,
-  StrokeLinecap: StrokeLinecap_,
-  StrokeLinejoin: StrokeLinejoin_,
-  D: D_,
-  Cx: Cx_,
-  Cy: Cy_,
-  R: R_,
-  X: X_,
-  Y: Y_,
-  Width: Width_,
-  Height: Height_,
-  X1: X1_,
-  Y1: Y1_,
-  X2: X2_,
-  Y2: Y2_,
-  Points: Points_,
-  Transform: Transform_,
-  Opacity: Opacity_,
-  StrokeDasharray: StrokeDasharray_,
-  StrokeDashoffset: StrokeDashoffset_,
+  Key,
+  Class,
+  Id,
+  Title,
+  Lang,
+  Dir,
+  Tabindex,
+  Hidden,
+  OnClick,
+  OnDblClick,
+  OnMouseDown,
+  OnMouseUp,
+  OnMouseEnter,
+  OnMouseLeave,
+  OnMouseOver,
+  OnMouseOut,
+  OnMouseMove,
+  OnKeyDown,
+  OnKeyUp,
+  OnKeyPress,
+  OnFocus,
+  OnBlur,
+  OnInput,
+  OnChange,
+  OnSubmit,
+  OnReset,
+  OnScroll,
+  OnWheel,
+  OnCopy,
+  OnCut,
+  OnPaste,
+  Value,
+  Checked,
+  Selected,
+  Placeholder,
+  Name,
+  Disabled,
+  Readonly,
+  Required,
+  Autofocus,
+  Spellcheck,
+  Autocorrect,
+  Autocapitalize,
+  InputMode,
+  EnterKeyHint,
+  Multiple,
+  Type,
+  Accept,
+  Autocomplete,
+  Pattern,
+  Maxlength,
+  Minlength,
+  Size,
+  Cols,
+  Rows,
+  Max,
+  Min,
+  Step,
+  For,
+  Href,
+  Src,
+  Alt,
+  Target,
+  Rel,
+  Download,
+  Action,
+  Method,
+  Enctype,
+  Novalidate,
+  Role,
+  AriaLabel,
+  AriaLabelledBy,
+  AriaDescribedBy,
+  AriaHidden,
+  AriaExpanded,
+  AriaSelected,
+  AriaChecked,
+  AriaDisabled,
+  AriaRequired,
+  AriaInvalid,
+  AriaLive,
+  Attribute,
+  DataAttribute,
+  Style,
+  InnerHTML,
+  ViewBox,
+  Xmlns,
+  Fill,
+  FillRule,
+  ClipRule,
+  Stroke,
+  StrokeWidth,
+  StrokeLinecap,
+  StrokeLinejoin,
+  D,
+  Cx,
+  Cy,
+  R,
+  X,
+  Y,
+  Width,
+  Height,
+  X1,
+  Y1,
+  X2,
+  Y2,
+  Points,
+  Transform,
+  Opacity,
+  StrokeDasharray,
+  StrokeDashoffset,
 } = Data.taggedEnum<AttributeDefinition>()
 
 const buildVNodeData = <Message>(
@@ -749,7 +749,7 @@ const keyed =
     attributes: ReadonlyArray<AttributeWithoutKey<Message>> = [],
     children: ReadonlyArray<Child> = [],
   ): Html =>
-    element<Message>()(tagName)([...attributes, Key_({ value: key })], children)
+    element<Message>()(tagName)([...attributes, Key({ value: key })], children)
 
 export type HtmlElements<Message> = Record<
   TagName,
@@ -983,202 +983,260 @@ export const htmlElements = <Message>(): HtmlElements<Message> => {
 }
 
 export type HtmlAttributes<Message> = {
-  Key: (value: string) => Attribute<Message>
-  Class: (value: string) => Attribute<Message>
-  Id: (value: string) => Attribute<Message>
-  Title: (value: string) => Attribute<Message>
-  Lang: (value: string) => Attribute<Message>
-  Dir: (value: string) => Attribute<Message>
-  Tabindex: (value: number) => Attribute<Message>
-  Hidden: (value: boolean) => Attribute<Message>
-  OnClick: (message: Message) => Attribute<Message>
-  OnDblClick: (message: Message) => Attribute<Message>
-  OnMouseDown: (message: Message) => Attribute<Message>
-  OnMouseUp: (message: Message) => Attribute<Message>
-  OnMouseEnter: (message: Message) => Attribute<Message>
-  OnMouseLeave: (message: Message) => Attribute<Message>
-  OnMouseOver: (message: Message) => Attribute<Message>
-  OnMouseOut: (message: Message) => Attribute<Message>
-  OnMouseMove: (message: Message) => Attribute<Message>
-  OnKeyDown: (f: (key: string) => Message) => Attribute<Message>
-  OnKeyUp: (f: (key: string) => Message) => Attribute<Message>
-  OnKeyPress: (f: (key: string) => Message) => Attribute<Message>
-  OnFocus: (message: Message) => Attribute<Message>
-  OnBlur: (message: Message) => Attribute<Message>
-  OnInput: (f: (value: string) => Message) => Attribute<Message>
-  OnChange: (f: (value: string) => Message) => Attribute<Message>
-  OnSubmit: (message: Message) => Attribute<Message>
-  OnReset: (message: Message) => Attribute<Message>
-  OnScroll: (message: Message) => Attribute<Message>
-  OnWheel: (message: Message) => Attribute<Message>
-  OnCopy: (message: Message) => Attribute<Message>
-  OnCut: (message: Message) => Attribute<Message>
-  OnPaste: (message: Message) => Attribute<Message>
-  Value: (value: string) => Attribute<Message>
-  Checked: (value: boolean) => Attribute<Message>
-  Selected: (value: boolean) => Attribute<Message>
-  Placeholder: (value: string) => Attribute<Message>
-  Name: (value: string) => Attribute<Message>
-  Disabled: (value: boolean) => Attribute<Message>
-  Readonly: (value: boolean) => Attribute<Message>
-  Required: (value: boolean) => Attribute<Message>
-  Autofocus: (value: boolean) => Attribute<Message>
-  Spellcheck: (value: boolean) => Attribute<Message>
-  Autocorrect: (value: string) => Attribute<Message>
-  Autocapitalize: (value: string) => Attribute<Message>
-  InputMode: (value: string) => Attribute<Message>
-  EnterKeyHint: (value: string) => Attribute<Message>
-  Multiple: (value: boolean) => Attribute<Message>
-  Type: (value: string) => Attribute<Message>
-  Accept: (value: string) => Attribute<Message>
-  Autocomplete: (value: string) => Attribute<Message>
-  Pattern: (value: string) => Attribute<Message>
-  Maxlength: (value: number) => Attribute<Message>
-  Minlength: (value: number) => Attribute<Message>
-  Size: (value: number) => Attribute<Message>
-  Cols: (value: number) => Attribute<Message>
-  Rows: (value: number) => Attribute<Message>
-  Max: (value: string) => Attribute<Message>
-  Min: (value: string) => Attribute<Message>
-  Step: (value: string) => Attribute<Message>
-  For: (value: string) => Attribute<Message>
-  Href: (value: string) => Attribute<Message>
-  Src: (value: string) => Attribute<Message>
-  Alt: (value: string) => Attribute<Message>
-  Target: (value: string) => Attribute<Message>
-  Rel: (value: string) => Attribute<Message>
-  Download: (value: string) => Attribute<Message>
-  Action: (value: string) => Attribute<Message>
-  Method: (value: string) => Attribute<Message>
-  Enctype: (value: string) => Attribute<Message>
-  Novalidate: (value: boolean) => Attribute<Message>
-  Role: (value: string) => Attribute<Message>
-  AriaLabel: (value: string) => Attribute<Message>
-  AriaLabelledBy: (value: string) => Attribute<Message>
-  AriaDescribedBy: (value: string) => Attribute<Message>
-  AriaHidden: (value: boolean) => Attribute<Message>
-  AriaExpanded: (value: boolean) => Attribute<Message>
-  AriaSelected: (value: boolean) => Attribute<Message>
-  AriaChecked: (value: boolean) => Attribute<Message>
-  AriaDisabled: (value: boolean) => Attribute<Message>
-  AriaRequired: (value: boolean) => Attribute<Message>
-  AriaInvalid: (value: boolean) => Attribute<Message>
-  AriaLive: (value: string) => Attribute<Message>
-  Attribute: (key: string, value: string) => Attribute<Message>
-  DataAttribute: (key: string, value: string) => Attribute<Message>
-  Style: (value: Record<string, string>) => Attribute<Message>
-  InnerHTML: (value: string) => Attribute<Message>
-  ViewBox: (value: string) => Attribute<Message>
-  Xmlns: (value: string) => Attribute<Message>
-  Fill: (value: string) => Attribute<Message>
-  FillRule: (value: string) => Attribute<Message>
-  ClipRule: (value: string) => Attribute<Message>
-  Stroke: (value: string) => Attribute<Message>
-  StrokeWidth: (value: string) => Attribute<Message>
-  StrokeLinecap: (value: string) => Attribute<Message>
-  StrokeLinejoin: (value: string) => Attribute<Message>
-  D: (value: string) => Attribute<Message>
+  Key: (value: string) => { readonly _tag: 'Key'; readonly value: string }
+  Class: (value: string) => { readonly _tag: 'Class'; readonly value: string }
+  Id: (value: string) => { readonly _tag: 'Id'; readonly value: string }
+  Title: (value: string) => { readonly _tag: 'Title'; readonly value: string }
+  Lang: (value: string) => { readonly _tag: 'Lang'; readonly value: string }
+  Dir: (value: string) => { readonly _tag: 'Dir'; readonly value: string }
+  Tabindex: (value: number) => { readonly _tag: 'Tabindex'; readonly value: number }
+  Hidden: (value: boolean) => { readonly _tag: 'Hidden'; readonly value: boolean }
+  OnClick: (message: Message) => { readonly _tag: 'OnClick'; readonly message: Message }
+  OnDblClick: (message: Message) => { readonly _tag: 'OnDblClick'; readonly message: Message }
+  OnMouseDown: (message: Message) => { readonly _tag: 'OnMouseDown'; readonly message: Message }
+  OnMouseUp: (message: Message) => { readonly _tag: 'OnMouseUp'; readonly message: Message }
+  OnMouseEnter: (message: Message) => { readonly _tag: 'OnMouseEnter'; readonly message: Message }
+  OnMouseLeave: (message: Message) => { readonly _tag: 'OnMouseLeave'; readonly message: Message }
+  OnMouseOver: (message: Message) => { readonly _tag: 'OnMouseOver'; readonly message: Message }
+  OnMouseOut: (message: Message) => { readonly _tag: 'OnMouseOut'; readonly message: Message }
+  OnMouseMove: (message: Message) => { readonly _tag: 'OnMouseMove'; readonly message: Message }
+  OnKeyDown: (f: (key: string) => Message) => {
+    readonly _tag: 'OnKeyDown'
+    readonly f: (key: string) => Message
+  }
+  OnKeyUp: (f: (key: string) => Message) => {
+    readonly _tag: 'OnKeyUp'
+    readonly f: (key: string) => Message
+  }
+  OnKeyPress: (f: (key: string) => Message) => {
+    readonly _tag: 'OnKeyPress'
+    readonly f: (key: string) => Message
+  }
+  OnFocus: (message: Message) => { readonly _tag: 'OnFocus'; readonly message: Message }
+  OnBlur: (message: Message) => { readonly _tag: 'OnBlur'; readonly message: Message }
+  OnInput: (f: (value: string) => Message) => {
+    readonly _tag: 'OnInput'
+    readonly f: (value: string) => Message
+  }
+  OnChange: (f: (value: string) => Message) => {
+    readonly _tag: 'OnChange'
+    readonly f: (value: string) => Message
+  }
+  OnSubmit: (message: Message) => { readonly _tag: 'OnSubmit'; readonly message: Message }
+  OnReset: (message: Message) => { readonly _tag: 'OnReset'; readonly message: Message }
+  OnScroll: (message: Message) => { readonly _tag: 'OnScroll'; readonly message: Message }
+  OnWheel: (message: Message) => { readonly _tag: 'OnWheel'; readonly message: Message }
+  OnCopy: (message: Message) => { readonly _tag: 'OnCopy'; readonly message: Message }
+  OnCut: (message: Message) => { readonly _tag: 'OnCut'; readonly message: Message }
+  OnPaste: (message: Message) => { readonly _tag: 'OnPaste'; readonly message: Message }
+  Value: (value: string) => { readonly _tag: 'Value'; readonly value: string }
+  Checked: (value: boolean) => { readonly _tag: 'Checked'; readonly value: boolean }
+  Selected: (value: boolean) => { readonly _tag: 'Selected'; readonly value: boolean }
+  Placeholder: (value: string) => { readonly _tag: 'Placeholder'; readonly value: string }
+  Name: (value: string) => { readonly _tag: 'Name'; readonly value: string }
+  Disabled: (value: boolean) => { readonly _tag: 'Disabled'; readonly value: boolean }
+  Readonly: (value: boolean) => { readonly _tag: 'Readonly'; readonly value: boolean }
+  Required: (value: boolean) => { readonly _tag: 'Required'; readonly value: boolean }
+  Autofocus: (value: boolean) => { readonly _tag: 'Autofocus'; readonly value: boolean }
+  Spellcheck: (value: boolean) => { readonly _tag: 'Spellcheck'; readonly value: boolean }
+  Autocorrect: (value: string) => { readonly _tag: 'Autocorrect'; readonly value: string }
+  Autocapitalize: (value: string) => { readonly _tag: 'Autocapitalize'; readonly value: string }
+  InputMode: (value: string) => { readonly _tag: 'InputMode'; readonly value: string }
+  EnterKeyHint: (value: string) => { readonly _tag: 'EnterKeyHint'; readonly value: string }
+  Multiple: (value: boolean) => { readonly _tag: 'Multiple'; readonly value: boolean }
+  Type: (value: string) => { readonly _tag: 'Type'; readonly value: string }
+  Accept: (value: string) => { readonly _tag: 'Accept'; readonly value: string }
+  Autocomplete: (value: string) => { readonly _tag: 'Autocomplete'; readonly value: string }
+  Pattern: (value: string) => { readonly _tag: 'Pattern'; readonly value: string }
+  Maxlength: (value: number) => { readonly _tag: 'Maxlength'; readonly value: number }
+  Minlength: (value: number) => { readonly _tag: 'Minlength'; readonly value: number }
+  Size: (value: number) => { readonly _tag: 'Size'; readonly value: number }
+  Cols: (value: number) => { readonly _tag: 'Cols'; readonly value: number }
+  Rows: (value: number) => { readonly _tag: 'Rows'; readonly value: number }
+  Max: (value: string) => { readonly _tag: 'Max'; readonly value: string }
+  Min: (value: string) => { readonly _tag: 'Min'; readonly value: string }
+  Step: (value: string) => { readonly _tag: 'Step'; readonly value: string }
+  For: (value: string) => { readonly _tag: 'For'; readonly value: string }
+  Href: (value: string) => { readonly _tag: 'Href'; readonly value: string }
+  Src: (value: string) => { readonly _tag: 'Src'; readonly value: string }
+  Alt: (value: string) => { readonly _tag: 'Alt'; readonly value: string }
+  Target: (value: string) => { readonly _tag: 'Target'; readonly value: string }
+  Rel: (value: string) => { readonly _tag: 'Rel'; readonly value: string }
+  Download: (value: string) => { readonly _tag: 'Download'; readonly value: string }
+  Action: (value: string) => { readonly _tag: 'Action'; readonly value: string }
+  Method: (value: string) => { readonly _tag: 'Method'; readonly value: string }
+  Enctype: (value: string) => { readonly _tag: 'Enctype'; readonly value: string }
+  Novalidate: (value: boolean) => { readonly _tag: 'Novalidate'; readonly value: boolean }
+  Role: (value: string) => { readonly _tag: 'Role'; readonly value: string }
+  AriaLabel: (value: string) => { readonly _tag: 'AriaLabel'; readonly value: string }
+  AriaLabelledBy: (value: string) => { readonly _tag: 'AriaLabelledBy'; readonly value: string }
+  AriaDescribedBy: (value: string) => { readonly _tag: 'AriaDescribedBy'; readonly value: string }
+  AriaHidden: (value: boolean) => { readonly _tag: 'AriaHidden'; readonly value: boolean }
+  AriaExpanded: (value: boolean) => { readonly _tag: 'AriaExpanded'; readonly value: boolean }
+  AriaSelected: (value: boolean) => { readonly _tag: 'AriaSelected'; readonly value: boolean }
+  AriaChecked: (value: boolean) => { readonly _tag: 'AriaChecked'; readonly value: boolean }
+  AriaDisabled: (value: boolean) => { readonly _tag: 'AriaDisabled'; readonly value: boolean }
+  AriaRequired: (value: boolean) => { readonly _tag: 'AriaRequired'; readonly value: boolean }
+  AriaInvalid: (value: boolean) => { readonly _tag: 'AriaInvalid'; readonly value: boolean }
+  AriaLive: (value: string) => { readonly _tag: 'AriaLive'; readonly value: string }
+  Attribute: (
+    key: string,
+    value: string,
+  ) => { readonly _tag: 'Attribute'; readonly key: string; readonly value: string }
+  DataAttribute: (
+    key: string,
+    value: string,
+  ) => {
+    readonly _tag: 'DataAttribute'
+    readonly key: string
+    readonly value: string
+  }
+  Style: (value: Record<string, string>) => {
+    readonly _tag: 'Style'
+    readonly value: Record<string, string>
+  }
+  InnerHTML: (value: string) => { readonly _tag: 'InnerHTML'; readonly value: string }
+  ViewBox: (value: string) => { readonly _tag: 'ViewBox'; readonly value: string }
+  Xmlns: (value: string) => { readonly _tag: 'Xmlns'; readonly value: string }
+  Fill: (value: string) => { readonly _tag: 'Fill'; readonly value: string }
+  FillRule: (value: string) => { readonly _tag: 'FillRule'; readonly value: string }
+  ClipRule: (value: string) => { readonly _tag: 'ClipRule'; readonly value: string }
+  Stroke: (value: string) => { readonly _tag: 'Stroke'; readonly value: string }
+  StrokeWidth: (value: string) => { readonly _tag: 'StrokeWidth'; readonly value: string }
+  StrokeLinecap: (value: string) => { readonly _tag: 'StrokeLinecap'; readonly value: string }
+  StrokeLinejoin: (value: string) => { readonly _tag: 'StrokeLinejoin'; readonly value: string }
+  D: (value: string) => { readonly _tag: 'D'; readonly value: string }
+  Cx: (value: string) => { readonly _tag: 'Cx'; readonly value: string }
+  Cy: (value: string) => { readonly _tag: 'Cy'; readonly value: string }
+  R: (value: string) => { readonly _tag: 'R'; readonly value: string }
+  X: (value: string) => { readonly _tag: 'X'; readonly value: string }
+  Y: (value: string) => { readonly _tag: 'Y'; readonly value: string }
+  Width: (value: string) => { readonly _tag: 'Width'; readonly value: string }
+  Height: (value: string) => { readonly _tag: 'Height'; readonly value: string }
+  X1: (value: string) => { readonly _tag: 'X1'; readonly value: string }
+  Y1: (value: string) => { readonly _tag: 'Y1'; readonly value: string }
+  X2: (value: string) => { readonly _tag: 'X2'; readonly value: string }
+  Y2: (value: string) => { readonly _tag: 'Y2'; readonly value: string }
+  Points: (value: string) => { readonly _tag: 'Points'; readonly value: string }
+  Transform: (value: string) => { readonly _tag: 'Transform'; readonly value: string }
+  Opacity: (value: string) => { readonly _tag: 'Opacity'; readonly value: string }
+  StrokeDasharray: (value: string) => { readonly _tag: 'StrokeDasharray'; readonly value: string }
+  StrokeDashoffset: (value: string) => { readonly _tag: 'StrokeDashoffset'; readonly value: string }
 }
 
-export const htmlAttributes = <Message>(): HtmlAttributes<Message> => {
-  return {
-    Key: (value: string) => Key_({ value }),
-    Class: (value: string) => Class_({ value }),
-    Id: (value: string) => Id_({ value }),
-    Title: (value: string) => Title_({ value }),
-    Lang: (value: string) => Lang_({ value }),
-    Dir: (value: string) => Dir_({ value }),
-    Tabindex: (value: number) => Tabindex_({ value }),
-    Hidden: (value: boolean) => Hidden_({ value }),
-    OnClick: (message: Message) => OnClick_({ message }),
-    OnDblClick: (message: Message) => OnDblClick_({ message }),
-    OnMouseDown: (message: Message) => OnMouseDown_({ message }),
-    OnMouseUp: (message: Message) => OnMouseUp_({ message }),
-    OnMouseEnter: (message: Message) => OnMouseEnter_({ message }),
-    OnMouseLeave: (message: Message) => OnMouseLeave_({ message }),
-    OnMouseOver: (message: Message) => OnMouseOver_({ message }),
-    OnMouseOut: (message: Message) => OnMouseOut_({ message }),
-    OnMouseMove: (message: Message) => OnMouseMove_({ message }),
-    OnKeyDown: (f: (key: string) => Message) => OnKeyDown_({ f }),
-    OnKeyUp: (f: (key: string) => Message) => OnKeyUp_({ f }),
-    OnKeyPress: (f: (key: string) => Message) => OnKeyPress_({ f }),
-    OnFocus: (message: Message) => OnFocus_({ message }),
-    OnBlur: (message: Message) => OnBlur_({ message }),
-    OnInput: (f: (value: string) => Message) => OnInput_({ f }),
-    OnChange: (f: (value: string) => Message) => OnChange_({ f }),
-    OnSubmit: (message: Message) => OnSubmit_({ message }),
-    OnReset: (message: Message) => OnReset_({ message }),
-    OnScroll: (message: Message) => OnScroll_({ message }),
-    OnWheel: (message: Message) => OnWheel_({ message }),
-    OnCopy: (message: Message) => OnCopy_({ message }),
-    OnCut: (message: Message) => OnCut_({ message }),
-    OnPaste: (message: Message) => OnPaste_({ message }),
-    Value: (value: string) => Value_({ value }),
-    Checked: (value: boolean) => Checked_({ value }),
-    Selected: (value: boolean) => Selected_({ value }),
-    Placeholder: (value: string) => Placeholder_({ value }),
-    Name: (value: string) => Name_({ value }),
-    Disabled: (value: boolean) => Disabled_({ value }),
-    Readonly: (value: boolean) => Readonly_({ value }),
-    Required: (value: boolean) => Required_({ value }),
-    Autofocus: (value: boolean) => Autofocus_({ value }),
-    Spellcheck: (value: boolean) => Spellcheck_({ value }),
-    Autocorrect: (value: string) => Autocorrect_({ value }),
-    Autocapitalize: (value: string) => Autocapitalize_({ value }),
-    InputMode: (value: string) => InputMode_({ value }),
-    EnterKeyHint: (value: string) => EnterKeyHint_({ value }),
-    Multiple: (value: boolean) => Multiple_({ value }),
-    Type: (value: string) => Type_({ value }),
-    Accept: (value: string) => Accept_({ value }),
-    Autocomplete: (value: string) => Autocomplete_({ value }),
-    Pattern: (value: string) => Pattern_({ value }),
-    Maxlength: (value: number) => Maxlength_({ value }),
-    Minlength: (value: number) => Minlength_({ value }),
-    Size: (value: number) => Size_({ value }),
-    Cols: (value: number) => Cols_({ value }),
-    Rows: (value: number) => Rows_({ value }),
-    Max: (value: string) => Max_({ value }),
-    Min: (value: string) => Min_({ value }),
-    Step: (value: string) => Step_({ value }),
-    For: (value: string) => For_({ value }),
-    Href: (value: string) => Href_({ value }),
-    Src: (value: string) => Src_({ value }),
-    Alt: (value: string) => Alt_({ value }),
-    Target: (value: string) => Target_({ value }),
-    Rel: (value: string) => Rel_({ value }),
-    Download: (value: string) => Download_({ value }),
-    Action: (value: string) => Action_({ value }),
-    Method: (value: string) => Method_({ value }),
-    Enctype: (value: string) => Enctype_({ value }),
-    Novalidate: (value: boolean) => Novalidate_({ value }),
-    Role: (value: string) => Role_({ value }),
-    AriaLabel: (value: string) => AriaLabel_({ value }),
-    AriaLabelledBy: (value: string) => AriaLabelledBy_({ value }),
-    AriaDescribedBy: (value: string) => AriaDescribedBy_({ value }),
-    AriaHidden: (value: boolean) => AriaHidden_({ value }),
-    AriaExpanded: (value: boolean) => AriaExpanded_({ value }),
-    AriaSelected: (value: boolean) => AriaSelected_({ value }),
-    AriaChecked: (value: boolean) => AriaChecked_({ value }),
-    AriaDisabled: (value: boolean) => AriaDisabled_({ value }),
-    AriaRequired: (value: boolean) => AriaRequired_({ value }),
-    AriaInvalid: (value: boolean) => AriaInvalid_({ value }),
-    AriaLive: (value: string) => AriaLive_({ value }),
-    Attribute: (key: string, value: string) => Attribute_({ key, value }),
-    DataAttribute: (key: string, value: string) => DataAttribute_({ key, value }),
-    Style: (value: Record<string, string>) => Style_({ value }),
-    InnerHTML: (value: string) => InnerHTML_({ value }),
-    ViewBox: (value: string) => ViewBox_({ value }),
-    Xmlns: (value: string) => Xmlns_({ value }),
-    Fill: (value: string) => Fill_({ value }),
-    FillRule: (value: string) => FillRule_({ value }),
-    ClipRule: (value: string) => ClipRule_({ value }),
-    Stroke: (value: string) => Stroke_({ value }),
-    StrokeWidth: (value: string) => StrokeWidth_({ value }),
-    StrokeLinecap: (value: string) => StrokeLinecap_({ value }),
-    StrokeLinejoin: (value: string) => StrokeLinejoin_({ value }),
-    D: (value: string) => D_({ value }),
-  }
-}
+export const htmlAttributes = <Message>(): HtmlAttributes<Message> => ({
+  Key: (value: string) => Key({ value }),
+  Class: (value: string) => Class({ value }),
+  Id: (value: string) => Id({ value }),
+  Title: (value: string) => Title({ value }),
+  Lang: (value: string) => Lang({ value }),
+  Dir: (value: string) => Dir({ value }),
+  Tabindex: (value: number) => Tabindex({ value }),
+  Hidden: (value: boolean) => Hidden({ value }),
+  OnClick: (message: Message) => OnClick({ message }),
+  OnDblClick: (message: Message) => OnDblClick({ message }),
+  OnMouseDown: (message: Message) => OnMouseDown({ message }),
+  OnMouseUp: (message: Message) => OnMouseUp({ message }),
+  OnMouseEnter: (message: Message) => OnMouseEnter({ message }),
+  OnMouseLeave: (message: Message) => OnMouseLeave({ message }),
+  OnMouseOver: (message: Message) => OnMouseOver({ message }),
+  OnMouseOut: (message: Message) => OnMouseOut({ message }),
+  OnMouseMove: (message: Message) => OnMouseMove({ message }),
+  OnKeyDown: (f: (key: string) => Message) => OnKeyDown({ f }),
+  OnKeyUp: (f: (key: string) => Message) => OnKeyUp({ f }),
+  OnKeyPress: (f: (key: string) => Message) => OnKeyPress({ f }),
+  OnFocus: (message: Message) => OnFocus({ message }),
+  OnBlur: (message: Message) => OnBlur({ message }),
+  OnInput: (f: (value: string) => Message) => OnInput({ f }),
+  OnChange: (f: (value: string) => Message) => OnChange({ f }),
+  OnSubmit: (message: Message) => OnSubmit({ message }),
+  OnReset: (message: Message) => OnReset({ message }),
+  OnScroll: (message: Message) => OnScroll({ message }),
+  OnWheel: (message: Message) => OnWheel({ message }),
+  OnCopy: (message: Message) => OnCopy({ message }),
+  OnCut: (message: Message) => OnCut({ message }),
+  OnPaste: (message: Message) => OnPaste({ message }),
+  Value: (value: string) => Value({ value }),
+  Checked: (value: boolean) => Checked({ value }),
+  Selected: (value: boolean) => Selected({ value }),
+  Placeholder: (value: string) => Placeholder({ value }),
+  Name: (value: string) => Name({ value }),
+  Disabled: (value: boolean) => Disabled({ value }),
+  Readonly: (value: boolean) => Readonly({ value }),
+  Required: (value: boolean) => Required({ value }),
+  Autofocus: (value: boolean) => Autofocus({ value }),
+  Spellcheck: (value: boolean) => Spellcheck({ value }),
+  Autocorrect: (value: string) => Autocorrect({ value }),
+  Autocapitalize: (value: string) => Autocapitalize({ value }),
+  InputMode: (value: string) => InputMode({ value }),
+  EnterKeyHint: (value: string) => EnterKeyHint({ value }),
+  Multiple: (value: boolean) => Multiple({ value }),
+  Type: (value: string) => Type({ value }),
+  Accept: (value: string) => Accept({ value }),
+  Autocomplete: (value: string) => Autocomplete({ value }),
+  Pattern: (value: string) => Pattern({ value }),
+  Maxlength: (value: number) => Maxlength({ value }),
+  Minlength: (value: number) => Minlength({ value }),
+  Size: (value: number) => Size({ value }),
+  Cols: (value: number) => Cols({ value }),
+  Rows: (value: number) => Rows({ value }),
+  Max: (value: string) => Max({ value }),
+  Min: (value: string) => Min({ value }),
+  Step: (value: string) => Step({ value }),
+  For: (value: string) => For({ value }),
+  Href: (value: string) => Href({ value }),
+  Src: (value: string) => Src({ value }),
+  Alt: (value: string) => Alt({ value }),
+  Target: (value: string) => Target({ value }),
+  Rel: (value: string) => Rel({ value }),
+  Download: (value: string) => Download({ value }),
+  Action: (value: string) => Action({ value }),
+  Method: (value: string) => Method({ value }),
+  Enctype: (value: string) => Enctype({ value }),
+  Novalidate: (value: boolean) => Novalidate({ value }),
+  Role: (value: string) => Role({ value }),
+  AriaLabel: (value: string) => AriaLabel({ value }),
+  AriaLabelledBy: (value: string) => AriaLabelledBy({ value }),
+  AriaDescribedBy: (value: string) => AriaDescribedBy({ value }),
+  AriaHidden: (value: boolean) => AriaHidden({ value }),
+  AriaExpanded: (value: boolean) => AriaExpanded({ value }),
+  AriaSelected: (value: boolean) => AriaSelected({ value }),
+  AriaChecked: (value: boolean) => AriaChecked({ value }),
+  AriaDisabled: (value: boolean) => AriaDisabled({ value }),
+  AriaRequired: (value: boolean) => AriaRequired({ value }),
+  AriaInvalid: (value: boolean) => AriaInvalid({ value }),
+  AriaLive: (value: string) => AriaLive({ value }),
+  Attribute: (key: string, value: string) => Attribute({ key, value }),
+  DataAttribute: (key: string, value: string) => DataAttribute({ key, value }),
+  Style: (value: Record<string, string>) => Style({ value }),
+  InnerHTML: (value: string) => InnerHTML({ value }),
+  ViewBox: (value: string) => ViewBox({ value }),
+  Xmlns: (value: string) => Xmlns({ value }),
+  Fill: (value: string) => Fill({ value }),
+  FillRule: (value: string) => FillRule({ value }),
+  ClipRule: (value: string) => ClipRule({ value }),
+  Stroke: (value: string) => Stroke({ value }),
+  StrokeWidth: (value: string) => StrokeWidth({ value }),
+  StrokeLinecap: (value: string) => StrokeLinecap({ value }),
+  StrokeLinejoin: (value: string) => StrokeLinejoin({ value }),
+  D: (value: string) => D({ value }),
+  Cx: (value: string) => Cx({ value }),
+  Cy: (value: string) => Cy({ value }),
+  R: (value: string) => R({ value }),
+  X: (value: string) => X({ value }),
+  Y: (value: string) => Y({ value }),
+  Width: (value: string) => Width({ value }),
+  Height: (value: string) => Height({ value }),
+  X1: (value: string) => X1({ value }),
+  Y1: (value: string) => Y1({ value }),
+  X2: (value: string) => X2({ value }),
+  Y2: (value: string) => Y2({ value }),
+  Points: (value: string) => Points({ value }),
+  Transform: (value: string) => Transform({ value }),
+  Opacity: (value: string) => Opacity({ value }),
+  StrokeDasharray: (value: string) => StrokeDasharray({ value }),
+  StrokeDashoffset: (value: string) => StrokeDashoffset({ value }),
+})
 
 export const html = <Message>() => {
   return {

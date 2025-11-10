@@ -354,7 +354,8 @@ const connectionStatusView = (connection: ConnectionState): Html =>
       ),
       M.value(connection).pipe(
         M.tagsExhaustive({
-          ConnectionDisconnected: () => h.span([h.Class('text-sm text-gray-600')], ['Disconnected']),
+          ConnectionDisconnected: () =>
+            h.span([h.Class('text-sm text-gray-600')], ['Disconnected']),
           ConnectionConnecting: () => h.span([h.Class('text-sm text-gray-600')], ['Connecting...']),
           ConnectionConnected: () => h.span([h.Class('text-sm text-gray-600')], ['Connected']),
           ConnectionError: () => h.span([h.Class('text-sm text-red-600')], ['Error']),

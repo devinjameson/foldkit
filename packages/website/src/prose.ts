@@ -1,9 +1,10 @@
 import { Array } from 'effect'
+import { Html } from 'foldkit/html'
+
 import {
   AriaLabel,
   Class,
   Href,
-  Html,
   Id,
   OnClick,
   a,
@@ -15,8 +16,7 @@ import {
   p,
   strong,
   ul,
-} from 'foldkit/html'
-
+} from './html'
 import { Icon } from './icon'
 import { CopyLinkToClipboard } from './main'
 

@@ -1,6 +1,6 @@
 import { Array, Effect, Match as M, Schema as S, String } from 'effect'
 import { Runtime } from 'foldkit'
-import { Html, empty, html } from 'foldkit/html'
+import { Html, html } from 'foldkit/html'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
@@ -163,7 +163,10 @@ const view = (model: Model): Html =>
       h.h1([h.Class('text-4xl font-bold text-blue-900 mb-8')], ['Weather']),
 
       h.form(
-        [h.Class('flex flex-col gap-4 items-center w-full max-w-md'), h.OnSubmit(FetchWeather.make())],
+        [
+          h.Class('flex flex-col gap-4 items-center w-full max-w-md'),
+          h.OnSubmit(FetchWeather.make()),
+        ],
         [
           h.label([h.For('location'), h.Class('sr-only')], ['Location']),
           h.input([
@@ -189,11 +192,14 @@ const view = (model: Model): Html =>
 
       M.value(model.weather).pipe(
         M.tagsExhaustive({
-          WeatherInit: () => empty,
+          WeatherInit: () => h.empty,
           WeatherLoading: () =>
             h.div([h.Class('text-blue-600 font-semibold')], ['Fetching weather...']),
           WeatherFailure: ({ error }) =>
-            h.div([h.Class('p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg')], [error]),
+            h.div(
+              [h.Class('p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg')],
+              [error],
+            ),
           WeatherSuccess: ({ data: weather }) => weatherView(weather),
         }),
       ),

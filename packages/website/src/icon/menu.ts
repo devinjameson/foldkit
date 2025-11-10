@@ -1,8 +1,9 @@
+import { Html } from 'foldkit/html'
+
 import {
   Class,
   D,
   Fill,
-  Html,
   Stroke,
   StrokeLinecap,
   StrokeLinejoin,
@@ -11,7 +12,7 @@ import {
   Xmlns,
   path,
   svg,
-} from 'foldkit/html'
+} from '../html'
 
 export const menu = (className: string = 'w-6 h-6'): Html =>
   svg(

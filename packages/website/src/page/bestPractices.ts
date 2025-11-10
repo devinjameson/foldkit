@@ -1,5 +1,6 @@
-import { Html, div } from 'foldkit/html'
+import { Html } from 'foldkit/html'
 
+import { div } from '../html'
 import { heading, para } from '../prose'
 
 export const view = (): Html =>

@@ -2,28 +2,7 @@ import { KeyValueStore } from '@effect/platform'
 import { BrowserKeyValueStore } from '@effect/platform-browser'
 import { Array, Clock, Effect, Match as M, Option, Random, Schema as S, String } from 'effect'
 import { Runtime } from 'foldkit'
-import {
-  Class,
-  For,
-  Html,
-  Id,
-  OnClick,
-  OnInput,
-  OnSubmit,
-  Placeholder,
-  Type,
-  Value,
-  button,
-  div,
-  empty,
-  form,
-  h1,
-  input,
-  label,
-  li,
-  span,
-  ul,
-} from 'foldkit/html'
+import { Html, html } from 'foldkit/html'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
@@ -342,6 +321,8 @@ const saveTodos = (todos: Todos): Runtime.Command<TodosSaved> =>
 
 // VIEW
 
+const h = html<Message>()
+
 const todoItemView =
   (model: Model) =>
   (todo: Todo): Html =>
@@ -354,29 +335,29 @@ const todoItemView =
     )
 
 const editingTodoView = (todo: Todo, text: string): Html =>
-  li(
-    [Class('flex items-center gap-3 p-3 bg-gray-50 rounded-lg')],
+  h.li(
+    [h.Class('flex items-center gap-3 p-3 bg-gray-50 rounded-lg')],
     [
-      input([
-        Type('text'),
-        Id(`edit-${todo.id}`),
-        Value(text),
-        Class(
+      h.input([
+        h.Type('text'),
+        h.Id(`edit-${todo.id}`),
+        h.Value(text),
+        h.Class(
           'flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500',
         ),
-        OnInput((text) => UpdateEditingTodo.make({ text })),
+        h.OnInput((text) => UpdateEditingTodo.make({ text })),
       ]),
-      button(
+      h.button(
         [
-          OnClick(SaveEdit.make()),
-          Class('px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600'),
+          h.OnClick(SaveEdit.make()),
+          h.Class('px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600'),
         ],
         ['Save'],
       ),
-      button(
+      h.button(
         [
-          OnClick(CancelEdit.make()),
-          Class('px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600'),
+          h.OnClick(CancelEdit.make()),
+          h.Class('px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600'),
         ],
         ['Cancel'],
       ),
@@ -384,27 +365,27 @@ const editingTodoView = (todo: Todo, text: string): Html =>
   )
 
 const nonEditingTodoView = (todo: Todo): Html =>
-  li(
-    [Class('flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg group')],
+  h.li(
+    [h.Class('flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg group')],
     [
-      input([
-        Type('checkbox'),
-        Id(`todo-${todo.id}`),
-        Value(todo.completed ? 'on' : ''),
-        Class('w-4 h-4 text-blue-600 rounded focus:ring-blue-500'),
-        OnClick(ToggleTodo.make({ id: todo.id })),
+      h.input([
+        h.Type('checkbox'),
+        h.Id(`todo-${todo.id}`),
+        h.Value(todo.completed ? 'on' : ''),
+        h.Class('w-4 h-4 text-blue-600 rounded focus:ring-blue-500'),
+        h.OnClick(ToggleTodo.make({ id: todo.id })),
       ]),
-      span(
+      h.span(
         [
-          Class(`flex-1 ${todo.completed ? 'line-through text-gray-500' : 'text-gray-900'}`),
-          OnClick(StartEditing.make({ id: todo.id })),
+          h.Class(`flex-1 ${todo.completed ? 'line-through text-gray-500' : 'text-gray-900'}`),
+          h.OnClick(StartEditing.make({ id: todo.id })),
         ],
         [todo.text],
       ),
-      button(
+      h.button(
         [
-          OnClick(DeleteTodo.make({ id: todo.id })),
-          Class(
+          h.OnClick(DeleteTodo.make({ id: todo.id })),
+          h.Class(
             'px-2 py-1 text-red-600 opacity-0 group-hover:opacity-100 hover:bg-red-100 rounded transition-opacity',
           ),
         ],
@@ -416,10 +397,10 @@ const nonEditingTodoView = (todo: Todo): Html =>
 const filterButtonView =
   (model: Model) =>
   (filter: Filter, label: string): Html =>
-    button(
+    h.button(
       [
-        OnClick(SetFilter.make({ filter })),
-        Class(
+        h.OnClick(SetFilter.make({ filter })),
+        h.Class(
           `px-3 py-1 rounded ${
             model.filter === filter
               ? 'bg-blue-500 text-white'
@@ -432,18 +413,18 @@ const filterButtonView =
 
 const footerView = (model: Model, activeCount: number, completedCount: number): Html =>
   Array.match(model.todos, {
-    onEmpty: () => empty,
+    onEmpty: () => h.empty,
     onNonEmpty: () =>
-      div(
-        [Class('flex flex-col gap-4')],
+      h.div(
+        [h.Class('flex flex-col gap-4')],
         [
-          div(
-            [Class('text-sm text-gray-600 text-center')],
+          h.div(
+            [h.Class('text-sm text-gray-600 text-center')],
             [`${activeCount} active, ${completedCount} completed`],
           ),
 
-          div(
-            [Class('flex justify-center gap-2')],
+          h.div(
+            [h.Class('flex justify-center gap-2')],
             [
               filterButtonView(model)('All', 'All'),
               filterButtonView(model)('Active', 'Active'),
@@ -451,16 +432,16 @@ const footerView = (model: Model, activeCount: number, completedCount: number): 
             ],
           ),
 
-          div(
-            [Class('flex justify-center gap-2')],
+          h.div(
+            [h.Class('flex justify-center gap-2')],
             [
               Array.match(model.todos, {
-                onEmpty: () => empty,
+                onEmpty: () => h.empty,
                 onNonEmpty: (todos) =>
-                  button(
+                  h.button(
                     [
-                      OnClick(ToggleAll.make()),
-                      Class(
+                      h.OnClick(ToggleAll.make()),
+                      h.Class(
                         'px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300',
                       ),
                     ],
@@ -473,14 +454,14 @@ const footerView = (model: Model, activeCount: number, completedCount: number): 
               }),
 
               completedCount > 0
-                ? button(
+                ? h.button(
                     [
-                      OnClick(ClearCompleted.make()),
-                      Class('px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200'),
+                      h.OnClick(ClearCompleted.make()),
+                      h.Class('px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200'),
                     ],
                     [`Clear ${completedCount} completed`],
                   )
-                : empty,
+                : h.empty,
             ],
           ),
         ],
@@ -500,34 +481,34 @@ const view = (model: Model): Html => {
   const activeCount = Array.length(Array.filter(model.todos, (todo) => !todo.completed))
   const completedCount = Array.length(model.todos) - activeCount
 
-  return div(
-    [Class('min-h-screen bg-gray-100 py-8')],
+  return h.div(
+    [h.Class('min-h-screen bg-gray-100 py-8')],
     [
-      div(
-        [Class('max-w-md mx-auto bg-white rounded-xl shadow-lg p-6')],
+      h.div(
+        [h.Class('max-w-md mx-auto bg-white rounded-xl shadow-lg p-6')],
         [
-          h1([Class('text-3xl font-bold text-gray-800 text-center mb-8')], ['Todo App']),
+          h.h1([h.Class('text-3xl font-bold text-gray-800 text-center mb-8')], ['Todo App']),
 
-          form(
-            [Class('mb-6'), OnSubmit(AddTodo.make())],
+          h.form(
+            [h.Class('mb-6'), h.OnSubmit(AddTodo.make())],
             [
-              label([For('new-todo'), Class('sr-only')], ['New todo']),
-              div(
-                [Class('flex gap-3')],
+              h.label([h.For('new-todo'), h.Class('sr-only')], ['New todo']),
+              h.div(
+                [h.Class('flex gap-3')],
                 [
-                  input([
-                    Id('new-todo'),
-                    Value(model.newTodoText),
-                    Placeholder('What needs to be done?'),
-                    Class(
+                  h.input([
+                    h.Id('new-todo'),
+                    h.Value(model.newTodoText),
+                    h.Placeholder('What needs to be done?'),
+                    h.Class(
                       'flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
                     ),
-                    OnInput((text) => UpdateNewTodo.make({ text })),
+                    h.OnInput((text) => UpdateNewTodo.make({ text })),
                   ]),
-                  button(
+                  h.button(
                     [
-                      Type('submit'),
-                      Class(
+                      h.Type('submit'),
+                      h.Class(
                         'px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500',
                       ),
                     ],
@@ -540,8 +521,8 @@ const view = (model: Model): Html => {
 
           Array.match(filteredTodos, {
             onEmpty: () =>
-              div(
-                [Class('text-center text-gray-500 py-8')],
+              h.div(
+                [h.Class('text-center text-gray-500 py-8')],
                 [
                   M.value(model.filter).pipe(
                     M.when('All', () => 'No todos yet. Add one above!'),
@@ -552,7 +533,7 @@ const view = (model: Model): Html => {
                 ],
               ),
             onNonEmpty: (todos) =>
-              ul([Class('space-y-2 mb-6')], Array.map(todos, todoItemView(model))),
+              h.ul([h.Class('space-y-2 mb-6')], Array.map(todos, todoItemView(model))),
           }),
 
           footerView(model, activeCount, completedCount),
@@ -562,7 +543,7 @@ const view = (model: Model): Html => {
   )
 }
 
-// RUN
+// FLAG
 
 const flags: Effect.Effect<Flags> = Effect.gen(function* () {
   const store = yield* KeyValueStore.KeyValueStore
@@ -577,6 +558,8 @@ const flags: Effect.Effect<Flags> = Effect.gen(function* () {
   Effect.catchAll(() => Effect.succeed({ todos: Option.none() })),
   Effect.provide(BrowserKeyValueStore.layerLocalStorage),
 )
+
+// RUN
 
 const element = Runtime.makeElement({
   Model,

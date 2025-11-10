@@ -1,6 +1,6 @@
 import { Effect, Match as M, Option, Schema as S, pipe } from 'effect'
 import { Route, Runtime } from 'foldkit'
-import { Class, Href, Html, a, div, h1, header, keyed, li, main, nav, p, ul } from 'foldkit/html'
+import { Html } from 'foldkit/html'
 import { load, pushUrl } from 'foldkit/navigation'
 import { literal } from 'foldkit/route'
 import { ts } from 'foldkit/schema'
@@ -9,6 +9,7 @@ import { Url, toString as urlToString } from 'foldkit/url'
 
 import { products } from './data/products'
 import { Cart, Item } from './domain'
+import { Class, Href, a, div, h1, header, keyed, li, main, nav, p, ul } from './html'
 import { Cart as CartPage, Checkout, Products } from './page'
 
 // ROUTE
@@ -58,11 +59,11 @@ const UrlChanged = ts('UrlChanged', { url: Url })
 const ProductsMessage = ts('ProductsMessage', { message: Products.Message })
 const AddToCartClicked = ts('AddToCartClicked', { item: Item.Item })
 const QuantityChangeClicked = ts('QuantityChangeClicked', { itemId: S.String, quantity: S.Number })
-const ChangeCartQuantity = ts('ChangeCartQuantity', { itemId: S.String, quantity: S.Number })
-const RemoveFromCart = ts('RemoveFromCart', { itemId: S.String })
-const ClearCart = ts('ClearCart')
-const UpdateDeliveryInstructions = ts('UpdateDeliveryInstructions', { value: S.String })
-const PlaceOrder = ts('PlaceOrder')
+export const ChangeCartQuantity = ts('ChangeCartQuantity', { itemId: S.String, quantity: S.Number })
+export const RemoveFromCart = ts('RemoveFromCart', { itemId: S.String })
+export const ClearCart = ts('ClearCart')
+export const UpdateDeliveryInstructions = ts('UpdateDeliveryInstructions', { value: S.String })
+export const PlaceOrder = ts('PlaceOrder')
 
 export const Message = S.Union(
   NoOp,
@@ -256,7 +257,7 @@ const navigationView = (currentRoute: AppRoute, cartCount: number): Html => {
 }
 
 const productsView = (model: Model): Html => {
-  return Products.view<Message>(
+  return Products.view(
     model.productsPage,
     model.cart,
     cartRouter,
@@ -267,25 +268,16 @@ const productsView = (model: Model): Html => {
 }
 
 const cartView = (model: Model): Html => {
-  return CartPage.view<Message>(
-    model.cart,
-    productsRouter,
-    checkoutRouter,
-    (itemId, quantity) => ChangeCartQuantity.make({ itemId, quantity }),
-    (itemId) => RemoveFromCart.make({ itemId }),
-    () => ClearCart.make(),
-  )
+  return CartPage.view(model.cart, productsRouter, checkoutRouter)
 }
 
 const checkoutView = (model: Model): Html => {
-  return Checkout.view<Message>(
+  return Checkout.view(
     model.cart,
     model.deliveryInstructions,
     model.orderPlaced,
     productsRouter,
     cartRouter,
-    (value) => UpdateDeliveryInstructions.make({ value }),
-    () => PlaceOrder.make(),
   )
 }
 
