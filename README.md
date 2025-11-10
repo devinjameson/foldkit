@@ -2,9 +2,9 @@
 
 # Foldkit
 
-> ⚠️ **Experimental**: Foldkit is in canary release for early adopters and experimenters. APIs are incomplete and may change rapidly.
+> ⚠️ Foldkit is in canary release for early adopters and experimenters. APIs are incomplete and may change rapidly.
 
-**Foldkit** is an [Elm](https://elm-lang.org/)-inspired UI framework powered by [Effect](https://effect.website/).
+**Foldkit** is an [Elm](https://elm-lang.org/)-inspired framework for building web applications powered by [Effect](https://effect.website/).
 
 > Like origami: simple parts become intricate when folded together.
 
@@ -12,7 +12,7 @@
 
 ## Philosophy
 
-Foldkit applies functional programming principles to UI development:
+Foldkit applies functional programming principles to web application development.
 
 - **Pure updates** — State transitions are deterministic functions: `(model: Model, message: Message): Model` is the only way to change state.
 - **Controlled side effects** — Side effects are described as `Command<Message>` values and executed by the runtime, not performed directly in update functions.
@@ -51,7 +51,7 @@ See the full example at [examples/counter/src/main.ts](examples/counter/src/main
 ```ts
 import { Match as M, Schema } from 'effect'
 import { Runtime } from 'foldkit'
-import { Class, Html, OnClick, button, div } from 'foldkit/html'
+import { Html, html } from 'foldkit/html'
 import { ts } from 'foldkit/schema'
 
 // MODEL
@@ -71,13 +71,13 @@ type Decrement = typeof Decrement.Type
 type Increment = typeof Increment.Type
 type Reset = typeof Reset.Type
 
-type Message = typeof Message.Type
+export type Message = typeof Message.Type
 
 // UPDATE
 
-const update = (count: Model, message: Message): [Model, Runtime.Command<Message>[]] =>
+const update = (count: Model, message: Message): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
   M.value(message).pipe(
-    M.withReturnType<[Model, Runtime.Command<Message>[]]>(),
+    M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
     M.tagsExhaustive({
       Decrement: () => [count - 1, []],
       Increment: () => [count + 1, []],
@@ -90,6 +90,8 @@ const update = (count: Model, message: Message): [Model, Runtime.Command<Message
 const init: Runtime.ElementInit<Model, Message> = () => [0, []]
 
 // VIEW
+
+const { div, button, Class, OnClick } = html<Message>()
 
 const view = (count: Model): Html =>
   div(

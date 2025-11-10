@@ -136,7 +136,7 @@ const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Model, Mes
 
 // VIEW
 
-const h = html<Message>()
+const { div, button, Class, OnClick } = html<Message>()
 
 const formatTime = (ms: number): string => {
   const minutes = pipe(Duration.millis(ms), Duration.toMinutes, floorAndPad)
@@ -156,21 +156,21 @@ const formatTime = (ms: number): string => {
 const floorAndPad = flow(Math.floor, (v) => v.toString(), String.padStart(2, '0'))
 
 const view = (model: Model): Html =>
-  h.div(
-    [h.Class('min-h-screen bg-gray-200 flex items-center justify-center')],
+  div(
+    [Class('min-h-screen bg-gray-200 flex items-center justify-center')],
     [
-      h.div(
-        [h.Class('bg-white text-center')],
+      div(
+        [Class('bg-white text-center')],
         [
-          h.div(
-            [h.Class('text-6xl font-mono font-bold text-gray-800 p-8')],
+          div(
+            [Class('text-6xl font-mono font-bold text-gray-800 p-8')],
             [formatTime(model.elapsedMs)],
           ),
-          h.div(
-            [h.Class('flex')],
+          div(
+            [Class('flex')],
             [
-              h.button(
-                [h.OnClick(Reset.make()), h.Class(buttonStyle + ' bg-gray-500 hover:bg-gray-600')],
+              button(
+                [OnClick(Reset.make()), Class(buttonStyle + ' bg-gray-500 hover:bg-gray-600')],
                 ['Reset'],
               ),
               startStopButton(model.isRunning),
@@ -183,12 +183,9 @@ const view = (model: Model): Html =>
 
 const startStopButton = (isRunning: boolean): Html =>
   isRunning
-    ? h.button(
-        [h.OnClick(Stop.make()), h.Class(buttonStyle + ' bg-red-500 hover:bg-red-600')],
-        ['Stop'],
-      )
-    : h.button(
-        [h.OnClick(RequestStart.make()), h.Class(buttonStyle + ' bg-green-500 hover:bg-green-600')],
+    ? button([OnClick(Stop.make()), Class(buttonStyle + ' bg-red-500 hover:bg-red-600')], ['Stop'])
+    : button(
+        [OnClick(RequestStart.make()), Class(buttonStyle + ' bg-green-500 hover:bg-green-600')],
         ['Start'],
       )
 

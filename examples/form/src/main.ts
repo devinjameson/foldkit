@@ -245,7 +245,25 @@ const submitForm = (model: Model): Runtime.Command<FormSubmitted> =>
 
 // VIEW
 
-const h = html<Message>()
+const {
+  button,
+  div,
+  empty,
+  form,
+  h1,
+  input,
+  label,
+  span,
+  textarea,
+  Class,
+  Disabled,
+  For,
+  Id,
+  OnInput,
+  OnSubmit,
+  Type,
+  Value,
+} = html<Message>()
 
 const fieldView = (
   id: string,
@@ -266,36 +284,30 @@ const fieldView = (
 
   const inputClass = `w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${getBorderClass()}`
 
-  return h.div(
-    [h.Class('mb-4')],
+  return div(
+    [Class('mb-4')],
     [
-      h.div(
-        [h.Class('flex items-center gap-2 mb-2')],
+      div(
+        [Class('flex items-center gap-2 mb-2')],
         [
-          h.label([h.For(id), h.Class('text-sm font-medium text-gray-700')], [labelText]),
+          label([For(id), Class('text-sm font-medium text-gray-700')], [labelText]),
           Field.$match(field, {
-            NotValidated: () => h.empty,
-            Validating: () => h.span([h.Class('text-blue-600 text-sm animate-spin')], ['◐']),
-            Valid: () => h.span([h.Class('text-green-600 text-sm')], ['✓']),
-            Invalid: () => h.empty,
+            NotValidated: () => empty,
+            Validating: () => span([Class('text-blue-600 text-sm animate-spin')], ['◐']),
+            Valid: () => span([Class('text-green-600 text-sm')], ['✓']),
+            Invalid: () => empty,
           }),
         ],
       ),
       type === 'textarea'
-        ? h.textarea([h.Id(id), h.Value(value), h.Class(inputClass), h.OnInput(onUpdate)])
-        : h.input([
-            h.Id(id),
-            h.Type(type),
-            h.Value(value),
-            h.Class(inputClass),
-            h.OnInput(onUpdate),
-          ]),
+        ? textarea([Id(id), Value(value), Class(inputClass), OnInput(onUpdate)])
+        : input([Id(id), Type(type), Value(value), Class(inputClass), OnInput(onUpdate)]),
 
       Field.$match(field, {
-        NotValidated: () => h.empty,
-        Validating: () => h.div([h.Class('text-blue-600 text-sm mt-1')], ['Checking...']),
-        Valid: () => h.empty,
-        Invalid: ({ error }) => h.div([h.Class('text-red-600 text-sm mt-1')], [error]),
+        NotValidated: () => empty,
+        Validating: () => div([Class('text-blue-600 text-sm mt-1')], ['Checking...']),
+        Valid: () => empty,
+        Invalid: ({ error }) => div([Class('text-red-600 text-sm mt-1')], [error]),
       }),
     ],
   )
@@ -304,19 +316,16 @@ const fieldView = (
 const view = (model: Model): Html => {
   const canSubmit = isFormValid(model) && model.submission._tag !== 'Submitting'
 
-  return h.div(
-    [h.Class('min-h-screen bg-gray-100 py-8')],
+  return div(
+    [Class('min-h-screen bg-gray-100 py-8')],
     [
-      h.div(
-        [h.Class('max-w-md mx-auto bg-white rounded-xl shadow-lg p-6')],
+      div(
+        [Class('max-w-md mx-auto bg-white rounded-xl shadow-lg p-6')],
         [
-          h.h1(
-            [h.Class('text-3xl font-bold text-gray-800 text-center mb-8')],
-            ['Join Our Waitlist'],
-          ),
+          h1([Class('text-3xl font-bold text-gray-800 text-center mb-8')], ['Join Our Waitlist']),
 
-          h.form(
-            [h.Class('space-y-4'), h.OnSubmit(SubmitForm.make())],
+          form(
+            [Class('space-y-4'), OnSubmit(SubmitForm.make())],
             [
               fieldView('name', 'Name', model.name, (value) => UpdateName.make({ value })),
               fieldView(
@@ -334,11 +343,11 @@ const view = (model: Model): Html => {
                 'textarea',
               ),
 
-              h.button(
+              button(
                 [
-                  h.Type('submit'),
-                  h.Disabled(!canSubmit),
-                  h.Class(
+                  Type('submit'),
+                  Disabled(!canSubmit),
+                  Class(
                     `w-full py-2 px-4 rounded-md transition ${
                       canSubmit
                         ? 'bg-blue-500 text-white hover:bg-blue-600'
@@ -353,20 +362,20 @@ const view = (model: Model): Html => {
 
           M.value(model.submission).pipe(
             M.tagsExhaustive({
-              NotSubmitted: () => h.empty,
-              Submitting: () => h.empty,
+              NotSubmitted: () => empty,
+              Submitting: () => empty,
               SubmitSuccess: ({ message }) =>
-                h.div(
+                div(
                   [
-                    h.Class(
+                    Class(
                       'mt-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg',
                     ),
                   ],
                   [message],
                 ),
               SubmitError: ({ error }) =>
-                h.div(
-                  [h.Class('mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg')],
+                div(
+                  [Class('mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg')],
                   [error],
                 ),
             }),

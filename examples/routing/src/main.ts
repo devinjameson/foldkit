@@ -136,37 +136,54 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
 
 // VIEW
 
-const h = html<Message>()
+const {
+  a,
+  article,
+  div,
+  h1,
+  h2,
+  header,
+  input,
+  keyed,
+  li,
+  main,
+  nav,
+  p,
+  search,
+  ul,
+  Class,
+  Href,
+  OnInput,
+  Placeholder,
+  Value,
+} = html<Message>()
 
 const navigationView = (currentRoute: AppRoute): Html => {
   const navLinkClassName = (isActive: boolean) =>
     `hover:bg-blue-600 font-medium px-3 py-1 rounded transition ${isActive ? 'bg-blue-700 bg-opacity-50' : ''}`
 
-  return h.nav(
-    [h.Class('bg-blue-500 text-white p-4 mb-6')],
+  return nav(
+    [Class('bg-blue-500 text-white p-4 mb-6')],
     [
-      h.ul(
-        [h.Class('max-w-4xl mx-auto flex gap-6 list-none')],
+      ul(
+        [Class('max-w-4xl mx-auto flex gap-6 list-none')],
         [
-          h.li(
+          li(
             [],
             [
-              h.a(
-                [
-                  h.Href(homeRouter.build({})),
-                  h.Class(navLinkClassName(currentRoute._tag === 'Home')),
-                ],
+              a(
+                [Href(homeRouter.build({})), Class(navLinkClassName(currentRoute._tag === 'Home'))],
                 ['Home'],
               ),
             ],
           ),
-          h.li(
+          li(
             [],
             [
-              h.a(
+              a(
                 [
-                  h.Href(peopleRouter.build({ searchText: Option.none() })),
-                  h.Class(
+                  Href(peopleRouter.build({ searchText: Option.none() })),
+                  Class(
                     navLinkClassName(
                       currentRoute._tag === 'People' || currentRoute._tag === 'Person',
                     ),
@@ -176,13 +193,13 @@ const navigationView = (currentRoute: AppRoute): Html => {
               ),
             ],
           ),
-          h.li(
+          li(
             [],
             [
-              h.a(
+              a(
                 [
-                  h.Href(nestedRouter.build({})),
-                  h.Class(navLinkClassName(currentRoute._tag === 'Nested')),
+                  Href(nestedRouter.build({})),
+                  Class(navLinkClassName(currentRoute._tag === 'Nested')),
                 ],
                 ['Nested'],
               ),
@@ -195,27 +212,27 @@ const navigationView = (currentRoute: AppRoute): Html => {
 }
 
 const homeView = (): Html =>
-  h.div(
-    [h.Class('max-w-4xl mx-auto px-4')],
+  div(
+    [Class('max-w-4xl mx-auto px-4')],
     [
-      h.h1([h.Class('text-4xl font-bold text-gray-800 mb-6')], ['Welcome Home']),
-      h.p(
-        [h.Class('text-lg text-gray-600 mb-4')],
+      h1([Class('text-4xl font-bold text-gray-800 mb-6')], ['Welcome Home']),
+      p(
+        [Class('text-lg text-gray-600 mb-4')],
         [
           'This is a routing example built with foldkit. Navigate using the links above to see different routes in action.',
         ],
       ),
-      h.p([h.Class('text-gray-600')]),
+      p([Class('text-gray-600')]),
     ],
   )
 
 const nestedView = (): Html =>
-  h.div(
-    [h.Class('max-w-4xl mx-auto px-4')],
+  div(
+    [Class('max-w-4xl mx-auto px-4')],
     [
-      h.h1([h.Class('text-4xl font-bold text-gray-800 mb-6')], ['Very Nested Route!']),
-      h.p(
-        [h.Class('text-lg text-gray-600')],
+      h1([Class('text-4xl font-bold text-gray-800 mb-6')], ['Very Nested Route!']),
+      p(
+        [Class('text-lg text-gray-600')],
         ['You found the deeply nested route at /nested/route/is/very/nested'],
       ),
     ],
@@ -233,27 +250,27 @@ const peopleView = (searchText: Option.Option<string>): Html => {
       ),
   })
 
-  return h.div(
-    [h.Class('max-w-4xl mx-auto px-4')],
+  return div(
+    [Class('max-w-4xl mx-auto px-4')],
     [
-      h.h1([h.Class('text-4xl font-bold text-gray-800 mb-6')], ['People']),
+      h1([Class('text-4xl font-bold text-gray-800 mb-6')], ['People']),
 
-      h.search(
-        [h.Class('mb-6')],
+      search(
+        [Class('mb-6')],
         [
-          h.input([
-            h.Value(Option.getOrElse(searchText, () => '')),
-            h.Placeholder('Search by name or role...'),
-            h.Class(
+          input([
+            Value(Option.getOrElse(searchText, () => '')),
+            Placeholder('Search by name or role...'),
+            Class(
               'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
             ),
-            h.OnInput((value) => SearchInputChanged.make({ value })),
+            OnInput((value) => SearchInputChanged.make({ value })),
           ]),
         ],
       ),
 
-      h.p(
-        [h.Class('text-lg text-gray-600 mb-6')],
+      p(
+        [Class('text-lg text-gray-600 mb-6')],
         [
           Option.match(searchText, {
             onNone: () => 'Click on any person to view their details:',
@@ -262,20 +279,20 @@ const peopleView = (searchText: Option.Option<string>): Html => {
           }),
         ],
       ),
-      h.ul(
-        [h.Class('space-y-3')],
+      ul(
+        [Class('space-y-3')],
         Array.map(filteredPeople, (person) =>
-          h.li(
-            [h.Class('border border-gray-200 rounded-lg hover:bg-gray-50')],
+          li(
+            [Class('border border-gray-200 rounded-lg hover:bg-gray-50')],
             [
-              h.a(
-                [h.Href(personRouter.build({ personId: person.id })), h.Class('block p-4 ')],
+              a(
+                [Href(personRouter.build({ personId: person.id })), Class('block p-4 ')],
                 [
-                  h.div(
-                    [h.Class('flex justify-between items-center')],
+                  div(
+                    [Class('flex justify-between items-center')],
                     [
-                      h.h2([h.Class('text-xl font-semibold text-gray-800')], [person.name]),
-                      h.p([h.Class('text-gray-600')], [person.role]),
+                      h2([Class('text-xl font-semibold text-gray-800')], [person.name]),
+                      p([Class('text-gray-600')], [person.role]),
                     ],
                   ),
                 ],
@@ -293,15 +310,15 @@ const personView = (personId: number): Html => {
 
   return Option.match(person, {
     onNone: () =>
-      h.div(
-        [h.Class('max-w-4xl mx-auto px-4')],
+      div(
+        [Class('max-w-4xl mx-auto px-4')],
         [
-          h.h2([h.Class('text-4xl font-bold text-red-600 mb-6')], ['Person Not Found']),
-          h.p([h.Class('text-lg text-gray-600 mb-4')], [`No person found with ID: ${personId}`]),
-          h.a(
+          h2([Class('text-4xl font-bold text-red-600 mb-6')], ['Person Not Found']),
+          p([Class('text-lg text-gray-600 mb-4')], [`No person found with ID: ${personId}`]),
+          a(
             [
-              h.Href(peopleRouter.build({ searchText: Option.none() })),
-              h.Class('text-blue-500 hover:underline'),
+              Href(peopleRouter.build({ searchText: Option.none() })),
+              Class('text-blue-500 hover:underline'),
             ],
             ['← Back to People'],
           ),
@@ -309,46 +326,46 @@ const personView = (personId: number): Html => {
       ),
 
     onSome: (person) =>
-      h.div(
-        [h.Class('max-w-4xl mx-auto px-4')],
+      div(
+        [Class('max-w-4xl mx-auto px-4')],
         [
-          h.a(
+          a(
             [
-              h.Href(peopleRouter.build({ searchText: Option.none() })),
-              h.Class('text-blue-500 hover:underline mb-4 inline-block'),
+              Href(peopleRouter.build({ searchText: Option.none() })),
+              Class('text-blue-500 hover:underline mb-4 inline-block'),
             ],
             ['← Back to People'],
           ),
 
-          h.article(
+          article(
             [],
             [
-              h.h2([h.Class('text-4xl font-bold text-gray-800 mb-6')], [person.name]),
+              h2([Class('text-4xl font-bold text-gray-800 mb-6')], [person.name]),
 
-              h.div(
-                [h.Class('bg-gray-50 border border-gray-200 rounded-lg p-6')],
+              div(
+                [Class('bg-gray-50 border border-gray-200 rounded-lg p-6')],
                 [
-                  h.div(
-                    [h.Class('grid grid-cols-2 gap-4')],
+                  div(
+                    [Class('grid grid-cols-2 gap-4')],
                     [
-                      h.div(
+                      div(
                         [],
                         [
-                          h.h2(
-                            [h.Class('text-sm font-medium text-gray-500 uppercase tracking-wide')],
+                          h2(
+                            [Class('text-sm font-medium text-gray-500 uppercase tracking-wide')],
                             ['ID'],
                           ),
-                          h.p([h.Class('text-lg text-gray-900 mt-1')], [String(person.id)]),
+                          p([Class('text-lg text-gray-900 mt-1')], [String(person.id)]),
                         ],
                       ),
-                      h.div(
+                      div(
                         [],
                         [
-                          h.h2(
-                            [h.Class('text-sm font-medium text-gray-500 uppercase tracking-wide')],
+                          h2(
+                            [Class('text-sm font-medium text-gray-500 uppercase tracking-wide')],
                             ['Role'],
                           ),
-                          h.p([h.Class('text-lg text-gray-900 mt-1')], [person.role]),
+                          p([Class('text-lg text-gray-900 mt-1')], [person.role]),
                         ],
                       ),
                     ],
@@ -363,12 +380,12 @@ const personView = (personId: number): Html => {
 }
 
 const notFoundView = (path: string): Html =>
-  h.div(
-    [h.Class('max-w-4xl mx-auto px-4')],
+  div(
+    [Class('max-w-4xl mx-auto px-4')],
     [
-      h.h1([h.Class('text-4xl font-bold text-red-600 mb-6')], ['404 - Page Not Found']),
-      h.p([h.Class('text-lg text-gray-600 mb-4')], [`The path "${path}" was not found.`]),
-      h.a([h.Href(homeRouter.build({})), h.Class('text-blue-500 hover:underline')], ['← Go Home']),
+      h1([Class('text-4xl font-bold text-red-600 mb-6')], ['404 - Page Not Found']),
+      p([Class('text-lg text-gray-600 mb-4')], [`The path "${path}" was not found.`]),
+      a([Href(homeRouter.build({})), Class('text-blue-500 hover:underline')], ['← Go Home']),
     ],
   )
 
@@ -383,11 +400,11 @@ const view = (model: Model): Html => {
     }),
   )
 
-  return h.div(
-    [h.Class('min-h-screen bg-gray-100')],
+  return div(
+    [Class('min-h-screen bg-gray-100')],
     [
-      h.header([], [navigationView(model.route)]),
-      h.main([h.Class('py-8')], [h.keyed('div')(model.route._tag, [], [routeContent])]),
+      header([], [navigationView(model.route)]),
+      main([Class('py-8')], [keyed('div')(model.route._tag, [], [routeContent])]),
     ],
   )
 }

@@ -2,14 +2,13 @@ import { html } from 'foldkit/html'
 
 import { Message } from './main'
 
-const h = html<Message>()
-
 export const {
   a,
   article,
   button,
   div,
   empty,
+  form,
   h1,
   h2,
   h3,
@@ -26,9 +25,14 @@ export const {
   textarea,
   ul,
   Class,
+  Disabled,
+  For,
   Href,
+  Id,
   OnClick,
   OnInput,
+  OnSubmit,
   Placeholder,
+  Type,
   Value,
-} = h
+} = html<Message>()

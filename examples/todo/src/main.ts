@@ -321,7 +321,27 @@ const saveTodos = (todos: Todos): Runtime.Command<TodosSaved> =>
 
 // VIEW
 
-const h = html<Message>()
+const {
+  button,
+  div,
+  empty,
+  form,
+  h1,
+  input,
+  label,
+  li,
+  span,
+  ul,
+  Class,
+  For,
+  Id,
+  OnClick,
+  OnInput,
+  OnSubmit,
+  Placeholder,
+  Type,
+  Value,
+} = html<Message>()
 
 const todoItemView =
   (model: Model) =>
@@ -335,29 +355,29 @@ const todoItemView =
     )
 
 const editingTodoView = (todo: Todo, text: string): Html =>
-  h.li(
-    [h.Class('flex items-center gap-3 p-3 bg-gray-50 rounded-lg')],
+  li(
+    [Class('flex items-center gap-3 p-3 bg-gray-50 rounded-lg')],
     [
-      h.input([
-        h.Type('text'),
-        h.Id(`edit-${todo.id}`),
-        h.Value(text),
-        h.Class(
+      input([
+        Type('text'),
+        Id(`edit-${todo.id}`),
+        Value(text),
+        Class(
           'flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500',
         ),
-        h.OnInput((text) => UpdateEditingTodo.make({ text })),
+        OnInput((text) => UpdateEditingTodo.make({ text })),
       ]),
-      h.button(
+      button(
         [
-          h.OnClick(SaveEdit.make()),
-          h.Class('px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600'),
+          OnClick(SaveEdit.make()),
+          Class('px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600'),
         ],
         ['Save'],
       ),
-      h.button(
+      button(
         [
-          h.OnClick(CancelEdit.make()),
-          h.Class('px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600'),
+          OnClick(CancelEdit.make()),
+          Class('px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600'),
         ],
         ['Cancel'],
       ),
@@ -365,27 +385,27 @@ const editingTodoView = (todo: Todo, text: string): Html =>
   )
 
 const nonEditingTodoView = (todo: Todo): Html =>
-  h.li(
-    [h.Class('flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg group')],
+  li(
+    [Class('flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg group')],
     [
-      h.input([
-        h.Type('checkbox'),
-        h.Id(`todo-${todo.id}`),
-        h.Value(todo.completed ? 'on' : ''),
-        h.Class('w-4 h-4 text-blue-600 rounded focus:ring-blue-500'),
-        h.OnClick(ToggleTodo.make({ id: todo.id })),
+      input([
+        Type('checkbox'),
+        Id(`todo-${todo.id}`),
+        Value(todo.completed ? 'on' : ''),
+        Class('w-4 h-4 text-blue-600 rounded focus:ring-blue-500'),
+        OnClick(ToggleTodo.make({ id: todo.id })),
       ]),
-      h.span(
+      span(
         [
-          h.Class(`flex-1 ${todo.completed ? 'line-through text-gray-500' : 'text-gray-900'}`),
-          h.OnClick(StartEditing.make({ id: todo.id })),
+          Class(`flex-1 ${todo.completed ? 'line-through text-gray-500' : 'text-gray-900'}`),
+          OnClick(StartEditing.make({ id: todo.id })),
         ],
         [todo.text],
       ),
-      h.button(
+      button(
         [
-          h.OnClick(DeleteTodo.make({ id: todo.id })),
-          h.Class(
+          OnClick(DeleteTodo.make({ id: todo.id })),
+          Class(
             'px-2 py-1 text-red-600 opacity-0 group-hover:opacity-100 hover:bg-red-100 rounded transition-opacity',
           ),
         ],
@@ -397,10 +417,10 @@ const nonEditingTodoView = (todo: Todo): Html =>
 const filterButtonView =
   (model: Model) =>
   (filter: Filter, label: string): Html =>
-    h.button(
+    button(
       [
-        h.OnClick(SetFilter.make({ filter })),
-        h.Class(
+        OnClick(SetFilter.make({ filter })),
+        Class(
           `px-3 py-1 rounded ${
             model.filter === filter
               ? 'bg-blue-500 text-white'
@@ -413,18 +433,18 @@ const filterButtonView =
 
 const footerView = (model: Model, activeCount: number, completedCount: number): Html =>
   Array.match(model.todos, {
-    onEmpty: () => h.empty,
+    onEmpty: () => empty,
     onNonEmpty: () =>
-      h.div(
-        [h.Class('flex flex-col gap-4')],
+      div(
+        [Class('flex flex-col gap-4')],
         [
-          h.div(
-            [h.Class('text-sm text-gray-600 text-center')],
+          div(
+            [Class('text-sm text-gray-600 text-center')],
             [`${activeCount} active, ${completedCount} completed`],
           ),
 
-          h.div(
-            [h.Class('flex justify-center gap-2')],
+          div(
+            [Class('flex justify-center gap-2')],
             [
               filterButtonView(model)('All', 'All'),
               filterButtonView(model)('Active', 'Active'),
@@ -432,16 +452,16 @@ const footerView = (model: Model, activeCount: number, completedCount: number): 
             ],
           ),
 
-          h.div(
-            [h.Class('flex justify-center gap-2')],
+          div(
+            [Class('flex justify-center gap-2')],
             [
               Array.match(model.todos, {
-                onEmpty: () => h.empty,
+                onEmpty: () => empty,
                 onNonEmpty: (todos) =>
-                  h.button(
+                  button(
                     [
-                      h.OnClick(ToggleAll.make()),
-                      h.Class(
+                      OnClick(ToggleAll.make()),
+                      Class(
                         'px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300',
                       ),
                     ],
@@ -454,14 +474,14 @@ const footerView = (model: Model, activeCount: number, completedCount: number): 
               }),
 
               completedCount > 0
-                ? h.button(
+                ? button(
                     [
-                      h.OnClick(ClearCompleted.make()),
-                      h.Class('px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200'),
+                      OnClick(ClearCompleted.make()),
+                      Class('px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200'),
                     ],
                     [`Clear ${completedCount} completed`],
                   )
-                : h.empty,
+                : empty,
             ],
           ),
         ],
@@ -481,34 +501,34 @@ const view = (model: Model): Html => {
   const activeCount = Array.length(Array.filter(model.todos, (todo) => !todo.completed))
   const completedCount = Array.length(model.todos) - activeCount
 
-  return h.div(
-    [h.Class('min-h-screen bg-gray-100 py-8')],
+  return div(
+    [Class('min-h-screen bg-gray-100 py-8')],
     [
-      h.div(
-        [h.Class('max-w-md mx-auto bg-white rounded-xl shadow-lg p-6')],
+      div(
+        [Class('max-w-md mx-auto bg-white rounded-xl shadow-lg p-6')],
         [
-          h.h1([h.Class('text-3xl font-bold text-gray-800 text-center mb-8')], ['Todo App']),
+          h1([Class('text-3xl font-bold text-gray-800 text-center mb-8')], ['Todo App']),
 
-          h.form(
-            [h.Class('mb-6'), h.OnSubmit(AddTodo.make())],
+          form(
+            [Class('mb-6'), OnSubmit(AddTodo.make())],
             [
-              h.label([h.For('new-todo'), h.Class('sr-only')], ['New todo']),
-              h.div(
-                [h.Class('flex gap-3')],
+              label([For('new-todo'), Class('sr-only')], ['New todo']),
+              div(
+                [Class('flex gap-3')],
                 [
-                  h.input([
-                    h.Id('new-todo'),
-                    h.Value(model.newTodoText),
-                    h.Placeholder('What needs to be done?'),
-                    h.Class(
+                  input([
+                    Id('new-todo'),
+                    Value(model.newTodoText),
+                    Placeholder('What needs to be done?'),
+                    Class(
                       'flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
                     ),
-                    h.OnInput((text) => UpdateNewTodo.make({ text })),
+                    OnInput((text) => UpdateNewTodo.make({ text })),
                   ]),
-                  h.button(
+                  button(
                     [
-                      h.Type('submit'),
-                      h.Class(
+                      Type('submit'),
+                      Class(
                         'px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500',
                       ),
                     ],
@@ -521,8 +541,8 @@ const view = (model: Model): Html => {
 
           Array.match(filteredTodos, {
             onEmpty: () =>
-              h.div(
-                [h.Class('text-center text-gray-500 py-8')],
+              div(
+                [Class('text-center text-gray-500 py-8')],
                 [
                   M.value(model.filter).pipe(
                     M.when('All', () => 'No todos yet. Add one above!'),
@@ -533,7 +553,7 @@ const view = (model: Model): Html => {
                 ],
               ),
             onNonEmpty: (todos) =>
-              h.ul([h.Class('space-y-2 mb-6')], Array.map(todos, todoItemView(model))),
+              ul([Class('space-y-2 mb-6')], Array.map(todos, todoItemView(model))),
           }),
 
           footerView(model, activeCount, completedCount),

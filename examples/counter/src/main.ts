@@ -22,10 +22,6 @@ type Reset = typeof Reset.Type
 
 export type Message = typeof Message.Type
 
-// HTML
-
-const { div, button, Class, OnClick } = html<Message>()
-
 // UPDATE
 
 const update = (count: Model, message: Message): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
@@ -43,6 +39,8 @@ const update = (count: Model, message: Message): [Model, ReadonlyArray<Runtime.C
 const init: Runtime.ElementInit<Model, Message> = () => [0, []]
 
 // VIEW
+
+const { div, button, Class, OnClick } = html<Message>()
 
 const view = (count: Model): Html =>
   div(

@@ -2,8 +2,6 @@ import { html } from 'foldkit/html'
 
 import type { Message } from './main'
 
-const h = html<Message>()
-
 export const {
   a,
   aside,
@@ -50,4 +48,4 @@ export const {
   Value,
   ViewBox,
   Xmlns,
-} = h
+} = html<Message>()
