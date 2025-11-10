@@ -466,118 +466,6 @@ export const {
   StrokeDashoffset: StrokeDashoffset_,
 } = Data.taggedEnum<AttributeDefinition>()
 
-export const Key = (value: string) => Key_({ value })
-export const Class = (value: string) => Class_({ value })
-export const Id = (value: string) => Id_({ value })
-export const Title = (value: string) => Title_({ value })
-export const Lang = (value: string) => Lang_({ value })
-export const Dir = (value: string) => Dir_({ value })
-export const Tabindex = (value: number) => Tabindex_({ value })
-export const Hidden = (value: boolean) => Hidden_({ value })
-export const OnClick = <Message>(message: Message) => OnClick_({ message })
-export const OnDblClick = <Message>(message: Message) => OnDblClick_({ message })
-export const OnMouseDown = <Message>(message: Message) => OnMouseDown_({ message })
-export const OnMouseUp = <Message>(message: Message) => OnMouseUp_({ message })
-export const OnMouseEnter = <Message>(message: Message) => OnMouseEnter_({ message })
-export const OnMouseLeave = <Message>(message: Message) => OnMouseLeave_({ message })
-export const OnMouseOver = <Message>(message: Message) => OnMouseOver_({ message })
-export const OnMouseOut = <Message>(message: Message) => OnMouseOut_({ message })
-export const OnMouseMove = <Message>(message: Message) => OnMouseMove_({ message })
-export const OnKeyDown = <Message>(f: (key: string) => Message) => OnKeyDown_({ f })
-export const OnKeyUp = <Message>(f: (key: string) => Message) => OnKeyUp_({ f })
-export const OnKeyPress = <Message>(f: (key: string) => Message) => OnKeyPress_({ f })
-export const OnFocus = <Message>(message: Message) => OnFocus_({ message })
-export const OnBlur = <Message>(message: Message) => OnBlur_({ message })
-export const OnInput = <Message>(f: (value: string) => Message) => OnInput_({ f })
-export const OnChange = <Message>(f: (value: string) => Message) => OnChange_({ f })
-export const OnSubmit = <Message>(message: Message) => OnSubmit_({ message })
-export const OnReset = <Message>(message: Message) => OnReset_({ message })
-export const OnScroll = <Message>(message: Message) => OnScroll_({ message })
-export const OnWheel = <Message>(message: Message) => OnWheel_({ message })
-export const OnCopy = <Message>(message: Message) => OnCopy_({ message })
-export const OnCut = <Message>(message: Message) => OnCut_({ message })
-export const OnPaste = <Message>(message: Message) => OnPaste_({ message })
-export const Value = (value: string) => Value_({ value })
-export const Checked = (value: boolean) => Checked_({ value })
-export const Selected = (value: boolean) => Selected_({ value })
-export const Placeholder = (value: string) => Placeholder_({ value })
-export const Name = (value: string) => Name_({ value })
-export const Disabled = (value: boolean) => Disabled_({ value })
-export const Readonly = (value: boolean) => Readonly_({ value })
-export const Required = (value: boolean) => Required_({ value })
-export const Autofocus = (value: boolean) => Autofocus_({ value })
-export const Spellcheck = (value: boolean) => Spellcheck_({ value })
-export const Autocorrect = (value: string) => Autocorrect_({ value })
-export const Autocapitalize = (value: string) => Autocapitalize_({ value })
-export const InputMode = (value: string) => InputMode_({ value })
-export const EnterKeyHint = (value: string) => EnterKeyHint_({ value })
-export const Multiple = (value: boolean) => Multiple_({ value })
-export const Type = (value: string) => Type_({ value })
-export const Accept = (value: string) => Accept_({ value })
-export const Autocomplete = (value: string) => Autocomplete_({ value })
-export const Pattern = (value: string) => Pattern_({ value })
-export const Maxlength = (value: number) => Maxlength_({ value })
-export const Minlength = (value: number) => Minlength_({ value })
-export const Size = (value: number) => Size_({ value })
-export const Cols = (value: number) => Cols_({ value })
-export const Rows = (value: number) => Rows_({ value })
-export const Max = (value: string) => Max_({ value })
-export const Min = (value: string) => Min_({ value })
-export const Step = (value: string) => Step_({ value })
-export const For = (value: string) => For_({ value })
-export const Href = (value: string) => Href_({ value })
-export const Src = (value: string) => Src_({ value })
-export const Alt = (value: string) => Alt_({ value })
-export const Target = (value: string) => Target_({ value })
-export const Rel = (value: string) => Rel_({ value })
-export const Download = (value: string) => Download_({ value })
-export const Action = (value: string) => Action_({ value })
-export const Method = (value: string) => Method_({ value })
-export const Enctype = (value: string) => Enctype_({ value })
-export const Novalidate = (value: boolean) => Novalidate_({ value })
-export const Role = (value: string) => Role_({ value })
-export const AriaLabel = (value: string) => AriaLabel_({ value })
-export const AriaLabelledBy = (value: string) => AriaLabelledBy_({ value })
-export const AriaDescribedBy = (value: string) => AriaDescribedBy_({ value })
-export const AriaHidden = (value: boolean) => AriaHidden_({ value })
-export const AriaExpanded = (value: boolean) => AriaExpanded_({ value })
-export const AriaSelected = (value: boolean) => AriaSelected_({ value })
-export const AriaChecked = (value: boolean) => AriaChecked_({ value })
-export const AriaDisabled = (value: boolean) => AriaDisabled_({ value })
-export const AriaRequired = (value: boolean) => AriaRequired_({ value })
-export const AriaInvalid = (value: boolean) => AriaInvalid_({ value })
-export const AriaLive = (value: string) => AriaLive_({ value })
-export const Attribute = (key: string, value: string) => Attribute_({ key, value })
-export const DataAttr = (key: string, value: string) => DataAttribute_({ key, value })
-export const StyleAttr = (value: Record<string, string>) => Style_({ value })
-export const InnerHTML = (value: string) => InnerHTML_({ value })
-export const ViewBox = (value: string) => ViewBox_({ value })
-export const Xmlns = (value: string) => Xmlns_({ value })
-export const Fill = (value: string) => Fill_({ value })
-export const FillRule = (value: string) => FillRule_({ value })
-export const ClipRule = (value: string) => ClipRule_({ value })
-export const Stroke = (value: string) => Stroke_({ value })
-export const StrokeWidth = (value: string) => StrokeWidth_({ value })
-export const StrokeLinecap = (value: string) => StrokeLinecap_({ value })
-export const StrokeLinejoin = (value: string) => StrokeLinejoin_({ value })
-export const D = (value: string) => D_({ value })
-export const Cx = (value: string) => Cx_({ value })
-export const Cy = (value: string) => Cy_({ value })
-export const R = (value: string) => R_({ value })
-export const X = (value: string) => X_({ value })
-export const Y = (value: string) => Y_({ value })
-export const Width = (value: string) => Width_({ value })
-export const Height = (value: string) => Height_({ value })
-export const X1 = (value: string) => X1_({ value })
-export const Y1 = (value: string) => Y1_({ value })
-export const X2 = (value: string) => X2_({ value })
-export const Y2 = (value: string) => Y2_({ value })
-export const Points = (value: string) => Points_({ value })
-export const Transform = (value: string) => Transform_({ value })
-export const Opacity = (value: string) => Opacity_({ value })
-export const StrokeDasharray = (value: string) => StrokeDasharray_({ value })
-export const StrokeDashoffset = (value: string) => StrokeDashoffset_({ value })
-
 const buildVNodeData = <Message>(
   attributes: ReadonlyArray<Attribute<Message>>,
 ): Effect.Effect<VNodeData, never, Dispatch> =>
@@ -831,7 +719,7 @@ const processVNodeChildren = (
       Predicate.isString(child) ? Effect.succeed(child) : child,
   ).pipe(Effect.map(Array.filter(Predicate.isNotNull)))
 
-export const createElement = <Message>(
+const createElement = <Message>(
   tagName: TagName,
   attributes: ReadonlyArray<Attribute<Message>> = [],
   children: ReadonlyArray<Child<Message>> = [],
@@ -868,7 +756,7 @@ const keyed =
     attributes: ReadonlyArray<AttributeWithoutKey<Message>> = [],
     children: ReadonlyArray<Child<Message>> = [],
   ): Html<Message> =>
-    element<Message>()(tagName)([...attributes, Key(key)], children)
+    element<Message>()(tagName)([...attributes, Key_({ value: key })], children)
 
 export type HtmlElements<Message> = Record<
   TagName,
@@ -1102,200 +990,200 @@ export const htmlElements = <Message>(): HtmlElements<Message> => {
 }
 
 export type HtmlAttributes<Message> = {
-  Key: typeof Key
-  Class: typeof Class
-  Id: typeof Id
-  Title: typeof Title
-  Lang: typeof Lang
-  Dir: typeof Dir
-  Tabindex: typeof Tabindex
-  Hidden: typeof Hidden
-  OnClick: <M extends Message>(message: M) => Attribute<Message>
-  OnDblClick: <M extends Message>(message: M) => Attribute<Message>
-  OnMouseDown: <M extends Message>(message: M) => Attribute<Message>
-  OnMouseUp: <M extends Message>(message: M) => Attribute<Message>
-  OnMouseEnter: <M extends Message>(message: M) => Attribute<Message>
-  OnMouseLeave: <M extends Message>(message: M) => Attribute<Message>
-  OnMouseOver: <M extends Message>(message: M) => Attribute<Message>
-  OnMouseOut: <M extends Message>(message: M) => Attribute<Message>
-  OnMouseMove: <M extends Message>(message: M) => Attribute<Message>
-  OnKeyDown: <M extends Message>(f: (key: string) => M) => Attribute<Message>
-  OnKeyUp: <M extends Message>(f: (key: string) => M) => Attribute<Message>
-  OnKeyPress: <M extends Message>(f: (key: string) => M) => Attribute<Message>
-  OnFocus: <M extends Message>(message: M) => Attribute<Message>
-  OnBlur: <M extends Message>(message: M) => Attribute<Message>
-  OnInput: <M extends Message>(f: (value: string) => M) => Attribute<Message>
-  OnChange: <M extends Message>(f: (value: string) => M) => Attribute<Message>
-  OnSubmit: <M extends Message>(message: M) => Attribute<Message>
-  OnReset: <M extends Message>(message: M) => Attribute<Message>
-  OnScroll: <M extends Message>(message: M) => Attribute<Message>
-  OnWheel: <M extends Message>(message: M) => Attribute<Message>
-  OnCopy: <M extends Message>(message: M) => Attribute<Message>
-  OnCut: <M extends Message>(message: M) => Attribute<Message>
-  OnPaste: <M extends Message>(message: M) => Attribute<Message>
-  Value: typeof Value
-  Checked: typeof Checked
-  Selected: typeof Selected
-  Placeholder: typeof Placeholder
-  Name: typeof Name
-  Disabled: typeof Disabled
-  Readonly: typeof Readonly
-  Required: typeof Required
-  Autofocus: typeof Autofocus
-  Spellcheck: typeof Spellcheck
-  Autocorrect: typeof Autocorrect
-  Autocapitalize: typeof Autocapitalize
-  InputMode: typeof InputMode
-  EnterKeyHint: typeof EnterKeyHint
-  Multiple: typeof Multiple
-  Type: typeof Type
-  Accept: typeof Accept
-  Autocomplete: typeof Autocomplete
-  Pattern: typeof Pattern
-  Maxlength: typeof Maxlength
-  Minlength: typeof Minlength
-  Size: typeof Size
-  Cols: typeof Cols
-  Rows: typeof Rows
-  Max: typeof Max
-  Min: typeof Min
-  Step: typeof Step
-  For: typeof For
-  Href: typeof Href
-  Src: typeof Src
-  Alt: typeof Alt
-  Target: typeof Target
-  Rel: typeof Rel
-  Download: typeof Download
-  Action: typeof Action
-  Method: typeof Method
-  Enctype: typeof Enctype
-  Novalidate: typeof Novalidate
-  Role: typeof Role
-  AriaLabel: typeof AriaLabel
-  AriaLabelledBy: typeof AriaLabelledBy
-  AriaDescribedBy: typeof AriaDescribedBy
-  AriaHidden: typeof AriaHidden
-  AriaExpanded: typeof AriaExpanded
-  AriaSelected: typeof AriaSelected
-  AriaChecked: typeof AriaChecked
-  AriaDisabled: typeof AriaDisabled
-  AriaRequired: typeof AriaRequired
-  AriaInvalid: typeof AriaInvalid
-  AriaLive: typeof AriaLive
-  Attribute: typeof Attribute
-  DataAttribute: typeof DataAttribute_
-  Style: typeof Style_
-  InnerHTML: typeof InnerHTML
-  ViewBox: typeof ViewBox
-  Xmlns: typeof Xmlns
-  Fill: typeof Fill
-  FillRule: typeof FillRule
-  ClipRule: typeof ClipRule
-  Stroke: typeof Stroke
-  StrokeWidth: typeof StrokeWidth
-  StrokeLinecap: typeof StrokeLinecap
-  StrokeLinejoin: typeof StrokeLinejoin
-  D: typeof D
+  Key: (value: string) => Attribute<Message>
+  Class: (value: string) => Attribute<Message>
+  Id: (value: string) => Attribute<Message>
+  Title: (value: string) => Attribute<Message>
+  Lang: (value: string) => Attribute<Message>
+  Dir: (value: string) => Attribute<Message>
+  Tabindex: (value: number) => Attribute<Message>
+  Hidden: (value: boolean) => Attribute<Message>
+  OnClick: (message: Message) => Attribute<Message>
+  OnDblClick: (message: Message) => Attribute<Message>
+  OnMouseDown: (message: Message) => Attribute<Message>
+  OnMouseUp: (message: Message) => Attribute<Message>
+  OnMouseEnter: (message: Message) => Attribute<Message>
+  OnMouseLeave: (message: Message) => Attribute<Message>
+  OnMouseOver: (message: Message) => Attribute<Message>
+  OnMouseOut: (message: Message) => Attribute<Message>
+  OnMouseMove: (message: Message) => Attribute<Message>
+  OnKeyDown: (f: (key: string) => Message) => Attribute<Message>
+  OnKeyUp: (f: (key: string) => Message) => Attribute<Message>
+  OnKeyPress: (f: (key: string) => Message) => Attribute<Message>
+  OnFocus: (message: Message) => Attribute<Message>
+  OnBlur: (message: Message) => Attribute<Message>
+  OnInput: (f: (value: string) => Message) => Attribute<Message>
+  OnChange: (f: (value: string) => Message) => Attribute<Message>
+  OnSubmit: (message: Message) => Attribute<Message>
+  OnReset: (message: Message) => Attribute<Message>
+  OnScroll: (message: Message) => Attribute<Message>
+  OnWheel: (message: Message) => Attribute<Message>
+  OnCopy: (message: Message) => Attribute<Message>
+  OnCut: (message: Message) => Attribute<Message>
+  OnPaste: (message: Message) => Attribute<Message>
+  Value: (value: string) => Attribute<Message>
+  Checked: (value: boolean) => Attribute<Message>
+  Selected: (value: boolean) => Attribute<Message>
+  Placeholder: (value: string) => Attribute<Message>
+  Name: (value: string) => Attribute<Message>
+  Disabled: (value: boolean) => Attribute<Message>
+  Readonly: (value: boolean) => Attribute<Message>
+  Required: (value: boolean) => Attribute<Message>
+  Autofocus: (value: boolean) => Attribute<Message>
+  Spellcheck: (value: boolean) => Attribute<Message>
+  Autocorrect: (value: string) => Attribute<Message>
+  Autocapitalize: (value: string) => Attribute<Message>
+  InputMode: (value: string) => Attribute<Message>
+  EnterKeyHint: (value: string) => Attribute<Message>
+  Multiple: (value: boolean) => Attribute<Message>
+  Type: (value: string) => Attribute<Message>
+  Accept: (value: string) => Attribute<Message>
+  Autocomplete: (value: string) => Attribute<Message>
+  Pattern: (value: string) => Attribute<Message>
+  Maxlength: (value: number) => Attribute<Message>
+  Minlength: (value: number) => Attribute<Message>
+  Size: (value: number) => Attribute<Message>
+  Cols: (value: number) => Attribute<Message>
+  Rows: (value: number) => Attribute<Message>
+  Max: (value: string) => Attribute<Message>
+  Min: (value: string) => Attribute<Message>
+  Step: (value: string) => Attribute<Message>
+  For: (value: string) => Attribute<Message>
+  Href: (value: string) => Attribute<Message>
+  Src: (value: string) => Attribute<Message>
+  Alt: (value: string) => Attribute<Message>
+  Target: (value: string) => Attribute<Message>
+  Rel: (value: string) => Attribute<Message>
+  Download: (value: string) => Attribute<Message>
+  Action: (value: string) => Attribute<Message>
+  Method: (value: string) => Attribute<Message>
+  Enctype: (value: string) => Attribute<Message>
+  Novalidate: (value: boolean) => Attribute<Message>
+  Role: (value: string) => Attribute<Message>
+  AriaLabel: (value: string) => Attribute<Message>
+  AriaLabelledBy: (value: string) => Attribute<Message>
+  AriaDescribedBy: (value: string) => Attribute<Message>
+  AriaHidden: (value: boolean) => Attribute<Message>
+  AriaExpanded: (value: boolean) => Attribute<Message>
+  AriaSelected: (value: boolean) => Attribute<Message>
+  AriaChecked: (value: boolean) => Attribute<Message>
+  AriaDisabled: (value: boolean) => Attribute<Message>
+  AriaRequired: (value: boolean) => Attribute<Message>
+  AriaInvalid: (value: boolean) => Attribute<Message>
+  AriaLive: (value: string) => Attribute<Message>
+  Attribute: (key: string, value: string) => Attribute<Message>
+  DataAttribute: (key: string, value: string) => Attribute<Message>
+  Style: (value: Record<string, string>) => Attribute<Message>
+  InnerHTML: (value: string) => Attribute<Message>
+  ViewBox: (value: string) => Attribute<Message>
+  Xmlns: (value: string) => Attribute<Message>
+  Fill: (value: string) => Attribute<Message>
+  FillRule: (value: string) => Attribute<Message>
+  ClipRule: (value: string) => Attribute<Message>
+  Stroke: (value: string) => Attribute<Message>
+  StrokeWidth: (value: string) => Attribute<Message>
+  StrokeLinecap: (value: string) => Attribute<Message>
+  StrokeLinejoin: (value: string) => Attribute<Message>
+  D: (value: string) => Attribute<Message>
 }
 
 export const htmlAttributes = <Message>(): HtmlAttributes<Message> => {
   return {
-    Key,
-    Class,
-    Id,
-    Title,
-    Lang,
-    Dir,
-    Tabindex,
-    Hidden,
-    OnClick: <M extends Message>(message: M) => OnClick_({ message }),
-    OnDblClick: <M extends Message>(message: M) => OnDblClick_({ message }),
-    OnMouseDown: <M extends Message>(message: M) => OnMouseDown_({ message }),
-    OnMouseUp: <M extends Message>(message: M) => OnMouseUp_({ message }),
-    OnMouseEnter: <M extends Message>(message: M) => OnMouseEnter_({ message }),
-    OnMouseLeave: <M extends Message>(message: M) => OnMouseLeave_({ message }),
-    OnMouseOver: <M extends Message>(message: M) => OnMouseOver_({ message }),
-    OnMouseOut: <M extends Message>(message: M) => OnMouseOut_({ message }),
-    OnMouseMove: <M extends Message>(message: M) => OnMouseMove_({ message }),
-    OnKeyDown: <M extends Message>(f: (key: string) => M) => OnKeyDown_({ f }),
-    OnKeyUp: <M extends Message>(f: (key: string) => M) => OnKeyUp_({ f }),
-    OnKeyPress: <M extends Message>(f: (key: string) => M) => OnKeyPress_({ f }),
-    OnFocus: <M extends Message>(message: M) => OnFocus_({ message }),
-    OnBlur: <M extends Message>(message: M) => OnBlur_({ message }),
-    OnInput: <M extends Message>(f: (value: string) => M) => OnInput_({ f }),
-    OnChange: <M extends Message>(f: (value: string) => M) => OnChange_({ f }),
-    OnSubmit: <M extends Message>(message: M) => OnSubmit_({ message }),
-    OnReset: <M extends Message>(message: M) => OnReset_({ message }),
-    OnScroll: <M extends Message>(message: M) => OnScroll_({ message }),
-    OnWheel: <M extends Message>(message: M) => OnWheel_({ message }),
-    OnCopy: <M extends Message>(message: M) => OnCopy_({ message }),
-    OnCut: <M extends Message>(message: M) => OnCut_({ message }),
-    OnPaste: <M extends Message>(message: M) => OnPaste_({ message }),
-    Value,
-    Checked,
-    Selected,
-    Placeholder,
-    Name,
-    Disabled,
-    Readonly,
-    Required,
-    Autofocus,
-    Spellcheck,
-    Autocorrect,
-    Autocapitalize,
-    InputMode,
-    EnterKeyHint,
-    Multiple,
-    Type,
-    Accept,
-    Autocomplete,
-    Pattern,
-    Maxlength,
-    Minlength,
-    Size,
-    Cols,
-    Rows,
-    Max,
-    Min,
-    Step,
-    For,
-    Href,
-    Src,
-    Alt,
-    Target,
-    Rel,
-    Download,
-    Action,
-    Method,
-    Enctype,
-    Novalidate,
-    Role,
-    AriaLabel,
-    AriaLabelledBy,
-    AriaDescribedBy,
-    AriaHidden,
-    AriaExpanded,
-    AriaSelected,
-    AriaChecked,
-    AriaDisabled,
-    AriaRequired,
-    AriaInvalid,
-    AriaLive,
-    Attribute,
-    DataAttribute: DataAttribute_,
-    Style: Style_,
-    InnerHTML,
-    ViewBox,
-    Xmlns,
-    Fill,
-    FillRule,
-    ClipRule,
-    Stroke,
-    StrokeWidth,
-    StrokeLinecap,
-    StrokeLinejoin,
-    D,
+    Key: (value: string) => Key_({ value }),
+    Class: (value: string) => Class_({ value }),
+    Id: (value: string) => Id_({ value }),
+    Title: (value: string) => Title_({ value }),
+    Lang: (value: string) => Lang_({ value }),
+    Dir: (value: string) => Dir_({ value }),
+    Tabindex: (value: number) => Tabindex_({ value }),
+    Hidden: (value: boolean) => Hidden_({ value }),
+    OnClick: (message: Message) => OnClick_({ message }),
+    OnDblClick: (message: Message) => OnDblClick_({ message }),
+    OnMouseDown: (message: Message) => OnMouseDown_({ message }),
+    OnMouseUp: (message: Message) => OnMouseUp_({ message }),
+    OnMouseEnter: (message: Message) => OnMouseEnter_({ message }),
+    OnMouseLeave: (message: Message) => OnMouseLeave_({ message }),
+    OnMouseOver: (message: Message) => OnMouseOver_({ message }),
+    OnMouseOut: (message: Message) => OnMouseOut_({ message }),
+    OnMouseMove: (message: Message) => OnMouseMove_({ message }),
+    OnKeyDown: (f: (key: string) => Message) => OnKeyDown_({ f }),
+    OnKeyUp: (f: (key: string) => Message) => OnKeyUp_({ f }),
+    OnKeyPress: (f: (key: string) => Message) => OnKeyPress_({ f }),
+    OnFocus: (message: Message) => OnFocus_({ message }),
+    OnBlur: (message: Message) => OnBlur_({ message }),
+    OnInput: (f: (value: string) => Message) => OnInput_({ f }),
+    OnChange: (f: (value: string) => Message) => OnChange_({ f }),
+    OnSubmit: (message: Message) => OnSubmit_({ message }),
+    OnReset: (message: Message) => OnReset_({ message }),
+    OnScroll: (message: Message) => OnScroll_({ message }),
+    OnWheel: (message: Message) => OnWheel_({ message }),
+    OnCopy: (message: Message) => OnCopy_({ message }),
+    OnCut: (message: Message) => OnCut_({ message }),
+    OnPaste: (message: Message) => OnPaste_({ message }),
+    Value: (value: string) => Value_({ value }),
+    Checked: (value: boolean) => Checked_({ value }),
+    Selected: (value: boolean) => Selected_({ value }),
+    Placeholder: (value: string) => Placeholder_({ value }),
+    Name: (value: string) => Name_({ value }),
+    Disabled: (value: boolean) => Disabled_({ value }),
+    Readonly: (value: boolean) => Readonly_({ value }),
+    Required: (value: boolean) => Required_({ value }),
+    Autofocus: (value: boolean) => Autofocus_({ value }),
+    Spellcheck: (value: boolean) => Spellcheck_({ value }),
+    Autocorrect: (value: string) => Autocorrect_({ value }),
+    Autocapitalize: (value: string) => Autocapitalize_({ value }),
+    InputMode: (value: string) => InputMode_({ value }),
+    EnterKeyHint: (value: string) => EnterKeyHint_({ value }),
+    Multiple: (value: boolean) => Multiple_({ value }),
+    Type: (value: string) => Type_({ value }),
+    Accept: (value: string) => Accept_({ value }),
+    Autocomplete: (value: string) => Autocomplete_({ value }),
+    Pattern: (value: string) => Pattern_({ value }),
+    Maxlength: (value: number) => Maxlength_({ value }),
+    Minlength: (value: number) => Minlength_({ value }),
+    Size: (value: number) => Size_({ value }),
+    Cols: (value: number) => Cols_({ value }),
+    Rows: (value: number) => Rows_({ value }),
+    Max: (value: string) => Max_({ value }),
+    Min: (value: string) => Min_({ value }),
+    Step: (value: string) => Step_({ value }),
+    For: (value: string) => For_({ value }),
+    Href: (value: string) => Href_({ value }),
+    Src: (value: string) => Src_({ value }),
+    Alt: (value: string) => Alt_({ value }),
+    Target: (value: string) => Target_({ value }),
+    Rel: (value: string) => Rel_({ value }),
+    Download: (value: string) => Download_({ value }),
+    Action: (value: string) => Action_({ value }),
+    Method: (value: string) => Method_({ value }),
+    Enctype: (value: string) => Enctype_({ value }),
+    Novalidate: (value: boolean) => Novalidate_({ value }),
+    Role: (value: string) => Role_({ value }),
+    AriaLabel: (value: string) => AriaLabel_({ value }),
+    AriaLabelledBy: (value: string) => AriaLabelledBy_({ value }),
+    AriaDescribedBy: (value: string) => AriaDescribedBy_({ value }),
+    AriaHidden: (value: boolean) => AriaHidden_({ value }),
+    AriaExpanded: (value: boolean) => AriaExpanded_({ value }),
+    AriaSelected: (value: boolean) => AriaSelected_({ value }),
+    AriaChecked: (value: boolean) => AriaChecked_({ value }),
+    AriaDisabled: (value: boolean) => AriaDisabled_({ value }),
+    AriaRequired: (value: boolean) => AriaRequired_({ value }),
+    AriaInvalid: (value: boolean) => AriaInvalid_({ value }),
+    AriaLive: (value: string) => AriaLive_({ value }),
+    Attribute: (key: string, value: string) => Attribute_({ key, value }),
+    DataAttribute: (key: string, value: string) => DataAttribute_({ key, value }),
+    Style: (value: Record<string, string>) => Style_({ value }),
+    InnerHTML: (value: string) => InnerHTML_({ value }),
+    ViewBox: (value: string) => ViewBox_({ value }),
+    Xmlns: (value: string) => Xmlns_({ value }),
+    Fill: (value: string) => Fill_({ value }),
+    FillRule: (value: string) => FillRule_({ value }),
+    ClipRule: (value: string) => ClipRule_({ value }),
+    Stroke: (value: string) => Stroke_({ value }),
+    StrokeWidth: (value: string) => StrokeWidth_({ value }),
+    StrokeLinecap: (value: string) => StrokeLinecap_({ value }),
+    StrokeLinejoin: (value: string) => StrokeLinejoin_({ value }),
+    D: (value: string) => D_({ value }),
   }
 }
 
