@@ -28,7 +28,7 @@ export const RoomUpdated = ts('RoomUpdated', {
   maybePlayerProgress: S.Option(Shared.PlayerProgress),
 })
 const RoomStreamError = ts('RoomStreamError', { error: S.String })
-const StartGameClicked = ts('StartGameClicked', { roomId: S.String })
+const StartGameRequested = ts('StartGameRequested', { roomId: S.String })
 const SessionLoaded = ts('SessionLoaded', { maybeSession: S.Option(RoomPlayerSession) })
 
 export type NoOp = typeof NoOp.Type
@@ -49,7 +49,7 @@ export type RoomJoined = typeof RoomJoined.Type
 export type RoomError = typeof RoomError.Type
 export type RoomUpdated = typeof RoomUpdated.Type
 export type RoomStreamError = typeof RoomStreamError.Type
-export type StartGameClicked = typeof StartGameClicked.Type
+export type StartGameRequested = typeof StartGameRequested.Type
 export type SessionLoaded = typeof SessionLoaded.Type
 
 export const Message = S.Union(
@@ -71,7 +71,7 @@ export const Message = S.Union(
   RoomError,
   RoomUpdated,
   RoomStreamError,
-  StartGameClicked,
+  StartGameRequested,
   SessionLoaded,
 )
 export type Message = typeof Message.Type
@@ -89,7 +89,7 @@ export {
   RoomStreamError,
   SessionIdInputBlurred,
   SessionLoaded,
-  StartGameClicked,
+  StartGameRequested,
   UrlChanged,
   UsernameFormSubmitted,
   UsernameInputBlurred,

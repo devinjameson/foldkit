@@ -12,7 +12,7 @@ import {
   updatePlayerProgress,
 } from '../command'
 import { SESSION_ID_INPUT_ID, USERNAME_INPUT_ID } from '../constant'
-import { CreateRoomClicked, Message, NoOp } from '../message'
+import { CreateRoomClicked, Message, NoOp, StartGameRequested } from '../message'
 import { EnterSessionId, EnterUsername, HOME_ACTIONS, Model, SelectAction } from '../model'
 import { urlToAppRoute } from '../route'
 import { validateUserTextInput } from '../validation'
@@ -52,66 +52,81 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
         ),
 
       KeyPressed: ({ key }) =>
-        M.value(model.homeStep).pipe(
-          withUpdateReturn,
-          M.tag('SelectAction', ({ username, selectedAction }) => {
-            const cycleAction = (offset: number) => {
-              const homeActionsLength = Array.length(HOME_ACTIONS)
-
-              return pipe(
-                HOME_ACTIONS,
-                Array.findFirstIndex((action) => action === selectedAction),
-                Option.map(
-                  flow(
-                    Number.sum(offset),
-                    Number.remainder(homeActionsLength),
-                    (remainder) => (remainder < 0 ? remainder + homeActionsLength : remainder),
-                    (nextIndex) => Array.unsafeGet(HOME_ACTIONS, nextIndex),
-                  ),
-                ),
-                Option.getOrThrow,
-              )
-            }
-
-            return M.value(key).pipe(
+        Option.match(model.maybeRoom, {
+          onSome: (room) =>
+            M.value(room.status).pipe(
               withUpdateReturn,
-              M.when('ArrowUp', () => [
-                evo(model, {
-                  homeStep: () => SelectAction.make({ username, selectedAction: cycleAction(-1) }),
-                }),
-                [],
-              ]),
-              M.when('ArrowDown', () => [
-                evo(model, {
-                  homeStep: () => SelectAction.make({ username, selectedAction: cycleAction(1) }),
-                }),
-                [],
-              ]),
-              M.when('Enter', () => {
-                return M.value(selectedAction).pipe(
+              M.tag('Waiting', () =>
+                M.value(key).pipe(
                   withUpdateReturn,
-                  M.when('CreateRoom', () => [model, [Effect.succeed(CreateRoomClicked.make())]]),
-                  M.when('JoinRoom', () => [
+                  M.when('Enter', () => [model, [Effect.succeed(StartGameRequested.make({ roomId: room.id }))]]),
+                  M.orElse(() => [model, []]),
+                ),
+              ),
+              M.orElse(() => [model, []]),
+            ),
+          onNone: () =>
+            M.value(model.homeStep).pipe(
+              withUpdateReturn,
+              M.tag('SelectAction', ({ username, selectedAction }) => {
+                const cycleAction = (offset: number) => {
+                  const homeActionsLength = Array.length(HOME_ACTIONS)
+
+                  return pipe(
+                    HOME_ACTIONS,
+                    Array.findFirstIndex((action) => action === selectedAction),
+                    Option.map(
+                      flow(
+                        Number.sum(offset),
+                        Number.remainder(homeActionsLength),
+                        (remainder) => (remainder < 0 ? remainder + homeActionsLength : remainder),
+                        (nextIndex) => Array.unsafeGet(HOME_ACTIONS, nextIndex),
+                      ),
+                    ),
+                    Option.getOrThrow,
+                  )
+                }
+
+                return M.value(key).pipe(
+                  withUpdateReturn,
+                  M.when('ArrowUp', () => [
                     evo(model, {
-                      homeStep: () =>
-                        EnterSessionId.make({ username, sessionId: '', sessionIdValidationId: 0 }),
+                      homeStep: () => SelectAction.make({ username, selectedAction: cycleAction(-1) }),
                     }),
-                    [Task.focus(`#${SESSION_ID_INPUT_ID}`, () => NoOp.make())],
+                    [],
                   ]),
-                  M.when('ChangeUsername', () => [
+                  M.when('ArrowDown', () => [
                     evo(model, {
-                      homeStep: () => EnterUsername.make({ username: '' }),
+                      homeStep: () => SelectAction.make({ username, selectedAction: cycleAction(1) }),
                     }),
-                    [Task.focus(`#${USERNAME_INPUT_ID}`, () => NoOp.make())],
+                    [],
                   ]),
-                  M.exhaustive,
+                  M.when('Enter', () => {
+                    return M.value(selectedAction).pipe(
+                      withUpdateReturn,
+                      M.when('CreateRoom', () => [model, [Effect.succeed(CreateRoomClicked.make())]]),
+                      M.when('JoinRoom', () => [
+                        evo(model, {
+                          homeStep: () =>
+                            EnterSessionId.make({ username, sessionId: '', sessionIdValidationId: 0 }),
+                        }),
+                        [Task.focus(`#${SESSION_ID_INPUT_ID}`, () => NoOp.make())],
+                      ]),
+                      M.when('ChangeUsername', () => [
+                        evo(model, {
+                          homeStep: () => EnterUsername.make({ username: '' }),
+                        }),
+                        [Task.focus(`#${USERNAME_INPUT_ID}`, () => NoOp.make())],
+                      ]),
+                      M.exhaustive,
+                    )
+                  }),
+                  M.orElse(() => [model, []]),
                 )
               }),
               M.orElse(() => [model, []]),
-            )
-          }),
-          M.orElse(() => [model, []]),
-        ),
+            ),
+        }),
 
       LinkClicked: ({ request }) =>
         M.value(request).pipe(
@@ -223,7 +238,7 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
         return [model, []]
       },
 
-      StartGameClicked: ({ roomId }) => [model, [startGame(roomId)]],
+      StartGameRequested: ({ roomId }) => [model, [startGame(roomId)]],
 
       SessionLoaded: ({ maybeSession }) => [
         evo(model, {

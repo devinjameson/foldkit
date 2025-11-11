@@ -2,7 +2,7 @@ import { HttpMiddleware, HttpRouter } from '@effect/platform'
 import { NodeHttpServer, NodeRuntime } from '@effect/platform-node'
 import { RpcSerialization, RpcServer } from '@effect/rpc'
 import * as Shared from '@typing-game/shared'
-import { Effect, Layer } from 'effect'
+import { Effect, Layer, Logger } from 'effect'
 import { createServer } from 'node:http'
 
 import {

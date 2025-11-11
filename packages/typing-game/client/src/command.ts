@@ -1,6 +1,6 @@
 import { KeyValueStore } from '@effect/platform'
 import { BrowserKeyValueStore } from '@effect/platform-browser'
-import { Effect, Match as M, Option, Schema as S, Stream } from 'effect'
+import { Effect, Match as M, Option, Schema as S, Stream, pipe } from 'effect'
 import { Runtime } from 'foldkit'
 import { pushUrl } from 'foldkit/navigation'
 
@@ -113,6 +113,8 @@ const CommandStreamsDeps = S.Struct({
   roomSubscription: S.Option(S.Struct({ roomId: S.String, playerId: S.String })),
   keyboard: S.Struct({
     isOnSelectActionStep: S.Boolean,
+    isInWaitingRoom: S.Boolean,
+    roomId: S.Option(S.String),
   }),
 })
 
@@ -146,8 +148,14 @@ export const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Mod
   keyboard: {
     modelToDeps: (model: Model) => ({
       isOnSelectActionStep: model.route._tag === 'Home' && model.homeStep._tag === 'SelectAction',
+      isInWaitingRoom: Option.exists(model.maybeRoom, ({ status }) => status._tag === 'Waiting'),
+      roomId: pipe(
+        model.maybeRoom,
+        Option.filter((room) => room.status._tag === 'Waiting'),
+        Option.map((room) => room.id),
+      ),
     }),
-    depsToStream: (deps: { isOnSelectActionStep: boolean }) =>
+    depsToStream: (deps: { isOnSelectActionStep: boolean; isInWaitingRoom: boolean }) =>
       Stream.when(
         Stream.fromEventListener<KeyboardEvent>(document, 'keydown').pipe(
           Stream.map((keyboardEvent) =>
@@ -157,7 +165,7 @@ export const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Mod
             }),
           ),
         ),
-        () => deps.isOnSelectActionStep,
+        () => deps.isOnSelectActionStep || deps.isInWaitingRoom,
       ),
   },
 })

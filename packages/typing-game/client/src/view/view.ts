@@ -3,6 +3,12 @@ import classNames from 'classnames'
 import { Array, Match as M, Number, Option, Order, String as Str, pipe } from 'effect'
 import { Html } from 'foldkit/html'
 
+import { USER_TEXT_INPUT_ID } from '../constant'
+import { StartGameRequested, UserTextInputted } from '../message'
+import { Model, RoomPlayerSession } from '../model'
+import { homeRouter } from '../route'
+import { findFirstWrongCharIndex } from '../validation'
+import { homeView } from './home'
 import {
   Autocapitalize,
   Autocorrect,
@@ -21,13 +27,6 @@ import {
   span,
   textarea,
 } from './html'
-
-import { USER_TEXT_INPUT_ID } from '../constant'
-import { StartGameClicked, UserTextInputted } from '../message'
-import { Model, RoomPlayerSession } from '../model'
-import { homeRouter } from '../route'
-import { findFirstWrongCharIndex } from '../validation'
-import { homeView } from './home'
 
 const isLocalPlayer = (
   player: Shared.Player,
@@ -62,14 +61,7 @@ const maybeRoomView = ({ maybeRoom, maybeSession, userText }: Model): Html =>
               [
                 div([Class('text-3xl uppercase uppercase')], ['[Connected users]']),
                 div([Class('space-y-2')], playerView(room.players, maybeSession)),
-                button(
-                  [
-                    Type('button'),
-                    Class('px-6 py-3 text-3xl font-terminal uppercase w-full'),
-                    OnClick(StartGameClicked.make({ roomId: room.id })),
-                  ],
-                  ['Initialize game'],
-                ),
+                div([Class('text-3xl mt-4')], ['> Press enter to start game']),
               ],
             ),
           GetReady: () =>
@@ -122,9 +114,10 @@ const finishedView = (roomId: string, maybeScoreboard: Option.Option<Shared.Scor
   div(
     [Class('space-y-6')],
     [
-      div([Class('text-3xl uppercase')], ['[GAME COMPLETE]']),
+      div([Class('text-3xl uppercase')], ['[Game complete]']),
       Option.match(maybeScoreboard, {
-        onNone: () => div([Class('text-terminal-green text-3xl')], ['CALCULATING RESULTS...']),
+        onNone: () =>
+          div([Class('text-terminal-green text-3xl uppercase')], ['Calculating results...']),
         onSome: scoreboardView,
       }),
       button(
@@ -133,7 +126,7 @@ const finishedView = (roomId: string, maybeScoreboard: Option.Option<Shared.Scor
           Class(
             'w-full border-2 border-terminal-green text-terminal-green px-6 py-3 text-3xl font-terminal uppercase hover:bg-terminal-green hover:text-terminal-bg transition-all duration-200',
           ),
-          OnClick(StartGameClicked.make({ roomId })),
+          OnClick(StartGameRequested.make({ roomId })),
         ],
         ['> Initialize new game'],
       ),
@@ -165,6 +158,7 @@ const scoreboardView = (scoreboard: Shared.Scoreboard) => {
           ),
           ...Array.map(sortedScoreboard, (score, index) => {
             const isFirst = index === 0
+
             return div(
               [
                 Class(
