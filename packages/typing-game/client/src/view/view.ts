@@ -1,12 +1,13 @@
 import * as Shared from '@typing-game/shared'
 import classNames from 'classnames'
 import { Array, Match as M, Number, Option, Order, String as Str, pipe } from 'effect'
+import { Html } from 'foldkit/html'
+
 import {
   Autocapitalize,
   Autocorrect,
   Class,
   Href,
-  Html,
   Id,
   OnClick,
   OnInput,
@@ -19,7 +20,7 @@ import {
   empty,
   span,
   textarea,
-} from 'foldkit/html'
+} from './html'
 
 import { USER_TEXT_INPUT_ID } from '../constant'
 import { StartGameClicked, UserTextInputted } from '../message'
@@ -218,15 +219,18 @@ const typingView = (
   div(
     [Class('relative')],
     [
-      textarea([
-        Id(USER_TEXT_INPUT_ID),
-        Value(userText),
-        Class('absolute inset-0 opacity-0 z-10 resize-none'),
-        OnInput((value) => UserTextInputted.make({ value })),
-        Spellcheck(false),
-        Autocorrect('off'),
-        Autocapitalize('none'),
-      ]),
+      textarea(
+        [
+          Id(USER_TEXT_INPUT_ID),
+          Value(userText),
+          Class('absolute inset-0 opacity-0 z-10 resize-none'),
+          OnInput((value) => UserTextInputted.make({ value })),
+          Spellcheck(false),
+          Autocorrect('off'),
+          Autocapitalize('none'),
+        ],
+        [],
+      ),
       gameTextWithProgress(gameText, userText, maybeWrongCharIndex),
     ],
   )

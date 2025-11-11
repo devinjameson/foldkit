@@ -1,10 +1,11 @@
 import { Match as M, Option } from 'effect'
+import { Html } from 'foldkit/html'
+
 import {
   Autocapitalize,
   Autocomplete,
   Autocorrect,
   Class,
-  Html,
   Id,
   OnBlur,
   OnInput,
@@ -17,7 +18,7 @@ import {
   form,
   input,
   span,
-} from 'foldkit/html'
+} from './html'
 
 import { SESSION_ID_INPUT_ID, USERNAME_INPUT_ID } from '../constant'
 import {
