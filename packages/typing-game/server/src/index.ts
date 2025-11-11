@@ -1,4 +1,4 @@
-import { HttpMiddleware, HttpRouter } from '@effect/platform'
+import { HttpMiddleware, HttpRouter, HttpServer } from '@effect/platform'
 import { NodeHttpServer, NodeRuntime } from '@effect/platform-node'
 import { RpcSerialization, RpcServer } from '@effect/rpc'
 import * as Shared from '@typing-game/shared'
@@ -47,6 +47,7 @@ const Main = HttpRouter.Default.serve(HttpMiddleware.cors()).pipe(
   Layer.provide(HttpProtocol),
   Layer.provide(RoomByIdStoreLive),
   Layer.provide(ProgressByGamePlayerStoreLive),
+  HttpServer.withLogAddress,
   Layer.provide(NodeHttpServer.layer(createServer, { port: 3001 })),
 )
 
