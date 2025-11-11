@@ -1,0 +1,37 @@
+import * as Shared from '@typing-game/shared'
+import { Array, Option } from 'effect'
+import { Html } from 'foldkit/html'
+
+import { RoomPlayerSession } from '../../model'
+import { Class, div, span } from '../html'
+
+const isLocalPlayer = (
+  player: Shared.Player,
+  maybeSession: Option.Option<RoomPlayerSession>,
+): boolean => Option.exists(maybeSession, (session) => session.player.id === player.id)
+
+const player = (
+  players: ReadonlyArray<Shared.Player>,
+  maybeSession: Option.Option<RoomPlayerSession>,
+): Html[] =>
+  Array.map(players, (player) => {
+    const isLocal = isLocalPlayer(player, maybeSession)
+
+    return div(
+      [],
+      [span([Class('font-terminal text-3xl')], [player.username, isLocal ? ' [YOU]' : ''])],
+    )
+  })
+
+export const waiting = (
+  players: ReadonlyArray<Shared.Player>,
+  maybeSession: Option.Option<RoomPlayerSession>,
+): Html =>
+  div(
+    [],
+    [
+      div([Class('text-3xl uppercase uppercase')], ['[Connected users]']),
+      div([Class('space-y-2 mb-6')], player(players, maybeSession)),
+      div([Class('text-3xl')], ['> Enter to start game']),
+    ],
+  )

@@ -30,7 +30,7 @@ import {
   span,
 } from './html'
 
-export const homeView = (model: Model): Html =>
+export const home = (model: Model): Html =>
   div(
     [Class('min-h-screen bg-terminal-bg font-terminal text-terminal-green p-8')],
     [
