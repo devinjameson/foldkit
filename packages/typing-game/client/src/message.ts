@@ -10,7 +10,6 @@ const LinkClicked = ts('LinkClicked', {
   request: Runtime.UrlRequest,
 })
 const UrlChanged = ts('UrlChanged', { url: Url.Url })
-const BootCompleted = ts('BootCompleted')
 const UsernameFormSubmitted = ts('UsernameFormSubmitted')
 const KeyPressed = ts('KeyPressed', { key: S.String })
 const UsernameInputted = ts('UsernameInputted', { value: S.String })
@@ -34,7 +33,6 @@ const SessionLoaded = ts('SessionLoaded', { maybeSession: S.Option(RoomPlayerSes
 export type NoOp = typeof NoOp.Type
 export type LinkClicked = typeof LinkClicked.Type
 export type UrlChanged = typeof UrlChanged.Type
-export type BootCompleted = typeof BootCompleted.Type
 export type UsernameFormSubmitted = typeof UsernameFormSubmitted.Type
 export type KeyPressed = typeof KeyPressed.Type
 export type UsernameInputted = typeof UsernameInputted.Type
@@ -56,7 +54,6 @@ export const Message = S.Union(
   NoOp,
   LinkClicked,
   UrlChanged,
-  BootCompleted,
   UsernameFormSubmitted,
   KeyPressed,
   UsernameInputted,
@@ -77,7 +74,6 @@ export const Message = S.Union(
 export type Message = typeof Message.Type
 
 export {
-  BootCompleted,
   CreateRoomClicked,
   JoinRoomClicked,
   KeyPressed,

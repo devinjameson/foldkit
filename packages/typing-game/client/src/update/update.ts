@@ -27,13 +27,6 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
     M.tagsExhaustive({
       NoOp: () => [model, []],
 
-      BootCompleted: () => [
-        evo(model, {
-          bootStatus: () => 'Ready',
-        }),
-        [Task.focus(`#${USERNAME_INPUT_ID}`, () => NoOp.make())],
-      ],
-
       UsernameFormSubmitted: () =>
         M.value(model.homeStep).pipe(
           withUpdateReturn,
@@ -59,7 +52,20 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
               M.tag('Waiting', () =>
                 M.value(key).pipe(
                   withUpdateReturn,
-                  M.when('Enter', () => [model, [Effect.succeed(StartGameRequested.make({ roomId: room.id }))]]),
+                  M.when('Enter', () => [
+                    model,
+                    [Effect.succeed(StartGameRequested.make({ roomId: room.id }))],
+                  ]),
+                  M.orElse(() => [model, []]),
+                ),
+              ),
+              M.tag('Finished', () =>
+                M.value(key).pipe(
+                  withUpdateReturn,
+                  M.when('Enter', () => [
+                    model,
+                    [Effect.succeed(StartGameRequested.make({ roomId: room.id }))],
+                  ]),
                   M.orElse(() => [model, []]),
                 ),
               ),
@@ -91,24 +97,33 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
                   withUpdateReturn,
                   M.when('ArrowUp', () => [
                     evo(model, {
-                      homeStep: () => SelectAction.make({ username, selectedAction: cycleAction(-1) }),
+                      homeStep: () =>
+                        SelectAction.make({ username, selectedAction: cycleAction(-1) }),
                     }),
                     [],
                   ]),
                   M.when('ArrowDown', () => [
                     evo(model, {
-                      homeStep: () => SelectAction.make({ username, selectedAction: cycleAction(1) }),
+                      homeStep: () =>
+                        SelectAction.make({ username, selectedAction: cycleAction(1) }),
                     }),
                     [],
                   ]),
                   M.when('Enter', () => {
                     return M.value(selectedAction).pipe(
                       withUpdateReturn,
-                      M.when('CreateRoom', () => [model, [Effect.succeed(CreateRoomClicked.make())]]),
+                      M.when('CreateRoom', () => [
+                        model,
+                        [Effect.succeed(CreateRoomClicked.make())],
+                      ]),
                       M.when('JoinRoom', () => [
                         evo(model, {
                           homeStep: () =>
-                            EnterSessionId.make({ username, sessionId: '', sessionIdValidationId: 0 }),
+                            EnterSessionId.make({
+                              username,
+                              sessionId: '',
+                              sessionIdValidationId: 0,
+                            }),
                         }),
                         [Task.focus(`#${SESSION_ID_INPUT_ID}`, () => NoOp.make())],
                       ]),

@@ -1,6 +1,16 @@
 import { Match as M, Option } from 'effect'
 import { Html } from 'foldkit/html'
 
+import { SESSION_ID_INPUT_ID, USERNAME_INPUT_ID } from '../constant'
+import {
+  JoinRoomClicked,
+  RoomIdInputted,
+  SessionIdInputBlurred,
+  UsernameFormSubmitted,
+  UsernameInputBlurred,
+  UsernameInputted,
+} from '../message'
+import { Model } from '../model'
 import {
   Autocapitalize,
   Autocomplete,
@@ -20,17 +30,6 @@ import {
   span,
 } from './html'
 
-import { SESSION_ID_INPUT_ID, USERNAME_INPUT_ID } from '../constant'
-import {
-  JoinRoomClicked,
-  RoomIdInputted,
-  SessionIdInputBlurred,
-  UsernameFormSubmitted,
-  UsernameInputBlurred,
-  UsernameInputted,
-} from '../message'
-import { Model } from '../model'
-
 export const homeView = (model: Model): Html =>
   div(
     [Class('min-h-screen bg-terminal-bg font-terminal text-terminal-green p-8')],
@@ -38,7 +37,7 @@ export const homeView = (model: Model): Html =>
       div(
         [Class('max-w-4xl')],
         [
-          div([Class('text-3xl mb-2 uppercase')], ['TYPING TERMINAL v1.0']),
+          div([Class('text-3xl mb-2 uppercase')], ['Miney Miney Tiny Type Town']),
 
           M.value(model.homeStep).pipe(
             M.tagsExhaustive({
@@ -58,7 +57,7 @@ export const homeView = (model: Model): Html =>
                               Type('text'),
                               Value(username),
                               Class(
-                                'bg-transparent border-0 text-terminal-green font-terminal text-3xl px-0 py-2 outline-none w-full',
+                                'bg-transparent text-terminal-green font-terminal text-3xl px-0 py-2 outline-none w-full',
                               ),
                               OnInput((value) => UsernameInputted.make({ value })),
                               OnBlur(UsernameInputBlurred.make()),
@@ -128,7 +127,7 @@ export const homeView = (model: Model): Html =>
                               Type('text'),
                               Value(sessionId),
                               Class(
-                                'bg-transparent border-0 text-terminal-green font-terminal text-3xl px-0 py-2 outline-none w-full',
+                                'bg-transparent text-terminal-green font-terminal text-3xl px-0 py-2 outline-none w-full',
                               ),
                               OnInput((value) => RoomIdInputted.make({ value })),
                               OnBlur(SessionIdInputBlurred.make()),

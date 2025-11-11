@@ -4,7 +4,7 @@ import { Array, Match as M, Number, Option, Order, String as Str, pipe } from 'e
 import { Html } from 'foldkit/html'
 
 import { USER_TEXT_INPUT_ID } from '../constant'
-import { StartGameRequested, UserTextInputted } from '../message'
+import { UserTextInputted } from '../message'
 import { Model, RoomPlayerSession } from '../model'
 import { homeRouter } from '../route'
 import { findFirstWrongCharIndex } from '../validation'
@@ -15,13 +15,10 @@ import {
   Class,
   Href,
   Id,
-  OnClick,
   OnInput,
   Spellcheck,
-  Type,
   Value,
   a,
-  button,
   div,
   empty,
   span,
@@ -48,7 +45,7 @@ const playerView = (
 
 const maybeRoomView = ({ maybeRoom, maybeSession, userText }: Model): Html =>
   Option.match(maybeRoom, {
-    onNone: () => div([Class('text-terminal-green text-3xl')], ['LOADING SESSION...']),
+    onNone: () => div([Class('text-terminal-green text-3xl')], ['Loading session...']),
     onSome: (room: Shared.Room) => {
       const maybeGameText = Option.map(room.maybeGame, ({ text }) => text)
       const maybeWrongCharIndex = Option.flatMap(maybeGameText, findFirstWrongCharIndex(userText))
@@ -60,8 +57,8 @@ const maybeRoomView = ({ maybeRoom, maybeSession, userText }: Model): Html =>
               [],
               [
                 div([Class('text-3xl uppercase uppercase')], ['[Connected users]']),
-                div([Class('space-y-2')], playerView(room.players, maybeSession)),
-                div([Class('text-3xl mt-4')], ['> Press enter to start game']),
+                div([Class('space-y-2 mb-6')], playerView(room.players, maybeSession)),
+                div([Class('text-3xl')], ['> Enter to start game']),
               ],
             ),
           GetReady: () =>
@@ -72,7 +69,7 @@ const maybeRoomView = ({ maybeRoom, maybeSession, userText }: Model): Html =>
                 div([Class('h-px bg-terminal-green my-4')], []),
                 Option.match(maybeGameText, {
                   onNone: () => empty,
-                  onSome: (text) => div([Class('p-6 border-2 text-3xl')], [text]),
+                  onSome: (text) => div([Class('text-3xl')], [text]),
                 }),
               ],
             ),
@@ -85,20 +82,13 @@ const maybeRoomView = ({ maybeRoom, maybeSession, userText }: Model): Html =>
                 Option.match(maybeGameText, {
                   onNone: () => empty,
                   onSome: (text) =>
-                    div(
-                      [
-                        Class(
-                          'p-6 border-2 border-terminal-green font-terminal text-3xl text-terminal-green-dim',
-                        ),
-                      ],
-                      [text],
-                    ),
+                    div([Class('font-terminal text-3xl text-terminal-green-dim')], [text]),
                 }),
               ],
             ),
           Playing: ({ secondsLeft }) =>
             playingView(secondsLeft, maybeGameText, userText, maybeWrongCharIndex),
-          Finished: () => finishedView(room.id, room.maybeScoreboard),
+          Finished: () => finishedView(room.maybeScoreboard),
         }),
       )
     },
@@ -110,7 +100,7 @@ const byHighestWpm = pipe(
   Order.reverse,
 )
 
-const finishedView = (roomId: string, maybeScoreboard: Option.Option<Shared.Scoreboard>): Html =>
+const finishedView = (maybeScoreboard: Option.Option<Shared.Scoreboard>): Html =>
   div(
     [Class('space-y-6')],
     [
@@ -120,16 +110,7 @@ const finishedView = (roomId: string, maybeScoreboard: Option.Option<Shared.Scor
           div([Class('text-terminal-green text-3xl uppercase')], ['Calculating results...']),
         onSome: scoreboardView,
       }),
-      button(
-        [
-          Type('button'),
-          Class(
-            'w-full border-2 border-terminal-green text-terminal-green px-6 py-3 text-3xl font-terminal uppercase hover:bg-terminal-green hover:text-terminal-bg transition-all duration-200',
-          ),
-          OnClick(StartGameRequested.make({ roomId })),
-        ],
-        ['> Initialize new game'],
-      ),
+      div([Class('text-3xl mt-4')], ['> Enter to play again']),
     ],
   )
 
@@ -139,7 +120,6 @@ const scoreboardView = (scoreboard: Shared.Scoreboard) => {
   return div(
     [Class('space-y-4')],
     [
-      div([Class('text-3xl uppercase mb-4')], ['[FINAL SCORES]']),
       div(
         [Class('border-2 border-terminal-green box-glow')],
         [
@@ -172,8 +152,8 @@ const scoreboardView = (scoreboard: Shared.Scoreboard) => {
               ],
               [
                 div(
-                  [Class('font-medium')],
-                  [isFirst ? '> ' : '  ', score.username, isFirst ? ' [WINNER]' : ''],
+                  [Class('uppercase')],
+                  [isFirst ? '> ' : '  ', score.username, isFirst ? ' [Winner]' : ''],
                 ),
                 div([Class('text-right')], [score.wpm.toFixed(1)]),
                 div([Class('text-right')], [score.accuracy.toFixed(1) + '%']),
@@ -301,39 +281,11 @@ const notFoundView = (path: string): Html =>
     ],
   )
 
-const bootView = (): Html =>
-  div(
-    [Class('min-h-screen bg-terminal-bg text-terminal-green font-terminal flex items-start p-8')],
-    [
-      div(
-        [Class('max-w-4xl')],
-        [
-          div(
-            [Class('text-3xl space-y-2')],
-            [
-              div([], ['Initializing...']),
-              div([], ['Establishing connection...']),
-              div(
-                [Class('mt-4')],
-                [span([Class('blink-cursor inline-block w-3 h-6 bg-terminal-green')], [])],
-              ),
-            ],
-          ),
-        ],
-      ),
-    ],
-  )
-
-export const view = (model: Model): Html => {
-  if (model.bootStatus === 'Booting') {
-    return bootView()
-  }
-
-  return M.value(model.route).pipe(
+export const view = (model: Model): Html =>
+  M.value(model.route).pipe(
     M.tagsExhaustive({
       Home: () => homeView(model),
       Room: ({ roomId }) => roomRouteView(model, roomId),
       NotFound: ({ path }) => notFoundView(path),
     }),
   )
-}

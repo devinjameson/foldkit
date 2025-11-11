@@ -1,12 +1,11 @@
 import { KeyValueStore } from '@effect/platform'
 import { BrowserKeyValueStore } from '@effect/platform-browser'
-import { Effect, Match as M, Option, Schema as S, Stream, pipe } from 'effect'
+import { Effect, Match as M, Option, Schema as S, Stream } from 'effect'
 import { Runtime } from 'foldkit'
 import { pushUrl } from 'foldkit/navigation'
 
 import { ROOM_PLAYER_SESSION_KEY } from './constant'
 import {
-  BootCompleted,
   KeyPressed,
   NoOp,
   RoomCreated,
@@ -20,10 +19,6 @@ import { Message } from './message'
 import { Model, RoomPlayerSession } from './model'
 import { roomRouter } from './route'
 import { RoomsClient } from './rpc'
-
-export const bootSequence: Runtime.Command<BootCompleted> = Effect.sleep('2500 millis').pipe(
-  Effect.as(BootCompleted.make()),
-)
 
 export const createRoom = (username: string): Runtime.Command<RoomCreated | RoomError> =>
   Effect.gen(function* () {
@@ -114,6 +109,7 @@ const CommandStreamsDeps = S.Struct({
   keyboard: S.Struct({
     isOnSelectActionStep: S.Boolean,
     isInWaitingRoom: S.Boolean,
+    isInFinishedRoom: S.Boolean,
     roomId: S.Option(S.String),
   }),
 })
@@ -149,13 +145,17 @@ export const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Mod
     modelToDeps: (model: Model) => ({
       isOnSelectActionStep: model.route._tag === 'Home' && model.homeStep._tag === 'SelectAction',
       isInWaitingRoom: Option.exists(model.maybeRoom, ({ status }) => status._tag === 'Waiting'),
-      roomId: pipe(
-        model.maybeRoom,
-        Option.filter((room) => room.status._tag === 'Waiting'),
-        Option.map((room) => room.id),
+      isInFinishedRoom: Option.exists(model.maybeRoom, ({ status }) => status._tag === 'Finished'),
+      roomId: model.maybeRoom.pipe(
+        Option.filter(({ status }) => status._tag === 'Waiting' || status._tag === 'Finished'),
+        Option.map(({ id }) => id),
       ),
     }),
-    depsToStream: (deps: { isOnSelectActionStep: boolean; isInWaitingRoom: boolean }) =>
+    depsToStream: (deps: {
+      isOnSelectActionStep: boolean
+      isInWaitingRoom: boolean
+      isInFinishedRoom: boolean
+    }) =>
       Stream.when(
         Stream.fromEventListener<KeyboardEvent>(document, 'keydown').pipe(
           Stream.map((keyboardEvent) =>
@@ -165,7 +165,7 @@ export const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Mod
             }),
           ),
         ),
-        () => deps.isOnSelectActionStep || deps.isInWaitingRoom,
+        () => deps.isOnSelectActionStep || deps.isInWaitingRoom || deps.isInFinishedRoom,
       ),
   },
 })
