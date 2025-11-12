@@ -17,7 +17,12 @@ const player = (
   Array.map(players, (player) => {
     const isLocal = isLocalPlayer(player, maybeSession)
 
-    return div([], [span([], [player.username, isLocal ? ' [YOU]' : ''])])
+    return div(
+      [],
+      isLocal
+        ? [span([], [player.username]), span([Class('uppercase')], [' [you]'])]
+        : [span([], [player.username])],
+    )
   })
 
 export const waiting = (

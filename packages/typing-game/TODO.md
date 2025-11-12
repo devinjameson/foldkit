@@ -20,6 +20,9 @@
 - [ ] Move room id input to the right of the label (same as the username input)
 - [ ] When all players leave a room, delete the room
 - [ ] Add "Made with Foldkit and Effect" footer
+- [ ] If a user joins a room and they have the same username as an existing
+      user in the room, append a (2), (3), etc to their username to make it
+      unique
 
 ## Bugs
 

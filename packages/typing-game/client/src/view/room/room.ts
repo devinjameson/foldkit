@@ -17,7 +17,7 @@ export const room = (model: Model, roomId: string): Html =>
     [
       div(
         [Class('max-w-4xl')],
-        [div([Class('uppercase')], ['[Room ID]']), div([Class('mb-6')], [roomId]), content(model)],
+        [div([Class('uppercase')], ['[Room id]']), div([Class('mb-6')], [roomId]), content(model)],
       ),
     ],
   )

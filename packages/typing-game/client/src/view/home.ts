@@ -48,7 +48,7 @@ export const home = (model: Model): Html =>
                     div(
                       [Class('flex items-center gap-2')],
                       [
-                        span([Class('text-3xl')], ['Enter username: ']),
+                        span([], ['Enter username: ']),
                         div(
                           [Class('flex items-center gap-2 flex-1')],
                           [
@@ -79,7 +79,7 @@ export const home = (model: Model): Html =>
                       [],
                       [
                         div(
-                          [Class('text-3xl whitespace-pre-wrap')],
+                          [Class('whitespace-pre-wrap')],
                           [selectedAction === 'CreateRoom' ? '> ' : '  ', 'Create room'],
                         ),
                       ],
@@ -88,7 +88,7 @@ export const home = (model: Model): Html =>
                       [],
                       [
                         div(
-                          [Class('text-3xl whitespace-pre-wrap')],
+                          [Class('whitespace-pre-wrap')],
                           [selectedAction === 'JoinRoom' ? '> ' : '  ', 'Join room'],
                         ),
                       ],
@@ -97,7 +97,7 @@ export const home = (model: Model): Html =>
                       [],
                       [
                         div(
-                          [Class('text-3xl whitespace-pre-wrap')],
+                          [Class('whitespace-pre-wrap')],
                           [selectedAction === 'ChangeUsername' ? '> ' : '  ', 'Change username'],
                         ),
                       ],
@@ -109,7 +109,7 @@ export const home = (model: Model): Html =>
                 div(
                   [],
                   [
-                    div([Class('text-3xl uppercase mb-4')], ['Enter room ID:']),
+                    div([Class('uppercase mb-4')], ['Enter room id:']),
                     form(
                       [OnSubmit(JoinRoomClicked.make())],
                       [
@@ -142,7 +142,10 @@ export const home = (model: Model): Html =>
             onSome: (errorMessage) =>
               div(
                 [Class('mt-6 border-2 border-terminal-red p-4')],
-                [span([Class('text-terminal-red text-3xl')], ['[ERROR] ', errorMessage])],
+                [
+                  span([Class('text-terminal-red uppercase')], ['[Error] ']),
+                  span([Class('text-terminal-red')], [errorMessage]),
+                ],
               ),
           }),
         ],
