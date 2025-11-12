@@ -8,13 +8,17 @@
 - [ ] Themed UI - retro glowing green with dark background
 - [ ] If someone loads a room page e.g. /room/noble-iron-fair and they are not
       in that room, they should see a username input field and a "Join Room" button
+- [ ] If someone loads a room page and the room does not exists, show "Room not
+      found" error
 - [ ] Add "host" concept:
   - Only host can start the game when enough players have joined
   - Only host can play again after the game is finished
   - If host leaves, assign a new host
-- [ ] Remove user from room when they disconnect (Stream.ensure I think?)
+- [X] Remove user from room when they disconnect (Stream.ensure I think?)
 - [ ] Copy room ID button (use same pattern as Foldkit website)
 - [ ] Add leave room button
+- [ ] Move room id input to the right of the label (same as the username input)
+- [ ] When all players leave a room, delete the room
 
 ## Bugs
 
