@@ -23,6 +23,7 @@
 - [ ] If a user joins a room and they have the same username as an existing
       user in the room, append a (2), (3), etc to their username to make it
       unique
+- [ ] 24 chars max username
 
 ## Bugs
 

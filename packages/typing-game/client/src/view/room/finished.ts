@@ -38,13 +38,11 @@ const scoreboard = (scoreboard: Shared.Scoreboard) => {
                   classNames('grid grid-cols-4 gap-4 p-4', {
                     'border-b-2 border-terminal-green':
                       index < Number.decrement(sortedScoreboard.length),
-                    'text-terminal-green terminal-glow': isFirst,
-                    'text-terminal-green-dim': !isFirst,
                   }),
                 ),
               ],
               [
-                div([Class('uppercase')], [isFirst ? '> ' : '  ', score.username]),
+                div([], [isFirst ? '> ' : '  ', score.username]),
                 div([Class('text-right')], [score.wpm.toFixed(1)]),
                 div([Class('text-right')], [score.accuracy.toFixed(1) + '%']),
                 div([Class('text-right')], [String(score.charsTyped)]),
