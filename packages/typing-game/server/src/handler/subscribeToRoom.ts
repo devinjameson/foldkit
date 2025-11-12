@@ -5,17 +5,21 @@ import {
   Duration,
   Effect,
   HashMap,
+  HashSet,
   Option,
+  Ref,
   Stream,
   Struct,
   SubscriptionRef,
   pipe,
 } from 'effect'
+import { DurationInput } from 'effect/Duration'
 
 import { ROOM_UPDATE_THROTTLE_MS } from '../game.js'
 import { getPlayerProgress } from '../scoring.js'
+import { PendingCleanupPlayerIds, ProgressByGamePlayer } from '../store.js'
 
-type ProgressByGamePlayer = HashMap.HashMap<Shared.GamePlayer, Shared.PlayerProgress>
+const DISCONNECT_CLEANUP_DELAY: DurationInput = '5 seconds'
 
 const removePlayerFromRoom = (
   roomByIdRef: SubscriptionRef.SubscriptionRef<Shared.RoomById>,
@@ -30,8 +34,8 @@ const removePlayerFromRoom = (
           pipe(
             room.players,
             Array.filter((player) => player.id !== playerId),
-            (players) =>
-              HashMap.set(roomById, roomId, Struct.evolve(room, { players: () => players })),
+            (nextPlayers) =>
+              HashMap.set(roomById, roomId, Struct.evolve(room, { players: () => nextPlayers })),
           ),
       }),
     ),
@@ -45,15 +49,48 @@ const removePlayerProgress = (
     HashMap.filter(progressByGamePlayer, (_, gamePlayer) => gamePlayer.playerId !== playerId),
   )
 
+const cancelPendingCleanup = (
+  pendingCleanupPlayerIdsRef: Ref.Ref<PendingCleanupPlayerIds>,
+  playerId: string,
+) => Ref.update(pendingCleanupPlayerIdsRef, HashSet.remove(playerId))
+
+const scheduleDelayedCleanup = (
+  roomByIdRef: SubscriptionRef.SubscriptionRef<Shared.RoomById>,
+  progressByGamePlayerRef: SubscriptionRef.SubscriptionRef<ProgressByGamePlayer>,
+  pendingCleanupPlayerIdsRef: Ref.Ref<PendingCleanupPlayerIds>,
+  roomId: string,
+  playerId: string,
+) =>
+  Effect.gen(function* () {
+    yield* Ref.update(pendingCleanupPlayerIdsRef, HashSet.add(playerId))
+
+    const scheduledCleanup = Effect.gen(function* () {
+      yield* Effect.sleep(DISCONNECT_CLEANUP_DELAY)
+
+      const pendingPlayerIds = yield* Ref.get(pendingCleanupPlayerIdsRef)
+      const isStillPending = HashSet.has(pendingPlayerIds, playerId)
+
+      if (isStillPending) {
+        yield* removePlayerFromRoom(roomByIdRef, roomId, playerId)
+        yield* removePlayerProgress(progressByGamePlayerRef, playerId)
+        yield* Ref.update(pendingCleanupPlayerIdsRef, HashSet.remove(playerId))
+      }
+    })
+
+    yield* Effect.fork(scheduledCleanup)
+  })
+
 export const subscribeToRoom =
   (
     roomByIdRef: SubscriptionRef.SubscriptionRef<Shared.RoomById>,
     progressByGamePlayerRef: SubscriptionRef.SubscriptionRef<ProgressByGamePlayer>,
+    pendingCleanupPlayerIdsRef: Ref.Ref<PendingCleanupPlayerIds>,
   ) =>
   (
     payload: Rpc.Payload<typeof Shared.subscribeToRoomRpc>,
   ): Stream.Stream<Shared.RoomWithPlayerProgress, Shared.RoomNotFoundError> =>
-    roomByIdRef.changes.pipe(
+    Stream.execute(cancelPendingCleanup(pendingCleanupPlayerIdsRef, payload.playerId)).pipe(
+      Stream.concat(roomByIdRef.changes),
       Stream.mapEffect((roomById) =>
         Effect.gen(function* () {
           const room = yield* HashMap.get(roomById, payload.roomId).pipe(
@@ -74,9 +111,12 @@ export const subscribeToRoom =
         units: 1,
       }),
       Stream.ensuring(
-        Effect.all([
-          removePlayerFromRoom(roomByIdRef, payload.roomId, payload.playerId),
-          removePlayerProgress(progressByGamePlayerRef, payload.playerId),
-        ]),
+        scheduleDelayedCleanup(
+          roomByIdRef,
+          progressByGamePlayerRef,
+          pendingCleanupPlayerIdsRef,
+          payload.roomId,
+          payload.playerId,
+        ),
       ),
     )

@@ -14,6 +14,8 @@ import {
   updatePlayerProgress,
 } from './handler/index.js'
 import {
+  PendingCleanupPlayerIdsStore,
+  PendingCleanupPlayerIdsStoreLive,
   ProgressByGamePlayerStore,
   ProgressByGamePlayerStoreLive,
   RoomByIdStore,
@@ -24,12 +26,17 @@ const RoomLive = Shared.RoomRpcs.toLayer(
   Effect.gen(function* () {
     const roomByIdRef = yield* RoomByIdStore
     const progressByGamePlayerRef = yield* ProgressByGamePlayerStore
+    const pendingCleanupPlayerIdsRef = yield* PendingCleanupPlayerIdsStore
 
     return {
       createRoom: createRoom(roomByIdRef),
       joinRoom: joinRoom(roomByIdRef),
       getRoomById: getRoomById(roomByIdRef),
-      subscribeToRoom: subscribeToRoom(roomByIdRef, progressByGamePlayerRef),
+      subscribeToRoom: subscribeToRoom(
+        roomByIdRef,
+        progressByGamePlayerRef,
+        pendingCleanupPlayerIdsRef,
+      ),
       startGame: startGame(roomByIdRef, progressByGamePlayerRef),
       updatePlayerProgress: updatePlayerProgress(progressByGamePlayerRef),
     }
@@ -47,6 +54,7 @@ const Main = HttpRouter.Default.serve(HttpMiddleware.cors()).pipe(
   Layer.provide(HttpProtocol),
   Layer.provide(RoomByIdStoreLive),
   Layer.provide(ProgressByGamePlayerStoreLive),
+  Layer.provide(PendingCleanupPlayerIdsStoreLive),
   HttpServer.withLogAddress,
   Layer.provide(NodeHttpServer.layer(createServer, { port: 3001 })),
 )
