@@ -88,7 +88,6 @@ export const playing = (
         [Class('uppercase')],
         [`[Time remaining] ${secondsLeft} ${secondsLeft === 1 ? 'second' : 'seconds'}`],
       ),
-      div([Class('h-px bg-terminal-green my-4')], []),
       Option.match(maybeGameText, {
         onNone: () => empty,
         onSome: (gameText) => typing(gameText, userText, maybeWrongCharIndex),

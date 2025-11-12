@@ -36,7 +36,8 @@ const scoreboard = (scoreboard: Shared.Scoreboard) => {
               [
                 Class(
                   classNames('grid grid-cols-4 gap-4 p-4', {
-                    'border-b-2 border-terminal-green': index < sortedScoreboard.length - 1,
+                    'border-b-2 border-terminal-green':
+                      index < Number.decrement(sortedScoreboard.length),
                     'text-terminal-green terminal-glow': isFirst,
                     'text-terminal-green-dim': !isFirst,
                   }),

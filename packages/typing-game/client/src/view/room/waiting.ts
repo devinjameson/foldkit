@@ -33,7 +33,7 @@ export const waiting = (
     [],
     [
       div([Class('uppercase')], ['[Connected users]']),
-      div([Class('space-y-2 mb-6')], player(players, maybeSession)),
+      div([Class('space-y-2 mb-12')], player(players, maybeSession)),
       div([], ['> Enter to start game']),
     ],
   )

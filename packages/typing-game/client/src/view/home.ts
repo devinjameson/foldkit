@@ -37,7 +37,7 @@ export const home = (model: Model): Html =>
       div(
         [Class('max-w-4xl')],
         [
-          div([Class('mb-2 uppercase')], ['Miney Miney Tiny Type Town']),
+          div([Class('mb-6 uppercase')], ['Miney Miney Tiny Type Town']),
 
           M.value(model.homeStep).pipe(
             M.tagsExhaustive({
@@ -73,7 +73,7 @@ export const home = (model: Model): Html =>
 
               SelectAction: ({ selectedAction }) =>
                 div(
-                  [Class('space-y-2')],
+                  [Class('space-y-4')],
                   [
                     div(
                       [],
@@ -106,15 +106,15 @@ export const home = (model: Model): Html =>
                 ),
 
               EnterSessionId: ({ sessionId }) =>
-                div(
-                  [],
+                form(
+                  [OnSubmit(JoinRoomClicked.make())],
                   [
-                    div([Class('uppercase mb-4')], ['Enter room id:']),
-                    form(
-                      [OnSubmit(JoinRoomClicked.make())],
+                    div(
+                      [Class('flex items-center gap-2')],
                       [
+                        span([], ['Enter room ID: ']),
                         div(
-                          [Class('flex items-center gap-2')],
+                          [Class('flex items-center gap-2 flex-1')],
                           [
                             input([
                               Id(SESSION_ID_INPUT_ID),

@@ -8,10 +8,9 @@ export const countdown = (secondsLeft: number, maybeGameText: Option.Option<stri
     [Class('space-y-6')],
     [
       div([Class('uppercase')], [`Starting in ${secondsLeft}...`]),
-      div([Class('h-px bg-terminal-green my-4')], []),
       Option.match(maybeGameText, {
         onNone: () => empty,
-        onSome: (text) => div([Class('text-terminal-green-dim')], [text]),
+        onSome: (text) => div([], [text]),
       }),
     ],
   )
