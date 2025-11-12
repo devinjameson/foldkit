@@ -32,7 +32,7 @@ import {
 
 export const home = (model: Model): Html =>
   div(
-    [Class('min-h-screen p-8')],
+    [Class('min-h-screen p-12')],
     [
       div(
         [Class('max-w-4xl')],
