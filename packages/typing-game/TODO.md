@@ -5,20 +5,21 @@
 - [x] Play again functionality (after game finishes)
 - [x] Do not repeat game texts in the same room until all have been used
 - [x] More game texts (variety of passages)
-- [ ] Themed UI - retro glowing green with dark background
+- [x] Themed UI - retro glowing green with dark background
 - [ ] If someone loads a room page e.g. /room/noble-iron-fair and they are not
       in that room, they should see a username input field and a "Join Room" button
-- [ ] If someone loads a room page and the room does not exists, show "Room not
+- [ ] If someone loads a room page and the room does not exist, show "Room not
       found" error
 - [ ] Add "host" concept:
-  - Only host can start the game when enough players have joined
-  - Only host can play again after the game is finished
+  - Only host can start the game
+  - Only host can restart the game after the game is finished
   - If host leaves, assign a new host
-- [X] Remove user from room when they disconnect (Stream.ensure I think?)
+- [x] Remove user from room when they disconnect (Stream.ensure I think?)
 - [ ] Copy room ID button (use same pattern as Foldkit website)
-- [ ] Add leave room button
+- [ ] Add leave room button (if you want to join a different room)
 - [ ] Move room id input to the right of the label (same as the username input)
 - [ ] When all players leave a room, delete the room
+- [ ] Add "Made with Foldkit and Effect" footer
 
 ## Bugs
 

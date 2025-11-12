@@ -7,11 +7,11 @@ export const getReady = (maybeGameText: Option.Option<string>): Html =>
   div(
     [Class('space-y-6')],
     [
-      div([Class('text-3xl uppercase')], ['Preparing game...']),
+      div([Class('uppercase')], ['Preparing game...']),
       div([Class('h-px bg-terminal-green my-4')], []),
       Option.match(maybeGameText, {
         onNone: () => empty,
-        onSome: (text) => div([Class('text-3xl')], [text]),
+        onSome: (text) => div([], [text]),
       }),
     ],
   )

@@ -21,11 +21,7 @@ const scoreboard = (scoreboard: Shared.Scoreboard) => {
         [Class('border-2 border-terminal-green box-glow')],
         [
           div(
-            [
-              Class(
-                'grid grid-cols-4 gap-4 p-4 bg-terminal-bg border-b-2 border-terminal-green font-terminal text-3xl uppercase',
-              ),
-            ],
+            [Class('grid grid-cols-4 gap-4 p-4 border-b-2 border-terminal-green uppercase')],
             [
               div([], ['Player']),
               div([Class('text-right')], ['WPM']),
@@ -39,9 +35,8 @@ const scoreboard = (scoreboard: Shared.Scoreboard) => {
             return div(
               [
                 Class(
-                  classNames('grid grid-cols-4 gap-4 p-4 font-terminal text-3xl', {
-                    'bg-terminal-bg border-b-2 border-terminal-green':
-                      index < sortedScoreboard.length - 1,
+                  classNames('grid grid-cols-4 gap-4 p-4', {
+                    'border-b-2 border-terminal-green': index < sortedScoreboard.length - 1,
                     'text-terminal-green terminal-glow': isFirst,
                     'text-terminal-green-dim': !isFirst,
                   }),
@@ -65,11 +60,11 @@ export const finished = (maybeScoreboard: Option.Option<Shared.Scoreboard>): Htm
   div(
     [Class('space-y-6')],
     [
-      div([Class('text-3xl uppercase')], ['[Game complete]']),
+      div([Class('uppercase')], ['[Game complete]']),
       Option.match(maybeScoreboard, {
         onNone: () => empty,
         onSome: scoreboard,
       }),
-      div([Class('text-3xl mt-4')], ['> Enter to play again']),
+      div([Class('mt-4')], ['> Enter to play again']),
     ],
   )

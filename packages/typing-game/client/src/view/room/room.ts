@@ -13,22 +13,18 @@ import { waiting } from './waiting'
 
 export const room = (model: Model, roomId: string): Html =>
   div(
-    [Class('min-h-screen bg-terminal-bg font-terminal text-terminal-green p-8')],
+    [Class('min-h-screen p-8')],
     [
       div(
         [Class('max-w-4xl')],
-        [
-          div([Class('text-3xl uppercase')], ['[Room ID]']),
-          div([Class('text-3xl mb-6')], [roomId]),
-          content(model),
-        ],
+        [div([Class('uppercase')], ['[Room ID]']), div([Class('mb-6')], [roomId]), content(model)],
       ),
     ],
   )
 
 const content = ({ maybeRoom, maybeSession, userText }: Model): Html =>
   Option.match(maybeRoom, {
-    onNone: () => div([Class('text-terminal-green text-3xl')], ['Loading session...']),
+    onNone: () => div([], ['Loading session...']),
     onSome: (room: Shared.Room) => {
       const maybeGameText = Option.map(room.maybeGame, ({ text }) => text)
       const maybeWrongCharIndex = Option.flatMap(maybeGameText, findFirstWrongCharIndex(userText))

@@ -7,11 +7,11 @@ export const countdown = (secondsLeft: number, maybeGameText: Option.Option<stri
   div(
     [Class('space-y-6')],
     [
-      div([Class('text-3xl uppercase')], [`Starting in ${secondsLeft}...`]),
+      div([Class('uppercase')], [`Starting in ${secondsLeft}...`]),
       div([Class('h-px bg-terminal-green my-4')], []),
       Option.match(maybeGameText, {
         onNone: () => empty,
-        onSome: (text) => div([Class('font-terminal text-3xl text-terminal-green-dim')], [text]),
+        onSome: (text) => div([Class('text-terminal-green-dim')], [text]),
       }),
     ],
   )

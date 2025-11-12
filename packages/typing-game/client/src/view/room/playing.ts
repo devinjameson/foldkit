@@ -46,28 +46,30 @@ const gameTextWithProgress = (
   gameText: string,
   userText: string,
   maybeWrongCharIndex: Option.Option<number>,
-): Html =>
-  div(
-    [Class('text-3xl')],
-    pipe(gameText, Str.split(''), Array.map(char(userText, maybeWrongCharIndex))),
-  )
+): Html => div([], pipe(gameText, Str.split(''), Array.map(char(userText, maybeWrongCharIndex))))
 
 const char =
   (userText: string, maybeWrongCharIndex: Option.Option<number>) =>
   (char: string, index: number): Html => {
     const userTextLength = Str.length(userText)
 
-    const isWrongChar = Option.exists(maybeWrongCharIndex, (wrongIndex) =>
-      Order.between(Number.Order)(index, { minimum: wrongIndex, maximum: userTextLength - 1 }),
+    const isNext = index === userTextLength && Option.isNone(maybeWrongCharIndex)
+
+    const isWrong = Option.exists(maybeWrongCharIndex, (wrongIndex) =>
+      Order.between(Number.Order)(index, {
+        minimum: wrongIndex,
+        maximum: Number.decrement(userTextLength),
+      }),
     )
 
-    const isNextChar = index === userTextLength && Option.isNone(maybeWrongCharIndex)
+    const isUntyped = index >= userTextLength && !isNext
+    const isCorrect = index < userTextLength && !isWrong
 
     const charClassName = classNames({
-      'char-untyped': index >= userTextLength && !isNextChar,
-      'char-correct': index < userTextLength && !isWrongChar,
-      'char-wrong': isWrongChar,
-      'char-next': isNextChar,
+      'text-terminal-green-dark': isUntyped,
+      'text-terminal-green': isCorrect,
+      'text-terminal-red bg-terminal-red/20': isWrong,
+      'text-terminal-green bg-terminal-green/30': isNext,
     })
 
     return span([Class(charClassName)], [char])
@@ -82,7 +84,7 @@ export const playing = (
   div(
     [Class('space-y-6')],
     [
-      div([Class('text-3xl uppercase')], [`[Time remaining] ${secondsLeft} seconds`]),
+      div([Class('uppercase')], [`[Time remaining] ${secondsLeft} seconds`]),
       div([Class('h-px bg-terminal-green my-4')], []),
       Option.match(maybeGameText, {
         onNone: () => empty,

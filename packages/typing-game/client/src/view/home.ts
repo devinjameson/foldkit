@@ -32,12 +32,12 @@ import {
 
 export const home = (model: Model): Html =>
   div(
-    [Class('min-h-screen bg-terminal-bg font-terminal text-terminal-green p-8')],
+    [Class('min-h-screen p-8')],
     [
       div(
         [Class('max-w-4xl')],
         [
-          div([Class('text-3xl mb-2 uppercase')], ['Miney Miney Tiny Type Town']),
+          div([Class('mb-2 uppercase')], ['Miney Miney Tiny Type Town']),
 
           M.value(model.homeStep).pipe(
             M.tagsExhaustive({
@@ -56,9 +56,7 @@ export const home = (model: Model): Html =>
                               Id(USERNAME_INPUT_ID),
                               Type('text'),
                               Value(username),
-                              Class(
-                                'bg-transparent text-terminal-green font-terminal text-3xl px-0 py-2 outline-none w-full',
-                              ),
+                              Class('bg-transparent px-0 py-2 outline-none w-full'),
                               OnInput((value) => UsernameInputted.make({ value })),
                               OnBlur(UsernameInputBlurred.make()),
                               Autocapitalize('none'),
@@ -66,10 +64,6 @@ export const home = (model: Model): Html =>
                               Autocorrect('off'),
                               Autocomplete('off'),
                             ]),
-                            span(
-                              [Class('blink-cursor inline-block w-3 h-8 bg-terminal-green')],
-                              [],
-                            ),
                           ],
                         ),
                       ],
@@ -126,9 +120,7 @@ export const home = (model: Model): Html =>
                               Id(SESSION_ID_INPUT_ID),
                               Type('text'),
                               Value(sessionId),
-                              Class(
-                                'bg-transparent text-terminal-green font-terminal text-3xl px-0 py-2 outline-none w-full',
-                              ),
+                              Class('bg-transparent px-0 py-2 outline-none w-full'),
                               OnInput((value) => RoomIdInputted.make({ value })),
                               OnBlur(SessionIdInputBlurred.make()),
                               Autocapitalize('none'),
@@ -136,10 +128,6 @@ export const home = (model: Model): Html =>
                               Autocorrect('off'),
                               Autocomplete('off'),
                             ]),
-                            span(
-                              [Class('blink-cursor inline-block w-3 h-8 bg-terminal-green')],
-                              [],
-                            ),
                           ],
                         ),
                       ],

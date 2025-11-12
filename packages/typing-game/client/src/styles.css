@@ -1,33 +1,22 @@
 @import 'tailwindcss';
 
+@theme {
+  --color-terminal-bg: #0a0a0a;
+  --color-terminal-green: #00ff41;
+  --color-terminal-green-dim: #00aa2b;
+  --color-terminal-green-dark: #006622;
+  --color-terminal-red: #ff2200;
+  --color-terminal-red-dim: #aa1500;
+  --font-terminal: 'VT323', monospace;
+}
+
 body {
-  font-family: 'VT323', monospace;
-  background: #0a0a0a;
-  color: #00ff41;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-}
-
-#root {
-  width: 100vw;
-  height: 100vh;
-  position: relative;
-}
-
-input,
-textarea {
-  caret-color: #00ff41;
+  @apply font-terminal bg-terminal-bg text-terminal-green text-3xl m-0 p-0 overflow-hidden;
 }
 
 body::before {
+  @apply fixed top-0 left-0 w-screen h-screen pointer-events-none z-[9999];
   content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  pointer-events: none;
   background: repeating-linear-gradient(
     0deg,
     rgba(0, 0, 0, 0.5) 0px,
@@ -35,7 +24,6 @@ body::before {
     transparent 1px,
     transparent 3px
   );
-  z-index: 9999;
   animation: flicker 0.15s infinite;
 }
 
@@ -49,37 +37,4 @@ body::before {
   100% {
     opacity: 0.97;
   }
-}
-
-@keyframes blink {
-  0%,
-  49% {
-    opacity: 1;
-  }
-  50%,
-  100% {
-    opacity: 0;
-  }
-}
-
-.blink-cursor {
-  animation: blink 1s step-end infinite;
-}
-
-.char-untyped {
-  color: #006622;
-}
-
-.char-correct {
-  color: #00ff41;
-}
-
-.char-wrong {
-  color: #ff2200;
-  background-color: rgba(255, 34, 0, 0.2);
-}
-
-.char-next {
-  color: #00ff41;
-  background-color: rgba(0, 255, 65, 0.3);
 }

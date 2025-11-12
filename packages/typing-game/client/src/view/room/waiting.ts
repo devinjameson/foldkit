@@ -17,10 +17,7 @@ const player = (
   Array.map(players, (player) => {
     const isLocal = isLocalPlayer(player, maybeSession)
 
-    return div(
-      [],
-      [span([Class('font-terminal text-3xl')], [player.username, isLocal ? ' [YOU]' : ''])],
-    )
+    return div([], [span([], [player.username, isLocal ? ' [YOU]' : ''])])
   })
 
 export const waiting = (
@@ -30,8 +27,8 @@ export const waiting = (
   div(
     [],
     [
-      div([Class('text-3xl uppercase uppercase')], ['[Connected users]']),
+      div([Class('uppercase')], ['[Connected users]']),
       div([Class('space-y-2 mb-6')], player(players, maybeSession)),
-      div([Class('text-3xl')], ['> Enter to start game']),
+      div([], ['> Enter to start game']),
     ],
   )
