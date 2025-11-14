@@ -1,9 +1,17 @@
 import * as Shared from '@typing-game/shared'
-import { Array, Option } from 'effect'
+import { Array, Match, Option, flow, pipe } from 'effect'
 import { Html } from 'foldkit/html'
 
 import { RoomPlayerSession } from '../../model'
 import { Class, div, span } from '../html'
+
+type Badge = 'Host' | 'You'
+const allBadges: ReadonlyArray<Badge> = ['Host', 'You']
+const badgeToString = Match.type<Badge>().pipe(
+  Match.when('Host', () => 'host'),
+  Match.when('You', () => 'you'),
+  Match.exhaustive,
+)
 
 const isLocalPlayer = (
   player: Shared.Player,
@@ -12,28 +20,39 @@ const isLocalPlayer = (
 
 const player = (
   players: ReadonlyArray<Shared.Player>,
+  hostId: string,
   maybeSession: Option.Option<RoomPlayerSession>,
 ): Html[] =>
   Array.map(players, (player) => {
-    const isLocal = isLocalPlayer(player, maybeSession)
-
-    return div(
-      [],
-      isLocal
-        ? [span([], [player.username]), span([Class('uppercase')], [' [you]'])]
-        : [span([], [player.username])],
+    const badges = pipe(
+      allBadges,
+      Array.filter(
+        flow(
+          Match.value,
+          Match.when('Host', () => player.id === hostId),
+          Match.when('You', () => isLocalPlayer(player, maybeSession)),
+          Match.exhaustive,
+        ),
+      ),
+      Array.map((badge) => span([Class('uppercase')], [` [${badgeToString(badge)}]`])),
     )
+
+    return div([], [span([], [player.username]), ...badges])
   })
 
 export const waiting = (
   players: ReadonlyArray<Shared.Player>,
+  hostId: string,
   maybeSession: Option.Option<RoomPlayerSession>,
-): Html =>
-  div(
+): Html => {
+  const isLocalPlayerHost = Option.exists(maybeSession, (session) => session.player.id === hostId)
+
+  return div(
     [],
     [
-      div([Class('uppercase')], ['[Connected users]']),
-      div([Class('space-y-2 mb-12')], player(players, maybeSession)),
-      div([], ['> Enter to start game']),
+      div([Class('uppercase mb-2')], ['[Connected users]']),
+      div([Class('space-y-2 mb-12')], player(players, hostId, maybeSession)),
+      ...(isLocalPlayerHost ? [div([], ['> Enter to start game'])] : []),
     ],
   )
+}

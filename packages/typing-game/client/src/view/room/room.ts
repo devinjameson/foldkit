@@ -31,12 +31,12 @@ const content = ({ maybeRoom, maybeSession, userText }: Model): Html =>
 
       return M.value(room.status).pipe(
         M.tagsExhaustive({
-          Waiting: () => waiting(room.players, maybeSession),
+          Waiting: () => waiting(room.players, room.hostId, maybeSession),
           GetReady: () => getReady(maybeGameText),
           Countdown: ({ secondsLeft }) => countdown(secondsLeft, maybeGameText),
           Playing: ({ secondsLeft }) =>
             playing(secondsLeft, maybeGameText, userText, maybeWrongCharIndex),
-          Finished: () => finished(room.maybeScoreboard),
+          Finished: () => finished(room.maybeScoreboard, room.hostId, maybeSession),
         }),
       )
     },

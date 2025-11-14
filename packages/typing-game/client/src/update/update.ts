@@ -14,6 +14,7 @@ import {
 import { SESSION_ID_INPUT_ID, USERNAME_INPUT_ID } from '../constant'
 import { CreateRoomClicked, Message, NoOp, StartGameRequested } from '../message'
 import { EnterSessionId, EnterUsername, HOME_ACTIONS, Model, SelectAction } from '../model'
+import { optionWhen } from '../optionWhen'
 import { urlToAppRoute } from '../route'
 import { validateUserTextInput } from '../validation'
 import { handleRoomUpdated } from './handleRoomUpdated'
@@ -52,20 +53,46 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
               M.tag('Waiting', () =>
                 M.value(key).pipe(
                   withUpdateReturn,
-                  M.when('Enter', () => [
-                    model,
-                    [Effect.succeed(StartGameRequested.make({ roomId: room.id }))],
-                  ]),
+                  M.when('Enter', () =>
+                    Option.match(model.maybeSession, {
+                      onSome: (session) => {
+                        const isHost = session.player.id === room.hostId
+                        const startGameRequested = optionWhen(isHost, () =>
+                          Effect.succeed(
+                            StartGameRequested.make({
+                              roomId: room.id,
+                              playerId: session.player.id,
+                            }),
+                          ),
+                        )
+                        return [model, Array.getSomes([startGameRequested])]
+                      },
+                      onNone: () => [model, []],
+                    }),
+                  ),
                   M.orElse(() => [model, []]),
                 ),
               ),
               M.tag('Finished', () =>
                 M.value(key).pipe(
                   withUpdateReturn,
-                  M.when('Enter', () => [
-                    model,
-                    [Effect.succeed(StartGameRequested.make({ roomId: room.id }))],
-                  ]),
+                  M.when('Enter', () =>
+                    Option.match(model.maybeSession, {
+                      onSome: (session) => {
+                        const isHost = session.player.id === room.hostId
+                        const startGameRequested = optionWhen(isHost, () =>
+                          Effect.succeed(
+                            StartGameRequested.make({
+                              roomId: room.id,
+                              playerId: session.player.id,
+                            }),
+                          ),
+                        )
+                        return [model, Array.getSomes([startGameRequested])]
+                      },
+                      onNone: () => [model, []],
+                    }),
+                  ),
                   M.orElse(() => [model, []]),
                 ),
               ),
@@ -253,7 +280,7 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
         return [model, []]
       },
 
-      StartGameRequested: ({ roomId }) => [model, [startGame(roomId)]],
+      StartGameRequested: ({ roomId, playerId }) => [model, [startGame(roomId, playerId)]],
 
       SessionLoaded: ({ maybeSession }) => [
         evo(model, {

@@ -27,7 +27,7 @@ export const RoomUpdated = ts('RoomUpdated', {
   maybePlayerProgress: S.Option(Shared.PlayerProgress),
 })
 const RoomStreamError = ts('RoomStreamError', { error: S.String })
-const StartGameRequested = ts('StartGameRequested', { roomId: S.String })
+const StartGameRequested = ts('StartGameRequested', { roomId: S.String, playerId: S.String })
 const SessionLoaded = ts('SessionLoaded', { maybeSession: S.Option(RoomPlayerSession) })
 
 export type NoOp = typeof NoOp.Type

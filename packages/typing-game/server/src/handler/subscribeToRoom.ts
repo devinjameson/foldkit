@@ -19,7 +19,7 @@ import { ROOM_UPDATE_THROTTLE_MS } from '../game.js'
 import { getPlayerProgress } from '../scoring.js'
 import { PendingCleanupPlayerIds, ProgressByGamePlayer } from '../store.js'
 
-const DISCONNECT_CLEANUP_DELAY: DurationInput = '5 seconds'
+const DISCONNECT_CLEANUP_DELAY: DurationInput = '2 seconds'
 
 const removePlayerFromRoom = (
   roomByIdRef: SubscriptionRef.SubscriptionRef<Shared.RoomById>,
@@ -34,8 +34,22 @@ const removePlayerFromRoom = (
           pipe(
             room.players,
             Array.filter((player) => player.id !== playerId),
-            (nextPlayers) =>
-              HashMap.set(roomById, roomId, Struct.evolve(room, { players: () => nextPlayers })),
+            (nextPlayers) => {
+              const isHostLeaving = room.hostId === playerId
+              const nextHostId =
+                isHostLeaving && Array.isNonEmptyArray(nextPlayers)
+                  ? Array.headNonEmpty(nextPlayers).id
+                  : room.hostId
+
+              return HashMap.set(
+                roomById,
+                roomId,
+                Struct.evolve(room, {
+                  players: () => nextPlayers,
+                  hostId: () => nextHostId,
+                }),
+              )
+            },
           ),
       }),
     ),

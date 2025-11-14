@@ -23,6 +23,7 @@ export const createRoom =
       const newRoom: Shared.Room = {
         id: roomId,
         players: [player],
+        hostId: playerId,
         status: Shared.Waiting.make(),
         maybeGame: Option.none(),
         maybeScoreboard: Option.none(),

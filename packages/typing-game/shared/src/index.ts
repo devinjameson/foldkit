@@ -59,6 +59,7 @@ export type Scoreboard = typeof Scoreboard.Type
 export const Room = S.Struct({
   id: S.String,
   players: S.Array(Player),
+  hostId: S.String,
   status: GameStatus,
   maybeGame: S.Option(Game),
   maybeScoreboard: S.Option(Scoreboard),
@@ -72,6 +73,10 @@ export type RoomById = typeof RoomById.Type
 
 export class RoomNotFoundError extends S.TaggedError<RoomNotFoundError>()('RoomNotFoundError', {
   roomId: S.String,
+}) {}
+
+export class UnauthorizedError extends S.TaggedError<UnauthorizedError>()('UnauthorizedError', {
+  message: S.String,
 }) {}
 
 export const RoomAndPlayer = S.Struct({ player: Player, room: Room })
@@ -108,9 +113,9 @@ export const subscribeToRoomRpc = Rpc.make('subscribeToRoom', {
 })
 
 export const startGameRpc = Rpc.make('startGame', {
-  payload: S.Struct({ roomId: S.String }),
+  payload: S.Struct({ roomId: S.String, playerId: S.String }),
   success: S.Void,
-  error: RoomNotFoundError,
+  error: S.Union(RoomNotFoundError, UnauthorizedError),
 })
 
 export const updatePlayerProgressRpc = Rpc.make('updatePlayerProgress', {

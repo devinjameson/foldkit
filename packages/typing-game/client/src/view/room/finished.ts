@@ -3,7 +3,8 @@ import classNames from 'classnames'
 import { Array, Number, Option, Order, pipe } from 'effect'
 import { Html } from 'foldkit/html'
 
-import { Class, div, empty } from '../html'
+import { RoomPlayerSession } from '../../model'
+import { Class, div, empty, span } from '../html'
 
 const byHighestWpm = pipe(
   Number.Order,
@@ -11,7 +12,7 @@ const byHighestWpm = pipe(
   Order.reverse,
 )
 
-const scoreboard = (scoreboard: Shared.Scoreboard) => {
+const scoreboardView = (scoreboard: Shared.Scoreboard, hostId: string) => {
   const sortedScoreboard = Array.sort(scoreboard, byHighestWpm)
 
   return div(
@@ -31,6 +32,7 @@ const scoreboard = (scoreboard: Shared.Scoreboard) => {
           ),
           ...Array.map(sortedScoreboard, (score, index) => {
             const isFirst = index === 0
+            const isHost = score.playerId === hostId
 
             return div(
               [
@@ -42,7 +44,14 @@ const scoreboard = (scoreboard: Shared.Scoreboard) => {
                 ),
               ],
               [
-                div([], [isFirst ? '> ' : '  ', score.username]),
+                div(
+                  [],
+                  [
+                    isFirst ? '> ' : '  ',
+                    score.username,
+                    ...(isHost ? [span([Class('uppercase')], [' [host]'])] : []),
+                  ],
+                ),
                 div([Class('text-right')], [score.wpm.toFixed(1)]),
                 div([Class('text-right')], [score.accuracy.toFixed(1) + '%']),
                 div([Class('text-right')], [String(score.charsTyped)]),
@@ -55,15 +64,22 @@ const scoreboard = (scoreboard: Shared.Scoreboard) => {
   )
 }
 
-export const finished = (maybeScoreboard: Option.Option<Shared.Scoreboard>): Html =>
-  div(
+export const finished = (
+  maybeScoreboard: Option.Option<Shared.Scoreboard>,
+  hostId: string,
+  maybeSession: Option.Option<RoomPlayerSession>,
+): Html => {
+  const isLocalPlayerHost = Option.exists(maybeSession, (session) => session.player.id === hostId)
+
+  return div(
     [Class('space-y-6')],
     [
       div([Class('uppercase')], ['[Game complete]']),
       Option.match(maybeScoreboard, {
         onNone: () => empty,
-        onSome: scoreboard,
+        onSome: (scoreboard) => scoreboardView(scoreboard, hostId),
       }),
-      div([Class('mt-4')], ['> Enter to play again']),
+      ...(isLocalPlayerHost ? [div([Class('mt-4')], ['> Enter to play again'])] : []),
     ],
   )
+}

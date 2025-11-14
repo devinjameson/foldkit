@@ -21,6 +21,12 @@ export const startGame =
       const roomById = yield* SubscriptionRef.get(roomByIdRef)
       const room = yield* Rooms.getById(roomById, payload.roomId)
 
+      if (room.hostId !== payload.playerId) {
+        return yield* Effect.fail(
+          new Shared.UnauthorizedError({ message: 'Only the host can start the game' }),
+        )
+      }
+
       const gameId = yield* Effect.sync(() => randomUUID())
       const gameText = yield* generateGameText(room.usedGameTexts)
 

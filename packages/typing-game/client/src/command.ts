@@ -43,10 +43,10 @@ export const joinRoom = (
     Effect.provide(RoomsClient.Default),
   )
 
-export const startGame = (roomId: string): Runtime.Command<NoOp> =>
+export const startGame = (roomId: string, playerId: string): Runtime.Command<NoOp> =>
   Effect.gen(function* () {
     const client = yield* RoomsClient
-    yield* client.startGame({ roomId })
+    yield* client.startGame({ roomId, playerId })
     return NoOp.make()
   }).pipe(
     Effect.catchAll(() => Effect.succeed(NoOp.make())),
