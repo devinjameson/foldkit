@@ -10,7 +10,9 @@ import {
   NoOp,
   RoomCreated,
   RoomError,
+  RoomFetched,
   RoomJoined,
+  RoomNotFound,
   RoomStreamError,
   RoomUpdated,
   SessionLoaded,
@@ -40,6 +42,16 @@ export const joinRoom = (
     return RoomJoined.make({ roomId: room.id, player })
   }).pipe(
     Effect.catchAll((error) => Effect.succeed(RoomError.make({ error: String(error) }))),
+    Effect.provide(RoomsClient.Default),
+  )
+
+export const getRoomById = (roomId: string): Runtime.Command<RoomFetched | RoomNotFound> =>
+  Effect.gen(function* () {
+    const client = yield* RoomsClient
+    const room = yield* client.getRoomById({ roomId })
+    return RoomFetched.make({ room })
+  }).pipe(
+    Effect.catchAll(() => Effect.succeed(RoomNotFound.make({ roomId }))),
     Effect.provide(RoomsClient.Default),
   )
 
@@ -142,15 +154,33 @@ export const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Mod
   },
 
   keyboard: {
-    modelToDeps: (model: Model) => ({
-      isOnSelectActionStep: model.route._tag === 'Home' && model.homeStep._tag === 'SelectAction',
-      isInWaitingRoom: Option.exists(model.maybeRoom, ({ status }) => status._tag === 'Waiting'),
-      isInFinishedRoom: Option.exists(model.maybeRoom, ({ status }) => status._tag === 'Finished'),
-      roomId: model.maybeRoom.pipe(
-        Option.filter(({ status }) => status._tag === 'Waiting' || status._tag === 'Finished'),
-        Option.map(({ id }) => id),
-      ),
-    }),
+    modelToDeps: (model: Model) => {
+      const hasSession = Option.isSome(model.maybeSession)
+
+      return {
+        isOnSelectActionStep: model.route._tag === 'Home' && model.homeStep._tag === 'SelectAction',
+        isInWaitingRoom:
+          hasSession &&
+          M.value(model.roomRemoteData).pipe(
+            M.tag('Ok', ({ data }) => data.status._tag === 'Waiting'),
+            M.orElse(() => false),
+          ),
+        isInFinishedRoom:
+          hasSession &&
+          M.value(model.roomRemoteData).pipe(
+            M.tag('Ok', ({ data }) => data.status._tag === 'Finished'),
+            M.orElse(() => false),
+          ),
+        roomId: M.value(model.roomRemoteData).pipe(
+          M.tag('Ok', ({ data }) =>
+            data.status._tag === 'Waiting' || data.status._tag === 'Finished'
+              ? Option.some(data.id)
+              : Option.none(),
+          ),
+          M.orElse(() => Option.none()),
+        ),
+      }
+    },
     depsToStream: (deps: {
       isOnSelectActionStep: boolean
       isInWaitingRoom: boolean

@@ -11,9 +11,16 @@ import {
   startGame,
   updatePlayerProgress,
 } from '../command'
-import { SESSION_ID_INPUT_ID, USERNAME_INPUT_ID } from '../constant'
+import { ROOM_ID_INPUT_ID, ROOM_PAGE_USERNAME_INPUT_ID, USERNAME_INPUT_ID } from '../constant'
 import { CreateRoomClicked, Message, NoOp, StartGameRequested } from '../message'
-import { EnterRoomId, EnterUsername, HOME_ACTIONS, Model, SelectAction } from '../model'
+import {
+  EnterRoomId,
+  EnterUsername,
+  HOME_ACTIONS,
+  Model,
+  RoomRemoteData,
+  SelectAction,
+} from '../model'
 import { optionWhen } from '../optionWhen'
 import { urlToAppRoute } from '../route'
 import { validateUserTextInput } from '../validation'
@@ -46,8 +53,9 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
         ),
 
       KeyPressed: ({ key }) =>
-        Option.match(model.maybeRoom, {
-          onSome: (room) =>
+        M.value(model.roomRemoteData).pipe(
+          withUpdateReturn,
+          M.tag('Ok', ({ data: room }) =>
             M.value(room.status).pipe(
               withUpdateReturn,
               M.tag('Waiting', () =>
@@ -98,7 +106,8 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
               ),
               M.orElse(() => [model, []]),
             ),
-          onNone: () =>
+          ),
+          M.orElse(() =>
             M.value(model.homeStep).pipe(
               withUpdateReturn,
               M.tag('SelectAction', ({ username, selectedAction }) => {
@@ -152,7 +161,7 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
                               roomIdValidationId: 0,
                             }),
                         }),
-                        [Task.focus(`#${SESSION_ID_INPUT_ID}`, () => NoOp.make())],
+                        [Task.focus(`#${ROOM_ID_INPUT_ID}`, () => NoOp.make())],
                       ]),
                       M.when('ChangeUsername', () => [
                         evo(model, {
@@ -168,7 +177,8 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
               }),
               M.orElse(() => [model, []]),
             ),
-        }),
+          ),
+        ),
 
       LinkClicked: ({ request }) =>
         M.value(request).pipe(
@@ -204,7 +214,12 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
 
       UsernameInputBlurred: () => [model, [Task.focus(`#${USERNAME_INPUT_ID}`, () => NoOp.make())]],
 
-      RoomIdInputBlurred: () => [model, [Task.focus(`#${SESSION_ID_INPUT_ID}`, () => NoOp.make())]],
+      RoomIdInputBlurred: () => [model, [Task.focus(`#${ROOM_ID_INPUT_ID}`, () => NoOp.make())]],
+
+      RoomPageUsernameInputBlurred: () => [
+        model,
+        [Task.focus(`#${ROOM_PAGE_USERNAME_INPUT_ID}`, () => NoOp.make())],
+      ],
 
       RoomIdInputted: ({ value }) =>
         M.value(model.homeStep).pipe(
@@ -272,8 +287,8 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
 
       RoomUpdated: handleRoomUpdated(model),
 
-      RoomStreamError: ({ error }) => {
-        console.error('Room stream error:', error)
+      RoomStreamError: ({ error: _error }) => {
+        // TODO: ADd handling here
         return [model, []]
       },
 
@@ -287,8 +302,13 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
       ],
 
       UserTextInputted: ({ value }) => {
+        const maybeRoom = M.value(model.roomRemoteData).pipe(
+          M.tag('Ok', ({ data }) => data),
+          M.option,
+        )
+
         const maybeGameText = pipe(
-          model.maybeRoom,
+          maybeRoom,
           Option.flatMap(({ maybeGame }) => maybeGame),
           Option.map(({ text }) => text),
         )
@@ -299,10 +319,7 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
         const nextCharsTyped = model.charsTyped + newCharsTyped
 
         const commands = pipe(
-          Option.all([
-            model.maybeSession,
-            Option.flatMap(model.maybeRoom, ({ maybeGame }) => maybeGame),
-          ]),
+          Option.all([model.maybeSession, Option.flatMap(maybeRoom, ({ maybeGame }) => maybeGame)]),
           Option.map(([session, game]) =>
             updatePlayerProgress(session.player.id, game.id, userText, nextCharsTyped),
           ),
@@ -315,6 +332,43 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
           }),
           Array.fromOption(commands),
         ]
+      },
+
+      RoomFetched: ({ room }) => {
+        const maybeFocusRoomUsernameInput = Option.match(model.maybeSession, {
+          onNone: () =>
+            Option.some(Task.focus(`#${ROOM_PAGE_USERNAME_INPUT_ID}`, () => NoOp.make())),
+          onSome: () => Option.none(),
+        })
+
+        return [
+          evo(model, {
+            roomRemoteData: () => RoomRemoteData.Ok.make({ data: room }),
+          }),
+          Array.getSomes([maybeFocusRoomUsernameInput]),
+        ]
+      },
+
+      RoomNotFound: () => [
+        evo(model, {
+          roomRemoteData: () => RoomRemoteData.Error.make({ error: 'Room not found' }),
+        }),
+        [],
+      ],
+
+      RoomPageUsernameInputted: ({ value }) => [
+        evo(model, {
+          roomPageUsername: () => value,
+          roomFormError: () => Option.none(),
+        }),
+        [],
+      ],
+
+      JoinRoomFromPageSubmitted: ({ roomId }) => {
+        if (Str.isNonEmpty(model.roomPageUsername)) {
+          return [model, [joinRoom(model.roomPageUsername, roomId)]]
+        }
+        return [model, []]
       },
     }),
   )

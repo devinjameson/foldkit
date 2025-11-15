@@ -17,6 +17,7 @@ const RoomIdInputted = ts('RoomIdInputted', { value: S.String })
 const UserTextInputted = ts('UserTextInputted', { value: S.String })
 const UsernameInputBlurred = ts('UsernameInputBlurred')
 const RoomIdInputBlurred = ts('RoomIdInputBlurred')
+const RoomPageUsernameInputBlurred = ts('RoomPageUsernameInputBlurred')
 const CreateRoomClicked = ts('CreateRoomClicked')
 const JoinRoomClicked = ts('JoinRoomClicked')
 const RoomCreated = ts('RoomCreated', { roomId: S.String, player: Shared.Player })
@@ -29,6 +30,10 @@ export const RoomUpdated = ts('RoomUpdated', {
 const RoomStreamError = ts('RoomStreamError', { error: S.String })
 const StartGameRequested = ts('StartGameRequested', { roomId: S.String, playerId: S.String })
 const SessionLoaded = ts('SessionLoaded', { maybeSession: S.Option(RoomPlayerSession) })
+const RoomFetched = ts('RoomFetched', { room: Shared.Room })
+const RoomNotFound = ts('RoomNotFound', { roomId: S.String })
+const RoomPageUsernameInputted = ts('RoomPageUsernameInputted', { value: S.String })
+const JoinRoomFromPageSubmitted = ts('JoinRoomFromPageSubmitted', { roomId: S.String })
 
 export type NoOp = typeof NoOp.Type
 export type LinkClicked = typeof LinkClicked.Type
@@ -40,6 +45,7 @@ export type RoomIdInputted = typeof RoomIdInputted.Type
 export type UserTextInputted = typeof UserTextInputted.Type
 export type UsernameInputBlurred = typeof UsernameInputBlurred.Type
 export type RoomIdInputBlurred = typeof RoomIdInputBlurred.Type
+export type RoomPageUsernameInputBlurred = typeof RoomPageUsernameInputBlurred.Type
 export type CreateRoomClicked = typeof CreateRoomClicked.Type
 export type JoinRoomClicked = typeof JoinRoomClicked.Type
 export type RoomCreated = typeof RoomCreated.Type
@@ -49,6 +55,10 @@ export type RoomUpdated = typeof RoomUpdated.Type
 export type RoomStreamError = typeof RoomStreamError.Type
 export type StartGameRequested = typeof StartGameRequested.Type
 export type SessionLoaded = typeof SessionLoaded.Type
+export type RoomFetched = typeof RoomFetched.Type
+export type RoomNotFound = typeof RoomNotFound.Type
+export type RoomPageUsernameInputted = typeof RoomPageUsernameInputted.Type
+export type JoinRoomFromPageSubmitted = typeof JoinRoomFromPageSubmitted.Type
 
 export const Message = S.Union(
   NoOp,
@@ -61,6 +71,7 @@ export const Message = S.Union(
   UserTextInputted,
   UsernameInputBlurred,
   RoomIdInputBlurred,
+  RoomPageUsernameInputBlurred,
   CreateRoomClicked,
   JoinRoomClicked,
   RoomCreated,
@@ -70,25 +81,34 @@ export const Message = S.Union(
   RoomStreamError,
   StartGameRequested,
   SessionLoaded,
+  RoomFetched,
+  RoomNotFound,
+  RoomPageUsernameInputted,
+  JoinRoomFromPageSubmitted,
 )
 export type Message = typeof Message.Type
 
 export {
   CreateRoomClicked,
   JoinRoomClicked,
+  JoinRoomFromPageSubmitted,
   KeyPressed,
   LinkClicked,
   RoomCreated,
   RoomError,
+  RoomFetched,
+  RoomIdInputBlurred,
   RoomIdInputted,
   RoomJoined,
+  RoomNotFound,
+  RoomPageUsernameInputBlurred,
+  RoomPageUsernameInputted,
   RoomStreamError,
-  RoomIdInputBlurred,
   SessionLoaded,
   StartGameRequested,
   UrlChanged,
   UsernameFormSubmitted,
   UsernameInputBlurred,
-  UserTextInputted,
   UsernameInputted,
+  UserTextInputted,
 }

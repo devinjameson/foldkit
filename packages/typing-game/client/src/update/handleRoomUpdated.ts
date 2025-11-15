@@ -1,11 +1,11 @@
 import * as Shared from '@typing-game/shared'
-import { Array, Data, Option, String as Str } from 'effect'
+import { Array, Data, Match as M, Option, String as Str } from 'effect'
 import { Runtime, Task } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
 import { USER_TEXT_INPUT_ID } from '../constant'
 import { Message, NoOp, RoomUpdated } from '../message'
-import { Model } from '../model'
+import { Model, RoomRemoteData } from '../model'
 import { optionWhen } from '../optionWhen'
 
 export const handleRoomUpdated =
@@ -14,10 +14,13 @@ export const handleRoomUpdated =
     room,
     maybePlayerProgress,
   }: RoomUpdated): [Model, ReadonlyArray<Runtime.Command<Message>>] => {
-    const hadRoom = Option.isSome(model.maybeRoom)
-    const hadStatusPlaying = Option.exists(
-      model.maybeRoom,
-      ({ status }) => status._tag === 'Playing',
+    const hadRoom = M.value(model.roomRemoteData).pipe(
+      M.tag('Ok', () => true),
+      M.orElse(() => false),
+    )
+    const hadStatusPlaying = M.value(model.roomRemoteData).pipe(
+      M.tag('Ok', ({ data }) => data.status._tag === 'Playing'),
+      M.orElse(() => false),
     )
     const isStatusPlaying = room.status._tag === 'Playing'
 
@@ -57,7 +60,7 @@ export const handleRoomUpdated =
 
     return [
       evo(model, {
-        maybeRoom: () => Option.some(room),
+        roomRemoteData: () => RoomRemoteData.Ok.make({ data: room }),
         userText: () => nextUserText,
         charsTyped: () => nextCharsTyped,
       }),

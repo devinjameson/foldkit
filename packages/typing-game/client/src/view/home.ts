@@ -1,7 +1,7 @@
 import { Array, Match as M, Option } from 'effect'
 import { Html } from 'foldkit/html'
 
-import { SESSION_ID_INPUT_ID, USERNAME_INPUT_ID } from '../constant'
+import { ROOM_ID_INPUT_ID, USERNAME_INPUT_ID } from '../constant'
 import {
   JoinRoomClicked,
   RoomIdInputBlurred,
@@ -99,8 +99,9 @@ const action =
   (homeAction: HomeAction): Html =>
     div(
       [Class('whitespace-pre-wrap')],
-      [selectedAction === homeAction ? '> ' : '  ', homeActionToLabel(selectedAction)],
+      [selectedAction === homeAction ? '> ' : '  ', homeActionToLabel(homeAction)],
     )
+
 const enterRoomId = ({ roomId }: EnterRoomId): Html =>
   form(
     [OnSubmit(JoinRoomClicked.make())],
@@ -113,7 +114,7 @@ const enterRoomId = ({ roomId }: EnterRoomId): Html =>
             [Class('flex items-center gap-2 flex-1')],
             [
               input([
-                Id(SESSION_ID_INPUT_ID),
+                Id(ROOM_ID_INPUT_ID),
                 Type('text'),
                 Value(roomId),
                 Class('bg-transparent px-0 py-2 outline-none w-full'),
@@ -136,7 +137,7 @@ const maybeErrorMessage = (maybeRoomFormError: Option.Option<string>) =>
     onNone: () => empty,
     onSome: (errorMessage) =>
       div(
-        [Class('mt-6 border-2 border-terminal-red p-4')],
+        [Class('mt-6')],
         [
           span([Class('text-terminal-red uppercase')], ['[Error] ']),
           span([Class('text-terminal-red')], [errorMessage]),
