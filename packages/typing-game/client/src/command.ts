@@ -6,6 +6,8 @@ import { pushUrl } from 'foldkit/navigation'
 
 import { ROOM_PLAYER_SESSION_KEY } from './constant'
 import {
+  CopyRoomIdSuccess,
+  HideRoomIdCopiedIndicator,
   KeyPressed,
   NoOp,
   RoomCreated,
@@ -115,6 +117,20 @@ export const updatePlayerProgress = (
     Effect.catchAll(() => Effect.succeed(NoOp.make())),
     Effect.provide(RoomsClient.Default),
   )
+
+export const copyRoomIdToClipboard = (roomId: string): Runtime.Command<CopyRoomIdSuccess | NoOp> =>
+  Effect.tryPromise({
+    try: () => navigator.clipboard.writeText(roomId),
+    catch: () => new Error('Failed to copy to clipboard'),
+  }).pipe(
+    Effect.as(CopyRoomIdSuccess.make()),
+    Effect.catchAll(() => Effect.succeed(NoOp.make())),
+  )
+
+const COPY_INDICATOR_DURATION = '2 seconds'
+
+export const hideRoomIdCopiedIndicator = (): Runtime.Command<HideRoomIdCopiedIndicator> =>
+  Effect.sleep(COPY_INDICATOR_DURATION).pipe(Effect.as(HideRoomIdCopiedIndicator.make()))
 
 const CommandStreamsDeps = S.Struct({
   roomSubscription: S.Option(S.Struct({ roomId: S.String, playerId: S.String })),

@@ -62,5 +62,6 @@ export const Model = S.Struct({
   userText: S.String,
   charsTyped: S.Number,
   roomPageUsername: S.String,
+  isRoomIdCopyIndicatorVisible: S.Boolean,
 })
 export type Model = typeof Model.Type

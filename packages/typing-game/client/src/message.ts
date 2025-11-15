@@ -34,6 +34,9 @@ const RoomFetched = ts('RoomFetched', { room: Shared.Room })
 const RoomNotFound = ts('RoomNotFound', { roomId: S.String })
 const RoomPageUsernameInputted = ts('RoomPageUsernameInputted', { value: S.String })
 const JoinRoomFromPageSubmitted = ts('JoinRoomFromPageSubmitted', { roomId: S.String })
+const CopyRoomIdClicked = ts('CopyRoomIdClicked', { roomId: S.String })
+const CopyRoomIdSuccess = ts('CopyRoomIdSuccess')
+const HideRoomIdCopiedIndicator = ts('HideRoomIdCopiedIndicator')
 
 export type NoOp = typeof NoOp.Type
 export type LinkClicked = typeof LinkClicked.Type
@@ -59,6 +62,9 @@ export type RoomFetched = typeof RoomFetched.Type
 export type RoomNotFound = typeof RoomNotFound.Type
 export type RoomPageUsernameInputted = typeof RoomPageUsernameInputted.Type
 export type JoinRoomFromPageSubmitted = typeof JoinRoomFromPageSubmitted.Type
+export type CopyRoomIdClicked = typeof CopyRoomIdClicked.Type
+export type CopyRoomIdSuccess = typeof CopyRoomIdSuccess.Type
+export type HideRoomIdCopiedIndicator = typeof HideRoomIdCopiedIndicator.Type
 
 export const Message = S.Union(
   NoOp,
@@ -85,11 +91,17 @@ export const Message = S.Union(
   RoomNotFound,
   RoomPageUsernameInputted,
   JoinRoomFromPageSubmitted,
+  CopyRoomIdClicked,
+  CopyRoomIdSuccess,
+  HideRoomIdCopiedIndicator,
 )
 export type Message = typeof Message.Type
 
 export {
+  CopyRoomIdClicked,
+  CopyRoomIdSuccess,
   CreateRoomClicked,
+  HideRoomIdCopiedIndicator,
   JoinRoomClicked,
   JoinRoomFromPageSubmitted,
   KeyPressed,

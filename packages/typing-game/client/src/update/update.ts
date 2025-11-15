@@ -4,7 +4,9 @@ import { load, pushUrl } from 'foldkit/navigation'
 import { evo } from 'foldkit/struct'
 
 import {
+  copyRoomIdToClipboard,
   createRoom,
+  hideRoomIdCopiedIndicator,
   joinRoom,
   navigateToRoom,
   savePlayerToSessionStorage,
@@ -370,5 +372,24 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
         }
         return [model, []]
       },
+
+      CopyRoomIdClicked: ({ roomId }) => [model, [copyRoomIdToClipboard(roomId)]],
+
+      CopyRoomIdSuccess: () =>
+        model.isRoomIdCopyIndicatorVisible
+          ? [model, []]
+          : [
+              evo(model, {
+                isRoomIdCopyIndicatorVisible: () => true,
+              }),
+              [hideRoomIdCopiedIndicator()],
+            ],
+
+      HideRoomIdCopiedIndicator: () => [
+        evo(model, {
+          isRoomIdCopyIndicatorVisible: () => false,
+        }),
+        [],
+      ],
     }),
   )

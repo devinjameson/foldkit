@@ -4,30 +4,35 @@ import { Html } from 'foldkit/html'
 
 import { ROOM_PAGE_USERNAME_INPUT_ID } from '../../constant'
 import {
+  CopyRoomIdClicked,
   JoinRoomFromPageSubmitted,
   RoomPageUsernameInputBlurred,
   RoomPageUsernameInputted,
 } from '../../message'
-import { Model } from '../../model'
+import { Model, RoomPlayerSession } from '../../model'
 import { findFirstWrongCharIndex } from '../../validation'
 import {
+  AriaLabel,
   Autocapitalize,
   Autocomplete,
   Autocorrect,
   Class,
   Id,
   OnBlur,
+  OnClick,
   OnInput,
   OnSubmit,
   Spellcheck,
   Type,
   Value,
+  button,
   div,
   empty,
   form,
   input,
   span,
 } from '../html'
+import { Icon } from '../icon'
 import { countdown } from './countdown'
 import { finished } from './finished'
 import { getReady } from './getReady'
@@ -36,8 +41,30 @@ import { waiting } from './waiting'
 
 export const room = (model: Model, roomId: string): Html => {
   const maybeError = M.value(model.roomRemoteData).pipe(
-    M.tag('Error', ({ error }) => Option.some(error)),
-    M.orElse(() => Option.none()),
+    M.tag('Error', ({ error }) => error),
+    M.option,
+  )
+
+  const copiedIndicator = model.isRoomIdCopyIndicatorVisible
+    ? div(
+        [
+          Class(
+            'text-lg rounded py-1 px-2 font-medium bg-terminal-green-dim text-terminal-bg uppercase',
+          ),
+        ],
+        ['Copied'],
+      )
+    : empty
+
+  const copyButton = button(
+    [
+      Class(
+        'p-2 rounded hover:bg-terminal-green-dim hover:text-terminal-bg transition text-terminal-green',
+      ),
+      AriaLabel('Copy room ID'),
+      OnClick(CopyRoomIdClicked.make({ roomId })),
+    ],
+    [Icon.copy()],
   )
 
   return div(
@@ -47,7 +74,10 @@ export const room = (model: Model, roomId: string): Html => {
         [Class('max-w-4xl')],
         [
           div([Class('uppercase')], ['[Room id]']),
-          div([Class('mb-12')], [roomId]),
+          div(
+            [Class('mb-12 flex items-center gap-2')],
+            [span([], [roomId]), copyButton, copiedIndicator],
+          ),
           content(model, roomId),
           maybeErrorMessage(maybeError),
         ],
@@ -74,7 +104,7 @@ const content = (
 
 const gameContent = (
   room: Shared.Room,
-  maybeSession: Option.Option<any>,
+  maybeSession: Option.Option<RoomPlayerSession>,
   userText: string,
 ): Html => {
   const maybeGameText = Option.map(room.maybeGame, ({ text }) => text)

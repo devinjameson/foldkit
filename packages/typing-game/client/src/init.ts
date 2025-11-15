@@ -38,6 +38,7 @@ export const init: Runtime.ApplicationInit<Model, Message> = (url: Url.Url) => {
       userText: '',
       charsTyped: 0,
       roomPageUsername: '',
+      isRoomIdCopyIndicatorVisible: false,
     },
     commands,
   ]
