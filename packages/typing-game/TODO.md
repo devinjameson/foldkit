@@ -2,22 +2,22 @@
 
 ## Features
 
-- [X] Play again functionality (after game finishes)
-- [X] Do not repeat game texts in the same room until all have been used
-- [X] More game texts (variety of passages)
-- [X] Themed UI - retro glowing green with dark background
+- [x] Play again functionality (after game finishes)
+- [x] Do not repeat game texts in the same room until all have been used
+- [x] More game texts (variety of passages)
+- [x] Themed UI - retro glowing green with dark background
 - [ ] If someone loads a room page e.g. /room/noble-iron-fair and they are not
       in that room, they should see a username input field and a "Join Room" button
 - [ ] If someone loads a room page and the room does not exist, show "Room not
       found" error
-- [X] Add "host" concept:
+- [x] Add "host" concept:
   - Only host can start the game
   - Only host can restart the game after the game is finished
   - If host leaves, assign a new host
-- [X] Remove user from room when they disconnect (Stream.ensure I think?)
+- [x] Remove user from room when they disconnect (Stream.ensure I think?)
 - [ ] Copy room ID button (use same pattern as Foldkit website)
 - [ ] Add leave room button (if you want to join a different room)
-- [X] Move room id input to the right of the label (same as the username input)
+- [x] Move room id input to the right of the label (same as the username input)
 - [ ] When all players leave a room, delete the room
 - [ ] Add "Made with Foldkit and Effect" footer
 - [ ] If a user joins a room and they have the same username as an existing
@@ -27,8 +27,8 @@
 
 ## Bugs
 
-- [X] Autofocus doesn't work on Safari when the text input appears (works on refresh)
-- [X] Room ID input with live room ID validation is slow
+- [x] Autofocus doesn't work on Safari when the text input appears (works on refresh)
+- [x] Room ID input with live room ID validation is slow
 - [ ] Background showing where you are disappears at end of lines
 
 ## Accessibility
@@ -37,7 +37,7 @@
 
 ## Infrastructure
 
-- [X] Add Foldkit flags for configuration (Elm-style)
+- [x] Add Foldkit flags for configuration (Elm-style)
   - Server URL (instead of hardcoding in `rpc.ts`)
   - Environment-specific configs (dev vs prod)
 - [ ] Add health check route (`/health`) (tried doing this but ran into strange

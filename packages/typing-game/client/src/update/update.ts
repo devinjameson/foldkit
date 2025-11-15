@@ -13,7 +13,7 @@ import {
 } from '../command'
 import { SESSION_ID_INPUT_ID, USERNAME_INPUT_ID } from '../constant'
 import { CreateRoomClicked, Message, NoOp, StartGameRequested } from '../message'
-import { EnterSessionId, EnterUsername, HOME_ACTIONS, Model, SelectAction } from '../model'
+import { EnterRoomId, EnterUsername, HOME_ACTIONS, Model, SelectAction } from '../model'
 import { optionWhen } from '../optionWhen'
 import { urlToAppRoute } from '../route'
 import { validateUserTextInput } from '../validation'
@@ -146,10 +146,10 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
                       M.when('JoinRoom', () => [
                         evo(model, {
                           homeStep: () =>
-                            EnterSessionId.make({
+                            EnterRoomId.make({
                               username,
-                              sessionId: '',
-                              sessionIdValidationId: 0,
+                              roomId: '',
+                              roomIdValidationId: 0,
                             }),
                         }),
                         [Task.focus(`#${SESSION_ID_INPUT_ID}`, () => NoOp.make())],
@@ -204,21 +204,18 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
 
       UsernameInputBlurred: () => [model, [Task.focus(`#${USERNAME_INPUT_ID}`, () => NoOp.make())]],
 
-      SessionIdInputBlurred: () => [
-        model,
-        [Task.focus(`#${SESSION_ID_INPUT_ID}`, () => NoOp.make())],
-      ],
+      RoomIdInputBlurred: () => [model, [Task.focus(`#${SESSION_ID_INPUT_ID}`, () => NoOp.make())]],
 
       RoomIdInputted: ({ value }) =>
         M.value(model.homeStep).pipe(
           withUpdateReturn,
-          M.tag('EnterSessionId', ({ username, sessionIdValidationId }) => [
+          M.tag('EnterRoomId', ({ username, roomIdValidationId }) => [
             evo(model, {
               homeStep: () =>
-                EnterSessionId.make({
+                EnterRoomId.make({
                   username,
-                  sessionId: value,
-                  sessionIdValidationId,
+                  roomId: value,
+                  roomIdValidationId,
                 }),
               roomFormError: () => Option.none(),
             }),
@@ -237,9 +234,9 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
       JoinRoomClicked: () =>
         M.value(model.homeStep).pipe(
           withUpdateReturn,
-          M.tag('EnterSessionId', ({ username, sessionId }) => {
-            if (Str.isNonEmpty(sessionId)) {
-              return [model, [joinRoom(username, sessionId)]]
+          M.tag('EnterRoomId', ({ username, roomId }) => {
+            if (Str.isNonEmpty(roomId)) {
+              return [model, [joinRoom(username, roomId)]]
             }
             return [model, []]
           }),

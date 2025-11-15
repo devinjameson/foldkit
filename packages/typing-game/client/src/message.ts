@@ -16,7 +16,7 @@ const UsernameInputted = ts('UsernameInputted', { value: S.String })
 const RoomIdInputted = ts('RoomIdInputted', { value: S.String })
 const UserTextInputted = ts('UserTextInputted', { value: S.String })
 const UsernameInputBlurred = ts('UsernameInputBlurred')
-const SessionIdInputBlurred = ts('SessionIdInputBlurred')
+const RoomIdInputBlurred = ts('RoomIdInputBlurred')
 const CreateRoomClicked = ts('CreateRoomClicked')
 const JoinRoomClicked = ts('JoinRoomClicked')
 const RoomCreated = ts('RoomCreated', { roomId: S.String, player: Shared.Player })
@@ -39,7 +39,7 @@ export type UsernameInputted = typeof UsernameInputted.Type
 export type RoomIdInputted = typeof RoomIdInputted.Type
 export type UserTextInputted = typeof UserTextInputted.Type
 export type UsernameInputBlurred = typeof UsernameInputBlurred.Type
-export type SessionIdInputBlurred = typeof SessionIdInputBlurred.Type
+export type RoomIdInputBlurred = typeof RoomIdInputBlurred.Type
 export type CreateRoomClicked = typeof CreateRoomClicked.Type
 export type JoinRoomClicked = typeof JoinRoomClicked.Type
 export type RoomCreated = typeof RoomCreated.Type
@@ -60,7 +60,7 @@ export const Message = S.Union(
   RoomIdInputted,
   UserTextInputted,
   UsernameInputBlurred,
-  SessionIdInputBlurred,
+  RoomIdInputBlurred,
   CreateRoomClicked,
   JoinRoomClicked,
   RoomCreated,
@@ -83,7 +83,7 @@ export {
   RoomIdInputted,
   RoomJoined,
   RoomStreamError,
-  SessionIdInputBlurred,
+  RoomIdInputBlurred,
   SessionLoaded,
   StartGameRequested,
   UrlChanged,

@@ -1,5 +1,5 @@
 import * as Shared from '@typing-game/shared'
-import { Schema as S } from 'effect'
+import { Match, Schema as S } from 'effect'
 
 import { AppRoute } from './route'
 
@@ -21,6 +21,13 @@ export const HOME_ACTIONS: readonly HomeAction[] = [
   'ChangeUsername',
 ] as const
 
+export const homeActionToLabel = Match.type<HomeAction>().pipe(
+  Match.when('CreateRoom', () => 'Create room'),
+  Match.when('JoinRoom', () => 'Join room'),
+  Match.when('ChangeUsername', () => 'Change username'),
+  Match.exhaustive,
+)
+
 export const EnterUsername = S.TaggedStruct('EnterUsername', {
   username: S.String,
 })
@@ -32,14 +39,14 @@ export const SelectAction = S.TaggedStruct('SelectAction', {
 })
 export type SelectAction = typeof SelectAction.Type
 
-export const EnterSessionId = S.TaggedStruct('EnterSessionId', {
+export const EnterRoomId = S.TaggedStruct('EnterRoomId', {
   username: S.String,
-  sessionId: S.String,
-  sessionIdValidationId: S.Number,
+  roomId: S.String,
+  roomIdValidationId: S.Number,
 })
-export type EnterSessionId = typeof EnterSessionId.Type
+export type EnterRoomId = typeof EnterRoomId.Type
 
-export const HomeStep = S.Union(EnterUsername, SelectAction, EnterSessionId)
+export const HomeStep = S.Union(EnterUsername, SelectAction, EnterRoomId)
 export type HomeStep = typeof HomeStep.Type
 
 export const Model = S.Struct({
