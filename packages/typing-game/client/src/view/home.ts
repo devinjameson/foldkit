@@ -45,7 +45,7 @@ export const home = (model: Model): Html =>
       div(
         [Class('max-w-4xl')],
         [
-          div([Class('mb-6 uppercase')], ['Miney Miney Tiny Type Town']),
+          div([Class('mb-6 uppercase')], ['Typing Terminal']),
 
           M.value(model.homeStep).pipe(
             M.tagsExhaustive({
