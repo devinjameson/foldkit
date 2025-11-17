@@ -13,6 +13,7 @@ export const {
   For,
   Id,
   Maxlength,
+  Name,
   OnBlur,
   OnClick,
   OnInput,

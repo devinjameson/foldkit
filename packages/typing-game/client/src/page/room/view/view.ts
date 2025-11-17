@@ -14,6 +14,7 @@ import {
   For,
   Id,
   Maxlength,
+  Name,
   OnBlur,
   OnClick,
   OnInput,
@@ -164,8 +165,10 @@ const joinForm = (
           div(
             [Class('flex items-center gap-2 flex-1')],
             [
+              // Safari ignores fields named "search" for password autofill
               input([
                 Id(ROOM_PAGE_USERNAME_INPUT_ID),
+                Name('search'),
                 Type('text'),
                 Value(username),
                 Class('bg-transparent px-0 py-2 outline-none w-full'),
