@@ -41,8 +41,9 @@ npx create-foldkit-app@latest --wizard
 - **[Form](examples/form/src/main.ts)** - Form validation with async email checking
 - **[Routing](examples/routing/src/main.ts)** - URL routing with parser combinators and route parameters
 - **[Shopping Cart](examples/shopping-cart/src/main.ts)** - Complex state management with nested models
-- **[Snake](examples/snake/src/main.ts)** - Classic game with built with command streams
+- **[Snake](examples/snake/src/main.ts)** - Classic game built with command streams
 - **[WebSocket Chat](examples/websocket-chat/src/main.ts)** - WebSocket integration
+- **[Typing Game](packages/typing-game/client/src/main.ts)** - Multiplayer typing game with Foldkit frontend and Effect RPC backend
 
 ### Simple Counter Example
 

@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - devin/typing-game
     paths:
       - 'packages/typing-game/client/**'
       - 'packages/typing-game/shared/**'
