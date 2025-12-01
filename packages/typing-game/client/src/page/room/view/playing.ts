@@ -60,8 +60,9 @@ const char =
   (userGameText: string, maybeWrongCharIndex: Option.Option<number>) =>
   (char: string, index: number): Html => {
     const userGameTextLength = Str.length(userGameText)
-
-    const isNext = index === userGameTextLength && Option.isNone(maybeWrongCharIndex)
+    const hasNoInput = userGameTextLength === 0
+    const isNext =
+      (hasNoInput && index === 0) || (index === userGameTextLength && Option.isNone(maybeWrongCharIndex))
 
     const isWrong = Option.exists(maybeWrongCharIndex, (wrongIndex) =>
       Order.between(Number.Order)(index, {
@@ -73,7 +74,6 @@ const char =
     const isUntyped = index >= userGameTextLength && !isNext
     const isCorrect = index < userGameTextLength && !isWrong
 
-    const isNextSpace = isNext && char === ' '
     const isNextNewline = isNext && char === '\n'
 
     const charClassName = classNames({
@@ -81,7 +81,6 @@ const char =
       'text-terminal-green': isCorrect,
       'text-terminal-red bg-terminal-red/20': isWrong,
       'text-terminal-green bg-terminal-green/30': isNext,
-      'inline-block min-w-[0.5rem]': isNextSpace,
     })
 
     const displayChar = isNextNewline ? '↵' : char
