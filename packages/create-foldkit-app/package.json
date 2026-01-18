@@ -18,15 +18,15 @@
     "typecheck": "tsc -b --noEmit"
   },
   "dependencies": {
-    "@effect/cli": "^0.71.0",
-    "@effect/platform": "^0.92.1",
-    "@effect/platform-node": "^0.98.3",
+    "@effect/cli": "^0.73.0",
+    "@effect/platform": "^0.94.1",
+    "@effect/platform-node": "^0.104.0",
     "@types/prompts": "^2.4.9",
     "chalk": "^5.6.2",
-    "effect": "^3.18.2",
+    "effect": "^3.19.14",
     "prompts": "^2.4.2",
-    "rimraf": "^6.0.1",
-    "typescript": "^5.9.2"
+    "rimraf": "^6.1.2",
+    "typescript": "^5.9.3"
   },
   "keywords": [
     "create-foldkit-app",

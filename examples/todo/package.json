@@ -8,12 +8,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@effect/platform": "^0.92.1",
-    "@effect/platform-browser": "^0.72.0",
-    "@tailwindcss/vite": "^4.1.10",
-    "effect": "^3.18.2",
+    "@effect/platform": "^0.94.1",
+    "@effect/platform-browser": "^0.74.0",
+    "@tailwindcss/vite": "^4.1.18",
+    "effect": "^3.19.14",
     "foldkit": "workspace:*",
-    "tailwindcss": "^4.1.10"
+    "tailwindcss": "^4.1.18"
   },
   "devDependencies": {
     "@foldkit/vite-plugin": "workspace:*"

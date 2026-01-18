@@ -23,16 +23,16 @@
     "dev:example:websocket-chat": "pnpm --filter websocket-chat-example dev"
   },
   "devDependencies": {
-    "@eslint/js": "^9.37.0",
-    "@trivago/prettier-plugin-sort-imports": "^5.2.2",
-    "@types/node": "^24.6.2",
-    "@typescript-eslint/eslint-plugin": "^8.45.0",
-    "@typescript-eslint/parser": "^8.45.0",
-    "eslint": "^9.37.0",
-    "prettier": "^3.6.2",
-    "rimraf": "^6.0.1",
+    "@eslint/js": "^9.39.2",
+    "@trivago/prettier-plugin-sort-imports": "^6.0.2",
+    "@types/node": "^25.0.9",
+    "@typescript-eslint/eslint-plugin": "^8.53.0",
+    "@typescript-eslint/parser": "^8.53.0",
+    "eslint": "^9.39.2",
+    "prettier": "^3.8.0",
+    "rimraf": "^6.1.2",
     "typescript": "^5.9.3",
-    "vite": "^7.1.9"
+    "vite": "^7.3.1"
   },
   "engines": {
     "node": ">=18",

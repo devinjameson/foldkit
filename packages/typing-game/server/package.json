@@ -11,21 +11,21 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@effect/platform": "^0.92.1",
-    "@effect/platform-node": "^0.98.3",
-    "@effect/rpc": "^0.71.1",
+    "@effect/platform": "^0.94.1",
+    "@effect/platform-node": "^0.104.0",
+    "@effect/rpc": "^0.73.0",
     "@effect/rpc-http": "^0.52.4",
     "@typing-game/shared": "workspace:*",
-    "effect": "^3.18.2"
+    "effect": "^3.19.14"
   },
   "devDependencies": {
-    "@eslint/js": "^9.37.0",
-    "@types/node": "^24.6.2",
-    "@typescript-eslint/eslint-plugin": "^8.45.0",
-    "@typescript-eslint/parser": "^8.45.0",
-    "eslint": "^9.37.0",
+    "@eslint/js": "^9.39.2",
+    "@types/node": "^25.0.9",
+    "@typescript-eslint/eslint-plugin": "^8.53.0",
+    "@typescript-eslint/parser": "^8.53.0",
+    "eslint": "^9.39.2",
     "eslint-plugin-unused-imports": "^4.3.0",
-    "tsx": "^4.19.2",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }
 }

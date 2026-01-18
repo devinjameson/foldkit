@@ -12,22 +12,22 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.1.10",
+    "@tailwindcss/vite": "^4.1.18",
     "classnames": "^2.5.1",
-    "effect": "^3.18.2",
+    "effect": "^3.19.14",
     "foldkit": "workspace:*",
-    "shiki": "^3.13.0",
-    "tailwindcss": "^4.1.10"
+    "shiki": "^3.21.0",
+    "tailwindcss": "^4.1.18"
   },
   "devDependencies": {
-    "@eslint/js": "^9.37.0",
+    "@eslint/js": "^9.39.2",
     "@foldkit/vite-plugin": "workspace:*",
-    "@trivago/prettier-plugin-sort-imports": "^5.2.2",
-    "@typescript-eslint/eslint-plugin": "^8.45.0",
-    "@typescript-eslint/parser": "^8.45.0",
-    "eslint": "^9.37.0",
-    "prettier": "^3.6.2",
+    "@trivago/prettier-plugin-sort-imports": "^6.0.2",
+    "@typescript-eslint/eslint-plugin": "^8.53.0",
+    "@typescript-eslint/parser": "^8.53.0",
+    "eslint": "^9.39.2",
+    "prettier": "^3.8.0",
     "typescript": "^5.9.3",
-    "vite": "^7.1.9"
+    "vite": "^7.3.1"
   }
 }
