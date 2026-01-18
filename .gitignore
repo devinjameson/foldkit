@@ -2,3 +2,4 @@ node_modules
 dist
 *.tsbuildinfo
 .vercel
+settings.local.json
