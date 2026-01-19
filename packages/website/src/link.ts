@@ -11,6 +11,11 @@ export const Link = {
   solid: 'https://solidjs.com',
   foldkitExamples:
     'https://github.com/devinjameson/foldkit/tree/main/examples',
+  websocketChatExample:
+    'https://github.com/devinjameson/foldkit/tree/main/examples/websocket-chat',
+  typingTerminal: 'https://typingterminal.com',
+  typingTerminalSource:
+    'https://github.com/devinjameson/foldkit/tree/main/packages/typing-game/client/src/commandStreams.ts',
   createFoldkitApp:
     'https://github.com/devinjameson/foldkit/tree/main/packages/create-foldkit-app',
   github: 'https://github.com/devinjameson/foldkit',
