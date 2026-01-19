@@ -62,7 +62,8 @@ const char =
     const userGameTextLength = Str.length(userGameText)
     const hasNoInput = userGameTextLength === 0
     const isNext =
-      (hasNoInput && index === 0) || (index === userGameTextLength && Option.isNone(maybeWrongCharIndex))
+      (hasNoInput && index === 0) ||
+      (index === userGameTextLength && Option.isNone(maybeWrongCharIndex))
 
     const isWrong = Option.exists(maybeWrongCharIndex, (wrongIndex) =>
       Order.between(Number.Order)(index, {
