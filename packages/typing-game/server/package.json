@@ -14,7 +14,6 @@
     "@effect/platform": "^0.94.1",
     "@effect/platform-node": "^0.104.0",
     "@effect/rpc": "^0.73.0",
-    "@effect/rpc-http": "^0.52.4",
     "@typing-game/shared": "workspace:*",
     "effect": "^3.19.14"
   },
