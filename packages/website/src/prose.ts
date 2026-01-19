@@ -8,6 +8,7 @@ import {
   Id,
   OnClick,
   a,
+  code,
   div,
   h1,
   h2,
@@ -92,3 +93,6 @@ export const bulletPoint = (
   label: string,
   description: string,
 ): Html => li([], [strong([], [`${label}:`]), ` ${description}`])
+
+export const inlineCode = (text: string): Html =>
+  code([Class('bg-gray-200 px-1.5 py-0.5 rounded text-sm')], [text])

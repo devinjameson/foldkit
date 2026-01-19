@@ -1,9 +1,9 @@
 import { Html } from 'foldkit/html'
 
-import { Class, InnerHTML, code, div, em, strong } from '../html'
+import { Class, InnerHTML, div, em, strong } from '../html'
 import { Link } from '../link'
 import type { Model, TableOfContentsEntry } from '../main'
-import { heading, link, para, section } from '../prose'
+import { heading, inlineCode, link, para, section } from '../prose'
 import * as Snippets from '../snippet'
 import { codeBlock } from '../view/codeBlock'
 
@@ -18,7 +18,10 @@ const messagesHeader: Header = { id: 'messages', text: 'Messages' }
 const updateHeader: Header = { id: 'update', text: 'Update' }
 const viewHeader: Header = { id: 'view', text: 'View' }
 const commandsHeader: Header = { id: 'commands', text: 'Commands' }
-const commandStreamsHeader: Header = { id: 'commandStreams', text: 'Command Streams' }
+const commandStreamsHeader: Header = {
+  id: 'commandStreams',
+  text: 'Command Streams',
+}
 
 export const tableOfContents: ReadonlyArray<TableOfContentsEntry> = [
   { level: 'h2', ...counterExampleHeader },
@@ -126,7 +129,7 @@ export const view = (model: Model): Html =>
       section(viewHeader.id, viewHeader.text, [
         para(
           'The view function is a pure function that transforms your model into HTML. Given the same model, it always produces the same HTML output. The view never directly modifies state - instead, it dispatches messages through event handlers like ',
-          code([], ['OnClick']),
+          inlineCode('OnClick'),
           '.',
         ),
         codeBlock(
@@ -178,7 +181,7 @@ export const view = (model: Model): Html =>
         ),
         para(
           "Let's zoom in on ",
-          code([], ['fetchCount']),
+          inlineCode('fetchCount'),
           " to understand what's happening here:",
         ),
         codeBlock(
@@ -203,14 +206,14 @@ export const view = (model: Model): Html =>
           '.',
         ),
         para(
-          'A Command Stream is a stream of Commands that runs continuously based on some part of your model. When that part of the model changes, the stream is automatically restarted with the new values.',
+          'A Command Stream is a stream of Commands that runs continuously based on some part of your model that the stream depends on. When that part of the model changes, the stream is automatically restarted with the new values.',
         ),
         para(
           "Let's look at a stopwatch example. We want a timer that ticks every 100ms, but only when ",
-          code([], ['isRunning']),
+          inlineCode('isRunning'),
           ' is ',
-          code([], ['true']),
-          ':',
+          inlineCode('true'),
+          '. This gives us a way to start and stop the stopwatch based on user input.',
         ),
         codeBlock(
           div(
@@ -226,27 +229,36 @@ export const view = (model: Model): Html =>
         ),
         para(
           'The key concept is ',
-          code([], ['CommandStreamsDeps']),
+          inlineCode('CommandStreamsDeps'),
           '. This schema defines what parts of the model your streams depend on. Each stream has two functions:',
         ),
         para(
-          code([], ['modelToDeps']),
+          inlineCode('modelToDeps'),
           ' extracts the relevant dependencies from the model.',
         ),
         para(
-          code([], ['depsToStream']),
+          inlineCode('depsToStream'),
           ' creates a stream based on those dependencies.',
         ),
         para(
           'When ',
-          code([], ['isRunning']),
+          inlineCode('isRunning'),
           ' changes from ',
-          code([], ['false']),
+          inlineCode('false'),
           ' to ',
-          code([], ['true']),
+          inlineCode('true'),
           ', the stream starts ticking. When it changes back to ',
-          code([], ['false']),
+          inlineCode('false'),
           ', the stream stops. Foldkit handles all the lifecycle management for you.',
+        ),
+        para(
+          'For a more complex example using WebSocket connections, see the ',
+          link(Link.websocketChatExample, 'websocket-chat example'),
+          '. For a full real-world application, check out ',
+          link(Link.typingTerminal, 'Typing Terminal'),
+          ' (',
+          link(Link.typingTerminalSource, 'source'),
+          ').',
         ),
       ]),
     ],
