@@ -18,6 +18,7 @@ const messagesHeader: Header = { id: 'messages', text: 'Messages' }
 const updateHeader: Header = { id: 'update', text: 'Update' }
 const viewHeader: Header = { id: 'view', text: 'View' }
 const commandsHeader: Header = { id: 'commands', text: 'Commands' }
+const commandStreamsHeader: Header = { id: 'commandStreams', text: 'Command Streams' }
 
 export const tableOfContents: ReadonlyArray<TableOfContentsEntry> = [
   { level: 'h2', ...counterExampleHeader },
@@ -26,6 +27,7 @@ export const tableOfContents: ReadonlyArray<TableOfContentsEntry> = [
   { level: 'h2', ...updateHeader },
   { level: 'h2', ...viewHeader },
   { level: 'h2', ...commandsHeader },
+  { level: 'h2', ...commandStreamsHeader },
 ]
 
 export const view = (model: Model): Html =>
@@ -192,6 +194,59 @@ export const view = (model: Model): Html =>
           Snippets.counterHttpCommandFetchCountRaw,
           'Copy HTTP command fetchCount example to clipboard',
           model,
+        ),
+      ]),
+      section(commandStreamsHeader.id, commandStreamsHeader.text, [
+        para(
+          'Commands are great for one-off side effects, but what about ongoing streams of events? Think timers, WebSocket connections, or keyboard input. For these, Foldkit provides ',
+          strong([], ['Command Streams']),
+          '.',
+        ),
+        para(
+          'A Command Stream is a stream of Commands that runs continuously based on some part of your model. When that part of the model changes, the stream is automatically restarted with the new values.',
+        ),
+        para(
+          "Let's look at a stopwatch example. We want a timer that ticks every 100ms, but only when ",
+          code([], ['isRunning']),
+          ' is ',
+          code([], ['true']),
+          ':',
+        ),
+        codeBlock(
+          div(
+            [
+              Class('text-sm'),
+              InnerHTML(Snippets.stopwatchCommandStreamHighlighted),
+            ],
+            [],
+          ),
+          Snippets.stopwatchCommandStreamRaw,
+          'Copy command stream example to clipboard',
+          model,
+        ),
+        para(
+          'The key concept is ',
+          code([], ['CommandStreamsDeps']),
+          '. This schema defines what parts of the model your streams depend on. Each stream has two functions:',
+        ),
+        para(
+          code([], ['modelToDeps']),
+          ' extracts the relevant dependencies from the model.',
+        ),
+        para(
+          code([], ['depsToStream']),
+          ' creates a stream based on those dependencies.',
+        ),
+        para(
+          'When ',
+          code([], ['isRunning']),
+          ' changes from ',
+          code([], ['false']),
+          ' to ',
+          code([], ['true']),
+          ', the stream starts ticking. When it changes back to ',
+          code([], ['false']),
+          ', the stream stops. Foldkit handles all the lifecycle management for you.',
         ),
       ]),
     ],
