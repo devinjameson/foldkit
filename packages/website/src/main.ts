@@ -49,6 +49,7 @@ import { themeSelector } from './view/themeSelector'
 // ROUTE
 
 const HomeRoute = ts('Home')
+const WhyFoldkitRoute = ts('WhyFoldkit')
 const GettingStartedRoute = ts('GettingStarted')
 const ArchitectureRoute = ts('Architecture')
 const ExamplesRoute = ts('Examples')
@@ -57,6 +58,7 @@ const NotFoundRoute = ts('NotFound', { path: S.String })
 
 const AppRoute = S.Union(
   HomeRoute,
+  WhyFoldkitRoute,
   GettingStartedRoute,
   ArchitectureRoute,
   ExamplesRoute,
@@ -65,6 +67,7 @@ const AppRoute = S.Union(
 )
 
 type HomeRoute = typeof HomeRoute.Type
+type WhyFoldkitRoute = typeof WhyFoldkitRoute.Type
 type GettingStartedRoute = typeof GettingStartedRoute.Type
 type ArchitectureRoute = typeof ArchitectureRoute.Type
 type ExamplesRoute = typeof ExamplesRoute.Type
@@ -73,6 +76,10 @@ type NotFoundRoute = typeof NotFoundRoute.Type
 type AppRoute = typeof AppRoute.Type
 
 const homeRouter = pipe(Route.root, Route.mapTo(HomeRoute))
+const whyFoldkitRouter = pipe(
+  literal('why-foldkit'),
+  Route.mapTo(WhyFoldkitRoute),
+)
 const gettingStartedRouter = pipe(
   literal('getting-started'),
   Route.mapTo(GettingStartedRoute),
@@ -91,6 +98,7 @@ const bestPracticesRouter = pipe(
 )
 
 const routeParser = Route.oneOf(
+  whyFoldkitRouter,
   gettingStartedRouter,
   architectureRouter,
   examplesRouter,
@@ -516,6 +524,11 @@ const sidebarView = (
                 'Home',
               ),
               navLink(
+                whyFoldkitRouter.build({}),
+                S.is(WhyFoldkitRoute)(currentRoute),
+                'Why Foldkit?',
+              ),
+              navLink(
                 gettingStartedRouter.build({}),
                 S.is(GettingStartedRoute)(currentRoute),
                 'Getting Started',
@@ -616,6 +629,7 @@ const view = (model: Model) => {
   const content = M.value(model.route).pipe(
     M.tagsExhaustive({
       Home: Page.Home.view,
+      WhyFoldkit: Page.WhyFoldkit.view,
       GettingStarted: () => Page.GettingStarted.view(model),
       Architecture: () => Page.Architecture.view(model),
       Examples: Page.Examples.view,
@@ -626,6 +640,9 @@ const view = (model: Model) => {
   )
 
   const currentPageTableOfContents = M.value(model.route).pipe(
+    M.tag('WhyFoldkit', () =>
+      Option.some(Page.WhyFoldkit.tableOfContents),
+    ),
     M.tag('GettingStarted', () =>
       Option.some(Page.GettingStarted.tableOfContents),
     ),

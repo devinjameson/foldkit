@@ -1,4 +1,6 @@
 export const Link = {
+  elm: 'https://elm-lang.org',
+  elmArchitecture: 'https://guide.elm-lang.org/architecture/',
   theElmArchitecture: 'https://guide.elm-lang.org/architecture/',
   effect: 'https://effect.website',
   effectSchema: 'https://effect.website/docs/schema/introduction/',
