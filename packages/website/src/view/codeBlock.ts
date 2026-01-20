@@ -8,12 +8,12 @@ import {
   button,
   div,
   empty,
+  pre,
 } from '../html'
 import { Icon } from '../icon'
 import { CopySnippetToClipboard, type Model } from '../main'
 
-export const codeBlock = (
-  content: Html,
+const copyButtonWithIndicator = (
   textToCopy: string,
   ariaLabel: string,
   model: Model,
@@ -25,7 +25,7 @@ export const codeBlock = (
     ? div(
         [
           Class(
-            'text-sm rounded py-1 px-2 font-medium bg-green-700 text-white',
+            'absolute bottom-full left-1/2 -translate-x-1/2 mb-1 text-sm rounded py-1 px-2 font-medium bg-green-700 text-white whitespace-nowrap',
           ),
         ],
         ['Copied'],
@@ -35,7 +35,7 @@ export const codeBlock = (
   const copyButton = button(
     [
       Class(
-        'p-2 rounded hover:bg-gray-700 transition text-gray-400 hover:text-white bg-gray-800',
+        'p-2 rounded transition bg-gray-800 dark:bg-gray-700 text-gray-400 hover:text-white hover:bg-gray-700 dark:hover:bg-gray-600',
       ),
       AriaLabel(ariaLabel),
       OnClick(CopySnippetToClipboard.make({ text: textToCopy })),
@@ -43,13 +43,39 @@ export const codeBlock = (
     [Icon.copy()],
   )
 
-  const copyButtonWithIndicator = div(
-    [Class('absolute top-2 right-2 flex items-center gap-2')],
+  return div(
+    [Class('absolute top-2 right-2')],
     [copiedIndicator, copyButton],
+  )
+}
+
+export const codeBlock = (
+  code: string,
+  ariaLabel: string,
+  model: Model,
+) => {
+  const content = pre(
+    [
+      Class(
+        'bg-gray-900 dark:bg-gray-800 text-gray-100 rounded-lg text-sm p-4 pr-14 overflow-x-auto',
+      ),
+    ],
+    [code],
   )
 
   return div(
     [Class('relative mb-8 min-w-0')],
-    [content, copyButtonWithIndicator],
+    [content, copyButtonWithIndicator(code, ariaLabel, model)],
   )
 }
+
+export const highlightedCodeBlock = (
+  content: Html,
+  rawCode: string,
+  ariaLabel: string,
+  model: Model,
+) =>
+  div(
+    [Class('relative mb-8 min-w-0')],
+    [content, copyButtonWithIndicator(rawCode, ariaLabel, model)],
+  )

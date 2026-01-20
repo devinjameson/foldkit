@@ -1,6 +1,6 @@
 import { Html } from 'foldkit/html'
 
-import { Class, div, li, pre, ul } from '../html'
+import { Class, div, li, ul } from '../html'
 import { Link } from '../link'
 import type { Model, TableOfContentsEntry } from '../main'
 import { heading, inlineCode, link, para, section } from '../prose'
@@ -48,10 +48,6 @@ export const view = (model: Model): Html =>
         " you would like to start with and the package manager you'd like to use.",
       ),
       codeBlock(
-        pre(
-          [Class('bg-gray-900 text-gray-100 rounded-lg text-sm')],
-          [CREATE_FOLDKIT_APP_COMMAND],
-        ),
         CREATE_FOLDKIT_APP_COMMAND,
         'Copy command to clipboard',
         model,
@@ -62,33 +58,9 @@ export const view = (model: Model): Html =>
       div(
         [Class('flex gap-2 flex-wrap')],
         [
-          codeBlock(
-            pre(
-              [Class('bg-gray-900 text-gray-100 rounded-lg text-sm')],
-              [DEV_PNPM],
-            ),
-            DEV_PNPM,
-            'Copy pnpm command',
-            model,
-          ),
-          codeBlock(
-            pre(
-              [Class('bg-gray-900 text-gray-100 rounded-lg text-sm')],
-              [DEV_NPM],
-            ),
-            DEV_NPM,
-            'Copy npm command',
-            model,
-          ),
-          codeBlock(
-            pre(
-              [Class('bg-gray-900 text-gray-100 rounded-lg text-sm')],
-              [DEV_YARN],
-            ),
-            DEV_YARN,
-            'Copy yarn command',
-            model,
-          ),
+          codeBlock(DEV_PNPM, 'Copy pnpm command', model),
+          codeBlock(DEV_NPM, 'Copy npm command', model),
+          codeBlock(DEV_YARN, 'Copy yarn command', model),
         ],
       ),
       section(
@@ -143,7 +115,10 @@ export const view = (model: Model): Html =>
       section(nextStepsHeader.id, nextStepsHeader.text, [
         para(
           'Now that you have a running app, head to the ',
-          link('/architecture', 'Architecture'),
+          link(
+            '/architecture-and-concepts',
+            'Architecture & Concepts',
+          ),
           ' page to understand how the pieces fit together.',
         ),
       ]),

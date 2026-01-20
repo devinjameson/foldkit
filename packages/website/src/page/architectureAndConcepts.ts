@@ -5,7 +5,7 @@ import { Link } from '../link'
 import type { Model, TableOfContentsEntry } from '../main'
 import { heading, inlineCode, link, para, section } from '../prose'
 import * as Snippets from '../snippet'
-import { codeBlock } from '../view/codeBlock'
+import { highlightedCodeBlock } from '../view/codeBlock'
 
 type Header = { id: string; text: string }
 
@@ -37,7 +37,11 @@ export const view = (model: Model): Html =>
   div(
     [],
     [
-      heading(1, 'architecture', 'Architecture & Concepts'),
+      heading(
+        1,
+        'architectureAndConcepts',
+        'Architecture & Concepts',
+      ),
       heading(2, counterExampleHeader.id, counterExampleHeader.text),
       para(
         'The easiest way to learn how Foldkit works is to first look at examples, then dive deeper to understand each piece in isolation.',
@@ -53,7 +57,7 @@ export const view = (model: Model): Html =>
         strong([], ['View']),
         ' (rendering). Take a look at the counter example below in full, then continue to see a more detailed explanation of each piece.',
       ),
-      codeBlock(
+      highlightedCodeBlock(
         div(
           [Class('text-sm'), InnerHTML(Snippets.counterHighlighted)],
           [],
@@ -69,7 +73,7 @@ export const view = (model: Model): Html =>
           ', which provides runtime validation, type inference, and a single source of truth for your application state.',
         ),
         para('In the counter example, the model is simply a number.'),
-        codeBlock(
+        highlightedCodeBlock(
           div(
             [
               Class('text-sm'),
@@ -91,7 +95,7 @@ export const view = (model: Model): Html =>
           '. Messages are implemented as tagged unions, providing exhaustive pattern matching and type safety.',
         ),
         para('The counter example has three simple messages:'),
-        codeBlock(
+        highlightedCodeBlock(
           div(
             [
               Class('text-sm'),
@@ -113,7 +117,7 @@ export const view = (model: Model): Html =>
           link(Link.effectMatch, 'Effect.Match'),
           ' for exhaustive pattern matching on messages. The TypeScript compiler will error if you forget to handle a message type.',
         ),
-        codeBlock(
+        highlightedCodeBlock(
           div(
             [
               Class('text-sm'),
@@ -132,7 +136,7 @@ export const view = (model: Model): Html =>
           inlineCode('OnClick'),
           '.',
         ),
-        codeBlock(
+        highlightedCodeBlock(
           div(
             [
               Class('text-sm'),
@@ -152,7 +156,7 @@ export const view = (model: Model): Html =>
         para(
           "Let's start simple. Say we want to wait one second before resetting the count if the user clicks reset. This is how we might implement that:",
         ),
-        codeBlock(
+        highlightedCodeBlock(
           div(
             [
               Class('text-sm'),
@@ -167,7 +171,7 @@ export const view = (model: Model): Html =>
         para(
           'Now, what if we want to get the next count from an API instead of incrementing locally? We can create a Command that performs the HTTP request and returns a Message when it completes:',
         ),
-        codeBlock(
+        highlightedCodeBlock(
           div(
             [
               Class('text-sm'),
@@ -184,7 +188,7 @@ export const view = (model: Model): Html =>
           inlineCode('fetchCount'),
           " to understand what's happening here:",
         ),
-        codeBlock(
+        highlightedCodeBlock(
           div(
             [
               Class('text-sm'),
@@ -215,7 +219,7 @@ export const view = (model: Model): Html =>
           inlineCode('true'),
           '. This gives us a way to start and stop the stopwatch based on user input.',
         ),
-        codeBlock(
+        highlightedCodeBlock(
           div(
             [
               Class('text-sm'),

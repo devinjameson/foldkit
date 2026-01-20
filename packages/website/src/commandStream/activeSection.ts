@@ -29,7 +29,10 @@ export const activeSection: CommandStream<
         'GettingStarted',
         () => Page.GettingStarted.tableOfContents,
       ),
-      M.tag('Architecture', () => Page.Architecture.tableOfContents),
+      M.tag(
+        'ArchitectureAndConcepts',
+        () => Page.ArchitectureAndConcepts.tableOfContents,
+      ),
       M.option,
     )
 

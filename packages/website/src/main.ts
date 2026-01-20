@@ -51,7 +51,7 @@ import { themeSelector } from './view/themeSelector'
 const HomeRoute = ts('Home')
 const WhyFoldkitRoute = ts('WhyFoldkit')
 const GettingStartedRoute = ts('GettingStarted')
-const ArchitectureRoute = ts('Architecture')
+const ArchitectureAndConceptsRoute = ts('ArchitectureAndConcepts')
 const ExamplesRoute = ts('Examples')
 const BestPracticesRoute = ts('BestPractices')
 const NotFoundRoute = ts('NotFound', { path: S.String })
@@ -60,7 +60,7 @@ const AppRoute = S.Union(
   HomeRoute,
   WhyFoldkitRoute,
   GettingStartedRoute,
-  ArchitectureRoute,
+  ArchitectureAndConceptsRoute,
   ExamplesRoute,
   BestPracticesRoute,
   NotFoundRoute,
@@ -69,7 +69,8 @@ const AppRoute = S.Union(
 type HomeRoute = typeof HomeRoute.Type
 type WhyFoldkitRoute = typeof WhyFoldkitRoute.Type
 type GettingStartedRoute = typeof GettingStartedRoute.Type
-type ArchitectureRoute = typeof ArchitectureRoute.Type
+type ArchitectureAndConceptsRoute =
+  typeof ArchitectureAndConceptsRoute.Type
 type ExamplesRoute = typeof ExamplesRoute.Type
 type BestPracticesRoute = typeof BestPracticesRoute.Type
 type NotFoundRoute = typeof NotFoundRoute.Type
@@ -84,9 +85,9 @@ const gettingStartedRouter = pipe(
   literal('getting-started'),
   Route.mapTo(GettingStartedRoute),
 )
-const architectureRouter = pipe(
-  literal('architecture'),
-  Route.mapTo(ArchitectureRoute),
+const architectureAndConceptsRouter = pipe(
+  literal('architecture-and-concepts'),
+  Route.mapTo(ArchitectureAndConceptsRoute),
 )
 const examplesRouter = pipe(
   literal('examples'),
@@ -100,7 +101,7 @@ const bestPracticesRouter = pipe(
 const routeParser = Route.oneOf(
   whyFoldkitRouter,
   gettingStartedRouter,
-  architectureRouter,
+  architectureAndConceptsRouter,
   examplesRouter,
   bestPracticesRouter,
   homeRouter,
@@ -493,9 +494,9 @@ const sidebarView = (
     [
       Class(
         classNames(
-          'absolute md:static top-0 left-0 bottom-0 z-40',
-          'w-full md:w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 p-4',
-          'md:h-full md:overflow-y-auto overflow-y-auto',
+          'fixed md:static inset-0 md:inset-auto z-40',
+          'md:w-64 bg-white dark:bg-gray-900 md:border-r border-gray-200 dark:border-gray-700 p-4',
+          'overflow-hidden md:h-full md:overflow-y-auto',
           {
             block: mobileMenuOpen,
             'hidden md:block': !mobileMenuOpen,
@@ -504,6 +505,29 @@ const sidebarView = (
       ),
     ],
     [
+      div(
+        [Class('flex justify-between items-center mb-4 md:hidden')],
+        [
+          span(
+            [
+              Class(
+                'text-xl font-bold text-gray-900 dark:text-white',
+              ),
+            ],
+            ['Foldkit'],
+          ),
+          button(
+            [
+              Class(
+                'p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-700 dark:text-gray-300',
+              ),
+              AriaLabel('Close menu'),
+              OnClick(ToggleMobileMenu.make()),
+            ],
+            [Icon.close('w-6 h-6')],
+          ),
+        ],
+      ),
       nav(
         [],
         [
@@ -534,8 +558,8 @@ const sidebarView = (
                 'Getting Started',
               ),
               navLink(
-                architectureRouter.build({}),
-                S.is(ArchitectureRoute)(currentRoute),
+                architectureAndConceptsRouter.build({}),
+                S.is(ArchitectureAndConceptsRoute)(currentRoute),
                 'Architecture & Concepts',
               ),
               navLink(
@@ -631,7 +655,8 @@ const view = (model: Model) => {
       Home: Page.Home.view,
       WhyFoldkit: Page.WhyFoldkit.view,
       GettingStarted: () => Page.GettingStarted.view(model),
-      Architecture: () => Page.Architecture.view(model),
+      ArchitectureAndConcepts: () =>
+        Page.ArchitectureAndConcepts.view(model),
       Examples: Page.Examples.view,
       BestPractices: Page.BestPractices.view,
       NotFound: ({ path }) =>
@@ -646,8 +671,8 @@ const view = (model: Model) => {
     M.tag('GettingStarted', () =>
       Option.some(Page.GettingStarted.tableOfContents),
     ),
-    M.tag('Architecture', () =>
-      Option.some(Page.Architecture.tableOfContents),
+    M.tag('ArchitectureAndConcepts', () =>
+      Option.some(Page.ArchitectureAndConcepts.tableOfContents),
     ),
     M.orElse(() => Option.none()),
   )
@@ -681,12 +706,12 @@ const view = (model: Model) => {
       header(
         [
           Class(
-            'bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 md:px-8 py-4 md:py-6 flex items-center justify-between',
+            'bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 pl-2 pr-3 md:px-8 py-4 md:py-6 flex items-center justify-between',
           ),
         ],
         [
           div(
-            [Class('flex items-center gap-4')],
+            [Class('flex items-center gap-2')],
             [
               button(
                 [
@@ -709,18 +734,23 @@ const view = (model: Model) => {
             ],
           ),
           div(
-            [Class('flex items-center gap-3 md:gap-4')],
+            [Class('flex items-center gap-5 md:gap-6')],
             [
               themeSelector(model.themePreference),
-              iconLink(
-                Link.github,
-                'GitHub',
-                Icon.github('w-5 h-5 md:w-6 md:h-6'),
-              ),
-              iconLink(
-                Link.npm,
-                'npm',
-                Icon.npm('w-6 h-6 md:w-8 md:h-8'),
+              div(
+                [Class('flex items-center gap-3 md:gap-4')],
+                [
+                  iconLink(
+                    Link.github,
+                    'GitHub',
+                    Icon.github('w-5 h-5 md:w-6 md:h-6'),
+                  ),
+                  iconLink(
+                    Link.npm,
+                    'npm',
+                    Icon.npm('w-6 h-6 md:w-8 md:h-8'),
+                  ),
+                ],
               ),
             ],
           ),

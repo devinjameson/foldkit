@@ -1,4 +1,4 @@
-export * as Architecture from './architecture'
+export * as ArchitectureAndConcepts from './architectureAndConcepts'
 export * as BestPractices from './bestPractices'
 export * as Examples from './examples'
 export * as GettingStarted from './gettingStarted'

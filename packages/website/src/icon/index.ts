@@ -1,3 +1,4 @@
+import { close } from './close'
 import { computer } from './computer'
 import { copy } from './copy'
 import { github } from './github'
@@ -8,6 +9,7 @@ import { npm } from './npm'
 import { sun } from './sun'
 
 export const Icon = {
+  close,
   computer,
   copy,
   github,
