@@ -1,3 +1,5 @@
+import { KeyValueStore } from '@effect/platform'
+import { BrowserKeyValueStore } from '@effect/platform-browser'
 import classNames from 'classnames'
 import {
   Array,
@@ -42,6 +44,7 @@ import {
 import { Icon } from './icon'
 import { Link } from './link'
 import * as Page from './page'
+import { themeSelector } from './view/themeSelector'
 
 // ROUTE
 
@@ -106,6 +109,60 @@ export type TableOfContentsEntry = {
   level: 'h2' | 'h3'
 }
 
+// THEME
+
+const ThemePreference = S.Literal('Dark', 'Light', 'System')
+const ResolvedTheme = S.Literal('Dark', 'Light')
+const THEME_STORAGE_KEY = 'theme-preference'
+
+export type ThemePreference = typeof ThemePreference.Type
+export type ResolvedTheme = typeof ResolvedTheme.Type
+
+const resolveTheme = (
+  preference: ThemePreference,
+  systemTheme: ResolvedTheme,
+): ResolvedTheme =>
+  M.value(preference).pipe(
+    M.withReturnType<ResolvedTheme>(),
+    M.when('Dark', () => 'Dark'),
+    M.when('Light', () => 'Light'),
+    M.when('System', () => systemTheme),
+    M.exhaustive,
+  )
+
+// FLAGS
+
+const Flags = S.Struct({
+  themePreference: S.Option(ThemePreference),
+  systemTheme: ResolvedTheme,
+})
+
+type Flags = typeof Flags.Type
+
+const getSystemTheme = (): ResolvedTheme =>
+  window.matchMedia('(prefers-color-scheme: dark)').matches
+    ? 'Dark'
+    : 'Light'
+
+const flags: Effect.Effect<Flags> = Effect.gen(function* () {
+  const store = yield* KeyValueStore.KeyValueStore
+  const maybeJson = yield* store.get(THEME_STORAGE_KEY)
+  const json = yield* maybeJson
+  const theme = yield* S.decode(S.parseJson(ThemePreference))(json)
+  return {
+    themePreference: Option.some(theme),
+    systemTheme: getSystemTheme(),
+  }
+}).pipe(
+  Effect.catchAll(() =>
+    Effect.succeed({
+      themePreference: Option.none(),
+      systemTheme: getSystemTheme(),
+    }),
+  ),
+  Effect.provide(BrowserKeyValueStore.layerLocalStorage),
+)
+
 // MODEL
 
 export const Model = S.Struct({
@@ -114,6 +171,9 @@ export const Model = S.Struct({
   copiedSnippets: S.HashSet(S.String),
   mobileMenuOpen: S.Boolean,
   activeSection: S.Option(S.String),
+  themePreference: ThemePreference,
+  systemTheme: ResolvedTheme,
+  resolvedTheme: ResolvedTheme,
 })
 
 export type Model = typeof Model.Type
@@ -139,6 +199,12 @@ const ToggleMobileMenu = ts('ToggleMobileMenu')
 export const ActiveSectionChanged = ts('ActiveSectionChanged', {
   sectionId: S.String,
 })
+export const SetThemePreference = ts('SetThemePreference', {
+  preference: ThemePreference,
+})
+export const SystemThemeChanged = ts('SystemThemeChanged', {
+  theme: ResolvedTheme,
+})
 
 const Message = S.Union(
   NoOp,
@@ -150,6 +216,8 @@ const Message = S.Union(
   HideCopiedIndicator,
   ToggleMobileMenu,
   ActiveSectionChanged,
+  SetThemePreference,
+  SystemThemeChanged,
 )
 
 type NoOp = typeof NoOp.Type
@@ -161,11 +229,23 @@ type CopySuccess = typeof CopySuccess.Type
 type HideCopiedIndicator = typeof HideCopiedIndicator.Type
 type ToggleMobileMenu = typeof ToggleMobileMenu.Type
 export type ActiveSectionChanged = typeof ActiveSectionChanged.Type
+export type SetThemePreference = typeof SetThemePreference.Type
+export type SystemThemeChanged = typeof SystemThemeChanged.Type
 export type Message = typeof Message.Type
 
 // INIT
 
-const init: Runtime.ApplicationInit<Model, Message> = (url: Url) => {
+const init: Runtime.ApplicationInit<Model, Message, Flags> = (
+  loadedFlags: Flags,
+  url: Url,
+) => {
+  const themePreference = Option.getOrElse(
+    loadedFlags.themePreference,
+    () => 'System' as const,
+  )
+  const { systemTheme } = loadedFlags
+  const resolvedTheme = resolveTheme(themePreference, systemTheme)
+
   return [
     {
       route: urlToAppRoute(url),
@@ -173,11 +253,17 @@ const init: Runtime.ApplicationInit<Model, Message> = (url: Url) => {
       copiedSnippets: HashSet.empty(),
       mobileMenuOpen: false,
       activeSection: Option.none(),
+      themePreference,
+      systemTheme,
+      resolvedTheme,
     },
-    Option.match(url.hash, {
-      onNone: () => [],
-      onSome: (hash) => [scrollToHash(hash)],
-    }),
+    [
+      applyThemeToDocument(resolvedTheme),
+      ...Option.match(url.hash, {
+        onNone: () => [],
+        onSome: (hash) => [scrollToHash(hash)],
+      }),
+    ],
   ]
 }
 
@@ -272,6 +358,39 @@ const update = (
         }),
         [],
       ],
+
+      SetThemePreference: ({ preference }) => {
+        const resolvedTheme = resolveTheme(
+          preference,
+          model.systemTheme,
+        )
+
+        return [
+          evo(model, {
+            themePreference: () => preference,
+            resolvedTheme: () => resolvedTheme,
+          }),
+          [
+            applyThemeToDocument(resolvedTheme),
+            saveThemePreference(preference),
+          ],
+        ]
+      },
+
+      SystemThemeChanged: ({ theme }) => {
+        const resolvedTheme = resolveTheme(
+          model.themePreference,
+          theme,
+        )
+
+        return [
+          evo(model, {
+            systemTheme: () => theme,
+            resolvedTheme: () => resolvedTheme,
+          }),
+          [applyThemeToDocument(resolvedTheme)],
+        ]
+      },
     }),
   )
 
@@ -317,6 +436,34 @@ const scrollToHash = (hash: string): Runtime.Command<NoOp> =>
     })
   })
 
+const applyThemeToDocument = (
+  theme: ResolvedTheme,
+): Runtime.Command<NoOp> =>
+  Effect.sync(() => {
+    M.value(theme).pipe(
+      M.when('Dark', () =>
+        document.documentElement.classList.add('dark'),
+      ),
+      M.when('Light', () =>
+        document.documentElement.classList.remove('dark'),
+      ),
+      M.exhaustive,
+    )
+    return NoOp.make()
+  })
+
+const saveThemePreference = (
+  preference: ThemePreference,
+): Runtime.Command<NoOp> =>
+  Effect.gen(function* () {
+    const store = yield* KeyValueStore.KeyValueStore
+    yield* store.set(THEME_STORAGE_KEY, JSON.stringify(preference))
+    return NoOp.make()
+  }).pipe(
+    Effect.catchAll(() => Effect.succeed(NoOp.make())),
+    Effect.provide(BrowserKeyValueStore.layerLocalStorage),
+  )
+
 // VIEW
 
 const sidebarView = (
@@ -325,8 +472,10 @@ const sidebarView = (
 ) => {
   const linkClass = (isActive: boolean) =>
     classNames('block px-2 py-1 rounded transition text-sm', {
-      'bg-blue-100 text-blue-700': isActive,
-      'text-gray-700 hover:bg-gray-100': !isActive,
+      'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400':
+        isActive,
+      'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800':
+        !isActive,
     })
 
   const navLink = (href: string, isActive: boolean, label: string) =>
@@ -337,7 +486,7 @@ const sidebarView = (
       Class(
         classNames(
           'absolute md:static top-0 left-0 bottom-0 z-40',
-          'w-full md:w-64 bg-white border-r border-gray-200 p-4',
+          'w-full md:w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 p-4',
           'md:h-full md:overflow-y-auto overflow-y-auto',
           {
             block: mobileMenuOpen,
@@ -353,7 +502,7 @@ const sidebarView = (
           h2(
             [
               Class(
-                'text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3',
+                'text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3',
               ),
             ],
             ['Documentation'],
@@ -398,7 +547,9 @@ const iconLink = (link: string, ariaLabel: string, icon: Html) =>
   a(
     [
       Href(link),
-      Class('text-gray-700 hover:text-gray-900 transition'),
+      Class(
+        'text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition',
+      ),
       AriaLabel(ariaLabel),
     ],
     [icon],
@@ -411,14 +562,14 @@ const tableOfContentsView = (
   aside(
     [
       Class(
-        'hidden xl:block w-64 overflow-y-auto border-l border-gray-200 p-4',
+        'hidden xl:block w-64 overflow-y-auto border-l border-gray-200 dark:border-gray-700 p-4',
       ),
     ],
     [
       h3(
         [
           Class(
-            'text-xs font-semibold text-gray-900 uppercase tracking-wider mb-2',
+            'text-xs font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-2',
           ),
         ],
         ['On This Page'],
@@ -443,8 +594,9 @@ const tableOfContentsView = (
                       Href(`#${id}`),
                       Class(
                         classNames('transition block', {
-                          'text-blue-600 underline': isActive,
-                          'text-gray-600 hover:text-gray-900':
+                          'text-blue-600 dark:text-blue-400 underline':
+                            isActive,
+                          'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white':
                             !isActive,
                         }),
                       ),
@@ -495,7 +647,7 @@ const view = (model: Model) => {
       div(
         [
           Class(
-            'bg-yellow-500 text-gray-900 text-center py-2 px-4 text-xs md:text-sm font-medium space-x-2 md:space-x-3',
+            'bg-yellow-500 dark:bg-yellow-600 text-gray-900 text-center py-2 px-4 text-xs md:text-sm font-medium space-x-2 md:space-x-3',
           ),
         ],
         [
@@ -512,7 +664,7 @@ const view = (model: Model) => {
       header(
         [
           Class(
-            'bg-white border-b border-gray-200 px-4 md:px-8 py-4 md:py-6 flex items-center justify-between',
+            'bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 md:px-8 py-4 md:py-6 flex items-center justify-between',
           ),
         ],
         [
@@ -522,7 +674,7 @@ const view = (model: Model) => {
               button(
                 [
                   Class(
-                    'md:hidden p-2 rounded hover:bg-gray-100 transition text-gray-700',
+                    'md:hidden p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-700 dark:text-gray-300',
                   ),
                   AriaLabel('Toggle menu'),
                   OnClick(ToggleMobileMenu.make()),
@@ -532,7 +684,7 @@ const view = (model: Model) => {
               h1(
                 [
                   Class(
-                    'text-xl md:text-2xl font-bold text-gray-900',
+                    'text-xl md:text-2xl font-bold text-gray-900 dark:text-white',
                   ),
                 ],
                 ['Foldkit'],
@@ -542,6 +694,7 @@ const view = (model: Model) => {
           div(
             [Class('flex items-center gap-3 md:gap-4')],
             [
+              themeSelector(model.themePreference),
               iconLink(
                 Link.github,
                 'GitHub',
@@ -561,7 +714,11 @@ const view = (model: Model) => {
         [
           sidebarView(model.route, model.mobileMenuOpen),
           main(
-            [Class('flex-1 min-w-0 overflow-y-auto')],
+            [
+              Class(
+                'flex-1 min-w-0 overflow-y-auto bg-white dark:bg-gray-900',
+              ),
+            ],
             [
               keyed('div')(
                 model.route._tag,
@@ -591,6 +748,9 @@ const CommandStreamsDeps = S.Struct({
     pageId: S.String,
     sections: S.Array(S.String),
   }),
+  systemTheme: S.Struct({
+    isSystemPreference: S.Boolean,
+  }),
 })
 
 export type CommandStreamsDeps = typeof CommandStreamsDeps.Type
@@ -600,12 +760,15 @@ const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<
   Message
 >({
   activeSection: CommandStream.activeSection,
+  systemTheme: CommandStream.systemTheme,
 })
 
 // RUN
 
 const application = Runtime.makeApplication({
   Model,
+  Flags,
+  flags,
   init,
   update,
   view,

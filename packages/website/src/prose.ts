@@ -22,7 +22,13 @@ import { Icon } from './icon'
 import { CopyLinkToClipboard } from './main'
 
 export const link = (href: string, text: string): Html =>
-  a([Href(href), Class('text-blue-500 hover:underline')], [text])
+  a(
+    [
+      Href(href),
+      Class('text-blue-500 dark:text-blue-400 hover:underline'),
+    ],
+    [text],
+  )
 
 export const heading = (
   level: 1 | 2 | 3,
@@ -30,9 +36,9 @@ export const heading = (
   text: string,
 ): Html => {
   const classes = {
-    1: 'text-3xl md:text-4xl font-bold text-gray-900 mb-6',
-    2: 'text-2xl md:text-2xl font-semibold text-gray-900 mb-4 scroll-mt-6',
-    3: 'text-xl font-semibold text-gray-900 mb-3 scroll-mt-6',
+    1: 'text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6',
+    2: 'text-2xl md:text-2xl font-semibold text-gray-900 dark:text-white mb-4 scroll-mt-6',
+    3: 'text-xl font-semibold text-gray-900 dark:text-white mb-3 scroll-mt-6',
   }
   const tag = { 1: h1, 2: h2, 3: h3 }
 
@@ -49,7 +55,7 @@ export const heading = (
     [
       Href(`#${id}`),
       Class(
-        'opacity-0 group-hover:opacity-100 transition-opacity absolute -left-8 top-1/2 -translate-y-1/2 p-1 pr-2 rounded hover:text-gray-800 text-gray-400 cursor-pointer',
+        'opacity-0 group-hover:opacity-100 transition-opacity absolute -left-8 top-1/2 -translate-y-1/2 p-1 pr-2 rounded hover:text-gray-800 dark:hover:text-gray-200 text-gray-400 dark:text-gray-500 cursor-pointer',
       ),
       AriaLabel(`Copy link to ${text}`),
       OnClick(CopyLinkToClipboard.make({ hash: id })),
@@ -95,4 +101,11 @@ export const bulletPoint = (
 ): Html => li([], [strong([], [`${label}:`]), ` ${description}`])
 
 export const inlineCode = (text: string): Html =>
-  code([Class('bg-gray-200 px-1.5 py-0.5 rounded text-sm')], [text])
+  code(
+    [
+      Class(
+        'bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm',
+      ),
+    ],
+    [text],
+  )

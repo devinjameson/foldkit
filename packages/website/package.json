@@ -12,6 +12,8 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@effect/platform": "^0.94.1",
+    "@effect/platform-browser": "^0.74.0",
     "@tailwindcss/vite": "^4.1.18",
     "classnames": "^2.5.1",
     "effect": "^3.19.14",

@@ -1,8 +1,18 @@
 @import 'tailwindcss';
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
+  html {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
   body {
-    @apply text-base text-gray-600;
+    @apply text-base text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-900;
   }
 
   pre {
