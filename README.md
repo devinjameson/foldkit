@@ -14,7 +14,7 @@
 
 Foldkit applies functional programming principles to web application development.
 
-- **Pure updates** — State transitions are deterministic functions: `(model: Model, message: Message): Model` is the only way to change state.
+- **Pure updates** — State transitions are pure functions: `(model: Model, message: Message): Model` is the only way to change state.
 - **Controlled side effects** — Side effects are described as `Command<Message>` values and executed by the runtime, not performed directly in update functions.
 - **Explicit state transitions** — Every state change is modeled as a specific message type and is captured in the update function.
 
