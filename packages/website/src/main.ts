@@ -40,7 +40,6 @@ import {
   li,
   main,
   nav,
-  span,
   ul,
 } from './html'
 import { Icon } from './icon'
@@ -499,7 +498,7 @@ const sidebarView = (
     [
       Class(
         classNames(
-          'fixed md:static inset-0 md:inset-auto z-40 md:w-64 md:shrink-0 md:overflow-y-auto bg-white dark:bg-gray-900 md:border-r border-gray-200 dark:border-gray-700 p-4',
+          'fixed inset-0 md:top-[72px] md:bottom-0 md:left-0 md:right-auto z-40 md:w-64 overflow-y-auto bg-white dark:bg-gray-900 md:border-r border-gray-200 dark:border-gray-700 p-4',
           {
             block: mobileMenuOpen,
             'hidden md:block': !mobileMenuOpen,
@@ -599,7 +598,7 @@ const tableOfContentsView = (
   aside(
     [
       Class(
-        'hidden xl:block w-64 shrink-0 overflow-y-auto border-l border-gray-200 dark:border-gray-700 p-4',
+        'hidden xl:block sticky top-[72px] w-64 h-[calc(100vh-72px)] shrink-0 overflow-y-auto border-l border-gray-200 dark:border-gray-700 p-4',
       ),
     ],
     [
@@ -680,33 +679,16 @@ const view = (model: Model) => {
   return div(
     [
       Class(
-        classNames('fixed inset-0 flex flex-col', {
+        classNames('flex flex-col min-h-screen', {
           'overflow-hidden': model.mobileMenuOpen,
         }),
       ),
     ],
     [
-      div(
-        [
-          Class(
-            'shrink-0 bg-yellow-500 dark:bg-yellow-600 text-gray-900 text-center py-2 px-4 text-xs md:text-sm font-medium space-x-2 md:space-x-3',
-          ),
-        ],
-        [
-          span([], ['🔧']),
-          span(
-            [],
-            [
-              'We are building in the open! This site is a work in progress.',
-            ],
-          ),
-          span([], ['🪛']),
-        ],
-      ),
       header(
         [
           Class(
-            'shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 pl-2 pr-3 md:px-8 py-4 md:py-6 flex items-center justify-between',
+            'fixed top-0 inset-x-0 z-50 h-14 md:h-[72px] bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 pl-2 pr-3 md:px-8 flex items-center justify-between',
           ),
         ],
         [
@@ -754,19 +736,19 @@ const view = (model: Model) => {
         ],
       ),
       div(
-        [Class('flex flex-1 overflow-hidden')],
+        [Class('flex flex-1 pt-14 md:pt-[72px] md:pl-64')],
         [
           sidebarView(model.route, model.mobileMenuOpen),
           main(
-            [
-              Class(
-                'flex-1 min-w-0 overflow-y-auto bg-white dark:bg-gray-900',
-              ),
-            ],
+            [Class('flex-1 min-w-0 bg-white dark:bg-gray-900')],
             [
               keyed('div')(
                 model.route._tag,
-                [Class('p-4 md:p-8 max-w-4xl mx-auto min-w-0')],
+                [
+                  Class(
+                    'px-4 py-6 md:px-8 md:py-10 px- max-w-4xl mx-auto min-w-0',
+                  ),
+                ],
                 [content],
               ),
             ],
