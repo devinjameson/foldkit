@@ -482,12 +482,15 @@ const sidebarView = (
   mobileMenuOpen: boolean,
 ) => {
   const linkClass = (isActive: boolean) =>
-    classNames('block px-2 py-1 rounded transition text-sm', {
-      'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400':
-        isActive,
-      'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800':
-        !isActive,
-    })
+    classNames(
+      'block px-3 py-3 md:px-2 md:py-1 rounded transition text-base md:text-sm font-medium md:font-normal',
+      {
+        'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400':
+          isActive,
+        'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800':
+          !isActive,
+      },
+    )
 
   const navLink = (href: string, isActive: boolean, label: string) =>
     li([], [a([Href(href), Class(linkClass(isActive))], [label])])

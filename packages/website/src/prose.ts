@@ -37,8 +37,8 @@ export const heading = (
 ): Html => {
   const classes = {
     1: 'text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6',
-    2: 'text-2xl md:text-2xl font-semibold text-gray-900 dark:text-white mb-4 scroll-mt-6',
-    3: 'text-xl font-semibold text-gray-900 dark:text-white mb-3 scroll-mt-6',
+    2: 'text-2xl md:text-2xl font-semibold text-gray-900 dark:text-white mt-8 mb-4 scroll-mt-6',
+    3: 'text-xl font-semibold text-gray-900 dark:text-white mt-6 mb-3 scroll-mt-6',
   }
   const tag = { 1: h1, 2: h2, 3: h3 }
 

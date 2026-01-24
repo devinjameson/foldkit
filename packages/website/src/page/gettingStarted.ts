@@ -51,6 +51,7 @@ export const view = (model: Model): Html =>
         CREATE_FOLDKIT_APP_COMMAND,
         'Copy command to clipboard',
         model,
+        'mb-8',
       ),
       para(
         'Once the project is created, navigate to the project directory and start the dev server:',

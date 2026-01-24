@@ -1,3 +1,4 @@
+import classNames from 'classnames'
 import { HashSet } from 'effect'
 import { Html } from 'foldkit/html'
 
@@ -53,6 +54,7 @@ export const codeBlock = (
   code: string,
   ariaLabel: string,
   model: Model,
+  className?: string,
 ) => {
   const content = pre(
     [
@@ -64,7 +66,7 @@ export const codeBlock = (
   )
 
   return div(
-    [Class('relative mb-8 min-w-0')],
+    [Class(classNames('relative min-w-0', className))],
     [content, copyButtonWithIndicator(code, ariaLabel, model)],
   )
 }
@@ -74,8 +76,9 @@ export const highlightedCodeBlock = (
   rawCode: string,
   ariaLabel: string,
   model: Model,
+  className?: string,
 ) =>
   div(
-    [Class('relative mb-8 min-w-0')],
+    [Class(classNames('relative min-w-0', className))],
     [content, copyButtonWithIndicator(rawCode, ariaLabel, model)],
   )

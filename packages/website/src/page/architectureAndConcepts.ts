@@ -65,6 +65,7 @@ export const view = (model: Model): Html =>
         Snippets.counterRaw,
         'Copy counter example to clipboard',
         model,
+        'mb-8',
       ),
       section(modelHeader.id, modelHeader.text, [
         para(
@@ -84,6 +85,7 @@ export const view = (model: Model): Html =>
           Snippets.counterModelRaw,
           'Copy model example to clipboard',
           model,
+          'mb-8',
         ),
       ]),
       section(messagesHeader.id, messagesHeader.text, [
@@ -106,6 +108,7 @@ export const view = (model: Model): Html =>
           Snippets.counterMessagesRaw,
           'Copy messages example to clipboard',
           model,
+          'mb-8',
         ),
       ]),
       section(updateHeader.id, updateHeader.text, [
@@ -128,6 +131,7 @@ export const view = (model: Model): Html =>
           Snippets.counterUpdateRaw,
           'Copy update example to clipboard',
           model,
+          'mb-8',
         ),
       ]),
       section(viewHeader.id, viewHeader.text, [
@@ -147,6 +151,7 @@ export const view = (model: Model): Html =>
           Snippets.counterViewRaw,
           'Copy view example to clipboard',
           model,
+          'mb-8',
         ),
       ]),
       section(commandsHeader.id, commandsHeader.text, [
@@ -167,6 +172,7 @@ export const view = (model: Model): Html =>
           Snippets.counterCommandsRaw,
           'Copy commands example to clipboard',
           model,
+          'mb-8',
         ),
         para(
           'Now, what if we want to get the next count from an API instead of incrementing locally? We can create a Command that performs the HTTP request and returns a Message when it completes:',
@@ -182,6 +188,7 @@ export const view = (model: Model): Html =>
           Snippets.counterHttpCommandRaw,
           'Copy HTTP command example to clipboard',
           model,
+          'mb-8',
         ),
         para(
           "Let's zoom in on ",
@@ -201,6 +208,7 @@ export const view = (model: Model): Html =>
           Snippets.counterHttpCommandFetchCountRaw,
           'Copy HTTP command fetchCount example to clipboard',
           model,
+          'mb-8',
         ),
       ]),
       section(commandStreamsHeader.id, commandStreamsHeader.text, [
@@ -230,6 +238,7 @@ export const view = (model: Model): Html =>
           Snippets.stopwatchCommandStreamRaw,
           'Copy command stream example to clipboard',
           model,
+          'mb-8',
         ),
         para(
           'The key concept is ',
