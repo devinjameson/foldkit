@@ -682,7 +682,7 @@ const view = (model: Model) => {
   return div(
     [
       Class(
-        classNames('flex flex-col h-screen', {
+        classNames('flex flex-col h-dvh', {
           'overflow-hidden': model.mobileMenuOpen,
         }),
       ),
