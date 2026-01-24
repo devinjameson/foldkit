@@ -21,19 +21,21 @@ import { Url, toString as urlToString } from 'foldkit/url'
 
 import * as CommandStream from './commandStream'
 import {
+  Alt,
   AriaLabel,
   Class,
   Href,
   OnClick,
+  Src,
   a,
   aside,
   button,
   div,
   empty,
-  h1,
   h2,
   h3,
   header,
+  img,
   keyed,
   li,
   main,
@@ -723,14 +725,11 @@ const view = (model: Model) => {
                 ],
                 [Icon.menu('w-6 h-6')],
               ),
-              h1(
-                [
-                  Class(
-                    'text-xl md:text-2xl font-bold text-gray-900 dark:text-white',
-                  ),
-                ],
-                ['Foldkit'],
-              ),
+              img([
+                Src('/logo.svg'),
+                Alt('Foldkit'),
+                Class('h-6 md:h-8 dark:invert'),
+              ]),
             ],
           ),
           div(
