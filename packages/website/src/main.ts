@@ -510,14 +510,11 @@ const sidebarView = (
       div(
         [Class('flex justify-between items-center mb-4 md:hidden')],
         [
-          span(
-            [
-              Class(
-                'text-xl font-bold text-gray-900 dark:text-white',
-              ),
-            ],
-            ['Foldkit'],
-          ),
+          img([
+            Src('/logo.svg'),
+            Alt('Foldkit'),
+            Class('h-6 dark:invert'),
+          ]),
           button(
             [
               Class(
