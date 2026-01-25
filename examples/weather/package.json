@@ -5,15 +5,19 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
+    "@effect/platform": "^0.77.0",
     "@tailwindcss/vite": "^4.1.18",
     "effect": "^3.19.14",
     "foldkit": "workspace:*",
     "tailwindcss": "^4.1.18"
   },
   "devDependencies": {
-    "@foldkit/vite-plugin": "workspace:*"
+    "@foldkit/vite-plugin": "workspace:*",
+    "happy-dom": "^18.0.1",
+    "vitest": "^3.1.4"
   }
 }

@@ -1,4 +1,5 @@
-import { Array, Effect, Match as M, Schema as S, String } from 'effect'
+import { FetchHttpClient, HttpClient } from '@effect/platform'
+import { Array, Effect, Match as M, Schema as S, String, flow } from 'effect'
 import { Runtime } from 'foldkit'
 import { Html, html } from 'foldkit/html'
 import { ts } from 'foldkit/schema'
@@ -6,7 +7,7 @@ import { evo } from 'foldkit/struct'
 
 // MODEL
 
-const WeatherData = S.Struct({
+export const WeatherData = S.Struct({
   zipCode: S.String,
   temperature: S.Number,
   description: S.String,
@@ -15,12 +16,12 @@ const WeatherData = S.Struct({
   areaName: S.String,
   region: S.String,
 })
-type WeatherData = typeof WeatherData.Type
+export type WeatherData = typeof WeatherData.Type
 
-const WeatherInit = ts('WeatherInit')
-const WeatherLoading = ts('WeatherLoading')
-const WeatherSuccess = ts('WeatherSuccess', { data: WeatherData })
-const WeatherFailure = ts('WeatherFailure', { error: S.String })
+export const WeatherInit = ts('WeatherInit')
+export const WeatherLoading = ts('WeatherLoading')
+export const WeatherSuccess = ts('WeatherSuccess', { data: WeatherData })
+export const WeatherFailure = ts('WeatherFailure', { error: S.String })
 
 const WeatherAsyncResult = S.Union(WeatherInit, WeatherLoading, WeatherSuccess, WeatherFailure)
 
@@ -31,18 +32,18 @@ type WeatherFailure = typeof WeatherFailure.Type
 
 type WeatherAsyncResult = typeof WeatherAsyncResult.Type
 
-const Model = S.Struct({
+export const Model = S.Struct({
   zipCodeInput: S.String,
   weather: WeatherAsyncResult,
 })
-type Model = typeof Model.Type
+export type Model = typeof Model.Type
 
 // MESSAGE
 
-const UpdateZipCodeInput = ts('UpdateZipCodeInput', { value: S.String })
-const FetchWeather = ts('FetchWeather')
-const WeatherFetched = ts('WeatherFetched', { weather: WeatherData })
-const WeatherError = ts('WeatherError', { error: S.String })
+export const UpdateZipCodeInput = ts('UpdateZipCodeInput', { value: S.String })
+export const FetchWeather = ts('FetchWeather')
+export const WeatherFetched = ts('WeatherFetched', { weather: WeatherData })
+export const WeatherError = ts('WeatherError', { error: S.String })
 
 const Message = S.Union(UpdateZipCodeInput, FetchWeather, WeatherFetched, WeatherError)
 
@@ -53,7 +54,10 @@ type WeatherError = typeof WeatherError.Type
 
 type Message = typeof Message.Type
 
-const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
+export const update = (
+  model: Model,
+  message: Message,
+): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
   M.value(message).pipe(
     M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
     M.tagsExhaustive({
@@ -68,7 +72,7 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         evo(model, {
           weather: () => WeatherLoading.make(),
         }),
-        [fetchWeather(model.zipCodeInput)],
+        [fetchWeatherLive(model.zipCodeInput)],
       ],
 
       WeatherFetched: ({ weather }) => [
@@ -112,21 +116,28 @@ type WeatherResponseData = {
   }>
 }
 
-const fetchWeather = (zipCode: string): Runtime.Command<WeatherFetched | WeatherError> =>
+export const fetchWeather = (
+  zipCode: string,
+): Effect.Effect<WeatherFetched | WeatherError, never, HttpClient.HttpClient> =>
   Effect.gen(function* () {
     if (String.isEmpty(zipCode.trim())) {
       return WeatherError.make({ error: 'Zip code required' })
     }
 
-    const response = yield* Effect.tryPromise(() =>
-      fetch(`https://wttr.in/${encodeURIComponent(zipCode)},US?format=j1`),
+    const client = yield* HttpClient.HttpClient
+    const response = yield* client.get(
+      `https://wttr.in/${encodeURIComponent(zipCode)},US?format=j1`,
     )
 
-    if (!response.ok) {
+    if (response.status !== 200) {
       return WeatherError.make({ error: 'Location not found' })
     }
 
-    const data: WeatherResponseData = yield* Effect.tryPromise(() => response.json())
+    // In a real app, you'd define a Schema for WeatherResponseData and use
+    // Schema.decodeUnknown to validate the response. We use a type assertion
+    // here for brevity.
+    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+    const data = (yield* response.json) as WeatherResponseData
     const currentCondition = data.current_condition[0]
     const areaName = data.nearest_area[0].areaName[0].value
     const region = data.nearest_area[0].region[0].value
@@ -143,10 +154,17 @@ const fetchWeather = (zipCode: string): Runtime.Command<WeatherFetched | Weather
 
     return WeatherFetched.make({ weather })
   }).pipe(
+    Effect.scoped,
     Effect.catchAll(() =>
       Effect.succeed(WeatherError.make({ error: 'Failed to fetch weather data' })),
     ),
   )
+
+const fetchWeatherLive = flow(
+  fetchWeather,
+  Effect.locally(HttpClient.currentTracerPropagation, false),
+  Effect.provide(FetchHttpClient.layer),
+)
 
 // VIEW
 
