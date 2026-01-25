@@ -1,13 +1,17 @@
+import { Array, Match } from 'effect'
 import { Html } from 'foldkit/html'
 
 import { Class, Href, a, div, h3, p } from '../html'
 import { Link } from '../link'
 import { heading, para } from '../prose'
 
+type Difficulty = 'Beginner' | 'Intermediate' | 'Advanced'
+
 type Example = {
   title: string
   description: string
   href: string
+  difficulty: Difficulty
   tags: ReadonlyArray<string>
 }
 
@@ -17,71 +21,105 @@ const examples: ReadonlyArray<Example> = [
     description:
       'The classic counter example. Increment, decrement, and reset a number.',
     href: Link.exampleCounter,
-    tags: ['Beginner', 'State'],
+    difficulty: 'Beginner',
+    tags: ['State'],
   },
   {
     title: 'Todo',
     description:
       'A todo list with local storage persistence. Add, complete, and delete tasks.',
     href: Link.exampleTodo,
-    tags: ['Beginner', 'Storage'],
+    difficulty: 'Beginner',
+    tags: ['Storage'],
   },
   {
     title: 'Stopwatch',
     description:
       'A stopwatch with start, stop, and reset. Demonstrates time-based subscriptions.',
     href: Link.exampleStopwatch,
-    tags: ['Beginner', 'Subscriptions'],
+    difficulty: 'Beginner',
+    tags: ['Subscriptions'],
   },
   {
     title: 'Form',
     description:
       'Form handling with field validation, error states, and async submission.',
     href: Link.exampleForm,
-    tags: ['Intermediate', 'Validation'],
+    difficulty: 'Intermediate',
+    tags: ['Validation'],
   },
   {
     title: 'Weather',
     description:
       'Look up weather by zip code. Demonstrates HTTP requests and loading states.',
     href: Link.exampleWeather,
-    tags: ['Intermediate', 'HTTP'],
+    difficulty: 'Intermediate',
+    tags: ['HTTP'],
   },
   {
     title: 'Routing',
     description:
       'Client-side routing with URL parameters, nested routes, and navigation.',
     href: Link.exampleRouting,
-    tags: ['Intermediate', 'Routing'],
+    difficulty: 'Intermediate',
+    tags: ['Routing'],
   },
   {
     title: 'Shopping Cart',
     description:
       'E-commerce app with product listing, cart management, and checkout flow.',
     href: Link.exampleShoppingCart,
-    tags: ['Advanced', 'Routing'],
+    difficulty: 'Advanced',
+    tags: ['Routing'],
   },
   {
     title: 'Snake',
     description:
       'The classic snake game. Keyboard input, game loop, and collision detection.',
     href: Link.exampleSnake,
-    tags: ['Advanced', 'Game'],
+    difficulty: 'Advanced',
+    tags: ['Game'],
   },
   {
     title: 'WebSocket Chat',
     description:
       'Real-time chat using WebSockets. Connection handling and message streaming.',
     href: Link.exampleWebsocketChat,
-    tags: ['Advanced', 'WebSocket'],
+    difficulty: 'Advanced',
+    tags: ['WebSocket'],
   },
 ]
 
-const tag = (text: string): Html =>
+const difficultyToTag = (difficulty: Difficulty): Html => {
+  const { label, colors } = Match.value(difficulty).pipe(
+    Match.when('Beginner', () => ({
+      label: 'Beginner',
+      colors:
+        'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-400',
+    })),
+    Match.when('Intermediate', () => ({
+      label: 'Intermediate',
+      colors:
+        'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400',
+    })),
+    Match.when('Advanced', () => ({
+      label: 'Advanced',
+      colors:
+        'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-400',
+    })),
+    Match.exhaustive,
+  )
+  return div(
+    [Class(`text-xs px-2 py-0.5 rounded-full ${colors}`)],
+    [label],
+  )
+}
+
+const featureTag = (text: string): Html =>
   div(
     [
       Class(
-        'text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400',
+        'text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300',
       ),
     ],
     [text],
@@ -108,7 +146,13 @@ const exampleCard = (example: Example): Html =>
         [Class('text-sm text-gray-600 dark:text-gray-400 mb-3')],
         [example.description],
       ),
-      div([Class('flex gap-2 flex-wrap')], example.tags.map(tag)),
+      div(
+        [Class('flex gap-2 flex-wrap')],
+        [
+          difficultyToTag(example.difficulty),
+          ...Array.map(example.tags, featureTag),
+        ],
+      ),
     ],
   )
 
