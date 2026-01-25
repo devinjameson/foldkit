@@ -27,27 +27,27 @@ import {
 type Header = { id: string; text: string }
 
 const theProblemHeader: Header = {
-  id: 'theProblem',
+  id: 'the-problem',
   text: 'The Problem',
 }
 
 const foldkitVsReactHeader: Header = {
-  id: 'foldkitVsReact',
+  id: 'foldkit-vs-react',
   text: 'Foldkit vs React',
 }
 
 const theElmArchitectureHeader: Header = {
-  id: 'theElmArchitecture',
+  id: 'the-elm-architecture',
   text: 'The Elm Architecture',
 }
 
 const builtOnEffectHeader: Header = {
-  id: 'builtOnEffect',
+  id: 'built-on-effect',
   text: 'Built on Effect',
 }
 
 const whoItsForHeader: Header = {
-  id: 'whoItsFor',
+  id: 'who-its-for',
   text: "Who It's For",
 }
 

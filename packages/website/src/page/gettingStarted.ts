@@ -15,22 +15,22 @@ const DEV_YARN = 'yarn dev'
 type Header = { id: string; text: string }
 
 const quickStartHeader: Header = {
-  id: 'quickStart',
+  id: 'quick-start',
   text: 'Quick Start',
 }
 
 const projectStructureHeader: Header = {
-  id: 'projectStructure',
+  id: 'project-structure',
   text: 'Project Structure',
 }
 
 const nextStepsHeader: Header = {
-  id: 'nextSteps',
+  id: 'next-steps',
   text: 'Next Steps',
 }
 
 const aiAssistedHeader: Header = {
-  id: 'aiAssisted',
+  id: 'ai-assisted',
   text: 'AI-Assisted Development',
 }
 
@@ -45,7 +45,7 @@ export const view = (model: Model): Html =>
   div(
     [],
     [
-      heading(1, 'gettingStarted', 'Getting Started'),
+      heading(1, 'getting-started', 'Getting Started'),
       heading(2, quickStartHeader.id, quickStartHeader.text),
       para(
         link(Link.createFoldkitApp, 'Create Foldkit app'),

@@ -15,32 +15,32 @@ const biparserHeader: Header = {
 }
 
 const definingRoutesHeader: Header = {
-  id: 'definingRoutes',
+  id: 'defining-routes',
   text: 'Defining Routes',
 }
 
 const buildingRoutersHeader: Header = {
-  id: 'buildingRouters',
+  id: 'building-routers',
   text: 'Building Routers',
 }
 
 const parsingUrlsHeader: Header = {
-  id: 'parsingUrls',
+  id: 'parsing-urls',
   text: 'Parsing URLs',
 }
 
 const buildingUrlsHeader: Header = {
-  id: 'buildingUrls',
+  id: 'building-urls',
   text: 'Building URLs',
 }
 
 const queryParametersHeader: Header = {
-  id: 'queryParameters',
+  id: 'query-parameters',
   text: 'Query Parameters',
 }
 
 const keyingRouteViewsHeader: Header = {
-  id: 'keyingRouteViews',
+  id: 'keying-route-views',
   text: 'Keying Route Views',
 }
 

@@ -10,27 +10,27 @@ import { codeBlock, highlightedCodeBlock } from '../view/codeBlock'
 type Header = { id: string; text: string }
 
 const startingSimpleHeader: Header = {
-  id: 'startingSimple',
+  id: 'starting-simple',
   text: 'Starting Simple',
 }
 
 const scalingWithSubmodelsHeader: Header = {
-  id: 'scalingWithSubmodels',
+  id: 'scaling-with-submodels',
   text: 'Scaling with Submodels',
 }
 
 const fileLayoutHeader: Header = {
-  id: 'fileLayout',
+  id: 'file-layout',
   text: 'File Layout',
 }
 
 const domainModulesHeader: Header = {
-  id: 'domainModules',
+  id: 'domain-modules',
   text: 'Domain Modules',
 }
 
 const indexReexportsHeader: Header = {
-  id: 'indexReexports',
+  id: 'index-reexports',
   text: 'Index Re-exports',
 }
 
@@ -46,7 +46,7 @@ export const view = (model: Model): Html =>
   div(
     [],
     [
-      heading(1, 'projectOrganization', 'Project Organization'),
+      heading(1, 'project-organization', 'Project Organization'),
       para(
         'Foldkit apps can start in a single ',
         inlineCode('main.ts'),
@@ -71,7 +71,7 @@ export const view = (model: Model): Html =>
           para(
             'As your app grows, a single Model/Message/Update becomes unwieldy. The submodel pattern lets you split your app into self-contained modules.',
           ),
-          heading(3, 'submoduleStructure', 'Submodule Structure'),
+          heading(3, 'submodule-structure', 'Submodule Structure'),
           ul(
             [Class('list-disc mb-4 space-y-1 ml-4')],
             [

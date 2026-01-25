@@ -10,22 +10,22 @@ import { highlightedCodeBlock } from '../view/codeBlock'
 type Header = { id: string; text: string }
 
 const pureFunctionsHeader: Header = {
-  id: 'pureFunctions',
+  id: 'pure-functions',
   text: 'Pure Functions Everywhere',
 }
 
 const requestingValuesHeader: Header = {
-  id: 'requestingValues',
+  id: 'requesting-values',
   text: 'Requesting Values',
 }
 
 const immutableUpdatesHeader: Header = {
-  id: 'immutableUpdates',
+  id: 'immutable-updates',
   text: 'Immutable Updates with evo',
 }
 
 const messagesAsIntentsHeader: Header = {
-  id: 'messagesAsIntents',
+  id: 'messages-as-intents',
   text: 'Messages as Intents',
 }
 
@@ -40,7 +40,7 @@ export const view = (model: Model): Html =>
   div(
     [],
     [
-      heading(1, 'bestPractices', 'Best Practices'),
+      heading(1, 'best-practices', 'Best Practices'),
       para(
         'Foldkit requires a different way of thinking than most TypeScript frameworks. These patterns will help you write maintainable applications.',
       ),
@@ -52,7 +52,7 @@ export const view = (model: Model): Html =>
           inlineCode('update'),
           ' are pure functions. They take inputs and return outputs without side effects.',
         ),
-        heading(3, 'viewIsPure', 'View is Pure'),
+        heading(3, 'view-is-pure', 'View is Pure'),
         ul(
           [Class('list-disc mb-6 space-y-2 ml-4')],
           [
@@ -90,7 +90,7 @@ export const view = (model: Model): Html =>
           model,
           'mb-8',
         ),
-        heading(3, 'updateIsPure', 'Update is Pure'),
+        heading(3, 'update-is-pure', 'Update is Pure'),
         ul(
           [Class('list-disc mb-6 space-y-2 ml-4')],
           [
@@ -150,7 +150,7 @@ export const view = (model: Model): Html =>
           inlineCode('useEffect'),
           '), Foldkit side effects only happen in response to Messages. This separation makes your code predictable and testable.',
         ),
-        heading(3, 'testingUpdate', 'Testing Update Functions'),
+        heading(3, 'testing-update', 'Testing Update Functions'),
         para(
           "Foldkit's pure update model makes testing painless because state transitions are just function calls — pass in a Model and Message, assert on the returned Model. And because Commands are Effects with explicit dependencies, you can swap in mocks without reaching for libraries like ",
           link(Link.msw, 'msw'),
@@ -184,7 +184,11 @@ export const view = (model: Model): Html =>
             inlineCode('update'),
             '. This breaks purity — calling the function twice with the same inputs would return different results.',
           ),
-          heading(3, 'dontComputeDirectly', "Don't Compute Directly"),
+          heading(
+            3,
+            'dont-compute-directly',
+            "Don't Compute Directly",
+          ),
           highlightedCodeBlock(
             div(
               [
@@ -198,7 +202,7 @@ export const view = (model: Model): Html =>
             model,
             'mb-8',
           ),
-          heading(3, 'requestViaCommand', 'Request Via Command'),
+          heading(3, 'request-via-command', 'Request Via Command'),
           para(
             'Instead, return a Command that generates the value and sends it back as a Message:',
           ),
@@ -271,7 +275,7 @@ export const view = (model: Model): Html =>
             strong([], ['what to do']),
             '. Name them after user actions or events, not implementation details.',
           ),
-          heading(3, 'goodMessageNames', 'Good Message Names'),
+          heading(3, 'good-message-names', 'Good Message Names'),
           ul(
             [
               Class(
@@ -284,7 +288,7 @@ export const view = (model: Model): Html =>
               li([], ['UserDataReceived']),
             ],
           ),
-          heading(3, 'avoidThese', 'Avoid These'),
+          heading(3, 'avoid-these', 'Avoid These'),
           ul(
             [
               Class(

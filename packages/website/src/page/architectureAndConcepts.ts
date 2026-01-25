@@ -10,7 +10,7 @@ import { highlightedCodeBlock } from '../view/codeBlock'
 type Header = { id: string; text: string }
 
 const counterExampleHeader: Header = {
-  id: 'counterExample',
+  id: 'counter-example',
   text: 'A Simple Counter Example',
 }
 const modelHeader: Header = { id: 'model', text: 'Model' }
@@ -19,7 +19,7 @@ const updateHeader: Header = { id: 'update', text: 'Update' }
 const viewHeader: Header = { id: 'view', text: 'View' }
 const commandsHeader: Header = { id: 'commands', text: 'Commands' }
 const commandStreamsHeader: Header = {
-  id: 'commandStreams',
+  id: 'command-streams',
   text: 'Command Streams',
 }
 
