@@ -4,6 +4,7 @@
   "private": true,
   "description": "foldkit: Elm-inspired UI framework powered by Effect-TS",
   "scripts": {
+    "test": "pnpm -r --filter './examples/*' --filter './packages/*' run --if-present test",
     "format": "prettier -w .",
     "dev:core": "pnpm --filter foldkit watch",
     "dev:website": "pnpm --filter website dev",
