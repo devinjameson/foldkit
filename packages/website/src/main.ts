@@ -53,6 +53,7 @@ const HomeRoute = ts('Home')
 const WhyFoldkitRoute = ts('WhyFoldkit')
 const GettingStartedRoute = ts('GettingStarted')
 const ArchitectureAndConceptsRoute = ts('ArchitectureAndConcepts')
+const RoutingRoute = ts('Routing')
 const ExamplesRoute = ts('Examples')
 const BestPracticesRoute = ts('BestPractices')
 const NotFoundRoute = ts('NotFound', { path: S.String })
@@ -62,6 +63,7 @@ const AppRoute = S.Union(
   WhyFoldkitRoute,
   GettingStartedRoute,
   ArchitectureAndConceptsRoute,
+  RoutingRoute,
   ExamplesRoute,
   BestPracticesRoute,
   NotFoundRoute,
@@ -72,6 +74,7 @@ type WhyFoldkitRoute = typeof WhyFoldkitRoute.Type
 type GettingStartedRoute = typeof GettingStartedRoute.Type
 type ArchitectureAndConceptsRoute =
   typeof ArchitectureAndConceptsRoute.Type
+type RoutingRoute = typeof RoutingRoute.Type
 type ExamplesRoute = typeof ExamplesRoute.Type
 type BestPracticesRoute = typeof BestPracticesRoute.Type
 type NotFoundRoute = typeof NotFoundRoute.Type
@@ -90,6 +93,10 @@ const architectureAndConceptsRouter = pipe(
   literal('architecture-and-concepts'),
   Route.mapTo(ArchitectureAndConceptsRoute),
 )
+const routingRouter = pipe(
+  literal('routing'),
+  Route.mapTo(RoutingRoute),
+)
 const examplesRouter = pipe(
   literal('examples'),
   Route.mapTo(ExamplesRoute),
@@ -103,6 +110,7 @@ const routeParser = Route.oneOf(
   whyFoldkitRouter,
   gettingStartedRouter,
   architectureAndConceptsRouter,
+  routingRouter,
   examplesRouter,
   bestPracticesRouter,
   homeRouter,
@@ -562,6 +570,11 @@ const sidebarView = (
                 'Architecture & Concepts',
               ),
               navLink(
+                routingRouter.build({}),
+                S.is(RoutingRoute)(currentRoute),
+                'Routing',
+              ),
+              navLink(
                 examplesRouter.build({}),
                 S.is(ExamplesRoute)(currentRoute),
                 'Examples',
@@ -656,6 +669,7 @@ const view = (model: Model) => {
       GettingStarted: () => Page.GettingStarted.view(model),
       ArchitectureAndConcepts: () =>
         Page.ArchitectureAndConcepts.view(model),
+      Routing: () => Page.Routing.view(model),
       Examples: Page.Examples.view,
       BestPractices: Page.BestPractices.view,
       NotFound: ({ path }) =>
@@ -673,6 +687,7 @@ const view = (model: Model) => {
     M.tag('ArchitectureAndConcepts', () =>
       Option.some(Page.ArchitectureAndConcepts.tableOfContents),
     ),
+    M.tag('Routing', () => Option.some(Page.Routing.tableOfContents)),
     M.tag('BestPractices', () =>
       Option.some(Page.BestPractices.tableOfContents),
     ),
