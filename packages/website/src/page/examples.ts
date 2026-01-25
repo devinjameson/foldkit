@@ -1,13 +1,144 @@
 import { Html } from 'foldkit/html'
 
-import { div } from '../html'
+import { Class, Href, a, div, h3, p } from '../html'
+import { Link } from '../link'
 import { heading, para } from '../prose'
+
+type Example = {
+  title: string
+  description: string
+  href: string
+  tags: ReadonlyArray<string>
+}
+
+const examples: ReadonlyArray<Example> = [
+  {
+    title: 'Counter',
+    description:
+      'The classic counter example. Increment, decrement, and reset a number.',
+    href: Link.exampleCounter,
+    tags: ['Beginner', 'State'],
+  },
+  {
+    title: 'Todo',
+    description:
+      'A todo list with local storage persistence. Add, complete, and delete tasks.',
+    href: Link.exampleTodo,
+    tags: ['Beginner', 'Storage'],
+  },
+  {
+    title: 'Stopwatch',
+    description:
+      'A stopwatch with start, stop, and reset. Demonstrates time-based subscriptions.',
+    href: Link.exampleStopwatch,
+    tags: ['Beginner', 'Subscriptions'],
+  },
+  {
+    title: 'Form',
+    description:
+      'Form handling with field validation, error states, and async submission.',
+    href: Link.exampleForm,
+    tags: ['Intermediate', 'Validation'],
+  },
+  {
+    title: 'Weather',
+    description:
+      'Look up weather by zip code. Demonstrates HTTP requests and loading states.',
+    href: Link.exampleWeather,
+    tags: ['Intermediate', 'HTTP'],
+  },
+  {
+    title: 'Routing',
+    description:
+      'Client-side routing with URL parameters, nested routes, and navigation.',
+    href: Link.exampleRouting,
+    tags: ['Intermediate', 'Routing'],
+  },
+  {
+    title: 'Shopping Cart',
+    description:
+      'E-commerce app with product listing, cart management, and checkout flow.',
+    href: Link.exampleShoppingCart,
+    tags: ['Advanced', 'Routing'],
+  },
+  {
+    title: 'Snake',
+    description:
+      'The classic snake game. Keyboard input, game loop, and collision detection.',
+    href: Link.exampleSnake,
+    tags: ['Advanced', 'Game'],
+  },
+  {
+    title: 'WebSocket Chat',
+    description:
+      'Real-time chat using WebSockets. Connection handling and message streaming.',
+    href: Link.exampleWebsocketChat,
+    tags: ['Advanced', 'WebSocket'],
+  },
+]
+
+const tag = (text: string): Html =>
+  div(
+    [
+      Class(
+        'text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400',
+      ),
+    ],
+    [text],
+  )
+
+const exampleCard = (example: Example): Html =>
+  a(
+    [
+      Href(example.href),
+      Class(
+        'block p-5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 hover:border-blue-500 dark:hover:border-blue-400 transition-colors',
+      ),
+    ],
+    [
+      h3(
+        [
+          Class(
+            'text-lg font-semibold text-gray-900 dark:text-white mb-2',
+          ),
+        ],
+        [example.title],
+      ),
+      p(
+        [Class('text-sm text-gray-600 dark:text-gray-400 mb-3')],
+        [example.description],
+      ),
+      div([Class('flex gap-2 flex-wrap')], example.tags.map(tag)),
+    ],
+  )
 
 export const view = (): Html =>
   div(
     [],
     [
       heading(1, 'examples', 'Examples'),
-      para('Explore real-world examples built with Foldkit.'),
+      para(
+        'Each example is available as a starter template via ',
+        a(
+          [
+            Href(Link.createFoldkitApp),
+            Class('text-blue-500 dark:text-blue-400 hover:underline'),
+          ],
+          ['Create Foldkit App'],
+        ),
+        ". Pick one that matches what you're building, or start with Counter and work your way up. See ",
+        a(
+          [
+            Href('/getting-started'),
+            Class('text-blue-500 dark:text-blue-400 hover:underline'),
+          ],
+          ['Getting Started'],
+        ),
+        ' to get up and running.',
+      ),
+      div(
+        [Class('grid gap-4 sm:grid-cols-2 lg:grid-cols-3')],
+        examples.map(exampleCard),
+      ),
     ],
   )

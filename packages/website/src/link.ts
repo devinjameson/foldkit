@@ -1,3 +1,6 @@
+const exampleBase =
+  'https://github.com/devinjameson/foldkit/tree/main/examples'
+
 export const Link = {
   elm: 'https://elm-lang.org',
   elmArchitecture: 'https://guide.elm-lang.org/architecture/',
@@ -11,8 +14,16 @@ export const Link = {
   angular: 'https://angular.dev',
   svelte: 'https://svelte.dev',
   solid: 'https://solidjs.com',
-  foldkitExamples:
-    'https://github.com/devinjameson/foldkit/tree/main/examples',
+  foldkitExamples: exampleBase,
+  exampleCounter: `${exampleBase}/counter`,
+  exampleForm: `${exampleBase}/form`,
+  exampleRouting: `${exampleBase}/routing`,
+  exampleShoppingCart: `${exampleBase}/shopping-cart`,
+  exampleSnake: `${exampleBase}/snake`,
+  exampleStopwatch: `${exampleBase}/stopwatch`,
+  exampleTodo: `${exampleBase}/todo`,
+  exampleWeather: `${exampleBase}/weather`,
+  exampleWebsocketChat: `${exampleBase}/websocket-chat`,
   websocketChatExample:
     'https://github.com/devinjameson/foldkit/tree/main/examples/websocket-chat',
   typingTerminal: 'https://typingterminal.com',
