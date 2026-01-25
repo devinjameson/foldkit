@@ -22,18 +22,27 @@ export const Link = {
   exampleForm: `${exampleBase}/form`,
   exampleRouting: `${exampleBase}/routing`,
   exampleShoppingCart: `${exampleBase}/shopping-cart`,
+  exampleShoppingCartSubmodel:
+    'https://github.com/devinjameson/foldkit/blob/main/examples/shopping-cart/src/main.ts#L139-L153',
   exampleSnake: `${exampleBase}/snake`,
+  exampleSnakeRequestPattern:
+    'https://github.com/devinjameson/foldkit/blob/main/examples/snake/src/main.ts#L138-L174',
   exampleStopwatch: `${exampleBase}/stopwatch`,
   exampleTodo: `${exampleBase}/todo`,
   exampleWeather: `${exampleBase}/weather`,
+  exampleWeatherTests:
+    'https://github.com/devinjameson/foldkit/blob/main/examples/weather/src/main.test.ts',
   exampleWebsocketChat: `${exampleBase}/websocket-chat`,
   websocketChatExample:
     'https://github.com/devinjameson/foldkit/tree/main/examples/websocket-chat',
   typingTerminal: 'https://typingterminal.com',
   typingTerminalSource:
     'https://github.com/devinjameson/foldkit/tree/main/packages/typing-game',
+  typingTerminalRoomSource:
+    'https://github.com/devinjameson/foldkit/tree/main/packages/typing-game/client/src/page/room',
   createFoldkitApp:
     'https://github.com/devinjameson/foldkit/tree/main/packages/create-foldkit-app',
+  msw: 'https://mswjs.io',
   github: 'https://github.com/devinjameson/foldkit',
   foldkitSource:
     'https://github.com/devinjameson/foldkit/tree/main/packages/foldkit',
