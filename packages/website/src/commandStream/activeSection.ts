@@ -25,6 +25,7 @@ export const activeSection: CommandStream<
 > = {
   modelToDeps: (model: Model) => {
     const currentPageTableOfContents = M.value(model.route).pipe(
+      M.tag('WhyFoldkit', () => Page.WhyFoldkit.tableOfContents),
       M.tag(
         'GettingStarted',
         () => Page.GettingStarted.tableOfContents,
@@ -32,6 +33,15 @@ export const activeSection: CommandStream<
       M.tag(
         'ArchitectureAndConcepts',
         () => Page.ArchitectureAndConcepts.tableOfContents,
+      ),
+      M.tag('Routing', () => Page.Routing.tableOfContents),
+      M.tag(
+        'BestPractices',
+        () => Page.BestPractices.tableOfContents,
+      ),
+      M.tag(
+        'ProjectOrganization',
+        () => Page.ProjectOrganization.tableOfContents,
       ),
       M.option,
     )
