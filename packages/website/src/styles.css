@@ -2,6 +2,16 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+:root {
+  --header-height: 3.5rem;
+}
+
+@media (min-width: theme(--breakpoint-md)) {
+  :root {
+    --header-height: 4.5rem;
+  }
+}
+
 @layer base {
   html {
     color-scheme: light;

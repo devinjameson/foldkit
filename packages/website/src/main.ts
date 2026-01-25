@@ -498,7 +498,7 @@ const sidebarView = (
     [
       Class(
         classNames(
-          'fixed inset-0 md:top-[72px] md:bottom-0 md:left-0 md:right-auto z-40 md:w-64 overflow-y-auto bg-white dark:bg-gray-900 md:border-r border-gray-200 dark:border-gray-700 p-4',
+          'fixed inset-0 md:top-[var(--header-height)] md:bottom-0 md:left-0 md:right-auto z-40 md:w-64 overflow-y-auto bg-white dark:bg-gray-900 md:border-r border-gray-200 dark:border-gray-700 p-4',
           {
             block: mobileMenuOpen,
             'hidden md:block': !mobileMenuOpen,
@@ -598,7 +598,7 @@ const tableOfContentsView = (
   aside(
     [
       Class(
-        'hidden xl:block sticky top-[72px] w-64 h-[calc(100vh-72px)] shrink-0 overflow-y-auto border-l border-gray-200 dark:border-gray-700 p-4',
+        'hidden xl:block sticky top-[var(--header-height)] w-64 h-[calc(100vh-var(--header-height))] shrink-0 overflow-y-auto border-l border-gray-200 dark:border-gray-700 p-4',
       ),
     ],
     [
@@ -688,7 +688,7 @@ const view = (model: Model) => {
       header(
         [
           Class(
-            'fixed top-0 inset-x-0 z-50 h-14 md:h-[72px] bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 pl-2 pr-3 md:px-8 flex items-center justify-between',
+            'fixed top-0 inset-x-0 z-50 h-[var(--header-height)] bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 pl-2 pr-3 md:px-8 flex items-center justify-between',
           ),
         ],
         [
@@ -736,7 +736,7 @@ const view = (model: Model) => {
         ],
       ),
       div(
-        [Class('flex flex-1 pt-14 md:pt-[72px] md:pl-64')],
+        [Class('flex flex-1 pt-[var(--header-height)] md:pl-64')],
         [
           sidebarView(model.route, model.mobileMenuOpen),
           main(
