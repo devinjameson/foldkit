@@ -29,10 +29,16 @@ const nextStepsHeader: Header = {
   text: 'Next Steps',
 }
 
+const aiAssistedHeader: Header = {
+  id: 'aiAssisted',
+  text: 'AI-Assisted Development',
+}
+
 export const tableOfContents: ReadonlyArray<TableOfContentsEntry> = [
   { level: 'h2', ...quickStartHeader },
   { level: 'h2', ...projectStructureHeader },
   { level: 'h2', ...nextStepsHeader },
+  { level: 'h2', ...aiAssistedHeader },
 ]
 
 export const view = (model: Model): Html =>
@@ -121,6 +127,54 @@ export const view = (model: Model): Html =>
             'Architecture & Concepts',
           ),
           ' page to understand how the pieces fit together.',
+        ),
+      ]),
+      section(aiAssistedHeader.id, aiAssistedHeader.text, [
+        para(
+          "Foldkit's explicit architecture — state in the Model, events as Messages, logic in pure functions — works well with AI coding assistants like Claude Code. The patterns are predictable, so the AI can follow and extend them reliably.",
+        ),
+        para(
+          'For the best experience, clone the ',
+          link(Link.github, 'Foldkit repository'),
+          ' as a git submodule in your project:',
+        ),
+        codeBlock(
+          'git submodule add https://github.com/devinjameson/foldkit.git',
+          'Copy submodule command',
+          model,
+          'mb-4',
+        ),
+        para('To update the submodule when Foldkit changes:'),
+        codeBlock(
+          'git submodule update --remote foldkit',
+          'Copy update command',
+          model,
+          'mb-4',
+        ),
+        para(
+          'Then add something like this to your ',
+          inlineCode('CLAUDE.md'),
+          ':',
+        ),
+        codeBlock(
+          'This is a Foldkit project.\nSee ./foldkit for the framework source, examples, and patterns to follow.',
+          'Copy CLAUDE.md snippet',
+          model,
+          'mb-4',
+        ),
+        para(
+          'This gives the AI access to the ',
+          link(Link.foldkitSource, 'Foldkit source code'),
+          ', the ',
+          link(Link.foldkitExamples, 'examples'),
+          ', ',
+          link(Link.typingTerminal, 'Typing Terminal'),
+          ' (',
+          link(Link.typingTerminalSource, 'source'),
+          ')',
+          ', and ',
+          link(Link.websiteSource, 'this documentation site'),
+          ' — real patterns it can learn from and apply to your code.',
         ),
       ]),
     ],

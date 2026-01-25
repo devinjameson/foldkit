@@ -13,6 +13,7 @@ type Example = {
   href: string
   difficulty: Difficulty
   tags: ReadonlyArray<string>
+  liveUrl?: string
 }
 
 const examples: ReadonlyArray<Example> = [
@@ -88,6 +89,15 @@ const examples: ReadonlyArray<Example> = [
     difficulty: 'Advanced',
     tags: ['WebSocket'],
   },
+  {
+    title: 'Typing Terminal',
+    description:
+      'A production real-time multiplayer typing speed game. Full stack Effect app with RPC backend and Foldkit frontend.',
+    href: Link.typingTerminalSource,
+    difficulty: 'Advanced',
+    tags: ['Full Stack', 'RPC', 'Production'],
+    liveUrl: Link.typingTerminal,
+  },
 ]
 
 const difficultyToTag = (difficulty: Difficulty): Html => {
@@ -153,6 +163,19 @@ const exampleCard = (example: Example): Html =>
           ...Array.map(example.tags, featureTag),
         ],
       ),
+      ...(example.liveUrl
+        ? [
+            a(
+              [
+                Href(example.liveUrl),
+                Class(
+                  'text-xs text-blue-500 dark:text-blue-400 hover:underline mt-5 inline-block',
+                ),
+              ],
+              ['Live →'],
+            ),
+          ]
+        : []),
     ],
   )
 

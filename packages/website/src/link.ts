@@ -31,11 +31,13 @@ export const Link = {
     'https://github.com/devinjameson/foldkit/tree/main/examples/websocket-chat',
   typingTerminal: 'https://typingterminal.com',
   typingTerminalSource:
-    'https://github.com/devinjameson/foldkit/tree/main/packages/typing-game/client/src/commandStreams.ts',
+    'https://github.com/devinjameson/foldkit/tree/main/packages/typing-game',
   createFoldkitApp:
     'https://github.com/devinjameson/foldkit/tree/main/packages/create-foldkit-app',
   github: 'https://github.com/devinjameson/foldkit',
+  foldkitSource:
+    'https://github.com/devinjameson/foldkit/tree/main/packages/foldkit',
   npm: 'https://www.npmjs.com/package/foldkit',
   websiteSource:
-    'https://github.com/devinjameson/foldkit/tree/main/website',
+    'https://github.com/devinjameson/foldkit/tree/main/packages/website',
 }
