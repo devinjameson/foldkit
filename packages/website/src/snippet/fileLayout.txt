@@ -1,0 +1,26 @@
+src/
+├── main.ts              App entry point
+├── model.ts             App-level state
+├── message.ts           App-level messages
+├── route.ts             Route definitions
+├── update.ts            App-level update
+│
+├── page/
+│   ├── index.ts         Re-exports all pages
+│   ├── home/
+│   │   ├── index.ts     Re-exports Home module
+│   │   ├── model.ts     Home state
+│   │   ├── message.ts   Home events
+│   │   ├── update.ts    Home update
+│   │   └── view.ts      Home view
+│   └── products/
+│       ├── index.ts
+│       ├── model.ts
+│       ├── message.ts
+│       ├── update.ts
+│       └── view.ts
+│
+└── domain/
+    ├── index.ts         Re-exports domain modules
+    ├── cart.ts          Cart type + operations
+    └── item.ts          Item type + operations

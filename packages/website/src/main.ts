@@ -56,6 +56,7 @@ const ArchitectureAndConceptsRoute = ts('ArchitectureAndConcepts')
 const RoutingRoute = ts('Routing')
 const ExamplesRoute = ts('Examples')
 const BestPracticesRoute = ts('BestPractices')
+const ProjectOrganizationRoute = ts('ProjectOrganization')
 const NotFoundRoute = ts('NotFound', { path: S.String })
 
 const AppRoute = S.Union(
@@ -66,6 +67,7 @@ const AppRoute = S.Union(
   RoutingRoute,
   ExamplesRoute,
   BestPracticesRoute,
+  ProjectOrganizationRoute,
   NotFoundRoute,
 )
 
@@ -77,6 +79,7 @@ type ArchitectureAndConceptsRoute =
 type RoutingRoute = typeof RoutingRoute.Type
 type ExamplesRoute = typeof ExamplesRoute.Type
 type BestPracticesRoute = typeof BestPracticesRoute.Type
+type ProjectOrganizationRoute = typeof ProjectOrganizationRoute.Type
 type NotFoundRoute = typeof NotFoundRoute.Type
 type AppRoute = typeof AppRoute.Type
 
@@ -105,6 +108,10 @@ const bestPracticesRouter = pipe(
   literal('best-practices'),
   Route.mapTo(BestPracticesRoute),
 )
+const projectOrganizationRouter = pipe(
+  literal('project-organization'),
+  Route.mapTo(ProjectOrganizationRoute),
+)
 
 const routeParser = Route.oneOf(
   whyFoldkitRouter,
@@ -113,6 +120,7 @@ const routeParser = Route.oneOf(
   routingRouter,
   examplesRouter,
   bestPracticesRouter,
+  projectOrganizationRouter,
   homeRouter,
 )
 
@@ -584,6 +592,11 @@ const sidebarView = (
                 S.is(BestPracticesRoute)(currentRoute),
                 'Best Practices',
               ),
+              navLink(
+                projectOrganizationRouter.build({}),
+                S.is(ProjectOrganizationRoute)(currentRoute),
+                'Project Organization',
+              ),
             ],
           ),
         ],
@@ -671,7 +684,8 @@ const view = (model: Model) => {
         Page.ArchitectureAndConcepts.view(model),
       Routing: () => Page.Routing.view(model),
       Examples: Page.Examples.view,
-      BestPractices: Page.BestPractices.view,
+      BestPractices: () => Page.BestPractices.view(model),
+      ProjectOrganization: () => Page.ProjectOrganization.view(model),
       NotFound: ({ path }) =>
         Page.NotFound.view(path, homeRouter.build({})),
     }),
@@ -690,6 +704,9 @@ const view = (model: Model) => {
     M.tag('Routing', () => Option.some(Page.Routing.tableOfContents)),
     M.tag('BestPractices', () =>
       Option.some(Page.BestPractices.tableOfContents),
+    ),
+    M.tag('ProjectOrganization', () =>
+      Option.some(Page.ProjectOrganization.tableOfContents),
     ),
     M.orElse(() => Option.none()),
   )

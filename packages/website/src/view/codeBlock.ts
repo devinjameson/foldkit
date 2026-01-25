@@ -59,7 +59,7 @@ export const codeBlock = (
   const content = pre(
     [
       Class(
-        'bg-gray-900 dark:bg-gray-800 text-gray-100 rounded-lg text-sm p-4 pr-14 overflow-x-auto',
+        'bg-[#24292e] text-[#e1e4e8] rounded-lg text-sm p-4 pr-14 overflow-x-auto',
       ),
     ],
     [code],
