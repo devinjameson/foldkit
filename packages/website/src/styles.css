@@ -15,6 +15,7 @@
 @layer base {
   html {
     color-scheme: light;
+    scroll-padding-top: var(--header-height);
   }
 
   html.dark {

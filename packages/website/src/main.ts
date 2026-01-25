@@ -673,6 +673,9 @@ const view = (model: Model) => {
     M.tag('ArchitectureAndConcepts', () =>
       Option.some(Page.ArchitectureAndConcepts.tableOfContents),
     ),
+    M.tag('BestPractices', () =>
+      Option.some(Page.BestPractices.tableOfContents),
+    ),
     M.orElse(() => Option.none()),
   )
 
