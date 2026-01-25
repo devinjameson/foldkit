@@ -38,6 +38,7 @@ export const {
   h2,
   h3,
   input,
+  keyed,
   label,
   main,
   p,

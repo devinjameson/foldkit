@@ -39,6 +39,11 @@ const queryParametersHeader: Header = {
   text: 'Query Parameters',
 }
 
+const keyingRouteViewsHeader: Header = {
+  id: 'keyingRouteViews',
+  text: 'Keying Route Views',
+}
+
 export const tableOfContents: ReadonlyArray<TableOfContentsEntry> = [
   { level: 'h2', ...biparserHeader },
   { level: 'h2', ...definingRoutesHeader },
@@ -46,6 +51,7 @@ export const tableOfContents: ReadonlyArray<TableOfContentsEntry> = [
   { level: 'h2', ...parsingUrlsHeader },
   { level: 'h2', ...buildingUrlsHeader },
   { level: 'h2', ...queryParametersHeader },
+  { level: 'h2', ...keyingRouteViewsHeader },
 ]
 
 export const view = (model: Model): Html =>
@@ -294,5 +300,39 @@ export const view = (model: Model): Html =>
           '.',
         ),
       ]),
+      section(
+        keyingRouteViewsHeader.id,
+        keyingRouteViewsHeader.text,
+        [
+          para(
+            'When rendering different routes in the same DOM position, you should key the content by the route tag. This tells ',
+            link(Link.snabbdom, 'Snabbdom'),
+            ' (which Foldkit uses for ',
+            link(Link.foldkitVdom, 'virtual DOM diffing'),
+            ') that different routes are distinct trees that should be fully replaced rather than patched.',
+          ),
+          highlightedCodeBlock(
+            div(
+              [
+                Class('text-sm'),
+                InnerHTML(Snippets.routingKeyedHighlighted),
+              ],
+              [],
+            ),
+            Snippets.routingKeyedRaw,
+            'Copy keyed route example to clipboard',
+            model,
+            'mb-8',
+          ),
+          para(
+            'Without the key, Snabbdom tries to diff the old and new route views as if they were the same tree. This can cause unexpected behavior when routes have different structures.',
+          ),
+          para(
+            'In React, this happens automatically — different component types in the same position cause a full remount. In Foldkit, you achieve the same behavior by explicitly keying with ',
+            inlineCode('model.route._tag'),
+            '.',
+          ),
+        ],
+      ),
     ],
   )

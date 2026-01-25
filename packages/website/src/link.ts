@@ -14,6 +14,9 @@ export const Link = {
   angular: 'https://angular.dev',
   svelte: 'https://svelte.dev',
   solid: 'https://solidjs.com',
+  snabbdom: 'https://github.com/snabbdom/snabbdom',
+  foldkitVdom:
+    'https://github.com/devinjameson/foldkit/blob/main/packages/foldkit/src/vdom.ts',
   foldkitExamples: exampleBase,
   exampleCounter: `${exampleBase}/counter`,
   exampleForm: `${exampleBase}/form`,
