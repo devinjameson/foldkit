@@ -13,6 +13,9 @@ const highlightCodePlugin = (): Plugin => ({
       const code = rawCode.trimEnd()
 
       const lines = code.split('\n')
+      const lineCount = lines.length
+      const lineDigits = String(lineCount).length
+
       const html = await codeToHtml(code, {
         lang: 'typescript',
         theme: 'github-dark',
@@ -23,7 +26,12 @@ const highlightCodePlugin = (): Plugin => ({
         })),
       })
 
-      return `export default ${JSON.stringify(html)}`
+      const htmlWithDigits = html.replace(
+        '<pre ',
+        `<pre data-line-digits="${lineDigits}" `,
+      )
+
+      return `export default ${JSON.stringify(htmlWithDigits)}`
     }
   },
 })

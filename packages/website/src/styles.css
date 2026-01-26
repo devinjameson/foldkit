@@ -27,7 +27,7 @@
   }
 
   pre {
-    @apply p-4 pr-14 rounded-lg overflow-x-auto;
+    @apply pr-14 pl-[11px] py-4 rounded-lg overflow-x-auto;
   }
 
   pre code {
@@ -40,6 +40,18 @@
 
   pre code .line[data-line]::before {
     content: attr(data-line);
-    @apply inline-block w-12 mr-4 text-right text-gray-500 select-none border-r border-gray-600 pr-4;
+    @apply inline-block mr-4 text-right text-gray-500 select-none border-r border-gray-600 pr-4;
+  }
+
+  pre[data-line-digits='1'] code .line[data-line]::before {
+    @apply w-8;
+  }
+
+  pre[data-line-digits='2'] code .line[data-line]::before {
+    @apply w-10;
+  }
+
+  pre[data-line-digits='3'] code .line[data-line]::before {
+    @apply w-12;
   }
 }
