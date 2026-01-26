@@ -15,7 +15,7 @@ const themeSelectorButton = (
     [
       Class(
         classNames(
-          'p-1.5 rounded transition',
+          'p-1.5 rounded-md transition',
           isActive
             ? 'bg-gray-200 dark:bg-gray-600 text-gray-900 dark:text-white'
             : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200',
@@ -33,7 +33,7 @@ export const themeSelector = (
   div(
     [
       Class(
-        'flex items-center gap-0.5 p-0.5 rounded-lg bg-gray-100 dark:bg-gray-800',
+        'flex items-center gap-0.5 p-0.5 rounded-lg bg-white dark:bg-gray-800',
       ),
     ],
     [

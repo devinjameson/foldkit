@@ -4,6 +4,7 @@
 
 :root {
   --header-height: 3.5rem;
+  --mobile-toc-height: 2.75rem;
 }
 
 @media (min-width: theme(--breakpoint-md)) {
@@ -12,10 +13,18 @@
   }
 }
 
+@media (min-width: theme(--breakpoint-xl)) {
+  :root {
+    --mobile-toc-height: 0rem;
+  }
+}
+
 @layer base {
   html {
     color-scheme: light;
-    scroll-padding-top: var(--header-height);
+    scroll-padding-top: calc(
+      var(--header-height) + var(--mobile-toc-height)
+    );
   }
 
   html.dark {

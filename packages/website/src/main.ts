@@ -25,11 +25,14 @@ import {
   AriaLabel,
   Class,
   Href,
+  Id,
   OnClick,
+  Open,
   Src,
   a,
   aside,
   button,
+  details,
   div,
   empty,
   h2,
@@ -40,6 +43,8 @@ import {
   li,
   main,
   nav,
+  span,
+  summary,
   ul,
 } from './html'
 import { Icon } from './icon'
@@ -196,6 +201,7 @@ export const Model = S.Struct({
   url: Url,
   copiedSnippets: S.HashSet(S.String),
   mobileMenuOpen: S.Boolean,
+  mobileTableOfContentsOpen: S.Boolean,
   activeSection: S.Option(S.String),
   themePreference: ThemePreference,
   systemTheme: ResolvedTheme,
@@ -222,6 +228,7 @@ const HideCopiedIndicator = ts('HideCopiedIndicator', {
   text: S.String,
 })
 const ToggleMobileMenu = ts('ToggleMobileMenu')
+const CloseMobileTableOfContents = ts('CloseMobileTableOfContents')
 export const ActiveSectionChanged = ts('ActiveSectionChanged', {
   sectionId: S.String,
 })
@@ -241,6 +248,7 @@ const Message = S.Union(
   CopySuccess,
   HideCopiedIndicator,
   ToggleMobileMenu,
+  CloseMobileTableOfContents,
   ActiveSectionChanged,
   SetThemePreference,
   SystemThemeChanged,
@@ -278,6 +286,7 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
       url,
       copiedSnippets: HashSet.empty(),
       mobileMenuOpen: false,
+      mobileTableOfContentsOpen: false,
       activeSection: Option.none(),
       themePreference,
       systemTheme,
@@ -335,7 +344,7 @@ const update = (
           mobileMenuOpen: () => false,
         }),
         Option.match(url.hash, {
-          onNone: () => [],
+          onNone: () => [scrollToTop],
           onSome: (hash) => [scrollToHash(hash)],
         }),
       ],
@@ -375,6 +384,11 @@ const update = (
         evo(model, {
           mobileMenuOpen: (mobileMenuOpen) => !mobileMenuOpen,
         }),
+        [],
+      ],
+
+      CloseMobileTableOfContents: () => [
+        evo(model, { mobileTableOfContentsOpen: () => false }),
         [],
       ],
 
@@ -451,6 +465,11 @@ const hideIndicator = (
     Effect.as(HideCopiedIndicator.make({ text })),
   )
 
+const scrollToTop: Runtime.Command<NoOp> = Effect.sync(() => {
+  window.scrollTo({ top: 0, behavior: 'instant' })
+  return NoOp.make()
+})
+
 const scrollToHash = (hash: string): Runtime.Command<NoOp> =>
   Effect.async((resume) => {
     requestAnimationFrame(() => {
@@ -498,7 +517,7 @@ const sidebarView = (
 ) => {
   const linkClass = (isActive: boolean) =>
     classNames(
-      'block px-3 py-3 md:px-2 md:py-1 rounded transition text-base md:text-sm font-medium md:font-normal',
+      'block px-4 py-3 md:px-2.5 md:py-1 rounded transition text-base md:text-sm font-medium md:font-normal',
       {
         'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400':
           isActive,
@@ -514,7 +533,7 @@ const sidebarView = (
     [
       Class(
         classNames(
-          'fixed inset-0 md:top-[var(--header-height)] md:bottom-0 md:left-0 md:right-auto z-40 md:w-64 overflow-y-auto bg-white dark:bg-gray-900 md:border-r border-gray-200 dark:border-gray-700 p-4',
+          'fixed inset-0 md:top-[var(--header-height)] md:bottom-0 md:left-0 md:right-auto z-[60] md:z-40 md:w-64 overflow-y-auto bg-white dark:bg-gray-900 md:border-r border-gray-200 dark:border-gray-700 p-4',
           {
             block: mobileMenuOpen,
             'hidden md:block': !mobileMenuOpen,
@@ -674,6 +693,128 @@ const tableOfContentsView = (
     ],
   )
 
+const mobileTableOfContentsView = (
+  entries: ReadonlyArray<TableOfContentsEntry>,
+  maybeActiveSectionId: Option.Option<string>,
+  isOpen: boolean,
+) => {
+  const firstEntryText = Array.head(entries).pipe(
+    Option.match({
+      onNone: () => '',
+      onSome: ({ text }) => text,
+    }),
+  )
+
+  const activeSectionText = Option.match(maybeActiveSectionId, {
+    onNone: () => firstEntryText,
+    onSome: (activeSectionId) =>
+      Option.match(
+        Array.findFirst(entries, ({ id }) => id === activeSectionId),
+        {
+          onNone: () => firstEntryText,
+          onSome: ({ text }) => text,
+        },
+      ),
+  })
+
+  return details(
+    [
+      Id('mobile-table-of-contents'),
+      Open(isOpen),
+      Class(
+        'group xl:hidden fixed top-[var(--header-height)] inset-x-0 z-40 bg-gray-100 dark:bg-black border-b border-gray-200 dark:border-gray-700',
+      ),
+    ],
+    [
+      summary(
+        [
+          Class(
+            'flex items-center justify-between px-4 py-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden group-open:border-b group-open:border-gray-200 dark:group-open:border-gray-700',
+          ),
+        ],
+        [
+          div(
+            [Class('flex items-center gap-2 min-w-0')],
+            [
+              span(
+                [
+                  Class(
+                    'text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider shrink-0',
+                  ),
+                ],
+                ['On this page'],
+              ),
+              span(
+                [
+                  Class(
+                    'text-sm text-gray-900 dark:text-white truncate',
+                  ),
+                ],
+                [activeSectionText],
+              ),
+            ],
+          ),
+          span(
+            [Class('text-gray-500 dark:text-gray-400 shrink-0 ml-2')],
+            [Icon.chevronDown('w-4 h-4')],
+          ),
+        ],
+      ),
+      nav(
+        [Class('max-h-96 overflow-y-auto')],
+        [
+          ul(
+            [
+              Class(
+                'text-sm divide-y divide-gray-200 dark:divide-gray-700',
+              ),
+            ],
+            Array.map(entries, ({ level, id, text }) => {
+              const isActive = Option.match(maybeActiveSectionId, {
+                onNone: () => false,
+                onSome: (activeSectionId) => activeSectionId === id,
+              })
+
+              return keyed('li')(
+                id,
+                [],
+                [
+                  a(
+                    [
+                      Href(`#${id}`),
+                      OnClick(CloseMobileTableOfContents.make()),
+                      Class(
+                        classNames(
+                          'transition flex items-center justify-between py-3 px-4',
+                          {
+                            'pl-8': level === 'h3',
+                            'text-blue-600 dark:text-blue-400':
+                              isActive,
+                            'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white':
+                              !isActive,
+                          },
+                        ),
+                      ),
+                    ],
+                    [
+                      text,
+                      isActive
+                        ? Icon.check(
+                            'w-4 h-4 text-blue-600 dark:text-blue-400',
+                          )
+                        : empty,
+                    ],
+                  ),
+                ],
+              )
+            }),
+          ),
+        ],
+      ),
+    ],
+  )
+}
+
 const view = (model: Model) => {
   const content = M.value(model.route).pipe(
     M.tagsExhaustive({
@@ -723,7 +864,7 @@ const view = (model: Model) => {
       header(
         [
           Class(
-            'fixed top-0 inset-x-0 z-50 h-[var(--header-height)] bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 pl-2 pr-3 md:px-8 flex items-center justify-between',
+            'fixed top-0 inset-x-0 z-50 h-[var(--header-height)] bg-gray-100 dark:bg-black border-b border-gray-200 dark:border-gray-700 pl-2 pr-3 md:px-8 flex items-center justify-between',
           ),
         ],
         [
@@ -775,8 +916,28 @@ const view = (model: Model) => {
         [
           sidebarView(model.route, model.mobileMenuOpen),
           main(
-            [Class('flex-1 min-w-0 bg-white dark:bg-gray-900')],
             [
+              Class(
+                classNames(
+                  'flex-1 min-w-0 bg-white dark:bg-gray-900',
+                  {
+                    'pt-[var(--mobile-toc-height)]': Option.isSome(
+                      currentPageTableOfContents,
+                    ),
+                  },
+                ),
+              ),
+            ],
+            [
+              Option.match(currentPageTableOfContents, {
+                onSome: (tableOfContents) =>
+                  mobileTableOfContentsView(
+                    tableOfContents,
+                    model.activeSection,
+                    model.mobileTableOfContentsOpen,
+                  ),
+                onNone: () => empty,
+              }),
               keyed('div')(
                 model.route._tag,
                 [

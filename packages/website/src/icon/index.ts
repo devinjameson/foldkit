@@ -1,3 +1,5 @@
+import { check } from './check'
+import { chevronDown } from './chevronDown'
 import { close } from './close'
 import { computer } from './computer'
 import { copy } from './copy'
@@ -9,6 +11,8 @@ import { npm } from './npm'
 import { sun } from './sun'
 
 export const Icon = {
+  check,
+  chevronDown,
   close,
   computer,
   copy,
