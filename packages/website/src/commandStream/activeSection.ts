@@ -34,6 +34,10 @@ export const activeSection: CommandStream<
         'ArchitectureAndConcepts',
         () => Page.ArchitectureAndConcepts.tableOfContents,
       ),
+      M.tag(
+        'ComingFromReact',
+        () => Page.ComingFromReact.tableOfContents,
+      ),
       M.tag('Routing', () => Page.Routing.tableOfContents),
       M.tag(
         'BestPractices',
