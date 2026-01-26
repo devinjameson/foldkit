@@ -19,7 +19,7 @@ import {
   ul,
 } from './html'
 import { Icon } from './icon'
-import { CopyLinkToClipboard } from './main'
+import { CopyLinkToClipboard, TableOfContentsEntry } from './main'
 
 export const link = (href: string, text: string): Html =>
   a(
@@ -31,23 +31,23 @@ export const link = (href: string, text: string): Html =>
   )
 
 export const heading = (
-  level: 1 | 2 | 3,
+  level: 'h1' | 'h2' | 'h3',
   id: string,
   text: string,
 ): Html => {
   const classes = {
-    1: 'text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6',
-    2: 'text-2xl md:text-2xl font-semibold text-gray-900 dark:text-white mt-8 mb-4 scroll-mt-6',
-    3: 'text-lg font-semibold text-gray-900 dark:text-white mt-6 mb-3 scroll-mt-6',
+    h1: 'text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6',
+    h2: 'text-2xl md:text-2xl font-semibold text-gray-900 dark:text-white mt-8 mb-4 scroll-mt-6',
+    h3: 'text-lg font-semibold text-gray-900 dark:text-white mt-6 mb-3 scroll-mt-6',
   }
-  const tag = { 1: h1, 2: h2, 3: h3 }
+  const tag = { h1, h2, h3 }
 
   const headingElement = tag[level](
     [Class(classes[level]), Id(id)],
     [text],
   )
 
-  if (level === 1) {
+  if (level === 'h1') {
     return headingElement
   }
 
@@ -75,17 +75,9 @@ export const paragraphs = (
 ): ReadonlyArray<Html> =>
   Array.map(contents, (text) => p([Class('mb-4')], [text]))
 
-export const section = (
-  id: string,
-  title: string,
-  content: ReadonlyArray<Html>,
-): Html => div([], [heading(2, id, title), ...content])
-
-export const subsection = (
-  id: string,
-  title: string,
-  content: ReadonlyArray<Html>,
-): Html => div([], [heading(3, id, title), ...content])
+export const tableOfContentsEntryToHeader = (
+  entry: TableOfContentsEntry,
+): Html => heading(entry.level, entry.id, entry.text)
 
 export const bullets = (
   ...items: ReadonlyArray<string | Html>

@@ -755,7 +755,11 @@ const mobileTableOfContentsView = (
             ],
           ),
           span(
-            [Class('text-gray-500 dark:text-gray-400 shrink-0 ml-2')],
+            [
+              Class(
+                'text-gray-500 dark:text-gray-400 shrink-0 ml-2 transition-transform group-open:rotate-180',
+              ),
+            ],
             [Icon.chevronDown('w-4 h-4')],
           ),
         ],

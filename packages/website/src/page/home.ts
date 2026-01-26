@@ -8,7 +8,7 @@ export const view = (): Html =>
   div(
     [],
     [
-      heading(1, 'introduction', 'Introduction'),
+      heading('h1', 'introduction', 'Introduction'),
       para(
         'Foldkit is a TypeScript framework for building type-safe, functional web applications (',
         link(Link.websiteSource, 'like this one!'),

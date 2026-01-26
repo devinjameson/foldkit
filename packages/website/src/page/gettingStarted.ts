@@ -3,7 +3,13 @@ import { Html } from 'foldkit/html'
 import { Class, div, li, ul } from '../html'
 import { Link } from '../link'
 import type { Model, TableOfContentsEntry } from '../main'
-import { heading, inlineCode, link, para, section } from '../prose'
+import {
+  heading,
+  inlineCode,
+  link,
+  para,
+  tableOfContentsEntryToHeader,
+} from '../prose'
 import { codeBlock } from '../view/codeBlock'
 
 const CREATE_FOLDKIT_APP_COMMAND =
@@ -12,41 +18,43 @@ const DEV_PNPM = 'pnpm dev'
 const DEV_NPM = 'npm run dev'
 const DEV_YARN = 'yarn dev'
 
-type Header = { id: string; text: string }
-
-const quickStartHeader: Header = {
+const quickStartHeader: TableOfContentsEntry = {
+  level: 'h2',
   id: 'quick-start',
   text: 'Quick Start',
 }
 
-const projectStructureHeader: Header = {
+const projectStructureHeader: TableOfContentsEntry = {
+  level: 'h2',
   id: 'project-structure',
   text: 'Project Structure',
 }
 
-const nextStepsHeader: Header = {
+const nextStepsHeader: TableOfContentsEntry = {
+  level: 'h2',
   id: 'next-steps',
   text: 'Next Steps',
 }
 
-const aiAssistedHeader: Header = {
+const aiAssistedHeader: TableOfContentsEntry = {
+  level: 'h2',
   id: 'ai-assisted',
   text: 'AI-Assisted Development',
 }
 
 export const tableOfContents: ReadonlyArray<TableOfContentsEntry> = [
-  { level: 'h2', ...quickStartHeader },
-  { level: 'h2', ...projectStructureHeader },
-  { level: 'h2', ...nextStepsHeader },
-  { level: 'h2', ...aiAssistedHeader },
+  quickStartHeader,
+  projectStructureHeader,
+  nextStepsHeader,
+  aiAssistedHeader,
 ]
 
 export const view = (model: Model): Html =>
   div(
     [],
     [
-      heading(1, 'getting-started', 'Getting Started'),
-      heading(2, quickStartHeader.id, quickStartHeader.text),
+      heading('h1', 'getting-started', 'Getting Started'),
+      tableOfContentsEntryToHeader(quickStartHeader),
       para(
         link(Link.createFoldkitApp, 'Create Foldkit app'),
         " is the recommended way to get started with Foldkit. You'll be able to select the ",
@@ -70,112 +78,96 @@ export const view = (model: Model): Html =>
           codeBlock(DEV_YARN, 'Copy yarn command', model),
         ],
       ),
-      section(
-        projectStructureHeader.id,
-        projectStructureHeader.text,
+      tableOfContentsEntryToHeader(projectStructureHeader),
+      para('A new Foldkit project has the following structure:'),
+      ul(
+        [Class('list-none mb-6 space-y-2 font-mono text-sm')],
         [
-          para('A new Foldkit project has the following structure:'),
-          ul(
-            [Class('list-none mb-6 space-y-2 font-mono text-sm')],
+          li(
+            [],
+            [inlineCode('src/main.ts'), ' — Your application code'],
+          ),
+          li([], [inlineCode('index.html'), ' — HTML entry point']),
+          li(
+            [],
             [
-              li(
-                [],
-                [
-                  inlineCode('src/main.ts'),
-                  ' — Your application code',
-                ],
-              ),
-              li(
-                [],
-                [inlineCode('index.html'), ' — HTML entry point'],
-              ),
-              li(
-                [],
-                [
-                  inlineCode('vite.config.ts'),
-                  ' — Vite configuration with Foldkit HMR plugin',
-                ],
-              ),
-              li(
-                [],
-                [
-                  inlineCode('tsconfig.json'),
-                  ' — TypeScript configuration',
-                ],
-              ),
-              li(
-                [],
-                [
-                  inlineCode('package.json'),
-                  ' — Dependencies and scripts',
-                ],
-              ),
+              inlineCode('vite.config.ts'),
+              ' — Vite configuration with Foldkit HMR plugin',
             ],
           ),
-          para(
-            'The ',
-            inlineCode('src/main.ts'),
-            ' file is the entry point for your application. In the starter examples, it contains the Model, Messages, Update function, and View all in one file. As your app grows, you can split these into separate modules.',
+          li(
+            [],
+            [
+              inlineCode('tsconfig.json'),
+              ' — TypeScript configuration',
+            ],
+          ),
+          li(
+            [],
+            [
+              inlineCode('package.json'),
+              ' — Dependencies and scripts',
+            ],
           ),
         ],
       ),
-      section(nextStepsHeader.id, nextStepsHeader.text, [
-        para(
-          'Now that you have a running app, head to the ',
-          link(
-            '/architecture-and-concepts',
-            'Architecture & Concepts',
-          ),
-          ' page to understand how the pieces fit together.',
-        ),
-      ]),
-      section(aiAssistedHeader.id, aiAssistedHeader.text, [
-        para(
-          "Foldkit's explicit architecture — state in the Model, events as Messages, logic in pure functions — works well with AI coding assistants like Claude Code. The patterns are predictable, so the AI can follow and extend them reliably.",
-        ),
-        para(
-          'For the best experience, clone the ',
-          link(Link.github, 'Foldkit repository'),
-          ' as a git submodule in your project:',
-        ),
-        codeBlock(
-          'git submodule add https://github.com/devinjameson/foldkit.git',
-          'Copy submodule command',
-          model,
-          'mb-4',
-        ),
-        para('To update the submodule when Foldkit changes:'),
-        codeBlock(
-          'git submodule update --remote foldkit',
-          'Copy update command',
-          model,
-          'mb-4',
-        ),
-        para(
-          'Then add something like this to your ',
-          inlineCode('CLAUDE.md'),
-          ':',
-        ),
-        codeBlock(
-          'This is a Foldkit project.\nSee ./foldkit for the framework source, examples, and patterns to follow.',
-          'Copy CLAUDE.md snippet',
-          model,
-          'mb-4',
-        ),
-        para(
-          'This gives the AI access to the ',
-          link(Link.foldkitSource, 'Foldkit source code'),
-          ', the ',
-          link(Link.foldkitExamples, 'examples'),
-          ', ',
-          link(Link.typingTerminal, 'Typing Terminal'),
-          ' (',
-          link(Link.typingTerminalSource, 'source'),
-          ')',
-          ', and ',
-          link(Link.websiteSource, 'this documentation site'),
-          ' — real patterns it can learn from and apply to your code.',
-        ),
-      ]),
+      para(
+        'The ',
+        inlineCode('src/main.ts'),
+        ' file is the entry point for your application. In the starter examples, it contains the Model, Messages, Update function, and View all in one file. As your app grows, you can split these into separate modules.',
+      ),
+      tableOfContentsEntryToHeader(nextStepsHeader),
+      para(
+        'Now that you have a running app, head to the ',
+        link('/architecture-and-concepts', 'Architecture & Concepts'),
+        ' page to understand how the pieces fit together.',
+      ),
+      tableOfContentsEntryToHeader(aiAssistedHeader),
+      para(
+        "Foldkit's explicit architecture — state in the Model, events as Messages, logic in pure functions — works well with AI coding assistants like Claude Code. The patterns are predictable, so the AI can follow and extend them reliably.",
+      ),
+      para(
+        'For the best experience, clone the ',
+        link(Link.github, 'Foldkit repository'),
+        ' as a git submodule in your project:',
+      ),
+      codeBlock(
+        'git submodule add https://github.com/devinjameson/foldkit.git',
+        'Copy submodule command',
+        model,
+        'mb-4',
+      ),
+      para('To update the submodule when Foldkit changes:'),
+      codeBlock(
+        'git submodule update --remote foldkit',
+        'Copy update command',
+        model,
+        'mb-4',
+      ),
+      para(
+        'Then add something like this to your ',
+        inlineCode('CLAUDE.md'),
+        ':',
+      ),
+      codeBlock(
+        'This is a Foldkit project.\nSee ./foldkit for the framework source, examples, and patterns to follow.',
+        'Copy CLAUDE.md snippet',
+        model,
+        'mb-4',
+      ),
+      para(
+        'This gives the AI access to the ',
+        link(Link.foldkitSource, 'Foldkit source code'),
+        ', the ',
+        link(Link.foldkitExamples, 'examples'),
+        ', ',
+        link(Link.typingTerminal, 'Typing Terminal'),
+        ' (',
+        link(Link.typingTerminalSource, 'source'),
+        ')',
+        ', and ',
+        link(Link.websiteSource, 'this documentation site'),
+        ' — real patterns it can learn from and apply to your code.',
+      ),
     ],
   )

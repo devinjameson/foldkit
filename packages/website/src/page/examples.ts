@@ -183,7 +183,7 @@ export const view = (): Html =>
   div(
     [],
     [
-      heading(1, 'examples', 'Examples'),
+      heading('h1', 'examples', 'Examples'),
       para(
         'Each example is available as a starter template via ',
         a(
