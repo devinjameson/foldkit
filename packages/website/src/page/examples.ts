@@ -140,7 +140,7 @@ const exampleCard = (example: Example): Html =>
     [
       Href(example.href),
       Class(
-        'block p-5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 hover:border-blue-500 dark:hover:border-blue-400 transition-colors',
+        'block p-5 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-blue-500 dark:hover:border-blue-400 transition-colors',
       ),
     ],
     [

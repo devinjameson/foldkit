@@ -32,7 +32,7 @@
   }
 
   body {
-    @apply text-base text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-900;
+    @apply text-base text-gray-800 dark:text-gray-300 bg-gray-100 dark:bg-gray-900;
   }
 
   pre {

@@ -35,7 +35,7 @@ export const comparisonTable = (
   div(
     [
       Class(
-        'overflow-x-auto mb-6 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden',
+        'overflow-x-auto mb-6 border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden',
       ),
     ],
     [
@@ -43,16 +43,20 @@ export const comparisonTable = (
         [Class('w-full')],
         [
           thead(
-            [Class('bg-gray-100 dark:bg-gray-800')],
+            [
+              Class(
+                'bg-white dark:bg-gray-800 border-b border-gray-300 dark:border-gray-700',
+              ),
+            ],
             [tr([], Array.map(headers, headerCell))],
           ),
           tbody(
-            [],
+            [Class('bg-white dark:bg-gray-900')],
             Array.map(rows, (row) =>
               tr(
                 [
                   Class(
-                    'border-b border-gray-200 dark:border-gray-700',
+                    'border-b border-gray-300 dark:border-gray-700 last:border-b-0',
                   ),
                 ],
                 Array.map(row, (content, index) =>

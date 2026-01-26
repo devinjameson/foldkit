@@ -541,7 +541,7 @@ const sidebarView = (
     [
       Class(
         classNames(
-          'fixed inset-0 md:top-[var(--header-height)] md:bottom-0 md:left-0 md:right-auto z-[60] md:z-40 md:w-64 overflow-y-auto bg-white dark:bg-gray-900 md:border-r border-gray-200 dark:border-gray-700 p-4',
+          'fixed inset-0 md:top-[var(--header-height)] md:bottom-0 md:left-0 md:right-auto z-[60] md:z-40 md:w-64 overflow-y-auto bg-white dark:bg-gray-900 md:border-r border-gray-300 dark:border-gray-700 p-4',
           {
             block: mobileMenuOpen,
             'hidden md:block': !mobileMenuOpen,
@@ -656,7 +656,7 @@ const tableOfContentsView = (
   aside(
     [
       Class(
-        'hidden xl:block sticky top-[var(--header-height)] w-64 h-[calc(100vh-var(--header-height))] shrink-0 overflow-y-auto border-l border-gray-200 dark:border-gray-700 p-4',
+        'hidden xl:block sticky top-[var(--header-height)] w-64 h-[calc(100vh-var(--header-height))] shrink-0 overflow-y-auto border-l border-gray-300 dark:border-gray-700 p-4',
       ),
     ],
     [
@@ -735,14 +735,14 @@ const mobileTableOfContentsView = (
       Id('mobile-table-of-contents'),
       Open(isOpen),
       Class(
-        'group xl:hidden fixed top-[var(--header-height)] left-0 right-0 md:left-64 z-40 bg-gray-100 dark:bg-black border-b border-gray-200 dark:border-gray-700',
+        'group xl:hidden fixed top-[var(--header-height)] left-0 right-0 md:left-64 z-40 bg-white dark:bg-black border-b border-gray-300 dark:border-gray-700',
       ),
     ],
     [
       summary(
         [
           Class(
-            'flex items-center justify-between px-4 py-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden group-open:border-b group-open:border-gray-200 dark:group-open:border-gray-700',
+            'flex items-center justify-between px-4 py-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden group-open:border-b group-open:border-gray-300 dark:group-open:border-gray-700',
           ),
         ],
         [
@@ -783,7 +783,7 @@ const mobileTableOfContentsView = (
           ul(
             [
               Class(
-                'text-sm divide-y divide-gray-200 dark:divide-gray-700',
+                'text-sm divide-y divide-gray-300 dark:divide-gray-700',
               ),
             ],
             Array.map(entries, ({ level, id, text }) => {
@@ -885,7 +885,7 @@ const view = (model: Model) => {
       header(
         [
           Class(
-            'fixed top-0 inset-x-0 z-50 h-[var(--header-height)] bg-gray-100 dark:bg-black border-b border-gray-200 dark:border-gray-700 pl-2 pr-3 md:px-8 flex items-center justify-between',
+            'fixed top-0 inset-x-0 z-50 h-[var(--header-height)] bg-white dark:bg-black border-b border-gray-300 dark:border-gray-700 pl-2 pr-3 md:px-8 flex items-center justify-between',
           ),
         ],
         [
@@ -895,7 +895,7 @@ const view = (model: Model) => {
               button(
                 [
                   Class(
-                    'md:hidden p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-700 dark:text-gray-300',
+                    'md:hidden p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-700 dark:text-gray-300',
                   ),
                   AriaLabel('Toggle menu'),
                   OnClick(ToggleMobileMenu.make()),
@@ -940,7 +940,7 @@ const view = (model: Model) => {
             [
               Class(
                 classNames(
-                  'flex-1 min-w-0 bg-white dark:bg-gray-900',
+                  'flex-1 min-w-0 bg-gray-100 dark:bg-gray-900',
                   {
                     'pt-[var(--mobile-toc-height)]': Option.isSome(
                       currentPageTableOfContents,
