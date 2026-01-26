@@ -1,5 +1,9 @@
 <p align="center">
-  <img src="packages/website/public/logo.svg" alt="Foldkit" width="350">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="packages/website/public/logo-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="packages/website/public/logo.svg">
+    <img src="packages/website/public/logo.svg" alt="Foldkit" width="350">
+  </picture>
 </p>
 
 <p align="center">
