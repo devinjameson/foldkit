@@ -102,7 +102,7 @@ const architectureAndConceptsRouter = pipe(
   Route.mapTo(ArchitectureAndConceptsRoute),
 )
 const routingRouter = pipe(
-  literal('routing'),
+  literal('routing-and-navigation'),
   Route.mapTo(RoutingRoute),
 )
 const examplesRouter = pipe(
@@ -599,7 +599,7 @@ const sidebarView = (
               navLink(
                 routingRouter.build({}),
                 S.is(RoutingRoute)(currentRoute),
-                'Routing',
+                'Routing & Navigation',
               ),
               navLink(
                 examplesRouter.build({}),

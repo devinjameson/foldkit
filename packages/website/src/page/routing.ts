@@ -55,6 +55,12 @@ const keyingRouteViewsHeader: TableOfContentsEntry = {
   text: 'Keying Route Views',
 }
 
+const navigationHeader: TableOfContentsEntry = {
+  level: 'h2',
+  id: 'navigation',
+  text: 'Navigation',
+}
+
 export const tableOfContents: ReadonlyArray<TableOfContentsEntry> = [
   biparserHeader,
   definingRoutesHeader,
@@ -63,13 +69,14 @@ export const tableOfContents: ReadonlyArray<TableOfContentsEntry> = [
   buildingUrlsHeader,
   queryParametersHeader,
   keyingRouteViewsHeader,
+  navigationHeader,
 ]
 
 export const view = (model: Model): Html =>
   div(
     [],
     [
-      heading('h1', 'routing', 'Routing'),
+      heading('h1', 'routing-and-navigation', 'Routing & Navigation'),
       para(
         'Foldkit uses a bidirectional routing system where you define routes once and use them for both parsing URLs and building URLs. No more keeping route matchers and URL builders in sync.',
       ),
@@ -333,6 +340,89 @@ export const view = (model: Model): Html =>
         'In React, this happens automatically — different component types in the same position cause a full remount. In Foldkit, you achieve the same behavior by explicitly keying with ',
         inlineCode('model.route._tag'),
         '.',
+      ),
+      tableOfContentsEntryToHeader(navigationHeader),
+      para(
+        'Foldkit provides navigation commands for programmatically changing the URL. These are returned from your update function like any other command.',
+      ),
+      highlightedCodeBlock(
+        div(
+          [
+            Class('text-sm'),
+            InnerHTML(Snippets.navigationCommandsHighlighted),
+          ],
+          [],
+        ),
+        Snippets.navigationCommandsRaw,
+        'Copy navigation commands to clipboard',
+        model,
+        'mb-8',
+      ),
+      ul(
+        [Class('list-none mb-6 space-y-2')],
+        [
+          li(
+            [],
+            [
+              inlineCode('Navigation.pushUrl'),
+              ' — adds a new entry to browser history',
+            ],
+          ),
+          li(
+            [],
+            [
+              inlineCode('Navigation.replaceUrl'),
+              ' — replaces the current history entry (no back button)',
+            ],
+          ),
+          li(
+            [],
+            [
+              inlineCode('Navigation.back'),
+              ' / ',
+              inlineCode('Navigation.forward'),
+              ' — navigate through browser history',
+            ],
+          ),
+          li(
+            [],
+            [
+              inlineCode('Navigation.load'),
+              ' — full page load (for external URLs)',
+            ],
+          ),
+        ],
+      ),
+      para(
+        'When a link is clicked in your application, the ',
+        inlineCode('browser.onUrlRequest'),
+        ' handler receives either an Internal or External request. Handle Internal links with ',
+        inlineCode('pushUrl'),
+        ' and External links with ',
+        inlineCode('load'),
+        ':',
+      ),
+      highlightedCodeBlock(
+        div(
+          [
+            Class('text-sm'),
+            InnerHTML(Snippets.navigationHandleUrlRequestHighlighted),
+          ],
+          [],
+        ),
+        Snippets.navigationHandleUrlRequestRaw,
+        'Copy URL request handling to clipboard',
+        model,
+        'mb-8',
+      ),
+      para(
+        'After ',
+        inlineCode('pushUrl'),
+        ' or ',
+        inlineCode('replaceUrl'),
+        ' changes the URL, Foldkit automatically calls your ',
+        inlineCode('browser.onUrlChange'),
+        ' handler with the new URL. This is where you parse the URL into a route and update your model.',
       ),
     ],
   )

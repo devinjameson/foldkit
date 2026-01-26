@@ -34,13 +34,13 @@ const messagesHeader: TableOfContentsEntry = {
 const updateHeader: TableOfContentsEntry = {
   level: 'h2',
   id: 'update',
-  text: 'Update',
+  text: 'update',
 }
 
 const viewHeader: TableOfContentsEntry = {
   level: 'h2',
   id: 'view',
-  text: 'View',
+  text: 'view',
 }
 
 const typedHtmlHelpersHeader: TableOfContentsEntry = {
@@ -67,6 +67,36 @@ const commandStreamsHeader: TableOfContentsEntry = {
   text: 'Command Streams',
 }
 
+const initHeader: TableOfContentsEntry = {
+  level: 'h2',
+  id: 'init',
+  text: 'init',
+}
+
+const flagsHeader: TableOfContentsEntry = {
+  level: 'h3',
+  id: 'flags',
+  text: 'flags',
+}
+
+const taskHeader: TableOfContentsEntry = {
+  level: 'h2',
+  id: 'task',
+  text: 'Task',
+}
+
+const runningAppHeader: TableOfContentsEntry = {
+  level: 'h2',
+  id: 'running-the-app',
+  text: 'Running the App',
+}
+
+const makeElementVsApplicationHeader: TableOfContentsEntry = {
+  level: 'h3',
+  id: 'make-element-vs-application',
+  text: 'makeElement vs makeApplication',
+}
+
 export const tableOfContents: ReadonlyArray<TableOfContentsEntry> = [
   counterExampleHeader,
   modelHeader,
@@ -77,6 +107,11 @@ export const tableOfContents: ReadonlyArray<TableOfContentsEntry> = [
   eventHandlingHeader,
   commandsHeader,
   commandStreamsHeader,
+  initHeader,
+  flagsHeader,
+  taskHeader,
+  runningAppHeader,
+  makeElementVsApplicationHeader,
 ]
 
 export const view = (model: Model): Html =>
@@ -357,6 +392,163 @@ export const view = (model: Model): Html =>
         ' (',
         link(Link.typingTerminalSource, 'source'),
         ').',
+      ),
+      tableOfContentsEntryToHeader(initHeader),
+      para(
+        'The ',
+        inlineCode('init'),
+        ' function returns the initial model and any commands to run on startup. It returns a tuple of ',
+        inlineCode('[Model, ReadonlyArray<Command<Message>>]'),
+        '.',
+      ),
+      highlightedCodeBlock(
+        div(
+          [
+            Class('text-sm'),
+            InnerHTML(Snippets.initSimpleHighlighted),
+          ],
+          [],
+        ),
+        Snippets.initSimpleRaw,
+        'Copy init example to clipboard',
+        model,
+        'mb-8',
+      ),
+      para(
+        'For elements (components without routing), init takes no arguments. For applications with routing, init receives the current URL so you can set up initial state based on the route.',
+      ),
+      tableOfContentsEntryToHeader(flagsHeader),
+      para(
+        'Flags let you pass initialization data into your application — things like persisted state from localStorage or configuration values. Define a Flags schema and provide an Effect that loads the flags.',
+      ),
+      highlightedCodeBlock(
+        div(
+          [
+            Class('text-sm'),
+            InnerHTML(Snippets.flagsDefinitionHighlighted),
+          ],
+          [],
+        ),
+        Snippets.flagsDefinitionRaw,
+        'Copy flags definition to clipboard',
+        model,
+        'mb-8',
+      ),
+      para(
+        'When using flags, your init function receives them as the first argument:',
+      ),
+      highlightedCodeBlock(
+        div(
+          [
+            Class('text-sm'),
+            InnerHTML(Snippets.initWithFlagsHighlighted),
+          ],
+          [],
+        ),
+        Snippets.initWithFlagsRaw,
+        'Copy init with flags to clipboard',
+        model,
+        'mb-8',
+      ),
+      tableOfContentsEntryToHeader(taskHeader),
+      para(
+        'Foldkit provides utility functions for common side effects that return commands you can use in your update function.',
+      ),
+      para(
+        inlineCode('Task.getTime'),
+        ' gets the current UTC time. ',
+        inlineCode('Task.getZonedTime'),
+        ' gets time with the system timezone. ',
+        inlineCode('Task.getZonedTimeIn'),
+        ' gets time in a specific timezone.',
+      ),
+      highlightedCodeBlock(
+        div(
+          [
+            Class('text-sm'),
+            InnerHTML(Snippets.taskGetTimeHighlighted),
+          ],
+          [],
+        ),
+        Snippets.taskGetTimeRaw,
+        'Copy task time examples to clipboard',
+        model,
+        'mb-8',
+      ),
+      para(
+        inlineCode('Task.focus'),
+        ' focuses an element by CSS selector (useful after form submission). ',
+        inlineCode('Task.randomInt'),
+        ' generates random integers.',
+      ),
+      highlightedCodeBlock(
+        div(
+          [
+            Class('text-sm'),
+            InnerHTML(Snippets.taskFocusHighlighted),
+          ],
+          [],
+        ),
+        Snippets.taskFocusRaw,
+        'Copy task focus example to clipboard',
+        model,
+        'mb-8',
+      ),
+      tableOfContentsEntryToHeader(runningAppHeader),
+      para(
+        'To run a Foldkit application, create a runtime with ',
+        inlineCode('makeElement'),
+        ' or ',
+        inlineCode('makeApplication'),
+        ', then call ',
+        inlineCode('Runtime.run'),
+        '.',
+      ),
+      tableOfContentsEntryToHeader(makeElementVsApplicationHeader),
+      para(
+        inlineCode('makeElement'),
+        ' creates a component without URL handling. The init function takes no URL argument (or just flags if you use them). Use this for standalone widgets or components embedded in existing pages.',
+      ),
+      highlightedCodeBlock(
+        div(
+          [
+            Class('text-sm'),
+            InnerHTML(Snippets.runMakeElementHighlighted),
+          ],
+          [],
+        ),
+        Snippets.runMakeElementRaw,
+        'Copy makeElement example to clipboard',
+        model,
+        'mb-8',
+      ),
+      para(
+        inlineCode('makeApplication'),
+        ' creates a full-page application with routing. The init function receives the current URL, and you must provide a ',
+        inlineCode('browser'),
+        ' config to handle URL changes.',
+      ),
+      highlightedCodeBlock(
+        div(
+          [
+            Class('text-sm'),
+            InnerHTML(Snippets.runMakeApplicationHighlighted),
+          ],
+          [],
+        ),
+        Snippets.runMakeApplicationRaw,
+        'Copy makeApplication example to clipboard',
+        model,
+        'mb-8',
+      ),
+      para(
+        'The ',
+        inlineCode('browser'),
+        ' config has two handlers: ',
+        inlineCode('onUrlRequest'),
+        ' is called when a link is clicked (giving you a chance to handle internal vs external links), and ',
+        inlineCode('onUrlChange'),
+        ' is called when the URL changes (so you can update your model with the new route).',
       ),
     ],
   )

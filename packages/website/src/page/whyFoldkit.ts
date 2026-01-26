@@ -268,8 +268,8 @@ export const view = (): Html =>
           li(
             [],
             [
-              strong([], ['Stream-based subscriptions']),
-              ' — Reactive data flows with automatic cleanup',
+              strong([], ['Command Streams']),
+              ' — For timers, WebSockets, and other ongoing effects',
             ],
           ),
         ],
