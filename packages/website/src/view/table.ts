@@ -1,0 +1,67 @@
+import { Array } from 'effect'
+import { Html } from 'foldkit/html'
+
+import { Class, div, table, tbody, td, th, thead, tr } from '../html'
+
+const headerCell = (text: string): Html =>
+  th(
+    [
+      Class(
+        'px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white',
+      ),
+    ],
+    [text],
+  )
+
+const cell = (
+  content: ReadonlyArray<string | Html>,
+  isFirstColumn: boolean,
+): Html =>
+  td(
+    [
+      Class(
+        isFirstColumn
+          ? 'px-4 py-3 text-sm font-medium text-gray-900 dark:text-white'
+          : 'px-4 py-3 text-sm text-gray-700 dark:text-gray-300',
+      ),
+    ],
+    content,
+  )
+
+export const comparisonTable = (
+  headers: ReadonlyArray<string>,
+  rows: ReadonlyArray<ReadonlyArray<ReadonlyArray<string | Html>>>,
+): Html =>
+  div(
+    [
+      Class(
+        'overflow-x-auto mb-6 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden',
+      ),
+    ],
+    [
+      table(
+        [Class('w-full')],
+        [
+          thead(
+            [Class('bg-gray-100 dark:bg-gray-800')],
+            [tr([], Array.map(headers, headerCell))],
+          ),
+          tbody(
+            [],
+            Array.map(rows, (row) =>
+              tr(
+                [
+                  Class(
+                    'border-b border-gray-200 dark:border-gray-700',
+                  ),
+                ],
+                Array.map(row, (content, index) =>
+                  cell(content, index === 0),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ],
+  )

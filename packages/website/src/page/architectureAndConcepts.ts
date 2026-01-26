@@ -4,6 +4,7 @@ import { Class, InnerHTML, div, em, strong } from '../html'
 import { Link } from '../link'
 import type { Model, TableOfContentsEntry } from '../main'
 import {
+  callout,
   heading,
   inlineCode,
   link,
@@ -168,6 +169,10 @@ export const view = (model: Model): Html =>
         model,
         'mb-8',
       ),
+      callout(
+        'For React developers',
+        'Think of the Model as combining useState, useContext, and your Redux store into one typed structure. Instead of state scattered across components, everything lives here.',
+      ),
       tableOfContentsEntryToHeader(messagesHeader),
       para(
         'Messages represent all the events that can occur in your application. They describe ',
@@ -189,6 +194,10 @@ export const view = (model: Model): Html =>
         'Copy messages example to clipboard',
         model,
         'mb-8',
+      ),
+      callout(
+        'For React developers',
+        'Messages are similar to Redux action types, but more ergonomic with Effect Schema. Instead of string constants and action creators, you get type inference and pattern matching for free.',
       ),
       tableOfContentsEntryToHeader(updateHeader),
       para(
@@ -212,6 +221,10 @@ export const view = (model: Model): Html =>
         model,
         'mb-8',
       ),
+      callout(
+        'For React developers',
+        "Like a Redux reducer, but update returns Commands instead of triggering useEffect. You'll never wonder why an effect ran — it's explicit in the return value.",
+      ),
       tableOfContentsEntryToHeader(viewHeader),
       para(
         'The view function is a pure function that transforms your model into HTML. Given the same model, it always produces the same HTML output. The view never directly modifies state — instead, it dispatches messages through event handlers.',
@@ -228,6 +241,10 @@ export const view = (model: Model): Html =>
         'Copy view example to clipboard',
         model,
         'mb-8',
+      ),
+      callout(
+        'For React developers',
+        'The view is like a functional component, but guaranteed pure — no hooks, no effects, no local state. It\'s a function from Model to Html. This simplicity means no "rules of hooks" to follow.',
       ),
       tableOfContentsEntryToHeader(typedHtmlHelpersHeader),
       para(

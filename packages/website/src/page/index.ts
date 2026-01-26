@@ -1,5 +1,6 @@
 export * as ArchitectureAndConcepts from './architectureAndConcepts'
 export * as BestPractices from './bestPractices'
+export * as ComingFromReact from './comingFromReact'
 export * as Examples from './examples'
 export * as GettingStarted from './gettingStarted'
 export * as Home from './home'

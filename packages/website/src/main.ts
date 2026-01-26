@@ -56,6 +56,7 @@ import { themeSelector } from './view/themeSelector'
 
 const HomeRoute = ts('Home')
 const WhyFoldkitRoute = ts('WhyFoldkit')
+const ComingFromReactRoute = ts('ComingFromReact')
 const GettingStartedRoute = ts('GettingStarted')
 const ArchitectureAndConceptsRoute = ts('ArchitectureAndConcepts')
 const RoutingRoute = ts('Routing')
@@ -67,6 +68,7 @@ const NotFoundRoute = ts('NotFound', { path: S.String })
 const AppRoute = S.Union(
   HomeRoute,
   WhyFoldkitRoute,
+  ComingFromReactRoute,
   GettingStartedRoute,
   ArchitectureAndConceptsRoute,
   RoutingRoute,
@@ -78,6 +80,7 @@ const AppRoute = S.Union(
 
 type HomeRoute = typeof HomeRoute.Type
 type WhyFoldkitRoute = typeof WhyFoldkitRoute.Type
+type ComingFromReactRoute = typeof ComingFromReactRoute.Type
 type GettingStartedRoute = typeof GettingStartedRoute.Type
 type ArchitectureAndConceptsRoute =
   typeof ArchitectureAndConceptsRoute.Type
@@ -92,6 +95,10 @@ const homeRouter = pipe(Route.root, Route.mapTo(HomeRoute))
 const whyFoldkitRouter = pipe(
   literal('why-foldkit'),
   Route.mapTo(WhyFoldkitRoute),
+)
+const comingFromReactRouter = pipe(
+  literal('coming-from-react'),
+  Route.mapTo(ComingFromReactRoute),
 )
 const gettingStartedRouter = pipe(
   literal('getting-started'),
@@ -120,6 +127,7 @@ const projectOrganizationRouter = pipe(
 
 const routeParser = Route.oneOf(
   whyFoldkitRouter,
+  comingFromReactRouter,
   gettingStartedRouter,
   architectureAndConceptsRouter,
   routingRouter,
@@ -587,6 +595,11 @@ const sidebarView = (
                 'Why Foldkit?',
               ),
               navLink(
+                comingFromReactRouter.build({}),
+                S.is(ComingFromReactRoute)(currentRoute),
+                'Coming from React',
+              ),
+              navLink(
                 gettingStartedRouter.build({}),
                 S.is(GettingStartedRoute)(currentRoute),
                 'Getting Started',
@@ -722,7 +735,7 @@ const mobileTableOfContentsView = (
       Id('mobile-table-of-contents'),
       Open(isOpen),
       Class(
-        'group xl:hidden fixed top-[var(--header-height)] inset-x-0 z-40 bg-gray-100 dark:bg-black border-b border-gray-200 dark:border-gray-700',
+        'group xl:hidden fixed top-[var(--header-height)] left-0 right-0 md:left-64 z-40 bg-gray-100 dark:bg-black border-b border-gray-200 dark:border-gray-700',
       ),
     ],
     [
@@ -824,6 +837,7 @@ const view = (model: Model) => {
     M.tagsExhaustive({
       Home: Page.Home.view,
       WhyFoldkit: Page.WhyFoldkit.view,
+      ComingFromReact: () => Page.ComingFromReact.view(model),
       GettingStarted: () => Page.GettingStarted.view(model),
       ArchitectureAndConcepts: () =>
         Page.ArchitectureAndConcepts.view(model),
@@ -839,6 +853,9 @@ const view = (model: Model) => {
   const currentPageTableOfContents = M.value(model.route).pipe(
     M.tag('WhyFoldkit', () =>
       Option.some(Page.WhyFoldkit.tableOfContents),
+    ),
+    M.tag('ComingFromReact', () =>
+      Option.some(Page.ComingFromReact.tableOfContents),
     ),
     M.tag('GettingStarted', () =>
       Option.some(Page.GettingStarted.tableOfContents),

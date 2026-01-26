@@ -4,6 +4,7 @@ import { Class, div, li, ul } from '../html'
 import { Link } from '../link'
 import type { Model, TableOfContentsEntry } from '../main'
 import {
+  callout,
   heading,
   inlineCode,
   link,
@@ -54,6 +55,12 @@ export const view = (model: Model): Html =>
     [],
     [
       heading('h1', 'getting-started', 'Getting Started'),
+      callout(
+        'Coming from React?',
+        "If you're familiar with React, check out the ",
+        link('/coming-from-react', 'Coming from React'),
+        ' guide to understand how your existing knowledge applies.',
+      ),
       tableOfContentsEntryToHeader(quickStartHeader),
       para(
         link(Link.createFoldkitApp, 'Create Foldkit app'),

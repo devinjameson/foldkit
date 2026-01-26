@@ -16,8 +16,10 @@ const highlightCodePlugin = (): Plugin => ({
       const lineCount = lines.length
       const lineDigits = String(lineCount).length
 
+      const lang = filePath.endsWith('.tsx') ? 'tsx' : 'typescript'
+
       const html = await codeToHtml(code, {
-        lang: 'typescript',
+        lang,
         theme: 'github-dark',
         decorations: lines.map((line, i) => ({
           start: { line: i, character: 0 },

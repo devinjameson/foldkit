@@ -2,7 +2,14 @@ import { Html } from 'foldkit/html'
 
 import { div } from '../html'
 import { Link } from '../link'
-import { bulletPoint, bullets, heading, link, para } from '../prose'
+import {
+  bulletPoint,
+  bullets,
+  callout,
+  heading,
+  link,
+  para,
+} from '../prose'
 
 export const view = (): Html =>
   div(
@@ -30,6 +37,15 @@ export const view = (): Html =>
         ', or ',
         link(Link.solid, 'Solid'),
         ', Foldkit may feel unfamiliar at first. However, once you get used to its patterns and principles, you may find it to be a refreshing and enjoyable way to build web applications.',
+      ),
+      callout(
+        'Coming from React?',
+        'Read our ',
+        link(
+          '/coming-from-react',
+          'dedicated guide for React developers',
+        ),
+        ' to understand the key differences and how your existing knowledge translates.',
       ),
       para(
         'The main qualities of Foldkit that differentiate it from other frameworks are:',

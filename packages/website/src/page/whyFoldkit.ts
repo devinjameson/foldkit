@@ -1,33 +1,23 @@
 import { Html } from 'foldkit/html'
 
-import {
-  Class,
-  div,
-  li,
-  strong,
-  table,
-  tbody,
-  td,
-  th,
-  thead,
-  tr,
-  ul,
-} from '../html'
+import { Class, div, li, strong, ul } from '../html'
 import { Link } from '../link'
 import type { TableOfContentsEntry } from '../main'
 import {
   bullets,
+  callout,
   heading,
   inlineCode,
   link,
   para,
   tableOfContentsEntryToHeader,
 } from '../prose'
+import { comparisonTable } from '../view/table'
 
-const theProblemHeader: TableOfContentsEntry = {
+const theChallengesHeader: TableOfContentsEntry = {
   level: 'h2',
-  id: 'the-problem',
-  text: 'The Problem',
+  id: 'the-challenges',
+  text: 'The Challenges',
 }
 
 const foldkitVsReactHeader: TableOfContentsEntry = {
@@ -55,137 +45,86 @@ const whoItsForHeader: TableOfContentsEntry = {
 }
 
 export const tableOfContents: ReadonlyArray<TableOfContentsEntry> = [
-  theProblemHeader,
+  theChallengesHeader,
   foldkitVsReactHeader,
   theElmArchitectureHeader,
   builtOnEffectHeader,
   whoItsForHeader,
 ]
 
-const comparisonTable = (): Html => {
-  const headerCell = (text: string) =>
-    th(
-      [
-        Class(
-          'px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white',
-        ),
-      ],
-      [text],
-    )
-
-  const featureCell = (text: string) =>
-    td(
-      [
-        Class(
-          'px-4 py-3 text-sm font-medium text-gray-900 dark:text-white',
-        ),
-      ],
-      [text],
-    )
-
-  const descriptionCell = (text: string) =>
-    td(
-      [Class('px-4 py-3 text-sm text-gray-700 dark:text-gray-300')],
-      [text],
-    )
-
-  const comparisonRow = (
-    feature: string,
-    react: string,
-    foldkit: string,
-  ) =>
-    tr(
-      [Class('border-b border-gray-200 dark:border-gray-700')],
-      [
-        featureCell(feature),
-        descriptionCell(react),
-        descriptionCell(foldkit),
-      ],
-    )
-
-  return div(
-    [Class('overflow-x-auto mb-6')],
+const foldkitVsReactTable = (): Html =>
+  comparisonTable(
+    ['Feature', 'React', 'Foldkit'],
     [
-      table(
+      [
+        ['Component state'],
+        ['useState per component, prop drilling'],
+        ['Part of single Model, direct access'],
+      ],
+      [
+        ['Global state'],
+        ['Context/Redux/Zustand + providers'],
+        ['Built into Model, no extra libraries'],
+      ],
+      [
+        ['Derived state'],
+        ['useMemo with dependency arrays'],
+        ['Pure functions, no memoization needed'],
+      ],
+      [
+        ['Event handlers'],
+        ['Callbacks that may close over stale state'],
+        ['Messages describe events, update handles them'],
+      ],
+      [
+        ['Routing'],
+        ['React Router + state sync + URL parsing'],
+        ['Built-in typed routes, automatic URL ↔ Model sync'],
+      ],
+      [
+        ['Side effects'],
+        ['useEffect cleanup, race conditions, stale closures'],
+        ['Commands are explicit, return values from update'],
+      ],
+      [
+        ['Subscriptions'],
+        ['Manual useEffect + cleanup + dependency arrays'],
+        ['CommandStreams with automatic lifecycle'],
+      ],
+      [
+        ['Debugging'],
+        ['React DevTools + Redux DevTools + console.log'],
         [
-          Class(
-            'w-full border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden',
-          ),
+          'Single state tree, message log, time-travel (in development)',
         ],
-        [
-          thead(
-            [Class('bg-gray-100 dark:bg-gray-800')],
-            [
-              tr(
-                [],
-                [
-                  headerCell('Feature'),
-                  headerCell('React'),
-                  headerCell('Foldkit'),
-                ],
-              ),
-            ],
-          ),
-          tbody(
-            [],
-            [
-              comparisonRow(
-                'Routing',
-                'React Router + state sync + URL parsing',
-                'Built-in typed routes, automatic URL ↔ Model sync',
-              ),
-              comparisonRow(
-                'Complex state',
-                'useState/useReducer/Context/Redux/Zustand + prop drilling',
-                'Single Model, exhaustive message handling',
-              ),
-              comparisonRow(
-                'Side effects',
-                'useEffect cleanup, race conditions, stale closures',
-                'Commands are explicit, return values from update',
-              ),
-              comparisonRow(
-                'Subscriptions',
-                'Manual useEffect + cleanup + dependency arrays',
-                'CommandStreams with automatic lifecycle',
-              ),
-              comparisonRow(
-                'Debugging',
-                'React DevTools + Redux DevTools + console.log',
-                'Single state tree, message log, time-travel (in development)',
-              ),
-            ],
-          ),
-        ],
-      ),
+      ],
     ],
   )
-}
 
 export const view = (): Html =>
   div(
     [],
     [
       heading('h1', 'whyFoldkit', 'Why Foldkit?'),
-      tableOfContentsEntryToHeader(theProblemHeader),
+      tableOfContentsEntryToHeader(theChallengesHeader),
       para(
-        'Modern web frameworks make simple things complex. What starts as a clean component quickly accumulates state management patterns, effect handling, and implicit dependencies.',
+        'Building interactive web applications presents recurring challenges. As complexity grows, certain patterns become harder to manage:',
       ),
       bullets(
-        'State scattered across components, hooks, contexts, and stores',
-        'Side effects mixed with rendering logic',
-        'Debugging requires understanding implicit dependencies',
-        'Race conditions and stale closures lurk in async code',
-        'Testing requires mocking framework internals',
+        'State spread across components, hooks, contexts, and stores',
+        'Side effects interleaved with rendering logic',
+        'Dependencies that are implicit rather than explicit',
+        'Race conditions and stale closures in async code',
+        'Testing that requires mocking framework internals',
       ),
       para(
-        'These problems compound as applications grow. Teams spend more time managing complexity than building features.',
+        'These challenges are not unique to any framework — they emerge naturally as applications grow. Foldkit addresses them through architecture rather than convention.',
       ),
       tableOfContentsEntryToHeader(foldkitVsReactHeader),
       para(
         'A simple counter looks similar in both React and Foldkit. The difference emerges as complexity grows.',
       ),
-      comparisonTable(),
+      foldkitVsReactTable(),
       para(
         strong([], ['Key insight:']),
         " React's simplicity at small scale becomes complexity debt. Foldkit's structure feels like overhead at first but pays off as the app grows.",
@@ -233,6 +172,10 @@ export const view = (): Html =>
         'This architecture has been refined over a decade in the ',
         link(Link.elm, 'Elm'),
         ' community. Foldkit brings these ideas to TypeScript.',
+      ),
+      callout(
+        'Familiar if you know Redux',
+        'The Model-View-Update pattern will feel similar to Redux: the Model is like your store, Messages are like actions, and update is your reducer. The key differences are that Commands replace middleware, and the pattern is built into the framework rather than added on top.',
       ),
       tableOfContentsEntryToHeader(builtOnEffectHeader),
       para(

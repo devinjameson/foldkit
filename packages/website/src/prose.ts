@@ -101,3 +101,26 @@ export const inlineCode = (text: string): Html =>
     ],
     [text],
   )
+
+export const callout = (
+  label: string,
+  ...content: ReadonlyArray<string | Html>
+): Html =>
+  div(
+    [
+      Class(
+        'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 dark:border-blue-400 p-4 mb-6 rounded-r',
+      ),
+    ],
+    [
+      p(
+        [
+          Class(
+            'font-semibold text-blue-800 dark:text-blue-300 mb-1',
+          ),
+        ],
+        [label],
+      ),
+      p([Class('text-blue-700 dark:text-blue-200')], content),
+    ],
+  )
