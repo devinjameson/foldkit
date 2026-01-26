@@ -258,6 +258,7 @@ type Attribute<Message> = Data.TaggedEnum<{
   Value: { readonly value: string }
   Checked: { readonly value: boolean }
   Selected: { readonly value: boolean }
+  Open: { readonly value: boolean }
   Placeholder: { readonly value: string }
   Name: { readonly value: string }
   Disabled: { readonly value: boolean }
@@ -376,6 +377,7 @@ const {
   Value,
   Checked,
   Selected,
+  Open,
   Placeholder,
   Name,
   Disabled,
@@ -615,6 +617,7 @@ const buildVNodeData = <Message>(
           Value: ({ value }) => updatePropsWithPostpatch('value', value),
           Checked: ({ value }) => updatePropsWithPostpatch('checked', value),
           Selected: ({ value }) => updatePropsWithPostpatch('selected', value),
+          Open: ({ value }) => updatePropsWithPostpatch('open', value),
           Placeholder: ({ value }) => updateDataProps({ placeholder: value }),
           Name: ({ value }) => updateDataProps({ name: value }),
           Disabled: ({ value }) => updateDataProps({ disabled: value }),
@@ -1243,6 +1246,7 @@ type HtmlAttributes<Message> = {
   Value: (value: string) => { readonly _tag: 'Value'; readonly value: string }
   Checked: (value: boolean) => { readonly _tag: 'Checked'; readonly value: boolean }
   Selected: (value: boolean) => { readonly _tag: 'Selected'; readonly value: boolean }
+  Open: (value: boolean) => { readonly _tag: 'Open'; readonly value: boolean }
   Placeholder: (value: string) => { readonly _tag: 'Placeholder'; readonly value: string }
   Name: (value: string) => { readonly _tag: 'Name'; readonly value: string }
   Disabled: (value: boolean) => { readonly _tag: 'Disabled'; readonly value: boolean }
@@ -1370,6 +1374,7 @@ const htmlAttributes = <Message>(): HtmlAttributes<Message> => ({
   Value: (value: string) => Value({ value }),
   Checked: (value: boolean) => Checked({ value }),
   Selected: (value: boolean) => Selected({ value }),
+  Open: (value: boolean) => Open({ value }),
   Placeholder: (value: string) => Placeholder({ value }),
   Name: (value: string) => Name({ value }),
   Disabled: (value: boolean) => Disabled({ value }),
