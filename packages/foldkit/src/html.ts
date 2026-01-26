@@ -255,6 +255,7 @@ type Attribute<Message> = Data.TaggedEnum<{
   OnCopy: { readonly message: Message }
   OnCut: { readonly message: Message }
   OnPaste: { readonly message: Message }
+  OnToggle: { readonly f: (isOpen: boolean) => Message }
   Value: { readonly value: string }
   Checked: { readonly value: boolean }
   Selected: { readonly value: boolean }
@@ -374,6 +375,7 @@ const {
   OnCopy,
   OnCut,
   OnPaste,
+  OnToggle,
   Value,
   Checked,
   Selected,
@@ -490,6 +492,24 @@ const buildVNodeData = <Message>(
             if (vnode.elm) {
               /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
               ;(vnode.elm as any)[propName] = value
+            }
+          },
+        },
+      }))
+
+    const updateBooleanAttrWithPostpatch = (attrName: string, value: boolean) =>
+      Ref.update(dataRef, (data) => ({
+        ...data,
+        attrs: {
+          ...data.attrs,
+          [attrName]: value,
+        },
+        hook: {
+          ...data.hook,
+          postpatch: (_oldVnode, vnode) => {
+            if (vnode.elm) {
+              /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+              ;(vnode.elm as any)[attrName] = value
             }
           },
         },
@@ -614,10 +634,14 @@ const buildVNodeData = <Message>(
             updateDataOn({
               paste: () => dispatchSync(message),
             }),
+          OnToggle: ({ f }) =>
+            updateDataOn({
+              toggle: (event) => dispatchSync(f((event.target as HTMLDetailsElement).open)),
+            }),
           Value: ({ value }) => updatePropsWithPostpatch('value', value),
           Checked: ({ value }) => updatePropsWithPostpatch('checked', value),
           Selected: ({ value }) => updatePropsWithPostpatch('selected', value),
-          Open: ({ value }) => updatePropsWithPostpatch('open', value),
+          Open: ({ value }) => updateBooleanAttrWithPostpatch('open', value),
           Placeholder: ({ value }) => updateDataProps({ placeholder: value }),
           Name: ({ value }) => updateDataProps({ name: value }),
           Disabled: ({ value }) => updateDataProps({ disabled: value }),
@@ -1243,6 +1267,10 @@ type HtmlAttributes<Message> = {
   OnCopy: (message: Message) => { readonly _tag: 'OnCopy'; readonly message: Message }
   OnCut: (message: Message) => { readonly _tag: 'OnCut'; readonly message: Message }
   OnPaste: (message: Message) => { readonly _tag: 'OnPaste'; readonly message: Message }
+  OnToggle: (f: (isOpen: boolean) => Message) => {
+    readonly _tag: 'OnToggle'
+    readonly f: (isOpen: boolean) => Message
+  }
   Value: (value: string) => { readonly _tag: 'Value'; readonly value: string }
   Checked: (value: boolean) => { readonly _tag: 'Checked'; readonly value: boolean }
   Selected: (value: boolean) => { readonly _tag: 'Selected'; readonly value: boolean }
@@ -1371,6 +1399,7 @@ const htmlAttributes = <Message>(): HtmlAttributes<Message> => ({
   OnCopy: (message: Message) => OnCopy({ message }),
   OnCut: (message: Message) => OnCut({ message }),
   OnPaste: (message: Message) => OnPaste({ message }),
+  OnToggle: (f: (isOpen: boolean) => Message) => OnToggle({ f }),
   Value: (value: string) => Value({ value }),
   Checked: (value: boolean) => Checked({ value }),
   Selected: (value: boolean) => Selected({ value }),

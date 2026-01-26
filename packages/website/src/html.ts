@@ -47,6 +47,7 @@ export const {
   Id,
   InnerHTML,
   OnClick,
+  OnToggle,
   Open,
   OnInput,
   OnSubmit,

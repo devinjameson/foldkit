@@ -27,6 +27,7 @@ import {
   Href,
   Id,
   OnClick,
+  OnToggle,
   Open,
   Src,
   a,
@@ -236,7 +237,15 @@ const HideCopiedIndicator = ts('HideCopiedIndicator', {
   text: S.String,
 })
 const ToggleMobileMenu = ts('ToggleMobileMenu')
-const CloseMobileTableOfContents = ts('CloseMobileTableOfContents')
+const MobileTableOfContentsToggled = ts(
+  'MobileTableOfContentsToggled',
+  {
+    isOpen: S.Boolean,
+  },
+)
+const MobileTableOfContentsLinkClicked = ts(
+  'MobileTableOfContentsLinkClicked',
+)
 export const ActiveSectionChanged = ts('ActiveSectionChanged', {
   sectionId: S.String,
 })
@@ -256,7 +265,8 @@ const Message = S.Union(
   CopySuccess,
   HideCopiedIndicator,
   ToggleMobileMenu,
-  CloseMobileTableOfContents,
+  MobileTableOfContentsToggled,
+  MobileTableOfContentsLinkClicked,
   ActiveSectionChanged,
   SetThemePreference,
   SystemThemeChanged,
@@ -395,7 +405,12 @@ const update = (
         [],
       ],
 
-      CloseMobileTableOfContents: () => [
+      MobileTableOfContentsToggled: ({ isOpen }) => [
+        evo(model, { mobileTableOfContentsOpen: () => isOpen }),
+        [],
+      ],
+
+      MobileTableOfContentsLinkClicked: () => [
         evo(model, { mobileTableOfContentsOpen: () => false }),
         [],
       ],
@@ -734,6 +749,9 @@ const mobileTableOfContentsView = (
     [
       Id('mobile-table-of-contents'),
       Open(isOpen),
+      OnToggle((open) =>
+        MobileTableOfContentsToggled.make({ isOpen: open }),
+      ),
       Class(
         'group xl:hidden fixed top-[var(--header-height)] left-0 right-0 md:left-64 z-40 bg-white dark:bg-black border-b border-gray-300 dark:border-gray-700',
       ),
@@ -778,7 +796,7 @@ const mobileTableOfContentsView = (
         ],
       ),
       nav(
-        [Class('max-h-96 overflow-y-auto')],
+        [Class('max-h-[50vh] overflow-y-auto')],
         [
           ul(
             [
@@ -799,7 +817,9 @@ const mobileTableOfContentsView = (
                   a(
                     [
                       Href(`#${id}`),
-                      OnClick(CloseMobileTableOfContents.make()),
+                      OnClick(
+                        MobileTableOfContentsLinkClicked.make(),
+                      ),
                       Class(
                         classNames(
                           'transition flex items-center justify-between py-3 px-4',
