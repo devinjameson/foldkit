@@ -497,24 +497,6 @@ const buildVNodeData = <Message>(
         },
       }))
 
-    const updateBooleanAttrWithPostpatch = (attrName: string, value: boolean) =>
-      Ref.update(dataRef, (data) => ({
-        ...data,
-        attrs: {
-          ...data.attrs,
-          [attrName]: value,
-        },
-        hook: {
-          ...data.hook,
-          postpatch: (_oldVnode, vnode) => {
-            if (vnode.elm) {
-              /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-              ;(vnode.elm as any)[attrName] = value
-            }
-          },
-        },
-      }))
-
     yield* Effect.forEach(attributes, (attr) =>
       Match.value(attr).pipe(
         Match.tagsExhaustive({
@@ -641,7 +623,7 @@ const buildVNodeData = <Message>(
           Value: ({ value }) => updatePropsWithPostpatch('value', value),
           Checked: ({ value }) => updatePropsWithPostpatch('checked', value),
           Selected: ({ value }) => updatePropsWithPostpatch('selected', value),
-          Open: ({ value }) => updateBooleanAttrWithPostpatch('open', value),
+          Open: ({ value }) => updateDataProps({ open: value }),
           Placeholder: ({ value }) => updateDataProps({ placeholder: value }),
           Name: ({ value }) => updateDataProps({ name: value }),
           Disabled: ({ value }) => updateDataProps({ disabled: value }),
