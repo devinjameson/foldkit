@@ -1,8 +1,14 @@
-![Foldkit](packages/website/public/logo.svg)
+<p align="center">
+  <img src="packages/website/public/logo.svg" alt="Foldkit" width="350">
+</p>
 
-![npm version](https://img.shields.io/npm/v/foldkit)
+<p align="center">
+  <a href="https://www.npmjs.com/package/foldkit"><img src="https://img.shields.io/npm/v/foldkit" alt="npm version"></a>
+</p>
 
-**[Documentation](https://foldkit.dev)** · **[Examples](#examples)** · **[Getting Started](https://foldkit.dev/getting-started)**
+<p align="center">
+  <a href="https://foldkit.dev"><strong>Documentation</strong></a> · <a href="#examples"><strong>Examples</strong></a> · <a href="https://foldkit.dev/getting-started"><strong>Getting Started</strong></a>
+</p>
 
 > ⚠️ Foldkit is in canary release for early adopters and experimenters. APIs are incomplete and may change rapidly.
 
