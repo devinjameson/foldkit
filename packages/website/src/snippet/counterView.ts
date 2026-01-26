@@ -1,8 +1,7 @@
 import { Class, Html, OnClick, button, div } from '../html'
 
 // VIEW - Renders your state as HTML
-// Pure function: same state always produces the same HTML - no side effects in
-// the view
+// Pure function: same state always produces the same HTML — no side effects
 
 const view = (model: Model): Html =>
   div(
@@ -15,6 +14,9 @@ const view = (model: Model): Html =>
       div(
         [Class('flex flex-wrap justify-center gap-4')],
         [
+          // OnClick takes a Message, not a callback. The Message doesn't
+          // execute anything — it just declares what should happen on click.
+          // Foldkit dispatches it to your update function.
           button(
             [OnClick(Decrement.make()), Class(buttonStyle)],
             ['-'],

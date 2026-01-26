@@ -43,6 +43,18 @@ const viewHeader: TableOfContentsEntry = {
   text: 'View',
 }
 
+const typedHtmlHelpersHeader: TableOfContentsEntry = {
+  level: 'h3',
+  id: 'typed-html-helpers',
+  text: 'Typed HTML Helpers',
+}
+
+const eventHandlingHeader: TableOfContentsEntry = {
+  level: 'h3',
+  id: 'event-handling',
+  text: 'Event Handling',
+}
+
 const commandsHeader: TableOfContentsEntry = {
   level: 'h2',
   id: 'commands',
@@ -61,6 +73,8 @@ export const tableOfContents: ReadonlyArray<TableOfContentsEntry> = [
   messagesHeader,
   updateHeader,
   viewHeader,
+  typedHtmlHelpersHeader,
+  eventHandlingHeader,
   commandsHeader,
   commandStreamsHeader,
 ]
@@ -165,9 +179,7 @@ export const view = (model: Model): Html =>
       ),
       tableOfContentsEntryToHeader(viewHeader),
       para(
-        'The view function is a pure function that transforms your model into HTML. Given the same model, it always produces the same HTML output. The view never directly modifies state - instead, it dispatches messages through event handlers like ',
-        inlineCode('OnClick'),
-        '.',
+        'The view function is a pure function that transforms your model into HTML. Given the same model, it always produces the same HTML output. The view never directly modifies state — instead, it dispatches messages through event handlers.',
       ),
       highlightedCodeBlock(
         div(
@@ -181,6 +193,52 @@ export const view = (model: Model): Html =>
         'Copy view example to clipboard',
         model,
         'mb-8',
+      ),
+      tableOfContentsEntryToHeader(typedHtmlHelpersHeader),
+      para(
+        "Foldkit's HTML functions are typed to your Message type. This ensures event handlers only accept valid Messages from your application. You create these helpers by calling ",
+        inlineCode('html<Message>()'),
+        ' and destructuring the elements and attributes you need:',
+      ),
+      highlightedCodeBlock(
+        div(
+          [
+            Class('text-sm'),
+            InnerHTML(Snippets.htmlHelpersHighlighted),
+          ],
+          [],
+        ),
+        Snippets.htmlHelpersRaw,
+        'Copy HTML helpers example to clipboard',
+        model,
+        'mb-8',
+      ),
+      para(
+        "This pattern might seem unusual if you're coming from React, but it provides strong type safety. If you try to pass an invalid Message to ",
+        inlineCode('OnClick'),
+        ', TypeScript will catch it at compile time. You only need to do this once per module — most apps create a single ',
+        inlineCode('html.ts'),
+        ' file and import from there.',
+      ),
+      tableOfContentsEntryToHeader(eventHandlingHeader),
+      para(
+        'Event handlers in Foldkit work differently from React. Instead of passing a callback function, you pass a Message. When the event fires, Foldkit dispatches that Message to your update function.',
+      ),
+      highlightedCodeBlock(
+        div(
+          [
+            Class('text-sm'),
+            InnerHTML(Snippets.eventHandlingHighlighted),
+          ],
+          [],
+        ),
+        Snippets.eventHandlingRaw,
+        'Copy event handling example to clipboard',
+        model,
+        'mb-8',
+      ),
+      para(
+        'For simple events like clicks, you pass the Message directly. For events that carry data (like input changes), you pass a function that receives the event and returns a Message. This keeps your view declarative — it describes what Messages should be sent, not how to handle them.',
       ),
       tableOfContentsEntryToHeader(commandsHeader),
       para(
