@@ -211,28 +211,6 @@ const makeRuntime =
 
       const maybeCurrentVNodeRef = yield* Ref.make<Option.Option<VNode>>(Option.none())
 
-      if (commandStreams) {
-        yield* pipe(
-          commandStreams,
-          Record.toEntries,
-          Effect.forEach(
-            ([_key, { schema, modelToDeps, depsToStream }]) =>
-              Effect.forkDaemon(
-                modelSubscriptionRef.changes.pipe(
-                  Stream.map(modelToDeps),
-                  Stream.changesWith(Schema.equivalence(schema)),
-                  Stream.flatMap(depsToStream, { switch: true }),
-                  Stream.runForEach(Effect.flatMap(enqueueMessage)),
-                ),
-              ),
-            {
-              concurrency: 'unbounded',
-              discard: true,
-            },
-          ),
-        )
-      }
-
       const maybeRuntimeRef = yield* Ref.make<Option.Option<Runtime.Runtime<never>>>(Option.none())
 
       const processMessage = (message: Message): Effect.Effect<void> =>
@@ -291,6 +269,34 @@ const makeRuntime =
       yield* Ref.set(maybeRuntimeRef, Option.some(runtime))
 
       yield* render(initModel)
+
+      if (commandStreams) {
+        yield* pipe(
+          commandStreams,
+          Record.toEntries,
+          Effect.forEach(
+            ([_key, { schema, modelToDeps, depsToStream }]) => {
+              const modelStream = Stream.concat(
+                Stream.make(initModel),
+                modelSubscriptionRef.changes,
+              )
+
+              return Effect.forkDaemon(
+                modelStream.pipe(
+                  Stream.map(modelToDeps),
+                  Stream.changesWith(Schema.equivalence(schema)),
+                  Stream.flatMap(depsToStream, { switch: true }),
+                  Stream.runForEach(Effect.flatMap(enqueueMessage)),
+                ),
+              )
+            },
+            {
+              concurrency: 'unbounded',
+              discard: true,
+            },
+          ),
+        )
+      }
 
       yield* Effect.forever(
         Effect.gen(function* () {
