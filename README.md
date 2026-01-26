@@ -1,6 +1,8 @@
+![Foldkit](packages/website/public/logo.svg)
+
 ![npm version](https://img.shields.io/npm/v/foldkit)
 
-# Foldkit
+**[Documentation](https://foldkit.dev)** · **[Examples](#examples)** · **[Getting Started](https://foldkit.dev/getting-started)**
 
 > ⚠️ Foldkit is in canary release for early adopters and experimenters. APIs are incomplete and may change rapidly.
 
