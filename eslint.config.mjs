@@ -42,7 +42,6 @@ export default [
       parserOptions: {
         ecmaVersion: 'latest',
         sourceType: 'module',
-        project: ['./tsconfig.json', './packages/foldkit/tsconfig.json'],
         projectService: true,
       },
     },
