@@ -86,14 +86,12 @@ const init: Runtime.ElementInit<Model, Message> = () => [
 // FIELD VALIDATION
 
 const nameValidations: ReadonlyArray<Validation<string>> = [
-  FieldValidation.minLength(2, (min) => `Name must be at least ${min} characters`),
+  FieldValidation.minLength(2, 'Name must be at least 2 characters'),
 ]
 
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-
 const emailValidations: ReadonlyArray<Validation<string>> = [
-  FieldValidation.required('Email'),
-  FieldValidation.regex(emailRegex, 'Please enter a valid email address'),
+  FieldValidation.required('Email is required'),
+  FieldValidation.email('Please enter a valid email address'),
 ]
 
 const EMAILS_ON_WAITLIST = ['test@example.com', 'demo@email.com', 'admin@test.com']

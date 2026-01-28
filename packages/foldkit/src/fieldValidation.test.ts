@@ -4,10 +4,24 @@ import { expect } from 'vitest'
 
 import {
   type Validation,
+  between,
+  email,
+  endsWith,
+  equals,
+  includes,
+  integer,
   makeField,
+  max,
+  maxLength,
+  min,
   minLength,
-  regex,
+  nonNegative,
+  oneOf,
+  pattern,
+  positive,
   required,
+  startsWith,
+  url,
   validateField,
 } from './fieldValidation'
 
@@ -66,63 +80,444 @@ describe('makeField', () => {
   })
 })
 
-describe('required', () => {
-  const [predicate, message] = required('Email')
+describe('string validators', () => {
+  describe('required', () => {
+    it('fails for empty string', () => {
+      const [predicate] = required()
+      expect(predicate('')).toBe(false)
+    })
 
-  it('fails for empty string', () => {
-    expect(predicate('')).toBe(false)
+    it('passes for non-empty string', () => {
+      const [predicate] = required()
+      expect(predicate('test')).toBe(true)
+    })
+
+    it('uses default message', () => {
+      const [, message] = required()
+      expect(message).toBe('Required')
+    })
+
+    it('accepts custom message', () => {
+      const [, message] = required('Email is required')
+      expect(message).toBe('Email is required')
+    })
   })
 
-  it('passes for non-empty string', () => {
-    expect(predicate('test')).toBe(true)
+  describe('minLength', () => {
+    it('fails below minimum', () => {
+      const [predicate] = minLength(3)
+      expect(predicate('ab')).toBe(false)
+    })
+
+    it('passes at minimum', () => {
+      const [predicate] = minLength(3)
+      expect(predicate('abc')).toBe(true)
+    })
+
+    it('passes above minimum', () => {
+      const [predicate] = minLength(3)
+      expect(predicate('abcd')).toBe(true)
+    })
+
+    it('uses default message', () => {
+      const [, message] = minLength(3)
+      expect(message).toBe('Must be at least 3 characters')
+    })
+
+    it('accepts custom message', () => {
+      const [, message] = minLength(3, 'Too short')
+      expect(message).toBe('Too short')
+    })
   })
 
-  it('includes the field name in the error message', () => {
-    expect(message).toBe('Email is required')
+  describe('maxLength', () => {
+    it('fails above maximum', () => {
+      const [predicate] = maxLength(5)
+      expect(predicate('toolong')).toBe(false)
+    })
+
+    it('passes at maximum', () => {
+      const [predicate] = maxLength(5)
+      expect(predicate('hello')).toBe(true)
+    })
+
+    it('passes below maximum', () => {
+      const [predicate] = maxLength(5)
+      expect(predicate('hi')).toBe(true)
+    })
+
+    it('uses default message', () => {
+      const [, message] = maxLength(5)
+      expect(message).toBe('Must be at most 5 characters')
+    })
+
+    it('accepts custom message', () => {
+      const [, message] = maxLength(5, 'Too long')
+      expect(message).toBe('Too long')
+    })
+  })
+
+  describe('pattern', () => {
+    const hexRegex = /^#[0-9a-f]{6}$/i
+
+    it('fails for non-matching string', () => {
+      const [predicate] = pattern(hexRegex)
+      expect(predicate('red')).toBe(false)
+    })
+
+    it('passes for matching string', () => {
+      const [predicate] = pattern(hexRegex)
+      expect(predicate('#ff00aa')).toBe(true)
+    })
+
+    it('uses default message', () => {
+      const [, message] = pattern(hexRegex)
+      expect(message).toBe('Invalid format')
+    })
+
+    it('accepts custom message', () => {
+      const [, message] = pattern(hexRegex, 'Must be a hex color')
+      expect(message).toBe('Must be a hex color')
+    })
+  })
+
+  describe('email', () => {
+    it('fails for non-email string', () => {
+      const [predicate] = email()
+      expect(predicate('not-an-email')).toBe(false)
+    })
+
+    it('passes for valid email', () => {
+      const [predicate] = email()
+      expect(predicate('user@example.com')).toBe(true)
+    })
+
+    it('uses default message', () => {
+      const [, message] = email()
+      expect(message).toBe('Invalid email address')
+    })
+
+    it('accepts custom message', () => {
+      const [, message] = email('Bad email')
+      expect(message).toBe('Bad email')
+    })
+  })
+
+  describe('url', () => {
+    it('fails for non-URL string', () => {
+      const [predicate] = url()
+      expect(predicate('not a url')).toBe(false)
+    })
+
+    it('passes for http URL', () => {
+      const [predicate] = url()
+      expect(predicate('http://example.com')).toBe(true)
+    })
+
+    it('passes for https URL', () => {
+      const [predicate] = url()
+      expect(predicate('https://example.com/path')).toBe(true)
+    })
+
+    it('uses default message', () => {
+      const [, message] = url()
+      expect(message).toBe('Invalid URL')
+    })
+
+    it('accepts custom message', () => {
+      const [, message] = url('Enter a valid link')
+      expect(message).toBe('Enter a valid link')
+    })
+  })
+
+  describe('startsWith', () => {
+    it('fails when prefix missing', () => {
+      const [predicate] = startsWith('https://')
+      expect(predicate('http://example.com')).toBe(false)
+    })
+
+    it('passes when prefix present', () => {
+      const [predicate] = startsWith('https://')
+      expect(predicate('https://example.com')).toBe(true)
+    })
+
+    it('uses default message', () => {
+      const [, message] = startsWith('https://')
+      expect(message).toBe('Must start with https://')
+    })
+
+    it('accepts custom message', () => {
+      const [, message] = startsWith('https://', 'Needs HTTPS')
+      expect(message).toBe('Needs HTTPS')
+    })
+  })
+
+  describe('endsWith', () => {
+    it('fails when suffix missing', () => {
+      const [predicate] = endsWith('.com')
+      expect(predicate('example.org')).toBe(false)
+    })
+
+    it('passes when suffix present', () => {
+      const [predicate] = endsWith('.com')
+      expect(predicate('example.com')).toBe(true)
+    })
+
+    it('uses default message', () => {
+      const [, message] = endsWith('.com')
+      expect(message).toBe('Must end with .com')
+    })
+
+    it('accepts custom message', () => {
+      const [, message] = endsWith('.com', 'Only .com domains')
+      expect(message).toBe('Only .com domains')
+    })
+  })
+
+  describe('includes', () => {
+    it('fails when substring missing', () => {
+      const [predicate] = includes('@')
+      expect(predicate('hello')).toBe(false)
+    })
+
+    it('passes when substring present', () => {
+      const [predicate] = includes('@')
+      expect(predicate('user@test')).toBe(true)
+    })
+
+    it('uses default message', () => {
+      const [, message] = includes('@')
+      expect(message).toBe('Must contain @')
+    })
+
+    it('accepts custom message', () => {
+      const [, message] = includes('@', 'Needs an @ sign')
+      expect(message).toBe('Needs an @ sign')
+    })
+  })
+
+  describe('equals', () => {
+    it('fails on mismatch', () => {
+      const [predicate] = equals('DELETE')
+      expect(predicate('delete')).toBe(false)
+    })
+
+    it('passes on exact match', () => {
+      const [predicate] = equals('DELETE')
+      expect(predicate('DELETE')).toBe(true)
+    })
+
+    it('uses default message', () => {
+      const [, message] = equals('DELETE')
+      expect(message).toBe('Must match DELETE')
+    })
+
+    it('accepts custom message', () => {
+      const [, message] = equals('DELETE', 'Type DELETE to confirm')
+      expect(message).toBe('Type DELETE to confirm')
+    })
   })
 })
 
-describe('minLength', () => {
-  const [predicate, message] = minLength(3, (min) => `Must be at least ${min} chars`)
+describe('number validators', () => {
+  describe('min', () => {
+    it('fails below minimum', () => {
+      const [predicate] = min(5)
+      expect(predicate(4)).toBe(false)
+    })
 
-  it('fails below minimum', () => {
-    expect(predicate('ab')).toBe(false)
+    it('passes at minimum', () => {
+      const [predicate] = min(5)
+      expect(predicate(5)).toBe(true)
+    })
+
+    it('uses default message', () => {
+      const [, message] = min(5)
+      expect(message).toBe('Must be at least 5')
+    })
+
+    it('accepts custom message', () => {
+      const [, message] = min(5, 'Too low')
+      expect(message).toBe('Too low')
+    })
   })
 
-  it('passes at minimum', () => {
-    expect(predicate('abc')).toBe(true)
+  describe('max', () => {
+    it('fails above maximum', () => {
+      const [predicate] = max(10)
+      expect(predicate(11)).toBe(false)
+    })
+
+    it('passes at maximum', () => {
+      const [predicate] = max(10)
+      expect(predicate(10)).toBe(true)
+    })
+
+    it('uses default message', () => {
+      const [, message] = max(10)
+      expect(message).toBe('Must be at most 10')
+    })
+
+    it('accepts custom message', () => {
+      const [, message] = max(10, 'Too high')
+      expect(message).toBe('Too high')
+    })
   })
 
-  it('passes above minimum', () => {
-    expect(predicate('abcd')).toBe(true)
+  describe('between', () => {
+    it('fails below range', () => {
+      const [predicate] = between(1, 10)
+      expect(predicate(0)).toBe(false)
+    })
+
+    it('fails above range', () => {
+      const [predicate] = between(1, 10)
+      expect(predicate(11)).toBe(false)
+    })
+
+    it('passes at lower bound', () => {
+      const [predicate] = between(1, 10)
+      expect(predicate(1)).toBe(true)
+    })
+
+    it('passes at upper bound', () => {
+      const [predicate] = between(1, 10)
+      expect(predicate(10)).toBe(true)
+    })
+
+    it('passes within range', () => {
+      const [predicate] = between(1, 10)
+      expect(predicate(5)).toBe(true)
+    })
+
+    it('uses default message', () => {
+      const [, message] = between(1, 10)
+      expect(message).toBe('Must be between 1 and 10')
+    })
+
+    it('accepts custom message', () => {
+      const [, message] = between(1, 10, 'Out of range')
+      expect(message).toBe('Out of range')
+    })
   })
 
-  it('produces the expected message', () => {
-    expect(message).toBe('Must be at least 3 chars')
+  describe('positive', () => {
+    it('fails for zero', () => {
+      const [predicate] = positive()
+      expect(predicate(0)).toBe(false)
+    })
+
+    it('fails for negative', () => {
+      const [predicate] = positive()
+      expect(predicate(-1)).toBe(false)
+    })
+
+    it('passes for positive', () => {
+      const [predicate] = positive()
+      expect(predicate(1)).toBe(true)
+    })
+
+    it('uses default message', () => {
+      const [, message] = positive()
+      expect(message).toBe('Must be positive')
+    })
+
+    it('accepts custom message', () => {
+      const [, message] = positive('Needs to be > 0')
+      expect(message).toBe('Needs to be > 0')
+    })
+  })
+
+  describe('nonNegative', () => {
+    it('fails for negative', () => {
+      const [predicate] = nonNegative()
+      expect(predicate(-1)).toBe(false)
+    })
+
+    it('passes for zero', () => {
+      const [predicate] = nonNegative()
+      expect(predicate(0)).toBe(true)
+    })
+
+    it('passes for positive', () => {
+      const [predicate] = nonNegative()
+      expect(predicate(5)).toBe(true)
+    })
+
+    it('uses default message', () => {
+      const [, message] = nonNegative()
+      expect(message).toBe('Must be non-negative')
+    })
+
+    it('accepts custom message', () => {
+      const [, message] = nonNegative('No negatives')
+      expect(message).toBe('No negatives')
+    })
+  })
+
+  describe('integer', () => {
+    it('fails for float', () => {
+      const [predicate] = integer()
+      expect(predicate(3.5)).toBe(false)
+    })
+
+    it('passes for whole number', () => {
+      const [predicate] = integer()
+      expect(predicate(3)).toBe(true)
+    })
+
+    it('passes for zero', () => {
+      const [predicate] = integer()
+      expect(predicate(0)).toBe(true)
+    })
+
+    it('passes for negative integer', () => {
+      const [predicate] = integer()
+      expect(predicate(-2)).toBe(true)
+    })
+
+    it('uses default message', () => {
+      const [, message] = integer()
+      expect(message).toBe('Must be a whole number')
+    })
+
+    it('accepts custom message', () => {
+      const [, message] = integer('No decimals')
+      expect(message).toBe('No decimals')
+    })
   })
 })
 
-describe('regex', () => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  const [predicate, message] = regex(emailRegex, 'Invalid email')
+describe('generic validators', () => {
+  describe('oneOf', () => {
+    const colors = ['red', 'green', 'blue']
 
-  it('fails for non-matching string', () => {
-    expect(predicate('not-an-email')).toBe(false)
-  })
+    it('fails for value not in set', () => {
+      const [predicate] = oneOf(colors)
+      expect(predicate('yellow')).toBe(false)
+    })
 
-  it('passes for matching string', () => {
-    expect(predicate('user@example.com')).toBe(true)
-  })
+    it('passes for value in set', () => {
+      const [predicate] = oneOf(colors)
+      expect(predicate('red')).toBe(true)
+    })
 
-  it('returns the provided message', () => {
-    expect(message).toBe('Invalid email')
+    it('uses default message', () => {
+      const [, message] = oneOf(colors)
+      expect(message).toBe('Must be one of: red, green, blue')
+    })
+
+    it('accepts custom message', () => {
+      const [, message] = oneOf(colors, 'Pick a color')
+      expect(message).toBe('Pick a color')
+    })
   })
 })
 
 describe('validateField', () => {
   const validations: ReadonlyArray<Validation<string>> = [
-    required('Name'),
-    minLength(2, (min) => `At least ${min} chars`),
+    required('Name is required'),
+    minLength(2, 'At least 2 chars'),
   ]
   const validate = validateField(validations)
 
