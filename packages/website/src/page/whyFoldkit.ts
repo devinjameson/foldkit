@@ -32,6 +32,12 @@ const theElmArchitectureHeader: TableOfContentsEntry = {
   text: 'The Elm Architecture',
 }
 
+const aiFriendlyHeader: TableOfContentsEntry = {
+  level: 'h2',
+  id: 'ai-friendly-architecture',
+  text: 'AI-Friendly Architecture',
+}
+
 const builtOnEffectHeader: TableOfContentsEntry = {
   level: 'h2',
   id: 'built-on-effect',
@@ -48,9 +54,37 @@ export const tableOfContents: ReadonlyArray<TableOfContentsEntry> = [
   theChallengesHeader,
   foldkitVsReactHeader,
   theElmArchitectureHeader,
+  aiFriendlyHeader,
   builtOnEffectHeader,
   whoItsForHeader,
 ]
+
+const aiFriendlyTable = (): Html =>
+  comparisonTable(
+    ['Property', 'Why AI Benefits'],
+    [
+      [
+        ['Single immutable model'],
+        [
+          'AI can track state without hunting through component trees',
+        ],
+      ],
+      [
+        ['Pure update functions'],
+        ['Explicit input → output makes state changes easy to trace'],
+      ],
+      [
+        ['Explicit commands'],
+        [
+          'Side effects are declared, not hidden in useEffect callbacks',
+        ],
+      ],
+      [
+        ['Strong typing'],
+        ['Type signatures act as contracts AI can verify against'],
+      ],
+    ],
+  )
 
 const foldkitVsReactTable = (): Html =>
   comparisonTable(
@@ -176,6 +210,17 @@ export const view = (): Html =>
       callout(
         'Familiar if you know Redux',
         'The Model-View-Update pattern will feel similar to Redux: the Model is like your store, Messages are like actions, and update is your reducer. The key differences are that Commands replace middleware, and the pattern is built into the framework rather than added on top.',
+      ),
+      tableOfContentsEntryToHeader(aiFriendlyHeader),
+      para(
+        'In our experience, AI tools generate more reliable code when patterns are predictable and explicit.',
+      ),
+      aiFriendlyTable(),
+      para(
+        'Compare this to React where state can live anywhere (useState, useContext, Redux, Zustand, URL params, refs...) and side effects are scattered across useEffect hooks with dependency arrays that even humans get wrong constantly.',
+      ),
+      para(
+        "If you've paired AI tools with strictly typed codebases and explicit patterns, you've likely seen this firsthand. The generated code feels almost inevitable given the constraints of the architecture and type system.",
       ),
       tableOfContentsEntryToHeader(builtOnEffectHeader),
       para(
