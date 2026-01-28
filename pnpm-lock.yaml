@@ -32,6 +32,9 @@ importers:
       rimraf:
         specifier: ^6.1.2
         version: 6.1.2
+      simple-git-hooks:
+        specifier: ^2.11.1
+        version: 2.13.1
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -1967,6 +1970,10 @@ packages:
   siginfo@2.0.0:
     resolution: {integrity: sha512-ybx0WO1/8bSBLEWXZvEd7gMW3Sn3JFlW3TvX1nREbDLRNQNaeNN8WK0meBwPdAaOI7TtRRRJn/Es1zhrrCHu7g==}
 
+  simple-git-hooks@2.13.1:
+    resolution: {integrity: sha512-WszCLXwT4h2k1ufIXAgsbiTOazqqevFCIncOuUBZJ91DdvWcC5+OFkluWRQPrcuSYd8fjq+o2y1QfWqYMoAToQ==}
+    hasBin: true
+
   sisteransi@1.0.5:
     resolution: {integrity: sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg==}
 
@@ -3609,6 +3616,8 @@ snapshots:
       '@types/hast': 3.0.4
 
   siginfo@2.0.0: {}
+
+  simple-git-hooks@2.13.1: {}
 
   sisteransi@1.0.5: {}
 

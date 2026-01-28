@@ -4,6 +4,8 @@
   "private": true,
   "description": "foldkit: Elm-inspired UI framework powered by Effect-TS",
   "scripts": {
+    "prepare": "simple-git-hooks",
+    "pre-push": "prettier --check . && pnpm -r typecheck && pnpm test",
     "test": "pnpm -r --filter './examples/*' --filter './packages/*' run --if-present test",
     "format": "prettier -w .",
     "dev:core": "pnpm --filter foldkit watch",
@@ -33,7 +35,11 @@
     "prettier": "^3.8.0",
     "rimraf": "^6.1.2",
     "typescript": "^5.9.3",
+    "simple-git-hooks": "^2.11.1",
     "vite": "^7.3.1"
+  },
+  "simple-git-hooks": {
+    "pre-push": "branch=$(git rev-parse --abbrev-ref HEAD) && [ \"$branch\" = \"main\" ] && pnpm pre-push || true"
   },
   "engines": {
     "node": ">=18",
