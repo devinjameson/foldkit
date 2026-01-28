@@ -1,9 +1,12 @@
 import { Array, Duration, Effect, Match as M, Number, Random, Schema as S } from 'effect'
 import { FieldValidation, Runtime } from 'foldkit'
-import { Field, FieldSchema, Validation, validateField } from 'foldkit/fieldValidation'
+import { type Validation, makeField, validateField } from 'foldkit/fieldValidation'
 import { Html, html } from 'foldkit/html'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
+
+const StringField = makeField(S.String)
+type StringField = typeof StringField.Union.Type
 
 // MODEL
 
@@ -21,10 +24,10 @@ type SubmitError = typeof SubmitError.Type
 type Submission = typeof Submission.Type
 
 const Model = S.Struct({
-  name: FieldSchema(S.String),
-  email: FieldSchema(S.String),
+  name: StringField.Union,
+  email: StringField.Union,
   emailValidationId: S.Number,
-  message: FieldSchema(S.String),
+  message: StringField.Union,
   submission: Submission,
 })
 type Model = typeof Model.Type
@@ -36,7 +39,7 @@ const UpdateName = ts('UpdateName', { value: S.String })
 const UpdateEmail = ts('UpdateEmail', { value: S.String })
 const EmailValidated = ts('EmailValidated', {
   validationId: S.Number,
-  field: FieldSchema(S.String),
+  field: StringField.Union,
 })
 const UpdateMessage = ts('UpdateMessage', { value: S.String })
 const SubmitForm = ts('SubmitForm')
@@ -71,10 +74,10 @@ type Message = typeof Message.Type
 
 const init: Runtime.ElementInit<Model, Message> = () => [
   {
-    name: Field.NotValidated({ value: '' }),
-    email: Field.NotValidated({ value: '' }),
+    name: StringField.NotValidated.make({ value: '' }),
+    email: StringField.NotValidated.make({ value: '' }),
     emailValidationId: 0,
-    message: Field.NotValidated({ value: '' }),
+    message: StringField.NotValidated.make({ value: '' }),
     submission: NotSubmitted.make(),
   },
   [],
@@ -109,7 +112,7 @@ const validateEmailNotOnWaitlist = (
     if (yield* isEmailOnWaitlist(email)) {
       return EmailValidated.make({
         validationId,
-        field: Field.Invalid({
+        field: StringField.Invalid.make({
           value: email,
           error: 'This email is already on our waitlist',
         }),
@@ -117,7 +120,7 @@ const validateEmailNotOnWaitlist = (
     } else {
       return EmailValidated.make({
         validationId,
-        field: Field.Valid({ value: email }),
+        field: StringField.Valid.make({ value: email }),
       })
     }
   })
@@ -126,7 +129,7 @@ const validateName = validateField(nameValidations)
 const validateEmail = validateField(emailValidations)
 
 const isFormValid = (model: Model): boolean =>
-  Array.every([model.name, model.email], Field.$is('Valid'))
+  Array.every([model.name, model.email], (field) => field._tag === 'Valid')
 
 // UPDATE
 
@@ -147,10 +150,10 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
         const validateEmailResult = validateEmail(value)
         const validationId = Number.increment(model.emailValidationId)
 
-        if (Field.$is('Valid')(validateEmailResult)) {
+        if (validateEmailResult._tag === 'Valid') {
           return [
             evo(model, {
-              email: () => Field.Validating({ value }),
+              email: () => StringField.Validating.make({ value }),
               emailValidationId: () => validationId,
             }),
             [validateEmailNotOnWaitlist(value, validationId)],
@@ -181,7 +184,7 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
 
       UpdateMessage: ({ value }) => [
         evo(model, {
-          message: () => Field.Valid({ value }),
+          message: () => StringField.Valid.make({ value }),
         }),
         [],
       ],
@@ -268,19 +271,21 @@ const {
 const fieldView = (
   id: string,
   labelText: string,
-  field: Field<string>,
+  field: StringField,
   onUpdate: (value: string) => Message,
   type: 'text' | 'email' | 'textarea' = 'text',
 ): Html => {
   const { value } = field
 
   const getBorderClass = () =>
-    Field.$match(field, {
-      NotValidated: () => 'border-gray-300',
-      Validating: () => 'border-blue-300',
-      Valid: () => 'border-green-500',
-      Invalid: () => 'border-red-500',
-    })
+    M.value(field).pipe(
+      M.tagsExhaustive({
+        NotValidated: () => 'border-gray-300',
+        Validating: () => 'border-blue-300',
+        Valid: () => 'border-green-500',
+        Invalid: () => 'border-red-500',
+      }),
+    )
 
   const inputClass = `w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${getBorderClass()}`
 
@@ -291,24 +296,28 @@ const fieldView = (
         [Class('flex items-center gap-2 mb-2')],
         [
           label([For(id), Class('text-sm font-medium text-gray-700')], [labelText]),
-          Field.$match(field, {
-            NotValidated: () => empty,
-            Validating: () => span([Class('text-blue-600 text-sm animate-spin')], ['◐']),
-            Valid: () => span([Class('text-green-600 text-sm')], ['✓']),
-            Invalid: () => empty,
-          }),
+          M.value(field).pipe(
+            M.tagsExhaustive({
+              NotValidated: () => empty,
+              Validating: () => span([Class('text-blue-600 text-sm animate-spin')], ['◐']),
+              Valid: () => span([Class('text-green-600 text-sm')], ['✓']),
+              Invalid: () => empty,
+            }),
+          ),
         ],
       ),
       type === 'textarea'
         ? textarea([Id(id), Value(value), Class(inputClass), OnInput(onUpdate)], [])
         : input([Id(id), Type(type), Value(value), Class(inputClass), OnInput(onUpdate)]),
 
-      Field.$match(field, {
-        NotValidated: () => empty,
-        Validating: () => div([Class('text-blue-600 text-sm mt-1')], ['Checking...']),
-        Valid: () => empty,
-        Invalid: ({ error }) => div([Class('text-red-600 text-sm mt-1')], [error]),
-      }),
+      M.value(field).pipe(
+        M.tagsExhaustive({
+          NotValidated: () => empty,
+          Validating: () => div([Class('text-blue-600 text-sm mt-1')], ['Checking...']),
+          Valid: () => empty,
+          Invalid: ({ error }) => div([Class('text-red-600 text-sm mt-1')], [error]),
+        }),
+      ),
     ],
   )
 }
