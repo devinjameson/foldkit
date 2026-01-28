@@ -1,0 +1,302 @@
+import { describe, it } from '@effect/vitest'
+import { Effect, Option, Schema as S, pipe } from 'effect'
+import { expect } from 'vitest'
+
+import {
+  int,
+  literal,
+  mapTo,
+  oneOf,
+  parseUrlWithFallback,
+  query,
+  root,
+  slash,
+  string,
+} from './parser'
+import { ts } from './schema'
+import { Url } from './url'
+
+const makeUrl = (path: string, search?: string): Url => ({
+  protocol: 'https:',
+  host: 'example.com',
+  port: Option.none(),
+  pathname: path,
+  search: search ? Option.some(search) : Option.none(),
+  hash: Option.none(),
+})
+
+describe('literal', () => {
+  it.scoped('matches an exact segment', () =>
+    Effect.gen(function* () {
+      const [value, remaining] = yield* literal('users').parse(['users', 'abc'])
+      expect(value).toStrictEqual({})
+      expect(remaining).toStrictEqual(['abc'])
+    }),
+  )
+
+  it.scoped('fails on mismatched segment', () =>
+    Effect.gen(function* () {
+      const error = yield* Effect.flip(literal('users').parse(['posts']))
+      expect(error._tag).toBe('ParseError')
+      expect(error.expected).toBe('users')
+      expect(error.actual).toBe('posts')
+    }),
+  )
+
+  it.scoped('fails on empty segments', () =>
+    Effect.gen(function* () {
+      const error = yield* Effect.flip(literal('users').parse([]))
+      expect(error.actual).toBe('end of path')
+    }),
+  )
+
+  it.scoped('prints a segment', () =>
+    Effect.gen(function* () {
+      const state = yield* literal('users').print(
+        {},
+        { segments: [], queryParams: new URLSearchParams() },
+      )
+      expect(state.segments).toStrictEqual(['users'])
+    }),
+  )
+})
+
+describe('string', () => {
+  it.scoped('captures a segment as a named string', () =>
+    Effect.gen(function* () {
+      const [value, remaining] = yield* string('id').parse(['abc', 'next'])
+      expect(value).toStrictEqual({ id: 'abc' })
+      expect(remaining).toStrictEqual(['next'])
+    }),
+  )
+
+  it.scoped('fails on empty segments', () =>
+    Effect.gen(function* () {
+      const error = yield* Effect.flip(string('id').parse([]))
+      expect(error._tag).toBe('ParseError')
+    }),
+  )
+
+  it.scoped('prints the named value', () =>
+    Effect.gen(function* () {
+      const state = yield* string('id').print(
+        { id: 'abc' },
+        { segments: ['users'], queryParams: new URLSearchParams() },
+      )
+      expect(state.segments).toStrictEqual(['users', 'abc'])
+    }),
+  )
+})
+
+describe('int', () => {
+  it.scoped('parses a valid integer', () =>
+    Effect.gen(function* () {
+      const [value] = yield* int('id').parse(['42'])
+      expect(value).toStrictEqual({ id: 42 })
+    }),
+  )
+
+  it.scoped('rejects non-integer strings', () =>
+    Effect.gen(function* () {
+      const error = yield* Effect.flip(int('id').parse(['abc']))
+      expect(error._tag).toBe('ParseError')
+      expect(error.actual).toBe('abc')
+    }),
+  )
+
+  it.scoped('rejects floating point numbers', () =>
+    Effect.gen(function* () {
+      const error = yield* Effect.flip(int('id').parse(['3.5']))
+      expect(error._tag).toBe('ParseError')
+    }),
+  )
+
+  it.scoped('rejects empty string', () =>
+    Effect.gen(function* () {
+      const error = yield* Effect.flip(int('id').parse(['']))
+      expect(error._tag).toBe('ParseError')
+    }),
+  )
+
+  it.scoped('prints the integer as a string segment', () =>
+    Effect.gen(function* () {
+      const state = yield* int('id').print(
+        { id: 42 },
+        { segments: [], queryParams: new URLSearchParams() },
+      )
+      expect(state.segments).toStrictEqual(['42'])
+    }),
+  )
+})
+
+describe('root', () => {
+  it.scoped('succeeds on empty segments', () =>
+    Effect.gen(function* () {
+      const [value, remaining] = yield* root.parse([])
+      expect(value).toStrictEqual({})
+      expect(remaining).toStrictEqual([])
+    }),
+  )
+
+  it.scoped('fails when segments remain', () =>
+    Effect.gen(function* () {
+      const error = yield* Effect.flip(root.parse(['extra']))
+      expect(error._tag).toBe('ParseError')
+    }),
+  )
+})
+
+describe('slash', () => {
+  it.scoped('composes two parsers sequentially', () =>
+    Effect.gen(function* () {
+      const parser = pipe(literal('users'), slash(string('id')))
+      const [value, remaining] = yield* parser.parse(['users', 'abc'])
+      expect(value).toStrictEqual({ id: 'abc' })
+      expect(remaining).toStrictEqual([])
+    }),
+  )
+
+  it.scoped('merges parsed values from chained parsers', () =>
+    Effect.gen(function* () {
+      const parser = pipe(literal('posts'), slash(string('postId')), slash(int('commentId')))
+      const [value] = yield* parser.parse(['posts', 'my-post', '5'])
+      expect(value).toStrictEqual({ postId: 'my-post', commentId: 5 })
+    }),
+  )
+
+  it.scoped('fails if first parser fails', () =>
+    Effect.gen(function* () {
+      const parser = pipe(literal('users'), slash(string('id')))
+      const error = yield* Effect.flip(parser.parse(['posts', 'abc']))
+      expect(error._tag).toBe('ParseError')
+    }),
+  )
+
+  it.scoped('fails if second parser fails', () =>
+    Effect.gen(function* () {
+      const parser = pipe(literal('users'), slash(int('id')))
+      const error = yield* Effect.flip(parser.parse(['users', 'abc']))
+      expect(error._tag).toBe('ParseError')
+    }),
+  )
+})
+
+describe('query', () => {
+  it.scoped('parses query parameters with a schema', () =>
+    Effect.gen(function* () {
+      const parser = pipe(literal('items'), query(S.Struct({ page: S.NumberFromString })))
+      const [value] = yield* parser.parse(['items'], 'page=3')
+      expect(value).toStrictEqual({ page: 3 })
+    }),
+  )
+
+  it.scoped('fails on invalid query parameters', () =>
+    Effect.gen(function* () {
+      const parser = pipe(literal('items'), query(S.Struct({ page: S.NumberFromString })))
+      const error = yield* Effect.flip(parser.parse(['items'], 'page=abc'))
+      expect(error._tag).toBe('ParseError')
+    }),
+  )
+
+  it.scoped('combines path and query values', () =>
+    Effect.gen(function* () {
+      const parser = pipe(
+        literal('shop'),
+        slash(string('category')),
+        query(S.Struct({ sort: S.String })),
+      )
+      const [value] = yield* parser.parse(['shop', 'electronics'], 'sort=price')
+      expect(value).toStrictEqual({ category: 'electronics', sort: 'price' })
+    }),
+  )
+})
+
+describe('oneOf', () => {
+  it.scoped('matches the first successful parser', () =>
+    Effect.gen(function* () {
+      const parser = oneOf(literal('users'), literal('posts'))
+      const [value] = yield* parser.parse(['users'])
+      expect(value).toStrictEqual({})
+    }),
+  )
+
+  it.scoped('falls through to second parser', () =>
+    Effect.gen(function* () {
+      const parser = oneOf(literal('users'), literal('posts'))
+      const [value] = yield* parser.parse(['posts'])
+      expect(value).toStrictEqual({})
+    }),
+  )
+
+  it.scoped('fails when no parser matches', () =>
+    Effect.gen(function* () {
+      const parser = oneOf(literal('users'), literal('posts'))
+      const error = yield* Effect.flip(parser.parse(['comments']))
+      expect(error._tag).toBe('ParseError')
+    }),
+  )
+})
+
+describe('mapTo', () => {
+  const Home = ts('Home')
+  const UserProfile = ts('UserProfile', { id: S.String })
+
+  it.scoped('wraps parsed values with a constructor', () =>
+    Effect.gen(function* () {
+      const router = mapTo(Home)(root)
+      const [result] = yield* router.parse([])
+      expect(result).toStrictEqual({ _tag: 'Home' })
+    }),
+  )
+
+  it.scoped('wraps parameterized parsed values', () =>
+    Effect.gen(function* () {
+      const router = pipe(literal('users'), slash(string('id')), mapTo(UserProfile))
+      const [result] = yield* router.parse(['users', 'abc'])
+      expect(result).toStrictEqual({ _tag: 'UserProfile', id: 'abc' })
+    }),
+  )
+
+  it('builds a URL from route data', () => {
+    const router = pipe(literal('users'), slash(string('id')), mapTo(UserProfile))
+    const url = router.build({ id: 'abc' })
+    expect(url).toBe('/users/abc')
+  })
+})
+
+describe('parseUrlWithFallback', () => {
+  const Home = ts('Home')
+  const NotFound = ts('NotFound', { path: S.String })
+
+  const homeRouter = mapTo(Home)(root)
+  const parser = oneOf(homeRouter)
+
+  it('parses a matching URL', () => {
+    const result = parseUrlWithFallback(parser, NotFound)(makeUrl('/'))
+    expect(result).toStrictEqual({ _tag: 'Home' })
+  })
+
+  it('returns the fallback route for non-matching URLs', () => {
+    const result = parseUrlWithFallback(parser, NotFound)(makeUrl('/unknown'))
+    expect(result).toStrictEqual({ _tag: 'NotFound', path: '/unknown' })
+  })
+})
+
+describe('round-trip: parse then build', () => {
+  const Route = ts('Route', { userId: S.String, postId: S.Number })
+
+  const router = pipe(literal('users'), slash(string('userId')), slash(int('postId')), mapTo(Route))
+
+  it('build produces the expected path', () => {
+    const url = router.build({ userId: 'jane', postId: 7 })
+    expect(url).toBe('/users/jane/7')
+  })
+
+  it.scoped('parse then build round-trips', () =>
+    Effect.gen(function* () {
+      const [parsed] = yield* router.parse(['users', 'jane', '7'])
+      const rebuilt = router.build({ userId: parsed.userId, postId: parsed.postId })
+      expect(rebuilt).toBe('/users/jane/7')
+    }),
+  )
+})

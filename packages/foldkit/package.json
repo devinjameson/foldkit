@@ -51,14 +51,18 @@
     "clean": "rimraf dist *.tsbuildinfo",
     "build": "pnpm run clean && tsc -b",
     "watch": "tsc -b --watch",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit",
+    "test": "vitest run"
   },
   "peerDependencies": {
     "effect": "^3.18.2"
   },
   "devDependencies": {
+    "@effect/vitest": "^0.27.0",
     "effect": "^3.19.14",
-    "typescript": "^5.9.3"
+    "happy-dom": "^18.0.1",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
   },
   "keywords": [
     "effect",
