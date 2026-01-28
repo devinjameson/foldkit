@@ -9,8 +9,9 @@ import { DateTime, Effect, Option } from 'effect'
  * Task.getTime(utc => GotTime.make({ utc }))
  * ```
  */
-export const getTime = <Message>(f: (utc: DateTime.Utc) => Message): Effect.Effect<Message> =>
-  Effect.map(DateTime.now, f)
+export const getTime = <Message>(
+  f: (utc: DateTime.Utc) => Message,
+): Effect.Effect<Message> => Effect.map(DateTime.now, f)
 
 /**
  * Creates a command that gets the system timezone and passes it to a message constructor.
@@ -107,4 +108,5 @@ export const randomInt = <Message>(
   min: number,
   max: number,
   f: (value: number) => Message,
-): Effect.Effect<Message> => Effect.sync(() => f(Math.floor(Math.random() * (max - min)) + min))
+): Effect.Effect<Message> =>
+  Effect.sync(() => f(Math.floor(Math.random() * (max - min)) + min))

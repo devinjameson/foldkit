@@ -22,7 +22,12 @@ import {
   span,
   textarea,
 } from '../html'
-import { type CartRoute, PlaceOrder, type ProductsRoute, UpdateDeliveryInstructions } from '../main'
+import {
+  type CartRoute,
+  PlaceOrder,
+  type ProductsRoute,
+  UpdateDeliveryInstructions,
+} from '../main'
 
 // VIEW
 
@@ -37,7 +42,10 @@ export const view = (
     return div(
       [Class('max-w-4xl mx-auto px-4 text-center')],
       [
-        h1([Class('text-4xl font-bold text-green-600 mb-8')], ['Order placed successfully!']),
+        h1(
+          [Class('text-4xl font-bold text-green-600 mb-8')],
+          ['Order placed successfully!'],
+        ),
         article(
           [Class('bg-green-50 border border-green-200 rounded-lg p-6 mb-6')],
           [
@@ -45,7 +53,10 @@ export const view = (
               [Class('text-lg text-gray-700 mb-4')],
               ["Thank you for your order! We'll deliver it soon."],
             ),
-            p([Class('text-gray-600')], ['You will receive a confirmation email shortly.']),
+            p(
+              [Class('text-gray-600')],
+              ['You will receive a confirmation email shortly.'],
+            ),
           ],
         ),
         a(
@@ -69,7 +80,10 @@ export const view = (
         [Class('bg-white rounded-lg shadow p-6')],
         Array.match(cart, {
           onEmpty: () => [
-            p([Class('text-gray-500 text-center py-8')], ['Your cart is empty']),
+            p(
+              [Class('text-gray-500 text-center py-8')],
+              ['Your cart is empty'],
+            ),
             div(
               [Class('text-center mt-4')],
               [
@@ -89,23 +103,35 @@ export const view = (
             section(
               [],
               [
-                h2([Class('text-2xl font-bold text-gray-800 mb-4')], ['Order Summary']),
+                h2(
+                  [Class('text-2xl font-bold text-gray-800 mb-4')],
+                  ['Order Summary'],
+                ),
                 div(
                   [Class('space-y-2 mb-6')],
                   cart.map((cartItem) =>
                     div(
-                      [Class('flex justify-between items-center py-2 border-b')],
+                      [
+                        Class(
+                          'flex justify-between items-center py-2 border-b',
+                        ),
+                      ],
                       [
                         div(
                           [],
                           [
                             span([Class('font-medium')], [cartItem.item.name]),
-                            span([Class('text-gray-600 ml-2')], [`× ${cartItem.quantity}`]),
+                            span(
+                              [Class('text-gray-600 ml-2')],
+                              [`× ${cartItem.quantity}`],
+                            ),
                           ],
                         ),
                         span(
                           [Class('font-medium')],
-                          [`$${(cartItem.item.price * cartItem.quantity).toFixed(2)}`],
+                          [
+                            `$${(cartItem.item.price * cartItem.quantity).toFixed(2)}`,
+                          ],
                         ),
                       ],
                     ),
@@ -114,7 +140,11 @@ export const view = (
               ],
             ),
             div(
-              [Class('flex justify-between items-center text-xl font-bold mb-6')],
+              [
+                Class(
+                  'flex justify-between items-center text-xl font-bold mb-6',
+                ),
+              ],
               [
                 span([], ['Total']),
                 span(
@@ -128,7 +158,10 @@ export const view = (
             div(
               [Class('mb-6')],
               [
-                h3([Class('text-lg font-semibold text-gray-800 mb-2')], ['Delivery Instructions']),
+                h3(
+                  [Class('text-lg font-semibold text-gray-800 mb-2')],
+                  ['Delivery Instructions'],
+                ),
                 textarea(
                   [
                     Value(deliveryInstructions),
@@ -136,7 +169,9 @@ export const view = (
                     Class(
                       'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-24 resize-none',
                     ),
-                    OnInput((value: string) => UpdateDeliveryInstructions.make({ value })),
+                    OnInput((value: string) =>
+                      UpdateDeliveryInstructions.make({ value }),
+                    ),
                   ],
                   [],
                 ),

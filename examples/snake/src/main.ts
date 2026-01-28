@@ -1,4 +1,12 @@
-import { Array, Duration, Effect, Match as M, Schema as S, Stream, pipe } from 'effect'
+import {
+  Array,
+  Duration,
+  Effect,
+  Match as M,
+  Schema as S,
+  Stream,
+  pipe,
+} from 'effect'
 import { Runtime } from 'foldkit'
 import { Html, html } from 'foldkit/html'
 import { ts } from 'foldkit/schema'
@@ -9,7 +17,12 @@ import { Apple, Direction, Position, Snake } from './domain'
 
 // MODEL
 
-export const GameState = S.Literal('NotStarted', 'Playing', 'Paused', 'GameOver')
+export const GameState = S.Literal(
+  'NotStarted',
+  'Playing',
+  'Paused',
+  'GameOver',
+)
 export type GameState = typeof GameState.Type
 
 const Model = S.Struct({
@@ -32,7 +45,14 @@ const RestartGame = ts('RestartGame')
 const RequestApple = ts('RequestApple', { snake: Snake.Snake })
 const GotApple = ts('GotApple', { position: Position.Position })
 
-export const Message = S.Union(ClockTick, KeyPress, PauseGame, RestartGame, RequestApple, GotApple)
+export const Message = S.Union(
+  ClockTick,
+  KeyPress,
+  PauseGame,
+  RestartGame,
+  RequestApple,
+  GotApple,
+)
 
 type ClockTick = typeof ClockTick.Type
 type KeyPress = typeof KeyPress.Type
@@ -64,7 +84,10 @@ const init: Runtime.ElementInit<Model, Message> = () => {
 
 // UPDATE
 
-const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
+const update = (
+  model: Model,
+  message: Message,
+): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
   M.value(message).pipe(
     M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
     M.tagsExhaustive({
@@ -140,7 +163,10 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
           return [model, []]
         }
 
-        const currentDirection = Direction.isOpposite(model.direction, model.nextDirection)
+        const currentDirection = Direction.isOpposite(
+          model.direction,
+          model.nextDirection,
+        )
           ? model.direction
           : model.nextDirection
 
@@ -167,7 +193,8 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
           evo(model, {
             snake: () => nextSnake,
             direction: () => currentDirection,
-            points: (points) => (willEatApple ? points + GAME.POINTS_PER_APPLE : points),
+            points: (points) =>
+              willEatApple ? points + GAME.POINTS_PER_APPLE : points,
           }),
           commands,
         ]
@@ -175,7 +202,8 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
 
       PauseGame: () => [
         evo(model, {
-          gameState: (gameState) => (gameState === 'Playing' ? 'Paused' : 'Playing'),
+          gameState: (gameState) =>
+            gameState === 'Playing' ? 'Paused' : 'Playing',
         }),
         [],
       ],
@@ -198,7 +226,11 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
 
       RequestApple: ({ snake }) => [
         model,
-        [Apple.generatePosition(snake).pipe(Effect.map((position) => GotApple.make({ position })))],
+        [
+          Apple.generatePosition(snake).pipe(
+            Effect.map((position) => GotApple.make({ position })),
+          ),
+        ],
       ],
 
       GotApple: ({ position }) => [
@@ -225,11 +257,17 @@ const CommandStreamsDeps = S.Struct({
   keyboard: S.Null,
 })
 
-const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Model, Message>({
+const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<
+  Model,
+  Message
+>({
   gameClock: {
     modelToDeps: (model: Model) => ({
       isPlaying: model.gameState === 'Playing',
-      interval: Math.max(GAME_SPEED.MIN_INTERVAL, GAME_SPEED.BASE_INTERVAL - model.points),
+      interval: Math.max(
+        GAME_SPEED.MIN_INTERVAL,
+        GAME_SPEED.BASE_INTERVAL - model.points,
+      ),
     }),
     depsToStream: (deps: { isPlaying: boolean; interval: number }) =>
       Stream.when(
@@ -309,7 +347,11 @@ const instructionsView = (): Html =>
 
 const view = (model: Model): Html =>
   div(
-    [Class('flex flex-col items-center justify-center min-h-screen bg-black text-white p-8')],
+    [
+      Class(
+        'flex flex-col items-center justify-center min-h-screen bg-black text-white p-8',
+      ),
+    ],
     [
       h1([Class('text-4xl font-bold mb-4')], ['Snake Game']),
       div(

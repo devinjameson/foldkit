@@ -2,12 +2,22 @@ import { describe, it } from '@effect/vitest'
 import { DateTime, Effect } from 'effect'
 import { expect } from 'vitest'
 
-import { focus, getTime, getTimeZone, getZonedTime, getZonedTimeIn, randomInt } from './task'
+import {
+  focus,
+  getTime,
+  getTimeZone,
+  getZonedTime,
+  getZonedTimeIn,
+  randomInt,
+} from './task'
 
 describe('getTime', () => {
   it.scoped('returns a UTC time wrapped in the message constructor', () =>
     Effect.gen(function* () {
-      const result = yield* getTime((utc) => ({ _tag: 'GotTime' as const, utc }))
+      const result = yield* getTime((utc) => ({
+        _tag: 'GotTime' as const,
+        utc,
+      }))
       expect(result._tag).toBe('GotTime')
       expect(DateTime.isUtc(result.utc)).toBe(true)
     }),
@@ -17,7 +27,10 @@ describe('getTime', () => {
 describe('getTimeZone', () => {
   it.scoped('returns a timezone', () =>
     Effect.gen(function* () {
-      const result = yield* getTimeZone((zone) => ({ _tag: 'GotZone' as const, zone }))
+      const result = yield* getTimeZone((zone) => ({
+        _tag: 'GotZone' as const,
+        zone,
+      }))
       expect(result._tag).toBe('GotZone')
       expect(DateTime.isTimeZone(result.zone)).toBe(true)
     }),
@@ -27,7 +40,10 @@ describe('getTimeZone', () => {
 describe('getZonedTime', () => {
   it.scoped('returns a zoned datetime', () =>
     Effect.gen(function* () {
-      const result = yield* getZonedTime((zoned) => ({ _tag: 'GotZoned' as const, zoned }))
+      const result = yield* getZonedTime((zoned) => ({
+        _tag: 'GotZoned' as const,
+        zoned,
+      }))
       expect(result._tag).toBe('GotZoned')
       expect(DateTime.isZoned(result.zoned)).toBe(true)
     }),
@@ -49,7 +65,10 @@ describe('getZonedTimeIn', () => {
   it.scoped('fails with an invalid timezone', () =>
     Effect.gen(function* () {
       const error = yield* Effect.flip(
-        getZonedTimeIn('Invalid/Zone', (zoned) => ({ _tag: 'Nope' as const, zoned })),
+        getZonedTimeIn('Invalid/Zone', (zoned) => ({
+          _tag: 'Nope' as const,
+          zoned,
+        })),
       )
       expect(error).toBe('Invalid timezone: Invalid/Zone')
     }),
@@ -73,7 +92,10 @@ describe('randomInt', () => {
 
   it.scoped('wraps the value in the message constructor', () =>
     Effect.gen(function* () {
-      const result = yield* randomInt(5, 15, (v) => ({ _tag: 'GotRandom' as const, value: v }))
+      const result = yield* randomInt(5, 15, (v) => ({
+        _tag: 'GotRandom' as const,
+        value: v,
+      }))
       expect(result._tag).toBe('GotRandom')
       expect(result.value).toBeGreaterThanOrEqual(5)
       expect(result.value).toBeLessThan(15)

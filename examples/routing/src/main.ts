@@ -15,7 +15,13 @@ const PeopleRoute = ts('People', { searchText: S.Option(S.String) })
 const PersonRoute = ts('Person', { personId: S.Number })
 const NotFoundRoute = ts('NotFound', { path: S.String })
 
-export const AppRoute = S.Union(HomeRoute, NestedRoute, PeopleRoute, PersonRoute, NotFoundRoute)
+export const AppRoute = S.Union(
+  HomeRoute,
+  NestedRoute,
+  PeopleRoute,
+  PersonRoute,
+  NotFoundRoute,
+)
 
 type HomeRoute = typeof HomeRoute.Type
 type NestedRoute = typeof NestedRoute.Type
@@ -46,9 +52,18 @@ const peopleRouter = pipe(
   Route.mapTo(PeopleRoute),
 )
 
-const personRouter = pipe(literal('people'), slash(int('personId')), Route.mapTo(PersonRoute))
+const personRouter = pipe(
+  literal('people'),
+  slash(int('personId')),
+  Route.mapTo(PersonRoute),
+)
 
-const routeParser = Route.oneOf(personRouter, peopleRouter, nestedRouter, homeRouter)
+const routeParser = Route.oneOf(
+  personRouter,
+  peopleRouter,
+  nestedRouter,
+  homeRouter,
+)
 
 const urlToAppRoute = Route.parseUrlWithFallback(routeParser, NotFoundRoute)
 
@@ -60,7 +75,8 @@ const people = [
   { id: 5, name: 'Eva Brown', role: 'Designer' },
 ]
 
-const findPerson = (id: number) => Array.findFirst(people, (person) => person.id === id)
+const findPerson = (id: number) =>
+  Array.findFirst(people, (person) => person.id === id)
 
 // MODEL
 
@@ -79,7 +95,12 @@ const LinkClicked = ts('LinkClicked', {
 const UrlChanged = ts('UrlChanged', { url: Url })
 const SearchInputChanged = ts('SearchInputChanged', { value: S.String })
 
-export const Message = S.Union(NoOp, LinkClicked, UrlChanged, SearchInputChanged)
+export const Message = S.Union(
+  NoOp,
+  LinkClicked,
+  UrlChanged,
+  SearchInputChanged,
+)
 
 type NoOp = typeof NoOp.Type
 type LinkClicked = typeof LinkClicked.Type
@@ -96,7 +117,10 @@ const init: Runtime.ApplicationInit<Model, Message> = (url: Url) => {
 
 // UPDATE
 
-const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
+const update = (
+  model: Model,
+  message: Message,
+): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
   M.value(message).pipe(
     M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
     M.tagsExhaustive({
@@ -105,11 +129,15 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
       LinkClicked: ({ request }) =>
         M.value(request).pipe(
           M.tagsExhaustive({
-            Internal: ({ url }): [Model, ReadonlyArray<Runtime.Command<NoOp>>] => [
+            Internal: ({
+              url,
+            }): [Model, ReadonlyArray<Runtime.Command<NoOp>>] => [
               model,
               [pushUrl(urlToString(url)).pipe(Effect.as(NoOp.make()))],
             ],
-            External: ({ href }): [Model, ReadonlyArray<Runtime.Command<NoOp>>] => [
+            External: ({
+              href,
+            }): [Model, ReadonlyArray<Runtime.Command<NoOp>>] => [
               model,
               [load(href).pipe(Effect.as(NoOp.make()))],
             ],
@@ -126,9 +154,11 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
       SearchInputChanged: ({ value }) => [
         model,
         [
-          replaceUrl(peopleRouter.build({ searchText: Option.fromNullable(value || null) })).pipe(
-            Effect.as(NoOp.make()),
-          ),
+          replaceUrl(
+            peopleRouter.build({
+              searchText: Option.fromNullable(value || null),
+            }),
+          ).pipe(Effect.as(NoOp.make())),
         ],
       ],
     }),
@@ -172,7 +202,10 @@ const navigationView = (currentRoute: AppRoute): Html => {
             [],
             [
               a(
-                [Href(homeRouter.build({})), Class(navLinkClassName(currentRoute._tag === 'Home'))],
+                [
+                  Href(homeRouter.build({})),
+                  Class(navLinkClassName(currentRoute._tag === 'Home')),
+                ],
                 ['Home'],
               ),
             ],
@@ -185,7 +218,8 @@ const navigationView = (currentRoute: AppRoute): Html => {
                   Href(peopleRouter.build({ searchText: Option.none() })),
                   Class(
                     navLinkClassName(
-                      currentRoute._tag === 'People' || currentRoute._tag === 'Person',
+                      currentRoute._tag === 'People' ||
+                        currentRoute._tag === 'Person',
                     ),
                   ),
                 ],
@@ -230,7 +264,10 @@ const nestedView = (): Html =>
   div(
     [Class('max-w-4xl mx-auto px-4')],
     [
-      h1([Class('text-4xl font-bold text-gray-800 mb-6')], ['Very Nested Route!']),
+      h1(
+        [Class('text-4xl font-bold text-gray-800 mb-6')],
+        ['Very Nested Route!'],
+      ),
       p(
         [Class('text-lg text-gray-600')],
         ['You found the deeply nested route at /nested/route/is/very/nested'],
@@ -286,12 +323,18 @@ const peopleView = (searchText: Option.Option<string>): Html => {
             [Class('border border-gray-200 rounded-lg hover:bg-gray-50')],
             [
               a(
-                [Href(personRouter.build({ personId: person.id })), Class('block p-4 ')],
+                [
+                  Href(personRouter.build({ personId: person.id })),
+                  Class('block p-4 '),
+                ],
                 [
                   div(
                     [Class('flex justify-between items-center')],
                     [
-                      h2([Class('text-xl font-semibold text-gray-800')], [person.name]),
+                      h2(
+                        [Class('text-xl font-semibold text-gray-800')],
+                        [person.name],
+                      ),
                       p([Class('text-gray-600')], [person.role]),
                     ],
                   ),
@@ -313,8 +356,14 @@ const personView = (personId: number): Html => {
       div(
         [Class('max-w-4xl mx-auto px-4')],
         [
-          h2([Class('text-4xl font-bold text-red-600 mb-6')], ['Person Not Found']),
-          p([Class('text-lg text-gray-600 mb-4')], [`No person found with ID: ${personId}`]),
+          h2(
+            [Class('text-4xl font-bold text-red-600 mb-6')],
+            ['Person Not Found'],
+          ),
+          p(
+            [Class('text-lg text-gray-600 mb-4')],
+            [`No person found with ID: ${personId}`],
+          ),
           a(
             [
               Href(peopleRouter.build({ searchText: Option.none() })),
@@ -340,7 +389,10 @@ const personView = (personId: number): Html => {
           article(
             [],
             [
-              h2([Class('text-4xl font-bold text-gray-800 mb-6')], [person.name]),
+              h2(
+                [Class('text-4xl font-bold text-gray-800 mb-6')],
+                [person.name],
+              ),
 
               div(
                 [Class('bg-gray-50 border border-gray-200 rounded-lg p-6')],
@@ -352,20 +404,34 @@ const personView = (personId: number): Html => {
                         [],
                         [
                           h2(
-                            [Class('text-sm font-medium text-gray-500 uppercase tracking-wide')],
+                            [
+                              Class(
+                                'text-sm font-medium text-gray-500 uppercase tracking-wide',
+                              ),
+                            ],
                             ['ID'],
                           ),
-                          p([Class('text-lg text-gray-900 mt-1')], [String(person.id)]),
+                          p(
+                            [Class('text-lg text-gray-900 mt-1')],
+                            [String(person.id)],
+                          ),
                         ],
                       ),
                       div(
                         [],
                         [
                           h2(
-                            [Class('text-sm font-medium text-gray-500 uppercase tracking-wide')],
+                            [
+                              Class(
+                                'text-sm font-medium text-gray-500 uppercase tracking-wide',
+                              ),
+                            ],
                             ['Role'],
                           ),
-                          p([Class('text-lg text-gray-900 mt-1')], [person.role]),
+                          p(
+                            [Class('text-lg text-gray-900 mt-1')],
+                            [person.role],
+                          ),
                         ],
                       ),
                     ],
@@ -383,9 +449,18 @@ const notFoundView = (path: string): Html =>
   div(
     [Class('max-w-4xl mx-auto px-4')],
     [
-      h1([Class('text-4xl font-bold text-red-600 mb-6')], ['404 - Page Not Found']),
-      p([Class('text-lg text-gray-600 mb-4')], [`The path "${path}" was not found.`]),
-      a([Href(homeRouter.build({})), Class('text-blue-500 hover:underline')], ['← Go Home']),
+      h1(
+        [Class('text-4xl font-bold text-red-600 mb-6')],
+        ['404 - Page Not Found'],
+      ),
+      p(
+        [Class('text-lg text-gray-600 mb-4')],
+        [`The path "${path}" was not found.`],
+      ),
+      a(
+        [Href(homeRouter.build({})), Class('text-blue-500 hover:underline')],
+        ['← Go Home'],
+      ),
     ],
   )
 
@@ -404,7 +479,10 @@ const view = (model: Model): Html => {
     [Class('min-h-screen bg-gray-100')],
     [
       header([], [navigationView(model.route)]),
-      main([Class('py-8')], [keyed('div')(model.route._tag, [], [routeContent])]),
+      main(
+        [Class('py-8')],
+        [keyed('div')(model.route._tag, [], [routeContent])],
+      ),
     ],
   )
 }

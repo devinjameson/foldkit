@@ -6,11 +6,22 @@ import {
   HttpClientRequest,
   Path,
 } from '@effect/platform'
-import { Array, Effect, Match, Option, Record, Ref, Schema, String, pipe } from 'effect'
+import {
+  Array,
+  Effect,
+  Match,
+  Option,
+  Record,
+  Ref,
+  Schema,
+  String,
+  pipe,
+} from 'effect'
 import { ParseError } from 'effect/ParseResult'
 import { fileURLToPath } from 'node:url'
 
-const GITHUB_API_BASE_URL = 'https://api.github.com/repos/devinjameson/foldkit/contents/examples'
+const GITHUB_API_BASE_URL =
+  'https://api.github.com/repos/devinjameson/foldkit/contents/examples'
 
 const getBaseFiles = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem
@@ -49,10 +60,14 @@ const getBaseFiles = Effect.gen(function* () {
         )
       })
 
-  const processDirectory = (dir: string): Effect.Effect<void, Error.PlatformError> =>
+  const processDirectory = (
+    dir: string,
+  ): Effect.Effect<void, Error.PlatformError> =>
     Effect.gen(function* () {
       const entries = yield* fs.readDirectory(dir)
-      yield* Effect.forEach(entries, processEntry(dir), { concurrency: 'unbounded' })
+      yield* Effect.forEach(entries, processEntry(dir), {
+        concurrency: 'unbounded',
+      })
     })
 
   yield* processDirectory(templatesDir)
@@ -60,7 +75,11 @@ const getBaseFiles = Effect.gen(function* () {
   return yield* Ref.get(fileContentByPath)
 })
 
-export const createProject = (name: string, projectPath: string, example: string) =>
+export const createProject = (
+  name: string,
+  projectPath: string,
+  example: string,
+) =>
   Effect.gen(function* () {
     yield* createBaseFiles(projectPath)
     yield* modifyBaseFiles(projectPath, name)
@@ -82,7 +101,8 @@ const createBaseFiles = (projectPath: string) =>
       Effect.forEach(
         ([filePath, content]) =>
           Effect.gen(function* () {
-            const targetPath = filePath === 'gitignore' ? '.gitignore' : filePath
+            const targetPath =
+              filePath === 'gitignore' ? '.gitignore' : filePath
             const fullPath = path.join(projectPath, targetPath)
             const dirPath = path.dirname(fullPath)
             yield* fs.makeDirectory(dirPath, { recursive: true })
@@ -102,7 +122,9 @@ const modifyBaseFiles = (projectPath: string, name: string) =>
 
     return yield* fs.readFileString(packageJsonPath).pipe(
       Effect.map(String.replace('my-foldkit-app', name)),
-      Effect.flatMap((updatedContent) => fs.writeFileString(packageJsonPath, updatedContent)),
+      Effect.flatMap((updatedContent) =>
+        fs.writeFileString(packageJsonPath, updatedContent),
+      ),
     )
   })
 
@@ -125,9 +147,13 @@ const createExampleFiles = (projectPath: string, example: string) =>
     const srcPath = path.join(projectPath, 'src')
     yield* fs.makeDirectory(srcPath, { recursive: true })
 
-    yield* Effect.forEach(files, (file) => downloadExampleFile(file, projectPath), {
-      concurrency: 'unbounded',
-    })
+    yield* Effect.forEach(
+      files,
+      (file) => downloadExampleFile(file, projectPath),
+      {
+        concurrency: 'unbounded',
+      },
+    )
   })
 
 const fetchExampleFileList = (
@@ -150,7 +176,9 @@ const fetchExampleFileList = (
         const request = HttpClientRequest.get(apiUrl)
         const response = yield* client.execute(request)
         const json = yield* response.json
-        const entries = yield* Schema.decodeUnknown(Schema.Array(GitHubFileEntry))(json)
+        const entries = yield* Schema.decodeUnknown(
+          Schema.Array(GitHubFileEntry),
+        )(json)
 
         const results = yield* Effect.forEach(entries, (entry) =>
           Match.value(entry.type).pipe(
@@ -187,7 +215,8 @@ const downloadExampleFile = (file: GitHubFileEntry, projectPath: string) =>
       srcIndex,
       Option.match({
         onNone: () => file.name,
-        onSome: (index) => pipe(pathParts, Array.drop(index + 1), Array.join('/')),
+        onSome: (index) =>
+          pipe(pathParts, Array.drop(index + 1), Array.join('/')),
       }),
     )
     const targetPath = path.join(projectPath, 'src', relativePath)

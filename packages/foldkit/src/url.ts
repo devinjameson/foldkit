@@ -36,11 +36,14 @@ const LocationAndHrefFromString = S.transformOrFail(S.String, LocationAndHref, {
           },
         }
       },
-      catch: (error) => new ParseResult.Type(ast, urlString, `Invalid URL: ${error}`),
+      catch: (error) =>
+        new ParseResult.Type(ast, urlString, `Invalid URL: ${error}`),
     }),
   encode: ({ href, location }) => {
     const portString = location.port ? `:${location.port}` : ''
-    return ParseResult.succeed(`${location.protocol}//${location.host}${portString}${href}`)
+    return ParseResult.succeed(
+      `${location.protocol}//${location.host}${portString}${href}`,
+    )
   },
 })
 
@@ -81,7 +84,10 @@ const UrlFromLocationAndHref = S.transform(LocationAndHref, Url, {
   },
 })
 
-const UrlFromString = S.compose(LocationAndHrefFromString, UrlFromLocationAndHref)
+const UrlFromString = S.compose(
+  LocationAndHrefFromString,
+  UrlFromLocationAndHref,
+)
 
 export const fromString = (str: string) => S.decodeOption(UrlFromString)(str)
 export const toString = (url: Url) => S.encodeSync(UrlFromString)(url)

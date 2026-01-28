@@ -47,8 +47,14 @@ export interface RuntimeConfig<
   Model: Schema.Schema<Model, any, never>
   Flags: Schema.Schema<Flags, any, never>
   readonly flags: Effect.Effect<Flags>
-  readonly init: (flags: Flags, url?: Url) => [Model, ReadonlyArray<Command<Message>>]
-  readonly update: (model: Model, message: Message) => [Model, ReadonlyArray<Command<Message>>]
+  readonly init: (
+    flags: Flags,
+    url?: Url,
+  ) => [Model, ReadonlyArray<Command<Message>>]
+  readonly update: (
+    model: Model,
+    message: Message,
+  ) => [Model, ReadonlyArray<Command<Message>>]
   readonly view: (model: Model) => Html
   readonly commandStreams?: CommandStreams<Model, Message, StreamDepsMap>
   readonly container: HTMLElement
@@ -61,7 +67,10 @@ interface BaseElementConfig<
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
 > {
   readonly Model: Schema.Schema<Model, any, never>
-  readonly update: (model: Model, message: Message) => [Model, ReadonlyArray<Command<Message>>]
+  readonly update: (
+    model: Model,
+    message: Message,
+  ) => [Model, ReadonlyArray<Command<Message>>]
   readonly view: (model: Model) => Html
   readonly commandStreams?: CommandStreams<Model, Message, StreamDepsMap>
   readonly container: HTMLElement
@@ -92,7 +101,10 @@ interface BaseApplicationConfig<
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
 > {
   readonly Model: Schema.Schema<Model, any, never>
-  readonly update: (model: Model, message: Message) => [Model, ReadonlyArray<Command<Message>>]
+  readonly update: (
+    model: Model,
+    message: Message,
+  ) => [Model, ReadonlyArray<Command<Message>>]
   readonly view: (model: Model) => Html
   readonly commandStreams?: CommandStreams<Model, Message, StreamDepsMap>
   readonly container: HTMLElement
@@ -107,7 +119,10 @@ export interface ApplicationConfigWithFlags<
 > extends BaseApplicationConfig<Model, Message, StreamDepsMap> {
   readonly Flags: Schema.Schema<Flags, any, never>
   readonly flags: Effect.Effect<Flags>
-  readonly init: (flags: Flags, url: Url) => [Model, ReadonlyArray<Command<Message>>]
+  readonly init: (
+    flags: Flags,
+    url: Url,
+  ) => [Model, ReadonlyArray<Command<Message>>]
 }
 
 export interface ApplicationConfigWithoutFlags<
@@ -135,7 +150,11 @@ type CommandStreamConfig<Model, Message, StreamDeps> = {
   readonly schema: Schema.Schema<StreamDeps>
 } & CommandStream<Model, Message, StreamDeps>
 
-export type CommandStreams<Model, Message, CommandStreamsDeps extends Schema.Struct<any>> = {
+export type CommandStreams<
+  Model,
+  Message,
+  CommandStreamsDeps extends Schema.Struct<any>,
+> = {
   readonly [K in keyof Schema.Schema.Type<CommandStreamsDeps>]: CommandStreamConfig<
     Model,
     Message,
@@ -144,7 +163,9 @@ export type CommandStreams<Model, Message, CommandStreamsDeps extends Schema.Str
 }
 
 export const makeCommandStreams =
-  <CommandStreamsDeps extends Schema.Struct<any>>(CommandStreamsDeps: CommandStreamsDeps) =>
+  <CommandStreamsDeps extends Schema.Struct<any>>(
+    CommandStreamsDeps: CommandStreamsDeps,
+  ) =>
   <Model, Message>(configs: {
     [K in keyof Schema.Schema.Type<CommandStreamsDeps>]: {
       modelToDeps: (model: Model) => Schema.Schema.Type<CommandStreamsDeps>[K]
@@ -162,7 +183,12 @@ export const makeCommandStreams =
 type MakeRuntimeReturn = (hmrModel?: unknown) => Effect.Effect<void>
 
 const makeRuntime =
-  <Model, Message, StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>, Flags>({
+  <
+    Model,
+    Message,
+    StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
+    Flags,
+  >({
     Model,
     Flags: _Flags,
     flags: flags_,
@@ -180,11 +206,12 @@ const makeRuntime =
       const modelEquivalence = Schema.equivalence(Model)
 
       const messageQueue = yield* Queue.unbounded<Message>()
-      const enqueueMessage = (message: Message) => Queue.offer(messageQueue, message)
+      const enqueueMessage = (message: Message) =>
+        Queue.offer(messageQueue, message)
 
-      const currentUrl: Option.Option<Url> = Option.fromNullable(browserConfig).pipe(
-        Option.flatMap(() => urlFromString(window.location.href)),
-      )
+      const currentUrl: Option.Option<Url> = Option.fromNullable(
+        browserConfig,
+      ).pipe(Option.flatMap(() => urlFromString(window.location.href)))
 
       const [initModel, initCommands] = Predicate.isNotUndefined(hmrModel)
         ? pipe(
@@ -209,9 +236,13 @@ const makeRuntime =
 
       const modelRef = yield* Ref.make<Model>(initModel)
 
-      const maybeCurrentVNodeRef = yield* Ref.make<Option.Option<VNode>>(Option.none())
+      const maybeCurrentVNodeRef = yield* Ref.make<Option.Option<VNode>>(
+        Option.none(),
+      )
 
-      const maybeRuntimeRef = yield* Ref.make<Option.Option<Runtime.Runtime<never>>>(Option.none())
+      const maybeRuntimeRef = yield* Ref.make<
+        Option.Option<Runtime.Runtime<never>>
+      >(Option.none())
 
       const processMessage = (message: Message): Effect.Effect<void> =>
         Effect.gen(function* () {
@@ -311,7 +342,9 @@ const patchVNode = (
   nextVNodeNullish: VNode | null,
   container: HTMLElement,
 ): VNode => {
-  const nextVNode = Predicate.isNotNull(nextVNodeNullish) ? nextVNodeNullish : h('#text', {}, '')
+  const nextVNode = Predicate.isNotNull(nextVNodeNullish)
+    ? nextVNodeNullish
+    : h('#text', {}, '')
 
   return Option.match(maybeCurrentVNode, {
     onNone: () => patch(toVNode(container), nextVNode),
@@ -324,13 +357,17 @@ export function makeElement<
   Message extends { _tag: string },
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
   Flags,
->(config: ElementConfigWithFlags<Model, Message, StreamDepsMap, Flags>): MakeRuntimeReturn
+>(
+  config: ElementConfigWithFlags<Model, Message, StreamDepsMap, Flags>,
+): MakeRuntimeReturn
 
 export function makeElement<
   Model,
   Message extends { _tag: string },
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
->(config: ElementConfigWithoutFlags<Model, Message, StreamDepsMap>): MakeRuntimeReturn
+>(
+  config: ElementConfigWithoutFlags<Model, Message, StreamDepsMap>,
+): MakeRuntimeReturn
 
 export function makeElement<
   Model,
@@ -372,13 +409,17 @@ export function makeApplication<
   Message extends { _tag: string },
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
   Flags,
->(config: ApplicationConfigWithFlags<Model, Message, StreamDepsMap, Flags>): MakeRuntimeReturn
+>(
+  config: ApplicationConfigWithFlags<Model, Message, StreamDepsMap, Flags>,
+): MakeRuntimeReturn
 
 export function makeApplication<
   Model,
   Message extends { _tag: string },
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
->(config: ApplicationConfigWithoutFlags<Model, Message, StreamDepsMap>): MakeRuntimeReturn
+>(
+  config: ApplicationConfigWithoutFlags<Model, Message, StreamDepsMap>,
+): MakeRuntimeReturn
 
 export function makeApplication<
   Model,

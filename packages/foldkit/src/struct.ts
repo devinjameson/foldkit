@@ -14,10 +14,19 @@ type StrictKeys<O, T> =
     : never
 
 type Evolved<O, T> = {
-  [K in keyof O]: K extends keyof T ? (T[K] extends (a: any) => infer R ? R : O[K]) : O[K]
+  [K in keyof O]: K extends keyof T
+    ? T[K] extends (a: any) => infer R
+      ? R
+      : O[K]
+    : O[K]
 }
 
 export const evo: {
-  <O, const T extends EvolveTransform<O>>(t: StrictKeys<O, T>): (obj: O) => Evolved<O, T>
-  <O, const T extends EvolveTransform<O>>(obj: O, t: StrictKeys<O, T>): Evolved<O, T>
+  <O, const T extends EvolveTransform<O>>(
+    t: StrictKeys<O, T>,
+  ): (obj: O) => Evolved<O, T>
+  <O, const T extends EvolveTransform<O>>(
+    obj: O,
+    t: StrictKeys<O, T>,
+  ): Evolved<O, T>
 } = Struct.evolve

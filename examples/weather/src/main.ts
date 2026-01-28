@@ -23,7 +23,12 @@ export const WeatherLoading = ts('WeatherLoading')
 export const WeatherSuccess = ts('WeatherSuccess', { data: WeatherData })
 export const WeatherFailure = ts('WeatherFailure', { error: S.String })
 
-const WeatherAsyncResult = S.Union(WeatherInit, WeatherLoading, WeatherSuccess, WeatherFailure)
+const WeatherAsyncResult = S.Union(
+  WeatherInit,
+  WeatherLoading,
+  WeatherSuccess,
+  WeatherFailure,
+)
 
 type WeatherInit = typeof WeatherInit.Type
 type WeatherLoading = typeof WeatherLoading.Type
@@ -45,7 +50,12 @@ export const FetchWeather = ts('FetchWeather')
 export const WeatherFetched = ts('WeatherFetched', { weather: WeatherData })
 export const WeatherError = ts('WeatherError', { error: S.String })
 
-const Message = S.Union(UpdateZipCodeInput, FetchWeather, WeatherFetched, WeatherError)
+const Message = S.Union(
+  UpdateZipCodeInput,
+  FetchWeather,
+  WeatherFetched,
+  WeatherError,
+)
 
 type UpdateZipCodeInput = typeof UpdateZipCodeInput.Type
 type FetchWeather = typeof FetchWeather.Type
@@ -156,7 +166,9 @@ export const fetchWeather = (
   }).pipe(
     Effect.scoped,
     Effect.catchAll(() =>
-      Effect.succeed(WeatherError.make({ error: 'Failed to fetch weather data' })),
+      Effect.succeed(
+        WeatherError.make({ error: 'Failed to fetch weather data' }),
+      ),
     ),
   )
 
@@ -200,7 +212,10 @@ const view = (model: Model): Html =>
       h1([Class('text-4xl font-bold text-blue-900 mb-8')], ['Weather']),
 
       form(
-        [Class('flex flex-col gap-4 items-center w-full max-w-md'), OnSubmit(FetchWeather.make())],
+        [
+          Class('flex flex-col gap-4 items-center w-full max-w-md'),
+          OnSubmit(FetchWeather.make()),
+        ],
         [
           label([For('location'), Class('sr-only')], ['Location']),
           input([
@@ -219,7 +234,11 @@ const view = (model: Model): Html =>
                 'px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition disabled:opacity-50',
               ),
             ],
-            [model.weather._tag === 'WeatherLoading' ? 'Loading...' : 'Get Weather'],
+            [
+              model.weather._tag === 'WeatherLoading'
+                ? 'Loading...'
+                : 'Get Weather',
+            ],
           ),
         ],
       ),
@@ -228,9 +247,19 @@ const view = (model: Model): Html =>
         M.tagsExhaustive({
           WeatherInit: () => empty,
           WeatherLoading: () =>
-            div([Class('text-blue-600 font-semibold')], ['Fetching weather...']),
+            div(
+              [Class('text-blue-600 font-semibold')],
+              ['Fetching weather...'],
+            ),
           WeatherFailure: ({ error }) =>
-            div([Class('p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg')], [error]),
+            div(
+              [
+                Class(
+                  'p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg',
+                ),
+              ],
+              [error],
+            ),
           WeatherSuccess: ({ data: weather }) => weatherView(weather),
         }),
       ),
@@ -241,13 +270,22 @@ const weatherView = (weather: WeatherData): Html =>
   article(
     [Class('bg-white rounded-xl shadow-lg p-8 max-w-md w-full')],
     [
-      h2([Class('text-2xl font-bold text-gray-800 mb-3 text-center')], [weather.zipCode]),
-      p([Class('text-center text-gray-600 mb-6')], [weather.areaName + ', ' + weather.region]),
+      h2(
+        [Class('text-2xl font-bold text-gray-800 mb-3 text-center')],
+        [weather.zipCode],
+      ),
+      p(
+        [Class('text-center text-gray-600 mb-6')],
+        [weather.areaName + ', ' + weather.region],
+      ),
 
       div(
         [Class('text-center mb-6')],
         [
-          div([Class('text-6xl font-bold text-blue-600')], [`${weather.temperature}°F`]),
+          div(
+            [Class('text-6xl font-bold text-blue-600')],
+            [`${weather.temperature}°F`],
+          ),
           div([Class('text-xl text-gray-600 mt-2')], [weather.description]),
         ],
       ),
@@ -266,7 +304,10 @@ const weatherView = (weather: WeatherData): Html =>
             [Class('bg-blue-50 p-4 rounded-lg')],
             [
               div([Class('text-sm text-gray-600')], ['Wind Speed']),
-              div([Class('text-lg font-semibold')], [`${weather.windSpeed} km/h`]),
+              div(
+                [Class('text-lg font-semibold')],
+                [`${weather.windSpeed} km/h`],
+              ),
             ],
           ),
         ],

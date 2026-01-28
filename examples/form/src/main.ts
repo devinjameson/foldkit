@@ -1,6 +1,18 @@
-import { Array, Duration, Effect, Match as M, Number, Random, Schema as S } from 'effect'
+import {
+  Array,
+  Duration,
+  Effect,
+  Match as M,
+  Number,
+  Random,
+  Schema as S,
+} from 'effect'
 import { FieldValidation, Runtime } from 'foldkit'
-import { type Validation, makeField, validateField } from 'foldkit/fieldValidation'
+import {
+  type Validation,
+  makeField,
+  validateField,
+} from 'foldkit/fieldValidation'
 import { Html, html } from 'foldkit/html'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
@@ -94,7 +106,11 @@ const emailValidations: ReadonlyArray<Validation<string>> = [
   FieldValidation.email('Please enter a valid email address'),
 ]
 
-const EMAILS_ON_WAITLIST = ['test@example.com', 'demo@email.com', 'admin@test.com']
+const EMAILS_ON_WAITLIST = [
+  'test@example.com',
+  'demo@email.com',
+  'admin@test.com',
+]
 
 const isEmailOnWaitlist = (email: string): Effect.Effect<boolean> =>
   Effect.gen(function* () {
@@ -131,7 +147,10 @@ const isFormValid = (model: Model): boolean =>
 
 // UPDATE
 
-const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
+const update = (
+  model: Model,
+  message: Message,
+): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
   M.value(message).pipe(
     M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
     M.tagsExhaustive({
@@ -216,7 +235,8 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
             evo(model, {
               submission: () =>
                 SubmitError.make({
-                  error: 'Sorry, there was an error adding you to the waitlist. Please try again.',
+                  error:
+                    'Sorry, there was an error adding you to the waitlist. Please try again.',
                 }),
             }),
             [],
@@ -293,11 +313,15 @@ const fieldView = (
       div(
         [Class('flex items-center gap-2 mb-2')],
         [
-          label([For(id), Class('text-sm font-medium text-gray-700')], [labelText]),
+          label(
+            [For(id), Class('text-sm font-medium text-gray-700')],
+            [labelText],
+          ),
           M.value(field).pipe(
             M.tagsExhaustive({
               NotValidated: () => empty,
-              Validating: () => span([Class('text-blue-600 text-sm animate-spin')], ['◐']),
+              Validating: () =>
+                span([Class('text-blue-600 text-sm animate-spin')], ['◐']),
               Valid: () => span([Class('text-green-600 text-sm')], ['✓']),
               Invalid: () => empty,
             }),
@@ -305,15 +329,26 @@ const fieldView = (
         ],
       ),
       type === 'textarea'
-        ? textarea([Id(id), Value(value), Class(inputClass), OnInput(onUpdate)], [])
-        : input([Id(id), Type(type), Value(value), Class(inputClass), OnInput(onUpdate)]),
+        ? textarea(
+            [Id(id), Value(value), Class(inputClass), OnInput(onUpdate)],
+            [],
+          )
+        : input([
+            Id(id),
+            Type(type),
+            Value(value),
+            Class(inputClass),
+            OnInput(onUpdate),
+          ]),
 
       M.value(field).pipe(
         M.tagsExhaustive({
           NotValidated: () => empty,
-          Validating: () => div([Class('text-blue-600 text-sm mt-1')], ['Checking...']),
+          Validating: () =>
+            div([Class('text-blue-600 text-sm mt-1')], ['Checking...']),
           Valid: () => empty,
-          Invalid: ({ error }) => div([Class('text-red-600 text-sm mt-1')], [error]),
+          Invalid: ({ error }) =>
+            div([Class('text-red-600 text-sm mt-1')], [error]),
         }),
       ),
     ],
@@ -329,12 +364,17 @@ const view = (model: Model): Html => {
       div(
         [Class('max-w-md mx-auto bg-white rounded-xl shadow-lg p-6')],
         [
-          h1([Class('text-3xl font-bold text-gray-800 text-center mb-8')], ['Join Our Waitlist']),
+          h1(
+            [Class('text-3xl font-bold text-gray-800 text-center mb-8')],
+            ['Join Our Waitlist'],
+          ),
 
           form(
             [Class('space-y-4'), OnSubmit(SubmitForm.make())],
             [
-              fieldView('name', 'Name', model.name, (value) => UpdateName.make({ value })),
+              fieldView('name', 'Name', model.name, (value) =>
+                UpdateName.make({ value }),
+              ),
               fieldView(
                 'email',
                 'Email',
@@ -362,7 +402,11 @@ const view = (model: Model): Html => {
                     }`,
                   ),
                 ],
-                [model.submission._tag === 'Submitting' ? 'Joining...' : 'Join Waitlist'],
+                [
+                  model.submission._tag === 'Submitting'
+                    ? 'Joining...'
+                    : 'Join Waitlist',
+                ],
               ),
             ],
           ),
@@ -382,7 +426,11 @@ const view = (model: Model): Html => {
                 ),
               SubmitError: ({ error }) =>
                 div(
-                  [Class('mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg')],
+                  [
+                    Class(
+                      'mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg',
+                    ),
+                  ],
                   [error],
                 ),
             }),

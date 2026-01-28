@@ -23,7 +23,11 @@ type CreateOptions = {
   packageManager: PackageManager
 }
 
-const validateProject = (name: string, projectPath: string, packageManager: PackageManager) =>
+const validateProject = (
+  name: string,
+  projectPath: string,
+  packageManager: PackageManager,
+) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
 
@@ -40,7 +44,8 @@ const validateProject = (name: string, projectPath: string, packageManager: Pack
     return yield* Command.exitCode(checkCommand).pipe(
       Effect.filterOrFail(
         (exitCode) => exitCode === 0,
-        () => `Package manager '${packageManager}' is not available. Please install it first.`,
+        () =>
+          `Package manager '${packageManager}' is not available. Please install it first.`,
       ),
     )
   })
@@ -56,9 +61,14 @@ const setupProject = (name: string, projectPath: string, example: Example) =>
     yield* Console.log('')
   })
 
-const installProjectDependencies = (projectPath: string, packageManager: PackageManager) =>
+const installProjectDependencies = (
+  projectPath: string,
+  packageManager: PackageManager,
+) =>
   Effect.gen(function* () {
-    yield* Console.log(chalk.blue(`📦 Installing dependencies with ${packageManager}...`))
+    yield* Console.log(
+      chalk.blue(`📦 Installing dependencies with ${packageManager}...`),
+    )
 
     yield* installDependencies(projectPath, packageManager)
 

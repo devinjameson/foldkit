@@ -18,7 +18,10 @@ const configureServer = (server: ViteDevServer) => {
   })
 
   server.ws.on('foldkit:request-model', () => {
-    server.ws.send('foldkit:restore-model', isHmrReload ? preservedModel : undefined)
+    server.ws.send(
+      'foldkit:restore-model',
+      isHmrReload ? preservedModel : undefined,
+    )
     if (!isHmrReload) {
       preservedModel = undefined
     }

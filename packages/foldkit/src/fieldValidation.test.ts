@@ -54,7 +54,10 @@ describe('makeField', () => {
   })
 
   it('Union schema decodes NotValidated', () => {
-    const result = S.decodeUnknownOption(StringField.Union)({ _tag: 'NotValidated', value: 'hi' })
+    const result = S.decodeUnknownOption(StringField.Union)({
+      _tag: 'NotValidated',
+      value: 'hi',
+    })
     expect(Option.isSome(result)).toBe(true)
   })
 
@@ -68,7 +71,10 @@ describe('makeField', () => {
   })
 
   it('Union schema rejects unknown tags', () => {
-    const result = S.decodeUnknownOption(StringField.Union)({ _tag: 'Unknown', value: 'hi' })
+    const result = S.decodeUnknownOption(StringField.Union)({
+      _tag: 'Unknown',
+      value: 'hi',
+    })
     expect(Option.isNone(result)).toBe(true)
   })
 

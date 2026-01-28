@@ -3,7 +3,10 @@ import { Effect, Match, pipe } from 'effect'
 
 type PackageManager = 'pnpm' | 'npm' | 'yarn'
 
-const getInstallArgs = (packageManager: PackageManager, isDev = false): ReadonlyArray<string> =>
+const getInstallArgs = (
+  packageManager: PackageManager,
+  isDev = false,
+): ReadonlyArray<string> =>
   pipe(
     Match.value(packageManager),
     Match.when('npm', () => ['install']),
@@ -13,7 +16,10 @@ const getInstallArgs = (packageManager: PackageManager, isDev = false): Readonly
     (args) => (isDev ? [...args, '-D'] : args),
   )
 
-export const installDependencies = (projectPath: string, packageManager: PackageManager) =>
+export const installDependencies = (
+  projectPath: string,
+  packageManager: PackageManager,
+) =>
   Effect.gen(function* () {
     const installArgs = getInstallArgs(packageManager)
     const installDeps = Command.make(

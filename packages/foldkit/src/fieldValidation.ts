@@ -1,4 +1,12 @@
-import { Array, Number, Option, Predicate, Schema as S, String, flow } from 'effect'
+import {
+  Array,
+  Number,
+  Option,
+  Predicate,
+  Schema as S,
+  String,
+  flow,
+} from 'effect'
 
 export const makeField = <A, I>(value: S.Schema<A, I>) => {
   const NotValidated = S.TaggedStruct('NotValidated', { value })
@@ -19,22 +27,31 @@ export type Validation<T> = [Predicate.Predicate<T>, string]
 
 // STRING VALIDATORS
 
-export const required = (message = 'Required'): Validation<string> => [String.isNonEmpty, message]
+export const required = (message = 'Required'): Validation<string> => [
+  String.isNonEmpty,
+  message,
+]
 
-export const minLength = (min: number, message?: string): Validation<string> => [
+export const minLength = (
+  min: number,
+  message?: string,
+): Validation<string> => [
   flow(String.length, Number.greaterThanOrEqualTo(min)),
   message ?? `Must be at least ${min} characters`,
 ]
 
-export const maxLength = (max: number, message?: string): Validation<string> => [
+export const maxLength = (
+  max: number,
+  message?: string,
+): Validation<string> => [
   flow(String.length, Number.lessThanOrEqualTo(max)),
   message ?? `Must be at most ${max} characters`,
 ]
 
-export const pattern = (regex: RegExp, message = 'Invalid format'): Validation<string> => [
-  flow(String.match(regex), Option.isSome),
-  message,
-]
+export const pattern = (
+  regex: RegExp,
+  message = 'Invalid format',
+): Validation<string> => [flow(String.match(regex), Option.isSome), message]
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -43,24 +60,37 @@ export const email = (message = 'Invalid email address'): Validation<string> =>
 
 const URL_REGEX = /^https?:\/\/.+/
 
-export const url = (message = 'Invalid URL'): Validation<string> => pattern(URL_REGEX, message)
+export const url = (message = 'Invalid URL'): Validation<string> =>
+  pattern(URL_REGEX, message)
 
-export const startsWith = (prefix: string, message?: string): Validation<string> => [
+export const startsWith = (
+  prefix: string,
+  message?: string,
+): Validation<string> => [
   flow(String.startsWith(prefix)),
   message ?? `Must start with ${prefix}`,
 ]
 
-export const endsWith = (suffix: string, message?: string): Validation<string> => [
+export const endsWith = (
+  suffix: string,
+  message?: string,
+): Validation<string> => [
   flow(String.endsWith(suffix)),
   message ?? `Must end with ${suffix}`,
 ]
 
-export const includes = (substring: string, message?: string): Validation<string> => [
+export const includes = (
+  substring: string,
+  message?: string,
+): Validation<string> => [
   flow(String.includes(substring)),
   message ?? `Must contain ${substring}`,
 ]
 
-export const equals = (expected: string, message?: string): Validation<string> => [
+export const equals = (
+  expected: string,
+  message?: string,
+): Validation<string> => [
   (value) => value === expected,
   message ?? `Must match ${expected}`,
 ]
@@ -77,7 +107,11 @@ export const max = (num: number, message?: string): Validation<number> => [
   message ?? `Must be at most ${num}`,
 ]
 
-export const between = (min: number, max: number, message?: string): Validation<number> => [
+export const between = (
+  min: number,
+  max: number,
+  message?: string,
+): Validation<number> => [
   (value) => value >= min && value <= max,
   message ?? `Must be between ${min} and ${max}`,
 ]
@@ -87,19 +121,23 @@ export const positive = (message = 'Must be positive'): Validation<number> => [
   message,
 ]
 
-export const nonNegative = (message = 'Must be non-negative'): Validation<number> => [
-  Number.greaterThanOrEqualTo(0),
-  message,
-]
+export const nonNegative = (
+  message = 'Must be non-negative',
+): Validation<number> => [Number.greaterThanOrEqualTo(0), message]
 
-export const integer = (message = 'Must be a whole number'): Validation<number> => [
+export const integer = (
+  message = 'Must be a whole number',
+): Validation<number> => [
   (value) => globalThis.Number.isInteger(value),
   message,
 ]
 
 // GENERIC VALIDATORS
 
-export const oneOf = (values: ReadonlyArray<string>, message?: string): Validation<string> => {
+export const oneOf = (
+  values: ReadonlyArray<string>,
+  message?: string,
+): Validation<string> => {
   const joinedValues = Array.join(values, ', ')
   const message_ = message ?? `Must be one of: ${joinedValues}`
   return [(value) => Array.contains(values, value), message_]

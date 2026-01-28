@@ -60,7 +60,10 @@ export const init = (products: ReadonlyArray<Item.Item>): Model => ({
 
 export const update =
   (productsRouter: Route.Router<ExtractTag<AppRoute, 'Products'>>) =>
-  (model: Model, message: Message): [Model, ReadonlyArray<Effect.Effect<Message>>] =>
+  (
+    model: Model,
+    message: Message,
+  ): [Model, ReadonlyArray<Effect.Effect<Message>>] =>
     M.value(message).pipe(
       M.withReturnType<[Model, ReadonlyArray<Effect.Effect<Message>>]>(),
       M.tagsExhaustive({
@@ -72,7 +75,9 @@ export const update =
           }),
           [
             replaceUrl(
-              productsRouter.build({ searchText: Option.fromNullable(value || null) }),
+              productsRouter.build({
+                searchText: Option.fromNullable(value || null),
+              }),
             ).pipe(Effect.as(NoOp.make())),
           ],
         ],
@@ -111,7 +116,9 @@ export const view = (
                 Class(
                   'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
                 ),
-                OnInput((value: string) => toMessage(SearchInputChanged.make({ value }))),
+                OnInput((value: string) =>
+                  toMessage(SearchInputChanged.make({ value })),
+                ),
               ]),
             ],
           ),
@@ -119,13 +126,23 @@ export const view = (
             [Class('grid gap-4')],
             filteredProducts.map((product) =>
               article(
-                [Class('flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50')],
+                [
+                  Class(
+                    'flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50',
+                  ),
+                ],
                 [
                   div(
                     [],
                     [
-                      h3([Class('font-semibold text-gray-800')], [product.name]),
-                      p([Class('text-gray-600')], [`$${product.price.toFixed(2)}`]),
+                      h3(
+                        [Class('font-semibold text-gray-800')],
+                        [product.name],
+                      ),
+                      p(
+                        [Class('text-gray-600')],
+                        [`$${product.price.toFixed(2)}`],
+                      ),
                     ],
                   ),
                   Cart.itemQuantity(product.id)(cart) === 0
@@ -156,7 +173,11 @@ export const view = (
                             ['-'],
                           ),
                           span(
-                            [Class('px-3 py-1 font-medium min-w-[2rem] text-center font-mono')],
+                            [
+                              Class(
+                                'px-3 py-1 font-medium min-w-[2rem] text-center font-mono',
+                              ),
+                            ],
                             [String(Cart.itemQuantity(product.id)(cart))],
                           ),
                           button(

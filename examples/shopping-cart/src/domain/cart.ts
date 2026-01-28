@@ -12,7 +12,9 @@ const hasItemId =
     cartItem.item.id === itemId
 
 const mapCartItem = (itemId: string, f: (cartItem: CartItem) => CartItem) =>
-  Array.map<Cart, CartItem>((cartItem) => (hasItemId(itemId)(cartItem) ? f(cartItem) : cartItem))
+  Array.map<Cart, CartItem>((cartItem) =>
+    hasItemId(itemId)(cartItem) ? f(cartItem) : cartItem,
+  )
 
 export const addItem =
   (item: Item) =>

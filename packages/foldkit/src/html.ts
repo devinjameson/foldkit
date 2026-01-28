@@ -1,4 +1,15 @@
-import { Array, Data, Effect, Match, Predicate, Record, Ref, String, flow, pipe } from 'effect'
+import {
+  Array,
+  Data,
+  Effect,
+  Match,
+  Predicate,
+  Record,
+  Ref,
+  String,
+  flow,
+  pipe,
+} from 'effect'
 import { h } from 'snabbdom'
 import type { Attrs, On, Props, VNodeData } from 'snabbdom'
 
@@ -469,7 +480,10 @@ const buildVNodeData = <Message>(
     const setData = <K extends keyof VNodeData>(key: K, value: VNodeData[K]) =>
       Ref.update(dataRef, (data) => ({ ...data, [key]: value }))
 
-    const updateData = <K extends keyof VNodeData>(key: K, value: Partial<VNodeData[K]>) =>
+    const updateData = <K extends keyof VNodeData>(
+      key: K,
+      value: Partial<VNodeData[K]>,
+    ) =>
       Ref.update(dataRef, (data) => ({
         ...data,
         [key]: { ...data[key], ...value },
@@ -479,7 +493,10 @@ const buildVNodeData = <Message>(
     const updateDataOn = (on: On) => updateData('on', on)
     const updateDataAttrs = (attrs: Attrs) => updateData('attrs', attrs)
 
-    const updatePropsWithPostpatch = <K extends string>(propName: K, value: unknown) =>
+    const updatePropsWithPostpatch = <K extends string>(
+      propName: K,
+      value: unknown,
+    ) =>
       Ref.update(dataRef, (data) => ({
         ...data,
         props: {
@@ -507,7 +524,10 @@ const buildVNodeData = <Message>(
                 value,
                 String.split(' '),
                 Array.filter(flow(String.trim, String.isNonEmpty)),
-                Array.reduce({}, (acc, className) => ({ ...acc, [className]: true })),
+                Array.reduce({}, (acc, className) => ({
+                  ...acc,
+                  [className]: true,
+                })),
               )
               yield* setData('class', classObject)
             }),
@@ -618,7 +638,8 @@ const buildVNodeData = <Message>(
             }),
           OnToggle: ({ f }) =>
             updateDataOn({
-              toggle: (event) => dispatchSync(f((event.target as HTMLDetailsElement).open)),
+              toggle: (event) =>
+                dispatchSync(f((event.target as HTMLDetailsElement).open)),
             }),
           Value: ({ value }) => updatePropsWithPostpatch('value', value),
           Checked: ({ value }) => updatePropsWithPostpatch('checked', value),
@@ -630,9 +651,11 @@ const buildVNodeData = <Message>(
           Readonly: ({ value }) => updateDataProps({ readOnly: value }),
           Required: ({ value }) => updateDataProps({ required: value }),
           Autofocus: ({ value }) => updateDataProps({ autofocus: value }),
-          Spellcheck: ({ value }) => updateDataAttrs({ spellcheck: value.toString() }),
+          Spellcheck: ({ value }) =>
+            updateDataAttrs({ spellcheck: value.toString() }),
           Autocorrect: ({ value }) => updateDataAttrs({ autocorrect: value }),
-          Autocapitalize: ({ value }) => updateDataAttrs({ autocapitalize: value }),
+          Autocapitalize: ({ value }) =>
+            updateDataAttrs({ autocapitalize: value }),
           InputMode: ({ value }) => updateDataAttrs({ inputmode: value }),
           EnterKeyHint: ({ value }) => updateDataAttrs({ enterkeyhint: value }),
           Multiple: ({ value }) => updateDataProps({ multiple: value }),
@@ -661,18 +684,28 @@ const buildVNodeData = <Message>(
           Novalidate: ({ value }) => updateDataProps({ noValidate: value }),
           Role: ({ value }) => updateDataAttrs({ role: value }),
           AriaLabel: ({ value }) => updateDataAttrs({ 'aria-label': value }),
-          AriaLabelledBy: ({ value }) => updateDataAttrs({ 'aria-labelledby': value }),
-          AriaDescribedBy: ({ value }) => updateDataAttrs({ 'aria-describedby': value }),
-          AriaHidden: ({ value }) => updateDataAttrs({ 'aria-hidden': value.toString() }),
-          AriaExpanded: ({ value }) => updateDataAttrs({ 'aria-expanded': value.toString() }),
-          AriaSelected: ({ value }) => updateDataAttrs({ 'aria-selected': value.toString() }),
-          AriaChecked: ({ value }) => updateDataAttrs({ 'aria-checked': value.toString() }),
-          AriaDisabled: ({ value }) => updateDataAttrs({ 'aria-disabled': value.toString() }),
-          AriaRequired: ({ value }) => updateDataAttrs({ 'aria-required': value.toString() }),
-          AriaInvalid: ({ value }) => updateDataAttrs({ 'aria-invalid': value.toString() }),
+          AriaLabelledBy: ({ value }) =>
+            updateDataAttrs({ 'aria-labelledby': value }),
+          AriaDescribedBy: ({ value }) =>
+            updateDataAttrs({ 'aria-describedby': value }),
+          AriaHidden: ({ value }) =>
+            updateDataAttrs({ 'aria-hidden': value.toString() }),
+          AriaExpanded: ({ value }) =>
+            updateDataAttrs({ 'aria-expanded': value.toString() }),
+          AriaSelected: ({ value }) =>
+            updateDataAttrs({ 'aria-selected': value.toString() }),
+          AriaChecked: ({ value }) =>
+            updateDataAttrs({ 'aria-checked': value.toString() }),
+          AriaDisabled: ({ value }) =>
+            updateDataAttrs({ 'aria-disabled': value.toString() }),
+          AriaRequired: ({ value }) =>
+            updateDataAttrs({ 'aria-required': value.toString() }),
+          AriaInvalid: ({ value }) =>
+            updateDataAttrs({ 'aria-invalid': value.toString() }),
           AriaLive: ({ value }) => updateDataAttrs({ 'aria-live': value }),
           Attribute: ({ key, value }) => updateDataAttrs({ [key]: value }),
-          DataAttribute: ({ key, value }) => updateDataAttrs({ [`data-${key}`]: value }),
+          DataAttribute: ({ key, value }) =>
+            updateDataAttrs({ [`data-${key}`]: value }),
           Style: ({ value }) => setData('style', value),
           InnerHTML: ({ value }) => updateDataProps({ innerHTML: value }),
           ViewBox: ({ value }) => updateDataAttrs({ viewBox: value }),
@@ -681,9 +714,12 @@ const buildVNodeData = <Message>(
           FillRule: ({ value }) => updateDataAttrs({ 'fill-rule': value }),
           ClipRule: ({ value }) => updateDataAttrs({ 'clip-rule': value }),
           Stroke: ({ value }) => updateDataAttrs({ stroke: value }),
-          StrokeWidth: ({ value }) => updateDataAttrs({ 'stroke-width': value }),
-          StrokeLinecap: ({ value }) => updateDataAttrs({ 'stroke-linecap': value }),
-          StrokeLinejoin: ({ value }) => updateDataAttrs({ 'stroke-linejoin': value }),
+          StrokeWidth: ({ value }) =>
+            updateDataAttrs({ 'stroke-width': value }),
+          StrokeLinecap: ({ value }) =>
+            updateDataAttrs({ 'stroke-linecap': value }),
+          StrokeLinejoin: ({ value }) =>
+            updateDataAttrs({ 'stroke-linejoin': value }),
           D: ({ value }) => updateDataAttrs({ d: value }),
           Cx: ({ value }) => updateDataAttrs({ cx: value }),
           Cy: ({ value }) => updateDataAttrs({ cy: value }),
@@ -699,8 +735,10 @@ const buildVNodeData = <Message>(
           Points: ({ value }) => updateDataAttrs({ points: value }),
           Transform: ({ value }) => updateDataAttrs({ transform: value }),
           Opacity: ({ value }) => updateDataAttrs({ opacity: value }),
-          StrokeDasharray: ({ value }) => updateDataAttrs({ 'stroke-dasharray': value }),
-          StrokeDashoffset: ({ value }) => updateDataAttrs({ 'stroke-dashoffset': value }),
+          StrokeDasharray: ({ value }) =>
+            updateDataAttrs({ 'stroke-dasharray': value }),
+          StrokeDashoffset: ({ value }) =>
+            updateDataAttrs({ 'stroke-dashoffset': value }),
         }),
       ),
     )
@@ -732,7 +770,10 @@ const createElement = <Message>(
 const element =
   <Message>() =>
   (tagName: TagName) =>
-  (attributes: ReadonlyArray<Attribute<Message>> = [], children: ReadonlyArray<Child> = []): Html =>
+  (
+    attributes: ReadonlyArray<Attribute<Message>> = [],
+    children: ReadonlyArray<Child> = [],
+  ): Html =>
     createElement(tagName, attributes, children)
 
 const voidElement =
@@ -758,7 +799,9 @@ type ElementFunction<Message> = (
   children: ReadonlyArray<Child>,
 ) => Html
 
-type VoidElementFunction<Message> = (attributes: ReadonlyArray<Attribute<Message>>) => Html
+type VoidElementFunction<Message> = (
+  attributes: ReadonlyArray<Attribute<Message>>,
+) => Html
 
 type HtmlElements<Message> = {
   a: ElementFunction<Message>
@@ -1209,17 +1252,50 @@ type HtmlAttributes<Message> = {
   Title: (value: string) => { readonly _tag: 'Title'; readonly value: string }
   Lang: (value: string) => { readonly _tag: 'Lang'; readonly value: string }
   Dir: (value: string) => { readonly _tag: 'Dir'; readonly value: string }
-  Tabindex: (value: number) => { readonly _tag: 'Tabindex'; readonly value: number }
-  Hidden: (value: boolean) => { readonly _tag: 'Hidden'; readonly value: boolean }
-  OnClick: (message: Message) => { readonly _tag: 'OnClick'; readonly message: Message }
-  OnDblClick: (message: Message) => { readonly _tag: 'OnDblClick'; readonly message: Message }
-  OnMouseDown: (message: Message) => { readonly _tag: 'OnMouseDown'; readonly message: Message }
-  OnMouseUp: (message: Message) => { readonly _tag: 'OnMouseUp'; readonly message: Message }
-  OnMouseEnter: (message: Message) => { readonly _tag: 'OnMouseEnter'; readonly message: Message }
-  OnMouseLeave: (message: Message) => { readonly _tag: 'OnMouseLeave'; readonly message: Message }
-  OnMouseOver: (message: Message) => { readonly _tag: 'OnMouseOver'; readonly message: Message }
-  OnMouseOut: (message: Message) => { readonly _tag: 'OnMouseOut'; readonly message: Message }
-  OnMouseMove: (message: Message) => { readonly _tag: 'OnMouseMove'; readonly message: Message }
+  Tabindex: (value: number) => {
+    readonly _tag: 'Tabindex'
+    readonly value: number
+  }
+  Hidden: (value: boolean) => {
+    readonly _tag: 'Hidden'
+    readonly value: boolean
+  }
+  OnClick: (message: Message) => {
+    readonly _tag: 'OnClick'
+    readonly message: Message
+  }
+  OnDblClick: (message: Message) => {
+    readonly _tag: 'OnDblClick'
+    readonly message: Message
+  }
+  OnMouseDown: (message: Message) => {
+    readonly _tag: 'OnMouseDown'
+    readonly message: Message
+  }
+  OnMouseUp: (message: Message) => {
+    readonly _tag: 'OnMouseUp'
+    readonly message: Message
+  }
+  OnMouseEnter: (message: Message) => {
+    readonly _tag: 'OnMouseEnter'
+    readonly message: Message
+  }
+  OnMouseLeave: (message: Message) => {
+    readonly _tag: 'OnMouseLeave'
+    readonly message: Message
+  }
+  OnMouseOver: (message: Message) => {
+    readonly _tag: 'OnMouseOver'
+    readonly message: Message
+  }
+  OnMouseOut: (message: Message) => {
+    readonly _tag: 'OnMouseOut'
+    readonly message: Message
+  }
+  OnMouseMove: (message: Message) => {
+    readonly _tag: 'OnMouseMove'
+    readonly message: Message
+  }
   OnKeyDown: (f: (key: string) => Message) => {
     readonly _tag: 'OnKeyDown'
     readonly f: (key: string) => Message
@@ -1232,8 +1308,14 @@ type HtmlAttributes<Message> = {
     readonly _tag: 'OnKeyPress'
     readonly f: (key: string) => Message
   }
-  OnFocus: (message: Message) => { readonly _tag: 'OnFocus'; readonly message: Message }
-  OnBlur: (message: Message) => { readonly _tag: 'OnBlur'; readonly message: Message }
+  OnFocus: (message: Message) => {
+    readonly _tag: 'OnFocus'
+    readonly message: Message
+  }
+  OnBlur: (message: Message) => {
+    readonly _tag: 'OnBlur'
+    readonly message: Message
+  }
   OnInput: (f: (value: string) => Message) => {
     readonly _tag: 'OnInput'
     readonly f: (value: string) => Message
@@ -1242,39 +1324,111 @@ type HtmlAttributes<Message> = {
     readonly _tag: 'OnChange'
     readonly f: (value: string) => Message
   }
-  OnSubmit: (message: Message) => { readonly _tag: 'OnSubmit'; readonly message: Message }
-  OnReset: (message: Message) => { readonly _tag: 'OnReset'; readonly message: Message }
-  OnScroll: (message: Message) => { readonly _tag: 'OnScroll'; readonly message: Message }
-  OnWheel: (message: Message) => { readonly _tag: 'OnWheel'; readonly message: Message }
-  OnCopy: (message: Message) => { readonly _tag: 'OnCopy'; readonly message: Message }
-  OnCut: (message: Message) => { readonly _tag: 'OnCut'; readonly message: Message }
-  OnPaste: (message: Message) => { readonly _tag: 'OnPaste'; readonly message: Message }
+  OnSubmit: (message: Message) => {
+    readonly _tag: 'OnSubmit'
+    readonly message: Message
+  }
+  OnReset: (message: Message) => {
+    readonly _tag: 'OnReset'
+    readonly message: Message
+  }
+  OnScroll: (message: Message) => {
+    readonly _tag: 'OnScroll'
+    readonly message: Message
+  }
+  OnWheel: (message: Message) => {
+    readonly _tag: 'OnWheel'
+    readonly message: Message
+  }
+  OnCopy: (message: Message) => {
+    readonly _tag: 'OnCopy'
+    readonly message: Message
+  }
+  OnCut: (message: Message) => {
+    readonly _tag: 'OnCut'
+    readonly message: Message
+  }
+  OnPaste: (message: Message) => {
+    readonly _tag: 'OnPaste'
+    readonly message: Message
+  }
   OnToggle: (f: (isOpen: boolean) => Message) => {
     readonly _tag: 'OnToggle'
     readonly f: (isOpen: boolean) => Message
   }
   Value: (value: string) => { readonly _tag: 'Value'; readonly value: string }
-  Checked: (value: boolean) => { readonly _tag: 'Checked'; readonly value: boolean }
-  Selected: (value: boolean) => { readonly _tag: 'Selected'; readonly value: boolean }
+  Checked: (value: boolean) => {
+    readonly _tag: 'Checked'
+    readonly value: boolean
+  }
+  Selected: (value: boolean) => {
+    readonly _tag: 'Selected'
+    readonly value: boolean
+  }
   Open: (value: boolean) => { readonly _tag: 'Open'; readonly value: boolean }
-  Placeholder: (value: string) => { readonly _tag: 'Placeholder'; readonly value: string }
+  Placeholder: (value: string) => {
+    readonly _tag: 'Placeholder'
+    readonly value: string
+  }
   Name: (value: string) => { readonly _tag: 'Name'; readonly value: string }
-  Disabled: (value: boolean) => { readonly _tag: 'Disabled'; readonly value: boolean }
-  Readonly: (value: boolean) => { readonly _tag: 'Readonly'; readonly value: boolean }
-  Required: (value: boolean) => { readonly _tag: 'Required'; readonly value: boolean }
-  Autofocus: (value: boolean) => { readonly _tag: 'Autofocus'; readonly value: boolean }
-  Spellcheck: (value: boolean) => { readonly _tag: 'Spellcheck'; readonly value: boolean }
-  Autocorrect: (value: string) => { readonly _tag: 'Autocorrect'; readonly value: string }
-  Autocapitalize: (value: string) => { readonly _tag: 'Autocapitalize'; readonly value: string }
-  InputMode: (value: string) => { readonly _tag: 'InputMode'; readonly value: string }
-  EnterKeyHint: (value: string) => { readonly _tag: 'EnterKeyHint'; readonly value: string }
-  Multiple: (value: boolean) => { readonly _tag: 'Multiple'; readonly value: boolean }
+  Disabled: (value: boolean) => {
+    readonly _tag: 'Disabled'
+    readonly value: boolean
+  }
+  Readonly: (value: boolean) => {
+    readonly _tag: 'Readonly'
+    readonly value: boolean
+  }
+  Required: (value: boolean) => {
+    readonly _tag: 'Required'
+    readonly value: boolean
+  }
+  Autofocus: (value: boolean) => {
+    readonly _tag: 'Autofocus'
+    readonly value: boolean
+  }
+  Spellcheck: (value: boolean) => {
+    readonly _tag: 'Spellcheck'
+    readonly value: boolean
+  }
+  Autocorrect: (value: string) => {
+    readonly _tag: 'Autocorrect'
+    readonly value: string
+  }
+  Autocapitalize: (value: string) => {
+    readonly _tag: 'Autocapitalize'
+    readonly value: string
+  }
+  InputMode: (value: string) => {
+    readonly _tag: 'InputMode'
+    readonly value: string
+  }
+  EnterKeyHint: (value: string) => {
+    readonly _tag: 'EnterKeyHint'
+    readonly value: string
+  }
+  Multiple: (value: boolean) => {
+    readonly _tag: 'Multiple'
+    readonly value: boolean
+  }
   Type: (value: string) => { readonly _tag: 'Type'; readonly value: string }
   Accept: (value: string) => { readonly _tag: 'Accept'; readonly value: string }
-  Autocomplete: (value: string) => { readonly _tag: 'Autocomplete'; readonly value: string }
-  Pattern: (value: string) => { readonly _tag: 'Pattern'; readonly value: string }
-  Maxlength: (value: number) => { readonly _tag: 'Maxlength'; readonly value: number }
-  Minlength: (value: number) => { readonly _tag: 'Minlength'; readonly value: number }
+  Autocomplete: (value: string) => {
+    readonly _tag: 'Autocomplete'
+    readonly value: string
+  }
+  Pattern: (value: string) => {
+    readonly _tag: 'Pattern'
+    readonly value: string
+  }
+  Maxlength: (value: number) => {
+    readonly _tag: 'Maxlength'
+    readonly value: number
+  }
+  Minlength: (value: number) => {
+    readonly _tag: 'Minlength'
+    readonly value: number
+  }
   Size: (value: number) => { readonly _tag: 'Size'; readonly value: number }
   Cols: (value: number) => { readonly _tag: 'Cols'; readonly value: number }
   Rows: (value: number) => { readonly _tag: 'Rows'; readonly value: number }
@@ -1287,27 +1441,73 @@ type HtmlAttributes<Message> = {
   Alt: (value: string) => { readonly _tag: 'Alt'; readonly value: string }
   Target: (value: string) => { readonly _tag: 'Target'; readonly value: string }
   Rel: (value: string) => { readonly _tag: 'Rel'; readonly value: string }
-  Download: (value: string) => { readonly _tag: 'Download'; readonly value: string }
+  Download: (value: string) => {
+    readonly _tag: 'Download'
+    readonly value: string
+  }
   Action: (value: string) => { readonly _tag: 'Action'; readonly value: string }
   Method: (value: string) => { readonly _tag: 'Method'; readonly value: string }
-  Enctype: (value: string) => { readonly _tag: 'Enctype'; readonly value: string }
-  Novalidate: (value: boolean) => { readonly _tag: 'Novalidate'; readonly value: boolean }
+  Enctype: (value: string) => {
+    readonly _tag: 'Enctype'
+    readonly value: string
+  }
+  Novalidate: (value: boolean) => {
+    readonly _tag: 'Novalidate'
+    readonly value: boolean
+  }
   Role: (value: string) => { readonly _tag: 'Role'; readonly value: string }
-  AriaLabel: (value: string) => { readonly _tag: 'AriaLabel'; readonly value: string }
-  AriaLabelledBy: (value: string) => { readonly _tag: 'AriaLabelledBy'; readonly value: string }
-  AriaDescribedBy: (value: string) => { readonly _tag: 'AriaDescribedBy'; readonly value: string }
-  AriaHidden: (value: boolean) => { readonly _tag: 'AriaHidden'; readonly value: boolean }
-  AriaExpanded: (value: boolean) => { readonly _tag: 'AriaExpanded'; readonly value: boolean }
-  AriaSelected: (value: boolean) => { readonly _tag: 'AriaSelected'; readonly value: boolean }
-  AriaChecked: (value: boolean) => { readonly _tag: 'AriaChecked'; readonly value: boolean }
-  AriaDisabled: (value: boolean) => { readonly _tag: 'AriaDisabled'; readonly value: boolean }
-  AriaRequired: (value: boolean) => { readonly _tag: 'AriaRequired'; readonly value: boolean }
-  AriaInvalid: (value: boolean) => { readonly _tag: 'AriaInvalid'; readonly value: boolean }
-  AriaLive: (value: string) => { readonly _tag: 'AriaLive'; readonly value: string }
+  AriaLabel: (value: string) => {
+    readonly _tag: 'AriaLabel'
+    readonly value: string
+  }
+  AriaLabelledBy: (value: string) => {
+    readonly _tag: 'AriaLabelledBy'
+    readonly value: string
+  }
+  AriaDescribedBy: (value: string) => {
+    readonly _tag: 'AriaDescribedBy'
+    readonly value: string
+  }
+  AriaHidden: (value: boolean) => {
+    readonly _tag: 'AriaHidden'
+    readonly value: boolean
+  }
+  AriaExpanded: (value: boolean) => {
+    readonly _tag: 'AriaExpanded'
+    readonly value: boolean
+  }
+  AriaSelected: (value: boolean) => {
+    readonly _tag: 'AriaSelected'
+    readonly value: boolean
+  }
+  AriaChecked: (value: boolean) => {
+    readonly _tag: 'AriaChecked'
+    readonly value: boolean
+  }
+  AriaDisabled: (value: boolean) => {
+    readonly _tag: 'AriaDisabled'
+    readonly value: boolean
+  }
+  AriaRequired: (value: boolean) => {
+    readonly _tag: 'AriaRequired'
+    readonly value: boolean
+  }
+  AriaInvalid: (value: boolean) => {
+    readonly _tag: 'AriaInvalid'
+    readonly value: boolean
+  }
+  AriaLive: (value: string) => {
+    readonly _tag: 'AriaLive'
+    readonly value: string
+  }
   Attribute: (
     key: string,
     value: string,
-  ) => { readonly _tag: 'Attribute'; readonly key: string; readonly value: string }
+  ) => {
+    readonly _tag: 'Attribute'
+    readonly key: string
+    readonly value: string
+  }
   DataAttribute: (
     key: string,
     value: string,
@@ -1320,16 +1520,37 @@ type HtmlAttributes<Message> = {
     readonly _tag: 'Style'
     readonly value: Record<string, string>
   }
-  InnerHTML: (value: string) => { readonly _tag: 'InnerHTML'; readonly value: string }
-  ViewBox: (value: string) => { readonly _tag: 'ViewBox'; readonly value: string }
+  InnerHTML: (value: string) => {
+    readonly _tag: 'InnerHTML'
+    readonly value: string
+  }
+  ViewBox: (value: string) => {
+    readonly _tag: 'ViewBox'
+    readonly value: string
+  }
   Xmlns: (value: string) => { readonly _tag: 'Xmlns'; readonly value: string }
   Fill: (value: string) => { readonly _tag: 'Fill'; readonly value: string }
-  FillRule: (value: string) => { readonly _tag: 'FillRule'; readonly value: string }
-  ClipRule: (value: string) => { readonly _tag: 'ClipRule'; readonly value: string }
+  FillRule: (value: string) => {
+    readonly _tag: 'FillRule'
+    readonly value: string
+  }
+  ClipRule: (value: string) => {
+    readonly _tag: 'ClipRule'
+    readonly value: string
+  }
   Stroke: (value: string) => { readonly _tag: 'Stroke'; readonly value: string }
-  StrokeWidth: (value: string) => { readonly _tag: 'StrokeWidth'; readonly value: string }
-  StrokeLinecap: (value: string) => { readonly _tag: 'StrokeLinecap'; readonly value: string }
-  StrokeLinejoin: (value: string) => { readonly _tag: 'StrokeLinejoin'; readonly value: string }
+  StrokeWidth: (value: string) => {
+    readonly _tag: 'StrokeWidth'
+    readonly value: string
+  }
+  StrokeLinecap: (value: string) => {
+    readonly _tag: 'StrokeLinecap'
+    readonly value: string
+  }
+  StrokeLinejoin: (value: string) => {
+    readonly _tag: 'StrokeLinejoin'
+    readonly value: string
+  }
   D: (value: string) => { readonly _tag: 'D'; readonly value: string }
   Cx: (value: string) => { readonly _tag: 'Cx'; readonly value: string }
   Cy: (value: string) => { readonly _tag: 'Cy'; readonly value: string }
@@ -1343,10 +1564,22 @@ type HtmlAttributes<Message> = {
   X2: (value: string) => { readonly _tag: 'X2'; readonly value: string }
   Y2: (value: string) => { readonly _tag: 'Y2'; readonly value: string }
   Points: (value: string) => { readonly _tag: 'Points'; readonly value: string }
-  Transform: (value: string) => { readonly _tag: 'Transform'; readonly value: string }
-  Opacity: (value: string) => { readonly _tag: 'Opacity'; readonly value: string }
-  StrokeDasharray: (value: string) => { readonly _tag: 'StrokeDasharray'; readonly value: string }
-  StrokeDashoffset: (value: string) => { readonly _tag: 'StrokeDashoffset'; readonly value: string }
+  Transform: (value: string) => {
+    readonly _tag: 'Transform'
+    readonly value: string
+  }
+  Opacity: (value: string) => {
+    readonly _tag: 'Opacity'
+    readonly value: string
+  }
+  StrokeDasharray: (value: string) => {
+    readonly _tag: 'StrokeDasharray'
+    readonly value: string
+  }
+  StrokeDashoffset: (value: string) => {
+    readonly _tag: 'StrokeDashoffset'
+    readonly value: string
+  }
 }
 
 const htmlAttributes = <Message>(): HtmlAttributes<Message> => ({

@@ -2,7 +2,7 @@
   "semi": false,
   "singleQuote": true,
   "trailingComma": "all",
-  "printWidth": 100,
+  "printWidth": 80,
 
   "importOrder": ["<THIRD_PARTY_MODULES>", "^[./]"],
   "importOrderSeparation": true,

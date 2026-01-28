@@ -13,7 +13,13 @@ export type Countdown = typeof Countdown.Type
 export type Playing = typeof Playing.Type
 export type Finished = typeof Finished.Type
 
-export const GameStatus = S.Union(Waiting, GetReady, Countdown, Playing, Finished)
+export const GameStatus = S.Union(
+  Waiting,
+  GetReady,
+  Countdown,
+  Playing,
+  Finished,
+)
 export type GameStatus = typeof GameStatus.Type
 
 export const Player = S.Struct({
@@ -71,13 +77,19 @@ export type Room = typeof Room.Type
 export const RoomById = S.HashMap({ key: S.String, value: Room })
 export type RoomById = typeof RoomById.Type
 
-export class RoomNotFoundError extends S.TaggedError<RoomNotFoundError>()('RoomNotFoundError', {
-  roomId: S.String,
-}) {}
+export class RoomNotFoundError extends S.TaggedError<RoomNotFoundError>()(
+  'RoomNotFoundError',
+  {
+    roomId: S.String,
+  },
+) {}
 
-export class UnauthorizedError extends S.TaggedError<UnauthorizedError>()('UnauthorizedError', {
-  message: S.String,
-}) {}
+export class UnauthorizedError extends S.TaggedError<UnauthorizedError>()(
+  'UnauthorizedError',
+  {
+    message: S.String,
+  },
+) {}
 
 export const RoomAndPlayer = S.Struct({ player: Player, room: Room })
 export type RoomAndPlayer = typeof RoomAndPlayer.Type

@@ -7,7 +7,10 @@ export const getById = (roomById: Shared.RoomById, id: string) =>
   )
 
 export const updateRoom =
-  (roomByIdRef: SubscriptionRef.SubscriptionRef<Shared.RoomById>, roomId: string) =>
+  (
+    roomByIdRef: SubscriptionRef.SubscriptionRef<Shared.RoomById>,
+    roomId: string,
+  ) =>
   (f: (room: Shared.Room) => Shared.Room) =>
     SubscriptionRef.updateEffect(roomByIdRef, (roomById) =>
       Effect.gen(function* () {
@@ -18,6 +21,9 @@ export const updateRoom =
     )
 
 export const updateRoomStatus =
-  (roomByIdRef: SubscriptionRef.SubscriptionRef<Shared.RoomById>, roomId: string) =>
+  (
+    roomByIdRef: SubscriptionRef.SubscriptionRef<Shared.RoomById>,
+    roomId: string,
+  ) =>
   (status: Shared.GameStatus) =>
     updateRoom(roomByIdRef, roomId)(Struct.evolve({ status: () => status }))

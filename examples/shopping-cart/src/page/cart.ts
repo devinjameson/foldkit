@@ -3,7 +3,20 @@ import { Route } from 'foldkit'
 import { Html } from 'foldkit/html'
 
 import { Cart } from '../domain'
-import { Class, Href, OnClick, a, article, button, div, h1, h3, p, section, span } from '../html'
+import {
+  Class,
+  Href,
+  OnClick,
+  a,
+  article,
+  button,
+  div,
+  h1,
+  h3,
+  p,
+  section,
+  span,
+} from '../html'
 import {
   ChangeCartQuantity,
   type CheckoutRoute,
@@ -30,13 +43,18 @@ export const view = (
             [],
             Array.match(cart, {
               onEmpty: () => [
-                p([Class('text-gray-500 text-center py-8')], ['Your cart is empty']),
+                p(
+                  [Class('text-gray-500 text-center py-8')],
+                  ['Your cart is empty'],
+                ),
                 div(
                   [Class('text-center mt-4')],
                   [
                     a(
                       [
-                        Href(productsRouter.build({ searchText: Option.none() })),
+                        Href(
+                          productsRouter.build({ searchText: Option.none() }),
+                        ),
                         Class(
                           'bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium inline-block',
                         ),
@@ -51,12 +69,19 @@ export const view = (
                   [Class('space-y-4 mb-6')],
                   cart.map((cartItem) =>
                     article(
-                      [Class('flex items-center justify-between p-4 border rounded-lg')],
+                      [
+                        Class(
+                          'flex items-center justify-between p-4 border rounded-lg',
+                        ),
+                      ],
                       [
                         div(
                           [],
                           [
-                            h3([Class('font-semibold text-gray-800')], [cartItem.item.name]),
+                            h3(
+                              [Class('font-semibold text-gray-800')],
+                              [cartItem.item.name],
+                            ),
                             p(
                               [Class('text-gray-600')],
                               [`$${cartItem.item.price.toFixed(2)} each`],
@@ -74,13 +99,18 @@ export const view = (
                                 OnClick(
                                   ChangeCartQuantity.make({
                                     itemId: cartItem.item.id,
-                                    quantity: Number.decrement(cartItem.quantity),
+                                    quantity: Number.decrement(
+                                      cartItem.quantity,
+                                    ),
                                   }),
                                 ),
                               ],
                               ['-'],
                             ),
-                            span([Class('px-3 py-1 font-medium')], [String(cartItem.quantity)]),
+                            span(
+                              [Class('px-3 py-1 font-medium')],
+                              [String(cartItem.quantity)],
+                            ),
                             button(
                               [
                                 Class(
@@ -100,7 +130,11 @@ export const view = (
                                 Class(
                                   'bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded ml-2',
                                 ),
-                                OnClick(RemoveFromCart.make({ itemId: cartItem.item.id })),
+                                OnClick(
+                                  RemoveFromCart.make({
+                                    itemId: cartItem.item.id,
+                                  }),
+                                ),
                               ],
                               ['Remove'],
                             ),
@@ -116,7 +150,10 @@ export const view = (
                     div(
                       [Class('flex justify-between items-center')],
                       [
-                        h3([Class('text-xl font-bold text-gray-800')], ['Total']),
+                        h3(
+                          [Class('text-xl font-bold text-gray-800')],
+                          ['Total'],
+                        ),
                         p(
                           [Class('text-xl font-bold text-gray-800')],
                           [
@@ -132,7 +169,9 @@ export const view = (
                   [
                     a(
                       [
-                        Href(productsRouter.build({ searchText: Option.none() })),
+                        Href(
+                          productsRouter.build({ searchText: Option.none() }),
+                        ),
                         Class(
                           'bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-medium',
                         ),

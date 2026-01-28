@@ -17,7 +17,10 @@ export const wrap = ({ x, y }: Position): Position => ({
   y: y < 0 ? GAME.GRID_SIZE - 1 : y >= GAME.GRID_SIZE ? 0 : y,
 })
 
-export const move = (pos: Position, direction: Direction.Direction): Position => {
+export const move = (
+  pos: Position,
+  direction: Direction.Direction,
+): Position => {
   const next = Match.value(direction).pipe(
     Match.when('Up', () => ({ x: pos.x, y: pos.y - 1 })),
     Match.when('Down', () => ({ x: pos.x, y: pos.y + 1 })),

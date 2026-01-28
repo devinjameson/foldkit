@@ -9,9 +9,13 @@ const makeUniqueUsername = (
   desiredUsername: string,
   existingPlayers: ReadonlyArray<Shared.Player>,
 ): string => {
-  const existingUsernames = Array.map(existingPlayers, (player) => player.username)
+  const existingUsernames = Array.map(
+    existingPlayers,
+    (player) => player.username,
+  )
 
-  const usernameExists = (username: string) => Array.contains(existingUsernames, username)
+  const usernameExists = (username: string) =>
+    Array.contains(existingUsernames, username)
 
   if (!usernameExists(desiredUsername)) {
     return desiredUsername
@@ -33,25 +37,34 @@ export const joinRoom =
     Effect.gen(function* () {
       const playerId = yield* Effect.sync(() => randomUUID())
 
-      const [room, player] = yield* SubscriptionRef.modifyEffect(roomByIdRef, (roomById) =>
-        Rooms.getById(roomById, payload.roomId).pipe(
-          Effect.map((room) => {
-            const uniqueUsername = makeUniqueUsername(payload.username, room.players)
+      const [room, player] = yield* SubscriptionRef.modifyEffect(
+        roomByIdRef,
+        (roomById) =>
+          Rooms.getById(roomById, payload.roomId).pipe(
+            Effect.map((room) => {
+              const uniqueUsername = makeUniqueUsername(
+                payload.username,
+                room.players,
+              )
 
-            const player = Shared.Player.make({
-              id: playerId,
-              username: uniqueUsername,
-            })
+              const player = Shared.Player.make({
+                id: playerId,
+                username: uniqueUsername,
+              })
 
-            const updatedRoom = Struct.evolve(room, {
-              players: (players) => [...players, player],
-            })
+              const updatedRoom = Struct.evolve(room, {
+                players: (players) => [...players, player],
+              })
 
-            const nextRoomById = HashMap.set(roomById, payload.roomId, updatedRoom)
+              const nextRoomById = HashMap.set(
+                roomById,
+                payload.roomId,
+                updatedRoom,
+              )
 
-            return [[updatedRoom, player], nextRoomById] as const
-          }),
-        ),
+              return [[updatedRoom, player], nextRoomById] as const
+            }),
+          ),
       )
 
       return { player, room }

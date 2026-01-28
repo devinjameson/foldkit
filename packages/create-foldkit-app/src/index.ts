@@ -14,7 +14,10 @@ const nameSchema = Schema.String.pipe(
         String.includes('\\'),
         () => 'Project name cannot contain path separators (/ or \\)',
       ),
-      Match.when(String.includes(' '), () => 'Project name cannot contain spaces'),
+      Match.when(
+        String.includes(' '),
+        () => 'Project name cannot contain spaces',
+      ),
       Match.when(
         flow(String.match(/[<>:"|?*]/), Option.isSome),
         () => 'Project name cannot contain special characters: < > : " | ? *',
@@ -63,9 +66,15 @@ const example = Options.choice('example', [
   ),
 )
 
-const packageManager = Options.choice('package-manager', ['pnpm', 'npm', 'yarn']).pipe(
+const packageManager = Options.choice('package-manager', [
+  'pnpm',
+  'npm',
+  'yarn',
+]).pipe(
   Options.withAlias('p'),
-  Options.withDescription('The package manager to use for installing dependencies'),
+  Options.withDescription(
+    'The package manager to use for installing dependencies',
+  ),
 )
 
 const create = Command.make(

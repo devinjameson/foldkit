@@ -158,7 +158,11 @@ describe('slash', () => {
 
   it.scoped('merges parsed values from chained parsers', () =>
     Effect.gen(function* () {
-      const parser = pipe(literal('posts'), slash(string('postId')), slash(int('commentId')))
+      const parser = pipe(
+        literal('posts'),
+        slash(string('postId')),
+        slash(int('commentId')),
+      )
       const [value] = yield* parser.parse(['posts', 'my-post', '5'])
       expect(value).toStrictEqual({ postId: 'my-post', commentId: 5 })
     }),
@@ -184,7 +188,10 @@ describe('slash', () => {
 describe('query', () => {
   it.scoped('parses query parameters with a schema', () =>
     Effect.gen(function* () {
-      const parser = pipe(literal('items'), query(S.Struct({ page: S.NumberFromString })))
+      const parser = pipe(
+        literal('items'),
+        query(S.Struct({ page: S.NumberFromString })),
+      )
       const [value] = yield* parser.parse(['items'], 'page=3')
       expect(value).toStrictEqual({ page: 3 })
     }),
@@ -192,7 +199,10 @@ describe('query', () => {
 
   it.scoped('fails on invalid query parameters', () =>
     Effect.gen(function* () {
-      const parser = pipe(literal('items'), query(S.Struct({ page: S.NumberFromString })))
+      const parser = pipe(
+        literal('items'),
+        query(S.Struct({ page: S.NumberFromString })),
+      )
       const error = yield* Effect.flip(parser.parse(['items'], 'page=abc'))
       expect(error._tag).toBe('ParseError')
     }),
@@ -251,14 +261,22 @@ describe('mapTo', () => {
 
   it.scoped('wraps parameterized parsed values', () =>
     Effect.gen(function* () {
-      const router = pipe(literal('users'), slash(string('id')), mapTo(UserProfile))
+      const router = pipe(
+        literal('users'),
+        slash(string('id')),
+        mapTo(UserProfile),
+      )
       const [result] = yield* router.parse(['users', 'abc'])
       expect(result).toStrictEqual({ _tag: 'UserProfile', id: 'abc' })
     }),
   )
 
   it('builds a URL from route data', () => {
-    const router = pipe(literal('users'), slash(string('id')), mapTo(UserProfile))
+    const router = pipe(
+      literal('users'),
+      slash(string('id')),
+      mapTo(UserProfile),
+    )
     const url = router.build({ id: 'abc' })
     expect(url).toBe('/users/abc')
   })
@@ -285,7 +303,12 @@ describe('parseUrlWithFallback', () => {
 describe('round-trip: parse then build', () => {
   const Route = ts('Route', { userId: S.String, postId: S.Number })
 
-  const router = pipe(literal('users'), slash(string('userId')), slash(int('postId')), mapTo(Route))
+  const router = pipe(
+    literal('users'),
+    slash(string('userId')),
+    slash(int('postId')),
+    mapTo(Route),
+  )
 
   it('build produces the expected path', () => {
     const url = router.build({ userId: 'jane', postId: 7 })
@@ -295,7 +318,10 @@ describe('round-trip: parse then build', () => {
   it.scoped('parse then build round-trips', () =>
     Effect.gen(function* () {
       const [parsed] = yield* router.parse(['users', 'jane', '7'])
-      const rebuilt = router.build({ userId: parsed.userId, postId: parsed.postId })
+      const rebuilt = router.build({
+        userId: parsed.userId,
+        postId: parsed.postId,
+      })
       expect(rebuilt).toBe('/users/jane/7')
     }),
   )

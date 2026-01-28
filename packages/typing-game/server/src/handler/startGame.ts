@@ -1,6 +1,15 @@
 import { Rpc } from '@effect/rpc'
 import * as Shared from '@typing-game/shared'
-import { Array, Effect, HashMap, Option, Stream, Struct, SubscriptionRef, pipe } from 'effect'
+import {
+  Array,
+  Effect,
+  HashMap,
+  Option,
+  Stream,
+  Struct,
+  SubscriptionRef,
+  pipe,
+} from 'effect'
 import { randomUUID } from 'node:crypto'
 
 import { gameSequence } from '../game.js'
@@ -9,7 +18,10 @@ import * as Rooms from '../roomById.js'
 import { updateRoom, updateRoomStatus } from '../roomById.js'
 import { calculateScoreboard } from '../scoring.js'
 
-type ProgressByGamePlayer = HashMap.HashMap<Shared.GamePlayer, Shared.PlayerProgress>
+type ProgressByGamePlayer = HashMap.HashMap<
+  Shared.GamePlayer,
+  Shared.PlayerProgress
+>
 
 export const startGame =
   (
@@ -23,7 +35,9 @@ export const startGame =
 
       if (room.hostId !== payload.playerId) {
         return yield* Effect.fail(
-          new Shared.UnauthorizedError({ message: 'Only the host can start the game' }),
+          new Shared.UnauthorizedError({
+            message: 'Only the host can start the game',
+          }),
         )
       }
 
@@ -60,7 +74,11 @@ export const startGame =
         }),
         Stream.runDrain,
         Effect.zipRight(
-          finalizeGameScoreboard(roomByIdRef, progressByGamePlayerRef, payload.roomId),
+          finalizeGameScoreboard(
+            roomByIdRef,
+            progressByGamePlayerRef,
+            payload.roomId,
+          ),
         ),
         Effect.forkDaemon,
       )
@@ -74,8 +92,12 @@ const finalizeGameScoreboard = (
   Effect.gen(function* () {
     const roomById = yield* SubscriptionRef.get(roomByIdRef)
     const room = yield* Rooms.getById(roomById, roomId)
-    const progressByGamePlayer = yield* SubscriptionRef.get(progressByGamePlayerRef)
-    const maybeScoreboard = Option.some(calculateScoreboard(room, progressByGamePlayer))
+    const progressByGamePlayer = yield* SubscriptionRef.get(
+      progressByGamePlayerRef,
+    )
+    const maybeScoreboard = Option.some(
+      calculateScoreboard(room, progressByGamePlayer),
+    )
 
     yield* updateRoom(
       roomByIdRef,

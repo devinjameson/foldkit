@@ -1,9 +1,22 @@
 import * as Shared from '@typing-game/shared'
-import { Array, Data, Effect, HashMap, Number, Option, String, SubscriptionRef, pipe } from 'effect'
+import {
+  Array,
+  Data,
+  Effect,
+  HashMap,
+  Number,
+  Option,
+  String,
+  SubscriptionRef,
+  pipe,
+} from 'effect'
 
 import { CHARS_PER_WORD, PLAYING_SECONDS } from './game.js'
 
-type ProgressByGamePlayer = HashMap.HashMap<Shared.GamePlayer, Shared.PlayerProgress>
+type ProgressByGamePlayer = HashMap.HashMap<
+  Shared.GamePlayer,
+  Shared.PlayerProgress
+>
 
 const calculatePlayerScore = (
   player: Shared.Player,
@@ -68,7 +81,9 @@ export const getPlayerProgress = (
   gameId: string,
 ): Effect.Effect<Option.Option<Shared.PlayerProgress>> =>
   Effect.gen(function* () {
-    const progressByGamePlayer = yield* SubscriptionRef.get(progressByGamePlayerRef)
+    const progressByGamePlayer = yield* SubscriptionRef.get(
+      progressByGamePlayerRef,
+    )
     const gamePlayer = Data.struct(Shared.GamePlayer.make({ gameId, playerId }))
     return HashMap.get(progressByGamePlayer, gamePlayer)
   })

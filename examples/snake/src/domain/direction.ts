@@ -13,4 +13,5 @@ export const opposite = (direction: Direction): Direction =>
     Match.exhaustive,
   )
 
-export const isOpposite = (a: Direction, b: Direction): boolean => opposite(a) === b
+export const isOpposite = (a: Direction, b: Direction): boolean =>
+  opposite(a) === b

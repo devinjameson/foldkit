@@ -24,7 +24,9 @@ const playingStream: Stream.Stream<Shared.Playing> = pipe(
   Stream.map((secondsLeft) => Shared.Playing.make({ secondsLeft })),
 )
 
-const finishedStream: Stream.Stream<Shared.Finished> = Stream.make(Shared.Finished.make())
+const finishedStream: Stream.Stream<Shared.Finished> = Stream.make(
+  Shared.Finished.make(),
+)
 
 export const gameSequence = pipe(
   getReadyStream,

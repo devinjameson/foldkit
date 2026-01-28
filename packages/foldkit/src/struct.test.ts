@@ -10,7 +10,10 @@ describe('evo', () => {
   })
 
   it('supports curried form', () => {
-    const inc = evo<{ count: number; name: string }, { count: (a: number) => number }>({
+    const inc = evo<
+      { count: number; name: string },
+      { count: (a: number) => number }
+    >({
       count: (n) => n + 1,
     })
     const result = inc({ count: 0, name: 'test' })

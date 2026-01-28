@@ -1,4 +1,15 @@
-import { Array, Data, Effect, Option, Predicate, Record, Schema, String, flow, pipe } from 'effect'
+import {
+  Array,
+  Data,
+  Effect,
+  Option,
+  Predicate,
+  Record,
+  Schema,
+  String,
+  flow,
+  pipe,
+} from 'effect'
 
 import { Url } from './url'
 
@@ -99,7 +110,9 @@ export const param = <A>(
     }),
 })
 
-export const string = <K extends string>(name: K): Biparser<Record<K, string>> =>
+export const string = <K extends string>(
+  name: K,
+): Biparser<Record<K, string>> =>
   param(
     `string (${name})`,
     /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
@@ -182,7 +195,15 @@ export function oneOf<A, B = never, C = never, D = never, E = never, F = never>(
   p5: Biparser<E> | Parser<E>,
   p6: Biparser<F> | Parser<F>,
 ): Parser<A | B | C | D | E | F>
-export function oneOf<A, B = never, C = never, D = never, E = never, F = never, G = never>(
+export function oneOf<
+  A,
+  B = never,
+  C = never,
+  D = never,
+  E = never,
+  F = never,
+  G = never,
+>(
   p1: Biparser<A> | Parser<A>,
   p2: Biparser<B> | Parser<B>,
   p3: Biparser<C> | Parser<C>,
@@ -266,7 +287,9 @@ export function oneOf(
   p9?: Biparser<any> | Parser<any>,
   p10?: Biparser<any> | Parser<any>,
 ): Parser<any> {
-  const parsers = [p1, p2, p3, p4, p5, p6, p7, p8, p9, p10].filter((p) => p !== undefined)
+  const parsers = [p1, p2, p3, p4, p5, p6, p7, p8, p9, p10].filter(
+    (p) => p !== undefined,
+  )
 
   return {
     parse: (segments, search) =>
@@ -281,14 +304,20 @@ export function oneOf(
           )
         },
         onNonEmpty: () =>
-          Effect.firstSuccessOf(Array.map(parsers, (parser) => parser.parse(segments, search))),
+          Effect.firstSuccessOf(
+            Array.map(parsers, (parser) => parser.parse(segments, search)),
+          ),
       }),
   }
 }
 
 export const mapTo: {
-  <T>(appRouteConstructor: { make: () => T }): (parser: Biparser<{}>) => Router<T>
-  <A, T>(appRouteConstructor: { make: (data: A) => T }): (parser: Biparser<A>) => Router<T>
+  <T>(appRouteConstructor: {
+    make: () => T
+  }): (parser: Biparser<{}>) => Router<T>
+  <A, T>(appRouteConstructor: {
+    make: (data: A) => T
+  }): (parser: Biparser<A>) => Router<T>
 } = (appRouteConstructor: any): any => {
   return (parser: any) => {
     return {
@@ -309,7 +338,9 @@ export const mapTo: {
 }
 
 export const slash =
-  <A extends Record<string, unknown>, B extends Record<string, unknown>>(parserB: Biparser<A>) =>
+  <A extends Record<string, unknown>, B extends Record<string, unknown>>(
+    parserB: Biparser<A>,
+  ) =>
   (
     parserA: Biparser<B> & {
       readonly __terminal?: never
@@ -322,7 +353,10 @@ export const slash =
         Effect.flatMap(([valueA, remainingA]) =>
           pipe(
             parserB.parse(remainingA, search),
-            Effect.map(([valueB, remainingB]) => [{ ...valueA, ...valueB }, remainingB]),
+            Effect.map(([valueB, remainingB]) => [
+              { ...valueA, ...valueB },
+              remainingB,
+            ]),
           ),
         ),
       ),
@@ -334,8 +368,12 @@ export const slash =
   })
 
 export const query =
-  <A, I extends Record.ReadonlyRecord<string, unknown>>(schema: Schema.Schema<A, I>) =>
-  <B extends Record<string, unknown>>(parser: Biparser<B>): TerminalParser<B & A> => {
+  <A, I extends Record.ReadonlyRecord<string, unknown>>(
+    schema: Schema.Schema<A, I>,
+  ) =>
+  <B extends Record<string, unknown>>(
+    parser: Biparser<B>,
+  ): TerminalParser<B & A> => {
     const queryParser: Biparser<B & A> = {
       parse: (segments, search) => {
         return pipe(
@@ -430,12 +468,17 @@ const parseUrl =
   }
 
 export const parseUrlWithFallback =
-  <A, B>(parser: Parser<A>, notFoundRouteConstructor: { make: (data: { path: string }) => B }) =>
+  <A, B>(
+    parser: Parser<A>,
+    notFoundRouteConstructor: { make: (data: { path: string }) => B },
+  ) =>
   (url: Url): A | B =>
     pipe(
       url,
       parseUrl(parser),
-      Effect.orElse(() => Effect.succeed(notFoundRouteConstructor.make({ path: url.pathname }))),
+      Effect.orElse(() =>
+        Effect.succeed(notFoundRouteConstructor.make({ path: url.pathname })),
+      ),
       Effect.runSync,
     )
 

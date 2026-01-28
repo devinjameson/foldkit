@@ -1,6 +1,15 @@
 import { KeyValueStore } from '@effect/platform'
 import { BrowserKeyValueStore } from '@effect/platform-browser'
-import { Array, Clock, Effect, Match as M, Option, Random, Schema as S, String } from 'effect'
+import {
+  Array,
+  Clock,
+  Effect,
+  Match as M,
+  Option,
+  Random,
+  Schema as S,
+  String,
+} from 'effect'
 import { Runtime } from 'foldkit'
 import { Html, html } from 'foldkit/html'
 import { ts } from 'foldkit/schema'
@@ -52,7 +61,11 @@ const NoOp = ts('NoOp')
 const UpdateNewTodo = ts('UpdateNewTodo', { text: S.String })
 const UpdateEditingTodo = ts('UpdateEditingTodo', { text: S.String })
 const AddTodo = ts('AddTodo')
-const GotNewTodoData = ts('GotNewTodoData', { id: S.String, timestamp: S.Number, text: S.String })
+const GotNewTodoData = ts('GotNewTodoData', {
+  id: S.String,
+  timestamp: S.Number,
+  text: S.String,
+})
 const DeleteTodo = ts('DeleteTodo', { id: S.String })
 const ToggleTodo = ts('ToggleTodo', { id: S.String })
 const StartEditing = ts('StartEditing', { id: S.String })
@@ -118,7 +131,10 @@ const init: Runtime.ElementInit<Model, Message, Flags> = (flags) => [
 
 // UPDATE
 
-const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
+const update = (
+  model: Model,
+  message: Message,
+): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
   M.value(message).pipe(
     M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
     M.tagsExhaustive({
@@ -184,7 +200,9 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
 
       ToggleTodo: ({ id }) => {
         const updatedTodos = Array.map(model.todos, (todo) =>
-          todo.id === id ? evo(todo, { completed: (completed) => !completed }) : todo,
+          todo.id === id
+            ? evo(todo, { completed: (completed) => !completed })
+            : todo,
         )
 
         return [
@@ -229,7 +247,9 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
               }
 
               const updatedTodos = Array.map(model.todos, (todo) =>
-                todo.id === id ? evo(todo, { text: () => String.trim(text) }) : todo,
+                todo.id === id
+                  ? evo(todo, { text: () => String.trim(text) })
+                  : todo,
               )
 
               return [
@@ -267,7 +287,10 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
       },
 
       ClearCompleted: () => {
-        const updatedTodos = Array.filter(model.todos, (todo) => !todo.completed)
+        const updatedTodos = Array.filter(
+          model.todos,
+          (todo) => !todo.completed,
+        )
 
         return [
           evo(model, {
@@ -350,7 +373,9 @@ const todoItemView =
       M.tagsExhaustive({
         NotEditing: () => nonEditingTodoView(todo),
         Editing: ({ id, text }) =>
-          id === todo.id ? editingTodoView(todo, text) : nonEditingTodoView(todo),
+          id === todo.id
+            ? editingTodoView(todo, text)
+            : nonEditingTodoView(todo),
       }),
     )
 
@@ -397,7 +422,9 @@ const nonEditingTodoView = (todo: Todo): Html =>
       ]),
       span(
         [
-          Class(`flex-1 ${todo.completed ? 'line-through text-gray-500' : 'text-gray-900'}`),
+          Class(
+            `flex-1 ${todo.completed ? 'line-through text-gray-500' : 'text-gray-900'}`,
+          ),
           OnClick(StartEditing.make({ id: todo.id })),
         ],
         [todo.text],
@@ -431,7 +458,11 @@ const filterButtonView =
       [label],
     )
 
-const footerView = (model: Model, activeCount: number, completedCount: number): Html =>
+const footerView = (
+  model: Model,
+  activeCount: number,
+  completedCount: number,
+): Html =>
   Array.match(model.todos, {
     onEmpty: () => empty,
     onNonEmpty: () =>
@@ -477,7 +508,9 @@ const footerView = (model: Model, activeCount: number, completedCount: number): 
                 ? button(
                     [
                       OnClick(ClearCompleted.make()),
-                      Class('px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200'),
+                      Class(
+                        'px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200',
+                      ),
                     ],
                     [`Clear ${completedCount} completed`],
                   )
@@ -498,7 +531,9 @@ const filterTodos = (todos: Todos, filter: Filter): Todos =>
 
 const view = (model: Model): Html => {
   const filteredTodos = filterTodos(model.todos, model.filter)
-  const activeCount = Array.length(Array.filter(model.todos, (todo) => !todo.completed))
+  const activeCount = Array.length(
+    Array.filter(model.todos, (todo) => !todo.completed),
+  )
   const completedCount = Array.length(model.todos) - activeCount
 
   return div(
@@ -507,7 +542,10 @@ const view = (model: Model): Html => {
       div(
         [Class('max-w-md mx-auto bg-white rounded-xl shadow-lg p-6')],
         [
-          h1([Class('text-3xl font-bold text-gray-800 text-center mb-8')], ['Todo App']),
+          h1(
+            [Class('text-3xl font-bold text-gray-800 text-center mb-8')],
+            ['Todo App'],
+          ),
 
           form(
             [Class('mb-6'), OnSubmit(AddTodo.make())],
@@ -553,7 +591,10 @@ const view = (model: Model): Html => {
                 ],
               ),
             onNonEmpty: (todos) =>
-              ul([Class('space-y-2 mb-6')], Array.map(todos, todoItemView(model))),
+              ul(
+                [Class('space-y-2 mb-6')],
+                Array.map(todos, todoItemView(model)),
+              ),
           }),
 
           footerView(model, activeCount, completedCount),

@@ -64,7 +64,10 @@ const removePlayerProgress = (
   playerId: string,
 ) =>
   SubscriptionRef.update(progressByGamePlayerRef, (progressByGamePlayer) =>
-    HashMap.filter(progressByGamePlayer, (_, gamePlayer) => gamePlayer.playerId !== playerId),
+    HashMap.filter(
+      progressByGamePlayer,
+      (_, gamePlayer) => gamePlayer.playerId !== playerId,
+    ),
   )
 
 const cancelPendingCleanup = (
@@ -107,20 +110,32 @@ export const subscribeToRoom =
   (
     payload: Rpc.Payload<typeof Shared.subscribeToRoomRpc>,
   ): Stream.Stream<Shared.RoomWithPlayerProgress, Shared.RoomNotFoundError> =>
-    Stream.execute(cancelPendingCleanup(pendingCleanupPlayerIdsRef, payload.playerId)).pipe(
+    Stream.execute(
+      cancelPendingCleanup(pendingCleanupPlayerIdsRef, payload.playerId),
+    ).pipe(
       Stream.concat(roomByIdRef.changes),
       Stream.mapEffect((roomById) =>
         Effect.gen(function* () {
           const room = yield* HashMap.get(roomById, payload.roomId).pipe(
-            Effect.mapError(() => new Shared.RoomNotFoundError({ roomId: payload.roomId })),
+            Effect.mapError(
+              () => new Shared.RoomNotFoundError({ roomId: payload.roomId }),
+            ),
           )
 
           const maybePlayerProgress = yield* Option.match(room.maybeGame, {
-            onSome: (game) => getPlayerProgress(progressByGamePlayerRef, payload.playerId, game.id),
+            onSome: (game) =>
+              getPlayerProgress(
+                progressByGamePlayerRef,
+                payload.playerId,
+                game.id,
+              ),
             onNone: () => Effect.succeed(Option.none<Shared.PlayerProgress>()),
           })
 
-          return Shared.RoomWithPlayerProgress.make({ room, maybePlayerProgress })
+          return Shared.RoomWithPlayerProgress.make({
+            room,
+            maybePlayerProgress,
+          })
         }),
       ),
       Stream.throttle({

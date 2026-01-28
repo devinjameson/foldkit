@@ -20,5 +20,7 @@ export const ts: {
     tag: Tag,
     fields: Fields,
   ): S.TaggedStruct<Tag, Fields>
-} = <Tag extends string, Fields extends S.Struct.Fields = {}>(tag: Tag, fields?: Fields) =>
-  S.TaggedStruct(tag, fields ?? {})
+} = <Tag extends string, Fields extends S.Struct.Fields = {}>(
+  tag: Tag,
+  fields?: Fields,
+) => S.TaggedStruct(tag, fields ?? {})

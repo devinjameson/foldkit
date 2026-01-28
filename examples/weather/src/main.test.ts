@@ -38,7 +38,10 @@ test('WeatherFetched updates model with weather data', () => {
     region: 'California',
   }
 
-  const [newModel, commands] = update(model, WeatherFetched.make({ weather: weatherData }))
+  const [newModel, commands] = update(
+    model,
+    WeatherFetched.make({ weather: weatherData }),
+  )
 
   expect(newModel.weather._tag).toBe('WeatherSuccess')
   if (newModel.weather._tag === 'WeatherSuccess') {
@@ -91,7 +94,9 @@ test('fetchWeather returns WeatherFetched with data on success', async () => {
 
 test('fetchWeather returns WeatherError on HTTP failure', async () => {
   const mockClient = HttpClient.make((req) =>
-    Effect.succeed(HttpClientResponse.fromWeb(req, new Response(null, { status: 404 }))),
+    Effect.succeed(
+      HttpClientResponse.fromWeb(req, new Response(null, { status: 404 })),
+    ),
   )
 
   const HttpClientTest = Layer.succeed(HttpClient.HttpClient, mockClient)

@@ -43,7 +43,9 @@ export const GAME_TEXTS: Array.NonEmptyReadonlyArray<string> = [
   modernLife,
 ]
 
-export const generateGameText = (usedGameTexts: ReadonlyArray<string>): Effect.Effect<string> => {
+export const generateGameText = (
+  usedGameTexts: ReadonlyArray<string>,
+): Effect.Effect<string> => {
   const availableTexts = pipe(
     Array.difference(GAME_TEXTS, usedGameTexts),
     Array.match({

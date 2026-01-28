@@ -31,7 +31,9 @@ const WebSocketSchema = S.instanceOf(WebSocket)
 
 const ConnectionDisconnected = ts('ConnectionDisconnected')
 const ConnectionConnecting = ts('ConnectionConnecting')
-const ConnectionConnected = ts('ConnectionConnected', { socket: WebSocketSchema })
+const ConnectionConnected = ts('ConnectionConnected', {
+  socket: WebSocketSchema,
+})
 const ConnectionError = ts('ConnectionError', { error: S.String })
 
 const ConnectionState = S.Union(
@@ -101,7 +103,10 @@ type Message = typeof Message.Type
 
 // UPDATE
 
-const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
+const update = (
+  model: Model,
+  message: Message,
+): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
   M.value(message).pipe(
     M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
     M.tagsExhaustive({
@@ -162,7 +167,11 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
 
       MessageSent: ({ text }) => [
         model,
-        [Task.getZonedTime((zoned) => GotSentMessageTime.make({ text, zoned }))],
+        [
+          Task.getZonedTime((zoned) =>
+            GotSentMessageTime.make({ text, zoned }),
+          ),
+        ],
       ],
 
       GotSentMessageTime: ({ text, zoned }) => {
@@ -182,7 +191,11 @@ const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.C
 
       MessageReceived: ({ text }) => [
         model,
-        [Task.getZonedTime((zoned) => GotReceivedMessageTime.make({ text, zoned }))],
+        [
+          Task.getZonedTime((zoned) =>
+            GotReceivedMessageTime.make({ text, zoned }),
+          ),
+        ],
       ],
 
       GotReceivedMessageTime: ({ text, zoned }) => {
@@ -215,7 +228,10 @@ const init: Runtime.ElementInit<Model, Message> = () => [
 
 // COMMAND
 
-const sendMessage = (socket: WebSocket, text: string): Runtime.Command<MessageSent> =>
+const sendMessage = (
+  socket: WebSocket,
+  text: string,
+): Runtime.Command<MessageSent> =>
   Effect.sync(() => {
     socket.send(text)
     return MessageSent.make({ text })
@@ -231,7 +247,11 @@ const connect = (): Runtime.Command<Connected | ConnectionFailed> =>
       }
 
       const handleError = () => {
-        resume(Effect.succeed(ConnectionFailed.make({ error: 'Failed to connect to WebSocket' })))
+        resume(
+          Effect.succeed(
+            ConnectionFailed.make({ error: 'Failed to connect to WebSocket' }),
+          ),
+        )
       }
 
       ws.addEventListener('open', handleOpen)
@@ -253,7 +273,10 @@ const CommandStreamsDeps = S.Struct({
   maybeWebsocket: S.OptionFromSelf(WebSocketSchema),
 })
 
-const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Model, Message>({
+const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<
+  Model,
+  Message
+>({
   maybeWebsocket: {
     modelToDeps: (model: Model) =>
       M.value(model.connection).pipe(
@@ -264,33 +287,39 @@ const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Model, Mes
       Option.match(maybeWebsocket, {
         onNone: () => Stream.empty,
         onSome: (ws: WebSocket) =>
-          Stream.async<Runtime.Command<MessageReceived | Disconnected | ConnectionFailed>>(
-            (emit) => {
-              const handleMessage = (event: MessageEvent) => {
-                emit.single(Effect.succeed(MessageReceived.make({ text: event.data })))
-              }
+          Stream.async<
+            Runtime.Command<MessageReceived | Disconnected | ConnectionFailed>
+          >((emit) => {
+            const handleMessage = (event: MessageEvent) => {
+              emit.single(
+                Effect.succeed(MessageReceived.make({ text: event.data })),
+              )
+            }
 
-              const handleClose = () => {
-                emit.single(Effect.succeed(Disconnected.make()))
-                emit.end()
-              }
+            const handleClose = () => {
+              emit.single(Effect.succeed(Disconnected.make()))
+              emit.end()
+            }
 
-              const handleError = () => {
-                emit.single(Effect.succeed(ConnectionFailed.make({ error: 'Connection error' })))
-                emit.end()
-              }
+            const handleError = () => {
+              emit.single(
+                Effect.succeed(
+                  ConnectionFailed.make({ error: 'Connection error' }),
+                ),
+              )
+              emit.end()
+            }
 
-              ws.addEventListener('message', handleMessage)
-              ws.addEventListener('close', handleClose)
-              ws.addEventListener('error', handleError)
+            ws.addEventListener('message', handleMessage)
+            ws.addEventListener('close', handleClose)
+            ws.addEventListener('error', handleError)
 
-              return Effect.sync(() => {
-                ws.removeEventListener('message', handleMessage)
-                ws.removeEventListener('close', handleClose)
-                ws.removeEventListener('error', handleError)
-              })
-            },
-          ),
+            return Effect.sync(() => {
+              ws.removeEventListener('message', handleMessage)
+              ws.removeEventListener('close', handleClose)
+              ws.removeEventListener('error', handleError)
+            })
+          }),
       }),
   },
 })
@@ -325,16 +354,30 @@ const view = (model: Model): Html =>
     ],
     [
       div(
-        [Class('bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col h-[600px]')],
+        [
+          Class(
+            'bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col h-[600px]',
+          ),
+        ],
         [
           div(
-            [Class('p-6 border-b border-gray-200 flex items-center justify-between')],
+            [
+              Class(
+                'p-6 border-b border-gray-200 flex items-center justify-between',
+              ),
+            ],
             [
               div(
                 [],
                 [
-                  div([Class('text-2xl font-bold text-gray-800')], ['WebSocket Chat']),
-                  div([Class('text-sm text-gray-500 mt-1')], ['Echo server demo']),
+                  div(
+                    [Class('text-2xl font-bold text-gray-800')],
+                    ['WebSocket Chat'],
+                  ),
+                  div(
+                    [Class('text-sm text-gray-500 mt-1')],
+                    ['Echo server demo'],
+                  ),
                 ],
               ),
               connectionStatusView(model.connection),
@@ -362,19 +405,29 @@ const connectionStatusView = (connection: ConnectionState): Html =>
     [
       M.value(connection).pipe(
         M.tagsExhaustive({
-          ConnectionDisconnected: () => div([Class('w-3 h-3 rounded-full bg-red-500')], []),
+          ConnectionDisconnected: () =>
+            div([Class('w-3 h-3 rounded-full bg-red-500')], []),
           ConnectionConnecting: () =>
-            div([Class('w-3 h-3 rounded-full bg-yellow-500 animate-pulse')], []),
-          ConnectionConnected: () => div([Class('w-3 h-3 rounded-full bg-green-500')], []),
-          ConnectionError: () => div([Class('w-3 h-3 rounded-full bg-red-500')], []),
+            div(
+              [Class('w-3 h-3 rounded-full bg-yellow-500 animate-pulse')],
+              [],
+            ),
+          ConnectionConnected: () =>
+            div([Class('w-3 h-3 rounded-full bg-green-500')], []),
+          ConnectionError: () =>
+            div([Class('w-3 h-3 rounded-full bg-red-500')], []),
         }),
       ),
       M.value(connection).pipe(
         M.tagsExhaustive({
-          ConnectionDisconnected: () => span([Class('text-sm text-gray-600')], ['Disconnected']),
-          ConnectionConnecting: () => span([Class('text-sm text-gray-600')], ['Connecting...']),
-          ConnectionConnected: () => span([Class('text-sm text-gray-600')], ['Connected']),
-          ConnectionError: () => span([Class('text-sm text-red-600')], ['Error']),
+          ConnectionDisconnected: () =>
+            span([Class('text-sm text-gray-600')], ['Disconnected']),
+          ConnectionConnecting: () =>
+            span([Class('text-sm text-gray-600')], ['Connecting...']),
+          ConnectionConnected: () =>
+            span([Class('text-sm text-gray-600')], ['Connected']),
+          ConnectionError: () =>
+            span([Class('text-sm text-red-600')], ['Error']),
         }),
       ),
     ],
@@ -403,7 +456,11 @@ const messagesView = (messages: ReadonlyArray<ChatMessage>): Html =>
             [Class('space-y-3')],
             messages.map((message) => {
               return li(
-                [Class(message.isSent ? 'flex justify-end' : 'flex justify-start')],
+                [
+                  Class(
+                    message.isSent ? 'flex justify-end' : 'flex justify-start',
+                  ),
+                ],
                 [
                   div(
                     [

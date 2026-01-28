@@ -35,7 +35,8 @@ export const grow = (snake: Snake, direction: Direction): Snake =>
 export const hasCollision = (snake: Snake): boolean =>
   Array.matchLeft(snake, {
     onEmpty: () => false,
-    onNonEmpty: (head, tail) => Array.some(tail, (segment) => Position.equivalence(head, segment)),
+    onNonEmpty: (head, tail) =>
+      Array.some(tail, (segment) => Position.equivalence(head, segment)),
   })
 
 export const contains = (snake: Snake, pos: Position.Position): boolean =>

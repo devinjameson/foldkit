@@ -1,4 +1,12 @@
-import { Array, Data, Effect, HashMap, Random, SubscriptionRef, pipe } from 'effect'
+import {
+  Array,
+  Data,
+  Effect,
+  HashMap,
+  Random,
+  SubscriptionRef,
+  pipe,
+} from 'effect'
 
 import { RoomByIdStore } from './store.js'
 
@@ -29,9 +37,10 @@ const generateRoomId = (words: ReadonlyArray<string>) =>
     Effect.map(indicesToRoomId(words)),
   )
 
-const indicesToRoomId = (words: ReadonlyArray<string>) => (indices: ReadonlyArray<number>) =>
-  pipe(
-    indices,
-    Array.map((i) => Array.unsafeGet(words, i)),
-    Array.join(DELIMITER),
-  )
+const indicesToRoomId =
+  (words: ReadonlyArray<string>) => (indices: ReadonlyArray<number>) =>
+    pipe(
+      indices,
+      Array.map((i) => Array.unsafeGet(words, i)),
+      Array.join(DELIMITER),
+    )

@@ -34,7 +34,14 @@ const Reset = ts('Reset')
 const RequestTick = ts('RequestTick')
 const GotTick = ts('GotTick', { elapsedMs: S.Number })
 
-export const Message = S.Union(RequestStart, GotStartTime, Stop, Reset, RequestTick, GotTick)
+export const Message = S.Union(
+  RequestStart,
+  GotStartTime,
+  Stop,
+  Reset,
+  RequestTick,
+  GotTick,
+)
 
 type RequestStart = typeof RequestStart.Type
 type GotStartTime = typeof GotStartTime.Type
@@ -45,7 +52,10 @@ type GotTick = typeof GotTick.Type
 
 export type Message = typeof Message.Type
 
-const update = (model: Model, message: Message): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
+const update = (
+  model: Model,
+  message: Message,
+): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
   M.value(message).pipe(
     M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
     M.tagsExhaustive({
@@ -121,7 +131,10 @@ const CommandStreamsDeps = S.Struct({
   }),
 })
 
-const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Model, Message>({
+const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<
+  Model,
+  Message
+>({
   tick: {
     modelToDeps: (model: Model) => ({ isRunning: model.isRunning }),
     depsToStream: ({ isRunning }) =>
@@ -141,7 +154,11 @@ const { div, button, Class, OnClick } = html<Message>()
 const formatTime = (ms: number): string => {
   const minutes = pipe(Duration.millis(ms), Duration.toMinutes, floorAndPad)
 
-  const seconds = pipe(Duration.millis(ms % 60000), Duration.toSeconds, floorAndPad)
+  const seconds = pipe(
+    Duration.millis(ms % 60000),
+    Duration.toSeconds,
+    floorAndPad,
+  )
 
   const centiseconds = pipe(
     Duration.millis(ms % 1000),
@@ -153,7 +170,11 @@ const formatTime = (ms: number): string => {
   return `${minutes}:${seconds}.${centiseconds}`
 }
 
-const floorAndPad = flow(Math.floor, (v) => v.toString(), String.padStart(2, '0'))
+const floorAndPad = flow(
+  Math.floor,
+  (v) => v.toString(),
+  String.padStart(2, '0'),
+)
 
 const view = (model: Model): Html =>
   div(
@@ -170,7 +191,10 @@ const view = (model: Model): Html =>
             [Class('flex')],
             [
               button(
-                [OnClick(Reset.make()), Class(buttonStyle + ' bg-gray-500 hover:bg-gray-600')],
+                [
+                  OnClick(Reset.make()),
+                  Class(buttonStyle + ' bg-gray-500 hover:bg-gray-600'),
+                ],
                 ['Reset'],
               ),
               startStopButton(model.isRunning),
@@ -183,15 +207,25 @@ const view = (model: Model): Html =>
 
 const startStopButton = (isRunning: boolean): Html =>
   isRunning
-    ? button([OnClick(Stop.make()), Class(buttonStyle + ' bg-red-500 hover:bg-red-600')], ['Stop'])
+    ? button(
+        [
+          OnClick(Stop.make()),
+          Class(buttonStyle + ' bg-red-500 hover:bg-red-600'),
+        ],
+        ['Stop'],
+      )
     : button(
-        [OnClick(RequestStart.make()), Class(buttonStyle + ' bg-green-500 hover:bg-green-600')],
+        [
+          OnClick(RequestStart.make()),
+          Class(buttonStyle + ' bg-green-500 hover:bg-green-600'),
+        ],
         ['Start'],
       )
 
 // STYLE
 
-const buttonStyle = 'px-6 py-4 flex-1 font-semibold text-white transition-colors'
+const buttonStyle =
+  'px-6 py-4 flex-1 font-semibold text-white transition-colors'
 
 // RUN
 

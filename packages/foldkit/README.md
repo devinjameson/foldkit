@@ -61,7 +61,10 @@ export type Message = typeof Message.Type
 
 // UPDATE
 
-const update = (count: Model, message: Message): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
+const update = (
+  count: Model,
+  message: Message,
+): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
   M.value(message).pipe(
     M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
     M.tagsExhaustive({
@@ -81,7 +84,11 @@ const { div, button, Class, OnClick } = html<Message>()
 
 const view = (count: Model): Html =>
   div(
-    [Class('min-h-screen bg-white flex flex-col items-center justify-center gap-6 p-6')],
+    [
+      Class(
+        'min-h-screen bg-white flex flex-col items-center justify-center gap-6 p-6',
+      ),
+    ],
     [
       div([Class('text-6xl font-bold text-gray-800')], [count.toString()]),
       div(
