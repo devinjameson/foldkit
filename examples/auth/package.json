@@ -1,0 +1,22 @@
+{
+  "name": "auth-example",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@effect/platform": "^0.94.1",
+    "@effect/platform-browser": "^0.74.0",
+    "@tailwindcss/vite": "^4.1.18",
+    "classnames": "^2.5.1",
+    "effect": "^3.19.14",
+    "foldkit": "workspace:*",
+    "tailwindcss": "^4.1.18"
+  },
+  "devDependencies": {
+    "@foldkit/vite-plugin": "workspace:*"
+  }
+}

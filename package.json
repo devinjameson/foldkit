@@ -23,7 +23,8 @@
     "dev:example:routing": "pnpm --filter routing-example dev",
     "dev:example:shopping-cart": "pnpm --filter shopping-cart-example dev",
     "dev:example:snake": "pnpm --filter snake-example dev",
-    "dev:example:websocket-chat": "pnpm --filter websocket-chat-example dev"
+    "dev:example:websocket-chat": "pnpm --filter websocket-chat-example dev",
+    "dev:example:auth": "pnpm --filter auth-example dev"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
