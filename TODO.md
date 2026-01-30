@@ -37,3 +37,5 @@
 
 - [ ] Add auth example as starter template in `create-foldkit-app`
   - Add after merging feat/auth-example branch
+
+- [ ] Upgrade node (Vite is complaining)
