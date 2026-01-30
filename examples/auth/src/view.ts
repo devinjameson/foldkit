@@ -1,10 +1,11 @@
 import { Match as M } from 'effect'
-import { Html, html } from 'foldkit/html'
+import { Html } from 'foldkit/html'
 
-import { LoggedInMessage, LoggedOutMessage, Message } from './message'
+import { Class, div, keyed } from './html'
+import { LoggedInMessage, LoggedOutMessage } from './message'
 import { LoggedIn, LoggedOut, Model } from './model'
 
-const { div, keyed, Class } = html<Message>()
+// VIEW
 
 export const view = (model: Model): Html =>
   div(
@@ -17,14 +18,12 @@ export const view = (model: Model): Html =>
           M.value(model).pipe(
             M.tagsExhaustive({
               LoggedOut: (loggedOutModel) =>
-                wrapLoggedOutView(
-                  LoggedOut.view(loggedOutModel, (childMessage) =>
-                    LoggedOutMessage.make({ message: childMessage }),
-                  ),
+                LoggedOut.view(loggedOutModel, (message) =>
+                  LoggedOutMessage.make({ message }),
                 ),
               LoggedIn: (loggedInModel) =>
-                LoggedIn.view(loggedInModel, (childMessage) =>
-                  LoggedInMessage.make({ message: childMessage }),
+                LoggedIn.view(loggedInModel, (message) =>
+                  LoggedInMessage.make({ message }),
                 ),
             }),
           ),
@@ -32,8 +31,3 @@ export const view = (model: Model): Html =>
       ),
     ],
   )
-
-const wrapLoggedOutView = (childView: Html): Html => {
-  const { div, Class } = html<Message>()
-  return div([Class('py-8')], [childView])
-}

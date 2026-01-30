@@ -1,19 +1,21 @@
 import { KeyValueStore } from '@effect/platform'
 import { BrowserKeyValueStore } from '@effect/platform-browser'
-import { Effect, Schema as S } from 'effect'
+import { Console, Effect, Schema as S } from 'effect'
 import { Runtime } from 'foldkit'
-import { ts } from 'foldkit/schema'
 
 import { SESSION_STORAGE_KEY } from './constant'
 import { Session } from './domain/session'
+import {
+  NoOp,
+  SessionClearFailed,
+  SessionCleared,
+  SessionSaveFailed,
+  SessionSaved,
+} from './message'
 
-const SessionSaved = ts('SessionSaved')
-const SessionCleared = ts('SessionCleared')
-
-export type SessionSaved = typeof SessionSaved.Type
-export type SessionCleared = typeof SessionCleared.Type
-
-export const saveSession = (session: Session): Runtime.Command<SessionSaved> =>
+export const saveSession = (
+  session: Session,
+): Runtime.Command<SessionSaved | SessionSaveFailed> =>
   Effect.gen(function* () {
     const store = yield* KeyValueStore.KeyValueStore
     yield* store.set(
@@ -22,18 +24,26 @@ export const saveSession = (session: Session): Runtime.Command<SessionSaved> =>
     )
     return SessionSaved.make()
   }).pipe(
-    Effect.catchAll(() => Effect.succeed(SessionSaved.make())),
+    Effect.catchAll((error) =>
+      Effect.succeed(SessionSaveFailed.make({ error: String(error) })),
+    ),
     Effect.provide(BrowserKeyValueStore.layerLocalStorage),
   )
 
-export const clearSession = (): Runtime.Command<SessionCleared> =>
+export const clearSession = (): Runtime.Command<
+  SessionCleared | SessionClearFailed
+> =>
   Effect.gen(function* () {
     const store = yield* KeyValueStore.KeyValueStore
     yield* store.remove(SESSION_STORAGE_KEY)
     return SessionCleared.make()
   }).pipe(
-    Effect.catchAll(() => Effect.succeed(SessionCleared.make())),
+    Effect.catchAll((error) =>
+      Effect.succeed(SessionClearFailed.make({ error: String(error) })),
+    ),
     Effect.provide(BrowserKeyValueStore.layerLocalStorage),
   )
 
-export { SessionSaved, SessionCleared }
+export const logError = (
+  ...args: ReadonlyArray<unknown>
+): Runtime.Command<NoOp> => Console.error(...args).pipe(Effect.as(NoOp.make()))

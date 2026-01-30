@@ -1,8 +1,7 @@
-import { Html, html } from 'foldkit/html'
+import { Html } from 'foldkit/html'
 
+import { Class, Href, a, div, h1, h2, p } from '../../../html'
 import { loginRouter } from '../../../route'
-
-const { a, div, h1, h2, p, Class, Href } = html()
 
 export const view = (): Html =>
   div(

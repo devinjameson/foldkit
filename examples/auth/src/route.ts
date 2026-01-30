@@ -1,4 +1,4 @@
-import { Match as M, Schema as S, pipe } from 'effect'
+import { Schema as S, pipe } from 'effect'
 import { Route } from 'foldkit'
 import { literal } from 'foldkit/route'
 import { ts } from 'foldkit/schema'
@@ -55,27 +55,3 @@ export const urlToAppRoute = Route.parseUrlWithFallback(
   routeParser,
   NotFoundRoute,
 )
-
-export const isProtectedRoute = (route: AppRoute): boolean =>
-  M.value(route).pipe(
-    M.tag('Dashboard', 'Settings', () => true),
-    M.orElse(() => false),
-  )
-
-export const isPublicOnlyRoute = (route: AppRoute): boolean =>
-  M.value(route).pipe(
-    M.tag('Home', 'Login', () => true),
-    M.orElse(() => false),
-  )
-
-export const isLoggedOutRoute = (route: AppRoute): route is LoggedOutRoute =>
-  M.value(route).pipe(
-    M.tag('Home', 'Login', 'NotFound', () => true),
-    M.orElse(() => false),
-  )
-
-export const isLoggedInRoute = (route: AppRoute): route is LoggedInRoute =>
-  M.value(route).pipe(
-    M.tag('Dashboard', 'Settings', 'NotFound', () => true),
-    M.orElse(() => false),
-  )

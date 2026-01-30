@@ -1,8 +1,7 @@
-import { Html, html } from 'foldkit/html'
+import { Html } from 'foldkit/html'
 
 import { Session } from '../../../domain/session'
-
-const { div, h1, h2, p, Class } = html()
+import { Class, div, h1, h2, p } from '../../../html'
 
 export const view = (session: Session): Html =>
   div(

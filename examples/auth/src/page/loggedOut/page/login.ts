@@ -1,20 +1,51 @@
 import classNames from 'classnames'
-import { Array, Match as M, Schema as S } from 'effect'
+import { Array, Match as M, Option, Schema as S, String, pipe } from 'effect'
+import { Runtime } from 'foldkit'
 import { FieldValidation } from 'foldkit'
 import {
   type Validation,
   makeField,
   validateField,
 } from 'foldkit/fieldValidation'
-import { Html, html } from 'foldkit/html'
+import { Html } from 'foldkit/html'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
 import { Session } from '../../../domain/session'
+import {
+  Class,
+  Disabled,
+  For,
+  Href,
+  Id,
+  OnInput,
+  OnSubmit,
+  Placeholder,
+  Type,
+  Value,
+  a,
+  button,
+  div,
+  empty,
+  form,
+  h1,
+  input,
+  label,
+  p,
+  span,
+} from '../../../html'
+import type { Message as ParentMessage } from '../../../message'
 import { homeRouter } from '../../../route'
+
+// FIELD
 
 const StringField = makeField(S.String)
 type StringField = typeof StringField.Union.Type
+
+const StringFieldValid = StringField.Valid
+const StringFieldInvalid = StringField.Invalid
+
+// MODEL
 
 export const Model = S.Struct({
   email: StringField.Union,
@@ -29,6 +60,8 @@ export const initModel = (): Model => ({
   password: StringField.NotValidated.make({ value: '' }),
   isSubmitting: false,
 })
+
+// MESSAGE
 
 const EmailChanged = ts('EmailChanged', { value: S.String })
 const PasswordChanged = ts('PasswordChanged', { value: S.String })
@@ -52,6 +85,16 @@ export type LoginFailed = typeof LoginFailed.Type
 
 export type Message = typeof Message.Type
 
+// OUT MESSAGE
+
+export const LoginSucceeded = ts('LoginSucceeded', { session: Session })
+export const OutMessage = S.Union(LoginSucceeded)
+
+export type LoginSucceeded = typeof LoginSucceeded.Type
+export type OutMessage = typeof LoginSucceeded.Type
+
+// VALIDATION
+
 const emailValidations: ReadonlyArray<Validation<string>> = [
   FieldValidation.required('Email is required'),
   FieldValidation.email('Please enter a valid email'),
@@ -65,101 +108,96 @@ const validateEmail = validateField(emailValidations)
 const validatePassword = validateField(passwordValidations)
 
 const isFormValid = (model: Model): boolean =>
-  Array.every([model.email, model.password], (field) => field._tag === 'Valid')
+  Array.every([model.email, model.password], S.is(StringFieldValid))
 
-const ModelUpdated = ts('ModelUpdated', { model: Model })
-const LoginSucceeded = ts('LoginSucceeded', { session: Session })
+// UPDATE
 
-export const UpdateResult = S.Union(ModelUpdated, LoginSucceeded)
-export type UpdateResult = typeof UpdateResult.Type
+type UpdateReturn = [
+  Model,
+  ReadonlyArray<Runtime.Command<Message>>,
+  Option.Option<OutMessage>,
+]
+const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
-export const update = (model: Model, message: Message): UpdateResult =>
+export const update = (model: Model, message: Message): UpdateReturn =>
   M.value(message).pipe(
+    withUpdateReturn,
     M.tagsExhaustive({
-      EmailChanged: ({ value }) =>
-        ModelUpdated.make({
-          model: evo(model, {
-            email: () => validateEmail(value),
-          }),
-        }),
+      EmailChanged: ({ value }) => [
+        evo(model, { email: () => validateEmail(value) }),
+        [],
+        Option.none(),
+      ],
 
-      PasswordChanged: ({ value }) =>
-        ModelUpdated.make({
-          model: evo(model, {
-            password: () => validatePassword(value),
-          }),
-        }),
+      PasswordChanged: ({ value }) => [
+        evo(model, { password: () => validatePassword(value) }),
+        [],
+        Option.none(),
+      ],
 
       SubmitClicked: () => {
         if (!isFormValid(model)) {
-          return ModelUpdated.make({ model })
+          return [model, [], Option.none()]
         }
 
         if (model.password.value !== 'password') {
-          return ModelUpdated.make({
-            model: evo(model, {
+          return [
+            evo(model, {
               password: () =>
-                StringField.Invalid.make({
+                StringFieldInvalid.make({
                   value: model.password.value,
                   error: 'Invalid credentials',
                 }),
               isSubmitting: () => false,
             }),
-          })
+            [],
+            Option.none(),
+          ]
         }
+
+        const name = pipe(
+          model.email.value,
+          String.split('@'),
+          Array.head,
+          Option.getOrElse(() => model.email.value),
+        )
 
         const session: Session = {
           userId: '1',
           email: model.email.value,
-          name: model.email.value.split('@')[0] ?? model.email.value,
+          name,
         }
 
-        return LoginSucceeded.make({ session })
+        return [model, [], Option.some(LoginSucceeded.make({ session }))]
       },
 
-      LoginSuccess: ({ session }) => LoginSucceeded.make({ session }),
+      LoginSuccess: ({ session }) => [
+        model,
+        [],
+        Option.some(LoginSucceeded.make({ session })),
+      ],
 
-      LoginFailed: ({ error }) =>
-        ModelUpdated.make({
-          model: evo(model, {
-            password: () =>
-              StringField.Invalid.make({
-                value: model.password.value,
-                error,
-              }),
-            isSubmitting: () => false,
-          }),
+      LoginFailed: ({ error }) => [
+        evo(model, {
+          password: () =>
+            StringFieldInvalid.make({
+              value: model.password.value,
+              error,
+            }),
+          isSubmitting: () => false,
         }),
+        [],
+        Option.none(),
+      ],
     }),
   )
 
-export const view = <ParentMessage>(
+// VIEW
+
+export const view = (
   model: Model,
   toMessage: (message: Message) => ParentMessage,
 ): Html => {
-  const {
-    a,
-    button,
-    div,
-    empty,
-    form,
-    h1,
-    input,
-    label,
-    p,
-    span,
-    Class,
-    Disabled,
-    For,
-    Href,
-    Id,
-    OnInput,
-    OnSubmit,
-    Placeholder,
-    Type,
-    Value,
-  } = html<ParentMessage>()
-
   const canSubmit = isFormValid(model) && !model.isSubmitting
 
   const fieldView = (

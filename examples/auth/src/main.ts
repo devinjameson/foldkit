@@ -11,61 +11,21 @@ import { LinkClicked, Message, NoOp, UrlChanged } from './message'
 import { LoggedIn, LoggedOut, Model } from './model'
 import {
   DashboardRoute,
+  LoggedInRoute,
+  LoggedOutRoute,
   LoginRoute,
   dashboardRouter,
-  isLoggedInRoute,
-  isLoggedOutRoute,
-  isProtectedRoute,
-  isPublicOnlyRoute,
   loginRouter,
   urlToAppRoute,
 } from './route'
 import { update } from './update'
 import { view } from './view'
 
+// FLAGS
+
 const Flags = S.Struct({
-  session: S.Option(Session),
+  maybeSession: S.Option(Session),
 })
-
-type Flags = typeof Flags.Type
-
-type InitResult = [Model, ReadonlyArray<Runtime.Command<Message>>]
-
-const init: Runtime.ApplicationInit<Model, Message, Flags> = (
-  flags: Flags,
-  url: Url,
-) => {
-  const route = urlToAppRoute(url)
-
-  return Option.match(flags.session, {
-    onNone: () =>
-      M.value(route).pipe(
-        M.withReturnType<InitResult>(),
-        M.when(isProtectedRoute, () => [
-          LoggedOut.init(LoginRoute.make()),
-          [replaceUrl(loginRouter.build({})).pipe(Effect.as(NoOp.make()))],
-        ]),
-        M.when(isLoggedOutRoute, (route) => [LoggedOut.init(route), []]),
-        M.orElse(() => [
-          LoggedOut.init(LoginRoute.make()),
-          [replaceUrl(loginRouter.build({})).pipe(Effect.as(NoOp.make()))],
-        ]),
-      ),
-    onSome: (session) =>
-      M.value(route).pipe(
-        M.withReturnType<InitResult>(),
-        M.when(isLoggedInRoute, (route) => [LoggedIn.init(route, session), []]),
-        M.when(isPublicOnlyRoute, () => [
-          LoggedIn.init(DashboardRoute.make(), session),
-          [replaceUrl(dashboardRouter.build({})).pipe(Effect.as(NoOp.make()))],
-        ]),
-        M.orElse(() => [
-          LoggedIn.init(DashboardRoute.make(), session),
-          [replaceUrl(dashboardRouter.build({})).pipe(Effect.as(NoOp.make()))],
-        ]),
-      ),
-  })
-}
 
 const flags: Effect.Effect<Flags> = Effect.gen(function* () {
   const store = yield* KeyValueStore.KeyValueStore
@@ -75,11 +35,52 @@ const flags: Effect.Effect<Flags> = Effect.gen(function* () {
   const decodeSession = S.decode(S.parseJson(Session))
   const session = yield* decodeSession(sessionJson)
 
-  return { session: Option.some(session) }
+  return { maybeSession: Option.some(session) }
 }).pipe(
-  Effect.catchAll(() => Effect.succeed({ session: Option.none() })),
+  Effect.catchAll(() => Effect.succeed({ maybeSession: Option.none() })),
   Effect.provide(BrowserKeyValueStore.layerLocalStorage),
 )
+
+type Flags = typeof Flags.Type
+
+// INIT
+
+type InitReturn = [Model, ReadonlyArray<Runtime.Command<Message>>]
+const withInitReturn = M.withReturnType<InitReturn>()
+
+const init: Runtime.ApplicationInit<Model, Message, Flags> = (
+  flags: Flags,
+  url: Url,
+): InitReturn => {
+  const route = urlToAppRoute(url)
+
+  return Option.match(flags.maybeSession, {
+    onNone: () =>
+      M.value(route).pipe(
+        withInitReturn,
+        M.when(S.is(LoggedOutRoute), (route) => [LoggedOut.init(route), []]),
+        M.orElse(() => [
+          LoggedOut.init(LoginRoute.make()),
+          [replaceUrl(loginRouter.build({})).pipe(Effect.as(NoOp.make()))],
+        ]),
+      ),
+
+    onSome: (session) =>
+      M.value(route).pipe(
+        withInitReturn,
+        M.when(S.is(LoggedInRoute), (route) => [
+          LoggedIn.init(route, session),
+          [],
+        ]),
+        M.orElse(() => [
+          LoggedIn.init(DashboardRoute.make(), session),
+          [replaceUrl(dashboardRouter.build({})).pipe(Effect.as(NoOp.make()))],
+        ]),
+      ),
+  })
+}
+
+// RUN
 
 const app = Runtime.makeApplication({
   Model,

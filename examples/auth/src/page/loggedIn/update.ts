@@ -1,22 +1,28 @@
-import { Match as M, Schema as S } from 'effect'
-import { ts } from 'foldkit/schema'
+import { Match as M, Option } from 'effect'
+import { Runtime } from 'foldkit'
 
-import { Message } from './message'
+import { LogoutRequested, Message, type OutMessage } from './message'
 import { Model } from './model'
 
-const ModelUpdated = ts('ModelUpdated', { model: Model })
-const LogoutRequested = ts('LogoutRequested')
+type UpdateReturn = [
+  Model,
+  ReadonlyArray<Runtime.Command<Message>>,
+  Option.Option<OutMessage>,
+]
+const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
-export const UpdateResult = S.Union(ModelUpdated, LogoutRequested)
-export type UpdateResult = typeof UpdateResult.Type
-
-export const update = (_model: Model, message: Message): UpdateResult =>
+export const update = (model: Model, message: Message): UpdateReturn =>
   M.value(message).pipe(
     M.tagsExhaustive({
       SettingsMessage: ({ message }) =>
         M.value(message).pipe(
+          withUpdateReturn,
           M.tagsExhaustive({
-            LogoutClicked: () => LogoutRequested.make(),
+            LogoutClicked: () => [
+              model,
+              [],
+              Option.some(LogoutRequested.make()),
+            ],
           }),
         ),
     }),

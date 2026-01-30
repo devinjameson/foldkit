@@ -1,21 +1,22 @@
 import classNames from 'classnames'
 import { Match as M } from 'effect'
-import { Html, html } from 'foldkit/html'
+import { Html } from 'foldkit/html'
 
 import { Session } from '../../domain/session'
+import { Class, Href, a, div, h1, li, main, nav, p, ul } from '../../html'
+import type { Message as ParentMessage } from '../../message'
 import { dashboardRouter, settingsRouter } from '../../route'
 import { Message, SettingsMessage } from './message'
 import { Model } from './model'
 import * as Dashboard from './page/dashboard'
 import * as Settings from './page/settings'
 
-export const view = <ParentMessage>(
+// VIEW
+
+export const view = (
   model: Model,
   toMessage: (message: Message) => ParentMessage,
 ): Html => {
-  const { a, div, h1, li, main, nav, p, ul, Class, Href } =
-    html<ParentMessage>()
-
   const navigationView = (session: Session, currentRouteTag: string): Html => {
     const navLinkClassName = (isActive: boolean) =>
       classNames(

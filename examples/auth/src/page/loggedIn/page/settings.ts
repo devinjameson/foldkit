@@ -1,22 +1,25 @@
 import { Schema as S } from 'effect'
-import { Html, html } from 'foldkit/html'
+import { Html } from 'foldkit/html'
 import { ts } from 'foldkit/schema'
 
 import { Session } from '../../../domain/session'
+import { Class, OnClick, button, div, h1, h2, p } from '../../../html'
+import type { Message as ParentMessage } from '../../../message'
 
-const LogoutClicked = ts('LogoutClicked')
+// MESSAGE
 
+export const LogoutClicked = ts('LogoutClicked')
 export const Message = S.Union(LogoutClicked)
 
 export type LogoutClicked = typeof LogoutClicked.Type
 export type Message = typeof Message.Type
 
-export const view = <ParentMessage>(
+// VIEW
+
+export const view = (
   session: Session,
   toMessage: (message: Message) => ParentMessage,
 ): Html => {
-  const { button, div, h1, h2, p, Class, OnClick } = html<ParentMessage>()
-
   return div(
     [Class('max-w-4xl mx-auto px-4')],
     [
