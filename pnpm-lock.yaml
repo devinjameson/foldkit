@@ -42,6 +42,34 @@ importers:
         specifier: ^7.3.1
         version: 7.3.1(@types/node@25.0.9)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2)
 
+  examples/auth:
+    dependencies:
+      '@effect/platform':
+        specifier: ^0.94.1
+        version: 0.94.1(effect@3.19.14)
+      '@effect/platform-browser':
+        specifier: ^0.74.0
+        version: 0.74.0(@effect/platform@0.94.1(effect@3.19.14))(effect@3.19.14)
+      '@tailwindcss/vite':
+        specifier: ^4.1.18
+        version: 4.1.18(vite@7.3.1(@types/node@25.0.9)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2))
+      classnames:
+        specifier: ^2.5.1
+        version: 2.5.1
+      effect:
+        specifier: ^3.19.14
+        version: 3.19.14
+      foldkit:
+        specifier: workspace:*
+        version: link:../../packages/foldkit
+      tailwindcss:
+        specifier: ^4.1.18
+        version: 4.1.18
+    devDependencies:
+      '@foldkit/vite-plugin':
+        specifier: workspace:*
+        version: link:../../packages/vite-plugin-foldkit
+
   examples/counter:
     dependencies:
       '@tailwindcss/vite':

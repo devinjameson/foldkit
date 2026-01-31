@@ -1,0 +1,189 @@
+import { Array, Effect, Match as M, Option, Schema as S } from 'effect'
+import { Runtime } from 'foldkit'
+import { load, pushUrl, replaceUrl } from 'foldkit/navigation'
+import { evo } from 'foldkit/struct'
+import { toString as urlToString } from 'foldkit/url'
+
+import { clearSession, logError, saveSession } from './command'
+import { LoggedInMessage, LoggedOutMessage, Message, NoOp } from './message'
+import { LoggedIn, LoggedOut, Model } from './model'
+import {
+  DashboardRoute,
+  HomeRoute,
+  LoggedInRoute,
+  LoggedOutRoute,
+  dashboardRouter,
+  homeRouter,
+  loginRouter,
+  urlToAppRoute,
+} from './route'
+
+type UpdateReturn = [Model, ReadonlyArray<Runtime.Command<Message>>]
+const withUpdateReturn = M.withReturnType<UpdateReturn>()
+
+export const update = (model: Model, message: Message): UpdateReturn =>
+  M.value(message).pipe(
+    withUpdateReturn,
+    M.tagsExhaustive({
+      NoOp: () => [model, []],
+
+      LinkClicked: ({ request }) =>
+        M.value(request).pipe(
+          withUpdateReturn,
+          M.tagsExhaustive({
+            Internal: ({ url }) => [
+              model,
+              [pushUrl(urlToString(url)).pipe(Effect.as(NoOp.make()))],
+            ],
+            External: ({ href }) => [
+              model,
+              [load(href).pipe(Effect.as(NoOp.make()))],
+            ],
+          }),
+        ),
+
+      UrlChanged: ({ url }) => {
+        const route = urlToAppRoute(url)
+
+        return M.value(model).pipe(
+          withUpdateReturn,
+          M.tagsExhaustive({
+            LoggedOut: (loggedOutModel) =>
+              M.value(route).pipe(
+                withUpdateReturn,
+                M.when(S.is(LoggedOutRoute), (route) => [
+                  evo(loggedOutModel, { route: () => route }),
+                  [],
+                ]),
+                M.orElse(() => [
+                  model,
+                  [
+                    replaceUrl(loginRouter.build({})).pipe(
+                      Effect.as(NoOp.make()),
+                    ),
+                  ],
+                ]),
+              ),
+
+            LoggedIn: (loggedInModel) =>
+              M.value(route).pipe(
+                withUpdateReturn,
+                M.when(S.is(LoggedInRoute), (route) => [
+                  evo(loggedInModel, { route: () => route }),
+                  [],
+                ]),
+                M.orElse(() => [
+                  model,
+                  [
+                    replaceUrl(dashboardRouter.build({})).pipe(
+                      Effect.as(NoOp.make()),
+                    ),
+                  ],
+                ]),
+              ),
+          }),
+        )
+      },
+
+      SessionLoaded: ({ session }) =>
+        M.value(session).pipe(
+          withUpdateReturn,
+          M.tagsExhaustive({
+            Some: ({ value }) => [
+              LoggedIn.init(DashboardRoute.make(), value),
+              [],
+            ],
+            None: () => [model, []],
+          }),
+        ),
+
+      SessionSaved: () => [model, []],
+
+      SessionSaveFailed: ({ error }) => [
+        model,
+        [logError('Failed to save session:', error)],
+      ],
+
+      SessionCleared: () => [model, []],
+
+      SessionClearFailed: ({ error }) => [
+        model,
+        [logError('Failed to clear session:', error)],
+      ],
+
+      LoggedOutMessage: ({ message }) => handleLoggedOutMessage(model, message),
+
+      LoggedInMessage: ({ message }) => handleLoggedInMessage(model, message),
+    }),
+  )
+
+const handleLoggedOutMessage = (
+  model: Model,
+  message: LoggedOut.Message,
+): UpdateReturn => {
+  if (model._tag !== 'LoggedOut') {
+    return [model, []]
+  }
+
+  const [nextModel, commands, maybeOutMessage] = LoggedOut.update(
+    model,
+    message,
+  )
+
+  const mappedCommands = Array.map(commands, (command) =>
+    Effect.map(command, (message) => LoggedOutMessage.make({ message })),
+  )
+
+  return Option.match(maybeOutMessage, {
+    onNone: () => [nextModel, mappedCommands],
+    onSome: (outMessage) =>
+      M.value(outMessage).pipe(
+        withUpdateReturn,
+        M.tagsExhaustive({
+          LoginSucceeded: ({ session }) => [
+            LoggedIn.init(DashboardRoute.make(), session),
+            [
+              ...mappedCommands,
+              saveSession(session).pipe(Effect.as(NoOp.make())),
+              replaceUrl(dashboardRouter.build({})).pipe(
+                Effect.as(NoOp.make()),
+              ),
+            ],
+          ],
+        }),
+      ),
+  })
+}
+
+const handleLoggedInMessage = (
+  model: Model,
+  message: LoggedIn.Message,
+): UpdateReturn => {
+  if (model._tag !== 'LoggedIn') {
+    return [model, []]
+  }
+
+  const [nextModel, commands, maybeOutMessage] = LoggedIn.update(model, message)
+
+  const mappedCommands = Array.map(commands, (command) =>
+    Effect.map(command, (message) => LoggedInMessage.make({ message })),
+  )
+
+  return Option.match(maybeOutMessage, {
+    onNone: () => [nextModel, mappedCommands],
+    onSome: (outMessage) =>
+      M.value(outMessage).pipe(
+        withUpdateReturn,
+        M.tagsExhaustive({
+          LogoutRequested: () => [
+            LoggedOut.init(HomeRoute.make()),
+            [
+              ...mappedCommands,
+              clearSession().pipe(Effect.as(NoOp.make())),
+              replaceUrl(homeRouter.build({})).pipe(Effect.as(NoOp.make())),
+            ],
+          ],
+        }),
+      ),
+  })
+}
