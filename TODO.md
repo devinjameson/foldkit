@@ -33,7 +33,8 @@
 - [ ] Update website examples page to include auth example
   - Add after merging feat/auth-example branch
 
-- [ ] Add an errorView example
+- [ ] Add docs on errorView to website
+  - Also add an example app showcasing usage
 
 ## Tooling
 

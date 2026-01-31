@@ -15,7 +15,7 @@ const themeSelectorButton = (
     [
       Class(
         classNames(
-          'p-1.5 rounded-md transition',
+          'p-1.5 rounded-md transition cursor-pointer',
           isActive
             ? 'bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-white'
             : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200',
