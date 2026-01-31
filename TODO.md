@@ -33,9 +33,15 @@
 - [ ] Update website examples page to include auth example
   - Add after merging feat/auth-example branch
 
+- [ ] Add an errorView example
+
 ## Tooling
 
 - [ ] Add auth example as starter template in `create-foldkit-app`
   - Add after merging feat/auth-example branch
 
 - [ ] Upgrade node (Vite is complaining)
+
+## Foldkit
+
+- [ ] Why does the html function not require a generic arg?

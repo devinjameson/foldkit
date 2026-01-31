@@ -1,5 +1,7 @@
 import { BrowserRuntime } from '@effect/platform-browser/index'
 import {
+  Cause,
+  Console,
   Context,
   Effect,
   Either,
@@ -24,6 +26,7 @@ import {
   addBfcacheRestoreListener,
   addNavigationEventListeners,
 } from './browserListeners'
+import { defaultErrorView, renderHtml } from './errorUI'
 import { UrlRequest } from './urlRequest'
 
 export class Dispatch extends Context.Tag('@foldkit/Dispatch')<
@@ -62,6 +65,7 @@ export interface RuntimeConfig<
   readonly commandStreams?: CommandStreams<Model, Message, StreamDepsMap>
   readonly container: HTMLElement
   readonly browser?: BrowserConfig<Message>
+  readonly errorView?: (error: Error) => Html
 }
 
 interface BaseElementConfig<
@@ -77,6 +81,7 @@ interface BaseElementConfig<
   readonly view: (model: Model) => Html
   readonly commandStreams?: CommandStreams<Model, Message, StreamDepsMap>
   readonly container: HTMLElement
+  readonly errorView?: (error: Error) => Html
 }
 
 export interface ElementConfigWithFlags<
@@ -112,6 +117,7 @@ interface BaseApplicationConfig<
   readonly commandStreams?: CommandStreams<Model, Message, StreamDepsMap>
   readonly container: HTMLElement
   readonly browser: BrowserConfig<Message>
+  readonly errorView?: (error: Error) => Html
 }
 
 export interface ApplicationConfigWithFlags<
@@ -201,6 +207,7 @@ const makeRuntime =
     commandStreams,
     container,
     browser: browserConfig,
+    errorView,
   }: RuntimeConfig<Model, Message, StreamDepsMap, Flags>): MakeRuntimeReturn =>
   (hmrModel?: unknown): Effect.Effect<void> =>
     Effect.gen(function* () {
@@ -340,6 +347,38 @@ const makeRuntime =
           yield* processMessage(message)
         }),
       )
+    }).pipe(Effect.catchAllCause(handleFatalError(container, errorView)))
+
+const handleFatalError =
+  (container: HTMLElement, errorView?: (error: Error) => Html) =>
+  (cause: Cause.Cause<unknown>): Effect.Effect<void> =>
+    Effect.gen(function* () {
+      const squashed = Cause.squash(cause)
+      const error =
+        squashed instanceof Error ? squashed : new Error(String(squashed))
+
+      yield* Console.error('[foldkit] Application error:', error)
+
+      if (errorView) {
+        yield* Effect.try({
+          try: () => errorView(error),
+          catch: (e) => (e instanceof Error ? e : new Error(String(e))),
+        }).pipe(
+          Effect.matchEffect({
+            onSuccess: (view) => renderHtml(container, view),
+            onFailure: (viewError) =>
+              Effect.gen(function* () {
+                yield* Console.error(
+                  '[foldkit] Custom errorView failed:',
+                  viewError,
+                )
+                yield* renderHtml(container, defaultErrorView(error, viewError))
+              }),
+          }),
+        )
+      } else {
+        yield* renderHtml(container, defaultErrorView(error))
+      }
     })
 
 const patchVNode = (
@@ -390,6 +429,7 @@ export function makeElement<
     view: config.view,
     ...(config.commandStreams && { commandStreams: config.commandStreams }),
     container: config.container,
+    ...(config.errorView && { errorView: config.errorView }),
   }
 
   if ('Flags' in config) {
@@ -445,6 +485,7 @@ export function makeApplication<
     ...(config.commandStreams && { commandStreams: config.commandStreams }),
     container: config.container,
     browser: config.browser,
+    ...(config.errorView && { errorView: config.errorView }),
   }
 
   if ('Flags' in config) {
