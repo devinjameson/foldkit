@@ -304,12 +304,7 @@ const makeRuntime =
 
       yield* render(initModel)
 
-      addBfcacheRestoreListener({
-        runtimeRef: maybeRuntimeRef,
-        vnodeRef: maybeCurrentVNodeRef,
-        modelRef,
-        render,
-      })
+      addBfcacheRestoreListener()
 
       if (commandStreams) {
         yield* pipe(

@@ -1,17 +1,7 @@
-import {
-  Effect,
-  Function,
-  Option,
-  Queue,
-  Ref,
-  Runtime,
-  String,
-  pipe,
-} from 'effect'
+import { Option, Queue, String } from 'effect'
 
 import { OptionExt, StringExt } from '../effectExtensions'
 import { Url } from '../url'
-import { VNode } from '../vdom'
 import { BrowserConfig } from './runtime'
 import { External, Internal } from './urlRequest'
 
@@ -106,32 +96,12 @@ const urlToFoldkitUrl = (url: URL): Url => {
 
 const locationToUrl = (): Url => urlToFoldkitUrl(new URL(window.location.href))
 
-export const addBfcacheRestoreListener = <Model>(config: {
-  runtimeRef: Ref.Ref<Option.Option<Runtime.Runtime<never>>>
-  vnodeRef: Ref.Ref<Option.Option<VNode>>
-  modelRef: Ref.Ref<Model>
-  render: (model: Model) => Effect.Effect<void>
-}) => {
+export const addBfcacheRestoreListener = () => {
   window.addEventListener(
     'pageshow',
     ({ persisted: isRestoredFromBfcache }) => {
       if (isRestoredFromBfcache) {
-        pipe(
-          config.runtimeRef,
-          Ref.get,
-          Effect.runSync,
-          Option.match({
-            onNone: Function.constVoid,
-            onSome: (runtime) =>
-              Runtime.runSync(runtime)(
-                Effect.gen(function* () {
-                  yield* Ref.set(config.vnodeRef, Option.none())
-                  const model = yield* Ref.get(config.modelRef)
-                  yield* config.render(model)
-                }),
-              ),
-          }),
-        )
+        location.reload()
       }
     },
   )
