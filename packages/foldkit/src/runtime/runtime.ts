@@ -20,7 +20,10 @@ import { h } from 'snabbdom'
 import { Html } from '../html'
 import { Url, fromString as urlFromString } from '../url'
 import { VNode, patch, toVNode } from '../vdom'
-import { addNavigationEventListeners } from './addNavigationEventListeners'
+import {
+  addBfcacheRestoreListener,
+  addNavigationEventListeners,
+} from './browserListeners'
 import { UrlRequest } from './urlRequest'
 
 export class Dispatch extends Context.Tag('@foldkit/Dispatch')<
@@ -300,6 +303,13 @@ const makeRuntime =
       yield* Ref.set(maybeRuntimeRef, Option.some(runtime))
 
       yield* render(initModel)
+
+      addBfcacheRestoreListener({
+        runtimeRef: maybeRuntimeRef,
+        vnodeRef: maybeCurrentVNodeRef,
+        modelRef,
+        render,
+      })
 
       if (commandStreams) {
         yield* pipe(
