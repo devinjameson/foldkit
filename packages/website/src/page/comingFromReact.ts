@@ -69,7 +69,7 @@ export const tableOfContents: ReadonlyArray<TableOfContentsEntry> = [
 
 const patternMappingTable = (): Html =>
   comparisonTable(
-    ['React', 'Foldkit'],
+    ['React Ecosystem', 'Foldkit'],
     [
       [[inlineCode('useState')], ['Model (single state tree)']],
       [
@@ -81,7 +81,7 @@ const patternMappingTable = (): Html =>
         ['Commands (returned from ', inlineCode('update'), ')'],
       ],
       [
-        [inlineCode('useContext'), ' / Redux'],
+        [inlineCode('useContext'), ' / Redux / Zustand'],
         ['Single Model (no prop drilling)'],
       ],
       [
@@ -95,6 +95,23 @@ const patternMappingTable = (): Html =>
       [
         ['Event handlers'],
         ['Messages dispatched to ', inlineCode('update')],
+      ],
+      [
+        ['React Router / TanStack Router'],
+        ['Built-in typed routing'],
+      ],
+      [
+        ['React Hook Form / Formik'],
+        ['Model + Messages + Effect Schema validation'],
+      ],
+      [
+        ['TanStack Query / SWR'],
+        ['Commands + Command Streams + typed async ADTs'],
+      ],
+      [['WebSocket libraries / real-time'], ['Command Streams']],
+      [
+        ['Error boundaries'],
+        ['Typed errors in Effects + ', inlineCode('errorView')],
       ],
     ],
   )

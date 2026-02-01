@@ -212,7 +212,11 @@ export const view = (): Html =>
         ' to get up and running.',
       ),
       div(
-        [Class('grid gap-4 sm:grid-cols-2 lg:grid-cols-3')],
+        [
+          Class(
+            'grid gap-4 sm:grid-cols-2 lg:grid-cols-3 items-start',
+          ),
+        ],
         examples.map(exampleCard),
       ),
     ],

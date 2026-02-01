@@ -1,13 +1,19 @@
+import classNames from 'classnames'
 import { Array } from 'effect'
 import { Html } from 'foldkit/html'
 
 import { Class, div, table, tbody, td, th, thead, tr } from '../html'
 
-const headerCell = (text: string): Html =>
+const columnBorder = 'border-r border-gray-300 dark:border-gray-700'
+
+const headerCell = (text: string, isLastColumn: boolean): Html =>
   th(
     [
       Class(
-        'px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white',
+        classNames(
+          'px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white',
+          { [columnBorder]: !isLastColumn },
+        ),
       ),
     ],
     [text],
@@ -16,13 +22,18 @@ const headerCell = (text: string): Html =>
 const cell = (
   content: ReadonlyArray<string | Html>,
   isFirstColumn: boolean,
+  isLastColumn: boolean,
 ): Html =>
   td(
     [
       Class(
-        isFirstColumn
-          ? 'px-4 py-3 text-sm font-medium text-gray-900 dark:text-white'
-          : 'px-4 py-3 text-sm text-gray-700 dark:text-gray-300',
+        classNames(
+          'px-4 py-3 text-sm',
+          isFirstColumn
+            ? 'font-medium text-gray-900 dark:text-white'
+            : 'text-gray-700 dark:text-gray-300',
+          { [columnBorder]: !isLastColumn },
+        ),
       ),
     ],
     content,
@@ -48,7 +59,14 @@ export const comparisonTable = (
                 'bg-white dark:bg-gray-800 border-b border-gray-300 dark:border-gray-700',
               ),
             ],
-            [tr([], Array.map(headers, headerCell))],
+            [
+              tr(
+                [],
+                Array.map(headers, (header, index) =>
+                  headerCell(header, index === headers.length - 1),
+                ),
+              ),
+            ],
           ),
           tbody(
             [Class('bg-white dark:bg-gray-900')],
@@ -60,7 +78,11 @@ export const comparisonTable = (
                   ),
                 ],
                 Array.map(row, (content, index) =>
-                  cell(content, index === 0),
+                  cell(
+                    content,
+                    index === 0,
+                    index === row.length - 1,
+                  ),
                 ),
               ),
             ),
