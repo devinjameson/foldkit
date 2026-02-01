@@ -108,3 +108,5 @@ export { default as submodelWrapperMessageRaw } from './submodelWrapperMessage.t
 export { default as submodelWrapperMessageHighlighted } from './submodelWrapperMessage.ts?highlighted'
 export { default as submodelUpdateDelegationRaw } from './submodelUpdateDelegation.ts?raw'
 export { default as submodelUpdateDelegationHighlighted } from './submodelUpdateDelegation.ts?highlighted'
+export { default as multipleInstancesRaw } from './multipleInstances.ts?raw'
+export { default as multipleInstancesHighlighted } from './multipleInstances.ts?highlighted'

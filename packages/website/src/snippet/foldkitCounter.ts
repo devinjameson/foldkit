@@ -3,25 +3,33 @@ import { Runtime } from 'foldkit'
 import { Html, html } from 'foldkit/html'
 import { ts } from 'foldkit/schema'
 
+// MODEL
+
 const Model = S.Number
 type Model = typeof Model.Type
 
-const Increment = ts('Increment')
-const Message = S.Union(Increment)
+// MESSAGE
+
+const IncrementClicked = ts('IncrementClicked')
+const Message = S.Union(IncrementClicked)
+
+type IncrementClicked = typeof IncrementClicked.Type
 type Message = typeof Message.Type
 
-const update = (
-  model: Model,
-  message: Message,
-): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
+// UPDATE
+
+type UpdateReturn = [Model, ReadonlyArray<Runtime.Command<Message>>]
+const withUpdateReturn = M.withReturnType<UpdateReturn>()
+
+const update = (model: Model, message: Message): UpdateReturn =>
   M.value(message).pipe(
-    M.withReturnType<
-      [Model, ReadonlyArray<Runtime.Command<Message>>]
-    >(),
+    withUpdateReturn,
     M.tagsExhaustive({
-      Increment: () => [model + 1, []],
+      IncrementClicked: () => [model + 1, []],
     }),
   )
+
+// VIEW
 
 const { div, button, p, OnClick } = html<Message>()
 
@@ -30,6 +38,6 @@ const view = (model: Model): Html =>
     [],
     [
       p([], [`Count: ${model}`]),
-      button([OnClick(Increment.make())], ['Increment']),
+      button([OnClick(IncrementClicked.make())], ['Increment']),
     ],
   )

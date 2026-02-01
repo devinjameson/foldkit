@@ -51,10 +51,10 @@ const whatYoullGainHeader: TableOfContentsEntry = {
   text: "What You'll Gain",
 }
 
-const commonQuestionsHeader: TableOfContentsEntry = {
+const faqHeader: TableOfContentsEntry = {
   level: 'h2',
-  id: 'common-questions',
-  text: 'Common Questions',
+  id: 'faq',
+  text: 'FAQ',
 }
 
 export const tableOfContents: ReadonlyArray<TableOfContentsEntry> = [
@@ -64,7 +64,7 @@ export const tableOfContents: ReadonlyArray<TableOfContentsEntry> = [
   patternMappingHeader,
   whatYoullMissHeader,
   whatYoullGainHeader,
-  commonQuestionsHeader,
+  faqHeader,
 ]
 
 const patternMappingTable = (): Html =>
@@ -206,7 +206,7 @@ export const view = (model: Model): Html =>
         'mb-6',
       ),
       para(
-        'At small scale, Foldkit looks like more code. The difference becomes clear when you add complexity — async operations, multiple pieces of state, or effects that depend on state.',
+        'At small scale, Foldkit is more lines of code. The advantages become clear when you add complexity — async operations, multiple pieces of state, or effects that depend on state.',
       ),
       para(
         "Here's a data fetching example. React requires careful handling of loading states, race conditions, and cleanup:",
@@ -241,7 +241,7 @@ export const view = (model: Model): Html =>
         'mb-6',
       ),
       para(
-        "Notice there's no cleanup function, no cancelled flag, no stale closure risk. When the user clicks a button, you dispatch FetchUser. The Command runs, and when it completes, it dispatches the result message. The architecture eliminates the need for defensive coding.",
+        "Notice there's no cleanup function, no cancelled flag, no stale closure risk. When the user clicks a button, you dispatch FetchUserClicked. The Command runs, and when it completes, it dispatches the result message. The architecture eliminates the need for defensive coding.",
       ),
       tableOfContentsEntryToHeader(patternMappingHeader),
       para("Here's how common React patterns map to Foldkit:"),
@@ -339,26 +339,53 @@ export const view = (model: Model): Html =>
           ),
         ],
       ),
-      tableOfContentsEntryToHeader(commonQuestionsHeader),
+      tableOfContentsEntryToHeader(faqHeader),
       para(strong([], ['How do I make reusable "components"?'])),
       para(
         "Create functions that take parts of your Model and return Html. They're not components in the React sense — they don't have their own state — but they're reusable view logic. For complex features, you can use the submodel pattern to organize related state and logic together.",
       ),
+      para(
+        strong(
+          [],
+          [
+            'How do I create multiple components with their own state?',
+          ],
+        ),
+      ),
+      para(
+        'There are no components in Foldkit. State always lives in your Model, and views are just functions from Model to Html. Say you need multiple accordions with independent state — you model that explicitly:',
+      ),
+      highlightedCodeBlock(
+        div(
+          [
+            Class('text-sm'),
+            InnerHTML(Snippets.multipleInstancesHighlighted),
+          ],
+          [],
+        ),
+        Snippets.multipleInstancesRaw,
+        'Copy Model example',
+        model,
+        'mb-4',
+      ),
+      para(
+        'Here ',
+        inlineCode('Accordion.Model'),
+        ' is a submodel — a self-contained piece of state defined in its own module, with its own Message types, update function, and view. This is similar to what experienced React devs often end up doing anyway — lifting state out of components into a parent. Foldkit just enforces this pattern from the start. See the ',
+        link(Link.exampleShoppingCart, 'Shopping Cart example'),
+        ' for the full submodel pattern.',
+      ),
       para(strong([], ['How does routing work?'])),
       para(
-        'Foldkit has built-in typed routing. Define your routes as a schema, parse URLs into route values, and match on them in your view. See the ',
+        'Foldkit has built-in typed routing. See the ',
         link('/routing-and-navigation', 'Routing & Navigation'),
         ' page for details.',
       ),
       para(strong([], ['What about forms?'])),
       para(
-        'Forms work like everything else: form state lives in your Model, input changes dispatch Messages, and update handles validation. Check the ',
+        'Forms work like everything else: form state lives in your Model, input dispatches Messages, and update handles validation. Check the ',
         link(Link.exampleForm, 'form example'),
         ' for patterns.',
-      ),
-      para(strong([], ['How do I handle code splitting?'])),
-      para(
-        "Foldkit doesn't have built-in code splitting like React.lazy. For most applications, this isn't a problem — the bundle is typically small. For larger apps, you can use dynamic imports to load view modules on demand.",
       ),
       para(strong([], ["I'm sold. Where do I start?"])),
       para(

@@ -10,29 +10,45 @@ const UserSuccess = ts('UserSuccess', { data: UserSchema })
 const UserFailure = ts('UserFailure', { error: S.String })
 const UserState = S.Union(UserLoading, UserSuccess, UserFailure)
 
+// MODEL
+
 const Model = S.Struct({
   userId: S.String,
   user: UserState,
 })
 type Model = typeof Model.Type
 
-const FetchUser = ts('FetchUser', { userId: S.String })
-const UserFetched = ts('UserFetched', { data: UserSchema })
-const UserFetchFailed = ts('UserFetchFailed', { error: S.String })
-// This Message type represents all possible "things that can happen" in the
-// Foldkit application
-const Message = S.Union(FetchUser, UserFetched, UserFetchFailed)
+// MESSAGE
 
-type UserFetched = typeof UserFetched.Type
+const FetchUserClicked = ts('FetchUserClicked', { userId: S.String })
+const UserFetchSucceeded = ts('UserFetchSucceeded', {
+  data: UserSchema,
+})
+const UserFetchFailed = ts('UserFetchFailed', { error: S.String })
+
+// The Message Schema represents all events that can update the model
+const Message = S.Union(
+  FetchUserClicked,
+  UserFetchSucceeded,
+  UserFetchFailed,
+)
+
+type FetchUserClicked = typeof FetchUserClicked.Type
+type UserFetchSucceeded = typeof UserFetchSucceeded.Type
 type UserFetchFailed = typeof UserFetchFailed.Type
+
 type Message = typeof Message.Type
+
+// COMMAND
 
 const fetchUser = (
   userId: string,
-): Runtime.Command<UserFetched | UserFetchFailed> =>
+): Runtime.Command<UserFetchSucceeded | UserFetchFailed> =>
   Effect.gen(function* () {
-    // Fetch a user and return a UserFetched or UserFetchFailed message
+    // Fetch a user and return a UserFetchSucceeded or UserFetchFailed message
   })
+
+// UPDATE
 
 const update = (
   model: Model,
@@ -43,11 +59,11 @@ const update = (
       [Model, ReadonlyArray<Runtime.Command<Message>>]
     >(),
     M.tagsExhaustive({
-      FetchUser: ({ userId }) => [
+      FetchUserClicked: ({ userId }) => [
         evo(model, { user: () => UserLoading.make() }),
         [fetchUser(userId)],
       ],
-      UserFetched: ({ data }) => [
+      UserFetchSucceeded: ({ data }) => [
         evo(model, { user: () => UserSuccess.make({ data }) }),
         [],
       ],
