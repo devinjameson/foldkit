@@ -576,11 +576,16 @@ const sidebarView = (
       div(
         [Class('flex justify-between items-center mb-4 md:hidden')],
         [
-          img([
-            Src('/logo.svg'),
-            Alt('Foldkit'),
-            Class('h-6 dark:invert'),
-          ]),
+          a(
+            [Href(homeRouter.build({}))],
+            [
+              img([
+                Src('/logo.svg'),
+                Alt('Foldkit'),
+                Class('h-6 dark:invert'),
+              ]),
+            ],
+          ),
           button(
             [
               Class(
@@ -939,11 +944,16 @@ const view = (model: Model) => {
                 ],
                 [Icon.menu('w-6 h-6')],
               ),
-              img([
-                Src('/logo.svg'),
-                Alt('Foldkit'),
-                Class('h-6 md:h-8 dark:invert'),
-              ]),
+              a(
+                [Href(homeRouter.build({}))],
+                [
+                  img([
+                    Src('/logo.svg'),
+                    Alt('Foldkit'),
+                    Class('h-6 md:h-8 dark:invert'),
+                  ]),
+                ],
+              ),
             ],
           ),
           div(
