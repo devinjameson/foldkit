@@ -38,11 +38,11 @@
 - [ ] Add docs on errorView to website
   - Also add an example app showcasing usage
 
-- [ ] Add auth example to README
+- [x] Add auth example to README
 
-- [ ] Clicking Foldkit logo in nav should probably link home?
+- [x] Clicking Foldkit logo in nav should probably link home?
 
-- [ ] Nav bar could be a little tighter on mobile
+- [x] Mobile menu improvements (scrollable nav, icons at bottom, fixed header)
 
 - [ ] Changelog
 
