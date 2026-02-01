@@ -3,7 +3,7 @@ import { Html } from 'foldkit/html'
 import { Class, div, h1 } from '../html'
 import { link, para } from '../prose'
 
-export const view = (path: string, homeRoute: string): Html =>
+export const view = (path: string, introductionRoute: string): Html =>
   div(
     [],
     [
@@ -12,6 +12,6 @@ export const view = (path: string, homeRoute: string): Html =>
         ['404 - Page Not Found'],
       ),
       para(`The path "${path}" was not found.`),
-      link(homeRoute, '← Go Home'),
+      link(introductionRoute, '← Go to Introduction'),
     ],
   )

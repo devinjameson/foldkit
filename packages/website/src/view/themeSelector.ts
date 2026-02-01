@@ -5,30 +5,8 @@ import { AriaLabel, Class, OnClick, button, div } from '../html'
 import { Icon } from '../icon'
 import { SetThemePreference, type ThemePreference } from '../main'
 
-const themeSelectorButton = (
-  preference: ThemePreference,
-  isActive: boolean,
-  icon: Html,
-  label: string,
-) =>
-  button(
-    [
-      Class(
-        classNames(
-          'p-1.5 rounded-md transition cursor-pointer',
-          isActive
-            ? 'bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-white'
-            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200',
-        ),
-      ),
-      AriaLabel(label),
-      OnClick(SetThemePreference.make({ preference })),
-    ],
-    [icon],
-  )
-
 export const themeSelector = (
-  currentPreference: ThemePreference,
+  activePreference: ThemePreference,
 ): Html =>
   div(
     [
@@ -39,21 +17,46 @@ export const themeSelector = (
     [
       themeSelectorButton(
         'Light',
-        currentPreference === 'Light',
+        activePreference,
         Icon.sun('w-4 h-4'),
         'Light mode',
       ),
       themeSelectorButton(
         'System',
-        currentPreference === 'System',
+        activePreference,
         Icon.computer('w-4 h-4'),
         'System mode',
       ),
       themeSelectorButton(
         'Dark',
-        currentPreference === 'Dark',
+        activePreference,
         Icon.moon('w-4 h-4'),
         'Dark mode',
       ),
     ],
   )
+
+const themeSelectorButton = (
+  preference: ThemePreference,
+  activePreference: ThemePreference,
+  icon: Html,
+  label: string,
+) => {
+  const isActive = preference === activePreference
+
+  return button(
+    [
+      Class(
+        classNames(
+          'p-2 rounded-md transition cursor-pointer',
+          isActive
+            ? 'bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-white'
+            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200',
+        ),
+      ),
+      AriaLabel(label),
+      OnClick(SetThemePreference.make({ preference })),
+    ],
+    [icon],
+  )
+}

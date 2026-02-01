@@ -564,17 +564,21 @@ const sidebarView = (
     [
       Class(
         classNames(
-          'fixed inset-0 md:top-[var(--header-height)] md:bottom-0 md:left-0 md:right-auto z-[60] md:z-40 md:w-64 overflow-y-auto bg-white dark:bg-gray-900 md:border-r border-gray-300 dark:border-gray-700 p-4',
+          'fixed inset-0 md:top-[var(--header-height)] md:bottom-0 md:left-0 md:right-auto z-[60] md:z-40 md:w-64 bg-white dark:bg-gray-900 md:border-r border-gray-300 dark:border-gray-700 flex flex-col',
           {
-            block: mobileMenuOpen,
-            'hidden md:block': !mobileMenuOpen,
+            flex: mobileMenuOpen,
+            'hidden md:flex': !mobileMenuOpen,
           },
         ),
       ),
     ],
     [
       div(
-        [Class('flex justify-between items-center mb-4 md:hidden')],
+        [
+          Class(
+            'flex justify-between items-center p-4 md:hidden border-b border-gray-300 dark:border-gray-700 shrink-0 bg-white dark:bg-black',
+          ),
+        ],
         [
           a(
             [Href(homeRouter.build({}))],
@@ -589,7 +593,7 @@ const sidebarView = (
           button(
             [
               Class(
-                'p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-700 dark:text-gray-300',
+                'p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-700 dark:text-gray-300 cursor-pointer',
               ),
               AriaLabel('Close menu'),
               OnClick(ToggleMobileMenu.make()),
@@ -599,12 +603,12 @@ const sidebarView = (
         ],
       ),
       nav(
-        [],
+        [Class('flex-1 overflow-y-auto p-4')],
         [
           h2(
             [
               Class(
-                'text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3',
+                'hidden md:block text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3',
               ),
             ],
             ['Documentation'],
@@ -615,7 +619,7 @@ const sidebarView = (
               navLink(
                 homeRouter.build({}),
                 S.is(HomeRoute)(currentRoute),
-                'Home',
+                'Introduction',
               ),
               navLink(
                 whyFoldkitRouter.build({}),
@@ -662,6 +666,22 @@ const sidebarView = (
                 S.is(ExamplesRoute)(currentRoute),
                 'Example Apps',
               ),
+            ],
+          ),
+        ],
+      ),
+      div(
+        [
+          Class(
+            'md:hidden p-4 border-t border-gray-300 dark:border-gray-700 shrink-0',
+          ),
+        ],
+        [
+          div(
+            [Class('flex items-center justify-center gap-8')],
+            [
+              iconLink(Link.github, 'GitHub', Icon.github('w-6 h-6')),
+              iconLink(Link.npm, 'npm', Icon.npm('w-8 h-8')),
             ],
           ),
         ],
@@ -937,7 +957,7 @@ const view = (model: Model) => {
               button(
                 [
                   Class(
-                    'md:hidden p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-700 dark:text-gray-300',
+                    'md:hidden p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-700 dark:text-gray-300 cursor-pointer',
                   ),
                   AriaLabel('Toggle menu'),
                   OnClick(ToggleMobileMenu.make()),
@@ -957,7 +977,7 @@ const view = (model: Model) => {
             ],
           ),
           div(
-            [Class('flex items-center gap-5 md:gap-6')],
+            [Class('flex items-center gap-6 md:gap-8')],
             [
               themeSelector(model.themePreference),
               div(
