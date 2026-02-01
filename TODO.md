@@ -30,16 +30,14 @@
   - Current "Component encapsulation" bullet mentions the tradeoff but doesn't show the alternative
   - Add concrete example of how you handle multiple instances in Foldkit vs React
 
-- [ ] Update website examples page to include auth example
-  - Add after merging feat/auth-example branch
+- [x] Update website examples page to include auth example
 
 - [ ] Add docs on errorView to website
   - Also add an example app showcasing usage
 
 ## Tooling
 
-- [ ] Add auth example as starter template in `create-foldkit-app`
-  - Add after merging feat/auth-example branch
+- [x] Add auth example as starter template in `create-foldkit-app`
 
 - [ ] Upgrade node (Vite is complaining)
 
