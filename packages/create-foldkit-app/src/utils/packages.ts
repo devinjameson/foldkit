@@ -1,7 +1,10 @@
-import { Command } from '@effect/platform'
-import { Effect, Match, pipe } from 'effect'
+import { Command, HttpClient, HttpClientRequest } from '@effect/platform'
+import { Array, Effect, Match, Record, Schema, pipe } from 'effect'
 
 type PackageManager = 'pnpm' | 'npm' | 'yarn'
+
+const GITHUB_RAW_BASE_URL =
+  'https://raw.githubusercontent.com/devinjameson/foldkit/main/examples'
 
 const getInstallArgs = (
   packageManager: PackageManager,
@@ -16,19 +19,49 @@ const getInstallArgs = (
     (args) => (isDev ? [...args, '-D'] : args),
   )
 
+const StringRecord = Schema.Record({ key: Schema.String, value: Schema.String })
+
+const PackageJson = Schema.Struct({
+  dependencies: Schema.optionalWith(StringRecord, { default: () => ({}) }),
+  devDependencies: Schema.optionalWith(StringRecord, { default: () => ({}) }),
+})
+
+const formatDeps = (deps: Record<string, string>): ReadonlyArray<string> =>
+  pipe(
+    deps,
+    Record.toEntries,
+    Array.filter(([_, version]) => !version.includes('workspace:')),
+    Array.map(([name, version]) => `${name}@${version}`),
+  )
+
+const fetchExampleDeps = (example: string) =>
+  Effect.gen(function* () {
+    const client = yield* HttpClient.HttpClient
+    const url = `${GITHUB_RAW_BASE_URL}/${example}/package.json`
+    const response = yield* client.execute(HttpClientRequest.get(url))
+    const json = yield* response.json
+    const packageJson = yield* Schema.decodeUnknown(PackageJson)(json)
+
+    return {
+      dependencies: formatDeps(packageJson.dependencies),
+      devDependencies: formatDeps(packageJson.devDependencies),
+    }
+  })
+
 export const installDependencies = (
   projectPath: string,
   packageManager: PackageManager,
+  example: string,
 ) =>
   Effect.gen(function* () {
+    const exampleDeps = yield* fetchExampleDeps(example)
+
     const installArgs = getInstallArgs(packageManager)
     const installDeps = Command.make(
       packageManager,
       ...installArgs,
       'foldkit',
-      'effect@^3.18.2',
-      '@tailwindcss/vite@^4.1.10',
-      'tailwindcss@^4.1.10',
+      ...exampleDeps.dependencies,
     ).pipe(
       Command.workingDirectory(projectPath),
       Command.stdout('inherit'),
@@ -40,15 +73,8 @@ export const installDependencies = (
     const installDevDeps = Command.make(
       packageManager,
       ...installDevArgs,
-      '@foldkit/vite-plugin@0.2.0',
-      'vite@^7.1.9',
-      'typescript@^5.9.3',
-      'prettier@^3.6.2',
-      '@trivago/prettier-plugin-sort-imports@^5.2.2',
-      'eslint@^9.37.0',
-      '@eslint/js@^9.37.0',
-      '@typescript-eslint/eslint-plugin@^8.45.0',
-      '@typescript-eslint/parser@^8.45.0',
+      '@foldkit/vite-plugin',
+      ...exampleDeps.devDependencies,
     ).pipe(
       Command.workingDirectory(projectPath),
       Command.stdout('inherit'),

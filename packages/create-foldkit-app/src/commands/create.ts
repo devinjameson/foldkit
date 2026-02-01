@@ -7,7 +7,6 @@ import { installDependencies } from '../utils/packages.js'
 
 type PackageManager = 'pnpm' | 'npm' | 'yarn'
 type Example =
-  | 'auth'
   | 'counter'
   | 'form'
   | 'routing'
@@ -17,6 +16,7 @@ type Example =
   | 'todo'
   | 'weather'
   | 'websocket-chat'
+  | 'auth'
 
 type CreateOptions = {
   name: string
@@ -65,13 +65,14 @@ const setupProject = (name: string, projectPath: string, example: Example) =>
 const installProjectDependencies = (
   projectPath: string,
   packageManager: PackageManager,
+  example: Example,
 ) =>
   Effect.gen(function* () {
     yield* Console.log(
       chalk.blue(`📦 Installing dependencies with ${packageManager}...`),
     )
 
-    yield* installDependencies(projectPath, packageManager)
+    yield* installDependencies(projectPath, packageManager, example)
 
     yield* Console.log(chalk.green('✅ Dependencies installed'))
     yield* Console.log('')
@@ -103,7 +104,7 @@ export const create = ({ name, example, packageManager }: CreateOptions) =>
 
     yield* validateProject(name, projectPath, packageManager)
     yield* setupProject(name, projectPath, example)
-    yield* installProjectDependencies(projectPath, packageManager)
+    yield* installProjectDependencies(projectPath, packageManager, example)
     yield* displaySuccessMessage(name, packageManager)
 
     return name

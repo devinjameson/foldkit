@@ -40,7 +40,6 @@ const name = Options.text('name').pipe(
 )
 
 const example = Options.choice('example', [
-  'auth',
   'counter',
   'stopwatch',
   'weather',
@@ -50,12 +49,12 @@ const example = Options.choice('example', [
   'routing',
   'shopping-cart',
   'websocket-chat',
+  'auth',
 ]).pipe(
   Options.withAlias('e'),
   Options.withDescription(
     "The example application to start from. Pick an example that's similar to the application you're building. Or create multiple projects and take pieces of each!\n\n" +
       'Available examples:\n' +
-      '  auth - Authentication with Model-as-Union pattern and protected routes\n' +
       '  counter - Simple increment/decrement with reset\n' +
       '  stopwatch - Timer with start/stop/reset functionality\n' +
       '  weather - HTTP requests with async state handling\n' +
@@ -64,7 +63,8 @@ const example = Options.choice('example', [
       '  snake - Classic game built with command streams\n' +
       '  routing - URL routing with parser combinators and route parameters\n' +
       '  shopping-cart - Complex state management with nested models and routing\n' +
-      '  websocket-chat - WebSocket integration',
+      '  websocket-chat - WebSocket integration\n' +
+      '  auth - Authentication with Model-as-Union pattern and protected routes',
   ),
 )
 
@@ -91,7 +91,7 @@ const create = Command.make(
 
 const cli = Command.run(create, {
   name: 'Create Foldkit App',
-  version: '0.3.0',
+  version: '0.3.1',
   summary: HelpDoc.getSpan(HelpDoc.p('Create a new Foldkit application')),
 })
 

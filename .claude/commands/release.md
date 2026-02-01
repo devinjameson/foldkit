@@ -29,13 +29,11 @@ Release a package to npm with version bump, git tag, and GitHub release.
 8. **GitHub Release** - Create a GitHub release from the tag using `gh release create`
 
 9. **Publish to npm** - Use 1Password CLI for OTP:
-   - For `foldkit` canary: `npm publish --tag canary --otp=$(op item get "npm" --otp)`
-   - For other packages: `npm publish --otp=$(op item get "npm" --otp)`
+   `npm publish --otp=$(op item get "npm" --otp)`
 
 ## Important Notes
 
 - Ensure working directory is clean before releasing
 - The package must build successfully before publishing
 - OTP is fetched automatically via 1Password CLI (`op`)
-- For `foldkit` canary releases, use `--tag canary` to avoid setting as latest
 - Do NOT use `--prerelease` flag for GitHub releases (even for canary versions)
