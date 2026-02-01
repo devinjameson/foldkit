@@ -40,6 +40,14 @@
 
 - [ ] Add auth example to README
 
+- [ ] Clicking Foldkit logo in nav should probably link home?
+
+- [ ] Nav bar could be a little tighter on mobile
+
+- [ ] Changelog
+
+- [ ] Library reference docs that pull directly from code comments
+
 ## Tooling
 
 - [x] Add auth example as starter template in `create-foldkit-app`
