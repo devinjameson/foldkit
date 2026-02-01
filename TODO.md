@@ -7,6 +7,7 @@
   - Need to document the pattern where the Model itself is a union of exclusive states (e.g., `S.Union(LoggedOut.Model, LoggedIn.Model)`)
   - Covers: state transitions between variants, update returning result unions, guard checks
   - Reference: `examples/auth` demonstrates this pattern
+  - Need to communicate the "rules of thumb" for this -- e.g. when to use OutgoingMessage, where to put that message organizationally, etc.
 
 - [ ] Document 3-tuple OutMessage pattern for child-to-parent communication
   - `[Model, Commands, Option<OutMessage>]` return type from update functions
@@ -25,10 +26,12 @@
   - Common React pattern: `items.map(item => <ItemWithState key={item.id} />)`
   - Show Foldkit equivalent: `S.Array(Item.Model)` with messages containing item ID
   - Demonstrate routing messages to correct array element in update
+  - Maybe we need an example app for this too?
 
 - [ ] Expand "Coming from React" tradeoffs section
   - Current "Component encapsulation" bullet mentions the tradeoff but doesn't show the alternative
   - Add concrete example of how you handle multiple instances in Foldkit vs React
+  - Maybe the table with the React/Foldkit columns should be moved up to frame the comparison earlier?
 
 - [x] Update website examples page to include auth example
 
