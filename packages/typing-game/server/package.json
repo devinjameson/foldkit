@@ -11,17 +11,17 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@effect/platform": "^0.94.1",
-    "@effect/platform-node": "^0.104.0",
+    "@effect/platform": "^0.94.2",
+    "@effect/platform-node": "^0.104.1",
     "@effect/rpc": "^0.73.0",
     "@typing-game/shared": "workspace:*",
-    "effect": "^3.19.14"
+    "effect": "^3.19.15"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
-    "@types/node": "^25.0.9",
-    "@typescript-eslint/eslint-plugin": "^8.53.0",
-    "@typescript-eslint/parser": "^8.53.0",
+    "@types/node": "^25.1.0",
+    "@typescript-eslint/eslint-plugin": "^8.54.0",
+    "@typescript-eslint/parser": "^8.54.0",
     "eslint": "^9.39.2",
     "eslint-plugin-unused-imports": "^4.3.0",
     "tsx": "^4.21.0",
