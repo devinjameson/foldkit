@@ -42,7 +42,7 @@
 
 - [x] Add auth example as starter template in `create-foldkit-app`
 
-- [ ] Upgrade node (Vite is complaining)
+- [x] Upgrade node (Vite is complaining)
 
 ## Foldkit
 
