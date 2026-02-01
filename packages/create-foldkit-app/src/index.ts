@@ -40,6 +40,7 @@ const name = Options.text('name').pipe(
 )
 
 const example = Options.choice('example', [
+  'auth',
   'counter',
   'stopwatch',
   'weather',
@@ -54,6 +55,7 @@ const example = Options.choice('example', [
   Options.withDescription(
     "The example application to start from. Pick an example that's similar to the application you're building. Or create multiple projects and take pieces of each!\n\n" +
       'Available examples:\n' +
+      '  auth - Authentication with Model-as-Union pattern and protected routes\n' +
       '  counter - Simple increment/decrement with reset\n' +
       '  stopwatch - Timer with start/stop/reset functionality\n' +
       '  weather - HTTP requests with async state handling\n' +

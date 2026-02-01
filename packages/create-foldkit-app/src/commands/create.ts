@@ -7,6 +7,7 @@ import { installDependencies } from '../utils/packages.js'
 
 type PackageManager = 'pnpm' | 'npm' | 'yarn'
 type Example =
+  | 'auth'
   | 'counter'
   | 'form'
   | 'routing'

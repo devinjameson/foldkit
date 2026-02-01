@@ -18,6 +18,7 @@ export const Link = {
   foldkitVdom:
     'https://github.com/devinjameson/foldkit/blob/main/packages/foldkit/src/vdom.ts',
   foldkitExamples: exampleBase,
+  exampleAuth: `${exampleBase}/auth`,
   exampleCounter: `${exampleBase}/counter`,
   exampleForm: `${exampleBase}/form`,
   exampleRouting: `${exampleBase}/routing`,

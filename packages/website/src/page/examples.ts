@@ -66,6 +66,14 @@ const examples: ReadonlyArray<Example> = [
     tags: ['Routing'],
   },
   {
+    title: 'Auth',
+    description:
+      'Authentication flow with Model-as-Union pattern, protected routes, and session management.',
+    href: Link.exampleAuth,
+    difficulty: 'Advanced',
+    tags: ['Auth', 'Routing'],
+  },
+  {
     title: 'Shopping Cart',
     description:
       'E-commerce app with product listing, cart management, and checkout flow.',
