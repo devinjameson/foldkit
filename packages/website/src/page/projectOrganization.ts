@@ -1,6 +1,6 @@
 import { Html } from 'foldkit/html'
 
-import { Class, InnerHTML, div, li, ul } from '../html'
+import { Class, InnerHTML, div } from '../html'
 import { Link } from '../link'
 import type { Model, TableOfContentsEntry } from '../main'
 import {
@@ -17,24 +17,6 @@ const startingSimpleHeader: TableOfContentsEntry = {
   level: 'h2',
   id: 'starting-simple',
   text: 'Starting Simple',
-}
-
-const scalingWithSubmodelsHeader: TableOfContentsEntry = {
-  level: 'h2',
-  id: 'scaling-with-submodels',
-  text: 'Scaling with Submodels',
-}
-
-const submoduleStructureHeader: TableOfContentsEntry = {
-  level: 'h3',
-  id: 'submodule-structure',
-  text: 'Submodule Structure',
-}
-
-const parentResponsibilitiesHeader: TableOfContentsEntry = {
-  level: 'h3',
-  id: 'parentResponsibilities',
-  text: 'Parent Responsibilities',
 }
 
 const fileLayoutHeader: TableOfContentsEntry = {
@@ -57,9 +39,6 @@ const indexReexportsHeader: TableOfContentsEntry = {
 
 export const tableOfContents: ReadonlyArray<TableOfContentsEntry> = [
   startingSimpleHeader,
-  scalingWithSubmodelsHeader,
-  submoduleStructureHeader,
-  parentResponsibilitiesHeader,
   fileLayoutHeader,
   domainModulesHeader,
   indexReexportsHeader,
@@ -86,63 +65,11 @@ export const view = (model: Model): Html =>
       para(
         "This is fine for small apps. You don't need to split into multiple files until the single file becomes hard to navigate.",
       ),
-      tableOfContentsEntryToHeader(scalingWithSubmodelsHeader),
-      para(
-        'As your app grows, a single Model/Message/Update becomes unwieldy. The submodel pattern lets you split your app into self-contained modules.',
-      ),
-      tableOfContentsEntryToHeader(submoduleStructureHeader),
-      ul(
-        [Class('list-disc mb-4 space-y-1 ml-4')],
-        [
-          li([], ['Its own Model, Message, init, update, and view']),
-          li(
-            [],
-            [
-              'A view that takes a ',
-              inlineCode('toMessage'),
-              ' function to wrap its messages',
-            ],
-          ),
-        ],
-      ),
-      tableOfContentsEntryToHeader(parentResponsibilitiesHeader),
-      ul(
-        [Class('list-disc mb-4 space-y-1 ml-4')],
-        [
-          li(
-            [],
-            [
-              'Embeds the child Model: ',
-              inlineCode('productsPage: Products.Model'),
-            ],
-          ),
-          li(
-            [],
-            [
-              'Has a wrapper Message: ',
-              inlineCode(
-                'ProductsMessage({ message: Products.Message })',
-              ),
-            ],
-          ),
-          li(
-            [],
-            ['Delegates in update, then rewraps returned Commands'],
-          ),
-          li([], ['Passes a wrapper function to the child view']),
-        ],
-      ),
-      para(
-        'See the ',
-        link(
-          Link.exampleShoppingCartSubmodel,
-          'Shopping Cart example',
-        ),
-        ' for a complete implementation of this pattern.',
-      ),
       tableOfContentsEntryToHeader(fileLayoutHeader),
       para(
-        'Once you split into submodules, a consistent file layout helps you navigate the codebase. Each page or feature becomes a folder:',
+        'As your app grows and you ',
+        link('/advanced-patterns', 'scale with submodels'),
+        ', a consistent file layout helps you navigate the codebase. Each page or feature becomes a folder:',
       ),
       codeBlock(
         Snippets.fileLayoutRaw,

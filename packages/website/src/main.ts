@@ -64,6 +64,7 @@ const RoutingRoute = ts('Routing')
 const ExamplesRoute = ts('Examples')
 const BestPracticesRoute = ts('BestPractices')
 const ProjectOrganizationRoute = ts('ProjectOrganization')
+const AdvancedPatternsRoute = ts('AdvancedPatterns')
 const NotFoundRoute = ts('NotFound', { path: S.String })
 
 const AppRoute = S.Union(
@@ -76,6 +77,7 @@ const AppRoute = S.Union(
   ExamplesRoute,
   BestPracticesRoute,
   ProjectOrganizationRoute,
+  AdvancedPatternsRoute,
   NotFoundRoute,
 )
 
@@ -89,6 +91,7 @@ type RoutingRoute = typeof RoutingRoute.Type
 type ExamplesRoute = typeof ExamplesRoute.Type
 type BestPracticesRoute = typeof BestPracticesRoute.Type
 type ProjectOrganizationRoute = typeof ProjectOrganizationRoute.Type
+type AdvancedPatternsRoute = typeof AdvancedPatternsRoute.Type
 type NotFoundRoute = typeof NotFoundRoute.Type
 type AppRoute = typeof AppRoute.Type
 
@@ -114,7 +117,7 @@ const routingRouter = pipe(
   Route.mapTo(RoutingRoute),
 )
 const examplesRouter = pipe(
-  literal('examples'),
+  literal('example-apps'),
   Route.mapTo(ExamplesRoute),
 )
 const bestPracticesRouter = pipe(
@@ -124,6 +127,10 @@ const bestPracticesRouter = pipe(
 const projectOrganizationRouter = pipe(
   literal('project-organization'),
   Route.mapTo(ProjectOrganizationRoute),
+)
+const advancedPatternsRouter = pipe(
+  literal('advanced-patterns'),
+  Route.mapTo(AdvancedPatternsRoute),
 )
 
 const routeParser = Route.oneOf(
@@ -135,6 +142,7 @@ const routeParser = Route.oneOf(
   examplesRouter,
   bestPracticesRouter,
   projectOrganizationRouter,
+  advancedPatternsRouter,
   homeRouter,
 )
 
@@ -630,9 +638,14 @@ const sidebarView = (
                 'Routing & Navigation',
               ),
               navLink(
-                examplesRouter.build({}),
-                S.is(ExamplesRoute)(currentRoute),
-                'Examples',
+                projectOrganizationRouter.build({}),
+                S.is(ProjectOrganizationRoute)(currentRoute),
+                'Project Organization',
+              ),
+              navLink(
+                advancedPatternsRouter.build({}),
+                S.is(AdvancedPatternsRoute)(currentRoute),
+                'Advanced Patterns',
               ),
               navLink(
                 bestPracticesRouter.build({}),
@@ -640,9 +653,9 @@ const sidebarView = (
                 'Best Practices',
               ),
               navLink(
-                projectOrganizationRouter.build({}),
-                S.is(ProjectOrganizationRoute)(currentRoute),
-                'Project Organization',
+                examplesRouter.build({}),
+                S.is(ExamplesRoute)(currentRoute),
+                'Example Apps',
               ),
             ],
           ),
@@ -865,6 +878,7 @@ const view = (model: Model) => {
       Examples: Page.Examples.view,
       BestPractices: () => Page.BestPractices.view(model),
       ProjectOrganization: () => Page.ProjectOrganization.view(model),
+      AdvancedPatterns: () => Page.AdvancedPatterns.view(model),
       NotFound: ({ path }) =>
         Page.NotFound.view(path, homeRouter.build({})),
     }),
@@ -889,6 +903,9 @@ const view = (model: Model) => {
     ),
     M.tag('ProjectOrganization', () =>
       Option.some(Page.ProjectOrganization.tableOfContents),
+    ),
+    M.tag('AdvancedPatterns', () =>
+      Option.some(Page.AdvancedPatterns.tableOfContents),
     ),
     M.orElse(() => Option.none()),
   )

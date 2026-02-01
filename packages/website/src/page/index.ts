@@ -1,3 +1,4 @@
+export * as AdvancedPatterns from './advancedPatterns'
 export * as ArchitectureAndConcepts from './architectureAndConcepts'
 export * as BestPractices from './bestPractices'
 export * as ComingFromReact from './comingFromReact'

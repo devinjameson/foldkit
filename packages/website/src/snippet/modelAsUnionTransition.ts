@@ -1,0 +1,19 @@
+import { Match as M } from 'effect'
+import { Runtime } from 'foldkit'
+
+export const update = (
+  model: Model,
+  message: Message,
+): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
+  M.value(message).pipe(
+    M.tagsExhaustive({
+      LoginClicked: () => [
+        LoggedIn.make({ userId: '123', username: 'alice' }),
+        [],
+      ],
+      LogoutClicked: () => [
+        LoggedOut.make({ email: '', password: '' }),
+        [],
+      ],
+    }),
+  )

@@ -2,14 +2,14 @@
 
 ## Documentation
 
-- [ ] Add "Model-as-Union" pattern documentation
+- [x] Add "Model-as-Union" pattern documentation
   - Current "Scaling with Submodels" docs cover embedding child models as struct fields
   - Need to document the pattern where the Model itself is a union of exclusive states (e.g., `S.Union(LoggedOut.Model, LoggedIn.Model)`)
   - Covers: state transitions between variants, update returning result unions, guard checks
   - Reference: `examples/auth` demonstrates this pattern
   - Need to communicate the "rules of thumb" for this -- e.g. when to use OutgoingMessage, where to put that message organizationally, etc.
 
-- [ ] Document 3-tuple OutMessage pattern for child-to-parent communication
+- [x] Document 3-tuple OutMessage pattern for child-to-parent communication
   - `[Model, Commands, Option<OutMessage>]` return type from update functions
   - When to use OutMessage vs Commands for signaling parent
   - How parent updates handle child OutMessages via Option.match
@@ -37,6 +37,8 @@
 
 - [ ] Add docs on errorView to website
   - Also add an example app showcasing usage
+
+- [ ] Add auth example to README
 
 ## Tooling
 

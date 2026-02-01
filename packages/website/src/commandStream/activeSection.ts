@@ -47,6 +47,10 @@ export const activeSection: CommandStream<
         'ProjectOrganization',
         () => Page.ProjectOrganization.tableOfContents,
       ),
+      M.tag(
+        'AdvancedPatterns',
+        () => Page.AdvancedPatterns.tableOfContents,
+      ),
       M.option,
     )
 
