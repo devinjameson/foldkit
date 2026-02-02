@@ -1,39 +1,48 @@
 # Release Package
 
-Release a package to npm with version bump, git tag, and GitHub release.
+This project uses [changesets](https://github.com/changesets/changesets) for versioning and releases.
 
-## Workflow
+## Adding a Changeset
 
-1. **Select package** - Ask which publishable package to release:
-   - `foldkit` (packages/foldkit)
-   - `create-foldkit-app` (packages/create-foldkit-app)
-   - `@foldkit/vite-plugin` (packages/vite-plugin-foldkit)
+When you make a change that should be released, run:
 
-2. **Select version bump** - Ask for bump type:
-   - `patch` (bug fixes)
-   - `minor` (new features)
-   - `major` (breaking changes)
+```bash
+pnpm changeset
+```
 
-3. **Bump version** - Update the package.json version field
+This will prompt you to:
 
-4. **Build package** - Run the package's build script
+1. Select which packages are affected (foldkit, create-foldkit-app, @foldkit/vite-plugin)
+2. Choose the bump type (patch/minor/major)
+3. Write a summary of the change
 
-5. **Commit** - Create a commit with message: `release: <package>@<version>`
+Commit the generated changeset file with your changes.
 
-6. **Tag** - Create git tag using these formats:
-   - For `foldkit`: `v<version>` (e.g., `v1.0.0`)
-   - For other packages: `<package>@<version>` (e.g., `create-foldkit-app@1.0.0`)
+## Version Guidelines
 
-7. **Push** - Push commit and tag to origin
+- **patch** - Bug fixes, documentation updates, internal refactors
+- **minor** - New features, non-breaking API additions
+- **major** - Breaking changes to public APIs
 
-8. **GitHub Release** - Create a GitHub release from the tag using `gh release create`
+## Release Process
 
-9. **Publish to npm** - Use 1Password CLI for OTP:
-   `npm publish --otp=$(op item get "npm" --otp)`
+Releases happen automatically via GitHub Actions:
 
-## Important Notes
+1. Push changes with changeset files to main
+2. GitHub Action creates a "Version Packages" PR
+3. Merge that PR to trigger:
+   - Version bumps in package.json files
+   - CHANGELOG.md updates
+   - npm publishing (via trusted publishing/OIDC)
+   - GitHub release creation
 
-- Ensure working directory is clean before releasing
-- The package must build successfully before publishing
-- OTP is fetched automatically via 1Password CLI (`op`)
-- Do NOT use `--prerelease` flag for GitHub releases (even for canary versions)
+## Manual Release (if needed)
+
+If automation fails, you can release manually:
+
+```bash
+pnpm version-packages  # Apply changesets to versions and changelogs
+pnpm release           # Build all packages and publish to npm
+```
+
+Note: Manual publishing requires npm login with appropriate permissions.

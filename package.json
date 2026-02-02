@@ -44,7 +44,7 @@
     "vite": "^7.3.1"
   },
   "simple-git-hooks": {
-    "pre-push": "branch=$(git rev-parse --abbrev-ref HEAD) && [ \"$branch\" = \"main\" ] && pnpm pre-push || true"
+    "pre-push": "branch=$(git rev-parse --abbrev-ref HEAD) && { [ \"$branch\" != \"main\" ] || pnpm pre-push; }"
   },
   "engines": {
     "node": ">=20.19.0 || >=22.12.0",
