@@ -844,23 +844,15 @@ const view = (model: Model) => {
       BestPractices: () => Page.BestPractices.view(model),
       ProjectOrganization: () => Page.ProjectOrganization.view(model),
       AdvancedPatterns: () => Page.AdvancedPatterns.view(model),
-      Api: () => ApiReference.indexView(apiReferenceModel.modules),
-      ApiModule: ({ moduleName }) =>
-        Option.match(
-          ApiReference.findModule(apiReferenceModel, moduleName),
-          {
-            onNone: () =>
-              Page.NotFound.view(
-                `/api/${moduleName}`,
-                apiRouter.build({}),
-              ),
-            onSome: ApiReference.moduleView,
-          },
-        ),
+      Api: () => ApiReference.fullView(apiReferenceModel.modules),
+      ApiModule: () => ApiReference.fullView(apiReferenceModel.modules),
       NotFound: ({ path }) =>
         Page.NotFound.view(path, homeRouter.build({})),
     }),
   )
+
+  const apiReferenceTableOfContents =
+    ApiReference.getTableOfContents(apiReferenceModel)
 
   const currentPageTableOfContents = M.value(model.route).pipe(
     M.tag('WhyFoldkit', () =>
@@ -887,6 +879,8 @@ const view = (model: Model) => {
     M.tag('AdvancedPatterns', () =>
       Option.some(Page.AdvancedPatterns.tableOfContents),
     ),
+    M.tag('Api', () => Option.some(apiReferenceTableOfContents)),
+    M.tag('ApiModule', () => Option.some(apiReferenceTableOfContents)),
     M.orElse(() => Option.none()),
   )
 

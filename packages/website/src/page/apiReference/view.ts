@@ -10,10 +10,8 @@ import {
   div,
   h2,
   h3,
-  li,
   p,
   span,
-  ul,
 } from '../../html'
 import { heading, para } from '../../prose'
 import type {
@@ -23,76 +21,6 @@ import type {
   ApiType,
   ApiVariable,
 } from './model'
-
-// Module list view (sidebar or index)
-
-export const moduleList = (
-  modules: ReadonlyArray<ApiModule>,
-  currentModule: Option.Option<string>,
-): Html =>
-  ul(
-    [Class('space-y-1')],
-    Array.map(modules, (module) =>
-      li(
-        [],
-        [
-          a(
-            [
-              Class(
-                pipe(
-                  currentModule,
-                  Option.match({
-                    onNone: () =>
-                      'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100',
-                    onSome: (name) =>
-                      name === module.name
-                        ? 'text-blue-600 dark:text-blue-400 font-medium'
-                        : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100',
-                  }),
-                ),
-              ),
-              Href(`/api/${module.name}`),
-            ],
-            [module.name],
-          ),
-        ],
-      ),
-    ),
-  )
-
-// Module detail view
-
-export const moduleView = (module: ApiModule): Html =>
-  div(
-    [],
-    [
-      heading('h1', `api-${module.name}`, module.name),
-      ...(Array.isNonEmptyReadonlyArray(module.types)
-        ? [
-            h2([Class('text-xl font-semibold mt-8 mb-4')], ['Types']),
-            ...Array.map(module.types, typeView),
-          ]
-        : []),
-      ...(Array.isNonEmptyReadonlyArray(module.functions)
-        ? [
-            h2(
-              [Class('text-xl font-semibold mt-8 mb-4')],
-              ['Functions'],
-            ),
-            ...Array.map(module.functions, functionView),
-          ]
-        : []),
-      ...(Array.isNonEmptyReadonlyArray(module.variables)
-        ? [
-            h2(
-              [Class('text-xl font-semibold mt-8 mb-4')],
-              ['Variables'],
-            ),
-            ...Array.map(module.variables, variableView),
-          ]
-        : []),
-    ],
-  )
 
 // Function view
 
@@ -354,49 +282,42 @@ const variableView = (variable: ApiVariable): Html =>
     ],
   )
 
-// API index view
+// Full API reference view (all modules on one page)
 
-export const indexView = (modules: ReadonlyArray<ApiModule>): Html =>
+export const fullView = (modules: ReadonlyArray<ApiModule>): Html =>
   div(
     [],
     [
       heading('h1', 'api-reference', 'API Reference'),
       para(
-        'This is the API reference for Foldkit. Select a module from the sidebar to view its contents.',
+        'Complete API reference for Foldkit. Each module is documented with its types, functions, and constants.',
       ),
-      h2([Class('text-xl font-semibold mt-8 mb-4')], ['Modules']),
-      ul(
-        [Class('space-y-4')],
-        Array.map(modules, (module) =>
-          li(
-            [
-              Class(
-                'border-b border-zinc-200 dark:border-zinc-700 pb-4',
-              ),
-            ],
-            [
-              a(
-                [
-                  Class(
-                    'text-lg font-mono text-blue-600 dark:text-blue-400 hover:underline',
-                  ),
-                  Href(`/api/${module.name}`),
-                ],
-                [module.name],
-              ),
-              div(
-                [
-                  Class(
-                    'text-sm text-zinc-600 dark:text-zinc-400 mt-1',
-                  ),
-                ],
-                [
-                  `${module.functions.length} functions, ${module.types.length} types, ${module.variables.length} variables`,
-                ],
-              ),
-            ],
-          ),
+      ...Array.flatMap(modules, (module) => [
+        h2(
+          [
+            Class('text-2xl font-semibold mt-12 mb-6 pt-4 border-t border-zinc-200 dark:border-zinc-700'),
+            Id(module.name),
+          ],
+          [module.name],
         ),
-      ),
+        ...(Array.isNonEmptyReadonlyArray(module.types)
+          ? [
+              h3([Class('text-lg font-semibold mt-6 mb-4 text-zinc-700 dark:text-zinc-300')], ['Types']),
+              ...Array.map(module.types, typeView),
+            ]
+          : []),
+        ...(Array.isNonEmptyReadonlyArray(module.functions)
+          ? [
+              h3([Class('text-lg font-semibold mt-6 mb-4 text-zinc-700 dark:text-zinc-300')], ['Functions']),
+              ...Array.map(module.functions, functionView),
+            ]
+          : []),
+        ...(Array.isNonEmptyReadonlyArray(module.variables)
+          ? [
+              h3([Class('text-lg font-semibold mt-6 mb-4 text-zinc-700 dark:text-zinc-300')], ['Constants']),
+              ...Array.map(module.variables, variableView),
+            ]
+          : []),
+      ]),
     ],
   )

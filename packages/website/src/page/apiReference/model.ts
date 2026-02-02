@@ -185,8 +185,17 @@ export const parseTypedocJson = (json: TypeDocJson): Model => ({
   modules: (json.children ?? []).map(parseModule),
 })
 
-export const findModule = (
+export type TableOfContentsEntry = {
+  readonly id: string
+  readonly text: string
+  readonly level: 'h2' | 'h3'
+}
+
+export const getTableOfContents = (
   model: Model,
-  name: string,
-): Option.Option<ApiModule> =>
-  Array.findFirst(model.modules, (m) => m.name === name)
+): ReadonlyArray<TableOfContentsEntry> => [
+  { id: 'api-reference', text: 'API Reference', level: 'h2' },
+  ...Array.flatMap(model.modules, (module) => [
+    { id: module.name, text: module.name, level: 'h2' as const },
+  ]),
+]
