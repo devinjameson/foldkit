@@ -1,4 +1,4 @@
-import { Array, Option, pipe } from 'effect'
+import { Array, Option, Order, pipe } from 'effect'
 import { Html } from 'foldkit/html'
 
 import {
@@ -20,6 +20,11 @@ import type {
   ApiType,
   ApiVariable,
 } from './model'
+
+const byName = <
+  T extends { readonly name: string },
+>(): Order.Order<T> =>
+  Order.mapInput(Order.string, (item: T) => item.name)
 
 // Function view
 
@@ -306,19 +311,6 @@ export const fullView = (modules: ReadonlyArray<ApiModule>): Html =>
           ],
           [heading('h2', module.name, module.name)],
         ),
-        ...(Array.isNonEmptyReadonlyArray(module.types)
-          ? [
-              h3(
-                [
-                  Class(
-                    'text-lg font-semibold mt-6 mb-4 text-zinc-700 dark:text-zinc-300',
-                  ),
-                ],
-                ['Types'],
-              ),
-              ...Array.map(module.types, typeView),
-            ]
-          : []),
         ...(Array.isNonEmptyReadonlyArray(module.functions)
           ? [
               h3(
@@ -329,7 +321,28 @@ export const fullView = (modules: ReadonlyArray<ApiModule>): Html =>
                 ],
                 ['Functions'],
               ),
-              ...Array.map(module.functions, functionView),
+              ...pipe(
+                module.functions,
+                Array.sort(byName()),
+                Array.map(functionView),
+              ),
+            ]
+          : []),
+        ...(Array.isNonEmptyReadonlyArray(module.types)
+          ? [
+              h3(
+                [
+                  Class(
+                    'text-lg font-semibold mt-6 mb-4 text-zinc-700 dark:text-zinc-300',
+                  ),
+                ],
+                ['Types'],
+              ),
+              ...pipe(
+                module.types,
+                Array.sort(byName()),
+                Array.map(typeView),
+              ),
             ]
           : []),
         ...(Array.isNonEmptyReadonlyArray(module.variables)
@@ -342,7 +355,11 @@ export const fullView = (modules: ReadonlyArray<ApiModule>): Html =>
                 ],
                 ['Constants'],
               ),
-              ...Array.map(module.variables, variableView),
+              ...pipe(
+                module.variables,
+                Array.sort(byName()),
+                Array.map(variableView),
+              ),
             ]
           : []),
       ]),

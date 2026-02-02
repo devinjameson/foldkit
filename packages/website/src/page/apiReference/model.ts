@@ -1,4 +1,4 @@
-import { Array, Option, Schema as S, pipe } from 'effect'
+import { Array, Option, Order, Schema as S, pipe } from 'effect'
 
 import {
   Kind,
@@ -191,22 +191,31 @@ export type TableOfContentsEntry = {
   readonly level: 'h2' | 'h3'
 }
 
+const byName = <
+  T extends { readonly name: string },
+>(): Order.Order<T> =>
+  Order.mapInput(Order.string, (item: T) => item.name)
+
+const sortByName = <T extends { readonly name: string }>(
+  items: ReadonlyArray<T>,
+): ReadonlyArray<T> => Array.sort(items, byName())
+
 export const getTableOfContents = (
   model: Model,
 ): ReadonlyArray<TableOfContentsEntry> =>
   Array.flatMap(model.modules, (module) => [
     { id: module.name, text: module.name, level: 'h2' as const },
-    ...Array.map(module.types, (t) => ({
-      id: `type-${t.name}`,
-      text: t.name,
-      level: 'h3' as const,
-    })),
-    ...Array.map(module.functions, (f) => ({
+    ...Array.map(sortByName(module.functions), (f) => ({
       id: `fn-${f.name}`,
       text: f.name,
       level: 'h3' as const,
     })),
-    ...Array.map(module.variables, (v) => ({
+    ...Array.map(sortByName(module.types), (t) => ({
+      id: `type-${t.name}`,
+      text: t.name,
+      level: 'h3' as const,
+    })),
+    ...Array.map(sortByName(module.variables), (v) => ({
       id: `const-${v.name}`,
       text: v.name,
       level: 'h3' as const,
