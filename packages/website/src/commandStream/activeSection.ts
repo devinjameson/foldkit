@@ -11,12 +11,20 @@ import {
 import { Runtime } from 'foldkit'
 import { CommandStream } from 'foldkit/runtime'
 
+import apiJson from '../generated/api.json'
 import {
   ActiveSectionChanged,
   CommandStreamsDeps,
   Model,
 } from '../main'
 import * as Page from '../page'
+import * as ApiReference from '../page/apiReference'
+
+const apiReferenceModel = ApiReference.parseTypedocJson(
+  apiJson as ApiReference.TypeDocJson,
+)
+const apiReferenceTableOfContents =
+  ApiReference.getTableOfContents(apiReferenceModel)
 
 export const activeSection: CommandStream<
   Model,
@@ -54,6 +62,8 @@ export const activeSection: CommandStream<
         'AdvancedPatterns',
         () => Page.AdvancedPatterns.tableOfContents,
       ),
+      M.tag('Api', () => apiReferenceTableOfContents),
+      M.tag('ApiModule', () => apiReferenceTableOfContents),
       M.option,
     )
 
