@@ -3,3 +3,4 @@ dist
 *.tsbuildinfo
 .vercel
 settings.local.json
+packages/website/src/generated/

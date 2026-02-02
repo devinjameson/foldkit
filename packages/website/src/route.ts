@@ -1,6 +1,6 @@
 import { Schema as S, pipe } from 'effect'
 import { Route } from 'foldkit'
-import { literal } from 'foldkit/route'
+import { literal, slash, string } from 'foldkit/route'
 import { ts } from 'foldkit/schema'
 
 // ROUTE SCHEMAS
@@ -17,6 +17,10 @@ export const ExamplesRoute = ts('Examples')
 export const BestPracticesRoute = ts('BestPractices')
 export const ProjectOrganizationRoute = ts('ProjectOrganization')
 export const AdvancedPatternsRoute = ts('AdvancedPatterns')
+export const ApiRoute = ts('Api')
+export const ApiModuleRoute = ts('ApiModule', {
+  moduleName: S.String,
+})
 export const NotFoundRoute = ts('NotFound', { path: S.String })
 
 export const AppRoute = S.Union(
@@ -30,6 +34,8 @@ export const AppRoute = S.Union(
   BestPracticesRoute,
   ProjectOrganizationRoute,
   AdvancedPatternsRoute,
+  ApiRoute,
+  ApiModuleRoute,
   NotFoundRoute,
 )
 
@@ -46,6 +52,8 @@ export type BestPracticesRoute = typeof BestPracticesRoute.Type
 export type ProjectOrganizationRoute =
   typeof ProjectOrganizationRoute.Type
 export type AdvancedPatternsRoute = typeof AdvancedPatternsRoute.Type
+export type ApiRoute = typeof ApiRoute.Type
+export type ApiModuleRoute = typeof ApiModuleRoute.Type
 export type NotFoundRoute = typeof NotFoundRoute.Type
 export type AppRoute = typeof AppRoute.Type
 
@@ -88,10 +96,16 @@ export const advancedPatternsRouter = pipe(
   literal('advanced-patterns'),
   Route.mapTo(AdvancedPatternsRoute),
 )
+export const apiModuleRouter = pipe(
+  literal('api'),
+  slash(string('moduleName')),
+  Route.mapTo(ApiModuleRoute),
+)
+export const apiRouter = pipe(literal('api'), Route.mapTo(ApiRoute))
 
 // PARSER
 
-export const routeParser = Route.oneOf(
+const docsParser = Route.oneOf(
   whyFoldkitRouter,
   comingFromReactRouter,
   gettingStartedRouter,
@@ -101,6 +115,12 @@ export const routeParser = Route.oneOf(
   bestPracticesRouter,
   projectOrganizationRouter,
   advancedPatternsRouter,
+)
+
+export const routeParser = Route.oneOf(
+  docsParser,
+  apiModuleRouter,
+  apiRouter,
   homeRouter,
 )
 

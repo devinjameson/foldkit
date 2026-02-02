@@ -52,7 +52,8 @@
     "build": "pnpm run clean && tsc -b",
     "watch": "tsc -b --watch",
     "typecheck": "tsc -b --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "docs": "typedoc"
   },
   "peerDependencies": {
     "effect": "^3.18.2"

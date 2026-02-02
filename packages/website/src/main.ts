@@ -18,6 +18,7 @@ import { evo } from 'foldkit/struct'
 import { Url, toString as urlToString } from 'foldkit/url'
 
 import * as CommandStream from './commandStream'
+import apiJson from './generated/api.json'
 import {
   Alt,
   AriaLabel,
@@ -49,8 +50,11 @@ import {
 import { Icon } from './icon'
 import { Link } from './link'
 import * as Page from './page'
+import * as ApiReference from './page/apiReference'
 import {
   AdvancedPatternsRoute,
+  ApiModuleRoute,
+  ApiRoute,
   AppRoute,
   ArchitectureAndConceptsRoute,
   BestPracticesRoute,
@@ -62,6 +66,7 @@ import {
   RoutingAndNavigationRoute,
   WhyFoldkitRoute,
   advancedPatternsRouter,
+  apiRouter,
   architectureAndConceptsRouter,
   bestPracticesRouter,
   comingFromReactRouter,
@@ -590,6 +595,12 @@ const sidebarView = (
                 S.is(ExamplesRoute)(currentRoute),
                 'Example Apps',
               ),
+              navLink(
+                apiRouter.build({}),
+                S.is(ApiRoute)(currentRoute) ||
+                  S.is(ApiModuleRoute)(currentRoute),
+                'API Reference',
+              ),
             ],
           ),
         ],
@@ -814,6 +825,11 @@ const mobileTableOfContentsView = (
   )
 }
 
+// Parse API reference data at module load time
+const apiReferenceModel = ApiReference.parseTypedocJson(
+  apiJson as ApiReference.TypeDocJson,
+)
+
 const view = (model: Model) => {
   const content = M.value(model.route).pipe(
     M.tagsExhaustive({
@@ -828,6 +844,19 @@ const view = (model: Model) => {
       BestPractices: () => Page.BestPractices.view(model),
       ProjectOrganization: () => Page.ProjectOrganization.view(model),
       AdvancedPatterns: () => Page.AdvancedPatterns.view(model),
+      Api: () => ApiReference.indexView(apiReferenceModel.modules),
+      ApiModule: ({ moduleName }) =>
+        Option.match(
+          ApiReference.findModule(apiReferenceModel, moduleName),
+          {
+            onNone: () =>
+              Page.NotFound.view(
+                `/api/${moduleName}`,
+                apiRouter.build({}),
+              ),
+            onSome: ApiReference.moduleView,
+          },
+        ),
       NotFound: ({ path }) =>
         Page.NotFound.view(path, homeRouter.build({})),
     }),
