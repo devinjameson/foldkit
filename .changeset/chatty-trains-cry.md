@@ -1,0 +1,5 @@
+---
+'foldkit': patch
+---
+
+Update dependencies

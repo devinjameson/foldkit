@@ -9,6 +9,9 @@
   "updateInternalDependencies": "patch",
   "ignore": [
     "website",
+    "@typing-game/client",
+    "@typing-game/server",
+    "@typing-game/shared",
     "form-example",
     "auth-example",
     "todo-example",
