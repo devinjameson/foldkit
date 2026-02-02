@@ -845,7 +845,8 @@ const view = (model: Model) => {
       ProjectOrganization: () => Page.ProjectOrganization.view(model),
       AdvancedPatterns: () => Page.AdvancedPatterns.view(model),
       Api: () => ApiReference.fullView(apiReferenceModel.modules),
-      ApiModule: () => ApiReference.fullView(apiReferenceModel.modules),
+      ApiModule: () =>
+        ApiReference.fullView(apiReferenceModel.modules),
       NotFound: ({ path }) =>
         Page.NotFound.view(path, homeRouter.build({})),
     }),
@@ -880,7 +881,9 @@ const view = (model: Model) => {
       Option.some(Page.AdvancedPatterns.tableOfContents),
     ),
     M.tag('Api', () => Option.some(apiReferenceTableOfContents)),
-    M.tag('ApiModule', () => Option.some(apiReferenceTableOfContents)),
+    M.tag('ApiModule', () =>
+      Option.some(apiReferenceTableOfContents),
+    ),
     M.orElse(() => Option.none()),
   )
 

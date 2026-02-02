@@ -1,4 +1,4 @@
-import { Array, Option, pipe, Schema as S } from 'effect'
+import { Array, Option, Schema as S, pipe } from 'effect'
 
 import {
   Kind,
@@ -193,9 +193,22 @@ export type TableOfContentsEntry = {
 
 export const getTableOfContents = (
   model: Model,
-): ReadonlyArray<TableOfContentsEntry> => [
-  { id: 'api-reference', text: 'API Reference', level: 'h2' },
-  ...Array.flatMap(model.modules, (module) => [
+): ReadonlyArray<TableOfContentsEntry> =>
+  Array.flatMap(model.modules, (module) => [
     { id: module.name, text: module.name, level: 'h2' as const },
-  ]),
-]
+    ...Array.map(module.types, (t) => ({
+      id: `type-${t.name}`,
+      text: t.name,
+      level: 'h3' as const,
+    })),
+    ...Array.map(module.functions, (f) => ({
+      id: `fn-${f.name}`,
+      text: f.name,
+      level: 'h3' as const,
+    })),
+    ...Array.map(module.variables, (v) => ({
+      id: `const-${v.name}`,
+      text: v.name,
+      level: 'h3' as const,
+    })),
+  ])

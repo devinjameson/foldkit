@@ -8,7 +8,6 @@ import {
   a,
   code,
   div,
-  h2,
   h3,
   p,
   span,
@@ -36,7 +35,10 @@ const functionView = (fn: ApiFunction): Html =>
         [Class('flex items-center gap-2 mb-2')],
         [
           h3(
-            [Class('text-lg font-mono font-medium'), Id(fn.name)],
+            [
+              Class('text-lg font-mono font-medium scroll-mt-6'),
+              Id(`fn-${fn.name}`),
+            ],
             [fn.name],
           ),
           span(
@@ -159,7 +161,10 @@ const typeView = (type: ApiType): Html =>
         [Class('flex items-center gap-2 mb-2')],
         [
           h3(
-            [Class('text-lg font-mono font-medium'), Id(type.name)],
+            [
+              Class('text-lg font-mono font-medium scroll-mt-6'),
+              Id(`type-${type.name}`),
+            ],
             [type.name],
           ),
           span(
@@ -227,8 +232,8 @@ const variableView = (variable: ApiVariable): Html =>
         [
           h3(
             [
-              Class('text-lg font-mono font-medium'),
-              Id(variable.name),
+              Class('text-lg font-mono font-medium scroll-mt-6'),
+              Id(`const-${variable.name}`),
             ],
             [variable.name],
           ),
@@ -293,28 +298,50 @@ export const fullView = (modules: ReadonlyArray<ApiModule>): Html =>
         'Complete API reference for Foldkit. Each module is documented with its types, functions, and constants.',
       ),
       ...Array.flatMap(modules, (module) => [
-        h2(
+        div(
           [
-            Class('text-2xl font-semibold mt-12 mb-6 pt-4 border-t border-zinc-200 dark:border-zinc-700'),
-            Id(module.name),
+            Class(
+              'mt-12 pt-4 border-t border-zinc-200 dark:border-zinc-700',
+            ),
           ],
-          [module.name],
+          [heading('h2', module.name, module.name)],
         ),
         ...(Array.isNonEmptyReadonlyArray(module.types)
           ? [
-              h3([Class('text-lg font-semibold mt-6 mb-4 text-zinc-700 dark:text-zinc-300')], ['Types']),
+              h3(
+                [
+                  Class(
+                    'text-lg font-semibold mt-6 mb-4 text-zinc-700 dark:text-zinc-300',
+                  ),
+                ],
+                ['Types'],
+              ),
               ...Array.map(module.types, typeView),
             ]
           : []),
         ...(Array.isNonEmptyReadonlyArray(module.functions)
           ? [
-              h3([Class('text-lg font-semibold mt-6 mb-4 text-zinc-700 dark:text-zinc-300')], ['Functions']),
+              h3(
+                [
+                  Class(
+                    'text-lg font-semibold mt-6 mb-4 text-zinc-700 dark:text-zinc-300',
+                  ),
+                ],
+                ['Functions'],
+              ),
               ...Array.map(module.functions, functionView),
             ]
           : []),
         ...(Array.isNonEmptyReadonlyArray(module.variables)
           ? [
-              h3([Class('text-lg font-semibold mt-6 mb-4 text-zinc-700 dark:text-zinc-300')], ['Constants']),
+              h3(
+                [
+                  Class(
+                    'text-lg font-semibold mt-6 mb-4 text-zinc-700 dark:text-zinc-300',
+                  ),
+                ],
+                ['Constants'],
+              ),
               ...Array.map(module.variables, variableView),
             ]
           : []),

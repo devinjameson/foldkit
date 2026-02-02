@@ -64,7 +64,10 @@ export type TypeDocType =
       readonly type: 'intersection'
       readonly types: ReadonlyArray<TypeDocType>
     }
-  | { readonly type: 'reflection'; readonly declaration?: TypeDocItem }
+  | {
+      readonly type: 'reflection'
+      readonly declaration?: TypeDocItem
+    }
   | {
       readonly type: 'typeOperator'
       readonly operator: string
@@ -131,7 +134,9 @@ export type TypeDocItem = {
   readonly sources?: ReadonlyArray<TypeDocSource> | undefined
   readonly signatures?: ReadonlyArray<TypeDocSignature> | undefined
   readonly type?: TypeDocType | undefined
-  readonly typeParameters?: ReadonlyArray<TypeDocTypeParam> | undefined
+  readonly typeParameters?:
+    | ReadonlyArray<TypeDocTypeParam>
+    | undefined
   readonly children?: ReadonlyArray<TypeDocItem> | undefined
 }
 
