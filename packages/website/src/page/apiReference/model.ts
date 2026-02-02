@@ -1,61 +1,75 @@
-import { Array, Option, pipe } from 'effect'
+import { Array, Option, pipe, Schema as S } from 'effect'
 
-import type {
-  TypeDocItem,
-  TypeDocJson,
-  TypeDocModule,
+import {
+  Kind,
+  type TypeDocItem,
+  type TypeDocJson,
+  type TypeDocModule,
 } from './typedoc'
-import { Kind } from './typedoc'
 
-// Simplified model for rendering
+// API Reference domain schemas
 
-export type ApiModule = {
-  readonly name: string
-  readonly functions: ReadonlyArray<ApiFunction>
-  readonly types: ReadonlyArray<ApiType>
-  readonly variables: ReadonlyArray<ApiVariable>
-}
+export const ApiParameter = S.Struct({
+  name: S.String,
+  type: S.String,
+  isOptional: S.Boolean,
+  defaultValue: S.Option(S.String),
+  description: S.Option(S.String),
+})
 
-export type ApiFunction = {
-  readonly name: string
-  readonly description: Option.Option<string>
-  readonly signatures: ReadonlyArray<ApiFunctionSignature>
-  readonly sourceUrl: Option.Option<string>
-}
+export type ApiParameter = typeof ApiParameter.Type
 
-export type ApiFunctionSignature = {
-  readonly parameters: ReadonlyArray<ApiParameter>
-  readonly returnType: string
-  readonly typeParameters: ReadonlyArray<string>
-}
+export const ApiFunctionSignature = S.Struct({
+  parameters: S.Array(ApiParameter),
+  returnType: S.String,
+  typeParameters: S.Array(S.String),
+})
 
-export type ApiParameter = {
-  readonly name: string
-  readonly type: string
-  readonly isOptional: boolean
-  readonly defaultValue: Option.Option<string>
-  readonly description: Option.Option<string>
-}
+export type ApiFunctionSignature = typeof ApiFunctionSignature.Type
 
-export type ApiType = {
-  readonly name: string
-  readonly description: Option.Option<string>
-  readonly typeDefinition: string
-  readonly sourceUrl: Option.Option<string>
-}
+export const ApiFunction = S.Struct({
+  name: S.String,
+  description: S.Option(S.String),
+  signatures: S.Array(ApiFunctionSignature),
+  sourceUrl: S.Option(S.String),
+})
 
-export type ApiVariable = {
-  readonly name: string
-  readonly description: Option.Option<string>
-  readonly type: string
-  readonly sourceUrl: Option.Option<string>
-}
+export type ApiFunction = typeof ApiFunction.Type
 
-export type Model = {
-  readonly modules: ReadonlyArray<ApiModule>
-}
+export const ApiType = S.Struct({
+  name: S.String,
+  description: S.Option(S.String),
+  typeDefinition: S.String,
+  sourceUrl: S.Option(S.String),
+})
 
-// Parsing
+export type ApiType = typeof ApiType.Type
+
+export const ApiVariable = S.Struct({
+  name: S.String,
+  description: S.Option(S.String),
+  type: S.String,
+  sourceUrl: S.Option(S.String),
+})
+
+export type ApiVariable = typeof ApiVariable.Type
+
+export const ApiModule = S.Struct({
+  name: S.String,
+  functions: S.Array(ApiFunction),
+  types: S.Array(ApiType),
+  variables: S.Array(ApiVariable),
+})
+
+export type ApiModule = typeof ApiModule.Type
+
+export const Model = S.Struct({
+  modules: S.Array(ApiModule),
+})
+
+export type Model = typeof Model.Type
+
+// Parsing helpers
 
 const getDescription = (item: TypeDocItem): Option.Option<string> =>
   pipe(
