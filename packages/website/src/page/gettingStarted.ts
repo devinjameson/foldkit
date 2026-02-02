@@ -11,6 +11,10 @@ import {
   para,
   tableOfContentsEntryToHeader,
 } from '../prose'
+import {
+  architectureAndConceptsRouter,
+  comingFromReactRouter,
+} from '../route'
 import { codeBlock } from '../view/codeBlock'
 
 const CREATE_FOLDKIT_APP_COMMAND =
@@ -58,7 +62,7 @@ export const view = (model: Model): Html =>
       callout(
         'Coming from React?',
         "If you're familiar with React, check out the ",
-        link('/coming-from-react', 'Coming from React'),
+        link(comingFromReactRouter.build({}), 'Coming from React'),
         ' guide to understand how your existing knowledge applies.',
       ),
       tableOfContentsEntryToHeader(quickStartHeader),
@@ -126,7 +130,10 @@ export const view = (model: Model): Html =>
       tableOfContentsEntryToHeader(nextStepsHeader),
       para(
         'Now that you have a running app, head to the ',
-        link('/architecture-and-concepts', 'Architecture & Concepts'),
+        link(
+          architectureAndConceptsRouter.build({}),
+          'Architecture & Concepts',
+        ),
         ' page to understand how the pieces fit together.',
       ),
       tableOfContentsEntryToHeader(aiAssistedHeader),

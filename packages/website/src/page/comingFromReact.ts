@@ -11,6 +11,11 @@ import {
   para,
   tableOfContentsEntryToHeader,
 } from '../prose'
+import {
+  architectureAndConceptsRouter,
+  gettingStartedRouter,
+  routingAndNavigationRouter,
+} from '../route'
 import * as Snippets from '../snippet'
 import { highlightedCodeBlock } from '../view/codeBlock'
 import { comparisonTable } from '../view/table'
@@ -378,7 +383,10 @@ export const view = (model: Model): Html =>
       para(strong([], ['How does routing work?'])),
       para(
         'Foldkit has built-in typed routing. See the ',
-        link('/routing-and-navigation', 'Routing & Navigation'),
+        link(
+          routingAndNavigationRouter.build({}),
+          'Routing & Navigation',
+        ),
         ' page for details.',
       ),
       para(strong([], ['What about forms?'])),
@@ -390,9 +398,12 @@ export const view = (model: Model): Html =>
       para(strong([], ["I'm sold. Where do I start?"])),
       para(
         'Head to ',
-        link('/getting-started', 'Getting Started'),
+        link(gettingStartedRouter.build({}), 'Getting Started'),
         ' to create your first Foldkit app. Then read ',
-        link('/architecture-and-concepts', 'Architecture & Concepts'),
+        link(
+          architectureAndConceptsRouter.build({}),
+          'Architecture & Concepts',
+        ),
         ' to understand the pieces in depth.',
       ),
     ],

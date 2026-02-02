@@ -10,6 +10,8 @@ const ModelA = S.Struct({
 })
 
 // Dynamic number of instances
+// Each accordion has an id; messages include the id
+// to route updates to the correct element
 const ModelB = S.Struct({
   accordions: S.Array(Accordion.Model),
 })

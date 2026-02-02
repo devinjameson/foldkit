@@ -17,10 +17,11 @@
   - OutMessage should be a Schema union in message.ts (not just type alias)
   - Reference: `examples/auth` demonstrates the full flow
 
-- [ ] Document multiple instances with independent state
+- [x] Document multiple instances with independent state
   - React devs expect `<Foo /> <Foo /> <Foo />` to give three isolated state slices
   - Show how to explicitly model this: `sideMenu1: SideMenu.Model, sideMenu2: SideMenu.Model, ...`
   - Explain the tradeoff: more explicit, but all state visible in model
+  - Added as FAQ in "Coming from React" page with code snippet showing both patterns
 
 - [ ] Document arrays of submodels with ID-based message routing
   - Common React pattern: `items.map(item => <ItemWithState key={item.id} />)`
@@ -28,10 +29,11 @@
   - Demonstrate routing messages to correct array element in update
   - Maybe we need an example app for this too?
 
-- [ ] Expand "Coming from React" tradeoffs section
+- [x] Expand "Coming from React" tradeoffs section
   - Current "Component encapsulation" bullet mentions the tradeoff but doesn't show the alternative
   - Add concrete example of how you handle multiple instances in Foldkit vs React
   - Maybe the table with the React/Foldkit columns should be moved up to frame the comparison earlier?
+  - Done: Added FAQ entry with submodel pattern explanation and code example
 
 - [x] Update website examples page to include auth example
 

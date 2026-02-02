@@ -8,12 +8,10 @@ import {
   Match as M,
   Option,
   Schema as S,
-  pipe,
 } from 'effect'
-import { Route, Runtime } from 'foldkit'
+import { Runtime } from 'foldkit'
 import { Html } from 'foldkit/html'
 import { load, pushUrl } from 'foldkit/navigation'
-import { literal } from 'foldkit/route'
 import { UrlRequest } from 'foldkit/runtime'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
@@ -51,105 +49,31 @@ import {
 import { Icon } from './icon'
 import { Link } from './link'
 import * as Page from './page'
-import { themeSelector } from './view/themeSelector'
-
-// ROUTE
-
-const HomeRoute = ts('Home')
-const WhyFoldkitRoute = ts('WhyFoldkit')
-const ComingFromReactRoute = ts('ComingFromReact')
-const GettingStartedRoute = ts('GettingStarted')
-const ArchitectureAndConceptsRoute = ts('ArchitectureAndConcepts')
-const RoutingRoute = ts('Routing')
-const ExamplesRoute = ts('Examples')
-const BestPracticesRoute = ts('BestPractices')
-const ProjectOrganizationRoute = ts('ProjectOrganization')
-const AdvancedPatternsRoute = ts('AdvancedPatterns')
-const NotFoundRoute = ts('NotFound', { path: S.String })
-
-const AppRoute = S.Union(
-  HomeRoute,
-  WhyFoldkitRoute,
-  ComingFromReactRoute,
-  GettingStartedRoute,
-  ArchitectureAndConceptsRoute,
-  RoutingRoute,
-  ExamplesRoute,
-  BestPracticesRoute,
-  ProjectOrganizationRoute,
+import {
   AdvancedPatternsRoute,
-  NotFoundRoute,
-)
-
-type HomeRoute = typeof HomeRoute.Type
-type WhyFoldkitRoute = typeof WhyFoldkitRoute.Type
-type ComingFromReactRoute = typeof ComingFromReactRoute.Type
-type GettingStartedRoute = typeof GettingStartedRoute.Type
-type ArchitectureAndConceptsRoute =
-  typeof ArchitectureAndConceptsRoute.Type
-type RoutingRoute = typeof RoutingRoute.Type
-type ExamplesRoute = typeof ExamplesRoute.Type
-type BestPracticesRoute = typeof BestPracticesRoute.Type
-type ProjectOrganizationRoute = typeof ProjectOrganizationRoute.Type
-type AdvancedPatternsRoute = typeof AdvancedPatternsRoute.Type
-type NotFoundRoute = typeof NotFoundRoute.Type
-type AppRoute = typeof AppRoute.Type
-
-const homeRouter = pipe(Route.root, Route.mapTo(HomeRoute))
-const whyFoldkitRouter = pipe(
-  literal('why-foldkit'),
-  Route.mapTo(WhyFoldkitRoute),
-)
-const comingFromReactRouter = pipe(
-  literal('coming-from-react'),
-  Route.mapTo(ComingFromReactRoute),
-)
-const gettingStartedRouter = pipe(
-  literal('getting-started'),
-  Route.mapTo(GettingStartedRoute),
-)
-const architectureAndConceptsRouter = pipe(
-  literal('architecture-and-concepts'),
-  Route.mapTo(ArchitectureAndConceptsRoute),
-)
-const routingRouter = pipe(
-  literal('routing-and-navigation'),
-  Route.mapTo(RoutingRoute),
-)
-const examplesRouter = pipe(
-  literal('example-apps'),
-  Route.mapTo(ExamplesRoute),
-)
-const bestPracticesRouter = pipe(
-  literal('best-practices'),
-  Route.mapTo(BestPracticesRoute),
-)
-const projectOrganizationRouter = pipe(
-  literal('project-organization'),
-  Route.mapTo(ProjectOrganizationRoute),
-)
-const advancedPatternsRouter = pipe(
-  literal('advanced-patterns'),
-  Route.mapTo(AdvancedPatternsRoute),
-)
-
-const routeParser = Route.oneOf(
-  whyFoldkitRouter,
-  comingFromReactRouter,
-  gettingStartedRouter,
-  architectureAndConceptsRouter,
-  routingRouter,
-  examplesRouter,
-  bestPracticesRouter,
-  projectOrganizationRouter,
+  AppRoute,
+  ArchitectureAndConceptsRoute,
+  BestPracticesRoute,
+  ComingFromReactRoute,
+  ExamplesRoute,
+  GettingStartedRoute,
+  HomeRoute,
+  ProjectOrganizationRoute,
+  RoutingAndNavigationRoute,
+  WhyFoldkitRoute,
   advancedPatternsRouter,
+  architectureAndConceptsRouter,
+  bestPracticesRouter,
+  comingFromReactRouter,
+  examplesRouter,
+  gettingStartedRouter,
   homeRouter,
-)
-
-const urlToAppRoute = Route.parseUrlWithFallback(
-  routeParser,
-  NotFoundRoute,
-)
+  projectOrganizationRouter,
+  routingAndNavigationRouter,
+  urlToAppRoute,
+  whyFoldkitRouter,
+} from './route'
+import { themeSelector } from './view/themeSelector'
 
 export type TableOfContentsEntry = {
   id: string
@@ -642,8 +566,8 @@ const sidebarView = (
                 'Architecture & Concepts',
               ),
               navLink(
-                routingRouter.build({}),
-                S.is(RoutingRoute)(currentRoute),
+                routingAndNavigationRouter.build({}),
+                S.is(RoutingAndNavigationRoute)(currentRoute),
                 'Routing & Navigation',
               ),
               navLink(
@@ -899,7 +823,7 @@ const view = (model: Model) => {
       GettingStarted: () => Page.GettingStarted.view(model),
       ArchitectureAndConcepts: () =>
         Page.ArchitectureAndConcepts.view(model),
-      Routing: () => Page.Routing.view(model),
+      RoutingAndNavigation: () => Page.Routing.view(model),
       Examples: Page.Examples.view,
       BestPractices: () => Page.BestPractices.view(model),
       ProjectOrganization: () => Page.ProjectOrganization.view(model),
@@ -922,7 +846,9 @@ const view = (model: Model) => {
     M.tag('ArchitectureAndConcepts', () =>
       Option.some(Page.ArchitectureAndConcepts.tableOfContents),
     ),
-    M.tag('Routing', () => Option.some(Page.Routing.tableOfContents)),
+    M.tag('RoutingAndNavigation', () =>
+      Option.some(Page.Routing.tableOfContents),
+    ),
     M.tag('BestPractices', () =>
       Option.some(Page.BestPractices.tableOfContents),
     ),
