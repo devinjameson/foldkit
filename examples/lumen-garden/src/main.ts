@@ -293,7 +293,6 @@ const generateStarData = (
 const {
   button,
   div,
-  empty,
   footer,
   form,
   h1,
@@ -364,7 +363,7 @@ const starListItem = (model: Model, star: Star): Html => {
           Type('button'),
           OnClick(SelectStar.make({ id: star.id })),
           Class(
-            `w-full text-left border rounded-2xl px-4 py-4 transition backdrop-blur-xl ${accent.border} ${
+            `w-full text-left border rounded-2xl px-4 py-4 transition backdrop-blur-xl ${accent?.border} ${
               isSelected
                 ? 'bg-white/15 shadow-lg'
                 : 'bg-white/5 hover:bg-white/10'
@@ -381,10 +380,10 @@ const starListItem = (model: Model, star: Star): Html => {
                   span(
                     [
                       Class(
-                        `text-xs uppercase tracking-[0.2em] ${accent.accent}`,
+                        `text-xs uppercase tracking-[0.2em] ${accent?.accent}`,
                       ),
                     ],
-                    [accent.name],
+                    [accent?.name],
                   ),
                   h2(
                     [Class('text-lg font-semibold text-white mt-1')],
@@ -401,7 +400,7 @@ const starListItem = (model: Model, star: Star): Html => {
                 ],
               ),
               span(
-                [Class(`px-2 py-1 rounded-full text-[11px] ${accent.chip}`)],
+                [Class(`px-2 py-1 rounded-full text-[11px] ${accent?.chip}`)],
                 [star.folded ? 'Folded' : 'Open'],
               ),
             ],
@@ -477,7 +476,7 @@ const skyStarCard = (model: Model, star: Star): Html => {
       div(
         [
           Class(
-            `rounded-3xl border bg-gradient-to-br ${accent.card} ${accent.border} ${accent.glow} shadow-2xl backdrop-blur-xl px-5 py-4`,
+            `rounded-3xl border bg-gradient-to-br ${accent?.card} ${accent?.border} ${accent?.glow} shadow-2xl backdrop-blur-xl px-5 py-4`,
           ),
           OnClick(SelectStar.make({ id: star.id })),
         ],
@@ -486,8 +485,8 @@ const skyStarCard = (model: Model, star: Star): Html => {
             [Class('flex items-center justify-between gap-2')],
             [
               span(
-                [Class(`text-xs uppercase tracking-[0.2em] ${accent.accent}`)],
-                [accent.name],
+                [Class(`text-xs uppercase tracking-[0.2em] ${accent?.accent}`)],
+                [accent?.name],
               ),
               span(
                 [Class('text-[11px] text-white/60')],
@@ -637,14 +636,17 @@ const view = (model: Model): Html => {
                         ],
                         ['Whisper'],
                       ),
-                      textarea([
-                        Value(model.draftNote),
-                        Placeholder('Let it glow with a secret.'),
-                        Class(
-                          'mt-2 w-full min-h-[120px] rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30',
-                        ),
-                        OnInput((note) => UpdateDraftNote.make({ note })),
-                      ]),
+                      textarea(
+                        [
+                          Value(model.draftNote),
+                          Placeholder('Let it glow with a secret.'),
+                          Class(
+                            'mt-2 w-full min-h-[120px] rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30',
+                          ),
+                          OnInput((note) => UpdateDraftNote.make({ note })),
+                        ],
+                        [],
+                      ),
                     ],
                   ),
                   button(
