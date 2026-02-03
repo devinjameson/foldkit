@@ -20,5 +20,7 @@
     "@foldkit/vite-plugin": "0.2.1",
     "website": "0.1.0"
   },
-  "changesets": []
+  "changesets": [
+    "chatty-trains-cry"
+  ]
 }
