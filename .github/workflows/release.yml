@@ -30,7 +30,6 @@ jobs:
         with:
           node-version: 22
           cache: 'pnpm'
-          registry-url: 'https://registry.npmjs.org'
 
       - name: Install Dependencies
         run: pnpm install
