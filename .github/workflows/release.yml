@@ -30,6 +30,10 @@ jobs:
         with:
           node-version: 22
           cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Upgrade npm for OIDC support
+        run: npm install -g npm@latest
 
       - name: Install Dependencies
         run: pnpm install
@@ -42,4 +46,3 @@ jobs:
           publish: pnpm release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_CONFIG_PROVENANCE: true
