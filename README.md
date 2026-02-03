@@ -56,6 +56,7 @@ npx create-foldkit-app@latest --wizard
 - **[Snake](examples/snake/src/main.ts)** - Classic game built with command streams
 - **[WebSocket Chat](examples/websocket-chat/src/main.ts)** - WebSocket integration
 - **[Auth](examples/auth/src/main.ts)** - Authentication flow with model-as-union pattern
+- **[Lumen Garden](examples/lumen-garden/src/main.ts)** - Fold luminous notes into a constellation journal
 - **[Typing Game](packages/typing-game)** - Multiplayer typing game with Foldkit frontend and Effect RPC backend
 
 ### Simple Counter Example
