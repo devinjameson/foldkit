@@ -16,7 +16,6 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
-    environment: release
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
