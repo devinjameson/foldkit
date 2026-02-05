@@ -21,6 +21,7 @@
     "routing-example",
     "counter-example",
     "websocket-chat-example",
-    "snake-example"
+    "snake-example",
+    "error-view-example"
   ]
 }
