@@ -25,6 +25,7 @@
     "dev:example:snake": "pnpm --filter snake-example dev",
     "dev:example:websocket-chat": "pnpm --filter websocket-chat-example dev",
     "dev:example:auth": "pnpm --filter auth-example dev",
+    "dev:example:error-view": "pnpm --filter error-view-example dev",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "pnpm -r build && changeset publish"

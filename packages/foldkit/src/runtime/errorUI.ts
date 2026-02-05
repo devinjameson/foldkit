@@ -1,26 +1,11 @@
 import { Effect } from 'effect'
-import { h } from 'snabbdom'
 
 import { Html, html } from '../html'
-import { patch, toVNode } from '../vdom'
-import { Dispatch } from './runtime'
 
-const noOpDispatch = {
+export const noOpDispatch = {
   dispatchAsync: (_message: unknown) => Effect.void,
   dispatchSync: (_message: unknown) => {},
 }
-
-export const renderHtml = (
-  container: HTMLElement,
-  html: Html,
-): Effect.Effect<void> =>
-  html.pipe(
-    Effect.map((vnode) => {
-      const targetVNode = vnode ?? h('#text', {}, '')
-      patch(toVNode(container), targetVNode)
-    }),
-    Effect.provideService(Dispatch, noOpDispatch),
-  )
 
 const colors = {
   bg: '#f9fafb',

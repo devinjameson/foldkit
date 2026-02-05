@@ -110,3 +110,5 @@ export { default as submodelUpdateDelegationRaw } from './submodelUpdateDelegati
 export { default as submodelUpdateDelegationHighlighted } from './submodelUpdateDelegation.ts?highlighted'
 export { default as multipleInstancesRaw } from './multipleInstances.ts?raw'
 export { default as multipleInstancesHighlighted } from './multipleInstances.ts?highlighted'
+export { default as errorViewCustomRaw } from './errorViewCustom.ts?raw'
+export { default as errorViewCustomHighlighted } from './errorViewCustom.ts?highlighted'

@@ -1,7 +1,6 @@
 import { BrowserRuntime } from '@effect/platform-browser/index'
 import {
   Cause,
-  Console,
   Context,
   Effect,
   Either,
@@ -26,7 +25,7 @@ import {
   addBfcacheRestoreListener,
   addNavigationEventListeners,
 } from './browserListeners'
-import { defaultErrorView, renderHtml } from './errorUI'
+import { defaultErrorView, noOpDispatch } from './errorUI'
 import { UrlRequest } from './urlRequest'
 
 export class Dispatch extends Context.Tag('@foldkit/Dispatch')<
@@ -273,15 +272,36 @@ const makeRuntime =
           )
         })
 
+      const runProcessMessage =
+        (messageEffect: Effect.Effect<void>) =>
+        (runtime: Runtime.Runtime<never>): void => {
+          try {
+            Runtime.runSync(runtime)(messageEffect)
+          } catch (error) {
+            const squashed = Runtime.isFiberFailure(error)
+              ? Cause.squash(error[Runtime.FiberFailureCauseId])
+              : error
+
+            const appError =
+              squashed instanceof Error ? squashed : new Error(String(squashed))
+            renderErrorView(
+              appError,
+              errorView,
+              container,
+              maybeCurrentVNodeRef,
+            )
+          }
+        }
+
       const dispatchSync = (message: unknown): void => {
-        const maybeRuntime = Ref.get(maybeRuntimeRef).pipe(Effect.runSync)
+        const maybeRuntime = Effect.runSync(Ref.get(maybeRuntimeRef))
 
         Option.match(maybeRuntime, {
           onNone: Function.constVoid,
-          onSome: (runtime) => {
+          onSome: runProcessMessage(
             /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-            Runtime.runSync(runtime)(processMessage(message as Message))
-          },
+            processMessage(message as Message),
+          ),
         })
       }
 
@@ -341,44 +361,27 @@ const makeRuntime =
         )
       }
 
-      yield* Effect.forever(
-        Effect.gen(function* () {
-          const message = yield* Queue.take(messageQueue)
-          yield* processMessage(message)
-        }),
-      )
-    }).pipe(Effect.catchAllCause(handleFatalError(container, errorView)))
-
-const handleFatalError =
-  (container: HTMLElement, errorView?: (error: Error) => Html) =>
-  (cause: Cause.Cause<unknown>): Effect.Effect<void> =>
-    Effect.gen(function* () {
-      const squashed = Cause.squash(cause)
-      const error =
-        squashed instanceof Error ? squashed : new Error(String(squashed))
-
-      yield* Console.error('[foldkit] Application error:', error)
-
-      if (errorView) {
-        yield* Effect.try({
-          try: () => errorView(error),
-          catch: (e) => (e instanceof Error ? e : new Error(String(e))),
-        }).pipe(
-          Effect.matchEffect({
-            onSuccess: (view) => renderHtml(container, view),
-            onFailure: (viewError) =>
-              Effect.gen(function* () {
-                yield* Console.error(
-                  '[foldkit] Custom errorView failed:',
-                  viewError,
-                )
-                yield* renderHtml(container, defaultErrorView(error, viewError))
-              }),
+      yield* pipe(
+        Effect.forever(
+          Effect.gen(function* () {
+            const message = yield* Queue.take(messageQueue)
+            yield* processMessage(message)
           }),
-        )
-      } else {
-        yield* renderHtml(container, defaultErrorView(error))
-      }
+        ),
+        Effect.catchAllCause((cause) =>
+          Effect.sync(() => {
+            const squashed = Cause.squash(cause)
+            const appError =
+              squashed instanceof Error ? squashed : new Error(String(squashed))
+            renderErrorView(
+              appError,
+              errorView,
+              container,
+              maybeCurrentVNodeRef,
+            )
+          }),
+        ),
+      )
     })
 
 const patchVNode = (
@@ -394,6 +397,44 @@ const patchVNode = (
     onNone: () => patch(toVNode(container), nextVNode),
     onSome: (currentVNode) => patch(currentVNode, nextVNode),
   })
+}
+
+const renderErrorView = (
+  appError: Error,
+  errorView: ((error: Error) => Html) | undefined,
+  container: HTMLElement,
+  maybeCurrentVNodeRef: Ref.Ref<Option.Option<VNode>>,
+): void => {
+  console.error('[foldkit] Application error:', appError)
+
+  try {
+    const errorHtml = errorView
+      ? errorView(appError)
+      : defaultErrorView(appError)
+
+    const maybeCurrentVNode = Ref.get(maybeCurrentVNodeRef).pipe(Effect.runSync)
+
+    const vnode = errorHtml.pipe(
+      Effect.provideService(Dispatch, noOpDispatch),
+      Effect.runSync,
+    )
+
+    patchVNode(maybeCurrentVNode, vnode, container)
+  } catch (viewError) {
+    console.error('[foldkit] Custom errorView failed:', viewError)
+
+    const maybeCurrentVNode = Ref.get(maybeCurrentVNodeRef).pipe(Effect.runSync)
+
+    const fallbackViewError =
+      viewError instanceof Error ? viewError : new Error(String(viewError))
+
+    const vnode = defaultErrorView(appError, fallbackViewError).pipe(
+      Effect.provideService(Dispatch, noOpDispatch),
+      Effect.runSync,
+    )
+
+    patchVNode(maybeCurrentVNode, vnode, container)
+  }
 }
 
 export function makeElement<

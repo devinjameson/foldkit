@@ -90,6 +90,14 @@ const examples: ReadonlyArray<Example> = [
     tags: ['Game'],
   },
   {
+    title: 'Error View',
+    description:
+      'Custom error fallback UI. Demonstrates errorView with a crash button and reload.',
+    href: Link.exampleErrorView,
+    difficulty: 'Beginner',
+    tags: ['Fallback UI'],
+  },
+  {
     title: 'WebSocket Chat',
     description:
       'Real-time chat using WebSockets. Connection handling and message streaming.',

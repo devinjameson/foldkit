@@ -37,7 +37,7 @@
 
 - [x] Update website examples page to include auth example
 
-- [ ] Add docs on errorView to website
+- [x] Add docs on errorView to website
   - Also add an example app showcasing usage
 
 - [x] Add auth example to README
@@ -59,3 +59,5 @@
 ## Foldkit
 
 - [ ] Why does the html function not require a generic arg?
+
+- [ ] Route.oneOf has overloads up to 10 args — consider making it truly variadic or documenting that users should chain oneOfs for more

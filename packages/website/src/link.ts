@@ -20,6 +20,7 @@ export const Link = {
   foldkitExamples: exampleBase,
   exampleAuth: `${exampleBase}/auth`,
   exampleCounter: `${exampleBase}/counter`,
+  exampleErrorView: `${exampleBase}/error-view`,
   exampleForm: `${exampleBase}/form`,
   exampleRouting: `${exampleBase}/routing`,
   exampleShoppingCart: `${exampleBase}/shopping-cart`,
