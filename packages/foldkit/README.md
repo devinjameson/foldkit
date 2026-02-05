@@ -1,6 +1,6 @@
 # Foldkit
 
-> ⚠️ Foldkit is in canary release for early adopters and experimenters. APIs are incomplete and may change rapidly.
+> ⚠️ Foldkit is pre-1.0. APIs may change between minor versions.
 
 **Foldkit** is an [Elm](https://elm-lang.org/)-inspired framework for building web applications powered by [Effect](https://effect.website/).
 
