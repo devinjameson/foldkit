@@ -73,10 +73,29 @@ export type TypeDocType =
       readonly operator: string
       readonly target: TypeDocType
     }
-  | { readonly type: 'mapped' }
-  | { readonly type: 'conditional' }
-  | { readonly type: 'indexedAccess' }
-  | { readonly type: 'query' }
+  | {
+      readonly type: 'mapped'
+      readonly parameter: string
+      readonly parameterType: TypeDocType
+      readonly templateType: TypeDocType
+      readonly readonlyModifier?: string
+    }
+  | {
+      readonly type: 'conditional'
+      readonly checkType: TypeDocType
+      readonly extendsType: TypeDocType
+      readonly trueType: TypeDocType
+      readonly falseType: TypeDocType
+    }
+  | {
+      readonly type: 'indexedAccess'
+      readonly objectType: TypeDocType
+      readonly indexType: TypeDocType
+    }
+  | {
+      readonly type: 'query'
+      readonly queryType: TypeDocType
+    }
   | { readonly type: 'predicate' }
   | { readonly type: 'unknown' }
 

@@ -132,6 +132,49 @@ const signatureView = (sig: {
                 span([Class('text-zinc-500')], [')']),
               ],
             ),
+            ...pipe(
+              sig.parameters,
+              Array.filter((param) =>
+                Option.isSome(param.description),
+              ),
+              Array.match({
+                onEmpty: () => [],
+                onNonEmpty: (params) => [
+                  div(
+                    [
+                      Class(
+                        'mt-2 pt-2 border-t border-zinc-200 dark:border-zinc-700 text-sm',
+                      ),
+                    ],
+                    Array.map(params, (param) =>
+                      div(
+                        [Class('mb-1')],
+                        [
+                          span(
+                            [
+                              Class(
+                                'text-blue-600 dark:text-blue-400',
+                              ),
+                            ],
+                            [param.name],
+                          ),
+                          span(
+                            [
+                              Class(
+                                'text-zinc-500 dark:text-zinc-400',
+                              ),
+                            ],
+                            [
+                              ` — ${Option.getOrElse(param.description, () => '')}`,
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              }),
+            ),
           ]
         : [
             div(
@@ -299,9 +342,6 @@ export const fullView = (modules: ReadonlyArray<ApiModule>): Html =>
     [],
     [
       heading('h1', 'api-reference', 'API Reference'),
-      para(
-        'Complete API reference for Foldkit. Each module is documented with its types, functions, and constants.',
-      ),
       ...Array.flatMap(modules, (module) => [
         div(
           [
@@ -311,6 +351,9 @@ export const fullView = (modules: ReadonlyArray<ApiModule>): Html =>
           ],
           [heading('h2', module.name, module.name)],
         ),
+        // CLAUDE: We can use Array.match for these and also I think these are
+        // repeating the same h3 + list, so that probably wants to be an
+        // extracted view fn
         ...(Array.isNonEmptyReadonlyArray(module.functions)
           ? [
               h3(

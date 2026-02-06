@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "predev": "pnpm --filter foldkit docs",
     "dev": "vite",
     "prebuild": "pnpm --filter foldkit docs",
     "build": "vite build",

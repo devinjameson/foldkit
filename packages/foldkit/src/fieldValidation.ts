@@ -1,6 +1,6 @@
 import {
   Array,
-  Number,
+  Number as N,
   Option,
   Predicate,
   Schema as S,
@@ -36,7 +36,7 @@ export const minLength = (
   min: number,
   message?: string,
 ): Validation<string> => [
-  flow(String.length, Number.greaterThanOrEqualTo(min)),
+  flow(String.length, N.greaterThanOrEqualTo(min)),
   message ?? `Must be at least ${min} characters`,
 ]
 
@@ -44,7 +44,7 @@ export const maxLength = (
   max: number,
   message?: string,
 ): Validation<string> => [
-  flow(String.length, Number.lessThanOrEqualTo(max)),
+  flow(String.length, N.lessThanOrEqualTo(max)),
   message ?? `Must be at most ${max} characters`,
 ]
 
@@ -98,12 +98,12 @@ export const equals = (
 // NUMBER VALIDATORS
 
 export const min = (num: number, message?: string): Validation<number> => [
-  Number.greaterThanOrEqualTo(num),
+  N.greaterThanOrEqualTo(num),
   message ?? `Must be at least ${num}`,
 ]
 
 export const max = (num: number, message?: string): Validation<number> => [
-  Number.lessThanOrEqualTo(num),
+  N.lessThanOrEqualTo(num),
   message ?? `Must be at most ${num}`,
 ]
 
@@ -117,20 +117,17 @@ export const between = (
 ]
 
 export const positive = (message = 'Must be positive'): Validation<number> => [
-  Number.greaterThan(0),
+  N.greaterThan(0),
   message,
 ]
 
 export const nonNegative = (
   message = 'Must be non-negative',
-): Validation<number> => [Number.greaterThanOrEqualTo(0), message]
+): Validation<number> => [N.greaterThanOrEqualTo(0), message]
 
 export const integer = (
   message = 'Must be a whole number',
-): Validation<number> => [
-  (value) => globalThis.Number.isInteger(value),
-  message,
-]
+): Validation<number> => [(value) => Number.isInteger(value), message]
 
 // GENERIC VALIDATORS
 

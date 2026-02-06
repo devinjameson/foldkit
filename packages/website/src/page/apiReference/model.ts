@@ -124,14 +124,40 @@ const typeToString = (type: unknown): string => {
       const target = typeToString(t.target)
       return `${operator} ${target}`
     }
+    case 'query':
+      return `typeof ${typeToString(t.queryType)}`
+    case 'indexedAccess':
+      return `${typeToString(t.objectType)}[${typeToString(t.indexType)}]`
+    case 'conditional':
+      return `${typeToString(t.checkType)} extends ${typeToString(t.extendsType)} ? ${typeToString(t.trueType)} : ${typeToString(t.falseType)}`
+    case 'mapped': {
+      const param = t.parameter as string
+      const paramType = typeToString(t.parameterType)
+      const templateType = typeToString(t.templateType)
+      const readonly = t.readonlyModifier === '+' ? 'readonly ' : ''
+      return `{ ${readonly}[${param} in ${paramType}]: ${templateType} }`
+    }
     default:
       return 'unknown'
   }
 }
 
+const getSignatureDescription = (
+  item: TypeDocItem,
+): Option.Option<string> =>
+  pipe(
+    Option.fromNullable(item.signatures),
+    Option.flatMap(Array.head),
+    Option.flatMap((sig) =>
+      Option.fromNullable(sig.comment?.summary),
+    ),
+    Option.flatMap(Array.head),
+    Option.map((part) => part.text),
+  )
+
 const parseFunction = (item: TypeDocItem): ApiFunction => ({
   name: item.name,
-  description: getDescription(item),
+  description: getSignatureDescription(item),
   sourceUrl: getSourceUrl(item),
   signatures: (item.signatures ?? []).map((sig) => ({
     parameters: (sig.parameters ?? []).map((param) => ({
