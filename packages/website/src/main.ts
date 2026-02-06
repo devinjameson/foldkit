@@ -1,5 +1,6 @@
 import { KeyValueStore } from '@effect/platform'
 import { BrowserKeyValueStore } from '@effect/platform-browser'
+import { inject } from '@vercel/analytics'
 import classNames from 'classnames'
 import {
   Array,
@@ -243,6 +244,7 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
       resolvedTheme,
     },
     [
+      injectAnalytics,
       applyThemeToDocument(resolvedTheme),
       ...Option.match(url.hash, {
         onNone: () => [],
@@ -390,6 +392,10 @@ const update = (
   )
 
 // COMMAND
+
+const injectAnalytics: Runtime.Command<NoOp> = Effect.sync(() =>
+  inject(),
+).pipe(Effect.as(NoOp.make()))
 
 const copySnippetToClipboard = (
   text: string,
