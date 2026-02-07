@@ -163,7 +163,6 @@ export type Parser<A> = {
   ) => Effect.Effect<ParseResult<A>, ParseError>
 }
 
-// Overloaded signatures for oneOf to properly infer union types
 export function oneOf<A>(p1: Biparser<A> | Parser<A>): Parser<A>
 export function oneOf<A, B = never>(
   p1: Biparser<A> | Parser<A>,

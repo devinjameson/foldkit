@@ -12,7 +12,7 @@ import {
   p,
   span,
 } from '../../html'
-import { heading, para } from '../../prose'
+import { heading } from '../../prose'
 import type {
   ApiFunction,
   ApiModule,
@@ -24,9 +24,7 @@ import type {
 const byName = <
   T extends { readonly name: string },
 >(): Order.Order<T> =>
-  Order.mapInput(Order.string, (item: T) => item.name)
-
-// Function view
+  Order.mapInput(Order.string, ({ name }: T) => name)
 
 const functionView = (fn: ApiFunction): Html =>
   div(
@@ -77,10 +75,10 @@ const functionView = (fn: ApiFunction): Html =>
         fn.description,
         Option.match({
           onNone: () => [],
-          onSome: (desc) => [
+          onSome: (description) => [
             p(
               [Class('text-zinc-600 dark:text-zinc-400 mb-4')],
-              [desc],
+              [description],
             ),
           ],
         }),
@@ -89,7 +87,7 @@ const functionView = (fn: ApiFunction): Html =>
     ],
   )
 
-const signatureView = (sig: {
+const signatureView = (signature: {
   readonly parameters: ReadonlyArray<ApiParameter>
   readonly returnType: string
   readonly typeParameters: ReadonlyArray<string>
@@ -101,21 +99,21 @@ const signatureView = (sig: {
       ),
     ],
     [
-      ...(Array.isNonEmptyReadonlyArray(sig.typeParameters)
+      ...(Array.isNonEmptyReadonlyArray(signature.typeParameters)
         ? [
             div(
               [Class('text-zinc-500 mb-2')],
-              [`<${Array.join(sig.typeParameters, ', ')}>`],
+              [`<${Array.join(signature.typeParameters, ', ')}>`],
             ),
           ]
         : []),
-      ...(Array.isNonEmptyReadonlyArray(sig.parameters)
+      ...(Array.isNonEmptyReadonlyArray(signature.parameters)
         ? [
             div(
               [Class('mb-2')],
               [
                 span([Class('text-zinc-500')], ['(']),
-                ...Array.flatMap(sig.parameters, (param, i) => [
+                ...Array.flatMap(signature.parameters, (param, i) => [
                   ...(i > 0
                     ? [span([Class('text-zinc-500')], [', '])]
                     : []),
@@ -133,7 +131,7 @@ const signatureView = (sig: {
               ],
             ),
             ...pipe(
-              sig.parameters,
+              signature.parameters,
               Array.filter((param) =>
                 Option.isSome(param.description),
               ),
@@ -188,14 +186,12 @@ const signatureView = (sig: {
           span([Class('text-zinc-500')], ['→ ']),
           span(
             [Class('text-green-600 dark:text-green-400')],
-            [sig.returnType],
+            [signature.returnType],
           ),
         ],
       ),
     ],
   )
-
-// Type view
 
 const typeView = (type: ApiType): Html =>
   div(
@@ -246,10 +242,10 @@ const typeView = (type: ApiType): Html =>
         type.description,
         Option.match({
           onNone: () => [],
-          onSome: (desc) => [
+          onSome: (description) => [
             p(
               [Class('text-zinc-600 dark:text-zinc-400 mb-2')],
-              [desc],
+              [description],
             ),
           ],
         }),
@@ -264,8 +260,6 @@ const typeView = (type: ApiType): Html =>
       ),
     ],
   )
-
-// Variable view
 
 const variableView = (variable: ApiVariable): Html =>
   div(
@@ -316,10 +310,10 @@ const variableView = (variable: ApiVariable): Html =>
         variable.description,
         Option.match({
           onNone: () => [],
-          onSome: (desc) => [
+          onSome: (description) => [
             p(
               [Class('text-zinc-600 dark:text-zinc-400 mb-2')],
-              [desc],
+              [description],
             ),
           ],
         }),
@@ -335,7 +329,25 @@ const variableView = (variable: ApiVariable): Html =>
     ],
   )
 
-// Full API reference view (all modules on one page)
+const section = <T extends { readonly name: string }>(
+  label: string,
+  items: ReadonlyArray<T>,
+  itemView: (item: T) => Html,
+): ReadonlyArray<Html> =>
+  Array.match(items, {
+    onEmpty: () => [],
+    onNonEmpty: (items) => [
+      h3(
+        [
+          Class(
+            'text-lg font-semibold mt-6 mb-4 text-zinc-700 dark:text-zinc-300',
+          ),
+        ],
+        [label],
+      ),
+      ...pipe(items, Array.sort(byName()), Array.map(itemView)),
+    ],
+  })
 
 export const fullView = (modules: ReadonlyArray<ApiModule>): Html =>
   div(
@@ -344,60 +356,9 @@ export const fullView = (modules: ReadonlyArray<ApiModule>): Html =>
       heading('h1', 'api-reference', 'API Reference'),
       ...Array.flatMap(modules, (module) => [
         heading('h2', module.name, module.name),
-        // CLAUDE: We can use Array.match for these and also I think these are
-        // repeating the same h3 + list, so that probably wants to be an
-        // extracted view fn
-        ...(Array.isNonEmptyReadonlyArray(module.functions)
-          ? [
-              h3(
-                [
-                  Class(
-                    'text-lg font-semibold mt-6 mb-4 text-zinc-700 dark:text-zinc-300',
-                  ),
-                ],
-                ['Functions'],
-              ),
-              ...pipe(
-                module.functions,
-                Array.sort(byName()),
-                Array.map(functionView),
-              ),
-            ]
-          : []),
-        ...(Array.isNonEmptyReadonlyArray(module.types)
-          ? [
-              h3(
-                [
-                  Class(
-                    'text-lg font-semibold mt-6 mb-4 text-zinc-700 dark:text-zinc-300',
-                  ),
-                ],
-                ['Types'],
-              ),
-              ...pipe(
-                module.types,
-                Array.sort(byName()),
-                Array.map(typeView),
-              ),
-            ]
-          : []),
-        ...(Array.isNonEmptyReadonlyArray(module.variables)
-          ? [
-              h3(
-                [
-                  Class(
-                    'text-lg font-semibold mt-6 mb-4 text-zinc-700 dark:text-zinc-300',
-                  ),
-                ],
-                ['Constants'],
-              ),
-              ...pipe(
-                module.variables,
-                Array.sort(byName()),
-                Array.map(variableView),
-              ),
-            ]
-          : []),
+        ...section('Functions', module.functions, functionView),
+        ...section('Types', module.types, typeView),
+        ...section('Constants', module.variables, variableView),
       ]),
     ],
   )
