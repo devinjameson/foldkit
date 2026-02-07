@@ -32,7 +32,7 @@ npx create-foldkit-app@latest --wizard
 
 ### Simple Counter Example
 
-See the full example at [examples/counter/src/main.ts](examples/counter/src/main.ts)
+See the full example at [examples/counter/src/main.ts](https://github.com/devinjameson/foldkit/blob/main/examples/counter/src/main.ts)
 
 ```ts
 import { Match as M, Schema } from 'effect'

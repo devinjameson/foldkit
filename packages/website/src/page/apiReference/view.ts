@@ -343,14 +343,7 @@ export const fullView = (modules: ReadonlyArray<ApiModule>): Html =>
     [
       heading('h1', 'api-reference', 'API Reference'),
       ...Array.flatMap(modules, (module) => [
-        div(
-          [
-            Class(
-              'mt-12 pt-4 border-t border-zinc-200 dark:border-zinc-700',
-            ),
-          ],
-          [heading('h2', module.name, module.name)],
-        ),
+        heading('h2', module.name, module.name),
         // CLAUDE: We can use Array.match for these and also I think these are
         // repeating the same h3 + list, so that probably wants to be an
         // extracted view fn

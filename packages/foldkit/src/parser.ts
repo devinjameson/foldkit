@@ -20,14 +20,14 @@ export class ParseError extends Data.TaggedError('ParseError')<{
   readonly position?: number
 }> {}
 
-type ParseResult<A> = [A, ReadonlyArray<string>]
+export type ParseResult<A> = [A, ReadonlyArray<string>]
 
 type PrintState = {
   segments: ReadonlyArray<string>
   queryParams: URLSearchParams
 }
 
-type Biparser<A> = {
+export type Biparser<A> = {
   parse: (
     segments: ReadonlyArray<string>,
     search?: string,
