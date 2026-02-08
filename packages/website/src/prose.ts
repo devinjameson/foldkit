@@ -13,6 +13,7 @@ import {
   h1,
   h2,
   h3,
+  h4,
   li,
   p,
   strong,
@@ -21,37 +22,8 @@ import {
 import { Icon } from './icon'
 import { CopyLinkToClipboard, TableOfContentsEntry } from './main'
 
-export const link = (href: string, text: string): Html =>
+export const headingLinkButton = (id: string, text: string): Html =>
   a(
-    [
-      Href(href),
-      Class('text-blue-500 dark:text-blue-400 hover:underline'),
-    ],
-    [text],
-  )
-
-export const heading = (
-  level: 'h1' | 'h2' | 'h3',
-  id: string,
-  text: string,
-): Html => {
-  const classes = {
-    h1: 'text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6',
-    h2: 'text-2xl md:text-2xl font-semibold text-gray-900 dark:text-white mt-8 mb-4 scroll-mt-6',
-    h3: 'text-lg font-semibold text-gray-900 dark:text-white mt-6 mb-3 scroll-mt-6',
-  }
-  const tag = { h1, h2, h3 }
-
-  const headingElement = tag[level](
-    [Class(classes[level]), Id(id)],
-    [text],
-  )
-
-  if (level === 'h1') {
-    return headingElement
-  }
-
-  const linkButton = a(
     [
       Href(`#${id}`),
       Class(
@@ -63,7 +35,41 @@ export const heading = (
     [Icon.link('w-6 h-6')],
   )
 
-  return div([Class('group relative')], [linkButton, headingElement])
+export const link = (href: string, text: string): Html =>
+  a(
+    [
+      Href(href),
+      Class('text-blue-500 dark:text-blue-400 hover:underline'),
+    ],
+    [text],
+  )
+
+export const heading = (
+  level: 'h1' | 'h2' | 'h3' | 'h4',
+  id: string,
+  text: string,
+): Html => {
+  const classes = {
+    h1: 'text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6',
+    h2: 'text-2xl md:text-2xl font-semibold text-gray-900 dark:text-white mt-8 mb-4 scroll-mt-6',
+    h3: 'text-lg font-semibold text-gray-900 dark:text-white mt-6 mb-3 scroll-mt-6',
+    h4: 'text-base font-mono font-medium text-gray-900 dark:text-white scroll-mt-6',
+  }
+  const tag = { h1, h2, h3, h4 }
+
+  const headingElement = tag[level](
+    [Class(classes[level]), Id(id)],
+    [text],
+  )
+
+  if (level === 'h1') {
+    return headingElement
+  }
+
+  return div(
+    [Class('group relative')],
+    [headingLinkButton(id, text), headingElement],
+  )
 }
 
 export const para = (
@@ -84,7 +90,7 @@ export const bullets = (
 ): Html =>
   ul(
     [Class('list-disc mb-8 space-y-2 ml-4')],
-    items.map((item) => li([], [item])),
+    Array.map(items, (item) => li([], [item])),
   )
 
 export const bulletPoint = (

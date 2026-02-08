@@ -28,6 +28,7 @@ import {
 import { defaultErrorView, noOpDispatch } from './errorUI'
 import { UrlRequest } from './urlRequest'
 
+/** Effect service tag that provides message dispatching to the view layer. */
 export class Dispatch extends Context.Tag('@foldkit/Dispatch')<
   Dispatch,
   {
@@ -36,13 +37,16 @@ export class Dispatch extends Context.Tag('@foldkit/Dispatch')<
   }
 >() {}
 
+/** An `Effect` that produces a message, used for side effects in the update function. */
 export type Command<Message> = Effect.Effect<Message>
 
+/** Configuration for browser URL integration with handlers for URL requests and URL changes. */
 export type BrowserConfig<Message> = {
   readonly onUrlRequest: (request: UrlRequest) => Message
   readonly onUrlChange: (url: Url) => Message
 }
 
+/** Full runtime configuration including model schema, flags, init, update, view, and optional browser/stream config. */
 export interface RuntimeConfig<
   Model,
   Message,
@@ -83,6 +87,7 @@ interface BaseElementConfig<
   readonly errorView?: (error: Error) => Html
 }
 
+/** Configuration for `makeElement` when the element receives initial data via flags. */
 export interface ElementConfigWithFlags<
   Model,
   Message,
@@ -94,6 +99,7 @@ export interface ElementConfigWithFlags<
   readonly init: (flags: Flags) => [Model, ReadonlyArray<Command<Message>>]
 }
 
+/** Configuration for `makeElement` without flags. */
 export interface ElementConfigWithoutFlags<
   Model,
   Message,
@@ -119,6 +125,7 @@ interface BaseApplicationConfig<
   readonly errorView?: (error: Error) => Html
 }
 
+/** Configuration for `makeApplication` when the application receives initial data via flags. */
 export interface ApplicationConfigWithFlags<
   Model,
   Message,
@@ -133,6 +140,7 @@ export interface ApplicationConfigWithFlags<
   ) => [Model, ReadonlyArray<Command<Message>>]
 }
 
+/** Configuration for `makeApplication` without flags. */
 export interface ApplicationConfigWithoutFlags<
   Model,
   Message,
@@ -141,14 +149,17 @@ export interface ApplicationConfigWithoutFlags<
   readonly init: (url: Url) => [Model, ReadonlyArray<Command<Message>>]
 }
 
+/** The `init` function type for elements, with an optional `flags` parameter when `Flags` is not `void`. */
 export type ElementInit<Model, Message, Flags = void> = Flags extends void
   ? () => [Model, ReadonlyArray<Command<Message>>]
   : (flags: Flags) => [Model, ReadonlyArray<Command<Message>>]
 
+/** The `init` function type for applications, receives the current URL and optional flags. */
 export type ApplicationInit<Model, Message, Flags = void> = Flags extends void
   ? (url: Url) => [Model, ReadonlyArray<Command<Message>>]
   : (flags: Flags, url: Url) => [Model, ReadonlyArray<Command<Message>>]
 
+/** A reactive stream configuration that maps model changes to a stream of commands. */
 export type CommandStream<Model, Message, StreamDeps> = {
   readonly modelToDeps: (model: Model) => StreamDeps
   readonly depsToStream: (deps: StreamDeps) => Stream.Stream<Command<Message>>
@@ -158,6 +169,7 @@ type CommandStreamConfig<Model, Message, StreamDeps> = {
   readonly schema: Schema.Schema<StreamDeps>
 } & CommandStream<Model, Message, StreamDeps>
 
+/** A record of named command stream configurations, keyed by dependency field name. */
 export type CommandStreams<
   Model,
   Message,
@@ -170,6 +182,7 @@ export type CommandStreams<
   >
 }
 
+/** Creates type-safe command stream configurations from a dependency schema. */
 export const makeCommandStreams =
   <CommandStreamsDeps extends Schema.Struct<any>>(
     CommandStreamsDeps: CommandStreamsDeps,
@@ -188,7 +201,8 @@ export const makeCommandStreams =
       depsToStream,
     }))
 
-type MakeRuntimeReturn = (hmrModel?: unknown) => Effect.Effect<void>
+/** A configured Foldkit runtime returned by `makeElement` or `makeApplication`, passed to `run` to start the application. */
+export type MakeRuntimeReturn = (hmrModel?: unknown) => Effect.Effect<void>
 
 const makeRuntime =
   <
@@ -437,6 +451,7 @@ const renderErrorView = (
   }
 }
 
+/** Creates a Foldkit element (no URL routing) and returns a runtime that can be passed to `run`. */
 export function makeElement<
   Model,
   Message extends { _tag: string },
@@ -490,6 +505,7 @@ export function makeElement<
   }
 }
 
+/** Creates a Foldkit application with URL routing and returns a runtime that can be passed to `run`. */
 export function makeApplication<
   Model,
   Message extends { _tag: string },
@@ -552,9 +568,7 @@ const preserveModel = (model: unknown): void => {
   }
 }
 
-/*
- * Run a Foldkit application
- */
+/** Starts a Foldkit runtime, with HMR support for development. */
 export const run = (foldkitRuntime: MakeRuntimeReturn): void => {
   if (import.meta.hot) {
     import.meta.hot.on('foldkit:restore-model', (model) => {

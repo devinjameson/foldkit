@@ -16,6 +16,7 @@ import type { Attrs, On, Props, VNodeData } from 'snabbdom'
 import { Dispatch } from './runtime'
 import { VNode } from './vdom'
 
+/** A virtual DOM element represented as an `Effect` that produces a `VNode`. */
 export type Html = Effect.Effect<VNode | null, never, Dispatch>
 type Child = Html | string
 
@@ -1698,6 +1699,11 @@ const htmlAttributes = <Message>(): HtmlAttributes<Message> => ({
   StrokeDashoffset: (value: string) => StrokeDashoffset({ value }),
 })
 
+/**
+ * Factory that returns all HTML, SVG, and MathML element constructors,
+ * attribute constructors, a `keyed` helper for keyed elements, and `empty`
+ * for rendering nothing.
+ */
 export const html = <Message>() => {
   return {
     ...htmlElements<Message>(),
