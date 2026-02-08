@@ -61,3 +61,5 @@
 - [ ] Why does the html function not require a generic arg?
 
 - [ ] Route.oneOf has overloads up to 10 args — consider making it truly variadic or documenting that users should chain oneOfs for more
+
+- [ ] Noticed that Effect is not technically a dependency of Foldkit, seems wrong?

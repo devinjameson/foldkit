@@ -4,7 +4,8 @@ import { int, literal, slash } from 'foldkit/route'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
-// Routes
+// ROUTE
+
 const HomeRoute = ts('Home')
 const PersonRoute = ts('Person', { personId: S.Number })
 const NotFoundRoute = ts('NotFound', { path: S.String })
@@ -23,16 +24,21 @@ const urlToAppRoute = Route.parseUrlWithFallback(
   NotFoundRoute,
 )
 
-// Model
+// MODEL
+
 const Model = S.Struct({ route: AppRoute })
 type Model = typeof Model.Type
 
-// Messages - LinkClicked and UrlChanged are required for routing
+// MESSAGE
+
+// LinkClicked and UrlChanged are required for routing
 const NoOp = ts('NoOp')
 const LinkClicked = ts('LinkClicked', { request: Runtime.UrlRequest })
 const UrlChanged = ts('UrlChanged', { url: Url.Url })
 const Message = S.Union(NoOp, LinkClicked, UrlChanged)
 type Message = typeof Message.Type
+
+// UPDATE
 
 const update = (model: Model, message: Message) =>
   M.value(message).pipe(

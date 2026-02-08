@@ -17,6 +17,7 @@ export const ExamplesRoute = ts('Examples')
 export const BestPracticesRoute = ts('BestPractices')
 export const ProjectOrganizationRoute = ts('ProjectOrganization')
 export const AdvancedPatternsRoute = ts('AdvancedPatterns')
+export const ApiReferenceRoute = ts('ApiReference')
 export const NotFoundRoute = ts('NotFound', { path: S.String })
 
 export const AppRoute = S.Union(
@@ -30,6 +31,7 @@ export const AppRoute = S.Union(
   BestPracticesRoute,
   ProjectOrganizationRoute,
   AdvancedPatternsRoute,
+  ApiReferenceRoute,
   NotFoundRoute,
 )
 
@@ -46,6 +48,7 @@ export type BestPracticesRoute = typeof BestPracticesRoute.Type
 export type ProjectOrganizationRoute =
   typeof ProjectOrganizationRoute.Type
 export type AdvancedPatternsRoute = typeof AdvancedPatternsRoute.Type
+export type ApiReferenceRoute = typeof ApiReferenceRoute.Type
 export type NotFoundRoute = typeof NotFoundRoute.Type
 export type AppRoute = typeof AppRoute.Type
 
@@ -88,10 +91,14 @@ export const advancedPatternsRouter = pipe(
   literal('advanced-patterns'),
   Route.mapTo(AdvancedPatternsRoute),
 )
+export const apiReferenceRouter = pipe(
+  literal('api'),
+  Route.mapTo(ApiReferenceRoute),
+)
 
 // PARSER
 
-export const routeParser = Route.oneOf(
+const docsParser = Route.oneOf(
   whyFoldkitRouter,
   comingFromReactRouter,
   gettingStartedRouter,
@@ -101,6 +108,11 @@ export const routeParser = Route.oneOf(
   bestPracticesRouter,
   projectOrganizationRouter,
   advancedPatternsRouter,
+)
+
+export const routeParser = Route.oneOf(
+  docsParser,
+  apiReferenceRouter,
   homeRouter,
 )
 

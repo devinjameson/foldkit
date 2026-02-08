@@ -17,6 +17,7 @@ import {
   Model,
 } from '../main'
 import * as Page from '../page'
+import { apiReferenceTableOfContents } from '../page/apiReference'
 
 export const activeSection: CommandStream<
   Model,
@@ -54,6 +55,7 @@ export const activeSection: CommandStream<
         'AdvancedPatterns',
         () => Page.AdvancedPatterns.tableOfContents,
       ),
+      M.tag('ApiReference', () => apiReferenceTableOfContents),
       M.option,
     )
 

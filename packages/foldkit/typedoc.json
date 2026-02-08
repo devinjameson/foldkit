@@ -1,0 +1,19 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src/index.ts"],
+  "tsconfig": "tsconfig.json",
+  "json": "../website/src/generated/api.json",
+  "pretty": false,
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeInternal": true,
+  "intentionallyNotExported": [
+    "CommandStreamConfig",
+    "ElementFunction",
+    "VoidElementFunction",
+    "TagName",
+    "AttributeWithoutKey",
+    "Child",
+    "PrintState"
+  ]
+}

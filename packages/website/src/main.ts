@@ -50,8 +50,10 @@ import {
 import { Icon } from './icon'
 import { Link } from './link'
 import * as Page from './page'
+import * as ApiReference from './page/apiReference'
 import {
   AdvancedPatternsRoute,
+  ApiReferenceRoute,
   AppRoute,
   ArchitectureAndConceptsRoute,
   BestPracticesRoute,
@@ -63,6 +65,7 @@ import {
   RoutingAndNavigationRoute,
   WhyFoldkitRoute,
   advancedPatternsRouter,
+  apiReferenceRouter,
   architectureAndConceptsRouter,
   bestPracticesRouter,
   comingFromReactRouter,
@@ -79,7 +82,7 @@ import { themeSelector } from './view/themeSelector'
 export type TableOfContentsEntry = {
   id: string
   text: string
-  level: 'h2' | 'h3'
+  level: 'h2' | 'h3' | 'h4'
 }
 
 // THEME
@@ -596,6 +599,11 @@ const sidebarView = (
                 S.is(ExamplesRoute)(currentRoute),
                 'Example Apps',
               ),
+              navLink(
+                apiReferenceRouter.build({}),
+                S.is(ApiReferenceRoute)(currentRoute),
+                'API Reference',
+              ),
             ],
           ),
         ],
@@ -639,7 +647,7 @@ const tableOfContentsView = (
   aside(
     [
       Class(
-        'hidden xl:block sticky top-[var(--header-height)] w-64 h-[calc(100vh-var(--header-height))] shrink-0 overflow-y-auto border-l border-gray-300 dark:border-gray-700 p-4',
+        'hidden xl:block sticky top-[var(--header-height)] min-w-64 w-fit h-[calc(100vh-var(--header-height))] shrink-0 overflow-y-auto border-l border-gray-300 dark:border-gray-700 p-4',
       ),
     ],
     [
@@ -655,7 +663,7 @@ const tableOfContentsView = (
         [],
         [
           ul(
-            [Class('space-y-2 text-sm pl-1')],
+            [Class('space-y-2 text-sm')],
             Array.map(entries, ({ level, id, text }) => {
               const isActive = Option.match(maybeActiveSectionId, {
                 onNone: () => false,
@@ -664,7 +672,14 @@ const tableOfContentsView = (
 
               return keyed('li')(
                 id,
-                [Class(classNames({ 'ml-4': level === 'h3' }))],
+                [
+                  Class(
+                    classNames({
+                      'ml-3': level === 'h3',
+                      'ml-6': level === 'h4',
+                    }),
+                  ),
+                ],
                 [
                   a(
                     [
@@ -793,6 +808,7 @@ const mobileTableOfContentsView = (
                           'transition flex items-center justify-between py-3 px-4',
                           {
                             'pl-8': level === 'h3',
+                            'pl-12': level === 'h4',
                             'text-blue-600 dark:text-blue-400':
                               isActive,
                             'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white':
@@ -834,6 +850,8 @@ const view = (model: Model) => {
       BestPractices: () => Page.BestPractices.view(model),
       ProjectOrganization: () => Page.ProjectOrganization.view(model),
       AdvancedPatterns: () => Page.AdvancedPatterns.view(model),
+      ApiReference: () =>
+        ApiReference.view(ApiReference.apiReference.modules),
       NotFound: ({ path }) =>
         Page.NotFound.view(path, homeRouter.build({})),
     }),
@@ -863,6 +881,9 @@ const view = (model: Model) => {
     ),
     M.tag('AdvancedPatterns', () =>
       Option.some(Page.AdvancedPatterns.tableOfContents),
+    ),
+    M.tag('ApiReference', () =>
+      Option.some(ApiReference.apiReferenceTableOfContents),
     ),
     M.orElse(() => Option.none()),
   )

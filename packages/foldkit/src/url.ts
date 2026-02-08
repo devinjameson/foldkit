@@ -2,6 +2,7 @@ import { Effect, Option, ParseResult, Schema as S, String } from 'effect'
 
 import { OptionExt } from './effectExtensions'
 
+/** Schema representing a parsed URL with protocol, host, port, pathname, search, and hash fields. */
 export const Url = S.Struct({
   protocol: S.String,
   host: S.String,
@@ -89,5 +90,7 @@ const UrlFromString = S.compose(
   UrlFromLocationAndHref,
 )
 
+/** Parses a URL string into a `Url`, returning `Option.None` if invalid. */
 export const fromString = (str: string) => S.decodeOption(UrlFromString)(str)
+/** Serializes a `Url` back to a string. */
 export const toString = (url: Url) => S.encodeSync(UrlFromString)(url)

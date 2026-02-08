@@ -13,6 +13,12 @@ import {
 
 import { Url } from './url'
 
+/**
+ * Error type for route parsing failures.
+ *
+ * Includes optional `expected`, `actual`, and `position` fields for
+ * diagnostic context when a URL segment does not match.
+ */
 export class ParseError extends Data.TaggedError('ParseError')<{
   readonly message: string
   readonly expected?: string
@@ -20,14 +26,21 @@ export class ParseError extends Data.TaggedError('ParseError')<{
   readonly position?: number
 }> {}
 
-type ParseResult<A> = [A, ReadonlyArray<string>]
+/**
+ * The result of parsing: a tuple of the parsed value and remaining URL segments.
+ */
+export type ParseResult<A> = [A, ReadonlyArray<string>]
 
 type PrintState = {
   segments: ReadonlyArray<string>
   queryParams: URLSearchParams
 }
 
-type Biparser<A> = {
+/**
+ * A bidirectional parser that can both parse URL segments into a value
+ * and print a value back to URL segments.
+ */
+export type Biparser<A> = {
   parse: (
     segments: ReadonlyArray<string>,
     search?: string,
@@ -35,6 +48,13 @@ type Biparser<A> = {
   print: (value: A, state: PrintState) => Effect.Effect<PrintState, ParseError>
 }
 
+/**
+ * A parser with a `build` method that can reconstruct URLs from parsed values.
+ *
+ * Created by applying `mapTo` to a `Biparser`, binding it to a tagged
+ * type constructor so parsed values carry a discriminant tag and URLs can be
+ * built from tag payloads.
+ */
 export type Router<A> = {
   parse: (
     segments: ReadonlyArray<string>,
@@ -43,12 +63,24 @@ export type Router<A> = {
   build: (value: A extends { _tag: string } ? Omit<A, '_tag'> : never) => string
 }
 
+/**
+ * A `Biparser` that has been terminated (e.g. by `query`) and cannot
+ * be extended with `slash`.
+ */
 export type TerminalParser<A> = Biparser<A> & { readonly __terminal: true }
 
 const makeTerminalParser = <A>(parser: Biparser<A>): TerminalParser<A> =>
   /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
   parser as TerminalParser<A>
 
+/**
+ * Creates a parser that matches an exact URL path segment.
+ *
+ * @example
+ * ```ts
+ * literal('users') // matches /users
+ * ```
+ */
 export const literal = (segment: string): Biparser<{}> => ({
   parse: (segments) =>
     Array.matchLeft(segments, {
@@ -80,6 +112,13 @@ export const literal = (segment: string): Biparser<{}> => ({
     }),
 })
 
+/**
+ * Creates a parser for a dynamic URL segment with custom parse and print functions.
+ *
+ * @param label - A descriptive name used in error messages.
+ * @param parse - Converts a raw URL segment string into the parsed value.
+ * @param print - Converts the parsed value back into a URL segment string.
+ */
 export const param = <A>(
   label: string,
   parse: (segment: string) => Effect.Effect<A, ParseError>,
@@ -110,6 +149,14 @@ export const param = <A>(
     }),
 })
 
+/**
+ * Creates a parser that captures a URL segment as a named string field.
+ *
+ * @example
+ * ```ts
+ * string('slug') // parses /hello into { slug: "hello" }
+ * ```
+ */
 export const string = <K extends string>(
   name: K,
 ): Biparser<Record<K, string>> =>
@@ -120,6 +167,16 @@ export const string = <K extends string>(
     (record) => record[name],
   )
 
+/**
+ * Creates a parser that captures a URL segment as a named integer field.
+ *
+ * Fails if the segment is not a valid integer.
+ *
+ * @example
+ * ```ts
+ * int('id') // parses /42 into { id: 42 }
+ * ```
+ */
 export const int = <K extends string>(name: K): Biparser<Record<K, number>> =>
   param(
     `integer (${name})`,
@@ -140,6 +197,11 @@ export const int = <K extends string>(name: K): Biparser<Record<K, number>> =>
     (record) => record[name].toString(),
   )
 
+/**
+ * A parser that matches the root path with no remaining segments.
+ *
+ * Succeeds only when the URL path is exactly `/`.
+ */
 export const root: Biparser<{}> = {
   parse: (segments) =>
     Array.matchLeft(segments, {
@@ -156,6 +218,12 @@ export const root: Biparser<{}> = {
   print: (_, state) => Effect.succeed(state),
 }
 
+/**
+ * A parse-only parser with no print/build capabilities.
+ *
+ * Returned by `oneOf`, which combines multiple parsers whose print
+ * types may differ and therefore cannot be unified into a single `Biparser`.
+ */
 export type Parser<A> = {
   parse: (
     segments: ReadonlyArray<string>,
@@ -163,7 +231,12 @@ export type Parser<A> = {
   ) => Effect.Effect<ParseResult<A>, ParseError>
 }
 
-// Overloaded signatures for oneOf to properly infer union types
+/**
+ * Combines multiple parsers, trying each in order until one succeeds.
+ *
+ * Returns a `Parser` (parse-only) since the union of different route
+ * shapes cannot provide a single unified print function.
+ */
 export function oneOf<A>(p1: Biparser<A> | Parser<A>): Parser<A>
 export function oneOf<A, B = never>(
   p1: Biparser<A> | Parser<A>,
@@ -311,6 +384,18 @@ export function oneOf(
   }
 }
 
+/**
+ * Converts a `Biparser` into a `Router` by mapping parsed values to a
+ * tagged type constructor.
+ *
+ * The resulting `Router` can both parse URLs into tagged route values and
+ * build URLs from route payloads.
+ *
+ * @example
+ * ```ts
+ * pipe(literal('users'), slash(int('id')), mapTo(UserRoute))
+ * ```
+ */
 export const mapTo: {
   <T>(appRouteConstructor: {
     make: () => T
@@ -337,6 +422,16 @@ export const mapTo: {
   }
 }
 
+/**
+ * Composes two `Biparser`s sequentially, combining their parsed values.
+ *
+ * Cannot be used after `query` since query parameters are terminal.
+ *
+ * @example
+ * ```ts
+ * pipe(literal('users'), slash(int('id'))) // matches /users/42
+ * ```
+ */
 export const slash =
   <A extends Record<string, unknown>, B extends Record<string, unknown>>(
     parserB: Biparser<A>,
@@ -367,6 +462,23 @@ export const slash =
       ),
   })
 
+/**
+ * Adds query parameter parsing to a `Biparser` using an Effect `Schema`.
+ *
+ * Produces a `TerminalParser` that cannot be extended with `slash`,
+ * since query parameters must appear at the end of a route definition.
+ *
+ * @example
+ * ```ts
+ * pipe(
+ *   literal('search'),
+ *   query(S.Struct({ q: S.String })),
+ *   mapTo(SearchRoute),
+ * )
+ * ```
+ *
+ * @param schema - An Effect Schema describing the expected query parameters.
+ */
 export const query =
   <A, I extends Record.ReadonlyRecord<string, unknown>>(
     schema: Schema.Schema<A, I>,
@@ -467,6 +579,14 @@ const parseUrl =
     )
   }
 
+/**
+ * Parses a URL against a parser, falling back to a not-found route if no
+ * parser matches.
+ *
+ * @param parser - The parser (typically from `oneOf`) to attempt.
+ * @param notFoundRouteConstructor - Constructor called with `{ path }` when
+ *   no route matches.
+ */
 export const parseUrlWithFallback =
   <A, B>(
     parser: Parser<A>,
