@@ -92,7 +92,7 @@ export const advancedPatternsRouter = pipe(
   Route.mapTo(AdvancedPatternsRoute),
 )
 export const apiReferenceRouter = pipe(
-  literal('api'),
+  literal('api-reference'),
   Route.mapTo(ApiReferenceRoute),
 )
 
