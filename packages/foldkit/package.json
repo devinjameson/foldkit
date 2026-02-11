@@ -56,9 +56,11 @@
     "docs": "typedoc"
   },
   "peerDependencies": {
+    "@effect/platform-browser": "^0.74.0",
     "effect": "^3.18.2"
   },
   "devDependencies": {
+    "@effect/platform-browser": "^0.74.0",
     "@effect/vitest": "^0.27.0",
     "effect": "^3.19.15",
     "happy-dom": "^18.0.1",
@@ -80,7 +82,6 @@
     "directory": "packages/foldkit"
   },
   "dependencies": {
-    "@effect/platform-browser": "^0.74.0",
     "snabbdom": "^3.6.3"
   },
   "publishConfig": {

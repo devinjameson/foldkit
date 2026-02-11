@@ -577,13 +577,13 @@ importers:
 
   packages/foldkit:
     dependencies:
-      '@effect/platform-browser':
-        specifier: ^0.74.0
-        version: 0.74.0(@effect/platform@0.94.2(effect@3.19.15))(effect@3.19.15)
       snabbdom:
         specifier: ^3.6.3
         version: 3.6.3
     devDependencies:
+      '@effect/platform-browser':
+        specifier: ^0.74.0
+        version: 0.74.0(@effect/platform@0.94.2(effect@3.19.15))(effect@3.19.15)
       '@effect/vitest':
         specifier: ^0.27.0
         version: 0.27.0(effect@3.19.15)(vitest@3.2.4(@types/node@25.1.0)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2))
