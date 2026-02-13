@@ -1,5 +1,18 @@
 # foldkit
 
+## 0.16.0
+
+### Minor Changes
+
+- Add headless Tabs component to foldkit-ui
+  - Horizontal and vertical orientations with arrow key navigation
+  - Automatic and manual activation modes
+  - Disabled tab support, skipped in keyboard navigation
+  - Panel persistence option to keep inactive panels in the DOM
+  - Element polymorphism for tab list, tab, and panel elements
+  - Data attributes (`data-selected`, `data-disabled`) for CSS-driven styling
+  - Add `AriaControls` and `AriaOrientation` helpers to the html module
+
 ## 0.15.0
 
 ### Patch Changes
