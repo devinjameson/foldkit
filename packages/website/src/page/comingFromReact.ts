@@ -8,6 +8,7 @@ import {
   heading,
   inlineCode,
   link,
+  pageTitle,
   para,
   tableOfContentsEntryToHeader,
 } from '../prose'
@@ -125,7 +126,7 @@ export const view = (model: Model): Html =>
   div(
     [],
     [
-      heading('h1', 'coming-from-react', 'Coming from React'),
+      pageTitle('coming-from-react', 'Coming from React'),
       tableOfContentsEntryToHeader(introductionHeader),
       para(
         "If you're coming from React, you already understand component-based UI, state management, and the challenges of building complex web applications. Foldkit takes a different approach — one that may feel unfamiliar at first but addresses many frustrations you've likely encountered.",

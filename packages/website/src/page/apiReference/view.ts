@@ -15,7 +15,12 @@ import {
   span,
   summary,
 } from '../../html'
-import { heading, headingLinkButton, inlineCode } from '../../prose'
+import {
+  heading,
+  headingLinkButton,
+  inlineCode,
+  pageTitle,
+} from '../../prose'
 import type {
   ApiFunction,
   ApiInterface,
@@ -586,7 +591,7 @@ export const view = (modules: ReadonlyArray<ApiModule>): Html =>
   div(
     [],
     [
-      heading('h1', 'api-reference', 'API Reference'),
+      pageTitle('api-reference', 'API Reference'),
       ...Array.flatMap(modules, (module, index) => [
         div(
           [

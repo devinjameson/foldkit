@@ -18,6 +18,7 @@ export const BestPracticesRoute = ts('BestPractices')
 export const ProjectOrganizationRoute = ts('ProjectOrganization')
 export const AdvancedPatternsRoute = ts('AdvancedPatterns')
 export const ApiReferenceRoute = ts('ApiReference')
+export const FoldkitUiRoute = ts('FoldkitUi')
 export const NotFoundRoute = ts('NotFound', { path: S.String })
 
 export const AppRoute = S.Union(
@@ -32,6 +33,7 @@ export const AppRoute = S.Union(
   ProjectOrganizationRoute,
   AdvancedPatternsRoute,
   ApiReferenceRoute,
+  FoldkitUiRoute,
   NotFoundRoute,
 )
 
@@ -49,6 +51,7 @@ export type ProjectOrganizationRoute =
   typeof ProjectOrganizationRoute.Type
 export type AdvancedPatternsRoute = typeof AdvancedPatternsRoute.Type
 export type ApiReferenceRoute = typeof ApiReferenceRoute.Type
+export type FoldkitUiRoute = typeof FoldkitUiRoute.Type
 export type NotFoundRoute = typeof NotFoundRoute.Type
 export type AppRoute = typeof AppRoute.Type
 
@@ -95,6 +98,10 @@ export const apiReferenceRouter = pipe(
   literal('api-reference'),
   Route.mapTo(ApiReferenceRoute),
 )
+export const foldkitUiRouter = pipe(
+  literal('foldkit-ui'),
+  Route.mapTo(FoldkitUiRoute),
+)
 
 // PARSER
 
@@ -113,6 +120,7 @@ const docsParser = Route.oneOf(
 export const routeParser = Route.oneOf(
   docsParser,
   apiReferenceRouter,
+  foldkitUiRouter,
   homeRouter,
 )
 

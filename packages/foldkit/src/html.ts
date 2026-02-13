@@ -20,7 +20,7 @@ import { VNode } from './vdom'
 export type Html = Effect.Effect<VNode | null, never, Dispatch>
 type Child = Html | string
 
-type TagName =
+export type TagName =
   | 'a'
   | 'abbr'
   | 'address'
@@ -319,6 +319,8 @@ type Attribute<Message> = Data.TaggedEnum<{
   AriaRequired: { readonly value: boolean }
   AriaInvalid: { readonly value: boolean }
   AriaLive: { readonly value: string }
+  AriaControls: { readonly value: string }
+  AriaOrientation: { readonly value: string }
   Attribute: { readonly key: string; readonly value: string }
   DataAttribute: { readonly key: string; readonly value: string }
   Style: { readonly value: Record<string, string> }
@@ -439,6 +441,8 @@ const {
   AriaRequired,
   AriaInvalid,
   AriaLive,
+  AriaControls,
+  AriaOrientation,
   Attribute,
   DataAttribute,
   Style,
@@ -704,6 +708,10 @@ const buildVNodeData = <Message>(
           AriaInvalid: ({ value }) =>
             updateDataAttrs({ 'aria-invalid': value.toString() }),
           AriaLive: ({ value }) => updateDataAttrs({ 'aria-live': value }),
+          AriaControls: ({ value }) =>
+            updateDataAttrs({ 'aria-controls': value }),
+          AriaOrientation: ({ value }) =>
+            updateDataAttrs({ 'aria-orientation': value }),
           Attribute: ({ key, value }) => updateDataAttrs({ [key]: value }),
           DataAttribute: ({ key, value }) =>
             updateDataAttrs({ [`data-${key}`]: value }),
@@ -1501,6 +1509,14 @@ type HtmlAttributes<Message> = {
     readonly _tag: 'AriaLive'
     readonly value: string
   }
+  AriaControls: (value: string) => {
+    readonly _tag: 'AriaControls'
+    readonly value: string
+  }
+  AriaOrientation: (value: string) => {
+    readonly _tag: 'AriaOrientation'
+    readonly value: string
+  }
   Attribute: (
     key: string,
     value: string,
@@ -1667,6 +1683,8 @@ const htmlAttributes = <Message>(): HtmlAttributes<Message> => ({
   AriaRequired: (value: boolean) => AriaRequired({ value }),
   AriaInvalid: (value: boolean) => AriaInvalid({ value }),
   AriaLive: (value: string) => AriaLive({ value }),
+  AriaControls: (value: string) => AriaControls({ value }),
+  AriaOrientation: (value: string) => AriaOrientation({ value }),
   Attribute: (key: string, value: string) => Attribute({ key, value }),
   DataAttribute: (key: string, value: string) => DataAttribute({ key, value }),
   Style: (value: Record<string, string>) => Style({ value }),

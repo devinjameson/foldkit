@@ -27,6 +27,7 @@ export const {
   p,
   path,
   pre,
+  section,
   span,
   strong,
   summary,

@@ -1,0 +1,137 @@
+import { Class, div, p, section, span } from '../../html'
+import type { TableOfContentsEntry } from '../../main'
+import type { Message as ParentMessage } from '../../main'
+import { heading, pageTitle, para } from '../../prose'
+import type { Message } from './message'
+import type { Model } from './model'
+import * as Tabs from './tabs'
+
+// TABLE OF CONTENTS
+
+const plannedComponents: ReadonlyArray<{
+  readonly entry: TableOfContentsEntry
+  readonly description: string
+}> = [
+  {
+    entry: { level: 'h2', id: 'disclosure', text: 'Disclosure' },
+    description:
+      'A simple, accessible foundation for building custom UIs that show and hide content, like toggleable FAQ sections.',
+  },
+  {
+    entry: { level: 'h2', id: 'dialog', text: 'Dialog' },
+    description:
+      'A fully-managed, renderless dialog component with accessibility features like focus trapping and scroll locking.',
+  },
+  {
+    entry: { level: 'h2', id: 'menu', text: 'Menu' },
+    description:
+      'A dropdown menu with keyboard navigation, typeahead support, and proper ARIA attributes.',
+  },
+  {
+    entry: { level: 'h2', id: 'listbox', text: 'Listbox' },
+    description:
+      'A custom select component with search, multi-select, and keyboard navigation.',
+  },
+  {
+    entry: { level: 'h2', id: 'combobox', text: 'Combobox' },
+    description:
+      'An autocomplete input with filtering, keyboard navigation, and custom rendering.',
+  },
+  {
+    entry: { level: 'h2', id: 'popover', text: 'Popover' },
+    description:
+      'A floating panel that attaches to a trigger element with proper focus management.',
+  },
+  {
+    entry: { level: 'h2', id: 'switch', text: 'Switch' },
+    description:
+      'A toggle switch component with accessible labeling and keyboard support.',
+  },
+  {
+    entry: { level: 'h2', id: 'radio-group', text: 'Radio Group' },
+    description:
+      'A set of radio buttons with keyboard navigation and custom styling.',
+  },
+  {
+    entry: { level: 'h2', id: 'checkbox', text: 'Checkbox' },
+    description:
+      'A custom checkbox with accessible labeling, indeterminate state, and keyboard support.',
+  },
+  {
+    entry: { level: 'h2', id: 'input', text: 'Input' },
+    description:
+      'An accessible text input with description and error message associations via ARIA attributes.',
+  },
+  {
+    entry: { level: 'h2', id: 'select', text: 'Select' },
+    description:
+      'An accessible native select wrapper with labeling and description support.',
+  },
+  {
+    entry: { level: 'h2', id: 'textarea', text: 'Textarea' },
+    description:
+      'An accessible textarea with description and error message associations via ARIA attributes.',
+  },
+  {
+    entry: { level: 'h2', id: 'fieldset', text: 'Fieldset' },
+    description:
+      'A group of related form controls with a legend, supporting disabled state propagation to all children.',
+  },
+]
+
+export const tableOfContents: ReadonlyArray<TableOfContentsEntry> = [
+  Tabs.tabsHeader,
+  Tabs.horizontalHeader,
+  Tabs.verticalHeader,
+  ...plannedComponents.map(({ entry }) => entry),
+]
+
+// VIEW
+
+const comingSoonBadge = span(
+  [
+    Class(
+      'inline-block px-2.5 py-0.5 text-xs font-medium rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400',
+    ),
+  ],
+  ['Coming Soon'],
+)
+
+const comingSoonSection = (
+  entry: TableOfContentsEntry,
+  description: string,
+) =>
+  section(
+    [Class('mt-8')],
+    [
+      heading('h2', entry.id, entry.text),
+      div([Class('-mt-2 mb-3')], [comingSoonBadge]),
+      p([Class('text-gray-600 dark:text-gray-400')], [description]),
+    ],
+  )
+
+export const view = (
+  model: Model,
+  toMessage: (message: Message) => ParentMessage,
+) =>
+  div(
+    [],
+    [
+      pageTitle('foldkit-ui', 'Foldkit UI'),
+      para(
+        'Accessible, unstyled UI components. Each component provides Model, Message, init, update, and view: composable building blocks with zero extra dependencies.',
+      ),
+      heading('h2', Tabs.tabsHeader.id, Tabs.tabsHeader.text),
+      para(
+        'A fully accessible tabs component with keyboard navigation. Renders a tablist with tab buttons and a tabpanel. Supports Home/End to jump, with wrapping.',
+      ),
+      ...Tabs.horizontalDemo(model, toMessage),
+      ...Tabs.verticalDemo(model, toMessage),
+      div(
+        [Class('mt-12')],
+        plannedComponents.map(({ entry, description }) =>
+          comingSoonSection(entry, description),
+        ),
+      ),
+    ],
+  )

@@ -3,7 +3,7 @@ import { Html } from 'foldkit/html'
 
 import { Class, Href, a, div, h3, p } from '../html'
 import { Link } from '../link'
-import { heading, para } from '../prose'
+import { pageTitle, para } from '../prose'
 
 type Difficulty = 'Beginner' | 'Intermediate' | 'Advanced'
 
@@ -199,7 +199,7 @@ export const view = (): Html =>
   div(
     [],
     [
-      heading('h1', 'examples', 'Examples'),
+      pageTitle('examples', 'Examples'),
       para(
         'Each example is available as a starter template via ',
         a(

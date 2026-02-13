@@ -56,6 +56,7 @@ export const activeSection: CommandStream<
         () => Page.AdvancedPatterns.tableOfContents,
       ),
       M.tag('ApiReference', () => apiReferenceTableOfContents),
+      M.tag('FoldkitUi', () => Page.FoldkitUi.tableOfContents),
       M.option,
     )
 

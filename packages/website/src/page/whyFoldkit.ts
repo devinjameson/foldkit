@@ -9,6 +9,7 @@ import {
   heading,
   inlineCode,
   link,
+  pageTitle,
   para,
   tableOfContentsEntryToHeader,
 } from '../prose'
@@ -139,7 +140,7 @@ export const view = (): Html =>
   div(
     [],
     [
-      heading('h1', 'whyFoldkit', 'Why Foldkit?'),
+      pageTitle('whyFoldkit', 'Why Foldkit?'),
       tableOfContentsEntryToHeader(theChallengesHeader),
       para(
         'Building interactive web applications presents recurring challenges. As complexity grows, certain patterns become harder to manage:',

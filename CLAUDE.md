@@ -46,7 +46,30 @@ Match the quality and thoughtfulness of these files. The principles below apply 
 - Use `Effect.gen()` for imperative-style async operations
 - Use curried functions for better composition
 - Always use Effect.Match instead of switch
-- Prefer Effect module functions over native methods when available — e.g. `Array.map`, `Array.filter`, `Option.map`, `String.startsWith` from Effect instead of their native equivalents.
+- Prefer Effect module functions over native methods when available — e.g. `Array.map`, `Array.filter`, `Option.map`, `String.startsWith` from Effect instead of their native equivalents. Exception: native `.map`, `.filter`, etc. are fine when calling directly on a named variable (e.g. `commands.map(Effect.map(...))`) — use Effect's `Array.map` in `pipe` chains where the curried, data-last form composes naturally.
+
+### Message Layout
+
+Message definitions follow a strict four-group layout, whether in a dedicated message file or a message block within a larger file (like main.ts). Each group is separated by a blank line:
+
+```ts
+const A = ts('A')
+const B = ts('B', { value: S.String })
+
+const Message = S.Union(A, B)
+
+type A = typeof A.Type
+type B = typeof B.Type
+
+type Message = typeof Message.Type
+```
+
+1. **Values** — all `ts()` declarations, no blank lines between them
+2. **Union** — `S.Union(...)` of all values
+3. **Individual types** — `type X = typeof X.Type` for every value, no blank lines between them
+4. **Message type** — `type Message = typeof Message.Type`, separated from individual types
+
+Always create types for all message values, not just the ones currently used externally.
 
 ### General Preferences
 
@@ -58,6 +81,7 @@ Match the quality and thoughtfulness of these files. The principles below apply 
   comments to explain or improve clairty, instead refactor it to make it easier to
   understand or use better names.
 - When editing code, follow existing patterns in the codebase exactly. Before writing new code, read 2-3 existing files that do similar things and match their style for naming, spacing, imports, and patterns. Never use placeholder types like `{_tag: string}`.
+- Use capitalized string literals for Schema literal types: `S.Literal('Horizontal', 'Vertical')` not `S.Literal('horizontal', 'vertical')`.
 
 ### Commits and Releases
 

@@ -5,9 +5,9 @@ import { Link } from '../link'
 import type { Model, TableOfContentsEntry } from '../main'
 import {
   callout,
-  heading,
   inlineCode,
   link,
+  pageTitle,
   para,
   tableOfContentsEntryToHeader,
 } from '../prose'
@@ -126,11 +126,7 @@ export const view = (model: Model): Html =>
   div(
     [],
     [
-      heading(
-        'h1',
-        'architectureAndConcepts',
-        'Architecture & Concepts',
-      ),
+      pageTitle('architectureAndConcepts', 'Architecture & Concepts'),
       tableOfContentsEntryToHeader(counterExampleHeader),
       para(
         'The easiest way to learn how Foldkit works is to first look at examples, then dive deeper to understand each piece in isolation.',

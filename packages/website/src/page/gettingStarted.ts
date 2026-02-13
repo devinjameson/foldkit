@@ -8,6 +8,7 @@ import {
   heading,
   inlineCode,
   link,
+  pageTitle,
   para,
   tableOfContentsEntryToHeader,
 } from '../prose'
@@ -58,7 +59,7 @@ export const view = (model: Model): Html =>
   div(
     [],
     [
-      heading('h1', 'getting-started', 'Getting Started'),
+      pageTitle('getting-started', 'Getting Started'),
       callout(
         'Coming from React?',
         "If you're familiar with React, check out the ",

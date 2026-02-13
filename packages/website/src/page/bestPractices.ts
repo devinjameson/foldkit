@@ -7,6 +7,7 @@ import {
   heading,
   inlineCode,
   link,
+  pageTitle,
   para,
   tableOfContentsEntryToHeader,
 } from '../prose'
@@ -97,7 +98,7 @@ export const view = (model: Model): Html =>
   div(
     [],
     [
-      heading('h1', 'best-practices', 'Best Practices'),
+      pageTitle('best-practices', 'Best Practices'),
       para(
         'Foldkit requires a different way of thinking than most TypeScript frameworks. These patterns will help you write maintainable applications.',
       ),

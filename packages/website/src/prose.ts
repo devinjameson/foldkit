@@ -27,12 +27,12 @@ export const headingLinkButton = (id: string, text: string): Html =>
     [
       Href(`#${id}`),
       Class(
-        'opacity-0 group-hover:opacity-100 transition-opacity absolute -left-8 top-1/2 -translate-y-1/2 p-1 pr-2 rounded hover:text-gray-800 dark:hover:text-gray-200 text-gray-400 dark:text-gray-500 cursor-pointer',
+        'p-0.5 md:p-1 rounded transition-opacity text-gray-400 dark:text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 focus-visible:text-gray-800 dark:focus-visible:text-gray-200 focus-visible:opacity-100 cursor-pointer hover-capable:opacity-0 hover-capable:group-hover:opacity-100',
       ),
       AriaLabel(`Copy link to ${text}`),
       OnClick(CopyLinkToClipboard.make({ hash: id })),
     ],
-    [Icon.link('w-6 h-6')],
+    [Icon.link('w-4 h-4 md:w-5 md:h-5')],
   )
 
 export const link = (href: string, text: string): Html =>
@@ -44,31 +44,52 @@ export const link = (href: string, text: string): Html =>
     [text],
   )
 
-export const heading = (
-  level: 'h1' | 'h2' | 'h3' | 'h4',
-  id: string,
-  text: string,
-): Html => {
-  const classes = {
-    h1: 'text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6',
-    h2: 'text-2xl md:text-2xl font-semibold text-gray-900 dark:text-white mt-8 mb-4 scroll-mt-6',
-    h3: 'text-lg font-semibold text-gray-900 dark:text-white mt-6 mb-3 scroll-mt-6',
-    h4: 'text-base font-mono font-medium text-gray-900 dark:text-white scroll-mt-6',
-  }
-  const tag = { h1, h2, h3, h4 }
-
-  const headingElement = tag[level](
-    [Class(classes[level]), Id(id)],
+export const pageTitle = (id: string, text: string): Html =>
+  h1(
+    [
+      Class(
+        'text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6',
+      ),
+      Id(id),
+    ],
     [text],
   )
 
-  if (level === 'h1') {
-    return headingElement
-  }
+const sectionHeadingConfig = {
+  h2: {
+    textClassName:
+      'text-2xl font-semibold text-gray-900 dark:text-white scroll-mt-6',
+    wrapperClassName:
+      'group flex items-center gap-1 mt-8 mb-4 md:flex-row-reverse md:justify-end md:-ml-8',
+  },
+  h3: {
+    textClassName:
+      'text-lg font-semibold text-gray-900 dark:text-white scroll-mt-6',
+    wrapperClassName:
+      'group flex items-center gap-1 mt-6 mb-3 md:flex-row-reverse md:justify-end md:-ml-8',
+  },
+  h4: {
+    textClassName:
+      'text-base font-mono font-medium text-gray-900 dark:text-white scroll-mt-6',
+    wrapperClassName:
+      'group flex items-center gap-1 md:flex-row-reverse md:justify-end md:-ml-8',
+  },
+}
+
+export const heading = (
+  level: 'h2' | 'h3' | 'h4',
+  id: string,
+  text: string,
+): Html => {
+  const tag = { h2, h3, h4 }
+  const config = sectionHeadingConfig[level]
 
   return div(
-    [Class('group relative')],
-    [headingLinkButton(id, text), headingElement],
+    [Class(config.wrapperClassName)],
+    [
+      tag[level]([Class(config.textClassName), Id(id)], [text]),
+      headingLinkButton(id, text),
+    ],
   )
 }
 

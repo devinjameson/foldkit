@@ -7,6 +7,7 @@ import {
   heading,
   inlineCode,
   link,
+  pageTitle,
   para,
   tableOfContentsEntryToHeader,
 } from '../prose'
@@ -49,7 +50,7 @@ export const view = (model: Model): Html =>
   div(
     [],
     [
-      heading('h1', 'project-organization', 'Project Organization'),
+      pageTitle('project-organization', 'Project Organization'),
       para(
         'Foldkit apps can start in a single ',
         inlineCode('main.ts'),

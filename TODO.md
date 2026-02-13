@@ -75,5 +75,15 @@
   - Components: Dialog, Combobox, Listbox, Menu, Popover, Disclosure, Tabs, etc.
   - Each component exposes its own Model, Message, update, and view
   - Consumers compose them into their app's model and wire messages through update
+  - [x] Tabs: vertical orientation — support `orientation: 'vertical'` that swaps ArrowLeft/Right to ArrowUp/Down
+  - [x] Tabs: manual activation mode — focus moves on arrow keys but selection only happens on Enter/Space
+  - [x] Tabs: disabled tabs — individual tabs can be marked disabled (skipped in keyboard nav, not clickable)
+  - [x] Tabs: panel persistence — option to keep inactive panels in the DOM (hidden) instead of unmounting, for preserving internal state
+  - [x] Tabs: element polymorphism (`as` prop) — render tab/panel as arbitrary elements instead of fixed button/div
+  - [x] Tabs: outer wrapper className — styling hook for the root container div
+  - [ ] Data attributes convention — every foldkit-ui component should emit `data-*` attributes reflecting its interactive state (e.g. `data-selected`, `data-disabled`, `data-active`, `data-checked`, `data-open`). Consumers style against these with CSS selectors or Tailwind's `data-[selected]:` modifiers instead of computing classNames from state. Design and implement this pattern on Tabs first (retrofitting `data-selected`, `data-disabled`), then apply consistently to all subsequent components.
+  - [ ] Remaining components: Disclosure, Dialog, Menu, Listbox, Combobox, Popover, Switch, Radio Group, Checkbox, Input, Select, Textarea, Fieldset
 
 - [ ] Are we using Effect.Clock everywhere we should be in the examples, instead of Date.now()?
+
+- [ ] Create `examples/foldkit-ui` example app — a standalone app with a page per UI component showing real integration patterns (model, message, init, update, view). To be done after all foldkit-ui components are built. Website links to this as the canonical usage reference.

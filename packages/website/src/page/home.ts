@@ -6,8 +6,8 @@ import {
   bulletPoint,
   bullets,
   callout,
-  heading,
   link,
+  pageTitle,
   para,
 } from '../prose'
 
@@ -15,7 +15,7 @@ export const view = (): Html =>
   div(
     [],
     [
-      heading('h1', 'introduction', 'Introduction'),
+      pageTitle('introduction', 'Introduction'),
       para(
         'Foldkit is a TypeScript framework for building type-safe, functional web applications (',
         link(Link.websiteSource, 'like this one!'),

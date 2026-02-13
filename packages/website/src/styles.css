@@ -1,6 +1,11 @@
 @import 'tailwindcss';
 
 @custom-variant dark (&:where(.dark, .dark *));
+@custom-variant hover-capable {
+  @media (hover: hover) {
+    @slot;
+  }
+}
 
 :root {
   --header-height: 3.5rem;

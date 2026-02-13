@@ -59,6 +59,7 @@ import {
   BestPracticesRoute,
   ComingFromReactRoute,
   ExamplesRoute,
+  FoldkitUiRoute,
   GettingStartedRoute,
   HomeRoute,
   ProjectOrganizationRoute,
@@ -70,6 +71,7 @@ import {
   bestPracticesRouter,
   comingFromReactRouter,
   examplesRouter,
+  foldkitUiRouter,
   gettingStartedRouter,
   homeRouter,
   projectOrganizationRouter,
@@ -151,6 +153,7 @@ export const Model = S.Struct({
   themePreference: ThemePreference,
   systemTheme: ResolvedTheme,
   resolvedTheme: ResolvedTheme,
+  foldkitUi: Page.FoldkitUi.Model,
 })
 
 export type Model = typeof Model.Type
@@ -191,6 +194,9 @@ export const SetThemePreference = ts('SetThemePreference', {
 export const SystemThemeChanged = ts('SystemThemeChanged', {
   theme: ResolvedTheme,
 })
+const FoldkitUiMessage = ts('FoldkitUiMessage', {
+  message: Page.FoldkitUi.Message,
+})
 
 const Message = S.Union(
   NoOp,
@@ -206,6 +212,7 @@ const Message = S.Union(
   ActiveSectionChanged,
   SetThemePreference,
   SystemThemeChanged,
+  FoldkitUiMessage,
 )
 
 type NoOp = typeof NoOp.Type
@@ -219,6 +226,8 @@ type ToggleMobileMenu = typeof ToggleMobileMenu.Type
 export type ActiveSectionChanged = typeof ActiveSectionChanged.Type
 export type SetThemePreference = typeof SetThemePreference.Type
 export type SystemThemeChanged = typeof SystemThemeChanged.Type
+type FoldkitUiMessage = typeof FoldkitUiMessage.Type
+
 export type Message = typeof Message.Type
 
 // INIT
@@ -234,6 +243,14 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
   const { systemTheme } = loadedFlags
   const resolvedTheme = resolveTheme(themePreference, systemTheme)
 
+  const [foldkitUi, foldkitUiCommands] = Page.FoldkitUi.init()
+
+  const mappedFoldkitUiCommands = foldkitUiCommands.map((message) =>
+    Effect.map(message, (message) =>
+      FoldkitUiMessage.make({ message }),
+    ),
+  )
+
   return [
     {
       route: urlToAppRoute(url),
@@ -245,10 +262,12 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
       themePreference,
       systemTheme,
       resolvedTheme,
+      foldkitUi,
     },
     [
       injectAnalytics,
       applyThemeToDocument(resolvedTheme),
+      ...mappedFoldkitUiCommands,
       ...Option.match(url.hash, {
         onNone: () => [],
         onSome: (hash) => [scrollToHash(hash)],
@@ -374,6 +393,20 @@ const update = (
             applyThemeToDocument(resolvedTheme),
             saveThemePreference(preference),
           ],
+        ]
+      },
+
+      FoldkitUiMessage: ({ message }) => {
+        const [nextFoldkitUi, foldkitUiCommands] =
+          Page.FoldkitUi.update(model.foldkitUi, message)
+
+        return [
+          evo(model, { foldkitUi: () => nextFoldkitUi }),
+          foldkitUiCommands.map(
+            Effect.map((message) =>
+              FoldkitUiMessage.make({ message }),
+            ),
+          ),
         ]
       },
 
@@ -598,6 +631,11 @@ const sidebarView = (
                 examplesRouter.build({}),
                 S.is(ExamplesRoute)(currentRoute),
                 'Example Apps',
+              ),
+              navLink(
+                foldkitUiRouter.build({}),
+                S.is(FoldkitUiRoute)(currentRoute),
+                'Foldkit UI',
               ),
               navLink(
                 apiReferenceRouter.build({}),
@@ -852,6 +890,10 @@ const view = (model: Model) => {
       AdvancedPatterns: () => Page.AdvancedPatterns.view(model),
       ApiReference: () =>
         ApiReference.view(ApiReference.apiReference.modules),
+      FoldkitUi: () =>
+        Page.FoldkitUi.view(model.foldkitUi, (message) =>
+          FoldkitUiMessage.make({ message }),
+        ),
       NotFound: ({ path }) =>
         Page.NotFound.view(path, homeRouter.build({})),
     }),
@@ -884,6 +926,9 @@ const view = (model: Model) => {
     ),
     M.tag('ApiReference', () =>
       Option.some(ApiReference.apiReferenceTableOfContents),
+    ),
+    M.tag('FoldkitUi', () =>
+      Option.some(Page.FoldkitUi.tableOfContents),
     ),
     M.orElse(() => Option.none()),
   )

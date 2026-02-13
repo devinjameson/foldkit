@@ -39,6 +39,14 @@
       "types": "./dist/struct.d.ts",
       "import": "./dist/struct.js"
     },
+    "./ui": {
+      "types": "./dist/ui/index.d.ts",
+      "import": "./dist/ui/index.js"
+    },
+    "./ui/tabs": {
+      "types": "./dist/ui/tabs.d.ts",
+      "import": "./dist/ui/tabs.js"
+    },
     "./url": {
       "types": "./dist/url.d.ts",
       "import": "./dist/url.js"

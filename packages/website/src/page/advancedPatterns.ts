@@ -7,6 +7,7 @@ import {
   heading,
   inlineCode,
   link,
+  pageTitle,
   para,
   tableOfContentsEntryToHeader,
 } from '../prose'
@@ -55,7 +56,7 @@ export const view = (model: Model): Html =>
   div(
     [],
     [
-      heading('h1', 'advanced-patterns', 'Advanced Patterns'),
+      pageTitle('advanced-patterns', 'Advanced Patterns'),
       para(
         'As your Foldkit app grows, these patterns help you manage complexity while keeping code organized and maintainable.',
       ),

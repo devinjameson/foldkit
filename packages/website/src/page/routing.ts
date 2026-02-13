@@ -7,6 +7,7 @@ import {
   heading,
   inlineCode,
   link,
+  pageTitle,
   para,
   tableOfContentsEntryToHeader,
 } from '../prose'
@@ -76,7 +77,7 @@ export const view = (model: Model): Html =>
   div(
     [],
     [
-      heading('h1', 'routing-and-navigation', 'Routing & Navigation'),
+      pageTitle('routing-and-navigation', 'Routing & Navigation'),
       para(
         'Foldkit uses a bidirectional routing system where you define routes once and use them for both parsing URLs and building URLs. No more keeping route matchers and URL builders in sync.',
       ),
