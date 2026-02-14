@@ -2,6 +2,7 @@ import { Class, div, p, section, span } from '../../html'
 import type { TableOfContentsEntry } from '../../main'
 import type { Message as ParentMessage } from '../../main'
 import { heading, pageTitle, para } from '../../prose'
+import * as Disclosure from './disclosure'
 import type { Message } from './message'
 import type { Model } from './model'
 import * as Tabs from './tabs'
@@ -12,11 +13,6 @@ const plannedComponents: ReadonlyArray<{
   readonly entry: TableOfContentsEntry
   readonly description: string
 }> = [
-  {
-    entry: { level: 'h2', id: 'disclosure', text: 'Disclosure' },
-    description:
-      'A simple, accessible foundation for building custom UIs that show and hide content, like toggleable FAQ sections.',
-  },
   {
     entry: { level: 'h2', id: 'dialog', text: 'Dialog' },
     description:
@@ -83,6 +79,7 @@ export const tableOfContents: ReadonlyArray<TableOfContentsEntry> = [
   Tabs.tabsHeader,
   Tabs.horizontalHeader,
   Tabs.verticalHeader,
+  Disclosure.disclosureHeader,
   ...plannedComponents.map(({ entry }) => entry),
 ]
 
@@ -127,6 +124,15 @@ export const view = (
       ),
       ...Tabs.horizontalDemo(model, toMessage),
       ...Tabs.verticalDemo(model, toMessage),
+      heading(
+        'h2',
+        Disclosure.disclosureHeader.id,
+        Disclosure.disclosureHeader.text,
+      ),
+      para(
+        'A simple, accessible foundation for building custom UIs that show and hide content, like toggleable FAQ sections.',
+      ),
+      ...Disclosure.disclosureDemo(model, toMessage),
       div(
         [Class('mt-12')],
         plannedComponents.map(({ entry, description }) =>

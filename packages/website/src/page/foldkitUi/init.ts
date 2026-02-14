@@ -10,6 +10,7 @@ export type InitReturn = [
 
 export const init = (): InitReturn => [
   {
+    disclosureDemo: Ui.Disclosure.init({ id: 'disclosure-demo' }),
     horizontalTabsDemo: Ui.Tabs.init({ id: 'horizontal-tabs-demo' }),
     verticalTabsDemo: Ui.Tabs.init({
       id: 'vertical-tabs-demo',

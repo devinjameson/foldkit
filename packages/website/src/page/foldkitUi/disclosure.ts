@@ -1,0 +1,62 @@
+import { Ui } from 'foldkit'
+
+import { Class, div, p, span } from '../../html'
+import { Icon } from '../../icon'
+import type { Message as ParentMessage } from '../../main'
+import type { TableOfContentsEntry } from '../../main'
+import { DisclosureDemoMessage, type Message } from './message'
+import type { Model } from './model'
+
+// TABLE OF CONTENTS
+
+export const disclosureHeader: TableOfContentsEntry = {
+  level: 'h2',
+  id: 'disclosure',
+  text: 'Disclosure',
+}
+
+// DEMO CONTENT
+
+const buttonClassName =
+  'w-full flex items-center justify-between px-4 py-3 text-left text-sm font-medium cursor-pointer transition border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg data-[open]:rounded-b-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'
+
+const panelClassName =
+  'px-4 py-3 bg-white dark:bg-gray-800 border-x border-b border-gray-200 dark:border-gray-700 last:rounded-b-lg'
+
+const chevron = (isOpen: boolean) =>
+  span(
+    [
+      Class(
+        `text-gray-600 dark:text-gray-300 ${isOpen ? 'rotate-180' : ''}`,
+      ),
+    ],
+    [Icon.chevronDown('w-4 h-4')],
+  )
+
+// VIEW
+
+export const disclosureDemo = (
+  model: Model,
+  toMessage: (message: Message) => ParentMessage,
+) => [
+  Ui.Disclosure.view({
+    model: model.disclosureDemo,
+    toMessage: (message) =>
+      toMessage(DisclosureDemoMessage.make({ message })),
+    buttonClassName,
+    buttonContent: div(
+      [Class('flex items-center justify-between w-full')],
+      [
+        span([], ['What is Foldkit?']),
+        chevron(model.disclosureDemo.isOpen),
+      ],
+    ),
+    panelClassName,
+    panelContent: p(
+      [Class('text-gray-600 dark:text-gray-400 text-sm')],
+      [
+        'Foldkit is an Elm-inspired UI framework powered by Effect. It brings the Model-View-Update architecture to TypeScript with Schema-typed state, explicit side effects via commands, and composable headless UI components.',
+      ],
+    ),
+  }),
+]

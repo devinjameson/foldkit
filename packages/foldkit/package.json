@@ -43,6 +43,10 @@
       "types": "./dist/ui/index.d.ts",
       "import": "./dist/ui/index.js"
     },
+    "./ui/disclosure": {
+      "types": "./dist/ui/disclosure.d.ts",
+      "import": "./dist/ui/disclosure.js"
+    },
     "./ui/tabs": {
       "types": "./dist/ui/tabs.d.ts",
       "import": "./dist/ui/tabs.js"
