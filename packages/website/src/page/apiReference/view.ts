@@ -49,43 +49,52 @@ const functionView = (apiFunction: ApiFunction): Html =>
     [Class('mb-8')],
     [
       div(
-        [Class('group relative flex items-center gap-2 mb-2')],
         [
+          Class(
+            'group flex items-center gap-1 mb-2 md:flex-row-reverse md:justify-end md:-ml-8',
+          ),
+        ],
+        [
+          div(
+            [Class('flex items-center gap-2')],
+            [
+              h4(
+                [
+                  Class(
+                    'text-base font-mono font-medium text-gray-900 dark:text-white scroll-mt-6',
+                  ),
+                  Id(`function-${apiFunction.name}`),
+                ],
+                [apiFunction.name],
+              ),
+              span(
+                [
+                  Class(
+                    'text-xs px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300',
+                  ),
+                ],
+                ['function'],
+              ),
+              ...Option.match(apiFunction.sourceUrl, {
+                onNone: () => [],
+                onSome: (url) => [
+                  a(
+                    [
+                      Class(
+                        'text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300',
+                      ),
+                      Href(url),
+                    ],
+                    ['source'],
+                  ),
+                ],
+              }),
+            ],
+          ),
           headingLinkButton(
             `function-${apiFunction.name}`,
             apiFunction.name,
           ),
-          h4(
-            [
-              Class(
-                'text-base font-mono font-medium text-gray-900 dark:text-white scroll-mt-6',
-              ),
-              Id(`function-${apiFunction.name}`),
-            ],
-            [apiFunction.name],
-          ),
-          span(
-            [
-              Class(
-                'text-xs px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300',
-              ),
-            ],
-            ['function'],
-          ),
-          ...Option.match(apiFunction.sourceUrl, {
-            onNone: () => [],
-            onSome: (url) => [
-              a(
-                [
-                  Class(
-                    'text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300',
-                  ),
-                  Href(url),
-                ],
-                ['source'],
-              ),
-            ],
-          }),
         ],
       ),
       ...Option.match(apiFunction.description, {
@@ -338,40 +347,49 @@ const typeView = (type: ApiType): Html => {
     [Class('mb-6')],
     [
       div(
-        [Class('group relative flex items-center gap-2 mb-2')],
         [
-          headingLinkButton(`type-${type.name}`, type.name),
-          h4(
-            [
-              Class(
-                'text-base font-mono font-medium text-gray-900 dark:text-white scroll-mt-6',
-              ),
-              Id(`type-${type.name}`),
-            ],
-            [type.name],
+          Class(
+            'group flex items-center gap-1 mb-2 md:flex-row-reverse md:justify-end md:-ml-8',
           ),
-          span(
+        ],
+        [
+          div(
+            [Class('flex items-center gap-2')],
             [
-              Class(
-                'text-xs px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300',
-              ),
-            ],
-            ['type'],
-          ),
-          ...Option.match(type.sourceUrl, {
-            onNone: () => [],
-            onSome: (url) => [
-              a(
+              h4(
                 [
                   Class(
-                    'text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300',
+                    'text-base font-mono font-medium text-gray-900 dark:text-white scroll-mt-6',
                   ),
-                  Href(url),
+                  Id(`type-${type.name}`),
                 ],
-                ['source'],
+                [type.name],
               ),
+              span(
+                [
+                  Class(
+                    'text-xs px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300',
+                  ),
+                ],
+                ['type'],
+              ),
+              ...Option.match(type.sourceUrl, {
+                onNone: () => [],
+                onSome: (url) => [
+                  a(
+                    [
+                      Class(
+                        'text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300',
+                      ),
+                      Href(url),
+                    ],
+                    ['source'],
+                  ),
+                ],
+              }),
             ],
-          }),
+          ),
+          headingLinkButton(`type-${type.name}`, type.name),
         ],
       ),
       ...Option.match(type.description, {
@@ -418,43 +436,52 @@ const interfaceView = (apiInterface: ApiInterface): Html => {
     [Class('mb-6')],
     [
       div(
-        [Class('group relative flex items-center gap-2 mb-2')],
         [
+          Class(
+            'group flex items-center gap-1 mb-2 md:flex-row-reverse md:justify-end md:-ml-8',
+          ),
+        ],
+        [
+          div(
+            [Class('flex items-center gap-2')],
+            [
+              h4(
+                [
+                  Class(
+                    'text-base font-mono font-medium text-gray-900 dark:text-white scroll-mt-6',
+                  ),
+                  Id(`interface-${apiInterface.name}`),
+                ],
+                [apiInterface.name],
+              ),
+              span(
+                [
+                  Class(
+                    'text-xs px-2 py-0.5 rounded bg-teal-100 dark:bg-teal-900 text-teal-700 dark:text-teal-300',
+                  ),
+                ],
+                ['interface'],
+              ),
+              ...Option.match(apiInterface.sourceUrl, {
+                onNone: () => [],
+                onSome: (url) => [
+                  a(
+                    [
+                      Class(
+                        'text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300',
+                      ),
+                      Href(url),
+                    ],
+                    ['source'],
+                  ),
+                ],
+              }),
+            ],
+          ),
           headingLinkButton(
             `interface-${apiInterface.name}`,
             apiInterface.name,
           ),
-          h4(
-            [
-              Class(
-                'text-base font-mono font-medium text-gray-900 dark:text-white scroll-mt-6',
-              ),
-              Id(`interface-${apiInterface.name}`),
-            ],
-            [apiInterface.name],
-          ),
-          span(
-            [
-              Class(
-                'text-xs px-2 py-0.5 rounded bg-teal-100 dark:bg-teal-900 text-teal-700 dark:text-teal-300',
-              ),
-            ],
-            ['interface'],
-          ),
-          ...Option.match(apiInterface.sourceUrl, {
-            onNone: () => [],
-            onSome: (url) => [
-              a(
-                [
-                  Class(
-                    'text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300',
-                  ),
-                  Href(url),
-                ],
-                ['source'],
-              ),
-            ],
-          }),
         ],
       ),
       ...Option.match(apiInterface.description, {
@@ -501,40 +528,49 @@ const variableView = (variable: ApiVariable): Html => {
     [Class('mb-6')],
     [
       div(
-        [Class('group relative flex items-center gap-2 mb-2')],
         [
-          headingLinkButton(`const-${variable.name}`, variable.name),
-          h4(
-            [
-              Class(
-                'text-base font-mono font-medium text-gray-900 dark:text-white scroll-mt-6',
-              ),
-              Id(`const-${variable.name}`),
-            ],
-            [variable.name],
+          Class(
+            'group flex items-center gap-1 mb-2 md:flex-row-reverse md:justify-end md:-ml-8',
           ),
-          span(
+        ],
+        [
+          div(
+            [Class('flex items-center gap-2')],
             [
-              Class(
-                'text-xs px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300',
-              ),
-            ],
-            ['const'],
-          ),
-          ...Option.match(variable.sourceUrl, {
-            onNone: () => [],
-            onSome: (url) => [
-              a(
+              h4(
                 [
                   Class(
-                    'text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300',
+                    'text-base font-mono font-medium text-gray-900 dark:text-white scroll-mt-6',
                   ),
-                  Href(url),
+                  Id(`const-${variable.name}`),
                 ],
-                ['source'],
+                [variable.name],
               ),
+              span(
+                [
+                  Class(
+                    'text-xs px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300',
+                  ),
+                ],
+                ['const'],
+              ),
+              ...Option.match(variable.sourceUrl, {
+                onNone: () => [],
+                onSome: (url) => [
+                  a(
+                    [
+                      Class(
+                        'text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300',
+                      ),
+                      Href(url),
+                    ],
+                    ['source'],
+                  ),
+                ],
+              }),
             ],
-          }),
+          ),
+          headingLinkButton(`const-${variable.name}`, variable.name),
         ],
       ),
       ...Option.match(variable.description, {
