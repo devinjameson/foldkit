@@ -13,6 +13,8 @@
     "VoidElementFunction",
     "AttributeWithoutKey",
     "Child",
-    "PrintState"
+    "PrintState",
+    "Evolved",
+    "StrictKeys"
   ]
 }
