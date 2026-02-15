@@ -18,10 +18,10 @@ export const disclosureHeader: TableOfContentsEntry = {
 // DEMO CONTENT
 
 const buttonClassName =
-  'w-full flex items-center justify-between px-4 py-3 text-left text-sm font-medium cursor-pointer transition border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg data-[open]:rounded-b-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'
+  'w-full flex items-center justify-between px-4 py-3 text-left text-base font-medium cursor-pointer transition border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white hover:bg-gray-200/50 dark:hover:bg-gray-800 rounded-lg data-[open]:rounded-b-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 select-none'
 
 const panelClassName =
-  'px-4 py-3 bg-white dark:bg-gray-800 border-x border-b border-gray-200 dark:border-gray-700 last:rounded-b-lg'
+  'px-4 py-3 border-x border-b border-gray-300 dark:border-gray-700 rounded-b-lg text-gray-800 dark:text-gray-200'
 
 const chevron = (isOpen: boolean) =>
   span(
@@ -53,7 +53,7 @@ export const disclosureDemo = (
     ),
     panelClassName,
     panelContent: p(
-      [Class('text-gray-600 dark:text-gray-400 text-sm')],
+      [Class('text-gray-800 dark:text-gray-200')],
       [
         'Foldkit is an Elm-inspired UI framework powered by Effect. It brings the Model-View-Update architecture to TypeScript with Schema-typed state, explicit side effects via commands, and composable headless UI components.',
       ],

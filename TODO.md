@@ -88,4 +88,4 @@
 
 - [ ] Create `examples/foldkit-ui` example app — a standalone app with a page per UI component showing real integration patterns (model, message, init, update, view). To be done after all foldkit-ui components are built. Website links to this as the canonical usage reference.
 
-- [ ] Use Disclosure component for API reference disclosures and React page FAQ section
+- [x] Use Disclosure component for API reference disclosures and React page FAQ section

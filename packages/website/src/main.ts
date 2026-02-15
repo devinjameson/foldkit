@@ -154,6 +154,9 @@ export const Model = S.Struct({
   systemTheme: ResolvedTheme,
   resolvedTheme: ResolvedTheme,
   foldkitUi: Page.FoldkitUi.Model,
+  comingFromReact: Page.ComingFromReact.Model,
+  // Why is this one not Page.ApiReference.Model like the others?
+  apiReference: ApiReference.Model,
 })
 
 export type Model = typeof Model.Type
@@ -197,6 +200,12 @@ export const SystemThemeChanged = ts('SystemThemeChanged', {
 const FoldkitUiMessage = ts('FoldkitUiMessage', {
   message: Page.FoldkitUi.Message,
 })
+const ComingFromReactMessage = ts('ComingFromReactMessage', {
+  message: Page.ComingFromReact.Message,
+})
+const ApiReferenceMessage = ts('ApiReferenceMessage', {
+  message: ApiReference.Message,
+})
 
 const Message = S.Union(
   NoOp,
@@ -213,6 +222,8 @@ const Message = S.Union(
   SetThemePreference,
   SystemThemeChanged,
   FoldkitUiMessage,
+  ComingFromReactMessage,
+  ApiReferenceMessage,
 )
 
 type NoOp = typeof NoOp.Type
@@ -227,6 +238,8 @@ export type ActiveSectionChanged = typeof ActiveSectionChanged.Type
 export type SetThemePreference = typeof SetThemePreference.Type
 export type SystemThemeChanged = typeof SystemThemeChanged.Type
 type FoldkitUiMessage = typeof FoldkitUiMessage.Type
+type ComingFromReactMessage = typeof ComingFromReactMessage.Type
+type ApiReferenceMessage = typeof ApiReferenceMessage.Type
 
 export type Message = typeof Message.Type
 
@@ -244,11 +257,24 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
   const resolvedTheme = resolveTheme(themePreference, systemTheme)
 
   const [foldkitUi, foldkitUiCommands] = Page.FoldkitUi.init()
+  const [comingFromReact, comingFromReactCommands] =
+    Page.ComingFromReact.init()
+  const [apiReference, apiReferenceCommands] = ApiReference.init(
+    ApiReference.apiReference.modules,
+  )
 
   const mappedFoldkitUiCommands = foldkitUiCommands.map((message) =>
     Effect.map(message, (message) =>
       FoldkitUiMessage.make({ message }),
     ),
+  )
+
+  const mappedComingFromReactCommands = comingFromReactCommands.map(
+    Effect.map((message) => ComingFromReactMessage.make({ message })),
+  )
+
+  const mappedApiReferenceCommands = apiReferenceCommands.map(
+    Effect.map((message) => ApiReferenceMessage.make({ message })),
   )
 
   return [
@@ -263,11 +289,15 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
       systemTheme,
       resolvedTheme,
       foldkitUi,
+      comingFromReact,
+      apiReference,
     },
     [
       injectAnalytics,
       applyThemeToDocument(resolvedTheme),
       ...mappedFoldkitUiCommands,
+      ...mappedComingFromReactCommands,
+      ...mappedApiReferenceCommands,
       ...Option.match(url.hash, {
         onNone: () => [],
         onSome: (hash) => [scrollToHash(hash)],
@@ -422,6 +452,36 @@ const update = (
             resolvedTheme: () => resolvedTheme,
           }),
           [applyThemeToDocument(resolvedTheme)],
+        ]
+      },
+
+      ComingFromReactMessage: ({ message }) => {
+        const [nextComingFromReact, comingFromReactCommands] =
+          Page.ComingFromReact.update(model.comingFromReact, message)
+
+        return [
+          evo(model, {
+            comingFromReact: () => nextComingFromReact,
+          }),
+          comingFromReactCommands.map(
+            Effect.map((message) =>
+              ComingFromReactMessage.make({ message }),
+            ),
+          ),
+        ]
+      },
+
+      ApiReferenceMessage: ({ message }) => {
+        const [nextApiReference, apiReferenceCommands] =
+          ApiReference.update(model.apiReference, message)
+
+        return [
+          evo(model, { apiReference: () => nextApiReference }),
+          apiReferenceCommands.map(
+            Effect.map((message) =>
+              ApiReferenceMessage.make({ message }),
+            ),
+          ),
         ]
       },
     }),
@@ -879,7 +939,12 @@ const view = (model: Model) => {
     M.tagsExhaustive({
       Home: Page.Home.view,
       WhyFoldkit: Page.WhyFoldkit.view,
-      ComingFromReact: () => Page.ComingFromReact.view(model),
+      ComingFromReact: () =>
+        Page.ComingFromReact.view(
+          model,
+          model.comingFromReact,
+          (message) => ComingFromReactMessage.make({ message }),
+        ),
       GettingStarted: () => Page.GettingStarted.view(model),
       ArchitectureAndConcepts: () =>
         Page.ArchitectureAndConcepts.view(model),
@@ -889,7 +954,11 @@ const view = (model: Model) => {
       ProjectOrganization: () => Page.ProjectOrganization.view(model),
       AdvancedPatterns: () => Page.AdvancedPatterns.view(model),
       ApiReference: () =>
-        ApiReference.view(ApiReference.apiReference.modules),
+        ApiReference.view(
+          ApiReference.apiReference.modules,
+          model.apiReference,
+          (message) => ApiReferenceMessage.make({ message }),
+        ),
       FoldkitUi: () =>
         Page.FoldkitUi.view(model.foldkitUi, (message) =>
           FoldkitUiMessage.make({ message }),

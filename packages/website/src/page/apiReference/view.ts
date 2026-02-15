@@ -1,4 +1,5 @@
 import { Array, Option, Order, Record, String, pipe } from 'effect'
+import { Ui } from 'foldkit'
 import { Html } from 'foldkit/html'
 import highlights from 'virtual:api-highlights'
 
@@ -8,27 +9,30 @@ import {
   Id,
   InnerHTML,
   a,
-  details,
   div,
   h4,
   p,
   span,
-  summary,
 } from '../../html'
+import { Icon } from '../../icon'
+import type { Message as ParentMessage } from '../../main'
 import {
   heading,
   headingLinkButton,
   inlineCode,
   pageTitle,
 } from '../../prose'
-import type {
-  ApiFunction,
-  ApiInterface,
-  ApiModule,
-  ApiParameter,
-  ApiType,
-  ApiVariable,
+import {
+  type ApiFunction,
+  type ApiInterface,
+  type ApiModule,
+  type ApiParameter,
+  type ApiType,
+  type ApiVariable,
+  scopedId,
 } from './domain'
+import { DisclosureToggled, type Message } from './message'
+import type { Model } from './model'
 
 const descriptionWithCode = (
   text: string,
@@ -44,15 +48,11 @@ const byName = <
 >(): Order.Order<T> =>
   Order.mapInput(Order.string, ({ name }: T) => name)
 
-const scopedId = (
-  kind: string,
-  moduleName: string,
-  name: string,
-): string => `${kind}-${moduleName}/${name}`
-
 const functionView = (
   moduleName: string,
   apiFunction: ApiFunction,
+  model: Model,
+  toMessage: (message: Message) => ParentMessage,
 ): Html => {
   const id = scopedId('function', moduleName, apiFunction.name)
 
@@ -114,34 +114,10 @@ const functionView = (
           ),
         ],
       }),
-      signaturesView(id, apiFunction),
+      signaturesView(id, apiFunction, model, toMessage),
     ],
   )
 }
-
-const SIGNATURE_COLLAPSE_THRESHOLD = 500
-
-const signaturesLength = (apiFunction: ApiFunction): number =>
-  Array.reduce(
-    apiFunction.signatures,
-    0,
-    (total, signature) =>
-      total +
-      pipe(
-        signature.typeParameters,
-        Array.join(', '),
-        String.length,
-      ) +
-      Array.reduce(
-        signature.parameters,
-        0,
-        (innerTotal, parameter) =>
-          innerTotal +
-          String.length(parameter.name) +
-          String.length(parameter.type),
-      ) +
-      String.length(signature.returnType),
-  )
 
 const allParameterDescriptions = (
   apiFunction: ApiFunction,
@@ -184,66 +160,64 @@ const allParameterDescriptions = (
     }),
   )
 
+const chevron = (isOpen: boolean) =>
+  span(
+    [
+      Class(
+        `text-gray-500 dark:text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`,
+      ),
+    ],
+    [Icon.chevronDown('w-4 h-4')],
+  )
+
+const disclosureButtonClassName =
+  'w-full flex items-center justify-between px-3 py-2 text-left text-base cursor-pointer transition border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-800 rounded-lg data-[open]:rounded-b-none select-none'
+
+const disclosurePanelClassName =
+  'border-x border-b border-gray-200 dark:border-gray-700 rounded-b-lg overflow-x-auto'
+
 const signaturesView = (
   key: string,
   apiFunction: ApiFunction,
+  model: Model,
+  toMessage: (message: Message) => ParentMessage,
 ): Html => {
   const maybeHighlighted = Record.get(highlights, key)
+  const maybeDisclosure = Record.get(model, key)
 
-  const isLong =
-    signaturesLength(apiFunction) > SIGNATURE_COLLAPSE_THRESHOLD
-
-  return Option.match(maybeHighlighted, {
-    onSome: (highlighted) => {
-      const content: ReadonlyArray<Html> = [
+  const { wrapperClass, content } = Option.match(maybeHighlighted, {
+    onSome: (highlighted) => ({
+      wrapperClass:
+        'rounded text-sm [&_pre]:!rounded [&_pre]:!py-4 [&_pre]:!pl-4 [&_pre]:!pr-0 [&_code]:block [&_code]:w-fit [&_code]:min-w-full [&_code]:pr-4',
+      content: [
         div([InnerHTML(highlighted)], []),
         ...allParameterDescriptions(apiFunction),
-      ]
-      const highlightedClass =
-        'rounded text-sm [&_pre]:!rounded [&_pre]:!py-4 [&_pre]:!pl-4 [&_pre]:!pr-0 [&_code]:block [&_code]:w-fit [&_code]:min-w-full [&_code]:pr-4'
+      ],
+    }),
+    onNone: () => ({
+      wrapperClass:
+        'bg-white dark:bg-gray-800 rounded p-4 font-mono text-sm',
+      content: Array.flatMap(apiFunction.signatures, (signature) =>
+        signatureChildrenFallback(signature),
+      ),
+    }),
+  })
 
-      return isLong
-        ? details(
-            [Class(highlightedClass)],
-            [
-              summary(
-                [
-                  Class(
-                    'cursor-pointer text-gray-500 hover:text-gray-700 dark:hover:text-gray-300',
-                  ),
-                ],
-                ['Show signature'],
-              ),
-              div([Class('mt-2')], content),
-            ],
-          )
-        : div([Class(highlightedClass)], content)
-    },
-    onNone: () => {
-      const fallbackClass =
-        'bg-white dark:bg-gray-800 rounded p-4 font-mono text-sm'
-      const content = Array.flatMap(
-        apiFunction.signatures,
-        (signature) => signatureChildrenFallback(signature),
-      )
-
-      return isLong
-        ? details(
-            [Class(fallbackClass)],
-            [
-              summary(
-                [
-                  Class(
-                    'cursor-pointer list-none [&::-webkit-details-marker]:hidden text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 select-none',
-                  ),
-                ],
-                ['Show signature'],
-              ),
-              div([Class('mt-3')], content),
-            ],
-          )
-        : div([Class(fallbackClass)], content)
-    },
+  return Option.match(maybeDisclosure, {
+    onSome: (disclosure) =>
+      Ui.Disclosure.view({
+        model: disclosure,
+        toMessage: (message) =>
+          toMessage(DisclosureToggled.make({ id: key, message })),
+        buttonClassName: disclosureButtonClassName,
+        buttonContent: div(
+          [Class('flex items-center justify-between w-full')],
+          [span([], ['Show signature']), chevron(disclosure.isOpen)],
+        ),
+        panelClassName: disclosurePanelClassName,
+        panelContent: div([Class(wrapperClass)], content),
+      }),
+    onNone: () => div([Class(wrapperClass)], content),
   })
 }
 
@@ -641,7 +615,11 @@ const section = <T extends { readonly name: string }>(
     ],
   })
 
-export const view = (modules: ReadonlyArray<ApiModule>): Html =>
+export const view = (
+  modules: ReadonlyArray<ApiModule>,
+  model: Model,
+  toMessage: (message: Message) => ParentMessage,
+): Html =>
   div(
     [],
     [
@@ -661,7 +639,13 @@ export const view = (modules: ReadonlyArray<ApiModule>): Html =>
               module.name,
               'Functions',
               module.functions,
-              functionView,
+              (moduleName, apiFunction) =>
+                functionView(
+                  moduleName,
+                  apiFunction,
+                  model,
+                  toMessage,
+                ),
             ),
             ...section(module.name, 'Types', module.types, typeView),
             ...section(

@@ -4,7 +4,7 @@ import { Ui } from 'foldkit'
 import { Class, div, p, span, strong } from '../../html'
 import type { Message as ParentMessage } from '../../main'
 import type { TableOfContentsEntry } from '../../main'
-import { heading, para } from '../../prose'
+import { heading } from '../../prose'
 import {
   HorizontalTabsDemoMessage,
   type Message,
@@ -39,7 +39,7 @@ type DemoTab = 'Foldkit' | 'React' | 'Elm'
 const demoTabs: ReadonlyArray<DemoTab> = ['Foldkit', 'React', 'Elm']
 
 const buttonClassName =
-  'px-4 py-2 text-sm font-medium cursor-pointer transition rounded-t-lg border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 mb-[-1px] data-[selected]:relative data-[selected]:z-10 data-[selected]:bg-white data-[selected]:dark:bg-gray-800 data-[selected]:text-gray-900 data-[selected]:dark:text-white data-[selected]:border-b-0'
+  'px-4 py-2 text-base font-medium cursor-pointer transition rounded-t-lg border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 mb-[-1px] data-[selected]:relative data-[selected]:z-10 data-[selected]:bg-white data-[selected]:dark:bg-gray-800 data-[selected]:text-gray-900 data-[selected]:dark:text-white data-[selected]:border-b-0'
 
 const panelClassName =
   'p-6 bg-white dark:bg-gray-800 rounded-b-lg rounded-tr-lg border border-gray-200 dark:border-gray-700'
@@ -111,7 +111,7 @@ const elmPanel = div(
 )
 
 const verticalButtonClassName =
-  'px-4 py-2 text-sm font-medium text-left cursor-pointer transition rounded-l-lg border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 mr-[-1px] data-[selected]:relative data-[selected]:z-10 data-[selected]:bg-white data-[selected]:dark:bg-gray-800 data-[selected]:text-gray-900 data-[selected]:dark:text-white data-[selected]:border-r-0'
+  'px-4 py-2 text-base font-medium text-left cursor-pointer transition rounded-l-lg border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 mr-[-1px] data-[selected]:relative data-[selected]:z-10 data-[selected]:bg-white data-[selected]:dark:bg-gray-800 data-[selected]:text-gray-900 data-[selected]:dark:text-white data-[selected]:border-r-0'
 
 const verticalPanelClassName =
   'flex-1 p-6 bg-white dark:bg-gray-800 rounded-r-lg rounded-bl-lg border border-gray-200 dark:border-gray-700'

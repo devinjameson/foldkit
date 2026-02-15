@@ -1,25 +1,52 @@
+import { Option, Record } from 'effect'
+import { Ui } from 'foldkit'
 import { Html } from 'foldkit/html'
 
-import { Class, InnerHTML, div, li, strong, ul } from '../html'
-import { Link } from '../link'
-import type { Model, TableOfContentsEntry } from '../main'
+import {
+  Class,
+  InnerHTML,
+  div,
+  li,
+  p,
+  span,
+  strong,
+  ul,
+} from '../../html'
+import { Icon } from '../../icon'
+import { Link } from '../../link'
+import type {
+  Model as MainModel,
+  Message as ParentMessage,
+  TableOfContentsEntry,
+} from '../../main'
 import {
   callout,
-  heading,
   inlineCode,
   link,
   pageTitle,
   para,
   tableOfContentsEntryToHeader,
-} from '../prose'
+} from '../../prose'
 import {
+  advancedPatternsRouter,
   architectureAndConceptsRouter,
   gettingStartedRouter,
   routingAndNavigationRouter,
-} from '../route'
-import * as Snippets from '../snippet'
-import { highlightedCodeBlock } from '../view/codeBlock'
-import { comparisonTable } from '../view/table'
+} from '../../route'
+import * as Snippets from '../../snippet'
+import { highlightedCodeBlock } from '../../view/codeBlock'
+import { comparisonTable } from '../../view/table'
+import { FAQ_IDS } from './faq'
+import { FaqDisclosureToggled, type Message } from './message'
+import type { Model } from './model'
+
+const [
+  faqReusableComponents,
+  faqMultipleInstances,
+  faqRouting,
+  faqForms,
+  faqWhereToStart,
+] = FAQ_IDS
 
 const introductionHeader: TableOfContentsEntry = {
   level: 'h2',
@@ -122,7 +149,56 @@ const patternMappingTable = (): Html =>
     ],
   )
 
-export const view = (model: Model): Html =>
+const chevron = (isOpen: boolean) =>
+  span(
+    [
+      Class(
+        `text-gray-600 dark:text-gray-300 transition-transform ${isOpen ? 'rotate-180' : ''}`,
+      ),
+    ],
+    [Icon.chevronDown('w-4 h-4')],
+  )
+
+const faqButtonClassName =
+  'w-full flex items-center justify-between px-4 py-3 text-left text-base font-medium cursor-pointer transition border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white hover:bg-gray-200/50 dark:hover:bg-gray-800 rounded-lg data-[open]:rounded-b-none select-none'
+
+const faqPanelClassName =
+  'px-4 py-3 border-x border-b border-gray-300 dark:border-gray-700 rounded-b-lg text-gray-800 dark:text-gray-200 [&_p]:mb-2 [&_p]:last:mb-0 [&_p]:leading-normal'
+
+const faqItem = (
+  id: string,
+  question: string,
+  answerContent: ReadonlyArray<Html>,
+  model: Model,
+  toMessage: (message: Message) => ParentMessage,
+): Html =>
+  Option.match(Record.get(model, id), {
+    onSome: (disclosure) =>
+      Ui.Disclosure.view({
+        model: disclosure,
+        toMessage: (message) =>
+          toMessage(FaqDisclosureToggled.make({ id, message })),
+        buttonClassName: faqButtonClassName,
+        buttonContent: div(
+          [Class('flex items-center justify-between w-full')],
+          [span([], [question]), chevron(disclosure.isOpen)],
+        ),
+        panelClassName: faqPanelClassName,
+        panelContent: div([], answerContent),
+        className: 'mb-2',
+      }),
+    onNone: () =>
+      div(
+        [],
+        [p([Class('font-bold')], [question]), ...answerContent],
+      ),
+  })
+
+export const view = (
+  mainModel: MainModel,
+  model: Model,
+  toMessage: (message: Message) => ParentMessage,
+): Html =>
   div(
     [],
     [
@@ -194,7 +270,7 @@ export const view = (model: Model): Html =>
         ),
         Snippets.reactCounterRaw,
         'Copy React counter',
-        model,
+        mainModel,
         'mb-4',
       ),
       para(
@@ -210,7 +286,7 @@ export const view = (model: Model): Html =>
         ),
         Snippets.foldkitCounterRaw,
         'Copy Foldkit counter',
-        model,
+        mainModel,
         'mb-6',
       ),
       para(
@@ -229,7 +305,7 @@ export const view = (model: Model): Html =>
         ),
         Snippets.reactDataFetchingRaw,
         'Copy React data fetching',
-        model,
+        mainModel,
         'mb-4',
       ),
       para(
@@ -245,7 +321,7 @@ export const view = (model: Model): Html =>
         ),
         Snippets.foldkitDataFetchingRaw,
         'Copy Foldkit data fetching',
-        model,
+        mainModel,
         'mb-6',
       ),
       para(
@@ -351,66 +427,99 @@ export const view = (model: Model): Html =>
         ],
       ),
       tableOfContentsEntryToHeader(faqHeader),
-      para(strong([], ['How do I make reusable "components"?'])),
-      para(
-        "Create functions that take parts of your Model and return Html. They're not components in the React sense — they don't have their own state — but they're reusable view logic. For complex features, you can use the submodel pattern to organize related state and logic together.",
-      ),
-      para(
-        strong(
-          [],
-          [
-            'How do I create multiple components with their own state?',
-          ],
-        ),
-      ),
-      para(
-        'There are no components in Foldkit. State always lives in your Model, and views are just functions from Model to Html. Say you need multiple accordions with independent state — you model that explicitly:',
-      ),
-      highlightedCodeBlock(
-        div(
-          [
-            Class('text-sm'),
-            InnerHTML(Snippets.multipleInstancesHighlighted),
-          ],
-          [],
-        ),
-        Snippets.multipleInstancesRaw,
-        'Copy Model example',
+      faqItem(
+        faqReusableComponents,
+        'How do I make reusable "components"?',
+        [
+          para(
+            "Create functions that take parts of your Model and return Html. They're not components in the React sense — they don't have their own state — but they're reusable view logic. For complex features, you can use the submodel pattern to organize related state and logic together.",
+          ),
+        ],
         model,
-        'mb-4',
+        toMessage,
       ),
-      para(
-        'Here ',
-        inlineCode('Accordion.Model'),
-        ' is a submodel — a self-contained piece of state defined in its own module, with its own Message types, update function, and view. This is similar to what experienced React devs often end up doing anyway — lifting state out of components into a parent. Foldkit just enforces this pattern from the start. See the ',
-        link(Link.exampleShoppingCart, 'Shopping Cart example'),
-        ' for the full submodel pattern.',
+      faqItem(
+        faqMultipleInstances,
+        'How do I create multiple components with their own state?',
+        [
+          para(
+            'There are no components in Foldkit. State always lives in your Model, and views are just functions from Model to Html. Say you need multiple accordions with independent state — you model that explicitly:',
+          ),
+          highlightedCodeBlock(
+            div(
+              [
+                Class('text-sm'),
+                InnerHTML(Snippets.multipleInstancesHighlighted),
+              ],
+              [],
+            ),
+            Snippets.multipleInstancesRaw,
+            'Copy Model example',
+            mainModel,
+            'mb-4',
+          ),
+          para(
+            'Here ',
+            inlineCode('Accordion.Model'),
+            ' is a submodel — a self-contained piece of state defined in its own module, with its own Message types, update function, and view. This is similar to what experienced React devs often end up doing anyway — lifting state out of components into a parent. Foldkit just enforces this pattern from the start. See the ',
+            link(Link.exampleShoppingCart, 'Shopping Cart example'),
+            ' for a concrete example, or ',
+            link(
+              advancedPatternsRouter.build({}),
+              'Scaling with Submodels',
+            ),
+            ' for the full pattern.',
+          ),
+        ],
+        model,
+        toMessage,
       ),
-      para(strong([], ['How does routing work?'])),
-      para(
-        'Foldkit has built-in typed routing. See the ',
-        link(
-          routingAndNavigationRouter.build({}),
-          'Routing & Navigation',
-        ),
-        ' page for details.',
+      faqItem(
+        faqRouting,
+        'How does routing work?',
+        [
+          para(
+            'Foldkit has built-in typed routing. See the ',
+            link(
+              routingAndNavigationRouter.build({}),
+              'Routing & Navigation',
+            ),
+            ' page for details.',
+          ),
+        ],
+        model,
+        toMessage,
       ),
-      para(strong([], ['What about forms?'])),
-      para(
-        'Forms work like everything else: form state lives in your Model, input dispatches Messages, and update handles validation. Check the ',
-        link(Link.exampleForm, 'form example'),
-        ' for patterns.',
+      faqItem(
+        faqForms,
+        'What about forms?',
+        [
+          para(
+            'Forms work like everything else: form state lives in your Model, input dispatches Messages, and update handles validation. Check the ',
+            link(Link.exampleForm, 'form example'),
+            ' for patterns.',
+          ),
+        ],
+        model,
+        toMessage,
       ),
-      para(strong([], ["I'm sold. Where do I start?"])),
-      para(
-        'Head to ',
-        link(gettingStartedRouter.build({}), 'Getting Started'),
-        ' to create your first Foldkit app. Then read ',
-        link(
-          architectureAndConceptsRouter.build({}),
-          'Architecture & Concepts',
-        ),
-        ' to understand the pieces in depth.',
+      faqItem(
+        faqWhereToStart,
+        "I'm sold. Where do I start?",
+        [
+          para(
+            'Head to ',
+            link(gettingStartedRouter.build({}), 'Getting Started'),
+            ' to create your first Foldkit app. Then read ',
+            link(
+              architectureAndConceptsRouter.build({}),
+              'Architecture & Concepts',
+            ),
+            ' to understand the pieces in depth.',
+          ),
+        ],
+        model,
+        toMessage,
       ),
     ],
   )

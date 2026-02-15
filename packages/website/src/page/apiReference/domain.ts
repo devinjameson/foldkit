@@ -83,11 +83,43 @@ export const ApiModule = S.Struct({
 
 export type ApiModule = typeof ApiModule.Type
 
-export const Model = S.Struct({
+export const ParsedApiReference = S.Struct({
   modules: S.Array(ApiModule),
 })
 
-export type Model = typeof Model.Type
+export type ParsedApiReference = typeof ParsedApiReference.Type
+
+// SHARED
+
+export const SIGNATURE_COLLAPSE_THRESHOLD = 500
+
+export const signaturesLength = (apiFunction: ApiFunction): number =>
+  Array.reduce(
+    apiFunction.signatures,
+    0,
+    (total, signature) =>
+      total +
+      pipe(
+        signature.typeParameters,
+        Array.join(', '),
+        String.length,
+      ) +
+      Array.reduce(
+        signature.parameters,
+        0,
+        (innerTotal, parameter) =>
+          innerTotal +
+          String.length(parameter.name) +
+          String.length(parameter.type),
+      ) +
+      String.length(signature.returnType),
+  )
+
+export const scopedId = (
+  kind: string,
+  moduleName: string,
+  name: string,
+): string => `${kind}-${moduleName}/${name}`
 
 // PARSE
 
@@ -253,7 +285,9 @@ const parseModule = (
   })
 }
 
-export const parseTypedocJson = (json: TypeDocJson): Model => ({
+export const parseTypedocJson = (
+  json: TypeDocJson,
+): ParsedApiReference => ({
   modules: Array.flatMap(json.children, parseModule),
 })
 
@@ -297,9 +331,9 @@ const sectionEntries = <T extends { readonly name: string }>(
   })
 
 export const toTableOfContents = (
-  model: Model,
+  parsed: ParsedApiReference,
 ): ReadonlyArray<TableOfContentsEntry> =>
-  Array.flatMap(model.modules, (module) => [
+  Array.flatMap(parsed.modules, (module) => [
     { id: module.name, text: module.name, level: 'h2' as const },
     ...sectionEntries(
       module.name,
