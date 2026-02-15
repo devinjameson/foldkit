@@ -201,7 +201,11 @@ const parseItemsAsModule = (
   ),
   types: pipe(
     children,
-    Array.filter((item) => item.kind === Kind.TypeAlias),
+    Array.filter(
+      ({ kind, type }) =>
+        kind === Kind.TypeAlias &&
+        !Option.exists(type, ({ type }) => type === 'query'),
+    ),
     Array.map(parseType),
   ),
   interfaces: pipe(

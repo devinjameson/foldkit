@@ -17,9 +17,11 @@ import * as Task from '../../task'
 
 // MODEL
 
+/** Controls the tab list layout direction and which arrow keys navigate between tabs. */
 export const Orientation = S.Literal('Horizontal', 'Vertical')
 export type Orientation = typeof Orientation.Type
 
+/** Controls whether tabs activate on focus (`Automatic`) or require an explicit selection (`Manual`). */
 export const ActivationMode = S.Literal('Automatic', 'Manual')
 export type ActivationMode = typeof ActivationMode.Type
 
@@ -36,8 +38,11 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
+/** Sent when a tab is selected via click or keyboard. Updates both the active and focused indices. */
 export const TabSelected = ts('TabSelected', { index: S.Number })
+/** Sent when a tab receives keyboard focus in `Manual` mode without being activated. */
 export const TabFocused = ts('TabFocused', { index: S.Number })
+/** Placeholder message used when no action is needed, such as after a focus command completes. */
 export const NoOp = ts('NoOp')
 
 /** Union of all messages the tabs component can produce. */

@@ -151,10 +151,16 @@ const functionEntries = (
     }),
   )
 
+const isExtractedTypeAlias = (item: TypeDocItem): boolean =>
+  Option.exists(item.type, ({ type }) => type === 'query')
+
 const typeAliasEntries = (
   prefix: string,
   item: TypeDocItem,
 ): ReadonlyArray<readonly [string, string]> => {
+  if (isExtractedTypeAlias(item)) {
+    return []
+  }
   const tsString = Option.match(item.type, {
     onNone: () =>
       `type ${item.name} = ${typeDefFromChildren(item.children)}`,

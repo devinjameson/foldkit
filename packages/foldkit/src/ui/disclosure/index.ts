@@ -19,8 +19,11 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
+/** Sent when the disclosure button is clicked. Toggles the open/closed state. */
 export const Toggled = ts('Toggled')
+/** Sent to explicitly close the disclosure, regardless of its current state. */
 export const Closed = ts('Closed')
+/** Placeholder message used when no action is needed, such as after a focus command completes. */
 export const NoOp = ts('NoOp')
 
 /** Union of all messages the disclosure component can produce. */
