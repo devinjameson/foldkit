@@ -197,7 +197,9 @@ export const view = (model: Model): Html =>
         model,
         'mb-4',
       ),
-      para('The Foldkit version separates state, events, and view:'),
+      para(
+        'The Foldkit version separates state, events, how events update state, and view:',
+      ),
       highlightedCodeBlock(
         div(
           [
@@ -212,7 +214,7 @@ export const view = (model: Model): Html =>
         'mb-6',
       ),
       para(
-        'At small scale, Foldkit is more lines of code. The advantages become clear when you add complexity — async operations, multiple pieces of state, or effects that depend on state.',
+        "Foldkit is more lines of code. It doesn't optimize for fewer characters or clever shortcuts — it optimizes for honesty. Every state is named, every event is typed, every transition is visible. At small scale that feels like overhead. At large scale it's the reason you can still understand your app.",
       ),
       para(
         "Here's a data fetching example. React requires careful handling of loading states, race conditions, and cleanup:",
@@ -231,7 +233,7 @@ export const view = (model: Model): Html =>
         'mb-4',
       ),
       para(
-        'In Foldkit, the same pattern is explicit and predictable:',
+        'In Foldkit, the same pattern is explicit, auditable, and safe by default:',
       ),
       highlightedCodeBlock(
         div(
@@ -247,7 +249,10 @@ export const view = (model: Model): Html =>
         'mb-6',
       ),
       para(
-        "Notice there's no cleanup function, no cancelled flag, no stale closure risk. When the user clicks a button, you dispatch FetchUserClicked. The Command runs, and when it completes, it dispatches the result message. The architecture eliminates the need for defensive coding.",
+        "Notice there's no cleanup function, no cancelled flag, no stale closure risk. The Command runs, and when it completes, it returns a Message. The architecture eliminates the need for defensive coding.",
+      ),
+      para(
+        'Now read the update function. Every state transition in the app is right there — when the user clicks fetch, set loading and fire the command. When the fetch succeeds, store the data. When it fails, store the error. Want to know what your app does? Read update. In React, the same understanding requires tracing through hooks, effects, and closures across multiple components.',
       ),
       tableOfContentsEntryToHeader(patternMappingHeader),
       para("Here's how common React patterns map to Foldkit:"),

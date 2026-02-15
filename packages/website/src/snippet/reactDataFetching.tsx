@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react'
 
+type User = { id: string; name: string }
+
+const fetchUser = async (userId: string): Promise<User> => {
+  const response = await fetch(`/api/users/${userId}`)
+  return response.json()
+}
+
 function UserProfile({ userId }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)

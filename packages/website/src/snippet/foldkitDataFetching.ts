@@ -10,7 +10,7 @@ const UserSuccess = ts('UserSuccess', { data: UserSchema })
 const UserFailure = ts('UserFailure', { error: S.String })
 const UserState = S.Union(UserLoading, UserSuccess, UserFailure)
 
-// MODEL
+// MODEL - your entire application state
 
 const Model = S.Struct({
   userId: S.String,
@@ -18,7 +18,7 @@ const Model = S.Struct({
 })
 type Model = typeof Model.Type
 
-// MESSAGE
+// MESSAGE - events that can happen in your app
 
 const FetchUserClicked = ts('FetchUserClicked', { userId: S.String })
 const UserFetchSucceeded = ts('UserFetchSucceeded', {
@@ -26,7 +26,6 @@ const UserFetchSucceeded = ts('UserFetchSucceeded', {
 })
 const UserFetchFailed = ts('UserFetchFailed', { error: S.String })
 
-// The Message Schema represents all events that can update the model
 const Message = S.Union(
   FetchUserClicked,
   UserFetchSucceeded,
@@ -39,16 +38,28 @@ type UserFetchFailed = typeof UserFetchFailed.Type
 
 type Message = typeof Message.Type
 
-// COMMAND
+// COMMAND - descriptions of side effects that resolve to Messages
 
 const fetchUser = (
   userId: string,
 ): Runtime.Command<UserFetchSucceeded | UserFetchFailed> =>
   Effect.gen(function* () {
-    // Fetch a user and return a UserFetchSucceeded or UserFetchFailed message
-  })
+    const response = yield* Effect.tryPromise(() =>
+      fetch(`/api/users/${userId}`).then((response) =>
+        response.json(),
+      ),
+    )
+    // Validate the response against UserSchema at runtime
+    const data = yield* S.decodeUnknown(UserSchema)(response)
+    return UserFetchSucceeded.make({ data })
+  }).pipe(
+    // Every Command must return a Message — no errors bubble up
+    Effect.catchAll((error) =>
+      Effect.succeed(UserFetchFailed.make({ error: String(error) })),
+    ),
+  )
 
-// UPDATE
+// UPDATE - how Messages change the Model
 
 const update = (
   model: Model,
@@ -58,8 +69,10 @@ const update = (
     M.withReturnType<
       [Model, ReadonlyArray<Runtime.Command<Message>>]
     >(),
+    // Handle every Message — the type system ensures all cases are covered
     M.tagsExhaustive({
       FetchUserClicked: ({ userId }) => [
+        // evo returns an updated copy of Model
         evo(model, { user: () => UserLoading.make() }),
         [fetchUser(userId)],
       ],

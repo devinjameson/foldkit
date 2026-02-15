@@ -3,12 +3,12 @@ import { Runtime } from 'foldkit'
 import { Html, html } from 'foldkit/html'
 import { ts } from 'foldkit/schema'
 
-// MODEL
+// MODEL - your entire application state
 
 const Model = S.Number
 type Model = typeof Model.Type
 
-// MESSAGE
+// MESSAGE - events that can happen in your app
 
 const IncrementClicked = ts('IncrementClicked')
 const Message = S.Union(IncrementClicked)
@@ -16,7 +16,7 @@ const Message = S.Union(IncrementClicked)
 type IncrementClicked = typeof IncrementClicked.Type
 type Message = typeof Message.Type
 
-// UPDATE
+// UPDATE - how Messages change the Model
 
 type UpdateReturn = [Model, ReadonlyArray<Runtime.Command<Message>>]
 const withUpdateReturn = M.withReturnType<UpdateReturn>()
@@ -29,7 +29,7 @@ const update = (model: Model, message: Message): UpdateReturn =>
     }),
   )
 
-// VIEW
+// VIEW - a pure function from Model to HTML
 
 const { div, button, p, OnClick } = html<Message>()
 
