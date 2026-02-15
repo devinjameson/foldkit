@@ -2,7 +2,7 @@ import { describe, it } from '@effect/vitest'
 import { Option } from 'effect'
 import { expect } from 'vitest'
 
-import { Url, fromString, toString } from './url'
+import { Url, fromString, toString } from './index'
 
 describe('fromString', () => {
   it('parses a full URL with all parts', () => {

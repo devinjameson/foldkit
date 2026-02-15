@@ -11,7 +11,7 @@ import {
   pipe,
 } from 'effect'
 
-import { Url } from './url'
+import { Url } from '../url'
 
 /**
  * Error type for route parsing failures.

@@ -13,13 +13,14 @@ import {
 import { h } from 'snabbdom'
 import type { Attrs, On, Props, VNodeData } from 'snabbdom'
 
-import { Dispatch } from './runtime'
-import { VNode } from './vdom'
+import { Dispatch } from '../runtime'
+import { VNode } from '../vdom'
 
 /** A virtual DOM element represented as an `Effect` that produces a `VNode`. */
 export type Html = Effect.Effect<VNode | null, never, Dispatch>
 type Child = Html | string
 
+/** Union of all valid HTML, SVG, and MathML tag names. */
 export type TagName =
   | 'a'
   | 'abbr'

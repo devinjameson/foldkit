@@ -9,7 +9,7 @@ import {
   getZonedTime,
   getZonedTimeIn,
   randomInt,
-} from './task'
+} from './index'
 
 describe('getTime', () => {
   it.scoped('returns a UTC time wrapped in the message constructor', () =>

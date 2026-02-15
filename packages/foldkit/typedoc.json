@@ -9,6 +9,7 @@
   "excludeInternal": true,
   "intentionallyNotExported": [
     "CommandStreamConfig",
+    "Dispatch",
     "ElementFunction",
     "VoidElementFunction",
     "AttributeWithoutKey",

@@ -1,0 +1,1 @@
+export { ts } from './index'

@@ -1,2 +1,2 @@
-export * as Disclosure from './disclosure'
-export * as Tabs from './tabs'
+export * as Disclosure from './disclosure/public'
+export * as Tabs from './tabs/public'

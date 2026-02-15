@@ -1,7 +1,7 @@
 import { describe, it } from '@effect/vitest'
 import { expect } from 'vitest'
 
-import { Closed, NoOp, Toggled, init, update } from './disclosure'
+import { Closed, NoOp, Toggled, init, update } from './index'
 
 describe('Disclosure', () => {
   describe('init', () => {

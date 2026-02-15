@@ -21,6 +21,7 @@ type Evolved<O, T> = {
     : O[K]
 }
 
+/** Immutably updates fields of a struct by applying transform functions. Wraps Effect's `Struct.evolve` with stricter key checking. */
 export const evo: {
   <O, const T extends EvolveTransform<O>>(
     t: StrictKeys<O, T>,

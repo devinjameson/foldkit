@@ -9,7 +9,7 @@ import {
   keyToIndex,
   update,
   wrapIndex,
-} from './tabs'
+} from './index'
 
 const noneDisabled = () => false
 

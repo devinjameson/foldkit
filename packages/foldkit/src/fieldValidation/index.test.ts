@@ -23,7 +23,7 @@ import {
   startsWith,
   url,
   validateField,
-} from './fieldValidation'
+} from './index'
 
 describe('makeField', () => {
   const StringField = makeField(S.String)

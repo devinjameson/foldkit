@@ -1,14 +1,15 @@
 import { Match as M, Option, Schema as S } from 'effect'
 
-import { html } from '../html'
-import type { Html, TagName } from '../html'
-import type { Command } from '../runtime/runtime'
-import { ts } from '../schema'
-import { evo } from '../struct'
-import * as Task from '../task'
+import { html } from '../../html'
+import type { Html, TagName } from '../../html'
+import type { Command } from '../../runtime/runtime'
+import { ts } from '../../schema'
+import { evo } from '../../struct'
+import * as Task from '../../task'
 
 // MODEL
 
+/** Schema for the disclosure component's state, tracking its unique ID and open/closed status. */
 export const Model = S.Struct({
   id: S.String,
   isOpen: S.Boolean,
@@ -22,6 +23,7 @@ export const Toggled = ts('Toggled')
 export const Closed = ts('Closed')
 export const NoOp = ts('NoOp')
 
+/** Union of all messages the disclosure component can produce. */
 export const Message = S.Union(Toggled, Closed, NoOp)
 
 export type Toggled = typeof Toggled.Type
@@ -32,11 +34,13 @@ export type Message = typeof Message.Type
 
 // INIT
 
+/** Configuration for creating a disclosure model with `init`. */
 export type InitConfig = {
   readonly id: string
   readonly isOpen?: boolean
 }
 
+/** Creates an initial disclosure model from a config. Defaults to closed. */
 export const init = (config: InitConfig): Model => ({
   id: config.id,
   isOpen: config.isOpen ?? false,
@@ -48,6 +52,7 @@ const buttonId = (id: string): string => `${id}-button`
 
 const panelId = (id: string): string => `${id}-panel`
 
+/** Processes a disclosure message and returns the next model and commands. */
 export const update = (
   model: Model,
   message: Message,
@@ -83,6 +88,7 @@ export const update = (
 
 // VIEW
 
+/** Configuration for rendering a disclosure with `view`. */
 export type ViewConfig<Message> = {
   readonly model: Model
   readonly toMessage: (message: Toggled | Closed | NoOp) => Message
@@ -97,6 +103,7 @@ export type ViewConfig<Message> = {
   readonly className?: string
 }
 
+/** Renders a headless disclosure component with accessible ARIA attributes and keyboard support. */
 export const view = <Message>(config: ViewConfig<Message>): Html => {
   const {
     div,

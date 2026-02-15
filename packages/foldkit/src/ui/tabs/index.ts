@@ -8,12 +8,12 @@ import {
   pipe,
 } from 'effect'
 
-import { html } from '../html'
-import type { Html, TagName } from '../html'
-import type { Command } from '../runtime/runtime'
-import { ts } from '../schema'
-import { evo } from '../struct'
-import * as Task from '../task'
+import { html } from '../../html'
+import type { Html, TagName } from '../../html'
+import type { Command } from '../../runtime/runtime'
+import { ts } from '../../schema'
+import { evo } from '../../struct'
+import * as Task from '../../task'
 
 // MODEL
 
@@ -23,6 +23,7 @@ export type Orientation = typeof Orientation.Type
 export const ActivationMode = S.Literal('Automatic', 'Manual')
 export type ActivationMode = typeof ActivationMode.Type
 
+/** Schema for the tabs component's state, tracking active/focused indices, orientation, and activation mode. */
 export const Model = S.Struct({
   id: S.String,
   activeIndex: S.Number,
@@ -39,6 +40,7 @@ export const TabSelected = ts('TabSelected', { index: S.Number })
 export const TabFocused = ts('TabFocused', { index: S.Number })
 export const NoOp = ts('NoOp')
 
+/** Union of all messages the tabs component can produce. */
 export const Message = S.Union(TabSelected, TabFocused, NoOp)
 
 export type TabSelected = typeof TabSelected.Type
@@ -49,6 +51,7 @@ export type Message = typeof Message.Type
 
 // INIT
 
+/** Configuration for creating a tabs model with `init`. */
 export type InitConfig = {
   readonly id: string
   readonly activeIndex?: number
@@ -56,6 +59,7 @@ export type InitConfig = {
   readonly activationMode?: ActivationMode
 }
 
+/** Creates an initial tabs model from a config. Defaults to first tab, horizontal orientation, and automatic activation. */
 export const init = (config: InitConfig): Model => {
   const activeIndex = config.activeIndex ?? 0
 
@@ -70,6 +74,7 @@ export const init = (config: InitConfig): Model => {
 
 // UPDATE
 
+/** Processes a tabs message and returns the next model and commands. */
 export const update = (
   model: Model,
   message: Message,
@@ -142,6 +147,7 @@ export const keyToIndex = (
 
 // VIEW
 
+/** Configuration for an individual tab's button and panel content. */
 export type TabConfig = {
   readonly buttonClassName: string
   readonly buttonContent: Html
@@ -149,6 +155,7 @@ export type TabConfig = {
   readonly panelContent: Html
 }
 
+/** Configuration for rendering a tab group with `view`. */
 export type ViewConfig<Message, Tab extends string> = {
   readonly model: Model
   readonly toMessage: (message: TabSelected | TabFocused | NoOp) => Message
@@ -167,6 +174,7 @@ const tabPanelId = (id: string, index: number): string => `${id}-panel-${index}`
 
 const tabId = (id: string, index: number): string => `${id}-tab-${index}`
 
+/** Renders a headless tab group with accessible ARIA roles, roving tabindex, and keyboard navigation. */
 export const view = <Message, Tab extends string>(
   config: ViewConfig<Message, Tab>,
 ): Html => {

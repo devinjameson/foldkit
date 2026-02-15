@@ -12,48 +12,48 @@
       "import": "./dist/index.js"
     },
     "./html": {
-      "types": "./dist/html.d.ts",
-      "import": "./dist/html.js"
+      "types": "./dist/html/public.d.ts",
+      "import": "./dist/html/public.js"
     },
     "./navigation": {
-      "types": "./dist/navigation.d.ts",
-      "import": "./dist/navigation.js"
+      "types": "./dist/navigation/public.d.ts",
+      "import": "./dist/navigation/public.js"
     },
     "./route": {
-      "types": "./dist/route.d.ts",
-      "import": "./dist/route.js"
+      "types": "./dist/route/public.d.ts",
+      "import": "./dist/route/public.js"
     },
     "./runtime": {
-      "types": "./dist/runtime/index.d.ts",
-      "import": "./dist/runtime/index.js"
+      "types": "./dist/runtime/public.d.ts",
+      "import": "./dist/runtime/public.js"
     },
     "./fieldValidation": {
-      "types": "./dist/fieldValidation.d.ts",
-      "import": "./dist/fieldValidation.js"
+      "types": "./dist/fieldValidation/public.d.ts",
+      "import": "./dist/fieldValidation/public.js"
     },
     "./schema": {
-      "types": "./dist/schema.d.ts",
-      "import": "./dist/schema.js"
+      "types": "./dist/schema/public.d.ts",
+      "import": "./dist/schema/public.js"
     },
     "./struct": {
-      "types": "./dist/struct.d.ts",
-      "import": "./dist/struct.js"
+      "types": "./dist/struct/public.d.ts",
+      "import": "./dist/struct/public.js"
     },
     "./ui": {
       "types": "./dist/ui/index.d.ts",
       "import": "./dist/ui/index.js"
     },
     "./ui/disclosure": {
-      "types": "./dist/ui/disclosure.d.ts",
-      "import": "./dist/ui/disclosure.js"
+      "types": "./dist/ui/disclosure/public.d.ts",
+      "import": "./dist/ui/disclosure/public.js"
     },
     "./ui/tabs": {
-      "types": "./dist/ui/tabs.d.ts",
-      "import": "./dist/ui/tabs.js"
+      "types": "./dist/ui/tabs/public.d.ts",
+      "import": "./dist/ui/tabs/public.js"
     },
     "./url": {
-      "types": "./dist/url.d.ts",
-      "import": "./dist/url.js"
+      "types": "./dist/url/public.d.ts",
+      "import": "./dist/url/public.js"
     }
   },
   "files": [
