@@ -189,32 +189,68 @@ const parseVariable = (item: TypeDocItem): ApiVariable => ({
   sourceUrl: itemToSourceUrl(item),
 })
 
-const parseModule = (module: TypeDocModule): ApiModule => ({
-  name: module.name,
+const parseItemsAsModule = (
+  name: string,
+  children: ReadonlyArray<TypeDocItem>,
+): ApiModule => ({
+  name,
   functions: pipe(
-    module.children,
+    children,
     Array.filter((item) => item.kind === Kind.Function),
     Array.map(parseFunction),
   ),
   types: pipe(
-    module.children,
+    children,
     Array.filter((item) => item.kind === Kind.TypeAlias),
     Array.map(parseType),
   ),
   interfaces: pipe(
-    module.children,
+    children,
     Array.filter((item) => item.kind === Kind.Interface),
     Array.map(parseInterface),
   ),
   variables: pipe(
-    module.children,
+    children,
     Array.filter((item) => item.kind === Kind.Variable),
     Array.map(parseVariable),
   ),
 })
 
+const parseModule = (
+  module: TypeDocModule,
+): ReadonlyArray<ApiModule> => {
+  const namespaces = Array.filter(
+    module.children,
+    ({ kind }) => kind === Kind.Namespace,
+  )
+  const directChildren = Array.filter(
+    module.children,
+    ({ kind }) => kind !== Kind.Namespace,
+  )
+
+  const namespaceModules = Array.flatMap(namespaces, (namespace) =>
+    Option.match(namespace.children, {
+      onNone: () => [],
+      onSome: (children) => [
+        parseItemsAsModule(
+          `${module.name}/${namespace.name}`,
+          children,
+        ),
+      ],
+    }),
+  )
+
+  return Array.match(directChildren, {
+    onEmpty: () => namespaceModules,
+    onNonEmpty: () => [
+      parseItemsAsModule(module.name, directChildren),
+      ...namespaceModules,
+    ],
+  })
+}
+
 export const parseTypedocJson = (json: TypeDocJson): Model => ({
-  modules: Array.map(json.children, parseModule),
+  modules: Array.flatMap(json.children, parseModule),
 })
 
 export type TableOfContentsEntry = {
@@ -248,7 +284,7 @@ const sectionEntries = <T extends { readonly name: string }>(
         items,
         sortByName,
         Array.map((item) => ({
-          id: `${idPrefix}-${item.name}`,
+          id: `${idPrefix}-${moduleName}/${item.name}`,
           text: item.name,
           level: 'h4' as const,
         })),

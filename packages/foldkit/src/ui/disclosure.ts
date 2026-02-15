@@ -44,9 +44,9 @@ export const init = (config: InitConfig): Model => ({
 
 // UPDATE
 
-export const buttonId = (id: string): string => `${id}-button`
+const buttonId = (id: string): string => `${id}-button`
 
-export const panelId = (id: string): string => `${id}-panel`
+const panelId = (id: string): string => `${id}-panel`
 
 export const update = (
   model: Model,

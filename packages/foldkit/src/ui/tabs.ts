@@ -100,32 +100,7 @@ export const update = (
     }),
   )
 
-// VIEW
-
-export type TabConfig = {
-  readonly buttonClassName: string
-  readonly buttonContent: Html
-  readonly panelClassName: string
-  readonly panelContent: Html
-}
-
-export type ViewConfig<Message, Tab extends string> = {
-  readonly model: Model
-  readonly toMessage: (message: TabSelected | TabFocused | NoOp) => Message
-  readonly tabs: ReadonlyArray<Tab>
-  readonly tabToConfig: (tab: Tab, context: { isActive: boolean }) => TabConfig
-  readonly isTabDisabled?: (tab: Tab, index: number) => boolean
-  readonly persistPanels?: boolean
-  readonly tabListElement?: TagName
-  readonly tabElement?: TagName
-  readonly panelElement?: TagName
-  readonly className?: string
-  readonly tabListClassName?: string
-}
-
-const tabPanelId = (id: string, index: number): string => `${id}-panel-${index}`
-
-const tabId = (id: string, index: number): string => `${id}-tab-${index}`
+// KEYBOARD
 
 export const wrapIndex = (index: number, length: number): number =>
   ((index % length) + length) % length
@@ -164,6 +139,33 @@ export const keyToIndex = (
       M.orElse(() => focusedIndex),
     )
 }
+
+// VIEW
+
+export type TabConfig = {
+  readonly buttonClassName: string
+  readonly buttonContent: Html
+  readonly panelClassName: string
+  readonly panelContent: Html
+}
+
+export type ViewConfig<Message, Tab extends string> = {
+  readonly model: Model
+  readonly toMessage: (message: TabSelected | TabFocused | NoOp) => Message
+  readonly tabs: ReadonlyArray<Tab>
+  readonly tabToConfig: (tab: Tab, context: { isActive: boolean }) => TabConfig
+  readonly isTabDisabled?: (tab: Tab, index: number) => boolean
+  readonly persistPanels?: boolean
+  readonly tabListElement?: TagName
+  readonly tabElement?: TagName
+  readonly panelElement?: TagName
+  readonly className?: string
+  readonly tabListClassName?: string
+}
+
+const tabPanelId = (id: string, index: number): string => `${id}-panel-${index}`
+
+const tabId = (id: string, index: number): string => `${id}-tab-${index}`
 
 export const view = <Message, Tab extends string>(
   config: ViewConfig<Message, Tab>,

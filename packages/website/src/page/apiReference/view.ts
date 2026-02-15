@@ -44,8 +44,19 @@ const byName = <
 >(): Order.Order<T> =>
   Order.mapInput(Order.string, ({ name }: T) => name)
 
-const functionView = (apiFunction: ApiFunction): Html =>
-  div(
+const scopedId = (
+  kind: string,
+  moduleName: string,
+  name: string,
+): string => `${kind}-${moduleName}/${name}`
+
+const functionView = (
+  moduleName: string,
+  apiFunction: ApiFunction,
+): Html => {
+  const id = scopedId('function', moduleName, apiFunction.name)
+
+  return div(
     [Class('mb-8')],
     [
       div(
@@ -63,7 +74,7 @@ const functionView = (apiFunction: ApiFunction): Html =>
                   Class(
                     'text-base font-mono font-medium text-gray-900 dark:text-white scroll-mt-6',
                   ),
-                  Id(`function-${apiFunction.name}`),
+                  Id(id),
                 ],
                 [apiFunction.name],
               ),
@@ -91,10 +102,7 @@ const functionView = (apiFunction: ApiFunction): Html =>
               }),
             ],
           ),
-          headingLinkButton(
-            `function-${apiFunction.name}`,
-            apiFunction.name,
-          ),
+          headingLinkButton(id, apiFunction.name),
         ],
       ),
       ...Option.match(apiFunction.description, {
@@ -106,9 +114,10 @@ const functionView = (apiFunction: ApiFunction): Html =>
           ),
         ],
       }),
-      signaturesView(apiFunction),
+      signaturesView(id, apiFunction),
     ],
   )
+}
 
 const SIGNATURE_COLLAPSE_THRESHOLD = 500
 
@@ -175,8 +184,10 @@ const allParameterDescriptions = (
     }),
   )
 
-const signaturesView = (apiFunction: ApiFunction): Html => {
-  const key = `function-${apiFunction.name}`
+const signaturesView = (
+  key: string,
+  apiFunction: ApiFunction,
+): Html => {
   const maybeHighlighted = Record.get(highlights, key)
 
   const isLong =
@@ -339,9 +350,9 @@ const signatureChildrenFallback = (signature: {
   returnTypeView(signature.returnType),
 ]
 
-const typeView = (type: ApiType): Html => {
-  const key = `type-${type.name}`
-  const maybeHighlighted = Record.get(highlights, key)
+const typeView = (moduleName: string, type: ApiType): Html => {
+  const id = scopedId('type', moduleName, type.name)
+  const maybeHighlighted = Record.get(highlights, id)
 
   return div(
     [Class('mb-6')],
@@ -361,7 +372,7 @@ const typeView = (type: ApiType): Html => {
                   Class(
                     'text-base font-mono font-medium text-gray-900 dark:text-white scroll-mt-6',
                   ),
-                  Id(`type-${type.name}`),
+                  Id(id),
                 ],
                 [type.name],
               ),
@@ -389,7 +400,7 @@ const typeView = (type: ApiType): Html => {
               }),
             ],
           ),
-          headingLinkButton(`type-${type.name}`, type.name),
+          headingLinkButton(id, type.name),
         ],
       ),
       ...Option.match(type.description, {
@@ -428,9 +439,12 @@ const typeView = (type: ApiType): Html => {
   )
 }
 
-const interfaceView = (apiInterface: ApiInterface): Html => {
-  const key = `interface-${apiInterface.name}`
-  const maybeHighlighted = Record.get(highlights, key)
+const interfaceView = (
+  moduleName: string,
+  apiInterface: ApiInterface,
+): Html => {
+  const id = scopedId('interface', moduleName, apiInterface.name)
+  const maybeHighlighted = Record.get(highlights, id)
 
   return div(
     [Class('mb-6')],
@@ -450,7 +464,7 @@ const interfaceView = (apiInterface: ApiInterface): Html => {
                   Class(
                     'text-base font-mono font-medium text-gray-900 dark:text-white scroll-mt-6',
                   ),
-                  Id(`interface-${apiInterface.name}`),
+                  Id(id),
                 ],
                 [apiInterface.name],
               ),
@@ -478,10 +492,7 @@ const interfaceView = (apiInterface: ApiInterface): Html => {
               }),
             ],
           ),
-          headingLinkButton(
-            `interface-${apiInterface.name}`,
-            apiInterface.name,
-          ),
+          headingLinkButton(id, apiInterface.name),
         ],
       ),
       ...Option.match(apiInterface.description, {
@@ -520,9 +531,12 @@ const interfaceView = (apiInterface: ApiInterface): Html => {
   )
 }
 
-const variableView = (variable: ApiVariable): Html => {
-  const key = `const-${variable.name}`
-  const maybeHighlighted = Record.get(highlights, key)
+const variableView = (
+  moduleName: string,
+  variable: ApiVariable,
+): Html => {
+  const id = scopedId('const', moduleName, variable.name)
+  const maybeHighlighted = Record.get(highlights, id)
 
   return div(
     [Class('mb-6')],
@@ -542,7 +556,7 @@ const variableView = (variable: ApiVariable): Html => {
                   Class(
                     'text-base font-mono font-medium text-gray-900 dark:text-white scroll-mt-6',
                   ),
-                  Id(`const-${variable.name}`),
+                  Id(id),
                 ],
                 [variable.name],
               ),
@@ -570,7 +584,7 @@ const variableView = (variable: ApiVariable): Html => {
               }),
             ],
           ),
-          headingLinkButton(`const-${variable.name}`, variable.name),
+          headingLinkButton(id, variable.name),
         ],
       ),
       ...Option.match(variable.description, {
@@ -613,13 +627,17 @@ const section = <T extends { readonly name: string }>(
   moduleName: string,
   label: string,
   items: ReadonlyArray<T>,
-  itemView: (item: T) => Html,
+  itemView: (moduleName: string, item: T) => Html,
 ): ReadonlyArray<Html> =>
   Array.match(items, {
     onEmpty: () => [],
     onNonEmpty: (items) => [
       heading('h3', `${moduleName}-${label.toLowerCase()}`, label),
-      ...pipe(items, Array.sort(byName()), Array.map(itemView)),
+      ...pipe(
+        items,
+        Array.sort(byName()),
+        Array.map((item) => itemView(moduleName, item)),
+      ),
     ],
   })
 

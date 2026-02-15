@@ -68,9 +68,12 @@ const formatTypeParam = (typeParam: TypeDocTypeParam): string => {
   return `${typeParam.name}${constraint}${defaultValue}`
 }
 
-const formatParam = (parameter: TypeDocParam): string => {
+const formatParam = (
+  parameter: TypeDocParam,
+  depth: number,
+): string => {
   const optionalSuffix = parameter.flags.isOptional ? '?' : ''
-  return `${parameter.name}${optionalSuffix}: ${typeToString(parameter.type)}`
+  return `${parameter.name}${optionalSuffix}: ${typeToString(parameter.type, depth)}`
 }
 
 const formatParams = (
@@ -80,11 +83,13 @@ const formatParams = (
     onEmpty: () => '()',
     onNonEmpty: (first, rest) =>
       Array.match(rest, {
-        onEmpty: () => `(${formatParam(first)})`,
+        onEmpty: () => `(${formatParam(first, 0)})`,
         onNonEmpty: () =>
           pipe(
             parameters,
-            Array.map((parameter) => `  ${formatParam(parameter)}`),
+            Array.map(
+              (parameter) => `  ${formatParam(parameter, 1)}`,
+            ),
             Array.join(',\n'),
             (joined) => `(\n${joined}\n)`,
           ),
@@ -122,6 +127,7 @@ const buildFunctionSignatureString = (
 }
 
 const functionEntries = (
+  prefix: string,
   item: TypeDocItem,
 ): ReadonlyArray<readonly [string, string]> =>
   pipe(
@@ -131,7 +137,7 @@ const functionEntries = (
       onNone: () => [],
       onSome: (signatures) => [
         [
-          `function-${item.name}`,
+          `function-${prefix}${item.name}`,
           pipe(
             signatures,
             Array.map(
@@ -146,6 +152,7 @@ const functionEntries = (
   )
 
 const typeAliasEntries = (
+  prefix: string,
   item: TypeDocItem,
 ): ReadonlyArray<readonly [string, string]> => {
   const tsString = Option.match(item.type, {
@@ -153,35 +160,38 @@ const typeAliasEntries = (
       `type ${item.name} = ${typeDefFromChildren(item.children)}`,
     onSome: () => `type ${item.name} = ${typeToString(item.type)}`,
   })
-  return [[`type-${item.name}`, tsString] as const]
+  return [[`type-${prefix}${item.name}`, tsString] as const]
 }
 
 const interfaceEntries = (
+  prefix: string,
   item: TypeDocItem,
 ): ReadonlyArray<readonly [string, string]> => [
   [
-    `interface-${item.name}`,
+    `interface-${prefix}${item.name}`,
     `interface ${item.name} ${typeDefFromChildren(item.children)}`,
   ] as const,
 ]
 
 const variableEntries = (
+  prefix: string,
   item: TypeDocItem,
 ): ReadonlyArray<readonly [string, string]> => [
   [
-    `const-${item.name}`,
+    `const-${prefix}${item.name}`,
     `const ${item.name}: ${typeToString(item.type)}`,
   ] as const,
 ]
 
 const itemToEntries = (
+  prefix: string,
   item: TypeDocItem,
 ): ReadonlyArray<readonly [string, string]> =>
   M.value(item.kind).pipe(
-    M.when(Kind.Function, () => functionEntries(item)),
-    M.when(Kind.TypeAlias, () => typeAliasEntries(item)),
-    M.when(Kind.Interface, () => interfaceEntries(item)),
-    M.when(Kind.Variable, () => variableEntries(item)),
+    M.when(Kind.Function, () => functionEntries(prefix, item)),
+    M.when(Kind.TypeAlias, () => typeAliasEntries(prefix, item)),
+    M.when(Kind.Interface, () => interfaceEntries(prefix, item)),
+    M.when(Kind.Variable, () => variableEntries(prefix, item)),
     M.orElse(() => []),
   )
 
@@ -209,8 +219,26 @@ const highlightApiSignaturesPlugin = (): Plugin => ({
     const raw = await readFile(jsonPath, 'utf-8')
     const json = S.decodeUnknownSync(TypeDocJson)(JSON.parse(raw))
 
-    const entries = Array.flatMap(json.children, ({ children }) =>
-      Array.flatMap(children, itemToEntries),
+    const itemsToEntries = (
+      prefix: string,
+      children: ReadonlyArray<TypeDocItem>,
+    ): ReadonlyArray<readonly [string, string]> =>
+      Array.flatMap(children, (item) =>
+        item.kind === Kind.Namespace
+          ? Option.match(item.children, {
+              onNone: () => [],
+              onSome: (namespaceChildren) =>
+                itemsToEntries(
+                  `${prefix}${item.name}/`,
+                  namespaceChildren,
+                ),
+            })
+          : itemToEntries(prefix, item),
+      )
+
+    const entries = Array.flatMap(
+      json.children,
+      ({ name, children }) => itemsToEntries(`${name}/`, children),
     )
 
     const highlightedEntries = await Promise.all(

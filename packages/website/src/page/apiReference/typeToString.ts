@@ -92,14 +92,26 @@ const formatType = (type: TypeDocType, depth: number): string =>
       'array',
       ({ elementType }) => `Array<${formatType(elementType, depth)}>`,
     ),
-    whenType('tuple', ({ elements }) =>
-      pipe(
-        elements,
-        Array.map((element) => formatType(element, depth)),
-        Array.join(', '),
-        (joined) => `[${joined}]`,
-      ),
-    ),
+    whenType('tuple', ({ elements }) => {
+      const formatted = Array.map(elements, (element) =>
+        formatType(element, depth),
+      )
+      const isMultiLine = Array.some(formatted, (line) =>
+        line.includes('\n'),
+      )
+
+      return isMultiLine
+        ? pipe(
+            elements,
+            Array.map(
+              (element) =>
+                `${indent(depth + 1)}${formatType(element, depth + 1)}`,
+            ),
+            Array.join(',\n'),
+            (joined) => `[\n${joined}\n${indent(depth)}]`,
+          )
+        : `[${Array.join(formatted, ', ')}]`
+    }),
     whenType('union', ({ types }) =>
       pipe(
         types,
