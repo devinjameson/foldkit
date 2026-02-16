@@ -23,7 +23,7 @@ const highlightCodePlugin = (): Plugin => ({
   name: 'highlight-code',
   async transform(_code, id) {
     if (id.includes('?highlighted')) {
-      const filePath = id.split('?')[0]
+      const filePath = id.slice(0, id.indexOf('?'))
       const rawCode = await readFile(filePath, 'utf-8')
       const code = rawCode.trimEnd()
 
