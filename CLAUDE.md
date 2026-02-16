@@ -47,6 +47,10 @@ Match the quality and thoughtfulness of these files. The principles below apply 
 - Use curried functions for better composition
 - Always use Effect.Match instead of switch
 - Prefer Effect module functions over native methods when available — e.g. `Array.map`, `Array.filter`, `Option.map`, `String.startsWith` from Effect instead of their native equivalents. Exception: native `.map`, `.filter`, etc. are fine when calling directly on a named variable (e.g. `commands.map(Effect.map(...))`) — use Effect's `Array.map` in `pipe` chains where the curried, data-last form composes naturally.
+- Never use `for` loops or `let` for iteration. Use `Array.makeBy` for index-based construction, `Array.range` + `Array.findFirst`/`Array.findLast` for searches, and `Array.filterMap`/`Array.flatMap` for transforms.
+- Never cast Schema values with `as Type`. Use `.make()` constructors: `LoginSucceeded.make({ sessionId })` not `{ _tag: 'LoginSucceeded', sessionId } as Message`. Commands should return specific union types (e.g. `Runtime.Command<LoginSucceeded | LoginFailed>`) rather than the full Message type.
+- Use `Option` for model fields that may be absent — not empty strings or zero values. `loginError: S.OptionFromSelf(S.String)` not `loginError: S.String` with `''` as the "none" state. Use `Option.match` in views to conditionally render.
+- Use `Array.take` instead of `.slice(0, n)` — especially avoid casting Schema arrays with `as readonly T[]` just to call `.slice`.
 
 ### Message Layout
 
@@ -73,7 +77,7 @@ Always create types for all message values, not just the ones currently used ext
 
 ### General Preferences
 
-- Never abbreviate names. Use full, descriptive names everywhere — variables, types, functions, parameters. e.g. `signature` not `sig`, `cart` not `c`, `Message` not `Msg`.
+- Never abbreviate names. Use full, descriptive names everywhere — variables, types, functions, parameters, including callback parameters. e.g. `signature` not `sig`, `cart` not `c`, `Message` not `Msg`, `(tickCount) => tickCount + 1` not `(t) => t + 1`.
 - Avoid `let`. Use `const` and prefer immutable patterns. Only use `let` when mutation is truly unavoidable.
 - Always use braces for control flow. `if (foo) { return true }` not `if (foo) return true`.
 - Use `is*` for boolean naming e.g. `isPlaying`, `isValid`
@@ -82,6 +86,14 @@ Always create types for all message values, not just the ones currently used ext
   understand or use better names.
 - When editing code, follow existing patterns in the codebase exactly. Before writing new code, read 2-3 existing files that do similar things and match their style for naming, spacing, imports, and patterns. Never use placeholder types like `{_tag: string}`.
 - Use capitalized string literals for Schema literal types: `S.Literal('Horizontal', 'Vertical')` not `S.Literal('horizontal', 'vertical')`.
+- Capitalize namespace imports: `import * as Command from './command'` not `import * as command from './command'`.
+- Extract magic numbers to named constants. No raw numeric literals in logic — e.g. `FINAL_PHOTO_INDEX` not `15`.
+
+### Application Architecture
+
+- Extract messages to a dedicated `message.ts` file when commands need message constructors — this breaks the circular dependency between command.ts and main.ts. Export all schemas individually and as the `Message` union type.
+- Use the `ViteEnvConfig` Effect.Service pattern for environment variables in RPC layers (see `examples/typing-game/client/src/config.ts`). For values needed synchronously in views (e.g. photo URLs), keep a simple module-level `const` alongside the service.
+- Extract repeated inline style values (colors, shadows) to constants. Use Tailwind `@theme` for colors that map to utility classes (e.g. `--color-valentine: #ff2d55` → `text-valentine`). Use a `theme.ts` for values Tailwind can't express as utilities (textShadow, boxShadow).
 
 ### Commits and Releases
 
