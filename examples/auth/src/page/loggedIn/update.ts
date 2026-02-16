@@ -14,7 +14,7 @@ const withUpdateReturn = M.withReturnType<UpdateReturn>()
 export const update = (model: Model, message: Message): UpdateReturn =>
   M.value(message).pipe(
     M.tagsExhaustive({
-      SettingsMessage: ({ message }) =>
+      GotSettingsMessage: ({ message }) =>
         M.value(message).pipe(
           withUpdateReturn,
           M.tagsExhaustive({

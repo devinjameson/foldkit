@@ -5,7 +5,9 @@
   "description": "foldkit: Elm-inspired UI framework powered by Effect-TS",
   "scripts": {
     "prepare": "simple-git-hooks",
-    "pre-push": "prettier --check . && pnpm -r typecheck && pnpm test",
+    "check": "pnpm -r typecheck && pnpm lint",
+    "lint": "pnpm -r --if-present lint",
+    "pre-push": "prettier --check . && pnpm check && pnpm test",
     "test": "pnpm -r --filter './examples/*' --filter './packages/*' run --if-present test",
     "format": "prettier -w .",
     "dev:core": "pnpm --filter foldkit watch",

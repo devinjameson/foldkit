@@ -5,7 +5,6 @@ import { Link } from '../link'
 import type { Model, TableOfContentsEntry } from '../main'
 import {
   callout,
-  heading,
   inlineCode,
   link,
   pageTitle,

@@ -5,7 +5,7 @@ import { Class, div } from '../../html'
 import type { Message as ParentMessage } from '../../message'
 import { notFoundView } from '../../notFoundView'
 import { homeRouter } from '../../route'
-import { LoginMessage, Message } from './message'
+import { GotLoginMessage, Message } from './message'
 import { Model } from './model'
 import * as Home from './page/home'
 import * as Login from './page/login'
@@ -22,7 +22,7 @@ export const view = (
           Home: () => Home.view(),
           Login: () =>
             Login.view(model.loginModel, (message) =>
-              toMessage(LoginMessage.make({ message })),
+              toMessage(GotLoginMessage.make({ message })),
             ),
           NotFound: ({ path }) =>
             notFoundView(path, homeRouter.build({}), 'Go Home'),

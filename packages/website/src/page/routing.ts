@@ -4,7 +4,6 @@ import { Class, InnerHTML, div, li, ul } from '../html'
 import { Link } from '../link'
 import type { Model, TableOfContentsEntry } from '../main'
 import {
-  heading,
   inlineCode,
   link,
   pageTitle,

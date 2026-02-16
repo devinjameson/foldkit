@@ -3,7 +3,7 @@ import { Runtime } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
 import {
-  LoginMessage,
+  GotLoginMessage,
   LoginSucceeded,
   Message,
   type OutMessage,
@@ -22,14 +22,14 @@ export const update = (model: Model, message: Message): UpdateReturn =>
   M.value(message).pipe(
     withUpdateReturn,
     M.tagsExhaustive({
-      LoginMessage: ({ message: loginMessage }) => {
+      GotLoginMessage: ({ message }) => {
         const [loginModel, commands, maybeOutMessage] = Login.update(
           model.loginModel,
-          loginMessage,
+          message,
         )
 
         const mappedCommands = Array.map(commands, (command) =>
-          Effect.map(command, (message) => LoginMessage.make({ message })),
+          Effect.map(command, (message) => GotLoginMessage.make({ message })),
         )
 
         return [

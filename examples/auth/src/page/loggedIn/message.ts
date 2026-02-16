@@ -5,12 +5,12 @@ import * as Settings from './page/settings'
 
 // MESSAGE
 
-export const SettingsMessage = ts('SettingsMessage', {
+export const GotSettingsMessage = ts('GotSettingsMessage', {
   message: Settings.Message,
 })
-export const Message = S.Union(SettingsMessage)
+export const Message = S.Union(GotSettingsMessage)
 
-export type SettingsMessage = typeof SettingsMessage.Type
+export type GotSettingsMessage = typeof GotSettingsMessage.Type
 export type Message = typeof Message.Type
 
 // OUT MESSAGE

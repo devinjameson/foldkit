@@ -1,7 +1,7 @@
 import { Match as M } from 'effect'
 import { Html } from 'foldkit/html'
 
-import { HomeMessage, RoomMessage } from '../message'
+import { GotHomeMessage, GotRoomMessage } from '../message'
 import { Model } from '../model'
 import { Home, Room } from '../page'
 import { NotFoundRoute } from '../route'
@@ -10,8 +10,8 @@ import { Class, Href, a, div, footer, h1, keyed, main, p, section, span } from '
 export const view = (model: Model): Html => {
   const content = M.value(model.route).pipe(
     M.tagsExhaustive({
-      Home: () => Home.view(model.home, (message) => HomeMessage.make({ message })),
-      Room: Room.view(model.room, (message) => RoomMessage.make({ message })),
+      Home: () => Home.view(model.home, (message) => GotHomeMessage.make({ message })),
+      Room: Room.view(model.room, (message) => GotRoomMessage.make({ message })),
       NotFound: notFound,
     }),
   )

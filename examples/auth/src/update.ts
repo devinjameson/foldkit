@@ -5,7 +5,12 @@ import { evo } from 'foldkit/struct'
 import { toString as urlToString } from 'foldkit/url'
 
 import { clearSession, logError, saveSession } from './command'
-import { LoggedInMessage, LoggedOutMessage, Message, NoOp } from './message'
+import {
+  GotLoggedInMessage,
+  GotLoggedOutMessage,
+  Message,
+  NoOp,
+} from './message'
 import { LoggedIn, LoggedOut, Model } from './model'
 import {
   DashboardRoute,
@@ -111,13 +116,15 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         [logError('Failed to clear session:', error)],
       ],
 
-      LoggedOutMessage: ({ message }) => handleLoggedOutMessage(model, message),
+      GotLoggedOutMessage: ({ message }) =>
+        handleGotLoggedOutMessage(model, message),
 
-      LoggedInMessage: ({ message }) => handleLoggedInMessage(model, message),
+      GotLoggedInMessage: ({ message }) =>
+        handleGotLoggedInMessage(model, message),
     }),
   )
 
-const handleLoggedOutMessage = (
+const handleGotLoggedOutMessage = (
   model: Model,
   message: LoggedOut.Message,
 ): UpdateReturn => {
@@ -131,7 +138,7 @@ const handleLoggedOutMessage = (
   )
 
   const mappedCommands = Array.map(commands, (command) =>
-    Effect.map(command, (message) => LoggedOutMessage.make({ message })),
+    Effect.map(command, (message) => GotLoggedOutMessage.make({ message })),
   )
 
   return Option.match(maybeOutMessage, {
@@ -155,7 +162,7 @@ const handleLoggedOutMessage = (
   })
 }
 
-const handleLoggedInMessage = (
+const handleGotLoggedInMessage = (
   model: Model,
   message: LoggedIn.Message,
 ): UpdateReturn => {
@@ -166,7 +173,7 @@ const handleLoggedInMessage = (
   const [nextModel, commands, maybeOutMessage] = LoggedIn.update(model, message)
 
   const mappedCommands = Array.map(commands, (command) =>
-    Effect.map(command, (message) => LoggedInMessage.make({ message })),
+    Effect.map(command, (message) => GotLoggedInMessage.make({ message })),
   )
 
   return Option.match(maybeOutMessage, {

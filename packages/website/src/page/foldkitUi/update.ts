@@ -3,10 +3,10 @@ import { Runtime, Ui } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
 import {
-  DisclosureDemoMessage,
-  HorizontalTabsDemoMessage,
+  GotDisclosureDemoMessage,
+  GotHorizontalTabsDemoMessage,
+  GotVerticalTabsDemoMessage,
   type Message,
-  VerticalTabsDemoMessage,
 } from './message'
 import type { Model } from './model'
 
@@ -23,7 +23,7 @@ export const update = (
   M.value(message).pipe(
     withUpdateReturn,
     M.tagsExhaustive({
-      DisclosureDemoMessage: ({ message }) => {
+      GotDisclosureDemoMessage: ({ message }) => {
         const [nextDisclosureDemo, disclosureCommands] =
           Ui.Disclosure.update(model.disclosureDemo, message)
 
@@ -33,13 +33,13 @@ export const update = (
           }),
           disclosureCommands.map(
             Effect.map((message) =>
-              DisclosureDemoMessage.make({ message }),
+              GotDisclosureDemoMessage.make({ message }),
             ),
           ),
         ]
       },
 
-      HorizontalTabsDemoMessage: ({ message }) => {
+      GotHorizontalTabsDemoMessage: ({ message }) => {
         const [nextHorizontalTabsDemo, horizontalTabsCommands] =
           Ui.Tabs.update(model.horizontalTabsDemo, message)
 
@@ -49,13 +49,13 @@ export const update = (
           }),
           horizontalTabsCommands.map(
             Effect.map((message) =>
-              HorizontalTabsDemoMessage.make({ message }),
+              GotHorizontalTabsDemoMessage.make({ message }),
             ),
           ),
         ]
       },
 
-      VerticalTabsDemoMessage: ({ message }) => {
+      GotVerticalTabsDemoMessage: ({ message }) => {
         const [nextVerticalTabsDemo, verticalTabsCommands] =
           Ui.Tabs.update(model.verticalTabsDemo, message)
 
@@ -65,7 +65,7 @@ export const update = (
           }),
           verticalTabsCommands.map(
             Effect.map((message) =>
-              VerticalTabsDemoMessage.make({ message }),
+              GotVerticalTabsDemoMessage.make({ message }),
             ),
           ),
         ]

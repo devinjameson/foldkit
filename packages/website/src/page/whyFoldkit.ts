@@ -6,7 +6,6 @@ import type { TableOfContentsEntry } from '../main'
 import {
   bullets,
   callout,
-  heading,
   inlineCode,
   link,
   pageTitle,

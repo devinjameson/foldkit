@@ -6,9 +6,9 @@ import type { Message as ParentMessage } from '../../main'
 import type { TableOfContentsEntry } from '../../main'
 import { heading } from '../../prose'
 import {
-  HorizontalTabsDemoMessage,
+  GotHorizontalTabsDemoMessage,
+  GotVerticalTabsDemoMessage,
   type Message,
-  VerticalTabsDemoMessage,
 } from './message'
 import type { Model } from './model'
 
@@ -156,7 +156,7 @@ export const horizontalDemo = (
   Ui.Tabs.view({
     model: model.horizontalTabsDemo,
     toMessage: (message) =>
-      toMessage(HorizontalTabsDemoMessage.make({ message })),
+      toMessage(GotHorizontalTabsDemoMessage.make({ message })),
     tabs: demoTabs,
     tabToConfig,
     tabListClassName: 'flex',
@@ -171,7 +171,7 @@ export const verticalDemo = (
   Ui.Tabs.view({
     model: model.verticalTabsDemo,
     toMessage: (message) =>
-      toMessage(VerticalTabsDemoMessage.make({ message })),
+      toMessage(GotVerticalTabsDemoMessage.make({ message })),
     tabs: demoTabs,
     tabToConfig: verticalTabToConfig,
     className: 'flex',

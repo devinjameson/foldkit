@@ -31,7 +31,7 @@ import {
   type ApiVariable,
   scopedId,
 } from './domain'
-import { DisclosureToggled, type Message } from './message'
+import { GotDisclosureMessage, type Message } from './message'
 import type { Model } from './model'
 
 const descriptionWithCode = (
@@ -208,7 +208,7 @@ const signaturesView = (
       Ui.Disclosure.view({
         model: disclosure,
         toMessage: (message) =>
-          toMessage(DisclosureToggled.make({ id: key, message })),
+          toMessage(GotDisclosureMessage.make({ id: key, message })),
         buttonClassName: disclosureButtonClassName,
         buttonContent: div(
           [Class('flex items-center justify-between w-full')],

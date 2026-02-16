@@ -2,7 +2,7 @@ import { Match as M } from 'effect'
 import { Html } from 'foldkit/html'
 
 import { Class, div, keyed } from './html'
-import { LoggedInMessage, LoggedOutMessage } from './message'
+import { GotLoggedInMessage, GotLoggedOutMessage } from './message'
 import { LoggedIn, LoggedOut, Model } from './model'
 
 export const view = (model: Model): Html =>
@@ -17,11 +17,11 @@ export const view = (model: Model): Html =>
             M.tagsExhaustive({
               LoggedOut: (loggedOutModel) =>
                 LoggedOut.view(loggedOutModel, (message) =>
-                  LoggedOutMessage.make({ message }),
+                  GotLoggedOutMessage.make({ message }),
                 ),
               LoggedIn: (loggedInModel) =>
                 LoggedIn.view(loggedInModel, (message) =>
-                  LoggedInMessage.make({ message }),
+                  GotLoggedInMessage.make({ message }),
                 ),
             }),
           ),

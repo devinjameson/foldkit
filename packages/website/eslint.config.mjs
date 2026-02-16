@@ -46,6 +46,7 @@ export default [
       'vite.config.ts',
       '**/*.config.js',
       '**/*.config.mjs',
+      'src/snippet/',
     ],
   },
 ]

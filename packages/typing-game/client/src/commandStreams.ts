@@ -1,7 +1,7 @@
 import { Effect, Match as M, Option, Schema as S, Stream } from 'effect'
 import { Runtime } from 'foldkit'
 
-import { HomeMessage, Message, NoOp, RoomMessage } from './message'
+import { GotHomeMessage, GotRoomMessage, Message, NoOp } from './message'
 import { Model } from './model'
 import { Home, Room } from './page'
 import { AppRoute } from './route'
@@ -36,7 +36,7 @@ export const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Mod
             return client.subscribeToRoom({ roomId, playerId }).pipe(
               Stream.map(({ room, maybePlayerProgress }) =>
                 Effect.succeed(
-                  RoomMessage.make({
+                  GotRoomMessage.make({
                     message: Room.Message.RoomUpdated.make({ room, maybePlayerProgress }),
                   }),
                 ),
@@ -44,7 +44,7 @@ export const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Mod
               Stream.catchAll((error) =>
                 Stream.make(
                   Effect.succeed(
-                    RoomMessage.make({
+                    GotRoomMessage.make({
                       message: Room.Message.RoomStreamError.make({ error: String(error) }),
                     }),
                   ),
@@ -89,8 +89,10 @@ export const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Mod
 
               return M.value(deps.route).pipe(
                 M.tagsExhaustive({
-                  Home: () => HomeMessage.make({ message: Home.Message.KeyPressed.make({ key }) }),
-                  Room: () => RoomMessage.make({ message: Room.Message.KeyPressed.make({ key }) }),
+                  Home: () =>
+                    GotHomeMessage.make({ message: Home.Message.KeyPressed.make({ key }) }),
+                  Room: () =>
+                    GotRoomMessage.make({ message: Room.Message.KeyPressed.make({ key }) }),
                   NotFound: () => NoOp.make(),
                 }),
               )

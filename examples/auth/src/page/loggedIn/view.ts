@@ -7,7 +7,7 @@ import { Class, Href, a, div, li, main, nav, ul } from '../../html'
 import type { Message as ParentMessage } from '../../message'
 import { notFoundView } from '../../notFoundView'
 import { dashboardRouter, settingsRouter } from '../../route'
-import { Message, SettingsMessage } from './message'
+import { GotSettingsMessage, Message } from './message'
 import { Model } from './model'
 import * as Dashboard from './page/dashboard'
 import * as Settings from './page/settings'
@@ -75,8 +75,8 @@ export const view = (
             M.tagsExhaustive({
               Dashboard: () => Dashboard.view(model.session),
               Settings: () =>
-                Settings.view(model.session, (childMessage) =>
-                  toMessage(SettingsMessage.make({ message: childMessage })),
+                Settings.view(model.session, (message) =>
+                  toMessage(GotSettingsMessage.make({ message })),
                 ),
               NotFound: ({ path }) =>
                 notFoundView(

@@ -2,13 +2,14 @@ import { Schema as S } from 'effect'
 import { Ui } from 'foldkit'
 import { ts } from 'foldkit/schema'
 
-export const FaqDisclosureToggled = ts('FaqDisclosureToggled', {
+export const GotFaqDisclosureMessage = ts('GotFaqDisclosureMessage', {
   id: S.String,
   message: Ui.Disclosure.Message,
 })
 
-export const Message = S.Union(FaqDisclosureToggled)
+export const Message = S.Union(GotFaqDisclosureMessage)
 
-export type FaqDisclosureToggled = typeof FaqDisclosureToggled.Type
+export type GotFaqDisclosureMessage =
+  typeof GotFaqDisclosureMessage.Type
 
 export type Message = typeof Message.Type

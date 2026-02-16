@@ -6,10 +6,10 @@ import * as Login from './page/login'
 
 // MESSAGE
 
-export const LoginMessage = ts('LoginMessage', { message: Login.Message })
-export const Message = S.Union(LoginMessage)
+export const GotLoginMessage = ts('GotLoginMessage', { message: Login.Message })
+export const Message = S.Union(GotLoginMessage)
 
-export type LoginMessage = typeof LoginMessage.Type
+export type GotLoginMessage = typeof GotLoginMessage.Type
 export type Message = typeof Message.Type
 
 // OUT MESSAGE

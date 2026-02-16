@@ -4,7 +4,7 @@ import { Class, div, p, span } from '../../html'
 import { Icon } from '../../icon'
 import type { Message as ParentMessage } from '../../main'
 import type { TableOfContentsEntry } from '../../main'
-import { DisclosureDemoMessage, type Message } from './message'
+import { GotDisclosureDemoMessage, type Message } from './message'
 import type { Model } from './model'
 
 // TABLE OF CONTENTS
@@ -42,7 +42,7 @@ export const disclosureDemo = (
   Ui.Disclosure.view({
     model: model.disclosureDemo,
     toMessage: (message) =>
-      toMessage(DisclosureDemoMessage.make({ message })),
+      toMessage(GotDisclosureDemoMessage.make({ message })),
     buttonClassName,
     buttonContent: div(
       [Class('flex items-center justify-between w-full')],

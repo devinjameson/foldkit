@@ -6,7 +6,7 @@ import { evo } from 'foldkit/struct'
 
 import { navigateToRoom, savePlayerToSessionStorage } from './command'
 import { USERNAME_INPUT_ID } from './constant'
-import { HomeMessage, Message, NoOp, RoomMessage } from './message'
+import { GotHomeMessage, GotRoomMessage, Message, NoOp } from './message'
 import { Model } from './model'
 import { Home, Room } from './page'
 import { urlToAppRoute } from './route'
@@ -46,14 +46,16 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
         ]
       },
 
-      HomeMessage: ({ message: homeMessage }) => {
-        const [nextHomeModel, homeComands] = Home.update(model.home, homeMessage)
+      GotHomeMessage: ({ message }) => {
+        const [nextHomeModel, homeComands] = Home.update(model.home, message)
 
-        const additionalCommands = M.value(homeMessage).pipe(
+        const additionalCommands = M.value(message).pipe(
           M.tag('RoomCreated', ({ roomId, player }) => handleRoomJoined(roomId, player)),
           M.tag('RoomJoined', ({ roomId, player }) => handleRoomJoined(roomId, player)),
           M.tag('RoomError', ({ error }) => [
-            Effect.succeed(RoomMessage.make({ message: Room.Message.RoomError.make({ error }) })),
+            Effect.succeed(
+              GotRoomMessage.make({ message: Room.Message.RoomError.make({ error }) }),
+            ),
           ]),
           M.orElse(() => []),
         )
@@ -63,20 +65,20 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
             home: () => nextHomeModel,
           }),
           [
-            ...homeComands.map(Effect.map((message) => HomeMessage.make({ message }))),
+            ...homeComands.map(Effect.map((message) => GotHomeMessage.make({ message }))),
             ...additionalCommands,
           ],
         ]
       },
 
-      RoomMessage: ({ message: roomMessage }) => {
-        const [nextRoomModel, roomCommands] = Room.update(model.room, roomMessage)
+      GotRoomMessage: ({ message }) => {
+        const [nextRoomModel, roomCommands] = Room.update(model.room, message)
 
         return [
           evo(model, {
             room: () => nextRoomModel,
           }),
-          roomCommands.map(Effect.map((message) => RoomMessage.make({ message }))),
+          roomCommands.map(Effect.map((message) => GotRoomMessage.make({ message }))),
         ]
       },
     }),
@@ -87,6 +89,8 @@ const handleRoomJoined = (roomId: string, player: Shared.Player) => {
   return [
     navigateToRoom(roomId),
     savePlayerToSessionStorage(session),
-    Effect.succeed(RoomMessage.make({ message: Room.Message.RoomJoined.make({ roomId, player }) })),
+    Effect.succeed(
+      GotRoomMessage.make({ message: Room.Message.RoomJoined.make({ roomId, player }) }),
+    ),
   ]
 }

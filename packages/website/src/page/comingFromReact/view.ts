@@ -37,7 +37,7 @@ import * as Snippets from '../../snippet'
 import { highlightedCodeBlock } from '../../view/codeBlock'
 import { comparisonTable } from '../../view/table'
 import { FAQ_IDS } from './faq'
-import { FaqDisclosureToggled, type Message } from './message'
+import { GotFaqDisclosureMessage, type Message } from './message'
 import type { Model } from './model'
 
 const [
@@ -177,7 +177,7 @@ const faqItem = (
       Ui.Disclosure.view({
         model: disclosure,
         toMessage: (message) =>
-          toMessage(FaqDisclosureToggled.make({ id, message })),
+          toMessage(GotFaqDisclosureMessage.make({ id, message })),
         buttonClassName: faqButtonClassName,
         buttonContent: div(
           [Class('flex items-center justify-between w-full')],

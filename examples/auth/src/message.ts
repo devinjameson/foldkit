@@ -14,10 +14,10 @@ export const SessionSaved = ts('SessionSaved')
 export const SessionSaveFailed = ts('SessionSaveFailed', { error: S.String })
 export const SessionCleared = ts('SessionCleared')
 export const SessionClearFailed = ts('SessionClearFailed', { error: S.String })
-export const LoggedOutMessage = ts('LoggedOutMessage', {
+export const GotLoggedOutMessage = ts('GotLoggedOutMessage', {
   message: LoggedOut.Message,
 })
-export const LoggedInMessage = ts('LoggedInMessage', {
+export const GotLoggedInMessage = ts('GotLoggedInMessage', {
   message: LoggedIn.Message,
 })
 
@@ -30,8 +30,8 @@ export const Message = S.Union(
   SessionSaveFailed,
   SessionCleared,
   SessionClearFailed,
-  LoggedOutMessage,
-  LoggedInMessage,
+  GotLoggedOutMessage,
+  GotLoggedInMessage,
 )
 
 export type NoOp = typeof NoOp.Type
@@ -42,7 +42,7 @@ export type SessionSaved = typeof SessionSaved.Type
 export type SessionSaveFailed = typeof SessionSaveFailed.Type
 export type SessionCleared = typeof SessionCleared.Type
 export type SessionClearFailed = typeof SessionClearFailed.Type
-export type LoggedOutMessage = typeof LoggedOutMessage.Type
-export type LoggedInMessage = typeof LoggedInMessage.Type
+export type GotLoggedOutMessage = typeof GotLoggedOutMessage.Type
+export type GotLoggedInMessage = typeof GotLoggedInMessage.Type
 
 export type Message = typeof Message.Type

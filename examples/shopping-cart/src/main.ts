@@ -74,7 +74,9 @@ const LinkClicked = ts('LinkClicked', {
   request: Runtime.UrlRequest,
 })
 const UrlChanged = ts('UrlChanged', { url: Url })
-const ProductsMessage = ts('ProductsMessage', { message: Products.Message })
+const GotProductsMessage = ts('GotProductsMessage', {
+  message: Products.Message,
+})
 const AddToCartClicked = ts('AddToCartClicked', { item: Item.Item })
 const QuantityChangeClicked = ts('QuantityChangeClicked', {
   itemId: S.String,
@@ -95,7 +97,7 @@ export const Message = S.Union(
   NoOp,
   LinkClicked,
   UrlChanged,
-  ProductsMessage,
+  GotProductsMessage,
   AddToCartClicked,
   QuantityChangeClicked,
   ChangeCartQuantity,
@@ -108,7 +110,7 @@ export const Message = S.Union(
 type NoOp = typeof NoOp.Type
 type LinkClicked = typeof LinkClicked.Type
 type UrlChanged = typeof UrlChanged.Type
-type ProductsMessage = typeof ProductsMessage.Type
+type GotProductsMessage = typeof GotProductsMessage.Type
 type AddToCartClicked = typeof AddToCartClicked.Type
 type QuantityChangeClicked = typeof QuantityChangeClicked.Type
 type ChangeCartQuantity = typeof ChangeCartQuantity.Type
@@ -168,7 +170,7 @@ const update = (
         [],
       ],
 
-      ProductsMessage: ({ message }) => {
+      GotProductsMessage: ({ message }) => {
         const [newProductsModel, commands] = Products.update(productsRouter)(
           model.productsPage,
           message,
@@ -179,9 +181,7 @@ const update = (
             productsPage: () => newProductsModel,
           }),
           commands.map(
-            Effect.map((productsMessage) =>
-              ProductsMessage.make({ message: productsMessage }),
-            ),
+            Effect.map((message) => GotProductsMessage.make({ message })),
           ),
         ]
       },
@@ -298,7 +298,7 @@ const productsView = (model: Model): Html => {
     model.productsPage,
     model.cart,
     cartRouter,
-    (message) => ProductsMessage.make({ message }),
+    (message) => GotProductsMessage.make({ message }),
     (item) => AddToCartClicked.make({ item }),
     (itemId, quantity) => QuantityChangeClicked.make({ itemId, quantity }),
   )
