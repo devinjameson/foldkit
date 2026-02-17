@@ -10,6 +10,7 @@ export type InitReturn = [
 
 export const init = (): InitReturn => [
   {
+    dialogDemo: Ui.Dialog.init({ id: 'dialog-demo' }),
     disclosureDemo: Ui.Disclosure.init({ id: 'disclosure-demo' }),
     horizontalTabsDemo: Ui.Tabs.init({ id: 'horizontal-tabs-demo' }),
     verticalTabsDemo: Ui.Tabs.init({

@@ -268,6 +268,7 @@ type Attribute<Message> = Data.TaggedEnum<{
   OnCopy: { readonly message: Message }
   OnCut: { readonly message: Message }
   OnPaste: { readonly message: Message }
+  OnCancel: { readonly message: Message }
   OnToggle: { readonly f: (isOpen: boolean) => Message }
   Value: { readonly value: string }
   Checked: { readonly value: boolean }
@@ -390,6 +391,7 @@ const {
   OnCopy,
   OnCut,
   OnPaste,
+  OnCancel,
   OnToggle,
   Value,
   Checked,
@@ -641,6 +643,13 @@ const buildVNodeData = <Message>(
           OnPaste: ({ message }) =>
             updateDataOn({
               paste: () => dispatchSync(message),
+            }),
+          OnCancel: ({ message }) =>
+            updateDataOn({
+              cancel: (event: Event) => {
+                event.preventDefault()
+                dispatchSync(message)
+              },
             }),
           OnToggle: ({ f }) =>
             updateDataOn({
@@ -1362,6 +1371,10 @@ type HtmlAttributes<Message> = {
     readonly _tag: 'OnPaste'
     readonly message: Message
   }
+  OnCancel: (message: Message) => {
+    readonly _tag: 'OnCancel'
+    readonly message: Message
+  }
   OnToggle: (f: (isOpen: boolean) => Message) => {
     readonly _tag: 'OnToggle'
     readonly f: (isOpen: boolean) => Message
@@ -1632,6 +1645,7 @@ const htmlAttributes = <Message>(): HtmlAttributes<Message> => ({
   OnCopy: (message: Message) => OnCopy({ message }),
   OnCut: (message: Message) => OnCut({ message }),
   OnPaste: (message: Message) => OnPaste({ message }),
+  OnCancel: (message: Message) => OnCancel({ message }),
   OnToggle: (f: (isOpen: boolean) => Message) => OnToggle({ f }),
   Value: (value: string) => Value({ value }),
   Checked: (value: boolean) => Checked({ value }),

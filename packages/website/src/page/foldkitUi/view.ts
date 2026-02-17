@@ -2,6 +2,7 @@ import { Class, div, p, section, span } from '../../html'
 import type { TableOfContentsEntry } from '../../main'
 import type { Message as ParentMessage } from '../../main'
 import { heading, pageTitle, para } from '../../prose'
+import * as Dialog from './dialog'
 import * as Disclosure from './disclosure'
 import type { Message } from './message'
 import type { Model } from './model'
@@ -13,11 +14,6 @@ const plannedComponents: ReadonlyArray<{
   readonly entry: TableOfContentsEntry
   readonly description: string
 }> = [
-  {
-    entry: { level: 'h2', id: 'dialog', text: 'Dialog' },
-    description:
-      'A fully-managed, renderless dialog component with accessibility features like focus trapping and scroll locking.',
-  },
   {
     entry: { level: 'h2', id: 'menu', text: 'Menu' },
     description:
@@ -80,6 +76,7 @@ export const tableOfContents: ReadonlyArray<TableOfContentsEntry> = [
   Tabs.horizontalHeader,
   Tabs.verticalHeader,
   Disclosure.disclosureHeader,
+  Dialog.dialogHeader,
   ...plannedComponents.map(({ entry }) => entry),
 ]
 
@@ -133,6 +130,11 @@ export const view = (
         'A simple, accessible foundation for building custom UIs that show and hide content, like toggleable FAQ sections.',
       ),
       ...Disclosure.disclosureDemo(model, toMessage),
+      heading('h2', Dialog.dialogHeader.id, Dialog.dialogHeader.text),
+      para(
+        'A modal dialog backed by the native <dialog> element. Uses showModal() for focus trapping, backdrop rendering, and scroll locking — no JavaScript focus trap needed.',
+      ),
+      ...Dialog.dialogDemo(model, toMessage),
       div(
         [Class('mt-12')],
         plannedComponents.map(({ entry, description }) =>

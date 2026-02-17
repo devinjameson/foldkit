@@ -2,6 +2,9 @@ import { Schema as S } from 'effect'
 import { Ui } from 'foldkit'
 import { ts } from 'foldkit/schema'
 
+export const GotDialogDemoMessage = ts('GotDialogDemoMessage', {
+  message: Ui.Dialog.Message,
+})
 export const GotDisclosureDemoMessage = ts(
   'GotDisclosureDemoMessage',
   {
@@ -22,11 +25,13 @@ export const GotVerticalTabsDemoMessage = ts(
 )
 
 export const Message = S.Union(
+  GotDialogDemoMessage,
   GotDisclosureDemoMessage,
   GotHorizontalTabsDemoMessage,
   GotVerticalTabsDemoMessage,
 )
 
+export type GotDialogDemoMessage = typeof GotDialogDemoMessage.Type
 export type GotDisclosureDemoMessage =
   typeof GotDisclosureDemoMessage.Type
 export type GotHorizontalTabsDemoMessage =

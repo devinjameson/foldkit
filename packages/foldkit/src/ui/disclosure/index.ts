@@ -38,10 +38,10 @@ export type Message = typeof Message.Type
 // INIT
 
 /** Configuration for creating a disclosure model with `init`. */
-export type InitConfig = {
-  readonly id: string
-  readonly isOpen?: boolean
-}
+export type InitConfig = Readonly<{
+  id: string
+  isOpen?: boolean
+}>
 
 /** Creates an initial disclosure model from a config. Defaults to closed. */
 export const init = (config: InitConfig): Model => ({
@@ -92,19 +92,19 @@ export const update = (
 // VIEW
 
 /** Configuration for rendering a disclosure with `view`. */
-export type ViewConfig<Message> = {
-  readonly model: Model
-  readonly toMessage: (message: Toggled | Closed | NoOp) => Message
-  readonly buttonClassName: string
-  readonly buttonContent: Html
-  readonly panelClassName: string
-  readonly panelContent: Html
-  readonly isDisabled?: boolean
-  readonly persistPanel?: boolean
-  readonly buttonElement?: TagName
-  readonly panelElement?: TagName
-  readonly className?: string
-}
+export type ViewConfig<Message> = Readonly<{
+  model: Model
+  toMessage: (message: Toggled | Closed | NoOp) => Message
+  buttonClassName: string
+  buttonContent: Html
+  panelClassName: string
+  panelContent: Html
+  isDisabled?: boolean
+  persistPanel?: boolean
+  buttonElement?: TagName
+  panelElement?: TagName
+  className?: string
+}>
 
 /** Renders a headless disclosure component with accessible ARIA attributes and keyboard support. */
 export const view = <Message>(config: ViewConfig<Message>): Html => {

@@ -3,6 +3,7 @@ import { Runtime, Ui } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
 import {
+  GotDialogDemoMessage,
   GotDisclosureDemoMessage,
   GotHorizontalTabsDemoMessage,
   GotVerticalTabsDemoMessage,
@@ -23,6 +24,24 @@ export const update = (
   M.value(message).pipe(
     withUpdateReturn,
     M.tagsExhaustive({
+      GotDialogDemoMessage: ({ message }) => {
+        const [nextDialogDemo, dialogCommands] = Ui.Dialog.update(
+          model.dialogDemo,
+          message,
+        )
+
+        return [
+          evo(model, {
+            dialogDemo: () => nextDialogDemo,
+          }),
+          dialogCommands.map(
+            Effect.map((message) =>
+              GotDialogDemoMessage.make({ message }),
+            ),
+          ),
+        ]
+      },
+
       GotDisclosureDemoMessage: ({ message }) => {
         const [nextDisclosureDemo, disclosureCommands] =
           Ui.Disclosure.update(model.disclosureDemo, message)

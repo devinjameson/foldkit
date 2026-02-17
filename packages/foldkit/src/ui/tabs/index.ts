@@ -57,12 +57,12 @@ export type Message = typeof Message.Type
 // INIT
 
 /** Configuration for creating a tabs model with `init`. */
-export type InitConfig = {
-  readonly id: string
-  readonly activeIndex?: number
-  readonly orientation?: Orientation
-  readonly activationMode?: ActivationMode
-}
+export type InitConfig = Readonly<{
+  id: string
+  activeIndex?: number
+  orientation?: Orientation
+  activationMode?: ActivationMode
+}>
 
 /** Creates an initial tabs model from a config. Defaults to first tab, horizontal orientation, and automatic activation. */
 export const init = (config: InitConfig): Model => {
@@ -153,27 +153,27 @@ export const keyToIndex = (
 // VIEW
 
 /** Configuration for an individual tab's button and panel content. */
-export type TabConfig = {
-  readonly buttonClassName: string
-  readonly buttonContent: Html
-  readonly panelClassName: string
-  readonly panelContent: Html
-}
+export type TabConfig = Readonly<{
+  buttonClassName: string
+  buttonContent: Html
+  panelClassName: string
+  panelContent: Html
+}>
 
 /** Configuration for rendering a tab group with `view`. */
-export type ViewConfig<Message, Tab extends string> = {
-  readonly model: Model
-  readonly toMessage: (message: TabSelected | TabFocused | NoOp) => Message
-  readonly tabs: ReadonlyArray<Tab>
-  readonly tabToConfig: (tab: Tab, context: { isActive: boolean }) => TabConfig
-  readonly isTabDisabled?: (tab: Tab, index: number) => boolean
-  readonly persistPanels?: boolean
-  readonly tabListElement?: TagName
-  readonly tabElement?: TagName
-  readonly panelElement?: TagName
-  readonly className?: string
-  readonly tabListClassName?: string
-}
+export type ViewConfig<Message, Tab extends string> = Readonly<{
+  model: Model
+  toMessage: (message: TabSelected | TabFocused | NoOp) => Message
+  tabs: ReadonlyArray<Tab>
+  tabToConfig: (tab: Tab, context: { isActive: boolean }) => TabConfig
+  isTabDisabled?: (tab: Tab, index: number) => boolean
+  persistPanels?: boolean
+  tabListElement?: TagName
+  tabElement?: TagName
+  panelElement?: TagName
+  className?: string
+  tabListClassName?: string
+}>
 
 const tabPanelId = (id: string, index: number): string => `${id}-panel-${index}`
 
