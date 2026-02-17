@@ -1,5 +1,11 @@
 # foldkit
 
+## 0.17.0
+
+### Minor Changes
+
+- 598f974: Add headless Disclosure component and public barrel exports for all modules
+
 ## 0.16.0
 
 ### Minor Changes
