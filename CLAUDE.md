@@ -88,6 +88,8 @@ Always create types for all message values, not just the ones currently used ext
 - Use capitalized string literals for Schema literal types: `S.Literal('Horizontal', 'Vertical')` not `S.Literal('horizontal', 'vertical')`.
 - Capitalize namespace imports: `import * as Command from './command'` not `import * as command from './command'`.
 - Extract magic numbers to named constants. No raw numeric literals in logic — e.g. `FINAL_PHOTO_INDEX` not `15`.
+- Never use `T[]` syntax. Always use `Array<T>` or `ReadonlyArray<T>`.
+- Don't add type annotations to evo callbacks when the type can be inferred. `gameState: () => 'Loading'` not `gameState: (): GameState => 'Loading'`.
 
 ### Application Architecture
 
