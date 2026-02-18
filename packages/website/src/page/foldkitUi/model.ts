@@ -1,9 +1,10 @@
 import { Schema as S } from 'effect'
-import { Dialog, Disclosure, Tabs } from 'foldkit/ui'
+import { Dialog, Disclosure, Menu, Tabs } from 'foldkit/ui'
 
 export const Model = S.Struct({
   dialogDemo: Dialog.Model,
   disclosureDemo: Disclosure.Model,
+  menuDemo: Menu.Model,
   horizontalTabsDemo: Tabs.Model,
   verticalTabsDemo: Tabs.Model,
 })

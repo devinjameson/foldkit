@@ -3,6 +3,7 @@ import {
   Data,
   Effect,
   Match,
+  Option,
   Predicate,
   Record,
   Ref,
@@ -255,6 +256,9 @@ type Attribute<Message> = Data.TaggedEnum<{
   OnMouseOut: { readonly message: Message }
   OnMouseMove: { readonly message: Message }
   OnKeyDown: { readonly f: (key: string) => Message }
+  OnKeyDownPreventDefault: {
+    readonly f: (key: string) => Option.Option<Message>
+  }
   OnKeyUp: { readonly f: (key: string) => Message }
   OnKeyPress: { readonly f: (key: string) => Message }
   OnFocus: { readonly message: Message }
@@ -323,6 +327,8 @@ type Attribute<Message> = Data.TaggedEnum<{
   AriaLive: { readonly value: string }
   AriaControls: { readonly value: string }
   AriaOrientation: { readonly value: string }
+  AriaHasPopup: { readonly value: string }
+  AriaActiveDescendant: { readonly value: string }
   Attribute: { readonly key: string; readonly value: string }
   DataAttribute: { readonly key: string; readonly value: string }
   Style: { readonly value: Record<string, string> }
@@ -378,6 +384,7 @@ const {
   OnMouseOut,
   OnMouseMove,
   OnKeyDown,
+  OnKeyDownPreventDefault,
   OnKeyUp,
   OnKeyPress,
   OnFocus,
@@ -446,6 +453,8 @@ const {
   AriaLive,
   AriaControls,
   AriaOrientation,
+  AriaHasPopup,
+  AriaActiveDescendant,
   Attribute,
   DataAttribute,
   Style,
@@ -585,6 +594,16 @@ const buildVNodeData = <Message>(
             updateDataOn({
               keydown: ({ key }: KeyboardEvent) => dispatchSync(f(key)),
             }),
+          OnKeyDownPreventDefault: ({ f }) =>
+            updateDataOn({
+              keydown: (event: KeyboardEvent) => {
+                const maybeMessage = f(event.key)
+                if (Option.isSome(maybeMessage)) {
+                  event.preventDefault()
+                  dispatchSync(maybeMessage.value)
+                }
+              },
+            }),
           OnKeyUp: ({ f }) =>
             updateDataOn({
               keyup: ({ key }: KeyboardEvent) => dispatchSync(f(key)),
@@ -722,6 +741,10 @@ const buildVNodeData = <Message>(
             updateDataAttrs({ 'aria-controls': value }),
           AriaOrientation: ({ value }) =>
             updateDataAttrs({ 'aria-orientation': value }),
+          AriaHasPopup: ({ value }) =>
+            updateDataAttrs({ 'aria-haspopup': value }),
+          AriaActiveDescendant: ({ value }) =>
+            updateDataAttrs({ 'aria-activedescendant': value }),
           Attribute: ({ key, value }) => updateDataAttrs({ [key]: value }),
           DataAttribute: ({ key, value }) =>
             updateDataAttrs({ [`data-${key}`]: value }),
@@ -1319,6 +1342,10 @@ type HtmlAttributes<Message> = {
     readonly _tag: 'OnKeyDown'
     readonly f: (key: string) => Message
   }
+  OnKeyDownPreventDefault: (f: (key: string) => Option.Option<Message>) => {
+    readonly _tag: 'OnKeyDownPreventDefault'
+    readonly f: (key: string) => Option.Option<Message>
+  }
   OnKeyUp: (f: (key: string) => Message) => {
     readonly _tag: 'OnKeyUp'
     readonly f: (key: string) => Message
@@ -1531,6 +1558,14 @@ type HtmlAttributes<Message> = {
     readonly _tag: 'AriaOrientation'
     readonly value: string
   }
+  AriaHasPopup: (value: string) => {
+    readonly _tag: 'AriaHasPopup'
+    readonly value: string
+  }
+  AriaActiveDescendant: (value: string) => {
+    readonly _tag: 'AriaActiveDescendant'
+    readonly value: string
+  }
   Attribute: (
     key: string,
     value: string,
@@ -1632,6 +1667,8 @@ const htmlAttributes = <Message>(): HtmlAttributes<Message> => ({
   OnMouseOut: (message: Message) => OnMouseOut({ message }),
   OnMouseMove: (message: Message) => OnMouseMove({ message }),
   OnKeyDown: (f: (key: string) => Message) => OnKeyDown({ f }),
+  OnKeyDownPreventDefault: (f: (key: string) => Option.Option<Message>) =>
+    OnKeyDownPreventDefault({ f }),
   OnKeyUp: (f: (key: string) => Message) => OnKeyUp({ f }),
   OnKeyPress: (f: (key: string) => Message) => OnKeyPress({ f }),
   OnFocus: (message: Message) => OnFocus({ message }),
@@ -1700,6 +1737,8 @@ const htmlAttributes = <Message>(): HtmlAttributes<Message> => ({
   AriaLive: (value: string) => AriaLive({ value }),
   AriaControls: (value: string) => AriaControls({ value }),
   AriaOrientation: (value: string) => AriaOrientation({ value }),
+  AriaHasPopup: (value: string) => AriaHasPopup({ value }),
+  AriaActiveDescendant: (value: string) => AriaActiveDescendant({ value }),
   Attribute: (key: string, value: string) => Attribute({ key, value }),
   DataAttribute: (key: string, value: string) => DataAttribute({ key, value }),
   Style: (value: Record<string, string>) => Style({ value }),

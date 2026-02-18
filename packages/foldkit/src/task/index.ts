@@ -1,4 +1,4 @@
-import { DateTime, Effect, Option } from 'effect'
+import { DateTime, Duration, Effect, Option } from 'effect'
 
 /**
  * Creates a command that gets the current UTC time and passes it to a message constructor.
@@ -70,7 +70,7 @@ export const getZonedTimeIn = <Message>(
 
 /**
  * Creates a command that focuses an element by selector and passes the result to a message constructor.
- * Returns true if the element was found and focused, false otherwise.
+ * Passes true if the element was found and focused, false otherwise.
  * Uses requestAnimationFrame to ensure the DOM tree is updated and nodes exist before attempting to focus.
  * This follows the same approach as Elm's Browser.Dom.focus.
  *
@@ -97,7 +97,7 @@ export const focus = <Message>(
 
 /**
  * Creates a command that opens a dialog element as a modal using `showModal()`.
- * Returns true if the element was found and opened, false otherwise.
+ * Passes true if the element was found and opened, false otherwise.
  * Uses requestAnimationFrame to ensure the DOM tree is updated and nodes exist before attempting to show.
  *
  * @example
@@ -123,7 +123,7 @@ export const showModal = <Message>(
 
 /**
  * Creates a command that closes a dialog element using `.close()`.
- * Returns true if the element was found and closed, false otherwise.
+ * Passes true if the element was found and closed, false otherwise.
  * Uses requestAnimationFrame to ensure the DOM tree is updated and nodes exist before attempting to close.
  *
  * @example
@@ -148,6 +148,25 @@ export const closeModal = <Message>(
   })
 
 /**
+ * Creates a command that resolves to a message after a delay.
+ * Useful for debouncing, such as clearing a typeahead search query.
+ *
+ * @example
+ * ```typescript
+ * Task.delay(350, () => SearchCleared.make({ version: model.searchVersion }))
+ * Task.delay(Duration.seconds(1), () => TimedOut.make())
+ * ```
+ */
+export const delay = <Message>(
+  duration: Duration.DurationInput,
+  f: () => Message,
+): Effect.Effect<Message> =>
+  Effect.gen(function* () {
+    yield* Effect.sleep(duration)
+    return f()
+  })
+
+/**
  * Creates a command that generates a random integer between min (inclusive) and max (exclusive)
  * and passes it to a message constructor.
  *
@@ -156,6 +175,33 @@ export const closeModal = <Message>(
  * Task.randomInt(0, 100, value => GotRandom.make({ value }))
  * ```
  */
+/**
+ * Creates a command that scrolls an element into view by selector and passes the result to a message constructor.
+ * Passes true if the element was found and scrolled, false otherwise.
+ * Uses requestAnimationFrame to ensure the DOM tree is updated and nodes exist before attempting to scroll.
+ * Uses `{ block: 'nearest' }` to avoid unnecessary scrolling when the element is already visible.
+ *
+ * @example
+ * ```typescript
+ * Task.scrollIntoView('#active-item', success => ItemScrolled.make({ success }))
+ * ```
+ */
+export const scrollIntoView = <Message>(
+  selector: string,
+  f: (success: boolean) => Message,
+): Effect.Effect<Message> =>
+  Effect.async<Message>((resume) => {
+    requestAnimationFrame(() => {
+      const element = document.querySelector(selector)
+      if (element instanceof HTMLElement) {
+        element.scrollIntoView({ block: 'nearest' })
+        resume(Effect.succeed(f(true)))
+      } else {
+        resume(Effect.succeed(f(false)))
+      }
+    })
+  })
+
 export const randomInt = <Message>(
   min: number,
   max: number,

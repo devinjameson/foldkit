@@ -4,6 +4,7 @@ import type { Message as ParentMessage } from '../../main'
 import { heading, pageTitle, para } from '../../prose'
 import * as Dialog from './dialog'
 import * as Disclosure from './disclosure'
+import * as Menu from './menu'
 import type { Message } from './message'
 import type { Model } from './model'
 import * as Tabs from './tabs'
@@ -14,11 +15,6 @@ const plannedComponents: ReadonlyArray<{
   readonly entry: TableOfContentsEntry
   readonly description: string
 }> = [
-  {
-    entry: { level: 'h2', id: 'menu', text: 'Menu' },
-    description:
-      'A dropdown menu with keyboard navigation, typeahead support, and proper ARIA attributes.',
-  },
   {
     entry: { level: 'h2', id: 'listbox', text: 'Listbox' },
     description:
@@ -77,6 +73,7 @@ export const tableOfContents: ReadonlyArray<TableOfContentsEntry> = [
   Tabs.verticalHeader,
   Disclosure.disclosureHeader,
   Dialog.dialogHeader,
+  Menu.menuHeader,
   ...plannedComponents.map(({ entry }) => entry),
 ]
 
@@ -135,6 +132,11 @@ export const view = (
         'A modal dialog backed by the native <dialog> element. Uses showModal() for focus trapping, backdrop rendering, and scroll locking — no JavaScript focus trap needed.',
       ),
       ...Dialog.dialogDemo(model, toMessage),
+      heading('h2', Menu.menuHeader.id, Menu.menuHeader.text),
+      para(
+        'A dropdown menu with keyboard navigation, typeahead search, and proper ARIA attributes. Uses aria-activedescendant for focus management — focus stays on the menu container while items are highlighted by reference.',
+      ),
+      ...Menu.menuDemo(model, toMessage),
       div(
         [Class('mt-12')],
         plannedComponents.map(({ entry, description }) =>

@@ -81,9 +81,7 @@ Always create types for all message values, not just the ones currently used ext
 - Avoid `let`. Use `const` and prefer immutable patterns. Only use `let` when mutation is truly unavoidable.
 - Always use braces for control flow. `if (foo) { return true }` not `if (foo) return true`.
 - Use `is*` for boolean naming e.g. `isPlaying`, `isValid`
-- Don't add comments. If the code is not clear enough and you are adding
-  comments to explain or improve clairty, instead refactor it to make it easier to
-  understand or use better names.
+- Don't add inline or block comments to explain code — if code needs explanation, refactor for clarity or use better names. Exceptions: section headers (`// MODEL`, `// MESSAGE`, `// INIT`, `// UPDATE`, `// VIEW`) and TSDoc (`/** ... */`) on all public exports are required.
 - When editing code, follow existing patterns in the codebase exactly. Before writing new code, read 2-3 existing files that do similar things and match their style for naming, spacing, imports, and patterns. Never use placeholder types like `{_tag: string}`.
 - Use capitalized string literals for Schema literal types: `S.Literal('Horizontal', 'Vertical')` not `S.Literal('horizontal', 'vertical')`.
 - Capitalize namespace imports: `import * as Command from './command'` not `import * as command from './command'`.

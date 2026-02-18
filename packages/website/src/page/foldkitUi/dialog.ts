@@ -25,7 +25,7 @@ const panelClassName =
   'bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md mx-auto relative shadow-xl'
 
 const titleClassName =
-  'text-lg font-bold text-gray-900 dark:text-white mb-2'
+  'text-lg font-medium text-gray-900 dark:text-white mb-2'
 
 const dialogClassName =
   'backdrop:bg-transparent bg-transparent p-0 m-auto'

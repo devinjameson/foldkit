@@ -1,0 +1,81 @@
+import { describe, it } from '@effect/vitest'
+import { expect } from 'vitest'
+
+import {
+  Closed,
+  NoOp,
+  Opened,
+  descriptionId,
+  init,
+  titleId,
+  update,
+} from './index'
+
+describe('Dialog', () => {
+  describe('init', () => {
+    it('defaults isOpen to false', () => {
+      expect(init({ id: 'test' })).toStrictEqual({
+        id: 'test',
+        isOpen: false,
+      })
+    })
+
+    it('accepts a custom isOpen', () => {
+      expect(init({ id: 'test', isOpen: true })).toStrictEqual({
+        id: 'test',
+        isOpen: true,
+      })
+    })
+  })
+
+  describe('update', () => {
+    it('opens when closed on Opened', () => {
+      const model = init({ id: 'test' })
+      const [result, commands] = update(model, Opened.make())
+      expect(result.isOpen).toBe(true)
+      expect(commands).toHaveLength(1)
+    })
+
+    it('opens without command when already open on Opened', () => {
+      const model = init({ id: 'test', isOpen: true })
+      const [result, commands] = update(model, Opened.make())
+      expect(result.isOpen).toBe(true)
+      expect(commands).toHaveLength(0)
+    })
+
+    it('closes when open on Closed', () => {
+      const model = init({ id: 'test', isOpen: true })
+      const [result, commands] = update(model, Closed.make())
+      expect(result.isOpen).toBe(false)
+      expect(commands).toHaveLength(1)
+    })
+
+    it('closes without command when already closed on Closed', () => {
+      const model = init({ id: 'test' })
+      const [result, commands] = update(model, Closed.make())
+      expect(result.isOpen).toBe(false)
+      expect(commands).toHaveLength(0)
+    })
+
+    it('returns model unchanged on NoOp', () => {
+      const model = init({ id: 'test' })
+      const [result, commands] = update(model, NoOp.make())
+      expect(result).toBe(model)
+      expect(commands).toHaveLength(0)
+    })
+  })
+
+  describe('titleId', () => {
+    it('returns the id suffixed with -title', () => {
+      const model = init({ id: 'my-dialog' })
+      expect(titleId(model)).toBe('my-dialog-title')
+    })
+  })
+
+  describe('descriptionId', () => {
+    it('returns the id suffixed with -description', () => {
+      const model = init({ id: 'my-dialog' })
+      expect(descriptionId(model)).toBe('my-dialog-description')
+    })
+  })
+})

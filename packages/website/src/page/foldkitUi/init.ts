@@ -12,6 +12,7 @@ export const init = (): InitReturn => [
   {
     dialogDemo: Ui.Dialog.init({ id: 'dialog-demo' }),
     disclosureDemo: Ui.Disclosure.init({ id: 'disclosure-demo' }),
+    menuDemo: Ui.Menu.init({ id: 'menu-demo' }),
     horizontalTabsDemo: Ui.Tabs.init({ id: 'horizontal-tabs-demo' }),
     verticalTabsDemo: Ui.Tabs.init({
       id: 'vertical-tabs-demo',

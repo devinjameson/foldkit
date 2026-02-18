@@ -1,12 +1,4 @@
-import {
-  Array,
-  Match as M,
-  Option,
-  Predicate,
-  Schema as S,
-  String,
-  pipe,
-} from 'effect'
+import { Array, Match as M, Option, Schema as S, String, pipe } from 'effect'
 
 import { html } from '../../html'
 import type { Html, TagName } from '../../html'
@@ -14,6 +6,9 @@ import type { Command } from '../../runtime/runtime'
 import { ts } from '../../schema'
 import { evo } from '../../struct'
 import * as Task from '../../task'
+import { keyToIndex } from '../keyboard'
+
+export { wrapIndex, findFirstEnabledIndex, keyToIndex } from '../keyboard'
 
 // MODEL
 
@@ -110,46 +105,6 @@ export const update = (
     }),
   )
 
-// KEYBOARD
-
-export const wrapIndex = (index: number, length: number): number =>
-  ((index % length) + length) % length
-
-export const findFirstEnabledIndex =
-  (
-    tabCount: number,
-    focusedIndex: number,
-    isDisabled: (index: number) => boolean,
-  ) =>
-  (startIndex: number, direction: 1 | -1): number =>
-    pipe(
-      tabCount,
-      Array.makeBy((step) =>
-        wrapIndex(startIndex + step * direction, tabCount),
-      ),
-      Array.findFirst(Predicate.not(isDisabled)),
-      Option.getOrElse(() => focusedIndex),
-    )
-
-export const keyToIndex = (
-  nextKey: string,
-  previousKey: string,
-  tabCount: number,
-  focusedIndex: number,
-  isDisabled: (index: number) => boolean,
-): ((key: string) => number) => {
-  const find = findFirstEnabledIndex(tabCount, focusedIndex, isDisabled)
-
-  return (key: string): number =>
-    M.value(key).pipe(
-      M.when(nextKey, () => find(focusedIndex + 1, 1)),
-      M.when(previousKey, () => find(focusedIndex - 1, -1)),
-      M.whenOr('Home', 'PageUp', () => find(0, 1)),
-      M.whenOr('End', 'PageDown', () => find(tabCount - 1, -1)),
-      M.orElse(() => focusedIndex),
-    )
-}
-
 // VIEW
 
 /** Configuration for an individual tab's button and panel content. */
@@ -163,7 +118,7 @@ export type TabConfig = Readonly<{
 /** Configuration for rendering a tab group with `view`. */
 export type ViewConfig<Message, Tab extends string> = Readonly<{
   model: Model
-  toMessage: (message: TabSelected | TabFocused | NoOp) => Message
+  toMessage: (message: TabSelected | TabFocused) => Message
   tabs: ReadonlyArray<Tab>
   tabToConfig: (tab: Tab, context: { isActive: boolean }) => TabConfig
   isTabDisabled?: (tab: Tab, index: number) => boolean
@@ -197,7 +152,7 @@ export const view = <Message, Tab extends string>(
     Hidden,
     Id,
     OnClick,
-    OnKeyDown,
+    OnKeyDownPreventDefault,
     Role,
     Tabindex,
     Type,
@@ -247,37 +202,38 @@ export const view = <Message, Tab extends string>(
     isDisabled,
   )
 
-  const handleAutomaticKeyDown = (key: string): Message =>
-    /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+  const handleAutomaticKeyDown = (key: string): Option.Option<Message> =>
     M.value(key).pipe(
       M.whenOr(nextKey, previousKey, 'Home', 'End', 'PageUp', 'PageDown', () =>
-        toMessage(TabSelected.make({ index: resolveKeyIndex(key) })),
+        Option.some(
+          toMessage(TabSelected.make({ index: resolveKeyIndex(key) })),
+        ),
       ),
       M.whenOr('Enter', ' ', () =>
-        toMessage(TabSelected.make({ index: focusedIndex })),
+        Option.some(toMessage(TabSelected.make({ index: focusedIndex }))),
       ),
-      M.orElse(() => toMessage(NoOp.make())),
-    ) as Message
+      M.orElse(() => Option.none()),
+    )
 
-  const handleManualKeyDown = (key: string): Message =>
-    /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+  const handleManualKeyDown = (key: string): Option.Option<Message> =>
     M.value(key).pipe(
       M.whenOr(nextKey, previousKey, 'Home', 'End', 'PageUp', 'PageDown', () =>
-        toMessage(TabFocused.make({ index: resolveKeyIndex(key) })),
+        Option.some(
+          toMessage(TabFocused.make({ index: resolveKeyIndex(key) })),
+        ),
       ),
       M.whenOr('Enter', ' ', () =>
-        toMessage(TabSelected.make({ index: focusedIndex })),
+        Option.some(toMessage(TabSelected.make({ index: focusedIndex }))),
       ),
-      M.orElse(() => toMessage(NoOp.make())),
-    ) as Message
+      M.orElse(() => Option.none()),
+    )
 
-  const handleKeyDown = (key: string): Message =>
-    /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+  const handleKeyDown = (key: string): Option.Option<Message> =>
     M.value(activationMode).pipe(
       M.when('Automatic', () => handleAutomaticKeyDown(key)),
       M.when('Manual', () => handleManualKeyDown(key)),
       M.exhaustive,
-    ) as Message
+    )
 
   const tabButtons = Array.map(tabs, (tab, index) => {
     const isActive = index === model.activeIndex
@@ -299,7 +255,7 @@ export const view = <Message, Tab extends string>(
         ...(isTabDisabledAtIndex
           ? [Disabled(true), AriaDisabled(true), DataAttribute('disabled', '')]
           : [OnClick(toMessage(TabSelected.make({ index })))]),
-        OnKeyDown(handleKeyDown),
+        OnKeyDownPreventDefault(handleKeyDown),
       ],
       [tabConfig.buttonContent],
     )

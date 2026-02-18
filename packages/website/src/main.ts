@@ -50,7 +50,6 @@ import {
 import { Icon } from './icon'
 import { Link } from './link'
 import * as Page from './page'
-import * as ApiReference from './page/apiReference'
 import {
   AdvancedPatternsRoute,
   ApiReferenceRoute,
@@ -155,8 +154,7 @@ export const Model = S.Struct({
   resolvedTheme: ResolvedTheme,
   foldkitUi: Page.FoldkitUi.Model,
   comingFromReact: Page.ComingFromReact.Model,
-  // Why is this one not Page.ApiReference.Model like the others?
-  apiReference: ApiReference.Model,
+  apiReference: Page.ApiReference.Model,
 })
 
 export type Model = typeof Model.Type
@@ -204,7 +202,7 @@ const ComingFromReactMessage = ts('ComingFromReactMessage', {
   message: Page.ComingFromReact.Message,
 })
 const ApiReferenceMessage = ts('ApiReferenceMessage', {
-  message: ApiReference.Message,
+  message: Page.ApiReference.Message,
 })
 
 const Message = S.Union(
@@ -259,8 +257,8 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
   const [foldkitUi, foldkitUiCommands] = Page.FoldkitUi.init()
   const [comingFromReact, comingFromReactCommands] =
     Page.ComingFromReact.init()
-  const [apiReference, apiReferenceCommands] = ApiReference.init(
-    ApiReference.apiReference.modules,
+  const [apiReference, apiReferenceCommands] = Page.ApiReference.init(
+    Page.ApiReference.apiReference.modules,
   )
 
   const mappedFoldkitUiCommands = foldkitUiCommands.map((message) =>
@@ -473,7 +471,7 @@ const update = (
 
       ApiReferenceMessage: ({ message }) => {
         const [nextApiReference, apiReferenceCommands] =
-          ApiReference.update(model.apiReference, message)
+          Page.ApiReference.update(model.apiReference, message)
 
         return [
           evo(model, { apiReference: () => nextApiReference }),
@@ -954,8 +952,8 @@ const view = (model: Model) => {
       ProjectOrganization: () => Page.ProjectOrganization.view(model),
       AdvancedPatterns: () => Page.AdvancedPatterns.view(model),
       ApiReference: () =>
-        ApiReference.view(
-          ApiReference.apiReference.modules,
+        Page.ApiReference.view(
+          Page.ApiReference.apiReference.modules,
           model.apiReference,
           (message) => ApiReferenceMessage.make({ message }),
         ),
@@ -994,7 +992,7 @@ const view = (model: Model) => {
       Option.some(Page.AdvancedPatterns.tableOfContents),
     ),
     M.tag('ApiReference', () =>
-      Option.some(ApiReference.apiReferenceTableOfContents),
+      Option.some(Page.ApiReference.apiReferenceTableOfContents),
     ),
     M.tag('FoldkitUi', () =>
       Option.some(Page.FoldkitUi.tableOfContents),

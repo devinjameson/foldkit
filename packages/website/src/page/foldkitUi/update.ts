@@ -6,6 +6,7 @@ import {
   GotDialogDemoMessage,
   GotDisclosureDemoMessage,
   GotHorizontalTabsDemoMessage,
+  GotMenuDemoMessage,
   GotVerticalTabsDemoMessage,
   type Message,
 } from './message'
@@ -53,6 +54,24 @@ export const update = (
           disclosureCommands.map(
             Effect.map((message) =>
               GotDisclosureDemoMessage.make({ message }),
+            ),
+          ),
+        ]
+      },
+
+      GotMenuDemoMessage: ({ message }) => {
+        const [nextMenuDemo, menuCommands] = Ui.Menu.update(
+          model.menuDemo,
+          message,
+        )
+
+        return [
+          evo(model, {
+            menuDemo: () => nextMenuDemo,
+          }),
+          menuCommands.map(
+            Effect.map((message) =>
+              GotMenuDemoMessage.make({ message }),
             ),
           ),
         ]

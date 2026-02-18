@@ -82,7 +82,8 @@
   - [x] Tabs: element polymorphism (`as` prop) — render tab/panel as arbitrary elements instead of fixed button/div
   - [x] Tabs: outer wrapper className — styling hook for the root container div
   - [ ] Data attributes convention — every foldkit-ui component should emit `data-*` attributes reflecting its interactive state (e.g. `data-selected`, `data-disabled`, `data-active`, `data-checked`, `data-open`). Consumers style against these with CSS selectors or Tailwind's `data-[selected]:` modifiers instead of computing classNames from state. Design and implement this pattern on Tabs first (retrofitting `data-selected`, `data-disabled`), then apply consistently to all subsequent components.
-  - [ ] Remaining components: Menu, Listbox, Combobox, Popover, Switch, Radio Group, Checkbox, Input, Select, Textarea, Fieldset
+  - [x] Menu: dropdown menu with keyboard navigation, typeahead search, aria-activedescendant focus management
+  - [ ] Remaining components: Listbox, Combobox, Popover, Switch, Radio Group, Checkbox, Input, Select, Textarea, Fieldset
   - [ ] `OnKeyDown` modifier keys (`shiftKey`, `ctrlKey`, `altKey`, `metaKey`) — useful for keyboard shortcuts, complex keyboard interactions, and potential future focus trap alternatives
   - [ ] General portal support for components that need to escape stacking contexts without native `<dialog>`
 

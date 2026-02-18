@@ -43,9 +43,17 @@
       "types": "./dist/ui/index.d.ts",
       "import": "./dist/ui/index.js"
     },
+    "./ui/dialog": {
+      "types": "./dist/ui/dialog/public.d.ts",
+      "import": "./dist/ui/dialog/public.js"
+    },
     "./ui/disclosure": {
       "types": "./dist/ui/disclosure/public.d.ts",
       "import": "./dist/ui/disclosure/public.js"
+    },
+    "./ui/menu": {
+      "types": "./dist/ui/menu/public.d.ts",
+      "import": "./dist/ui/menu/public.js"
     },
     "./ui/tabs": {
       "types": "./dist/ui/tabs/public.d.ts",

@@ -11,6 +11,9 @@ export const GotDisclosureDemoMessage = ts(
     message: Ui.Disclosure.Message,
   },
 )
+export const GotMenuDemoMessage = ts('GotMenuDemoMessage', {
+  message: Ui.Menu.Message,
+})
 export const GotHorizontalTabsDemoMessage = ts(
   'GotHorizontalTabsDemoMessage',
   {
@@ -27,6 +30,7 @@ export const GotVerticalTabsDemoMessage = ts(
 export const Message = S.Union(
   GotDialogDemoMessage,
   GotDisclosureDemoMessage,
+  GotMenuDemoMessage,
   GotHorizontalTabsDemoMessage,
   GotVerticalTabsDemoMessage,
 )
@@ -34,6 +38,7 @@ export const Message = S.Union(
 export type GotDialogDemoMessage = typeof GotDialogDemoMessage.Type
 export type GotDisclosureDemoMessage =
   typeof GotDisclosureDemoMessage.Type
+export type GotMenuDemoMessage = typeof GotMenuDemoMessage.Type
 export type GotHorizontalTabsDemoMessage =
   typeof GotHorizontalTabsDemoMessage.Type
 export type GotVerticalTabsDemoMessage =
