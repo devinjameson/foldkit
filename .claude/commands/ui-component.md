@@ -13,6 +13,7 @@ Enter plan mode and design the component following these integration touchpoints
 ### Library files (packages/foldkit/src/)
 
 - `ui/{name}/index.ts` — Model, Messages, init, update, view (follow Dialog/Tabs patterns)
+- `ui/{name}/index.test.ts` — tests for init, every update message handler, and any exported pure helpers (follow Menu/Dialog test patterns)
 - `ui/{name}/public.ts` — public re-exports (follow Dialog/Tabs patterns)
 - `ui/index.ts` — add `export * as {Name} from './{name}/public'`
 - `html/index.ts` — add any new ARIA attributes needed (4 locations: tagged enum, destructured constructors, buildVNodeData matcher, HtmlAttributes type + htmlAttributes factory)
@@ -53,6 +54,6 @@ Enter plan mode and design the component following these integration touchpoints
 ## Verification
 
 1. `pnpm --filter foldkit build` — library compiles
-2. `pnpm --filter foldkit test` — existing tests pass
-3. `pnpm --filter website dev` — website builds and demo works
+2. `pnpm --filter foldkit test` — all tests pass, including new component tests
+3. `pnpm --filter website build` — website builds and demo works
 4. Manual testing of all keyboard interactions, ARIA attributes, and data attributes
