@@ -1,5 +1,11 @@
 # foldkit
 
+## 0.18.0
+
+### Minor Changes
+
+- 401e224: Make `Command` accept schema values via conditional type, eliminating the need for individual message type declarations. `Command<typeof Foo>` now extracts the instance type automatically. Added optional `E` and `R` type parameters to `Command` for commands with error or service requirements.
+
 ## 0.17.0
 
 ### Minor Changes
