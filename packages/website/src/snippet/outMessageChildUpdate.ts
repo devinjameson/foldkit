@@ -14,7 +14,7 @@ export const update = (
       LogoutClicked: () => [
         model,
         [],
-        Option.some(LogoutRequested.make()),
+        Option.some(LogoutRequested()),
       ],
     }),
   )

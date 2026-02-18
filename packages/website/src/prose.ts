@@ -30,7 +30,7 @@ export const headingLinkButton = (id: string, text: string): Html =>
         'p-0.5 md:p-1 rounded transition-opacity text-gray-400 dark:text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 focus-visible:text-gray-800 dark:focus-visible:text-gray-200 focus-visible:opacity-100 cursor-pointer hover-capable:opacity-0 hover-capable:group-hover:opacity-100',
       ),
       AriaLabel(`Copy link to ${text}`),
-      OnClick(CopyLinkToClipboard.make({ hash: id })),
+      OnClick(CopyLinkToClipboard({ hash: id })),
     ],
     [Icon.link('w-4 h-4 md:w-5 md:h-5')],
   )

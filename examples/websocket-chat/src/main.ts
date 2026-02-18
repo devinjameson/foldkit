@@ -112,21 +112,21 @@ const update = (
     M.tagsExhaustive({
       RequestConnect: () => [
         evo(model, {
-          connection: () => ConnectionConnecting.make(),
+          connection: () => ConnectionConnecting(),
         }),
         [connect()],
       ],
 
       Connected: ({ socket }) => [
         evo(model, {
-          connection: () => ConnectionConnected.make({ socket }),
+          connection: () => ConnectionConnected({ socket }),
         }),
         [],
       ],
 
       Disconnected: () => [
         evo(model, {
-          connection: () => ConnectionDisconnected.make(),
+          connection: () => ConnectionDisconnected(),
           messages: () => [],
         }),
         [],
@@ -134,7 +134,7 @@ const update = (
 
       ConnectionFailed: ({ error }) => [
         evo(model, {
-          connection: () => ConnectionError.make({ error }),
+          connection: () => ConnectionError({ error }),
         }),
         [],
       ],
@@ -167,11 +167,7 @@ const update = (
 
       MessageSent: ({ text }) => [
         model,
-        [
-          Task.getZonedTime((zoned) =>
-            GotSentMessageTime.make({ text, zoned }),
-          ),
-        ],
+        [Task.getZonedTime((zoned) => GotSentMessageTime({ text, zoned }))],
       ],
 
       GotSentMessageTime: ({ text, zoned }) => {
@@ -191,11 +187,7 @@ const update = (
 
       MessageReceived: ({ text }) => [
         model,
-        [
-          Task.getZonedTime((zoned) =>
-            GotReceivedMessageTime.make({ text, zoned }),
-          ),
-        ],
+        [Task.getZonedTime((zoned) => GotReceivedMessageTime({ text, zoned }))],
       ],
 
       GotReceivedMessageTime: ({ text, zoned }) => {
@@ -219,7 +211,7 @@ const update = (
 
 const init: Runtime.ElementInit<Model, Message> = () => [
   {
-    connection: ConnectionDisconnected.make(),
+    connection: ConnectionDisconnected(),
     messages: [],
     messageInput: '',
   },
@@ -234,7 +226,7 @@ const sendMessage = (
 ): Runtime.Command<MessageSent> =>
   Effect.sync(() => {
     socket.send(text)
-    return MessageSent.make({ text })
+    return MessageSent({ text })
   })
 
 const connect = (): Runtime.Command<Connected | ConnectionFailed> =>
@@ -243,13 +235,13 @@ const connect = (): Runtime.Command<Connected | ConnectionFailed> =>
       const ws = new WebSocket(WS_URL)
 
       const handleOpen = () => {
-        resume(Effect.succeed(Connected.make({ socket: ws })))
+        resume(Effect.succeed(Connected({ socket: ws })))
       }
 
       const handleError = () => {
         resume(
           Effect.succeed(
-            ConnectionFailed.make({ error: 'Failed to connect to WebSocket' }),
+            ConnectionFailed({ error: 'Failed to connect to WebSocket' }),
           ),
         )
       }
@@ -263,7 +255,7 @@ const connect = (): Runtime.Command<Connected | ConnectionFailed> =>
       })
     }),
     Effect.sleep(Duration.millis(CONNECTION_TIMEOUT_MS)).pipe(
-      Effect.as(ConnectionFailed.make({ error: 'Connection timeout' })),
+      Effect.as(ConnectionFailed({ error: 'Connection timeout' })),
     ),
   )
 
@@ -291,21 +283,17 @@ const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<
             Runtime.Command<MessageReceived | Disconnected | ConnectionFailed>
           >((emit) => {
             const handleMessage = (event: MessageEvent) => {
-              emit.single(
-                Effect.succeed(MessageReceived.make({ text: event.data })),
-              )
+              emit.single(Effect.succeed(MessageReceived({ text: event.data })))
             }
 
             const handleClose = () => {
-              emit.single(Effect.succeed(Disconnected.make()))
+              emit.single(Effect.succeed(Disconnected()))
               emit.end()
             }
 
             const handleError = () => {
               emit.single(
-                Effect.succeed(
-                  ConnectionFailed.make({ error: 'Connection error' }),
-                ),
+                Effect.succeed(ConnectionFailed({ error: 'Connection error' })),
               )
               emit.end()
             }
@@ -504,7 +492,7 @@ const connectButtonView = (): Html =>
     [
       button(
         [
-          OnClick(RequestConnect.make()),
+          OnClick(RequestConnect()),
           Class(
             'bg-blue-500 hover:bg-blue-600 text-white font-semibold px-8 py-3 rounded-lg transition',
           ),
@@ -522,7 +510,7 @@ const connectingView = (): Html =>
 
 const messageInputView = (messageInput: string): Html =>
   form(
-    [Class('p-6 border-t border-gray-200'), OnSubmit(SendMessage.make())],
+    [Class('p-6 border-t border-gray-200'), OnSubmit(SendMessage())],
     [
       div(
         [Class('flex gap-3')],
@@ -531,7 +519,7 @@ const messageInputView = (messageInput: string): Html =>
             Type('text'),
             Value(messageInput),
             Placeholder('Type a message...'),
-            OnInput((value) => UpdateMessageInput.make({ value })),
+            OnInput((value) => UpdateMessageInput({ value })),
             Class(
               'flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
             ),
@@ -564,7 +552,7 @@ const errorView = (error: string): Html =>
       ),
       button(
         [
-          OnClick(RequestConnect.make()),
+          OnClick(RequestConnect()),
           Class(
             'w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg transition',
           ),

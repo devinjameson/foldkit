@@ -1,16 +1,17 @@
 import { Schema as S } from 'effect'
 
+import { ts } from '../schema'
 import { Url } from '../url'
 
 /** A URL request to a page within the application (same origin). */
-export const Internal = S.TaggedStruct('Internal', {
+export const Internal = ts('Internal', {
   url: Url,
 })
 /** A URL request to a page within the application (same origin). */
 export type Internal = typeof Internal.Type
 
 /** A URL request to an external page (different origin). */
-export const External = S.TaggedStruct('External', {
+export const External = ts('External', {
   href: S.String,
 })
 /** A URL request to an external page (different origin). */

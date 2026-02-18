@@ -156,11 +156,11 @@ export const update = (
           searchVersion: () => 0,
           maybeLastPointerPosition: () => Option.none(),
         }),
-        [Task.focus(itemsSelector(model.id), () => NoOp.make())],
+        [Task.focus(itemsSelector(model.id), () => NoOp())],
       ],
       Closed: () => [
         closedModel(model),
-        [Task.focus(buttonSelector(model.id), () => NoOp.make())],
+        [Task.focus(buttonSelector(model.id), () => NoOp())],
       ],
       ClosedByTab: () => [closedModel(model), []],
       ItemActivated: ({ index, activationTrigger }) => [
@@ -169,11 +169,7 @@ export const update = (
           activationTrigger: () => activationTrigger,
         }),
         activationTrigger === 'Keyboard'
-          ? [
-              Task.scrollIntoView(itemSelector(model.id, index), () =>
-                NoOp.make(),
-              ),
-            ]
+          ? [Task.scrollIntoView(itemSelector(model.id, index), () => NoOp())]
           : [],
       ],
       PointerMovedOverItem: ({ index, screenX, screenY }) => {
@@ -202,7 +198,7 @@ export const update = (
           : [model, []],
       ItemSelected: () => [
         closedModel(model),
-        [Task.focus(buttonSelector(model.id), () => NoOp.make())],
+        [Task.focus(buttonSelector(model.id), () => NoOp())],
       ],
       Searched: ({ key, maybeTargetIndex }) => {
         const nextSearchQuery = model.searchQuery + key
@@ -217,7 +213,7 @@ export const update = (
           }),
           [
             Task.delay(SEARCH_DEBOUNCE_MILLISECONDS, () =>
-              SearchCleared.make({ version: nextSearchVersion }),
+              SearchCleared({ version: nextSearchVersion }),
             ),
           ],
         ]
@@ -410,7 +406,7 @@ export const view = <Message, Item extends string>(
       M.whenOr('Enter', ' ', 'ArrowDown', () =>
         Option.some(
           toMessage(
-            Opened.make({
+            Opened({
               maybeActiveItemIndex: Option.some(firstEnabledIndex),
             }),
           ),
@@ -419,7 +415,7 @@ export const view = <Message, Item extends string>(
       M.when('ArrowUp', () =>
         Option.some(
           toMessage(
-            Opened.make({
+            Opened({
               maybeActiveItemIndex: Option.some(lastEnabledIndex),
             }),
           ),
@@ -430,8 +426,8 @@ export const view = <Message, Item extends string>(
 
   const handleButtonClick = (): Message =>
     isOpen
-      ? toMessage(Closed.make())
-      : toMessage(Opened.make({ maybeActiveItemIndex: Option.none() }))
+      ? toMessage(Closed())
+      : toMessage(Opened({ maybeActiveItemIndex: Option.none() }))
 
   const resolveActiveIndex = keyToIndex(
     'ArrowDown',
@@ -443,10 +439,10 @@ export const view = <Message, Item extends string>(
 
   const handleItemsKeyDown = (key: string): Option.Option<Message> =>
     M.value(key).pipe(
-      M.when('Escape', () => Option.some(toMessage(Closed.make()))),
+      M.when('Escape', () => Option.some(toMessage(Closed()))),
       M.whenOr('Enter', ' ', () =>
         Option.map(maybeActiveItemIndex, (index) =>
-          toMessage(ItemSelected.make({ index })),
+          toMessage(ItemSelected({ index })),
         ),
       ),
       M.whenOr(
@@ -459,7 +455,7 @@ export const view = <Message, Item extends string>(
         () =>
           Option.some(
             toMessage(
-              ItemActivated.make({
+              ItemActivated({
                 index: resolveActiveIndex(key),
                 activationTrigger: 'Keyboard',
               }),
@@ -479,9 +475,7 @@ export const view = <Message, Item extends string>(
             Str.isNonEmpty(searchQuery),
           )
 
-          return Option.some(
-            toMessage(Searched.make({ key, maybeTargetIndex })),
-          )
+          return Option.some(toMessage(Searched({ key, maybeTargetIndex })))
         },
       ),
       M.orElse(() => Option.none()),
@@ -516,7 +510,7 @@ export const view = <Message, Item extends string>(
     Tabindex(0),
     Class(itemsClassName),
     OnKeyDownPreventDefault(handleItemsKeyDown),
-    OnBlur(toMessage(ClosedByTab.make())),
+    OnBlur(toMessage(ClosedByTab())),
   ]
 
   const menuItems = Array.map(items, (item, index) => {
@@ -541,13 +535,11 @@ export const view = <Message, Item extends string>(
         ...(isDisabledItem
           ? [AriaDisabled(true), DataAttribute('disabled', '')]
           : [
-              OnClick(toMessage(ItemSelected.make({ index }))),
+              OnClick(toMessage(ItemSelected({ index }))),
               OnPointerMove((screenX, screenY) =>
-                toMessage(
-                  PointerMovedOverItem.make({ index, screenX, screenY }),
-                ),
+                toMessage(PointerMovedOverItem({ index, screenX, screenY })),
               ),
-              OnMouseLeave(toMessage(ItemDeactivated.make())),
+              OnMouseLeave(toMessage(ItemDeactivated())),
             ]),
       ],
       [itemConfig.content],
@@ -615,7 +607,7 @@ export const view = <Message, Item extends string>(
 
   const backdrop = keyed('div')(
     `${id}-backdrop`,
-    [Class(backdropClassName), OnClick(toMessage(Closed.make()))],
+    [Class(backdropClassName), OnClick(toMessage(Closed()))],
     [],
   )
 

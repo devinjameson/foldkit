@@ -15,7 +15,7 @@ export type Model = typeof Model.Type
 // INIT
 
 export const init = (route: LoggedOutRoute): Model =>
-  Model.make({
+  Model({
     route,
     loginModel: Login.initModel(),
   })

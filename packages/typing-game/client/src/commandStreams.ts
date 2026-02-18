@@ -36,16 +36,16 @@ export const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Mod
             return client.subscribeToRoom({ roomId, playerId }).pipe(
               Stream.map(({ room, maybePlayerProgress }) =>
                 Effect.succeed(
-                  GotRoomMessage.make({
-                    message: Room.Message.RoomUpdated.make({ room, maybePlayerProgress }),
+                  GotRoomMessage({
+                    message: Room.Message.RoomUpdated({ room, maybePlayerProgress }),
                   }),
                 ),
               ),
               Stream.catchAll((error) =>
                 Stream.make(
                   Effect.succeed(
-                    GotRoomMessage.make({
-                      message: Room.Message.RoomStreamError.make({ error: String(error) }),
+                    GotRoomMessage({
+                      message: Room.Message.RoomStreamError({ error: String(error) }),
                     }),
                   ),
                 ),
@@ -89,11 +89,9 @@ export const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Mod
 
               return M.value(deps.route).pipe(
                 M.tagsExhaustive({
-                  Home: () =>
-                    GotHomeMessage.make({ message: Home.Message.KeyPressed.make({ key }) }),
-                  Room: () =>
-                    GotRoomMessage.make({ message: Room.Message.KeyPressed.make({ key }) }),
-                  NotFound: () => NoOp.make(),
+                  Home: () => GotHomeMessage({ message: Home.Message.KeyPressed({ key }) }),
+                  Room: () => GotRoomMessage({ message: Room.Message.KeyPressed({ key }) }),
+                  NotFound: () => NoOp(),
                 }),
               )
             }),

@@ -9,8 +9,8 @@ export type InitReturn = [Model, ReadonlyArray<Runtime.Command<Message>>]
 
 export const init = (): InitReturn => [
   {
-    homeStep: EnterUsername.make({ username: '' }),
+    homeStep: EnterUsername({ username: '' }),
     formError: Option.none(),
   },
-  [Task.focus(`#${USERNAME_INPUT_ID}`, () => NoOp.make())],
+  [Task.focus(`#${USERNAME_INPUT_ID}`, () => NoOp())],
 ]

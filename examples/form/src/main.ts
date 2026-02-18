@@ -86,11 +86,11 @@ type Message = typeof Message.Type
 
 const init: Runtime.ElementInit<Model, Message> = () => [
   {
-    name: StringField.NotValidated.make({ value: '' }),
-    email: StringField.NotValidated.make({ value: '' }),
+    name: StringField.NotValidated({ value: '' }),
+    email: StringField.NotValidated({ value: '' }),
     emailValidationId: 0,
-    message: StringField.NotValidated.make({ value: '' }),
-    submission: NotSubmitted.make(),
+    message: StringField.NotValidated({ value: '' }),
+    submission: NotSubmitted(),
   },
   [],
 ]
@@ -124,17 +124,17 @@ const validateEmailNotOnWaitlist = (
 ): Runtime.Command<EmailValidated> =>
   Effect.gen(function* () {
     if (yield* isEmailOnWaitlist(email)) {
-      return EmailValidated.make({
+      return EmailValidated({
         validationId,
-        field: StringField.Invalid.make({
+        field: StringField.Invalid({
           value: email,
           error: 'This email is already on our waitlist',
         }),
       })
     } else {
-      return EmailValidated.make({
+      return EmailValidated({
         validationId,
-        field: StringField.Valid.make({ value: email }),
+        field: StringField.Valid({ value: email }),
       })
     }
   })
@@ -170,7 +170,7 @@ const update = (
         if (validateEmailResult._tag === 'Valid') {
           return [
             evo(model, {
-              email: () => StringField.Validating.make({ value }),
+              email: () => StringField.Validating({ value }),
               emailValidationId: () => validationId,
             }),
             [validateEmailNotOnWaitlist(value, validationId)],
@@ -201,7 +201,7 @@ const update = (
 
       UpdateMessage: ({ value }) => [
         evo(model, {
-          message: () => StringField.Valid.make({ value }),
+          message: () => StringField.Valid({ value }),
         }),
         [],
       ],
@@ -213,7 +213,7 @@ const update = (
 
         return [
           evo(model, {
-            submission: () => Submitting.make(),
+            submission: () => Submitting(),
           }),
           [submitForm(model)],
         ]
@@ -224,7 +224,7 @@ const update = (
           return [
             evo(model, {
               submission: () =>
-                SubmitSuccess.make({
+                SubmitSuccess({
                   message: `Welcome to the waitlist, ${name}! We'll be in touch soon.`,
                 }),
             }),
@@ -234,7 +234,7 @@ const update = (
           return [
             evo(model, {
               submission: () =>
-                SubmitError.make({
+                SubmitError({
                   error:
                     'Sorry, there was an error adding you to the waitlist. Please try again.',
                 }),
@@ -256,7 +256,7 @@ const submitForm = (model: Model): Runtime.Command<FormSubmitted> =>
 
     const success = yield* Random.nextBoolean
 
-    return FormSubmitted.make({
+    return FormSubmitted({
       success,
       name: model.name.value,
       email: model.name.value,
@@ -370,23 +370,23 @@ const view = (model: Model): Html => {
           ),
 
           form(
-            [Class('space-y-4'), OnSubmit(SubmitForm.make())],
+            [Class('space-y-4'), OnSubmit(SubmitForm())],
             [
               fieldView('name', 'Name', model.name, (value) =>
-                UpdateName.make({ value }),
+                UpdateName({ value }),
               ),
               fieldView(
                 'email',
                 'Email',
                 model.email,
-                (value) => UpdateEmail.make({ value }),
+                (value) => UpdateEmail({ value }),
                 'email',
               ),
               fieldView(
                 'message',
                 "Anything you'd like to share with us?",
                 model.message,
-                (value) => UpdateMessage.make({ value }),
+                (value) => UpdateMessage({ value }),
                 'textarea',
               ),
 

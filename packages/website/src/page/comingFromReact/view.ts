@@ -177,7 +177,7 @@ const faqItem = (
       Ui.Disclosure.view({
         model: disclosure,
         toMessage: (message) =>
-          toMessage(GotFaqDisclosureMessage.make({ id, message })),
+          toMessage(GotFaqDisclosureMessage({ id, message })),
         buttonClassName: faqButtonClassName,
         buttonContent: div(
           [Class('flex items-center justify-between w-full')],

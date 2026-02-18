@@ -36,7 +36,7 @@ const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<
     depsToStream: ({ isRunning }) =>
       Stream.when(
         Stream.tick(Duration.millis(100)).pipe(
-          Stream.map(() => Effect.succeed(Tick.make())),
+          Stream.map(() => Effect.succeed(Tick())),
         ),
         () => isRunning,
       ),

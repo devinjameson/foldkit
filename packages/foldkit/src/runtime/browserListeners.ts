@@ -54,16 +54,14 @@ const addLinkClickListener = <Message>(
     if (linkUrl.origin !== currentUrl.origin) {
       Queue.unsafeOffer(
         messageQueue,
-        browserConfig.onUrlRequest(External.make({ href })),
+        browserConfig.onUrlRequest(External({ href })),
       )
       return
     }
 
     Queue.unsafeOffer(
       messageQueue,
-      browserConfig.onUrlRequest(
-        Internal.make({ url: urlToFoldkitUrl(linkUrl) }),
-      ),
+      browserConfig.onUrlRequest(Internal({ url: urlToFoldkitUrl(linkUrl) })),
     )
   }
 

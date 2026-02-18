@@ -8,11 +8,11 @@ export const update = (
   M.value(message).pipe(
     M.tagsExhaustive({
       LoginClicked: () => [
-        LoggedIn.make({ userId: '123', username: 'alice' }),
+        LoggedIn({ userId: '123', username: 'alice' }),
         [],
       ],
       LogoutClicked: () => [
-        LoggedOut.make({ email: '', password: '' }),
+        LoggedOut({ email: '', password: '' }),
         [],
       ],
     }),

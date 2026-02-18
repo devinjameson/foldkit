@@ -83,7 +83,7 @@ export const menuDemo = (
   toMessage: (message: Message) => ParentMessage,
 ) => {
   const toMenuMessage = (message: Ui.Menu.Message) =>
-    toMessage(GotMenuDemoMessage.make({ message }))
+    toMessage(GotMenuDemoMessage({ message }))
 
   return [
     div(

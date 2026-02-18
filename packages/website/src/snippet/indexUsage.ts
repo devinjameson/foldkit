@@ -3,7 +3,7 @@ import { Home, Products } from './page'
 
 // Access page modules
 Home.Model
-Home.view(model.home, (message) => HomeMessage.make({ message }))
+Home.view(model.home, (message) => HomeMessage({ message }))
 
 // Access domain modules
 Cart.addItem(item)(cart)

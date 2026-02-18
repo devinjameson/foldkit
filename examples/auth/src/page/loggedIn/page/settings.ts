@@ -56,7 +56,7 @@ export const view = (
           h2([Class('text-xl font-semibold text-gray-800 mb-4')], ['Actions']),
           button(
             [
-              OnClick(toMessage(LogoutClicked.make())),
+              OnClick(toMessage(LogoutClicked())),
               Class(
                 'px-6 py-3 bg-red-500 text-white font-medium rounded-lg hover:bg-red-600 transition cursor-pointer',
               ),

@@ -153,12 +153,12 @@ const update = (
           M.tagsExhaustive({
             Internal: ({ url }) => [
               model,
-              [pushUrl(urlToString(url)).pipe(Effect.as(NoOp.make()))],
+              [pushUrl(urlToString(url)).pipe(Effect.as(NoOp()))],
             ],
 
             External: ({ href }) => [
               model,
-              [load(href).pipe(Effect.as(NoOp.make()))],
+              [load(href).pipe(Effect.as(NoOp()))],
             ],
           }),
         ),
@@ -181,7 +181,7 @@ const update = (
             productsPage: () => newProductsModel,
           }),
           commands.map(
-            Effect.map((message) => GotProductsMessage.make({ message })),
+            Effect.map((message) => GotProductsMessage({ message })),
           ),
         ]
       },
@@ -298,9 +298,9 @@ const productsView = (model: Model): Html => {
     model.productsPage,
     model.cart,
     cartRouter,
-    (message) => GotProductsMessage.make({ message }),
-    (item) => AddToCartClicked.make({ item }),
-    (itemId, quantity) => QuantityChangeClicked.make({ itemId, quantity }),
+    (message) => GotProductsMessage({ message }),
+    (item) => AddToCartClicked({ item }),
+    (itemId, quantity) => QuantityChangeClicked({ itemId, quantity }),
   )
 }
 
@@ -371,8 +371,8 @@ const app = Runtime.makeApplication({
   view,
   container: document.getElementById('root')!,
   browser: {
-    onUrlRequest: (request) => LinkClicked.make({ request }),
-    onUrlChange: (url) => UrlChanged.make({ url }),
+    onUrlRequest: (request) => LinkClicked({ request }),
+    onUrlChange: (url) => UrlChanged({ url }),
   },
 })
 

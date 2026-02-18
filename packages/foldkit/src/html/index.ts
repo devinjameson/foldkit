@@ -680,6 +680,7 @@ const buildVNodeData = <Message>(
           OnToggle: ({ f }) =>
             updateDataOn({
               toggle: (event) =>
+                /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
                 dispatchSync(f((event.target as HTMLDetailsElement).open)),
             }),
           Value: ({ value }) => updatePropsWithPostpatch('value', value),

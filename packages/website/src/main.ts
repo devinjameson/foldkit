@@ -262,17 +262,15 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
   )
 
   const mappedFoldkitUiCommands = foldkitUiCommands.map((message) =>
-    Effect.map(message, (message) =>
-      FoldkitUiMessage.make({ message }),
-    ),
+    Effect.map(message, (message) => FoldkitUiMessage({ message })),
   )
 
   const mappedComingFromReactCommands = comingFromReactCommands.map(
-    Effect.map((message) => ComingFromReactMessage.make({ message })),
+    Effect.map((message) => ComingFromReactMessage({ message })),
   )
 
   const mappedApiReferenceCommands = apiReferenceCommands.map(
-    Effect.map((message) => ApiReferenceMessage.make({ message })),
+    Effect.map((message) => ApiReferenceMessage({ message })),
   )
 
   return [
@@ -324,17 +322,13 @@ const update = (
               url,
             }): [Model, ReadonlyArray<Runtime.Command<NoOp>>] => [
               model,
-              [
-                pushUrl(urlToString(url)).pipe(
-                  Effect.as(NoOp.make()),
-                ),
-              ],
+              [pushUrl(urlToString(url)).pipe(Effect.as(NoOp()))],
             ],
             External: ({
               href,
             }): [Model, ReadonlyArray<Runtime.Command<NoOp>>] => [
               model,
-              [load(href).pipe(Effect.as(NoOp.make()))],
+              [load(href).pipe(Effect.as(NoOp()))],
             ],
           }),
         ),
@@ -431,9 +425,7 @@ const update = (
         return [
           evo(model, { foldkitUi: () => nextFoldkitUi }),
           foldkitUiCommands.map(
-            Effect.map((message) =>
-              FoldkitUiMessage.make({ message }),
-            ),
+            Effect.map((message) => FoldkitUiMessage({ message })),
           ),
         ]
       },
@@ -463,7 +455,7 @@ const update = (
           }),
           comingFromReactCommands.map(
             Effect.map((message) =>
-              ComingFromReactMessage.make({ message }),
+              ComingFromReactMessage({ message }),
             ),
           ),
         ]
@@ -476,9 +468,7 @@ const update = (
         return [
           evo(model, { apiReference: () => nextApiReference }),
           apiReferenceCommands.map(
-            Effect.map((message) =>
-              ApiReferenceMessage.make({ message }),
-            ),
+            Effect.map((message) => ApiReferenceMessage({ message })),
           ),
         ]
       },
@@ -489,7 +479,7 @@ const update = (
 
 const injectAnalytics: Runtime.Command<NoOp> = Effect.sync(() =>
   inject(),
-).pipe(Effect.as(NoOp.make()))
+).pipe(Effect.as(NoOp()))
 
 const copySnippetToClipboard = (
   text: string,
@@ -498,8 +488,8 @@ const copySnippetToClipboard = (
     try: () => navigator.clipboard.writeText(text),
     catch: () => new Error('Failed to copy to clipboard'),
   }).pipe(
-    Effect.as(CopySuccess.make({ text })),
-    Effect.catchAll(() => Effect.succeed(NoOp.make())),
+    Effect.as(CopySuccess({ text })),
+    Effect.catchAll(() => Effect.succeed(NoOp())),
   )
 
 const copyLinkToClipboard = (url: string): Runtime.Command<NoOp> =>
@@ -507,8 +497,8 @@ const copyLinkToClipboard = (url: string): Runtime.Command<NoOp> =>
     try: () => navigator.clipboard.writeText(url),
     catch: () => new Error('Failed to copy link to clipboard'),
   }).pipe(
-    Effect.as(NoOp.make()),
-    Effect.catchAll(() => Effect.succeed(NoOp.make())),
+    Effect.as(NoOp()),
+    Effect.catchAll(() => Effect.succeed(NoOp())),
   )
 
 const COPY_INDICATOR_DURATION = '2 seconds'
@@ -517,12 +507,12 @@ const hideIndicator = (
   text: string,
 ): Runtime.Command<HideCopiedIndicator> =>
   Effect.sleep(COPY_INDICATOR_DURATION).pipe(
-    Effect.as(HideCopiedIndicator.make({ text })),
+    Effect.as(HideCopiedIndicator({ text })),
   )
 
 const scrollToTop: Runtime.Command<NoOp> = Effect.sync(() => {
   window.scrollTo({ top: 0, behavior: 'instant' })
-  return NoOp.make()
+  return NoOp()
 })
 
 const scrollToHash = (hash: string): Runtime.Command<NoOp> =>
@@ -532,7 +522,7 @@ const scrollToHash = (hash: string): Runtime.Command<NoOp> =>
       if (element) {
         element.scrollIntoView({ behavior: 'instant' })
       }
-      resume(Effect.succeed(NoOp.make()))
+      resume(Effect.succeed(NoOp()))
     })
   })
 
@@ -549,7 +539,7 @@ const applyThemeToDocument = (
       ),
       M.exhaustive,
     )
-    return NoOp.make()
+    return NoOp()
   })
 
 const saveThemePreference = (
@@ -558,9 +548,9 @@ const saveThemePreference = (
   Effect.gen(function* () {
     const store = yield* KeyValueStore.KeyValueStore
     yield* store.set(THEME_STORAGE_KEY, JSON.stringify(preference))
-    return NoOp.make()
+    return NoOp()
   }).pipe(
-    Effect.catchAll(() => Effect.succeed(NoOp.make())),
+    Effect.catchAll(() => Effect.succeed(NoOp())),
     Effect.provide(BrowserKeyValueStore.layerLocalStorage),
   )
 
@@ -620,7 +610,7 @@ const sidebarView = (
                 'p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-700 dark:text-gray-300 cursor-pointer',
               ),
               AriaLabel('Close menu'),
-              OnClick(ToggleMobileMenu.make()),
+              OnClick(ToggleMobileMenu()),
             ],
             [Icon.close('w-6 h-6')],
           ),
@@ -829,7 +819,7 @@ const mobileTableOfContentsView = (
       Id('mobile-table-of-contents'),
       Open(isOpen),
       OnToggle((open) =>
-        MobileTableOfContentsToggled.make({ isOpen: open }),
+        MobileTableOfContentsToggled({ isOpen: open }),
       ),
       Class(
         'group xl:hidden fixed top-[var(--header-height)] left-0 right-0 md:left-64 z-40 bg-white dark:bg-black border-b border-gray-300 dark:border-gray-700',
@@ -896,9 +886,7 @@ const mobileTableOfContentsView = (
                   a(
                     [
                       Href(`#${id}`),
-                      OnClick(
-                        MobileTableOfContentsLinkClicked.make(),
-                      ),
+                      OnClick(MobileTableOfContentsLinkClicked()),
                       Class(
                         classNames(
                           'transition flex items-center justify-between py-3 px-4',
@@ -941,7 +929,7 @@ const view = (model: Model) => {
         Page.ComingFromReact.view(
           model,
           model.comingFromReact,
-          (message) => ComingFromReactMessage.make({ message }),
+          (message) => ComingFromReactMessage({ message }),
         ),
       GettingStarted: () => Page.GettingStarted.view(model),
       ArchitectureAndConcepts: () =>
@@ -955,11 +943,11 @@ const view = (model: Model) => {
         Page.ApiReference.view(
           Page.ApiReference.apiReference.modules,
           model.apiReference,
-          (message) => ApiReferenceMessage.make({ message }),
+          (message) => ApiReferenceMessage({ message }),
         ),
       FoldkitUi: () =>
         Page.FoldkitUi.view(model.foldkitUi, (message) =>
-          FoldkitUiMessage.make({ message }),
+          FoldkitUiMessage({ message }),
         ),
       NotFound: ({ path }) =>
         Page.NotFound.view(path, homeRouter.build({})),
@@ -1025,7 +1013,7 @@ const view = (model: Model) => {
                     'md:hidden p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-700 dark:text-gray-300 cursor-pointer',
                   ),
                   AriaLabel('Toggle menu'),
-                  OnClick(ToggleMobileMenu.make()),
+                  OnClick(ToggleMobileMenu()),
                 ],
                 [Icon.menu('w-6 h-6')],
               ),
@@ -1150,8 +1138,8 @@ const application = Runtime.makeApplication({
   commandStreams,
   container: document.getElementById('root')!,
   browser: {
-    onUrlRequest: (request) => LinkClicked.make({ request }),
-    onUrlChange: (url) => UrlChanged.make({ url }),
+    onUrlRequest: (request) => LinkClicked({ request }),
+    onUrlChange: (url) => UrlChanged({ url }),
   },
 })
 

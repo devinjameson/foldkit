@@ -26,7 +26,7 @@ export const systemTheme: CommandStream<
         const handler = (event: MediaQueryListEvent) => {
           emit.single(
             Effect.succeed(
-              SystemThemeChanged.make({
+              SystemThemeChanged({
                 theme: event.matches ? 'Dark' : 'Light',
               }),
             ),

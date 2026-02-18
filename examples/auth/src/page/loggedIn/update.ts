@@ -18,11 +18,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         M.value(message).pipe(
           withUpdateReturn,
           M.tagsExhaustive({
-            LogoutClicked: () => [
-              model,
-              [],
-              Option.some(LogoutRequested.make()),
-            ],
+            LogoutClicked: () => [model, [], Option.some(LogoutRequested())],
           }),
         ),
     }),

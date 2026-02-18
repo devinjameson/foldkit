@@ -22,13 +22,13 @@ const generateApplePosition: Runtime.Command<Message> = Effect.gen(
   function* () {
     const x = yield* Random.nextIntBetween(0, GRID_SIZE)
     const y = yield* Random.nextIntBetween(0, GRID_SIZE)
-    return GotApplePosition.make({ position: { x, y } })
+    return GotApplePosition({ position: { x, y } })
   },
 )
 
 // Same inputs always produce the same outputs - purity preserved!
 const model = { snake: [{ x: 0, y: 0 }], apple: { x: 5, y: 5 } }
-const message = SpawnApple.make()
+const message = SpawnApple()
 
 console.log(update(model, message)) // [model, [generateApplePosition]]
 console.log(update(model, message)) // [model, [generateApplePosition]]

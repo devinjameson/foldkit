@@ -45,9 +45,9 @@ const fetchCount: Runtime.Command<GetCountSuccess | GetCountFailure> =
         return res.json() as unknown as { count: number }
       }),
     )
-    return GetCountSuccess.make({ count: result.count })
+    return GetCountSuccess({ count: result.count })
   }).pipe(
     Effect.catchAll((error) =>
-      Effect.succeed(GetCountFailure.make({ error: error.message })),
+      Effect.succeed(GetCountFailure({ error: error.message })),
     ),
   )

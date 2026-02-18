@@ -59,12 +59,12 @@ export const handleRoomUpdated =
     const shouldFocus = (gameJustStarted || isFirstRoomUpdate) && hasGame
 
     const mabyeFocusUserGameTextInput = optionWhen(shouldFocus, () =>
-      Task.focus(`#${USER_GAME_TEXT_INPUT_ID}`, () => NoOp.make()),
+      Task.focus(`#${USER_GAME_TEXT_INPUT_ID}`, () => NoOp()),
     )
 
     return [
       evo(model, {
-        roomRemoteData: () => RoomRemoteData.Ok.make({ data: room }),
+        roomRemoteData: () => RoomRemoteData.Ok({ data: room }),
         userGameText: () => nextUserGameText,
         charsTyped: () => nextCharsTyped,
       }),

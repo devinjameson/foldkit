@@ -90,7 +90,7 @@ export const update = (
             activeIndex: () => index,
             focusedIndex: () => index,
           }),
-          [Task.focus(tabSelector, () => NoOp.make())],
+          [Task.focus(tabSelector, () => NoOp())],
         ]
       },
       TabFocused: ({ index }) => {
@@ -98,7 +98,7 @@ export const update = (
 
         return [
           evo(model, { focusedIndex: () => index }),
-          [Task.focus(tabSelector, () => NoOp.make())],
+          [Task.focus(tabSelector, () => NoOp())],
         ]
       },
       NoOp: () => [model, []],
@@ -205,12 +205,10 @@ export const view = <Message, Tab extends string>(
   const handleAutomaticKeyDown = (key: string): Option.Option<Message> =>
     M.value(key).pipe(
       M.whenOr(nextKey, previousKey, 'Home', 'End', 'PageUp', 'PageDown', () =>
-        Option.some(
-          toMessage(TabSelected.make({ index: resolveKeyIndex(key) })),
-        ),
+        Option.some(toMessage(TabSelected({ index: resolveKeyIndex(key) }))),
       ),
       M.whenOr('Enter', ' ', () =>
-        Option.some(toMessage(TabSelected.make({ index: focusedIndex }))),
+        Option.some(toMessage(TabSelected({ index: focusedIndex }))),
       ),
       M.orElse(() => Option.none()),
     )
@@ -218,12 +216,10 @@ export const view = <Message, Tab extends string>(
   const handleManualKeyDown = (key: string): Option.Option<Message> =>
     M.value(key).pipe(
       M.whenOr(nextKey, previousKey, 'Home', 'End', 'PageUp', 'PageDown', () =>
-        Option.some(
-          toMessage(TabFocused.make({ index: resolveKeyIndex(key) })),
-        ),
+        Option.some(toMessage(TabFocused({ index: resolveKeyIndex(key) }))),
       ),
       M.whenOr('Enter', ' ', () =>
-        Option.some(toMessage(TabSelected.make({ index: focusedIndex }))),
+        Option.some(toMessage(TabSelected({ index: focusedIndex }))),
       ),
       M.orElse(() => Option.none()),
     )
@@ -254,7 +250,7 @@ export const view = <Message, Tab extends string>(
         ...(isActive ? [DataAttribute('selected', '')] : []),
         ...(isTabDisabledAtIndex
           ? [Disabled(true), AriaDisabled(true), DataAttribute('disabled', '')]
-          : [OnClick(toMessage(TabSelected.make({ index })))]),
+          : [OnClick(toMessage(TabSelected({ index })))]),
         OnKeyDownPreventDefault(handleKeyDown),
       ],
       [tabConfig.buttonContent],

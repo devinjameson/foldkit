@@ -83,7 +83,7 @@ const enterUsername =
   (toMessage: (message: Message) => ParentMessage) =>
   ({ username }: EnterUsername): Html =>
     form(
-      [OnSubmit(toMessage(UsernameFormSubmitted.make()))],
+      [OnSubmit(toMessage(UsernameFormSubmitted()))],
       [
         div(
           [Class('flex items-center gap-2')],
@@ -99,8 +99,8 @@ const enterUsername =
                   Type('text'),
                   Value(username),
                   Class('bg-transparent px-0 py-2 outline-none w-full'),
-                  OnInput((value) => toMessage(UsernameInputted.make({ value }))),
-                  OnBlur(toMessage(UsernameInputBlurred.make())),
+                  OnInput((value) => toMessage(UsernameInputted({ value }))),
+                  OnBlur(toMessage(UsernameInputBlurred())),
                   Autocapitalize('none'),
                   Spellcheck(false),
                   Autocorrect('off'),
@@ -135,7 +135,7 @@ const enterRoomId =
   (toMessage: (message: Message) => ParentMessage) =>
   ({ roomId }: EnterRoomId): Html =>
     form(
-      [OnSubmit(toMessage(JoinRoomClicked.make()))],
+      [OnSubmit(toMessage(JoinRoomClicked()))],
       [
         div(
           [Class('flex items-center gap-2')],
@@ -149,8 +149,8 @@ const enterRoomId =
                   Type('text'),
                   Value(roomId),
                   Class('bg-transparent px-0 py-2 outline-none w-full'),
-                  OnInput((value) => toMessage(RoomIdInputted.make({ value }))),
-                  OnBlur(toMessage(RoomIdInputBlurred.make())),
+                  OnInput((value) => toMessage(RoomIdInputted({ value }))),
+                  OnBlur(toMessage(RoomIdInputBlurred())),
                   Autocapitalize('none'),
                   Spellcheck(false),
                   Autocorrect('off'),

@@ -208,7 +208,7 @@ const signaturesView = (
       Ui.Disclosure.view({
         model: disclosure,
         toMessage: (message) =>
-          toMessage(GotDisclosureMessage.make({ id: key, message })),
+          toMessage(GotDisclosureMessage({ id: key, message })),
         buttonClassName: disclosureButtonClassName,
         buttonContent: div(
           [Class('flex items-center justify-between w-full')],

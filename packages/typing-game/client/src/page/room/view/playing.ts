@@ -35,7 +35,7 @@ const typing = (
           Id(USER_GAME_TEXT_INPUT_ID),
           Value(userGameText),
           Class('absolute inset-0 opacity-0 z-10 resize-none'),
-          OnInput((value) => toMessage(UserTextInputted.make({ value }))),
+          OnInput((value) => toMessage(UserTextInputted({ value }))),
           Spellcheck(false),
           Autocorrect('off'),
           Autocapitalize('none'),

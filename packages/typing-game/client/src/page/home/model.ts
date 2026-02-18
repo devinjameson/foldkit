@@ -1,4 +1,5 @@
 import { Match, Schema as S } from 'effect'
+import { ts } from 'foldkit/schema'
 
 export const HomeAction = S.Literal('CreateRoom', 'JoinRoom', 'ChangeUsername')
 export type HomeAction = typeof HomeAction.Type
@@ -16,18 +17,18 @@ export const homeActionToLabel = Match.type<HomeAction>().pipe(
   Match.exhaustive,
 )
 
-export const EnterUsername = S.TaggedStruct('EnterUsername', {
+export const EnterUsername = ts('EnterUsername', {
   username: S.String,
 })
 export type EnterUsername = typeof EnterUsername.Type
 
-export const SelectAction = S.TaggedStruct('SelectAction', {
+export const SelectAction = ts('SelectAction', {
   username: S.String,
   selectedAction: HomeAction,
 })
 export type SelectAction = typeof SelectAction.Type
 
-export const EnterRoomId = S.TaggedStruct('EnterRoomId', {
+export const EnterRoomId = ts('EnterRoomId', {
   username: S.String,
   roomId: S.String,
   roomIdValidationId: S.Number,

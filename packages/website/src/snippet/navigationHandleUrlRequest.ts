@@ -59,7 +59,7 @@ const update = (model: Model, message: Message) =>
               model,
               [
                 Navigation.pushUrl(Url.toString(url)).pipe(
-                  Effect.as(NoOp.make()),
+                  Effect.as(NoOp()),
                 ),
               ],
             ],
@@ -68,7 +68,7 @@ const update = (model: Model, message: Message) =>
               href,
             }): [Model, ReadonlyArray<Runtime.Command<Message>>] => [
               model,
-              [Navigation.load(href).pipe(Effect.as(NoOp.make()))],
+              [Navigation.load(href).pipe(Effect.as(NoOp()))],
             ],
           }),
         ),

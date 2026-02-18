@@ -63,7 +63,7 @@ export const update = (
     M.tagsExhaustive({
       Opened: () => {
         const maybeShowCommand = Option.liftPredicate(
-          Task.showModal(dialogSelector(model.id), () => NoOp.make()),
+          Task.showModal(dialogSelector(model.id), () => NoOp()),
           () => !model.isOpen,
         )
 
@@ -74,7 +74,7 @@ export const update = (
       },
       Closed: () => {
         const maybeCloseCommand = Option.liftPredicate(
-          Task.closeModal(dialogSelector(model.id), () => NoOp.make()),
+          Task.closeModal(dialogSelector(model.id), () => NoOp()),
           () => model.isOpen,
         )
 
@@ -131,14 +131,14 @@ export const view = <Message>(config: ViewConfig<Message>): Html => {
     Id(id),
     AriaLabelledBy(`${id}-title`),
     AriaDescribedBy(`${id}-description`),
-    OnCancel(toMessage(Closed.make())),
+    OnCancel(toMessage(Closed())),
     ...(isOpen ? [DataAttribute('open', '')] : []),
     ...(className ? [Class(className)] : []),
   ]
 
   const backdrop = keyed('div')(
     `${id}-backdrop`,
-    [Class(backdropClassName), OnClick(toMessage(Closed.make()))],
+    [Class(backdropClassName), OnClick(toMessage(Closed()))],
     [],
   )
 

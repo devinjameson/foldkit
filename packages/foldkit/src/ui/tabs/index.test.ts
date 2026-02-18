@@ -69,40 +69,40 @@ describe('Tabs', () => {
   describe('update', () => {
     it('sets activeIndex and focusedIndex on TabSelected', () => {
       const model = init({ id: 'test' })
-      const [result] = update(model, TabSelected.make({ index: 3 }))
+      const [result] = update(model, TabSelected({ index: 3 }))
       expect(result.activeIndex).toBe(3)
       expect(result.focusedIndex).toBe(3)
     })
 
     it('replaces activeIndex on subsequent TabSelected', () => {
       const model = init({ id: 'test', activeIndex: 1 })
-      const [result] = update(model, TabSelected.make({ index: 0 }))
+      const [result] = update(model, TabSelected({ index: 0 }))
       expect(result.activeIndex).toBe(0)
       expect(result.focusedIndex).toBe(0)
     })
 
     it('returns a focus command on TabSelected', () => {
       const model = init({ id: 'test' })
-      const [, commands] = update(model, TabSelected.make({ index: 2 }))
+      const [, commands] = update(model, TabSelected({ index: 2 }))
       expect(commands).toHaveLength(1)
     })
 
     it('preserves orientation on TabSelected', () => {
       const model = init({ id: 'test', orientation: 'Vertical' })
-      const [result] = update(model, TabSelected.make({ index: 1 }))
+      const [result] = update(model, TabSelected({ index: 1 }))
       expect(result.orientation).toBe('Vertical')
     })
 
     it('updates only focusedIndex on TabFocused', () => {
       const model = init({ id: 'test', activationMode: 'Manual' })
-      const [result] = update(model, TabFocused.make({ index: 2 }))
+      const [result] = update(model, TabFocused({ index: 2 }))
       expect(result.activeIndex).toBe(0)
       expect(result.focusedIndex).toBe(2)
     })
 
     it('returns a focus command on TabFocused', () => {
       const model = init({ id: 'test', activationMode: 'Manual' })
-      const [, commands] = update(model, TabFocused.make({ index: 2 }))
+      const [, commands] = update(model, TabFocused({ index: 2 }))
       expect(commands).toHaveLength(1)
     })
 
@@ -112,7 +112,7 @@ describe('Tabs', () => {
         activeIndex: 1,
         activationMode: 'Manual',
       })
-      const [result] = update(model, TabFocused.make({ index: 3 }))
+      const [result] = update(model, TabFocused({ index: 3 }))
       expect(result.activeIndex).toBe(1)
       expect(result.focusedIndex).toBe(3)
     })
@@ -122,7 +122,7 @@ describe('Tabs', () => {
         ...init({ id: 'test', activationMode: 'Manual' }),
         focusedIndex: 2,
       }
-      const [result] = update(model, TabSelected.make({ index: 2 }))
+      const [result] = update(model, TabSelected({ index: 2 }))
       expect(result.activeIndex).toBe(2)
       expect(result.focusedIndex).toBe(2)
     })

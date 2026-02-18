@@ -22,7 +22,7 @@ export const init = (route: AppRoute): InitReturn => {
 
   return [
     {
-      roomRemoteData: RoomRemoteData.Idle.make(),
+      roomRemoteData: RoomRemoteData.Idle(),
       maybeSession: Option.none(),
       userGameText: '',
       charsTyped: 0,

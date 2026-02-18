@@ -39,7 +39,7 @@ const copyButtonWithIndicator = (
         'p-2 rounded transition bg-gray-800 dark:bg-gray-700 text-gray-400 hover:text-white hover:bg-gray-700 dark:hover:bg-gray-600',
       ),
       AriaLabel(ariaLabel),
-      OnClick(CopySnippetToClipboard.make({ text: textToCopy })),
+      OnClick(CopySnippetToClipboard({ text: textToCopy })),
     ],
     [Icon.copy()],
   )

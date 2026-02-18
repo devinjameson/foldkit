@@ -16,11 +16,9 @@ export const createRoom = (
   Effect.gen(function* () {
     const client = yield* RoomsClient
     const { player, room } = yield* client.createRoom({ username })
-    return Home.Message.RoomCreated.make({ roomId: room.id, player })
+    return Home.Message.RoomCreated({ roomId: room.id, player })
   }).pipe(
-    Effect.catchAll((error) =>
-      Effect.succeed(Home.Message.RoomError.make({ error: String(error) })),
-    ),
+    Effect.catchAll((error) => Effect.succeed(Home.Message.RoomError({ error: String(error) }))),
     Effect.provide(RoomsClient.Default),
   )
 
@@ -31,11 +29,9 @@ export const joinRoom = (
   Effect.gen(function* () {
     const client = yield* RoomsClient
     const { player, room } = yield* client.joinRoom({ username, roomId })
-    return Home.Message.RoomJoined.make({ roomId: room.id, player })
+    return Home.Message.RoomJoined({ roomId: room.id, player })
   }).pipe(
-    Effect.catchAll((error) =>
-      Effect.succeed(Home.Message.RoomError.make({ error: String(error) })),
-    ),
+    Effect.catchAll((error) => Effect.succeed(Home.Message.RoomError({ error: String(error) }))),
     Effect.provide(RoomsClient.Default),
   )
 
@@ -45,9 +41,9 @@ export const getRoomById = (
   Effect.gen(function* () {
     const client = yield* RoomsClient
     const room = yield* client.getRoomById({ roomId })
-    return Room.Message.RoomFetched.make({ room })
+    return Room.Message.RoomFetched({ room })
   }).pipe(
-    Effect.catchAll(() => Effect.succeed(Room.Message.RoomNotFound.make({ roomId }))),
+    Effect.catchAll(() => Effect.succeed(Room.Message.RoomNotFound({ roomId }))),
     Effect.provide(RoomsClient.Default),
   )
 
@@ -55,14 +51,14 @@ export const startGame = (roomId: string, playerId: string): Runtime.Command<NoO
   Effect.gen(function* () {
     const client = yield* RoomsClient
     yield* client.startGame({ roomId, playerId })
-    return NoOp.make()
+    return NoOp()
   }).pipe(
-    Effect.catchAll(() => Effect.succeed(NoOp.make())),
+    Effect.catchAll(() => Effect.succeed(NoOp())),
     Effect.provide(RoomsClient.Default),
   )
 
 export const navigateToRoom = (roomId: string): Runtime.Command<NoOp> =>
-  pushUrl(roomRouter.build({ roomId })).pipe(Effect.as(NoOp.make()))
+  pushUrl(roomRouter.build({ roomId })).pipe(Effect.as(NoOp()))
 
 export const savePlayerToSessionStorage = (
   session: Room.Model.RoomPlayerSession,
@@ -72,9 +68,9 @@ export const savePlayerToSessionStorage = (
     const encodeSession = S.encode(S.parseJson(Room.Model.RoomPlayerSession))
     const sessionJson = yield* encodeSession(session)
     yield* store.set(ROOM_PLAYER_SESSION_KEY, sessionJson)
-    return NoOp.make()
+    return NoOp()
   }).pipe(
-    Effect.catchAll(() => Effect.succeed(NoOp.make())),
+    Effect.catchAll(() => Effect.succeed(NoOp())),
     Effect.provide(BrowserKeyValueStore.layerSessionStorage),
   )
 
@@ -90,14 +86,14 @@ export const loadSessionFromStorage = (
 
     return yield* decodeSession(sessionJson).pipe(
       Effect.map((session) =>
-        Room.Message.SessionLoaded.make({
+        Room.Message.SessionLoaded({
           maybeSession: Option.liftPredicate(session, (session) => session.roomId === roomId),
         }),
       ),
     )
   }).pipe(
     Effect.catchAll(() =>
-      Effect.succeed(Room.Message.SessionLoaded.make({ maybeSession: Option.none() })),
+      Effect.succeed(Room.Message.SessionLoaded({ maybeSession: Option.none() })),
     ),
     Effect.provide(BrowserKeyValueStore.layerSessionStorage),
   )
@@ -111,9 +107,9 @@ export const updatePlayerProgress = (
   Effect.gen(function* () {
     const client = yield* RoomsClient
     yield* client.updatePlayerProgress({ playerId, gameId, userText: userGameText, charsTyped })
-    return NoOp.make()
+    return NoOp()
   }).pipe(
-    Effect.catchAll(() => Effect.succeed(NoOp.make())),
+    Effect.catchAll(() => Effect.succeed(NoOp())),
     Effect.provide(RoomsClient.Default),
   )
 
@@ -124,24 +120,22 @@ export const copyRoomIdToClipboard = (
     try: () => navigator.clipboard.writeText(roomId),
     catch: () => new Error('Failed to copy to clipboard'),
   }).pipe(
-    Effect.as(Room.Message.CopyRoomIdSuccess.make()),
-    Effect.catchAll(() => Effect.succeed(NoOp.make())),
+    Effect.as(Room.Message.CopyRoomIdSuccess()),
+    Effect.catchAll(() => Effect.succeed(NoOp())),
   )
 
 const COPY_INDICATOR_DURATION = '2 seconds'
 
 export const hideRoomIdCopiedIndicator =
   (): Runtime.Command<Room.Message.HideRoomIdCopiedIndicator> =>
-    Effect.sleep(COPY_INDICATOR_DURATION).pipe(
-      Effect.as(Room.Message.HideRoomIdCopiedIndicator.make()),
-    )
+    Effect.sleep(COPY_INDICATOR_DURATION).pipe(Effect.as(Room.Message.HideRoomIdCopiedIndicator()))
 
 export const clearSession = (): Runtime.Command<NoOp> =>
   Effect.gen(function* () {
     const store = yield* KeyValueStore.KeyValueStore
     yield* store.remove(ROOM_PLAYER_SESSION_KEY)
-    return NoOp.make()
+    return NoOp()
   }).pipe(
-    Effect.catchAll(() => Effect.succeed(NoOp.make())),
+    Effect.catchAll(() => Effect.succeed(NoOp())),
     Effect.provide(BrowserKeyValueStore.layerSessionStorage),
   )

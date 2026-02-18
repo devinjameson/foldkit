@@ -38,11 +38,11 @@ export const update = (model: Model, message: Message): UpdateReturn =>
           M.tagsExhaustive({
             Internal: ({ url }) => [
               model,
-              [pushUrl(urlToString(url)).pipe(Effect.as(NoOp.make()))],
+              [pushUrl(urlToString(url)).pipe(Effect.as(NoOp()))],
             ],
             External: ({ href }) => [
               model,
-              [load(href).pipe(Effect.as(NoOp.make()))],
+              [load(href).pipe(Effect.as(NoOp()))],
             ],
           }),
         ),
@@ -62,11 +62,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
                 ]),
                 M.orElse(() => [
                   model,
-                  [
-                    replaceUrl(loginRouter.build({})).pipe(
-                      Effect.as(NoOp.make()),
-                    ),
-                  ],
+                  [replaceUrl(loginRouter.build({})).pipe(Effect.as(NoOp()))],
                 ]),
               ),
 
@@ -81,7 +77,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
                   model,
                   [
                     replaceUrl(dashboardRouter.build({})).pipe(
-                      Effect.as(NoOp.make()),
+                      Effect.as(NoOp()),
                     ),
                   ],
                 ]),
@@ -94,10 +90,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         M.value(session).pipe(
           withUpdateReturn,
           M.tagsExhaustive({
-            Some: ({ value }) => [
-              LoggedIn.init(DashboardRoute.make(), value),
-              [],
-            ],
+            Some: ({ value }) => [LoggedIn.init(DashboardRoute(), value), []],
             None: () => [model, []],
           }),
         ),
@@ -138,7 +131,7 @@ const handleGotLoggedOutMessage = (
   )
 
   const mappedCommands = Array.map(commands, (command) =>
-    Effect.map(command, (message) => GotLoggedOutMessage.make({ message })),
+    Effect.map(command, (message) => GotLoggedOutMessage({ message })),
   )
 
   return Option.match(maybeOutMessage, {
@@ -148,13 +141,11 @@ const handleGotLoggedOutMessage = (
         withUpdateReturn,
         M.tagsExhaustive({
           LoginSucceeded: ({ session }) => [
-            LoggedIn.init(DashboardRoute.make(), session),
+            LoggedIn.init(DashboardRoute(), session),
             [
               ...mappedCommands,
-              saveSession(session).pipe(Effect.as(NoOp.make())),
-              replaceUrl(dashboardRouter.build({})).pipe(
-                Effect.as(NoOp.make()),
-              ),
+              saveSession(session).pipe(Effect.as(NoOp())),
+              replaceUrl(dashboardRouter.build({})).pipe(Effect.as(NoOp())),
             ],
           ],
         }),
@@ -173,7 +164,7 @@ const handleGotLoggedInMessage = (
   const [nextModel, commands, maybeOutMessage] = LoggedIn.update(model, message)
 
   const mappedCommands = Array.map(commands, (command) =>
-    Effect.map(command, (message) => GotLoggedInMessage.make({ message })),
+    Effect.map(command, (message) => GotLoggedInMessage({ message })),
   )
 
   return Option.match(maybeOutMessage, {
@@ -183,11 +174,11 @@ const handleGotLoggedInMessage = (
         withUpdateReturn,
         M.tagsExhaustive({
           LogoutRequested: () => [
-            LoggedOut.init(HomeRoute.make()),
+            LoggedOut.init(HomeRoute()),
             [
               ...mappedCommands,
-              clearSession().pipe(Effect.as(NoOp.make())),
-              replaceUrl(homeRouter.build({})).pipe(Effect.as(NoOp.make())),
+              clearSession().pipe(Effect.as(NoOp())),
+              replaceUrl(homeRouter.build({})).pipe(Effect.as(NoOp())),
             ],
           ],
         }),

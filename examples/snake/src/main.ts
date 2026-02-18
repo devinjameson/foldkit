@@ -228,7 +228,7 @@ const update = (
         model,
         [
           Apple.generatePosition(snake).pipe(
-            Effect.map((position) => GotApple.make({ position })),
+            Effect.map((position) => GotApple({ position })),
           ),
         ],
       ],
@@ -245,7 +245,7 @@ const update = (
 // COMMAND
 
 const requestApple = (snake: Snake.Snake): Runtime.Command<Message> =>
-  Effect.succeed(RequestApple.make({ snake }))
+  Effect.succeed(RequestApple({ snake }))
 
 // COMMAND STREAM
 
@@ -272,7 +272,7 @@ const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<
     depsToStream: (deps: { isPlaying: boolean; interval: number }) =>
       Stream.when(
         Stream.tick(Duration.millis(deps.interval)).pipe(
-          Stream.map(() => Effect.succeed(ClockTick.make())),
+          Stream.map(() => Effect.succeed(ClockTick())),
         ),
         () => deps.isPlaying,
       ),
@@ -285,7 +285,7 @@ const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<
         Stream.map((keyboardEvent) =>
           Effect.sync(() => {
             keyboardEvent.preventDefault()
-            return KeyPress.make({ key: keyboardEvent.key })
+            return KeyPress({ key: keyboardEvent.key })
           }),
         ),
       ),

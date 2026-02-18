@@ -22,7 +22,7 @@ export const view = (
           Home: () => Home.view(),
           Login: () =>
             Login.view(model.loginModel, (message) =>
-              toMessage(GotLoginMessage.make({ message })),
+              toMessage(GotLoginMessage({ message })),
             ),
           NotFound: ({ path }) =>
             notFoundView(path, homeRouter.build({}), 'Go Home'),

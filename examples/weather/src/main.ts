@@ -80,21 +80,21 @@ export const update = (
 
       FetchWeather: () => [
         evo(model, {
-          weather: () => WeatherLoading.make(),
+          weather: () => WeatherLoading(),
         }),
         [fetchWeatherLive(model.zipCodeInput)],
       ],
 
       WeatherFetched: ({ weather }) => [
         evo(model, {
-          weather: () => WeatherSuccess.make({ data: weather }),
+          weather: () => WeatherSuccess({ data: weather }),
         }),
         [],
       ],
 
       WeatherError: ({ error }) => [
         evo(model, {
-          weather: () => WeatherFailure.make({ error }),
+          weather: () => WeatherFailure({ error }),
         }),
         [],
       ],
@@ -106,7 +106,7 @@ export const update = (
 const init: Runtime.ElementInit<Model, Message> = () => [
   {
     zipCodeInput: '',
-    weather: WeatherInit.make(),
+    weather: WeatherInit(),
   },
   [],
 ]
@@ -131,7 +131,7 @@ export const fetchWeather = (
 ): Effect.Effect<WeatherFetched | WeatherError, never, HttpClient.HttpClient> =>
   Effect.gen(function* () {
     if (String.isEmpty(zipCode.trim())) {
-      return WeatherError.make({ error: 'Zip code required' })
+      return WeatherError({ error: 'Zip code required' })
     }
 
     const client = yield* HttpClient.HttpClient
@@ -140,7 +140,7 @@ export const fetchWeather = (
     )
 
     if (response.status !== 200) {
-      return WeatherError.make({ error: 'Location not found' })
+      return WeatherError({ error: 'Location not found' })
     }
 
     // In a real app, you'd define a Schema for WeatherResponseData and use
@@ -162,13 +162,11 @@ export const fetchWeather = (
       region,
     })
 
-    return WeatherFetched.make({ weather })
+    return WeatherFetched({ weather })
   }).pipe(
     Effect.scoped,
     Effect.catchAll(() =>
-      Effect.succeed(
-        WeatherError.make({ error: 'Failed to fetch weather data' }),
-      ),
+      Effect.succeed(WeatherError({ error: 'Failed to fetch weather data' })),
     ),
   )
 
@@ -214,7 +212,7 @@ const view = (model: Model): Html =>
       form(
         [
           Class('flex flex-col gap-4 items-center w-full max-w-md'),
-          OnSubmit(FetchWeather.make()),
+          OnSubmit(FetchWeather()),
         ],
         [
           label([For('location'), Class('sr-only')], ['Location']),
@@ -224,7 +222,7 @@ const view = (model: Model): Html =>
               'w-full px-4 py-2 rounded-lg border-2 border-blue-300 focus:border-blue-500 outline-none',
             ),
             Placeholder('Enter a zip code'),
-            OnInput((value) => UpdateZipCodeInput.make({ value })),
+            OnInput((value) => UpdateZipCodeInput({ value })),
           ]),
           button(
             [

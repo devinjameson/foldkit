@@ -31,35 +31,35 @@ describe('Dialog', () => {
   describe('update', () => {
     it('opens when closed on Opened', () => {
       const model = init({ id: 'test' })
-      const [result, commands] = update(model, Opened.make())
+      const [result, commands] = update(model, Opened())
       expect(result.isOpen).toBe(true)
       expect(commands).toHaveLength(1)
     })
 
     it('opens without command when already open on Opened', () => {
       const model = init({ id: 'test', isOpen: true })
-      const [result, commands] = update(model, Opened.make())
+      const [result, commands] = update(model, Opened())
       expect(result.isOpen).toBe(true)
       expect(commands).toHaveLength(0)
     })
 
     it('closes when open on Closed', () => {
       const model = init({ id: 'test', isOpen: true })
-      const [result, commands] = update(model, Closed.make())
+      const [result, commands] = update(model, Closed())
       expect(result.isOpen).toBe(false)
       expect(commands).toHaveLength(1)
     })
 
     it('closes without command when already closed on Closed', () => {
       const model = init({ id: 'test' })
-      const [result, commands] = update(model, Closed.make())
+      const [result, commands] = update(model, Closed())
       expect(result.isOpen).toBe(false)
       expect(commands).toHaveLength(0)
     })
 
     it('returns model unchanged on NoOp', () => {
       const model = init({ id: 'test' })
-      const [result, commands] = update(model, NoOp.make())
+      const [result, commands] = update(model, NoOp())
       expect(result).toBe(model)
       expect(commands).toHaveLength(0)
     })

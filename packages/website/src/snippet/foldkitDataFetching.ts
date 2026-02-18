@@ -51,11 +51,11 @@ const fetchUser = (
     )
     // Validate the response against UserSchema at runtime
     const data = yield* S.decodeUnknown(UserSchema)(response)
-    return UserFetchSucceeded.make({ data })
+    return UserFetchSucceeded({ data })
   }).pipe(
     // Every Command must return a Message — no errors bubble up
     Effect.catchAll((error) =>
-      Effect.succeed(UserFetchFailed.make({ error: String(error) })),
+      Effect.succeed(UserFetchFailed({ error: String(error) })),
     ),
   )
 
@@ -73,15 +73,15 @@ const update = (
     M.tagsExhaustive({
       FetchUserClicked: ({ userId }) => [
         // evo returns an updated copy of Model
-        evo(model, { user: () => UserLoading.make() }),
+        evo(model, { user: () => UserLoading() }),
         [fetchUser(userId)],
       ],
       UserFetchSucceeded: ({ data }) => [
-        evo(model, { user: () => UserSuccess.make({ data }) }),
+        evo(model, { user: () => UserSuccess({ data }) }),
         [],
       ],
       UserFetchFailed: ({ error }) => [
-        evo(model, { user: () => UserFailure.make({ error }) }),
+        evo(model, { user: () => UserFailure({ error }) }),
         [],
       ],
     }),

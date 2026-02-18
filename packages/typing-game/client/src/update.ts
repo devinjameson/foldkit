@@ -24,18 +24,15 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
         M.value(request).pipe(
           withUpdateReturn,
           M.tagsExhaustive({
-            Internal: ({ url }) => [
-              model,
-              [pushUrl(Url.toString(url)).pipe(Effect.as(NoOp.make()))],
-            ],
-            External: ({ href }) => [model, [load(href).pipe(Effect.as(NoOp.make()))]],
+            Internal: ({ url }) => [model, [pushUrl(Url.toString(url)).pipe(Effect.as(NoOp()))]],
+            External: ({ href }) => [model, [load(href).pipe(Effect.as(NoOp()))]],
           }),
         ),
 
       UrlChanged: ({ url }) => {
         const nextRoute = urlToAppRoute(url)
         const maybeFocusUsernameInput = M.value(nextRoute).pipe(
-          M.tag('Home', () => Task.focus(`#${USERNAME_INPUT_ID}`, () => NoOp.make())),
+          M.tag('Home', () => Task.focus(`#${USERNAME_INPUT_ID}`, () => NoOp())),
           M.option,
         )
         return [
@@ -53,9 +50,7 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
           M.tag('RoomCreated', ({ roomId, player }) => handleRoomJoined(roomId, player)),
           M.tag('RoomJoined', ({ roomId, player }) => handleRoomJoined(roomId, player)),
           M.tag('RoomError', ({ error }) => [
-            Effect.succeed(
-              GotRoomMessage.make({ message: Room.Message.RoomError.make({ error }) }),
-            ),
+            Effect.succeed(GotRoomMessage({ message: Room.Message.RoomError({ error }) })),
           ]),
           M.orElse(() => []),
         )
@@ -65,7 +60,7 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
             home: () => nextHomeModel,
           }),
           [
-            ...homeComands.map(Effect.map((message) => GotHomeMessage.make({ message }))),
+            ...homeComands.map(Effect.map((message) => GotHomeMessage({ message }))),
             ...additionalCommands,
           ],
         ]
@@ -78,7 +73,7 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
           evo(model, {
             room: () => nextRoomModel,
           }),
-          roomCommands.map(Effect.map((message) => GotRoomMessage.make({ message }))),
+          roomCommands.map(Effect.map((message) => GotRoomMessage({ message }))),
         ]
       },
     }),
@@ -89,8 +84,6 @@ const handleRoomJoined = (roomId: string, player: Shared.Player) => {
   return [
     navigateToRoom(roomId),
     savePlayerToSessionStorage(session),
-    Effect.succeed(
-      GotRoomMessage.make({ message: Room.Message.RoomJoined.make({ roomId, player }) }),
-    ),
+    Effect.succeed(GotRoomMessage({ message: Room.Message.RoomJoined({ roomId, player }) })),
   ]
 }

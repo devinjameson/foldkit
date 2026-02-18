@@ -64,7 +64,7 @@ const update = (
         [
           Effect.gen(function* () {
             const now = yield* Clock.currentTimeMillis
-            return GotStartTime.make({ startTime: now - model.elapsedMs })
+            return GotStartTime({ startTime: now - model.elapsedMs })
           }),
         ],
       ],
@@ -98,7 +98,7 @@ const update = (
         [
           Effect.gen(function* () {
             const now = yield* Clock.currentTimeMillis
-            return GotTick.make({ elapsedMs: now - model.startTime })
+            return GotTick({ elapsedMs: now - model.startTime })
           }),
         ],
       ],
@@ -140,7 +140,7 @@ const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<
     depsToStream: ({ isRunning }) =>
       Stream.when(
         Stream.tick(Duration.millis(TICK_INTERVAL_MS)).pipe(
-          Stream.map(() => Effect.succeed(RequestTick.make())),
+          Stream.map(() => Effect.succeed(RequestTick())),
         ),
         () => isRunning,
       ),
@@ -192,7 +192,7 @@ const view = (model: Model): Html =>
             [
               button(
                 [
-                  OnClick(Reset.make()),
+                  OnClick(Reset()),
                   Class(buttonStyle + ' bg-gray-500 hover:bg-gray-600'),
                 ],
                 ['Reset'],
@@ -208,15 +208,12 @@ const view = (model: Model): Html =>
 const startStopButton = (isRunning: boolean): Html =>
   isRunning
     ? button(
-        [
-          OnClick(Stop.make()),
-          Class(buttonStyle + ' bg-red-500 hover:bg-red-600'),
-        ],
+        [OnClick(Stop()), Class(buttonStyle + ' bg-red-500 hover:bg-red-600')],
         ['Stop'],
       )
     : button(
         [
-          OnClick(RequestStart.make()),
+          OnClick(RequestStart()),
           Class(buttonStyle + ' bg-green-500 hover:bg-green-600'),
         ],
         ['Start'],

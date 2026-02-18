@@ -64,8 +64,8 @@ export const Model = S.Struct({
 export type Model = typeof Model.Type
 
 export const initModel = (): Model => ({
-  email: StringField.NotValidated.make({ value: '' }),
-  password: StringField.NotValidated.make({ value: '' }),
+  email: StringField.NotValidated({ value: '' }),
+  password: StringField.NotValidated({ value: '' }),
   isSubmitting: false,
 })
 
@@ -134,7 +134,7 @@ const simulateAuthRequest = (
     yield* Effect.sleep(Duration.seconds(1))
 
     if (password !== 'password') {
-      return AuthFailed.make({ error: 'Invalid credentials' })
+      return AuthFailed({ error: 'Invalid credentials' })
     }
 
     const name = pipe(
@@ -146,7 +146,7 @@ const simulateAuthRequest = (
 
     const session: Session = { userId: '1', email, name }
 
-    return AuthSucceeded.make({ session })
+    return AuthSucceeded({ session })
   })
 
 export const update = (model: Model, message: Message): UpdateReturn =>
@@ -180,13 +180,13 @@ export const update = (model: Model, message: Message): UpdateReturn =>
       AuthSucceeded: ({ session }) => [
         model,
         [],
-        Option.some(LoginSucceeded.make({ session })),
+        Option.some(LoginSucceeded({ session })),
       ],
 
       AuthFailed: ({ error }) => [
         evo(model, {
           password: () =>
-            StringFieldInvalid.make({ value: model.password.value, error }),
+            StringFieldInvalid({ value: model.password.value, error }),
           isSubmitting: () => false,
         }),
         [],
@@ -287,13 +287,13 @@ export const view = (
             ],
           ),
           form(
-            [Class('space-y-6'), OnSubmit(toMessage(SubmitClicked.make()))],
+            [Class('space-y-6'), OnSubmit(toMessage(SubmitClicked()))],
             [
               fieldView(
                 'email',
                 'Email',
                 model.email,
-                (value) => toMessage(EmailChanged.make({ value })),
+                (value) => toMessage(EmailChanged({ value })),
                 'email',
                 'you@example.com',
               ),
@@ -301,7 +301,7 @@ export const view = (
                 'password',
                 'Password',
                 model.password,
-                (value) => toMessage(PasswordChanged.make({ value })),
+                (value) => toMessage(PasswordChanged({ value })),
                 'password',
                 'Enter your password',
               ),

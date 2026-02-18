@@ -23,35 +23,35 @@ describe('Disclosure', () => {
   describe('update', () => {
     it('opens when closed on Toggled', () => {
       const model = init({ id: 'test' })
-      const [result, commands] = update(model, Toggled.make())
+      const [result, commands] = update(model, Toggled())
       expect(result.isOpen).toBe(true)
       expect(commands).toHaveLength(0)
     })
 
     it('closes when open on Toggled', () => {
       const model = init({ id: 'test', isOpen: true })
-      const [result, commands] = update(model, Toggled.make())
+      const [result, commands] = update(model, Toggled())
       expect(result.isOpen).toBe(false)
       expect(commands).toHaveLength(1)
     })
 
     it('closes when open on Closed', () => {
       const model = init({ id: 'test', isOpen: true })
-      const [result, commands] = update(model, Closed.make())
+      const [result, commands] = update(model, Closed())
       expect(result.isOpen).toBe(false)
       expect(commands).toHaveLength(1)
     })
 
     it('is a no-op when already closed on Closed', () => {
       const model = init({ id: 'test' })
-      const [result, commands] = update(model, Closed.make())
+      const [result, commands] = update(model, Closed())
       expect(result).toStrictEqual(model)
       expect(commands).toHaveLength(0)
     })
 
     it('returns model unchanged on NoOp', () => {
       const model = init({ id: 'test' })
-      const [result, commands] = update(model, NoOp.make())
+      const [result, commands] = update(model, NoOp())
       expect(result).toBe(model)
       expect(commands).toHaveLength(0)
     })

@@ -17,11 +17,11 @@ export const view = (model: Model): Html =>
             M.tagsExhaustive({
               LoggedOut: (loggedOutModel) =>
                 LoggedOut.view(loggedOutModel, (message) =>
-                  GotLoggedOutMessage.make({ message }),
+                  GotLoggedOutMessage({ message }),
                 ),
               LoggedIn: (loggedInModel) =>
                 LoggedIn.view(loggedInModel, (message) =>
-                  GotLoggedInMessage.make({ message }),
+                  GotLoggedInMessage({ message }),
                 ),
             }),
           ),

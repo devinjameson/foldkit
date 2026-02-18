@@ -25,7 +25,7 @@ This first commit:
 ```ts
 Tabs.view({
   model: model.tabs,
-  toMessage: (msg) => TabsDemoMessage.make({ inner: msg }),
+  toMessage: (msg) => TabsDemoMessage({ inner: msg }),
   tabs: [
     { label: 'Preview', content: previewPanel },
     { label: 'Code', content: codePanel },

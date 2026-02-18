@@ -25,7 +25,7 @@ const openModel = () => {
   const model = init({ id: 'test' })
   const [result] = update(
     model,
-    Opened.make({ maybeActiveItemIndex: Option.some(0) }),
+    Opened({ maybeActiveItemIndex: Option.some(0) }),
   )
   return result
 }
@@ -51,7 +51,7 @@ describe('Menu', () => {
         const model = closedModel()
         const [result, commands] = update(
           model,
-          Opened.make({ maybeActiveItemIndex: Option.some(2) }),
+          Opened({ maybeActiveItemIndex: Option.some(2) }),
         )
         expect(result.isOpen).toBe(true)
         expect(result.maybeActiveItemIndex).toStrictEqual(Option.some(2))
@@ -66,7 +66,7 @@ describe('Menu', () => {
         }
         const [result] = update(
           model,
-          Opened.make({ maybeActiveItemIndex: Option.some(0) }),
+          Opened({ maybeActiveItemIndex: Option.some(0) }),
         )
         expect(result.searchQuery).toBe('')
         expect(result.searchVersion).toBe(0)
@@ -76,7 +76,7 @@ describe('Menu', () => {
         const model = closedModel()
         const [result] = update(
           model,
-          Opened.make({ maybeActiveItemIndex: Option.some(0) }),
+          Opened({ maybeActiveItemIndex: Option.some(0) }),
         )
         expect(result.activationTrigger).toBe('Keyboard')
       })
@@ -85,7 +85,7 @@ describe('Menu', () => {
         const model = closedModel()
         const [result] = update(
           model,
-          Opened.make({ maybeActiveItemIndex: Option.none() }),
+          Opened({ maybeActiveItemIndex: Option.none() }),
         )
         expect(result.activationTrigger).toBe('Pointer')
         expect(result.maybeActiveItemIndex).toStrictEqual(Option.none())
@@ -101,7 +101,7 @@ describe('Menu', () => {
         }
         const [result] = update(
           model,
-          Opened.make({ maybeActiveItemIndex: Option.some(0) }),
+          Opened({ maybeActiveItemIndex: Option.some(0) }),
         )
         expect(result.maybeLastPointerPosition).toStrictEqual(Option.none())
       })
@@ -110,7 +110,7 @@ describe('Menu', () => {
     describe('Closed', () => {
       it('closes the menu and resets state', () => {
         const model = openModel()
-        const [result, commands] = update(model, Closed.make())
+        const [result, commands] = update(model, Closed())
         expect(result.isOpen).toBe(false)
         expect(result.maybeActiveItemIndex).toStrictEqual(Option.none())
         expect(result.activationTrigger).toBe('Keyboard')
@@ -124,7 +124,7 @@ describe('Menu', () => {
     describe('ClosedByTab', () => {
       it('closes the menu without a focus command', () => {
         const model = openModel()
-        const [result, commands] = update(model, ClosedByTab.make())
+        const [result, commands] = update(model, ClosedByTab())
         expect(result.isOpen).toBe(false)
         expect(result.maybeActiveItemIndex).toStrictEqual(Option.none())
         expect(result.maybeLastPointerPosition).toStrictEqual(Option.none())
@@ -137,7 +137,7 @@ describe('Menu', () => {
         const model = openModel()
         const [result] = update(
           model,
-          ItemActivated.make({ index: 3, activationTrigger: 'Keyboard' }),
+          ItemActivated({ index: 3, activationTrigger: 'Keyboard' }),
         )
         expect(result.maybeActiveItemIndex).toStrictEqual(Option.some(3))
       })
@@ -146,11 +146,11 @@ describe('Menu', () => {
         const model = openModel()
         const [intermediate] = update(
           model,
-          ItemActivated.make({ index: 1, activationTrigger: 'Keyboard' }),
+          ItemActivated({ index: 1, activationTrigger: 'Keyboard' }),
         )
         const [result] = update(
           intermediate,
-          ItemActivated.make({ index: 4, activationTrigger: 'Keyboard' }),
+          ItemActivated({ index: 4, activationTrigger: 'Keyboard' }),
         )
         expect(result.maybeActiveItemIndex).toStrictEqual(Option.some(4))
       })
@@ -159,7 +159,7 @@ describe('Menu', () => {
         const model = openModel()
         const [result] = update(
           model,
-          ItemActivated.make({ index: 1, activationTrigger: 'Pointer' }),
+          ItemActivated({ index: 1, activationTrigger: 'Pointer' }),
         )
         expect(result.activationTrigger).toBe('Pointer')
       })
@@ -168,7 +168,7 @@ describe('Menu', () => {
         const model = openModel()
         const [, commands] = update(
           model,
-          ItemActivated.make({ index: 2, activationTrigger: 'Keyboard' }),
+          ItemActivated({ index: 2, activationTrigger: 'Keyboard' }),
         )
         expect(commands).toHaveLength(1)
       })
@@ -177,7 +177,7 @@ describe('Menu', () => {
         const model = openModel()
         const [, commands] = update(
           model,
-          ItemActivated.make({ index: 2, activationTrigger: 'Pointer' }),
+          ItemActivated({ index: 2, activationTrigger: 'Pointer' }),
         )
         expect(commands).toHaveLength(0)
       })
@@ -188,9 +188,9 @@ describe('Menu', () => {
         const model = openModel()
         const [afterPointer] = update(
           model,
-          ItemActivated.make({ index: 1, activationTrigger: 'Pointer' }),
+          ItemActivated({ index: 1, activationTrigger: 'Pointer' }),
         )
-        const [result, commands] = update(afterPointer, ItemDeactivated.make())
+        const [result, commands] = update(afterPointer, ItemDeactivated())
         expect(result.maybeActiveItemIndex).toStrictEqual(Option.none())
         expect(commands).toHaveLength(0)
       })
@@ -199,9 +199,9 @@ describe('Menu', () => {
         const model = openModel()
         const [afterKeyboard] = update(
           model,
-          ItemActivated.make({ index: 2, activationTrigger: 'Keyboard' }),
+          ItemActivated({ index: 2, activationTrigger: 'Keyboard' }),
         )
-        const [result, commands] = update(afterKeyboard, ItemDeactivated.make())
+        const [result, commands] = update(afterKeyboard, ItemDeactivated())
         expect(result.maybeActiveItemIndex).toStrictEqual(Option.some(2))
         expect(result).toBe(afterKeyboard)
         expect(commands).toHaveLength(0)
@@ -213,7 +213,7 @@ describe('Menu', () => {
         const model = openModel()
         const [result, commands] = update(
           model,
-          PointerMovedOverItem.make({
+          PointerMovedOverItem({
             index: 2,
             screenX: 100,
             screenY: 200,
@@ -231,7 +231,7 @@ describe('Menu', () => {
         const model = openModel()
         const [afterFirst] = update(
           model,
-          PointerMovedOverItem.make({
+          PointerMovedOverItem({
             index: 1,
             screenX: 100,
             screenY: 200,
@@ -239,7 +239,7 @@ describe('Menu', () => {
         )
         const [result] = update(
           afterFirst,
-          PointerMovedOverItem.make({
+          PointerMovedOverItem({
             index: 3,
             screenX: 150,
             screenY: 250,
@@ -255,7 +255,7 @@ describe('Menu', () => {
         const model = openModel()
         const [afterFirst] = update(
           model,
-          PointerMovedOverItem.make({
+          PointerMovedOverItem({
             index: 1,
             screenX: 100,
             screenY: 200,
@@ -263,7 +263,7 @@ describe('Menu', () => {
         )
         const [result, commands] = update(
           afterFirst,
-          PointerMovedOverItem.make({
+          PointerMovedOverItem({
             index: 2,
             screenX: 100,
             screenY: 200,
@@ -277,7 +277,7 @@ describe('Menu', () => {
         const model = openModel()
         const [, commands] = update(
           model,
-          PointerMovedOverItem.make({
+          PointerMovedOverItem({
             index: 2,
             screenX: 100,
             screenY: 200,
@@ -290,10 +290,7 @@ describe('Menu', () => {
     describe('ItemSelected', () => {
       it('closes the menu and returns a focus command', () => {
         const model = openModel()
-        const [result, commands] = update(
-          model,
-          ItemSelected.make({ index: 2 }),
-        )
+        const [result, commands] = update(model, ItemSelected({ index: 2 }))
         expect(result.isOpen).toBe(false)
         expect(result.maybeActiveItemIndex).toStrictEqual(Option.none())
         expect(commands).toHaveLength(1)
@@ -305,13 +302,13 @@ describe('Menu', () => {
         const model = openModel()
         const [result] = update(
           model,
-          Searched.make({ key: 'a', maybeTargetIndex: Option.none() }),
+          Searched({ key: 'a', maybeTargetIndex: Option.none() }),
         )
         expect(result.searchQuery).toBe('a')
 
         const [result2] = update(
           result,
-          Searched.make({ key: 'b', maybeTargetIndex: Option.none() }),
+          Searched({ key: 'b', maybeTargetIndex: Option.none() }),
         )
         expect(result2.searchQuery).toBe('ab')
       })
@@ -320,13 +317,13 @@ describe('Menu', () => {
         const model = openModel()
         const [result] = update(
           model,
-          Searched.make({ key: 'x', maybeTargetIndex: Option.none() }),
+          Searched({ key: 'x', maybeTargetIndex: Option.none() }),
         )
         expect(result.searchVersion).toBe(1)
 
         const [result2] = update(
           result,
-          Searched.make({ key: 'y', maybeTargetIndex: Option.none() }),
+          Searched({ key: 'y', maybeTargetIndex: Option.none() }),
         )
         expect(result2.searchVersion).toBe(2)
       })
@@ -335,7 +332,7 @@ describe('Menu', () => {
         const model = openModel()
         const [result] = update(
           model,
-          Searched.make({ key: 'd', maybeTargetIndex: Option.some(3) }),
+          Searched({ key: 'd', maybeTargetIndex: Option.some(3) }),
         )
         expect(result.maybeActiveItemIndex).toStrictEqual(Option.some(3))
       })
@@ -344,7 +341,7 @@ describe('Menu', () => {
         const model = openModel()
         const [result] = update(
           model,
-          Searched.make({ key: 'z', maybeTargetIndex: Option.none() }),
+          Searched({ key: 'z', maybeTargetIndex: Option.none() }),
         )
         expect(result.maybeActiveItemIndex).toStrictEqual(Option.some(0))
       })
@@ -353,7 +350,7 @@ describe('Menu', () => {
         const model = openModel()
         const [, commands] = update(
           model,
-          Searched.make({ key: 'a', maybeTargetIndex: Option.none() }),
+          Searched({ key: 'a', maybeTargetIndex: Option.none() }),
         )
         expect(commands).toHaveLength(1)
       })
@@ -364,13 +361,13 @@ describe('Menu', () => {
         const model = openModel()
         const [afterSearch] = update(
           model,
-          Searched.make({ key: 'a', maybeTargetIndex: Option.none() }),
+          Searched({ key: 'a', maybeTargetIndex: Option.none() }),
         )
         expect(afterSearch.searchVersion).toBe(1)
 
         const [result, commands] = update(
           afterSearch,
-          SearchCleared.make({ version: 1 }),
+          SearchCleared({ version: 1 }),
         )
         expect(result.searchQuery).toBe('')
         expect(commands).toHaveLength(0)
@@ -380,17 +377,17 @@ describe('Menu', () => {
         const model = openModel()
         const [afterFirstSearch] = update(
           model,
-          Searched.make({ key: 'a', maybeTargetIndex: Option.none() }),
+          Searched({ key: 'a', maybeTargetIndex: Option.none() }),
         )
         const [afterSecondSearch] = update(
           afterFirstSearch,
-          Searched.make({ key: 'b', maybeTargetIndex: Option.none() }),
+          Searched({ key: 'b', maybeTargetIndex: Option.none() }),
         )
         expect(afterSecondSearch.searchVersion).toBe(2)
 
         const [result] = update(
           afterSecondSearch,
-          SearchCleared.make({ version: 1 }),
+          SearchCleared({ version: 1 }),
         )
         expect(result.searchQuery).toBe('ab')
       })
@@ -399,7 +396,7 @@ describe('Menu', () => {
     describe('NoOp', () => {
       it('returns model unchanged', () => {
         const model = openModel()
-        const [result, commands] = update(model, NoOp.make())
+        const [result, commands] = update(model, NoOp())
         expect(result).toBe(model)
         expect(commands).toHaveLength(0)
       })

@@ -76,7 +76,7 @@ export const view = (
               Dashboard: () => Dashboard.view(model.session),
               Settings: () =>
                 Settings.view(model.session, (message) =>
-                  toMessage(GotSettingsMessage.make({ message })),
+                  toMessage(GotSettingsMessage({ message })),
                 ),
               NotFound: ({ path }) =>
                 notFoundView(

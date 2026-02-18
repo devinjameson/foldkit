@@ -60,8 +60,8 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
         withInitReturn,
         M.when(S.is(LoggedOutRoute), (route) => [LoggedOut.init(route), []]),
         M.orElse(() => [
-          LoggedOut.init(LoginRoute.make()),
-          [replaceUrl(loginRouter.build({})).pipe(Effect.as(NoOp.make()))],
+          LoggedOut.init(LoginRoute()),
+          [replaceUrl(loginRouter.build({})).pipe(Effect.as(NoOp()))],
         ]),
       ),
 
@@ -73,8 +73,8 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
           [],
         ]),
         M.orElse(() => [
-          LoggedIn.init(DashboardRoute.make(), session),
-          [replaceUrl(dashboardRouter.build({})).pipe(Effect.as(NoOp.make()))],
+          LoggedIn.init(DashboardRoute(), session),
+          [replaceUrl(dashboardRouter.build({})).pipe(Effect.as(NoOp()))],
         ]),
       ),
   })
@@ -91,8 +91,8 @@ const app = Runtime.makeApplication({
   view,
   container: document.getElementById('root')!,
   browser: {
-    onUrlRequest: (request) => LinkClicked.make({ request }),
-    onUrlChange: (url) => UrlChanged.make({ url }),
+    onUrlRequest: (request) => LinkClicked({ request }),
+    onUrlChange: (url) => UrlChanged({ url }),
   },
 })
 

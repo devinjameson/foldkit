@@ -7,7 +7,7 @@ import { FetchWeather, fetchWeather, update } from './main'
 test('FetchWeather sets loading state and returns fetch command', () => {
   const model = createModel()
 
-  const [newModel, commands] = update(model, FetchWeather.make())
+  const [newModel, commands] = update(model, FetchWeather())
 
   expect(newModel.weather._tag).toBe('WeatherLoading')
   expect(commands).toHaveLength(1)

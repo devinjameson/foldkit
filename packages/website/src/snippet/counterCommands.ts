@@ -30,6 +30,6 @@ const update = (
 const resetAfterDelay: Runtime.Command<ResetNow> = Effect.gen(
   function* () {
     yield* Effect.sleep('1 second')
-    return ResetNow.make()
+    return ResetNow()
   },
 )

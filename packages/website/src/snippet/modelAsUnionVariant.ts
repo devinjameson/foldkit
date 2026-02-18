@@ -11,4 +11,4 @@ export type LoggedIn = typeof LoggedIn.Type
 export const initLoggedIn = (
   userId: string,
   username: string,
-): LoggedIn => LoggedIn.make({ userId, username })
+): LoggedIn => LoggedIn({ userId, username })

@@ -124,7 +124,7 @@ const init: Runtime.ElementInit<Model, Message, Flags> = (flags) => [
     todos: Option.getOrElse(flags.todos, () => []),
     newTodoText: '',
     filter: 'All',
-    editing: NotEditing.make(),
+    editing: NotEditing(),
   },
   [],
 ]
@@ -153,7 +153,7 @@ const update = (
             M.value(model.editing).pipe(
               M.tagsExhaustive({
                 NotEditing: () => model.editing,
-                Editing: ({ id }) => Editing.make({ id, text }),
+                Editing: ({ id }) => Editing({ id, text }),
               }),
             ),
         }),
@@ -218,7 +218,7 @@ const update = (
         return [
           evo(model, {
             editing: () =>
-              Editing.make({
+              Editing({
                 id,
                 text: Option.match(todo, {
                   onNone: () => '',
@@ -240,7 +240,7 @@ const update = (
               if (String.isEmpty(String.trim(text))) {
                 return [
                   evo(model, {
-                    editing: () => NotEditing.make(),
+                    editing: () => NotEditing(),
                   }),
                   [],
                 ]
@@ -255,7 +255,7 @@ const update = (
               return [
                 evo(model, {
                   todos: () => updatedTodos,
-                  editing: () => NotEditing.make(),
+                  editing: () => NotEditing(),
                 }),
                 [saveTodos(updatedTodos)],
               ]
@@ -265,7 +265,7 @@ const update = (
 
       CancelEdit: () => [
         evo(model, {
-          editing: () => NotEditing.make(),
+          editing: () => NotEditing(),
         }),
         [],
       ],
@@ -327,7 +327,7 @@ const generateTodoData = (text: string): Runtime.Command<GotNewTodoData> =>
   Effect.gen(function* () {
     const id = yield* randomId
     const timestamp = yield* Clock.currentTimeMillis
-    return GotNewTodoData.make({ id, timestamp, text })
+    return GotNewTodoData({ id, timestamp, text })
   })
 
 // COMMAND
@@ -336,9 +336,9 @@ const saveTodos = (todos: Todos): Runtime.Command<TodosSaved> =>
   Effect.gen(function* () {
     const store = yield* KeyValueStore.KeyValueStore
     yield* store.set(TODOS_STORAGE_KEY, S.encodeSync(S.parseJson(Todos))(todos))
-    return TodosSaved.make({ todos })
+    return TodosSaved({ todos })
   }).pipe(
-    Effect.catchAll(() => Effect.succeed(TodosSaved.make({ todos }))),
+    Effect.catchAll(() => Effect.succeed(TodosSaved({ todos }))),
     Effect.provide(BrowserKeyValueStore.layerLocalStorage),
   )
 
@@ -390,18 +390,18 @@ const editingTodoView = (todo: Todo, text: string): Html =>
         Class(
           'flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500',
         ),
-        OnInput((text) => UpdateEditingTodo.make({ text })),
+        OnInput((text) => UpdateEditingTodo({ text })),
       ]),
       button(
         [
-          OnClick(SaveEdit.make()),
+          OnClick(SaveEdit()),
           Class('px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600'),
         ],
         ['Save'],
       ),
       button(
         [
-          OnClick(CancelEdit.make()),
+          OnClick(CancelEdit()),
           Class('px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600'),
         ],
         ['Cancel'],
@@ -418,20 +418,20 @@ const nonEditingTodoView = (todo: Todo): Html =>
         Id(`todo-${todo.id}`),
         Value(todo.completed ? 'on' : ''),
         Class('w-4 h-4 text-blue-600 rounded focus:ring-blue-500'),
-        OnClick(ToggleTodo.make({ id: todo.id })),
+        OnClick(ToggleTodo({ id: todo.id })),
       ]),
       span(
         [
           Class(
             `flex-1 ${todo.completed ? 'line-through text-gray-500' : 'text-gray-900'}`,
           ),
-          OnClick(StartEditing.make({ id: todo.id })),
+          OnClick(StartEditing({ id: todo.id })),
         ],
         [todo.text],
       ),
       button(
         [
-          OnClick(DeleteTodo.make({ id: todo.id })),
+          OnClick(DeleteTodo({ id: todo.id })),
           Class(
             'px-2 py-1 text-red-600 opacity-0 group-hover:opacity-100 hover:bg-red-100 rounded transition-opacity',
           ),
@@ -446,7 +446,7 @@ const filterButtonView =
   (filter: Filter, label: string): Html =>
     button(
       [
-        OnClick(SetFilter.make({ filter })),
+        OnClick(SetFilter({ filter })),
         Class(
           `px-3 py-1 rounded ${
             model.filter === filter
@@ -491,7 +491,7 @@ const footerView = (
                 onNonEmpty: (todos) =>
                   button(
                     [
-                      OnClick(ToggleAll.make()),
+                      OnClick(ToggleAll()),
                       Class(
                         'px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300',
                       ),
@@ -507,7 +507,7 @@ const footerView = (
               completedCount > 0
                 ? button(
                     [
-                      OnClick(ClearCompleted.make()),
+                      OnClick(ClearCompleted()),
                       Class(
                         'px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200',
                       ),
@@ -548,7 +548,7 @@ const view = (model: Model): Html => {
           ),
 
           form(
-            [Class('mb-6'), OnSubmit(AddTodo.make())],
+            [Class('mb-6'), OnSubmit(AddTodo())],
             [
               label([For('new-todo'), Class('sr-only')], ['New todo']),
               div(
@@ -561,7 +561,7 @@ const view = (model: Model): Html => {
                     Class(
                       'flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
                     ),
-                    OnInput((text) => UpdateNewTodo.make({ text })),
+                    OnInput((text) => UpdateNewTodo({ text })),
                   ]),
                   button(
                     [

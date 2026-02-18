@@ -78,7 +78,7 @@ export const view =
           'p-2 rounded hover:bg-terminal-green-dim hover:text-terminal-bg transition text-terminal-green',
         ),
         AriaLabel('Copy room ID'),
-        OnClick(toMessage(CopyRoomIdClicked.make({ roomId }))),
+        OnClick(toMessage(CopyRoomIdClicked({ roomId }))),
       ],
       [Icon.copy()],
     )
@@ -156,7 +156,7 @@ const joinForm = (
   toMessage: (message: Message) => ParentMessage,
 ): Html =>
   form(
-    [OnSubmit(toMessage(JoinRoomFromPageSubmitted.make({ roomId })))],
+    [OnSubmit(toMessage(JoinRoomFromPageSubmitted({ roomId })))],
     [
       div(
         [Class('flex items-center gap-2')],
@@ -172,8 +172,8 @@ const joinForm = (
                 Type('text'),
                 Value(username),
                 Class('bg-transparent px-0 py-2 outline-none w-full'),
-                OnInput((value) => toMessage(RoomPageUsernameInputted.make({ value }))),
-                OnBlur(toMessage(RoomPageUsernameInputBlurred.make())),
+                OnInput((value) => toMessage(RoomPageUsernameInputted({ value }))),
+                OnBlur(toMessage(RoomPageUsernameInputBlurred())),
                 Autocapitalize('none'),
                 Spellcheck(false),
                 Autocorrect('off'),

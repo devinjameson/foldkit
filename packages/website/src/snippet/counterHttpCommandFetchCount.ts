@@ -18,7 +18,7 @@ const fetchCount: Runtime.Command<GetCountSuccess | GetCountFailure> =
 
     // If we reach this, the Effect above that uses tryPromise succeeded,
     // and we can return the GetCountSuccess message
-    return GetCountSuccess.make({ count: result.count })
+    return GetCountSuccess({ count: result.count })
   }).pipe(
     // We are forced by the type system to handle the error case because
     // Command's may not fail. They must always return a Message. Here, we recover
@@ -26,6 +26,6 @@ const fetchCount: Runtime.Command<GetCountSuccess | GetCountFailure> =
     // In a real application, we might log the error to an external service,
     // retry the request, etc.
     Effect.catchAll((error) =>
-      Effect.succeed(GetCountFailure.make({ error: error.message })),
+      Effect.succeed(GetCountFailure({ error: error.message })),
     ),
   )

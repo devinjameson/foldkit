@@ -70,7 +70,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
 
       RoomPageUsernameInputBlurred: () => [
         model,
-        [Task.focus(`#${ROOM_PAGE_USERNAME_INPUT_ID}`, () => NoOp.make())],
+        [Task.focus(`#${ROOM_PAGE_USERNAME_INPUT_ID}`, () => NoOp())],
       ],
 
       RoomPageUsernameInputted: ({ value }) => [
@@ -105,14 +105,13 @@ export const update = (model: Model, message: Message): UpdateReturn =>
 
       RoomFetched: ({ room }) => {
         const maybeFocusRoomUsernameInput = Option.match(model.maybeSession, {
-          onNone: () =>
-            Option.some(Task.focus(`#${ROOM_PAGE_USERNAME_INPUT_ID}`, () => NoOp.make())),
+          onNone: () => Option.some(Task.focus(`#${ROOM_PAGE_USERNAME_INPUT_ID}`, () => NoOp())),
           onSome: () => Option.none(),
         })
 
         return [
           evo(model, {
-            roomRemoteData: () => RoomRemoteData.Ok.make({ data: room }),
+            roomRemoteData: () => RoomRemoteData.Ok({ data: room }),
           }),
           Array.fromOption(maybeFocusRoomUsernameInput),
         ]
@@ -120,7 +119,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
 
       RoomNotFound: () => [
         evo(model, {
-          roomRemoteData: () => RoomRemoteData.Error.make({ error: 'Room not found' }),
+          roomRemoteData: () => RoomRemoteData.Error({ error: 'Room not found' }),
         }),
         [],
       ],
@@ -185,9 +184,9 @@ const whenWaitingOrFinished = (model: Model, key: string, room: Shared.Room): Up
 const leaveRoom = (model: Model): UpdateReturn => [
   evo(model, {
     maybeSession: () => Option.none(),
-    roomRemoteData: () => RoomRemoteData.Loading.make(),
+    roomRemoteData: () => RoomRemoteData.Loading(),
   }),
-  [clearSession(), pushUrl(homeRouter.build({})).pipe(Effect.as(NoOp.make()))],
+  [clearSession(), pushUrl(homeRouter.build({})).pipe(Effect.as(NoOp()))],
 ]
 
 const handleStartGame = (model: Model, room: Shared.Room) => (): UpdateReturn =>

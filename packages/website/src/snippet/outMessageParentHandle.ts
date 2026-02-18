@@ -20,7 +20,7 @@ export const update = (
             M.value(outMessage).pipe(
               M.tagsExhaustive({
                 LogoutRequested: () => [
-                  LoggedOut.make({ email: '', password: '' }),
+                  LoggedOut({ email: '', password: '' }),
                   [...commands, clearSession()],
                 ],
               }),

@@ -101,9 +101,7 @@ export const activeSection: CommandStream<
             onNone: Function.constVoid,
             onSome: (sectionId) => {
               emit.single(
-                Effect.succeed(
-                  ActiveSectionChanged.make({ sectionId }),
-                ),
+                Effect.succeed(ActiveSectionChanged({ sectionId })),
               )
             },
           })

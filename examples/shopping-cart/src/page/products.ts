@@ -78,7 +78,7 @@ export const update =
               productsRouter.build({
                 searchText: Option.fromNullable(value || null),
               }),
-            ).pipe(Effect.as(NoOp.make())),
+            ).pipe(Effect.as(NoOp())),
           ],
         ],
       }),
@@ -117,7 +117,7 @@ export const view = (
                   'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
                 ),
                 OnInput((value: string) =>
-                  toMessage(SearchInputChanged.make({ value })),
+                  toMessage(SearchInputChanged({ value })),
                 ),
               ]),
             ],

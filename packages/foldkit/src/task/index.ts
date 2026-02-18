@@ -6,7 +6,7 @@ import { DateTime, Duration, Effect, Option } from 'effect'
  *
  * @example
  * ```typescript
- * Task.getTime(utc => GotTime.make({ utc }))
+ * Task.getTime(utc => GotTime({ utc }))
  * ```
  */
 export const getTime = <Message>(
@@ -19,7 +19,7 @@ export const getTime = <Message>(
  *
  * @example
  * ```typescript
- * Task.getTimeZone(zone => GotTimeZone.make({ zone }))
+ * Task.getTimeZone(zone => GotTimeZone({ zone }))
  * ```
  */
 export const getTimeZone = <Message>(
@@ -32,7 +32,7 @@ export const getTimeZone = <Message>(
  *
  * @example
  * ```typescript
- * Task.getZonedTime(zoned => GotTime.make({ zoned }))
+ * Task.getZonedTime(zoned => GotTime({ zoned }))
  * ```
  */
 export const getZonedTime = <Message>(
@@ -51,7 +51,7 @@ export const getZonedTime = <Message>(
  *
  * @example
  * ```typescript
- * Task.getZonedTimeIn('America/New_York', zoned => GotNYTime.make({ zoned }))
+ * Task.getZonedTimeIn('America/New_York', zoned => GotNYTime({ zoned }))
  * ```
  */
 export const getZonedTimeIn = <Message>(
@@ -76,7 +76,7 @@ export const getZonedTimeIn = <Message>(
  *
  * @example
  * ```typescript
- * Task.focus('#email-input', success => InputFocused.make({ success }))
+ * Task.focus('#email-input', success => InputFocused({ success }))
  * ```
  */
 export const focus = <Message>(
@@ -102,7 +102,7 @@ export const focus = <Message>(
  *
  * @example
  * ```typescript
- * Task.showModal('#my-dialog', success => ModalOpened.make({ success }))
+ * Task.showModal('#my-dialog', success => ModalOpened({ success }))
  * ```
  */
 export const showModal = <Message>(
@@ -128,7 +128,7 @@ export const showModal = <Message>(
  *
  * @example
  * ```typescript
- * Task.closeModal('#my-dialog', success => ModalClosed.make({ success }))
+ * Task.closeModal('#my-dialog', success => ModalClosed({ success }))
  * ```
  */
 export const closeModal = <Message>(
@@ -153,8 +153,8 @@ export const closeModal = <Message>(
  *
  * @example
  * ```typescript
- * Task.delay(350, () => SearchCleared.make({ version: model.searchVersion }))
- * Task.delay(Duration.seconds(1), () => TimedOut.make())
+ * Task.delay(350, () => SearchCleared({ version: model.searchVersion }))
+ * Task.delay(Duration.seconds(1), () => TimedOut())
  * ```
  */
 export const delay = <Message>(
@@ -172,7 +172,7 @@ export const delay = <Message>(
  *
  * @example
  * ```typescript
- * Task.randomInt(0, 100, value => GotRandom.make({ value }))
+ * Task.randomInt(0, 100, value => GotRandom({ value }))
  * ```
  */
 /**
@@ -183,7 +183,7 @@ export const delay = <Message>(
  *
  * @example
  * ```typescript
- * Task.scrollIntoView('#active-item', success => ItemScrolled.make({ success }))
+ * Task.scrollIntoView('#active-item', success => ItemScrolled({ success }))
  * ```
  */
 export const scrollIntoView = <Message>(

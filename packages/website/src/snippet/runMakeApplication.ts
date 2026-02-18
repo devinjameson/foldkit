@@ -7,8 +7,8 @@ const app = Runtime.makeApplication({
   view,
   container: document.getElementById('root')!,
   browser: {
-    onUrlRequest: (request) => LinkClicked.make({ request }),
-    onUrlChange: (url) => UrlChanged.make({ url }),
+    onUrlRequest: (request) => LinkClicked({ request }),
+    onUrlChange: (url) => UrlChanged({ url }),
   },
 })
 

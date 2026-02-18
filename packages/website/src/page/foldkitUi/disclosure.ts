@@ -42,7 +42,7 @@ export const disclosureDemo = (
   Ui.Disclosure.view({
     model: model.disclosureDemo,
     toMessage: (message) =>
-      toMessage(GotDisclosureDemoMessage.make({ message })),
+      toMessage(GotDisclosureDemoMessage({ message })),
     buttonClassName,
     buttonContent: div(
       [Class('flex items-center justify-between w-full')],

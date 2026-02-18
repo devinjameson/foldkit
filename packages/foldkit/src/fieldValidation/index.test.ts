@@ -29,25 +29,25 @@ describe('makeField', () => {
   const StringField = makeField(S.String)
 
   it('creates NotValidated via schema make', () => {
-    const field = StringField.NotValidated.make({ value: 'hello' })
+    const field = StringField.NotValidated({ value: 'hello' })
     expect(field._tag).toBe('NotValidated')
     expect(field.value).toBe('hello')
   })
 
   it('creates Validating via schema make', () => {
-    const field = StringField.Validating.make({ value: 'hello' })
+    const field = StringField.Validating({ value: 'hello' })
     expect(field._tag).toBe('Validating')
     expect(field.value).toBe('hello')
   })
 
   it('creates Valid via schema make', () => {
-    const field = StringField.Valid.make({ value: 'hello' })
+    const field = StringField.Valid({ value: 'hello' })
     expect(field._tag).toBe('Valid')
     expect(field.value).toBe('hello')
   })
 
   it('creates Invalid via schema make', () => {
-    const field = StringField.Invalid.make({ value: 'hello', error: 'bad' })
+    const field = StringField.Invalid({ value: 'hello', error: 'bad' })
     expect(field._tag).toBe('Invalid')
     expect(field.value).toBe('hello')
     expect(field.error).toBe('bad')
@@ -80,7 +80,7 @@ describe('makeField', () => {
 
   it('works with non-string value schemas', () => {
     const NumberField = makeField(S.Number)
-    const field = NumberField.Valid.make({ value: 42 })
+    const field = NumberField.Valid({ value: 42 })
     expect(field._tag).toBe('Valid')
     expect(field.value).toBe(42)
   })

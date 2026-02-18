@@ -38,6 +38,6 @@ const view = (model: Model): Html =>
     [],
     [
       p([], [`Count: ${model}`]),
-      button([OnClick(IncrementClicked.make())], ['Increment']),
+      button([OnClick(IncrementClicked())], ['Increment']),
     ],
   )

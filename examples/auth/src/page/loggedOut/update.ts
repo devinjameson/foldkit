@@ -29,14 +29,14 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         )
 
         const mappedCommands = Array.map(commands, (command) =>
-          Effect.map(command, (message) => GotLoginMessage.make({ message })),
+          Effect.map(command, (message) => GotLoginMessage({ message })),
         )
 
         return [
           evo(model, { loginModel: () => loginModel }),
           mappedCommands,
           Option.map(maybeOutMessage, ({ session }) =>
-            LoginSucceeded.make({ session }),
+            LoginSucceeded({ session }),
           ),
         ]
       },

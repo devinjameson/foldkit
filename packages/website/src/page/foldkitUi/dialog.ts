@@ -43,7 +43,7 @@ export const dialogDemo = (
   toMessage: (message: Message) => ParentMessage,
 ) => {
   const toDialogMessage = (message: Ui.Dialog.Message) =>
-    toMessage(GotDialogDemoMessage.make({ message }))
+    toMessage(GotDialogDemoMessage({ message }))
 
   return [
     div(
@@ -52,7 +52,7 @@ export const dialogDemo = (
         button(
           [
             Class(triggerClassName),
-            OnClick(toDialogMessage(Ui.Dialog.Opened.make())),
+            OnClick(toDialogMessage(Ui.Dialog.Opened())),
           ],
           ['Open Dialog'],
         ),
@@ -83,14 +83,14 @@ export const dialogDemo = (
               button(
                 [
                   Class(cancelButtonClassName),
-                  OnClick(toDialogMessage(Ui.Dialog.Closed.make())),
+                  OnClick(toDialogMessage(Ui.Dialog.Closed())),
                 ],
                 ['Cancel'],
               ),
               button(
                 [
                   Class(confirmButtonClassName),
-                  OnClick(toDialogMessage(Ui.Dialog.Closed.make())),
+                  OnClick(toDialogMessage(Ui.Dialog.Closed())),
                 ],
                 ['Confirm'],
               ),

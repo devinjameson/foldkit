@@ -57,9 +57,9 @@ const view = (count: Model): Html =>
       div(
         [Class('flex flex-wrap justify-center gap-4')],
         [
-          button([OnClick(Decrement.make()), Class(buttonStyle)], ['-']),
-          button([OnClick(Reset.make()), Class(buttonStyle)], ['Reset']),
-          button([OnClick(Increment.make()), Class(buttonStyle)], ['+']),
+          button([OnClick(Decrement()), Class(buttonStyle)], ['-']),
+          button([OnClick(Reset()), Class(buttonStyle)], ['Reset']),
+          button([OnClick(Increment()), Class(buttonStyle)], ['+']),
         ],
       ),
     ],

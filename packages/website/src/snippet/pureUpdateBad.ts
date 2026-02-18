@@ -18,7 +18,7 @@ const update = (model: Model, message: Message) =>
 
 // Same inputs produce different outputs - this breaks purity!
 const model = { snake: [{ x: 0, y: 0 }], apple: { x: 5, y: 5 } }
-const message = SpawnApple.make()
+const message = SpawnApple()
 
 console.log(update(model, message)[0].apple) // { x: 12, y: 7 }
 console.log(update(model, message)[0].apple) // { x: 3, y: 19 }

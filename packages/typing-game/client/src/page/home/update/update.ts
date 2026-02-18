@@ -24,7 +24,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
           M.tag('EnterUsername', ({ username }) => {
             const nextModel = Str.isNonEmpty(username)
               ? evo(model, {
-                  homeStep: () => SelectAction.make({ username, selectedAction: 'CreateRoom' }),
+                  homeStep: () => SelectAction({ username, selectedAction: 'CreateRoom' }),
                 })
               : model
 
@@ -40,7 +40,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
           withUpdateReturn,
           M.tag('EnterUsername', () => [
             evo(model, {
-              homeStep: () => EnterUsername.make({ username: value }),
+              homeStep: () => EnterUsername({ username: value }),
               formError: () => Option.none(),
             }),
             [],
@@ -48,9 +48,9 @@ export const update = (model: Model, message: Message): UpdateReturn =>
           M.orElse(() => [model, []]),
         ),
 
-      UsernameInputBlurred: () => [model, [Task.focus(`#${USERNAME_INPUT_ID}`, () => NoOp.make())]],
+      UsernameInputBlurred: () => [model, [Task.focus(`#${USERNAME_INPUT_ID}`, () => NoOp())]],
 
-      RoomIdInputBlurred: () => [model, [Task.focus(`#${ROOM_ID_INPUT_ID}`, () => NoOp.make())]],
+      RoomIdInputBlurred: () => [model, [Task.focus(`#${ROOM_ID_INPUT_ID}`, () => NoOp())]],
 
       RoomIdInputted: ({ value }) =>
         M.value(model.homeStep).pipe(
@@ -58,7 +58,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
           M.tag('EnterRoomId', ({ username, roomIdValidationId }) => [
             evo(model, {
               homeStep: () =>
-                EnterRoomId.make({
+                EnterRoomId({
                   username,
                   roomId: value,
                   roomIdValidationId,
@@ -84,7 +84,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
             if (roomId === 'exit') {
               return [
                 evo(model, {
-                  homeStep: () => SelectAction.make({ username, selectedAction: 'JoinRoom' }),
+                  homeStep: () => SelectAction({ username, selectedAction: 'JoinRoom' }),
                 }),
                 [],
               ]

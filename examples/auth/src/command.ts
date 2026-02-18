@@ -22,10 +22,10 @@ export const saveSession = (
       SESSION_STORAGE_KEY,
       S.encodeSync(S.parseJson(Session))(session),
     )
-    return SessionSaved.make()
+    return SessionSaved()
   }).pipe(
     Effect.catchAll((error) =>
-      Effect.succeed(SessionSaveFailed.make({ error: String(error) })),
+      Effect.succeed(SessionSaveFailed({ error: String(error) })),
     ),
     Effect.provide(BrowserKeyValueStore.layerLocalStorage),
   )
@@ -36,14 +36,14 @@ export const clearSession = (): Runtime.Command<
   Effect.gen(function* () {
     const store = yield* KeyValueStore.KeyValueStore
     yield* store.remove(SESSION_STORAGE_KEY)
-    return SessionCleared.make()
+    return SessionCleared()
   }).pipe(
     Effect.catchAll((error) =>
-      Effect.succeed(SessionClearFailed.make({ error: String(error) })),
+      Effect.succeed(SessionClearFailed({ error: String(error) })),
     ),
     Effect.provide(BrowserKeyValueStore.layerLocalStorage),
   )
 
 export const logError = (
   ...args: ReadonlyArray<unknown>
-): Runtime.Command<NoOp> => Console.error(...args).pipe(Effect.as(NoOp.make()))
+): Runtime.Command<NoOp> => Console.error(...args).pipe(Effect.as(NoOp()))

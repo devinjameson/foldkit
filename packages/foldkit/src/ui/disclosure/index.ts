@@ -65,7 +65,7 @@ export const update = (
     M.tagsExhaustive({
       Toggled: () => {
         const maybeFocusCommand = Option.liftPredicate(
-          Task.focus(`#${buttonId(model.id)}`, () => NoOp.make()),
+          Task.focus(`#${buttonId(model.id)}`, () => NoOp()),
           () => model.isOpen,
         )
 
@@ -76,7 +76,7 @@ export const update = (
       },
       Closed: () => {
         const maybeFocusCommand = Option.liftPredicate(
-          Task.focus(`#${buttonId(model.id)}`, () => NoOp.make()),
+          Task.focus(`#${buttonId(model.id)}`, () => NoOp()),
           () => model.isOpen,
         )
 
@@ -145,8 +145,8 @@ export const view = <Message>(config: ViewConfig<Message>): Html => {
   const handleKeyDown = (key: string): Message =>
     /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
     M.value(key).pipe(
-      M.whenOr('Enter', ' ', () => toMessage(Toggled.make())),
-      M.orElse(() => toMessage(NoOp.make())),
+      M.whenOr('Enter', ' ', () => toMessage(Toggled())),
+      M.orElse(() => toMessage(NoOp())),
     ) as Message
 
   const disabledAttributes = [
@@ -158,7 +158,7 @@ export const view = <Message>(config: ViewConfig<Message>): Html => {
   const interactionAttributes = isDisabled
     ? disabledAttributes
     : [
-        OnClick(toMessage(Toggled.make())),
+        OnClick(toMessage(Toggled())),
         ...(!isNativeButton ? [OnKeyDown(handleKeyDown)] : []),
       ]
 

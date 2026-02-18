@@ -156,7 +156,7 @@ export const horizontalDemo = (
   Ui.Tabs.view({
     model: model.horizontalTabsDemo,
     toMessage: (message) =>
-      toMessage(GotHorizontalTabsDemoMessage.make({ message })),
+      toMessage(GotHorizontalTabsDemoMessage({ message })),
     tabs: demoTabs,
     tabToConfig,
     tabListClassName: 'flex',
@@ -171,7 +171,7 @@ export const verticalDemo = (
   Ui.Tabs.view({
     model: model.verticalTabsDemo,
     toMessage: (message) =>
-      toMessage(GotVerticalTabsDemoMessage.make({ message })),
+      toMessage(GotVerticalTabsDemoMessage({ message })),
     tabs: demoTabs,
     tabToConfig: verticalTabToConfig,
     className: 'flex',

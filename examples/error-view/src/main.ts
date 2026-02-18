@@ -39,7 +39,7 @@ const view = (_model: Model): Html =>
     [
       button(
         [
-          OnClick(Crash.make()),
+          OnClick(Crash()),
           Class(
             'bg-red-600 text-white text-lg font-semibold hover:bg-red-700 px-6 py-3 rounded transition cursor-pointer',
           ),

@@ -27,7 +27,7 @@ Match the quality and thoughtfulness of these files. The principles below apply 
 - Encode state in discriminated unions, not booleans or nullable fields. Use `Idle | Loading | Error | Ok` instead of `isLoading: boolean`. Use `EnterUsername | SelectAction | EnterRoomId` instead of `step: number`. Make impossible states unrepresentable.
 - Name messages as past-tense events describing what happened (`UsernameFormSubmitted`, `RoomCreated`, `KeyPressed`), not imperative commands. The update function decides what to do — messages are facts.
 - Use `Option` instead of `null` or `undefined`. Match explicitly with `Option.match` or chain with `Option.map`/`Option.flatMap`. No `if (x != null)` checks. Prefer `Option.match` over `Option.map` + `Option.getOrElse` — if you're unwrapping at the end, just match.
-- Errors in commands should become messages via `Effect.catchAll(() => Effect.succeed(ErrorMessage.make(...)))`. Side effects should never crash the app.
+- Errors in commands should become messages via `Effect.catchAll(() => Effect.succeed(ErrorMessage(...)))`. Side effects should never crash the app.
 - Extract complex update handlers or view sections into their own files when they grow beyond a few cases. Don't let logic pile up.
 - Prefer curried, data-last functions that compose in `pipe` chains.
 - Every line should serve a purpose. No dead code, no empty catch blocks, no placeholder types, no defensive code for impossible cases.
@@ -48,7 +48,7 @@ Match the quality and thoughtfulness of these files. The principles below apply 
 - Always use Effect.Match instead of switch
 - Prefer Effect module functions over native methods when available — e.g. `Array.map`, `Array.filter`, `Option.map`, `String.startsWith` from Effect instead of their native equivalents. Exception: native `.map`, `.filter`, etc. are fine when calling directly on a named variable (e.g. `commands.map(Effect.map(...))`) — use Effect's `Array.map` in `pipe` chains where the curried, data-last form composes naturally.
 - Never use `for` loops or `let` for iteration. Use `Array.makeBy` for index-based construction, `Array.range` + `Array.findFirst`/`Array.findLast` for searches, and `Array.filterMap`/`Array.flatMap` for transforms.
-- Never cast Schema values with `as Type`. Use `.make()` constructors: `LoginSucceeded.make({ sessionId })` not `{ _tag: 'LoginSucceeded', sessionId } as Message`. Commands should return specific union types (e.g. `Runtime.Command<LoginSucceeded | LoginFailed>`) rather than the full Message type.
+- Never cast Schema values with `as Type`. Use callable constructors: `LoginSucceeded({ sessionId })` not `{ _tag: 'LoginSucceeded', sessionId } as Message`. Commands should return specific union types (e.g. `Runtime.Command<LoginSucceeded | LoginFailed>`) rather than the full Message type.
 - Use `Option` for model fields that may be absent — not empty strings or zero values. `loginError: S.OptionFromSelf(S.String)` not `loginError: S.String` with `''` as the "none" state. Use `Option.match` in views to conditionally render.
 - Use `Array.take` instead of `.slice(0, n)` — especially avoid casting Schema arrays with `as readonly T[]` just to call `.slice`.
 

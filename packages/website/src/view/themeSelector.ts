@@ -55,7 +55,7 @@ const themeSelectorButton = (
         ),
       ),
       AriaLabel(label),
-      OnClick(SetThemePreference.make({ preference })),
+      OnClick(SetThemePreference({ preference })),
     ],
     [icon],
   )

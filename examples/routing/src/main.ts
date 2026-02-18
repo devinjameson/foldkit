@@ -133,13 +133,13 @@ const update = (
               url,
             }): [Model, ReadonlyArray<Runtime.Command<NoOp>>] => [
               model,
-              [pushUrl(urlToString(url)).pipe(Effect.as(NoOp.make()))],
+              [pushUrl(urlToString(url)).pipe(Effect.as(NoOp()))],
             ],
             External: ({
               href,
             }): [Model, ReadonlyArray<Runtime.Command<NoOp>>] => [
               model,
-              [load(href).pipe(Effect.as(NoOp.make()))],
+              [load(href).pipe(Effect.as(NoOp()))],
             ],
           }),
         ),
@@ -158,7 +158,7 @@ const update = (
             peopleRouter.build({
               searchText: Option.fromNullable(value || null),
             }),
-          ).pipe(Effect.as(NoOp.make())),
+          ).pipe(Effect.as(NoOp())),
         ],
       ],
     }),
@@ -301,7 +301,7 @@ const peopleView = (searchText: Option.Option<string>): Html => {
             Class(
               'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
             ),
-            OnInput((value) => SearchInputChanged.make({ value })),
+            OnInput((value) => SearchInputChanged({ value })),
           ]),
         ],
       ),
@@ -496,8 +496,8 @@ const app = Runtime.makeApplication({
   view,
   container: document.getElementById('root')!,
   browser: {
-    onUrlRequest: (request) => LinkClicked.make({ request }),
-    onUrlChange: (url) => UrlChanged.make({ url }),
+    onUrlRequest: (request) => LinkClicked({ request }),
+    onUrlChange: (url) => UrlChanged({ url }),
   },
 })
 

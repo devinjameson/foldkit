@@ -35,7 +35,7 @@ const moveSelection =
   (model: Model, { username, selectedAction }: SelectAction): UpdateReturn => [
     evo(model, {
       homeStep: () =>
-        SelectAction.make({
+        SelectAction({
           username,
           selectedAction: cycleAction(f)(selectedAction),
         }),
@@ -70,19 +70,19 @@ const confirmSelection =
       M.when('JoinRoom', () => [
         evo(model, {
           homeStep: () =>
-            EnterRoomId.make({
+            EnterRoomId({
               username: selectAction.username,
               roomId: '',
               roomIdValidationId: Date.now(),
             }),
         }),
-        [Task.focus(`#${ROOM_ID_INPUT_ID}`, () => NoOp.make())],
+        [Task.focus(`#${ROOM_ID_INPUT_ID}`, () => NoOp())],
       ]),
       M.when('ChangeUsername', () => [
         evo(model, {
-          homeStep: () => EnterUsername.make({ username: '' }),
+          homeStep: () => EnterUsername({ username: '' }),
         }),
-        [Task.focus(`#${USERNAME_INPUT_ID}`, () => NoOp.make())],
+        [Task.focus(`#${USERNAME_INPUT_ID}`, () => NoOp())],
       ]),
       M.exhaustive,
     )

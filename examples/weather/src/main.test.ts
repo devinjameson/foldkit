@@ -14,13 +14,13 @@ import {
 
 const createModel = (): Model => ({
   zipCodeInput: '90210',
-  weather: WeatherInit.make(),
+  weather: WeatherInit(),
 })
 
 test('FetchWeather sets loading state and returns fetch command', () => {
   const model = createModel()
 
-  const [newModel, commands] = update(model, FetchWeather.make())
+  const [newModel, commands] = update(model, FetchWeather())
 
   expect(newModel.weather._tag).toBe('WeatherLoading')
   expect(commands).toHaveLength(1)
@@ -40,7 +40,7 @@ test('WeatherFetched updates model with weather data', () => {
 
   const [newModel, commands] = update(
     model,
-    WeatherFetched.make({ weather: weatherData }),
+    WeatherFetched({ weather: weatherData }),
   )
 
   expect(newModel.weather._tag).toBe('WeatherSuccess')

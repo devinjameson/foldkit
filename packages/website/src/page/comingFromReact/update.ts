@@ -30,7 +30,7 @@ export const update = (
               Record.set(model, id, nextDisclosure),
               commands.map(
                 Effect.map((message) =>
-                  GotFaqDisclosureMessage.make({ id, message }),
+                  GotFaqDisclosureMessage({ id, message }),
                 ),
               ),
             ]
