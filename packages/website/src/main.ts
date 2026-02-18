@@ -223,22 +223,6 @@ const Message = S.Union(
   ComingFromReactMessage,
   ApiReferenceMessage,
 )
-
-type NoOp = typeof NoOp.Type
-type LinkClicked = typeof LinkClicked.Type
-type UrlChanged = typeof UrlChanged.Type
-type CopySnippetToClipboard = typeof CopySnippetToClipboard.Type
-type CopyLinkToClipboard = typeof CopyLinkToClipboard.Type
-type CopySuccess = typeof CopySuccess.Type
-type HideCopiedIndicator = typeof HideCopiedIndicator.Type
-type ToggleMobileMenu = typeof ToggleMobileMenu.Type
-export type ActiveSectionChanged = typeof ActiveSectionChanged.Type
-export type SetThemePreference = typeof SetThemePreference.Type
-export type SystemThemeChanged = typeof SystemThemeChanged.Type
-type FoldkitUiMessage = typeof FoldkitUiMessage.Type
-type ComingFromReactMessage = typeof ComingFromReactMessage.Type
-type ApiReferenceMessage = typeof ApiReferenceMessage.Type
-
 export type Message = typeof Message.Type
 
 // INIT
@@ -320,16 +304,19 @@ const update = (
           M.tagsExhaustive({
             Internal: ({
               url,
-            }): [Model, ReadonlyArray<Runtime.Command<NoOp>>] => [
+            }): [
+              Model,
+              ReadonlyArray<Runtime.Command<typeof NoOp>>,
+            ] => [
               model,
               [pushUrl(urlToString(url)).pipe(Effect.as(NoOp()))],
             ],
             External: ({
               href,
-            }): [Model, ReadonlyArray<Runtime.Command<NoOp>>] => [
-              model,
-              [load(href).pipe(Effect.as(NoOp()))],
-            ],
+            }): [
+              Model,
+              ReadonlyArray<Runtime.Command<typeof NoOp>>,
+            ] => [model, [load(href).pipe(Effect.as(NoOp()))]],
           }),
         ),
 
@@ -477,13 +464,13 @@ const update = (
 
 // COMMAND
 
-const injectAnalytics: Runtime.Command<NoOp> = Effect.sync(() =>
-  inject(),
+const injectAnalytics: Runtime.Command<typeof NoOp> = Effect.sync(
+  () => inject(),
 ).pipe(Effect.as(NoOp()))
 
 const copySnippetToClipboard = (
   text: string,
-): Runtime.Command<CopySuccess | NoOp> =>
+): Runtime.Command<typeof CopySuccess | typeof NoOp> =>
   Effect.tryPromise({
     try: () => navigator.clipboard.writeText(text),
     catch: () => new Error('Failed to copy to clipboard'),
@@ -492,7 +479,9 @@ const copySnippetToClipboard = (
     Effect.catchAll(() => Effect.succeed(NoOp())),
   )
 
-const copyLinkToClipboard = (url: string): Runtime.Command<NoOp> =>
+const copyLinkToClipboard = (
+  url: string,
+): Runtime.Command<typeof NoOp> =>
   Effect.tryPromise({
     try: () => navigator.clipboard.writeText(url),
     catch: () => new Error('Failed to copy link to clipboard'),
@@ -505,17 +494,17 @@ const COPY_INDICATOR_DURATION = '2 seconds'
 
 const hideIndicator = (
   text: string,
-): Runtime.Command<HideCopiedIndicator> =>
+): Runtime.Command<typeof HideCopiedIndicator> =>
   Effect.sleep(COPY_INDICATOR_DURATION).pipe(
     Effect.as(HideCopiedIndicator({ text })),
   )
 
-const scrollToTop: Runtime.Command<NoOp> = Effect.sync(() => {
+const scrollToTop: Runtime.Command<typeof NoOp> = Effect.sync(() => {
   window.scrollTo({ top: 0, behavior: 'instant' })
   return NoOp()
 })
 
-const scrollToHash = (hash: string): Runtime.Command<NoOp> =>
+const scrollToHash = (hash: string): Runtime.Command<typeof NoOp> =>
   Effect.async((resume) => {
     requestAnimationFrame(() => {
       const element = document.getElementById(hash)
@@ -528,7 +517,7 @@ const scrollToHash = (hash: string): Runtime.Command<NoOp> =>
 
 const applyThemeToDocument = (
   theme: ResolvedTheme,
-): Runtime.Command<NoOp> =>
+): Runtime.Command<typeof NoOp> =>
   Effect.sync(() => {
     M.value(theme).pipe(
       M.when('Dark', () =>
@@ -544,7 +533,7 @@ const applyThemeToDocument = (
 
 const saveThemePreference = (
   preference: ThemePreference,
-): Runtime.Command<NoOp> =>
+): Runtime.Command<typeof NoOp> =>
   Effect.gen(function* () {
     const store = yield* KeyValueStore.KeyValueStore
     yield* store.set(THEME_STORAGE_KEY, JSON.stringify(preference))

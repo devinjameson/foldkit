@@ -1,6 +1,6 @@
 import { Array, Effect, Match as M, Option, Schema as S } from 'effect'
 import { ExtractTag } from 'effect/Types'
-import { Route } from 'foldkit'
+import { Route, Runtime } from 'foldkit'
 import { Html } from 'foldkit/html'
 import { replaceUrl } from 'foldkit/navigation'
 import { ts } from 'foldkit/schema'
@@ -43,10 +43,6 @@ const NoOp = ts('NoOp')
 const SearchInputChanged = ts('SearchInputChanged', { value: S.String })
 
 export const Message = S.Union(NoOp, SearchInputChanged)
-
-type NoOp = typeof NoOp.Type
-type SearchInputChanged = typeof SearchInputChanged.Type
-
 export type Message = typeof Message.Type
 
 // INIT
@@ -63,9 +59,9 @@ export const update =
   (
     model: Model,
     message: Message,
-  ): [Model, ReadonlyArray<Effect.Effect<Message>>] =>
+  ): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
     M.value(message).pipe(
-      M.withReturnType<[Model, ReadonlyArray<Effect.Effect<Message>>]>(),
+      M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
       M.tagsExhaustive({
         NoOp: () => [model, []],
 

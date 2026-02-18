@@ -16,8 +16,6 @@ export type Model = typeof Model.Type
 
 export const ThemeChanged = ts('ThemeChanged', { theme: S.String })
 export const Message = S.Union(ThemeChanged)
-
-export type ThemeChanged = typeof ThemeChanged.Type
 export type Message = typeof Message.Type
 
 // UPDATE

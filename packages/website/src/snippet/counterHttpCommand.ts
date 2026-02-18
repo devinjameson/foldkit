@@ -10,10 +10,6 @@ const GetCountFailure = ts('GetCountFailure', {
   error: Schema.String,
 })
 
-type GetCountFromAPI = typeof GetCountFromAPI.Type
-type GetCountSuccess = typeof GetCountSuccess.Type
-type GetCountFailure = typeof GetCountFailure.Type
-
 const update = (
   model: Model,
   message: Message,
@@ -37,17 +33,18 @@ const update = (
   )
 
 // Command that fetches the count from an API
-const fetchCount: Runtime.Command<GetCountSuccess | GetCountFailure> =
-  Effect.gen(function* () {
-    const result = yield* Effect.tryPromise(() =>
-      fetch('/api/count').then((res) => {
-        if (!res.ok) throw new Error('API request failed')
-        return res.json() as unknown as { count: number }
-      }),
-    )
-    return GetCountSuccess({ count: result.count })
-  }).pipe(
-    Effect.catchAll((error) =>
-      Effect.succeed(GetCountFailure({ error: error.message })),
-    ),
+const fetchCount: Runtime.Command<
+  typeof GetCountSuccess | typeof GetCountFailure
+> = Effect.gen(function* () {
+  const result = yield* Effect.tryPromise(() =>
+    fetch('/api/count').then((res) => {
+      if (!res.ok) throw new Error('API request failed')
+      return res.json() as unknown as { count: number }
+    }),
   )
+  return GetCountSuccess({ count: result.count })
+}).pipe(
+  Effect.catchAll((error) =>
+    Effect.succeed(GetCountFailure({ error: error.message })),
+  ),
+)

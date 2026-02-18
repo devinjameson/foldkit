@@ -12,8 +12,6 @@ type Model = typeof Model.Type
 
 const IncrementClicked = ts('IncrementClicked')
 const Message = S.Union(IncrementClicked)
-
-type IncrementClicked = typeof IncrementClicked.Type
 type Message = typeof Message.Type
 
 // UPDATE - how Messages change the Model

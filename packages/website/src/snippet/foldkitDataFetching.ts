@@ -31,18 +31,15 @@ const Message = S.Union(
   UserFetchSucceeded,
   UserFetchFailed,
 )
-
-type FetchUserClicked = typeof FetchUserClicked.Type
-type UserFetchSucceeded = typeof UserFetchSucceeded.Type
-type UserFetchFailed = typeof UserFetchFailed.Type
-
 type Message = typeof Message.Type
 
 // COMMAND - descriptions of side effects that resolve to Messages
 
 const fetchUser = (
   userId: string,
-): Runtime.Command<UserFetchSucceeded | UserFetchFailed> =>
+): Runtime.Command<
+  typeof UserFetchSucceeded | typeof UserFetchFailed
+> =>
   Effect.gen(function* () {
     const response = yield* Effect.tryPromise(() =>
       fetch(`/api/users/${userId}`).then((response) =>

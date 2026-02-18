@@ -10,8 +10,6 @@ import type { Message as ParentMessage } from '../../../message'
 
 export const LogoutClicked = ts('LogoutClicked')
 export const Message = S.Union(LogoutClicked)
-
-export type LogoutClicked = typeof LogoutClicked.Type
 export type Message = typeof Message.Type
 
 // VIEW

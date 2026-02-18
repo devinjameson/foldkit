@@ -8,6 +8,4 @@ export const SettingsMessage = ts('SettingsMessage', {
 })
 
 export const Message = S.Union(SettingsMessage)
-
-export type SettingsMessage = typeof SettingsMessage.Type
 export type Message = typeof Message.Type

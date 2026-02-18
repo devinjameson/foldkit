@@ -20,22 +20,20 @@ export const homeActionToLabel = Match.type<HomeAction>().pipe(
 export const EnterUsername = ts('EnterUsername', {
   username: S.String,
 })
-export type EnterUsername = typeof EnterUsername.Type
-
 export const SelectAction = ts('SelectAction', {
   username: S.String,
   selectedAction: HomeAction,
 })
-export type SelectAction = typeof SelectAction.Type
-
 export const EnterRoomId = ts('EnterRoomId', {
   username: S.String,
   roomId: S.String,
   roomIdValidationId: S.Number,
 })
-export type EnterRoomId = typeof EnterRoomId.Type
 
 export const HomeStep = S.Union(EnterUsername, SelectAction, EnterRoomId)
+export type EnterUsername = typeof EnterUsername.Type
+export type SelectAction = typeof SelectAction.Type
+export type EnterRoomId = typeof EnterRoomId.Type
 export type HomeStep = typeof HomeStep.Type
 
 export const Model = S.Struct({

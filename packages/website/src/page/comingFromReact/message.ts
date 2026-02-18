@@ -8,8 +8,4 @@ export const GotFaqDisclosureMessage = ts('GotFaqDisclosureMessage', {
 })
 
 export const Message = S.Union(GotFaqDisclosureMessage)
-
-export type GotFaqDisclosureMessage =
-  typeof GotFaqDisclosureMessage.Type
-
 export type Message = typeof Message.Type

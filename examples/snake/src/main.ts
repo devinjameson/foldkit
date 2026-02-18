@@ -53,14 +53,6 @@ export const Message = S.Union(
   RequestApple,
   GotApple,
 )
-
-type ClockTick = typeof ClockTick.Type
-type KeyPress = typeof KeyPress.Type
-type PauseGame = typeof PauseGame.Type
-type RestartGame = typeof RestartGame.Type
-type RequestApple = typeof RequestApple.Type
-type GotApple = typeof GotApple.Type
-
 export type Message = typeof Message.Type
 
 // INIT

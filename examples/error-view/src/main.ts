@@ -13,7 +13,6 @@ type Model = typeof Model.Type
 const Crash = ts('Crash')
 
 const Message = Schema.Union(Crash)
-
 export type Message = typeof Message.Type
 
 // UPDATE

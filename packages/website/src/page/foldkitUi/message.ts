@@ -34,14 +34,4 @@ export const Message = S.Union(
   GotHorizontalTabsDemoMessage,
   GotVerticalTabsDemoMessage,
 )
-
-export type GotDialogDemoMessage = typeof GotDialogDemoMessage.Type
-export type GotDisclosureDemoMessage =
-  typeof GotDisclosureDemoMessage.Type
-export type GotMenuDemoMessage = typeof GotMenuDemoMessage.Type
-export type GotHorizontalTabsDemoMessage =
-  typeof GotHorizontalTabsDemoMessage.Type
-export type GotVerticalTabsDemoMessage =
-  typeof GotVerticalTabsDemoMessage.Type
-
 export type Message = typeof Message.Type

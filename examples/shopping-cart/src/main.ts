@@ -106,19 +106,6 @@ export const Message = S.Union(
   UpdateDeliveryInstructions,
   PlaceOrder,
 )
-
-type NoOp = typeof NoOp.Type
-type LinkClicked = typeof LinkClicked.Type
-type UrlChanged = typeof UrlChanged.Type
-type GotProductsMessage = typeof GotProductsMessage.Type
-type AddToCartClicked = typeof AddToCartClicked.Type
-type QuantityChangeClicked = typeof QuantityChangeClicked.Type
-type ChangeCartQuantity = typeof ChangeCartQuantity.Type
-type RemoveFromCart = typeof RemoveFromCart.Type
-type ClearCart = typeof ClearCart.Type
-type UpdateDeliveryInstructions = typeof UpdateDeliveryInstructions.Type
-type PlaceOrder = typeof PlaceOrder.Type
-
 export type Message = typeof Message.Type
 
 // INIT
@@ -149,7 +136,9 @@ const update = (
 
       LinkClicked: ({ request }) =>
         M.value(request).pipe(
-          M.withReturnType<[Model, ReadonlyArray<Runtime.Command<NoOp>>]>(),
+          M.withReturnType<
+            [Model, ReadonlyArray<Runtime.Command<typeof NoOp>>]
+          >(),
           M.tagsExhaustive({
             Internal: ({ url }) => [
               model,

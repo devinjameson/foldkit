@@ -84,20 +84,12 @@ export const Message = S.Union(
   AuthSucceeded,
   AuthFailed,
 )
-
-export type EmailChanged = typeof EmailChanged.Type
-export type PasswordChanged = typeof PasswordChanged.Type
-export type SubmitClicked = typeof SubmitClicked.Type
-export type AuthSucceeded = typeof AuthSucceeded.Type
-export type AuthFailed = typeof AuthFailed.Type
 export type Message = typeof Message.Type
 
 // OUT MESSAGE
 
 export const LoginSucceeded = ts('LoginSucceeded', { session: Session })
 export const OutMessage = S.Union(LoginSucceeded)
-
-export type LoginSucceeded = typeof LoginSucceeded.Type
 export type OutMessage = typeof OutMessage.Type
 
 // VALIDATION

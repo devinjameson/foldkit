@@ -6,8 +6,6 @@ import { ts } from 'foldkit/schema'
 
 const Tick = ts('Tick')
 const Message = S.Union(Tick)
-
-type Tick = typeof Tick.Type
 type Message = typeof Message.Type
 
 // MODEL

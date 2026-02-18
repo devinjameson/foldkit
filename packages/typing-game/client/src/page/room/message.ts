@@ -25,24 +25,6 @@ export const HideRoomIdCopiedIndicator = ts('HideRoomIdCopiedIndicator')
 export const RoomJoined = ts('RoomJoined', { roomId: S.String, player: Shared.Player })
 export const RoomError = ts('RoomError', { error: S.String })
 
-export type NoOp = typeof NoOp.Type
-export type KeyPressed = typeof KeyPressed.Type
-export type UserTextInputted = typeof UserTextInputted.Type
-export type RoomPageUsernameInputBlurred = typeof RoomPageUsernameInputBlurred.Type
-export type RoomPageUsernameInputted = typeof RoomPageUsernameInputted.Type
-export type JoinRoomFromPageSubmitted = typeof JoinRoomFromPageSubmitted.Type
-export type RoomUpdated = typeof RoomUpdated.Type
-export type RoomStreamError = typeof RoomStreamError.Type
-export type StartGameRequested = typeof StartGameRequested.Type
-export type SessionLoaded = typeof SessionLoaded.Type
-export type RoomFetched = typeof RoomFetched.Type
-export type RoomNotFound = typeof RoomNotFound.Type
-export type CopyRoomIdClicked = typeof CopyRoomIdClicked.Type
-export type CopyRoomIdSuccess = typeof CopyRoomIdSuccess.Type
-export type HideRoomIdCopiedIndicator = typeof HideRoomIdCopiedIndicator.Type
-export type RoomJoined = typeof RoomJoined.Type
-export type RoomError = typeof RoomError.Type
-
 export const Message = S.Union(
   NoOp,
   KeyPressed,

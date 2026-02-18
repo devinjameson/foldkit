@@ -33,16 +33,4 @@ export const Message = S.Union(
   GotLoggedOutMessage,
   GotLoggedInMessage,
 )
-
-export type NoOp = typeof NoOp.Type
-export type LinkClicked = typeof LinkClicked.Type
-export type UrlChanged = typeof UrlChanged.Type
-export type SessionLoaded = typeof SessionLoaded.Type
-export type SessionSaved = typeof SessionSaved.Type
-export type SessionSaveFailed = typeof SessionSaveFailed.Type
-export type SessionCleared = typeof SessionCleared.Type
-export type SessionClearFailed = typeof SessionClearFailed.Type
-export type GotLoggedOutMessage = typeof GotLoggedOutMessage.Type
-export type GotLoggedInMessage = typeof GotLoggedInMessage.Type
-
 export type Message = typeof Message.Type

@@ -101,12 +101,6 @@ export const Message = S.Union(
   UrlChanged,
   SearchInputChanged,
 )
-
-type NoOp = typeof NoOp.Type
-type LinkClicked = typeof LinkClicked.Type
-type UrlChanged = typeof UrlChanged.Type
-type SearchInputChanged = typeof SearchInputChanged.Type
-
 export type Message = typeof Message.Type
 
 // INIT
@@ -131,13 +125,13 @@ const update = (
           M.tagsExhaustive({
             Internal: ({
               url,
-            }): [Model, ReadonlyArray<Runtime.Command<NoOp>>] => [
+            }): [Model, ReadonlyArray<Runtime.Command<typeof NoOp>>] => [
               model,
               [pushUrl(urlToString(url)).pipe(Effect.as(NoOp()))],
             ],
             External: ({
               href,
-            }): [Model, ReadonlyArray<Runtime.Command<NoOp>>] => [
+            }): [Model, ReadonlyArray<Runtime.Command<typeof NoOp>>] => [
               model,
               [load(href).pipe(Effect.as(NoOp()))],
             ],

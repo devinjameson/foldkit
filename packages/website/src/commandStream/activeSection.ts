@@ -20,7 +20,7 @@ import * as Page from '../page'
 
 export const activeSection: CommandStream<
   Model,
-  ActiveSectionChanged,
+  typeof ActiveSectionChanged,
   CommandStreamsDeps['activeSection']
 > = {
   modelToDeps: (model: Model) => {
@@ -71,54 +71,64 @@ export const activeSection: CommandStream<
     }
   },
   depsToStream: ({ sections }) =>
-    Stream.async<Runtime.Command<ActiveSectionChanged>>((emit) => {
-      if (!Array.isNonEmptyReadonlyArray(sections)) {
-        return Effect.void
-      }
-
-      const visibleSections = MutableRef.make(HashSet.empty<string>())
-
-      const observer = new IntersectionObserver(
-        (entries) => {
-          Array.forEach(
-            entries,
-            ({ isIntersecting, target: { id } }) => {
-              if (isIntersecting) {
-                MutableRef.update(visibleSections, HashSet.add(id))
-              } else {
-                MutableRef.update(visibleSections, HashSet.remove(id))
-              }
-            },
-          )
-
-          const activeSectionId = Array.findFirst(
-            sections,
-            (sectionId) =>
-              HashSet.has(MutableRef.get(visibleSections), sectionId),
-          )
-
-          Option.match(activeSectionId, {
-            onNone: Function.constVoid,
-            onSome: (sectionId) => {
-              emit.single(
-                Effect.succeed(ActiveSectionChanged({ sectionId })),
-              )
-            },
-          })
-        },
-        {
-          rootMargin: '-100px 0px -80% 0px',
-        },
-      )
-
-      Array.forEach(sections, (sectionId) => {
-        const element = document.getElementById(sectionId)
-
-        if (element) {
-          observer.observe(element)
+    Stream.async<Runtime.Command<typeof ActiveSectionChanged>>(
+      (emit) => {
+        if (!Array.isNonEmptyReadonlyArray(sections)) {
+          return Effect.void
         }
-      })
 
-      return Effect.sync(() => observer.disconnect())
-    }),
+        const visibleSections = MutableRef.make(
+          HashSet.empty<string>(),
+        )
+
+        const observer = new IntersectionObserver(
+          (entries) => {
+            Array.forEach(
+              entries,
+              ({ isIntersecting, target: { id } }) => {
+                if (isIntersecting) {
+                  MutableRef.update(visibleSections, HashSet.add(id))
+                } else {
+                  MutableRef.update(
+                    visibleSections,
+                    HashSet.remove(id),
+                  )
+                }
+              },
+            )
+
+            const activeSectionId = Array.findFirst(
+              sections,
+              (sectionId) =>
+                HashSet.has(
+                  MutableRef.get(visibleSections),
+                  sectionId,
+                ),
+            )
+
+            Option.match(activeSectionId, {
+              onNone: Function.constVoid,
+              onSome: (sectionId) => {
+                emit.single(
+                  Effect.succeed(ActiveSectionChanged({ sectionId })),
+                )
+              },
+            })
+          },
+          {
+            rootMargin: '-100px 0px -80% 0px',
+          },
+        )
+
+        Array.forEach(sections, (sectionId) => {
+          const element = document.getElementById(sectionId)
+
+          if (element) {
+            observer.observe(element)
+          }
+        })
+
+        return Effect.sync(() => observer.disconnect())
+      },
+    ),
 }

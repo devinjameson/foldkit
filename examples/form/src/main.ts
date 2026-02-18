@@ -71,15 +71,6 @@ const Message = S.Union(
   SubmitForm,
   FormSubmitted,
 )
-
-type NoOp = typeof NoOp.Type
-type UpdateName = typeof UpdateName.Type
-type UpdateEmail = typeof UpdateEmail.Type
-type EmailValidated = typeof EmailValidated.Type
-type UpdateMessage = typeof UpdateMessage.Type
-type SubmitForm = typeof SubmitForm.Type
-type FormSubmitted = typeof FormSubmitted.Type
-
 type Message = typeof Message.Type
 
 // INIT
@@ -121,7 +112,7 @@ const isEmailOnWaitlist = (email: string): Effect.Effect<boolean> =>
 const validateEmailNotOnWaitlist = (
   email: string,
   validationId: number,
-): Runtime.Command<EmailValidated> =>
+): Runtime.Command<typeof EmailValidated> =>
   Effect.gen(function* () {
     if (yield* isEmailOnWaitlist(email)) {
       return EmailValidated({
@@ -250,7 +241,7 @@ const update = (
 
 const FAKE_API_DELAY_MS = 500
 
-const submitForm = (model: Model): Runtime.Command<FormSubmitted> =>
+const submitForm = (model: Model): Runtime.Command<typeof FormSubmitted> =>
   Effect.gen(function* () {
     yield* Effect.sleep(`${FAKE_API_DELAY_MS} millis`)
 

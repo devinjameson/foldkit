@@ -15,7 +15,7 @@ import {
 
 export const saveSession = (
   session: Session,
-): Runtime.Command<SessionSaved | SessionSaveFailed> =>
+): Runtime.Command<typeof SessionSaved | typeof SessionSaveFailed> =>
   Effect.gen(function* () {
     const store = yield* KeyValueStore.KeyValueStore
     yield* store.set(
@@ -31,7 +31,7 @@ export const saveSession = (
   )
 
 export const clearSession = (): Runtime.Command<
-  SessionCleared | SessionClearFailed
+  typeof SessionCleared | typeof SessionClearFailed
 > =>
   Effect.gen(function* () {
     const store = yield* KeyValueStore.KeyValueStore
@@ -46,4 +46,5 @@ export const clearSession = (): Runtime.Command<
 
 export const logError = (
   ...args: ReadonlyArray<unknown>
-): Runtime.Command<NoOp> => Console.error(...args).pipe(Effect.as(NoOp()))
+): Runtime.Command<typeof NoOp> =>
+  Console.error(...args).pipe(Effect.as(NoOp()))

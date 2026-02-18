@@ -5,9 +5,6 @@ import { Runtime } from 'foldkit'
 const ResetAfterDelay = ts('ResetDelayed')
 const ResetNow = ts('ResetNow')
 
-type ResetAfterDelay = typeof ResetAfterDelay.Type
-type ResetNow = typeof ResetNow.Type
-
 const update = (
   model: Model,
   message: Message,
@@ -27,7 +24,7 @@ const update = (
 
 // A Command is an Effect that returns a Message
 // This Command sleeps for 1 second and then returns the ResetNow message
-const resetAfterDelay: Runtime.Command<ResetNow> = Effect.gen(
+const resetAfterDelay: Runtime.Command<typeof ResetNow> = Effect.gen(
   function* () {
     yield* Effect.sleep('1 second')
     return ResetNow()

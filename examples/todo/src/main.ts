@@ -92,22 +92,6 @@ export const Message = S.Union(
   SetFilter,
   TodosSaved,
 )
-
-type NoOp = typeof NoOp.Type
-type UpdateNewTodo = typeof UpdateNewTodo.Type
-type UpdateEditingTodo = typeof UpdateEditingTodo.Type
-type AddTodo = typeof AddTodo.Type
-type GotNewTodoData = typeof GotNewTodoData.Type
-type DeleteTodo = typeof DeleteTodo.Type
-type ToggleTodo = typeof ToggleTodo.Type
-type StartEditing = typeof StartEditing.Type
-type SaveEdit = typeof SaveEdit.Type
-type CancelEdit = typeof CancelEdit.Type
-type ToggleAll = typeof ToggleAll.Type
-type ClearCompleted = typeof ClearCompleted.Type
-type SetFilter = typeof SetFilter.Type
-type TodosSaved = typeof TodosSaved.Type
-
 export type Message = typeof Message.Type
 
 // FLAGS
@@ -232,7 +216,7 @@ const update = (
 
       SaveEdit: () =>
         M.value(model.editing).pipe(
-          M.withReturnType<[Model, Runtime.Command<TodosSaved>[]]>(),
+          M.withReturnType<[Model, Runtime.Command<typeof TodosSaved>[]]>(),
           M.tagsExhaustive({
             NotEditing: () => [model, []],
 
@@ -323,7 +307,9 @@ const randomId = Effect.gen(function* () {
   return randomValue.toString(36).substring(2, 15)
 })
 
-const generateTodoData = (text: string): Runtime.Command<GotNewTodoData> =>
+const generateTodoData = (
+  text: string,
+): Runtime.Command<typeof GotNewTodoData> =>
   Effect.gen(function* () {
     const id = yield* randomId
     const timestamp = yield* Clock.currentTimeMillis
@@ -332,7 +318,7 @@ const generateTodoData = (text: string): Runtime.Command<GotNewTodoData> =>
 
 // COMMAND
 
-const saveTodos = (todos: Todos): Runtime.Command<TodosSaved> =>
+const saveTodos = (todos: Todos): Runtime.Command<typeof TodosSaved> =>
   Effect.gen(function* () {
     const store = yield* KeyValueStore.KeyValueStore
     yield* store.set(TODOS_STORAGE_KEY, S.encodeSync(S.parseJson(Todos))(todos))

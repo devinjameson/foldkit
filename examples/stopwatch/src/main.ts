@@ -42,14 +42,6 @@ export const Message = S.Union(
   RequestTick,
   GotTick,
 )
-
-type RequestStart = typeof RequestStart.Type
-type GotStartTime = typeof GotStartTime.Type
-type Stop = typeof Stop.Type
-type Reset = typeof Reset.Type
-type RequestTick = typeof RequestTick.Type
-type GotTick = typeof GotTick.Type
-
 export type Message = typeof Message.Type
 
 const update = (

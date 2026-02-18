@@ -10,7 +10,7 @@ import {
 
 export const systemTheme: CommandStream<
   Model,
-  SystemThemeChanged,
+  typeof SystemThemeChanged,
   CommandStreamsDeps['systemTheme']
 > = {
   modelToDeps: (model: Model) => ({
@@ -18,27 +18,29 @@ export const systemTheme: CommandStream<
   }),
   depsToStream: ({ isSystemPreference }) =>
     Stream.when(
-      Stream.async<Runtime.Command<SystemThemeChanged>>((emit) => {
-        const mediaQuery = window.matchMedia(
-          '(prefers-color-scheme: dark)',
-        )
-
-        const handler = (event: MediaQueryListEvent) => {
-          emit.single(
-            Effect.succeed(
-              SystemThemeChanged({
-                theme: event.matches ? 'Dark' : 'Light',
-              }),
-            ),
+      Stream.async<Runtime.Command<typeof SystemThemeChanged>>(
+        (emit) => {
+          const mediaQuery = window.matchMedia(
+            '(prefers-color-scheme: dark)',
           )
-        }
 
-        mediaQuery.addEventListener('change', handler)
+          const handler = (event: MediaQueryListEvent) => {
+            emit.single(
+              Effect.succeed(
+                SystemThemeChanged({
+                  theme: event.matches ? 'Dark' : 'Light',
+                }),
+              ),
+            )
+          }
 
-        return Effect.sync(() =>
-          mediaQuery.removeEventListener('change', handler),
-        )
-      }),
+          mediaQuery.addEventListener('change', handler)
+
+          return Effect.sync(() =>
+            mediaQuery.removeEventListener('change', handler),
+          )
+        },
+      ),
       () => isSystemPreference,
     ),
 }

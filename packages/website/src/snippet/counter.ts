@@ -18,11 +18,6 @@ const Increment = ts('Increment')
 const Reset = ts('Reset')
 
 const Message = Schema.Union(Decrement, Increment, Reset)
-
-type Decrement = typeof Decrement.Type
-type Increment = typeof Increment.Type
-type Reset = typeof Reset.Type
-
 type Message = typeof Message.Type
 
 // UPDATE - How your state changes in response to messages

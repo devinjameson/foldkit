@@ -38,7 +38,11 @@ export class Dispatch extends Context.Tag('@foldkit/Dispatch')<
 >() {}
 
 /** An `Effect` that produces a message, used for side effects in the update function. */
-export type Command<Message> = Effect.Effect<Message>
+export type Command<T, E = never, R = never> = Effect.Effect<
+  T extends Schema.Schema.Any ? Schema.Schema.Type<T> : T,
+  E,
+  R
+>
 
 /** Configuration for browser URL integration with handlers for URL requests and URL changes. */
 export type BrowserConfig<Message> = {

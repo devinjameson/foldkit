@@ -29,12 +29,6 @@ const WeatherAsyncResult = S.Union(
   WeatherSuccess,
   WeatherFailure,
 )
-
-type WeatherInit = typeof WeatherInit.Type
-type WeatherLoading = typeof WeatherLoading.Type
-type WeatherSuccess = typeof WeatherSuccess.Type
-type WeatherFailure = typeof WeatherFailure.Type
-
 type WeatherAsyncResult = typeof WeatherAsyncResult.Type
 
 export const Model = S.Struct({
@@ -56,12 +50,6 @@ const Message = S.Union(
   WeatherFetched,
   WeatherError,
 )
-
-type UpdateZipCodeInput = typeof UpdateZipCodeInput.Type
-type FetchWeather = typeof FetchWeather.Type
-type WeatherFetched = typeof WeatherFetched.Type
-type WeatherError = typeof WeatherError.Type
-
 type Message = typeof Message.Type
 
 export const update = (
@@ -128,7 +116,11 @@ type WeatherResponseData = {
 
 export const fetchWeather = (
   zipCode: string,
-): Effect.Effect<WeatherFetched | WeatherError, never, HttpClient.HttpClient> =>
+): Runtime.Command<
+  typeof WeatherFetched | typeof WeatherError,
+  never,
+  HttpClient.HttpClient
+> =>
   Effect.gen(function* () {
     if (String.isEmpty(zipCode.trim())) {
       return WeatherError({ error: 'Zip code required' })

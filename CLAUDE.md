@@ -48,7 +48,7 @@ Match the quality and thoughtfulness of these files. The principles below apply 
 - Always use Effect.Match instead of switch
 - Prefer Effect module functions over native methods when available — e.g. `Array.map`, `Array.filter`, `Option.map`, `String.startsWith` from Effect instead of their native equivalents. Exception: native `.map`, `.filter`, etc. are fine when calling directly on a named variable (e.g. `commands.map(Effect.map(...))`) — use Effect's `Array.map` in `pipe` chains where the curried, data-last form composes naturally.
 - Never use `for` loops or `let` for iteration. Use `Array.makeBy` for index-based construction, `Array.range` + `Array.findFirst`/`Array.findLast` for searches, and `Array.filterMap`/`Array.flatMap` for transforms.
-- Never cast Schema values with `as Type`. Use callable constructors: `LoginSucceeded({ sessionId })` not `{ _tag: 'LoginSucceeded', sessionId } as Message`. Commands should return specific union types (e.g. `Runtime.Command<LoginSucceeded | LoginFailed>`) rather than the full Message type.
+- Never cast Schema values with `as Type`. Use callable constructors: `LoginSucceeded({ sessionId })` not `{ _tag: 'LoginSucceeded', sessionId } as Message`. Commands should return specific schema types (e.g. `Runtime.Command<typeof LoginSucceeded | typeof LoginFailed>`) rather than the full Message type.
 - Use `Option` for model fields that may be absent — not empty strings or zero values. `loginError: S.OptionFromSelf(S.String)` not `loginError: S.String` with `''` as the "none" state. Use `Option.match` in views to conditionally render.
 - Use `Array.take` instead of `.slice(0, n)` — especially avoid casting Schema arrays with `as readonly T[]` just to call `.slice`.
 
@@ -61,19 +61,13 @@ const A = ts('A')
 const B = ts('B', { value: S.String })
 
 const Message = S.Union(A, B)
-
-type A = typeof A.Type
-type B = typeof B.Type
-
 type Message = typeof Message.Type
 ```
 
 1. **Values** — all `ts()` declarations, no blank lines between them
-2. **Union** — `S.Union(...)` of all values
-3. **Individual types** — `type X = typeof X.Type` for every value, no blank lines between them
-4. **Message type** — `type Message = typeof Message.Type`, separated from individual types
+2. **Union + type** — `S.Union(...)` followed by `type Message = typeof Message.Type` on adjacent lines (no blank line between them)
 
-Always create types for all message values, not just the ones currently used externally.
+Individual `type A = typeof A.Type` declarations are not needed — use `typeof A` in type positions (e.g. `Runtime.Command<typeof A>`) to reference a schema value's type. Only create individual type aliases in library components where the type is part of a public API (e.g. `ViewConfig` callback parameters).
 
 ### General Preferences
 

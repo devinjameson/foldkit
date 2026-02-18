@@ -42,11 +42,6 @@ const ConnectionState = S.Union(
   ConnectionConnected,
   ConnectionError,
 )
-
-type ConnectionDisconnected = typeof ConnectionDisconnected.Type
-type ConnectionConnecting = typeof ConnectionConnecting.Type
-type ConnectionConnected = typeof ConnectionConnected.Type
-type ConnectionError = typeof ConnectionError.Type
 type ConnectionState = typeof ConnectionState.Type
 
 const Model = S.Struct({
@@ -88,17 +83,6 @@ const Message = S.Union(
   GotReceivedMessageTime,
   GotSentMessageTime,
 )
-
-type RequestConnect = typeof RequestConnect.Type
-type Connected = typeof Connected.Type
-type Disconnected = typeof Disconnected.Type
-type ConnectionFailed = typeof ConnectionFailed.Type
-type UpdateMessageInput = typeof UpdateMessageInput.Type
-type SendMessage = typeof SendMessage.Type
-type MessageSent = typeof MessageSent.Type
-type MessageReceived = typeof MessageReceived.Type
-type GotReceivedMessageTime = typeof GotReceivedMessageTime.Type
-type GotSentMessageTime = typeof GotSentMessageTime.Type
 type Message = typeof Message.Type
 
 // UPDATE
@@ -223,15 +207,17 @@ const init: Runtime.ElementInit<Model, Message> = () => [
 const sendMessage = (
   socket: WebSocket,
   text: string,
-): Runtime.Command<MessageSent> =>
+): Runtime.Command<typeof MessageSent> =>
   Effect.sync(() => {
     socket.send(text)
     return MessageSent({ text })
   })
 
-const connect = (): Runtime.Command<Connected | ConnectionFailed> =>
+const connect = (): Runtime.Command<
+  typeof Connected | typeof ConnectionFailed
+> =>
   Effect.race(
-    Effect.async<Connected | ConnectionFailed>((resume) => {
+    Effect.async((resume) => {
       const ws = new WebSocket(WS_URL)
 
       const handleOpen = () => {
@@ -280,7 +266,11 @@ const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<
         onNone: () => Stream.empty,
         onSome: (ws: WebSocket) =>
           Stream.async<
-            Runtime.Command<MessageReceived | Disconnected | ConnectionFailed>
+            Runtime.Command<
+              | typeof MessageReceived
+              | typeof Disconnected
+              | typeof ConnectionFailed
+            >
           >((emit) => {
             const handleMessage = (event: MessageEvent) => {
               emit.single(Effect.succeed(MessageReceived({ text: event.data })))

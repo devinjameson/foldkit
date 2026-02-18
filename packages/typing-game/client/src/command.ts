@@ -12,7 +12,7 @@ import { RoomsClient } from './rpc'
 
 export const createRoom = (
   username: string,
-): Runtime.Command<Home.Message.RoomCreated | Home.Message.RoomError> =>
+): Runtime.Command<typeof Home.Message.RoomCreated | typeof Home.Message.RoomError> =>
   Effect.gen(function* () {
     const client = yield* RoomsClient
     const { player, room } = yield* client.createRoom({ username })
@@ -25,7 +25,7 @@ export const createRoom = (
 export const joinRoom = (
   username: string,
   roomId: string,
-): Runtime.Command<Home.Message.RoomJoined | Home.Message.RoomError> =>
+): Runtime.Command<typeof Home.Message.RoomJoined | typeof Home.Message.RoomError> =>
   Effect.gen(function* () {
     const client = yield* RoomsClient
     const { player, room } = yield* client.joinRoom({ username, roomId })
@@ -37,7 +37,7 @@ export const joinRoom = (
 
 export const getRoomById = (
   roomId: string,
-): Runtime.Command<Room.Message.RoomFetched | Room.Message.RoomNotFound> =>
+): Runtime.Command<typeof Room.Message.RoomFetched | typeof Room.Message.RoomNotFound> =>
   Effect.gen(function* () {
     const client = yield* RoomsClient
     const room = yield* client.getRoomById({ roomId })
@@ -47,7 +47,7 @@ export const getRoomById = (
     Effect.provide(RoomsClient.Default),
   )
 
-export const startGame = (roomId: string, playerId: string): Runtime.Command<NoOp> =>
+export const startGame = (roomId: string, playerId: string): Runtime.Command<typeof NoOp> =>
   Effect.gen(function* () {
     const client = yield* RoomsClient
     yield* client.startGame({ roomId, playerId })
@@ -57,12 +57,12 @@ export const startGame = (roomId: string, playerId: string): Runtime.Command<NoO
     Effect.provide(RoomsClient.Default),
   )
 
-export const navigateToRoom = (roomId: string): Runtime.Command<NoOp> =>
+export const navigateToRoom = (roomId: string): Runtime.Command<typeof NoOp> =>
   pushUrl(roomRouter.build({ roomId })).pipe(Effect.as(NoOp()))
 
 export const savePlayerToSessionStorage = (
   session: Room.Model.RoomPlayerSession,
-): Runtime.Command<NoOp> =>
+): Runtime.Command<typeof NoOp> =>
   Effect.gen(function* () {
     const store = yield* KeyValueStore.KeyValueStore
     const encodeSession = S.encode(S.parseJson(Room.Model.RoomPlayerSession))
@@ -76,7 +76,7 @@ export const savePlayerToSessionStorage = (
 
 export const loadSessionFromStorage = (
   roomId: string,
-): Runtime.Command<Room.Message.SessionLoaded> =>
+): Runtime.Command<typeof Room.Message.SessionLoaded> =>
   Effect.gen(function* () {
     const store = yield* KeyValueStore.KeyValueStore
     const maybeSessionJson = yield* store.get(ROOM_PLAYER_SESSION_KEY)
@@ -103,7 +103,7 @@ export const updatePlayerProgress = (
   gameId: string,
   userGameText: string,
   charsTyped: number,
-): Runtime.Command<NoOp> =>
+): Runtime.Command<typeof NoOp> =>
   Effect.gen(function* () {
     const client = yield* RoomsClient
     yield* client.updatePlayerProgress({ playerId, gameId, userText: userGameText, charsTyped })
@@ -115,7 +115,7 @@ export const updatePlayerProgress = (
 
 export const copyRoomIdToClipboard = (
   roomId: string,
-): Runtime.Command<Room.Message.CopyRoomIdSuccess | NoOp> =>
+): Runtime.Command<typeof Room.Message.CopyRoomIdSuccess | typeof NoOp> =>
   Effect.tryPromise({
     try: () => navigator.clipboard.writeText(roomId),
     catch: () => new Error('Failed to copy to clipboard'),
@@ -126,11 +126,11 @@ export const copyRoomIdToClipboard = (
 
 const COPY_INDICATOR_DURATION = '2 seconds'
 
-export const hideRoomIdCopiedIndicator =
-  (): Runtime.Command<Room.Message.HideRoomIdCopiedIndicator> =>
-    Effect.sleep(COPY_INDICATOR_DURATION).pipe(Effect.as(Room.Message.HideRoomIdCopiedIndicator()))
+export const hideRoomIdCopiedIndicator = (): Runtime.Command<
+  typeof Room.Message.HideRoomIdCopiedIndicator
+> => Effect.sleep(COPY_INDICATOR_DURATION).pipe(Effect.as(Room.Message.HideRoomIdCopiedIndicator()))
 
-export const clearSession = (): Runtime.Command<NoOp> =>
+export const clearSession = (): Runtime.Command<typeof NoOp> =>
   Effect.gen(function* () {
     const store = yield* KeyValueStore.KeyValueStore
     yield* store.remove(ROOM_PLAYER_SESSION_KEY)
