@@ -10,6 +10,7 @@ import {
   ItemSelected,
   NoOp,
   Opened,
+  PointerMovedOverItem,
   SearchCleared,
   Searched,
   groupContiguous,
@@ -39,6 +40,7 @@ describe('Menu', () => {
         activationTrigger: 'Keyboard',
         searchQuery: '',
         searchVersion: 0,
+        maybeLastPointerPosition: Option.none(),
       })
     })
   })
@@ -88,6 +90,21 @@ describe('Menu', () => {
         expect(result.activationTrigger).toBe('Pointer')
         expect(result.maybeActiveItemIndex).toStrictEqual(Option.none())
       })
+
+      it('resets pointer position on open', () => {
+        const model = {
+          ...closedModel(),
+          maybeLastPointerPosition: Option.some({
+            screenX: 100,
+            screenY: 200,
+          }),
+        }
+        const [result] = update(
+          model,
+          Opened.make({ maybeActiveItemIndex: Option.some(0) }),
+        )
+        expect(result.maybeLastPointerPosition).toStrictEqual(Option.none())
+      })
     })
 
     describe('Closed', () => {
@@ -99,6 +116,7 @@ describe('Menu', () => {
         expect(result.activationTrigger).toBe('Keyboard')
         expect(result.searchQuery).toBe('')
         expect(result.searchVersion).toBe(0)
+        expect(result.maybeLastPointerPosition).toStrictEqual(Option.none())
         expect(commands).toHaveLength(1)
       })
     })
@@ -109,6 +127,7 @@ describe('Menu', () => {
         const [result, commands] = update(model, ClosedByTab.make())
         expect(result.isOpen).toBe(false)
         expect(result.maybeActiveItemIndex).toStrictEqual(Option.none())
+        expect(result.maybeLastPointerPosition).toStrictEqual(Option.none())
         expect(commands).toHaveLength(0)
       })
     })
@@ -185,6 +204,85 @@ describe('Menu', () => {
         const [result, commands] = update(afterKeyboard, ItemDeactivated.make())
         expect(result.maybeActiveItemIndex).toStrictEqual(Option.some(2))
         expect(result).toBe(afterKeyboard)
+        expect(commands).toHaveLength(0)
+      })
+    })
+
+    describe('PointerMovedOverItem', () => {
+      it('activates item on first pointer move', () => {
+        const model = openModel()
+        const [result, commands] = update(
+          model,
+          PointerMovedOverItem.make({
+            index: 2,
+            screenX: 100,
+            screenY: 200,
+          }),
+        )
+        expect(result.maybeActiveItemIndex).toStrictEqual(Option.some(2))
+        expect(result.activationTrigger).toBe('Pointer')
+        expect(result.maybeLastPointerPosition).toStrictEqual(
+          Option.some({ screenX: 100, screenY: 200 }),
+        )
+        expect(commands).toHaveLength(0)
+      })
+
+      it('activates when position differs from stored', () => {
+        const model = openModel()
+        const [afterFirst] = update(
+          model,
+          PointerMovedOverItem.make({
+            index: 1,
+            screenX: 100,
+            screenY: 200,
+          }),
+        )
+        const [result] = update(
+          afterFirst,
+          PointerMovedOverItem.make({
+            index: 3,
+            screenX: 150,
+            screenY: 250,
+          }),
+        )
+        expect(result.maybeActiveItemIndex).toStrictEqual(Option.some(3))
+        expect(result.maybeLastPointerPosition).toStrictEqual(
+          Option.some({ screenX: 150, screenY: 250 }),
+        )
+      })
+
+      it('returns model unchanged when position matches', () => {
+        const model = openModel()
+        const [afterFirst] = update(
+          model,
+          PointerMovedOverItem.make({
+            index: 1,
+            screenX: 100,
+            screenY: 200,
+          }),
+        )
+        const [result, commands] = update(
+          afterFirst,
+          PointerMovedOverItem.make({
+            index: 2,
+            screenX: 100,
+            screenY: 200,
+          }),
+        )
+        expect(result).toBe(afterFirst)
+        expect(commands).toHaveLength(0)
+      })
+
+      it('does not return scroll commands', () => {
+        const model = openModel()
+        const [, commands] = update(
+          model,
+          PointerMovedOverItem.make({
+            index: 2,
+            screenX: 100,
+            screenY: 200,
+          }),
+        )
         expect(commands).toHaveLength(0)
       })
     })

@@ -255,6 +255,7 @@ type Attribute<Message> = Data.TaggedEnum<{
   OnMouseOver: { readonly message: Message }
   OnMouseOut: { readonly message: Message }
   OnMouseMove: { readonly message: Message }
+  OnPointerMove: { readonly f: (screenX: number, screenY: number) => Message }
   OnKeyDown: { readonly f: (key: string) => Message }
   OnKeyDownPreventDefault: {
     readonly f: (key: string) => Option.Option<Message>
@@ -383,6 +384,7 @@ const {
   OnMouseOver,
   OnMouseOut,
   OnMouseMove,
+  OnPointerMove,
   OnKeyDown,
   OnKeyDownPreventDefault,
   OnKeyUp,
@@ -589,6 +591,11 @@ const buildVNodeData = <Message>(
           OnMouseMove: ({ message }) =>
             updateDataOn({
               mousemove: () => dispatchSync(message),
+            }),
+          OnPointerMove: ({ f }) =>
+            updateDataOn({
+              pointermove: (event: PointerEvent) =>
+                dispatchSync(f(event.screenX, event.screenY)),
             }),
           OnKeyDown: ({ f }) =>
             updateDataOn({
@@ -1338,6 +1345,10 @@ type HtmlAttributes<Message> = {
     readonly _tag: 'OnMouseMove'
     readonly message: Message
   }
+  OnPointerMove: (f: (screenX: number, screenY: number) => Message) => {
+    readonly _tag: 'OnPointerMove'
+    readonly f: (screenX: number, screenY: number) => Message
+  }
   OnKeyDown: (f: (key: string) => Message) => {
     readonly _tag: 'OnKeyDown'
     readonly f: (key: string) => Message
@@ -1666,6 +1677,8 @@ const htmlAttributes = <Message>(): HtmlAttributes<Message> => ({
   OnMouseOver: (message: Message) => OnMouseOver({ message }),
   OnMouseOut: (message: Message) => OnMouseOut({ message }),
   OnMouseMove: (message: Message) => OnMouseMove({ message }),
+  OnPointerMove: (f: (screenX: number, screenY: number) => Message) =>
+    OnPointerMove({ f }),
   OnKeyDown: (f: (key: string) => Message) => OnKeyDown({ f }),
   OnKeyDownPreventDefault: (f: (key: string) => Option.Option<Message>) =>
     OnKeyDownPreventDefault({ f }),

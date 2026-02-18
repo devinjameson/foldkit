@@ -29,6 +29,9 @@ export const Model = S.Struct({
   activationTrigger: ActivationTrigger,
   searchQuery: S.String,
   searchVersion: S.Number,
+  maybeLastPointerPosition: S.OptionFromSelf(
+    S.Struct({ screenX: S.Number, screenY: S.Number }),
+  ),
 })
 
 export type Model = typeof Model.Type
@@ -59,6 +62,12 @@ export const Searched = ts('Searched', {
 })
 /** Sent after the search debounce period to clear the accumulated query. */
 export const SearchCleared = ts('SearchCleared', { version: S.Number })
+/** Sent when the pointer moves over a menu item, carrying screen coordinates for tracked-pointer comparison. */
+export const PointerMovedOverItem = ts('PointerMovedOverItem', {
+  index: S.Number,
+  screenX: S.Number,
+  screenY: S.Number,
+})
 /** Placeholder message used when no action is needed. */
 export const NoOp = ts('NoOp')
 
@@ -70,6 +79,7 @@ export const Message = S.Union(
   ItemActivated,
   ItemDeactivated,
   ItemSelected,
+  PointerMovedOverItem,
   Searched,
   SearchCleared,
   NoOp,
@@ -81,6 +91,7 @@ export type ClosedByTab = typeof ClosedByTab.Type
 export type ItemActivated = typeof ItemActivated.Type
 export type ItemDeactivated = typeof ItemDeactivated.Type
 export type ItemSelected = typeof ItemSelected.Type
+export type PointerMovedOverItem = typeof PointerMovedOverItem.Type
 export type Searched = typeof Searched.Type
 export type SearchCleared = typeof SearchCleared.Type
 export type NoOp = typeof NoOp.Type
@@ -104,6 +115,7 @@ export const init = (config: InitConfig): Model => ({
   activationTrigger: 'Keyboard',
   searchQuery: '',
   searchVersion: 0,
+  maybeLastPointerPosition: Option.none(),
 })
 
 // UPDATE
@@ -115,6 +127,7 @@ const closedModel = (model: Model): Model =>
     activationTrigger: () => 'Keyboard',
     searchQuery: () => '',
     searchVersion: () => 0,
+    maybeLastPointerPosition: () => Option.none(),
   })
 
 const buttonSelector = (id: string): string => `#${id}-button`
@@ -141,6 +154,7 @@ export const update = (
             }),
           searchQuery: () => '',
           searchVersion: () => 0,
+          maybeLastPointerPosition: () => Option.none(),
         }),
         [Task.focus(itemsSelector(model.id), () => NoOp.make())],
       ],
@@ -162,6 +176,26 @@ export const update = (
             ]
           : [],
       ],
+      PointerMovedOverItem: ({ index, screenX, screenY }) => {
+        const isSamePosition = Option.exists(
+          model.maybeLastPointerPosition,
+          (position) =>
+            position.screenX === screenX && position.screenY === screenY,
+        )
+
+        if (isSamePosition) {
+          return [model, []]
+        }
+
+        return [
+          evo(model, {
+            maybeActiveItemIndex: () => Option.some(index),
+            activationTrigger: () => 'Pointer',
+            maybeLastPointerPosition: () => Option.some({ screenX, screenY }),
+          }),
+          [],
+        ]
+      },
       ItemDeactivated: () =>
         model.activationTrigger === 'Pointer'
           ? [evo(model, { maybeActiveItemIndex: () => Option.none() }), []]
@@ -224,6 +258,7 @@ export type ViewConfig<Message, Item extends string> = Readonly<{
       | ItemActivated
       | ItemDeactivated
       | ItemSelected
+      | PointerMovedOverItem
       | Searched,
   ) => Message
   items: ReadonlyArray<Item>
@@ -233,6 +268,7 @@ export type ViewConfig<Message, Item extends string> = Readonly<{
   ) => ItemConfig
   isItemDisabled?: (item: Item, index: number) => boolean
   itemToSearchText?: (item: Item, index: number) => string
+  isButtonDisabled?: boolean
   buttonContent: Html
   buttonClassName: string
   itemsClassName: string
@@ -322,8 +358,8 @@ export const view = <Message, Item extends string>(
     OnBlur,
     OnClick,
     OnKeyDownPreventDefault,
-    OnMouseEnter,
     OnMouseLeave,
+    OnPointerMove,
     Role,
     Tabindex,
     Type,
@@ -337,6 +373,7 @@ export const view = <Message, Item extends string>(
     itemToConfig,
     isItemDisabled,
     itemToSearchText = (item: Item) => item,
+    isButtonDisabled,
     buttonContent,
     buttonClassName,
     itemsClassName,
@@ -457,8 +494,12 @@ export const view = <Message, Item extends string>(
     AriaHasPopup('menu'),
     AriaExpanded(isOpen),
     AriaControls(`${id}-items`),
-    OnKeyDownPreventDefault(handleButtonKeyDown),
-    OnClick(handleButtonClick()),
+    ...(isButtonDisabled
+      ? [AriaDisabled(true), DataAttribute('disabled', '')]
+      : [
+          OnKeyDownPreventDefault(handleButtonKeyDown),
+          OnClick(handleButtonClick()),
+        ]),
     ...(isOpen ? [DataAttribute('open', '')] : []),
   ]
 
@@ -501,12 +542,9 @@ export const view = <Message, Item extends string>(
           ? [AriaDisabled(true), DataAttribute('disabled', '')]
           : [
               OnClick(toMessage(ItemSelected.make({ index }))),
-              OnMouseEnter(
+              OnPointerMove((screenX, screenY) =>
                 toMessage(
-                  ItemActivated.make({
-                    index,
-                    activationTrigger: 'Pointer',
-                  }),
+                  PointerMovedOverItem.make({ index, screenX, screenY }),
                 ),
               ),
               OnMouseLeave(toMessage(ItemDeactivated.make())),

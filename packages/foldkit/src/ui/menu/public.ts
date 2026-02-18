@@ -8,6 +8,7 @@ export type {
   ItemActivated,
   ItemDeactivated,
   ItemSelected,
+  PointerMovedOverItem,
   Searched,
   SearchCleared,
   NoOp,
