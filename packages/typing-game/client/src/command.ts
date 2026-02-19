@@ -1,7 +1,7 @@
 import { KeyValueStore } from '@effect/platform'
 import { BrowserKeyValueStore } from '@effect/platform-browser'
 import { Effect, Option, Schema as S } from 'effect'
-import { Runtime } from 'foldkit'
+import { Runtime, Task } from 'foldkit'
 import { pushUrl } from 'foldkit/navigation'
 
 import { ROOM_PLAYER_SESSION_KEY } from './constant'
@@ -123,6 +123,9 @@ export const copyRoomIdToClipboard = (
     Effect.as(Room.Message.CopyRoomIdSuccess()),
     Effect.catchAll(() => Effect.succeed(NoOp())),
   )
+
+export const exitCountdownTick: Runtime.Command<typeof Room.Message.ExitCountdownTicked> =
+  Task.delay('1 second', () => Room.Message.ExitCountdownTicked())
 
 const COPY_INDICATOR_DURATION = '2 seconds'
 

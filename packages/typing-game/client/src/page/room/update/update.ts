@@ -7,6 +7,7 @@ import { evo } from 'foldkit/struct'
 import {
   clearSession,
   copyRoomIdToClipboard,
+  exitCountdownTick,
   hideRoomIdCopiedIndicator,
   joinRoom,
   savePlayerToSessionStorage,
@@ -143,6 +144,18 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         [],
       ],
 
+      ExitCountdownTicked: () => {
+        const nextSecondsLeft = Number.decrement(model.exitCountdownSecondsLeft)
+        const maybeTickCommand = optionWhen(nextSecondsLeft > 0, () => exitCountdownTick)
+
+        return [
+          evo(model, {
+            exitCountdownSecondsLeft: () => nextSecondsLeft,
+          }),
+          Array.fromOption(maybeTickCommand),
+        ]
+      },
+
       RoomJoined: ({ roomId, player }) => {
         const session = { roomId, player }
         return [
@@ -165,18 +178,28 @@ const handleKeyPressed =
       M.tag('Ok', ({ data: room }) =>
         M.value(room.status).pipe(
           withUpdateReturn,
-          M.tag('Waiting', () => whenWaitingOrFinished(model, key, room)),
-          M.tag('Finished', () => whenWaitingOrFinished(model, key, room)),
+          M.tag('Waiting', () => whenWaiting(model, key, room)),
+          M.tag('Finished', () => whenFinished(model, key, room)),
           M.orElse(() => [model, []]),
         ),
       ),
       M.orElse(() => [model, []]),
     )
 
-const whenWaitingOrFinished = (model: Model, key: string, room: Shared.Room): UpdateReturn =>
+const whenWaiting = (model: Model, key: string, room: Shared.Room): UpdateReturn =>
   M.value(key).pipe(
     withUpdateReturn,
     M.when('Backspace', () => leaveRoom(model)),
+    M.when('Enter', handleStartGame(model, room)),
+    M.orElse(() => [model, []]),
+  )
+
+const whenFinished = (model: Model, key: string, room: Shared.Room): UpdateReturn =>
+  M.value(key).pipe(
+    withUpdateReturn,
+    M.when('Backspace', () =>
+      model.exitCountdownSecondsLeft === 0 ? leaveRoom(model) : [model, []],
+    ),
     M.when('Enter', handleStartGame(model, room)),
     M.orElse(() => [model, []]),
   )

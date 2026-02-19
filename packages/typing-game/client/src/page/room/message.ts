@@ -22,6 +22,7 @@ export const RoomNotFound = ts('RoomNotFound', { roomId: S.String })
 export const CopyRoomIdClicked = ts('CopyRoomIdClicked', { roomId: S.String })
 export const CopyRoomIdSuccess = ts('CopyRoomIdSuccess')
 export const HideRoomIdCopiedIndicator = ts('HideRoomIdCopiedIndicator')
+export const ExitCountdownTicked = ts('ExitCountdownTicked')
 export const RoomJoined = ts('RoomJoined', { roomId: S.String, player: Shared.Player })
 export const RoomError = ts('RoomError', { error: S.String })
 
@@ -41,6 +42,7 @@ export const Message = S.Union(
   CopyRoomIdClicked,
   CopyRoomIdSuccess,
   HideRoomIdCopiedIndicator,
+  ExitCountdownTicked,
   RoomJoined,
   RoomError,
 )

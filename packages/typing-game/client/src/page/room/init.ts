@@ -28,6 +28,7 @@ export const init = (route: AppRoute): InitReturn => {
       charsTyped: 0,
       username: '',
       isRoomIdCopyIndicatorVisible: false,
+      exitCountdownSecondsLeft: 0,
     },
     commands,
   ]

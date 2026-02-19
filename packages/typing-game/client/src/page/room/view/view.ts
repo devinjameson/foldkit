@@ -88,7 +88,16 @@ export const view =
       M.orElse(() => false),
     )
 
-    const leaveRoomText = isInLeavableState ? div([], ['< Backspace to leave room']) : empty
+    const isExitCountingDown = model.exitCountdownSecondsLeft > 0
+
+    const leaveRoomContent = isExitCountingDown
+      ? div(
+          [Class('opacity-30')],
+          [`< Backspace to leave room (${model.exitCountdownSecondsLeft})`],
+        )
+      : div([], ['< Backspace to leave room'])
+
+    const leaveRoomText = isInLeavableState ? leaveRoomContent : empty
 
     return div(
       [Class('max-w-4xl flex-1 flex flex-col justify-between')],
