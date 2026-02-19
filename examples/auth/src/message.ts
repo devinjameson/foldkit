@@ -7,13 +7,13 @@ import { Session } from './domain/session'
 import { LoggedIn, LoggedOut } from './page'
 
 export const NoOp = ts('NoOp')
-export const LinkClicked = ts('LinkClicked', { request: Runtime.UrlRequest })
-export const UrlChanged = ts('UrlChanged', { url: Url })
-export const SessionLoaded = ts('SessionLoaded', { session: S.Option(Session) })
-export const SessionSaved = ts('SessionSaved')
-export const SessionSaveFailed = ts('SessionSaveFailed', { error: S.String })
-export const SessionCleared = ts('SessionCleared')
-export const SessionClearFailed = ts('SessionClearFailed', { error: S.String })
+export const ClickedLink = ts('ClickedLink', { request: Runtime.UrlRequest })
+export const ChangedUrl = ts('ChangedUrl', { url: Url })
+export const LoadedSession = ts('LoadedSession', { session: S.Option(Session) })
+export const SavedSession = ts('SavedSession')
+export const FailedSessionSave = ts('FailedSessionSave', { error: S.String })
+export const ClearedSession = ts('ClearedSession')
+export const FailedSessionClear = ts('FailedSessionClear', { error: S.String })
 export const GotLoggedOutMessage = ts('GotLoggedOutMessage', {
   message: LoggedOut.Message,
 })
@@ -23,13 +23,13 @@ export const GotLoggedInMessage = ts('GotLoggedInMessage', {
 
 export const Message = S.Union(
   NoOp,
-  LinkClicked,
-  UrlChanged,
-  SessionLoaded,
-  SessionSaved,
-  SessionSaveFailed,
-  SessionCleared,
-  SessionClearFailed,
+  ClickedLink,
+  ChangedUrl,
+  LoadedSession,
+  SavedSession,
+  FailedSessionSave,
+  ClearedSession,
+  FailedSessionClear,
   GotLoggedOutMessage,
   GotLoggedInMessage,
 )

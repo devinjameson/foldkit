@@ -61,10 +61,10 @@ const immutableUpdatesHeader: TableOfContentsEntry = {
   text: 'Immutable Updates with evo',
 }
 
-const messagesAsIntentsHeader: TableOfContentsEntry = {
+const messagesAsEventsHeader: TableOfContentsEntry = {
   level: 'h2',
-  id: 'messages-as-intents',
-  text: 'Messages as Intents',
+  id: 'messages-as-events',
+  text: 'Messages as Events',
 }
 
 const goodMessageNamesHeader: TableOfContentsEntry = {
@@ -88,7 +88,7 @@ export const tableOfContents: ReadonlyArray<TableOfContentsEntry> = [
   dontComputeInUpdateHeader,
   requestViaCommandHeader,
   immutableUpdatesHeader,
-  messagesAsIntentsHeader,
+  messagesAsEventsHeader,
   goodMessageNamesHeader,
   avoidTheseHeader,
 ]
@@ -306,21 +306,29 @@ export const view = (model: Model): Html =>
       para(
         'Each property in the transform object is a function that takes the current value and returns the new value. Properties not included remain unchanged.',
       ),
-      tableOfContentsEntryToHeader(messagesAsIntentsHeader),
+      tableOfContentsEntryToHeader(messagesAsEventsHeader),
       para(
         'Messages describe ',
         strong([], ['what happened']),
         ', not ',
         strong([], ['what to do']),
-        '. Name them after user actions or events, not implementation details.',
+        '. Name them as past-tense events (',
+        inlineCode('RemovedCartItem'),
+        ', ',
+        inlineCode('ClickedFormSubmit'),
+        ') rather than imperative commands (',
+        inlineCode('RemoveFromCart'),
+        ', ',
+        inlineCode('SubmitForm'),
+        ').',
       ),
       tableOfContentsEntryToHeader(goodMessageNamesHeader),
       ul(
         [Class('list-disc mb-4 space-y-1 ml-4 font-mono text-sm')],
         [
-          li([], ['AddToCartClicked']),
-          li([], ['SearchInputChanged']),
-          li([], ['UserDataReceived']),
+          li([], ['ClickedAddToCart']),
+          li([], ['ChangedSearchInput']),
+          li([], ['ReceivedUserData']),
         ],
       ),
       tableOfContentsEntryToHeader(avoidTheseHeader),

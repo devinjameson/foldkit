@@ -12,7 +12,7 @@ import {
   pre,
 } from '../html'
 import { Icon } from '../icon'
-import { CopySnippetToClipboard, type Model } from '../main'
+import { type Model, RequestedSnippetCopy } from '../main'
 
 const copyButtonWithIndicator = (
   textToCopy: string,
@@ -39,7 +39,7 @@ const copyButtonWithIndicator = (
         'p-2 rounded transition bg-gray-800 dark:bg-gray-700 text-gray-400 hover:text-white hover:bg-gray-700 dark:hover:bg-gray-600',
       ),
       AriaLabel(ariaLabel),
-      OnClick(CopySnippetToClipboard({ text: textToCopy })),
+      OnClick(RequestedSnippetCopy({ text: textToCopy })),
     ],
     [Icon.copy()],
   )

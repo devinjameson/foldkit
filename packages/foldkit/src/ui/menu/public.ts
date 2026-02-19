@@ -10,7 +10,7 @@ export type {
   ItemSelected,
   PointerMovedOverItem,
   Searched,
-  SearchCleared,
+  ClearedSearch,
   NoOp,
   InitConfig,
   ViewConfig,

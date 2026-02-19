@@ -89,17 +89,17 @@ type Model = typeof Model.Type
 // MESSAGE
 
 const NoOp = ts('NoOp')
-const LinkClicked = ts('LinkClicked', {
+const ClickedLink = ts('ClickedLink', {
   request: Runtime.UrlRequest,
 })
-const UrlChanged = ts('UrlChanged', { url: Url })
-const SearchInputChanged = ts('SearchInputChanged', { value: S.String })
+const ChangedUrl = ts('ChangedUrl', { url: Url })
+const ChangedSearchInput = ts('ChangedSearchInput', { value: S.String })
 
 export const Message = S.Union(
   NoOp,
-  LinkClicked,
-  UrlChanged,
-  SearchInputChanged,
+  ClickedLink,
+  ChangedUrl,
+  ChangedSearchInput,
 )
 export type Message = typeof Message.Type
 
@@ -120,7 +120,7 @@ const update = (
     M.tagsExhaustive({
       NoOp: () => [model, []],
 
-      LinkClicked: ({ request }) =>
+      ClickedLink: ({ request }) =>
         M.value(request).pipe(
           M.tagsExhaustive({
             Internal: ({
@@ -138,14 +138,14 @@ const update = (
           }),
         ),
 
-      UrlChanged: ({ url }) => [
+      ChangedUrl: ({ url }) => [
         evo(model, {
           route: () => urlToAppRoute(url),
         }),
         [],
       ],
 
-      SearchInputChanged: ({ value }) => [
+      ChangedSearchInput: ({ value }) => [
         model,
         [
           replaceUrl(
@@ -295,7 +295,7 @@ const peopleView = (searchText: Option.Option<string>): Html => {
             Class(
               'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
             ),
-            OnInput((value) => SearchInputChanged({ value })),
+            OnInput((value) => ChangedSearchInput({ value })),
           ]),
         ],
       ),
@@ -490,8 +490,8 @@ const app = Runtime.makeApplication({
   view,
   container: document.getElementById('root')!,
   browser: {
-    onUrlRequest: (request) => LinkClicked({ request }),
-    onUrlChange: (url) => UrlChanged({ url }),
+    onUrlRequest: (request) => ClickedLink({ request }),
+    onUrlChange: (url) => ChangedUrl({ url }),
   },
 })
 

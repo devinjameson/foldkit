@@ -4,9 +4,9 @@ import { evo } from 'foldkit/struct'
 
 import {
   GotLoginMessage,
-  LoginSucceeded,
   Message,
   type OutMessage,
+  SucceededLogin,
 } from './message'
 import { Model } from './model'
 import * as Login from './page/login'
@@ -36,7 +36,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
           evo(model, { loginModel: () => loginModel }),
           mappedCommands,
           Option.map(maybeOutMessage, ({ session }) =>
-            LoginSucceeded({ session }),
+            SucceededLogin({ session }),
           ),
         ]
       },

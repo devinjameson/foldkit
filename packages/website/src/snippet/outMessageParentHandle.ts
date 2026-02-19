@@ -19,7 +19,7 @@ export const update = (
           onSome: (outMessage) =>
             M.value(outMessage).pipe(
               M.tagsExhaustive({
-                LogoutRequested: () => [
+                RequestedLogout: () => [
                   LoggedOut({ email: '', password: '' }),
                   [...commands, clearSession()],
                 ],

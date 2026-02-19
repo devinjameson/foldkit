@@ -10,8 +10,8 @@ type Model = typeof Model.Type
 
 // MESSAGE - events that can happen in your app
 
-const IncrementClicked = ts('IncrementClicked')
-const Message = S.Union(IncrementClicked)
+const ClickedIncrement = ts('ClickedIncrement')
+const Message = S.Union(ClickedIncrement)
 type Message = typeof Message.Type
 
 // UPDATE - how Messages change the Model
@@ -23,7 +23,7 @@ const update = (model: Model, message: Message): UpdateReturn =>
   M.value(message).pipe(
     withUpdateReturn,
     M.tagsExhaustive({
-      IncrementClicked: () => [model + 1, []],
+      ClickedIncrement: () => [model + 1, []],
     }),
   )
 
@@ -36,6 +36,6 @@ const view = (model: Model): Html =>
     [],
     [
       p([], [`Count: ${model}`]),
-      button([OnClick(IncrementClicked())], ['Increment']),
+      button([OnClick(ClickedIncrement())], ['Increment']),
     ],
   )

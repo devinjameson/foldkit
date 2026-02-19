@@ -31,11 +31,11 @@ type Model = typeof Model.Type
 
 // MESSAGE
 
-// LinkClicked and UrlChanged are required for routing
+// ClickedLink and ChangedUrl are required for routing
 const NoOp = ts('NoOp')
-const LinkClicked = ts('LinkClicked', { request: Runtime.UrlRequest })
-const UrlChanged = ts('UrlChanged', { url: Url.Url })
-const Message = S.Union(NoOp, LinkClicked, UrlChanged)
+const ClickedLink = ts('ClickedLink', { request: Runtime.UrlRequest })
+const ChangedUrl = ts('ChangedUrl', { url: Url.Url })
+const Message = S.Union(NoOp, ClickedLink, ChangedUrl)
 type Message = typeof Message.Type
 
 // UPDATE
@@ -49,7 +49,7 @@ const update = (model: Model, message: Message) =>
       NoOp: () => [model, []],
 
       // Handle link clicks - decide whether to navigate or do a full page load
-      LinkClicked: ({ request }) =>
+      ClickedLink: ({ request }) =>
         M.value(request).pipe(
           M.tagsExhaustive({
             // Same-origin link - push to history
@@ -74,7 +74,7 @@ const update = (model: Model, message: Message) =>
         ),
 
       // URL changed - parse it and update the route
-      UrlChanged: ({ url }) => [
+      ChangedUrl: ({ url }) => [
         evo(model, {
           route: () => urlToAppRoute(url),
         }),

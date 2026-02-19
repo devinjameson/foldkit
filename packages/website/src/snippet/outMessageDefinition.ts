@@ -3,12 +3,12 @@ import { ts } from 'foldkit/schema'
 
 // MESSAGE
 
-export const LogoutClicked = ts('LogoutClicked')
-export const Message = S.Union(LogoutClicked)
+export const ClickedLogout = ts('ClickedLogout')
+export const Message = S.Union(ClickedLogout)
 export type Message = typeof Message.Type
 
 // OUT MESSAGE
 
-export const LogoutRequested = ts('LogoutRequested')
-export const OutMessage = S.Union(LogoutRequested)
+export const RequestedLogout = ts('RequestedLogout')
+export const OutMessage = S.Union(RequestedLogout)
 export type OutMessage = typeof OutMessage.Type

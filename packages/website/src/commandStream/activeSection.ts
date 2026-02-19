@@ -12,7 +12,7 @@ import { Runtime } from 'foldkit'
 import { CommandStream } from 'foldkit/runtime'
 
 import {
-  ActiveSectionChanged,
+  ChangedActiveSection,
   CommandStreamsDeps,
   Model,
 } from '../main'
@@ -20,7 +20,7 @@ import * as Page from '../page'
 
 export const activeSection: CommandStream<
   Model,
-  typeof ActiveSectionChanged,
+  typeof ChangedActiveSection,
   CommandStreamsDeps['activeSection']
 > = {
   modelToDeps: (model: Model) => {
@@ -71,7 +71,7 @@ export const activeSection: CommandStream<
     }
   },
   depsToStream: ({ sections }) =>
-    Stream.async<Runtime.Command<typeof ActiveSectionChanged>>(
+    Stream.async<Runtime.Command<typeof ChangedActiveSection>>(
       (emit) => {
         if (!Array.isNonEmptyReadonlyArray(sections)) {
           return Effect.void
@@ -110,7 +110,7 @@ export const activeSection: CommandStream<
               onNone: Function.constVoid,
               onSome: (sectionId) => {
                 emit.single(
-                  Effect.succeed(ActiveSectionChanged({ sectionId })),
+                  Effect.succeed(ChangedActiveSection({ sectionId })),
                 )
               },
             })

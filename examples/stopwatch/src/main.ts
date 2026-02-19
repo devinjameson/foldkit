@@ -27,19 +27,19 @@ type Model = typeof Model.Type
 
 // UPDATE
 
-const RequestStart = ts('RequestStart')
+const RequestedStart = ts('RequestedStart')
 const GotStartTime = ts('GotStartTime', { startTime: S.Number })
-const Stop = ts('Stop')
-const Reset = ts('Reset')
-const RequestTick = ts('RequestTick')
+const ClickedStop = ts('ClickedStop')
+const ClickedReset = ts('ClickedReset')
+const RequestedTick = ts('RequestedTick')
 const GotTick = ts('GotTick', { elapsedMs: S.Number })
 
 export const Message = S.Union(
-  RequestStart,
+  RequestedStart,
   GotStartTime,
-  Stop,
-  Reset,
-  RequestTick,
+  ClickedStop,
+  ClickedReset,
+  RequestedTick,
   GotTick,
 )
 export type Message = typeof Message.Type
@@ -51,7 +51,7 @@ const update = (
   M.value(message).pipe(
     M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
     M.tagsExhaustive({
-      RequestStart: () => [
+      RequestedStart: () => [
         model,
         [
           Effect.gen(function* () {
@@ -69,14 +69,14 @@ const update = (
         [],
       ],
 
-      Stop: () => [
+      ClickedStop: () => [
         evo(model, {
           isRunning: () => false,
         }),
         [],
       ],
 
-      Reset: () => [
+      ClickedReset: () => [
         evo(model, {
           elapsedMs: () => 0,
           isRunning: () => false,
@@ -85,7 +85,7 @@ const update = (
         [],
       ],
 
-      RequestTick: () => [
+      RequestedTick: () => [
         model,
         [
           Effect.gen(function* () {
@@ -132,7 +132,7 @@ const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<
     depsToStream: ({ isRunning }) =>
       Stream.when(
         Stream.tick(Duration.millis(TICK_INTERVAL_MS)).pipe(
-          Stream.map(() => Effect.succeed(RequestTick())),
+          Stream.map(() => Effect.succeed(RequestedTick())),
         ),
         () => isRunning,
       ),
@@ -184,7 +184,7 @@ const view = (model: Model): Html =>
             [
               button(
                 [
-                  OnClick(Reset()),
+                  OnClick(ClickedReset()),
                   Class(buttonStyle + ' bg-gray-500 hover:bg-gray-600'),
                 ],
                 ['Reset'],
@@ -200,12 +200,15 @@ const view = (model: Model): Html =>
 const startStopButton = (isRunning: boolean): Html =>
   isRunning
     ? button(
-        [OnClick(Stop()), Class(buttonStyle + ' bg-red-500 hover:bg-red-600')],
+        [
+          OnClick(ClickedStop()),
+          Class(buttonStyle + ' bg-red-500 hover:bg-red-600'),
+        ],
         ['Stop'],
       )
     : button(
         [
-          OnClick(RequestStart()),
+          OnClick(RequestedStart()),
           Class(buttonStyle + ' bg-green-500 hover:bg-green-600'),
         ],
         ['Start'],

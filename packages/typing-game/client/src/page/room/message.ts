@@ -5,43 +5,43 @@ import { ts } from 'foldkit/schema'
 import { RoomPlayerSession } from './model'
 
 export const NoOp = ts('NoOp')
-export const KeyPressed = ts('KeyPressed', { key: S.String })
-export const UserTextInputted = ts('UserTextInputted', { value: S.String })
-export const RoomPageUsernameInputBlurred = ts('RoomPageUsernameInputBlurred')
-export const RoomPageUsernameInputted = ts('RoomPageUsernameInputted', { value: S.String })
-export const JoinRoomFromPageSubmitted = ts('JoinRoomFromPageSubmitted', { roomId: S.String })
-export const RoomUpdated = ts('RoomUpdated', {
+export const PressedKey = ts('PressedKey', { key: S.String })
+export const InputtedUserText = ts('InputtedUserText', { value: S.String })
+export const BlurredRoomPageUsernameInput = ts('BlurredRoomPageUsernameInput')
+export const InputtedRoomPageUsername = ts('InputtedRoomPageUsername', { value: S.String })
+export const SubmittedJoinRoomFromPage = ts('SubmittedJoinRoomFromPage', { roomId: S.String })
+export const UpdatedRoom = ts('UpdatedRoom', {
   room: Shared.Room,
   maybePlayerProgress: S.Option(Shared.PlayerProgress),
 })
 export const RoomStreamError = ts('RoomStreamError', { error: S.String })
-export const StartGameRequested = ts('StartGameRequested', { roomId: S.String, playerId: S.String })
-export const SessionLoaded = ts('SessionLoaded', { maybeSession: S.Option(RoomPlayerSession) })
-export const RoomFetched = ts('RoomFetched', { room: Shared.Room })
+export const RequestedStartGame = ts('RequestedStartGame', { roomId: S.String, playerId: S.String })
+export const LoadedSession = ts('LoadedSession', { maybeSession: S.Option(RoomPlayerSession) })
+export const FetchedRoom = ts('FetchedRoom', { room: Shared.Room })
 export const RoomNotFound = ts('RoomNotFound', { roomId: S.String })
-export const CopyRoomIdClicked = ts('CopyRoomIdClicked', { roomId: S.String })
+export const ClickedCopyRoomId = ts('ClickedCopyRoomId', { roomId: S.String })
 export const CopyRoomIdSuccess = ts('CopyRoomIdSuccess')
-export const HideRoomIdCopiedIndicator = ts('HideRoomIdCopiedIndicator')
-export const ExitCountdownTicked = ts('ExitCountdownTicked')
-export const RoomJoined = ts('RoomJoined', { roomId: S.String, player: Shared.Player })
+export const HiddenRoomIdCopiedIndicator = ts('HiddenRoomIdCopiedIndicator')
+export const TickedExitCountdown = ts('TickedExitCountdown')
+export const JoinedRoom = ts('JoinedRoom', { roomId: S.String, player: Shared.Player })
 
 export const Message = S.Union(
   NoOp,
-  KeyPressed,
-  UserTextInputted,
-  RoomPageUsernameInputBlurred,
-  RoomPageUsernameInputted,
-  JoinRoomFromPageSubmitted,
-  RoomUpdated,
+  PressedKey,
+  InputtedUserText,
+  BlurredRoomPageUsernameInput,
+  InputtedRoomPageUsername,
+  SubmittedJoinRoomFromPage,
+  UpdatedRoom,
   RoomStreamError,
-  StartGameRequested,
-  SessionLoaded,
-  RoomFetched,
+  RequestedStartGame,
+  LoadedSession,
+  FetchedRoom,
   RoomNotFound,
-  CopyRoomIdClicked,
+  ClickedCopyRoomId,
   CopyRoomIdSuccess,
-  HideRoomIdCopiedIndicator,
-  ExitCountdownTicked,
-  RoomJoined,
+  HiddenRoomIdCopiedIndicator,
+  TickedExitCountdown,
+  JoinedRoom,
 )
 export type Message = typeof Message.Type

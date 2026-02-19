@@ -20,7 +20,7 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
     M.tagsExhaustive({
       NoOp: () => [model, []],
 
-      LinkClicked: ({ request }) =>
+      ClickedLink: ({ request }) =>
         M.value(request).pipe(
           withUpdateReturn,
           M.tagsExhaustive({
@@ -29,7 +29,7 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
           }),
         ),
 
-      UrlChanged: ({ url }) => {
+      ChangedUrl: ({ url }) => {
         const nextRoute = urlToAppRoute(url)
         const maybeFocusUsernameInput = M.value(nextRoute).pipe(
           M.tag('Home', () => Task.focus(`#${USERNAME_INPUT_ID}`, () => NoOp())),
@@ -61,13 +61,13 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
             M.value(outMessage).pipe(
               withUpdateReturn,
               M.tagsExhaustive({
-                RoomCreationSucceeded: ({ roomId, player }) => [
+                SucceededRoomCreation: ({ roomId, player }) => [
                   evo(model, {
                     home: () => nextHomeModel,
                   }),
                   [...mappedCommands, ...handleRoomJoined(roomId, player)],
                 ],
-                RoomJoinSucceeded: ({ roomId, player }) => [
+                SucceededRoomJoin: ({ roomId, player }) => [
                   evo(model, {
                     home: () => nextHomeModel,
                   }),
@@ -96,6 +96,6 @@ const handleRoomJoined = (roomId: string, player: Shared.Player) => {
   return [
     navigateToRoom(roomId),
     savePlayerToSessionStorage(session),
-    Effect.succeed(GotRoomMessage({ message: Room.Message.RoomJoined({ roomId, player }) })),
+    Effect.succeed(GotRoomMessage({ message: Room.Message.JoinedRoom({ roomId, player }) })),
   ]
 }

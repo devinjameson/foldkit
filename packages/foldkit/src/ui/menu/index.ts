@@ -61,7 +61,7 @@ export const Searched = ts('Searched', {
   maybeTargetIndex: S.OptionFromSelf(S.Number),
 })
 /** Sent after the search debounce period to clear the accumulated query. */
-export const SearchCleared = ts('SearchCleared', { version: S.Number })
+export const ClearedSearch = ts('ClearedSearch', { version: S.Number })
 /** Sent when the pointer moves over a menu item, carrying screen coordinates for tracked-pointer comparison. */
 export const PointerMovedOverItem = ts('PointerMovedOverItem', {
   index: S.Number,
@@ -81,7 +81,7 @@ export const Message = S.Union(
   ItemSelected,
   PointerMovedOverItem,
   Searched,
-  SearchCleared,
+  ClearedSearch,
   NoOp,
 )
 
@@ -93,7 +93,7 @@ export type ItemDeactivated = typeof ItemDeactivated.Type
 export type ItemSelected = typeof ItemSelected.Type
 export type PointerMovedOverItem = typeof PointerMovedOverItem.Type
 export type Searched = typeof Searched.Type
-export type SearchCleared = typeof SearchCleared.Type
+export type ClearedSearch = typeof ClearedSearch.Type
 export type NoOp = typeof NoOp.Type
 
 export type Message = typeof Message.Type
@@ -213,12 +213,12 @@ export const update = (
           }),
           [
             Task.delay(SEARCH_DEBOUNCE_MILLISECONDS, () =>
-              SearchCleared({ version: nextSearchVersion }),
+              ClearedSearch({ version: nextSearchVersion }),
             ),
           ],
         ]
       },
-      SearchCleared: ({ version }) => {
+      ClearedSearch: ({ version }) => {
         if (version !== model.searchVersion) {
           return [model, []]
         }

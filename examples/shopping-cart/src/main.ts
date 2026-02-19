@@ -70,41 +70,43 @@ type Model = typeof Model.Type
 // MESSAGE
 
 const NoOp = ts('NoOp')
-const LinkClicked = ts('LinkClicked', {
+const ClickedLink = ts('ClickedLink', {
   request: Runtime.UrlRequest,
 })
-const UrlChanged = ts('UrlChanged', { url: Url })
+const ChangedUrl = ts('ChangedUrl', { url: Url })
 const GotProductsMessage = ts('GotProductsMessage', {
   message: Products.Message,
 })
-const AddToCartClicked = ts('AddToCartClicked', { item: Item.Item })
-const QuantityChangeClicked = ts('QuantityChangeClicked', {
+const ClickedAddToCart = ts('ClickedAddToCart', { item: Item.Item })
+const ClickedQuantityChange = ts('ClickedQuantityChange', {
   itemId: S.String,
   quantity: S.Number,
 })
-export const ChangeCartQuantity = ts('ChangeCartQuantity', {
+export const ClickedCartQuantityChange = ts('ClickedCartQuantityChange', {
   itemId: S.String,
   quantity: S.Number,
 })
-export const RemoveFromCart = ts('RemoveFromCart', { itemId: S.String })
-export const ClearCart = ts('ClearCart')
-export const UpdateDeliveryInstructions = ts('UpdateDeliveryInstructions', {
+export const ClickedRemoveCartItem = ts('ClickedRemoveCartItem', {
+  itemId: S.String,
+})
+export const ClickedClearCart = ts('ClickedClearCart')
+export const UpdatedDeliveryInstructions = ts('UpdatedDeliveryInstructions', {
   value: S.String,
 })
-export const PlaceOrder = ts('PlaceOrder')
+export const ClickedPlaceOrder = ts('ClickedPlaceOrder')
 
 export const Message = S.Union(
   NoOp,
-  LinkClicked,
-  UrlChanged,
+  ClickedLink,
+  ChangedUrl,
   GotProductsMessage,
-  AddToCartClicked,
-  QuantityChangeClicked,
-  ChangeCartQuantity,
-  RemoveFromCart,
-  ClearCart,
-  UpdateDeliveryInstructions,
-  PlaceOrder,
+  ClickedAddToCart,
+  ClickedQuantityChange,
+  ClickedCartQuantityChange,
+  ClickedRemoveCartItem,
+  ClickedClearCart,
+  UpdatedDeliveryInstructions,
+  ClickedPlaceOrder,
 )
 export type Message = typeof Message.Type
 
@@ -134,7 +136,7 @@ const update = (
     M.tagsExhaustive({
       NoOp: () => [model, []],
 
-      LinkClicked: ({ request }) =>
+      ClickedLink: ({ request }) =>
         M.value(request).pipe(
           M.withReturnType<
             [Model, ReadonlyArray<Runtime.Command<typeof NoOp>>]
@@ -152,7 +154,7 @@ const update = (
           }),
         ),
 
-      UrlChanged: ({ url }) => [
+      ChangedUrl: ({ url }) => [
         evo(model, {
           route: () => urlToAppRoute(url),
         }),
@@ -175,49 +177,49 @@ const update = (
         ]
       },
 
-      AddToCartClicked: ({ item }) => [
+      ClickedAddToCart: ({ item }) => [
         evo(model, {
           cart: () => Cart.addItem(item)(model.cart),
         }),
         [],
       ],
 
-      QuantityChangeClicked: ({ itemId, quantity }) => [
+      ClickedQuantityChange: ({ itemId, quantity }) => [
         evo(model, {
           cart: () => Cart.changeQuantity(itemId, quantity)(model.cart),
         }),
         [],
       ],
 
-      ChangeCartQuantity: ({ itemId, quantity }) => [
+      ClickedCartQuantityChange: ({ itemId, quantity }) => [
         evo(model, {
           cart: () => Cart.changeQuantity(itemId, quantity)(model.cart),
         }),
         [],
       ],
 
-      RemoveFromCart: ({ itemId }) => [
+      ClickedRemoveCartItem: ({ itemId }) => [
         evo(model, {
           cart: () => Cart.removeItem(itemId)(model.cart),
         }),
         [],
       ],
 
-      ClearCart: () => [
+      ClickedClearCart: () => [
         evo(model, {
           cart: () => [],
         }),
         [],
       ],
 
-      UpdateDeliveryInstructions: ({ value }) => [
+      UpdatedDeliveryInstructions: ({ value }) => [
         evo(model, {
           deliveryInstructions: () => value,
         }),
         [],
       ],
 
-      PlaceOrder: () => [
+      ClickedPlaceOrder: () => [
         evo(model, {
           orderPlaced: () => true,
           cart: () => [],
@@ -288,8 +290,8 @@ const productsView = (model: Model): Html => {
     model.cart,
     cartRouter,
     (message) => GotProductsMessage({ message }),
-    (item) => AddToCartClicked({ item }),
-    (itemId, quantity) => QuantityChangeClicked({ itemId, quantity }),
+    (item) => ClickedAddToCart({ item }),
+    (itemId, quantity) => ClickedQuantityChange({ itemId, quantity }),
   )
 }
 
@@ -360,8 +362,8 @@ const app = Runtime.makeApplication({
   view,
   container: document.getElementById('root')!,
   browser: {
-    onUrlRequest: (request) => LinkClicked({ request }),
-    onUrlChange: (url) => UrlChanged({ url }),
+    onUrlRequest: (request) => ClickedLink({ request }),
+    onUrlChange: (url) => ChangedUrl({ url }),
   },
 })
 

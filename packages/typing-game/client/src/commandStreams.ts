@@ -37,7 +37,7 @@ export const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Mod
               Stream.map(({ room, maybePlayerProgress }) =>
                 Effect.succeed(
                   GotRoomMessage({
-                    message: Room.Message.RoomUpdated({ room, maybePlayerProgress }),
+                    message: Room.Message.UpdatedRoom({ room, maybePlayerProgress }),
                   }),
                 ),
               ),
@@ -89,8 +89,8 @@ export const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Mod
 
               return M.value(deps.route).pipe(
                 M.tagsExhaustive({
-                  Home: () => GotHomeMessage({ message: Home.Message.KeyPressed({ key }) }),
-                  Room: () => GotRoomMessage({ message: Room.Message.KeyPressed({ key }) }),
+                  Home: () => GotHomeMessage({ message: Home.Message.PressedKey({ key }) }),
+                  Room: () => GotRoomMessage({ message: Room.Message.PressedKey({ key }) }),
                   NotFound: () => NoOp(),
                 }),
               )

@@ -153,7 +153,7 @@ export const closeModal = <Message>(
  *
  * @example
  * ```typescript
- * Task.delay(350, () => SearchCleared({ version: model.searchVersion }))
+ * Task.delay(350, () => ClearedSearch({ version: model.searchVersion }))
  * Task.delay(Duration.seconds(1), () => TimedOut())
  * ```
  */

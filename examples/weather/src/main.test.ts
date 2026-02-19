@@ -3,10 +3,10 @@ import { Effect, Layer } from 'effect'
 import { expect, test } from 'vitest'
 
 import {
-  FetchWeather,
+  FetchedWeather,
   Model,
+  RequestedWeatherFetch,
   WeatherData,
-  WeatherFetched,
   WeatherInit,
   fetchWeather,
   update,
@@ -17,16 +17,16 @@ const createModel = (): Model => ({
   weather: WeatherInit(),
 })
 
-test('FetchWeather sets loading state and returns fetch command', () => {
+test('RequestedWeatherFetch sets loading state and returns fetch command', () => {
   const model = createModel()
 
-  const [newModel, commands] = update(model, FetchWeather())
+  const [newModel, commands] = update(model, RequestedWeatherFetch())
 
   expect(newModel.weather._tag).toBe('WeatherLoading')
   expect(commands).toHaveLength(1)
 })
 
-test('WeatherFetched updates model with weather data', () => {
+test('FetchedWeather updates model with weather data', () => {
   const model = createModel()
   const weatherData: WeatherData = {
     zipCode: '90210',
@@ -40,7 +40,7 @@ test('WeatherFetched updates model with weather data', () => {
 
   const [newModel, commands] = update(
     model,
-    WeatherFetched({ weather: weatherData }),
+    FetchedWeather({ weather: weatherData }),
   )
 
   expect(newModel.weather._tag).toBe('WeatherSuccess')
@@ -51,7 +51,7 @@ test('WeatherFetched updates model with weather data', () => {
   expect(commands).toHaveLength(0)
 })
 
-test('fetchWeather returns WeatherFetched with data on success', async () => {
+test('fetchWeather returns FetchedWeather with data on success', async () => {
   const mockResponseData = {
     current_condition: [
       {
@@ -85,8 +85,8 @@ test('fetchWeather returns WeatherFetched with data on success', async () => {
     Effect.runPromise,
   )
 
-  expect(message._tag).toBe('WeatherFetched')
-  if (message._tag === 'WeatherFetched') {
+  expect(message._tag).toBe('FetchedWeather')
+  if (message._tag === 'FetchedWeather') {
     expect(message.weather.temperature).toBe(72)
     expect(message.weather.areaName).toBe('Beverly Hills')
   }

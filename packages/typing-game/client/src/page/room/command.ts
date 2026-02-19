@@ -7,29 +7,29 @@ import { ROOM_PLAYER_SESSION_KEY } from '../../constant'
 import { RoomsClient } from '../../rpc'
 import {
   CopyRoomIdSuccess,
-  ExitCountdownTicked,
-  HideRoomIdCopiedIndicator,
+  FetchedRoom,
+  HiddenRoomIdCopiedIndicator,
+  JoinedRoom,
+  LoadedSession,
   NoOp,
-  RoomFetched,
-  RoomJoined,
   RoomNotFound,
-  SessionLoaded,
+  TickedExitCountdown,
 } from './message'
 import { RoomPlayerSession } from './model'
 
 export const getRoomById = (
   roomId: string,
-): Runtime.Command<typeof RoomFetched | typeof RoomNotFound> =>
+): Runtime.Command<typeof FetchedRoom | typeof RoomNotFound> =>
   Effect.gen(function* () {
     const client = yield* RoomsClient
     const room = yield* client.getRoomById({ roomId })
-    return RoomFetched({ room })
+    return FetchedRoom({ room })
   }).pipe(
     Effect.catchAll(() => Effect.succeed(RoomNotFound({ roomId }))),
     Effect.provide(RoomsClient.Default),
   )
 
-export const loadSessionFromStorage = (roomId: string): Runtime.Command<typeof SessionLoaded> =>
+export const loadSessionFromStorage = (roomId: string): Runtime.Command<typeof LoadedSession> =>
   Effect.gen(function* () {
     const store = yield* KeyValueStore.KeyValueStore
     const maybeSessionJson = yield* store.get(ROOM_PLAYER_SESSION_KEY)
@@ -39,24 +39,24 @@ export const loadSessionFromStorage = (roomId: string): Runtime.Command<typeof S
 
     return yield* decodeSession(sessionJson).pipe(
       Effect.map((session) =>
-        SessionLoaded({
+        LoadedSession({
           maybeSession: Option.liftPredicate(session, (session) => session.roomId === roomId),
         }),
       ),
     )
   }).pipe(
-    Effect.catchAll(() => Effect.succeed(SessionLoaded({ maybeSession: Option.none() }))),
+    Effect.catchAll(() => Effect.succeed(LoadedSession({ maybeSession: Option.none() }))),
     Effect.provide(BrowserKeyValueStore.layerSessionStorage),
   )
 
 export const joinRoom = (
   username: string,
   roomId: string,
-): Runtime.Command<typeof RoomJoined | typeof NoOp> =>
+): Runtime.Command<typeof JoinedRoom | typeof NoOp> =>
   Effect.gen(function* () {
     const client = yield* RoomsClient
     const { player, room } = yield* client.joinRoom({ username, roomId })
-    return RoomJoined({ roomId: room.id, player })
+    return JoinedRoom({ roomId: room.id, player })
   }).pipe(
     Effect.catchAll(() => Effect.succeed(NoOp())),
     Effect.provide(RoomsClient.Default),
@@ -98,12 +98,12 @@ export const copyRoomIdToClipboard = (
     Effect.catchAll(() => Effect.succeed(NoOp())),
   )
 
-export const exitCountdownTick: Runtime.Command<typeof ExitCountdownTicked> = Task.delay(
+export const exitCountdownTick: Runtime.Command<typeof TickedExitCountdown> = Task.delay(
   '1 second',
-  () => ExitCountdownTicked(),
+  () => TickedExitCountdown(),
 )
 
 const COPY_INDICATOR_DURATION = '2 seconds'
 
-export const hideRoomIdCopiedIndicator = (): Runtime.Command<typeof HideRoomIdCopiedIndicator> =>
-  Effect.sleep(COPY_INDICATOR_DURATION).pipe(Effect.as(HideRoomIdCopiedIndicator()))
+export const hideRoomIdCopiedIndicator = (): Runtime.Command<typeof HiddenRoomIdCopiedIndicator> =>
+  Effect.sleep(COPY_INDICATOR_DURATION).pipe(Effect.as(HiddenRoomIdCopiedIndicator()))

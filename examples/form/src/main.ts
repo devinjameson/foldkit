@@ -47,15 +47,15 @@ type Model = typeof Model.Type
 // MESSAGE
 
 const NoOp = ts('NoOp')
-const UpdateName = ts('UpdateName', { value: S.String })
-const UpdateEmail = ts('UpdateEmail', { value: S.String })
-const EmailValidated = ts('EmailValidated', {
+const UpdatedName = ts('UpdatedName', { value: S.String })
+const UpdatedEmail = ts('UpdatedEmail', { value: S.String })
+const ValidatedEmail = ts('ValidatedEmail', {
   validationId: S.Number,
   field: StringField.Union,
 })
-const UpdateMessage = ts('UpdateMessage', { value: S.String })
-const SubmitForm = ts('SubmitForm')
-const FormSubmitted = ts('FormSubmitted', {
+const UpdatedMessage = ts('UpdatedMessage', { value: S.String })
+const ClickedFormSubmit = ts('ClickedFormSubmit')
+const SubmittedForm = ts('SubmittedForm', {
   success: S.Boolean,
   name: S.String,
   email: S.String,
@@ -64,12 +64,12 @@ const FormSubmitted = ts('FormSubmitted', {
 
 const Message = S.Union(
   NoOp,
-  UpdateName,
-  UpdateEmail,
-  EmailValidated,
-  UpdateMessage,
-  SubmitForm,
-  FormSubmitted,
+  UpdatedName,
+  UpdatedEmail,
+  ValidatedEmail,
+  UpdatedMessage,
+  ClickedFormSubmit,
+  SubmittedForm,
 )
 type Message = typeof Message.Type
 
@@ -112,10 +112,10 @@ const isEmailOnWaitlist = (email: string): Effect.Effect<boolean> =>
 const validateEmailNotOnWaitlist = (
   email: string,
   validationId: number,
-): Runtime.Command<typeof EmailValidated> =>
+): Runtime.Command<typeof ValidatedEmail> =>
   Effect.gen(function* () {
     if (yield* isEmailOnWaitlist(email)) {
-      return EmailValidated({
+      return ValidatedEmail({
         validationId,
         field: StringField.Invalid({
           value: email,
@@ -123,7 +123,7 @@ const validateEmailNotOnWaitlist = (
         }),
       })
     } else {
-      return EmailValidated({
+      return ValidatedEmail({
         validationId,
         field: StringField.Valid({ value: email }),
       })
@@ -147,14 +147,14 @@ const update = (
     M.tagsExhaustive({
       NoOp: () => [model, []],
 
-      UpdateName: ({ value }) => [
+      UpdatedName: ({ value }) => [
         evo(model, {
           name: () => validateName(value),
         }),
         [],
       ],
 
-      UpdateEmail: ({ value }) => {
+      UpdatedEmail: ({ value }) => {
         const validateEmailResult = validateEmail(value)
         const validationId = Number.increment(model.emailValidationId)
 
@@ -177,7 +177,7 @@ const update = (
         }
       },
 
-      EmailValidated: ({ validationId, field }) => {
+      ValidatedEmail: ({ validationId, field }) => {
         if (validationId === model.emailValidationId) {
           return [
             evo(model, {
@@ -190,14 +190,14 @@ const update = (
         }
       },
 
-      UpdateMessage: ({ value }) => [
+      UpdatedMessage: ({ value }) => [
         evo(model, {
           message: () => StringField.Valid({ value }),
         }),
         [],
       ],
 
-      SubmitForm: () => {
+      ClickedFormSubmit: () => {
         if (!isFormValid(model)) {
           return [model, []]
         }
@@ -210,7 +210,7 @@ const update = (
         ]
       },
 
-      FormSubmitted: ({ success, name }) => {
+      SubmittedForm: ({ success, name }) => {
         if (success) {
           return [
             evo(model, {
@@ -241,13 +241,13 @@ const update = (
 
 const FAKE_API_DELAY_MS = 500
 
-const submitForm = (model: Model): Runtime.Command<typeof FormSubmitted> =>
+const submitForm = (model: Model): Runtime.Command<typeof SubmittedForm> =>
   Effect.gen(function* () {
     yield* Effect.sleep(`${FAKE_API_DELAY_MS} millis`)
 
     const success = yield* Random.nextBoolean
 
-    return FormSubmitted({
+    return SubmittedForm({
       success,
       name: model.name.value,
       email: model.name.value,
@@ -361,23 +361,23 @@ const view = (model: Model): Html => {
           ),
 
           form(
-            [Class('space-y-4'), OnSubmit(SubmitForm())],
+            [Class('space-y-4'), OnSubmit(ClickedFormSubmit())],
             [
               fieldView('name', 'Name', model.name, (value) =>
-                UpdateName({ value }),
+                UpdatedName({ value }),
               ),
               fieldView(
                 'email',
                 'Email',
                 model.email,
-                (value) => UpdateEmail({ value }),
+                (value) => UpdatedEmail({ value }),
                 'email',
               ),
               fieldView(
                 'message',
                 "Anything you'd like to share with us?",
                 model.message,
-                (value) => UpdateMessage({ value }),
+                (value) => UpdatedMessage({ value }),
                 'textarea',
               ),
 

@@ -40,9 +40,9 @@ export type Model = typeof Model.Type
 // MESSAGE
 
 const NoOp = ts('NoOp')
-const SearchInputChanged = ts('SearchInputChanged', { value: S.String })
+const ChangedSearchInput = ts('ChangedSearchInput', { value: S.String })
 
-export const Message = S.Union(NoOp, SearchInputChanged)
+export const Message = S.Union(NoOp, ChangedSearchInput)
 export type Message = typeof Message.Type
 
 // INIT
@@ -65,7 +65,7 @@ export const update =
       M.tagsExhaustive({
         NoOp: () => [model, []],
 
-        SearchInputChanged: ({ value }) => [
+        ChangedSearchInput: ({ value }) => [
           evo(model, {
             searchText: () => value,
           }),
@@ -113,7 +113,7 @@ export const view = (
                   'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
                 ),
                 OnInput((value: string) =>
-                  toMessage(SearchInputChanged({ value })),
+                  toMessage(ChangedSearchInput({ value })),
                 ),
               ]),
             ],

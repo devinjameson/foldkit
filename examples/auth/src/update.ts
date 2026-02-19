@@ -32,7 +32,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
     M.tagsExhaustive({
       NoOp: () => [model, []],
 
-      LinkClicked: ({ request }) =>
+      ClickedLink: ({ request }) =>
         M.value(request).pipe(
           withUpdateReturn,
           M.tagsExhaustive({
@@ -47,7 +47,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
           }),
         ),
 
-      UrlChanged: ({ url }) => {
+      ChangedUrl: ({ url }) => {
         const route = urlToAppRoute(url)
 
         return M.value(model).pipe(
@@ -86,7 +86,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         )
       },
 
-      SessionLoaded: ({ session }) =>
+      LoadedSession: ({ session }) =>
         M.value(session).pipe(
           withUpdateReturn,
           M.tagsExhaustive({
@@ -95,16 +95,16 @@ export const update = (model: Model, message: Message): UpdateReturn =>
           }),
         ),
 
-      SessionSaved: () => [model, []],
+      SavedSession: () => [model, []],
 
-      SessionSaveFailed: ({ error }) => [
+      FailedSessionSave: ({ error }) => [
         model,
         [logError('Failed to save session:', error)],
       ],
 
-      SessionCleared: () => [model, []],
+      ClearedSession: () => [model, []],
 
-      SessionClearFailed: ({ error }) => [
+      FailedSessionClear: ({ error }) => [
         model,
         [logError('Failed to clear session:', error)],
       ],
@@ -140,7 +140,7 @@ const handleGotLoggedOutMessage = (
       M.value(outMessage).pipe(
         withUpdateReturn,
         M.tagsExhaustive({
-          LoginSucceeded: ({ session }) => [
+          SucceededLogin: ({ session }) => [
             LoggedIn.init(DashboardRoute(), session),
             [
               ...mappedCommands,
@@ -173,7 +173,7 @@ const handleGotLoggedInMessage = (
       M.value(outMessage).pipe(
         withUpdateReturn,
         M.tagsExhaustive({
-          LogoutRequested: () => [
+          RequestedLogout: () => [
             LoggedOut.init(HomeRoute()),
             [
               ...mappedCommands,

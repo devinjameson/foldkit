@@ -3,6 +3,7 @@ import { Option } from 'effect'
 import { expect } from 'vitest'
 
 import {
+  ClearedSearch,
   Closed,
   ClosedByTab,
   ItemActivated,
@@ -11,7 +12,6 @@ import {
   NoOp,
   Opened,
   PointerMovedOverItem,
-  SearchCleared,
   Searched,
   groupContiguous,
   init,
@@ -356,7 +356,7 @@ describe('Menu', () => {
       })
     })
 
-    describe('SearchCleared', () => {
+    describe('ClearedSearch', () => {
       it('clears search query when version matches', () => {
         const model = openModel()
         const [afterSearch] = update(
@@ -367,7 +367,7 @@ describe('Menu', () => {
 
         const [result, commands] = update(
           afterSearch,
-          SearchCleared({ version: 1 }),
+          ClearedSearch({ version: 1 }),
         )
         expect(result.searchQuery).toBe('')
         expect(commands).toHaveLength(0)
@@ -387,7 +387,7 @@ describe('Menu', () => {
 
         const [result] = update(
           afterSecondSearch,
-          SearchCleared({ version: 1 }),
+          ClearedSearch({ version: 1 }),
         )
         expect(result.searchQuery).toBe('ab')
       })

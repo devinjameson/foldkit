@@ -9,12 +9,12 @@ import { Model } from './model'
 const update = (model: Model, message: Message) =>
   Match.value(message).pipe(
     Match.tagsExhaustive({
-      FetchUserClicked: () => [
+      ClickedFetchUser: () => [
         evo(model, { isLoading: () => true }),
         [fetchUser(model.userId)], // Command handles the side effect
       ],
 
-      UserFetchSucceeded: ({ user }) => [
+      SucceededUserFetch: ({ user }) => [
         evo(model, { isLoading: () => false, user: () => user }),
         [], // Result received, no more commands needed
       ],

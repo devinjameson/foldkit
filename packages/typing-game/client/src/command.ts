@@ -13,11 +13,11 @@ import { RoomsClient } from './rpc'
 export const joinRoom = (
   username: string,
   roomId: string,
-): Runtime.Command<typeof Home.Message.RoomJoined | typeof Home.Message.RoomError> =>
+): Runtime.Command<typeof Home.Message.JoinedRoom | typeof Home.Message.RoomError> =>
   Effect.gen(function* () {
     const client = yield* RoomsClient
     const { player, room } = yield* client.joinRoom({ username, roomId })
-    return Home.Message.RoomJoined({ roomId: room.id, player })
+    return Home.Message.JoinedRoom({ roomId: room.id, player })
   }).pipe(
     Effect.catchAll((error) => Effect.succeed(Home.Message.RoomError({ error: String(error) }))),
     Effect.provide(RoomsClient.Default),

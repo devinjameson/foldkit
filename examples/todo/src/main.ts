@@ -58,39 +58,39 @@ type Model = typeof Model.Type
 // MESSAGE
 
 const NoOp = ts('NoOp')
-const UpdateNewTodo = ts('UpdateNewTodo', { text: S.String })
-const UpdateEditingTodo = ts('UpdateEditingTodo', { text: S.String })
-const AddTodo = ts('AddTodo')
+const UpdatedNewTodo = ts('UpdatedNewTodo', { text: S.String })
+const UpdatedEditingTodo = ts('UpdatedEditingTodo', { text: S.String })
+const AddedTodo = ts('AddedTodo')
 const GotNewTodoData = ts('GotNewTodoData', {
   id: S.String,
   timestamp: S.Number,
   text: S.String,
 })
-const DeleteTodo = ts('DeleteTodo', { id: S.String })
-const ToggleTodo = ts('ToggleTodo', { id: S.String })
-const StartEditing = ts('StartEditing', { id: S.String })
-const SaveEdit = ts('SaveEdit')
-const CancelEdit = ts('CancelEdit')
-const ToggleAll = ts('ToggleAll')
-const ClearCompleted = ts('ClearCompleted')
+const DeletedTodo = ts('DeletedTodo', { id: S.String })
+const ToggledTodo = ts('ToggledTodo', { id: S.String })
+const StartedEditing = ts('StartedEditing', { id: S.String })
+const SavedEdit = ts('SavedEdit')
+const CancelledEdit = ts('CancelledEdit')
+const ToggledAll = ts('ToggledAll')
+const ClearedCompleted = ts('ClearedCompleted')
 const SetFilter = ts('SetFilter', { filter: Filter })
-const TodosSaved = ts('TodosSaved', { todos: Todos })
+const SavedTodos = ts('SavedTodos', { todos: Todos })
 
 export const Message = S.Union(
   NoOp,
-  UpdateNewTodo,
-  UpdateEditingTodo,
-  AddTodo,
+  UpdatedNewTodo,
+  UpdatedEditingTodo,
+  AddedTodo,
   GotNewTodoData,
-  DeleteTodo,
-  ToggleTodo,
-  StartEditing,
-  SaveEdit,
-  CancelEdit,
-  ToggleAll,
-  ClearCompleted,
+  DeletedTodo,
+  ToggledTodo,
+  StartedEditing,
+  SavedEdit,
+  CancelledEdit,
+  ToggledAll,
+  ClearedCompleted,
   SetFilter,
-  TodosSaved,
+  SavedTodos,
 )
 export type Message = typeof Message.Type
 
@@ -124,14 +124,14 @@ const update = (
     M.tagsExhaustive({
       NoOp: () => [model, []],
 
-      UpdateNewTodo: ({ text }) => [
+      UpdatedNewTodo: ({ text }) => [
         evo(model, {
           newTodoText: () => text,
         }),
         [],
       ],
 
-      UpdateEditingTodo: ({ text }) => [
+      UpdatedEditingTodo: ({ text }) => [
         evo(model, {
           editing: () =>
             M.value(model.editing).pipe(
@@ -144,7 +144,7 @@ const update = (
         [],
       ],
 
-      AddTodo: () => {
+      AddedTodo: () => {
         if (String.isEmpty(String.trim(model.newTodoText))) {
           return [model, []]
         }
@@ -171,7 +171,7 @@ const update = (
         ]
       },
 
-      DeleteTodo: ({ id }) => {
+      DeletedTodo: ({ id }) => {
         const updatedTodos = Array.filter(model.todos, (todo) => todo.id !== id)
 
         return [
@@ -182,7 +182,7 @@ const update = (
         ]
       },
 
-      ToggleTodo: ({ id }) => {
+      ToggledTodo: ({ id }) => {
         const updatedTodos = Array.map(model.todos, (todo) =>
           todo.id === id
             ? evo(todo, { completed: (completed) => !completed })
@@ -197,7 +197,7 @@ const update = (
         ]
       },
 
-      StartEditing: ({ id }) => {
+      StartedEditing: ({ id }) => {
         const todo = Array.findFirst(model.todos, (t) => t.id === id)
         return [
           evo(model, {
@@ -214,9 +214,9 @@ const update = (
         ]
       },
 
-      SaveEdit: () =>
+      SavedEdit: () =>
         M.value(model.editing).pipe(
-          M.withReturnType<[Model, Runtime.Command<typeof TodosSaved>[]]>(),
+          M.withReturnType<[Model, Runtime.Command<typeof SavedTodos>[]]>(),
           M.tagsExhaustive({
             NotEditing: () => [model, []],
 
@@ -247,14 +247,14 @@ const update = (
           }),
         ),
 
-      CancelEdit: () => [
+      CancelledEdit: () => [
         evo(model, {
           editing: () => NotEditing(),
         }),
         [],
       ],
 
-      ToggleAll: () => {
+      ToggledAll: () => {
         const allCompleted = Array.every(model.todos, (todo) => todo.completed)
         const updatedTodos = Array.map(model.todos, (todo) =>
           evo(todo, {
@@ -270,7 +270,7 @@ const update = (
         ]
       },
 
-      ClearCompleted: () => {
+      ClearedCompleted: () => {
         const updatedTodos = Array.filter(
           model.todos,
           (todo) => !todo.completed,
@@ -291,7 +291,7 @@ const update = (
         [],
       ],
 
-      TodosSaved: ({ todos }) => [
+      SavedTodos: ({ todos }) => [
         evo(model, {
           todos: () => todos,
         }),
@@ -318,13 +318,13 @@ const generateTodoData = (
 
 // COMMAND
 
-const saveTodos = (todos: Todos): Runtime.Command<typeof TodosSaved> =>
+const saveTodos = (todos: Todos): Runtime.Command<typeof SavedTodos> =>
   Effect.gen(function* () {
     const store = yield* KeyValueStore.KeyValueStore
     yield* store.set(TODOS_STORAGE_KEY, S.encodeSync(S.parseJson(Todos))(todos))
-    return TodosSaved({ todos })
+    return SavedTodos({ todos })
   }).pipe(
-    Effect.catchAll(() => Effect.succeed(TodosSaved({ todos }))),
+    Effect.catchAll(() => Effect.succeed(SavedTodos({ todos }))),
     Effect.provide(BrowserKeyValueStore.layerLocalStorage),
   )
 
@@ -376,18 +376,18 @@ const editingTodoView = (todo: Todo, text: string): Html =>
         Class(
           'flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500',
         ),
-        OnInput((text) => UpdateEditingTodo({ text })),
+        OnInput((text) => UpdatedEditingTodo({ text })),
       ]),
       button(
         [
-          OnClick(SaveEdit()),
+          OnClick(SavedEdit()),
           Class('px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600'),
         ],
         ['Save'],
       ),
       button(
         [
-          OnClick(CancelEdit()),
+          OnClick(CancelledEdit()),
           Class('px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600'),
         ],
         ['Cancel'],
@@ -404,20 +404,20 @@ const nonEditingTodoView = (todo: Todo): Html =>
         Id(`todo-${todo.id}`),
         Value(todo.completed ? 'on' : ''),
         Class('w-4 h-4 text-blue-600 rounded focus:ring-blue-500'),
-        OnClick(ToggleTodo({ id: todo.id })),
+        OnClick(ToggledTodo({ id: todo.id })),
       ]),
       span(
         [
           Class(
             `flex-1 ${todo.completed ? 'line-through text-gray-500' : 'text-gray-900'}`,
           ),
-          OnClick(StartEditing({ id: todo.id })),
+          OnClick(StartedEditing({ id: todo.id })),
         ],
         [todo.text],
       ),
       button(
         [
-          OnClick(DeleteTodo({ id: todo.id })),
+          OnClick(DeletedTodo({ id: todo.id })),
           Class(
             'px-2 py-1 text-red-600 opacity-0 group-hover:opacity-100 hover:bg-red-100 rounded transition-opacity',
           ),
@@ -477,7 +477,7 @@ const footerView = (
                 onNonEmpty: (todos) =>
                   button(
                     [
-                      OnClick(ToggleAll()),
+                      OnClick(ToggledAll()),
                       Class(
                         'px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300',
                       ),
@@ -493,7 +493,7 @@ const footerView = (
               completedCount > 0
                 ? button(
                     [
-                      OnClick(ClearCompleted()),
+                      OnClick(ClearedCompleted()),
                       Class(
                         'px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200',
                       ),
@@ -534,7 +534,7 @@ const view = (model: Model): Html => {
           ),
 
           form(
-            [Class('mb-6'), OnSubmit(AddTodo())],
+            [Class('mb-6'), OnSubmit(AddedTodo())],
             [
               label([For('new-todo'), Class('sr-only')], ['New todo']),
               div(
@@ -547,7 +547,7 @@ const view = (model: Model): Html => {
                     Class(
                       'flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
                     ),
-                    OnInput((text) => UpdateNewTodo({ text })),
+                    OnInput((text) => UpdatedNewTodo({ text })),
                   ]),
                   button(
                     [

@@ -5,9 +5,13 @@ import { ts } from 'foldkit/schema'
 // Messages are dispatched from the view and handled by the update function
 
 // ts is shorthand for Schema.TaggedStruct
-const Decrement = ts('Decrement')
-const Increment = ts('Increment')
-const Reset = ts('Reset')
+const ClickedDecrement = ts('ClickedDecrement')
+const ClickedIncrement = ts('ClickedIncrement')
+const ClickedReset = ts('ClickedReset')
 
-const Message = Schema.Union(Decrement, Increment, Reset)
+const Message = Schema.Union(
+  ClickedDecrement,
+  ClickedIncrement,
+  ClickedReset,
+)
 type Message = typeof Message.Type

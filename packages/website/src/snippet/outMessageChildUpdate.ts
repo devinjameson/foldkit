@@ -11,10 +11,10 @@ export const update = (
 ] =>
   M.value(message).pipe(
     M.tagsExhaustive({
-      LogoutClicked: () => [
+      ClickedLogout: () => [
         model,
         [],
-        Option.some(LogoutRequested()),
+        Option.some(RequestedLogout()),
       ],
     }),
   )

@@ -14,8 +14,8 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const ThemeChanged = ts('ThemeChanged', { theme: S.String })
-export const Message = S.Union(ThemeChanged)
+export const ChangedTheme = ts('ChangedTheme', { theme: S.String })
+export const Message = S.Union(ChangedTheme)
 export type Message = typeof Message.Type
 
 // UPDATE
@@ -26,7 +26,7 @@ export const update = (
 ): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
   M.value(message).pipe(
     M.tagsExhaustive({
-      ThemeChanged: ({ theme }) => [
+      ChangedTheme: ({ theme }) => [
         evo(model, { theme: () => theme }),
         [],
       ],

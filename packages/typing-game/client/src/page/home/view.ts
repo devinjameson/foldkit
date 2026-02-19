@@ -28,12 +28,12 @@ import {
   span,
 } from '../../view/html'
 import {
-  JoinRoomClicked,
-  RoomIdInputBlurred,
-  RoomIdInputted,
-  UsernameFormSubmitted,
-  UsernameInputBlurred,
-  UsernameInputted,
+  BlurredRoomIdInput,
+  BlurredUsernameInput,
+  ClickedJoinRoom,
+  InputtedRoomId,
+  InputtedUsername,
+  SubmittedUsernameForm,
 } from './message'
 import type { Message } from './message'
 import {
@@ -83,7 +83,7 @@ const enterUsername =
   (toMessage: (message: Message) => ParentMessage) =>
   ({ username }: EnterUsername): Html =>
     form(
-      [OnSubmit(toMessage(UsernameFormSubmitted()))],
+      [OnSubmit(toMessage(SubmittedUsernameForm()))],
       [
         div(
           [Class('flex items-center gap-2')],
@@ -99,8 +99,8 @@ const enterUsername =
                   Type('text'),
                   Value(username),
                   Class('bg-transparent px-0 py-2 outline-none w-full'),
-                  OnInput((value) => toMessage(UsernameInputted({ value }))),
-                  OnBlur(toMessage(UsernameInputBlurred())),
+                  OnInput((value) => toMessage(InputtedUsername({ value }))),
+                  OnBlur(toMessage(BlurredUsernameInput())),
                   Autocapitalize('none'),
                   Spellcheck(false),
                   Autocorrect('off'),
@@ -135,7 +135,7 @@ const enterRoomId =
   (toMessage: (message: Message) => ParentMessage) =>
   ({ roomId }: EnterRoomId): Html =>
     form(
-      [OnSubmit(toMessage(JoinRoomClicked()))],
+      [OnSubmit(toMessage(ClickedJoinRoom()))],
       [
         div(
           [Class('flex items-center gap-2')],
@@ -149,8 +149,8 @@ const enterRoomId =
                   Type('text'),
                   Value(roomId),
                   Class('bg-transparent px-0 py-2 outline-none w-full'),
-                  OnInput((value) => toMessage(RoomIdInputted({ value }))),
-                  OnBlur(toMessage(RoomIdInputBlurred())),
+                  OnInput((value) => toMessage(InputtedRoomId({ value }))),
+                  OnBlur(toMessage(BlurredRoomIdInput())),
                   Autocapitalize('none'),
                   Spellcheck(false),
                   Autocorrect('off'),

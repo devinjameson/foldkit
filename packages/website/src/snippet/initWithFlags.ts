@@ -13,8 +13,8 @@ const Flags = S.Struct({
 })
 type Flags = typeof Flags.Type
 
-const Increment = ts('Increment')
-const Message = S.Union(Increment)
+const ClickedIncrement = ts('ClickedIncrement')
+const Message = S.Union(ClickedIncrement)
 type Message = typeof Message.Type
 
 const init: Runtime.ElementInit<Model, Message, Flags> = (flags) => [

@@ -34,12 +34,12 @@ const makeCallable = <Tag extends string, Fields extends S.Struct.Fields>(
  * @example
  * ```typescript
  * // Simple tag — callable with no args
- * const Reset = ts('Reset')
- * Reset() // { _tag: 'Reset' }
+ * const ClickedReset = ts('ClickedReset')
+ * ClickedReset() // { _tag: 'ClickedReset' }
  *
  * // Tag with fields — callable with fields
- * const SetCount = ts('SetCount', { count: S.Number })
- * SetCount({ count: 1 }) // { _tag: 'SetCount', count: 1 }
+ * const ChangedCount = ts('ChangedCount', { count: S.Number })
+ * ChangedCount({ count: 1 }) // { _tag: 'ChangedCount', count: 1 }
  * ```
  */
 export function ts<Tag extends string>(tag: Tag): CallableTaggedStruct<Tag, {}>

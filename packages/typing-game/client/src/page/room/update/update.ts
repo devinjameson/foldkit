@@ -30,9 +30,9 @@ export const update = (model: Model, message: Message): UpdateReturn =>
     M.tagsExhaustive({
       NoOp: () => [model, []],
 
-      KeyPressed: handleKeyPressed(model),
+      PressedKey: handleKeyPressed(model),
 
-      UserTextInputted: ({ value }) => {
+      InputtedUserText: ({ value }) => {
         const maybeRoom = M.value(model.roomRemoteData).pipe(
           M.tag('Ok', ({ data }) => data),
           M.option,
@@ -68,19 +68,19 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         ]
       },
 
-      RoomPageUsernameInputBlurred: () => [
+      BlurredRoomPageUsernameInput: () => [
         model,
         [Task.focus(`#${ROOM_PAGE_USERNAME_INPUT_ID}`, () => NoOp())],
       ],
 
-      RoomPageUsernameInputted: ({ value }) => [
+      InputtedRoomPageUsername: ({ value }) => [
         evo(model, {
           username: () => value,
         }),
         [],
       ],
 
-      JoinRoomFromPageSubmitted: ({ roomId }) => {
+      SubmittedJoinRoomFromPage: ({ roomId }) => {
         const maybeJoinRoom = optionWhen(Str.isNonEmpty(model.username), () =>
           joinRoom(model.username, roomId),
         )
@@ -88,22 +88,22 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         return [model, Array.fromOption(maybeJoinRoom)]
       },
 
-      RoomUpdated: handleRoomUpdated(model),
+      UpdatedRoom: handleRoomUpdated(model),
 
       RoomStreamError: ({ error: _error }) => {
         return [model, []]
       },
 
-      StartGameRequested: ({ roomId, playerId }) => [model, [startGame(roomId, playerId)]],
+      RequestedStartGame: ({ roomId, playerId }) => [model, [startGame(roomId, playerId)]],
 
-      SessionLoaded: ({ maybeSession }) => [
+      LoadedSession: ({ maybeSession }) => [
         evo(model, {
           maybeSession: () => maybeSession,
         }),
         [],
       ],
 
-      RoomFetched: ({ room }) => {
+      FetchedRoom: ({ room }) => {
         const maybeFocusRoomUsernameInput = Option.match(model.maybeSession, {
           onNone: () => Option.some(Task.focus(`#${ROOM_PAGE_USERNAME_INPUT_ID}`, () => NoOp())),
           onSome: () => Option.none(),
@@ -124,7 +124,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         [],
       ],
 
-      CopyRoomIdClicked: ({ roomId }) => [model, [copyRoomIdToClipboard(roomId)]],
+      ClickedCopyRoomId: ({ roomId }) => [model, [copyRoomIdToClipboard(roomId)]],
 
       CopyRoomIdSuccess: () =>
         model.isRoomIdCopyIndicatorVisible
@@ -136,14 +136,14 @@ export const update = (model: Model, message: Message): UpdateReturn =>
               [hideRoomIdCopiedIndicator()],
             ],
 
-      HideRoomIdCopiedIndicator: () => [
+      HiddenRoomIdCopiedIndicator: () => [
         evo(model, {
           isRoomIdCopyIndicatorVisible: () => false,
         }),
         [],
       ],
 
-      ExitCountdownTicked: () => {
+      TickedExitCountdown: () => {
         const nextSecondsLeft = Number.decrement(model.exitCountdownSecondsLeft)
         const maybeTickCommand = optionWhen(nextSecondsLeft > 0, () => exitCountdownTick)
 
@@ -155,7 +155,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         ]
       },
 
-      RoomJoined: ({ roomId, player }) => {
+      JoinedRoom: ({ roomId, player }) => {
         const session = { roomId, player }
         return [
           evo(model, {

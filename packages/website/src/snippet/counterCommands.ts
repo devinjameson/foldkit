@@ -3,7 +3,7 @@ import { Runtime } from 'foldkit'
 
 // Add a new Message for the reset after delay
 const ResetAfterDelay = ts('ResetDelayed')
-const ResetNow = ts('ResetNow')
+const RequestedImmediateReset = ts('RequestedImmediateReset')
 
 const update = (
   model: Model,
@@ -16,17 +16,17 @@ const update = (
     M.tagsExhaustive({
       // When user clicks "Reset", don't reset immediately.
       // Instead, return a Command that sleeps for 1 second
-      // and then returns the ResetNow message.
+      // and then returns the RequestedImmediateReset message.
       ResetAfterDelay: () => [model, [resetAfterDelay]],
-      ResetNow: () => [0, []],
+      RequestedImmediateReset: () => [0, []],
     }),
   )
 
 // A Command is an Effect that returns a Message
-// This Command sleeps for 1 second and then returns the ResetNow message
-const resetAfterDelay: Runtime.Command<typeof ResetNow> = Effect.gen(
-  function* () {
-    yield* Effect.sleep('1 second')
-    return ResetNow()
-  },
-)
+// This Command sleeps for 1 second and then returns the RequestedImmediateReset message
+const resetAfterDelay: Runtime.Command<
+  typeof RequestedImmediateReset
+> = Effect.gen(function* () {
+  yield* Effect.sleep('1 second')
+  return RequestedImmediateReset()
+})

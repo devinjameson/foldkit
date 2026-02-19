@@ -13,11 +13,15 @@ type Model = typeof Model.Type
 // MESSAGE - All possible events that can happen in your application
 // Messages are dispatched from the view and handled by the update function
 
-const Decrement = ts('Decrement')
-const Increment = ts('Increment')
-const Reset = ts('Reset')
+const ClickedDecrement = ts('ClickedDecrement')
+const ClickedIncrement = ts('ClickedIncrement')
+const ClickedReset = ts('ClickedReset')
 
-const Message = Schema.Union(Decrement, Increment, Reset)
+const Message = Schema.Union(
+  ClickedDecrement,
+  ClickedIncrement,
+  ClickedReset,
+)
 type Message = typeof Message.Type
 
 // UPDATE - How your state changes in response to messages
@@ -33,9 +37,9 @@ const update = (
       [Model, ReadonlyArray<Runtime.Command<Message>>]
     >(),
     M.tagsExhaustive({
-      Decrement: () => [count - 1, []],
-      Increment: () => [count + 1, []],
-      Reset: () => [0, []],
+      ClickedDecrement: () => [count - 1, []],
+      ClickedIncrement: () => [count + 1, []],
+      ClickedReset: () => [0, []],
     }),
   )
 
@@ -59,9 +63,18 @@ const view = (count: Model): Html =>
       div(
         [Class('flex flex-wrap justify-center gap-4')],
         [
-          button([OnClick(Decrement()), Class(buttonStyle)], ['-']),
-          button([OnClick(Reset()), Class(buttonStyle)], ['Reset']),
-          button([OnClick(Increment()), Class(buttonStyle)], ['+']),
+          button(
+            [OnClick(ClickedDecrement()), Class(buttonStyle)],
+            ['-'],
+          ),
+          button(
+            [OnClick(ClickedReset()), Class(buttonStyle)],
+            ['Reset'],
+          ),
+          button(
+            [OnClick(ClickedIncrement()), Class(buttonStyle)],
+            ['+'],
+          ),
         ],
       ),
     ],

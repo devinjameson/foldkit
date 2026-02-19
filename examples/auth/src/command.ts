@@ -6,40 +6,40 @@ import { Runtime } from 'foldkit'
 import { SESSION_STORAGE_KEY } from './constant'
 import { Session } from './domain/session'
 import {
+  ClearedSession,
+  FailedSessionClear,
+  FailedSessionSave,
   NoOp,
-  SessionClearFailed,
-  SessionCleared,
-  SessionSaveFailed,
-  SessionSaved,
+  SavedSession,
 } from './message'
 
 export const saveSession = (
   session: Session,
-): Runtime.Command<typeof SessionSaved | typeof SessionSaveFailed> =>
+): Runtime.Command<typeof SavedSession | typeof FailedSessionSave> =>
   Effect.gen(function* () {
     const store = yield* KeyValueStore.KeyValueStore
     yield* store.set(
       SESSION_STORAGE_KEY,
       S.encodeSync(S.parseJson(Session))(session),
     )
-    return SessionSaved()
+    return SavedSession()
   }).pipe(
     Effect.catchAll((error) =>
-      Effect.succeed(SessionSaveFailed({ error: String(error) })),
+      Effect.succeed(FailedSessionSave({ error: String(error) })),
     ),
     Effect.provide(BrowserKeyValueStore.layerLocalStorage),
   )
 
 export const clearSession = (): Runtime.Command<
-  typeof SessionCleared | typeof SessionClearFailed
+  typeof ClearedSession | typeof FailedSessionClear
 > =>
   Effect.gen(function* () {
     const store = yield* KeyValueStore.KeyValueStore
     yield* store.remove(SESSION_STORAGE_KEY)
-    return SessionCleared()
+    return ClearedSession()
   }).pipe(
     Effect.catchAll((error) =>
-      Effect.succeed(SessionClearFailed({ error: String(error) })),
+      Effect.succeed(FailedSessionClear({ error: String(error) })),
     ),
     Effect.provide(BrowserKeyValueStore.layerLocalStorage),
   )

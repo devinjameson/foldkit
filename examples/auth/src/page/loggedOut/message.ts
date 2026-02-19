@@ -12,6 +12,6 @@ export type Message = typeof Message.Type
 
 // OUT MESSAGE
 
-export const LoginSucceeded = ts('LoginSucceeded', { session: Session })
-export const OutMessage = S.Union(LoginSucceeded)
+export const SucceededLogin = ts('SucceededLogin', { session: Session })
+export const OutMessage = S.Union(SucceededLogin)
 export type OutMessage = typeof OutMessage.Type

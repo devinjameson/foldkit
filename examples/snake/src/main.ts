@@ -38,19 +38,19 @@ type Model = typeof Model.Type
 
 // MESSAGE
 
-const ClockTick = ts('ClockTick')
-const KeyPress = ts('KeyPress', { key: S.String })
-const PauseGame = ts('PauseGame')
-const RestartGame = ts('RestartGame')
-const RequestApple = ts('RequestApple', { snake: Snake.Snake })
+const TickedClock = ts('TickedClock')
+const PressedKey = ts('PressedKey', { key: S.String })
+const PausedGame = ts('PausedGame')
+const RestartedGame = ts('RestartedGame')
+const RequestedApple = ts('RequestedApple', { snake: Snake.Snake })
 const GotApple = ts('GotApple', { position: Position.Position })
 
 export const Message = S.Union(
-  ClockTick,
-  KeyPress,
-  PauseGame,
-  RestartGame,
-  RequestApple,
+  TickedClock,
+  PressedKey,
+  PausedGame,
+  RestartedGame,
+  RequestedApple,
   GotApple,
 )
 export type Message = typeof Message.Type
@@ -83,7 +83,7 @@ const update = (
   M.value(message).pipe(
     M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
     M.tagsExhaustive({
-      KeyPress: ({ key }) =>
+      PressedKey: ({ key }) =>
         M.value(key).pipe(
           M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
           M.whenOr(
@@ -150,7 +150,7 @@ const update = (
           M.orElse(() => [model, []]),
         ),
 
-      ClockTick: () => {
+      TickedClock: () => {
         if (model.gameState !== 'Playing') {
           return [model, []]
         }
@@ -192,7 +192,7 @@ const update = (
         ]
       },
 
-      PauseGame: () => [
+      PausedGame: () => [
         evo(model, {
           gameState: (gameState) =>
             gameState === 'Playing' ? 'Paused' : 'Playing',
@@ -200,7 +200,7 @@ const update = (
         [],
       ],
 
-      RestartGame: () => {
+      RestartedGame: () => {
         const startPos: Position.Position = { x: 10, y: 10 }
         const nextSnake = Snake.create(startPos)
 
@@ -216,7 +216,7 @@ const update = (
         ]
       },
 
-      RequestApple: ({ snake }) => [
+      RequestedApple: ({ snake }) => [
         model,
         [
           Apple.generatePosition(snake).pipe(
@@ -237,7 +237,7 @@ const update = (
 // COMMAND
 
 const requestApple = (snake: Snake.Snake): Runtime.Command<Message> =>
-  Effect.succeed(RequestApple({ snake }))
+  Effect.succeed(RequestedApple({ snake }))
 
 // COMMAND STREAM
 
@@ -264,7 +264,7 @@ const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<
     depsToStream: (deps: { isPlaying: boolean; interval: number }) =>
       Stream.when(
         Stream.tick(Duration.millis(deps.interval)).pipe(
-          Stream.map(() => Effect.succeed(ClockTick())),
+          Stream.map(() => Effect.succeed(TickedClock())),
         ),
         () => deps.isPlaying,
       ),
@@ -277,7 +277,7 @@ const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<
         Stream.map((keyboardEvent) =>
           Effect.sync(() => {
             keyboardEvent.preventDefault()
-            return KeyPress({ key: keyboardEvent.key })
+            return PressedKey({ key: keyboardEvent.key })
           }),
         ),
       ),

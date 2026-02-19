@@ -34,10 +34,10 @@ import {
 } from '../../../view/html'
 import { Icon } from '../../../view/icon'
 import {
-  CopyRoomIdClicked,
-  JoinRoomFromPageSubmitted,
-  RoomPageUsernameInputBlurred,
-  RoomPageUsernameInputted,
+  BlurredRoomPageUsernameInput,
+  ClickedCopyRoomId,
+  InputtedRoomPageUsername,
+  SubmittedJoinRoomFromPage,
 } from '../message'
 import type { Message } from '../message'
 import { Model, RoomPlayerSession } from '../model'
@@ -78,7 +78,7 @@ export const view =
           'p-2 rounded hover:bg-terminal-green-dim hover:text-terminal-bg transition text-terminal-green',
         ),
         AriaLabel('Copy room ID'),
-        OnClick(toMessage(CopyRoomIdClicked({ roomId }))),
+        OnClick(toMessage(ClickedCopyRoomId({ roomId }))),
       ],
       [Icon.copy()],
     )
@@ -165,7 +165,7 @@ const joinForm = (
   toMessage: (message: Message) => ParentMessage,
 ): Html =>
   form(
-    [OnSubmit(toMessage(JoinRoomFromPageSubmitted({ roomId })))],
+    [OnSubmit(toMessage(SubmittedJoinRoomFromPage({ roomId })))],
     [
       div(
         [Class('flex items-center gap-2')],
@@ -181,8 +181,8 @@ const joinForm = (
                 Type('text'),
                 Value(username),
                 Class('bg-transparent px-0 py-2 outline-none w-full'),
-                OnInput((value) => toMessage(RoomPageUsernameInputted({ value }))),
-                OnBlur(toMessage(RoomPageUsernameInputBlurred())),
+                OnInput((value) => toMessage(InputtedRoomPageUsername({ value }))),
+                OnBlur(toMessage(BlurredRoomPageUsernameInput())),
                 Autocapitalize('none'),
                 Spellcheck(false),
                 Autocorrect('off'),

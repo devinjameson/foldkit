@@ -20,16 +20,16 @@ type Model = typeof Model.Type
 
 // MESSAGE - events that can happen in your app
 
-const FetchUserClicked = ts('FetchUserClicked', { userId: S.String })
-const UserFetchSucceeded = ts('UserFetchSucceeded', {
+const ClickedFetchUser = ts('ClickedFetchUser', { userId: S.String })
+const SucceededUserFetch = ts('SucceededUserFetch', {
   data: UserSchema,
 })
-const UserFetchFailed = ts('UserFetchFailed', { error: S.String })
+const FailedUserFetch = ts('FailedUserFetch', { error: S.String })
 
 const Message = S.Union(
-  FetchUserClicked,
-  UserFetchSucceeded,
-  UserFetchFailed,
+  ClickedFetchUser,
+  SucceededUserFetch,
+  FailedUserFetch,
 )
 type Message = typeof Message.Type
 
@@ -38,7 +38,7 @@ type Message = typeof Message.Type
 const fetchUser = (
   userId: string,
 ): Runtime.Command<
-  typeof UserFetchSucceeded | typeof UserFetchFailed
+  typeof SucceededUserFetch | typeof FailedUserFetch
 > =>
   Effect.gen(function* () {
     const response = yield* Effect.tryPromise(() =>
@@ -48,11 +48,11 @@ const fetchUser = (
     )
     // Validate the response against UserSchema at runtime
     const data = yield* S.decodeUnknown(UserSchema)(response)
-    return UserFetchSucceeded({ data })
+    return SucceededUserFetch({ data })
   }).pipe(
     // Every Command must return a Message — no errors bubble up
     Effect.catchAll((error) =>
-      Effect.succeed(UserFetchFailed({ error: String(error) })),
+      Effect.succeed(FailedUserFetch({ error: String(error) })),
     ),
   )
 
@@ -68,16 +68,16 @@ const update = (
     >(),
     // Handle every Message — the type system ensures all cases are covered
     M.tagsExhaustive({
-      FetchUserClicked: ({ userId }) => [
+      ClickedFetchUser: ({ userId }) => [
         // evo returns an updated copy of Model
         evo(model, { user: () => UserLoading() }),
         [fetchUser(userId)],
       ],
-      UserFetchSucceeded: ({ data }) => [
+      SucceededUserFetch: ({ data }) => [
         evo(model, { user: () => UserSuccess({ data }) }),
         [],
       ],
-      UserFetchFailed: ({ error }) => [
+      FailedUserFetch: ({ error }) => [
         evo(model, { user: () => UserFailure({ error }) }),
         [],
       ],

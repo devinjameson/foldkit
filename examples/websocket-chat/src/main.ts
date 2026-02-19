@@ -54,14 +54,14 @@ type Model = typeof Model.Type
 
 // MESSAGE
 
-const RequestConnect = ts('RequestConnect')
+const RequestedConnection = ts('RequestedConnection')
 const Connected = ts('Connected', { socket: WebSocketSchema })
 const Disconnected = ts('Disconnected')
-const ConnectionFailed = ts('ConnectionFailed', { error: S.String })
-const UpdateMessageInput = ts('UpdateMessageInput', { value: S.String })
-const SendMessage = ts('SendMessage')
-const MessageSent = ts('MessageSent', { text: S.String })
-const MessageReceived = ts('MessageReceived', { text: S.String })
+const FailedConnection = ts('FailedConnection', { error: S.String })
+const UpdatedMessageInput = ts('UpdatedMessageInput', { value: S.String })
+const RequestedMessageSend = ts('RequestedMessageSend')
+const SentMessage = ts('SentMessage', { text: S.String })
+const ReceivedMessage = ts('ReceivedMessage', { text: S.String })
 const GotReceivedMessageTime = ts('GotReceivedMessageTime', {
   text: S.String,
   zoned: S.DateTimeZonedFromSelf,
@@ -72,14 +72,14 @@ const GotSentMessageTime = ts('GotSentMessageTime', {
 })
 
 const Message = S.Union(
-  RequestConnect,
+  RequestedConnection,
   Connected,
   Disconnected,
-  ConnectionFailed,
-  UpdateMessageInput,
-  SendMessage,
-  MessageSent,
-  MessageReceived,
+  FailedConnection,
+  UpdatedMessageInput,
+  RequestedMessageSend,
+  SentMessage,
+  ReceivedMessage,
   GotReceivedMessageTime,
   GotSentMessageTime,
 )
@@ -94,7 +94,7 @@ const update = (
   M.value(message).pipe(
     M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
     M.tagsExhaustive({
-      RequestConnect: () => [
+      RequestedConnection: () => [
         evo(model, {
           connection: () => ConnectionConnecting(),
         }),
@@ -116,21 +116,21 @@ const update = (
         [],
       ],
 
-      ConnectionFailed: ({ error }) => [
+      FailedConnection: ({ error }) => [
         evo(model, {
           connection: () => ConnectionError({ error }),
         }),
         [],
       ],
 
-      UpdateMessageInput: ({ value }) => [
+      UpdatedMessageInput: ({ value }) => [
         evo(model, {
           messageInput: () => value,
         }),
         [],
       ],
 
-      SendMessage: () => {
+      RequestedMessageSend: () => {
         const trimmedMessage = model.messageInput.trim()
 
         if (String.isEmpty(trimmedMessage)) {
@@ -149,7 +149,7 @@ const update = (
         )
       },
 
-      MessageSent: ({ text }) => [
+      SentMessage: ({ text }) => [
         model,
         [Task.getZonedTime((zoned) => GotSentMessageTime({ text, zoned }))],
       ],
@@ -169,7 +169,7 @@ const update = (
         ]
       },
 
-      MessageReceived: ({ text }) => [
+      ReceivedMessage: ({ text }) => [
         model,
         [Task.getZonedTime((zoned) => GotReceivedMessageTime({ text, zoned }))],
       ],
@@ -207,14 +207,14 @@ const init: Runtime.ElementInit<Model, Message> = () => [
 const sendMessage = (
   socket: WebSocket,
   text: string,
-): Runtime.Command<typeof MessageSent> =>
+): Runtime.Command<typeof SentMessage> =>
   Effect.sync(() => {
     socket.send(text)
-    return MessageSent({ text })
+    return SentMessage({ text })
   })
 
 const connect = (): Runtime.Command<
-  typeof Connected | typeof ConnectionFailed
+  typeof Connected | typeof FailedConnection
 > =>
   Effect.race(
     Effect.async((resume) => {
@@ -227,7 +227,7 @@ const connect = (): Runtime.Command<
       const handleError = () => {
         resume(
           Effect.succeed(
-            ConnectionFailed({ error: 'Failed to connect to WebSocket' }),
+            FailedConnection({ error: 'Failed to connect to WebSocket' }),
           ),
         )
       }
@@ -241,7 +241,7 @@ const connect = (): Runtime.Command<
       })
     }),
     Effect.sleep(Duration.millis(CONNECTION_TIMEOUT_MS)).pipe(
-      Effect.as(ConnectionFailed({ error: 'Connection timeout' })),
+      Effect.as(FailedConnection({ error: 'Connection timeout' })),
     ),
   )
 
@@ -267,13 +267,13 @@ const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<
         onSome: (ws: WebSocket) =>
           Stream.async<
             Runtime.Command<
-              | typeof MessageReceived
+              | typeof ReceivedMessage
               | typeof Disconnected
-              | typeof ConnectionFailed
+              | typeof FailedConnection
             >
           >((emit) => {
             const handleMessage = (event: MessageEvent) => {
-              emit.single(Effect.succeed(MessageReceived({ text: event.data })))
+              emit.single(Effect.succeed(ReceivedMessage({ text: event.data })))
             }
 
             const handleClose = () => {
@@ -283,7 +283,7 @@ const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<
 
             const handleError = () => {
               emit.single(
-                Effect.succeed(ConnectionFailed({ error: 'Connection error' })),
+                Effect.succeed(FailedConnection({ error: 'Connection error' })),
               )
               emit.end()
             }
@@ -482,7 +482,7 @@ const connectButtonView = (): Html =>
     [
       button(
         [
-          OnClick(RequestConnect()),
+          OnClick(RequestedConnection()),
           Class(
             'bg-blue-500 hover:bg-blue-600 text-white font-semibold px-8 py-3 rounded-lg transition',
           ),
@@ -500,7 +500,7 @@ const connectingView = (): Html =>
 
 const messageInputView = (messageInput: string): Html =>
   form(
-    [Class('p-6 border-t border-gray-200'), OnSubmit(SendMessage())],
+    [Class('p-6 border-t border-gray-200'), OnSubmit(RequestedMessageSend())],
     [
       div(
         [Class('flex gap-3')],
@@ -509,7 +509,7 @@ const messageInputView = (messageInput: string): Html =>
             Type('text'),
             Value(messageInput),
             Placeholder('Type a message...'),
-            OnInput((value) => UpdateMessageInput({ value })),
+            OnInput((value) => UpdatedMessageInput({ value })),
             Class(
               'flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
             ),
@@ -542,7 +542,7 @@ const errorView = (error: string): Html =>
       ),
       button(
         [
-          OnClick(RequestConnect()),
+          OnClick(RequestedConnection()),
           Class(
             'w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg transition',
           ),

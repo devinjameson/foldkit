@@ -39,15 +39,17 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const UpdateZipCodeInput = ts('UpdateZipCodeInput', { value: S.String })
-export const FetchWeather = ts('FetchWeather')
-export const WeatherFetched = ts('WeatherFetched', { weather: WeatherData })
+export const UpdatedZipCodeInput = ts('UpdatedZipCodeInput', {
+  value: S.String,
+})
+export const RequestedWeatherFetch = ts('RequestedWeatherFetch')
+export const FetchedWeather = ts('FetchedWeather', { weather: WeatherData })
 export const WeatherError = ts('WeatherError', { error: S.String })
 
 const Message = S.Union(
-  UpdateZipCodeInput,
-  FetchWeather,
-  WeatherFetched,
+  UpdatedZipCodeInput,
+  RequestedWeatherFetch,
+  FetchedWeather,
   WeatherError,
 )
 type Message = typeof Message.Type
@@ -59,21 +61,21 @@ export const update = (
   M.value(message).pipe(
     M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
     M.tagsExhaustive({
-      UpdateZipCodeInput: ({ value }) => [
+      UpdatedZipCodeInput: ({ value }) => [
         evo(model, {
           zipCodeInput: () => value,
         }),
         [],
       ],
 
-      FetchWeather: () => [
+      RequestedWeatherFetch: () => [
         evo(model, {
           weather: () => WeatherLoading(),
         }),
         [fetchWeatherLive(model.zipCodeInput)],
       ],
 
-      WeatherFetched: ({ weather }) => [
+      FetchedWeather: ({ weather }) => [
         evo(model, {
           weather: () => WeatherSuccess({ data: weather }),
         }),
@@ -117,7 +119,7 @@ type WeatherResponseData = {
 export const fetchWeather = (
   zipCode: string,
 ): Runtime.Command<
-  typeof WeatherFetched | typeof WeatherError,
+  typeof FetchedWeather | typeof WeatherError,
   never,
   HttpClient.HttpClient
 > =>
@@ -154,7 +156,7 @@ export const fetchWeather = (
       region,
     })
 
-    return WeatherFetched({ weather })
+    return FetchedWeather({ weather })
   }).pipe(
     Effect.scoped,
     Effect.catchAll(() =>
@@ -204,7 +206,7 @@ const view = (model: Model): Html =>
       form(
         [
           Class('flex flex-col gap-4 items-center w-full max-w-md'),
-          OnSubmit(FetchWeather()),
+          OnSubmit(RequestedWeatherFetch()),
         ],
         [
           label([For('location'), Class('sr-only')], ['Location']),
@@ -214,7 +216,7 @@ const view = (model: Model): Html =>
               'w-full px-4 py-2 rounded-lg border-2 border-blue-300 focus:border-blue-500 outline-none',
             ),
             Placeholder('Enter a zip code'),
-            OnInput((value) => UpdateZipCodeInput({ value })),
+            OnInput((value) => UpdatedZipCodeInput({ value })),
           ]),
           button(
             [

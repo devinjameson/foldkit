@@ -71,25 +71,25 @@ export const initModel = (): Model => ({
 
 // MESSAGE
 
-const EmailChanged = ts('EmailChanged', { value: S.String })
-const PasswordChanged = ts('PasswordChanged', { value: S.String })
-const SubmitClicked = ts('SubmitClicked')
-const AuthSucceeded = ts('AuthSucceeded', { session: Session })
-const AuthFailed = ts('AuthFailed', { error: S.String })
+const ChangedEmail = ts('ChangedEmail', { value: S.String })
+const ChangedPassword = ts('ChangedPassword', { value: S.String })
+const ClickedSubmit = ts('ClickedSubmit')
+const SucceededAuth = ts('SucceededAuth', { session: Session })
+const FailedAuth = ts('FailedAuth', { error: S.String })
 
 export const Message = S.Union(
-  EmailChanged,
-  PasswordChanged,
-  SubmitClicked,
-  AuthSucceeded,
-  AuthFailed,
+  ChangedEmail,
+  ChangedPassword,
+  ClickedSubmit,
+  SucceededAuth,
+  FailedAuth,
 )
 export type Message = typeof Message.Type
 
 // OUT MESSAGE
 
-export const LoginSucceeded = ts('LoginSucceeded', { session: Session })
-export const OutMessage = S.Union(LoginSucceeded)
+export const SucceededLogin = ts('SucceededLogin', { session: Session })
+export const OutMessage = S.Union(SucceededLogin)
 export type OutMessage = typeof OutMessage.Type
 
 // VALIDATION
@@ -126,7 +126,7 @@ const simulateAuthRequest = (
     yield* Effect.sleep(Duration.seconds(1))
 
     if (password !== 'password') {
-      return AuthFailed({ error: 'Invalid credentials' })
+      return FailedAuth({ error: 'Invalid credentials' })
     }
 
     const name = pipe(
@@ -138,26 +138,26 @@ const simulateAuthRequest = (
 
     const session: Session = { userId: '1', email, name }
 
-    return AuthSucceeded({ session })
+    return SucceededAuth({ session })
   })
 
 export const update = (model: Model, message: Message): UpdateReturn =>
   M.value(message).pipe(
     withUpdateReturn,
     M.tagsExhaustive({
-      EmailChanged: ({ value }) => [
+      ChangedEmail: ({ value }) => [
         evo(model, { email: () => validateEmail(value) }),
         [],
         Option.none(),
       ],
 
-      PasswordChanged: ({ value }) => [
+      ChangedPassword: ({ value }) => [
         evo(model, { password: () => validatePassword(value) }),
         [],
         Option.none(),
       ],
 
-      SubmitClicked: () => {
+      ClickedSubmit: () => {
         if (!isFormValid(model)) {
           return [model, [], Option.none()]
         }
@@ -169,13 +169,13 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         ]
       },
 
-      AuthSucceeded: ({ session }) => [
+      SucceededAuth: ({ session }) => [
         model,
         [],
-        Option.some(LoginSucceeded({ session })),
+        Option.some(SucceededLogin({ session })),
       ],
 
-      AuthFailed: ({ error }) => [
+      FailedAuth: ({ error }) => [
         evo(model, {
           password: () =>
             StringFieldInvalid({ value: model.password.value, error }),
@@ -279,13 +279,13 @@ export const view = (
             ],
           ),
           form(
-            [Class('space-y-6'), OnSubmit(toMessage(SubmitClicked()))],
+            [Class('space-y-6'), OnSubmit(toMessage(ClickedSubmit()))],
             [
               fieldView(
                 'email',
                 'Email',
                 model.email,
-                (value) => toMessage(EmailChanged({ value })),
+                (value) => toMessage(ChangedEmail({ value })),
                 'email',
                 'you@example.com',
               ),
@@ -293,7 +293,7 @@ export const view = (
                 'password',
                 'Password',
                 model.password,
-                (value) => toMessage(PasswordChanged({ value })),
+                (value) => toMessage(ChangedPassword({ value })),
                 'password',
                 'Enter your password',
               ),

@@ -10,8 +10,8 @@ import {
   Message,
   NoOp,
   type OutMessage,
-  RoomCreationSucceeded,
-  RoomJoinSucceeded,
+  SucceededRoomCreation,
+  SucceededRoomJoin,
 } from '../message'
 import { EnterRoomId, EnterUsername, Model, SelectAction } from '../model'
 import { handleKeyPressed } from './handleKeyPressed'
@@ -29,7 +29,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
     M.tagsExhaustive({
       NoOp: () => [model, [], Option.none()],
 
-      UsernameFormSubmitted: () =>
+      SubmittedUsernameForm: () =>
         M.value(model.homeStep).pipe(
           withUpdateReturn,
           M.tag('EnterUsername', ({ username }) => {
@@ -44,9 +44,9 @@ export const update = (model: Model, message: Message): UpdateReturn =>
           M.orElse(() => [model, [], Option.none()]),
         ),
 
-      KeyPressed: (message) => [...handleKeyPressed(model)(message), Option.none()],
+      PressedKey: (message) => [...handleKeyPressed(model)(message), Option.none()],
 
-      UsernameInputted: ({ value }) =>
+      InputtedUsername: ({ value }) =>
         M.value(model.homeStep).pipe(
           withUpdateReturn,
           M.tag('EnterUsername', () => [
@@ -60,19 +60,19 @@ export const update = (model: Model, message: Message): UpdateReturn =>
           M.orElse(() => [model, [], Option.none()]),
         ),
 
-      UsernameInputBlurred: () => [
+      BlurredUsernameInput: () => [
         model,
         [Task.focus(`#${USERNAME_INPUT_ID}`, () => NoOp())],
         Option.none(),
       ],
 
-      RoomIdInputBlurred: () => [
+      BlurredRoomIdInput: () => [
         model,
         [Task.focus(`#${ROOM_ID_INPUT_ID}`, () => NoOp())],
         Option.none(),
       ],
 
-      RoomIdInputted: ({ value }) =>
+      InputtedRoomId: ({ value }) =>
         M.value(model.homeStep).pipe(
           withUpdateReturn,
           M.tag('EnterRoomId', ({ username, roomIdValidationId }) => [
@@ -91,14 +91,14 @@ export const update = (model: Model, message: Message): UpdateReturn =>
           M.orElse(() => [model, [], Option.none()]),
         ),
 
-      CreateRoomClicked: () =>
+      ClickedCreateRoom: () =>
         M.value(model.homeStep).pipe(
           withUpdateReturn,
           M.tag('SelectAction', ({ username }) => [model, [createRoom(username)], Option.none()]),
           M.orElse(() => [model, [], Option.none()]),
         ),
 
-      JoinRoomClicked: () =>
+      ClickedJoinRoom: () =>
         M.value(model.homeStep).pipe(
           withUpdateReturn,
           M.tag('EnterRoomId', ({ username, roomId }) => {
@@ -121,16 +121,16 @@ export const update = (model: Model, message: Message): UpdateReturn =>
           M.orElse(() => [model, [], Option.none()]),
         ),
 
-      RoomCreated: ({ roomId, player }) => [
+      CreatedRoom: ({ roomId, player }) => [
         model,
         [],
-        Option.some(RoomCreationSucceeded({ roomId, player })),
+        Option.some(SucceededRoomCreation({ roomId, player })),
       ],
 
-      RoomJoined: ({ roomId, player }) => [
+      JoinedRoom: ({ roomId, player }) => [
         model,
         [],
-        Option.some(RoomJoinSucceeded({ roomId, player })),
+        Option.some(SucceededRoomJoin({ roomId, player })),
       ],
 
       RoomError: ({ error }) => [

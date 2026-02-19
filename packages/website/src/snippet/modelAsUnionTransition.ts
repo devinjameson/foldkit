@@ -11,7 +11,7 @@ export const update = (
         LoggedIn({ userId: '123', username: 'alice' }),
         [],
       ],
-      LogoutClicked: () => [
+      ClickedLogout: () => [
         LoggedOut({ email: '', password: '' }),
         [],
       ],

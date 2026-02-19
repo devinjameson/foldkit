@@ -7,7 +7,7 @@ import { Url } from 'foldkit/url'
 
 import { SESSION_STORAGE_KEY } from './constant'
 import { Session } from './domain/session'
-import { LinkClicked, Message, NoOp, UrlChanged } from './message'
+import { ChangedUrl, ClickedLink, Message, NoOp } from './message'
 import { LoggedIn, LoggedOut, Model } from './model'
 import {
   DashboardRoute,
@@ -91,8 +91,8 @@ const app = Runtime.makeApplication({
   view,
   container: document.getElementById('root')!,
   browser: {
-    onUrlRequest: (request) => LinkClicked({ request }),
-    onUrlChange: (url) => UrlChanged({ url }),
+    onUrlRequest: (request) => ClickedLink({ request }),
+    onUrlChange: (url) => ChangedUrl({ url }),
   },
 })
 

@@ -162,66 +162,66 @@ export type Model = typeof Model.Type
 // MESSAGE
 
 const NoOp = ts('NoOp')
-const LinkClicked = ts('LinkClicked', {
+const ClickedLink = ts('ClickedLink', {
   request: UrlRequest,
 })
-const UrlChanged = ts('UrlChanged', { url: Url })
-export const CopySnippetToClipboard = ts('CopySnippetToClipboard', {
+const ChangedUrl = ts('ChangedUrl', { url: Url })
+export const RequestedSnippetCopy = ts('RequestedSnippetCopy', {
   text: S.String,
 })
-export const CopyLinkToClipboard = ts('CopyLinkToClipboard', {
+export const RequestedLinkCopy = ts('RequestedLinkCopy', {
   hash: S.String,
 })
 const CopySuccess = ts('CopySuccess', { text: S.String })
-const HideCopiedIndicator = ts('HideCopiedIndicator', {
+const HiddenCopiedIndicator = ts('HiddenCopiedIndicator', {
   text: S.String,
 })
-const ToggleMobileMenu = ts('ToggleMobileMenu')
-const MobileTableOfContentsToggled = ts(
-  'MobileTableOfContentsToggled',
+const ToggledMobileMenu = ts('ToggledMobileMenu')
+const ToggledMobileTableOfContents = ts(
+  'ToggledMobileTableOfContents',
   {
     isOpen: S.Boolean,
   },
 )
-const MobileTableOfContentsLinkClicked = ts(
-  'MobileTableOfContentsLinkClicked',
+const ClickedMobileTableOfContentsLink = ts(
+  'ClickedMobileTableOfContentsLink',
 )
-export const ActiveSectionChanged = ts('ActiveSectionChanged', {
+export const ChangedActiveSection = ts('ChangedActiveSection', {
   sectionId: S.String,
 })
 export const SetThemePreference = ts('SetThemePreference', {
   preference: ThemePreference,
 })
-export const SystemThemeChanged = ts('SystemThemeChanged', {
+export const ChangedSystemTheme = ts('ChangedSystemTheme', {
   theme: ResolvedTheme,
 })
-const FoldkitUiMessage = ts('FoldkitUiMessage', {
+const GotFoldkitUiMessage = ts('GotFoldkitUiMessage', {
   message: Page.FoldkitUi.Message,
 })
-const ComingFromReactMessage = ts('ComingFromReactMessage', {
+const GotComingFromReactMessage = ts('GotComingFromReactMessage', {
   message: Page.ComingFromReact.Message,
 })
-const ApiReferenceMessage = ts('ApiReferenceMessage', {
+const GotApiReferenceMessage = ts('GotApiReferenceMessage', {
   message: Page.ApiReference.Message,
 })
 
 const Message = S.Union(
   NoOp,
-  LinkClicked,
-  UrlChanged,
-  CopySnippetToClipboard,
-  CopyLinkToClipboard,
+  ClickedLink,
+  ChangedUrl,
+  RequestedSnippetCopy,
+  RequestedLinkCopy,
   CopySuccess,
-  HideCopiedIndicator,
-  ToggleMobileMenu,
-  MobileTableOfContentsToggled,
-  MobileTableOfContentsLinkClicked,
-  ActiveSectionChanged,
+  HiddenCopiedIndicator,
+  ToggledMobileMenu,
+  ToggledMobileTableOfContents,
+  ClickedMobileTableOfContentsLink,
+  ChangedActiveSection,
   SetThemePreference,
-  SystemThemeChanged,
-  FoldkitUiMessage,
-  ComingFromReactMessage,
-  ApiReferenceMessage,
+  ChangedSystemTheme,
+  GotFoldkitUiMessage,
+  GotComingFromReactMessage,
+  GotApiReferenceMessage,
 )
 export type Message = typeof Message.Type
 
@@ -246,15 +246,17 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
   )
 
   const mappedFoldkitUiCommands = foldkitUiCommands.map((message) =>
-    Effect.map(message, (message) => FoldkitUiMessage({ message })),
+    Effect.map(message, (message) =>
+      GotFoldkitUiMessage({ message }),
+    ),
   )
 
   const mappedComingFromReactCommands = comingFromReactCommands.map(
-    Effect.map((message) => ComingFromReactMessage({ message })),
+    Effect.map((message) => GotComingFromReactMessage({ message })),
   )
 
   const mappedApiReferenceCommands = apiReferenceCommands.map(
-    Effect.map((message) => ApiReferenceMessage({ message })),
+    Effect.map((message) => GotApiReferenceMessage({ message })),
   )
 
   return [
@@ -299,7 +301,7 @@ const update = (
     M.tagsExhaustive({
       NoOp: () => [model, []],
 
-      LinkClicked: ({ request }) =>
+      ClickedLink: ({ request }) =>
         M.value(request).pipe(
           M.tagsExhaustive({
             Internal: ({
@@ -320,7 +322,7 @@ const update = (
           }),
         ),
 
-      UrlChanged: ({ url }) => [
+      ChangedUrl: ({ url }) => [
         evo(model, {
           route: () => urlToAppRoute(url),
           url: () => url,
@@ -332,12 +334,12 @@ const update = (
         }),
       ],
 
-      CopySnippetToClipboard: ({ text }) => [
+      RequestedSnippetCopy: ({ text }) => [
         model,
         [copySnippetToClipboard(text)],
       ],
 
-      CopyLinkToClipboard: ({ hash }) => [
+      RequestedLinkCopy: ({ hash }) => [
         model,
         [
           copyLinkToClipboard(
@@ -356,31 +358,31 @@ const update = (
               [hideIndicator(text)],
             ],
 
-      HideCopiedIndicator: ({ text }) => [
+      HiddenCopiedIndicator: ({ text }) => [
         evo(model, {
           copiedSnippets: HashSet.remove(text),
         }),
         [],
       ],
 
-      ToggleMobileMenu: () => [
+      ToggledMobileMenu: () => [
         evo(model, {
           mobileMenuOpen: (mobileMenuOpen) => !mobileMenuOpen,
         }),
         [],
       ],
 
-      MobileTableOfContentsToggled: ({ isOpen }) => [
+      ToggledMobileTableOfContents: ({ isOpen }) => [
         evo(model, { mobileTableOfContentsOpen: () => isOpen }),
         [],
       ],
 
-      MobileTableOfContentsLinkClicked: () => [
+      ClickedMobileTableOfContentsLink: () => [
         evo(model, { mobileTableOfContentsOpen: () => false }),
         [],
       ],
 
-      ActiveSectionChanged: ({ sectionId }) => [
+      ChangedActiveSection: ({ sectionId }) => [
         evo(model, {
           activeSection: () => Option.some(sectionId),
         }),
@@ -405,19 +407,19 @@ const update = (
         ]
       },
 
-      FoldkitUiMessage: ({ message }) => {
+      GotFoldkitUiMessage: ({ message }) => {
         const [nextFoldkitUi, foldkitUiCommands] =
           Page.FoldkitUi.update(model.foldkitUi, message)
 
         return [
           evo(model, { foldkitUi: () => nextFoldkitUi }),
           foldkitUiCommands.map(
-            Effect.map((message) => FoldkitUiMessage({ message })),
+            Effect.map((message) => GotFoldkitUiMessage({ message })),
           ),
         ]
       },
 
-      SystemThemeChanged: ({ theme }) => {
+      ChangedSystemTheme: ({ theme }) => {
         const resolvedTheme = resolveTheme(
           model.themePreference,
           theme,
@@ -432,7 +434,7 @@ const update = (
         ]
       },
 
-      ComingFromReactMessage: ({ message }) => {
+      GotComingFromReactMessage: ({ message }) => {
         const [nextComingFromReact, comingFromReactCommands] =
           Page.ComingFromReact.update(model.comingFromReact, message)
 
@@ -442,20 +444,22 @@ const update = (
           }),
           comingFromReactCommands.map(
             Effect.map((message) =>
-              ComingFromReactMessage({ message }),
+              GotComingFromReactMessage({ message }),
             ),
           ),
         ]
       },
 
-      ApiReferenceMessage: ({ message }) => {
+      GotApiReferenceMessage: ({ message }) => {
         const [nextApiReference, apiReferenceCommands] =
           Page.ApiReference.update(model.apiReference, message)
 
         return [
           evo(model, { apiReference: () => nextApiReference }),
           apiReferenceCommands.map(
-            Effect.map((message) => ApiReferenceMessage({ message })),
+            Effect.map((message) =>
+              GotApiReferenceMessage({ message }),
+            ),
           ),
         ]
       },
@@ -494,9 +498,9 @@ const COPY_INDICATOR_DURATION = '2 seconds'
 
 const hideIndicator = (
   text: string,
-): Runtime.Command<typeof HideCopiedIndicator> =>
+): Runtime.Command<typeof HiddenCopiedIndicator> =>
   Effect.sleep(COPY_INDICATOR_DURATION).pipe(
-    Effect.as(HideCopiedIndicator({ text })),
+    Effect.as(HiddenCopiedIndicator({ text })),
   )
 
 const scrollToTop: Runtime.Command<typeof NoOp> = Effect.sync(() => {
@@ -599,7 +603,7 @@ const sidebarView = (
                 'p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-700 dark:text-gray-300 cursor-pointer',
               ),
               AriaLabel('Close menu'),
-              OnClick(ToggleMobileMenu()),
+              OnClick(ToggledMobileMenu()),
             ],
             [Icon.close('w-6 h-6')],
           ),
@@ -808,7 +812,7 @@ const mobileTableOfContentsView = (
       Id('mobile-table-of-contents'),
       Open(isOpen),
       OnToggle((open) =>
-        MobileTableOfContentsToggled({ isOpen: open }),
+        ToggledMobileTableOfContents({ isOpen: open }),
       ),
       Class(
         'group xl:hidden fixed top-[var(--header-height)] left-0 right-0 md:left-64 z-40 bg-white dark:bg-black border-b border-gray-300 dark:border-gray-700',
@@ -875,7 +879,7 @@ const mobileTableOfContentsView = (
                   a(
                     [
                       Href(`#${id}`),
-                      OnClick(MobileTableOfContentsLinkClicked()),
+                      OnClick(ClickedMobileTableOfContentsLink()),
                       Class(
                         classNames(
                           'transition flex items-center justify-between py-3 px-4',
@@ -918,7 +922,7 @@ const view = (model: Model) => {
         Page.ComingFromReact.view(
           model,
           model.comingFromReact,
-          (message) => ComingFromReactMessage({ message }),
+          (message) => GotComingFromReactMessage({ message }),
         ),
       GettingStarted: () => Page.GettingStarted.view(model),
       ArchitectureAndConcepts: () =>
@@ -932,11 +936,11 @@ const view = (model: Model) => {
         Page.ApiReference.view(
           Page.ApiReference.apiReference.modules,
           model.apiReference,
-          (message) => ApiReferenceMessage({ message }),
+          (message) => GotApiReferenceMessage({ message }),
         ),
       FoldkitUi: () =>
         Page.FoldkitUi.view(model.foldkitUi, (message) =>
-          FoldkitUiMessage({ message }),
+          GotFoldkitUiMessage({ message }),
         ),
       NotFound: ({ path }) =>
         Page.NotFound.view(path, homeRouter.build({})),
@@ -1002,7 +1006,7 @@ const view = (model: Model) => {
                     'md:hidden p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-700 dark:text-gray-300 cursor-pointer',
                   ),
                   AriaLabel('Toggle menu'),
-                  OnClick(ToggleMobileMenu()),
+                  OnClick(ToggledMobileMenu()),
                 ],
                 [Icon.menu('w-6 h-6')],
               ),
@@ -1127,8 +1131,8 @@ const application = Runtime.makeApplication({
   commandStreams,
   container: document.getElementById('root')!,
   browser: {
-    onUrlRequest: (request) => LinkClicked({ request }),
-    onUrlChange: (url) => UrlChanged({ url }),
+    onUrlRequest: (request) => ClickedLink({ request }),
+    onUrlChange: (url) => ChangedUrl({ url }),
   },
 })
 

@@ -3,14 +3,14 @@ import { Runtime } from 'foldkit'
 import { CommandStream } from 'foldkit/runtime'
 
 import {
+  ChangedSystemTheme,
   type CommandStreamsDeps,
   type Model,
-  SystemThemeChanged,
 } from '../main'
 
 export const systemTheme: CommandStream<
   Model,
-  typeof SystemThemeChanged,
+  typeof ChangedSystemTheme,
   CommandStreamsDeps['systemTheme']
 > = {
   modelToDeps: (model: Model) => ({
@@ -18,7 +18,7 @@ export const systemTheme: CommandStream<
   }),
   depsToStream: ({ isSystemPreference }) =>
     Stream.when(
-      Stream.async<Runtime.Command<typeof SystemThemeChanged>>(
+      Stream.async<Runtime.Command<typeof ChangedSystemTheme>>(
         (emit) => {
           const mediaQuery = window.matchMedia(
             '(prefers-color-scheme: dark)',
@@ -27,7 +27,7 @@ export const systemTheme: CommandStream<
           const handler = (event: MediaQueryListEvent) => {
             emit.single(
               Effect.succeed(
-                SystemThemeChanged({
+                ChangedSystemTheme({
                   theme: event.matches ? 'Dark' : 'Light',
                 }),
               ),

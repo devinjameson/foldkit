@@ -18,11 +18,11 @@ import {
   span,
 } from '../html'
 import {
-  ChangeCartQuantity,
   type CheckoutRoute,
-  ClearCart,
+  ClickedCartQuantityChange,
+  ClickedClearCart,
+  ClickedRemoveCartItem,
   type ProductsRoute,
-  RemoveFromCart,
 } from '../main'
 
 // VIEW
@@ -97,7 +97,7 @@ export const view = (
                                   'bg-gray-200 hover:bg-gray-300 text-gray-800 w-8 h-8 rounded flex items-center justify-center',
                                 ),
                                 OnClick(
-                                  ChangeCartQuantity({
+                                  ClickedCartQuantityChange({
                                     itemId: cartItem.item.id,
                                     quantity: Number.decrement(
                                       cartItem.quantity,
@@ -117,7 +117,7 @@ export const view = (
                                   'bg-gray-200 hover:bg-gray-300 text-gray-800 w-8 h-8 rounded flex items-center justify-center',
                                 ),
                                 OnClick(
-                                  ChangeCartQuantity({
+                                  ClickedCartQuantityChange({
                                     itemId: cartItem.item.id,
                                     quantity: cartItem.quantity + 1,
                                   }),
@@ -131,7 +131,7 @@ export const view = (
                                   'bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded ml-2',
                                 ),
                                 OnClick(
-                                  RemoveFromCart({
+                                  ClickedRemoveCartItem({
                                     itemId: cartItem.item.id,
                                   }),
                                 ),
@@ -183,7 +183,7 @@ export const view = (
                         Class(
                           'bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-medium',
                         ),
-                        OnClick(ClearCart()),
+                        OnClick(ClickedClearCart()),
                       ],
                       ['Clear Cart'],
                     ),
