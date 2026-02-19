@@ -1,5 +1,5 @@
 import * as Shared from '@typing-game/shared'
-import { Array, Effect, Match as M } from 'effect'
+import { Array, Effect, Match as M, Option } from 'effect'
 import { Runtime, Task, Url } from 'foldkit'
 import { load, pushUrl } from 'foldkit/navigation'
 import { evo } from 'foldkit/struct'
@@ -44,26 +44,38 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
       },
 
       GotHomeMessage: ({ message }) => {
-        const [nextHomeModel, homeComands] = Home.update(model.home, message)
+        const [nextHomeModel, homeCommands, maybeOutMessage] = Home.update(model.home, message)
 
-        const additionalCommands = M.value(message).pipe(
-          M.tag('RoomCreated', ({ roomId, player }) => handleRoomJoined(roomId, player)),
-          M.tag('RoomJoined', ({ roomId, player }) => handleRoomJoined(roomId, player)),
-          M.tag('RoomError', ({ error }) => [
-            Effect.succeed(GotRoomMessage({ message: Room.Message.RoomError({ error }) })),
-          ]),
-          M.orElse(() => []),
+        const mappedCommands = homeCommands.map(
+          Effect.map((message) => GotHomeMessage({ message })),
         )
 
-        return [
-          evo(model, {
-            home: () => nextHomeModel,
-          }),
-          [
-            ...homeComands.map(Effect.map((message) => GotHomeMessage({ message }))),
-            ...additionalCommands,
+        return Option.match(maybeOutMessage, {
+          onNone: () => [
+            evo(model, {
+              home: () => nextHomeModel,
+            }),
+            mappedCommands,
           ],
-        ]
+          onSome: (outMessage) =>
+            M.value(outMessage).pipe(
+              withUpdateReturn,
+              M.tagsExhaustive({
+                RoomCreationSucceeded: ({ roomId, player }) => [
+                  evo(model, {
+                    home: () => nextHomeModel,
+                  }),
+                  [...mappedCommands, ...handleRoomJoined(roomId, player)],
+                ],
+                RoomJoinSucceeded: ({ roomId, player }) => [
+                  evo(model, {
+                    home: () => nextHomeModel,
+                  }),
+                  [...mappedCommands, ...handleRoomJoined(roomId, player)],
+                ],
+              }),
+            ),
+        })
       },
 
       GotRoomMessage: ({ message }) => {

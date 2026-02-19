@@ -2,8 +2,8 @@ import { Array, Match as M, Number, Option, flow, pipe } from 'effect'
 import { Runtime, Task } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
-import { createRoom } from '../../../command'
 import { ROOM_ID_INPUT_ID, USERNAME_INPUT_ID } from '../../../constant'
+import { createRoom } from '../command'
 import { Message, NoOp } from '../message'
 import { EnterRoomId, EnterUsername, HOME_ACTIONS, HomeAction, Model, SelectAction } from '../model'
 

@@ -4,19 +4,18 @@ import { Runtime, Task } from 'foldkit'
 import { pushUrl } from 'foldkit/navigation'
 import { evo } from 'foldkit/struct'
 
+import { clearSession, savePlayerToSessionStorage } from '../../../command'
+import { ROOM_PAGE_USERNAME_INPUT_ID } from '../../../constant'
+import { optionWhen } from '../../../optionWhen'
+import { homeRouter } from '../../../route'
 import {
-  clearSession,
   copyRoomIdToClipboard,
   exitCountdownTick,
   hideRoomIdCopiedIndicator,
   joinRoom,
-  savePlayerToSessionStorage,
   startGame,
   updatePlayerProgress,
-} from '../../../command'
-import { ROOM_PAGE_USERNAME_INPUT_ID } from '../../../constant'
-import { optionWhen } from '../../../optionWhen'
-import { homeRouter } from '../../../route'
+} from '../command'
 import { Message, NoOp } from '../message'
 import { Model, RoomRemoteData } from '../model'
 import { validateUserTextInput } from '../userGameText'
@@ -165,8 +164,6 @@ export const update = (model: Model, message: Message): UpdateReturn =>
           [savePlayerToSessionStorage(session)],
         ]
       },
-
-      RoomError: () => [model, []],
     }),
   )
 

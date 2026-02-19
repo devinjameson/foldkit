@@ -24,7 +24,6 @@ export const CopyRoomIdSuccess = ts('CopyRoomIdSuccess')
 export const HideRoomIdCopiedIndicator = ts('HideRoomIdCopiedIndicator')
 export const ExitCountdownTicked = ts('ExitCountdownTicked')
 export const RoomJoined = ts('RoomJoined', { roomId: S.String, player: Shared.Player })
-export const RoomError = ts('RoomError', { error: S.String })
 
 export const Message = S.Union(
   NoOp,
@@ -44,6 +43,5 @@ export const Message = S.Union(
   HideRoomIdCopiedIndicator,
   ExitCountdownTicked,
   RoomJoined,
-  RoomError,
 )
 export type Message = typeof Message.Type

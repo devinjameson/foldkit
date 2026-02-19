@@ -30,3 +30,17 @@ export const Message = S.Union(
   KeyPressed,
 )
 export type Message = typeof Message.Type
+
+// OUT MESSAGE
+
+export const RoomCreationSucceeded = ts('RoomCreationSucceeded', {
+  roomId: S.String,
+  player: Shared.Player,
+})
+export const RoomJoinSucceeded = ts('RoomJoinSucceeded', {
+  roomId: S.String,
+  player: Shared.Player,
+})
+
+export const OutMessage = S.Union(RoomCreationSucceeded, RoomJoinSucceeded)
+export type OutMessage = typeof OutMessage.Type

@@ -1,8 +1,8 @@
 import { Array, Effect, Option, pipe } from 'effect'
 import { Runtime } from 'foldkit'
 
-import { getRoomById, loadSessionFromStorage } from '../../command'
 import { AppRoute } from '../../route'
+import { getRoomById, loadSessionFromStorage } from './command'
 import { Message } from './message'
 import { Model, RoomRemoteData } from './model'
 

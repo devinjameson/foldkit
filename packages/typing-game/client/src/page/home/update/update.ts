@@ -2,21 +2,32 @@ import { Array, Match as M, Option, String as Str } from 'effect'
 import { Runtime, Task } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
-import { createRoom, joinRoom } from '../../../command'
+import { joinRoom } from '../../../command'
 import { ROOM_ID_INPUT_ID, USERNAME_INPUT_ID } from '../../../constant'
 import { optionWhen } from '../../../optionWhen'
-import { Message, NoOp } from '../message'
+import { createRoom } from '../command'
+import {
+  Message,
+  NoOp,
+  type OutMessage,
+  RoomCreationSucceeded,
+  RoomJoinSucceeded,
+} from '../message'
 import { EnterRoomId, EnterUsername, Model, SelectAction } from '../model'
 import { handleKeyPressed } from './handleKeyPressed'
 
-export type UpdateReturn = [Model, ReadonlyArray<Runtime.Command<Message>>]
+export type UpdateReturn = [
+  Model,
+  ReadonlyArray<Runtime.Command<Message>>,
+  Option.Option<OutMessage>,
+]
 const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
 export const update = (model: Model, message: Message): UpdateReturn =>
   M.value(message).pipe(
     withUpdateReturn,
     M.tagsExhaustive({
-      NoOp: () => [model, []],
+      NoOp: () => [model, [], Option.none()],
 
       UsernameFormSubmitted: () =>
         M.value(model.homeStep).pipe(
@@ -28,12 +39,12 @@ export const update = (model: Model, message: Message): UpdateReturn =>
                 })
               : model
 
-            return [nextModel, []]
+            return [nextModel, [], Option.none()]
           }),
-          M.orElse(() => [model, []]),
+          M.orElse(() => [model, [], Option.none()]),
         ),
 
-      KeyPressed: handleKeyPressed(model),
+      KeyPressed: (message) => [...handleKeyPressed(model)(message), Option.none()],
 
       UsernameInputted: ({ value }) =>
         M.value(model.homeStep).pipe(
@@ -44,13 +55,22 @@ export const update = (model: Model, message: Message): UpdateReturn =>
               formError: () => Option.none(),
             }),
             [],
+            Option.none(),
           ]),
-          M.orElse(() => [model, []]),
+          M.orElse(() => [model, [], Option.none()]),
         ),
 
-      UsernameInputBlurred: () => [model, [Task.focus(`#${USERNAME_INPUT_ID}`, () => NoOp())]],
+      UsernameInputBlurred: () => [
+        model,
+        [Task.focus(`#${USERNAME_INPUT_ID}`, () => NoOp())],
+        Option.none(),
+      ],
 
-      RoomIdInputBlurred: () => [model, [Task.focus(`#${ROOM_ID_INPUT_ID}`, () => NoOp())]],
+      RoomIdInputBlurred: () => [
+        model,
+        [Task.focus(`#${ROOM_ID_INPUT_ID}`, () => NoOp())],
+        Option.none(),
+      ],
 
       RoomIdInputted: ({ value }) =>
         M.value(model.homeStep).pipe(
@@ -66,15 +86,16 @@ export const update = (model: Model, message: Message): UpdateReturn =>
               formError: () => Option.none(),
             }),
             [],
+            Option.none(),
           ]),
-          M.orElse(() => [model, []]),
+          M.orElse(() => [model, [], Option.none()]),
         ),
 
       CreateRoomClicked: () =>
         M.value(model.homeStep).pipe(
           withUpdateReturn,
-          M.tag('SelectAction', ({ username }) => [model, [createRoom(username)]]),
-          M.orElse(() => [model, []]),
+          M.tag('SelectAction', ({ username }) => [model, [createRoom(username)], Option.none()]),
+          M.orElse(() => [model, [], Option.none()]),
         ),
 
       JoinRoomClicked: () =>
@@ -87,6 +108,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
                   homeStep: () => SelectAction({ username, selectedAction: 'JoinRoom' }),
                 }),
                 [],
+                Option.none(),
               ]
             }
 
@@ -94,20 +116,29 @@ export const update = (model: Model, message: Message): UpdateReturn =>
               joinRoom(username, roomId),
             )
 
-            return [model, Array.fromOption(maybeJoinCommand)]
+            return [model, Array.fromOption(maybeJoinCommand), Option.none()]
           }),
-          M.orElse(() => [model, []]),
+          M.orElse(() => [model, [], Option.none()]),
         ),
 
-      RoomCreated: () => [model, []],
+      RoomCreated: ({ roomId, player }) => [
+        model,
+        [],
+        Option.some(RoomCreationSucceeded({ roomId, player })),
+      ],
 
-      RoomJoined: () => [model, []],
+      RoomJoined: ({ roomId, player }) => [
+        model,
+        [],
+        Option.some(RoomJoinSucceeded({ roomId, player })),
+      ],
 
       RoomError: ({ error }) => [
         evo(model, {
           formError: () => Option.some(error),
         }),
         [],
+        Option.none(),
       ],
     }),
   )
