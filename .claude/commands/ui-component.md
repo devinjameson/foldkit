@@ -2,7 +2,7 @@ Build a new foldkit UI component: **$ARGUMENTS**
 
 ## Research Phase
 
-1. Study the Headless UI equivalent of this component at headlessui.com
+1. Study the Headless UI equivalent of this component — source code is available locally at `~/Repos/headlessui` (React implementation under `packages/@headlessui-react/src/components/`)
 2. Read the WAI-ARIA Authoring Practices for the relevant pattern
 3. Identify the key interactions: keyboard navigation, focus management, ARIA attributes, state transitions
 
