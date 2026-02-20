@@ -60,14 +60,14 @@ export const Closed = ts('Closed')
 /** Sent when focus leaves the menu items container via Tab key. */
 export const ClosedByTab = ts('ClosedByTab')
 /** Sent when an item is highlighted via arrow keys or mouse hover. Includes activation trigger. */
-export const ItemActivated = ts('ItemActivated', {
+export const ActivatedItem = ts('ActivatedItem', {
   index: S.Number,
   activationTrigger: ActivationTrigger,
 })
 /** Sent when the mouse leaves an enabled item. */
-export const ItemDeactivated = ts('ItemDeactivated')
+export const DeactivatedItem = ts('DeactivatedItem')
 /** Sent when an item is selected via Enter, Space, or click. */
-export const ItemSelected = ts('ItemSelected', { index: S.Number })
+export const SelectedItem = ts('SelectedItem', { index: S.Number })
 /** Sent when a printable character is typed for typeahead search. */
 export const Searched = ts('Searched', {
   key: S.String,
@@ -76,7 +76,7 @@ export const Searched = ts('Searched', {
 /** Sent after the search debounce period to clear the accumulated query. */
 export const ClearedSearch = ts('ClearedSearch', { version: S.Number })
 /** Sent when the pointer moves over a menu item, carrying screen coordinates for tracked-pointer comparison. */
-export const PointerMovedOverItem = ts('PointerMovedOverItem', {
+export const MovedPointerOverItem = ts('MovedPointerOverItem', {
   index: S.Number,
   screenX: S.Number,
   screenY: S.Number,
@@ -84,38 +84,38 @@ export const PointerMovedOverItem = ts('PointerMovedOverItem', {
 /** Placeholder message used when no action is needed. */
 export const NoOp = ts('NoOp')
 /** Sent internally when a double-rAF completes, advancing the transition to its animating phase. */
-export const TransitionFrameAdvanced = ts('TransitionFrameAdvanced')
+export const AdvancedTransitionFrame = ts('AdvancedTransitionFrame')
 /** Sent internally when all CSS transitions on the menu items container have completed. */
-export const TransitionEnded = ts('TransitionEnded')
+export const EndedTransition = ts('EndedTransition')
 
 /** Union of all messages the menu component can produce. */
 export const Message = S.Union(
   Opened,
   Closed,
   ClosedByTab,
-  ItemActivated,
-  ItemDeactivated,
-  ItemSelected,
-  PointerMovedOverItem,
+  ActivatedItem,
+  DeactivatedItem,
+  SelectedItem,
+  MovedPointerOverItem,
   Searched,
   ClearedSearch,
   NoOp,
-  TransitionFrameAdvanced,
-  TransitionEnded,
+  AdvancedTransitionFrame,
+  EndedTransition,
 )
 
 export type Opened = typeof Opened.Type
 export type Closed = typeof Closed.Type
 export type ClosedByTab = typeof ClosedByTab.Type
-export type ItemActivated = typeof ItemActivated.Type
-export type ItemDeactivated = typeof ItemDeactivated.Type
-export type ItemSelected = typeof ItemSelected.Type
-export type PointerMovedOverItem = typeof PointerMovedOverItem.Type
+export type ActivatedItem = typeof ActivatedItem.Type
+export type DeactivatedItem = typeof DeactivatedItem.Type
+export type SelectedItem = typeof SelectedItem.Type
+export type MovedPointerOverItem = typeof MovedPointerOverItem.Type
 export type Searched = typeof Searched.Type
 export type ClearedSearch = typeof ClearedSearch.Type
 export type NoOp = typeof NoOp.Type
-export type TransitionFrameAdvanced = typeof TransitionFrameAdvanced.Type
-export type TransitionEnded = typeof TransitionEnded.Type
+export type AdvancedTransitionFrame = typeof AdvancedTransitionFrame.Type
+export type EndedTransition = typeof EndedTransition.Type
 
 export type Message = typeof Message.Type
 
@@ -167,7 +167,7 @@ export const update = (
 ): [Model, ReadonlyArray<Command<Message>>] => {
   const maybeNextFrameCommand = OptionExt.when(
     model.isAnimated,
-    Task.nextFrame(() => TransitionFrameAdvanced()),
+    Task.nextFrame(() => AdvancedTransitionFrame()),
   )
 
   return M.value(message).pipe(
@@ -210,7 +210,7 @@ export const update = (
         Array.fromOption(maybeNextFrameCommand),
       ],
 
-      ItemActivated: ({ index, activationTrigger }) => [
+      ActivatedItem: ({ index, activationTrigger }) => [
         evo(model, {
           maybeActiveItemIndex: () => Option.some(index),
           activationTrigger: () => activationTrigger,
@@ -220,7 +220,7 @@ export const update = (
           : [],
       ],
 
-      PointerMovedOverItem: ({ index, screenX, screenY }) => {
+      MovedPointerOverItem: ({ index, screenX, screenY }) => {
         const isSamePosition = Option.exists(
           model.maybeLastPointerPosition,
           (position) =>
@@ -241,12 +241,12 @@ export const update = (
         ]
       },
 
-      ItemDeactivated: () =>
+      DeactivatedItem: () =>
         model.activationTrigger === 'Pointer'
           ? [evo(model, { maybeActiveItemIndex: () => Option.none() }), []]
           : [model, []],
 
-      ItemSelected: () => [
+      SelectedItem: () => [
         closedModel(model),
         [
           Task.focus(buttonSelector(model.id), () => NoOp()),
@@ -281,14 +281,14 @@ export const update = (
         return [evo(model, { searchQuery: () => '' }), []]
       },
 
-      TransitionFrameAdvanced: () =>
+      AdvancedTransitionFrame: () =>
         M.value(model.transitionState).pipe(
           M.withReturnType<[Model, ReadonlyArray<Command<Message>>]>(),
           M.when('EnterStart', () => [
             evo(model, { transitionState: () => 'EnterAnimating' }),
             [
               Task.waitForTransitions(itemsSelector(model.id), () =>
-                TransitionEnded(),
+                EndedTransition(),
               ),
             ],
           ]),
@@ -296,14 +296,14 @@ export const update = (
             evo(model, { transitionState: () => 'LeaveAnimating' }),
             [
               Task.waitForTransitions(itemsSelector(model.id), () =>
-                TransitionEnded(),
+                EndedTransition(),
               ),
             ],
           ]),
           M.orElse(() => [model, []]),
         ),
 
-      TransitionEnded: () =>
+      EndedTransition: () =>
         M.value(model.transitionState).pipe(
           M.withReturnType<[Model, ReadonlyArray<Command<Message>>]>(),
           M.whenOr('EnterAnimating', 'LeaveAnimating', () => [
@@ -340,10 +340,10 @@ export type ViewConfig<Message, Item extends string> = Readonly<{
       | Opened
       | Closed
       | ClosedByTab
-      | ItemActivated
-      | ItemDeactivated
-      | ItemSelected
-      | PointerMovedOverItem
+      | ActivatedItem
+      | DeactivatedItem
+      | SelectedItem
+      | MovedPointerOverItem
       | Searched,
   ) => Message
   items: ReadonlyArray<Item>
@@ -558,7 +558,7 @@ export const view = <Message, Item extends string>(
       M.when('Escape', () => Option.some(toMessage(Closed()))),
       M.whenOr('Enter', ' ', () =>
         Option.map(maybeActiveItemIndex, (index) =>
-          toMessage(ItemSelected({ index })),
+          toMessage(SelectedItem({ index })),
         ),
       ),
       M.whenOr(
@@ -571,7 +571,7 @@ export const view = <Message, Item extends string>(
         () =>
           Option.some(
             toMessage(
-              ItemActivated({
+              ActivatedItem({
                 index: resolveActiveIndex(key),
                 activationTrigger: 'Keyboard',
               }),
@@ -660,11 +660,11 @@ export const view = <Message, Item extends string>(
           : []),
         ...(isInteractive
           ? [
-              OnClick(toMessage(ItemSelected({ index }))),
+              OnClick(toMessage(SelectedItem({ index }))),
               OnPointerMove((screenX, screenY) =>
-                toMessage(PointerMovedOverItem({ index, screenX, screenY })),
+                toMessage(MovedPointerOverItem({ index, screenX, screenY })),
               ),
-              OnMouseLeave(toMessage(ItemDeactivated())),
+              OnMouseLeave(toMessage(DeactivatedItem())),
             ]
           : []),
       ],

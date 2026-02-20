@@ -3,18 +3,18 @@ import { Option } from 'effect'
 import { expect } from 'vitest'
 
 import {
+  ActivatedItem,
+  AdvancedTransitionFrame,
   ClearedSearch,
   Closed,
   ClosedByTab,
-  ItemActivated,
-  ItemDeactivated,
-  ItemSelected,
+  DeactivatedItem,
+  EndedTransition,
+  MovedPointerOverItem,
   NoOp,
   Opened,
-  PointerMovedOverItem,
   Searched,
-  TransitionEnded,
-  TransitionFrameAdvanced,
+  SelectedItem,
   groupContiguous,
   init,
   resolveTypeaheadMatch,
@@ -153,12 +153,12 @@ describe('Menu', () => {
       })
     })
 
-    describe('ItemActivated', () => {
+    describe('ActivatedItem', () => {
       it('sets the active item index', () => {
         const model = openModel()
         const [result] = update(
           model,
-          ItemActivated({ index: 3, activationTrigger: 'Keyboard' }),
+          ActivatedItem({ index: 3, activationTrigger: 'Keyboard' }),
         )
         expect(result.maybeActiveItemIndex).toStrictEqual(Option.some(3))
       })
@@ -167,11 +167,11 @@ describe('Menu', () => {
         const model = openModel()
         const [intermediate] = update(
           model,
-          ItemActivated({ index: 1, activationTrigger: 'Keyboard' }),
+          ActivatedItem({ index: 1, activationTrigger: 'Keyboard' }),
         )
         const [result] = update(
           intermediate,
-          ItemActivated({ index: 4, activationTrigger: 'Keyboard' }),
+          ActivatedItem({ index: 4, activationTrigger: 'Keyboard' }),
         )
         expect(result.maybeActiveItemIndex).toStrictEqual(Option.some(4))
       })
@@ -180,7 +180,7 @@ describe('Menu', () => {
         const model = openModel()
         const [result] = update(
           model,
-          ItemActivated({ index: 1, activationTrigger: 'Pointer' }),
+          ActivatedItem({ index: 1, activationTrigger: 'Pointer' }),
         )
         expect(result.activationTrigger).toBe('Pointer')
       })
@@ -189,7 +189,7 @@ describe('Menu', () => {
         const model = openModel()
         const [, commands] = update(
           model,
-          ItemActivated({ index: 2, activationTrigger: 'Keyboard' }),
+          ActivatedItem({ index: 2, activationTrigger: 'Keyboard' }),
         )
         expect(commands).toHaveLength(1)
       })
@@ -198,20 +198,20 @@ describe('Menu', () => {
         const model = openModel()
         const [, commands] = update(
           model,
-          ItemActivated({ index: 2, activationTrigger: 'Pointer' }),
+          ActivatedItem({ index: 2, activationTrigger: 'Pointer' }),
         )
         expect(commands).toHaveLength(0)
       })
     })
 
-    describe('ItemDeactivated', () => {
+    describe('DeactivatedItem', () => {
       it('clears active item when pointer-activated', () => {
         const model = openModel()
         const [afterPointer] = update(
           model,
-          ItemActivated({ index: 1, activationTrigger: 'Pointer' }),
+          ActivatedItem({ index: 1, activationTrigger: 'Pointer' }),
         )
-        const [result, commands] = update(afterPointer, ItemDeactivated())
+        const [result, commands] = update(afterPointer, DeactivatedItem())
         expect(result.maybeActiveItemIndex).toStrictEqual(Option.none())
         expect(commands).toHaveLength(0)
       })
@@ -220,21 +220,21 @@ describe('Menu', () => {
         const model = openModel()
         const [afterKeyboard] = update(
           model,
-          ItemActivated({ index: 2, activationTrigger: 'Keyboard' }),
+          ActivatedItem({ index: 2, activationTrigger: 'Keyboard' }),
         )
-        const [result, commands] = update(afterKeyboard, ItemDeactivated())
+        const [result, commands] = update(afterKeyboard, DeactivatedItem())
         expect(result.maybeActiveItemIndex).toStrictEqual(Option.some(2))
         expect(result).toBe(afterKeyboard)
         expect(commands).toHaveLength(0)
       })
     })
 
-    describe('PointerMovedOverItem', () => {
+    describe('MovedPointerOverItem', () => {
       it('activates item on first pointer move', () => {
         const model = openModel()
         const [result, commands] = update(
           model,
-          PointerMovedOverItem({
+          MovedPointerOverItem({
             index: 2,
             screenX: 100,
             screenY: 200,
@@ -252,7 +252,7 @@ describe('Menu', () => {
         const model = openModel()
         const [afterFirst] = update(
           model,
-          PointerMovedOverItem({
+          MovedPointerOverItem({
             index: 1,
             screenX: 100,
             screenY: 200,
@@ -260,7 +260,7 @@ describe('Menu', () => {
         )
         const [result] = update(
           afterFirst,
-          PointerMovedOverItem({
+          MovedPointerOverItem({
             index: 3,
             screenX: 150,
             screenY: 250,
@@ -276,7 +276,7 @@ describe('Menu', () => {
         const model = openModel()
         const [afterFirst] = update(
           model,
-          PointerMovedOverItem({
+          MovedPointerOverItem({
             index: 1,
             screenX: 100,
             screenY: 200,
@@ -284,7 +284,7 @@ describe('Menu', () => {
         )
         const [result, commands] = update(
           afterFirst,
-          PointerMovedOverItem({
+          MovedPointerOverItem({
             index: 2,
             screenX: 100,
             screenY: 200,
@@ -298,7 +298,7 @@ describe('Menu', () => {
         const model = openModel()
         const [, commands] = update(
           model,
-          PointerMovedOverItem({
+          MovedPointerOverItem({
             index: 2,
             screenX: 100,
             screenY: 200,
@@ -308,10 +308,10 @@ describe('Menu', () => {
       })
     })
 
-    describe('ItemSelected', () => {
+    describe('SelectedItem', () => {
       it('closes the menu and returns a focus command', () => {
         const model = openModel()
-        const [result, commands] = update(model, ItemSelected({ index: 2 }))
+        const [result, commands] = update(model, SelectedItem({ index: 2 }))
         expect(result.isOpen).toBe(false)
         expect(result.maybeActiveItemIndex).toStrictEqual(Option.none())
         expect(commands).toHaveLength(1)
@@ -436,21 +436,21 @@ describe('Menu', () => {
           expect(commands).toHaveLength(2)
         })
 
-        it('advances EnterStart to EnterAnimating on TransitionFrameAdvanced', () => {
+        it('advances EnterStart to EnterAnimating on AdvancedTransitionFrame', () => {
           const model = openAnimatedModel()
           expect(model.transitionState).toBe('EnterStart')
 
-          const [result, commands] = update(model, TransitionFrameAdvanced())
+          const [result, commands] = update(model, AdvancedTransitionFrame())
           expect(result.transitionState).toBe('EnterAnimating')
           expect(commands).toHaveLength(1)
         })
 
-        it('completes EnterAnimating to Idle on TransitionEnded', () => {
+        it('completes EnterAnimating to Idle on EndedTransition', () => {
           const model = openAnimatedModel()
-          const [enterAnimating] = update(model, TransitionFrameAdvanced())
+          const [enterAnimating] = update(model, AdvancedTransitionFrame())
           expect(enterAnimating.transitionState).toBe('EnterAnimating')
 
-          const [result, commands] = update(enterAnimating, TransitionEnded())
+          const [result, commands] = update(enterAnimating, EndedTransition())
           expect(result.transitionState).toBe('Idle')
           expect(commands).toHaveLength(0)
         })
@@ -473,31 +473,31 @@ describe('Menu', () => {
           expect(commands).toHaveLength(1)
         })
 
-        it('sets LeaveStart on ItemSelected', () => {
+        it('sets LeaveStart on SelectedItem', () => {
           const model = openAnimatedModel()
-          const [result, commands] = update(model, ItemSelected({ index: 0 }))
+          const [result, commands] = update(model, SelectedItem({ index: 0 }))
           expect(result.isOpen).toBe(false)
           expect(result.transitionState).toBe('LeaveStart')
           expect(commands).toHaveLength(2)
         })
 
-        it('advances LeaveStart to LeaveAnimating on TransitionFrameAdvanced', () => {
+        it('advances LeaveStart to LeaveAnimating on AdvancedTransitionFrame', () => {
           const model = openAnimatedModel()
           const [closed] = update(model, Closed())
           expect(closed.transitionState).toBe('LeaveStart')
 
-          const [result, commands] = update(closed, TransitionFrameAdvanced())
+          const [result, commands] = update(closed, AdvancedTransitionFrame())
           expect(result.transitionState).toBe('LeaveAnimating')
           expect(commands).toHaveLength(1)
         })
 
-        it('completes LeaveAnimating to Idle on TransitionEnded', () => {
+        it('completes LeaveAnimating to Idle on EndedTransition', () => {
           const model = openAnimatedModel()
           const [closed] = update(model, Closed())
-          const [leaveAnimating] = update(closed, TransitionFrameAdvanced())
+          const [leaveAnimating] = update(closed, AdvancedTransitionFrame())
           expect(leaveAnimating.transitionState).toBe('LeaveAnimating')
 
-          const [result, commands] = update(leaveAnimating, TransitionEnded())
+          const [result, commands] = update(leaveAnimating, EndedTransition())
           expect(result.transitionState).toBe('Idle')
           expect(commands).toHaveLength(0)
         })
@@ -523,16 +523,16 @@ describe('Menu', () => {
       })
 
       describe('stale messages', () => {
-        it('ignores TransitionFrameAdvanced when Idle', () => {
+        it('ignores AdvancedTransitionFrame when Idle', () => {
           const model = openModel()
-          const [result, commands] = update(model, TransitionFrameAdvanced())
+          const [result, commands] = update(model, AdvancedTransitionFrame())
           expect(result).toBe(model)
           expect(commands).toHaveLength(0)
         })
 
-        it('ignores TransitionEnded when Idle', () => {
+        it('ignores EndedTransition when Idle', () => {
           const model = openModel()
-          const [result, commands] = update(model, TransitionEnded())
+          const [result, commands] = update(model, EndedTransition())
           expect(result).toBe(model)
           expect(commands).toHaveLength(0)
         })
@@ -550,7 +550,7 @@ describe('Menu', () => {
 
         it('transitions to LeaveStart when Closed during EnterAnimating', () => {
           const model = openAnimatedModel()
-          const [enterAnimating] = update(model, TransitionFrameAdvanced())
+          const [enterAnimating] = update(model, AdvancedTransitionFrame())
           expect(enterAnimating.transitionState).toBe('EnterAnimating')
 
           const [result] = update(enterAnimating, Closed())
