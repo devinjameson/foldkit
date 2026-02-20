@@ -1,10 +1,10 @@
 import { Duration, Effect, Schema as S, Stream } from 'effect'
 import { Runtime } from 'foldkit'
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 
 // MESSAGE
 
-const Ticked = ts('Ticked')
+const Ticked = m('Ticked')
 const Message = S.Union(Ticked)
 type Message = typeof Message.Type
 

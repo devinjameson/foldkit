@@ -1,6 +1,6 @@
 import { Match as M, Schema } from 'effect'
 import { Runtime } from 'foldkit'
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 
 import { Class, Html, OnClick, button, div } from '../html'
 
@@ -13,9 +13,9 @@ type Model = typeof Model.Type
 // MESSAGE - All possible events that can happen in your application
 // Messages are dispatched from the view and handled by the update function
 
-const ClickedDecrement = ts('ClickedDecrement')
-const ClickedIncrement = ts('ClickedIncrement')
-const ClickedReset = ts('ClickedReset')
+const ClickedDecrement = m('ClickedDecrement')
+const ClickedIncrement = m('ClickedIncrement')
+const ClickedReset = m('ClickedReset')
 
 const Message = Schema.Union(
   ClickedDecrement,

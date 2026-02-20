@@ -3,7 +3,7 @@ import { Match as M, Option, Schema as S } from 'effect'
 import { html } from '../../html'
 import type { Html, TagName } from '../../html'
 import type { Command } from '../../runtime/runtime'
-import { ts } from '../../schema'
+import { m } from '../../schema'
 import { evo } from '../../struct'
 import * as Task from '../../task'
 
@@ -20,11 +20,11 @@ export type Model = typeof Model.Type
 // MESSAGE
 
 /** Sent when the disclosure button is clicked. Toggles the open/closed state. */
-export const Toggled = ts('Toggled')
+export const Toggled = m('Toggled')
 /** Sent to explicitly close the disclosure, regardless of its current state. */
-export const Closed = ts('Closed')
+export const Closed = m('Closed')
 /** Placeholder message used when no action is needed, such as after a focus command completes. */
-export const NoOp = ts('NoOp')
+export const NoOp = m('NoOp')
 
 /** Union of all messages the disclosure component can produce. */
 export const Message = S.Union(Toggled, Closed, NoOp)

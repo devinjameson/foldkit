@@ -11,7 +11,7 @@ import {
 } from 'effect'
 import { Runtime, Task } from 'foldkit'
 import { Html, html } from 'foldkit/html'
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
 const WS_URL = 'wss://echo.websocket.org'
@@ -29,12 +29,12 @@ type ChatMessage = typeof ChatMessage.Type
 
 const WebSocketSchema = S.instanceOf(WebSocket)
 
-const ConnectionDisconnected = ts('ConnectionDisconnected')
-const ConnectionConnecting = ts('ConnectionConnecting')
-const ConnectionConnected = ts('ConnectionConnected', {
+const ConnectionDisconnected = m('ConnectionDisconnected')
+const ConnectionConnecting = m('ConnectionConnecting')
+const ConnectionConnected = m('ConnectionConnected', {
   socket: WebSocketSchema,
 })
-const ConnectionError = ts('ConnectionError', { error: S.String })
+const ConnectionError = m('ConnectionError', { error: S.String })
 
 const ConnectionState = S.Union(
   ConnectionDisconnected,
@@ -54,19 +54,19 @@ type Model = typeof Model.Type
 
 // MESSAGE
 
-const RequestedConnection = ts('RequestedConnection')
-const Connected = ts('Connected', { socket: WebSocketSchema })
-const Disconnected = ts('Disconnected')
-const FailedConnection = ts('FailedConnection', { error: S.String })
-const UpdatedMessageInput = ts('UpdatedMessageInput', { value: S.String })
-const RequestedMessageSend = ts('RequestedMessageSend')
-const SentMessage = ts('SentMessage', { text: S.String })
-const ReceivedMessage = ts('ReceivedMessage', { text: S.String })
-const GotReceivedMessageTime = ts('GotReceivedMessageTime', {
+const RequestedConnection = m('RequestedConnection')
+const Connected = m('Connected', { socket: WebSocketSchema })
+const Disconnected = m('Disconnected')
+const FailedConnection = m('FailedConnection', { error: S.String })
+const UpdatedMessageInput = m('UpdatedMessageInput', { value: S.String })
+const RequestedMessageSend = m('RequestedMessageSend')
+const SentMessage = m('SentMessage', { text: S.String })
+const ReceivedMessage = m('ReceivedMessage', { text: S.String })
+const GotReceivedMessageTime = m('GotReceivedMessageTime', {
   text: S.String,
   zoned: S.DateTimeZonedFromSelf,
 })
-const GotSentMessageTime = ts('GotSentMessageTime', {
+const GotSentMessageTime = m('GotSentMessageTime', {
   text: S.String,
   zoned: S.DateTimeZonedFromSelf,
 })

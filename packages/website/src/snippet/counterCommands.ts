@@ -1,8 +1,8 @@
 import { Match as M } from 'effect'
 import { Runtime, Task } from 'foldkit'
 
-const ClickedResetAfterDelay = ts('ClickedResetAfterDelay')
-const ElapsedResetDelay = ts('ElapsedResetDelay')
+const ClickedResetAfterDelay = m('ClickedResetAfterDelay')
+const ElapsedResetDelay = m('ElapsedResetDelay')
 
 const update = (
   model: Model,

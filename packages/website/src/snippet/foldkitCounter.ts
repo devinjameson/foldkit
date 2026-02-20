@@ -1,7 +1,7 @@
 import { Match as M, Schema as S } from 'effect'
 import { Runtime } from 'foldkit'
 import { Html, html } from 'foldkit/html'
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 
 // MODEL - your entire application state
 
@@ -10,7 +10,7 @@ type Model = typeof Model.Type
 
 // MESSAGE - events that can happen in your app
 
-const ClickedIncrement = ts('ClickedIncrement')
+const ClickedIncrement = m('ClickedIncrement')
 const Message = S.Union(ClickedIncrement)
 type Message = typeof Message.Type
 

@@ -3,17 +3,17 @@ import { Route, Runtime } from 'foldkit'
 import { Html, html } from 'foldkit/html'
 import { load, pushUrl, replaceUrl } from 'foldkit/navigation'
 import { int, literal, slash } from 'foldkit/route'
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 import { Url, toString as urlToString } from 'foldkit/url'
 
 // ROUTE
 
-const HomeRoute = ts('Home')
-const NestedRoute = ts('Nested')
-const PeopleRoute = ts('People', { searchText: S.Option(S.String) })
-const PersonRoute = ts('Person', { personId: S.Number })
-const NotFoundRoute = ts('NotFound', { path: S.String })
+const HomeRoute = m('Home')
+const NestedRoute = m('Nested')
+const PeopleRoute = m('People', { searchText: S.Option(S.String) })
+const PersonRoute = m('Person', { personId: S.Number })
+const NotFoundRoute = m('NotFound', { path: S.String })
 
 export const AppRoute = S.Union(
   HomeRoute,
@@ -88,12 +88,12 @@ type Model = typeof Model.Type
 
 // MESSAGE
 
-const NoOp = ts('NoOp')
-const ClickedLink = ts('ClickedLink', {
+const NoOp = m('NoOp')
+const ClickedLink = m('ClickedLink', {
   request: Runtime.UrlRequest,
 })
-const ChangedUrl = ts('ChangedUrl', { url: Url })
-const ChangedSearchInput = ts('ChangedSearchInput', { value: S.String })
+const ChangedUrl = m('ChangedUrl', { url: Url })
+const ChangedSearchInput = m('ChangedSearchInput', { value: S.String })
 
 export const Message = S.Union(
   NoOp,

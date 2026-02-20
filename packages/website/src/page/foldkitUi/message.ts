@@ -1,32 +1,32 @@
 import { Schema as S } from 'effect'
 import { Ui } from 'foldkit'
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 
-export const GotDialogDemoMessage = ts('GotDialogDemoMessage', {
+export const GotDialogDemoMessage = m('GotDialogDemoMessage', {
   message: Ui.Dialog.Message,
 })
-export const GotDisclosureDemoMessage = ts(
+export const GotDisclosureDemoMessage = m(
   'GotDisclosureDemoMessage',
   {
     message: Ui.Disclosure.Message,
   },
 )
-export const GotMenuBasicDemoMessage = ts('GotMenuBasicDemoMessage', {
+export const GotMenuBasicDemoMessage = m('GotMenuBasicDemoMessage', {
   message: Ui.Menu.Message,
 })
-export const GotMenuAnimatedDemoMessage = ts(
+export const GotMenuAnimatedDemoMessage = m(
   'GotMenuAnimatedDemoMessage',
   {
     message: Ui.Menu.Message,
   },
 )
-export const GotHorizontalTabsDemoMessage = ts(
+export const GotHorizontalTabsDemoMessage = m(
   'GotHorizontalTabsDemoMessage',
   {
     message: Ui.Tabs.Message,
   },
 )
-export const GotVerticalTabsDemoMessage = ts(
+export const GotVerticalTabsDemoMessage = m(
   'GotVerticalTabsDemoMessage',
   {
     message: Ui.Tabs.Message,

@@ -3,7 +3,7 @@ import { Route, Runtime } from 'foldkit'
 import { Html } from 'foldkit/html'
 import { load, pushUrl } from 'foldkit/navigation'
 import { literal } from 'foldkit/route'
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 import { Url, toString as urlToString } from 'foldkit/url'
 
@@ -27,10 +27,10 @@ import { Cart as CartPage, Checkout, Products } from './page'
 
 // ROUTE
 
-export const ProductsRoute = ts('Products', { searchText: S.Option(S.String) })
-export const CartRoute = ts('Cart')
-export const CheckoutRoute = ts('Checkout')
-export const NotFoundRoute = ts('NotFound', { path: S.String })
+export const ProductsRoute = m('Products', { searchText: S.Option(S.String) })
+export const CartRoute = m('Cart')
+export const CheckoutRoute = m('Checkout')
+export const NotFoundRoute = m('NotFound', { path: S.String })
 export const AppRoute = S.Union(
   ProductsRoute,
   CartRoute,
@@ -69,31 +69,31 @@ type Model = typeof Model.Type
 
 // MESSAGE
 
-const NoOp = ts('NoOp')
-const ClickedLink = ts('ClickedLink', {
+const NoOp = m('NoOp')
+const ClickedLink = m('ClickedLink', {
   request: Runtime.UrlRequest,
 })
-const ChangedUrl = ts('ChangedUrl', { url: Url })
-const GotProductsMessage = ts('GotProductsMessage', {
+const ChangedUrl = m('ChangedUrl', { url: Url })
+const GotProductsMessage = m('GotProductsMessage', {
   message: Products.Message,
 })
-const ClickedAddToCart = ts('ClickedAddToCart', { item: Item.Item })
-const ClickedQuantityChange = ts('ClickedQuantityChange', {
+const ClickedAddToCart = m('ClickedAddToCart', { item: Item.Item })
+const ClickedQuantityChange = m('ClickedQuantityChange', {
   itemId: S.String,
   quantity: S.Number,
 })
-export const ClickedCartQuantityChange = ts('ClickedCartQuantityChange', {
+export const ClickedCartQuantityChange = m('ClickedCartQuantityChange', {
   itemId: S.String,
   quantity: S.Number,
 })
-export const ClickedRemoveCartItem = ts('ClickedRemoveCartItem', {
+export const ClickedRemoveCartItem = m('ClickedRemoveCartItem', {
   itemId: S.String,
 })
-export const ClickedClearCart = ts('ClickedClearCart')
-export const UpdatedDeliveryInstructions = ts('UpdatedDeliveryInstructions', {
+export const ClickedClearCart = m('ClickedClearCart')
+export const UpdatedDeliveryInstructions = m('UpdatedDeliveryInstructions', {
   value: S.String,
 })
-export const ClickedPlaceOrder = ts('ClickedPlaceOrder')
+export const ClickedPlaceOrder = m('ClickedPlaceOrder')
 
 export const Message = S.Union(
   NoOp,

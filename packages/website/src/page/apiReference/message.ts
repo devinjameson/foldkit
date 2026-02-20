@@ -1,8 +1,8 @@
 import { Schema as S } from 'effect'
 import { Ui } from 'foldkit'
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 
-export const GotDisclosureMessage = ts('GotDisclosureMessage', {
+export const GotDisclosureMessage = m('GotDisclosureMessage', {
   id: S.String,
   message: Ui.Disclosure.Message,
 })

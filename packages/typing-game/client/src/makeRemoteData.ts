@@ -1,14 +1,14 @@
 import { Schema as S } from 'effect'
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 
 export const makeRemoteData = <EA, EI, DA, DI>(
   error: S.Schema<EA, EI, never>,
   data: S.Schema<DA, DI, never>,
 ) => {
-  const Idle = ts('Idle')
-  const Loading = ts('Loading')
-  const Error = ts('Error', { error })
-  const Ok = ts('Ok', { data })
+  const Idle = m('Idle')
+  const Loading = m('Loading')
+  const Error = m('Error', { error })
+  const Ok = m('Ok', { data })
 
   return {
     Idle,

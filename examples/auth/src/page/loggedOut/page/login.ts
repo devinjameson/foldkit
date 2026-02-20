@@ -16,7 +16,7 @@ import {
   validateField,
 } from 'foldkit/fieldValidation'
 import { Html } from 'foldkit/html'
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
 import { Session } from '../../../domain/session'
@@ -71,11 +71,11 @@ export const initModel = (): Model => ({
 
 // MESSAGE
 
-const ChangedEmail = ts('ChangedEmail', { value: S.String })
-const ChangedPassword = ts('ChangedPassword', { value: S.String })
-const ClickedSubmit = ts('ClickedSubmit')
-const SucceededAuth = ts('SucceededAuth', { session: Session })
-const FailedAuth = ts('FailedAuth', { error: S.String })
+const ChangedEmail = m('ChangedEmail', { value: S.String })
+const ChangedPassword = m('ChangedPassword', { value: S.String })
+const ClickedSubmit = m('ClickedSubmit')
+const SucceededAuth = m('SucceededAuth', { session: Session })
+const FailedAuth = m('FailedAuth', { error: S.String })
 
 export const Message = S.Union(
   ChangedEmail,
@@ -88,7 +88,7 @@ export type Message = typeof Message.Type
 
 // OUT MESSAGE
 
-export const SucceededLogin = ts('SucceededLogin', { session: Session })
+export const SucceededLogin = m('SucceededLogin', { session: Session })
 export const OutMessage = S.Union(SucceededLogin)
 export type OutMessage = typeof OutMessage.Type
 

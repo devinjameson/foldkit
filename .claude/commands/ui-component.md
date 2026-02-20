@@ -40,7 +40,7 @@ Enter plan mode and design the component following these integration touchpoints
 ## Implementation Conventions
 
 - Follow the four-group message layout: values, union, individual types, message type
-- Use `ts()` from `foldkit/schema` for all message constructors
+- Use `m()` from `foldkit/schema` for all message constructors
 - Use `evo()` from `foldkit/struct` for model updates
 - Use `Effect.Match` with `M.tagsExhaustive` in update — never switch statements
 - Use `M.withReturnType<[Model, ReadonlyArray<Command<Message>>]>()`

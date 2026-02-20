@@ -1,11 +1,11 @@
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 
 import { Session } from '../../domain/session'
 import { LoggedInRoute } from '../../route'
 
 // MODEL
 
-export const Model = ts('LoggedIn', {
+export const Model = m('LoggedIn', {
   route: LoggedInRoute,
   session: Session,
 })

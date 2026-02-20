@@ -12,7 +12,7 @@ import {
 } from 'effect'
 import { Runtime } from 'foldkit'
 import { Html, html } from 'foldkit/html'
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
 // CONSTANT
@@ -35,10 +35,10 @@ type Todos = typeof Todos.Type
 const Filter = S.Literal('All', 'Active', 'Completed')
 type Filter = typeof Filter.Type
 
-const NotEditing = ts('NotEditing')
+const NotEditing = m('NotEditing')
 type NotEditing = typeof NotEditing.Type
 
-const Editing = ts('Editing', {
+const Editing = m('Editing', {
   id: S.String,
   text: S.String,
 })
@@ -57,24 +57,24 @@ type Model = typeof Model.Type
 
 // MESSAGE
 
-const NoOp = ts('NoOp')
-const UpdatedNewTodo = ts('UpdatedNewTodo', { text: S.String })
-const UpdatedEditingTodo = ts('UpdatedEditingTodo', { text: S.String })
-const AddedTodo = ts('AddedTodo')
-const GotNewTodoData = ts('GotNewTodoData', {
+const NoOp = m('NoOp')
+const UpdatedNewTodo = m('UpdatedNewTodo', { text: S.String })
+const UpdatedEditingTodo = m('UpdatedEditingTodo', { text: S.String })
+const AddedTodo = m('AddedTodo')
+const GotNewTodoData = m('GotNewTodoData', {
   id: S.String,
   timestamp: S.Number,
   text: S.String,
 })
-const DeletedTodo = ts('DeletedTodo', { id: S.String })
-const ToggledTodo = ts('ToggledTodo', { id: S.String })
-const StartedEditing = ts('StartedEditing', { id: S.String })
-const SavedEdit = ts('SavedEdit')
-const CancelledEdit = ts('CancelledEdit')
-const ToggledAll = ts('ToggledAll')
-const ClearedCompleted = ts('ClearedCompleted')
-const SetFilter = ts('SetFilter', { filter: Filter })
-const SavedTodos = ts('SavedTodos', { todos: Todos })
+const DeletedTodo = m('DeletedTodo', { id: S.String })
+const ToggledTodo = m('ToggledTodo', { id: S.String })
+const StartedEditing = m('StartedEditing', { id: S.String })
+const SavedEdit = m('SavedEdit')
+const CancelledEdit = m('CancelledEdit')
+const ToggledAll = m('ToggledAll')
+const ClearedCompleted = m('ClearedCompleted')
+const SetFilter = m('SetFilter', { filter: Filter })
+const SavedTodos = m('SavedTodos', { todos: Todos })
 
 export const Message = S.Union(
   NoOp,

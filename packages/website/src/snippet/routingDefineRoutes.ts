@@ -1,10 +1,10 @@
 import { Schema as S } from 'effect'
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 
-const HomeRoute = ts('Home')
-const PeopleRoute = ts('People', { searchText: S.Option(S.String) })
-const PersonRoute = ts('Person', { personId: S.Number })
-const NotFoundRoute = ts('NotFound', { path: S.String })
+const HomeRoute = m('Home')
+const PeopleRoute = m('People', { searchText: S.Option(S.String) })
+const PersonRoute = m('Person', { personId: S.Number })
+const NotFoundRoute = m('NotFound', { path: S.String })
 
 const AppRoute = S.Union(
   HomeRoute,

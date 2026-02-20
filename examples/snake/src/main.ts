@@ -9,7 +9,7 @@ import {
 } from 'effect'
 import { Runtime } from 'foldkit'
 import { Html, html } from 'foldkit/html'
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
 import { GAME, GAME_SPEED } from './constants'
@@ -38,12 +38,12 @@ type Model = typeof Model.Type
 
 // MESSAGE
 
-const TickedClock = ts('TickedClock')
-const PressedKey = ts('PressedKey', { key: S.String })
-const PausedGame = ts('PausedGame')
-const RestartedGame = ts('RestartedGame')
-const RequestedApple = ts('RequestedApple', { snake: Snake.Snake })
-const GotApple = ts('GotApple', { position: Position.Position })
+const TickedClock = m('TickedClock')
+const PressedKey = m('PressedKey', { key: S.String })
+const PausedGame = m('PausedGame')
+const RestartedGame = m('RestartedGame')
+const RequestedApple = m('RequestedApple', { snake: Snake.Snake })
+const GotApple = m('GotApple', { position: Position.Position })
 
 export const Message = S.Union(
   TickedClock,

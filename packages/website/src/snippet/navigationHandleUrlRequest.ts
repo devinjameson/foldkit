@@ -1,14 +1,14 @@
 import { Effect, Match as M, Schema as S, pipe } from 'effect'
 import { Navigation, Route, Runtime, Url } from 'foldkit'
 import { int, literal, slash } from 'foldkit/route'
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
 // ROUTE
 
-const HomeRoute = ts('Home')
-const PersonRoute = ts('Person', { personId: S.Number })
-const NotFoundRoute = ts('NotFound', { path: S.String })
+const HomeRoute = m('Home')
+const PersonRoute = m('Person', { personId: S.Number })
+const NotFoundRoute = m('NotFound', { path: S.String })
 const AppRoute = S.Union(HomeRoute, PersonRoute, NotFoundRoute)
 type AppRoute = typeof AppRoute.Type
 
@@ -32,9 +32,9 @@ type Model = typeof Model.Type
 // MESSAGE
 
 // ClickedLink and ChangedUrl are required for routing
-const NoOp = ts('NoOp')
-const ClickedLink = ts('ClickedLink', { request: Runtime.UrlRequest })
-const ChangedUrl = ts('ChangedUrl', { url: Url.Url })
+const NoOp = m('NoOp')
+const ClickedLink = m('ClickedLink', { request: Runtime.UrlRequest })
+const ChangedUrl = m('ChangedUrl', { url: Url.Url })
 const Message = S.Union(NoOp, ClickedLink, ChangedUrl)
 type Message = typeof Message.Type
 

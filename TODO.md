@@ -94,3 +94,5 @@
 - [x] Use Disclosure component for API reference disclosures and React page FAQ section
 
 - [ ] Example app with undo/redo, maybe a markdown previewer with undo/redo stack and WYSIWYG?
+
+- [ ] Should load and pushUrl take Message's so you don't have to .pipe(Effect.as(NoOp()))?

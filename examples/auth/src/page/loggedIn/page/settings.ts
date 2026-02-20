@@ -1,6 +1,6 @@
 import { Schema as S } from 'effect'
 import { Html } from 'foldkit/html'
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 
 import { Session } from '../../../domain/session'
 import { Class, OnClick, button, div, h1, h2, p } from '../../../html'
@@ -8,7 +8,7 @@ import type { Message as ParentMessage } from '../../../message'
 
 // MESSAGE
 
-export const ClickedLogout = ts('ClickedLogout')
+export const ClickedLogout = m('ClickedLogout')
 export const Message = S.Union(ClickedLogout)
 export type Message = typeof Message.Type
 

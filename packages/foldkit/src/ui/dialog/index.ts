@@ -3,7 +3,7 @@ import { Match as M, Option, Schema as S } from 'effect'
 import { html } from '../../html'
 import type { Html } from '../../html'
 import type { Command } from '../../runtime/runtime'
-import { ts } from '../../schema'
+import { m } from '../../schema'
 import { evo } from '../../struct'
 import * as Task from '../../task'
 
@@ -20,11 +20,11 @@ export type Model = typeof Model.Type
 // MESSAGE
 
 /** Sent when the dialog should open. Triggers the showModal command. */
-export const Opened = ts('Opened')
+export const Opened = m('Opened')
 /** Sent when the dialog should close (Escape key, backdrop click, or programmatic). Triggers the closeModal command. */
-export const Closed = ts('Closed')
+export const Closed = m('Closed')
 /** Placeholder message used when no action is needed, such as after a showModal or closeModal command completes. */
-export const NoOp = ts('NoOp')
+export const NoOp = m('NoOp')
 
 /** Union of all messages the dialog component can produce. */
 export const Message = S.Union(Opened, Closed, NoOp)

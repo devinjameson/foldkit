@@ -1,23 +1,23 @@
 import { Schema as S } from 'effect'
 import { Runtime } from 'foldkit'
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 import { Url } from 'foldkit/url'
 
 import { Session } from './domain/session'
 import { LoggedIn, LoggedOut } from './page'
 
-export const NoOp = ts('NoOp')
-export const ClickedLink = ts('ClickedLink', { request: Runtime.UrlRequest })
-export const ChangedUrl = ts('ChangedUrl', { url: Url })
-export const LoadedSession = ts('LoadedSession', { session: S.Option(Session) })
-export const SavedSession = ts('SavedSession')
-export const FailedSessionSave = ts('FailedSessionSave', { error: S.String })
-export const ClearedSession = ts('ClearedSession')
-export const FailedSessionClear = ts('FailedSessionClear', { error: S.String })
-export const GotLoggedOutMessage = ts('GotLoggedOutMessage', {
+export const NoOp = m('NoOp')
+export const ClickedLink = m('ClickedLink', { request: Runtime.UrlRequest })
+export const ChangedUrl = m('ChangedUrl', { url: Url })
+export const LoadedSession = m('LoadedSession', { session: S.Option(Session) })
+export const SavedSession = m('SavedSession')
+export const FailedSessionSave = m('FailedSessionSave', { error: S.String })
+export const ClearedSession = m('ClearedSession')
+export const FailedSessionClear = m('FailedSessionClear', { error: S.String })
+export const GotLoggedOutMessage = m('GotLoggedOutMessage', {
   message: LoggedOut.Message,
 })
-export const GotLoggedInMessage = ts('GotLoggedInMessage', {
+export const GotLoggedInMessage = m('GotLoggedInMessage', {
   message: LoggedIn.Message,
 })
 

@@ -11,7 +11,7 @@ import { OptionExt } from '../../effectExtensions'
 import { html } from '../../html'
 import type { Html } from '../../html'
 import type { Command } from '../../runtime/runtime'
-import { ts } from '../../schema'
+import { m } from '../../schema'
 import { evo } from '../../struct'
 import * as Task from '../../task'
 import { findFirstEnabledIndex, keyToIndex, wrapIndex } from '../keyboard'
@@ -53,41 +53,41 @@ export type Model = typeof Model.Type
 // MESSAGE
 
 /** Sent when the menu opens via button click or keyboard. Contains an optional initial active item index — None for pointer, Some for keyboard. */
-export const Opened = ts('Opened', {
+export const Opened = m('Opened', {
   maybeActiveItemIndex: S.OptionFromSelf(S.Number),
 })
 /** Sent when the menu closes via Escape key or backdrop click. */
-export const Closed = ts('Closed')
+export const Closed = m('Closed')
 /** Sent when focus leaves the menu items container via Tab key. */
-export const ClosedByTab = ts('ClosedByTab')
+export const ClosedByTab = m('ClosedByTab')
 /** Sent when an item is highlighted via arrow keys or mouse hover. Includes activation trigger. */
-export const ActivatedItem = ts('ActivatedItem', {
+export const ActivatedItem = m('ActivatedItem', {
   index: S.Number,
   activationTrigger: ActivationTrigger,
 })
 /** Sent when the mouse leaves an enabled item. */
-export const DeactivatedItem = ts('DeactivatedItem')
+export const DeactivatedItem = m('DeactivatedItem')
 /** Sent when an item is selected via Enter, Space, or click. */
-export const SelectedItem = ts('SelectedItem', { index: S.Number })
+export const SelectedItem = m('SelectedItem', { index: S.Number })
 /** Sent when a printable character is typed for typeahead search. */
-export const Searched = ts('Searched', {
+export const Searched = m('Searched', {
   key: S.String,
   maybeTargetIndex: S.OptionFromSelf(S.Number),
 })
 /** Sent after the search debounce period to clear the accumulated query. */
-export const ClearedSearch = ts('ClearedSearch', { version: S.Number })
+export const ClearedSearch = m('ClearedSearch', { version: S.Number })
 /** Sent when the pointer moves over a menu item, carrying screen coordinates for tracked-pointer comparison. */
-export const MovedPointerOverItem = ts('MovedPointerOverItem', {
+export const MovedPointerOverItem = m('MovedPointerOverItem', {
   index: S.Number,
   screenX: S.Number,
   screenY: S.Number,
 })
 /** Placeholder message used when no action is needed. */
-export const NoOp = ts('NoOp')
+export const NoOp = m('NoOp')
 /** Sent internally when a double-rAF completes, advancing the transition to its animating phase. */
-export const AdvancedTransitionFrame = ts('AdvancedTransitionFrame')
+export const AdvancedTransitionFrame = m('AdvancedTransitionFrame')
 /** Sent internally when all CSS transitions on the menu items container have completed. */
-export const EndedTransition = ts('EndedTransition')
+export const EndedTransition = m('EndedTransition')
 
 /** Union of all messages the menu component can produce. */
 export const Message = S.Union(

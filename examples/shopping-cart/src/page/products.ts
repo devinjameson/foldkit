@@ -3,7 +3,7 @@ import { ExtractTag } from 'effect/Types'
 import { Route, Runtime } from 'foldkit'
 import { Html } from 'foldkit/html'
 import { replaceUrl } from 'foldkit/navigation'
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
 import { Cart, Item } from '../domain'
@@ -39,8 +39,8 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-const NoOp = ts('NoOp')
-const ChangedSearchInput = ts('ChangedSearchInput', { value: S.String })
+const NoOp = m('NoOp')
+const ChangedSearchInput = m('ChangedSearchInput', { value: S.String })
 
 export const Message = S.Union(NoOp, ChangedSearchInput)
 export type Message = typeof Message.Type

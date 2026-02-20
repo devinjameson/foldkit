@@ -3,7 +3,7 @@ import { Array, Match as M, Option, Schema as S, String, pipe } from 'effect'
 import { html } from '../../html'
 import type { Html, TagName } from '../../html'
 import type { Command } from '../../runtime/runtime'
-import { ts } from '../../schema'
+import { m } from '../../schema'
 import { evo } from '../../struct'
 import * as Task from '../../task'
 import { keyToIndex } from '../keyboard'
@@ -34,11 +34,11 @@ export type Model = typeof Model.Type
 // MESSAGE
 
 /** Sent when a tab is selected via click or keyboard. Updates both the active and focused indices. */
-export const TabSelected = ts('TabSelected', { index: S.Number })
+export const TabSelected = m('TabSelected', { index: S.Number })
 /** Sent when a tab receives keyboard focus in `Manual` mode without being activated. */
-export const TabFocused = ts('TabFocused', { index: S.Number })
+export const TabFocused = m('TabFocused', { index: S.Number })
 /** Placeholder message used when no action is needed, such as after a focus command completes. */
-export const NoOp = ts('NoOp')
+export const NoOp = m('NoOp')
 
 /** Union of all messages the tabs component can produce. */
 export const Message = S.Union(TabSelected, TabFocused, NoOp)

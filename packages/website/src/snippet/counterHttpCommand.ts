@@ -1,12 +1,12 @@
 import { Effect, Match as M, Schema } from 'effect'
 import { Runtime } from 'foldkit'
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 
-const ClickedFetchCount = ts('ClickedFetchCount')
-const SucceededCountFetch = ts('SucceededCountFetch', {
+const ClickedFetchCount = m('ClickedFetchCount')
+const SucceededCountFetch = m('SucceededCountFetch', {
   count: Schema.Number,
 })
-const FailedCountFetch = ts('FailedCountFetch', {
+const FailedCountFetch = m('FailedCountFetch', {
   error: Schema.String,
 })
 

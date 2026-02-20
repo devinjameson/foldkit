@@ -14,7 +14,7 @@ import { Runtime } from 'foldkit'
 import { Html } from 'foldkit/html'
 import { load, pushUrl } from 'foldkit/navigation'
 import { UrlRequest } from 'foldkit/runtime'
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 import { Url, toString as urlToString } from 'foldkit/url'
 
@@ -161,47 +161,47 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-const NoOp = ts('NoOp')
-const ClickedLink = ts('ClickedLink', {
+const NoOp = m('NoOp')
+const ClickedLink = m('ClickedLink', {
   request: UrlRequest,
 })
-const ChangedUrl = ts('ChangedUrl', { url: Url })
-export const ClickedCopySnippet = ts('ClickedCopySnippet', {
+const ChangedUrl = m('ChangedUrl', { url: Url })
+export const ClickedCopySnippet = m('ClickedCopySnippet', {
   text: S.String,
 })
-export const ClickedCopyLink = ts('ClickedCopyLink', {
+export const ClickedCopyLink = m('ClickedCopyLink', {
   hash: S.String,
 })
-const SucceededCopy = ts('SucceededCopy', { text: S.String })
-const HiddenCopiedIndicator = ts('HiddenCopiedIndicator', {
+const SucceededCopy = m('SucceededCopy', { text: S.String })
+const HiddenCopiedIndicator = m('HiddenCopiedIndicator', {
   text: S.String,
 })
-const ToggledMobileMenu = ts('ToggledMobileMenu')
-const ToggledMobileTableOfContents = ts(
+const ToggledMobileMenu = m('ToggledMobileMenu')
+const ToggledMobileTableOfContents = m(
   'ToggledMobileTableOfContents',
   {
     isOpen: S.Boolean,
   },
 )
-const ClickedMobileTableOfContentsLink = ts(
+const ClickedMobileTableOfContentsLink = m(
   'ClickedMobileTableOfContentsLink',
 )
-export const ChangedActiveSection = ts('ChangedActiveSection', {
+export const ChangedActiveSection = m('ChangedActiveSection', {
   sectionId: S.String,
 })
-export const SelectedThemePreference = ts('SelectedThemePreference', {
+export const SelectedThemePreference = m('SelectedThemePreference', {
   preference: ThemePreference,
 })
-export const ChangedSystemTheme = ts('ChangedSystemTheme', {
+export const ChangedSystemTheme = m('ChangedSystemTheme', {
   theme: ResolvedTheme,
 })
-const GotFoldkitUiMessage = ts('GotFoldkitUiMessage', {
+const GotFoldkitUiMessage = m('GotFoldkitUiMessage', {
   message: Page.FoldkitUi.Message,
 })
-const GotComingFromReactMessage = ts('GotComingFromReactMessage', {
+const GotComingFromReactMessage = m('GotComingFromReactMessage', {
   message: Page.ComingFromReact.Message,
 })
-const GotApiReferenceMessage = ts('GotApiReferenceMessage', {
+const GotApiReferenceMessage = m('GotApiReferenceMessage', {
   message: Page.ApiReference.Message,
 })
 

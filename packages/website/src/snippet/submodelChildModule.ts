@@ -1,6 +1,6 @@
 import { Match as M, Schema as S } from 'effect'
 import { Runtime } from 'foldkit'
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
 // MODEL
@@ -14,7 +14,7 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const ChangedTheme = ts('ChangedTheme', { theme: S.String })
+export const ChangedTheme = m('ChangedTheme', { theme: S.String })
 export const Message = S.Union(ChangedTheme)
 export type Message = typeof Message.Type
 

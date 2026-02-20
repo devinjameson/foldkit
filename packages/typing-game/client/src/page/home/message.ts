@@ -1,19 +1,19 @@
 import * as Shared from '@typing-game/shared'
 import { Schema as S } from 'effect'
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 
-export const NoOp = ts('NoOp')
-export const SubmittedUsernameForm = ts('SubmittedUsernameForm')
-export const ChangedUsername = ts('ChangedUsername', { value: S.String })
-export const BlurredUsernameInput = ts('BlurredUsernameInput')
-export const ChangedRoomId = ts('ChangedRoomId', { value: S.String })
-export const BlurredRoomIdInput = ts('BlurredRoomIdInput')
-export const ClickedCreateRoom = ts('ClickedCreateRoom')
-export const ClickedJoinRoom = ts('ClickedJoinRoom')
-export const CreatedRoom = ts('CreatedRoom', { roomId: S.String, player: Shared.Player })
-export const JoinedRoom = ts('JoinedRoom', { roomId: S.String, player: Shared.Player })
-export const FailedRoom = ts('FailedRoom', { error: S.String })
-export const PressedKey = ts('PressedKey', { key: S.String })
+export const NoOp = m('NoOp')
+export const SubmittedUsernameForm = m('SubmittedUsernameForm')
+export const ChangedUsername = m('ChangedUsername', { value: S.String })
+export const BlurredUsernameInput = m('BlurredUsernameInput')
+export const ChangedRoomId = m('ChangedRoomId', { value: S.String })
+export const BlurredRoomIdInput = m('BlurredRoomIdInput')
+export const ClickedCreateRoom = m('ClickedCreateRoom')
+export const ClickedJoinRoom = m('ClickedJoinRoom')
+export const CreatedRoom = m('CreatedRoom', { roomId: S.String, player: Shared.Player })
+export const JoinedRoom = m('JoinedRoom', { roomId: S.String, player: Shared.Player })
+export const FailedRoom = m('FailedRoom', { error: S.String })
+export const PressedKey = m('PressedKey', { key: S.String })
 
 export const Message = S.Union(
   NoOp,
@@ -33,11 +33,11 @@ export type Message = typeof Message.Type
 
 // OUT MESSAGE
 
-export const SucceededRoomCreation = ts('SucceededRoomCreation', {
+export const SucceededRoomCreation = m('SucceededRoomCreation', {
   roomId: S.String,
   player: Shared.Player,
 })
-export const SucceededRoomJoin = ts('SucceededRoomJoin', {
+export const SucceededRoomJoin = m('SucceededRoomJoin', {
   roomId: S.String,
   player: Shared.Player,
 })

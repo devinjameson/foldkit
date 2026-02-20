@@ -57,14 +57,14 @@ Match the quality and thoughtfulness of these files. The principles below apply 
 Message definitions follow a strict four-group layout, whether in a dedicated message file or a message block within a larger file (like main.ts). Each group is separated by a blank line:
 
 ```ts
-const A = ts('A')
-const B = ts('B', { value: S.String })
+const A = m('A')
+const B = m('B', { value: S.String })
 
 const Message = S.Union(A, B)
 type Message = typeof Message.Type
 ```
 
-1. **Values** — all `ts()` declarations, no blank lines between them
+1. **Values** — all `m()` declarations, no blank lines between them
 2. **Union + type** — `S.Union(...)` followed by `type Message = typeof Message.Type` on adjacent lines (no blank line between them)
 
 Individual `type A = typeof A.Type` declarations are not needed — use `typeof A` in type positions (e.g. `Runtime.Command<typeof A>`) to reference a schema value's type. Only create individual type aliases in library components where the type is part of a public API (e.g. `ViewConfig` callback parameters).

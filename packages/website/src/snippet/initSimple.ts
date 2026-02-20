@@ -1,12 +1,12 @@
 import { Schema as S } from 'effect'
 import type { Runtime } from 'foldkit'
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 
 const Model = S.Number
 type Model = typeof Model.Type
 
-const ClickedIncrement = ts('ClickedIncrement')
-const ClickedDecrement = ts('ClickedDecrement')
+const ClickedIncrement = m('ClickedIncrement')
+const ClickedDecrement = m('ClickedDecrement')
 const Message = S.Union(ClickedIncrement, ClickedDecrement)
 type Message = typeof Message.Type
 

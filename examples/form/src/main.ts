@@ -14,7 +14,7 @@ import {
   validateField,
 } from 'foldkit/fieldValidation'
 import { Html, html } from 'foldkit/html'
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
 const StringField = makeField(S.String)
@@ -22,10 +22,10 @@ type StringField = typeof StringField.Union.Type
 
 // MODEL
 
-const NotSubmitted = ts('NotSubmitted')
-const Submitting = ts('Submitting')
-const SubmitSuccess = ts('SubmitSuccess', { message: S.String })
-const SubmitError = ts('SubmitError', { error: S.String })
+const NotSubmitted = m('NotSubmitted')
+const Submitting = m('Submitting')
+const SubmitSuccess = m('SubmitSuccess', { message: S.String })
+const SubmitError = m('SubmitError', { error: S.String })
 
 const Submission = S.Union(NotSubmitted, Submitting, SubmitSuccess, SubmitError)
 
@@ -46,16 +46,16 @@ type Model = typeof Model.Type
 
 // MESSAGE
 
-const NoOp = ts('NoOp')
-const UpdatedName = ts('UpdatedName', { value: S.String })
-const UpdatedEmail = ts('UpdatedEmail', { value: S.String })
-const ValidatedEmail = ts('ValidatedEmail', {
+const NoOp = m('NoOp')
+const UpdatedName = m('UpdatedName', { value: S.String })
+const UpdatedEmail = m('UpdatedEmail', { value: S.String })
+const ValidatedEmail = m('ValidatedEmail', {
   validationId: S.Number,
   field: StringField.Union,
 })
-const UpdatedMessage = ts('UpdatedMessage', { value: S.String })
-const ClickedFormSubmit = ts('ClickedFormSubmit')
-const SubmittedForm = ts('SubmittedForm', {
+const UpdatedMessage = m('UpdatedMessage', { value: S.String })
+const ClickedFormSubmit = m('ClickedFormSubmit')
+const SubmittedForm = m('SubmittedForm', {
   success: S.Boolean,
   name: S.String,
   email: S.String,

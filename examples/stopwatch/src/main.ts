@@ -11,7 +11,7 @@ import {
 } from 'effect'
 import { Runtime } from 'foldkit'
 import { Html, html } from 'foldkit/html'
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
 const TICK_INTERVAL_MS = 10
@@ -27,12 +27,12 @@ type Model = typeof Model.Type
 
 // UPDATE
 
-const RequestedStart = ts('RequestedStart')
-const GotStartTime = ts('GotStartTime', { startTime: S.Number })
-const ClickedStop = ts('ClickedStop')
-const ClickedReset = ts('ClickedReset')
-const RequestedTick = ts('RequestedTick')
-const GotTick = ts('GotTick', { elapsedMs: S.Number })
+const RequestedStart = m('RequestedStart')
+const GotStartTime = m('GotStartTime', { startTime: S.Number })
+const ClickedStop = m('ClickedStop')
+const ClickedReset = m('ClickedReset')
+const RequestedTick = m('RequestedTick')
+const GotTick = m('GotTick', { elapsedMs: S.Number })
 
 export const Message = S.Union(
   RequestedStart,

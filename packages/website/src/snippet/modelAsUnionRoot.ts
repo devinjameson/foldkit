@@ -1,12 +1,12 @@
 import { Schema as S } from 'effect'
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 
-const LoggedOut = ts('LoggedOut', {
+const LoggedOut = m('LoggedOut', {
   email: S.String,
   password: S.String,
 })
 
-const LoggedIn = ts('LoggedIn', {
+const LoggedIn = m('LoggedIn', {
   userId: S.String,
   username: S.String,
 })

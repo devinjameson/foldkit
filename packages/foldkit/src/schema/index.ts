@@ -27,26 +27,23 @@ const makeCallable = <Tag extends string, Fields extends S.Struct.Fields>(
   }) as unknown as CallableTaggedStruct<Tag, Fields>
 
 /**
- * A wrapper around Effect Schema.taggedStruct that returns a callable schema.
- *
- * Abbreviated as `ts` because it's used so frequently throughout Foldkit applications.
+ * Wraps `Schema.TaggedStruct` to create a message variant you can call directly as a constructor.
+ * Use `m` for message types — write `ClickedReset()` instead of `ClickedReset.make()`.
  *
  * @example
  * ```typescript
- * // Simple tag — callable with no args
- * const ClickedReset = ts('ClickedReset')
+ * const ClickedReset = m('ClickedReset')
  * ClickedReset() // { _tag: 'ClickedReset' }
  *
- * // Tag with fields — callable with fields
- * const ChangedCount = ts('ChangedCount', { count: S.Number })
+ * const ChangedCount = m('ChangedCount', { count: S.Number })
  * ChangedCount({ count: 1 }) // { _tag: 'ChangedCount', count: 1 }
  * ```
  */
-export function ts<Tag extends string>(tag: Tag): CallableTaggedStruct<Tag, {}>
-export function ts<Tag extends string, Fields extends S.Struct.Fields>(
+export function m<Tag extends string>(tag: Tag): CallableTaggedStruct<Tag, {}>
+export function m<Tag extends string, Fields extends S.Struct.Fields>(
   tag: Tag,
   fields: Fields,
 ): CallableTaggedStruct<Tag, Fields>
-export function ts(tag: string, fields: S.Struct.Fields = {}): any {
+export function m(tag: string, fields: S.Struct.Fields = {}): any {
   return makeCallable(S.TaggedStruct(tag, fields))
 }

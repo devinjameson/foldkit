@@ -8,14 +8,14 @@ import {
   flow,
 } from 'effect'
 
-import { ts } from '../schema'
+import { m } from '../schema'
 
 /** Creates a tagged union of field states (`NotValidated`, `Validating`, `Valid`, `Invalid`) for a given value schema. */
 export const makeField = <A, I>(value: S.Schema<A, I>) => {
-  const NotValidated = ts('NotValidated', { value })
-  const Validating = ts('Validating', { value })
-  const Valid = ts('Valid', { value })
-  const Invalid = ts('Invalid', { value, error: S.String })
+  const NotValidated = m('NotValidated', { value })
+  const Validating = m('Validating', { value })
+  const Valid = m('Valid', { value })
+  const Invalid = m('Invalid', { value, error: S.String })
 
   return {
     NotValidated,

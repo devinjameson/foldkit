@@ -1,6 +1,6 @@
 import { Option, Schema as S } from 'effect'
 import type { Runtime } from 'foldkit'
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 
 const Model = S.Struct({
   count: S.Number,
@@ -13,7 +13,7 @@ const Flags = S.Struct({
 })
 type Flags = typeof Flags.Type
 
-const ClickedIncrement = ts('ClickedIncrement')
+const ClickedIncrement = m('ClickedIncrement')
 const Message = S.Union(ClickedIncrement)
 type Message = typeof Message.Type
 

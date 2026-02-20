@@ -1,7 +1,7 @@
 import { Match as M, Schema } from 'effect'
 import { Runtime } from 'foldkit'
 import { Html, html } from 'foldkit/html'
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 
 // MODEL
 
@@ -10,9 +10,9 @@ type Model = typeof Model.Type
 
 // MESSAGE
 
-const ClickedDecrement = ts('ClickedDecrement')
-const ClickedIncrement = ts('ClickedIncrement')
-const ClickedReset = ts('ClickedReset')
+const ClickedDecrement = m('ClickedDecrement')
+const ClickedIncrement = m('ClickedIncrement')
+const ClickedReset = m('ClickedReset')
 
 const Message = Schema.Union(ClickedDecrement, ClickedIncrement, ClickedReset)
 export type Message = typeof Message.Type

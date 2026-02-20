@@ -1,11 +1,11 @@
 import { Schema as S, pipe } from 'effect'
 import { Route } from 'foldkit'
 import { literal, slash, string } from 'foldkit/route'
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 
-const HomeRoute = ts('Home')
-const RoomRoute = ts('Room', { roomId: S.String })
-const NotFoundRoute = ts('NotFound', { path: S.String })
+const HomeRoute = m('Home')
+const RoomRoute = m('Room', { roomId: S.String })
+const NotFoundRoute = m('NotFound', { path: S.String })
 
 export const AppRoute = S.Union(HomeRoute, RoomRoute, NotFoundRoute)
 

@@ -2,7 +2,7 @@ import { FetchHttpClient, HttpClient } from '@effect/platform'
 import { Array, Effect, Match as M, Schema as S, String, flow } from 'effect'
 import { Runtime } from 'foldkit'
 import { Html, html } from 'foldkit/html'
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
 // MODEL
@@ -18,10 +18,10 @@ export const WeatherData = S.Struct({
 })
 export type WeatherData = typeof WeatherData.Type
 
-export const WeatherInit = ts('WeatherInit')
-export const WeatherLoading = ts('WeatherLoading')
-export const WeatherSuccess = ts('WeatherSuccess', { data: WeatherData })
-export const WeatherFailure = ts('WeatherFailure', { error: S.String })
+export const WeatherInit = m('WeatherInit')
+export const WeatherLoading = m('WeatherLoading')
+export const WeatherSuccess = m('WeatherSuccess', { data: WeatherData })
+export const WeatherFailure = m('WeatherFailure', { error: S.String })
 
 const WeatherAsyncResult = S.Union(
   WeatherInit,
@@ -39,14 +39,14 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const UpdatedZipCodeInput = ts('UpdatedZipCodeInput', {
+export const UpdatedZipCodeInput = m('UpdatedZipCodeInput', {
   value: S.String,
 })
-export const SubmittedWeatherForm = ts('SubmittedWeatherForm')
-export const SucceededWeatherFetch = ts('SucceededWeatherFetch', {
+export const SubmittedWeatherForm = m('SubmittedWeatherForm')
+export const SucceededWeatherFetch = m('SucceededWeatherFetch', {
   weather: WeatherData,
 })
-export const FailedWeatherFetch = ts('FailedWeatherFetch', { error: S.String })
+export const FailedWeatherFetch = m('FailedWeatherFetch', { error: S.String })
 
 const Message = S.Union(
   UpdatedZipCodeInput,

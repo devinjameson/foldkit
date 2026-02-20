@@ -1,13 +1,13 @@
 import { Effect, Match as M, Schema as S } from 'effect'
 import { Runtime } from 'foldkit'
-import { ts } from 'foldkit/schema'
+import { m } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
 const UserSchema = S.Struct({ id: S.String, name: S.String })
 
-const UserLoading = ts('UserLoading')
-const UserSuccess = ts('UserSuccess', { data: UserSchema })
-const UserFailure = ts('UserFailure', { error: S.String })
+const UserLoading = m('UserLoading')
+const UserSuccess = m('UserSuccess', { data: UserSchema })
+const UserFailure = m('UserFailure', { error: S.String })
 const UserState = S.Union(UserLoading, UserSuccess, UserFailure)
 
 // MODEL - your entire application state
@@ -20,11 +20,11 @@ type Model = typeof Model.Type
 
 // MESSAGE - events that can happen in your app
 
-const ClickedFetchUser = ts('ClickedFetchUser', { userId: S.String })
-const SucceededUserFetch = ts('SucceededUserFetch', {
+const ClickedFetchUser = m('ClickedFetchUser', { userId: S.String })
+const SucceededUserFetch = m('SucceededUserFetch', {
   data: UserSchema,
 })
-const FailedUserFetch = ts('FailedUserFetch', { error: S.String })
+const FailedUserFetch = m('FailedUserFetch', { error: S.String })
 
 const Message = S.Union(
   ClickedFetchUser,
