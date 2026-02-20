@@ -30,9 +30,9 @@ import {
 import {
   BlurredRoomIdInput,
   BlurredUsernameInput,
+  ChangedRoomId,
+  ChangedUsername,
   ClickedJoinRoom,
-  InputtedRoomId,
-  InputtedUsername,
   SubmittedUsernameForm,
 } from './message'
 import type { Message } from './message'
@@ -99,7 +99,7 @@ const enterUsername =
                   Type('text'),
                   Value(username),
                   Class('bg-transparent px-0 py-2 outline-none w-full'),
-                  OnInput((value) => toMessage(InputtedUsername({ value }))),
+                  OnInput((value) => toMessage(ChangedUsername({ value }))),
                   OnBlur(toMessage(BlurredUsernameInput())),
                   Autocapitalize('none'),
                   Spellcheck(false),
@@ -149,7 +149,7 @@ const enterRoomId =
                   Type('text'),
                   Value(roomId),
                   Class('bg-transparent px-0 py-2 outline-none w-full'),
-                  OnInput((value) => toMessage(InputtedRoomId({ value }))),
+                  OnInput((value) => toMessage(ChangedRoomId({ value }))),
                   OnBlur(toMessage(BlurredRoomIdInput())),
                   Autocapitalize('none'),
                   Spellcheck(false),

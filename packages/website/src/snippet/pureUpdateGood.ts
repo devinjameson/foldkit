@@ -2,14 +2,18 @@ import { Effect, Match, Random } from 'effect'
 import { Runtime } from 'foldkit'
 
 import { GRID_SIZE } from './constants'
-import { GotApplePosition, Message, SpawnApple } from './message'
+import {
+  GotApplePosition,
+  Message,
+  RequestedAppleSpawn,
+} from './message'
 import { Model } from './model'
 
 // ✅ Do this - request the value via a Command
 const update = (model: Model, message: Message) =>
   Match.value(message).pipe(
     Match.tagsExhaustive({
-      SpawnApple: () => [model, [generateApplePosition]],
+      RequestedAppleSpawn: () => [model, [generateApplePosition]],
       GotApplePosition: ({ position }) => [
         { ...model, apple: position },
         [],
@@ -28,7 +32,7 @@ const generateApplePosition: Runtime.Command<Message> = Effect.gen(
 
 // Same inputs always produce the same outputs - purity preserved!
 const model = { snake: [{ x: 0, y: 0 }], apple: { x: 5, y: 5 } }
-const message = SpawnApple()
+const message = RequestedAppleSpawn()
 
 console.log(update(model, message)) // [model, [generateApplePosition]]
 console.log(update(model, message)) // [model, [generateApplePosition]]

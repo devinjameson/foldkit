@@ -4,8 +4,8 @@ import { ts } from 'foldkit/schema'
 
 // MESSAGE
 
-const Tick = ts('Tick')
-const Message = S.Union(Tick)
+const Ticked = ts('Ticked')
+const Message = S.Union(Ticked)
 type Message = typeof Message.Type
 
 // MODEL
@@ -34,7 +34,7 @@ const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<
     depsToStream: ({ isRunning }) =>
       Stream.when(
         Stream.tick(Duration.millis(100)).pipe(
-          Stream.map(() => Effect.succeed(Tick())),
+          Stream.map(() => Effect.succeed(Ticked())),
         ),
         () => isRunning,
       ),

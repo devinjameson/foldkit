@@ -42,15 +42,17 @@ export type Model = typeof Model.Type
 export const UpdatedZipCodeInput = ts('UpdatedZipCodeInput', {
   value: S.String,
 })
-export const RequestedWeatherFetch = ts('RequestedWeatherFetch')
-export const FetchedWeather = ts('FetchedWeather', { weather: WeatherData })
-export const WeatherError = ts('WeatherError', { error: S.String })
+export const SubmittedWeatherForm = ts('SubmittedWeatherForm')
+export const SucceededWeatherFetch = ts('SucceededWeatherFetch', {
+  weather: WeatherData,
+})
+export const FailedWeatherFetch = ts('FailedWeatherFetch', { error: S.String })
 
 const Message = S.Union(
   UpdatedZipCodeInput,
-  RequestedWeatherFetch,
-  FetchedWeather,
-  WeatherError,
+  SubmittedWeatherForm,
+  SucceededWeatherFetch,
+  FailedWeatherFetch,
 )
 type Message = typeof Message.Type
 
@@ -68,21 +70,21 @@ export const update = (
         [],
       ],
 
-      RequestedWeatherFetch: () => [
+      SubmittedWeatherForm: () => [
         evo(model, {
           weather: () => WeatherLoading(),
         }),
         [fetchWeatherLive(model.zipCodeInput)],
       ],
 
-      FetchedWeather: ({ weather }) => [
+      SucceededWeatherFetch: ({ weather }) => [
         evo(model, {
           weather: () => WeatherSuccess({ data: weather }),
         }),
         [],
       ],
 
-      WeatherError: ({ error }) => [
+      FailedWeatherFetch: ({ error }) => [
         evo(model, {
           weather: () => WeatherFailure({ error }),
         }),
@@ -119,13 +121,13 @@ type WeatherResponseData = {
 export const fetchWeather = (
   zipCode: string,
 ): Runtime.Command<
-  typeof FetchedWeather | typeof WeatherError,
+  typeof SucceededWeatherFetch | typeof FailedWeatherFetch,
   never,
   HttpClient.HttpClient
 > =>
   Effect.gen(function* () {
     if (String.isEmpty(zipCode.trim())) {
-      return WeatherError({ error: 'Zip code required' })
+      return FailedWeatherFetch({ error: 'Zip code required' })
     }
 
     const client = yield* HttpClient.HttpClient
@@ -134,7 +136,7 @@ export const fetchWeather = (
     )
 
     if (response.status !== 200) {
-      return WeatherError({ error: 'Location not found' })
+      return FailedWeatherFetch({ error: 'Location not found' })
     }
 
     // In a real app, you'd define a Schema for WeatherResponseData and use
@@ -156,11 +158,13 @@ export const fetchWeather = (
       region,
     })
 
-    return FetchedWeather({ weather })
+    return SucceededWeatherFetch({ weather })
   }).pipe(
     Effect.scoped,
     Effect.catchAll(() =>
-      Effect.succeed(WeatherError({ error: 'Failed to fetch weather data' })),
+      Effect.succeed(
+        FailedWeatherFetch({ error: 'Failed to fetch weather data' }),
+      ),
     ),
   )
 
@@ -206,7 +210,7 @@ const view = (model: Model): Html =>
       form(
         [
           Class('flex flex-col gap-4 items-center w-full max-w-md'),
-          OnSubmit(RequestedWeatherFetch()),
+          OnSubmit(SubmittedWeatherForm()),
         ],
         [
           label([For('location'), Class('sr-only')], ['Location']),

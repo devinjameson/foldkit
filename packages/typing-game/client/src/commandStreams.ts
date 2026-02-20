@@ -45,7 +45,7 @@ export const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Mod
                 Stream.make(
                   Effect.succeed(
                     GotRoomMessage({
-                      message: Room.Message.RoomStreamError({ error: String(error) }),
+                      message: Room.Message.FailedRoomStream({ error: String(error) }),
                     }),
                   ),
                 ),

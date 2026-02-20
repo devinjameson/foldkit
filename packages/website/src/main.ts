@@ -166,13 +166,13 @@ const ClickedLink = ts('ClickedLink', {
   request: UrlRequest,
 })
 const ChangedUrl = ts('ChangedUrl', { url: Url })
-export const RequestedSnippetCopy = ts('RequestedSnippetCopy', {
+export const ClickedCopySnippet = ts('ClickedCopySnippet', {
   text: S.String,
 })
-export const RequestedLinkCopy = ts('RequestedLinkCopy', {
+export const ClickedCopyLink = ts('ClickedCopyLink', {
   hash: S.String,
 })
-const CopySuccess = ts('CopySuccess', { text: S.String })
+const SucceededCopy = ts('SucceededCopy', { text: S.String })
 const HiddenCopiedIndicator = ts('HiddenCopiedIndicator', {
   text: S.String,
 })
@@ -189,7 +189,7 @@ const ClickedMobileTableOfContentsLink = ts(
 export const ChangedActiveSection = ts('ChangedActiveSection', {
   sectionId: S.String,
 })
-export const SetThemePreference = ts('SetThemePreference', {
+export const SelectedThemePreference = ts('SelectedThemePreference', {
   preference: ThemePreference,
 })
 export const ChangedSystemTheme = ts('ChangedSystemTheme', {
@@ -209,15 +209,15 @@ const Message = S.Union(
   NoOp,
   ClickedLink,
   ChangedUrl,
-  RequestedSnippetCopy,
-  RequestedLinkCopy,
-  CopySuccess,
+  ClickedCopySnippet,
+  ClickedCopyLink,
+  SucceededCopy,
   HiddenCopiedIndicator,
   ToggledMobileMenu,
   ToggledMobileTableOfContents,
   ClickedMobileTableOfContentsLink,
   ChangedActiveSection,
-  SetThemePreference,
+  SelectedThemePreference,
   ChangedSystemTheme,
   GotFoldkitUiMessage,
   GotComingFromReactMessage,
@@ -334,12 +334,12 @@ const update = (
         }),
       ],
 
-      RequestedSnippetCopy: ({ text }) => [
+      ClickedCopySnippet: ({ text }) => [
         model,
         [copySnippetToClipboard(text)],
       ],
 
-      RequestedLinkCopy: ({ hash }) => [
+      ClickedCopyLink: ({ hash }) => [
         model,
         [
           copyLinkToClipboard(
@@ -348,7 +348,7 @@ const update = (
         ],
       ],
 
-      CopySuccess: ({ text }) =>
+      SucceededCopy: ({ text }) =>
         HashSet.has(model.copiedSnippets, text)
           ? [model, []]
           : [
@@ -389,7 +389,7 @@ const update = (
         [],
       ],
 
-      SetThemePreference: ({ preference }) => {
+      SelectedThemePreference: ({ preference }) => {
         const resolvedTheme = resolveTheme(
           preference,
           model.systemTheme,
@@ -474,12 +474,12 @@ const injectAnalytics: Runtime.Command<typeof NoOp> = Effect.sync(
 
 const copySnippetToClipboard = (
   text: string,
-): Runtime.Command<typeof CopySuccess | typeof NoOp> =>
+): Runtime.Command<typeof SucceededCopy | typeof NoOp> =>
   Effect.tryPromise({
     try: () => navigator.clipboard.writeText(text),
     catch: () => new Error('Failed to copy to clipboard'),
   }).pipe(
-    Effect.as(CopySuccess({ text })),
+    Effect.as(SucceededCopy({ text })),
     Effect.catchAll(() => Effect.succeed(NoOp())),
   )
 

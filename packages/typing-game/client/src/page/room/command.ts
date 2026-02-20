@@ -6,26 +6,26 @@ import { Runtime, Task } from 'foldkit'
 import { ROOM_PLAYER_SESSION_KEY } from '../../constant'
 import { RoomsClient } from '../../rpc'
 import {
-  CopyRoomIdSuccess,
-  FetchedRoom,
+  FailedRoomFetch,
   HiddenRoomIdCopiedIndicator,
   JoinedRoom,
   LoadedSession,
   NoOp,
-  RoomNotFound,
+  SucceededCopyRoomId,
+  SucceededRoomFetch,
   TickedExitCountdown,
 } from './message'
 import { RoomPlayerSession } from './model'
 
 export const getRoomById = (
   roomId: string,
-): Runtime.Command<typeof FetchedRoom | typeof RoomNotFound> =>
+): Runtime.Command<typeof SucceededRoomFetch | typeof FailedRoomFetch> =>
   Effect.gen(function* () {
     const client = yield* RoomsClient
     const room = yield* client.getRoomById({ roomId })
-    return FetchedRoom({ room })
+    return SucceededRoomFetch({ room })
   }).pipe(
-    Effect.catchAll(() => Effect.succeed(RoomNotFound({ roomId }))),
+    Effect.catchAll(() => Effect.succeed(FailedRoomFetch({ roomId }))),
     Effect.provide(RoomsClient.Default),
   )
 
@@ -89,12 +89,12 @@ export const updatePlayerProgress = (
 
 export const copyRoomIdToClipboard = (
   roomId: string,
-): Runtime.Command<typeof CopyRoomIdSuccess | typeof NoOp> =>
+): Runtime.Command<typeof SucceededCopyRoomId | typeof NoOp> =>
   Effect.tryPromise({
     try: () => navigator.clipboard.writeText(roomId),
     catch: () => new Error('Failed to copy to clipboard'),
   }).pipe(
-    Effect.as(CopyRoomIdSuccess()),
+    Effect.as(SucceededCopyRoomId()),
     Effect.catchAll(() => Effect.succeed(NoOp())),
   )
 

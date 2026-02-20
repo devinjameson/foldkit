@@ -18,7 +18,7 @@ import {
   span,
   textarea,
 } from '../../../view/html'
-import { InputtedUserText } from '../message'
+import { ChangedUserText } from '../message'
 import type { Message } from '../message'
 
 const typing = (
@@ -35,7 +35,7 @@ const typing = (
           Id(USER_GAME_TEXT_INPUT_ID),
           Value(userGameText),
           Class('absolute inset-0 opacity-0 z-10 resize-none'),
-          OnInput((value) => toMessage(InputtedUserText({ value }))),
+          OnInput((value) => toMessage(ChangedUserText({ value }))),
           Spellcheck(false),
           Autocorrect('off'),
           Autocapitalize('none'),

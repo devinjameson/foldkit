@@ -10,9 +10,9 @@ type Model = typeof Model.Type
 
 // MESSAGE
 
-const Crash = ts('Crash')
+const ClickedCrash = ts('ClickedCrash')
 
-const Message = Schema.Union(Crash)
+const Message = Schema.Union(ClickedCrash)
 export type Message = typeof Message.Type
 
 // UPDATE
@@ -38,7 +38,7 @@ const view = (_model: Model): Html =>
     [
       button(
         [
-          OnClick(Crash()),
+          OnClick(ClickedCrash()),
           Class(
             'bg-red-600 text-white text-lg font-semibold hover:bg-red-700 px-6 py-3 rounded transition cursor-pointer',
           ),

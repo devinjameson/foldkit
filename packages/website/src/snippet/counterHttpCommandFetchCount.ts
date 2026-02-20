@@ -2,7 +2,7 @@ import { Effect } from 'effect'
 import { Runtime } from 'foldkit'
 
 const fetchCount: Runtime.Command<
-  typeof GetCountSuccess | typeof GetCountFailure
+  typeof SucceededCountFetch | typeof FailedCountFetch
 > = Effect.gen(function* () {
   // tryPromise creates an Effect that represents an asynchronous computation
   // that might fail. If the Promise rejects, it is propagated to the error channel
@@ -18,15 +18,15 @@ const fetchCount: Runtime.Command<
   )
 
   // If we reach this, the Effect above that uses tryPromise succeeded,
-  // and we can return the GetCountSuccess message
-  return GetCountSuccess({ count: result.count })
+  // and we can return the SucceededCountFetch message
+  return SucceededCountFetch({ count: result.count })
 }).pipe(
   // We are forced by the type system to handle the error case because
   // Command's may not fail. They must always return a Message. Here, we recover
-  // from failure by returning a GetCountFailure Message with the error message.
+  // from failure by returning a FailedCountFetch Message with the error message.
   // In a real application, we might log the error to an external service,
   // retry the request, etc.
   Effect.catchAll((error) =>
-    Effect.succeed(GetCountFailure({ error: error.message })),
+    Effect.succeed(FailedCountFetch({ error: error.message })),
   ),
 )

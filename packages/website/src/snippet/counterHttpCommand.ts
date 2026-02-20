@@ -2,7 +2,7 @@ import { Effect, Match as M, Schema } from 'effect'
 import { Runtime } from 'foldkit'
 import { ts } from 'foldkit/schema'
 
-const RequestedCountFetch = ts('RequestedCountFetch')
+const ClickedFetchCount = ts('ClickedFetchCount')
 const SucceededCountFetch = ts('SucceededCountFetch', {
   count: Schema.Number,
 })
@@ -20,7 +20,7 @@ const update = (
     >(),
     M.tagsExhaustive({
       // Tell Foldkit to fetch the count from the API
-      RequestedCountFetch: () => [model, [fetchCount]],
+      ClickedFetchCount: () => [model, [fetchCount]],
       // Update the count on successful API response
       SucceededCountFetch: ({ count }) => [count, []],
       // Keep the current count on failure

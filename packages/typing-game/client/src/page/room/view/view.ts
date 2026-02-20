@@ -35,8 +35,8 @@ import {
 import { Icon } from '../../../view/icon'
 import {
   BlurredRoomPageUsernameInput,
+  ChangedRoomPageUsername,
   ClickedCopyRoomId,
-  InputtedRoomPageUsername,
   SubmittedJoinRoomFromPage,
 } from '../message'
 import type { Message } from '../message'
@@ -181,7 +181,7 @@ const joinForm = (
                 Type('text'),
                 Value(username),
                 Class('bg-transparent px-0 py-2 outline-none w-full'),
-                OnInput((value) => toMessage(InputtedRoomPageUsername({ value }))),
+                OnInput((value) => toMessage(ChangedRoomPageUsername({ value }))),
                 OnBlur(toMessage(BlurredRoomPageUsernameInput())),
                 Autocapitalize('none'),
                 Spellcheck(false),

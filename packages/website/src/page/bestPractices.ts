@@ -272,7 +272,7 @@ export const view = (model: Model): Html =>
         'This "request/response" pattern keeps ',
         inlineCode('update'),
         ' pure. The ',
-        inlineCode('SpawnApple'),
+        inlineCode('RequestedAppleSpawn'),
         ' handler always returns the same result — it just emits a Command. The actual random generation happens in the Effect, and the result comes back via ',
         inlineCode('GotApplePosition'),
         '.',

@@ -32,7 +32,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
 
       PressedKey: handleKeyPressed(model),
 
-      InputtedUserText: ({ value }) => {
+      ChangedUserText: ({ value }) => {
         const maybeRoom = M.value(model.roomRemoteData).pipe(
           M.tag('Ok', ({ data }) => data),
           M.option,
@@ -73,7 +73,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         [Task.focus(`#${ROOM_PAGE_USERNAME_INPUT_ID}`, () => NoOp())],
       ],
 
-      InputtedRoomPageUsername: ({ value }) => [
+      ChangedRoomPageUsername: ({ value }) => [
         evo(model, {
           username: () => value,
         }),
@@ -90,7 +90,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
 
       UpdatedRoom: handleRoomUpdated(model),
 
-      RoomStreamError: ({ error: _error }) => {
+      FailedRoomStream: ({ error: _error }) => {
         return [model, []]
       },
 
@@ -103,7 +103,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         [],
       ],
 
-      FetchedRoom: ({ room }) => {
+      SucceededRoomFetch: ({ room }) => {
         const maybeFocusRoomUsernameInput = Option.match(model.maybeSession, {
           onNone: () => Option.some(Task.focus(`#${ROOM_PAGE_USERNAME_INPUT_ID}`, () => NoOp())),
           onSome: () => Option.none(),
@@ -117,7 +117,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         ]
       },
 
-      RoomNotFound: () => [
+      FailedRoomFetch: () => [
         evo(model, {
           roomRemoteData: () => RoomRemoteData.Error({ error: 'Room not found' }),
         }),
@@ -126,7 +126,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
 
       ClickedCopyRoomId: ({ roomId }) => [model, [copyRoomIdToClipboard(roomId)]],
 
-      CopyRoomIdSuccess: () =>
+      SucceededCopyRoomId: () =>
         model.isRoomIdCopyIndicatorVisible
           ? [model, []]
           : [

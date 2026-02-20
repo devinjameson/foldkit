@@ -7,7 +7,7 @@ export const update = (
 ): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
   M.value(message).pipe(
     M.tagsExhaustive({
-      LoginClicked: () => [
+      ClickedLogin: () => [
         LoggedIn({ userId: '123', username: 'alice' }),
         [],
       ],

@@ -6,21 +6,21 @@ import { RoomPlayerSession } from './model'
 
 export const NoOp = ts('NoOp')
 export const PressedKey = ts('PressedKey', { key: S.String })
-export const InputtedUserText = ts('InputtedUserText', { value: S.String })
+export const ChangedUserText = ts('ChangedUserText', { value: S.String })
 export const BlurredRoomPageUsernameInput = ts('BlurredRoomPageUsernameInput')
-export const InputtedRoomPageUsername = ts('InputtedRoomPageUsername', { value: S.String })
+export const ChangedRoomPageUsername = ts('ChangedRoomPageUsername', { value: S.String })
 export const SubmittedJoinRoomFromPage = ts('SubmittedJoinRoomFromPage', { roomId: S.String })
 export const UpdatedRoom = ts('UpdatedRoom', {
   room: Shared.Room,
   maybePlayerProgress: S.Option(Shared.PlayerProgress),
 })
-export const RoomStreamError = ts('RoomStreamError', { error: S.String })
+export const FailedRoomStream = ts('FailedRoomStream', { error: S.String })
 export const RequestedStartGame = ts('RequestedStartGame', { roomId: S.String, playerId: S.String })
 export const LoadedSession = ts('LoadedSession', { maybeSession: S.Option(RoomPlayerSession) })
-export const FetchedRoom = ts('FetchedRoom', { room: Shared.Room })
-export const RoomNotFound = ts('RoomNotFound', { roomId: S.String })
+export const SucceededRoomFetch = ts('SucceededRoomFetch', { room: Shared.Room })
+export const FailedRoomFetch = ts('FailedRoomFetch', { roomId: S.String })
 export const ClickedCopyRoomId = ts('ClickedCopyRoomId', { roomId: S.String })
-export const CopyRoomIdSuccess = ts('CopyRoomIdSuccess')
+export const SucceededCopyRoomId = ts('SucceededCopyRoomId')
 export const HiddenRoomIdCopiedIndicator = ts('HiddenRoomIdCopiedIndicator')
 export const TickedExitCountdown = ts('TickedExitCountdown')
 export const JoinedRoom = ts('JoinedRoom', { roomId: S.String, player: Shared.Player })
@@ -28,18 +28,18 @@ export const JoinedRoom = ts('JoinedRoom', { roomId: S.String, player: Shared.Pl
 export const Message = S.Union(
   NoOp,
   PressedKey,
-  InputtedUserText,
+  ChangedUserText,
   BlurredRoomPageUsernameInput,
-  InputtedRoomPageUsername,
+  ChangedRoomPageUsername,
   SubmittedJoinRoomFromPage,
   UpdatedRoom,
-  RoomStreamError,
+  FailedRoomStream,
   RequestedStartGame,
   LoadedSession,
-  FetchedRoom,
-  RoomNotFound,
+  SucceededRoomFetch,
+  FailedRoomFetch,
   ClickedCopyRoomId,
-  CopyRoomIdSuccess,
+  SucceededCopyRoomId,
   HiddenRoomIdCopiedIndicator,
   TickedExitCountdown,
   JoinedRoom,

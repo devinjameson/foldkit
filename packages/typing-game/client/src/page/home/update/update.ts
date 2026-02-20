@@ -46,7 +46,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
 
       PressedKey: (message) => [...handleKeyPressed(model)(message), Option.none()],
 
-      InputtedUsername: ({ value }) =>
+      ChangedUsername: ({ value }) =>
         M.value(model.homeStep).pipe(
           withUpdateReturn,
           M.tag('EnterUsername', () => [
@@ -72,7 +72,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         Option.none(),
       ],
 
-      InputtedRoomId: ({ value }) =>
+      ChangedRoomId: ({ value }) =>
         M.value(model.homeStep).pipe(
           withUpdateReturn,
           M.tag('EnterRoomId', ({ username, roomIdValidationId }) => [
@@ -133,7 +133,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         Option.some(SucceededRoomJoin({ roomId, player })),
       ],
 
-      RoomError: ({ error }) => [
+      FailedRoom: ({ error }) => [
         evo(model, {
           formError: () => Option.some(error),
         }),

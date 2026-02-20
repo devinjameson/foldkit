@@ -6,5 +6,5 @@ const [nextSettings, commands, maybeOutMessage] = Settings.update(
 )
 
 const mappedCommands = Array.map(commands, (command) =>
-  Effect.map(command, (message) => SettingsMessage({ message })),
+  Effect.map(command, (message) => GotSettingsMessage({ message })),
 )

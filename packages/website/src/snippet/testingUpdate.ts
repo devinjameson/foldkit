@@ -2,18 +2,18 @@ import { HttpClient, HttpClientResponse } from '@effect/platform'
 import { Effect, Layer } from 'effect'
 import { expect, test } from 'vitest'
 
-import { FetchWeather, fetchWeather, update } from './main'
+import { ClickedFetchWeather, fetchWeather, update } from './main'
 
-test('FetchWeather sets loading state and returns fetch command', () => {
+test('ClickedFetchWeather sets loading state and returns fetch command', () => {
   const model = createModel()
 
-  const [newModel, commands] = update(model, FetchWeather())
+  const [newModel, commands] = update(model, ClickedFetchWeather())
 
   expect(newModel.weather._tag).toBe('WeatherLoading')
   expect(commands).toHaveLength(1)
 })
 
-test('fetchWeather returns WeatherFetched with data on success', async () => {
+test('fetchWeather returns SucceededWeatherFetch with data on success', async () => {
   const mockResponse = {
     current_condition: [
       { temp_F: '72', weatherDesc: [{ value: 'Sunny' }] },
@@ -36,5 +36,5 @@ test('fetchWeather returns WeatherFetched with data on success', async () => {
     Effect.runPromise,
   )
 
-  expect(message._tag).toBe('WeatherFetched')
+  expect(message._tag).toBe('SucceededWeatherFetch')
 })

@@ -3,9 +3,9 @@ import { ts } from 'foldkit/schema'
 
 import * as Settings from './page/settings'
 
-export const SettingsMessage = ts('SettingsMessage', {
+export const GotSettingsMessage = ts('GotSettingsMessage', {
   message: Settings.Message,
 })
 
-export const Message = S.Union(SettingsMessage)
+export const Message = S.Union(GotSettingsMessage)
 export type Message = typeof Message.Type

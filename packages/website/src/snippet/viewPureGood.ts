@@ -1,6 +1,6 @@
 import { Html, html } from 'foldkit/html'
 
-import { Increment, Message } from './message'
+import { ClickedIncrement, Message } from './message'
 import { Model } from './model'
 
 const { button, div, h1, p, Class, OnClick } = html<Message>()
@@ -12,6 +12,6 @@ const view = (model: Model): Html =>
     [
       h1([], [model.title]),
       p([], [`Count: ${model.count}`]),
-      button([OnClick(Increment())], ['+']),
+      button([OnClick(ClickedIncrement())], ['+']),
     ],
   )

@@ -3,7 +3,10 @@ import { Html } from 'foldkit/html'
 
 import { AriaLabel, Class, OnClick, button, div } from '../html'
 import { Icon } from '../icon'
-import { SetThemePreference, type ThemePreference } from '../main'
+import {
+  SelectedThemePreference,
+  type ThemePreference,
+} from '../main'
 
 export const themeSelector = (
   activePreference: ThemePreference,
@@ -55,7 +58,7 @@ const themeSelectorButton = (
         ),
       ),
       AriaLabel(label),
-      OnClick(SetThemePreference({ preference })),
+      OnClick(SelectedThemePreference({ preference })),
     ],
     [icon],
   )

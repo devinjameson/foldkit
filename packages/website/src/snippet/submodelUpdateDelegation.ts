@@ -8,7 +8,7 @@ export const update = (
 ): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
   M.value(message).pipe(
     M.tagsExhaustive({
-      SettingsMessage: ({ message }) => {
+      GotSettingsMessage: ({ message }) => {
         const [nextSettings, commands] = Settings.update(
           model.settings,
           message,
@@ -16,7 +16,7 @@ export const update = (
 
         const mappedCommands = Array.map(
           commands,
-          Effect.map((message) => SettingsMessage({ message })),
+          Effect.map((message) => GotSettingsMessage({ message })),
         )
 
         return [
