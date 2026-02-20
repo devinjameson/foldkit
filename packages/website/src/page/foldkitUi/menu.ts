@@ -6,7 +6,12 @@ import { Class, div, span } from '../../html'
 import { Icon } from '../../icon'
 import type { Message as ParentMessage } from '../../main'
 import type { TableOfContentsEntry } from '../../main'
-import { GotMenuDemoMessage, type Message } from './message'
+import { heading } from '../../prose'
+import {
+  GotMenuAnimatedDemoMessage,
+  GotMenuBasicDemoMessage,
+  type Message,
+} from './message'
 import type { Model } from './model'
 
 // TABLE OF CONTENTS
@@ -17,13 +22,28 @@ export const menuHeader: TableOfContentsEntry = {
   text: 'Menu',
 }
 
+export const basicHeader: TableOfContentsEntry = {
+  level: 'h3',
+  id: 'basic-menu',
+  text: 'Basic',
+}
+
+export const animatedHeader: TableOfContentsEntry = {
+  level: 'h3',
+  id: 'animated-menu',
+  text: 'Animated',
+}
+
 // DEMO CONTENT
 
 const triggerClassName =
   'inline-flex items-center gap-1.5 px-4 py-2 text-base font-medium cursor-pointer transition rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 select-none'
 
-const itemsClassName =
+const basicItemsClassName =
   'absolute mt-1 w-48 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg overflow-hidden z-10 outline-none'
+
+const animatedItemsClassName =
+  'absolute mt-1 w-48 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg overflow-hidden z-10 outline-none transition duration-200 ease-out data-[closed]:scale-95 data-[closed]:opacity-0'
 
 const itemClassName =
   'px-3 py-2 text-base text-gray-700 dark:text-gray-200 cursor-pointer data-[active]:bg-gray-100 dark:data-[active]:bg-gray-700/50 data-[disabled]:opacity-50 data-[disabled]:cursor-not-allowed'
@@ -78,41 +98,60 @@ const groupToHeading = (
 
 // VIEW
 
-export const menuDemo = (
+const menuViewConfig = (itemsClassName: string) => ({
+  items: MENU_ITEMS,
+  itemToConfig: (item: MenuItem) => ({
+    className: itemClassName,
+    content: div(
+      [Class('flex items-center gap-2.5')],
+      [menuItemIcon(item), span([], [item])],
+    ),
+  }),
+  isItemDisabled,
+  buttonContent: div(
+    [Class('flex items-center gap-4')],
+    [span([], ['Actions']), Icon.chevronDown('w-4 h-4')],
+  ),
+  buttonClassName: triggerClassName,
+  itemsClassName,
+  backdropClassName,
+  className: wrapperClassName,
+  itemGroupKey,
+  groupToHeading,
+})
+
+export const basicDemo = (
   model: Model,
   toMessage: (message: Message) => ParentMessage,
-) => {
-  const toMenuMessage = (message: Ui.Menu.Message) =>
-    toMessage(GotMenuDemoMessage({ message }))
+) => [
+  heading('h3', basicHeader.id, basicHeader.text),
+  div(
+    [Class('relative')],
+    [
+      Ui.Menu.view({
+        model: model.menuBasicDemo,
+        toMessage: (message) =>
+          toMessage(GotMenuBasicDemoMessage({ message })),
+        ...menuViewConfig(basicItemsClassName),
+      }),
+    ],
+  ),
+]
 
-  return [
-    div(
-      [Class('relative')],
-      [
-        Ui.Menu.view({
-          model: model.menuDemo,
-          toMessage: toMenuMessage,
-          items: MENU_ITEMS,
-          itemToConfig: (item) => ({
-            className: itemClassName,
-            content: div(
-              [Class('flex items-center gap-2.5')],
-              [menuItemIcon(item), span([], [item])],
-            ),
-          }),
-          isItemDisabled,
-          buttonContent: div(
-            [Class('flex items-center gap-4')],
-            [span([], ['Actions']), Icon.chevronDown('w-4 h-4')],
-          ),
-          buttonClassName: triggerClassName,
-          itemsClassName,
-          backdropClassName,
-          className: wrapperClassName,
-          itemGroupKey,
-          groupToHeading,
-        }),
-      ],
-    ),
-  ]
-}
+export const animatedDemo = (
+  model: Model,
+  toMessage: (message: Message) => ParentMessage,
+) => [
+  heading('h3', animatedHeader.id, animatedHeader.text),
+  div(
+    [Class('relative')],
+    [
+      Ui.Menu.view({
+        model: model.menuAnimatedDemo,
+        toMessage: (message) =>
+          toMessage(GotMenuAnimatedDemoMessage({ message })),
+        ...menuViewConfig(animatedItemsClassName),
+      }),
+    ],
+  ),
+]

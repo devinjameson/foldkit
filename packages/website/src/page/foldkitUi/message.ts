@@ -11,9 +11,15 @@ export const GotDisclosureDemoMessage = ts(
     message: Ui.Disclosure.Message,
   },
 )
-export const GotMenuDemoMessage = ts('GotMenuDemoMessage', {
+export const GotMenuBasicDemoMessage = ts('GotMenuBasicDemoMessage', {
   message: Ui.Menu.Message,
 })
+export const GotMenuAnimatedDemoMessage = ts(
+  'GotMenuAnimatedDemoMessage',
+  {
+    message: Ui.Menu.Message,
+  },
+)
 export const GotHorizontalTabsDemoMessage = ts(
   'GotHorizontalTabsDemoMessage',
   {
@@ -30,7 +36,8 @@ export const GotVerticalTabsDemoMessage = ts(
 export const Message = S.Union(
   GotDialogDemoMessage,
   GotDisclosureDemoMessage,
-  GotMenuDemoMessage,
+  GotMenuBasicDemoMessage,
+  GotMenuAnimatedDemoMessage,
   GotHorizontalTabsDemoMessage,
   GotVerticalTabsDemoMessage,
 )

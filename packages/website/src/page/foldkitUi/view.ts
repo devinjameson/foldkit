@@ -74,6 +74,8 @@ export const tableOfContents: ReadonlyArray<TableOfContentsEntry> = [
   Disclosure.disclosureHeader,
   Dialog.dialogHeader,
   Menu.menuHeader,
+  Menu.basicHeader,
+  Menu.animatedHeader,
   ...plannedComponents.map(({ entry }) => entry),
 ]
 
@@ -136,7 +138,8 @@ export const view = (
       para(
         'A dropdown menu with keyboard navigation, typeahead search, and proper ARIA attributes. Uses aria-activedescendant for focus management — focus stays on the menu container while items are highlighted by reference.',
       ),
-      ...Menu.menuDemo(model, toMessage),
+      ...Menu.basicDemo(model, toMessage),
+      ...Menu.animatedDemo(model, toMessage),
       div(
         [Class('mt-12')],
         plannedComponents.map(({ entry, description }) =>

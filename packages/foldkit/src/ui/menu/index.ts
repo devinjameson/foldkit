@@ -7,6 +7,7 @@ import {
   pipe,
 } from 'effect'
 
+import { OptionExt } from '../../effectExtensions'
 import { html } from '../../html'
 import type { Html } from '../../html'
 import type { Command } from '../../runtime/runtime'
@@ -21,10 +22,22 @@ import { findFirstEnabledIndex, keyToIndex, wrapIndex } from '../keyboard'
 export const ActivationTrigger = S.Literal('Pointer', 'Keyboard')
 export type ActivationTrigger = typeof ActivationTrigger.Type
 
+/** Schema for the transition animation state, tracking enter/leave phases for CSS transition coordination. */
+export const TransitionState = S.Literal(
+  'Idle',
+  'EnterStart',
+  'EnterAnimating',
+  'LeaveStart',
+  'LeaveAnimating',
+)
+export type TransitionState = typeof TransitionState.Type
+
 /** Schema for the menu component's state, tracking open/closed status, active item, activation trigger, and typeahead search. */
 export const Model = S.Struct({
   id: S.String,
   isOpen: S.Boolean,
+  isAnimated: S.Boolean,
+  transitionState: TransitionState,
   maybeActiveItemIndex: S.OptionFromSelf(S.Number),
   activationTrigger: ActivationTrigger,
   searchQuery: S.String,
@@ -70,6 +83,10 @@ export const PointerMovedOverItem = ts('PointerMovedOverItem', {
 })
 /** Placeholder message used when no action is needed. */
 export const NoOp = ts('NoOp')
+/** Sent internally when a double-rAF completes, advancing the transition to its animating phase. */
+export const TransitionFrameAdvanced = ts('TransitionFrameAdvanced')
+/** Sent internally when all CSS transitions on the menu items container have completed. */
+export const TransitionEnded = ts('TransitionEnded')
 
 /** Union of all messages the menu component can produce. */
 export const Message = S.Union(
@@ -83,6 +100,8 @@ export const Message = S.Union(
   Searched,
   ClearedSearch,
   NoOp,
+  TransitionFrameAdvanced,
+  TransitionEnded,
 )
 
 export type Opened = typeof Opened.Type
@@ -95,6 +114,8 @@ export type PointerMovedOverItem = typeof PointerMovedOverItem.Type
 export type Searched = typeof Searched.Type
 export type ClearedSearch = typeof ClearedSearch.Type
 export type NoOp = typeof NoOp.Type
+export type TransitionFrameAdvanced = typeof TransitionFrameAdvanced.Type
+export type TransitionEnded = typeof TransitionEnded.Type
 
 export type Message = typeof Message.Type
 
@@ -105,12 +126,15 @@ const SEARCH_DEBOUNCE_MILLISECONDS = 350
 /** Configuration for creating a menu model with `init`. */
 export type InitConfig = Readonly<{
   id: string
+  isAnimated?: boolean
 }>
 
 /** Creates an initial menu model from a config. Defaults to closed with no active item. */
 export const init = (config: InitConfig): Model => ({
   id: config.id,
   isOpen: false,
+  isAnimated: config.isAnimated ?? false,
+  transitionState: 'Idle',
   maybeActiveItemIndex: Option.none(),
   activationTrigger: 'Keyboard',
   searchQuery: '',
@@ -123,6 +147,7 @@ export const init = (config: InitConfig): Model => ({
 const closedModel = (model: Model): Model =>
   evo(model, {
     isOpen: () => false,
+    transitionState: () => (model.isAnimated ? 'LeaveStart' : 'Idle'),
     maybeActiveItemIndex: () => Option.none(),
     activationTrigger: () => 'Keyboard',
     searchQuery: () => '',
@@ -139,13 +164,19 @@ const itemSelector = (id: string, index: number): string =>
 export const update = (
   model: Model,
   message: Message,
-): [Model, ReadonlyArray<Command<Message>>] =>
-  M.value(message).pipe(
+): [Model, ReadonlyArray<Command<Message>>] => {
+  const maybeNextFrameCommand = OptionExt.when(
+    model.isAnimated,
+    Task.nextFrame(() => TransitionFrameAdvanced()),
+  )
+
+  return M.value(message).pipe(
     M.withReturnType<[Model, ReadonlyArray<Command<Message>>]>(),
     M.tagsExhaustive({
-      Opened: ({ maybeActiveItemIndex }) => [
-        evo(model, {
+      Opened: ({ maybeActiveItemIndex }) => {
+        const nextModel = evo(model, {
           isOpen: () => true,
+          transitionState: () => (model.isAnimated ? 'EnterStart' : 'Idle'),
           maybeActiveItemIndex: () => maybeActiveItemIndex,
           activationTrigger: () =>
             Option.match(maybeActiveItemIndex, {
@@ -155,14 +186,30 @@ export const update = (
           searchQuery: () => '',
           searchVersion: () => 0,
           maybeLastPointerPosition: () => Option.none(),
-        }),
-        [Task.focus(itemsSelector(model.id), () => NoOp())],
-      ],
+        })
+
+        return [
+          nextModel,
+          [
+            Task.focus(itemsSelector(model.id), () => NoOp()),
+            ...Array.fromOption(maybeNextFrameCommand),
+          ],
+        ]
+      },
+
       Closed: () => [
         closedModel(model),
-        [Task.focus(buttonSelector(model.id), () => NoOp())],
+        [
+          Task.focus(buttonSelector(model.id), () => NoOp()),
+          ...Array.fromOption(maybeNextFrameCommand),
+        ],
       ],
-      ClosedByTab: () => [closedModel(model), []],
+
+      ClosedByTab: () => [
+        closedModel(model),
+        Array.fromOption(maybeNextFrameCommand),
+      ],
+
       ItemActivated: ({ index, activationTrigger }) => [
         evo(model, {
           maybeActiveItemIndex: () => Option.some(index),
@@ -172,6 +219,7 @@ export const update = (
           ? [Task.scrollIntoView(itemSelector(model.id, index), () => NoOp())]
           : [],
       ],
+
       PointerMovedOverItem: ({ index, screenX, screenY }) => {
         const isSamePosition = Option.exists(
           model.maybeLastPointerPosition,
@@ -192,14 +240,20 @@ export const update = (
           [],
         ]
       },
+
       ItemDeactivated: () =>
         model.activationTrigger === 'Pointer'
           ? [evo(model, { maybeActiveItemIndex: () => Option.none() }), []]
           : [model, []],
+
       ItemSelected: () => [
         closedModel(model),
-        [Task.focus(buttonSelector(model.id), () => NoOp())],
+        [
+          Task.focus(buttonSelector(model.id), () => NoOp()),
+          ...Array.fromOption(maybeNextFrameCommand),
+        ],
       ],
+
       Searched: ({ key, maybeTargetIndex }) => {
         const nextSearchQuery = model.searchQuery + key
         const nextSearchVersion = model.searchVersion + 1
@@ -218,6 +272,7 @@ export const update = (
           ],
         ]
       },
+
       ClearedSearch: ({ version }) => {
         if (version !== model.searchVersion) {
           return [model, []]
@@ -225,9 +280,43 @@ export const update = (
 
         return [evo(model, { searchQuery: () => '' }), []]
       },
+
+      TransitionFrameAdvanced: () =>
+        M.value(model.transitionState).pipe(
+          M.withReturnType<[Model, ReadonlyArray<Command<Message>>]>(),
+          M.when('EnterStart', () => [
+            evo(model, { transitionState: () => 'EnterAnimating' }),
+            [
+              Task.waitForTransitions(itemsSelector(model.id), () =>
+                TransitionEnded(),
+              ),
+            ],
+          ]),
+          M.when('LeaveStart', () => [
+            evo(model, { transitionState: () => 'LeaveAnimating' }),
+            [
+              Task.waitForTransitions(itemsSelector(model.id), () =>
+                TransitionEnded(),
+              ),
+            ],
+          ]),
+          M.orElse(() => [model, []]),
+        ),
+
+      TransitionEnded: () =>
+        M.value(model.transitionState).pipe(
+          M.withReturnType<[Model, ReadonlyArray<Command<Message>>]>(),
+          M.whenOr('EnterAnimating', 'LeaveAnimating', () => [
+            evo(model, { transitionState: () => 'Idle' }),
+            [],
+          ]),
+          M.orElse(() => [model, []]),
+        ),
+
       NoOp: () => [model, []],
     }),
   )
+}
 
 // VIEW
 
@@ -363,7 +452,7 @@ export const view = <Message, Item extends string>(
   } = html<Message>()
 
   const {
-    model: { id, isOpen, maybeActiveItemIndex, searchQuery },
+    model: { id, isOpen, transitionState, maybeActiveItemIndex, searchQuery },
     toMessage,
     items,
     itemToConfig,
@@ -380,6 +469,33 @@ export const view = <Message, Item extends string>(
     groupClassName,
     separatorClassName,
   } = config
+
+  const isLeaving =
+    transitionState === 'LeaveStart' || transitionState === 'LeaveAnimating'
+  const isVisible = isOpen || isLeaving
+
+  const transitionAttributes: ReadonlyArray<ReturnType<typeof DataAttribute>> =
+    M.value(transitionState).pipe(
+      M.when('EnterStart', () => [
+        DataAttribute('closed', ''),
+        DataAttribute('enter', ''),
+        DataAttribute('transition', ''),
+      ]),
+      M.when('EnterAnimating', () => [
+        DataAttribute('enter', ''),
+        DataAttribute('transition', ''),
+      ]),
+      M.when('LeaveStart', () => [
+        DataAttribute('leave', ''),
+        DataAttribute('transition', ''),
+      ]),
+      M.when('LeaveAnimating', () => [
+        DataAttribute('closed', ''),
+        DataAttribute('leave', ''),
+        DataAttribute('transition', ''),
+      ]),
+      M.orElse(() => []),
+    )
 
   const isDisabled = (index: number): boolean =>
     !!isItemDisabled &&
@@ -486,7 +602,7 @@ export const view = <Message, Item extends string>(
     Type('button'),
     Class(buttonClassName),
     AriaHasPopup('menu'),
-    AriaExpanded(isOpen),
+    AriaExpanded(isVisible),
     AriaControls(`${id}-items`),
     ...(isButtonDisabled
       ? [AriaDisabled(true), DataAttribute('disabled', '')]
@@ -494,7 +610,7 @@ export const view = <Message, Item extends string>(
           OnKeyDownPreventDefault(handleButtonKeyDown),
           OnClick(handleButtonClick()),
         ]),
-    ...(isOpen ? [DataAttribute('open', '')] : []),
+    ...(isVisible ? [DataAttribute('open', '')] : []),
   ]
 
   const maybeActiveDescendant = Option.match(maybeActiveItemIndex, {
@@ -509,8 +625,13 @@ export const view = <Message, Item extends string>(
     ...maybeActiveDescendant,
     Tabindex(0),
     Class(itemsClassName),
-    OnKeyDownPreventDefault(handleItemsKeyDown),
-    OnBlur(toMessage(ClosedByTab())),
+    ...transitionAttributes,
+    ...(isLeaving
+      ? []
+      : [
+          OnKeyDownPreventDefault(handleItemsKeyDown),
+          OnBlur(toMessage(ClosedByTab())),
+        ]),
   ]
 
   const menuItems = Array.map(items, (item, index) => {
@@ -524,6 +645,8 @@ export const view = <Message, Item extends string>(
       isDisabled: isDisabledItem,
     })
 
+    const isInteractive = !isDisabledItem && !isLeaving
+
     return keyed('div')(
       itemId(id, index),
       [
@@ -534,13 +657,16 @@ export const view = <Message, Item extends string>(
         ...(isActiveItem ? [DataAttribute('active', '')] : []),
         ...(isDisabledItem
           ? [AriaDisabled(true), DataAttribute('disabled', '')]
-          : [
+          : []),
+        ...(isInteractive
+          ? [
               OnClick(toMessage(ItemSelected({ index }))),
               OnPointerMove((screenX, screenY) =>
                 toMessage(PointerMovedOverItem({ index, screenX, screenY })),
               ),
               OnMouseLeave(toMessage(ItemDeactivated())),
-            ]),
+            ]
+          : []),
       ],
       [itemConfig.content],
     )
@@ -607,13 +733,16 @@ export const view = <Message, Item extends string>(
 
   const backdrop = keyed('div')(
     `${id}-backdrop`,
-    [Class(backdropClassName), OnClick(toMessage(Closed()))],
+    [
+      Class(backdropClassName),
+      ...(isLeaving ? [] : [OnClick(toMessage(Closed()))]),
+    ],
     [],
   )
 
   const renderedItems = renderGroupedItems()
 
-  const openContent = [
+  const visibleContent = [
     backdrop,
     keyed('div')(
       `${id}-items-container`,
@@ -624,11 +753,11 @@ export const view = <Message, Item extends string>(
 
   const wrapperAttributes = [
     ...(className ? [Class(className)] : []),
-    ...(isOpen ? [DataAttribute('open', '')] : []),
+    ...(isVisible ? [DataAttribute('open', '')] : []),
   ]
 
   return div(wrapperAttributes, [
     keyed('button')(`${id}-button`, buttonAttributes, [buttonContent]),
-    ...(isOpen ? openContent : []),
+    ...(isVisible ? visibleContent : []),
   ])
 }

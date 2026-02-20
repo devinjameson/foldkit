@@ -1,4 +1,4 @@
-export { init, update, view, Model, Message } from './index'
+export { init, update, view, Model, Message, TransitionState } from './index'
 
 export type {
   ActivationTrigger,
@@ -12,6 +12,8 @@ export type {
   Searched,
   ClearedSearch,
   NoOp,
+  TransitionFrameAdvanced,
+  TransitionEnded,
   InitConfig,
   ViewConfig,
   ItemConfig,

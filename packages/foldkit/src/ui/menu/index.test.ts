@@ -13,6 +13,8 @@ import {
   Opened,
   PointerMovedOverItem,
   Searched,
+  TransitionEnded,
+  TransitionFrameAdvanced,
   groupContiguous,
   init,
   resolveTypeaheadMatch,
@@ -30,18 +32,37 @@ const openModel = () => {
   return result
 }
 
+const closedAnimatedModel = () => init({ id: 'test', isAnimated: true })
+
+const openAnimatedModel = () => {
+  const model = closedAnimatedModel()
+  const [result] = update(
+    model,
+    Opened({ maybeActiveItemIndex: Option.some(0) }),
+  )
+  return result
+}
+
 describe('Menu', () => {
   describe('init', () => {
     it('defaults to closed with no active item', () => {
       expect(init({ id: 'test' })).toStrictEqual({
         id: 'test',
         isOpen: false,
+        isAnimated: false,
+        transitionState: 'Idle',
         maybeActiveItemIndex: Option.none(),
         activationTrigger: 'Keyboard',
         searchQuery: '',
         searchVersion: 0,
         maybeLastPointerPosition: Option.none(),
       })
+    })
+
+    it('accepts isAnimated option', () => {
+      const model = init({ id: 'test', isAnimated: true })
+      expect(model.isAnimated).toBe(true)
+      expect(model.transitionState).toBe('Idle')
     })
   })
 
@@ -399,6 +420,143 @@ describe('Menu', () => {
         const [result, commands] = update(model, NoOp())
         expect(result).toBe(model)
         expect(commands).toHaveLength(0)
+      })
+    })
+
+    describe('transitions', () => {
+      describe('enter flow', () => {
+        it('sets EnterStart and emits focus + nextFrame on Opened', () => {
+          const model = closedAnimatedModel()
+          const [result, commands] = update(
+            model,
+            Opened({ maybeActiveItemIndex: Option.some(0) }),
+          )
+          expect(result.isOpen).toBe(true)
+          expect(result.transitionState).toBe('EnterStart')
+          expect(commands).toHaveLength(2)
+        })
+
+        it('advances EnterStart to EnterAnimating on TransitionFrameAdvanced', () => {
+          const model = openAnimatedModel()
+          expect(model.transitionState).toBe('EnterStart')
+
+          const [result, commands] = update(model, TransitionFrameAdvanced())
+          expect(result.transitionState).toBe('EnterAnimating')
+          expect(commands).toHaveLength(1)
+        })
+
+        it('completes EnterAnimating to Idle on TransitionEnded', () => {
+          const model = openAnimatedModel()
+          const [enterAnimating] = update(model, TransitionFrameAdvanced())
+          expect(enterAnimating.transitionState).toBe('EnterAnimating')
+
+          const [result, commands] = update(enterAnimating, TransitionEnded())
+          expect(result.transitionState).toBe('Idle')
+          expect(commands).toHaveLength(0)
+        })
+      })
+
+      describe('leave flow', () => {
+        it('sets LeaveStart on Closed', () => {
+          const model = openAnimatedModel()
+          const [result, commands] = update(model, Closed())
+          expect(result.isOpen).toBe(false)
+          expect(result.transitionState).toBe('LeaveStart')
+          expect(commands).toHaveLength(2)
+        })
+
+        it('sets LeaveStart on ClosedByTab', () => {
+          const model = openAnimatedModel()
+          const [result, commands] = update(model, ClosedByTab())
+          expect(result.isOpen).toBe(false)
+          expect(result.transitionState).toBe('LeaveStart')
+          expect(commands).toHaveLength(1)
+        })
+
+        it('sets LeaveStart on ItemSelected', () => {
+          const model = openAnimatedModel()
+          const [result, commands] = update(model, ItemSelected({ index: 0 }))
+          expect(result.isOpen).toBe(false)
+          expect(result.transitionState).toBe('LeaveStart')
+          expect(commands).toHaveLength(2)
+        })
+
+        it('advances LeaveStart to LeaveAnimating on TransitionFrameAdvanced', () => {
+          const model = openAnimatedModel()
+          const [closed] = update(model, Closed())
+          expect(closed.transitionState).toBe('LeaveStart')
+
+          const [result, commands] = update(closed, TransitionFrameAdvanced())
+          expect(result.transitionState).toBe('LeaveAnimating')
+          expect(commands).toHaveLength(1)
+        })
+
+        it('completes LeaveAnimating to Idle on TransitionEnded', () => {
+          const model = openAnimatedModel()
+          const [closed] = update(model, Closed())
+          const [leaveAnimating] = update(closed, TransitionFrameAdvanced())
+          expect(leaveAnimating.transitionState).toBe('LeaveAnimating')
+
+          const [result, commands] = update(leaveAnimating, TransitionEnded())
+          expect(result.transitionState).toBe('Idle')
+          expect(commands).toHaveLength(0)
+        })
+      })
+
+      describe('non-animated', () => {
+        it('keeps transitionState Idle on Opened', () => {
+          const model = closedModel()
+          const [result, commands] = update(
+            model,
+            Opened({ maybeActiveItemIndex: Option.some(0) }),
+          )
+          expect(result.transitionState).toBe('Idle')
+          expect(commands).toHaveLength(1)
+        })
+
+        it('keeps transitionState Idle on Closed', () => {
+          const model = openModel()
+          const [result, commands] = update(model, Closed())
+          expect(result.transitionState).toBe('Idle')
+          expect(commands).toHaveLength(1)
+        })
+      })
+
+      describe('stale messages', () => {
+        it('ignores TransitionFrameAdvanced when Idle', () => {
+          const model = openModel()
+          const [result, commands] = update(model, TransitionFrameAdvanced())
+          expect(result).toBe(model)
+          expect(commands).toHaveLength(0)
+        })
+
+        it('ignores TransitionEnded when Idle', () => {
+          const model = openModel()
+          const [result, commands] = update(model, TransitionEnded())
+          expect(result).toBe(model)
+          expect(commands).toHaveLength(0)
+        })
+      })
+
+      describe('interruptions', () => {
+        it('transitions to LeaveStart when Closed during EnterStart', () => {
+          const model = openAnimatedModel()
+          expect(model.transitionState).toBe('EnterStart')
+
+          const [result] = update(model, Closed())
+          expect(result.isOpen).toBe(false)
+          expect(result.transitionState).toBe('LeaveStart')
+        })
+
+        it('transitions to LeaveStart when Closed during EnterAnimating', () => {
+          const model = openAnimatedModel()
+          const [enterAnimating] = update(model, TransitionFrameAdvanced())
+          expect(enterAnimating.transitionState).toBe('EnterAnimating')
+
+          const [result] = update(enterAnimating, Closed())
+          expect(result.isOpen).toBe(false)
+          expect(result.transitionState).toBe('LeaveStart')
+        })
       })
     })
   })

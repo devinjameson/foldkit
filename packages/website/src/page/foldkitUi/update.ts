@@ -6,7 +6,8 @@ import {
   GotDialogDemoMessage,
   GotDisclosureDemoMessage,
   GotHorizontalTabsDemoMessage,
-  GotMenuDemoMessage,
+  GotMenuAnimatedDemoMessage,
+  GotMenuBasicDemoMessage,
   GotVerticalTabsDemoMessage,
   type Message,
 } from './message'
@@ -59,18 +60,36 @@ export const update = (
         ]
       },
 
-      GotMenuDemoMessage: ({ message }) => {
-        const [nextMenuDemo, menuCommands] = Ui.Menu.update(
-          model.menuDemo,
+      GotMenuBasicDemoMessage: ({ message }) => {
+        const [nextMenuBasicDemo, menuBasicCommands] = Ui.Menu.update(
+          model.menuBasicDemo,
           message,
         )
 
         return [
           evo(model, {
-            menuDemo: () => nextMenuDemo,
+            menuBasicDemo: () => nextMenuBasicDemo,
           }),
-          menuCommands.map(
-            Effect.map((message) => GotMenuDemoMessage({ message })),
+          menuBasicCommands.map(
+            Effect.map((message) =>
+              GotMenuBasicDemoMessage({ message }),
+            ),
+          ),
+        ]
+      },
+
+      GotMenuAnimatedDemoMessage: ({ message }) => {
+        const [nextMenuAnimatedDemo, menuAnimatedCommands] =
+          Ui.Menu.update(model.menuAnimatedDemo, message)
+
+        return [
+          evo(model, {
+            menuAnimatedDemo: () => nextMenuAnimatedDemo,
+          }),
+          menuAnimatedCommands.map(
+            Effect.map((message) =>
+              GotMenuAnimatedDemoMessage({ message }),
+            ),
           ),
         ]
       },
