@@ -16,20 +16,11 @@ Reference: `~/Repos/headlessui/packages/@headlessui-react/src/components/menu/me
 - [x] Activation trigger tracking (Pointer vs Keyboard)
 - [x] Backdrop click to close
 - [x] Tab to close (native browser focus advancement works correctly without manual interception)
+- [x] Space as typeahead character (when search query is active, Space adds to query instead of selecting)
 
 ## Remaining
 
-### 1. Space as typeahead character
-
-**Scope:** ~10 lines in `update`
-
-Headless UI treats Space as a typeahead character when `searchQuery !== ''`, falling through to "select active item" only when there's no active search. Foldkit always treats Space as select. This means you can't type multi-word queries like "Danger Zone" in typeahead.
-
-**Change:** In the items keydown handler, check if `searchQuery` is non-empty before treating Space as select. If searching, treat it as a `Searched` message with `' '` as the key.
-
-**Reference:** `menu.tsx` line 465-470
-
-### 2. Scroll lock
+### 1. Scroll lock
 
 **Scope:** New `Task` command + `InitConfig` option
 
@@ -39,7 +30,7 @@ Headless UI locks body scroll when the menu is open, gated by a `modal` prop (de
 
 **Reference:** `menu.tsx` line 409-410, `use-scroll-lock.ts`
 
-### 3. Inert others
+### 2. Inert others
 
 **Scope:** New `Task` command, pairs with scroll lock
 
@@ -49,7 +40,7 @@ Headless UI applies `inert` attribute to all sibling elements outside the menu w
 
 **Reference:** `menu.tsx` line 413-419, `use-inert-others.ts`
 
-### 4. Enter/Space clicks DOM element
+### 3. Enter/Space clicks DOM element
 
 **Scope:** New `Task` command
 
@@ -59,7 +50,7 @@ Headless UI calls `.click()` on the actual DOM node of the selected item. This m
 
 **Reference:** `menu.tsx` line 475-478
 
-### 5. Button moved detection
+### 4. Button moved detection
 
 **Scope:** Model field + position tracking command
 
@@ -69,7 +60,7 @@ Headless UI tracks the button's visual position when the menu closes. If the but
 
 **Reference:** `menu-machine.ts` lines 351-358, 409-421, `element-movement.ts`
 
-### 6. Anchor positioning + portal rendering
+### 5. Anchor positioning + portal rendering
 
 **Scope:** New module — largest item
 

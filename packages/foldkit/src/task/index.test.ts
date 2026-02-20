@@ -8,7 +8,9 @@ import {
   getTimeZone,
   getZonedTime,
   getZonedTimeIn,
+  lockScroll,
   randomInt,
+  unlockScroll,
 } from './index'
 
 describe('getTime', () => {
@@ -112,6 +114,59 @@ describe('focus', () => {
       }))
       expect(result._tag).toBe('Focused')
       expect(result.success).toBe(false)
+    }),
+  )
+})
+
+describe('lockScroll', () => {
+  it.scoped('sets overflow hidden on document element', () =>
+    Effect.gen(function* () {
+      const result = yield* lockScroll(() => ({
+        _tag: 'Locked' as const,
+      }))
+      expect(result._tag).toBe('Locked')
+      expect(document.documentElement.style.overflow).toBe('hidden')
+
+      yield* unlockScroll(() => ({ _tag: 'Unlocked' as const }))
+    }),
+  )
+
+  it.scoped('restores original overflow on unlock', () =>
+    Effect.gen(function* () {
+      document.documentElement.style.overflow = 'auto'
+
+      yield* lockScroll(() => ({ _tag: 'Locked' as const }))
+      expect(document.documentElement.style.overflow).toBe('hidden')
+
+      yield* unlockScroll(() => ({ _tag: 'Unlocked' as const }))
+      expect(document.documentElement.style.overflow).toBe('auto')
+
+      document.documentElement.style.overflow = ''
+    }),
+  )
+
+  it.scoped('supports nested locks via reference counting', () =>
+    Effect.gen(function* () {
+      yield* lockScroll(() => ({ _tag: 'Locked' as const }))
+      yield* lockScroll(() => ({ _tag: 'Locked' as const }))
+      expect(document.documentElement.style.overflow).toBe('hidden')
+
+      yield* unlockScroll(() => ({ _tag: 'Unlocked' as const }))
+      expect(document.documentElement.style.overflow).toBe('hidden')
+
+      yield* unlockScroll(() => ({ _tag: 'Unlocked' as const }))
+      expect(document.documentElement.style.overflow).toBe('')
+    }),
+  )
+})
+
+describe('unlockScroll', () => {
+  it.scoped('is safe to call without a preceding lock', () =>
+    Effect.gen(function* () {
+      const result = yield* unlockScroll(() => ({
+        _tag: 'Unlocked' as const,
+      }))
+      expect(result._tag).toBe('Unlocked')
     }),
   )
 })

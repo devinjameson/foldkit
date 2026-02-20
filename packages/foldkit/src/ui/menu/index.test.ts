@@ -21,10 +21,10 @@ import {
   update,
 } from './index'
 
-const closedModel = () => init({ id: 'test' })
+const closedModel = () => init({ id: 'test', isModal: false })
 
 const openModel = () => {
-  const model = init({ id: 'test' })
+  const model = init({ id: 'test', isModal: false })
   const [result] = update(
     model,
     Opened({ maybeActiveItemIndex: Option.some(0) }),
@@ -32,7 +32,8 @@ const openModel = () => {
   return result
 }
 
-const closedAnimatedModel = () => init({ id: 'test', isAnimated: true })
+const closedAnimatedModel = () =>
+  init({ id: 'test', isAnimated: true, isModal: false })
 
 const openAnimatedModel = () => {
   const model = closedAnimatedModel()
@@ -50,6 +51,7 @@ describe('Menu', () => {
         id: 'test',
         isOpen: false,
         isAnimated: false,
+        isModal: true,
         transitionState: 'Idle',
         maybeActiveItemIndex: Option.none(),
         activationTrigger: 'Keyboard',
@@ -63,6 +65,16 @@ describe('Menu', () => {
       const model = init({ id: 'test', isAnimated: true })
       expect(model.isAnimated).toBe(true)
       expect(model.transitionState).toBe('Idle')
+    })
+
+    it('defaults isModal to true', () => {
+      const model = init({ id: 'test' })
+      expect(model.isModal).toBe(true)
+    })
+
+    it('accepts isModal option', () => {
+      const model = init({ id: 'test', isModal: false })
+      expect(model.isModal).toBe(false)
     })
   })
 
@@ -558,6 +570,65 @@ describe('Menu', () => {
           expect(result.transitionState).toBe('LeaveStart')
         })
       })
+    })
+  })
+
+  describe('modal scroll lock', () => {
+    const closedModalModel = () => init({ id: 'test', isModal: true })
+
+    const openModalModel = () => {
+      const model = closedModalModel()
+      const [result] = update(
+        model,
+        Opened({ maybeActiveItemIndex: Option.some(0) }),
+      )
+      return result
+    }
+
+    it('emits lockScroll command on Opened when isModal is true', () => {
+      const model = closedModalModel()
+      const [, commands] = update(
+        model,
+        Opened({ maybeActiveItemIndex: Option.some(0) }),
+      )
+      expect(commands).toHaveLength(2)
+    })
+
+    it('emits unlockScroll command on Closed when isModal is true', () => {
+      const model = openModalModel()
+      const [, commands] = update(model, Closed())
+      expect(commands).toHaveLength(2)
+    })
+
+    it('emits unlockScroll command on ClosedByTab when isModal is true', () => {
+      const model = openModalModel()
+      const [, commands] = update(model, ClosedByTab())
+      expect(commands).toHaveLength(1)
+    })
+
+    it('emits unlockScroll command on SelectedItem when isModal is true', () => {
+      const model = openModalModel()
+      const [, commands] = update(model, SelectedItem({ index: 0 }))
+      expect(commands).toHaveLength(2)
+    })
+
+    it('does not emit scroll commands when isModal is false', () => {
+      const model = closedModel()
+      const [, openCommands] = update(
+        model,
+        Opened({ maybeActiveItemIndex: Option.some(0) }),
+      )
+      expect(openCommands).toHaveLength(1)
+
+      const open = openModel()
+      const [, closeCommands] = update(open, Closed())
+      expect(closeCommands).toHaveLength(1)
+
+      const [, tabCommands] = update(open, ClosedByTab())
+      expect(tabCommands).toHaveLength(0)
+
+      const [, selectCommands] = update(open, SelectedItem({ index: 0 }))
+      expect(selectCommands).toHaveLength(1)
     })
   })
 

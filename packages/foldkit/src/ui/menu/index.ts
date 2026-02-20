@@ -37,6 +37,7 @@ export const Model = S.Struct({
   id: S.String,
   isOpen: S.Boolean,
   isAnimated: S.Boolean,
+  isModal: S.Boolean,
   transitionState: TransitionState,
   maybeActiveItemIndex: S.OptionFromSelf(S.Number),
   activationTrigger: ActivationTrigger,
@@ -123,10 +124,11 @@ export type Message = typeof Message.Type
 
 const SEARCH_DEBOUNCE_MILLISECONDS = 350
 
-/** Configuration for creating a menu model with `init`. */
+/** Configuration for creating a menu model with `init`. `isAnimated` enables CSS transition coordination (default `false`). `isModal` locks page scroll and inerts other elements when open (default `true`). */
 export type InitConfig = Readonly<{
   id: string
   isAnimated?: boolean
+  isModal?: boolean
 }>
 
 /** Creates an initial menu model from a config. Defaults to closed with no active item. */
@@ -134,6 +136,7 @@ export const init = (config: InitConfig): Model => ({
   id: config.id,
   isOpen: false,
   isAnimated: config.isAnimated ?? false,
+  isModal: config.isModal ?? true,
   transitionState: 'Idle',
   maybeActiveItemIndex: Option.none(),
   activationTrigger: 'Keyboard',
@@ -170,6 +173,16 @@ export const update = (
     Task.nextFrame(() => AdvancedTransitionFrame()),
   )
 
+  const maybeLockScrollCommand = OptionExt.when(
+    model.isModal,
+    Task.lockScroll(() => NoOp()),
+  )
+
+  const maybeUnlockScrollCommand = OptionExt.when(
+    model.isModal,
+    Task.unlockScroll(() => NoOp()),
+  )
+
   return M.value(message).pipe(
     M.withReturnType<[Model, ReadonlyArray<Command<Message>>]>(),
     M.tagsExhaustive({
@@ -193,6 +206,7 @@ export const update = (
           [
             Task.focus(itemsSelector(model.id), () => NoOp()),
             ...Array.fromOption(maybeNextFrameCommand),
+            ...Array.fromOption(maybeLockScrollCommand),
           ],
         ]
       },
@@ -202,12 +216,16 @@ export const update = (
         [
           Task.focus(buttonSelector(model.id), () => NoOp()),
           ...Array.fromOption(maybeNextFrameCommand),
+          ...Array.fromOption(maybeUnlockScrollCommand),
         ],
       ],
 
       ClosedByTab: () => [
         closedModel(model),
-        Array.fromOption(maybeNextFrameCommand),
+        [
+          ...Array.fromOption(maybeNextFrameCommand),
+          ...Array.fromOption(maybeUnlockScrollCommand),
+        ],
       ],
 
       ActivatedItem: ({ index, activationTrigger }) => [
@@ -251,6 +269,7 @@ export const update = (
         [
           Task.focus(buttonSelector(model.id), () => NoOp()),
           ...Array.fromOption(maybeNextFrameCommand),
+          ...Array.fromOption(maybeUnlockScrollCommand),
         ],
       ],
 
