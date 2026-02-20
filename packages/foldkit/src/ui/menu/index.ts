@@ -553,13 +553,33 @@ export const view = <Message, Item extends string>(
     isDisabled,
   )
 
+  const searchForKey = (key: string): Option.Option<Message> => {
+    const nextQuery = searchQuery + key
+    const maybeTargetIndex = resolveTypeaheadMatch(
+      items,
+      nextQuery,
+      maybeActiveItemIndex,
+      isDisabled,
+      itemToSearchText,
+      Str.isNonEmpty(searchQuery),
+    )
+    return Option.some(toMessage(Searched({ key, maybeTargetIndex })))
+  }
+
   const handleItemsKeyDown = (key: string): Option.Option<Message> =>
     M.value(key).pipe(
       M.when('Escape', () => Option.some(toMessage(Closed()))),
-      M.whenOr('Enter', ' ', () =>
+      M.when('Enter', () =>
         Option.map(maybeActiveItemIndex, (index) =>
           toMessage(SelectedItem({ index })),
         ),
+      ),
+      M.when(' ', () =>
+        Str.isNonEmpty(searchQuery)
+          ? searchForKey(' ')
+          : Option.map(maybeActiveItemIndex, (index) =>
+              toMessage(SelectedItem({ index })),
+            ),
       ),
       M.whenOr(
         'ArrowDown',
@@ -580,19 +600,7 @@ export const view = <Message, Item extends string>(
       ),
       M.when(
         (key) => key.length === 1,
-        () => {
-          const nextQuery = searchQuery + key
-          const maybeTargetIndex = resolveTypeaheadMatch(
-            items,
-            nextQuery,
-            maybeActiveItemIndex,
-            isDisabled,
-            itemToSearchText,
-            Str.isNonEmpty(searchQuery),
-          )
-
-          return Option.some(toMessage(Searched({ key, maybeTargetIndex })))
-        },
+        () => searchForKey(key),
       ),
       M.orElse(() => Option.none()),
     )

@@ -742,6 +742,66 @@ describe('Menu', () => {
         ),
       ).toStrictEqual(Option.some(1))
     })
+
+    it('matches queries containing spaces', () => {
+      const multiWordItems: ReadonlyArray<string> = [
+        'Copy Link',
+        'Danger Zone',
+        'Dark Mode',
+        'Delete All',
+      ]
+      expect(
+        resolveTypeaheadMatch(
+          multiWordItems,
+          'danger z',
+          Option.none(),
+          noneDisabled,
+          identity,
+          false,
+        ),
+      ).toStrictEqual(Option.some(1))
+    })
+
+    it('distinguishes multi-word items by space in query', () => {
+      const multiWordItems: ReadonlyArray<string> = [
+        'Copy Link',
+        'Danger Zone',
+        'Dark Mode',
+        'Delete All',
+      ]
+      expect(
+        resolveTypeaheadMatch(
+          multiWordItems,
+          'da',
+          Option.none(),
+          noneDisabled,
+          identity,
+          false,
+        ),
+      ).toStrictEqual(Option.some(1))
+
+      expect(
+        resolveTypeaheadMatch(
+          multiWordItems,
+          'danger ',
+          Option.none(),
+          noneDisabled,
+          identity,
+          true,
+        ),
+      ).toStrictEqual(Option.some(1))
+
+      expect(
+        resolveTypeaheadMatch(
+          multiWordItems,
+          'dark',
+          Option.none(),
+          noneDisabled,
+          identity,
+          true,
+        ),
+      ).toStrictEqual(Option.some(2))
+    })
   })
 
   describe('groupContiguous', () => {
