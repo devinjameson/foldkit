@@ -1,13 +1,12 @@
 import { Schema as S, pipe } from 'effect'
 import { Route } from 'foldkit'
-import { literal } from 'foldkit/route'
-import { m } from 'foldkit/schema'
+import { literal, r } from 'foldkit/route'
 
-export const HomeRoute = m('Home')
-export const LoginRoute = m('Login')
-export const DashboardRoute = m('Dashboard')
-export const SettingsRoute = m('Settings')
-export const NotFoundRoute = m('NotFound', { path: S.String })
+export const HomeRoute = r('Home')
+export const LoginRoute = r('Login')
+export const DashboardRoute = r('Dashboard')
+export const SettingsRoute = r('Settings')
+export const NotFoundRoute = r('NotFound', { path: S.String })
 
 export type HomeRoute = typeof HomeRoute.Type
 export type LoginRoute = typeof LoginRoute.Type

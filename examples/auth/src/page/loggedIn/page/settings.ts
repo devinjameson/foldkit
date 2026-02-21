@@ -1,6 +1,6 @@
 import { Schema as S } from 'effect'
 import { Html } from 'foldkit/html'
-import { m } from 'foldkit/schema'
+import { m } from 'foldkit/message'
 
 import { Session } from '../../../domain/session'
 import { Class, OnClick, button, div, h1, h2, p } from '../../../html'

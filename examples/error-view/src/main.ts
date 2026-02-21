@@ -1,7 +1,7 @@
 import { Schema } from 'effect'
 import { Runtime } from 'foldkit'
 import { Html, html } from 'foldkit/html'
-import { m } from 'foldkit/schema'
+import { m } from 'foldkit/message'
 
 // MODEL
 

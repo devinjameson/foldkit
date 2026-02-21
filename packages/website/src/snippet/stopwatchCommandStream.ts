@@ -1,6 +1,6 @@
 import { Duration, Effect, Schema as S, Stream } from 'effect'
 import { Runtime } from 'foldkit'
-import { m } from 'foldkit/schema'
+import { m } from 'foldkit/message'
 
 // MESSAGE
 

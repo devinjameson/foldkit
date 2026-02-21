@@ -1,6 +1,6 @@
 import { Schema as S } from 'effect'
 import { Runtime, Url } from 'foldkit'
-import { m } from 'foldkit/schema'
+import { m } from 'foldkit/message'
 
 import { Home, Room } from './page'
 

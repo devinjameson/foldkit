@@ -1,6 +1,6 @@
 import * as Shared from '@typing-game/shared'
 import { Schema as S } from 'effect'
-import { m } from 'foldkit/schema'
+import { m } from 'foldkit/message'
 
 export const NoOp = m('NoOp')
 export const SubmittedUsernameForm = m('SubmittedUsernameForm')

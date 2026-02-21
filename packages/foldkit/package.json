@@ -15,6 +15,10 @@
       "types": "./dist/html/public.d.ts",
       "import": "./dist/html/public.js"
     },
+    "./message": {
+      "types": "./dist/message/public.d.ts",
+      "import": "./dist/message/public.js"
+    },
     "./navigation": {
       "types": "./dist/navigation/public.d.ts",
       "import": "./dist/navigation/public.js"

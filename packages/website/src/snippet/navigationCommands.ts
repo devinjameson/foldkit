@@ -1,6 +1,6 @@
 import { Effect, Schema as S } from 'effect'
 import { Navigation } from 'foldkit'
-import { m } from 'foldkit/schema'
+import { m } from 'foldkit/message'
 
 const NoOp = m('NoOp')
 const Message = S.Union(NoOp)

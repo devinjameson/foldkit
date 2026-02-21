@@ -1,6 +1,6 @@
 import { Match as M, Schema } from 'effect'
 import { Runtime } from 'foldkit'
-import { m } from 'foldkit/schema'
+import { m } from 'foldkit/message'
 
 import { Class, Html, OnClick, button, div } from '../html'
 

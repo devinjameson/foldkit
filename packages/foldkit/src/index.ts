@@ -1,5 +1,6 @@
 export * as FieldValidation from './fieldValidation/public'
 export * as Html from './html/public'
+export * as Message from './message/public'
 export * as Navigation from './navigation/public'
 export * as Route from './route/public'
 export * as Runtime from './runtime/public'

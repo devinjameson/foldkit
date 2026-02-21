@@ -1,7 +1,7 @@
 import { Schema as S } from 'effect'
-import { m } from 'foldkit/schema'
+import { ts } from 'foldkit/schema'
 
-export const LoggedIn = m('LoggedIn', {
+export const LoggedIn = ts('LoggedIn', {
   userId: S.String,
   username: S.String,
 })

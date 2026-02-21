@@ -1,25 +1,24 @@
 import { Schema as S, pipe } from 'effect'
 import { Route } from 'foldkit'
-import { literal } from 'foldkit/route'
-import { m } from 'foldkit/schema'
+import { literal, r } from 'foldkit/route'
 
 // ROUTE SCHEMAS
 
-export const HomeRoute = m('Home')
-export const WhyFoldkitRoute = m('WhyFoldkit')
-export const ComingFromReactRoute = m('ComingFromReact')
-export const GettingStartedRoute = m('GettingStarted')
-export const ArchitectureAndConceptsRoute = m(
+export const HomeRoute = r('Home')
+export const WhyFoldkitRoute = r('WhyFoldkit')
+export const ComingFromReactRoute = r('ComingFromReact')
+export const GettingStartedRoute = r('GettingStarted')
+export const ArchitectureAndConceptsRoute = r(
   'ArchitectureAndConcepts',
 )
-export const RoutingAndNavigationRoute = m('RoutingAndNavigation')
-export const ExamplesRoute = m('Examples')
-export const BestPracticesRoute = m('BestPractices')
-export const ProjectOrganizationRoute = m('ProjectOrganization')
-export const AdvancedPatternsRoute = m('AdvancedPatterns')
-export const ApiReferenceRoute = m('ApiReference')
-export const FoldkitUiRoute = m('FoldkitUi')
-export const NotFoundRoute = m('NotFound', { path: S.String })
+export const RoutingAndNavigationRoute = r('RoutingAndNavigation')
+export const ExamplesRoute = r('Examples')
+export const BestPracticesRoute = r('BestPractices')
+export const ProjectOrganizationRoute = r('ProjectOrganization')
+export const AdvancedPatternsRoute = r('AdvancedPatterns')
+export const ApiReferenceRoute = r('ApiReference')
+export const FoldkitUiRoute = r('FoldkitUi')
+export const NotFoundRoute = r('NotFound', { path: S.String })
 
 export const AppRoute = S.Union(
   HomeRoute,

@@ -1,5 +1,5 @@
 import { Schema as S } from 'effect'
-import { m } from 'foldkit/schema'
+import { m } from 'foldkit/message'
 
 import { Session } from '../../domain/session'
 import * as Login from './page/login'

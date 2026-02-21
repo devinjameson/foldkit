@@ -1,6 +1,6 @@
 import { Schema as S } from 'effect'
 import { Runtime } from 'foldkit'
-import { m } from 'foldkit/schema'
+import { m } from 'foldkit/message'
 import { Url } from 'foldkit/url'
 
 import { Session } from './domain/session'

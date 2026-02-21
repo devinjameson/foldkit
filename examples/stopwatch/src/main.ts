@@ -11,7 +11,7 @@ import {
 } from 'effect'
 import { Runtime } from 'foldkit'
 import { Html, html } from 'foldkit/html'
-import { m } from 'foldkit/schema'
+import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 const TICK_INTERVAL_MS = 10

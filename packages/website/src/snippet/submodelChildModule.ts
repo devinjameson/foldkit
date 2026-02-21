@@ -1,6 +1,6 @@
 import { Match as M, Schema as S } from 'effect'
 import { Runtime } from 'foldkit'
-import { m } from 'foldkit/schema'
+import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 // MODEL

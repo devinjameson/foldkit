@@ -1,6 +1,6 @@
 import { Option, Schema as S } from 'effect'
 import type { Runtime } from 'foldkit'
-import { m } from 'foldkit/schema'
+import { m } from 'foldkit/message'
 
 const Model = S.Struct({
   count: S.Number,

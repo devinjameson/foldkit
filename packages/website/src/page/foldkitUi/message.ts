@@ -1,6 +1,6 @@
 import { Schema as S } from 'effect'
 import { Ui } from 'foldkit'
-import { m } from 'foldkit/schema'
+import { m } from 'foldkit/message'
 
 export const GotDialogDemoMessage = m('GotDialogDemoMessage', {
   message: Ui.Dialog.Message,

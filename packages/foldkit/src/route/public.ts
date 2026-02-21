@@ -10,6 +10,7 @@ export {
   slash,
   query,
   parseUrlWithFallback,
+  r,
 } from './index'
 
 export type {

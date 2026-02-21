@@ -1,6 +1,6 @@
 import { Effect, Match as M, Schema } from 'effect'
 import { Runtime } from 'foldkit'
-import { m } from 'foldkit/schema'
+import { m } from 'foldkit/message'
 
 const ClickedFetchCount = m('ClickedFetchCount')
 const SucceededCountFetch = m('SucceededCountFetch', {

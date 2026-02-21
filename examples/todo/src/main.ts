@@ -12,7 +12,8 @@ import {
 } from 'effect'
 import { Runtime } from 'foldkit'
 import { Html, html } from 'foldkit/html'
-import { m } from 'foldkit/schema'
+import { m } from 'foldkit/message'
+import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
 // CONSTANT
@@ -35,10 +36,10 @@ type Todos = typeof Todos.Type
 const Filter = S.Literal('All', 'Active', 'Completed')
 type Filter = typeof Filter.Type
 
-const NotEditing = m('NotEditing')
+const NotEditing = ts('NotEditing')
 type NotEditing = typeof NotEditing.Type
 
-const Editing = m('Editing', {
+const Editing = ts('Editing', {
   id: S.String,
   text: S.String,
 })

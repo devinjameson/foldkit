@@ -1,19 +1,19 @@
 import { Array, Effect, Match as M, Option, Schema as S, pipe } from 'effect'
 import { Route, Runtime } from 'foldkit'
 import { Html, html } from 'foldkit/html'
+import { m } from 'foldkit/message'
 import { load, pushUrl, replaceUrl } from 'foldkit/navigation'
-import { int, literal, slash } from 'foldkit/route'
-import { m } from 'foldkit/schema'
+import { int, literal, r, slash } from 'foldkit/route'
 import { evo } from 'foldkit/struct'
 import { Url, toString as urlToString } from 'foldkit/url'
 
 // ROUTE
 
-const HomeRoute = m('Home')
-const NestedRoute = m('Nested')
-const PeopleRoute = m('People', { searchText: S.Option(S.String) })
-const PersonRoute = m('Person', { personId: S.Number })
-const NotFoundRoute = m('NotFound', { path: S.String })
+const HomeRoute = r('Home')
+const NestedRoute = r('Nested')
+const PeopleRoute = r('People', { searchText: S.Option(S.String) })
+const PersonRoute = r('Person', { personId: S.Number })
+const NotFoundRoute = r('NotFound', { path: S.String })
 
 export const AppRoute = S.Union(
   HomeRoute,

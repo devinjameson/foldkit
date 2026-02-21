@@ -1,9 +1,9 @@
 import { Effect, Match as M, Option, Schema as S, pipe } from 'effect'
 import { Route, Runtime } from 'foldkit'
 import { Html } from 'foldkit/html'
+import { m } from 'foldkit/message'
 import { load, pushUrl } from 'foldkit/navigation'
-import { literal } from 'foldkit/route'
-import { m } from 'foldkit/schema'
+import { literal, r } from 'foldkit/route'
 import { evo } from 'foldkit/struct'
 import { Url, toString as urlToString } from 'foldkit/url'
 
@@ -27,10 +27,10 @@ import { Cart as CartPage, Checkout, Products } from './page'
 
 // ROUTE
 
-export const ProductsRoute = m('Products', { searchText: S.Option(S.String) })
-export const CartRoute = m('Cart')
-export const CheckoutRoute = m('Checkout')
-export const NotFoundRoute = m('NotFound', { path: S.String })
+export const ProductsRoute = r('Products', { searchText: S.Option(S.String) })
+export const CartRoute = r('Cart')
+export const CheckoutRoute = r('Checkout')
+export const NotFoundRoute = r('NotFound', { path: S.String })
 export const AppRoute = S.Union(
   ProductsRoute,
   CartRoute,

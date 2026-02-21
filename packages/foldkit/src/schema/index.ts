@@ -28,7 +28,7 @@ const makeCallable = <Tag extends string, Fields extends S.Struct.Fields>(
 
 /**
  * Wraps `Schema.TaggedStruct` to create a message variant you can call directly as a constructor.
- * Use `m` for message types — write `ClickedReset()` instead of `ClickedReset.make()`.
+ * Use `m` for message types — enabling `ClickedReset()` instead of `ClickedReset.make()`.
  *
  * @example
  * ```typescript
@@ -45,5 +45,50 @@ export function m<Tag extends string, Fields extends S.Struct.Fields>(
   fields: Fields,
 ): CallableTaggedStruct<Tag, Fields>
 export function m(tag: string, fields: S.Struct.Fields = {}): any {
+  return makeCallable(S.TaggedStruct(tag, fields))
+}
+
+/**
+ * Wraps `Schema.TaggedStruct` to create a route variant you can call directly as a constructor.
+ * Use `r` for route types — enabling `Home()` instead of `Home.make()`.
+ *
+ * @example
+ * ```typescript
+ * const Home = r('Home')
+ * Home() // { _tag: 'Home' }
+ *
+ * const UserProfile = r('UserProfile', { id: S.String })
+ * UserProfile({ id: 'abc' }) // { _tag: 'UserProfile', id: 'abc' }
+ * ```
+ */
+export function r<Tag extends string>(tag: Tag): CallableTaggedStruct<Tag, {}>
+export function r<Tag extends string, Fields extends S.Struct.Fields>(
+  tag: Tag,
+  fields: Fields,
+): CallableTaggedStruct<Tag, Fields>
+export function r(tag: string, fields: S.Struct.Fields = {}): any {
+  return makeCallable(S.TaggedStruct(tag, fields))
+}
+
+/**
+ * Wraps `Schema.TaggedStruct` to create a callable tagged struct you can call directly as a constructor.
+ * Use `ts` for non-message, non-route tagged structs — enabling `Loading()`
+ * instead of `Loading.make()`.
+ *
+ * @example
+ * ```typescript
+ * const Loading = ts('Loading')
+ * Loading() // { _tag: 'Loading' }
+ *
+ * const Ok = ts('Ok', { data: S.String })
+ * Ok({ data: 'hello' }) // { _tag: 'Ok', data: 'hello' }
+ * ```
+ */
+export function ts<Tag extends string>(tag: Tag): CallableTaggedStruct<Tag, {}>
+export function ts<Tag extends string, Fields extends S.Struct.Fields>(
+  tag: Tag,
+  fields: Fields,
+): CallableTaggedStruct<Tag, Fields>
+export function ts(tag: string, fields: S.Struct.Fields = {}): any {
   return makeCallable(S.TaggedStruct(tag, fields))
 }

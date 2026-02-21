@@ -11,7 +11,8 @@ import {
 } from 'effect'
 import { Runtime, Task } from 'foldkit'
 import { Html, html } from 'foldkit/html'
-import { m } from 'foldkit/schema'
+import { m } from 'foldkit/message'
+import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
 const WS_URL = 'wss://echo.websocket.org'
@@ -29,12 +30,12 @@ type ChatMessage = typeof ChatMessage.Type
 
 const WebSocketSchema = S.instanceOf(WebSocket)
 
-const ConnectionDisconnected = m('ConnectionDisconnected')
-const ConnectionConnecting = m('ConnectionConnecting')
-const ConnectionConnected = m('ConnectionConnected', {
+const ConnectionDisconnected = ts('ConnectionDisconnected')
+const ConnectionConnecting = ts('ConnectionConnecting')
+const ConnectionConnected = ts('ConnectionConnected', {
   socket: WebSocketSchema,
 })
-const ConnectionError = m('ConnectionError', { error: S.String })
+const ConnectionError = ts('ConnectionError', { error: S.String })
 
 const ConnectionState = S.Union(
   ConnectionDisconnected,

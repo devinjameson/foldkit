@@ -2,8 +2,8 @@ import { describe, it } from '@effect/vitest'
 import { Effect, Option, Schema as S, pipe } from 'effect'
 import { expect } from 'vitest'
 
-import { m } from '../schema'
 import { Url } from '../url'
+import { r } from './index'
 import {
   int,
   literal,
@@ -248,8 +248,8 @@ describe('oneOf', () => {
 })
 
 describe('mapTo', () => {
-  const Home = m('Home')
-  const UserProfile = m('UserProfile', { id: S.String })
+  const Home = r('Home')
+  const UserProfile = r('UserProfile', { id: S.String })
 
   it.scoped('wraps parsed values with a constructor', () =>
     Effect.gen(function* () {
@@ -283,8 +283,8 @@ describe('mapTo', () => {
 })
 
 describe('parseUrlWithFallback', () => {
-  const Home = m('Home')
-  const NotFound = m('NotFound', { path: S.String })
+  const Home = r('Home')
+  const NotFound = r('NotFound', { path: S.String })
 
   const homeRouter = mapTo(Home)(root)
   const parser = oneOf(homeRouter)
@@ -301,7 +301,7 @@ describe('parseUrlWithFallback', () => {
 })
 
 describe('round-trip: parse then build', () => {
-  const Route = m('Route', { userId: S.String, postId: S.Number })
+  const Route = r('Route', { userId: S.String, postId: S.Number })
 
   const router = pipe(
     literal('users'),

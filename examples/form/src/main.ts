@@ -14,7 +14,8 @@ import {
   validateField,
 } from 'foldkit/fieldValidation'
 import { Html, html } from 'foldkit/html'
-import { m } from 'foldkit/schema'
+import { m } from 'foldkit/message'
+import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
 const StringField = makeField(S.String)
@@ -22,10 +23,10 @@ type StringField = typeof StringField.Union.Type
 
 // MODEL
 
-const NotSubmitted = m('NotSubmitted')
-const Submitting = m('Submitting')
-const SubmitSuccess = m('SubmitSuccess', { message: S.String })
-const SubmitError = m('SubmitError', { error: S.String })
+const NotSubmitted = ts('NotSubmitted')
+const Submitting = ts('Submitting')
+const SubmitSuccess = ts('SubmitSuccess', { message: S.String })
+const SubmitError = ts('SubmitError', { error: S.String })
 
 const Submission = S.Union(NotSubmitted, Submitting, SubmitSuccess, SubmitError)
 

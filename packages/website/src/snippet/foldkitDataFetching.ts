@@ -1,13 +1,14 @@
 import { Effect, Match as M, Schema as S } from 'effect'
 import { Runtime } from 'foldkit'
-import { m } from 'foldkit/schema'
+import { m } from 'foldkit/message'
+import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
 const UserSchema = S.Struct({ id: S.String, name: S.String })
 
-const UserLoading = m('UserLoading')
-const UserSuccess = m('UserSuccess', { data: UserSchema })
-const UserFailure = m('UserFailure', { error: S.String })
+const UserLoading = ts('UserLoading')
+const UserSuccess = ts('UserSuccess', { data: UserSchema })
+const UserFailure = ts('UserFailure', { error: S.String })
 const UserState = S.Union(UserLoading, UserSuccess, UserFailure)
 
 // MODEL - your entire application state

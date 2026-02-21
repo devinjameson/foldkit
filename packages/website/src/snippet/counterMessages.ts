@@ -1,5 +1,5 @@
 import { Schema } from 'effect'
-import { m } from 'foldkit/schema'
+import { m } from 'foldkit/message'
 
 // MESSAGE - All possible events that can happen in your application
 // Messages are dispatched from the view and handled by the update function

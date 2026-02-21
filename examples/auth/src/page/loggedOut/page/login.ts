@@ -16,7 +16,7 @@ import {
   validateField,
 } from 'foldkit/fieldValidation'
 import { Html } from 'foldkit/html'
-import { m } from 'foldkit/schema'
+import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Session } from '../../../domain/session'

@@ -12,9 +12,9 @@ import {
 } from 'effect'
 import { Runtime } from 'foldkit'
 import { Html } from 'foldkit/html'
+import { m } from 'foldkit/message'
 import { load, pushUrl } from 'foldkit/navigation'
 import { UrlRequest } from 'foldkit/runtime'
-import { m } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 import { Url, toString as urlToString } from 'foldkit/url'
 

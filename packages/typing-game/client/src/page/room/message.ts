@@ -1,6 +1,6 @@
 import * as Shared from '@typing-game/shared'
 import { Schema as S } from 'effect'
-import { m } from 'foldkit/schema'
+import { m } from 'foldkit/message'
 
 import { RoomPlayerSession } from './model'
 

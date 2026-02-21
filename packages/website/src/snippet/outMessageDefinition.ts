@@ -1,5 +1,5 @@
 import { Schema as S } from 'effect'
-import { m } from 'foldkit/schema'
+import { m } from 'foldkit/message'
 
 // MESSAGE
 

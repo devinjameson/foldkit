@@ -2,8 +2,8 @@ import { Match as M, Option, Schema as S } from 'effect'
 
 import { html } from '../../html'
 import type { Html } from '../../html'
+import { m } from '../../message'
 import type { Command } from '../../runtime/runtime'
-import { m } from '../../schema'
 import { evo } from '../../struct'
 import * as Task from '../../task'
 
