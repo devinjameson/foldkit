@@ -573,7 +573,7 @@ describe('Menu', () => {
     })
   })
 
-  describe('modal scroll lock', () => {
+  describe('modal commands', () => {
     const closedModalModel = () => init({ id: 'test', isModal: true })
 
     const openModalModel = () => {
@@ -585,34 +585,34 @@ describe('Menu', () => {
       return result
     }
 
-    it('emits lockScroll command on Opened when isModal is true', () => {
+    it('emits lockScroll and inertOthers commands on Opened when isModal is true', () => {
       const model = closedModalModel()
       const [, commands] = update(
         model,
         Opened({ maybeActiveItemIndex: Option.some(0) }),
       )
-      expect(commands).toHaveLength(2)
+      expect(commands).toHaveLength(3)
     })
 
-    it('emits unlockScroll command on Closed when isModal is true', () => {
+    it('emits unlockScroll and restoreInert commands on Closed when isModal is true', () => {
       const model = openModalModel()
       const [, commands] = update(model, Closed())
-      expect(commands).toHaveLength(2)
+      expect(commands).toHaveLength(3)
     })
 
-    it('emits unlockScroll command on ClosedByTab when isModal is true', () => {
+    it('emits unlockScroll and restoreInert commands on ClosedByTab when isModal is true', () => {
       const model = openModalModel()
       const [, commands] = update(model, ClosedByTab())
-      expect(commands).toHaveLength(1)
-    })
-
-    it('emits unlockScroll command on SelectedItem when isModal is true', () => {
-      const model = openModalModel()
-      const [, commands] = update(model, SelectedItem({ index: 0 }))
       expect(commands).toHaveLength(2)
     })
 
-    it('does not emit scroll commands when isModal is false', () => {
+    it('emits unlockScroll and restoreInert commands on SelectedItem when isModal is true', () => {
+      const model = openModalModel()
+      const [, commands] = update(model, SelectedItem({ index: 0 }))
+      expect(commands).toHaveLength(3)
+    })
+
+    it('does not emit modal commands when isModal is false', () => {
       const model = closedModel()
       const [, openCommands] = update(
         model,

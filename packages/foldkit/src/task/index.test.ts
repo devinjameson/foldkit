@@ -8,8 +8,10 @@ import {
   getTimeZone,
   getZonedTime,
   getZonedTimeIn,
+  inertOthers,
   lockScroll,
   randomInt,
+  restoreInert,
   unlockScroll,
 } from './index'
 
@@ -167,6 +169,146 @@ describe('unlockScroll', () => {
         _tag: 'Unlocked' as const,
       }))
       expect(result._tag).toBe('Unlocked')
+    }),
+  )
+})
+
+describe('inertOthers', () => {
+  const buildDom = () => {
+    const header = document.createElement('header')
+    const main = document.createElement('main')
+    const sidebar = document.createElement('div')
+    sidebar.id = 'sidebar'
+    const content = document.createElement('div')
+    content.id = 'content'
+    const button = document.createElement('button')
+    button.id = 'menu-button'
+    const items = document.createElement('div')
+    items.id = 'menu-items'
+    const footer = document.createElement('footer')
+
+    content.appendChild(button)
+    content.appendChild(items)
+    main.appendChild(sidebar)
+    main.appendChild(content)
+    document.body.appendChild(header)
+    document.body.appendChild(main)
+    document.body.appendChild(footer)
+
+    return { header, main, sidebar, content, button, items, footer }
+  }
+
+  const cleanupDom = () => {
+    document.body.innerHTML = ''
+  }
+
+  it.scoped('marks siblings of allowed elements as inert', () =>
+    Effect.gen(function* () {
+      const { header, main, sidebar, content, button, items, footer } =
+        buildDom()
+
+      yield* inertOthers('test', ['#menu-button', '#menu-items'], () => 'done')
+
+      expect(header.inert).toBe(true)
+      expect(header.getAttribute('aria-hidden')).toBe('true')
+      expect(footer.inert).toBe(true)
+      expect(footer.getAttribute('aria-hidden')).toBe('true')
+      expect(sidebar.inert).toBe(true)
+      expect(sidebar.getAttribute('aria-hidden')).toBe('true')
+
+      expect(main.inert).toBeFalsy()
+      expect(content.inert).toBeFalsy()
+      expect(button.inert).toBeFalsy()
+      expect(items.inert).toBeFalsy()
+
+      yield* restoreInert('test', () => 'restored')
+      cleanupDom()
+    }),
+  )
+
+  it.scoped('restores original values', () =>
+    Effect.gen(function* () {
+      const { header, footer } = buildDom()
+      header.setAttribute('aria-hidden', 'false')
+
+      yield* inertOthers('test', ['#menu-button', '#menu-items'], () => 'done')
+
+      expect(header.getAttribute('aria-hidden')).toBe('true')
+
+      yield* restoreInert('test', () => 'restored')
+
+      expect(header.getAttribute('aria-hidden')).toBe('false')
+      expect(footer.getAttribute('aria-hidden')).toBeNull()
+
+      cleanupDom()
+    }),
+  )
+
+  it.scoped('removes aria-hidden when original was null', () =>
+    Effect.gen(function* () {
+      const { header } = buildDom()
+      expect(header.getAttribute('aria-hidden')).toBeNull()
+
+      yield* inertOthers('test', ['#menu-button', '#menu-items'], () => 'done')
+
+      expect(header.getAttribute('aria-hidden')).toBe('true')
+
+      yield* restoreInert('test', () => 'restored')
+
+      expect(header.getAttribute('aria-hidden')).toBeNull()
+
+      cleanupDom()
+    }),
+  )
+
+  it.scoped('supports nested locks via reference counting', () =>
+    Effect.gen(function* () {
+      const { header } = buildDom()
+
+      yield* inertOthers('first', ['#menu-button', '#menu-items'], () => 'done')
+      yield* inertOthers(
+        'second',
+        ['#menu-button', '#menu-items'],
+        () => 'done',
+      )
+
+      expect(header.inert).toBe(true)
+
+      yield* restoreInert('first', () => 'restored')
+      expect(header.inert).toBe(true)
+
+      yield* restoreInert('second', () => 'restored')
+      expect(header.inert).toBeFalsy()
+
+      cleanupDom()
+    }),
+  )
+
+  it.scoped('handles missing selectors gracefully', () =>
+    Effect.gen(function* () {
+      buildDom()
+
+      const result = yield* inertOthers(
+        'test',
+        ['#nonexistent', '#also-missing'],
+        () => 'done',
+      )
+
+      expect(result).toBe('done')
+
+      yield* restoreInert('test', () => 'restored')
+      cleanupDom()
+    }),
+  )
+})
+
+describe('restoreInert', () => {
+  it.scoped('is safe to call without a preceding inertOthers', () =>
+    Effect.gen(function* () {
+      const result = yield* restoreInert('nonexistent', () => ({
+        _tag: 'Restored' as const,
+      }))
+      expect(result._tag).toBe('Restored')
     }),
   )
 })

@@ -183,6 +183,20 @@ export const update = (
     Task.unlockScroll(() => NoOp()),
   )
 
+  const maybeInertOthersCommand = OptionExt.when(
+    model.isModal,
+    Task.inertOthers(
+      model.id,
+      [buttonSelector(model.id), itemsSelector(model.id)],
+      () => NoOp(),
+    ),
+  )
+
+  const maybeRestoreInertCommand = OptionExt.when(
+    model.isModal,
+    Task.restoreInert(model.id, () => NoOp()),
+  )
+
   return M.value(message).pipe(
     M.withReturnType<[Model, ReadonlyArray<Command<Message>>]>(),
     M.tagsExhaustive({
@@ -207,6 +221,7 @@ export const update = (
             Task.focus(itemsSelector(model.id), () => NoOp()),
             ...Array.fromOption(maybeNextFrameCommand),
             ...Array.fromOption(maybeLockScrollCommand),
+            ...Array.fromOption(maybeInertOthersCommand),
           ],
         ]
       },
@@ -217,6 +232,7 @@ export const update = (
           Task.focus(buttonSelector(model.id), () => NoOp()),
           ...Array.fromOption(maybeNextFrameCommand),
           ...Array.fromOption(maybeUnlockScrollCommand),
+          ...Array.fromOption(maybeRestoreInertCommand),
         ],
       ],
 
@@ -225,6 +241,7 @@ export const update = (
         [
           ...Array.fromOption(maybeNextFrameCommand),
           ...Array.fromOption(maybeUnlockScrollCommand),
+          ...Array.fromOption(maybeRestoreInertCommand),
         ],
       ],
 
@@ -270,6 +287,7 @@ export const update = (
           Task.focus(buttonSelector(model.id), () => NoOp()),
           ...Array.fromOption(maybeNextFrameCommand),
           ...Array.fromOption(maybeUnlockScrollCommand),
+          ...Array.fromOption(maybeRestoreInertCommand),
         ],
       ],
 
