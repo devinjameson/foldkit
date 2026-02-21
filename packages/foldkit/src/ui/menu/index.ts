@@ -393,7 +393,8 @@ export type ViewConfig<Message, Item extends string> = Readonly<{
       | SelectedItem
       | MovedPointerOverItem
       | RequestedItemClick
-      | Searched,
+      | Searched
+      | NoOp,
   ) => Message
   items: ReadonlyArray<Item>
   itemToConfig: (
@@ -489,6 +490,7 @@ export const view = <Message, Item extends string>(
     OnBlur,
     OnClick,
     OnKeyDownPreventDefault,
+    OnKeyUpPreventDefault,
     OnPointerLeave,
     OnPointerMove,
     Role,
@@ -591,6 +593,9 @@ export const view = <Message, Item extends string>(
       ? toMessage(Closed())
       : toMessage(Opened({ maybeActiveItemIndex: Option.none() }))
 
+  const handleSpaceKeyUp = (key: string): Option.Option<Message> =>
+    OptionExt.when(key === ' ', toMessage(NoOp()))
+
   const resolveActiveIndex = keyToIndex(
     'ArrowDown',
     'ArrowUp',
@@ -662,6 +667,7 @@ export const view = <Message, Item extends string>(
       ? [AriaDisabled(true), DataAttribute('disabled', '')]
       : [
           OnKeyDownPreventDefault(handleButtonKeyDown),
+          OnKeyUpPreventDefault(handleSpaceKeyUp),
           OnClick(handleButtonClick()),
         ]),
     ...(isVisible ? [DataAttribute('open', '')] : []),
@@ -684,6 +690,7 @@ export const view = <Message, Item extends string>(
       ? []
       : [
           OnKeyDownPreventDefault(handleItemsKeyDown),
+          OnKeyUpPreventDefault(handleSpaceKeyUp),
           OnBlur(toMessage(ClosedByTab())),
         ]),
   ]

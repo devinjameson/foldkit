@@ -270,6 +270,9 @@ type Attribute<Message> = Data.TaggedEnum<{
     readonly f: (key: string) => Option.Option<Message>
   }
   OnKeyUp: { readonly f: (key: string) => Message }
+  OnKeyUpPreventDefault: {
+    readonly f: (key: string) => Option.Option<Message>
+  }
   OnKeyPress: { readonly f: (key: string) => Message }
   OnFocus: { readonly message: Message }
   OnBlur: { readonly message: Message }
@@ -398,6 +401,7 @@ const {
   OnKeyDown,
   OnKeyDownPreventDefault,
   OnKeyUp,
+  OnKeyUpPreventDefault,
   OnKeyPress,
   OnFocus,
   OnBlur,
@@ -641,6 +645,16 @@ const buildVNodeData = <Message>(
           OnKeyUp: ({ f }) =>
             updateDataOn({
               keyup: ({ key }: KeyboardEvent) => dispatchSync(f(key)),
+            }),
+          OnKeyUpPreventDefault: ({ f }) =>
+            updateDataOn({
+              keyup: (event: KeyboardEvent) => {
+                const maybeMessage = f(event.key)
+                if (Option.isSome(maybeMessage)) {
+                  event.preventDefault()
+                  dispatchSync(maybeMessage.value)
+                }
+              },
             }),
           OnKeyPress: ({ f }) =>
             updateDataOn({
@@ -1403,6 +1417,10 @@ type HtmlAttributes<Message> = {
     readonly _tag: 'OnKeyUp'
     readonly f: (key: string) => Message
   }
+  OnKeyUpPreventDefault: (f: (key: string) => Option.Option<Message>) => {
+    readonly _tag: 'OnKeyUpPreventDefault'
+    readonly f: (key: string) => Option.Option<Message>
+  }
   OnKeyPress: (f: (key: string) => Message) => {
     readonly _tag: 'OnKeyPress'
     readonly f: (key: string) => Message
@@ -1732,6 +1750,8 @@ const htmlAttributes = <Message>(): HtmlAttributes<Message> => ({
   OnKeyDownPreventDefault: (f: (key: string) => Option.Option<Message>) =>
     OnKeyDownPreventDefault({ f }),
   OnKeyUp: (f: (key: string) => Message) => OnKeyUp({ f }),
+  OnKeyUpPreventDefault: (f: (key: string) => Option.Option<Message>) =>
+    OnKeyUpPreventDefault({ f }),
   OnKeyPress: (f: (key: string) => Message) => OnKeyPress({ f }),
   OnFocus: (message: Message) => OnFocus({ message }),
   OnBlur: (message: Message) => OnBlur({ message }),

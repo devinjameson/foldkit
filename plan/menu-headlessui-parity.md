@@ -19,20 +19,12 @@ Reference: `~/Repos/headlessui/packages/@headlessui-react/src/components/menu/me
 - [x] Space as typeahead character (when search query is active, Space adds to query instead of selecting)
 - [x] Scroll lock (`Task.lockScroll` / `Task.unlockScroll`, `isModal` option on `InitConfig`)
 - [x] Inert others (`Task.inertOthers` / `Task.restoreInert`, pairs with scroll lock under `isModal`)
+- [x] Enter/Space clicks DOM element (`Task.clickElement`, `RequestedItemClick` two-message flow)
+- [x] Pointer events instead of mouse events on items (pointer event migration with touch filtering)
 
 ## Remaining
 
-### 1. Enter/Space clicks DOM element
-
-**Scope:** New `Task` command
-
-Headless UI calls `.click()` on the actual DOM node of the selected item. This means items rendered as links (`<a>`) or containing forms actually navigate/submit. Foldkit just sends `SelectedItem` with an index — the consumer never gets a real click event.
-
-**Change:** Add `Task.clickElement(selector, () => Message)` command. When Enter/Space selects an item, issue this command targeting the item's DOM node. The click event will bubble normally, then the menu closes.
-
-**Reference:** `menu.tsx` line 475-478
-
-### 2. Quick release (drag-to-select)
+### 1. Quick release (drag-to-select)
 
 **Scope:** New pointer tracking behavior
 
@@ -44,7 +36,7 @@ Thresholds prevent accidental activation: the pointer must move at least 5px fro
 
 **Reference:** `menu.tsx` pointerdown/pointerup handlers, `use-tracked-pointer.ts`
 
-### 3. Firefox Space keyup workaround
+### 2. Firefox Space keyup workaround
 
 **Scope:** Keyboard event handler change
 
@@ -54,7 +46,7 @@ Firefox fires a spurious `click` event on the button when Space is released afte
 
 **Reference:** `menu.tsx` keydown/keyup handlers for Space
 
-### 4. Button moved detection
+### 3. Button moved detection
 
 **Scope:** Model field + position tracking command
 
@@ -64,7 +56,7 @@ Headless UI tracks the button's visual position when the menu closes. If the but
 
 **Reference:** `menu-machine.ts` lines 351-358, 409-421, `element-movement.ts`
 
-### 5. Anchor positioning + portal rendering
+### 4. Anchor positioning + portal rendering
 
 **Scope:** New module — largest item
 
@@ -88,17 +80,7 @@ Exposes `--button-width` CSS variable on the items container for width matching.
 
 Cross-cutting concerns for touch devices and mobile browsers. These affect existing features and should be addressed alongside or before the remaining desktop items.
 
-### 6. Pointer events instead of mouse events on items
-
-**Scope:** Event handler migration in `view`
-
-Foldkit uses `OnMouseEnter`, `OnMouseLeave`, and `OnMouseMove` on menu items. These fire unreliably on touch devices — `mouseleave` may not fire at all, and `mouseenter` fires on tap rather than hover. Pointer Events (`pointerenter`, `pointerleave`, `pointermove`) work across mouse, touch, and pen input types consistently.
-
-**Change:** Replace `OnMouseEnter` → `OnPointerEnter`, `OnMouseLeave` → `OnPointerLeave`, `OnMouseMove` → `OnPointerMove` on item elements. May also want to filter by `pointerType` to avoid activating hover states on `touch` events (Headless UI ignores pointer events with `pointerType === 'touch'` for item activation).
-
-**Reference:** `menu.tsx` pointer event handlers, Headless UI filters `evt.pointerType` checks
-
-### 7. iOS Safari scroll lock hardening
+### 5. iOS Safari scroll lock hardening
 
 **Scope:** Enhancement to `Task.lockScroll` in `packages/foldkit/src/task/scrollLock.ts`
 
@@ -112,7 +94,7 @@ The current scroll lock implementation sets `overflow: hidden` on `documentEleme
 
 **Reference:** Headless UI `use-scroll-lock.ts` — handles iOS with `touchstart`/`touchmove` interception and overflow container detection
 
-### 8. Mobile outside-click: distinguish scroll from tap
+### 6. Mobile outside-click: distinguish scroll from tap
 
 **Scope:** Enhancement to backdrop/outside-click handling
 
@@ -124,7 +106,7 @@ Headless UI tracks the pointer origin on `pointerdown` and compares it to the `p
 
 **Reference:** Headless UI `use-outside-click.ts` — 30px movement threshold
 
-### 9. Mouse vs touch button toggle
+### 7. Mouse vs touch button toggle
 
 **Scope:** Enhancement to button interaction handling
 
