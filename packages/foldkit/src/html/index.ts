@@ -255,7 +255,16 @@ type Attribute<Message> = Data.TaggedEnum<{
   OnMouseOver: { readonly message: Message }
   OnMouseOut: { readonly message: Message }
   OnMouseMove: { readonly message: Message }
-  OnPointerMove: { readonly f: (screenX: number, screenY: number) => Message }
+  OnPointerMove: {
+    readonly f: (
+      screenX: number,
+      screenY: number,
+      pointerType: string,
+    ) => Option.Option<Message>
+  }
+  OnPointerLeave: {
+    readonly f: (pointerType: string) => Option.Option<Message>
+  }
   OnKeyDown: { readonly f: (key: string) => Message }
   OnKeyDownPreventDefault: {
     readonly f: (key: string) => Option.Option<Message>
@@ -385,6 +394,7 @@ const {
   OnMouseOut,
   OnMouseMove,
   OnPointerMove,
+  OnPointerLeave,
   OnKeyDown,
   OnKeyDownPreventDefault,
   OnKeyUp,
@@ -594,8 +604,25 @@ const buildVNodeData = <Message>(
             }),
           OnPointerMove: ({ f }) =>
             updateDataOn({
-              pointermove: (event: PointerEvent) =>
-                dispatchSync(f(event.screenX, event.screenY)),
+              pointermove: (event: PointerEvent) => {
+                const maybeMessage = f(
+                  event.screenX,
+                  event.screenY,
+                  event.pointerType,
+                )
+                if (Option.isSome(maybeMessage)) {
+                  dispatchSync(maybeMessage.value)
+                }
+              },
+            }),
+          OnPointerLeave: ({ f }) =>
+            updateDataOn({
+              pointerleave: (event: PointerEvent) => {
+                const maybeMessage = f(event.pointerType)
+                if (Option.isSome(maybeMessage)) {
+                  dispatchSync(maybeMessage.value)
+                }
+              },
             }),
           OnKeyDown: ({ f }) =>
             updateDataOn({
@@ -1346,9 +1373,23 @@ type HtmlAttributes<Message> = {
     readonly _tag: 'OnMouseMove'
     readonly message: Message
   }
-  OnPointerMove: (f: (screenX: number, screenY: number) => Message) => {
+  OnPointerMove: (
+    f: (
+      screenX: number,
+      screenY: number,
+      pointerType: string,
+    ) => Option.Option<Message>,
+  ) => {
     readonly _tag: 'OnPointerMove'
-    readonly f: (screenX: number, screenY: number) => Message
+    readonly f: (
+      screenX: number,
+      screenY: number,
+      pointerType: string,
+    ) => Option.Option<Message>
+  }
+  OnPointerLeave: (f: (pointerType: string) => Option.Option<Message>) => {
+    readonly _tag: 'OnPointerLeave'
+    readonly f: (pointerType: string) => Option.Option<Message>
   }
   OnKeyDown: (f: (key: string) => Message) => {
     readonly _tag: 'OnKeyDown'
@@ -1678,8 +1719,15 @@ const htmlAttributes = <Message>(): HtmlAttributes<Message> => ({
   OnMouseOver: (message: Message) => OnMouseOver({ message }),
   OnMouseOut: (message: Message) => OnMouseOut({ message }),
   OnMouseMove: (message: Message) => OnMouseMove({ message }),
-  OnPointerMove: (f: (screenX: number, screenY: number) => Message) =>
-    OnPointerMove({ f }),
+  OnPointerMove: (
+    f: (
+      screenX: number,
+      screenY: number,
+      pointerType: string,
+    ) => Option.Option<Message>,
+  ) => OnPointerMove({ f }),
+  OnPointerLeave: (f: (pointerType: string) => Option.Option<Message>) =>
+    OnPointerLeave({ f }),
   OnKeyDown: (f: (key: string) => Message) => OnKeyDown({ f }),
   OnKeyDownPreventDefault: (f: (key: string) => Option.Option<Message>) =>
     OnKeyDownPreventDefault({ f }),

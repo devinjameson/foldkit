@@ -480,7 +480,7 @@ export const view = <Message, Item extends string>(
     OnBlur,
     OnClick,
     OnKeyDownPreventDefault,
-    OnMouseLeave,
+    OnPointerLeave,
     OnPointerMove,
     Role,
     Tabindex,
@@ -706,10 +706,18 @@ export const view = <Message, Item extends string>(
         ...(isInteractive
           ? [
               OnClick(toMessage(SelectedItem({ index }))),
-              OnPointerMove((screenX, screenY) =>
-                toMessage(MovedPointerOverItem({ index, screenX, screenY })),
+              OnPointerMove((screenX, screenY, pointerType) =>
+                OptionExt.when(
+                  pointerType !== 'touch',
+                  toMessage(MovedPointerOverItem({ index, screenX, screenY })),
+                ),
               ),
-              OnMouseLeave(toMessage(DeactivatedItem())),
+              OnPointerLeave((pointerType) =>
+                OptionExt.when(
+                  pointerType !== 'touch',
+                  toMessage(DeactivatedItem()),
+                ),
+              ),
             ]
           : []),
       ],
