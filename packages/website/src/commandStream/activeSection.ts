@@ -72,7 +72,7 @@ export const activeSection: CommandStream<
   },
   depsToStream: ({ sections }) =>
     Stream.async<Runtime.Command<typeof ChangedActiveSection>>(
-      (emit) => {
+      emit => {
         if (!Array.isNonEmptyReadonlyArray(sections)) {
           return Effect.void
         }
@@ -82,7 +82,7 @@ export const activeSection: CommandStream<
         )
 
         const observer = new IntersectionObserver(
-          (entries) => {
+          entries => {
             Array.forEach(
               entries,
               ({ isIntersecting, target: { id } }) => {
@@ -99,7 +99,7 @@ export const activeSection: CommandStream<
 
             const activeSectionId = Array.findFirst(
               sections,
-              (sectionId) =>
+              sectionId =>
                 HashSet.has(
                   MutableRef.get(visibleSections),
                   sectionId,
@@ -108,7 +108,7 @@ export const activeSection: CommandStream<
 
             Option.match(activeSectionId, {
               onNone: Function.constVoid,
-              onSome: (sectionId) => {
+              onSome: sectionId => {
                 emit.single(
                   Effect.succeed(ChangedActiveSection({ sectionId })),
                 )
@@ -120,7 +120,7 @@ export const activeSection: CommandStream<
           },
         )
 
-        Array.forEach(sections, (sectionId) => {
+        Array.forEach(sections, sectionId => {
           const element = document.getElementById(sectionId)
 
           if (element) {

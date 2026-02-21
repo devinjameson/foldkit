@@ -58,7 +58,7 @@ export const calculateScoreboard = (
   Effect.gen(function* () {
     const game = yield* room.maybeGame
 
-    const scores = Array.map(room.players, (player) => {
+    const scores = Array.map(room.players, player => {
       const gamePlayer = Data.struct(
         Shared.GamePlayer.make({
           gameId: game.id,

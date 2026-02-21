@@ -13,7 +13,7 @@ export const foldkit = (): Plugin => {
 }
 
 const configureServer = (server: ViteDevServer) => {
-  server.ws.on('foldkit:preserve-model', (model) => {
+  server.ws.on('foldkit:preserve-model', model => {
     preservedModel = model
   })
 

@@ -99,7 +99,7 @@ export const view = (
               ],
             ),
           ],
-          onNonEmpty: (cart) => [
+          onNonEmpty: cart => [
             section(
               [],
               [
@@ -109,7 +109,7 @@ export const view = (
                 ),
                 div(
                   [Class('space-y-2 mb-6')],
-                  cart.map((cartItem) =>
+                  cart.map(cartItem =>
                     div(
                       [
                         Class(

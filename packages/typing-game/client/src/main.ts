@@ -15,8 +15,8 @@ const application = Runtime.makeApplication({
   commandStreams,
   container: document.getElementById('root')!,
   browser: {
-    onUrlRequest: (request) => ClickedLink({ request }),
-    onUrlChange: (url) => ChangedUrl({ url }),
+    onUrlRequest: request => ClickedLink({ request }),
+    onUrlChange: url => ChangedUrl({ url }),
   },
 })
 

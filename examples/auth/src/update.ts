@@ -53,10 +53,10 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         return M.value(model).pipe(
           withUpdateReturn,
           M.tagsExhaustive({
-            LoggedOut: (loggedOutModel) =>
+            LoggedOut: loggedOutModel =>
               M.value(route).pipe(
                 withUpdateReturn,
-                M.when(S.is(LoggedOutRoute), (route) => [
+                M.when(S.is(LoggedOutRoute), route => [
                   evo(loggedOutModel, { route: () => route }),
                   [],
                 ]),
@@ -66,10 +66,10 @@ export const update = (model: Model, message: Message): UpdateReturn =>
                 ]),
               ),
 
-            LoggedIn: (loggedInModel) =>
+            LoggedIn: loggedInModel =>
               M.value(route).pipe(
                 withUpdateReturn,
-                M.when(S.is(LoggedInRoute), (route) => [
+                M.when(S.is(LoggedInRoute), route => [
                   evo(loggedInModel, { route: () => route }),
                   [],
                 ]),
@@ -130,13 +130,13 @@ const handleGotLoggedOutMessage = (
     message,
   )
 
-  const mappedCommands = Array.map(commands, (command) =>
-    Effect.map(command, (message) => GotLoggedOutMessage({ message })),
+  const mappedCommands = Array.map(commands, command =>
+    Effect.map(command, message => GotLoggedOutMessage({ message })),
   )
 
   return Option.match(maybeOutMessage, {
     onNone: () => [nextModel, mappedCommands],
-    onSome: (outMessage) =>
+    onSome: outMessage =>
       M.value(outMessage).pipe(
         withUpdateReturn,
         M.tagsExhaustive({
@@ -163,13 +163,13 @@ const handleGotLoggedInMessage = (
 
   const [nextModel, commands, maybeOutMessage] = LoggedIn.update(model, message)
 
-  const mappedCommands = Array.map(commands, (command) =>
-    Effect.map(command, (message) => GotLoggedInMessage({ message })),
+  const mappedCommands = Array.map(commands, command =>
+    Effect.map(command, message => GotLoggedInMessage({ message })),
   )
 
   return Option.match(maybeOutMessage, {
     onNone: () => [nextModel, mappedCommands],
-    onSome: (outMessage) =>
+    onSome: outMessage =>
       M.value(outMessage).pipe(
         withUpdateReturn,
         M.tagsExhaustive({

@@ -7,7 +7,7 @@ import { Effect, Match, Option, Schema, String, flow } from 'effect'
 import { create as create_ } from './commands/create.js'
 
 const nameSchema = Schema.String.pipe(
-  Schema.filter((name) =>
+  Schema.filter(name =>
     Match.value(name).pipe(
       Match.whenOr(
         String.includes('/'),

@@ -44,7 +44,7 @@ const validateProject = (
 
     return yield* Command.exitCode(checkCommand).pipe(
       Effect.filterOrFail(
-        (exitCode) => exitCode === 0,
+        exitCode => exitCode === 0,
         () =>
           `Package manager '${packageManager}' is not available. Please install it first.`,
       ),

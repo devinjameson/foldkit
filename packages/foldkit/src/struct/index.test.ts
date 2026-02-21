@@ -5,7 +5,7 @@ import { evo } from './index'
 
 describe('evo', () => {
   it('transforms specified fields', () => {
-    const result = evo({ count: 0, name: 'test' }, { count: (n) => n + 1 })
+    const result = evo({ count: 0, name: 'test' }, { count: n => n + 1 })
     expect(result).toStrictEqual({ count: 1, name: 'test' })
   })
 
@@ -14,14 +14,14 @@ describe('evo', () => {
       { count: number; name: string },
       { count: (a: number) => number }
     >({
-      count: (n) => n + 1,
+      count: n => n + 1,
     })
     const result = inc({ count: 0, name: 'test' })
     expect(result).toStrictEqual({ count: 1, name: 'test' })
   })
 
   it('preserves untransformed fields', () => {
-    const result = evo({ a: 1, b: 'hello', c: true }, { a: (n) => n * 2 })
+    const result = evo({ a: 1, b: 'hello', c: true }, { a: n => n * 2 })
     expect(result).toStrictEqual({ a: 2, b: 'hello', c: true })
   })
 

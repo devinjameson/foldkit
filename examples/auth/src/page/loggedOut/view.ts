@@ -21,7 +21,7 @@ export const view = (
         M.tagsExhaustive({
           Home: () => Home.view(),
           Login: () =>
-            Login.view(model.loginModel, (message) =>
+            Login.view(model.loginModel, message =>
               toMessage(GotLoginMessage({ message })),
             ),
           NotFound: ({ path }) =>

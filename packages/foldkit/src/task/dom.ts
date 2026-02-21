@@ -15,7 +15,7 @@ export const focus = <Message>(
   selector: string,
   f: (success: boolean) => Message,
 ): Effect.Effect<Message> =>
-  Effect.async<Message>((resume) => {
+  Effect.async<Message>(resume => {
     requestAnimationFrame(() => {
       const element = document.querySelector(selector)
       if (element instanceof HTMLElement) {
@@ -41,7 +41,7 @@ export const showModal = <Message>(
   selector: string,
   f: (success: boolean) => Message,
 ): Effect.Effect<Message> =>
-  Effect.async<Message>((resume) => {
+  Effect.async<Message>(resume => {
     requestAnimationFrame(() => {
       const element = document.querySelector(selector)
       if (element instanceof HTMLDialogElement) {
@@ -67,11 +67,37 @@ export const closeModal = <Message>(
   selector: string,
   f: (success: boolean) => Message,
 ): Effect.Effect<Message> =>
-  Effect.async<Message>((resume) => {
+  Effect.async<Message>(resume => {
     requestAnimationFrame(() => {
       const element = document.querySelector(selector)
       if (element instanceof HTMLDialogElement) {
         element.close()
+        resume(Effect.succeed(f(true)))
+      } else {
+        resume(Effect.succeed(f(false)))
+      }
+    })
+  })
+
+/**
+ * Creates a command that programmatically clicks an element by selector and passes the result to a message constructor.
+ * Passes true if the element was found and clicked, false otherwise.
+ * Uses requestAnimationFrame to ensure the DOM tree is updated and nodes exist before attempting to click.
+ *
+ * @example
+ * ```typescript
+ * Task.clickElement('#menu-item-2', success => ItemClicked({ success }))
+ * ```
+ */
+export const clickElement = <Message>(
+  selector: string,
+  f: (success: boolean) => Message,
+): Effect.Effect<Message> =>
+  Effect.async<Message>(resume => {
+    requestAnimationFrame(() => {
+      const element = document.querySelector(selector)
+      if (element instanceof HTMLElement) {
+        element.click()
         resume(Effect.succeed(f(true)))
       } else {
         resume(Effect.succeed(f(false)))
@@ -94,7 +120,7 @@ export const scrollIntoView = <Message>(
   selector: string,
   f: (success: boolean) => Message,
 ): Effect.Effect<Message> =>
-  Effect.async<Message>((resume) => {
+  Effect.async<Message>(resume => {
     requestAnimationFrame(() => {
       const element = document.querySelector(selector)
       if (element instanceof HTMLElement) {

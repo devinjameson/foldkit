@@ -109,7 +109,7 @@ const determinePlayerProgressAction = (
     })
   } else {
     return Option.match(maybePlayerProgress, {
-      onSome: (progress) => PlayerProgressAction.Restore({ progress }),
+      onSome: progress => PlayerProgressAction.Restore({ progress }),
       onNone: () => PlayerProgressAction.Clear(),
     })
   }

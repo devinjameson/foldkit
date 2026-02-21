@@ -105,7 +105,7 @@ export const equals = (
   expected: string,
   message?: string,
 ): Validation<string> => [
-  (value) => value === expected,
+  value => value === expected,
   message ?? `Must match ${expected}`,
 ]
 
@@ -129,7 +129,7 @@ export const between = (
   max: number,
   message?: string,
 ): Validation<number> => [
-  (value) => value >= min && value <= max,
+  value => value >= min && value <= max,
   message ?? `Must be between ${min} and ${max}`,
 ]
 
@@ -147,7 +147,7 @@ export const nonNegative = (
 /** Creates a `Validation` that checks if a number is a whole number (integer). */
 export const integer = (
   message = 'Must be a whole number',
-): Validation<number> => [(value) => Number.isInteger(value), message]
+): Validation<number> => [value => Number.isInteger(value), message]
 
 // GENERIC VALIDATORS
 
@@ -158,7 +158,7 @@ export const oneOf = (
 ): Validation<string> => {
   const joinedValues = Array.join(values, ', ')
   const message_ = message ?? `Must be one of: ${joinedValues}`
-  return [(value) => Array.contains(values, value), message_]
+  return [value => Array.contains(values, value), message_]
 }
 
 // VALIDATE

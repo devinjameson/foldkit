@@ -24,7 +24,7 @@ export const generateUniqueId = (
 
     return yield* generateRoomId(words).pipe(
       Effect.filterOrFail(
-        (id) => !HashMap.has(roomById, id),
+        id => !HashMap.has(roomById, id),
         () => new RoomIdExists(),
       ),
       Effect.catchAll(() => generateUniqueId(words)),
@@ -41,6 +41,6 @@ const indicesToRoomId =
   (words: ReadonlyArray<string>) => (indices: ReadonlyArray<number>) =>
     pipe(
       indices,
-      Array.map((i) => Array.unsafeGet(words, i)),
+      Array.map(i => Array.unsafeGet(words, i)),
       Array.join(DELIMITER),
     )

@@ -15,12 +15,12 @@ export const view = (model: Model): Html =>
         [
           M.value(model).pipe(
             M.tagsExhaustive({
-              LoggedOut: (loggedOutModel) =>
-                LoggedOut.view(loggedOutModel, (message) =>
+              LoggedOut: loggedOutModel =>
+                LoggedOut.view(loggedOutModel, message =>
                   GotLoggedOutMessage({ message }),
                 ),
-              LoggedIn: (loggedInModel) =>
-                LoggedIn.view(loggedInModel, (message) =>
+              LoggedIn: loggedInModel =>
+                LoggedIn.view(loggedInModel, message =>
                   GotLoggedInMessage({ message }),
                 ),
             }),

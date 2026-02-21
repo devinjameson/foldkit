@@ -12,15 +12,15 @@ export const addItem =
   (cart: Cart): Cart => {
     const existing = Array.findFirst(
       cart,
-      (cartItem) => cartItem.item.id === item.id,
+      cartItem => cartItem.item.id === item.id,
     )
 
     return Option.match(existing, {
       onNone: () => [...cart, { item, quantity: 1 }],
       onSome: () =>
-        Array.map(cart, (cartItem) =>
+        Array.map(cart, cartItem =>
           cartItem.item.id === item.id
-            ? evo(cartItem, { quantity: (quantity) => quantity + 1 })
+            ? evo(cartItem, { quantity: quantity => quantity + 1 })
             : cartItem,
         ),
     })
@@ -29,7 +29,7 @@ export const addItem =
 export const removeItem =
   (itemId: string) =>
   (cart: Cart): Cart =>
-    Array.filter(cart, (cartItem) => cartItem.item.id !== itemId)
+    Array.filter(cart, cartItem => cartItem.item.id !== itemId)
 
 export const totalItems = (cart: Cart): number =>
   Array.reduce(cart, 0, (total, { quantity }) => total + quantity)

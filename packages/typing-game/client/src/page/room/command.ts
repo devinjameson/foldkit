@@ -38,9 +38,9 @@ export const loadSessionFromStorage = (roomId: string): Runtime.Command<typeof L
     const decodeSession = S.decode(S.parseJson(RoomPlayerSession))
 
     return yield* decodeSession(sessionJson).pipe(
-      Effect.map((session) =>
+      Effect.map(session =>
         LoadedSession({
-          maybeSession: Option.liftPredicate(session, (session) => session.roomId === roomId),
+          maybeSession: Option.liftPredicate(session, session => session.roomId === roomId),
         }),
       ),
     )

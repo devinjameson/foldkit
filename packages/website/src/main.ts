@@ -245,18 +245,16 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
     Page.ApiReference.apiReference.modules,
   )
 
-  const mappedFoldkitUiCommands = foldkitUiCommands.map((message) =>
-    Effect.map(message, (message) =>
-      GotFoldkitUiMessage({ message }),
-    ),
+  const mappedFoldkitUiCommands = foldkitUiCommands.map(message =>
+    Effect.map(message, message => GotFoldkitUiMessage({ message })),
   )
 
   const mappedComingFromReactCommands = comingFromReactCommands.map(
-    Effect.map((message) => GotComingFromReactMessage({ message })),
+    Effect.map(message => GotComingFromReactMessage({ message })),
   )
 
   const mappedApiReferenceCommands = apiReferenceCommands.map(
-    Effect.map((message) => GotApiReferenceMessage({ message })),
+    Effect.map(message => GotApiReferenceMessage({ message })),
   )
 
   return [
@@ -282,7 +280,7 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
       ...mappedApiReferenceCommands,
       ...Option.match(url.hash, {
         onNone: () => [],
-        onSome: (hash) => [scrollToHash(hash)],
+        onSome: hash => [scrollToHash(hash)],
       }),
     ],
   ]
@@ -330,7 +328,7 @@ const update = (
         }),
         Option.match(url.hash, {
           onNone: () => [scrollToTop],
-          onSome: (hash) => [scrollToHash(hash)],
+          onSome: hash => [scrollToHash(hash)],
         }),
       ],
 
@@ -367,7 +365,7 @@ const update = (
 
       ToggledMobileMenu: () => [
         evo(model, {
-          mobileMenuOpen: (mobileMenuOpen) => !mobileMenuOpen,
+          mobileMenuOpen: mobileMenuOpen => !mobileMenuOpen,
         }),
         [],
       ],
@@ -414,7 +412,7 @@ const update = (
         return [
           evo(model, { foldkitUi: () => nextFoldkitUi }),
           foldkitUiCommands.map(
-            Effect.map((message) => GotFoldkitUiMessage({ message })),
+            Effect.map(message => GotFoldkitUiMessage({ message })),
           ),
         ]
       },
@@ -443,7 +441,7 @@ const update = (
             comingFromReact: () => nextComingFromReact,
           }),
           comingFromReactCommands.map(
-            Effect.map((message) =>
+            Effect.map(message =>
               GotComingFromReactMessage({ message }),
             ),
           ),
@@ -457,7 +455,7 @@ const update = (
         return [
           evo(model, { apiReference: () => nextApiReference }),
           apiReferenceCommands.map(
-            Effect.map((message) =>
+            Effect.map(message =>
               GotApiReferenceMessage({ message }),
             ),
           ),
@@ -509,7 +507,7 @@ const scrollToTop: Runtime.Command<typeof NoOp> = Effect.sync(() => {
 })
 
 const scrollToHash = (hash: string): Runtime.Command<typeof NoOp> =>
-  Effect.async((resume) => {
+  Effect.async(resume => {
     requestAnimationFrame(() => {
       const element = document.getElementById(hash)
       if (element) {
@@ -746,7 +744,7 @@ const tableOfContentsView = (
             Array.map(entries, ({ level, id, text }) => {
               const isActive = Option.match(maybeActiveSectionId, {
                 onNone: () => false,
-                onSome: (activeSectionId) => activeSectionId === id,
+                onSome: activeSectionId => activeSectionId === id,
               })
 
               return keyed('li')(
@@ -797,7 +795,7 @@ const mobileTableOfContentsView = (
 
   const activeSectionText = Option.match(maybeActiveSectionId, {
     onNone: () => firstEntryText,
-    onSome: (activeSectionId) =>
+    onSome: activeSectionId =>
       Option.match(
         Array.findFirst(entries, ({ id }) => id === activeSectionId),
         {
@@ -811,7 +809,7 @@ const mobileTableOfContentsView = (
     [
       Id('mobile-table-of-contents'),
       Open(isOpen),
-      OnToggle((open) =>
+      OnToggle(open =>
         ToggledMobileTableOfContents({ isOpen: open }),
       ),
       Class(
@@ -869,7 +867,7 @@ const mobileTableOfContentsView = (
             Array.map(entries, ({ level, id, text }) => {
               const isActive = Option.match(maybeActiveSectionId, {
                 onNone: () => false,
-                onSome: (activeSectionId) => activeSectionId === id,
+                onSome: activeSectionId => activeSectionId === id,
               })
 
               return keyed('li')(
@@ -922,7 +920,7 @@ const view = (model: Model) => {
         Page.ComingFromReact.view(
           model,
           model.comingFromReact,
-          (message) => GotComingFromReactMessage({ message }),
+          message => GotComingFromReactMessage({ message }),
         ),
       GettingStarted: () => Page.GettingStarted.view(model),
       ArchitectureAndConcepts: () =>
@@ -936,10 +934,10 @@ const view = (model: Model) => {
         Page.ApiReference.view(
           Page.ApiReference.apiReference.modules,
           model.apiReference,
-          (message) => GotApiReferenceMessage({ message }),
+          message => GotApiReferenceMessage({ message }),
         ),
       FoldkitUi: () =>
-        Page.FoldkitUi.view(model.foldkitUi, (message) =>
+        Page.FoldkitUi.view(model.foldkitUi, message =>
           GotFoldkitUiMessage({ message }),
         ),
       NotFound: ({ path }) =>
@@ -1064,7 +1062,7 @@ const view = (model: Model) => {
             ],
             [
               Option.match(currentPageTableOfContents, {
-                onSome: (tableOfContents) =>
+                onSome: tableOfContents =>
                   mobileTableOfContentsView(
                     tableOfContents,
                     model.activeSection,
@@ -1084,7 +1082,7 @@ const view = (model: Model) => {
             ],
           ),
           Option.match(currentPageTableOfContents, {
-            onSome: (tableOfContents) =>
+            onSome: tableOfContents =>
               tableOfContentsView(
                 tableOfContents,
                 model.activeSection,
@@ -1131,8 +1129,8 @@ const application = Runtime.makeApplication({
   commandStreams,
   container: document.getElementById('root')!,
   browser: {
-    onUrlRequest: (request) => ClickedLink({ request }),
-    onUrlChange: (url) => ChangedUrl({ url }),
+    onUrlRequest: request => ClickedLink({ request }),
+    onUrlChange: url => ChangedUrl({ url }),
   },
 })
 

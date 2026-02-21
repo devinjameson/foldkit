@@ -211,7 +211,7 @@ const leaveRoom = (model: Model): UpdateReturn => [
 
 const handleStartGame = (model: Model, room: Shared.Room) => (): UpdateReturn =>
   Option.match(model.maybeSession, {
-    onSome: (session) => {
+    onSome: session => {
       const isHost = session.player.id === room.hostId
       const startGameCommand = optionWhen(isHost, () => startGame(room.id, session.player.id))
       return [model, Array.fromOption(startGameCommand)]

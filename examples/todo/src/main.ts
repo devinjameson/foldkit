@@ -104,7 +104,7 @@ type Flags = typeof Flags.Type
 
 // INIT
 
-const init: Runtime.ElementInit<Model, Message, Flags> = (flags) => [
+const init: Runtime.ElementInit<Model, Message, Flags> = flags => [
   {
     todos: Option.getOrElse(flags.todos, () => []),
     newTodoText: '',
@@ -173,7 +173,7 @@ const update = (
       },
 
       DeletedTodo: ({ id }) => {
-        const updatedTodos = Array.filter(model.todos, (todo) => todo.id !== id)
+        const updatedTodos = Array.filter(model.todos, todo => todo.id !== id)
 
         return [
           evo(model, {
@@ -184,9 +184,9 @@ const update = (
       },
 
       ToggledTodo: ({ id }) => {
-        const updatedTodos = Array.map(model.todos, (todo) =>
+        const updatedTodos = Array.map(model.todos, todo =>
           todo.id === id
-            ? evo(todo, { completed: (completed) => !completed })
+            ? evo(todo, { completed: completed => !completed })
             : todo,
         )
 
@@ -199,7 +199,7 @@ const update = (
       },
 
       StartedEditing: ({ id }) => {
-        const todo = Array.findFirst(model.todos, (t) => t.id === id)
+        const todo = Array.findFirst(model.todos, t => t.id === id)
         return [
           evo(model, {
             editing: () =>
@@ -207,7 +207,7 @@ const update = (
                 id,
                 text: Option.match(todo, {
                   onNone: () => '',
-                  onSome: (t) => t.text,
+                  onSome: t => t.text,
                 }),
               }),
           }),
@@ -231,7 +231,7 @@ const update = (
                 ]
               }
 
-              const updatedTodos = Array.map(model.todos, (todo) =>
+              const updatedTodos = Array.map(model.todos, todo =>
                 todo.id === id
                   ? evo(todo, { text: () => String.trim(text) })
                   : todo,
@@ -256,8 +256,8 @@ const update = (
       ],
 
       ToggledAll: () => {
-        const allCompleted = Array.every(model.todos, (todo) => todo.completed)
-        const updatedTodos = Array.map(model.todos, (todo) =>
+        const allCompleted = Array.every(model.todos, todo => todo.completed)
+        const updatedTodos = Array.map(model.todos, todo =>
           evo(todo, {
             completed: () => !allCompleted,
           }),
@@ -272,10 +272,7 @@ const update = (
       },
 
       ClearedCompleted: () => {
-        const updatedTodos = Array.filter(
-          model.todos,
-          (todo) => !todo.completed,
-        )
+        const updatedTodos = Array.filter(model.todos, todo => !todo.completed)
 
         return [
           evo(model, {
@@ -377,7 +374,7 @@ const editingTodoView = (todo: Todo, text: string): Html =>
         Class(
           'flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500',
         ),
-        OnInput((text) => UpdatedEditingTodo({ text })),
+        OnInput(text => UpdatedEditingTodo({ text })),
       ]),
       button(
         [
@@ -475,7 +472,7 @@ const footerView = (
             [
               Array.match(model.todos, {
                 onEmpty: () => empty,
-                onNonEmpty: (todos) =>
+                onNonEmpty: todos =>
                   button(
                     [
                       OnClick(ToggledAll()),
@@ -484,7 +481,7 @@ const footerView = (
                       ),
                     ],
                     [
-                      Array.every(todos, (t) => t.completed)
+                      Array.every(todos, t => t.completed)
                         ? 'Mark all active'
                         : 'Mark all complete',
                     ],
@@ -511,15 +508,15 @@ const footerView = (
 const filterTodos = (todos: Todos, filter: Filter): Todos =>
   M.value(filter).pipe(
     M.when('All', () => todos),
-    M.when('Active', () => Array.filter(todos, (todo) => !todo.completed)),
-    M.when('Completed', () => Array.filter(todos, (todo) => todo.completed)),
+    M.when('Active', () => Array.filter(todos, todo => !todo.completed)),
+    M.when('Completed', () => Array.filter(todos, todo => todo.completed)),
     M.exhaustive,
   )
 
 const view = (model: Model): Html => {
   const filteredTodos = filterTodos(model.todos, model.filter)
   const activeCount = Array.length(
-    Array.filter(model.todos, (todo) => !todo.completed),
+    Array.filter(model.todos, todo => !todo.completed),
   )
   const completedCount = Array.length(model.todos) - activeCount
 
@@ -548,7 +545,7 @@ const view = (model: Model): Html => {
                     Class(
                       'flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
                     ),
-                    OnInput((text) => UpdatedNewTodo({ text })),
+                    OnInput(text => UpdatedNewTodo({ text })),
                   ]),
                   button(
                     [
@@ -577,7 +574,7 @@ const view = (model: Model): Html => {
                   ),
                 ],
               ),
-            onNonEmpty: (todos) =>
+            onNonEmpty: todos =>
               ul(
                 [Class('space-y-2 mb-6')],
                 Array.map(todos, todoItemView(model)),

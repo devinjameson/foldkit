@@ -30,7 +30,7 @@ const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<
   Message
 >({
   tick: {
-    modelToDeps: (model) => ({ isRunning: model.isRunning }),
+    modelToDeps: model => ({ isRunning: model.isRunning }),
     depsToStream: ({ isRunning }) =>
       Stream.when(
         Stream.tick(Duration.millis(100)).pipe(

@@ -138,7 +138,7 @@ const itemToDescription = (
 ): Option.Option<string> =>
   pipe(
     item.comment,
-    Option.flatMap((comment) => comment.summary),
+    Option.flatMap(comment => comment.summary),
     Option.flatMap(partsToSummaryText),
   )
 
@@ -156,7 +156,7 @@ const signatureToDescription = (
     item.signatures,
     Option.flatMap(Array.head),
     Option.flatMap(({ comment }) => comment),
-    Option.flatMap((comment) => comment.summary),
+    Option.flatMap(comment => comment.summary),
     Option.flatMap(partsToSummaryText),
   )
 
@@ -167,7 +167,7 @@ const parseParameter = (parameter: TypeDocParam): ApiParameter => ({
   defaultValue: parameter.defaultValue,
   description: pipe(
     parameter.comment,
-    Option.flatMap((comment) => comment.summary),
+    Option.flatMap(comment => comment.summary),
     Option.flatMap(partsToSummaryText),
   ),
 })
@@ -177,7 +177,7 @@ const parseSignatures = (
 ): ReadonlyArray<ApiFunctionSignature> =>
   Option.match(item.signatures, {
     onNone: () => [],
-    onSome: Array.map((signature) => ({
+    onSome: Array.map(signature => ({
       parameters: Option.match(signature.parameters, {
         onNone: () => [],
         onSome: Array.map(parseParameter),
@@ -228,7 +228,7 @@ const parseItemsAsModule = (
   name,
   functions: pipe(
     children,
-    Array.filter((item) => item.kind === Kind.Function),
+    Array.filter(item => item.kind === Kind.Function),
     Array.map(parseFunction),
   ),
   types: pipe(
@@ -242,12 +242,12 @@ const parseItemsAsModule = (
   ),
   interfaces: pipe(
     children,
-    Array.filter((item) => item.kind === Kind.Interface),
+    Array.filter(item => item.kind === Kind.Interface),
     Array.map(parseInterface),
   ),
   variables: pipe(
     children,
-    Array.filter((item) => item.kind === Kind.Variable),
+    Array.filter(item => item.kind === Kind.Variable),
     Array.map(parseVariable),
   ),
 })
@@ -264,10 +264,10 @@ const parseModule = (
     ({ kind }) => kind !== Kind.Namespace,
   )
 
-  const namespaceModules = Array.flatMap(namespaces, (namespace) =>
+  const namespaceModules = Array.flatMap(namespaces, namespace =>
     Option.match(namespace.children, {
       onNone: () => [],
-      onSome: (children) => [
+      onSome: children => [
         parseItemsAsModule(
           `${module.name}/${namespace.name}`,
           children,
@@ -321,7 +321,7 @@ const sectionEntries = <T extends { readonly name: string }>(
       ...pipe(
         items,
         sortByName,
-        Array.map((item) => ({
+        Array.map(item => ({
           id: `${idPrefix}-${moduleName}/${item.name}`,
           text: item.name,
           level: 'h4' as const,
@@ -333,7 +333,7 @@ const sectionEntries = <T extends { readonly name: string }>(
 export const toTableOfContents = (
   parsed: ParsedApiReference,
 ): ReadonlyArray<TableOfContentsEntry> =>
-  Array.flatMap(parsed.modules, (module) => [
+  Array.flatMap(parsed.modules, module => [
     { id: module.name, text: module.name, level: 'h2' as const },
     ...sectionEntries(
       module.name,

@@ -20,7 +20,7 @@ export const update = (
       GotDisclosureMessage: ({ id, message }) =>
         Option.match(Record.get(model, id), {
           onNone: () => [model, []],
-          onSome: (disclosure) => {
+          onSome: disclosure => {
             const [nextDisclosure, commands] = Ui.Disclosure.update(
               disclosure,
               message,
@@ -29,7 +29,7 @@ export const update = (
             return [
               Record.set(model, id, nextDisclosure),
               commands.map(
-                Effect.map((message) =>
+                Effect.map(message =>
                   GotDisclosureMessage({ id, message }),
                 ),
               ),

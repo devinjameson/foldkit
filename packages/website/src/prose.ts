@@ -100,7 +100,7 @@ export const para = (
 export const paragraphs = (
   ...contents: ReadonlyArray<string>
 ): ReadonlyArray<Html> =>
-  Array.map(contents, (text) => p([Class('mb-4')], [text]))
+  Array.map(contents, text => p([Class('mb-4')], [text]))
 
 export const tableOfContentsEntryToHeader = (
   entry: TableOfContentsEntry,
@@ -111,7 +111,7 @@ export const bullets = (
 ): Html =>
   ul(
     [Class('list-disc mb-8 space-y-2 ml-4')],
-    Array.map(items, (item) => li([], [item])),
+    Array.map(items, item => li([], [item])),
   )
 
 export const bulletPoint = (

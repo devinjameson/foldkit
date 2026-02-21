@@ -507,13 +507,13 @@ const buildVNodeData = <Message>(
     const dataRef = yield* Ref.make<VNodeData>({})
 
     const setData = <K extends keyof VNodeData>(key: K, value: VNodeData[K]) =>
-      Ref.update(dataRef, (data) => ({ ...data, [key]: value }))
+      Ref.update(dataRef, data => ({ ...data, [key]: value }))
 
     const updateData = <K extends keyof VNodeData>(
       key: K,
       value: Partial<VNodeData[K]>,
     ) =>
-      Ref.update(dataRef, (data) => ({
+      Ref.update(dataRef, data => ({
         ...data,
         [key]: { ...data[key], ...value },
       }))
@@ -526,7 +526,7 @@ const buildVNodeData = <Message>(
       propName: K,
       value: unknown,
     ) =>
-      Ref.update(dataRef, (data) => ({
+      Ref.update(dataRef, data => ({
         ...data,
         props: {
           ...data.props,
@@ -543,7 +543,7 @@ const buildVNodeData = <Message>(
         },
       }))
 
-    yield* Effect.forEach(attributes, (attr) =>
+    yield* Effect.forEach(attributes, attr =>
       Match.value(attr).pipe(
         Match.tagsExhaustive({
           Key: ({ value }) => setData('key', value),
@@ -706,7 +706,7 @@ const buildVNodeData = <Message>(
             }),
           OnToggle: ({ f }) =>
             updateDataOn({
-              toggle: (event) =>
+              toggle: event =>
                 /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
                 dispatchSync(f((event.target as HTMLDetailsElement).open)),
             }),

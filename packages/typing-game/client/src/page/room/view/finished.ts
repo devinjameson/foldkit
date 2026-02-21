@@ -105,7 +105,7 @@ export const finished = (
   hostId: string,
   maybeSession: Option.Option<RoomPlayerSession>,
 ): Html => {
-  const isLocalPlayerHost = Option.exists(maybeSession, (session) => session.player.id === hostId)
+  const isLocalPlayerHost = Option.exists(maybeSession, session => session.player.id === hostId)
 
   return div(
     [Class('space-y-6')],
@@ -113,7 +113,7 @@ export const finished = (
       h3([Class('uppercase')], ['[Game complete]']),
       Option.match(maybeScoreboard, {
         onNone: () => empty,
-        onSome: (scoreboard) => scoreboardView(scoreboard, hostId),
+        onSome: scoreboard => scoreboardView(scoreboard, hostId),
       }),
       ...(isLocalPlayerHost ? [div([Class('mt-4')], ['> Enter to play again'])] : []),
     ],

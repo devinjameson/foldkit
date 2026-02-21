@@ -37,7 +37,7 @@ const LocationAndHrefFromString = S.transformOrFail(S.String, LocationAndHref, {
           },
         }
       },
-      catch: (error) =>
+      catch: error =>
         new ParseResult.Type(ast, urlString, `Invalid URL: ${error}`),
     }),
   encode: ({ href, location }) => {
@@ -63,14 +63,14 @@ const UrlFromLocationAndHref = S.transform(LocationAndHref, Url, {
       hash: OptionExt.fromString(hashPart || ''),
     }
   },
-  encode: (url) => {
+  encode: url => {
     const search = Option.match(url.search, {
       onNone: () => '',
-      onSome: (s) => `?${s}`,
+      onSome: s => `?${s}`,
     })
     const hash = Option.match(url.hash, {
       onNone: () => '',
-      onSome: (h) => `#${h}`,
+      onSome: h => `#${h}`,
     })
     const href = `${url.pathname}${search}${hash}`
 

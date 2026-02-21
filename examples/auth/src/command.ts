@@ -24,7 +24,7 @@ export const saveSession = (
     )
     return SavedSession()
   }).pipe(
-    Effect.catchAll((error) =>
+    Effect.catchAll(error =>
       Effect.succeed(FailedSessionSave({ error: String(error) })),
     ),
     Effect.provide(BrowserKeyValueStore.layerLocalStorage),
@@ -38,7 +38,7 @@ export const clearSession = (): Runtime.Command<
     yield* store.remove(SESSION_STORAGE_KEY)
     return ClearedSession()
   }).pipe(
-    Effect.catchAll((error) =>
+    Effect.catchAll(error =>
       Effect.succeed(FailedSessionClear({ error: String(error) })),
     ),
     Effect.provide(BrowserKeyValueStore.layerLocalStorage),

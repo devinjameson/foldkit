@@ -16,7 +16,7 @@ export const update = (
             evo(model, { settings: () => nextSettings }),
             commands,
           ],
-          onSome: (outMessage) =>
+          onSome: outMessage =>
             M.value(outMessage).pipe(
               M.tagsExhaustive({
                 RequestedLogout: () => [

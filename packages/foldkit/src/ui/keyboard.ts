@@ -12,9 +12,7 @@ export const findFirstEnabledIndex =
   (startIndex: number, direction: 1 | -1): number =>
     pipe(
       itemCount,
-      Array.makeBy((step) =>
-        wrapIndex(startIndex + step * direction, itemCount),
-      ),
+      Array.makeBy(step => wrapIndex(startIndex + step * direction, itemCount)),
       Array.findFirst(Predicate.not(isDisabled)),
       Option.getOrElse(() => focusedIndex),
     )

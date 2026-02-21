@@ -1,11 +1,11 @@
 import { Task } from 'foldkit'
 
 // Focus an element after form submission
-const focusCommand = Task.focus('#email-input', (success) =>
+const focusCommand = Task.focus('#email-input', success =>
   GotInputFocus({ success }),
 )
 
 // Generate a random integer between 1 and 6 (dice roll)
-const randomCommand = Task.randomInt(1, 7, (value) =>
+const randomCommand = Task.randomInt(1, 7, value =>
   GotDiceRoll({ value }),
 )

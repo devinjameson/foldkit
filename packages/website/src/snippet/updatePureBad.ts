@@ -9,7 +9,7 @@ const update = (model: Model, message: Message) =>
     Match.tagsExhaustive({
       ClickedFetchUser: () => {
         // Making HTTP requests directly
-        fetch('/api/user').then((res) => {
+        fetch('/api/user').then(res => {
           model.user = res.json() // Mutating state!
         })
         return [model, []]

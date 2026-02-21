@@ -19,7 +19,7 @@ export const systemTheme: CommandStream<
   depsToStream: ({ isSystemPreference }) =>
     Stream.when(
       Stream.async<Runtime.Command<typeof ChangedSystemTheme>>(
-        (emit) => {
+        emit => {
           const mediaQuery = window.matchMedia(
             '(prefers-color-scheme: dark)',
           )

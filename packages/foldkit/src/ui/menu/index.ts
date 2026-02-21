@@ -69,6 +69,10 @@ export const ActivatedItem = m('ActivatedItem', {
 export const DeactivatedItem = m('DeactivatedItem')
 /** Sent when an item is selected via Enter, Space, or click. */
 export const SelectedItem = m('SelectedItem', { index: S.Number })
+/** Sent when Enter or Space is pressed on the active item, triggering a programmatic click on the DOM element. */
+export const RequestedItemClick = m('RequestedItemClick', {
+  index: S.Number,
+})
 /** Sent when a printable character is typed for typeahead search. */
 export const Searched = m('Searched', {
   key: S.String,
@@ -98,6 +102,7 @@ export const Message = S.Union(
   DeactivatedItem,
   SelectedItem,
   MovedPointerOverItem,
+  RequestedItemClick,
   Searched,
   ClearedSearch,
   NoOp,
@@ -112,6 +117,7 @@ export type ActivatedItem = typeof ActivatedItem.Type
 export type DeactivatedItem = typeof DeactivatedItem.Type
 export type SelectedItem = typeof SelectedItem.Type
 export type MovedPointerOverItem = typeof MovedPointerOverItem.Type
+export type RequestedItemClick = typeof RequestedItemClick.Type
 export type Searched = typeof Searched.Type
 export type ClearedSearch = typeof ClearedSearch.Type
 export type NoOp = typeof NoOp.Type
@@ -258,7 +264,7 @@ export const update = (
       MovedPointerOverItem: ({ index, screenX, screenY }) => {
         const isSamePosition = Option.exists(
           model.maybeLastPointerPosition,
-          (position) =>
+          position =>
             position.screenX === screenX && position.screenY === screenY,
         )
 
@@ -289,6 +295,11 @@ export const update = (
           ...Array.fromOption(maybeUnlockScrollCommand),
           ...Array.fromOption(maybeRestoreInertCommand),
         ],
+      ],
+
+      RequestedItemClick: ({ index }) => [
+        model,
+        [Task.clickElement(itemSelector(model.id, index), () => NoOp())],
       ],
 
       Searched: ({ key, maybeTargetIndex }) => {
@@ -381,6 +392,7 @@ export type ViewConfig<Message, Item extends string> = Readonly<{
       | DeactivatedItem
       | SelectedItem
       | MovedPointerOverItem
+      | RequestedItemClick
       | Searched,
   ) => Message
   items: ReadonlyArray<Item>
@@ -413,12 +425,9 @@ export const groupContiguous = <A>(
     item,
   }))
 
-  return Array.chop(tagged, (nonEmpty) => {
+  return Array.chop(tagged, nonEmpty => {
     const key = Array.headNonEmpty(nonEmpty).key
-    const [matching, rest] = Array.span(
-      nonEmpty,
-      (tagged) => tagged.key === key,
-    )
+    const [matching, rest] = Array.span(nonEmpty, tagged => tagged.key === key)
     return [{ key, items: Array.map(matching, ({ item }) => item) }, rest]
   })
 }
@@ -438,7 +447,7 @@ export const resolveTypeaheadMatch = <Item extends string>(
   const offset = isRefinement ? 0 : 1
   const startIndex = Option.match(maybeActiveItemIndex, {
     onNone: () => 0,
-    onSome: (index) => index + offset,
+    onSome: index => index + offset,
   })
 
   const isEnabledMatch = (index: number): boolean =>
@@ -446,7 +455,7 @@ export const resolveTypeaheadMatch = <Item extends string>(
     pipe(
       items,
       Array.get(index),
-      Option.exists((item) =>
+      Option.exists(item =>
         pipe(
           itemToSearchText(item, index),
           Str.toLowerCase,
@@ -457,7 +466,7 @@ export const resolveTypeaheadMatch = <Item extends string>(
 
   return pipe(
     items.length,
-    Array.makeBy((step) => wrapIndex(startIndex + step, items.length)),
+    Array.makeBy(step => wrapIndex(startIndex + step, items.length)),
     Array.findFirst(isEnabledMatch),
   )
 }
@@ -539,7 +548,7 @@ export const view = <Message, Item extends string>(
     pipe(
       items,
       Array.get(index),
-      Option.exists((item) => isItemDisabled(item, index)),
+      Option.exists(item => isItemDisabled(item, index)),
     )
 
   const firstEnabledIndex = findFirstEnabledIndex(
@@ -607,15 +616,15 @@ export const view = <Message, Item extends string>(
     M.value(key).pipe(
       M.when('Escape', () => Option.some(toMessage(Closed()))),
       M.when('Enter', () =>
-        Option.map(maybeActiveItemIndex, (index) =>
-          toMessage(SelectedItem({ index })),
+        Option.map(maybeActiveItemIndex, index =>
+          toMessage(RequestedItemClick({ index })),
         ),
       ),
       M.when(' ', () =>
         Str.isNonEmpty(searchQuery)
           ? searchForKey(' ')
-          : Option.map(maybeActiveItemIndex, (index) =>
-              toMessage(SelectedItem({ index })),
+          : Option.map(maybeActiveItemIndex, index =>
+              toMessage(RequestedItemClick({ index })),
             ),
       ),
       M.whenOr(
@@ -636,7 +645,7 @@ export const view = <Message, Item extends string>(
           ),
       ),
       M.when(
-        (key) => key.length === 1,
+        key => key.length === 1,
         () => searchForKey(key),
       ),
       M.orElse(() => Option.none()),
@@ -660,7 +669,7 @@ export const view = <Message, Item extends string>(
 
   const maybeActiveDescendant = Option.match(maybeActiveItemIndex, {
     onNone: () => [],
-    onSome: (index) => [AriaActiveDescendant(itemId(id, index))],
+    onSome: index => [AriaActiveDescendant(itemId(id, index))],
   })
 
   const itemsContainerAttributes = [
@@ -682,7 +691,7 @@ export const view = <Message, Item extends string>(
   const menuItems = Array.map(items, (item, index) => {
     const isActiveItem = Option.exists(
       maybeActiveItemIndex,
-      (activeIndex) => activeIndex === index,
+      activeIndex => activeIndex === index,
     )
     const isDisabledItem = isDisabled(index)
     const itemConfig = itemToConfig(item, {
@@ -712,7 +721,7 @@ export const view = <Message, Item extends string>(
                   toMessage(MovedPointerOverItem({ index, screenX, screenY })),
                 ),
               ),
-              OnPointerLeave((pointerType) =>
+              OnPointerLeave(pointerType =>
                 OptionExt.when(
                   pointerType !== 'touch',
                   toMessage(DeactivatedItem()),
@@ -734,7 +743,7 @@ export const view = <Message, Item extends string>(
       Array.get(items, index).pipe(
         Option.match({
           onNone: () => '',
-          onSome: (item) => itemGroupKey(item, index),
+          onSome: item => itemGroupKey(item, index),
         }),
       ),
     )
@@ -748,7 +757,7 @@ export const view = <Message, Item extends string>(
 
       const headingElement = Option.match(maybeHeading, {
         onNone: () => [],
-        onSome: (heading) => [
+        onSome: heading => [
           keyed('div')(
             headingId,
             [Id(headingId), Role('presentation'), Class(heading.className)],

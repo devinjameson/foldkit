@@ -173,10 +173,10 @@ const faqItem = (
   toMessage: (message: Message) => ParentMessage,
 ): Html =>
   Option.match(Record.get(model, id), {
-    onSome: (disclosure) =>
+    onSome: disclosure =>
       Ui.Disclosure.view({
         model: disclosure,
-        toMessage: (message) =>
+        toMessage: message =>
           toMessage(GotFaqDisclosureMessage({ id, message })),
         buttonClassName: faqButtonClassName,
         buttonContent: div(

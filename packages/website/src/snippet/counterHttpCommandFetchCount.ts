@@ -9,7 +9,7 @@ const fetchCount: Runtime.Command<
   // in the Effect as UnknownException.
   // https://effect.website/docs/getting-started/creating-effects/#trypromise
   const result = yield* Effect.tryPromise(() =>
-    fetch('/api/count').then((res) => {
+    fetch('/api/count').then(res => {
       if (!res.ok) throw new Error('API request failed')
       // NOTE: We would not cast in a real application. Instead, we would
       // decode the JSON using Effect Schema. For simplicity, we skip that here.
@@ -26,7 +26,7 @@ const fetchCount: Runtime.Command<
   // from failure by returning a FailedCountFetch Message with the error message.
   // In a real application, we might log the error to an external service,
   // retry the request, etc.
-  Effect.catchAll((error) =>
+  Effect.catchAll(error =>
     Effect.succeed(FailedCountFetch({ error: error.message })),
   ),
 )

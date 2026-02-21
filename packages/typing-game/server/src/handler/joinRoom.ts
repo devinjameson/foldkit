@@ -11,7 +11,7 @@ const makeUniqueUsername = (
 ): string => {
   const existingUsernames = Array.map(
     existingPlayers,
-    (player) => player.username,
+    player => player.username,
   )
 
   const usernameExists = (username: string) =>
@@ -39,9 +39,9 @@ export const joinRoom =
 
       const [room, player] = yield* SubscriptionRef.modifyEffect(
         roomByIdRef,
-        (roomById) =>
+        roomById =>
           Rooms.getById(roomById, payload.roomId).pipe(
-            Effect.map((room) => {
+            Effect.map(room => {
               const uniqueUsername = makeUniqueUsername(
                 payload.username,
                 room.players,
@@ -53,7 +53,7 @@ export const joinRoom =
               })
 
               const updatedRoom = Struct.evolve(room, {
-                players: (players) => [...players, player],
+                players: players => [...players, player],
               })
 
               const nextRoomById = HashMap.set(

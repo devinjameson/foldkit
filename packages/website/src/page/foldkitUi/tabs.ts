@@ -155,7 +155,7 @@ export const horizontalDemo = (
   heading('h3', horizontalHeader.id, horizontalHeader.text),
   Ui.Tabs.view({
     model: model.horizontalTabsDemo,
-    toMessage: (message) =>
+    toMessage: message =>
       toMessage(GotHorizontalTabsDemoMessage({ message })),
     tabs: demoTabs,
     tabToConfig,
@@ -170,7 +170,7 @@ export const verticalDemo = (
   heading('h3', verticalHeader.id, verticalHeader.text),
   Ui.Tabs.view({
     model: model.verticalTabsDemo,
-    toMessage: (message) =>
+    toMessage: message =>
       toMessage(GotVerticalTabsDemoMessage({ message })),
     tabs: demoTabs,
     tabToConfig: verticalTabToConfig,

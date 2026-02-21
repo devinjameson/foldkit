@@ -91,7 +91,7 @@ export const view = (
   onQuantityChange: (itemId: string, quantity: number) => ParentMessage,
 ): Html => {
   const filteredProducts = model.searchText
-    ? model.products.filter((product) =>
+    ? model.products.filter(product =>
         product.name.toLowerCase().includes(model.searchText.toLowerCase()),
       )
     : model.products
@@ -120,7 +120,7 @@ export const view = (
           ),
           section(
             [Class('grid gap-4')],
-            filteredProducts.map((product) =>
+            filteredProducts.map(product =>
               article(
                 [
                   Class(
@@ -198,7 +198,7 @@ export const view = (
           ),
           Array.match(cart, {
             onEmpty: () => empty,
-            onNonEmpty: (cart) =>
+            onNonEmpty: cart =>
               div(
                 [Class('mt-6 text-center')],
                 [

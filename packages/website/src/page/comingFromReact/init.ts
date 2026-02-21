@@ -13,7 +13,7 @@ export type InitReturn = [
 export const init = (): InitReturn => {
   const disclosures: Model = pipe(
     FAQ_IDS,
-    Array.map((id) => [id, Ui.Disclosure.init({ id })] as const),
+    Array.map(id => [id, Ui.Disclosure.init({ id })] as const),
     Record.fromEntries,
   )
 

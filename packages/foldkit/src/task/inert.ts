@@ -52,13 +52,13 @@ const markNotInert = (element: HTMLElement): void => {
 const resolveElements = (
   selectors: ReadonlyArray<string>,
 ): ReadonlyArray<HTMLElement> =>
-  Array.filterMap(selectors, (selector) => {
+  Array.filterMap(selectors, selector => {
     const element = document.querySelector(selector)
     return element instanceof HTMLElement ? Option.some(element) : Option.none()
   })
 
 const ancestorsUpToBody = (element: HTMLElement): ReadonlyArray<HTMLElement> =>
-  Array.unfold(element.parentElement, (current) =>
+  Array.unfold(element.parentElement, current =>
     Predicate.isNotNull(current)
       ? Option.some([
           current,
@@ -74,9 +74,9 @@ const inertableSiblings = (
   pipe(
     parent.children,
     Array.fromIterable,
-    Array.filterMap((child) =>
+    Array.filterMap(child =>
       child instanceof HTMLElement &&
-      !Array.some(allowedElements, (allowed) => child.contains(allowed))
+      !Array.some(allowedElements, allowed => child.contains(allowed))
         ? Option.some(child)
         : Option.none(),
     ),
@@ -104,7 +104,7 @@ export const inertOthers = <Message>(
     const cleanupFunctions = pipe(
       allowedElements,
       Array.flatMap(ancestorsUpToBody),
-      Array.flatMap((ancestor) =>
+      Array.flatMap(ancestor =>
         Array.map(inertableSiblings(ancestor, allowedElements), markInert),
       ),
     )
@@ -132,7 +132,7 @@ export const restoreInert = <Message>(
     const cleanupFunctions = inertState.cleanups.get(id)
 
     if (cleanupFunctions) {
-      Array.forEach(cleanupFunctions, (cleanup) => cleanup())
+      Array.forEach(cleanupFunctions, cleanup => cleanup())
       inertState.cleanups.delete(id)
     }
 

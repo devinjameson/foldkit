@@ -9,7 +9,7 @@ export const Snake = S.NonEmptyArray(Position.Position)
 export type Snake = typeof Snake.Type
 
 export const create = (startPos: Position.Position): Snake =>
-  Array.makeBy(INITIAL_LENGTH, (i) => ({
+  Array.makeBy(INITIAL_LENGTH, i => ({
     x: startPos.x - i,
     y: startPos.y,
   }))
@@ -36,8 +36,8 @@ export const hasCollision = (snake: Snake): boolean =>
   Array.matchLeft(snake, {
     onEmpty: () => false,
     onNonEmpty: (head, tail) =>
-      Array.some(tail, (segment) => Position.equivalence(head, segment)),
+      Array.some(tail, segment => Position.equivalence(head, segment)),
   })
 
 export const contains = (snake: Snake, pos: Position.Position): boolean =>
-  Array.some(snake, (segment) => Position.equivalence(segment, pos))
+  Array.some(snake, segment => Position.equivalence(segment, pos))

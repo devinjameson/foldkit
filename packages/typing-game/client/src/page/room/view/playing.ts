@@ -35,7 +35,7 @@ const typing = (
           Id(USER_GAME_TEXT_INPUT_ID),
           Value(userGameText),
           Class('absolute inset-0 opacity-0 z-10 resize-none'),
-          OnInput((value) => toMessage(ChangedUserText({ value }))),
+          OnInput(value => toMessage(ChangedUserText({ value }))),
           Spellcheck(false),
           Autocorrect('off'),
           Autocapitalize('none'),
@@ -65,7 +65,7 @@ const char =
       (hasNoInput && index === 0) ||
       (index === userGameTextLength && Option.isNone(maybeWrongCharIndex))
 
-    const isWrong = Option.exists(maybeWrongCharIndex, (wrongIndex) =>
+    const isWrong = Option.exists(maybeWrongCharIndex, wrongIndex =>
       Order.between(Number.Order)(index, {
         minimum: wrongIndex,
         maximum: Number.decrement(userGameTextLength),
@@ -105,7 +105,7 @@ export const playing = (
       ),
       Option.match(maybeGameText, {
         onNone: () => empty,
-        onSome: (gameText) => typing(gameText, userGameText, maybeWrongCharIndex, toMessage),
+        onSome: gameText => typing(gameText, userGameText, maybeWrongCharIndex, toMessage),
       }),
     ],
   )

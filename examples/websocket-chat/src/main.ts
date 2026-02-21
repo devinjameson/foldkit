@@ -152,7 +152,7 @@ const update = (
 
       SentMessage: ({ text }) => [
         model,
-        [Task.getZonedTime((zoned) => GotSentMessageTime({ text, zoned }))],
+        [Task.getZonedTime(zoned => GotSentMessageTime({ text, zoned }))],
       ],
 
       GotSentMessageTime: ({ text, zoned }) => {
@@ -164,7 +164,7 @@ const update = (
 
         return [
           evo(model, {
-            messages: (messages) => [...messages, newMessage],
+            messages: messages => [...messages, newMessage],
           }),
           [],
         ]
@@ -172,7 +172,7 @@ const update = (
 
       ReceivedMessage: ({ text }) => [
         model,
-        [Task.getZonedTime((zoned) => GotReceivedMessageTime({ text, zoned }))],
+        [Task.getZonedTime(zoned => GotReceivedMessageTime({ text, zoned }))],
       ],
 
       GotReceivedMessageTime: ({ text, zoned }) => {
@@ -184,7 +184,7 @@ const update = (
 
         return [
           evo(model, {
-            messages: (messages) => [...messages, newMessage],
+            messages: messages => [...messages, newMessage],
           }),
           [],
         ]
@@ -218,7 +218,7 @@ const connect = (): Runtime.Command<
   typeof Connected | typeof FailedConnection
 > =>
   Effect.race(
-    Effect.async((resume) => {
+    Effect.async(resume => {
       const ws = new WebSocket(WS_URL)
 
       const handleOpen = () => {
@@ -272,7 +272,7 @@ const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<
               | typeof Disconnected
               | typeof FailedConnection
             >
-          >((emit) => {
+          >(emit => {
             const handleMessage = (event: MessageEvent) => {
               emit.single(Effect.succeed(ReceivedMessage({ text: event.data })))
             }
@@ -427,13 +427,13 @@ const messagesView = (messages: ReadonlyArray<ChatMessage>): Html =>
           ),
         ],
       ),
-    onNonEmpty: (messages) =>
+    onNonEmpty: messages =>
       div(
         [Class('flex-1 p-6 overflow-y-auto')],
         [
           ul(
             [Class('space-y-3')],
-            messages.map((message) => {
+            messages.map(message => {
               return li(
                 [
                   Class(
@@ -510,7 +510,7 @@ const messageInputView = (messageInput: string): Html =>
             Type('text'),
             Value(messageInput),
             Placeholder('Type a message...'),
-            OnInput((value) => UpdatedMessageInput({ value })),
+            OnInput(value => UpdatedMessageInput({ value })),
             Class(
               'flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
             ),

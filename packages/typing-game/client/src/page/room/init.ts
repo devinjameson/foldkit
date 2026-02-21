@@ -11,10 +11,10 @@ export type InitReturn = [Model, ReadonlyArray<Runtime.Command<Message>>]
 export const init = (route: AppRoute): InitReturn => {
   const commands = pipe(
     route,
-    Option.liftPredicate((route) => route._tag === 'Room'),
+    Option.liftPredicate(route => route._tag === 'Room'),
     Option.map(({ roomId }) => [
-      loadSessionFromStorage(roomId).pipe(Effect.map((message) => message)),
-      getRoomById(roomId).pipe(Effect.map((message) => message)),
+      loadSessionFromStorage(roomId).pipe(Effect.map(message => message)),
+      getRoomById(roomId).pipe(Effect.map(message => message)),
     ]),
     Array.fromOption,
     Array.flatten,

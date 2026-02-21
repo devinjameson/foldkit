@@ -246,14 +246,14 @@ const makeRuntime =
             Schema.decodeUnknownEither(Model),
             Either.match({
               onLeft: () => init(flags, Option.getOrUndefined(currentUrl)),
-              onRight: (restoredModel) => [restoredModel, []],
+              onRight: restoredModel => [restoredModel, []],
             }),
           )
         : init(flags, Option.getOrUndefined(currentUrl))
 
       const modelSubscriptionRef = yield* SubscriptionRef.make(initModel)
 
-      yield* Effect.forEach(initCommands, (command) =>
+      yield* Effect.forEach(initCommands, command =>
         Effect.forkDaemon(command.pipe(Effect.flatMap(enqueueMessage))),
       )
 
@@ -285,7 +285,7 @@ const makeRuntime =
             preserveModel(nextModel)
           }
 
-          yield* Effect.forEach(commands, (command) =>
+          yield* Effect.forEach(commands, command =>
             Effect.forkDaemon(command.pipe(Effect.flatMap(enqueueMessage))),
           )
         })
@@ -329,7 +329,7 @@ const makeRuntime =
 
       const render = (model: Model) =>
         view(model).pipe(
-          Effect.flatMap((nextVNodeNullish) =>
+          Effect.flatMap(nextVNodeNullish =>
             Effect.gen(function* () {
               const maybeCurrentVNode = yield* Ref.get(maybeCurrentVNodeRef)
               const patchedVNode = yield* Effect.sync(() =>
@@ -386,7 +386,7 @@ const makeRuntime =
             yield* processMessage(message)
           }),
         ),
-        Effect.catchAllCause((cause) =>
+        Effect.catchAllCause(cause =>
           Effect.sync(() => {
             const squashed = Cause.squash(cause)
             const appError =
@@ -413,7 +413,7 @@ const patchVNode = (
 
   return Option.match(maybeCurrentVNode, {
     onNone: () => patch(toVNode(container), nextVNode),
-    onSome: (currentVNode) => patch(currentVNode, nextVNode),
+    onSome: currentVNode => patch(currentVNode, nextVNode),
   })
 }
 
@@ -497,7 +497,7 @@ export function makeElement<
       ...baseConfig,
       Flags: config.Flags,
       flags: config.flags,
-      init: (flags) => config.init(flags),
+      init: flags => config.init(flags),
     })
   } else {
     return makeRuntime({
@@ -575,7 +575,7 @@ const preserveModel = (model: unknown): void => {
 /** Starts a Foldkit runtime, with HMR support for development. */
 export const run = (foldkitRuntime: MakeRuntimeReturn): void => {
   if (import.meta.hot) {
-    import.meta.hot.on('foldkit:restore-model', (model) => {
+    import.meta.hot.on('foldkit:restore-model', model => {
       BrowserRuntime.runMain(foldkitRuntime(model))
     })
 

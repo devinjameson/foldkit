@@ -12,6 +12,6 @@ export const createRoom = (
     const { player, room } = yield* client.createRoom({ username })
     return CreatedRoom({ roomId: room.id, player })
   }).pipe(
-    Effect.catchAll((error) => Effect.succeed(FailedRoom({ error: String(error) }))),
+    Effect.catchAll(error => Effect.succeed(FailedRoom({ error: String(error) }))),
     Effect.provide(RoomsClient.Default),
   )

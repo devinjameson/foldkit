@@ -37,9 +37,7 @@ export const update = (
             dialogDemo: () => nextDialogDemo,
           }),
           dialogCommands.map(
-            Effect.map((message) =>
-              GotDialogDemoMessage({ message }),
-            ),
+            Effect.map(message => GotDialogDemoMessage({ message })),
           ),
         ]
       },
@@ -53,7 +51,7 @@ export const update = (
             disclosureDemo: () => nextDisclosureDemo,
           }),
           disclosureCommands.map(
-            Effect.map((message) =>
+            Effect.map(message =>
               GotDisclosureDemoMessage({ message }),
             ),
           ),
@@ -71,7 +69,7 @@ export const update = (
             menuBasicDemo: () => nextMenuBasicDemo,
           }),
           menuBasicCommands.map(
-            Effect.map((message) =>
+            Effect.map(message =>
               GotMenuBasicDemoMessage({ message }),
             ),
           ),
@@ -87,7 +85,7 @@ export const update = (
             menuAnimatedDemo: () => nextMenuAnimatedDemo,
           }),
           menuAnimatedCommands.map(
-            Effect.map((message) =>
+            Effect.map(message =>
               GotMenuAnimatedDemoMessage({ message }),
             ),
           ),
@@ -103,7 +101,7 @@ export const update = (
             horizontalTabsDemo: () => nextHorizontalTabsDemo,
           }),
           horizontalTabsCommands.map(
-            Effect.map((message) =>
+            Effect.map(message =>
               GotHorizontalTabsDemoMessage({ message }),
             ),
           ),
@@ -119,7 +117,7 @@ export const update = (
             verticalTabsDemo: () => nextVerticalTabsDemo,
           }),
           verticalTabsCommands.map(
-            Effect.map((message) =>
+            Effect.map(message =>
               GotVerticalTabsDemoMessage({ message }),
             ),
           ),

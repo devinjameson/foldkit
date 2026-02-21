@@ -64,10 +64,10 @@ export const view = (
                   ],
                 ),
               ],
-              onNonEmpty: (cart) => [
+              onNonEmpty: cart => [
                 section(
                   [Class('space-y-4 mb-6')],
-                  cart.map((cartItem) =>
+                  cart.map(cartItem =>
                     article(
                       [
                         Class(

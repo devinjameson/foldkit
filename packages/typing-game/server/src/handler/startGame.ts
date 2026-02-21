@@ -60,7 +60,7 @@ export const startGame =
       yield* updateRoom(
         roomByIdRef,
         payload.roomId,
-      )((room) =>
+      )(room =>
         Struct.evolve(room, {
           maybeGame: () => Option.some(game),
           maybeScoreboard: () => Option.none(),

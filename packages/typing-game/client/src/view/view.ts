@@ -10,8 +10,8 @@ import { Class, Href, a, div, footer, h1, keyed, main, p, section, span } from '
 export const view = (model: Model): Html => {
   const content = M.value(model.route).pipe(
     M.tagsExhaustive({
-      Home: () => Home.view(model.home, (message) => GotHomeMessage({ message })),
-      Room: Room.view(model.room, (message) => GotRoomMessage({ message })),
+      Home: () => Home.view(model.home, message => GotHomeMessage({ message })),
+      Room: Room.view(model.room, message => GotRoomMessage({ message })),
       NotFound: notFound,
     }),
   )

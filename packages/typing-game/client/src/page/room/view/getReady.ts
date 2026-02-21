@@ -10,7 +10,7 @@ export const getReady = (maybeGameText: Option.Option<string>): Html =>
       h3([Class('uppercase')], ['Preparing game...']),
       Option.match(maybeGameText, {
         onNone: () => empty,
-        onSome: (text) => div([], [text]),
+        onSome: text => div([], [text]),
       }),
     ],
   )

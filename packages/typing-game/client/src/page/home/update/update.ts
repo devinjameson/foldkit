@@ -44,7 +44,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
           M.orElse(() => [model, [], Option.none()]),
         ),
 
-      PressedKey: (message) => [...handleKeyPressed(model)(message), Option.none()],
+      PressedKey: message => [...handleKeyPressed(model)(message), Option.none()],
 
       ChangedUsername: ({ value }) =>
         M.value(model.homeStep).pipe(

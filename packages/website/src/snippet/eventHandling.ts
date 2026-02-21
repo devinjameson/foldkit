@@ -9,7 +9,7 @@ button(
 // For input events, Foldkit extracts the value and passes it
 // to your function:
 input([
-  OnInput((value) => ChangedSearch({ text: value })),
+  OnInput(value => ChangedSearch({ text: value })),
   Value(model.searchText),
   Class('input'),
 ])

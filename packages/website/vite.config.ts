@@ -87,11 +87,9 @@ const formatParams = (
         onNonEmpty: () =>
           pipe(
             parameters,
-            Array.map(
-              (parameter) => `  ${formatParam(parameter, 1)}`,
-            ),
+            Array.map(parameter => `  ${formatParam(parameter, 1)}`),
             Array.join(',\n'),
-            (joined) => `(\n${joined}\n)`,
+            joined => `(\n${joined}\n)`,
           ),
       }),
   })
@@ -104,12 +102,12 @@ const buildFunctionSignatureString = (
     Option.filter(Array.isNonEmptyReadonlyArray),
     Option.match({
       onNone: () => '',
-      onSome: (typeParams) =>
+      onSome: typeParams =>
         pipe(
           typeParams,
           Array.map(formatTypeParam),
           Array.join(', '),
-          (joined) => `<${joined}>`,
+          joined => `<${joined}>`,
         ),
     }),
   )
@@ -135,13 +133,13 @@ const functionEntries = (
     Option.filter(Array.isNonEmptyReadonlyArray),
     Option.match({
       onNone: () => [],
-      onSome: (signatures) => [
+      onSome: signatures => [
         [
           `function-${prefix}${item.name}`,
           pipe(
             signatures,
             Array.map(
-              (signature) =>
+              signature =>
                 `declare function _${buildFunctionSignatureString(signature)}`,
             ),
             Array.join('\n\n'),
@@ -229,11 +227,11 @@ const highlightApiSignaturesPlugin = (): Plugin => ({
       prefix: string,
       children: ReadonlyArray<TypeDocItem>,
     ): ReadonlyArray<readonly [string, string]> =>
-      Array.flatMap(children, (item) =>
+      Array.flatMap(children, item =>
         item.kind === Kind.Namespace
           ? Option.match(item.children, {
               onNone: () => [],
-              onSome: (namespaceChildren) =>
+              onSome: namespaceChildren =>
                 itemsToEntries(
                   `${prefix}${item.name}/`,
                   namespaceChildren,

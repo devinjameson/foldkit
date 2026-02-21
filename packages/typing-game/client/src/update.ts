@@ -46,9 +46,7 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
       GotHomeMessage: ({ message }) => {
         const [nextHomeModel, homeCommands, maybeOutMessage] = Home.update(model.home, message)
 
-        const mappedCommands = homeCommands.map(
-          Effect.map((message) => GotHomeMessage({ message })),
-        )
+        const mappedCommands = homeCommands.map(Effect.map(message => GotHomeMessage({ message })))
 
         return Option.match(maybeOutMessage, {
           onNone: () => [
@@ -57,7 +55,7 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
             }),
             mappedCommands,
           ],
-          onSome: (outMessage) =>
+          onSome: outMessage =>
             M.value(outMessage).pipe(
               withUpdateReturn,
               M.tagsExhaustive({
@@ -85,7 +83,7 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
           evo(model, {
             room: () => nextRoomModel,
           }),
-          roomCommands.map(Effect.map((message) => GotRoomMessage({ message }))),
+          roomCommands.map(Effect.map(message => GotRoomMessage({ message }))),
         ]
       },
     }),

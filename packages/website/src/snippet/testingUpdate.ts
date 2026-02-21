@@ -22,7 +22,7 @@ test('fetchWeather returns SucceededWeatherFetch with data on success', async ()
   }
 
   // Provide a mock HttpClient - no msw or fetch mocking needed
-  const mockClient = HttpClient.make((req) =>
+  const mockClient = HttpClient.make(req =>
     Effect.succeed(
       HttpClientResponse.fromWeb(
         req,

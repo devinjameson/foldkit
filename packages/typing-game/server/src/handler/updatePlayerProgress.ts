@@ -32,7 +32,7 @@ export const updatePlayerProgress =
 
       yield* SubscriptionRef.update(
         progressByGamePlayerRef,
-        (progressByGamePlayer) =>
+        progressByGamePlayer =>
           HashMap.set(progressByGamePlayer, gamePlayer, progress),
       )
     })

@@ -88,7 +88,7 @@ const functionView = (
               ),
               ...Option.match(apiFunction.sourceUrl, {
                 onNone: () => [],
-                onSome: (url) => [
+                onSome: url => [
                   a(
                     [
                       Class(
@@ -107,7 +107,7 @@ const functionView = (
       ),
       ...Option.match(apiFunction.description, {
         onNone: () => [],
-        onSome: (description) => [
+        onSome: description => [
           p(
             [Class('text-gray-600 dark:text-gray-400 mb-4')],
             descriptionWithCode(description),
@@ -125,11 +125,11 @@ const allParameterDescriptions = (
   pipe(
     Array.flatMap(
       apiFunction.signatures,
-      (signature) => signature.parameters,
+      signature => signature.parameters,
     ),
     Array.dedupeWith((a, b) => a.name === b.name),
-    Array.filterMap((parameter) =>
-      Option.map(parameter.description, (description) =>
+    Array.filterMap(parameter =>
+      Option.map(parameter.description, description =>
         div(
           [Class('mb-1')],
           [
@@ -147,7 +147,7 @@ const allParameterDescriptions = (
     ),
     Array.match({
       onEmpty: () => [],
-      onNonEmpty: (items) => [
+      onNonEmpty: items => [
         div(
           [
             Class(
@@ -186,7 +186,7 @@ const signaturesView = (
   const maybeDisclosure = Record.get(model, key)
 
   const { wrapperClass, content } = Option.match(maybeHighlighted, {
-    onSome: (highlighted) => ({
+    onSome: highlighted => ({
       wrapperClass:
         'rounded text-sm [&_pre]:!rounded [&_pre]:!py-4 [&_pre]:!pl-4 [&_pre]:!pr-0 [&_code]:block [&_code]:w-fit [&_code]:min-w-full [&_code]:pr-4',
       content: [
@@ -197,17 +197,17 @@ const signaturesView = (
     onNone: () => ({
       wrapperClass:
         'bg-white dark:bg-gray-800 rounded p-4 font-mono text-sm',
-      content: Array.flatMap(apiFunction.signatures, (signature) =>
+      content: Array.flatMap(apiFunction.signatures, signature =>
         signatureChildrenFallback(signature),
       ),
     }),
   })
 
   return Option.match(maybeDisclosure, {
-    onSome: (disclosure) =>
+    onSome: disclosure =>
       Ui.Disclosure.view({
         model: disclosure,
-        toMessage: (message) =>
+        toMessage: message =>
           toMessage(GotDisclosureMessage({ id: key, message })),
         buttonClassName: disclosureButtonClassName,
         buttonContent: div(
@@ -226,8 +226,8 @@ const parameterDescriptions = (
 ): ReadonlyArray<Html> =>
   pipe(
     parameters,
-    Array.filterMap((parameter) =>
-      Option.map(parameter.description, (description) =>
+    Array.filterMap(parameter =>
+      Option.map(parameter.description, description =>
         div(
           [Class('mb-1')],
           [
@@ -245,7 +245,7 @@ const parameterDescriptions = (
     ),
     Array.match({
       onEmpty: () => [],
-      onNonEmpty: (items) => [
+      onNonEmpty: items => [
         div(
           [
             Class(
@@ -278,7 +278,7 @@ const parameterListView = (
 ): ReadonlyArray<Html> =>
   Array.match(parameters, {
     onEmpty: () => [div([Class('mb-2')], [punctuation('()')])],
-    onNonEmpty: (nonEmpty) => [
+    onNonEmpty: nonEmpty => [
       div(
         [Class('mb-2')],
         [
@@ -313,7 +313,7 @@ const signatureChildrenFallback = (signature: {
 }): ReadonlyArray<Html> => [
   ...Array.match(signature.typeParameters, {
     onEmpty: () => [],
-    onNonEmpty: (typeParameters) => [
+    onNonEmpty: typeParameters => [
       div(
         [Class('text-gray-500 mb-2')],
         [`<${Array.join(typeParameters, ', ')}>`],
@@ -360,7 +360,7 @@ const typeView = (moduleName: string, type: ApiType): Html => {
               ),
               ...Option.match(type.sourceUrl, {
                 onNone: () => [],
-                onSome: (url) => [
+                onSome: url => [
                   a(
                     [
                       Class(
@@ -379,7 +379,7 @@ const typeView = (moduleName: string, type: ApiType): Html => {
       ),
       ...Option.match(type.description, {
         onNone: () => [],
-        onSome: (description) => [
+        onSome: description => [
           p(
             [Class('text-gray-600 dark:text-gray-400 mb-2')],
             descriptionWithCode(description),
@@ -387,7 +387,7 @@ const typeView = (moduleName: string, type: ApiType): Html => {
         ],
       }),
       ...Option.match(maybeHighlighted, {
-        onSome: (highlighted) => [
+        onSome: highlighted => [
           div(
             [
               Class(
@@ -452,7 +452,7 @@ const interfaceView = (
               ),
               ...Option.match(apiInterface.sourceUrl, {
                 onNone: () => [],
-                onSome: (url) => [
+                onSome: url => [
                   a(
                     [
                       Class(
@@ -471,7 +471,7 @@ const interfaceView = (
       ),
       ...Option.match(apiInterface.description, {
         onNone: () => [],
-        onSome: (description) => [
+        onSome: description => [
           p(
             [Class('text-gray-600 dark:text-gray-400 mb-2')],
             descriptionWithCode(description),
@@ -479,7 +479,7 @@ const interfaceView = (
         ],
       }),
       ...Option.match(maybeHighlighted, {
-        onSome: (highlighted) => [
+        onSome: highlighted => [
           div(
             [
               Class(
@@ -544,7 +544,7 @@ const variableView = (
               ),
               ...Option.match(variable.sourceUrl, {
                 onNone: () => [],
-                onSome: (url) => [
+                onSome: url => [
                   a(
                     [
                       Class(
@@ -563,7 +563,7 @@ const variableView = (
       ),
       ...Option.match(variable.description, {
         onNone: () => [],
-        onSome: (description) => [
+        onSome: description => [
           p(
             [Class('text-gray-600 dark:text-gray-400 mb-2')],
             descriptionWithCode(description),
@@ -571,7 +571,7 @@ const variableView = (
         ],
       }),
       ...Option.match(maybeHighlighted, {
-        onSome: (highlighted) => [
+        onSome: highlighted => [
           div(
             [
               Class(
@@ -605,12 +605,12 @@ const section = <T extends { readonly name: string }>(
 ): ReadonlyArray<Html> =>
   Array.match(items, {
     onEmpty: () => [],
-    onNonEmpty: (items) => [
+    onNonEmpty: items => [
       heading('h3', `${moduleName}-${label.toLowerCase()}`, label),
       ...pipe(
         items,
         Array.sort(byName()),
-        Array.map((item) => itemView(moduleName, item)),
+        Array.map(item => itemView(moduleName, item)),
       ),
     ],
   })

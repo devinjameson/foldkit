@@ -75,7 +75,7 @@ export const view = (
             M.tagsExhaustive({
               Dashboard: () => Dashboard.view(model.session),
               Settings: () =>
-                Settings.view(model.session, (message) =>
+                Settings.view(model.session, message =>
                   toMessage(GotSettingsMessage({ message })),
                 ),
               NotFound: ({ path }) =>

@@ -171,9 +171,7 @@ const update = (
           evo(model, {
             productsPage: () => newProductsModel,
           }),
-          commands.map(
-            Effect.map((message) => GotProductsMessage({ message })),
-          ),
+          commands.map(Effect.map(message => GotProductsMessage({ message }))),
         ]
       },
 
@@ -289,8 +287,8 @@ const productsView = (model: Model): Html => {
     model.productsPage,
     model.cart,
     cartRouter,
-    (message) => GotProductsMessage({ message }),
-    (item) => ClickedAddToCart({ item }),
+    message => GotProductsMessage({ message }),
+    item => ClickedAddToCart({ item }),
     (itemId, quantity) => ClickedQuantityChange({ itemId, quantity }),
   )
 }
@@ -362,8 +360,8 @@ const app = Runtime.makeApplication({
   view,
   container: document.getElementById('root')!,
   browser: {
-    onUrlRequest: (request) => ClickedLink({ request }),
-    onUrlChange: (url) => ChangedUrl({ url }),
+    onUrlRequest: request => ClickedLink({ request }),
+    onUrlChange: url => ChangedUrl({ url }),
   },
 })
 

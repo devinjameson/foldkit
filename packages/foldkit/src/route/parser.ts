@@ -82,7 +82,7 @@ const makeTerminalParser = <A>(parser: Biparser<A>): TerminalParser<A> =>
  * ```
  */
 export const literal = (segment: string): Biparser<{}> => ({
-  parse: (segments) =>
+  parse: segments =>
     Array.matchLeft(segments, {
       onEmpty: () =>
         Effect.fail(
@@ -124,7 +124,7 @@ export const param = <A>(
   parse: (segment: string) => Effect.Effect<A, ParseError>,
   print: (value: A) => string,
 ): Biparser<A> => ({
-  parse: (segments) =>
+  parse: segments =>
     Array.matchLeft(segments, {
       onEmpty: () =>
         Effect.fail(
@@ -139,7 +139,7 @@ export const param = <A>(
         pipe(
           head,
           parse,
-          Effect.map((value) => [value, tail]),
+          Effect.map(value => [value, tail]),
         ),
     }),
   print: (value, state) =>
@@ -163,8 +163,8 @@ export const string = <K extends string>(
   param(
     `string (${name})`,
     /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-    (segment) => Effect.succeed({ [name]: segment } as Record<K, string>),
-    (record) => record[name],
+    segment => Effect.succeed({ [name]: segment } as Record<K, string>),
+    record => record[name],
   )
 
 /**
@@ -180,7 +180,7 @@ export const string = <K extends string>(
 export const int = <K extends string>(name: K): Biparser<Record<K, number>> =>
   param(
     `integer (${name})`,
-    (segment) => {
+    segment => {
       const parsed = parseInt(segment, 10)
 
       return isNaN(parsed) || parsed.toString() !== segment
@@ -194,7 +194,7 @@ export const int = <K extends string>(name: K): Biparser<Record<K, number>> =>
         : /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
           Effect.succeed({ [name]: parsed } as Record<K, number>)
     },
-    (record) => record[name].toString(),
+    record => record[name].toString(),
   )
 
 /**
@@ -203,7 +203,7 @@ export const int = <K extends string>(name: K): Biparser<Record<K, number>> =>
  * Succeeds only when the URL path is exactly `/`.
  */
 export const root: Biparser<{}> = {
-  parse: (segments) =>
+  parse: segments =>
     Array.matchLeft(segments, {
       onEmpty: () => Effect.succeed([{}, []]),
       onNonEmpty: (_, tail) =>
@@ -361,7 +361,7 @@ export function oneOf(
   p10?: Biparser<any> | Parser<any>,
 ): Parser<any> {
   const parsers = [p1, p2, p3, p4, p5, p6, p7, p8, p9, p10].filter(
-    (p) => p !== undefined,
+    p => p !== undefined,
   )
 
   return {
@@ -378,7 +378,7 @@ export function oneOf(
         },
         onNonEmpty: () =>
           Effect.firstSuccessOf(
-            Array.map(parsers, (parser) => parser.parse(segments, search)),
+            Array.map(parsers, parser => parser.parse(segments, search)),
           ),
       }),
   }
@@ -458,7 +458,7 @@ export const slash =
     print: (value, state) =>
       pipe(
         parserA.print(value, state),
-        Effect.flatMap((newState) => parserB.print(value, newState)),
+        Effect.flatMap(newState => parserB.print(value, newState)),
       ),
   })
 
@@ -498,7 +498,7 @@ export const query =
               queryRecord,
               Schema.decodeUnknown(schema),
               Effect.mapError(
-                (error) =>
+                error =>
                   new ParseError({
                     message: `Query parameter validation failed: ${error.message}`,
                     expected: 'valid query parameters',
@@ -506,7 +506,7 @@ export const query =
                   }),
               ),
               Effect.map(
-                (queryValue) =>
+                queryValue =>
                   /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
                   [{ ...pathValue, ...queryValue }, remainingSegments] as [
                     B & A,
@@ -520,10 +520,10 @@ export const query =
       print: (value, state) =>
         pipe(
           parser.print(value, state),
-          Effect.flatMap((newState) => {
+          Effect.flatMap(newState => {
             return pipe(
               Schema.encode(schema)(value),
-              Effect.map((queryValue) => {
+              Effect.map(queryValue => {
                 const newQueryParams = new URLSearchParams(newState.queryParams)
                 pipe(
                   queryValue,
@@ -540,7 +540,7 @@ export const query =
                 }
               }),
               Effect.mapError(
-                (error) =>
+                error =>
                   new ParseError({
                     message: `Query parameter encoding failed: ${error.message}`,
                   }),
@@ -574,7 +574,7 @@ const parseUrl =
   (url: Url) => {
     return pipe(
       pathToSegments(url.pathname),
-      (segments) => parser.parse(segments, Option.getOrUndefined(url.search)),
+      segments => parser.parse(segments, Option.getOrUndefined(url.search)),
       Effect.flatMap(complete),
     )
   }
@@ -612,7 +612,7 @@ const buildUrl =
 
     return pipe(
       parser.print(data, initialState),
-      Effect.map((state) => {
+      Effect.map(state => {
         const path = '/' + Array.join(state.segments, '/')
         const query = state.queryParams.toString()
         return query ? `${path}?${query}` : path

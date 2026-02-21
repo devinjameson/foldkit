@@ -179,7 +179,7 @@ export const view = <Message, Tab extends string>(
     pipe(
       tabs,
       Array.get(index),
-      Option.exists((tab) => isTabDisabled(tab, index)),
+      Option.exists(tab => isTabDisabled(tab, index)),
     )
 
   const { nextKey, previousKey } = M.value(orientation).pipe(
@@ -281,7 +281,7 @@ export const view = <Message, Tab extends string>(
     Array.get(model.activeIndex),
     Option.match({
       onNone: () => empty,
-      onSome: (tab) => {
+      onSome: tab => {
         const activeConfig = tabToConfig(tab, { isActive: true })
 
         return keyed(panelElement)(

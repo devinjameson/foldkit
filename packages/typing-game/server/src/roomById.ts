@@ -12,7 +12,7 @@ export const updateRoom =
     roomId: string,
   ) =>
   (f: (room: Shared.Room) => Shared.Room) =>
-    SubscriptionRef.updateEffect(roomByIdRef, (roomById) =>
+    SubscriptionRef.updateEffect(roomByIdRef, roomById =>
       Effect.gen(function* () {
         const room = yield* getById(roomById, roomId)
         const updatedRoom = f(room)

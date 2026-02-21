@@ -16,12 +16,12 @@ const getReadyStream = Stream.make(Shared.GetReady.make())
 
 const countdownStream: Stream.Stream<Shared.Countdown> = pipe(
   descendingRangeStream(COUNTDOWN_SECONDS, 1),
-  Stream.map((secondsLeft) => Shared.Countdown.make({ secondsLeft })),
+  Stream.map(secondsLeft => Shared.Countdown.make({ secondsLeft })),
 )
 
 const playingStream: Stream.Stream<Shared.Playing> = pipe(
   descendingRangeStream(PLAYING_SECONDS, 1),
-  Stream.map((secondsLeft) => Shared.Playing.make({ secondsLeft })),
+  Stream.map(secondsLeft => Shared.Playing.make({ secondsLeft })),
 )
 
 const finishedStream: Stream.Stream<Shared.Finished> = Stream.make(

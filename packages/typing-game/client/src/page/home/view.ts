@@ -57,7 +57,7 @@ export const view = (model: Model, toMessage: (message: Message) => ParentMessag
 
   const welcomeText = Option.match(maybeUsername, {
     onNone: () => empty,
-    onSome: (username) => h2([Class('mb-6')], [`Welcome, ${username}!`]),
+    onSome: username => h2([Class('mb-6')], [`Welcome, ${username}!`]),
   })
 
   return div(
@@ -99,7 +99,7 @@ const enterUsername =
                   Type('text'),
                   Value(username),
                   Class('bg-transparent px-0 py-2 outline-none w-full'),
-                  OnInput((value) => toMessage(ChangedUsername({ value }))),
+                  OnInput(value => toMessage(ChangedUsername({ value }))),
                   OnBlur(toMessage(BlurredUsernameInput())),
                   Autocapitalize('none'),
                   Spellcheck(false),
@@ -149,7 +149,7 @@ const enterRoomId =
                   Type('text'),
                   Value(roomId),
                   Class('bg-transparent px-0 py-2 outline-none w-full'),
-                  OnInput((value) => toMessage(ChangedRoomId({ value }))),
+                  OnInput(value => toMessage(ChangedRoomId({ value }))),
                   OnBlur(toMessage(BlurredRoomIdInput())),
                   Autocapitalize('none'),
                   Spellcheck(false),
@@ -166,7 +166,7 @@ const enterRoomId =
 const maybeErrorMessage = (maybeRoomFormError: Option.Option<string>) =>
   Option.match(maybeRoomFormError, {
     onNone: () => empty,
-    onSome: (errorMessage) =>
+    onSome: errorMessage =>
       div(
         [Class('mt-6')],
         [

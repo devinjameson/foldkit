@@ -28,8 +28,8 @@ export const update = (model: Model, message: Message): UpdateReturn =>
           message,
         )
 
-        const mappedCommands = Array.map(commands, (command) =>
-          Effect.map(command, (message) => GotLoginMessage({ message })),
+        const mappedCommands = Array.map(commands, command =>
+          Effect.map(command, message => GotLoginMessage({ message })),
         )
 
         return [

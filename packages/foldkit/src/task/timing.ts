@@ -31,7 +31,7 @@ export const delay = <Message>(
  * ```
  */
 export const nextFrame = <Message>(f: () => Message): Effect.Effect<Message> =>
-  Effect.async<Message>((resume) => {
+  Effect.async<Message>(resume => {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         resume(Effect.succeed(f()))
@@ -53,7 +53,7 @@ export const waitForTransitions = <Message>(
   selector: string,
   f: () => Message,
 ): Effect.Effect<Message> =>
-  Effect.async<Message>((resume) => {
+  Effect.async<Message>(resume => {
     requestAnimationFrame(async () => {
       const element = document.querySelector(selector)
 
@@ -61,7 +61,7 @@ export const waitForTransitions = <Message>(
         element instanceof HTMLElement
           ? element
               .getAnimations()
-              .filter((animation) => 'transitionProperty' in animation)
+              .filter(animation => 'transitionProperty' in animation)
           : []
 
       await Promise.allSettled(cssTransitions.map(({ finished }) => finished))

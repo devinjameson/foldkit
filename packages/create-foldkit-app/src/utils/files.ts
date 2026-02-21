@@ -50,7 +50,7 @@ const getBaseFiles = Effect.gen(function* () {
               const content = yield* fs.readFileString(fullPath)
               const relativePath = path.relative(templatesDir, fullPath)
 
-              yield* Ref.update(fileContentByPath, (files) => ({
+              yield* Ref.update(fileContentByPath, files => ({
                 ...files,
                 [relativePath]: content,
               }))
@@ -122,7 +122,7 @@ const modifyBaseFiles = (projectPath: string, name: string) =>
 
     return yield* fs.readFileString(packageJsonPath).pipe(
       Effect.map(String.replace('my-foldkit-app', name)),
-      Effect.flatMap((updatedContent) =>
+      Effect.flatMap(updatedContent =>
         fs.writeFileString(packageJsonPath, updatedContent),
       ),
     )
@@ -149,7 +149,7 @@ const createExampleFiles = (projectPath: string, example: string) =>
 
     yield* Effect.forEach(
       files,
-      (file) => downloadExampleFile(file, projectPath),
+      file => downloadExampleFile(file, projectPath),
       {
         concurrency: 'unbounded',
       },
@@ -180,7 +180,7 @@ const fetchExampleFileList = (
           Schema.Array(GitHubFileEntry),
         )(json)
 
-        const results = yield* Effect.forEach(entries, (entry) =>
+        const results = yield* Effect.forEach(entries, entry =>
           Match.value(entry.type).pipe(
             Match.when('file', () => Effect.succeed([entry])),
             Match.when('dir', () => fetchFilesRecursively(entry.url)),
@@ -210,12 +210,12 @@ const downloadExampleFile = (file: GitHubFileEntry, projectPath: string) =>
     const content = yield* response.text
 
     const pathParts = String.split(file.path, '/')
-    const srcIndex = Array.findFirstIndex(pathParts, (part) => part === 'src')
+    const srcIndex = Array.findFirstIndex(pathParts, part => part === 'src')
     const relativePath = pipe(
       srcIndex,
       Option.match({
         onNone: () => file.name,
-        onSome: (index) =>
+        onSome: index =>
           pipe(pathParts, Array.drop(index + 1), Array.join('/')),
       }),
     )

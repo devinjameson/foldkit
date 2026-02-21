@@ -16,7 +16,7 @@ const getInstallArgs = (
     Match.when('yarn', () => ['add']),
     Match.when('pnpm', () => ['add']),
     Match.exhaustive,
-    (args) => (isDev ? [...args, '-D'] : args),
+    args => (isDev ? [...args, '-D'] : args),
   )
 
 const StringRecord = Schema.Record({ key: Schema.String, value: Schema.String })

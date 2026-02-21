@@ -41,7 +41,7 @@ export const disclosureDemo = (
 ) => [
   Ui.Disclosure.view({
     model: model.disclosureDemo,
-    toMessage: (message) =>
+    toMessage: message =>
       toMessage(GotDisclosureDemoMessage({ message })),
     buttonClassName,
     buttonContent: div(

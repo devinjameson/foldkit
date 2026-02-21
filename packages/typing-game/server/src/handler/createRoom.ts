@@ -31,7 +31,7 @@ export const createRoom =
         usedGameTexts: [],
       }
 
-      yield* SubscriptionRef.update(roomByIdRef, (roomById) =>
+      yield* SubscriptionRef.update(roomByIdRef, roomById =>
         HashMap.set(roomById, newRoom.id, newRoom),
       )
 

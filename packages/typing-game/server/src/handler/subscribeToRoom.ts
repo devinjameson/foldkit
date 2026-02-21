@@ -26,15 +26,15 @@ const removePlayerFromRoom = (
   roomId: string,
   playerId: string,
 ) =>
-  SubscriptionRef.update(roomByIdRef, (roomById) =>
+  SubscriptionRef.update(roomByIdRef, roomById =>
     HashMap.get(roomById, roomId).pipe(
       Option.match({
         onNone: () => roomById,
-        onSome: (room) =>
+        onSome: room =>
           pipe(
             room.players,
-            Array.filter((player) => player.id !== playerId),
-            (nextPlayers) => {
+            Array.filter(player => player.id !== playerId),
+            nextPlayers => {
               if (Array.isEmptyArray(nextPlayers)) {
                 return HashMap.remove(roomById, roomId)
               }
@@ -63,7 +63,7 @@ const removePlayerProgress = (
   progressByGamePlayerRef: SubscriptionRef.SubscriptionRef<ProgressByGamePlayer>,
   playerId: string,
 ) =>
-  SubscriptionRef.update(progressByGamePlayerRef, (progressByGamePlayer) =>
+  SubscriptionRef.update(progressByGamePlayerRef, progressByGamePlayer =>
     HashMap.filter(
       progressByGamePlayer,
       (_, gamePlayer) => gamePlayer.playerId !== playerId,
@@ -114,7 +114,7 @@ export const subscribeToRoom =
       cancelPendingCleanup(pendingCleanupPlayerIdsRef, payload.playerId),
     ).pipe(
       Stream.concat(roomByIdRef.changes),
-      Stream.mapEffect((roomById) =>
+      Stream.mapEffect(roomById =>
         Effect.gen(function* () {
           const room = yield* HashMap.get(roomById, payload.roomId).pipe(
             Effect.mapError(
@@ -123,7 +123,7 @@ export const subscribeToRoom =
           )
 
           const maybePlayerProgress = yield* Option.match(room.maybeGame, {
-            onSome: (game) =>
+            onSome: game =>
               getPlayerProgress(
                 progressByGamePlayerRef,
                 payload.playerId,

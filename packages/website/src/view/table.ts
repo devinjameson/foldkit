@@ -70,7 +70,7 @@ export const comparisonTable = (
           ),
           tbody(
             [Class('bg-white dark:bg-gray-900')],
-            Array.map(rows, (row) =>
+            Array.map(rows, row =>
               tr(
                 [
                   Class(

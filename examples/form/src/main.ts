@@ -135,7 +135,7 @@ const validateName = validateField(nameValidations)
 const validateEmail = validateField(emailValidations)
 
 const isFormValid = (model: Model): boolean =>
-  Array.every([model.name, model.email], (field) => field._tag === 'Valid')
+  Array.every([model.name, model.email], field => field._tag === 'Valid')
 
 // UPDATE
 
@@ -364,21 +364,21 @@ const view = (model: Model): Html => {
           form(
             [Class('space-y-4'), OnSubmit(ClickedFormSubmit())],
             [
-              fieldView('name', 'Name', model.name, (value) =>
+              fieldView('name', 'Name', model.name, value =>
                 UpdatedName({ value }),
               ),
               fieldView(
                 'email',
                 'Email',
                 model.email,
-                (value) => UpdatedEmail({ value }),
+                value => UpdatedEmail({ value }),
                 'email',
               ),
               fieldView(
                 'message',
                 "Anything you'd like to share with us?",
                 model.message,
-                (value) => UpdatedMessage({ value }),
+                value => UpdatedMessage({ value }),
                 'textarea',
               ),
 

@@ -155,18 +155,14 @@ const formatTime = (ms: number): string => {
   const centiseconds = pipe(
     Duration.millis(ms % 1000),
     Duration.toMillis,
-    (v) => v / 10,
+    v => v / 10,
     floorAndPad,
   )
 
   return `${minutes}:${seconds}.${centiseconds}`
 }
 
-const floorAndPad = flow(
-  Math.floor,
-  (v) => v.toString(),
-  String.padStart(2, '0'),
-)
+const floorAndPad = flow(Math.floor, v => v.toString(), String.padStart(2, '0'))
 
 const view = (model: Model): Html =>
   div(

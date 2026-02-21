@@ -76,7 +76,7 @@ const people = [
 ]
 
 const findPerson = (id: number) =>
-  Array.findFirst(people, (person) => person.id === id)
+  Array.findFirst(people, person => person.id === id)
 
 // MODEL
 
@@ -272,10 +272,10 @@ const nestedView = (): Html =>
 const peopleView = (searchText: Option.Option<string>): Html => {
   const filteredPeople = Option.match(searchText, {
     onNone: () => people,
-    onSome: (query) =>
+    onSome: query =>
       Array.filter(
         people,
-        (person) =>
+        person =>
           person.name.toLowerCase().includes(query.toLowerCase()) ||
           person.role.toLowerCase().includes(query.toLowerCase()),
       ),
@@ -295,7 +295,7 @@ const peopleView = (searchText: Option.Option<string>): Html => {
             Class(
               'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
             ),
-            OnInput((value) => ChangedSearchInput({ value })),
+            OnInput(value => ChangedSearchInput({ value })),
           ]),
         ],
       ),
@@ -305,14 +305,14 @@ const peopleView = (searchText: Option.Option<string>): Html => {
         [
           Option.match(searchText, {
             onNone: () => 'Click on any person to view their details:',
-            onSome: (query) =>
+            onSome: query =>
               `Searching for "${query}" - ${Array.length(filteredPeople)} results:`,
           }),
         ],
       ),
       ul(
         [Class('space-y-3')],
-        Array.map(filteredPeople, (person) =>
+        Array.map(filteredPeople, person =>
           li(
             [Class('border border-gray-200 rounded-lg hover:bg-gray-50')],
             [
@@ -368,7 +368,7 @@ const personView = (personId: number): Html => {
         ],
       ),
 
-    onSome: (person) =>
+    onSome: person =>
       div(
         [Class('max-w-4xl mx-auto px-4')],
         [
@@ -490,8 +490,8 @@ const app = Runtime.makeApplication({
   view,
   container: document.getElementById('root')!,
   browser: {
-    onUrlRequest: (request) => ClickedLink({ request }),
-    onUrlChange: (url) => ChangedUrl({ url }),
+    onUrlRequest: request => ClickedLink({ request }),
+    onUrlChange: url => ChangedUrl({ url }),
   },
 })
 

@@ -20,15 +20,15 @@ export const init = (
 ): InitReturn => {
   const disclosures: Model = pipe(
     modules,
-    Array.flatMap((module) =>
+    Array.flatMap(module =>
       pipe(
         module.functions,
         Array.filter(
-          (apiFunction) =>
+          apiFunction =>
             signaturesLength(apiFunction) >
             SIGNATURE_COLLAPSE_THRESHOLD,
         ),
-        Array.map((apiFunction) => {
+        Array.map(apiFunction => {
           const id = scopedId(
             'function',
             module.name,

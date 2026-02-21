@@ -43,16 +43,14 @@ const fetchUser = (
 > =>
   Effect.gen(function* () {
     const response = yield* Effect.tryPromise(() =>
-      fetch(`/api/users/${userId}`).then((response) =>
-        response.json(),
-      ),
+      fetch(`/api/users/${userId}`).then(response => response.json()),
     )
     // Validate the response against UserSchema at runtime
     const data = yield* S.decodeUnknown(UserSchema)(response)
     return SucceededUserFetch({ data })
   }).pipe(
     // Every Command must return a Message — no errors bubble up
-    Effect.catchAll((error) =>
+    Effect.catchAll(error =>
       Effect.succeed(FailedUserFetch({ error: String(error) })),
     ),
   )

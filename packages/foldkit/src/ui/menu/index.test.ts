@@ -13,6 +13,7 @@ import {
   MovedPointerOverItem,
   NoOp,
   Opened,
+  RequestedItemClick,
   Searched,
   SelectedItem,
   groupContiguous,
@@ -326,6 +327,18 @@ describe('Menu', () => {
         const [result, commands] = update(model, SelectedItem({ index: 2 }))
         expect(result.isOpen).toBe(false)
         expect(result.maybeActiveItemIndex).toStrictEqual(Option.none())
+        expect(commands).toHaveLength(1)
+      })
+    })
+
+    describe('RequestedItemClick', () => {
+      it('returns model unchanged with a click command', () => {
+        const model = openModel()
+        const [result, commands] = update(
+          model,
+          RequestedItemClick({ index: 2 }),
+        )
+        expect(result).toBe(model)
         expect(commands).toHaveLength(1)
       })
     })

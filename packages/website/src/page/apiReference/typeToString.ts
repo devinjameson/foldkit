@@ -19,15 +19,15 @@ const objectLiteralToString = (
     Option.filter(Array.isNonEmptyReadonlyArray),
     Option.match({
       onNone: () => '{}',
-      onSome: (children) =>
+      onSome: children =>
         pipe(
           children,
           Array.map(
-            (child) =>
+            child =>
               `${indent(depth + 1)}${child.name}: ${typeToString(child.type, depth + 1)}`,
           ),
           Array.join('\n'),
-          (properties) => `{\n${properties}\n${indent(depth)}}`,
+          properties => `{\n${properties}\n${indent(depth)}}`,
         ),
     }),
   )
@@ -38,10 +38,10 @@ const callSignatureToString = (
 ): string => {
   const parameters = Option.match(signature.parameters, {
     onNone: () => '',
-    onSome: (params) =>
+    onSome: params =>
       pipe(
         params,
-        Array.map((parameter) => {
+        Array.map(parameter => {
           const optionalSuffix = parameter.flags.isOptional ? '?' : ''
           return `${parameter.name}${optionalSuffix}: ${typeToString(parameter.type, depth)}`
         }),
@@ -57,13 +57,13 @@ const reflectionToString = (
 ): string =>
   Option.match(maybeDeclaration, {
     onNone: () => '{}',
-    onSome: (item) =>
+    onSome: item =>
       pipe(
         item.signatures,
         Option.flatMap(Array.head),
         Option.match({
           onNone: () => objectLiteralToString(item.children, depth),
-          onSome: (signature) =>
+          onSome: signature =>
             callSignatureToString(signature, depth),
         }),
       ),
@@ -79,10 +79,10 @@ const formatType = (type: TypeDocType, depth: number): string =>
         Option.filter(Array.isNonEmptyReadonlyArray),
         Option.match({
           onNone: () => name,
-          onSome: (arguments_) =>
+          onSome: arguments_ =>
             `${name}<${pipe(
               arguments_,
-              Array.map((argument) => formatType(argument, depth)),
+              Array.map(argument => formatType(argument, depth)),
               Array.join(', '),
             )}>`,
         }),
@@ -93,10 +93,10 @@ const formatType = (type: TypeDocType, depth: number): string =>
       ({ elementType }) => `Array<${formatType(elementType, depth)}>`,
     ),
     whenType('tuple', ({ elements }) => {
-      const formatted = Array.map(elements, (element) =>
+      const formatted = Array.map(elements, element =>
         formatType(element, depth),
       )
-      const isMultiLine = Array.some(formatted, (line) =>
+      const isMultiLine = Array.some(formatted, line =>
         line.includes('\n'),
       )
 
@@ -104,25 +104,25 @@ const formatType = (type: TypeDocType, depth: number): string =>
         ? pipe(
             elements,
             Array.map(
-              (element) =>
+              element =>
                 `${indent(depth + 1)}${formatType(element, depth + 1)}`,
             ),
             Array.join(',\n'),
-            (joined) => `[\n${joined}\n${indent(depth)}]`,
+            joined => `[\n${joined}\n${indent(depth)}]`,
           )
         : `[${Array.join(formatted, ', ')}]`
     }),
     whenType('union', ({ types }) =>
       pipe(
         types,
-        Array.map((member) => formatType(member, depth)),
+        Array.map(member => formatType(member, depth)),
         Array.join(' | '),
       ),
     ),
     whenType('intersection', ({ types }) =>
       pipe(
         types,
-        Array.map((member) => formatType(member, depth)),
+        Array.map(member => formatType(member, depth)),
         Array.join(' & '),
       ),
     ),
@@ -178,7 +178,7 @@ export const typeToString = (
 ): string =>
   Option.match(maybeType, {
     onNone: () => 'unknown',
-    onSome: (type) => formatType(type, depth),
+    onSome: type => formatType(type, depth),
   })
 
 export const typeDefFromChildren = (
@@ -189,15 +189,15 @@ export const typeDefFromChildren = (
     Option.filter(Array.isNonEmptyReadonlyArray),
     Option.match({
       onNone: () => 'unknown',
-      onSome: (items) =>
+      onSome: items =>
         pipe(
           items,
           Array.map(
-            (child) =>
+            child =>
               `  ${child.name}: ${typeToString(child.type, 1)}`,
           ),
           Array.join('\n'),
-          (properties) => `{\n${properties}\n}`,
+          properties => `{\n${properties}\n}`,
         ),
     }),
   )

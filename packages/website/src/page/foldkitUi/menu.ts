@@ -130,7 +130,7 @@ export const basicDemo = (
     [
       Ui.Menu.view({
         model: model.menuBasicDemo,
-        toMessage: (message) =>
+        toMessage: message =>
           toMessage(GotMenuBasicDemoMessage({ message })),
         ...menuViewConfig(basicItemsClassName),
       }),
@@ -148,7 +148,7 @@ export const animatedDemo = (
     [
       Ui.Menu.view({
         model: model.menuAnimatedDemo,
-        toMessage: (message) =>
+        toMessage: message =>
           toMessage(GotMenuAnimatedDemoMessage({ message })),
         ...menuViewConfig(animatedItemsClassName),
       }),

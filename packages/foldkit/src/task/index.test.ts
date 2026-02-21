@@ -18,7 +18,7 @@ import {
 describe('getTime', () => {
   it.scoped('returns a UTC time wrapped in the message constructor', () =>
     Effect.gen(function* () {
-      const result = yield* getTime((utc) => ({
+      const result = yield* getTime(utc => ({
         _tag: 'GotTime' as const,
         utc,
       }))
@@ -31,7 +31,7 @@ describe('getTime', () => {
 describe('getTimeZone', () => {
   it.scoped('returns a timezone', () =>
     Effect.gen(function* () {
-      const result = yield* getTimeZone((zone) => ({
+      const result = yield* getTimeZone(zone => ({
         _tag: 'GotZone' as const,
         zone,
       }))
@@ -44,7 +44,7 @@ describe('getTimeZone', () => {
 describe('getZonedTime', () => {
   it.scoped('returns a zoned datetime', () =>
     Effect.gen(function* () {
-      const result = yield* getZonedTime((zoned) => ({
+      const result = yield* getZonedTime(zoned => ({
         _tag: 'GotZoned' as const,
         zoned,
       }))
@@ -57,7 +57,7 @@ describe('getZonedTime', () => {
 describe('getZonedTimeIn', () => {
   it.scoped('succeeds with a valid timezone', () =>
     Effect.gen(function* () {
-      const result = yield* getZonedTimeIn('America/New_York', (zoned) => ({
+      const result = yield* getZonedTimeIn('America/New_York', zoned => ({
         _tag: 'GotNY' as const,
         zoned,
       }))
@@ -69,7 +69,7 @@ describe('getZonedTimeIn', () => {
   it.scoped('fails with an invalid timezone', () =>
     Effect.gen(function* () {
       const error = yield* Effect.flip(
-        getZonedTimeIn('Invalid/Zone', (zoned) => ({
+        getZonedTimeIn('Invalid/Zone', zoned => ({
           _tag: 'Nope' as const,
           zoned,
         })),
@@ -84,7 +84,7 @@ describe('randomInt', () => {
     Effect.gen(function* () {
       const results: number[] = []
       for (let i = 0; i < 50; i++) {
-        const result = yield* randomInt(0, 10, (v) => v)
+        const result = yield* randomInt(0, 10, v => v)
         results.push(result)
       }
       for (const r of results) {
@@ -96,7 +96,7 @@ describe('randomInt', () => {
 
   it.scoped('wraps the value in the message constructor', () =>
     Effect.gen(function* () {
-      const result = yield* randomInt(5, 15, (v) => ({
+      const result = yield* randomInt(5, 15, v => ({
         _tag: 'GotRandom' as const,
         value: v,
       }))
@@ -110,7 +110,7 @@ describe('randomInt', () => {
 describe('focus', () => {
   it.scoped('returns false when element is not found', () =>
     Effect.gen(function* () {
-      const result = yield* focus('#nonexistent', (success) => ({
+      const result = yield* focus('#nonexistent', success => ({
         _tag: 'Focused' as const,
         success,
       }))

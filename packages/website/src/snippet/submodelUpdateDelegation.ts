@@ -16,7 +16,7 @@ export const update = (
 
         const mappedCommands = Array.map(
           commands,
-          Effect.map((message) => GotSettingsMessage({ message })),
+          Effect.map(message => GotSettingsMessage({ message })),
         )
 
         return [

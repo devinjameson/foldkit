@@ -69,7 +69,7 @@ test('fetchWeather returns SucceededWeatherFetch with data on success', async ()
     ],
   }
 
-  const mockClient = HttpClient.make((req) =>
+  const mockClient = HttpClient.make(req =>
     Effect.succeed(
       HttpClientResponse.fromWeb(
         req,
@@ -93,7 +93,7 @@ test('fetchWeather returns SucceededWeatherFetch with data on success', async ()
 })
 
 test('fetchWeather returns FailedWeatherFetch on HTTP failure', async () => {
-  const mockClient = HttpClient.make((req) =>
+  const mockClient = HttpClient.make(req =>
     Effect.succeed(
       HttpClientResponse.fromWeb(req, new Response(null, { status: 404 })),
     ),

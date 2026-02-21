@@ -20,7 +20,7 @@ export const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Mod
     modelToDeps: (model: Model) =>
       M.value(model.route).pipe(
         M.tag('Room', ({ roomId }) =>
-          Option.map(model.room.maybeSession, (session) => ({
+          Option.map(model.room.maybeSession, session => ({
             roomId,
             playerId: session.player.id,
           })),
@@ -41,7 +41,7 @@ export const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Mod
                   }),
                 ),
               ),
-              Stream.catchAll((error) =>
+              Stream.catchAll(error =>
                 Stream.make(
                   Effect.succeed(
                     GotRoomMessage({
@@ -82,7 +82,7 @@ export const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Mod
     depsToStream: (deps: { shouldCaptureKeyboard: boolean; route: AppRoute }) =>
       Stream.when(
         Stream.fromEventListener<KeyboardEvent>(document, 'keydown').pipe(
-          Stream.map((keyboardEvent) =>
+          Stream.map(keyboardEvent =>
             Effect.sync(() => {
               keyboardEvent.preventDefault()
               const { key } = keyboardEvent

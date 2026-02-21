@@ -181,7 +181,7 @@ const joinForm = (
                 Type('text'),
                 Value(username),
                 Class('bg-transparent px-0 py-2 outline-none w-full'),
-                OnInput((value) => toMessage(ChangedRoomPageUsername({ value }))),
+                OnInput(value => toMessage(ChangedRoomPageUsername({ value }))),
                 OnBlur(toMessage(BlurredRoomPageUsernameInput())),
                 Autocapitalize('none'),
                 Spellcheck(false),
@@ -199,7 +199,7 @@ const joinForm = (
 const maybeErrorMessage = (maybeRoomFormError: Option.Option<string>) =>
   Option.match(maybeRoomFormError, {
     onNone: () => empty,
-    onSome: (errorMessage) =>
+    onSome: errorMessage =>
       div(
         [Class('mt-6')],
         [

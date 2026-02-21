@@ -48,13 +48,13 @@ const cycleAction = (f: (a: number) => number) => (selectedAction: HomeAction) =
 
   return pipe(
     HOME_ACTIONS,
-    Array.findFirstIndex((action) => action === selectedAction),
+    Array.findFirstIndex(action => action === selectedAction),
     Option.map(
       flow(
         f,
         Number.remainder(homeActionsLength),
-        (remainder) => (remainder < 0 ? remainder + homeActionsLength : remainder),
-        (nextIndex) => Array.unsafeGet(HOME_ACTIONS, nextIndex),
+        remainder => (remainder < 0 ? remainder + homeActionsLength : remainder),
+        nextIndex => Array.unsafeGet(HOME_ACTIONS, nextIndex),
       ),
     ),
     Option.getOrThrow,

@@ -17,13 +17,13 @@ function UserProfile({ userId }) {
     setLoading(true)
 
     fetchUser(userId)
-      .then((data) => {
+      .then(data => {
         if (!cancelled) {
           setUser(data)
           setLoading(false)
         }
       })
-      .catch((err) => {
+      .catch(err => {
         if (!cancelled) {
           setError(err)
           setLoading(false)

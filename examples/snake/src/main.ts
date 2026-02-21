@@ -95,7 +95,7 @@ const update = (
             'a',
             's',
             'd',
-            (moveKey) => {
+            moveKey => {
               const nextDirection = M.value(moveKey).pipe(
                 M.withReturnType<Direction.Direction>(),
                 M.whenOr('ArrowUp', 'w', () => 'Up'),
@@ -173,7 +173,7 @@ const update = (
           return [
             evo(model, {
               gameState: () => 'GameOver',
-              highScore: (highScore) => Math.max(model.points, highScore),
+              highScore: highScore => Math.max(model.points, highScore),
             }),
             [],
           ]
@@ -185,7 +185,7 @@ const update = (
           evo(model, {
             snake: () => nextSnake,
             direction: () => currentDirection,
-            points: (points) =>
+            points: points =>
               willEatApple ? points + GAME.POINTS_PER_APPLE : points,
           }),
           commands,
@@ -194,7 +194,7 @@ const update = (
 
       PausedGame: () => [
         evo(model, {
-          gameState: (gameState) =>
+          gameState: gameState =>
             gameState === 'Playing' ? 'Paused' : 'Playing',
         }),
         [],
@@ -220,7 +220,7 @@ const update = (
         model,
         [
           Apple.generatePosition(snake).pipe(
-            Effect.map((position) => GotApple({ position })),
+            Effect.map(position => GotApple({ position })),
           ),
         ],
       ],
@@ -274,7 +274,7 @@ const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<
     modelToDeps: () => null,
     depsToStream: () =>
       Stream.fromEventListener<KeyboardEvent>(document, 'keydown').pipe(
-        Stream.map((keyboardEvent) =>
+        Stream.map(keyboardEvent =>
           Effect.sync(() => {
             keyboardEvent.preventDefault()
             return PressedKey({ key: keyboardEvent.key })
@@ -293,7 +293,7 @@ const cellView = (x: number, y: number, model: Model): Html => {
   const isSnakeTail = pipe(
     model.snake,
     Array.tailNonEmpty,
-    Array.some((segment) => Position.equivalence({ x, y }, segment)),
+    Array.some(segment => Position.equivalence({ x, y }, segment)),
   )
   const isApple = Position.equivalence({ x, y }, model.apple)
 
@@ -310,10 +310,10 @@ const cellView = (x: number, y: number, model: Model): Html => {
 const gridView = (model: Model): Html =>
   div(
     [Class('inline-block border-2 border-gray-600')],
-    Array.makeBy(GAME.GRID_SIZE, (y) =>
+    Array.makeBy(GAME.GRID_SIZE, y =>
       div(
         [Class('flex')],
-        Array.makeBy(GAME.GRID_SIZE, (x) => cellView(x, y, model)),
+        Array.makeBy(GAME.GRID_SIZE, x => cellView(x, y, model)),
       ),
     ),
   )

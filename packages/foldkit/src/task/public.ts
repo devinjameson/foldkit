@@ -6,6 +6,7 @@ export {
   focus,
   showModal,
   closeModal,
+  clickElement,
   delay,
   scrollIntoView,
   randomInt,
