@@ -18,6 +18,8 @@ This will prompt you to:
 
 Commit the generated changeset file with your changes.
 
+**Note:** The project formatter converts double quotes to single quotes in changeset YAML frontmatter. Use single quotes when writing changesets: `'foldkit': minor`.
+
 ## Version Guidelines
 
 - **patch** - Bug fixes, documentation updates, internal refactors
