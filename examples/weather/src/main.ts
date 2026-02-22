@@ -1,5 +1,6 @@
 import { FetchHttpClient, HttpClient } from '@effect/platform'
 import { Array, Effect, Match as M, Schema as S, String, flow } from 'effect'
+import type { Command } from 'foldkit'
 import { Runtime } from 'foldkit'
 import { Html, html } from 'foldkit/html'
 import { m } from 'foldkit/message'
@@ -60,9 +61,9 @@ type Message = typeof Message.Type
 export const update = (
   model: Model,
   message: Message,
-): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
+): [Model, ReadonlyArray<Command<Message>>] =>
   M.value(message).pipe(
-    M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
+    M.withReturnType<[Model, ReadonlyArray<Command<Message>>]>(),
     M.tagsExhaustive({
       UpdatedZipCodeInput: ({ value }) => [
         evo(model, {
@@ -121,7 +122,7 @@ type WeatherResponseData = {
 
 export const fetchWeather = (
   zipCode: string,
-): Runtime.Command<
+): Command<
   typeof SucceededWeatherFetch | typeof FailedWeatherFetch,
   never,
   HttpClient.HttpClient

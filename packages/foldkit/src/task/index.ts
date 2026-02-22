@@ -1,3 +1,4 @@
+export { ElementNotFound, TimeZoneError } from './error'
 export { getTime, getTimeZone, getZonedTime, getZonedTimeIn } from './time'
 export {
   focus,

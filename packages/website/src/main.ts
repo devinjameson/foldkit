@@ -10,6 +10,7 @@ import {
   Option,
   Schema as S,
 } from 'effect'
+import type { Command } from 'foldkit'
 import { Runtime } from 'foldkit'
 import { Html } from 'foldkit/html'
 import { m } from 'foldkit/message'
@@ -291,11 +292,9 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
 const update = (
   model: Model,
   message: Message,
-): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
+): [Model, ReadonlyArray<Command<Message>>] =>
   M.value(message).pipe(
-    M.withReturnType<
-      [Model, ReadonlyArray<Runtime.Command<Message>>]
-    >(),
+    M.withReturnType<[Model, ReadonlyArray<Command<Message>>]>(),
     M.tagsExhaustive({
       NoOp: () => [model, []],
 
@@ -304,19 +303,16 @@ const update = (
           M.tagsExhaustive({
             Internal: ({
               url,
-            }): [
-              Model,
-              ReadonlyArray<Runtime.Command<typeof NoOp>>,
-            ] => [
+            }): [Model, ReadonlyArray<Command<typeof NoOp>>] => [
               model,
               [pushUrl(urlToString(url)).pipe(Effect.as(NoOp()))],
             ],
             External: ({
               href,
-            }): [
-              Model,
-              ReadonlyArray<Runtime.Command<typeof NoOp>>,
-            ] => [model, [load(href).pipe(Effect.as(NoOp()))]],
+            }): [Model, ReadonlyArray<Command<typeof NoOp>>] => [
+              model,
+              [load(href).pipe(Effect.as(NoOp()))],
+            ],
           }),
         ),
 
@@ -466,13 +462,13 @@ const update = (
 
 // COMMAND
 
-const injectAnalytics: Runtime.Command<typeof NoOp> = Effect.sync(
-  () => inject(),
+const injectAnalytics: Command<typeof NoOp> = Effect.sync(() =>
+  inject(),
 ).pipe(Effect.as(NoOp()))
 
 const copySnippetToClipboard = (
   text: string,
-): Runtime.Command<typeof SucceededCopy | typeof NoOp> =>
+): Command<typeof SucceededCopy | typeof NoOp> =>
   Effect.tryPromise({
     try: () => navigator.clipboard.writeText(text),
     catch: () => new Error('Failed to copy to clipboard'),
@@ -481,9 +477,7 @@ const copySnippetToClipboard = (
     Effect.catchAll(() => Effect.succeed(NoOp())),
   )
 
-const copyLinkToClipboard = (
-  url: string,
-): Runtime.Command<typeof NoOp> =>
+const copyLinkToClipboard = (url: string): Command<typeof NoOp> =>
   Effect.tryPromise({
     try: () => navigator.clipboard.writeText(url),
     catch: () => new Error('Failed to copy link to clipboard'),
@@ -496,17 +490,17 @@ const COPY_INDICATOR_DURATION = '2 seconds'
 
 const hideIndicator = (
   text: string,
-): Runtime.Command<typeof HiddenCopiedIndicator> =>
+): Command<typeof HiddenCopiedIndicator> =>
   Effect.sleep(COPY_INDICATOR_DURATION).pipe(
     Effect.as(HiddenCopiedIndicator({ text })),
   )
 
-const scrollToTop: Runtime.Command<typeof NoOp> = Effect.sync(() => {
+const scrollToTop: Command<typeof NoOp> = Effect.sync(() => {
   window.scrollTo({ top: 0, behavior: 'instant' })
   return NoOp()
 })
 
-const scrollToHash = (hash: string): Runtime.Command<typeof NoOp> =>
+const scrollToHash = (hash: string): Command<typeof NoOp> =>
   Effect.async(resume => {
     requestAnimationFrame(() => {
       const element = document.getElementById(hash)
@@ -519,7 +513,7 @@ const scrollToHash = (hash: string): Runtime.Command<typeof NoOp> =>
 
 const applyThemeToDocument = (
   theme: ResolvedTheme,
-): Runtime.Command<typeof NoOp> =>
+): Command<typeof NoOp> =>
   Effect.sync(() => {
     M.value(theme).pipe(
       M.when('Dark', () =>
@@ -535,7 +529,7 @@ const applyThemeToDocument = (
 
 const saveThemePreference = (
   preference: ThemePreference,
-): Runtime.Command<typeof NoOp> =>
+): Command<typeof NoOp> =>
   Effect.gen(function* () {
     const store = yield* KeyValueStore.KeyValueStore
     yield* store.set(THEME_STORAGE_KEY, JSON.stringify(preference))

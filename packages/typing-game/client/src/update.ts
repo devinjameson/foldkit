@@ -1,6 +1,7 @@
 import * as Shared from '@typing-game/shared'
 import { Array, Effect, Match as M, Option } from 'effect'
-import { Runtime, Task, Url } from 'foldkit'
+import type { Command } from 'foldkit'
+import { Task, Url } from 'foldkit'
 import { load, pushUrl } from 'foldkit/navigation'
 import { evo } from 'foldkit/struct'
 
@@ -11,7 +12,7 @@ import { Model } from './model'
 import { Home, Room } from './page'
 import { urlToAppRoute } from './route'
 
-export type UpdateReturn<Model, Message> = [Model, ReadonlyArray<Runtime.Command<Message>>]
+export type UpdateReturn<Model, Message> = [Model, ReadonlyArray<Command<Message>>]
 const withUpdateReturn = M.withReturnType<UpdateReturn<Model, Message>>()
 
 export const update = (model: Model, message: Message): UpdateReturn<Model, Message> =>
@@ -32,7 +33,9 @@ export const update = (model: Model, message: Message): UpdateReturn<Model, Mess
       ChangedUrl: ({ url }) => {
         const nextRoute = urlToAppRoute(url)
         const maybeFocusUsernameInput = M.value(nextRoute).pipe(
-          M.tag('Home', () => Task.focus(`#${USERNAME_INPUT_ID}`, () => NoOp())),
+          M.tag('Home', () =>
+            Task.focus(`#${USERNAME_INPUT_ID}`).pipe(Effect.ignore, Effect.as(NoOp())),
+          ),
           M.option,
         )
         return [

@@ -1,5 +1,5 @@
 import * as Shared from '@typing-game/shared'
-import { Array, Data, Match as M, Option, String as Str } from 'effect'
+import { Array, Data, Effect, Match as M, Option, String as Str } from 'effect'
 import { Task } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
@@ -69,7 +69,7 @@ export const handleRoomUpdated =
     const shouldFocus = (gameJustStarted || isFirstRoomUpdate) && hasGame
 
     const mabyeFocusUserGameTextInput = optionWhen(shouldFocus, () =>
-      Task.focus(`#${USER_GAME_TEXT_INPUT_ID}`, () => NoOp()),
+      Task.focus(`#${USER_GAME_TEXT_INPUT_ID}`).pipe(Effect.ignore, Effect.as(NoOp())),
     )
 
     const maybeExitCountdownCommand = optionWhen(gameJustFinished, () => exitCountdownTick)

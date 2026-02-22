@@ -1,5 +1,5 @@
 import { Array, Effect, Match as M, Option } from 'effect'
-import { Runtime } from 'foldkit'
+import type { Command } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
 import {
@@ -13,7 +13,7 @@ import * as Login from './page/login'
 
 type UpdateReturn = [
   Model,
-  ReadonlyArray<Runtime.Command<Message>>,
+  ReadonlyArray<Command<Message>>,
   Option.Option<OutMessage>,
 ]
 const withUpdateReturn = M.withReturnType<UpdateReturn>()

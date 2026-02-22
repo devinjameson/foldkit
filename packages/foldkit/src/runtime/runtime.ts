@@ -18,6 +18,7 @@ import {
 } from 'effect'
 import { h } from 'snabbdom'
 
+import type { Command } from '../command'
 import { Html } from '../html'
 import { Url, fromString as urlFromString } from '../url'
 import { VNode, patch, toVNode } from '../vdom'
@@ -37,12 +38,7 @@ export class Dispatch extends Context.Tag('@foldkit/Dispatch')<
   }
 >() {}
 
-/** An `Effect` that produces a message, used for side effects in the update function. */
-export type Command<T, E = never, R = never> = Effect.Effect<
-  T extends Schema.Schema.Any ? Schema.Schema.Type<T> : T,
-  E,
-  R
->
+export type { Command } from '../command'
 
 /** Configuration for browser URL integration with handlers for URL requests and URL changes. */
 export type BrowserConfig<Message> = {

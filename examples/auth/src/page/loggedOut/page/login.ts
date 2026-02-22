@@ -9,7 +9,8 @@ import {
   String,
   pipe,
 } from 'effect'
-import { FieldValidation, Runtime } from 'foldkit'
+import type { Command } from 'foldkit'
+import { FieldValidation } from 'foldkit'
 import {
   type Validation,
   makeField,
@@ -113,7 +114,7 @@ const isFormValid = (model: Model): boolean =>
 
 type UpdateReturn = [
   Model,
-  ReadonlyArray<Runtime.Command<Message>>,
+  ReadonlyArray<Command<Message>>,
   Option.Option<OutMessage>,
 ]
 const withUpdateReturn = M.withReturnType<UpdateReturn>()
@@ -121,7 +122,7 @@ const withUpdateReturn = M.withReturnType<UpdateReturn>()
 const simulateAuthRequest = (
   email: string,
   password: string,
-): Runtime.Command<Message> =>
+): Command<Message> =>
   Effect.gen(function* () {
     yield* Effect.sleep(Duration.seconds(1))
 

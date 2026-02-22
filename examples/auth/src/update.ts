@@ -1,5 +1,5 @@
 import { Array, Effect, Match as M, Option, Schema as S } from 'effect'
-import { Runtime } from 'foldkit'
+import type { Command } from 'foldkit'
 import { load, pushUrl, replaceUrl } from 'foldkit/navigation'
 import { evo } from 'foldkit/struct'
 import { toString as urlToString } from 'foldkit/url'
@@ -23,7 +23,7 @@ import {
   urlToAppRoute,
 } from './route'
 
-type UpdateReturn = [Model, ReadonlyArray<Runtime.Command<Message>>]
+type UpdateReturn = [Model, ReadonlyArray<Command<Message>>]
 const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
 export const update = (model: Model, message: Message): UpdateReturn =>

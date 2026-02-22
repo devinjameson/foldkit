@@ -9,6 +9,7 @@ import {
   Stream,
   String,
 } from 'effect'
+import type { Command } from 'foldkit'
 import { Runtime, Task } from 'foldkit'
 import { Html, html } from 'foldkit/html'
 import { m } from 'foldkit/message'
@@ -91,9 +92,9 @@ type Message = typeof Message.Type
 const update = (
   model: Model,
   message: Message,
-): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
+): [Model, ReadonlyArray<Command<Message>>] =>
   M.value(message).pipe(
-    M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
+    M.withReturnType<[Model, ReadonlyArray<Command<Message>>]>(),
     M.tagsExhaustive({
       RequestedConnection: () => [
         evo(model, {
@@ -139,7 +140,7 @@ const update = (
         }
 
         return M.value(model.connection).pipe(
-          M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
+          M.withReturnType<[Model, ReadonlyArray<Command<Message>>]>(),
           M.tag('ConnectionConnected', ({ socket }) => [
             evo(model, {
               messageInput: () => '',
@@ -152,7 +153,11 @@ const update = (
 
       SentMessage: ({ text }) => [
         model,
-        [Task.getZonedTime(zoned => GotSentMessageTime({ text, zoned }))],
+        [
+          Task.getZonedTime.pipe(
+            Effect.map(zoned => GotSentMessageTime({ text, zoned })),
+          ),
+        ],
       ],
 
       GotSentMessageTime: ({ text, zoned }) => {
@@ -172,7 +177,11 @@ const update = (
 
       ReceivedMessage: ({ text }) => [
         model,
-        [Task.getZonedTime(zoned => GotReceivedMessageTime({ text, zoned }))],
+        [
+          Task.getZonedTime.pipe(
+            Effect.map(zoned => GotReceivedMessageTime({ text, zoned })),
+          ),
+        ],
       ],
 
       GotReceivedMessageTime: ({ text, zoned }) => {
@@ -208,15 +217,13 @@ const init: Runtime.ElementInit<Model, Message> = () => [
 const sendMessage = (
   socket: WebSocket,
   text: string,
-): Runtime.Command<typeof SentMessage> =>
+): Command<typeof SentMessage> =>
   Effect.sync(() => {
     socket.send(text)
     return SentMessage({ text })
   })
 
-const connect = (): Runtime.Command<
-  typeof Connected | typeof FailedConnection
-> =>
+const connect = (): Command<typeof Connected | typeof FailedConnection> =>
   Effect.race(
     Effect.async(resume => {
       const ws = new WebSocket(WS_URL)
@@ -267,7 +274,7 @@ const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<
         onNone: () => Stream.empty,
         onSome: (ws: WebSocket) =>
           Stream.async<
-            Runtime.Command<
+            Command<
               | typeof ReceivedMessage
               | typeof Disconnected
               | typeof FailedConnection

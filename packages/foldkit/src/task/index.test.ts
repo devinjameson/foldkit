@@ -3,6 +3,8 @@ import { DateTime, Effect } from 'effect'
 import { expect } from 'vitest'
 
 import {
+  ElementNotFound,
+  TimeZoneError,
   focus,
   getTime,
   getTimeZone,
@@ -16,14 +18,10 @@ import {
 } from './index'
 
 describe('getTime', () => {
-  it.scoped('returns a UTC time wrapped in the message constructor', () =>
+  it.scoped('returns a UTC time', () =>
     Effect.gen(function* () {
-      const result = yield* getTime(utc => ({
-        _tag: 'GotTime' as const,
-        utc,
-      }))
-      expect(result._tag).toBe('GotTime')
-      expect(DateTime.isUtc(result.utc)).toBe(true)
+      const utc = yield* getTime
+      expect(DateTime.isUtc(utc)).toBe(true)
     }),
   )
 })
@@ -31,12 +29,8 @@ describe('getTime', () => {
 describe('getTimeZone', () => {
   it.scoped('returns a timezone', () =>
     Effect.gen(function* () {
-      const result = yield* getTimeZone(zone => ({
-        _tag: 'GotZone' as const,
-        zone,
-      }))
-      expect(result._tag).toBe('GotZone')
-      expect(DateTime.isTimeZone(result.zone)).toBe(true)
+      const zone = yield* getTimeZone
+      expect(DateTime.isTimeZone(zone)).toBe(true)
     }),
   )
 })
@@ -44,12 +38,8 @@ describe('getTimeZone', () => {
 describe('getZonedTime', () => {
   it.scoped('returns a zoned datetime', () =>
     Effect.gen(function* () {
-      const result = yield* getZonedTime(zoned => ({
-        _tag: 'GotZoned' as const,
-        zoned,
-      }))
-      expect(result._tag).toBe('GotZoned')
-      expect(DateTime.isZoned(result.zoned)).toBe(true)
+      const zoned = yield* getZonedTime
+      expect(DateTime.isZoned(zoned)).toBe(true)
     }),
   )
 })
@@ -57,24 +47,16 @@ describe('getZonedTime', () => {
 describe('getZonedTimeIn', () => {
   it.scoped('succeeds with a valid timezone', () =>
     Effect.gen(function* () {
-      const result = yield* getZonedTimeIn('America/New_York', zoned => ({
-        _tag: 'GotNY' as const,
-        zoned,
-      }))
-      expect(result._tag).toBe('GotNY')
-      expect(DateTime.isZoned(result.zoned)).toBe(true)
+      const zoned = yield* getZonedTimeIn('America/New_York')
+      expect(DateTime.isZoned(zoned)).toBe(true)
     }),
   )
 
   it.scoped('fails with an invalid timezone', () =>
     Effect.gen(function* () {
-      const error = yield* Effect.flip(
-        getZonedTimeIn('Invalid/Zone', zoned => ({
-          _tag: 'Nope' as const,
-          zoned,
-        })),
-      )
-      expect(error).toBe('Invalid timezone: Invalid/Zone')
+      const error = yield* Effect.flip(getZonedTimeIn('Invalid/Zone'))
+      expect(error).toBeInstanceOf(TimeZoneError)
+      expect(error.zoneId).toBe('Invalid/Zone')
     }),
   )
 })
@@ -82,40 +64,33 @@ describe('getZonedTimeIn', () => {
 describe('randomInt', () => {
   it.scoped('produces a value within the specified range', () =>
     Effect.gen(function* () {
-      const results: number[] = []
-      for (let i = 0; i < 50; i++) {
-        const result = yield* randomInt(0, 10, v => v)
+      const results: Array<number> = []
+      for (let index = 0; index < 50; index++) {
+        const result = yield* randomInt(0, 10)
         results.push(result)
       }
-      for (const r of results) {
-        expect(r).toBeGreaterThanOrEqual(0)
-        expect(r).toBeLessThan(10)
+      for (const result of results) {
+        expect(result).toBeGreaterThanOrEqual(0)
+        expect(result).toBeLessThan(10)
       }
     }),
   )
 
-  it.scoped('wraps the value in the message constructor', () =>
+  it.scoped('returns the raw number value', () =>
     Effect.gen(function* () {
-      const result = yield* randomInt(5, 15, v => ({
-        _tag: 'GotRandom' as const,
-        value: v,
-      }))
-      expect(result._tag).toBe('GotRandom')
-      expect(result.value).toBeGreaterThanOrEqual(5)
-      expect(result.value).toBeLessThan(15)
+      const value = yield* randomInt(5, 15)
+      expect(value).toBeGreaterThanOrEqual(5)
+      expect(value).toBeLessThan(15)
     }),
   )
 })
 
 describe('focus', () => {
-  it.scoped('returns false when element is not found', () =>
+  it.scoped('fails with ElementNotFound when element is not found', () =>
     Effect.gen(function* () {
-      const result = yield* focus('#nonexistent', success => ({
-        _tag: 'Focused' as const,
-        success,
-      }))
-      expect(result._tag).toBe('Focused')
-      expect(result.success).toBe(false)
+      const error = yield* Effect.flip(focus('#nonexistent'))
+      expect(error).toBeInstanceOf(ElementNotFound)
+      expect(error.selector).toBe('#nonexistent')
     }),
   )
 })
@@ -123,13 +98,10 @@ describe('focus', () => {
 describe('lockScroll', () => {
   it.scoped('sets overflow hidden on document element', () =>
     Effect.gen(function* () {
-      const result = yield* lockScroll(() => ({
-        _tag: 'Locked' as const,
-      }))
-      expect(result._tag).toBe('Locked')
+      yield* lockScroll
       expect(document.documentElement.style.overflow).toBe('hidden')
 
-      yield* unlockScroll(() => ({ _tag: 'Unlocked' as const }))
+      yield* unlockScroll
     }),
   )
 
@@ -137,10 +109,10 @@ describe('lockScroll', () => {
     Effect.gen(function* () {
       document.documentElement.style.overflow = 'auto'
 
-      yield* lockScroll(() => ({ _tag: 'Locked' as const }))
+      yield* lockScroll
       expect(document.documentElement.style.overflow).toBe('hidden')
 
-      yield* unlockScroll(() => ({ _tag: 'Unlocked' as const }))
+      yield* unlockScroll
       expect(document.documentElement.style.overflow).toBe('auto')
 
       document.documentElement.style.overflow = ''
@@ -149,14 +121,14 @@ describe('lockScroll', () => {
 
   it.scoped('supports nested locks via reference counting', () =>
     Effect.gen(function* () {
-      yield* lockScroll(() => ({ _tag: 'Locked' as const }))
-      yield* lockScroll(() => ({ _tag: 'Locked' as const }))
+      yield* lockScroll
+      yield* lockScroll
       expect(document.documentElement.style.overflow).toBe('hidden')
 
-      yield* unlockScroll(() => ({ _tag: 'Unlocked' as const }))
+      yield* unlockScroll
       expect(document.documentElement.style.overflow).toBe('hidden')
 
-      yield* unlockScroll(() => ({ _tag: 'Unlocked' as const }))
+      yield* unlockScroll
       expect(document.documentElement.style.overflow).toBe('')
     }),
   )
@@ -165,10 +137,7 @@ describe('lockScroll', () => {
 describe('unlockScroll', () => {
   it.scoped('is safe to call without a preceding lock', () =>
     Effect.gen(function* () {
-      const result = yield* unlockScroll(() => ({
-        _tag: 'Unlocked' as const,
-      }))
-      expect(result._tag).toBe('Unlocked')
+      yield* unlockScroll
     }),
   )
 })
@@ -207,7 +176,7 @@ describe('inertOthers', () => {
       const { header, main, sidebar, content, button, items, footer } =
         buildDom()
 
-      yield* inertOthers('test', ['#menu-button', '#menu-items'], () => 'done')
+      yield* inertOthers('test', ['#menu-button', '#menu-items'])
 
       expect(header.inert).toBe(true)
       expect(header.getAttribute('aria-hidden')).toBe('true')
@@ -221,7 +190,7 @@ describe('inertOthers', () => {
       expect(button.inert).toBeFalsy()
       expect(items.inert).toBeFalsy()
 
-      yield* restoreInert('test', () => 'restored')
+      yield* restoreInert('test')
       cleanupDom()
     }),
   )
@@ -231,11 +200,11 @@ describe('inertOthers', () => {
       const { header, footer } = buildDom()
       header.setAttribute('aria-hidden', 'false')
 
-      yield* inertOthers('test', ['#menu-button', '#menu-items'], () => 'done')
+      yield* inertOthers('test', ['#menu-button', '#menu-items'])
 
       expect(header.getAttribute('aria-hidden')).toBe('true')
 
-      yield* restoreInert('test', () => 'restored')
+      yield* restoreInert('test')
 
       expect(header.getAttribute('aria-hidden')).toBe('false')
       expect(footer.getAttribute('aria-hidden')).toBeNull()
@@ -249,11 +218,11 @@ describe('inertOthers', () => {
       const { header } = buildDom()
       expect(header.getAttribute('aria-hidden')).toBeNull()
 
-      yield* inertOthers('test', ['#menu-button', '#menu-items'], () => 'done')
+      yield* inertOthers('test', ['#menu-button', '#menu-items'])
 
       expect(header.getAttribute('aria-hidden')).toBe('true')
 
-      yield* restoreInert('test', () => 'restored')
+      yield* restoreInert('test')
 
       expect(header.getAttribute('aria-hidden')).toBeNull()
 
@@ -265,19 +234,15 @@ describe('inertOthers', () => {
     Effect.gen(function* () {
       const { header } = buildDom()
 
-      yield* inertOthers('first', ['#menu-button', '#menu-items'], () => 'done')
-      yield* inertOthers(
-        'second',
-        ['#menu-button', '#menu-items'],
-        () => 'done',
-      )
+      yield* inertOthers('first', ['#menu-button', '#menu-items'])
+      yield* inertOthers('second', ['#menu-button', '#menu-items'])
 
       expect(header.inert).toBe(true)
 
-      yield* restoreInert('first', () => 'restored')
+      yield* restoreInert('first')
       expect(header.inert).toBe(true)
 
-      yield* restoreInert('second', () => 'restored')
+      yield* restoreInert('second')
       expect(header.inert).toBeFalsy()
 
       cleanupDom()
@@ -288,15 +253,9 @@ describe('inertOthers', () => {
     Effect.gen(function* () {
       buildDom()
 
-      const result = yield* inertOthers(
-        'test',
-        ['#nonexistent', '#also-missing'],
-        () => 'done',
-      )
+      yield* inertOthers('test', ['#nonexistent', '#also-missing'])
 
-      expect(result).toBe('done')
-
-      yield* restoreInert('test', () => 'restored')
+      yield* restoreInert('test')
       cleanupDom()
     }),
   )
@@ -305,10 +264,7 @@ describe('inertOthers', () => {
 describe('restoreInert', () => {
   it.scoped('is safe to call without a preceding inertOthers', () =>
     Effect.gen(function* () {
-      const result = yield* restoreInert('nonexistent', () => ({
-        _tag: 'Restored' as const,
-      }))
-      expect(result._tag).toBe('Restored')
+      yield* restoreInert('nonexistent')
     }),
   )
 })

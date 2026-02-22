@@ -1,3 +1,4 @@
+export type { Command } from './command'
 export * as FieldValidation from './fieldValidation/public'
 export * as Html from './html/public'
 export * as Message from './message/public'

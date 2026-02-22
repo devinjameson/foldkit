@@ -7,6 +7,7 @@ import {
   Random,
   Schema as S,
 } from 'effect'
+import type { Command } from 'foldkit'
 import { FieldValidation, Runtime } from 'foldkit'
 import {
   type Validation,
@@ -113,7 +114,7 @@ const isEmailOnWaitlist = (email: string): Effect.Effect<boolean> =>
 const validateEmailNotOnWaitlist = (
   email: string,
   validationId: number,
-): Runtime.Command<typeof ValidatedEmail> =>
+): Command<typeof ValidatedEmail> =>
   Effect.gen(function* () {
     if (yield* isEmailOnWaitlist(email)) {
       return ValidatedEmail({
@@ -142,9 +143,9 @@ const isFormValid = (model: Model): boolean =>
 const update = (
   model: Model,
   message: Message,
-): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
+): [Model, ReadonlyArray<Command<Message>>] =>
   M.value(message).pipe(
-    M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
+    M.withReturnType<[Model, ReadonlyArray<Command<Message>>]>(),
     M.tagsExhaustive({
       NoOp: () => [model, []],
 
@@ -242,7 +243,7 @@ const update = (
 
 const FAKE_API_DELAY_MS = 500
 
-const submitForm = (model: Model): Runtime.Command<typeof SubmittedForm> =>
+const submitForm = (model: Model): Command<typeof SubmittedForm> =>
   Effect.gen(function* () {
     yield* Effect.sleep(`${FAKE_API_DELAY_MS} millis`)
 

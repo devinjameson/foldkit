@@ -1,5 +1,5 @@
 import { Effect, Match as M, Schema } from 'effect'
-import { Runtime } from 'foldkit'
+import type { Command } from 'foldkit'
 import { m } from 'foldkit/message'
 
 const ClickedFetchCount = m('ClickedFetchCount')
@@ -13,11 +13,9 @@ const FailedCountFetch = m('FailedCountFetch', {
 const update = (
   model: Model,
   message: Message,
-): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
+): [Model, ReadonlyArray<Command<Message>>] =>
   M.value(message).pipe(
-    M.withReturnType<
-      [Model, ReadonlyArray<Runtime.Command<Message>>]
-    >(),
+    M.withReturnType<[Model, ReadonlyArray<Command<Message>>]>(),
     M.tagsExhaustive({
       // Tell Foldkit to fetch the count from the API
       ClickedFetchCount: () => [model, [fetchCount]],
@@ -33,7 +31,7 @@ const update = (
   )
 
 // Command that fetches the count from an API
-const fetchCount: Runtime.Command<
+const fetchCount: Command<
   typeof SucceededCountFetch | typeof FailedCountFetch
 > = Effect.gen(function* () {
   const result = yield* Effect.tryPromise(() =>

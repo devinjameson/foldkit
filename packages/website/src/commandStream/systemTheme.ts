@@ -1,5 +1,5 @@
 import { Effect, Stream } from 'effect'
-import { Runtime } from 'foldkit'
+import type { Command } from 'foldkit'
 import { CommandStream } from 'foldkit/runtime'
 
 import {
@@ -18,29 +18,27 @@ export const systemTheme: CommandStream<
   }),
   depsToStream: ({ isSystemPreference }) =>
     Stream.when(
-      Stream.async<Runtime.Command<typeof ChangedSystemTheme>>(
-        emit => {
-          const mediaQuery = window.matchMedia(
-            '(prefers-color-scheme: dark)',
+      Stream.async<Command<typeof ChangedSystemTheme>>(emit => {
+        const mediaQuery = window.matchMedia(
+          '(prefers-color-scheme: dark)',
+        )
+
+        const handler = (event: MediaQueryListEvent) => {
+          emit.single(
+            Effect.succeed(
+              ChangedSystemTheme({
+                theme: event.matches ? 'Dark' : 'Light',
+              }),
+            ),
           )
+        }
 
-          const handler = (event: MediaQueryListEvent) => {
-            emit.single(
-              Effect.succeed(
-                ChangedSystemTheme({
-                  theme: event.matches ? 'Dark' : 'Light',
-                }),
-              ),
-            )
-          }
+        mediaQuery.addEventListener('change', handler)
 
-          mediaQuery.addEventListener('change', handler)
-
-          return Effect.sync(() =>
-            mediaQuery.removeEventListener('change', handler),
-          )
-        },
-      ),
+        return Effect.sync(() =>
+          mediaQuery.removeEventListener('change', handler),
+        )
+      }),
       () => isSystemPreference,
     ),
 }

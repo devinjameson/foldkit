@@ -1,5 +1,5 @@
 import { Match as M, Schema as S } from 'effect'
-import { Runtime } from 'foldkit'
+import type { Command } from 'foldkit'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -23,7 +23,7 @@ export type Message = typeof Message.Type
 export const update = (
   model: Model,
   message: Message,
-): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
+): [Model, ReadonlyArray<Command<Message>>] =>
   M.value(message).pipe(
     M.tagsExhaustive({
       ChangedTheme: ({ theme }) => [

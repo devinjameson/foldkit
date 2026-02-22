@@ -1,6 +1,7 @@
 import * as Shared from '@typing-game/shared'
 import { Array, Effect, Match as M, Number, Option, String as Str, pipe } from 'effect'
-import { Runtime, Task } from 'foldkit'
+import type { Command } from 'foldkit'
+import { Task } from 'foldkit'
 import { pushUrl } from 'foldkit/navigation'
 import { evo } from 'foldkit/struct'
 
@@ -21,7 +22,7 @@ import { Model, RoomRemoteData } from '../model'
 import { validateUserTextInput } from '../userGameText'
 import { handleRoomUpdated } from './handleRoomUpdates'
 
-export type UpdateReturn = [Model, ReadonlyArray<Runtime.Command<Message>>]
+export type UpdateReturn = [Model, ReadonlyArray<Command<Message>>]
 const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
 export const update = (model: Model, message: Message): UpdateReturn =>
@@ -70,7 +71,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
 
       BlurredRoomPageUsernameInput: () => [
         model,
-        [Task.focus(`#${ROOM_PAGE_USERNAME_INPUT_ID}`, () => NoOp())],
+        [Task.focus(`#${ROOM_PAGE_USERNAME_INPUT_ID}`).pipe(Effect.ignore, Effect.as(NoOp()))],
       ],
 
       ChangedRoomPageUsername: ({ value }) => [
@@ -105,7 +106,10 @@ export const update = (model: Model, message: Message): UpdateReturn =>
 
       SucceededRoomFetch: ({ room }) => {
         const maybeFocusRoomUsernameInput = Option.match(model.maybeSession, {
-          onNone: () => Option.some(Task.focus(`#${ROOM_PAGE_USERNAME_INPUT_ID}`, () => NoOp())),
+          onNone: () =>
+            Option.some(
+              Task.focus(`#${ROOM_PAGE_USERNAME_INPUT_ID}`).pipe(Effect.ignore, Effect.as(NoOp())),
+            ),
           onSome: () => Option.none(),
         })
 

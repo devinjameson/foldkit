@@ -1,59 +1,48 @@
 import { Duration, Effect } from 'effect'
 
 /**
- * Creates a command that resolves to a message after a delay.
+ * Waits for the given duration before completing.
  * Useful for debouncing, such as clearing a typeahead search query.
  *
  * @example
  * ```typescript
- * Task.delay(350, () => ClearedSearch({ version: model.searchVersion }))
- * Task.delay(Duration.seconds(1), () => TimedOut())
+ * Task.delay('1 second').pipe(Effect.as(TimedOut()))
  * ```
  */
-export const delay = <Message>(
-  duration: Duration.DurationInput,
-  f: () => Message,
-): Effect.Effect<Message> =>
-  Effect.gen(function* () {
-    yield* Effect.sleep(duration)
-    return f()
-  })
+export const delay = (duration: Duration.DurationInput): Effect.Effect<void> =>
+  Effect.sleep(duration)
 
 /**
- * Creates a command that resolves to a message after two animation frames,
- * ensuring the browser has painted the current state before proceeding.
- * Used for CSS transition orchestration — the double-rAF guarantees the "from"
- * state is visible before transitioning to the "to" state.
+ * Completes after two animation frames, ensuring the browser has painted
+ * the current state before proceeding. Used for CSS transition orchestration —
+ * the double-rAF guarantees the "from" state is visible before transitioning
+ * to the "to" state.
  *
  * @example
  * ```typescript
- * Task.nextFrame(() => TransitionFrameAdvanced())
+ * Task.nextFrame.pipe(Effect.as(TransitionFrameAdvanced()))
  * ```
  */
-export const nextFrame = <Message>(f: () => Message): Effect.Effect<Message> =>
-  Effect.async<Message>(resume => {
+export const nextFrame: Effect.Effect<void> = Effect.async<void>(resume => {
+  requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        resume(Effect.succeed(f()))
-      })
+      resume(Effect.void)
     })
   })
+})
 
 /**
- * Creates a command that waits for all CSS transitions on the element matching the selector
- * to complete, then resolves to a message. Uses the Web Animations API for reliable detection.
- * Falls back to resolving immediately if the element is missing or has no active transitions.
+ * Waits for all CSS transitions on the element matching the selector to complete.
+ * Uses the Web Animations API for reliable detection. Falls back to completing
+ * immediately if the element is missing or has no active transitions.
  *
  * @example
  * ```typescript
- * Task.waitForTransitions('#menu-items', () => TransitionEnded())
+ * Task.waitForTransitions('#menu-items').pipe(Effect.as(TransitionEnded()))
  * ```
  */
-export const waitForTransitions = <Message>(
-  selector: string,
-  f: () => Message,
-): Effect.Effect<Message> =>
-  Effect.async<Message>(resume => {
+export const waitForTransitions = (selector: string): Effect.Effect<void> =>
+  Effect.async<void>(resume => {
     requestAnimationFrame(async () => {
       const element = document.querySelector(selector)
 
@@ -66,6 +55,6 @@ export const waitForTransitions = <Message>(
 
       await Promise.allSettled(cssTransitions.map(({ finished }) => finished))
 
-      resume(Effect.succeed(f()))
+      resume(Effect.void)
     })
   })

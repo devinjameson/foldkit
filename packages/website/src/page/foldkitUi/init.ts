@@ -1,12 +1,10 @@
-import { Runtime, Ui } from 'foldkit'
+import type { Command } from 'foldkit'
+import { Ui } from 'foldkit'
 
 import type { Message } from './message'
 import type { Model } from './model'
 
-export type InitReturn = [
-  Model,
-  ReadonlyArray<Runtime.Command<Message>>,
-]
+export type InitReturn = [Model, ReadonlyArray<Command<Message>>]
 
 export const init = (): InitReturn => [
   {

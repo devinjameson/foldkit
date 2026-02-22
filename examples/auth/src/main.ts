@@ -1,6 +1,7 @@
 import { KeyValueStore } from '@effect/platform'
 import { BrowserKeyValueStore } from '@effect/platform-browser'
 import { Effect, Match as M, Option, Schema as S } from 'effect'
+import type { Command } from 'foldkit'
 import { Runtime } from 'foldkit'
 import { replaceUrl } from 'foldkit/navigation'
 import { Url } from 'foldkit/url'
@@ -45,7 +46,7 @@ type Flags = typeof Flags.Type
 
 // INIT
 
-type InitReturn = [Model, ReadonlyArray<Runtime.Command<Message>>]
+type InitReturn = [Model, ReadonlyArray<Command<Message>>]
 const withInitReturn = M.withReturnType<InitReturn>()
 
 const init: Runtime.ApplicationInit<Model, Message, Flags> = (

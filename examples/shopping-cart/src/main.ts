@@ -1,4 +1,5 @@
 import { Effect, Match as M, Option, Schema as S, pipe } from 'effect'
+import type { Command } from 'foldkit'
 import { Route, Runtime } from 'foldkit'
 import { Html } from 'foldkit/html'
 import { m } from 'foldkit/message'
@@ -130,17 +131,15 @@ const init: Runtime.ApplicationInit<Model, Message> = (url: Url) => {
 const update = (
   model: Model,
   message: Message,
-): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
+): [Model, ReadonlyArray<Command<Message>>] =>
   M.value(message).pipe(
-    M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
+    M.withReturnType<[Model, ReadonlyArray<Command<Message>>]>(),
     M.tagsExhaustive({
       NoOp: () => [model, []],
 
       ClickedLink: ({ request }) =>
         M.value(request).pipe(
-          M.withReturnType<
-            [Model, ReadonlyArray<Runtime.Command<typeof NoOp>>]
-          >(),
+          M.withReturnType<[Model, ReadonlyArray<Command<typeof NoOp>>]>(),
           M.tagsExhaustive({
             Internal: ({ url }) => [
               model,

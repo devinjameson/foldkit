@@ -1,5 +1,6 @@
 import {
   Array,
+  Effect,
   Match as M,
   Option,
   Schema as S,
@@ -7,11 +8,11 @@ import {
   pipe,
 } from 'effect'
 
+import type { Command } from '../../command'
 import { OptionExt } from '../../effectExtensions'
 import { html } from '../../html'
 import type { Html } from '../../html'
 import { m } from '../../message'
-import type { Command } from '../../runtime/runtime'
 import { evo } from '../../struct'
 import * as Task from '../../task'
 import { findFirstEnabledIndex, keyToIndex, wrapIndex } from '../keyboard'
@@ -208,31 +209,30 @@ export const update = (
 ): [Model, ReadonlyArray<Command<Message>>] => {
   const maybeNextFrameCommand = OptionExt.when(
     model.isAnimated,
-    Task.nextFrame(() => AdvancedTransitionFrame()),
+    Task.nextFrame.pipe(Effect.as(AdvancedTransitionFrame())),
   )
 
   const maybeLockScrollCommand = OptionExt.when(
     model.isModal,
-    Task.lockScroll(() => NoOp()),
+    Task.lockScroll.pipe(Effect.as(NoOp())),
   )
 
   const maybeUnlockScrollCommand = OptionExt.when(
     model.isModal,
-    Task.unlockScroll(() => NoOp()),
+    Task.unlockScroll.pipe(Effect.as(NoOp())),
   )
 
   const maybeInertOthersCommand = OptionExt.when(
     model.isModal,
-    Task.inertOthers(
-      model.id,
-      [buttonSelector(model.id), itemsSelector(model.id)],
-      () => NoOp(),
-    ),
+    Task.inertOthers(model.id, [
+      buttonSelector(model.id),
+      itemsSelector(model.id),
+    ]).pipe(Effect.as(NoOp())),
   )
 
   const maybeRestoreInertCommand = OptionExt.when(
     model.isModal,
-    Task.restoreInert(model.id, () => NoOp()),
+    Task.restoreInert(model.id).pipe(Effect.as(NoOp())),
   )
 
   return M.value(message).pipe(
@@ -261,7 +261,12 @@ export const update = (
               maybeLockScrollCommand,
               maybeInertOthersCommand,
             ]),
-            Array.prepend(Task.focus(itemsSelector(model.id), () => NoOp())),
+            Array.prepend(
+              Task.focus(itemsSelector(model.id)).pipe(
+                Effect.ignore,
+                Effect.as(NoOp()),
+              ),
+            ),
           ),
         ]
       },
@@ -274,7 +279,12 @@ export const update = (
             maybeUnlockScrollCommand,
             maybeRestoreInertCommand,
           ]),
-          Array.prepend(Task.focus(buttonSelector(model.id), () => NoOp())),
+          Array.prepend(
+            Task.focus(buttonSelector(model.id)).pipe(
+              Effect.ignore,
+              Effect.as(NoOp()),
+            ),
+          ),
         ),
       ],
 
@@ -293,7 +303,12 @@ export const update = (
           activationTrigger: () => activationTrigger,
         }),
         activationTrigger === 'Keyboard'
-          ? [Task.scrollIntoView(itemSelector(model.id, index), () => NoOp())]
+          ? [
+              Task.scrollIntoView(itemSelector(model.id, index)).pipe(
+                Effect.ignore,
+                Effect.as(NoOp()),
+              ),
+            ]
           : [],
       ],
 
@@ -331,13 +346,23 @@ export const update = (
             maybeUnlockScrollCommand,
             maybeRestoreInertCommand,
           ]),
-          Array.prepend(Task.focus(buttonSelector(model.id), () => NoOp())),
+          Array.prepend(
+            Task.focus(buttonSelector(model.id)).pipe(
+              Effect.ignore,
+              Effect.as(NoOp()),
+            ),
+          ),
         ),
       ],
 
       RequestedItemClick: ({ index }) => [
         model,
-        [Task.clickElement(itemSelector(model.id, index), () => NoOp())],
+        [
+          Task.clickElement(itemSelector(model.id, index)).pipe(
+            Effect.ignore,
+            Effect.as(NoOp()),
+          ),
+        ],
       ],
 
       Searched: ({ key, maybeTargetIndex }) => {
@@ -352,8 +377,8 @@ export const update = (
               Option.orElse(maybeTargetIndex, () => model.maybeActiveItemIndex),
           }),
           [
-            Task.delay(SEARCH_DEBOUNCE_MILLISECONDS, () =>
-              ClearedSearch({ version: nextSearchVersion }),
+            Task.delay(SEARCH_DEBOUNCE_MILLISECONDS).pipe(
+              Effect.as(ClearedSearch({ version: nextSearchVersion })),
             ),
           ],
         ]
@@ -373,16 +398,16 @@ export const update = (
           M.when('EnterStart', () => [
             evo(model, { transitionState: () => 'EnterAnimating' }),
             [
-              Task.waitForTransitions(itemsSelector(model.id), () =>
-                EndedTransition(),
+              Task.waitForTransitions(itemsSelector(model.id)).pipe(
+                Effect.as(EndedTransition()),
               ),
             ],
           ]),
           M.when('LeaveStart', () => [
             evo(model, { transitionState: () => 'LeaveAnimating' }),
             [
-              Task.waitForTransitions(itemsSelector(model.id), () =>
-                EndedTransition(),
+              Task.waitForTransitions(itemsSelector(model.id)).pipe(
+                Effect.as(EndedTransition()),
               ),
             ],
           ]),
@@ -423,7 +448,12 @@ export const update = (
                 maybeUnlockScrollCommand,
                 maybeRestoreInertCommand,
               ]),
-              Array.prepend(Task.focus(buttonSelector(model.id), () => NoOp())),
+              Array.prepend(
+                Task.focus(buttonSelector(model.id)).pipe(
+                  Effect.ignore,
+                  Effect.as(NoOp()),
+                ),
+              ),
             ),
           ]
         }
@@ -448,7 +478,12 @@ export const update = (
               maybeLockScrollCommand,
               maybeInertOthersCommand,
             ]),
-            Array.prepend(Task.focus(itemsSelector(model.id), () => NoOp())),
+            Array.prepend(
+              Task.focus(itemsSelector(model.id)).pipe(
+                Effect.ignore,
+                Effect.as(NoOp()),
+              ),
+            ),
           ),
         ]
       },
@@ -487,8 +522,7 @@ export const update = (
           [
             Task.clickElement(
               itemSelector(model.id, model.maybeActiveItemIndex.value),
-              () => NoOp(),
-            ),
+            ).pipe(Effect.ignore, Effect.as(NoOp())),
           ],
         ]
       },

@@ -1,12 +1,12 @@
 import { Match as M, Option } from 'effect'
-import { Runtime } from 'foldkit'
+import type { Command } from 'foldkit'
 
 export const update = (
   model: Model,
   message: Message,
 ): [
   Model,
-  ReadonlyArray<Runtime.Command<Message>>,
+  ReadonlyArray<Command<Message>>,
   Option.Option<OutMessage>,
 ] =>
   M.value(message).pipe(

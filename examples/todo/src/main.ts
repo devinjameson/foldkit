@@ -10,6 +10,7 @@ import {
   Schema as S,
   String,
 } from 'effect'
+import type { Command } from 'foldkit'
 import { Runtime } from 'foldkit'
 import { Html, html } from 'foldkit/html'
 import { m } from 'foldkit/message'
@@ -119,9 +120,9 @@ const init: Runtime.ElementInit<Model, Message, Flags> = flags => [
 const update = (
   model: Model,
   message: Message,
-): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
+): [Model, ReadonlyArray<Command<Message>>] =>
   M.value(message).pipe(
-    M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
+    M.withReturnType<[Model, ReadonlyArray<Command<Message>>]>(),
     M.tagsExhaustive({
       NoOp: () => [model, []],
 
@@ -217,7 +218,7 @@ const update = (
 
       SavedEdit: () =>
         M.value(model.editing).pipe(
-          M.withReturnType<[Model, Runtime.Command<typeof SavedTodos>[]]>(),
+          M.withReturnType<[Model, Command<typeof SavedTodos>[]]>(),
           M.tagsExhaustive({
             NotEditing: () => [model, []],
 
@@ -305,9 +306,7 @@ const randomId = Effect.gen(function* () {
   return randomValue.toString(36).substring(2, 15)
 })
 
-const generateTodoData = (
-  text: string,
-): Runtime.Command<typeof GotNewTodoData> =>
+const generateTodoData = (text: string): Command<typeof GotNewTodoData> =>
   Effect.gen(function* () {
     const id = yield* randomId
     const timestamp = yield* Clock.currentTimeMillis
@@ -316,7 +315,7 @@ const generateTodoData = (
 
 // COMMAND
 
-const saveTodos = (todos: Todos): Runtime.Command<typeof SavedTodos> =>
+const saveTodos = (todos: Todos): Command<typeof SavedTodos> =>
   Effect.gen(function* () {
     const store = yield* KeyValueStore.KeyValueStore
     yield* store.set(TODOS_STORAGE_KEY, S.encodeSync(S.parseJson(Todos))(todos))

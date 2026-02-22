@@ -1,5 +1,6 @@
-import { Array, Match as M, Number, Option, flow, pipe } from 'effect'
-import { Runtime, Task } from 'foldkit'
+import { Array, Effect, Match as M, Number, Option, flow, pipe } from 'effect'
+import type { Command } from 'foldkit'
+import { Task } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
 import { ROOM_ID_INPUT_ID, USERNAME_INPUT_ID } from '../../../constant'
@@ -7,7 +8,7 @@ import { createRoom } from '../command'
 import { Message, NoOp } from '../message'
 import { EnterRoomId, EnterUsername, HOME_ACTIONS, HomeAction, Model, SelectAction } from '../model'
 
-type UpdateReturn = [Model, ReadonlyArray<Runtime.Command<Message>>]
+type UpdateReturn = [Model, ReadonlyArray<Command<Message>>]
 const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
 export const handleKeyPressed =
@@ -76,13 +77,13 @@ const confirmSelection =
               roomIdValidationId: Date.now(),
             }),
         }),
-        [Task.focus(`#${ROOM_ID_INPUT_ID}`, () => NoOp())],
+        [Task.focus(`#${ROOM_ID_INPUT_ID}`).pipe(Effect.ignore, Effect.as(NoOp()))],
       ]),
       M.when('ChangeUsername', () => [
         evo(model, {
           homeStep: () => EnterUsername({ username: '' }),
         }),
-        [Task.focus(`#${USERNAME_INPUT_ID}`, () => NoOp())],
+        [Task.focus(`#${USERNAME_INPUT_ID}`).pipe(Effect.ignore, Effect.as(NoOp()))],
       ]),
       M.exhaustive,
     )

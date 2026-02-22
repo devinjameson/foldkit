@@ -83,21 +83,22 @@ const inertableSiblings = (
   )
 
 /**
- * Creates a command that marks all DOM elements outside the given selectors as
- * `inert` and `aria-hidden="true"`. Walks each allowed element up to
- * `document.body`, marking siblings that don't contain an allowed element.
- * Uses reference counting so nested calls are safe.
+ * Marks all DOM elements outside the given selectors as `inert` and
+ * `aria-hidden="true"`. Walks each allowed element up to `document.body`,
+ * marking siblings that don't contain an allowed element. Uses reference
+ * counting so nested calls are safe.
  *
  * @example
  * ```typescript
- * Task.inertOthers('my-menu', ['#menu-button', '#menu-items'], () => NoOp())
+ * Task.inertOthers('my-menu', ['#menu-button', '#menu-items']).pipe(
+ *   Effect.as(NoOp()),
+ * )
  * ```
  */
-export const inertOthers = <Message>(
+export const inertOthers = (
   id: string,
   allowedSelectors: ReadonlyArray<string>,
-  f: () => Message,
-): Effect.Effect<Message> =>
+): Effect.Effect<void> =>
   Effect.sync(() => {
     const allowedElements = resolveElements(allowedSelectors)
 
@@ -110,24 +111,18 @@ export const inertOthers = <Message>(
     )
 
     inertState.cleanups.set(id, cleanupFunctions)
-
-    return f()
   })
 
 /**
- * Creates a command that restores all elements previously marked inert by
- * `inertOthers` for the given ID. Safe to call without a preceding
- * `inertOthers` — acts as a no-op in that case.
+ * Restores all elements previously marked inert by `inertOthers` for the
+ * given ID. Safe to call without a preceding `inertOthers` — acts as a no-op.
  *
  * @example
  * ```typescript
- * Task.restoreInert('my-menu', () => NoOp())
+ * Task.restoreInert('my-menu').pipe(Effect.as(NoOp()))
  * ```
  */
-export const restoreInert = <Message>(
-  id: string,
-  f: () => Message,
-): Effect.Effect<Message> =>
+export const restoreInert = (id: string): Effect.Effect<void> =>
   Effect.sync(() => {
     const cleanupFunctions = inertState.cleanups.get(id)
 
@@ -135,6 +130,4 @@ export const restoreInert = <Message>(
       Array.forEach(cleanupFunctions, cleanup => cleanup())
       inertState.cleanups.delete(id)
     }
-
-    return f()
   })

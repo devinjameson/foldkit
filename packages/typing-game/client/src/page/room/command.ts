@@ -1,7 +1,8 @@
 import { KeyValueStore } from '@effect/platform'
 import { BrowserKeyValueStore } from '@effect/platform-browser'
 import { Effect, Option, Schema as S } from 'effect'
-import { Runtime, Task } from 'foldkit'
+import type { Command } from 'foldkit'
+import { Task } from 'foldkit'
 
 import { ROOM_PLAYER_SESSION_KEY } from '../../constant'
 import { RoomsClient } from '../../rpc'
@@ -19,7 +20,7 @@ import { RoomPlayerSession } from './model'
 
 export const getRoomById = (
   roomId: string,
-): Runtime.Command<typeof SucceededRoomFetch | typeof FailedRoomFetch> =>
+): Command<typeof SucceededRoomFetch | typeof FailedRoomFetch> =>
   Effect.gen(function* () {
     const client = yield* RoomsClient
     const room = yield* client.getRoomById({ roomId })
@@ -29,7 +30,7 @@ export const getRoomById = (
     Effect.provide(RoomsClient.Default),
   )
 
-export const loadSessionFromStorage = (roomId: string): Runtime.Command<typeof LoadedSession> =>
+export const loadSessionFromStorage = (roomId: string): Command<typeof LoadedSession> =>
   Effect.gen(function* () {
     const store = yield* KeyValueStore.KeyValueStore
     const maybeSessionJson = yield* store.get(ROOM_PLAYER_SESSION_KEY)
@@ -52,7 +53,7 @@ export const loadSessionFromStorage = (roomId: string): Runtime.Command<typeof L
 export const joinRoom = (
   username: string,
   roomId: string,
-): Runtime.Command<typeof JoinedRoom | typeof NoOp> =>
+): Command<typeof JoinedRoom | typeof NoOp> =>
   Effect.gen(function* () {
     const client = yield* RoomsClient
     const { player, room } = yield* client.joinRoom({ username, roomId })
@@ -62,7 +63,7 @@ export const joinRoom = (
     Effect.provide(RoomsClient.Default),
   )
 
-export const startGame = (roomId: string, playerId: string): Runtime.Command<typeof NoOp> =>
+export const startGame = (roomId: string, playerId: string): Command<typeof NoOp> =>
   Effect.gen(function* () {
     const client = yield* RoomsClient
     yield* client.startGame({ roomId, playerId })
@@ -77,7 +78,7 @@ export const updatePlayerProgress = (
   gameId: string,
   userGameText: string,
   charsTyped: number,
-): Runtime.Command<typeof NoOp> =>
+): Command<typeof NoOp> =>
   Effect.gen(function* () {
     const client = yield* RoomsClient
     yield* client.updatePlayerProgress({ playerId, gameId, userText: userGameText, charsTyped })
@@ -89,7 +90,7 @@ export const updatePlayerProgress = (
 
 export const copyRoomIdToClipboard = (
   roomId: string,
-): Runtime.Command<typeof SucceededCopyRoomId | typeof NoOp> =>
+): Command<typeof SucceededCopyRoomId | typeof NoOp> =>
   Effect.tryPromise({
     try: () => navigator.clipboard.writeText(roomId),
     catch: () => new Error('Failed to copy to clipboard'),
@@ -98,12 +99,11 @@ export const copyRoomIdToClipboard = (
     Effect.catchAll(() => Effect.succeed(NoOp())),
   )
 
-export const exitCountdownTick: Runtime.Command<typeof TickedExitCountdown> = Task.delay(
-  '1 second',
-  () => TickedExitCountdown(),
+export const exitCountdownTick: Command<typeof TickedExitCountdown> = Task.delay('1 second').pipe(
+  Effect.as(TickedExitCountdown()),
 )
 
 const COPY_INDICATOR_DURATION = '2 seconds'
 
-export const hideRoomIdCopiedIndicator = (): Runtime.Command<typeof HiddenRoomIdCopiedIndicator> =>
+export const hideRoomIdCopiedIndicator = (): Command<typeof HiddenRoomIdCopiedIndicator> =>
   Effect.sleep(COPY_INDICATOR_DURATION).pipe(Effect.as(HiddenRoomIdCopiedIndicator()))

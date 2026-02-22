@@ -1,6 +1,7 @@
 import { Array, Effect, Match as M, Option, Schema as S } from 'effect'
 import { ExtractTag } from 'effect/Types'
-import { Route, Runtime } from 'foldkit'
+import type { Command } from 'foldkit'
+import { Route } from 'foldkit'
 import { Html } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { replaceUrl } from 'foldkit/navigation'
@@ -56,12 +57,9 @@ export const init = (products: ReadonlyArray<Item.Item>): Model => ({
 
 export const update =
   (productsRouter: Route.Router<ExtractTag<AppRoute, 'Products'>>) =>
-  (
-    model: Model,
-    message: Message,
-  ): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
+  (model: Model, message: Message): [Model, ReadonlyArray<Command<Message>>] =>
     M.value(message).pipe(
-      M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
+      M.withReturnType<[Model, ReadonlyArray<Command<Message>>]>(),
       M.tagsExhaustive({
         NoOp: () => [model, []],
 

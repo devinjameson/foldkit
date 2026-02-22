@@ -1,7 +1,7 @@
 import { KeyValueStore } from '@effect/platform'
 import { BrowserKeyValueStore } from '@effect/platform-browser'
 import { Console, Effect, Schema as S } from 'effect'
-import { Runtime } from 'foldkit'
+import type { Command } from 'foldkit'
 
 import { SESSION_STORAGE_KEY } from './constant'
 import { Session } from './domain/session'
@@ -15,7 +15,7 @@ import {
 
 export const saveSession = (
   session: Session,
-): Runtime.Command<typeof SavedSession | typeof FailedSessionSave> =>
+): Command<typeof SavedSession | typeof FailedSessionSave> =>
   Effect.gen(function* () {
     const store = yield* KeyValueStore.KeyValueStore
     yield* store.set(
@@ -30,7 +30,7 @@ export const saveSession = (
     Effect.provide(BrowserKeyValueStore.layerLocalStorage),
   )
 
-export const clearSession = (): Runtime.Command<
+export const clearSession = (): Command<
   typeof ClearedSession | typeof FailedSessionClear
 > =>
   Effect.gen(function* () {
@@ -46,5 +46,4 @@ export const clearSession = (): Runtime.Command<
 
 export const logError = (
   ...args: ReadonlyArray<unknown>
-): Runtime.Command<typeof NoOp> =>
-  Console.error(...args).pipe(Effect.as(NoOp()))
+): Command<typeof NoOp> => Console.error(...args).pipe(Effect.as(NoOp()))

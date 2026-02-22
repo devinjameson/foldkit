@@ -7,7 +7,6 @@ export {
 
 export type {
   BrowserConfig,
-  Command,
   CommandStream,
   CommandStreams,
   ElementConfigWithFlags,

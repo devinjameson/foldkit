@@ -1,7 +1,7 @@
 import { Effect } from 'effect'
-import { Runtime } from 'foldkit'
+import type { Command } from 'foldkit'
 
-const fetchCount: Runtime.Command<
+const fetchCount: Command<
   typeof SucceededCountFetch | typeof FailedCountFetch
 > = Effect.gen(function* () {
   // tryPromise creates an Effect that represents an asynchronous computation

@@ -1,5 +1,6 @@
 import { Effect, Match as M } from 'effect'
-import { Runtime, Ui } from 'foldkit'
+import type { Command } from 'foldkit'
+import { Ui } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
 import {
@@ -13,10 +14,7 @@ import {
 } from './message'
 import type { Model } from './model'
 
-export type UpdateReturn = [
-  Model,
-  ReadonlyArray<Runtime.Command<Message>>,
-]
+export type UpdateReturn = [Model, ReadonlyArray<Command<Message>>]
 const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
 export const update = (

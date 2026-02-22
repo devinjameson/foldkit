@@ -1,5 +1,5 @@
 import { Match as M } from 'effect'
-import { Runtime } from 'foldkit'
+import type { Command } from 'foldkit'
 
 // UPDATE - How your state changes in response to messages
 // Returns a tuple of [nextModel, commands]
@@ -8,11 +8,9 @@ import { Runtime } from 'foldkit'
 const update = (
   model: Model,
   message: Message,
-): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
+): [Model, ReadonlyArray<Command<Message>>] =>
   M.value(message).pipe(
-    M.withReturnType<
-      [Model, ReadonlyArray<Runtime.Command<Message>>]
-    >(),
+    M.withReturnType<[Model, ReadonlyArray<Command<Message>>]>(),
     M.tagsExhaustive({
       // This means: the next model (application state) is
       // model - 1 and there are no commands to run

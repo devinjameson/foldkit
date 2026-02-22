@@ -1,12 +1,10 @@
 import { Effect } from 'effect'
-import { Runtime } from 'foldkit'
+import type { Command } from 'foldkit'
 
 import { RoomsClient } from '../../rpc'
 import { CreatedRoom, FailedRoom } from './message'
 
-export const createRoom = (
-  username: string,
-): Runtime.Command<typeof CreatedRoom | typeof FailedRoom> =>
+export const createRoom = (username: string): Command<typeof CreatedRoom | typeof FailedRoom> =>
   Effect.gen(function* () {
     const client = yield* RoomsClient
     const { player, room } = yield* client.createRoom({ username })

@@ -1,17 +1,12 @@
 import { Effect } from 'effect'
 
 /**
- * Creates a command that generates a random integer between min (inclusive) and max (exclusive)
- * and passes it to a message constructor.
+ * Generates a random integer between min (inclusive) and max (exclusive).
  *
  * @example
  * ```typescript
- * Task.randomInt(0, 100, value => GotRandom({ value }))
+ * Task.randomInt(1, 7).pipe(Effect.map(value => GotDiceRoll({ value })))
  * ```
  */
-export const randomInt = <Message>(
-  min: number,
-  max: number,
-  f: (value: number) => Message,
-): Effect.Effect<Message> =>
-  Effect.sync(() => f(Math.floor(Math.random() * (max - min)) + min))
+export const randomInt = (min: number, max: number): Effect.Effect<number> =>
+  Effect.sync(() => Math.floor(Math.random() * (max - min)) + min)

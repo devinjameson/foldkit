@@ -1,9 +1,17 @@
-import { Array, Match as M, Option, Schema as S, String, pipe } from 'effect'
+import {
+  Array,
+  Effect,
+  Match as M,
+  Option,
+  Schema as S,
+  String,
+  pipe,
+} from 'effect'
 
+import type { Command } from '../../command'
 import { html } from '../../html'
 import type { Html, TagName } from '../../html'
 import { m } from '../../message'
-import type { Command } from '../../runtime/runtime'
 import { evo } from '../../struct'
 import * as Task from '../../task'
 import { keyToIndex } from '../keyboard'
@@ -90,7 +98,7 @@ export const update = (
             activeIndex: () => index,
             focusedIndex: () => index,
           }),
-          [Task.focus(tabSelector, () => NoOp())],
+          [Task.focus(tabSelector).pipe(Effect.ignore, Effect.as(NoOp()))],
         ]
       },
       TabFocused: ({ index }) => {
@@ -98,7 +106,7 @@ export const update = (
 
         return [
           evo(model, { focusedIndex: () => index }),
-          [Task.focus(tabSelector, () => NoOp())],
+          [Task.focus(tabSelector).pipe(Effect.ignore, Effect.as(NoOp()))],
         ]
       },
       NoOp: () => [model, []],

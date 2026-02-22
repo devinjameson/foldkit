@@ -1,5 +1,5 @@
 import { Effect, Match, Random } from 'effect'
-import { Runtime } from 'foldkit'
+import type { Command } from 'foldkit'
 
 import { GRID_SIZE } from './constants'
 import {
@@ -22,7 +22,7 @@ const update = (model: Model, message: Message) =>
   )
 
 // The Command that performs the side effect
-const generateApplePosition: Runtime.Command<Message> = Effect.gen(
+const generateApplePosition: Command<Message> = Effect.gen(
   function* () {
     const x = yield* Random.nextIntBetween(0, GRID_SIZE)
     const y = yield* Random.nextIntBetween(0, GRID_SIZE)

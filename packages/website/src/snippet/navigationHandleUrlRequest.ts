@@ -1,4 +1,5 @@
 import { Effect, Match as M, Schema as S, pipe } from 'effect'
+import type { Command } from 'foldkit'
 import { Navigation, Route, Runtime, Url } from 'foldkit'
 import { m } from 'foldkit/message'
 import { int, literal, r, slash } from 'foldkit/route'
@@ -42,9 +43,7 @@ type Message = typeof Message.Type
 
 const update = (model: Model, message: Message) =>
   M.value(message).pipe(
-    M.withReturnType<
-      [Model, ReadonlyArray<Runtime.Command<Message>>]
-    >(),
+    M.withReturnType<[Model, ReadonlyArray<Command<Message>>]>(),
     M.tagsExhaustive({
       NoOp: () => [model, []],
 
@@ -55,7 +54,7 @@ const update = (model: Model, message: Message) =>
             // Same-origin link - push to history
             Internal: ({
               url,
-            }): [Model, ReadonlyArray<Runtime.Command<Message>>] => [
+            }): [Model, ReadonlyArray<Command<Message>>] => [
               model,
               [
                 Navigation.pushUrl(Url.toString(url)).pipe(
@@ -66,7 +65,7 @@ const update = (model: Model, message: Message) =>
             // Different-origin link - full page load
             External: ({
               href,
-            }): [Model, ReadonlyArray<Runtime.Command<Message>>] => [
+            }): [Model, ReadonlyArray<Command<Message>>] => [
               model,
               [Navigation.load(href).pipe(Effect.as(NoOp()))],
             ],

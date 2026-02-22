@@ -36,7 +36,7 @@ See the full example at [examples/counter/src/main.ts](https://github.com/devinj
 
 ```ts
 import { Match as M, Schema } from 'effect'
-import { Runtime } from 'foldkit'
+import { type Command, Runtime } from 'foldkit'
 import { Html, html } from 'foldkit/html'
 import { m } from 'foldkit/message'
 
@@ -59,9 +59,9 @@ export type Message = typeof Message.Type
 const update = (
   count: Model,
   message: Message,
-): [Model, ReadonlyArray<Runtime.Command<Message>>] =>
+): [Model, ReadonlyArray<Command<Message>>] =>
   M.value(message).pipe(
-    M.withReturnType<[Model, ReadonlyArray<Runtime.Command<Message>>]>(),
+    M.withReturnType<[Model, ReadonlyArray<Command<Message>>]>(),
     M.tagsExhaustive({
       ClickedDecrement: () => [count - 1, []],
       ClickedIncrement: () => [count + 1, []],

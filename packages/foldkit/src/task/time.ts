@@ -1,69 +1,65 @@
 import { DateTime, Effect, Option } from 'effect'
 
-/**
- * Creates a command that gets the current UTC time and passes it to a message constructor.
- * This is similar to Elm's `Task.perform` with `Time.now`.
- *
- * @example
- * ```typescript
- * Task.getTime(utc => GotTime({ utc }))
- * ```
- */
-export const getTime = <Message>(
-  f: (utc: DateTime.Utc) => Message,
-): Effect.Effect<Message> => Effect.map(DateTime.now, f)
+import { TimeZoneError } from './error'
 
 /**
- * Creates a command that gets the system timezone and passes it to a message constructor.
- * This is similar to Elm's `Task.perform` with `Time.here`.
+ * Gets the current UTC time.
  *
  * @example
  * ```typescript
- * Task.getTimeZone(zone => GotTimeZone({ zone }))
+ * Task.getTime.pipe(Effect.map(utc => GotTime({ utc })))
  * ```
  */
-export const getTimeZone = <Message>(
-  f: (zone: DateTime.TimeZone) => Message,
-): Effect.Effect<Message> => Effect.sync(() => f(DateTime.zoneMakeLocal()))
+export const getTime: Effect.Effect<DateTime.Utc> = DateTime.now
 
 /**
- * Creates a command that gets the current time in the system timezone and passes it to a message constructor.
- * This combines both time and timezone in a single task.
+ * Gets the system timezone.
  *
  * @example
  * ```typescript
- * Task.getZonedTime(zoned => GotTime({ zoned }))
+ * Task.getTimeZone.pipe(Effect.map(zone => GotTimeZone({ zone })))
  * ```
  */
-export const getZonedTime = <Message>(
-  f: (zoned: DateTime.Zoned) => Message,
-): Effect.Effect<Message> =>
-  Effect.gen(function* () {
+export const getTimeZone: Effect.Effect<DateTime.TimeZone> = Effect.sync(() =>
+  DateTime.zoneMakeLocal(),
+)
+
+/**
+ * Gets the current time in the system timezone.
+ *
+ * @example
+ * ```typescript
+ * Task.getZonedTime.pipe(Effect.map(zoned => GotTime({ zoned })))
+ * ```
+ */
+export const getZonedTime: Effect.Effect<DateTime.Zoned> = Effect.gen(
+  function* () {
     const utc = yield* DateTime.now
     const zone = DateTime.zoneMakeLocal()
-    const zoned = DateTime.setZone(utc, zone)
-    return f(zoned)
-  })
+    return DateTime.setZone(utc, zone)
+  },
+)
 
 /**
- * Creates a command that gets the current time in a specific timezone and passes it to a message constructor.
- * If the timezone is invalid, the effect will fail with an error string.
+ * Gets the current time in a specific timezone.
+ * Fails with `TimeZoneError` if the timezone ID is invalid.
  *
  * @example
  * ```typescript
- * Task.getZonedTimeIn('America/New_York', zoned => GotNYTime({ zoned }))
+ * Task.getZonedTimeIn('America/New_York').pipe(
+ *   Effect.map(zoned => GotNYTime({ zoned })),
+ *   Effect.catchAll(() => Effect.succeed(FailedTimeZone())),
+ * )
  * ```
  */
-export const getZonedTimeIn = <Message>(
+export const getZonedTimeIn = (
   zoneId: string,
-  f: (zoned: DateTime.Zoned) => Message,
-): Effect.Effect<Message, string> =>
+): Effect.Effect<DateTime.Zoned, TimeZoneError> =>
   Effect.gen(function* () {
     const utc = yield* DateTime.now
     const maybeZone = DateTime.zoneMakeNamed(zoneId)
     if (Option.isNone(maybeZone)) {
-      return yield* Effect.fail(`Invalid timezone: ${zoneId}`)
+      return yield* Effect.fail(new TimeZoneError({ zoneId }))
     }
-    const zoned = DateTime.setZone(utc, maybeZone.value)
-    return f(zoned)
+    return DateTime.setZone(utc, maybeZone.value)
   })

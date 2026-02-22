@@ -1,5 +1,6 @@
-import { Array, Match as M, Option, String as Str } from 'effect'
-import { Runtime, Task } from 'foldkit'
+import { Array, Effect, Match as M, Option, String as Str } from 'effect'
+import type { Command } from 'foldkit'
+import { Task } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
 import { joinRoom } from '../../../command'
@@ -16,11 +17,7 @@ import {
 import { EnterRoomId, EnterUsername, Model, SelectAction } from '../model'
 import { handleKeyPressed } from './handleKeyPressed'
 
-export type UpdateReturn = [
-  Model,
-  ReadonlyArray<Runtime.Command<Message>>,
-  Option.Option<OutMessage>,
-]
+export type UpdateReturn = [Model, ReadonlyArray<Command<Message>>, Option.Option<OutMessage>]
 const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
 export const update = (model: Model, message: Message): UpdateReturn =>
@@ -62,13 +59,13 @@ export const update = (model: Model, message: Message): UpdateReturn =>
 
       BlurredUsernameInput: () => [
         model,
-        [Task.focus(`#${USERNAME_INPUT_ID}`, () => NoOp())],
+        [Task.focus(`#${USERNAME_INPUT_ID}`).pipe(Effect.ignore, Effect.as(NoOp()))],
         Option.none(),
       ],
 
       BlurredRoomIdInput: () => [
         model,
-        [Task.focus(`#${ROOM_ID_INPUT_ID}`, () => NoOp())],
+        [Task.focus(`#${ROOM_ID_INPUT_ID}`).pipe(Effect.ignore, Effect.as(NoOp()))],
         Option.none(),
       ],
 

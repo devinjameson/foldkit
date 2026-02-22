@@ -1,4 +1,6 @@
 export {
+  ElementNotFound,
+  TimeZoneError,
   getTime,
   getTimeZone,
   getZonedTime,

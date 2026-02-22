@@ -1,133 +1,126 @@
 import { Effect } from 'effect'
 
+import { ElementNotFound } from './error'
+
 /**
- * Creates a command that focuses an element by selector and passes the result to a message constructor.
- * Passes true if the element was found and focused, false otherwise.
- * Uses requestAnimationFrame to ensure the DOM tree is updated and nodes exist before attempting to focus.
- * This follows the same approach as Elm's Browser.Dom.focus.
+ * Focuses an element matching the given selector.
+ * Uses requestAnimationFrame to ensure the DOM is updated before attempting to focus.
+ * Fails with `ElementNotFound` if the selector does not match an `HTMLElement`.
  *
  * @example
  * ```typescript
- * Task.focus('#email-input', success => InputFocused({ success }))
+ * Task.focus('#email-input').pipe(Effect.ignore, Effect.as(NoOp()))
  * ```
  */
-export const focus = <Message>(
-  selector: string,
-  f: (success: boolean) => Message,
-): Effect.Effect<Message> =>
-  Effect.async<Message>(resume => {
+export const focus = (selector: string): Effect.Effect<void, ElementNotFound> =>
+  Effect.async<void, ElementNotFound>(resume => {
     requestAnimationFrame(() => {
       const element = document.querySelector(selector)
       if (element instanceof HTMLElement) {
         element.focus()
-        resume(Effect.succeed(f(true)))
+        resume(Effect.void)
       } else {
-        resume(Effect.succeed(f(false)))
+        resume(Effect.fail(new ElementNotFound({ selector })))
       }
     })
   })
 
 /**
- * Creates a command that opens a dialog element as a modal using `showModal()`.
- * Passes true if the element was found and opened, false otherwise.
- * Uses requestAnimationFrame to ensure the DOM tree is updated and nodes exist before attempting to show.
+ * Opens a dialog element as a modal using `showModal()`.
+ * Uses requestAnimationFrame to ensure the DOM is updated before attempting to show.
+ * Fails with `ElementNotFound` if the selector does not match an `HTMLDialogElement`.
  *
  * @example
  * ```typescript
- * Task.showModal('#my-dialog', success => ModalOpened({ success }))
+ * Task.showModal('#my-dialog').pipe(Effect.ignore, Effect.as(NoOp()))
  * ```
  */
-export const showModal = <Message>(
+export const showModal = (
   selector: string,
-  f: (success: boolean) => Message,
-): Effect.Effect<Message> =>
-  Effect.async<Message>(resume => {
+): Effect.Effect<void, ElementNotFound> =>
+  Effect.async<void, ElementNotFound>(resume => {
     requestAnimationFrame(() => {
       const element = document.querySelector(selector)
       if (element instanceof HTMLDialogElement) {
         element.showModal()
-        resume(Effect.succeed(f(true)))
+        resume(Effect.void)
       } else {
-        resume(Effect.succeed(f(false)))
+        resume(Effect.fail(new ElementNotFound({ selector })))
       }
     })
   })
 
 /**
- * Creates a command that closes a dialog element using `.close()`.
- * Passes true if the element was found and closed, false otherwise.
- * Uses requestAnimationFrame to ensure the DOM tree is updated and nodes exist before attempting to close.
+ * Closes a dialog element using `.close()`.
+ * Uses requestAnimationFrame to ensure the DOM is updated before attempting to close.
+ * Fails with `ElementNotFound` if the selector does not match an `HTMLDialogElement`.
  *
  * @example
  * ```typescript
- * Task.closeModal('#my-dialog', success => ModalClosed({ success }))
+ * Task.closeModal('#my-dialog').pipe(Effect.ignore, Effect.as(NoOp()))
  * ```
  */
-export const closeModal = <Message>(
+export const closeModal = (
   selector: string,
-  f: (success: boolean) => Message,
-): Effect.Effect<Message> =>
-  Effect.async<Message>(resume => {
+): Effect.Effect<void, ElementNotFound> =>
+  Effect.async<void, ElementNotFound>(resume => {
     requestAnimationFrame(() => {
       const element = document.querySelector(selector)
       if (element instanceof HTMLDialogElement) {
         element.close()
-        resume(Effect.succeed(f(true)))
+        resume(Effect.void)
       } else {
-        resume(Effect.succeed(f(false)))
+        resume(Effect.fail(new ElementNotFound({ selector })))
       }
     })
   })
 
 /**
- * Creates a command that programmatically clicks an element by selector and passes the result to a message constructor.
- * Passes true if the element was found and clicked, false otherwise.
- * Uses requestAnimationFrame to ensure the DOM tree is updated and nodes exist before attempting to click.
+ * Programmatically clicks an element matching the given selector.
+ * Uses requestAnimationFrame to ensure the DOM is updated before attempting to click.
+ * Fails with `ElementNotFound` if the selector does not match an `HTMLElement`.
  *
  * @example
  * ```typescript
- * Task.clickElement('#menu-item-2', success => ItemClicked({ success }))
+ * Task.clickElement('#menu-item-2').pipe(Effect.ignore, Effect.as(NoOp()))
  * ```
  */
-export const clickElement = <Message>(
+export const clickElement = (
   selector: string,
-  f: (success: boolean) => Message,
-): Effect.Effect<Message> =>
-  Effect.async<Message>(resume => {
+): Effect.Effect<void, ElementNotFound> =>
+  Effect.async<void, ElementNotFound>(resume => {
     requestAnimationFrame(() => {
       const element = document.querySelector(selector)
       if (element instanceof HTMLElement) {
         element.click()
-        resume(Effect.succeed(f(true)))
+        resume(Effect.void)
       } else {
-        resume(Effect.succeed(f(false)))
+        resume(Effect.fail(new ElementNotFound({ selector })))
       }
     })
   })
 
 /**
- * Creates a command that scrolls an element into view by selector and passes the result to a message constructor.
- * Passes true if the element was found and scrolled, false otherwise.
- * Uses requestAnimationFrame to ensure the DOM tree is updated and nodes exist before attempting to scroll.
- * Uses `{ block: 'nearest' }` to avoid unnecessary scrolling when the element is already visible.
+ * Scrolls an element into view by selector using `{ block: 'nearest' }`.
+ * Uses requestAnimationFrame to ensure the DOM is updated before attempting to scroll.
+ * Fails with `ElementNotFound` if the selector does not match an `HTMLElement`.
  *
  * @example
  * ```typescript
- * Task.scrollIntoView('#active-item', success => ItemScrolled({ success }))
+ * Task.scrollIntoView('#active-item').pipe(Effect.ignore, Effect.as(NoOp()))
  * ```
  */
-export const scrollIntoView = <Message>(
+export const scrollIntoView = (
   selector: string,
-  f: (success: boolean) => Message,
-): Effect.Effect<Message> =>
-  Effect.async<Message>(resume => {
+): Effect.Effect<void, ElementNotFound> =>
+  Effect.async<void, ElementNotFound>(resume => {
     requestAnimationFrame(() => {
       const element = document.querySelector(selector)
       if (element instanceof HTMLElement) {
         element.scrollIntoView({ block: 'nearest' })
-        resume(Effect.succeed(f(true)))
+        resume(Effect.void)
       } else {
-        resume(Effect.succeed(f(false)))
+        resume(Effect.fail(new ElementNotFound({ selector })))
       }
     })
   })

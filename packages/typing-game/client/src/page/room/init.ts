@@ -1,12 +1,12 @@
 import { Array, Effect, Option, pipe } from 'effect'
-import { Runtime } from 'foldkit'
+import type { Command } from 'foldkit'
 
 import { AppRoute } from '../../route'
 import { getRoomById, loadSessionFromStorage } from './command'
 import { Message } from './message'
 import { Model, RoomRemoteData } from './model'
 
-export type InitReturn = [Model, ReadonlyArray<Runtime.Command<Message>>]
+export type InitReturn = [Model, ReadonlyArray<Command<Message>>]
 
 export const init = (route: AppRoute): InitReturn => {
   const commands = pipe(

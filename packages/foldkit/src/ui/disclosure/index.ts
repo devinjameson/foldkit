@@ -1,9 +1,9 @@
-import { Match as M, Option, Schema as S } from 'effect'
+import { Effect, Match as M, Option, Schema as S } from 'effect'
 
+import type { Command } from '../../command'
 import { html } from '../../html'
 import type { Html, TagName } from '../../html'
 import { m } from '../../message'
-import type { Command } from '../../runtime/runtime'
 import { evo } from '../../struct'
 import * as Task from '../../task'
 
@@ -65,7 +65,10 @@ export const update = (
     M.tagsExhaustive({
       Toggled: () => {
         const maybeFocusCommand = Option.liftPredicate(
-          Task.focus(`#${buttonId(model.id)}`, () => NoOp()),
+          Task.focus(`#${buttonId(model.id)}`).pipe(
+            Effect.ignore,
+            Effect.as(NoOp()),
+          ),
           () => model.isOpen,
         )
 
@@ -76,7 +79,10 @@ export const update = (
       },
       Closed: () => {
         const maybeFocusCommand = Option.liftPredicate(
-          Task.focus(`#${buttonId(model.id)}`, () => NoOp()),
+          Task.focus(`#${buttonId(model.id)}`).pipe(
+            Effect.ignore,
+            Effect.as(NoOp()),
+          ),
           () => model.isOpen,
         )
 

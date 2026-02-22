@@ -1,13 +1,11 @@
 import { Effect, Match as M, Option, Record } from 'effect'
-import { Runtime, Ui } from 'foldkit'
+import type { Command } from 'foldkit'
+import { Ui } from 'foldkit'
 
 import { GotFaqDisclosureMessage, type Message } from './message'
 import type { Model } from './model'
 
-export type UpdateReturn = [
-  Model,
-  ReadonlyArray<Runtime.Command<Message>>,
-]
+export type UpdateReturn = [Model, ReadonlyArray<Command<Message>>]
 const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
 export const update = (

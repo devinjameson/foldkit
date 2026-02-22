@@ -1,9 +1,9 @@
-import { Match as M, Option, Schema as S } from 'effect'
+import { Effect, Match as M, Option, Schema as S } from 'effect'
 
+import type { Command } from '../../command'
 import { html } from '../../html'
 import type { Html } from '../../html'
 import { m } from '../../message'
-import type { Command } from '../../runtime/runtime'
 import { evo } from '../../struct'
 import * as Task from '../../task'
 
@@ -63,7 +63,10 @@ export const update = (
     M.tagsExhaustive({
       Opened: () => {
         const maybeShowCommand = Option.liftPredicate(
-          Task.showModal(dialogSelector(model.id), () => NoOp()),
+          Task.showModal(dialogSelector(model.id)).pipe(
+            Effect.ignore,
+            Effect.as(NoOp()),
+          ),
           () => !model.isOpen,
         )
 
@@ -74,7 +77,10 @@ export const update = (
       },
       Closed: () => {
         const maybeCloseCommand = Option.liftPredicate(
-          Task.closeModal(dialogSelector(model.id), () => NoOp()),
+          Task.closeModal(dialogSelector(model.id)).pipe(
+            Effect.ignore,
+            Effect.as(NoOp()),
+          ),
           () => model.isOpen,
         )
 
