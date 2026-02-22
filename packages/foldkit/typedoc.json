@@ -16,6 +16,9 @@
     "Child",
     "PrintState",
     "Evolved",
-    "StrictKeys"
+    "StrictKeys",
+    "RequestedItemClick",
+    "PressedPointerOnButton",
+    "ReleasedPointerOnItems"
   ]
 }
