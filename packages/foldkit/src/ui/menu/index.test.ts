@@ -13,6 +13,8 @@ import {
   MovedPointerOverItem,
   NoOp,
   Opened,
+  PressedPointerOnButton,
+  ReleasedPointerOnItems,
   RequestedItemClick,
   Searched,
   SelectedItem,
@@ -59,6 +61,8 @@ describe('Menu', () => {
         searchQuery: '',
         searchVersion: 0,
         maybeLastPointerPosition: Option.none(),
+        maybeLastButtonPointerType: Option.none(),
+        maybePointerOrigin: Option.none(),
       })
     })
 
@@ -151,6 +155,8 @@ describe('Menu', () => {
         expect(result.searchQuery).toBe('')
         expect(result.searchVersion).toBe(0)
         expect(result.maybeLastPointerPosition).toStrictEqual(Option.none())
+        expect(result.maybeLastButtonPointerType).toStrictEqual(Option.none())
+        expect(result.maybePointerOrigin).toStrictEqual(Option.none())
         expect(commands).toHaveLength(1)
       })
     })
@@ -163,6 +169,230 @@ describe('Menu', () => {
         expect(result.maybeActiveItemIndex).toStrictEqual(Option.none())
         expect(result.maybeLastPointerPosition).toStrictEqual(Option.none())
         expect(commands).toHaveLength(0)
+      })
+    })
+
+    describe('PressedPointerOnButton', () => {
+      it('records pointer type for touch without toggling', () => {
+        const model = closedModel()
+        const [result, commands] = update(
+          model,
+          PressedPointerOnButton({
+            pointerType: 'touch',
+            button: 0,
+            screenX: 100,
+            screenY: 200,
+            timeStamp: 1000,
+          }),
+        )
+        expect(result.isOpen).toBe(false)
+        expect(result.maybeLastButtonPointerType).toStrictEqual(
+          Option.some('touch'),
+        )
+        expect(commands).toHaveLength(0)
+      })
+
+      it('records pointer type for pen without toggling', () => {
+        const model = closedModel()
+        const [result, commands] = update(
+          model,
+          PressedPointerOnButton({
+            pointerType: 'pen',
+            button: 0,
+            screenX: 100,
+            screenY: 200,
+            timeStamp: 1000,
+          }),
+        )
+        expect(result.isOpen).toBe(false)
+        expect(result.maybeLastButtonPointerType).toStrictEqual(
+          Option.some('pen'),
+        )
+        expect(commands).toHaveLength(0)
+      })
+
+      it('opens the menu on mouse left button when closed', () => {
+        const model = closedModel()
+        const [result, commands] = update(
+          model,
+          PressedPointerOnButton({
+            pointerType: 'mouse',
+            button: 0,
+            screenX: 100,
+            screenY: 200,
+            timeStamp: 1000,
+          }),
+        )
+        expect(result.isOpen).toBe(true)
+        expect(result.activationTrigger).toBe('Pointer')
+        expect(result.maybeActiveItemIndex).toStrictEqual(Option.none())
+        expect(result.maybeLastButtonPointerType).toStrictEqual(
+          Option.some('mouse'),
+        )
+        expect(result.maybePointerOrigin).toStrictEqual(
+          Option.some({ screenX: 100, screenY: 200, timeStamp: 1000 }),
+        )
+        expect(commands).toHaveLength(1)
+      })
+
+      it('closes the menu on mouse left button when open', () => {
+        const model = openModel()
+        const [result, commands] = update(
+          model,
+          PressedPointerOnButton({
+            pointerType: 'mouse',
+            button: 0,
+            screenX: 100,
+            screenY: 200,
+            timeStamp: 1000,
+          }),
+        )
+        expect(result.isOpen).toBe(false)
+        expect(result.maybeLastButtonPointerType).toStrictEqual(Option.none())
+        expect(result.maybePointerOrigin).toStrictEqual(Option.none())
+        expect(commands).toHaveLength(1)
+      })
+
+      it('does not toggle on mouse right button', () => {
+        const model = closedModel()
+        const [result, commands] = update(
+          model,
+          PressedPointerOnButton({
+            pointerType: 'mouse',
+            button: 2,
+            screenX: 100,
+            screenY: 200,
+            timeStamp: 1000,
+          }),
+        )
+        expect(result.isOpen).toBe(false)
+        expect(result.maybeLastButtonPointerType).toStrictEqual(
+          Option.some('mouse'),
+        )
+        expect(commands).toHaveLength(0)
+      })
+
+      it('always records maybeLastButtonPointerType', () => {
+        const model = closedModel()
+        const [afterTouch] = update(
+          model,
+          PressedPointerOnButton({
+            pointerType: 'touch',
+            button: 0,
+            screenX: 0,
+            screenY: 0,
+            timeStamp: 0,
+          }),
+        )
+        expect(afterTouch.maybeLastButtonPointerType).toStrictEqual(
+          Option.some('touch'),
+        )
+
+        const [afterMouse] = update(
+          afterTouch,
+          PressedPointerOnButton({
+            pointerType: 'mouse',
+            button: 0,
+            screenX: 0,
+            screenY: 0,
+            timeStamp: 0,
+          }),
+        )
+        expect(afterMouse.maybeLastButtonPointerType).toStrictEqual(
+          Option.some('mouse'),
+        )
+      })
+    })
+
+    describe('ReleasedPointerOnItems', () => {
+      const openWithOrigin = () => {
+        const model = closedModel()
+        const [result] = update(
+          model,
+          PressedPointerOnButton({
+            pointerType: 'mouse',
+            button: 0,
+            screenX: 100,
+            screenY: 200,
+            timeStamp: 1000,
+          }),
+        )
+        return result
+      }
+
+      it('no-ops when no pointer origin', () => {
+        const model = openModel()
+        const [result, commands] = update(
+          model,
+          ReleasedPointerOnItems({
+            screenX: 200,
+            screenY: 300,
+            timeStamp: 2000,
+          }),
+        )
+        expect(result).toBe(model)
+        expect(commands).toHaveLength(0)
+      })
+
+      it('no-ops when movement is below threshold', () => {
+        const model = openWithOrigin()
+        const [result, commands] = update(
+          model,
+          ReleasedPointerOnItems({
+            screenX: 103,
+            screenY: 203,
+            timeStamp: 2000,
+          }),
+        )
+        expect(result).toBe(model)
+        expect(commands).toHaveLength(0)
+      })
+
+      it('no-ops when hold time is below threshold', () => {
+        const model = openWithOrigin()
+        const [result, commands] = update(
+          model,
+          ReleasedPointerOnItems({
+            screenX: 200,
+            screenY: 300,
+            timeStamp: 1100,
+          }),
+        )
+        expect(result).toBe(model)
+        expect(commands).toHaveLength(0)
+      })
+
+      it('no-ops when no active item', () => {
+        const model = openWithOrigin()
+        expect(model.maybeActiveItemIndex).toStrictEqual(Option.none())
+        const [result, commands] = update(
+          model,
+          ReleasedPointerOnItems({
+            screenX: 200,
+            screenY: 300,
+            timeStamp: 2000,
+          }),
+        )
+        expect(result).toBe(model)
+        expect(commands).toHaveLength(0)
+      })
+
+      it('issues click command when all thresholds met', () => {
+        const model = openWithOrigin()
+        const [withActiveItem] = update(
+          model,
+          ActivatedItem({ index: 2, activationTrigger: 'Pointer' }),
+        )
+        const [result, commands] = update(
+          withActiveItem,
+          ReleasedPointerOnItems({
+            screenX: 200,
+            screenY: 300,
+            timeStamp: 2000,
+          }),
+        )
+        expect(result).toBe(withActiveItem)
+        expect(commands).toHaveLength(1)
       })
     })
 

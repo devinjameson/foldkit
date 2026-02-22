@@ -21,32 +21,13 @@ Reference: `~/Repos/headlessui/packages/@headlessui-react/src/components/menu/me
 - [x] Inert others (`Task.inertOthers` / `Task.restoreInert`, pairs with scroll lock under `isModal`)
 - [x] Enter/Space clicks DOM element (`Task.clickElement`, `RequestedItemClick` two-message flow)
 - [x] Pointer events instead of mouse events on items (pointer event migration with touch filtering)
+- [x] Firefox Space keyup workaround (`OnKeyUpPreventDefault` on button and items container)
+- [x] Quick release / drag-to-select (`OnPointerDown`/`OnPointerUp`, `PressedPointerOnButton`/`ReleasedPointerOnItems`, 5px + 200ms thresholds)
+- [x] Mouse vs touch button toggle (mouse toggles on `pointerdown`, touch/pen falls through to `click` via `lastButtonPointerType`)
 
 ## Remaining
 
-### 1. Quick release (drag-to-select)
-
-**Scope:** New pointer tracking behavior
-
-Headless UI supports a "quick release" interaction: pointerdown on the button opens the menu, then dragging into an item and releasing selects it. This enables fast one-gesture menu selection on both desktop and mobile.
-
-Thresholds prevent accidental activation: the pointer must move at least 5px from the initial pointerdown position, and the button must be held for at least 200ms before a release on an item counts as a selection.
-
-**Change:** Track pointer origin on `pointerdown` (button open). On `pointerup` inside items container, check distance from origin (>= 5px) and elapsed time (>= 200ms). If both thresholds met and pointer is over an enabled item, select it. Requires tracking `pointerOrigin: Option<{ x: number; y: number; time: number }>` in the model.
-
-**Reference:** `menu.tsx` pointerdown/pointerup handlers, `use-tracked-pointer.ts`
-
-### 2. Firefox Space keyup workaround
-
-**Scope:** Keyboard event handler change
-
-Firefox fires a spurious `click` event on the button when Space is released after opening the menu via Space key. This causes the menu to immediately close after opening.
-
-**Change:** Track whether the menu was opened via Space keydown. On the next `keyup` for Space, `preventDefault()` to suppress the synthetic click. This is a targeted Firefox workaround — other browsers don't exhibit this behavior.
-
-**Reference:** `menu.tsx` keydown/keyup handlers for Space
-
-### 3. Button moved detection
+### 2. Button moved detection
 
 **Scope:** Model field + position tracking command
 
@@ -56,7 +37,7 @@ Headless UI tracks the button's visual position when the menu closes. If the but
 
 **Reference:** `menu-machine.ts` lines 351-358, 409-421, `element-movement.ts`
 
-### 4. Anchor positioning + portal rendering
+### 3. Anchor positioning + portal rendering
 
 **Scope:** New module — largest item
 
@@ -80,7 +61,7 @@ Exposes `--button-width` CSS variable on the items container for width matching.
 
 Cross-cutting concerns for touch devices and mobile browsers. These affect existing features and should be addressed alongside or before the remaining desktop items.
 
-### 5. iOS Safari scroll lock hardening
+### 4. iOS Safari scroll lock hardening
 
 **Scope:** Enhancement to `Task.lockScroll` in `packages/foldkit/src/task/scrollLock.ts`
 
@@ -94,7 +75,7 @@ The current scroll lock implementation sets `overflow: hidden` on `documentEleme
 
 **Reference:** Headless UI `use-scroll-lock.ts` — handles iOS with `touchstart`/`touchmove` interception and overflow container detection
 
-### 6. Mobile outside-click: distinguish scroll from tap
+### 5. Mobile outside-click: distinguish scroll from tap
 
 **Scope:** Enhancement to backdrop/outside-click handling
 
@@ -105,16 +86,6 @@ Headless UI tracks the pointer origin on `pointerdown` and compares it to the `p
 **Change:** For non-modal menus (where the backdrop doesn't block interaction), track the pointer origin on `pointerdown` outside the menu. On `pointerup`, compare distance — if > 30px, suppress the close. Modal menus with a backdrop div are unaffected since the backdrop itself intercepts the event.
 
 **Reference:** Headless UI `use-outside-click.ts` — 30px movement threshold
-
-### 7. Mouse vs touch button toggle
-
-**Scope:** Enhancement to button interaction handling
-
-Headless UI differentiates mouse and touch input on the button. For mouse, it uses `pointerdown` to open (so the menu appears on press, enabling drag-to-select). For touch/pen, it uses `click` (which fires on release) to avoid blocking scroll gestures — a `pointerdown` handler on touch would interfere with the browser's scroll detection.
-
-**Change:** Replace `OnClick` on the button with `OnPointerDown` that checks `pointerType`. For `mouse`, toggle immediately on pointerdown. For `touch` or `pen`, let it fall through to a `click` handler. This pairs with item 2 (quick release) — mouse pointerdown enables the drag-to-select gesture, while touch click keeps scrolling smooth.
-
-**Reference:** `menu.tsx` button pointerdown + click handlers with `pointerType` checks
 
 ## Not applicable to foldkit
 

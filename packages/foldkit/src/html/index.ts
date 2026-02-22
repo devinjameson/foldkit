@@ -265,6 +265,23 @@ type Attribute<Message> = Data.TaggedEnum<{
   OnPointerLeave: {
     readonly f: (pointerType: string) => Option.Option<Message>
   }
+  OnPointerDown: {
+    readonly f: (
+      pointerType: string,
+      button: number,
+      screenX: number,
+      screenY: number,
+      timeStamp: number,
+    ) => Option.Option<Message>
+  }
+  OnPointerUp: {
+    readonly f: (
+      screenX: number,
+      screenY: number,
+      pointerType: string,
+      timeStamp: number,
+    ) => Option.Option<Message>
+  }
   OnKeyDown: { readonly f: (key: string) => Message }
   OnKeyDownPreventDefault: {
     readonly f: (key: string) => Option.Option<Message>
@@ -398,6 +415,8 @@ const {
   OnMouseMove,
   OnPointerMove,
   OnPointerLeave,
+  OnPointerDown,
+  OnPointerUp,
   OnKeyDown,
   OnKeyDownPreventDefault,
   OnKeyUp,
@@ -623,6 +642,35 @@ const buildVNodeData = <Message>(
             updateDataOn({
               pointerleave: (event: PointerEvent) => {
                 const maybeMessage = f(event.pointerType)
+                if (Option.isSome(maybeMessage)) {
+                  dispatchSync(maybeMessage.value)
+                }
+              },
+            }),
+          OnPointerDown: ({ f }) =>
+            updateDataOn({
+              pointerdown: (event: PointerEvent) => {
+                const maybeMessage = f(
+                  event.pointerType,
+                  event.button,
+                  event.screenX,
+                  event.screenY,
+                  event.timeStamp,
+                )
+                if (Option.isSome(maybeMessage)) {
+                  dispatchSync(maybeMessage.value)
+                }
+              },
+            }),
+          OnPointerUp: ({ f }) =>
+            updateDataOn({
+              pointerup: (event: PointerEvent) => {
+                const maybeMessage = f(
+                  event.screenX,
+                  event.screenY,
+                  event.pointerType,
+                  event.timeStamp,
+                )
                 if (Option.isSome(maybeMessage)) {
                   dispatchSync(maybeMessage.value)
                 }
@@ -1405,6 +1453,40 @@ type HtmlAttributes<Message> = {
     readonly _tag: 'OnPointerLeave'
     readonly f: (pointerType: string) => Option.Option<Message>
   }
+  OnPointerDown: (
+    f: (
+      pointerType: string,
+      button: number,
+      screenX: number,
+      screenY: number,
+      timeStamp: number,
+    ) => Option.Option<Message>,
+  ) => {
+    readonly _tag: 'OnPointerDown'
+    readonly f: (
+      pointerType: string,
+      button: number,
+      screenX: number,
+      screenY: number,
+      timeStamp: number,
+    ) => Option.Option<Message>
+  }
+  OnPointerUp: (
+    f: (
+      screenX: number,
+      screenY: number,
+      pointerType: string,
+      timeStamp: number,
+    ) => Option.Option<Message>,
+  ) => {
+    readonly _tag: 'OnPointerUp'
+    readonly f: (
+      screenX: number,
+      screenY: number,
+      pointerType: string,
+      timeStamp: number,
+    ) => Option.Option<Message>
+  }
   OnKeyDown: (f: (key: string) => Message) => {
     readonly _tag: 'OnKeyDown'
     readonly f: (key: string) => Message
@@ -1746,6 +1828,23 @@ const htmlAttributes = <Message>(): HtmlAttributes<Message> => ({
   ) => OnPointerMove({ f }),
   OnPointerLeave: (f: (pointerType: string) => Option.Option<Message>) =>
     OnPointerLeave({ f }),
+  OnPointerDown: (
+    f: (
+      pointerType: string,
+      button: number,
+      screenX: number,
+      screenY: number,
+      timeStamp: number,
+    ) => Option.Option<Message>,
+  ) => OnPointerDown({ f }),
+  OnPointerUp: (
+    f: (
+      screenX: number,
+      screenY: number,
+      pointerType: string,
+      timeStamp: number,
+    ) => Option.Option<Message>,
+  ) => OnPointerUp({ f }),
   OnKeyDown: (f: (key: string) => Message) => OnKeyDown({ f }),
   OnKeyDownPreventDefault: (f: (key: string) => Option.Option<Message>) =>
     OnKeyDownPreventDefault({ f }),

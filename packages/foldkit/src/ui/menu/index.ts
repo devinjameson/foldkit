@@ -32,6 +32,12 @@ export const TransitionState = S.Literal(
 )
 export type TransitionState = typeof TransitionState.Type
 
+const PointerOrigin = S.Struct({
+  screenX: S.Number,
+  screenY: S.Number,
+  timeStamp: S.Number,
+})
+
 /** Schema for the menu component's state, tracking open/closed status, active item, activation trigger, and typeahead search. */
 export const Model = S.Struct({
   id: S.String,
@@ -46,6 +52,8 @@ export const Model = S.Struct({
   maybeLastPointerPosition: S.OptionFromSelf(
     S.Struct({ screenX: S.Number, screenY: S.Number }),
   ),
+  maybeLastButtonPointerType: S.OptionFromSelf(S.String),
+  maybePointerOrigin: S.OptionFromSelf(PointerOrigin),
 })
 
 export type Model = typeof Model.Type
@@ -92,6 +100,20 @@ export const NoOp = m('NoOp')
 export const AdvancedTransitionFrame = m('AdvancedTransitionFrame')
 /** Sent internally when all CSS transitions on the menu items container have completed. */
 export const EndedTransition = m('EndedTransition')
+/** Sent when the user presses a pointer device on the menu button. Records pointer type and toggles for mouse. */
+export const PressedPointerOnButton = m('PressedPointerOnButton', {
+  pointerType: S.String,
+  button: S.Number,
+  screenX: S.Number,
+  screenY: S.Number,
+  timeStamp: S.Number,
+})
+/** Sent when the user releases a pointer on the items container, enabling drag-to-select for mouse. */
+export const ReleasedPointerOnItems = m('ReleasedPointerOnItems', {
+  screenX: S.Number,
+  screenY: S.Number,
+  timeStamp: S.Number,
+})
 
 /** Union of all messages the menu component can produce. */
 export const Message = S.Union(
@@ -108,6 +130,8 @@ export const Message = S.Union(
   NoOp,
   AdvancedTransitionFrame,
   EndedTransition,
+  PressedPointerOnButton,
+  ReleasedPointerOnItems,
 )
 
 export type Opened = typeof Opened.Type
@@ -123,12 +147,16 @@ export type ClearedSearch = typeof ClearedSearch.Type
 export type NoOp = typeof NoOp.Type
 export type AdvancedTransitionFrame = typeof AdvancedTransitionFrame.Type
 export type EndedTransition = typeof EndedTransition.Type
+export type PressedPointerOnButton = typeof PressedPointerOnButton.Type
+export type ReleasedPointerOnItems = typeof ReleasedPointerOnItems.Type
 
 export type Message = typeof Message.Type
 
 // INIT
 
 const SEARCH_DEBOUNCE_MILLISECONDS = 350
+const POINTER_HOLD_THRESHOLD_MILLISECONDS = 200
+const POINTER_MOVEMENT_THRESHOLD_PIXELS = 5
 
 /** Configuration for creating a menu model with `init`. `isAnimated` enables CSS transition coordination (default `false`). `isModal` locks page scroll and inerts other elements when open (default `true`). */
 export type InitConfig = Readonly<{
@@ -149,6 +177,8 @@ export const init = (config: InitConfig): Model => ({
   searchQuery: '',
   searchVersion: 0,
   maybeLastPointerPosition: Option.none(),
+  maybeLastButtonPointerType: Option.none(),
+  maybePointerOrigin: Option.none(),
 })
 
 // UPDATE
@@ -162,6 +192,8 @@ const closedModel = (model: Model): Model =>
     searchQuery: () => '',
     searchVersion: () => 0,
     maybeLastPointerPosition: () => Option.none(),
+    maybeLastButtonPointerType: () => Option.none(),
+    maybePointerOrigin: () => Option.none(),
   })
 
 const buttonSelector = (id: string): string => `#${id}-button`
@@ -223,32 +255,36 @@ export const update = (
 
         return [
           nextModel,
-          [
-            Task.focus(itemsSelector(model.id), () => NoOp()),
-            ...Array.fromOption(maybeNextFrameCommand),
-            ...Array.fromOption(maybeLockScrollCommand),
-            ...Array.fromOption(maybeInertOthersCommand),
-          ],
+          pipe(
+            Array.getSomes([
+              maybeNextFrameCommand,
+              maybeLockScrollCommand,
+              maybeInertOthersCommand,
+            ]),
+            Array.prepend(Task.focus(itemsSelector(model.id), () => NoOp())),
+          ),
         ]
       },
 
       Closed: () => [
         closedModel(model),
-        [
-          Task.focus(buttonSelector(model.id), () => NoOp()),
-          ...Array.fromOption(maybeNextFrameCommand),
-          ...Array.fromOption(maybeUnlockScrollCommand),
-          ...Array.fromOption(maybeRestoreInertCommand),
-        ],
+        pipe(
+          Array.getSomes([
+            maybeNextFrameCommand,
+            maybeUnlockScrollCommand,
+            maybeRestoreInertCommand,
+          ]),
+          Array.prepend(Task.focus(buttonSelector(model.id), () => NoOp())),
+        ),
       ],
 
       ClosedByTab: () => [
         closedModel(model),
-        [
-          ...Array.fromOption(maybeNextFrameCommand),
-          ...Array.fromOption(maybeUnlockScrollCommand),
-          ...Array.fromOption(maybeRestoreInertCommand),
-        ],
+        Array.getSomes([
+          maybeNextFrameCommand,
+          maybeUnlockScrollCommand,
+          maybeRestoreInertCommand,
+        ]),
       ],
 
       ActivatedItem: ({ index, activationTrigger }) => [
@@ -289,12 +325,14 @@ export const update = (
 
       SelectedItem: () => [
         closedModel(model),
-        [
-          Task.focus(buttonSelector(model.id), () => NoOp()),
-          ...Array.fromOption(maybeNextFrameCommand),
-          ...Array.fromOption(maybeUnlockScrollCommand),
-          ...Array.fromOption(maybeRestoreInertCommand),
-        ],
+        pipe(
+          Array.getSomes([
+            maybeNextFrameCommand,
+            maybeUnlockScrollCommand,
+            maybeRestoreInertCommand,
+          ]),
+          Array.prepend(Task.focus(buttonSelector(model.id), () => NoOp())),
+        ),
       ],
 
       RequestedItemClick: ({ index }) => [
@@ -361,6 +399,100 @@ export const update = (
           M.orElse(() => [model, []]),
         ),
 
+      PressedPointerOnButton: ({
+        pointerType,
+        button,
+        screenX,
+        screenY,
+        timeStamp,
+      }) => {
+        const withPointerType = evo(model, {
+          maybeLastButtonPointerType: () => Option.some(pointerType),
+        })
+
+        if (pointerType !== 'mouse' || button !== 0) {
+          return [withPointerType, []]
+        }
+
+        if (model.isOpen) {
+          return [
+            closedModel(withPointerType),
+            pipe(
+              Array.getSomes([
+                maybeNextFrameCommand,
+                maybeUnlockScrollCommand,
+                maybeRestoreInertCommand,
+              ]),
+              Array.prepend(Task.focus(buttonSelector(model.id), () => NoOp())),
+            ),
+          ]
+        }
+
+        const nextModel = evo(withPointerType, {
+          isOpen: () => true,
+          transitionState: () => (model.isAnimated ? 'EnterStart' : 'Idle'),
+          maybeActiveItemIndex: () => Option.none(),
+          activationTrigger: () => 'Pointer',
+          searchQuery: () => '',
+          searchVersion: () => 0,
+          maybeLastPointerPosition: () => Option.none(),
+          maybePointerOrigin: () =>
+            Option.some({ screenX, screenY, timeStamp }),
+        })
+
+        return [
+          nextModel,
+          pipe(
+            Array.getSomes([
+              maybeNextFrameCommand,
+              maybeLockScrollCommand,
+              maybeInertOthersCommand,
+            ]),
+            Array.prepend(Task.focus(itemsSelector(model.id), () => NoOp())),
+          ),
+        ]
+      },
+
+      ReleasedPointerOnItems: ({ screenX, screenY, timeStamp }) => {
+        const hasNoOrigin = Option.isNone(model.maybePointerOrigin)
+
+        const hasNoActiveItem = Option.isNone(model.maybeActiveItemIndex)
+
+        const isMovementBelowThreshold = Option.exists(
+          model.maybePointerOrigin,
+          origin =>
+            Math.abs(screenX - origin.screenX) <
+              POINTER_MOVEMENT_THRESHOLD_PIXELS &&
+            Math.abs(screenY - origin.screenY) <
+              POINTER_MOVEMENT_THRESHOLD_PIXELS,
+        )
+
+        const isHoldTimeBelowThreshold = Option.exists(
+          model.maybePointerOrigin,
+          origin =>
+            timeStamp - origin.timeStamp < POINTER_HOLD_THRESHOLD_MILLISECONDS,
+        )
+
+        if (
+          hasNoOrigin ||
+          isMovementBelowThreshold ||
+          isHoldTimeBelowThreshold ||
+          hasNoActiveItem
+        ) {
+          return [model, []]
+        }
+
+        return [
+          model,
+          [
+            Task.clickElement(
+              itemSelector(model.id, model.maybeActiveItemIndex.value),
+              () => NoOp(),
+            ),
+          ],
+        ]
+      },
+
       NoOp: () => [model, []],
     }),
   )
@@ -394,6 +526,8 @@ export type ViewConfig<Message, Item extends string> = Readonly<{
       | MovedPointerOverItem
       | RequestedItemClick
       | Searched
+      | PressedPointerOnButton
+      | ReleasedPointerOnItems
       | NoOp,
   ) => Message
   items: ReadonlyArray<Item>
@@ -491,8 +625,10 @@ export const view = <Message, Item extends string>(
     OnClick,
     OnKeyDownPreventDefault,
     OnKeyUpPreventDefault,
+    OnPointerDown,
     OnPointerLeave,
     OnPointerMove,
+    OnPointerUp,
     Role,
     Tabindex,
     Type,
@@ -500,7 +636,14 @@ export const view = <Message, Item extends string>(
   } = html<Message>()
 
   const {
-    model: { id, isOpen, transitionState, maybeActiveItemIndex, searchQuery },
+    model: {
+      id,
+      isOpen,
+      transitionState,
+      maybeActiveItemIndex,
+      searchQuery,
+      maybeLastButtonPointerType,
+    },
     toMessage,
     items,
     itemToConfig,
@@ -588,10 +731,39 @@ export const view = <Message, Item extends string>(
       M.orElse(() => Option.none()),
     )
 
-  const handleButtonClick = (): Message =>
-    isOpen
-      ? toMessage(Closed())
-      : toMessage(Opened({ maybeActiveItemIndex: Option.none() }))
+  const handleButtonPointerDown = (
+    pointerType: string,
+    button: number,
+    screenX: number,
+    screenY: number,
+    timeStamp: number,
+  ): Option.Option<Message> =>
+    Option.some(
+      toMessage(
+        PressedPointerOnButton({
+          pointerType,
+          button,
+          screenX,
+          screenY,
+          timeStamp,
+        }),
+      ),
+    )
+
+  const handleButtonClick = (): Message => {
+    const isMouse = Option.exists(
+      maybeLastButtonPointerType,
+      type => type === 'mouse',
+    )
+
+    if (isMouse) {
+      return toMessage(NoOp())
+    } else if (isOpen) {
+      return toMessage(Closed())
+    } else {
+      return toMessage(Opened({ maybeActiveItemIndex: Option.none() }))
+    }
+  }
 
   const handleSpaceKeyUp = (key: string): Option.Option<Message> =>
     OptionExt.when(key === ' ', toMessage(NoOp()))
@@ -656,6 +828,17 @@ export const view = <Message, Item extends string>(
       M.orElse(() => Option.none()),
     )
 
+  const handleItemsPointerUp = (
+    screenX: number,
+    screenY: number,
+    pointerType: string,
+    timeStamp: number,
+  ): Option.Option<Message> =>
+    OptionExt.when(
+      pointerType === 'mouse',
+      toMessage(ReleasedPointerOnItems({ screenX, screenY, timeStamp })),
+    )
+
   const buttonAttributes = [
     Id(`${id}-button`),
     Type('button'),
@@ -666,6 +849,7 @@ export const view = <Message, Item extends string>(
     ...(isButtonDisabled
       ? [AriaDisabled(true), DataAttribute('disabled', '')]
       : [
+          OnPointerDown(handleButtonPointerDown),
           OnKeyDownPreventDefault(handleButtonKeyDown),
           OnKeyUpPreventDefault(handleSpaceKeyUp),
           OnClick(handleButtonClick()),
@@ -691,6 +875,7 @@ export const view = <Message, Item extends string>(
       : [
           OnKeyDownPreventDefault(handleItemsKeyDown),
           OnKeyUpPreventDefault(handleSpaceKeyUp),
+          OnPointerUp(handleItemsPointerUp),
           OnBlur(toMessage(ClosedByTab())),
         ]),
   ]
