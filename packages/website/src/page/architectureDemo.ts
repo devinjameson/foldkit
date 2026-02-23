@@ -305,7 +305,7 @@ export const view = (
         ],
         [peekViewBox(model, toMessage), codePanel(model)],
       ),
-      appPanel(model, toMessage),
+      appPanel(model),
     ],
   )
 
@@ -329,7 +329,7 @@ const peekViewBox = (
         ['View'],
       ),
       div(
-        [Class('flex items-center justify-between')],
+        [Class('flex flex-wrap items-center gap-3')],
         [
           span(
             [
@@ -340,7 +340,7 @@ const peekViewBox = (
             [String(model.count)],
           ),
           div(
-            [Class('flex gap-2')],
+            [Class('flex items-center gap-2 flex-wrap')],
             [
               button(
                 [
@@ -350,6 +350,77 @@ const peekViewBox = (
                   OnClick(toMessage(ClickedDemoIncrement())),
                 ],
                 ['Add 1'],
+              ),
+              div(
+                [Class('flex items-center gap-1')],
+                [
+                  label(
+                    [
+                      Class(
+                        'text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap',
+                      ),
+                    ],
+                    ['Delay'],
+                  ),
+                  input([
+                    Class(
+                      'w-12 px-2 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-sm text-gray-800 dark:text-gray-200 font-mono text-center',
+                    ),
+                    Type('number'),
+                    Min(String(MIN_RESET_DURATION)),
+                    Max(String(MAX_RESET_DURATION)),
+                    Value(String(model.resetDuration)),
+                    OnInput(value =>
+                      toMessage(
+                        ChangedDemoResetDuration({
+                          seconds: parseResetDuration(value),
+                        }),
+                      ),
+                    ),
+                  ]),
+                  button(
+                    [
+                      Class(
+                        stepperButtonClass(
+                          model.resetDuration <= MIN_RESET_DURATION,
+                        ),
+                      ),
+                      Disabled(model.resetDuration <= MIN_RESET_DURATION),
+                      OnClick(
+                        toMessage(
+                          ChangedDemoResetDuration({
+                            seconds: N.clamp(model.resetDuration - 1, {
+                              minimum: MIN_RESET_DURATION,
+                              maximum: MAX_RESET_DURATION,
+                            }),
+                          }),
+                        ),
+                      ),
+                    ],
+                    ['\u2212'],
+                  ),
+                  button(
+                    [
+                      Class(
+                        stepperButtonClass(
+                          model.resetDuration >= MAX_RESET_DURATION,
+                        ),
+                      ),
+                      Disabled(model.resetDuration >= MAX_RESET_DURATION),
+                      OnClick(
+                        toMessage(
+                          ChangedDemoResetDuration({
+                            seconds: N.clamp(model.resetDuration + 1, {
+                              minimum: MIN_RESET_DURATION,
+                              maximum: MAX_RESET_DURATION,
+                            }),
+                          }),
+                        ),
+                      ),
+                    ],
+                    ['+'],
+                  ),
+                ],
               ),
               button(
                 [
@@ -394,33 +465,20 @@ const codePanel = (model: Model): Html =>
     ],
   )
 
-const appPanel = (
-  model: Model,
-  toMessage: (message: Message) => ParentMessage,
-): Html =>
+const appPanel = (model: Model): Html =>
   div(
     [Class('relative')],
     [
       div(
         [
           Class(
-            'lg:absolute lg:inset-0 flex flex-col gap-4 overflow-hidden',
+            'lg:absolute lg:inset-0 flex flex-col gap-4 p-5 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 overflow-hidden',
           ),
         ],
         [
-          buttonsView(model, toMessage),
-          div(
-            [
-              Class(
-                'flex flex-col gap-4 p-5 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 flex-1 min-h-0 overflow-hidden',
-              ),
-            ],
-            [
-              modelStateView(model),
-              phaseIndicatorView(model),
-              eventLogView(model),
-            ],
-          ),
+          modelStateView(model),
+          phaseIndicatorView(model),
+          eventLogView(model),
         ],
       ),
     ],
@@ -517,131 +575,6 @@ const stepperButtonClass = (isDisabled: boolean): string =>
 
 const parseResetDuration = (value: string): number =>
   N.clamp(Number(value), { minimum: 0, maximum: MAX_RESET_DURATION })
-
-const buttonsView = (
-  model: Model,
-  toMessage: (message: Message) => ParentMessage,
-): Html =>
-  div(
-    [
-      Class(
-        'flex flex-col gap-3 p-5 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700',
-      ),
-    ],
-    [
-      p(
-        [
-          Class(
-            'text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider',
-          ),
-        ],
-        ['Controls'],
-      ),
-      button(
-        [
-          Class(
-            'px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold transition hover:bg-blue-700 active:bg-blue-800 cursor-pointer',
-          ),
-          OnClick(toMessage(ClickedDemoIncrement())),
-        ],
-        ['Add 1'],
-      ),
-      div(
-        [Class('flex flex-col gap-1')],
-        [
-          label(
-            [Class('text-xs text-gray-400 dark:text-gray-500')],
-            ['Reset Delay (seconds)'],
-          ),
-          div(
-            [Class('flex gap-1')],
-            [
-              input([
-                Class(
-                  'flex-1 min-w-0 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-sm text-gray-800 dark:text-gray-200 font-mono',
-                ),
-                Type('number'),
-                Min(String(MIN_RESET_DURATION)),
-                Max(String(MAX_RESET_DURATION)),
-                Value(String(model.resetDuration)),
-                OnInput(value =>
-                  toMessage(
-                    ChangedDemoResetDuration({
-                      seconds: parseResetDuration(value),
-                    }),
-                  ),
-                ),
-              ]),
-              button(
-                [
-                  Class(
-                    stepperButtonClass(
-                      model.resetDuration <= MIN_RESET_DURATION,
-                    ),
-                  ),
-                  Disabled(model.resetDuration <= MIN_RESET_DURATION),
-                  OnClick(
-                    toMessage(
-                      ChangedDemoResetDuration({
-                        seconds: N.clamp(model.resetDuration - 1, {
-                          minimum: MIN_RESET_DURATION,
-                          maximum: MAX_RESET_DURATION,
-                        }),
-                      }),
-                    ),
-                  ),
-                ],
-                ['\u2212'],
-              ),
-              button(
-                [
-                  Class(
-                    stepperButtonClass(
-                      model.resetDuration >= MAX_RESET_DURATION,
-                    ),
-                  ),
-                  Disabled(model.resetDuration >= MAX_RESET_DURATION),
-                  OnClick(
-                    toMessage(
-                      ChangedDemoResetDuration({
-                        seconds: N.clamp(model.resetDuration + 1, {
-                          minimum: MIN_RESET_DURATION,
-                          maximum: MAX_RESET_DURATION,
-                        }),
-                      }),
-                    ),
-                  ),
-                ],
-                ['+'],
-              ),
-            ],
-          ),
-        ],
-      ),
-      button(
-        [
-          Class(
-            classNames(
-              'px-4 py-2 rounded-lg text-sm font-semibold transition',
-              {
-                'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed':
-                  model.isResetting,
-                'bg-violet-600 text-white hover:bg-violet-700 active:bg-violet-800 cursor-pointer':
-                  !model.isResetting,
-              },
-            ),
-          ),
-          Disabled(model.isResetting),
-          OnClick(toMessage(ClickedDemoReset())),
-        ],
-        [
-          model.isResetting
-            ? 'Resetting...'
-            : `Reset after ${model.resetDuration} seconds`,
-        ],
-      ),
-    ],
-  )
 
 const phaseIndicatorView = (model: Model): Html => {
   const label = phaseLabel(model.phase)
