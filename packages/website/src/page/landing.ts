@@ -32,13 +32,16 @@ export const HERO_SECTION_ID = 'hero'
 
 // VIEW
 
-export const view = (model: Model, architectureDemo: Html): Html =>
+export const view = (
+  model: Model,
+  architectureDemoView: Html,
+): Html =>
   div(
     [],
     [
       heroSection(model),
       promiseSection(),
-      architectureDemoSection(architectureDemo),
+      architectureDemoSection(architectureDemoView),
       poweredByStrip(),
       includedSection(),
       aiSection(),

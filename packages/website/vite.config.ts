@@ -269,8 +269,7 @@ const highlightApiSignaturesPlugin = (): Plugin => ({
 const DEMO_CODE_ID = 'virtual:demo-code'
 const RESOLVED_DEMO_CODE_ID = '\0' + DEMO_CODE_ID
 
-const DEMO_CODE = `// Counter with async reset
-// View and boilerplate omitted
+const DEMO_CODE = `// Counter with async reset. View and boilerplate omitted.
 
 // MODEL
 

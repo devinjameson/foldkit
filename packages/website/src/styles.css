@@ -164,79 +164,78 @@
 
   /* Demo line highlights: message (emerald), update (amber), model (blue), command (violet) */
   .demo-code-panel[data-demo-phase='IncrementMessage']
-    [data-line='14'] {
+    [data-line='13'] {
     @apply bg-emerald-500/15;
     border-left-color: theme(--color-emerald-400);
   }
 
+  .demo-code-panel[data-demo-phase='IncrementUpdate']
+    [data-line='23'],
   .demo-code-panel[data-demo-phase='IncrementUpdate']
     [data-line='24'],
   .demo-code-panel[data-demo-phase='IncrementUpdate']
     [data-line='25'],
   .demo-code-panel[data-demo-phase='IncrementUpdate']
-    [data-line='26'],
-  .demo-code-panel[data-demo-phase='IncrementUpdate']
-    [data-line='27'] {
+    [data-line='26'] {
     @apply bg-amber-500/15;
     border-left-color: theme(--color-amber-400);
   }
 
+  .demo-code-panel[data-demo-phase='IncrementModel'] [data-line='5'],
   .demo-code-panel[data-demo-phase='IncrementModel'] [data-line='6'],
   .demo-code-panel[data-demo-phase='IncrementModel'] [data-line='7'],
   .demo-code-panel[data-demo-phase='IncrementModel'] [data-line='8'],
-  .demo-code-panel[data-demo-phase='IncrementModel'] [data-line='9'],
-  .demo-code-panel[data-demo-phase='IncrementModel']
-    [data-line='10'] {
+  .demo-code-panel[data-demo-phase='IncrementModel'] [data-line='9'] {
     @apply bg-blue-500/15;
     border-left-color: theme(--color-blue-400);
   }
 
-  .demo-code-panel[data-demo-phase='ResetMessage'] [data-line='18'] {
+  .demo-code-panel[data-demo-phase='ResetMessage'] [data-line='17'] {
     @apply bg-emerald-500/15;
     border-left-color: theme(--color-emerald-400);
   }
 
+  .demo-code-panel[data-demo-phase='ResetUpdate'] [data-line='31'],
   .demo-code-panel[data-demo-phase='ResetUpdate'] [data-line='32'],
   .demo-code-panel[data-demo-phase='ResetUpdate'] [data-line='33'],
   .demo-code-panel[data-demo-phase='ResetUpdate'] [data-line='34'],
   .demo-code-panel[data-demo-phase='ResetUpdate'] [data-line='35'],
-  .demo-code-panel[data-demo-phase='ResetUpdate'] [data-line='36'],
-  .demo-code-panel[data-demo-phase='ResetUpdate'] [data-line='37'] {
+  .demo-code-panel[data-demo-phase='ResetUpdate'] [data-line='36'] {
     @apply bg-amber-500/15;
     border-left-color: theme(--color-amber-400);
   }
 
+  .demo-code-panel[data-demo-phase='ResetCommand'] [data-line='33'],
   .demo-code-panel[data-demo-phase='ResetCommand'] [data-line='34'],
-  .demo-code-panel[data-demo-phase='ResetCommand'] [data-line='35'],
-  .demo-code-panel[data-demo-phase='ResetCommand'] [data-line='36'] {
+  .demo-code-panel[data-demo-phase='ResetCommand'] [data-line='35'] {
     @apply bg-violet-500/15;
     border-left-color: theme(--color-violet-400);
     animation: demo-pulse 1s ease-in-out infinite;
   }
 
   .demo-code-panel[data-demo-phase='ResetCommandMessage']
-    [data-line='19'] {
+    [data-line='18'] {
     @apply bg-emerald-500/15;
     border-left-color: theme(--color-emerald-400);
   }
 
   .demo-code-panel[data-demo-phase='ResetCommandUpdate']
+    [data-line='37'],
+  .demo-code-panel[data-demo-phase='ResetCommandUpdate']
     [data-line='38'],
   .demo-code-panel[data-demo-phase='ResetCommandUpdate']
     [data-line='39'],
   .demo-code-panel[data-demo-phase='ResetCommandUpdate']
-    [data-line='40'],
-  .demo-code-panel[data-demo-phase='ResetCommandUpdate']
-    [data-line='41'] {
+    [data-line='40'] {
     @apply bg-amber-500/15;
     border-left-color: theme(--color-amber-400);
   }
 
+  .demo-code-panel[data-demo-phase='ResetModel'] [data-line='5'],
   .demo-code-panel[data-demo-phase='ResetModel'] [data-line='6'],
   .demo-code-panel[data-demo-phase='ResetModel'] [data-line='7'],
   .demo-code-panel[data-demo-phase='ResetModel'] [data-line='8'],
-  .demo-code-panel[data-demo-phase='ResetModel'] [data-line='9'],
-  .demo-code-panel[data-demo-phase='ResetModel'] [data-line='10'] {
+  .demo-code-panel[data-demo-phase='ResetModel'] [data-line='9'] {
     @apply bg-blue-500/15;
     border-left-color: theme(--color-blue-400);
   }

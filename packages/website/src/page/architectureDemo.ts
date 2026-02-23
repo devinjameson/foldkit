@@ -332,11 +332,11 @@ const appPanel = (
           ),
         ],
         [
-          buttonsView(model, toMessage),
+          viewView(model, toMessage),
           div(
             [
               Class(
-                'flex flex-col gap-4 p-5 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 flex-1 min-h-0 overflow-hidden',
+                'flex flex-col gap-6 p-5 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 flex-1 min-h-0 overflow-hidden',
               ),
             ],
             [
@@ -442,7 +442,7 @@ const stepperButtonClass = (isDisabled: boolean): string =>
 const parseResetDuration = (value: string): number =>
   N.clamp(Number(value), { minimum: 0, maximum: MAX_RESET_DURATION })
 
-const buttonsView = (
+const viewView = (
   model: Model,
   toMessage: (message: Message) => ParentMessage,
 ): Html =>
@@ -459,7 +459,15 @@ const buttonsView = (
             'text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider',
           ),
         ],
-        ['Controls'],
+        ['View'],
+      ),
+      p(
+        [
+          Class(
+            'text-sm font-semibold text-gray-500 dark:text-gray-400 tabular-nums',
+          ),
+        ],
+        [`The count is ${model.count}`],
       ),
       button(
         [
@@ -474,7 +482,7 @@ const buttonsView = (
         [Class('flex flex-col gap-1')],
         [
           label(
-            [Class('text-xs text-gray-400 dark:text-gray-500')],
+            [Class('text-xs text-gray-500 dark:text-gray-400')],
             ['Reset Delay (seconds)'],
           ),
           div(
