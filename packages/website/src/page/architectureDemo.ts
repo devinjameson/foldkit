@@ -297,33 +297,22 @@ export const view = (
           'On a larger screen, you can see the relevant code highlight in real time as your action runs.',
         ],
       ),
-      div(
-        [
-          Class(
-            'flex flex-col gap-4 lg:gap-6 order-last lg:order-none min-h-0',
-          ),
-        ],
-        [peekViewBox(model, toMessage), codePanel(model)],
-      ),
-      appPanel(model),
+      codePanel(model),
+      appPanel(model, toMessage),
     ],
   )
 
-const peekViewBox = (
+const viewControlsSection = (
   model: Model,
   toMessage: (message: Message) => ParentMessage,
 ): Html =>
   div(
-    [
-      Class(
-        'flex flex-col gap-3 p-5 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700',
-      ),
-    ],
+    [],
     [
       p(
         [
           Class(
-            'text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider',
+            'text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2',
           ),
         ],
         ['View'],
@@ -454,7 +443,9 @@ const peekViewBox = (
 const codePanel = (model: Model): Html =>
   div(
     [
-      Class('demo-code-panel rounded-xl overflow-hidden flex-1 min-h-0'),
+      Class(
+        'demo-code-panel rounded-xl overflow-hidden order-last lg:order-none',
+      ),
       DataAttribute('demo-phase', model.phase),
     ],
     [
@@ -465,7 +456,10 @@ const codePanel = (model: Model): Html =>
     ],
   )
 
-const appPanel = (model: Model): Html =>
+const appPanel = (
+  model: Model,
+  toMessage: (message: Message) => ParentMessage,
+): Html =>
   div(
     [Class('relative')],
     [
@@ -476,6 +470,7 @@ const appPanel = (model: Model): Html =>
           ),
         ],
         [
+          viewControlsSection(model, toMessage),
           modelStateView(model),
           phaseIndicatorView(model),
           eventLogView(model),
