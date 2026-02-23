@@ -1,5 +1,5 @@
 const GRID_SPACING = 24
-const DOT_BASE_RADIUS = 1.6
+const DOT_BASE_RADIUS = 1.2
 const RIPPLE_SPEED = 0.09
 const RIPPLE_WIDTH = 200
 const RIPPLE_INTERVAL = 5000
@@ -98,7 +98,7 @@ export const startAnimation = (
         const red = lerp(baseRgb[0], waveRgb[0], colorBlend)
         const green = lerp(baseRgb[1], waveRgb[1], colorBlend)
         const blue = lerp(baseRgb[2], waveRgb[2], colorBlend)
-        const opacity = 0.4 + totalIntensity * 0.05
+        const opacity = 0.7 + totalIntensity * 0.05
 
         ctx.beginPath()
         ctx.arc(x + offsetX, y + offsetY, radius, 0, Math.PI * 2)

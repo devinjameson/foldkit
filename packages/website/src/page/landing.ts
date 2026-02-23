@@ -137,6 +137,18 @@ const heroSection = (model: Model): Html =>
 
 // POWERED BY
 
+const poweredByItem = (text: string): Html =>
+  div(
+    [Class('flex items-center gap-2')],
+    [
+      div(
+        [Class('shrink-0 text-green-600 dark:text-green-400')],
+        [Icon.check('w-5 h-5')],
+      ),
+      span([], [text]),
+    ],
+  )
+
 const poweredByStrip = (): Html =>
   section(
     [
@@ -151,7 +163,7 @@ const poweredByStrip = (): Html =>
           p(
             [
               Class(
-                'text-xl md:text-2xl font-bold text-gray-900 dark:text-white text-balance',
+                'text-2xl md:text-3xl font-bold text-gray-900 dark:text-white text-balance',
               ),
             ],
             [
@@ -168,19 +180,23 @@ const poweredByStrip = (): Html =>
               '. Inside and out.',
             ],
           ),
-          p(
+          div(
             [
               Class(
-                'mt-3 text-lg text-gray-600 dark:text-gray-300 text-balance',
+                'mt-4 flex flex-col gap-2 items-center text-lg text-gray-600 dark:text-gray-300',
               ),
             ],
             [
-              'Every Foldkit application is an Effect. All state is a single Schema. Side effects are modeled as Effects that never fail.',
+              poweredByItem('Every Foldkit application is an Effect'),
+              poweredByItem('All state is a single Schema'),
+              poweredByItem(
+                'Side effects are modeled as Effects that never fail',
+              ),
             ],
           ),
           p(
             [Class('mt-3 text-gray-500 dark:text-gray-300')],
-            ['(Yeah, we like Effect.)'],
+            ['(Yeah. We like Effect.)'],
           ),
         ],
       ),
@@ -287,7 +303,7 @@ const architectureDemoSection = (architectureDemo: Html): Html =>
               ),
             ],
             [
-              'A model, four messages, and an update function. Click a button and follow your action through the code.',
+              'This is what a Foldkit application looks like. Click a button and watch the code highlight as your action flows from message to update to model.',
             ],
           ),
           architectureDemo,
@@ -335,7 +351,7 @@ const includedSection = (): Html =>
                 'text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-3 text-balance',
               ),
             ],
-            ['One framework. Batteries included.'],
+            ['Batteries included.'],
           ),
           p(
             [
@@ -374,7 +390,7 @@ const includedSection = (): Html =>
                             'inline-block ml-1 px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 align-middle',
                           ),
                         ],
-                        ['In development'],
+                        ['In Development'],
                       ),
                     ],
                   ),
@@ -452,42 +468,6 @@ const includedSection = (): Html =>
 
 // WHY FOLDKIT
 
-const benefitBlock = (
-  icon: Html,
-  title: string,
-  description: string,
-): Html =>
-  div(
-    [Class('py-6 flex gap-4')],
-    [
-      div(
-        [Class('shrink-0 mt-0.5 text-blue-600 dark:text-blue-400')],
-        [icon],
-      ),
-      div(
-        [],
-        [
-          h3(
-            [
-              Class(
-                'text-lg font-semibold text-gray-900 dark:text-white mb-2',
-              ),
-            ],
-            [title],
-          ),
-          p(
-            [
-              Class(
-                'text-gray-600 dark:text-gray-300 leading-relaxed',
-              ),
-            ],
-            [description],
-          ),
-        ],
-      ),
-    ],
-  )
-
 const whyFoldkitSection = (): Html =>
   section(
     [Class('landing-section')],
@@ -498,7 +478,7 @@ const whyFoldkitSection = (): Html =>
           h2(
             [
               Class(
-                'text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-8 text-balance',
+                'text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-3 text-balance',
               ),
             ],
             ["What's the catch?"],
@@ -506,7 +486,7 @@ const whyFoldkitSection = (): Html =>
           p(
             [
               Class(
-                'text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-4 max-w-3xl',
+                'text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-4 max-w-3xl text-balance',
               ),
             ],
             [
@@ -526,35 +506,14 @@ const whyFoldkitSection = (): Html =>
           p(
             [
               Class(
-                'text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-8 max-w-3xl',
+                'text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-8 max-w-3xl text-balance',
               ),
             ],
             ["It's a discipline. It pays off, but it's a real ask."],
           ),
-          div(
-            [Class('grid gap-2 md:grid-cols-2 md:gap-x-12')],
-            [
-              benefitBlock(
-                Icon.circleStack('w-6 h-6'),
-                'Single source of truth',
-                'Your entire application state lives in one immutable model. No component trees to reconcile, no context providers to thread, no store subscriptions to manage.',
-              ),
-              benefitBlock(
-                Icon.chatBubble('w-6 h-6'),
-                'Messages describe what happened',
-                'Every state update begins with a fact about what happened. ClickedSubmitButton, SucceededFetchWeather, TickedTimer. The update function decides what to do. Testing is trivial: send a message, check the model.',
-              ),
-              benefitBlock(
-                Icon.codeBracket('w-6 h-6'),
-                'Commands as values',
-                'You can never forget a side effect because it is a return value, not a call site. Every async flow is visible in the update function, testable in isolation, and composable with other commands.',
-              ),
-              benefitBlock(
-                Icon.checkBadge('w-6 h-6'),
-                'Type-safe from edge to edge',
-                'Effect Schema validates at system boundaries. Discriminated unions make impossible states unrepresentable. The compiler catches the bugs your tests would miss.',
-              ),
-            ],
+          a(
+            [Href(Link.whyFoldkit), Class('cta-secondary')],
+            ['See how it works', Icon.arrowRight('w-5 h-5')],
           ),
         ],
       ),
@@ -864,7 +823,7 @@ const aiSection = (): Html =>
               ),
             ],
             [
-              'Foldkit apps are explicit and predictable. This makes LLMs particularly good at generating Foldkit code, and it makes generated Foldkit code exceptionally easy for humans to review.',
+              'Foldkit apps are explicit and predictable. This makes LLMs particularly good at generating Foldkit code. And it makes generated Foldkit code exceptionally easy for humans to review.',
             ],
           ),
           a(

@@ -21,6 +21,7 @@ import {
   Disabled,
   InnerHTML,
   Max,
+  Min,
   OnClick,
   OnInput,
   Style,
@@ -285,13 +286,28 @@ export const view = (
         'demo-container grid grid-cols-1 lg:grid-cols-[1fr_22rem] lg:grid-rows-[minmax(0,1fr)] gap-4 lg:gap-6',
       ),
     ],
-    [codePanel(model), appPanel(model, toMessage)],
+    [
+      p(
+        [
+          Class(
+            'text-sm text-gray-400 dark:text-gray-500 text-center lg:hidden',
+          ),
+        ],
+        [
+          'On a larger screen, you can see the relevant code highlight in real time as your action runs.',
+        ],
+      ),
+      codePanel(model),
+      appPanel(model, toMessage),
+    ],
   )
 
 const codePanel = (model: Model): Html =>
   div(
     [
-      Class('demo-code-panel rounded-xl overflow-hidden'),
+      Class(
+        'demo-code-panel rounded-xl overflow-hidden order-last lg:order-none',
+      ),
       DataAttribute('demo-phase', model.phase),
     ],
     [
@@ -410,7 +426,10 @@ const modelStateView = (model: Model): Html =>
   )
 
 const MIN_RESET_DURATION = 1
-const MAX_RESET_DURATION = 10
+const MAX_RESET_DURATION = 5
+
+const STEPPER_BUTTON_CLASS =
+  'px-2.5 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer transition'
 
 const parseResetDuration = (value: string): number =>
   pipe(
@@ -453,21 +472,59 @@ const buttonsView = (
             [Class('text-xs text-gray-400 dark:text-gray-500')],
             ['Reset Delay (seconds)'],
           ),
-          input([
-            Class(
-              'w-full px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-sm text-gray-800 dark:text-gray-200 font-mono',
-            ),
-            Type('number'),
-            Max(String(MAX_RESET_DURATION)),
-            Value(String(model.resetDuration)),
-            OnInput(value =>
-              toMessage(
-                ChangedDemoResetDuration({
-                  seconds: parseResetDuration(value),
-                }),
+          div(
+            [Class('flex gap-1')],
+            [
+              input([
+                Class(
+                  'flex-1 min-w-0 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-sm text-gray-800 dark:text-gray-200 font-mono',
+                ),
+                Type('number'),
+                Min(String(MIN_RESET_DURATION)),
+                Max(String(MAX_RESET_DURATION)),
+                Value(String(model.resetDuration)),
+                OnInput(value =>
+                  toMessage(
+                    ChangedDemoResetDuration({
+                      seconds: parseResetDuration(value),
+                    }),
+                  ),
+                ),
+              ]),
+              button(
+                [
+                  Class(STEPPER_BUTTON_CLASS),
+                  OnClick(
+                    toMessage(
+                      ChangedDemoResetDuration({
+                        seconds: N.clamp(model.resetDuration - 1, {
+                          minimum: MIN_RESET_DURATION,
+                          maximum: MAX_RESET_DURATION,
+                        }),
+                      }),
+                    ),
+                  ),
+                ],
+                ['\u2212'],
               ),
-            ),
-          ]),
+              button(
+                [
+                  Class(STEPPER_BUTTON_CLASS),
+                  OnClick(
+                    toMessage(
+                      ChangedDemoResetDuration({
+                        seconds: N.clamp(model.resetDuration + 1, {
+                          minimum: MIN_RESET_DURATION,
+                          maximum: MAX_RESET_DURATION,
+                        }),
+                      }),
+                    ),
+                  ),
+                ],
+                ['+'],
+              ),
+            ],
+          ),
         ],
       ),
       button(
