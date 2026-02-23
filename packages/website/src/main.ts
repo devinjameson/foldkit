@@ -58,10 +58,10 @@ import {
   ArchitectureAndConceptsRoute,
   BestPracticesRoute,
   ComingFromReactRoute,
+  DocsRoute,
   ExamplesRoute,
   FoldkitUiRoute,
   GettingStartedRoute,
-  HomeRoute,
   ProjectOrganizationRoute,
   RoutingAndNavigationRoute,
   WhyFoldkitRoute,
@@ -150,6 +150,7 @@ export const Model = S.Struct({
   mobileMenuOpen: S.Boolean,
   mobileTableOfContentsOpen: S.Boolean,
   activeSection: S.Option(S.String),
+  isLandingHeaderVisible: S.Boolean,
   themePreference: ThemePreference,
   systemTheme: ResolvedTheme,
   resolvedTheme: ResolvedTheme,
@@ -196,6 +197,9 @@ export const SelectedThemePreference = m('SelectedThemePreference', {
 export const ChangedSystemTheme = m('ChangedSystemTheme', {
   theme: ResolvedTheme,
 })
+export const ChangedHeroVisibility = m('ChangedHeroVisibility', {
+  isVisible: S.Boolean,
+})
 const GotFoldkitUiMessage = m('GotFoldkitUiMessage', {
   message: Page.FoldkitUi.Message,
 })
@@ -220,6 +224,7 @@ const Message = S.Union(
   ChangedActiveSection,
   SelectedThemePreference,
   ChangedSystemTheme,
+  ChangedHeroVisibility,
   GotFoldkitUiMessage,
   GotComingFromReactMessage,
   GotApiReferenceMessage,
@@ -266,6 +271,7 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
       mobileMenuOpen: false,
       mobileTableOfContentsOpen: false,
       activeSection: Option.none(),
+      isLandingHeaderVisible: false,
       themePreference,
       systemTheme,
       resolvedTheme,
@@ -380,6 +386,11 @@ const update = (
         evo(model, {
           activeSection: () => Option.some(sectionId),
         }),
+        [],
+      ],
+
+      ChangedHeroVisibility: ({ isVisible }) => [
+        evo(model, { isLandingHeaderVisible: () => !isVisible }),
         [],
       ],
 
@@ -615,11 +626,6 @@ const sidebarView = (
           ul(
             [Class('space-y-1')],
             [
-              navLink(
-                homeRouter.build({}),
-                S.is(HomeRoute)(currentRoute),
-                'Introduction',
-              ),
               navLink(
                 whyFoldkitRouter.build({}),
                 S.is(WhyFoldkitRoute)(currentRoute),
@@ -905,10 +911,118 @@ const mobileTableOfContentsView = (
   )
 }
 
-const view = (model: Model) => {
-  const content = M.value(model.route).pipe(
+const view = (model: Model) =>
+  M.value(model.route).pipe(
+    M.tag('Home', () => landingView(model)),
+    M.orElse(route => docsView(model, route)),
+  )
+
+const landingHeaderView = (model: Model) =>
+  header(
+    [
+      Class(
+        classNames(
+          'fixed top-0 inset-x-0 z-50 h-[var(--header-height)] bg-white/80 dark:bg-black/80 backdrop-blur-sm border-b border-gray-300 dark:border-gray-700 px-4 md:px-8 flex items-center justify-between transition-transform duration-300',
+          {
+            '-translate-y-full': !model.isLandingHeaderVisible,
+            'translate-y-0': model.isLandingHeaderVisible,
+          },
+        ),
+      ),
+    ],
+    [
+      a(
+        [Href(homeRouter.build({}))],
+        [
+          img([
+            Src('/logo.svg'),
+            Alt('Foldkit'),
+            Class('h-6 md:h-8 dark:invert'),
+          ]),
+        ],
+      ),
+      a(
+        [
+          Href(Link.gettingStarted),
+          Class(
+            'inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold transition hover:bg-blue-700',
+          ),
+        ],
+        ['Dive In', Icon.arrowRight('w-4 h-4')],
+      ),
+    ],
+  )
+
+const landingView = (model: Model) =>
+  keyed('div')(
+    'landing',
+    [Class('flex flex-col min-h-screen')],
+    [
+      landingHeaderView(model),
+      main([Class('flex-1')], [Page.Landing.view(model)]),
+    ],
+  )
+
+const docsHeaderView = (model: Model) =>
+  header(
+    [
+      Class(
+        'fixed top-0 inset-x-0 z-50 h-[var(--header-height)] bg-white dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 pl-2 pr-3 md:px-8 flex items-center justify-between',
+      ),
+    ],
+    [
+      div(
+        [Class('flex items-center gap-2')],
+        [
+          button(
+            [
+              Class(
+                'md:hidden p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-700 dark:text-gray-300 cursor-pointer',
+              ),
+              AriaLabel('Toggle menu'),
+              OnClick(ToggledMobileMenu()),
+            ],
+            [Icon.menu('w-6 h-6')],
+          ),
+          a(
+            [Href(homeRouter.build({}))],
+            [
+              img([
+                Src('/logo.svg'),
+                Alt('Foldkit'),
+                Class('h-6 md:h-8 dark:invert'),
+              ]),
+            ],
+          ),
+        ],
+      ),
+      div(
+        [Class('flex items-center gap-6 md:gap-8')],
+        [
+          themeSelector(model.themePreference),
+          div(
+            [Class('flex items-center gap-3 md:gap-4')],
+            [
+              iconLink(
+                Link.github,
+                'GitHub',
+                Icon.github('w-5 h-5 md:w-6 md:h-6'),
+              ),
+              iconLink(
+                Link.npm,
+                'npm',
+                Icon.npm('w-6 h-6 md:w-8 md:h-8'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ],
+  )
+
+const docsView = (model: Model, docsRoute: DocsRoute) => {
+  const content = M.value(docsRoute).pipe(
     M.tagsExhaustive({
-      Home: Page.Home.view,
       WhyFoldkit: Page.WhyFoldkit.view,
       ComingFromReact: () =>
         Page.ComingFromReact.view(
@@ -939,7 +1053,7 @@ const view = (model: Model) => {
     }),
   )
 
-  const currentPageTableOfContents = M.value(model.route).pipe(
+  const currentPageTableOfContents = M.value(docsRoute).pipe(
     M.tag('WhyFoldkit', () =>
       Option.some(Page.WhyFoldkit.tableOfContents),
     ),
@@ -970,10 +1084,12 @@ const view = (model: Model) => {
     M.tag('FoldkitUi', () =>
       Option.some(Page.FoldkitUi.tableOfContents),
     ),
-    M.orElse(() => Option.none()),
+    M.tag('Examples', 'NotFound', () => Option.none()),
+    M.exhaustive,
   )
 
-  return div(
+  return keyed('div')(
+    'docs',
     [
       Class(
         classNames('flex flex-col min-h-screen', {
@@ -982,61 +1098,7 @@ const view = (model: Model) => {
       ),
     ],
     [
-      header(
-        [
-          Class(
-            'fixed top-0 inset-x-0 z-50 h-[var(--header-height)] bg-white dark:bg-black border-b border-gray-300 dark:border-gray-700 pl-2 pr-3 md:px-8 flex items-center justify-between',
-          ),
-        ],
-        [
-          div(
-            [Class('flex items-center gap-2')],
-            [
-              button(
-                [
-                  Class(
-                    'md:hidden p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-700 dark:text-gray-300 cursor-pointer',
-                  ),
-                  AriaLabel('Toggle menu'),
-                  OnClick(ToggledMobileMenu()),
-                ],
-                [Icon.menu('w-6 h-6')],
-              ),
-              a(
-                [Href(homeRouter.build({}))],
-                [
-                  img([
-                    Src('/logo.svg'),
-                    Alt('Foldkit'),
-                    Class('h-6 md:h-8 dark:invert'),
-                  ]),
-                ],
-              ),
-            ],
-          ),
-          div(
-            [Class('flex items-center gap-6 md:gap-8')],
-            [
-              themeSelector(model.themePreference),
-              div(
-                [Class('flex items-center gap-3 md:gap-4')],
-                [
-                  iconLink(
-                    Link.github,
-                    'GitHub',
-                    Icon.github('w-5 h-5 md:w-6 md:h-6'),
-                  ),
-                  iconLink(
-                    Link.npm,
-                    'npm',
-                    Icon.npm('w-6 h-6 md:w-8 md:h-8'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ],
-      ),
+      docsHeaderView(model),
       div(
         [Class('flex flex-1 pt-[var(--header-height)] md:pl-64')],
         [
@@ -1096,6 +1158,9 @@ const CommandStreamsDeps = S.Struct({
     pageId: S.String,
     sections: S.Array(S.String),
   }),
+  heroVisibility: S.Struct({
+    isLandingPage: S.Boolean,
+  }),
   systemTheme: S.Struct({
     isSystemPreference: S.Boolean,
   }),
@@ -1108,6 +1173,7 @@ const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<
   Message
 >({
   activeSection: CommandStream.activeSection,
+  heroVisibility: CommandStream.heroVisibility,
   systemTheme: CommandStream.systemTheme,
 })
 

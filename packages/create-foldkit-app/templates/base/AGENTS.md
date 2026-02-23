@@ -58,6 +58,8 @@ export const { div, button, span, Class, OnClick } = html<Message>()
 
 Use `empty` (not `null`) for conditional rendering. Use `M.value().pipe(M.tagsExhaustive({...}))` for rendering discriminated unions and `Array.match` for rendering lists that may be empty.
 
+Use `keyed` wrappers whenever the view branches into structurally different layouts based on route or model state. Without keying, the virtual DOM will try to diff one layout into another (e.g. a full-width landing page into a sidebar docs layout), which causes stale DOM, mismatched event handlers, and subtle rendering bugs. Key the outermost container of each layout branch with a stable string (e.g. `keyed('div')('landing', ...)` vs `keyed('div')('docs', ...)`). Within a single layout, key the content area on the route tag (e.g. `keyed('div')(model.route._tag, ...)`) so page transitions replace rather than patch.
+
 ### Commands
 
 Commands catch all errors and return messages — side effects never crash the app:

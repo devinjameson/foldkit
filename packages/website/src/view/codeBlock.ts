@@ -36,7 +36,7 @@ const copyButtonWithIndicator = (
   const copyButton = button(
     [
       Class(
-        'p-2 rounded transition bg-gray-800 dark:bg-gray-700 text-gray-400 hover:text-white hover:bg-gray-700 dark:hover:bg-gray-600',
+        'p-2 rounded transition cursor-pointer bg-gray-800 dark:bg-gray-700 text-gray-400 hover:text-white hover:bg-gray-700 dark:hover:bg-gray-600',
       ),
       AriaLabel(ariaLabel),
       OnClick(ClickedCopySnippet({ text: textToCopy })),
@@ -57,16 +57,19 @@ export const codeBlock = (
   className?: string,
 ) => {
   const content = pre(
-    [
-      Class(
-        'bg-[#24292e] text-[#e1e4e8] rounded-lg text-sm p-4 pr-14 overflow-x-auto',
-      ),
-    ],
+    [Class('text-[#e1e4e8] text-sm p-4 pr-14 overflow-x-auto')],
     [code],
   )
 
   return div(
-    [Class(classNames('relative min-w-0', className))],
+    [
+      Class(
+        classNames(
+          'relative min-w-0 bg-[#24292e] rounded-lg',
+          className,
+        ),
+      ),
+    ],
     [content, copyButtonWithIndicator(code, ariaLabel, model)],
   )
 }

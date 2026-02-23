@@ -85,6 +85,7 @@ Individual `type A = typeof A.Type` declarations are not needed — use `typeof 
 
 ### Application Architecture
 
+- Use `keyed` wrappers whenever the view branches into structurally different layouts based on route or model state. Without keying, the virtual DOM will try to diff one layout into another (e.g. a full-width landing page into a sidebar docs layout), which causes stale DOM, mismatched event handlers, and subtle rendering bugs. Key the outermost container of each layout branch with a stable string (e.g. `keyed('div')('landing', ...)` vs `keyed('div')('docs', ...)`). Within a single layout, key the content area on the route tag (e.g. `keyed('div')(model.route._tag, ...)`) so page transitions replace rather than patch.
 - Extract messages to a dedicated `message.ts` file when commands need message constructors — this breaks the circular dependency between command.ts and main.ts. Export all schemas individually and as the `Message` union type.
 - Use the `ViteEnvConfig` Effect.Service pattern for environment variables in RPC layers (see `examples/typing-game/client/src/config.ts`). For values needed synchronously in views (e.g. photo URLs), keep a simple module-level `const` alongside the service.
 - Extract repeated inline style values (colors, shadows) to constants. Use Tailwind `@theme` for colors that map to utility classes (e.g. `--color-valentine: #ff2d55` → `text-valentine`). Use a `theme.ts` for values Tailwind can't express as utilities (textShadow, boxShadow).

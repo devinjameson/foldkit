@@ -315,7 +315,9 @@ export const TypeDocModule = S.Struct({
   name: S.String,
   variant: S.String,
   kind: S.Number,
-  children: S.Array(TypeDocItem),
+  children: S.optionalWith(S.Array(TypeDocItem), {
+    default: () => [],
+  }),
 })
 
 export type TypeDocModule = typeof TypeDocModule.Type

@@ -20,8 +20,7 @@ export const ApiReferenceRoute = r('ApiReference')
 export const FoldkitUiRoute = r('FoldkitUi')
 export const NotFoundRoute = r('NotFound', { path: S.String })
 
-export const AppRoute = S.Union(
-  HomeRoute,
+export const DocsRoute = S.Union(
   WhyFoldkitRoute,
   ComingFromReactRoute,
   GettingStartedRoute,
@@ -35,6 +34,9 @@ export const AppRoute = S.Union(
   FoldkitUiRoute,
   NotFoundRoute,
 )
+export type DocsRoute = typeof DocsRoute.Type
+
+export const AppRoute = S.Union(HomeRoute, DocsRoute)
 
 export type HomeRoute = typeof HomeRoute.Type
 export type WhyFoldkitRoute = typeof WhyFoldkitRoute.Type

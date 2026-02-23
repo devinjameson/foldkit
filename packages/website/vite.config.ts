@@ -266,11 +266,38 @@ const highlightApiSignaturesPlugin = (): Plugin => ({
   },
 })
 
+const LANDING_DATA_ID = 'virtual:landing-data'
+const RESOLVED_LANDING_DATA_ID = '\0' + LANDING_DATA_ID
+
+const landingDataPlugin = (): Plugin => ({
+  name: 'landing-data',
+  resolveId(id) {
+    if (id === LANDING_DATA_ID) {
+      return RESOLVED_LANDING_DATA_ID
+    }
+  },
+  async load(id) {
+    if (id !== RESOLVED_LANDING_DATA_ID) {
+      return
+    }
+
+    const packageJson = JSON.parse(
+      await readFile(
+        resolve(__dirname, '../foldkit/package.json'),
+        'utf-8',
+      ),
+    )
+
+    return `export const foldkitVersion = ${JSON.stringify(packageJson.version)}`
+  },
+})
+
 export default defineConfig({
   plugins: [
     tailwindcss(),
     foldkit(),
     highlightCodePlugin(),
     highlightApiSignaturesPlugin(),
+    landingDataPlugin(),
   ],
 })

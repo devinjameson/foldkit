@@ -24,3 +24,7 @@ declare module 'virtual:api-highlights' {
   const highlights: Record<string, string>
   export default highlights
 }
+
+declare module 'virtual:landing-data' {
+  export const foldkitVersion: string
+}

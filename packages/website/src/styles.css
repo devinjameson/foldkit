@@ -7,6 +7,10 @@
   }
 }
 
+@theme {
+  --color-gray-850: #131921;
+}
+
 :root {
   --header-height: 3.5rem;
   --mobile-toc-height: 2.75rem;
@@ -67,5 +71,60 @@
 
   pre[data-line-digits='3'] code .line[data-line]::before {
     @apply w-12;
+  }
+}
+
+@layer components {
+  .landing-section {
+    @apply px-6 py-10 md:px-12 md:py-24 lg:px-20;
+  }
+
+  .landing-section + .landing-section {
+    @apply border-t border-gray-200 dark:border-gray-800;
+  }
+
+  .landing-section-narrow {
+    @apply max-w-5xl mx-auto;
+  }
+
+  .cta-primary {
+    @apply inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-blue-600 text-white font-semibold text-base transition hover:bg-blue-700 active:bg-blue-800;
+  }
+
+  .cta-secondary {
+    @apply inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-semibold text-base transition hover:bg-gray-200 hover:border-gray-400 dark:hover:bg-gray-700 dark:hover:border-gray-400;
+  }
+
+  .landing-card {
+    @apply rounded-xl bg-white border border-gray-200 dark:border-gray-700;
+  }
+
+  .demo-placeholder {
+    @apply rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 flex items-center justify-center;
+  }
+
+  .hero-dot-grid {
+    background-image: radial-gradient(
+      circle,
+      theme(--color-gray-300) 1px,
+      transparent 1px
+    );
+    background-size: 24px 24px;
+  }
+
+  .dark .hero-dot-grid {
+    background-image: radial-gradient(
+      circle,
+      theme(--color-gray-800) 1px,
+      transparent 1px
+    );
+  }
+
+  .hero-gradient-text {
+    @apply bg-gradient-to-r from-blue-600 via-violet-600 to-blue-600 bg-clip-text text-transparent;
+  }
+
+  .dark .hero-gradient-text {
+    @apply from-blue-400 via-violet-400 to-blue-400;
   }
 }

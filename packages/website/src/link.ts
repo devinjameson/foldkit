@@ -51,4 +51,10 @@ export const Link = {
   npm: 'https://www.npmjs.com/package/foldkit',
   websiteSource:
     'https://github.com/devinjameson/foldkit/tree/main/packages/website',
+  changelog:
+    'https://github.com/devinjameson/foldkit/blob/main/packages/foldkit/CHANGELOG.md',
+  gettingStarted: '/getting-started',
+  whyFoldkit: '/why-foldkit',
+  docs: '/why-foldkit',
+  exampleApps: '/example-apps',
 }

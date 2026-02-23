@@ -1,35 +1,61 @@
 import { archiveBox } from './archiveBox'
 import { arrowRight } from './arrowRight'
+import { arrowsPointingOut } from './arrowsPointingOut'
+import { bolt } from './bolt'
+import { chatBubble } from './chatBubble'
 import { check } from './check'
+import { checkBadge } from './checkBadge'
 import { chevronDown } from './chevronDown'
+import { circleStack } from './circleStack'
 import { close } from './close'
+import { codeBracket } from './codeBracket'
+import { cog } from './cog'
 import { computer } from './computer'
 import { copy } from './copy'
 import { documentDuplicate } from './documentDuplicate'
 import { github } from './github'
 import { link } from './link'
+import { lockClosed } from './lockClosed'
 import { menu } from './menu'
 import { moon } from './moon'
 import { npm } from './npm'
 import { pencil } from './pencil'
+import { puzzle } from './puzzle'
+import { route } from './route'
+import { shieldCheck } from './shieldCheck'
+import { signal } from './signal'
+import { squareStack } from './squareStack'
 import { sun } from './sun'
 import { trash } from './trash'
 
 export const Icon = {
   archiveBox,
   arrowRight,
+  arrowsPointingOut,
+  bolt,
+  chatBubble,
   check,
+  checkBadge,
   chevronDown,
+  circleStack,
   close,
+  codeBracket,
+  cog,
   computer,
   copy,
   documentDuplicate,
   github,
   link,
+  lockClosed,
   menu,
   moon,
   npm,
   pencil,
+  puzzle,
+  route,
+  shieldCheck,
+  signal,
+  squareStack,
   sun,
   trash,
 }

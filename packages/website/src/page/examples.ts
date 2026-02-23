@@ -116,6 +116,8 @@ const examples: ReadonlyArray<Example> = [
   },
 ]
 
+export const exampleAppCount = examples.length
+
 const difficultyToTag = (difficulty: Difficulty): Html => {
   const { label, colors } = Match.value(difficulty).pipe(
     Match.when('Beginner', () => ({
