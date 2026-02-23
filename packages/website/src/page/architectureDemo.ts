@@ -360,7 +360,7 @@ const peekViewBox = (
                         'text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap',
                       ),
                     ],
-                    ['Delay'],
+                    ['Reset Delay (seconds)'],
                   ),
                   input([
                     Class(
