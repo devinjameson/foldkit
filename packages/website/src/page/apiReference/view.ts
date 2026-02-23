@@ -4,6 +4,7 @@ import { Html } from 'foldkit/html'
 import highlights from 'virtual:api-highlights'
 
 import {
+  AriaLabel,
   Class,
   Href,
   Id,
@@ -42,6 +43,26 @@ const descriptionWithCode = (
     index % 2 === 1 ? inlineCode(part) : part,
   )
 }
+
+const sourceLink = (
+  sourceUrl: Option.Option<string>,
+  name: string,
+): ReadonlyArray<Html> =>
+  Option.match(sourceUrl, {
+    onNone: () => [],
+    onSome: url => [
+      a(
+        [
+          Class(
+            'text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300',
+          ),
+          AriaLabel(`View source for ${name}`),
+          Href(url),
+        ],
+        ['source'],
+      ),
+    ],
+  })
 
 const byName = <
   T extends { readonly name: string },
@@ -86,20 +107,7 @@ const functionView = (
                 ],
                 ['function'],
               ),
-              ...Option.match(apiFunction.sourceUrl, {
-                onNone: () => [],
-                onSome: url => [
-                  a(
-                    [
-                      Class(
-                        'text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300',
-                      ),
-                      Href(url),
-                    ],
-                    ['source'],
-                  ),
-                ],
-              }),
+              ...sourceLink(apiFunction.sourceUrl, apiFunction.name),
             ],
           ),
           headingLinkButton(id, apiFunction.name),
@@ -358,20 +366,7 @@ const typeView = (moduleName: string, type: ApiType): Html => {
                 ],
                 ['type'],
               ),
-              ...Option.match(type.sourceUrl, {
-                onNone: () => [],
-                onSome: url => [
-                  a(
-                    [
-                      Class(
-                        'text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300',
-                      ),
-                      Href(url),
-                    ],
-                    ['source'],
-                  ),
-                ],
-              }),
+              ...sourceLink(type.sourceUrl, type.name),
             ],
           ),
           headingLinkButton(id, type.name),
@@ -450,20 +445,10 @@ const interfaceView = (
                 ],
                 ['interface'],
               ),
-              ...Option.match(apiInterface.sourceUrl, {
-                onNone: () => [],
-                onSome: url => [
-                  a(
-                    [
-                      Class(
-                        'text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300',
-                      ),
-                      Href(url),
-                    ],
-                    ['source'],
-                  ),
-                ],
-              }),
+              ...sourceLink(
+                apiInterface.sourceUrl,
+                apiInterface.name,
+              ),
             ],
           ),
           headingLinkButton(id, apiInterface.name),
@@ -542,20 +527,7 @@ const variableView = (
                 ],
                 ['const'],
               ),
-              ...Option.match(variable.sourceUrl, {
-                onNone: () => [],
-                onSome: url => [
-                  a(
-                    [
-                      Class(
-                        'text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300',
-                      ),
-                      Href(url),
-                    ],
-                    ['source'],
-                  ),
-                ],
-              }),
+              ...sourceLink(variable.sourceUrl, variable.name),
             ],
           ),
           headingLinkButton(id, variable.name),

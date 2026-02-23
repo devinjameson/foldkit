@@ -22,6 +22,9 @@ import { Url, toString as urlToString } from 'foldkit/url'
 import * as CommandStream from './commandStream'
 import {
   Alt,
+  AriaCurrent,
+  AriaExpanded,
+  AriaHidden,
   AriaLabel,
   Class,
   Href,
@@ -602,10 +605,23 @@ const sidebarView = (
     )
 
   const navLink = (href: string, isActive: boolean, label: string) =>
-    li([], [a([Href(href), Class(linkClass(isActive))], [label])])
+    li(
+      [],
+      [
+        a(
+          [
+            Href(href),
+            Class(linkClass(isActive)),
+            ...(isActive ? [AriaCurrent('page')] : []),
+          ],
+          [label],
+        ),
+      ],
+    )
 
   return aside(
     [
+      AriaLabel('Documentation sidebar'),
       Class(
         classNames(
           'fixed inset-0 md:top-[var(--header-height)] md:bottom-0 md:left-0 md:right-auto z-[60] md:z-40 md:w-64 bg-white dark:bg-gray-900 md:border-r border-gray-300 dark:border-gray-700 flex flex-col',
@@ -647,10 +663,14 @@ const sidebarView = (
         ],
       ),
       nav(
-        [Class('flex-1 overflow-y-auto p-4')],
+        [
+          AriaLabel('Documentation'),
+          Class('flex-1 overflow-y-auto p-4'),
+        ],
         [
           h2(
             [
+              AriaHidden(true),
               Class(
                 'hidden md:block text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3',
               ),
@@ -764,6 +784,7 @@ const tableOfContentsView = (
     [
       h3(
         [
+          AriaHidden(true),
           Class(
             'text-xs font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-2',
           ),
@@ -771,7 +792,7 @@ const tableOfContentsView = (
         ['On This Page'],
       ),
       nav(
-        [],
+        [AriaLabel('Table of contents')],
         [
           ul(
             [Class('space-y-2 text-sm')],
@@ -803,6 +824,7 @@ const tableOfContentsView = (
                             !isActive,
                         }),
                       ),
+                      ...(isActive ? [AriaCurrent('location')] : []),
                     ],
                     [text],
                   ),
@@ -890,7 +912,10 @@ const mobileTableOfContentsView = (
         ],
       ),
       nav(
-        [Class('max-h-[50vh] overflow-y-auto')],
+        [
+          AriaLabel('Table of contents'),
+          Class('max-h-[50vh] overflow-y-auto'),
+        ],
         [
           ul(
             [
@@ -925,6 +950,7 @@ const mobileTableOfContentsView = (
                           },
                         ),
                       ),
+                      ...(isActive ? [AriaCurrent('location')] : []),
                     ],
                     [
                       text,
@@ -1064,6 +1090,7 @@ const docsHeaderView = (model: Model) =>
               Class(
                 'md:hidden p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-700 dark:text-gray-300 cursor-pointer',
               ),
+              AriaExpanded(model.mobileMenuOpen),
               AriaLabel('Toggle menu'),
               OnClick(ToggledMobileMenu()),
             ],
@@ -1183,6 +1210,7 @@ const docsView = (model: Model, docsRoute: DocsRoute) => {
       ),
     ],
     [
+      skipNavLink,
       docsHeaderView(model),
       div(
         [Class('flex flex-1 pt-[var(--header-height)] md:pl-64')],
@@ -1190,6 +1218,7 @@ const docsView = (model: Model, docsRoute: DocsRoute) => {
           sidebarView(model.route, model.mobileMenuOpen),
           main(
             [
+              Id('main-content'),
               Class(
                 classNames(
                   'flex-1 min-w-0 bg-gray-100 dark:bg-gray-900',

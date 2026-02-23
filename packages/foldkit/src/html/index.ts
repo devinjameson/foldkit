@@ -356,7 +356,9 @@ type Attribute<Message> = Data.TaggedEnum<{
   AriaInvalid: { readonly value: boolean }
   AriaLive: { readonly value: string }
   AriaControls: { readonly value: string }
+  AriaCurrent: { readonly value: string }
   AriaOrientation: { readonly value: string }
+  AriaPressed: { readonly value: string }
   AriaHasPopup: { readonly value: string }
   AriaActiveDescendant: { readonly value: string }
   Attribute: { readonly key: string; readonly value: string }
@@ -487,7 +489,9 @@ const {
   AriaInvalid,
   AriaLive,
   AriaControls,
+  AriaCurrent,
   AriaOrientation,
+  AriaPressed,
   AriaHasPopup,
   AriaActiveDescendant,
   Attribute,
@@ -836,8 +840,12 @@ const buildVNodeData = <Message>(
           AriaLive: ({ value }) => updateDataAttrs({ 'aria-live': value }),
           AriaControls: ({ value }) =>
             updateDataAttrs({ 'aria-controls': value }),
+          AriaCurrent: ({ value }) =>
+            updateDataAttrs({ 'aria-current': value }),
           AriaOrientation: ({ value }) =>
             updateDataAttrs({ 'aria-orientation': value }),
+          AriaPressed: ({ value }) =>
+            updateDataAttrs({ 'aria-pressed': value }),
           AriaHasPopup: ({ value }) =>
             updateDataAttrs({ 'aria-haspopup': value }),
           AriaActiveDescendant: ({ value }) =>
@@ -1707,8 +1715,16 @@ type HtmlAttributes<Message> = {
     readonly _tag: 'AriaControls'
     readonly value: string
   }
+  AriaCurrent: (value: string) => {
+    readonly _tag: 'AriaCurrent'
+    readonly value: string
+  }
   AriaOrientation: (value: string) => {
     readonly _tag: 'AriaOrientation'
+    readonly value: string
+  }
+  AriaPressed: (value: string) => {
+    readonly _tag: 'AriaPressed'
     readonly value: string
   }
   AriaHasPopup: (value: string) => {
@@ -1917,7 +1933,9 @@ const htmlAttributes = <Message>(): HtmlAttributes<Message> => ({
   AriaInvalid: (value: boolean) => AriaInvalid({ value }),
   AriaLive: (value: string) => AriaLive({ value }),
   AriaControls: (value: string) => AriaControls({ value }),
+  AriaCurrent: (value: string) => AriaCurrent({ value }),
   AriaOrientation: (value: string) => AriaOrientation({ value }),
+  AriaPressed: (value: string) => AriaPressed({ value }),
   AriaHasPopup: (value: string) => AriaHasPopup({ value }),
   AriaActiveDescendant: (value: string) => AriaActiveDescendant({ value }),
   Attribute: (key: string, value: string) => Attribute({ key, value }),

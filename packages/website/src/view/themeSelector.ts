@@ -1,7 +1,15 @@
 import classNames from 'classnames'
 import { Html } from 'foldkit/html'
 
-import { AriaLabel, Class, OnClick, button, div } from '../html'
+import {
+  AriaLabel,
+  AriaPressed,
+  Class,
+  OnClick,
+  Role,
+  button,
+  div,
+} from '../html'
 import { Icon } from '../icon'
 import {
   SelectedThemePreference,
@@ -13,6 +21,8 @@ export const themeSelector = (
 ): Html =>
   div(
     [
+      Role('group'),
+      AriaLabel('Theme preference'),
       Class(
         'flex items-center gap-0.5 p-0.5 rounded-lg bg-gray-100 dark:bg-gray-800',
       ),
@@ -49,6 +59,7 @@ const themeSelectorButton = (
 
   return button(
     [
+      AriaPressed(isActive.toString()),
       Class(
         classNames(
           'p-2 rounded-md transition cursor-pointer',

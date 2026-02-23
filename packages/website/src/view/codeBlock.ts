@@ -7,6 +7,7 @@ import {
   AriaLive,
   Class,
   OnClick,
+  Role,
   button,
   div,
   empty,
@@ -34,8 +35,8 @@ const copyButtonWithIndicator = (
       )
     : empty
 
-  const copiedAnnouncement = span(
-    [AriaLive('polite'), Class('sr-only')],
+  const liveAnnouncement = span(
+    [Role('status'), AriaLive('polite'), Class('sr-only')],
     [isCopied ? 'Copied to clipboard' : ''],
   )
 
@@ -52,7 +53,7 @@ const copyButtonWithIndicator = (
 
   return div(
     [Class('absolute top-2 right-2')],
-    [copiedIndicator, copiedAnnouncement, copyButton],
+    [copiedIndicator, liveAnnouncement, copyButton],
   )
 }
 
