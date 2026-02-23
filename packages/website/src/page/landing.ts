@@ -3,6 +3,7 @@ import { foldkitVersion } from 'virtual:landing-data'
 
 import {
   Alt,
+  AriaHidden,
   Class,
   Href,
   Id,
@@ -14,9 +15,11 @@ import {
   h2,
   h3,
   img,
+  li,
   p,
   section,
   span,
+  ul,
 } from '../html'
 import { Icon } from '../icon'
 import { Link } from '../link'
@@ -65,6 +68,7 @@ const heroSection = (model: Model): Html =>
         [
           Id(HERO_GRID_CANVAS_ID),
           Class('absolute inset-0 w-full h-full'),
+          AriaHidden(true),
         ],
         [],
       ),
@@ -138,7 +142,7 @@ const heroSection = (model: Model): Html =>
 // POWERED BY
 
 const poweredByItem = (text: string): Html =>
-  div(
+  li(
     [Class('flex items-center gap-2')],
     [
       div(
@@ -161,7 +165,7 @@ const poweredByStrip = (): Html =>
       div(
         [Class('landing-section-narrow')],
         [
-          p(
+          h2(
             [
               Class(
                 'text-2xl md:text-3xl font-bold text-gray-900 dark:text-white text-balance',
@@ -181,10 +185,10 @@ const poweredByStrip = (): Html =>
               '. Inside and out.',
             ],
           ),
-          div(
+          ul(
             [
               Class(
-                'mt-4 flex flex-col gap-2 items-center text-lg text-gray-600 dark:text-gray-300',
+                'mt-4 flex flex-col gap-2 items-center text-lg text-gray-600 dark:text-gray-300 list-none',
               ),
             ],
             [
@@ -550,17 +554,22 @@ const audienceSection = (): Html =>
                     ],
                     ["Who it's for"],
                   ),
-                  audienceForItem(
-                    'Developers who value correctness',
-                    'You want your architecture to prevent bugs, not just catch them.',
-                  ),
-                  audienceForItem(
-                    'Teams that need to stay aligned',
-                    'One pattern for state, effects, and views means less disagreement and faster onboarding.',
-                  ),
-                  audienceForItem(
-                    'Projects with complex state',
-                    'Auth flows, real-time data, multi-step forms — the architecture handles complexity without losing clarity.',
+                  ul(
+                    [Class('list-none')],
+                    [
+                      audienceForItem(
+                        'Developers who value correctness',
+                        'You want your architecture to prevent bugs, not just catch them.',
+                      ),
+                      audienceForItem(
+                        'Teams that need to stay aligned',
+                        'One pattern for state, effects, and views means less disagreement and faster onboarding.',
+                      ),
+                      audienceForItem(
+                        'Projects with complex state',
+                        'Auth flows, real-time data, multi-step forms — the architecture handles complexity without losing clarity.',
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -575,17 +584,22 @@ const audienceSection = (): Html =>
                     ],
                     ["Who it's not for"],
                   ),
-                  audienceNotItem(
-                    'Large existing React codebases',
-                    "Foldkit isn't an incremental adoption — it's a different architecture. Migration means a rewrite.",
-                  ),
-                  audienceNotItem(
-                    'Teams not ready to invest in Effect',
-                    "Foldkit leans on pipe, discriminated unions, and Effect throughout. There's no escape hatch — you're all in or you're not.",
-                  ),
-                  audienceNotItem(
-                    'Projects that need the React ecosystem',
-                    "No React component libraries, no Next.js, no existing middleware. You're building on different foundations.",
+                  ul(
+                    [Class('list-none')],
+                    [
+                      audienceNotItem(
+                        'Large existing React codebases',
+                        "Foldkit isn't an incremental adoption — it's a different architecture. Migration means a rewrite.",
+                      ),
+                      audienceNotItem(
+                        'Teams not ready to invest in Effect',
+                        "Foldkit leans on pipe, discriminated unions, and Effect throughout. There's no escape hatch — you're all in or you're not.",
+                      ),
+                      audienceNotItem(
+                        'Projects that need the React ecosystem',
+                        "No React component libraries, no Next.js, no existing middleware. You're building on different foundations.",
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -597,7 +611,7 @@ const audienceSection = (): Html =>
   )
 
 const audienceForItem = (title: string, description: string): Html =>
-  div(
+  li(
     [Class('mb-5 flex gap-3')],
     [
       div(
@@ -629,7 +643,7 @@ const audienceForItem = (title: string, description: string): Html =>
   )
 
 const audienceNotItem = (title: string, description: string): Html =>
-  div(
+  li(
     [Class('mb-5 flex gap-3')],
     [
       div(
@@ -716,8 +730,12 @@ const trustSection = (): Html =>
       div(
         [Class('landing-section-narrow')],
         [
-          div(
-            [Class('grid gap-6 sm:grid-cols-2 lg:grid-cols-4')],
+          ul(
+            [
+              Class(
+                'grid gap-6 sm:grid-cols-2 lg:grid-cols-4 list-none',
+              ),
+            ],
             [
               trustItem('Version', `v${foldkitVersion}`),
               trustItemWithLink(
@@ -743,7 +761,7 @@ const trustSection = (): Html =>
   )
 
 const trustItem = (label: string, value: string): Html =>
-  div(
+  li(
     [Class('landing-card p-5 text-center dark:bg-gray-850')],
     [
       p(
@@ -766,7 +784,7 @@ const trustItemWithLink = (
   linkText: string,
   href: string,
 ): Html =>
-  div(
+  li(
     [Class('landing-card p-5 text-center dark:bg-gray-850')],
     [
       p(
@@ -810,6 +828,7 @@ const aiSection = (): Html =>
         [
           Id(AI_GRID_CANVAS_ID),
           Class('absolute inset-0 w-full h-full'),
+          AriaHidden(true),
         ],
         [],
       ),
