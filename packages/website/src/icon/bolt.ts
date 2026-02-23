@@ -1,6 +1,7 @@
 import { Html } from 'foldkit/html'
 
 import {
+  AriaHidden,
   Class,
   D,
   Fill,
@@ -17,6 +18,7 @@ import {
 export const bolt = (className: string = 'w-5 h-5'): Html =>
   svg(
     [
+      AriaHidden(true),
       Class(className),
       Xmlns('http://www.w3.org/2000/svg'),
       Fill('none'),

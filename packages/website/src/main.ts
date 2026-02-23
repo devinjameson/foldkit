@@ -36,6 +36,7 @@ import {
   details,
   div,
   empty,
+  footer,
   h2,
   h3,
   header,
@@ -44,6 +45,7 @@ import {
   li,
   main,
   nav,
+  p,
   span,
   summary,
   ul,
@@ -973,15 +975,15 @@ const landingHeaderView = (model: Model) =>
           ]),
         ],
       ),
-      div(
-        [Class('flex items-center gap-3')],
+      nav(
+        [AriaLabel('Main'), Class('flex items-center gap-3')],
         [
           themeSelector(model.themePreference),
           a(
             [
               Href(Link.gettingStarted),
               Class(
-                'inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold transition hover:bg-blue-700',
+                'inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-pink-600 dark:bg-pink-500 text-white text-sm font-semibold transition hover:bg-pink-700 dark:hover:bg-pink-600',
               ),
             ],
             ['Dive In', Icon.arrowRight('w-4 h-4')],
@@ -990,6 +992,40 @@ const landingHeaderView = (model: Model) =>
       ),
     ],
   )
+
+const skipNavLink: Html = a(
+  [
+    Href('#main-content'),
+    Class(
+      'sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-pink-600 dark:focus:bg-pink-500 focus:text-white focus:text-sm focus:font-semibold',
+    ),
+  ],
+  ['Skip to main content'],
+)
+
+const landingFooter: Html = footer(
+  [
+    Class(
+      'px-6 py-8 md:px-12 lg:px-20 border-t border-gray-200 dark:border-gray-800 text-center text-sm text-gray-500 dark:text-gray-400',
+    ),
+  ],
+  [
+    p(
+      [],
+      [
+        'Built with ',
+        a(
+          [
+            Href(Link.github),
+            Class('text-pink-600 dark:text-pink-500 hover:underline'),
+          ],
+          ['Foldkit'],
+        ),
+        '.',
+      ],
+    ),
+  ],
+)
 
 const landingView = (model: Model) => {
   const architectureDemoView = Page.ArchitectureDemo.view(
@@ -1001,11 +1037,13 @@ const landingView = (model: Model) => {
     'landing',
     [Class('flex flex-col min-h-screen')],
     [
+      skipNavLink,
       landingHeaderView(model),
       main(
-        [Class('flex-1')],
+        [Id('main-content'), Class('flex-1')],
         [Page.Landing.view(model, architectureDemoView)],
       ),
+      landingFooter,
     ],
   )
 }

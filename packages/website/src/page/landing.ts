@@ -3,9 +3,11 @@ import { foldkitVersion } from 'virtual:landing-data'
 
 import {
   Alt,
+  AriaHidden,
   Class,
   Href,
   Id,
+  Role,
   Src,
   a,
   canvas,
@@ -14,9 +16,11 @@ import {
   h2,
   h3,
   img,
+  li,
   p,
   section,
   span,
+  ul,
 } from '../html'
 import { Icon } from '../icon'
 import { Link } from '../link'
@@ -42,7 +46,7 @@ export const view = (
       heroSection(model),
       promiseSection(),
       architectureDemoSection(architectureDemoView),
-      poweredByStrip(),
+      poweredBySection(),
       includedSection(),
       aiSection(),
       whyFoldkitSection(),
@@ -61,13 +65,16 @@ const heroSection = (model: Model): Html =>
   section(
     [
       Id(HERO_SECTION_ID),
-      Class('landing-section relative overflow-hidden'),
+      Class(
+        'landing-section relative overflow-hidden bg-white dark:bg-gray-900',
+      ),
     ],
     [
       canvas(
         [
           Id(HERO_GRID_CANVAS_ID),
           Class('absolute inset-0 w-full h-full'),
+          AriaHidden(true),
         ],
         [],
       ),
@@ -91,7 +98,10 @@ const heroSection = (model: Model): Html =>
               ),
             ],
             [
-              span([Class('hero-gradient-text')], ['Beautifully']),
+              span(
+                [Class('text-pink-600 dark:text-pink-500')],
+                ['Beautifully'],
+              ),
               ' boring frontend applications.',
             ],
           ),
@@ -141,7 +151,7 @@ const heroSection = (model: Model): Html =>
 // POWERED BY
 
 const poweredByItem = (text: string): Html =>
-  div(
+  li(
     [Class('flex items-center gap-2')],
     [
       div(
@@ -152,7 +162,7 @@ const poweredByItem = (text: string): Html =>
     ],
   )
 
-const poweredByStrip = (): Html =>
+const poweredBySection = (): Html =>
   section(
     [
       Id('powered-by-effect'),
@@ -164,7 +174,7 @@ const poweredByStrip = (): Html =>
       div(
         [Class('landing-section-narrow')],
         [
-          p(
+          h2(
             [
               Class(
                 'text-2xl md:text-3xl font-bold text-gray-900 dark:text-white text-balance',
@@ -176,7 +186,7 @@ const poweredByStrip = (): Html =>
                 [
                   Href(Link.effect),
                   Class(
-                    'text-blue-500 dark:text-blue-400 hover:underline',
+                    'text-pink-600 dark:text-pink-500 hover:underline',
                   ),
                 ],
                 ['Effect'],
@@ -184,10 +194,11 @@ const poweredByStrip = (): Html =>
               '. Inside and out.',
             ],
           ),
-          div(
+          ul(
             [
+              Role('list'),
               Class(
-                'mt-4 flex flex-col gap-2 items-center text-lg text-gray-600 dark:text-gray-300',
+                'mt-4 flex flex-col gap-2 items-center text-lg text-gray-600 dark:text-gray-300 list-none',
               ),
             ],
             [
@@ -217,7 +228,7 @@ const pillarCard = (
   div(
     [Class('landing-card p-6 dark:bg-gray-900')],
     [
-      div([Class('mb-3 text-blue-600 dark:text-blue-400')], [icon]),
+      div([Class('mb-3 text-pink-600 dark:text-pink-500')], [icon]),
       h3(
         [
           Class(
@@ -329,7 +340,7 @@ const includedFeature = (
   div(
     [Class('landing-card p-6 dark:bg-gray-850')],
     [
-      div([Class('mb-3 text-blue-600 dark:text-blue-400')], [icon]),
+      div([Class('mb-3 text-pink-600 dark:text-pink-500')], [icon]),
       h3(
         [
           Class(
@@ -380,21 +391,21 @@ const includedSection = (): Html =>
                 [Class('landing-card p-6 dark:bg-gray-850')],
                 [
                   div(
-                    [Class('mb-3 text-blue-600 dark:text-blue-400')],
+                    [Class('mb-3 text-pink-600 dark:text-pink-500')],
                     [Icon.puzzle('w-6 h-6')],
                   ),
                   h3(
                     [
                       Class(
-                        'text-base font-semibold text-gray-900 dark:text-white mb-2',
+                        'flex items-center text-base font-semibold text-gray-900 dark:text-white mb-2',
                       ),
                     ],
                     [
-                      'UI Components ',
+                      'UI Components',
                       span(
                         [
                           Class(
-                            'inline-block ml-1 px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 align-middle',
+                            'ml-2 px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400',
                           ),
                         ],
                         ['In Development'],
@@ -415,7 +426,7 @@ const includedSection = (): Html =>
                     [
                       Href('/foldkit-ui'),
                       Class(
-                        'text-blue-500 dark:text-blue-400 hover:underline font-semibold text-sm',
+                        'text-pink-600 dark:text-pink-500 hover:underline font-semibold text-sm',
                       ),
                     ],
                     [
@@ -437,7 +448,7 @@ const includedSection = (): Html =>
                     [
                       Href(Link.snabbdom),
                       Class(
-                        'text-blue-500 dark:text-blue-400 hover:underline',
+                        'text-pink-600 dark:text-pink-500 hover:underline',
                       ),
                     ],
                     ['Snabbdom'],
@@ -502,7 +513,7 @@ const whyFoldkitSection = (): Html =>
                 [
                   Href(Link.theElmArchitecture),
                   Class(
-                    'text-blue-500 dark:text-blue-400 hover:underline',
+                    'text-pink-600 dark:text-pink-500 hover:underline',
                   ),
                 ],
                 ['The Elm Architecture'],
@@ -553,17 +564,22 @@ const audienceSection = (): Html =>
                     ],
                     ["Who it's for"],
                   ),
-                  audienceForItem(
-                    'Developers who value correctness',
-                    'You want your architecture to prevent bugs, not just catch them.',
-                  ),
-                  audienceForItem(
-                    'Teams that need to stay aligned',
-                    'One pattern for state, effects, and views means less disagreement and faster onboarding.',
-                  ),
-                  audienceForItem(
-                    'Projects with complex state',
-                    'Auth flows, real-time data, multi-step forms — the architecture handles complexity without losing clarity.',
+                  ul(
+                    [Role('list'), Class('list-none')],
+                    [
+                      audienceForItem(
+                        'Developers who value correctness',
+                        'You want your architecture to prevent bugs, not just catch them.',
+                      ),
+                      audienceForItem(
+                        'Teams that need to stay aligned',
+                        'One pattern for state, effects, and views means less disagreement and faster onboarding.',
+                      ),
+                      audienceForItem(
+                        'Projects with complex state',
+                        'Auth flows, real-time data, multi-step forms — the architecture handles complexity without losing clarity.',
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -578,17 +594,22 @@ const audienceSection = (): Html =>
                     ],
                     ["Who it's not for"],
                   ),
-                  audienceNotItem(
-                    'Large existing React codebases',
-                    "Foldkit isn't an incremental adoption — it's a different architecture. Migration means a rewrite.",
-                  ),
-                  audienceNotItem(
-                    'Teams not ready to invest in Effect',
-                    "Foldkit leans on pipe, discriminated unions, and Effect throughout. There's no escape hatch — you're all in or you're not.",
-                  ),
-                  audienceNotItem(
-                    'Projects that need the React ecosystem',
-                    "No React component libraries, no Next.js, no existing middleware. You're building on different foundations.",
+                  ul(
+                    [Role('list'), Class('list-none')],
+                    [
+                      audienceNotItem(
+                        'Large existing React codebases',
+                        "Foldkit isn't an incremental adoption — it's a different architecture. Migration means a rewrite.",
+                      ),
+                      audienceNotItem(
+                        'Teams not ready to invest in Effect',
+                        "Foldkit leans on pipe, discriminated unions, and Effect throughout. There's no escape hatch — you're all in or you're not.",
+                      ),
+                      audienceNotItem(
+                        'Projects that need the React ecosystem',
+                        "No React component libraries, no Next.js, no existing middleware. You're building on different foundations.",
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -600,7 +621,7 @@ const audienceSection = (): Html =>
   )
 
 const audienceForItem = (title: string, description: string): Html =>
-  div(
+  li(
     [Class('mb-5 flex gap-3')],
     [
       div(
@@ -632,7 +653,7 @@ const audienceForItem = (title: string, description: string): Html =>
   )
 
 const audienceNotItem = (title: string, description: string): Html =>
-  div(
+  li(
     [Class('mb-5 flex gap-3')],
     [
       div(
@@ -719,8 +740,21 @@ const trustSection = (): Html =>
       div(
         [Class('landing-section-narrow')],
         [
-          div(
-            [Class('grid gap-6 sm:grid-cols-2 lg:grid-cols-4')],
+          h2(
+            [
+              Class(
+                'text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-6 text-center text-balance',
+              ),
+            ],
+            ['Proof of life.'],
+          ),
+          ul(
+            [
+              Role('list'),
+              Class(
+                'grid gap-6 sm:grid-cols-2 lg:grid-cols-4 list-none',
+              ),
+            ],
             [
               trustItem('Version', `v${foldkitVersion}`),
               trustItemWithLink(
@@ -746,7 +780,7 @@ const trustSection = (): Html =>
   )
 
 const trustItem = (label: string, value: string): Html =>
-  div(
+  li(
     [Class('landing-card p-5 text-center dark:bg-gray-850')],
     [
       p(
@@ -769,7 +803,7 @@ const trustItemWithLink = (
   linkText: string,
   href: string,
 ): Html =>
-  div(
+  li(
     [Class('landing-card p-5 text-center dark:bg-gray-850')],
     [
       p(
@@ -784,7 +818,7 @@ const trustItemWithLink = (
         [
           Href(href),
           Class(
-            'text-blue-500 dark:text-blue-400 hover:underline text-lg font-semibold',
+            'text-pink-600 dark:text-pink-500 hover:underline text-lg font-semibold',
           ),
         ],
         [
@@ -813,6 +847,7 @@ const aiSection = (): Html =>
         [
           Id(AI_GRID_CANVAS_ID),
           Class('absolute inset-0 w-full h-full'),
+          AriaHidden(true),
         ],
         [],
       ),
@@ -827,7 +862,14 @@ const aiSection = (): Html =>
             ],
             [
               'Your favorite ',
-              span([Class('hero-gradient-text font-black')], ['LLM']),
+              span(
+                [
+                  Class(
+                    'text-pink-600 dark:text-pink-500 font-black',
+                  ),
+                ],
+                ['LLM'],
+              ),
               ' has a crush on Foldkit.',
             ],
           ),

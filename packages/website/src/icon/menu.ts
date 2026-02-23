@@ -1,6 +1,7 @@
 import { Html } from 'foldkit/html'
 
 import {
+  AriaHidden,
   Class,
   D,
   Fill,
@@ -17,6 +18,7 @@ import {
 export const menu = (className: string = 'w-6 h-6'): Html =>
   svg(
     [
+      AriaHidden(true),
       Class(className),
       Xmlns('http://www.w3.org/2000/svg'),
       Fill('none'),

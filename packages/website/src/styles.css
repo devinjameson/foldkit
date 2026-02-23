@@ -88,7 +88,7 @@
   }
 
   .cta-primary {
-    @apply inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-blue-600 text-white font-semibold text-base transition hover:bg-blue-700 active:bg-blue-800;
+    @apply inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-pink-600 dark:bg-pink-500 text-white font-semibold text-base transition hover:bg-pink-700 dark:hover:bg-pink-600 active:bg-pink-800 dark:active:bg-pink-700;
   }
 
   .cta-secondary {
@@ -105,12 +105,7 @@
     content: '';
     @apply absolute inset-0 rounded-lg;
     padding: 1px;
-    background: linear-gradient(
-      to right,
-      theme(--color-blue-600),
-      theme(--color-violet-600),
-      theme(--color-blue-600)
-    );
+    background: theme(--color-pink-600);
     mask:
       linear-gradient(#fff 0 0) content-box,
       linear-gradient(#fff 0 0);
@@ -118,7 +113,7 @@
   }
 
   .cta-gradient:hover {
-    background: rgba(139, 92, 246, 0.05);
+    background: rgba(219, 39, 119, 0.05);
   }
 
   .dark .cta-gradient {
@@ -126,16 +121,11 @@
   }
 
   .dark .cta-gradient::before {
-    background: linear-gradient(
-      to right,
-      theme(--color-blue-400),
-      theme(--color-violet-400),
-      theme(--color-blue-400)
-    );
+    background: theme(--color-pink-500);
   }
 
   .dark .cta-gradient:hover {
-    background: rgba(139, 92, 246, 0.1);
+    background: rgba(236, 72, 153, 0.1);
   }
 
   .landing-card {
@@ -249,64 +239,9 @@
       opacity: 0.5;
     }
   }
-
-  .hero-dot-grid {
-    background-image: radial-gradient(
-      circle,
-      theme(--color-gray-300) 1px,
-      transparent 1px
-    );
-    background-size: 24px 24px;
-  }
-
-  .dark .hero-dot-grid {
-    background-image: radial-gradient(
-      circle,
-      theme(--color-gray-800) 1px,
-      transparent 1px
-    );
-  }
-
-  .hero-gradient-text {
-    @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(
-      90deg,
-      theme(--color-blue-600),
-      theme(--color-violet-600),
-      theme(--color-blue-600),
-      theme(--color-violet-600),
-      theme(--color-blue-600)
-    );
-    background-size: 200% 100%;
-    animation: gradient-shift 8s linear infinite;
-  }
-
-  .dark .hero-gradient-text {
-    background-image: linear-gradient(
-      90deg,
-      theme(--color-blue-400),
-      theme(--color-violet-400),
-      theme(--color-blue-400),
-      theme(--color-violet-400),
-      theme(--color-blue-400)
-    );
-  }
-
-  @keyframes gradient-shift {
-    0% {
-      background-position: 0% 50%;
-    }
-    100% {
-      background-position: 200% 50%;
-    }
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero-gradient-text {
-    animation: none;
-  }
-
   .demo-code-panel [data-line] {
     transition: none;
   }

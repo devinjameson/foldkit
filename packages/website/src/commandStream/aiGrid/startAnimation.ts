@@ -1,35 +1,32 @@
-const GRID_SPACING = 24
-const DOT_BASE_RADIUS = 1.2
-const RIPPLE_SPEED = 0.09
-const RIPPLE_WIDTH = 200
-const RIPPLE_INTERVAL = 5000
-const RIPPLE_COUNT = 2
-const WAVE_AMPLITUDE = 14
-const MAX_DISTANCE = 1200
-const WAVE_COLOR_BLEND = 0.12
+const GRID_SPACING = 36
+const DOT_BASE_RADIUS = 1.4
+const DOT_DENSITY = 1.0
+const WAVE_SPEED = 0.05
+const WAVE_LENGTH = 250
+const WAVE_AMPLITUDE = 20
+const WAVE_COLOR_BLEND = 0.6
 
 const DOT_RGB = {
-  dark: [40, 48, 64] as const,
-  light: [200, 205, 215] as const,
+  dark: [80, 50, 70] as const,
+  light: [220, 215, 220] as const,
 }
 
 const WAVE_RGB = {
-  dark: [139, 92, 246] as const,
-  light: [124, 58, 237] as const,
+  dark: [255, 105, 180] as const,
+  light: [219, 39, 119] as const,
 }
 
 const lerp = (from: number, to: number, amount: number): number =>
   from + (to - from) * amount
 
-const rippleIntensity = (
-  distance: number,
-  ripplePosition: number,
-): number => {
-  const distanceFromRipple = Math.abs(distance - ripplePosition)
+const waveIntensity = (distance: number, time: number): number => {
+  const phase = (distance - time * WAVE_SPEED) / WAVE_LENGTH
+  return (Math.sin(phase * Math.PI * 2) + 1) / 2
+}
 
-  return distanceFromRipple < RIPPLE_WIDTH
-    ? Math.cos((distanceFromRipple / RIPPLE_WIDTH) * Math.PI * 0.5)
-    : 0
+const dotHash = (gridX: number, gridY: number): number => {
+  const n = Math.sin(gridX * 127.1 + gridY * 311.7) * 43758.5453
+  return n - Math.floor(n)
 }
 
 export const startAnimation = (
@@ -65,46 +62,43 @@ export const startAnimation = (
     const baseRgb = DOT_RGB[theme]
     const waveRgb = WAVE_RGB[theme]
 
+    let gridX = 0
     for (let x = GRID_SPACING / 2; x < width; x += GRID_SPACING) {
+      let gridY = 0
       for (let y = GRID_SPACING / 2; y < height; y += GRID_SPACING) {
+        gridY++
+        if (dotHash(gridX, gridY) > DOT_DENSITY) {
+          continue
+        }
         const dx = x - centerX
         const dy = y - centerY
         const distance = Math.sqrt(dx * dx + dy * dy)
 
-        let totalIntensity = 0
-
-        for (let ripple = 0; ripple < RIPPLE_COUNT; ripple++) {
-          const rippleAge =
-            (timestamp - ripple * RIPPLE_INTERVAL) * RIPPLE_SPEED
-          const ripplePosition =
-            rippleAge % (MAX_DISTANCE + RIPPLE_WIDTH)
-
-          if (ripplePosition > 0) {
-            const fadeIn = Math.min(ripplePosition / RIPPLE_WIDTH, 1)
-            totalIntensity = Math.max(
-              totalIntensity,
-              rippleIntensity(distance, ripplePosition) * fadeIn,
-            )
-          }
-        }
+        const totalIntensity = waveIntensity(distance, timestamp)
 
         const push = totalIntensity * WAVE_AMPLITUDE
         const angle = Math.atan2(dy, dx)
         const offsetX = Math.cos(angle) * push
         const offsetY = Math.sin(angle) * push
-        const radius = DOT_BASE_RADIUS + totalIntensity * 0.3
+        const radius = DOT_BASE_RADIUS + totalIntensity * 0.15
 
         const colorBlend = totalIntensity * WAVE_COLOR_BLEND
         const red = lerp(baseRgb[0], waveRgb[0], colorBlend)
         const green = lerp(baseRgb[1], waveRgb[1], colorBlend)
         const blue = lerp(baseRgb[2], waveRgb[2], colorBlend)
-        const opacity = 0.7 + totalIntensity * 0.05
+        const horizontalCenter = Math.abs(dx) / (width / 2)
+        const centerFade =
+          horizontalCenter < 0.33
+            ? 0.3
+            : Math.min((horizontalCenter - 0.33) / 0.33, 1)
+        const opacity = (0.85 + totalIntensity * 0.15) * centerFade
 
         ctx.beginPath()
         ctx.arc(x + offsetX, y + offsetY, radius, 0, Math.PI * 2)
         ctx.fillStyle = `rgba(${red}, ${green}, ${blue}, ${opacity})`
         ctx.fill()
       }
+      gridX++
     }
 
     animationId = requestAnimationFrame(draw)

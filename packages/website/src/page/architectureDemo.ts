@@ -16,9 +16,13 @@ import { evo } from 'foldkit/struct'
 import demoCodeHtml from 'virtual:demo-code'
 
 import {
+  AriaHidden,
+  AriaLabel,
   Class,
   DataAttribute,
   Disabled,
+  For,
+  Id,
   InnerHTML,
   Max,
   Min,
@@ -472,7 +476,7 @@ const viewView = (
       button(
         [
           Class(
-            'px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold transition hover:bg-blue-700 active:bg-blue-800 cursor-pointer',
+            'px-4 py-2 rounded-lg bg-pink-600 dark:bg-pink-500 text-white text-sm font-semibold transition hover:bg-pink-700 dark:hover:bg-pink-600 active:bg-pink-800 dark:active:bg-pink-700 cursor-pointer',
           ),
           OnClick(toMessage(ClickedDemoIncrement())),
         ],
@@ -482,13 +486,17 @@ const viewView = (
         [Class('flex flex-col gap-1')],
         [
           label(
-            [Class('text-xs text-gray-500 dark:text-gray-400')],
+            [
+              For('demo-reset-duration'),
+              Class('text-xs text-gray-500 dark:text-gray-400'),
+            ],
             ['Reset Delay (seconds)'],
           ),
           div(
             [Class('flex gap-1')],
             [
               input([
+                Id('demo-reset-duration'),
                 Class(
                   'flex-1 min-w-0 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-sm text-gray-800 dark:text-gray-200 font-mono',
                 ),
@@ -511,6 +519,7 @@ const viewView = (
                       model.resetDuration <= MIN_RESET_DURATION,
                     ),
                   ),
+                  AriaLabel('Decrease reset delay'),
                   Disabled(model.resetDuration <= MIN_RESET_DURATION),
                   OnClick(
                     toMessage(
@@ -532,6 +541,7 @@ const viewView = (
                       model.resetDuration >= MAX_RESET_DURATION,
                     ),
                   ),
+                  AriaLabel('Increase reset delay'),
                   Disabled(model.resetDuration >= MAX_RESET_DURATION),
                   OnClick(
                     toMessage(
@@ -558,7 +568,7 @@ const viewView = (
               {
                 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed':
                   model.isResetting,
-                'bg-violet-600 text-white hover:bg-violet-700 active:bg-violet-800 cursor-pointer':
+                'bg-pink-600 dark:bg-pink-500 text-white hover:bg-pink-700 dark:hover:bg-pink-600 active:bg-pink-800 dark:active:bg-pink-700 cursor-pointer':
                   !model.isResetting,
               },
             ),
@@ -605,6 +615,7 @@ const phaseIndicatorView = (model: Model): Html => {
           span([Class(colorClass)], [label]),
           div(
             [
+              AriaHidden(true),
               Class(
                 classNames(
                   'flex-1 h-2 rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden transition-opacity duration-200',
@@ -620,7 +631,7 @@ const phaseIndicatorView = (model: Model): Html => {
                 [
                   Class(
                     classNames(
-                      'demo-progress-bar h-full rounded-full bg-violet-500',
+                      'demo-progress-bar h-full rounded-full bg-pink-600 dark:bg-pink-500',
                       {
                         'demo-progress-bar-active': isCommand,
                       },
