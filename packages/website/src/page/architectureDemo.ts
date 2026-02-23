@@ -297,17 +297,93 @@ export const view = (
           'On a larger screen, you can see the relevant code highlight in real time as your action runs.',
         ],
       ),
-      codePanel(model),
+      div(
+        [
+          Class(
+            'flex flex-col gap-4 lg:gap-6 order-last lg:order-none min-h-0',
+          ),
+        ],
+        [peekViewBox(model, toMessage), codePanel(model)],
+      ),
       appPanel(model, toMessage),
+    ],
+  )
+
+const peekViewBox = (
+  model: Model,
+  toMessage: (message: Message) => ParentMessage,
+): Html =>
+  div(
+    [
+      Class(
+        'flex flex-col gap-3 p-5 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700',
+      ),
+    ],
+    [
+      p(
+        [
+          Class(
+            'text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider',
+          ),
+        ],
+        ['View'],
+      ),
+      div(
+        [Class('flex items-center justify-between')],
+        [
+          span(
+            [
+              Class(
+                'text-4xl font-bold text-gray-900 dark:text-white font-mono tabular-nums',
+              ),
+            ],
+            [String(model.count)],
+          ),
+          div(
+            [Class('flex gap-2')],
+            [
+              button(
+                [
+                  Class(
+                    'px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold transition hover:bg-blue-700 active:bg-blue-800 cursor-pointer',
+                  ),
+                  OnClick(toMessage(ClickedDemoIncrement())),
+                ],
+                ['Add 1'],
+              ),
+              button(
+                [
+                  Class(
+                    classNames(
+                      'px-4 py-2 rounded-lg text-sm font-semibold transition',
+                      {
+                        'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed':
+                          model.isResetting,
+                        'bg-violet-600 text-white hover:bg-violet-700 active:bg-violet-800 cursor-pointer':
+                          !model.isResetting,
+                      },
+                    ),
+                  ),
+                  Disabled(model.isResetting),
+                  OnClick(toMessage(ClickedDemoReset())),
+                ],
+                [
+                  model.isResetting
+                    ? 'Resetting\u2026'
+                    : `Reset after ${model.resetDuration}s`,
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
     ],
   )
 
 const codePanel = (model: Model): Html =>
   div(
     [
-      Class(
-        'demo-code-panel rounded-xl overflow-hidden order-last lg:order-none',
-      ),
+      Class('demo-code-panel rounded-xl overflow-hidden flex-1 min-h-0'),
       DataAttribute('demo-phase', model.phase),
     ],
     [
