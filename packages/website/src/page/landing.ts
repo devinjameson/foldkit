@@ -152,6 +152,7 @@ const poweredByItem = (text: string): Html =>
 const poweredByStrip = (): Html =>
   section(
     [
+      Id('powered-by-effect'),
       Class(
         'landing-section py-10 md:py-14 text-center bg-gray-50 dark:bg-gray-850',
       ),
@@ -231,7 +232,10 @@ const pillarCard = (
 
 const promiseSection = (): Html =>
   section(
-    [Class('landing-section bg-gray-50 dark:bg-gray-850')],
+    [
+      Id('the-promise'),
+      Class('landing-section bg-gray-50 dark:bg-gray-850'),
+    ],
     [
       div(
         [Class('landing-section-narrow')],
@@ -283,7 +287,7 @@ const promiseSection = (): Html =>
 
 const architectureDemoSection = (architectureDemo: Html): Html =>
   section(
-    [Class('landing-section')],
+    [Id('peek-inside'), Class('landing-section')],
     [
       div(
         [Class('landing-section-narrow')],
@@ -340,7 +344,7 @@ const includedFeature = (
 
 const includedSection = (): Html =>
   section(
-    [Class('landing-section')],
+    [Id('batteries-included'), Class('landing-section')],
     [
       div(
         [Class('landing-section-narrow')],
@@ -470,7 +474,7 @@ const includedSection = (): Html =>
 
 const whyFoldkitSection = (): Html =>
   section(
-    [Class('landing-section')],
+    [Id('whats-the-catch'), Class('landing-section')],
     [
       div(
         [Class('landing-section-narrow')],
@@ -524,7 +528,10 @@ const whyFoldkitSection = (): Html =>
 
 const audienceSection = (): Html =>
   section(
-    [Class('landing-section bg-gray-50 dark:bg-gray-850')],
+    [
+      Id('who-its-for'),
+      Class('landing-section bg-gray-50 dark:bg-gray-850'),
+    ],
     [
       div(
         [Class('landing-section-narrow')],
@@ -657,7 +664,10 @@ const audienceNotItem = (title: string, description: string): Html =>
 
 const comparisonStripSection = (): Html =>
   section(
-    [Class('landing-section py-10 md:py-14 text-center')],
+    [
+      Id('foldkit-vs-react'),
+      Class('landing-section py-10 md:py-14 text-center'),
+    ],
     [
       div(
         [Class('landing-section-narrow')],
@@ -697,6 +707,7 @@ const comparisonStripSection = (): Html =>
 const trustSection = (): Html =>
   section(
     [
+      Id('trust'),
       Class(
         'landing-section py-10 md:py-14 bg-gray-50 dark:bg-gray-850',
       ),
@@ -789,6 +800,7 @@ const trustItemWithLink = (
 const aiSection = (): Html =>
   section(
     [
+      Id('ai'),
       Class(
         'landing-section py-10 md:py-14 text-center relative overflow-hidden',
       ),
@@ -845,7 +857,7 @@ const aiSection = (): Html =>
 
 const finalCtaSection = (): Html =>
   section(
-    [Class('landing-section text-center')],
+    [Id('get-started'), Class('landing-section text-center')],
     [
       div(
         [Class('landing-section-narrow')],

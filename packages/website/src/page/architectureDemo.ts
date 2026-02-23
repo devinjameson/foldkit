@@ -428,14 +428,19 @@ const modelStateView = (model: Model): Html =>
 const MIN_RESET_DURATION = 1
 const MAX_RESET_DURATION = 5
 
-const STEPPER_BUTTON_CLASS =
-  'px-2.5 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer transition'
+const stepperButtonClass = (isDisabled: boolean): string =>
+  classNames(
+    'px-2.5 rounded-lg border text-sm font-semibold transition',
+    {
+      'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-300 dark:text-gray-600 cursor-not-allowed':
+        isDisabled,
+      'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer':
+        !isDisabled,
+    },
+  )
 
 const parseResetDuration = (value: string): number =>
-  pipe(
-    Number(value),
-    N.clamp({ minimum: 0, maximum: MAX_RESET_DURATION }),
-  )
+  N.clamp(Number(value), { minimum: 0, maximum: MAX_RESET_DURATION })
 
 const buttonsView = (
   model: Model,
@@ -493,7 +498,12 @@ const buttonsView = (
               ]),
               button(
                 [
-                  Class(STEPPER_BUTTON_CLASS),
+                  Class(
+                    stepperButtonClass(
+                      model.resetDuration <= MIN_RESET_DURATION,
+                    ),
+                  ),
+                  Disabled(model.resetDuration <= MIN_RESET_DURATION),
                   OnClick(
                     toMessage(
                       ChangedDemoResetDuration({
@@ -509,7 +519,12 @@ const buttonsView = (
               ),
               button(
                 [
-                  Class(STEPPER_BUTTON_CLASS),
+                  Class(
+                    stepperButtonClass(
+                      model.resetDuration >= MAX_RESET_DURATION,
+                    ),
+                  ),
+                  Disabled(model.resetDuration >= MAX_RESET_DURATION),
                   OnClick(
                     toMessage(
                       ChangedDemoResetDuration({
