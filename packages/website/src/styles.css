@@ -92,15 +92,163 @@
   }
 
   .cta-secondary {
-    @apply inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-semibold text-base transition hover:bg-gray-200 hover:border-gray-400 dark:hover:bg-gray-700 dark:hover:border-gray-400;
+    @apply inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-semibold text-base transition hover:bg-gray-200 hover:border-gray-400 dark:hover:bg-gray-800 dark:hover:border-gray-400;
+  }
+
+  .cta-gradient {
+    @apply inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-base transition relative;
+    background: transparent;
+    color: theme(--color-gray-900);
+  }
+
+  .cta-gradient::before {
+    content: '';
+    @apply absolute inset-0 rounded-lg;
+    padding: 1px;
+    background: linear-gradient(
+      to right,
+      theme(--color-blue-600),
+      theme(--color-violet-600),
+      theme(--color-blue-600)
+    );
+    mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+  }
+
+  .cta-gradient:hover {
+    background: rgba(139, 92, 246, 0.05);
+  }
+
+  .dark .cta-gradient {
+    color: white;
+  }
+
+  .dark .cta-gradient::before {
+    background: linear-gradient(
+      to right,
+      theme(--color-blue-400),
+      theme(--color-violet-400),
+      theme(--color-blue-400)
+    );
+  }
+
+  .dark .cta-gradient:hover {
+    background: rgba(139, 92, 246, 0.1);
   }
 
   .landing-card {
     @apply rounded-xl bg-white border border-gray-200 dark:border-gray-700;
   }
 
-  .demo-placeholder {
-    @apply rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 flex items-center justify-center;
+  .demo-code-panel pre {
+    @apply pr-4 py-3 text-sm leading-relaxed;
+  }
+
+  .demo-code-panel pre code .line {
+    @apply transition-all duration-200 rounded-sm;
+    border-left: 3px solid transparent;
+    padding-left: 4px;
+  }
+
+  .demo-progress-bar {
+    width: 0%;
+    transition: none;
+  }
+
+  .demo-progress-bar-active {
+    width: 100%;
+    transition: width calc(var(--reset-duration) * 1s) linear;
+  }
+
+  /* Demo line highlights: message (emerald), update (amber), model (blue), command (violet) */
+  .demo-code-panel[data-demo-phase='IncrementMessage']
+    [data-line='14'] {
+    @apply bg-emerald-500/15;
+    border-left-color: theme(--color-emerald-400);
+  }
+
+  .demo-code-panel[data-demo-phase='IncrementUpdate']
+    [data-line='24'],
+  .demo-code-panel[data-demo-phase='IncrementUpdate']
+    [data-line='25'],
+  .demo-code-panel[data-demo-phase='IncrementUpdate']
+    [data-line='26'],
+  .demo-code-panel[data-demo-phase='IncrementUpdate']
+    [data-line='27'] {
+    @apply bg-amber-500/15;
+    border-left-color: theme(--color-amber-400);
+  }
+
+  .demo-code-panel[data-demo-phase='IncrementModel'] [data-line='6'],
+  .demo-code-panel[data-demo-phase='IncrementModel'] [data-line='7'],
+  .demo-code-panel[data-demo-phase='IncrementModel'] [data-line='8'],
+  .demo-code-panel[data-demo-phase='IncrementModel'] [data-line='9'],
+  .demo-code-panel[data-demo-phase='IncrementModel']
+    [data-line='10'] {
+    @apply bg-blue-500/15;
+    border-left-color: theme(--color-blue-400);
+  }
+
+  .demo-code-panel[data-demo-phase='ResetMessage'] [data-line='18'] {
+    @apply bg-emerald-500/15;
+    border-left-color: theme(--color-emerald-400);
+  }
+
+  .demo-code-panel[data-demo-phase='ResetUpdate'] [data-line='32'],
+  .demo-code-panel[data-demo-phase='ResetUpdate'] [data-line='33'],
+  .demo-code-panel[data-demo-phase='ResetUpdate'] [data-line='34'],
+  .demo-code-panel[data-demo-phase='ResetUpdate'] [data-line='35'],
+  .demo-code-panel[data-demo-phase='ResetUpdate'] [data-line='36'],
+  .demo-code-panel[data-demo-phase='ResetUpdate'] [data-line='37'] {
+    @apply bg-amber-500/15;
+    border-left-color: theme(--color-amber-400);
+  }
+
+  .demo-code-panel[data-demo-phase='ResetCommand'] [data-line='34'],
+  .demo-code-panel[data-demo-phase='ResetCommand'] [data-line='35'],
+  .demo-code-panel[data-demo-phase='ResetCommand'] [data-line='36'] {
+    @apply bg-violet-500/15;
+    border-left-color: theme(--color-violet-400);
+    animation: demo-pulse 1s ease-in-out infinite;
+  }
+
+  .demo-code-panel[data-demo-phase='ResetCommandMessage']
+    [data-line='19'] {
+    @apply bg-emerald-500/15;
+    border-left-color: theme(--color-emerald-400);
+  }
+
+  .demo-code-panel[data-demo-phase='ResetCommandUpdate']
+    [data-line='38'],
+  .demo-code-panel[data-demo-phase='ResetCommandUpdate']
+    [data-line='39'],
+  .demo-code-panel[data-demo-phase='ResetCommandUpdate']
+    [data-line='40'],
+  .demo-code-panel[data-demo-phase='ResetCommandUpdate']
+    [data-line='41'] {
+    @apply bg-amber-500/15;
+    border-left-color: theme(--color-amber-400);
+  }
+
+  .demo-code-panel[data-demo-phase='ResetModel'] [data-line='6'],
+  .demo-code-panel[data-demo-phase='ResetModel'] [data-line='7'],
+  .demo-code-panel[data-demo-phase='ResetModel'] [data-line='8'],
+  .demo-code-panel[data-demo-phase='ResetModel'] [data-line='9'],
+  .demo-code-panel[data-demo-phase='ResetModel'] [data-line='10'] {
+    @apply bg-blue-500/15;
+    border-left-color: theme(--color-blue-400);
+  }
+
+  @keyframes demo-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
   }
 
   .hero-dot-grid {
@@ -121,10 +269,46 @@
   }
 
   .hero-gradient-text {
-    @apply bg-gradient-to-r from-blue-600 via-violet-600 to-blue-600 bg-clip-text text-transparent;
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(
+      90deg,
+      theme(--color-blue-600),
+      theme(--color-violet-600),
+      theme(--color-blue-600),
+      theme(--color-violet-600),
+      theme(--color-blue-600)
+    );
+    background-size: 200% 100%;
+    animation: gradient-shift 8s linear infinite;
   }
 
   .dark .hero-gradient-text {
-    @apply from-blue-400 via-violet-400 to-blue-400;
+    background-image: linear-gradient(
+      90deg,
+      theme(--color-blue-400),
+      theme(--color-violet-400),
+      theme(--color-blue-400),
+      theme(--color-violet-400),
+      theme(--color-blue-400)
+    );
+  }
+
+  @keyframes gradient-shift {
+    0% {
+      background-position: 0% 50%;
+    }
+    100% {
+      background-position: 200% 50%;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-gradient-text {
+    animation: none;
+  }
+
+  .demo-code-panel [data-line] {
+    transition: none;
   }
 }

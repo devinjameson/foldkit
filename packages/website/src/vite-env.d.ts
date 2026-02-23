@@ -28,3 +28,8 @@ declare module 'virtual:api-highlights' {
 declare module 'virtual:landing-data' {
   export const foldkitVersion: string
 }
+
+declare module 'virtual:demo-code' {
+  const html: string
+  export default html
+}

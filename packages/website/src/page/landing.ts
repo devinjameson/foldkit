@@ -8,6 +8,7 @@ import {
   Id,
   Src,
   a,
+  canvas,
   div,
   h1,
   h2,
@@ -25,19 +26,22 @@ import { exampleAppCount } from './examples'
 
 // CONSTANTS
 
+export const AI_GRID_CANVAS_ID = 'ai-grid-canvas'
+export const HERO_GRID_CANVAS_ID = 'hero-grid-canvas'
 export const HERO_SECTION_ID = 'hero'
 
 // VIEW
 
-export const view = (model: Model): Html =>
+export const view = (model: Model, architectureDemo: Html): Html =>
   div(
     [],
     [
       heroSection(model),
       promiseSection(),
-      demoPlaceholderSection(),
+      architectureDemoSection(architectureDemo),
       poweredByStrip(),
       includedSection(),
+      aiSection(),
       whyFoldkitSection(),
       audienceSection(),
       comparisonStripSection(),
@@ -52,10 +56,20 @@ const INSTALL_COMMAND = 'npx create-foldkit-app@latest --wizard'
 
 const heroSection = (model: Model): Html =>
   section(
-    [Id(HERO_SECTION_ID), Class('landing-section hero-dot-grid')],
     [
+      Id(HERO_SECTION_ID),
+      Class('landing-section relative overflow-hidden'),
+    ],
+    [
+      canvas(
+        [
+          Id(HERO_GRID_CANVAS_ID),
+          Class('absolute inset-0 w-full h-full'),
+        ],
+        [],
+      ),
       div(
-        [Class('landing-section-narrow text-center')],
+        [Class('landing-section-narrow text-center relative')],
         [
           div(
             [Class('flex justify-center mb-8')],
@@ -70,7 +84,7 @@ const heroSection = (model: Model): Html =>
           h1(
             [
               Class(
-                'text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white tracking-tight leading-tight text-balance',
+                'text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white tracking-tight leading-[1.1] text-balance',
               ),
             ],
             [
@@ -81,11 +95,11 @@ const heroSection = (model: Model): Html =>
           p(
             [
               Class(
-                'mt-6 text-lg md:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed text-balance',
+                'mt-6 text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto leading-relaxed text-balance',
               ),
             ],
             [
-              'No surprises. No magic. Just an architecture that does exactly what you describe.',
+              'No surprises. No magic. Just a framework that does exactly what you describe.',
             ],
           ),
           div(
@@ -157,7 +171,7 @@ const poweredByStrip = (): Html =>
           p(
             [
               Class(
-                'mt-3 text-lg text-gray-600 dark:text-gray-400 text-balance',
+                'mt-3 text-lg text-gray-600 dark:text-gray-300 text-balance',
               ),
             ],
             [
@@ -165,7 +179,7 @@ const poweredByStrip = (): Html =>
             ],
           ),
           p(
-            [Class('mt-3 text-gray-500 dark:text-gray-400')],
+            [Class('mt-3 text-gray-500 dark:text-gray-300')],
             ['(Yeah, we like Effect.)'],
           ),
         ],
@@ -193,7 +207,7 @@ const pillarCard = (
         [title],
       ),
       p(
-        [Class('text-gray-600 dark:text-gray-400 leading-relaxed')],
+        [Class('text-gray-600 dark:text-gray-300 leading-relaxed')],
         [description],
       ),
     ],
@@ -217,7 +231,7 @@ const promiseSection = (): Html =>
           p(
             [
               Class(
-                'text-lg text-gray-600 dark:text-gray-400 leading-relaxed mb-10 max-w-3xl mx-auto text-center text-balance',
+                'text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-10 max-w-3xl mx-auto text-center text-balance',
               ),
             ],
             [
@@ -249,33 +263,34 @@ const promiseSection = (): Html =>
     ],
   )
 
-// DEMO PLACEHOLDER
+// ARCHITECTURE DEMO
 
-const demoPlaceholderSection = (): Html =>
+const architectureDemoSection = (architectureDemo: Html): Html =>
   section(
     [Class('landing-section')],
     [
       div(
         [Class('landing-section-narrow')],
         [
-          div(
-            [Class('demo-placeholder h-64 md:h-80')],
+          h2(
             [
-              div(
-                [Class('text-center')],
-                [
-                  p(
-                    [
-                      Class(
-                        'text-gray-400 dark:text-gray-500 text-sm font-medium',
-                      ),
-                    ],
-                    ['Interactive architecture demo coming soon'],
-                  ),
-                ],
+              Class(
+                'text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-3 text-center text-balance',
               ),
             ],
+            ['Peek inside.'],
           ),
+          p(
+            [
+              Class(
+                'text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-10 max-w-3xl mx-auto text-center text-balance',
+              ),
+            ],
+            [
+              'A model, four messages, and an update function. Click a button and follow your action through the code.',
+            ],
+          ),
+          architectureDemo,
         ],
       ),
     ],
@@ -301,7 +316,7 @@ const includedFeature = (
         [title],
       ),
       p(
-        [Class('text-gray-600 dark:text-gray-400 leading-relaxed')],
+        [Class('text-gray-600 dark:text-gray-300 leading-relaxed')],
         description,
       ),
     ],
@@ -325,7 +340,7 @@ const includedSection = (): Html =>
           p(
             [
               Class(
-                'text-gray-600 dark:text-gray-400 leading-relaxed mb-10 max-w-3xl text-balance',
+                'text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-10 max-w-3xl text-balance',
               ),
             ],
             [
@@ -338,18 +353,55 @@ const includedSection = (): Html =>
               includedFeature(Icon.route('w-6 h-6'), 'Routing', [
                 'Type-safe bidirectional routing. URLs parse into typed routes and routes build back into URLs. No string matching, no runtime surprises.',
               ]),
-              includedFeature(
-                Icon.puzzle('w-6 h-6'),
-                'UI Components',
+              div(
+                [Class('landing-card p-6 dark:bg-gray-850')],
                 [
-                  'Accessible headless primitives — dialog, menu, tabs, disclosure — built for the Elm Architecture. No React dependency. ',
-                  span(
+                  div(
+                    [Class('mb-3 text-blue-600 dark:text-blue-400')],
+                    [Icon.puzzle('w-6 h-6')],
+                  ),
+                  h3(
                     [
                       Class(
-                        'inline-block ml-1 px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400',
+                        'text-base font-semibold text-gray-900 dark:text-white mb-2',
                       ),
                     ],
-                    ['In development'],
+                    [
+                      'UI Components ',
+                      span(
+                        [
+                          Class(
+                            'inline-block ml-1 px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 align-middle',
+                          ),
+                        ],
+                        ['In development'],
+                      ),
+                    ],
+                  ),
+                  p(
+                    [
+                      Class(
+                        'text-gray-600 dark:text-gray-300 leading-relaxed mb-3',
+                      ),
+                    ],
+                    [
+                      'Accessible headless primitives — dialog, menu, tabs, disclosure — built for the Elm Architecture. No React dependency.',
+                    ],
+                  ),
+                  a(
+                    [
+                      Href('/foldkit-ui'),
+                      Class(
+                        'text-blue-500 dark:text-blue-400 hover:underline font-semibold text-sm',
+                      ),
+                    ],
+                    [
+                      'See the docs',
+                      span(
+                        [Class('inline-block ml-1')],
+                        [Icon.arrowRight('w-3.5 h-3.5 inline')],
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -388,7 +440,7 @@ const includedSection = (): Html =>
                 Icon.cog('w-6 h-6'),
                 'Side Effect Management',
                 [
-                  'Commands are values you return, not imperative calls. Every async operation is explicit, testable, and composable via Effect.',
+                  'Automatic cancellation, retry, and timeout powered by Effect. Commands compose naturally and the runtime manages their lifecycle.',
                 ],
               ),
             ],
@@ -426,7 +478,7 @@ const benefitBlock = (
           p(
             [
               Class(
-                'text-gray-600 dark:text-gray-400 leading-relaxed',
+                'text-gray-600 dark:text-gray-300 leading-relaxed',
               ),
             ],
             [description],
@@ -438,7 +490,7 @@ const benefitBlock = (
 
 const whyFoldkitSection = (): Html =>
   section(
-    [Class('landing-section bg-gray-50 dark:bg-gray-850')],
+    [Class('landing-section')],
     [
       div(
         [Class('landing-section-narrow')],
@@ -449,16 +501,16 @@ const whyFoldkitSection = (): Html =>
                 'text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-8 text-balance',
               ),
             ],
-            ['Why Foldkit'],
+            ["What's the catch?"],
           ),
           p(
             [
               Class(
-                'text-gray-600 dark:text-gray-400 leading-relaxed mb-8 max-w-3xl',
+                'text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-4 max-w-3xl',
               ),
             ],
             [
-              'Foldkit implements ',
+              'Foldkit asks you to think about frontend development differently. It uses ',
               a(
                 [
                   Href(Link.theElmArchitecture),
@@ -468,18 +520,16 @@ const whyFoldkitSection = (): Html =>
                 ],
                 ['The Elm Architecture'],
               ),
-              ' in TypeScript, powered by ',
-              a(
-                [
-                  Href(Link.effect),
-                  Class(
-                    'text-blue-500 dark:text-blue-400 hover:underline',
-                  ),
-                ],
-                ['Effect'],
-              ),
-              '. These foundations give you guarantees that other frameworks cannot.',
+              ', so there are no components, no hooks, no local state. Everything is declarative and structured. You will have to learn a few things.',
             ],
+          ),
+          p(
+            [
+              Class(
+                'text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-8 max-w-3xl',
+              ),
+            ],
+            ["It's a discipline. It pays off, but it's a real ask."],
           ),
           div(
             [Class('grid gap-2 md:grid-cols-2 md:gap-x-12')],
@@ -497,7 +547,7 @@ const whyFoldkitSection = (): Html =>
               benefitBlock(
                 Icon.codeBracket('w-6 h-6'),
                 'Commands as values',
-                'Side effects are data you return from update, not imperative calls you fire. This makes async flows explicit, testable, and impossible to accidentally forget.',
+                'You can never forget a side effect because it is a return value, not a call site. Every async flow is visible in the update function, testable in isolation, and composable with other commands.',
               ),
               benefitBlock(
                 Icon.checkBadge('w-6 h-6'),
@@ -515,7 +565,7 @@ const whyFoldkitSection = (): Html =>
 
 const audienceSection = (): Html =>
   section(
-    [Class('landing-section')],
+    [Class('landing-section bg-gray-50 dark:bg-gray-850')],
     [
       div(
         [Class('landing-section-narrow')],
@@ -564,8 +614,8 @@ const audienceSection = (): Html =>
                     "Foldkit isn't an incremental adoption — it's a different architecture. Migration means a rewrite.",
                   ),
                   audienceNotItem(
-                    'Teams unwilling to learn Effect',
-                    "Foldkit leans on pipe, discriminated unions, and Effect throughout. The learning curve is real and there's no escape hatch.",
+                    'Teams not ready to invest in Effect',
+                    "Foldkit leans on pipe, discriminated unions, and Effect throughout. There's no escape hatch — you're all in or you're not.",
                   ),
                   audienceNotItem(
                     'Projects that need the React ecosystem',
@@ -602,7 +652,7 @@ const audienceForItem = (title: string, description: string): Html =>
           p(
             [
               Class(
-                'text-gray-600 dark:text-gray-400 leading-relaxed',
+                'text-gray-600 dark:text-gray-300 leading-relaxed',
               ),
             ],
             [description],
@@ -634,7 +684,7 @@ const audienceNotItem = (title: string, description: string): Html =>
           p(
             [
               Class(
-                'text-gray-600 dark:text-gray-400 leading-relaxed',
+                'text-gray-600 dark:text-gray-300 leading-relaxed',
               ),
             ],
             [description],
@@ -648,11 +698,7 @@ const audienceNotItem = (title: string, description: string): Html =>
 
 const comparisonStripSection = (): Html =>
   section(
-    [
-      Class(
-        'landing-section bg-gray-50 dark:bg-gray-850 text-center',
-      ),
-    ],
+    [Class('landing-section py-10 md:py-14 text-center')],
     [
       div(
         [Class('landing-section-narrow')],
@@ -660,7 +706,7 @@ const comparisonStripSection = (): Html =>
           h2(
             [
               Class(
-                'text-2xl font-bold text-gray-900 dark:text-white mb-4 text-balance',
+                'text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-4 text-balance',
               ),
             ],
             ['How does Foldkit compare to React?'],
@@ -668,11 +714,11 @@ const comparisonStripSection = (): Html =>
           p(
             [
               Class(
-                'text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto text-balance',
+                'text-lg text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto text-balance',
               ),
             ],
             [
-              "We've written a detailed comparison covering state management, side effects, type safety, and more.",
+              "It's a different architecture. See where the approaches diverge and where they don't.",
             ],
           ),
           a(
@@ -680,7 +726,7 @@ const comparisonStripSection = (): Html =>
               Href('/why-foldkit#foldkit-vs-react'),
               Class('cta-secondary'),
             ],
-            ['See the full comparison', Icon.arrowRight('w-5 h-5')],
+            ['Read the full comparison', Icon.arrowRight('w-5 h-5')],
           ),
         ],
       ),
@@ -691,7 +737,11 @@ const comparisonStripSection = (): Html =>
 
 const trustSection = (): Html =>
   section(
-    [Class('landing-section py-10 md:py-14')],
+    [
+      Class(
+        'landing-section py-10 md:py-14 bg-gray-50 dark:bg-gray-850',
+      ),
+    ],
     [
       div(
         [Class('landing-section-narrow')],
@@ -729,7 +779,7 @@ const trustItem = (label: string, value: string): Html =>
       p(
         [
           Class(
-            'text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1',
+            'text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-1',
           ),
         ],
         [label],
@@ -752,7 +802,7 @@ const trustItemWithLink = (
       p(
         [
           Class(
-            'text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1',
+            'text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-1',
           ),
         ],
         [label],
@@ -775,15 +825,68 @@ const trustItemWithLink = (
     ],
   )
 
+// AI
+
+const aiSection = (): Html =>
+  section(
+    [
+      Class(
+        'landing-section py-10 md:py-14 text-center relative overflow-hidden',
+      ),
+    ],
+    [
+      canvas(
+        [
+          Id(AI_GRID_CANVAS_ID),
+          Class('absolute inset-0 w-full h-full'),
+        ],
+        [],
+      ),
+      div(
+        [Class('landing-section-narrow relative')],
+        [
+          h2(
+            [
+              Class(
+                'text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-4 text-balance',
+              ),
+            ],
+            [
+              'Your favorite ',
+              span([Class('hero-gradient-text font-black')], ['LLM']),
+              ' has a crush on Foldkit.',
+            ],
+          ),
+          p(
+            [
+              Class(
+                'text-lg text-gray-600 dark:text-gray-300 mb-4 max-w-2xl mx-auto text-balance',
+              ),
+            ],
+            [
+              'Foldkit apps are explicit and predictable. This makes LLMs particularly good at generating Foldkit code, and it makes generated Foldkit code exceptionally easy for humans to review.',
+            ],
+          ),
+          a(
+            [
+              Href('/getting-started#ai-assisted'),
+              Class('cta-gradient'),
+            ],
+            [
+              'Set up AI-assisted development',
+              Icon.arrowRight('w-5 h-5'),
+            ],
+          ),
+        ],
+      ),
+    ],
+  )
+
 // FINAL CTA
 
 const finalCtaSection = (): Html =>
   section(
-    [
-      Class(
-        'landing-section bg-gray-50 dark:bg-gray-850 text-center',
-      ),
-    ],
+    [Class('landing-section text-center')],
     [
       div(
         [Class('landing-section-narrow')],
@@ -794,17 +897,15 @@ const finalCtaSection = (): Html =>
                 'text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-4 text-balance',
               ),
             ],
-            ['Ready to build with confidence?'],
+            ['Ready to be bored?'],
           ),
           p(
             [
               Class(
-                'text-gray-600 dark:text-gray-400 mb-8 max-w-xl mx-auto text-balance',
+                'text-lg text-gray-600 dark:text-gray-300 mb-8 max-w-xl mx-auto text-balance',
               ),
             ],
-            [
-              'Start with a template, explore the examples, or read the architecture guide.',
-            ],
+            ['Describe your app. Let the runtime handle the rest.'],
           ),
           div(
             [

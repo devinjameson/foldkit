@@ -266,6 +266,88 @@ const highlightApiSignaturesPlugin = (): Plugin => ({
   },
 })
 
+const DEMO_CODE_ID = 'virtual:demo-code'
+const RESOLVED_DEMO_CODE_ID = '\0' + DEMO_CODE_ID
+
+const DEMO_CODE = `// Counter with async reset
+// View and boilerplate omitted
+
+// MODEL
+
+const Model = S.Struct({
+  count: S.Number,
+  isResetting: S.Boolean,
+  resetDuration: S.Number,
+})
+
+// MESSAGE
+
+const ClickedIncrement = m('ClickedIncrement')
+const ChangedResetDuration = m('ChangedResetDuration', {
+  seconds: S.Number,
+})
+const ClickedReset = m('ClickedReset')
+const CompletedReset = m('CompletedReset')
+
+// UPDATE
+
+M.tagsExhaustive({
+  ClickedIncrement: () => [
+    evo(model, { count: count => count + 1 }),
+    [],
+  ],
+  ChangedResetDuration: ({ seconds }) => [
+    evo(model, { resetDuration: () => seconds }),
+    [],
+  ],
+  ClickedReset: () => [
+    evo(model, { isResetting: () => true }),
+    [Task.delay(\`\${model.resetDuration} seconds\`).pipe(
+      Effect.as(CompletedReset()),
+    )],
+  ],
+  CompletedReset: () => [
+    evo(model, { count: () => 0, isResetting: () => false }),
+    [],
+  ],
+})`
+
+const demoCodePlugin = (): Plugin => ({
+  name: 'demo-code',
+  resolveId(id) {
+    if (id === DEMO_CODE_ID) {
+      return RESOLVED_DEMO_CODE_ID
+    }
+  },
+  async load(id) {
+    if (id !== RESOLVED_DEMO_CODE_ID) {
+      return
+    }
+
+    const code = DEMO_CODE.trimEnd()
+    const lines = code.split('\n')
+    const lineCount = lines.length
+    const lineDigits = String(lineCount).length
+
+    const html = await codeToHtml(code, {
+      lang: 'typescript',
+      theme: 'github-dark',
+      decorations: lines.map((line, i) => ({
+        start: { line: i, character: 0 },
+        end: { line: i, character: line.length },
+        properties: { 'data-line': i + 1 },
+      })),
+    })
+
+    const htmlWithDigits = html.replace(
+      '<pre ',
+      `<pre data-line-digits="${lineDigits}" `,
+    )
+
+    return `export default ${JSON.stringify(htmlWithDigits)}`
+  },
+})
+
 const LANDING_DATA_ID = 'virtual:landing-data'
 const RESOLVED_LANDING_DATA_ID = '\0' + LANDING_DATA_ID
 
@@ -299,5 +381,6 @@ export default defineConfig({
     highlightCodePlugin(),
     highlightApiSignaturesPlugin(),
     landingDataPlugin(),
+    demoCodePlugin(),
   ],
 })

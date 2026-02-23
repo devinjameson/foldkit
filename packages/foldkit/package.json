@@ -47,6 +47,10 @@
       "types": "./dist/struct/public.d.ts",
       "import": "./dist/struct/public.js"
     },
+    "./task": {
+      "types": "./dist/task/public.d.ts",
+      "import": "./dist/task/public.js"
+    },
     "./ui": {
       "types": "./dist/ui/index.d.ts",
       "import": "./dist/ui/index.js"

@@ -154,6 +154,7 @@ export const Model = S.Struct({
   themePreference: ThemePreference,
   systemTheme: ResolvedTheme,
   resolvedTheme: ResolvedTheme,
+  architectureDemo: Page.ArchitectureDemo.Model,
   foldkitUi: Page.FoldkitUi.Model,
   comingFromReact: Page.ComingFromReact.Model,
   apiReference: Page.ApiReference.Model,
@@ -200,6 +201,9 @@ export const ChangedSystemTheme = m('ChangedSystemTheme', {
 export const ChangedHeroVisibility = m('ChangedHeroVisibility', {
   isVisible: S.Boolean,
 })
+const GotArchitectureDemoMessage = m('GotArchitectureDemoMessage', {
+  message: Page.ArchitectureDemo.Message,
+})
 const GotFoldkitUiMessage = m('GotFoldkitUiMessage', {
   message: Page.FoldkitUi.Message,
 })
@@ -225,6 +229,7 @@ const Message = S.Union(
   SelectedThemePreference,
   ChangedSystemTheme,
   ChangedHeroVisibility,
+  GotArchitectureDemoMessage,
   GotFoldkitUiMessage,
   GotComingFromReactMessage,
   GotApiReferenceMessage,
@@ -244,11 +249,17 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
   const { systemTheme } = loadedFlags
   const resolvedTheme = resolveTheme(themePreference, systemTheme)
 
+  const [architectureDemo, architectureDemoCommands] =
+    Page.ArchitectureDemo.init()
   const [foldkitUi, foldkitUiCommands] = Page.FoldkitUi.init()
   const [comingFromReact, comingFromReactCommands] =
     Page.ComingFromReact.init()
   const [apiReference, apiReferenceCommands] = Page.ApiReference.init(
     Page.ApiReference.apiReference.modules,
+  )
+
+  const mappedArchitectureDemoCommands = architectureDemoCommands.map(
+    Effect.map(message => GotArchitectureDemoMessage({ message })),
   )
 
   const mappedFoldkitUiCommands = foldkitUiCommands.map(message =>
@@ -275,6 +286,7 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
       themePreference,
       systemTheme,
       resolvedTheme,
+      architectureDemo,
       foldkitUi,
       comingFromReact,
       apiReference,
@@ -282,6 +294,7 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
     [
       injectAnalytics,
       applyThemeToDocument(resolvedTheme),
+      ...mappedArchitectureDemoCommands,
       ...mappedFoldkitUiCommands,
       ...mappedComingFromReactCommands,
       ...mappedApiReferenceCommands,
@@ -409,6 +422,25 @@ const update = (
             applyThemeToDocument(resolvedTheme),
             saveThemePreference(preference),
           ],
+        ]
+      },
+
+      GotArchitectureDemoMessage: ({ message }) => {
+        const [nextArchitectureDemo, architectureDemoCommands] =
+          Page.ArchitectureDemo.update(
+            model.architectureDemo,
+            message,
+          )
+
+        return [
+          evo(model, {
+            architectureDemo: () => nextArchitectureDemo,
+          }),
+          architectureDemoCommands.map(
+            Effect.map(message =>
+              GotArchitectureDemoMessage({ message }),
+            ),
+          ),
         ]
       },
 
@@ -922,7 +954,7 @@ const landingHeaderView = (model: Model) =>
     [
       Class(
         classNames(
-          'fixed top-0 inset-x-0 z-50 h-[var(--header-height)] bg-white/80 dark:bg-black/80 backdrop-blur-sm border-b border-gray-300 dark:border-gray-700 px-4 md:px-8 flex items-center justify-between transition-transform duration-300',
+          'fixed top-0 inset-x-0 z-50 h-[var(--header-height)] bg-white/80 dark:bg-gray-850/80 backdrop-blur-sm border-b border-gray-300 dark:border-gray-700 px-4 md:px-8 flex items-center justify-between transition-transform duration-300',
           {
             '-translate-y-full': !model.isLandingHeaderVisible,
             'translate-y-0': model.isLandingHeaderVisible,
@@ -941,27 +973,42 @@ const landingHeaderView = (model: Model) =>
           ]),
         ],
       ),
-      a(
+      div(
+        [Class('flex items-center gap-3')],
         [
-          Href(Link.gettingStarted),
-          Class(
-            'inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold transition hover:bg-blue-700',
+          themeSelector(model.themePreference),
+          a(
+            [
+              Href(Link.gettingStarted),
+              Class(
+                'inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold transition hover:bg-blue-700',
+              ),
+            ],
+            ['Dive In', Icon.arrowRight('w-4 h-4')],
           ),
         ],
-        ['Dive In', Icon.arrowRight('w-4 h-4')],
       ),
     ],
   )
 
-const landingView = (model: Model) =>
-  keyed('div')(
+const landingView = (model: Model) => {
+  const architectureDemoView = Page.ArchitectureDemo.view(
+    model.architectureDemo,
+    message => GotArchitectureDemoMessage({ message }),
+  )
+
+  return keyed('div')(
     'landing',
     [Class('flex flex-col min-h-screen')],
     [
       landingHeaderView(model),
-      main([Class('flex-1')], [Page.Landing.view(model)]),
+      main(
+        [Class('flex-1')],
+        [Page.Landing.view(model, architectureDemoView)],
+      ),
     ],
   )
+}
 
 const docsHeaderView = (model: Model) =>
   header(
@@ -1158,6 +1205,9 @@ const CommandStreamsDeps = S.Struct({
     pageId: S.String,
     sections: S.Array(S.String),
   }),
+  aiGrid: S.Struct({
+    isLandingPage: S.Boolean,
+  }),
   heroVisibility: S.Struct({
     isLandingPage: S.Boolean,
   }),
@@ -1173,6 +1223,7 @@ const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<
   Message
 >({
   activeSection: CommandStream.activeSection,
+  aiGrid: CommandStream.aiGrid,
   heroVisibility: CommandStream.heroVisibility,
   systemTheme: CommandStream.systemTheme,
 })
