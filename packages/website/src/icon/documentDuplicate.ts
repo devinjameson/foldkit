@@ -1,6 +1,7 @@
 import { Html } from 'foldkit/html'
 
 import {
+  AriaHidden,
   Class,
   D,
   Fill,
@@ -19,6 +20,7 @@ export const documentDuplicate = (
 ): Html =>
   svg(
     [
+      AriaHidden(true),
       Class(className),
       Xmlns('http://www.w3.org/2000/svg'),
       Fill('none'),

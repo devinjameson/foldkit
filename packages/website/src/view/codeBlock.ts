@@ -4,12 +4,15 @@ import { Html } from 'foldkit/html'
 
 import {
   AriaLabel,
+  AriaLive,
   Class,
   OnClick,
+  Role,
   button,
   div,
   empty,
   pre,
+  span,
 } from '../html'
 import { Icon } from '../icon'
 import { ClickedCopySnippet, type Model } from '../main'
@@ -19,10 +22,9 @@ const copyButtonWithIndicator = (
   ariaLabel: string,
   model: Model,
 ) => {
-  const copiedIndicator = HashSet.has(
-    model.copiedSnippets,
-    textToCopy,
-  )
+  const isCopied = HashSet.has(model.copiedSnippets, textToCopy)
+
+  const copiedIndicator = isCopied
     ? div(
         [
           Class(
@@ -32,6 +34,11 @@ const copyButtonWithIndicator = (
         ['Copied'],
       )
     : empty
+
+  const liveAnnouncement = span(
+    [Role('status'), AriaLive('polite'), Class('sr-only')],
+    [isCopied ? 'Copied to clipboard' : ''],
+  )
 
   const copyButton = button(
     [
@@ -46,7 +53,7 @@ const copyButtonWithIndicator = (
 
   return div(
     [Class('absolute top-2 right-2')],
-    [copiedIndicator, copyButton],
+    [copiedIndicator, liveAnnouncement, copyButton],
   )
 }
 
