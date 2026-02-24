@@ -1,5 +1,12 @@
 # create-foldkit-app
 
+## 0.4.1
+
+### Patch Changes
+
+- 4ee0289: ### Fixes
+  - **Update template to use subscription naming** — align starter template with the command stream to subscription rename
+
 ## 0.4.0
 
 ### Minor Changes
