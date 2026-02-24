@@ -1,6 +1,6 @@
 import { Effect, Match as M } from 'effect'
-import type { Command } from 'foldkit'
 import { Ui } from 'foldkit'
+import { Command } from 'foldkit/command'
 import { evo } from 'foldkit/struct'
 
 import {

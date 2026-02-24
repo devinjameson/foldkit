@@ -1,6 +1,6 @@
 import { Effect, Match as M } from 'effect'
-import type { Command } from 'foldkit'
 import { Task } from 'foldkit'
+import { Command } from 'foldkit/command'
 
 const ClickedResetAfterDelay = m('ClickedResetAfterDelay')
 const ElapsedResetDelay = m('ElapsedResetDelay')

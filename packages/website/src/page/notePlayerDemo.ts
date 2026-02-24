@@ -10,8 +10,8 @@ import {
   String as Str,
   pipe,
 } from 'effect'
-import type { Command } from 'foldkit'
 import { FieldValidation, Task } from 'foldkit'
+import { Command } from 'foldkit/command'
 import { makeField, validateField } from 'foldkit/fieldValidation'
 import { Html } from 'foldkit/html'
 import { m } from 'foldkit/message'

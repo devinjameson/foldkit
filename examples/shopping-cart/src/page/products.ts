@@ -1,7 +1,7 @@
 import { Array, Effect, Match as M, Option, Schema as S } from 'effect'
 import { ExtractTag } from 'effect/Types'
-import type { Command } from 'foldkit'
 import { Route } from 'foldkit'
+import { Command } from 'foldkit/command'
 import { Html } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { replaceUrl } from 'foldkit/navigation'

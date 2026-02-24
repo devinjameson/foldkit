@@ -7,8 +7,8 @@ import {
   Random,
   Schema as S,
 } from 'effect'
-import type { Command } from 'foldkit'
 import { FieldValidation, Runtime } from 'foldkit'
+import { Command } from 'foldkit/command'
 import {
   type Validation,
   makeField,

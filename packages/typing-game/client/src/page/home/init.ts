@@ -1,6 +1,6 @@
 import { Effect, Option } from 'effect'
-import type { Command } from 'foldkit'
 import { Task } from 'foldkit'
+import { Command } from 'foldkit/command'
 
 import { USERNAME_INPUT_ID } from '../../constant'
 import { Message, NoOp } from './message'

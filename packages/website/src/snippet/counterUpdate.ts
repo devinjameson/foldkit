@@ -1,5 +1,5 @@
 import { Match as M } from 'effect'
-import type { Command } from 'foldkit'
+import { Command } from 'foldkit/command'
 
 // UPDATE - How your state changes in response to messages
 // Returns a tuple of [nextModel, commands]

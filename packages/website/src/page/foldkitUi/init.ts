@@ -1,5 +1,5 @@
-import type { Command } from 'foldkit'
 import { Ui } from 'foldkit'
+import { Command } from 'foldkit/command'
 
 import type { Message } from './message'
 import type { Model } from './model'

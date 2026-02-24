@@ -1,5 +1,5 @@
 import { Array, Effect, Option, pipe } from 'effect'
-import type { Command } from 'foldkit'
+import { Command } from 'foldkit/command'
 
 import { AppRoute } from '../../route'
 import { getRoomById, loadSessionFromStorage } from './command'

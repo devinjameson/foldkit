@@ -9,8 +9,8 @@ import {
   String,
   pipe,
 } from 'effect'
-import type { Command } from 'foldkit'
 import { FieldValidation } from 'foldkit'
+import { Command } from 'foldkit/command'
 import {
   type Validation,
   makeField,

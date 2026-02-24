@@ -1,5 +1,5 @@
 import { Match as M, Option } from 'effect'
-import type { Command } from 'foldkit'
+import { Command } from 'foldkit/command'
 
 import { Message, type OutMessage, RequestedLogout } from './message'
 import { Model } from './model'

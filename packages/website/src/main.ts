@@ -11,8 +11,8 @@ import {
   Option,
   Schema as S,
 } from 'effect'
-import type { Command } from 'foldkit'
 import { Runtime, Ui } from 'foldkit'
+import { Command } from 'foldkit/command'
 import { Html } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { load, pushUrl } from 'foldkit/navigation'

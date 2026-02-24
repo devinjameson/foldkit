@@ -1,6 +1,6 @@
 import { Array, Effect, Match as M, Number, Option, flow, pipe } from 'effect'
-import type { Command } from 'foldkit'
 import { Task } from 'foldkit'
+import { Command } from 'foldkit/command'
 import { evo } from 'foldkit/struct'
 
 import { ROOM_ID_INPUT_ID, USERNAME_INPUT_ID } from '../../../constant'

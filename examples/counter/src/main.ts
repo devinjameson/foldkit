@@ -1,6 +1,6 @@
 import { Match as M, Schema } from 'effect'
-import type { Command } from 'foldkit'
 import { Runtime } from 'foldkit'
+import { Command } from 'foldkit/command'
 import { Html, html } from 'foldkit/html'
 import { m } from 'foldkit/message'
 

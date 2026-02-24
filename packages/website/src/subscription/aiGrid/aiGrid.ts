@@ -1,5 +1,5 @@
 import { Effect, Stream } from 'effect'
-import type { Command } from 'foldkit'
+import { Command } from 'foldkit/command'
 import type { Subscription } from 'foldkit/runtime'
 
 import type { Message, Model, SubscriptionDeps } from '../../main'

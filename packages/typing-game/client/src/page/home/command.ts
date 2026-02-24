@@ -1,5 +1,5 @@
 import { Effect } from 'effect'
-import type { Command } from 'foldkit'
+import { Command } from 'foldkit/command'
 
 import { RoomsClient } from '../../rpc'
 import { CreatedRoom, FailedRoom } from './message'

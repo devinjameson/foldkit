@@ -1,6 +1,6 @@
 import { Array, Effect, Match as M, Option, String as Str } from 'effect'
-import type { Command } from 'foldkit'
 import { Task } from 'foldkit'
+import { Command } from 'foldkit/command'
 import { evo } from 'foldkit/struct'
 
 import { joinRoom } from '../../../command'

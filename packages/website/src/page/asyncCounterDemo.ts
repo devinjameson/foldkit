@@ -8,8 +8,8 @@ import {
   Schema as S,
   pipe,
 } from 'effect'
-import type { Command } from 'foldkit'
 import { Task } from 'foldkit'
+import { Command } from 'foldkit/command'
 import { Html } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'

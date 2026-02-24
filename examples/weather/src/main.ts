@@ -1,7 +1,7 @@
 import { FetchHttpClient, HttpClient } from '@effect/platform'
 import { Array, Effect, Match as M, Schema as S, String, flow } from 'effect'
-import type { Command } from 'foldkit'
 import { Runtime } from 'foldkit'
+import { Command } from 'foldkit/command'
 import { Html, html } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { ts } from 'foldkit/schema'

@@ -1,5 +1,5 @@
 import { Match as M, Schema as S } from 'effect'
-import type { Command } from 'foldkit'
+import { Command } from 'foldkit/command'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 

@@ -1,6 +1,6 @@
 import { Array, Record, pipe } from 'effect'
-import type { Command } from 'foldkit'
 import { Ui } from 'foldkit'
+import { Command } from 'foldkit/command'
 
 import {
   type ApiModule,

@@ -1,5 +1,5 @@
 import { Effect, Match, Random } from 'effect'
-import type { Command } from 'foldkit'
+import { Command } from 'foldkit/command'
 
 import { GRID_SIZE } from './constants'
 import {

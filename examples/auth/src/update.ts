@@ -1,5 +1,5 @@
 import { Array, Effect, Match as M, Option, Schema as S } from 'effect'
-import type { Command } from 'foldkit'
+import { Command } from 'foldkit/command'
 import { load, pushUrl, replaceUrl } from 'foldkit/navigation'
 import { evo } from 'foldkit/struct'
 import { toString as urlToString } from 'foldkit/url'

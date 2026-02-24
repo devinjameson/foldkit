@@ -1,8 +1,8 @@
 import { KeyValueStore } from '@effect/platform'
 import { BrowserKeyValueStore } from '@effect/platform-browser'
 import { Effect, Option, Schema as S } from 'effect'
-import type { Command } from 'foldkit'
 import { Task } from 'foldkit'
+import { Command } from 'foldkit/command'
 
 import { ROOM_PLAYER_SESSION_KEY } from '../../constant'
 import { RoomsClient } from '../../rpc'

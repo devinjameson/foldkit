@@ -1,6 +1,6 @@
 import { Effect, Match as M, Option, Record } from 'effect'
-import type { Command } from 'foldkit'
 import { Ui } from 'foldkit'
+import { Command } from 'foldkit/command'
 
 import { GotFaqDisclosureMessage, type Message } from './message'
 import type { Model } from './model'

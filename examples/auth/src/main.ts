@@ -1,8 +1,8 @@
 import { KeyValueStore } from '@effect/platform'
 import { BrowserKeyValueStore } from '@effect/platform-browser'
 import { Effect, Match as M, Option, Schema as S } from 'effect'
-import type { Command } from 'foldkit'
 import { Runtime } from 'foldkit'
+import { Command } from 'foldkit/command'
 import { replaceUrl } from 'foldkit/navigation'
 import { Url } from 'foldkit/url'
 

@@ -7,6 +7,10 @@ export default defineConfig({
   plugins: [tailwindcss(), foldkit()],
   resolve: {
     alias: {
+      'foldkit/command': path.resolve(
+        __dirname,
+        '../../packages/foldkit/src/command',
+      ),
       'foldkit/fieldValidation': path.resolve(
         __dirname,
         '../../packages/foldkit/src/fieldValidation',

@@ -1,6 +1,6 @@
 import { Effect, Match as M, Schema as S, pipe } from 'effect'
-import type { Command } from 'foldkit'
 import { Navigation, Route, Runtime, Url } from 'foldkit'
+import { Command } from 'foldkit/command'
 import { m } from 'foldkit/message'
 import { int, literal, r, slash } from 'foldkit/route'
 import { evo } from 'foldkit/struct'

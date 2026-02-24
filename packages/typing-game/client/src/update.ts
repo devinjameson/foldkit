@@ -1,7 +1,7 @@
 import * as Shared from '@typing-game/shared'
 import { Array, Effect, Match as M, Option } from 'effect'
-import type { Command } from 'foldkit'
 import { Task, Url } from 'foldkit'
+import { Command } from 'foldkit/command'
 import { load, pushUrl } from 'foldkit/navigation'
 import { evo } from 'foldkit/struct'
 

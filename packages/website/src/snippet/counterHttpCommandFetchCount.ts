@@ -1,5 +1,5 @@
 import { Effect } from 'effect'
-import type { Command } from 'foldkit'
+import { Command } from 'foldkit/command'
 
 const fetchCount: Command<
   typeof SucceededCountFetch | typeof FailedCountFetch
