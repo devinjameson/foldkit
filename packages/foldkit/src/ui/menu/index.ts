@@ -164,7 +164,7 @@ const SEARCH_DEBOUNCE_MILLISECONDS = 350
 const POINTER_HOLD_THRESHOLD_MILLISECONDS = 200
 const POINTER_MOVEMENT_THRESHOLD_PIXELS = 5
 
-/** Configuration for creating a menu model with `init`. `isAnimated` enables CSS transition coordination (default `false`). `isModal` locks page scroll and inerts other elements when open (default `true`). */
+/** Configuration for creating a menu model with `init`. `isAnimated` enables CSS transition coordination (default `false`). `isModal` locks page scroll and inerts other elements when open (default `false`). */
 export type InitConfig = Readonly<{
   id: string
   isAnimated?: boolean
@@ -176,7 +176,7 @@ export const init = (config: InitConfig): Model => ({
   id: config.id,
   isOpen: false,
   isAnimated: config.isAnimated ?? false,
-  isModal: config.isModal ?? true,
+  isModal: config.isModal ?? false,
   transitionState: 'Idle',
   maybeActiveItemIndex: Option.none(),
   activationTrigger: 'Keyboard',

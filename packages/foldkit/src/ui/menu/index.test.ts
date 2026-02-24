@@ -30,10 +30,10 @@ import {
 } from './index'
 import type { Model, ViewConfig } from './index'
 
-const closedModel = () => init({ id: 'test', isModal: false })
+const closedModel = () => init({ id: 'test' })
 
 const openModel = () => {
-  const model = init({ id: 'test', isModal: false })
+  const model = init({ id: 'test' })
   const [result] = update(
     model,
     Opened({ maybeActiveItemIndex: Option.some(0) }),
@@ -41,8 +41,7 @@ const openModel = () => {
   return result
 }
 
-const closedAnimatedModel = () =>
-  init({ id: 'test', isAnimated: true, isModal: false })
+const closedAnimatedModel = () => init({ id: 'test', isAnimated: true })
 
 const openAnimatedModel = () => {
   const model = closedAnimatedModel()
@@ -60,7 +59,7 @@ describe('Menu', () => {
         id: 'test',
         isOpen: false,
         isAnimated: false,
-        isModal: true,
+        isModal: false,
         transitionState: 'Idle',
         maybeActiveItemIndex: Option.none(),
         activationTrigger: 'Keyboard',
@@ -78,14 +77,14 @@ describe('Menu', () => {
       expect(model.transitionState).toBe('Idle')
     })
 
-    it('defaults isModal to true', () => {
+    it('defaults isModal to false', () => {
       const model = init({ id: 'test' })
-      expect(model.isModal).toBe(true)
+      expect(model.isModal).toBe(false)
     })
 
     it('accepts isModal option', () => {
-      const model = init({ id: 'test', isModal: false })
-      expect(model.isModal).toBe(false)
+      const model = init({ id: 'test', isModal: true })
+      expect(model.isModal).toBe(true)
     })
   })
 
