@@ -7,6 +7,7 @@ Research findings for menu item 3 (anchor positioning + rendering escape).
 Menu items container can be clipped by ancestor `overflow: hidden`, buried under `z-index` stacking contexts, or constrained by `transform` containment. We need the items to visually escape these constraints while staying positioned relative to the button.
 
 Two sub-problems:
+
 1. **Rendering escape** — get the items above everything else
 2. **Positioning** — place the items relative to the button with flip/shift/offset
 
@@ -78,6 +79,7 @@ This could eventually replace Floating UI's JS calculations. Not ready to be the
 ## HeadlessUI's Current Approach
 
 HeadlessUI still uses **React portals + Floating UI**. They have not adopted the popover API. This is likely because:
+
 - They support older browser versions
 - React's `createPortal` is a zero-cost abstraction (first-class primitive)
 - Their portal infrastructure already exists and works
@@ -89,6 +91,7 @@ Foldkit's situation is different: we don't have `createPortal`, and building a p
 **Use `popover="manual"` for the rendering escape. Use Floating UI for positioning. Skip the portal primitive for now.**
 
 Rationale:
+
 1. The portal's only purpose is rendering escape. `popover` provides the same escape with zero vdom complexity.
 2. Building a portal means modifying the runtime, maintaining a second patch cycle, and managing container lifecycle — permanent infrastructure cost for a problem the browser already solves.
 3. Foldkit's strength is the Elm Architecture's simplicity. A portal primitive adds a second rendering path that every developer must understand. `popover` is invisible to the architecture.
