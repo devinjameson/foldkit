@@ -20,12 +20,11 @@ const disabledAt =
 
 describe('Tabs', () => {
   describe('init', () => {
-    it('defaults activeIndex to 0 and orientation to horizontal', () => {
+    it('defaults activeIndex to 0 and automatic activation', () => {
       expect(init({ id: 'test' })).toStrictEqual({
         id: 'test',
         activeIndex: 0,
         focusedIndex: 0,
-        orientation: 'Horizontal',
         activationMode: 'Automatic',
       })
     })
@@ -35,17 +34,6 @@ describe('Tabs', () => {
         id: 'test',
         activeIndex: 2,
         focusedIndex: 2,
-        orientation: 'Horizontal',
-        activationMode: 'Automatic',
-      })
-    })
-
-    it('accepts a custom orientation', () => {
-      expect(init({ id: 'test', orientation: 'Vertical' })).toStrictEqual({
-        id: 'test',
-        activeIndex: 0,
-        focusedIndex: 0,
-        orientation: 'Vertical',
         activationMode: 'Automatic',
       })
     })
@@ -55,7 +43,6 @@ describe('Tabs', () => {
         id: 'test',
         activeIndex: 0,
         focusedIndex: 0,
-        orientation: 'Horizontal',
         activationMode: 'Manual',
       })
     })
@@ -85,12 +72,6 @@ describe('Tabs', () => {
       const model = init({ id: 'test' })
       const [, commands] = update(model, TabSelected({ index: 2 }))
       expect(commands).toHaveLength(1)
-    })
-
-    it('preserves orientation on TabSelected', () => {
-      const model = init({ id: 'test', orientation: 'Vertical' })
-      const [result] = update(model, TabSelected({ index: 1 }))
-      expect(result.orientation).toBe('Vertical')
     })
 
     it('updates only focusedIndex on TabFocused', () => {

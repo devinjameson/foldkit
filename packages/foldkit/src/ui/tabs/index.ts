@@ -28,12 +28,11 @@ export type Orientation = typeof Orientation.Type
 export const ActivationMode = S.Literal('Automatic', 'Manual')
 export type ActivationMode = typeof ActivationMode.Type
 
-/** Schema for the tabs component's state, tracking active/focused indices, orientation, and activation mode. */
+/** Schema for the tabs component's state, tracking active/focused indices and activation mode. */
 export const Model = S.Struct({
   id: S.String,
   activeIndex: S.Number,
   focusedIndex: S.Number,
-  orientation: Orientation,
   activationMode: ActivationMode,
 })
 
@@ -63,11 +62,10 @@ export type Message = typeof Message.Type
 export type InitConfig = Readonly<{
   id: string
   activeIndex?: number
-  orientation?: Orientation
   activationMode?: ActivationMode
 }>
 
-/** Creates an initial tabs model from a config. Defaults to first tab, horizontal orientation, and automatic activation. */
+/** Creates an initial tabs model from a config. Defaults to first tab and automatic activation. */
 export const init = (config: InitConfig): Model => {
   const activeIndex = config.activeIndex ?? 0
 
@@ -75,7 +73,6 @@ export const init = (config: InitConfig): Model => {
     id: config.id,
     activeIndex,
     focusedIndex: activeIndex,
-    orientation: config.orientation ?? 'Horizontal',
     activationMode: config.activationMode ?? 'Automatic',
   }
 }
@@ -131,6 +128,7 @@ export type ViewConfig<Message, Tab extends string> = Readonly<{
   tabToConfig: (tab: Tab, context: { isActive: boolean }) => TabConfig
   isTabDisabled?: (tab: Tab, index: number) => boolean
   persistPanels?: boolean
+  orientation?: Orientation
   tabListElement?: TagName
   tabElement?: TagName
   panelElement?: TagName
@@ -169,12 +167,13 @@ export const view = <Message, Tab extends string>(
 
   const {
     model,
-    model: { id, orientation, activationMode, focusedIndex },
+    model: { id, activationMode, focusedIndex },
     toMessage,
     tabs,
     tabToConfig,
     isTabDisabled,
     persistPanels,
+    orientation = 'Horizontal',
     tabListElement = 'div',
     tabElement = 'button',
     panelElement = 'div',
