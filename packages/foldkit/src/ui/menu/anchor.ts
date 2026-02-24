@@ -18,7 +18,7 @@ export type AnchorConfig = Readonly<{
 
 const anchorCleanups = new WeakMap<Element, () => void>()
 
-/** Returns insert/destroy hook callbacks that position the menu items container relative to its button using the Popover API and Floating UI. */
+/** Returns insert/destroy hook callbacks that position the menu items container relative to its button using Floating UI. */
 export const anchorHooks = (config: {
   buttonId: string
   anchor: AnchorConfig
@@ -63,7 +63,7 @@ export const anchorHooks = (config: {
 
         if (isFirstUpdate) {
           isFirstUpdate = false
-          items.showPopover()
+          items.style.visibility = ''
         }
       })
     })
@@ -73,9 +73,5 @@ export const anchorHooks = (config: {
   onDestroy: (items: Element) => {
     anchorCleanups.get(items)?.()
     anchorCleanups.delete(items)
-
-    if (items instanceof HTMLElement && items.isConnected) {
-      items.hidePopover()
-    }
   },
 })

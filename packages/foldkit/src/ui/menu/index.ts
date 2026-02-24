@@ -662,7 +662,6 @@ export const view = <Message, Item extends string>(
     AriaExpanded,
     AriaHasPopup,
     AriaLabelledBy,
-    Attribute,
     Class,
     DataAttribute,
     Id,
@@ -917,8 +916,7 @@ export const view = <Message, Item extends string>(
 
   const anchorAttributes = hooks
     ? [
-        Attribute('popover', 'manual'),
-        Style({ position: 'absolute', margin: '0' }),
+        Style({ position: 'absolute', margin: '0', visibility: 'hidden' }),
         OnInsert(hooks.onInsert),
         OnDestroy(hooks.onDestroy),
       ]
