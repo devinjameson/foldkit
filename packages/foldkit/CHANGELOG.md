@@ -1,8 +1,8 @@
 # foldkit
 
-## 1.0.0
+## 0.21.0
 
-### Major Changes
+### Minor Changes
 
 - 4ee0289: ### Breaking Changes
   - **Command streams renamed to subscriptions** — `commandStream` renamed to `subscription` across the public API, including runtime configuration and all related types
