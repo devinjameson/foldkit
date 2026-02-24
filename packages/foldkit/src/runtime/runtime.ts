@@ -405,7 +405,7 @@ const patchVNode = (
 ): VNode => {
   const nextVNode = Predicate.isNotNull(nextVNodeNullish)
     ? nextVNodeNullish
-    : h('#text', {}, '')
+    : h('!')
 
   return Option.match(maybeCurrentVNode, {
     onNone: () => patch(toVNode(container), nextVNode),
