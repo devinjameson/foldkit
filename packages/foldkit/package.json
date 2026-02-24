@@ -115,6 +115,7 @@
     "directory": "packages/foldkit"
   },
   "dependencies": {
+    "@floating-ui/dom": "^1.7.5",
     "snabbdom": "^3.6.3"
   },
   "publishConfig": {

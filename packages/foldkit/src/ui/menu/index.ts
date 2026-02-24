@@ -16,6 +16,7 @@ import { m } from '../../message'
 import { evo } from '../../struct'
 import * as Task from '../../task'
 import { findFirstEnabledIndex, keyToIndex, wrapIndex } from '../keyboard'
+import type { AnchorConfig } from './anchor'
 
 // MODEL
 
@@ -588,6 +589,7 @@ export type ViewConfig<Message, Item extends string> = Readonly<{
   groupToHeading?: (groupKey: string) => GroupHeading | undefined
   groupClassName?: string
   separatorClassName?: string
+  anchor?: AnchorConfig
 }>
 
 type Segment<A> = Readonly<{ key: string; items: ReadonlyArray<A> }>
@@ -659,6 +661,7 @@ export const view = <Message, Item extends string>(
     AriaExpanded,
     AriaHasPopup,
     AriaLabelledBy,
+    Attribute,
     Class,
     DataAttribute,
     Id,
@@ -671,6 +674,7 @@ export const view = <Message, Item extends string>(
     OnPointerMove,
     OnPointerUp,
     Role,
+    Style,
     Tabindex,
     Type,
     keyed,
@@ -700,6 +704,7 @@ export const view = <Message, Item extends string>(
     groupToHeading,
     groupClassName,
     separatorClassName,
+    anchor,
   } = config
 
   const isLeaving =
@@ -903,6 +908,13 @@ export const view = <Message, Item extends string>(
     onSome: index => [AriaActiveDescendant(itemId(id, index))],
   })
 
+  const anchorAttributes = anchor
+    ? [
+        Attribute('popover', 'manual'),
+        Style({ position: 'fixed', margin: '0' }),
+      ]
+    : []
+
   const itemsContainerAttributes = [
     Id(`${id}-items`),
     Role('menu'),
@@ -910,6 +922,7 @@ export const view = <Message, Item extends string>(
     ...maybeActiveDescendant,
     Tabindex(0),
     Class(itemsClassName),
+    ...anchorAttributes,
     ...transitionAttributes,
     ...(isLeaving
       ? []

@@ -1,5 +1,7 @@
 export { init, update, view, Model, Message, TransitionState } from './index'
 
+export { AnchorDeps, makeAnchorStream } from './anchor'
+
 export type {
   ActivationTrigger,
   Opened,
@@ -19,3 +21,5 @@ export type {
   ItemConfig,
   GroupHeading,
 } from './index'
+
+export type { AnchorConfig } from './anchor'

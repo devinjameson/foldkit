@@ -1,7 +1,10 @@
 import { describe, it } from '@effect/vitest'
-import { Option } from 'effect'
+import { Effect, Option, Predicate } from 'effect'
+import type { VNode } from 'snabbdom'
 import { expect } from 'vitest'
 
+import { Dispatch } from '../../runtime'
+import { noOpDispatch } from '../../runtime/errorUI'
 import {
   ActivatedItem,
   AdvancedTransitionFrame,
@@ -23,7 +26,9 @@ import {
   init,
   resolveTypeaheadMatch,
   update,
+  view,
 } from './index'
+import type { Model, ViewConfig } from './index'
 
 const closedModel = () => init({ id: 'test', isModal: false })
 
@@ -1211,6 +1216,91 @@ describe('Menu', () => {
         { key: 'first', items: ['a', 'b'] },
         { key: 'second', items: ['c', 'd'] },
       ])
+    })
+  })
+
+  describe('view', () => {
+    type TestMessage = string
+
+    const baseViewConfig = (model: Model): ViewConfig<TestMessage, string> => ({
+      model,
+      toMessage: message => message._tag,
+      items: ['Edit', 'Delete'],
+      itemToConfig: () => ({
+        className: 'item',
+        content: Effect.succeed(null),
+      }),
+      buttonContent: Effect.succeed(null),
+      buttonClassName: 'button',
+      itemsClassName: 'items',
+      backdropClassName: 'backdrop',
+    })
+
+    const renderView = (config: ViewConfig<TestMessage, string>): VNode => {
+      const vnode = Effect.runSync(
+        Effect.provideService(view(config), Dispatch, noOpDispatch),
+      )
+      if (Predicate.isNull(vnode)) {
+        throw new Error('Expected vnode, got null')
+      }
+      return vnode
+    }
+
+    const findChildByKey = (vnode: VNode, key: string): VNode | undefined =>
+      vnode.children?.find(
+        (child): child is VNode =>
+          typeof child !== 'string' && child.key === key,
+      )
+
+    describe('anchor', () => {
+      it('adds popover and fixed positioning when anchor is provided', () => {
+        const model = openModel()
+        const config = {
+          ...baseViewConfig(model),
+          anchor: { placement: 'bottom-start' as const },
+        }
+        const vnode = renderView(config)
+        const itemsContainer = findChildByKey(vnode, 'test-items-container')
+
+        expect(itemsContainer?.data?.attrs?.['popover']).toBe('manual')
+        expect(itemsContainer?.data?.style?.position).toBe('fixed')
+        expect(itemsContainer?.data?.style?.margin).toBe('0')
+      })
+
+      it('does not add popover or fixed positioning when anchor is absent', () => {
+        const model = openModel()
+        const config = baseViewConfig(model)
+        const vnode = renderView(config)
+        const itemsContainer = findChildByKey(vnode, 'test-items-container')
+
+        expect(itemsContainer?.data?.attrs?.['popover']).toBeUndefined()
+        expect(itemsContainer?.data?.style).toBeUndefined()
+      })
+
+      it('does not affect button attributes when anchor is provided', () => {
+        const model = openModel()
+        const configWithAnchor = {
+          ...baseViewConfig(model),
+          anchor: { placement: 'bottom-start' as const },
+        }
+        const configWithout = baseViewConfig(model)
+
+        const buttonWith = findChildByKey(
+          renderView(configWithAnchor),
+          'test-button',
+        )
+        const buttonWithout = findChildByKey(
+          renderView(configWithout),
+          'test-button',
+        )
+
+        expect(buttonWith?.data?.attrs).toStrictEqual(
+          buttonWithout?.data?.attrs,
+        )
+        expect(buttonWith?.data?.props).toStrictEqual(
+          buttonWithout?.data?.props,
+        )
+      })
     })
   })
 })
