@@ -16,6 +16,7 @@ import { m } from '../../message'
 import { evo } from '../../struct'
 import * as Task from '../../task'
 import { findFirstEnabledIndex, keyToIndex, wrapIndex } from '../keyboard'
+import { anchorHooks } from './anchor'
 import type { AnchorConfig } from './anchor'
 
 // MODEL
@@ -667,6 +668,8 @@ export const view = <Message, Item extends string>(
     Id,
     OnBlur,
     OnClick,
+    OnDestroy,
+    OnInsert,
     OnKeyDownPreventDefault,
     OnKeyUpPreventDefault,
     OnPointerDown,
@@ -908,10 +911,16 @@ export const view = <Message, Item extends string>(
     onSome: index => [AriaActiveDescendant(itemId(id, index))],
   })
 
-  const anchorAttributes = anchor
+  const hooks = anchor
+    ? anchorHooks({ buttonId: `${id}-button`, anchor })
+    : undefined
+
+  const anchorAttributes = hooks
     ? [
         Attribute('popover', 'manual'),
-        Style({ position: 'fixed', margin: '0' }),
+        Style({ position: 'absolute', margin: '0' }),
+        OnInsert(hooks.onInsert),
+        OnDestroy(hooks.onDestroy),
       ]
     : []
 

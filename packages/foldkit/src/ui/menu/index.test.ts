@@ -1252,7 +1252,7 @@ describe('Menu', () => {
       )
 
     describe('anchor', () => {
-      it('adds popover and fixed positioning when anchor is provided', () => {
+      it('adds popover, absolute positioning, and hooks when anchor is provided', () => {
         const model = openModel()
         const config = {
           ...baseViewConfig(model),
@@ -1262,11 +1262,13 @@ describe('Menu', () => {
         const itemsContainer = findChildByKey(vnode, 'test-items-container')
 
         expect(itemsContainer?.data?.attrs?.['popover']).toBe('manual')
-        expect(itemsContainer?.data?.style?.position).toBe('fixed')
+        expect(itemsContainer?.data?.style?.position).toBe('absolute')
         expect(itemsContainer?.data?.style?.margin).toBe('0')
+        expect(itemsContainer?.data?.hook?.insert).toBeTypeOf('function')
+        expect(itemsContainer?.data?.hook?.destroy).toBeTypeOf('function')
       })
 
-      it('does not add popover or fixed positioning when anchor is absent', () => {
+      it('does not add popover, hooks, or fixed positioning when anchor is absent', () => {
         const model = openModel()
         const config = baseViewConfig(model)
         const vnode = renderView(config)
@@ -1274,6 +1276,8 @@ describe('Menu', () => {
 
         expect(itemsContainer?.data?.attrs?.['popover']).toBeUndefined()
         expect(itemsContainer?.data?.style).toBeUndefined()
+        expect(itemsContainer?.data?.hook?.insert).toBeUndefined()
+        expect(itemsContainer?.data?.hook?.destroy).toBeUndefined()
       })
 
       it('does not affect button attributes when anchor is provided', () => {

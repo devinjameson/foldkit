@@ -1,6 +1,7 @@
 import { Match as M } from 'effect'
 import { Ui } from 'foldkit'
 import type { Html } from 'foldkit/html'
+import type { AnchorConfig } from 'foldkit/ui/menu'
 
 import { Class, div, span } from '../../html'
 import { Icon } from '../../icon'
@@ -98,7 +99,14 @@ const groupToHeading = (
 
 // VIEW
 
+const MENU_ANCHOR: AnchorConfig = {
+  placement: 'bottom-start',
+  gap: 4,
+  padding: 8,
+}
+
 const menuViewConfig = (itemsClassName: string) => ({
+  anchor: MENU_ANCHOR,
   items: MENU_ITEMS,
   itemToConfig: (item: MenuItem) => ({
     className: itemClassName,

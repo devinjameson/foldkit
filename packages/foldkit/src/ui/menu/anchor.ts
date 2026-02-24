@@ -7,9 +7,6 @@ import {
   size,
 } from '@floating-ui/dom'
 import type { Placement } from '@floating-ui/dom'
-import { Effect, Schema as S, Stream } from 'effect'
-
-import type { Command } from '../../command'
 
 /** Static configuration for anchor-based positioning of menu items relative to the button. */
 export type AnchorConfig = Readonly<{
@@ -19,71 +16,66 @@ export type AnchorConfig = Readonly<{
   padding?: number
 }>
 
-/** Schema for the subscription dependency that controls anchor stream activation. */
-export const AnchorDeps = S.Struct({
-  isVisible: S.Boolean,
-})
+const anchorCleanups = new WeakMap<Element, () => void>()
 
-/** Creates a subscription stream factory that positions the menu items container relative to its button using the Popover API and Floating UI. */
-export const makeAnchorStream =
-  (config: {
-    menuId: string
-    anchor: AnchorConfig
-  }): ((deps: typeof AnchorDeps.Type) => Stream.Stream<Command<never>>) =>
-  ({ isVisible }) =>
-    Stream.when(
-      Stream.async<Command<never>>(_emit => {
-        const button = document.querySelector(`#${config.menuId}-button`)
-        const items = document.querySelector(`#${config.menuId}-items`)
+/** Returns insert/destroy hook callbacks that position the menu items container relative to its button using the Popover API and Floating UI. */
+export const anchorHooks = (config: {
+  buttonId: string
+  anchor: AnchorConfig
+}): Readonly<{
+  onInsert: (items: Element) => void
+  onDestroy: (items: Element) => void
+}> => ({
+  onInsert: (items: Element) => {
+    const button = document.getElementById(config.buttonId)
 
-        if (
-          !(button instanceof HTMLElement) ||
-          !(items instanceof HTMLElement)
-        ) {
-          return Effect.void
+    if (!(button instanceof HTMLElement) || !(items instanceof HTMLElement)) {
+      return
+    }
+
+    const { placement, gap, offset: crossAxis, padding } = config.anchor
+
+    let isFirstUpdate = true
+
+    const cleanup = autoUpdate(button, items, () => {
+      computePosition(button, items, {
+        placement: placement ?? 'bottom-start',
+        strategy: 'absolute',
+        middleware: [
+          floatingOffset({
+            mainAxis: gap ?? 0,
+            crossAxis: crossAxis ?? 0,
+          }),
+          flip({ padding: padding ?? 0 }),
+          shift({ padding: padding ?? 0 }),
+          size({
+            apply({ rects }) {
+              items.style.setProperty(
+                '--button-width',
+                `${rects.reference.width}px`,
+              )
+            },
+          }),
+        ],
+      }).then(({ x, y }) => {
+        items.style.left = `${x}px`
+        items.style.top = `${y}px`
+
+        if (isFirstUpdate) {
+          isFirstUpdate = false
+          items.showPopover()
         }
+      })
+    })
 
-        const { placement, gap, offset: crossAxis, padding } = config.anchor
+    anchorCleanups.set(items, cleanup)
+  },
+  onDestroy: (items: Element) => {
+    anchorCleanups.get(items)?.()
+    anchorCleanups.delete(items)
 
-        let isFirstUpdate = true
-
-        const cleanupAutoUpdate = autoUpdate(button, items, () => {
-          computePosition(button, items, {
-            placement: placement ?? 'bottom-start',
-            strategy: 'fixed',
-            middleware: [
-              floatingOffset({
-                mainAxis: gap ?? 0,
-                crossAxis: crossAxis ?? 0,
-              }),
-              flip({ padding: padding ?? 0 }),
-              shift({ padding: padding ?? 0 }),
-              size({
-                apply({ rects }) {
-                  items.style.setProperty(
-                    '--button-width',
-                    `${rects.reference.width}px`,
-                  )
-                },
-              }),
-            ],
-          }).then(({ x, y }) => {
-            items.style.left = `${x}px`
-            items.style.top = `${y}px`
-
-            if (isFirstUpdate) {
-              isFirstUpdate = false
-              items.showPopover()
-            }
-          })
-        })
-
-        return Effect.sync(() => {
-          cleanupAutoUpdate()
-          if (items.isConnected) {
-            items.hidePopover()
-          }
-        })
-      }),
-      () => isVisible,
-    )
+    if (items instanceof HTMLElement && items.isConnected) {
+      items.hidePopover()
+    }
+  },
+})

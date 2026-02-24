@@ -391,6 +391,8 @@ type Attribute<Message> = Data.TaggedEnum<{
   Opacity: { readonly value: string }
   StrokeDasharray: { readonly value: string }
   StrokeDashoffset: { readonly value: string }
+  OnInsert: { readonly f: (element: Element) => void }
+  OnDestroy: { readonly f: (element: Element) => void }
 }>
 
 interface AttributeDefinition extends Data.TaggedEnum.WithGenerics<1> {
@@ -524,6 +526,8 @@ const {
   Opacity,
   StrokeDasharray,
   StrokeDashoffset,
+  OnInsert,
+  OnDestroy,
 } = Data.taggedEnum<AttributeDefinition>()
 
 const buildVNodeData = <Message>(
@@ -886,6 +890,30 @@ const buildVNodeData = <Message>(
             updateDataAttrs({ 'stroke-dasharray': value }),
           StrokeDashoffset: ({ value }) =>
             updateDataAttrs({ 'stroke-dashoffset': value }),
+          OnInsert: ({ f }) =>
+            Ref.update(dataRef, data => ({
+              ...data,
+              hook: {
+                ...data.hook,
+                insert: vnode => {
+                  if (vnode.elm instanceof Element) {
+                    f(vnode.elm)
+                  }
+                },
+              },
+            })),
+          OnDestroy: ({ f }) =>
+            Ref.update(dataRef, data => ({
+              ...data,
+              hook: {
+                ...data.hook,
+                destroy: vnode => {
+                  if (vnode.elm instanceof Element) {
+                    f(vnode.elm)
+                  }
+                },
+              },
+            })),
         }),
       ),
     )
@@ -1815,6 +1843,14 @@ type HtmlAttributes<Message> = {
     readonly _tag: 'StrokeDashoffset'
     readonly value: string
   }
+  OnInsert: (f: (element: Element) => void) => {
+    readonly _tag: 'OnInsert'
+    readonly f: (element: Element) => void
+  }
+  OnDestroy: (f: (element: Element) => void) => {
+    readonly _tag: 'OnDestroy'
+    readonly f: (element: Element) => void
+  }
 }
 
 const htmlAttributes = <Message>(): HtmlAttributes<Message> => ({
@@ -1968,6 +2004,8 @@ const htmlAttributes = <Message>(): HtmlAttributes<Message> => ({
   Opacity: (value: string) => Opacity({ value }),
   StrokeDasharray: (value: string) => StrokeDasharray({ value }),
   StrokeDashoffset: (value: string) => StrokeDashoffset({ value }),
+  OnInsert: (f: (element: Element) => void) => OnInsert({ f }),
+  OnDestroy: (f: (element: Element) => void) => OnDestroy({ f }),
 })
 
 /**

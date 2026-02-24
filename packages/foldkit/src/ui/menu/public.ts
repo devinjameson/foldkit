@@ -1,7 +1,5 @@
 export { init, update, view, Model, Message, TransitionState } from './index'
 
-export { AnchorDeps, makeAnchorStream } from './anchor'
-
 export type {
   ActivationTrigger,
   Opened,
