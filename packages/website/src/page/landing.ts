@@ -266,7 +266,7 @@ const promiseSection = (): Html =>
               ),
             ],
             [
-              'Most frameworks let you do anything. Foldkit lets you do one thing really well: describe your application as a value and let the runtime run it.',
+              'Most frameworks ask you to make architectural decisions instead of empowering you to build great applications. Foldkit gives you a principled, cohesive architecture so you can focus on shipping.',
             ],
           ),
           div(
@@ -515,7 +515,7 @@ const whyFoldkitSection = (): Html =>
                 ],
                 ['The Elm Architecture'],
               ),
-              ', so there are no components, no hooks, no local state. Everything is declarative and structured. You will have to learn a few things.',
+              ", so there are no components, no hooks, no local state. Everything is declarative and structured. You'll need to shift how you think about state, effects, and views.",
             ],
           ),
           p(
