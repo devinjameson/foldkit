@@ -310,13 +310,13 @@ const codePanel = (model: Model): Html =>
   div(
     [
       Class(
-        'demo-code-panel rounded-xl overflow-hidden order-last lg:order-none',
+        'demo-code-panel rounded-xl order-last lg:order-none bg-[#24292e]',
       ),
       DataAttribute('demo-phase', model.phase),
     ],
     [
       div(
-        [Class('demo-code-scroll overflow-x-auto')],
+        [Class('demo-code-scroll overflow-auto')],
         [div([InnerHTML(demoCodeHtml)], [])],
       ),
     ],
@@ -336,19 +336,10 @@ const appPanel = (
           ),
         ],
         [
-          viewView(model, toMessage),
-          div(
-            [
-              Class(
-                'flex flex-col gap-6 p-5 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 flex-1 min-h-0 overflow-hidden',
-              ),
-            ],
-            [
-              modelStateView(model),
-              phaseIndicatorView(model),
-              eventLogView(model),
-            ],
-          ),
+          viewAndControlsView(model, toMessage),
+          modelStateView(model),
+          phaseIndicatorView(model),
+          eventLogView(model),
         ],
       ),
     ],
@@ -356,7 +347,7 @@ const appPanel = (
 
 const modelStateView = (model: Model): Html =>
   div(
-    [],
+    [Class('pt-3 border-t border-gray-300 dark:border-gray-800')],
     [
       p(
         [
@@ -369,7 +360,7 @@ const modelStateView = (model: Model): Html =>
       div(
         [
           Class(
-            'font-mono text-sm bg-gray-100 dark:bg-gray-800 rounded-lg p-3 text-gray-700 dark:text-gray-300 leading-relaxed',
+            'font-mono text-sm bg-gray-200 dark:bg-gray-800 rounded-lg p-3 text-gray-700 dark:text-gray-300 leading-relaxed',
           ),
         ],
         [
@@ -446,32 +437,34 @@ const stepperButtonClass = (isDisabled: boolean): string =>
 const parseResetDuration = (value: string): number =>
   N.clamp(Number(value), { minimum: 0, maximum: MAX_RESET_DURATION })
 
-const viewView = (
+const viewAndControlsView = (
   model: Model,
   toMessage: (message: Message) => ParentMessage,
 ): Html =>
   div(
+    [Class('flex flex-col gap-3')],
     [
-      Class(
-        'flex flex-col gap-3 p-5 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700',
-      ),
-    ],
-    [
-      p(
+      div(
+        [Class('pb-3 border-b border-gray-300 dark:border-gray-800')],
         [
-          Class(
-            'text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider',
+          div(
+            [
+              Class(
+                'flex items-center justify-center py-4 rounded-lg bg-gray-200 dark:bg-gray-800',
+              ),
+            ],
+            [
+              p(
+                [
+                  Class(
+                    'text-3xl font-bold text-gray-800 dark:text-gray-200 font-mono',
+                  ),
+                ],
+                [`${model.count}`],
+              ),
+            ],
           ),
         ],
-        ['View'],
-      ),
-      p(
-        [
-          Class(
-            'text-sm font-semibold text-gray-500 dark:text-gray-400 tabular-nums',
-          ),
-        ],
-        [`The count is ${model.count}`],
       ),
       button(
         [
@@ -631,7 +624,7 @@ const phaseIndicatorView = (model: Model): Html => {
                 [
                   Class(
                     classNames(
-                      'demo-progress-bar h-full rounded-full bg-pink-600 dark:bg-pink-500',
+                      'demo-progress-bar h-full rounded-full bg-violet-600 dark:bg-violet-400',
                       {
                         'demo-progress-bar-active': isCommand,
                       },
@@ -666,7 +659,7 @@ const eventLogView = (model: Model): Html =>
       div(
         [
           Class(
-            'font-mono text-xs bg-gray-100 dark:bg-gray-800 rounded-lg p-3 flex-1 min-h-0 overflow-y-auto',
+            'font-mono text-xs bg-gray-200 dark:bg-gray-800 rounded-lg p-3 flex-1 min-h-0 overflow-y-auto',
           ),
         ],
         Array.map(model.messageLog, (entry, index) =>

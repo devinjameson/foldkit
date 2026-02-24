@@ -269,9 +269,7 @@ const highlightApiSignaturesPlugin = (): Plugin => ({
 const DEMO_CODE_ID = 'virtual:demo-code'
 const RESOLVED_DEMO_CODE_ID = '\0' + DEMO_CODE_ID
 
-const DEMO_CODE = `// Counter with async reset. View and boilerplate omitted.
-
-// MODEL
+const DEMO_CODE = `// MODEL
 
 const Model = S.Struct({
   count: S.Number,
@@ -347,6 +345,110 @@ const demoCodePlugin = (): Plugin => ({
   },
 })
 
+const NOTE_PLAYER_DEMO_CODE_ID = 'virtual:note-player-demo-code'
+const RESOLVED_NOTE_PLAYER_DEMO_CODE_ID =
+  '\0' + NOTE_PLAYER_DEMO_CODE_ID
+
+const NOTE_PLAYER_DEMO_CODE = `// MODEL
+
+const Model = S.Struct({
+  noteInput: NoteInputField.Union,
+  noteDuration: NoteDuration,
+  playbackState: PlaybackState, // Idle | Playing | Paused
+})
+
+// MESSAGE
+
+const ClickedPlay = m('ClickedPlay')
+const ClickedPause = m('ClickedPause')
+const PlayedNote = m('PlayedNote', {
+  noteIndex: S.Number,
+})
+
+// UPDATE
+
+M.tagsExhaustive({
+  ClickedPlay: () => [
+    evo(model, {
+      playbackState: () =>
+        Playing({ noteSequence, currentNoteIndex: 0 }),
+    }),
+    [playNote(firstNote, model.noteDuration, 0)],
+  ],
+  ClickedPause: () => [
+    evo(model, {
+      playbackState: () =>
+        Paused({ noteSequence, currentNoteIndex }),
+    }),
+    [],
+  ],
+  PlayedNote: ({ noteIndex }) => {
+    if (nextIndex >= noteSequence.length) {
+      return [
+        evo(model, { playbackState: () => Idle() }),
+        [],
+      ]
+    } else {
+      return [
+        evo(model, {
+          playbackState: () =>
+            Playing({
+              noteSequence,
+              currentNoteIndex: nextIndex,
+            }),
+        }),
+        [playNote(nextNote, model.noteDuration, nextIndex)],
+      ]
+    }
+  },
+})
+
+// COMMAND
+
+const playNote = (note, duration, noteIndex) =>
+  Effect.async(resume => {
+    const oscillator = audioContext.createOscillator()
+    oscillator.frequency.setValueAtTime(NOTE_FREQUENCIES[note])
+    oscillator.onended = () =>
+      resume(Effect.succeed(PlayedNote({ noteIndex })))
+  })`
+
+const notePlayerDemoCodePlugin = (): Plugin => ({
+  name: 'note-player-demo-code',
+  resolveId(id) {
+    if (id === NOTE_PLAYER_DEMO_CODE_ID) {
+      return RESOLVED_NOTE_PLAYER_DEMO_CODE_ID
+    }
+  },
+  async load(id) {
+    if (id !== RESOLVED_NOTE_PLAYER_DEMO_CODE_ID) {
+      return
+    }
+
+    const code = NOTE_PLAYER_DEMO_CODE.trimEnd()
+    const lines = code.split('\n')
+    const lineCount = lines.length
+    const lineDigits = String(lineCount).length
+
+    const html = await codeToHtml(code, {
+      lang: 'typescript',
+      theme: 'github-dark',
+      decorations: lines.map((line, i) => ({
+        start: { line: i, character: 0 },
+        end: { line: i, character: line.length },
+        properties: { 'data-line': i + 1 },
+      })),
+    })
+
+    const htmlWithDigits = html.replace(
+      '<pre ',
+      `<pre data-line-digits="${lineDigits}" `,
+    )
+
+    return `export default ${JSON.stringify(htmlWithDigits)}`
+  },
+})
+
 const LANDING_DATA_ID = 'virtual:landing-data'
 const RESOLVED_LANDING_DATA_ID = '\0' + LANDING_DATA_ID
 
@@ -381,5 +483,6 @@ export default defineConfig({
     highlightApiSignaturesPlugin(),
     landingDataPlugin(),
     demoCodePlugin(),
+    notePlayerDemoCodePlugin(),
   ],
 })

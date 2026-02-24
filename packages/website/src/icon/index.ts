@@ -19,12 +19,15 @@ import { lockClosed } from './lockClosed'
 import { menu } from './menu'
 import { moon } from './moon'
 import { npm } from './npm'
+import { pause } from './pause'
 import { pencil } from './pencil'
+import { play } from './play'
 import { puzzle } from './puzzle'
 import { route } from './route'
 import { shieldCheck } from './shieldCheck'
 import { signal } from './signal'
 import { squareStack } from './squareStack'
+import { stop } from './stop'
 import { sun } from './sun'
 import { trash } from './trash'
 
@@ -50,11 +53,14 @@ export const Icon = {
   menu,
   moon,
   npm,
+  pause,
   pencil,
+  play,
   puzzle,
   route,
   shieldCheck,
   signal,
+  stop,
   squareStack,
   sun,
   trash,

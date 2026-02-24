@@ -36,16 +36,13 @@ export const HERO_SECTION_ID = 'hero'
 
 // VIEW
 
-export const view = (
-  model: Model,
-  architectureDemoView: Html,
-): Html =>
+export const view = (model: Model, demoTabsView: Html): Html =>
   div(
     [],
     [
       heroSection(model),
       promiseSection(),
-      architectureDemoSection(architectureDemoView),
+      demoSection(demoTabsView),
       poweredBySection(),
       includedSection(),
       aiSection(),
@@ -297,14 +294,14 @@ const promiseSection = (): Html =>
     ],
   )
 
-// ARCHITECTURE DEMO
+// DEMOS
 
-const architectureDemoSection = (architectureDemo: Html): Html =>
+const demoSection = (demoTabsView: Html): Html =>
   section(
     [Id('peek-inside'), Class('landing-section')],
     [
       div(
-        [Class('landing-section-narrow')],
+        [Class('max-w-6xl mx-auto')],
         [
           h2(
             [
@@ -321,10 +318,10 @@ const architectureDemoSection = (architectureDemo: Html): Html =>
               ),
             ],
             [
-              'This is what a Foldkit application looks like. Click a button and watch the code highlight as your action flows from message to update to model.',
+              'See the architecture in action. Each demo shows a different pattern — from state animation to chained commands.',
             ],
           ),
-          architectureDemo,
+          div([Class('demo-viewport-constraint')], [demoTabsView]),
         ],
       ),
     ],

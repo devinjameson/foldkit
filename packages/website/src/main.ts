@@ -11,7 +11,7 @@ import {
   Schema as S,
 } from 'effect'
 import type { Command } from 'foldkit'
-import { Runtime } from 'foldkit'
+import { Runtime, Ui } from 'foldkit'
 import { Html } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { load, pushUrl } from 'foldkit/navigation'
@@ -159,7 +159,9 @@ export const Model = S.Struct({
   themePreference: ThemePreference,
   systemTheme: ResolvedTheme,
   resolvedTheme: ResolvedTheme,
+  demoTabs: Ui.Tabs.Model,
   architectureDemo: Page.ArchitectureDemo.Model,
+  notePlayerDemo: Page.NotePlayerDemo.Model,
   foldkitUi: Page.FoldkitUi.Model,
   comingFromReact: Page.ComingFromReact.Model,
   apiReference: Page.ApiReference.Model,
@@ -206,8 +208,14 @@ export const ChangedSystemTheme = m('ChangedSystemTheme', {
 export const ChangedHeroVisibility = m('ChangedHeroVisibility', {
   isVisible: S.Boolean,
 })
+const GotDemoTabsMessage = m('GotDemoTabsMessage', {
+  message: Ui.Tabs.Message,
+})
 const GotArchitectureDemoMessage = m('GotArchitectureDemoMessage', {
   message: Page.ArchitectureDemo.Message,
+})
+const GotNotePlayerDemoMessage = m('GotNotePlayerDemoMessage', {
+  message: Page.NotePlayerDemo.Message,
 })
 const GotFoldkitUiMessage = m('GotFoldkitUiMessage', {
   message: Page.FoldkitUi.Message,
@@ -234,7 +242,9 @@ const Message = S.Union(
   SelectedThemePreference,
   ChangedSystemTheme,
   ChangedHeroVisibility,
+  GotDemoTabsMessage,
   GotArchitectureDemoMessage,
+  GotNotePlayerDemoMessage,
   GotFoldkitUiMessage,
   GotComingFromReactMessage,
   GotApiReferenceMessage,
@@ -254,8 +264,15 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
   const { systemTheme } = loadedFlags
   const resolvedTheme = resolveTheme(themePreference, systemTheme)
 
+  const demoTabs = Ui.Tabs.init({
+    id: 'demo-tabs',
+    orientation: 'Vertical',
+  })
+
   const [architectureDemo, architectureDemoCommands] =
     Page.ArchitectureDemo.init()
+  const [notePlayerDemo, notePlayerDemoCommands] =
+    Page.NotePlayerDemo.init()
   const [foldkitUi, foldkitUiCommands] = Page.FoldkitUi.init()
   const [comingFromReact, comingFromReactCommands] =
     Page.ComingFromReact.init()
@@ -265,6 +282,10 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
 
   const mappedArchitectureDemoCommands = architectureDemoCommands.map(
     Effect.map(message => GotArchitectureDemoMessage({ message })),
+  )
+
+  const mappedNotePlayerDemoCommands = notePlayerDemoCommands.map(
+    Effect.map(message => GotNotePlayerDemoMessage({ message })),
   )
 
   const mappedFoldkitUiCommands = foldkitUiCommands.map(message =>
@@ -291,7 +312,9 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
       themePreference,
       systemTheme,
       resolvedTheme,
+      demoTabs,
       architectureDemo,
+      notePlayerDemo,
       foldkitUi,
       comingFromReact,
       apiReference,
@@ -300,6 +323,7 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
       injectAnalytics,
       applyThemeToDocument(resolvedTheme),
       ...mappedArchitectureDemoCommands,
+      ...mappedNotePlayerDemoCommands,
       ...mappedFoldkitUiCommands,
       ...mappedComingFromReactCommands,
       ...mappedApiReferenceCommands,
@@ -430,6 +454,20 @@ const update = (
         ]
       },
 
+      GotDemoTabsMessage: ({ message }) => {
+        const [nextDemoTabs, demoTabsCommands] = Ui.Tabs.update(
+          model.demoTabs,
+          message,
+        )
+
+        return [
+          evo(model, { demoTabs: () => nextDemoTabs }),
+          demoTabsCommands.map(
+            Effect.map(message => GotDemoTabsMessage({ message })),
+          ),
+        ]
+      },
+
       GotArchitectureDemoMessage: ({ message }) => {
         const [nextArchitectureDemo, architectureDemoCommands] =
           Page.ArchitectureDemo.update(
@@ -444,6 +482,22 @@ const update = (
           architectureDemoCommands.map(
             Effect.map(message =>
               GotArchitectureDemoMessage({ message }),
+            ),
+          ),
+        ]
+      },
+
+      GotNotePlayerDemoMessage: ({ message }) => {
+        const [nextNotePlayerDemo, notePlayerDemoCommands] =
+          Page.NotePlayerDemo.update(model.notePlayerDemo, message)
+
+        return [
+          evo(model, {
+            notePlayerDemo: () => nextNotePlayerDemo,
+          }),
+          notePlayerDemoCommands.map(
+            Effect.map(message =>
+              GotNotePlayerDemoMessage({ message }),
             ),
           ),
         ]
@@ -624,7 +678,7 @@ const sidebarView = (
       AriaLabel('Documentation sidebar'),
       Class(
         classNames(
-          'fixed inset-0 md:top-[var(--header-height)] md:bottom-0 md:left-0 md:right-auto z-[60] md:z-40 md:w-64 bg-white dark:bg-gray-900 md:border-r border-gray-300 dark:border-gray-700 flex flex-col',
+          'fixed inset-0 md:top-[var(--header-height)] md:bottom-0 md:left-0 md:right-auto z-[60] md:z-40 md:w-64 bg-white dark:bg-gray-900 md:border-r border-gray-300 dark:border-gray-800 flex flex-col',
           {
             flex: mobileMenuOpen,
             'hidden md:flex': !mobileMenuOpen,
@@ -636,7 +690,7 @@ const sidebarView = (
       div(
         [
           Class(
-            'flex justify-between items-center p-4 md:hidden border-b border-gray-300 dark:border-gray-700 shrink-0 bg-white dark:bg-black',
+            'flex justify-between items-center p-4 md:hidden border-b border-gray-300 dark:border-gray-800 shrink-0 bg-white dark:bg-black',
           ),
         ],
         [
@@ -742,7 +796,7 @@ const sidebarView = (
       div(
         [
           Class(
-            'md:hidden p-4 border-t border-gray-300 dark:border-gray-700 shrink-0',
+            'md:hidden p-4 border-t border-gray-300 dark:border-gray-800 shrink-0',
           ),
         ],
         [
@@ -778,7 +832,7 @@ const tableOfContentsView = (
   aside(
     [
       Class(
-        'hidden xl:block sticky top-[var(--header-height)] min-w-64 w-fit h-[calc(100vh-var(--header-height))] shrink-0 overflow-y-auto border-l border-gray-300 dark:border-gray-700 p-4',
+        'hidden xl:block sticky top-[var(--header-height)] min-w-64 w-fit h-[calc(100vh-var(--header-height))] shrink-0 overflow-y-auto border-l border-gray-300 dark:border-gray-800 p-4',
       ),
     ],
     [
@@ -869,7 +923,7 @@ const mobileTableOfContentsView = (
         ToggledMobileTableOfContents({ isOpen: open }),
       ),
       Class(
-        'group xl:hidden fixed top-[var(--header-height)] left-0 right-0 md:left-64 z-40 bg-white dark:bg-black border-b border-gray-300 dark:border-gray-700',
+        'group xl:hidden fixed top-[var(--header-height)] left-0 right-0 md:left-64 z-40 bg-white dark:bg-black border-b border-gray-300 dark:border-gray-800',
       ),
     ],
     [
@@ -982,7 +1036,7 @@ const landingHeaderView = (model: Model) =>
     [
       Class(
         classNames(
-          'fixed top-0 inset-x-0 z-50 h-[var(--header-height)] bg-white/80 dark:bg-gray-850/80 backdrop-blur-sm border-b border-gray-300 dark:border-gray-700 px-4 md:px-8 flex items-center justify-between transition-transform duration-300',
+          'fixed top-0 inset-x-0 z-50 h-[var(--header-height)] bg-white/80 dark:bg-gray-850/80 backdrop-blur-sm border-b border-gray-300 dark:border-gray-800 px-4 md:px-8 flex items-center justify-between transition-transform duration-300',
           {
             '-translate-y-full': !model.isLandingHeaderVisible,
             'translate-y-0': model.isLandingHeaderVisible,
@@ -1053,11 +1107,53 @@ const landingFooter: Html = footer(
   ],
 )
 
+type DemoTab = 'Architecture' | 'Note Player'
+
+const demoTabs: ReadonlyArray<DemoTab> = [
+  'Architecture',
+  'Note Player',
+]
+
+const demoTabButtonClassName =
+  'px-3 py-2 text-sm font-medium cursor-pointer transition rounded-l-lg border border-r-0 border-gray-300 dark:border-gray-800 bg-gray-100 dark:bg-gray-900 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 mr-[-1px] data-[selected]:relative data-[selected]:z-10 data-[selected]:bg-gray-100 data-[selected]:dark:bg-gray-900 data-[selected]:text-gray-900 data-[selected]:dark:text-white data-[selected]:border-r-0'
+
+const demoTabPanelClassName =
+  'flex-1 min-w-0 p-4 bg-gray-100 dark:bg-gray-900 rounded-r-lg rounded-bl-lg border border-gray-300 dark:border-gray-800'
+
 const landingView = (model: Model) => {
   const architectureDemoView = Page.ArchitectureDemo.view(
     model.architectureDemo,
     message => GotArchitectureDemoMessage({ message }),
   )
+
+  const notePlayerDemoView = Page.NotePlayerDemo.view(
+    model.notePlayerDemo,
+    message => GotNotePlayerDemoMessage({ message }),
+  )
+
+  const demoTabsView = Ui.Tabs.view<Message, DemoTab>({
+    model: model.demoTabs,
+    toMessage: message => GotDemoTabsMessage({ message }),
+    tabs: demoTabs,
+    tabToConfig: (tab, { isActive }) =>
+      M.value(tab).pipe(
+        M.when('Architecture', () => ({
+          buttonClassName: demoTabButtonClassName,
+          buttonContent: span([], ['Async Counter']),
+          panelClassName: demoTabPanelClassName,
+          panelContent: isActive ? architectureDemoView : empty,
+        })),
+        M.when('Note Player', () => ({
+          buttonClassName: demoTabButtonClassName,
+          buttonContent: span([], ['Note Player']),
+          panelClassName: demoTabPanelClassName,
+          panelContent: isActive ? notePlayerDemoView : empty,
+        })),
+        M.exhaustive,
+      ),
+    className: 'flex',
+    tabListClassName: 'flex flex-col gap-1',
+  })
 
   return keyed('div')(
     'landing',
@@ -1067,7 +1163,7 @@ const landingView = (model: Model) => {
       landingHeaderView(model),
       main(
         [Id('main-content'), Class('flex-1')],
-        [Page.Landing.view(model, architectureDemoView)],
+        [Page.Landing.view(model, demoTabsView)],
       ),
       landingFooter,
     ],
@@ -1078,7 +1174,7 @@ const docsHeaderView = (model: Model) =>
   header(
     [
       Class(
-        'fixed top-0 inset-x-0 z-50 h-[var(--header-height)] bg-white dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 pl-2 pr-3 md:px-8 flex items-center justify-between',
+        'fixed top-0 inset-x-0 z-50 h-[var(--header-height)] bg-white dark:bg-gray-900 border-b border-gray-300 dark:border-gray-800 pl-2 pr-3 md:px-8 flex items-center justify-between',
       ),
     ],
     [

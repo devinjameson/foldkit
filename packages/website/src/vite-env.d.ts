@@ -33,3 +33,8 @@ declare module 'virtual:demo-code' {
   const html: string
   export default html
 }
+
+declare module 'virtual:note-player-demo-code' {
+  const html: string
+  export default html
+}
