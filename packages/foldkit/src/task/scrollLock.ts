@@ -6,9 +6,42 @@ const scrollLockState = {
   paddingRight: '',
 }
 
+const isIOS = (): boolean => {
+  const { platform, maxTouchPoints } = window.navigator
+  const isIPhone = /iPhone/gi.test(platform)
+  const isIPad = /Mac/gi.test(platform) && maxTouchPoints > 0
+  return isIPhone || isIPad
+}
+
+const isScrollableElement = (element: Element): boolean => {
+  const style = window.getComputedStyle(element)
+  const overflowY = style.overflowY
+  const isOverflowable = overflowY === 'auto' || overflowY === 'scroll'
+  return isOverflowable && element.scrollHeight > element.clientHeight
+}
+
+const findScrollableParent = (target: Element): Element | null => {
+  let current: Element | null = target
+  while (current && current !== document.documentElement) {
+    if (isScrollableElement(current)) {
+      return current
+    }
+    current = current.parentElement
+  }
+  return null
+}
+
+const handleTouchMove = (event: TouchEvent): void => {
+  if (event.target instanceof Element && !findScrollableParent(event.target)) {
+    event.preventDefault()
+  }
+}
+
 /**
  * Locks page scroll by setting `overflow: hidden` on the document element.
  * Compensates for scrollbar width with padding to prevent layout shift.
+ * On iOS Safari, intercepts `touchmove` events to prevent page scroll
+ * while allowing scrolling within overflow containers.
  * Uses reference counting so nested locks are safe — the page only unlocks
  * when every lock has been released.
  *
@@ -32,6 +65,12 @@ export const lockScroll: Effect.Effect<void> = Effect.sync(() => {
     style.overflow = 'hidden'
     style.paddingRight =
       scrollbarWidth > 0 ? `${scrollbarWidth}px` : style.paddingRight
+
+    if (isIOS()) {
+      document.addEventListener('touchmove', handleTouchMove, {
+        passive: false,
+      })
+    }
   }
 
   scrollLockState.count++
@@ -40,6 +79,7 @@ export const lockScroll: Effect.Effect<void> = Effect.sync(() => {
 /**
  * Releases one scroll lock. When the last lock is released, restores the
  * original `overflow` and `padding-right` on the document element.
+ * On iOS Safari, removes the `touchmove` listener.
  *
  * @example
  * ```typescript
@@ -55,5 +95,6 @@ export const unlockScroll: Effect.Effect<void> = Effect.sync(() => {
     } = document
     style.overflow = scrollLockState.overflow
     style.paddingRight = scrollLockState.paddingRight
+    document.removeEventListener('touchmove', handleTouchMove)
   }
 })
