@@ -266,8 +266,8 @@ const highlightApiSignaturesPlugin = (): Plugin => ({
   },
 })
 
-const DEMO_CODE_ID = 'virtual:demo-code'
-const RESOLVED_DEMO_CODE_ID = '\0' + DEMO_CODE_ID
+const COUNTER_DEMO_CODE_ID = 'virtual:counter-demo-code'
+const RESOLVED_COUNTER_DEMO_CODE_ID = '\0' + COUNTER_DEMO_CODE_ID
 
 const DEMO_CODE = `// MODEL
 
@@ -309,15 +309,15 @@ M.tagsExhaustive({
   ],
 })`
 
-const demoCodePlugin = (): Plugin => ({
-  name: 'demo-code',
+const counterDemoCodePlugin = (): Plugin => ({
+  name: 'counter-demo-code',
   resolveId(id) {
-    if (id === DEMO_CODE_ID) {
-      return RESOLVED_DEMO_CODE_ID
+    if (id === COUNTER_DEMO_CODE_ID) {
+      return RESOLVED_COUNTER_DEMO_CODE_ID
     }
   },
   async load(id) {
-    if (id !== RESOLVED_DEMO_CODE_ID) {
+    if (id !== RESOLVED_COUNTER_DEMO_CODE_ID) {
       return
     }
 
@@ -482,7 +482,7 @@ export default defineConfig({
     highlightCodePlugin(),
     highlightApiSignaturesPlugin(),
     landingDataPlugin(),
-    demoCodePlugin(),
+    counterDemoCodePlugin(),
     notePlayerDemoCodePlugin(),
   ],
 })

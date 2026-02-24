@@ -24,11 +24,9 @@ import {
   AriaLabel,
   Autocomplete,
   Class,
-  DataAttribute,
   Disabled,
   For,
   Id,
-  InnerHTML,
   Maxlength,
   OnClick,
   OnInput,
@@ -45,6 +43,7 @@ import {
 } from '../html'
 import { Icon } from '../icon'
 import type { Message as ParentMessage } from '../main'
+import * as DemoView from './demoView'
 
 // CONSTANTS
 
@@ -527,42 +526,14 @@ export const view = (
   model: Model,
   toMessage: (message: Message) => ParentMessage,
 ): Html =>
-  div(
-    [
-      Class(
-        'demo-container grid grid-cols-1 lg:grid-cols-[1fr_22rem] lg:grid-rows-[minmax(0,1fr)] gap-4 lg:gap-6',
-      ),
-    ],
-    [
-      p(
-        [
-          Class(
-            'text-sm text-gray-400 dark:text-gray-500 text-center lg:hidden',
-          ),
-        ],
-        [
-          'On a larger screen, you can see the relevant code highlight in real time as your action runs.',
-        ],
-      ),
-      codePanel(model),
-      appPanel(model, toMessage),
-    ],
-  )
-
-const codePanel = (model: Model): Html =>
-  div(
-    [
-      Class(
-        'note-demo-code-panel rounded-xl order-last lg:order-none bg-[#24292e]',
-      ),
-      DataAttribute('note-demo-phase', model.highlightPhase),
-    ],
-    [
-      div(
-        [Class('demo-code-scroll overflow-auto')],
-        [div([InnerHTML(notePlayerDemoCodeHtml)], [])],
-      ),
-    ],
+  DemoView.demoViewShell(
+    DemoView.codePanelView(
+      'note-demo-code-panel',
+      'note-demo-phase',
+      model.highlightPhase,
+      notePlayerDemoCodeHtml,
+    ),
+    appPanel(model, toMessage),
   )
 
 const appPanel = (
@@ -594,9 +565,22 @@ const appPanel = (
               playbackControlView(model, canPlay, toMessage),
             ],
           ),
-          modelStateView(model),
+          DemoView.modelStateView([
+            DemoView.modelStateField(
+              'playbackState',
+              playbackStateLabel(model),
+            ),
+            DemoView.modelStateField(
+              'noteDuration',
+              model.noteDuration,
+            ),
+            DemoView.modelStateField(
+              'noteInput',
+              model.noteInput._tag,
+            ),
+          ]),
           phaseIndicatorView(model),
-          eventLogView(model),
+          DemoView.eventLogView(model.messageLog),
         ],
       ),
     ],
@@ -888,105 +872,9 @@ const phaseColorClass = (phase: NoteHighlightPhase): string =>
     M.exhaustive,
   )
 
-const phaseIndicatorView = (model: Model): Html => {
-  const label = phaseLabel(model.highlightPhase)
-  const colorClass = phaseColorClass(model.highlightPhase)
-
-  return div(
+const phaseIndicatorView = (model: Model): Html =>
+  DemoView.phaseIndicatorView(
+    phaseLabel(model.highlightPhase),
+    phaseColorClass(model.highlightPhase),
     [],
-    [
-      p(
-        [
-          Class(
-            'text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2',
-          ),
-        ],
-        ['Phase'],
-      ),
-      div(
-        [
-          Class(
-            'flex items-center gap-2 text-xs font-semibold uppercase tracking-wider',
-          ),
-        ],
-        [
-          div(
-            [Class('w-2 h-2 rounded-full bg-current ' + colorClass)],
-            [],
-          ),
-          span([Class(colorClass)], [label]),
-        ],
-      ),
-    ],
-  )
-}
-
-const modelStateField = (name: string, value: string): Html =>
-  div(
-    [],
-    [
-      span([Class('text-blue-600 dark:text-blue-400')], [name]),
-      span([Class('text-gray-400 dark:text-gray-500')], [': ']),
-      span([Class('text-amber-600 dark:text-amber-300')], [value]),
-    ],
-  )
-
-const modelStateView = (model: Model): Html =>
-  div(
-    [Class('pt-3 border-t border-gray-300 dark:border-gray-800')],
-    [
-      p(
-        [
-          Class(
-            'text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2',
-          ),
-        ],
-        ['Model State'],
-      ),
-      div(
-        [
-          Class(
-            'font-mono text-sm bg-gray-200 dark:bg-gray-800 rounded-lg p-3 text-gray-700 dark:text-gray-300 leading-relaxed',
-          ),
-        ],
-        [
-          modelStateField('playbackState', playbackStateLabel(model)),
-          modelStateField('noteDuration', model.noteDuration),
-          modelStateField('noteInput', model.noteInput._tag),
-        ],
-      ),
-    ],
-  )
-
-const eventLogView = (model: Model): Html =>
-  div(
-    [Class('flex-1 flex flex-col min-h-0')],
-    [
-      p(
-        [
-          Class(
-            'text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2',
-          ),
-        ],
-        ['Message Log'],
-      ),
-      div(
-        [
-          Class(
-            'font-mono text-xs bg-gray-200 dark:bg-gray-800 rounded-lg p-3 flex-1 min-h-0 overflow-y-auto',
-          ),
-        ],
-        Array.map(model.messageLog, (entry, index) =>
-          keyed('div')(
-            `${entry}-${index}`,
-            [
-              Class(
-                'py-0.5 text-emerald-600 dark:text-emerald-400 break-all',
-              ),
-            ],
-            [span([], [entry])],
-          ),
-        ),
-      ),
-    ],
   )

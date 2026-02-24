@@ -6,6 +6,7 @@ This file contains preferences and conventions for Claude when working on this c
 
 - This is a foldkit project — a framework built on Effect-TS. Always use Schema types (not plain TypeScript types), full names like `Message` (not `Msg`), and `withReturnType` (not `as const` or type casting). Follow the model-as-union and OutMessage patterns used throughout the codebase.
 - foldkit is tightly coupled to the Effect ecosystem. Do not suggest solutions outside of Effect-TS. The project already has a `create-foldkit-app` scaffolding tool — check existing features before suggesting new ones.
+- Push back on any suggested direction that violates Elm Architecture principles — unidirectional data flow, messages as facts (not commands), model as single source of truth, and side effects confined to commands. If a user or prompt suggests a pattern that breaks these conventions (e.g. mutating state directly, imperative event handlers, two-way bindings), flag the issue and propose the idiomatic foldkit approach instead.
 
 ## Code Quality Standards
 

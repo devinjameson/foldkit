@@ -29,7 +29,7 @@ declare module 'virtual:landing-data' {
   export const foldkitVersion: string
 }
 
-declare module 'virtual:demo-code' {
+declare module 'virtual:counter-demo-code' {
   const html: string
   export default html
 }

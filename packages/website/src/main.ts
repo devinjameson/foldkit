@@ -160,7 +160,7 @@ export const Model = S.Struct({
   systemTheme: ResolvedTheme,
   resolvedTheme: ResolvedTheme,
   demoTabs: Ui.Tabs.Model,
-  architectureDemo: Page.ArchitectureDemo.Model,
+  asyncCounterDemo: Page.AsyncCounterDemo.Model,
   notePlayerDemo: Page.NotePlayerDemo.Model,
   foldkitUi: Page.FoldkitUi.Model,
   comingFromReact: Page.ComingFromReact.Model,
@@ -211,8 +211,8 @@ export const ChangedHeroVisibility = m('ChangedHeroVisibility', {
 const GotDemoTabsMessage = m('GotDemoTabsMessage', {
   message: Ui.Tabs.Message,
 })
-const GotArchitectureDemoMessage = m('GotArchitectureDemoMessage', {
-  message: Page.ArchitectureDemo.Message,
+const GotAsyncCounterDemoMessage = m('GotAsyncCounterDemoMessage', {
+  message: Page.AsyncCounterDemo.Message,
 })
 const GotNotePlayerDemoMessage = m('GotNotePlayerDemoMessage', {
   message: Page.NotePlayerDemo.Message,
@@ -243,7 +243,7 @@ const Message = S.Union(
   ChangedSystemTheme,
   ChangedHeroVisibility,
   GotDemoTabsMessage,
-  GotArchitectureDemoMessage,
+  GotAsyncCounterDemoMessage,
   GotNotePlayerDemoMessage,
   GotFoldkitUiMessage,
   GotComingFromReactMessage,
@@ -269,8 +269,8 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
     orientation: 'Vertical',
   })
 
-  const [architectureDemo, architectureDemoCommands] =
-    Page.ArchitectureDemo.init()
+  const [asyncCounterDemo, asyncCounterDemoCommands] =
+    Page.AsyncCounterDemo.init()
   const [notePlayerDemo, notePlayerDemoCommands] =
     Page.NotePlayerDemo.init()
   const [foldkitUi, foldkitUiCommands] = Page.FoldkitUi.init()
@@ -280,8 +280,8 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
     Page.ApiReference.apiReference.modules,
   )
 
-  const mappedArchitectureDemoCommands = architectureDemoCommands.map(
-    Effect.map(message => GotArchitectureDemoMessage({ message })),
+  const mappedAsyncCounterDemoCommands = asyncCounterDemoCommands.map(
+    Effect.map(message => GotAsyncCounterDemoMessage({ message })),
   )
 
   const mappedNotePlayerDemoCommands = notePlayerDemoCommands.map(
@@ -313,7 +313,7 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
       systemTheme,
       resolvedTheme,
       demoTabs,
-      architectureDemo,
+      asyncCounterDemo,
       notePlayerDemo,
       foldkitUi,
       comingFromReact,
@@ -322,7 +322,7 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
     [
       injectAnalytics,
       applyThemeToDocument(resolvedTheme),
-      ...mappedArchitectureDemoCommands,
+      ...mappedAsyncCounterDemoCommands,
       ...mappedNotePlayerDemoCommands,
       ...mappedFoldkitUiCommands,
       ...mappedComingFromReactCommands,
@@ -468,20 +468,20 @@ const update = (
         ]
       },
 
-      GotArchitectureDemoMessage: ({ message }) => {
-        const [nextArchitectureDemo, architectureDemoCommands] =
-          Page.ArchitectureDemo.update(
-            model.architectureDemo,
+      GotAsyncCounterDemoMessage: ({ message }) => {
+        const [nextAsyncCounterDemo, asyncCounterDemoCommands] =
+          Page.AsyncCounterDemo.update(
+            model.asyncCounterDemo,
             message,
           )
 
         return [
           evo(model, {
-            architectureDemo: () => nextArchitectureDemo,
+            asyncCounterDemo: () => nextAsyncCounterDemo,
           }),
-          architectureDemoCommands.map(
+          asyncCounterDemoCommands.map(
             Effect.map(message =>
-              GotArchitectureDemoMessage({ message }),
+              GotAsyncCounterDemoMessage({ message }),
             ),
           ),
         ]
@@ -1121,9 +1121,9 @@ const demoTabPanelClassName =
   'flex-1 min-w-0 p-4 bg-gray-100 dark:bg-gray-900 rounded-r-lg rounded-bl-lg border border-gray-300 dark:border-gray-800'
 
 const landingView = (model: Model) => {
-  const architectureDemoView = Page.ArchitectureDemo.view(
-    model.architectureDemo,
-    message => GotArchitectureDemoMessage({ message }),
+  const asyncCounterDemoView = Page.AsyncCounterDemo.view(
+    model.asyncCounterDemo,
+    message => GotAsyncCounterDemoMessage({ message }),
   )
 
   const notePlayerDemoView = Page.NotePlayerDemo.view(
@@ -1135,19 +1135,19 @@ const landingView = (model: Model) => {
     model: model.demoTabs,
     toMessage: message => GotDemoTabsMessage({ message }),
     tabs: demoTabs,
-    tabToConfig: (tab, { isActive }) =>
+    tabToConfig: tab =>
       M.value(tab).pipe(
         M.when('Architecture', () => ({
           buttonClassName: demoTabButtonClassName,
           buttonContent: span([], ['Async Counter']),
           panelClassName: demoTabPanelClassName,
-          panelContent: isActive ? architectureDemoView : empty,
+          panelContent: asyncCounterDemoView,
         })),
         M.when('Note Player', () => ({
           buttonClassName: demoTabButtonClassName,
           buttonContent: span([], ['Note Player']),
           panelClassName: demoTabPanelClassName,
-          panelContent: isActive ? notePlayerDemoView : empty,
+          panelContent: notePlayerDemoView,
         })),
         M.exhaustive,
       ),

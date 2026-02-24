@@ -13,17 +13,15 @@ import { Task } from 'foldkit'
 import { Html } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
-import demoCodeHtml from 'virtual:demo-code'
+import demoCodeHtml from 'virtual:counter-demo-code'
 
 import {
   AriaHidden,
   AriaLabel,
   Class,
-  DataAttribute,
   Disabled,
   For,
   Id,
-  InnerHTML,
   Max,
   Min,
   OnClick,
@@ -34,12 +32,11 @@ import {
   button,
   div,
   input,
-  keyed,
   label,
   p,
-  span,
 } from '../html'
 import type { Message as ParentMessage } from '../main'
+import * as DemoView from './demoView'
 
 // CONSTANTS
 
@@ -284,42 +281,14 @@ export const view = (
   model: Model,
   toMessage: (message: Message) => ParentMessage,
 ): Html =>
-  div(
-    [
-      Class(
-        'demo-container grid grid-cols-1 lg:grid-cols-[1fr_22rem] lg:grid-rows-[minmax(0,1fr)] gap-4 lg:gap-6',
-      ),
-    ],
-    [
-      p(
-        [
-          Class(
-            'text-sm text-gray-400 dark:text-gray-500 text-center lg:hidden',
-          ),
-        ],
-        [
-          'On a larger screen, you can see the relevant code highlight in real time as your action runs.',
-        ],
-      ),
-      codePanel(model),
-      appPanel(model, toMessage),
-    ],
-  )
-
-const codePanel = (model: Model): Html =>
-  div(
-    [
-      Class(
-        'demo-code-panel rounded-xl order-last lg:order-none bg-[#24292e]',
-      ),
-      DataAttribute('demo-phase', model.phase),
-    ],
-    [
-      div(
-        [Class('demo-code-scroll overflow-auto')],
-        [div([InnerHTML(demoCodeHtml)], [])],
-      ),
-    ],
+  DemoView.demoViewShell(
+    DemoView.codePanelView(
+      'demo-code-panel',
+      'demo-phase',
+      model.phase,
+      demoCodeHtml,
+    ),
+    appPanel(model, toMessage),
   )
 
 const appPanel = (
@@ -337,84 +306,19 @@ const appPanel = (
         ],
         [
           viewAndControlsView(model, toMessage),
-          modelStateView(model),
+          DemoView.modelStateView([
+            DemoView.modelStateField('count', String(model.count)),
+            DemoView.modelStateField(
+              'isResetting',
+              String(model.isResetting),
+            ),
+            DemoView.modelStateField(
+              'resetDuration',
+              String(model.resetDuration),
+            ),
+          ]),
           phaseIndicatorView(model),
-          eventLogView(model),
-        ],
-      ),
-    ],
-  )
-
-const modelStateView = (model: Model): Html =>
-  div(
-    [Class('pt-3 border-t border-gray-300 dark:border-gray-800')],
-    [
-      p(
-        [
-          Class(
-            'text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2',
-          ),
-        ],
-        ['Model State'],
-      ),
-      div(
-        [
-          Class(
-            'font-mono text-sm bg-gray-200 dark:bg-gray-800 rounded-lg p-3 text-gray-700 dark:text-gray-300 leading-relaxed',
-          ),
-        ],
-        [
-          div(
-            [],
-            [
-              span(
-                [Class('text-blue-600 dark:text-blue-400')],
-                ['count'],
-              ),
-              span(
-                [Class('text-gray-400 dark:text-gray-500')],
-                [': '],
-              ),
-              span(
-                [Class('text-amber-600 dark:text-amber-300')],
-                [String(model.count)],
-              ),
-            ],
-          ),
-          div(
-            [],
-            [
-              span(
-                [Class('text-blue-600 dark:text-blue-400')],
-                ['isResetting'],
-              ),
-              span(
-                [Class('text-gray-400 dark:text-gray-500')],
-                [': '],
-              ),
-              span(
-                [Class('text-amber-600 dark:text-amber-300')],
-                [String(model.isResetting)],
-              ),
-            ],
-          ),
-          div(
-            [],
-            [
-              span(
-                [Class('text-blue-600 dark:text-blue-400')],
-                ['resetDuration'],
-              ),
-              span(
-                [Class('text-gray-400 dark:text-gray-500')],
-                [': '],
-              ),
-              span(
-                [Class('text-amber-600 dark:text-amber-300')],
-                [String(model.resetDuration)],
-              ),
-            ],
-          ),
+          DemoView.eventLogView(model.messageLog),
         ],
       ),
     ],
@@ -579,100 +483,45 @@ const viewAndControlsView = (
   )
 
 const phaseIndicatorView = (model: Model): Html => {
-  const label = phaseLabel(model.phase)
-  const colorClass = phaseColorClass(model.phase)
   const isCommand = model.phase === 'ResetCommand'
 
-  return div(
-    [],
-    [
-      p(
-        [
-          Class(
-            'text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2',
-          ),
-        ],
-        ['Phase'],
-      ),
-      div(
-        [
-          Class(
-            'flex items-center gap-2 text-xs font-semibold uppercase tracking-wider',
-          ),
-        ],
-        [
-          div(
-            [Class('w-2 h-2 rounded-full bg-current ' + colorClass)],
-            [],
-          ),
-          span([Class(colorClass)], [label]),
-          div(
-            [
-              AriaHidden(true),
-              Class(
-                classNames(
-                  'flex-1 h-2 rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden transition-opacity duration-200',
-                  {
-                    'opacity-100': isCommand,
-                    'opacity-0': !isCommand,
-                  },
-                ),
-              ),
-            ],
-            [
-              div(
-                [
-                  Class(
-                    classNames(
-                      'demo-progress-bar h-full rounded-full bg-violet-600 dark:bg-violet-400',
-                      {
-                        'demo-progress-bar-active': isCommand,
-                      },
-                    ),
-                  ),
-                  Style({
-                    '--reset-duration': String(model.resetDuration),
-                  }),
-                ],
-                [],
-              ),
-            ],
-          ),
-        ],
-      ),
-    ],
+  return DemoView.phaseIndicatorView(
+    phaseLabel(model.phase),
+    phaseColorClass(model.phase),
+    [progressBarView(model, isCommand)],
   )
 }
 
-const eventLogView = (model: Model): Html =>
+const progressBarView = (model: Model, isCommand: boolean): Html =>
   div(
-    [Class('flex-1 flex flex-col min-h-0')],
     [
-      p(
-        [
-          Class(
-            'text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2',
-          ),
-        ],
-        ['Message Log'],
+      AriaHidden(true),
+      Class(
+        classNames(
+          'flex-1 h-2 rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden transition-opacity duration-200',
+          {
+            'opacity-100': isCommand,
+            'opacity-0': !isCommand,
+          },
+        ),
       ),
+    ],
+    [
       div(
         [
           Class(
-            'font-mono text-xs bg-gray-200 dark:bg-gray-800 rounded-lg p-3 flex-1 min-h-0 overflow-y-auto',
+            classNames(
+              'demo-progress-bar h-full rounded-full bg-violet-600 dark:bg-violet-400',
+              {
+                'demo-progress-bar-active': isCommand,
+              },
+            ),
           ),
+          Style({
+            '--reset-duration': String(model.resetDuration),
+          }),
         ],
-        Array.map(model.messageLog, (entry, index) =>
-          keyed('div')(
-            `${entry}-${index}`,
-            [
-              Class(
-                'py-0.5 text-emerald-600 dark:text-emerald-400 break-all',
-              ),
-            ],
-            [span([], [entry])],
-          ),
-        ),
+        [],
       ),
     ],
   )

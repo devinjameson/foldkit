@@ -1,6 +1,6 @@
 export * as AdvancedPatterns from './advancedPatterns'
 export * as ApiReference from './apiReference'
-export * as ArchitectureDemo from './architectureDemo'
+export * as AsyncCounterDemo from './asyncCounterDemo'
 export * as ArchitectureAndConcepts from './architectureAndConcepts'
 export * as BestPractices from './bestPractices'
 export * as ComingFromReact from './comingFromReact'
