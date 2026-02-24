@@ -62,7 +62,7 @@ export const update = (
     M.withReturnType<[Model, ReadonlyArray<Command<Message>>]>(),
     M.tagsExhaustive({
       Opened: () => {
-        const maybeShowCommand = Option.liftPredicate(
+        const maybeShow = Option.liftPredicate(
           Task.showModal(dialogSelector(model.id)).pipe(
             Effect.ignore,
             Effect.as(NoOp()),
@@ -70,13 +70,10 @@ export const update = (
           () => !model.isOpen,
         )
 
-        return [
-          evo(model, { isOpen: () => true }),
-          Option.toArray(maybeShowCommand),
-        ]
+        return [evo(model, { isOpen: () => true }), Option.toArray(maybeShow)]
       },
       Closed: () => {
-        const maybeCloseCommand = Option.liftPredicate(
+        const maybeClose = Option.liftPredicate(
           Task.closeModal(dialogSelector(model.id)).pipe(
             Effect.ignore,
             Effect.as(NoOp()),
@@ -84,10 +81,7 @@ export const update = (
           () => model.isOpen,
         )
 
-        return [
-          evo(model, { isOpen: () => false }),
-          Option.toArray(maybeCloseCommand),
-        ]
+        return [evo(model, { isOpen: () => false }), Option.toArray(maybeClose)]
       },
       NoOp: () => [model, []],
     }),

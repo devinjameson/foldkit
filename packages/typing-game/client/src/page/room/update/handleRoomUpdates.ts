@@ -72,7 +72,7 @@ export const handleRoomUpdated =
       Task.focus(`#${USER_GAME_TEXT_INPUT_ID}`).pipe(Effect.ignore, Effect.as(NoOp())),
     )
 
-    const maybeExitCountdownCommand = optionWhen(gameJustFinished, () => exitCountdownTick)
+    const maybeExitCountdown = optionWhen(gameJustFinished, () => exitCountdownTick)
 
     return [
       evo(model, {
@@ -82,7 +82,7 @@ export const handleRoomUpdated =
         exitCountdownSecondsLeft: () =>
           gameJustFinished ? EXIT_COUNTDOWN_SECONDS : model.exitCountdownSecondsLeft,
       }),
-      Array.getSomes([mabyeFocusUserGameTextInput, maybeExitCountdownCommand]),
+      Array.getSomes([mabyeFocusUserGameTextInput, maybeExitCountdown]),
     ]
   }
 

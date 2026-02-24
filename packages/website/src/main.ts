@@ -1,7 +1,7 @@
 import { KeyValueStore } from '@effect/platform'
 import { BrowserKeyValueStore } from '@effect/platform-browser'
 import { inject } from '@vercel/analytics'
-import { injectSpeedInsights } from '@vercel/speed-insights'
+import * as SpeedInsights from '@vercel/speed-insights'
 import classNames from 'classnames'
 import {
   Array,
@@ -335,7 +335,7 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
     },
     [
       injectAnalytics,
-      injectSpeedInsightsCommand,
+      injectSpeedInsights,
       applyThemeToDocument(resolvedTheme),
       ...mappedAsyncCounterDemoCommands,
       ...mappedNotePlayerDemoCommands,
@@ -588,8 +588,8 @@ const injectAnalytics: Command<typeof NoOp> = Effect.sync(() =>
   inject(),
 ).pipe(Effect.as(NoOp()))
 
-const injectSpeedInsightsCommand: Command<typeof NoOp> = Effect.sync(
-  () => injectSpeedInsights(),
+const injectSpeedInsights: Command<typeof NoOp> = Effect.sync(() =>
+  SpeedInsights.injectSpeedInsights(),
 ).pipe(Effect.as(NoOp()))
 
 const copySnippetToClipboard = (

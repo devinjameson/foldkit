@@ -149,13 +149,13 @@ export const update = (model: Model, message: Message): UpdateReturn =>
 
       TickedExitCountdown: () => {
         const nextSecondsLeft = Number.decrement(model.exitCountdownSecondsLeft)
-        const maybeTickCommand = optionWhen(nextSecondsLeft > 0, () => exitCountdownTick)
+        const maybeTick = optionWhen(nextSecondsLeft > 0, () => exitCountdownTick)
 
         return [
           evo(model, {
             exitCountdownSecondsLeft: () => nextSecondsLeft,
           }),
-          Array.fromOption(maybeTickCommand),
+          Array.fromOption(maybeTick),
         ]
       },
 
@@ -217,8 +217,8 @@ const handleStartGame = (model: Model, room: Shared.Room) => (): UpdateReturn =>
   Option.match(model.maybeSession, {
     onSome: session => {
       const isHost = session.player.id === room.hostId
-      const startGameCommand = optionWhen(isHost, () => startGame(room.id, session.player.id))
-      return [model, Array.fromOption(startGameCommand)]
+      const maybeStartGame = optionWhen(isHost, () => startGame(room.id, session.player.id))
+      return [model, Array.fromOption(maybeStartGame)]
     },
     onNone: () => [model, []],
   })

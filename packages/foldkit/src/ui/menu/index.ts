@@ -211,22 +211,22 @@ const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
 /** Processes a menu message and returns the next model and commands. */
 export const update = (model: Model, message: Message): UpdateReturn => {
-  const maybeNextFrameCommand = OptionExt.when(
+  const maybeNextFrame = OptionExt.when(
     model.isAnimated,
     Task.nextFrame.pipe(Effect.as(AdvancedTransitionFrame())),
   )
 
-  const maybeLockScrollCommand = OptionExt.when(
+  const maybeLockScroll = OptionExt.when(
     model.isModal,
     Task.lockScroll.pipe(Effect.as(NoOp())),
   )
 
-  const maybeUnlockScrollCommand = OptionExt.when(
+  const maybeUnlockScroll = OptionExt.when(
     model.isModal,
     Task.unlockScroll.pipe(Effect.as(NoOp())),
   )
 
-  const maybeInertOthersCommand = OptionExt.when(
+  const maybeInertOthers = OptionExt.when(
     model.isModal,
     Task.inertOthers(model.id, [
       buttonSelector(model.id),
@@ -234,7 +234,7 @@ export const update = (model: Model, message: Message): UpdateReturn => {
     ]).pipe(Effect.as(NoOp())),
   )
 
-  const maybeRestoreInertCommand = OptionExt.when(
+  const maybeRestoreInert = OptionExt.when(
     model.isModal,
     Task.restoreInert(model.id).pipe(Effect.as(NoOp())),
   )
@@ -260,11 +260,7 @@ export const update = (model: Model, message: Message): UpdateReturn => {
         return [
           nextModel,
           pipe(
-            Array.getSomes([
-              maybeNextFrameCommand,
-              maybeLockScrollCommand,
-              maybeInertOthersCommand,
-            ]),
+            Array.getSomes([maybeNextFrame, maybeLockScroll, maybeInertOthers]),
             Array.prepend(
               Task.focus(itemsSelector(model.id)).pipe(
                 Effect.ignore,
@@ -279,9 +275,9 @@ export const update = (model: Model, message: Message): UpdateReturn => {
         closedModel(model),
         pipe(
           Array.getSomes([
-            maybeNextFrameCommand,
-            maybeUnlockScrollCommand,
-            maybeRestoreInertCommand,
+            maybeNextFrame,
+            maybeUnlockScroll,
+            maybeRestoreInert,
           ]),
           Array.prepend(
             Task.focus(buttonSelector(model.id)).pipe(
@@ -294,11 +290,7 @@ export const update = (model: Model, message: Message): UpdateReturn => {
 
       ClosedByTab: () => [
         closedModel(model),
-        Array.getSomes([
-          maybeNextFrameCommand,
-          maybeUnlockScrollCommand,
-          maybeRestoreInertCommand,
-        ]),
+        Array.getSomes([maybeNextFrame, maybeUnlockScroll, maybeRestoreInert]),
       ],
 
       ActivatedItem: ({ index, activationTrigger }) => [
@@ -346,9 +338,9 @@ export const update = (model: Model, message: Message): UpdateReturn => {
         closedModel(model),
         pipe(
           Array.getSomes([
-            maybeNextFrameCommand,
-            maybeUnlockScrollCommand,
-            maybeRestoreInertCommand,
+            maybeNextFrame,
+            maybeUnlockScroll,
+            maybeRestoreInert,
           ]),
           Array.prepend(
             Task.focus(buttonSelector(model.id)).pipe(
@@ -463,9 +455,9 @@ export const update = (model: Model, message: Message): UpdateReturn => {
             closedModel(withPointerType),
             pipe(
               Array.getSomes([
-                maybeNextFrameCommand,
-                maybeUnlockScrollCommand,
-                maybeRestoreInertCommand,
+                maybeNextFrame,
+                maybeUnlockScroll,
+                maybeRestoreInert,
               ]),
               Array.prepend(
                 Task.focus(buttonSelector(model.id)).pipe(
@@ -492,11 +484,7 @@ export const update = (model: Model, message: Message): UpdateReturn => {
         return [
           nextModel,
           pipe(
-            Array.getSomes([
-              maybeNextFrameCommand,
-              maybeLockScrollCommand,
-              maybeInertOthersCommand,
-            ]),
+            Array.getSomes([maybeNextFrame, maybeLockScroll, maybeInertOthers]),
             Array.prepend(
               Task.focus(itemsSelector(model.id)).pipe(
                 Effect.ignore,

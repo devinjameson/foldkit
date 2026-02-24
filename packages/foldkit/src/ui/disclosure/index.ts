@@ -64,7 +64,7 @@ export const update = (
     M.withReturnType<[Model, ReadonlyArray<Command<Message>>]>(),
     M.tagsExhaustive({
       Toggled: () => {
-        const maybeFocusCommand = Option.liftPredicate(
+        const maybeFocus = Option.liftPredicate(
           Task.focus(`#${buttonId(model.id)}`).pipe(
             Effect.ignore,
             Effect.as(NoOp()),
@@ -74,11 +74,11 @@ export const update = (
 
         return [
           evo(model, { isOpen: () => !model.isOpen }),
-          Option.toArray(maybeFocusCommand),
+          Option.toArray(maybeFocus),
         ]
       },
       Closed: () => {
-        const maybeFocusCommand = Option.liftPredicate(
+        const maybeFocus = Option.liftPredicate(
           Task.focus(`#${buttonId(model.id)}`).pipe(
             Effect.ignore,
             Effect.as(NoOp()),
@@ -86,10 +86,7 @@ export const update = (
           () => model.isOpen,
         )
 
-        return [
-          evo(model, { isOpen: () => false }),
-          Option.toArray(maybeFocusCommand),
-        ]
+        return [evo(model, { isOpen: () => false }), Option.toArray(maybeFocus)]
       },
       NoOp: () => [model, []],
     }),

@@ -109,11 +109,9 @@ export const update = (model: Model, message: Message): UpdateReturn =>
               ]
             }
 
-            const maybeJoinCommand = optionWhen(Str.isNonEmpty(roomId), () =>
-              joinRoom(username, roomId),
-            )
+            const maybeJoin = optionWhen(Str.isNonEmpty(roomId), () => joinRoom(username, roomId))
 
-            return [model, Array.fromOption(maybeJoinCommand), Option.none()]
+            return [model, Array.fromOption(maybeJoin), Option.none()]
           }),
           M.orElse(() => [model, [], Option.none()]),
         ),
