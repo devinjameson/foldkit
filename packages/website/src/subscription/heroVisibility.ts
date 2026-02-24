@@ -1,18 +1,18 @@
 import { Effect, Stream } from 'effect'
 import type { Command } from 'foldkit'
-import { CommandStream } from 'foldkit/runtime'
+import { Subscription } from 'foldkit/runtime'
 
 import {
   ChangedHeroVisibility,
-  type CommandStreamsDeps,
   type Model,
+  type SubscriptionDeps,
 } from '../main'
 import { HERO_SECTION_ID } from '../page/landing'
 
-export const heroVisibility: CommandStream<
+export const heroVisibility: Subscription<
   Model,
   typeof ChangedHeroVisibility,
-  CommandStreamsDeps['heroVisibility']
+  SubscriptionDeps['heroVisibility']
 > = {
   modelToDeps: (model: Model) => ({
     isLandingPage: model.route._tag === 'Home',

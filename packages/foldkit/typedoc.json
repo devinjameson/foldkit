@@ -8,7 +8,7 @@
   "excludeProtected": true,
   "excludeInternal": true,
   "intentionallyNotExported": [
-    "CommandStreamConfig",
+    "SubscriptionConfig",
     "Dispatch",
     "ElementFunction",
     "VoidElementFunction",

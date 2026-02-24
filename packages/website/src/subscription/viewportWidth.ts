@@ -1,18 +1,18 @@
 import { Effect, Stream } from 'effect'
 import type { Command } from 'foldkit'
-import { CommandStream } from 'foldkit/runtime'
+import { Subscription } from 'foldkit/runtime'
 
 import {
   ChangedViewportWidth,
-  type CommandStreamsDeps,
   type Model,
   NARROW_VIEWPORT_QUERY,
+  type SubscriptionDeps,
 } from '../main'
 
-export const viewportWidth: CommandStream<
+export const viewportWidth: Subscription<
   Model,
   typeof ChangedViewportWidth,
-  CommandStreamsDeps['viewportWidth']
+  SubscriptionDeps['viewportWidth']
 > = {
   modelToDeps: () => null,
   depsToStream: () =>

@@ -62,10 +62,10 @@ const commandsHeader: TableOfContentsEntry = {
   text: 'Commands',
 }
 
-const commandStreamsHeader: TableOfContentsEntry = {
+const subscriptionsHeader: TableOfContentsEntry = {
   level: 'h2',
-  id: 'command-streams',
-  text: 'Command Streams',
+  id: 'subscriptions',
+  text: 'Subscriptions',
 }
 
 const initHeader: TableOfContentsEntry = {
@@ -113,7 +113,7 @@ export const tableOfContents: ReadonlyArray<TableOfContentsEntry> = [
   typedHtmlHelpersHeader,
   eventHandlingHeader,
   commandsHeader,
-  commandStreamsHeader,
+  subscriptionsHeader,
   initHeader,
   flagsHeader,
   taskHeader,
@@ -351,14 +351,14 @@ export const view = (model: Model): Html =>
         model,
         'mb-8',
       ),
-      tableOfContentsEntryToHeader(commandStreamsHeader),
+      tableOfContentsEntryToHeader(subscriptionsHeader),
       para(
         'Commands are great for one-off side effects, but what about ongoing streams of events? Think timers, WebSocket connections, or keyboard input. For these, Foldkit provides ',
-        strong([], ['Command Streams']),
+        strong([], ['Subscriptions']),
         '.',
       ),
       para(
-        'A Command Stream is a stream of Commands that runs continuously based on some part of your model that the stream depends on. When that part of the model changes, the stream is automatically restarted with the new values.',
+        'A Subscription is a reactive binding between your model and a long-running stream. You declare which part of the model the subscription depends on, and Foldkit manages the stream lifecycle automatically, starting it when the component mounts and restarting it whenever those dependencies change.',
       ),
       para(
         "Let's look at a stopwatch example. We want a timer that ticks every 100ms, but only when ",
@@ -371,19 +371,19 @@ export const view = (model: Model): Html =>
         div(
           [
             Class('text-sm'),
-            InnerHTML(Snippets.stopwatchCommandStreamHighlighted),
+            InnerHTML(Snippets.stopwatchSubscriptionHighlighted),
           ],
           [],
         ),
-        Snippets.stopwatchCommandStreamRaw,
-        'Copy command stream example to clipboard',
+        Snippets.stopwatchSubscriptionRaw,
+        'Copy subscription example to clipboard',
         model,
         'mb-8',
       ),
       para(
         'The key concept is ',
-        inlineCode('CommandStreamsDeps'),
-        '. This schema defines what parts of the model your streams depend on. Each stream has two functions:',
+        inlineCode('SubscriptionDeps'),
+        '. This schema defines what parts of the model your subscriptions depend on. Each subscription has two functions:',
       ),
       para(
         inlineCode('modelToDeps'),
@@ -392,6 +392,9 @@ export const view = (model: Model): Html =>
       para(
         inlineCode('depsToStream'),
         ' creates a stream based on those dependencies.',
+      ),
+      para(
+        'Foldkit structurally compares the dependencies between updates. The stream is only restarted when the dependencies actually change, not on every model update.',
       ),
       para(
         'When ',
@@ -412,6 +415,15 @@ export const view = (model: Model): Html =>
         ' (',
         link(Link.typingTerminalSource, 'source'),
         ').',
+      ),
+      para(
+        "If you're coming from Elm, Subscriptions in Foldkit produce ",
+        inlineCode('Command<Message>'),
+        ' rather than plain ',
+        inlineCode('Message'),
+        '. This means each item in the stream can do async work before resolving to a message, avoiding extra round-trips through ',
+        inlineCode('update'),
+        '.',
       ),
       tableOfContentsEntryToHeader(initHeader),
       para(

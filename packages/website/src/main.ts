@@ -19,7 +19,6 @@ import { UrlRequest } from 'foldkit/runtime'
 import { evo } from 'foldkit/struct'
 import { Url, toString as urlToString } from 'foldkit/url'
 
-import * as CommandStream from './commandStream'
 import {
   Alt,
   AriaCurrent,
@@ -84,6 +83,7 @@ import {
   urlToAppRoute,
   whyFoldkitRouter,
 } from './route'
+import * as Subscription from './subscription'
 import { themeSelector } from './view/themeSelector'
 
 export type TableOfContentsEntry = {
@@ -1380,9 +1380,9 @@ const docsView = (model: Model, docsRoute: DocsRoute) => {
   )
 }
 
-// COMMAND STREAMS
+// SUBSCRIPTION
 
-const CommandStreamsDeps = S.Struct({
+const SubscriptionDeps = S.Struct({
   activeSection: S.Struct({
     pageId: S.String,
     sections: S.Array(S.String),
@@ -1399,17 +1399,17 @@ const CommandStreamsDeps = S.Struct({
   viewportWidth: S.Null,
 })
 
-export type CommandStreamsDeps = typeof CommandStreamsDeps.Type
+export type SubscriptionDeps = typeof SubscriptionDeps.Type
 
-const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<
+const subscriptions = Runtime.makeSubscriptions(SubscriptionDeps)<
   Model,
   Message
 >({
-  activeSection: CommandStream.activeSection,
-  aiGrid: CommandStream.aiGrid,
-  heroVisibility: CommandStream.heroVisibility,
-  systemTheme: CommandStream.systemTheme,
-  viewportWidth: CommandStream.viewportWidth,
+  activeSection: Subscription.activeSection,
+  aiGrid: Subscription.aiGrid,
+  heroVisibility: Subscription.heroVisibility,
+  systemTheme: Subscription.systemTheme,
+  viewportWidth: Subscription.viewportWidth,
 })
 
 // RUN
@@ -1421,7 +1421,7 @@ const application = Runtime.makeApplication({
   init,
   update,
   view,
-  commandStreams,
+  subscriptions,
   container: document.getElementById('root')!,
   browser: {
     onUrlRequest: request => ClickedLink({ request }),

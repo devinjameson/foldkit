@@ -65,7 +65,7 @@ export interface RuntimeConfig<
     message: Message,
   ) => [Model, ReadonlyArray<Command<Message>>]
   readonly view: (model: Model) => Html
-  readonly commandStreams?: CommandStreams<Model, Message, StreamDepsMap>
+  readonly subscriptions?: Subscriptions<Model, Message, StreamDepsMap>
   readonly container: HTMLElement
   readonly browser?: BrowserConfig<Message>
   readonly errorView?: (error: Error) => Html
@@ -82,7 +82,7 @@ interface BaseElementConfig<
     message: Message,
   ) => [Model, ReadonlyArray<Command<Message>>]
   readonly view: (model: Model) => Html
-  readonly commandStreams?: CommandStreams<Model, Message, StreamDepsMap>
+  readonly subscriptions?: Subscriptions<Model, Message, StreamDepsMap>
   readonly container: HTMLElement
   readonly errorView?: (error: Error) => Html
 }
@@ -119,7 +119,7 @@ interface BaseApplicationConfig<
     message: Message,
   ) => [Model, ReadonlyArray<Command<Message>>]
   readonly view: (model: Model) => Html
-  readonly commandStreams?: CommandStreams<Model, Message, StreamDepsMap>
+  readonly subscriptions?: Subscriptions<Model, Message, StreamDepsMap>
   readonly container: HTMLElement
   readonly browser: BrowserConfig<Message>
   readonly errorView?: (error: Error) => Html
@@ -159,44 +159,44 @@ export type ApplicationInit<Model, Message, Flags = void> = Flags extends void
   ? (url: Url) => [Model, ReadonlyArray<Command<Message>>]
   : (flags: Flags, url: Url) => [Model, ReadonlyArray<Command<Message>>]
 
-/** A reactive stream configuration that maps model changes to a stream of commands. */
-export type CommandStream<Model, Message, StreamDeps> = {
+/** A reactive binding between model state and a long-running stream of commands. */
+export type Subscription<Model, Message, StreamDeps> = {
   readonly modelToDeps: (model: Model) => StreamDeps
   readonly depsToStream: (deps: StreamDeps) => Stream.Stream<Command<Message>>
 }
 
-type CommandStreamConfig<Model, Message, StreamDeps> = {
+type SubscriptionConfig<Model, Message, StreamDeps> = {
   readonly schema: Schema.Schema<StreamDeps>
-} & CommandStream<Model, Message, StreamDeps>
+} & Subscription<Model, Message, StreamDeps>
 
-/** A record of named command stream configurations, keyed by dependency field name. */
-export type CommandStreams<
+/** A record of named subscription configurations, keyed by dependency field name. */
+export type Subscriptions<
   Model,
   Message,
-  CommandStreamsDeps extends Schema.Struct<any>,
+  SubscriptionDeps extends Schema.Struct<any>,
 > = {
-  readonly [K in keyof Schema.Schema.Type<CommandStreamsDeps>]: CommandStreamConfig<
+  readonly [K in keyof Schema.Schema.Type<SubscriptionDeps>]: SubscriptionConfig<
     Model,
     Message,
-    Schema.Schema.Type<CommandStreamsDeps>[K]
+    Schema.Schema.Type<SubscriptionDeps>[K]
   >
 }
 
-/** Creates type-safe command stream configurations from a dependency schema. */
-export const makeCommandStreams =
-  <CommandStreamsDeps extends Schema.Struct<any>>(
-    CommandStreamsDeps: CommandStreamsDeps,
+/** Creates type-safe subscription configurations from a dependency schema. */
+export const makeSubscriptions =
+  <SubscriptionDeps extends Schema.Struct<any>>(
+    SubscriptionDeps: SubscriptionDeps,
   ) =>
   <Model, Message>(configs: {
-    [K in keyof Schema.Schema.Type<CommandStreamsDeps>]: {
-      modelToDeps: (model: Model) => Schema.Schema.Type<CommandStreamsDeps>[K]
+    [K in keyof Schema.Schema.Type<SubscriptionDeps>]: {
+      modelToDeps: (model: Model) => Schema.Schema.Type<SubscriptionDeps>[K]
       depsToStream: (
-        deps: Schema.Schema.Type<CommandStreamsDeps>[K],
+        deps: Schema.Schema.Type<SubscriptionDeps>[K],
       ) => Stream.Stream<Command<Message>>
     }
   }) =>
     Record.map(configs, ({ modelToDeps, depsToStream }, key) => ({
-      schema: CommandStreamsDeps.fields[key],
+      schema: SubscriptionDeps.fields[key],
       modelToDeps,
       depsToStream,
     }))
@@ -217,7 +217,7 @@ const makeRuntime =
     init,
     update,
     view,
-    commandStreams,
+    subscriptions,
     container,
     browser: browserConfig,
     errorView,
@@ -347,9 +347,9 @@ const makeRuntime =
 
       addBfcacheRestoreListener()
 
-      if (commandStreams) {
+      if (subscriptions) {
         yield* pipe(
-          commandStreams,
+          subscriptions,
           Record.toEntries,
           Effect.forEach(
             ([_key, { schema, modelToDeps, depsToStream }]) => {
@@ -483,7 +483,7 @@ export function makeElement<
     Model: config.Model,
     update: config.update,
     view: config.view,
-    ...(config.commandStreams && { commandStreams: config.commandStreams }),
+    ...(config.subscriptions && { subscriptions: config.subscriptions }),
     container: config.container,
     ...(config.errorView && { errorView: config.errorView }),
   }
@@ -539,7 +539,7 @@ export function makeApplication<
     Model: config.Model,
     update: config.update,
     view: config.view,
-    ...(config.commandStreams && { commandStreams: config.commandStreams }),
+    ...(config.subscriptions && { subscriptions: config.subscriptions }),
     container: config.container,
     browser: config.browser,
     ...(config.errorView && { errorView: config.errorView }),

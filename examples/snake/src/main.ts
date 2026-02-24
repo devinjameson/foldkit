@@ -240,9 +240,9 @@ const update = (
 const requestApple = (snake: Snake.Snake): Command<Message> =>
   Effect.succeed(RequestedApple({ snake }))
 
-// COMMAND STREAM
+// SUBSCRIPTION
 
-const CommandStreamsDeps = S.Struct({
+const SubscriptionDeps = S.Struct({
   gameClock: S.Struct({
     isPlaying: S.Boolean,
     interval: S.Number,
@@ -250,7 +250,7 @@ const CommandStreamsDeps = S.Struct({
   keyboard: S.Null,
 })
 
-const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<
+const subscriptions = Runtime.makeSubscriptions(SubscriptionDeps)<
   Model,
   Message
 >({
@@ -367,7 +367,7 @@ const element = Runtime.makeElement({
   init,
   update,
   view,
-  commandStreams,
+  subscriptions,
   container: document.getElementById('root')!,
 })
 

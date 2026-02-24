@@ -1,14 +1,9 @@
-export {
-  makeElement,
-  makeApplication,
-  run,
-  makeCommandStreams,
-} from './runtime'
+export { makeElement, makeApplication, run, makeSubscriptions } from './runtime'
 
 export type {
   BrowserConfig,
-  CommandStream,
-  CommandStreams,
+  Subscription,
+  Subscriptions,
   ElementConfigWithFlags,
   ElementConfigWithoutFlags,
   ApplicationConfigWithFlags,

@@ -116,15 +116,15 @@ const init: Runtime.ElementInit<Model, Message> = () => [
   [],
 ]
 
-// COMMAND STREAM
+// SUBSCRIPTION
 
-const CommandStreamsDeps = S.Struct({
+const SubscriptionDeps = S.Struct({
   tick: S.Struct({
     isRunning: S.Boolean,
   }),
 })
 
-const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<
+const subscriptions = Runtime.makeSubscriptions(SubscriptionDeps)<
   Model,
   Message
 >({
@@ -223,7 +223,7 @@ const element = Runtime.makeElement({
   init,
   update,
   view,
-  commandStreams,
+  subscriptions,
   container: document.getElementById('root')!,
 })
 
