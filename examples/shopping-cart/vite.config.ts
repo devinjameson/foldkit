@@ -15,6 +15,10 @@ export default defineConfig({
         __dirname,
         '../../packages/foldkit/src/html',
       ),
+      'foldkit/message': path.resolve(
+        __dirname,
+        '../../packages/foldkit/src/message',
+      ),
       'foldkit/navigation': path.resolve(
         __dirname,
         '../../packages/foldkit/src/navigation',
