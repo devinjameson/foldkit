@@ -9,19 +9,19 @@ import {
   Stream,
 } from 'effect'
 import type { Command } from 'foldkit'
-import { CommandStream } from 'foldkit/runtime'
+import { Subscription } from 'foldkit/runtime'
 
 import {
   ChangedActiveSection,
-  CommandStreamsDeps,
   Model,
+  SubscriptionDeps,
 } from '../main'
 import * as Page from '../page'
 
-export const activeSection: CommandStream<
+export const activeSection: Subscription<
   Model,
   typeof ChangedActiveSection,
-  CommandStreamsDeps['activeSection']
+  SubscriptionDeps['activeSection']
 > = {
   modelToDeps: (model: Model) => {
     const currentPageTableOfContents = M.value(model.route).pipe(

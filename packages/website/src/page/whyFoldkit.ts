@@ -123,7 +123,7 @@ const foldkitVsReactTable = (): Html =>
       [
         ['Subscriptions'],
         ['Manual useEffect + cleanup + dependency arrays'],
-        ['CommandStreams with automatic lifecycle'],
+        ['Subscriptions with automatic lifecycle'],
       ],
       [
         ['Debugging'],
@@ -256,7 +256,7 @@ export const view = (): Html =>
           li(
             [],
             [
-              strong([], ['Command Streams']),
+              strong([], ['Subscriptions']),
               ' — For timers, WebSockets, and other ongoing effects',
             ],
           ),

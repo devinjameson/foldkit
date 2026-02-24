@@ -1,17 +1,17 @@
 import { Effect, Stream } from 'effect'
 import type { Command } from 'foldkit'
-import { CommandStream } from 'foldkit/runtime'
+import { Subscription } from 'foldkit/runtime'
 
 import {
   ChangedSystemTheme,
-  type CommandStreamsDeps,
   type Model,
+  type SubscriptionDeps,
 } from '../main'
 
-export const systemTheme: CommandStream<
+export const systemTheme: Subscription<
   Model,
   typeof ChangedSystemTheme,
-  CommandStreamsDeps['systemTheme']
+  SubscriptionDeps['systemTheme']
 > = {
   modelToDeps: (model: Model) => ({
     isSystemPreference: model.themePreference === 'System',

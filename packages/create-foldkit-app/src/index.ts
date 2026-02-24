@@ -60,7 +60,7 @@ const example = Options.choice('example', [
       '  weather - HTTP requests with async state handling\n' +
       '  todo - CRUD operations with localStorage persistence\n' +
       '  form - Form validation with async email checking\n' +
-      '  snake - Classic game built with command streams\n' +
+      '  snake - Classic game built with subscriptions\n' +
       '  routing - URL routing with parser combinators and route parameters\n' +
       '  shopping-cart - Complex state management with nested models and routing\n' +
       '  websocket-chat - WebSocket integration\n' +

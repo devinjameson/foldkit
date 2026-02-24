@@ -455,7 +455,7 @@ const includedSection = (): Html =>
               ),
               includedFeature(
                 Icon.signal('w-6 h-6'),
-                'Command Streams',
+                'Subscriptions',
                 [
                   'Declarative subscriptions that react to model changes. Timers, DOM observers, and external events are managed automatically. Set up when needed, torn down when not.',
                 ],

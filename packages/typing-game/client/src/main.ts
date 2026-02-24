@@ -1,9 +1,9 @@
 import { Runtime } from 'foldkit'
 
-import { commandStreams } from './commandStreams'
 import { init } from './init'
 import { ChangedUrl, ClickedLink } from './message'
 import { Model } from './model'
+import { subscriptions } from './subscription'
 import { update } from './update'
 import { view } from './view'
 
@@ -12,7 +12,7 @@ const application = Runtime.makeApplication({
   init,
   update,
   view,
-  commandStreams,
+  subscriptions,
   container: document.getElementById('root')!,
   browser: {
     onUrlRequest: request => ClickedLink({ request }),

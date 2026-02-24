@@ -1,8 +1,8 @@
 import { Effect, Stream } from 'effect'
 import type { Command } from 'foldkit'
-import type { CommandStream } from 'foldkit/runtime'
+import type { Subscription } from 'foldkit/runtime'
 
-import type { CommandStreamsDeps, Message, Model } from '../../main'
+import type { Message, Model, SubscriptionDeps } from '../../main'
 import {
   AI_GRID_CANVAS_ID,
   HERO_GRID_CANVAS_ID,
@@ -11,10 +11,10 @@ import { startAnimation } from './startAnimation'
 
 const CANVAS_IDS = [HERO_GRID_CANVAS_ID, AI_GRID_CANVAS_ID]
 
-export const aiGrid: CommandStream<
+export const aiGrid: Subscription<
   Model,
   Message,
-  CommandStreamsDeps['aiGrid']
+  SubscriptionDeps['aiGrid']
 > = {
   modelToDeps: (model: Model) => ({
     isLandingPage: model.route._tag === 'Home',

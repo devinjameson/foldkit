@@ -7,7 +7,7 @@ import { Home, Room } from './page'
 import { AppRoute } from './route'
 import { RoomsClient } from './rpc'
 
-const CommandStreamsDeps = S.Struct({
+const SubscriptionDeps = S.Struct({
   roomSubscription: S.Option(S.Struct({ roomId: S.String, playerId: S.String })),
   keyboard: S.Struct({
     shouldCaptureKeyboard: S.Boolean,
@@ -15,7 +15,7 @@ const CommandStreamsDeps = S.Struct({
   }),
 })
 
-export const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<Model, Message>({
+export const subscriptions = Runtime.makeSubscriptions(SubscriptionDeps)<Model, Message>({
   roomSubscription: {
     modelToDeps: (model: Model) =>
       M.value(model.route).pipe(

@@ -17,15 +17,15 @@ const Model = S.Struct({
 
 type Model = typeof Model.Type
 
-// COMMAND STREAM
+// SUBSCRIPTION
 
-const CommandStreamsDeps = S.Struct({
+const SubscriptionDeps = S.Struct({
   tick: S.Struct({
     isRunning: S.Boolean,
   }),
 })
 
-const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<
+const subscriptions = Runtime.makeSubscriptions(SubscriptionDeps)<
   Model,
   Message
 >({

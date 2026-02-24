@@ -139,9 +139,9 @@ const patternMappingTable = (): Html =>
       ],
       [
         ['TanStack Query / SWR'],
-        ['Commands + Command Streams + typed async ADTs'],
+        ['Commands + Subscriptions + typed async state'],
       ],
-      [['WebSocket libraries / real-time'], ['Command Streams']],
+      [['WebSocket libraries / real-time'], ['Subscriptions']],
       [
         ['Error boundaries'],
         ['Typed errors in Effects + ', inlineCode('errorView')],
