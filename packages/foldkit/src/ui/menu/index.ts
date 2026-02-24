@@ -101,6 +101,8 @@ export const NoOp = m('NoOp')
 export const AdvancedTransitionFrame = m('AdvancedTransitionFrame')
 /** Sent internally when all CSS transitions on the menu items container have completed. */
 export const EndedTransition = m('EndedTransition')
+/** Sent internally when the menu button moves in the viewport during a leave transition, cancelling the animation. */
+export const DetectedButtonMovement = m('DetectedButtonMovement')
 /** Sent when the user presses a pointer device on the menu button. Records pointer type and toggles for mouse. */
 export const PressedPointerOnButton = m('PressedPointerOnButton', {
   pointerType: S.String,
@@ -131,6 +133,7 @@ export const Message = S.Union(
   NoOp,
   AdvancedTransitionFrame,
   EndedTransition,
+  DetectedButtonMovement,
   PressedPointerOnButton,
   ReleasedPointerOnItems,
 )
@@ -148,6 +151,7 @@ export type ClearedSearch = typeof ClearedSearch.Type
 export type NoOp = typeof NoOp.Type
 export type AdvancedTransitionFrame = typeof AdvancedTransitionFrame.Type
 export type EndedTransition = typeof EndedTransition.Type
+export type DetectedButtonMovement = typeof DetectedButtonMovement.Type
 export type PressedPointerOnButton = typeof PressedPointerOnButton.Type
 export type ReleasedPointerOnItems = typeof ReleasedPointerOnItems.Type
 
@@ -202,11 +206,11 @@ const itemsSelector = (id: string): string => `#${id}-items`
 const itemSelector = (id: string, index: number): string =>
   `#${id}-item-${index}`
 
+type UpdateReturn = [Model, ReadonlyArray<Command<Message>>]
+const withUpdateReturn = M.withReturnType<UpdateReturn>()
+
 /** Processes a menu message and returns the next model and commands. */
-export const update = (
-  model: Model,
-  message: Message,
-): [Model, ReadonlyArray<Command<Message>>] => {
+export const update = (model: Model, message: Message): UpdateReturn => {
   const maybeNextFrameCommand = OptionExt.when(
     model.isAnimated,
     Task.nextFrame.pipe(Effect.as(AdvancedTransitionFrame())),
@@ -236,7 +240,7 @@ export const update = (
   )
 
   return M.value(message).pipe(
-    M.withReturnType<[Model, ReadonlyArray<Command<Message>>]>(),
+    withUpdateReturn,
     M.tagsExhaustive({
       Opened: ({ maybeActiveItemIndex }) => {
         const nextModel = evo(model, {
@@ -394,7 +398,7 @@ export const update = (
 
       AdvancedTransitionFrame: () =>
         M.value(model.transitionState).pipe(
-          M.withReturnType<[Model, ReadonlyArray<Command<Message>>]>(),
+          withUpdateReturn,
           M.when('EnterStart', () => [
             evo(model, { transitionState: () => 'EnterAnimating' }),
             [
@@ -406,8 +410,13 @@ export const update = (
           M.when('LeaveStart', () => [
             evo(model, { transitionState: () => 'LeaveAnimating' }),
             [
-              Task.waitForTransitions(itemsSelector(model.id)).pipe(
-                Effect.as(EndedTransition()),
+              Effect.raceFirst(
+                Task.detectElementMovement(buttonSelector(model.id)).pipe(
+                  Effect.as(DetectedButtonMovement()),
+                ),
+                Task.waitForTransitions(itemsSelector(model.id)).pipe(
+                  Effect.as(EndedTransition()),
+                ),
               ),
             ],
           ]),
@@ -416,8 +425,18 @@ export const update = (
 
       EndedTransition: () =>
         M.value(model.transitionState).pipe(
-          M.withReturnType<[Model, ReadonlyArray<Command<Message>>]>(),
+          withUpdateReturn,
           M.whenOr('EnterAnimating', 'LeaveAnimating', () => [
+            evo(model, { transitionState: () => 'Idle' }),
+            [],
+          ]),
+          M.orElse(() => [model, []]),
+        ),
+
+      DetectedButtonMovement: () =>
+        M.value(model.transitionState).pipe(
+          withUpdateReturn,
+          M.when('LeaveAnimating', () => [
             evo(model, { transitionState: () => 'Idle' }),
             [],
           ]),

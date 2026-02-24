@@ -9,6 +9,7 @@ import {
   Closed,
   ClosedByTab,
   DeactivatedItem,
+  DetectedButtonMovement,
   EndedTransition,
   MovedPointerOverItem,
   NoOp,
@@ -811,6 +812,44 @@ describe('Menu', () => {
           const [result] = update(enterAnimating, Closed())
           expect(result.isOpen).toBe(false)
           expect(result.transitionState).toBe('LeaveStart')
+        })
+      })
+
+      describe('DetectedButtonMovement', () => {
+        it('cancels leave animation by setting transitionState to Idle', () => {
+          const model = openAnimatedModel()
+          const [closed] = update(model, Closed())
+          const [leaveAnimating] = update(closed, AdvancedTransitionFrame())
+          expect(leaveAnimating.transitionState).toBe('LeaveAnimating')
+
+          const [result, commands] = update(
+            leaveAnimating,
+            DetectedButtonMovement(),
+          )
+          expect(result.transitionState).toBe('Idle')
+          expect(commands).toHaveLength(0)
+        })
+
+        it('is a no-op during Idle', () => {
+          const model = openModel()
+          expect(model.transitionState).toBe('Idle')
+
+          const [result, commands] = update(model, DetectedButtonMovement())
+          expect(result).toBe(model)
+          expect(commands).toHaveLength(0)
+        })
+
+        it('is a no-op during EnterAnimating', () => {
+          const model = openAnimatedModel()
+          const [enterAnimating] = update(model, AdvancedTransitionFrame())
+          expect(enterAnimating.transitionState).toBe('EnterAnimating')
+
+          const [result, commands] = update(
+            enterAnimating,
+            DetectedButtonMovement(),
+          )
+          expect(result).toBe(enterAnimating)
+          expect(commands).toHaveLength(0)
         })
       })
     })

@@ -7,6 +7,7 @@ export {
   clickElement,
   scrollIntoView,
 } from './dom'
+export { detectElementMovement } from './elementMovement'
 export { delay, nextFrame, waitForTransitions } from './timing'
 export { randomInt } from './random'
 export { lockScroll, unlockScroll } from './scrollLock'
