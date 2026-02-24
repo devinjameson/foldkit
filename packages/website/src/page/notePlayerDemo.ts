@@ -68,7 +68,7 @@ const GAIN_RELEASE_TIME = 0.02
 const PHASE_DURATION: Duration.DurationInput = '150 millis'
 const MAX_LOG_ENTRIES = 50
 const MIN_NOTES = 2
-const MAX_NOTES = 7
+const MAX_NOTES = 8
 
 // MODEL
 
@@ -167,7 +167,7 @@ const parseNotes = (value: string) =>
   )
 // INIT
 
-const INITIAL_NOTE_SEQUENCE = 'CDEFGAB'
+const INITIAL_NOTE_SEQUENCE = 'CDEFGABC'
 
 export const init = (): [Model, ReadonlyArray<Command<Message>>] => [
   {
@@ -460,7 +460,7 @@ const playNote = (
     const gainNode = audioContext.createGain()
     const durationSeconds = DURATION_MILLISECONDS[duration] / 1000
 
-    oscillator.type = 'sine'
+    oscillator.type = 'triangle'
     oscillator.frequency.setValueAtTime(
       NOTE_FREQUENCIES[note],
       audioContext.currentTime,
@@ -576,7 +576,7 @@ const appPanel = (
             ),
             DemoView.modelStateField(
               'noteInput',
-              model.noteInput._tag,
+              noteInputLabel(model),
             ),
           ]),
           phaseIndicatorView(model),
@@ -753,24 +753,38 @@ const playbackControlView = (
   )
 }
 
-const noteSequenceView = (model: Model): Html => {
-  const notes =
-    model.noteInput._tag === 'Valid'
-      ? parseNotes(model.noteInput.value)
-      : []
+const placeholderVisualizerView: Html = div(
+  [Class('flex gap-2')],
+  Array.makeBy(MIN_NOTES, index =>
+    keyed('div')(
+      `placeholder-${index}`,
+      [
+        Class(
+          'flex-1 h-10 rounded-lg flex items-center justify-center text-sm font-bold bg-gray-200 dark:bg-gray-800 text-gray-300 dark:text-gray-600',
+        ),
+      ],
+      [span([], ['\u2013'])],
+    ),
+  ),
+)
 
-  return Array.match(notes, {
-    onEmpty: () => div([Class('hidden')], []),
-    onNonEmpty: validNotes =>
-      div(
-        [
-          Class(
-            'flex flex-col gap-2 pb-3 border-b border-gray-300 dark:border-gray-800',
-          ),
-        ],
-        [noteVisualizerView(model, validNotes)],
+const noteSequenceView = (model: Model): Html => {
+  const notes = parseNotes(model.noteInput.value)
+
+  return div(
+    [
+      Class(
+        'flex flex-col gap-2 pb-3 border-b border-gray-300 dark:border-gray-800',
       ),
-  })
+    ],
+    [
+      Array.match(notes, {
+        onEmpty: () => placeholderVisualizerView,
+        onNonEmpty: validNotes =>
+          noteVisualizerView(model, validNotes),
+      }),
+    ],
+  )
 }
 
 const noteVisualizerView = (
@@ -814,6 +828,16 @@ const noteVisualizerView = (
     }),
   )
 }
+
+const noteInputLabel = (model: Model): string =>
+  M.value(model.noteInput).pipe(
+    M.tagsExhaustive({
+      Valid: ({ value }) => `Valid("${value}")`,
+      Invalid: ({ error }) => `Invalid("${error}")`,
+      NotValidated: ({ value }) => `NotValidated("${value}")`,
+      Validating: ({ value }) => `Validating("${value}")`,
+    }),
+  )
 
 const playbackStateLabel = (model: Model): string =>
   M.value(model.playbackState).pipe(

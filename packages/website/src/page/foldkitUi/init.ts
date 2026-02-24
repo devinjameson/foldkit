@@ -18,7 +18,6 @@ export const init = (): InitReturn => [
     horizontalTabsDemo: Ui.Tabs.init({ id: 'horizontal-tabs-demo' }),
     verticalTabsDemo: Ui.Tabs.init({
       id: 'vertical-tabs-demo',
-      orientation: 'Vertical',
     }),
   },
   [],

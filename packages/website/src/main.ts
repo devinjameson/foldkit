@@ -118,6 +118,7 @@ const resolveTheme = (
 const Flags = S.Struct({
   themePreference: S.Option(ThemePreference),
   systemTheme: ResolvedTheme,
+  isNarrowViewport: S.Boolean,
 })
 
 type Flags = typeof Flags.Type
@@ -127,6 +128,11 @@ const getSystemTheme = (): ResolvedTheme =>
     ? 'Dark'
     : 'Light'
 
+export const NARROW_VIEWPORT_QUERY = '(max-width: 1023px)'
+
+const getIsNarrowViewport = (): boolean =>
+  window.matchMedia(NARROW_VIEWPORT_QUERY).matches
+
 const flags: Effect.Effect<Flags> = Effect.gen(function* () {
   const store = yield* KeyValueStore.KeyValueStore
   const maybeJson = yield* store.get(THEME_STORAGE_KEY)
@@ -135,12 +141,14 @@ const flags: Effect.Effect<Flags> = Effect.gen(function* () {
   return {
     themePreference: Option.some(theme),
     systemTheme: getSystemTheme(),
+    isNarrowViewport: getIsNarrowViewport(),
   }
 }).pipe(
   Effect.catchAll(() =>
     Effect.succeed({
       themePreference: Option.none(),
       systemTheme: getSystemTheme(),
+      isNarrowViewport: getIsNarrowViewport(),
     }),
   ),
   Effect.provide(BrowserKeyValueStore.layerLocalStorage),
@@ -156,6 +164,7 @@ export const Model = S.Struct({
   mobileTableOfContentsOpen: S.Boolean,
   activeSection: S.Option(S.String),
   isLandingHeaderVisible: S.Boolean,
+  isNarrowViewport: S.Boolean,
   themePreference: ThemePreference,
   systemTheme: ResolvedTheme,
   resolvedTheme: ResolvedTheme,
@@ -208,6 +217,9 @@ export const ChangedSystemTheme = m('ChangedSystemTheme', {
 export const ChangedHeroVisibility = m('ChangedHeroVisibility', {
   isVisible: S.Boolean,
 })
+export const ChangedViewportWidth = m('ChangedViewportWidth', {
+  isNarrow: S.Boolean,
+})
 const GotDemoTabsMessage = m('GotDemoTabsMessage', {
   message: Ui.Tabs.Message,
 })
@@ -242,6 +254,7 @@ const Message = S.Union(
   SelectedThemePreference,
   ChangedSystemTheme,
   ChangedHeroVisibility,
+  ChangedViewportWidth,
   GotDemoTabsMessage,
   GotAsyncCounterDemoMessage,
   GotNotePlayerDemoMessage,
@@ -266,7 +279,6 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
 
   const demoTabs = Ui.Tabs.init({
     id: 'demo-tabs',
-    orientation: 'Vertical',
   })
 
   const [asyncCounterDemo, asyncCounterDemoCommands] =
@@ -309,6 +321,7 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
       mobileTableOfContentsOpen: false,
       activeSection: Option.none(),
       isLandingHeaderVisible: false,
+      isNarrowViewport: loadedFlags.isNarrowViewport,
       themePreference,
       systemTheme,
       resolvedTheme,
@@ -433,6 +446,11 @@ const update = (
 
       ChangedHeroVisibility: ({ isVisible }) => [
         evo(model, { isLandingHeaderVisible: () => !isVisible }),
+        [],
+      ],
+
+      ChangedViewportWidth: ({ isNarrow }) => [
+        evo(model, { isNarrowViewport: () => isNarrow }),
         [],
       ],
 
@@ -1115,10 +1133,10 @@ const demoTabs: ReadonlyArray<DemoTab> = [
 ]
 
 const demoTabButtonClassName =
-  'px-3 py-2 text-sm font-medium cursor-pointer transition rounded-l-lg border border-r-0 border-gray-300 dark:border-gray-800 bg-gray-100 dark:bg-gray-900 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 mr-[-1px] data-[selected]:relative data-[selected]:z-10 data-[selected]:bg-gray-100 data-[selected]:dark:bg-gray-900 data-[selected]:text-gray-900 data-[selected]:dark:text-white data-[selected]:border-r-0'
+  'px-3 py-2 text-sm font-medium cursor-pointer transition border border-gray-300 dark:border-gray-800 bg-gray-100 dark:bg-gray-900 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-t-lg lg:rounded-t-none lg:rounded-l-lg lg:border-r-0 mb-[-1px] lg:mb-0 lg:mr-[-1px] data-[selected]:relative data-[selected]:z-10 data-[selected]:bg-gray-100 data-[selected]:dark:bg-gray-900 data-[selected]:text-gray-900 data-[selected]:dark:text-white data-[selected]:border-b-0 lg:data-[selected]:border-b lg:data-[selected]:border-r-0'
 
 const demoTabPanelClassName =
-  'flex-1 min-w-0 p-4 bg-gray-100 dark:bg-gray-900 rounded-r-lg rounded-bl-lg border border-gray-300 dark:border-gray-800'
+  'flex-1 min-w-0 p-4 bg-gray-100 dark:bg-gray-900 rounded-b-lg rounded-tr-lg lg:rounded-b-none lg:rounded-r-lg lg:rounded-bl-lg border border-gray-300 dark:border-gray-800'
 
 const landingView = (model: Model) => {
   const asyncCounterDemoView = Page.AsyncCounterDemo.view(
@@ -1151,8 +1169,9 @@ const landingView = (model: Model) => {
         })),
         M.exhaustive,
       ),
-    className: 'flex',
-    tabListClassName: 'flex flex-col gap-1',
+    orientation: model.isNarrowViewport ? 'Horizontal' : 'Vertical',
+    className: 'lg:flex',
+    tabListClassName: 'flex lg:flex-col gap-1',
   })
 
   return keyed('div')(
@@ -1377,6 +1396,7 @@ const CommandStreamsDeps = S.Struct({
   systemTheme: S.Struct({
     isSystemPreference: S.Boolean,
   }),
+  viewportWidth: S.Null,
 })
 
 export type CommandStreamsDeps = typeof CommandStreamsDeps.Type
@@ -1389,6 +1409,7 @@ const commandStreams = Runtime.makeCommandStreams(CommandStreamsDeps)<
   aiGrid: CommandStream.aiGrid,
   heroVisibility: CommandStream.heroVisibility,
   systemTheme: CommandStream.systemTheme,
+  viewportWidth: CommandStream.viewportWidth,
 })
 
 // RUN

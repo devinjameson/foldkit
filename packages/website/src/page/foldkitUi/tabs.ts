@@ -174,6 +174,7 @@ export const verticalDemo = (
       toMessage(GotVerticalTabsDemoMessage({ message })),
     tabs: demoTabs,
     tabToConfig: verticalTabToConfig,
+    orientation: 'Vertical',
     className: 'flex',
     tabListClassName: 'flex flex-col',
   }),

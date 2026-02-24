@@ -40,7 +40,7 @@ export const modelStateView = (fields: ReadonlyArray<Html>): Html =>
       div(
         [
           Class(
-            'font-mono text-sm bg-gray-200 dark:bg-gray-800 rounded-lg p-3 text-gray-700 dark:text-gray-300 leading-relaxed',
+            'font-mono text-xs bg-gray-200 dark:bg-gray-800 rounded-lg p-3 text-gray-700 dark:text-gray-300 leading-relaxed',
           ),
         ],
         fields,
@@ -139,7 +139,7 @@ export const demoViewShell = (
       p(
         [
           Class(
-            'text-sm text-gray-400 dark:text-gray-500 text-center lg:hidden',
+            'text-sm text-gray-400 dark:text-gray-500 text-center text-balance lg:hidden',
           ),
           AriaHidden(true),
         ],
