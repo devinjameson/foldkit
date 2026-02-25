@@ -630,8 +630,15 @@ const scrollToHash = (hash: string): Command<typeof NoOp> =>
   Effect.async(resume => {
     requestAnimationFrame(() => {
       const element = document.getElementById(hash)
+
       if (element) {
         element.scrollIntoView({ behavior: 'instant' })
+
+        if (!element.hasAttribute('tabindex')) {
+          element.setAttribute('tabindex', '-1')
+        }
+
+        element.focus({ preventScroll: true })
       }
       resume(Effect.succeed(NoOp()))
     })

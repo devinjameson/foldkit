@@ -29,6 +29,10 @@
 }
 
 @layer base {
+  [tabindex='-1']:focus {
+    outline: none;
+  }
+
   html {
     color-scheme: light;
     scroll-padding-top: calc(

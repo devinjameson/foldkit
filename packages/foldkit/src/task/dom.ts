@@ -128,6 +128,7 @@ export const scrollIntoView = (
   Effect.async<void, ElementNotFound>(resume => {
     requestAnimationFrame(() => {
       const element = document.querySelector(selector)
+
       if (element instanceof HTMLElement) {
         element.scrollIntoView({ block: 'nearest' })
         resume(Effect.void)
