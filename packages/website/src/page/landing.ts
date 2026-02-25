@@ -63,7 +63,7 @@ const heroSection = (model: Model): Html =>
     [
       Id(HERO_SECTION_ID),
       Class(
-        'landing-section relative overflow-hidden bg-white dark:bg-gray-900',
+        'landing-section relative overflow-hidden bg-white dark:bg-gray-900 -mt-[env(safe-area-inset-top,0px)] pt-[calc(2.5rem+env(safe-area-inset-top,0px))] md:pt-[calc(6rem+env(safe-area-inset-top,0px))]',
       ),
     ],
     [
