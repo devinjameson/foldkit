@@ -1,6 +1,18 @@
-import { Effect } from 'effect'
+import { Array, Effect, Equal, Match as M, Number, Option } from 'effect'
 
 import { ElementNotFound } from './error'
+
+const FOCUSABLE_SELECTOR = Array.join(
+  [
+    'a[href]',
+    'button:not([disabled])',
+    'input:not([disabled])',
+    'select:not([disabled])',
+    'textarea:not([disabled])',
+    '[tabindex]:not([tabindex="-1"])',
+  ],
+  ', ',
+)
 
 /**
  * Focuses an element matching the given selector.
@@ -122,5 +134,62 @@ export const scrollIntoView = (
       } else {
         resume(Effect.fail(new ElementNotFound({ selector })))
       }
+    })
+  })
+
+/** Direction for focus advancement — forward or backward in tab order. */
+export type FocusDirection = 'Next' | 'Previous'
+
+/**
+ * Focuses the next or previous focusable element in the document relative to the element matching the given selector.
+ * Uses requestAnimationFrame to ensure the DOM is updated before querying focus order.
+ * Fails with `ElementNotFound` if the selector does not match an `HTMLElement`.
+ *
+ * @example
+ * ```typescript
+ * Task.advanceFocus('#menu-button', 'Next').pipe(Effect.ignore, Effect.as(NoOp()))
+ * ```
+ */
+export const advanceFocus = (
+  selector: string,
+  direction: FocusDirection,
+): Effect.Effect<void, ElementNotFound> =>
+  Effect.async<void, ElementNotFound>(resume => {
+    requestAnimationFrame(() => {
+      const reference = document.querySelector(selector)
+
+      if (!(reference instanceof HTMLElement)) {
+        return resume(Effect.fail(new ElementNotFound({ selector })))
+      }
+
+      const focusableElements = Array.fromIterable(
+        document.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+      )
+
+      const referenceElementIndex = Array.findFirstIndex(
+        focusableElements,
+        Equal.equals(reference),
+      )
+
+      if (Option.isNone(referenceElementIndex)) {
+        return resume(Effect.fail(new ElementNotFound({ selector })))
+      }
+
+      const offsetReferenceElementIndex = M.value(direction).pipe(
+        M.when('Next', () => Number.increment),
+        M.when('Previous', () => Number.decrement),
+        M.exhaustive,
+      )(referenceElementIndex.value)
+
+      const nextElement = Array.get(
+        focusableElements,
+        offsetReferenceElementIndex,
+      )
+
+      if (Option.isSome(nextElement)) {
+        nextElement.value.focus()
+      }
+
+      resume(Effect.void)
     })
   })

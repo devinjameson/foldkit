@@ -10,8 +10,7 @@ import {
 
 import type { Command } from '../../command'
 import { OptionExt } from '../../effectExtensions'
-import { html } from '../../html'
-import type { Html } from '../../html'
+import { type Html, html } from '../../html'
 import { m } from '../../message'
 import { evo } from '../../struct'
 import * as Task from '../../task'
@@ -69,7 +68,7 @@ export const Opened = m('Opened', {
 })
 /** Sent when the menu closes via Escape key or backdrop click. */
 export const Closed = m('Closed')
-/** Sent when focus leaves the menu items container via Tab key. */
+/** Sent when focus leaves the menu items container via Tab key or blur. */
 export const ClosedByTab = m('ClosedByTab')
 /** Sent when an item is highlighted via arrow keys or mouse hover. Includes activation trigger. */
 export const ActivatedItem = m('ActivatedItem', {

@@ -30,8 +30,7 @@ export const detectElementMovement = (selector: string): Effect.Effect<void> =>
       const element = document.querySelector(selector)
 
       if (!(element instanceof HTMLElement)) {
-        resume(Effect.void)
-        return
+        return resume(Effect.void)
       }
 
       const initialPosition = rectToPosition(element.getBoundingClientRect())

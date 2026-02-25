@@ -14,7 +14,23 @@ export type AnchorConfig = Readonly<{
   gap?: number
   offset?: number
   padding?: number
+  portal?: boolean
 }>
+
+const PORTAL_ROOT_ID = 'foldkit-portal-root'
+
+const getOrCreatePortalRoot = (): HTMLElement => {
+  const existing = document.getElementById(PORTAL_ROOT_ID)
+
+  if (existing) {
+    return existing
+  }
+
+  const root = document.createElement('div')
+  root.id = PORTAL_ROOT_ID
+
+  return document.body.appendChild(root)
+}
 
 const anchorCleanups = new WeakMap<Element, () => void>()
 
@@ -33,11 +49,17 @@ export const anchorHooks = (config: {
       return
     }
 
+    const isPortal = config.anchor.portal ?? true
+
+    if (isPortal) {
+      getOrCreatePortalRoot().appendChild(items)
+    }
+
     const { placement, gap, offset: crossAxis, padding } = config.anchor
 
     let isFirstUpdate = true
 
-    const cleanup = autoUpdate(button, items, () => {
+    const floatingCleanup = autoUpdate(button, items, () => {
       computePosition(button, items, {
         placement: placement ?? 'bottom-start',
         strategy: 'absolute',
@@ -68,7 +90,22 @@ export const anchorHooks = (config: {
       })
     })
 
-    anchorCleanups.set(items, cleanup)
+    if (isPortal) {
+      const handleTabKey = (event: Event): void => {
+        if (event instanceof KeyboardEvent && event.key === 'Tab') {
+          button.focus()
+        }
+      }
+
+      items.addEventListener('keydown', handleTabKey)
+
+      anchorCleanups.set(items, () => {
+        floatingCleanup()
+        items.removeEventListener('keydown', handleTabKey)
+      })
+    } else {
+      anchorCleanups.set(items, floatingCleanup)
+    }
   },
   onDestroy: (items: Element) => {
     anchorCleanups.get(items)?.()

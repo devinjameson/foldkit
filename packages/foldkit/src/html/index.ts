@@ -17,6 +17,21 @@ import type { Attrs, On, Props, VNodeData } from 'snabbdom'
 import { Dispatch } from '../runtime'
 import { VNode } from '../vdom'
 
+/** Modifier key state extracted from a `KeyboardEvent`. */
+export type KeyboardModifiers = Readonly<{
+  shiftKey: boolean
+  ctrlKey: boolean
+  altKey: boolean
+  metaKey: boolean
+}>
+
+const keyboardModifiers = (event: KeyboardEvent): KeyboardModifiers => ({
+  shiftKey: event.shiftKey,
+  ctrlKey: event.ctrlKey,
+  altKey: event.altKey,
+  metaKey: event.metaKey,
+})
+
 /** A virtual DOM element represented as an `Effect` that produces a `VNode`. */
 export type Html = Effect.Effect<VNode | null, never, Dispatch>
 type Child = Html | string
@@ -282,15 +297,27 @@ type Attribute<Message> = Data.TaggedEnum<{
       timeStamp: number,
     ) => Option.Option<Message>
   }
-  OnKeyDown: { readonly f: (key: string) => Message }
+  OnKeyDown: {
+    readonly f: (key: string, modifiers: KeyboardModifiers) => Message
+  }
   OnKeyDownPreventDefault: {
-    readonly f: (key: string) => Option.Option<Message>
+    readonly f: (
+      key: string,
+      modifiers: KeyboardModifiers,
+    ) => Option.Option<Message>
   }
-  OnKeyUp: { readonly f: (key: string) => Message }
+  OnKeyUp: {
+    readonly f: (key: string, modifiers: KeyboardModifiers) => Message
+  }
   OnKeyUpPreventDefault: {
-    readonly f: (key: string) => Option.Option<Message>
+    readonly f: (
+      key: string,
+      modifiers: KeyboardModifiers,
+    ) => Option.Option<Message>
   }
-  OnKeyPress: { readonly f: (key: string) => Message }
+  OnKeyPress: {
+    readonly f: (key: string, modifiers: KeyboardModifiers) => Message
+  }
   OnFocus: { readonly message: Message }
   OnBlur: { readonly message: Message }
   OnInput: { readonly f: (value: string) => Message }
@@ -686,12 +713,13 @@ const buildVNodeData = <Message>(
             }),
           OnKeyDown: ({ f }) =>
             updateDataOn({
-              keydown: ({ key }: KeyboardEvent) => dispatchSync(f(key)),
+              keydown: (event: KeyboardEvent) =>
+                dispatchSync(f(event.key, keyboardModifiers(event))),
             }),
           OnKeyDownPreventDefault: ({ f }) =>
             updateDataOn({
               keydown: (event: KeyboardEvent) => {
-                const maybeMessage = f(event.key)
+                const maybeMessage = f(event.key, keyboardModifiers(event))
                 if (Option.isSome(maybeMessage)) {
                   event.preventDefault()
                   dispatchSync(maybeMessage.value)
@@ -700,12 +728,13 @@ const buildVNodeData = <Message>(
             }),
           OnKeyUp: ({ f }) =>
             updateDataOn({
-              keyup: ({ key }: KeyboardEvent) => dispatchSync(f(key)),
+              keyup: (event: KeyboardEvent) =>
+                dispatchSync(f(event.key, keyboardModifiers(event))),
             }),
           OnKeyUpPreventDefault: ({ f }) =>
             updateDataOn({
               keyup: (event: KeyboardEvent) => {
-                const maybeMessage = f(event.key)
+                const maybeMessage = f(event.key, keyboardModifiers(event))
                 if (Option.isSome(maybeMessage)) {
                   event.preventDefault()
                   dispatchSync(maybeMessage.value)
@@ -714,7 +743,8 @@ const buildVNodeData = <Message>(
             }),
           OnKeyPress: ({ f }) =>
             updateDataOn({
-              keypress: ({ key }: KeyboardEvent) => dispatchSync(f(key)),
+              keypress: (event: KeyboardEvent) =>
+                dispatchSync(f(event.key, keyboardModifiers(event))),
             }),
           OnFocus: ({ message }) =>
             updateDataOn({
@@ -1523,25 +1553,35 @@ type HtmlAttributes<Message> = {
       timeStamp: number,
     ) => Option.Option<Message>
   }
-  OnKeyDown: (f: (key: string) => Message) => {
+  OnKeyDown: (f: (key: string, modifiers: KeyboardModifiers) => Message) => {
     readonly _tag: 'OnKeyDown'
-    readonly f: (key: string) => Message
+    readonly f: (key: string, modifiers: KeyboardModifiers) => Message
   }
-  OnKeyDownPreventDefault: (f: (key: string) => Option.Option<Message>) => {
+  OnKeyDownPreventDefault: (
+    f: (key: string, modifiers: KeyboardModifiers) => Option.Option<Message>,
+  ) => {
     readonly _tag: 'OnKeyDownPreventDefault'
-    readonly f: (key: string) => Option.Option<Message>
+    readonly f: (
+      key: string,
+      modifiers: KeyboardModifiers,
+    ) => Option.Option<Message>
   }
-  OnKeyUp: (f: (key: string) => Message) => {
+  OnKeyUp: (f: (key: string, modifiers: KeyboardModifiers) => Message) => {
     readonly _tag: 'OnKeyUp'
-    readonly f: (key: string) => Message
+    readonly f: (key: string, modifiers: KeyboardModifiers) => Message
   }
-  OnKeyUpPreventDefault: (f: (key: string) => Option.Option<Message>) => {
+  OnKeyUpPreventDefault: (
+    f: (key: string, modifiers: KeyboardModifiers) => Option.Option<Message>,
+  ) => {
     readonly _tag: 'OnKeyUpPreventDefault'
-    readonly f: (key: string) => Option.Option<Message>
+    readonly f: (
+      key: string,
+      modifiers: KeyboardModifiers,
+    ) => Option.Option<Message>
   }
-  OnKeyPress: (f: (key: string) => Message) => {
+  OnKeyPress: (f: (key: string, modifiers: KeyboardModifiers) => Message) => {
     readonly _tag: 'OnKeyPress'
-    readonly f: (key: string) => Message
+    readonly f: (key: string, modifiers: KeyboardModifiers) => Message
   }
   OnFocus: (message: Message) => {
     readonly _tag: 'OnFocus'
@@ -1897,13 +1937,18 @@ const htmlAttributes = <Message>(): HtmlAttributes<Message> => ({
       timeStamp: number,
     ) => Option.Option<Message>,
   ) => OnPointerUp({ f }),
-  OnKeyDown: (f: (key: string) => Message) => OnKeyDown({ f }),
-  OnKeyDownPreventDefault: (f: (key: string) => Option.Option<Message>) =>
-    OnKeyDownPreventDefault({ f }),
-  OnKeyUp: (f: (key: string) => Message) => OnKeyUp({ f }),
-  OnKeyUpPreventDefault: (f: (key: string) => Option.Option<Message>) =>
-    OnKeyUpPreventDefault({ f }),
-  OnKeyPress: (f: (key: string) => Message) => OnKeyPress({ f }),
+  OnKeyDown: (f: (key: string, modifiers: KeyboardModifiers) => Message) =>
+    OnKeyDown({ f }),
+  OnKeyDownPreventDefault: (
+    f: (key: string, modifiers: KeyboardModifiers) => Option.Option<Message>,
+  ) => OnKeyDownPreventDefault({ f }),
+  OnKeyUp: (f: (key: string, modifiers: KeyboardModifiers) => Message) =>
+    OnKeyUp({ f }),
+  OnKeyUpPreventDefault: (
+    f: (key: string, modifiers: KeyboardModifiers) => Option.Option<Message>,
+  ) => OnKeyUpPreventDefault({ f }),
+  OnKeyPress: (f: (key: string, modifiers: KeyboardModifiers) => Message) =>
+    OnKeyPress({ f }),
   OnFocus: (message: Message) => OnFocus({ message }),
   OnBlur: (message: Message) => OnBlur({ message }),
   OnInput: (f: (value: string) => Message) => OnInput({ f }),

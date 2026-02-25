@@ -1279,6 +1279,21 @@ describe('Menu', () => {
         expect(itemsContainer?.data?.hook?.destroy).toBeUndefined()
       })
 
+      it('adds hooks when portal is true', () => {
+        const model = openModel()
+        const config = {
+          ...baseViewConfig(model),
+          anchor: { placement: 'bottom-start' as const, portal: true },
+        }
+        const vnode = renderView(config)
+        const itemsContainer = findChildByKey(vnode, 'test-items-container')
+
+        expect(itemsContainer?.data?.style?.position).toBe('absolute')
+        expect(itemsContainer?.data?.style?.visibility).toBe('hidden')
+        expect(itemsContainer?.data?.hook?.insert).toBeTypeOf('function')
+        expect(itemsContainer?.data?.hook?.destroy).toBeTypeOf('function')
+      })
+
       it('does not affect button attributes when anchor is provided', () => {
         const model = openModel()
         const configWithAnchor = {

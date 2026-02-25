@@ -1,12 +1,14 @@
 export { ElementNotFound, TimeZoneError } from './error'
 export { getTime, getTimeZone, getZonedTime, getZonedTimeIn } from './time'
 export {
+  advanceFocus,
   focus,
   showModal,
   closeModal,
   clickElement,
   scrollIntoView,
 } from './dom'
+export type { FocusDirection } from './dom'
 export { detectElementMovement } from './elementMovement'
 export { delay, nextFrame, waitForTransitions } from './timing'
 export { randomInt } from './random'
