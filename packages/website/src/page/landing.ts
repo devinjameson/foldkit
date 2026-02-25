@@ -318,7 +318,7 @@ const demoSection = (demoTabsView: Html): Html =>
               ),
             ],
             [
-              'See the architecture in action. Each demo shows a different pattern — from state animation to chained commands.',
+              "Watch a message flow through update into the model. The code highlights in real time to show you what's happening at each step.",
             ],
           ),
           div([Class('demo-viewport-constraint')], [demoTabsView]),
