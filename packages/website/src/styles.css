@@ -12,13 +12,13 @@
 }
 
 :root {
-  --header-height: 3.5rem;
+  --header-height: calc(3.5rem + env(safe-area-inset-top, 0px));
   --mobile-toc-height: 2.75rem;
 }
 
 @media (min-width: theme(--breakpoint-md)) {
   :root {
-    --header-height: 4.5rem;
+    --header-height: calc(4.5rem + env(safe-area-inset-top, 0px));
   }
 }
 

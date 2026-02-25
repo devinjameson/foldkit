@@ -714,7 +714,7 @@ const sidebarView = (
       div(
         [
           Class(
-            'flex justify-between items-center p-4 md:hidden border-b border-gray-300 dark:border-gray-800 shrink-0 bg-white dark:bg-black',
+            'flex justify-between items-center p-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] md:hidden border-b border-gray-300 dark:border-gray-800 shrink-0 bg-white dark:bg-black',
           ),
         ],
         [
@@ -1060,7 +1060,7 @@ const landingHeaderView = (model: Model) =>
     [
       Class(
         classNames(
-          'fixed top-0 inset-x-0 z-50 h-[var(--header-height)] bg-white/80 dark:bg-gray-850/80 backdrop-blur-sm border-b border-gray-300 dark:border-gray-800 px-4 md:px-8 flex items-center justify-between transition-transform duration-300',
+          'fixed top-0 inset-x-0 z-50 h-[var(--header-height)] pt-[env(safe-area-inset-top,0px)] bg-white/80 dark:bg-gray-850/80 backdrop-blur-sm border-b border-gray-300 dark:border-gray-800 px-4 md:px-8 flex items-center justify-between transition-transform duration-300',
           {
             '-translate-y-full': !model.isLandingHeaderVisible,
             'translate-y-0': model.isLandingHeaderVisible,
@@ -1199,7 +1199,7 @@ const docsHeaderView = (model: Model) =>
   header(
     [
       Class(
-        'fixed top-0 inset-x-0 z-50 h-[var(--header-height)] bg-white dark:bg-gray-900 border-b border-gray-300 dark:border-gray-800 pl-2 pr-3 md:px-8 flex items-center justify-between',
+        'fixed top-0 inset-x-0 z-50 h-[var(--header-height)] pt-[env(safe-area-inset-top,0px)] bg-white dark:bg-gray-900 border-b border-gray-300 dark:border-gray-800 pl-2 pr-3 md:px-8 flex items-center justify-between',
       ),
     ],
     [
