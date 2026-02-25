@@ -205,6 +205,7 @@ const ToggledMobileTableOfContents = m(
 )
 const ClickedMobileTableOfContentsLink = m(
   'ClickedMobileTableOfContentsLink',
+  { sectionId: S.String },
 )
 export const ChangedActiveSection = m('ChangedActiveSection', {
   sectionId: S.String,
@@ -344,7 +345,7 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
       ...mappedApiReferenceCommands,
       ...Option.match(url.hash, {
         onNone: () => [],
-        onSome: hash => [scrollToHash(hash)],
+        onSome: hash => [scrollToHashAfterRender(hash)],
       }),
     ],
   ]
@@ -434,8 +435,11 @@ const update = (
         [],
       ],
 
-      ClickedMobileTableOfContentsLink: () => [
-        evo(model, { mobileTableOfContentsOpen: () => false }),
+      ClickedMobileTableOfContentsLink: ({ sectionId }) => [
+        evo(model, {
+          mobileTableOfContentsOpen: () => false,
+          activeSection: () => Option.some(sectionId),
+        }),
         [],
       ],
 
@@ -626,20 +630,32 @@ const scrollToTop: Command<typeof NoOp> = Effect.sync(() => {
   return NoOp()
 })
 
+const focusAndScrollToHash = (hash: string): void => {
+  const element = document.getElementById(hash)
+
+  if (element) {
+    element.scrollIntoView({ behavior: 'instant' })
+
+    if (!element.hasAttribute('tabindex')) {
+      element.setAttribute('tabindex', '-1')
+    }
+
+    element.focus({ preventScroll: true })
+  }
+}
+
 const scrollToHash = (hash: string): Command<typeof NoOp> =>
+  Effect.sync(() => {
+    focusAndScrollToHash(hash)
+    return NoOp()
+  })
+
+const scrollToHashAfterRender = (
+  hash: string,
+): Command<typeof NoOp> =>
   Effect.async(resume => {
     requestAnimationFrame(() => {
-      const element = document.getElementById(hash)
-
-      if (element) {
-        element.scrollIntoView({ behavior: 'instant' })
-
-        if (!element.hasAttribute('tabindex')) {
-          element.setAttribute('tabindex', '-1')
-        }
-
-        element.focus({ preventScroll: true })
-      }
+      focusAndScrollToHash(hash)
       resume(Effect.succeed(NoOp()))
     })
   })
@@ -901,6 +917,9 @@ const tableOfContentsView = (
                   a(
                     [
                       Href(`#${id}`),
+                      OnClick(
+                        ChangedActiveSection({ sectionId: id }),
+                      ),
                       Class(
                         classNames('transition block', {
                           'text-blue-600 dark:text-blue-400 underline':
@@ -1021,7 +1040,11 @@ const mobileTableOfContentsView = (
                   a(
                     [
                       Href(`#${id}`),
-                      OnClick(ClickedMobileTableOfContentsLink()),
+                      OnClick(
+                        ClickedMobileTableOfContentsLink({
+                          sectionId: id,
+                        }),
+                      ),
                       Class(
                         classNames(
                           'transition flex items-center justify-between py-3 px-4',
