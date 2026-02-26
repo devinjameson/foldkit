@@ -1,5 +1,8 @@
 import { Array, Match as M, Option, Predicate, pipe } from 'effect'
 
+/** Whether a keyboard event key is a single printable character (not a named key like "Enter" or "ArrowDown"). */
+export const isPrintableKey = (key: string): boolean => key.length === 1
+
 export const wrapIndex = (index: number, length: number): number =>
   ((index % length) + length) % length
 

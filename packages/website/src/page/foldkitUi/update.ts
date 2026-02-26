@@ -7,6 +7,9 @@ import {
   GotDialogDemoMessage,
   GotDisclosureDemoMessage,
   GotHorizontalTabsDemoMessage,
+  GotListboxDemoMessage,
+  GotListboxGroupedDemoMessage,
+  GotListboxMultiDemoMessage,
   GotMenuAnimatedDemoMessage,
   GotMenuBasicDemoMessage,
   GotVerticalTabsDemoMessage,
@@ -51,6 +54,54 @@ export const update = (
           disclosureCommands.map(
             Effect.map(message =>
               GotDisclosureDemoMessage({ message }),
+            ),
+          ),
+        ]
+      },
+
+      GotListboxDemoMessage: ({ message }) => {
+        const [nextListboxDemo, listboxCommands] = Ui.Listbox.update(
+          model.listboxDemo,
+          message,
+        )
+
+        return [
+          evo(model, {
+            listboxDemo: () => nextListboxDemo,
+          }),
+          listboxCommands.map(
+            Effect.map(message => GotListboxDemoMessage({ message })),
+          ),
+        ]
+      },
+
+      GotListboxMultiDemoMessage: ({ message }) => {
+        const [nextListboxMultiDemo, listboxMultiCommands] =
+          Ui.Listbox.update(model.listboxMultiDemo, message)
+
+        return [
+          evo(model, {
+            listboxMultiDemo: () => nextListboxMultiDemo,
+          }),
+          listboxMultiCommands.map(
+            Effect.map(message =>
+              GotListboxMultiDemoMessage({ message }),
+            ),
+          ),
+        ]
+      },
+
+      GotListboxGroupedDemoMessage: ({ message }) => {
+        const [nextListboxGroupedDemo, listboxGroupedCommands] =
+          Ui.Listbox.update(model.listboxGroupedDemo, message)
+
+        return [
+          evo(model, {
+            listboxGroupedDemo: () => nextListboxGroupedDemo,
+          }),
+          listboxGroupedCommands.map(
+            Effect.map(message =>
+              GotListboxGroupedDemoMessage({ message }),
             ),
           ),
         ]

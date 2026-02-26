@@ -10,6 +10,14 @@ export const init = (): InitReturn => [
   {
     dialogDemo: Ui.Dialog.init({ id: 'dialog-demo' }),
     disclosureDemo: Ui.Disclosure.init({ id: 'disclosure-demo' }),
+    listboxDemo: Ui.Listbox.init({ id: 'listbox-demo' }),
+    listboxMultiDemo: Ui.Listbox.init({
+      id: 'listbox-multi-demo',
+      isMultiple: true,
+    }),
+    listboxGroupedDemo: Ui.Listbox.init({
+      id: 'listbox-grouped-demo',
+    }),
     menuBasicDemo: Ui.Menu.init({ id: 'menu-basic-demo' }),
     menuAnimatedDemo: Ui.Menu.init({
       id: 'menu-animated-demo',

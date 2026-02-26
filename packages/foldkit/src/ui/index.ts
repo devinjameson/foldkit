@@ -1,4 +1,5 @@
 export * as Dialog from './dialog/public'
 export * as Disclosure from './disclosure/public'
+export * as Listbox from './listbox/public'
 export * as Menu from './menu/public'
 export * as Tabs from './tabs/public'
