@@ -1,5 +1,11 @@
 # foldkit
 
+## 0.24.0
+
+### Minor Changes
+
+- acff49f: Add Listbox UI component with full Headless UI parity, including typeahead search, keyboard navigation, grouped items, horizontal/vertical orientation, and open/close transition support
+
 ## 0.23.0
 
 ### Minor Changes
