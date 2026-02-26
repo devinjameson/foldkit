@@ -1313,7 +1313,7 @@ const docsHeaderView = (model: Model) =>
     ],
   )
 
-const apiReferenceContent = (
+const apiReferenceView = (
   apiReferenceModel: Page.ApiReference.Model,
 ): Html =>
   Page.ApiReference.view(
@@ -1343,7 +1343,7 @@ const docsView = (model: Model, docsRoute: DocsRoute) => {
       ProjectOrganization: () => Page.ProjectOrganization.view(model),
       AdvancedPatterns: () => Page.AdvancedPatterns.view(model),
       ApiReference: () =>
-        lazyApiReference(apiReferenceContent, [model.apiReference]),
+        lazyApiReference(apiReferenceView, [model.apiReference]),
       FoldkitUi: () =>
         Page.FoldkitUi.view(model.foldkitUi, message =>
           GotFoldkitUiMessage({ message }),

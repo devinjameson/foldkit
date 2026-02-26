@@ -41,7 +41,7 @@ const resolveOrCache = <Args extends ReadonlyArray<unknown>>(
  *  function reference and all arguments are referentially equal (`===`) to the
  *  previous call, the cached VNode is returned without re-running the view
  *  function. Snabbdom's `patchVnode` short-circuits when it sees the same VNode
- *  reference, so both vnode construction and subtree diffing are skipped. */
+ *  reference, so both VNode construction and subtree diffing are skipped. */
 export const createLazy = (): (<Args extends ReadonlyArray<unknown>>(
   fn: (...args: Args) => Html,
   args: Args,
