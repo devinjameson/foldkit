@@ -268,10 +268,12 @@ export type Message = typeof Message.Type
 
 // INIT
 
-const init: Runtime.ApplicationInit<Model, Message, Flags> = (
-  loadedFlags: Flags,
-  url: Url,
-) => {
+const init: Runtime.ApplicationInit<
+  Model,
+  Message,
+  Flags,
+  Page.NotePlayerDemo.AudioContextService
+> = (loadedFlags: Flags, url: Url) => {
   const themePreference = Option.getOrElse(
     loadedFlags.themePreference,
     () => 'System' as const,
@@ -356,9 +358,25 @@ const init: Runtime.ApplicationInit<Model, Message, Flags> = (
 const update = (
   model: Model,
   message: Message,
-): [Model, ReadonlyArray<Command<Message>>] =>
+): [
+  Model,
+  ReadonlyArray<
+    Command<Message, never, Page.NotePlayerDemo.AudioContextService>
+  >,
+] =>
   M.value(message).pipe(
-    M.withReturnType<[Model, ReadonlyArray<Command<Message>>]>(),
+    M.withReturnType<
+      [
+        Model,
+        ReadonlyArray<
+          Command<
+            Message,
+            never,
+            Page.NotePlayerDemo.AudioContextService
+          >
+        >,
+      ]
+    >(),
     M.tagsExhaustive({
       NoOp: () => [model, []],
 
@@ -1463,6 +1481,7 @@ const application = Runtime.makeApplication({
     onUrlRequest: request => ClickedLink({ request }),
     onUrlChange: url => ChangedUrl({ url }),
   },
+  resources: Page.NotePlayerDemo.AudioContextService.Default,
 })
 
 Runtime.run(application)

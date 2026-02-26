@@ -65,6 +65,7 @@ const DURATION_MILLISECONDS: Record<NoteDuration, number> = {
 
 const GAIN_ATTACK_TIME = 0.01
 const GAIN_RELEASE_TIME = 0.02
+const GAIN_NEAR_SILENT = 0.001
 const PHASE_DURATION: Duration.DurationInput = '150 millis'
 const MAX_LOG_ENTRIES = 50
 const MIN_NOTES = 2
@@ -169,7 +170,10 @@ const parseNotes = (value: string) =>
 
 const INITIAL_NOTE_SEQUENCE = 'CDEFGABC'
 
-export const init = (): [Model, ReadonlyArray<Command<Message>>] => [
+export const init = (): [
+  Model,
+  ReadonlyArray<Command<Message, never, AudioContextService>>,
+] => [
   {
     noteInput: validateNoteInput(INITIAL_NOTE_SEQUENCE),
     noteDuration: 'Medium',
@@ -183,7 +187,10 @@ export const init = (): [Model, ReadonlyArray<Command<Message>>] => [
 
 // UPDATE
 
-type UpdateReturn = [Model, ReadonlyArray<Command<Message>>]
+type UpdateReturn = [
+  Model,
+  ReadonlyArray<Command<Message, never, AudioContextService>>,
+]
 const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
 const prependToLog =
@@ -449,47 +456,56 @@ export const update = (
 
 // COMMAND
 
+export class AudioContextService extends Effect.Service<AudioContextService>()(
+  'AudioContextService',
+  {
+    sync: () => new AudioContext(),
+  },
+) {}
+
 const playNote = (
   note: Note,
   duration: NoteDuration,
   noteIndex: number,
-): Command<typeof PlayedNote> =>
-  Effect.async<typeof PlayedNote.Type>(resume => {
-    const audioContext = new AudioContext()
-    const oscillator = audioContext.createOscillator()
-    const gainNode = audioContext.createGain()
-    const durationSeconds = DURATION_MILLISECONDS[duration] / 1000
+): Command<typeof PlayedNote, never, AudioContextService> =>
+  Effect.gen(function* () {
+    const audioContext = yield* AudioContextService
 
-    oscillator.type = 'triangle'
-    oscillator.frequency.setValueAtTime(
-      NOTE_FREQUENCIES[note],
-      audioContext.currentTime,
-    )
+    return yield* Effect.async<typeof PlayedNote.Type>(resume => {
+      const oscillator = audioContext.createOscillator()
+      const gainNode = audioContext.createGain()
+      const durationSeconds = DURATION_MILLISECONDS[duration] / 1000
 
-    const releaseEnd =
-      audioContext.currentTime + durationSeconds - GAIN_RELEASE_TIME
+      oscillator.type = 'triangle'
+      oscillator.frequency.setValueAtTime(
+        NOTE_FREQUENCIES[note],
+        audioContext.currentTime,
+      )
 
-    gainNode.gain.setValueAtTime(0, audioContext.currentTime)
-    gainNode.gain.linearRampToValueAtTime(
-      0.1,
-      audioContext.currentTime + GAIN_ATTACK_TIME,
-    )
-    gainNode.gain.exponentialRampToValueAtTime(
-      0.01,
-      releaseEnd - GAIN_ATTACK_TIME,
-    )
-    gainNode.gain.linearRampToValueAtTime(0, releaseEnd)
+      const releaseEnd =
+        audioContext.currentTime + durationSeconds - GAIN_RELEASE_TIME
 
-    oscillator.connect(gainNode)
-    gainNode.connect(audioContext.destination)
+      gainNode.gain.setValueAtTime(0, audioContext.currentTime)
+      gainNode.gain.linearRampToValueAtTime(
+        0.1,
+        audioContext.currentTime + GAIN_ATTACK_TIME,
+      )
+      gainNode.gain.exponentialRampToValueAtTime(
+        GAIN_NEAR_SILENT,
+        releaseEnd,
+      )
 
-    oscillator.start()
-    oscillator.stop(audioContext.currentTime + durationSeconds)
+      oscillator.connect(gainNode)
+      gainNode.connect(audioContext.destination)
 
-    oscillator.onended = () => {
-      audioContext.close()
-      resume(Effect.succeed(PlayedNote({ noteIndex })))
-    }
+      oscillator.start()
+      oscillator.stop(audioContext.currentTime + durationSeconds)
+
+      oscillator.onended = () => {
+        gainNode.disconnect()
+        resume(Effect.succeed(PlayedNote({ noteIndex })))
+      }
+    })
   })
 
 // VIEW

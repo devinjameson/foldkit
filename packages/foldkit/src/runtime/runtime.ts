@@ -5,6 +5,7 @@ import {
   Effect,
   Either,
   Function,
+  Layer,
   Option,
   Predicate,
   Queue,
@@ -52,6 +53,7 @@ export interface RuntimeConfig<
   Message,
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
   Flags,
+  Resources = never,
 > {
   Model: Schema.Schema<Model, any, never>
   Flags: Schema.Schema<Flags, any, never>
@@ -59,32 +61,54 @@ export interface RuntimeConfig<
   readonly init: (
     flags: Flags,
     url?: Url,
-  ) => [Model, ReadonlyArray<Command<Message>>]
+  ) => [Model, ReadonlyArray<Command<Message, never, Resources>>]
   readonly update: (
     model: Model,
     message: Message,
-  ) => [Model, ReadonlyArray<Command<Message>>]
+  ) => [Model, ReadonlyArray<Command<Message, never, Resources>>]
   readonly view: (model: Model) => Html
-  readonly subscriptions?: Subscriptions<Model, Message, StreamDepsMap>
+  readonly subscriptions?: Subscriptions<
+    Model,
+    Message,
+    StreamDepsMap,
+    Resources
+  >
   readonly container: HTMLElement
   readonly browser?: BrowserConfig<Message>
   readonly errorView?: (error: Error) => Html
+  /**
+   * An Effect Layer providing long-lived resources that persist across command
+   * invocations. Use this for browser resources with lifecycle (AudioContext,
+   * RTCPeerConnection, CanvasRenderingContext2D) — not for stateless utilities
+   * (HttpClient, JSON encoding) which should be provided per-command.
+   *
+   * The runtime memoizes the layer, ensuring a single shared instance for all
+   * commands and subscriptions throughout the application's lifetime.
+   */
+  readonly resources?: Layer.Layer<Resources>
 }
 
 interface BaseElementConfig<
   Model,
   Message,
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
+  Resources = never,
 > {
   readonly Model: Schema.Schema<Model, any, never>
   readonly update: (
     model: Model,
     message: Message,
-  ) => [Model, ReadonlyArray<Command<Message>>]
+  ) => [Model, ReadonlyArray<Command<Message, never, Resources>>]
   readonly view: (model: Model) => Html
-  readonly subscriptions?: Subscriptions<Model, Message, StreamDepsMap>
+  readonly subscriptions?: Subscriptions<
+    Model,
+    Message,
+    StreamDepsMap,
+    Resources
+  >
   readonly container: HTMLElement
   readonly errorView?: (error: Error) => Html
+  readonly resources?: Layer.Layer<Resources>
 }
 
 /** Configuration for `makeElement` when the element receives initial data via flags. */
@@ -93,10 +117,13 @@ export interface ElementConfigWithFlags<
   Message,
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
   Flags,
-> extends BaseElementConfig<Model, Message, StreamDepsMap> {
+  Resources = never,
+> extends BaseElementConfig<Model, Message, StreamDepsMap, Resources> {
   readonly Flags: Schema.Schema<Flags, any, never>
   readonly flags: Effect.Effect<Flags>
-  readonly init: (flags: Flags) => [Model, ReadonlyArray<Command<Message>>]
+  readonly init: (
+    flags: Flags,
+  ) => [Model, ReadonlyArray<Command<Message, never, Resources>>]
 }
 
 /** Configuration for `makeElement` without flags. */
@@ -104,25 +131,36 @@ export interface ElementConfigWithoutFlags<
   Model,
   Message,
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
-> extends BaseElementConfig<Model, Message, StreamDepsMap> {
-  readonly init: () => [Model, ReadonlyArray<Command<Message>>]
+  Resources = never,
+> extends BaseElementConfig<Model, Message, StreamDepsMap, Resources> {
+  readonly init: () => [
+    Model,
+    ReadonlyArray<Command<Message, never, Resources>>,
+  ]
 }
 
 interface BaseApplicationConfig<
   Model,
   Message,
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
+  Resources = never,
 > {
   readonly Model: Schema.Schema<Model, any, never>
   readonly update: (
     model: Model,
     message: Message,
-  ) => [Model, ReadonlyArray<Command<Message>>]
+  ) => [Model, ReadonlyArray<Command<Message, never, Resources>>]
   readonly view: (model: Model) => Html
-  readonly subscriptions?: Subscriptions<Model, Message, StreamDepsMap>
+  readonly subscriptions?: Subscriptions<
+    Model,
+    Message,
+    StreamDepsMap,
+    Resources
+  >
   readonly container: HTMLElement
   readonly browser: BrowserConfig<Message>
   readonly errorView?: (error: Error) => Html
+  readonly resources?: Layer.Layer<Resources>
 }
 
 /** Configuration for `makeApplication` when the application receives initial data via flags. */
@@ -131,13 +169,14 @@ export interface ApplicationConfigWithFlags<
   Message,
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
   Flags,
-> extends BaseApplicationConfig<Model, Message, StreamDepsMap> {
+  Resources = never,
+> extends BaseApplicationConfig<Model, Message, StreamDepsMap, Resources> {
   readonly Flags: Schema.Schema<Flags, any, never>
   readonly flags: Effect.Effect<Flags>
   readonly init: (
     flags: Flags,
     url: Url,
-  ) => [Model, ReadonlyArray<Command<Message>>]
+  ) => [Model, ReadonlyArray<Command<Message, never, Resources>>]
 }
 
 /** Configuration for `makeApplication` without flags. */
@@ -145,40 +184,60 @@ export interface ApplicationConfigWithoutFlags<
   Model,
   Message,
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
-> extends BaseApplicationConfig<Model, Message, StreamDepsMap> {
-  readonly init: (url: Url) => [Model, ReadonlyArray<Command<Message>>]
+  Resources = never,
+> extends BaseApplicationConfig<Model, Message, StreamDepsMap, Resources> {
+  readonly init: (
+    url: Url,
+  ) => [Model, ReadonlyArray<Command<Message, never, Resources>>]
 }
 
 /** The `init` function type for elements, with an optional `flags` parameter when `Flags` is not `void`. */
-export type ElementInit<Model, Message, Flags = void> = Flags extends void
-  ? () => [Model, ReadonlyArray<Command<Message>>]
-  : (flags: Flags) => [Model, ReadonlyArray<Command<Message>>]
+export type ElementInit<
+  Model,
+  Message,
+  Flags = void,
+  Resources = never,
+> = Flags extends void
+  ? () => [Model, ReadonlyArray<Command<Message, never, Resources>>]
+  : (flags: Flags) => [Model, ReadonlyArray<Command<Message, never, Resources>>]
 
 /** The `init` function type for applications, receives the current URL and optional flags. */
-export type ApplicationInit<Model, Message, Flags = void> = Flags extends void
-  ? (url: Url) => [Model, ReadonlyArray<Command<Message>>]
-  : (flags: Flags, url: Url) => [Model, ReadonlyArray<Command<Message>>]
+export type ApplicationInit<
+  Model,
+  Message,
+  Flags = void,
+  Resources = never,
+> = Flags extends void
+  ? (url: Url) => [Model, ReadonlyArray<Command<Message, never, Resources>>]
+  : (
+      flags: Flags,
+      url: Url,
+    ) => [Model, ReadonlyArray<Command<Message, never, Resources>>]
 
 /** A reactive binding between model state and a long-running stream of commands. */
-export type Subscription<Model, Message, StreamDeps> = {
+export type Subscription<Model, Message, StreamDeps, Resources = never> = {
   readonly modelToDeps: (model: Model) => StreamDeps
-  readonly depsToStream: (deps: StreamDeps) => Stream.Stream<Command<Message>>
+  readonly depsToStream: (
+    deps: StreamDeps,
+  ) => Stream.Stream<Command<Message, never, Resources>>
 }
 
-type SubscriptionConfig<Model, Message, StreamDeps> = {
+type SubscriptionConfig<Model, Message, StreamDeps, Resources = never> = {
   readonly schema: Schema.Schema<StreamDeps>
-} & Subscription<Model, Message, StreamDeps>
+} & Subscription<Model, Message, StreamDeps, Resources>
 
 /** A record of named subscription configurations, keyed by dependency field name. */
 export type Subscriptions<
   Model,
   Message,
   SubscriptionDeps extends Schema.Struct<any>,
+  Resources = never,
 > = {
   readonly [K in keyof Schema.Schema.Type<SubscriptionDeps>]: SubscriptionConfig<
     Model,
     Message,
-    Schema.Schema.Type<SubscriptionDeps>[K]
+    Schema.Schema.Type<SubscriptionDeps>[K],
+    Resources
   >
 }
 
@@ -187,12 +246,12 @@ export const makeSubscriptions =
   <SubscriptionDeps extends Schema.Struct<any>>(
     SubscriptionDeps: SubscriptionDeps,
   ) =>
-  <Model, Message>(configs: {
+  <Model, Message, Resources = never>(configs: {
     [K in keyof Schema.Schema.Type<SubscriptionDeps>]: {
       modelToDeps: (model: Model) => Schema.Schema.Type<SubscriptionDeps>[K]
       depsToStream: (
         deps: Schema.Schema.Type<SubscriptionDeps>[K],
-      ) => Stream.Stream<Command<Message>>
+      ) => Stream.Stream<Command<Message, never, Resources>>
     }
   }) =>
     Record.map(configs, ({ modelToDeps, depsToStream }, key) => ({
@@ -210,6 +269,7 @@ const makeRuntime =
     Message,
     StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
     Flags,
+    Resources,
   >({
     Model,
     Flags: _Flags,
@@ -221,182 +281,223 @@ const makeRuntime =
     container,
     browser: browserConfig,
     errorView,
-  }: RuntimeConfig<Model, Message, StreamDepsMap, Flags>): MakeRuntimeReturn =>
+    resources,
+  }: RuntimeConfig<
+    Model,
+    Message,
+    StreamDepsMap,
+    Flags,
+    Resources
+  >): MakeRuntimeReturn =>
   (hmrModel?: unknown): Effect.Effect<void> =>
-    Effect.gen(function* () {
-      const flags = yield* flags_
+    Effect.scoped(
+      Effect.gen(function* () {
+        const maybeResourceLayer = resources
+          ? Option.some(yield* Layer.memoize(resources))
+          : Option.none()
 
-      const modelEquivalence = Schema.equivalence(Model)
+        const provideCommandResources = (
+          command: Effect.Effect<Message, never, Resources>,
+        ): Effect.Effect<Message> =>
+          Option.match(maybeResourceLayer, {
+            /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+            onNone: () => command as Effect.Effect<Message>,
+            onSome: resourceLayer => Effect.provide(command, resourceLayer),
+          })
 
-      const messageQueue = yield* Queue.unbounded<Message>()
-      const enqueueMessage = (message: Message) =>
-        Queue.offer(messageQueue, message)
+        const flags = yield* flags_
 
-      const currentUrl: Option.Option<Url> = Option.fromNullable(
-        browserConfig,
-      ).pipe(Option.flatMap(() => urlFromString(window.location.href)))
+        const modelEquivalence = Schema.equivalence(Model)
 
-      const [initModel, initCommands] = Predicate.isNotUndefined(hmrModel)
-        ? pipe(
-            hmrModel,
-            Schema.decodeUnknownEither(Model),
-            Either.match({
-              onLeft: () => init(flags, Option.getOrUndefined(currentUrl)),
-              onRight: restoredModel => [restoredModel, []],
-            }),
-          )
-        : init(flags, Option.getOrUndefined(currentUrl))
+        const messageQueue = yield* Queue.unbounded<Message>()
+        const enqueueMessage = (message: Message) =>
+          Queue.offer(messageQueue, message)
 
-      const modelSubscriptionRef = yield* SubscriptionRef.make(initModel)
+        const currentUrl: Option.Option<Url> = Option.fromNullable(
+          browserConfig,
+        ).pipe(Option.flatMap(() => urlFromString(window.location.href)))
 
-      yield* Effect.forEach(initCommands, command =>
-        Effect.forkDaemon(command.pipe(Effect.flatMap(enqueueMessage))),
-      )
-
-      if (browserConfig) {
-        addNavigationEventListeners(messageQueue, browserConfig)
-      }
-
-      const modelRef = yield* Ref.make<Model>(initModel)
-
-      const maybeCurrentVNodeRef = yield* Ref.make<Option.Option<VNode>>(
-        Option.none(),
-      )
-
-      const maybeRuntimeRef = yield* Ref.make<
-        Option.Option<Runtime.Runtime<never>>
-      >(Option.none())
-
-      const processMessage = (message: Message): Effect.Effect<void> =>
-        Effect.gen(function* () {
-          const currentModel = yield* Ref.get(modelRef)
-
-          const [nextModel, commands] = update(currentModel, message)
-
-          yield* Ref.set(modelRef, nextModel)
-          yield* render(nextModel)
-
-          if (!modelEquivalence(currentModel, nextModel)) {
-            yield* SubscriptionRef.set(modelSubscriptionRef, nextModel)
-            preserveModel(nextModel)
-          }
-
-          yield* Effect.forEach(commands, command =>
-            Effect.forkDaemon(command.pipe(Effect.flatMap(enqueueMessage))),
-          )
-        })
-
-      const runProcessMessage =
-        (messageEffect: Effect.Effect<void>) =>
-        (runtime: Runtime.Runtime<never>): void => {
-          try {
-            Runtime.runSync(runtime)(messageEffect)
-          } catch (error) {
-            const squashed = Runtime.isFiberFailure(error)
-              ? Cause.squash(error[Runtime.FiberFailureCauseId])
-              : error
-
-            const appError =
-              squashed instanceof Error ? squashed : new Error(String(squashed))
-            renderErrorView(
-              appError,
-              errorView,
-              container,
-              maybeCurrentVNodeRef,
+        const [initModel, initCommands] = Predicate.isNotUndefined(hmrModel)
+          ? pipe(
+              hmrModel,
+              Schema.decodeUnknownEither(Model),
+              Either.match({
+                onLeft: () => init(flags, Option.getOrUndefined(currentUrl)),
+                onRight: restoredModel => [restoredModel, []],
+              }),
             )
-          }
+          : init(flags, Option.getOrUndefined(currentUrl))
+
+        const modelSubscriptionRef = yield* SubscriptionRef.make(initModel)
+
+        yield* Effect.forEach(initCommands, command =>
+          Effect.forkDaemon(
+            command.pipe(
+              provideCommandResources,
+              Effect.flatMap(enqueueMessage),
+            ),
+          ),
+        )
+
+        if (browserConfig) {
+          addNavigationEventListeners(messageQueue, browserConfig)
         }
 
-      const dispatchSync = (message: unknown): void => {
-        const maybeRuntime = Effect.runSync(Ref.get(maybeRuntimeRef))
+        const modelRef = yield* Ref.make<Model>(initModel)
 
-        Option.match(maybeRuntime, {
-          onNone: Function.constVoid,
-          onSome: runProcessMessage(
-            /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-            processMessage(message as Message),
-          ),
-        })
-      }
+        const maybeCurrentVNodeRef = yield* Ref.make<Option.Option<VNode>>(
+          Option.none(),
+        )
 
-      const dispatchAsync = (message: unknown): Effect.Effect<void> =>
-        /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-        enqueueMessage(message as Message)
+        const maybeRuntimeRef = yield* Ref.make<
+          Option.Option<Runtime.Runtime<never>>
+        >(Option.none())
 
-      const render = (model: Model) =>
-        view(model).pipe(
-          Effect.flatMap(nextVNodeNullish =>
-            Effect.gen(function* () {
-              const maybeCurrentVNode = yield* Ref.get(maybeCurrentVNodeRef)
-              const patchedVNode = yield* Effect.sync(() =>
-                patchVNode(maybeCurrentVNode, nextVNodeNullish, container),
+        const processMessage = (message: Message): Effect.Effect<void> =>
+          Effect.gen(function* () {
+            const currentModel = yield* Ref.get(modelRef)
+
+            const [nextModel, commands] = update(currentModel, message)
+
+            yield* Ref.set(modelRef, nextModel)
+            yield* render(nextModel)
+
+            if (!modelEquivalence(currentModel, nextModel)) {
+              yield* SubscriptionRef.set(modelSubscriptionRef, nextModel)
+              preserveModel(nextModel)
+            }
+
+            yield* Effect.forEach(commands, command =>
+              Effect.forkDaemon(
+                command.pipe(
+                  provideCommandResources,
+                  Effect.flatMap(enqueueMessage),
+                ),
+              ),
+            )
+          })
+
+        const runProcessMessage =
+          (messageEffect: Effect.Effect<void>) =>
+          (runtime: Runtime.Runtime<never>): void => {
+            try {
+              Runtime.runSync(runtime)(messageEffect)
+            } catch (error) {
+              const squashed = Runtime.isFiberFailure(error)
+                ? Cause.squash(error[Runtime.FiberFailureCauseId])
+                : error
+
+              const appError =
+                squashed instanceof Error
+                  ? squashed
+                  : new Error(String(squashed))
+              renderErrorView(
+                appError,
+                errorView,
+                container,
+                maybeCurrentVNodeRef,
               )
-              yield* Ref.set(maybeCurrentVNodeRef, Option.some(patchedVNode))
+            }
+          }
+
+        const dispatchSync = (message: unknown): void => {
+          const maybeRuntime = Effect.runSync(Ref.get(maybeRuntimeRef))
+
+          Option.match(maybeRuntime, {
+            onNone: Function.constVoid,
+            onSome: runProcessMessage(
+              /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+              processMessage(message as Message),
+            ),
+          })
+        }
+
+        const dispatchAsync = (message: unknown): Effect.Effect<void> =>
+          /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+          enqueueMessage(message as Message)
+
+        const render = (model: Model) =>
+          view(model).pipe(
+            Effect.flatMap(nextVNodeNullish =>
+              Effect.gen(function* () {
+                const maybeCurrentVNode = yield* Ref.get(maybeCurrentVNodeRef)
+                const patchedVNode = yield* Effect.sync(() =>
+                  patchVNode(maybeCurrentVNode, nextVNodeNullish, container),
+                )
+                yield* Ref.set(maybeCurrentVNodeRef, Option.some(patchedVNode))
+              }),
+            ),
+            Effect.provideService(Dispatch, {
+              dispatchAsync,
+              dispatchSync,
+            }),
+          )
+
+        const runtime = yield* Effect.runtime()
+        yield* Ref.set(maybeRuntimeRef, Option.some(runtime))
+
+        yield* render(initModel)
+
+        addBfcacheRestoreListener()
+
+        if (subscriptions) {
+          yield* pipe(
+            subscriptions,
+            Record.toEntries,
+            Effect.forEach(
+              ([_key, { schema, modelToDeps, depsToStream }]) => {
+                const modelStream = Stream.concat(
+                  Stream.make(initModel),
+                  modelSubscriptionRef.changes,
+                )
+
+                return Effect.forkDaemon(
+                  modelStream.pipe(
+                    Stream.map(modelToDeps),
+                    Stream.changesWith(Schema.equivalence(schema)),
+                    Stream.flatMap(depsToStream, { switch: true }),
+                    Stream.runForEach(command =>
+                      command.pipe(
+                        provideCommandResources,
+                        Effect.flatMap(enqueueMessage),
+                      ),
+                    ),
+                  ),
+                )
+              },
+              {
+                concurrency: 'unbounded',
+                discard: true,
+              },
+            ),
+          )
+        }
+
+        yield* pipe(
+          Effect.forever(
+            Effect.gen(function* () {
+              const message = yield* Queue.take(messageQueue)
+              yield* processMessage(message)
             }),
           ),
-          Effect.provideService(Dispatch, {
-            dispatchAsync,
-            dispatchSync,
-          }),
-        )
-
-      const runtime = yield* Effect.runtime()
-      yield* Ref.set(maybeRuntimeRef, Option.some(runtime))
-
-      yield* render(initModel)
-
-      addBfcacheRestoreListener()
-
-      if (subscriptions) {
-        yield* pipe(
-          subscriptions,
-          Record.toEntries,
-          Effect.forEach(
-            ([_key, { schema, modelToDeps, depsToStream }]) => {
-              const modelStream = Stream.concat(
-                Stream.make(initModel),
-                modelSubscriptionRef.changes,
+          Effect.catchAllCause(cause =>
+            Effect.sync(() => {
+              const squashed = Cause.squash(cause)
+              const appError =
+                squashed instanceof Error
+                  ? squashed
+                  : new Error(String(squashed))
+              renderErrorView(
+                appError,
+                errorView,
+                container,
+                maybeCurrentVNodeRef,
               )
-
-              return Effect.forkDaemon(
-                modelStream.pipe(
-                  Stream.map(modelToDeps),
-                  Stream.changesWith(Schema.equivalence(schema)),
-                  Stream.flatMap(depsToStream, { switch: true }),
-                  Stream.runForEach(Effect.flatMap(enqueueMessage)),
-                ),
-              )
-            },
-            {
-              concurrency: 'unbounded',
-              discard: true,
-            },
+            }),
           ),
         )
-      }
-
-      yield* pipe(
-        Effect.forever(
-          Effect.gen(function* () {
-            const message = yield* Queue.take(messageQueue)
-            yield* processMessage(message)
-          }),
-        ),
-        Effect.catchAllCause(cause =>
-          Effect.sync(() => {
-            const squashed = Cause.squash(cause)
-            const appError =
-              squashed instanceof Error ? squashed : new Error(String(squashed))
-            renderErrorView(
-              appError,
-              errorView,
-              container,
-              maybeCurrentVNodeRef,
-            )
-          }),
-        ),
-      )
-    })
+      }),
+    )
 
 const patchVNode = (
   maybeCurrentVNode: Option.Option<VNode>,
@@ -457,16 +558,24 @@ export function makeElement<
   Message extends { _tag: string },
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
   Flags,
+  Resources = never,
 >(
-  config: ElementConfigWithFlags<Model, Message, StreamDepsMap, Flags>,
+  config: ElementConfigWithFlags<
+    Model,
+    Message,
+    StreamDepsMap,
+    Flags,
+    Resources
+  >,
 ): MakeRuntimeReturn
 
 export function makeElement<
   Model,
   Message extends { _tag: string },
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
+  Resources = never,
 >(
-  config: ElementConfigWithoutFlags<Model, Message, StreamDepsMap>,
+  config: ElementConfigWithoutFlags<Model, Message, StreamDepsMap, Resources>,
 ): MakeRuntimeReturn
 
 export function makeElement<
@@ -474,10 +583,11 @@ export function makeElement<
   Message extends { _tag: string },
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
   Flags,
+  Resources = never,
 >(
   config:
-    | ElementConfigWithFlags<Model, Message, StreamDepsMap, Flags>
-    | ElementConfigWithoutFlags<Model, Message, StreamDepsMap>,
+    | ElementConfigWithFlags<Model, Message, StreamDepsMap, Flags, Resources>
+    | ElementConfigWithoutFlags<Model, Message, StreamDepsMap, Resources>,
 ): MakeRuntimeReturn {
   const baseConfig = {
     Model: config.Model,
@@ -486,6 +596,7 @@ export function makeElement<
     ...(config.subscriptions && { subscriptions: config.subscriptions }),
     container: config.container,
     ...(config.errorView && { errorView: config.errorView }),
+    ...(config.resources && { resources: config.resources }),
   }
 
   if ('Flags' in config) {
@@ -511,16 +622,29 @@ export function makeApplication<
   Message extends { _tag: string },
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
   Flags,
+  Resources = never,
 >(
-  config: ApplicationConfigWithFlags<Model, Message, StreamDepsMap, Flags>,
+  config: ApplicationConfigWithFlags<
+    Model,
+    Message,
+    StreamDepsMap,
+    Flags,
+    Resources
+  >,
 ): MakeRuntimeReturn
 
 export function makeApplication<
   Model,
   Message extends { _tag: string },
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
+  Resources = never,
 >(
-  config: ApplicationConfigWithoutFlags<Model, Message, StreamDepsMap>,
+  config: ApplicationConfigWithoutFlags<
+    Model,
+    Message,
+    StreamDepsMap,
+    Resources
+  >,
 ): MakeRuntimeReturn
 
 export function makeApplication<
@@ -528,10 +652,17 @@ export function makeApplication<
   Message extends { _tag: string },
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
   Flags,
+  Resources = never,
 >(
   config:
-    | ApplicationConfigWithFlags<Model, Message, StreamDepsMap, Flags>
-    | ApplicationConfigWithoutFlags<Model, Message, StreamDepsMap>,
+    | ApplicationConfigWithFlags<
+        Model,
+        Message,
+        StreamDepsMap,
+        Flags,
+        Resources
+      >
+    | ApplicationConfigWithoutFlags<Model, Message, StreamDepsMap, Resources>,
 ): MakeRuntimeReturn {
   const currentUrl: Url = Option.getOrThrow(urlFromString(window.location.href))
 
@@ -543,6 +674,7 @@ export function makeApplication<
     container: config.container,
     browser: config.browser,
     ...(config.errorView && { errorView: config.errorView }),
+    ...(config.resources && { resources: config.resources }),
   }
 
   if ('Flags' in config) {

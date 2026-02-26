@@ -403,14 +403,28 @@ M.tagsExhaustive({
   },
 })
 
+// RESOURCE
+
+class AudioContextService extends Effect.Service<AudioContextService>()(
+  'AudioContextService',
+  { sync: () => new AudioContext() },
+) {}
+
 // COMMAND
 
 const playNote = (note, duration, noteIndex) =>
-  Effect.async(resume => {
-    const oscillator = audioContext.createOscillator()
-    oscillator.frequency.setValueAtTime(NOTE_FREQUENCIES[note])
-    oscillator.onended = () =>
-      resume(Effect.succeed(PlayedNote({ noteIndex })))
+  Effect.gen(function* () {
+    const audioContext = yield* AudioContextService
+
+    return yield* Effect.async(resume => {
+      const oscillator = audioContext.createOscillator()
+      oscillator.frequency.setValueAtTime(NOTE_FREQUENCIES[note])
+      oscillator.connect(audioContext.destination)
+      oscillator.start()
+      oscillator.stop(audioContext.currentTime + duration)
+      oscillator.onended = () =>
+        resume(Effect.succeed(PlayedNote({ noteIndex })))
+    })
   })`
 
 const notePlayerDemoCodePlugin = (): Plugin => ({

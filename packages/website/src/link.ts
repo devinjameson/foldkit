@@ -9,6 +9,8 @@ export const Link = {
   effectSchema: 'https://effect.website/docs/schema/introduction/',
   effectMatch:
     'https://effect.website/docs/code-style/pattern-matching/',
+  effectService:
+    'https://effect.website/docs/requirements-management/services/',
   react: 'https://react.dev',
   vue: 'https://vuejs.org',
   angular: 'https://angular.dev',

@@ -406,19 +406,27 @@
   }
 
   .note-demo-code-panel[data-note-demo-phase='NoteCommand']
-    [data-line='57'],
+    [data-line='64'],
   .note-demo-code-panel[data-note-demo-phase='NoteCommand']
-    [data-line='58'],
+    [data-line='65'],
   .note-demo-code-panel[data-note-demo-phase='NoteCommand']
-    [data-line='59'],
+    [data-line='66'],
   .note-demo-code-panel[data-note-demo-phase='NoteCommand']
-    [data-line='60'],
+    [data-line='67'],
   .note-demo-code-panel[data-note-demo-phase='NoteCommand']
-    [data-line='61'],
+    [data-line='68'],
   .note-demo-code-panel[data-note-demo-phase='NoteCommand']
-    [data-line='62'],
+    [data-line='69'],
   .note-demo-code-panel[data-note-demo-phase='NoteCommand']
-    [data-line='63'] {
+    [data-line='70'],
+  .note-demo-code-panel[data-note-demo-phase='NoteCommand']
+    [data-line='71'],
+  .note-demo-code-panel[data-note-demo-phase='NoteCommand']
+    [data-line='72'],
+  .note-demo-code-panel[data-note-demo-phase='NoteCommand']
+    [data-line='73'],
+  .note-demo-code-panel[data-note-demo-phase='NoteCommand']
+    [data-line='74'] {
     @apply bg-violet-500/15;
     border-left-color: theme(--color-violet-400);
   }
