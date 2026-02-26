@@ -17,9 +17,11 @@ import { evo } from '../../struct'
 import * as Task from '../../task'
 import { groupContiguous } from '../group'
 import { findFirstEnabledIndex, isPrintableKey, keyToIndex } from '../keyboard'
+import { anchorHooks } from '../menu/anchor'
+import type { AnchorConfig } from '../menu/anchor'
 import { resolveTypeaheadMatch } from '../typeahead'
-import { anchorHooks } from './anchor'
-import type { AnchorConfig } from './anchor'
+
+export { resolveTypeaheadMatch }
 
 // MODEL
 
@@ -37,41 +39,41 @@ export const TransitionState = S.Literal(
 )
 export type TransitionState = typeof TransitionState.Type
 
-const PointerOrigin = S.Struct({
-  screenX: S.Number,
-  screenY: S.Number,
-  timeStamp: S.Number,
-})
+/** Schema for the listbox orientation — whether items flow vertically or horizontally. */
+export const Orientation = S.Literal('Vertical', 'Horizontal')
+export type Orientation = typeof Orientation.Type
 
-/** Schema for the menu component's state, tracking open/closed status, active item, activation trigger, and typeahead search. */
+/** Schema for the listbox component's state, tracking open/closed status, active item, selected items, activation trigger, and typeahead search. */
 export const Model = S.Struct({
   id: S.String,
   isOpen: S.Boolean,
   isAnimated: S.Boolean,
   isModal: S.Boolean,
+  isMultiple: S.Boolean,
+  orientation: Orientation,
   transitionState: TransitionState,
   maybeActiveItemIndex: S.OptionFromSelf(S.Number),
   activationTrigger: ActivationTrigger,
   searchQuery: S.String,
   searchVersion: S.Number,
+  selectedItems: S.Array(S.String),
   maybeLastPointerPosition: S.OptionFromSelf(
     S.Struct({ screenX: S.Number, screenY: S.Number }),
   ),
   maybeLastButtonPointerType: S.OptionFromSelf(S.String),
-  maybePointerOrigin: S.OptionFromSelf(PointerOrigin),
 })
 
 export type Model = typeof Model.Type
 
 // MESSAGE
 
-/** Sent when the menu opens via button click or keyboard. Contains an optional initial active item index — None for pointer, Some for keyboard. */
+/** Sent when the listbox opens via button click or keyboard. Contains an optional initial active item index — None for pointer, Some for keyboard. */
 export const Opened = m('Opened', {
   maybeActiveItemIndex: S.OptionFromSelf(S.Number),
 })
-/** Sent when the menu closes via Escape key or backdrop click. */
+/** Sent when the listbox closes via Escape key or backdrop click. */
 export const Closed = m('Closed')
-/** Sent when focus leaves the menu items container via Tab key or blur. */
+/** Sent when focus leaves the listbox items container via Tab key or blur. */
 export const ClosedByTab = m('ClosedByTab')
 /** Sent when an item is highlighted via arrow keys or mouse hover. Includes activation trigger. */
 export const ActivatedItem = m('ActivatedItem', {
@@ -80,8 +82,8 @@ export const ActivatedItem = m('ActivatedItem', {
 })
 /** Sent when the mouse leaves an enabled item. */
 export const DeactivatedItem = m('DeactivatedItem')
-/** Sent when an item is selected via Enter, Space, or click. */
-export const SelectedItem = m('SelectedItem', { index: S.Number })
+/** Sent when an item is selected via Enter, Space, or click. Contains the item's string value. */
+export const SelectedItem = m('SelectedItem', { item: S.String })
 /** Sent when Enter or Space is pressed on the active item, triggering a programmatic click on the DOM element. */
 export const RequestedItemClick = m('RequestedItemClick', {
   index: S.Number,
@@ -93,7 +95,7 @@ export const Searched = m('Searched', {
 })
 /** Sent after the search debounce period to clear the accumulated query. */
 export const ClearedSearch = m('ClearedSearch', { version: S.Number })
-/** Sent when the pointer moves over a menu item, carrying screen coordinates for tracked-pointer comparison. */
+/** Sent when the pointer moves over a listbox item, carrying screen coordinates for tracked-pointer comparison. */
 export const MovedPointerOverItem = m('MovedPointerOverItem', {
   index: S.Number,
   screenX: S.Number,
@@ -103,26 +105,17 @@ export const MovedPointerOverItem = m('MovedPointerOverItem', {
 export const NoOp = m('NoOp')
 /** Sent internally when a double-rAF completes, advancing the transition to its animating phase. */
 export const AdvancedTransitionFrame = m('AdvancedTransitionFrame')
-/** Sent internally when all CSS transitions on the menu items container have completed. */
+/** Sent internally when all CSS transitions on the listbox items container have completed. */
 export const EndedTransition = m('EndedTransition')
-/** Sent internally when the menu button moves in the viewport during a leave transition, cancelling the animation. */
+/** Sent internally when the listbox button moves in the viewport during a leave transition, cancelling the animation. */
 export const DetectedButtonMovement = m('DetectedButtonMovement')
-/** Sent when the user presses a pointer device on the menu button. Records pointer type and toggles for mouse. */
+/** Sent when the user presses a pointer device on the listbox button. Records pointer type for click handling. */
 export const PressedPointerOnButton = m('PressedPointerOnButton', {
   pointerType: S.String,
   button: S.Number,
-  screenX: S.Number,
-  screenY: S.Number,
-  timeStamp: S.Number,
-})
-/** Sent when the user releases a pointer on the items container, enabling drag-to-select for mouse. */
-export const ReleasedPointerOnItems = m('ReleasedPointerOnItems', {
-  screenX: S.Number,
-  screenY: S.Number,
-  timeStamp: S.Number,
 })
 
-/** Union of all messages the menu component can produce. */
+/** Union of all messages the listbox component can produce. */
 export const Message = S.Union(
   Opened,
   Closed,
@@ -139,7 +132,6 @@ export const Message = S.Union(
   EndedTransition,
   DetectedButtonMovement,
   PressedPointerOnButton,
-  ReleasedPointerOnItems,
 )
 
 export type Opened = typeof Opened.Type
@@ -157,7 +149,6 @@ export type AdvancedTransitionFrame = typeof AdvancedTransitionFrame.Type
 export type EndedTransition = typeof EndedTransition.Type
 export type DetectedButtonMovement = typeof DetectedButtonMovement.Type
 export type PressedPointerOnButton = typeof PressedPointerOnButton.Type
-export type ReleasedPointerOnItems = typeof ReleasedPointerOnItems.Type
 
 export type Message = typeof Message.Type
 
@@ -165,30 +156,33 @@ export type Message = typeof Message.Type
 
 const SEARCH_DEBOUNCE_MILLISECONDS = 350
 const LEFT_MOUSE_BUTTON = 0
-const POINTER_HOLD_THRESHOLD_MILLISECONDS = 200
-const POINTER_MOVEMENT_THRESHOLD_PIXELS = 5
 
-/** Configuration for creating a menu model with `init`. `isAnimated` enables CSS transition coordination (default `false`). `isModal` locks page scroll and inerts other elements when open (default `false`). */
+/** Configuration for creating a listbox model with `init`. `isAnimated` enables CSS transition coordination (default `false`). `isModal` locks page scroll and inerts other elements when open (default `false`). `isMultiple` enables multi-select with toggle behavior (default `false`). `selectedItems` sets the initial selection (default `[]`). */
 export type InitConfig = Readonly<{
   id: string
   isAnimated?: boolean
   isModal?: boolean
+  isMultiple?: boolean
+  orientation?: Orientation
+  selectedItems?: ReadonlyArray<string>
 }>
 
-/** Creates an initial menu model from a config. Defaults to closed with no active item. */
+/** Creates an initial listbox model from a config. Defaults to closed with no active item and no selection. */
 export const init = (config: InitConfig): Model => ({
   id: config.id,
   isOpen: false,
   isAnimated: config.isAnimated ?? false,
   isModal: config.isModal ?? false,
+  isMultiple: config.isMultiple ?? false,
+  orientation: config.orientation ?? 'Vertical',
   transitionState: 'Idle',
   maybeActiveItemIndex: Option.none(),
   activationTrigger: 'Keyboard',
   searchQuery: '',
   searchVersion: 0,
+  selectedItems: config.selectedItems ?? [],
   maybeLastPointerPosition: Option.none(),
   maybeLastButtonPointerType: Option.none(),
-  maybePointerOrigin: Option.none(),
 })
 
 // UPDATE
@@ -203,7 +197,6 @@ const closedModel = (model: Model): Model =>
     searchVersion: () => 0,
     maybeLastPointerPosition: () => Option.none(),
     maybeLastButtonPointerType: () => Option.none(),
-    maybePointerOrigin: () => Option.none(),
   })
 
 const buttonSelector = (id: string): string => `#${id}-button`
@@ -214,7 +207,7 @@ const itemSelector = (id: string, index: number): string =>
 type UpdateReturn = [Model, ReadonlyArray<Command<Message>>]
 const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
-/** Processes a menu message and returns the next model and commands. */
+/** Processes a listbox message and returns the next model and commands. */
 export const update = (model: Model, message: Message): UpdateReturn => {
   const maybeNextFrame = OptionExt.when(
     model.isAnimated,
@@ -242,6 +235,11 @@ export const update = (model: Model, message: Message): UpdateReturn => {
   const maybeRestoreInert = OptionExt.when(
     model.isModal,
     Task.restoreInert(model.id).pipe(Effect.as(NoOp())),
+  )
+
+  const focusButton = Task.focus(buttonSelector(model.id)).pipe(
+    Effect.ignore,
+    Effect.as(NoOp()),
   )
 
   return M.value(message).pipe(
@@ -284,12 +282,7 @@ export const update = (model: Model, message: Message): UpdateReturn => {
             maybeUnlockScroll,
             maybeRestoreInert,
           ]),
-          Array.prepend(
-            Task.focus(buttonSelector(model.id)).pipe(
-              Effect.ignore,
-              Effect.as(NoOp()),
-            ),
-          ),
+          Array.prepend(focusButton),
         ),
       ],
 
@@ -339,22 +332,29 @@ export const update = (model: Model, message: Message): UpdateReturn => {
           ? [evo(model, { maybeActiveItemIndex: () => Option.none() }), []]
           : [model, []],
 
-      SelectedItem: () => [
-        closedModel(model),
-        pipe(
-          Array.getSomes([
-            maybeNextFrame,
-            maybeUnlockScroll,
-            maybeRestoreInert,
-          ]),
-          Array.prepend(
-            Task.focus(buttonSelector(model.id)).pipe(
-              Effect.ignore,
-              Effect.as(NoOp()),
-            ),
+      SelectedItem: ({ item }) => {
+        if (model.isMultiple) {
+          const nextSelectedItems = Array.contains(model.selectedItems, item)
+            ? Array.filter(model.selectedItems, selected => selected !== item)
+            : Array.append(model.selectedItems, item)
+
+          return [evo(model, { selectedItems: () => nextSelectedItems }), []]
+        }
+
+        return [
+          evo(closedModel(model), {
+            selectedItems: () => [item],
+          }),
+          pipe(
+            Array.getSomes([
+              maybeNextFrame,
+              maybeUnlockScroll,
+              maybeRestoreInert,
+            ]),
+            Array.prepend(focusButton),
           ),
-        ),
-      ],
+        ]
+      },
 
       RequestedItemClick: ({ index }) => [
         model,
@@ -440,13 +440,7 @@ export const update = (model: Model, message: Message): UpdateReturn => {
           M.orElse(() => [model, []]),
         ),
 
-      PressedPointerOnButton: ({
-        pointerType,
-        button,
-        screenX,
-        screenY,
-        timeStamp,
-      }) => {
+      PressedPointerOnButton: ({ pointerType, button }) => {
         const withPointerType = evo(model, {
           maybeLastButtonPointerType: () => Option.some(pointerType),
         })
@@ -464,12 +458,7 @@ export const update = (model: Model, message: Message): UpdateReturn => {
                 maybeUnlockScroll,
                 maybeRestoreInert,
               ]),
-              Array.prepend(
-                Task.focus(buttonSelector(model.id)).pipe(
-                  Effect.ignore,
-                  Effect.as(NoOp()),
-                ),
-              ),
+              Array.prepend(focusButton),
             ),
           ]
         }
@@ -482,8 +471,6 @@ export const update = (model: Model, message: Message): UpdateReturn => {
           searchQuery: () => '',
           searchVersion: () => 0,
           maybeLastPointerPosition: () => Option.none(),
-          maybePointerOrigin: () =>
-            Option.some({ screenX, screenY, timeStamp }),
         })
 
         return [
@@ -500,45 +487,6 @@ export const update = (model: Model, message: Message): UpdateReturn => {
         ]
       },
 
-      ReleasedPointerOnItems: ({ screenX, screenY, timeStamp }) => {
-        const hasNoOrigin = Option.isNone(model.maybePointerOrigin)
-
-        const hasNoActiveItem = Option.isNone(model.maybeActiveItemIndex)
-
-        const isMovementBelowThreshold = Option.exists(
-          model.maybePointerOrigin,
-          origin =>
-            Math.abs(screenX - origin.screenX) <
-              POINTER_MOVEMENT_THRESHOLD_PIXELS &&
-            Math.abs(screenY - origin.screenY) <
-              POINTER_MOVEMENT_THRESHOLD_PIXELS,
-        )
-
-        const isHoldTimeBelowThreshold = Option.exists(
-          model.maybePointerOrigin,
-          origin =>
-            timeStamp - origin.timeStamp < POINTER_HOLD_THRESHOLD_MILLISECONDS,
-        )
-
-        if (
-          hasNoOrigin ||
-          isMovementBelowThreshold ||
-          isHoldTimeBelowThreshold ||
-          hasNoActiveItem
-        ) {
-          return [model, []]
-        }
-
-        return [
-          model,
-          [
-            Task.clickElement(
-              itemSelector(model.id, model.maybeActiveItemIndex.value),
-            ).pipe(Effect.ignore, Effect.as(NoOp())),
-          ],
-        ]
-      },
-
       NoOp: () => [model, []],
     }),
   )
@@ -546,7 +494,7 @@ export const update = (model: Model, message: Message): UpdateReturn => {
 
 // VIEW
 
-/** Configuration for an individual menu item's appearance. */
+/** Configuration for an individual listbox item's appearance. */
 export type ItemConfig = Readonly<{
   className: string
   content: Html
@@ -558,8 +506,8 @@ export type GroupHeading = Readonly<{
   className: string
 }>
 
-/** Configuration for rendering a menu with `view`. */
-export type ViewConfig<Message, Item extends string> = Readonly<{
+/** Configuration for rendering a listbox with `view`. */
+export type ViewConfig<Message, Item> = Readonly<{
   model: Model
   toMessage: (
     message:
@@ -573,16 +521,20 @@ export type ViewConfig<Message, Item extends string> = Readonly<{
       | RequestedItemClick
       | Searched
       | PressedPointerOnButton
-      | ReleasedPointerOnItems
       | NoOp,
   ) => Message
   items: ReadonlyArray<Item>
   itemToConfig: (
     item: Item,
-    context: Readonly<{ isActive: boolean; isDisabled: boolean }>,
+    context: Readonly<{
+      isActive: boolean
+      isDisabled: boolean
+      isSelected: boolean
+    }>,
   ) => ItemConfig
   isItemDisabled?: (item: Item, index: number) => boolean
   itemToSearchText?: (item: Item, index: number) => string
+  itemToValue?: (item: Item) => string
   isButtonDisabled?: boolean
   buttonContent: Html
   buttonClassName: string
@@ -594,27 +546,34 @@ export type ViewConfig<Message, Item extends string> = Readonly<{
   groupClassName?: string
   separatorClassName?: string
   anchor?: AnchorConfig
+  name?: string
+  form?: string
+  isDisabled?: boolean
+  isInvalid?: boolean
 }>
-
-export { groupContiguous, resolveTypeaheadMatch }
 
 const itemId = (id: string, index: number): string => `${id}-item-${index}`
 
-/** Renders a headless menu with typeahead search, keyboard navigation, and aria-activedescendant focus management. */
-export const view = <Message, Item extends string>(
+/** Renders a headless listbox with typeahead search, keyboard navigation, selection tracking, and aria-activedescendant focus management. */
+export const view = <Message, Item>(
   config: ViewConfig<Message, Item>,
 ): Html => {
   const {
     div,
+    input,
     AriaActiveDescendant,
     AriaControls,
     AriaDisabled,
     AriaExpanded,
     AriaHasPopup,
     AriaLabelledBy,
+    AriaOrientation,
+    AriaSelected,
+    Attribute,
     Class,
     DataAttribute,
     Id,
+    Name,
     OnBlur,
     OnClick,
     OnDestroy,
@@ -624,11 +583,11 @@ export const view = <Message, Item extends string>(
     OnPointerDown,
     OnPointerLeave,
     OnPointerMove,
-    OnPointerUp,
     Role,
     Style,
     Tabindex,
     Type,
+    Value,
     keyed,
   } = html<Message>()
 
@@ -636,8 +595,11 @@ export const view = <Message, Item extends string>(
     model: {
       id,
       isOpen,
+      isMultiple,
+      orientation,
       transitionState,
       maybeActiveItemIndex,
+      selectedItems,
       searchQuery,
       maybeLastButtonPointerType,
     },
@@ -645,7 +607,6 @@ export const view = <Message, Item extends string>(
     items,
     itemToConfig,
     isItemDisabled,
-    itemToSearchText = (item: Item) => item,
     isButtonDisabled,
     buttonContent,
     buttonClassName,
@@ -657,7 +618,15 @@ export const view = <Message, Item extends string>(
     groupClassName,
     separatorClassName,
     anchor,
+    name,
+    form,
+    isDisabled,
+    isInvalid,
   } = config
+
+  const itemToValue = config.itemToValue ?? (item => String(item))
+  const itemToSearchText =
+    config.itemToSearchText ?? (item => itemToValue(item))
 
   const isLeaving =
     transitionState === 'LeaveStart' || transitionState === 'LeaveAnimating'
@@ -686,7 +655,7 @@ export const view = <Message, Item extends string>(
       M.orElse(() => []),
     )
 
-  const isDisabled = (index: number): boolean =>
+  const isItemDisabledByIndex = (index: number): boolean =>
     Predicate.isNotUndefined(isItemDisabled) &&
     pipe(
       items,
@@ -694,17 +663,40 @@ export const view = <Message, Item extends string>(
       Option.exists(item => isItemDisabled(item, index)),
     )
 
+  const isButtonEffectivelyDisabled = isDisabled || isButtonDisabled
+
+  const nextKey = orientation === 'Horizontal' ? 'ArrowRight' : 'ArrowDown'
+  const previousKey = orientation === 'Horizontal' ? 'ArrowLeft' : 'ArrowUp'
+
+  const navigationKeys = [
+    nextKey,
+    previousKey,
+    'Home',
+    'End',
+    'PageUp',
+    'PageDown',
+  ]
+  const isNavigationKey = (key: string): boolean =>
+    Array.contains(navigationKeys, key)
+
   const firstEnabledIndex = findFirstEnabledIndex(
     items.length,
     0,
-    isDisabled,
+    isItemDisabledByIndex,
   )(0, 1)
 
   const lastEnabledIndex = findFirstEnabledIndex(
     items.length,
     0,
-    isDisabled,
+    isItemDisabledByIndex,
   )(items.length - 1, -1)
+
+  const selectedItemIndex = pipe(
+    Array.head(selectedItems),
+    Option.flatMap(selectedItem =>
+      Array.findFirstIndex(items, item => itemToValue(item) === selectedItem),
+    ),
+  )
 
   const handleButtonKeyDown = (key: string): Option.Option<Message> =>
     M.value(key).pipe(
@@ -712,7 +704,9 @@ export const view = <Message, Item extends string>(
         Option.some(
           toMessage(
             Opened({
-              maybeActiveItemIndex: Option.some(firstEnabledIndex),
+              maybeActiveItemIndex: Option.orElse(selectedItemIndex, () =>
+                Option.some(firstEnabledIndex),
+              ),
             }),
           ),
         ),
@@ -721,7 +715,9 @@ export const view = <Message, Item extends string>(
         Option.some(
           toMessage(
             Opened({
-              maybeActiveItemIndex: Option.some(lastEnabledIndex),
+              maybeActiveItemIndex: Option.orElse(selectedItemIndex, () =>
+                Option.some(lastEnabledIndex),
+              ),
             }),
           ),
         ),
@@ -732,18 +728,12 @@ export const view = <Message, Item extends string>(
   const handleButtonPointerDown = (
     pointerType: string,
     button: number,
-    screenX: number,
-    screenY: number,
-    timeStamp: number,
   ): Option.Option<Message> =>
     Option.some(
       toMessage(
         PressedPointerOnButton({
           pointerType,
           button,
-          screenX,
-          screenY,
-          timeStamp,
         }),
       ),
     )
@@ -766,13 +756,22 @@ export const view = <Message, Item extends string>(
   const handleSpaceKeyUp = (key: string): Option.Option<Message> =>
     OptionExt.when(key === ' ', toMessage(NoOp()))
 
-  const resolveActiveIndex = keyToIndex(
-    'ArrowDown',
-    'ArrowUp',
-    items.length,
-    Option.getOrElse(maybeActiveItemIndex, () => 0),
-    isDisabled,
-  )
+  const resolveActiveIndex = (key: string): number =>
+    Option.match(maybeActiveItemIndex, {
+      onNone: () =>
+        M.value(key).pipe(
+          M.whenOr(previousKey, 'End', 'PageDown', () => lastEnabledIndex),
+          M.orElse(() => firstEnabledIndex),
+        ),
+      onSome: activeIndex =>
+        keyToIndex(
+          nextKey,
+          previousKey,
+          items.length,
+          activeIndex,
+          isItemDisabledByIndex,
+        )(key),
+    })
 
   const searchForKey = (key: string): Option.Option<Message> => {
     const nextQuery = searchQuery + key
@@ -780,7 +779,7 @@ export const view = <Message, Item extends string>(
       items,
       nextQuery,
       maybeActiveItemIndex,
-      isDisabled,
+      isItemDisabledByIndex,
       itemToSearchText,
       Str.isNonEmpty(searchQuery),
     )
@@ -802,46 +801,28 @@ export const view = <Message, Item extends string>(
               toMessage(RequestedItemClick({ index })),
             ),
       ),
-      M.whenOr(
-        'ArrowDown',
-        'ArrowUp',
-        'Home',
-        'End',
-        'PageUp',
-        'PageDown',
-        () =>
-          Option.some(
-            toMessage(
-              ActivatedItem({
-                index: resolveActiveIndex(key),
-                activationTrigger: 'Keyboard',
-              }),
-            ),
+      M.when(isNavigationKey, () =>
+        Option.some(
+          toMessage(
+            ActivatedItem({
+              index: resolveActiveIndex(key),
+              activationTrigger: 'Keyboard',
+            }),
           ),
+        ),
       ),
       M.when(isPrintableKey, () => searchForKey(key)),
       M.orElse(() => Option.none()),
-    )
-
-  const handleItemsPointerUp = (
-    screenX: number,
-    screenY: number,
-    pointerType: string,
-    timeStamp: number,
-  ): Option.Option<Message> =>
-    OptionExt.when(
-      pointerType === 'mouse',
-      toMessage(ReleasedPointerOnItems({ screenX, screenY, timeStamp })),
     )
 
   const buttonAttributes = [
     Id(`${id}-button`),
     Type('button'),
     Class(buttonClassName),
-    AriaHasPopup('menu'),
+    AriaHasPopup('listbox'),
     AriaExpanded(isVisible),
     AriaControls(`${id}-items`),
-    ...(isButtonDisabled
+    ...(isButtonEffectivelyDisabled
       ? [AriaDisabled(true), DataAttribute('disabled', '')]
       : [
           OnPointerDown(handleButtonPointerDown),
@@ -850,6 +831,7 @@ export const view = <Message, Item extends string>(
           OnClick(handleButtonClick()),
         ]),
     ...(isVisible ? [DataAttribute('open', '')] : []),
+    ...(isInvalid ? [DataAttribute('invalid', '')] : []),
   ]
 
   const maybeActiveDescendant = Option.match(maybeActiveItemIndex, {
@@ -871,7 +853,9 @@ export const view = <Message, Item extends string>(
 
   const itemsContainerAttributes = [
     Id(`${id}-items`),
-    Role('menu'),
+    Role('listbox'),
+    AriaOrientation(Str.toLowerCase(orientation)),
+    ...(isMultiple ? [Attribute('aria-multiselectable', 'true')] : []),
     AriaLabelledBy(`${id}-button`),
     ...maybeActiveDescendant,
     Tabindex(0),
@@ -883,20 +867,21 @@ export const view = <Message, Item extends string>(
       : [
           OnKeyDownPreventDefault(handleItemsKeyDown),
           OnKeyUpPreventDefault(handleSpaceKeyUp),
-          OnPointerUp(handleItemsPointerUp),
           OnBlur(toMessage(ClosedByTab())),
         ]),
   ]
 
-  const menuItems = Array.map(items, (item, index) => {
+  const listboxItems = Array.map(items, (item, index) => {
     const isActiveItem = Option.exists(
       maybeActiveItemIndex,
       activeIndex => activeIndex === index,
     )
-    const isDisabledItem = isDisabled(index)
+    const isDisabledItem = isItemDisabledByIndex(index)
+    const isSelectedItem = Array.contains(selectedItems, itemToValue(item))
     const itemConfig = itemToConfig(item, {
       isActive: isActiveItem,
       isDisabled: isDisabledItem,
+      isSelected: isSelectedItem,
     })
 
     const isInteractive = !isDisabledItem && !isLeaving
@@ -905,15 +890,17 @@ export const view = <Message, Item extends string>(
       itemId(id, index),
       [
         Id(itemId(id, index)),
-        Role('menuitem'),
+        Role('option'),
+        AriaSelected(isSelectedItem),
         Class(itemConfig.className),
         ...(isActiveItem ? [DataAttribute('active', '')] : []),
+        ...(isSelectedItem ? [DataAttribute('selected', '')] : []),
         ...(isDisabledItem
           ? [AriaDisabled(true), DataAttribute('disabled', '')]
           : []),
         ...(isInteractive
           ? [
-              OnClick(toMessage(SelectedItem({ index }))),
+              OnClick(toMessage(SelectedItem({ item: itemToValue(item) }))),
               OnPointerMove((screenX, screenY, pointerType) =>
                 OptionExt.when(
                   pointerType !== 'touch',
@@ -935,10 +922,10 @@ export const view = <Message, Item extends string>(
 
   const renderGroupedItems = (): ReadonlyArray<Html> => {
     if (!itemGroupKey) {
-      return menuItems
+      return listboxItems
     }
 
-    const segments = groupContiguous(menuItems, (_, index) =>
+    const segments = groupContiguous(listboxItems, (_, index) =>
       Array.get(items, index).pipe(
         Option.match({
           onNone: () => '',
@@ -948,9 +935,7 @@ export const view = <Message, Item extends string>(
     )
 
     return Array.flatMap(segments, (segment, segmentIndex) => {
-      const maybeHeading = Option.fromNullable(
-        groupToHeading && groupToHeading(segment.key),
-      )
+      const maybeHeading = Option.fromNullable(groupToHeading?.(segment.key))
 
       const headingId = `${id}-heading-${segment.key}`
 
@@ -1012,13 +997,32 @@ export const view = <Message, Item extends string>(
     ),
   ]
 
+  const formAttribute = form ? [Attribute('form', form)] : []
+
+  const hiddenInputs = name
+    ? Array.match(selectedItems, {
+        onEmpty: () => [input([Type('hidden'), Name(name), ...formAttribute])],
+        onNonEmpty: Array.map(selectedItem =>
+          input([
+            Type('hidden'),
+            Name(name),
+            Value(selectedItem),
+            ...formAttribute,
+          ]),
+        ),
+      })
+    : []
+
   const wrapperAttributes = [
     ...(className ? [Class(className)] : []),
     ...(isVisible ? [DataAttribute('open', '')] : []),
+    ...(isDisabled ? [DataAttribute('disabled', '')] : []),
+    ...(isInvalid ? [DataAttribute('invalid', '')] : []),
   ]
 
   return div(wrapperAttributes, [
     keyed('button')(`${id}-button`, buttonAttributes, [buttonContent]),
+    ...hiddenInputs,
     ...(isVisible ? visibleContent : []),
   ])
 }

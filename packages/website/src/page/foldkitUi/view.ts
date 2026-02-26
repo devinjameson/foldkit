@@ -4,6 +4,7 @@ import type { Message as ParentMessage } from '../../main'
 import { heading, pageTitle, para } from '../../prose'
 import * as Dialog from './dialog'
 import * as Disclosure from './disclosure'
+import * as Listbox from './listbox'
 import * as Menu from './menu'
 import type { Message } from './message'
 import type { Model } from './model'
@@ -15,11 +16,6 @@ const plannedComponents: ReadonlyArray<{
   readonly entry: TableOfContentsEntry
   readonly description: string
 }> = [
-  {
-    entry: { level: 'h2', id: 'listbox', text: 'Listbox' },
-    description:
-      'A custom select component with search, multi-select, and keyboard navigation.',
-  },
   {
     entry: { level: 'h2', id: 'combobox', text: 'Combobox' },
     description:
@@ -76,6 +72,10 @@ export const tableOfContents: ReadonlyArray<TableOfContentsEntry> = [
   Menu.menuHeader,
   Menu.basicHeader,
   Menu.animatedHeader,
+  Listbox.listboxHeader,
+  Listbox.basicHeader,
+  Listbox.multiSelectHeader,
+  Listbox.groupedHeader,
   ...plannedComponents.map(({ entry }) => entry),
 ]
 
@@ -140,6 +140,17 @@ export const view = (
       ),
       ...Menu.basicDemo(model, toMessage),
       ...Menu.animatedDemo(model, toMessage),
+      heading(
+        'h2',
+        Listbox.listboxHeader.id,
+        Listbox.listboxHeader.text,
+      ),
+      para(
+        'A custom select dropdown with persistent selection, keyboard navigation, and typeahead search. Unlike Menu (which is fire-and-forget), Listbox tracks the selected value and reflects it in the button.',
+      ),
+      ...Listbox.basicDemo(model, toMessage),
+      ...Listbox.multiSelectDemo(model, toMessage),
+      ...Listbox.groupedDemo(model, toMessage),
       div(
         [Class('mt-12')],
         plannedComponents.map(({ entry, description }) =>

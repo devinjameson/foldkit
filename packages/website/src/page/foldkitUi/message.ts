@@ -11,6 +11,21 @@ export const GotDisclosureDemoMessage = m(
     message: Ui.Disclosure.Message,
   },
 )
+export const GotListboxDemoMessage = m('GotListboxDemoMessage', {
+  message: Ui.Listbox.Message,
+})
+export const GotListboxMultiDemoMessage = m(
+  'GotListboxMultiDemoMessage',
+  {
+    message: Ui.Listbox.Message,
+  },
+)
+export const GotListboxGroupedDemoMessage = m(
+  'GotListboxGroupedDemoMessage',
+  {
+    message: Ui.Listbox.Message,
+  },
+)
 export const GotMenuBasicDemoMessage = m('GotMenuBasicDemoMessage', {
   message: Ui.Menu.Message,
 })
@@ -36,6 +51,9 @@ export const GotVerticalTabsDemoMessage = m(
 export const Message = S.Union(
   GotDialogDemoMessage,
   GotDisclosureDemoMessage,
+  GotListboxDemoMessage,
+  GotListboxMultiDemoMessage,
+  GotListboxGroupedDemoMessage,
   GotMenuBasicDemoMessage,
   GotMenuAnimatedDemoMessage,
   GotHorizontalTabsDemoMessage,

@@ -63,6 +63,10 @@
       "types": "./dist/ui/disclosure/public.d.ts",
       "import": "./dist/ui/disclosure/public.js"
     },
+    "./ui/listbox": {
+      "types": "./dist/ui/listbox/public.d.ts",
+      "import": "./dist/ui/listbox/public.js"
+    },
     "./ui/menu": {
       "types": "./dist/ui/menu/public.d.ts",
       "import": "./dist/ui/menu/public.js"

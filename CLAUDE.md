@@ -73,6 +73,7 @@ Individual `type A = typeof A.Type` declarations are not needed — use `typeof 
 ### General Preferences
 
 - Never abbreviate names. Use full, descriptive names everywhere — variables, types, functions, parameters, including callback parameters. e.g. `signature` not `sig`, `cart` not `c`, `Message` not `Msg`, `(tickCount) => tickCount + 1` not `(t) => t + 1`.
+- Don't suffix command variables with `Command`. Name them by what they do: `focusButton` not `focusButtonCommand`, `scrollToItem` not `scrollToItemCommand`. The type already communicates that it's a command.
 - Avoid `let`. Use `const` and prefer immutable patterns. Only use `let` when mutation is truly unavoidable.
 - Always use braces for control flow. `if (foo) { return true }` not `if (foo) return true`.
 - Use `is*` for boolean naming e.g. `isPlaying`, `isValid`
