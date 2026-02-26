@@ -426,7 +426,13 @@
   .note-demo-code-panel[data-note-demo-phase='NoteCommand']
     [data-line='73'],
   .note-demo-code-panel[data-note-demo-phase='NoteCommand']
-    [data-line='74'] {
+    [data-line='74'],
+  .note-demo-code-panel[data-note-demo-phase='NoteCommand']
+    [data-line='75'],
+  .note-demo-code-panel[data-note-demo-phase='NoteCommand']
+    [data-line='76'],
+  .note-demo-code-panel[data-note-demo-phase='NoteCommand']
+    [data-line='77'] {
     @apply bg-violet-500/15;
     border-left-color: theme(--color-violet-400);
   }
