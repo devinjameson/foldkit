@@ -1,0 +1,52 @@
+{
+  "name": "@foldkit/eslint-plugin",
+  "version": "0.1.0",
+  "description": "ESLint plugin for foldkit",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "clean": "rimraf dist *.tsbuildinfo",
+    "build": "pnpm run clean && tsc -b",
+    "watch": "tsc -b --watch",
+    "typecheck": "tsc -b --noEmit",
+    "lint": "eslint src --ignore-pattern '**/*.test.ts'",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "eslint": "^9.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.2",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  },
+  "keywords": [
+    "eslint",
+    "eslintplugin",
+    "foldkit"
+  ],
+  "author": "Devin Jameson",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/devinjameson/foldkit.git",
+    "directory": "packages/eslint-plugin-foldkit"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
