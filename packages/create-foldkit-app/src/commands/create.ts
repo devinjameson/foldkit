@@ -9,6 +9,7 @@ type PackageManager = 'pnpm' | 'npm' | 'yarn'
 type Example =
   | 'counter'
   | 'form'
+  | 'query-sync'
   | 'routing'
   | 'shopping-cart'
   | 'snake'

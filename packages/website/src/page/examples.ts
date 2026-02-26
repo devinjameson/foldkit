@@ -66,6 +66,14 @@ const examples: ReadonlyArray<Example> = [
     tags: ['Routing'],
   },
   {
+    title: 'Query Sync',
+    description:
+      'Filterable dinosaur table where every control syncs to URL query parameters. Schema transforms enforce valid states — invalid params gracefully fall back.',
+    href: Link.exampleQuerySync,
+    difficulty: 'Intermediate',
+    tags: ['Routing', 'Query Params'],
+  },
+  {
     title: 'Auth',
     description:
       'Authentication flow with Model-as-Union pattern, protected routes, and session management.',

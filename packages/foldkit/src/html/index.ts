@@ -388,6 +388,12 @@ type Attribute<Message> = Data.TaggedEnum<{
   AriaPressed: { readonly value: string }
   AriaHasPopup: { readonly value: string }
   AriaActiveDescendant: { readonly value: string }
+  AriaSort: { readonly value: string }
+  AriaMultiSelectable: { readonly value: boolean }
+  AriaModal: { readonly value: boolean }
+  AriaBusy: { readonly value: boolean }
+  AriaErrorMessage: { readonly value: string }
+  AriaRoleDescription: { readonly value: string }
   Attribute: { readonly key: string; readonly value: string }
   DataAttribute: { readonly key: string; readonly value: string }
   Style: { readonly value: Record<string, string> }
@@ -523,6 +529,12 @@ const {
   AriaPressed,
   AriaHasPopup,
   AriaActiveDescendant,
+  AriaSort,
+  AriaMultiSelectable,
+  AriaModal,
+  AriaBusy,
+  AriaErrorMessage,
+  AriaRoleDescription,
   Attribute,
   DataAttribute,
   Style,
@@ -884,6 +896,17 @@ const buildVNodeData = <Message>(
             updateDataAttrs({ 'aria-haspopup': value }),
           AriaActiveDescendant: ({ value }) =>
             updateDataAttrs({ 'aria-activedescendant': value }),
+          AriaSort: ({ value }) => updateDataAttrs({ 'aria-sort': value }),
+          AriaMultiSelectable: ({ value }) =>
+            updateDataAttrs({ 'aria-multiselectable': value.toString() }),
+          AriaModal: ({ value }) =>
+            updateDataAttrs({ 'aria-modal': value.toString() }),
+          AriaBusy: ({ value }) =>
+            updateDataAttrs({ 'aria-busy': value.toString() }),
+          AriaErrorMessage: ({ value }) =>
+            updateDataAttrs({ 'aria-errormessage': value }),
+          AriaRoleDescription: ({ value }) =>
+            updateDataAttrs({ 'aria-roledescription': value }),
           Attribute: ({ key, value }) => updateDataAttrs({ [key]: value }),
           DataAttribute: ({ key, value }) =>
             updateDataAttrs({ [`data-${key}`]: value }),
@@ -1803,6 +1826,30 @@ type HtmlAttributes<Message> = {
     readonly _tag: 'AriaActiveDescendant'
     readonly value: string
   }
+  AriaSort: (value: string) => {
+    readonly _tag: 'AriaSort'
+    readonly value: string
+  }
+  AriaMultiSelectable: (value: boolean) => {
+    readonly _tag: 'AriaMultiSelectable'
+    readonly value: boolean
+  }
+  AriaModal: (value: boolean) => {
+    readonly _tag: 'AriaModal'
+    readonly value: boolean
+  }
+  AriaBusy: (value: boolean) => {
+    readonly _tag: 'AriaBusy'
+    readonly value: boolean
+  }
+  AriaErrorMessage: (value: string) => {
+    readonly _tag: 'AriaErrorMessage'
+    readonly value: string
+  }
+  AriaRoleDescription: (value: string) => {
+    readonly _tag: 'AriaRoleDescription'
+    readonly value: string
+  }
   Attribute: (
     key: string,
     value: string,
@@ -2019,6 +2066,12 @@ const htmlAttributes = <Message>(): HtmlAttributes<Message> => ({
   AriaPressed: (value: string) => AriaPressed({ value }),
   AriaHasPopup: (value: string) => AriaHasPopup({ value }),
   AriaActiveDescendant: (value: string) => AriaActiveDescendant({ value }),
+  AriaSort: (value: string) => AriaSort({ value }),
+  AriaMultiSelectable: (value: boolean) => AriaMultiSelectable({ value }),
+  AriaModal: (value: boolean) => AriaModal({ value }),
+  AriaBusy: (value: boolean) => AriaBusy({ value }),
+  AriaErrorMessage: (value: string) => AriaErrorMessage({ value }),
+  AriaRoleDescription: (value: string) => AriaRoleDescription({ value }),
   Attribute: (key: string, value: string) => Attribute({ key, value }),
   DataAttribute: (key: string, value: string) => DataAttribute({ key, value }),
   Style: (value: Record<string, string>) => Style({ value }),

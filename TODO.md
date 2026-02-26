@@ -94,3 +94,5 @@
 - [x] Use Disclosure component for API reference disclosures and React page FAQ section
 
 - [ ] Example app with undo/redo, maybe a markdown previewer with undo/redo stack and WYSIWYG?
+
+- [ ] Keying route views example should give a more realistic example of what it looks like, this is a crucial thing to get right

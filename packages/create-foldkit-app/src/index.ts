@@ -47,6 +47,7 @@ const example = Options.choice('example', [
   'form',
   'snake',
   'routing',
+  'query-sync',
   'shopping-cart',
   'websocket-chat',
   'auth',
@@ -62,6 +63,7 @@ const example = Options.choice('example', [
       '  form - Form validation with async email checking\n' +
       '  snake - Classic game built with subscriptions\n' +
       '  routing - URL routing with parser combinators and route parameters\n' +
+      '  query-sync - URL-driven filtering, sorting, and search with query parameters\n' +
       '  shopping-cart - Complex state management with nested models and routing\n' +
       '  websocket-chat - WebSocket integration\n' +
       '  auth - Authentication with Model-as-Union pattern and protected routes',

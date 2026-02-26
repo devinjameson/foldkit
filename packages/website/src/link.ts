@@ -24,6 +24,7 @@ export const Link = {
   exampleCounter: `${exampleBase}/counter`,
   exampleErrorView: `${exampleBase}/error-view`,
   exampleForm: `${exampleBase}/form`,
+  exampleQuerySync: `${exampleBase}/query-sync`,
   exampleRouting: `${exampleBase}/routing`,
   exampleShoppingCart: `${exampleBase}/shopping-cart`,
   exampleShoppingCartSubmodel:

@@ -310,6 +310,8 @@ export const view = (model: Model): Html =>
       para(
         'For a complete routing example, see the ',
         link(Link.exampleRouting, 'Routing example'),
+        '. For a deeper look at query parameters — custom schema transforms, lenient parsing, and bidirectional URL sync — see the ',
+        link(Link.exampleQuerySync, 'Query Sync example'),
         '.',
       ),
       tableOfContentsEntryToHeader(keyingRouteViewsHeader),
