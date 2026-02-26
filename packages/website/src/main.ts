@@ -13,7 +13,7 @@ import {
 } from 'effect'
 import { Runtime, Ui } from 'foldkit'
 import { Command } from 'foldkit/command'
-import { Html } from 'foldkit/html'
+import { Html, createKeyedLazy, createLazy } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { load, pushUrl } from 'foldkit/navigation'
 import { UrlRequest } from 'foldkit/runtime'
@@ -890,6 +890,43 @@ const iconLink = (link: string, ariaLabel: string, icon: Html) =>
     [icon],
   )
 
+const tableOfContentsEntryView = (
+  level: TableOfContentsEntry['level'],
+  id: string,
+  text: string,
+  isActive: boolean,
+): Html =>
+  keyed('li')(
+    id,
+    [
+      Class(
+        classNames({
+          'ml-3': level === 'h3',
+          'ml-6': level === 'h4',
+        }),
+      ),
+    ],
+    [
+      a(
+        [
+          Href(`#${id}`),
+          OnClick(ChangedActiveSection({ sectionId: id })),
+          Class(
+            classNames('transition block', {
+              'text-blue-600 dark:text-blue-400 underline': isActive,
+              'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white':
+                !isActive,
+            }),
+          ),
+          ...(isActive ? [AriaCurrent('location')] : []),
+        ],
+        [text],
+      ),
+    ],
+  )
+
+const lazyTocEntry = createKeyedLazy()
+
 const tableOfContentsView = (
   entries: ReadonlyArray<TableOfContentsEntry>,
   maybeActiveSectionId: Option.Option<string>,
@@ -916,42 +953,17 @@ const tableOfContentsView = (
           ul(
             [Class('space-y-2 text-sm')],
             Array.map(entries, ({ level, id, text }) => {
-              const isActive = Option.match(maybeActiveSectionId, {
-                onNone: () => false,
-                onSome: activeSectionId => activeSectionId === id,
-              })
-
-              return keyed('li')(
-                id,
-                [
-                  Class(
-                    classNames({
-                      'ml-3': level === 'h3',
-                      'ml-6': level === 'h4',
-                    }),
-                  ),
-                ],
-                [
-                  a(
-                    [
-                      Href(`#${id}`),
-                      OnClick(
-                        ChangedActiveSection({ sectionId: id }),
-                      ),
-                      Class(
-                        classNames('transition block', {
-                          'text-blue-600 dark:text-blue-400 underline':
-                            isActive,
-                          'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white':
-                            !isActive,
-                        }),
-                      ),
-                      ...(isActive ? [AriaCurrent('location')] : []),
-                    ],
-                    [text],
-                  ),
-                ],
+              const isActive = Option.exists(
+                maybeActiveSectionId,
+                activeSectionId => activeSectionId === id,
               )
+
+              return lazyTocEntry(id, tableOfContentsEntryView, [
+                level,
+                id,
+                text,
+                isActive,
+              ])
             }),
           ),
         ],
@@ -1301,6 +1313,17 @@ const docsHeaderView = (model: Model) =>
     ],
   )
 
+const apiReferenceContent = (
+  apiReferenceModel: Page.ApiReference.Model,
+): Html =>
+  Page.ApiReference.view(
+    Page.ApiReference.apiReference.modules,
+    apiReferenceModel,
+    message => GotApiReferenceMessage({ message }),
+  )
+
+const lazyApiReference = createLazy()
+
 const docsView = (model: Model, docsRoute: DocsRoute) => {
   const content = M.value(docsRoute).pipe(
     M.tagsExhaustive({
@@ -1320,11 +1343,7 @@ const docsView = (model: Model, docsRoute: DocsRoute) => {
       ProjectOrganization: () => Page.ProjectOrganization.view(model),
       AdvancedPatterns: () => Page.AdvancedPatterns.view(model),
       ApiReference: () =>
-        Page.ApiReference.view(
-          Page.ApiReference.apiReference.modules,
-          model.apiReference,
-          message => GotApiReferenceMessage({ message }),
-        ),
+        lazyApiReference(apiReferenceContent, [model.apiReference]),
       FoldkitUi: () =>
         Page.FoldkitUi.view(model.foldkitUi, message =>
           GotFoldkitUiMessage({ message }),
