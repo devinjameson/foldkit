@@ -1170,10 +1170,58 @@ const skipNavLink: Html = a(
 const landingFooter: Html = footer(
   [
     Class(
-      'px-6 py-8 md:px-12 lg:px-20 border-t border-gray-200 dark:border-gray-800 text-center text-sm text-gray-500 dark:text-gray-400',
+      'px-6 py-12 md:px-12 lg:px-20 text-center text-sm text-gray-500 dark:text-gray-400',
     ),
   ],
   [
+    div(
+      [Class('flex items-center justify-center gap-2 mb-4')],
+      [
+        img([
+          Src('/foldkit-logo.svg'),
+          Alt('Foldkit'),
+          Class('h-6 dark:invert'),
+        ]),
+        span(
+          [Class('text-base font-semibold text-gray-900 dark:text-white')],
+          ['Foldkit'],
+        ),
+      ],
+    ),
+    div(
+      [Class('flex items-center justify-center gap-4 mb-6')],
+      [
+        a(
+          [
+            Href(Link.github),
+            Class(
+              'hover:text-gray-700 dark:hover:text-gray-200 transition',
+            ),
+          ],
+          ['GitHub'],
+        ),
+        span([Class('text-gray-300 dark:text-gray-600')], ['\u00B7']),
+        a(
+          [
+            Href(Link.npm),
+            Class(
+              'hover:text-gray-700 dark:hover:text-gray-200 transition',
+            ),
+          ],
+          ['npm'],
+        ),
+        span([Class('text-gray-300 dark:text-gray-600')], ['\u00B7']),
+        a(
+          [
+            Href('/getting-started'),
+            Class(
+              'hover:text-gray-700 dark:hover:text-gray-200 transition',
+            ),
+          ],
+          ['Docs'],
+        ),
+      ],
+    ),
     p(
       [],
       [
@@ -1185,7 +1233,7 @@ const landingFooter: Html = footer(
           ],
           ['Foldkit'],
         ),
-        '.',
+        ', naturally.',
       ],
     ),
   ],
