@@ -337,11 +337,19 @@ const includedFeature = (
   icon: Html,
   title: string,
   description: ReadonlyArray<string | Html>,
+  iconColorClass: string,
 ): Html =>
   div(
     [Class('landing-card p-6 dark:bg-gray-850')],
     [
-      div([Class('mb-3 text-pink-600 dark:text-pink-500')], [icon]),
+      div(
+        [
+          Class(
+            `inline-flex items-center justify-center w-10 h-10 rounded-lg mb-3 ${iconColorClass}`,
+          ),
+        ],
+        [icon],
+      ),
       h3(
         [
           Class(
@@ -385,15 +393,19 @@ const includedSection = (): Html =>
           div(
             [Class('grid gap-6 sm:grid-cols-2 lg:grid-cols-3')],
             [
-              includedFeature(Icon.route('w-6 h-6'), 'Routing', [
+              includedFeature(Icon.route('w-5 h-5'), 'Routing', [
                 'Type-safe bidirectional routing. URLs parse into typed routes and routes build back into URLs. No string matching, no runtime surprises.',
-              ]),
+              ], 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'),
               div(
                 [Class('landing-card p-6 dark:bg-gray-850')],
                 [
                   div(
-                    [Class('mb-3 text-pink-600 dark:text-pink-500')],
-                    [Icon.puzzle('w-6 h-6')],
+                    [
+                      Class(
+                        'inline-flex items-center justify-center w-10 h-10 rounded-lg mb-3 bg-pink-100 text-pink-600 dark:bg-pink-900/30 dark:text-pink-400',
+                      ),
+                    ],
+                    [Icon.puzzle('w-5 h-5')],
                   ),
                   h3(
                     [
@@ -441,7 +453,7 @@ const includedSection = (): Html =>
                 ],
               ),
               includedFeature(
-                Icon.squareStack('w-6 h-6'),
+                Icon.squareStack('w-5 h-5'),
                 'Virtual DOM',
                 [
                   'Built on ',
@@ -456,27 +468,31 @@ const includedSection = (): Html =>
                   ),
                   '. Fast, keyed diffing with declarative views that are plain functions of your model.',
                 ],
+                'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
               ),
               includedFeature(
-                Icon.signal('w-6 h-6'),
+                Icon.signal('w-5 h-5'),
                 'Subscriptions',
                 [
                   'Declarative subscriptions that react to model changes. Timers, DOM observers, and external events are managed automatically. Set up when needed, torn down when not.',
                 ],
+                'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400',
               ),
               includedFeature(
-                Icon.shieldCheck('w-6 h-6'),
+                Icon.shieldCheck('w-5 h-5'),
                 'Field Validation',
                 [
                   'Schema-driven validation with per-field error states. Validation rules live in your model, not scattered across event handlers.',
                 ],
+                'bg-pink-100 text-pink-600 dark:bg-pink-900/30 dark:text-pink-400',
               ),
               includedFeature(
-                Icon.cog('w-6 h-6'),
+                Icon.cog('w-5 h-5'),
                 'Side Effect Management',
                 [
                   'Automatic cancellation, retry, and timeout powered by Effect. Commands compose naturally and the runtime manages their lifecycle.',
                 ],
+                'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400',
               ),
             ],
           ),
