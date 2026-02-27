@@ -393,9 +393,14 @@ const includedSection = (): Html =>
           div(
             [Class('grid gap-6 sm:grid-cols-2 lg:grid-cols-3')],
             [
-              includedFeature(Icon.route('w-5 h-5'), 'Routing', [
-                'Type-safe bidirectional routing. URLs parse into typed routes and routes build back into URLs. No string matching, no runtime surprises.',
-              ], 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'),
+              includedFeature(
+                Icon.route('w-5 h-5'),
+                'Routing',
+                [
+                  'Type-safe bidirectional routing. URLs parse into typed routes and routes build back into URLs. No string matching, no runtime surprises.',
+                ],
+                'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400',
+              ),
               div(
                 [Class('landing-card p-6 dark:bg-gray-850')],
                 [
@@ -505,7 +510,10 @@ const includedSection = (): Html =>
 
 const whyFoldkitSection = (): Html =>
   section(
-    [Id('whats-the-catch'), Class('landing-section bg-gray-50 dark:bg-gray-850')],
+    [
+      Id('whats-the-catch'),
+      Class('landing-section bg-gray-50 dark:bg-gray-850'),
+    ],
     [
       div(
         [Class('landing-section-narrow')],
@@ -707,7 +715,9 @@ const comparisonStripSection = (): Html =>
   section(
     [
       Id('foldkit-vs-react'),
-      Class('landing-section py-10 md:py-14 text-center bg-gray-50 dark:bg-gray-850'),
+      Class(
+        'landing-section py-10 md:py-14 text-center bg-gray-50 dark:bg-gray-850',
+      ),
     ],
     [
       div(
@@ -747,12 +757,7 @@ const comparisonStripSection = (): Html =>
 
 const trustSection = (): Html =>
   section(
-    [
-      Id('trust'),
-      Class(
-        'landing-section py-10 md:py-14',
-      ),
-    ],
+    [Id('trust'), Class('landing-section py-10 md:py-14')],
     [
       div(
         [Class('landing-section-narrow')],
@@ -931,7 +936,12 @@ const aiSection = (): Html =>
 
 const finalCtaSection = (): Html =>
   section(
-    [Id('get-started'), Class('landing-section text-center bg-gray-50 dark:bg-gray-850')],
+    [
+      Id('get-started'),
+      Class(
+        'landing-section text-center bg-gray-50 dark:bg-gray-850',
+      ),
+    ],
     [
       div(
         [Class('landing-section-narrow')],

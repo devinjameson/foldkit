@@ -25,9 +25,11 @@
 
 @theme {
   --color-gray-850: #131921;
-  --color-warm-50: #FAFAF8;
+  --color-warm-50: #fafaf8;
   --font-sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'Geist Mono', ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
+  --font-mono:
+    'Geist Mono', ui-monospace, 'Cascadia Code', 'Source Code Pro',
+    monospace;
 }
 
 :root {

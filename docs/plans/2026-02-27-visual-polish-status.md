@@ -9,17 +9,20 @@
 Full visual identity upgrade to the Foldkit website landing page. No structural changes — same sections, same copy, same architecture. Pure CSS and view-layer refinements.
 
 ### Typography
+
 - **Geist + Geist Mono** (Vercel's font family). Replaced Tailwind's default system font stack. Self-hosted variable WOFF2 files in `public/fonts/`.
 - Hero headline upgraded to `font-black` (900 weight) for more visual authority
 - All section h2 headings bumped from `text-2xl/3xl` to `text-3xl/4xl` with `tracking-tight`
 - Geist was chosen over Satoshi because Satoshi felt too warm/consumer-product ("mattress brand energy"). Geist is geometric, precise, and developer-native — matches the "boringly beautiful" ethos. The matched Geist Mono pairing is a huge win for a code-heavy site.
 
 ### Color & Layout
+
 - Light mode body background warmed from `gray-100` to custom `warm-50` (#FAFAF8) — barely perceptible but removes the cold/generic feel
 - Dark mode kept as-is (the blue cast in gray-900 works well with the pink accent)
 - Hard `border-t` lines between landing sections removed, replaced with alternating section backgrounds (base vs gray-50/gray-850 wash). Creates visual rhythm instead of stacked cards.
 
 ### Component Polish
+
 - `.cta-primary` buttons have a subtle pink glow (`shadow-pink-600/20`, deeper on hover)
 - `.landing-card` has softer borders (60% opacity) and shadows — subtle in light, deeper in dark
 - Hero "Beautifully" has a pink-to-rose gradient text treatment
@@ -50,6 +53,7 @@ These were identified during brainstorming as "Approach 3" follow-ups:
 ## Files Changed
 
 All changes are in `packages/website/`:
+
 - `public/fonts/` — Geist-Variable.woff2, GeistMono-Variable.woff2
 - `src/styles.css` — @font-face, @theme (fonts, warm-50 color), body bg, section border removal, CTA glow, card depth
 - `src/page/landing.ts` — hero gradient + font-black, heading sizes, section backgrounds, icon pills, stats styling

@@ -1183,7 +1183,11 @@ const landingFooter: Html = footer(
           Class('h-6 dark:invert'),
         ]),
         span(
-          [Class('text-base font-semibold text-gray-900 dark:text-white')],
+          [
+            Class(
+              'text-base font-semibold text-gray-900 dark:text-white',
+            ),
+          ],
           ['Foldkit'],
         ),
       ],
