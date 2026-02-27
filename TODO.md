@@ -96,3 +96,5 @@
 - [ ] Example app with undo/redo, maybe a markdown previewer with undo/redo stack and WYSIWYG?
 
 - [ ] Keying route views example should give a more realistic example of what it looks like, this is a crucial thing to get right
+
+- [ ] Maybe show a better error if the user provides a container to run that does not exist?
