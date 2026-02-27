@@ -91,12 +91,16 @@ const heroSection = (model: Model): Html =>
           h1(
             [
               Class(
-                'text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white tracking-tight leading-[1.1] text-balance',
+                'text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 dark:text-white tracking-tight leading-[1.1] text-balance',
               ),
             ],
             [
               span(
-                [Class('text-pink-600 dark:text-pink-500')],
+                [
+                  Class(
+                    'bg-gradient-to-r from-pink-600 to-rose-500 dark:from-pink-500 dark:to-rose-400 bg-clip-text text-transparent',
+                  ),
+                ],
                 ['Beautifully'],
               ),
               ' boring frontend applications.',
