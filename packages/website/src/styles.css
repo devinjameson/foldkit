@@ -115,7 +115,7 @@
   }
 
   .cta-primary {
-    @apply inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-pink-600 dark:bg-pink-500 text-white font-semibold text-base transition hover:bg-pink-700 dark:hover:bg-pink-600 active:bg-pink-800 dark:active:bg-pink-700;
+    @apply inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-pink-600 dark:bg-pink-500 text-white font-semibold text-base transition hover:bg-pink-700 dark:hover:bg-pink-600 active:bg-pink-800 dark:active:bg-pink-700 shadow-sm shadow-pink-600/20 hover:shadow-md hover:shadow-pink-600/30;
   }
 
   .cta-secondary {
@@ -156,7 +156,7 @@
   }
 
   .landing-card {
-    @apply rounded-xl bg-white border border-gray-200 dark:border-gray-700;
+    @apply rounded-xl bg-white border border-gray-200/60 shadow-sm dark:border-gray-700/40 dark:shadow-lg dark:shadow-black/10;
   }
 
   @media (min-width: theme(--breakpoint-lg)) {
