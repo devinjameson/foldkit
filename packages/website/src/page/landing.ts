@@ -485,7 +485,7 @@ const includedSection = (): Html =>
 
 const whyFoldkitSection = (): Html =>
   section(
-    [Id('whats-the-catch'), Class('landing-section')],
+    [Id('whats-the-catch'), Class('landing-section bg-gray-50 dark:bg-gray-850')],
     [
       div(
         [Class('landing-section-narrow')],
@@ -687,7 +687,7 @@ const comparisonStripSection = (): Html =>
   section(
     [
       Id('foldkit-vs-react'),
-      Class('landing-section py-10 md:py-14 text-center'),
+      Class('landing-section py-10 md:py-14 text-center bg-gray-50 dark:bg-gray-850'),
     ],
     [
       div(
@@ -730,7 +730,7 @@ const trustSection = (): Html =>
     [
       Id('trust'),
       Class(
-        'landing-section py-10 md:py-14 bg-gray-50 dark:bg-gray-850',
+        'landing-section py-10 md:py-14',
       ),
     ],
     [
@@ -899,7 +899,7 @@ const aiSection = (): Html =>
 
 const finalCtaSection = (): Html =>
   section(
-    [Id('get-started'), Class('landing-section text-center')],
+    [Id('get-started'), Class('landing-section text-center bg-gray-50 dark:bg-gray-850')],
     [
       div(
         [Class('landing-section-narrow')],

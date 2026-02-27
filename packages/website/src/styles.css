@@ -33,6 +33,7 @@
 
 @theme {
   --color-gray-850: #131921;
+  --color-warm-50: #FAFAF8;
   --font-sans: 'Satoshi', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
 }
@@ -71,7 +72,7 @@
   }
 
   body {
-    @apply text-base text-gray-800 dark:text-gray-300 bg-gray-100 dark:bg-gray-900;
+    @apply text-base text-gray-800 dark:text-gray-300 bg-warm-50 dark:bg-gray-900;
   }
 
   pre {
@@ -107,10 +108,6 @@
 @layer components {
   .landing-section {
     @apply px-6 py-10 md:px-12 md:py-24 lg:px-20;
-  }
-
-  .landing-section + .landing-section {
-    @apply border-t border-gray-200 dark:border-gray-800;
   }
 
   .landing-section-narrow {
