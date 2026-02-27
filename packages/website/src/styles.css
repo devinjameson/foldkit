@@ -16,6 +16,14 @@
   font-style: italic;
 }
 
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/JetBrainsMono-Variable.woff2') format('woff2');
+  font-weight: 100 800;
+  font-display: optional;
+  font-style: normal;
+}
+
 @custom-variant dark (&:where(.dark, .dark *));
 @custom-variant hover-capable {
   @media (hover: hover) {
@@ -26,6 +34,7 @@
 @theme {
   --color-gray-850: #131921;
   --font-sans: 'Satoshi', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
 }
 
 :root {
