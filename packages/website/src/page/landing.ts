@@ -798,18 +798,26 @@ const trustSection = (): Html =>
 
 const trustItem = (label: string, value: string): Html =>
   li(
-    [Class('landing-card p-5 text-center dark:bg-gray-850')],
+    [
+      Class(
+        'landing-card p-6 text-center dark:bg-gray-850 border-t-2 border-t-pink-600/30 dark:border-t-pink-500/30',
+      ),
+    ],
     [
       p(
         [
           Class(
-            'text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-1',
+            'text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2',
           ),
         ],
         [label],
       ),
       p(
-        [Class('text-xl font-bold text-gray-900 dark:text-white')],
+        [
+          Class(
+            'text-3xl md:text-4xl font-bold text-gray-900 dark:text-white',
+          ),
+        ],
         [value],
       ),
     ],
@@ -821,12 +829,16 @@ const trustItemWithLink = (
   href: string,
 ): Html =>
   li(
-    [Class('landing-card p-5 text-center dark:bg-gray-850')],
+    [
+      Class(
+        'landing-card p-6 text-center dark:bg-gray-850 border-t-2 border-t-pink-600/30 dark:border-t-pink-500/30',
+      ),
+    ],
     [
       p(
         [
           Class(
-            'text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-1',
+            'text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2',
           ),
         ],
         [label],
@@ -835,14 +847,14 @@ const trustItemWithLink = (
         [
           Href(href),
           Class(
-            'text-pink-600 dark:text-pink-500 hover:underline text-lg font-semibold',
+            'text-pink-600 dark:text-pink-500 hover:underline text-2xl md:text-3xl font-bold',
           ),
         ],
         [
           linkText,
           span(
             [Class('inline-block ml-1')],
-            [Icon.arrowRight('w-4 h-4 inline')],
+            [Icon.arrowRight('w-5 h-5 inline')],
           ),
         ],
       ),
