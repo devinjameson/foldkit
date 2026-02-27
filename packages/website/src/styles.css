@@ -1,5 +1,21 @@
 @import 'tailwindcss';
 
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-Variable.woff2') format('woff2');
+  font-weight: 300 900;
+  font-display: swap;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-VariableItalic.woff2') format('woff2');
+  font-weight: 300 900;
+  font-display: swap;
+  font-style: italic;
+}
+
 @custom-variant dark (&:where(.dark, .dark *));
 @custom-variant hover-capable {
   @media (hover: hover) {
@@ -9,6 +25,7 @@
 
 @theme {
   --color-gray-850: #131921;
+  --font-sans: 'Satoshi', ui-sans-serif, system-ui, sans-serif;
 }
 
 :root {
