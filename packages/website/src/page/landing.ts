@@ -178,7 +178,7 @@ const poweredBySection = (): Html =>
           h2(
             [
               Class(
-                'text-2xl md:text-3xl font-bold text-gray-900 dark:text-white text-balance',
+                'text-3xl md:text-4xl font-bold tracking-tight text-gray-900 dark:text-white text-balance',
               ),
             ],
             [
@@ -258,7 +258,7 @@ const promiseSection = (): Html =>
           h2(
             [
               Class(
-                'text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-3 text-center text-balance',
+                'text-3xl md:text-4xl font-bold tracking-tight text-gray-900 dark:text-white mb-3 text-center text-balance',
               ),
             ],
             ['Declare behavior. Ship. Repeat.'],
@@ -310,7 +310,7 @@ const demoSection = (demoTabsView: Html): Html =>
           h2(
             [
               Class(
-                'text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-3 text-center text-balance',
+                'text-3xl md:text-4xl font-bold tracking-tight text-gray-900 dark:text-white mb-3 text-center text-balance',
               ),
             ],
             ['Peek inside.'],
@@ -367,7 +367,7 @@ const includedSection = (): Html =>
           h2(
             [
               Class(
-                'text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-3 text-balance',
+                'text-3xl md:text-4xl font-bold tracking-tight text-gray-900 dark:text-white mb-3 text-balance',
               ),
             ],
             ['Batteries included.'],
@@ -497,7 +497,7 @@ const whyFoldkitSection = (): Html =>
           h2(
             [
               Class(
-                'text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-3 text-balance',
+                'text-3xl md:text-4xl font-bold tracking-tight text-gray-900 dark:text-white mb-3 text-balance',
               ),
             ],
             ["What's the catch?"],
@@ -560,7 +560,7 @@ const audienceSection = (): Html =>
                   h2(
                     [
                       Class(
-                        'text-2xl font-bold text-gray-900 dark:text-white mb-6 text-balance',
+                        'text-3xl font-bold tracking-tight text-gray-900 dark:text-white mb-6 text-balance',
                       ),
                     ],
                     ["Who it's for"],
@@ -590,7 +590,7 @@ const audienceSection = (): Html =>
                   h2(
                     [
                       Class(
-                        'text-2xl font-bold text-gray-900 dark:text-white mb-6 text-balance',
+                        'text-3xl font-bold tracking-tight text-gray-900 dark:text-white mb-6 text-balance',
                       ),
                     ],
                     ["Who it's not for"],
@@ -700,7 +700,7 @@ const comparisonStripSection = (): Html =>
           h2(
             [
               Class(
-                'text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-4 text-balance',
+                'text-3xl md:text-4xl font-bold tracking-tight text-gray-900 dark:text-white mb-4 text-balance',
               ),
             ],
             ['How does Foldkit compare to React?'],
@@ -744,7 +744,7 @@ const trustSection = (): Html =>
           h2(
             [
               Class(
-                'text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-6 text-center text-balance',
+                'text-3xl md:text-4xl font-bold tracking-tight text-gray-900 dark:text-white mb-6 text-center text-balance',
               ),
             ],
             ['Proof of life.'],
@@ -858,7 +858,7 @@ const aiSection = (): Html =>
           h2(
             [
               Class(
-                'text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-4 text-balance',
+                'text-3xl md:text-4xl font-bold tracking-tight text-gray-900 dark:text-white mb-4 text-balance',
               ),
             ],
             [
@@ -911,7 +911,7 @@ const finalCtaSection = (): Html =>
           h2(
             [
               Class(
-                'text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-4 text-balance',
+                'text-3xl md:text-4xl font-bold tracking-tight text-gray-900 dark:text-white mb-4 text-balance',
               ),
             ],
             ['Ready to be bored?'],
