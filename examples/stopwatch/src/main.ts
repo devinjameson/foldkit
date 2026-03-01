@@ -129,7 +129,7 @@ const subscriptions = Runtime.makeSubscriptions(SubscriptionDeps)<
   Message
 >({
   tick: {
-    modelToDeps: (model: Model) => ({ isRunning: model.isRunning }),
+    modelToDependencies: (model: Model) => ({ isRunning: model.isRunning }),
     depsToStream: ({ isRunning }) =>
       Stream.when(
         Stream.tick(Duration.millis(TICK_INTERVAL_MS)).pipe(

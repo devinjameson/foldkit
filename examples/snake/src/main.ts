@@ -255,7 +255,7 @@ const subscriptions = Runtime.makeSubscriptions(SubscriptionDeps)<
   Message
 >({
   gameClock: {
-    modelToDeps: (model: Model) => ({
+    modelToDependencies: (model: Model) => ({
       isPlaying: model.gameState === 'Playing',
       interval: Math.max(
         GAME_SPEED.MIN_INTERVAL,
@@ -272,7 +272,7 @@ const subscriptions = Runtime.makeSubscriptions(SubscriptionDeps)<
   },
 
   keyboard: {
-    modelToDeps: () => null,
+    modelToDependencies: () => null,
     depsToStream: () =>
       Stream.fromEventListener<KeyboardEvent>(document, 'keydown').pipe(
         Stream.map(keyboardEvent =>

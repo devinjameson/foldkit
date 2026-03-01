@@ -65,7 +65,7 @@ const example = Options.choice('example', [
       '  routing - URL routing with parser combinators and route parameters\n' +
       '  query-sync - URL-driven filtering, sorting, and search with query parameters\n' +
       '  shopping-cart - Complex state management with nested models and routing\n' +
-      '  websocket-chat - WebSocket integration\n' +
+      '  websocket-chat - Managed resources with WebSocket integration\n' +
       '  auth - Authentication with Model-as-Union pattern and protected routes',
   ),
 )

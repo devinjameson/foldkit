@@ -98,3 +98,5 @@
 - [ ] Keying route views example should give a more realistic example of what it looks like, this is a crucial thing to get right
 
 - [ ] Maybe show a better error if the user provides a container to run that does not exist?
+
+- [ ] Communicating this idea somewhere on the website: "You can trust AI-written Foldkit code more that other frameworks, because the architecture makes correctness visible."

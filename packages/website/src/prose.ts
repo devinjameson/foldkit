@@ -136,7 +136,7 @@ export const callout = (
   div(
     [
       Class(
-        'bg-white dark:bg-gray-800 border-l-4 border-gray-400 dark:border-gray-500 p-4 mb-6 rounded-r-lg',
+        'border-l-4 border-gray-400 dark:border-gray-500 bg-gray-200/40 dark:bg-gray-800/40 p-4 mb-6 rounded-r-lg',
       ),
     ],
     [

@@ -16,7 +16,7 @@ export const aiGrid: Subscription<
   Message,
   SubscriptionDeps['aiGrid']
 > = {
-  modelToDeps: (model: Model) => ({
+  modelToDependencies: (model: Model) => ({
     isLandingPage: model.route._tag === 'Home',
   }),
   depsToStream: ({ isLandingPage }) =>

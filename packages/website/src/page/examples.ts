@@ -108,10 +108,10 @@ const examples: ReadonlyArray<Example> = [
   {
     title: 'WebSocket Chat',
     description:
-      'Real-time chat using WebSockets. Connection handling and message streaming.',
+      'Managed resources with WebSocket integration. Connection lifecycle, reconnection, and message streaming.',
     href: Link.exampleWebsocketChat,
     difficulty: 'Advanced',
-    tags: ['WebSocket'],
+    tags: ['Managed Resources', 'WebSocket'],
   },
   {
     title: 'Typing Terminal',
