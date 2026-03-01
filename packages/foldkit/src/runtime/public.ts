@@ -1,9 +1,18 @@
-export { makeElement, makeApplication, run, makeSubscriptions } from './runtime'
+export {
+  makeElement,
+  makeApplication,
+  run,
+  makeSubscriptions,
+  makeManagedResources,
+} from './runtime'
 
 export type {
   BrowserConfig,
   Subscription,
   Subscriptions,
+  ManagedResourceConfig,
+  ManagedResources,
+  ManagedResourceServicesOf,
   ElementConfigWithFlags,
   ElementConfigWithoutFlags,
   ApplicationConfigWithFlags,

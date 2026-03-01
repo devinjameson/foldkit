@@ -14,7 +14,7 @@ export const heroVisibility: Subscription<
   typeof ChangedHeroVisibility,
   SubscriptionDeps['heroVisibility']
 > = {
-  modelToDeps: (model: Model) => ({
+  modelToDependencies: (model: Model) => ({
     isLandingPage: model.route._tag === 'Home',
   }),
   depsToStream: ({ isLandingPage }) =>

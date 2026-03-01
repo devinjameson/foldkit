@@ -23,7 +23,7 @@ export const activeSection: Subscription<
   typeof ChangedActiveSection,
   SubscriptionDeps['activeSection']
 > = {
-  modelToDeps: (model: Model) => {
+  modelToDependencies: (model: Model) => {
     const currentPageTableOfContents = M.value(model.route).pipe(
       M.tag('WhyFoldkit', () => Page.WhyFoldkit.tableOfContents),
       M.tag(

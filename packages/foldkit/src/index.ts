@@ -1,4 +1,5 @@
 export * as Command from './command/public'
+export * as ManagedResource from './managedResource/public'
 export * as FieldValidation from './fieldValidation/public'
 export * as Html from './html/public'
 export * as Message from './message/public'

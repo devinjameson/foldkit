@@ -1,5 +1,6 @@
 import { BrowserRuntime } from '@effect/platform-browser/index'
 import {
+  Array,
   Cause,
   Context,
   Effect,
@@ -21,6 +22,7 @@ import { h } from 'snabbdom'
 
 import type { Command } from '../command'
 import { Html } from '../html'
+import type { ManagedResource } from '../managedResource'
 import { Url, fromString as urlFromString } from '../url'
 import { VNode, patch, toVNode } from '../vdom'
 import {
@@ -54,6 +56,7 @@ export interface RuntimeConfig<
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
   Flags,
   Resources = never,
+  ManagedResourceServices = never,
 > {
   Model: Schema.Schema<Model, any, never>
   Flags: Schema.Schema<Flags, any, never>
@@ -61,17 +64,23 @@ export interface RuntimeConfig<
   readonly init: (
     flags: Flags,
     url?: Url,
-  ) => [Model, ReadonlyArray<Command<Message, never, Resources>>]
+  ) => [
+    Model,
+    ReadonlyArray<Command<Message, never, Resources | ManagedResourceServices>>,
+  ]
   readonly update: (
     model: Model,
     message: Message,
-  ) => [Model, ReadonlyArray<Command<Message, never, Resources>>]
+  ) => [
+    Model,
+    ReadonlyArray<Command<Message, never, Resources | ManagedResourceServices>>,
+  ]
   readonly view: (model: Model) => Html
   readonly subscriptions?: Subscriptions<
     Model,
     Message,
     StreamDepsMap,
-    Resources
+    Resources | ManagedResourceServices
   >
   readonly container: HTMLElement
   readonly browser?: BrowserConfig<Message>
@@ -86,6 +95,17 @@ export interface RuntimeConfig<
    * commands and subscriptions throughout the application's lifetime.
    */
   readonly resources?: Layer.Layer<Resources>
+  /**
+   * Model-driven resources with acquire/release lifecycle. Unlike `resources`
+   * which persist for the application's lifetime, managed resources are
+   * acquired and released based on the current model state. Create with
+   * `makeManagedResources`.
+   */
+  readonly managedResources?: ManagedResources<
+    Model,
+    Message,
+    ManagedResourceServices
+  >
 }
 
 interface BaseElementConfig<
@@ -93,22 +113,31 @@ interface BaseElementConfig<
   Message,
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
   Resources = never,
+  ManagedResourceServices = never,
 > {
   readonly Model: Schema.Schema<Model, any, never>
   readonly update: (
     model: Model,
     message: Message,
-  ) => [Model, ReadonlyArray<Command<Message, never, Resources>>]
+  ) => [
+    Model,
+    ReadonlyArray<Command<Message, never, Resources | ManagedResourceServices>>,
+  ]
   readonly view: (model: Model) => Html
   readonly subscriptions?: Subscriptions<
     Model,
     Message,
     StreamDepsMap,
-    Resources
+    Resources | ManagedResourceServices
   >
   readonly container: HTMLElement
   readonly errorView?: (error: Error) => Html
   readonly resources?: Layer.Layer<Resources>
+  readonly managedResources?: ManagedResources<
+    Model,
+    Message,
+    ManagedResourceServices
+  >
 }
 
 /** Configuration for `makeElement` when the element receives initial data via flags. */
@@ -118,12 +147,22 @@ export interface ElementConfigWithFlags<
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
   Flags,
   Resources = never,
-> extends BaseElementConfig<Model, Message, StreamDepsMap, Resources> {
+  ManagedResourceServices = never,
+> extends BaseElementConfig<
+  Model,
+  Message,
+  StreamDepsMap,
+  Resources,
+  ManagedResourceServices
+> {
   readonly Flags: Schema.Schema<Flags, any, never>
   readonly flags: Effect.Effect<Flags>
   readonly init: (
     flags: Flags,
-  ) => [Model, ReadonlyArray<Command<Message, never, Resources>>]
+  ) => [
+    Model,
+    ReadonlyArray<Command<Message, never, Resources | ManagedResourceServices>>,
+  ]
 }
 
 /** Configuration for `makeElement` without flags. */
@@ -132,10 +171,17 @@ export interface ElementConfigWithoutFlags<
   Message,
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
   Resources = never,
-> extends BaseElementConfig<Model, Message, StreamDepsMap, Resources> {
+  ManagedResourceServices = never,
+> extends BaseElementConfig<
+  Model,
+  Message,
+  StreamDepsMap,
+  Resources,
+  ManagedResourceServices
+> {
   readonly init: () => [
     Model,
-    ReadonlyArray<Command<Message, never, Resources>>,
+    ReadonlyArray<Command<Message, never, Resources | ManagedResourceServices>>,
   ]
 }
 
@@ -144,23 +190,32 @@ interface BaseApplicationConfig<
   Message,
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
   Resources = never,
+  ManagedResourceServices = never,
 > {
   readonly Model: Schema.Schema<Model, any, never>
   readonly update: (
     model: Model,
     message: Message,
-  ) => [Model, ReadonlyArray<Command<Message, never, Resources>>]
+  ) => [
+    Model,
+    ReadonlyArray<Command<Message, never, Resources | ManagedResourceServices>>,
+  ]
   readonly view: (model: Model) => Html
   readonly subscriptions?: Subscriptions<
     Model,
     Message,
     StreamDepsMap,
-    Resources
+    Resources | ManagedResourceServices
   >
   readonly container: HTMLElement
   readonly browser: BrowserConfig<Message>
   readonly errorView?: (error: Error) => Html
   readonly resources?: Layer.Layer<Resources>
+  readonly managedResources?: ManagedResources<
+    Model,
+    Message,
+    ManagedResourceServices
+  >
 }
 
 /** Configuration for `makeApplication` when the application receives initial data via flags. */
@@ -170,13 +225,23 @@ export interface ApplicationConfigWithFlags<
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
   Flags,
   Resources = never,
-> extends BaseApplicationConfig<Model, Message, StreamDepsMap, Resources> {
+  ManagedResourceServices = never,
+> extends BaseApplicationConfig<
+  Model,
+  Message,
+  StreamDepsMap,
+  Resources,
+  ManagedResourceServices
+> {
   readonly Flags: Schema.Schema<Flags, any, never>
   readonly flags: Effect.Effect<Flags>
   readonly init: (
     flags: Flags,
     url: Url,
-  ) => [Model, ReadonlyArray<Command<Message, never, Resources>>]
+  ) => [
+    Model,
+    ReadonlyArray<Command<Message, never, Resources | ManagedResourceServices>>,
+  ]
 }
 
 /** Configuration for `makeApplication` without flags. */
@@ -185,10 +250,20 @@ export interface ApplicationConfigWithoutFlags<
   Message,
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
   Resources = never,
-> extends BaseApplicationConfig<Model, Message, StreamDepsMap, Resources> {
+  ManagedResourceServices = never,
+> extends BaseApplicationConfig<
+  Model,
+  Message,
+  StreamDepsMap,
+  Resources,
+  ManagedResourceServices
+> {
   readonly init: (
     url: Url,
-  ) => [Model, ReadonlyArray<Command<Message, never, Resources>>]
+  ) => [
+    Model,
+    ReadonlyArray<Command<Message, never, Resources | ManagedResourceServices>>,
+  ]
 }
 
 /** The `init` function type for elements, with an optional `flags` parameter when `Flags` is not `void`. */
@@ -197,9 +272,22 @@ export type ElementInit<
   Message,
   Flags = void,
   Resources = never,
+  ManagedResourceServices = never,
 > = Flags extends void
-  ? () => [Model, ReadonlyArray<Command<Message, never, Resources>>]
-  : (flags: Flags) => [Model, ReadonlyArray<Command<Message, never, Resources>>]
+  ? () => [
+      Model,
+      ReadonlyArray<
+        Command<Message, never, Resources | ManagedResourceServices>
+      >,
+    ]
+  : (
+      flags: Flags,
+    ) => [
+      Model,
+      ReadonlyArray<
+        Command<Message, never, Resources | ManagedResourceServices>
+      >,
+    ]
 
 /** The `init` function type for applications, receives the current URL and optional flags. */
 export type ApplicationInit<
@@ -207,19 +295,32 @@ export type ApplicationInit<
   Message,
   Flags = void,
   Resources = never,
+  ManagedResourceServices = never,
 > = Flags extends void
-  ? (url: Url) => [Model, ReadonlyArray<Command<Message, never, Resources>>]
+  ? (
+      url: Url,
+    ) => [
+      Model,
+      ReadonlyArray<
+        Command<Message, never, Resources | ManagedResourceServices>
+      >,
+    ]
   : (
       flags: Flags,
       url: Url,
-    ) => [Model, ReadonlyArray<Command<Message, never, Resources>>]
+    ) => [
+      Model,
+      ReadonlyArray<
+        Command<Message, never, Resources | ManagedResourceServices>
+      >,
+    ]
 
 /** A reactive binding between model state and a long-running stream of commands. */
 export type Subscription<Model, Message, StreamDeps, Resources = never> = {
-  readonly modelToDeps: (model: Model) => StreamDeps
+  readonly modelToDependencies: (model: Model) => StreamDeps
   readonly depsToStream: (
     deps: StreamDeps,
-  ) => Stream.Stream<Command<Message, never, Resources>>
+  ) => Stream.Stream<Command<Message, never, Resources>, never, Resources>
 }
 
 type SubscriptionConfig<Model, Message, StreamDeps, Resources = never> = {
@@ -248,17 +349,162 @@ export const makeSubscriptions =
   ) =>
   <Model, Message, Resources = never>(configs: {
     [K in keyof Schema.Schema.Type<SubscriptionDeps>]: {
-      modelToDeps: (model: Model) => Schema.Schema.Type<SubscriptionDeps>[K]
+      modelToDependencies: (
+        model: Model,
+      ) => Schema.Schema.Type<SubscriptionDeps>[K]
       depsToStream: (
         deps: Schema.Schema.Type<SubscriptionDeps>[K],
-      ) => Stream.Stream<Command<Message, never, Resources>>
+      ) => Stream.Stream<Command<Message, never, Resources>, never, Resources>
     }
   }) =>
-    Record.map(configs, ({ modelToDeps, depsToStream }, key) => ({
+    Record.map(configs, ({ modelToDependencies, depsToStream }, key) => ({
       schema: SubscriptionDeps.fields[key],
-      modelToDeps,
+      modelToDependencies,
       depsToStream,
     }))
+
+/** Internal configuration for a single managed resource, used by the runtime. */
+export type ManagedResourceConfig<Model, Message> = {
+  readonly schema: Schema.Schema<any>
+  readonly resource: ManagedResource<any>
+  readonly modelToMaybeRequirements: (model: Model) => unknown
+  readonly acquire: (params: unknown) => Effect.Effect<unknown, unknown>
+  readonly release: (value: unknown) => Effect.Effect<void>
+  readonly onAcquired: (value: unknown) => Message
+  readonly onReleased: () => Message
+  readonly onAcquireError: (error: unknown) => Message
+}
+
+declare const ManagedResourceServicesPhantom: unique symbol
+
+/** A record of named managed resource configurations, keyed by dependency field name. */
+export type ManagedResources<Model, Message, Services = never> = Record<
+  string,
+  ManagedResourceConfig<Model, Message>
+> & {
+  readonly [ManagedResourceServicesPhantom]?: Services
+}
+
+/** Type-level utility to extract the service union from a ManagedResources type. */
+export type ManagedResourceServicesOf<MR> =
+  MR extends ManagedResources<any, any, infer S> ? S : never
+
+/**
+ * Creates type-safe managed resource configurations from a dependency schema.
+ *
+ * Use this when a resource is expensive or stateful and should only exist while
+ * the model is in a particular state — a camera stream during a video call, a
+ * WebSocket connection while on a chat page, or a Web Worker pool during a
+ * computation. For resources that live for the entire application lifetime, use
+ * the static `resources` config instead.
+ *
+ * **Lifecycle** — The runtime watches each config's `modelToMaybeRequirements`
+ * after every model update, structurally comparing the result against the
+ * previous value:
+ *
+ * - `Option.none()` → `Option.some(params)`: calls `acquire(params)`, then
+ *   dispatches `onAcquired(value)`.
+ * - `Option.some(paramsA)` → `Option.some(paramsB)` (structurally different):
+ *   releases the old resource, then acquires a new one with `paramsB`.
+ * - `Option.some(params)` → `Option.none()`: calls `release(value)`, then
+ *   dispatches `onReleased()`. No re-acquisition occurs.
+ *
+ * If `acquire` fails, `onAcquireError` is dispatched and the resource daemon
+ * continues watching for the next deps change — a failed acquisition does not
+ * crash the application.
+ *
+ * **Config fields:**
+ *
+ * - `resource` — The identity tag created with `ManagedResource.tag`. Appears
+ *   in the Effect R channel so commands that call `.get` are type-checked.
+ * - `modelToMaybeRequirements` — Extracts requirements from the model.
+ *   `Option.none()` means "release", `Option.some(params)` means
+ *   "acquire/re-acquire if params changed". For resources with no
+ *   parameters, use `S.Option(S.Null)` and return `Option.some(null)` —
+ *   not `S.Struct({})`, which has no fields for equivalence comparison.
+ * - `acquire` — Creates the resource from the unwrapped params. The returned
+ *   Effect should fail when acquisition fails — errors in the error channel
+ *   flow to `onAcquireError` as a message instead of crashing the runtime.
+ * - `release` — Tears down the resource. Errors thrown here are silently
+ *   swallowed — release must not block cleanup.
+ * - `onAcquired` — Message dispatched when `acquire` succeeds.
+ * - `onAcquireError` — Message dispatched when `acquire` fails.
+ * - `onReleased` — Message dispatched after `release` completes.
+ *
+ * @example
+ * ```ts
+ * const CameraStream = ManagedResource.tag<MediaStream>()('CameraStream')
+ *
+ * const ManagedResourceDeps = S.Struct({
+ *   camera: S.Option(S.Struct({ facingMode: S.String })),
+ * })
+ *
+ * const managedResources = Runtime.makeManagedResources(
+ *   ManagedResourceDeps,
+ * )<Model, Message>({
+ *   camera: {
+ *     resource: CameraStream,
+ *     modelToMaybeRequirements: model =>
+ *       pipe(
+ *         model.callState,
+ *         Option.liftPredicate(
+ *           (callState): callState is typeof InCall.Type =>
+ *             callState._tag === 'InCall',
+ *         ),
+ *         Option.map(callState => ({ facingMode: callState.facingMode })),
+ *       ),
+ *     acquire: ({ facingMode }) =>
+ *       Effect.tryPromise(() =>
+ *         navigator.mediaDevices.getUserMedia({ video: { facingMode } }),
+ *       ),
+ *     release: stream =>
+ *       Effect.sync(() => stream.getTracks().forEach(track => track.stop())),
+ *     onAcquired: () => AcquiredCamera(),
+ *     onAcquireError: error => FailedToAcquireCamera({ error: String(error) }),
+ *     onReleased: () => ReleasedCamera(),
+ *   },
+ * })
+ * ```
+ *
+ * @param ManagedResourceDeps - An Effect Schema struct where each field's type
+ * drives the requirements for one managed resource. Wrap in `S.Option(...)` for
+ * resources that can be released (most cases).
+ *
+ * @see {@link ManagedResource.tag} for creating the resource identity.
+ */
+export const makeManagedResources =
+  <ManagedResourceDeps extends Schema.Struct<any>>(
+    ManagedResourceDeps: ManagedResourceDeps,
+  ) =>
+  <Model, Message>(configs: {
+    [K in keyof Schema.Schema.Type<ManagedResourceDeps>]: {
+      readonly resource: ManagedResource<any, any>
+      readonly modelToMaybeRequirements: (
+        model: Model,
+      ) => Schema.Schema.Type<ManagedResourceDeps>[K]
+      readonly acquire: (
+        params: Schema.Schema.Type<ManagedResourceDeps>[K] extends Option.Option<
+          infer P
+        >
+          ? P
+          : Schema.Schema.Type<ManagedResourceDeps>[K],
+      ) => Effect.Effect<any, unknown>
+      readonly release: (value: any) => Effect.Effect<void>
+      readonly onAcquired: (value: any) => Message
+      readonly onReleased: () => Message
+      readonly onAcquireError: (error: unknown) => Message
+    }
+  }): ManagedResources<Model, Message> =>
+    /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+    Record.map(
+      configs,
+      (config, key) =>
+        /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+        ({
+          schema: ManagedResourceDeps.fields[key],
+          ...config,
+        }) as ManagedResourceConfig<Model, Message>,
+    ) as ManagedResources<Model, Message>
 
 /** A configured Foldkit runtime returned by `makeElement` or `makeApplication`, passed to `run` to start the application. */
 export type MakeRuntimeReturn = (hmrModel?: unknown) => Effect.Effect<void>
@@ -270,6 +516,7 @@ const makeRuntime =
     StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
     Flags,
     Resources,
+    ManagedResourceServices,
   >({
     Model,
     Flags: _Flags,
@@ -282,12 +529,14 @@ const makeRuntime =
     browser: browserConfig,
     errorView,
     resources,
+    managedResources,
   }: RuntimeConfig<
     Model,
     Message,
     StreamDepsMap,
     Flags,
-    Resources
+    Resources,
+    ManagedResourceServices
   >): MakeRuntimeReturn =>
   (hmrModel?: unknown): Effect.Effect<void> =>
     Effect.scoped(
@@ -296,14 +545,65 @@ const makeRuntime =
           ? Option.some(yield* Layer.memoize(resources))
           : Option.none()
 
-        const provideCommandResources = (
-          command: Effect.Effect<Message, never, Resources>,
-        ): Effect.Effect<Message> =>
-          Option.match(maybeResourceLayer, {
-            /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-            onNone: () => command as Effect.Effect<Message>,
-            onSome: resourceLayer => Effect.provide(command, resourceLayer),
+        const managedResourceEntries: ReadonlyArray<
+          [string, ManagedResourceConfig<Model, Message>]
+        > = managedResources
+          ? /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+            (Record.toEntries(managedResources) as ReadonlyArray<
+              [string, ManagedResourceConfig<Model, Message>]
+            >)
+          : []
+
+        const managedResourceRefs = yield* Effect.forEach(
+          managedResourceEntries,
+          ([_key, config]) =>
+            Ref.make<Option.Option<unknown>>(Option.none()).pipe(
+              Effect.map(ref => ({ config, ref })),
+            ),
+        )
+
+        const mergeResourceIntoLayer = (
+          layer: Layer.Layer<any>,
+          { config, ref }: ManagedResourceRef,
+        ) =>
+          Layer.merge(
+            layer,
+            Layer.succeed(
+              /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+              config.resource._tag as Context.Tag<any, any>,
+              ref,
+            ),
+          )
+
+        const maybeManagedResourceLayer = Array.match(managedResourceRefs, {
+          onEmpty: () => Option.none(),
+          onNonEmpty: refs =>
+            Option.some(
+              /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+              Array.reduce(
+                refs,
+                Layer.empty as Layer.Layer<any>,
+                mergeResourceIntoLayer,
+              ),
+            ),
+        })
+
+        const provideAllResources = <A>(
+          effect: Effect.Effect<A, never, Resources | ManagedResourceServices>,
+        ): Effect.Effect<A> => {
+          const withResources = Option.match(maybeResourceLayer, {
+            onNone: () => effect,
+            onSome: resourceLayer => Effect.provide(effect, resourceLayer),
           })
+
+          return Option.match(maybeManagedResourceLayer, {
+            /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+            onNone: () => withResources as Effect.Effect<A>,
+            onSome: managedLayer =>
+              /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+              Effect.provide(withResources, managedLayer) as Effect.Effect<A>,
+          })
+        }
 
         const flags = yield* flags_
 
@@ -332,10 +632,7 @@ const makeRuntime =
 
         yield* Effect.forEach(initCommands, command =>
           Effect.forkDaemon(
-            command.pipe(
-              provideCommandResources,
-              Effect.flatMap(enqueueMessage),
-            ),
+            command.pipe(provideAllResources, Effect.flatMap(enqueueMessage)),
           ),
         )
 
@@ -370,7 +667,7 @@ const makeRuntime =
             yield* Effect.forEach(commands, command =>
               Effect.forkDaemon(
                 command.pipe(
-                  provideCommandResources,
+                  provideAllResources,
                   Effect.flatMap(enqueueMessage),
                 ),
               ),
@@ -445,7 +742,7 @@ const makeRuntime =
             subscriptions,
             Record.toEntries,
             Effect.forEach(
-              ([_key, { schema, modelToDeps, depsToStream }]) => {
+              ([_key, { schema, modelToDependencies, depsToStream }]) => {
                 const modelStream = Stream.concat(
                   Stream.make(initModel),
                   modelSubscriptionRef.changes,
@@ -453,15 +750,13 @@ const makeRuntime =
 
                 return Effect.forkDaemon(
                   modelStream.pipe(
-                    Stream.map(modelToDeps),
+                    Stream.map(modelToDependencies),
                     Stream.changesWith(Schema.equivalence(schema)),
                     Stream.flatMap(depsToStream, { switch: true }),
                     Stream.runForEach(command =>
-                      command.pipe(
-                        provideCommandResources,
-                        Effect.flatMap(enqueueMessage),
-                      ),
+                      command.pipe(Effect.flatMap(enqueueMessage)),
                     ),
+                    provideAllResources,
                   ),
                 )
               },
@@ -472,6 +767,91 @@ const makeRuntime =
             ),
           )
         }
+
+        const maybeRequirementsToLifecycle =
+          (
+            config: ManagedResourceConfig<Model, Message>,
+            resourceRef: Ref.Ref<Option.Option<unknown>>,
+          ) =>
+          (
+            maybeRequirements: unknown,
+          ): Stream.Stream<Effect.Effect<Message, unknown>> => {
+            if (
+              Option.isOption(maybeRequirements) &&
+              Option.isNone(maybeRequirements)
+            ) {
+              return Stream.empty
+            }
+
+            const requirements = Option.isOption(maybeRequirements)
+              ? Option.getOrThrow(maybeRequirements)
+              : maybeRequirements
+
+            const acquire = Effect.gen(function* () {
+              const value = yield* config.acquire(requirements)
+              yield* Ref.set(resourceRef, Option.some(value))
+              return value
+            })
+
+            const release = (value: unknown) =>
+              Effect.gen(function* () {
+                yield* config.release(value)
+                yield* Ref.set(resourceRef, Option.none())
+                yield* enqueueMessage(config.onReleased())
+              }).pipe(Effect.catchAllCause(() => Effect.void))
+
+            return pipe(
+              Stream.scoped(Effect.acquireRelease(acquire, release)),
+              Stream.flatMap(value =>
+                Stream.concat(
+                  Stream.make(config.onAcquired(value)),
+                  Stream.never,
+                ),
+              ),
+              Stream.map(Effect.succeed),
+              Stream.catchAll(error =>
+                Stream.make(Effect.succeed(config.onAcquireError(error))),
+              ),
+            )
+          }
+
+        type ManagedResourceRef = (typeof managedResourceRefs)[number]
+
+        const forkManagedResourceLifecycle = ({
+          config,
+          ref: resourceRef,
+        }: ManagedResourceRef) =>
+          Effect.gen(function* () {
+            const modelStream = Stream.concat(
+              Stream.make(initModel),
+              modelSubscriptionRef.changes,
+            )
+
+            const equivalence = Schema.equivalence(config.schema)
+
+            yield* Effect.forkDaemon(
+              modelStream.pipe(
+                Stream.map(config.modelToMaybeRequirements),
+                Stream.changesWith(equivalence),
+                Stream.flatMap(
+                  maybeRequirementsToLifecycle(config, resourceRef),
+                  {
+                    switch: true,
+                  },
+                ),
+                Stream.runForEach(Effect.flatMap(enqueueMessage)),
+              ),
+            )
+          })
+
+        yield* Effect.forEach(
+          managedResourceRefs,
+          forkManagedResourceLifecycle,
+          {
+            concurrency: 'unbounded',
+            discard: true,
+          },
+        )
 
         yield* pipe(
           Effect.forever(
@@ -559,13 +939,15 @@ export function makeElement<
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
   Flags,
   Resources = never,
+  ManagedResourceServices = never,
 >(
   config: ElementConfigWithFlags<
     Model,
     Message,
     StreamDepsMap,
     Flags,
-    Resources
+    Resources,
+    ManagedResourceServices
   >,
 ): MakeRuntimeReturn
 
@@ -574,8 +956,15 @@ export function makeElement<
   Message extends { _tag: string },
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
   Resources = never,
+  ManagedResourceServices = never,
 >(
-  config: ElementConfigWithoutFlags<Model, Message, StreamDepsMap, Resources>,
+  config: ElementConfigWithoutFlags<
+    Model,
+    Message,
+    StreamDepsMap,
+    Resources,
+    ManagedResourceServices
+  >,
 ): MakeRuntimeReturn
 
 export function makeElement<
@@ -584,10 +973,24 @@ export function makeElement<
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
   Flags,
   Resources = never,
+  ManagedResourceServices = never,
 >(
   config:
-    | ElementConfigWithFlags<Model, Message, StreamDepsMap, Flags, Resources>
-    | ElementConfigWithoutFlags<Model, Message, StreamDepsMap, Resources>,
+    | ElementConfigWithFlags<
+        Model,
+        Message,
+        StreamDepsMap,
+        Flags,
+        Resources,
+        ManagedResourceServices
+      >
+    | ElementConfigWithoutFlags<
+        Model,
+        Message,
+        StreamDepsMap,
+        Resources,
+        ManagedResourceServices
+      >,
 ): MakeRuntimeReturn {
   const baseConfig = {
     Model: config.Model,
@@ -597,22 +1000,43 @@ export function makeElement<
     container: config.container,
     ...(config.errorView && { errorView: config.errorView }),
     ...(config.resources && { resources: config.resources }),
+    ...(config.managedResources && {
+      managedResources: config.managedResources,
+    }),
   }
 
   if ('Flags' in config) {
+    /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
     return makeRuntime({
       ...baseConfig,
       Flags: config.Flags,
       flags: config.flags,
-      init: flags => config.init(flags),
-    })
+      init: (flags: unknown) =>
+        /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+        config.init(flags as Flags),
+    } as RuntimeConfig<
+      Model,
+      Message,
+      StreamDepsMap,
+      Flags,
+      Resources,
+      ManagedResourceServices
+    >)
   } else {
+    /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
     return makeRuntime({
       ...baseConfig,
       Flags: Schema.Void,
       flags: Effect.succeed(undefined),
       init: () => config.init(),
-    })
+    } as RuntimeConfig<
+      Model,
+      Message,
+      StreamDepsMap,
+      void,
+      Resources,
+      ManagedResourceServices
+    >)
   }
 }
 
@@ -623,13 +1047,15 @@ export function makeApplication<
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
   Flags,
   Resources = never,
+  ManagedResourceServices = never,
 >(
   config: ApplicationConfigWithFlags<
     Model,
     Message,
     StreamDepsMap,
     Flags,
-    Resources
+    Resources,
+    ManagedResourceServices
   >,
 ): MakeRuntimeReturn
 
@@ -638,12 +1064,14 @@ export function makeApplication<
   Message extends { _tag: string },
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
   Resources = never,
+  ManagedResourceServices = never,
 >(
   config: ApplicationConfigWithoutFlags<
     Model,
     Message,
     StreamDepsMap,
-    Resources
+    Resources,
+    ManagedResourceServices
   >,
 ): MakeRuntimeReturn
 
@@ -653,6 +1081,7 @@ export function makeApplication<
   StreamDepsMap extends Schema.Struct<Schema.Struct.Fields>,
   Flags,
   Resources = never,
+  ManagedResourceServices = never,
 >(
   config:
     | ApplicationConfigWithFlags<
@@ -660,9 +1089,16 @@ export function makeApplication<
         Message,
         StreamDepsMap,
         Flags,
-        Resources
+        Resources,
+        ManagedResourceServices
       >
-    | ApplicationConfigWithoutFlags<Model, Message, StreamDepsMap, Resources>,
+    | ApplicationConfigWithoutFlags<
+        Model,
+        Message,
+        StreamDepsMap,
+        Resources,
+        ManagedResourceServices
+      >,
 ): MakeRuntimeReturn {
   const currentUrl: Url = Option.getOrThrow(urlFromString(window.location.href))
 
@@ -675,22 +1111,43 @@ export function makeApplication<
     browser: config.browser,
     ...(config.errorView && { errorView: config.errorView }),
     ...(config.resources && { resources: config.resources }),
+    ...(config.managedResources && {
+      managedResources: config.managedResources,
+    }),
   }
 
   if ('Flags' in config) {
+    /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
     return makeRuntime({
       ...baseConfig,
       Flags: config.Flags,
       flags: config.flags,
-      init: (flags, url) => config.init(flags, url ?? currentUrl),
-    })
+      init: (flags: unknown, url) =>
+        /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+        config.init(flags as Flags, url ?? currentUrl),
+    } as RuntimeConfig<
+      Model,
+      Message,
+      StreamDepsMap,
+      Flags,
+      Resources,
+      ManagedResourceServices
+    >)
   } else {
+    /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
     return makeRuntime({
       ...baseConfig,
       Flags: Schema.Void,
       flags: Effect.succeed(undefined),
       init: (_flags, url) => config.init(url ?? currentUrl),
-    })
+    } as RuntimeConfig<
+      Model,
+      Message,
+      StreamDepsMap,
+      void,
+      Resources,
+      ManagedResourceServices
+    >)
   }
 }
 

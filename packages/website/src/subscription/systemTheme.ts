@@ -13,7 +13,7 @@ export const systemTheme: Subscription<
   typeof ChangedSystemTheme,
   SubscriptionDeps['systemTheme']
 > = {
-  modelToDeps: (model: Model) => ({
+  modelToDependencies: (model: Model) => ({
     isSystemPreference: model.themePreference === 'System',
   }),
   depsToStream: ({ isSystemPreference }) =>

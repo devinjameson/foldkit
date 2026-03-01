@@ -17,7 +17,7 @@ const SubscriptionDeps = S.Struct({
 
 export const subscriptions = Runtime.makeSubscriptions(SubscriptionDeps)<Model, Message>({
   roomSubscription: {
-    modelToDeps: (model: Model) =>
+    modelToDependencies: (model: Model) =>
       M.value(model.route).pipe(
         M.tag('Room', ({ roomId }) =>
           Option.map(model.room.maybeSession, session => ({
@@ -56,7 +56,7 @@ export const subscriptions = Runtime.makeSubscriptions(SubscriptionDeps)<Model, 
   },
 
   keyboard: {
-    modelToDeps: ({ route, room, home }: Model) => {
+    modelToDependencies: ({ route, room, home }: Model) => {
       const shouldCaptureKeyboard = M.value(route).pipe(
         M.tagsExhaustive({
           Home: () => home.homeStep._tag === 'SelectAction',
