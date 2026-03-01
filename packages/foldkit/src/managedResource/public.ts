@@ -1,4 +1,4 @@
-export { tag, isManagedResource, ResourceNotAvailable } from './index'
+export { tag, ResourceNotAvailable } from './index'
 
 export type {
   ManagedResource,

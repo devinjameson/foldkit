@@ -121,6 +121,11 @@ interface TypeDocQueryType<Self> {
   readonly queryType: Self
 }
 
+type TypeDocInferredType = Readonly<{
+  type: 'inferred'
+  name: string
+}>
+
 type TypeDocPredicateType = Readonly<{
   type: 'predicate'
 }>
@@ -143,6 +148,7 @@ export type TypeDocType =
   | TypeDocConditionalType<TypeDocType>
   | TypeDocIndexedAccessType<TypeDocType>
   | TypeDocQueryType<TypeDocType>
+  | TypeDocInferredType
   | TypeDocPredicateType
   | TypeDocUnknownType
 
@@ -162,6 +168,7 @@ type TypeDocTypeEncoded =
   | TypeDocConditionalType<TypeDocTypeEncoded>
   | TypeDocIndexedAccessType<TypeDocTypeEncoded>
   | TypeDocQueryType<TypeDocTypeEncoded>
+  | TypeDocInferredType
   | TypeDocPredicateType
   | TypeDocUnknownType
 
@@ -226,6 +233,7 @@ export const TypeDocTypeSchema: S.Schema<
       type: S.Literal('query'),
       queryType: TypeDocTypeSchema,
     }),
+    S.Struct({ type: S.Literal('inferred'), name: S.String }),
     S.Struct({ type: S.Literal('predicate') }),
     S.Struct({ type: S.Literal('unknown') }),
   ),

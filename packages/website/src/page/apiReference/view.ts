@@ -44,6 +44,19 @@ const descriptionWithCode = (
   )
 }
 
+const descriptionView = (description: string): ReadonlyArray<Html> =>
+  pipe(
+    String.split(description, '\n\n'),
+    Array.map(String.trim),
+    Array.filter(String.isNonEmpty),
+    Array.map(paragraph =>
+      p(
+        [Class('text-gray-600 dark:text-gray-400 mb-2')],
+        descriptionWithCode(paragraph),
+      ),
+    ),
+  )
+
 const sourceLink = (
   sourceUrl: Option.Option<string>,
   name: string,
@@ -115,12 +128,7 @@ const functionView = (
       ),
       ...Option.match(apiFunction.description, {
         onNone: () => [],
-        onSome: description => [
-          p(
-            [Class('text-gray-600 dark:text-gray-400 mb-4')],
-            descriptionWithCode(description),
-          ),
-        ],
+        onSome: descriptionView,
       }),
       signaturesView(id, apiFunction, model, toMessage),
     ],
@@ -374,12 +382,7 @@ const typeView = (moduleName: string, type: ApiType): Html => {
       ),
       ...Option.match(type.description, {
         onNone: () => [],
-        onSome: description => [
-          p(
-            [Class('text-gray-600 dark:text-gray-400 mb-2')],
-            descriptionWithCode(description),
-          ),
-        ],
+        onSome: descriptionView,
       }),
       ...Option.match(maybeHighlighted, {
         onSome: highlighted => [
@@ -456,12 +459,7 @@ const interfaceView = (
       ),
       ...Option.match(apiInterface.description, {
         onNone: () => [],
-        onSome: description => [
-          p(
-            [Class('text-gray-600 dark:text-gray-400 mb-2')],
-            descriptionWithCode(description),
-          ),
-        ],
+        onSome: descriptionView,
       }),
       ...Option.match(maybeHighlighted, {
         onSome: highlighted => [
@@ -535,12 +533,7 @@ const variableView = (
       ),
       ...Option.match(variable.description, {
         onNone: () => [],
-        onSome: description => [
-          p(
-            [Class('text-gray-600 dark:text-gray-400 mb-2')],
-            descriptionWithCode(description),
-          ),
-        ],
+        onSome: descriptionView,
       }),
       ...Option.match(maybeHighlighted, {
         onSome: highlighted => [

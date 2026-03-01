@@ -168,6 +168,7 @@ const formatType = (type: TypeDocType, depth: number): string =>
         return `{\n${indent(depth + 1)}${readonlyPrefix}[${parameter} in ${formatType(parameterType, depth + 1)}]: ${formatType(templateType, depth + 1)}\n${indent(depth)}}`
       },
     ),
+    whenType('inferred', ({ name }) => `infer ${name}`),
     whenType('predicate', 'unknown', () => 'unknown'),
     M.exhaustive,
   )

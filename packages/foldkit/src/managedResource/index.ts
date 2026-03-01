@@ -69,9 +69,3 @@ export type Value<T> = T extends ManagedResource<infer V, any> ? V : never
 
 /** Type-level utility to extract the service identity type from a ManagedResource. */
 export type ServiceOf<T> = T extends ManagedResource<any, infer S> ? S : never
-
-/** Returns whether the given value is a ManagedResource. */
-export const isManagedResource = (
-  value: unknown,
-): value is ManagedResource<unknown> =>
-  typeof value === 'object' && value !== null && ManagedResourceTypeId in value
