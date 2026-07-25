@@ -18,9 +18,11 @@ import {
 import {
   coreCounterExampleRouter,
   coreSubmodelRouter,
+  coreViewMemoizationRouter,
   exampleDetailRouter,
   fieldValidationRouter,
   gettingStartedRouter,
+  reactComparisonRouter,
   routingAndNavigationRouter,
   testingSceneRouter,
   testingStoryRouter,
@@ -39,6 +41,7 @@ const [
   faqRouting,
   faqForms,
   faqUiComponents,
+  faqReactCompiler,
   faqDataFetching,
   faqTesting,
   faqWhereToStart,
@@ -101,7 +104,12 @@ const patternMappingTable: Html = comparisonTable(
     ],
     [
       [inlineCode('useMemo'), ' / ', inlineCode('useCallback')],
-      ['Not needed (no stale closures)'],
+      [
+        inlineCode('createLazy'),
+        ' / ',
+        inlineCode('createKeyedLazy'),
+        ' (memoize on data, not closure identity)',
+      ],
     ],
     [['Custom hooks'], ['Domain modules with pure functions']],
     [['JSX'], ['Plain functions from Model to HTML']],
@@ -284,11 +292,13 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           'One more feature: an input that controls how much each tick and manual click increments by.',
         ),
         para(
-          'This is where the React version hits a wall. The ',
+          'This is where the React version gets subtle. The ',
           inlineCode('setInterval'),
           ' callback captures ',
           inlineCode('step'),
-          ' at creation time. If you change the step while playing, the interval keeps using the old value: a stale closure. The fix is a ref and a sync effect to keep it current:',
+          ' at creation time. If you change the step while playing, the interval keeps using the old value: a stale closure. Nothing flags it at build time; the counter just increments by the wrong amount. React’s current fix is ',
+          inlineCode('useEffectEvent'),
+          ', stable since 19.2: declare the tick as an Effect Event and every call reads current state:',
         ),
         highlightedCodeBlock(
           h.div(
@@ -304,7 +314,13 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           'mb-4',
         ),
         para(
-          'Two refs, two effects, and a subtle bug that only manifests at runtime. The interval silently uses a stale value until you add the ref workaround. Most React developers have been burned by this.',
+          'This is React’s best answer, and look at what it asks of you. First you meet the bug at runtime, because nothing flags a stale closure. Then you classify the read: ',
+          inlineCode('step'),
+          ' must be non-reactive here, so it belongs in an Effect Event. The nearest wrong answer is silent: for the naive version, ',
+          inlineCode('react-hooks/exhaustive-deps'),
+          ' suggests adding ',
+          inlineCode('step'),
+          ' to the dependency array instead, which restarts the interval on every keystroke and quietly resets its rhythm. And codebases older than React 19.2 solve this with a ref plus a sync effect to carry the current value past the closure, a pattern you will still meet everywhere. Most React developers have been burned by this.',
         ),
         para('In Foldkit, there is no stale closure:'),
         highlightedCodeBlock(
@@ -328,14 +344,14 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           inlineCode('Ticked'),
           ' use ',
           inlineCode('model.step'),
-          ' and it just works. No refs, no sync effects, no runtime surprises.',
+          ' and it just works. No refs, no Effect Events, and no deciding which reads are reactive.',
         ),
         para(
           'Read the update function top to bottom. Every behavior in the app is right there. Each case is independent. They don’t interact through shared mutable state or overlapping effect dependencies. Adding a feature meant adding cases, not restructuring existing ones.',
         ),
         infoCallout(
           'The pattern',
-          'In React, complexity compounds. Each feature interacts with existing effects, refs, and closures. In Foldkit, complexity scales linearly. Each feature adds Messages, update cases, and possibly Commands or Subscriptions, but they don’t interact with each other through shared mutable state.',
+          'In React, each new feature interacts with the effects, refs, and closures already there. In Foldkit, each new feature adds Messages, update cases, and possibly Commands or Subscriptions to structures that already exist, and the cases don’t interact through shared mutable state.',
         ),
         para(
           'This structure also makes testing trivial. Your update function is pure. Pass a Model and a Message, assert on the returned Model. No rendering, no mocking ',
@@ -444,6 +460,34 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
             para(
               link(uiOverviewRouter(), 'Foldkit UI'),
               ' is a first-party set of headless, accessible components: Dialog, Combobox, Listbox, Menu, Popover, and more. Each one follows The Elm Architecture with its own Model, Message, and update, and integrates into your app via the Submodels pattern. You provide the markup and styling; Foldkit UI provides the accessibility attributes, keyboard navigation, and state management.',
+            ),
+          ],
+          model,
+        ),
+        faqItem(
+          faqReactCompiler,
+          'What about React Compiler?',
+          [
+            para(
+              'React Compiler, stable since October 2025, automatically memoizes components that follow the Rules of React, replacing most hand-written ',
+              inlineCode('memo'),
+              ', ',
+              inlineCode('useMemo'),
+              ', and ',
+              inlineCode('useCallback'),
+              '. If you stay in React, evaluate it; it addresses a real cost. What it does not change is the architecture this page is about: state still lives across hooks and libraries rather than in one Model, side effects still live in ',
+              inlineCode('useEffect'),
+              ' bodies with dependency arrays, and none of it is visible to the reducer, the type system, or a unit test.',
+            ),
+            para(
+              'Foldkit’s equivalent of memoization is ',
+              link(
+                coreViewMemoizationRouter(),
+                'createLazy and createKeyedLazy',
+              ),
+              ', keyed on Model data instead of closure identity. See the ',
+              link(reactComparisonRouter(), 'Foldkit vs React comparison'),
+              ' for the full side by side.',
             ),
           ],
           model,

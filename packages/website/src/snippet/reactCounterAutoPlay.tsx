@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
 
 const TICK_INTERVAL_MS = 1000
 
@@ -8,7 +8,6 @@ function Counter() {
   const [count, setCount] = useState(0)
   const [isAutoCounting, setIsPlaying] = useState(false)
   const [step, setStep] = useState(1)
-  const stepRef = useRef(step)
 
   const handleClickIncrement = () => {
     setCount(count => count + step)
@@ -18,15 +17,13 @@ function Counter() {
     setIsPlaying(isAutoCounting => !isAutoCounting)
   }
 
-  useEffect(() => {
-    stepRef.current = step
-  }, [step])
+  const onTick = useEffectEvent(() => {
+    setCount(count => count + step)
+  })
 
   useEffect(() => {
     if (isAutoCounting) {
-      intervalRef.current = setInterval(() => {
-        setCount(count => count + stepRef.current)
-      }, TICK_INTERVAL_MS)
+      intervalRef.current = setInterval(() => onTick(), TICK_INTERVAL_MS)
     }
 
     return () => clearInterval(intervalRef.current)
