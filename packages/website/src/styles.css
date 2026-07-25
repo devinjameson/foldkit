@@ -303,15 +303,18 @@
   }
 
   /* Demo line highlights: message (emerald), update (amber), model (blue), command (violet) */
+  /* NOTE: data-line counts from the first line after the import prologue, so these
+     numbers match DEMO_CODE and NOTE_PLAYER_DEMO_CODE in
+     scripts/demoCodePlugin.ts directly. */
   .demo-code-panel[data-demo-phase='IncrementMessage'] [data-line='11'] {
     @apply bg-emerald-500/15;
     border-left-color: theme(--color-emerald-400);
   }
 
+  .demo-code-panel[data-demo-phase='IncrementUpdate'] [data-line='31'],
+  .demo-code-panel[data-demo-phase='IncrementUpdate'] [data-line='32'],
   .demo-code-panel[data-demo-phase='IncrementUpdate'] [data-line='33'],
-  .demo-code-panel[data-demo-phase='IncrementUpdate'] [data-line='34'],
-  .demo-code-panel[data-demo-phase='IncrementUpdate'] [data-line='35'],
-  .demo-code-panel[data-demo-phase='IncrementUpdate'] [data-line='36'] {
+  .demo-code-panel[data-demo-phase='IncrementUpdate'] [data-line='34'] {
     @apply bg-amber-500/15;
     border-left-color: theme(--color-amber-400);
   }
@@ -325,15 +328,35 @@
     border-left-color: theme(--color-blue-400);
   }
 
+  .demo-code-panel[data-demo-phase='DurationMessage'] [data-line='12'],
+  .demo-code-panel[data-demo-phase='DurationMessage'] [data-line='13'],
+  .demo-code-panel[data-demo-phase='DurationMessage'] [data-line='14'] {
+    @apply bg-emerald-500/15;
+    border-left-color: theme(--color-emerald-400);
+  }
+
+  .demo-code-panel[data-demo-phase='DurationUpdate'] [data-line='35'],
+  .demo-code-panel[data-demo-phase='DurationUpdate'] [data-line='36'],
+  .demo-code-panel[data-demo-phase='DurationUpdate'] [data-line='37'],
+  .demo-code-panel[data-demo-phase='DurationUpdate'] [data-line='38'] {
+    @apply bg-amber-500/15;
+    border-left-color: theme(--color-amber-400);
+  }
+
+  .demo-code-panel[data-demo-phase='DurationModel'] [data-line='6'] {
+    @apply bg-blue-500/15;
+    border-left-color: theme(--color-blue-400);
+  }
+
   .demo-code-panel[data-demo-phase='ResetMessage'] [data-line='15'] {
     @apply bg-emerald-500/15;
     border-left-color: theme(--color-emerald-400);
   }
 
+  .demo-code-panel[data-demo-phase='ResetUpdate'] [data-line='39'],
+  .demo-code-panel[data-demo-phase='ResetUpdate'] [data-line='40'],
   .demo-code-panel[data-demo-phase='ResetUpdate'] [data-line='41'],
-  .demo-code-panel[data-demo-phase='ResetUpdate'] [data-line='42'],
-  .demo-code-panel[data-demo-phase='ResetUpdate'] [data-line='43'],
-  .demo-code-panel[data-demo-phase='ResetUpdate'] [data-line='44'] {
+  .demo-code-panel[data-demo-phase='ResetUpdate'] [data-line='42'] {
     @apply bg-amber-500/15;
     border-left-color: theme(--color-amber-400);
   }
@@ -345,9 +368,7 @@
   .demo-code-panel[data-demo-phase='ResetCommand'] [data-line='24'],
   .demo-code-panel[data-demo-phase='ResetCommand'] [data-line='25'],
   .demo-code-panel[data-demo-phase='ResetCommand'] [data-line='26'],
-  .demo-code-panel[data-demo-phase='ResetCommand'] [data-line='27'],
-  .demo-code-panel[data-demo-phase='ResetCommand'] [data-line='28'],
-  .demo-code-panel[data-demo-phase='ResetCommand'] [data-line='43'] {
+  .demo-code-panel[data-demo-phase='ResetCommand'] [data-line='41'] {
     @apply bg-violet-500/15;
     border-left-color: theme(--color-violet-400);
     animation: demo-pulse 1s ease-in-out infinite;
@@ -358,10 +379,10 @@
     border-left-color: theme(--color-emerald-400);
   }
 
+  .demo-code-panel[data-demo-phase='ResetCommandUpdate'] [data-line='43'],
+  .demo-code-panel[data-demo-phase='ResetCommandUpdate'] [data-line='44'],
   .demo-code-panel[data-demo-phase='ResetCommandUpdate'] [data-line='45'],
-  .demo-code-panel[data-demo-phase='ResetCommandUpdate'] [data-line='46'],
-  .demo-code-panel[data-demo-phase='ResetCommandUpdate'] [data-line='47'],
-  .demo-code-panel[data-demo-phase='ResetCommandUpdate'] [data-line='48'] {
+  .demo-code-panel[data-demo-phase='ResetCommandUpdate'] [data-line='46'] {
     @apply bg-amber-500/15;
     border-left-color: theme(--color-amber-400);
   }
@@ -472,7 +493,13 @@
   .note-demo-code-panel[data-note-demo-phase='NoteCommand'] [data-line='78'],
   .note-demo-code-panel[data-note-demo-phase='NoteCommand'] [data-line='79'],
   .note-demo-code-panel[data-note-demo-phase='NoteCommand'] [data-line='80'],
-  .note-demo-code-panel[data-note-demo-phase='NoteCommand'] [data-line='81'] {
+  .note-demo-code-panel[data-note-demo-phase='NoteCommand'] [data-line='81'],
+  .note-demo-code-panel[data-note-demo-phase='NoteCommand'] [data-line='82'],
+  .note-demo-code-panel[data-note-demo-phase='NoteCommand'] [data-line='83'],
+  .note-demo-code-panel[data-note-demo-phase='NoteCommand'] [data-line='84'],
+  .note-demo-code-panel[data-note-demo-phase='NoteCommand'] [data-line='85'],
+  .note-demo-code-panel[data-note-demo-phase='NoteCommand'] [data-line='86'],
+  .note-demo-code-panel[data-note-demo-phase='NoteCommand'] [data-line='87'] {
     @apply bg-violet-500/15;
     border-left-color: theme(--color-violet-400);
   }
