@@ -15,7 +15,11 @@ pnpm add @foldkit/markdown
 Add the plugin to `vite.config.ts`:
 
 ```typescript
+import { defineConfig } from 'vite'
+
 import { markdown } from '@foldkit/markdown/vite'
+import { foldkit } from '@foldkit/vite-plugin'
+import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [tailwindcss(), foldkit(), markdown()],
@@ -37,13 +41,20 @@ If you run tests with Vitest, add `markdown()` with the same options to the `plu
 ## Render a document
 
 ```typescript
+import { Html, html } from 'foldkit/html'
+
 import * as Markdown from '@foldkit/markdown'
 
 import aboutRaw from './content/about.md'
+import { type Message } from './message'
 
 const about = Markdown.decodeDocument(aboutRaw)
 
-const view = (model: Model): Html => h.div([], [Markdown.view(about)])
+const view = (): Html => {
+  const h = html<Message>()
+
+  return h.div([], [Markdown.view(about)])
+}
 ```
 
 `Markdown.view` renders every node through unstyled semantic defaults. Restyle any node by overriding its view:
@@ -78,6 +89,9 @@ Islands can wrap _markdown_ too.
 Declare each island's attributes as a Schema struct, once, in a module both your Vite config and your views import:
 
 ```typescript
+// src/islands.ts
+import { Schema as S } from 'effect'
+
 export const islandAttributes = {
   Counter: S.Struct({ label: S.optionalKey(S.String) }),
   Note: S.Struct({ tone: S.optionalKey(S.String) }),
@@ -87,25 +101,47 @@ export const islandAttributes = {
 Pass the definitions to the plugin and every directive validates at build time. An unknown island name, an unknown attribute, or an attribute value outside its schema fails the build with the file and line:
 
 ```typescript
+import { markdown } from '@foldkit/markdown/vite'
+
+import { islandAttributes } from './src/islands'
+
 markdown({ islands: islandAttributes })
 ```
 
 `islandsFor` pairs the same definitions with typed views: attributes arrive decoded through each island's schema, and the record must cover every declared name. State stays in your Model; the markdown only decides placement. The third argument is the zero-based occurrence of that island name in the document, for identifiers that must be unique per instance, like an `h.submodel` slotId:
 
 ```typescript
-Markdown.view(post, {
-  islands: Markdown.islandsFor(islandAttributes, {
-    Counter: ({ label }, _content, occurrenceIndex) =>
-      h.submodel({
-        slotId: `counter-${occurrenceIndex}`,
-        model: model.counter,
-        view: Counter.view,
-        toParentMessage: message => GotCounterMessage({ message }),
-      }),
-    Note: (_attributes, content) =>
-      h.aside([h.Class('rounded border p-4')], content),
-  }),
-})
+import { Html, html } from 'foldkit/html'
+
+import * as Markdown from '@foldkit/markdown'
+
+import { Counter } from './counter'
+import { islandAttributes } from './islands'
+import { GotCounterMessage, type Message, type Model } from './message'
+
+const postView = (model: Model, post: Markdown.MarkdownDocument): Html => {
+  const h = html<Message>()
+
+  return Markdown.view(post, {
+    islands: Markdown.islandsFor(islandAttributes, {
+      Counter: ({ label }, _content, occurrenceIndex) =>
+        h.div(
+          [],
+          [
+            h.span([], [label ?? 'Counter']),
+            h.submodel({
+              slotId: `counter-${occurrenceIndex}`,
+              model: model.counter,
+              view: Counter.view,
+              toParentMessage: message => GotCounterMessage({ message }),
+            }),
+          ],
+        ),
+      Note: (_attributes, content) =>
+        h.aside([h.Class('rounded border p-4')], content),
+    }),
+  })
+}
 ```
 
 Attribute values are strings on the wire, so transforming field schemas decode past them: `S.NumberFromString` turns `::Chart{height="240"}` into `height: number`. A plain `islands` record of untyped views (`Readonly<Record<string, IslandView>>`) also works when you want to skip the schemas.
@@ -122,6 +158,8 @@ Anything outside the vocabulary fails the build with an error naming the constru
 
 ```typescript
 import { parseMarkdown } from '@foldkit/markdown/vite'
+
+import { islandAttributes } from './islands'
 
 const document = parseMarkdown('# Title', { islands: islandAttributes })
 ```

@@ -14,7 +14,7 @@ import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 import demoCodeHtml from 'virtual:counter-demo-code'
 
-import { Button, Input } from '@foldkit/ui'
+import { Button } from '@foldkit/ui'
 
 import * as DemoView from './demoView'
 
@@ -22,6 +22,14 @@ import * as DemoView from './demoView'
 
 const PHASE_DURATION: Duration.Input = '300 millis'
 const MAX_LOG_ENTRIES = 50
+const MIN_RESET_DURATION = 1
+const MAX_RESET_DURATION = 5
+
+const clampResetSeconds = (seconds: number): number =>
+  N.clamp(seconds, {
+    minimum: MIN_RESET_DURATION,
+    maximum: MAX_RESET_DURATION,
+  })
 
 // MODEL
 
@@ -30,6 +38,9 @@ const AnimationPhase = S.Literals([
   'IncrementMessage',
   'IncrementUpdate',
   'IncrementModel',
+  'DurationMessage',
+  'DurationUpdate',
+  'DurationModel',
   'ResetMessage',
   'ResetUpdate',
   'ResetCommand',
@@ -53,12 +64,12 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-const ClickedDemoIncrement = m('ClickedDemoIncrement')
-const ChangedDemoResetDuration = m('ChangedDemoResetDuration', {
+export const ClickedDemoIncrement = m('ClickedDemoIncrement')
+export const ChangedDemoResetDuration = m('ChangedDemoResetDuration', {
   seconds: S.Number,
 })
-const ClickedDemoReset = m('ClickedDemoReset')
-const ProgressedDemoPhase = m('ProgressedDemoPhase', {
+export const ClickedDemoReset = m('ClickedDemoReset')
+export const ProgressedDemoPhase = m('ProgressedDemoPhase', {
   generation: S.Number,
 })
 
@@ -92,7 +103,7 @@ export const init = (): readonly [
 type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
 const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
-const DelayAdvancePhase = Command.define(
+export const DelayAdvancePhase = Command.define(
   'DelayAdvancePhase',
   { generation: S.Number, duration: S.DurationFromMillis },
   ProgressedDemoPhase,
@@ -110,46 +121,55 @@ export const update = (model: Model, message: Message): UpdateReturn =>
     withUpdateReturn,
     M.tagsExhaustive({
       ClickedDemoIncrement: () => {
-        const nextGeneration = model.generation + 1
+        const nextModel = evo(model, {
+          count: N.increment,
+          phase: () => 'IncrementMessage',
+          generation: N.increment,
+          messageLog: prependToLog('ClickedIncrement'),
+        })
         return [
-          evo(model, {
-            count: N.increment,
-            isResetting: () => false,
-            phase: () => 'IncrementMessage',
-            generation: () => nextGeneration,
-            messageLog: prependToLog('ClickedIncrement'),
-          }),
+          nextModel,
           [
             DelayAdvancePhase({
-              generation: nextGeneration,
+              generation: nextModel.generation,
               duration: Duration.fromInputUnsafe(PHASE_DURATION),
             }),
           ],
         ]
       },
 
-      ChangedDemoResetDuration: ({ seconds }) => [
-        evo(model, {
-          resetDuration: () => seconds,
+      ChangedDemoResetDuration: ({ seconds }) => {
+        const nextModel = evo(model, {
+          resetDuration: () => clampResetSeconds(seconds),
+          phase: () => 'DurationMessage',
+          generation: N.increment,
           messageLog: prependToLog(
             `ChangedResetDuration({ seconds: ${seconds} })`,
           ),
-        }),
-        [],
-      ],
-
-      ClickedDemoReset: () => {
-        const nextGeneration = model.generation + 1
+        })
         return [
-          evo(model, {
-            isResetting: () => true,
-            phase: () => 'ResetMessage',
-            generation: () => nextGeneration,
-            messageLog: prependToLog('ClickedResetAfterDelay'),
-          }),
+          nextModel,
           [
             DelayAdvancePhase({
-              generation: nextGeneration,
+              generation: nextModel.generation,
+              duration: Duration.fromInputUnsafe(PHASE_DURATION),
+            }),
+          ],
+        ]
+      },
+
+      ClickedDemoReset: () => {
+        const nextModel = evo(model, {
+          isResetting: () => true,
+          phase: () => 'ResetMessage',
+          generation: N.increment,
+          messageLog: prependToLog('ClickedResetAfterDelay'),
+        })
+        return [
+          nextModel,
+          [
+            DelayAdvancePhase({
+              generation: nextModel.generation,
               duration: Duration.fromInputUnsafe(PHASE_DURATION),
             }),
           ],
@@ -184,6 +204,28 @@ export const update = (model: Model, message: Message): UpdateReturn =>
               evo(model, { phase: () => 'Idle' }),
               [],
             ]),
+            M.when('DurationMessage', () => [
+              evo(model, { phase: () => 'DurationUpdate' }),
+              [
+                DelayAdvancePhase({
+                  generation,
+                  duration: Duration.fromInputUnsafe(PHASE_DURATION),
+                }),
+              ],
+            ]),
+            M.when('DurationUpdate', () => [
+              evo(model, { phase: () => 'DurationModel' }),
+              [
+                DelayAdvancePhase({
+                  generation,
+                  duration: Duration.fromInputUnsafe(PHASE_DURATION),
+                }),
+              ],
+            ]),
+            M.when('DurationModel', () => [
+              evo(model, { phase: () => 'Idle' }),
+              [],
+            ]),
             M.when('ResetMessage', () => [
               evo(model, { phase: () => 'ResetUpdate' }),
               [
@@ -199,7 +241,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
                 DelayAdvancePhase({
                   generation,
                   duration: Duration.fromInputUnsafe(
-                    `${N.clamp(model.resetDuration, { minimum: MIN_RESET_DURATION, maximum: MAX_RESET_DURATION })} seconds`,
+                    `${clampResetSeconds(model.resetDuration)} seconds`,
                   ),
                 }),
               ],
@@ -257,17 +299,19 @@ const phaseLabel = (phase: AnimationPhase): string =>
     M.when('Idle', () => 'Idle'),
     M.whenOr(
       'IncrementMessage',
+      'DurationMessage',
       'ResetMessage',
       'ResetCommandMessage',
       () => 'Message',
     ),
     M.whenOr(
       'IncrementUpdate',
+      'DurationUpdate',
       'ResetUpdate',
       'ResetCommandUpdate',
       () => 'Update',
     ),
-    M.whenOr('IncrementModel', 'ResetModel', () => 'Model'),
+    M.whenOr('IncrementModel', 'DurationModel', 'ResetModel', () => 'Model'),
     M.when('ResetCommand', () => 'Command'),
     M.exhaustive,
   )
@@ -277,18 +321,21 @@ const phaseColorClass = (phase: AnimationPhase): string =>
     M.when('Idle', () => 'text-gray-500 dark:text-gray-400'),
     M.whenOr(
       'IncrementMessage',
+      'DurationMessage',
       'ResetMessage',
       'ResetCommandMessage',
       () => 'text-emerald-600 dark:text-emerald-400',
     ),
     M.whenOr(
       'IncrementUpdate',
+      'DurationUpdate',
       'ResetUpdate',
       'ResetCommandUpdate',
       () => 'text-amber-600 dark:text-amber-400',
     ),
     M.whenOr(
       'IncrementModel',
+      'DurationModel',
       'ResetModel',
       () => 'text-accent-600 dark:text-accent-400',
     ),
@@ -335,8 +382,12 @@ const appPanel = (model: Model): Html => {
   )
 }
 
-const MIN_RESET_DURATION = 1
-const MAX_RESET_DURATION = 5
+const actionButtonClass = (isDisabled: boolean): string =>
+  clsx('px-4 py-2 rounded-lg text-sm font-normal transition', {
+    'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed': isDisabled,
+    'bg-accent-600 dark:bg-accent-500 text-white dark:text-accent-900 hover:bg-accent-700 dark:hover:bg-accent-600 active:bg-accent-800 dark:active:bg-accent-700 cursor-pointer':
+      !isDisabled,
+  })
 
 const stepperButtonClass = (isDisabled: boolean): string =>
   clsx('px-2.5 rounded-lg border text-sm font-normal transition', {
@@ -346,8 +397,41 @@ const stepperButtonClass = (isDisabled: boolean): string =>
       !isDisabled,
   })
 
-const parseResetDuration = (value: string): number =>
-  N.clamp(Number(value), { minimum: 0, maximum: MAX_RESET_DURATION })
+const RESET_DELAY_LABEL_ID = 'demo-reset-delay-label'
+
+const resetButtonLabel = (model: Model): string => {
+  if (model.isResetting) {
+    return 'Resetting...'
+  } else {
+    const unit = model.resetDuration === 1 ? 'second' : 'seconds'
+    return `Reset after ${model.resetDuration} ${unit}`
+  }
+}
+
+const stepperButton = (
+  model: Model,
+  label: string,
+  symbol: string,
+  delta: number,
+): Html => {
+  const h = html<Message>()
+  const nextSeconds = clampResetSeconds(model.resetDuration + delta)
+  const isDisabled = model.isResetting || nextSeconds === model.resetDuration
+
+  return Button.view<Message>({
+    onClick: ChangedDemoResetDuration({ seconds: nextSeconds }),
+    isDisabled,
+    toView: attributes =>
+      h.button(
+        [
+          ...attributes.button,
+          h.Class(stepperButtonClass(isDisabled)),
+          h.AriaLabel(label),
+        ],
+        [symbol],
+      ),
+  })
+}
 
 const viewAndControlsView = (model: Model): Html => {
   const h = html<Message>()
@@ -379,97 +463,54 @@ const viewAndControlsView = (model: Model): Html => {
       ),
       Button.view<Message>({
         onClick: ClickedDemoIncrement(),
+        isDisabled: model.isResetting,
         toView: attributes =>
           h.button(
             [
               ...attributes.button,
-              h.Class(
-                'px-4 py-2 rounded-lg bg-accent-600 dark:bg-accent-500 text-white dark:text-accent-900 text-sm font-normal transition hover:bg-accent-700 dark:hover:bg-accent-600 active:bg-accent-800 dark:active:bg-accent-700 cursor-pointer',
-              ),
+              h.Class(actionButtonClass(model.isResetting)),
             ],
             ['Add 1'],
           ),
       }),
-      Input.view<Message>({
-        id: 'demo-reset-duration',
-        value: String(model.resetDuration),
-        onInput: value =>
-          ChangedDemoResetDuration({
-            seconds: parseResetDuration(value),
-          }),
-        type: 'number',
-        toView: attributes =>
-          h.div(
-            [h.Class('flex flex-col gap-1')],
+      h.div(
+        [h.Class('flex flex-col gap-1')],
+        [
+          h.p(
             [
-              h.label(
+              h.Id(RESET_DELAY_LABEL_ID),
+              h.Class('text-xs text-gray-500 dark:text-gray-400'),
+            ],
+            ['Reset Delay (seconds)'],
+          ),
+          h.div(
+            [
+              h.Class('flex gap-1'),
+              h.Role('group'),
+              h.AriaLabelledBy(RESET_DELAY_LABEL_ID),
+            ],
+            [
+              stepperButton(model, 'Decrease reset delay', '\u2212', -1),
+              h.p(
                 [
-                  ...attributes.label,
-                  h.For('demo-reset-duration'),
-                  h.Class('text-xs text-gray-500 dark:text-gray-400'),
-                ],
-                ['Reset Delay (seconds)'],
-              ),
-              h.div(
-                [h.Class('flex gap-1')],
-                [
-                  h.input([
-                    ...attributes.input,
-                    h.Class(
-                      'flex-1 min-w-0 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-sm text-gray-800 dark:text-gray-200 font-mono',
+                  h.AriaLive('polite'),
+                  h.Class(
+                    clsx(
+                      'flex-1 min-w-0 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-sm font-mono text-center',
+                      {
+                        'text-gray-400 dark:text-gray-600': model.isResetting,
+                        'text-gray-800 dark:text-gray-200': !model.isResetting,
+                      },
                     ),
-                    h.Min(String(MIN_RESET_DURATION)),
-                    h.Max(String(MAX_RESET_DURATION)),
-                  ]),
-                  Button.view<Message>({
-                    onClick: ChangedDemoResetDuration({
-                      seconds: N.clamp(model.resetDuration - 1, {
-                        minimum: MIN_RESET_DURATION,
-                        maximum: MAX_RESET_DURATION,
-                      }),
-                    }),
-                    isDisabled: model.resetDuration <= MIN_RESET_DURATION,
-                    toView: buttonAttributes =>
-                      h.button(
-                        [
-                          ...buttonAttributes.button,
-                          h.Class(
-                            stepperButtonClass(
-                              model.resetDuration <= MIN_RESET_DURATION,
-                            ),
-                          ),
-                          h.AriaLabel('Decrease reset delay'),
-                        ],
-                        ['−'],
-                      ),
-                  }),
-                  Button.view<Message>({
-                    onClick: ChangedDemoResetDuration({
-                      seconds: N.clamp(model.resetDuration + 1, {
-                        minimum: MIN_RESET_DURATION,
-                        maximum: MAX_RESET_DURATION,
-                      }),
-                    }),
-                    isDisabled: model.resetDuration >= MAX_RESET_DURATION,
-                    toView: buttonAttributes =>
-                      h.button(
-                        [
-                          ...buttonAttributes.button,
-                          h.Class(
-                            stepperButtonClass(
-                              model.resetDuration >= MAX_RESET_DURATION,
-                            ),
-                          ),
-                          h.AriaLabel('Increase reset delay'),
-                        ],
-                        ['+'],
-                      ),
-                  }),
+                  ),
                 ],
+                [String(model.resetDuration)],
               ),
+              stepperButton(model, 'Increase reset delay', '+', 1),
             ],
           ),
-      }),
+        ],
+      ),
       Button.view<Message>({
         onClick: ClickedDemoReset(),
         isDisabled: model.isResetting,
@@ -477,20 +518,9 @@ const viewAndControlsView = (model: Model): Html => {
           h.button(
             [
               ...attributes.button,
-              h.Class(
-                clsx('px-4 py-2 rounded-lg text-sm font-normal transition', {
-                  'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed':
-                    model.isResetting,
-                  'bg-accent-600 dark:bg-accent-500 text-white dark:text-accent-900 hover:bg-accent-700 dark:hover:bg-accent-600 active:bg-accent-800 dark:active:bg-accent-700 cursor-pointer':
-                    !model.isResetting,
-                }),
-              ),
+              h.Class(actionButtonClass(model.isResetting)),
             ],
-            [
-              model.isResetting
-                ? 'Resetting...'
-                : `Reset after ${model.resetDuration} seconds`,
-            ],
+            [resetButtonLabel(model)],
           ),
       }),
     ],
@@ -535,7 +565,7 @@ const progressBarView = (model: Model, isCommand: boolean): Html => {
             ),
           ),
           h.Style({
-            '--reset-duration': String(model.resetDuration),
+            '--reset-duration': String(clampResetSeconds(model.resetDuration)),
           }),
         ],
         [],
