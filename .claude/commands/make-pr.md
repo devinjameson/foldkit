@@ -19,7 +19,7 @@ These never bend. A violation means the work is not done.
 - **No AI attribution in artifacts.** No co-author trailer, no mention of Claude or any model identifier in the commit message, changeset, code comments, or PR title. The PR body ends with the standard Claude Code footer and nothing more.
 - **No em dashes** in any prose you write (commit, changeset, PR body, comments). Use a period and a fresh sentence.
 - **Scope is `foldkit/foldkit` only.** Use the `mcp__github__*` tools for all GitHub work. There is no `gh` CLI.
-- **Read the conventions first.** Root `CLAUDE.md` and `AGENTS.md` govern naming, code style, commit scopes, and changesets. Follow them. The rules below are the workflow, not a substitute for them.
+- **Read the conventions first.** Root `AGENTS.md` governs naming, code style, commit scopes, and changesets (`CLAUDE.md` is a symlink to it). Follow them. The rules below are the workflow, not a substitute for them.
 
 ## Workflow
 
@@ -45,7 +45,7 @@ Read the full diff yourself as a hostile reviewer, do not take the implementer's
 
 - **Correctness.** Does it actually do what was asked? Construct the failing case and confirm the change handles it. For anything with a runtime surface, exercise it, do not trust a green typecheck. The repo ships a `verify` skill and a `code-review` skill; use them.
 - **Scope.** Nothing unrelated. No drive-by edits. The commit describes the whole change set and only it.
-- **Conventions.** Naming, code style, keying, state modeling per `CLAUDE.md`. Schema types, `Option`, `Match`, no bracket indexing, no sentinels.
+- **Conventions.** Naming, code style, keying, state modeling per `AGENTS.md`. Schema types, `Option`, `Match`, no bracket indexing, no sentinels.
 - **Changeset.** Any change to a versioned package (`foldkit`, `@foldkit/ui`, `@foldkit/devtools`, `create-foldkit-app`, `@foldkit/vite-plugin`, `@foldkit/devtools-mcp`) needs a changeset. A test-only or internal change with no user-facing effect uses `pnpm changeset add --empty`. The repo blocks major changesets, so use `minor` or `patch`. A change touching no versioned package needs none.
 - **Commit hygiene.** One commit. Conventional Commits with a valid scope that fits the whole diff (package dirs, example dirs, `skills`, `ci`, `release`; omit the scope if none fits, and do not invent broad scopes). `!` after the scope only for a real breaking change. Body lines within the length the commit check enforces.
 
