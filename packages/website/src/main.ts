@@ -153,7 +153,7 @@ export const Flags = S.Struct({
   maybeSidebarState: S.Option(SidebarState),
   systemTheme: ResolvedTheme,
   isNarrowViewport: S.Boolean,
-  isChromium: S.Boolean,
+  isPlaygroundSupported: S.Boolean,
   currentYear: S.Number,
   today: Calendar.CalendarDate,
 })
@@ -162,14 +162,12 @@ type Flags = typeof Flags.Type
 
 export const NARROW_VIEWPORT_QUERY = '(max-width: 1023px)'
 
-const CHROMIUM_BRANDS = new Set(['Chromium', 'Google Chrome', 'Microsoft Edge'])
-const CHROMIUM_UA_PATTERN = /Chrome\/|Chromium\/|Edg\/|OPR\//
-
-const detectChromium = (): boolean =>
-  Option.match(Option.fromNullishOr(navigator.userAgentData?.brands), {
-    onNone: () => CHROMIUM_UA_PATTERN.test(navigator.userAgent),
-    onSome: brands => brands.some(({ brand }) => CHROMIUM_BRANDS.has(brand)),
-  })
+// NOTE: WebContainer needs `SharedArrayBuffer`, which browsers only expose
+// in a cross-origin isolated document. Playground routes always load a
+// fresh document carrying the COOP/COEP headers (see the `Internal` branch
+// of `ClickedLink`), so this reads the real isolation state there.
+const detectPlaygroundSupport = (): boolean =>
+  window.crossOriginIsolated && typeof SharedArrayBuffer !== 'undefined'
 
 export const flags: Effect.Effect<Flags> = Effect.gen(function* () {
   const themePreference: Option.Option<typeof ThemePreference.Type> =
@@ -213,7 +211,7 @@ export const flags: Effect.Effect<Flags> = Effect.gen(function* () {
     () => window.matchMedia(NARROW_VIEWPORT_QUERY).matches,
   )
 
-  const isChromium = yield* Effect.sync(detectChromium)
+  const isPlaygroundSupported = yield* Effect.sync(detectPlaygroundSupport)
 
   const currentYear = yield* DateTime.now.pipe(
     Effect.map(DateTime.getPartUtc('year')),
@@ -226,7 +224,7 @@ export const flags: Effect.Effect<Flags> = Effect.gen(function* () {
     maybeSidebarState,
     systemTheme,
     isNarrowViewport,
-    isChromium,
+    isPlaygroundSupported,
     currentYear,
     today,
   }
@@ -247,7 +245,7 @@ export const Model = S.Struct({
   activeSection: S.Option(S.String),
   isLandingHeaderVisible: S.Boolean,
   isNarrowViewport: S.Boolean,
-  isChromium: S.Boolean,
+  isPlaygroundSupported: S.Boolean,
   playground: S.Option(Page.Playground.Model),
   sidebarGroups: SidebarGroups,
   isMapMessagesUnderHoodOpen: S.Boolean,
@@ -433,7 +431,7 @@ export const init: Runtime.RoutingApplicationInit<
       aiHeadingToggleCount: 0,
       isLandingHeaderVisible: isLandingHeaderAlwaysVisible(initialRoute),
       isNarrowViewport: flags.isNarrowViewport,
-      isChromium: flags.isChromium,
+      isPlaygroundSupported: flags.isPlaygroundSupported,
       playground: pipe(
         initialRoute,
         Option.liftPredicate(isPlaygroundRoute),
@@ -1311,7 +1309,9 @@ export const view = (model: Model): Document => {
               slotId: `playground-${playgroundModel.slug}`,
               model: playgroundModel,
               view: Page.Playground.view,
-              viewInputs: { isChromium: model.isChromium },
+              viewInputs: {
+                isPlaygroundSupported: model.isPlaygroundSupported,
+              },
               toParentMessage: message => GotPlaygroundMessage({ message }),
             }),
         }),

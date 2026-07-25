@@ -7,11 +7,16 @@ import type { Plugin } from 'vite'
 // NOTE: Monaco's TypeScript service runs in a Web Worker. We can't use
 // Vite's native `?worker` import because in dev Vite hard-codes module
 // workers (`new Worker(url, { type: "module" })`), and a module worker
-// loaded by our COEP-credentialless `/playground/*` page gets blocked
+// loaded by our cross-origin isolated `/playground/*` page gets blocked
 // (`blocked:COEP-framed-resource`). So we bundle each Monaco worker as
 // a classic IIFE script with esbuild, serve it in dev with the right
 // headers, and emit it at the same path in prod so the shim baked into
 // `index.html` resolves there in both modes.
+//
+// A dedicated worker owned by a `require-corp` document has to be served
+// with `Cross-Origin-Embedder-Policy: require-corp` itself, or the script
+// load becomes a network error. The prod equivalent of the dev header
+// below is the `/monacoworkers/.*` route in deploy-website.yml.
 const SCRIPT_DIRECTORY = dirname(fileURLToPath(import.meta.url))
 const WEBSITE_ROOT = resolve(SCRIPT_DIRECTORY, '..')
 
@@ -101,7 +106,7 @@ export const monacoWorkersPlugin = (): Plugin => ({
         (_request, response) => {
           const contents = buildWorkerBundle(worker)
           response.setHeader('Content-Type', 'text/javascript')
-          response.setHeader('Cross-Origin-Embedder-Policy', 'credentialless')
+          response.setHeader('Cross-Origin-Embedder-Policy', 'require-corp')
           response.setHeader('Cross-Origin-Resource-Policy', 'same-origin')
           response.end(contents)
         },
