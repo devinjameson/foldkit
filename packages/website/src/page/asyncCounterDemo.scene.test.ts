@@ -3,8 +3,10 @@ import { Scene } from 'foldkit'
 import { describe, test } from 'vitest'
 
 import {
+  CompletedScrollDemoHighlight,
   DelayAdvancePhase,
   ProgressedDemoPhase,
+  ScrollDemoHighlight,
   init,
   update,
   view,
@@ -12,13 +14,16 @@ import {
 
 const [initialModel] = init()
 
+// NOTE: every phase change also scrolls the highlighted lines into view, so
+// each step settles that Command alongside the one driving the animation.
 const advancePhases = (steps: number, generation: number) =>
-  Array.makeBy(steps, () =>
+  Array.makeBy(steps, () => [
+    Scene.Command.resolve(ScrollDemoHighlight, CompletedScrollDemoHighlight()),
     Scene.Command.resolve(
       DelayAdvancePhase,
       ProgressedDemoPhase({ generation }),
     ),
-  )
+  ]).flat()
 
 describe('async counter demo view', () => {
   test('Add 1 renders the new count', () => {
