@@ -76,9 +76,76 @@ Before deep review, build a model of the audited code:
 
 The exemplar is the comparison target. When you find a pattern that smells off, ask: **does the exemplar do this differently?** If yes, flag it.
 
-## Phase 4: Mechanical scans
+## Phase 4: Run the linter, then the mechanical scans
 
-Run the canonical greps from the **Mechanical scans** block in [`../generate-program/checklist.md`](../generate-program/checklist.md). That checklist is the source of truth. Don't duplicate the commands here. Each hit is either a finding or a `// NOTE:` justification. Silent hits aren't allowed.
+### The linter first
+
+`@foldkit/oxlint-plugin` ships 24 AST rules covering much of what this audit
+grades: keyed mapped rows, no array-index keys, hard-coded route strings,
+empty-object tagged calls, `Rel` on external links, spread inside `evo`, `Got*`
+wrapping of child output, PascalCase `Command.define` bindings, Mount factories
+that ignore their element, module-level mutable state, and `NoOp` Messages. They
+parse the code, so they catch what a grep misses.
+
+Establish whether the rules are actually **active**, which is not the same as
+finding the package name. **The config is the authority here, not the lint
+output.** Locate the config before reading anything out of it. A lint script may
+name one with `--config`, and in a workspace the config usually sits above the
+app rather than beside it:
+
+```bash
+grep -n '"lint"' package.json
+find . .. ../.. -maxdepth 1 -name '.oxlintrc.json' 2>/dev/null
+```
+
+**Finding no config is a different outcome from finding one without Foldkit in
+it, and the two look identical if you only read stdout.** A grep against a
+missing file and a grep against a config that doesn't mention Foldkit both print
+nothing. Branch on whether the `find` located a file at all:
+
+- **No config located**: the outcome is Undetermined, never Not active. The
+  project may well be linted from a parent workspace this audit didn't reach.
+- **Config located**: grep it for `foldkit`. A hit under `extends` pointing at
+  the plugin's `recommended.json`, which is what the scaffold writes, or a
+  `jsPlugins` entry naming the plugin by path specifier, which is how a monorepo
+  or vendored setup wires it and how the Foldkit repo itself does it, means the
+  rules are Active. No hit, but the config has an `extends` entry pointing
+  somewhere else, means follow that file and repeat: a shared internal config can
+  wire the plugin one level up. No hit and nothing left to follow is Not active.
+
+Lint output can confirm activation but can never rule it out. Diagnostics are
+labelled `foldkit(rule-name)`, so seeing `foldkit(` proves the rules ran, and
+grepping for `foldkit/` finds nothing even when every rule is running. Zero
+`foldkit(` matches proves nothing at all: that is what a passing project looks
+like. Never infer "not active" from a quiet lint run.
+
+- **Active**: run the project's lint script. Every `foldkit(...)` diagnostic is a
+  finding, reported like any other, and it outranks a grep hit on the same
+  subject because the rule actually parsed the code. Do not re-derive those
+  findings by hand.
+- **Not active**: report it as the first **QUALITY** item, worded as tooling.
+  Don't file it as a BLOCKER: that bucket is defined for code that is
+  structurally wrong and its item format requires a `file:line`, which a missing
+  devDependency doesn't have. Filing it there would also fail every hand-written
+  app on tooling grounds alone. It is still usually the highest-leverage fix in
+  the audit, so lead the QUALITY list with it: one devDependency and one
+  `extends` line buy continuous enforcement of two dozen invariants, where this
+  audit is a snapshot. Then fall back to the greps, and say in the report that
+  they are a weaker substitute, since they miss wrapped calls and renamed
+  helpers. A clean grep run on an unlinted project is weak evidence, not a pass.
+- **Undetermined**: run the lint script anyway and treat any `foldkit(...)`
+  diagnostic as the Active case, since one diagnostic settles the question. With
+  no diagnostics, fall back to the greps as above, but say the wiring was
+  undetermined rather than missing, and name the paths you searched. Do not
+  recommend installing a plugin that may already be enforcing these rules.
+
+A project scaffolded by `create-foldkit-app` has the plugin installed and wired
+by default, so an audited project lacking it usually predates the scaffold or
+dropped the config.
+
+### Then the scans
+
+Run the canonical greps from the **Mechanical scans** block in [`../generate-program/checklist.md`](../generate-program/checklist.md). That checklist is the source of truth. It covers ground no rule touches (API drift, `@foldkit/ui` adoption, Effect idiom, a11y detail, test shape) plus the deliberate edges of rules that are narrow by design; each such grep names the rule it complements and where that rule stops. Don't duplicate the commands here, and don't delete a scan just because a rule shares its subject: check whether the rule actually covers the case. Note too that `recommended.json` disables every rule for `**/*.test.ts` and `**/*.test.tsx`, so the linter contributes nothing to the test-shape checks in Subagent E. Each hit is either a finding or a `// NOTE:` justification. Silent hits aren't allowed.
 
 For every hit, decide:
 
@@ -209,4 +276,4 @@ Blind spots are named by their slug in [`../generate-program/blindSpots.md`](../
 | `submodels`     | A + submodel-specific (Got\* wrapping, three-tuple update returns with OutMessage, parent ↔ child Message isolation)                                 | `flat-parent-message-union`, `view-named-after-namespace`                                                                                                            |
 | `types`         | (inline) type-shape and aliasing                                                                                                                     | `array-type-syntax`, `unearned-type-aliases`, `hand-rolled-async-state`                                                                                              |
 
-For focused audits, skip Phase 4's full grep block and run only the greps relevant to the focus (e.g. for `a11y`, run `label without For`, `outline-none without focus-visible`, `_blank without Rel`).
+For focused audits, skip Phase 4's full grep block and run only the greps relevant to the focus (e.g. for `a11y`, run `label without For`, `outline-none without focus-visible`, and the `_blank` scan, reading each hit's attribute block for `Rel`).

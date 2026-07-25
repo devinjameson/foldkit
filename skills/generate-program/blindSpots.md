@@ -40,7 +40,7 @@ Variants set but never observed by the view or other updates. Fields written but
 
 The **no-op startup Command**: `init` returns `[DEFAULT_MODEL, [triggerApplicationStarted]]`, the Command resolves to `ApplicationStarted()`, and the handler is `ApplicationStarted: () => [model, []]`. Give the Command real work (load preferences, fetch initial data, focus first input, restore session) or delete the Command and the Message together.
 
-The **navigate-before-save**: a handler returning BOTH `saveState(...)` AND `navigateInternal(...)` races the save against the navigation. A failure surfaced on the old page is unreachable. Idiomatic: emit the save only, then navigate in the `Succeeded*` handler, so errors surface on the page the user is still looking at.
+The **navigate-before-save**: a handler returning BOTH a save Command and a navigation Command races the save against the navigation. (`pushUrl` is an `Effect`, not a Command; it reaches a handler wrapped in one, as `Command.define('PushUrl', { url: S.String }, CompletedPushUrl)(({ url }) => pushUrl(url).pipe(Effect.as(CompletedPushUrl())))`.) Which one lands first is timing, not something the handler decides, and a navigation is local while a save is a round trip, so the route has almost always changed by the time the save resolves. The failure Message still arrives and the handler still runs; the error just renders on a route the user didn't submit from, or on one whose view doesn't render it at all. Idiomatic: emit the save only, then navigate in the `Succeeded*` handler, so errors surface on the page the user is still looking at.
 
 For every union variant, trace whether the view branches on it and whether that branch is reachable. For every Model field, trace whether anything reads it besides its own writes.
 
@@ -103,6 +103,8 @@ An `evo` setter that only transforms that same field should be point-free: `entr
 
 ### `empty-object-constructors`
 
+`foldkit/no-empty-object-tagged-call` catches the bare-identifier form (`Idle({})`). It bails on a member-expression callee, so `Todo.ClickedDelete({})` through a namespace import needs your eyes.
+
 No-field tagged structs called with `({})`: `Idle({})`, `Work({})`, `ClickedSubmit({})`. Should be `Idle()`, `Work()`, `ClickedSubmit()`. Both compile; exemplars are uniform on the no-arg form.
 
 ### `hand-rolled-async-state`
@@ -119,9 +121,13 @@ The two states a hand-rolled union usually lacks are the ones that matter: `Refr
 
 ### `hard-coded-route-paths`
 
-`Href('/')`, `navigateInternal('/new')`, ``Href(`/tag/${name}`)``. Routers are bidirectional; call them as printers: `Href(homeRouter())`, `navigateInternal(newLinkRouter())`, `Href(tagFilterRouter({ tag: name }))`.
+`foldkit/no-hardcoded-route-strings` covers `Href`, `pushUrl`, and `replaceUrl`. Anything routing through another helper needs your eyes.
+
+`Href('/')`, `pushUrl('/new')`, ``Href(`/tag/${name}`)``. Routers are bidirectional; call them as printers: `Href(homeRouter())`, `pushUrl(newLinkRouter())`, `Href(tagFilterRouter({ tag: name }))`.
 
 ### `unkeyed-list-rows`
+
+`foldkit/keyed-required-for-mapped-rows` and `foldkit/no-array-index-view-keys` cover part of this, but the first is narrow: it fires only when the callback references `.id` and the row element is one of li/div/tr/article/section. Rows keyed on a slug or name, and rows returning `h.a`, `h.button`, or a component call, pass it silently. A green lint does not clear this one; read the map sites.
 
 Rows in `Array.map(items, ...)` carrying `OnClick` handlers bound to specific item ids, without `keyed('li')(item.id, ...)`, are a snabbdom patching bug. Delete from the middle and the OLD row's click handler patches onto a different row: the user clicks "Delete B" and A is deleted. Invisible until a delete or reorder happens mid-list.
 
