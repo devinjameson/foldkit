@@ -138,17 +138,36 @@ M.value(message).pipe(
 // Use Effect's Array module, not native methods in pipe chains
 Array.map(items, item => ...)
 Array.filter(items, item => ...)
-Array.isArrayEmpty(items)             // not items.length === 0
-Array.isArrayNonEmpty(items)          // not items.length > 0
-Array.match(items, {                  // when handling both cases
+Array.match(items, {                  // empty / non-empty branching
   onEmpty: () => ...,
-  onNonEmpty: (items) => ...,
+  onNonEmpty: (items) => ...,          // NonEmptyReadonlyArray
 })
+Array.isArrayEmpty(items)             // MUTABLE Array<A> only, see below
+Array.isArrayNonEmpty(items)          // MUTABLE Array<A> only, see below
 Array.findFirst(items, predicate)
 Array.sort(items, order)
 Array.fromOption(maybeItem)           // Option → 0 or 1 element array
 Array.take(items, count)              // not .slice(0, n)
 ```
+
+**`Array.match` is the one that works on a Model.** Both `isArrayEmpty` and
+`isArrayNonEmpty` take a mutable `Array<A>`, so neither accepts the
+`ReadonlyArray` that `S.Array(...)` decodes to:
+
+```ts
+const Model = S.Struct({ items: S.Array(S.String) })
+
+Array.isArrayEmpty(model.items)
+// Argument of type 'readonly string[]' is not assignable to
+// parameter of type 'string[]'
+
+Array.match(model.items, { onEmpty: () => ..., onNonEmpty: items => ... }) // OK
+```
+
+Reach for `Array.match` by default. It takes `ReadonlyArray`, hands the
+non-empty branch a `NonEmptyReadonlyArray`, and is what every example that
+branches on a Model array uses. Keep the predicates for arrays you built
+locally and never froze into the Model.
 
 ### String module
 

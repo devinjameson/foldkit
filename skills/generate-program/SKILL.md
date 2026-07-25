@@ -384,6 +384,17 @@ urlToString(url: Url): string
 Update.Return<Model, Message>: readonly [Model, ReadonlyArray<Command<Message>>]
 Command.mapMessages(commands, toParentMessage): re-tag a child's Commands
 AsyncData.Schema(DataSchema, ErrorSchema): { schema, Idle(), Loading(), Success({data}), Failure({error}), ... }
+AsyncData.match(value, { onIdle, onLoading, onRefreshing, onFailure, onStale, onSuccess })
+  // handlers take BARE values, except onStale:
+  //   onIdle: () => B          onLoading: () => B
+  //   onRefreshing: (data) => B     onSuccess: (data) => B
+  //   onFailure: (error) => B       onStale: ({ error, data }) => B
+Command.define(name, argsSchema, Ok, Err)(({ id }) => Effect): the Effect factory
+  binds at DEFINITION and receives the decoded args object directly, so you
+  destructure the fields themselves; the call site passes args:
+  const Fetch = Command.define('Fetch', { id: S.String }, Ok, Err)(({ id }) => ...)
+  update: [Fetch({ id })]     // NOT Fetch({ id })(effect)
+Document: NOT generic, and `body` is a single Html, not an array
 Input.view({ id, value, onInput, isInvalid?, type?, placeholder?, toView: (attrs) => Html })
   // from '@foldkit/ui', NOT Ui.Input
   // attrs: { label: ReadonlyArray<Attribute<M>>, input: ..., description: ... }
@@ -411,7 +422,7 @@ Record these in the crib and keep them visible while generating:
 - **`HttpClient` and `HttpClientRequest` come from `effect/unstable/http`**, not `@effect/platform`. Provide the client to the Command's Effect with `Effect.provide(effect, Http.layer)`, where `Http` is imported from `foldkit`. `@effect/platform-browser` is a different thing, used for `BrowserKeyValueStore` and `BrowserCrypto`.
 - **Map a child Submodel's Commands with `Command.mapMessages(childCommands, message => GotChildMessage({ message }))`.** Not `Command.mapEffect`.
 - **Name the update return type once per file**, and prefer `Update.Return<Model, Message>` from `foldkit/update` for the alias. Spelling the tuple out by hand is what most examples still do and is fine; what to avoid is skipping the alias and repeating `readonly [Model, ReadonlyArray<Command.Command<Message>>]` at the signature and again inside `M.withReturnType<...>()`.
-- **Effect's array predicates are `Array.isArrayEmpty` / `Array.isArrayNonEmpty`**, not `isEmptyArray` / `isNonEmptyArray`.
+- **Branch on a Model array with `Array.match`, not the predicates.** `Array.isArrayEmpty` and `Array.isArrayNonEmpty` (note the names: not `isEmptyArray` / `isNonEmptyArray`) take a mutable `Array<A>`, so neither compiles against the `ReadonlyArray` an `S.Array(...)` field decodes to. `Array.match` takes `ReadonlyArray` and is what the exemplars use.
 - **`empty` and `keyed` are properties on `h`**, so they are never in the `foldkit/html` import list. Import `{ Document, Html, html }` and reach for `h.empty` / `h.keyed`.
 
 ## Phase 4: Generate the App
@@ -424,7 +435,7 @@ Generate files following the architecture and conventions guides exactly. Write 
 - Use discriminated unions for state: `Idle | Loading | Error | Ok`, never booleans for multi-valued state
 - Use `Option` for fields that may be absent. Never empty strings or null
 - Prefix Option-typed fields with `maybe`: `maybeCurrentUser`, `maybeError`
-- For remote data, use the `AsyncData` module rather than hand-rolling a union. `AsyncData.Schema(WeatherData, S.String)` returns `{ schema, Idle, Loading, Refreshing, Failure, Stale, Success }`; put `schema` in the Model and build values with the constructors. The `Refreshing` and `Stale` states are the point: they let a reload keep the current data on screen, and a failed reload keep it rather than discarding it. `examples/weather/src/main.ts` is the canonical use
+- For remote data, use the `AsyncData` module rather than hand-rolling a union. `AsyncData.Schema(WeatherData, S.String)` returns `{ schema, Idle, Loading, Refreshing, Failure, Stale, Success }`; put `schema` in the Model and build values with the constructors. The `Refreshing` and `Stale` states are the point: they let a reload keep the current data on screen, and a failed reload keep it rather than discarding it. `repos/foldkit/examples/weather/src/main.ts` is the canonical use. Read `AsyncData.match`'s signature before calling it: the handlers take bare values (`onSuccess: data => ...`, `onFailure: error => ...`), except `onStale`, which takes `{ error, data }`
 - For non-remote multi-valued state (form steps, editor modes, connection phases), define variants with `ts()` and compose into an `S.Union`. See Discriminated Unions for State in [conventions.md](conventions.md)
 - For apps with multiple domain entities referenced across modules, extract shared schemas into `src/domain/` (e.g., `domain/product.ts`, `domain/session.ts`). See the shopping-cart and auth examples for this pattern, and read `${CLAUDE_SKILL_DIR}/../../packages/website/src/page/projectOrganization.ts` for guidance on when and how to structure domain modules
 
@@ -502,7 +513,7 @@ Every message must carry meaning. No `NoOp`.
 
 ### Commands
 
-- Define Command identities with `Command.define`, passing result Message schemas after the name. Result types are required
+- Define Command identities with `Command.define`, passing result Message schemas after the name. Result types are required. With an args schema the shape is `Command.define('Fetch', { id: S.String }, Ok, Err)(({ id }) => Effect)`: the Effect factory binds at definition and receives the args, and the update returns `Fetch({ id })`. Getting that currying backwards is the most common way to misuse it
 - Always assign definitions to PascalCase constants. Never inline in pipe chains
 - Definitions live where they're produced, colocated with the update function
 - Let TypeScript infer return types. No explicit `Command<typeof A>` annotations
