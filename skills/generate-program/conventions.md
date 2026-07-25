@@ -99,10 +99,10 @@ pipe(
 // Model fields
 maybeError: S.Option(S.String) // not error: S.String with '' as none
 
-// Conditional rendering
+// Conditional rendering (inside a view function that bound `const h = html<Message>()`)
 Option.match(model.maybeError, {
-  onNone: () => empty,
-  onSome: error => div([Class('text-red-500')], [error]),
+  onNone: () => h.empty,
+  onSome: error => h.div([h.Class('text-red-500')], [error]),
 })
 
 // Conditional values
@@ -339,6 +339,18 @@ const Model = S.Struct({
 })
 ```
 
+For **remote data**, don't write that union at all. `AsyncData` ships it, with two states hand-rolled versions always miss:
+
+```ts
+const DataAsyncData = AsyncData.Schema(Data, S.String)
+
+const Model = S.Struct({
+  data: DataAsyncData.schema,
+})
+```
+
+`Idle | Loading | Refreshing | Failure | Stale | Success`. `Refreshing` holds the previous data during a reload so a refetch doesn't blank the screen; `Stale` holds previous data alongside the new error so a failed reload doesn't throw away what the user was reading. Hand-rolling the four-state version bakes both regressions in. Keep `ts()` unions for state that isn't remote data: form steps, editor modes, connection phases.
+
 For form field validation:
 
 ```ts
@@ -420,22 +432,41 @@ import {
   String as String_,
   pipe,
 } from 'effect'
+import { HttpClient, HttpClientRequest } from 'effect/unstable/http'
 import {
+  AsyncData,
   Calendar,
   Command,
   Dom,
   File,
+  Http,
   Runtime,
   Subscription,
-  Ui,
+  Update,
   Url,
 } from 'foldkit'
-import { Html, empty, html, keyed } from 'foldkit/html'
+import { Document, Html, html } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { r } from 'foldkit/route'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
+
+import { Button, Dialog, Input } from '@foldkit/ui'
 ```
+
+Two component names collide with `foldkit` module names: `Calendar` (the date
+module) and `Toast`. Alias the component with a `Ui` prefix, which is what the
+exemplars do:
+
+```ts
+import { Calendar } from 'foldkit'
+
+import { Calendar as UiCalendar, Toast as UiToast } from '@foldkit/ui'
+```
+
+`Calendar.CalendarDate` is then the date type and `UiCalendar.view` the
+component. Alias the `foldkit` side instead (`Calendar as FoldkitCalendar`) when
+the component is the one used throughout the file.
 
 For form validation, also:
 
@@ -456,9 +487,11 @@ import {
 Notes:
 
 - Only import what you actually use in the file. The lint pass catches unused imports.
-- Module-by-module reminders, for example: `Calendar` for `Calendar.CalendarDate`, `Calendar.today.local`, `Calendar.make`, `Calendar.addDays` etc., paired with `Ui.Calendar` or `Ui.DatePicker`. `Dom` for DOM-side-effect helpers (`Dom.focus`, `Dom.scrollIntoView`, `Dom.showDialog`, `Dom.closeDialog`, `Dom.lockScroll`, `Dom.unlockScroll`, `Dom.waitForAnimationSettled`, etc.). `File` for file upload primitives paired with `Ui.FileDrop`. `foldkit/fieldValidation` for form validation.
+- Module-by-module reminders, for example: `Calendar` for `Calendar.CalendarDate`, `Calendar.today.local`, `Calendar.make`, `Calendar.addDays` etc., paired with the `Calendar` or `DatePicker` component from `@foldkit/ui` (the component and the `foldkit` date module share the name `Calendar`; they are different things). `Dom` for DOM-side-effect helpers (`Dom.focus`, `Dom.scrollIntoView`, `Dom.showDialog`, `Dom.closeDialog`, `Dom.lockScroll`, `Dom.unlockScroll`, `Dom.waitForAnimationSettled`, etc.). `File` for file upload primitives paired with `FileDrop` from `@foldkit/ui`. `foldkit/fieldValidation` for form validation.
 - For time, randomness, UUIDs, or delays, use Effect's built-ins directly rather than reaching for a Foldkit module: `Clock.currentTimeMillis`, `Random.nextIntBetween`, `Effect.uuid`, `Effect.sleep(Duration.millis(...))`.
 - When an Effect module name collides with a global, alias the Effect import with a trailing underscore: `String as String_`, `Array as Array_`, `Number as Number_`.
-- `Match as M` is Effect's Match module. Foldkit re-exports `M.value`, `M.tagsExhaustive`, `M.withReturnType` etc. through Effect's `Match`.
-- `Ui` from `foldkit` gives access to all UI components: `Ui.Dialog`, `Ui.Tabs`, `Ui.Menu`, `Ui.DatePicker`, `Ui.FileDrop`, `Ui.Toast`, `Ui.Tooltip`, etc.
-- `empty` and `keyed` are properties on `h` after binding `const h = html<Message>()` inside the view function. They are not top-level exports of `foldkit/html`.
+- `Match as M` is Effect's Match module, imported from `effect`. `M.value`, `M.tagsExhaustive`, and `M.withReturnType` are Effect APIs; Foldkit does not wrap or re-export them.
+- **UI components live in a separate package.** Import them by name from `@foldkit/ui`: `import { Dialog, DatePicker, FileDrop, Toast, Tooltip } from '@foldkit/ui'`. Deep imports (`@foldkit/ui/dialog`) work too. There is no `Ui` export on the `foldkit` package, so `Ui.Dialog.view` does not resolve.
+- **`empty` and `keyed` are properties on `h`**, reached as `h.empty` / `h.keyed` after binding `const h = html<Message>()` inside the view function. They are not top-level exports of `foldkit/html`, so they never belong in that import list. Same for `h.submodel`.
+- `AsyncData` for remote data state, `Update` for the update return type and the `combine` / `refresh` combinators, `Http` for the `layer` that provides `HttpClient` to a Command.
+- HTTP types come from `effect/unstable/http`, not `@effect/platform`. `@effect/platform-browser` is a separate package used for `BrowserKeyValueStore` and `BrowserCrypto`.

@@ -3,13 +3,20 @@
 Run through each category after generating an app. Fix any issues before presenting the result.
 
 > **This is the canonical reference for mechanical checks.** `SKILL.md` phases 4.5, 5, and 5.5 point here rather than duplicating the grep commands inline, to prevent drift. If you update a grep or add a new one, update it here. The phases will inherit the change.
+> Example paths assume a consumer project with the Foldkit subtree vendored at `repos/foldkit/`. Working inside the Foldkit repo itself, drop that prefix; the same paths exist at the project root.
 
 ## Gate commands (run ALL FOUR; fix everything they surface)
 
-- [ ] `npm run format` (or `npx prettier -w .`): run FIRST; rewrites files so subsequent gates see the committed shape.
-- [ ] `npm run lint` (or `npx eslint .`): output clean. Catches unused imports, unused vars, style-rule violations that `tsc` does not.
-- [ ] `npm run typecheck` (or `npx tsc --noEmit`): no errors.
-- [ ] `npm run test` (or `npx vitest run`): all tests pass.
+- [ ] `format`: run FIRST; rewrites files so subsequent gates see the committed shape. The scaffold wires prettier.
+- [ ] `lint`: output clean. Catches unused imports, unused vars, style-rule violations that `tsc` does not. The scaffold wires oxlint.
+- [ ] `typecheck`: no errors. The scaffold wires `tsc --noEmit`.
+- [ ] `test`: all tests pass. The scaffold wires vitest.
+
+The project's configured script is the contract for each gate; the tools named
+are what `create-foldkit-app` happens to wire up. If a project swapped one out,
+run its script, not the tool named here.
+
+Invoke each through the package manager the project was scaffolded with (`npm run lint`, `pnpm run lint`, `yarn lint`, `bun run lint`). If a script is missing, run the project-local binary through that manager's exec (`pnpm exec oxlint src`, `npm exec --no-install oxlint src`, `yarn exec oxlint src`, `bun x --no-install oxlint src`). Avoid bare `npx`, which fetches from the registry when the binary isn't installed locally.
 
 "Typecheck clean and tests pass" is NOT sufficient. Generated code is rarely Prettier-exact out of the box, and frequently has unused imports (`Invalid`, `NotValidated`, `Valid` imported as values when only used as string-literal tag keys in `M.tag(...)`) that only the linter catches. Skipping either means the user's first `git commit` produces a cascade of formatting/lint fixes they have to clean up.
 
@@ -21,18 +28,46 @@ These are the fast greps that catch the common write-time violations. Run them a
 # Empty-object constructor calls: no-field tagged structs should call with no arg
 grep -rn "({})" src/
 
+# Wrong package for UI components: they come from '@foldkit/ui', and there is
+# no Ui namespace on foldkit. Any Ui.Something is a stale import.
+grep -rn "\bUi\.[A-Z]" src/
+
+# Wrong package for HTTP: HttpClient lives in effect/unstable/http.
+# (@effect/platform-browser is fine; that's KeyValueStore and Crypto.)
+grep -rn "from '@effect/platform'" src/
+
+# Update return type written inline at a match site instead of aliased once
+# per file. The alias itself is fine (most examples spell it by hand);
+# repeating the tuple inline is the finding. Two alternatives on purpose:
+# `withReturnType<$` catches the wrapped form where the tuple sits on the next
+# line, and `withReturnType<readonly [` catches the single-line form. Keep both.
+grep -rn "withReturnType<\s*$\|withReturnType<readonly \[" src/
+
+# T[] syntax in the return type: use ReadonlyArray<Command<Message>>
+grep -rn "readonly Command<.*>\[\]" src/
+
+# Hand-rolled remote-data union: use AsyncData.Schema(Data, Error).
+# Eyeball each hit; a non-remote state machine with these names is fine.
+grep -rn "ts('Loading')" src/
+
+# Effect array predicates are isArrayEmpty / isArrayNonEmpty
+grep -rn "isEmptyArray\|isNonEmptyArray" src/
+
 # Hard-coded route paths: use router() / router({params}) instead of template strings
 grep -rn "Href('/" src/
 grep -rn "navigateInternal('/" src/
 
-# Hand-rolled form inputs: should use Ui.Input.view / Ui.Textarea.view
-grep -rn "^\s*input(\[" src/
-grep -rn "^\s*textarea(\[" src/
-
-# Hand-rolled buttons: should use Ui.Button.view (except inside a Ui.Button toView callback,
-# where ...attributes.button is present). A `button(` line without `...attributes.button` is
-# almost always a hand-rolled button that should go through Ui.Button.
-grep -rn "^\s*button(" src/
+# Hand-rolled form controls: should use Input.view / Textarea.view / Button.view
+# from '@foldkit/ui'. Views bind `const h = html<Message>()`, so the call shape is
+# `h.input(...)`, not a bare `input(...)`; match both, and don't assume the element
+# starts the line or that OnClick precedes it.
+#
+# Legitimate exception: inside the component's own `toView` callback you DO render
+# the element, spreading the component's attribute group into it. Those calls
+# contain `...attributes.input` / `...attributes.textarea` / `...attributes.button`,
+# usually on a different line, so the exclusion has to be eyeballed per hit rather
+# than grepped. A hit whose enclosing call has no such spread is hand-rolled.
+grep -rnE "(^|[^.[:alnum:]_])(h\.)?(input|textarea|button)\(" src/
 
 # Option ceremony: Array.findFirst(...)._tag === 'Some' should be Array.some(...)
 grep -rn "Array\.findFirst.*_tag" src/
@@ -70,8 +105,11 @@ grep -rn "evo(.*, {" src/ -A 3 | grep "\.\.\."
 # as casts on constructor returns: constructors already return the right type
 grep -rn " as [A-Z][a-zA-Z]*State\b\| as [A-Z][a-zA-Z]*Message\b" src/
 
-# Labels without For: should pair with Id on input, or use Ui.Input
-grep -rn "label(\[" src/ | grep -v "For("
+# Labels without For: should pair with Id on the input, or use Input from
+# '@foldkit/ui'. The attribute array often starts on the next line, so match the
+# call and read its attribute block rather than filtering the matched line: a
+# `grep -v "For("` on one line silently passes every multiline label.
+grep -rnE "(^|[^.[:alnum:]_])(h\.)?label\(" src/
 
 # maybe* on non-Option: should be Option<T>
 grep -rn "maybe[A-Z][a-zA-Z]*: [A-Z][a-zA-Z]* | undefined" src/
@@ -83,14 +121,18 @@ grep -rn "\.span(\[\], \[\])\|^span(\[\], \[\])" src/
 # Effect.ignore on infallible Effects (pushUrl, load, back, forward)
 grep -rn "pushUrl.*Effect\.ignore\|load(.*)\.pipe.*Effect\.ignore" src/
 
-# _blank links missing Rel (fast scan; multi-line matches need eyeballing)
-grep -rn "Target('_blank')" src/ -A 2 | grep -B 1 "Rel(" || echo "(all _blank have Rel, or none are used)"
+# _blank links missing Rel. Match the bare literal, not `Target('_blank')`: the
+# argument may be wrapped onto its own line, quoted either way, and the Rel may
+# sit any distance from Target or precede it. Anything narrower silently passes
+# an unformatted anchor. List every _blank and read each one's whole attribute
+# block for Rel.
+grep -rn "_blank" src/
 
 # outline-none without focus-visible replacement
 grep -rn "outline-none" src/ | grep -v "focus-visible:"
 ```
 
-Alongside the greps, eyeball each file's imports. Every symbol you imported should be called. ESLint flags this, but so do you, at write-time.
+Alongside the greps, eyeball each file's imports. Every symbol you imported should be called. The linter flags this, but so do you, at write-time.
 
 ## Structural completeness
 
@@ -164,6 +206,17 @@ Alongside the greps, eyeball each file's imports. Every symbol you imported shou
 - [ ] Impossible states are unrepresentable
 - [ ] `ts()` for non-Message tagged structs (Model states, route variants)
 - [ ] `m()` only for Message variants
+- [ ] **Remote data uses `AsyncData`, not a hand-rolled union.** `AsyncData.Schema(DataSchema, ErrorSchema)` supplies `Idle`, `Loading`, `Refreshing`, `Failure`, `Stale`, and `Success` plus `match`, `isPending`, `hasData`, `revalidate`, and the rest. A hand-rolled `Idle | Loading | Error | Ok` is missing `Refreshing` and `Stale`, which is what forces a refetch to blank the screen and a failed refetch to discard good data. Reference: `repos/foldkit/examples/weather/src/main.ts`
+
+## Framework modules over hand-rolled equivalents
+
+Foldkit ships these; reaching past them is a finding, not a style choice.
+
+- [ ] Update return type is aliased once per file, not repeated inline at the signature and again at each `M.withReturnType` site. `Update.Return<Model, Message>` (or `Update.ReturnWithOutMessage<Model, Message, OutMessage>`) is the preferred spelling for new code; a hand-written tuple alias is what most examples still use and is not itself a finding
+- [ ] Multi-step post-mutation handlers use `Update.combine(model, [...])` and `Update.refresh({ read, revalidate, write, load })` rather than hand-threaded `evo` chains and conditional Command arrays
+- [ ] Child Submodel Commands are re-tagged with `Command.mapMessages(commands, toParentMessage)`
+- [ ] HTTP uses `HttpClient` / `HttpClientRequest` from `effect/unstable/http`, with `Effect.provide(effect, Http.layer)` to supply the client. Not `@effect/platform` (`@effect/platform-browser` is separate and is for `BrowserKeyValueStore` / `BrowserCrypto`)
+- [ ] UI components are imported from `@foldkit/ui` by name (`import { Dialog, Input } from '@foldkit/ui'`). There is no `Ui` namespace on `foldkit`
 
 ## Effect-TS patterns
 
@@ -184,27 +237,42 @@ Alongside the greps, eyeball each file's imports. Every symbol you imported shou
 ## Foldkit UI
 
 - [ ] Foldkit UI components used where interaction matches (Dialog, Tabs, Menu, Combobox, DatePicker, FileDrop, Toast, Tooltip, DragAndDrop, etc.). Never hand-roll accessible widgets
-- [ ] **Form inputs use `Ui.Input.view`, `Ui.Textarea.view`, `Ui.Button`.** Hand-rolled `input`/`textarea`/`button` elements in a form are a fail unless the file has a NOTE comment explaining why the component couldn't be used.
-- [ ] Each stateful UI component has its Model in the app Model, a `Got*` Message, init in init, and delegation in update. Stateless render helpers (`Ui.Button`, `Ui.Input`, `Ui.Textarea`, `Ui.RadioGroup`, `Ui.Checkbox`, `Ui.Switch`, `Ui.Disclosure`) are called directly in view and dispatch parent Messages; the controlled ones (`Ui.RadioGroup`, `Ui.Checkbox`, `Ui.Switch`, `Ui.Disclosure`) take the current value in from the parent Model, which stores the new value on toggle
-- [ ] `Ui.Toast` uses `Ui.Toast.make(PayloadSchema)` to bind to a consumer-defined payload type
+- [ ] **Form inputs use `Input.view`, `Textarea.view`, `Button.view` from `@foldkit/ui`.** Hand-rolled `input`/`textarea`/`button` elements in a form are a fail unless the file has a NOTE comment explaining why the component couldn't be used.
+- [ ] Each stateful UI component has its Model in the app Model, a `Got*` Message, init in init, and delegation in update. Stateless render helpers (`Button`, `Input`, `Textarea`, `Select`, `Fieldset`, `RadioGroup`, `Checkbox`, `Switch`, `Disclosure`, `Nav`) are called directly in view and dispatch parent Messages; the controlled ones (`RadioGroup`, `Checkbox`, `Switch`, `Disclosure`) take the current value in from the parent Model, which stores the new value on toggle
+- [ ] `Toast` uses `Toast.make(PayloadSchema)` to bind to a consumer-defined payload type
 - [ ] No custom keyboard navigation or ARIA attributes for patterns covered by Foldkit UI components
 
 ### Mechanical check: no hand-rolling
 
-Run these greps against `src/`. Each should return zero matches (or only matches inside a `NOTE:` justification):
+Run these greps against `src/`. Every hit needs an explanation: a sanctioned `toView` spread, a `NOTE:` justification, or a fix.
 
 ```bash
-grep -rn "^\s*input(\[" src/            # raw <input>: should use Ui.Input
-grep -rn "^\s*textarea(\[" src/         # raw <textarea>: should use Ui.Textarea
-grep -rn "OnClick(.*) .*button(" src/   # raw <button> with click handler: should use Ui.Button
-grep -rn "role.*dialog\|role.*menu" src/  # hand-rolled ARIA: should use Ui.Dialog / Ui.Menu
+# Raw input / textarea / button: should use Input, Textarea, Button.
+# Matches both `input(...)` and the usual `h.input(...)`, anywhere on the line.
+grep -rnE "(^|[^.[:alnum:]_])(h\.)?(input|textarea|button)\(" src/
+
+# Hand-rolled ARIA: should use Dialog / Menu / Tabs. Capital-R `Role(` is the
+# view attribute; lowercase `Scene.role(` is a test locator and is not a finding.
+grep -rnE "(^|[^.[:alnum:]_])(h\.)?Role\(['\"](dialog|menu|tab)" src/
 ```
 
-The rule: **if the interaction pattern appears in the Ui.\* component table (Phase 2.5 of SKILL.md), use the component.** Hand-rolling is permitted only when: (a) the component doesn't exist yet, AND (b) you add a `// NOTE: hand-rolling because <specific reason>` comment above the element. Without the NOTE, the reviewer treats hand-rolling as a BLOCKER, not a style preference.
+Eyeball every hit from the first grep. A call that spreads the component's own
+attribute group (`...attributes.input`, `...attributes.textarea`,
+`...attributes.button`) is the sanctioned `toView` case, not a finding. The spread
+usually sits on a later line than the element call, which is why this exclusion is
+a read rather than a `grep -v`.
+
+The rule: **if the interaction pattern appears in the `@foldkit/ui` component table (Phase 2.5 of SKILL.md), use the component.** The gate is about the interaction, not the tag, so a hit is only a finding once you know which of these it is:
+
+- **Inside the component's own `toView`** (the call spreads `...attributes.input` / `.textarea` / `.button` / `.label`): sanctioned, not a finding.
+- **A form control** (a text input, textarea, or button in a form): must go through `Input`, `Textarea`, or `Button`. Raw here is a BLOCKER unless a `// NOTE: hand-rolling because <specific reason>` comment sits above it.
+- **A deliberate non-form control** (a search field, an inline editor, anything intentionally below the component layer, per the form-inputs rule in Phase 2.5): allowed. Still check it directly against the Accessibility section below, since nothing is supplying the label wiring, focus ring, or ARIA for you.
+
+Hand-rolling a control the table covers is permitted only when the component genuinely doesn't fit, and only with the NOTE. Without the NOTE, the reviewer treats it as a BLOCKER, not a style preference.
 
 **A NOTE is not a free pass.** Before writing one, read the component's `.d.ts` and confirm the concern is real. Common false-justifications to avoid:
 
-- _"Using the Ui component would require a per-row Model instance and duplicate state"_: first check whether the component is stateful. Stateless controlled helpers like `Ui.Checkbox`, `Ui.Switch`, `Ui.Disclosure`, and `Ui.RadioGroup` do not add a child Model. Store the value in the parent Model and pass it to `view` with an `onToggle` or `onSelect` Message. For stateful components, the component Model holds UI state (focus, open/closed, typeahead key buffer), not your domain value, so holding it is not duplication.
+- _"Using the component would require a per-row Model instance and duplicate state"_: first check whether the component is stateful. Stateless controlled helpers like `Checkbox`, `Switch`, `Disclosure`, and `RadioGroup` do not add a child Model. Store the value in the parent Model and pass it to `view` with an `onToggle` or `onSelect` Message. For stateful components, the component Model holds UI state (focus, open/closed, typeahead key buffer), not your domain value, so holding it is not duplication.
 - _"The component needs a toParentMessage and I don't want to wire one"_: that's always the wiring cost. The whole point of Ui components is that you pay it once per use and get a11y for free.
 - _"The interaction is too custom for the component"_: check the `toView` callback signature. It lets you render whatever HTML you want inside the component's attribute-scaffolding. Custom visual = fine, custom a11y = never needed.
 
@@ -212,29 +280,29 @@ Reviewers should challenge every NOTE: "Is this justification actually true, or 
 
 ## Accessibility
 
-Foldkit UI components ARE the a11y pass for their covered patterns. These checks apply to anything NOT covered by a Ui.\* component (raw inputs in a custom context, static content, custom layouts) and to the overall document structure.
+Foldkit UI components ARE the a11y pass for their covered patterns. These checks apply to anything NOT covered by a `@foldkit/ui` component (raw inputs in a custom context, static content, custom layouts) and to the overall document structure.
 
 - [ ] Exactly one `h1` per route. Headings descend without skipping levels (no `h3` without an `h2` above it).
 - [ ] Semantic landmarks used: `main`, `nav`, `header`, `footer`, `aside`, `section`. Not `div` soup.
-- [ ] Every `label` is associated with its input: `label([For('email-input')], ['Email'])` paired with `input([Id('email-input'), ...])`. Or use `Ui.Input.view` which handles the association. Grep for `label([` followed by no `For(` → should be zero.
+- [ ] Every `label` is associated with its input: `label([For('email-input')], ['Email'])` paired with `input([Id('email-input'), ...])`. Or use `Input.view` which handles the association. Grep the `label(` calls and read each one's attribute block for `For(`; a single-line `grep -v` misses labels whose attributes wrap. A `...attributes.label` spread is the component's own `toView` and is not a finding.
 - [ ] Every `input`, `textarea`, and `select` has either an associated `label` OR an explicit `AriaLabel(...)`. Unlabeled form fields are a fail.
 - [ ] Icon-only buttons have `AriaLabel(...)` describing the action. `button([OnClick(...)], ['★'])` without an aria label is unreadable to screen readers.
 - [ ] Dynamic error messages wrap in `role="alert"` (for immediate errors) or `aria-live="polite"` (for non-urgent updates). Validation errors that appear after blur should be announced. Example: `p([Role('alert'), ...], [errorMessage])`. Grep for error-class CSS (e.g. `text-red`) and verify each error container has `Role('alert')` or a parent with `AriaLive('polite')`.
 - [ ] External links (`Target('_blank')`) also have `Rel('noopener noreferrer')`.
 - [ ] Images have `Alt(...)`. Decorative images use `Alt('')` explicitly. Never omitted.
 - [ ] Interactive lists (navigable items, selectable rows) use `ul`/`ol` + `li`, not `div` stacks. Screen readers announce "list with N items" for real lists.
-- [ ] Required form fields are marked `AriaRequired(true)` OR the `Ui.Input` `required: true` is set. The `required` HTML attribute alone is not enough for every screen reader.
+- [ ] Required form fields are marked `AriaRequired(true)` on the rendered input. `Input.view` has no `required` option, so pass it through the `toView` callback's `input` attribute group. The `required` HTML attribute alone is not enough for every screen reader.
 - [ ] Focus is visible, either via Tailwind's `focus-visible:` classes or the browser default. If you've reset outline, you must replace it. Grep for `outline-none` without a paired `focus-visible:` class.
 - [ ] Color is not the only carrier of meaning. A red border on an invalid input needs an accompanying error message or icon. Don't ship "invalid = red only."
 - [ ] Page `<title>` is set via the `title` field of the `Document` returned by `view` (with `Runtime.makeApplication`). For routed apps, each route returns a distinct title.
 
 ### Mechanical check: a11y
 
-The greps below are **fast starting scans**, not authoritative. Attributes often span multiple lines (`Target('_blank')` on line N, `Rel('noopener noreferrer')` on line N+1), so line-only matches can false-positive. Every hit should be eyeballed in context before flagging it as a bug, but every hit DOES need to be eyeballed.
+The greps below are **fast starting scans**, not authoritative. Attributes often span multiple lines (`Target('_blank')` on line N, `Rel('noopener noreferrer')` several lines later, or ordered the other way), so a fixed `-A` window silently passes anchors whose `Rel` falls outside it. Each scan lists candidates; you confirm by reading the whole attribute block. Every hit should be eyeballed in context before flagging it as a bug, but every hit DOES need to be eyeballed.
 
 ```bash
-grep -rn "label(\[" src/ | grep -v "For("                # labels without For
-grep -rn "Target('_blank')" src/ -A 2 | grep -B 1 "Rel("  # _blank paired with rel
+grep -rnE "(^|[^.[:alnum:]_])(h\.)?label\(" src/       # labels: read each block for For(
+grep -rn "_blank" src/                                  # then read each anchor's block for Rel(
 grep -rn "outline-none" src/ | grep -v "focus-visible:"  # killed focus outline without replacement
 ```
 
@@ -246,7 +314,7 @@ Each confirmed miss is a concrete a11y bug a screen reader user would hit.
 
 - [ ] Form validation uses `foldkit/fieldValidation` (`Field`, `makeRules`, `validate`, `allValid`). No hand-rolled `Valid | Invalid` unions when validation is the concern
 - [ ] Date handling uses the `Calendar` module (`Calendar.CalendarDate`, `Calendar.today.local`). No raw `Date` objects in Model
-- [ ] File handling uses the `File` module with `Ui.FileDrop`. No direct `File` API usage in update/view
+- [ ] File handling uses the `File` module with `FileDrop` from `@foldkit/ui`. No direct `File` API usage in update/view
 
 ## File organization
 
@@ -264,7 +332,7 @@ Each confirmed miss is a concrete a11y bug a screen reader user would hit.
 - [ ] At least one multi-step test that chains Messages and Command resolutions
 - [ ] Submodel tests assert `outMessage` when the child signals to parent
 - [ ] Tests use `Story.Command.resolve(Definition, resultMessage)`. Never run Command Effects directly in story tests
-- [ ] All tests pass with `npx vitest run`
+- [ ] All tests pass with the project's test script
 
 **Scene tests** (REQUIRED at Tier 3+; strongly encouraged at Tier 2):
 
@@ -318,7 +386,7 @@ Items without a tier marker apply universally (even to a 50-line counter). When 
 - [ ] **Pure domain logic lives in `domain/*.ts`**, not in update handlers. Examples: `Column.reorder(columns, from, to)`, `Cart.totalPrice(items)`. If the update is doing array surgery on domain entities, that surgery belongs in the domain module.
 - [ ] Domain files export schemas AND pure operations on those schemas. Update calls the operations; it doesn't reimplement them.
 - [ ] Domain modules never import from `model.ts`, `update.ts`, `view.ts`, or `message.ts`. Domain is the leaf layer.
-- [ ] References: `examples/kanban/src/domain/`, `examples/job-application/src/domain/`, `examples/shopping-cart/src/domain/`.
+- [ ] References: `repos/foldkit/examples/kanban/src/domain/`, `repos/foldkit/examples/job-application/src/domain/`, `repos/foldkit/examples/shopping-cart/src/domain/`.
 
 ## Naming precision
 

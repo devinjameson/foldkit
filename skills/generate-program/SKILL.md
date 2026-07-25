@@ -17,11 +17,13 @@ Before writing any code, analyze the description to identify:
 3. **Async operations**: external data that becomes Commands (e.g., "fetch weather", "save to localStorage")
 4. **Real-time needs**: streaming data that becomes Subscriptions (e.g., "live updates", "countdown", "WebSocket")
 5. **Pages/navigation**: URL structure that becomes routes (e.g., "home page", "detail page")
-6. **UI component needs**: interactive widgets that map to Foldkit UI components (e.g., "dropdown" → Menu, "modal" → Dialog, "tabs" → Tabs, "autocomplete" → Combobox, "date picker" → DatePicker, "file upload" → FileDrop, "reorderable list" → DragAndDrop, "toast/notification" → Toast, "hover tooltip" → Tooltip)
+6. **UI component needs**: interactive widgets that map to Foldkit UI components (e.g., "dropdown" → Menu, "modal" → Dialog, "tabs" → Tabs, "autocomplete" → Combobox, "date picker" → DatePicker, "file upload" → FileDrop, "reorderable list" → DragAndDrop, "toast/notification" → Toast, "hover tooltip" → Tooltip, "range/price filter" → Slider, "long scrolling list" → VirtualList)
 7. **Form validation needs**: required fields, format checks, async uniqueness → `foldkit/fieldValidation` module (see Phase 4)
-8. **Date handling**: birthdays, deadlines, scheduling → `Calendar` module + `Ui.DatePicker` or `Ui.Calendar`
-9. **File handling**: uploads, attachments, images → `File` module + `Ui.FileDrop`
-10. **Host embedding**: the program runs inside another app ("a widget in our React app", "embed this in an existing page", "the host needs to control it") → `Runtime.makeElement` plus the `Runtime.embed` lifecycle handle, with Flags for initial data and Ports for ongoing communication in both directions. `repos/foldkit/examples/embedding/` is the canonical reference: a plain TypeScript host driving a Foldkit widget end to end
+8. **Date handling**: birthdays, deadlines, scheduling → `Calendar` module + `DatePicker` or `Calendar` from `@foldkit/ui`
+9. **File handling**: uploads, attachments, images → `File` module + `FileDrop` from `@foldkit/ui`
+10. **Remote data**: anything fetched, cached, refreshed, or revalidated → the `AsyncData` module (see Phase 4). Don't hand-roll a loading/error union
+11. **Multi-state flows**: a described process that moves through several named steps with rules about which step follows which (checkout, onboarding, multi-step approval, a connection lifecycle) → consider the `Machine` module (`foldkit/experimental`). Writing the transitions as a table makes the edge set enumerable, so `unreachableStates()` and `deadTransitions()` catch a missing or unreachable step by computation instead of by review. Raise it as an option in the analysis you present, noting it is under `experimental/`, and let the user choose. Plain `ts()` unions with one `M.tagsExhaustive` are still right for a flow of two or three states. `repos/foldkit/examples/checkout-machine/` is the reference
+12. **Host embedding**: the program runs inside another app ("a widget in our React app", "embed this in an existing page", "the host needs to control it") → `Runtime.makeElement` plus the `Runtime.embed` lifecycle handle, with Flags for initial data and Ports for ongoing communication in both directions. `repos/foldkit/examples/embedding/` is the canonical reference: a plain TypeScript host driving a Foldkit widget end to end
 
 Present this analysis to the user before proceeding.
 
@@ -52,6 +54,9 @@ Read the architecture and conventions guides to internalize the rules:
 - [Architecture guide](architecture.md): TEA structure, file organization, type patterns
 - [Conventions guide](conventions.md): naming, Effect-TS patterns, anti-patterns
 - [Verification checklist](checklist.md): not just for Phase 5, also the generation bar. Skim the **Quality Bar** section now so you generate code that already meets it rather than code that will fail review.
+- [Blind spots](blindSpots.md): what the Phase 6 reviewer will grade you against. Reading it now is cheaper than fixing it later.
+
+These four files are a snapshot of a moving codebase. When they disagree with the live source (`repos/foldkit/`, or the `.d.ts` in `node_modules`), the live source is right. Treat the disagreement as a bug in this skill and say so in your final report.
 
 If you have access to a context7 MCP tool, use it to look up Effect-TS documentation when you're unsure about an API. Effect is a large library. Verify function signatures rather than guessing.
 
@@ -81,10 +86,10 @@ Read `${CLAUDE_SKILL_DIR}/../../examples/weather/src/main.ts` (HTTP with `HttpCl
 Read `${CLAUDE_SKILL_DIR}/../../examples/routing/src/main.ts` and `${CLAUDE_SKILL_DIR}/../../examples/query-sync/src/main.ts`
 
 **Tier 5: Complex state, nested domain models, CRUD, drag-and-drop:**
-Read `${CLAUDE_SKILL_DIR}/../../examples/shopping-cart/src/main.ts` (nested domain schemas, cart state) and `${CLAUDE_SKILL_DIR}/../../examples/kanban/src/main.ts` (CRUD with `Ui.DragAndDrop`, flags restoring from localStorage, subscriptions)
+Read `${CLAUDE_SKILL_DIR}/../../examples/shopping-cart/src/main.ts` (nested domain schemas, cart state) and `${CLAUDE_SKILL_DIR}/../../examples/kanban/src/main.ts` (CRUD with `DragAndDrop`, flags restoring from localStorage, subscriptions)
 
 **Tier 6: Submodels, OutMessage, multi-step forms, auth flows, multi-module apps:**
-Read `${CLAUDE_SKILL_DIR}/../../examples/auth/src/main.ts` (login/signup with Submodels, OutMessage, protected routes) and `${CLAUDE_SKILL_DIR}/../../examples/job-application/src/main.ts` (multi-step form with deeply nested Submodels in `step/`, `Ui.DatePicker`, `Ui.FileDrop`, `Ui.Menu`, `Calendar` module for date handling)
+Read `${CLAUDE_SKILL_DIR}/../../examples/auth/src/main.ts` (login/signup with Submodels, OutMessage, protected routes) and `${CLAUDE_SKILL_DIR}/../../examples/job-application/src/main.ts` (multi-step form with deeply nested Submodels in `step/`, `DatePicker`, `FileDrop`, `Listbox`, `Calendar` module for date handling)
 
 **Tier 7: Real-time, WebSocket, Managed Resources, production-grade:**
 Read `${CLAUDE_SKILL_DIR}/../../packages/typing-game/client/src/update.ts`, then explore its `page/home/` and `page/room/` directories for the full Submodel/OutMessage pattern.
@@ -93,53 +98,75 @@ Read examples from the target tier AND all lower tiers. A Tier 4 app should refl
 
 ## Phase 2.5: Identify Foldkit UI Component Opportunities
 
-Foldkit ships accessible UI components that handle keyboard navigation, ARIA attributes, and focus management automatically. Before generating, check if any part of the app maps to a built-in component:
+Foldkit ships accessible UI components that handle keyboard navigation, ARIA attributes, and focus management automatically. They live in a **separate package**, `@foldkit/ui`, and are imported by name:
 
-| User Need                       | Foldkit Component | What you get for free                                           |
-| ------------------------------- | ----------------- | --------------------------------------------------------------- |
-| Modal/dialog/confirmation       | `Dialog`          | Focus trapping, Escape to close, scroll locking, backdrop       |
-| Tabbed content                  | `Tabs`            | Arrow key navigation, aria-selected, roving tabindex            |
-| Dropdown menu                   | `Menu`            | Arrow keys, typeahead search, aria-expanded, click-outside      |
-| Autocomplete/tag input          | `Combobox`        | Filtering, arrow key selection, aria-activedescendant           |
-| Select dropdown                 | `Select`          | Keyboard selection, aria-selected, positioning                  |
-| Single selection from options   | `RadioGroup`      | Arrow key cycling, aria-checked                                 |
-| On/off toggle                   | `Switch`          | Spacebar toggle, aria-checked                                   |
-| Boolean option                  | `Checkbox`        | Spacebar toggle, aria-checked, indeterminate                    |
-| Expandable section              | `Disclosure`      | Enter/Space toggle, aria-expanded                               |
-| Floating content on hover/click | `Popover`         | Positioning, click-outside, focus management                    |
-| Hover tooltip                   | `Tooltip`         | Show-delay, keyboard dismiss, positioning, aria-describedby     |
-| Single-select list              | `Listbox`         | Arrow keys, typeahead, aria-selected                            |
-| Text input                      | `Input`           | Consistent styling/behavior wrapper                             |
-| Multi-line text                 | `Textarea`        | Auto-resize, consistent styling                                 |
-| Form group                      | `Fieldset`        | Disabled state propagation, grouping                            |
-| Styled button                   | `Button`          | Consistent click/keyboard handling                              |
-| Inline calendar grid            | `Calendar`        | Month navigation, keyboard nav, aria-selected, date constraints |
-| Date input + popover            | `DatePicker`      | Calendar popover, input masking, keyboard nav, constraints      |
-| File upload zone                | `FileDrop`        | Drag-and-drop, click-to-browse, accept filters, validation      |
-| Reorderable list                | `DragAndDrop`     | Pointer + keyboard drag, drop zones, announcement region        |
-| Transient notifications         | `Toast`           | Auto-dismiss, pause-on-hover, stacking, role=status/alert       |
+```ts
+import { Button, Dialog, Input } from '@foldkit/ui'
+```
 
-Each component is a Foldkit Submodel with its own Model, Message, init, update, and view. To use one:
+There is no `Ui` namespace on the `foldkit` package. Reach for `Dialog.view`, not `Ui.Dialog.view`. Deep imports (`@foldkit/ui/dialog`) work too when you want to keep the barrel out of the bundle.
 
-1. Add its Model to your Model: `confirmDialog: Ui.Dialog.Model`
-2. Add a `Got*` Message: `GotConfirmDialogMessage` with `{ message: Ui.Dialog.Message }`
-3. Initialize in init: `confirmDialog: Ui.Dialog.init({ id: 'confirm-dialog' })`
+Before generating, check if any part of the app maps to a built-in component:
+
+| User Need                       | Component     | What you get for free                                           |
+| ------------------------------- | ------------- | --------------------------------------------------------------- |
+| Modal/dialog/confirmation       | `Dialog`      | Focus trapping, Escape to close, scroll locking, backdrop       |
+| Tabbed content                  | `Tabs`        | Arrow key navigation, aria-selected, roving tabindex            |
+| Dropdown menu                   | `Menu`        | Arrow keys, typeahead search, aria-expanded, click-outside      |
+| Autocomplete/tag input          | `Combobox`    | Filtering, arrow key selection, aria-activedescendant           |
+| Select dropdown                 | `Select`      | Keyboard selection, aria-selected, positioning                  |
+| Single selection from options   | `RadioGroup`  | Arrow key cycling, aria-checked                                 |
+| On/off toggle                   | `Switch`      | Spacebar toggle, aria-checked                                   |
+| Boolean option                  | `Checkbox`    | Spacebar toggle, aria-checked, indeterminate                    |
+| Expandable section              | `Disclosure`  | Enter/Space toggle, aria-expanded                               |
+| Floating content on hover/click | `Popover`     | Positioning, click-outside, focus management                    |
+| Hover tooltip                   | `Tooltip`     | Show-delay, keyboard dismiss, positioning, aria-describedby     |
+| Single-select list              | `Listbox`     | Arrow keys, typeahead, aria-selected                            |
+| Text input                      | `Input`       | Consistent styling/behavior wrapper                             |
+| Multi-line text                 | `Textarea`    | Auto-resize, consistent styling                                 |
+| Form group                      | `Fieldset`    | Disabled state propagation, grouping                            |
+| Styled button                   | `Button`      | Consistent click/keyboard handling                              |
+| Inline calendar grid            | `Calendar`    | Month navigation, keyboard nav, aria-selected, date constraints |
+| Date input + popover            | `DatePicker`  | Calendar popover, input masking, keyboard nav, constraints      |
+| File upload zone                | `FileDrop`    | Drag-and-drop, click-to-browse, accept filters, validation      |
+| Reorderable list                | `DragAndDrop` | Pointer + keyboard drag, drop zones, announcement region        |
+| Transient notifications         | `Toast`       | Auto-dismiss, pause-on-hover, stacking, role=status/alert       |
+| Numeric range / price filter    | `Slider`      | Arrow/Home/End keys, aria-valuenow, multi-thumb ranges          |
+| Long scrolling list             | `VirtualList` | Windowed rendering, scroll anchoring, measured item heights     |
+| Site/section navigation         | `Nav`         | Current-page marking, keyboard traversal, landmark semantics    |
+
+The package is not one shape.
+
+**Stateful Submodels** carry their own Model, Message, update, and (mostly) OutMessage, and are embedded via `h.submodel`: `Menu`, `Listbox`, `Combobox`, `Calendar`, `DatePicker`, `Dialog`, `Popover`, `Tabs`, `Tooltip`, `FileDrop`, `DragAndDrop`, `Slider`, `VirtualList`, plus `Toast` once built through `Toast.make(PayloadSchema)`.
+
+**Stateless render helpers** have no Model at all. You call `view` directly and store the value in your own Model: `Button`, `Input`, `Textarea`, `Select`, `Fieldset`, `Checkbox`, `Switch`, `Disclosure`, `RadioGroup`, `Nav`.
+
+Don't take that split on faith, because components have moved across it (`Checkbox`, `Switch`, and `Disclosure` became controlled render helpers; `Tabs` and `Slider` moved their selection to the parent Model). Read the component's `public.d.ts`: exporting `Model` and `update` means Submodel, exporting only `view` and a `ViewConfig` / `ViewInputs` type means render helper. A render helper does not want a `Got*` Message.
+
+To use a stateful Submodel:
+
+1. Add its Model to your Model: `confirmDialog: Dialog.Model`
+2. Add a `Got*` Message: `GotConfirmDialogMessage` with `{ message: Dialog.Message }`
+3. Initialize in init: `confirmDialog: Dialog.init({ id: 'confirm-dialog' })`
 4. Delegate in update: `GotConfirmDialogMessage: ({ message }) => ...`
-5. Embed in view via `h.submodel`: `h.submodel({ slotId: 'confirm-dialog', view: Ui.Dialog.view, model: model.confirmDialog, toParentMessage: message => GotConfirmDialogMessage({ message }) })` (add `viewInputs` for components whose view takes them)
+5. Embed in view via `h.submodel`: `h.submodel({ slotId: 'confirm-dialog', view: Dialog.view, model: model.confirmDialog, toParentMessage: message => GotConfirmDialogMessage({ message }) })` (add `viewInputs` for components whose view takes them)
 
 **Always prefer Foldkit UI components over hand-rolling interactive widgets.** They make accessibility the default, not an afterthought.
 
-**For form inputs specifically:** every text input, textarea, and button in a form MUST use `Ui.Input`, `Ui.Textarea`, and `Ui.Button` respectively. This is not optional, even though raw `input`/`textarea` HTML elements are available from `html<Message>()`. The form example (`examples/form/src/main.ts:347-403`) defines `inputFieldView` and `textareaFieldView` helpers that wrap `Ui.Input.view` and `Ui.Textarea.view` with label + validation feedback. Copy that helper pattern. Raw `input`/`textarea` are for non-form cases (search fields, inline editors) where you're intentionally working below the Ui component layer, and even then, reach for the Ui component first.
+**For form inputs specifically:** every text input, textarea, and button in a form MUST go through `Input`, `Textarea`, and `Button`. This is not optional, even though raw `input`/`textarea` HTML elements are available from `html<Message>()`. The form example (`examples/form/src/main.ts`) defines `inputFieldView` and `textareaFieldView` helpers that wrap `Input.view` and `Textarea.view` with label + validation feedback. Copy that helper pattern. Raw `input`/`textarea` are for non-form cases (search fields, inline editors) where you're intentionally working below the component layer, and even then, reach for the component first.
 
 If the app uses UI components, **always read the ui-showcase example first** to understand how components are wired. This is the canonical reference for Foldkit UI integration patterns:
 
 - `${CLAUDE_SKILL_DIR}/../../examples/ui-showcase/src/main.ts`: root wiring, `Got*` delegation, `toParentMessage` helpers
-- `${CLAUDE_SKILL_DIR}/../../examples/ui-showcase/src/message.ts`: how UI component Messages are structured
-- `${CLAUDE_SKILL_DIR}/../../examples/ui-showcase/src/model.ts`: how UI component Models are composed
-- `${CLAUDE_SKILL_DIR}/../../examples/ui-showcase/src/update.ts`: how UI component updates are delegated
-- `${CLAUDE_SKILL_DIR}/../../examples/ui-showcase/src/toast.ts`: read when using `Ui.Toast`: Toast is unique in that it's parameterized on a payload schema via `Ui.Toast.make(PayloadSchema)`, returning a typed module you import from
+- `${CLAUDE_SKILL_DIR}/../../examples/ui-showcase/src/ui/message.ts`: how component Messages are structured
+- `${CLAUDE_SKILL_DIR}/../../examples/ui-showcase/src/ui/model.ts`: how component Models are composed
+- `${CLAUDE_SKILL_DIR}/../../examples/ui-showcase/src/ui/update.ts`: how component updates are delegated
+- `${CLAUDE_SKILL_DIR}/../../examples/ui-showcase/src/ui/subscriptions.ts`: which components need Subscriptions lifted into the parent (`DragAndDrop`, `Slider`, `VirtualList`)
+- `${CLAUDE_SKILL_DIR}/../../examples/ui-showcase/src/ui/toast.ts`: read when using `Toast`. It's unique in that it's parameterized on a payload schema via `Toast.make(PayloadSchema)`, returning a typed module you import from
 
-For apps using `Ui.DatePicker`, `Ui.FileDrop`, or other recently-added components, also read the `job-application` example (see Tier 6 below). It's the most complete real-world integration of these components together.
+Directory names under `examples/ui-showcase/src/` have moved before. List the directory rather than trusting these paths blind.
+
+For apps using `DatePicker`, `FileDrop`, or other recently-added components, also read the `job-application` example (see Tier 6 below). It's the most complete real-world integration of these components together.
 
 ## Phase 3: Determine File Organization
 
@@ -299,13 +326,14 @@ Before writing any code, READ the type signatures of every Foldkit module you wi
 
 For each Foldkit module you plan to use, read the `.d.ts` at the paths below. Read the public surface; you don't need the internals. Write a short signature crib in your working notes so you don't have to re-check while generating.
 
-```
+```text
 # Every app
-<project>/node_modules/foldkit/dist/index.d.ts          # top-level re-exports
-<project>/node_modules/foldkit/dist/html/index.d.ts     # html<Message>(), element signatures, Attribute<Message>, empty, keyed
+<project>/node_modules/foldkit/dist/index.d.ts          # top-level re-exports: the authoritative list of what `foldkit` exposes
+<project>/node_modules/foldkit/dist/html/index.d.ts     # html<Message>(), element signatures, Attribute<Message>
 <project>/node_modules/foldkit/dist/message/index.d.ts  # m()
 <project>/node_modules/foldkit/dist/schema/index.d.ts   # ts(), r()
 <project>/node_modules/foldkit/dist/struct/index.d.ts   # evo(): check nested-update signature
+<project>/node_modules/foldkit/dist/update/public.d.ts  # Update.Return, Update.ReturnWithOutMessage, Update.combine, Update.refresh
 <project>/node_modules/foldkit/dist/runtime/runtime.d.ts # ApplicationInit, RoutingApplicationInit, makeApplication, makeElement
 
 # If using routing
@@ -314,40 +342,51 @@ For each Foldkit module you plan to use, read the `.d.ts` at the paths below. Re
 <project>/node_modules/foldkit/dist/navigation/index.d.ts # pushUrl, load: all return Effect<void> (no Effect.ignore needed)
 
 # If using async / side effects
-<project>/node_modules/foldkit/dist/command/index.d.ts  # Command.define: result schemas are required
+<project>/node_modules/foldkit/dist/command/index.d.ts  # Command.define: result schemas are required. Command.mapMessages for parent<-child mapping
+<project>/node_modules/foldkit/dist/asyncData/public.d.ts # AsyncData: Idle/Loading/Refreshing/Failure/Stale/Success + Schema, match, isPending, hasData, revalidate
+<project>/node_modules/foldkit/dist/http/public.d.ts     # Http.layer: provide it to Commands that use HttpClient
 <project>/node_modules/foldkit/dist/dom/index.d.ts      # focus, advanceFocus, scrollIntoView, showDialog, closeDialog, clickElement, lockScroll, unlockScroll, inertOthers, restoreInert, detectElementMovement, waitForAnimationSettled. For time/random/uuid/delay use Effect's Clock, Random, Effect.uuid, Effect.sleep + Duration directly.
 
 # If using subscriptions
 <project>/node_modules/foldkit/dist/subscription/index.d.ts # Subscription.make<Model, Message>, Subscription.lift, Subscription.aggregate
 
 # If using mount / managed-resource / custom-element
-<project>/node_modules/foldkit/dist/mount/index.d.ts             # Mount.define: for per-instance VNode lifecycle
+<project>/node_modules/foldkit/dist/mount/public.d.ts            # Mount.define (one-shot) / Mount.defineStream (continuous): per-instance VNode lifecycle
 <project>/node_modules/foldkit/dist/managedResource/public.d.ts  # ManagedResource.make / lift / aggregate + tag: for stateful runtime objects keyed on Model condition
 <project>/node_modules/foldkit/dist/customElement/index.d.ts     # CustomElement.define: for typed bindings to native web components
+
+# If the host application drives the program
+<project>/node_modules/foldkit/dist/port/public.d.ts    # Port.inbound / outbound / emit / stream / subscription
 
 # If using forms
 <project>/node_modules/foldkit/dist/fieldValidation/public.d.ts # Field (tagged union), makeRules({required?, rules}), validate, allValid; rule constructors on the Rule namespace (Rule.url(options), Rule.email, Rule.minLength, Rule.pattern, Rule.fromSchema, ...)
 # Rule.Rule is [Predicate, Rule.RuleMessage], NOT {test, message}. Field.Invalid has `errors: NonEmptyArray<string>`, not `error: string`.
 
-# If using any UI component
-<project>/node_modules/foldkit/dist/ui/<component>/public.d.ts  # Model, Message, init, update, view (Submodel-shaped) or ViewConfig (render-helper-shaped), OutMessage when applicable
-# Check: is it a Submodel (Menu/Listbox/Combobox/Calendar/Disclosure/Dialog/Popover/etc.) embedded via h.submodel, or a stateless render helper (Button/Input/Textarea/Select/Fieldset) called directly with a ViewConfig? Submodels carry their own Model/Message/update/OutMessage; render helpers don't. Check ViewInputs (for Submodels) or ViewConfig (for helpers) for the slot callbacks (toView, itemToConfig, etc.).
+# If using any UI component (SEPARATE PACKAGE)
+<project>/node_modules/@foldkit/ui/dist/<component>/public.d.ts  # Model, Message, init, update, view (Submodel-shaped) or ViewConfig (render-helper-shaped), OutMessage when applicable
+# Check: is it a Submodel (Menu/Listbox/Combobox/Calendar/DatePicker/Dialog/Popover/Tabs/Tooltip/FileDrop/DragAndDrop/Slider/VirtualList/Toast) embedded via h.submodel, or a stateless render helper (Button/Input/Textarea/Select/Fieldset/Checkbox/Switch/Disclosure/RadioGroup/Nav) called directly? Submodels carry their own Model/Message/update/OutMessage; render helpers don't. Check ViewInputs (for Submodels) or ViewConfig (for helpers) for the slot callbacks (toView, itemToConfig, etc.).
 
 # If using dates
 <project>/node_modules/foldkit/dist/calendar/index.d.ts # CalendarDate, today.local (returns Effect<CalendarDate>); for raw millis use Clock.currentTimeMillis
 ```
 
+If a path above doesn't resolve, list the package's `dist/` and find the module. **The `.d.ts` is authoritative and this file is not.** Where the two disagree, the `.d.ts` is right and the disagreement is a bug in this skill worth reporting.
+
 ### What to record in the crib
 
 For each symbol you'll call, write one line:
 
-```
-html<Message>(): { div, input (VOID), textarea, button, Class, Href, For, Id, Role, OnClick(Message), OnInput(value=>Message), OnBlur(Message), OnSubmit(Message), keyed, empty, ... }
+```text
+html<Message>(): { div, input (VOID), textarea, button, Class, Href, For, Id, Role, OnClick(Message), OnInput(value=>Message), OnBlur(Message), OnSubmit(Message), keyed, empty, submodel, ... }
 Route.mapTo(schema)(parser): curried
 pushUrl(path): Effect<void>  // NOT fallible, no Effect.ignore needed
 urlToString(url: Url): string
-Ui.Input.view({ id, value, onInput, isInvalid?, type?, placeholder?, toView: (attrs) => Html })
-  // attrs: { label: Attribute<M>[], input: Attribute<M>[], description: Attribute<M>[] }
+Update.Return<Model, Message>: readonly [Model, ReadonlyArray<Command<Message>>]
+Command.mapMessages(commands, toParentMessage): re-tag a child's Commands
+AsyncData.Schema(DataSchema, ErrorSchema): { schema, Idle(), Loading(), Success({data}), Failure({error}), ... }
+Input.view({ id, value, onInput, isInvalid?, type?, placeholder?, toView: (attrs) => Html })
+  // from '@foldkit/ui', NOT Ui.Input
+  // attrs: { label: ReadonlyArray<Attribute<M>>, input: ..., description: ... }
 Field (schema): NotValidated | Validating | Valid | Invalid(errors: NonEmpty<Rule Message>)
 ```
 
@@ -368,6 +407,12 @@ Record these in the crib and keep them visible while generating:
 - **`Field.Invalid` has `errors: NonEmptyArray<string>`, not `error: string`.** Use `Array.headNonEmpty(errors)` to get the first message; use `Rule.resolveMessage(message, value)` to resolve a rule message to its final string.
 - **Route variants are `HomeRoute`, `NewLinkRoute`, etc., with the `Route` suffix.** Every exemplar uses this convention.
 - **Routers are callable for printing**: `homeRouter()` returns `'/'`, `tagFilterRouter({ tag: 'foo' })` returns `'/tag/foo'`. Never hand-construct URLs.
+- **UI components come from `@foldkit/ui`, not from a `Ui` namespace on `foldkit`.** `import { Dialog, Input } from '@foldkit/ui'`, then `Dialog.view(...)`. There is no `Ui` export on the `foldkit` package.
+- **`HttpClient` and `HttpClientRequest` come from `effect/unstable/http`**, not `@effect/platform`. Provide the client to the Command's Effect with `Effect.provide(effect, Http.layer)`, where `Http` is imported from `foldkit`. `@effect/platform-browser` is a different thing, used for `BrowserKeyValueStore` and `BrowserCrypto`.
+- **Map a child Submodel's Commands with `Command.mapMessages(childCommands, message => GotChildMessage({ message }))`.** Not `Command.mapEffect`.
+- **Name the update return type once per file**, and prefer `Update.Return<Model, Message>` from `foldkit/update` for the alias. Spelling the tuple out by hand is what most examples still do and is fine; what to avoid is skipping the alias and repeating `readonly [Model, ReadonlyArray<Command.Command<Message>>]` at the signature and again inside `M.withReturnType<...>()`.
+- **Effect's array predicates are `Array.isArrayEmpty` / `Array.isArrayNonEmpty`**, not `isEmptyArray` / `isNonEmptyArray`.
+- **`empty` and `keyed` are properties on `h`**, so they are never in the `foldkit/html` import list. Import `{ Document, Html, html }` and reach for `h.empty` / `h.keyed`.
 
 ## Phase 4: Generate the App
 
@@ -379,7 +424,8 @@ Generate files following the architecture and conventions guides exactly. Write 
 - Use discriminated unions for state: `Idle | Loading | Error | Ok`, never booleans for multi-valued state
 - Use `Option` for fields that may be absent. Never empty strings or null
 - Prefix Option-typed fields with `maybe`: `maybeCurrentUser`, `maybeError`
-- For async data, define `Idle`, `Loading`, `Error`, `Ok` variants with `ts()` and compose into an `S.Union`. See Discriminated Unions for State in [conventions.md](conventions.md)
+- For remote data, use the `AsyncData` module rather than hand-rolling a union. `AsyncData.Schema(WeatherData, S.String)` returns `{ schema, Idle, Loading, Refreshing, Failure, Stale, Success }`; put `schema` in the Model and build values with the constructors. The `Refreshing` and `Stale` states are the point: they let a reload keep the current data on screen, and a failed reload keep it rather than discarding it. `examples/weather/src/main.ts` is the canonical use
+- For non-remote multi-valued state (form steps, editor modes, connection phases), define variants with `ts()` and compose into an `S.Union`. See Discriminated Unions for State in [conventions.md](conventions.md)
 - For apps with multiple domain entities referenced across modules, extract shared schemas into `src/domain/` (e.g., `domain/product.ts`, `domain/session.ts`). See the shopping-cart and auth examples for this pattern, and read `${CLAUDE_SKILL_DIR}/../../packages/website/src/page/projectOrganization.ts` for guidance on when and how to structure domain modules
 
 ### Messages
@@ -437,9 +483,18 @@ Every message must carry meaning. No `NoOp`.
 
 ### Update
 
+- Name the return type once per file from the framework's alias, then bind the matcher to it:
+
+  ```ts
+  type UpdateReturn = Update.Return<Model, Message>
+  const withUpdateReturn = M.withReturnType<UpdateReturn>()
+  ```
+
+  `Update.ReturnWithOutMessage<Model, Message, OutMessage>` is the Submodel counterpart. `Update.Return` is the preferred spelling; a hand-written tuple alias is what most examples still use and is fine. What to avoid is skipping the alias and repeating the tuple at the signature and again inside `M.withReturnType<...>()`
+
 - Use `M.value(message).pipe(withUpdateReturn, M.tagsExhaustive({...}))`. Never switch
-- Every case returns `[Model, ReadonlyArray<Command<Message>>]`
 - Use `evo(model, { field: () => newValue })` for immutable updates
+- When a `Succeeded*` handler has to write several caches and kick off refetches, sequence them with `Update.combine(model, [step, step, ...])` and build the refetch steps with `Update.refresh({ read, revalidate, write, load })`, which reloads a cache only when it actually holds data. `examples/route-transitions/src/main.ts` shows both
 - In `evo`, use point-free field transformers when the update only depends on that field's current value: `items: Array.map(updateItem)`, `count: Number.increment`, `priceSlider: Slider.reflectRange({ min: minPrice, max: maxPrice })`. Use `() => value` for replacement values from Messages, child updates, Commands, or other Model fields.
 - Extract complex handlers to separate functions when a case exceeds ~15 lines
 - For Submodels: return `[Model, ReadonlyArray<Command<Message>>, Option.Option<OutMessage>]`
@@ -457,7 +512,8 @@ Every message must carry meaning. No `NoOp`.
 - Factory functions named by action: `fetchWeather`, not `fetchWeatherCommand`
 - Fire-and-forget Commands return `Completed*` Messages
 - Use Foldkit's `Dom` module for DOM operations (`Dom.focus`, `Dom.scrollIntoView`, `Dom.showDialog`, `Dom.lockScroll`, etc.) and Effect built-ins for everything else (`Clock.currentTimeMillis`, `Random.nextIntBetween`, `Effect.uuid`, `Effect.sleep(Duration.millis(...))`). See DOM and Effect Helpers in [architecture.md](architecture.md)
-- For HTTP requests, use `HttpClient` from `@effect/platform`. See the weather example for the pattern
+- For HTTP requests, use `HttpClient` and `HttpClientRequest` from `effect/unstable/http`, and provide the client with `Effect.provide(effect, Http.layer)` where `Http` comes from `foldkit`. See `examples/weather/src/main.ts` for the pattern
+- To re-tag a child Submodel's Commands for the parent, use `Command.mapMessages(childCommands, message => GotChildMessage({ message }))`
 
 ### Form Validation
 
@@ -501,14 +557,14 @@ Canonical reference: `${CLAUDE_SKILL_DIR}/../../examples/form/src/main.ts` (asyn
 For date handling (birthday, deadlines, scheduling):
 
 - Use the `Calendar` module: `Calendar.CalendarDate`, `Calendar.today.local` (Effect returning today's date in the user's timezone), `Calendar.make(year, month, day)`, `Calendar.addDays`, etc.
-- Use `Ui.DatePicker` (input + popover calendar) or `Ui.Calendar` (inline grid) for the UI
+- Use `DatePicker` (input + popover calendar) or `Calendar` (inline grid) from `@foldkit/ui` for the UI
 - Seed the initial date via flags when needed. See `job-application` example, which uses `Calendar.today.local` in its flags Effect
 
 For file uploads (resumes, images, attachments):
 
 - Use the `File` module for file primitives
-- Use `Ui.FileDrop` for a drag-and-drop + click-to-browse zone with validation
-- `Ui.FileDrop.ReceivedFiles` is a `NonEmptyArray<File>` OutMessage. Empty selections never fire
+- Use `FileDrop` from `@foldkit/ui` for a drag-and-drop + click-to-browse zone with validation
+- `FileDrop.ReceivedFiles` carries `files: NonEmptyArray<File>`, so the happy path never has to handle an empty list. A drop that produced no files arrives as the separate `RejectedNonFiles` OutMessage; handle it to surface a message like "Only files are accepted"
 - Canonical reference: `${CLAUDE_SKILL_DIR}/../../examples/job-application/src/step/attachments.ts`
 
 ### View
@@ -583,11 +639,13 @@ This is ~2 minutes of reading per file. It saves ~15 minutes of review loop per 
 Before moving to Phase 6, run ALL FOUR of these and fix everything they surface. Not one, not three. All four:
 
 ```bash
-npm run format      # or: npx prettier -w .   (run FIRST: rewrites files)
-npm run lint        # or: npx eslint .
-npm run typecheck   # or: npx tsc --noEmit
-npm run test        # or: npx vitest run
+npm run format      # run FIRST: rewrites files
+npm run lint
+npm run typecheck
+npm run test
 ```
+
+Use whichever package manager the project was scaffolded with: `npm run`, `pnpm run`, `yarn`, or `bun run`. If a script is missing, run the project-local binary through that manager's exec (`pnpm exec prettier -w .`, `npm exec --no-install prettier -w .`, `yarn exec prettier -w .`, `bun x --no-install prettier -w .`). Avoid bare `npx`, which fetches and runs a package from the registry when the binary isn't installed locally.
 
 Run **format first** because it rewrites files; running it last would leave tsc/test passing against unformatted code that a pre-commit hook would then reformat, creating a diff the user has to clean up. Running it first means lint/typecheck/test verify the exact code that will be committed.
 
@@ -598,7 +656,7 @@ Each catches different classes of issue:
 - **Typecheck** catches API misuse, wrong parameter shapes, missing required props, and structural type errors. Doesn't catch unused imports.
 - **Tests** catch behavioral regressions. Don't catch either of the above.
 
-If the project doesn't have a format/lint script, check `package.json` and run `npx prettier -w .` / `npx eslint .` directly. Don't skip either because "there's no script". The scaffolded `create-foldkit-app` project always ships both configured.
+If the project doesn't have a format/lint script, check `package.json` and run the binaries through your package manager's exec (`pnpm exec prettier -w .` / `pnpm exec oxlint src`, or the npm / yarn / bun equivalent) directly. Don't skip either because "there's no script". The scaffolded `create-foldkit-app` project always ships both configured.
 
 Fix ALL output from all four before declaring Phase 5 done. "Typecheck clean and tests pass" is insufficient. Unformatted code with unused imports is not at the bar.
 
@@ -634,7 +692,7 @@ Write `Scene.scene` pipelines covering:
 - **Scoped queries**: use `Scene.within(parent, child)` to compose a single scoped Locator (good for one-off scoped assertions or reusable named locators). Use `Scene.inside(parent, ...steps)` to scope a whole block of steps to the same parent. Every Locator referenced by the nested steps resolves within the parent's subtree. Reach for `inside` when two or more steps share a scope; reach for `within` for single-use scoping.
 - Prefer accessible locators: `Scene.label(...)`, `Scene.role(...)`, `Scene.text(...)` over `Scene.placeholder(...)` or CSS selectors
 
-Run `npx vitest run` to verify tests pass.
+Run the project's test script (`npm run test`, or your package manager's equivalent) to verify tests pass.
 
 Then run through the [verification checklist](checklist.md) to catch structural gaps. Fix any remaining issues before moving on.
 
@@ -646,13 +704,13 @@ Code review and automated tests don't catch rendering bugs or accessibility gaps
 
 Start the dev server (`npm run dev`) and open the app in a browser. Click through every route. Interact with every form. Watch for:
 
-- Inputs with missing backgrounds (Tailwind preflight strips the browser-default white; `bg-white` must be explicit on every `input`/`textarea` you don't route through `Ui.Input`)
+- Inputs with missing backgrounds (Tailwind preflight strips the browser-default white; `bg-white` must be explicit on every raw `input` or `textarea`, meaning every one you don't route through `Input` or `Textarea` from `@foldkit/ui`)
 - Text that's too dim or too small to read
 - Overlapping elements, broken spacing, layout shifts
 - Cursor/hover states that don't feel right
 - Focus rings that are invisible or missing on interactive elements
 
-Many visual bugs are invisible to typecheck, tests, and code review. The only tools that catch them are (1) looking at the rendered output and (2) using `Ui.*` components that already bake sensible defaults in.
+Many visual bugs are invisible to typecheck, tests, and code review. The only tools that catch them are (1) looking at the rendered output and (2) using `@foldkit/ui` components that already bake sensible defaults in.
 
 If the app has UI, **don't claim Phase 5 complete until you've loaded the app and clicked through it.** If you can't run a browser in your environment, say so explicitly in the final report rather than skipping the check silently.
 
@@ -682,174 +740,40 @@ After round 3, if issues remain, exit the loop and carry the unresolved items in
 
 Use a prompt of roughly this shape. Tailor only the file list and project path. Keep the rubric, output format, blind-spots checklist, and bar-setting instructions intact.
 
-```
+```text
 You are reviewing a freshly generated Foldkit program. The bar is:
 this code should be indistinguishable in quality from hand-written
 code in `packages/typing-game/client/src/` or `packages/website/src/`.
 Not "works." Not "structurally valid." Typing-game quality.
 
 Read FIRST, in this order:
-1. <absolute path to generated src/ files: list every file>
-2. /Users/devinjameson/Repos/foldkit/skills/generate-program/architecture.md
-3. /Users/devinjameson/Repos/foldkit/skills/generate-program/conventions.md
-4. /Users/devinjameson/Repos/foldkit/skills/generate-program/checklist.md
-5. At least one exemplar file matching the generated app's complexity:
-   - Tier 1-2: packages/foldkit/src/runtime/runtime.ts (for quality calibration)
+1. The generated source files, project-relative: list every one
+   (src/main.ts, src/update.ts, ...).
+2. ${CLAUDE_SKILL_DIR}/architecture.md
+3. ${CLAUDE_SKILL_DIR}/conventions.md
+4. ${CLAUDE_SKILL_DIR}/checklist.md
+5. ${CLAUDE_SKILL_DIR}/blindSpots.md
+6. At least one exemplar file matching the generated app's complexity,
+   from the foldkit repo (vendored at repos/foldkit/ when the project
+   has the subtree):
+   - Tier 1-2: packages/foldkit/src/runtime/runtime.ts (quality calibration)
    - Tier 3-4: examples/weather/src/main.ts OR examples/form/src/main.ts
    - Tier 5: examples/kanban/src/update.ts AND examples/kanban/src/domain/
    - Tier 6: examples/job-application/src/update.ts AND examples/auth/src/page/
    - Tier 7: packages/typing-game/client/src/page/room/
 
+Every path above is either project-relative or resolved through
+${CLAUDE_SKILL_DIR}, the same way the rest of this skill refers to its
+own files. Do not rewrite them as absolute paths. An absolute path is
+machine-specific, and hand-pasting one is what made an earlier version
+of this prompt unusable anywhere but the machine it was written on.
+
 Then walk the entire checklist.md against the generated code. Every item.
+Then walk every entry in blindSpots.md and report one line per entry:
+`<slug>: clean | flagged at <file:line>: <issue>`. Silence is not a pass.
 Also read at least one of the generated files side-by-side with the
 exemplar you chose. Ask: does this look like it was written by the
 same hand?
-
-COMMON BLIND SPOTS. Check each explicitly; these are frequently missed:
-
-1. OFF-BY-ONE ERRORS. Any logic with "after N", modulo, "every Nth",
-   counter thresholds, or cycle boundaries. Trace the logic for N=0,
-   N=1, and the first transition. Does the boundary go where it should?
-   Example to look for: `count % 4 === 0` triggers on count=0 too.
-   Is that intended or a bug?
-
-2. SKIP / RESET SEMANTICS. If the app has skip, reset, cancel, or
-   undo actions, trace what happens to counters and derived state.
-   Does skip increment or bypass the counter? Does reset clear the
-   counter or preserve it? Is the behavior consistent with what a
-   user would expect?
-
-3. STATE MACHINE EDGES. Every discriminated-union state. Can the
-   current code transition *into* every state? Out of every state?
-   Are there dead states (created, never entered)? Impossible
-   transitions (states that should be reachable but aren't)?
-
-4. REDUNDANT DERIVED DATA IN MODEL. Fields that could be computed
-   from other fields. Example: `endTime` AND `remainingMs` on the
-   same state, where one can drift. Flag these unless there's a
-   concrete reason (view needs pure data, etc.), and if there IS a
-   reason, the code should document it.
-
-5. REPEATED INLINE PATTERNS. If three or four handlers share the
-   same 5-line scaffold (M.tag + M.orElse, Option.match + fallback,
-   etc.), that scaffold wants a named helper. Don't flag every
-   repetition, but flag genuinely duplicated decision logic.
-
-6. FUNCTIONS THAT DO TWO THINGS. Orchestrators that mix "decide
-   what to do" with "do it." Helpers with an `if` that branches
-   into two unrelated behaviors. Handlers that both mutate state
-   AND emit a command in a way that conflates the decisions.
-
-7. NAMING DRIFT. One Message uses `Updated*`, another uses
-   `Changed*` for the same kind of event. One helper is `whenX`,
-   another is `handleX` for analogous cases. Consistency matters;
-   diverging naming is a quality regression.
-
-8. EFFECT MODULE INCONSISTENCY. Mixing `items.map(f)` and
-   `Array.map(items, f)` in the same file. Mixing `Option.match`
-   with `maybe.pipe(Option.map(...), Option.getOrElse(...))` for
-   similar code. One file should use one idiom throughout.
-
-9. EMPTY-OBJECT CONSTRUCTOR CALLS. No-field tagged structs and
-   messages should be called with NO argument: `Idle()`, `Work()`,
-   `ClickedSubmit()`. Never `Idle({})`, `Work({})`. Both compile,
-   but exemplars consistently use the no-arg form. The `({})` form
-   reads as "a value with some empty object in it" and makes a
-   reader wonder what's supposed to be there. Grep for `({})` as a
-   quick scan; should be zero matches in generated code.
-
-10. DEAD STATE VARIANTS. State variants (or fields on state
-    variants) that are assigned but never observed downstream.
-    Examples:
-    - `Saving` state set on submit, but the update also navigates
-      away before the view renders, so the user never sees "Saving."
-    - `SaveError` set on failure, but the form is no longer
-      visible because the user already navigated to the home route
-      on the optimistic submit. Error is unreachable to the user.
-    - `Running.remainingMs` stored alongside `endTime`, where
-      `remainingMs = endTime - now`. One can drift from the other.
-    - A field in Model that's written by updates but never read by
-      the view or other updates.
-
-    **The "navigate-before-save" pattern is a specific instance to
-    look for**: if an update handler emits BOTH `saveState(...)`
-    AND `navigateInternal(...)` in the same return, the navigation
-    races the save. A failure surfaced on the old page is
-    unreachable. The idiomatic pattern is: emit save only, then
-    navigate in the `Succeeded*` handler. Errors then surface on
-    the page the user is still looking at.
-
-    For every discriminated-union variant, trace whether the view
-    branches on it and whether the branch is actually reachable.
-    For every Model field, trace whether it's read anywhere except
-    its own writes. If not, flag it: either the code is missing
-    something, or the variant/field should be deleted.
-
-11. HARD-CODED ROUTE PATHS. Template strings for internal navigation
-    (`Href('/')`, `navigateInternal('/new')`, `/tag/${name}`). Route
-    parsers are bidirectional; each router is callable as a printer:
-    `Href(homeRouter())`, `navigateInternal(newLinkRouter())`,
-    `Href(tagFilterRouter({ tag: name }))`. Grep for `Href('/` and
-    `navigateInternal('/`; should be zero matches in generated code.
-
-12. HAND-ROLLED ACCESSIBLE WIDGETS. Raw `input`, `textarea`, `button`,
-    `dialog`, or any element with `role="menu"` / `role="dialog"` /
-    `role="tab"`. Foldkit ships `Ui.Input`, `Ui.Textarea`, `Ui.Button`,
-    `Ui.Dialog`, `Ui.Menu`, `Ui.Tabs` etc., the whole component table
-    in Phase 2.5. If a form renders `input(...)` directly, that's a
-    BLOCKER unless there's a `// NOTE:` comment explaining why the
-    component can't be used. Hand-rolling isn't a style preference;
-    it's skipping accessibility work. Grep `src/` for the bare
-    elements and flag every match that isn't in a NOTE-justified
-    escape hatch.
-
-13. A11Y GAPS. For anything NOT covered by a Ui.* component (static
-    content, custom layouts, any residual hand-rolled input), verify:
-    label/input association via `For(id)` + `Id(id)`, dynamic errors
-    announced via `Role('alert')` or `AriaLive('polite')`, icon-only
-    buttons have `AriaLabel(...)`, external links have
-    `Rel('noopener noreferrer')`, exactly one `h1` per route, semantic
-    landmarks (`main`, `nav`, `header`) instead of `div` soup. The
-    checklist.md "Accessibility" section lists concrete grep commands;
-    run the ones relevant to what the generator built.
-
-14. MISSING SCENE TEST. For Tier 3+ apps (routing, async Commands,
-    forms), `scene.test.ts` must exist. Check the file tree:
-    if it's absent and the app is Tier 3+, that's a BLOCKER, not a
-    QUALITY item. Story tests alone test the update function in
-    isolation; Scene tests test the rendered view through accessible
-    locators, which is what a real user interacts with. An app
-    without a scene test hasn't been tested at all from the user's
-    perspective.
-
-    Also: **Scene tests must contain assertions.** A `Scene.scene(...)`
-    call with only `Scene.with(model)` and no `Scene.expect(...)` or
-    `Scene.click(...).resolve(...)` only verifies the view doesn't
-    throw. Each test needs at least one `Scene.expect(locator).toX()`
-    or an interaction that asserts on the resulting state.
-
-15. ARIA ROLE CONFUSION.
-    - **Checkboxes**: `Role('checkbox')` + `AriaChecked(boolean)`.
-      Screen readers announce "checkbox, checked/unchecked."
-    - **Toggle buttons** (Play/Pause, Bold on/off, formatting
-      toggles): `AriaPressed(string)` on a `button`. Screen readers
-      announce "toggle button, pressed/not pressed."
-    Using `AriaPressed` on something the user thinks of as a
-    checkbox is wrong semantically. Ask: "does the label say 'Mark
-    X as done' (checkbox) or 'toggle bold' (pressed button)?" The
-    former is a checkbox role; the latter is a toggle button.
-
-16. UNKEYED LIST ROWS. Rows in a list (li or div returned inside
-    `Array.map`) that carry `OnClick` handlers bound to a specific
-    item id, without a `keyed('li')(item.id, ...)` wrapper, are a
-    snabbdom patching bug. Deleting a row from the middle causes
-    the OLD row's click handler to be patched onto what should have
-    been a DIFFERENT row. User clicks "Delete B" and habit A is
-    deleted. This is the exact failure mode `keyed` exists to prevent,
-    and it's subtle because the bug is invisible until a delete or
-    reorder happens mid-list. Every row renderer that consumes a
-    domain entity with an `id` field should return `keyed('li')(item.id, ...)`
-    or `keyed('div')(item.id, ...)`, not bare `li(...)`.
 
 Output format. Exactly this structure:
 
@@ -883,10 +807,12 @@ Do NOT write code. Review only. Be specific, be brutal, don't grade on
 a curve. If you're unsure whether something is at the bar, compare it
 to the exemplar. If the exemplar wouldn't write it that way, flag it.
 
-Before finishing, confirm the generator ran all three gates. If the
-generator claims Phase 5 complete but lint output wasn't shown, flag
-it as a BLOCKER: "Run `npm run lint`: unverified." Lint catches unused
-imports that tsc does not, and those leak into review as noise.
+Before finishing, confirm the generator ran all four gates (format,
+lint, typecheck, test) and showed the output of each. If it claims
+Phase 5 complete but a gate's output wasn't shown, flag it as a
+BLOCKER naming the gate: "Run `npm run lint`: unverified." Lint
+catches unused imports that tsc does not, and those leak into review
+as noise.
 ```
 
 ### After the loop
