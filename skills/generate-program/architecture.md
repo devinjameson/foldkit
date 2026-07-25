@@ -106,6 +106,22 @@ const Model = S.Struct({
 
 With booleans, you can have `isLoading: true` AND `isError: true`, an impossible state. With unions, you're always in exactly one state.
 
+For **remote data specifically**, don't hand-roll the union. The `AsyncData` module ships it:
+
+```ts
+import { AsyncData } from 'foldkit'
+
+const WeatherAsyncData = AsyncData.Schema(WeatherData, S.String)
+
+const Model = S.Struct({
+  weather: WeatherAsyncData.schema,
+})
+```
+
+That gives six states, not four: `Idle`, `Loading`, `Refreshing`, `Failure`, `Stale`, `Success`. The two extra ones are the reason to use it. `Refreshing` carries the previous data while a reload runs, so a refetch doesn't blank the screen. `Stale` carries both the previous data and the new error, so a failed reload doesn't discard what the user was reading. A hand-rolled `Idle | Loading | Error | Ok` forces both of those regressions.
+
+The module also supplies the operations: `AsyncData.match`, `matchData`, `isPending`, `hasData`, `getData`, `map`, `revalidate`, `revalidateOrLoad`, `loadIfMissing`, `zipWith`, `all`. Read `foldkit/asyncData`'s `public.d.ts` for the full surface. `repos/foldkit/examples/weather/src/main.ts` is the canonical use.
+
 ### 5. Messages Are Facts, Not Commands
 
 Messages describe what happened, not what should happen. The update function decides what to do. Messages don't dictate the response:
@@ -121,6 +137,38 @@ const ClickedRefresh = m('ClickedRefresh')
 const SelectedFilter = m('SelectedFilter', { filter: S.String })
 const ClickedOpenModal = m('ClickedOpenModal')
 ```
+
+## The update Return Type
+
+`foldkit/update` names the shape so you don't have to:
+
+```ts
+import { Update } from 'foldkit'
+
+type UpdateReturn = Update.Return<Model, Message>
+const withUpdateReturn = M.withReturnType<UpdateReturn>()
+```
+
+`Update.ReturnWithOutMessage<Model, Message, OutMessage>` is the Submodel counterpart, adding the `Option<OutMessage>` third element.
+
+The rule that matters is **name the alias once per file**. Several examples still spell the tuple out by hand (`type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]`) and that reads fine; `Update.Return` is the tidier spelling and the right default for new code. What to avoid is skipping the alias and repeating the full tuple at the signature and again inside `M.withReturnType<...>()`.
+
+The module also carries two combinators for handlers that fan out after a mutation succeeds:
+
+- `Update.combine(model, [step, step, ...])` sequences update steps over one Model, threading the Model through and collecting the Commands.
+- `Update.refresh({ read, revalidate, write, load })` builds a step that reloads a cache **only when it already holds data**. A cache sitting at `Idle` returns `[model, []]`. That one rule is what makes blanket revalidation safe: a `Succeeded*` handler can list every cache that might be affected without refetching ones nobody has looked at.
+
+```ts
+SucceededUpdateNote: ({ note }) =>
+  Update.combine(model, [
+    replaceNoteInCaches(note),
+    refreshNote(note.id),
+    refreshAllNotes,
+    showToast('Success', `Updated ${note.title}`),
+  ])
+```
+
+`repos/foldkit/examples/route-transitions/src/main.ts` uses both.
 
 ## Flags: Side Effects That Seed the Initial Model
 
@@ -178,11 +226,7 @@ Child → Parent: the child returns an `Option<OutMessage>` as a third tuple ele
 
 ```ts
 // Child update return type
-type UpdateReturn = [
-  Model,
-  ReadonlyArray<Command<Message>>,
-  Option.Option<OutMessage>,
-]
+type UpdateReturn = Update.ReturnWithOutMessage<Model, Message, OutMessage>
 
 // Child signals to parent
 CreatedRoom: ({ roomId, player }) => [
@@ -198,8 +242,8 @@ GotChildMessage: ({ message }) => {
     message,
   )
 
-  const mappedCommands = childCommands.map(
-    Command.mapEffect(Effect.map(message => GotChildMessage({ message }))),
+  const mappedCommands = Command.mapMessages(childCommands, message =>
+    GotChildMessage({ message }),
   )
 
   return Option.match(maybeOutMessage, {
