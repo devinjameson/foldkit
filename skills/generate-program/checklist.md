@@ -32,9 +32,16 @@ grep -rn "({})" src/
 # no Ui namespace on foldkit. Any Ui.Something is a stale import.
 grep -rn "\bUi\.[A-Z]" src/
 
-# Wrong package for HTTP: HttpClient lives in effect/unstable/http.
+# Wrong origin for HttpClient. It lives in 'effect/unstable/http'. Assert that
+# rather than blacklisting one wrong package: it also gets imported from 'effect'
+# and from '@effect/platform', and a blacklist misses whichever one you didn't list.
+# Check per FILE, not per line: `import { ... HttpClient ... } from '...'` usually
+# wraps, so the name and the module specifier land on different lines and any
+# single-line pattern sees neither together.
 # (@effect/platform-browser is fine; that's KeyValueStore and Crypto.)
-grep -rn "from '@effect/platform'" src/
+for f in $(grep -rl "HttpClient" src/); do
+  grep -q "from 'effect/unstable/http'" "$f" || echo "WRONG HttpClient ORIGIN: $f"
+done
 
 # Update return type written inline at a match site instead of aliased once
 # per file. The alias itself is fine (most examples spell it by hand);
@@ -50,8 +57,13 @@ grep -rn "readonly Command<.*>\[\]" src/
 # Eyeball each hit; a non-remote state machine with these names is fine.
 grep -rn "ts('Loading')" src/
 
-# Effect array predicates are isArrayEmpty / isArrayNonEmpty
+# Stale Effect array predicate names (the real ones are isArrayEmpty /
+# isArrayNonEmpty). Note both real ones take a MUTABLE Array<A>: on a Model
+# field from S.Array(...) use Array.match instead.
 grep -rn "isEmptyArray\|isNonEmptyArray" src/
+
+# Array predicates applied to a Model field: won't compile on ReadonlyArray
+grep -rn "isArrayEmpty(model\.\|isArrayNonEmpty(model\." src/
 
 # Hard-coded route paths: use router() / router({params}) instead of template strings
 grep -rn "Href('/" src/
@@ -72,12 +84,21 @@ grep -rnE "(^|[^.[:alnum:]_])(h\.)?(input|textarea|button)\(" src/
 # Option ceremony: Array.findFirst(...)._tag === 'Some' should be Array.some(...)
 grep -rn "Array\.findFirst.*_tag" src/
 
-# Unkeyed list rows: li/div inside Array.map over domain entities should use keyed()
-# to avoid positional-patch bugs when items are added/removed/reordered.
-# Look for: Array.map(items, item => li(...)) should be keyed('li')(item.id, ...)
-grep -rn "Array\.map.*=>\s*\(li\|div\)" src/
-grep -rn "^\s*return li(" src/    # row-renderer helpers
-grep -rn "^\s*return div(" src/   # same for div-based rows
+# Unkeyed list rows. Rows built by Array.map that bind per-item handlers must be
+# keyed by a stable id, or deleting a middle row patches the old row's handler onto
+# a different row (user clicks "delete B", A disappears).
+#
+# Don't try to match the element right after `=>`: real code puts `h.div(` on the
+# next line and the row renderer is an expression, not a `return`. This is triage,
+# not a verdict: it lists files that map a list AND bind per-item handlers, with
+# the map-site and keyed() counts so a shortfall is visible. Read every map site in
+# a listed file. One keyed row does not clear the file, because a file can key one
+# list and leave a second one unkeyed.
+for f in $(grep -rl "Array\.map(\|\.map(" src/); do
+  grep -q "OnClick(\|OnInput(\|OnChange(" "$f" || continue
+  maps=$(grep -c "Array\.map(\|\.map(" "$f"); keys=$(grep -c "keyed(" "$f")
+  echo "READ MAP SITES: $f (maps=$maps keyed=$keys)"
+done
 
 # Scene tests without assertions: Scene.scene(...) calls that only do Scene.with()
 # and nothing else verify only that the view doesn't throw. Each test needs at least
@@ -90,7 +111,8 @@ grep -rn "Scene.scene(" src/ -A 3 | grep -B 2 "Scene.with" | grep -v "Scene.expe
 # These are common patterns; eyeball each hit.
 grep -rn "pipe([a-zA-Z_]*,\s*$" src/ -A 1 | grep "Option\.match\|Array\.map\|Effect\.runSync"
 
-# Length checks: use Array.match / Array.isArrayNonEmpty / String.isNonEmpty
+# Length checks: use Array.match on a Model array (the predicates reject
+# ReadonlyArray), or String.isNonEmpty for strings
 grep -rn "\.length > 0\|\.length === 0\|\.length !== 0" src/
 
 # Raw spread inside evo: use nested evo instead
@@ -222,7 +244,7 @@ Foldkit ships these; reaching past them is a finding, not a style choice.
 
 - [ ] `pipe()` only for multi-step chains (not single operations)
 - [ ] `M.tagsExhaustive` for all Message/state matching (no switch)
-- [ ] `Array.isArrayEmpty` / `Array.isArrayNonEmpty` (not `.length === 0` or `.length > 0`)
+- [ ] `Array.match({ onEmpty, onNonEmpty })` for branching on a Model array (not `.length === 0` / `.length > 0`, and not `Array.isArrayEmpty` / `Array.isArrayNonEmpty`, which take a mutable `Array<A>` and reject the `ReadonlyArray` that `S.Array(...)` decodes to)
 - [ ] `evo()` for Model updates (not spread)
 - [ ] Callable constructors (not `as` casts or manual `_tag` objects)
 - [ ] No-field tagged structs called with NO argument: `Idle()`, `Work()`, `ClickedSubmit()`. Never `Idle({})`, `Work({})`, `ClickedSubmit({})`
@@ -371,7 +393,7 @@ Items without a tier marker apply universally (even to a 50-line counter). When 
 
 - [ ] Native methods replaced with Effect equivalents _in pipe chains_: `Array.map(items, f)` not `items.map(f)` when composing; `String.startsWith(s, 'foo')` in a pipe not `s.startsWith('foo')`.
 - [ ] `Option.match({ onNone, onSome })` preferred over `Option.map(...).pipe(Option.getOrElse(...))`. The labeled branches are self-documenting.
-- [ ] `Array.match({ onEmpty, onNonEmpty })` when handling both empty and non-empty cases. Not `isArrayEmpty ? ... : ...` ternaries. Grep for `.length > 0`, `.length === 0`, and `.length !== 0` on arrays and strings; should be zero. Use `Array.isArrayNonEmpty` / `String.isNonEmpty` for pure checks, `Array.match` for branching renders.
+- [ ] `Array.match({ onEmpty, onNonEmpty })` when handling both empty and non-empty cases, and for any branch on a Model array at all, since the predicates reject `ReadonlyArray`. Not `isArrayEmpty ? ... : ...` ternaries. Grep for `.length > 0`, `.length === 0`, and `.length !== 0` on arrays and strings; should be zero. Use `Array.isArrayNonEmpty` / `String.isNonEmpty` for pure checks, `Array.match` for branching renders.
 - [ ] `Equal.equals(target)` in predicates: `Array.findFirst(items, Equal.equals('Other'))` not `item => item === 'Other'`.
 - [ ] `Array.fromOption(maybeCommand)` for "zero or one command based on Option", not `Option.match` that returns `[]` vs `[cmd]`.
 - [ ] `Option.liftPredicate(value, predicate)` instead of `condition ? Option.some(value) : Option.none()`. The predicate may be a constant `() => condition` when the check doesn't use the value.

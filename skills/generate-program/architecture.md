@@ -120,7 +120,22 @@ const Model = S.Struct({
 
 That gives six states, not four: `Idle`, `Loading`, `Refreshing`, `Failure`, `Stale`, `Success`. The two extra ones are the reason to use it. `Refreshing` carries the previous data while a reload runs, so a refetch doesn't blank the screen. `Stale` carries both the previous data and the new error, so a failed reload doesn't discard what the user was reading. A hand-rolled `Idle | Loading | Error | Ok` forces both of those regressions.
 
-The module also supplies the operations: `AsyncData.match`, `matchData`, `isPending`, `hasData`, `getData`, `map`, `revalidate`, `revalidateOrLoad`, `loadIfMissing`, `zipWith`, `all`. Read `foldkit/asyncData`'s `public.d.ts` for the full surface. `repos/foldkit/examples/weather/src/main.ts` is the canonical use.
+The module also supplies the operations: `AsyncData.match`, `matchData`, `isPending`, `hasData`, `getData`, `map`, `revalidate`, `revalidateOrLoad`, `loadIfMissing`, `zipWith`, `all`.
+
+`match` hands each branch the bare value rather than the tagged variant, with one exception:
+
+```ts
+AsyncData.match(model.notes, {
+  onIdle: () => h.empty,
+  onLoading: () => spinnerView,
+  onRefreshing: data => listView(data),
+  onFailure: error => errorView(error),
+  onStale: ({ error, data }) => staleView(error, data),
+  onSuccess: data => listView(data),
+})
+```
+
+`onRefreshing`, `onFailure`, and `onSuccess` each take one bare value. `onStale` takes `{ error, data }` because it carries both. `onIdle` and `onLoading` take nothing at all, since there is no payload in those states. Destructuring `({ data })` in `onSuccess` or `onRefreshing` is the easy mistake. Read `foldkit/asyncData`'s `public.d.ts` for the full surface. `repos/foldkit/examples/weather/src/main.ts` is the canonical use.
 
 ### 5. Messages Are Facts, Not Commands
 
