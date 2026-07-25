@@ -233,7 +233,7 @@ export const managedResources = ManagedResource.make<Model, Message>()(
           )
           const container = yield* Effect.tryPromise(() =>
             WebContainer.boot({
-              coep: 'require-corp',
+              coep: 'credentialless',
               workdirName: 'foldkit',
             }),
           ).pipe(
@@ -1082,7 +1082,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
         () =>
           messageView(
             'Playground cannot run in this browser',
-            'The editable playground runs on WebContainers, which needs SharedArrayBuffer in a cross-origin isolated page. This browser did not grant it. Recent versions of Chrome, Edge, Firefox, and Safari all support it. You can still see the example running on its detail page.',
+            'The editable playground runs on WebContainers, which needs SharedArrayBuffer in a cross-origin isolated page. Chrome, Edge, and Firefox grant it. Safari does not. You can still see the example running on its detail page.',
             maybeMeta,
           ),
       ),

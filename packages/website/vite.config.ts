@@ -931,23 +931,25 @@ const embeddedExampleRedirectPlugin = (): Plugin => ({
 // boots in `pnpm dev` and `pnpm preview`. The deployed Vercel config is
 // the source of truth; this is the dev-mode equivalent.
 //
-// COEP is `require-corp` rather than `credentialless` because WebKit never
-// shipped `credentialless`, so Safari refuses the cross-origin isolation
-// WebContainer needs. Chromium and Firefox honor both. Every subresource
-// the playground document loads (Monaco, its workers, fonts, styles) is
-// same-origin, which `require-corp` allows without an opt-in header, so
-// adding a cross-origin asset to that page means giving it CORP or CORS.
-// `WebContainer.boot` takes a matching `coep` option in playground.ts.
+// COEP is `credentialless`, which Chromium and Firefox 119+ honor and
+// WebKit never shipped. `require-corp` would grant Safari the isolation
+// too, but WebContainer still cannot boot there, so Safari would spend a
+// 90 second timeout to reach the same dead end instead of being told
+// immediately. `WebContainer.boot` takes a matching `coep` option in
+// playground.ts.
 //
-// CORP same-origin goes on every response so other origins can't embed
-// our assets.
+// CORP same-origin goes on every response (not just /playground/*) so
+// that Monaco's editor and worker scripts loaded by the credentialless
+// /playground/* page satisfy COEP. Workers in credentialless contexts
+// require their script URLs to return a CORP-compatible response, and
+// Vite serves those from non-/playground paths.
 const setIsolationHeaders = (
   url: string | undefined,
   res: { setHeader: (name: string, value: string) => void },
 ) => {
   res.setHeader('Cross-Origin-Resource-Policy', 'same-origin')
   if (url?.startsWith('/playground/')) {
-    res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp')
+    res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless')
     res.setHeader('Cross-Origin-Opener-Policy', 'same-origin')
   }
 }
