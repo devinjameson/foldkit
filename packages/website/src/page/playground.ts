@@ -213,6 +213,89 @@ const reasonFromError = (error: unknown): string => {
   return String(error)
 }
 
+const startPlaygroundServer = (
+  container: WebContainer,
+  files: Record<string, string>,
+) =>
+  Effect.gen(function* () {
+    yield* Effect.tryPromise(() =>
+      container.mount(fileSystemTreeFromFiles(files)),
+    )
+    const install = yield* Effect.tryPromise(() =>
+      container.spawn('npm', ['install']),
+    )
+    let installOutput = ''
+    void install.output.pipeTo(
+      new WritableStream({
+        write: data => {
+          installOutput += data
+        },
+      }),
+    )
+    const installExitCode = yield* Effect.tryPromise(() => install.exit).pipe(
+      Effect.timeoutOrElse({
+        duration: INSTALL_TIMEOUT,
+        orElse: () =>
+          Effect.fail(
+            new Error(
+              `npm install did not finish within ${INSTALL_TIMEOUT}:\n${installOutput}`,
+            ),
+          ),
+      }),
+    )
+    if (installExitCode !== 0) {
+      return yield* Effect.fail(
+        new Error(
+          `npm install exited with code ${installExitCode}:\n${installOutput}`,
+        ),
+      )
+    }
+    const dev = yield* Effect.tryPromise(() =>
+      container.spawn('npm', ['run', 'dev']),
+    )
+    let devOutput = ''
+    void dev.output.pipeTo(
+      new WritableStream({
+        write: data => {
+          devOutput += data
+        },
+      }),
+    )
+    return yield* Effect.callback<string, Error>((resume, signal) => {
+      let settled = false
+      const settle = (effect: Effect.Effect<string, Error>): void => {
+        if (settled) {
+          return
+        }
+        settled = true
+        resume(effect)
+      }
+      const unsubscribe = container.on('server-ready', (_port, url) =>
+        settle(Effect.succeed(url)),
+      )
+      void dev.exit.then(code =>
+        settle(
+          Effect.fail(
+            new Error(
+              `npm run dev exited with code ${code} before the dev server was ready:\n${devOutput}`,
+            ),
+          ),
+        ),
+      )
+      signal.addEventListener('abort', unsubscribe)
+    }).pipe(
+      Effect.timeoutOrElse({
+        duration: DEV_SERVER_TIMEOUT,
+        orElse: () =>
+          Effect.fail(
+            new Error(
+              `The dev server was not ready within ${DEV_SERVER_TIMEOUT}:\n${devOutput}`,
+            ),
+          ),
+      }),
+    )
+  })
+
 export const managedResources = ManagedResource.make<Model, Message>()(
   entry => ({
     webContainerPlayground: entry(S.Option(PlaygroundParams), {
@@ -247,86 +330,14 @@ export const managedResources = ManagedResource.make<Model, Message>()(
                 ),
             }),
           )
-          yield* Effect.tryPromise(() =>
-            container.mount(fileSystemTreeFromFiles(fileEntry.files)),
-          )
-          const install = yield* Effect.tryPromise(() =>
-            container.spawn('npm', ['install']),
-          )
-          let installOutput = ''
-          void install.output.pipeTo(
-            new WritableStream({
-              write: data => {
-                installOutput += data
-              },
-            }),
-          )
-          const installExitCode = yield* Effect.tryPromise(
-            () => install.exit,
-          ).pipe(
-            Effect.timeoutOrElse({
-              duration: INSTALL_TIMEOUT,
-              orElse: () =>
-                Effect.fail(
-                  new Error(
-                    `npm install did not finish within ${INSTALL_TIMEOUT}:\n${installOutput}`,
-                  ),
-                ),
-            }),
-          )
-          if (installExitCode !== 0) {
-            return yield* Effect.fail(
-              new Error(
-                `npm install exited with code ${installExitCode}:\n${installOutput}`,
-              ),
-            )
-          }
-          const dev = yield* Effect.tryPromise(() =>
-            container.spawn('npm', ['run', 'dev']),
-          )
-          let devOutput = ''
-          void dev.output.pipeTo(
-            new WritableStream({
-              write: data => {
-                devOutput += data
-              },
-            }),
-          )
-          const previewUrl = yield* Effect.callback<string, Error>(
-            (resume, signal) => {
-              let settled = false
-              const settle = (effect: Effect.Effect<string, Error>): void => {
-                if (settled) {
-                  return
-                }
-                settled = true
-                resume(effect)
-              }
-              const unsubscribe = container.on('server-ready', (_port, url) =>
-                settle(Effect.succeed(url)),
-              )
-              void dev.exit.then(code =>
-                settle(
-                  Effect.fail(
-                    new Error(
-                      `npm run dev exited with code ${code} before the dev server was ready:\n${devOutput}`,
-                    ),
-                  ),
-                ),
-              )
-              signal.addEventListener('abort', unsubscribe)
-            },
-          ).pipe(
-            Effect.timeoutOrElse({
-              duration: DEV_SERVER_TIMEOUT,
-              orElse: () =>
-                Effect.fail(
-                  new Error(
-                    `The dev server was not ready within ${DEV_SERVER_TIMEOUT}:\n${devOutput}`,
-                  ),
-                ),
-            }),
-          )
+          // NOTE: `release` runs only for a resource that finished
+          // acquiring, so every path that fails or is interrupted after
+          // boot has to tear the container down itself. Otherwise the page
+          // keeps a live container nothing holds a handle to.
+          const previewUrl = yield* startPlaygroundServer(
+            container,
+            fileEntry.files,
+          ).pipe(Effect.onError(() => Effect.sync(() => container.teardown())))
           return {
             container,
             previewUrl,
@@ -1082,7 +1093,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
         () =>
           messageView(
             'Playground cannot run in this browser',
-            'The editable playground runs on WebContainers, which needs SharedArrayBuffer in a cross-origin isolated page. Chrome, Edge, and Firefox grant it. Safari does not. You can still see the example running on its detail page.',
+            'The editable playground runs on WebContainers, which needs SharedArrayBuffer in a cross-origin isolated page. Chrome, Edge, and Firefox work. Safari is not supported yet. You can still see the example running on its detail page.',
             maybeMeta,
           ),
       ),
