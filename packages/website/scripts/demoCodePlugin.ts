@@ -242,6 +242,7 @@ export const counterDemoCodePlugin = (): Plugin =>
 const NOTE_PLAYER_DEMO_CODE_ID = 'virtual:note-player-demo-code'
 
 const NOTE_PLAYER_DEMO_IMPORTS = `import {
+  Array,
   Context,
   Effect,
   Layer,
@@ -250,13 +251,22 @@ const NOTE_PLAYER_DEMO_IMPORTS = `import {
 } from 'effect'
 import { Command } from 'foldkit'
 import { m } from 'foldkit/message'
+import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'`
 
 const NOTE_PLAYER_DEMO_CODE = `// MODEL
 
+const Note = S.Literals(['A', 'B', 'C', 'D', 'E', 'F', 'G'])
+type Note = typeof Note.Type
+
+const Idle = ts('Idle')
+const Playing = ts('Playing', { currentNoteIndex: S.Number })
+const Paused = ts('Paused', { currentNoteIndex: S.Number })
+const PlaybackState = S.Union([Idle, Playing, Paused])
+
 const Model = S.Struct({
-  noteInput: NoteInputField.Union,
-  noteDuration: NoteDuration,
+  noteSequence: S.Array(Note),
+  noteDuration: S.Number,
   playbackState: PlaybackState,
 })
 type Model = typeof Model.Type
@@ -269,52 +279,77 @@ const CompletedPlayNote = m('CompletedPlayNote', {
   noteIndex: S.Number,
 })
 
-const Message = S.Union([ClickedPlay, ClickedPause, CompletedPlayNote])
+const Message = S.Union([
+  ClickedPlay,
+  ClickedPause,
+  CompletedPlayNote,
+])
 type Message = typeof Message.Type
 
 // UPDATE
 
 type UpdateReturn = readonly [
   Model,
-  ReadonlyArray<Command.Command<Message, never, AudioContextService>>,
+  ReadonlyArray<
+    Command.Command<Message, never, AudioContextService>
+  >,
 ]
 const withUpdateReturn = M.withReturnType<UpdateReturn>()
+
+const playNoteAt = (
+  model: Model,
+  noteIndex: number,
+): UpdateReturn => [
+  evo(model, {
+    playbackState: () => Playing({ currentNoteIndex: noteIndex }),
+  }),
+  [
+    PlayNote({
+      note: Array.getUnsafe(model.noteSequence, noteIndex),
+      duration: model.noteDuration,
+      noteIndex,
+    }),
+  ],
+]
 
 const update = (model: Model, message: Message): UpdateReturn =>
   M.value(message).pipe(
     withUpdateReturn,
     M.tagsExhaustive({
-      ClickedPlay: () => [
-        evo(model, {
-          playbackState: () =>
-            Playing({ noteSequence, currentNoteIndex: 0 }),
-        }),
-        [playNote(firstNote, model.noteDuration, 0)],
-      ],
-      ClickedPause: () => [
-        evo(model, {
-          playbackState: () =>
-            Paused({ noteSequence, currentNoteIndex }),
-        }),
-        [],
-      ],
+      ClickedPlay: () =>
+        M.value(model.playbackState).pipe(
+          withUpdateReturn,
+          M.tagsExhaustive({
+            Idle: () => playNoteAt(model, 0),
+            Paused: ({ currentNoteIndex }) =>
+              playNoteAt(model, currentNoteIndex),
+            Playing: () => [model, []],
+          }),
+        ),
+      ClickedPause: () =>
+        M.value(model.playbackState).pipe(
+          withUpdateReturn,
+          M.tagsExhaustive({
+            Playing: ({ currentNoteIndex }) => [
+              evo(model, {
+                playbackState: () => Paused({ currentNoteIndex }),
+              }),
+              [],
+            ],
+            Idle: () => [model, []],
+            Paused: () => [model, []],
+          }),
+        ),
       CompletedPlayNote: ({ noteIndex }) => {
-        if (nextIndex >= noteSequence.length) {
-          return [
-            evo(model, { playbackState: () => Idle() }),
-            [],
-          ]
+        const { playbackState, noteSequence } = model
+        const nextCurrentNoteIndex = noteIndex + 1
+
+        if (playbackState._tag !== 'Playing') {
+          return [model, []]
+        } else if (nextCurrentNoteIndex >= noteSequence.length) {
+          return [evo(model, { playbackState: () => Idle() }), []]
         } else {
-          return [
-            evo(model, {
-              playbackState: () =>
-                Playing({
-                  noteSequence,
-                  currentNoteIndex: nextIndex,
-                }),
-            }),
-            [playNote(nextNote, model.noteDuration, nextIndex)],
-          ]
+          return playNoteAt(model, nextCurrentNoteIndex)
         }
       },
     }),
@@ -326,7 +361,10 @@ class AudioContextService extends Context.Service<
   AudioContextService,
   AudioContext
 >()('AudioContextService') {
-  static readonly Default = Layer.sync(this, () => new AudioContext())
+  static readonly Default = Layer.sync(
+    this,
+    () => new AudioContext(),
+  )
 }
 
 // COMMAND
@@ -357,13 +395,17 @@ const PlayNote = Command.define(
 const NOTE_PLAYER_PHASE_REGIONS: PhaseRegions = {
   PlayMessage: [{ from: "const ClickedPlay = m('ClickedPlay')" }],
   PauseMessage: [{ from: "const ClickedPause = m('ClickedPause')" }],
-  PlayUpdate: [{ from: '      ClickedPlay: () => [', to: '      ],' }],
+  PlayUpdate: [
+    { from: '      ClickedPlay: () =>', to: '        ),' },
+    { from: 'const playNoteAt = (', to: ']' },
+  ],
   PlayModel: [{ from: 'const Model = S.Struct({', to: '})' }],
   NoteMessage: [
     { from: "const CompletedPlayNote = m('CompletedPlayNote', {", to: '})' },
   ],
   NoteUpdate: [
     { from: '      CompletedPlayNote: ({ noteIndex }) => {', to: '      },' },
+    { from: 'const playNoteAt = (', to: ']' },
   ],
   NoteModel: [{ from: 'const Model = S.Struct({', to: '})' }],
   NoteCommand: [{ from: 'const PlayNote = Command.define(', to: ')' }],
