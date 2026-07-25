@@ -4,7 +4,7 @@ set -euo pipefail
 # Check for CLAUDE: comments that should be resolved before merging.
 # Searches all tracked (and staged) files, ignoring this script itself.
 
-MATCHES=$(git grep -n 'CLAUDE:' -- ':!scripts/check-no-claude-comments.sh' ':!CLAUDE.md' || true)
+MATCHES=$(git grep -n 'CLAUDE:' -- ':!scripts/check-no-claude-comments.sh' ':!AGENTS.md' || true)
 
 if [ -n "$MATCHES" ]; then
   echo ""

@@ -55,7 +55,7 @@ grep -rn "Scene.scene(" src/ -A 3 | grep -B 2 "Scene.with" | grep -v "Scene.expe
 # These are common patterns; eyeball each hit.
 grep -rn "pipe([a-zA-Z_]*,\s*$" src/ -A 1 | grep "Option\.match\|Array\.map\|Effect\.runSync"
 
-# Length checks: use Array.match / Array.isNonEmptyArray / String.isNonEmpty
+# Length checks: use Array.match / Array.isArrayNonEmpty / String.isNonEmpty
 grep -rn "\.length > 0\|\.length === 0\|\.length !== 0" src/
 
 # Raw spread inside evo: use nested evo instead
@@ -169,7 +169,7 @@ Alongside the greps, eyeball each file's imports. Every symbol you imported shou
 
 - [ ] `pipe()` only for multi-step chains (not single operations)
 - [ ] `M.tagsExhaustive` for all Message/state matching (no switch)
-- [ ] `Array.isEmptyArray` / `Array.isNonEmptyArray` (not `.length === 0` or `.length > 0`)
+- [ ] `Array.isArrayEmpty` / `Array.isArrayNonEmpty` (not `.length === 0` or `.length > 0`)
 - [ ] `evo()` for Model updates (not spread)
 - [ ] Callable constructors (not `as` casts or manual `_tag` objects)
 - [ ] No-field tagged structs called with NO argument: `Idle()`, `Work()`, `ClickedSubmit()`. Never `Idle({})`, `Work({})`, `ClickedSubmit({})`
@@ -303,7 +303,7 @@ Items without a tier marker apply universally (even to a 50-line counter). When 
 
 - [ ] Native methods replaced with Effect equivalents _in pipe chains_: `Array.map(items, f)` not `items.map(f)` when composing; `String.startsWith(s, 'foo')` in a pipe not `s.startsWith('foo')`.
 - [ ] `Option.match({ onNone, onSome })` preferred over `Option.map(...).pipe(Option.getOrElse(...))`. The labeled branches are self-documenting.
-- [ ] `Array.match({ onEmpty, onNonEmpty })` when handling both empty and non-empty cases. Not `isEmptyArray ? ... : ...` ternaries. Grep for `.length > 0` and `.length === 0` on arrays and strings; should be zero. Use `Array.isNonEmptyArray` / `String.isNonEmpty` for pure checks, `Array.match` for branching renders.
+- [ ] `Array.match({ onEmpty, onNonEmpty })` when handling both empty and non-empty cases. Not `isArrayEmpty ? ... : ...` ternaries. Grep for `.length > 0`, `.length === 0`, and `.length !== 0` on arrays and strings; should be zero. Use `Array.isArrayNonEmpty` / `String.isNonEmpty` for pure checks, `Array.match` for branching renders.
 - [ ] `Equal.equals(target)` in predicates: `Array.findFirst(items, Equal.equals('Other'))` not `item => item === 'Other'`.
 - [ ] `Array.fromOption(maybeCommand)` for "zero or one command based on Option", not `Option.match` that returns `[]` vs `[cmd]`.
 - [ ] `Option.liftPredicate(value, predicate)` instead of `condition ? Option.some(value) : Option.none()`. The predicate may be a constant `() => condition` when the check doesn't use the value.

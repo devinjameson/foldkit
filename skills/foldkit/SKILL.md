@@ -25,7 +25,7 @@ The foldkit repo is vendored as a git subtree at `repos/foldkit/` from the proje
 Stable top-level entry points:
 
 - `repos/foldkit/examples/`: runnable example apps spanning every complexity tier. Usually your first stop when looking for a precedent.
-- `repos/foldkit/CLAUDE.md`: project conventions and the code-quality bar
+- `repos/foldkit/AGENTS.md`: project conventions and the code-quality bar
 - `repos/foldkit/README.md`: framework overview and entry pointers
 - `repos/foldkit/skills/`: task-oriented skills with the canonical architecture, conventions, and quality-bar references
 - `repos/foldkit/packages/`: framework source and production reference apps (the website, the typing-game, the framework itself)

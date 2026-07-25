@@ -138,8 +138,8 @@ M.value(message).pipe(
 // Use Effect's Array module, not native methods in pipe chains
 Array.map(items, item => ...)
 Array.filter(items, item => ...)
-Array.isEmptyArray(items)             // not items.length === 0
-Array.isNonEmptyArray(items)          // not items.length > 0
+Array.isArrayEmpty(items)             // not items.length === 0
+Array.isArrayNonEmpty(items)          // not items.length > 0
 Array.match(items, {                  // when handling both cases
   onEmpty: () => ...,
   onNonEmpty: (items) => ...,
