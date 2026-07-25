@@ -163,6 +163,16 @@ export type WebContainerPlaygroundService = ManagedResource.ServiceOf<
 
 const PlaygroundParams = S.Struct({ slug: S.String })
 
+// NOTE: Each boot step gets a deadline so a stalled step reports which one
+// stalled instead of spinning forever. WebContainer support outside
+// Chromium is still beta, and a browser that cannot register the
+// cross-origin service worker the container needs never rejects, it just
+// never resolves. The durations are generous: a cold boot on a slow
+// connection installs dependencies in well under a minute.
+const BOOT_TIMEOUT = '90 seconds'
+const INSTALL_TIMEOUT = '5 minutes'
+const DEV_SERVER_TIMEOUT = '3 minutes'
+
 const fileSystemTreeFromFiles = (
   files: Readonly<Record<string, string>>,
 ): FileSystemTree => {
@@ -226,6 +236,16 @@ export const managedResources = ManagedResource.make<Model, Message>()(
               coep: 'require-corp',
               workdirName: 'foldkit',
             }),
+          ).pipe(
+            Effect.timeoutOrElse({
+              duration: BOOT_TIMEOUT,
+              orElse: () =>
+                Effect.fail(
+                  new Error(
+                    `WebContainer did not boot within ${BOOT_TIMEOUT}. This browser may not support the service worker WebContainer registers on its own origin.`,
+                  ),
+                ),
+            }),
           )
           yield* Effect.tryPromise(() =>
             container.mount(fileSystemTreeFromFiles(fileEntry.files)),
@@ -241,7 +261,19 @@ export const managedResources = ManagedResource.make<Model, Message>()(
               },
             }),
           )
-          const installExitCode = yield* Effect.tryPromise(() => install.exit)
+          const installExitCode = yield* Effect.tryPromise(
+            () => install.exit,
+          ).pipe(
+            Effect.timeoutOrElse({
+              duration: INSTALL_TIMEOUT,
+              orElse: () =>
+                Effect.fail(
+                  new Error(
+                    `npm install did not finish within ${INSTALL_TIMEOUT}:\n${installOutput}`,
+                  ),
+                ),
+            }),
+          )
           if (installExitCode !== 0) {
             return yield* Effect.fail(
               new Error(
@@ -284,6 +316,16 @@ export const managedResources = ManagedResource.make<Model, Message>()(
               )
               signal.addEventListener('abort', unsubscribe)
             },
+          ).pipe(
+            Effect.timeoutOrElse({
+              duration: DEV_SERVER_TIMEOUT,
+              orElse: () =>
+                Effect.fail(
+                  new Error(
+                    `The dev server was not ready within ${DEV_SERVER_TIMEOUT}:\n${devOutput}`,
+                  ),
+                ),
+            }),
           )
           return {
             container,
@@ -799,13 +841,20 @@ const failurePanelView = (reason: string): Html => {
     [h.Class('flex-1 flex items-center justify-center px-6 py-20 text-center')],
     [
       h.div(
-        [h.Class('max-w-sm flex flex-col items-center')],
+        [h.Class('max-w-xl flex flex-col items-center min-w-0')],
         [
           h.div(
             [h.Class('text-base font-semibold text-gray-900 mb-2')],
             ['Playground failed to load'],
           ),
-          h.div([h.Class('text-sm text-gray-600')], [reason]),
+          h.div(
+            [
+              h.Class(
+                'w-full max-h-64 overflow-auto text-left text-sm text-gray-600 whitespace-pre-wrap break-words',
+              ),
+            ],
+            [reason],
+          ),
         ],
       ),
     ],
