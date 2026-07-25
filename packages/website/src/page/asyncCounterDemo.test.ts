@@ -41,7 +41,10 @@ describe('async counter demo', () => {
     expect(incremented.count).toBe(1)
     expect(incremented.phase).toBe('IncrementMessage')
     expect(incremented.generation).toBe(1)
-    expect(commands).toHaveLength(1)
+    expect(Array.map(commands, command => command.name)).toStrictEqual([
+      'DelayAdvancePhase',
+      'ScrollDemoHighlight',
+    ])
 
     const settled = advancePhases(incremented, INCREMENT_PHASE_STEPS)
     expect(settled.phase).toBe('Idle')

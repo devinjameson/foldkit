@@ -8,7 +8,7 @@ import {
   Schema as S,
   pipe,
 } from 'effect'
-import { Command, Submodel } from 'foldkit'
+import { Command, Dom, Submodel } from 'foldkit'
 import { Html, html } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
@@ -72,12 +72,14 @@ export const ClickedDemoReset = m('ClickedDemoReset')
 export const ProgressedDemoPhase = m('ProgressedDemoPhase', {
   generation: S.Number,
 })
+export const CompletedScrollDemoHighlight = m('CompletedScrollDemoHighlight')
 
 export const Message = S.Union([
   ClickedDemoIncrement,
   ChangedDemoResetDuration,
   ClickedDemoReset,
   ProgressedDemoPhase,
+  CompletedScrollDemoHighlight,
 ])
 export type Message = typeof Message.Type
 
@@ -111,15 +113,27 @@ export const DelayAdvancePhase = Command.define(
   Effect.sleep(duration).pipe(Effect.as(ProgressedDemoPhase({ generation }))),
 )
 
+export const ScrollDemoHighlight = Command.define(
+  'ScrollDemoHighlight',
+  { phase: AnimationPhase },
+  CompletedScrollDemoHighlight,
+)(({ phase }) =>
+  Dom.scrollIntoViewIfNotVisible(`.demo-code-panel [data-phases~="${phase}"]`, {
+    block: 'nearest',
+  }).pipe(Effect.ignore, Effect.as(CompletedScrollDemoHighlight())),
+)
+
 const prependToLog =
   (entry: string) =>
   (messageLog: ReadonlyArray<string>): ReadonlyArray<string> =>
     pipe([entry, ...messageLog], Array.take(MAX_LOG_ENTRIES))
 
-export const update = (model: Model, message: Message): UpdateReturn =>
+const applyMessage = (model: Model, message: Message): UpdateReturn =>
   M.value(message).pipe(
     withUpdateReturn,
     M.tagsExhaustive({
+      CompletedScrollDemoHighlight: () => [model, []],
+
       ClickedDemoIncrement: () => {
         const nextModel = evo(model, {
           count: N.increment,
@@ -291,6 +305,19 @@ export const update = (model: Model, message: Message): UpdateReturn =>
       },
     }),
   )
+
+export const update = (model: Model, message: Message): UpdateReturn => {
+  const [nextModel, commands] = applyMessage(model, message)
+
+  if (nextModel.phase === model.phase || nextModel.phase === 'Idle') {
+    return [nextModel, commands]
+  } else {
+    return [
+      nextModel,
+      [...commands, ScrollDemoHighlight({ phase: nextModel.phase })],
+    ]
+  }
+}
 
 // VIEW
 
