@@ -8,7 +8,7 @@ Run through each category after generating an app. Fix any issues before present
 ## Gate commands (run ALL FOUR; fix everything they surface)
 
 - [ ] `format`: run FIRST; rewrites files so subsequent gates see the committed shape. The scaffold wires prettier.
-- [ ] `lint`: output clean. Catches unused imports, unused vars, style-rule violations that `tsc` does not. The scaffold wires oxlint.
+- [ ] `lint`: output clean. This is the substantive structural gate, not just a style pass: the scaffold wires oxlint **and** `@foldkit/oxlint-plugin`, whose 24 `foldkit/*` rules enforce keyed rows, route printing, `Got*` wrapping, Command naming, and more. Treat any `foldkit(...)` diagnostic as a blocker; that is how they are labelled in the output. It also catches the unused imports `tsc` does not.
 - [ ] `typecheck`: no errors. The scaffold wires `tsc --noEmit`.
 - [ ] `test`: all tests pass. The scaffold wires vitest.
 
@@ -22,11 +22,68 @@ Invoke each through the package manager the project was scaffolded with (`npm ru
 
 ## Mechanical scans (run on every file before tsc)
 
-These are the fast greps that catch the common write-time violations. Run them against `src/`. Each hit is either a fix or a `// NOTE:` justification. Silent hits aren't allowed. Phase 4.5 of SKILL.md runs this block; the reviewer in Phase 6 runs it again as sanity.
+**Run the linter before any of these.** `@foldkit/oxlint-plugin` ships 24 AST
+rules, all `error` in its `recommended.json`, and `create-foldkit-app` installs
+and wires it, so `npm run lint` already enforces them in a scaffolded project.
+Those rules are the real structural check: they parse the code instead of
+matching text, so they don't miss a wrapped call or a renamed helper the way a
+grep does. Confirm the rules are actually active rather than that the package is named
+somewhere, and read the config to confirm it rather than the lint output: a
+monorepo or vendored setup wires the plugin by path specifier under `jsPlugins`
+and never extends `recommended.json`. Diagnostics are labelled
+`foldkit(rule-name)`, so grepping for `foldkit/` finds nothing even when every
+rule is running, and a run with zero `foldkit(` matches is what a passing project
+looks like. Never read a quiet lint run as the rules being off.
+If the rules aren't active, turning them on is a bigger win than any scan below.
+
+Among others, the plugin enforces keyed mapped rows, hard-coded route strings,
+empty-object tagged calls, `Rel` on external links, spread inside `evo`, `Got*`
+wrapping of child output, PascalCase `Command.define` bindings, and no `NoOp`
+Messages. Don't re-implement a rule wholesale.
+
+**A rule being green is not the same as the subject being clean.** Several rules
+are deliberately narrow, and the greps below deliberately cover their edges. Each
+such grep says which rule it complements and where that rule stops. Note also
+that `recommended.json` turns every rule off for `**/*.test.ts` and
+`**/*.test.tsx`, so the linter
+contributes nothing to test files; Scene and Story shape is on you.
+
+The rest of the block covers ground no rule touches: API drift where a name moved
+between packages, `@foldkit/ui` component adoption, Effect idiom, a11y detail,
+and test shape. Each hit is either a fix or a `// NOTE:` justification. Silent
+hits aren't allowed. Phase 4.5 of SKILL.md runs this block; the reviewer in
+Phase 6 runs it again as sanity.
 
 ```bash
-# Empty-object constructor calls: no-field tagged structs should call with no arg
+# Empty-object constructor calls. foldkit/no-empty-object-tagged-call covers this
+# ONLY for a bare identifier callee: it bails on `!isIdentifier(node.callee)`, so
+# `Todo.ClickedDelete({})` through a namespace import is unflagged, and namespaced
+# Submodel Messages are the common spelling.
 grep -rn "({})" src/
+
+# External links missing Rel. foldkit/require-rel-for-external-link bails when the
+# attribute array contains a spread, so `h.a([...baseAttrs, Target('_blank')], ...)`
+# is unflagged. Read each hit's attribute block for Rel.
+grep -rn "_blank" src/
+
+# `as` casts on constructor returns. Rejected by oxlint's
+# typescript/consistent-type-assertions, which the SCAFFOLD sets but
+# recommended.json does not, so a project that only extends recommended.json has
+# no coverage here.
+grep -rn " as [A-Z][a-zA-Z]*State\b\| as [A-Z][a-zA-Z]*Message\b" src/
+
+# Unkeyed list rows. foldkit/keyed-required-for-mapped-rows is narrow by design:
+# it fires only when the callback references `.id` (or destructures a property
+# literally named `id`) AND the row element is one of li/div/tr/article/section.
+# Rows keyed on slug/name/uuid, or rows returning h.a / h.button / a component
+# call, pass it silently. This triage covers those: it lists files that map a list
+# and bind a per-item handler, with map-site and keyed counts. Read every map site
+# in a listed file: one keyed row does not clear it, since a file can key one
+# list and leave a second unkeyed.
+for f in $(grep -rl "Array\.map(\|\.map(" src/); do
+  grep -qE "OnClick\(|OnInput\(|OnChange\(|onClick:|onInput:|onChange:" "$f" || continue
+  echo "READ MAP SITES: $f (maps=$(grep -c 'Array\.map(\|\.map(' "$f") keyed=$(grep -c 'keyed(' "$f"))"
+done
 
 # Wrong package for UI components: they come from '@foldkit/ui', and there is
 # no Ui namespace on foldkit. Any Ui.Something is a stale import.
@@ -65,10 +122,6 @@ grep -rn "isEmptyArray\|isNonEmptyArray" src/
 # Array predicates applied to a Model field: won't compile on ReadonlyArray
 grep -rn "isArrayEmpty(model\.\|isArrayNonEmpty(model\." src/
 
-# Hard-coded route paths: use router() / router({params}) instead of template strings
-grep -rn "Href('/" src/
-grep -rn "navigateInternal('/" src/
-
 # Hand-rolled form controls: should use Input.view / Textarea.view / Button.view
 # from '@foldkit/ui'. Views bind `const h = html<Message>()`, so the call shape is
 # `h.input(...)`, not a bare `input(...)`; match both, and don't assume the element
@@ -81,24 +134,20 @@ grep -rn "navigateInternal('/" src/
 # than grepped. A hit whose enclosing call has no such spread is hand-rolled.
 grep -rnE "(^|[^.[:alnum:]_])(h\.)?(input|textarea|button)\(" src/
 
+# Spread inside evo. foldkit/no-spread-in-evo only inspects a Property whose
+# value is an arrow updater, and skips bodies with a computed key, so a spread in
+# the evo updates object itself is unflagged. Use a nested evo instead.
+#
+# Don't window this with -A: an updates object runs past any fixed number of lines,
+# and piping the window through a second grep drops the file:line that would let you
+# find the hit again. Narrow to files that call evo, then print every spread in them
+# with its own location. Most hits are unrelated spreads (array literals, attribute
+# groups); read each one's enclosing call to see whether it sits in an evo updates
+# object. Few enough hits to eyeball, which listing every evo call site is not.
+grep -rl "evo(" src/ | xargs grep -Hn "\.\.\."
+
 # Option ceremony: Array.findFirst(...)._tag === 'Some' should be Array.some(...)
 grep -rn "Array\.findFirst.*_tag" src/
-
-# Unkeyed list rows. Rows built by Array.map that bind per-item handlers must be
-# keyed by a stable id, or deleting a middle row patches the old row's handler onto
-# a different row (user clicks "delete B", A disappears).
-#
-# Don't try to match the element right after `=>`: real code puts `h.div(` on the
-# next line and the row renderer is an expression, not a `return`. This is triage,
-# not a verdict: it lists files that map a list AND bind per-item handlers, with
-# the map-site and keyed() counts so a shortfall is visible. Read every map site in
-# a listed file. One keyed row does not clear the file, because a file can key one
-# list and leave a second one unkeyed.
-for f in $(grep -rl "Array\.map(\|\.map(" src/); do
-  grep -q "OnClick(\|OnInput(\|OnChange(" "$f" || continue
-  maps=$(grep -c "Array\.map(\|\.map(" "$f"); keys=$(grep -c "keyed(" "$f")
-  echo "READ MAP SITES: $f (maps=$maps keyed=$keys)"
-done
 
 # Scene tests without assertions: Scene.scene(...) calls that only do Scene.with()
 # and nothing else verify only that the view doesn't throw. Each test needs at least
@@ -115,17 +164,11 @@ grep -rn "pipe([a-zA-Z_]*,\s*$" src/ -A 1 | grep "Option\.match\|Array\.map\|Eff
 # ReadonlyArray), or String.isNonEmpty for strings
 grep -rn "\.length > 0\|\.length === 0\|\.length !== 0" src/
 
-# Raw spread inside evo: use nested evo instead
-grep -rn "evo(.*, {" src/ -A 3 | grep "\.\.\."
-
 # Stuttery evo setters: when a setter only transforms that same field, pass
 # the transformer directly. Look for `field: () => f(model.field)`,
 # `field: () => Array.map(model.field, f)`, or
 # `field: () => Reflect.helper(model.field, ...)`.
 # Prefer `field: f`, `field: Array.map(f)`, or `field: Reflect.helper(...)`.
-
-# as casts on constructor returns: constructors already return the right type
-grep -rn " as [A-Z][a-zA-Z]*State\b\| as [A-Z][a-zA-Z]*Message\b" src/
 
 # Labels without For: should pair with Id on the input, or use Input from
 # '@foldkit/ui'. The attribute array often starts on the next line, so match the
@@ -142,13 +185,6 @@ grep -rn "\.span(\[\], \[\])\|^span(\[\], \[\])" src/
 
 # Effect.ignore on infallible Effects (pushUrl, load, back, forward)
 grep -rn "pushUrl.*Effect\.ignore\|load(.*)\.pipe.*Effect\.ignore" src/
-
-# _blank links missing Rel. Match the bare literal, not `Target('_blank')`: the
-# argument may be wrapped onto its own line, quoted either way, and the Rel may
-# sit any distance from Target or precede it. Anything narrower silently passes
-# an unformatted anchor. List every _blank and read each one's whole attribute
-# block for Rel.
-grep -rn "_blank" src/
 
 # outline-none without focus-visible replacement
 grep -rn "outline-none" src/ | grep -v "focus-visible:"
@@ -320,11 +356,13 @@ Foldkit UI components ARE the a11y pass for their covered patterns. These checks
 
 ### Mechanical check: a11y
 
-The greps below are **fast starting scans**, not authoritative. Attributes often span multiple lines (`Target('_blank')` on line N, `Rel('noopener noreferrer')` several lines later, or ordered the other way), so a fixed `-A` window silently passes anchors whose `Rel` falls outside it. Each scan lists candidates; you confirm by reading the whole attribute block. Every hit should be eyeballed in context before flagging it as a bug, but every hit DOES need to be eyeballed.
+The greps below are **fast starting scans**, not authoritative. `foldkit/require-rel-for-external-link` is the real check for the external-link case, but it bails when the attribute array contains a spread, so the scan stays for that edge. Attributes also span multiple lines (`Target('_blank')` on line N, `Rel('noopener noreferrer')` several lines later, or ordered the other way), so a fixed `-A` window silently passes anchors whose `Rel` falls outside it. Each scan lists candidates; you confirm by reading the whole attribute block. Every hit needs eyeballing in context before it is called a bug, and every hit does need it.
 
 ```bash
 grep -rnE "(^|[^.[:alnum:]_])(h\.)?label\(" src/       # labels: read each block for For(
 grep -rn "_blank" src/                                  # then read each anchor's block for Rel(
+                                                        # foldkit/require-rel-for-external-link
+                                                        # bails on spread attribute arrays
 grep -rn "outline-none" src/ | grep -v "focus-visible:"  # killed focus outline without replacement
 ```
 
