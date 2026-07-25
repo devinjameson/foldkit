@@ -3,7 +3,7 @@ import { Array, Match as M, Option, Result, pipe } from 'effect'
 import type { Heading, MarkdownDocument } from '@foldkit/markdown'
 
 import type { TableOfContentsEntry } from '../main'
-import { inlineToText, slugify } from './slug'
+import { inlineToText, parseHeadingId, slugify } from './slug'
 
 // TABLE OF CONTENTS
 
@@ -16,20 +16,33 @@ export type CollectedHeadings = Readonly<{
   idByHeading: HeadingIds
 }>
 
+const uniqueHeadingId = (
+  base: string,
+  usedIds: ReadonlySet<string>,
+): string => {
+  if (usedIds.has(base)) {
+    let suffix = 2
+    while (usedIds.has(`${base}-${suffix}`)) {
+      suffix += 1
+    }
+    return `${base}-${suffix}`
+  } else {
+    return base
+  }
+}
+
 const tableOfContentsEntry = (
   heading: Heading,
   id: string,
-): Result.Result<TableOfContentsEntry, void> => {
-  const text = inlineToText(heading.content)
-
-  return M.value(heading.level).pipe(
+  text: string,
+): Result.Result<TableOfContentsEntry, void> =>
+  M.value(heading.level).pipe(
     M.withReturnType<Result.Result<TableOfContentsEntry, void>>(),
     M.when(2, () => Result.succeed({ id, level: 'h2', text })),
     M.when(3, () => Result.succeed({ id, level: 'h3', text })),
     M.when(4, () => Result.succeed({ id, level: 'h4', text })),
     M.orElse(() => Result.failVoid),
   )
-}
 
 /**
  * Walks a document's top-level blocks, assigns a slug id to every heading
@@ -42,18 +55,18 @@ export const collectHeadings = (
   document: MarkdownDocument,
 ): CollectedHeadings => {
   const idByHeading = new Map<Heading, string>()
-  const slugCounts = new Map<string, number>()
+  const usedIds = new Set<string>()
 
   const tableOfContents = Array.filterMap(document.blocks, block =>
     M.value(block).pipe(
       M.withReturnType<Result.Result<TableOfContentsEntry, void>>(),
       M.tag('Heading', heading => {
-        const base = slugify(inlineToText(heading.content))
-        const priorCount = slugCounts.get(base) ?? 0
-        slugCounts.set(base, priorCount + 1)
-        const id = priorCount === 0 ? base : `${base}-${priorCount + 1}`
+        const { maybeId, text } = parseHeadingId(inlineToText(heading.content))
+        const base = Option.getOrElse(maybeId, () => slugify(text))
+        const id = uniqueHeadingId(base, usedIds)
+        usedIds.add(id)
         idByHeading.set(heading, id)
-        return tableOfContentsEntry(heading, id)
+        return tableOfContentsEntry(heading, id, text)
       }),
       M.orElse(() => Result.failVoid),
     ),
@@ -66,5 +79,8 @@ export const collectHeadings = (
 export const headingId = (idByHeading: HeadingIds, heading: Heading): string =>
   pipe(
     Option.fromNullishOr(idByHeading.get(heading)),
-    Option.getOrElse(() => slugify(inlineToText(heading.content))),
+    Option.getOrElse(() => {
+      const { maybeId, text } = parseHeadingId(inlineToText(heading.content))
+      return Option.getOrElse(maybeId, () => slugify(text))
+    }),
   )

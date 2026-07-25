@@ -20,4 +20,5 @@ export const islandAttributes = {
   }),
   Info: S.Struct({ label: S.String }),
   Warning: S.Struct({ label: S.String }),
+  Cta: S.Struct({}),
 }
