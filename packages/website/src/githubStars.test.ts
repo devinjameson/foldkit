@@ -1,22 +1,6 @@
-import { Option } from 'effect'
-import { AsyncData } from 'foldkit'
 import { describe, expect, test } from 'vitest'
 
-import { formatStarCount, initialGitHubStars } from './githubStars'
-
-describe('initialGitHubStars', () => {
-  test('a baked count seeds Success so the badge renders immediately', () => {
-    const stars = initialGitHubStars(4242)
-    expect(stars._tag).toBe('Success')
-    expect(Option.getOrNull(AsyncData.getData(stars))).toBe(4242)
-  })
-
-  test('an absent baked count seeds Loading', () => {
-    const stars = initialGitHubStars(null)
-    expect(stars._tag).toBe('Loading')
-    expect(Option.isNone(AsyncData.getData(stars))).toBe(true)
-  })
-})
+import { formatStarCount } from './githubStars'
 
 describe('formatStarCount', () => {
   test.each([

@@ -369,7 +369,7 @@ export const landingView = (model: Model) => {
             emailSignupView,
             playgroundMenu,
             model.aiHeadingToggleCount,
-            model.githubStarsAsyncData,
+            model.maybeGitHubStarCount,
           ),
         ],
       ),

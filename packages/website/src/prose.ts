@@ -122,7 +122,7 @@ export const bullets = (...items: ReadonlyArray<string | Html>): Html => {
 export const bulletPoint = (label: string, description: string): Html => {
   const h = html<Message>()
 
-  return h.li([], [h.strong([], [`${label}:`]), ` ${description}`])
+  return h.span([], [h.strong([], [`${label}:`]), ` ${description}`])
 }
 
 const inlineCodeClassName =

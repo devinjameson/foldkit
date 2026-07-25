@@ -455,6 +455,7 @@ const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
 const WEBSITE_DIR = resolve(SCRIPT_DIR, '..')
 const DIST_DIR = resolve(WEBSITE_DIR, 'dist')
 const API_JSON_PATH = resolve(WEBSITE_DIR, 'src/generated/api.json')
+const API_UI_JSON_PATH = resolve(WEBSITE_DIR, 'src/generated/api-ui.json')
 
 // SERVICES
 
@@ -557,11 +558,23 @@ const captureRoutePage = (browser: Browser, url: string, route: AppRoute) =>
 
 const ApiDocJson = S.fromJsonString(TypeDocJson)
 
+// NOTE: The core and UI TypeDoc projects are merged here the same way
+// vite.config.ts merges them for the client. Reading only api.json drops every
+// Ui/* module, and with it every `ui-*` route from prerender, the sitemap, the
+// Pagefind index, and per-page metadata.
 const readApiModules = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem
-  const raw = yield* fs.readFileString(API_JSON_PATH)
-  const apiDoc = yield* S.decodeUnknownEffect(ApiDocJson)(raw)
-  return parseTypedocJson(apiDoc).modules
+  const [coreRaw, uiRaw] = yield* Effect.all([
+    fs.readFileString(API_JSON_PATH),
+    fs.readFileString(API_UI_JSON_PATH),
+  ])
+  const coreApiDoc = yield* S.decodeUnknownEffect(ApiDocJson)(coreRaw)
+  const uiApiDoc = yield* S.decodeUnknownEffect(ApiDocJson)(uiRaw)
+
+  return parseTypedocJson({
+    ...coreApiDoc,
+    children: [...coreApiDoc.children, ...uiApiDoc.children],
+  }).modules
 })
 
 type PrerenderResult = Readonly<{

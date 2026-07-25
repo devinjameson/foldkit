@@ -1,10 +1,9 @@
 import { clsx } from 'clsx'
-import { Array, Match as M } from 'effect'
-import { AsyncData } from 'foldkit'
+import { Array, Match as M, Option } from 'effect'
 import type { Field } from 'foldkit/fieldValidation'
 import { Html, html } from 'foldkit/html'
 
-import { GitHubStarsAsyncData, formatStarCount } from '../githubStars'
+import { formatStarCount } from '../githubStars'
 import { Icon } from '../icon'
 import { type EmailSubscriptionStatus } from '../main'
 import { type Message, SubmittedEmailForm, UpdatedEmailField } from '../message'
@@ -38,13 +37,10 @@ export const iconLink = (link: string, ariaLabel: string, icon: Html) => {
   )
 }
 
-// NOTE: The reserved count width and placeholder length track our current star
-// order of magnitude. Bump both to four once we cross a thousand stars.
-const STAR_COUNT_WIDTH = 'w-[3ch]'
-const STAR_COUNT_PLACEHOLDER = '···'
+const STAR_COUNT_MIN_WIDTH = 'min-w-[3ch]'
 
 export const githubStarBadge = (
-  githubStarsAsyncData: GitHubStarsAsyncData,
+  maybeGitHubStarCount: Option.Option<number>,
 ): Html => {
   const h = html<Message>()
 
@@ -63,7 +59,7 @@ export const githubStarBadge = (
             h.Class(
               clsx(
                 'mt-px inline-flex justify-center tabular-nums',
-                STAR_COUNT_WIDTH,
+                STAR_COUNT_MIN_WIDTH,
               ),
             ),
           ],
@@ -72,14 +68,9 @@ export const githubStarBadge = (
       ],
     )
 
-  return AsyncData.matchDataSplitEmpty(githubStarsAsyncData, {
-    onData: count => badge(h.span([], [formatStarCount(count)])),
-    onLoading: () =>
-      badge(
-        h.span([h.Class('animate-pulse opacity-60')], [STAR_COUNT_PLACEHOLDER]),
-      ),
-    onFailure: () => h.empty,
-    onIdle: () => h.empty,
+  return Option.match(maybeGitHubStarCount, {
+    onNone: () => h.empty,
+    onSome: count => badge(h.span([], [formatStarCount(count)])),
   })
 }
 

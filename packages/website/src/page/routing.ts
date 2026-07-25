@@ -606,7 +606,7 @@ export const view = (copiedSnippets: CopiedSnippets): Html => {
       ),
       para(
         'When a link is clicked in your application, the ',
-        inlineCode('browser.onUrlRequest'),
+        inlineCode('routing.onUrlRequest'),
         ' handler receives either an Internal or External request. Handle Internal links with ',
         inlineCode('pushUrl'),
         ' and External links with ',
@@ -632,7 +632,7 @@ export const view = (copiedSnippets: CopiedSnippets): Html => {
         ' or ',
         inlineCode('replaceUrl'),
         ' changes the URL, Foldkit automatically calls your ',
-        inlineCode('browser.onUrlChange'),
+        inlineCode('routing.onUrlChange'),
         ' handler with the new URL. This is where you parse the URL into a route and update your model.',
       ),
       tableOfContentsEntryToHeader(coldLoadsHeader),

@@ -59,12 +59,6 @@ export const SucceededSubscribeToNewsletter = m(
   'SucceededSubscribeToNewsletter',
 )
 export const FailedSubscribeToNewsletter = m('FailedSubscribeToNewsletter')
-export const SucceededFetchGitHubStars = m('SucceededFetchGitHubStars', {
-  count: S.Number,
-})
-export const FailedFetchGitHubStars = m('FailedFetchGitHubStars', {
-  error: S.String,
-})
 export const GotMobileMenuDialogMessage = m('GotMobileMenuDialogMessage', {
   message: Dialog.Message,
 })
@@ -155,8 +149,6 @@ export const Message = S.Union([
   SubmittedEmailForm,
   SucceededSubscribeToNewsletter,
   FailedSubscribeToNewsletter,
-  SucceededFetchGitHubStars,
-  FailedFetchGitHubStars,
   GotMobileMenuDialogMessage,
   ClickedOpenMobileMenu,
   ToggledMobileTableOfContents,

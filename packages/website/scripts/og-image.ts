@@ -288,6 +288,21 @@ const HOMEPAGE_JSON_LD = [
 
 // META TAG INJECTION
 
+const replaceOrThrow = (
+  html: string,
+  pattern: RegExp,
+  replacement: string,
+  urlPath: string,
+): string => {
+  if (!pattern.test(html)) {
+    throw new Error(
+      `Head rewrite for ${urlPath} matched nothing with ${pattern}. The markup in index.html no longer has the shape this pattern expects.`,
+    )
+  }
+
+  return html.replace(pattern, replacement)
+}
+
 export const injectMetaTags = (
   html: string,
   route: AppRoute,
@@ -305,47 +320,58 @@ export const injectMetaTags = (
 
   const jsonLd = metadata.title === 'Foldkit' ? HOMEPAGE_JSON_LD : ''
 
-  return html
-    .replace(/<title>[^<]*<\/title>/, `<title>${fullTitle}</title>`)
-    .replace(
-      /rel="canonical" href="[^"]*"/,
-      `rel="canonical" href="${pageUrl}"`,
-    )
-    .replace(
-      /name="description" content="[^"]*"/,
+  const metaTagReplacements: ReadonlyArray<readonly [RegExp, string]> = [
+    [/<title>[^<]*<\/title>/, `<title>${fullTitle}</title>`],
+    [/rel="canonical"\s+href="[^"]*"/, `rel="canonical" href="${pageUrl}"`],
+    [
+      /name="description"\s+content="[^"]*"/,
       `name="description" content="${metadata.description}"`,
-    )
-    .replace(
-      /property="og:url" content="[^"]*"/,
+    ],
+    [
+      /property="og:url"\s+content="[^"]*"/,
       `property="og:url" content="${pageUrl}"`,
-    )
-    .replace(
-      /property="og:title" content="[^"]*"/,
+    ],
+    [
+      /property="og:title"\s+content="[^"]*"/,
       `property="og:title" content="${fullTitle}"`,
-    )
-    .replace(
-      /property="og:description" content="[^"]*"/,
+    ],
+    [
+      /property="og:description"\s+content="[^"]*"/,
       `property="og:description" content="${metadata.description}"`,
-    )
-    .replace(
-      /property="og:image" content="[^"]*"/,
+    ],
+    [
+      /property="og:image"\s+content="[^"]*"/,
       `property="og:image" content="${ogImageUrl}"`,
-    )
-    .replace(
-      /property="og:image:alt" content="[^"]*"/,
+    ],
+    [
+      /property="og:image:alt"\s+content="[^"]*"/,
       `property="og:image:alt" content="${fullTitle}"`,
-    )
-    .replace(
-      /name="twitter:title" content="[^"]*"/,
+    ],
+    [
+      /name="twitter:title"\s+content="[^"]*"/,
       `name="twitter:title" content="${fullTitle}"`,
-    )
-    .replace(
-      /name="twitter:description" content="[^"]*"/,
+    ],
+    [
+      /name="twitter:description"\s+content="[^"]*"/,
       `name="twitter:description" content="${metadata.description}"`,
-    )
-    .replace(
-      /name="twitter:image" content="[^"]*"/,
+    ],
+    [
+      /name="twitter:image"\s+content="[^"]*"/,
       `name="twitter:image" content="${ogImageUrl}"`,
-    )
-    .replace('</head>', jsonLd ? `${jsonLd}\n  </head>` : '</head>')
+    ],
+  ]
+
+  const withMetaTags = Array.reduce(
+    metaTagReplacements,
+    html,
+    (currentHtml, [pattern, replacement]) =>
+      replaceOrThrow(currentHtml, pattern, replacement, urlPath),
+  )
+
+  return replaceOrThrow(
+    withMetaTags,
+    /<\/head>/,
+    jsonLd ? `${jsonLd}\n  </head>` : '</head>',
+    urlPath,
+  )
 }

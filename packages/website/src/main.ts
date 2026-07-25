@@ -8,7 +8,6 @@ import {
   Number as Number_,
   Option,
   Record as Record_,
-  Result,
   Schema as S,
   pipe,
 } from 'effect'
@@ -43,7 +42,6 @@ import {
   allPages,
   findActiveSectionKey,
 } from './docsNav'
-import { GitHubStarsAsyncData, initialGitHubStars } from './githubStars'
 import {
   CompletedApplyTheme,
   CompletedInjectAnalytics,
@@ -58,7 +56,6 @@ import {
   CompletedScrollToTop,
   FailedCopyLink,
   FailedCopySnippet,
-  FailedFetchGitHubStars,
   FailedSubscribeToNewsletter,
   GotApiReferenceMessage,
   GotAsyncCounterDemoMessage,
@@ -76,7 +73,6 @@ import {
   ResolvedTheme,
   SucceededCopyLink,
   SucceededCopySnippet,
-  SucceededFetchGitHubStars,
   SucceededSubscribeToNewsletter,
   ThemePreference,
 } from './message'
@@ -240,7 +236,7 @@ export const Model = S.Struct({
   copiedSnippets: S.HashSet(S.String),
   emailField: FieldValidation.Field(S.String),
   emailSubscriptionStatus: EmailSubscriptionStatus,
-  githubStarsAsyncData: GitHubStarsAsyncData.schema,
+  maybeGitHubStarCount: S.Option(S.Number),
   currentYear: S.Number,
   mobileMenuDialog: Dialog.Model,
   isMobileTableOfContentsOpen: S.Boolean,
@@ -425,7 +421,7 @@ export const init: Runtime.RoutingApplicationInit<
       copiedSnippets: HashSet.empty(),
       emailField: FieldValidation.NotValidated({ value: '' }),
       emailSubscriptionStatus: 'Idle',
-      githubStarsAsyncData: initialGitHubStars(githubStarCount),
+      maybeGitHubStarCount: Option.fromNullishOr(githubStarCount),
       currentYear: flags.currentYear,
       mobileMenuDialog: Dialog.init({ id: 'mobile-menu' }),
       isMobileTableOfContentsOpen: false,
@@ -462,7 +458,6 @@ export const init: Runtime.RoutingApplicationInit<
       InjectAnalytics(),
       InjectSpeedInsights(),
       ApplyTheme({ theme: resolvedTheme }),
-      FetchGitHubStars(),
       ...mappedUiPagesCommands,
       ...mappedComingFromReactCommands,
       ...mappedApiReferenceCommands,
@@ -712,22 +707,6 @@ export const update = (
       FailedSubscribeToNewsletter: () => [
         evo(model, {
           emailSubscriptionStatus: () => 'Failed',
-        }),
-        [],
-      ],
-
-      SucceededFetchGitHubStars: ({ count }) => [
-        evo(model, {
-          githubStarsAsyncData: () =>
-            GitHubStarsAsyncData.Success({ data: count }),
-        }),
-        [],
-      ],
-
-      FailedFetchGitHubStars: ({ error }) => [
-        evo(model, {
-          githubStarsAsyncData: previousGitHubStarsAsyncData =>
-            AsyncData.settle(previousGitHubStarsAsyncData, Result.fail(error)),
         }),
         [],
       ],
@@ -1203,42 +1182,6 @@ const SubscribeToNewsletter = Command.define(
     return SucceededSubscribeToNewsletter()
   }).pipe(
     Effect.catch(() => Effect.succeed(FailedSubscribeToNewsletter())),
-    Effect.provide(Http.layer),
-  ),
-)
-
-const GITHUB_REPO_API_URL = 'https://api.github.com/repos/foldkit/foldkit'
-
-const GitHubRepo = S.Struct({ stargazers_count: S.Number })
-
-const FetchGitHubStars = Command.define(
-  'FetchGitHubStars',
-  SucceededFetchGitHubStars,
-  FailedFetchGitHubStars,
-)(
-  Effect.gen(function* () {
-    const client = yield* HttpClient.HttpClient
-    const response = yield* client.execute(
-      HttpClientRequest.get(GITHUB_REPO_API_URL),
-    )
-
-    if (response.status >= 400) {
-      return yield* Effect.fail('Failed to fetch GitHub stars')
-    }
-
-    const body = yield* response.json
-    const { stargazers_count } = yield* S.decodeUnknownEffect(GitHubRepo)(body)
-
-    return SucceededFetchGitHubStars({ count: stargazers_count })
-  }).pipe(
-    Effect.catch(error =>
-      Effect.succeed(
-        FailedFetchGitHubStars({
-          error:
-            typeof error === 'string' ? error : 'Failed to fetch GitHub stars',
-        }),
-      ),
-    ),
     Effect.provide(Http.layer),
   ),
 )
