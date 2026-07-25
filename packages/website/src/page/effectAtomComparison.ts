@@ -497,7 +497,7 @@ export const view = (copiedSnippets: CopiedSnippets): Html => {
       para(
         'Atom-level subscriptions mean Effect Atom often needs less memoization than a ',
         inlineCode('useReducer'),
-        ' app. But the React machinery is still present: the rules of hooks, the memoization you maintain by hand, and the dependency arrays. The ',
+        ' app. But the React machinery is still present: the rules of hooks, the dependency arrays, and the memoization you maintain by hand or delegate to React Compiler, which in turn requires every component to follow the Rules of React. The ',
         inlineCode('react-hooks/exhaustive-deps'),
         ' lint rule catches the common mistakes, but it is a lint rule you have to run and heed, not a property of the type system.',
       ),

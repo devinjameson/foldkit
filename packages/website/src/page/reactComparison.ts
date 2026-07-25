@@ -15,6 +15,7 @@ import {
   coreDevToolsRouter,
   coreMessagesRouter,
   coreModelRouter,
+  coreMountRouter,
   coreSubmodelRouter,
   coreSubscriptionsRouter,
   exampleDetailRouter,
@@ -257,7 +258,7 @@ const oneFunctionHeader: TableOfContentsEntry = {
 const noStaleClosuresHeader: TableOfContentsEntry = {
   level: 'h3',
   id: 'no-stale-closures',
-  text: 'No stale closures, ever',
+  text: 'No stale closures in view, update, or Subscriptions',
 }
 
 const scalabilityHeader: TableOfContentsEntry = {
@@ -455,9 +456,7 @@ export const view = (copiedSnippets: CopiedSnippets): Html => {
       ),
       para(
         inlineCode('ClickedExport'),
-        ' is missing: export fires through a ',
-        inlineCode('useCallback'),
-        ' in the App component, not through the reducer. ',
+        ' is missing: export fires through an inline handler in the App component, not through the reducer. ',
         inlineCode('SucceededExportPng'),
         ' and ',
         inlineCode('CompletedSaveCanvas'),
@@ -472,9 +471,7 @@ export const view = (copiedSnippets: CopiedSnippets): Html => {
         ' bundle, so dismissal never becomes an app Message.',
       ),
       para(
-        'Stating the difference plainly: Foldkit pulls side effect results and UI component state changes into the Message union as first-class facts. React leaves them distributed: effect outcomes inside ',
-        inlineCode('useCallback'),
-        ' closures and ',
+        'Stating the difference plainly: Foldkit pulls side effect results and UI component state changes into the Message union as first-class facts. React leaves them distributed: effect outcomes inside handler closures and ',
         inlineCode('useEffect'),
         ' bodies, component-internal events inside library hooks. Both are valid design choices. But only one gives you a single answer when a teammate asks “how can state change in this app?”. The Message union catalogs every event, and the update function implements every transition.',
       ),
@@ -485,7 +482,7 @@ export const view = (copiedSnippets: CopiedSnippets): Html => {
       ),
       tableOfContentsEntryToHeader(reactAppHeader),
       para(
-        'The React App component initializes the reducer, computes derived values, delegates global event listeners to custom hooks, works around stale closures with a ref, memoizes a callback, and manually threads state into 6 child components:',
+        'The React App component initializes the reducer, computes derived values, delegates global event listeners to custom hooks, and manually threads state into 6 child components:',
       ),
       highlightedCodeBlock(
         h.div(
@@ -505,20 +502,7 @@ export const view = (copiedSnippets: CopiedSnippets): Html => {
         inlineCode('useReducer'),
         ', two ',
         inlineCode('useMemo'),
-        ', one ',
-        inlineCode('useRef'),
-        ', one ',
-        inlineCode('useCallback'),
-        ', plus three custom hooks. That’s 8 hooks in a single component. Remove any of them and something breaks.',
-      ),
-      para(
-        'The ',
-        inlineCode('stateRef'),
-        ' pattern is worth a closer look. It exists because ',
-        inlineCode('handleExport'),
-        ' is wrapped in ',
-        inlineCode('useCallback'),
-        ' for memoization, which closes over stale state. So you need a ref to read the current state. This is not a mistake. It’s the standard pattern. React’s closure-based model requires you to manually escape closures when you need current state in a memoized callback.',
+        ', plus three custom hooks. That’s 6 hooks in a single component. Remove any of them and something breaks.',
       ),
       para(
         'Then look at the JSX. Each child receives ',
@@ -762,9 +746,7 @@ export const view = (copiedSnippets: CopiedSnippets): Html => {
         'Now try to answer one question: what side effects does this app have? In Foldkit, you open two files. In React, there is no list. There is no file you can open.',
       ),
       para(
-        'Here’s where the React side effects actually live. The PNG export fires from a ',
-        inlineCode('useCallback'),
-        ' in ',
+        'Here’s where the React side effects actually live. The PNG export fires from an inline handler in ',
         inlineCode('App.tsx'),
         '. The localStorage save lives in a ',
         inlineCode('useEffect'),
@@ -1227,9 +1209,25 @@ export const view = (copiedSnippets: CopiedSnippets): Html => {
         inlineCode('useCallback'),
         ' wrapping every handler and ',
         inlineCode('useMemo'),
-        ' wrapping every derived value, the memoized child re-renders anyway because its props look new. Forget one ',
+        ' wrapping every derived value, the memoized child re-renders anyway because its props look new. Maintained by hand, this is optimization you must not forget: miss one wrapper and the grid slows down with no test failure or type error to flag it.',
+      ),
+      para(
+        'React Compiler, stable since October 2025, exists to write these wrappers for you. Enable it and the ',
+        inlineCode('memo'),
+        ', ',
         inlineCode('useCallback'),
-        ' and the optimization silently breaks: your grid rendering slows down, no test catches it, no type error flags it, and you only notice when someone profiles the app.',
+        ', and ',
+        inlineCode('useMemo'),
+        ' in this section are generated at build time; forgetting one stops being a failure mode. We ran the compiler over this React app and every component compiles, so for this codebase the ceremony gap mostly closes. Three things scope that. The compiler is opt-in, in Next.js 16 as everywhere else. It requires components to follow the Rules of React, and code that breaks them is common: an earlier revision of this app wrapped its export handler in ',
+        inlineCode('useCallback'),
+        ' and escaped the resulting stale closure by writing a ref during render, and the compiler rejected the whole root component for it. And when the compiler cannot prove a component safe, it skips it, and that component silently ships unmemoized: the failure mode above at a different layer, with ',
+        inlineCode('eslint-plugin-react-hooks'),
+        ' as the way to find out.',
+      ),
+      para(
+        'What the compiler does not change is everything else on this page. It memoizes. It does not move side effects out of ',
+        inlineCode('useEffect'),
+        ', give the reducer a way to return them, connect an effect to the action that caused it, or make any of them visible to a test.',
       ),
 
       tableOfContentsEntryToHeader(cellLevelMemoizationHeader),
@@ -1288,9 +1286,9 @@ export const view = (copiedSnippets: CopiedSnippets): Html => {
         inlineCode('dispatch'),
         ' in its dependency array so it doesn’t capture stale coordinates. Miss any and the cell misbehaves silently. Write them but forget ',
         inlineCode('memo'),
-        ' on the component and every cell re-renders on every stroke. The pattern works. But it’s a lot of ceremony for what Foldkit expresses as two event attributes on a plain ',
-        inlineCode('div'),
-        '.',
+        ' on the component and every cell re-renders on every stroke. The pattern works, and with React Compiler enabled these wrappers are generated instead of written by hand. What no compiler changes is what sits at the boundary: the React cell hands its child closures that must be proven stable, by you or by a build tool. The Foldkit cell hands the runtime two Message values. There is nothing to stabilize because there is nothing that can go stale: ',
+        inlineCode('PressedCell({ x, y })'),
+        ' is data, compared by value, the same on every render.',
       ),
 
       tableOfContentsEntryToHeader(guaranteesHeader),
@@ -1368,7 +1366,9 @@ export const view = (copiedSnippets: CopiedSnippets): Html => {
       para(
         'No dependency arrays. No ',
         inlineCode('useCallback'),
-        ' wrappers. No refs to escape closures. The view and Subscriptions always receive the current Model because the runtime calls them with it on every update. There is no closure captured at render time waiting to go stale. The entire class of bugs that comes from React’s closure-based model does not exist in Foldkit.',
+        ' wrappers. No refs to escape closures. The view, Subscriptions, and update always receive the current Model because the runtime calls them with it on every update. There is no closure captured at render time waiting to go stale. One boundary works differently: ',
+        link(coreMountRouter(), 'Mount'),
+        ' args are captured when the element enters the DOM and are not refreshed by later renders, with a documented escape hatch for post-mount Model changes. That is the whole list. React’s largest bug class, narrowed to a single boundary you can name.',
       ),
 
       tableOfContentsEntryToHeader(scalabilityHeader),
