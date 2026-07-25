@@ -95,21 +95,21 @@ export const view = (): Html => {
       para(
         'The architecture is not hostile to pre-rendering. ',
         link(coreViewRouter(), 'The view function'),
-        ' is pure: given a Model, it produces a virtual DOM tree. That tree can be rendered to HTML at build time and served as static assets, then hydrated when the runtime boots in the browser.',
+        ' is pure: given a Model, it produces a virtual DOM tree. That tree can be rendered to HTML at build time and served as static assets, then replaced by the live tree when the runtime boots in the browser.',
       ),
       tableOfContentsEntryToHeader(thisSiteHeader),
       para('This site is a single Foldkit application. When we deploy it:'),
       bullets(
         'Vite builds the SPA bundle.',
         'A build script boots vite preview and launches headless Chromium.',
-        'The script visits every route, waits for the runtime to render, and captures the HTML.',
+        'The script visits every statically rendered route, waits for the runtime to render, and captures the HTML.',
         'Each route gets its own index.html written into dist/, so the static host serves real content for every URL.',
         'Pagefind indexes the rendered HTML so search works without a server.',
       ),
       para(
         'You can read ',
         link(Link.prerenderScript, 'the pre-render script'),
-        ' in the website repo. It is a few hundred lines of Effect-TS.',
+        ' in the website repo. It is about 800 lines of Effect-TS.',
       ),
       para(
         'The cost is paid at build time, not at runtime. There is no Node server in production. The output is plain static files that any CDN can serve. Crawlers see fully rendered HTML. Users see real content before the runtime boots.',
@@ -119,7 +119,7 @@ export const view = (): Html => {
         inlineCode('init'),
         ' returns. That is the full content when the Model already has everything the page needs (docs, marketing, this site). App shells that fetch data after ',
         inlineCode('init'),
-        ' will pre-render their loading state, with real content arriving after hydration.',
+        ' will pre-render their loading state, with real content arriving once the runtime boots and those Commands resolve.',
       ),
       tableOfContentsEntryToHeader(perRequestRoadmapHeader),
       para(

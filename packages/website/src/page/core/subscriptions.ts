@@ -252,6 +252,26 @@ export const view = (copiedSnippets: CopiedSnippets): Html => {
         ', the stream stops. Foldkit handles all the lifecycle management for you.',
       ),
       para(
+        'Defining ',
+        inlineCode('subscriptions'),
+        ' is only half of it. The value does nothing until you pass it to ',
+        inlineCode('makeApplication'),
+        '. The field is optional, so leaving it out is not a type error: the streams simply never start, and the app runs as though the Subscription were not there.',
+      ),
+      highlightedCodeBlock(
+        h.div(
+          [
+            h.Class('text-sm'),
+            h.InnerHTML(Snippet.counterEntryWithSubscriptionsHighlighted),
+          ],
+          [],
+        ),
+        Snippet.counterEntryWithSubscriptionsRaw,
+        'Copy subscription wiring to clipboard',
+        copiedSnippets,
+        'mb-8',
+      ),
+      para(
         'For a more complex example consuming a ',
         inlineCode('WebSocket'),
         ' message stream, see the ',

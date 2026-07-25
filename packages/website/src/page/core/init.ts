@@ -94,6 +94,30 @@ export const view = (copiedSnippets: CopiedSnippets): Html => {
         'mb-8',
       ),
       para(
+        'Both the schema and the Effect are passed to ',
+        inlineCode('makeApplication'),
+        ' as ',
+        inlineCode('Flags'),
+        ' and ',
+        inlineCode('flags'),
+        '. Without them the runtime calls ',
+        inlineCode('init'),
+        ' with no arguments and the compiler rejects the config.',
+      ),
+      highlightedCodeBlock(
+        h.div(
+          [
+            h.Class('text-sm'),
+            h.InnerHTML(Snippet.counterEntryWithFlagsHighlighted),
+          ],
+          [],
+        ),
+        Snippet.counterEntryWithFlagsRaw,
+        'Copy flags wiring to clipboard',
+        copiedSnippets,
+        'mb-8',
+      ),
+      para(
         'Once your app outgrows a single Model, Message, and update, the next step is to decompose it into ',
         link(coreSubmodelRouter(), 'Submodels'),
         ': self-contained modules with their own state, Messages, and update, embedded under a parent.',
