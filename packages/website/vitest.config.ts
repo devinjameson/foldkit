@@ -1,12 +1,19 @@
 import { defineConfig } from 'vitest/config'
 
+import { markdown } from '@foldkit/markdown/vite'
+
 import {
   counterDemoCodePlugin,
   notePlayerDemoCodePlugin,
 } from './scripts/demoCodePlugin'
+import { islandAttributes } from './src/markdown/islandAttributes'
 
 export default defineConfig({
-  plugins: [counterDemoCodePlugin(), notePlayerDemoCodePlugin()],
+  plugins: [
+    markdown({ islands: islandAttributes }),
+    counterDemoCodePlugin(),
+    notePlayerDemoCodePlugin(),
+  ],
   test: {
     environment: 'happy-dom',
     exclude: ['e2e/**', 'node_modules/**', 'dist/**'],
