@@ -7,7 +7,7 @@ import type * as Markdown from '@foldkit/markdown'
 import type { Message } from '../message'
 import { diagram, headingWithContent, inlineCode, pageTitle } from '../prose'
 import { type CopiedSnippets, codeBlock } from '../view/codeBlock'
-import { inlineToText, parseHeadingId, stripHeadingIdMarker } from './slug'
+import { parseHeadingId, stripHeadingIdMarker } from './slug'
 import { type HeadingIds, headingId } from './tableOfContents'
 
 // VIEWS
@@ -94,7 +94,7 @@ export const docViews = (config: DocViewConfig): Partial<Markdown.Views> => {
     InlineCode: ({ value }) => inlineCode(value),
 
     Heading: (heading, content) => {
-      const { maybeId, text } = parseHeadingId(inlineToText(heading.content))
+      const { maybeId, text } = parseHeadingId(heading.content)
       const id = headingId(config.idByHeading, heading)
       const displayContent = Option.match(maybeId, {
         onNone: () => content,
