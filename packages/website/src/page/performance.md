@@ -17,31 +17,31 @@ The production hot path does no work proportional to Model size. No serializatio
 
 ## Benchmarks
 
-Foldkit ships a TodoMVC implementation for the [lustre-labs/benchmark](https://github.com/lustre-labs/benchmark) harness, which drives each implementation through the same TodoMVC workload and required selectors (add 100 todos, toggle each one, destroy the first one 100 times). Same-batch timings are comparable because every implementation uses the same driver, runbook, and browser batch. Foldkit registers two slots: an unoptimised view that rebuilds the entire tree on every Message with no memoization, and an optimised view that adds `createLazy` slots for the header, the footer, the filters list, and the toggle-all controls, and `createKeyedLazy` per todo item. The Model and update logic are identical in both. The implementation lives [in the Foldkit repo](https://github.com/foldkit/foldkit/tree/main/internal/lustre-benchmark), so you can run the comparison yourself.
+Foldkit ships a TodoMVC implementation for the [lustre-labs/benchmark](https://github.com/lustre-labs/benchmark) harness, which drives each implementation through the same TodoMVC workload and required selectors (add 100 todos, toggle each one, destroy the first one 100 times). Same-batch timings are comparable because every implementation uses the same driver, runbook, and browser batch. Foldkit registers two slots: an unoptimized view that rebuilds the entire tree on every Message with no memoization, and an optimized view that adds `createLazy` slots for the header, the footer, the filters list, and the toggle-all controls, and `createKeyedLazy` per todo item. The Model and update logic are identical in both. The implementation lives [in the Foldkit repo](https://github.com/foldkit/foldkit/tree/main/internal/lustre-benchmark), so you can run the comparison yourself.
 
-These cover every current-version framework variant in the harness plus Foldkit’s two current development slots; the legacy Lustre 4 and older Foldkit slots are excluded. The medians come from fifteen interleaved runs in one position-balanced batch, so every implementation occupied every ordinal run position once. The batch used harness commit 03fff17 and Chromium 149.0.7827.55. The relative column divides each displayed median by the fastest median from that same batch. Absolute times depend on hardware and browser conditions; the same-run relationships are the result to compare.
+These cover every current-version framework variant in the harness plus Foldkit’s two current development slots; the legacy Lustre 4 and older Foldkit slots are excluded. The medians come from fifteen interleaved runs in one position-balanced batch, so every implementation occupied every ordinal run position once. The batch used harness commit 03fff17 and Chromium 149.0.7827.55. The relative column divides each displayed median by the fastest median from that same batch. A parenthesized label appears only where the harness registers both a baseline and a memoized slot. Solid and Alpine drive the DOM without a diff to skip, so each registers one implementation and its row carries a bare name. Absolute times depend on hardware and browser conditions; the same-run relationships are the result to compare.
 
 | Implementation         | Median time | Relative to fastest |
 | ---------------------- | ----------- | ------------------- |
-| Svelte (optimised)     | 59.2ms      | 1.00×               |
-| Gren (optimised)       | 70.6ms      | 1.19×               |
-| Elm (optimised)        | 72.7ms      | 1.23×               |
-| Svelte (unoptimised)   | 79.1ms      | 1.34×               |
-| Solid (unoptimised)    | 86.7ms      | 1.46×               |
-| Lustre 5 (optimised)   | 97.1ms      | 1.64×               |
-| Foldkit (optimised)    | 119.3ms     | 2.02×               |
-| Vue (unoptimised)      | 134.2ms     | 2.27×               |
-| React 19 (optimised)   | 136.1ms     | 2.30×               |
-| Gren (unoptimised)     | 159.3ms     | 2.69×               |
-| Elm (unoptimised)      | 161.4ms     | 2.73×               |
-| Lustre 5 (unoptimised) | 169.0ms     | 2.85×               |
-| React 19 (unoptimised) | 198.9ms     | 3.36×               |
-| Alpine (unoptimised)   | 258.1ms     | 4.36×               |
-| Foldkit (unoptimised)  | 352.9ms     | 5.96×               |
+| Svelte (optimized)     | 59.2ms      | 1.00×               |
+| Gren (optimized)       | 70.6ms      | 1.19×               |
+| Elm (optimized)        | 72.7ms      | 1.23×               |
+| Svelte (unoptimized)   | 79.1ms      | 1.34×               |
+| Solid                  | 86.7ms      | 1.46×               |
+| Lustre 5 (optimized)   | 97.1ms      | 1.64×               |
+| Foldkit (optimized)    | 119.3ms     | 2.02×               |
+| Vue (unoptimized)      | 134.2ms     | 2.27×               |
+| React 19 (optimized)   | 136.1ms     | 2.30×               |
+| Gren (unoptimized)     | 159.3ms     | 2.69×               |
+| Elm (unoptimized)      | 161.4ms     | 2.73×               |
+| Lustre 5 (unoptimized) | 169.0ms     | 2.85×               |
+| React 19 (unoptimized) | 198.9ms     | 3.36×               |
+| Alpine                 | 258.1ms     | 4.36×               |
+| Foldkit (unoptimized)  | 352.9ms     | 5.96×               |
 
 ### Reading the numbers
 
-Foldkit optimised ranks seventh of fifteen in this batch. It takes 2.02 times the fastest row, about 1.23 times optimised Lustre’s time, and 1.38 times Solid’s. Vue takes about 1.12 times Foldkit’s time, while optimised React takes about 1.14 times Foldkit’s. Per-bucket attribution puts the remaining distance in view and patch work inside animation frames rather than Message dispatch.
+Foldkit optimized ranks seventh of fifteen in this batch. It takes 2.02 times the fastest row, about 1.23 times optimized Lustre’s time, and 1.38 times Solid’s. Vue takes about 1.12 times Foldkit’s time, while optimized React takes about 1.14 times Foldkit’s. Per-bucket attribution puts the remaining distance in view and patch work inside animation frames rather than Message dispatch.
 
 Elm is the proof of what this architecture can do. Elm renders a pure view into a virtual DOM with lazy memoization, exactly Foldkit’s design, and sits near the batch leaders at 1.23 times the fastest row. Foldkit takes 1.64 times Elm’s time. That distance is runtime implementation, not architecture, which is why optimization work targets the runtime and owned differ rather than replacing the rendering model.
 
@@ -61,7 +61,7 @@ All of it is gated behind `import.meta.hot` and eliminated from production bundl
 When something is slow, work through this list in order:
 
 - Let the [Slow Warnings](/core/slow-warnings) tell you which synchronous phase is actually slow before optimizing anything.
-- Memoize expensive subtrees with [createLazy and createKeyedLazy](/core/view-memoization). This is the single highest-leverage tool, and it is what separates the Foldkit (unoptimised) row from the Foldkit (optimised) row in the benchmark table above.
+- Memoize expensive subtrees with [createLazy and createKeyedLazy](/core/view-memoization). This is the single highest-leverage tool, and it is what separates the Foldkit (unoptimized) row from the Foldkit (optimized) row in the benchmark table above.
 - [Key](/best-practices/keying) mapped list items by stable Model ids, the one identity only your data can provide, so the differ moves nodes instead of rebuilding them. Branching views need no keys when built with `@foldkit/vite-plugin`: view functions carry identity, and the differ replaces DOM when a position’s identity changes. Without the plugin, branch identity falls back to positional-plus-key semantics and each branch point needs an explicit key.
 - Cache expensive derived data on the Model when memoization cannot cover it. The view recomputes a derived value on every render whether or not its inputs changed; update can compute it once, in the branches that change those inputs. The price is a derived field every such branch must keep in sync, so reach for this after `createLazy`, not before.
 - Render long lists with [Virtual List](/ui/virtual-list) so only visible items mount.
