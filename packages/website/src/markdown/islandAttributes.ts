@@ -22,4 +22,5 @@ export const islandAttributes = {
   Warning: S.Struct({ label: S.String }),
   Cta: S.Struct({}),
   Demo: S.Struct({ name: S.String }),
+  Faq: S.Struct({ id: S.String, question: S.String }),
 }

@@ -6,6 +6,7 @@ import * as Markdown from '@foldkit/markdown'
 import { type TableOfContentsEntry } from '../main'
 import { type CopiedSnippets } from '../view/codeBlock'
 import { docIslands } from './islands'
+import { type Slots, emptySlots } from './slots'
 import { type HeadingIds, collectHeadings } from './tableOfContents'
 import { docViews } from './views'
 
@@ -16,22 +17,12 @@ const renderDocument = (
   pageId: string,
   idByHeading: HeadingIds,
   copiedSnippets: CopiedSnippets,
-  demos: Demos<string>,
+  slots: Slots<string>,
 ): Html =>
   Markdown.view(document, {
     views: docViews({ pageId, idByHeading, copiedSnippets }),
-    islands: docIslands(copiedSnippets, demos),
+    islands: docIslands(copiedSnippets, slots),
   })
-
-/**
- * Live demos a page embeds, keyed by the names on its `::Demo{name}` islands.
- * A record over the page's declared names rather than a string-keyed map, so a
- * missing or misspelled key is a type error where the page builds it instead of
- * a demo that silently renders nothing.
- */
-export type Demos<Name extends string> = Readonly<Record<Name, Html>>
-
-const emptyDemos: Demos<never> = {}
 
 /** A markdown-backed page that renders code snippets, so it takes copy state. */
 export type DocPage = Readonly<{
@@ -45,30 +36,30 @@ export type ProseDocPage = Readonly<{
   view: () => Html
 }>
 
-/** A markdown-backed page that embeds one or more live `::Demo` islands. */
-export type DemoDocPage<Name extends string> = Readonly<{
+/** A markdown-backed page whose markdown has slots the page itself fills. */
+export type SlotDocPage<DemoName extends string> = Readonly<{
   tableOfContents: ReadonlyArray<TableOfContentsEntry>
-  view: (copiedSnippets: CopiedSnippets, demos: Demos<Name>) => Html
+  view: (copiedSnippets: CopiedSnippets, slots: Slots<DemoName>) => Html
 }>
 
 /**
- * Like {@link docPage}, for a page that embeds live, interactive demos through
- * `::Demo{name}` islands. Name the islands the page embeds in the type argument:
- * `demoDocPage<'counter' | 'clock'>(raw, pageId)`. The page's dispatch site then
+ * Like {@link docPage}, for a page whose markdown carries interactive islands the
+ * page has to fill in. Name the `::Demo` islands it embeds in the type argument:
+ * `slotDocPage<'counter' | 'clock'>(raw, pageId)`. The page's dispatch site then
  * builds each one from Model state and passes them in by name, so the markdown
- * owns the prose and the app keeps owning the demos' Model.
+ * owns the prose and the app keeps owning the islands' Model.
  */
-export const demoDocPage = <Name extends string = never>(
+export const slotDocPage = <DemoName extends string = never>(
   raw: unknown,
   pageId: string,
-): DemoDocPage<Name> => {
+): SlotDocPage<DemoName> => {
   const document = Markdown.decodeDocument(raw)
   const { tableOfContents, idByHeading } = collectHeadings(document)
 
   return {
     tableOfContents,
-    view: (copiedSnippets, demos) =>
-      renderDocument(document, pageId, idByHeading, copiedSnippets, demos),
+    view: (copiedSnippets, slots) =>
+      renderDocument(document, pageId, idByHeading, copiedSnippets, slots),
   }
 }
 
@@ -79,11 +70,11 @@ export const demoDocPage = <Name extends string = never>(
  * old `pageTitle` first argument.
  */
 export const docPage = (raw: unknown, pageId: string): DocPage => {
-  const { tableOfContents, view } = demoDocPage(raw, pageId)
+  const { tableOfContents, view } = slotDocPage(raw, pageId)
 
   return {
     tableOfContents,
-    view: copiedSnippets => view(copiedSnippets, emptyDemos),
+    view: copiedSnippets => view(copiedSnippets, emptySlots),
   }
 }
 
