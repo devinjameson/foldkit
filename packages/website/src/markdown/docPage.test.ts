@@ -1,9 +1,11 @@
+import { Array, Result } from 'effect'
 import { html } from 'foldkit/html'
 import { describe, expect, test } from 'vitest'
 
 import { parseMarkdown } from '@foldkit/markdown/vite'
 
 import commandsSource from '../page/core/commands.md?raw'
+import submodelSource from '../page/core/submodel.md?raw'
 import manifestoSource from '../page/manifesto.md?raw'
 import { islandAttributes } from './islandAttributes'
 import { slugify, stripHeadingIdMarker } from './slug'
@@ -63,6 +65,33 @@ describe('collectHeadings', () => {
       { level: 'h2', id: 'when-to-use-lazy', text: 'When to Use Lazy Views' },
     ])
   })
+
+  test('ignores a {#id} marker nested inside emphasis, keeping the id and text in agreement', () => {
+    const document = parseMarkdown(
+      '## **Use {#use}**\n\n## Plain heading {#plain}',
+    )
+
+    expect(collectHeadings(document).tableOfContents).toEqual([
+      { level: 'h2', id: 'use-use', text: 'Use {#use}' },
+      { level: 'h2', id: 'plain', text: 'Plain heading' },
+    ])
+  })
+
+  test('ignores a {#id} marker nested inside inline code', () => {
+    const document = parseMarkdown('## `code {#c}`')
+
+    expect(collectHeadings(document).tableOfContents).toEqual([
+      { level: 'h2', id: 'code-c', text: 'code {#c}' },
+    ])
+  })
+
+  test('honors a trailing {#id} override that follows inline formatting', () => {
+    const document = parseMarkdown('## Use **evo** {#use-evo}')
+
+    expect(collectHeadings(document).tableOfContents).toEqual([
+      { level: 'h2', id: 'use-evo', text: 'Use evo' },
+    ])
+  })
 })
 
 describe('stripHeadingIdMarker', () => {
@@ -84,6 +113,20 @@ describe('stripHeadingIdMarker', () => {
     const code = html().span([], ['createLazy'])
 
     expect(stripHeadingIdMarker(['Use ', code])).toEqual(['Use ', code])
+  })
+})
+
+describe('Demo island', () => {
+  test('accepts a ::Demo directive carrying a name', () => {
+    expect(() =>
+      parseMarkdown('::Demo{name="counter"}', { islands: islandAttributes }),
+    ).not.toThrow()
+  })
+
+  test('rejects a ::Demo directive with no name', () => {
+    expect(() =>
+      parseMarkdown('::Demo', { islands: islandAttributes }),
+    ).toThrow()
   })
 })
 
@@ -139,4 +182,160 @@ describe('proof pages', () => {
       },
     ])
   })
+
+  test('submodel table of contents', () => {
+    expect(tocOf(submodelSource)).toEqual([
+      { level: 'h2', id: 'overview', text: 'Overview' },
+      { level: 'h2', id: 'child-submodel', text: 'The Child Submodel' },
+      { level: 'h2', id: 'embedding', text: 'Embedding the Submodel' },
+      { level: 'h3', id: 'embedding-the-model', text: 'Embedding the Model' },
+      {
+        level: 'h3',
+        id: 'never-bypass-the-update',
+        text: 'Never Bypass the Child’s Update',
+      },
+      { level: 'h3', id: 'wrapping-messages', text: 'Wrapping Messages' },
+      { level: 'h3', id: 'delegating-in-update', text: 'Delegating in update' },
+      {
+        level: 'h3',
+        id: 'wiring-the-view',
+        text: 'Wiring the View with h.submodel',
+      },
+      {
+        level: 'h3',
+        id: 'per-render-view-inputs',
+        text: 'Per-render View Inputs',
+      },
+      {
+        level: 'h2',
+        id: 'boundary-id-and-model-identity',
+        text: 'Boundary Id and Model Identity',
+      },
+      { level: 'h2', id: 'multiple-instances', text: 'Multiple Instances' },
+      {
+        level: 'h2',
+        id: 'memoization',
+        text: 'Memoization Across Submodel Boundaries',
+      },
+      { level: 'h2', id: 'reading-parent-state', text: 'Reading Parent State' },
+      {
+        level: 'h3',
+        id: 'parent-state-in-view',
+        text: 'Passing Parent State to a Child Submodel’s view',
+      },
+      {
+        level: 'h3',
+        id: 'parent-state-in-update',
+        text: 'Providing Parent State to a Child Submodel’s update',
+      },
+      {
+        level: 'h2',
+        id: 'surfacing-facts',
+        text: 'Surfacing Facts to the Parent',
+      },
+      {
+        level: 'h3',
+        id: 'defining-out-messages',
+        text: 'Defining OutMessages',
+      },
+      {
+        level: 'h3',
+        id: 'emitting-from-the-child',
+        text: 'Emitting from the Child',
+      },
+      {
+        level: 'h3',
+        id: 'handling-in-the-parent',
+        text: 'Handling in the Parent',
+      },
+      {
+        level: 'h2',
+        id: 'reflecting-external-state',
+        text: 'Reflecting External State',
+      },
+      { level: 'h2', id: 'child-attributes', text: 'childAttributes' },
+      {
+        level: 'h3',
+        id: 'child-attributes-the-problem',
+        text: 'The Problem',
+      },
+      {
+        level: 'h3',
+        id: 'child-attributes-how-it-works',
+        text: 'How It Works',
+      },
+      {
+        level: 'h3',
+        id: 'child-attributes-when-to-reach',
+        text: 'When to Reach For It',
+      },
+      { level: 'h2', id: 'testing-submodels', text: 'Testing Submodels' },
+      {
+        level: 'h2',
+        id: 'debugging-in-devtools',
+        text: 'Debugging Submodels in DevTools',
+      },
+      { level: 'h2', id: 'common-pitfalls', text: 'Common Pitfalls' },
+      { level: 'h2', id: 'api-reference', text: 'API Reference' },
+      { level: 'h3', id: 'api-h-submodel', text: 'h.submodel' },
+      { level: 'h3', id: 'api-submodel-config', text: 'SubmodelConfig' },
+      { level: 'h3', id: 'api-define-view', text: 'Submodel.defineView' },
+      { level: 'h3', id: 'api-submodel-view', text: 'Submodel.View' },
+      { level: 'h3', id: 'api-child-attributes', text: 'childAttributes' },
+      { level: 'h3', id: 'api-child-attribute', text: 'ChildAttribute' },
+    ])
+  })
+})
+
+// NOTE: the type of `demoDocPage<Name>` makes a page supply every demo name it
+// declares, but the names in the markdown are data the compiler cannot see. This
+// walks the other direction so a `::Demo` island can never name a demo its page
+// module never declared.
+const DEMO_ISLAND_PATTERN = /::Demo\{name="([^"]+)"\}/g
+
+describe('demo island registration', () => {
+  const markdownSources = import.meta.glob('../page/**/*.md', {
+    query: '?raw',
+    import: 'default',
+    eager: true,
+  })
+
+  const pageSources = import.meta.glob('../page/**/*.ts', {
+    query: '?raw',
+    import: 'default',
+    eager: true,
+  })
+
+  const demoUsages = Array.filterMap(
+    Object.entries(markdownSources),
+    ([markdownPath, source]) => {
+      const names = Array.filterMap(
+        Array.fromIterable(String(source).matchAll(DEMO_ISLAND_PATTERN)),
+        match =>
+          match[1] === undefined ? Result.failVoid : Result.succeed(match[1]),
+      )
+
+      return Array.isArrayNonEmpty(names)
+        ? Result.succeed({ markdownPath, names })
+        : Result.failVoid
+    },
+  )
+
+  test('finds at least one ::Demo island to check', () => {
+    expect(Array.isArrayNonEmpty(demoUsages)).toBe(true)
+  })
+
+  test.each(demoUsages)(
+    '$markdownPath declares every demo its markdown embeds',
+    ({ markdownPath, names }) => {
+      const pagePath = markdownPath.replace(/\.md$/, '.ts')
+      const pageSource = pageSources[pagePath]
+
+      expect(pageSource, `no page module at ${pagePath}`).toBeDefined()
+
+      for (const name of names) {
+        expect(String(pageSource)).toContain(`'${name}'`)
+      }
+    },
+  )
 })

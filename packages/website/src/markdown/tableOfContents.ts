@@ -3,7 +3,7 @@ import { Array, Match as M, Option, Result, pipe } from 'effect'
 import type { Heading, MarkdownDocument } from '@foldkit/markdown'
 
 import type { TableOfContentsEntry } from '../main'
-import { inlineToText, parseHeadingId, slugify } from './slug'
+import { parseHeadingId, slugify } from './slug'
 
 // TABLE OF CONTENTS
 
@@ -61,7 +61,7 @@ export const collectHeadings = (
     M.value(block).pipe(
       M.withReturnType<Result.Result<TableOfContentsEntry, void>>(),
       M.tag('Heading', heading => {
-        const { maybeId, text } = parseHeadingId(inlineToText(heading.content))
+        const { maybeId, text } = parseHeadingId(heading.content)
         const base = Option.getOrElse(maybeId, () => slugify(text))
         const id = uniqueHeadingId(base, usedIds)
         usedIds.add(id)
@@ -80,7 +80,7 @@ export const headingId = (idByHeading: HeadingIds, heading: Heading): string =>
   pipe(
     Option.fromNullishOr(idByHeading.get(heading)),
     Option.getOrElse(() => {
-      const { maybeId, text } = parseHeadingId(inlineToText(heading.content))
+      const { maybeId, text } = parseHeadingId(heading.content)
       return Option.getOrElse(maybeId, () => slugify(text))
     }),
   )
