@@ -4,7 +4,7 @@ import { html } from 'foldkit/html'
 import * as Markdown from '@foldkit/markdown'
 
 import { type Message } from '../message'
-import { infoCalloutBlocks, warningCalloutBlocks } from '../prose'
+import { ctaLinks, infoCalloutBlocks, warningCalloutBlocks } from '../prose'
 import { type CopiedSnippets, highlightedCodeBlock } from '../view/codeBlock'
 import { islandAttributes } from './islandAttributes'
 import { lookupSnippet } from './snippets'
@@ -27,8 +27,8 @@ const warnMissingSnippetOnce = (name: string): void => {
  * The site's island views, paired with {@link islandAttributes} so attributes
  * arrive already decoded. `Snippet` renders a build-time highlighted source file
  * with the standard copy affordance; `Info` and `Warning` wrap nested markdown
- * in the prose callouts. The copy state lives in the app Model, so the view
- * closes over `copiedSnippets`.
+ * in the prose callouts; `Cta` lays its nested links out as an action row. The
+ * copy state lives in the app Model, so the view closes over `copiedSnippets`.
  */
 export const docIslands = (
   copiedSnippets: CopiedSnippets,
@@ -57,5 +57,7 @@ export const docIslands = (
     Info: ({ label }, content) => infoCalloutBlocks(label, content),
 
     Warning: ({ label }, content) => warningCalloutBlocks(label, content),
+
+    Cta: (_attributes, content) => ctaLinks(content),
   })
 }

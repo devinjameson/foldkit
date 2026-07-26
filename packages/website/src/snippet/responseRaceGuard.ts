@@ -18,13 +18,13 @@ type Model = typeof Model.Type
 
 // MESSAGE
 
-const ChangedQuery = m('ChangedQuery', { query: S.String })
+const UpdatedQuery = m('UpdatedQuery', { query: S.String })
 const SettledSearch = m('SettledSearch', {
   query: S.String,
   result: S.Result(S.Array(SearchResult), S.String),
 })
 
-const Message = S.Union([ChangedQuery, SettledSearch])
+const Message = S.Union([UpdatedQuery, SettledSearch])
 type Message = typeof Message.Type
 
 // COMMAND
@@ -63,7 +63,7 @@ const update = (
       readonly [Model, ReadonlyArray<Command.Command<Message>>]
     >(),
     M.tagsExhaustive({
-      ChangedQuery: ({ query }) => [
+      UpdatedQuery: ({ query }) => [
         evo(model, {
           queryInput: () => query,
           searchResults: () => SearchResultsData.Loading(),

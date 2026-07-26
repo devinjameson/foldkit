@@ -1,3 +1,4 @@
+import { html } from 'foldkit/html'
 import { describe, expect, test } from 'vitest'
 
 import { parseMarkdown } from '@foldkit/markdown/vite'
@@ -5,7 +6,7 @@ import { parseMarkdown } from '@foldkit/markdown/vite'
 import commandsSource from '../page/core/commands.md?raw'
 import manifestoSource from '../page/manifesto.md?raw'
 import { islandAttributes } from './islandAttributes'
-import { slugify } from './slug'
+import { slugify, stripHeadingIdMarker } from './slug'
 import { collectHeadings } from './tableOfContents'
 
 const tocOf = (source: string) =>
@@ -42,6 +43,47 @@ describe('collectHeadings', () => {
     expect(
       collectHeadings(document).tableOfContents.map(entry => entry.id),
     ).toEqual(['overview', 'overview-2'])
+  })
+
+  test('advances a generated suffix past an explicit {#id} to avoid collisions', () => {
+    const document = parseMarkdown('## Foo\n\n## Foo {#foo-2}\n\n## Foo')
+
+    expect(
+      collectHeadings(document).tableOfContents.map(entry => entry.id),
+    ).toEqual(['foo', 'foo-2', 'foo-3'])
+  })
+
+  test('honors a trailing {#id} override and strips it from the text', () => {
+    const document = parseMarkdown(
+      '## createLazy {#create-lazy}\n\n## When to Use Lazy Views {#when-to-use-lazy}',
+    )
+
+    expect(collectHeadings(document).tableOfContents).toEqual([
+      { level: 'h2', id: 'create-lazy', text: 'createLazy' },
+      { level: 'h2', id: 'when-to-use-lazy', text: 'When to Use Lazy Views' },
+    ])
+  })
+})
+
+describe('stripHeadingIdMarker', () => {
+  test('strips a trailing {#id} marker from plain heading text', () => {
+    expect(stripHeadingIdMarker(['createLazy {#create-lazy}'])).toEqual([
+      'createLazy',
+    ])
+  })
+
+  test('preserves inline formatting and drops the marker-only trailing text', () => {
+    const emphasis = html().span([], ['lazy'])
+
+    expect(stripHeadingIdMarker([emphasis, ' {#when-to-use-lazy}'])).toEqual([
+      emphasis,
+    ])
+  })
+
+  test('leaves content without a marker untouched', () => {
+    const code = html().span([], ['createLazy'])
+
+    expect(stripHeadingIdMarker(['Use ', code])).toEqual(['Use ', code])
   })
 })
 

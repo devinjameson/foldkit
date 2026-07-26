@@ -5,9 +5,9 @@ import type { Alignment } from '@foldkit/markdown'
 import type * as Markdown from '@foldkit/markdown'
 
 import type { Message } from '../message'
-import { headingWithContent, inlineCode, pageTitle } from '../prose'
+import { diagram, headingWithContent, inlineCode, pageTitle } from '../prose'
 import { type CopiedSnippets, codeBlock } from '../view/codeBlock'
-import { inlineToText } from './slug'
+import { inlineToText, parseHeadingId, stripHeadingIdMarker } from './slug'
 import { type HeadingIds, headingId } from './tableOfContents'
 
 // VIEWS
@@ -27,12 +27,20 @@ const blockquoteClassName =
 
 const listClassName = 'mb-8 space-y-2 [&>li>p:last-child]:mb-0'
 
-const tableWrapperClassName = 'mb-8 overflow-x-auto'
-const tableClassName = 'w-full text-sm'
+const diagramLanguage = 'diagram'
+
+const tableWrapperClassName =
+  'overflow-x-auto overscroll-x-none mb-6 border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden'
+const tableClassName = 'w-full min-w-[40rem]'
+const tableHeadClassName =
+  'bg-cream dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700'
+const tableBodyClassName = 'bg-cream dark:bg-gray-900'
+const tableRowClassName =
+  'border-b border-gray-300 dark:border-gray-700 last:border-b-0'
 const tableHeaderCellClassName =
-  'py-2 pr-4 text-left font-medium text-gray-900 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700/50'
+  'px-4 py-3 text-left text-base font-semibold text-gray-900 dark:text-white border-r border-gray-300 dark:border-gray-700 last:border-r-0'
 const tableCellClassName =
-  'py-2.5 pr-4 align-top border-b border-gray-200 dark:border-gray-700/50'
+  'px-4 py-3 text-base min-w-[12rem] text-gray-800 dark:text-gray-200 border-r border-gray-300 dark:border-gray-700 last:border-r-0'
 
 const alignmentAttributes = (
   alignment: Alignment,
@@ -86,29 +94,35 @@ export const docViews = (config: DocViewConfig): Partial<Markdown.Views> => {
     InlineCode: ({ value }) => inlineCode(value),
 
     Heading: (heading, content) => {
-      const text = inlineToText(heading.content)
+      const { maybeId, text } = parseHeadingId(inlineToText(heading.content))
       const id = headingId(config.idByHeading, heading)
+      const displayContent = Option.match(maybeId, {
+        onNone: () => content,
+        onSome: () => stripHeadingIdMarker(content),
+      })
 
       return M.value(heading.level).pipe(
         M.withReturnType<Html>(),
         M.when(1, () => pageTitle(config.pageId, text)),
-        M.when(2, () => headingWithContent('h2', id, text, content)),
-        M.when(3, () => headingWithContent('h3', id, text, content)),
-        M.when(4, () => headingWithContent('h4', id, text, content)),
-        M.when(5, () => headingWithContent('h5', id, text, content)),
-        M.when(6, () => headingWithContent('h6', id, text, content)),
+        M.when(2, () => headingWithContent('h2', id, text, displayContent)),
+        M.when(3, () => headingWithContent('h3', id, text, displayContent)),
+        M.when(4, () => headingWithContent('h4', id, text, displayContent)),
+        M.when(5, () => headingWithContent('h5', id, text, displayContent)),
+        M.when(6, () => headingWithContent('h6', id, text, displayContent)),
         M.exhaustive,
       )
     },
 
     CodeBlock: ({ maybeLanguage, value }) =>
-      codeBlock(
-        value,
-        'Copy code to clipboard',
-        config.copiedSnippets,
-        'mb-8',
-        Option.getOrUndefined(maybeLanguage),
-      ),
+      Option.contains(maybeLanguage, diagramLanguage)
+        ? diagram(value)
+        : codeBlock(
+            value,
+            'Copy code to clipboard',
+            config.copiedSnippets,
+            'mb-8',
+            Option.getOrUndefined(maybeLanguage),
+          ),
 
     List: (list, items) => {
       if (list.isOrdered) {
@@ -142,12 +156,15 @@ export const docViews = (config: DocViewConfig): Partial<Markdown.Views> => {
         [
           h.table(
             [h.Class(tableClassName)],
-            [h.thead([], [headerRow]), h.tbody([], bodyRows)],
+            [
+              h.thead([h.Class(tableHeadClassName)], [headerRow]),
+              h.tbody([h.Class(tableBodyClassName)], bodyRows),
+            ],
           ),
         ],
       ),
 
-    TableRow: (_tableRow, cells) => h.tr([], cells),
+    TableRow: (_tableRow, cells) => h.tr([h.Class(tableRowClassName)], cells),
 
     TableCell: (_tableCell, content, alignment, isHeader) => {
       if (isHeader) {

@@ -1,4 +1,13 @@
-import { Array, Match as M, pipe } from 'effect'
+import {
+  Array,
+  Match as M,
+  Option,
+  Predicate,
+  String,
+  flow,
+  pipe,
+} from 'effect'
+import type { Html } from 'foldkit/html'
 
 import type { Inline } from '@foldkit/markdown'
 
@@ -35,8 +44,50 @@ export const inlineToText = (content: ReadonlyArray<Inline>): string =>
  * non-alphanumeric characters collapsed to a single dash and surrounding dashes
  * trimmed. `"HTTP Requests"` becomes `"http-requests"`.
  */
-export const slugify = (text: string): string => {
-  const lowered = text.toLowerCase()
-  const dashed = lowered.replace(/[^a-z0-9]+/g, '-')
-  return dashed.replace(/^-+|-+$/g, '')
-}
+export const slugify: (text: string) => string = flow(
+  String.toLowerCase,
+  String.replaceAll(/[^a-z0-9]+/g, '-'),
+  String.replaceAll(/^-+|-+$/g, ''),
+)
+
+const headingIdOverridePattern = /^(.*?)\s*\{#([A-Za-z0-9-]+)\}$/
+
+/**
+ * Reads an optional trailing `{#custom-id}` override off a heading's plain text.
+ * `"createLazy {#create-lazy}"` returns `{ maybeId: Some("create-lazy"), text:
+ * "createLazy" }`; text with no marker returns `{ maybeId: None, text: <the whole
+ * heading> }`. The override pins an anchor that `slugify` alone would not produce.
+ */
+export const parseHeadingId = (
+  raw: string,
+): Readonly<{ maybeId: Option.Option<string>; text: string }> =>
+  Option.match(String.match(headingIdOverridePattern)(raw), {
+    onNone: () => ({ maybeId: Option.none(), text: raw }),
+    onSome: ([, base = raw, id]) => ({
+      maybeId: Option.fromNullishOr(id),
+      text: base,
+    }),
+  })
+
+const headingIdMarkerSuffixPattern = /\s*\{#[A-Za-z0-9-]+\}$/
+
+/**
+ * Drops a trailing `{#custom-id}` marker from a heading's rendered inline content,
+ * leaving inline formatting intact. The marker is plain text, so it is always the
+ * final string element: `["Use ", codeHtml, " {#lazy}"]` becomes `["Use ",
+ * codeHtml]`.
+ */
+export const stripHeadingIdMarker = (
+  content: ReadonlyArray<Html | string>,
+): ReadonlyArray<Html | string> =>
+  Array.matchRight(content, {
+    onEmpty: () => content,
+    onNonEmpty: (init, last) => {
+      if (Predicate.isString(last)) {
+        const stripped = String.replace(headingIdMarkerSuffixPattern, '')(last)
+        return String.isEmpty(stripped) ? init : Array.append(init, stripped)
+      } else {
+        return content
+      }
+    },
+  })

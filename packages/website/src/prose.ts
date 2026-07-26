@@ -23,7 +23,7 @@ export const headingLinkButton = (id: string, text: string): Html => {
 }
 
 export const link = (href: string, text: string): Html => {
-  const h = html<Message>()
+  const h = html()
 
   return h.a(
     [
@@ -37,7 +37,7 @@ export const link = (href: string, text: string): Html => {
 }
 
 export const pageTitle = (id: string, text: string): Html => {
-  const h = html<Message>()
+  const h = html()
 
   return h.h1(
     [
@@ -95,7 +95,7 @@ export const headingWithContent = (
   ariaText: string,
   content: ReadonlyArray<string | Html>,
 ): Html => {
-  const h = html<Message>()
+  const h = html()
 
   const tag = { h2: h.h2, h3: h.h3, h4: h.h4, h5: h.h5, h6: h.h6 }
   const config = sectionHeadingConfig[level]
@@ -116,13 +116,13 @@ export const heading = (
 ): Html => headingWithContent(level, id, text, [text])
 
 export const para = (...content: ReadonlyArray<string | Html>): Html => {
-  const h = html<Message>()
+  const h = html()
 
   return h.p([h.Class('mb-4 leading-relaxed')], content)
 }
 
 export const subPara = (...content: ReadonlyArray<string | Html>): Html => {
-  const h = html<Message>()
+  const h = html()
 
   return h.p(
     [h.Class('mb-4 text-sm leading-6 text-gray-800 dark:text-gray-400')],
@@ -135,7 +135,7 @@ export const tableOfContentsEntryToHeader = (
 ): Html => heading(entry.level, entry.id, entry.text)
 
 export const bullets = (...items: ReadonlyArray<string | Html>): Html => {
-  const h = html<Message>()
+  const h = html()
 
   return h.ul(
     [h.Class('list-disc mb-8 space-y-2')],
@@ -144,7 +144,7 @@ export const bullets = (...items: ReadonlyArray<string | Html>): Html => {
 }
 
 export const bulletPoint = (label: string, description: string): Html => {
-  const h = html<Message>()
+  const h = html()
 
   return h.span([], [h.strong([], [`${label}:`]), ` ${description}`])
 }
@@ -153,7 +153,7 @@ const inlineCodeClassName =
   'bg-gray-200/70 dark:bg-gray-800 px-1 py-px rounded text-sm border border-gray-300/50 dark:border-gray-700/50'
 
 export const inlineCode = (text: string, className?: string): Html => {
-  const h = html<Message>()
+  const h = html()
   return h.code([h.Class(twMerge(inlineCodeClassName, className))], [text])
 }
 
@@ -161,7 +161,7 @@ export const infoCallout = (
   label: string,
   ...content: ReadonlyArray<string | Html>
 ): Html => {
-  const h = html<Message>()
+  const h = html()
 
   return h.div(
     [
@@ -184,7 +184,7 @@ export const infoCallout = (
 }
 
 export const demoContainer = (...content: ReadonlyArray<Html>): Html => {
-  const h = html<Message>()
+  const h = html()
 
   return h.div(
     [
@@ -200,7 +200,7 @@ export const warningCallout = (
   label: string,
   ...content: ReadonlyArray<string | Html>
 ): Html => {
-  const h = html<Message>()
+  const h = html()
 
   return h.div(
     [
@@ -231,7 +231,7 @@ const calloutBlocks = (
     blocks: ReadonlyArray<Html>
   }>,
 ): Html => {
-  const h = html<Message>()
+  const h = html()
 
   return h.div(
     [h.Class(`border ${config.borderClassName} py-3.5 px-5 mb-6 rounded-lg`)],
@@ -288,3 +288,39 @@ export const warningCalloutBlocks = (
     label,
     blocks,
   })
+
+/**
+ * A centered, monospaced figure for ASCII diagrams. The `diagram` fenced code
+ * block in markdown renders through this. It carries no copy affordance because
+ * the content is a picture, not code to lift.
+ */
+export const diagram = (content: string): Html => {
+  const h = html()
+
+  return h.pre(
+    [
+      h.Class(
+        'mb-4 mx-auto w-fit max-w-full text-[#403d4a] dark:text-[#E0DEE6] text-sm p-4 overflow-x-auto rounded-lg bg-gray-100 dark:bg-[#1c1a20] border border-gray-200 dark:border-gray-700/50',
+      ),
+    ],
+    [content],
+  )
+}
+
+/**
+ * A wrapping row of call-to-action links. The `:::Cta` markdown island renders
+ * its link paragraphs through this, laying them out as a row and lifting the
+ * links to medium weight.
+ */
+export const ctaLinks = (blocks: ReadonlyArray<Html>): Html => {
+  const h = html()
+
+  return h.div(
+    [
+      h.Class(
+        'mb-8 flex flex-wrap gap-x-6 gap-y-2 [&>p]:m-0 [&_a]:font-medium',
+      ),
+    ],
+    blocks,
+  )
+}
