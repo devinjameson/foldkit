@@ -149,7 +149,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     slug: 'route-transitions',
     title: 'Route Transitions',
     description:
-      'Live log of every navigation, narrated by the Transition helpers. Entering the gallery loads the catalog once, flipping paintings refetches only when the id changes via stayed, and leaving the studio saves a draft with exitedRoute.',
+      'Live log of every navigation, narrated by the Transition helpers. Entering the gallery loads the catalog once, the stayed helper refetches a painting only when its id changes, and the exited helper saves a draft when you leave the studio.',
     difficulty: 'Intermediate',
     tags: ['Routing', 'Transitions', 'Commands'],
     hasRouting: true,

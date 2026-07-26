@@ -1,6 +1,6 @@
 # Routing & Navigation
 
-Foldkit uses a bidirectional routing system where you define routes once and use them for both parsing URLs and building URLs. No more keeping route matchers and URL builders in sync.
+Foldkit uses a bidirectional routing system where you define routes once and use them for both parsing URLs and building URLs. No more keeping route matchers and URL builders in sync. This page introduces the pieces in the order you reach for them; the [Route API reference](/api-reference/route) has the exhaustive catalog of combinators, and the [Route Transition API reference](/api-reference/route-transition) covers the transition helpers.
 
 ## The Biparser Approach {#biparser}
 
@@ -150,18 +150,20 @@ The route union is inferred from the transition argument and the tag is checked 
 
 ::Snippet{name="routingIsEntering" label="isEntering example"}
 
-One route checks cleanly with a predicate. When several routes have entry Commands, ask the transition which route it entered instead: `Transition.entered` returns the entered route in a `Some`, payload included, and `Option.none()` when the transition stayed within one route. Match on the result to dispatch every entry policy in one place:
+A predicate answers whether, not which. When the entry Command needs the route’s payload, `Transition.entered(transition, tag)` returns the entered route narrowed to the tag, so a detail id arrives typed:
 
 ::Snippet{name="routingEntered" label="entered example"}
 
-When a single route owns the entry Command and needs the route’s payload, skip the dispatch: `Transition.enteredRoute(transition, tag)` returns the entered route narrowed to the tag, so the payload arrives typed:
+Every helper that takes a tag answers for one named route. When several routes have entry Commands, ask the transition which route it entered instead: `Transition.enteredAny` returns the entered route in a `Some`, whichever route that was, and `Option.none()` when the transition stayed within one route. Match on the result to dispatch every entry policy in one place:
 
-::Snippet{name="routingEnteredRoute" label="enteredRoute example"}
+::Snippet{name="routingEnteredAny" label="enteredAny example"}
 
-Entering has a mirror. `Transition.exited` returns the route the transition left, and `Transition.exitedRoute(transition, tag)` is its single-route, payload-carrying form. Exits are for one-shot Commands on the way out, saving a draft, recording that a visit ended. They are not for tearing down things that live while a route is active: listeners, timers, and handles belong to a [Subscription](/core/subscriptions) or [ManagedResource](/core/managed-resources) condition on the Model, which also ends them when the route state disappears for reasons other than navigation.
+Entering has a mirror. `Transition.exited(transition, tag)` returns the route the transition left, narrowed to the tag, and `Transition.exitedAny` is its whichever-route form. Exits are for one-shot Commands on the way out, saving a draft, recording that a visit ended. They are not for tearing down things that live while a route is active: listeners, timers, and handles belong to a [Subscription](/core/subscriptions) or [ManagedResource](/core/managed-resources) condition on the Model, which also ends them when the route state disappears for reasons other than navigation.
 
-The last case is staying. `Transition.stayed(transition, tag)` returns both sides of a within-route navigation, narrowed to the tag: `Some({ previousRoute, nextRoute })` when the transition stayed on that route, `Option.none()` when it entered it, left it, or never touched it. A cold load stays nowhere. Reach for it when the previous payload matters, comparing a detail id or diffing query parameters; when only the next value matters, the `ChangedUrl` handler already has the next route.
+The last case is staying. `Transition.stayed(transition, tag)` returns both sides of a within-route navigation, narrowed to the tag: `Some({ previousRoute, nextRoute })` when the transition stayed on that route, `Option.none()` when it entered it, left it, or never touched it. A cold load stays nowhere. Reach for it when the previous payload matters, comparing a detail id or diffing query parameters; when only the next value matters, the `ChangedUrl` handler already has the next route. Staying has no whichever-route form: without a tag the two sides could not narrow to the same route variant together, so matching on one would leave the other typed as the whole union.
 
 ::Snippet{name="routingExitedStayed" label="exited and stayed example"}
 
 Because a cold load counts as an entry, `init` and the `ChangedUrl` handler share one load-on-entry policy: reloading on `/people` runs the same entry Commands as clicking there from the home page. Transition helpers compose by concatenation, as above; a handler that mixes entry, exit, and per-navigation Commands flattens their results into one batch.
+
+The [Route Transition API reference](/api-reference/route-transition) lists every helper with its full signature.

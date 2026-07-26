@@ -180,7 +180,7 @@ const loadCatalogOnGalleryEntry =
 const loadPaintingOnEntry =
   (transition: AppTransition): Step =>
   model =>
-    Option.match(Transition.enteredRoute(transition, 'Painting'), {
+    Option.match(Transition.entered(transition, 'Painting'), {
       onNone: () => [model, []],
       onSome: ({ paintingId }) => [
         evo(model, { paintingStatus: () => PaintingLoading({ paintingId }) }),
@@ -208,7 +208,7 @@ const reloadPaintingOnIdChange =
 const saveDraftOnStudioExit =
   (transition: AppTransition): Step =>
   model =>
-    Option.match(Transition.exitedRoute(transition, 'Studio'), {
+    Option.match(Transition.exited(transition, 'Studio'), {
       onNone: () => [model, []],
       onSome: () =>
         model.studioDraft === ''
@@ -708,11 +708,13 @@ const logEntryBadges = (transition: AppTransition): ReadonlyArray<Html> => {
     onSome: () => [],
   })
 
-  const maybeEnteredBadge = Option.map(Transition.entered(transition), route =>
-    badgeView('bg-emerald-100 text-emerald-700', `Entered ${route._tag}`),
+  const maybeEnteredBadge = Option.map(
+    Transition.enteredAny(transition),
+    route =>
+      badgeView('bg-emerald-100 text-emerald-700', `Entered ${route._tag}`),
   )
 
-  const maybeExitedBadge = Option.map(Transition.exited(transition), route =>
+  const maybeExitedBadge = Option.map(Transition.exitedAny(transition), route =>
     badgeView('bg-amber-100 text-amber-700', `Exited ${route._tag}`),
   )
 
