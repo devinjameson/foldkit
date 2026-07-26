@@ -6,8 +6,8 @@ import * as Markdown from '@foldkit/markdown'
 import { type Message } from '../message'
 import { ctaLinks, infoCalloutBlocks, warningCalloutBlocks } from '../prose'
 import { type CopiedSnippets, highlightedCodeBlock } from '../view/codeBlock'
-import { type Demos } from './docPage'
 import { islandAttributes } from './islandAttributes'
+import { type Slots, renderFaqSection, resolveDemo } from './slots'
 import { lookupSnippet } from './snippets'
 
 // ISLANDS
@@ -35,12 +35,13 @@ const warnMissingSnippetOnce = createWarnOnce(
  * with the standard copy affordance; `Info` and `Warning` wrap nested markdown
  * in the prose callouts; `Cta` lays its nested links out as an action row;
  * `Demo` drops in a live, interactive demo the page has pre-built and keyed by
- * name. The copy state and the demos both live in the app Model, so the views
- * close over `copiedSnippets` and `demos`.
+ * name; `Faq` hands its rendered children to the page's collapsible shell. The
+ * copy state and the page's slots both live in the app Model, so the views close
+ * over `copiedSnippets` and `slots`.
  */
 export const docIslands = (
   copiedSnippets: CopiedSnippets,
-  demos: Demos<string>,
+  slots: Slots<string>,
 ): Markdown.Islands => {
   const h = html<Message>()
 
@@ -69,6 +70,9 @@ export const docIslands = (
 
     Cta: (_attributes, content) => ctaLinks(content),
 
-    Demo: ({ name }) => demos[name] ?? h.empty,
+    Demo: ({ name }) => resolveDemo(slots, name),
+
+    Faq: ({ id, question }, content) =>
+      renderFaqSection(slots, id, question, content),
   })
 }

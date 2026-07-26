@@ -1,9 +1,11 @@
-import { Array, Result } from 'effect'
+import { Array, Option, Result, String as String_ } from 'effect'
 import { html } from 'foldkit/html'
 import { describe, expect, test } from 'vitest'
 
 import { parseMarkdown } from '@foldkit/markdown/vite'
 
+import comingFromReactSource from '../page/comingFromReact/comingFromReact.md?raw'
+import { FAQ_IDS } from '../page/comingFromReact/faq'
 import commandsSource from '../page/core/commands.md?raw'
 import submodelSource from '../page/core/submodel.md?raw'
 import manifestoSource from '../page/manifesto.md?raw'
@@ -285,21 +287,74 @@ describe('proof pages', () => {
       { level: 'h3', id: 'api-child-attribute', text: 'ChildAttribute' },
     ])
   })
+
+  test('coming from react table of contents', () => {
+    expect(tocOf(comingFromReactSource)).toEqual([
+      { level: 'h2', id: 'a-simple-counter', text: 'A Simple Counter' },
+      { level: 'h2', id: 'adding-auto-count', text: 'Adding Auto-Count' },
+      { level: 'h2', id: 'adding-a-step-size', text: 'Adding a Step Size' },
+      {
+        level: 'h2',
+        id: 'translating-react-concepts',
+        text: 'Translating React Concepts',
+      },
+      { level: 'h2', id: 'faq', text: 'FAQ' },
+    ])
+  })
 })
 
-// NOTE: the type of `demoDocPage<Name>` makes a page supply every demo name it
+const markdownSources = import.meta.glob('../page/**/*.md', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+})
+
+const COMING_FROM_REACT_PATH = '../page/comingFromReact/comingFromReact.md'
+
+const capturedNames = (
+  source: string,
+  pattern: RegExp,
+): ReadonlyArray<string> =>
+  Array.filterMap(Array.fromIterable(source.matchAll(pattern)), match =>
+    Result.fromOption(Array.get(match, 1), () => undefined),
+  )
+
+// NOTE: the page keys each collapsible answer by the id in its markdown, so an
+// id the page's own list does not know renders as plain prose instead of a
+// collapsible section. This keeps the two lists in agreement.
+const FAQ_ISLAND_ID_PATTERN = /:::Faq\{[^}]*id="([^"]+)"/g
+
+describe('faq island registration', () => {
+  const embeddedIds = capturedNames(
+    comingFromReactSource,
+    FAQ_ISLAND_ID_PATTERN,
+  )
+
+  test('the markdown embeds exactly the ids the page declares, in order', () => {
+    expect(embeddedIds).toEqual([...FAQ_IDS])
+  })
+
+  test('no other page embeds a :::Faq island without a shell to render it', () => {
+    const otherPagesWithFaqIslands = Array.filterMap(
+      Object.entries(markdownSources),
+      ([markdownPath, source]) =>
+        markdownPath !== COMING_FROM_REACT_PATH &&
+        String(source).includes(':::Faq')
+          ? Result.succeed(markdownPath)
+          : Result.failVoid,
+    )
+
+    expect(otherPagesWithFaqIslands).toEqual([])
+  })
+})
+
+// NOTE: the type of `slotDocPage<Name>` makes a page supply every demo name it
 // declares, but the names in the markdown are data the compiler cannot see. This
 // walks the other direction so a `::Demo` island can never name a demo its page
 // module never declared.
 const DEMO_ISLAND_PATTERN = /::Demo\{name="([^"]+)"\}/g
 
 describe('demo island registration', () => {
-  const markdownSources = import.meta.glob('../page/**/*.md', {
-    query: '?raw',
-    import: 'default',
-    eager: true,
-  })
-
   const pageSources = import.meta.glob('../page/**/*.ts', {
     query: '?raw',
     import: 'default',
@@ -309,15 +364,13 @@ describe('demo island registration', () => {
   const demoUsages = Array.filterMap(
     Object.entries(markdownSources),
     ([markdownPath, source]) => {
-      const names = Array.filterMap(
-        Array.fromIterable(String(source).matchAll(DEMO_ISLAND_PATTERN)),
-        match =>
-          match[1] === undefined ? Result.failVoid : Result.succeed(match[1]),
-      )
+      const names = capturedNames(String(source), DEMO_ISLAND_PATTERN)
 
-      return Array.isArrayNonEmpty(names)
-        ? Result.succeed({ markdownPath, names })
-        : Result.failVoid
+      return Array.match(names, {
+        onEmpty: () => Result.failVoid,
+        onNonEmpty: presentNames =>
+          Result.succeed({ markdownPath, names: presentNames }),
+      })
     },
   )
 
@@ -336,6 +389,58 @@ describe('demo island registration', () => {
       for (const name of names) {
         expect(String(pageSource)).toContain(`'${name}'`)
       }
+    },
+  )
+})
+
+// NOTE: `::Snippet` names cannot reach the same safety as `::Demo` names. The
+// snippet registry is built from `import.meta.glob` at runtime and the name is
+// markdown data, so the lookup cannot be made total the way the demo record is.
+// This checks the same fact at test time instead. Globbing without `eager` reads
+// only the file paths, which keeps the `?highlighted` modules out of the test's
+// import graph.
+const SNIPPET_ISLAND_PATTERN = /::Snippet\{[^}]*name="([^"]+)"/g
+
+const SNIPPET_EXTENSION_PATTERN = /\.(?:ts|tsx|elm|json)$/
+
+describe('snippet island registration', () => {
+  const snippetFileNames = new Set(
+    Array.filterMap(
+      Object.keys(import.meta.glob('../snippet/*.{ts,tsx,elm,json}')),
+      path =>
+        Result.fromOption(
+          Option.map(Array.last(String_.split(path, '/')), fileName =>
+            String_.replace(SNIPPET_EXTENSION_PATTERN, '')(fileName),
+          ),
+          () => undefined,
+        ),
+    ),
+  )
+
+  const snippetUsages = Array.filterMap(
+    Object.entries(markdownSources),
+    ([markdownPath, source]) => {
+      const names = capturedNames(String(source), SNIPPET_ISLAND_PATTERN)
+
+      return Array.match(names, {
+        onEmpty: () => Result.failVoid,
+        onNonEmpty: presentNames =>
+          Result.succeed({ markdownPath, names: presentNames }),
+      })
+    },
+  )
+
+  test('finds snippet files and ::Snippet islands to check', () => {
+    expect(snippetFileNames.size).toBeGreaterThan(0)
+    expect(Array.isArrayNonEmpty(snippetUsages)).toBe(true)
+  })
+
+  test.each(snippetUsages)(
+    '$markdownPath references only snippets that exist',
+    ({ markdownPath, names }) => {
+      const missing = names.filter(name => !snippetFileNames.has(name))
+
+      expect(missing, `${markdownPath} references missing snippets`).toEqual([])
     },
   )
 })

@@ -47,9 +47,3 @@ const registry: Record<string, Snippet> = pipe(
  */
 export const lookupSnippet = (name: string): Option.Option<Snippet> =>
   Record_.get(registry, name)
-
-/**
- * Every registered snippet name, so a build-time check can validate that each
- * `::Snippet{name="..."}` directive resolves to a real file.
- */
-export const snippetNames: ReadonlyArray<string> = Record_.keys(registry)

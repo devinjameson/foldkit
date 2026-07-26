@@ -4,7 +4,7 @@ import { Disclosure } from '@foldkit/ui'
 
 import { Icon } from '../../icon'
 import { type Message } from '../../main'
-import { demoDocPage } from '../../markdown'
+import { slotDocPage } from '../../markdown'
 import { ToggledMapMessagesUnderHood } from '../../message'
 import { inlineCode } from '../../prose'
 import * as Snippet from '../../snippet'
@@ -110,7 +110,7 @@ const mapMessagesUnderHoodDemo = (
 // PAGE
 
 const { tableOfContents, view: renderPage } =
-  demoDocPage<'map-messages-under-hood'>(raw, 'core/submodel')
+  slotDocPage<'map-messages-under-hood'>(raw, 'core/submodel')
 
 export { tableOfContents }
 
@@ -119,8 +119,10 @@ export const view = (
   isMapMessagesUnderHoodOpen: boolean,
 ): Html =>
   renderPage(copiedSnippets, {
-    'map-messages-under-hood': mapMessagesUnderHoodDemo(
-      isMapMessagesUnderHoodOpen,
-      copiedSnippets,
-    ),
+    demos: {
+      'map-messages-under-hood': mapMessagesUnderHoodDemo(
+        isMapMessagesUnderHoodOpen,
+        copiedSnippets,
+      ),
+    },
   })
