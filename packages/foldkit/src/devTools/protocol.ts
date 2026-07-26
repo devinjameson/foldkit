@@ -119,6 +119,14 @@ export const RequestDispatchMessage = ts('RequestDispatchMessage', {
   message: S.Unknown,
 })
 
+/** The largest batch `RequestDispatchMessages` accepts. Matches the DevTools store's default history size, so a batch cannot evict its own earliest entries before the caller reads them back. The runtime rejects a larger batch with `ResponseError`, and MCP clients reject it earlier still, at their own input boundary. */
+export const MAX_DISPATCH_BATCH_SIZE = 100
+
+/** Request the runtime dispatch an ordered batch of Messages at the current state. Payloads are opaque to the protocol; the runtime decodes every entry against the app's Message Schema before dispatching any of them, so one invalid entry rejects the whole batch and no Message from it is dispatched. Decoded Messages dispatch in array order through the same path as single dispatch, so the runtime may still record its own Messages between entries, exactly as with rapid user input. Batches larger than `MAX_DISPATCH_BATCH_SIZE` are rejected outright. */
+export const RequestDispatchMessages = ts('RequestDispatchMessages', {
+  messages: S.Array(S.Unknown),
+})
+
 /** Request a description of the app's Message Schema. The runtime derives a JSON Schema document once at bridge boot from the configured `DevToolsConfig.Message`; the response is `None` when no Message Schema was configured. With `maybeVariantTag: None`, the response carries a small variant index (tag names plus payload field names and a tagged-union indicator) so MCP clients can enumerate the top-level variants without paying for the full schema. With `maybeVariantTag: Some(path)`, the value is interpreted as a dot-separated path of variant `_tag` values walked through each variant's single tagged-union payload field; the response carries the JSON Schema document narrowed along that chain, with any deeper unions collapsed to summary placeholders. Use the index to discover variants, then fetch one variant before calling `RequestDispatchMessage`. */
 export const RequestGetMessageSchema = ts('RequestGetMessageSchema', {
   maybeVariantTag: S.OptionFromNullOr(S.String),
@@ -139,6 +147,7 @@ export const Request = S.Union([
   RequestReplayToKeyframe,
   RequestResume,
   RequestDispatchMessage,
+  RequestDispatchMessages,
   RequestListRuntimes,
   RequestGetInit,
   RequestGetRuntimeState,
@@ -221,9 +230,14 @@ export const ResponseReplayed = ts('ResponseReplayed', {
 /** Response confirming the runtime resumed normal execution. */
 export const ResponseResumed = ts('ResponseResumed')
 
-/** Response confirming a Message was dispatched. The `acceptedAtIndex` is the absolute history index where the entry is predicted to land. Computed from the runtime's history length at dispatch time. The runtime processes Messages in arrival order and the bridge is the only external dispatch source, so this index is reliable for correlation. */
+/** Response confirming a Message was dispatched. The `acceptedAtIndex` is the absolute history index where the entry is predicted to land. Computed from the runtime's history length at dispatch time. The runtime processes Messages in arrival order, so the index is reliable whenever the bridge is the only Message source, but the app produces its own Messages too (user input, Subscription emissions, Command results); one recorded between the snapshot and the dispatch shifts the entry past this index. Messages excluded from history via `excludeFromHistory` still drive `update` but are never recorded, so no entry lands at the predicted index for them, and a Message dispatched into a crashed or disposed runtime is dropped without recording anything. */
 export const ResponseDispatched = ts('ResponseDispatched', {
   acceptedAtIndex: S.Number,
+})
+
+/** Response confirming a batch dispatch. `acceptedAtIndices` aligns with the request's `messages` order; each value is the absolute history index where that entry is predicted to land, computed from one history snapshot at dispatch time with the same caveats as `ResponseDispatched.acceptedAtIndex`. An `excludeFromHistory` Message inside the batch records no entry, so entries after it land below their predicted index. */
+export const ResponseDispatchedBatch = ts('ResponseDispatchedBatch', {
+  acceptedAtIndices: S.Array(S.Number),
 })
 
 /** One variant entry in a `MessageSchemaIndex`. `payloadFields` lists the variant's payload property names (excluding `_tag`); `unionFields` lists the subset of those properties whose schemas are themselves `_tag`-discriminated unions. A Submodel-wrapper variant always shows up with `unionFields: ['message']`, but the same flag also catches plain tagged-union value types like `UrlRequest = Internal | External`. Either way, the agent will need to pick a variant when filling these fields. */
@@ -302,6 +316,7 @@ export const Response = S.Union([
   ResponseReplayed,
   ResponseResumed,
   ResponseDispatched,
+  ResponseDispatchedBatch,
   ResponseRuntimes,
   ResponseInit,
   ResponseRuntimeState,

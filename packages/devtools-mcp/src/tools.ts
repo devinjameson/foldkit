@@ -1,9 +1,11 @@
 import { Array, Effect, Match, Option, Schema as S } from 'effect'
 import {
+  MAX_DISPATCH_BATCH_SIZE,
   type Request,
   RequestCountMessagesByTag,
   RequestDiffModels,
   RequestDispatchMessage,
+  RequestDispatchMessages,
   RequestGetInit,
   RequestGetMessage,
   RequestGetMessageSchema,
@@ -165,6 +167,15 @@ const DispatchMessageInput = S.Struct({
     description:
       "A Foldkit Message object to dispatch into the runtime. Must match the runtime's Message Schema. Call `foldkit_get_message_schema` with no arguments to see the available variant tags, then `foldkit_get_message_schema { variant_tag: \"X\" }` to learn one variant's exact payload shape. At minimum it has a `_tag` field naming the variant. The runtime decodes the payload and returns a clean error if it doesn't match.",
   }),
+})
+
+const DispatchMessagesInput = S.Struct({
+  runtime_id: RuntimeIdField,
+  messages: S.Array(S.Record(S.String, S.Unknown))
+    .check(S.isNonEmpty(), S.isMaxLength(MAX_DISPATCH_BATCH_SIZE))
+    .annotate({
+      description: `An ordered list of Foldkit Message objects to dispatch into the runtime, first to last. Must hold between 1 and ${MAX_DISPATCH_BATCH_SIZE} Messages. Each must match the runtime's Message Schema; call foldkit_get_message_schema to learn the shapes. The runtime decodes every entry before dispatching any of them, so one invalid entry rejects the whole batch with its zero-based position and nothing is dispatched.`,
+    }),
 })
 
 const VariantTagField = S.optional(
@@ -487,11 +498,21 @@ export const buildTools = (
   {
     name: 'foldkit_dispatch_message',
     description:
-      "Dispatch a Message into a Foldkit runtime, as if the application itself produced it. Requires the runtime to have configured DevToolsConfig.Message; without it, dispatch is rejected. Call `foldkit_get_message_schema` with no arguments to enumerate the variants, then with `variant_tag` to learn one variant's exact payload shape, before constructing the Message object. The runtime decodes the payload and returns a clean error if it doesn't match.",
+      "Dispatch a Message into a Foldkit runtime, as if the application itself produced it. Requires the runtime to have configured DevToolsConfig.Message; without it, dispatch is rejected. Call `foldkit_get_message_schema` with no arguments to enumerate the variants, then with `variant_tag` to learn one variant's exact payload shape, before constructing the Message object. The runtime decodes the payload and returns a clean error if it doesn't match. To dispatch several Messages in order with one call, use foldkit_dispatch_messages.",
     inputSchema: toInputSchema(DispatchMessageInput),
     handle: runRuntimeTool(
       DispatchMessageInput,
       ({ message }) => RequestDispatchMessage({ message }),
+      wsClient,
+    ),
+  },
+  {
+    name: 'foldkit_dispatch_messages',
+    description: `Dispatch an ordered batch of Messages into a Foldkit runtime in one call, first to last, as if the application produced them in quick succession. Prefer this over repeated foldkit_dispatch_message calls when staging state that takes several Messages: reproducing a bug, filling a form, or building a history fixture. Takes 1 to ${MAX_DISPATCH_BATCH_SIZE} Messages. Validation is all-or-nothing: the runtime decodes every payload against the Message Schema before dispatching any of them, and one invalid entry rejects the whole batch with an error naming its zero-based position, so there is never a partially applied prefix to clean up. On success the response carries acceptedAtIndices, the predicted history index for each Message in request order; the runtime may still record its own Messages between entries (for example a Command completing mid-burst), exactly as with rapid user input, and Messages excluded from history via excludeFromHistory are dispatched but never recorded, so entries after one land below their predicted index. Requires DevToolsConfig.Message, like foldkit_dispatch_message.`,
+    inputSchema: toInputSchema(DispatchMessagesInput),
+    handle: runRuntimeTool(
+      DispatchMessagesInput,
+      ({ messages }) => RequestDispatchMessages({ messages }),
       wsClient,
     ),
   },
