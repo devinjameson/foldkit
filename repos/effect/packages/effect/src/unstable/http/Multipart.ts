@@ -276,6 +276,13 @@ export class MultipartError extends Data.TaggedError("MultipartError")<{
  */
 export interface PersistedFileSchema extends Schema.declare<PersistedFile> {}
 
+const PersistedFileEncoded = Schema.Struct({
+  key: Schema.String,
+  name: Schema.String,
+  contentType: Schema.String.annotate({ contentEncoding: "binary" }),
+  path: Schema.String
+})
+
 /**
  * Schema for persisted multipart files.
  *
@@ -290,23 +297,19 @@ export interface PersistedFileSchema extends Schema.declare<PersistedFile> {}
 export const PersistedFileSchema: PersistedFileSchema = Schema.declare(
   isPersistedFile,
   {
-    typeConstructor: {
-      _tag: "effect/http/PersistedFile"
+    representation: {
+      id: "effect/http/PersistedFile",
+      payload: null
     },
-    generation: {
-      runtime: `Multipart.PersistedFileSchema`,
-      Type: `Multipart.PersistedFile`,
-      importDeclaration: `import * as Multipart from "effect/unstable/http/Multipart"`
-    },
+    toCode: () => ({
+      runtime: "Multipart.PersistedFileSchema",
+      Type: "Multipart.PersistedFile",
+      importDeclarations: [`import * as Multipart from "effect/unstable/http/Multipart"`]
+    }),
     expected: "PersistedFile",
     toCodecJson: () =>
       Schema.link<PersistedFile>()(
-        Schema.Struct({
-          key: Schema.String,
-          name: Schema.String,
-          contentType: Schema.String.annotate({ contentEncoding: "binary" }),
-          path: Schema.String
-        }),
+        PersistedFileEncoded,
         SchemaTransformation.transform({
           decode: ({ contentType, key, name, path }) => new PersistedFileImpl(key, name, contentType, path),
           encode: (file) => ({

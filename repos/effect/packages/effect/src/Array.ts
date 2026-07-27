@@ -13,9 +13,11 @@ import * as Equal from "./Equal.ts"
 import * as Equivalence from "./Equivalence.ts"
 import type { LazyArg } from "./Function.ts"
 import { dual, identity } from "./Function.ts"
+import * as Hash from "./Hash.ts"
 import type { TypeLambda } from "./HKT.ts"
 import * as internalArray from "./internal/array.ts"
 import * as internalDoNotation from "./internal/doNotation.ts"
+import * as InternalRecord from "./internal/record.ts"
 import * as moduleIterable from "./Iterable.ts"
 import * as Option from "./Option.ts"
 import * as Order from "./Order.ts"
@@ -3073,11 +3075,51 @@ export const groupBy: {
     if (Object.hasOwn(out, k)) {
       out[k].push(a)
     } else {
-      out[k] = [a]
+      InternalRecord.assignProperty(out, k, [a])
     }
   }
   return out
 })
+
+type HashBuckets = Map<number, Array<unknown>>
+
+const hashBucketsAdd = (buckets: HashBuckets, value: unknown): boolean => {
+  const hash = Hash.hash(value)
+  const bucket = buckets.get(hash)
+  if (bucket === undefined) {
+    buckets.set(hash, [value])
+    return true
+  }
+  // Hash collisions still require an Effect equality check.
+  for (const previous of bucket) {
+    if (Equal.equals(previous, value)) {
+      return false
+    }
+  }
+  bucket.push(value)
+  return true
+}
+
+const makeHashBuckets = (values: Iterable<unknown>): HashBuckets => {
+  const buckets: HashBuckets = new Map()
+  for (const value of values) {
+    hashBucketsAdd(buckets, value)
+  }
+  return buckets
+}
+
+const hashBucketsHas = (buckets: HashBuckets, value: unknown): boolean => {
+  const bucket = buckets.get(Hash.hash(value))
+  if (bucket === undefined) {
+    return false
+  }
+  for (const candidate of bucket) {
+    if (Equal.equals(candidate, value)) {
+      return true
+    }
+  }
+  return false
+}
 
 /**
  * Computes the union of two arrays using a custom equivalence, removing
@@ -3162,7 +3204,14 @@ export const union: {
   <A, B>(self: Iterable<A>, that: Iterable<B>): Array<A | B>
 } = dual(
   2,
-  <A, B>(self: Iterable<A>, that: Iterable<B>): Array<A | B> => unionWith(self, that, Equal.asEquivalence<A | B>())
+  <A, B>(self: Iterable<A>, that: Iterable<B>): Array<A | B> => {
+    const a = fromIterable(self)
+    const b = fromIterable(that)
+    if (isReadonlyArrayNonEmpty(a)) {
+      return isReadonlyArrayNonEmpty(b) ? dedupe(appendAll(a, b)) : a
+    }
+    return b
+  }
 )
 
 /**
@@ -3233,7 +3282,15 @@ export const intersectionWith = <A>(isEquivalent: (self: A, that: A) => boolean)
 export const intersection: {
   <B>(that: Iterable<B>): <A>(self: Iterable<A>) => Array<A & B>
   <A, B>(self: Iterable<A>, that: Iterable<B>): Array<A & B>
-} = intersectionWith(Equal.asEquivalence())
+} = dual(2, <A, B>(self: Iterable<A>, that: Iterable<B>): Array<A & B> => {
+  const thatArray = fromIterable(that)
+  const selfArray = fromIterable(self)
+  if (selfArray.length === 0 || thatArray.length === 0) {
+    return []
+  }
+  const buckets = makeHashBuckets(thatArray)
+  return selfArray.filter((value): value is A & B => hashBucketsHas(buckets, value))
+})
 
 /**
  * Computes elements in the first array that are not in the second, using a
@@ -3301,7 +3358,18 @@ export const differenceWith = <A>(isEquivalent: (self: A, that: A) => boolean): 
 export const difference: {
   <A>(that: Iterable<A>): (self: Iterable<A>) => Array<A>
   <A>(self: Iterable<A>, that: Iterable<A>): Array<A>
-} = differenceWith(Equal.asEquivalence())
+} = dual(2, <A>(self: Iterable<A>, that: Iterable<A>): Array<A> => {
+  const thatArray = fromIterable(that)
+  const selfArray = fromIterable(self)
+  if (selfArray.length === 0) {
+    return []
+  }
+  if (thatArray.length === 0) {
+    return selfArray.filter(() => true)
+  }
+  const buckets = makeHashBuckets(thatArray)
+  return selfArray.filter((value) => !hashBucketsHas(buckets, value))
+})
 
 /**
  * Creates an empty array.
@@ -4438,8 +4506,20 @@ export const dedupeWith: {
  */
 export const dedupe = <S extends Iterable<any>>(
   self: S
-): S extends NonEmptyReadonlyArray<infer A> ? NonEmptyArray<A> : S extends Iterable<infer A> ? Array<A> : never =>
-  dedupeWith(self, Equal.asEquivalence()) as any
+): S extends NonEmptyReadonlyArray<infer A> ? NonEmptyArray<A> : S extends Iterable<infer A> ? Array<A> : never => {
+  const input = fromIterable(self)
+  if (input.length < 2) {
+    return [...input] as any
+  }
+  const buckets: HashBuckets = new Map()
+  const out: Array<unknown> = []
+  for (const value of input) {
+    if (hashBucketsAdd(buckets, value)) {
+      out.push(value)
+    }
+  }
+  return out as any
+}
 
 /**
  * Removes consecutive duplicate elements using a custom equivalence.

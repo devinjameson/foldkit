@@ -1372,14 +1372,17 @@ export class Number extends Base {
   }
   /** @internal */
   toCodecJson(): AST {
-    if (this.checks && (hasCheck(this.checks, "isFinite") || hasCheck(this.checks, "isInt"))) {
+    if (
+      this.checks &&
+      (hasCheck(this.checks, "effect/schema/isFinite") || hasCheck(this.checks, "effect/schema/isInt"))
+    ) {
       return this
     }
-    return replaceEncoding(this, [numberToJson])
+    return replaceEncoding(this, [numberToJson(this.checks)])
   }
   /** @internal */
   toCodecStringTree(): AST {
-    if (this.checks && (hasCheck(this.checks, "isFinite") || hasCheck(this.checks, "isInt"))) {
+    if (this.toCodecJson() === this) {
       return replaceEncoding(this, [finiteToString])
     }
     return replaceEncoding(this, [numberToString])
@@ -1390,16 +1393,25 @@ export class Number extends Base {
   }
 }
 
-// oxlint-disable-next-line only-used-in-recursion - @gcanti what's this? :-)
-function hasCheck(checks: ReadonlyArray<Check<unknown>>, tag: string): boolean {
-  return checks.some((c) => {
-    switch (c._tag) {
-      case "Filter":
-        return c.annotations?.meta?._tag === tag
-      case "FilterGroup":
-        return hasCheck(c.checks, tag)
-    }
-  })
+function hasCheck(checks: ReadonlyArray<Check<unknown>>, id: string): boolean {
+  return checks.some((check) =>
+    check.annotations?.representation?.id === id ||
+    (check._tag === "FilterGroup" && hasCheck(check.checks, id))
+  )
+}
+
+function numberToJson(checks: Checks | undefined): Link {
+  const encodedFinite = checks === undefined
+    ? finite
+    : appendChecks(finite, checks)
+
+  return new Link(
+    new Union([encodedFinite, nonFiniteLiterals], "anyOf"),
+    new SchemaTransformation.Transformation(
+      SchemaGetter.Number(),
+      SchemaGetter.transform((n) => globalThis.Number.isFinite(n) ? n : globalThis.String(n))
+    )
+  )
 }
 
 /**
@@ -2131,9 +2143,9 @@ export class Objects extends Base {
             const v2 = exitValue.value.value
             if (is.merge && is.merge.decode && Object.hasOwn(s.out, k2)) {
               const [k, v] = is.merge.decode.combine([k2, s.out[k2]], [k2, v2])
-              InternalRecord.set(s.out, k, v)
+              InternalRecord.assignProperty(s.out, k, v)
             } else {
-              InternalRecord.set(s.out, k2, v2)
+              InternalRecord.assignProperty(s.out, k2, v2)
             }
           }
         }),
@@ -2189,7 +2201,7 @@ export class Objects extends Base {
               }
             } else {
               // preserve key
-              InternalRecord.set(out, key, input[key])
+              InternalRecord.assignProperty(out, key, input[key])
             }
           }
         }
@@ -2229,7 +2241,7 @@ export class Objects extends Base {
         const preserved: Record<PropertyKey, unknown> = {}
         for (const key of keys) {
           if (Object.hasOwn(out, key)) {
-            InternalRecord.set(preserved, key, out[key])
+            InternalRecord.assignProperty(preserved, key, out[key])
           }
         }
         return Option.some(preserved)
@@ -2320,7 +2332,7 @@ const parseProperties = iterateEager<{
     if (exit._tag === "Failure") {
       return wrapPropertyKeyIssue(s, s.ast, p.name, exit)
     } else if (exit.value._tag === "Some") {
-      InternalRecord.set(s.out, p.name, exit.value.value)
+      InternalRecord.assignProperty(s.out, p.name, exit.value.value)
     } else if (!isOptional(p.type)) {
       const issue = new SchemaIssue.Pointer([p.name], new SchemaIssue.MissingKey(p.type.context?.annotations))
       if (s.options.errors === "all") {
@@ -2447,7 +2459,7 @@ function getCandidateTypes(ast: AST): ReadonlyArray<Type> {
     case "Objects":
       return ast.propertySignatures.length || ast.indexSignatures.length
         ? ["object"]
-        : ["object", "array"]
+        : ["string", "number", "boolean", "symbol", "bigint", "object", "array", "function"]
     case "Enum":
       return Array.from(new Set(ast.enums.map(([, v]) => typeof v)))
     case "Literal":
@@ -2476,7 +2488,7 @@ export function collectSentinels(ast: AST): Array<Sentinel> {
     default:
       return []
     case "Declaration": {
-      const s = ast.annotations?.["~sentinels"]
+      const s = ast.annotations?.[InternalAnnotations.SENTINELS_ANNOTATION_KEY]
       return Array.isArray(s) ? s : []
     }
     case "Objects":
@@ -2780,14 +2792,6 @@ const nonFiniteLiterals = new Union([
   new Literal("NaN")
 ], "anyOf")
 
-const numberToJson = new Link(
-  new Union([number, nonFiniteLiterals], "anyOf"),
-  new SchemaTransformation.Transformation(
-    SchemaGetter.Number(),
-    SchemaGetter.transform((n) => globalThis.Number.isFinite(n) ? n : globalThis.String(n))
-  )
-)
-
 function formatIsMutable(isMutable: boolean | undefined): string {
   return isMutable ? "" : "readonly "
 }
@@ -2889,8 +2893,8 @@ export class Suspend extends Base {
  *
  * - `run` — the validation function. Returns `undefined` on success, or an
  *   `Issue` on failure.
- * - `annotations` — optional filter-level metadata (expected message, meta
- *   tags, arbitrary constraint hints).
+ * - `annotations` — optional filter-level annotations (expected message,
+ *   representation, arbitrary constraint hints).
  * - `aborted` — when `true`, parsing stops immediately after this filter
  *   fails (no further checks run).
  *
@@ -3013,6 +3017,32 @@ export function makeFilterByGuard<T extends E, E>(
   )
 }
 
+/** @internal */
+export function isFinite(annotations?: Schema.Annotations.Filter) {
+  return makeFilter(
+    (n: number) => globalThis.Number.isFinite(n),
+    {
+      expected: "a finite number",
+      representation: {
+        id: "effect/schema/isFinite",
+        payload: null
+      },
+      toJsonSchema: () => ({ type: "number" }),
+      toCode: () => ({ runtime: "Schema.isFinite()" }),
+      arbitrary: {
+        constraint: {
+          noInfinity: true,
+          noNaN: true
+        }
+      },
+      ...annotations
+    }
+  )
+}
+
+/** @internal */
+export const finite = appendChecks(number, [isFinite()])
+
 /**
  * Creates a {@link Filter} that validates strings by running `RegExp.test`.
  *
@@ -3051,10 +3081,11 @@ export function isPattern(regExp: globalThis.RegExp, annotations?: Schema.Annota
     (s: string) => regExp.test(s),
     {
       expected: `a string matching the RegExp ${source}`,
-      meta: {
-        _tag: "isPattern",
-        regExp
+      representation: {
+        id: "effect/schema/isPattern",
+        payload: { source, flags: regExp.flags }
       },
+      toJsonSchema: () => ({ pattern: source }),
       arbitrary: {
         constraint: {
           patterns: [regExp.source]
@@ -3130,19 +3161,27 @@ export function appendChecks<A extends AST>(ast: A, checks: Checks | undefined):
   return replaceChecks(ast, combineChecks(ast.checks, checks))
 }
 
+/** @internal */
+export function mapLink(link: Link, f: (ast: AST) => AST): Link {
+  const to = f(link.to)
+  return to === link.to ? link : new Link(to, link.transformation)
+}
+
 function updateLastLink(encoding: Encoding, f: (ast: AST) => AST): Encoding {
   const links = encoding
   const last = links[links.length - 1]
-  const to = f(last.to)
-  if (to !== last.to) {
-    return Arr.append(encoding.slice(0, encoding.length - 1), new Link(to, last.transformation))
-  }
-  return encoding
+  const out = mapLink(last, f)
+  return out === last ? encoding : Arr.append(encoding.slice(0, encoding.length - 1), out)
 }
 
 /** @internal */
 export function applyToLastLink(f: (ast: AST) => AST) {
   return <A extends AST>(ast: A): A => ast.encoding ? replaceEncoding(ast, updateLastLink(ast.encoding, f)) : ast
+}
+
+/** @internal */
+export function replaceContextLastLink<A extends AST>(ast: A, context: Context): A {
+  return applyToLastLink((ast) => replaceContext(ast, context))(ast)
 }
 
 /** @internal */
@@ -3220,8 +3259,7 @@ export function annotateKey<A extends AST>(ast: A, annotations: Schema.Annotatio
   return replaceContext(ast, context)
 }
 
-/** @internal */
-export const optionalKeyLastLink = applyToLastLink(optionalKey)
+const optionalKeyLastLink = applyToLastLink(optionalKey)
 
 /**
  * Marks an AST node's property key as optional by setting
@@ -3366,6 +3404,20 @@ export function isMutable(ast: AST): boolean {
   return ast.context?.isMutable ?? false
 }
 
+function isStructuralCheck(check: Check<any>): boolean {
+  return check.annotations?.[InternalAnnotations.STRUCTURAL_ANNOTATION_KEY] === true ||
+    check._tag === "FilterGroup" && check.checks.every(isStructuralCheck)
+}
+
+function extractStructuralChecks(checks: Checks): Checks | undefined {
+  function extract(check: Check<any>): Array<Check<any>> {
+    if (isStructuralCheck(check)) return [check]
+    return check._tag === "FilterGroup" ? check.checks.flatMap(extract) : []
+  }
+  const out = checks.flatMap(extract)
+  return Arr.isArrayNonEmpty(out) ? out : undefined
+}
+
 /**
  * Strips all encoding transformations from an AST, returning the decoded
  * (type-level) representation.
@@ -3397,13 +3449,16 @@ export const toType = memoize(<A extends AST>(ast: A): A => {
   }
   const out: any = ast
   const type = out.recur?.(toType) ?? out
-  const encodingChecks = type.encodingChecks
+  const encodingChecks: Checks | undefined = type.encodingChecks
   if (encodingChecks) {
+    const checks = type === ast
+      ? encodingChecks
+      : isArrays(type) || isObjects(type) || isDeclaration(type) && type.typeParameters.length > 0
+      ? extractStructuralChecks(encodingChecks)
+      : undefined
     return modifyOwnPropertyDescriptors(type, (d) => {
       d.encodingChecks.value = undefined
-      if (type === ast) {
-        d.checks.value = combineChecks(type.checks, encodingChecks)
-      }
+      d.checks.value = combineChecks(type.checks, checks)
     })
   }
   return type
@@ -3540,12 +3595,21 @@ function segmentTemplateLiteralParts(
   input: string,
   options: ParseOptions
 ): Array<string> | undefined {
+  const literals = parts.map((part) => part._tag === "Literal" ? globalThis.String(part.literal) : undefined)
+  if (literals.some((literal) => literal !== undefined && !input.includes(literal))) return undefined
+
+  const minimumLengths = new Array<number>(parts.length + 1)
+  minimumLengths[parts.length] = 0
+  for (let i = parts.length - 1; i >= 0; i--) {
+    minimumLengths[i] = minimumLengths[i + 1] + (literals[i]?.length ?? 0)
+  }
+  if (minimumLengths[0] > input.length) return undefined
+
   const out = new Array<string>(parts.length)
-  const failures = new Set<string>()
+  const failures = parts.map(() => new Set<number>())
   function go(i: number, pos: number): boolean {
     if (i === parts.length) return pos === input.length
-    const key = `${i}/${pos}`
-    if (failures.has(key)) return false
+    if (failures[i].has(pos)) return false
     const part = parts[i]
     if (i === parts.length - 1) {
       const s = input.slice(pos)
@@ -3554,21 +3618,27 @@ function segmentTemplateLiteralParts(
         return true
       }
     } else if (part._tag === "Literal") {
-      const s = globalThis.String(part.literal)
+      const s = literals[i]!
       if (input.startsWith(s, pos) && go(i + 1, pos + s.length)) {
         out[i] = s
         return true
       }
     } else {
-      for (let end = input.length; end >= pos; end--) {
+      const maximumEnd = input.length - minimumLengths[i + 1]
+      // Splits preceding a literal only need to consider occurrences of that literal.
+      const anchor = literals[i + 1]
+      let end = anchor === undefined ? maximumEnd : input.lastIndexOf(anchor, maximumEnd)
+      while (end >= pos) {
         const s = input.slice(pos, end)
         if (part.matchPart(s, options) !== undefined && go(i + 1, end)) {
           out[i] = s
           return true
         }
+        if (end === 0) break
+        end = anchor === undefined ? end - 1 : input.lastIndexOf(anchor, end - 1)
       }
     }
-    failures.add(key)
+    failures[i].add(pos)
     return false
   }
   return go(0, 0) ? out : undefined
@@ -3627,7 +3697,7 @@ export const STRING_PATTERN = "[\\s\\S]*?"
 
 const isStringFiniteRegExp = new globalThis.RegExp(`^${FINITE_PATTERN}$`)
 
-const isStringNumberRegExp = new globalThis.RegExp(`(?:${FINITE_PATTERN}|Infinity|-Infinity|NaN)`)
+const isStringNumberRegExp = new globalThis.RegExp(`^(?:${FINITE_PATTERN}|Infinity|-Infinity|NaN)$`)
 
 /** @internal */
 export function isStringFinite(annotations?: Schema.Annotations.Filter) {
@@ -3635,10 +3705,11 @@ export function isStringFinite(annotations?: Schema.Annotations.Filter) {
     isStringFiniteRegExp,
     {
       expected: "a string representing a finite number",
-      meta: {
-        _tag: "isStringFinite",
-        regExp: isStringFiniteRegExp
+      representation: {
+        id: "effect/schema/isStringFinite",
+        payload: null
       },
+      toJsonSchema: () => ({ pattern: isStringFiniteRegExp.source }),
       ...annotations
     }
   )
@@ -3669,10 +3740,11 @@ export function isStringBigInt(annotations?: Schema.Annotations.Filter) {
     isStringBigIntRegExp,
     {
       expected: "a string representing a bigint",
-      meta: {
-        _tag: "isStringBigInt",
-        regExp: isStringBigIntRegExp
+      representation: {
+        id: "effect/schema/isStringBigInt",
+        payload: null
       },
+      toJsonSchema: () => ({ pattern: isStringBigIntRegExp.source }),
       ...annotations
     }
   )
@@ -3720,10 +3792,11 @@ export function isStringSymbol(annotations?: Schema.Annotations.Filter) {
     isStringSymbolRegExp,
     {
       expected: "a string representing a symbol",
-      meta: {
-        _tag: "isStringSymbol",
-        regExp: isStringSymbolRegExp
+      representation: {
+        id: "effect/schema/isStringSymbol",
+        payload: null
       },
+      toJsonSchema: () => ({ pattern: isStringSymbolRegExp.source }),
       ...annotations
     }
   )
@@ -3769,9 +3842,6 @@ export function runChecks<T>(
 
 /** @internal */
 export const ClassTypeId = "~effect/Schema/Class"
-
-/** @internal */
-export const STRUCTURAL_ANNOTATION_KEY = "~structural"
 
 /**
  * Returns all annotations from the AST node.
@@ -3854,6 +3924,82 @@ export const resolveTitle: (ast: AST) => string | undefined = InternalAnnotation
  */
 export const resolveDescription: (ast: AST) => string | undefined = InternalAnnotations.resolveDescription
 
+type TreeFrame = {
+  readonly value: object
+  // Object keys or an array length snapshot.
+  readonly keys: ReadonlyArray<string> | number
+  index: number
+}
+
+function isJsonLeaf(u: unknown): boolean {
+  return u === null || typeof u === "string" || typeof u === "boolean" ||
+    typeof u === "number" && globalThis.Number.isFinite(u)
+}
+
+function isStringTreeLeaf(u: unknown): boolean {
+  return u === undefined || typeof u === "string"
+}
+
+function isTree(u: unknown, isLeaf: (u: unknown) => boolean): boolean {
+  const cache = new WeakMap<object, boolean>()
+  const stack: Array<TreeFrame> = []
+  outer: while (true) {
+    if (typeof u !== "object" || u === null) {
+      if (!isLeaf(u)) {
+        return false
+      }
+    } else {
+      const value = u
+      const cached = cache.get(value)
+      // `false` marks a node on the current path, while `true` marks a fully
+      // validated node that can be safely reused by a DAG.
+      if (cached === false) {
+        return false
+      }
+      if (cached === undefined) {
+        const isArray = Array.isArray(value)
+        if (!isArray) {
+          const prototype = Object.getPrototypeOf(value)
+          // A plain object from another realm has a different Object.prototype,
+          // but that prototype still has a null prototype.
+          if (
+            prototype !== null &&
+            prototype !== Object.prototype &&
+            Object.getPrototypeOf(prototype) !== null
+          ) {
+            return false
+          }
+        }
+        cache.set(value, false)
+        stack.push({
+          value,
+          keys: isArray ? value.length : Object.keys(value),
+          index: 0
+        })
+      }
+    }
+
+    while (stack.length > 0) {
+      const frame = stack[stack.length - 1]
+      const keys = frame.keys
+      if (typeof keys === "number") {
+        if (frame.index < keys) {
+          // A sparse slot is read as `undefined`; the leaf predicate determines
+          // whether that is valid for the current tree.
+          u = (frame.value as ReadonlyArray<unknown>)[frame.index++]
+          continue outer
+        }
+      } else if (frame.index < keys.length) {
+        u = (frame.value as Record<string, unknown>)[keys[frame.index++]]
+        continue outer
+      }
+      cache.set(frame.value, true)
+      stack.pop()
+    }
+    return true
+  }
+}
+
 /**
  * Returns true if the value is a JSON value.
  *
@@ -3862,51 +4008,7 @@ export const resolveDescription: (ast: AST) => string | undefined = InternalAnno
  * @internal
  */
 export function isJson(u: unknown): u is Schema.Json {
-  // `onPath` is the current recursion stack: nodes between the root and the
-  // one being visited. A hit here means we looped back to an ancestor — a
-  // real cycle, not a DAG — so the value is not JSON.
-  const onPath = new Set<unknown>()
-  // `validated` memoizes subtrees we've already fully checked. Without it, a
-  // diamond-shaped DAG (same node reached through multiple parents) would be
-  // re-traversed once per parent, which is exponential in the nesting depth.
-  const validated = new Set<unknown>()
-  return recur(u)
-
-  function recur(u: unknown): boolean {
-    if (u === null || typeof u === "string" || typeof u === "boolean") {
-      return true
-    }
-    if (typeof u === "number") {
-      return globalThis.Number.isFinite(u)
-    }
-    if (typeof u !== "object" || u === undefined) {
-      return false
-    }
-    if (onPath.has(u)) {
-      return false
-    }
-    if (validated.has(u)) {
-      return true
-    }
-    const isArray = Array.isArray(u)
-    if (!isArray) {
-      const prototype = Object.getPrototypeOf(u)
-      if (prototype !== null && Object.getPrototypeOf(prototype) !== null) {
-        return false
-      }
-    }
-    onPath.add(u)
-    const ok = isArray
-      ? u.every(recur)
-      : Object.keys(u).every((key) => recur((u as Record<string, unknown>)[key]))
-    // Pop on exit so siblings reaching the same node via a different path
-    // don't see it as an ancestor (that would reject valid DAGs).
-    onPath.delete(u)
-    if (ok) {
-      validated.add(u)
-    }
-    return ok
-  }
+  return isTree(u, isJsonLeaf)
 }
 
 /** @internal */
@@ -3917,42 +4019,37 @@ export const Json = new Declaration(
       Effect.succeed(input) :
       Effect.fail(new SchemaIssue.InvalidType(ast, Option.some(input))),
   {
-    typeConstructor: {
-      _tag: "effect/Json"
-    },
-    generation: {
-      runtime: `Schema.Json`,
-      Type: `Schema.Json`
+    representation: {
+      id: "effect/schema/Json",
+      payload: null
     },
     expected: "JSON value",
-    toCodecJson: () => new Link(unknown, SchemaTransformation.passthrough()),
+    toCodecJson: () => undefined,
+    toCodecStringTree: () => unknownToStringTree,
     toArbitrary: () => (fc: typeof FastCheck) => fc.jsonValue()
   }
 )
 
 /** @internal */
 export const MutableJson = annotate(Json, {
-  typeConstructor: {
-    _tag: "effect/MutableJson"
-  },
-  generation: {
-    runtime: `Schema.MutableJson`,
-    Type: `Schema.MutableJson`
+  representation: {
+    id: "effect/schema/MutableJson",
+    payload: null
   }
 })
 
 /** @internal */
-export const unknownToNull = new Link(
-  null_,
-  new SchemaTransformation.Transformation(
-    SchemaGetter.passthrough(),
-    SchemaGetter.transform(() => null)
-  )
+export const unknownToJson = new Link(
+  Json,
+  SchemaTransformation.passthrough()
 )
 
 /** @internal */
-export const unknownToJson = new Link(
-  Json,
+export const objectKeywordToJson = new Link(
+  new Union([
+    new Arrays(false, [], [Json]),
+    new Objects([], [new IndexSignature(string, Json, undefined)])
+  ], "anyOf"),
   SchemaTransformation.passthrough()
 )
 
@@ -3964,25 +4061,7 @@ export const unknownToJson = new Link(
  * @internal
  */
 export function isStringTree(u: unknown): u is Schema.StringTree {
-  const seen = new Set<unknown>()
-  return recur(u)
-
-  function recur(u: unknown): boolean {
-    if (u === undefined || typeof u === "string") {
-      return true
-    }
-    if (typeof u !== "object" || u === null) {
-      return false
-    }
-    if (seen.has(u)) {
-      return false
-    }
-    seen.add(u)
-    if (Array.isArray(u)) {
-      return u.every(recur)
-    }
-    return Object.keys(u).every((key) => recur((u as Record<string, unknown>)[key]))
-  }
+  return isTree(u, isStringTreeLeaf)
 }
 
 const StringTree = new Declaration(
@@ -3991,7 +4070,7 @@ const StringTree = new Declaration(
     isStringTree(input) ?
       Effect.succeed(input) :
       Effect.fail(new SchemaIssue.InvalidType(ast, Option.some(input))),
-  { expected: "StringTree" }
+  { expected: "StringTree", toCodecStringTree: () => undefined }
 )
 
 /** @internal */

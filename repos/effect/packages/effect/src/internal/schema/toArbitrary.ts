@@ -13,6 +13,7 @@ import * as Struct from "../../Struct.ts"
 import type * as FastCheck from "../../testing/FastCheck.ts"
 import * as UndefinedOr from "../../UndefinedOr.ts"
 import { errorWithPath } from "../errors.ts"
+import * as InternalRecord from "../record.ts"
 import * as InternalAnnotations from "./annotations.ts"
 
 const arbitraryMemoMap = new WeakMap<SchemaAST.AST, LazyArbitraryWithContext<any>>()
@@ -131,8 +132,7 @@ const combiner: Combiner.Combiner<any> = Struct.makeCombiner({
   noInfinity: or,
   noNaN: or,
   patterns: concat,
-  unique: or,
-  valid: or
+  unique: or
 }, {
   omitKeyWhen: Predicate.isUndefined
 })
@@ -288,7 +288,7 @@ function objectWithOptionalCount(
     const out: Record<PropertyKey, any> = {}
     for (const name of orderedNames) {
       if (keep.has(name)) {
-        out[name] = base[name]
+        InternalRecord.assignProperty(out, name, base[name])
       }
     }
     return out
@@ -403,10 +403,8 @@ function reportChecks(report: MutableReport, checks: SchemaAST.Checks | undefine
         visit(child, nextCovered)
       }
     } else if (!nextCovered) {
-      const meta = check.annotations?.meta
-      const description = typeof meta === "object" && meta !== null && "_tag" in meta && typeof meta._tag === "string"
-        ? meta._tag
-        : check.annotations?.identifier ?? check.annotations?.expected
+      const description = check.annotations?.representation?.id ?? check.annotations?.identifier ??
+        check.annotations?.expected
       report.warnings.push({ _tag: "OpaqueFilter", path, ...(description === undefined ? {} : { description }) })
     }
   }
@@ -773,7 +771,7 @@ function base(ast: SchemaAST.AST, path: ReadonlyArray<PropertyKey>): LazyArbitra
             return undefined
           }
           requiredKeys.push(name)
-          pss[name] = out
+          InternalRecord.assignProperty(pss, name, out)
         }
         let optionalCount = Math.max(0, (ctx.constraint?.minLength ?? 0) - requiredKeys.length)
         for (const [name, out] of optionals) {
@@ -782,7 +780,7 @@ function base(ast: SchemaAST.AST, path: ReadonlyArray<PropertyKey>): LazyArbitra
           }
           optionalCount--
           requiredKeys.push(name)
-          pss[name] = out
+          InternalRecord.assignProperty(pss, name, out)
         }
         if (optionalCount > 0 && ast.indexSignatures.length === 0) {
           return undefined
@@ -828,7 +826,7 @@ function base(ast: SchemaAST.AST, path: ReadonlyArray<PropertyKey>): LazyArbitra
           } else {
             requiredKeys.push(name)
           }
-          pss[name] = arbitrary(fc, reset, recursionStack)
+          InternalRecord.assignProperty(pss, name, arbitrary(fc, reset, recursionStack))
         }
         // When property-count constraints must be satisfied by selecting
         // optional keys (no index signatures are available to fill the gap),

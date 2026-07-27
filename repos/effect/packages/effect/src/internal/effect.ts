@@ -83,8 +83,8 @@ import {
 } from "./core.ts"
 import * as doNotation from "./doNotation.ts"
 import * as InternalMetric from "./metric.ts"
+import * as InternalRecord from "./record.ts"
 import {
-  CurrentConcurrency,
   CurrentErrorReporters,
   CurrentLogAnnotations,
   CurrentLogLevel,
@@ -2112,6 +2112,32 @@ export const updateService: {
 )
 
 /** @internal */
+export const updateServiceScoped = <I, A>(
+  service: Context.Key<I, A>,
+  update: (value: A) => A,
+  options?: {
+    readonly reset?: ((original: A, updated: A, current: A) => A) | undefined
+  } | undefined
+): Effect.Effect<void, never, I | Scope.Scope> =>
+  uninterruptible(withFiber((fiber) => {
+    const original = Context.getUnsafe(fiber.context, service)
+    const updated = update(original)
+    fiber.setContext(Context.add(fiber.context, service, updated))
+    return scopeAddFinalizerExit(Context.getUnsafe(fiber.context, scopeTag), (_) => {
+      const current = Context.getUnsafe(fiber.context, service)
+      let next: A
+      if (options?.reset === undefined) {
+        if (current !== updated) return void_
+        next = original
+      } else {
+        next = options.reset(original, updated, current)
+      }
+      fiber.setContext(Context.add(fiber.context, service, next))
+      return void_
+    })
+  }))
+
+/** @internal */
 export const context = <R = never>(): Effect.Effect<Context.Context<R>> => getContext as any
 const getContext = withFiber((fiber) => succeed(fiber.context))
 
@@ -2221,17 +2247,6 @@ export const provideServiceEffect: {
   ): Effect.Effect<A, E | E2, Exclude<R, I> | R2> =>
     flatMap(acquire, (implementation) => provideService(self, service, implementation))
 )
-
-/** @internal */
-export const withConcurrency: {
-  (
-    concurrency: "unbounded" | number
-  ): <A, E, R>(self: Effect.Effect<A, E, R>) => Effect.Effect<A, E, R>
-  <A, E, R>(
-    self: Effect.Effect<A, E, R>,
-    concurrency: "unbounded" | number
-  ): Effect.Effect<A, E, R>
-} = provideService(CurrentConcurrency)
 
 // ----------------------------------------------------------------------------
 // zipping
@@ -4353,7 +4368,7 @@ export const all = <
         Object.entries(arg),
         ([key, effect]) =>
           map(options?.mode === "result" ? result(effect) : effect, (value) => {
-            out[key] = value
+            InternalRecord.assignProperty(out, key, value)
           }),
         {
           discard: true,
@@ -4615,10 +4630,8 @@ export const forEach: {
     readonly discard?: boolean | undefined
   }
 ): Effect.Effect<any, E, R> =>
-  withFiber((parent) => {
-    const concurrencyOption = options?.concurrency === "inherit"
-      ? parent.getRef(CurrentConcurrency)
-      : (options?.concurrency ?? 1)
+  suspend(() => {
+    const concurrencyOption = options?.concurrency ?? 1
     const concurrency = concurrencyOption === "unbounded"
       ? Number.POSITIVE_INFINITY
       : Math.max(1, concurrencyOption)
@@ -5489,7 +5502,7 @@ const succeedFalse = succeed(false)
 
 class Latch implements _Latch.Latch {
   waiters: Array<(_: Effect.Effect<void>) => void> = []
-  scheduled = false
+  scheduled: Array<(_: Effect.Effect<void>) => void> | undefined = undefined
   private _isOpen: boolean
 
   constructor(isOpen: boolean) {
@@ -5497,17 +5510,35 @@ class Latch implements _Latch.Latch {
   }
 
   private scheduleUnsafe(fiber: Fiber.Fiber<unknown, unknown>) {
-    if (this.scheduled || this.waiters.length === 0) {
+    if (this.waiters.length === 0) {
       return succeedTrue
     }
-    this.scheduled = true
-    fiber.currentDispatcher.scheduleTask(this.flushWaiters, 0)
+    if (this.scheduled === undefined) {
+      this.scheduled = this.waiters
+      fiber.currentDispatcher.scheduleTask(this.flushScheduled, 0)
+    } else {
+      for (let i = 0; i < this.waiters.length; i++) {
+        this.scheduled.push(this.waiters[i])
+      }
+    }
+    this.waiters = []
     return succeedTrue
   }
-  private flushWaiters = () => {
-    this.scheduled = false
+  private flushScheduled = () => {
+    if (this.scheduled === undefined) return
+    const waiters = this.scheduled
+    this.scheduled = undefined
+    for (let i = 0; i < waiters.length; i++) {
+      waiters[i](exitVoid)
+    }
+  }
+  private flushWaiters() {
+    // swap both arrays out before any resume runs: a resumed waiter can
+    // reentrantly close the latch and register new waiters, which must not
+    // be drained by this flush
     const waiters = this.waiters
     this.waiters = []
+    this.flushScheduled()
     for (let i = 0; i < waiters.length; i++) {
       waiters[i](exitVoid)
     }
@@ -5531,9 +5562,14 @@ class Latch implements _Latch.Latch {
     }
     this.waiters.push(resume)
     return sync(() => {
-      const index = this.waiters.indexOf(resume)
+      let index = this.waiters.indexOf(resume)
       if (index !== -1) {
         this.waiters.splice(index, 1)
+      } else if (this.scheduled !== undefined) {
+        index = this.scheduled.indexOf(resume)
+        if (index !== -1) {
+          this.scheduled.splice(index, 1)
+        }
       }
     })
   })
@@ -5885,11 +5921,11 @@ export const annotateSpans: {
     ...args: [Record<string, unknown>] | [key: string, value: unknown]
   ): Effect.Effect<A, E, R> =>
     updateService(effect, TracerSpanAnnotations, (annotations) => {
-      const newAnnotations = { ...annotations }
+      const newAnnotations = args.length === 1 ? { ...annotations, ...args[0] } : { ...annotations }
       if (args.length === 1) {
-        Object.assign(newAnnotations, args[0])
+        return newAnnotations
       } else {
-        newAnnotations[args[0]] = args[1]
+        InternalRecord.assignProperty(newAnnotations, args[0], args[1])
       }
       return newAnnotations
     })
@@ -6160,7 +6196,7 @@ export const annotateLogsScoped: {
     const next = { ...prev }
     for (let i = 0; i < entries.length; i++) {
       const [key, value] = entries[i]
-      next[key] = value
+      InternalRecord.assignProperty(next, key, value)
     }
     fiber.setContext(Context.add(fiber.context, CurrentLogAnnotations, next))
     return scopeAddFinalizerExit(Context.getUnsafe(fiber.context, scopeTag), (_) => {
@@ -6169,8 +6205,8 @@ export const annotateLogsScoped: {
       for (let i = 0; i < entries.length; i++) {
         const [key, value] = entries[i]
         if (current[key] !== value) continue
-        if (key in prev) {
-          next[key] = prev[key]
+        if (Object.hasOwn(prev, key)) {
+          InternalRecord.assignProperty(next, key, prev[key])
         } else {
           delete next[key]
         }
@@ -6514,7 +6550,7 @@ export const tracerLogger = loggerMake<unknown, void>(({ cause, fiber, logLevel,
   if (span === undefined || span._tag === "ExternalSpan") return
   const attributes: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(annotations)) {
-    attributes[key] = value
+    InternalRecord.assignProperty(attributes, key, value)
   }
   attributes["effect.fiberId"] = fiber.id
   attributes["effect.logLevel"] = logLevel.toUpperCase()

@@ -1,10 +1,63 @@
+import { assert } from "@effect/vitest"
 import { SchemaRepresentation } from "effect"
 import { describe, it } from "vitest"
 import { deepStrictEqual, throws } from "../../utils/assert.ts"
 
-describe("fromJsonSchemaMultiDocument", () => {
+describe("SchemaRepresentation.fromJsonSchemaMultiDocument", () => {
+  it("preserves an onEnter exception by identity", () => {
+    const cause = new Error("boom")
+
+    throws(
+      () =>
+        SchemaRepresentation.fromJsonSchemaMultiDocument({
+          dialect: "draft-2020-12",
+          schemas: [{ type: "string" }],
+          definitions: {}
+        }, {
+          onEnter: () => {
+            throw cause
+          }
+        }),
+      (error: unknown) => {
+        assert.strictEqual(error, cause)
+        return undefined
+      }
+    )
+  })
+
+  it("preserves contentSchema as an annotation without traversing it", () => {
+    const document = SchemaRepresentation.fromSchemaMultiDocument(
+      SchemaRepresentation.fromJsonSchemaMultiDocument({
+        dialect: "draft-2020-12",
+        schemas: [{
+          type: "string",
+          contentMediaType: "application/json",
+          contentSchema: { $ref: "#/$defs/Payload" }
+        }],
+        definitions: {
+          Payload: {
+            type: "object",
+            properties: { value: { type: "number" } },
+            required: ["value"],
+            additionalProperties: false
+          }
+        }
+      })
+    )
+
+    const content = document.representations[0]
+    assert.strictEqual(content._tag, "String")
+    assert.deepStrictEqual(Object.keys(document.references), ["Payload"])
+    if (content._tag === "String") {
+      assert.deepStrictEqual(content.annotations, {
+        contentMediaType: "application/json",
+        contentSchema: { $ref: "#/$defs/Payload" }
+      })
+    }
+  })
+
   it("preserves root order and shares definitions", () => {
-    const document = SchemaRepresentation.fromJsonSchemaMultiDocument({
+    const document = SchemaRepresentation.fromSchemaMultiDocument(SchemaRepresentation.fromJsonSchemaMultiDocument({
       dialect: "draft-2020-12",
       schemas: [
         { $ref: "#/$defs/A" },
@@ -15,30 +68,54 @@ describe("fromJsonSchemaMultiDocument", () => {
       definitions: {
         A: { type: "string", minLength: 1 }
       }
-    })
+    }))
 
-    const definition = {
-      _tag: "String" as const,
-      checks: [{ _tag: "Filter" as const, meta: { _tag: "isMinLength" as const, minLength: 1 } }]
-    }
-    deepStrictEqual(document, {
+    deepStrictEqual(SchemaRepresentation.toJsonMultiDocument(document), {
       representations: [
         { _tag: "Reference", $ref: "A" },
-        { ...definition, annotations: { description: "second" } },
+        {
+          _tag: "Suspend",
+          checks: [],
+          annotations: { description: "second" },
+          thunk: { _tag: "Reference", $ref: "A" }
+        },
         {
           _tag: "Arrays",
           elements: [],
           rest: [{ _tag: "Reference", $ref: "A" }],
           checks: []
         },
-        { ...definition, annotations: { description: "fourth" } }
+        {
+          _tag: "Suspend",
+          checks: [],
+          annotations: { description: "fourth" },
+          thunk: { _tag: "Reference", $ref: "A" }
+        }
       ],
-      references: { A: definition }
+      references: {
+        A: {
+          _tag: "String",
+          checks: [{
+            _tag: "Filter",
+            representation: {
+              id: "effect/schema/isMinLength",
+              payload: { minLength: 1 }
+            },
+            annotations: {
+              identifier: "A",
+              expected: "a value with a length of at least 1",
+              "~structural": true,
+              arbitrary: { constraint: { minLength: 1 } }
+            },
+            aborted: false
+          }]
+        }
+      }
     })
   })
 
   it("resolves alias chains when combining a reference", () => {
-    const document = SchemaRepresentation.fromJsonSchemaMultiDocument({
+    const document = SchemaRepresentation.fromSchemaMultiDocument(SchemaRepresentation.fromJsonSchemaMultiDocument({
       dialect: "draft-2020-12",
       schemas: [{ $ref: "#/$defs/A", description: "root" }],
       definitions: {
@@ -46,43 +123,87 @@ describe("fromJsonSchemaMultiDocument", () => {
         B: { $ref: "#/$defs/C" },
         C: { type: "number" }
       }
-    })
+    }))
 
-    deepStrictEqual(document, {
+    deepStrictEqual(SchemaRepresentation.toJsonMultiDocument(document), {
       representations: [{
-        _tag: "Number",
-        checks: [{ _tag: "Filter", meta: { _tag: "isFinite" } }],
-        annotations: { description: "root" }
+        _tag: "Suspend",
+        checks: [],
+        annotations: { description: "root" },
+        thunk: { _tag: "Reference", $ref: "A" }
       }],
       references: {
-        A: { _tag: "Reference", $ref: "B" },
-        B: { _tag: "Reference", $ref: "C" },
+        A: {
+          _tag: "Number",
+          checks: [{
+            _tag: "Filter",
+            representation: { id: "effect/schema/isFinite", payload: null },
+            annotations: {
+              identifier: "A",
+              expected: "a finite number",
+              arbitrary: { constraint: { noInfinity: true, noNaN: true } }
+            },
+            aborted: false
+          }]
+        },
+        B: {
+          _tag: "Number",
+          checks: [{
+            _tag: "Filter",
+            representation: { id: "effect/schema/isFinite", payload: null },
+            annotations: {
+              identifier: "B",
+              expected: "a finite number",
+              arbitrary: { constraint: { noInfinity: true, noNaN: true } }
+            },
+            aborted: false
+          }]
+        },
         C: {
           _tag: "Number",
-          checks: [{ _tag: "Filter", meta: { _tag: "isFinite" } }]
+          checks: [{
+            _tag: "Filter",
+            representation: { id: "effect/schema/isFinite", payload: null },
+            annotations: {
+              identifier: "C",
+              expected: "a finite number",
+              arbitrary: { constraint: { noInfinity: true, noNaN: true } }
+            },
+            aborted: false
+          }]
         }
       }
     })
   })
 
   it("tracks recursive definitions independently", () => {
-    const document = SchemaRepresentation.fromJsonSchemaMultiDocument({
+    const document = SchemaRepresentation.fromSchemaMultiDocument(SchemaRepresentation.fromJsonSchemaMultiDocument({
       dialect: "draft-2020-12",
       schemas: [{ $ref: "#/$defs/A" }, { $ref: "#/$defs/B" }],
       definitions: {
         A: { $ref: "#/$defs/A" },
         B: { $ref: "#/$defs/B" }
       }
-    })
+    }))
 
-    deepStrictEqual(document, {
+    deepStrictEqual(SchemaRepresentation.toJsonMultiDocument(document), {
       representations: [
         { _tag: "Reference", $ref: "A" },
         { _tag: "Reference", $ref: "B" }
       ],
       references: {
-        A: { _tag: "Suspend", thunk: { _tag: "Reference", $ref: "A" }, checks: [] },
-        B: { _tag: "Suspend", thunk: { _tag: "Reference", $ref: "B" }, checks: [] }
+        A: {
+          _tag: "Suspend",
+          annotations: { identifier: "A" },
+          checks: [],
+          thunk: { _tag: "Reference", $ref: "A" }
+        },
+        B: {
+          _tag: "Suspend",
+          annotations: { identifier: "B" },
+          checks: [],
+          thunk: { _tag: "Reference", $ref: "B" }
+        }
       }
     })
   })
@@ -95,7 +216,7 @@ describe("fromJsonSchemaMultiDocument", () => {
           schemas: [{ $ref: "#/$defs/Missing", description: "resolve" }],
           definitions: {}
         }),
-      "Reference Missing not found"
+      "Invalid reference Missing\n  at [\"schemas\"][0][\"$ref\"]"
     )
   })
 
@@ -110,7 +231,7 @@ describe("fromJsonSchemaMultiDocument", () => {
             B: { $ref: "#/$defs/A" }
           }
         }),
-      "Circular reference detected: A"
+      "Invalid reference A\n  at [\"schemas\"][0][\"$ref\"]"
     )
   })
 })

@@ -5733,7 +5733,8 @@ export const catchReasons: {
     }[keyof Cases]
   >
 } = dual((args) => isStream(args[0]), (self, errorTag, cases, orElse) => {
-  const handlers: Record<string, (reason: any, error: any) => Channel.Channel<any, any, any, any, any, any, any>> = {}
+  const handlers: Record<string, (reason: any, error: any) => Channel.Channel<any, any, any, any, any, any, any>> =
+    Object.create(null)
   for (const key of Object.keys(cases)) {
     const handler = (cases as any)[key]
     handlers[key] = (reason, error) => handler(reason, error).channel
@@ -9720,7 +9721,7 @@ export const interruptWhen: {
 )
 
 /**
- * Stops a stream after the current element when an effect completes.
+ * Stops a stream after the current pull when an effect completes.
  *
  * **When to use**
  *
@@ -9733,8 +9734,10 @@ export const interruptWhen: {
  *
  * **Gotchas**
  *
- * This does not interrupt an in-progress pull. Use {@link interruptWhen} when
- * the stream should be interrupted immediately.
+ * This does not interrupt or truncate an in-progress pull. A pull may emit
+ * multiple elements in a single chunk, in which case the entire chunk is
+ * emitted. Use {@link interruptWhen} when the stream should be interrupted
+ * immediately.
  *
  * **Example** (Halting a stream after an effect completes)
  *
@@ -11333,32 +11336,69 @@ export const toAsyncIterableWith: {
   ): AsyncIterable<A> => ({
     [Symbol.asyncIterator]() {
       const runPromise = Effect.runPromiseWith(context)
-      const runPromiseExit = Effect.runPromiseExitWith(context)
+      const runFork = Effect.runForkWith(context)
       const scope = Scope.makeUnsafe()
       let pull: Pull.Pull<Arr.NonEmptyReadonlyArray<A>, E, void, R> | undefined
       let currentIter: Iterator<A> | undefined
+      let currentFiber: Fiber.Fiber<Arr.NonEmptyReadonlyArray<A>, E | Cause.Done<void>> | undefined
+      let closePromise: Promise<IteratorResult<A>> | undefined
+      const close = (exit: Exit.Exit<unknown, unknown>): Promise<IteratorResult<A>> => {
+        if (closePromise) return closePromise
+        const fiber = currentFiber
+        closePromise = runPromise(Effect.as(
+          Effect.andThen(
+            fiber ? Fiber.interrupt(fiber) : Effect.void,
+            Scope.close(scope, exit)
+          ),
+          { done: true, value: undefined }
+        ))
+        return closePromise
+      }
+      const closeAndReportError = async (exit: Exit.Exit<unknown, unknown>): Promise<void> => {
+        try {
+          await close(exit)
+        } catch (error) {
+          await runPromise(Effect.logError("Suppressed error while closing Stream async iterator", error))
+        }
+      }
       return {
         async next(): Promise<IteratorResult<A>> {
+          if (closePromise) return closePromise
           if (currentIter) {
             const next = currentIter.next()
             if (!next.done) return next
             currentIter = undefined
           }
-          pull ??= await runPromise(Channel.toPullScoped(self.channel, scope))
-          const exit = await runPromiseExit(pull)
+          const fiber = runFork(
+            pull ??
+              Effect.flatMap(Channel.toPullScoped(self.channel, scope), (nextPull) => {
+                pull = nextPull
+                return nextPull
+              })
+          )
+          currentFiber = fiber
+          const exit = await runPromise(Fiber.await(fiber))
+          if (currentFiber === fiber) {
+            currentFiber = undefined
+          }
           if (Exit.isSuccess(exit)) {
             currentIter = exit.value[Symbol.iterator]()
             return currentIter.next()
           } else if (Pull.isDoneCause(exit.cause)) {
-            return { done: true, value: undefined }
+            return close(Exit.void)
           }
+          if (closePromise && Cause.hasInterruptsOnly(exit.cause)) {
+            return closePromise
+          }
+          await closeAndReportError(exit)
           throw Cause.squash(exit.cause)
         },
-        return(_) {
-          return runPromise(Effect.as(
-            Scope.close(scope, Exit.void),
-            { done: true, value: undefined }
-          ))
+        return() {
+          return close(Exit.void)
+        },
+        async throw(error) {
+          await closeAndReportError(Exit.die(error))
+          throw error
         }
       }
     }
