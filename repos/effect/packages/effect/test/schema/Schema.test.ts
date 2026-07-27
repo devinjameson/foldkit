@@ -73,6 +73,7 @@ describe("Schema", () => {
 
       assertTrue(error instanceof Error)
       assertTrue(Schema.isSchemaError(error))
+      assertFalse(Schema.isSchemaError({ "~effect/SchemaError/SchemaError": false }))
       strictEqual(error._tag, "SchemaError")
       strictEqual(error.name, "SchemaError")
       strictEqual(error.issue, result.failure)
@@ -1835,66 +1836,6 @@ Expected a value between -2147483648 and 2147483647, got 9007199254740992`
       })
     })
 
-    describe("Structural checks", () => {
-      it("Array + isMinLength", async () => {
-        const schema = Schema.Struct({
-          tags: Schema.Array(Schema.NonEmptyString).check(Schema.isMinLength(3))
-        })
-        const asserts = new TestSchema.Asserts(schema)
-
-        const decoding = asserts.decoding()
-        await decoding.fail(
-          {},
-          `Missing key
-  at ["tags"]`
-        )
-        const decodingAll = asserts.decoding({ parseOptions: { errors: "all" } })
-        await decodingAll.fail(
-          { tags: ["a", ""] },
-          `Expected a value with a length of at least 1, got ""
-  at ["tags"][1]
-Expected a value with a length of at least 3, got ["a",""]
-  at ["tags"]`
-        )
-      })
-
-      it("Record + isMaxProperties", async () => {
-        const schema = Schema.Record(Schema.String, Schema.Finite).check(Schema.isMaxProperties(2))
-        const asserts = new TestSchema.Asserts(schema)
-
-        const decoding = asserts.decoding()
-        await decoding.fail(
-          null,
-          `Expected object, got null`
-        )
-        const decodingAll = asserts.decoding({ parseOptions: { errors: "all" } })
-        await decodingAll.fail(
-          { a: 1, b: NaN, c: 3 },
-          `Expected a finite number, got NaN
-  at ["b"]
-Expected a value with at most 2 entries, got {"a":1,"b":NaN,"c":3}`
-        )
-      })
-
-      it("ReadonlyMap + isMaxSize", async () => {
-        const schema = Schema.ReadonlyMap(Schema.String, Schema.Finite).check(Schema.isMaxSize(2))
-        const asserts = new TestSchema.Asserts(schema)
-
-        const decoding = asserts.decoding()
-        await decoding.fail(
-          null,
-          `Expected ReadonlyMap, got null`
-        )
-        const decodingAll = asserts.decoding({ parseOptions: { errors: "all" } })
-        await decodingAll.fail(
-          new Map([["a", 1], ["b", NaN], ["c", 3]]),
-          `Expected a finite number, got NaN
-  at ["entries"][1][1]
-Expected a value with a size of at most 2, got Map([["a",1],["b",NaN],["c",3]])`
-        )
-      })
-    })
-
     describe("Array checks", () => {
       it("UniqueArray", async () => {
         const schema = Schema.UniqueArray(Schema.Struct({
@@ -1957,9 +1898,11 @@ Expected a value with a size of at most 2, got Map([["a",1],["b",NaN],["c",3]])`
 
       const decoding = asserts.decoding()
       await decoding.succeed("2021-01-01T00:00:00.000Z", new Date("2021-01-01T00:00:00.000Z"))
+      await decoding.fail("invalid", `Expected a valid Date, got Invalid Date`)
 
       const encoding = asserts.encoding()
       await encoding.succeed(new Date("2021-01-01T00:00:00.000Z"), "2021-01-01T00:00:00.000Z")
+      await encoding.fail(new Date(NaN), `Expected a valid Date, got Invalid Date`)
     })
 
     it("DateFromMillis", async () => {
@@ -1971,17 +1914,18 @@ Expected a value with a size of at most 2, got Map([["a",1],["b",NaN],["c",3]])`
 
       const decoding = asserts.decoding()
       await decoding.succeed(0, new Date(0))
-      assertTrue(Schema.decodeSync(schema)(NaN) instanceof Date)
-      assertTrue(Schema.decodeSync(schema)(Infinity) instanceof Date)
-      assertTrue(Schema.decodeSync(schema)(-Infinity) instanceof Date)
+      await decoding.fail(NaN, `Expected an integer, got NaN`)
+      await decoding.fail(Infinity, `Expected an integer, got Infinity`)
+      await decoding.fail(-Infinity, `Expected an integer, got -Infinity`)
       await decoding.fail(null, `Expected number, got null`)
+      await decoding.fail(8640000000000001, `Expected a valid Date, got Invalid Date`)
 
       const encoding = asserts.encoding()
       await encoding.succeed(new Date(0), 0)
-      strictEqual(Schema.encodeSync(schema)(new Date("invalid")), NaN)
-      strictEqual(Schema.encodeSync(schema)(new Date(NaN)), NaN)
-      strictEqual(Schema.encodeSync(schema)(new Date(Infinity)), NaN)
-      strictEqual(Schema.encodeSync(schema)(new Date(-Infinity)), NaN)
+      await encoding.fail(new Date("invalid"), `Expected a valid Date, got Invalid Date`)
+      await encoding.fail(new Date(NaN), `Expected a valid Date, got Invalid Date`)
+      await encoding.fail(new Date(Infinity), `Expected a valid Date, got Invalid Date`)
+      await encoding.fail(new Date(-Infinity), `Expected a valid Date, got Invalid Date`)
     })
 
     it("FiniteFromString", async () => {
@@ -2646,41 +2590,6 @@ Expected a value with a size of at most 2, got Map([["a",1],["b",NaN],["c",3]])`
         `Expected a length > 1, got {"a":"a"}`
       )
       await encoding.succeed({ a: "aa" }, { b: "aa" })
-    })
-
-    it(`Struct & encoding chain & structural checks should check the local value with errors: "all"`, async () => {
-      const local = Schema.Struct({ a: Schema.Finite }).check(Schema.isMaxProperties(1))
-      const schema = Schema.Struct({ b: Schema.Number, c: Schema.String }).pipe(
-        Schema.decodeTo(local, {
-          decode: SchemaGetter.transform<
-            { readonly a: number },
-            { readonly b: number; readonly c: string }
-          >((o) => ({ a: o.b })),
-          encode: SchemaGetter.transform<
-            { readonly b: number; readonly c: string },
-            { readonly a: number }
-          >((o) => ({ b: o.a, c: "" }))
-        })
-      )
-      assertTrue(SchemaAST.isObjects(schema.ast))
-      strictEqual(schema.ast.encoding?.length, 1)
-      strictEqual(schema.ast.checks?.length, 1)
-      const asserts = new TestSchema.Asserts(schema)
-
-      const decoding = asserts.decoding({ parseOptions: { errors: "all" } })
-      await decoding.fail(
-        { b: NaN, c: "extra" },
-        `Expected a finite number, got NaN
-  at ["a"]`
-      )
-
-      const encoding = asserts.encoding({ parseOptions: { errors: "all" } })
-      await encoding.fail(
-        { a: NaN },
-        `Expected a finite number, got NaN
-  at ["a"]`
-      )
-      await encoding.succeed({ a: 1 }, { b: 1, c: "" })
     })
 
     it("should work with withConstructorDefault", async () => {
@@ -3420,6 +3329,32 @@ Expected a value with a size of at most 2, got Map([["a",1],["b",NaN],["c",3]])`
   })
 
   describe("make", () => {
+    it("preserves __proto__ as an own option", () => {
+      const value = { polluted: true }
+      const schema = Schema.make(Schema.String.ast, {
+        ["__proto__"]: value
+      })
+
+      assertTrue(Schema.isSchema(schema))
+      assertTrue(Object.hasOwn(schema, "__proto__"))
+      strictEqual((schema as any)["__proto__"], value)
+    })
+
+    it("preserves name and length as options", () => {
+      const schema = Schema.make<Schema.String>(Schema.String.ast, {
+        name: "CustomSchema",
+        length: 2
+      })
+
+      strictEqual((schema as any).name, "CustomSchema")
+      strictEqual((schema as any).length, 2)
+
+      const rebuilt = schema.annotate({})
+
+      strictEqual((rebuilt as any).name, "CustomSchema")
+      strictEqual((rebuilt as any).length, 2)
+    })
+
     it("should throw an error when the cause contains both a schema issue and a defect", () => {
       const cause = Cause.combine(
         Cause.fail(new Schema.SchemaError(new SchemaIssue.InvalidValue(Option.some("a"), { message: "schema issue" }))),
@@ -4337,15 +4272,26 @@ Expected a value with a size of at most 2, got Map([["a",1],["b",NaN],["c",3]])`
       await decoding.fail("a", `Expected exactly one member to match the input "a"`)
     })
 
-    it("{} & Literal", async () => {
+    it("Struct({}) preserves its semantics in a union", async () => {
       const schema = Schema.Union([
         Schema.Struct({}),
-        Schema.Literal("a")
+        Schema.Null
       ])
       const asserts = new TestSchema.Asserts(schema)
 
       const decoding = asserts.decoding()
+      const symbol = Symbol()
+      const fn = () => {}
+      await decoding.succeed("a")
+      await decoding.succeed(1)
+      await decoding.succeed(true)
+      await decoding.succeed(symbol)
+      await decoding.succeed(1n)
+      await decoding.succeed(fn)
+      await decoding.succeed({})
       await decoding.succeed([])
+      await decoding.succeed(null)
+      await decoding.fail(undefined, `Expected object | array | null, got undefined`)
     })
 
     describe("should exclude members based on failed sentinels", () => {
@@ -4881,17 +4827,13 @@ Expected a value with a size of at most 2, got Map([["a",1],["b",NaN],["c",3]])`
 
     const decoding = asserts.decoding()
     await decoding.succeed(new Date("2021-01-01"))
-    await decoding.fail(null, `Expected Date, got null`)
-    await decoding.fail(0, `Expected Date, got 0`)
-  })
+    await decoding.fail(new Date(NaN), `Expected a valid Date, got Invalid Date`)
+    await decoding.fail(null, `Expected a valid Date, got null`)
+    await decoding.fail(0, `Expected a valid Date, got 0`)
 
-  it("DateValid", async () => {
-    const schema = Schema.DateValid
-    const asserts = new TestSchema.Asserts(schema)
-
-    if (verifyGeneration) {
-      asserts.arbitrary().verifyGeneration()
-    }
+    const encoding = asserts.encoding()
+    await encoding.succeed(new Date("2021-01-01"))
+    await encoding.fail(new Date(NaN), `Expected a valid Date, got Invalid Date`)
   })
 
   it("DateTimeUtc", async () => {
@@ -4919,7 +4861,7 @@ Expected a value with a size of at most 2, got Map([["a",1],["b",NaN],["c",3]])`
 
     const decoding = asserts.decoding()
     await decoding.succeed(new Date("2021-01-01T00:00:00.000Z"), DateTime.makeUnsafe("2021-01-01T00:00:00.000Z"))
-    await decoding.fail(new Date("invalid date"), `Expected a valid date, got Invalid Date`)
+    await decoding.fail(new Date("invalid date"), `Expected a valid Date, got Invalid Date`)
 
     const encoding = asserts.encoding()
     await encoding.succeed(DateTime.makeUnsafe("2021-01-01T00:00:00.000Z"), new Date("2021-01-01T00:00:00.000Z"))
@@ -5169,6 +5111,12 @@ Expected a value with a size of at most 2, got Map([["a",1],["b",NaN],["c",3]])`
   })
 
   describe("Opaque", () => {
+    it("returns the original schema", () => {
+      const schema = Schema.Struct({ a: Schema.String })
+
+      strictEqual(Schema.Opaque<{ readonly a: string }>()(schema), schema)
+    })
+
     it("Struct", () => {
       class A extends Schema.Opaque<A>()(Schema.Struct({ a: Schema.String })) {}
 
@@ -5245,11 +5193,14 @@ Expected a value with a size of at most 2, got Map([["a",1],["b",NaN],["c",3]])`
     const decoding = asserts.decoding()
     await decoding.succeed(0n, Duration.zero)
     await decoding.succeed(1000n, Duration.nanos(1000n))
+    await decoding.succeed(-1000n, Duration.nanos(-1000n))
 
     const encoding = asserts.encoding()
     await encoding.succeed(Duration.millis(5), 5_000_000n)
     await encoding.succeed(Duration.nanos(5000n), 5000n)
+    await encoding.succeed(Duration.nanos(-5000n), -5000n)
     await encoding.fail(Duration.infinity, "Unable to encode Infinity into a bigint")
+    await encoding.fail(Duration.negativeInfinity, "Unable to encode -Infinity into a bigint")
   })
 
   it("DurationFromMillis", async () => {
@@ -5262,16 +5213,19 @@ Expected a value with a size of at most 2, got Map([["a",1],["b",NaN],["c",3]])`
 
     const decoding = asserts.decoding()
     await decoding.succeed(Infinity, Duration.infinity)
+    await decoding.succeed(-Infinity, Duration.negativeInfinity)
     await decoding.succeed(0, Duration.millis(0))
+    await decoding.succeed(-1, Duration.millis(-1))
     await decoding.succeed(1000, Duration.seconds(1))
     await decoding.succeed(60 * 1000, Duration.minutes(1))
     await decoding.succeed(0.1, Duration.millis(0.1))
-    await decoding.fail(-1, "Expected a value greater than or equal to 0, got -1")
-    await decoding.fail(NaN, "Expected a value greater than or equal to 0, got NaN")
+    await decoding.succeed(NaN, Duration.zero)
 
     const encoding = asserts.encoding()
     await encoding.succeed(Duration.infinity, Infinity)
+    await encoding.succeed(Duration.negativeInfinity, -Infinity)
     await encoding.succeed(Duration.millis(NaN), 0)
+    await encoding.succeed(Duration.millis(-1), -1)
     await encoding.succeed(Duration.seconds(5), 5000)
     await encoding.succeed(Duration.millis(5000), 5000)
     await encoding.succeed(Duration.millis(0.1), 0.1)
@@ -6075,6 +6029,27 @@ Expected a value with a size of at most 2, got Map([["a",1],["b",NaN],["c",3]])`
       const parts = ["a", Schema.String] as const
       const schema = Schema.TemplateLiteralParser(parts)
       deepStrictEqual(schema.parts, parts)
+    })
+
+    it("preserves greedy segmentation at repeated literal anchors", async () => {
+      const schema = Schema.TemplateLiteralParser([Schema.String, ":", Schema.String])
+      const decoding = new TestSchema.Asserts(schema).decoding()
+
+      await decoding.succeed("a:b:c", ["a:b", ":", "c"])
+    })
+
+    it("backtracks from an invalid literal anchor", async () => {
+      const schema = Schema.TemplateLiteralParser([Schema.String, ":", Schema.NonEmptyString, "x"])
+      const decoding = new TestSchema.Asserts(schema).decoding()
+
+      await decoding.succeed("a:b:x", ["a", ":", "b:", "x"])
+    })
+
+    it("backtracks across an empty literal anchor", async () => {
+      const schema = Schema.TemplateLiteralParser([Schema.String, "", Schema.NonEmptyString])
+      const decoding = new TestSchema.Asserts(schema).decoding()
+
+      await decoding.succeed("a", ["", "", "a"])
     })
 
     it(`NonEmptyString + String`, async () => {
@@ -9392,6 +9367,34 @@ pointed message
     )
   })
 
+  it("Natural", async () => {
+    const schema = Schema.Natural
+    const asserts = new TestSchema.Asserts(schema)
+
+    if (verifyGeneration) {
+      asserts.arbitrary().verifyGeneration()
+    }
+
+    const decoding = asserts.decoding()
+    await decoding.succeed(0)
+    await decoding.succeed(1)
+    await decoding.fail(
+      -1,
+      `Expected a value greater than or equal to 0, got -1`
+    )
+    await decoding.fail(
+      1.1,
+      `Expected an integer, got 1.1`
+    )
+
+    const encoding = asserts.encoding()
+    await encoding.succeed(0)
+    await encoding.fail(
+      -1,
+      `Expected a value greater than or equal to 0, got -1`
+    )
+  })
+
   it("Capitalize", async () => {
     const schema = Schema.String.pipe(
       Schema.decodeTo(
@@ -9511,27 +9514,27 @@ describe("Check", () => {
   it("isStringFinite", async () => {
     const schema = Schema.String.check(Schema.isStringFinite())
 
-    deepStrictEqual(Schema.resolveAnnotations(schema)?.["meta"], {
-      _tag: "isStringFinite",
-      regExp: /^[+-]?\d*\.?\d+(?:[Ee][+-]?\d+)?$/
+    deepStrictEqual(Schema.resolveAnnotations(schema)?.representation, {
+      id: "effect/schema/isStringFinite",
+      payload: null
     })
   })
 
   it("isStringBigInt", async () => {
     const schema = Schema.String.check(Schema.isStringBigInt())
 
-    deepStrictEqual(Schema.resolveAnnotations(schema)?.["meta"], {
-      _tag: "isStringBigInt",
-      regExp: /^-?\d+$/
+    deepStrictEqual(Schema.resolveAnnotations(schema)?.representation, {
+      id: "effect/schema/isStringBigInt",
+      payload: null
     })
   })
 
   it("isStringSymbol", async () => {
     const schema = Schema.String.check(Schema.isStringSymbol())
 
-    deepStrictEqual(Schema.resolveAnnotations(schema)?.["meta"], {
-      _tag: "isStringSymbol",
-      regExp: /^Symbol\((.*)\)$/
+    deepStrictEqual(Schema.resolveAnnotations(schema)?.representation, {
+      id: "effect/schema/isStringSymbol",
+      payload: null
     })
   })
 
@@ -9543,11 +9546,9 @@ describe("Check", () => {
       asserts.arbitrary().verifyGeneration()
     }
 
-    deepStrictEqual(Schema.resolveAnnotations(schema)?.["meta"], {
-      _tag: "isUUID",
-      regExp:
-        /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$/,
-      version: undefined
+    deepStrictEqual(Schema.resolveAnnotations(schema)?.representation, {
+      id: "effect/schema/isUUID",
+      payload: { version: null }
     })
 
     const decoding = asserts.decoding()
@@ -9585,9 +9586,9 @@ describe("Check", () => {
       asserts.arbitrary().verifyGeneration()
     }
 
-    deepStrictEqual(Schema.resolveAnnotations(schema)?.["meta"], {
-      _tag: "isGUID",
-      regExp: /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$/
+    deepStrictEqual(Schema.resolveAnnotations(schema)?.representation, {
+      id: "effect/schema/isGUID",
+      payload: null
     })
 
     const decoding = asserts.decoding()
@@ -9607,9 +9608,9 @@ describe("Check", () => {
       asserts.arbitrary().verifyGeneration()
     }
 
-    deepStrictEqual(Schema.resolveAnnotations(schema)?.["meta"], {
-      _tag: "isULID",
-      regExp: /^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$/
+    deepStrictEqual(Schema.resolveAnnotations(schema)?.representation, {
+      id: "effect/schema/isULID",
+      payload: null
     })
 
     const decoding = asserts.decoding()
@@ -9623,18 +9624,18 @@ describe("Check", () => {
   it("isBase64", async () => {
     const schema = Schema.String.check(Schema.isBase64())
 
-    deepStrictEqual(Schema.resolveAnnotations(schema)?.["meta"], {
-      _tag: "isBase64",
-      regExp: /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/
+    deepStrictEqual(Schema.resolveAnnotations(schema)?.representation, {
+      id: "effect/schema/isBase64",
+      payload: null
     })
   })
 
   it("isBase64Url", async () => {
     const schema = Schema.String.check(Schema.isBase64Url())
 
-    deepStrictEqual(Schema.resolveAnnotations(schema)?.["meta"], {
-      _tag: "isBase64Url",
-      regExp: /^([0-9a-zA-Z-_]{4})*(([0-9a-zA-Z-_]{2}(==)?)|([0-9a-zA-Z-_]{3}(=)?))?$/
+    deepStrictEqual(Schema.resolveAnnotations(schema)?.representation, {
+      id: "effect/schema/isBase64Url",
+      payload: null
     })
   })
 
@@ -9819,15 +9820,33 @@ Missing key
     )
   })
 
-  describe("asClass", () => {
+  describe("class extension", () => {
     it("wrapping a primitive schema", () => {
-      class A extends Schema.asClass(Schema.String) {}
+      class A extends Schema.String {}
 
       strictEqual(Schema.decodeUnknownSync(A)("a"), "a")
     })
 
+    it("inherits the schema protocol", () => {
+      class A extends Schema.String {}
+
+      assertTrue(Schema.isSchema(A))
+      strictEqual(A.make("a"), "a")
+
+      const annotated = A.annotate({ title: "A" })
+      assertTrue(Schema.isSchema(annotated))
+      strictEqual(Schema.resolveAnnotations(annotated)?.title, "A")
+    })
+
+    it("extending a rebuilt schema", () => {
+      class A extends Schema.Struct({ name: Schema.String }).annotate({ title: "A" }) {}
+
+      deepStrictEqual(Schema.decodeUnknownSync(A)({ name: "a" }), { name: "a" })
+      strictEqual(Schema.resolveAnnotations(A)?.title, "A")
+    })
+
     it("static getter using this", () => {
-      class A extends Schema.asClass(Schema.String) {
+      class A extends Schema.String {
         static get decodeUnknownSync() {
           return Schema.decodeUnknownSync(this)
         }
@@ -9837,7 +9856,7 @@ Missing key
     })
 
     it("static property", () => {
-      class A extends Schema.asClass(Schema.String) {
+      class A extends Schema.String {
         static readonly decodeUnknownSync = Schema.decodeUnknownSync(this)
       }
 
@@ -9845,7 +9864,7 @@ Missing key
     })
 
     it("static property using Schema.suspend", () => {
-      class A extends Schema.asClass(Schema.String) {
+      class A extends Schema.String {
         static readonly decodeUnknownSync = Schema.decodeUnknownSync(Schema.suspend(() => this))
       }
 
@@ -9856,7 +9875,7 @@ Missing key
       const struct = Schema.Struct({
         name: Schema.String
       })
-      class A extends Schema.asClass(struct) {
+      class A extends struct {
         static get decodeUnknownSync() {
           return Schema.decodeUnknownSync(this)
         }
@@ -9866,8 +9885,17 @@ Missing key
       strictEqual(A.fields, struct.fields)
     })
 
-    it("subclassing (double wrap)", () => {
-      class A extends Schema.asClass(Schema.FiniteFromString) {
+    it("does not create class instances", () => {
+      class A extends Schema.Struct({ name: Schema.String }) {}
+
+      const value = A.make({ name: "a" })
+
+      assertFalse(value instanceof A)
+      deepStrictEqual(value, { name: "a" })
+    })
+
+    it("subclassing", () => {
+      class A extends Schema.FiniteFromString {
         static get decodeUnknownSync() {
           return Schema.decodeUnknownSync(this)
         }

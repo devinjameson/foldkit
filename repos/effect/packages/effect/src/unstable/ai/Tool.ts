@@ -274,6 +274,13 @@ export interface Tool<
   readonly needsApproval?: boolean | NeedsApprovalFunction<any> | undefined
 
   /**
+   * Set whether user approval is required before executing this tool.
+   */
+  setNeedsApproval(
+    needsApproval: NeedsApproval<Config["parameters"]>
+  ): Tool<Name, Config, Requirements>
+
+  /**
    * Adds a _request-level_ dependency which must be provided before the tool
    * call handler can be executed.
    *
@@ -1051,6 +1058,9 @@ const Proto = {
   setFailure(this: Any, failureSchema: Schema.Constraint) {
     return clone(this, { failureSchema })
   },
+  setNeedsApproval(this: Any, needsApproval: NeedsApproval<any>) {
+    return clone(this, { needsApproval })
+  },
   annotate<I, S>(this: Any, tag: Context.Key<I, S>, value: S) {
     return clone(this, { annotations: Context.add(this.annotations, tag, value) })
   },
@@ -1666,10 +1676,18 @@ export const getJsonSchema = <Tool extends Any>(tool: Tool, options?: {
 export const getJsonSchemaFromSchema = <S extends Schema.Constraint>(schema: S, options?: {
   readonly transformer?: CodecTransformer
 }): JsonSchema.JsonSchema => {
+  return getJsonSchemaFromSchemaWith(schema, Schema.toJsonSchemaDocument, options)
+}
+
+const getJsonSchemaFromSchemaWith = <S extends Schema.Constraint>(
+  schema: S,
+  toJsonSchemaDocument: (schema: Schema.Constraint) => JsonSchema.Document<"draft-2020-12">,
+  options?: { readonly transformer?: CodecTransformer }
+): JsonSchema.JsonSchema => {
   if (Predicate.isNotUndefined(options?.transformer)) {
     return options.transformer(schema).jsonSchema
   }
-  const document = Schema.toJsonSchemaDocument(schema)
+  const document = toJsonSchemaDocument(schema)
   if (Object.keys(document.definitions).length > 0) {
     document.schema.$defs = document.definitions
   }
@@ -1915,13 +1933,13 @@ function filter(obj: any) {
     next = []
 
     for (const node of nodes) {
-      if (Object.prototype.hasOwnProperty.call(node, "__proto__")) {
+      if (Object.hasOwn(node, "__proto__")) {
         throw new SyntaxError("Object contains forbidden prototype property")
       }
 
       if (
-        Object.prototype.hasOwnProperty.call(node, "constructor") &&
-        Object.prototype.hasOwnProperty.call(node.constructor, "prototype")
+        Object.hasOwn(node, "constructor") &&
+        Object.hasOwn(node.constructor, "prototype")
       ) {
         throw new SyntaxError("Object contains forbidden prototype property")
       }

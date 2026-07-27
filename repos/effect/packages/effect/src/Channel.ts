@@ -6033,8 +6033,21 @@ export const mergeAll: {
 
         yield* Effect.gen(function*() {
           while (true) {
-            if (semaphore) yield* semaphore.take(1)
-            const channel = yield* pull
+            let pullFiber: Fiber.Fiber<Pull.Success<typeof pull>, any> | undefined
+            if (semaphore) {
+              if (fibers.size < concurrencyN) {
+                yield* semaphore.take(1)
+              } else {
+                pullFiber = yield* Effect.forkChild(pull)
+                yield* Effect.raceFirst(
+                  semaphore.take(1),
+                  Effect.andThen(Fiber.join(pullFiber), Effect.never)
+                )
+              }
+            }
+            const channel = pullFiber === undefined
+              ? yield* pull
+              : yield* Fiber.join(pullFiber)
             const childScope = Scope.forkUnsafe(forkedScope)
             const childPull = yield* toTransform(channel)(upstream, childScope)
 
@@ -6069,7 +6082,13 @@ export const mergeAll: {
             fibers.add(fiber)
           }
         }).pipe(
-          Effect.catchCause((cause) => doneLatch.whenOpen(Queue.failCause(queue, cause))),
+          Effect.catchCause((cause) => {
+            const halt = Pull.filterDone(cause)
+            if (Result.isSuccess(halt)) {
+              return doneLatch.whenOpen(Queue.failCause(queue, cause))
+            }
+            return Queue.failCause(queue, cause)
+          }),
           Effect.forkIn(forkedScope)
         )
 
@@ -6915,17 +6934,16 @@ export const haltWhen: {
 ): Channel<OutElem, OutErr | OutErr2, OutDone | OutDone2, InElem, InErr, InDone, Env2 | Env> =>
   fromTransformBracket(Effect.fnUntraced(function*(upstream, scope, forkedScope) {
     const pull = yield* toTransform(self)(upstream, scope)
-    let haltCause: Cause.Cause<OutErr2 | Cause.Done<OutDone2>> | undefined = undefined
-    yield* effect.pipe(
-      Effect.catchCause((cause) => {
-        haltCause = cause
-        return Effect.void
-      }),
-      Effect.forkIn(forkedScope)
-    )
-    return Effect.suspend((): Pull.Pull<OutElem, OutErr | OutErr2, OutDone | OutDone2> =>
-      haltCause ? Effect.failCause(haltCause) : pull
-    )
+    const fiber = yield* Effect.forkIn(effect, forkedScope, { startImmediately: true })
+    return Effect.suspend((): Pull.Pull<OutElem, OutErr | OutErr2, OutDone | OutDone2> => {
+      const exit = fiber.pollUnsafe()
+      return exit === undefined
+        ? pull
+        : Exit.match(exit, {
+          onFailure: Effect.failCause,
+          onSuccess: Cause.done
+        })
+    })
   })))
 
 /**
