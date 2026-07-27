@@ -145,6 +145,24 @@ export const tableOfContentsEntryToHeader = (
   entry: TableOfContentsEntry,
 ): Html => heading(entry.level, entry.id, entry.text)
 
+/**
+ * The heading helpers bound to a page-supplied copy-link renderer, for a page
+ * rendered inside a Submodel. Bind once at the top of the view and the call
+ * sites below it are unchanged.
+ */
+export const headingsFor = (renderHeadingLink: RenderHeadingLink) => ({
+  heading: (level: 'h2' | 'h3' | 'h4', id: string, text: string): Html =>
+    headingWithContent(level, id, text, [text], renderHeadingLink),
+  tableOfContentsEntryToHeader: (entry: TableOfContentsEntry): Html =>
+    headingWithContent(
+      entry.level,
+      entry.id,
+      entry.text,
+      [entry.text],
+      renderHeadingLink,
+    ),
+})
+
 export const bullets = (...items: ReadonlyArray<string | Html>): Html => {
   const h = html()
 
