@@ -5,8 +5,18 @@ import type { Alignment } from '@foldkit/markdown'
 import type * as Markdown from '@foldkit/markdown'
 
 import type { Message } from '../message'
-import { diagram, headingWithContent, inlineCode, pageTitle } from '../prose'
-import { type CopiedSnippets, codeBlock } from '../view/codeBlock'
+import {
+  type RenderHeadingLink,
+  diagram,
+  headingWithContent,
+  inlineCode,
+  pageTitle,
+} from '../prose'
+import {
+  type CopiedSnippets,
+  type RenderCopyButton,
+  codeBlock,
+} from '../view/codeBlock'
 import { parseHeadingId, stripHeadingIdMarker } from './slug'
 import { type HeadingIds, headingId } from './tableOfContents'
 
@@ -17,6 +27,8 @@ export type DocViewConfig = Readonly<{
   pageId: string
   idByHeading: HeadingIds
   copiedSnippets: CopiedSnippets
+  renderCopyButton?: RenderCopyButton | undefined
+  renderHeadingLink?: RenderHeadingLink | undefined
 }>
 
 const linkClassName =
@@ -104,11 +116,51 @@ export const docViews = (config: DocViewConfig): Partial<Markdown.Views> => {
       return M.value(heading.level).pipe(
         M.withReturnType<Html>(),
         M.when(1, () => pageTitle(config.pageId, text)),
-        M.when(2, () => headingWithContent('h2', id, text, displayContent)),
-        M.when(3, () => headingWithContent('h3', id, text, displayContent)),
-        M.when(4, () => headingWithContent('h4', id, text, displayContent)),
-        M.when(5, () => headingWithContent('h5', id, text, displayContent)),
-        M.when(6, () => headingWithContent('h6', id, text, displayContent)),
+        M.when(2, () =>
+          headingWithContent(
+            'h2',
+            id,
+            text,
+            displayContent,
+            config.renderHeadingLink,
+          ),
+        ),
+        M.when(3, () =>
+          headingWithContent(
+            'h3',
+            id,
+            text,
+            displayContent,
+            config.renderHeadingLink,
+          ),
+        ),
+        M.when(4, () =>
+          headingWithContent(
+            'h4',
+            id,
+            text,
+            displayContent,
+            config.renderHeadingLink,
+          ),
+        ),
+        M.when(5, () =>
+          headingWithContent(
+            'h5',
+            id,
+            text,
+            displayContent,
+            config.renderHeadingLink,
+          ),
+        ),
+        M.when(6, () =>
+          headingWithContent(
+            'h6',
+            id,
+            text,
+            displayContent,
+            config.renderHeadingLink,
+          ),
+        ),
         M.exhaustive,
       )
     },
@@ -122,6 +174,7 @@ export const docViews = (config: DocViewConfig): Partial<Markdown.Views> => {
             config.copiedSnippets,
             'mb-8',
             Option.getOrUndefined(maybeLanguage),
+            config.renderCopyButton,
           ),
 
     List: (list, items) => {

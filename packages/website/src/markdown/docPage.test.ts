@@ -255,6 +255,11 @@ describe('proof pages', () => {
         id: 'reflecting-external-state',
         text: 'Reflecting External State',
       },
+      {
+        level: 'h2',
+        id: 'which-boundary',
+        text: 'Which Boundary a Handler Dispatches Through',
+      },
       { level: 'h2', id: 'child-attributes', text: 'childAttributes' },
       {
         level: 'h3',

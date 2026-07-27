@@ -22,8 +22,10 @@ import {
   type Message,
 } from '../message'
 import * as Page from '../page'
+import { headingLinkButton } from '../prose'
 import { type DocsRoute, homeRouter } from '../route'
 import * as Search from '../search'
+import { defaultRenderCopyButton } from './codeBlock'
 import { betaTag, emailFormView, iconLink, skipNavLink } from './shared'
 import { sidebarView } from './sidebar'
 import {
@@ -417,7 +419,11 @@ export const docsView = (model: Model, docsRoute: DocsRoute) => {
             slotId: 'coming-from-react',
             model: model.comingFromReact,
             view: Page.ComingFromReact.view,
-            viewInputs: { copiedSnippets: model.copiedSnippets },
+            viewInputs: {
+              copiedSnippets: model.copiedSnippets,
+              renderCopyButton: defaultRenderCopyButton(model.copiedSnippets),
+              renderHeadingLink: headingLinkButton,
+            },
             toParentMessage: message => GotComingFromReactMessage({ message }),
           }),
           Page.ComingFromReact.tableOfContents,

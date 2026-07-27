@@ -49,18 +49,40 @@ prerequisite_packages=(
   '@typing-game/shared:packages/typing-game/shared'
 )
 
+#   * Stale dist/       -> the same failure as a missing one, because the build
+#     output predates the sources it claims to export.
+#
+# Compares against the oldest file inside dist/, not the directory itself: a
+# directory's mtime tracks entries added or removed, so it can be newer than the
+# stale contents it holds and report a rebuilt tree that never was.
+is_dist_stale() {
+  local dir="$1"
+  [[ -d "$dir/dist" && -d "$dir/src" && -r "$dir/src" ]] || return 0
+
+  local oldest_built
+  oldest_built=$(find "$dir/dist" -type f -printf '%T@ %p\n' 2>/dev/null |
+    sort -n | head -1 | cut -d' ' -f2-)
+  [[ -n "$oldest_built" ]] || return 0
+
+  local newer_source scan_status
+  newer_source=$(find "$dir/src" -type f -newer "$oldest_built" -print -quit 2>/dev/null)
+  scan_status=$?
+
+  [[ $scan_status -ne 0 || -n "$newer_source" ]]
+}
+
 build_filters=()
 for spec in "${prerequisite_packages[@]}"; do
   pkg="${spec%%:*}"
   dir="${spec#*:}"
-  if [[ ! -d "$dir/dist" ]]; then
+  if is_dist_stale "$dir"; then
     build_filters+=("-F" "$pkg")
   fi
 done
 
 if (( ${#build_filters[@]} > 0 )); then
-  echo "[setup] building prerequisite packages: ${build_filters[*]}"
+  echo "[setup] building prerequisite packages (missing or stale dist/): ${build_filters[*]}"
   pnpm "${build_filters[@]}" build
 else
-  echo "[setup] prerequisite package dist/ directories already present"
+  echo "[setup] prerequisite package dist/ directories present and up to date"
 fi

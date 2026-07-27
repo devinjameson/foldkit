@@ -9,6 +9,20 @@ const PagefindIgnore = html<Message>().DataAttribute('pagefind-ignore', '')
 
 export type CopiedSnippets = HashSet.HashSet<string>
 
+/**
+ * Builds the copy control for a code block.
+ *
+ * A page rendered through `h.submodel` must supply one of these from its
+ * parent, because a handler's dispatcher is chosen by where the element is
+ * built. Left to build itself inside a Submodel's view, the button's app-level
+ * Message meets that Submodel's `toParentMessage` and is rejected.
+ */
+export type RenderCopyButton = (
+  textToCopy: string,
+  ariaLabel: string,
+  positionClass: string,
+) => Html
+
 const copyButtonWithIndicator = (
   textToCopy: string,
   ariaLabel: string,
@@ -52,12 +66,24 @@ const copyButtonWithIndicator = (
   )
 }
 
+/** Builds the copy control directly, which is correct outside a Submodel. */
+export const defaultRenderCopyButton =
+  (copiedSnippets: CopiedSnippets): RenderCopyButton =>
+  (textToCopy, ariaLabel, positionClass) =>
+    copyButtonWithIndicator(
+      textToCopy,
+      ariaLabel,
+      copiedSnippets,
+      positionClass,
+    )
+
 export const codeBlock = (
   code: string,
   ariaLabel: string,
   copiedSnippets: CopiedSnippets,
   className?: string,
   language?: string,
+  renderCopyButton?: RenderCopyButton | undefined,
 ) => {
   const h = html<Message>()
 
@@ -86,10 +112,9 @@ export const codeBlock = (
     ],
     [
       content,
-      copyButtonWithIndicator(
+      (renderCopyButton ?? defaultRenderCopyButton(copiedSnippets))(
         code,
         ariaLabel,
-        copiedSnippets,
         'top-1/2 -translate-y-1/2 right-2',
       ),
     ],
@@ -102,11 +127,19 @@ export const highlightedCodeBlock = (
   ariaLabel: string,
   copiedSnippets: CopiedSnippets,
   className?: string,
+  renderCopyButton?: RenderCopyButton | undefined,
 ) => {
   const h = html<Message>()
 
   return h.div(
     [PagefindIgnore, h.Class(clsx('relative min-w-0 mt-8', className))],
-    [content, copyButtonWithIndicator(rawCode, ariaLabel, copiedSnippets)],
+    [
+      content,
+      (renderCopyButton ?? defaultRenderCopyButton(copiedSnippets))(
+        rawCode,
+        ariaLabel,
+        'top-2 right-2',
+      ),
+    ],
   )
 }
