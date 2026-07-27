@@ -7,6 +7,7 @@ import {
   Function,
   Option,
   Record,
+  Schema as S,
   Stream,
 } from 'effect'
 
@@ -125,20 +126,36 @@ const keyboardModifiers = (event: KeyboardEvent): KeyboardModifiers => ({
 export type Html = VNode | null
 export type Child = Html | string
 
+/** Text direction for the document root, applied to `dir` on the `<html>`
+ *  element. `Auto` defers to the browser's first-strong-character heuristic. */
+export const TextDirection = S.Literals(['Ltr', 'Rtl', 'Auto'])
+/** Text direction for the document root, applied to `dir` on the `<html>`
+ *  element. `Auto` defers to the browser's first-strong-character heuristic. */
+export type TextDirection = typeof TextDirection.Type
+
 /** A view's complete output for the runtime: title, body, and optional document
- *  metadata. The runtime applies `title` to `document.title`, syncs `canonical`
- *  to `<link rel="canonical">` (creating it if absent), syncs `ogUrl` to
- *  `<meta property="og:url">` (creating it if absent), and patches `body` into
- *  the application container.
+ *  metadata. The runtime applies `title` to `document.title`, syncs `lang` and
+ *  `dir` to the `<html>` element, syncs `canonical` to `<link rel="canonical">`
+ *  (creating it if absent), syncs `ogUrl` to `<meta property="og:url">`
+ *  (creating it if absent), and patches `body` into the application container.
  *
  *  When `canonical` is omitted, it defaults to the current URL (origin +
  *  pathname + search). When `ogUrl` is omitted, it falls back to `canonical`.
  *
+ *  `lang` and `dir` have no default. When either is omitted the runtime does not
+ *  touch that attribute, leaving whatever value it currently holds, so a view
+ *  that never sets it leaves the served HTML in place. Drive them from the Model
+ *  when the app switches language at runtime. The served HTML still decides what
+ *  a crawler sees on first paint, because the runtime can only sync after the
+ *  first render.
+ *
  *  This is the return type of a `makeApplication` view, which owns the document. An
  *  app embedded at a node should use `makeElement` instead, whose view returns
- *  `Html` and never touches the `<head>`. */
+ *  `Html` and never touches the `<head>` or the `<html>` element. */
 export type Document = Readonly<{
   title: string
+  lang?: string
+  dir?: TextDirection
   canonical?: string
   ogUrl?: string
   body: Html
