@@ -163,6 +163,16 @@ export type WebContainerPlaygroundService = ManagedResource.ServiceOf<
 
 const PlaygroundParams = S.Struct({ slug: S.String })
 
+// NOTE: Each boot step gets a deadline so a stalled step reports which one
+// stalled instead of spinning forever. WebContainer support outside
+// Chromium is still beta, and a browser that cannot register the
+// cross-origin service worker the container needs never rejects, it just
+// never resolves. The durations are generous: a cold boot on a slow
+// connection installs dependencies in well under a minute.
+const BOOT_TIMEOUT = '90 seconds'
+const INSTALL_TIMEOUT = '5 minutes'
+const DEV_SERVER_TIMEOUT = '3 minutes'
+
 const fileSystemTreeFromFiles = (
   files: Readonly<Record<string, string>>,
 ): FileSystemTree => {
@@ -203,6 +213,89 @@ const reasonFromError = (error: unknown): string => {
   return String(error)
 }
 
+const startPlaygroundServer = (
+  container: WebContainer,
+  files: Record<string, string>,
+) =>
+  Effect.gen(function* () {
+    yield* Effect.tryPromise(() =>
+      container.mount(fileSystemTreeFromFiles(files)),
+    )
+    const install = yield* Effect.tryPromise(() =>
+      container.spawn('npm', ['install']),
+    )
+    let installOutput = ''
+    void install.output.pipeTo(
+      new WritableStream({
+        write: data => {
+          installOutput += data
+        },
+      }),
+    )
+    const installExitCode = yield* Effect.tryPromise(() => install.exit).pipe(
+      Effect.timeoutOrElse({
+        duration: INSTALL_TIMEOUT,
+        orElse: () =>
+          Effect.fail(
+            new Error(
+              `npm install did not finish within ${INSTALL_TIMEOUT}:\n${installOutput}`,
+            ),
+          ),
+      }),
+    )
+    if (installExitCode !== 0) {
+      return yield* Effect.fail(
+        new Error(
+          `npm install exited with code ${installExitCode}:\n${installOutput}`,
+        ),
+      )
+    }
+    const dev = yield* Effect.tryPromise(() =>
+      container.spawn('npm', ['run', 'dev']),
+    )
+    let devOutput = ''
+    void dev.output.pipeTo(
+      new WritableStream({
+        write: data => {
+          devOutput += data
+        },
+      }),
+    )
+    return yield* Effect.callback<string, Error>((resume, signal) => {
+      let settled = false
+      const settle = (effect: Effect.Effect<string, Error>): void => {
+        if (settled) {
+          return
+        }
+        settled = true
+        resume(effect)
+      }
+      const unsubscribe = container.on('server-ready', (_port, url) =>
+        settle(Effect.succeed(url)),
+      )
+      void dev.exit.then(code =>
+        settle(
+          Effect.fail(
+            new Error(
+              `npm run dev exited with code ${code} before the dev server was ready:\n${devOutput}`,
+            ),
+          ),
+        ),
+      )
+      signal.addEventListener('abort', unsubscribe)
+    }).pipe(
+      Effect.timeoutOrElse({
+        duration: DEV_SERVER_TIMEOUT,
+        orElse: () =>
+          Effect.fail(
+            new Error(
+              `The dev server was not ready within ${DEV_SERVER_TIMEOUT}:\n${devOutput}`,
+            ),
+          ),
+      }),
+    )
+  })
+
 export const managedResources = ManagedResource.make<Model, Message>()(
   entry => ({
     webContainerPlayground: entry(S.Option(PlaygroundParams), {
@@ -226,65 +319,25 @@ export const managedResources = ManagedResource.make<Model, Message>()(
               coep: 'credentialless',
               workdirName: 'foldkit',
             }),
-          )
-          yield* Effect.tryPromise(() =>
-            container.mount(fileSystemTreeFromFiles(fileEntry.files)),
-          )
-          const install = yield* Effect.tryPromise(() =>
-            container.spawn('npm', ['install']),
-          )
-          let installOutput = ''
-          void install.output.pipeTo(
-            new WritableStream({
-              write: data => {
-                installOutput += data
-              },
-            }),
-          )
-          const installExitCode = yield* Effect.tryPromise(() => install.exit)
-          if (installExitCode !== 0) {
-            return yield* Effect.fail(
-              new Error(
-                `npm install exited with code ${installExitCode}:\n${installOutput}`,
-              ),
-            )
-          }
-          const dev = yield* Effect.tryPromise(() =>
-            container.spawn('npm', ['run', 'dev']),
-          )
-          let devOutput = ''
-          void dev.output.pipeTo(
-            new WritableStream({
-              write: data => {
-                devOutput += data
-              },
-            }),
-          )
-          const previewUrl = yield* Effect.callback<string, Error>(
-            (resume, signal) => {
-              let settled = false
-              const settle = (effect: Effect.Effect<string, Error>): void => {
-                if (settled) {
-                  return
-                }
-                settled = true
-                resume(effect)
-              }
-              const unsubscribe = container.on('server-ready', (_port, url) =>
-                settle(Effect.succeed(url)),
-              )
-              void dev.exit.then(code =>
-                settle(
-                  Effect.fail(
-                    new Error(
-                      `npm run dev exited with code ${code} before the dev server was ready:\n${devOutput}`,
-                    ),
+          ).pipe(
+            Effect.timeoutOrElse({
+              duration: BOOT_TIMEOUT,
+              orElse: () =>
+                Effect.fail(
+                  new Error(
+                    `WebContainer did not boot within ${BOOT_TIMEOUT}. This browser may not support the service worker WebContainer registers on its own origin.`,
                   ),
                 ),
-              )
-              signal.addEventListener('abort', unsubscribe)
-            },
+            }),
           )
+          // NOTE: `release` runs only for a resource that finished
+          // acquiring, so every path that fails or is interrupted after
+          // boot has to tear the container down itself. Otherwise the page
+          // keeps a live container nothing holds a handle to.
+          const previewUrl = yield* startPlaygroundServer(
+            container,
+            fileEntry.files,
+          ).pipe(Effect.onError(() => Effect.sync(() => container.teardown())))
           return {
             container,
             previewUrl,
@@ -799,13 +852,20 @@ const failurePanelView = (reason: string): Html => {
     [h.Class('flex-1 flex items-center justify-center px-6 py-20 text-center')],
     [
       h.div(
-        [h.Class('max-w-sm flex flex-col items-center')],
+        [h.Class('max-w-xl flex flex-col items-center min-w-0')],
         [
           h.div(
             [h.Class('text-base font-semibold text-gray-900 mb-2')],
             ['Playground failed to load'],
           ),
-          h.div([h.Class('text-sm text-gray-600')], [reason]),
+          h.div(
+            [
+              h.Class(
+                'w-full max-h-64 overflow-auto text-left text-sm text-gray-600 whitespace-pre-wrap break-words',
+              ),
+            ],
+            [reason],
+          ),
         ],
       ),
     ],
@@ -1014,22 +1074,26 @@ const editorLayoutView = (model: Model): Html => {
   )
 }
 
-type ViewInputs = Readonly<{ isChromium: boolean }>
+type ViewInputs = Readonly<{ isPlaygroundSupported: boolean }>
 
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
-  (model, { isChromium }): Html => {
+  (model, { isPlaygroundSupported }): Html => {
     const h = html<Message>()
 
     const maybeMeta = findBySlug(model.slug)
     const maybeFiles = Option.fromNullishOr(filesBySlug[model.slug])
 
-    const content = M.value({ isChromium, maybeMeta, maybeFiles }).pipe(
+    const content = M.value({
+      isPlaygroundSupported,
+      maybeMeta,
+      maybeFiles,
+    }).pipe(
       M.when(
-        ({ isChromium }) => !isChromium,
+        ({ isPlaygroundSupported }) => !isPlaygroundSupported,
         () =>
           messageView(
-            'Playground requires a Chromium browser',
-            'The editable playground runs on WebContainers, which requires Chrome, Edge, Brave, or another Chromium-based browser. You can still see the example running on its detail page.',
+            'Playground cannot run in this browser',
+            'The editable playground runs on WebContainers, which needs SharedArrayBuffer in a cross-origin isolated page. Chrome, Edge, and Firefox work. Safari is not supported yet. You can still see the example running on its detail page.',
             maybeMeta,
           ),
       ),

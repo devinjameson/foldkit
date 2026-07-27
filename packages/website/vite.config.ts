@@ -720,6 +720,13 @@ const embeddedExampleRedirectPlugin = (): Plugin => ({
 // boots in `pnpm dev` and `pnpm preview`. The deployed Vercel config is
 // the source of truth; this is the dev-mode equivalent.
 //
+// COEP is `credentialless`, which Chromium and Firefox 119+ honor and
+// WebKit never shipped. `require-corp` would grant Safari the isolation
+// too, but WebContainer still cannot boot there, so Safari would spend a
+// 90 second timeout to reach the same dead end instead of being told
+// immediately. `WebContainer.boot` takes a matching `coep` option in
+// playground.ts.
+//
 // CORP same-origin goes on every response (not just /playground/*) so
 // that Monaco's editor and worker scripts loaded by the credentialless
 // /playground/* page satisfy COEP. Workers in credentialless contexts

@@ -104,6 +104,13 @@ jobs:
                 "continue": true
               },
               {
+                "src": "^/monacoworkers/.*",
+                "headers": {
+                  "Cross-Origin-Embedder-Policy": "credentialless"
+                },
+                "continue": true
+              },
+              {
                 "src": ".*",
                 "headers": {
                   "Cross-Origin-Resource-Policy": "same-origin"

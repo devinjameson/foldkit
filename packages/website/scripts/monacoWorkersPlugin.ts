@@ -12,6 +12,11 @@ import type { Plugin } from 'vite'
 // a classic IIFE script with esbuild, serve it in dev with the right
 // headers, and emit it at the same path in prod so the shim baked into
 // `index.html` resolves there in both modes.
+//
+// A dedicated worker owned by a COEP-enabled document has to carry a
+// compatible COEP header itself, or the script load becomes a network
+// error. The prod equivalent of the dev header below is the
+// `/monacoworkers/.*` route in deploy-website.yml.
 const SCRIPT_DIRECTORY = dirname(fileURLToPath(import.meta.url))
 const WEBSITE_ROOT = resolve(SCRIPT_DIRECTORY, '..')
 
