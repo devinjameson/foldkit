@@ -40,11 +40,12 @@ Popover is headless. The `toView` callback receives attribute bundles for the bu
 
 When `isAnimated` is true, enter/leave animations flow through the [Animation](/ui/animation) module. Style with CSS transitions or CSS keyframe animations. Animation advances once every animation on the element has settled.
 
-| Attribute       | Condition                              |
-| --------------- | -------------------------------------- |
-| `data-open`     | Present on button and panel when open. |
-| `data-disabled` | Present on the button when disabled.   |
-| `data-closed`   | Present during close animation.        |
+| Attribute        | Condition                                                                                             |
+| ---------------- | ----------------------------------------------------------------------------------------------------- |
+| `data-open`      | Present on button and panel when open.                                                                |
+| `data-disabled`  | Present on the button when disabled.                                                                  |
+| `data-closed`    | Present during close animation.                                                                       |
+| `data-placement` | Present on the panel when lockPlacement is true, set to the locked side: top, right, bottom, or left. |
 
 ## Keyboard Interaction
 
@@ -85,7 +86,7 @@ Configuration object passed to `Popover.view()`.
 | ----------------- | -------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `model`           | `Popover.Model`                                    | —       | The popover state from your parent Model.                                                                                                                    |
 | `toParentMessage` | `(childMessage: Popover.Message) => ParentMessage` | —       | Wraps Popover Messages in your parent Message type for Submodel delegation.                                                                                  |
-| `anchor`          | `AnchorConfig`                                     | —       | Floating positioning config: placement, gap, and padding. Required.                                                                                          |
+| `anchor`          | `AnchorConfig`                                     | —       | Floating positioning config: placement, gap, padding, and lockPlacement. Required.                                                                           |
 | `toView`          | `(render: RenderInfo) => Html`                     | —       | Callback that receives the button, panel, and backdrop attribute bundles plus a derived `isVisible` flag, and returns the composed layout.                   |
 | `isDisabled`      | `boolean`                                          | `false` | Disables the trigger button.                                                                                                                                 |
 | `focusSelector`   | `string`                                           | —       | CSS selector for the element to focus after the panel is positioned. Defaults to the panel itself.                                                           |

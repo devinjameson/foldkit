@@ -22,10 +22,11 @@ Hover or tab into the trigger to reveal the tooltip. Hover waits for `showDelay`
 
 Tooltip is headless. The `toView` callback receives attribute bundles for the trigger and panel, and the consumer composes the markup. The panel is rendered with `pointer-events: none` so it never captures hover or clicks, which keeps the open/close logic tied to the trigger.
 
-| Attribute       | Condition                                                 |
-| --------------- | --------------------------------------------------------- |
-| `data-open`     | Present on trigger and panel when the tooltip is visible. |
-| `data-disabled` | Present on the trigger when disabled.                     |
+| Attribute        | Condition                                                                                             |
+| ---------------- | ----------------------------------------------------------------------------------------------------- |
+| `data-open`      | Present on trigger and panel when the tooltip is visible.                                             |
+| `data-disabled`  | Present on the trigger when disabled.                                                                 |
+| `data-placement` | Present on the panel when lockPlacement is true, set to the locked side: top, right, bottom, or left. |
 
 ## Keyboard Interaction
 
@@ -60,7 +61,7 @@ Configuration object passed to `Tooltip.view()`.
 | ----------------- | -------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `model`           | `Tooltip.Model`                                    | —       | The tooltip state from your parent Model.                                                                                                                    |
 | `toParentMessage` | `(childMessage: Tooltip.Message) => ParentMessage` | —       | Wraps Tooltip Messages in your parent Message type for Submodel delegation.                                                                                  |
-| `anchor`          | `AnchorConfig`                                     | —       | Floating positioning config: placement, gap, and padding. Required.                                                                                          |
+| `anchor`          | `AnchorConfig`                                     | —       | Floating positioning config: placement, gap, padding, and lockPlacement. Required.                                                                           |
 | `toView`          | `(render: RenderInfo) => Html`                     | —       | Callback that receives the `trigger` and `panel` attribute bundles plus a derived `isVisible` flag, and returns the composed layout.                         |
 | `isDisabled`      | `boolean`                                          | `false` | Disables the trigger. Hover, focus, and keyboard events are ignored and the tooltip will not open.                                                           |
 | `ariaLabel`       | `string`                                           | —       | Accessible name for the trigger button. Use for an icon-only trigger with no visible label. Applied as aria-label, and takes precedence over ariaLabelledBy. |

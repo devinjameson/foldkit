@@ -1,6 +1,7 @@
-import { Function, Schema as S } from 'effect'
+import { Array, Function, Schema as S, String, pipe } from 'effect'
 
 import {
+  type Placement as FloatingPlacement,
   autoUpdate,
   computePosition,
   flip,
@@ -33,6 +34,7 @@ export const AnchorConfig = S.Struct({
   offset: S.optional(S.Number),
   padding: S.optional(S.Number),
   portal: S.optional(S.Boolean),
+  lockPlacement: S.optional(S.Boolean),
 })
 
 export type AnchorConfig = typeof AnchorConfig.Type
@@ -89,6 +91,9 @@ export const portalToContainingRoot = (element: Element): (() => void) => {
   }
 }
 
+const toSide = (placement: FloatingPlacement): string =>
+  pipe(placement, String.split('-'), Array.headNonEmpty)
+
 /** Positions a floating element relative to its button using Floating UI, then
  *  returns a cleanup function. Designed to be called inside an `OnMount`
  *  action: the consumer wraps the call in `Effect.sync` and stashes the
@@ -99,7 +104,12 @@ export const portalToContainingRoot = (element: Element): (() => void) => {
  *  first position computation clears visibility, deferred via
  *  requestAnimationFrame so the element is painted before focus fires.
  *  `focusSelector` optionally targets a descendant (e.g. a calendar grid
- *  inside a popover panel) instead of the panel itself. */
+ *  inside a popover panel) instead of the panel itself.
+ *  When `lockPlacement` is true, the element keeps the side that the first
+ *  positioning picks, and `flip` is removed from every later update. The locked
+ *  side is also written to `data-placement` on the element, so CSS can react to
+ *  it. None of this happens unless `lockPlacement` is set, so existing callers
+ *  render exactly as before. */
 export const anchorSetup =
   (config: {
     buttonId: string
@@ -135,21 +145,35 @@ export const anchorSetup =
       element.style.position = 'fixed'
     }
 
-    const { placement, gap, offset: crossAxis, padding } = config.anchor
+    const {
+      placement,
+      gap,
+      offset: crossAxis,
+      padding,
+      lockPlacement,
+    } = config.anchor
     const shouldInterceptTab = config.interceptTab ?? true
+    const shouldLockPlacement = lockPlacement ?? false
 
     let isFirstUpdate = true
+    let lockedPlacement: FloatingPlacement | undefined
+    let latestRequestId = 0
 
     const floatingCleanup = autoUpdate(button, element, () => {
+      const isLocked = shouldLockPlacement && lockedPlacement !== undefined
+      const requestedPlacement = lockedPlacement ?? placement ?? 'bottom-start'
+      latestRequestId = latestRequestId + 1
+      const requestId = latestRequestId
+
       computePosition(button, element, {
-        placement: placement ?? 'bottom-start',
+        placement: requestedPlacement,
         strategy,
         middleware: [
           floatingOffset({
             mainAxis: gap ?? 0,
             crossAxis: crossAxis ?? 0,
           }),
-          flip({ padding: padding ?? 0 }),
+          ...(isLocked ? [] : [flip({ padding: padding ?? 0 })]),
           shift({ padding: padding ?? 0 }),
           size({
             padding: padding ?? 0,
@@ -164,9 +188,23 @@ export const anchorSetup =
             },
           }),
         ],
-      }).then(({ x, y }) => {
+      }).then(({ x, y, placement: resolvedPlacement }) => {
+        // NOTE: autoUpdate can start a second tick before this promise
+        // settles. Both ticks still carry flip, so they can resolve to
+        // different sides. Without this guard an older tick can finish last
+        // and write coordinates for the side that the lock did not pick.
+        if (shouldLockPlacement && requestId !== latestRequestId) {
+          return
+        }
+
         element.style.left = `${x}px`
         element.style.top = `${y}px`
+
+        if (shouldLockPlacement) {
+          const nextLockedPlacement = lockedPlacement ?? resolvedPlacement
+          lockedPlacement = nextLockedPlacement
+          element.setAttribute('data-placement', toSide(nextLockedPlacement))
+        }
 
         if (isFirstUpdate) {
           isFirstUpdate = false
