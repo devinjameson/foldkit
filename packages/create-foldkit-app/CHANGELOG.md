@@ -1,5 +1,15 @@
 # create-foldkit-app
 
+## 0.22.2
+
+### Patch Changes
+
+- d16d7f7: Bump bundled Effect dependencies to `4.0.0-beta.102`. No user-facing changes. Newly scaffolded apps will get the updated pins from the example sources.
+
+  The CLI now pins `effect`, `@effect/platform-node`, and `@effect/platform-node-shared` to exactly `4.0.0-beta.102` to match this release (exact versions, not ranges, while Effect v4 is in beta).
+
+- e3a5f5d: Fix the Effect array predicate names in the scaffolded `AGENTS.md`. The template told agents to use `Array.isEmptyArray` / `Array.isNonEmptyArray`, which Effect does not export. The correct names are `Array.isArrayEmpty` / `Array.isArrayNonEmpty`. The same rule now also prohibits `.length > 0`, not just `.length === 0`.
+
 ## 0.22.1
 
 ### Patch Changes

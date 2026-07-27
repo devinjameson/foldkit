@@ -1,5 +1,0 @@
----
-'@foldkit/vite-plugin': patch
----
-
-Shut the DevTools MCP relay down when the Vite dev server closes in middleware mode, and keep it alive across a dev server restart. The plugin hung its shutdown off `server.httpServer`, which is null when Vite runs as middleware, so with `devToolsMcpPort` set the relay's WebSocket server stayed bound and held the process open. Under Vitest that showed up as a `close timed out after 10000ms` delay on every run. Restarting a dev server also used to kill the relay for the rest of the session, because Vite binds the replacement server's relay while the server it replaces still owns the port, and the resulting `EADDRINUSE` was reported as a conflict with another project. The relay now retries the bind for a few seconds so the port hands over, and a genuine conflict reports the same message once the retries are spent. Binding runs alongside the HMR bridge rather than ahead of it, so a contended port never delays model preservation. Connected MCP clients are terminated as part of shutdown, so no socket the relay opened outlives the server. The MCP server already reconnects on a dropped connection.
