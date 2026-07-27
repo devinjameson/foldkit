@@ -20,7 +20,11 @@ import { exampleSourceHref } from '../../link'
 import type { TableOfContentsEntry } from '../../main'
 import { pageTitle, para } from '../../prose'
 import { examplesRouter, playgroundRouter } from '../../route'
-import { type CopiedSnippets, highlightedCodeBlock } from '../../view/codeBlock'
+import {
+  type CopiedSnippets,
+  type RenderCopyButton,
+  highlightedCodeBlockFor,
+} from '../../view/codeBlock'
 import { type ExampleMeta, findBySlug } from './meta'
 import {
   type ExampleSourceFile,
@@ -475,8 +479,10 @@ const sourceCodeView = (
   activeSourceFilePath: string,
   copiedSnippets: CopiedSnippets,
   isNarrowViewport: boolean,
+  renderCopyButton: RenderCopyButton,
 ): Html => {
   const h = html<Message>()
+  const highlightedCodeBlock = highlightedCodeBlockFor(renderCopyButton)
 
   const filePaths = Array.map(files, file => file.path)
 
@@ -649,10 +655,24 @@ type ViewInputs = Readonly<{
   copiedSnippets: CopiedSnippets
   isNarrowViewport: boolean
   isChromium: boolean
+  renderCopyButton: RenderCopyButton
 }>
 
+/**
+ * Renders one example app: its header, the live preview, and the source files
+ * behind a Tabs Submodel.
+ *
+ * The page is dispatched through `h.submodel`, so it takes `renderCopyButton`
+ * from its parent rather than building the copy control itself. The control
+ * carries an app-level Message, and a handler's dispatcher comes from the frame
+ * the element is built in, so one built here would be rejected by this
+ * Submodel's `toParentMessage`.
+ */
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
-  (model, { slug, copiedSnippets, isNarrowViewport, isChromium }): Html => {
+  (
+    model,
+    { slug, copiedSnippets, isNarrowViewport, isChromium, renderCopyButton },
+  ): Html => {
     const h = html<Message>()
 
     return Option.match(findBySlug(slug), {
@@ -690,6 +710,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
                             ),
                             copiedSnippets,
                             isNarrowViewport,
+                            renderCopyButton,
                           ),
                         ],
                       }),

@@ -6,7 +6,11 @@ import { Html, createKeyedLazy, html } from 'foldkit/html'
 import { Disclosure } from '@foldkit/ui'
 
 import { Icon } from '../../icon'
-import { heading, headingLinkButton, pageTitle } from '../../prose'
+import {
+  type RenderHeadingLink,
+  headingWithContent,
+  pageTitle,
+} from '../../prose'
 import {
   type ApiFunction,
   type ApiInterface,
@@ -52,6 +56,7 @@ const functionView = (
   apiFunction: ApiFunction,
   isSignatureDisclosureOpen: boolean | undefined,
   highlights: Highlights,
+  renderHeadingLink: RenderHeadingLink,
 ): Html => {
   const h = html<Message>()
   const id = scopedId('function', moduleName, apiFunction.name)
@@ -89,7 +94,7 @@ const functionView = (
               ...sourceLink(apiFunction.sourceUrl, apiFunction.name),
             ],
           ),
-          headingLinkButton(id, apiFunction.name),
+          renderHeadingLink(id, apiFunction.name),
         ],
       ),
       signaturesView(id, apiFunction, isSignatureDisclosureOpen, highlights),
@@ -377,6 +382,7 @@ const typeView = (
   moduleName: string,
   type: ApiType,
   highlights: Highlights,
+  renderHeadingLink: RenderHeadingLink,
 ): Html => {
   const h = html<Message>()
   const id = scopedId('type', moduleName, type.name)
@@ -415,7 +421,7 @@ const typeView = (
               ...sourceLink(type.sourceUrl, type.name),
             ],
           ),
-          headingLinkButton(id, type.name),
+          renderHeadingLink(id, type.name),
         ],
       ),
       ...Option.match(maybeHighlighted, {
@@ -452,6 +458,7 @@ const interfaceView = (
   moduleName: string,
   apiInterface: ApiInterface,
   highlights: Highlights,
+  renderHeadingLink: RenderHeadingLink,
 ): Html => {
   const h = html<Message>()
   const id = scopedId('interface', moduleName, apiInterface.name)
@@ -490,7 +497,7 @@ const interfaceView = (
               ...sourceLink(apiInterface.sourceUrl, apiInterface.name),
             ],
           ),
-          headingLinkButton(id, apiInterface.name),
+          renderHeadingLink(id, apiInterface.name),
         ],
       ),
       ...Option.match(maybeHighlighted, {
@@ -527,6 +534,7 @@ const variableView = (
   moduleName: string,
   variable: ApiVariable,
   highlights: Highlights,
+  renderHeadingLink: RenderHeadingLink,
 ): Html => {
   const h = html<Message>()
   const id = scopedId('const', moduleName, variable.name)
@@ -565,7 +573,7 @@ const variableView = (
               ...sourceLink(variable.sourceUrl, variable.name),
             ],
           ),
-          headingLinkButton(id, variable.name),
+          renderHeadingLink(id, variable.name),
         ],
       ),
       ...Option.match(maybeHighlighted, {
@@ -602,12 +610,19 @@ const section = <T extends { readonly name: string }>(
   moduleName: string,
   label: string,
   items: ReadonlyArray<T>,
+  renderHeadingLink: RenderHeadingLink,
   itemView: (item: T) => Html,
 ): ReadonlyArray<Html> =>
   Array.match(items, {
     onEmpty: () => [],
     onNonEmpty: items => [
-      heading('h2', sectionId(moduleName, label), label),
+      headingWithContent(
+        'h2',
+        sectionId(moduleName, label),
+        label,
+        [label],
+        renderHeadingLink,
+      ),
       ...Array.map(items, itemView),
     ],
   })
@@ -615,50 +630,88 @@ const section = <T extends { readonly name: string }>(
 type ViewInputs = Readonly<{
   module: ApiModule
   highlights: Highlights
+  renderHeadingLink: RenderHeadingLink
 }>
 
+/**
+ * Renders one API module: its sections and every function, type, interface, and
+ * constant it exports.
+ *
+ * The page is dispatched through `h.submodel`, so it takes `renderHeadingLink`
+ * from its parent rather than building the copy-link itself. The control carries
+ * an app-level Message, and a handler's dispatcher comes from the frame the
+ * element is built in, so one built here would be rejected by this Submodel's
+ * `toParentMessage`.
+ */
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
-  (model, { module, highlights }): Html => {
+  (model, { module, highlights, renderHeadingLink }): Html => {
     const h = html<Message>()
 
     return h.div(
       [h.DataAttribute('pagefind-meta', 'kind:API Reference')],
       [
         pageTitle(module.name, module.name),
-        ...section(module.name, 'Functions', module.functions, apiFunction => {
-          const key = scopedId('function', module.name, apiFunction.name)
-          return lazyItem(key, functionView, [
-            module.name,
-            apiFunction,
-            model.disclosures[key],
-            highlights,
-          ])
-        }),
-        ...section(module.name, 'Types', module.types, type => {
-          const key = scopedId('type', module.name, type.name)
-          return lazyItem(key, typeView, [module.name, type, highlights])
-        }),
+        ...section(
+          module.name,
+          'Functions',
+          module.functions,
+          renderHeadingLink,
+          apiFunction => {
+            const key = scopedId('function', module.name, apiFunction.name)
+            return lazyItem(key, functionView, [
+              module.name,
+              apiFunction,
+              model.disclosures[key],
+              highlights,
+              renderHeadingLink,
+            ])
+          },
+        ),
+        ...section(
+          module.name,
+          'Types',
+          module.types,
+          renderHeadingLink,
+          type => {
+            const key = scopedId('type', module.name, type.name)
+            return lazyItem(key, typeView, [
+              module.name,
+              type,
+              highlights,
+              renderHeadingLink,
+            ])
+          },
+        ),
         ...section(
           module.name,
           'Interfaces',
           module.interfaces,
+          renderHeadingLink,
           apiInterface => {
             const key = scopedId('interface', module.name, apiInterface.name)
             return lazyItem(key, interfaceView, [
               module.name,
               apiInterface,
               highlights,
+              renderHeadingLink,
             ])
           },
         ),
-        ...section(module.name, 'Constants', module.variables, variable => {
-          const key = scopedId('const', module.name, variable.name)
-          return lazyItem(key, variableView, [
-            module.name,
-            variable,
-            highlights,
-          ])
-        }),
+        ...section(
+          module.name,
+          'Constants',
+          module.variables,
+          renderHeadingLink,
+          variable => {
+            const key = scopedId('const', module.name, variable.name)
+            return lazyItem(key, variableView, [
+              module.name,
+              variable,
+              highlights,
+              renderHeadingLink,
+            ])
+          },
+        ),
       ],
     )
   },
