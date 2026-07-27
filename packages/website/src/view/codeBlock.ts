@@ -143,3 +143,26 @@ export const highlightedCodeBlock = (
     ],
   )
 }
+
+/**
+ * `highlightedCodeBlock` bound to a page-supplied copy-button renderer, for a
+ * page rendered inside a Submodel. Bind once at the top of the view and the
+ * call sites below it are unchanged.
+ */
+export const highlightedCodeBlockFor =
+  (renderCopyButton: RenderCopyButton) =>
+  (
+    content: Html,
+    rawCode: string,
+    ariaLabel: string,
+    copiedSnippets: CopiedSnippets,
+    className?: string,
+  ): Html =>
+    highlightedCodeBlock(
+      content,
+      rawCode,
+      ariaLabel,
+      copiedSnippets,
+      className,
+      renderCopyButton,
+    )

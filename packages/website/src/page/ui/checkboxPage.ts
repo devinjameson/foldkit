@@ -4,17 +4,21 @@ import { Html, html } from 'foldkit/html'
 import { uiShowcaseViewSourceHref } from '../../link'
 import type { TableOfContentsEntry } from '../../main'
 import {
+  type RenderHeadingLink,
   demoContainer,
-  heading,
+  headingsFor,
   infoCallout,
   inlineCode,
   link,
   pageTitle,
   para,
-  tableOfContentsEntryToHeader,
 } from '../../prose'
 import * as Snippet from '../../snippet'
-import { type CopiedSnippets, highlightedCodeBlock } from '../../view/codeBlock'
+import {
+  type CopiedSnippets,
+  type RenderCopyButton,
+  highlightedCodeBlockFor,
+} from '../../view/codeBlock'
 import {
   type DataAttributeEntry,
   type KeyboardEntry,
@@ -195,11 +199,18 @@ const keyboardEntries: ReadonlyArray<KeyboardEntry> = [
 
 // VIEW
 
-type ViewInputs = Readonly<{ copiedSnippets: CopiedSnippets }>
+type ViewInputs = Readonly<{
+  copiedSnippets: CopiedSnippets
+  renderCopyButton: RenderCopyButton
+  renderHeadingLink: RenderHeadingLink
+}>
 
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
-  (model, { copiedSnippets }): Html => {
+  (model, { copiedSnippets, renderCopyButton, renderHeadingLink }): Html => {
     const h = html<Message>()
+    const { heading, tableOfContentsEntryToHeader } =
+      headingsFor(renderHeadingLink)
+    const highlightedCodeBlock = highlightedCodeBlockFor(renderCopyButton)
 
     return h.div(
       [],

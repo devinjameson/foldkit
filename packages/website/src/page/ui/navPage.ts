@@ -5,18 +5,22 @@ import type { Url } from 'foldkit/url'
 import { exampleSourceHref } from '../../link'
 import type { TableOfContentsEntry } from '../../main'
 import {
+  type RenderHeadingLink,
   demoContainer,
-  heading,
+  headingsFor,
   infoCallout,
   inlineCode,
   link,
   pageTitle,
   para,
-  tableOfContentsEntryToHeader,
 } from '../../prose'
 import { uiTabsRouter } from '../../route'
 import * as Snippet from '../../snippet'
-import { type CopiedSnippets, highlightedCodeBlock } from '../../view/codeBlock'
+import {
+  type CopiedSnippets,
+  type RenderCopyButton,
+  highlightedCodeBlockFor,
+} from '../../view/codeBlock'
 import {
   type DataAttributeEntry,
   type KeyboardEntry,
@@ -204,11 +208,22 @@ const keyboardEntries: ReadonlyArray<KeyboardEntry> = [
 
 // VIEW
 
-type ViewInputs = Readonly<{ copiedSnippets: CopiedSnippets; url: Url }>
+type ViewInputs = Readonly<{
+  copiedSnippets: CopiedSnippets
+  renderCopyButton: RenderCopyButton
+  renderHeadingLink: RenderHeadingLink
+  url: Url
+}>
 
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
-  (_model, { copiedSnippets, url }): Html => {
+  (
+    _model,
+    { copiedSnippets, renderCopyButton, renderHeadingLink, url },
+  ): Html => {
     const h = html<Message>()
+    const { heading, tableOfContentsEntryToHeader } =
+      headingsFor(renderHeadingLink)
+    const highlightedCodeBlock = highlightedCodeBlockFor(renderCopyButton)
 
     return h.div(
       [],
