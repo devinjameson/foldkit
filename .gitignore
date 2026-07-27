@@ -6,7 +6,7 @@ coverage
 *.cpuprofile
 .vercel
 **/.claude/*
-!/.claude/commands/
+!/.claude/skills/
 !/.claude/settings.json
 packages/website/src/generated/
 packages/website/public/fonts/ABCFavorit-Book.woff2
