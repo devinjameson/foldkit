@@ -372,7 +372,7 @@ const renderApiReference = (
     slotId: `api-reference-${module.name}`,
     model: apiReference,
     view: Page.ApiReference.view,
-    viewInputs: { module, highlights },
+    viewInputs: { module, highlights, renderHeadingLink: headingLinkButton },
     toParentMessage: toApiReferenceMessage,
   })
 }
@@ -499,6 +499,7 @@ export const docsView = (model: Model, docsRoute: DocsRoute) => {
               copiedSnippets: model.copiedSnippets,
               isNarrowViewport: model.isNarrowViewport,
               isChromium: model.isChromium,
+              renderCopyButton: defaultRenderCopyButton(model.copiedSnippets),
             },
             toParentMessage: message => GotExampleDetailMessage({ message }),
           }),
