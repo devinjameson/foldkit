@@ -4,6 +4,7 @@ export {
   createLazy,
   html,
   submodel,
+  TextDirection,
 } from './index.js'
 
 export type {

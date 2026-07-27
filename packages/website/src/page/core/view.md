@@ -14,6 +14,43 @@ Given the same Model, view always produces the same HTML. It never modifies stat
 In React, functional components can hold local state and run effects via hooks, which come with ordering rules you have to follow. In Foldkit, view is guaranteed pure: no hooks, no effects, no local state. It’s a function from Model to Html.
 :::
 
+## The Document
+
+A `makeApplication` view returns a `Document` rather than bare HTML. A Document is everything the runtime needs to render one frame: the body to patch into the container, plus the document-level state that should track the Model.
+
+| Field       | Type                       | Required | What the runtime does with it                                                                  |
+| ----------- | -------------------------- | -------- | ---------------------------------------------------------------------------------------------- |
+| `title`     | `string`                   | Yes      | Writes it to `document.title`, so the browser tab tracks the current page.                     |
+| `body`      | `Html`                     | Yes      | Patches it into the application container.                                                     |
+| `lang`      | `string`                   | No       | Syncs it to `lang` on `<html>`. Omit it and the current value stands.                          |
+| `dir`       | `'Ltr' \| 'Rtl' \| 'Auto'` | No       | Syncs it to `dir` on `<html>`, lowercased. Omit it and the current value stands.               |
+| `canonical` | `string`                   | No       | Syncs it to `<link rel="canonical">`, creating the tag if absent. Defaults to the current URL. |
+| `ogUrl`     | `string`                   | No       | Syncs it to `<meta property="og:url">`, creating the tag if absent. Defaults to `canonical`.   |
+
+Every field is a function of the Model, exactly like `body`. There is no imperative `setTitle` and no separate head-management API: you return the values you want and the runtime makes the document match on each render.
+
+A `makeElement` view returns `Html` directly instead of a `Document`. An embedded app does not own the page, so it has no title or document metadata to declare, and the rest of this section does not apply to it. Everything on this page outside this section applies to both. See [Runtime](/core/runtime#make-element) for which of the two to reach for.
+
+### Language and direction
+
+`lang` and `dir` sync to the `<html>` element. Drive them from the Model when the app switches language at runtime, the same way `title` tracks the current page.
+
+::Snippet{name="documentLanguage" label="Localized document example"}
+
+`dir` takes `'Ltr'`, `'Rtl'`, or `'Auto'`, which the runtime writes as the lowercase `dir` attribute values. `Auto` hands the decision to the browser's first-strong-character heuristic. `foldkit/html` exports `TextDirection` as a Schema, so a Model that stores the direction rather than deriving it can drop the field straight into an `S.Struct`.
+
+Neither field has a default. When a view omits one, the runtime does not touch that attribute, leaving whatever value it currently holds, so a view that never sets it leaves the `lang` from your `index.html` in place. That is the right behavior for an app that ships in one language, and it means adding these fields never changes an existing app.
+
+The runtime can only sync after the first render, so the served HTML still decides what a crawler sees on first paint. When the language is known per request, stamp `<html lang>` in the HTML shell and let the runtime keep it in sync from there. The runtime sync is what a screen reader picks up when a user flips the language switcher, which is the part a static shell cannot do.
+
+To mark up a passage in a different language from the page, use the `Lang` attribute on that element instead. `Document.lang` is only the root.
+
+### Canonical and share URLs
+
+`canonical` and `ogUrl` keep `<link rel="canonical">` and `<meta property="og:url">` current as you navigate, so a platform share menu copies the link for the route the user is actually on rather than the one the page was first served as.
+
+Set neither and both fall back to the current URL, which is what a routed app usually wants. The two are chained rather than independent: `canonical` falls back to the current URL, and `ogUrl` falls back to the resolved `canonical`, so setting `canonical` alone moves both. Set them explicitly when the canonical URL differs from the address bar, such as a paginated list whose later pages should point back at the first.
+
 ## Typed HTML Helpers
 
 Foldkit’s HTML functions are typed to your Message type. This ensures event handlers only accept valid Messages from your application. Bind the factory once per module by calling `html<Message>()`, then reach for `h.div`, `h.OnClick`, and the rest off the returned record:

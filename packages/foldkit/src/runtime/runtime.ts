@@ -40,6 +40,7 @@ import {
   type BoundaryRegistry,
   Document,
   Html,
+  TextDirection,
   __beginRender as beginHtmlRender,
   __beginReplayRender as beginReplayHtmlRender,
   __clearRuntime as clearHtmlRuntime,
@@ -2722,6 +2723,14 @@ const currentLocationUrl = (): string => {
   return `${origin}${pathname}${search}`
 }
 
+const textDirectionForHtmlElement: Readonly<
+  Record<TextDirection, 'ltr' | 'rtl' | 'auto'>
+> = {
+  Ltr: 'ltr',
+  Rtl: 'rtl',
+  Auto: 'auto',
+}
+
 type DocumentMetadataElements = {
   canonical?: HTMLLinkElement
   ogUrl?: HTMLMetaElement
@@ -2771,6 +2780,22 @@ const applyDocumentMetadata = (
 
   if (document.title !== nextDocument.title) {
     document.title = nextDocument.title
+  }
+
+  const { documentElement } = document
+
+  if (
+    nextDocument.lang !== undefined &&
+    documentElement.lang !== nextDocument.lang
+  ) {
+    documentElement.lang = nextDocument.lang
+  }
+
+  if (nextDocument.dir !== undefined) {
+    const dir = textDirectionForHtmlElement[nextDocument.dir]
+    if (documentElement.dir !== dir) {
+      documentElement.dir = dir
+    }
   }
 
   const canonical = nextDocument.canonical ?? currentLocationUrl()

@@ -1,9 +1,10 @@
-import { Effect, Fiber, Match as M, Schema as S } from 'effect'
+import { Effect, Fiber, Match as M, Number, Schema as S } from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { Command } from '../command/index.js'
-import { html } from '../html/index.js'
+import { TextDirection, html } from '../html/index.js'
 import { m } from '../message/index.js'
+import { evo } from '../struct/index.js'
 import { makeApplication, makeElement } from './runtime.js'
 
 const Rendered = m('Rendered')
@@ -28,7 +29,46 @@ const update = (
     }),
   )
 
+const LocaleModel = S.Struct({
+  lang: S.String,
+  dir: TextDirection,
+  revision: S.Number,
+})
+type LocaleModel = typeof LocaleModel.Type
+
+const ENGLISH_LTR = LocaleModel.make({ lang: 'en', dir: 'Ltr', revision: 0 })
+const FRENCH_AUTO = LocaleModel.make({
+  lang: 'fr-CA',
+  dir: 'Auto',
+  revision: 0,
+})
+
+const ClickedArabic = m('ClickedArabic')
+const ClickedRerender = m('ClickedRerender')
+const LocaleMessage = S.Union([ClickedArabic, ClickedRerender])
+type LocaleMessage = typeof LocaleMessage.Type
+
+const localeH = html<LocaleMessage>()
+
+const localeUpdate = (
+  model: LocaleModel,
+  message: LocaleMessage,
+): readonly [LocaleModel, ReadonlyArray<Command<LocaleMessage>>] =>
+  M.value(message).pipe(
+    M.withReturnType<
+      readonly [LocaleModel, ReadonlyArray<Command<LocaleMessage>>]
+    >(),
+    M.tagsExhaustive({
+      ClickedArabic: () => [
+        evo(model, { lang: () => 'ar', dir: () => 'Rtl' }),
+        [],
+      ],
+      ClickedRerender: () => [evo(model, { revision: Number.increment }), []],
+    }),
+  )
+
 const HOST_TITLE = 'Host Page Title'
+const HOST_LANG = 'en'
 
 let container: HTMLElement
 
@@ -41,9 +81,15 @@ const removeHeadMetadata = (): void => {
   })
 }
 
+const resetRootAttributes = (): void => {
+  document.documentElement.lang = HOST_LANG
+  document.documentElement.removeAttribute('dir')
+}
+
 beforeEach(() => {
   document.title = HOST_TITLE
   removeHeadMetadata()
+  resetRootAttributes()
   container = document.createElement('div')
   container.id = 'app'
   document.body.appendChild(container)
@@ -53,6 +99,7 @@ afterEach(() => {
   document.body.innerHTML = ''
   document.title = HOST_TITLE
   removeHeadMetadata()
+  resetRootAttributes()
 })
 
 const awaitBodyText = (text: string): Promise<void> =>
@@ -60,10 +107,12 @@ const awaitBodyText = (text: string): Promise<void> =>
     expect(document.body.textContent).toContain(text)
   })
 
-const expectHeadUntouched = (): void => {
+const expectDocumentUntouched = (): void => {
   expect(document.title).toBe(HOST_TITLE)
   expect(document.head.querySelector('link[rel="canonical"]')).toBeNull()
   expect(document.head.querySelector('meta[property="og:url"]')).toBeNull()
+  expect(document.documentElement.lang).toBe(HOST_LANG)
+  expect(document.documentElement.hasAttribute('dir')).toBe(false)
 }
 
 describe('makeElement', () => {
@@ -80,7 +129,7 @@ describe('makeElement', () => {
 
     try {
       await awaitBodyText('hello')
-      expectHeadUntouched()
+      expectDocumentUntouched()
     } finally {
       await Effect.runPromise(Fiber.interrupt(fiber))
     }
@@ -109,7 +158,7 @@ describe('makeElement', () => {
       button?.click()
 
       await awaitBodyText('world')
-      expectHeadUntouched()
+      expectDocumentUntouched()
     } finally {
       await Effect.runPromise(Fiber.interrupt(fiber))
     }
@@ -132,7 +181,7 @@ describe('makeElement', () => {
 
     try {
       await awaitBodyText('from-flags')
-      expectHeadUntouched()
+      expectDocumentUntouched()
     } finally {
       await Effect.runPromise(Fiber.interrupt(fiber))
     }
@@ -156,7 +205,7 @@ describe('makeElement', () => {
 
     try {
       await awaitBodyText('Crashed Widget')
-      expectHeadUntouched()
+      expectDocumentUntouched()
     } finally {
       await Effect.runPromise(Fiber.interrupt(fiber))
     }
@@ -262,6 +311,130 @@ describe('makeApplication', () => {
         canonicalSetAttributeSpy.mockRestore()
         ogUrlSetAttributeSpy.mockRestore()
       }
+    } finally {
+      await Effect.runPromise(Fiber.interrupt(fiber))
+    }
+  })
+
+  it('applies lang and dir to the html element', async () => {
+    const application = makeApplication({
+      Model: LocaleModel,
+      init: () => [FRENCH_AUTO, []],
+      update: localeUpdate,
+      view: model => ({
+        title: 'Localized',
+        lang: model.lang,
+        dir: model.dir,
+        body: localeH.div([], ['bonjour']),
+      }),
+      container,
+    })
+
+    const fiber = Effect.runFork(application.start())
+
+    try {
+      await awaitBodyText('bonjour')
+
+      expect(document.documentElement.lang).toBe('fr-CA')
+      expect(document.documentElement.dir).toBe('auto')
+    } finally {
+      await Effect.runPromise(Fiber.interrupt(fiber))
+    }
+  })
+
+  it('leaves lang and dir alone when the view omits them', async () => {
+    const application = makeApplication({
+      Model,
+      init: () => [{ label: 'hello' }, []],
+      update,
+      view: model => ({ title: model.label, body: h.div([], [model.label]) }),
+      container,
+    })
+
+    const fiber = Effect.runFork(application.start())
+
+    try {
+      await awaitBodyText('hello')
+
+      expect(document.documentElement.lang).toBe(HOST_LANG)
+      expect(document.documentElement.hasAttribute('dir')).toBe(false)
+    } finally {
+      await Effect.runPromise(Fiber.interrupt(fiber))
+    }
+  })
+
+  it('applies lang without touching dir when the view sets only one', async () => {
+    const application = makeApplication({
+      Model,
+      init: () => [{ label: 'hello' }, []],
+      update,
+      view: model => ({
+        title: model.label,
+        lang: 'ja',
+        body: h.div([], [model.label]),
+      }),
+      container,
+    })
+
+    const fiber = Effect.runFork(application.start())
+
+    try {
+      await awaitBodyText('hello')
+
+      expect(document.documentElement.lang).toBe('ja')
+      expect(document.documentElement.hasAttribute('dir')).toBe(false)
+    } finally {
+      await Effect.runPromise(Fiber.interrupt(fiber))
+    }
+  })
+
+  it('tracks lang and dir across renders, and reasserts them on a later render that leaves both unchanged', async () => {
+    const application = makeApplication({
+      Model: LocaleModel,
+      init: () => [ENGLISH_LTR, []],
+      update: localeUpdate,
+      view: model => ({
+        title: 'Localized',
+        lang: model.lang,
+        dir: model.dir,
+        body: localeH.div(
+          [],
+          [
+            localeH.button([localeH.OnClick(ClickedArabic())], ['arabic']),
+            localeH.button([localeH.OnClick(ClickedRerender())], ['rerender']),
+            `${model.lang}-${model.revision}`,
+          ],
+        ),
+      }),
+      container,
+    })
+
+    const fiber = Effect.runFork(application.start())
+
+    try {
+      await awaitBodyText('en-0')
+      expect(document.documentElement.lang).toBe('en')
+      expect(document.documentElement.dir).toBe('ltr')
+
+      const buttons = document.body.querySelectorAll('button')
+      const arabicButton = buttons.item(0)
+      const rerenderButton = buttons.item(1)
+      if (arabicButton === null || rerenderButton === null) {
+        throw new Error('expected the arabic and rerender buttons')
+      }
+
+      arabicButton.click()
+      await awaitBodyText('ar-0')
+      expect(document.documentElement.lang).toBe('ar')
+      expect(document.documentElement.dir).toBe('rtl')
+
+      document.documentElement.lang = 'de'
+      document.documentElement.dir = 'ltr'
+
+      rerenderButton.click()
+      await awaitBodyText('ar-1')
+      expect(document.documentElement.lang).toBe('ar')
+      expect(document.documentElement.dir).toBe('rtl')
     } finally {
       await Effect.runPromise(Fiber.interrupt(fiber))
     }
