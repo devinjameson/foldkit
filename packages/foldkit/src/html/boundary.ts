@@ -218,6 +218,59 @@ export const deregisterBoundaryWrap = (
   registry.wraps.delete(boundaryId)
 }
 
+// NOTE: reading `_tag` can itself throw, through a getter or a Proxy trap. This
+// runs while reporting another failure, so an escape here would replace the
+// error being described with an unrelated one.
+const describeMessage = (message: unknown): string => {
+  try {
+    if (typeof message === 'object' && message !== null && '_tag' in message) {
+      const tag = Reflect.get(message, '_tag')
+      if (typeof tag === 'string') {
+        return `\`${tag}\``
+      }
+    }
+  } catch {
+    return 'the Message'
+  }
+  return 'the Message'
+}
+
+/** Applies one boundary's `toParentMessage`, translating a rejection into an
+ *  error that names the cause.
+ *
+ *  A wrapper Message is normally a Schema constructor, so handing it a Message
+ *  outside the child's union throws a Schema error naming both shapes and
+ *  nothing else. That error is accurate and nearly undiagnosable: it fires
+ *  inside a DOM listener, the app keeps rendering, and reading it requires
+ *  already knowing that a boundary sits between the handler and `update`. The
+ *  overwhelmingly common cause is a shared view helper that built an app-level
+ *  Message inside a Submodel's view, where the dispatcher is chosen by the
+ *  current render frame rather than by the Message's type. */
+const liftAcrossBoundary = (
+  descriptor: WrapDescriptor,
+  boundaryId: BoundaryId,
+  message: unknown,
+): unknown => {
+  try {
+    return descriptor.toParentMessage(message)
+  } catch (cause) {
+    throw new Error(
+      `Foldkit: a Message dispatched from inside Submodel boundary ` +
+        `"${boundaryId}" could not be lifted into its parent's Message type. ` +
+        `Its \`toParentMessage\` rejected ${describeMessage(message)}, which ` +
+        `means that Message is not part of the Submodel's own Message union. ` +
+        `The usual cause is a shared view helper building an app-level Message ` +
+        `inside a Submodel's view: a handler's dispatcher is chosen by where ` +
+        `the element is built, not by the Message it carries, so the boundary ` +
+        `tried to wrap a Message the Submodel does not own. Either move the ` +
+        `Message into the Submodel's union, or have the parent supply the ` +
+        `element through a \`viewInputs\` slot callback so it is built in the ` +
+        `parent's boundary.`,
+      { cause },
+    )
+  }
+}
+
 /** Applies the wrapping chain for `boundaryId` from innermost to
  *  outermost, then dispatches the fully-wrapped message via
  *  `outerDispatch`. Called at event-fire time by the dispatcher closure
@@ -257,7 +310,7 @@ const dispatchAcrossBoundary = (
           `wrap was registered in one copy and read from another.`,
       )
     }
-    wrapped = descriptor.toParentMessage(wrapped)
+    wrapped = liftAcrossBoundary(descriptor, ancestorBoundary, wrapped)
   }
   outerDispatch(wrapped)
 }
@@ -297,7 +350,7 @@ export const resolveBoundaryDispatchThunk = (
           `at resolve time, which should not happen during a live render.`,
       )
     }
-    wrapped = descriptor.toParentMessage(wrapped)
+    wrapped = liftAcrossBoundary(descriptor, ancestorBoundary, wrapped)
   }
   const rootMessage = wrapped
   return () => outerDispatch(rootMessage)

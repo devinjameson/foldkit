@@ -7,6 +7,7 @@ import {
   composeBoundary,
   createBoundaryRegistry,
   getOrCreateBoundaryDispatch,
+  resolveBoundaryDispatchThunk,
 } from './boundary.js'
 import type { DispatchSync } from './runtimeSingleton.js'
 
@@ -95,5 +96,99 @@ describe('getOrCreateBoundaryDispatch', () => {
     expect(getOrCreateBoundaryDispatch(registry, dispatch, ROOT_BOUNDARY)).toBe(
       dispatch,
     )
+  })
+
+  it('names the boundary, the Message, and the likely cause when toParentMessage rejects', () => {
+    // A wrapper Message is normally a Schema constructor, so a Message
+    // outside the child's union throws a Schema error naming only the two
+    // shapes. On its own that is undiagnosable from inside a DOM listener,
+    // so the boundary reframes it.
+    const registry = createBoundaryRegistry()
+    registry.wraps.set('ui-Button', {
+      toParentMessage: message => {
+        if (Reflect.get(Object(message), '_tag') !== 'ClickedButtonDemo') {
+          throw new Error('Expected { readonly "_tag": "ClickedButtonDemo" }')
+        }
+        return { _tag: 'GotUiPageMessage', message }
+      },
+    })
+
+    const dispatcher = getOrCreateBoundaryDispatch(
+      registry,
+      () => {},
+      'ui-Button',
+    )
+
+    expect(() => dispatcher({ _tag: 'ClickedCopySnippet' })).toThrow(
+      /boundary "ui-Button".*`ClickedCopySnippet`.*shared view helper/s,
+    )
+  })
+
+  it('describes a Message whose _tag throws without masking the rejection', () => {
+    const registry = createBoundaryRegistry()
+    const original = new Error('schema said no')
+    registry.wraps.set('child', {
+      toParentMessage: () => {
+        throw original
+      },
+    })
+
+    const hostile = new Proxy(
+      { _tag: 'Foreign' },
+      {
+        get: () => {
+          throw new Error('proxy trap')
+        },
+      },
+    )
+
+    const dispatcher = getOrCreateBoundaryDispatch(registry, () => {}, 'child')
+
+    expect(() => dispatcher(hostile)).toThrow(/could not be lifted/)
+    expect(() => dispatcher(hostile)).toThrow(
+      expect.objectContaining({ cause: original }),
+    )
+  })
+
+  it('keeps the original rejection as the cause', () => {
+    const registry = createBoundaryRegistry()
+    const original = new Error('schema said no')
+    registry.wraps.set('child', {
+      toParentMessage: () => {
+        throw original
+      },
+    })
+
+    const dispatcher = getOrCreateBoundaryDispatch(registry, () => {}, 'child')
+
+    expect(() => dispatcher({ _tag: 'Foreign' })).toThrow(
+      expect.objectContaining({ cause: original }),
+    )
+  })
+})
+
+describe('resolveBoundaryDispatchThunk', () => {
+  it('reframes an OnUnmount rejection the same way live dispatch does', () => {
+    // OnUnmount resolves its lift eagerly, so a rejection surfaces here rather
+    // than through dispatchAcrossBoundary and needs the same framing.
+    const registry = createBoundaryRegistry()
+    const original = new Error('schema said no')
+    registry.wraps.set('ui-Button', {
+      toParentMessage: () => {
+        throw original
+      },
+    })
+
+    expect(() =>
+      resolveBoundaryDispatchThunk(registry, () => {}, 'ui-Button', {
+        _tag: 'ClickedCopySnippet',
+      }),
+    ).toThrow(/boundary "ui-Button".*`ClickedCopySnippet`/s)
+
+    expect(() =>
+      resolveBoundaryDispatchThunk(registry, () => {}, 'ui-Button', {
+        _tag: 'ClickedCopySnippet',
+      }),
+    ).toThrow(expect.objectContaining({ cause: original }))
   })
 })

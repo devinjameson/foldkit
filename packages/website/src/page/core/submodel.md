@@ -237,6 +237,25 @@ The child never calls its own `reflect*`. It is the sanctioned way for the owner
 
 Across the stateful Foldkit UI components the choice-based setters keep domain verbs (`selectItem`, `selectDate`), and they emit. The `reflect*` family is the uniform name for the silent inbound setter: the `reflectMinDate` / `reflectMaxDate` / `reflectDisabledDates` / `reflectDisabledDaysOfWeek` constraint setters (Calendar, DatePicker), and `reflectRange` (Slider). It is a framework convention any Submodel can adopt; the stateful Foldkit UI components are the canonical adopters.
 
+## Which Boundary a Handler Dispatches Through {#which-boundary}
+
+A handler’s dispatcher is chosen by **where the element is built**, not by the Message it carries. `html<Message>()`’s type argument is erased at runtime, so the element constructor reads the boundary off the current render frame and the compiler never sees the question.
+
+Inside a Submodel there are two frames, with opposite defaults:
+
+| Where you build the element                       | Dispatches through        | To change it                                                            |
+| ------------------------------------------------- | ------------------------- | ----------------------------------------------------------------------- |
+| The child’s own view body                         | the **child’s** boundary  | have the parent supply the element through a `viewInputs` slot callback |
+| A slot callback the parent passed in `viewInputs` | the **parent’s** boundary | [`childAttributes`](#child-attributes) binds it back to the child       |
+
+Both defaults are usually what you want. The child’s view body is full of the child’s own Messages, and a parent’s slot callback is full of the parent’s.
+
+The case that bites is a **shared view helper** rendered inside a Submodel: a copy button, an analytics hook, a toast trigger. It builds an app-level Message in the child’s view body, so the child’s `toParentMessage` is applied to a Message the child does not own. That wrapper is a Schema constructor, so it throws inside the event listener: nothing dispatches, no `update` runs, the page keeps rendering, and the type checker never complained. Foldkit reframes that error to name the boundary and the Message, but the fix is structural. Let the parent build it and pass it down:
+
+::Snippet{name="submodelSharedChrome" label="shared chrome"}
+
+Because the renderer is a function at the top level of `viewInputs`, it runs in the parent’s boundary, so the Message it builds reaches `update` unwrapped no matter how deep the child renders it.
+
 ## childAttributes {#child-attributes}
 
 Some Submodels (Tooltip, Dialog, Popover, the selection family) hand the consumer **attribute bundles** rather than rendering their own DOM. The consumer spreads those attributes onto their own elements, deciding markup and styling, while the Submodel keeps owning the wiring. The snippets below evolve the CommandMenu from [Per-render View Inputs](#per-render-view-inputs): instead of rendering its own DOM, it publishes attribute bundles plus slot data, and the parent renders the button and the items.

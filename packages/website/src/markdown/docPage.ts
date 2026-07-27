@@ -20,7 +20,13 @@ const renderDocument = (
   slots: Slots<string>,
 ): Html =>
   Markdown.view(document, {
-    views: docViews({ pageId, idByHeading, copiedSnippets }),
+    views: docViews({
+      pageId,
+      idByHeading,
+      copiedSnippets,
+      renderCopyButton: slots.renderCopyButton,
+      renderHeadingLink: slots.renderHeadingLink,
+    }),
     islands: docIslands(copiedSnippets, slots),
   })
 

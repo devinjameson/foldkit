@@ -6,6 +6,16 @@ import { Icon } from './icon'
 import { type TableOfContentsEntry } from './main'
 import { ClickedCopyLink, type Message } from './message'
 
+/**
+ * Builds the copy-link control beside a section heading.
+ *
+ * A page rendered through `h.submodel` must supply one of these from its
+ * parent, for the same reason {@link RenderCopyButton} exists: a handler's
+ * dispatcher comes from the frame it is built in, so an app-level Message
+ * built inside a Submodel's view is rejected by that Submodel's boundary.
+ */
+export type RenderHeadingLink = (id: string, text: string) => Html
+
 export const headingLinkButton = (id: string, text: string): Html => {
   const h = html<Message>()
 
@@ -94,6 +104,7 @@ export const headingWithContent = (
   id: string,
   ariaText: string,
   content: ReadonlyArray<string | Html>,
+  renderHeadingLink: RenderHeadingLink | undefined = headingLinkButton,
 ): Html => {
   const h = html()
 
@@ -104,7 +115,7 @@ export const headingWithContent = (
     [h.Class(config.wrapperClassName)],
     [
       tag[level]([h.Class(config.textClassName), h.Id(id)], content),
-      headingLinkButton(id, ariaText),
+      renderHeadingLink(id, ariaText),
     ],
   )
 }

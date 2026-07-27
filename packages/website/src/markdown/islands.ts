@@ -61,6 +61,7 @@ export const docIslands = (
               : `Copy ${label} to clipboard`,
             copiedSnippets,
             className ?? 'mb-8',
+            slots.renderCopyButton,
           ),
       }),
 

@@ -6,7 +6,11 @@ import { Disclosure } from '@foldkit/ui'
 
 import { Icon } from '../../icon'
 import { slotDocPage } from '../../markdown'
-import { type CopiedSnippets } from '../../view/codeBlock'
+import { type RenderHeadingLink } from '../../prose'
+import {
+  type CopiedSnippets,
+  type RenderCopyButton,
+} from '../../view/codeBlock'
 import raw from './comingFromReact.md'
 import { type Message, ToggledFaq } from './message'
 import type { Model } from './model'
@@ -87,13 +91,24 @@ const { tableOfContents, view: renderPage } = slotDocPage(
 
 export { tableOfContents }
 
-type ViewInputs = Readonly<{ copiedSnippets: CopiedSnippets }>
+// NOTE: `renderCopyButton` and `renderHeadingLink` arrive as slot callbacks
+// rather than being built here. Both dispatch app-level Messages, and a handler
+// built inside this Submodel's view would be lifted by its `toParentMessage`
+// and rejected. As top-level `viewInputs` functions they run in the parent's
+// boundary instead.
+type ViewInputs = Readonly<{
+  copiedSnippets: CopiedSnippets
+  renderCopyButton: RenderCopyButton
+  renderHeadingLink: RenderHeadingLink
+}>
 
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
-  (model, { copiedSnippets }): Html =>
+  (model, { copiedSnippets, renderCopyButton, renderHeadingLink }): Html =>
     renderPage(copiedSnippets, {
       demos: {},
       renderFaq: (id, question, content) =>
         faqItem(id, question, content, model),
+      renderCopyButton,
+      renderHeadingLink,
     }),
 )

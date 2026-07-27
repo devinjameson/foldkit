@@ -1,6 +1,9 @@
 import { Option, Record as Record_ } from 'effect'
 import { Html, html } from 'foldkit/html'
 
+import type { RenderHeadingLink } from '../prose'
+import type { RenderCopyButton } from '../view/codeBlock'
+
 // SLOTS
 
 /**
@@ -26,6 +29,16 @@ export type RenderFaq = (
 export type Slots<DemoName extends string> = Readonly<{
   demos: Demos<DemoName>
   renderFaq?: RenderFaq
+  /**
+   * Chrome the page does not own but its markdown renders: the snippet copy
+   * button and the heading copy-link. A page embedded with `h.submodel` must
+   * pass these down from its parent through `viewInputs`, so they are built in
+   * the parent's boundary and their app-level Messages reach `update`
+   * unwrapped. Left unset, they build themselves, which is correct for a page
+   * rendered outside any Submodel.
+   */
+  renderCopyButton?: RenderCopyButton
+  renderHeadingLink?: RenderHeadingLink
 }>
 
 /** The slots a page with no interactive islands contributes, which is none. */
