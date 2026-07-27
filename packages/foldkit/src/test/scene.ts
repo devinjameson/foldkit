@@ -18,9 +18,15 @@ import {
   FOLDKIT_MOUNT_KEY,
   FileHandlerSymbol,
   __clearRuntime as clearHtmlRuntime,
+  __htmlBuilder as htmlBuilderFor,
   __setRuntime as setHtmlRuntime,
 } from '../html/index.js'
-import type { Document, Html, KeyboardModifiers } from '../html/index.js'
+import type {
+  Document,
+  Html,
+  HtmlBuilder,
+  KeyboardModifiers,
+} from '../html/index.js'
 import { MountTracker } from '../mount/index.js'
 import type { MountDefinition } from '../mount/index.js'
 import { Dispatch } from '../runtime/index.js'
@@ -215,7 +221,7 @@ type InternalSceneSimulation<
       message: Message,
     ) => UpdateResult<Model, OutMessage>
     resolvers: ReadonlyArray<ResolverEntry>
-    viewFn: (model: Model) => Html | Document
+    viewFn: (model: Model, h: HtmlBuilder<Message>) => Html | Document
     capturingDispatch: CapturingDispatch
     scope: Option.Option<Locator>
     mountSlots: ReadonlyArray<MountSlotState>
@@ -415,8 +421,8 @@ const createCapturingDispatch = (): CapturingDispatch => {
 
 // RENDERING
 
-const renderView = <Model>(
-  viewFn: (model: Model) => Html | Document,
+const renderView = <Model, Message>(
+  viewFn: (model: Model, h: HtmlBuilder<Message>) => Html | Document,
   model: Model,
   dispatch: DispatchService,
 ): VNode => {
@@ -430,7 +436,7 @@ const renderView = <Model>(
   setHtmlRuntime(dispatch.dispatchSync, sceneContext)
   let result: Html | Document
   try {
-    result = viewFn(model)
+    result = viewFn(model, htmlBuilderFor<Message>())
   } finally {
     clearHtmlRuntime()
   }
@@ -1997,7 +2003,7 @@ export const scene: {
         model: Model,
         message: Message,
       ) => readonly [Model, ReadonlyArray<AnyCommand>, OutMessage]
-      view: (model: Model) => Html | Document
+      view: (model: Model, h: HtmlBuilder<Message>) => Html | Document
     }>,
     ...steps: ReadonlyArray<SceneStep<Model, Message, OutMessage>>
   ): void
@@ -2007,14 +2013,14 @@ export const scene: {
         model: Model,
         message: Message,
       ) => readonly [Model, ReadonlyArray<AnyCommand>]
-      view: (model: Model) => Html | Document
+      view: (model: Model, h: HtmlBuilder<Message>) => Html | Document
     }>,
     ...steps: ReadonlyArray<SceneStep<Model, Message, undefined>>
   ): void
 } = <Model, Message, OutMessage = undefined>(
   config: Readonly<{
     update: (model: Model, message: Message) => UpdateResult<Model, OutMessage>
-    view: (model: Model) => Html | Document
+    view: (model: Model, h: HtmlBuilder<Message>) => Html | Document
   }>,
   ...steps: ReadonlyArray<SceneStep<Model, Message, OutMessage>>
 ): void => {

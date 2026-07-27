@@ -1,7 +1,7 @@
 import { clsx } from 'clsx'
 import { Array, Match as M, Option, String, pipe } from 'effect'
 import { Submodel } from 'foldkit'
-import { Html, html } from 'foldkit/html'
+import { Html, type HtmlBuilder, staticHtml } from 'foldkit/html'
 
 import { Dialog } from '@foldkit/ui'
 
@@ -49,9 +49,7 @@ const handleSearchInputKeyDown = (
     M.orElse(() => Option.none()),
   )
 
-const searchInputView = (model: Model): Html => {
-  const h = html<Message>()
-
+const searchInputView = (model: Model, h: HtmlBuilder<Message>): Html => {
   const isListboxVisible =
     model.searchState._tag === 'Ok' || model.searchState._tag === 'Loading'
 
@@ -102,7 +100,7 @@ const resultLabelText = (
   ])
 
 const resultLabel = (result: typeof SearchResult.Type): ReadonlyArray<Html> => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return Option.match(resultLabelText(result), {
     onSome: text => [h.span([h.Class(labelPillClassName)], [text])],
@@ -114,10 +112,9 @@ const resultItemView = (
   result: typeof SearchResult.Type,
   index: number,
   isActive: boolean,
-): Html => {
-  const h = html<Message>()
-
-  return h.a(
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.a(
     [
       h.Id(resultItemId(index)),
       h.Href(result.url),
@@ -155,10 +152,9 @@ const resultItemView = (
       ),
     ],
   )
-}
 
 const emptyPrompt: Html = (() => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.div(
     [h.Class('px-4 py-12 text-center')],
@@ -172,7 +168,7 @@ const emptyPrompt: Html = (() => {
 })()
 
 const searchingIndicator: Html = (() => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.div(
     [h.Class('px-4 py-12 text-center'), h.AriaLive('polite')],
@@ -186,7 +182,7 @@ const searchingIndicator: Html = (() => {
 })()
 
 const noResultsView = (query: string): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.div(
     [h.Class('px-4 py-12 text-center'), h.AriaLive('polite')],
@@ -202,10 +198,9 @@ const noResultsView = (query: string): Html => {
 const resultListView = (
   results: ReadonlyArray<typeof SearchResult.Type>,
   activeResultIndex: number,
-): Html => {
-  const h = html<Message>()
-
-  return Array.match(results, {
+  h: HtmlBuilder<Message>,
+): Html =>
+  Array.match(results, {
     onEmpty: () => h.empty,
     onNonEmpty: nonEmptyResults =>
       h.div(
@@ -216,33 +211,32 @@ const resultListView = (
           h.Class('max-h-[60dvh] overflow-y-auto'),
         ],
         Array.map(nonEmptyResults, (result, index) =>
-          resultItemView(result, index, index === activeResultIndex),
+          resultItemView(result, index, index === activeResultIndex, h),
         ),
       ),
   })
-}
 
-const resultsListView = (model: Model): Html =>
+const resultsListView = (model: Model, h: HtmlBuilder<Message>): Html =>
   M.value(model.searchState).pipe(
     M.withReturnType<Html>(),
     M.tag('Idle', () => emptyPrompt),
     M.tag('Loading', ({ results }) =>
       Array.match(results, {
         onEmpty: () => searchingIndicator,
-        onNonEmpty: () => resultListView(results, model.activeResultIndex),
+        onNonEmpty: () => resultListView(results, model.activeResultIndex, h),
       }),
     ),
     M.tag('Ok', ({ results }) =>
       Array.match(results, {
         onEmpty: () => noResultsView(model.query),
-        onNonEmpty: () => resultListView(results, model.activeResultIndex),
+        onNonEmpty: () => resultListView(results, model.activeResultIndex, h),
       }),
     ),
     M.exhaustive,
   )
 
 const resultCountAnnouncement = (model: Model): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   const results = resultsFromState(model.searchState)
   const count = results.length
@@ -263,7 +257,7 @@ const resultCountAnnouncement = (model: Model): Html => {
 // real input once the dialog renders, and iOS keeps the keyboard up across
 // a programmatic focus transfer between two text inputs.
 const keyboardWarmupInput: Html = (() => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.input([
     h.Id(KEYBOARD_WARMUP_INPUT_ID),
@@ -274,64 +268,63 @@ const keyboardWarmupInput: Html = (() => {
   ])
 })()
 
-export const view = Submodel.defineView<Model, Message>((model): Html => {
-  const h = html<Message>()
-
-  return h.div(
-    [],
-    [
-      keyboardWarmupInput,
-      h.submodel({
-        slotId: model.dialog.id,
-        model: model.dialog,
-        view: Dialog.view,
-        viewInputs: {
-          toView: ({ dialog, backdrop, panel, title, isVisible }) =>
-            h.dialog(
-              [...dialog],
-              isVisible
-                ? [
-                    h.div(
-                      [
-                        ...backdrop,
-                        h.Class(
-                          'fixed inset-0 z-[59] bg-black/50 dark:bg-black/70',
-                        ),
-                      ],
-                      [],
-                    ),
-                    h.div(
-                      [
-                        ...panel,
-                        h.Class(
-                          'fixed inset-0 z-[60] overflow-y-auto px-4 sm:px-6 pointer-events-none [&>*]:pointer-events-auto',
-                        ),
-                      ],
-                      [
-                        h.div(
-                          [
-                            h.Class(
-                              'w-full max-w-xl mx-auto mt-[15vh] bg-white dark:bg-gray-900 rounded-xl shadow-2xl dark:shadow-black/50 border border-gray-200 dark:border-gray-700 overflow-hidden',
-                            ),
-                          ],
-                          [
-                            h.span(
-                              [...title, h.Class('sr-only')],
-                              ['Search documentation'],
-                            ),
-                            searchInputView(model),
-                            resultsListView(model),
-                            resultCountAnnouncement(model),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ]
-                : [],
-            ),
-        },
-        toParentMessage: message => GotSearchDialogMessage({ message }),
-      }),
-    ],
-  )
-})
+export const view = Submodel.defineView<Model, Message>(
+  (model, h): Html =>
+    h.div(
+      [],
+      [
+        keyboardWarmupInput,
+        h.submodel({
+          slotId: model.dialog.id,
+          model: model.dialog,
+          view: Dialog.view,
+          viewInputs: {
+            toView: ({ dialog, backdrop, panel, title, isVisible }) =>
+              h.dialog(
+                [...dialog],
+                isVisible
+                  ? [
+                      h.div(
+                        [
+                          ...backdrop,
+                          h.Class(
+                            'fixed inset-0 z-[59] bg-black/50 dark:bg-black/70',
+                          ),
+                        ],
+                        [],
+                      ),
+                      h.div(
+                        [
+                          ...panel,
+                          h.Class(
+                            'fixed inset-0 z-[60] overflow-y-auto px-4 sm:px-6 pointer-events-none [&>*]:pointer-events-auto',
+                          ),
+                        ],
+                        [
+                          h.div(
+                            [
+                              h.Class(
+                                'w-full max-w-xl mx-auto mt-[15vh] bg-white dark:bg-gray-900 rounded-xl shadow-2xl dark:shadow-black/50 border border-gray-200 dark:border-gray-700 overflow-hidden',
+                              ),
+                            ],
+                            [
+                              h.span(
+                                [...title, h.Class('sr-only')],
+                                ['Search documentation'],
+                              ),
+                              searchInputView(model, h),
+                              resultsListView(model, h),
+                              resultCountAnnouncement(model),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ]
+                  : [],
+              ),
+          },
+          toParentMessage: message => GotSearchDialogMessage({ message }),
+        }),
+      ],
+    ),
+)

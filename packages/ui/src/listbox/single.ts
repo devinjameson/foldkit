@@ -79,11 +79,15 @@ const internalView = makeView<Model>({ ariaMultiSelectable: false })
 const arrayBasedView = internalView<unknown, string>()
 
 const singleViewImpl = defineView<Model, Message, ViewInputs<unknown, string>>(
-  (model, { maybeSelectedValue, ...baseInputs }) =>
-    arrayBasedView(model, {
-      ...baseInputs,
-      selectedValues: Option.toArray(maybeSelectedValue),
-    }),
+  (model, { maybeSelectedValue, ...baseInputs }, h) =>
+    arrayBasedView(
+      model,
+      {
+        ...baseInputs,
+        selectedValues: Option.toArray(maybeSelectedValue),
+      },
+      h,
+    ),
 )
 
 /** Pairs the single-select listbox's `view` and `update` (and programmatic

@@ -1,6 +1,6 @@
 import { Match as M, Option } from 'effect'
 import { AsyncData, Submodel } from 'foldkit'
-import { Html, html } from 'foldkit/html'
+import { Html, HtmlBuilder } from 'foldkit/html'
 
 import * as Shared from '@typing-game/shared'
 
@@ -24,9 +24,8 @@ import { waiting } from './waiting'
 export type ViewInputs = Readonly<{ roomId: string }>
 
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
-  (model, viewInputs): Html => {
+  (model, viewInputs, h): Html => {
     const { roomId } = viewInputs
-    const h = html<Message>()
 
     const maybeError = AsyncData.getError(model.roomAsyncData)
 
@@ -86,8 +85,8 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
               [h.Class('mb-12 flex items-center gap-2')],
               [h.span([], [roomId]), copyButton, copiedIndicator],
             ),
-            content(model),
-            maybeErrorMessage(maybeError),
+            content(model, h),
+            maybeErrorMessage(maybeError, h),
           ],
         ),
         h.div([], [leaveRoomText]),
@@ -96,29 +95,25 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
   },
 )
 
-const content = ({
-  roomAsyncData,
-  maybeSession,
-  userGameText,
-  username,
-}: Model): Html => {
-  const h = html<Message>()
-
-  return AsyncData.matchData(roomAsyncData, {
+const content = (
+  { roomAsyncData, maybeSession, userGameText, username }: Model,
+  h: HtmlBuilder<Message>,
+): Html =>
+  AsyncData.matchData(roomAsyncData, {
     onEmpty: () => h.div([], ['Loading...']),
     onFailure: () => h.empty,
     onData: room =>
       Option.match(maybeSession, {
-        onNone: () => joinForm(username),
-        onSome: () => gameContent(room, maybeSession, userGameText),
+        onNone: () => joinForm(username, h),
+        onSome: () => gameContent(room, maybeSession, userGameText, h),
       }),
   })
-}
 
 const gameContent = (
   room: Shared.Room,
   maybeSession: Option.Option<RoomPlayerSession>,
   userGameText: string,
+  h: HtmlBuilder<Message>,
 ): Html => {
   const maybeGameText = Option.map(room.maybeGame, ({ text }) => text)
   const maybeWrongCharIndex = Option.flatMap(
@@ -128,20 +123,25 @@ const gameContent = (
 
   return M.value(room.status).pipe(
     M.tagsExhaustive({
-      Waiting: () => waiting(room.players, room.hostId, maybeSession),
-      GetReady: () => getReady(maybeGameText),
-      Countdown: ({ secondsLeft }) => countdown(secondsLeft, maybeGameText),
+      Waiting: () => waiting(room.players, room.hostId, maybeSession, h),
+      GetReady: () => getReady(maybeGameText, h),
+      Countdown: ({ secondsLeft }) => countdown(secondsLeft, maybeGameText, h),
       Playing: ({ secondsLeft }) =>
-        playing(secondsLeft, maybeGameText, userGameText, maybeWrongCharIndex),
-      Finished: () => finished(room.maybeScoreboard, room.hostId, maybeSession),
+        playing(
+          secondsLeft,
+          maybeGameText,
+          userGameText,
+          maybeWrongCharIndex,
+          h,
+        ),
+      Finished: () =>
+        finished(room.maybeScoreboard, room.hostId, maybeSession, h),
     }),
   )
 }
 
-const joinForm = (username: string): Html => {
-  const h = html<Message>()
-
-  return h.form(
+const joinForm = (username: string, h: HtmlBuilder<Message>): Html =>
+  h.form(
     [h.OnSubmit(SubmittedJoinRoomFromPage())],
     [
       h.div(
@@ -172,12 +172,12 @@ const joinForm = (username: string): Html => {
       ),
     ],
   )
-}
 
-const maybeErrorMessage = (maybeRoomFormError: Option.Option<string>): Html => {
-  const h = html<Message>()
-
-  return Option.match(maybeRoomFormError, {
+const maybeErrorMessage = (
+  maybeRoomFormError: Option.Option<string>,
+  h: HtmlBuilder<Message>,
+): Html =>
+  Option.match(maybeRoomFormError, {
     onNone: () => h.empty,
     onSome: errorMessage =>
       h.div(
@@ -188,4 +188,3 @@ const maybeErrorMessage = (maybeRoomFormError: Option.Option<string>): Html => {
         ],
       ),
   })
-}

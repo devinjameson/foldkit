@@ -1,10 +1,5 @@
 import { Match as M } from 'effect'
-import {
-  type ChildAttribute,
-  type Html,
-  type TagName,
-  html,
-} from 'foldkit/html'
+import type { ChildAttribute, Html, TagName } from 'foldkit/html'
 import { defineView } from 'foldkit/submodel'
 
 import {
@@ -68,9 +63,7 @@ export type ViewInputs = Readonly<{
  *  - `data-transition`: any animation is active
  */
 export const view = defineView<Model, Message, ViewInputs>(
-  (model, viewInputs): Html => {
-    const h = html<Message>()
-
+  (model, viewInputs, h): Html => {
     const { id, isShowing, transitionState } = model
     const {
       content,

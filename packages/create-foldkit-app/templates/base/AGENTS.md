@@ -52,7 +52,7 @@ Use `evo()` from `foldkit/struct` for immutable model updates. Never spread or `
 
 ### View
 
-Bind the `html` factory inside each view function with `const h = html<Message>()` (never at module level), then reach for `h.div`, `h.OnClick`, etc. off the returned record. Use `empty` (not `null`) for conditional rendering, `M.value().pipe(M.tagsExhaustive({...}))` for discriminated unions, and `Array.match` for lists that may be empty.
+Every view receives `h`, the typed Html builder, as its last parameter (`view: (model, h) => ...`; `Submodel.defineView` passes the child's own). Never construct a builder; reach for `h.div`, `h.OnClick`, etc. off the parameter, and give extracted view helpers an `h: HtmlBuilder<Message>` last parameter that callers thread through. For handler-free Html at module top level, use `staticHtml` from `foldkit/html`. Use `h.empty` (not `null`) for conditional rendering, `M.value().pipe(M.tagsExhaustive({...}))` for discriminated unions, and `Array.match` for lists that may be empty.
 
 Keys are for mapped list items only: key each row by a stable Model identifier (`h.keyed('li')(item.id, [], [...])`), never by array position, and never derive a key from displayed data. Never key branches; the build gives each view function's output its own identity, so branch switches replace DOM automatically. When switching an inline same-tag ternary must reset DOM state, extract each arm into its own named view function.
 

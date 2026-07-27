@@ -1,6 +1,6 @@
 import { clsx } from 'clsx'
 import { Array, Equal, Option, pipe } from 'effect'
-import { Html, createLazy, html } from 'foldkit/html'
+import { Html, type HtmlBuilder, createLazy } from 'foldkit/html'
 import apiModuleIndex from 'virtual:api-module-index'
 
 import { Dialog, Disclosure } from '@foldkit/ui'
@@ -40,16 +40,17 @@ const GROUP_ID: Record<GroupKey, string> = {
   apiReference: 'api-reference-group',
 }
 
-const sidebarGroup = (config: {
-  readonly id: string
-  readonly label: string
-  readonly isOpen: boolean
-  readonly onToggle: (isOpen: boolean) => Message
-  readonly children: Html
-  readonly isLocked: boolean
-}): Html => {
-  const h = html<Message>()
-
+const sidebarGroup = (
+  config: {
+    readonly id: string
+    readonly label: string
+    readonly isOpen: boolean
+    readonly onToggle: (isOpen: boolean) => Message
+    readonly children: Html
+    readonly isLocked: boolean
+  },
+  h: HtmlBuilder<Message>,
+): Html => {
   const buttonClassName = clsx(
     'w-full flex items-center justify-between transition',
     'px-4 py-2.5 md:py-2',
@@ -66,47 +67,50 @@ const sidebarGroup = (config: {
   return h.li(
     [],
     [
-      Disclosure.view<Message>({
-        id: config.id,
-        isOpen: config.isOpen,
-        onToggle: config.onToggle,
-        isDisabled: config.isLocked,
-        toView: attributes =>
-          h.div(
-            [],
-            [
-              h.button(
-                [...attributes.button, h.Class(buttonClassName)],
-                [
-                  h.div(
-                    [h.Class('flex items-center justify-between w-full')],
-                    [
-                      h.span([], [config.label]),
-                      config.isLocked
-                        ? h.empty
-                        : h.span(
-                            [
-                              h.Class(
-                                clsx({
-                                  'rotate-180': config.isOpen,
-                                }),
-                              ),
-                            ],
-                            [Icon.chevronDown('w-3 h-3')],
-                          ),
-                    ],
-                  ),
-                ],
-              ),
-              config.isOpen
-                ? h.div(
-                    [...attributes.panel, h.Class('px-4 py-2')],
-                    [config.children],
-                  )
-                : h.empty,
-            ],
-          ),
-      }),
+      Disclosure.view(
+        {
+          id: config.id,
+          isOpen: config.isOpen,
+          onToggle: config.onToggle,
+          isDisabled: config.isLocked,
+          toView: attributes =>
+            h.div(
+              [],
+              [
+                h.button(
+                  [...attributes.button, h.Class(buttonClassName)],
+                  [
+                    h.div(
+                      [h.Class('flex items-center justify-between w-full')],
+                      [
+                        h.span([], [config.label]),
+                        config.isLocked
+                          ? h.empty
+                          : h.span(
+                              [
+                                h.Class(
+                                  clsx({
+                                    'rotate-180': config.isOpen,
+                                  }),
+                                ),
+                              ],
+                              [Icon.chevronDown('w-3 h-3')],
+                            ),
+                      ],
+                    ),
+                  ],
+                ),
+                config.isOpen
+                  ? h.div(
+                      [...attributes.panel, h.Class('px-4 py-2')],
+                      [config.children],
+                    )
+                  : h.empty,
+              ],
+            ),
+        },
+        h,
+      ),
     ],
   )
 }
@@ -115,9 +119,8 @@ const computeNavLinks = (
   idPrefix: string,
   route: Model['route'],
   sidebarGroups: SidebarGroups,
+  h: HtmlBuilder<Message>,
 ): Html => {
-  const h = html<Message>()
-
   const isOnApiModulePage = route._tag === 'ApiModule'
   const maybeExampleSlug = pipe(
     route,
@@ -176,43 +179,50 @@ const computeNavLinks = (
     [h.Class('space-y-0.5')],
     [
       ...Array.map(docsSections, section => {
-        return sidebarGroup({
-          id: `${idPrefix}-${GROUP_ID[section.key]}`,
-          label: section.label,
-          isOpen: sidebarGroups[section.key],
-          onToggle: isOpen => ToggledSidebarGroup({ key: section.key, isOpen }),
-          isLocked: isLocked(section.key),
-          children: h.div(
-            [h.Class('divide-y divide-gray-200 dark:divide-gray-800')],
-            Array.map(section.pageGroups, group =>
-              h.div(
-                [h.Class('py-2 first:pt-0 last:pb-0')],
-                [pageGroupList(group)],
+        return sidebarGroup(
+          {
+            id: `${idPrefix}-${GROUP_ID[section.key]}`,
+            label: section.label,
+            isOpen: sidebarGroups[section.key],
+            onToggle: isOpen =>
+              ToggledSidebarGroup({ key: section.key, isOpen }),
+            isLocked: isLocked(section.key),
+            children: h.div(
+              [h.Class('divide-y divide-gray-200 dark:divide-gray-800')],
+              Array.map(section.pageGroups, group =>
+                h.div(
+                  [h.Class('py-2 first:pt-0 last:pb-0')],
+                  [pageGroupList(group)],
+                ),
+              ),
+            ),
+          },
+          h,
+        )
+      }),
+      sidebarGroup(
+        {
+          id: `${idPrefix}-${GROUP_ID.apiReference}`,
+          label: 'API Reference',
+          isOpen: sidebarGroups.apiReference,
+          onToggle: isOpen =>
+            ToggledSidebarGroup({ key: 'apiReference', isOpen }),
+          isLocked: isLocked('apiReference'),
+          children: h.ul(
+            [h.Class('space-y-0.5')],
+            Array.map(apiModuleIndex, ({ slug, name }) =>
+              navLink(
+                apiModuleRouter({
+                  moduleSlug: slug,
+                }),
+                isOnApiModulePage && route.moduleSlug === slug,
+                name,
               ),
             ),
           ),
-        })
-      }),
-      sidebarGroup({
-        id: `${idPrefix}-${GROUP_ID.apiReference}`,
-        label: 'API Reference',
-        isOpen: sidebarGroups.apiReference,
-        onToggle: isOpen =>
-          ToggledSidebarGroup({ key: 'apiReference', isOpen }),
-        isLocked: isLocked('apiReference'),
-        children: h.ul(
-          [h.Class('space-y-0.5')],
-          Array.map(apiModuleIndex, ({ slug, name }) =>
-            navLink(
-              apiModuleRouter({
-                moduleSlug: slug,
-              }),
-              isOnApiModulePage && route.moduleSlug === slug,
-              name,
-            ),
-          ),
-        ),
-      }),
+        },
+        h,
+      ),
     ],
   )
 }
@@ -220,18 +230,18 @@ const computeNavLinks = (
 const lazyDesktopNavLinks = createLazy()
 const lazyMobileNavLinks = createLazy()
 
-export const sidebarView = (model: Model): Html => {
-  const h = html<Message>()
-
+export const sidebarView = (model: Model, h: HtmlBuilder<Message>): Html => {
   const desktopNavLinks = lazyDesktopNavLinks(computeNavLinks, [
     'desktop',
     model.route,
     model.sidebarGroups,
+    h,
   ])
   const mobileNavLinks = lazyMobileNavLinks(computeNavLinks, [
     'mobile',
     model.route,
     model.sidebarGroups,
+    h,
   ])
 
   const desktopSidebar = h.aside(

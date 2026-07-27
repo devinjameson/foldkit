@@ -1,5 +1,5 @@
 import { Match as M, Option } from 'effect'
-import { type Attribute, type Html, html } from 'foldkit/html'
+import type { Attribute, Html, HtmlBuilder } from 'foldkit/html'
 
 // VIEW
 
@@ -54,12 +54,15 @@ const descriptionId = (id: string): string => `${id}-description`
  *
  *  ```ts
  *  // In view:
- *  Checkbox.view<Message>({
- *    id: 'accept-terms',
- *    isChecked: model.acceptedTerms,
- *    onToggle: isChecked => ToggledTerms({ isChecked }),
- *    toView: attributes => ...,
- *  })
+ *  Checkbox.view(
+ *    {
+ *      id: 'accept-terms',
+ *      isChecked: model.acceptedTerms,
+ *      onToggle: isChecked => ToggledTerms({ isChecked }),
+ *      toView: attributes => ...,
+ *    },
+ *    h,
+ *  )
  *
  *  // In update:
  *  ToggledTerms: ({ isChecked }) => [
@@ -67,9 +70,10 @@ const descriptionId = (id: string): string => `${id}-description`
  *    [],
  *  ],
  *  ``` */
-export const view = <Message>(config: ViewConfig<Message>): Html => {
-  const h = html<Message>()
-
+export const view = <Message>(
+  config: ViewConfig<Message>,
+  h: HtmlBuilder<Message>,
+): Html => {
   const {
     id,
     isChecked,

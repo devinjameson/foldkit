@@ -1,5 +1,5 @@
 import { Match as M, Option, Schema as S } from 'effect'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import * as Scene from 'foldkit/scene'
 import { evo } from 'foldkit/struct'
@@ -33,28 +33,29 @@ const update = (model: Model, message: Message): UpdateReturn =>
     }),
   )
 
-const testView = (disabledValue?: string) => (model: Model) => {
-  const h = html<Message>()
-
-  return view<string, Message>({
-    id: RADIO_ID,
-    selectedValue: model.selectedValue,
-    options,
-    ariaLabel: 'Tool',
-    onSelect: value => SelectedOption({ value }),
-    isOptionDisabled: value => value === disabledValue,
-    toView: ({ group, options: optionInfos }) =>
-      h.div(
-        [...group],
-        optionInfos.map(option =>
+const testView =
+  (disabledValue?: string) => (model: Model, h: HtmlBuilder<Message>) =>
+    view(
+      {
+        id: RADIO_ID,
+        selectedValue: model.selectedValue,
+        options,
+        ariaLabel: 'Tool',
+        onSelect: value => SelectedOption({ value }),
+        isOptionDisabled: value => value === disabledValue,
+        toView: ({ group, options: optionInfos }) =>
           h.div(
-            [...option.option],
-            [h.span([...option.label], [option.value])],
+            [...group],
+            optionInfos.map(option =>
+              h.div(
+                [...option.option],
+                [h.span([...option.label], [option.value])],
+              ),
+            ),
           ),
-        ),
-      ),
-  })
-}
+      },
+      h,
+    )
 
 const option = (index: number) => Scene.selector(`#${RADIO_ID}-option-${index}`)
 

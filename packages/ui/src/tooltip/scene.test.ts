@@ -1,4 +1,4 @@
-import { html, submodel } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
 import { expect } from 'vitest'
 
@@ -28,10 +28,8 @@ const sceneView =
       ariaLabelledBy?: string
     } = {},
   ) =>
-  (model: Model) => {
-    const h = html<Message>()
-
-    return submodel({
+  (model: Model, h: HtmlBuilder<Message>) =>
+    h.submodel({
       slotId: 'test',
       view,
       model,
@@ -49,7 +47,6 @@ const sceneView =
       },
       toParentMessage: message => message,
     })
-  }
 
 const trigger = Scene.selector('#test-trigger')
 const panel = Scene.selector('#test-panel')

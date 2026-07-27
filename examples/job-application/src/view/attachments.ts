@@ -1,7 +1,7 @@
 import clsx from 'clsx'
 import { Array, Match as M, Number, Option } from 'effect'
 import { File, Submodel } from 'foldkit'
-import { type Html, html } from 'foldkit/html'
+import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { Button, FileDrop } from '@foldkit/ui'
 
@@ -26,10 +26,11 @@ const dropZoneClassName =
 const fileKey = (file: File.File): string =>
   `${File.name(file)}:${File.size(file)}:${file.lastModified}`
 
-const resumeView = (resume: File.File): Html => {
-  const h = html<Attachments.Message>()
-
-  return h.div(
+const resumeView = (
+  resume: File.File,
+  h: HtmlBuilder<Attachments.Message>,
+): Html =>
+  h.div(
     [
       h.Class(
         'flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3',
@@ -55,27 +56,31 @@ const resumeView = (resume: File.File): Html => {
           ),
         ],
       ),
-      Button.view<Attachments.Message>({
-        onClick: Attachments.RemovedResume(),
-        toView: attributes =>
-          h.button(
-            [
-              ...attributes.button,
-              h.Class(
-                'text-sm text-gray-400 hover:text-red-500 transition cursor-pointer',
-              ),
-            ],
-            ['Remove'],
-          ),
-      }),
+      Button.view(
+        {
+          onClick: Attachments.RemovedResume(),
+          toView: attributes =>
+            h.button(
+              [
+                ...attributes.button,
+                h.Class(
+                  'text-sm text-gray-400 hover:text-red-500 transition cursor-pointer',
+                ),
+              ],
+              ['Remove'],
+            ),
+        },
+        h,
+      ),
     ],
   )
-}
 
-const additionalFileView = (file: File.File, fileIndex: number): Html => {
-  const h = html<Attachments.Message>()
-
-  return h.keyed('div')(
+const additionalFileView = (
+  file: File.File,
+  fileIndex: number,
+  h: HtmlBuilder<Attachments.Message>,
+): Html =>
+  h.keyed('div')(
     fileKey(file),
     [
       h.Class(
@@ -94,28 +99,29 @@ const additionalFileView = (file: File.File, fileIndex: number): Html => {
           ),
         ],
       ),
-      Button.view<Attachments.Message>({
-        onClick: Attachments.RemovedAdditionalFile({ fileIndex }),
-        toView: attributes =>
-          h.button(
-            [
-              ...attributes.button,
-              h.Class(
-                'text-xs text-gray-400 hover:text-red-500 transition cursor-pointer',
-              ),
-            ],
-            ['Remove'],
-          ),
-      }),
+      Button.view(
+        {
+          onClick: Attachments.RemovedAdditionalFile({ fileIndex }),
+          toView: attributes =>
+            h.button(
+              [
+                ...attributes.button,
+                h.Class(
+                  'text-xs text-gray-400 hover:text-red-500 transition cursor-pointer',
+                ),
+              ],
+              ['Remove'],
+            ),
+        },
+        h,
+      ),
     ],
   )
-}
 
 export const attachmentsView = Submodel.defineView<
   Attachments.Model,
   Attachments.Message
->((model): Html => {
-  const h = html<Attachments.Message>()
+>((model, h): Html => {
   const { resumeDrop, maybeResume, additionalFilesDrop, additionalFiles } =
     model
 
@@ -153,7 +159,7 @@ export const attachmentsView = Submodel.defineView<
             toParentMessage: message =>
               Attachments.GotResumeDropMessage({ message }),
           }),
-        onSome: resumeView,
+        onSome: resume => resumeView(resume, h),
       }),
     ],
   )
@@ -193,7 +199,12 @@ export const attachmentsView = Submodel.defineView<
       ...Array.match(additionalFiles, {
         onEmpty: () => [],
         onNonEmpty: files => [
-          h.div([h.Class('space-y-2')], files.map(additionalFileView)),
+          h.div(
+            [h.Class('space-y-2')],
+            files.map((file, fileIndex) =>
+              additionalFileView(file, fileIndex, h),
+            ),
+          ),
         ],
       }),
     ],

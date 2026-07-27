@@ -2,7 +2,7 @@ import { Effect, Fiber, Match as M, Schema as S } from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { Command } from '../command/index.js'
-import { __requireDispatch, html } from '../html/index.js'
+import { __htmlBuilder, __requireDispatch } from '../html/index.js'
 import { m } from '../message/index.js'
 import { makeElement } from './runtime.js'
 
@@ -58,7 +58,7 @@ type Message = typeof Message.Type
 const Model = S.Struct({ log: S.Array(S.String) })
 type Model = typeof Model.Type
 
-const h = html<Message>()
+const h = __htmlBuilder<Message>()
 
 const view = (model: Model) => h.div([], [model.log.join(',')])
 
@@ -66,6 +66,14 @@ const view = (model: Model) => h.div([], [model.log.join(',')])
 // clock 4ms, so two burns cross the budget and the third dispatch defers.
 const BURN_MS = 4
 const OVER_BUDGET_GAP_MS = 6
+
+// NOTE: a frozen clock keeps every drain inside the budget, so consecutive
+// synchronous dispatches all land in one drain. On a loaded machine a single
+// instrumented update can exceed the real 5ms budget, which defers the next
+// dispatch to a later task. That is the budget contract working, but it
+// dissolves the setup for any test that needs two dispatches on one stack.
+const freezeDrainClock = () =>
+  vi.spyOn(performance, 'now').mockImplementation(() => 0)
 
 let container: HTMLElement
 
@@ -83,11 +91,7 @@ describe('message processing', () => {
   it('processes Messages synchronously at dispatch, in arrival order, with Command results following', async () => {
     const processedLog: Array<string> = []
     let capturedDispatch: ((message: Message) => void) | null = null
-    // NOTE: a frozen clock keeps every drain inside the budget. On a loaded
-    // machine one instrumented update can exceed the real 5ms budget and
-    // defer the next dispatch, which is budget behavior, not the ordering
-    // contract under test.
-    const nowSpy = vi.spyOn(performance, 'now').mockImplementation(() => 0)
+    const nowSpy = freezeDrainClock()
 
     const produceCommandResult: Command<Message> = {
       name: 'ProduceCommandResult',
@@ -334,6 +338,7 @@ describe('message processing', () => {
     const processedLog: Array<string> = []
     let capturedDispatch: ((message: Message) => void) | null = null
     const commandEffectSpy = vi.fn()
+    const nowSpy = freezeDrainClock()
 
     const spiedCommand: Command<Message> = {
       name: 'ProduceSpiedResult',
@@ -390,6 +395,7 @@ describe('message processing', () => {
       expect(processedLog).toEqual(['ThrewInUpdate'])
       expect(commandEffectSpy).not.toHaveBeenCalled()
     } finally {
+      nowSpy.mockRestore()
       await Effect.runPromise(Fiber.interrupt(fiber))
     }
   })
@@ -397,6 +403,7 @@ describe('message processing', () => {
   it('does not run a Command forked by a Message processed just before a crash', async () => {
     let capturedDispatch: ((message: Message) => void) | null = null
     const commandEffectSpy = vi.fn()
+    const nowSpy = freezeDrainClock()
 
     const spiedCommand: Command<Message> = {
       name: 'ProduceSpiedResult',
@@ -453,6 +460,7 @@ describe('message processing', () => {
       await new Promise(resolve => setTimeout(resolve, 20))
       expect(commandEffectSpy).not.toHaveBeenCalled()
     } finally {
+      nowSpy.mockRestore()
       await Effect.runPromise(Fiber.interrupt(fiber))
     }
   })

@@ -1,4 +1,4 @@
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 
 import { Animation } from '@foldkit/ui'
 
@@ -14,9 +14,10 @@ const contentClassName =
 
 // VIEW
 
-export const animationDemo = (animationModel: Animation.Model) => {
-  const h = html<Message>()
-
+export const animationDemo = (
+  animationModel: Animation.Model,
+  h: HtmlBuilder<Message>,
+) => {
   const toggleMessage = animationModel.isShowing
     ? Animation.Hid()
     : Animation.Showed()

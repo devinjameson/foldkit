@@ -1,12 +1,7 @@
 import { Effect, Match as M, Option, Schema as S } from 'effect'
 import * as Command from 'foldkit/command'
 import * as Dom from 'foldkit/dom'
-import {
-  type ChildAttribute,
-  type Html,
-  childAttributes,
-  html,
-} from 'foldkit/html'
+import { type ChildAttribute, type Html, childAttributes } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 import { defineView } from 'foldkit/submodel'
@@ -447,9 +442,7 @@ export type ViewInputs = Readonly<{
  *  (not native `showModal()`) with a high z-index, a focus trap, a
  *  component-supplied backdrop, and a `cancel` event dispatched on Esc. */
 export const view = defineView<Model, Message, ViewInputs>(
-  (model, viewInputs): Html => {
-    const h = html<Message>()
-
+  (model, viewInputs, h): Html => {
     const {
       id,
       isOpen,

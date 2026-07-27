@@ -7,7 +7,7 @@ import {
   String,
   pipe,
 } from 'effect'
-import { type Attribute, type Html, html } from 'foldkit/html'
+import type { Attribute, Html, HtmlBuilder } from 'foldkit/html'
 
 import { idSelector } from '../internal/selectors.js'
 import { keyToIndex } from '../keyboard.js'
@@ -31,17 +31,17 @@ const descriptionId = (id: string, index: number): string =>
 /** Per-option render info passed to the consumer's `toView`. The consumer
  *  spreads `option`, `label`, and `description` onto whichever elements carry
  *  that role in their layout. Generic over `Value extends string` so
- *  `option.value` carries the consumer's union type, and over `ParentMessage`
+ *  `option.value` carries the consumer's union type, and over `Message`
  *  so the attribute bundles dispatch the parent's own Message. */
-export type OptionInfo<Value extends string, ParentMessage> = Readonly<{
+export type OptionInfo<Value extends string, Message> = Readonly<{
   value: Value
   index: number
   isSelected: boolean
   isActive: boolean
   isDisabled: boolean
-  option: ReadonlyArray<Attribute<ParentMessage>>
-  label: ReadonlyArray<Attribute<ParentMessage>>
-  description: ReadonlyArray<Attribute<ParentMessage>>
+  option: ReadonlyArray<Attribute<Message>>
+  label: ReadonlyArray<Attribute<Message>>
+  description: ReadonlyArray<Attribute<Message>>
 }>
 
 /** Render-time payload published to the consumer's `toView`.
@@ -56,15 +56,15 @@ export type OptionInfo<Value extends string, ParentMessage> = Readonly<{
  *  - `hiddenInput`: when `name` was supplied, attributes for a hidden form
  *    input carrying the selected value. The consumer renders the `<input>`
  *    themselves. Empty array when `name` is undefined. */
-export type RenderInfo<Value extends string, ParentMessage> = Readonly<{
-  group: ReadonlyArray<Attribute<ParentMessage>>
-  options: ReadonlyArray<OptionInfo<Value, ParentMessage>>
+export type RenderInfo<Value extends string, Message> = Readonly<{
+  group: ReadonlyArray<Attribute<Message>>
+  options: ReadonlyArray<OptionInfo<Value, Message>>
   selectedValue: Option.Option<Value>
-  hiddenInput: ReadonlyArray<Attribute<ParentMessage>>
+  hiddenInput: ReadonlyArray<Attribute<Message>>
 }>
 
 /** Per-render view configuration for the stateless controlled {@link view}.
- *  Generic over `Value extends string` (the option union) and `ParentMessage`
+ *  Generic over `Value extends string` (the option union) and `Message`
  *  (the message `onSelect` dispatches).
  *
  *  - `selectedValue`: the current selection, read straight from the parent
@@ -74,13 +74,13 @@ export type RenderInfo<Value extends string, ParentMessage> = Readonly<{
  *    The radio group manages focus itself, so the handler needs to do nothing
  *    else.
  *  - `toView`: receives the {@link RenderInfo} and lays out the group. */
-export type ViewConfig<Value extends string, ParentMessage> = Readonly<{
+export type ViewConfig<Value extends string, Message> = Readonly<{
   id: string
   selectedValue: Option.Option<Value>
   options: ReadonlyArray<Value>
-  onSelect: (value: Value) => ParentMessage
+  onSelect: (value: Value) => Message
   ariaLabel: string
-  toView: (render: RenderInfo<Value, ParentMessage>) => Html
+  toView: (render: RenderInfo<Value, Message>) => Html
   orientation?: Orientation
   isOptionDisabled?: (value: Value, index: number) => boolean
   isDisabled?: boolean
@@ -96,23 +96,25 @@ export type ViewConfig<Value extends string, ParentMessage> = Readonly<{
  *
  *  ```ts
  *  // In view:
- *  RadioGroup.view<Tool, Message>({
- *    id: TOOL_RADIO_GROUP_ID,
- *    selectedValue: Option.some(model.tool),
- *    options: TOOLS,
- *    ariaLabel: 'Tool',
- *    onSelect: tool => SelectedTool({ tool }),
- *    toView: ({ group, options }) => ...,
- *  })
+ *  RadioGroup.view(
+ *    {
+ *      id: TOOL_RADIO_GROUP_ID,
+ *      selectedValue: Option.some(model.tool),
+ *      options: TOOLS,
+ *      ariaLabel: 'Tool',
+ *      onSelect: tool => SelectedTool({ tool }),
+ *      toView: ({ group, options }) => ...,
+ *    },
+ *    h,
+ *  )
  *
  *  // In update:
  *  SelectedTool: ({ tool }) => [evo(model, { tool: () => tool }), []],
  *  ``` */
-export const view = <Value extends string, ParentMessage>(
-  config: ViewConfig<Value, ParentMessage>,
+export const view = <Value extends string, Message>(
+  config: ViewConfig<Value, Message>,
+  h: HtmlBuilder<Message>,
 ): Html => {
-  const h = html<ParentMessage>()
-
   const {
     id,
     selectedValue,
@@ -182,9 +184,7 @@ export const view = <Value extends string, ParentMessage>(
 
   const selectionAt = (
     index: number,
-  ): Option.Option<
-    Readonly<{ focusSelector: string; message: ParentMessage }>
-  > =>
+  ): Option.Option<Readonly<{ focusSelector: string; message: Message }>> =>
     pipe(
       options,
       Array.get(index),
@@ -198,9 +198,7 @@ export const view = <Value extends string, ParentMessage>(
     (currentIndex: number) =>
     (
       key: string,
-    ): Option.Option<
-      Readonly<{ focusSelector: string; message: ParentMessage }>
-    > =>
+    ): Option.Option<Readonly<{ focusSelector: string; message: Message }>> =>
       M.value(key).pipe(
         M.whenOr(
           nextKey,
@@ -215,8 +213,9 @@ export const view = <Value extends string, ParentMessage>(
         M.orElse(() => Option.none()),
       )
 
-  const optionInfos: ReadonlyArray<OptionInfo<Value, ParentMessage>> =
-    Array.map(options, (value, index) => {
+  const optionInfos: ReadonlyArray<OptionInfo<Value, Message>> = Array.map(
+    options,
+    (value, index) => {
       const isSelected = Option.exists(
         selectedIndex,
         selectedIdx => selectedIdx === index,
@@ -265,7 +264,8 @@ export const view = <Value extends string, ParentMessage>(
         label: labelAttributes,
         description: descriptionAttributes,
       }
-    })
+    },
+  )
 
   const groupAttributes = [
     h.Role('radiogroup'),

@@ -2,7 +2,7 @@
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
 import { Schema as S } from 'effect'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -42,32 +42,32 @@ ToggledFaq: ({ isOpen }) => [evo(model, { isFaqOpen: () => isOpen }), []]
 // `Disclosure.buttonId('faq-1')` for a native `<label for>`). Either
 // attribute is only emitted when provided, so the toggle never carries a
 // dangling `aria-labelledby`.
-const view = model => {
-  const h = html<Message>()
-
-  return Disclosure.view<Message>({
-    id: 'faq-1',
-    isOpen: model.isFaqOpen,
-    onToggle: isOpen => ToggledFaq({ isOpen }),
-    // ariaLabel: 'What is Foldkit?',
-    toView: ({ button, panel, animatePanel }) =>
-      h.div(
-        [h.Class('border rounded-lg overflow-hidden')],
-        [
-          h.button(
-            [
-              ...button,
-              h.Class('flex items-center justify-between w-full p-4'),
-            ],
-            [h.span([], ['What is Foldkit?'])],
-          ),
-          animatePanel(
-            h.div(
-              [...panel, h.Class('p-4 border-t')],
-              [h.p([], ['A functional UI framework built on Effect-TS.'])],
+const view = (model, h: HtmlBuilder<Message>) =>
+  Disclosure.view(
+    {
+      id: 'faq-1',
+      isOpen: model.isFaqOpen,
+      onToggle: isOpen => ToggledFaq({ isOpen }),
+      // ariaLabel: 'What is Foldkit?',
+      toView: ({ button, panel, animatePanel }) =>
+        h.div(
+          [h.Class('border rounded-lg overflow-hidden')],
+          [
+            h.button(
+              [
+                ...button,
+                h.Class('flex items-center justify-between w-full p-4'),
+              ],
+              [h.span([], ['What is Foldkit?'])],
             ),
-          ),
-        ],
-      ),
-  })
-}
+            animatePanel(
+              h.div(
+                [...panel, h.Class('p-4 border-t')],
+                [h.p([], ['A functional UI framework built on Effect-TS.'])],
+              ),
+            ),
+          ],
+        ),
+    },
+    h,
+  )

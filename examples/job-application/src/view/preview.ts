@@ -1,5 +1,5 @@
 import { Array, Equal, Option, Order, Record, String, pipe } from 'effect'
-import { type Html, html } from 'foldkit/html'
+import { type Html, staticHtml as h } from 'foldkit/html'
 
 import type { Model } from '../model'
 import type { Education, Skills, WorkHistory } from '../step'
@@ -10,10 +10,8 @@ const COVER_LETTER_PREVIEW_MAX_CHARS = 200
 const truncate = (value: string, max: number): string =>
   value.length > max ? `${value.slice(0, max)}...` : value
 
-const sectionHeading = (title: string): Html => {
-  const h = html()
-
-  return h.h3(
+const sectionHeading = (title: string): Html =>
+  h.h3(
     [
       h.Class(
         'text-xs font-bold uppercase tracking-wider text-gray-400 border-b border-gray-200 pb-1 mb-2',
@@ -21,7 +19,6 @@ const sectionHeading = (title: string): Html => {
     ],
     [title],
   )
-}
 
 const headerSection = (
   fullName: string,
@@ -30,8 +27,6 @@ const headerSection = (
   phone: string,
   portfolio: string,
 ): Html => {
-  const h = html()
-
   const contacts = Array.filter([email, phone, portfolio], String.isNonEmpty)
   return h.div(
     [h.Class('text-center mb-4 pb-4 border-b border-gray-200')],
@@ -52,10 +47,8 @@ const headerSection = (
   )
 }
 
-const workEntryView = (entry: WorkHistory.Entry.Model): Html => {
-  const h = html()
-
-  return h.keyed('div')(
+const workEntryView = (entry: WorkHistory.Entry.Model): Html =>
+  h.keyed('div')(
     `work-${entry.id}`,
     [h.Class('mb-3')],
     [
@@ -90,12 +83,9 @@ const workEntryView = (entry: WorkHistory.Entry.Model): Html => {
         : []),
     ],
   )
-}
 
-const experienceSection = (workHistory: WorkHistory.Model): Html => {
-  const h = html()
-
-  return h.section(
+const experienceSection = (workHistory: WorkHistory.Model): Html =>
+  h.section(
     [h.Class('mb-4')],
     [
       sectionHeading('Experience'),
@@ -107,13 +97,10 @@ const experienceSection = (workHistory: WorkHistory.Model): Html => {
       ).map(entry => workEntryView(entry)),
     ],
   )
-}
 
 const educationTimelineLine = (
   entry: Education.Entry.Model,
 ): ReadonlyArray<Html> => {
-  const h = html()
-
   if (entry.isCurrentlyEnrolled) {
     return [
       h.p([h.Class('text-xs text-gray-400 mt-0.5')], ['Currently enrolled']),
@@ -131,8 +118,6 @@ const educationTimelineLine = (
 }
 
 const educationEntryView = (entry: Education.Entry.Model): Html => {
-  const h = html()
-
   const degreeLine = Array.filter(
     [entry.degree.value, entry.fieldOfStudy.value],
     String.isNonEmpty,
@@ -152,10 +137,8 @@ const educationEntryView = (entry: Education.Entry.Model): Html => {
   )
 }
 
-const educationSection = (education: Education.Model): Html => {
-  const h = html()
-
-  return h.section(
+const educationSection = (education: Education.Model): Html =>
+  h.section(
     [h.Class('mb-4')],
     [
       sectionHeading('Education'),
@@ -164,7 +147,6 @@ const educationSection = (education: Education.Model): Html => {
       ).map(entry => educationEntryView(entry)),
     ],
   )
-}
 
 type SkillsByProficiency = ReadonlyArray<
   Readonly<{ level: string; names: ReadonlyArray<string> }>
@@ -201,21 +183,16 @@ const groupSkillsByProficiency = (
 
 const skillGroupView = (
   group: Readonly<{ level: string; names: ReadonlyArray<string> }>,
-): Html => {
-  const h = html()
-
-  return h.p(
+): Html =>
+  h.p(
     [h.Class('text-xs text-gray-700 mb-1')],
     [
       h.strong([h.Class('text-gray-900')], [`${group.level}:`]),
       ` ${group.names.join(', ')}`,
     ],
   )
-}
 
 const skillsSection = (skills: Skills.Model): Html => {
-  const h = html()
-
   const grouped = groupSkillsByProficiency(skills.entries)
   return h.section(
     [h.Class('mb-4')],
@@ -223,10 +200,8 @@ const skillsSection = (skills: Skills.Model): Html => {
   )
 }
 
-const coverLetterSection = (content: string): Html => {
-  const h = html()
-
-  return h.section(
+const coverLetterSection = (content: string): Html =>
+  h.section(
     [],
     [
       sectionHeading('Cover Letter'),
@@ -236,7 +211,6 @@ const coverLetterSection = (content: string): Html => {
       ),
     ],
   )
-}
 
 export const preview = ({
   personalInfo: {
@@ -253,8 +227,6 @@ export const preview = ({
   skills,
   coverLetter,
 }: Model): Html => {
-  const h = html()
-
   const fullName =
     String.isNonEmpty(firstName) || String.isNonEmpty(lastName)
       ? `${firstName} ${lastName}`.trim()

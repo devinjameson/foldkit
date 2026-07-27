@@ -1,7 +1,7 @@
 import { Effect, Match as M, Schema as S } from 'effect'
 
 import * as Command from '../../command/index.js'
-import { type Html, html } from '../../html/index.js'
+import type { Html, HtmlBuilder } from '../../html/index.js'
 import { m } from '../../message/index.js'
 
 // MODEL
@@ -98,9 +98,7 @@ export const update = (
 
 // VIEW
 
-export const view = (model: Model): Html => {
-  const h = html<Message>()
-
+export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
   return h.div(
     [],
     [

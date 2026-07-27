@@ -13,6 +13,7 @@ import {
   createBoundaryRegistry,
   registerBoundaryWrap,
 } from './boundary.js'
+import { __htmlBuilder } from './index.js'
 import { createKeyedLazy, createLazy } from './lazy.js'
 import {
   type DispatchSync,
@@ -21,7 +22,16 @@ import {
   requireDispatch,
   setRuntime,
 } from './runtimeSingleton.js'
-import { defineView, submodel } from './submodel.js'
+import {
+  type AnySubmodelView,
+  type SubmodelConfig,
+  defineView,
+  submodel as submodelImpl,
+} from './submodel.js'
+
+const submodel = <View extends AnySubmodelView>(
+  config: SubmodelConfig<View, unknown>,
+): VNode | null => submodelImpl(config, __htmlBuilder())
 
 const asVNode = (child: VNode | string | undefined): VNode => {
   if (child === undefined || typeof child === 'string') {

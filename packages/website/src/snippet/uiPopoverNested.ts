@@ -2,7 +2,7 @@
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
 import { Command } from 'foldkit'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -71,9 +71,7 @@ GotAccountDetailsPopoverMessage: ({ message }) => {
 // Inside your view function, render the child Popover inside the parent
 // panel. `focusSelector` points at the child trigger, which Popover derives
 // from the child id as `${id}-button`.
-const view = () => {
-  const h = html<Message>()
-
+const view = (h: HtmlBuilder<Message>) => {
   const detailsPopover = h.submodel({
     slotId: 'account-details-popover',
     model: model.accountDetailsPopover,

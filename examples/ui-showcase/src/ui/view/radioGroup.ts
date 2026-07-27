@@ -1,5 +1,5 @@
 import { Submodel } from 'foldkit'
-import { Html, html } from 'foldkit/html'
+import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { RadioGroup } from '@foldkit/ui'
 
@@ -43,9 +43,7 @@ const descriptionClassName = 'text-sm text-gray-600'
 
 const priceClassName = 'text-sm font-semibold text-accent-600'
 
-const checkIcon = (): Html => {
-  const h = html()
-
+const checkIcon = (h: HtmlBuilder<UiMessage>): Html => {
   return h.svg(
     [h.ViewBox('0 0 24 24'), h.Fill('none'), h.Class('size-5 text-accent-600')],
     [
@@ -63,122 +61,136 @@ const checkIcon = (): Html => {
   )
 }
 
-const checkPlaceholder = (): Html => {
-  const h = html()
-
+const checkPlaceholder = (h: HtmlBuilder<UiMessage>): Html => {
   return h.div([h.Class('size-5')], [])
 }
 
-export const view = Submodel.defineView<UiModel, UiMessage>((model): Html => {
-  const h = html<UiMessage>()
+export const view = Submodel.defineView<UiModel, UiMessage>(
+  (model, h): Html => {
+    return h.div(
+      [],
+      [
+        h.h2(
+          [h.Class('text-2xl font-bold text-gray-900 mb-6')],
+          ['Radio Group'],
+        ),
 
-  return h.div(
-    [],
-    [
-      h.h2([h.Class('text-2xl font-bold text-gray-900 mb-6')], ['Radio Group']),
-
-      h.h3(
-        [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
-        ['Vertical'],
-      ),
-      RadioGroup.view<Plan, UiMessage>({
-        id: VERTICAL_RADIO_GROUP_ID,
-        selectedValue: model.verticalRadioGroupDemoValue,
-        options: plans,
-        ariaLabel: 'Server plan',
-        onSelect: plan => SelectedVerticalPlan({ plan }),
-        toView: ({ group, options }) =>
-          h.div(
-            [...group, h.Class(verticalGroupClassName)],
-            options.map(option => {
-              const plan = option.value
-              return h.div(
-                [...option.option, h.Class(verticalOptionClassName)],
-                [
-                  h.div(
-                    [h.Class('flex w-full items-center justify-between')],
+        h.h3(
+          [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
+          ['Vertical'],
+        ),
+        RadioGroup.view(
+          {
+            id: VERTICAL_RADIO_GROUP_ID,
+            selectedValue: model.verticalRadioGroupDemoValue,
+            options: plans,
+            ariaLabel: 'Server plan',
+            onSelect: plan => SelectedVerticalPlan({ plan }),
+            toView: ({ group, options }) =>
+              h.div(
+                [...group, h.Class(verticalGroupClassName)],
+                options.map(option => {
+                  const plan = option.value
+                  return h.div(
+                    [...option.option, h.Class(verticalOptionClassName)],
                     [
                       h.div(
-                        [],
+                        [h.Class('flex w-full items-center justify-between')],
                         [
-                          h.span(
-                            [...option.label, h.Class(labelClassName)],
-                            [plan],
-                          ),
-                          h.p(
+                          h.div(
+                            [],
                             [
-                              ...option.description,
-                              h.Class(descriptionClassName),
+                              h.span(
+                                [...option.label, h.Class(labelClassName)],
+                                [plan],
+                              ),
+                              h.p(
+                                [
+                                  ...option.description,
+                                  h.Class(descriptionClassName),
+                                ],
+                                [planDescriptions[plan]],
+                              ),
                             ],
-                            [planDescriptions[plan]],
                           ),
-                        ],
-                      ),
-                      h.div(
-                        [h.Class('flex items-center gap-3')],
-                        [
-                          h.span([h.Class(priceClassName)], [planPrices[plan]]),
-                          option.isSelected ? checkIcon() : checkPlaceholder(),
+                          h.div(
+                            [h.Class('flex items-center gap-3')],
+                            [
+                              h.span(
+                                [h.Class(priceClassName)],
+                                [planPrices[plan]],
+                              ),
+                              option.isSelected
+                                ? checkIcon(h)
+                                : checkPlaceholder(h),
+                            ],
+                          ),
                         ],
                       ),
                     ],
-                  ),
-                ],
-              )
-            }),
-          ),
-      }),
+                  )
+                }),
+              ),
+          },
+          h,
+        ),
 
-      h.h3(
-        [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
-        ['Horizontal'],
-      ),
-      RadioGroup.view<Plan, UiMessage>({
-        id: HORIZONTAL_RADIO_GROUP_ID,
-        selectedValue: model.horizontalRadioGroupDemoValue,
-        options: plans,
-        ariaLabel: 'Server plan',
-        orientation: 'Horizontal',
-        onSelect: plan => SelectedHorizontalPlan({ plan }),
-        toView: ({ group, options }) =>
-          h.div(
-            [...group, h.Class(horizontalGroupClassName)],
-            options.map(option => {
-              const plan = option.value
-              return h.div(
-                [...option.option, h.Class(horizontalOptionClassName)],
-                [
-                  h.div(
-                    [h.Class('flex w-full items-center justify-between')],
+        h.h3(
+          [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
+          ['Horizontal'],
+        ),
+        RadioGroup.view(
+          {
+            id: HORIZONTAL_RADIO_GROUP_ID,
+            selectedValue: model.horizontalRadioGroupDemoValue,
+            options: plans,
+            ariaLabel: 'Server plan',
+            orientation: 'Horizontal',
+            onSelect: plan => SelectedHorizontalPlan({ plan }),
+            toView: ({ group, options }) =>
+              h.div(
+                [...group, h.Class(horizontalGroupClassName)],
+                options.map(option => {
+                  const plan = option.value
+                  return h.div(
+                    [...option.option, h.Class(horizontalOptionClassName)],
                     [
                       h.div(
-                        [],
+                        [h.Class('flex w-full items-center justify-between')],
                         [
-                          h.span(
-                            [...option.label, h.Class(labelClassName)],
-                            [plan],
-                          ),
-                          h.p(
+                          h.div(
+                            [],
                             [
-                              ...option.description,
-                              h.Class(descriptionClassName),
+                              h.span(
+                                [...option.label, h.Class(labelClassName)],
+                                [plan],
+                              ),
+                              h.p(
+                                [
+                                  ...option.description,
+                                  h.Class(descriptionClassName),
+                                ],
+                                [planDescriptions[plan]],
+                              ),
                             ],
-                            [planDescriptions[plan]],
                           ),
+                          option.isSelected
+                            ? checkIcon(h)
+                            : checkPlaceholder(h),
                         ],
                       ),
-                      option.isSelected ? checkIcon() : checkPlaceholder(),
+                      h.span(
+                        [h.Class(priceClassName + ' mt-2')],
+                        [planPrices[plan]],
+                      ),
                     ],
-                  ),
-                  h.span(
-                    [h.Class(priceClassName + ' mt-2')],
-                    [planPrices[plan]],
-                  ),
-                ],
-              )
-            }),
-          ),
-      }),
-    ],
-  )
-})
+                  )
+                }),
+              ),
+          },
+          h,
+        ),
+      ],
+    )
+  },
+)

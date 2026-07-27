@@ -2,8 +2,7 @@ export {
   childAttributes,
   createKeyedLazy,
   createLazy,
-  html,
-  submodel,
+  staticHtml,
   TextDirection,
 } from './index.js'
 
@@ -12,6 +11,7 @@ export type {
   ChildAttribute,
   Document,
   Html,
+  HtmlBuilder,
   KeyboardModifiers,
   TagName,
 } from './index.js'

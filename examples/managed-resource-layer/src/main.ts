@@ -9,7 +9,7 @@ import {
   Schema as S,
 } from 'effect'
 import { Command, ManagedResource, Runtime } from 'foldkit'
-import { Document, Html, html } from 'foldkit/html'
+import { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
@@ -195,24 +195,29 @@ const primaryButton = (
   label: string,
   message: Message,
   colorClassName: string,
-  isDisabled = false,
+  isDisabled: boolean,
+  h: HtmlBuilder<Message>,
+): Html =>
+  Button.view(
+    {
+      onClick: message,
+      isDisabled,
+      toView: attributes =>
+        h.button(
+          [
+            ...attributes.button,
+            h.Class(`${buttonClassName} ${colorClassName}`),
+          ],
+          [label],
+        ),
+    },
+    h,
+  )
+
+const engineStatusView = (
+  engine: EngineState,
+  h: HtmlBuilder<Message>,
 ): Html => {
-  const h = html<Message>()
-
-  return Button.view<Message>({
-    onClick: message,
-    isDisabled,
-    toView: attributes =>
-      h.button(
-        [...attributes.button, h.Class(`${buttonClassName} ${colorClassName}`)],
-        [label],
-      ),
-  })
-}
-
-const engineStatusView = (engine: EngineState): Html => {
-  const h = html<Message>()
-
   const status = M.value(engine).pipe(
     M.tag('EngineOff', () => ({
       colorClassName: 'text-gray-500',
@@ -236,9 +241,10 @@ const engineStatusView = (engine: EngineState): Html => {
   return h.p([h.Class(status.colorClassName)], [status.text])
 }
 
-const engineControlsView = (engine: EngineState): Html => {
-  const h = html<Message>()
-
+const engineControlsView = (
+  engine: EngineState,
+  h: HtmlBuilder<Message>,
+): Html => {
   const controls = M.value(engine).pipe(
     M.tag('EngineBooting', 'EngineReady', () => ({
       label: 'Stop engine',
@@ -255,13 +261,22 @@ const engineControlsView = (engine: EngineState): Html => {
 
   return h.div(
     [h.Class('flex gap-3')],
-    [primaryButton(controls.label, controls.message, controls.colorClassName)],
+    [
+      primaryButton(
+        controls.label,
+        controls.message,
+        controls.colorClassName,
+        false,
+        h,
+      ),
+    ],
   )
 }
 
-const squareResultView = (maybeSquareResult: Option.Option<number>): Html => {
-  const h = html<Message>()
-
+const squareResultView = (
+  maybeSquareResult: Option.Option<number>,
+  h: HtmlBuilder<Message>,
+): Html => {
   const text = Option.match(maybeSquareResult, {
     onNone: () => 'No result yet.',
     onSome: value => `Square result: ${value}`,
@@ -273,8 +288,7 @@ const squareResultView = (maybeSquareResult: Option.Option<number>): Html => {
 const isEngineReady = (engine: EngineState): boolean =>
   engine._tag === 'EngineReady'
 
-export const view = (model: Model): Document => {
-  const h = html<Message>()
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
   const isComputeDisabled = !isEngineReady(model.engine)
 
   return {
@@ -289,15 +303,16 @@ export const view = (model: Model): Document => {
               [h.Class('text-xl font-bold text-gray-900')],
               ['Layer-backed Managed Resource'],
             ),
-            engineStatusView(model.engine),
-            engineControlsView(model.engine),
+            engineStatusView(model.engine, h),
+            engineControlsView(model.engine, h),
             primaryButton(
               'Compute next square',
               ClickedCompute(),
               'bg-blue-500 hover:bg-blue-600 data-[disabled]:hover:bg-blue-500',
               isComputeDisabled,
+              h,
             ),
-            squareResultView(model.maybeSquareResult),
+            squareResultView(model.maybeSquareResult, h),
           ],
         ),
       ],

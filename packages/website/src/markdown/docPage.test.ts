@@ -1,5 +1,5 @@
 import { Array, Option, Result, String as String_ } from 'effect'
-import { html } from 'foldkit/html'
+import { staticHtml as h } from 'foldkit/html'
 import { describe, expect, test } from 'vitest'
 
 import { parseMarkdown } from '@foldkit/markdown/vite'
@@ -104,7 +104,7 @@ describe('stripHeadingIdMarker', () => {
   })
 
   test('preserves inline formatting and drops the marker-only trailing text', () => {
-    const emphasis = html().span([], ['lazy'])
+    const emphasis = h.span([], ['lazy'])
 
     expect(stripHeadingIdMarker([emphasis, ' {#when-to-use-lazy}'])).toEqual([
       emphasis,
@@ -112,7 +112,7 @@ describe('stripHeadingIdMarker', () => {
   })
 
   test('leaves content without a marker untouched', () => {
-    const code = html().span([], ['createLazy'])
+    const code = h.span([], ['createLazy'])
 
     expect(stripHeadingIdMarker(['Use ', code])).toEqual(['Use ', code])
   })

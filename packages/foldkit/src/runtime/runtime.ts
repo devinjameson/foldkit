@@ -40,12 +40,14 @@ import {
   type BoundaryRegistry,
   Document,
   Html,
+  type HtmlBuilder,
   TextDirection,
   __beginRender as beginHtmlRender,
   __beginReplayRender as beginReplayHtmlRender,
   __clearRuntime as clearHtmlRuntime,
   __createBoundaryRegistry as createHtmlBoundaryRegistry,
   __endReplayRender as endReplayHtmlRender,
+  __htmlBuilder as htmlBuilderFor,
   __setRuntime as setHtmlRuntime,
 } from '../html/index.js'
 import type {
@@ -570,9 +572,15 @@ export type CrashContext<Model, Message> = Readonly<{
   message: Option.Option<Message>
 }>
 
-/** Configuration for crash handling, with custom crash UI and/or crash reporting. */
+/** Configuration for crash handling, with custom crash UI and/or crash
+ *  reporting. The crash view renders after the dispatch loop has stopped, so
+ *  its builder's Message is `never` and no handler is expressible. Reload or
+ *  navigate with a raw DOM attribute instead. */
 export type CrashConfig<Model, Message> = Readonly<{
-  view?: (context: CrashContext<Model, Message>) => Document
+  view?: (
+    context: CrashContext<Model, Message>,
+    h: HtmlBuilder<never>,
+  ) => Document
   report?: (context: CrashContext<Model, Message>) => void
 }>
 
@@ -603,7 +611,7 @@ type RuntimeConfig<
     Model,
     ReadonlyArray<Command<Message, never, Resources | ManagedResourceServices>>,
   ]
-  view: (model: Model) => Document
+  view: (model: Model, h: HtmlBuilder<Message>) => Document
   /**
    * Whether the runtime owns document-level state. When `true`, each render
    * applies the view's `title`, `canonical`, and `og:url` to the document
@@ -704,7 +712,7 @@ type BaseApplicationConfig<
     Model,
     ReadonlyArray<Command<Message, never, Resources | ManagedResourceServices>>,
   ]
-  view: (model: Model) => Document
+  view: (model: Model, h: HtmlBuilder<Message>) => Document
   subscriptions?: Subscriptions<
     Model,
     Message,
@@ -832,7 +840,7 @@ export type ApplicationConfig<
  *  returns `Html`, not a `Document`, because a scoped app never owns the
  *  document `<head>`. */
 export type ElementCrashConfig<Model, Message> = Readonly<{
-  view?: (context: CrashContext<Model, Message>) => Html
+  view?: (context: CrashContext<Model, Message>, h: HtmlBuilder<never>) => Html
   report?: (context: CrashContext<Model, Message>) => void
 }>
 
@@ -851,7 +859,7 @@ type BaseElementConfig<
     Model,
     ReadonlyArray<Command<Message, never, Resources | ManagedResourceServices>>,
   ]
-  view: (model: Model) => Html
+  view: (model: Model, h: HtmlBuilder<Message>) => Html
   subscriptions?: Subscriptions<
     Model,
     Message,
@@ -1292,6 +1300,8 @@ const makeRuntime = <
       Match.when('Development', () => !!import.meta.hot),
       Match.exhaustive,
     )
+
+  const htmlBuilder = htmlBuilderFor<Message>()
 
   const resolvedSlow = __resolveSlowConfig(slow, isSlowVisible)
 
@@ -2097,7 +2107,7 @@ const makeRuntime = <
                 )
 
                 try {
-                  return view(model)
+                  return view(model, htmlBuilder)
                 } finally {
                   clearHtmlRuntime()
                 }
@@ -2370,7 +2380,7 @@ const makeRuntime = <
                 boundaryRegistry,
               )
               try {
-                return view(model)
+                return view(model, htmlBuilder)
               } finally {
                 clearHtmlRuntime()
               }
@@ -2845,7 +2855,7 @@ const renderCrashView = <Model, Message>(
     let crashDocument: Document
     try {
       crashDocument = crash?.view
-        ? crash.view(context)
+        ? crash.view(context, htmlBuilderFor<never>())
         : defaultCrashView(context)
     } finally {
       clearHtmlRuntime()
@@ -3143,9 +3153,12 @@ const toCrashConfig = <Model, Message>(
 
   return {
     ...(Predicate.isNotUndefined(elementCrashView) && {
-      view: (context: CrashContext<Model, Message>): Document => ({
+      view: (
+        context: CrashContext<Model, Message>,
+        h: HtmlBuilder<never>,
+      ): Document => ({
         title: '',
-        body: elementCrashView(context),
+        body: elementCrashView(context, h),
       }),
     }),
     ...(Predicate.isNotUndefined(crash.report) && {
@@ -3226,9 +3239,9 @@ export function makeElement<
   const hasFlags = 'Flags' in config
 
   const elementView = config.view
-  const view = (model: Model): Document => ({
+  const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
     title: '',
-    body: elementView(model),
+    body: elementView(model, h),
   })
 
   const crash = toCrashConfig(config.crash)

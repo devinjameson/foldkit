@@ -1,8 +1,4 @@
-import { html } from 'foldkit/html'
-
-import type { Message } from './message'
-
-const h = html<Message>()
+import { staticHtml as h } from 'foldkit/html'
 
 const externalLinkAttributes = [h.Rel('noopener noreferrer')]
 

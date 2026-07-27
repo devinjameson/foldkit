@@ -1,5 +1,5 @@
 import { Match as M, Schema as S } from 'effect'
-import { html } from 'foldkit/html'
+import { staticHtml as h } from 'foldkit/html'
 
 const Idle = S.TaggedStruct('Idle', {})
 const Loading = S.TaggedStruct('Loading', {})
@@ -9,10 +9,8 @@ const Loaded = S.TaggedStruct('Loaded', { greeting: S.String })
 const Status = S.Union([Idle, Loading, Failed, Loaded])
 type Status = typeof Status.Type
 
-const greetingView = (status: Status) => {
-  const h = html()
-
-  return h.div(
+const greetingView = (status: Status) =>
+  h.div(
     [],
     [
       M.value(status).pipe(
@@ -25,4 +23,3 @@ const greetingView = (status: Status) => {
       ),
     ],
   )
-}

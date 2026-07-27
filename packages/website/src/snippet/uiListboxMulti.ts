@@ -3,7 +3,7 @@
 // update, and view definitions.
 import { Array, Match as M, Option } from 'effect'
 import { Command } from 'foldkit'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -82,10 +82,8 @@ const people: ReadonlyArray<Person> = [
 
 // Inside your view function, embed the Listbox via h.submodel. Multi-select
 // stays open on selection so the user can toggle several items:
-const view = (model: Model) => {
-  const h = html<Message>()
-
-  return h.submodel({
+const view = (model: Model, h: HtmlBuilder<Message>) =>
+  h.submodel({
     slotId: 'people',
     model: model.listboxMulti,
     view: PeopleListbox.view,
@@ -118,4 +116,3 @@ const view = (model: Model) => {
     },
     toParentMessage: message => GotListboxMultiMessage({ message }),
   })
-}

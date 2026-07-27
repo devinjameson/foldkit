@@ -1,5 +1,5 @@
 import { Match as M } from 'effect'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 
 import { Calendar } from '@foldkit/ui'
 
@@ -47,9 +47,7 @@ const monthYearButtonClassName =
 
 // VIEW
 
-export const basicDemo = (model: Model) => {
-  const h = html<Message>()
-
+export const basicDemo = (model: Model, h: HtmlBuilder<Message>) => {
   return [
     h.submodel({
       slotId: model.calendarBasicDemo.id,

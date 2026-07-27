@@ -19,7 +19,7 @@ import {
   makeRules,
   validate,
 } from 'foldkit/fieldValidation'
-import { Html, html } from 'foldkit/html'
+import { Html, HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -201,73 +201,73 @@ const fieldView = (
   labelText: string,
   field: Field<string>,
   onUpdate: (value: string) => Message,
-  type: 'text' | 'email' | 'password' = 'text',
-  placeholder = '',
+  type: 'text' | 'email' | 'password',
+  placeholder: string,
+  h: HtmlBuilder<Message>,
 ): Html => {
-  const h = html<Message>()
-
   const inputClass = clsx(
     'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
     fieldToBorderClass(field),
   )
 
-  return Input.view<Message>({
-    id,
-    type,
-    value: field.value,
-    placeholder,
-    onInput: onUpdate,
-    isInvalid: field._tag === 'Invalid',
-    toView: attributes =>
-      h.div(
-        [],
-        [
-          h.div(
-            [h.Class('flex items-center gap-2 mb-1')],
-            [
-              h.label(
-                [
-                  ...attributes.label,
-                  h.Class('block text-sm font-medium text-gray-700'),
-                ],
-                [labelText],
-              ),
-              M.value(field).pipe(
-                M.tagsExhaustive({
-                  NotValidated: () => h.empty,
-                  Validating: () =>
-                    h.span([h.Class('text-blue-600 text-sm')], ['...']),
-                  Valid: () =>
-                    h.span([h.Class('text-green-600 text-sm')], ['✓']),
-                  Invalid: () => h.empty,
-                }),
-              ),
-            ],
-          ),
-          h.input([...attributes.input, h.Class(inputClass)]),
-          M.value(field).pipe(
-            M.tagsExhaustive({
-              NotValidated: () => h.empty,
-              Validating: () => h.empty,
-              Valid: () => h.empty,
-              Invalid: ({ errors }) =>
-                h.div(
+  return Input.view(
+    {
+      id,
+      type,
+      value: field.value,
+      placeholder,
+      onInput: onUpdate,
+      isInvalid: field._tag === 'Invalid',
+      toView: attributes =>
+        h.div(
+          [],
+          [
+            h.div(
+              [h.Class('flex items-center gap-2 mb-1')],
+              [
+                h.label(
                   [
-                    ...attributes.description,
-                    h.Class('text-red-600 text-sm mt-1'),
+                    ...attributes.label,
+                    h.Class('block text-sm font-medium text-gray-700'),
                   ],
-                  [Array.headNonEmpty(errors)],
+                  [labelText],
                 ),
-            }),
-          ),
-        ],
-      ),
-  })
+                M.value(field).pipe(
+                  M.tagsExhaustive({
+                    NotValidated: () => h.empty,
+                    Validating: () =>
+                      h.span([h.Class('text-blue-600 text-sm')], ['...']),
+                    Valid: () =>
+                      h.span([h.Class('text-green-600 text-sm')], ['✓']),
+                    Invalid: () => h.empty,
+                  }),
+                ),
+              ],
+            ),
+            h.input([...attributes.input, h.Class(inputClass)]),
+            M.value(field).pipe(
+              M.tagsExhaustive({
+                NotValidated: () => h.empty,
+                Validating: () => h.empty,
+                Valid: () => h.empty,
+                Invalid: ({ errors }) =>
+                  h.div(
+                    [
+                      ...attributes.description,
+                      h.Class('text-red-600 text-sm mt-1'),
+                    ],
+                    [Array.headNonEmpty(errors)],
+                  ),
+              }),
+            ),
+          ],
+        ),
+    },
+    h,
+  )
 }
 
-export const view = Submodel.defineView<Model, Message>((model): Html => {
-  const h = html<Message>()
-
+export const view = Submodel.defineView<Model, Message>((model, h) => {
   const canSubmit = isFormValid(model) && !model.isSubmitting
 
   return h.div(
@@ -299,6 +299,7 @@ export const view = Submodel.defineView<Model, Message>((model): Html => {
                 value => ChangedEmail({ value }),
                 'email',
                 'you@example.com',
+                h,
               ),
               fieldView(
                 'password',
@@ -307,26 +308,30 @@ export const view = Submodel.defineView<Model, Message>((model): Html => {
                 value => ChangedPassword({ value }),
                 'password',
                 'Enter your password',
+                h,
               ),
-              Button.view<Message>({
-                type: 'submit',
-                isDisabled: !canSubmit,
-                toView: attributes =>
-                  h.button(
-                    [
-                      ...attributes.button,
-                      h.Class(
-                        clsx(
-                          'w-full py-3 font-medium rounded-lg transition',
-                          canSubmit
-                            ? 'bg-blue-500 text-white hover:bg-blue-600 cursor-pointer'
-                            : 'bg-gray-300 text-gray-500 cursor-not-allowed',
+              Button.view(
+                {
+                  type: 'submit',
+                  isDisabled: !canSubmit,
+                  toView: attributes =>
+                    h.button(
+                      [
+                        ...attributes.button,
+                        h.Class(
+                          clsx(
+                            'w-full py-3 font-medium rounded-lg transition',
+                            canSubmit
+                              ? 'bg-blue-500 text-white hover:bg-blue-600 cursor-pointer'
+                              : 'bg-gray-300 text-gray-500 cursor-not-allowed',
+                          ),
                         ),
-                      ),
-                    ],
-                    [model.isSubmitting ? 'Signing in...' : 'Sign In'],
-                  ),
-              }),
+                      ],
+                      [model.isSubmitting ? 'Signing in...' : 'Sign In'],
+                    ),
+                },
+                h,
+              ),
             ],
           ),
           h.div(

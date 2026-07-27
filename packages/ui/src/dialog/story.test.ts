@@ -1,6 +1,6 @@
 import { Effect, Option, Predicate } from 'effect'
 import * as Dom from 'foldkit/dom'
-import { type ChildAttribute, html } from 'foldkit/html'
+import type { ChildAttribute, HtmlBuilder } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
 import * as Story from 'foldkit/story'
 import { expect } from 'vitest'
@@ -40,13 +40,17 @@ const isOnUnmount = (childAttribute: ChildAttribute): boolean =>
 // OnUnmount backstop.
 const dialogHasOnUnmount = (model: Model): boolean => {
   let hasOnUnmount = false
-  const sceneView = (currentModel: Model) =>
-    view(currentModel, {
-      toView: ({ dialog }) => {
-        hasOnUnmount = dialog.some(isOnUnmount)
-        return html<Message>().dialog([...dialog], [])
+  const sceneView = (currentModel: Model, h: HtmlBuilder<Message>) =>
+    view(
+      currentModel,
+      {
+        toView: ({ dialog }) => {
+          hasOnUnmount = dialog.some(isOnUnmount)
+          return h.dialog([...dialog], [])
+        },
       },
-    })
+      h,
+    )
 
   Scene.scene({ update, view: sceneView }, Scene.with(model))
   return hasOnUnmount
@@ -59,13 +63,17 @@ const renderGroup = (
   selectGroup: (render: RenderInfo) => ReadonlyArray<ChildAttribute>,
 ): ReadonlyArray<ChildAttribute> => {
   let captured: ReadonlyArray<ChildAttribute> = []
-  const sceneView = (currentModel: Model) =>
-    view(currentModel, {
-      toView: render => {
-        captured = selectGroup(render)
-        return html<Message>().dialog([...render.dialog], [])
+  const sceneView = (currentModel: Model, h: HtmlBuilder<Message>) =>
+    view(
+      currentModel,
+      {
+        toView: render => {
+          captured = selectGroup(render)
+          return h.dialog([...render.dialog], [])
+        },
       },
-    })
+      h,
+    )
 
   Scene.scene({ update, view: sceneView }, Scene.with(model))
   return captured

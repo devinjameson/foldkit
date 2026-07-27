@@ -41,7 +41,7 @@ If you run tests with Vitest, add `markdown()` with the same options to the `plu
 ## Render a document
 
 ```typescript
-import { Html, html } from 'foldkit/html'
+import { Html, type HtmlBuilder } from 'foldkit/html'
 
 import * as Markdown from '@foldkit/markdown'
 
@@ -50,11 +50,8 @@ import { type Message } from './message'
 
 const about = Markdown.decodeDocument(aboutRaw)
 
-const view = (): Html => {
-  const h = html<Message>()
-
-  return h.div([], [Markdown.view(about)])
-}
+const view = (h: HtmlBuilder<Message>): Html =>
+  h.div([], [Markdown.view(about)])
 ```
 
 `Markdown.view` renders every node through unstyled semantic defaults. Restyle any node by overriding its view:
@@ -111,7 +108,7 @@ markdown({ islands: islandAttributes })
 `islandsFor` pairs the same definitions with typed views: attributes arrive decoded through each island's schema, and the record must cover every declared name. State stays in your Model; the markdown only decides placement. The third argument is the zero-based occurrence of that island name in the document, for identifiers that must be unique per instance, like an `h.submodel` slotId:
 
 ```typescript
-import { Html, html } from 'foldkit/html'
+import { Html, type HtmlBuilder } from 'foldkit/html'
 
 import * as Markdown from '@foldkit/markdown'
 
@@ -119,10 +116,12 @@ import { Counter } from './counter'
 import { islandAttributes } from './islands'
 import { GotCounterMessage, type Message, type Model } from './message'
 
-const postView = (model: Model, post: Markdown.MarkdownDocument): Html => {
-  const h = html<Message>()
-
-  return Markdown.view(post, {
+const postView = (
+  model: Model,
+  post: Markdown.MarkdownDocument,
+  h: HtmlBuilder<Message>,
+): Html =>
+  Markdown.view(post, {
     islands: Markdown.islandsFor(islandAttributes, {
       Counter: ({ label }, _content, occurrenceIndex) =>
         h.div(
@@ -141,7 +140,6 @@ const postView = (model: Model, post: Markdown.MarkdownDocument): Html => {
         h.aside([h.Class('rounded border p-4')], content),
     }),
   })
-}
 ```
 
 Attribute values are strings on the wire, so transforming field schemas decode past them: `S.NumberFromString` turns `::Chart{height="240"}` into `height: number`. A plain `islands` record of untyped views (`Readonly<Record<string, IslandView>>`) also works when you want to skip the schemas.

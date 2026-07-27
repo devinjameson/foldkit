@@ -10,7 +10,7 @@ import {
   pipe,
 } from 'effect'
 import { Command, Runtime } from 'foldkit'
-import { Document, Html, html } from 'foldkit/html'
+import { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -220,10 +220,8 @@ const badgeClass = (status: UploadStatus): string =>
 const ACTION_BUTTON_CLASS =
   'px-3 py-1 text-sm font-medium rounded-md border transition'
 
-const uploadActionView = (upload: Upload): Html => {
-  const h = html<Message>()
-
-  return M.value(upload.status).pipe(
+const uploadActionView = (upload: Upload, h: HtmlBuilder<Message>): Html =>
+  M.value(upload.status).pipe(
     M.when('Uploading', () =>
       h.keyed('button')(
         'Uploading',
@@ -259,12 +257,9 @@ const uploadActionView = (upload: Upload): Html => {
     M.when('Done', () => h.empty),
     M.exhaustive,
   )
-}
 
-const uploadView = (upload: Upload): Html => {
-  const h = html<Message>()
-
-  return h.keyed('li')(
+const uploadView = (upload: Upload, h: HtmlBuilder<Message>): Html =>
+  h.keyed('li')(
     String(upload.id),
     [h.Class('p-4 bg-white rounded-lg shadow flex flex-col gap-2')],
     [
@@ -298,7 +293,7 @@ const uploadView = (upload: Upload): Html => {
                 ],
                 [upload.status],
               ),
-              uploadActionView(upload),
+              uploadActionView(upload, h),
             ],
           ),
         ],
@@ -308,11 +303,8 @@ const uploadView = (upload: Upload): Html => {
         : h.empty,
     ],
   )
-}
 
-export const view = (model: Model): Document => {
-  const h = html<Message>()
-
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
   const isAnyUploadRunning = Array.some(
     model.uploads,
     upload => upload.status === 'Uploading',
@@ -365,7 +357,7 @@ export const view = (model: Model): Document => {
               h.keyed('ul')(
                 'UploadList',
                 [h.Class('flex flex-col gap-3')],
-                Array.map(uploads, uploadView),
+                Array.map(uploads, upload => uploadView(upload, h)),
               ),
           }),
         ],

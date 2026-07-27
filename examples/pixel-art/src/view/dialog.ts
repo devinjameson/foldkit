@@ -1,5 +1,5 @@
 import { Option } from 'effect'
-import { type Html, html } from 'foldkit/html'
+import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { Button, Dialog } from '@foldkit/ui'
 
@@ -19,10 +19,9 @@ const panelClassName =
 export const errorDialogView = (
   errorDialog: typeof Dialog.Model.Type,
   maybeExportError: Option.Option<string>,
-): Html => {
-  const h = html<Message>()
-
-  return h.submodel({
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.submodel({
     slotId: errorDialog.id,
     model: errorDialog,
     view: Dialog.view,
@@ -75,15 +74,13 @@ export const errorDialogView = (
     },
     toParentMessage: message => GotErrorDialogMessage({ message }),
   })
-}
 
 export const gridSizeConfirmDialogView = (
   gridSizeConfirmDialog: typeof Dialog.Model.Type,
   maybePendingGridSize: Option.Option<number>,
-): Html => {
-  const h = html<Message>()
-
-  return h.submodel({
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.submodel({
     slotId: gridSizeConfirmDialog.id,
     model: gridSizeConfirmDialog,
     view: Dialog.view,
@@ -130,19 +127,22 @@ export const gridSizeConfirmDialogView = (
                             ],
                             ['Cancel'],
                           ),
-                          Button.view({
-                            onClick: ConfirmedGridSizeChange(),
-                            toView: attributes =>
-                              h.button(
-                                [
-                                  ...attributes.button,
-                                  h.Class(
-                                    'flex-1 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-500 transition motion-reduce:transition-none cursor-pointer',
-                                  ),
-                                ],
-                                ['Clear and Resize'],
-                              ),
-                          }),
+                          Button.view(
+                            {
+                              onClick: ConfirmedGridSizeChange(),
+                              toView: attributes =>
+                                h.button(
+                                  [
+                                    ...attributes.button,
+                                    h.Class(
+                                      'flex-1 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-500 transition motion-reduce:transition-none cursor-pointer',
+                                    ),
+                                  ],
+                                  ['Clear and Resize'],
+                                ),
+                            },
+                            h,
+                          ),
                         ],
                       ),
                     ],
@@ -154,4 +154,3 @@ export const gridSizeConfirmDialogView = (
     },
     toParentMessage: message => GotGridSizeConfirmDialogMessage({ message }),
   })
-}

@@ -1,4 +1,5 @@
 import { Option, flow } from 'effect'
+import type { HtmlBuilder } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
 import * as Story from 'foldkit/story'
 import { expect } from 'vitest'
@@ -32,6 +33,7 @@ import {
   IgnoredMouseClick,
   InertOthers,
   LockScroll,
+  type Message,
   MovedPointerOverItem,
   Opened,
   PortalListboxBackdrop,
@@ -1138,14 +1140,18 @@ describe('Listbox', () => {
           'items' | 'buttonContent'
         > = {},
       ) =>
-      (model: Model) =>
-        view(model, {
-          items: ['Apple', 'Banana'],
-          itemToConfig: () => ({ content: null }),
-          buttonContent: null,
-          maybeSelectedValue: Option.none(),
-          ...overrides,
-        })
+      (model: Model, h: HtmlBuilder<Message>) =>
+        view(
+          model,
+          {
+            items: ['Apple', 'Banana'],
+            itemToConfig: () => ({ content: null }),
+            buttonContent: null,
+            maybeSelectedValue: Option.none(),
+            ...overrides,
+          },
+          h,
+        )
 
     describe('ARIA', () => {
       it('button has aria-haspopup="listbox"', () => {
@@ -1669,15 +1675,19 @@ describe('Listbox', () => {
             'items' | 'itemToValue' | 'itemToConfig' | 'buttonContent'
           > = {},
         ) =>
-        (model: Model) =>
-          PersonListbox.view(model, {
-            items: people,
-            itemToValue: person => person.id,
-            itemToConfig: () => ({ content: null }),
-            buttonContent: null,
-            maybeSelectedValue: Option.none(),
-            ...overrides,
-          })
+        (model: Model, h: HtmlBuilder<Message>) =>
+          PersonListbox.view(
+            model,
+            {
+              items: people,
+              itemToValue: person => person.id,
+              itemToConfig: () => ({ content: null }),
+              buttonContent: null,
+              maybeSelectedValue: Option.none(),
+              ...overrides,
+            },
+            h,
+          )
 
       it('items have click handlers with object items', () => {
         Scene.scene(

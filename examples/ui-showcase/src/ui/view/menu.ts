@@ -1,6 +1,6 @@
 import { Match as M } from 'effect'
 import { Submodel } from 'foldkit'
-import { Html, childAttributes, html } from 'foldkit/html'
+import { type Html, type HtmlBuilder, childAttributes } from 'foldkit/html'
 
 import { Menu } from '@foldkit/ui'
 
@@ -63,9 +63,10 @@ const itemGroupKey = (item: MenuItem): string =>
     M.orElse(() => 'Actions'),
   )
 
-const groupToHeading = (groupKey: string): Menu.GroupHeading | undefined => {
-  const h = html()
-
+const groupToHeading = (
+  groupKey: string,
+  h: HtmlBuilder<UiMessage>,
+): Menu.GroupHeading | undefined => {
   return M.value(groupKey).pipe(
     M.when('Danger', () => ({
       content: h.span([], ['Danger Zone']),
@@ -81,9 +82,10 @@ const MENU_ANCHOR = {
   padding: 8,
 }
 
-const menuViewConfig = (itemsClassNameValue: string) => {
-  const h = html<UiMessage>()
-
+const menuViewConfig = (
+  itemsClassNameValue: string,
+  h: HtmlBuilder<UiMessage>,
+) => {
   return {
     anchor: MENU_ANCHOR,
     items: MENU_ITEMS,
@@ -104,69 +106,70 @@ const menuViewConfig = (itemsClassNameValue: string) => {
     backdropAttributes: childAttributes([h.Class(backdropClassName)]),
     attributes: childAttributes([h.Class(wrapperClassName)]),
     itemGroupKey,
-    groupToHeading,
+    groupToHeading: (groupKey: string) => groupToHeading(groupKey, h),
   }
 }
 
-export const view = Submodel.defineView<UiModel, UiMessage>((model): Html => {
-  const h = html<UiMessage>()
+export const view = Submodel.defineView<UiModel, UiMessage>(
+  (model, h): Html => {
+    return h.div(
+      [],
+      [
+        h.h2([h.Class('text-2xl font-bold text-gray-900 mb-6')], ['Menu']),
 
-  return h.div(
-    [],
-    [
-      h.h2([h.Class('text-2xl font-bold text-gray-900 mb-6')], ['Menu']),
+        h.h3(
+          [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
+          ['Basic'],
+        ),
+        h.label(
+          [
+            h.For(Menu.buttonId(model.menuBasicDemo.id)),
+            h.Class('block mb-1.5 text-sm font-medium text-gray-900'),
+          ],
+          ['Row actions'],
+        ),
+        h.div(
+          [h.Class('relative')],
+          [
+            h.submodel({
+              slotId: model.menuBasicDemo.id,
+              model: model.menuBasicDemo,
+              view: ActionMenu.view,
+              viewInputs: {
+                ...menuViewConfig(basicItemsClassName, h),
+              },
+              toParentMessage: message => GotMenuBasicDemoMessage({ message }),
+            }),
+          ],
+        ),
 
-      h.h3(
-        [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
-        ['Basic'],
-      ),
-      h.label(
-        [
-          h.For(Menu.buttonId(model.menuBasicDemo.id)),
-          h.Class('block mb-1.5 text-sm font-medium text-gray-900'),
-        ],
-        ['Row actions'],
-      ),
-      h.div(
-        [h.Class('relative')],
-        [
-          h.submodel({
-            slotId: model.menuBasicDemo.id,
-            model: model.menuBasicDemo,
-            view: ActionMenu.view,
-            viewInputs: {
-              ...menuViewConfig(basicItemsClassName),
-            },
-            toParentMessage: message => GotMenuBasicDemoMessage({ message }),
-          }),
-        ],
-      ),
-
-      h.h3(
-        [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
-        ['Animated'],
-      ),
-      h.label(
-        [
-          h.For(Menu.buttonId(model.menuAnimatedDemo.id)),
-          h.Class('block mb-1.5 text-sm font-medium text-gray-900'),
-        ],
-        ['Row actions'],
-      ),
-      h.div(
-        [h.Class('relative')],
-        [
-          h.submodel({
-            slotId: model.menuAnimatedDemo.id,
-            model: model.menuAnimatedDemo,
-            view: ActionMenu.view,
-            viewInputs: {
-              ...menuViewConfig(animatedItemsClassName),
-            },
-            toParentMessage: message => GotMenuAnimatedDemoMessage({ message }),
-          }),
-        ],
-      ),
-    ],
-  )
-})
+        h.h3(
+          [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
+          ['Animated'],
+        ),
+        h.label(
+          [
+            h.For(Menu.buttonId(model.menuAnimatedDemo.id)),
+            h.Class('block mb-1.5 text-sm font-medium text-gray-900'),
+          ],
+          ['Row actions'],
+        ),
+        h.div(
+          [h.Class('relative')],
+          [
+            h.submodel({
+              slotId: model.menuAnimatedDemo.id,
+              model: model.menuAnimatedDemo,
+              view: ActionMenu.view,
+              viewInputs: {
+                ...menuViewConfig(animatedItemsClassName, h),
+              },
+              toParentMessage: message =>
+                GotMenuAnimatedDemoMessage({ message }),
+            }),
+          ],
+        ),
+      ],
+    )
+  },
+)

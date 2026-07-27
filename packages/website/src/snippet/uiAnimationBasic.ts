@@ -3,7 +3,7 @@
 // update, and view definitions.
 import { Effect, Match as M, Option } from 'effect'
 import { Command } from 'foldkit'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -88,10 +88,8 @@ GotAnimationMessage: ({ message }) => {
 // source of truth for whether content is currently visible. The Animation
 // view wraps your content. Data attributes drive the CSS transitions or
 // keyframe animations defined in className:
-const view = () => {
-  const h = html<Message>()
-
-  return h.div(
+const view = (h: HtmlBuilder<Message>) =>
+  h.div(
     [],
     [
       h.button(
@@ -120,4 +118,3 @@ const view = () => {
       }),
     ],
   )
-}

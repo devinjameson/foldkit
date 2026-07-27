@@ -1,4 +1,4 @@
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
 
 import { describe, it } from '@effect/vitest'
@@ -8,18 +8,19 @@ import { EnteredDragZone, init, update, view } from './index.js'
 
 const sceneView =
   (overrides: Omit<Partial<ViewInputs>, 'toView'> = {}) =>
-  (model: Model) => {
-    const h = html<Message>()
-
-    return view(model, {
-      toView: attrs =>
-        h.label(attrs.root, [
-          h.p([], ['Drop files or click to upload']),
-          h.input(attrs.input),
-        ]),
-      ...overrides,
-    })
-  }
+  (model: Model, h: HtmlBuilder<Message>) =>
+    view(
+      model,
+      {
+        toView: attrs =>
+          h.label(attrs.root, [
+            h.p([], ['Drop files or click to upload']),
+            h.input(attrs.input),
+          ]),
+        ...overrides,
+      },
+      h,
+    )
 
 const dropZone = Scene.selector('label')
 const fileInput = Scene.selector('input[type="file"]')

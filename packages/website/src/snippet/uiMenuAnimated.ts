@@ -1,7 +1,7 @@
 // Pseudocode walkthrough using the same Model, Messages, and update as
 // the basic menu; only init and view change. Each labeled block below is
 // an excerpt.
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 
 import { Menu } from '@foldkit/ui'
@@ -27,10 +27,8 @@ const GotMenuMessage = m('GotMenuMessage', {
 const ActionMenu = Menu.create<Action>()
 
 // Inside your view function, use data-[closed] for enter/leave transitions:
-const view = () => {
-  const h = html<Message>()
-
-  return h.submodel({
+const view = (h: HtmlBuilder<Message>) =>
+  h.submodel({
     slotId: 'menu',
     model: model.menu,
     view: ActionMenu.view,
@@ -49,4 +47,3 @@ const view = () => {
     },
     toParentMessage: message => GotMenuMessage({ message }),
   })
-}

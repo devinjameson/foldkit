@@ -1,5 +1,5 @@
 import { Submodel } from 'foldkit'
-import { Html, html } from 'foldkit/html'
+import type { Html } from 'foldkit/html'
 
 import { uiShowcaseViewSourceHref } from '../../link'
 import type { TableOfContentsEntry } from '../../main'
@@ -16,7 +16,6 @@ import {
 import { uiSelectionSubmodelsRouter } from '../../route'
 import * as Snippet from '../../snippet'
 import {
-  type CopiedSnippets,
   type RenderCopyButton,
   highlightedCodeBlockFor,
 } from '../../view/codeBlock'
@@ -301,14 +300,12 @@ const keyboardEntries: ReadonlyArray<KeyboardEntry> = [
 // VIEW
 
 type ViewInputs = Readonly<{
-  copiedSnippets: CopiedSnippets
   renderCopyButton: RenderCopyButton
   renderHeadingLink: RenderHeadingLink
 }>
 
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
-  (model, { copiedSnippets, renderCopyButton, renderHeadingLink }): Html => {
-    const h = html<Message>()
+  (model, { renderCopyButton, renderHeadingLink }, h): Html => {
     const { heading, tableOfContentsEntryToHeader } =
       headingsFor(renderHeadingLink)
     const highlightedCodeBlock = highlightedCodeBlockFor(renderCopyButton)
@@ -391,6 +388,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
               ...Combobox.comboboxDemo(
                 model.comboboxDemo,
                 model.maybeComboboxDemoSelectedCity,
+                h,
               ),
             ),
           ],
@@ -405,7 +403,6 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           ),
           Snippet.uiComboboxBasicRaw,
           'Copy combobox example to clipboard',
-          copiedSnippets,
           'mb-8',
         ),
         heading(
@@ -429,6 +426,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
               ...Combobox.nullableDemo(
                 model.comboboxNullableDemo,
                 model.maybeComboboxNullableDemoSelectedCity,
+                h,
               ),
             ),
           ],
@@ -450,6 +448,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
               ...Combobox.selectOnFocusDemo(
                 model.comboboxSelectOnFocusDemo,
                 model.maybeComboboxSelectOnFocusDemoSelectedCity,
+                h,
               ),
             ),
           ],
@@ -473,6 +472,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
               ...Combobox.multiDemo(
                 model.comboboxMultiDemo,
                 model.comboboxMultiDemoSelectedCities,
+                h,
               ),
             ),
           ],
@@ -487,7 +487,6 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           ),
           Snippet.uiComboboxMultiRaw,
           'Copy multi-select combobox example to clipboard',
-          copiedSnippets,
           'mb-8',
         ),
         heading(stylingHeader.level, stylingHeader.id, stylingHeader.text),

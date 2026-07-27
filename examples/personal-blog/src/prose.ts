@@ -1,9 +1,7 @@
 import { Match as M, Option } from 'effect'
-import { Html, html } from 'foldkit/html'
+import { Html, staticHtml as h } from 'foldkit/html'
 
 import * as Markdown from '@foldkit/markdown'
-
-const h = html()
 
 const headingView = (
   heading: Markdown.Heading,

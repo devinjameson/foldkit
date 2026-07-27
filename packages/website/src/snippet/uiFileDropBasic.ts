@@ -3,7 +3,7 @@
 // update, and view definitions.
 import { Effect, Match as M, Option } from 'effect'
 import { Command, File } from 'foldkit'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -65,10 +65,8 @@ GotFileDropMessage: ({ message }) => {
 // Spread `root` onto a <label> so clicking opens the picker, and spread
 // `input` onto a hidden <input type="file"> nested inside. Style the
 // drag-over state via `data-drag-over`.
-const view = (model: Model) => {
-  const h = html<Message>()
-
-  return h.submodel({
+const view = (model: Model, h: HtmlBuilder<Message>) =>
+  h.submodel({
     slotId: 'uploader',
     model: model.uploader,
     view: FileDrop.view,
@@ -92,4 +90,3 @@ const view = (model: Model) => {
     },
     toParentMessage: message => GotFileDropMessage({ message }),
   })
-}

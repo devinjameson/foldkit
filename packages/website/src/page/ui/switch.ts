@@ -1,4 +1,4 @@
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 
 import { Switch } from '@foldkit/ui'
 
@@ -20,9 +20,10 @@ const descriptionClassName = 'text-sm text-gray-500 dark:text-gray-400'
 
 // VIEW
 
-export const basicDemo = (isSwitchDemoChecked: boolean) => {
-  const h = html<Message>()
-
+export const basicDemo = (
+  isSwitchDemoChecked: boolean,
+  h: HtmlBuilder<Message>,
+) => {
   const knob = (isKnobRight: boolean) =>
     h.span(
       [
@@ -34,33 +35,36 @@ export const basicDemo = (isSwitchDemoChecked: boolean) => {
     )
 
   return [
-    Switch.view<Message>({
-      id: SWITCH_DEMO_ID,
-      isChecked: isSwitchDemoChecked,
-      onToggle: isChecked => ToggledSwitchDemo({ isChecked }),
-      toView: attributes =>
-        h.div(
-          [h.Class(wrapperClassName)],
-          [
-            h.button(
-              [...attributes.button, h.Class(buttonClassName)],
-              [knob(isSwitchDemoChecked)],
-            ),
-            h.div(
-              [],
-              [
-                h.label(
-                  [...attributes.label, h.Class(labelClassName)],
-                  ['Enable notifications'],
-                ),
-                h.p(
-                  [...attributes.description, h.Class(descriptionClassName)],
-                  ['Get notified when something important happens.'],
-                ),
-              ],
-            ),
-          ],
-        ),
-    }),
+    Switch.view(
+      {
+        id: SWITCH_DEMO_ID,
+        isChecked: isSwitchDemoChecked,
+        onToggle: isChecked => ToggledSwitchDemo({ isChecked }),
+        toView: attributes =>
+          h.div(
+            [h.Class(wrapperClassName)],
+            [
+              h.button(
+                [...attributes.button, h.Class(buttonClassName)],
+                [knob(isSwitchDemoChecked)],
+              ),
+              h.div(
+                [],
+                [
+                  h.label(
+                    [...attributes.label, h.Class(labelClassName)],
+                    ['Enable notifications'],
+                  ),
+                  h.p(
+                    [...attributes.description, h.Class(descriptionClassName)],
+                    ['Get notified when something important happens.'],
+                  ),
+                ],
+              ),
+            ],
+          ),
+      },
+      h,
+    ),
   ]
 }

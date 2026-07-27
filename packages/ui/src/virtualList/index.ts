@@ -15,7 +15,6 @@ import {
   type Html,
   type TagName,
   childAttributes,
-  html,
 } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { ts } from 'foldkit/schema'
@@ -570,9 +569,7 @@ export const view = <Item>() =>
   viewImpl as unknown as ViewForItem<Item>
 
 const viewImpl = defineView<Model, Message, ViewInputs<unknown>>(
-  (model, viewInputs) => {
-    const h = html<Message>()
-
+  (model, viewInputs, h) => {
     const {
       items,
       itemToKey,

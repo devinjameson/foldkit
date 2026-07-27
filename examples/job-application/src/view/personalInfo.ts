@@ -2,7 +2,7 @@ import { Equal, Option } from 'effect'
 import { Submodel } from 'foldkit'
 import { type CalendarDate } from 'foldkit/calendar'
 import { Valid } from 'foldkit/fieldValidation'
-import { type Html, childAttributes, html } from 'foldkit/html'
+import { type Html, type HtmlBuilder, childAttributes } from 'foldkit/html'
 
 import { DatePicker, Listbox } from '@foldkit/ui'
 
@@ -23,9 +23,7 @@ const PronounsListbox = Listbox.create<string>()
 export const personalInfoView = Submodel.defineView<
   PersonalInfo.Model,
   PersonalInfo.Message
->((model): Html => {
-  const h = html<PersonalInfo.Message>()
-
+>((model, h): Html => {
   const {
     firstName,
     lastName,
@@ -54,38 +52,50 @@ export const personalInfoView = Submodel.defineView<
       h.div(
         [h.Class('grid grid-cols-2 gap-4')],
         [
-          inputField<PersonalInfo.Message>({
-            id: 'first-name',
-            label: 'First Name',
-            field: firstName,
-            onInput: value => PersonalInfo.UpdatedFirstName({ value }),
-            placeholder: 'Jane',
-          }),
-          inputField<PersonalInfo.Message>({
-            id: 'last-name',
-            label: 'Last Name',
-            field: lastName,
-            onInput: value => PersonalInfo.UpdatedLastName({ value }),
-            placeholder: 'Doe',
-          }),
+          inputField(
+            {
+              id: 'first-name',
+              label: 'First Name',
+              field: firstName,
+              onInput: value => PersonalInfo.UpdatedFirstName({ value }),
+              placeholder: 'Jane',
+            },
+            h,
+          ),
+          inputField(
+            {
+              id: 'last-name',
+              label: 'Last Name',
+              field: lastName,
+              onInput: value => PersonalInfo.UpdatedLastName({ value }),
+              placeholder: 'Doe',
+            },
+            h,
+          ),
         ],
       ),
-      inputField<PersonalInfo.Message>({
-        id: 'email',
-        label: 'Email',
-        field: email,
-        onInput: value => PersonalInfo.UpdatedEmail({ value }),
-        type: 'email',
-        placeholder: 'jane@example.com',
-      }),
-      inputField<PersonalInfo.Message>({
-        id: 'phone',
-        label: 'Phone (optional)',
-        field: phone,
-        onInput: value => PersonalInfo.UpdatedPhone({ value }),
-        type: 'tel',
-        placeholder: '+1 (555) 123-4567',
-      }),
+      inputField(
+        {
+          id: 'email',
+          label: 'Email',
+          field: email,
+          onInput: value => PersonalInfo.UpdatedEmail({ value }),
+          type: 'email',
+          placeholder: 'jane@example.com',
+        },
+        h,
+      ),
+      inputField(
+        {
+          id: 'phone',
+          label: 'Phone (optional)',
+          field: phone,
+          onInput: value => PersonalInfo.UpdatedPhone({ value }),
+          type: 'tel',
+          placeholder: '+1 (555) 123-4567',
+        },
+        h,
+      ),
       h.div(
         [h.Class('space-y-1')],
         [
@@ -155,23 +165,29 @@ export const personalInfoView = Submodel.defineView<
       ),
       ...(isOtherSelected
         ? [
-            inputField<PersonalInfo.Message>({
-              id: 'custom-pronouns',
-              label: 'Custom Pronouns',
-              field: Valid({ value: customPronouns }),
-              onInput: value => PersonalInfo.UpdatedCustomPronouns({ value }),
-              placeholder: 'Enter your pronouns',
-            }),
+            inputField(
+              {
+                id: 'custom-pronouns',
+                label: 'Custom Pronouns',
+                field: Valid({ value: customPronouns }),
+                onInput: value => PersonalInfo.UpdatedCustomPronouns({ value }),
+                placeholder: 'Enter your pronouns',
+              },
+              h,
+            ),
           ]
         : []),
-      inputField<PersonalInfo.Message>({
-        id: 'portfolio-url',
-        label: 'Portfolio URL (optional)',
-        field: portfolioUrl,
-        onInput: value => PersonalInfo.UpdatedPortfolioUrl({ value }),
-        type: 'url',
-      }),
-      availableDatePickerView(availableDate, model.maybeAvailableDate),
+      inputField(
+        {
+          id: 'portfolio-url',
+          label: 'Portfolio URL (optional)',
+          field: portfolioUrl,
+          onInput: value => PersonalInfo.UpdatedPortfolioUrl({ value }),
+          type: 'url',
+        },
+        h,
+      ),
+      availableDatePickerView(availableDate, model.maybeAvailableDate, h),
     ],
   )
 })
@@ -179,10 +195,9 @@ export const personalInfoView = Submodel.defineView<
 const availableDatePickerView = (
   model: DatePicker.Model,
   maybeSelectedDate: Option.Option<CalendarDate>,
-): Html => {
-  const h = html<PersonalInfo.Message>()
-
-  return h.div(
+  h: HtmlBuilder<PersonalInfo.Message>,
+): Html =>
+  h.div(
     [h.Class('space-y-1')],
     [
       h.label(
@@ -207,4 +222,3 @@ const availableDatePickerView = (
       }),
     ],
   )
-}

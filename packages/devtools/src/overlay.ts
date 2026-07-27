@@ -34,7 +34,12 @@ import {
   toInspectableValue,
 } from 'foldkit/devtools-host'
 import { lockScroll, unlockScroll } from 'foldkit/dom'
-import { type Html, createKeyedLazy, createLazy, html } from 'foldkit/html'
+import {
+  type Html,
+  type HtmlBuilder,
+  createKeyedLazy,
+  createLazy,
+} from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { makeElement } from 'foldkit/runtime'
 import type { DevToolsMode, DevToolsPosition } from 'foldkit/runtime'
@@ -924,14 +929,38 @@ const PANEL_POSITION_CLASS: Record<DevToolsPosition, string> = {
   TopLeft: 'dt-panel-tl',
 }
 
+// NOTE: the builder arrives with the first render, so the helper closures
+// (and their createLazy slots) are built once on that render and reused.
+//
+// Required, not just an optimization. `resolveOrCache` compares
+// `previousEntry.fn === fn`, so rebuilding the helpers each render would miss
+// every memo on every render. Hoisting only the lazy slots out does not help;
+// the closures themselves have to be reference-stable.
+//
+// Safe despite the "thread `h`, never store it" rule because the overlay owns
+// its own root frame and the builder is the runtime's process-wide singleton,
+// so the captured object is the one every later render would hand back.
 const makeView = (
   position: DevToolsPosition,
   mode: DevToolsMode,
   shadow: ShadowRoot,
   maybeBanner: Option.Option<string>,
-): ((model: Model) => Html) => {
-  const h = html<Message>()
+): ((model: Model, h: HtmlBuilder<Message>) => Html) => {
+  let viewWithBuilder: ((model: Model) => Html) | undefined
 
+  return (model, h) => {
+    viewWithBuilder ??= buildOverlayView(position, mode, shadow, maybeBanner, h)
+    return viewWithBuilder(model)
+  }
+}
+
+const buildOverlayView = (
+  position: DevToolsPosition,
+  mode: DevToolsMode,
+  shadow: ShadowRoot,
+  maybeBanner: Option.Option<string>,
+  h: HtmlBuilder<Message>,
+): ((model: Model) => Html) => {
   const lazyTreeNode = createKeyedLazy()
   const lazyMessageRow = createKeyedLazy()
   const lazyTabContent = createKeyedLazy()
@@ -1910,37 +1939,40 @@ const makeView = (
   // SETTINGS
 
   const flattenSwitchView = (model: Model): Html =>
-    Switch.view<Message>({
-      id: FLATTEN_SWITCH_ID,
-      isChecked: model.isFlattened,
-      onToggle: isFlattened => ToggledFlatten({ isFlattened }),
-      toView: attributes =>
-        h.div(
-          [h.Class('dt-settings-row')],
-          [
-            h.div(
-              [...attributes.button, h.Class('dt-switch')],
-              [h.span([h.Class('dt-switch-thumb')], [])],
-            ),
-            h.div(
-              [h.Class('dt-settings-row-text')],
-              [
-                h.label(
-                  [...attributes.label, h.Class('dt-settings-row-label')],
-                  ['Flatten to leaf Message'],
-                ),
-                h.span(
-                  [
-                    ...attributes.description,
-                    h.Class('dt-settings-row-description'),
-                  ],
-                  ['Label each row with its innermost Message'],
-                ),
-              ],
-            ),
-          ],
-        ),
-    })
+    Switch.view(
+      {
+        id: FLATTEN_SWITCH_ID,
+        isChecked: model.isFlattened,
+        onToggle: isFlattened => ToggledFlatten({ isFlattened }),
+        toView: attributes =>
+          h.div(
+            [h.Class('dt-settings-row')],
+            [
+              h.div(
+                [...attributes.button, h.Class('dt-switch')],
+                [h.span([h.Class('dt-switch-thumb')], [])],
+              ),
+              h.div(
+                [h.Class('dt-settings-row-text')],
+                [
+                  h.label(
+                    [...attributes.label, h.Class('dt-settings-row-label')],
+                    ['Flatten to leaf Message'],
+                  ),
+                  h.span(
+                    [
+                      ...attributes.description,
+                      h.Class('dt-settings-row-description'),
+                    ],
+                    ['Label each row with its innermost Message'],
+                  ),
+                ],
+              ),
+            ],
+          ),
+      },
+      h,
+    )
 
   const settingsScreenView = (model: Model): Html =>
     h.div(

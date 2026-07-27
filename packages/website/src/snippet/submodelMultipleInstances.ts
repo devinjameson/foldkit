@@ -1,6 +1,6 @@
 import { Array, Option } from 'effect'
 import { Command } from 'foldkit'
-import { type Html, html } from 'foldkit/html'
+import type { Html, HtmlBuilder } from 'foldkit/html'
 import { evo } from 'foldkit/struct'
 
 import { Applicant } from './applicant'
@@ -10,10 +10,8 @@ import type { Model } from './model'
 // View: iterate the array of children and embed each as its own
 // `h.submodel`. The `id` is the stable per-instance identifier. The
 // wrapper Message carries `entryId` so update can route back.
-export const view = (model: Model): Html => {
-  const h = html<Message>()
-
-  return h.div(
+export const view = (model: Model, h: HtmlBuilder<Message>): Html =>
+  h.div(
     [h.Class('flex flex-col gap-4')],
     Array.map(model.applicants, applicant =>
       h.submodel({
@@ -25,7 +23,6 @@ export const view = (model: Model): Html => {
       }),
     ),
   )
-}
 
 // Update: route the wrapper Message by `entryId` to the right slice.
 // Find the matching applicant, delegate to the child's update, and

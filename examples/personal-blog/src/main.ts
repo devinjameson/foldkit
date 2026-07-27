@@ -1,7 +1,7 @@
 import { clsx } from 'clsx'
 import { Effect, Match as M, Option, Schema as S } from 'effect'
 import { Command, Runtime } from 'foldkit'
-import { Document, Html, html } from 'foldkit/html'
+import { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { UrlRequest, load, pushUrl } from 'foldkit/navigation'
 import { evo } from 'foldkit/struct'
@@ -111,10 +111,8 @@ export const update = (model: Model, message: Message): UpdateReturn =>
 
 // VIEW
 
-const islandViews = (model: Model): Markdown.Islands => {
-  const h = html<Message>()
-
-  return Markdown.islandsFor(islandAttributes, {
+const islandViews = (model: Model, h: HtmlBuilder<Message>): Markdown.Islands =>
+  Markdown.islandsFor(islandAttributes, {
     Counter: ({ label }, _content, occurrenceIndex) =>
       h.div(
         [
@@ -143,7 +141,6 @@ const islandViews = (model: Model): Markdown.Islands => {
         content,
       ),
   })
-}
 
 const navLinkClassName = ({ isActive }: { isActive: boolean }): string =>
   clsx('text-sm transition hover:text-stone-900', {
@@ -151,10 +148,11 @@ const navLinkClassName = ({ isActive }: { isActive: boolean }): string =>
     'text-stone-500': !isActive,
   })
 
-const headerView = (currentRoute: Route.AppRoute): Html => {
-  const h = html<Message>()
-
-  return h.header(
+const headerView = (
+  currentRoute: Route.AppRoute,
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.header(
     [h.Class('border-b border-stone-200')],
     [
       h.div(
@@ -217,14 +215,12 @@ const headerView = (currentRoute: Route.AppRoute): Html => {
       ),
     ],
   )
-}
 
-const homeView = (model: Model): Html => proseView(about, islandViews(model))
+const homeView = (model: Model, h: HtmlBuilder<Message>): Html =>
+  proseView(about, islandViews(model, h))
 
-const postCardView = (post: Post): Html => {
-  const h = html<Message>()
-
-  return h.keyed('li')(
+const postCardView = (post: Post, h: HtmlBuilder<Message>): Html =>
+  h.keyed('li')(
     post.slug,
     [],
     [
@@ -245,24 +241,21 @@ const postCardView = (post: Post): Html => {
       ),
     ],
   )
-}
 
-const postsView = (): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const postsView = (h: HtmlBuilder<Message>): Html =>
+  h.div(
     [],
     [
       h.h1([h.Class('mb-8 text-3xl font-bold text-stone-900')], ['Posts']),
-      h.ul([h.Class('list-none space-y-8')], posts.map(postCardView)),
+      h.ul(
+        [h.Class('list-none space-y-8')],
+        posts.map(post => postCardView(post, h)),
+      ),
     ],
   )
-}
 
-const missingPostView = (slug: string): Html => {
-  const h = html()
-
-  return h.div(
+const missingPostView = (slug: string, h: HtmlBuilder<Message>): Html =>
+  h.div(
     [],
     [
       h.h1([h.Class('text-3xl font-bold text-stone-900')], ['Post Not Found']),
@@ -272,11 +265,12 @@ const missingPostView = (slug: string): Html => {
       ),
     ],
   )
-}
 
-const postView = (slug: string, model: Model): Html => {
-  const h = html()
-
+const postView = (
+  slug: string,
+  model: Model,
+  h: HtmlBuilder<Message>,
+): Html => {
   const maybePost = findPost(slug)
 
   const contentKey = Option.match(maybePost, {
@@ -285,7 +279,7 @@ const postView = (slug: string, model: Model): Html => {
   })
 
   const content = Option.match(maybePost, {
-    onNone: () => missingPostView(slug),
+    onNone: () => missingPostView(slug, h),
     onSome: post =>
       h.article(
         [],
@@ -295,7 +289,7 @@ const postView = (slug: string, model: Model): Html => {
             [h.Class('mt-2 mb-8 text-sm text-stone-500')],
             [post.publishedOn],
           ),
-          proseView(post.document, islandViews(model)),
+          proseView(post.document, islandViews(model, h)),
         ],
       ),
   })
@@ -317,10 +311,8 @@ const postView = (slug: string, model: Model): Html => {
   )
 }
 
-const notFoundView = (path: string): Html => {
-  const h = html()
-
-  return h.div(
+const notFoundView = (path: string, h: HtmlBuilder<Message>): Html =>
+  h.div(
     [],
     [
       h.h1([h.Class('text-3xl font-bold text-stone-900')], ['404']),
@@ -339,7 +331,6 @@ const notFoundView = (path: string): Html => {
       ),
     ],
   )
-}
 
 const routeTitle = (route: Route.AppRoute): string =>
   M.value(route).pipe(
@@ -355,15 +346,13 @@ const routeTitle = (route: Route.AppRoute): string =>
     }),
   )
 
-export const view = (model: Model): Document => {
-  const h = html<Message>()
-
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
   const routeContent = M.value(model.route).pipe(
     M.tagsExhaustive({
-      Home: () => homeView(model),
-      Posts: postsView,
-      Post: ({ slug }) => postView(slug, model),
-      NotFound: ({ path }) => notFoundView(path),
+      Home: () => homeView(model, h),
+      Posts: () => postsView(h),
+      Post: ({ slug }) => postView(slug, model, h),
+      NotFound: ({ path }) => notFoundView(path, h),
     }),
   )
 
@@ -372,7 +361,7 @@ export const view = (model: Model): Document => {
     body: h.div(
       [h.Class('min-h-screen bg-white text-stone-800')],
       [
-        headerView(model.route),
+        headerView(model.route, h),
         h.main(
           [h.Class('mx-auto max-w-2xl px-6 py-10')],
           [h.keyed('div')(model.route._tag, [], [routeContent])],

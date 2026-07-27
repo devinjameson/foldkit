@@ -1,5 +1,5 @@
 import { Match as M } from 'effect'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 
 import { Tabs } from '@foldkit/ui'
 
@@ -45,9 +45,11 @@ const verticalPanelClassName =
 
 // VIEW
 
-export const horizontalDemo = (tabsModel: Tabs.Model, selectedTab: DemoTab) => {
-  const h = html<Message>()
-
+export const horizontalDemo = (
+  tabsModel: Tabs.Model,
+  selectedTab: DemoTab,
+  h: HtmlBuilder<Message>,
+) => {
   const foldkitPanel = h.div(
     [],
     [
@@ -160,9 +162,11 @@ export const horizontalDemo = (tabsModel: Tabs.Model, selectedTab: DemoTab) => {
   ]
 }
 
-export const verticalDemo = (tabsModel: Tabs.Model, selectedTab: DemoTab) => {
-  const h = html<Message>()
-
+export const verticalDemo = (
+  tabsModel: Tabs.Model,
+  selectedTab: DemoTab,
+  h: HtmlBuilder<Message>,
+) => {
   const foldkitPanel = h.div(
     [],
     [

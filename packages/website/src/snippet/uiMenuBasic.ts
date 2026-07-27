@@ -3,7 +3,7 @@
 // update, and view definitions.
 import { Effect, Match as M, Option } from 'effect'
 import { Command } from 'foldkit'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -75,10 +75,8 @@ GotMenuMessage: ({ message }) => {
 // label element (target the trigger id with `Menu.buttonId('actions')` for a
 // native `<label for>`). Either attribute is only emitted when provided, so
 // the trigger never carries a dangling `aria-labelledby`.
-const view = () => {
-  const h = html<Message>()
-
-  return h.submodel({
+const view = (h: HtmlBuilder<Message>) =>
+  h.submodel({
     slotId: 'menu',
     model: model.menu,
     view: ActionMenu.view,
@@ -98,4 +96,3 @@ const view = () => {
     },
     toParentMessage: message => GotMenuMessage({ message }),
   })
-}

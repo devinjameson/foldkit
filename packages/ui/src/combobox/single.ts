@@ -167,11 +167,15 @@ export const create = <Item extends string = string>(): Readonly<{
   const typedUpdate = update as (model: Model, message: Message) => UpdateReturn
   const arrayBasedView = internalView<Item>()
   const view = defineView<Model, Message, ViewInputs<Item>>(
-    (model, { maybeSelectedValue, ...baseInputs }) =>
-      arrayBasedView(model, {
-        ...baseInputs,
-        selectedValues: Option.toArray(maybeSelectedValue),
-      }),
+    (model, { maybeSelectedValue, ...baseInputs }, h) =>
+      arrayBasedView(
+        model,
+        {
+          ...baseInputs,
+          selectedValues: Option.toArray(maybeSelectedValue),
+        },
+        h,
+      ),
   )
   return {
     view,

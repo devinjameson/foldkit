@@ -1,6 +1,12 @@
 import { clsx } from 'clsx'
 import { Match as M, Option } from 'effect'
-import { Html, childAttributes, createLazy, html } from 'foldkit/html'
+import {
+  Html,
+  type HtmlBuilder,
+  childAttributes,
+  createLazy,
+  staticHtml,
+} from 'foldkit/html'
 
 import { Menu } from '@foldkit/ui'
 
@@ -28,14 +34,12 @@ import { themeSelector } from './themeSelector'
 
 const PlaygroundMenu = Menu.create<ExampleSlug>()
 
-const PagefindBody = html<Message>().DataAttribute('pagefind-body', '')
+const PagefindBody = staticHtml.DataAttribute('pagefind-body', '')
 
 // LANDING HEADER
 
-const landingHeaderView = (model: Model) => {
-  const h = html<Message>()
-
-  return h.header(
+const landingHeaderView = (model: Model, h: HtmlBuilder<Message>) =>
+  h.header(
     [
       h.Class(
         clsx(
@@ -66,7 +70,7 @@ const landingHeaderView = (model: Model) => {
         [
           h.div(
             [h.Class('hidden md:flex')],
-            [themeSelector(model.themePreference)],
+            [themeSelector(model.themePreference, h)],
           ),
           h.a(
             [
@@ -81,12 +85,11 @@ const landingHeaderView = (model: Model) => {
       ),
     ],
   )
-}
 
 // LANDING FOOTER
 
 const landingFooter = (currentYear: number): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.footer(
     [
@@ -134,9 +137,9 @@ const toNotePlayerDemoMessage = (
 
 const renderAsyncCounterDemo = (
   maybeAsyncCounterDemo: Option.Option<Page.AsyncCounterDemo.Model>,
-): Html => {
-  const h = html<Message>()
-  return Option.match(maybeAsyncCounterDemo, {
+  h: HtmlBuilder<Message>,
+): Html =>
+  Option.match(maybeAsyncCounterDemo, {
     onNone: () => h.empty,
     onSome: asyncCounterDemo =>
       h.submodel({
@@ -146,13 +149,12 @@ const renderAsyncCounterDemo = (
         toParentMessage: toAsyncCounterDemoMessage,
       }),
   })
-}
 
 const renderNotePlayerDemo = (
   maybeNotePlayerDemo: Option.Option<Page.NotePlayerDemo.Model>,
-): Html => {
-  const h = html<Message>()
-  return Option.match(maybeNotePlayerDemo, {
+  h: HtmlBuilder<Message>,
+): Html =>
+  Option.match(maybeNotePlayerDemo, {
     onNone: () => h.empty,
     onSome: notePlayerDemo =>
       h.submodel({
@@ -162,7 +164,6 @@ const renderNotePlayerDemo = (
         toParentMessage: toNotePlayerDemoMessage,
       }),
   })
-}
 
 const lazyAsyncCounterDemo = createLazy()
 const lazyNotePlayerDemo = createLazy()
@@ -186,7 +187,7 @@ const playgroundItemClassName =
 const playgroundBackdropClassName = 'fixed inset-0 z-10'
 
 const chromeRecommendedHint: Html = (() => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.p(
     [h.Class('text-xs text-gray-500 dark:text-gray-400')],
@@ -195,7 +196,7 @@ const chromeRecommendedHint: Html = (() => {
 })()
 
 const withChromeRecommendedHint = (menu: Html, isChromium: boolean): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return isChromium
     ? menu
@@ -206,7 +207,7 @@ const withChromeRecommendedHint = (menu: Html, isChromium: boolean): Html => {
 }
 
 const playgroundItemContent = (meta: ExampleMeta): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.div(
     [],
@@ -230,10 +231,9 @@ const playgroundItemContent = (meta: ExampleMeta): Html => {
 const playgroundMenuView = (
   menuModel: Menu.Model,
   slugs: ReadonlyArray<ExampleSlug>,
-): Html => {
-  const h = html<Message>()
-
-  return h.submodel({
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.submodel({
     slotId: menuModel.id,
     model: menuModel,
     view: PlaygroundMenu.view,
@@ -277,30 +277,31 @@ const playgroundMenuView = (
     },
     toParentMessage: message => GotPlaygroundMenuMessage({ message }),
   })
-}
 
 // VIEW
 
-export const landingView = (model: Model) => {
-  const h = html<Message>()
-
+export const landingView = (model: Model, h: HtmlBuilder<Message>) => {
   const asyncCounterDemoView = lazyAsyncCounterDemo(renderAsyncCounterDemo, [
     model.asyncCounterDemo,
+    h,
   ])
 
   const notePlayerDemoView = lazyNotePlayerDemo(renderNotePlayerDemo, [
     model.notePlayerDemo,
+    h,
   ])
 
   const emailSignupView = emailSignupContentView(
     model.emailField,
     model.emailSubscriptionStatus,
+    h,
   )
 
   const playgroundMenu = withChromeRecommendedHint(
     playgroundMenuView(
       model.playgroundMenu,
       examples.map(example => example.slug),
+      h,
     ),
     model.isChromium,
   )
@@ -359,7 +360,7 @@ export const landingView = (model: Model) => {
     [h.Class('flex flex-col min-h-screen')],
     [
       skipNavLink,
-      landingHeaderView(model),
+      landingHeaderView(model, h),
       h.main(
         [h.Id('main-content'), PagefindBody, h.Class('flex-1')],
         [
@@ -370,6 +371,7 @@ export const landingView = (model: Model) => {
             playgroundMenu,
             model.aiHeadingToggleCount,
             model.maybeGitHubStarCount,
+            h,
           ),
         ],
       ),
@@ -378,14 +380,12 @@ export const landingView = (model: Model) => {
   )
 }
 
-export const newsletterView = (model: Model) => {
-  const h = html<Message>()
-
-  return h.div(
+export const newsletterView = (model: Model, h: HtmlBuilder<Message>) =>
+  h.div(
     [h.Class('flex flex-col min-h-screen')],
     [
       skipNavLink,
-      landingHeaderView(model),
+      landingHeaderView(model, h),
       h.main(
         [
           h.Id('main-content'),
@@ -397,10 +397,10 @@ export const newsletterView = (model: Model) => {
           emailSignupContentView(
             model.emailField,
             model.emailSubscriptionStatus,
+            h,
           ),
         ],
       ),
       landingFooter(model.currentYear),
     ],
   )
-}

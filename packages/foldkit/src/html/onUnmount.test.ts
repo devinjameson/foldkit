@@ -23,13 +23,13 @@ import type { BoundaryRegistry } from './boundary.js'
 import { childAttributes } from './childAttribute.js'
 import {
   type ChildAttribute,
+  __htmlBuilder,
   __beginRender as beginHtmlRender,
   __beginReplayRender as beginReplayRender,
   __clearRuntime as clearHtmlRuntime,
   __createBoundaryRegistry as createHtmlBoundaryRegistry,
   defineView,
   __endReplayRender as endReplayRender,
-  html,
   __setRuntime as setHtmlRuntime,
 } from './index.js'
 
@@ -84,7 +84,7 @@ const makeRootContainer = (): HTMLElement => document.createElement('div')
 
 describe('OnUnmount', () => {
   it('dispatches the Message when the element is removed by a parent re-render', () => {
-    const h = html<typeof Unmounted.Type>()
+    const h = __htmlBuilder<typeof Unmounted.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
 
     const withChild = () => h.div([], [h.span([h.OnUnmount(Unmounted())], [])])
@@ -103,7 +103,7 @@ describe('OnUnmount', () => {
   })
 
   it('dispatches the Message when the element is removed by a key change', () => {
-    const h = html<typeof Unmounted.Type>()
+    const h = __htmlBuilder<typeof Unmounted.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
 
     const buildView = (key: string) => () =>
@@ -120,7 +120,7 @@ describe('OnUnmount', () => {
   })
 
   it('dispatches when an ancestor keyed node is replaced, removing the element as a descendant', () => {
-    const h = html<typeof Unmounted.Type>()
+    const h = __htmlBuilder<typeof Unmounted.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
 
     // The element carrying OnUnmount is nested below the keyed node, mirroring
@@ -148,7 +148,7 @@ describe('OnUnmount', () => {
   })
 
   it('does not dispatch the Message during a replay render window', () => {
-    const h = html<typeof Unmounted.Type>()
+    const h = __htmlBuilder<typeof Unmounted.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
 
     const withChild = () => h.div([], [h.span([h.OnUnmount(Unmounted())], [])])
@@ -174,7 +174,7 @@ describe('OnUnmount', () => {
   })
 
   it('dispatches again on a normal unmount after the replay window has closed', () => {
-    const h = html<typeof Unmounted.Type>()
+    const h = __htmlBuilder<typeof Unmounted.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
 
     const withChild = () => h.div([], [h.span([h.OnUnmount(Unmounted())], [])])
@@ -202,7 +202,7 @@ describe('OnUnmount', () => {
   })
 
   it('composes with an OnMount destroy hook on the same element', async () => {
-    const h = html<typeof Unmounted.Type | typeof Mounted.Type>()
+    const h = __htmlBuilder<typeof Unmounted.Type | typeof Mounted.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
     let cleanupCalls = 0
 
@@ -247,7 +247,7 @@ describe('OnUnmount', () => {
   })
 
   it('composes regardless of attribute order with OnUnmount first', async () => {
-    const h = html<typeof Unmounted.Type | typeof Mounted.Type>()
+    const h = __htmlBuilder<typeof Unmounted.Type | typeof Mounted.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
     let cleanupCalls = 0
 
@@ -314,7 +314,7 @@ const childView = defineView<
   ChildUnmounted,
   ChildViewInputs
 >((_model, viewInputs) => {
-  const childHtml = html<ChildUnmounted>()
+  const childHtml = __htmlBuilder<ChildUnmounted>()
   return viewInputs.toView(
     childAttributes([
       childHtml.Id('child-dialog'),
@@ -355,7 +355,7 @@ const renderViewWithRegistry = (
 
 describe('OnUnmount across a Submodel boundary', () => {
   it('dispatches the parent-wrapped Message when the boundary is torn down', () => {
-    const h = html<GotChildMessage>()
+    const h = __htmlBuilder<GotChildMessage>()
     const { dispatch, dispatched } = createCapturingDispatch()
     const registry = createHtmlBoundaryRegistry()
 

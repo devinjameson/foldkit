@@ -1,5 +1,5 @@
 import { Submodel } from 'foldkit'
-import { Html, html } from 'foldkit/html'
+import type { Html } from 'foldkit/html'
 
 import { uiShowcaseViewSourceHref } from '../../link'
 import type { TableOfContentsEntry } from '../../main'
@@ -15,7 +15,6 @@ import {
 } from '../../prose'
 import * as Snippet from '../../snippet'
 import {
-  type CopiedSnippets,
   type RenderCopyButton,
   highlightedCodeBlockFor,
 } from '../../view/codeBlock'
@@ -187,14 +186,12 @@ const keyboardEntries: ReadonlyArray<KeyboardEntry> = [
 // VIEW
 
 type ViewInputs = Readonly<{
-  copiedSnippets: CopiedSnippets
   renderCopyButton: RenderCopyButton
   renderHeadingLink: RenderHeadingLink
 }>
 
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
-  (model, { copiedSnippets, renderCopyButton, renderHeadingLink }): Html => {
-    const h = html<Message>()
+  (model, { renderCopyButton, renderHeadingLink }, h): Html => {
     const { heading, tableOfContentsEntryToHeader } =
       headingsFor(renderHeadingLink)
     const highlightedCodeBlock = highlightedCodeBlockFor(renderCopyButton)
@@ -227,7 +224,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           inlineCode('data-checked'),
           ' attribute for the on state.',
         ),
-        demoContainer(...Switch.basicDemo(model.isSwitchDemoChecked)),
+        demoContainer(...Switch.basicDemo(model.isSwitchDemoChecked, h)),
         highlightedCodeBlock(
           h.div(
             [h.Class('text-sm'), h.InnerHTML(Snippet.uiSwitchBasicHighlighted)],
@@ -235,7 +232,6 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           ),
           Snippet.uiSwitchBasicRaw,
           'Copy switch example to clipboard',
-          copiedSnippets,
           'mb-8',
         ),
         heading(stylingHeader.level, stylingHeader.id, stylingHeader.text),

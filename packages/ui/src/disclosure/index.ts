@@ -1,5 +1,5 @@
 import { Match as M, Option, Predicate } from 'effect'
-import { type Attribute, type Html, html } from 'foldkit/html'
+import type { Attribute, Html, HtmlBuilder } from 'foldkit/html'
 
 // VIEW
 
@@ -58,12 +58,15 @@ export type ViewConfig<Message> = Readonly<{
  *
  *  ```ts
  *  // In view:
- *  Disclosure.view<Message>({
- *    id: 'details',
- *    isOpen: model.isDetailsOpen,
- *    onToggle: isOpen => ToggledDetails({ isOpen }),
- *    toView: ({ button, panel, animatePanel }) => ...,
- *  })
+ *  Disclosure.view(
+ *    {
+ *      id: 'details',
+ *      isOpen: model.isDetailsOpen,
+ *      onToggle: isOpen => ToggledDetails({ isOpen }),
+ *      toView: ({ button, panel, animatePanel }) => ...,
+ *    },
+ *    h,
+ *  )
  *
  *  // In update:
  *  ToggledDetails: ({ isOpen }) => [
@@ -71,9 +74,10 @@ export type ViewConfig<Message> = Readonly<{
  *    [],
  *  ],
  *  ``` */
-export const view = <Message>(config: ViewConfig<Message>): Html => {
-  const h = html<Message>()
-
+export const view = <Message>(
+  config: ViewConfig<Message>,
+  h: HtmlBuilder<Message>,
+): Html => {
   const {
     id,
     isOpen,

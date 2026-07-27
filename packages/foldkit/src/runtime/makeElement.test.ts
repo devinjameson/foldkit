@@ -2,7 +2,7 @@ import { Effect, Fiber, Match as M, Number, Schema as S } from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { Command } from '../command/index.js'
-import { TextDirection, html } from '../html/index.js'
+import { TextDirection, __htmlBuilder } from '../html/index.js'
 import { m } from '../message/index.js'
 import { evo } from '../struct/index.js'
 import { makeApplication, makeElement } from './runtime.js'
@@ -15,7 +15,7 @@ type Message = typeof Message.Type
 const Model = S.Struct({ label: S.String })
 type Model = typeof Model.Type
 
-const h = html<Message>()
+const h = __htmlBuilder<Message>()
 
 const update = (
   model: Model,
@@ -48,7 +48,7 @@ const ClickedRerender = m('ClickedRerender')
 const LocaleMessage = S.Union([ClickedArabic, ClickedRerender])
 type LocaleMessage = typeof LocaleMessage.Type
 
-const localeH = html<LocaleMessage>()
+const localeH = __htmlBuilder<LocaleMessage>()
 
 const localeUpdate = (
   model: LocaleModel,

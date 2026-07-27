@@ -2,7 +2,7 @@
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
 import { Option } from 'effect'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 
 import { Combobox, Dialog } from '@foldkit/ui'
@@ -38,10 +38,8 @@ const GotComboboxMessage = m('GotComboboxMessage', {
 // the overlay's anchor. By default the panel portals to the document body,
 // where the dialog's high stacking order hides it. With portal: false the
 // panel stays inside the dialog and renders above the panel content.
-const view = (model: Model) => {
-  const h = html<Message>()
-
-  return h.submodel({
+const view = (model: Model, h: HtmlBuilder<Message>) =>
+  h.submodel({
     slotId: model.dialog.id,
     model: model.dialog,
     view: Dialog.view,
@@ -83,4 +81,3 @@ const view = (model: Model) => {
     },
     toParentMessage: message => GotDialogMessage({ message }),
   })
-}

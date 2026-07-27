@@ -9,7 +9,7 @@ import {
   pipe,
 } from 'effect'
 import { Canvas, Command, Runtime, Subscription } from 'foldkit'
-import { Document, Html, html } from 'foldkit/html'
+import { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -207,38 +207,42 @@ const sceneShapes = (model: Model): ReadonlyArray<Canvas.Shape> => [
   ...Array.map(model.balls, ballShape),
 ]
 
-const controlsView = (model: Model): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const controlsView = (model: Model, h: HtmlBuilder<Message>): Html =>
+  h.div(
     [h.Class('flex gap-3 mt-4')],
     [
-      Button.view<Message>({
-        onClick: ClickedTogglePlay(),
-        toView: attributes =>
-          h.button(
-            [
-              ...attributes.button,
-              h.Class(
-                'min-w-20 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-500',
-              ),
-            ],
-            [model.isRunning ? 'Pause' : 'Play'],
-          ),
-      }),
-      Button.view<Message>({
-        onClick: ClickedClear(),
-        toView: attributes =>
-          h.button(
-            [
-              ...attributes.button,
-              h.Class(
-                'min-w-20 px-4 py-2 bg-zinc-700 text-white rounded hover:bg-zinc-600',
-              ),
-            ],
-            ['Clear'],
-          ),
-      }),
+      Button.view(
+        {
+          onClick: ClickedTogglePlay(),
+          toView: attributes =>
+            h.button(
+              [
+                ...attributes.button,
+                h.Class(
+                  'min-w-20 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-500',
+                ),
+              ],
+              [model.isRunning ? 'Pause' : 'Play'],
+            ),
+        },
+        h,
+      ),
+      Button.view(
+        {
+          onClick: ClickedClear(),
+          toView: attributes =>
+            h.button(
+              [
+                ...attributes.button,
+                h.Class(
+                  'min-w-20 px-4 py-2 bg-zinc-700 text-white rounded hover:bg-zinc-600',
+                ),
+              ],
+              ['Clear'],
+            ),
+        },
+        h,
+      ),
       h.p(
         [h.Class('px-4 py-2 text-zinc-400 text-sm self-center')],
         [
@@ -251,34 +255,32 @@ const controlsView = (model: Model): Html => {
       ),
     ],
   )
-}
 
-export const view = (model: Model): Document => {
-  const h = html<Message>()
-
-  return {
-    title: `Canvas Art (${model.balls.length} balls)`,
-    body: h.div(
-      [
-        h.Class(
-          'flex flex-col items-center justify-center min-h-screen bg-black text-white p-8',
-        ),
-      ],
-      [
-        h.h1([h.Class('text-4xl font-bold mb-2')], ['Canvas Art']),
-        h.p(
-          [h.Class('text-zinc-400 mb-6')],
-          ['Click the canvas to spawn a ball.'],
-        ),
-        Canvas.view<Message>({
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
+  title: `Canvas Art (${model.balls.length} balls)`,
+  body: h.div(
+    [
+      h.Class(
+        'flex flex-col items-center justify-center min-h-screen bg-black text-white p-8',
+      ),
+    ],
+    [
+      h.h1([h.Class('text-4xl font-bold mb-2')], ['Canvas Art']),
+      h.p(
+        [h.Class('text-zinc-400 mb-6')],
+        ['Click the canvas to spawn a ball.'],
+      ),
+      Canvas.view(
+        {
           width: CANVAS_WIDTH,
           height: CANVAS_HEIGHT,
           shapes: sceneShapes(model),
           className: 'rounded-lg shadow-2xl cursor-crosshair',
           onPointerDown: ({ x, y }) => ClickedCanvas({ x, y }),
-        }),
-        controlsView(model),
-      ],
-    ),
-  }
-}
+        },
+        h,
+      ),
+      controlsView(model, h),
+    ],
+  ),
+})

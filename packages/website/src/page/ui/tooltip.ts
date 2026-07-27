@@ -1,4 +1,4 @@
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 
 import { Tooltip } from '@foldkit/ui'
 import type { AnchorConfig } from '@foldkit/ui/tooltip'
@@ -23,9 +23,7 @@ const TOOLTIP_ANCHOR: AnchorConfig = {
   padding: 8,
 }
 
-export const demo = (tooltipModel: Tooltip.Model) => {
-  const h = html<Message>()
-
+export const demo = (tooltipModel: Tooltip.Model, h: HtmlBuilder<Message>) => {
   return [
     h.div(
       [h.Class('flex flex-col gap-1.5')],

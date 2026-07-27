@@ -1,4 +1,4 @@
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 
 import { Input } from '@foldkit/ui'
 
@@ -32,59 +32,61 @@ const descriptionClassName = 'text-sm text-gray-500 dark:text-gray-400'
 
 // VIEW
 
-export const basicDemo = (model: Model) => {
-  const h = html<Message>()
-
+export const basicDemo = (model: Model, h: HtmlBuilder<Message>) => {
   return [
     h.div(
       [h.Class('flex flex-col items-start gap-2 w-full max-w-md')],
       [
-        Input.view({
-          id: 'input-basic-demo',
-          value: model.inputDemoValue,
-          onInput: value => UpdatedInputDemoValue({ value }),
-          placeholder: 'Enter your full name',
-          toView: attributes =>
-            h.div(
-              [h.Class('flex flex-col gap-1.5 w-full')],
-              [
-                h.label(
-                  [...attributes.label, h.Class(labelClassName)],
-                  ['Name'],
-                ),
-                h.input([...attributes.input, h.Class(inputClassName)]),
-                h.span(
-                  [...attributes.description, h.Class(descriptionClassName)],
-                  ['As it appears on your government-issued ID.'],
-                ),
-              ],
-            ),
-        }),
+        Input.view(
+          {
+            id: 'input-basic-demo',
+            value: model.inputDemoValue,
+            onInput: value => UpdatedInputDemoValue({ value }),
+            placeholder: 'Enter your full name',
+            toView: attributes =>
+              h.div(
+                [h.Class('flex flex-col gap-1.5 w-full')],
+                [
+                  h.label(
+                    [...attributes.label, h.Class(labelClassName)],
+                    ['Name'],
+                  ),
+                  h.input([...attributes.input, h.Class(inputClassName)]),
+                  h.span(
+                    [...attributes.description, h.Class(descriptionClassName)],
+                    ['As it appears on your government-issued ID.'],
+                  ),
+                ],
+              ),
+          },
+          h,
+        ),
       ],
     ),
   ]
 }
 
-export const disabledDemo = (_model: Model) => {
-  const h = html<Message>()
-
+export const disabledDemo = (_model: Model, h: HtmlBuilder<Message>) => {
   return [
-    Input.view<Message>({
-      id: 'input-disabled-demo',
-      isDisabled: true,
-      value: 'Ada Lovelace',
-      toView: attributes =>
-        h.div(
-          [h.Class('flex flex-col gap-1.5 w-full max-w-md')],
-          [
-            h.label([...attributes.label, h.Class(labelClassName)], ['Name']),
-            h.input([...attributes.input, h.Class(inputClassName)]),
-            h.span(
-              [...attributes.description, h.Class(descriptionClassName)],
-              ['This input is disabled.'],
-            ),
-          ],
-        ),
-    }),
+    Input.view(
+      {
+        id: 'input-disabled-demo',
+        isDisabled: true,
+        value: 'Ada Lovelace',
+        toView: attributes =>
+          h.div(
+            [h.Class('flex flex-col gap-1.5 w-full max-w-md')],
+            [
+              h.label([...attributes.label, h.Class(labelClassName)], ['Name']),
+              h.input([...attributes.input, h.Class(inputClassName)]),
+              h.span(
+                [...attributes.description, h.Class(descriptionClassName)],
+                ['This input is disabled.'],
+              ),
+            ],
+          ),
+      },
+      h,
+    ),
   ]
 }

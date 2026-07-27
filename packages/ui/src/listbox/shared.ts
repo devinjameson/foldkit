@@ -11,7 +11,7 @@ import {
 } from 'effect'
 import * as Command from 'foldkit/command'
 import * as Dom from 'foldkit/dom'
-import { type ChildAttribute, type Html, html } from 'foldkit/html'
+import type { ChildAttribute, Html } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import * as Mount from 'foldkit/mount'
 import { makeConstrainedEvo } from 'foldkit/struct'
@@ -859,9 +859,7 @@ type ViewBehavior = Readonly<{
 
 export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
   const impl = defineView<Model, Message, BaseViewInputs<unknown, string>>(
-    (model, viewInputs) => {
-      const h = html<Message>()
-
+    (model, viewInputs, h) => {
       const {
         id,
         isOpen,

@@ -19,7 +19,7 @@ import {
   makeRules,
   validate,
 } from 'foldkit/fieldValidation'
-import { type Attribute, Document, Html, html } from 'foldkit/html'
+import { type Attribute, Document, Html, HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
@@ -299,10 +299,8 @@ const inputClassName = (field: Field<string>): string =>
     borderClass(field),
   )
 
-const statusIndicator = (field: Field<string>): Html => {
-  const h = html<Message>()
-
-  return M.value(field).pipe(
+const statusIndicator = (field: Field<string>, h: HtmlBuilder<Message>): Html =>
+  M.value(field).pipe(
     M.tagsExhaustive({
       NotValidated: () => h.empty,
       Validating: () =>
@@ -311,15 +309,13 @@ const statusIndicator = (field: Field<string>): Html => {
       Invalid: () => h.empty,
     }),
   )
-}
 
 const descriptionView = (
   field: Field<string>,
   descriptionAttributes: ReadonlyArray<Attribute<Message>>,
-): Html => {
-  const h = html<Message>()
-
-  return M.value(field).pipe(
+  h: HtmlBuilder<Message>,
+): Html =>
+  M.value(field).pipe(
     M.tagsExhaustive({
       NotValidated: () => h.empty,
       Validating: () =>
@@ -341,78 +337,83 @@ const descriptionView = (
         ),
     }),
   )
-}
 
 const inputFieldView = (
   id: string,
   labelText: string,
   field: Field<string>,
   onUpdate: (value: string) => Message,
-  type: string = 'text',
-): Html => {
-  const h = html<Message>()
-
-  return Input.view({
-    id,
-    value: field.value,
-    onInput: onUpdate,
-    isInvalid: field._tag === 'Invalid',
-    type,
-    toView: attributes =>
-      h.div(
-        [h.Class('mb-4')],
-        [
-          h.div(
-            [h.Class('flex items-center gap-2 mb-2')],
-            [
-              h.label([...attributes.label, h.Class(LABEL_CLASS)], [labelText]),
-              statusIndicator(field),
-            ],
-          ),
-          h.input([...attributes.input, h.Class(inputClassName(field))]),
-          descriptionView(field, attributes.description),
-        ],
-      ),
-  })
-}
+  type: string,
+  h: HtmlBuilder<Message>,
+): Html =>
+  Input.view(
+    {
+      id,
+      value: field.value,
+      onInput: onUpdate,
+      isInvalid: field._tag === 'Invalid',
+      type,
+      toView: attributes =>
+        h.div(
+          [h.Class('mb-4')],
+          [
+            h.div(
+              [h.Class('flex items-center gap-2 mb-2')],
+              [
+                h.label(
+                  [...attributes.label, h.Class(LABEL_CLASS)],
+                  [labelText],
+                ),
+                statusIndicator(field, h),
+              ],
+            ),
+            h.input([...attributes.input, h.Class(inputClassName(field))]),
+            descriptionView(field, attributes.description, h),
+          ],
+        ),
+    },
+    h,
+  )
 
 const textareaFieldView = (
   id: string,
   labelText: string,
   field: Field<string>,
   onUpdate: (value: string) => Message,
-): Html => {
-  const h = html<Message>()
+  h: HtmlBuilder<Message>,
+): Html =>
+  Textarea.view(
+    {
+      id,
+      value: field.value,
+      onInput: onUpdate,
+      isInvalid: field._tag === 'Invalid',
+      toView: attributes =>
+        h.div(
+          [h.Class('mb-4')],
+          [
+            h.div(
+              [h.Class('flex items-center gap-2 mb-2')],
+              [
+                h.label(
+                  [...attributes.label, h.Class(LABEL_CLASS)],
+                  [labelText],
+                ),
+                statusIndicator(field, h),
+              ],
+            ),
+            h.textarea(
+              [...attributes.textarea, h.Class(inputClassName(field))],
+              [],
+            ),
+            descriptionView(field, attributes.description, h),
+          ],
+        ),
+    },
+    h,
+  )
 
-  return Textarea.view({
-    id,
-    value: field.value,
-    onInput: onUpdate,
-    isInvalid: field._tag === 'Invalid',
-    toView: attributes =>
-      h.div(
-        [h.Class('mb-4')],
-        [
-          h.div(
-            [h.Class('flex items-center gap-2 mb-2')],
-            [
-              h.label([...attributes.label, h.Class(LABEL_CLASS)], [labelText]),
-              statusIndicator(field),
-            ],
-          ),
-          h.textarea(
-            [...attributes.textarea, h.Class(inputClassName(field))],
-            [],
-          ),
-          descriptionView(field, attributes.description),
-        ],
-      ),
-  })
-}
-
-export const view = (model: Model): Document => {
-  const h = html<Message>()
-
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
   const canSubmit = isFormValid(model) && model.submission._tag !== 'Submitting'
 
   const body = h.div(
@@ -429,8 +430,13 @@ export const view = (model: Model): Document => {
           h.form(
             [h.Class('space-y-4'), h.OnSubmit(ClickedFormSubmit())],
             [
-              inputFieldView('name', 'Name', model.name, value =>
-                UpdatedName({ value }),
+              inputFieldView(
+                'name',
+                'Name',
+                model.name,
+                value => UpdatedName({ value }),
+                'text',
+                h,
               ),
               inputFieldView(
                 'email',
@@ -438,37 +444,42 @@ export const view = (model: Model): Document => {
                 model.email,
                 value => UpdatedEmail({ value }),
                 'email',
+                h,
               ),
               textareaFieldView(
                 'message',
                 "Anything you'd like to share with us?",
                 model.messageText,
                 value => UpdatedMessageText({ value }),
+                h,
               ),
 
-              Button.view<Message>({
-                type: 'submit',
-                isDisabled: !canSubmit,
-                toView: attributes =>
-                  h.button(
-                    [
-                      ...attributes.button,
-                      h.Class(
-                        clsx(
-                          'w-full py-2 px-4 rounded-md transition',
-                          canSubmit
-                            ? 'bg-blue-500 text-white hover:bg-blue-600'
-                            : 'bg-gray-300 text-gray-500 cursor-not-allowed',
+              Button.view(
+                {
+                  type: 'submit',
+                  isDisabled: !canSubmit,
+                  toView: attributes =>
+                    h.button(
+                      [
+                        ...attributes.button,
+                        h.Class(
+                          clsx(
+                            'w-full py-2 px-4 rounded-md transition',
+                            canSubmit
+                              ? 'bg-blue-500 text-white hover:bg-blue-600'
+                              : 'bg-gray-300 text-gray-500 cursor-not-allowed',
+                          ),
                         ),
-                      ),
-                    ],
-                    [
-                      model.submission._tag === 'Submitting'
-                        ? 'Joining...'
-                        : 'Join Waitlist',
-                    ],
-                  ),
-              }),
+                      ],
+                      [
+                        model.submission._tag === 'Submitting'
+                          ? 'Joining...'
+                          : 'Join Waitlist',
+                      ],
+                    ),
+                },
+                h,
+              ),
             ],
           ),
 

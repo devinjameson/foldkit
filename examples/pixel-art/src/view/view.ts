@@ -1,6 +1,11 @@
 import clsx from 'clsx'
 import { Array, Option, pipe } from 'effect'
-import { type Document, type Html, createLazy, html } from 'foldkit/html'
+import {
+  type Document,
+  type Html,
+  type HtmlBuilder,
+  createLazy,
+} from 'foldkit/html'
 
 import { Button } from '@foldkit/ui'
 
@@ -13,10 +18,8 @@ import { errorDialogView, gridSizeConfirmDialogView } from './dialog'
 import { historyPanelView } from './history'
 import { toolPanelView } from './toolbar'
 
-const downloadIcon = (className: string): Html => {
-  const h = html<Message>()
-
-  return h.svg(
+const downloadIcon = (className: string, h: HtmlBuilder<Message>): Html =>
+  h.svg(
     [
       h.AriaHidden(true),
       h.Class(className),
@@ -39,7 +42,6 @@ const downloadIcon = (className: string): Html => {
       ),
     ],
   )
-}
 
 const secondaryButtonStyle =
   'px-3 py-1.5 rounded text-sm bg-gray-800 text-gray-200 transition motion-reduce:transition-none'
@@ -50,33 +52,29 @@ const lazyHistoryPanel = createLazy()
 const lazyErrorDialog = createLazy()
 const lazyGridSizeConfirmDialog = createLazy()
 
-export const view = (model: Model): Document => {
-  const h = html<Message>()
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
+  title: 'Pixel Art',
+  body: h.div(
+    [h.Class('min-h-screen bg-gray-900 text-gray-100 flex flex-col')],
+    [
+      lazyHeader(headerView, [h]),
+      contentView(model, h),
+      lazyErrorDialog(errorDialogView, [
+        model.errorDialog,
+        model.maybeExportError,
+        h,
+      ]),
+      lazyGridSizeConfirmDialog(gridSizeConfirmDialogView, [
+        model.gridSizeConfirmDialog,
+        model.maybePendingGridSize,
+        h,
+      ]),
+    ],
+  ),
+})
 
-  return {
-    title: 'Pixel Art',
-    body: h.div(
-      [h.Class('min-h-screen bg-gray-900 text-gray-100 flex flex-col')],
-      [
-        lazyHeader(headerView, []),
-        contentView(model),
-        lazyErrorDialog(errorDialogView, [
-          model.errorDialog,
-          model.maybeExportError,
-        ]),
-        lazyGridSizeConfirmDialog(gridSizeConfirmDialogView, [
-          model.gridSizeConfirmDialog,
-          model.maybePendingGridSize,
-        ]),
-      ],
-    ),
-  }
-}
-
-const headerView = (): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const headerView = (h: HtmlBuilder<Message>): Html =>
+  h.div(
     [
       h.Class(
         'flex items-center justify-between px-4 py-3 border-b border-gray-800',
@@ -121,31 +119,31 @@ const headerView = (): Html => {
       h.div(
         [h.Class('flex items-center gap-4')],
         [
-          Button.view({
-            onClick: ClickedExport(),
-            toView: attributes =>
-              h.button(
-                [
-                  ...attributes.button,
-                  h.Class(
-                    clsx(
-                      secondaryButtonStyle,
-                      'flex items-center gap-2 hover:bg-gray-700 cursor-pointer',
+          Button.view(
+            {
+              onClick: ClickedExport(),
+              toView: attributes =>
+                h.button(
+                  [
+                    ...attributes.button,
+                    h.Class(
+                      clsx(
+                        secondaryButtonStyle,
+                        'flex items-center gap-2 hover:bg-gray-700 cursor-pointer',
+                      ),
                     ),
-                  ),
-                ],
-                [downloadIcon('w-4 h-4'), h.span([], ['Export PNG'])],
-              ),
-          }),
+                  ],
+                  [downloadIcon('w-4 h-4', h), h.span([], ['Export PNG'])],
+                ),
+            },
+            h,
+          ),
         ],
       ),
     ],
   )
-}
 
-const contentView = (model: Model): Html => {
-  const h = html<Message>()
-
+const contentView = (model: Model, h: HtmlBuilder<Message>): Html => {
   const theme = currentPaletteTheme(model)
 
   return h.div(
@@ -164,8 +162,9 @@ const contentView = (model: Model): Html => {
         theme,
         model.paletteThemeIndex,
         model.themeListbox,
+        h,
       ]),
-      canvasView(model, theme),
+      canvasView(model, theme, h),
       lazyHistoryPanel(historyPanelView, [
         model.undoStack,
         model.redoStack,
@@ -177,6 +176,7 @@ const contentView = (model: Model): Html => {
           : model.grid,
         model.gridSize,
         theme,
+        h,
       ]),
     ],
   )

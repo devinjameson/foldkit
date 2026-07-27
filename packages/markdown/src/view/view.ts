@@ -5,7 +5,7 @@ import {
   Record as Record_,
   Schema as S,
 } from 'effect'
-import { Html, html } from 'foldkit/html'
+import { Html, staticHtml } from 'foldkit/html'
 
 import {
   Alignment,
@@ -34,7 +34,7 @@ import {
 } from '../ast/index.js'
 import type { IslandDefinitions } from '../island/index.js'
 
-const h = html()
+const h = staticHtml
 
 /** Rendered inline content, ready to pass as element children. */
 export type InlineContent = ReadonlyArray<Html | string>

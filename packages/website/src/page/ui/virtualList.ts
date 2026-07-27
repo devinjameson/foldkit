@@ -1,5 +1,5 @@
 import { Array, Match as M, Option, pipe } from 'effect'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 
 import { VirtualList } from '@foldkit/ui'
 
@@ -149,9 +149,10 @@ const buttonClassName =
 const headerClassName =
   'flex items-end justify-between text-sm text-gray-600 dark:text-gray-400'
 
-export const virtualListDemo = (model: VirtualList.Model) => {
-  const h = html<Message>()
-
+export const virtualListDemo = (
+  model: VirtualList.Model,
+  h: HtmlBuilder<Message>,
+) => {
   return [
     h.div(
       [h.Class('flex flex-col gap-4 w-full')],
@@ -275,9 +276,10 @@ const variableSummaryBodyClassName =
 const variableArtifactClassName =
   'mt-1 inline-flex w-fit rounded bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 font-mono text-[10px] text-gray-600 dark:text-gray-300'
 
-export const virtualListVariableDemo = (model: VirtualList.Model) => {
-  const h = html<Message>()
-
+export const virtualListVariableDemo = (
+  model: VirtualList.Model,
+  h: HtmlBuilder<Message>,
+) => {
   const variableTallRow = (row: Activity, summary: Summary) =>
     h.div(
       [h.Class(variableTallRowClassName)],

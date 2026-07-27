@@ -1,6 +1,6 @@
 import clsx from 'clsx'
 import { Submodel } from 'foldkit'
-import { Html, html } from 'foldkit/html'
+import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { Switch } from '@foldkit/ui'
 
@@ -19,9 +19,7 @@ const labelClassName =
 
 const descriptionClassName = 'text-sm text-gray-500'
 
-const knob = (isChecked: boolean): Html => {
-  const h = html()
-
+const knob = (isChecked: boolean, h: HtmlBuilder<UiMessage>): Html => {
   return h.span(
     [
       h.Class(
@@ -35,49 +33,52 @@ const knob = (isChecked: boolean): Html => {
   )
 }
 
-export const view = Submodel.defineView<UiModel, UiMessage>((model): Html => {
-  const h = html<UiMessage>()
-
-  return h.div(
-    [],
-    [
-      h.h2([h.Class('text-2xl font-bold text-gray-900 mb-6')], ['Switch']),
-      h.div(
-        [h.Class('mt-4')],
-        [
-          Switch.view<UiMessage>({
-            id: SWITCH_DEMO_ID,
-            isChecked: model.isSwitchDemoChecked,
-            onToggle: isChecked => ToggledSwitchDemo({ isChecked }),
-            toView: attributes =>
-              h.div(
-                [h.Class(wrapperClassName)],
-                [
-                  h.button(
-                    [...attributes.button, h.Class(buttonClassName)],
-                    [knob(model.isSwitchDemoChecked)],
-                  ),
+export const view = Submodel.defineView<UiModel, UiMessage>(
+  (model, h): Html => {
+    return h.div(
+      [],
+      [
+        h.h2([h.Class('text-2xl font-bold text-gray-900 mb-6')], ['Switch']),
+        h.div(
+          [h.Class('mt-4')],
+          [
+            Switch.view(
+              {
+                id: SWITCH_DEMO_ID,
+                isChecked: model.isSwitchDemoChecked,
+                onToggle: isChecked => ToggledSwitchDemo({ isChecked }),
+                toView: attributes =>
                   h.div(
-                    [],
+                    [h.Class(wrapperClassName)],
                     [
-                      h.label(
-                        [...attributes.label, h.Class(labelClassName)],
-                        ['Enable notifications'],
+                      h.button(
+                        [...attributes.button, h.Class(buttonClassName)],
+                        [knob(model.isSwitchDemoChecked, h)],
                       ),
-                      h.p(
+                      h.div(
+                        [],
                         [
-                          ...attributes.description,
-                          h.Class(descriptionClassName),
+                          h.label(
+                            [...attributes.label, h.Class(labelClassName)],
+                            ['Enable notifications'],
+                          ),
+                          h.p(
+                            [
+                              ...attributes.description,
+                              h.Class(descriptionClassName),
+                            ],
+                            ['Get notified when something important happens.'],
+                          ),
                         ],
-                        ['Get notified when something important happens.'],
                       ),
                     ],
                   ),
-                ],
-              ),
-          }),
-        ],
-      ),
-    ],
-  )
-})
+              },
+              h,
+            ),
+          ],
+        ),
+      ],
+    )
+  },
+)

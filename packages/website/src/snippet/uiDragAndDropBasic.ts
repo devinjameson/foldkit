@@ -3,7 +3,7 @@
 // update, subscriptions, and view definitions.
 import { Effect, Match as M, Option } from 'effect'
 import { Command, Subscription } from 'foldkit'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -102,10 +102,8 @@ const subscriptions = Subscription.aggregate<Model, Message>()(
 
 // Inside your view function, spread draggable() onto items and droppable()
 // onto containers:
-const view = (model: Model) => {
-  const h = html<Message>()
-
-  return h.ul(
+const view = (model: Model, h: HtmlBuilder<Message>) =>
+  h.ul(
     [
       ...DragAndDrop.droppable('list', 'Sortable items'),
       h.Class('flex flex-col gap-2'),
@@ -113,17 +111,19 @@ const view = (model: Model) => {
     model.items.map((item, index) =>
       h.li(
         [
-          ...DragAndDrop.draggable({
-            model: model.dragAndDrop,
-            toParentMessage: message => GotDragAndDropMessage({ message }),
-            itemId: item.id,
-            containerId: 'list',
-            index,
-          }),
+          ...DragAndDrop.draggable(
+            {
+              model: model.dragAndDrop,
+              toParentMessage: message => GotDragAndDropMessage({ message }),
+              itemId: item.id,
+              containerId: 'list',
+              index,
+            },
+            h,
+          ),
           h.Class('p-3 rounded-lg border cursor-grab'),
         ],
         [h.span([], [item.label])],
       ),
     ),
   )
-}

@@ -1,5 +1,5 @@
 import { Array, Option, pipe } from 'effect'
-import { type Document, html } from 'foldkit/html'
+import { type Document, HtmlBuilder } from 'foldkit/html'
 
 import { DragAndDrop } from '@foldkit/ui'
 
@@ -21,10 +21,8 @@ const findDraggedCard = (model: Model) =>
     ),
   )
 
-const ghostElement = (model: Model) => {
-  const h = html<Message>()
-
-  return pipe(
+const ghostElement = (model: Model, h: HtmlBuilder<Message>) =>
+  pipe(
     DragAndDrop.ghostStyle(model.dragAndDrop),
     Option.flatMap(ghostStyle =>
       Option.map(findDraggedCard(model), card => ({ ghostStyle, card })),
@@ -34,45 +32,40 @@ const ghostElement = (model: Model) => {
       onSome: ({ ghostStyle, card }) =>
         h.div(
           [h.Style(ghostStyle), h.Class('w-64'), h.AriaHidden(true)],
-          [ghostCardView(card)],
+          [ghostCardView(card, h)],
         ),
     }),
   )
-}
 
-export const view = (model: Model): Document => {
-  const h = html<Message>()
-
-  return {
-    title: 'Kanban Board',
-    body: h.div(
-      [h.Class('flex flex-col min-h-screen bg-gray-100')],
-      [
-        h.div(
-          [h.Class('px-6 py-4 bg-white border-b border-gray-200')],
-          [
-            h.h1(
-              [h.Class('text-lg font-semibold text-gray-900')],
-              ['Kanban Board'],
-            ),
-          ],
-        ),
-        h.div(
-          [
-            h.Class(
-              'flex-1 p-6 grid grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-6 items-start',
-            ),
-          ],
-          Array.map(model.columns, column =>
-            columnView(model, column, message => message),
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
+  title: 'Kanban Board',
+  body: h.div(
+    [h.Class('flex flex-col min-h-screen bg-gray-100')],
+    [
+      h.div(
+        [h.Class('px-6 py-4 bg-white border-b border-gray-200')],
+        [
+          h.h1(
+            [h.Class('text-lg font-semibold text-gray-900')],
+            ['Kanban Board'],
           ),
+        ],
+      ),
+      h.div(
+        [
+          h.Class(
+            'flex-1 p-6 grid grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-6 items-start',
+          ),
+        ],
+        Array.map(model.columns, column =>
+          columnView(model, column, message => message, h),
         ),
-        ghostElement(model),
-        h.div(
-          [h.Class('sr-only'), h.AriaLive('assertive')],
-          [model.announcement],
-        ),
-      ],
-    ),
-  }
-}
+      ),
+      ghostElement(model, h),
+      h.div(
+        [h.Class('sr-only'), h.AriaLive('assertive')],
+        [model.announcement],
+      ),
+    ],
+  ),
+})

@@ -18,7 +18,7 @@ Foldkit UI components fall into two categories, distinguished by whether they ca
 
 Stateful [Submodels](/core/submodel) (Menu, Listbox, Combobox, Calendar, Dialog, Popover, among others) manage their own Model, Message, update, and OutMessage. You embed them via h.submodel and handle their events by pattern-matching the OutMessage in your update.
 
-Stateless render helpers (Button, Input, Textarea, Select, Radio Group, Checkbox, Switch, Disclosure, Fieldset, Nav) are called directly with a ViewConfig and return Html. They bundle ARIA and data attributes onto consumer-rendered DOM. No Model, no h.submodel wiring. The controlled helpers dispatch the Messages returned by their config callbacks. The “Kind” column in the table below marks which is which.
+Stateless render helpers (Button, Input, Textarea, Select, Radio Group, Checkbox, Switch, Disclosure, Fieldset, Nav) are called directly with a ViewConfig and your builder, and return Html. They bundle ARIA and data attributes onto consumer-rendered DOM. No Model, no h.submodel wiring. The controlled helpers dispatch the Messages returned by their config callbacks, and the builder you pass is what determines the Message type those callbacks must return, so there is no type argument to write. The “Kind” column in the table below marks which is which.
 
 ## Components
 

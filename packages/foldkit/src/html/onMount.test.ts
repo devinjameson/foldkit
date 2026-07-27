@@ -21,8 +21,8 @@ import {
 } from '../snabbdom/index.js'
 import type { VNode } from '../vdom.js'
 import {
+  __htmlBuilder,
   __clearRuntime as clearHtmlRuntime,
-  html,
   __setRuntime as setHtmlRuntime,
 } from './index.js'
 
@@ -113,7 +113,7 @@ describe('OnMount', () => {
   })
 
   it('dispatches the emitted Message when the element mounts', async () => {
-    const h = html<typeof MountedRoot.Type>()
+    const h = __htmlBuilder<typeof MountedRoot.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
 
     const view = () =>
@@ -128,7 +128,7 @@ describe('OnMount', () => {
   })
 
   it('does not dispatch the emitted Message when rendered with a no-op dispatch', async () => {
-    const h = html<typeof MountedRoot.Type>()
+    const h = __htmlBuilder<typeof MountedRoot.Type>()
     let streamRan = false
 
     const view = () =>
@@ -158,7 +158,7 @@ describe('OnMount', () => {
   })
 
   it('passes the inserted Element into the Stream factory', async () => {
-    const h = html<typeof MountedRoot.Type>()
+    const h = __htmlBuilder<typeof MountedRoot.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
     const seenIds: Array<string> = []
 
@@ -191,7 +191,7 @@ describe('OnMount', () => {
   })
 
   it('dispatches every Message a streaming Stream emits over the element lifetime', async () => {
-    const h = html<typeof MountedRoot.Type>()
+    const h = __htmlBuilder<typeof MountedRoot.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
 
     const view = () =>
@@ -228,7 +228,7 @@ describe('OnMount', () => {
   })
 
   it('dispatches async events from a listener attached inside acquireRelease and detaches on destroy', async () => {
-    const h = html<typeof MountedRoot.Type>()
+    const h = __htmlBuilder<typeof MountedRoot.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
     let listenerAttached = false
     let listenerDetached = false
@@ -299,7 +299,7 @@ describe('OnMount', () => {
   })
 
   it('runs the cleanup when the element is removed by a key change', async () => {
-    const h = html<typeof MountedRoot.Type>()
+    const h = __htmlBuilder<typeof MountedRoot.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
     let cleanupCalls = 0
 
@@ -340,7 +340,7 @@ describe('OnMount', () => {
   })
 
   it('runs the cleanup when the element is removed by a parent re-render', async () => {
-    const h = html<typeof MountedRoot.Type>()
+    const h = __htmlBuilder<typeof MountedRoot.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
     let cleanupCalls = 0
 
@@ -381,7 +381,7 @@ describe('OnMount', () => {
   })
 
   it('logs a failing Stream and dispatches nothing', async () => {
-    const h = html<typeof MountedRoot.Type>()
+    const h = __htmlBuilder<typeof MountedRoot.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
 
     const view = () =>
@@ -414,7 +414,7 @@ describe('OnMount', () => {
   })
 
   it('runs exactly once across repeated patches of the same element', async () => {
-    const h = html<typeof MountedRoot.Type>()
+    const h = __htmlBuilder<typeof MountedRoot.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
     let streamRunCount = 0
     let cleanupRunCount = 0
@@ -466,7 +466,7 @@ describe('OnMount', () => {
     // for async Mount setup. For example, a Mount that dynamically imports
     // a library before constructing a handle: if the element unmounts
     // during the import, there is no handle to destroy.
-    const h = html<typeof MountedRoot.Type>()
+    const h = __htmlBuilder<typeof MountedRoot.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
     let cleanupCalls = 0
     let acquireCompleted = false
@@ -528,7 +528,7 @@ describe('OnMount', () => {
   })
 
   it('Mount.define wraps an Effect: dispatches the result Message and holds the scope open until destroy for acquireRelease finalizers', async () => {
-    const h = html<typeof MountedRoot.Type>()
+    const h = __htmlBuilder<typeof MountedRoot.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
     let acquired = false
     let released = false
@@ -574,7 +574,7 @@ describe('OnMount', () => {
   })
 
   it('runs cleanup on unmount even after multiple re-renders', async () => {
-    const h = html<typeof MountedRoot.Type>()
+    const h = __htmlBuilder<typeof MountedRoot.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
     let cleanupRunCount = 0
 

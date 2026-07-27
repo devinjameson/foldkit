@@ -1,4 +1,5 @@
 import { Option, flow } from 'effect'
+import type { HtmlBuilder } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
 import * as Story from 'foldkit/story'
 import { expect } from 'vitest'
@@ -28,6 +29,7 @@ import {
   GotAnimationMessage,
   InertOthers,
   LockScroll,
+  type Message,
   MovedPointerOverItem,
   Opened,
   PortalComboboxBackdrop,
@@ -1032,16 +1034,20 @@ describe('Combobox', () => {
           'items' | 'itemToValue' | 'itemToDisplayText'
         > = {},
       ) =>
-      (model: Model) =>
-        view(model, {
-          items: ['Apple', 'Banana'],
-          itemToConfig: () => ({ content: null }),
-          itemToValue: item => item,
-          itemToDisplayText: item => item,
-          maybeSelectedValue: Option.none(),
-          restingInputValue: '',
-          ...overrides,
-        })
+      (model: Model, h: HtmlBuilder<Message>) =>
+        view(
+          model,
+          {
+            items: ['Apple', 'Banana'],
+            itemToConfig: () => ({ content: null }),
+            itemToValue: item => item,
+            itemToDisplayText: item => item,
+            maybeSelectedValue: Option.none(),
+            restingInputValue: '',
+            ...overrides,
+          },
+          h,
+        )
 
     it('renders input with role="combobox" when closed', () => {
       Scene.scene(

@@ -3,7 +3,7 @@
 // update, and view definitions.
 import { Match as M, Option } from 'effect'
 import { Command } from 'foldkit'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -77,10 +77,8 @@ const plans: ReadonlyArray<Plan> = ['Free', 'Pro', 'Enterprise']
 // `<label for>`: target the trigger id with `Listbox.buttonId('plan')`. The
 // `for` association gives the trigger both its accessible name and
 // click-to-focus, so ariaLabelledBy is not needed here.
-const view = (model: Model) => {
-  const h = html<Message>()
-
-  return h.div(
+const view = (model: Model, h: HtmlBuilder<Message>) =>
+  h.div(
     [],
     [
       h.label([h.For(Listbox.buttonId('plan'))], ['Plan']),
@@ -117,4 +115,3 @@ const view = (model: Model) => {
       }),
     ],
   )
-}

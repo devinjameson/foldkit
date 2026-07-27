@@ -1,5 +1,5 @@
 import { Submodel } from 'foldkit'
-import { type Html, html } from 'foldkit/html'
+import type { Html } from 'foldkit/html'
 
 import { Button, DatePicker } from '@foldkit/ui'
 
@@ -18,9 +18,7 @@ const ANCHOR = { placement: 'bottom-start' as const, gap: 4, padding: 8 }
 export const workEntryView = Submodel.defineView<
   WorkHistory.Entry.Model,
   WorkHistory.Entry.Message
->((model): Html => {
-  const h = html<WorkHistory.Entry.Message>()
-
+>((model, h): Html => {
   const showEndDate = !model.isCurrentlyEmployed
 
   const startDatePicker = h.div(
@@ -85,57 +83,72 @@ export const workEntryView = Submodel.defineView<
       h.div(
         [h.Class('grid grid-cols-2 gap-3')],
         [
-          inputField<WorkHistory.Entry.Message>({
-            id: `${model.id}-company`,
-            label: 'Company',
-            field: model.company,
-            onInput: value => WorkHistory.Entry.UpdatedCompany({ value }),
-            placeholder: 'e.g. Acme Corp',
-          }),
-          inputField<WorkHistory.Entry.Message>({
-            id: `${model.id}-title`,
-            label: 'Job Title',
-            field: model.title,
-            onInput: value => WorkHistory.Entry.UpdatedTitle({ value }),
-            placeholder: 'e.g. Senior Engineer',
-          }),
+          inputField(
+            {
+              id: `${model.id}-company`,
+              label: 'Company',
+              field: model.company,
+              onInput: value => WorkHistory.Entry.UpdatedCompany({ value }),
+              placeholder: 'e.g. Acme Corp',
+            },
+            h,
+          ),
+          inputField(
+            {
+              id: `${model.id}-title`,
+              label: 'Job Title',
+              field: model.title,
+              onInput: value => WorkHistory.Entry.UpdatedTitle({ value }),
+              placeholder: 'e.g. Senior Engineer',
+            },
+            h,
+          ),
         ],
       ),
       h.div(
         [h.Class('grid grid-cols-2 gap-3')],
         [startDatePicker, ...(showEndDate ? [endDatePicker] : [])],
       ),
-      checkboxField<WorkHistory.Entry.Message>({
-        id: `${model.id}-current`,
-        label: 'I currently work here',
-        isChecked: model.isCurrentlyEmployed,
-        onToggle: isChecked =>
-          WorkHistory.Entry.ToggledCurrentlyEmployed({ isChecked }),
-      }),
-      textareaField<WorkHistory.Entry.Message>({
-        id: `${model.id}-description`,
-        label: 'Description',
-        value: model.description,
-        onInput: value => WorkHistory.Entry.UpdatedDescription({ value }),
-        rows: 3,
-        placeholder: 'Describe your role and key accomplishments...',
-      }),
+      checkboxField(
+        {
+          id: `${model.id}-current`,
+          label: 'I currently work here',
+          isChecked: model.isCurrentlyEmployed,
+          onToggle: isChecked =>
+            WorkHistory.Entry.ToggledCurrentlyEmployed({ isChecked }),
+        },
+        h,
+      ),
+      textareaField(
+        {
+          id: `${model.id}-description`,
+          label: 'Description',
+          value: model.description,
+          onInput: value => WorkHistory.Entry.UpdatedDescription({ value }),
+          rows: 3,
+          placeholder: 'Describe your role and key accomplishments...',
+        },
+        h,
+      ),
       h.div(
         [h.Class('flex justify-end')],
         [
-          Button.view<WorkHistory.Entry.Message>({
-            onClick: WorkHistory.Entry.ClickedRemoveSelf(),
-            toView: attributes =>
-              h.button(
-                [
-                  ...attributes.button,
-                  h.Class(
-                    'text-sm text-gray-400 hover:text-red-500 transition cursor-pointer',
-                  ),
-                ],
-                ['Remove position'],
-              ),
-          }),
+          Button.view(
+            {
+              onClick: WorkHistory.Entry.ClickedRemoveSelf(),
+              toView: attributes =>
+                h.button(
+                  [
+                    ...attributes.button,
+                    h.Class(
+                      'text-sm text-gray-400 hover:text-red-500 transition cursor-pointer',
+                    ),
+                  ],
+                  ['Remove position'],
+                ),
+            },
+            h,
+          ),
         ],
       ),
     ],

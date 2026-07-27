@@ -1,5 +1,5 @@
 import { Submodel } from 'foldkit'
-import { Html, html } from 'foldkit/html'
+import type { Html } from 'foldkit/html'
 
 import { uiShowcaseViewSourceHref } from '../../link'
 import type { TableOfContentsEntry } from '../../main'
@@ -16,7 +16,6 @@ import {
 import { uiAnimationRouter } from '../../route'
 import * as Snippet from '../../snippet'
 import {
-  type CopiedSnippets,
   type RenderCopyButton,
   highlightedCodeBlockFor,
 } from '../../view/codeBlock'
@@ -262,14 +261,12 @@ const keyboardEntries: ReadonlyArray<KeyboardEntry> = [
 // VIEW
 
 type ViewInputs = Readonly<{
-  copiedSnippets: CopiedSnippets
   renderCopyButton: RenderCopyButton
   renderHeadingLink: RenderHeadingLink
 }>
 
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
-  (model, { copiedSnippets, renderCopyButton, renderHeadingLink }): Html => {
-    const h = html<Message>()
+  (model, { renderCopyButton, renderHeadingLink }, h): Html => {
     const { heading, tableOfContentsEntryToHeader } =
       headingsFor(renderHeadingLink)
     const highlightedCodeBlock = highlightedCodeBlockFor(renderCopyButton)
@@ -311,7 +308,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           inlineCode('...title'),
           ' onto a heading element so the dialog is labeled for screen readers.',
         ),
-        demoContainer(...Dialog.dialogDemo(model.dialogDemo)),
+        demoContainer(...Dialog.dialogDemo(model.dialogDemo, h)),
         highlightedCodeBlock(
           h.div(
             [h.Class('text-sm'), h.InnerHTML(Snippet.uiDialogBasicHighlighted)],
@@ -319,7 +316,6 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           ),
           Snippet.uiDialogBasicRaw,
           'Copy dialog example to clipboard',
-          copiedSnippets,
           'mb-8',
         ),
         heading(
@@ -336,7 +332,9 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           inlineCode('data-[closed]:opacity-0 data-[closed]:scale-95'),
           ').',
         ),
-        demoContainer(...Dialog.dialogAnimatedDemo(model.dialogAnimatedDemo)),
+        demoContainer(
+          ...Dialog.dialogAnimatedDemo(model.dialogAnimatedDemo, h),
+        ),
         highlightedCodeBlock(
           h.div(
             [
@@ -347,7 +345,6 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           ),
           Snippet.uiDialogAnimatedRaw,
           'Copy animated dialog example to clipboard',
-          copiedSnippets,
           'mb-8',
         ),
         heading(
@@ -365,6 +362,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
             model.overlayDialogDemo,
             model.overlayComboboxDemo,
             model.maybeOverlayComboboxDemoSelectedCity,
+            h,
           ),
         ),
         highlightedCodeBlock(
@@ -377,7 +375,6 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           ),
           Snippet.uiDialogOverlayRaw,
           'Copy field dialog example to clipboard',
-          copiedSnippets,
           'mb-8',
         ),
         heading(
@@ -392,6 +389,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           ...Dialog.nestedDialogDemo(
             model.nestedDialogParentDemo,
             model.nestedDialogChildDemo,
+            h,
           ),
         ),
         highlightedCodeBlock(
@@ -404,7 +402,6 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           ),
           Snippet.uiDialogNestedRaw,
           'Copy stacked dialogs example to clipboard',
-          copiedSnippets,
           'mb-8',
         ),
         heading(stylingHeader.level, stylingHeader.id, stylingHeader.text),

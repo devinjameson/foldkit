@@ -1,5 +1,5 @@
 import { Submodel } from 'foldkit'
-import { Html, html } from 'foldkit/html'
+import type { Html } from 'foldkit/html'
 
 import { uiShowcaseViewSourceHref } from '../../link'
 import type { TableOfContentsEntry } from '../../main'
@@ -15,7 +15,6 @@ import {
 } from '../../prose'
 import * as Snippet from '../../snippet'
 import {
-  type CopiedSnippets,
   type RenderCopyButton,
   highlightedCodeBlockFor,
 } from '../../view/codeBlock'
@@ -200,14 +199,12 @@ const keyboardEntries: ReadonlyArray<KeyboardEntry> = [
 // VIEW
 
 type ViewInputs = Readonly<{
-  copiedSnippets: CopiedSnippets
   renderCopyButton: RenderCopyButton
   renderHeadingLink: RenderHeadingLink
 }>
 
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
-  (model, { copiedSnippets, renderCopyButton, renderHeadingLink }): Html => {
-    const h = html<Message>()
+  (model, { renderCopyButton, renderHeadingLink }, h): Html => {
     const { heading, tableOfContentsEntryToHeader } =
       headingsFor(renderHeadingLink)
     const highlightedCodeBlock = highlightedCodeBlockFor(renderCopyButton)
@@ -245,7 +242,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           inlineCode('attributes.checkbox'),
           ' onto it for role, ARIA state, and keyboard/click handlers. The label click handler also toggles the checkbox.',
         ),
-        demoContainer(...Checkbox.basicDemo(model)),
+        demoContainer(...Checkbox.basicDemo(model, h)),
         highlightedCodeBlock(
           h.div(
             [
@@ -256,7 +253,6 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           ),
           Snippet.uiCheckboxBasicRaw,
           'Copy basic checkbox example to clipboard',
-          copiedSnippets,
           'mb-8',
         ),
         heading(
@@ -269,7 +265,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           inlineCode('isIndeterminate: true'),
           ' to show a mixed state. This is typically computed from child checkbox states: when some but not all children are checked, the parent shows the indeterminate mark. Toggling the parent sets all children to the same state.',
         ),
-        demoContainer(...Checkbox.indeterminateDemo(model)),
+        demoContainer(...Checkbox.indeterminateDemo(model, h)),
         highlightedCodeBlock(
           h.div(
             [
@@ -280,7 +276,6 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           ),
           Snippet.uiCheckboxIndeterminateRaw,
           'Copy indeterminate checkbox example to clipboard',
-          copiedSnippets,
           'mb-8',
         ),
         heading(stylingHeader.level, stylingHeader.id, stylingHeader.text),

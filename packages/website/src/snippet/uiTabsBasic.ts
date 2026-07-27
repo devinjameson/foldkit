@@ -3,7 +3,7 @@
 // update, and view definitions.
 import { Match as M, Option } from 'effect'
 import { Command } from 'foldkit'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -86,10 +86,8 @@ GotTabsMessage: ({ message }) => {
 
 // Inside your view function, embed the tabs via h.submodel and pass the
 // parent-owned active tab as selectedValue:
-const view = (model: Model) => {
-  const h = html<Message>()
-
-  return h.submodel({
+const view = (model: Model, h: HtmlBuilder<Message>) =>
+  h.submodel({
     slotId: 'framework-tabs',
     model: model.tabs,
     view: FrameworkTabs.view,
@@ -128,4 +126,3 @@ const view = (model: Model) => {
     },
     toParentMessage: message => GotTabsMessage({ message }),
   })
-}

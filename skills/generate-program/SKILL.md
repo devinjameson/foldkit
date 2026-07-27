@@ -139,7 +139,7 @@ The package is not one shape.
 
 **Stateful Submodels** carry their own Model, Message, update, and (mostly) OutMessage, and are embedded via `h.submodel`: `Menu`, `Listbox`, `Combobox`, `Calendar`, `DatePicker`, `Dialog`, `Popover`, `Tabs`, `Tooltip`, `FileDrop`, `DragAndDrop`, `Slider`, `VirtualList`, plus `Toast` once built through `Toast.make(PayloadSchema)`.
 
-**Stateless render helpers** have no Model at all. You call `view` directly and store the value in your own Model: `Button`, `Input`, `Textarea`, `Select`, `Fieldset`, `Checkbox`, `Switch`, `Disclosure`, `RadioGroup`, `Nav`.
+**Stateless render helpers** have no Model at all. You call `view` directly with a ViewConfig and your own `h`, and store the value in your own Model: `Button`, `Input`, `Textarea`, `Select`, `Fieldset`, `Checkbox`, `Switch`, `Disclosure`, `RadioGroup`, `Nav`.
 
 Don't take that split on faith, because components have moved across it (`Checkbox`, `Switch`, and `Disclosure` became controlled render helpers; `Tabs` and `Slider` moved their selection to the parent Model). Read the component's `public.d.ts`: exporting `Model` and `update` means Submodel, exporting only `view` and a `ViewConfig` / `ViewInputs` type means render helper. A render helper does not want a `Got*` Message.
 
@@ -153,7 +153,7 @@ To use a stateful Submodel:
 
 **Always prefer Foldkit UI components over hand-rolling interactive widgets.** They make accessibility the default, not an afterthought.
 
-**For form inputs specifically:** every text input, textarea, and button in a form MUST go through `Input`, `Textarea`, and `Button`. This is not optional, even though raw `input`/`textarea` HTML elements are available from `html<Message>()`. The form example (`examples/form/src/main.ts`) defines `inputFieldView` and `textareaFieldView` helpers that wrap `Input.view` and `Textarea.view` with label + validation feedback. Copy that helper pattern. Raw `input`/`textarea` are for non-form cases (search fields, inline editors) where you're intentionally working below the component layer, and even then, reach for the component first.
+**For form inputs specifically:** every text input, textarea, and button in a form MUST go through `Input`, `Textarea`, and `Button`. This is not optional, even though raw `input`/`textarea` HTML elements are available on the view's builder `h`. The form example (`examples/form/src/main.ts`) defines `inputFieldView` and `textareaFieldView` helpers that wrap `Input.view` and `Textarea.view` with label + validation feedback. Copy that helper pattern. Raw `input`/`textarea` are for non-form cases (search fields, inline editors) where you're intentionally working below the component layer, and even then, reach for the component first.
 
 If the app uses UI components, **always read the ui-showcase example first** to understand how components are wired. This is the canonical reference for Foldkit UI integration patterns:
 
@@ -329,7 +329,7 @@ For each Foldkit module you plan to use, read the `.d.ts` at the paths below. Re
 ```text
 # Every app
 <project>/node_modules/foldkit/dist/index.d.ts          # top-level re-exports: the authoritative list of what `foldkit` exposes
-<project>/node_modules/foldkit/dist/html/index.d.ts     # html<Message>(), element signatures, Attribute<Message>
+<project>/node_modules/foldkit/dist/html/index.d.ts     # HtmlBuilder<Message>, element signatures, Attribute<Message>, staticHtml
 <project>/node_modules/foldkit/dist/message/index.d.ts  # m()
 <project>/node_modules/foldkit/dist/schema/index.d.ts   # ts(), r()
 <project>/node_modules/foldkit/dist/struct/index.d.ts   # evo(): check nested-update signature
@@ -377,7 +377,7 @@ If a path above doesn't resolve, list the package's `dist/` and find the module.
 For each symbol you'll call, write one line:
 
 ```text
-html<Message>(): { div, input (VOID), textarea, button, Class, Href, For, Id, Role, OnClick(Message), OnInput(value=>Message), OnBlur(Message), OnSubmit(Message), keyed, empty, submodel, ... }
+h: HtmlBuilder<Message> (view parameter, supplied by the runtime): { div, input (VOID), textarea, button, Class, Href, For, Id, Role, OnClick(Message), OnInput(value=>Message), OnBlur(Message), OnSubmit(Message), keyed, empty, submodel, ... }
 Route.mapTo(schema)(parser): curried
 pushUrl(path): Effect<void>  // NOT fallible, no Effect.ignore needed
 urlToString(url: Url): string
@@ -395,7 +395,7 @@ Command.define(name, argsSchema, Ok, Err)(({ id }) => Effect): the Effect factor
   const Fetch = Command.define('Fetch', { id: S.String }, Ok, Err)(({ id }) => ...)
   update: [Fetch({ id })]     // NOT Fetch({ id })(effect)
 Document: NOT generic, and `body` is a single Html, not an array
-Input.view({ id, value, onInput, isInvalid?, type?, placeholder?, toView: (attrs) => Html })
+Input.view({ id, value, onInput, isInvalid?, type?, placeholder?, toView: (attrs) => Html }, h)
   // from '@foldkit/ui', NOT Ui.Input
   // attrs: { label: ReadonlyArray<Attribute<M>>, input: ..., description: ... }
 Field (schema): NotValidated | Validating | Valid | Invalid(errors: NonEmpty<Rule Message>)
@@ -408,7 +408,7 @@ Record these in the crib and keep them visible while generating:
 - **`input` and `br` and other void elements take ONLY attributes**: `input([...])`, never `input([...], [])`. `textarea` and `button` DO take children.
 - **`UrlRequest` tags are `Internal` and `External`**, not `InternalUrl` / `ExternalUrl`.
 - **`OnClick` and `OnSubmit` take a Message directly**, not a `() => Message`. Only `OnInput` takes `(value) => Message` because it needs the input value.
-- **`keyed`, `empty` are properties on the record returned by `html<Message>()`**: accessed as `h.keyed` and `h.empty` after `const h = html<Message>()`. They are not top-level exports of `foldkit/html`.
+- **`keyed`, `empty` are properties on the builder `h`** the view receives as its last parameter. They are not top-level exports of `foldkit/html`.
 - **Attribute helpers are specific**: `Value(...)`, `Type(...)`, `Placeholder(...)`, `Href(...)`, `Target(...)`, `Rel(...)`, `Rows(n)`, `Id(...)`, `For(...)`, `Role(...)`, `AriaLabel(...)`. There is no generic `Attr('...', '...')`.
 - **`ApplicationInit<Model, Message, Flags>` has no URL parameter.** For routed apps, use `RoutingApplicationInit<Model, Message, Flags>`: the second arg is `url: Url`.
 - **`Route.mapTo` takes the route schema, not a factory function.** `pipe(literal('new'), Route.mapTo(NewLinkRoute))`. NOT `Route.mapTo(() => NewLinkRoute())`.
@@ -423,7 +423,7 @@ Record these in the crib and keep them visible while generating:
 - **Map a child Submodel's Commands with `Command.mapMessages(childCommands, message => GotChildMessage({ message }))`.** Not `Command.mapEffect`.
 - **Name the update return type once per file**, and prefer `Update.Return<Model, Message>` from `foldkit/update` for the alias. Spelling the tuple out by hand is what most examples still do and is fine; what to avoid is skipping the alias and repeating `readonly [Model, ReadonlyArray<Command.Command<Message>>]` at the signature and again inside `M.withReturnType<...>()`.
 - **Branch on a Model array with `Array.match`, not the predicates.** `Array.isArrayEmpty` and `Array.isArrayNonEmpty` (note the names: not `isEmptyArray` / `isNonEmptyArray`) take a mutable `Array<A>`, so neither compiles against the `ReadonlyArray` an `S.Array(...)` field decodes to. `Array.match` takes `ReadonlyArray` and is what the exemplars use.
-- **`empty` and `keyed` are properties on `h`**, so they are never in the `foldkit/html` import list. Import `{ Document, Html, html }` and reach for `h.empty` / `h.keyed`.
+- **`empty` and `keyed` are properties on `h`**, so they are never in the `foldkit/html` import list. Import the types (`import type { Document, Html, HtmlBuilder } from 'foldkit/html'`) and reach for `h.empty` / `h.keyed` off the view's builder.
 
 ## Phase 4: Generate the App
 
@@ -580,7 +580,8 @@ For file uploads (resumes, images, attachments):
 
 ### View
 
-- Bind the html factory inside each view function (never at module level): `const h = html<Message>()` as the first line of the function body. Reach for elements, attributes, and event handlers off `h`: `h.div`, `h.Class`, `h.OnClick`. For Submodel views (children embedded via `h.submodel`), brand with `Submodel.defineView<Model, Message>` and bind `const h = html<Message>()` inside the body. The child dispatches in its own Message type and the parent declares the wrap at the embed site via `toParentMessage`.
+- Every view receives `h`, the typed Html builder, as its last parameter: the runtime passes it to the root view, and `Submodel.defineView<Model, Message>` passes the child's own to each Submodel view. Application code never constructs a builder. Reach for elements, attributes, and event handlers off `h`: `h.div`, `h.Class`, `h.OnClick`. The child dispatches in its own Message type and the parent declares the wrap at the embed site via `toParentMessage`.
+- Extracted view helpers take `h: HtmlBuilder<Message>` as their last parameter; callers thread it through. For handler-free Html at module top level, use `staticHtml` from `foldkit/html` (typed `HtmlBuilder<never>`, so no handlers can be built with it).
 - Use `h.Class(...)` for Tailwind classes
 - Use `clsx` from the `clsx` package for conditional class composition: `h.Class(clsx('base-classes', { 'active-class': isActive, 'bg-blue-500': variant === 'Primary' }))`. Use `clsx` whenever classes depend on model state, boolean flags, or discriminated union tags. Never string concatenation, template literals, or `&&` expressions.
 - Pattern match on model state: `M.value(model.state).pipe(M.tagsExhaustive({...}))`
@@ -673,7 +674,7 @@ Fix ALL output from all four before declaring Phase 5 done. "Typecheck clean and
 
 ### Type errors first
 
-Then generate tests using `foldkit/test`. There are two test styles. Name each test file for its style, beside the code under test: `story.test.ts` for Story tests (the state machine, driving `update`) and `scene.test.ts` for Scene tests (the rendered view). The name describes how the test works, not a source file, so it holds whether `update` and `view` live in `main.ts` or their own files. When a folder holds more than one test of a kind (sibling pages, component variants), prefix with the subject: `login.story.test.ts`. Scene runs at any level: `Submodel.defineView` produces a plain `(model) => Html`, so a page's view drops into `Scene.scene` unmodified, and a Submodel declaring `ViewInputs` takes a second argument the test supplies through a small wrapper. Put a `scene.test.ts` in the page folder for behavior that page owns, and keep a root-level `scene.test.ts` for flows that cross pages, which covers an OutMessage the parent folds, a Command the parent lifts, a route change, and view inputs the parent computes.
+Then generate tests using `foldkit/test`. There are two test styles. Name each test file for its style, beside the code under test: `story.test.ts` for Story tests (the state machine, driving `update`) and `scene.test.ts` for Scene tests (the rendered view). The name describes how the test works, not a source file, so it holds whether `update` and `view` live in `main.ts` or their own files. When a folder holds more than one test of a kind (sibling pages, component variants), prefix with the subject: `login.story.test.ts`. Scene runs at any level: `Submodel.defineView` produces a plain `(model, h) => Html`, so a page's view drops into `Scene.scene` unmodified, and a Submodel declaring `ViewInputs` takes a second argument the test supplies through a small wrapper. Put a `scene.test.ts` in the page folder for behavior that page owns, and keep a root-level `scene.test.ts` for flows that cross pages, which covers an OutMessage the parent folds, a Command the parent lifts, a route change, and view inputs the parent computes.
 
 **Story tests** (`story.test.ts`) test the update function directly. You send Messages and assert on the Model and Commands. Study these exemplars:
 

@@ -1,6 +1,6 @@
 import { Array, type Schema, String, pipe } from 'effect'
 
-import type { Attribute, Child, Html } from '../html/index.js'
+import type { Attribute, Child, Html, HtmlBuilder } from '../html/index.js'
 import {
   OnCustomEvent,
   Prop,
@@ -66,9 +66,11 @@ export interface CustomElementConfig<
 }
 
 /** A defined custom element, untyped on Message at definition time so the
- *  spec can be exported and shared across modules. Call `.withMessage<Message>()`
- *  inside a view module to mint a typed `ElementBuilder` bound to the
- *  consumer's Message universe. */
+ *  spec can be exported and shared across modules. Call `.withMessage(h)`
+ *  with a view's builder to mint a typed `ElementBuilder` bound to that
+ *  frame's Message universe. The builder argument is a type witness: it
+ *  fixes `Message` to the frame the element renders in, so the spec cannot
+ *  be bound to a Message universe its events will not dispatch into. */
 export interface CustomElementSpec<
   Tag extends string,
   Properties extends Record<string, Schema.Top>,
@@ -77,11 +79,9 @@ export interface CustomElementSpec<
   readonly tag: Tag
   readonly properties: Properties
   readonly events: Events
-  readonly withMessage: <Message>() => ElementBuilder<
-    Message,
-    Properties,
-    Events
-  >
+  readonly withMessage: <Message>(
+    h: HtmlBuilder<Message>,
+  ) => ElementBuilder<Message, Properties, Events>
 }
 
 /** The typed builder for a given spec and Message universe. Equivalent to
@@ -143,7 +143,8 @@ const eventFactoryName = (eventName: string): string =>
  *   },
  * })
  *
- * const picker = hexColorPicker.withMessage<Message>()
+ * // Inside a view, with its `h` in scope:
+ * const picker = hexColorPicker.withMessage(h)
  *
  * picker(
  *   [
@@ -166,15 +167,15 @@ export const define = <
 
   validateNames({ tag: config.tag, propertyNames, eventNames })
 
-  const buildForMessage = <Message>(): ElementBuilder<
-    Message,
+  const buildElementBuilder = (): ElementBuilder<
+    unknown,
     Properties,
     Events
   > => {
-    const createVNode = customElementVNode<Message>()(config.tag)
+    const createVNode = customElementVNode<unknown>()(config.tag)
 
     const elementFn = (
-      attributes: ReadonlyArray<Attribute<Message>> = [],
+      attributes: ReadonlyArray<Attribute<unknown>> = [],
       children: ReadonlyArray<Child> = [],
     ): Html => createVNode(attributes, children)
 
@@ -184,13 +185,13 @@ export const define = <
     for (const propertyName of propertyNames) {
       builder[propertyFactoryName(propertyName)] = (
         value: unknown,
-      ): Attribute<Message> => Prop({ key: propertyName, value })
+      ): Attribute<unknown> => Prop({ key: propertyName, value })
     }
 
     for (const eventName of eventNames) {
       builder[eventFactoryName(eventName)] = (
-        toMessage: (detail: unknown) => Message,
-      ): Attribute<Message> =>
+        toMessage: (detail: unknown) => unknown,
+      ): Attribute<unknown> =>
         OnCustomEvent({
           name: eventName,
           f: event => toMessage(event.detail),
@@ -198,14 +199,30 @@ export const define = <
     }
 
     /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-    return builder as ElementBuilder<Message, Properties, Events>
+    return builder as ElementBuilder<unknown, Properties, Events>
+  }
+
+  // NOTE: `withMessage` is called once per render, so the ElementBuilder is
+  // constructed once and retyped per call. Message is erased at runtime: the
+  // factories close over nothing Message-specific, exactly like the html
+  // builder singleton.
+  let cachedElementBuilder:
+    | ElementBuilder<unknown, Properties, Events>
+    | undefined
+
+  const withMessage = <Message>(
+    _h: HtmlBuilder<Message>,
+  ): ElementBuilder<Message, Properties, Events> => {
+    cachedElementBuilder ??= buildElementBuilder()
+    /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+    return cachedElementBuilder as ElementBuilder<Message, Properties, Events>
   }
 
   return {
     tag: config.tag,
     properties: config.properties,
     events: config.events,
-    withMessage: buildForMessage,
+    withMessage,
   }
 }
 

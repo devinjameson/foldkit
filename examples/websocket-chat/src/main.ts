@@ -11,7 +11,7 @@ import {
   String,
 } from 'effect'
 import { Command, ManagedResource, Runtime, Subscription } from 'foldkit'
-import { Document, Html, html } from 'foldkit/html'
+import { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
@@ -360,70 +360,68 @@ export const subscriptions = Subscription.make<
 
 // VIEW
 
-export const view = (model: Model): Document => {
-  const h = html<Message>()
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
+  title: 'WebSocket Chat',
+  body: h.div(
+    [
+      h.Class(
+        'min-h-screen bg-gradient-to-br from-purple-100 to-blue-100 flex flex-col items-center justify-center p-6',
+      ),
+    ],
+    [
+      h.div(
+        [
+          h.Class(
+            'bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col h-[600px]',
+          ),
+        ],
+        [
+          h.div(
+            [
+              h.Class(
+                'p-6 border-b border-gray-200 flex items-center justify-between',
+              ),
+            ],
+            [
+              h.div(
+                [],
+                [
+                  h.div(
+                    [h.Class('text-2xl font-bold text-gray-800')],
+                    ['WebSocket Chat'],
+                  ),
+                  h.div(
+                    [h.Class('text-sm text-gray-500 mt-1')],
+                    ['Echo server demo'],
+                  ),
+                ],
+              ),
+              connectionStatusView(model.connection, h),
+            ],
+          ),
 
-  return {
-    title: 'WebSocket Chat',
-    body: h.div(
-      [
-        h.Class(
-          'min-h-screen bg-gradient-to-br from-purple-100 to-blue-100 flex flex-col items-center justify-center p-6',
-        ),
-      ],
-      [
-        h.div(
-          [
-            h.Class(
-              'bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col h-[600px]',
-            ),
-          ],
-          [
-            h.div(
-              [
-                h.Class(
-                  'p-6 border-b border-gray-200 flex items-center justify-between',
-                ),
-              ],
-              [
-                h.div(
-                  [],
-                  [
-                    h.div(
-                      [h.Class('text-2xl font-bold text-gray-800')],
-                      ['WebSocket Chat'],
-                    ),
-                    h.div(
-                      [h.Class('text-sm text-gray-500 mt-1')],
-                      ['Echo server demo'],
-                    ),
-                  ],
-                ),
-                connectionStatusView(model.connection),
-              ],
-            ),
+          messagesView(model.messages, h),
 
-            messagesView(model.messages),
+          M.value(model.connection).pipe(
+            M.tagsExhaustive({
+              ConnectionDisconnected: () => connectButtonView(h),
+              ConnectionConnecting: () => connectingView(h),
+              ConnectionConnected: () =>
+                messageInputView(model.messageInput, h),
+              ConnectionError: ({ error }) => errorView(error, h),
+            }),
+          ),
+        ],
+      ),
+    ],
+  ),
+})
 
-            M.value(model.connection).pipe(
-              M.tagsExhaustive({
-                ConnectionDisconnected: connectButtonView,
-                ConnectionConnecting: connectingView,
-                ConnectionConnected: () => messageInputView(model.messageInput),
-                ConnectionError: ({ error }) => errorView(error),
-              }),
-            ),
-          ],
-        ),
-      ],
-    ),
-  }
-}
-
-const connectionStatusView = (connection: ConnectionState): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const connectionStatusView = (
+  connection: ConnectionState,
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.div(
     [h.Class('flex items-center gap-2')],
     [
       M.value(connection).pipe(
@@ -455,12 +453,12 @@ const connectionStatusView = (connection: ConnectionState): Html => {
       ),
     ],
   )
-}
 
-const messagesView = (messages: ReadonlyArray<ChatMessage>): Html => {
-  const h = html<Message>()
-
-  return Array.match(messages, {
+const messagesView = (
+  messages: ReadonlyArray<ChatMessage>,
+  h: HtmlBuilder<Message>,
+): Html =>
+  Array.match(messages, {
     onEmpty: () =>
       h.div(
         [
@@ -527,86 +525,86 @@ const messagesView = (messages: ReadonlyArray<ChatMessage>): Html => {
         ],
       ),
   })
-}
 
-const connectButtonView = (): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const connectButtonView = (h: HtmlBuilder<Message>): Html =>
+  h.div(
     [h.Class('p-6 border-t border-gray-200 flex items-center justify-center')],
     [
-      Button.view<Message>({
-        onClick: ClickedConnect(),
-        toView: attributes =>
-          h.button(
-            [
-              ...attributes.button,
-              h.Class(
-                'bg-blue-500 hover:bg-blue-600 text-white font-semibold px-8 py-3 rounded-lg transition',
-              ),
-            ],
-            ['Connect to Chat'],
-          ),
-      }),
+      Button.view(
+        {
+          onClick: ClickedConnect(),
+          toView: attributes =>
+            h.button(
+              [
+                ...attributes.button,
+                h.Class(
+                  'bg-blue-500 hover:bg-blue-600 text-white font-semibold px-8 py-3 rounded-lg transition',
+                ),
+              ],
+              ['Connect to Chat'],
+            ),
+        },
+        h,
+      ),
     ],
   )
-}
 
-const connectingView = (): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const connectingView = (h: HtmlBuilder<Message>): Html =>
+  h.div(
     [h.Class('p-6 border-t border-gray-200 flex items-center justify-center')],
     [h.div([h.Class('text-gray-600 font-semibold')], ['Connecting...'])],
   )
-}
 
-const messageInputView = (messageInput: string): Html => {
-  const h = html<Message>()
-
-  return h.form(
+const messageInputView = (
+  messageInput: string,
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.form(
     [h.Class('p-6 border-t border-gray-200'), h.OnSubmit(SubmittedMessage())],
     [
       h.div(
         [h.Class('flex gap-3')],
         [
-          Input.view<Message>({
-            id: 'message',
-            value: messageInput,
-            placeholder: 'Type a message...',
-            onInput: value => UpdatedMessageInput({ value }),
-            toView: attributes =>
-              h.input([
-                ...attributes.input,
-                h.Class(
-                  'flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
-                ),
-              ]),
-          }),
-          Button.view<Message>({
-            type: 'submit',
-            isDisabled: String.isEmpty(messageInput.trim()),
-            toView: attributes =>
-              h.button(
-                [
-                  ...attributes.button,
+          Input.view(
+            {
+              id: 'message',
+              value: messageInput,
+              placeholder: 'Type a message...',
+              onInput: value => UpdatedMessageInput({ value }),
+              toView: attributes =>
+                h.input([
+                  ...attributes.input,
                   h.Class(
-                    'bg-blue-500 hover:bg-blue-600 data-[disabled]:opacity-50 data-[disabled]:cursor-not-allowed text-white font-semibold px-6 py-3 rounded-lg transition',
+                    'flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
                   ),
-                ],
-                ['Send'],
-              ),
-          }),
+                ]),
+            },
+            h,
+          ),
+          Button.view(
+            {
+              type: 'submit',
+              isDisabled: String.isEmpty(messageInput.trim()),
+              toView: attributes =>
+                h.button(
+                  [
+                    ...attributes.button,
+                    h.Class(
+                      'bg-blue-500 hover:bg-blue-600 data-[disabled]:opacity-50 data-[disabled]:cursor-not-allowed text-white font-semibold px-6 py-3 rounded-lg transition',
+                    ),
+                  ],
+                  ['Send'],
+                ),
+            },
+            h,
+          ),
         ],
       ),
     ],
   )
-}
 
-const errorView = (error: string): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const errorView = (error: string, h: HtmlBuilder<Message>): Html =>
+  h.div(
     [h.Class('p-6 border-t border-gray-200')],
     [
       h.div(
@@ -619,19 +617,21 @@ const errorView = (error: string): Html => {
           h.p([h.Class('text-red-600 text-sm')], [error]),
         ],
       ),
-      Button.view<Message>({
-        onClick: ClickedConnect(),
-        toView: attributes =>
-          h.button(
-            [
-              ...attributes.button,
-              h.Class(
-                'w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg transition',
-              ),
-            ],
-            ['Try Again'],
-          ),
-      }),
+      Button.view(
+        {
+          onClick: ClickedConnect(),
+          toView: attributes =>
+            h.button(
+              [
+                ...attributes.button,
+                h.Class(
+                  'w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg transition',
+                ),
+              ],
+              ['Try Again'],
+            ),
+        },
+        h,
+      ),
     ],
   )
-}

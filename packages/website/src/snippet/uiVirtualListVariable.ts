@@ -2,7 +2,7 @@
 // example: same Model, init, Message, update, subscription wiring. The
 // difference is in the view and in how `scrollToIndex` is called. Fit the
 // excerpts into your own definitions.
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 
 import { VirtualList } from '@foldkit/ui'
 
@@ -26,10 +26,8 @@ const init = () => [
 // math walk the items via a prefix-sum to find the visible window. Tests
 // with 10k items at 60Hz scroll well within budget; larger lists may need
 // a prefix-sum cache if you can profile the regression:
-const view = () => {
-  const h = html<Message>()
-
-  return h.submodel({
+const view = (h: HtmlBuilder<Message>) =>
+  h.submodel({
     slotId: 'activity-list',
     model: model.activityList,
     view: VirtualList.view<Activity>(),
@@ -77,7 +75,6 @@ const view = () => {
     },
     toParentMessage: message => GotActivityListMessage({ message }),
   })
-}
 
 // Programmatic scrolling for variable-height lists uses
 // `scrollToIndexVariable`, which walks the heights to compute the target

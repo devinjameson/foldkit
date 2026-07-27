@@ -1,7 +1,7 @@
 import clsx from 'clsx'
 import { Array, Option, pipe } from 'effect'
 import { Submodel } from 'foldkit'
-import { Html, html } from 'foldkit/html'
+import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { DragAndDrop } from '@foldkit/ui'
 
@@ -31,8 +31,8 @@ const cardView = (
   index: number,
   containerId: string,
   dragAndDropModel: DragAndDrop.Model,
+  h: HtmlBuilder<UiMessage>,
 ): Html => {
-  const h = html<UiMessage>()
   const maybeItemId = DragAndDrop.maybeDraggedItemId(dragAndDropModel)
   const isBeingDragged = Option.exists(maybeItemId, id => id === card.id)
 
@@ -50,22 +50,23 @@ const cardView = (
           'ring-2 ring-accent-500': isKeyboardDragged,
         }),
       ),
-      ...DragAndDrop.draggable<UiMessage>({
-        model: dragAndDropModel,
-        toParentMessage: message => GotDragAndDropDemoMessage({ message }),
-        itemId: card.id,
-        containerId,
-        index,
-      }),
-      ...DragAndDrop.sortable<UiMessage>(card.id),
+      ...DragAndDrop.draggable(
+        {
+          model: dragAndDropModel,
+          toParentMessage: message => GotDragAndDropDemoMessage({ message }),
+          itemId: card.id,
+          containerId,
+          index,
+        },
+        h,
+      ),
+      ...DragAndDrop.sortable(card.id),
     ],
     [card.label],
   )
 }
 
-const dropPlaceholder = (): Html => {
-  const h = html()
-
+const dropPlaceholder = (h: HtmlBuilder<UiMessage>): Html => {
   return h.keyed('div')(
     'drop-placeholder',
     [h.Class('rounded-lg border-2 border-dashed border-accent-400/50 h-9')],
@@ -77,8 +78,8 @@ const renderColumn = (
   column: DemoColumn,
   dragAndDropModel: DragAndDrop.Model,
   children: ReadonlyArray<Html>,
+  h: HtmlBuilder<UiMessage>,
 ): Html => {
-  const h = html<UiMessage>()
   const maybeTarget = DragAndDrop.maybeDropTarget(dragAndDropModel)
   const isDropTarget =
     DragAndDrop.isDragging(dragAndDropModel) &&
@@ -106,7 +107,7 @@ const renderColumn = (
                 : 'border-transparent',
             ),
           ),
-          ...DragAndDrop.droppable<UiMessage>(column.id, column.label),
+          ...DragAndDrop.droppable(column.id, column.label),
         ],
         [...children],
       ),
@@ -118,6 +119,7 @@ const columnView = (
   columns: ReadonlyArray<DemoColumn>,
   column: DemoColumn,
   dragAndDropModel: DragAndDrop.Model,
+  h: HtmlBuilder<UiMessage>,
 ): Html => {
   const maybeItemId = DragAndDrop.maybeDraggedItemId(dragAndDropModel)
   const maybeTarget = DragAndDrop.maybeDropTarget(dragAndDropModel)
@@ -137,11 +139,11 @@ const columnView = (
   })
 
   const cardElements = Array.map(visibleCards, (card, index) =>
-    cardView(card, index, column.id, dragAndDropModel),
+    cardView(card, index, column.id, dragAndDropModel, h),
   )
 
   if (!isTargetColumn) {
-    return renderColumn(column, dragAndDropModel, cardElements)
+    return renderColumn(column, dragAndDropModel, cardElements, h)
   }
 
   const targetIndex = Option.match(maybeTarget, {
@@ -150,11 +152,11 @@ const columnView = (
   })
 
   const insertElement = isPointerDragging
-    ? dropPlaceholder()
+    ? dropPlaceholder(h)
     : Option.match(findDraggedCard(columns, maybeItemId), {
-        onNone: () => dropPlaceholder(),
+        onNone: () => dropPlaceholder(h),
         onSome: card =>
-          cardView(card, targetIndex, column.id, dragAndDropModel),
+          cardView(card, targetIndex, column.id, dragAndDropModel, h),
       })
 
   const withInsert: ReadonlyArray<Html> = pipe(
@@ -163,14 +165,14 @@ const columnView = (
     Option.getOrElse(() => [...cardElements, insertElement]),
   )
 
-  return renderColumn(column, dragAndDropModel, withInsert)
+  return renderColumn(column, dragAndDropModel, withInsert, h)
 }
 
 const ghostView = (
   columns: ReadonlyArray<DemoColumn>,
   dragAndDropModel: DragAndDrop.Model,
+  h: HtmlBuilder<UiMessage>,
 ): Html => {
-  const h = html()
   const maybeItemId = DragAndDrop.maybeDraggedItemId(dragAndDropModel)
 
   return pipe(
@@ -197,32 +199,33 @@ const ghostView = (
   )
 }
 
-export const view = Submodel.defineView<UiModel, UiMessage>((model): Html => {
-  const h = html<UiMessage>()
-
-  return h.div(
-    [],
-    [
-      h.h2(
-        [h.Class('text-2xl font-bold text-gray-900 mb-6')],
-        ['Drag and Drop'],
-      ),
-      h.div(
-        [h.Class('w-full max-w-md')],
-        [
-          h.div(
-            [h.Class('grid grid-cols-2 gap-4')],
-            Array.map(model.dragAndDropDemoColumns, column =>
-              columnView(
-                model.dragAndDropDemoColumns,
-                column,
-                model.dragAndDropDemo,
+export const view = Submodel.defineView<UiModel, UiMessage>(
+  (model, h): Html => {
+    return h.div(
+      [],
+      [
+        h.h2(
+          [h.Class('text-2xl font-bold text-gray-900 mb-6')],
+          ['Drag and Drop'],
+        ),
+        h.div(
+          [h.Class('w-full max-w-md')],
+          [
+            h.div(
+              [h.Class('grid grid-cols-2 gap-4')],
+              Array.map(model.dragAndDropDemoColumns, column =>
+                columnView(
+                  model.dragAndDropDemoColumns,
+                  column,
+                  model.dragAndDropDemo,
+                  h,
+                ),
               ),
             ),
-          ),
-          ghostView(model.dragAndDropDemoColumns, model.dragAndDropDemo),
-        ],
-      ),
-    ],
-  )
-})
+            ghostView(model.dragAndDropDemoColumns, model.dragAndDropDemo, h),
+          ],
+        ),
+      ],
+    )
+  },
+)

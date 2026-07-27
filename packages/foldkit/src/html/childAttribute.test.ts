@@ -12,13 +12,22 @@ import {
   createBoundaryRegistry,
 } from './boundary.js'
 import { type ChildAttribute, childAttributes } from './childAttribute.js'
-import { type Html, html } from './index.js'
+import { type Html, __htmlBuilder } from './index.js'
 import {
   type DispatchSync,
   clearRuntime,
   setRuntime,
 } from './runtimeSingleton.js'
-import { defineView, submodel } from './submodel.js'
+import {
+  type AnySubmodelView,
+  type SubmodelConfig,
+  defineView,
+  submodel as submodelImpl,
+} from './submodel.js'
+
+const submodel = <View extends AnySubmodelView>(
+  config: SubmodelConfig<View, unknown>,
+): Html => submodelImpl(config, __htmlBuilder())
 
 const setUpRuntime = (
   registry: BoundaryRegistry,
@@ -86,7 +95,7 @@ describe('childAttributes', () => {
       ChildClicked,
       CheckboxViewInputs
     >((_model, viewInputs) => {
-      const h = html<ChildClicked>()
+      const h = __htmlBuilder<ChildClicked>()
       const checkboxAttributes = [h.OnClick({ _tag: 'ChildClicked' })]
       return viewInputs.toView({
         checkbox: childAttributes(checkboxAttributes),
@@ -99,7 +108,7 @@ describe('childAttributes', () => {
       view: fakeCheckboxView,
       viewInputs: {
         toView: attributes => {
-          const hParent = html<ParentDirect>()
+          const hParent = __htmlBuilder<ParentDirect>()
           return hParent.div([...attributes.checkbox], [])
         },
       },
@@ -132,7 +141,7 @@ describe('childAttributes', () => {
       ChildClicked,
       CheckboxViewInputs
     >((_model, viewInputs) => {
-      const h = html<ChildClicked>()
+      const h = __htmlBuilder<ChildClicked>()
       const checkboxAttributes = [h.OnClick({ _tag: 'ChildClicked' })]
       return viewInputs.toView({
         checkbox: childAttributes(checkboxAttributes),
@@ -145,7 +154,7 @@ describe('childAttributes', () => {
       view: fakeCheckboxView,
       viewInputs: {
         toView: attributes => {
-          const hParent = html<ParentDirect>()
+          const hParent = __htmlBuilder<ParentDirect>()
           // Consumer wraps Checkbox's checkbox attributes in a button,
           // adding their own keyup handler. The keyup should dispatch
           // ParentDirect (no wrap); the click should dispatch
@@ -220,7 +229,7 @@ describe('childAttributes', () => {
       slotId: 'first',
       model: {},
       view: defineView<object, FirstChild, CaptureInputs>((_, viewInputs) => {
-        const h = html<FirstChild>()
+        const h = __htmlBuilder<FirstChild>()
         firstAttributes = childAttributes([h.OnClick({ _tag: 'FirstChild' })])
         viewInputs.capture(firstAttributes)
         return snabbdomH('span')
@@ -237,7 +246,7 @@ describe('childAttributes', () => {
       slotId: 'second',
       model: {},
       view: defineView<object, SecondChild, CaptureInputs>((_, viewInputs) => {
-        const h = html<SecondChild>()
+        const h = __htmlBuilder<SecondChild>()
         secondAttributes = childAttributes([h.OnClick({ _tag: 'SecondChild' })])
         viewInputs.capture(secondAttributes)
         return snabbdomH('span')
@@ -252,7 +261,7 @@ describe('childAttributes', () => {
 
     // Build a parent vnode using both attribute sets and verify each
     // routes correctly.
-    const hParent = html<ParentDirect>()
+    const hParent = __htmlBuilder<ParentDirect>()
     const merged = hParent.div([...firstAttributes, ...secondAttributes], [])
 
     /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
@@ -277,7 +286,7 @@ describe('childAttributes', () => {
 
     const fakeView = defineView<object, ChildClicked, FakeViewInputs>(
       (_model, viewInputs) => {
-        const h = html<ChildClicked>()
+        const h = __htmlBuilder<ChildClicked>()
         return viewInputs.toView({
           attributes: childAttributes([h.OnClick({ _tag: 'ChildClicked' })]),
         })
@@ -290,7 +299,7 @@ describe('childAttributes', () => {
       view: fakeView,
       viewInputs: {
         toView: inputs => {
-          const hParent = html<ParentDirect>()
+          const hParent = __htmlBuilder<ParentDirect>()
           return hParent.button(
             [...inputs.attributes, hParent.OnClick({ _tag: 'ParentDirect' })],
             [],

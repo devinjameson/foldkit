@@ -9,7 +9,7 @@ import {
   pipe,
 } from 'effect'
 import { Command, Submodel } from 'foldkit'
-import { Html, html } from 'foldkit/html'
+import { Html, HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { pushUrl } from 'foldkit/navigation'
 import { ts } from 'foldkit/schema'
@@ -232,10 +232,11 @@ const statusText = (results: SearchResults): string =>
     M.exhaustive,
   )
 
-const recentSearchesView = (history: ReadonlyArray<string>): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const recentSearchesView = (
+  history: ReadonlyArray<string>,
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.div(
     [h.Class('mb-6 text-sm text-gray-600 flex flex-wrap gap-2')],
     [
       h.span([h.Class('font-medium')], ['Recent searches:']),
@@ -248,12 +249,9 @@ const recentSearchesView = (history: ReadonlyArray<string>): Html => {
       ),
     ],
   )
-}
 
-const personListItemView = (person: Person): Html => {
-  const h = html<Message>()
-
-  return h.keyed('li')(
+const personListItemView = (person: Person, h: HtmlBuilder<Message>): Html =>
+  h.keyed('li')(
     person.id.toString(),
     [h.Class('border border-gray-200 rounded-lg hover:bg-gray-50')],
     [
@@ -274,82 +272,89 @@ const personListItemView = (person: Person): Html => {
       ),
     ],
   )
-}
 
-export const view = Submodel.defineView<Model, Message>((model): Html => {
-  const h = html<Message>()
+export const view = Submodel.defineView<Model, Message>(
+  (model, h): Html =>
+    h.div(
+      [h.Class('max-w-4xl mx-auto px-4')],
+      [
+        h.h1([h.Class('text-4xl font-bold text-gray-800 mb-6')], ['People']),
 
-  return h.div(
-    [h.Class('max-w-4xl mx-auto px-4')],
-    [
-      h.h1([h.Class('text-4xl font-bold text-gray-800 mb-6')], ['People']),
-
-      h.search(
-        [h.Class('mb-6')],
-        [
-          h.form(
-            [h.OnSubmit(SubmittedSearch()), h.Class('flex gap-2')],
-            [
-              Input.view({
-                id: 'people-search',
-                type: 'search',
-                value: model.searchInput,
-                placeholder: 'Search by name or role...',
-                onInput: value => ChangedSearchInput({ value }),
-                toView: ({ input, label, description }) =>
-                  h.div(
-                    [h.Class('flex-1')],
-                    [
-                      h.label(
-                        [...label, h.Class('sr-only')],
-                        ['Search people'],
+        h.search(
+          [h.Class('mb-6')],
+          [
+            h.form(
+              [h.OnSubmit(SubmittedSearch()), h.Class('flex gap-2')],
+              [
+                Input.view(
+                  {
+                    id: 'people-search',
+                    type: 'search',
+                    value: model.searchInput,
+                    placeholder: 'Search by name or role...',
+                    onInput: value => ChangedSearchInput({ value }),
+                    toView: ({ input, label, description }) =>
+                      h.div(
+                        [h.Class('flex-1')],
+                        [
+                          h.label(
+                            [...label, h.Class('sr-only')],
+                            ['Search people'],
+                          ),
+                          h.input([
+                            ...input,
+                            h.Autocomplete('off'),
+                            h.Class(
+                              'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
+                            ),
+                          ]),
+                          h.span([...description], []),
+                        ],
                       ),
-                      h.input([
-                        ...input,
-                        h.Autocomplete('off'),
-                        h.Class(
-                          'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
-                        ),
-                      ]),
-                      h.span([...description], []),
-                    ],
-                  ),
-              }),
-              Button.view<Message>({
-                type: 'submit',
-                toView: ({ button }) =>
-                  h.button(
-                    [
-                      ...button,
-                      h.Class(
-                        'px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition cursor-pointer',
+                  },
+                  h,
+                ),
+                Button.view(
+                  {
+                    type: 'submit',
+                    toView: ({ button }) =>
+                      h.button(
+                        [
+                          ...button,
+                          h.Class(
+                            'px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition cursor-pointer',
+                          ),
+                        ],
+                        ['Search'],
                       ),
-                    ],
-                    ['Search'],
-                  ),
-              }),
-            ],
-          ),
-        ],
-      ),
-
-      Array.match(model.searchHistory, {
-        onEmpty: () => h.empty,
-        onNonEmpty: recentSearchesView,
-      }),
-
-      h.p(
-        [h.Class('text-lg text-gray-600 mb-6'), h.AriaLive('polite')],
-        [statusText(model.results)],
-      ),
-
-      M.value(model.results).pipe(
-        M.tag('SearchLoading', () => h.empty),
-        M.tag('SearchLoaded', ({ people: results }) =>
-          h.ul([h.Class('space-y-3')], Array.map(results, personListItemView)),
+                  },
+                  h,
+                ),
+              ],
+            ),
+          ],
         ),
-        M.exhaustive,
-      ),
-    ],
-  )
-})
+
+        Array.match(model.searchHistory, {
+          onEmpty: () => h.empty,
+          onNonEmpty: history => recentSearchesView(history, h),
+        }),
+
+        h.p(
+          [h.Class('text-lg text-gray-600 mb-6'), h.AriaLive('polite')],
+          [statusText(model.results)],
+        ),
+
+        M.value(model.results).pipe(
+          M.tag('SearchLoading', () => h.empty),
+          M.tag('SearchLoaded', ({ people: results }) =>
+            h.ul(
+              [h.Class('space-y-3')],
+              Array.map(results, person => personListItemView(person, h)),
+            ),
+          ),
+          M.exhaustive,
+        ),
+      ],
+    ),
+)

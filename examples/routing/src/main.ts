@@ -1,6 +1,6 @@
 import { Array, Effect, Match as M, Option, Schema as S } from 'effect'
 import { Command, Runtime } from 'foldkit'
-import { Document, Html, html } from 'foldkit/html'
+import { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { UrlRequest, load, pushUrl } from 'foldkit/navigation'
 import { evo } from 'foldkit/struct'
@@ -165,9 +165,10 @@ export const update = (model: Model, message: Message): UpdateReturn =>
 
 // VIEW
 
-const navigationView = (currentRoute: AppRoute): Html => {
-  const h = html<Message>()
-
+const navigationView = (
+  currentRoute: AppRoute,
+  h: HtmlBuilder<Message>,
+): Html => {
   const navLinkClassName = (isActive: boolean) =>
     `hover:bg-blue-600 font-medium px-3 py-1 rounded transition ${isActive ? 'bg-blue-700 bg-opacity-50' : ''}`
 
@@ -241,10 +242,8 @@ const navigationView = (currentRoute: AppRoute): Html => {
   )
 }
 
-const homeView = (): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const homeView = (h: HtmlBuilder<Message>): Html =>
+  h.div(
     [h.Class('max-w-4xl mx-auto px-4')],
     [
       h.h1(
@@ -260,12 +259,9 @@ const homeView = (): Html => {
       h.p([h.Class('text-gray-600')], []),
     ],
   )
-}
 
-const nestedView = (): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const nestedView = (h: HtmlBuilder<Message>): Html =>
+  h.div(
     [h.Class('max-w-4xl mx-auto px-4')],
     [
       h.h1(
@@ -278,11 +274,8 @@ const nestedView = (): Html => {
       ),
     ],
   )
-}
 
-const personView = (personId: number): Html => {
-  const h = html<Message>()
-
+const personView = (personId: number, h: HtmlBuilder<Message>): Html => {
   const person = People.findPerson(personId)
 
   return Option.match(person, {
@@ -385,10 +378,9 @@ const entryCountLabel = (count: number): string =>
 const entryListView = (
   parentPath: ReadonlyArray<string>,
   entries: ReadonlyArray<FileTreeEntry>,
-): Html => {
-  const h = html<Message>()
-
-  return h.ul(
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.ul(
     [h.Class('divide-y divide-gray-200 border border-gray-200 rounded-lg')],
     Array.map(entries, entry =>
       h.keyed('li')(
@@ -422,11 +414,11 @@ const entryListView = (
       ),
     ),
   )
-}
 
-const breadcrumbView = (path: Array.NonEmptyReadonlyArray<string>): Html => {
-  const h = html<Message>()
-
+const breadcrumbView = (
+  path: Array.NonEmptyReadonlyArray<string>,
+  h: HtmlBuilder<Message>,
+): Html => {
   const lastSegmentIndex = path.length - 1
 
   return h.nav(
@@ -464,22 +456,20 @@ const breadcrumbView = (path: Array.NonEmptyReadonlyArray<string>): Html => {
   )
 }
 
-const fileDetailView = (file: File): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const fileDetailView = (file: File, h: HtmlBuilder<Message>): Html =>
+  h.div(
     [h.Class('bg-gray-50 border border-gray-200 rounded-lg p-6')],
     [
       h.h2([h.Class('text-2xl font-bold text-gray-800 mb-2')], [file.name]),
       h.p([h.Class('text-gray-600')], [formatFileSize(file.sizeInBytes)]),
     ],
   )
-}
 
-const missingEntryView = (path: Array.NonEmptyReadonlyArray<string>): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const missingEntryView = (
+  path: Array.NonEmptyReadonlyArray<string>,
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.div(
     [],
     [
       h.h2([h.Class('text-4xl font-bold text-red-600 mb-6')], ['Nothing Here']),
@@ -493,12 +483,9 @@ const missingEntryView = (path: Array.NonEmptyReadonlyArray<string>): Html => {
       ),
     ],
   )
-}
 
-const filesIndexView = (): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const filesIndexView = (h: HtmlBuilder<Message>): Html =>
+  h.div(
     [h.Class('max-w-4xl mx-auto px-4')],
     [
       h.h1([h.Class('text-4xl font-bold text-gray-800 mb-6')], ['Files']),
@@ -508,37 +495,35 @@ const filesIndexView = (): Html => {
           'Every path under /files parses into a single route that captures the remaining segments with rest.',
         ],
       ),
-      entryListView([], fileTree),
+      entryListView([], fileTree, h),
     ],
   )
-}
 
-const filesView = (path: Array.NonEmptyReadonlyArray<string>): Html => {
-  const h = html<Message>()
-
+const filesView = (
+  path: Array.NonEmptyReadonlyArray<string>,
+  h: HtmlBuilder<Message>,
+): Html => {
   const maybeEntry = findEntry(path)
 
   const content = Option.match(maybeEntry, {
-    onNone: () => missingEntryView(path),
+    onNone: () => missingEntryView(path, h),
     onSome: entry =>
       M.value(entry).pipe(
         M.tagsExhaustive({
-          File: fileDetailView,
-          Directory: directory => entryListView(path, directory.entries),
+          File: file => fileDetailView(file, h),
+          Directory: directory => entryListView(path, directory.entries, h),
         }),
       ),
   })
 
   return h.div(
     [h.Class('max-w-4xl mx-auto px-4')],
-    [breadcrumbView(path), content],
+    [breadcrumbView(path, h), content],
   )
 }
 
-const notFoundView = (path: string): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const notFoundView = (path: string, h: HtmlBuilder<Message>): Html =>
+  h.div(
     [h.Class('max-w-4xl mx-auto px-4')],
     [
       h.h1(
@@ -555,7 +540,6 @@ const notFoundView = (path: string): Html => {
       ),
     ],
   )
-}
 
 const routeTitle = (route: Model['route']): string =>
   M.value(route).pipe(
@@ -569,13 +553,11 @@ const routeTitle = (route: Model['route']): string =>
     M.orElse(({ _tag }) => `${_tag} | Routing`),
   )
 
-export const view = (model: Model): Document => {
-  const h = html<Message>()
-
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
   const routeContent = M.value(model.route).pipe(
     M.tagsExhaustive({
-      Home: homeView,
-      Nested: nestedView,
+      Home: () => homeView(h),
+      Nested: () => nestedView(h),
       People: () =>
         h.submodel({
           slotId: 'people',
@@ -583,10 +565,10 @@ export const view = (model: Model): Document => {
           view: People.view,
           toParentMessage: message => GotPeopleMessage({ message }),
         }),
-      Person: ({ personId }) => personView(personId),
-      FilesIndex: filesIndexView,
-      Files: ({ path }) => filesView(path),
-      NotFound: ({ path }) => notFoundView(path),
+      Person: ({ personId }) => personView(personId, h),
+      FilesIndex: () => filesIndexView(h),
+      Files: ({ path }) => filesView(path, h),
+      NotFound: ({ path }) => notFoundView(path, h),
     }),
   )
 
@@ -595,7 +577,7 @@ export const view = (model: Model): Document => {
     body: h.div(
       [h.Class('min-h-screen bg-gray-100')],
       [
-        h.header([], [navigationView(model.route)]),
+        h.header([], [navigationView(model.route, h)]),
         h.main([h.Class('py-8')], [routeContent]),
       ],
     ),

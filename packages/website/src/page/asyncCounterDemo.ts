@@ -9,7 +9,7 @@ import {
   pipe,
 } from 'effect'
 import { Command, Dom, Submodel } from 'foldkit'
-import { Html, html } from 'foldkit/html'
+import { Html, type HtmlBuilder, staticHtml } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 import demoCodeHtml from 'virtual:counter-demo-code'
@@ -371,7 +371,7 @@ const phaseColorClass = (phase: AnimationPhase): string =>
   )
 
 export const view = Submodel.defineView<Model, Message>(
-  (model): Html =>
+  (model, h): Html =>
     DemoView.demoViewShell(
       DemoView.codePanelView(
         'demo-code-panel',
@@ -379,20 +379,18 @@ export const view = Submodel.defineView<Model, Message>(
         model.phase,
         demoCodeHtml,
       ),
-      appPanel(model),
+      appPanel(model, h),
     ),
 )
 
-const appPanel = (model: Model): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const appPanel = (model: Model, h: HtmlBuilder<Message>): Html =>
+  h.div(
     [h.Class('relative')],
     [
       h.div(
         [h.Class('lg:absolute lg:inset-0 flex flex-col gap-4 overflow-hidden')],
         [
-          viewAndControlsView(model),
+          viewAndControlsView(model, h),
           DemoView.modelStateView([
             DemoView.modelStateField('count', String(model.count)),
             DemoView.modelStateField('isResetting', String(model.isResetting)),
@@ -407,7 +405,6 @@ const appPanel = (model: Model): Html => {
       ),
     ],
   )
-}
 
 const actionButtonClass = (isDisabled: boolean): string =>
   clsx('px-4 py-2 rounded-lg text-sm font-normal transition', {
@@ -440,30 +437,31 @@ const stepperButton = (
   label: string,
   symbol: string,
   delta: number,
+  h: HtmlBuilder<Message>,
 ): Html => {
-  const h = html<Message>()
   const nextSeconds = clampResetSeconds(model.resetDuration + delta)
   const isDisabled = model.isResetting || nextSeconds === model.resetDuration
 
-  return Button.view<Message>({
-    onClick: ChangedDemoResetDuration({ seconds: nextSeconds }),
-    isDisabled,
-    toView: attributes =>
-      h.button(
-        [
-          ...attributes.button,
-          h.Class(stepperButtonClass(isDisabled)),
-          h.AriaLabel(label),
-        ],
-        [symbol],
-      ),
-  })
+  return Button.view(
+    {
+      onClick: ChangedDemoResetDuration({ seconds: nextSeconds }),
+      isDisabled,
+      toView: attributes =>
+        h.button(
+          [
+            ...attributes.button,
+            h.Class(stepperButtonClass(isDisabled)),
+            h.AriaLabel(label),
+          ],
+          [symbol],
+        ),
+    },
+    h,
+  )
 }
 
-const viewAndControlsView = (model: Model): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const viewAndControlsView = (model: Model, h: HtmlBuilder<Message>): Html =>
+  h.div(
     [h.Class('flex flex-col gap-3')],
     [
       h.div(
@@ -488,18 +486,21 @@ const viewAndControlsView = (model: Model): Html => {
           ),
         ],
       ),
-      Button.view<Message>({
-        onClick: ClickedDemoIncrement(),
-        isDisabled: model.isResetting,
-        toView: attributes =>
-          h.button(
-            [
-              ...attributes.button,
-              h.Class(actionButtonClass(model.isResetting)),
-            ],
-            ['Add 1'],
-          ),
-      }),
+      Button.view(
+        {
+          onClick: ClickedDemoIncrement(),
+          isDisabled: model.isResetting,
+          toView: attributes =>
+            h.button(
+              [
+                ...attributes.button,
+                h.Class(actionButtonClass(model.isResetting)),
+              ],
+              ['Add 1'],
+            ),
+        },
+        h,
+      ),
       h.div(
         [h.Class('flex flex-col gap-1')],
         [
@@ -517,7 +518,7 @@ const viewAndControlsView = (model: Model): Html => {
               h.AriaLabelledBy(RESET_DELAY_LABEL_ID),
             ],
             [
-              stepperButton(model, 'Decrease reset delay', '\u2212', -1),
+              stepperButton(model, 'Decrease reset delay', '\u2212', -1, h),
               h.p(
                 [
                   h.AriaLive('polite'),
@@ -533,26 +534,28 @@ const viewAndControlsView = (model: Model): Html => {
                 ],
                 [String(model.resetDuration)],
               ),
-              stepperButton(model, 'Increase reset delay', '+', 1),
+              stepperButton(model, 'Increase reset delay', '+', 1, h),
             ],
           ),
         ],
       ),
-      Button.view<Message>({
-        onClick: ClickedDemoReset(),
-        isDisabled: model.isResetting,
-        toView: attributes =>
-          h.button(
-            [
-              ...attributes.button,
-              h.Class(actionButtonClass(model.isResetting)),
-            ],
-            [resetButtonLabel(model)],
-          ),
-      }),
+      Button.view(
+        {
+          onClick: ClickedDemoReset(),
+          isDisabled: model.isResetting,
+          toView: attributes =>
+            h.button(
+              [
+                ...attributes.button,
+                h.Class(actionButtonClass(model.isResetting)),
+              ],
+              [resetButtonLabel(model)],
+            ),
+        },
+        h,
+      ),
     ],
   )
-}
 
 const phaseIndicatorView = (model: Model): Html => {
   const isCommand = model.phase === 'ResetCommand'
@@ -565,7 +568,7 @@ const phaseIndicatorView = (model: Model): Html => {
 }
 
 const progressBarView = (model: Model, isCommand: boolean): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.div(
     [

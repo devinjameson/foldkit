@@ -1,5 +1,5 @@
 import { Submodel } from 'foldkit'
-import { Html, html } from 'foldkit/html'
+import type { Html } from 'foldkit/html'
 
 import { uiShowcaseViewSourceHref } from '../../link'
 import type { TableOfContentsEntry } from '../../main'
@@ -16,7 +16,6 @@ import {
 import { uiSelectionSubmodelsRouter } from '../../route'
 import * as Snippet from '../../snippet'
 import {
-  type CopiedSnippets,
   type RenderCopyButton,
   highlightedCodeBlockFor,
 } from '../../view/codeBlock'
@@ -304,14 +303,12 @@ const keyboardEntries: ReadonlyArray<KeyboardEntry> = [
 // VIEW
 
 type ViewInputs = Readonly<{
-  copiedSnippets: CopiedSnippets
   renderCopyButton: RenderCopyButton
   renderHeadingLink: RenderHeadingLink
 }>
 
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
-  (model, { copiedSnippets, renderCopyButton, renderHeadingLink }): Html => {
-    const h = html<Message>()
+  (model, { renderCopyButton, renderHeadingLink }, h): Html => {
     const { heading, tableOfContentsEntryToHeader } =
       headingsFor(renderHeadingLink)
     const highlightedCodeBlock = highlightedCodeBlockFor(renderCopyButton)
@@ -375,6 +372,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           ...Listbox.basicDemo(
             model.listboxDemo,
             model.maybeListboxDemoSelectedItem,
+            h,
           ),
         ),
         highlightedCodeBlock(
@@ -387,7 +385,6 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           ),
           Snippet.uiListboxBasicRaw,
           'Copy listbox example to clipboard',
-          copiedSnippets,
           'mb-8',
         ),
         heading(
@@ -406,6 +403,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           ...Listbox.multiSelectDemo(
             model.listboxMultiDemo,
             model.listboxMultiDemoSelectedItems,
+            h,
           ),
         ),
         highlightedCodeBlock(
@@ -418,7 +416,6 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           ),
           Snippet.uiListboxMultiRaw,
           'Copy multi-select listbox example to clipboard',
-          copiedSnippets,
           'mb-8',
         ),
         heading(
@@ -437,6 +434,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           ...Listbox.groupedDemo(
             model.listboxGroupedDemo,
             model.maybeListboxGroupedDemoSelectedItem,
+            h,
           ),
         ),
         highlightedCodeBlock(
@@ -449,7 +447,6 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           ),
           Snippet.uiListboxGroupedRaw,
           'Copy grouped listbox example to clipboard',
-          copiedSnippets,
           'mb-8',
         ),
         heading(stylingHeader.level, stylingHeader.id, stylingHeader.text),

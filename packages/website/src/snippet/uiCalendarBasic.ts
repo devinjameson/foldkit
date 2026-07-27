@@ -3,7 +3,7 @@
 // update, and view definitions.
 import { Effect, Match as M, Option } from 'effect'
 import { Calendar, Command } from 'foldkit'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -103,10 +103,8 @@ GotCalendarMessage: ({ message }) => {
 // receives a discriminated `CalendarAttributes` whose variant matches the
 // calendar's current `viewMode`. Pattern-match on `_tag` to render the
 // day grid, the months grid, or the years grid:
-const view = (model: Model) => {
-  const h = html<Message>()
-
-  return h.submodel({
+const view = (model: Model, h: HtmlBuilder<Message>) =>
+  h.submodel({
     slotId: model.calendarDemo.id,
     model: model.calendarDemo,
     view: UiCalendar.view,
@@ -313,4 +311,3 @@ const view = (model: Model) => {
     },
     toParentMessage: message => GotCalendarMessage({ message }),
   })
-}

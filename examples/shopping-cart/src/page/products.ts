@@ -1,6 +1,5 @@
 import { Array, Effect, Match as M, Option, Schema as S } from 'effect'
 import { Command, Submodel } from 'foldkit'
-import { type Html, html } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { replaceUrl } from 'foldkit/navigation'
 import { evo } from 'foldkit/struct'
@@ -129,9 +128,7 @@ export type ViewInputs = Readonly<{
 }>
 
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
-  (model, { cart }): Html => {
-    const h = html<Message>()
-
+  (model, { cart }, h) => {
     const filteredProducts = model.searchText
       ? model.products.filter(product =>
           product.name.toLowerCase().includes(model.searchText.toLowerCase()),
@@ -148,20 +145,23 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
             h.search(
               [h.Class('mb-6')],
               [
-                Input.view<Message>({
-                  id: 'product-search',
-                  value: model.searchText,
-                  placeholder: 'Search products...',
-                  onInput: value => ChangedSearchInput({ value }),
-                  toView: attributes =>
-                    h.input([
-                      ...attributes.input,
-                      h.AriaLabel('Search products'),
-                      h.Class(
-                        'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
-                      ),
-                    ]),
-                }),
+                Input.view(
+                  {
+                    id: 'product-search',
+                    value: model.searchText,
+                    placeholder: 'Search products...',
+                    onInput: value => ChangedSearchInput({ value }),
+                    toView: attributes =>
+                      h.input([
+                        ...attributes.input,
+                        h.AriaLabel('Search products'),
+                        h.Class(
+                          'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
+                        ),
+                      ]),
+                  },
+                  h,
+                ),
               ],
             ),
             h.section(
@@ -189,37 +189,43 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
                       ],
                     ),
                     Cart.itemQuantity(product.id)(cart) === 0
-                      ? Button.view<Message>({
-                          onClick: ClickedAddToCart({ item: product }),
-                          toView: attributes =>
-                            h.button(
-                              [
-                                ...attributes.button,
-                                h.Class(
-                                  'bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium',
-                                ),
-                              ],
-                              ['Add to Cart'],
-                            ),
-                        })
+                      ? Button.view(
+                          {
+                            onClick: ClickedAddToCart({ item: product }),
+                            toView: attributes =>
+                              h.button(
+                                [
+                                  ...attributes.button,
+                                  h.Class(
+                                    'bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium',
+                                  ),
+                                ],
+                                ['Add to Cart'],
+                              ),
+                          },
+                          h,
+                        )
                       : h.div(
                           [h.Class('flex items-center gap-2')],
                           [
-                            Button.view<Message>({
-                              onClick: ClickedDecrementQuantity({
-                                itemId: product.id,
-                              }),
-                              toView: attributes =>
-                                h.button(
-                                  [
-                                    ...attributes.button,
-                                    h.Class(
-                                      'bg-gray-200 hover:bg-gray-300 text-gray-800 w-8 h-8 rounded flex items-center justify-center',
-                                    ),
-                                  ],
-                                  ['-'],
-                                ),
-                            }),
+                            Button.view(
+                              {
+                                onClick: ClickedDecrementQuantity({
+                                  itemId: product.id,
+                                }),
+                                toView: attributes =>
+                                  h.button(
+                                    [
+                                      ...attributes.button,
+                                      h.Class(
+                                        'bg-gray-200 hover:bg-gray-300 text-gray-800 w-8 h-8 rounded flex items-center justify-center',
+                                      ),
+                                    ],
+                                    ['-'],
+                                  ),
+                              },
+                              h,
+                            ),
                             h.span(
                               [
                                 h.Class(
@@ -228,21 +234,24 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
                               ],
                               [String(Cart.itemQuantity(product.id)(cart))],
                             ),
-                            Button.view<Message>({
-                              onClick: ClickedIncrementQuantity({
-                                itemId: product.id,
-                              }),
-                              toView: attributes =>
-                                h.button(
-                                  [
-                                    ...attributes.button,
-                                    h.Class(
-                                      'bg-gray-200 hover:bg-gray-300 text-gray-800 w-8 h-8 rounded flex items-center justify-center',
-                                    ),
-                                  ],
-                                  ['+'],
-                                ),
-                            }),
+                            Button.view(
+                              {
+                                onClick: ClickedIncrementQuantity({
+                                  itemId: product.id,
+                                }),
+                                toView: attributes =>
+                                  h.button(
+                                    [
+                                      ...attributes.button,
+                                      h.Class(
+                                        'bg-gray-200 hover:bg-gray-300 text-gray-800 w-8 h-8 rounded flex items-center justify-center',
+                                      ),
+                                    ],
+                                    ['+'],
+                                  ),
+                              },
+                              h,
+                            ),
                           ],
                         ),
                   ],

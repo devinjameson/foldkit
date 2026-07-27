@@ -1,7 +1,7 @@
-import { Html, html } from 'foldkit/html'
+import { Html, staticHtml } from 'foldkit/html'
 
-export const discord = <ParentMessage>(className = 'w-5 h-5'): Html => {
-  const h = html<ParentMessage>()
+export const discord = (className = 'w-5 h-5'): Html => {
+  const h = staticHtml
 
   return h.svg(
     [

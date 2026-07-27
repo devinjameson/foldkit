@@ -81,7 +81,7 @@ A Message named `Incremented` describes the resulting state change, not the user
 
 ### `view-named-after-namespace`
 
-A counter feature exporting `counter(model)` reads as `Counter.counter(model)` at call sites. Name the primary view function `view`, so call sites read `Counter.view(model)`, `Home.view(model)`, `Room.view(model)`. The namespace disambiguates; the function name carries the role.
+A counter feature exporting `counter(model)` reads as `Counter.counter(model)` at call sites. Name the primary view function `view`, so call sites read `Counter.view(model, h)`, `Home.view(model, h)`, `Room.view(model, h)`. The namespace disambiguates; the function name carries the role.
 
 ### `unearned-type-aliases`
 

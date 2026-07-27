@@ -1,9 +1,7 @@
-import { type Html, html } from 'foldkit/html'
+import { Html, staticHtml as h } from 'foldkit/html'
 
-export const chevronDown = (className: string = 'w-4 h-4'): Html => {
-  const h = html()
-
-  return h.svg(
+export const chevronDown = (className: string = 'w-4 h-4'): Html =>
+  h.svg(
     [
       h.AriaHidden(true),
       h.Class(className),
@@ -24,4 +22,3 @@ export const chevronDown = (className: string = 'w-4 h-4'): Html => {
       ),
     ],
   )
-}

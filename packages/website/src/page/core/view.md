@@ -53,13 +53,15 @@ Set neither and both fall back to the current URL, which is what a routed app us
 
 ## Typed HTML Helpers
 
-Foldkit’s HTML functions are typed to your Message type. This ensures event handlers only accept valid Messages from your application. Bind the factory once per module by calling `html<Message>()`, then reach for `h.div`, `h.OnClick`, and the rest off the returned record:
+Foldkit’s HTML functions are typed to your Message type. This ensures event handlers only accept valid Messages from your application. Every view receives `h`, the typed Html builder, alongside the Model: the runtime passes one to your root view, and `Submodel.defineView` passes one to each child view. Reach for `h.div`, `h.OnClick`, and the rest off it:
 
 ::Snippet{name="htmlHelpers" label="HTML helpers example"}
 
-This gives you strong type safety: if you try to pass an invalid Message to `h.OnClick`, TypeScript catches it at compile time. Each view module binds its own `h` against the Message type it dispatches.
+This gives you strong type safety: if you try to pass an invalid Message to `h.OnClick`, TypeScript catches it at compile time.
 
-In a child view that should be agnostic to its parent, take `ParentMessage` as a function generic and bind `html<ParentMessage>()` inside. The view stays decoupled from any particular parent and composes through the `toParentMessage` callback the parent supplies.
+Application code cannot construct a builder; `h` only enters a view as a parameter. That is what keeps the typing truthful. The builder is supplied by the render frame it will dispatch into, so its Message type cannot disagree with the boundary that routes its handlers. When you extract a view helper, take `h: HtmlBuilder<Message>` as its last parameter and let callers thread theirs through. A helper meant to work under any parent takes `ParentMessage` as a function generic with `h: HtmlBuilder<ParentMessage>`, staying decoupled from any particular parent and composing through the callbacks the parent supplies.
+
+For handler-free Html built where no view is running, typically a static fragment at module top level, `foldkit/html` exports `staticHtml`. It is typed `HtmlBuilder<never>`: elements and styling attributes work, and no event handler can be constructed with it.
 
 ## Event Handling
 

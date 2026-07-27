@@ -1,11 +1,10 @@
 import { Option } from 'effect'
-import { html } from 'foldkit/html'
+import { staticHtml } from 'foldkit/html'
 
 import * as Markdown from '@foldkit/markdown'
 
-import { type Message } from '../message'
 import { ctaLinks, infoCalloutBlocks, warningCalloutBlocks } from '../prose'
-import { type CopiedSnippets, highlightedCodeBlock } from '../view/codeBlock'
+import { highlightedCodeBlock } from '../view/codeBlock'
 import { islandAttributes } from './islandAttributes'
 import { type Slots, renderFaqSection, resolveDemo } from './slots'
 import { lookupSnippet } from './snippets'
@@ -36,14 +35,11 @@ const warnMissingSnippetOnce = createWarnOnce(
  * in the prose callouts; `Cta` lays its nested links out as an action row;
  * `Demo` drops in a live, interactive demo the page has pre-built and keyed by
  * name; `Faq` hands its rendered children to the page's collapsible shell. The
- * copy state and the page's slots both live in the app Model, so the views close
- * over `copiedSnippets` and `slots`.
+ * page's slots live in the app Model, so the views close over `slots`; the copy
+ * state rides inside the slots' `renderCopyButton`.
  */
-export const docIslands = (
-  copiedSnippets: CopiedSnippets,
-  slots: Slots<string>,
-): Markdown.Islands => {
-  const h = html<Message>()
+export const docIslands = (slots: Slots<string>): Markdown.Islands => {
+  const h = staticHtml
 
   return Markdown.islandsFor(islandAttributes, {
     Snippet: ({ name, label, class: className }) =>
@@ -59,9 +55,8 @@ export const docIslands = (
             label === undefined
               ? 'Copy snippet to clipboard'
               : `Copy ${label} to clipboard`,
-            copiedSnippets,
-            className ?? 'mb-8',
             slots.renderCopyButton,
+            className ?? 'mb-8',
           ),
       }),
 

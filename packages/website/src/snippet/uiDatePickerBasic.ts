@@ -3,7 +3,7 @@
 // update, and view definitions.
 import { Effect, Match as M, Option } from 'effect'
 import { Calendar, Command } from 'foldkit'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -119,9 +119,7 @@ GotDatePickerMessage: ({ message }) => {
 // `DatePicker.triggerId('date-picker-demo')` for a native `<label for>`. The
 // attribute is only emitted when provided, so the trigger never carries a
 // dangling `aria-labelledby`.
-const view = (model: Model) => {
-  const h = html<Message>()
-
+const view = (model: Model, h: HtmlBuilder<Message>) => {
   const labelId = 'date-picker-label'
 
   return h.div(

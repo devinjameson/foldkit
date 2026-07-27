@@ -3,7 +3,7 @@
 // update, and view definitions.
 import { Match as M, Option } from 'effect'
 import { Command } from 'foldkit'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -74,10 +74,8 @@ GotTooltipMessage: ({ message }) => {
 // an accessible name with `ariaLabel`. (Point `ariaLabelledBy` at a visible
 // label element instead when one exists.) The attribute is only emitted when
 // provided, so the trigger never carries a dangling `aria-labelledby`.
-const view = () => {
-  const h = html<Message>()
-
-  return h.submodel({
+const view = (h: HtmlBuilder<Message>) =>
+  h.submodel({
     slotId: 'save-button',
     model: model.tooltip,
     view: Tooltip.view,
@@ -114,4 +112,3 @@ const view = () => {
     },
     toParentMessage: message => GotTooltipMessage({ message }),
   })
-}

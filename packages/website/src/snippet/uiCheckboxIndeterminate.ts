@@ -2,7 +2,7 @@
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
 import { Schema as S } from 'effect'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -45,9 +45,7 @@ ToggledSelectAll: ({ isChecked }) => [
 
 // Inside your view function, compute the parent's checked and indeterminate
 // state from the children and pass isIndeterminate straight to Checkbox.view:
-const view = model => {
-  const h = html<Message>()
-
+const view = (model, h: HtmlBuilder<Message>) => {
   const isAllChecked = model.optionA && model.optionB
   const isNoneChecked = !model.optionA && !model.optionB
   const isIndeterminate = !isAllChecked && !isNoneChecked
@@ -62,24 +60,27 @@ const view = model => {
     }
   }
 
-  return Checkbox.view<Message>({
-    id: 'select-all',
-    isChecked: isAllChecked,
-    isIndeterminate,
-    onToggle: isChecked => ToggledSelectAll({ isChecked }),
-    toView: attributes =>
-      h.div(
-        [h.Class('flex items-center gap-2')],
-        [
-          h.button(
-            [...attributes.checkbox, h.Class('h-5 w-5 rounded border')],
-            resolveSelectAllMark(),
-          ),
-          h.label(
-            [...attributes.label, h.Class('text-sm')],
-            ['All notifications'],
-          ),
-        ],
-      ),
-  })
+  return Checkbox.view(
+    {
+      id: 'select-all',
+      isChecked: isAllChecked,
+      isIndeterminate,
+      onToggle: isChecked => ToggledSelectAll({ isChecked }),
+      toView: attributes =>
+        h.div(
+          [h.Class('flex items-center gap-2')],
+          [
+            h.button(
+              [...attributes.checkbox, h.Class('h-5 w-5 rounded border')],
+              resolveSelectAllMark(),
+            ),
+            h.label(
+              [...attributes.label, h.Class('text-sm')],
+              ['All notifications'],
+            ),
+          ],
+        ),
+    },
+    h,
+  )
 }

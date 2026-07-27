@@ -2,7 +2,7 @@ import clsx from 'clsx'
 import { Array, Option } from 'effect'
 import { Submodel } from 'foldkit'
 import { type CalendarDate } from 'foldkit/calendar'
-import { type Html, html } from 'foldkit/html'
+import type { Html } from 'foldkit/html'
 
 import { Button, Listbox } from '@foldkit/ui'
 
@@ -28,8 +28,7 @@ export const educationEntryView = Submodel.defineView<
   Education.Entry.Model,
   Education.Entry.Message,
   ViewInputs
->((model, viewInputs): Html => {
-  const h = html<Education.Entry.Message>()
+>((model, viewInputs, h): Html => {
   const { today } = viewInputs
 
   const showGraduationYear = !model.isCurrentlyEnrolled
@@ -94,53 +93,68 @@ export const educationEntryView = Submodel.defineView<
       h.div(
         [h.Class('grid grid-cols-2 gap-3')],
         [
-          inputField<Education.Entry.Message>({
-            id: `${model.id}-school`,
-            label: 'School',
-            field: model.school,
-            onInput: value => Education.Entry.UpdatedSchool({ value }),
-            placeholder: 'e.g. MIT',
-          }),
-          inputField<Education.Entry.Message>({
-            id: `${model.id}-degree`,
-            label: 'Degree',
-            field: model.degree,
-            onInput: value => Education.Entry.UpdatedDegree({ value }),
-            placeholder: "e.g. Bachelor's, Master's",
-          }),
+          inputField(
+            {
+              id: `${model.id}-school`,
+              label: 'School',
+              field: model.school,
+              onInput: value => Education.Entry.UpdatedSchool({ value }),
+              placeholder: 'e.g. MIT',
+            },
+            h,
+          ),
+          inputField(
+            {
+              id: `${model.id}-degree`,
+              label: 'Degree',
+              field: model.degree,
+              onInput: value => Education.Entry.UpdatedDegree({ value }),
+              placeholder: "e.g. Bachelor's, Master's",
+            },
+            h,
+          ),
         ],
       ),
-      inputField<Education.Entry.Message>({
-        id: `${model.id}-field`,
-        label: 'Field of Study',
-        field: model.fieldOfStudy,
-        onInput: value => Education.Entry.UpdatedFieldOfStudy({ value }),
-        placeholder: 'e.g. Computer Science',
-      }),
-      checkboxField<Education.Entry.Message>({
-        id: `${model.id}-enrolled`,
-        label: 'I’m currently enrolled',
-        isChecked: model.isCurrentlyEnrolled,
-        onToggle: isChecked =>
-          Education.Entry.ToggledCurrentlyEnrolled({ isChecked }),
-      }),
+      inputField(
+        {
+          id: `${model.id}-field`,
+          label: 'Field of Study',
+          field: model.fieldOfStudy,
+          onInput: value => Education.Entry.UpdatedFieldOfStudy({ value }),
+          placeholder: 'e.g. Computer Science',
+        },
+        h,
+      ),
+      checkboxField(
+        {
+          id: `${model.id}-enrolled`,
+          label: 'I’m currently enrolled',
+          isChecked: model.isCurrentlyEnrolled,
+          onToggle: isChecked =>
+            Education.Entry.ToggledCurrentlyEnrolled({ isChecked }),
+        },
+        h,
+      ),
       ...(showGraduationYear ? [graduationYearField] : []),
       h.div(
         [h.Class('flex justify-end')],
         [
-          Button.view<Education.Entry.Message>({
-            onClick: Education.Entry.ClickedRemoveSelf(),
-            toView: attributes =>
-              h.button(
-                [
-                  ...attributes.button,
-                  h.Class(
-                    'text-sm text-gray-400 hover:text-red-500 transition cursor-pointer',
-                  ),
-                ],
-                ['Remove education'],
-              ),
-          }),
+          Button.view(
+            {
+              onClick: Education.Entry.ClickedRemoveSelf(),
+              toView: attributes =>
+                h.button(
+                  [
+                    ...attributes.button,
+                    h.Class(
+                      'text-sm text-gray-400 hover:text-red-500 transition cursor-pointer',
+                    ),
+                  ],
+                  ['Remove education'],
+                ),
+            },
+            h,
+          ),
         ],
       ),
     ],

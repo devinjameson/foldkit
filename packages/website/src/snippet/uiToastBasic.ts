@@ -3,7 +3,7 @@
 // update, and view definitions.
 import { Match as M, Option, Schema as S } from 'effect'
 import { Command } from 'foldkit'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -96,10 +96,8 @@ ClickedSave: () => {
 // entryToView callback lays out each entry from its payload. The
 // component handles the <li> wrapper, hover-to-pause, and enter/leave
 // animations.
-const view = () => {
-  const h = html<Message>()
-
-  return h.submodel({
+const view = (h: HtmlBuilder<Message>) =>
+  h.submodel({
     slotId: 'app-toast',
     model: model.toast,
     view: Toast.view,
@@ -135,4 +133,3 @@ const view = () => {
     },
     toParentMessage: message => GotToastMessage({ message }),
   })
-}

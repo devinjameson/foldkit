@@ -1,6 +1,6 @@
 import { Array, Option, pipe } from 'effect'
 import { Canvas } from 'foldkit'
-import { Document, Html, html } from 'foldkit/html'
+import { Document, Html, HtmlBuilder } from 'foldkit/html'
 
 import { Button, Slider } from '@foldkit/ui'
 
@@ -298,10 +298,9 @@ const slider = (
   sliderModel: Slider.Model,
   value: number,
   toParentMessage: (message: Slider.Message) => Message,
-): Html => {
-  const h = html<Message>()
-
-  return h.submodel({
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.submodel({
     slotId: sliderModel.id,
     model: sliderModel,
     view: Slider.view,
@@ -345,21 +344,23 @@ const slider = (
     },
     toParentMessage,
   })
-}
 
-const controlButton = (label: string, onClick: Message): Html => {
-  const h = html<Message>()
-  return Button.view<Message>({
-    onClick,
-    toView: attributes =>
-      h.button([...attributes.button, h.Class(buttonClass)], [label]),
-  })
-}
+const controlButton = (
+  label: string,
+  onClick: Message,
+  h: HtmlBuilder<Message>,
+): Html =>
+  Button.view(
+    {
+      onClick,
+      toView: attributes =>
+        h.button([...attributes.button, h.Class(buttonClass)], [label]),
+    },
+    h,
+  )
 
-const controlsView = (model: Model): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const controlsView = (model: Model, h: HtmlBuilder<Message>): Html =>
+  h.div(
     [
       h.Class(
         'flex flex-wrap items-end gap-6 mt-6 px-6 py-4 rounded-xl ' +
@@ -370,8 +371,12 @@ const controlsView = (model: Model): Html => {
       h.div(
         [h.Class('flex items-center gap-3')],
         [
-          controlButton(playPauseLabel(model.isRunning), ClickedTogglePlay()),
-          controlButton('Reset', ClickedReset()),
+          controlButton(
+            playPauseLabel(model.isRunning),
+            ClickedTogglePlay(),
+            h,
+          ),
+          controlButton('Reset', ClickedReset(), h),
           h.span(
             [h.Class('text-xs uppercase tracking-widest text-white/40')],
             [
@@ -393,18 +398,20 @@ const controlsView = (model: Model): Html => {
         model.flowStrengthSlider,
         model.flowStrength,
         message => GotFlowStrengthSliderMessage({ message }),
+        h,
       ),
-      slider('Noise scale', model.noiseScaleSlider, model.noiseScale, message =>
-        GotNoiseScaleSliderMessage({ message }),
+      slider(
+        'Noise scale',
+        model.noiseScaleSlider,
+        model.noiseScale,
+        message => GotNoiseScaleSliderMessage({ message }),
+        h,
       ),
     ],
   )
-}
 
-const headerView = (): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const headerView = (h: HtmlBuilder<Message>): Html =>
+  h.div(
     [h.Class('flex flex-col items-center mb-6 text-center')],
     [
       h.h1(
@@ -423,24 +430,21 @@ const headerView = (): Html => {
       ),
     ],
   )
-}
 
-export const view = (model: Model): Document => {
-  const h = html<Message>()
-
-  return {
-    title: `Prism Field · ${model.particles.length} particles`,
-    body: h.div(
-      [
-        h.Class(
-          'flex flex-col items-center justify-center min-h-screen p-8 ' +
-            'bg-[radial-gradient(ellipse_at_top,_#1a0a2c_0%,_#04010a_55%,_#000_100%)] ' +
-            'text-white font-mono select-none',
-        ),
-      ],
-      [
-        headerView(),
-        Canvas.view<Message>({
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
+  title: `Prism Field · ${model.particles.length} particles`,
+  body: h.div(
+    [
+      h.Class(
+        'flex flex-col items-center justify-center min-h-screen p-8 ' +
+          'bg-[radial-gradient(ellipse_at_top,_#1a0a2c_0%,_#04010a_55%,_#000_100%)] ' +
+          'text-white font-mono select-none',
+      ),
+    ],
+    [
+      headerView(h),
+      Canvas.view(
+        {
           width: CANVAS_WIDTH,
           height: CANVAS_HEIGHT,
           shapes: sceneShapes(model),
@@ -449,9 +453,10 @@ export const view = (model: Model): Document => {
             'border border-white/10 cursor-crosshair',
           onPointerDown: ({ x, y }) => PressedCanvas({ x, y }),
           onPointerMove: ({ x, y }) => MovedPointer({ x, y }),
-        }),
-        controlsView(model),
-      ],
-    ),
-  }
-}
+        },
+        h,
+      ),
+      controlsView(model, h),
+    ],
+  ),
+})

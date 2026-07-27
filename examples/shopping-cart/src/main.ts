@@ -1,6 +1,6 @@
 import { Effect, Match as M, Option, Schema as S } from 'effect'
 import { Command, Runtime } from 'foldkit'
-import { Document, Html, html } from 'foldkit/html'
+import { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { UrlRequest, load, pushUrl } from 'foldkit/navigation'
 import { evo } from 'foldkit/struct'
@@ -222,9 +222,11 @@ export const update = (model: Model, message: Message): UpdateReturn =>
 
 // VIEW
 
-const navigationView = (currentRoute: AppRoute, cartCount: number): Html => {
-  const h = html<Message>()
-
+const navigationView = (
+  currentRoute: AppRoute,
+  cartCount: number,
+  h: HtmlBuilder<Message>,
+): Html => {
   const navLinkClassName = (isActive: boolean) =>
     `hover:bg-blue-600 font-medium px-3 py-1 rounded transition ${isActive ? 'bg-blue-700 bg-opacity-50' : ''}`
 
@@ -276,33 +278,23 @@ const navigationView = (currentRoute: AppRoute, cartCount: number): Html => {
   )
 }
 
-const productsView = (model: Model): Html => {
-  const h = html<Message>()
-  return h.submodel({
+const productsView = (model: Model, h: HtmlBuilder<Message>): Html =>
+  h.submodel({
     slotId: 'products',
     model: model.productsPage,
     view: Products.view,
     viewInputs: { cart: model.cart },
     toParentMessage: message => GotProductsMessage({ message }),
   })
-}
 
-const cartView = (model: Model): Html => {
-  return CartPage.view(model.cart)
-}
+const cartView = (model: Model, h: HtmlBuilder<Message>): Html =>
+  CartPage.view(model.cart, h)
 
-const checkoutView = (model: Model): Html => {
-  return Checkout.view(
-    model.cart,
-    model.deliveryInstructions,
-    model.orderPlaced,
-  )
-}
+const checkoutView = (model: Model, h: HtmlBuilder<Message>): Html =>
+  Checkout.view(model.cart, model.deliveryInstructions, model.orderPlaced, h)
 
-const notFoundView = (path: string): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const notFoundView = (path: string, h: HtmlBuilder<Message>): Html =>
+  h.div(
     [h.Class('max-w-4xl mx-auto px-4 text-center')],
     [
       h.h1(
@@ -322,7 +314,6 @@ const notFoundView = (path: string): Html => {
       ),
     ],
   )
-}
 
 const routeTitle = (route: Model['route']): string =>
   M.value(route).pipe(
@@ -330,15 +321,13 @@ const routeTitle = (route: Model['route']): string =>
     M.orElse(({ _tag }) => `${_tag} | Shopping Cart`),
   )
 
-export const view = (model: Model): Document => {
-  const h = html<Message>()
-
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
   const routeContent = M.value(model.route).pipe(
     M.tagsExhaustive({
-      Products: () => productsView(model),
-      Cart: () => cartView(model),
-      Checkout: () => checkoutView(model),
-      NotFound: ({ path }) => notFoundView(path),
+      Products: () => productsView(model, h),
+      Cart: () => cartView(model, h),
+      Checkout: () => checkoutView(model, h),
+      NotFound: ({ path }) => notFoundView(path, h),
     }),
   )
 
@@ -349,7 +338,7 @@ export const view = (model: Model): Document => {
       [
         h.header(
           [],
-          [navigationView(model.route, Cart.totalItems(model.cart))],
+          [navigationView(model.route, Cart.totalItems(model.cart), h)],
         ),
         h.main([h.Class('py-8')], [routeContent]),
       ],

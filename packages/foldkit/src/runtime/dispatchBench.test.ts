@@ -1,7 +1,7 @@
 import { Effect, Match as M, Predicate, Schema as S } from 'effect'
 import { describe, it } from 'vitest'
 
-import { Document, __requireDispatch, html } from '../html/index.js'
+import { Document, __htmlBuilder, __requireDispatch } from '../html/index.js'
 import { m } from '../message/index.js'
 import { makeApplication } from './runtime.js'
 
@@ -49,7 +49,7 @@ const view = (model: Model): Document => {
     captureDispatch(__requireDispatch())
     captureDispatch = null
   }
-  const h = html<Message>()
+  const h = __htmlBuilder<Message>()
   return {
     title: 'bench',
     body: h.div([], [model.count.toString()]),

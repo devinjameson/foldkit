@@ -40,7 +40,11 @@ import {
   requireUnmountResolver,
   setRuntime,
 } from './runtimeSingleton.js'
-import { submodel } from './submodel.js'
+import {
+  type AnySubmodelView,
+  type SubmodelConfig,
+  submodel,
+} from './submodel.js'
 
 export { createKeyedLazy, createLazy } from './lazy.js'
 export {
@@ -50,8 +54,12 @@ export {
 export type { BoundaryRegistry } from './boundary.js'
 export { childAttributes } from './childAttribute.js'
 export type { ChildAttribute } from './childAttribute.js'
-export { defineView, submodel } from './submodel.js'
-export type { SubmodelConfig, SubmodelView } from './submodel.js'
+export { defineView } from './submodel.js'
+export type {
+  AnySubmodelView,
+  SubmodelConfig,
+  SubmodelView,
+} from './submodel.js'
 
 /** Pushes a dispatch and runtime context frame for the duration of a render.
  *  The runtime calls this immediately before invoking a user `view` and
@@ -4409,29 +4417,111 @@ const htmlAttributes = <Message>(): HtmlAttributes<Message> => ({
   OnUnmount: (message: Message) => OnUnmount({ message }),
 })
 
-const buildHtmlFactory = <Message>() => ({
+declare const messageUniverse: unique symbol
+
+/**
+ * Phantom marker carrying the builder's Message universe invariantly, so a
+ * builder from the wrong frame is rejected on this property rather than deep
+ * inside the structural comparison of every element constructor. It exists only
+ * to keep the diagnostic short and pointed at the cause.
+ */
+type MessageUniverse<Message> = Readonly<{
+  [messageUniverse]: (message: Message) => Message
+}>
+
+/**
+ * The typed Html builder a view builds DOM with: all HTML, SVG, and MathML
+ * element constructors, attribute constructors, a `keyed` helper for keyed
+ * elements, `empty` for rendering nothing, and `submodel` for embedding a
+ * child Submodel.
+ *
+ * A builder cannot be constructed by application code. The runtime supplies
+ * it to each view alongside the model, typed by the Message universe of the
+ * frame that view renders in: the app's Message for the root view, the
+ * Submodel's own Message inside a `Submodel.defineView`. Used in the frame
+ * that supplied it, a handler built with it carries exactly the Messages that
+ * frame's dispatcher can route, so a Message from another universe (the
+ * classic case: a shared helper building an app-level Message inside a
+ * Submodel) is a compile error at the handler call site.
+ *
+ * The type scopes where a builder is obtained, not where it is used. Carrying
+ * one into another frame, by storing it or handing the builder itself to a
+ * child through `viewInputs`, still compiles and still builds handlers that
+ * frame cannot route. Thread `h` as a parameter; never store it.
+ *
+ * Pass `h` along as an ordinary parameter when extracting view helpers; a
+ * memoized helper receives it through the `createLazy` args array. When a
+ * child must render markup that belongs to an ancestor, the ancestor passes a
+ * renderer that already closed over its own builder, not the builder, so the
+ * handlers resolve in the ancestor's boundary. For handler-free Html built at
+ * module top level, use {@link staticHtml}.
+ */
+export type HtmlBuilder<Message> = MessageUniverse<Message> &
+  HtmlElements<Message> &
+  HtmlAttributes<Message> &
+  Readonly<{
+    empty: null
+    keyed: (
+      tagName: TagName,
+    ) => (
+      key: PropertyKey,
+      attributes?: ReadonlyArray<Attribute<Message> | ChildAttribute>,
+      children?: ReadonlyArray<Child>,
+    ) => Html
+    submodel: <View extends AnySubmodelView>(
+      config: SubmodelConfig<View, Message>,
+    ) => Html
+  }>
+
+const buildHtmlFactory = <Message>(): Omit<
+  HtmlBuilder<Message>,
+  typeof messageUniverse
+> => ({
   ...htmlElements<Message>(),
   ...htmlAttributes<Message>(),
   empty: null,
   keyed: keyed<Message>(),
-  submodel,
+  submodel: <View extends AnySubmodelView>(
+    config: SubmodelConfig<View, Message>,
+  ) => submodel(config, cachedHtmlBuilder),
 })
 
-const cachedHtmlFactory = buildHtmlFactory<unknown>()
+// NOTE: the Message type parameter is erased at runtime and the element and
+// attribute constructors carry no per-program state (dispatch is read from
+// the runtime singleton frame at call time), so one process-wide builder
+// object serves every frame. Handing out the singleton under a frame's
+// Message type changes the static type and nothing else, so the same object
+// reaches every view. That keeps the builder referentially stable across
+// renders, which `createLazy`'s `===` args comparison relies on when `h` is
+// passed through a memoized helper's args array.
+const cachedHtmlBuilder: HtmlBuilder<unknown> =
+  /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+  buildHtmlFactory<unknown>() as HtmlBuilder<unknown>
+
+/** @internal Returns the process-wide builder singleton retyped to a frame's
+ *  Message. Only the runtime, the Scene test harness, and the framework's own
+ *  tests call this, each immediately before invoking a view under the frame
+ *  that Message belongs to. `h.submodel` does not: it receives the singleton
+ *  as a parameter, which is what keeps `index.ts` and `submodel.ts` free of a
+ *  runtime import cycle. Application code receives builders exclusively as
+ *  view parameters. */
+export const __htmlBuilder = <Message>(): HtmlBuilder<Message> =>
+  /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+  cachedHtmlBuilder as HtmlBuilder<Message>
 
 /**
- * Returns all HTML, SVG, and MathML element constructors, attribute
- * constructors, a `keyed` helper for keyed elements, and `empty` for
- * rendering nothing.
+ * Builder for Html that never dispatches: its Message type is `never`, so
+ * event-handler attributes cannot be constructed with it. Use it for static
+ * fragments built outside a view, typically at module top level, where no
+ * runtime frame exists:
  *
- * The returned object is a process-wide singleton. The `Message` type
- * parameter is erased at runtime, and the element and attribute constructors
- * carry no per-program state (dispatch is read from the runtime singleton at
- * call time), so calling `html()` repeatedly from inside view functions does
- * not allocate a fresh object.
+ * ```ts
+ * import { staticHtml as h } from 'foldkit/html'
+ *
+ * const badge = h.span([h.Class('badge')], ['beta'])
+ * ```
+ *
+ * Inside a view, prefer the view's own `h` parameter; reach for
+ * `staticHtml` only where no builder is in scope.
  */
-export const html = <Message = never>(): ReturnType<
-  typeof buildHtmlFactory<Message>
-> =>
-  /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-  cachedHtmlFactory as ReturnType<typeof buildHtmlFactory<Message>>
+export const staticHtml: HtmlBuilder<never> = __htmlBuilder<never>()

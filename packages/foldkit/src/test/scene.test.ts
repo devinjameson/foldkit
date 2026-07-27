@@ -1,7 +1,10 @@
 import { Option, pipe } from 'effect'
 import { describe, expect, test } from 'vitest'
 
-import { html as attributeHtml } from '../html/index.js'
+import {
+  type HtmlBuilder,
+  __htmlBuilder as attributeHtml,
+} from '../html/index.js'
 import { h } from '../snabbdom/index.js'
 import type { VNode } from '../snabbdom/index.js'
 import { defineView } from '../submodel/public.js'
@@ -62,12 +65,10 @@ import {
 } from './apps/logoutButton.js'
 import {
   CompletedFocusButton,
-  FailedMountSidebar,
   FocusButton,
   MeasurePanel,
   MeasuredPanel,
-  ClickedIncrement as MountClickedIncrement,
-  ClickedToggle as MountClickedToggle,
+  type Message as MountPanelMessage,
   ScrollList,
   ScrolledTo,
   initialModel as mountInitialModel,
@@ -1789,7 +1790,7 @@ describe('scene with expect', () => {
       username: 'alice',
     }
     Scene.scene(
-      { update, view: () => view(loggedInModel) },
+      { update, view: (_model, h) => view(loggedInModel, h) },
       Scene.with(loggedInModel),
       Scene.expect(Scene.role('status')).not.toBeEmpty(),
     )
@@ -3009,9 +3010,12 @@ describe('scene mounts', () => {
   })
 
   test('mounts on view returning Document are tracked', () => {
-    const documentView = (model: typeof mountInitialModel) => ({
+    const documentView = (
+      model: typeof mountInitialModel,
+      h: HtmlBuilder<MountPanelMessage>,
+    ) => ({
       title: 'Mount panel',
-      body: mountView(model),
+      body: mountView(model, h),
     })
 
     Scene.scene(
@@ -3024,16 +3028,10 @@ describe('scene mounts', () => {
 
   test('a pending mount whose element disappears must be acknowledged with expectEnded', () => {
     const openModel = { ...mountInitialModel, isOpen: true }
-    type Message =
-      | typeof MountClickedToggle.Type
-      | typeof CompletedFocusButton.Type
-      | typeof MeasuredPanel.Type
-      | typeof FailedMountSidebar.Type
-      | typeof MountClickedIncrement.Type
 
     const closingUpdate = (
       model: typeof mountInitialModel,
-      message: Message,
+      message: MountPanelMessage,
     ): readonly [typeof mountInitialModel, ReadonlyArray<never>] =>
       message._tag === 'CompletedFocusButton'
         ? [{ ...model, isOpen: false }, []]
@@ -3066,16 +3064,10 @@ describe('scene mounts', () => {
 
   test('an unacknowledged unmount throws at end of scene', () => {
     const openModel = { ...mountInitialModel, isOpen: true }
-    type Message =
-      | typeof MountClickedToggle.Type
-      | typeof CompletedFocusButton.Type
-      | typeof MeasuredPanel.Type
-      | typeof FailedMountSidebar.Type
-      | typeof MountClickedIncrement.Type
 
     const closingUpdate = (
       model: typeof mountInitialModel,
-      message: Message,
+      message: MountPanelMessage,
     ): readonly [typeof mountInitialModel, ReadonlyArray<never>] =>
       message._tag === 'CompletedFocusButton'
         ? [{ ...model, isOpen: false }, []]
@@ -3147,7 +3139,7 @@ describe('scene mounts', () => {
     Scene.scene(
       {
         update: mountUpdate,
-        view: () => mountScrollListView(offset),
+        view: (_model, h) => mountScrollListView(offset, h),
       },
       Scene.with(mountInitialModel),
       Scene.Mount.expectHas(ScrollList({ offset })),
@@ -3161,7 +3153,7 @@ describe('scene mounts', () => {
       Scene.scene(
         {
           update: mountUpdate,
-          view: () => mountScrollListView(offset),
+          view: (_model, h) => mountScrollListView(offset, h),
         },
         Scene.with(mountInitialModel),
         Scene.Mount.expectHas(ScrollList({ offset: 999 })),
@@ -3174,7 +3166,7 @@ describe('scene mounts', () => {
     Scene.scene(
       {
         update: mountUpdate,
-        view: () => mountScrollListView(offset),
+        view: (_model, h) => mountScrollListView(offset, h),
       },
       Scene.with(mountInitialModel),
       Scene.Mount.expectHas(ScrollList),
@@ -3187,7 +3179,7 @@ describe('scene mounts', () => {
       Scene.scene(
         {
           update: mountUpdate,
-          view: () => mountScrollListView(240),
+          view: (_model, h) => mountScrollListView(240, h),
         },
         Scene.with(mountInitialModel),
         Scene.Mount.resolve(

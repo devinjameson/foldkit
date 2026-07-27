@@ -2,7 +2,7 @@ import { Effect, Match as M, Option, Schema as S } from 'effect'
 
 import * as Command from '../../command/index.js'
 import * as File from '../../file/index.js'
-import { type Html, html } from '../../html/index.js'
+import type { Html, HtmlBuilder } from '../../html/index.js'
 import { m } from '../../message/index.js'
 import { evo } from '../../struct/index.js'
 
@@ -115,9 +115,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
 
 // VIEW
 
-const previewView = (model: Model): Html => {
-  const h = html<Message>()
-
+const previewView = (model: Model, h: HtmlBuilder<Message>): Html => {
   return Option.match(model.maybePreviewDataUrl, {
     onSome: dataUrl => h.img([h.Src(dataUrl), h.Alt('Resume preview')]),
     onNone: () =>
@@ -135,9 +133,7 @@ const previewView = (model: Model): Html => {
   })
 }
 
-export const view = (model: Model): Html => {
-  const h = html<Message>()
-
+export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
   return h.div(
     [h.Class('resume-upload')],
     [
@@ -149,7 +145,7 @@ export const view = (model: Model): Html => {
             [h.AriaLabel('Selected resume')],
             [
               h.p([h.Class('resume-name')], [File.name(file)]),
-              previewView(model),
+              previewView(model, h),
               h.button([h.OnClick(ClickedRemoveResume())], ['Remove']),
             ],
           ),

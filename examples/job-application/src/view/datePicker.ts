@@ -1,6 +1,6 @@
 import { Match as M, Option } from 'effect'
 import { type CalendarDate } from 'foldkit/calendar'
-import { type Html, html } from 'foldkit/html'
+import { type Html, staticHtml as h } from 'foldkit/html'
 
 import { Calendar } from '@foldkit/ui'
 
@@ -18,10 +18,8 @@ export const backdropClassName = 'fixed inset-0'
 export const triggerContent = (
   maybeDate: Option.Option<CalendarDate>,
   placeholder: string,
-): Html => {
-  const h = html()
-
-  return h.div(
+): Html =>
+  h.div(
     [h.Class('flex w-full items-center justify-between gap-2')],
     [
       Option.match(maybeDate, {
@@ -31,7 +29,6 @@ export const triggerContent = (
       h.span([h.Class('text-gray-400 shrink-0')], [chevronDown()]),
     ],
   )
-}
 
 const calendarWrapperClassName =
   'flex flex-col gap-3 select-none min-w-[248px] min-h-[260px]'
@@ -53,10 +50,8 @@ const monthYearGridClassName =
 const monthYearButtonClassName =
   'flex h-full w-full items-center justify-center rounded-md text-sm text-gray-900 tabular-nums cursor-pointer hover:bg-gray-100 group-data-[today]:ring-1 group-data-[today]:ring-gray-400 group-data-[selected]:bg-indigo-600 group-data-[selected]:text-white! group-data-[selected]:hover:bg-indigo-600 group-data-[focused]:outline-2 group-data-[focused]:outline-offset-2 group-data-[focused]:outline-indigo-500 group-data-[disabled]:cursor-not-allowed group-data-[disabled]:opacity-40'
 
-export const calendarView = (attributes: Calendar.CalendarAttributes): Html => {
-  const h = html()
-
-  return M.value(attributes).pipe(
+export const calendarView = (attributes: Calendar.CalendarAttributes): Html =>
+  M.value(attributes).pipe(
     M.tagsExhaustive({
       Days: days =>
         h.div(
@@ -210,4 +205,3 @@ export const calendarView = (attributes: Calendar.CalendarAttributes): Html => {
         ),
     }),
   )
-}

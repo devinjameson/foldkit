@@ -1,5 +1,5 @@
 import { Submodel } from 'foldkit'
-import { Html, html } from 'foldkit/html'
+import type { Html } from 'foldkit/html'
 
 import { uiShowcaseViewSourceHref } from '../../link'
 import type { TableOfContentsEntry } from '../../main'
@@ -16,7 +16,6 @@ import {
 import { uiAnimationRouter } from '../../route'
 import * as Snippet from '../../snippet'
 import {
-  type CopiedSnippets,
   type RenderCopyButton,
   highlightedCodeBlockFor,
 } from '../../view/codeBlock'
@@ -259,14 +258,12 @@ const keyboardEntries: ReadonlyArray<KeyboardEntry> = [
 // VIEW
 
 type ViewInputs = Readonly<{
-  copiedSnippets: CopiedSnippets
   renderCopyButton: RenderCopyButton
   renderHeadingLink: RenderHeadingLink
 }>
 
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
-  (model, { copiedSnippets, renderCopyButton, renderHeadingLink }): Html => {
-    const h = html<Message>()
+  (model, { renderCopyButton, renderHeadingLink }, h): Html => {
     const { heading, tableOfContentsEntryToHeader } =
       headingsFor(renderHeadingLink)
     const highlightedCodeBlock = highlightedCodeBlockFor(renderCopyButton)
@@ -305,7 +302,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           inlineCode('anchor'),
           ' to position the panel relative to the button. The panel can hold any content: links, forms, or informational text.',
         ),
-        demoContainer(...Popover.basicDemo(model.popoverBasicDemo)),
+        demoContainer(...Popover.basicDemo(model.popoverBasicDemo, h)),
         highlightedCodeBlock(
           h.div(
             [
@@ -316,7 +313,6 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           ),
           Snippet.uiPopoverBasicRaw,
           'Copy popover example to clipboard',
-          copiedSnippets,
           'mb-8',
         ),
         heading(
@@ -329,7 +325,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           inlineCode('isAnimated: true'),
           ' at init for animation coordination.',
         ),
-        demoContainer(...Popover.animatedDemo(model.popoverAnimatedDemo)),
+        demoContainer(...Popover.animatedDemo(model.popoverAnimatedDemo, h)),
         heading(
           Popover.nestedHeader.level,
           Popover.nestedHeader.id,
@@ -346,6 +342,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           ...Popover.nestedDemo(
             model.popoverNestedParentDemo,
             model.popoverNestedChildDemo,
+            h,
           ),
         ),
         highlightedCodeBlock(
@@ -358,7 +355,6 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           ),
           Snippet.uiPopoverNestedRaw,
           'Copy nested popovers example to clipboard',
-          copiedSnippets,
           'mb-8',
         ),
         heading(stylingHeader.level, stylingHeader.id, stylingHeader.text),

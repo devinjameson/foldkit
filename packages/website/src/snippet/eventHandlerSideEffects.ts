@@ -1,4 +1,4 @@
-const h = html<Message>()
+// Inside a view, with its builder `h` in scope.
 
 // OnKeyDownPreventDefault: calls event.preventDefault()
 // inline and dispatches the Message when the function

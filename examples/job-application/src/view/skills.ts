@@ -1,5 +1,5 @@
 import { Submodel } from 'foldkit'
-import { type Html, html } from 'foldkit/html'
+import type { Html } from 'foldkit/html'
 
 import { Button } from '@foldkit/ui'
 
@@ -7,10 +7,8 @@ import { Skills } from '../step'
 import { skillEntryView } from './skillEntry'
 
 export const skillsView = Submodel.defineView<Skills.Model, Skills.Message>(
-  (model): Html => {
-    const h = html<Skills.Message>()
-
-    return h.div(
+  (model, h): Html =>
+    h.div(
       [h.Class('space-y-6')],
       [
         h.p(
@@ -29,20 +27,22 @@ export const skillsView = Submodel.defineView<Skills.Model, Skills.Message>(
             }),
           ),
         ),
-        Button.view<Skills.Message>({
-          onClick: Skills.ClickedAddEntry(),
-          toView: attributes =>
-            h.button(
-              [
-                ...attributes.button,
-                h.Class(
-                  'w-full rounded-lg border-2 border-dashed border-gray-300 px-4 py-3 text-sm font-medium text-gray-600 hover:border-indigo-400 hover:text-indigo-600 transition cursor-pointer',
-                ),
-              ],
-              ['+ Add Skill'],
-            ),
-        }),
+        Button.view(
+          {
+            onClick: Skills.ClickedAddEntry(),
+            toView: attributes =>
+              h.button(
+                [
+                  ...attributes.button,
+                  h.Class(
+                    'w-full rounded-lg border-2 border-dashed border-gray-300 px-4 py-3 text-sm font-medium text-gray-600 hover:border-indigo-400 hover:text-indigo-600 transition cursor-pointer',
+                  ),
+                ],
+                ['+ Add Skill'],
+              ),
+          },
+          h,
+        ),
       ],
-    )
-  },
+    ),
 )

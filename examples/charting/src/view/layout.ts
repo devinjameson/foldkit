@@ -1,7 +1,7 @@
 import { Array, Option } from 'effect'
 import { AsyncData } from 'foldkit'
 import type { Html } from 'foldkit/html'
-import { html } from 'foldkit/html'
+import { HtmlBuilder } from 'foldkit/html'
 
 import { Button } from '@foldkit/ui'
 
@@ -11,8 +11,7 @@ import type { Model } from '../model'
 import { chartPanelView } from './chart'
 import { sidebarView } from './sidebar'
 
-export const headerView = (model: Model): Html => {
-  const h = html<Message>()
+export const headerView = (model: Model, h: HtmlBuilder<Message>): Html => {
   const isRefreshing = AsyncData.isRefreshing(model.telemetry)
   const isLoading = AsyncData.isLoading(model.telemetry)
 
@@ -44,20 +43,23 @@ export const headerView = (model: Model): Html => {
           ),
         ],
       ),
-      Button.view<Message>({
-        onClick: ClickedRefresh(),
-        isDisabled: isRefreshing || isLoading,
-        toView: attributes =>
-          h.button(
-            [
-              ...attributes.button,
-              h.Class(
-                'inline-flex min-h-10 items-center justify-center rounded-md bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50',
-              ),
-            ],
-            [isRefreshing ? 'Refreshing' : 'Refresh'],
-          ),
-      }),
+      Button.view(
+        {
+          onClick: ClickedRefresh(),
+          isDisabled: isRefreshing || isLoading,
+          toView: attributes =>
+            h.button(
+              [
+                ...attributes.button,
+                h.Class(
+                  'inline-flex min-h-10 items-center justify-center rounded-md bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50',
+                ),
+              ],
+              [isRefreshing ? 'Refreshing' : 'Refresh'],
+            ),
+        },
+        h,
+      ),
     ],
   )
 }
@@ -78,18 +80,19 @@ const dashboardBanner = (
       }),
   })
 
-export const telemetryStateView = (model: Model): Html =>
+export const telemetryStateView = (
+  model: Model,
+  h: HtmlBuilder<Message>,
+): Html =>
   AsyncData.matchData(model.telemetry, {
-    onEmpty: () => loadingView(),
-    onFailure: error => failureView(error),
+    onEmpty: () => loadingView(h),
+    onFailure: error => failureView(error, h),
     onData: data =>
-      dashboardShellView(model, data, dashboardBanner(model.telemetry)),
+      dashboardShellView(model, data, dashboardBanner(model.telemetry), h),
   })
 
-export const loadingView = (): Html => {
-  const h = html<Message>()
-
-  return h.section(
+export const loadingView = (h: HtmlBuilder<Message>): Html =>
+  h.section(
     [
       h.Class(
         'grid flex-1 place-items-center rounded-md border border-zinc-200 bg-white px-6 py-16',
@@ -117,12 +120,9 @@ export const loadingView = (): Html => {
       ),
     ],
   )
-}
 
-export const failureView = (error: string): Html => {
-  const h = html<Message>()
-
-  return h.section(
+export const failureView = (error: string, h: HtmlBuilder<Message>): Html =>
+  h.section(
     [
       h.Class(
         'grid flex-1 place-items-center rounded-md border border-rose-200 bg-rose-50 px-6 py-16 text-center',
@@ -138,41 +138,41 @@ export const failureView = (error: string): Html => {
             ['Could not fetch telemetry'],
           ),
           h.p([h.Class('mt-2 text-sm text-rose-800')], [error]),
-          Button.view<Message>({
-            onClick: ClickedRetry(),
-            toView: attributes =>
-              h.button(
-                [
-                  ...attributes.button,
-                  h.Class(
-                    'mt-5 inline-flex min-h-10 items-center justify-center rounded-md bg-rose-700 px-4 text-sm font-medium text-white hover:bg-rose-800',
-                  ),
-                ],
-                ['Retry'],
-              ),
-          }),
+          Button.view(
+            {
+              onClick: ClickedRetry(),
+              toView: attributes =>
+                h.button(
+                  [
+                    ...attributes.button,
+                    h.Class(
+                      'mt-5 inline-flex min-h-10 items-center justify-center rounded-md bg-rose-700 px-4 text-sm font-medium text-white hover:bg-rose-800',
+                    ),
+                  ],
+                  ['Retry'],
+                ),
+            },
+            h,
+          ),
         ],
       ),
     ],
   )
-}
 
 export const dashboardShellView = (
   model: Model,
   telemetry: Telemetry,
   maybeBanner: Option.Option<string>,
-): Html => {
-  const h = html<Message>()
-
-  return h.section(
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.section(
     [
       h.Class(
         'grid flex-1 gap-5 md:grid-cols-[18rem_minmax(0,1fr)] lg:grid-cols-[20rem_minmax(0,1fr)]',
       ),
     ],
     [
-      sidebarView(model, telemetry, maybeBanner),
-      chartPanelView(model, telemetry),
+      sidebarView(model, telemetry, maybeBanner, h),
+      chartPanelView(model, telemetry, h),
     ],
   )
-}

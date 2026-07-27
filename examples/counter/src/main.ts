@@ -1,6 +1,6 @@
 import { Match as M, Schema as S } from 'effect'
 import { Command, Runtime } from 'foldkit'
-import { Document, html } from 'foldkit/html'
+import { Document, HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 
 import { Button } from '@foldkit/ui'
@@ -49,49 +49,54 @@ export const init: Runtime.ApplicationInit<Model, Message> = () => [
 
 // VIEW
 
-export const view = (model: Model): Document => {
-  const h = html<Message>()
-
-  return {
-    title: `Counter: ${model.count}`,
-    body: h.div(
-      [
-        h.Class(
-          'min-h-screen bg-white flex flex-col items-center justify-center gap-6 p-6',
-        ),
-      ],
-      [
-        h.p(
-          [h.Class('text-6xl font-bold text-gray-800')],
-          [model.count.toString()],
-        ),
-        h.div(
-          [h.Class('flex flex-wrap justify-center gap-4')],
-          [
-            Button.view<Message>({
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
+  title: `Counter: ${model.count}`,
+  body: h.div(
+    [
+      h.Class(
+        'min-h-screen bg-white flex flex-col items-center justify-center gap-6 p-6',
+      ),
+    ],
+    [
+      h.p(
+        [h.Class('text-6xl font-bold text-gray-800')],
+        [model.count.toString()],
+      ),
+      h.div(
+        [h.Class('flex flex-wrap justify-center gap-4')],
+        [
+          Button.view(
+            {
               onClick: ClickedDecrement(),
               toView: attributes =>
                 h.button([...attributes.button, h.Class(buttonStyle)], ['-']),
-            }),
-            Button.view<Message>({
+            },
+            h,
+          ),
+          Button.view(
+            {
               onClick: ClickedReset(),
               toView: attributes =>
                 h.button(
                   [...attributes.button, h.Class(buttonStyle)],
                   ['Reset'],
                 ),
-            }),
-            Button.view<Message>({
+            },
+            h,
+          ),
+          Button.view(
+            {
               onClick: ClickedIncrement(),
               toView: attributes =>
                 h.button([...attributes.button, h.Class(buttonStyle)], ['+']),
-            }),
-          ],
-        ),
-      ],
-    ),
-  }
-}
+            },
+            h,
+          ),
+        ],
+      ),
+    ],
+  ),
+})
 
 // STYLE
 

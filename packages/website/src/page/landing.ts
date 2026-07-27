@@ -11,7 +11,7 @@ import {
   pipe,
 } from 'effect'
 import { Mount } from 'foldkit'
-import { Html, html } from 'foldkit/html'
+import { Html, type HtmlBuilder, staticHtml } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { foldkitVersion } from 'virtual:landing-data'
 
@@ -37,7 +37,9 @@ import {
 import * as Snippet from '../snippet'
 import {
   type CopiedSnippets,
+  type RenderCopyButton,
   codeBlock,
+  defaultRenderCopyButton,
   highlightedCodeBlock,
 } from '../view/codeBlock'
 import { githubStarBadge } from '../view/shared'
@@ -48,7 +50,7 @@ import { exampleAppCount } from './examples'
 export const HERO_SECTION_ID = 'hero'
 
 const glyph = (symbol: string, offsetY?: string): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.div(
     [
@@ -88,13 +90,19 @@ export const view = (
   playgroundMenuView: Html,
   aiHeadingToggleCount: number,
   maybeGitHubStarCount: Option.Option<number>,
+  h: HtmlBuilder<Message>,
 ): Html => {
-  const h = html<Message>()
+  const renderCopyButton = defaultRenderCopyButton(copiedSnippets, h)
 
   return h.div(
     [h.Class('isolate overflow-x-hidden')],
     [
-      heroSection(copiedSnippets, playgroundMenuView, maybeGitHubStarCount),
+      heroSection(
+        renderCopyButton,
+        playgroundMenuView,
+        maybeGitHubStarCount,
+        h,
+      ),
       glyph('{ }'),
       promiseSection(),
       glyph('=>'),
@@ -104,7 +112,7 @@ export const view = (
       glyph('[ ]'),
       includedSection(),
       glyph('::'),
-      testingSection(copiedSnippets),
+      testingSection(renderCopyButton),
       glyph('??'),
       devToolsSection(),
       glyph('~~'),
@@ -124,7 +132,7 @@ export const view = (
 const viewOnGitHubButton = (
   maybeGitHubStarCount: Option.Option<number>,
 ): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.a(
     [h.Href(Link.github), h.Class('cta-secondary')],
@@ -179,12 +187,11 @@ const ObserveHeroVisibility = Mount.defineStream(
 const INSTALL_COMMAND = 'npx create-foldkit-app@latest'
 
 const heroSection = (
-  copiedSnippets: CopiedSnippets,
+  renderCopyButton: RenderCopyButton,
   playgroundMenuView: Html,
   maybeGitHubStarCount: Option.Option<number>,
+  h: HtmlBuilder<Message>,
 ): Html => {
-  const h = html<Message>()
-
   return h.section(
     [
       h.Id(HERO_SECTION_ID),
@@ -245,7 +252,7 @@ const heroSection = (
               codeBlock(
                 INSTALL_COMMAND,
                 'Copy install command',
-                copiedSnippets,
+                renderCopyButton,
                 'max-w-fit [&_pre]:text-xs [&_pre]:md:text-sm',
               ),
             ],
@@ -270,7 +277,7 @@ const heroSection = (
 // POWERED BY
 
 const poweredByItem = (text: string): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.li(
     [h.Class('flex items-start gap-3')],
@@ -285,7 +292,7 @@ const poweredByItem = (text: string): Html => {
 }
 
 const poweredBySection = (): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.section(
     [h.Id('powered-by-effect'), h.Class('landing-section py-10 md:py-14')],
@@ -347,7 +354,7 @@ const poweredBySection = (): Html => {
 // THE PROMISE
 
 const pillarCard = (icon: Html, title: string, description: string): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.div(
     [h.Class('landing-card')],
@@ -366,7 +373,7 @@ const pillarCard = (icon: Html, title: string, description: string): Html => {
 }
 
 const promiseSection = (): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.section(
     [h.Id('the-promise'), h.Class('landing-section')],
@@ -421,7 +428,7 @@ const promiseSection = (): Html => {
 // DEMOS
 
 const demoSection = (demoTabsView: Html): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.section(
     [h.Id('peek-inside'), h.Class('landing-section')],
@@ -462,7 +469,7 @@ const includedFeature = (
   description: ReadonlyArray<string | Html>,
   link?: Readonly<{ href: string; label: string }>,
 ): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.div(
     [h.Class('landing-card')],
@@ -507,7 +514,7 @@ const includedFeature = (
 }
 
 const includedSection = (): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.section(
     [h.Id('batteries-included'), h.Class('landing-section')],
@@ -676,8 +683,8 @@ const includedSection = (): Html => {
 
 // TESTING
 
-const testingSection = (copiedSnippets: CopiedSnippets): Html => {
-  const h = html<Message>()
+const testingSection = (renderCopyButton: RenderCopyButton): Html => {
+  const h = staticHtml
 
   return h.section(
     [h.Id('testing'), h.Class('landing-section')],
@@ -720,7 +727,7 @@ const testingSection = (copiedSnippets: CopiedSnippets): Html => {
             ),
             Snippet.landingTestRaw,
             'Copy test example to clipboard',
-            copiedSnippets,
+            renderCopyButton,
             '',
           ),
         ],
@@ -732,7 +739,7 @@ const testingSection = (copiedSnippets: CopiedSnippets): Html => {
 // DEVTOOLS
 
 const devToolsSection = (): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.section(
     [h.Id('devtools'), h.Class('landing-section')],
@@ -818,7 +825,7 @@ const devToolsSection = (): Html => {
 // TRADE-OFFS & COMPARISON
 
 const tradeOffsSection = (): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.section(
     [h.Id('whats-the-catch'), h.Class('landing-section')],
@@ -911,7 +918,7 @@ const tradeOffsSection = (): Html => {
 // AUDIENCE
 
 const audienceSection = (): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.section(
     [h.Id('who-its-for'), h.Class('landing-section')],
@@ -999,7 +1006,7 @@ const audienceSection = (): Html => {
 }
 
 const audienceForItem = (title: string, description: string): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.li(
     [h.Class('mb-5 flex gap-3')],
@@ -1030,7 +1037,7 @@ const audienceForItem = (title: string, description: string): Html => {
 }
 
 const audienceNotItem = (title: string, description: string): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.li(
     [h.Class('mb-5 flex gap-3')],
@@ -1063,7 +1070,7 @@ const audienceNotItem = (title: string, description: string): Html => {
 // TRUST & MATURITY
 
 const trustSection = (): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.section(
     [h.Id('trust'), h.Class('landing-section py-10 md:py-14')],
@@ -1106,7 +1113,7 @@ const trustSection = (): Html => {
 }
 
 const trustItem = (label: string, value: string): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.li(
     [h.Class('landing-card')],
@@ -1132,7 +1139,7 @@ const trustItemWithLink = (
   linkText: string,
   href: string,
 ): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.li(
     [h.Class('landing-card')],
@@ -1171,7 +1178,7 @@ const AI_HEADING_B = 'Built for AI. Readable by humans.'
 const STATIC_PREFIX_LENGTH = 10
 
 const solariHeading = (toggleCount: number): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   const isSwapped = toggleCount % 2 === 1
 
@@ -1248,7 +1255,7 @@ const solariHeading = (toggleCount: number): Html => {
 }
 
 const aiSection = (aiHeadingToggleCount: number): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.section(
     [h.Id('ai'), h.Class('landing-section py-10 md:py-14 relative')],
@@ -1293,7 +1300,7 @@ const finalCtaSection = (
   emailSignupView: Html,
   maybeGitHubStarCount: Option.Option<number>,
 ): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.section(
     [h.Id('get-started'), h.Class('landing-section')],

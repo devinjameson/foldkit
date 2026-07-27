@@ -1,5 +1,5 @@
 import { Array } from 'effect'
-import { Html, html } from 'foldkit/html'
+import { Html, type HtmlBuilder, staticHtml } from 'foldkit/html'
 import { twMerge } from 'tailwind-merge'
 
 import { Icon } from './icon'
@@ -16,10 +16,12 @@ import { ClickedCopyLink, type Message } from './message'
  */
 export type RenderHeadingLink = (id: string, text: string) => Html
 
-export const headingLinkButton = (id: string, text: string): Html => {
-  const h = html<Message>()
-
-  return h.a(
+const headingLinkButton = (
+  id: string,
+  text: string,
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.a(
     [
       h.Href(`#${id}`),
       h.Class(
@@ -30,10 +32,22 @@ export const headingLinkButton = (id: string, text: string): Html => {
     ],
     [Icon.link('w-5 h-5')],
   )
-}
+
+/**
+ * Builds a copy-link control bound to the root frame's builder.
+ *
+ * This is the only way to construct a {@link RenderHeadingLink}, and it demands
+ * a builder typed to the app's Message. A Submodel's own builder cannot satisfy
+ * it, which is what forces the control to be created by an ancestor and passed
+ * down rather than built in place.
+ */
+export const defaultRenderHeadingLink =
+  (h: HtmlBuilder<Message>): RenderHeadingLink =>
+  (id, text) =>
+    headingLinkButton(id, text, h)
 
 export const link = (href: string, text: string): Html => {
-  const h = html()
+  const h = staticHtml
 
   return h.a(
     [
@@ -47,7 +61,7 @@ export const link = (href: string, text: string): Html => {
 }
 
 export const pageTitle = (id: string, text: string): Html => {
-  const h = html()
+  const h = staticHtml
 
   return h.h1(
     [
@@ -104,9 +118,9 @@ export const headingWithContent = (
   id: string,
   ariaText: string,
   content: ReadonlyArray<string | Html>,
-  renderHeadingLink: RenderHeadingLink | undefined = headingLinkButton,
+  renderHeadingLink: RenderHeadingLink,
 ): Html => {
-  const h = html()
+  const h = staticHtml
 
   const tag = { h2: h.h2, h3: h.h3, h4: h.h4, h5: h.h5, h6: h.h6 }
   const config = sectionHeadingConfig[level]
@@ -120,30 +134,20 @@ export const headingWithContent = (
   )
 }
 
-export const heading = (
-  level: 'h2' | 'h3' | 'h4',
-  id: string,
-  text: string,
-): Html => headingWithContent(level, id, text, [text])
-
 export const para = (...content: ReadonlyArray<string | Html>): Html => {
-  const h = html()
+  const h = staticHtml
 
   return h.p([h.Class('mb-4 leading-relaxed')], content)
 }
 
 export const subPara = (...content: ReadonlyArray<string | Html>): Html => {
-  const h = html()
+  const h = staticHtml
 
   return h.p(
     [h.Class('mb-4 text-sm leading-6 text-gray-800 dark:text-gray-400')],
     content,
   )
 }
-
-export const tableOfContentsEntryToHeader = (
-  entry: TableOfContentsEntry,
-): Html => heading(entry.level, entry.id, entry.text)
 
 /**
  * The heading helpers bound to a page-supplied copy-link renderer, for a page
@@ -164,7 +168,7 @@ export const headingsFor = (renderHeadingLink: RenderHeadingLink) => ({
 })
 
 export const bullets = (...items: ReadonlyArray<string | Html>): Html => {
-  const h = html()
+  const h = staticHtml
 
   return h.ul(
     [h.Class('list-disc mb-8 space-y-2')],
@@ -173,7 +177,7 @@ export const bullets = (...items: ReadonlyArray<string | Html>): Html => {
 }
 
 export const bulletPoint = (label: string, description: string): Html => {
-  const h = html()
+  const h = staticHtml
 
   return h.span([], [h.strong([], [`${label}:`]), ` ${description}`])
 }
@@ -182,7 +186,7 @@ const inlineCodeClassName =
   'bg-gray-200/70 dark:bg-gray-800 px-1 py-px rounded text-sm border border-gray-300/50 dark:border-gray-700/50'
 
 export const inlineCode = (text: string, className?: string): Html => {
-  const h = html()
+  const h = staticHtml
   return h.code([h.Class(twMerge(inlineCodeClassName, className))], [text])
 }
 
@@ -190,7 +194,7 @@ export const infoCallout = (
   label: string,
   ...content: ReadonlyArray<string | Html>
 ): Html => {
-  const h = html()
+  const h = staticHtml
 
   return h.div(
     [
@@ -213,7 +217,7 @@ export const infoCallout = (
 }
 
 export const demoContainer = (...content: ReadonlyArray<Html>): Html => {
-  const h = html()
+  const h = staticHtml
 
   return h.div(
     [
@@ -229,7 +233,7 @@ export const warningCallout = (
   label: string,
   ...content: ReadonlyArray<string | Html>
 ): Html => {
-  const h = html()
+  const h = staticHtml
 
   return h.div(
     [
@@ -260,7 +264,7 @@ const calloutBlocks = (
     blocks: ReadonlyArray<Html>
   }>,
 ): Html => {
-  const h = html()
+  const h = staticHtml
 
   return h.div(
     [h.Class(`border ${config.borderClassName} py-3.5 px-5 mb-6 rounded-lg`)],
@@ -324,7 +328,7 @@ export const warningCalloutBlocks = (
  * the content is a picture, not code to lift.
  */
 export const diagram = (content: string): Html => {
-  const h = html()
+  const h = staticHtml
 
   return h.pre(
     [
@@ -342,7 +346,7 @@ export const diagram = (content: string): Html => {
  * links to medium weight.
  */
 export const ctaLinks = (blocks: ReadonlyArray<Html>): Html => {
-  const h = html()
+  const h = staticHtml
 
   return h.div(
     [
