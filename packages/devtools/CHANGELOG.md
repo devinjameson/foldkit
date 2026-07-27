@@ -1,5 +1,18 @@
 # @foldkit/devtools
 
+## 0.133.0
+
+### Patch Changes
+
+- d16d7f7: Bump Effect to `4.0.0-beta.102` (from `4.0.0-beta.101`). Foldkit's peer dependencies now require `effect@4.0.0-beta.102` and `@effect/platform-browser@4.0.0-beta.102`.
+
+  Pin your Effect packages to `4.0.0-beta.102` to match this release. While Effect v4 is in beta, pin the exact version rather than a range:
+
+  ```sh
+  pnpm add effect@4.0.0-beta.102 @effect/platform-browser@4.0.0-beta.102
+  pnpm add -D @effect/vitest@4.0.0-beta.102
+  ```
+
 ## 0.132.0
 
 ### Patch Changes

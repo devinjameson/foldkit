@@ -1,5 +1,57 @@
 # foldkit
 
+## 0.133.0
+
+### Minor Changes
+
+- 057981a: Add a batch form of Message dispatch to the DevTools MCP surface. The new `foldkit_dispatch_messages` tool dispatches an ordered list of 1 to 100 Messages in one call, removing the one-round-trip-per-Message cost of staging multi-Message fixtures. The runtime bridge validates the whole batch against the configured `Message` Schema before dispatching any of it, so one invalid entry rejects the batch with an error naming its zero-based position and nothing is dispatched. The response reports the predicted history index for each Message, mirroring `acceptedAtIndex` on single dispatch.
+- 4090eb5: Add `lang` and `dir` to the view's `Document`, so an app that switches language at runtime can drive the `<html>` attributes from its Model. `Document` already carried `title`, `canonical`, and `ogUrl`, but the root element was the one piece of document state a view could not reach, because `<html>` sits outside the application container. Getting at it meant a Mount or a Command poking `document.documentElement`, the imperative escape hatch that `title` exists to avoid.
+
+  `dir` is typed by a new `TextDirection` Schema exported from `foldkit/html`, covering `'Ltr' | 'Rtl' | 'Auto'`, which the runtime writes as the lowercase attribute values. It is a Schema rather than a bare type union so a Model that stores the direction can use it directly in an `S.Struct`, the same way `Canvas.LineCap` and `Canvas.TextAlign` already work.
+
+  Both fields are optional and have no default: when a view omits one, the runtime does not touch that attribute, leaving whatever value it currently holds, so a view that never sets it leaves the served HTML in place and existing apps are unaffected. `makeElement` writes neither, matching how it already leaves the `<head>` alone. Note that the runtime can only sync after the first render, so the served HTML still decides what a crawler sees on first paint.
+
+- af4ba0b: Breaking: give the short names in `Route.Transition` to the tag-taking helpers. `entered` and `exited` now take a route tag and return that route narrowed to it, the behavior previously spelled `enteredRoute` and `exitedRoute`. The forms that answer for whichever route a transition entered or left are now `enteredAny` and `exitedAny`.
+
+  The tag-taking forms carry the common case: a transition helper is almost always asked about one named route, and the union-dispatch forms only come out when several routes have entry Commands. Every tag-taking helper is now the bare verb, so `entered`, `exited`, and `stayed` read the same and take the same arguments. `stayed` is unchanged and gains no `stayedAny` counterpart: without a tag its two sides could not narrow to the same route variant together, so matching on one would leave the other typed as the whole union.
+
+  Migration is a rename at each call site:
+
+  ```ts
+  // Before
+  Transition.enteredRoute(transition, 'Person')
+  Transition.exitedRoute(transition, 'Person')
+  Transition.entered(transition)
+  Transition.exited(transition)
+
+  // After
+  Transition.entered(transition, 'Person')
+  Transition.exited(transition, 'Person')
+  Transition.enteredAny(transition)
+  Transition.exitedAny(transition)
+  ```
+
+  The names `Transition.entered` and `Transition.exited` survive the rename with new meanings, but an unmigrated call cannot pass silently: the tag-taking forms require a second argument, so an old one-argument call fails to compile. `stayed`, `isEntering`, `make`, `coldLoad`, and the `Transition` type are unchanged.
+
+### Patch Changes
+
+- c79a935: Explain why a Message could not cross a Submodel boundary.
+
+  A wrapper Message is normally a Schema constructor, so handing it a Message outside the child's union throws a Schema error naming the two shapes and nothing else. That error fires inside a DOM listener, the app keeps rendering, and reading it requires already knowing that a boundary sits between the handler and `update`, which makes a real bug look like noise.
+
+  The boundary now catches that rejection and reframes it, naming the boundary, the Message, and the cause that accounts for almost every occurrence: a shared view helper building an app-level Message inside a Submodel's view, where a handler's dispatcher is chosen by the frame it is built in rather than by the Message it carries. The original rejection is preserved as `cause`.
+
+- d16d7f7: Bump Effect to `4.0.0-beta.102` (from `4.0.0-beta.101`). Foldkit's peer dependencies now require `effect@4.0.0-beta.102` and `@effect/platform-browser@4.0.0-beta.102`.
+
+  Pin your Effect packages to `4.0.0-beta.102` to match this release. While Effect v4 is in beta, pin the exact version rather than a range:
+
+  ```sh
+  pnpm add effect@4.0.0-beta.102 @effect/platform-browser@4.0.0-beta.102
+  pnpm add -D @effect/vitest@4.0.0-beta.102
+  ```
+
+- 477db0e: Bring the `foldkit` package README in line with the repository README. The npm-facing copy had drifted: it still named ESLint instead of Oxlint in the `create-foldkit-app` description, kept the superseded intro sections, carried a stale Counter snippet, listed feature and example entries that no longer match what ships, and omitted Embedding and the Discord link. The feature and example lists are now the pared-down versions, the Counter snippet matches `examples/counter`, and the prose drops the em dashes. Documentation only, no API changes.
+
 ## 0.132.0
 
 ### Minor Changes
