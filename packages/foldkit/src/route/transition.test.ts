@@ -8,9 +8,9 @@ import {
   type Transition,
   coldLoad,
   entered,
-  enteredRoute,
+  enteredAny,
   exited,
-  exitedRoute,
+  exitedAny,
   isEntering,
   make,
   stayed,
@@ -38,15 +38,15 @@ describe('coldLoad', () => {
   })
 })
 
-describe('entered', () => {
+describe('enteredAny', () => {
   it('returns the next route when the tag changes', () => {
-    expect(entered(make<AppRoute>(Home(), Notes()))).toStrictEqual(
+    expect(enteredAny(make<AppRoute>(Home(), Notes()))).toStrictEqual(
       Option.some(Notes()),
     )
   })
 
   it('returns the next route on a cold load', () => {
-    expect(entered(coldLoad(Notes()))).toStrictEqual(Option.some(Notes()))
+    expect(enteredAny(coldLoad(Notes()))).toStrictEqual(Option.some(Notes()))
   })
 
   it('returns none when staying within one route across two ids', () => {
@@ -54,14 +54,14 @@ describe('entered', () => {
       NoteDetail({ id: '1' }),
       NoteDetail({ id: '2' }),
     )
-    expect(entered(transition)).toStrictEqual(Option.none())
+    expect(enteredAny(transition)).toStrictEqual(Option.none())
   })
 })
 
-describe('enteredRoute', () => {
+describe('entered', () => {
   it('returns the narrowed route when entering the target route', () => {
     const transition = make<AppRoute>(Home(), NoteDetail({ id: '1' }))
-    const maybeEnteredNoteDetail = enteredRoute(transition, 'NoteDetail')
+    const maybeEnteredNoteDetail = entered(transition, 'NoteDetail')
     expect(maybeEnteredNoteDetail).toStrictEqual(
       Option.some(NoteDetail({ id: '1' })),
     )
@@ -72,13 +72,13 @@ describe('enteredRoute', () => {
 
   it('returns the narrowed route on a cold load into the target route', () => {
     expect(
-      enteredRoute(coldLoad<AppRoute>(NoteDetail({ id: '1' })), 'NoteDetail'),
+      entered(coldLoad<AppRoute>(NoteDetail({ id: '1' })), 'NoteDetail'),
     ).toStrictEqual(Option.some(NoteDetail({ id: '1' })))
   })
 
   it('returns none when entering a different route', () => {
     expect(
-      enteredRoute(make<AppRoute>(Home(), Notes()), 'NoteDetail'),
+      entered(make<AppRoute>(Home(), Notes()), 'NoteDetail'),
     ).toStrictEqual(Option.none())
   })
 
@@ -87,19 +87,19 @@ describe('enteredRoute', () => {
       NoteDetail({ id: '1' }),
       NoteDetail({ id: '2' }),
     )
-    expect(enteredRoute(transition, 'NoteDetail')).toStrictEqual(Option.none())
+    expect(entered(transition, 'NoteDetail')).toStrictEqual(Option.none())
   })
 })
 
-describe('exited', () => {
+describe('exitedAny', () => {
   it('returns the previous route when the tag changes', () => {
-    expect(exited(make<AppRoute>(Home(), Notes()))).toStrictEqual(
+    expect(exitedAny(make<AppRoute>(Home(), Notes()))).toStrictEqual(
       Option.some(Home()),
     )
   })
 
   it('returns none on a cold load', () => {
-    expect(exited(coldLoad<AppRoute>(Notes()))).toStrictEqual(Option.none())
+    expect(exitedAny(coldLoad<AppRoute>(Notes()))).toStrictEqual(Option.none())
   })
 
   it('returns none when staying within one route across two ids', () => {
@@ -107,20 +107,20 @@ describe('exited', () => {
       NoteDetail({ id: '1' }),
       NoteDetail({ id: '2' }),
     )
-    expect(exited(transition)).toStrictEqual(Option.none())
+    expect(exitedAny(transition)).toStrictEqual(Option.none())
   })
 })
 
-describe('exitedRoute', () => {
+describe('exited', () => {
   it('returns none on a cold load into the target route', () => {
     expect(
-      exitedRoute(coldLoad<AppRoute>(NoteDetail({ id: '1' })), 'NoteDetail'),
+      exited(coldLoad<AppRoute>(NoteDetail({ id: '1' })), 'NoteDetail'),
     ).toStrictEqual(Option.none())
   })
 
   it('returns the narrowed route when leaving the target route', () => {
     const transition = make<AppRoute>(NoteDetail({ id: '1' }), Home())
-    const maybeExitedNoteDetail = exitedRoute(transition, 'NoteDetail')
+    const maybeExitedNoteDetail = exited(transition, 'NoteDetail')
     expect(maybeExitedNoteDetail).toStrictEqual(
       Option.some(NoteDetail({ id: '1' })),
     )
@@ -130,9 +130,9 @@ describe('exitedRoute', () => {
   })
 
   it('returns none when leaving a different route', () => {
-    expect(
-      exitedRoute(make<AppRoute>(Home(), Notes()), 'NoteDetail'),
-    ).toStrictEqual(Option.none())
+    expect(exited(make<AppRoute>(Home(), Notes()), 'NoteDetail')).toStrictEqual(
+      Option.none(),
+    )
   })
 
   it('returns none when staying on the target route', () => {
@@ -140,7 +140,7 @@ describe('exitedRoute', () => {
       NoteDetail({ id: '1' }),
       NoteDetail({ id: '2' }),
     )
-    expect(exitedRoute(transition, 'NoteDetail')).toStrictEqual(Option.none())
+    expect(exited(transition, 'NoteDetail')).toStrictEqual(Option.none())
   })
 })
 
@@ -222,7 +222,9 @@ describe('types', () => {
     // @ts-expect-error 'Missing' is not a tag of AppRoute
     isEntering(transition, 'Missing')
     // @ts-expect-error 'Missing' is not a tag of AppRoute
-    enteredRoute(transition, 'Missing')
+    entered(transition, 'Missing')
+    // @ts-expect-error 'Missing' is not a tag of AppRoute
+    exited(transition, 'Missing')
     expect(isEntering(transition, 'Notes')).toBe(true)
   })
 })

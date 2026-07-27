@@ -30,13 +30,14 @@ export const coldLoad = <Route>(nextRoute: Route): Transition<Route> => ({
   nextRoute,
 })
 
-/** The route a transition entered, if it entered one: `Some(nextRoute)`
- *  when the next route's tag differs from the previous route's (a cold
- *  load counts as an entry), `None` when the transition stayed within one
- *  route, for example between two ids of one detail route. Match on the
- *  result to dispatch entry Commands for many routes in one place; for a
- *  single route, {@link isEntering} is the plain predicate form. */
-export const entered = <Route extends Readonly<{ _tag: string }>>({
+/** The route a transition entered, whichever route that was:
+ *  `Some(nextRoute)` when the next route's tag differs from the previous
+ *  route's (a cold load counts as an entry), `None` when the transition
+ *  stayed within one route, for example between two ids of one detail
+ *  route. Match on the result to dispatch entry Commands for many routes
+ *  in one place. For a single named route, {@link entered} narrows to its
+ *  tag and {@link isEntering} is the plain predicate form. */
+export const enteredAny = <Route extends Readonly<{ _tag: string }>>({
   maybePreviousRoute,
   nextRoute,
 }: Transition<Route>): Option.Option<Route> =>
@@ -53,28 +54,30 @@ const hasTag =
   ): route is Extract<Route, { _tag: Tag }> =>
     route._tag === routeTag
 
-/** The single-route, payload-carrying form of {@link entered}: `Some` of
- *  the entered route, narrowed to the given tag, when this transition
- *  entered it, and `None` otherwise. The entry Command for a detail route
- *  usually needs the route's payload, and this returns it typed. */
-export const enteredRoute = <
+/** The route a transition entered, narrowed to the given tag: `Some` of
+ *  the entered route when this transition entered it, and `None`
+ *  otherwise. The entry Command for a detail route usually needs the
+ *  route's payload, and this returns it typed. {@link enteredAny} is the
+ *  form that answers for every route at once. */
+export const entered = <
   Route extends Readonly<{ _tag: string }>,
   Tag extends Route['_tag'],
 >(
   transition: Transition<Route>,
   routeTag: Tag,
 ): Option.Option<Extract<Route, { _tag: Tag }>> =>
-  Option.filter(entered(transition), hasTag(routeTag))
+  Option.filter(enteredAny(transition), hasTag(routeTag))
 
-/** The route a transition left, if it left one: `Some(previousRoute)`
- *  when the previous route's tag differs from the next route's, `None` on
- *  a cold load or when the transition stayed within one route. For
- *  one-shot Commands on the way out, saving a draft, recording that a
- *  visit ended. Things that live while a route is active, listeners,
- *  timers, handles, belong to a Subscription or ManagedResource condition
- *  on the Model instead, which also ends them when the route state
- *  disappears for reasons other than navigation. */
-export const exited = <Route extends Readonly<{ _tag: string }>>({
+/** The route a transition left, whichever route that was:
+ *  `Some(previousRoute)` when the previous route's tag differs from the
+ *  next route's, `None` on a cold load or when the transition stayed
+ *  within one route. For one-shot Commands on the way out, saving a
+ *  draft, recording that a visit ended. Things that live while a route is
+ *  active, listeners, timers, handles, belong to a Subscription or
+ *  ManagedResource condition on the Model instead, which also ends them
+ *  when the route state disappears for reasons other than navigation.
+ *  {@link exited} narrows to a single tag. */
+export const exitedAny = <Route extends Readonly<{ _tag: string }>>({
   maybePreviousRoute,
   nextRoute,
 }: Transition<Route>): Option.Option<Route> =>
@@ -83,17 +86,17 @@ export const exited = <Route extends Readonly<{ _tag: string }>>({
     previousRoute => previousRoute._tag !== nextRoute._tag,
   )
 
-/** The single-route, payload-carrying form of {@link exited}: `Some` of
- *  the exited route, narrowed to the given tag, when this transition left
- *  it, and `None` otherwise. */
-export const exitedRoute = <
+/** The route a transition left, narrowed to the given tag: `Some` of the
+ *  exited route when this transition left it, and `None` otherwise.
+ *  {@link exitedAny} is the form that answers for every route at once. */
+export const exited = <
   Route extends Readonly<{ _tag: string }>,
   Tag extends Route['_tag'],
 >(
   transition: Transition<Route>,
   routeTag: Tag,
 ): Option.Option<Extract<Route, { _tag: Tag }>> =>
-  Option.filter(exited(transition), hasTag(routeTag))
+  Option.filter(exitedAny(transition), hasTag(routeTag))
 
 /** Both sides of a within-route navigation: `Some` of the previous and
  *  next routes, narrowed to the given tag, when the transition stayed on
@@ -101,7 +104,10 @@ export const exitedRoute = <
  *  it. A cold load stays nowhere. For reacting to payload changes within
  *  one route, a detail id, a search text, when the previous value
  *  matters; when it does not, the ChangedUrl handler already has the next
- *  route. */
+ *  route. There is no tagless counterpart to this the way
+ *  {@link enteredAny} answers for {@link entered}: without a tag the two
+ *  sides of a stay could not narrow to the same route variant together,
+ *  so matching on one would leave the other typed as the whole union. */
 export const stayed = <
   Route extends Readonly<{ _tag: string }>,
   Tag extends Route['_tag'],
@@ -127,9 +133,9 @@ export const stayed = <
  *  route carries the tag and the previous route did not (a cold load
  *  counts as an entry). Navigating within the same route, for example
  *  between two ids of one detail route, is not an entry. The boolean
- *  view of {@link enteredRoute}: when the entry Command needs the
- *  route's payload, use that instead. The route union is inferred from
- *  the transition argument, so the tag is checked against the union's
+ *  view of {@link entered}: when the entry Command needs the route's
+ *  payload, use that instead. The route union is inferred from the
+ *  transition argument, so the tag is checked against the union's
  *  tags. */
 export const isEntering = <
   Route extends Readonly<{ _tag: string }>,
@@ -137,4 +143,4 @@ export const isEntering = <
 >(
   transition: Transition<Route>,
   routeTag: Tag,
-): boolean => Option.isSome(enteredRoute(transition, routeTag))
+): boolean => Option.isSome(entered(transition, routeTag))
