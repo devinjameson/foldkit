@@ -47,7 +47,7 @@ export {
   createBoundaryRegistry as __createBoundaryRegistry,
 } from './boundary.js'
 export type { BoundaryRegistry } from './boundary.js'
-export { childAttributes } from './childAttribute.js'
+export { childAttributes, rootAttributes } from './childAttribute.js'
 export type { ChildAttribute } from './childAttribute.js'
 export { defineView, submodel } from './submodel.js'
 export type { SubmodelConfig, SubmodelView } from './submodel.js'

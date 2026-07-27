@@ -1,8 +1,9 @@
-import { Context } from 'effect'
+import { Context, Stream } from 'effect'
 import { afterEach, beforeEach, expect } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
 
+import type { MountAction } from '../mount/index.js'
 import { MountTracker } from '../mount/index.js'
 import { Dispatch } from '../runtime/index.js'
 import { h as snabbdomH } from '../snabbdom/index.js'
@@ -11,8 +12,17 @@ import {
   beginRender,
   createBoundaryRegistry,
 } from './boundary.js'
-import { type ChildAttribute, childAttributes } from './childAttribute.js'
-import { type Html, html } from './index.js'
+import {
+  type ChildAttribute,
+  childAttributes,
+  rootAttributes,
+} from './childAttribute.js'
+import {
+  FOLDKIT_MOUNT_KEY,
+  type FoldkitMountMarker,
+  type Html,
+  html,
+} from './index.js'
 import {
   type DispatchSync,
   clearRuntime,
@@ -308,5 +318,194 @@ describe('childAttributes', () => {
       { _tag: 'GotChild', message: { _tag: 'ChildClicked' } },
       { _tag: 'ParentDirect' },
     ])
+  })
+})
+
+describe('rootAttributes', () => {
+  let registry: BoundaryRegistry
+  let dispatched: Array<unknown>
+
+  beforeEach(() => {
+    registry = createBoundaryRegistry()
+    dispatched = []
+    setUpRuntime(registry, dispatched)
+    beginRender(registry)
+  })
+
+  afterEach(() => {
+    clearRuntime()
+  })
+
+  type AppLevel = Readonly<{ _tag: 'AppLevel' }>
+
+  const renderInsideSubmodel = (build: () => Html, slotId = 'chrome') =>
+    submodel({
+      slotId,
+      model: {},
+      view: defineView<object, ChildClicked, object>(build),
+      viewInputs: {},
+      toParentMessage: message => GotChild({ message }),
+    })
+
+  it('delivers an app-level message unwrapped from inside a Submodel', () => {
+    // Without rootAttributes this same handler dispatches
+    // GotChild({ message: { _tag: 'AppLevel' } }), which a parent's Schema
+    // rejects because AppLevel is not in the child's Message union.
+    const h = html<AppLevel>()
+    const result = renderInsideSubmodel(() =>
+      h.button([...rootAttributes([h.OnClick({ _tag: 'AppLevel' })])], []),
+    )
+
+    /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+    const onClick = result?.data?.on?.click as () => void
+    onClick()
+
+    expect(dispatched).toEqual([{ _tag: 'AppLevel' }])
+  })
+
+  it("leaves the Submodel's own handlers routed through its wrap", () => {
+    const h = html<ChildClicked>()
+    const result = renderInsideSubmodel(() =>
+      h.button([h.OnClick({ _tag: 'ChildClicked' })], []),
+    )
+
+    /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+    const onClick = result?.data?.on?.click as () => void
+    onClick()
+
+    expect(dispatched).toEqual([
+      { _tag: 'GotChild', message: { _tag: 'ChildClicked' } },
+    ])
+  })
+
+  it('skips every lift when Submodels are nested more than one deep', () => {
+    const h = html<AppLevel>()
+    const result = renderInsideSubmodel(() =>
+      submodel({
+        slotId: 'inner',
+        model: {},
+        view: defineView<object, ChildClicked, object>(() =>
+          h.button([...rootAttributes([h.OnClick({ _tag: 'AppLevel' })])], []),
+        ),
+        viewInputs: {},
+        toParentMessage: message => GotChild({ message }),
+      }),
+    )
+
+    /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+    const onClick = result?.data?.on?.click as () => void
+    onClick()
+
+    expect(dispatched).toEqual([{ _tag: 'AppLevel' }])
+  })
+
+  it('dispatches unwrapped at the root boundary too, where there is no wrap to skip', () => {
+    const h = html<AppLevel>()
+    const button = h.button(
+      [...rootAttributes([h.OnClick({ _tag: 'AppLevel' })])],
+      [],
+    )
+
+    /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+    const onClick = button?.data?.on?.click as () => void
+    onClick()
+
+    expect(dispatched).toEqual([{ _tag: 'AppLevel' }])
+  })
+
+  it('routes a root-bound and a child-bound group on one element to their own dispatchers', () => {
+    const hApp = html<AppLevel>()
+    const result = renderInsideSubmodel(() =>
+      hApp.button(
+        [
+          ...rootAttributes([hApp.OnClick({ _tag: 'AppLevel' })]),
+          ...childAttributes([
+            html<ChildClicked>().OnKeyPress(() => ({
+              _tag: 'ChildClicked' as const,
+            })),
+          ]),
+        ],
+        [],
+      ),
+    )
+
+    /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+    const onClick = result?.data?.on?.click as () => void
+    onClick()
+    /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+    const onKeyPress = result?.data?.on?.keypress as (e: KeyboardEvent) => void
+    onKeyPress(
+      /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+      {
+        key: 'a',
+        shiftKey: false,
+        ctrlKey: false,
+        altKey: false,
+        metaKey: false,
+      } as KeyboardEvent,
+    )
+
+    expect(dispatched).toEqual([
+      { _tag: 'AppLevel' },
+      { _tag: 'GotChild', message: { _tag: 'ChildClicked' } },
+    ])
+  })
+
+  it('sends an OnUnmount message straight to the root, skipping the wrap', () => {
+    const h = html<AppLevel>()
+    const result = renderInsideSubmodel(() =>
+      h.div([...rootAttributes([h.OnUnmount({ _tag: 'AppLevel' })])], []),
+    )
+
+    /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+    const destroy = result?.data?.hook?.destroy as (vnode: unknown) => void
+    destroy(result)
+
+    expect(dispatched).toEqual([{ _tag: 'AppLevel' }])
+  })
+
+  it('stamps no lift on an OnMount marker, so the Scene harness replays none', () => {
+    // A childAttributes group at this same boundary stamps a one-entry
+    // messageMappers chain; a root-bound group must stamp none.
+    const h = html<AppLevel>()
+    const probe: MountAction<AppLevel> = {
+      name: 'Probe',
+      f: () => Stream.empty,
+    }
+
+    const rootBound = renderInsideSubmodel(
+      () => h.div([...rootAttributes([h.OnMount(probe)])], []),
+      'root-bound',
+    )
+    const childBound = renderInsideSubmodel(
+      () => h.div([...childAttributes([h.OnMount(probe)])], []),
+      'child-bound',
+    )
+
+    /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+    const markerOf = (vnode: typeof rootBound) =>
+      /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+      (vnode?.data as Record<string, FoldkitMountMarker> | undefined)?.[
+        FOLDKIT_MOUNT_KEY
+      ]
+
+    expect(markerOf(rootBound)?.messageMappers).toBeUndefined()
+    expect(markerOf(childBound)?.messageMappers).toHaveLength(1)
+  })
+
+  it('builds outside a runtime frame and throws only when the handler fires', () => {
+    clearRuntime()
+
+    const h = html<AppLevel>()
+    const button = h.button(
+      [...rootAttributes([h.OnClick({ _tag: 'AppLevel' })])],
+      [],
+    )
+
+    /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+    const onClick = button?.data?.on?.click as () => void
+    expect(onClick).toThrow('without an active runtime frame')
+
+    setUpRuntime(registry, dispatched)
   })
 })

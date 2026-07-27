@@ -273,6 +273,32 @@ If you’re authoring your own Submodel and publishing attribute bundles to a co
 Stateless render helpers like `Button` and `Input`, plus controlled render helpers like `Checkbox`, `Switch`, and `Disclosure` don’t publish via `childAttributes`. They’re not Submodels; their `onClick` or `onInput` or `onToggle` values flow into element constructors in the consumer’s own boundary, which is correct. The boundary wiring only matters when there’s a Submodel boundary to wire through.
 :::
 
+## rootAttributes {#root-attributes}
+
+`rootAttributes` is the mirror of `childAttributes`. Where that one binds a deeper boundary so a child’s handler survives being spread into a parent’s element, this binds no boundary at all: the handler reaches your app’s own `update` unwrapped, however many Submodels it is rendered inside.
+
+### The Problem {#root-attributes-the-problem}
+
+A handler’s dispatcher is chosen by **where the element is built**, not by the Message it carries. `html<Message>()`’s type argument is erased at runtime, and the element constructor reads the boundary off the current render frame.
+
+That is invisible until you write a shared view helper. Say a copy button that any page can drop next to a code block, dispatching your app-level `ClickedCopySnippet`. On a plain page it works. Render the same helper inside a page that happens to be a Submodel and the click applies that page’s `toParentMessage`, which tries to build `GotDocPageMessage({ message: ClickedCopySnippet(...) })`. Wrapper Messages are Schema constructors, so the foreign Message is rejected and the constructor throws inside the event listener: nothing is dispatched, no `update` runs, and the page carries on rendering. The only trace is an uncaught error in the console, and the type checker never complains, because the Message type was erased before the boundary was consulted.
+
+### How It Works {#root-attributes-how-it-works}
+
+Every render frame already carries the app’s own dispatcher: entering a Submodel boundary inherits it unchanged and varies only the boundary id, and the wrapping chain is applied later, at event-fire time. `rootAttributes` captures that unwrapped dispatcher and brands each attribute with it, exactly as `childAttributes` brands with the Submodel’s.
+
+::Snippet{name="submodelRootAttributes" label="snippet" class="mb-4"}
+
+The result is the same `ChildAttribute` type, so element constructors already accept it and you can mix it with ordinary attributes on the same element. Only the branded ones skip the boundary; the `h.Class` and `h.AriaLabel` beside them are unaffected, and any of the page’s own handlers on other elements still route through its wrap.
+
+### When to Reach For It {#root-attributes-when-to-reach}
+
+Only when a Submodel renders app-level chrome it does not own. A copy button, an analytics hook, a toast trigger: things the surrounding page has no opinion about and should not have to declare a Message for.
+
+:::Warning{label="Not a substitute for OutMessage"}
+When a Submodel reports something about itself, that is an [OutMessage](#surfacing-facts). Reaching past the parent with `rootAttributes` would let a child mutate app state its parent knows nothing about, breaking the encapsulation the boundary exists to provide. The test is ownership: if the surrounding Submodel would care about the event, it belongs in that Submodel’s Message union.
+:::
+
 ## Testing Submodels
 
 A Submodel tests the same way as a top-level program. A two-argument child `update` is a pure function from `(model, message)` to `[Model, Commands]` or `[Model, Commands, Option<OutMessage>]`, so it slots straight into `Story.story`. The child’s view is a pure function too; assert against the rendered VNode through `Scene.scene`.
@@ -297,6 +323,7 @@ Issues new Submodel users hit, and where to read about the fix:
 - **Child events not reaching the parent’s update.** The wrapper Message isn’t named `Got*Message`, or the wrapper variant hasn’t been added to the parent’s update. See [Wrapping Messages](#wrapping-messages) and [Delegating in update](#delegating-in-update).
 - **Child’s view sees stale parent state.** Parent state was copied into the child Model and forgotten on update. Thread it through `viewInputs` (rebuilt every render) instead. See [Passing Parent State to a Child Submodel’s view](#parent-state-in-view).
 - **Handlers dispatched from a slot callback fire in the wrong boundary.** The Submodel published an attribute group without wrapping it in `childAttributes`. See [childAttributes](#child-attributes).
+- **A shared helper’s button does nothing inside a Submodel, and the console shows a Schema error naming a Message the page never declared.** The helper builds an app-level Message and the surrounding boundary’s `toParentMessage` throws trying to wrap it. Wrap that handler in `rootAttributes`. See [rootAttributes](#root-attributes).
 - **View-build error like** `viewInputs.config.onSubmit`. A slot callback was nested inside an object or array in `viewInputs`. Lift it to the top level. See the warning callout under [Per-render View Inputs](#per-render-view-inputs).
 - **Long list of Submodels feels slow.** Default is to re-render each row every parent render. See [Memoization Across Submodel Boundaries](#memoization).
 
@@ -338,8 +365,14 @@ The branded view type produced by `Submodel.defineView`. Carries the child’s M
 
 Snapshots the Submodel’s dispatcher at publish time and brands each attribute so handlers route through the Submodel’s boundary when later spread into the consumer’s elements. Called inside a Submodel that publishes attribute bundles to a consumer’s `toView` slot. See [childAttributes](#child-attributes) for the full mechanism.
 
+### rootAttributes {#api-root-attributes}
+
+`rootAttributes<Attribute>(attributes: ReadonlyArray<Attribute>): ReadonlyArray<ChildAttribute>`
+
+Brands each attribute with the app’s own dispatcher, so its handlers reach `update` unwrapped through any depth of Submodel nesting. For shared view helpers that dispatch app-level Messages from inside a Submodel they don’t own. See [rootAttributes](#root-attributes) for the full mechanism.
+
 ### ChildAttribute {#api-child-attribute}
 
-`ChildAttribute` is the branded attribute type returned by `childAttributes`. Element constructors (`h.button`, `h.input`, etc.) accept `ChildAttribute` alongside ordinary `Attribute<Message>` values, using the carried dispatcher when present.
+`ChildAttribute` is the branded attribute type returned by both `childAttributes` and `rootAttributes`. Element constructors (`h.button`, `h.input`, etc.) accept `ChildAttribute` alongside ordinary `Attribute<Message>` values, using the carried dispatcher when present.
 
 With Model, Messages, update, view, Commands, and Submodels in place, you have the full vocabulary for describing a Foldkit app. The next page covers the [Runtime](/core/runtime): the engine that executes Commands, runs Subscriptions, manages Mount and ManagedResource lifecycles, and routes Messages back into update.

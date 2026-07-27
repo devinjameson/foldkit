@@ -271,6 +271,22 @@ describe('proof pages', () => {
         id: 'child-attributes-when-to-reach',
         text: 'When to Reach For It',
       },
+      { level: 'h2', id: 'root-attributes', text: 'rootAttributes' },
+      {
+        level: 'h3',
+        id: 'root-attributes-the-problem',
+        text: 'The Problem',
+      },
+      {
+        level: 'h3',
+        id: 'root-attributes-how-it-works',
+        text: 'How It Works',
+      },
+      {
+        level: 'h3',
+        id: 'root-attributes-when-to-reach',
+        text: 'When to Reach For It',
+      },
       { level: 'h2', id: 'testing-submodels', text: 'Testing Submodels' },
       {
         level: 'h2',
@@ -284,6 +300,7 @@ describe('proof pages', () => {
       { level: 'h3', id: 'api-define-view', text: 'Submodel.defineView' },
       { level: 'h3', id: 'api-submodel-view', text: 'Submodel.View' },
       { level: 'h3', id: 'api-child-attributes', text: 'childAttributes' },
+      { level: 'h3', id: 'api-root-attributes', text: 'rootAttributes' },
       { level: 'h3', id: 'api-child-attribute', text: 'ChildAttribute' },
     ])
   })

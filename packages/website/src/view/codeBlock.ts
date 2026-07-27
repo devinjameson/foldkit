@@ -1,6 +1,6 @@
 import { clsx } from 'clsx'
 import { HashSet } from 'effect'
-import { Html, html } from 'foldkit/html'
+import { Html, html, rootAttributes } from 'foldkit/html'
 
 import { Icon } from '../icon'
 import { ClickedCopySnippet, type Message } from '../message'
@@ -35,13 +35,17 @@ const copyButtonWithIndicator = (
     [isCopied ? 'Copied to clipboard' : ''],
   )
 
+  // NOTE: `rootAttributes` because this button is shared chrome that doc pages
+  // render inside their own Submodel boundaries. A plain `h.OnClick` would be
+  // lifted by that page's `toParentMessage` and arrive at its update as a
+  // Message outside its union.
   const copyButton = h.button(
     [
       h.Class(
         'p-2 rounded transition cursor-pointer border border-gray-300 dark:border-gray-700/50 bg-gray-100 dark:bg-[#1c1a20] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700/30',
       ),
       h.AriaLabel(ariaLabel),
-      h.OnClick(ClickedCopySnippet({ text: textToCopy })),
+      ...rootAttributes([h.OnClick(ClickedCopySnippet({ text: textToCopy }))]),
     ],
     [Icon.copy()],
   )

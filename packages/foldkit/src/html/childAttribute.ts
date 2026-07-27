@@ -1,5 +1,6 @@
 import {
   type DispatchSync,
+  outerDispatchOrFallback,
   requireBoundaryMappers,
   requireDispatch,
   requireUnmountResolver,
@@ -7,23 +8,25 @@ import {
 
 const BRAND = '__childAttribute'
 
-/** An attribute carrying a handler that dispatches through a Submodel
- *  boundary's wrapping chain. Published by Submodels (typically Foldkit's
- *  `Ui.*` components) for a parent to spread into its own element
- *  attribute arrays. The parent does not know or care which child
- *  produced these; the runtime routes each handler through the
- *  originating Submodel's wrap chain at event-fire time.
+/** An attribute carrying its own dispatcher rather than using the one for the
+ *  boundary it is spread into. The runtime routes each handler through the
+ *  carried dispatcher at event-fire time, so the element's position in the
+ *  tree no longer decides where its messages go.
  *
- *  `resolveUnmount` snapshots the boundary's wrapping chain at the time the
- *  group was published (child boundary alive) so `OnUnmount` can dispatch a
- *  root message from a destroy hook that fires after the boundary has been
- *  torn down. `boundaryMappers` snapshots the same chain as a pure list of
+ *  Created via {@link childAttributes}, which binds the publishing Submodel's
+ *  boundary so a child's handler survives being spread into a parent's
+ *  element, or {@link rootAttributes}, which binds the app's own dispatcher so
+ *  a handler skips every boundary. Element constructors accept
+ *  `ChildAttribute` alongside `Attribute<Message>` in their attribute arrays.
+ *
+ *  `resolveUnmount` snapshots the wrapping chain at the time the group was
+ *  published (child boundary alive) so `OnUnmount` can dispatch a root message
+ *  from a destroy hook that fires after the boundary has been torn down.
+ *  `boundaryMappers` snapshots the same chain as a pure list of
  *  `toParentMessage` lifts (innermost first) so `OnMount` can stamp it on the
- *  mount marker; the Scene test harness folds it to replay the lift.
- *
- *  Created via {@link childAttributes}. Element constructors accept
- *  `ChildAttribute` alongside `Attribute<Message>` in their attribute
- *  arrays. */
+ *  mount marker; the Scene test harness folds it to replay the lift. For a
+ *  root-bound group there is no chain: the resolver dispatches directly and
+ *  the mapper list is empty. */
 export type ChildAttribute = Readonly<{
   readonly [BRAND]: true
   readonly attribute: unknown
@@ -70,5 +73,47 @@ export const childAttributes = <Attribute>(
     dispatch,
     resolveUnmount,
     boundaryMappers,
+  }))
+}
+
+/** The mirror of {@link childAttributes}. Binds each attribute to the app's own
+ *  dispatcher, so its handlers reach `update` unwrapped no matter how many
+ *  Submodel boundaries the element is rendered inside.
+ *
+ *  A handler's dispatcher is chosen by where the element is built, not by the
+ *  Message type it carries: `html<Message>()`'s type argument is erased, and
+ *  the runtime reads the boundary off the current frame. So a shared view
+ *  helper that constructs an app-level Message works at the root and breaks
+ *  inside a Submodel, where the boundary's `toParentMessage` is applied to it.
+ *  That wrapper is a Schema constructor, so it rejects the foreign Message and
+ *  throws inside the event listener: nothing is dispatched, no `update` runs,
+ *  and the only signal is an uncaught error in the console. Nothing catches it
+ *  at compile time. This makes the intent explicit instead:
+ *
+ *  ```ts
+ *  // A shared copy button, rendered on plain pages and inside Submodels alike:
+ *  h.button(
+ *    [h.AriaLabel(label), ...rootAttributes([h.OnClick(ClickedCopy({ text }))])],
+ *    [Icon.copy()],
+ *  )
+ *  ```
+ *
+ *  Reach for this only when a Submodel renders app-level chrome it does not
+ *  own, such as a copy button, an analytics hook, or a toast trigger. When a
+ *  Submodel reports something about itself, that is an OutMessage, and routing
+ *  it past the parent breaks the encapsulation the boundary exists to provide.
+ *
+ *  `OnUnmount` messages resolve straight to the root dispatcher, and the
+ *  `boundaryMappers` chain is empty, both matching the absence of any lift. */
+export const rootAttributes = <Attribute>(
+  attributes: ReadonlyArray<Attribute>,
+): ReadonlyArray<ChildAttribute> => {
+  const dispatch = outerDispatchOrFallback()
+  return attributes.map(attribute => ({
+    [BRAND]: true,
+    attribute,
+    dispatch,
+    resolveUnmount: message => () => dispatch(message),
+    boundaryMappers: [],
   }))
 }

@@ -122,6 +122,34 @@ export const requireDispatch = (): DispatchSync => {
   )
 }
 
+const fallbackOuterDispatch: DispatchSync = () => {
+  throw new Error(
+    'Foldkit: a rootAttributes handler fired without an active runtime ' +
+      'frame. This typically means the attribute was built at module top ' +
+      'level outside of a view function.',
+  )
+}
+
+/** Returns the dispatcher that delivers a message to the app's own `update`,
+ *  skipping every Submodel wrapping chain between here and the root. Every
+ *  frame carries the same `outerDispatch`; {@link pushBoundary} inherits it
+ *  verbatim and only the `boundaryId` changes, so the root dispatcher is
+ *  always reachable without threading it through the view.
+ *
+ *  With no active frame this returns a fallback that throws when the handler
+ *  fires, matching how ordinary event attributes degrade. Attributes built at
+ *  module top level therefore still construct at import and surface a clear
+ *  error only if something actually dispatches through them.
+ *
+ *  This is the escape hatch {@link requireDispatch} deliberately is not. Use it
+ *  only for app-level chrome that a Submodel happens to render but does not
+ *  own. Anything a Submodel is reporting about itself belongs in an
+ *  OutMessage. */
+export const outerDispatchOrFallback = (): DispatchSync => {
+  const frame = stack[stack.length - 1]
+  return frame === undefined ? fallbackOuterDispatch : frame.outerDispatch
+}
+
 /** A function that, given a message, resolves it through the current
  *  boundary's wrapping chain immediately and returns a thunk that dispatches
  *  the fully wrapped root message. */

@@ -3,6 +3,7 @@ export {
   createKeyedLazy,
   createLazy,
   html,
+  rootAttributes,
   submodel,
 } from './index.js'
 
