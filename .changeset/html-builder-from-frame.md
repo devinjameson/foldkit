@@ -51,13 +51,15 @@ A memoized helper receives it through the existing args array. The builder is re
 lazyRow(rowView, [item, h])
 ```
 
-For handler-free Html built outside any view, typically at module top level, use `staticHtml`. It is typed `HtmlBuilder<never>`, so element and attribute constructors work while every event-handler constructor is uncallable:
+Where no builder is in scope, typically module scope, use `inertHtml`. It is typed `HtmlBuilder<never>`, so element and attribute constructors work while every event-handler constructor is uncallable. Its attributes are `Attribute<never>` and flow into any Message universe by covariance, which also makes it the builder for library code emitting handler-free attribute bundles:
 
 ```ts
-import { staticHtml as h } from 'foldkit/html'
+import { inertHtml as ih } from 'foldkit/html'
 
-const badge = h.span([h.Class('badge')], ['beta'])
+const PagefindBody = ih.DataAttribute('pagefind-body', '')
 ```
+
+Inside a view, use the view's own `h`. The view already holds a builder, and reaching past it is the habit that made a caller-chosen Message type possible to begin with.
 
 `@foldkit/ui` components take the consumer's builder as their last argument, and the explicit type argument goes away because it is inferred from the builder:
 

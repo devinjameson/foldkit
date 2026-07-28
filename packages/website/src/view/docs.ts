@@ -2,7 +2,12 @@ import { clsx } from 'clsx'
 import { Match as M, Option, String as S } from 'effect'
 import { AsyncData } from 'foldkit'
 import type { Field } from 'foldkit/fieldValidation'
-import { Html, type HtmlBuilder, createLazy, staticHtml } from 'foldkit/html'
+import {
+  Html,
+  type HtmlBuilder,
+  createLazy,
+  inertHtml as ih,
+} from 'foldkit/html'
 
 import { pageNeighbors } from '../docsNav'
 import { Icon } from '../icon'
@@ -34,9 +39,9 @@ import {
 } from './tableOfContents'
 import { themeSelector } from './themeSelector'
 
-const PagefindBody = staticHtml.DataAttribute('pagefind-body', '')
-const PagefindIgnore = staticHtml.DataAttribute('pagefind-ignore', '')
-const LlmIgnore = staticHtml.DataAttribute('llm-ignore', '')
+const PagefindBody = ih.DataAttribute('pagefind-body', '')
+const PagefindIgnore = ih.DataAttribute('pagefind-ignore', '')
+const LlmIgnore = ih.DataAttribute('llm-ignore', '')
 
 const openSearchDialog: Message = GotSearchMessage({
   message: Search.ClickedOpenSearch(),

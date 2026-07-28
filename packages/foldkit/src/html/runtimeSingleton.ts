@@ -155,7 +155,7 @@ export const requireUnmountResolver = (): UnmountResolver => {
  *  snapshot the lift a Submodel-embedded mount's result travels through in
  *  production (via `ctx.dispatch`), so the Scene test harness can replay it when
  *  the mount is resolved. Returns `[]` when there is no active frame, mirroring
- *  the lazy tolerance of static Html built outside a render. */
+ *  the lazy tolerance of handler-free Html built outside a render. */
 export const requireBoundaryMappers = (): ReadonlyArray<
   (message: unknown) => unknown
 > => {

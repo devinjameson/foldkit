@@ -1,5 +1,5 @@
 import { Duration, Option, Schema as S } from 'effect'
-import { type Html, type HtmlBuilder, staticHtml } from 'foldkit/html'
+import { type Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
 
 import { describe, it } from '@effect/vitest'
@@ -27,11 +27,8 @@ const makeSettledEntry = (overrides: Partial<Entry> = {}): Entry => ({
   ...overrides,
 })
 
-const defaultRenderEntry = (entry: Entry, _handlers: EntryHandlers) => {
-  const h = staticHtml
-
-  return h.div([], [h.span([], [entry.payload.body])])
-}
+const defaultRenderEntry = (entry: Entry, _handlers: EntryHandlers) =>
+  ih.div([], [ih.span([], [entry.payload.body])])
 
 type ViewOverrides = {
   entryToView?: (entry: Entry, handlers: EntryHandlers) => Html

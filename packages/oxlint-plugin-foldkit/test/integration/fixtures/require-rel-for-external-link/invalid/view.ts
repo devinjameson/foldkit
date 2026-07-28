@@ -1,6 +1,6 @@
-import { staticHtml as h } from 'foldkit/html'
+import { inertHtml as ih } from 'foldkit/html'
 
-export const docsLink = h.a(
-  [h.Href('https://example.com'), h.Target('_blank')],
+export const docsLink = ih.a(
+  [ih.Href('https://example.com'), ih.Target('_blank')],
   ['Docs'],
 )

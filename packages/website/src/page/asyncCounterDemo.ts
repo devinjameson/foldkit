@@ -9,7 +9,7 @@ import {
   pipe,
 } from 'effect'
 import { Command, Dom, Submodel } from 'foldkit'
-import { Html, type HtmlBuilder, staticHtml } from 'foldkit/html'
+import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 import demoCodeHtml from 'virtual:counter-demo-code'
@@ -567,13 +567,11 @@ const phaseIndicatorView = (model: Model): Html => {
   )
 }
 
-const progressBarView = (model: Model, isCommand: boolean): Html => {
-  const h = staticHtml
-
-  return h.div(
+const progressBarView = (model: Model, isCommand: boolean): Html =>
+  ih.div(
     [
-      h.AriaHidden(true),
-      h.Class(
+      ih.AriaHidden(true),
+      ih.Class(
         clsx(
           'flex-1 h-2 rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden transition-opacity duration-200',
           {
@@ -584,9 +582,9 @@ const progressBarView = (model: Model, isCommand: boolean): Html => {
       ),
     ],
     [
-      h.div(
+      ih.div(
         [
-          h.Class(
+          ih.Class(
             clsx(
               'demo-progress-bar h-full rounded-full bg-violet-600 dark:bg-violet-400',
               {
@@ -594,7 +592,7 @@ const progressBarView = (model: Model, isCommand: boolean): Html => {
               },
             ),
           ),
-          h.Style({
+          ih.Style({
             '--reset-duration': String(clampResetSeconds(model.resetDuration)),
           }),
         ],
@@ -602,4 +600,3 @@ const progressBarView = (model: Model, isCommand: boolean): Html => {
       ),
     ],
   )
-}

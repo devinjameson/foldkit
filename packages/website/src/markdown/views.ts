@@ -1,5 +1,5 @@
 import { Match as M, Option } from 'effect'
-import { type Attribute, Html, staticHtml } from 'foldkit/html'
+import { type Attribute, Html, inertHtml as ih } from 'foldkit/html'
 
 import type { Alignment } from '@foldkit/markdown'
 import type * as Markdown from '@foldkit/markdown'
@@ -50,29 +50,23 @@ const tableCellClassName =
 
 const alignmentAttributes = (
   alignment: Alignment,
-): ReadonlyArray<Attribute<never>> => {
-  const h = staticHtml
-
-  return M.value(alignment).pipe(
+): ReadonlyArray<Attribute<never>> =>
+  M.value(alignment).pipe(
     M.withReturnType<ReadonlyArray<Attribute<never>>>(),
     M.when('None', () => []),
-    M.when('Left', () => [h.Style({ 'text-align': 'left' })]),
-    M.when('Center', () => [h.Style({ 'text-align': 'center' })]),
-    M.when('Right', () => [h.Style({ 'text-align': 'right' })]),
+    M.when('Left', () => [ih.Style({ 'text-align': 'left' })]),
+    M.when('Center', () => [ih.Style({ 'text-align': 'center' })]),
+    M.when('Right', () => [ih.Style({ 'text-align': 'right' })]),
     M.exhaustive,
   )
-}
 
 const titleAttributes = (
   maybeTitle: Option.Option<string>,
-): ReadonlyArray<Attribute<never>> => {
-  const h = staticHtml
-
-  return Option.match(maybeTitle, {
+): ReadonlyArray<Attribute<never>> =>
+  Option.match(maybeTitle, {
     onNone: () => [],
-    onSome: title => [h.Title(title)],
+    onSome: title => [ih.Title(title)],
   })
-}
 
 /**
  * The site's markdown node views. Every node not overridden here keeps the
@@ -81,17 +75,15 @@ const titleAttributes = (
  * affordances and search attributes the hand-written prose helpers produce.
  */
 export const docViews = (config: DocViewConfig): Partial<Markdown.Views> => {
-  const h = staticHtml
-
   return {
     Paragraph: (_paragraph, content) =>
-      h.p([h.Class('mb-4 leading-relaxed')], content),
+      ih.p([ih.Class('mb-4 leading-relaxed')], content),
 
     Link: (link, content) =>
-      h.a(
+      ih.a(
         [
-          h.Href(link.url),
-          h.Class(linkClassName),
+          ih.Href(link.url),
+          ih.Class(linkClassName),
           ...titleAttributes(link.maybeTitle),
         ],
         content,
@@ -174,56 +166,59 @@ export const docViews = (config: DocViewConfig): Partial<Markdown.Views> => {
       if (list.isOrdered) {
         const start = Option.match(list.maybeStartNumber, {
           onNone: () => [],
-          onSome: startNumber => [h.Start(startNumber)],
+          onSome: startNumber => [ih.Start(startNumber)],
         })
-        return h.ol([h.Class(`list-decimal ${listClassName}`), ...start], items)
+        return ih.ol(
+          [ih.Class(`list-decimal ${listClassName}`), ...start],
+          items,
+        )
       } else {
-        return h.ul([h.Class(`list-disc ${listClassName}`)], items)
+        return ih.ul([ih.Class(`list-disc ${listClassName}`)], items)
       }
     },
 
     Blockquote: (_blockquote, blocks) =>
-      h.blockquote([h.Class(blockquoteClassName)], blocks),
+      ih.blockquote([ih.Class(blockquoteClassName)], blocks),
 
     ThematicBreak: () =>
-      h.hr([h.Class('my-8 border-gray-300 dark:border-gray-800')]),
+      ih.hr([ih.Class('my-8 border-gray-300 dark:border-gray-800')]),
 
     Image: ({ url, alt, maybeTitle }) =>
-      h.img([
-        h.Src(url),
-        h.Alt(alt),
-        h.Class('max-w-full'),
+      ih.img([
+        ih.Src(url),
+        ih.Alt(alt),
+        ih.Class('max-w-full'),
         ...titleAttributes(maybeTitle),
       ]),
 
     Table: (_table, headerRow, bodyRows) =>
-      h.div(
-        [h.Class(tableWrapperClassName)],
+      ih.div(
+        [ih.Class(tableWrapperClassName)],
         [
-          h.table(
-            [h.Class(tableClassName)],
+          ih.table(
+            [ih.Class(tableClassName)],
             [
-              h.thead([h.Class(tableHeadClassName)], [headerRow]),
-              h.tbody([h.Class(tableBodyClassName)], bodyRows),
+              ih.thead([ih.Class(tableHeadClassName)], [headerRow]),
+              ih.tbody([ih.Class(tableBodyClassName)], bodyRows),
             ],
           ),
         ],
       ),
 
-    TableRow: (_tableRow, cells) => h.tr([h.Class(tableRowClassName)], cells),
+    TableRow: (_tableRow, cells) => ih.tr([ih.Class(tableRowClassName)], cells),
 
     TableCell: (_tableCell, content, alignment, isHeader) => {
       if (isHeader) {
-        return h.th(
+        return ih.th(
           [
-            h.Class(tableHeaderCellClassName),
+            ih.Class(tableHeaderCellClassName),
             ...alignmentAttributes(alignment),
           ],
           content,
         )
       } else {
-        return h.td(
-          [h.Class(tableCellClassName), ...alignmentAttributes(alignment)],
+        return ih.td(
+          [ih.Class(tableCellClassName), ...alignmentAttributes(alignment)],
           content,
         )
       }

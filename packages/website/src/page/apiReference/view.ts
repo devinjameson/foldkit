@@ -5,7 +5,7 @@ import {
   Html,
   type HtmlBuilder,
   createKeyedLazy,
-  staticHtml,
+  inertHtml as ih,
 } from 'foldkit/html'
 
 import { Disclosure } from '@foldkit/ui'
@@ -34,25 +34,22 @@ type Highlights = ApiData['highlights']
 const sourceLink = (
   sourceUrl: Option.Option<string>,
   name: string,
-): ReadonlyArray<Html> => {
-  const h = staticHtml
-
-  return Option.match(sourceUrl, {
+): ReadonlyArray<Html> =>
+  Option.match(sourceUrl, {
     onNone: () => [],
     onSome: url => [
-      h.a(
+      ih.a(
         [
-          h.Class(
+          ih.Class(
             'text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300',
           ),
-          h.AriaLabel(`View source for ${name}`),
-          h.Href(url),
+          ih.AriaLabel(`View source for ${name}`),
+          ih.Href(url),
         ],
         ['source'],
       ),
     ],
   })
-}
 
 const lazyItem = createKeyedLazy()
 
@@ -109,24 +106,22 @@ const functionView = (
 
 const allParameterDescriptions = (
   apiFunction: ApiFunction,
-): ReadonlyArray<Html> => {
-  const h = staticHtml
-
-  return pipe(
+): ReadonlyArray<Html> =>
+  pipe(
     Array.flatMap(apiFunction.signatures, signature => signature.parameters),
     Array.dedupeWith((a, b) => a.name === b.name),
     Array.filterMap(parameter =>
       Result.fromOption(
         Option.map(parameter.description, description =>
-          h.div(
-            [h.Class('mb-1')],
+          ih.div(
+            [ih.Class('mb-1')],
             [
-              h.span(
-                [h.Class('font-normal text-gray-900 dark:text-gray-200')],
+              ih.span(
+                [ih.Class('font-normal text-gray-900 dark:text-gray-200')],
                 [parameter.name],
               ),
-              h.span(
-                [h.Class('text-gray-500 dark:text-gray-400')],
+              ih.span(
+                [ih.Class('text-gray-500 dark:text-gray-400')],
                 [`: ${description}`],
               ),
             ],
@@ -138,9 +133,9 @@ const allParameterDescriptions = (
     Array.match({
       onEmpty: () => [],
       onNonEmpty: items => [
-        h.div(
+        ih.div(
           [
-            h.Class(
+            ih.Class(
               'mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 text-sm',
             ),
           ],
@@ -149,14 +144,11 @@ const allParameterDescriptions = (
       ],
     }),
   )
-}
 
-const chevron = (isOpen: boolean): Html => {
-  const h = staticHtml
-
-  return h.span(
+const chevron = (isOpen: boolean): Html =>
+  ih.span(
     [
-      h.Class(
+      ih.Class(
         clsx('text-gray-500 dark:text-gray-400', {
           'rotate-180': isOpen,
         }),
@@ -164,7 +156,6 @@ const chevron = (isOpen: boolean): Html => {
     ],
     [Icon.chevronDown('w-4 h-4')],
   )
-}
 
 const disclosureButtonClassName =
   'w-full flex items-center justify-between px-3 py-2 text-left text-base cursor-pointer transition border border-gray-200 dark:border-gray-700/50 text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-800 rounded-lg data-[open]:rounded-b-none select-none'
@@ -250,23 +241,21 @@ const signaturesView = (
 
 const parameterDescriptions = (
   parameters: ReadonlyArray<ApiParameter>,
-): ReadonlyArray<Html> => {
-  const h = staticHtml
-
-  return pipe(
+): ReadonlyArray<Html> =>
+  pipe(
     parameters,
     Array.filterMap(parameter =>
       Result.fromOption(
         Option.map(parameter.description, description =>
-          h.div(
-            [h.Class('mb-1')],
+          ih.div(
+            [ih.Class('mb-1')],
             [
-              h.span(
-                [h.Class('font-normal text-gray-900 dark:text-gray-200')],
+              ih.span(
+                [ih.Class('font-normal text-gray-900 dark:text-gray-200')],
                 [parameter.name],
               ),
-              h.span(
-                [h.Class('text-gray-500 dark:text-gray-400')],
+              ih.span(
+                [ih.Class('text-gray-500 dark:text-gray-400')],
                 [`: ${description}`],
               ),
             ],
@@ -278,9 +267,9 @@ const parameterDescriptions = (
     Array.match({
       onEmpty: () => [],
       onNonEmpty: items => [
-        h.div(
+        ih.div(
           [
-            h.Class(
+            ih.Class(
               'mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 text-sm',
             ),
           ],
@@ -289,36 +278,29 @@ const parameterDescriptions = (
       ],
     }),
   )
-}
 
 const punctuation = (text: string): Html =>
-  staticHtml.span([staticHtml.Class('text-gray-500')], [text])
+  ih.span([ih.Class('text-gray-500')], [text])
 
-const parameterView = (parameter: ApiParameter): ReadonlyArray<Html> => {
-  const h = staticHtml
-
-  return [
-    ...(parameter.isRest ? [punctuation('...')] : []),
-    h.span(
-      [h.Class('font-normal text-gray-900 dark:text-gray-200')],
-      [parameter.name],
-    ),
-    ...(parameter.isOptional ? [punctuation('?')] : []),
-    punctuation(': '),
-    h.span([h.Class('whitespace-pre-wrap')], [parameter.type]),
-  ]
-}
+const parameterView = (parameter: ApiParameter): ReadonlyArray<Html> => [
+  ...(parameter.isRest ? [punctuation('...')] : []),
+  ih.span(
+    [ih.Class('font-normal text-gray-900 dark:text-gray-200')],
+    [parameter.name],
+  ),
+  ...(parameter.isOptional ? [punctuation('?')] : []),
+  punctuation(': '),
+  ih.span([ih.Class('whitespace-pre-wrap')], [parameter.type]),
+]
 
 const parameterListView = (
   parameters: ReadonlyArray<ApiParameter>,
-): ReadonlyArray<Html> => {
-  const h = staticHtml
-
-  return Array.match(parameters, {
-    onEmpty: () => [h.div([h.Class('mb-2')], [punctuation('()')])],
+): ReadonlyArray<Html> =>
+  Array.match(parameters, {
+    onEmpty: () => [ih.div([ih.Class('mb-2')], [punctuation('()')])],
     onNonEmpty: nonEmpty => [
-      h.div(
-        [h.Class('mb-2')],
+      ih.div(
+        [ih.Class('mb-2')],
         [
           punctuation('('),
           ...Array.flatMap(nonEmpty, (parameter, index) => [
@@ -331,57 +313,46 @@ const parameterListView = (
       ...parameterDescriptions(nonEmpty),
     ],
   })
-}
 
-const returnTypeView = (returnType: string): Html => {
-  const h = staticHtml
-
-  return h.div(
-    [h.Class('whitespace-pre-wrap')],
+const returnTypeView = (returnType: string): Html =>
+  ih.div(
+    [ih.Class('whitespace-pre-wrap')],
     [
       punctuation('→ '),
-      h.span([h.Class('text-accent-600 dark:text-accent-400')], [returnType]),
+      ih.span([ih.Class('text-accent-600 dark:text-accent-400')], [returnType]),
     ],
   )
-}
 
 const descriptionCommentFallback = (
   maybeDescription: Option.Option<string>,
-): ReadonlyArray<Html> => {
-  const h = staticHtml
-
-  return Option.match(maybeDescription, {
+): ReadonlyArray<Html> =>
+  Option.match(maybeDescription, {
     onNone: () => [],
     onSome: description => [
-      h.div(
-        [h.Class('text-gray-500 dark:text-gray-400 mb-3 whitespace-pre-wrap')],
+      ih.div(
+        [ih.Class('text-gray-500 dark:text-gray-400 mb-3 whitespace-pre-wrap')],
         [`/** ${description} */`],
       ),
     ],
   })
-}
 
 const signatureChildrenFallback = (signature: {
   readonly parameters: ReadonlyArray<ApiParameter>
   readonly returnType: string
   readonly typeParameters: ReadonlyArray<string>
-}): ReadonlyArray<Html> => {
-  const h = staticHtml
-
-  return [
-    ...Array.match(signature.typeParameters, {
-      onEmpty: () => [],
-      onNonEmpty: typeParameters => [
-        h.div(
-          [h.Class('text-gray-500 mb-2')],
-          [`<${Array.join(typeParameters, ', ')}>`],
-        ),
-      ],
-    }),
-    ...parameterListView(signature.parameters),
-    returnTypeView(signature.returnType),
-  ]
-}
+}): ReadonlyArray<Html> => [
+  ...Array.match(signature.typeParameters, {
+    onEmpty: () => [],
+    onNonEmpty: typeParameters => [
+      ih.div(
+        [ih.Class('text-gray-500 mb-2')],
+        [`<${Array.join(typeParameters, ', ')}>`],
+      ),
+    ],
+  }),
+  ...parameterListView(signature.parameters),
+  returnTypeView(signature.returnType),
+]
 
 const typeView = (
   moduleName: string,
@@ -738,29 +709,31 @@ const skeletonFunctionBlocks: ReadonlyArray<{
 
 const skeletonSurfaceClass = 'bg-gray-200 dark:bg-gray-800'
 
-export const skeletonView = (): Html => {
-  const h = staticHtml
-
-  return h.div(
-    [h.Class('animate-pulse')],
+export const skeletonView = (): Html =>
+  ih.div(
+    [ih.Class('animate-pulse')],
     [
-      h.div([h.Class(`h-10 w-72 mb-10 rounded ${skeletonSurfaceClass}`)], []),
-      h.div([h.Class(`h-7 w-36 mb-6 rounded ${skeletonSurfaceClass}`)], []),
+      ih.div([ih.Class(`h-10 w-72 mb-10 rounded ${skeletonSurfaceClass}`)], []),
+      ih.div([ih.Class(`h-7 w-36 mb-6 rounded ${skeletonSurfaceClass}`)], []),
       ...Array.map(skeletonFunctionBlocks, ({ id, labelWidth, bodyHeight }) =>
-        h.keyed('div')(
+        ih.keyed('div')(
           id,
-          [h.Class('mb-8')],
+          [ih.Class('mb-8')],
           [
-            h.div(
+            ih.div(
               [
-                h.Class(
+                ih.Class(
                   `h-5 ${labelWidth} mb-3 rounded ${skeletonSurfaceClass}`,
                 ),
               ],
               [],
             ),
-            h.div(
-              [h.Class(`${bodyHeight} w-full rounded ${skeletonSurfaceClass}`)],
+            ih.div(
+              [
+                ih.Class(
+                  `${bodyHeight} w-full rounded ${skeletonSurfaceClass}`,
+                ),
+              ],
               [],
             ),
           ],
@@ -768,23 +741,19 @@ export const skeletonView = (): Html => {
       ),
     ],
   )
-}
 
-export const failureView = (error: string): Html => {
-  const h = staticHtml
-
-  return h.div(
-    [h.Class('rounded-lg border border-red-300 dark:border-red-800 p-6')],
+export const failureView = (error: string): Html =>
+  ih.div(
+    [ih.Class('rounded-lg border border-red-300 dark:border-red-800 p-6')],
     [
-      h.h3(
+      ih.h3(
         [
-          h.Class(
+          ih.Class(
             'text-base font-semibold text-red-700 dark:text-red-400 mb-2',
           ),
         ],
         ['Failed to load API reference'],
       ),
-      h.div([h.Class('text-sm text-gray-600 dark:text-gray-400')], [error]),
+      ih.div([ih.Class('text-sm text-gray-600 dark:text-gray-400')], [error]),
     ],
   )
-}

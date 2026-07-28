@@ -1,27 +1,24 @@
-import { Html, staticHtml } from 'foldkit/html'
+import { Html, inertHtml as ih } from 'foldkit/html'
 
-export const close = (className: string = 'w-6 h-6'): Html => {
-  const h = staticHtml
-
-  return h.svg(
+export const close = (className: string = 'w-6 h-6'): Html =>
+  ih.svg(
     [
-      h.AriaHidden(true),
-      h.Class(className),
-      h.Xmlns('http://www.w3.org/2000/svg'),
-      h.Fill('none'),
-      h.ViewBox('0 0 24 24'),
-      h.StrokeWidth('1.5'),
-      h.Stroke('currentColor'),
+      ih.AriaHidden(true),
+      ih.Class(className),
+      ih.Xmlns('http://www.w3.org/2000/svg'),
+      ih.Fill('none'),
+      ih.ViewBox('0 0 24 24'),
+      ih.StrokeWidth('1.5'),
+      ih.Stroke('currentColor'),
     ],
     [
-      h.path(
+      ih.path(
         [
-          h.StrokeLinecap('round'),
-          h.StrokeLinejoin('round'),
-          h.D('M6 18L18 6M6 6l12 12'),
+          ih.StrokeLinecap('round'),
+          ih.StrokeLinejoin('round'),
+          ih.D('M6 18L18 6M6 6l12 12'),
         ],
         [],
       ),
     ],
   )
-}

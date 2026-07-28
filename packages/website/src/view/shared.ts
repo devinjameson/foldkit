@@ -1,62 +1,53 @@
 import { clsx } from 'clsx'
 import { Array, Match as M, Option } from 'effect'
 import type { Field } from 'foldkit/fieldValidation'
-import { Html, type HtmlBuilder, staticHtml } from 'foldkit/html'
+import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 
 import { formatStarCount } from '../githubStars'
 import { Icon } from '../icon'
 import { type EmailSubscriptionStatus } from '../main'
 import { type Message, SubmittedEmailForm, UpdatedEmailField } from '../message'
 
-export const betaTag: Html = (() => {
-  const h = staticHtml
+export const betaTag: Html = ih.span(
+  [
+    ih.Class(
+      'hidden sm:inline-block -rotate-6 rounded bg-accent-700 dark:bg-accent-500 px-1.5 py-0.5 text-[10px] font-extrabold uppercase leading-none tracking-wider text-white dark:text-accent-900 select-none',
+    ),
+    ih.AriaLabel('Beta'),
+  ],
+  ['Beta'],
+)
 
-  return h.span(
+export const iconLink = (link: string, ariaLabel: string, icon: Html) =>
+  ih.a(
     [
-      h.Class(
-        'hidden sm:inline-block -rotate-6 rounded bg-accent-700 dark:bg-accent-500 px-1.5 py-0.5 text-[10px] font-extrabold uppercase leading-none tracking-wider text-white dark:text-accent-900 select-none',
-      ),
-      h.AriaLabel('Beta'),
-    ],
-    ['Beta'],
-  )
-})()
-
-export const iconLink = (link: string, ariaLabel: string, icon: Html) => {
-  const h = staticHtml
-
-  return h.a(
-    [
-      h.Href(link),
-      h.Class(
+      ih.Href(link),
+      ih.Class(
         'text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition',
       ),
-      h.AriaLabel(ariaLabel),
+      ih.AriaLabel(ariaLabel),
     ],
     [icon],
   )
-}
 
 const STAR_COUNT_MIN_WIDTH = 'min-w-[3ch]'
 
 export const githubStarBadge = (
   maybeGitHubStarCount: Option.Option<number>,
 ): Html => {
-  const h = staticHtml
-
   const badge = (label: Html): Html =>
-    h.span(
+    ih.span(
       [
-        h.Class(
+        ih.Class(
           'inline-flex items-center gap-1 rounded-full bg-gray-900 dark:bg-white px-2 pt-0.5 pb-0.75 text-xs font-semibold text-white dark:text-gray-900',
         ),
-        h.AriaHidden(true),
+        ih.AriaHidden(true),
       ],
       [
         Icon.star('w-3.5 h-3.5'),
-        h.span(
+        ih.span(
           [
-            h.Class(
+            ih.Class(
               clsx(
                 'mt-px inline-flex justify-center tabular-nums',
                 STAR_COUNT_MIN_WIDTH,
@@ -69,24 +60,20 @@ export const githubStarBadge = (
     )
 
   return Option.match(maybeGitHubStarCount, {
-    onNone: () => h.empty,
-    onSome: count => badge(h.span([], [formatStarCount(count)])),
+    onNone: () => ih.empty,
+    onSome: count => badge(ih.span([], [formatStarCount(count)])),
   })
 }
 
-export const skipNavLink: Html = (() => {
-  const h = staticHtml
-
-  return h.a(
-    [
-      h.Href('#main-content'),
-      h.Class(
-        'sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-accent-600 dark:focus:bg-accent-500 focus:text-white focus:text-sm focus:font-normal',
-      ),
-    ],
-    ['Skip to main content'],
-  )
-})()
+export const skipNavLink: Html = ih.a(
+  [
+    ih.Href('#main-content'),
+    ih.Class(
+      'sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-accent-600 dark:focus:bg-accent-500 focus:text-white focus:text-sm focus:font-normal',
+    ),
+  ],
+  ['Skip to main content'],
+)
 
 export const emailFormView = (
   emailField: Field<string>,

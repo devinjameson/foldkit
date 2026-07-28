@@ -5,7 +5,7 @@ import {
   Record as Record_,
   Schema as S,
 } from 'effect'
-import { Html, staticHtml } from 'foldkit/html'
+import { Html, inertHtml as ih } from 'foldkit/html'
 
 import {
   Alignment,
@@ -33,8 +33,6 @@ import {
   ThematicBreak,
 } from '../ast/index.js'
 import type { IslandDefinitions } from '../island/index.js'
-
-const h = staticHtml
 
 /** Rendered inline content, ready to pass as element children. */
 export type InlineContent = ReadonlyArray<Html | string>
@@ -107,21 +105,21 @@ export type ViewConfig = Readonly<{
 const titleAttribute = (maybeTitle: Option.Option<string>) =>
   Option.match(maybeTitle, {
     onNone: () => [],
-    onSome: title => [h.Title(title)],
+    onSome: title => [ih.Title(title)],
   })
 
 const startAttribute = (maybeStartNumber: Option.Option<number>) =>
   Option.match(maybeStartNumber, {
     onNone: () => [],
-    onSome: startNumber => [h.Start(startNumber)],
+    onSome: startNumber => [ih.Start(startNumber)],
   })
 
 const alignmentAttribute = (alignment: Alignment) =>
   M.value(alignment).pipe(
     M.when('None', () => []),
-    M.when('Left', () => [h.Style({ 'text-align': 'left' })]),
-    M.when('Center', () => [h.Style({ 'text-align': 'center' })]),
-    M.when('Right', () => [h.Style({ 'text-align': 'right' })]),
+    M.when('Left', () => [ih.Style({ 'text-align': 'left' })]),
+    M.when('Center', () => [ih.Style({ 'text-align': 'center' })]),
+    M.when('Right', () => [ih.Style({ 'text-align': 'right' })]),
     M.exhaustive,
   )
 
@@ -134,7 +132,7 @@ const alignmentAttribute = (alignment: Alignment) =>
  * const blogViews: Markdown.Views = {
  *   ...Markdown.defaultViews,
  *   Paragraph: (paragraph, content) =>
- *     h.p([h.Class('leading-relaxed text-stone-700')], content),
+ *     ih.p([ih.Class('leading-relaxed text-stone-700')], content),
  * }
  * ```
  */
@@ -145,46 +143,46 @@ const alignmentAttribute = (alignment: Alignment) =>
 // whole document belongs on the consumer's key around the rendered output.
 export const defaultViews: Views = {
   Text: ({ value }) => value,
-  InlineCode: ({ value }) => h.code([], [value]),
-  HardBreak: () => h.br([]),
-  Emphasis: (_emphasis, content) => h.em([], content),
-  Strong: (_strong, content) => h.strong([], content),
-  Strikethrough: (_strikethrough, content) => h.del([], content),
+  InlineCode: ({ value }) => ih.code([], [value]),
+  HardBreak: () => ih.br([]),
+  Emphasis: (_emphasis, content) => ih.em([], content),
+  Strong: (_strong, content) => ih.strong([], content),
+  Strikethrough: (_strikethrough, content) => ih.del([], content),
   Link: ({ url, maybeTitle }, content) =>
-    h.a([h.Href(url), ...titleAttribute(maybeTitle)], content),
+    ih.a([ih.Href(url), ...titleAttribute(maybeTitle)], content),
   Image: ({ url, alt, maybeTitle }) =>
-    h.img([h.Src(url), h.Alt(alt), ...titleAttribute(maybeTitle)]),
+    ih.img([ih.Src(url), ih.Alt(alt), ...titleAttribute(maybeTitle)]),
   Heading: ({ level }, content) =>
     M.value(level).pipe(
       M.withReturnType<Html>(),
-      M.when(1, () => h.h1([], content)),
-      M.when(2, () => h.h2([], content)),
-      M.when(3, () => h.h3([], content)),
-      M.when(4, () => h.h4([], content)),
-      M.when(5, () => h.h5([], content)),
-      M.when(6, () => h.h6([], content)),
+      M.when(1, () => ih.h1([], content)),
+      M.when(2, () => ih.h2([], content)),
+      M.when(3, () => ih.h3([], content)),
+      M.when(4, () => ih.h4([], content)),
+      M.when(5, () => ih.h5([], content)),
+      M.when(6, () => ih.h6([], content)),
       M.exhaustive,
     ),
-  Paragraph: (_paragraph, content) => h.p([], content),
-  CodeBlock: ({ value }) => h.pre([], [h.code([], [value])]),
+  Paragraph: (_paragraph, content) => ih.p([], content),
+  CodeBlock: ({ value }) => ih.pre([], [ih.code([], [value])]),
   List: ({ isOrdered, maybeStartNumber }, items) => {
     if (isOrdered) {
-      return h.ol(startAttribute(maybeStartNumber), items)
+      return ih.ol(startAttribute(maybeStartNumber), items)
     } else {
-      return h.ul([], items)
+      return ih.ul([], items)
     }
   },
-  ListItem: (_listItem, blocks) => h.li([], blocks),
-  Blockquote: (_blockquote, blocks) => h.blockquote([], blocks),
-  ThematicBreak: () => h.hr([]),
+  ListItem: (_listItem, blocks) => ih.li([], blocks),
+  Blockquote: (_blockquote, blocks) => ih.blockquote([], blocks),
+  ThematicBreak: () => ih.hr([]),
   Table: (_table, headerRow, bodyRows) =>
-    h.table([], [h.thead([], [headerRow]), h.tbody([], bodyRows)]),
-  TableRow: (_tableRow, cells) => h.tr([], cells),
+    ih.table([], [ih.thead([], [headerRow]), ih.tbody([], bodyRows)]),
+  TableRow: (_tableRow, cells) => ih.tr([], cells),
   TableCell: (_tableCell, content, alignment, isHeader) => {
     if (isHeader) {
-      return h.th(alignmentAttribute(alignment), content)
+      return ih.th(alignmentAttribute(alignment), content)
     } else {
-      return h.td(alignmentAttribute(alignment), content)
+      return ih.td(alignmentAttribute(alignment), content)
     }
   },
 }
@@ -420,4 +418,4 @@ export const viewBlocks = (
 export const view = (
   document: MarkdownDocument,
   config: ViewConfig = {},
-): Html => h.div([], viewBlocks(document, config))
+): Html => ih.div([], viewBlocks(document, config))

@@ -1,6 +1,6 @@
-import { staticHtml as h } from 'foldkit/html'
+import { inertHtml as ih } from 'foldkit/html'
 
-export const reloadButton = h.button(
-  [h.Attribute('onclick', 'location.reload()')],
+export const reloadButton = ih.button(
+  [ih.Attribute('onclick', 'location.reload()')],
   ['Reload'],
 )

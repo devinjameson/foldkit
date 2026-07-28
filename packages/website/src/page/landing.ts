@@ -11,7 +11,7 @@ import {
   pipe,
 } from 'effect'
 import { Mount } from 'foldkit'
-import { Html, type HtmlBuilder, staticHtml } from 'foldkit/html'
+import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { foldkitVersion } from 'virtual:landing-data'
 
@@ -49,29 +49,27 @@ import { exampleAppCount } from './examples'
 
 export const HERO_SECTION_ID = 'hero'
 
-const glyph = (symbol: string, offsetY?: string): Html => {
-  const h = staticHtml
-
-  return h.div(
+const glyph = (symbol: string, offsetY?: string): Html =>
+  ih.div(
     [
-      h.Class(
+      ih.Class(
         '-my-[9rem] md:-my-[13.5rem] px-6 md:px-12 lg:px-20 select-none pointer-events-none',
       ),
-      h.AriaHidden(true),
+      ih.AriaHidden(true),
     ],
     [
-      h.div(
-        [h.Class('max-w-6xl mx-auto')],
+      ih.div(
+        [ih.Class('max-w-6xl mx-auto')],
         [
-          h.span(
+          ih.span(
             [
-              h.Class(
+              ih.Class(
                 clsx(
                   'inline-block -translate-x-1/4 text-accent-200/18 dark:text-accent-400/4 font-mono text-[18rem] md:text-[27rem] font-extrabold leading-none -z-10 relative whitespace-nowrap',
                   offsetY,
                 ),
               ),
-              h.DataAttribute('glyph', symbol),
+              ih.DataAttribute('glyph', symbol),
             ],
             [],
           ),
@@ -79,7 +77,6 @@ const glyph = (symbol: string, offsetY?: string): Html => {
       ),
     ],
   )
-}
 
 // VIEW
 
@@ -131,18 +128,15 @@ export const view = (
 
 const viewOnGitHubButton = (
   maybeGitHubStarCount: Option.Option<number>,
-): Html => {
-  const h = staticHtml
-
-  return h.a(
-    [h.Href(Link.github), h.Class('cta-secondary')],
+): Html =>
+  ih.a(
+    [ih.Href(Link.github), ih.Class('cta-secondary')],
     [
       Icon.github('w-5 h-5'),
-      h.span([h.Class('mr-2')], ['View on GitHub']),
+      ih.span([ih.Class('mr-2')], ['View on GitHub']),
       githubStarBadge(maybeGitHubStarCount),
     ],
   )
-}
 
 // MESSAGE
 
@@ -276,42 +270,40 @@ const heroSection = (
 
 // POWERED BY
 
-const poweredByItem = (text: string): Html => {
-  const h = staticHtml
-
-  return h.li(
-    [h.Class('flex items-start gap-3')],
+const poweredByItem = (text: string): Html =>
+  ih.li(
+    [ih.Class('flex items-start gap-3')],
     [
-      h.div(
-        [h.Class('shrink-0 mt-0.5 text-accent-600 dark:text-accent-500')],
+      ih.div(
+        [ih.Class('shrink-0 mt-0.5 text-accent-600 dark:text-accent-500')],
         [Icon.check('w-5 h-5')],
       ),
-      h.span([h.Class('font-normal text-gray-600 dark:text-gray-300')], [text]),
+      ih.span(
+        [ih.Class('font-normal text-gray-600 dark:text-gray-300')],
+        [text],
+      ),
     ],
   )
-}
 
-const poweredBySection = (): Html => {
-  const h = staticHtml
-
-  return h.section(
-    [h.Id('powered-by-effect'), h.Class('landing-section py-10 md:py-14')],
+const poweredBySection = (): Html =>
+  ih.section(
+    [ih.Id('powered-by-effect'), ih.Class('landing-section py-10 md:py-14')],
     [
-      h.div(
-        [h.Class('landing-section-narrow')],
+      ih.div(
+        [ih.Class('landing-section-narrow')],
         [
-          h.h2(
+          ih.h2(
             [
-              h.Class(
+              ih.Class(
                 'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white text-balance',
               ),
             ],
             [
               'Built on ',
-              h.a(
+              ih.a(
                 [
-                  h.Href(Link.effect),
-                  h.Class(
+                  ih.Href(Link.effect),
+                  ih.Class(
                     'text-accent-600 dark:text-accent-500 underline decoration-accent-600/30 dark:decoration-accent-500/30 hover:decoration-accent-600 dark:hover:decoration-accent-500 font-normal',
                   ),
                 ],
@@ -320,9 +312,9 @@ const poweredBySection = (): Html => {
               '. Inside and out.',
             ],
           ),
-          h.p(
+          ih.p(
             [
-              h.Class(
+              ih.Class(
                 'mt-4 text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-6 max-w-3xl',
               ),
             ],
@@ -330,10 +322,10 @@ const poweredBySection = (): Html => {
               'If you already know Effect, Foldkit feels natural. If you’re new to Effect, Foldkit is a great way to learn it.',
             ],
           ),
-          h.ul(
+          ih.ul(
             [
-              h.Role('list'),
-              h.Class(
+              ih.Role('list'),
+              ih.Class(
                 'flex flex-col gap-2 text-lg text-gray-600 dark:text-gray-300 list-none',
               ),
             ],
@@ -349,49 +341,43 @@ const poweredBySection = (): Html => {
       ),
     ],
   )
-}
 
 // THE PROMISE
 
-const pillarCard = (icon: Html, title: string, description: string): Html => {
-  const h = staticHtml
-
-  return h.div(
-    [h.Class('landing-card')],
+const pillarCard = (icon: Html, title: string, description: string): Html =>
+  ih.div(
+    [ih.Class('landing-card')],
     [
-      h.div([h.Class('mb-3 text-accent-600 dark:text-accent-500')], [icon]),
-      h.h3(
-        [h.Class('text-xl font-normal text-gray-900 dark:text-white mb-2')],
+      ih.div([ih.Class('mb-3 text-accent-600 dark:text-accent-500')], [icon]),
+      ih.h3(
+        [ih.Class('text-xl font-normal text-gray-900 dark:text-white mb-2')],
         [title],
       ),
-      h.p(
-        [h.Class('text-gray-600 dark:text-gray-300 leading-relaxed')],
+      ih.p(
+        [ih.Class('text-gray-600 dark:text-gray-300 leading-relaxed')],
         [description],
       ),
     ],
   )
-}
 
-const promiseSection = (): Html => {
-  const h = staticHtml
-
-  return h.section(
-    [h.Id('the-promise'), h.Class('landing-section')],
+const promiseSection = (): Html =>
+  ih.section(
+    [ih.Id('the-promise'), ih.Class('landing-section')],
     [
-      h.div(
-        [h.Class('landing-section-narrow')],
+      ih.div(
+        [ih.Class('landing-section-narrow')],
         [
-          h.h2(
+          ih.h2(
             [
-              h.Class(
+              ih.Class(
                 'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white mb-3 text-balance',
               ),
             ],
             ['Declare behavior. Ship. Repeat.'],
           ),
-          h.p(
+          ih.p(
             [
-              h.Class(
+              ih.Class(
                 'text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-10 max-w-3xl',
               ),
             ],
@@ -399,8 +385,8 @@ const promiseSection = (): Html => {
               'React, Vue, Svelte, and Solid solve rendering and leave the architecture to you. Foldkit gives you the architecture, so you can focus on your domain.',
             ],
           ),
-          h.div(
-            [h.Class('grid gap-6 md:grid-cols-3')],
+          ih.div(
+            [ih.Class('grid gap-6 md:grid-cols-3')],
             [
               pillarCard(
                 Icon.lockClosed('w-6 h-6'),
@@ -423,30 +409,27 @@ const promiseSection = (): Html => {
       ),
     ],
   )
-}
 
 // DEMOS
 
-const demoSection = (demoTabsView: Html): Html => {
-  const h = staticHtml
-
-  return h.section(
-    [h.Id('peek-inside'), h.Class('landing-section')],
+const demoSection = (demoTabsView: Html): Html =>
+  ih.section(
+    [ih.Id('peek-inside'), ih.Class('landing-section')],
     [
-      h.div(
-        [h.Class('landing-section-narrow')],
+      ih.div(
+        [ih.Class('landing-section-narrow')],
         [
-          h.h2(
+          ih.h2(
             [
-              h.Class(
+              ih.Class(
                 'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white mb-3 text-balance',
               ),
             ],
             ['See it work.'],
           ),
-          h.p(
+          ih.p(
             [
-              h.Class(
+              ih.Class(
                 'text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-10 max-w-3xl',
               ),
             ],
@@ -454,12 +437,11 @@ const demoSection = (demoTabsView: Html): Html => {
               'Watch a message flow through update into the model. The code highlights in real time to show you what’s happening at each step.',
             ],
           ),
-          h.div([h.Class('demo-viewport-constraint')], [demoTabsView]),
+          ih.div([ih.Class('demo-viewport-constraint')], [demoTabsView]),
         ],
       ),
     ],
   )
-}
 
 // WHAT'S INCLUDED
 
@@ -468,20 +450,18 @@ const includedFeature = (
   title: string,
   description: ReadonlyArray<string | Html>,
   link?: Readonly<{ href: string; label: string }>,
-): Html => {
-  const h = staticHtml
-
-  return h.div(
-    [h.Class('landing-card')],
+): Html =>
+  ih.div(
+    [ih.Class('landing-card')],
     [
-      h.div([h.Class('mb-3 text-accent-600 dark:text-accent-500')], [icon]),
-      h.h3(
-        [h.Class('text-xl font-normal text-gray-900 dark:text-white mb-2')],
+      ih.div([ih.Class('mb-3 text-accent-600 dark:text-accent-500')], [icon]),
+      ih.h3(
+        [ih.Class('text-xl font-normal text-gray-900 dark:text-white mb-2')],
         [title],
       ),
-      h.p(
+      ih.p(
         [
-          h.Class(
+          ih.Class(
             clsx(
               'text-gray-600 dark:text-gray-300 leading-relaxed',
               link && 'mb-3',
@@ -492,17 +472,17 @@ const includedFeature = (
       ),
       ...(link
         ? [
-            h.a(
+            ih.a(
               [
-                h.Href(link.href),
-                h.Class(
+                ih.Href(link.href),
+                ih.Class(
                   'text-accent-600 dark:text-accent-500 underline decoration-accent-600/30 dark:decoration-accent-500/30 hover:decoration-accent-600 dark:hover:decoration-accent-500 font-normal',
                 ),
               ],
               [
                 link.label,
-                h.span(
-                  [h.Class('inline-block ml-1')],
+                ih.span(
+                  [ih.Class('inline-block ml-1')],
                   [Icon.arrowRight('w-3.5 h-3.5 inline')],
                 ),
               ],
@@ -511,28 +491,25 @@ const includedFeature = (
         : []),
     ],
   )
-}
 
-const includedSection = (): Html => {
-  const h = staticHtml
-
-  return h.section(
-    [h.Id('batteries-included'), h.Class('landing-section')],
+const includedSection = (): Html =>
+  ih.section(
+    [ih.Id('batteries-included'), ih.Class('landing-section')],
     [
-      h.div(
-        [h.Class('landing-section-narrow')],
+      ih.div(
+        [ih.Class('landing-section-narrow')],
         [
-          h.h2(
+          ih.h2(
             [
-              h.Class(
+              ih.Class(
                 'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white mb-3 text-balance',
               ),
             ],
             ['Batteries included.'],
           ),
-          h.p(
+          ih.p(
             [
-              h.Class(
+              ih.Class(
                 'text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-10 max-w-3xl',
               ),
             ],
@@ -540,8 +517,8 @@ const includedSection = (): Html => {
               'Most frameworks ask you to bring your own routing library, state manager, UI kit, and form validator. Foldkit ships them as one coherent system.',
             ],
           ),
-          h.div(
-            [h.Class('grid gap-6 sm:grid-cols-2 lg:grid-cols-3')],
+          ih.div(
+            [ih.Class('grid gap-6 sm:grid-cols-2 lg:grid-cols-3')],
             [
               includedFeature(
                 Icon.route('w-6 h-6'),
@@ -554,24 +531,24 @@ const includedSection = (): Html => {
                   label: 'Explore routing',
                 },
               ),
-              h.div(
-                [h.Class('landing-card')],
+              ih.div(
+                [ih.Class('landing-card')],
                 [
-                  h.div(
-                    [h.Class('mb-3 text-accent-600 dark:text-accent-500')],
+                  ih.div(
+                    [ih.Class('mb-3 text-accent-600 dark:text-accent-500')],
                     [Icon.puzzle('w-6 h-6')],
                   ),
-                  h.h3(
+                  ih.h3(
                     [
-                      h.Class(
+                      ih.Class(
                         'flex items-center text-xl font-normal text-gray-900 dark:text-white mb-2',
                       ),
                     ],
                     ['UI Components'],
                   ),
-                  h.p(
+                  ih.p(
                     [
-                      h.Class(
+                      ih.Class(
                         'text-gray-600 dark:text-gray-300 leading-relaxed mb-3',
                       ),
                     ],
@@ -579,17 +556,17 @@ const includedSection = (): Html => {
                       'Accessible components (dialog, menu, tabs, listbox, disclosure, and more) built for The Elm Architecture. Easy to style and customize.',
                     ],
                   ),
-                  h.a(
+                  ih.a(
                     [
-                      h.Href(uiOverviewRouter()),
-                      h.Class(
+                      ih.Href(uiOverviewRouter()),
+                      ih.Class(
                         'text-accent-600 dark:text-accent-500 underline decoration-accent-600/30 dark:decoration-accent-500/30 hover:decoration-accent-600 dark:hover:decoration-accent-500 font-normal',
                       ),
                     ],
                     [
                       'Browse the components',
-                      h.span(
-                        [h.Class('inline-block ml-1')],
+                      ih.span(
+                        [ih.Class('inline-block ml-1')],
                         [Icon.arrowRight('w-3.5 h-3.5 inline')],
                       ),
                     ],
@@ -679,36 +656,33 @@ const includedSection = (): Html => {
       ),
     ],
   )
-}
 
 // TESTING
 
-const testingSection = (renderCopyButton: RenderCopyButton): Html => {
-  const h = staticHtml
-
-  return h.section(
-    [h.Id('testing'), h.Class('landing-section')],
+const testingSection = (renderCopyButton: RenderCopyButton): Html =>
+  ih.section(
+    [ih.Id('testing'), ih.Class('landing-section')],
     [
-      h.div(
-        [h.Class('landing-section-narrow')],
+      ih.div(
+        [ih.Class('landing-section-narrow')],
         [
-          h.h2(
+          ih.h2(
             [
-              h.Class(
+              ih.Class(
                 'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white mb-3 text-balance',
               ),
             ],
             [
               'Tests that read like ',
-              h.span(
-                [h.Class('text-accent-600 dark:text-accent-500')],
+              ih.span(
+                [ih.Class('text-accent-600 dark:text-accent-500')],
                 ['stories and scenes.'],
               ),
             ],
           ),
-          h.p(
+          ih.p(
             [
-              h.Class(
+              ih.Class(
                 'text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-10 max-w-3xl',
               ),
             ],
@@ -716,13 +690,16 @@ const testingSection = (renderCopyButton: RenderCopyButton): Html => {
               'Pure update functions mean pure tests. Story tests the state machine. Scene tests features through the view (clicking buttons, typing into inputs) with accessible locators. No DOM, no mocking.',
             ],
           ),
-          h.a(
-            [h.Href(testingRouter()), h.Class('cta-secondary mb-8')],
+          ih.a(
+            [ih.Href(testingRouter()), ih.Class('cta-secondary mb-8')],
             ['Learn about testing', Icon.arrowRight('w-5 h-5')],
           ),
           highlightedCodeBlock(
-            h.div(
-              [h.Class('text-sm'), h.InnerHTML(Snippet.landingTestHighlighted)],
+            ih.div(
+              [
+                ih.Class('text-sm'),
+                ih.InnerHTML(Snippet.landingTestHighlighted),
+              ],
               [],
             ),
             Snippet.landingTestRaw,
@@ -734,36 +711,33 @@ const testingSection = (renderCopyButton: RenderCopyButton): Html => {
       ),
     ],
   )
-}
 
 // DEVTOOLS
 
-const devToolsSection = (): Html => {
-  const h = staticHtml
-
-  return h.section(
-    [h.Id('devtools'), h.Class('landing-section')],
+const devToolsSection = (): Html =>
+  ih.section(
+    [ih.Id('devtools'), ih.Class('landing-section')],
     [
-      h.div(
-        [h.Class('landing-section-narrow')],
+      ih.div(
+        [ih.Class('landing-section-narrow')],
         [
-          h.h2(
+          ih.h2(
             [
-              h.Class(
+              ih.Class(
                 'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white mb-3 text-balance',
               ),
             ],
             [
               'Watch your program ',
-              h.span(
-                [h.Class('text-accent-600 dark:text-accent-500')],
+              ih.span(
+                [ih.Class('text-accent-600 dark:text-accent-500')],
                 ['think.'],
               ),
             ],
           ),
-          h.p(
+          ih.p(
             [
-              h.Class(
+              ih.Class(
                 'text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-4 max-w-3xl',
               ),
             ],
@@ -771,9 +745,9 @@ const devToolsSection = (): Html => {
               'When every state change flows through Messages and a single Model, you get DevTools that would be impossible in a mutable-state framework. Every Message is logged. Every Model state is inspectable. Click any row to see exactly what changed.',
             ],
           ),
-          h.p(
+          ih.p(
             [
-              h.Class(
+              ih.Class(
                 'text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-4 max-w-3xl',
               ),
             ],
@@ -781,9 +755,9 @@ const devToolsSection = (): Html => {
               'Plus, AI agents can connect over MCP. They read the current Model, walk Message history, and rewind the UI to past states. Programmatic access to the same data DevTools shows you.',
             ],
           ),
-          h.p(
+          ih.p(
             [
-              h.Class(
+              ih.Class(
                 'text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-10 max-w-3xl',
               ),
             ],
@@ -791,28 +765,28 @@ const devToolsSection = (): Html => {
               'This site runs on Foldkit. Look for the tab on the bottom right of this page to try DevTools live.',
             ],
           ),
-          h.a(
-            [h.Href(coreDevToolsRouter()), h.Class('cta-secondary mb-8')],
+          ih.a(
+            [ih.Href(coreDevToolsRouter()), ih.Class('cta-secondary mb-8')],
             ['Learn about DevTools', Icon.arrowRight('w-5 h-5')],
           ),
-          h.div(
+          ih.div(
             [
-              h.Class(
+              ih.Class(
                 'rounded-lg overflow-hidden shadow-xl ring-1 ring-gray-200 dark:ring-gray-700',
               ),
             ],
             [
-              h.img([
-                h.Src('/devtools-overlay.webp'),
-                h.Srcset(
+              ih.img([
+                ih.Src('/devtools-overlay.webp'),
+                ih.Srcset(
                   '/devtools-overlay-1x.webp 1x, /devtools-overlay.webp 2x',
                 ),
-                h.Alt(
+                ih.Alt(
                   'Foldkit DevTools overlay inspecting the Foldkit website: a numbered Message timeline on the left with entries like ClickedLink, ChangedUrl, and CompletedScrollToTop, and an expandable Model state tree on the right showing route, url, and theme fields.',
                 ),
-                h.Width('972'),
-                h.Height('637'),
-                h.Class('w-full h-auto'),
+                ih.Width('972'),
+                ih.Height('637'),
+                ih.Class('w-full h-auto'),
               ]),
             ],
           ),
@@ -820,45 +794,42 @@ const devToolsSection = (): Html => {
       ),
     ],
   )
-}
 
 // TRADE-OFFS & COMPARISON
 
-const tradeOffsSection = (): Html => {
-  const h = staticHtml
-
-  return h.section(
-    [h.Id('whats-the-catch'), h.Class('landing-section')],
+const tradeOffsSection = (): Html =>
+  ih.section(
+    [ih.Id('whats-the-catch'), ih.Class('landing-section')],
     [
-      h.div(
-        [h.Class('landing-section-narrow')],
+      ih.div(
+        [ih.Class('landing-section-narrow')],
         [
-          h.div(
-            [h.Class('grid gap-10 md:grid-cols-2')],
+          ih.div(
+            [ih.Class('grid gap-10 md:grid-cols-2')],
             [
-              h.div(
+              ih.div(
                 [],
                 [
-                  h.h2(
+                  ih.h2(
                     [
-                      h.Class(
+                      ih.Class(
                         'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white mb-3 text-balance',
                       ),
                     ],
                     ['What’s the catch?'],
                   ),
-                  h.p(
+                  ih.p(
                     [
-                      h.Class(
+                      ih.Class(
                         'text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-4',
                       ),
                     ],
                     [
                       'Foldkit asks you to think about frontend development differently. It uses ',
-                      h.a(
+                      ih.a(
                         [
-                          h.Href(Link.elmArchitecture),
-                          h.Class(
+                          ih.Href(Link.elmArchitecture),
+                          ih.Class(
                             'text-accent-600 dark:text-accent-500 underline decoration-accent-600/30 dark:decoration-accent-500/30 hover:decoration-accent-600 dark:hover:decoration-accent-500 font-normal',
                           ),
                         ],
@@ -867,42 +838,45 @@ const tradeOffsSection = (): Html => {
                       ', so there are no components, no hooks, no local state. Everything is declarative and structured. You’ll need to shift how you think about state, effects, and views.',
                     ],
                   ),
-                  h.p(
+                  ih.p(
                     [
-                      h.Class(
+                      ih.Class(
                         'text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-8',
                       ),
                     ],
                     ['It’s a discipline. It pays off, but it’s a real ask.'],
                   ),
-                  h.a(
+                  ih.a(
                     [
-                      h.Href(coreArchitectureRouter()),
-                      h.Class('cta-secondary'),
+                      ih.Href(coreArchitectureRouter()),
+                      ih.Class('cta-secondary'),
                     ],
                     ['See how it works', Icon.arrowRight('w-5 h-5')],
                   ),
                 ],
               ),
-              h.div(
-                [h.Id('foldkit-vs-react')],
+              ih.div(
+                [ih.Id('foldkit-vs-react')],
                 [
-                  h.h2(
+                  ih.h2(
                     [
-                      h.Class(
+                      ih.Class(
                         'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white mb-4 text-balance',
                       ),
                     ],
                     ['How does it compare?'],
                   ),
-                  h.p(
-                    [h.Class('text-lg text-gray-600 dark:text-gray-300 mb-8')],
+                  ih.p(
+                    [ih.Class('text-lg text-gray-600 dark:text-gray-300 mb-8')],
                     [
                       'Foldkit is a different kind of frontend framework. If you’re weighing it against React, Vue, Svelte, or Solid, the key difference isn’t syntax or performance. It’s that Foldkit prescribes the architecture instead of leaving it to you.',
                     ],
                   ),
-                  h.a(
-                    [h.Href(comingFromReactRouter()), h.Class('cta-secondary')],
+                  ih.a(
+                    [
+                      ih.Href(comingFromReactRouter()),
+                      ih.Class('cta-secondary'),
+                    ],
                     ['Compare to React', Icon.arrowRight('w-5 h-5')],
                   ),
                 ],
@@ -913,35 +887,32 @@ const tradeOffsSection = (): Html => {
       ),
     ],
   )
-}
 
 // AUDIENCE
 
-const audienceSection = (): Html => {
-  const h = staticHtml
-
-  return h.section(
-    [h.Id('who-its-for'), h.Class('landing-section')],
+const audienceSection = (): Html =>
+  ih.section(
+    [ih.Id('who-its-for'), ih.Class('landing-section')],
     [
-      h.div(
-        [h.Class('landing-section-narrow')],
+      ih.div(
+        [ih.Class('landing-section-narrow')],
         [
-          h.div(
-            [h.Class('grid gap-8 md:grid-cols-2')],
+          ih.div(
+            [ih.Class('grid gap-8 md:grid-cols-2')],
             [
-              h.div(
+              ih.div(
                 [],
                 [
-                  h.h2(
+                  ih.h2(
                     [
-                      h.Class(
+                      ih.Class(
                         'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white mb-6 text-balance',
                       ),
                     ],
                     ['Who it’s for'],
                   ),
-                  h.ul(
-                    [h.Role('list'), h.Class('list-none')],
+                  ih.ul(
+                    [ih.Role('list'), ih.Class('list-none')],
                     [
                       audienceForItem(
                         'Effect developers who need a frontend',
@@ -963,19 +934,19 @@ const audienceSection = (): Html => {
                   ),
                 ],
               ),
-              h.div(
+              ih.div(
                 [],
                 [
-                  h.h2(
+                  ih.h2(
                     [
-                      h.Class(
+                      ih.Class(
                         'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white mb-6 text-balance',
                       ),
                     ],
                     ['Who it’s not for'],
                   ),
-                  h.ul(
-                    [h.Role('list'), h.Class('list-none')],
+                  ih.ul(
+                    [ih.Role('list'), ih.Class('list-none')],
                     [
                       audienceNotItem(
                         'Large existing React codebases',
@@ -1003,93 +974,84 @@ const audienceSection = (): Html => {
       ),
     ],
   )
-}
 
-const audienceForItem = (title: string, description: string): Html => {
-  const h = staticHtml
-
-  return h.li(
-    [h.Class('mb-5 flex gap-3')],
+const audienceForItem = (title: string, description: string): Html =>
+  ih.li(
+    [ih.Class('mb-5 flex gap-3')],
     [
-      h.div(
-        [h.Class('shrink-0 mt-0.5 text-accent-600 dark:text-accent-400')],
+      ih.div(
+        [ih.Class('shrink-0 mt-0.5 text-accent-600 dark:text-accent-400')],
         [Icon.check('w-5 h-5')],
       ),
-      h.div(
+      ih.div(
         [],
         [
-          h.h3(
+          ih.h3(
             [
-              h.Class(
+              ih.Class(
                 'text-base font-normal text-gray-900 dark:text-white mb-1',
               ),
             ],
             [title],
           ),
-          h.p(
-            [h.Class('text-gray-600 dark:text-gray-300 leading-relaxed')],
+          ih.p(
+            [ih.Class('text-gray-600 dark:text-gray-300 leading-relaxed')],
             [description],
           ),
         ],
       ),
     ],
   )
-}
 
-const audienceNotItem = (title: string, description: string): Html => {
-  const h = staticHtml
-
-  return h.li(
-    [h.Class('mb-5 flex gap-3')],
+const audienceNotItem = (title: string, description: string): Html =>
+  ih.li(
+    [ih.Class('mb-5 flex gap-3')],
     [
-      h.div(
-        [h.Class('shrink-0 mt-0.5 text-gray-400 dark:text-gray-500')],
+      ih.div(
+        [ih.Class('shrink-0 mt-0.5 text-gray-400 dark:text-gray-500')],
         [Icon.close('w-5 h-5')],
       ),
-      h.div(
+      ih.div(
         [],
         [
-          h.h3(
+          ih.h3(
             [
-              h.Class(
+              ih.Class(
                 'text-base font-normal text-gray-900 dark:text-white mb-1',
               ),
             ],
             [title],
           ),
-          h.p(
-            [h.Class('text-gray-600 dark:text-gray-300 leading-relaxed')],
+          ih.p(
+            [ih.Class('text-gray-600 dark:text-gray-300 leading-relaxed')],
             [description],
           ),
         ],
       ),
     ],
   )
-}
 
 // TRUST & MATURITY
 
-const trustSection = (): Html => {
-  const h = staticHtml
-
-  return h.section(
-    [h.Id('trust'), h.Class('landing-section py-10 md:py-14')],
+const trustSection = (): Html =>
+  ih.section(
+    [ih.Id('trust'), ih.Class('landing-section py-10 md:py-14')],
     [
-      h.div(
-        [h.Class('landing-section-narrow')],
+      ih.div(
+        [ih.Class('landing-section-narrow')],
         [
-          h.h2(
+          ih.h2(
             [
-              h.Class(
+              ih.Class(
                 'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white mb-6 text-balance',
               ),
             ],
             ['Proof of life.'],
           ),
-          h.ul(
+          ih.ul(
             [
-              h.Role('list'),
-              h.Class('grid gap-6 sm:grid-cols-2 lg:grid-cols-4 list-none'),
+              ih.Role('list'),
+              ih.Class('grid gap-6 sm:grid-cols-2 lg:grid-cols-4 list-none'),
             ],
             [
               trustItem('Version', `v${foldkitVersion}`),
@@ -1110,66 +1072,59 @@ const trustSection = (): Html => {
       ),
     ],
   )
-}
 
-const trustItem = (label: string, value: string): Html => {
-  const h = staticHtml
-
-  return h.li(
-    [h.Class('landing-card')],
+const trustItem = (label: string, value: string): Html =>
+  ih.li(
+    [ih.Class('landing-card')],
     [
-      h.p(
+      ih.p(
         [
-          h.Class(
+          ih.Class(
             'text-xs font-normal text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-1',
           ),
         ],
         [label],
       ),
-      h.p(
-        [h.Class('text-xl font-normal text-gray-900 dark:text-white')],
+      ih.p(
+        [ih.Class('text-xl font-normal text-gray-900 dark:text-white')],
         [value],
       ),
     ],
   )
-}
 
 const trustItemWithLink = (
   label: string,
   linkText: string,
   href: string,
-): Html => {
-  const h = staticHtml
-
-  return h.li(
-    [h.Class('landing-card')],
+): Html =>
+  ih.li(
+    [ih.Class('landing-card')],
     [
-      h.p(
+      ih.p(
         [
-          h.Class(
+          ih.Class(
             'text-xs font-normal text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-1',
           ),
         ],
         [label],
       ),
-      h.a(
+      ih.a(
         [
-          h.Href(href),
-          h.Class(
+          ih.Href(href),
+          ih.Class(
             'text-accent-600 dark:text-accent-500 underline decoration-accent-600/30 dark:decoration-accent-500/30 hover:decoration-accent-600 dark:hover:decoration-accent-500 text-lg font-normal',
           ),
         ],
         [
           linkText,
-          h.span(
-            [h.Class('inline-block ml-1')],
+          ih.span(
+            [ih.Class('inline-block ml-1')],
             [Icon.arrowRight('w-4 h-4 inline')],
           ),
         ],
       ),
     ],
   )
-}
 
 // AI
 
@@ -1178,16 +1133,14 @@ const AI_HEADING_B = 'Built for AI. Readable by humans.'
 const STATIC_PREFIX_LENGTH = 10
 
 const solariHeading = (toggleCount: number): Html => {
-  const h = staticHtml
-
   const isSwapped = toggleCount % 2 === 1
 
-  return h.h2(
+  return ih.h2(
     [
-      h.Class(
+      ih.Class(
         'text-[1.25rem] sm:text-2xl md:text-[2rem] font-normal text-amber-500 dark:text-amber-400 mb-4 font-mono',
       ),
-      h.AriaLabel(isSwapped ? AI_HEADING_B : AI_HEADING_A),
+      ih.AriaLabel(isSwapped ? AI_HEADING_B : AI_HEADING_A),
     ],
     pipe(
       AI_HEADING_A,
@@ -1205,15 +1158,15 @@ const solariHeading = (toggleCount: number): Html => {
 
         if (isStatic && characterA === ' ') {
           return isLineBreakPosition
-            ? [' ', h.br([h.Class('solari-break')])]
+            ? [' ', ih.br([ih.Class('solari-break')])]
             : [' ']
         }
 
         if (!isFlipping) {
           return [
-            h.span(
+            ih.span(
               [
-                h.Class(
+                ih.Class(
                   clsx(
                     'solari-character-static',
                     isStatic
@@ -1228,22 +1181,22 @@ const solariHeading = (toggleCount: number): Html => {
         }
 
         return [
-          h.span(
+          ih.span(
             [
-              h.Class(
+              ih.Class(
                 clsx('solari-character', {
                   'solari-character-flipped': isSwapped,
                 }),
               ),
-              h.AriaHidden(true),
+              ih.AriaHidden(true),
             ],
             [
-              h.span(
-                [h.Class('solari-face solari-face-front')],
+              ih.span(
+                [ih.Class('solari-face solari-face-front')],
                 [characterA === ' ' ? ' ' : characterA],
               ),
-              h.span(
-                [h.Class('solari-face solari-face-back')],
+              ih.span(
+                [ih.Class('solari-face solari-face-back')],
                 [characterB === ' ' ? ' ' : characterB],
               ),
             ],
@@ -1254,19 +1207,17 @@ const solariHeading = (toggleCount: number): Html => {
   )
 }
 
-const aiSection = (aiHeadingToggleCount: number): Html => {
-  const h = staticHtml
-
-  return h.section(
-    [h.Id('ai'), h.Class('landing-section py-10 md:py-14 relative')],
+const aiSection = (aiHeadingToggleCount: number): Html =>
+  ih.section(
+    [ih.Id('ai'), ih.Class('landing-section py-10 md:py-14 relative')],
     [
-      h.div(
-        [h.Class('landing-section-narrow relative')],
+      ih.div(
+        [ih.Class('landing-section-narrow relative')],
         [
           solariHeading(aiHeadingToggleCount),
-          h.p(
+          ih.p(
             [
-              h.Class(
+              ih.Class(
                 'text-lg text-gray-600 dark:text-gray-300 mb-4 max-w-2xl',
               ),
             ],
@@ -1274,9 +1225,9 @@ const aiSection = (aiHeadingToggleCount: number): Html => {
               'Foldkit apps are explicit and predictable. This makes LLMs particularly good at generating Foldkit code. And it makes generated Foldkit code exceptionally easy for humans to review.',
             ],
           ),
-          h.p(
+          ih.p(
             [
-              h.Class(
+              ih.Class(
                 'text-lg text-gray-600 dark:text-gray-300 mb-8 max-w-2xl',
               ),
             ],
@@ -1284,63 +1235,60 @@ const aiSection = (aiHeadingToggleCount: number): Html => {
               'AI agents can also connect directly to a running Foldkit app over the Model Context Protocol. They read the current Model, inspect Message history, rewind the UI to past states, and dispatch Messages.',
             ],
           ),
-          h.a(
-            [h.Href(aiOverviewRouter()), h.Class('cta-secondary')],
+          ih.a(
+            [ih.Href(aiOverviewRouter()), ih.Class('cta-secondary')],
             ['Set up AI-assisted development', Icon.arrowRight('w-5 h-5')],
           ),
         ],
       ),
     ],
   )
-}
 
 // FINAL CTA
 
 const finalCtaSection = (
   emailSignupView: Html,
   maybeGitHubStarCount: Option.Option<number>,
-): Html => {
-  const h = staticHtml
-
-  return h.section(
-    [h.Id('get-started'), h.Class('landing-section')],
+): Html =>
+  ih.section(
+    [ih.Id('get-started'), ih.Class('landing-section')],
     [
-      h.div(
-        [h.Class('landing-section-narrow')],
+      ih.div(
+        [ih.Class('landing-section-narrow')],
         [
-          h.div(
-            [h.Class('grid gap-10 lg:grid-cols-2')],
+          ih.div(
+            [ih.Class('grid gap-10 lg:grid-cols-2')],
             [
-              h.div(
+              ih.div(
                 [],
                 [
-                  h.h2(
+                  ih.h2(
                     [
-                      h.Class(
+                      ih.Class(
                         'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white mb-4 text-balance',
                       ),
                     ],
                     ['Make something correct.'],
                   ),
-                  h.p(
+                  ih.p(
                     [
-                      h.Class(
+                      ih.Class(
                         'text-lg text-gray-600 dark:text-gray-300 mb-8 max-w-xl',
                       ),
                     ],
                     ['Describe your app. Let the runtime handle the rest.'],
                   ),
-                  h.div(
+                  ih.div(
                     [
-                      h.Class(
+                      ih.Class(
                         'flex flex-col sm:flex-row items-start sm:items-center gap-4',
                       ),
                     ],
                     [
-                      h.a(
+                      ih.a(
                         [
-                          h.Href(coreArchitectureRouter()),
-                          h.Class('cta-primary'),
+                          ih.Href(coreArchitectureRouter()),
+                          ih.Class('cta-primary'),
                         ],
                         ['Dive In', Icon.arrowRight('w-5 h-5')],
                       ),
@@ -1356,4 +1304,3 @@ const finalCtaSection = (
       ),
     ],
   )
-}

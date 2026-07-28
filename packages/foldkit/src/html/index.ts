@@ -4453,8 +4453,8 @@ type MessageUniverse<Message> = Readonly<{
  * memoized helper receives it through the `createLazy` args array. When a
  * child must render markup that belongs to an ancestor, the ancestor passes a
  * renderer that already closed over its own builder, not the builder, so the
- * handlers resolve in the ancestor's boundary. For handler-free Html built at
- * module top level, use {@link staticHtml}.
+ * handlers resolve in the ancestor's boundary. Where no builder is in scope
+ * at all, typically module scope, use {@link inertHtml}.
  */
 export type HtmlBuilder<Message> = MessageUniverse<Message> &
   HtmlElements<Message> &
@@ -4510,18 +4510,33 @@ export const __htmlBuilder = <Message>(): HtmlBuilder<Message> =>
   cachedHtmlBuilder as HtmlBuilder<Message>
 
 /**
- * Builder for Html that never dispatches: its Message type is `never`, so
- * event-handler attributes cannot be constructed with it. Use it for static
- * fragments built outside a view, typically at module top level, where no
- * runtime frame exists:
+ * Builder whose Message universe is empty. Its Message type is `never`, so
+ * every event-handler constructor is uncallable and nothing built with it can
+ * dispatch a Message. Elements, attributes, and keying behave exactly as they
+ * do on any other builder, and the markup itself is free to vary with runtime
+ * data. Inert describes what the result can do, not how it is computed.
+ *
+ * Inert to Foldkit's dispatch, not to the browser. A raw DOM attribute still
+ * does whatever the browser makes of it, which is exactly how the default
+ * crash view gets a working reload button:
+ * `h.Attribute('onclick', 'location.reload()')`. What `never` rules out is a
+ * Message reaching `update`, not every possible behavior.
+ *
+ * Use it where no builder is in scope, which in practice means module scope
+ * and the frameless renders the framework performs itself:
  *
  * ```ts
- * import { staticHtml as h } from 'foldkit/html'
+ * import { inertHtml as ih } from 'foldkit/html'
  *
- * const badge = h.span([h.Class('badge')], ['beta'])
+ * const PagefindBody = ih.DataAttribute('pagefind-body', '')
  * ```
  *
- * Inside a view, prefer the view's own `h` parameter; reach for
- * `staticHtml` only where no builder is in scope.
+ * Attributes it produces are `Attribute<never>`, so they flow into any
+ * Message universe by covariance. That makes it the right builder for
+ * library code emitting handler-free attribute bundles for arbitrary apps.
+ *
+ * Inside a view, use the view's own `h` parameter. A view already holds a
+ * builder, and reaching past it for this one is the habit that made a
+ * caller-chosen Message type possible in the first place.
  */
-export const staticHtml: HtmlBuilder<never> = __htmlBuilder<never>()
+export const inertHtml: HtmlBuilder<never> = __htmlBuilder<never>()

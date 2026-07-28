@@ -1,6 +1,10 @@
 import { clsx } from 'clsx'
 import { Array, Option } from 'effect'
-import { type HtmlBuilder, childAttributes, staticHtml } from 'foldkit/html'
+import {
+  type HtmlBuilder,
+  childAttributes,
+  inertHtml as ih,
+} from 'foldkit/html'
 
 import { Combobox } from '@foldkit/ui'
 import type { AnchorConfig } from '@foldkit/ui/combobox'
@@ -98,7 +102,6 @@ export const comboboxViewInputs = ({
   anchor?: AnchorConfig
   wrapperClass?: string
 }>): Omit<Combobox.ViewInputs<City>, 'maybeSelectedValue'> => {
-  const h = staticHtml
   const filteredCities = filterCities(inputValue)
 
   return {
@@ -106,8 +109,8 @@ export const comboboxViewInputs = ({
     restingInputValue,
     itemToConfig: (city, context) => ({
       className: itemClassName,
-      content: h.div(
-        [h.Class('flex items-center gap-2')],
+      content: ih.div(
+        [ih.Class('flex items-center gap-2')],
         [
           Icon.check(
             clsx('w-4 h-4 shrink-0 text-gray-900 dark:text-white', {
@@ -115,22 +118,22 @@ export const comboboxViewInputs = ({
               invisible: !context.isSelected,
             }),
           ),
-          h.span([], [city]),
+          ih.span([], [city]),
         ],
       ),
     }),
     itemToValue: city => city,
     itemToDisplayText: city => city,
     inputAttributes: childAttributes([
-      h.Class(inputClassName),
-      h.Placeholder('Search cities...'),
+      ih.Class(inputClassName),
+      ih.Placeholder('Search cities...'),
     ]),
-    itemsAttributes: childAttributes([h.Class(itemsClassName)]),
-    backdropAttributes: childAttributes([h.Class(backdropClassName)]),
-    attributes: childAttributes([h.Class(wrapperClass)]),
-    inputWrapperAttributes: childAttributes([h.Class('relative')]),
+    itemsAttributes: childAttributes([ih.Class(itemsClassName)]),
+    backdropAttributes: childAttributes([ih.Class(backdropClassName)]),
+    attributes: childAttributes([ih.Class(wrapperClass)]),
+    inputWrapperAttributes: childAttributes([ih.Class('relative')]),
     buttonContent: Icon.chevronDown('w-4 h-4'),
-    buttonAttributes: childAttributes([h.Class(buttonClassName)]),
+    buttonAttributes: childAttributes([ih.Class(buttonClassName)]),
     anchor,
   }
 }

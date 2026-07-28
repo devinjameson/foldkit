@@ -2,7 +2,7 @@
 import { Effect, Fiber, Match as M, Schema as S } from 'effect'
 import { brandViewResult } from 'foldkit/brand'
 import type { Command } from 'foldkit/command'
-import { type Html, staticHtml } from 'foldkit/html'
+import { type Html, inertHtml } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { makeElement } from 'foldkit/runtime'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -39,9 +39,9 @@ const FIXTURE_ROOT = '/app'
 const BRAND_IMPORT_ALIAS = '__foldkitBrandViewResult'
 const TYPED_TEXT = 'draft text'
 
-const DELEGATED_BRANCH_FIXTURE = `import { staticHtml } from 'foldkit/html'
+const DELEGATED_BRANCH_FIXTURE = `import { inertHtml } from 'foldkit/html'
 
-const h = staticHtml
+const h = inertHtml
 
 const summaryView = (model) =>
   h.section([], [h.input([h.Class('summary-input'), h.Placeholder('summary')])])
@@ -59,9 +59,9 @@ const view = (model) =>
   )
 `
 
-const ARM_HANDLER_FIXTURE = `import { staticHtml } from 'foldkit/html'
+const ARM_HANDLER_FIXTURE = `import { inertHtml } from 'foldkit/html'
 
-const h = staticHtml
+const h = inertHtml
 
 const view = (model) => {
   const handlers = {
@@ -77,9 +77,9 @@ const view = (model) => {
 }
 `
 
-const SHARED_FUNCTION_FIXTURE = `import { staticHtml } from 'foldkit/html'
+const SHARED_FUNCTION_FIXTURE = `import { inertHtml } from 'foldkit/html'
 
-const h = staticHtml
+const h = inertHtml
 
 const panelView = (label) =>
   h.div([], [h.input([h.Class('panel-input'), h.Placeholder(label)])])
@@ -94,9 +94,9 @@ const view = (model) =>
   )
 `
 
-const INLINE_TERNARY_FIXTURE = `import { staticHtml } from 'foldkit/html'
+const INLINE_TERNARY_FIXTURE = `import { inertHtml } from 'foldkit/html'
 
-const h = staticHtml
+const h = inertHtml
 
 const view = (model) =>
   h.div(
@@ -120,12 +120,12 @@ type View = (model: Model) => Html
 
 const instantiateView = (viewSource: string): View => {
   const factory = new Function(
-    'staticHtml',
+    'inertHtml',
     'ClickedToggle',
     BRAND_IMPORT_ALIAS,
     `${viewSource}\nreturn view`,
   )
-  const view: View = factory(staticHtml, ClickedToggle, brandViewResult)
+  const view: View = factory(inertHtml, ClickedToggle, brandViewResult)
   return view
 }
 

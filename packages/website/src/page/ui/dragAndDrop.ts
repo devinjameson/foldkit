@@ -1,5 +1,5 @@
 import { Array, Option, pipe } from 'effect'
-import { type Html, type HtmlBuilder, staticHtml } from 'foldkit/html'
+import { type Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 
 import { DragAndDrop } from '@foldkit/ui'
 
@@ -86,9 +86,9 @@ const columnView = (
   dragAndDropModel: DragAndDrop.Model,
   h: HtmlBuilder<Message>,
 ): Html => {
-  const dropPlaceholder: Html = staticHtml.div(
+  const dropPlaceholder: Html = h.div(
     [
-      staticHtml.Class(
+      h.Class(
         'rounded-lg border-2 border-dashed border-accent-400/50 dark:border-accent-500/50 h-9',
       ),
     ],
@@ -191,8 +191,6 @@ const ghostView = (
   columns: ReadonlyArray<DemoColumnType>,
   dragAndDropModel: DragAndDrop.Model,
 ): Html => {
-  const h = staticHtml
-
   const maybeItemId = DragAndDrop.maybeDraggedItemId(dragAndDropModel)
 
   return pipe(
@@ -204,12 +202,12 @@ const ghostView = (
       })),
     ),
     Option.match({
-      onNone: () => h.empty,
+      onNone: () => ih.empty,
       onSome: ({ ghostStyle, card }) =>
-        h.div(
+        ih.div(
           [
-            h.Style(ghostStyle),
-            h.Class(
+            ih.Style(ghostStyle),
+            ih.Class(
               'rounded-lg border border-accent-400 dark:border-accent-500 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-lg',
             ),
           ],

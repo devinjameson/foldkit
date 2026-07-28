@@ -1,6 +1,6 @@
 import { Option, Record } from 'effect'
 import { Submodel } from 'foldkit'
-import { Html, type HtmlBuilder, staticHtml } from 'foldkit/html'
+import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 
 import { Disclosure } from '@foldkit/ui'
 
@@ -14,18 +14,15 @@ import type { Model } from './model'
 
 // FAQ SHELL
 
-const chevron = (isOpen: boolean): Html => {
-  const h = staticHtml
-
-  return h.span(
+const chevron = (isOpen: boolean): Html =>
+  ih.span(
     [
-      h.Class(
+      ih.Class(
         `text-gray-600 dark:text-gray-300 transition-transform ${isOpen ? 'rotate-180' : ''}`,
       ),
     ],
     [Icon.chevronDown('w-4 h-4')],
   )
-}
 
 const faqButtonClassName =
   'w-full flex items-center justify-between px-4 py-3 text-left text-base font-normal cursor-pointer transition border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white hover:bg-gray-200/50 dark:hover:bg-gray-800 rounded-lg data-[open]:rounded-b-none select-none'

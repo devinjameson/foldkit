@@ -1,4 +1,4 @@
-import { type Html, type HtmlBuilder, staticHtml } from 'foldkit/html'
+import { type Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 
 import { Popover } from '@foldkit/ui'
 import type { AnchorConfig } from '@foldkit/ui/popover'
@@ -63,23 +63,20 @@ const NESTED_POPOVER_ANCHOR: AnchorConfig = {
 
 const nestedChildButtonSelector = '#popover-nested-child-demo-button'
 
-const panelContent = (): Html => {
-  const h = staticHtml
-
-  return h.div(
+const panelContent = (): Html =>
+  ih.div(
     [],
     [
-      h.p(
-        [h.Class('text-sm font-semibold text-gray-900 dark:text-white mb-2')],
+      ih.p(
+        [ih.Class('text-sm font-semibold text-gray-900 dark:text-white mb-2')],
         ['Analytics'],
       ),
-      h.p(
-        [h.Class('text-sm text-gray-600 dark:text-gray-400')],
+      ih.p(
+        [ih.Class('text-sm text-gray-600 dark:text-gray-400')],
         ['Get a better understanding of where your traffic is coming from.'],
       ),
     ],
   )
-}
 
 const popoverDemo = (
   popoverModel: Popover.Model,

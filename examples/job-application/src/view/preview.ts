@@ -1,5 +1,5 @@
 import { Array, Equal, Option, Order, Record, String, pipe } from 'effect'
-import { type Html, staticHtml as h } from 'foldkit/html'
+import { type Html, inertHtml as ih } from 'foldkit/html'
 
 import type { Model } from '../model'
 import type { Education, Skills, WorkHistory } from '../step'
@@ -11,9 +11,9 @@ const truncate = (value: string, max: number): string =>
   value.length > max ? `${value.slice(0, max)}...` : value
 
 const sectionHeading = (title: string): Html =>
-  h.h3(
+  ih.h3(
     [
-      h.Class(
+      ih.Class(
         'text-xs font-bold uppercase tracking-wider text-gray-400 border-b border-gray-200 pb-1 mb-2',
       ),
     ],
@@ -28,17 +28,17 @@ const headerSection = (
   portfolio: string,
 ): Html => {
   const contacts = Array.filter([email, phone, portfolio], String.isNonEmpty)
-  return h.div(
-    [h.Class('text-center mb-4 pb-4 border-b border-gray-200')],
+  return ih.div(
+    [ih.Class('text-center mb-4 pb-4 border-b border-gray-200')],
     [
-      h.h2([h.Class('text-xl font-bold text-gray-900')], [fullName]),
+      ih.h2([ih.Class('text-xl font-bold text-gray-900')], [fullName]),
       ...(String.isNonEmpty(pronounLabel)
-        ? [h.p([h.Class('text-xs text-gray-500 italic')], [pronounLabel])]
+        ? [ih.p([ih.Class('text-xs text-gray-500 italic')], [pronounLabel])]
         : []),
       ...(Array.isReadonlyArrayNonEmpty(contacts)
         ? [
-            h.p(
-              [h.Class('text-xs text-gray-500 mt-1 break-words')],
+            ih.p(
+              [ih.Class('text-xs text-gray-500 mt-1 break-words')],
               [contacts.join(' · ')],
             ),
           ]
@@ -48,26 +48,26 @@ const headerSection = (
 }
 
 const workEntryView = (entry: WorkHistory.Entry.Model): Html =>
-  h.keyed('div')(
+  ih.keyed('div')(
     `work-${entry.id}`,
-    [h.Class('mb-3')],
+    [ih.Class('mb-3')],
     [
       ...(String.isNonEmpty(entry.title.value)
         ? [
-            h.strong(
-              [h.Class('block text-sm text-gray-900')],
+            ih.strong(
+              [ih.Class('block text-sm text-gray-900')],
               [entry.title.value],
             ),
           ]
         : []),
       ...(String.isNonEmpty(entry.company.value)
-        ? [h.p([h.Class('text-xs text-gray-600')], [entry.company.value])]
+        ? [ih.p([ih.Class('text-xs text-gray-600')], [entry.company.value])]
         : []),
       ...Option.match(entry.maybeStartDate, {
         onNone: () => [],
         onSome: start => [
-          h.p(
-            [h.Class('text-xs text-gray-400 mt-0.5')],
+          ih.p(
+            [ih.Class('text-xs text-gray-400 mt-0.5')],
             [
               employmentRange(
                 start,
@@ -79,14 +79,14 @@ const workEntryView = (entry: WorkHistory.Entry.Model): Html =>
         ],
       }),
       ...(String.isNonEmpty(entry.description)
-        ? [h.p([h.Class('text-xs text-gray-600 mt-1')], [entry.description])]
+        ? [ih.p([ih.Class('text-xs text-gray-600 mt-1')], [entry.description])]
         : []),
     ],
   )
 
 const experienceSection = (workHistory: WorkHistory.Model): Html =>
-  h.section(
-    [h.Class('mb-4')],
+  ih.section(
+    [ih.Class('mb-4')],
     [
       sectionHeading('Experience'),
       ...Array.filter(
@@ -103,14 +103,14 @@ const educationTimelineLine = (
 ): ReadonlyArray<Html> => {
   if (entry.isCurrentlyEnrolled) {
     return [
-      h.p([h.Class('text-xs text-gray-400 mt-0.5')], ['Currently enrolled']),
+      ih.p([ih.Class('text-xs text-gray-400 mt-0.5')], ['Currently enrolled']),
     ]
   }
   return Option.match(entry.maybeGraduationYear, {
     onNone: () => [],
     onSome: graduationYear => [
-      h.p(
-        [h.Class('text-xs text-gray-400 mt-0.5')],
+      ih.p(
+        [ih.Class('text-xs text-gray-400 mt-0.5')],
         [`Class of ${graduationYear}`],
       ),
     ],
@@ -122,15 +122,15 @@ const educationEntryView = (entry: Education.Entry.Model): Html => {
     [entry.degree.value, entry.fieldOfStudy.value],
     String.isNonEmpty,
   ).join(', ')
-  return h.keyed('div')(
+  return ih.keyed('div')(
     `education-${entry.id}`,
-    [h.Class('mb-3')],
+    [ih.Class('mb-3')],
     [
       ...(String.isNonEmpty(degreeLine)
-        ? [h.strong([h.Class('block text-sm text-gray-900')], [degreeLine])]
+        ? [ih.strong([ih.Class('block text-sm text-gray-900')], [degreeLine])]
         : []),
       ...(String.isNonEmpty(entry.school.value)
-        ? [h.p([h.Class('text-xs text-gray-600')], [entry.school.value])]
+        ? [ih.p([ih.Class('text-xs text-gray-600')], [entry.school.value])]
         : []),
       ...educationTimelineLine(entry),
     ],
@@ -138,8 +138,8 @@ const educationEntryView = (entry: Education.Entry.Model): Html => {
 }
 
 const educationSection = (education: Education.Model): Html =>
-  h.section(
-    [h.Class('mb-4')],
+  ih.section(
+    [ih.Class('mb-4')],
     [
       sectionHeading('Education'),
       ...Array.filter(education.entries, entry =>
@@ -184,29 +184,29 @@ const groupSkillsByProficiency = (
 const skillGroupView = (
   group: Readonly<{ level: string; names: ReadonlyArray<string> }>,
 ): Html =>
-  h.p(
-    [h.Class('text-xs text-gray-700 mb-1')],
+  ih.p(
+    [ih.Class('text-xs text-gray-700 mb-1')],
     [
-      h.strong([h.Class('text-gray-900')], [`${group.level}:`]),
+      ih.strong([ih.Class('text-gray-900')], [`${group.level}:`]),
       ` ${group.names.join(', ')}`,
     ],
   )
 
 const skillsSection = (skills: Skills.Model): Html => {
   const grouped = groupSkillsByProficiency(skills.entries)
-  return h.section(
-    [h.Class('mb-4')],
+  return ih.section(
+    [ih.Class('mb-4')],
     [sectionHeading('Skills'), ...grouped.map(group => skillGroupView(group))],
   )
 }
 
 const coverLetterSection = (content: string): Html =>
-  h.section(
+  ih.section(
     [],
     [
       sectionHeading('Cover Letter'),
-      h.p(
-        [h.Class('text-xs text-gray-600 whitespace-pre-wrap')],
+      ih.p(
+        [ih.Class('text-xs text-gray-600 whitespace-pre-wrap')],
         [truncate(content, COVER_LETTER_PREVIEW_MAX_CHARS)],
       ),
     ],
@@ -250,8 +250,8 @@ export const preview = ({
     String.isNonEmpty(entry.name.value),
   )
 
-  return h.div(
-    [h.Class('font-serif')],
+  return ih.div(
+    [ih.Class('font-serif')],
     [
       headerSection(fullName, pronounLabel, email, phone, portfolio),
       ...(hasExperience ? [experienceSection(workHistory)] : []),

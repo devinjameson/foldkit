@@ -1,11 +1,11 @@
 import { clsx } from 'clsx'
 import { HashSet } from 'effect'
-import { Html, type HtmlBuilder, staticHtml } from 'foldkit/html'
+import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 
 import { Icon } from '../icon'
 import { ClickedCopySnippet, type Message } from '../message'
 
-const PagefindIgnore = staticHtml.DataAttribute('pagefind-ignore', '')
+const PagefindIgnore = ih.DataAttribute('pagefind-ignore', '')
 
 export type CopiedSnippets = HashSet.HashSet<string>
 
@@ -91,25 +91,23 @@ export const codeBlock = (
   className?: string,
   language?: string,
 ) => {
-  const h = staticHtml
-
   const languageAttribute =
-    language === undefined ? [] : [h.DataAttribute('language', language)]
+    language === undefined ? [] : [ih.DataAttribute('language', language)]
 
-  const content = h.pre(
+  const content = ih.pre(
     [
       ...languageAttribute,
-      h.Class(
+      ih.Class(
         'text-[#403d4a] dark:text-[#E0DEE6] text-sm p-4 pr-14 overflow-x-auto !rounded-none !border-none',
       ),
     ],
     [code],
   )
 
-  return h.div(
+  return ih.div(
     [
       PagefindIgnore,
-      h.Class(
+      ih.Class(
         clsx(
           'relative min-w-0 rounded-lg bg-gray-100 dark:bg-[#1c1a20] border border-gray-200 dark:border-gray-700/50',
           className,
@@ -129,14 +127,11 @@ export const highlightedCodeBlock = (
   ariaLabel: string,
   renderCopyButton: RenderCopyButton,
   className?: string,
-) => {
-  const h = staticHtml
-
-  return h.div(
-    [PagefindIgnore, h.Class(clsx('relative min-w-0 mt-8', className))],
+) =>
+  ih.div(
+    [PagefindIgnore, ih.Class(clsx('relative min-w-0 mt-8', className))],
     [content, renderCopyButton(rawCode, ariaLabel, 'top-2 right-2')],
   )
-}
 
 /**
  * `highlightedCodeBlock` bound to a page-supplied copy-button renderer, for a
