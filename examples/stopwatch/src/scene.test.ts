@@ -3,17 +3,20 @@ import { describe, test } from 'vitest'
 
 import {
   DetermineStartTime,
+  DetermineTickTime,
   DeterminedStartTime,
-  type Model,
+  DeterminedTickTime,
+  Model,
+  Ticked,
   update,
   view,
 } from './main'
 
-const initialModel: Model = {
+const initialModel = Model.make({
   elapsedMs: 0,
   isRunning: false,
   startTime: 0,
-}
+})
 
 describe('view', () => {
   test('initial view shows the zeroed time and Start + Reset buttons', () => {
@@ -43,11 +46,11 @@ describe('view', () => {
   })
 
   test('clicking Stop while running switches back to Start', () => {
-    const runningModel: Model = {
+    const runningModel = Model.make({
       elapsedMs: 1500,
       isRunning: true,
       startTime: 1000,
-    }
+    })
 
     Scene.scene(
       { update, view },
@@ -60,11 +63,11 @@ describe('view', () => {
   })
 
   test('clicking Reset zeros the elapsed time', () => {
-    const runningModel: Model = {
+    const runningModel = Model.make({
       elapsedMs: 12345,
       isRunning: true,
       startTime: 1000,
-    }
+    })
 
     Scene.scene(
       { update, view },
@@ -76,12 +79,34 @@ describe('view', () => {
     )
   })
 
+  test('a tick from the running Subscription advances the elapsed time', () => {
+    const startTime = 1000
+    const runningModel = Model.make({
+      elapsedMs: 0,
+      isRunning: true,
+      startTime,
+    })
+
+    Scene.scene(
+      { update, view },
+      Scene.with(runningModel),
+      Scene.expect(Scene.text('00:00.00')).toExist(),
+      Scene.Subscription.emit(Ticked()),
+      Scene.Command.expectExact(DetermineTickTime({ startTime })),
+      Scene.Command.resolve(
+        DetermineTickTime,
+        DeterminedTickTime({ elapsedMs: 4320 }),
+      ),
+      Scene.expect(Scene.text('00:04.32')).toExist(),
+    )
+  })
+
   test('elapsed time formats as MM:SS.cc', () => {
-    const longRunModel: Model = {
+    const longRunModel = Model.make({
       elapsedMs: 67890,
       isRunning: false,
       startTime: 0,
-    }
+    })
 
     Scene.scene(
       { update, view },

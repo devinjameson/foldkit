@@ -2,9 +2,11 @@ import {
   Array,
   Context,
   Effect,
+  Equal,
   Function,
   Option,
   Predicate,
+  type Schema,
   String as String_,
   pipe,
 } from 'effect'
@@ -12,6 +14,8 @@ import { dual } from 'effect/Function'
 
 import type { CommandDefinition } from '../command/index.js'
 import type * as Interruptible from '../command/interruptible/index.js'
+import { kebabToPascal } from '../customElement/index.js'
+import type { CustomElementSpec } from '../customElement/index.js'
 import type { File } from '../file/index.js'
 import type { FoldkitMountMarker } from '../html/index.js'
 import {
@@ -27,6 +31,7 @@ import type {
   HtmlBuilder,
   KeyboardModifiers,
 } from '../html/index.js'
+import type { Entry as ManagedResourceEntry } from '../managedResource/index.js'
 import { MountTracker } from '../mount/index.js'
 import type { MountDefinition } from '../mount/index.js'
 import { Dispatch } from '../runtime/index.js'
@@ -474,13 +479,13 @@ const EVENT_NAMES: Record<string, string> = {
   pointerup: 'OnPointerUp',
 }
 
-const captureFromElement = <Model, Message, OutMessage>(
+const maybeCaptureFromElement = <Model, Message, OutMessage>(
   simulation: SceneSimulation<Model, Message, OutMessage>,
   element: VNode,
   description: string,
   eventName: string,
   invokeHandler: (handler: Function) => void,
-): SceneSimulation<Model, Message, OutMessage> => {
+): Option.Option<SceneSimulation<Model, Message, OutMessage>> => {
   const internal = toInternal(simulation)
   const maybeHandler = Option.fromNullishOr(element.data?.on?.[eventName])
 
@@ -495,40 +500,35 @@ const captureFromElement = <Model, Message, OutMessage>(
   internal.capturingDispatch.reset()
   // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
   invokeHandler(maybeHandler.value as Function)
-  const captured = internal.capturingDispatch.getCapturedMessage()
 
-  if (Predicate.isUndefined(captured)) {
-    return simulation
-  }
-
-  assertNoUnresolvedCommands(
-    internal.commands,
-    'when an interaction dispatched a new Message',
+  return Option.map(
+    Option.fromNullishOr(internal.capturingDispatch.getCapturedMessage()),
+    captured =>
+      applyExternalMessage(
+        simulation,
+        captured,
+        'when an interaction dispatched a new Message',
+      ),
   )
-  assertNoUnresolvedMounts(
-    internal.mounts,
-    'when an interaction dispatched a new Message',
-  )
-  assertNoUnacknowledgedUnmounts(
-    unacknowledgedEndedMountsOf(internal.mountSlots),
-    'when an interaction dispatched a new Message',
-  )
-
-  /* eslint-disable @typescript-eslint/consistent-type-assertions */
-  const capturedMessage = captured as unknown as Message
-  const result = internal.updateFn(internal.model, capturedMessage)
-  const [nextModel, commands] = result
-  const outMessage = result.length === 3 ? result[2] : internal.outMessage
-
-  return {
-    ...internal,
-    model: nextModel,
-    message: capturedMessage,
-    commands: Array.appendAll(internal.commands, commands),
-    outMessage,
-  } as unknown as SceneSimulation<Model, Message, OutMessage>
-  /* eslint-enable @typescript-eslint/consistent-type-assertions */
 }
+
+const captureFromElement = <Model, Message, OutMessage>(
+  simulation: SceneSimulation<Model, Message, OutMessage>,
+  element: VNode,
+  description: string,
+  eventName: string,
+  invokeHandler: (handler: Function) => void,
+): SceneSimulation<Model, Message, OutMessage> =>
+  Option.getOrElse(
+    maybeCaptureFromElement(
+      simulation,
+      element,
+      description,
+      eventName,
+      invokeHandler,
+    ),
+    () => simulation,
+  )
 
 const invokeAndCapture = <Model, Message, OutMessage>(
   simulation: SceneSimulation<Model, Message, OutMessage>,
@@ -925,6 +925,253 @@ const expectEndedMountsStep =
     /* eslint-enable @typescript-eslint/consistent-type-assertions */
   }
 
+const applyExternalMessage = <Model, Message, OutMessage>(
+  simulation: SceneSimulation<Model, Message, OutMessage>,
+  message: unknown,
+  context: string,
+): SceneSimulation<Model, Message, OutMessage> => {
+  const internal = toInternal(simulation)
+
+  assertNoUnresolvedCommands(internal.commands, context)
+  assertNoUnresolvedMounts(internal.mounts, context)
+  assertNoUnacknowledgedUnmounts(
+    unacknowledgedEndedMountsOf(internal.mountSlots),
+    context,
+  )
+
+  /* eslint-disable @typescript-eslint/consistent-type-assertions */
+  const messageAsParent = message as unknown as Message
+  const result = internal.updateFn(internal.model, messageAsParent)
+  const [nextModel, commands] = result
+  const outMessage = result.length === 3 ? result[2] : internal.outMessage
+
+  return {
+    ...internal,
+    model: nextModel,
+    message: messageAsParent,
+    commands: Array.appendAll(internal.commands, commands),
+    outMessage,
+  } as unknown as SceneSimulation<Model, Message, OutMessage>
+  /* eslint-enable @typescript-eslint/consistent-type-assertions */
+}
+
+/** Feeds a Message through update as if a Subscription had emitted it,
+ *  then re-renders. Use it for Messages whose real cause is a Subscription
+ *  (a timer tick, a WebSocket frame, a global listener), which have no
+ *  element in the rendered tree to interact with. Do NOT reach for it when
+ *  the Message has a DOM affordance: click the actual button instead, so
+ *  the test exercises the handler wiring this step skips. Like an
+ *  interaction, it throws if unresolved Commands, unresolved Mounts, or
+ *  unacknowledged unmounts are pending. */
+const emitSubscriptionMessage =
+  <MessageInput>(message: MessageInput) =>
+  <Model, Message, OutMessage = undefined>(
+    simulation: SceneSimulation<Model, Message, OutMessage>,
+  ): SceneSimulation<Model, Message, OutMessage> =>
+    applyExternalMessage(
+      simulation,
+      message,
+      'when a Subscription emitted a new Message',
+    )
+
+const MANAGED_RESOURCE_CONTEXT =
+  'when a ManagedResource dispatched a new Message'
+
+/** A ManagedResource entry a scene can drive: the Option-shaped requirements
+ *  are what the runtime watches, so the steps can check the current Model
+ *  against them before dispatching a lifecycle Message. */
+type SceneManagedResourceEntry<
+  EntryModel,
+  EntryMessage,
+  Value,
+  OnAcquired extends (...args: any) => EntryMessage = (
+    value: Value,
+  ) => EntryMessage,
+> = ManagedResourceEntry<
+  EntryModel,
+  EntryMessage,
+  Option.Option<any>,
+  Value,
+  any,
+  OnAcquired
+>
+
+/** Declares that a ManagedResource's acquire succeeded, feeding the entry's
+ *  `onAcquired` Message through update the way the runtime would. The step
+ *  takes exactly the arguments the entry's `onAcquired` declares: a handler
+ *  that consumes the acquired value needs one here, and a handler that
+ *  ignores it needs none. Requires the current Model to request the
+ *  resource: the runtime only acquires while `modelToMaybeRequirements`
+ *  returns Some, so drive the Model into that state through real steps
+ *  first. */
+const acquireManagedResource =
+  <EntryModel, EntryMessage, Value, Args extends ReadonlyArray<any>>(
+    entry: SceneManagedResourceEntry<
+      EntryModel,
+      EntryMessage,
+      Value,
+      (...args: Args) => EntryMessage
+    >,
+    ...args: NoInfer<Args>
+  ) =>
+  <Message, OutMessage = undefined>(
+    simulation: SceneSimulation<EntryModel, Message, OutMessage>,
+  ): SceneSimulation<EntryModel, Message, OutMessage> => {
+    const internal = toInternal(simulation)
+    const maybeRequirements = entry.modelToMaybeRequirements(internal.model)
+
+    if (Option.isNone(maybeRequirements)) {
+      throw new Error(
+        `I tried to acquire the ManagedResource "${entry.resource.key}" but the current Model does not request it.\n\n` +
+          'modelToMaybeRequirements returned None. The runtime only acquires while the Model requests the resource, so drive that transition through real steps first.',
+      )
+    }
+
+    return applyExternalMessage(
+      simulation,
+      entry.onAcquired(...args),
+      MANAGED_RESOURCE_CONTEXT,
+    )
+  }
+
+/** Declares that a ManagedResource's acquire failed, feeding the entry's
+ *  `onAcquireError(error)` Message through update the way the runtime
+ *  would. Requires the current Model to request the resource, the same as
+ *  {@link acquireManagedResource}: the runtime only attempts acquisition
+ *  while `modelToMaybeRequirements` returns Some. */
+const failAcquireManagedResource =
+  <EntryModel, EntryMessage, Value>(
+    entry: SceneManagedResourceEntry<EntryModel, EntryMessage, Value>,
+    error: unknown,
+  ) =>
+  <Message, OutMessage = undefined>(
+    simulation: SceneSimulation<EntryModel, Message, OutMessage>,
+  ): SceneSimulation<EntryModel, Message, OutMessage> => {
+    const internal = toInternal(simulation)
+    const maybeRequirements = entry.modelToMaybeRequirements(internal.model)
+
+    if (Option.isNone(maybeRequirements)) {
+      throw new Error(
+        `I tried to fail acquiring the ManagedResource "${entry.resource.key}" but the current Model does not request it.\n\n` +
+          'modelToMaybeRequirements returned None. The runtime only attempts acquisition while the Model requests the resource, so drive that transition through real steps first.',
+      )
+    }
+
+    return applyExternalMessage(
+      simulation,
+      entry.onAcquireError(error),
+      MANAGED_RESOURCE_CONTEXT,
+    )
+  }
+
+/** Declares that a ManagedResource was released, feeding the entry's
+ *  `onReleased()` Message through update. Models the runtime's Some to
+ *  None transition, which releases and then dispatches `onReleased()`, so
+ *  it requires the current Model to no longer request the resource: drive
+ *  the Model out of the requesting state through real steps first. The
+ *  runtime's Some to Some re-acquire (structurally changed requirements),
+ *  which also dispatches `onReleased()` and then `onAcquired(value)` while
+ *  the Model still requests the resource, has no step yet. */
+const releaseManagedResource =
+  <EntryModel, EntryMessage, Value>(
+    entry: SceneManagedResourceEntry<EntryModel, EntryMessage, Value>,
+  ) =>
+  <Message, OutMessage = undefined>(
+    simulation: SceneSimulation<EntryModel, Message, OutMessage>,
+  ): SceneSimulation<EntryModel, Message, OutMessage> => {
+    const internal = toInternal(simulation)
+    const maybeRequirements = entry.modelToMaybeRequirements(internal.model)
+
+    if (Option.isSome(maybeRequirements)) {
+      throw new Error(
+        `I tried to release the ManagedResource "${entry.resource.key}" but the current Model still requests it.\n\n` +
+          'modelToMaybeRequirements returned Some. This step models the Some to None transition, so drive the Model out of the requesting state through real steps first.',
+      )
+    }
+
+    return applyExternalMessage(
+      simulation,
+      entry.onReleased(),
+      MANAGED_RESOURCE_CONTEXT,
+    )
+  }
+
+/** Dispatches a CustomEvent a rendered custom element declares, feeding the
+ *  Message its `On*` event mapping produces through update. The event name
+ *  and detail are typed by the spec's event Schemas. The element must be in
+ *  the rendered tree with the event's attribute attached, so the test
+ *  exercises the same mapping the browser event would. */
+const emitCustomElementEvent =
+  <
+    Events extends Record<string, Schema.Top>,
+    Name extends keyof Events & string,
+  >(
+    spec: CustomElementSpec<string, Record<string, Schema.Top>, Events>,
+    target: string | Locator,
+    eventName: Name,
+    detail: Schema.Schema.Type<Events[Name]>,
+  ) =>
+  <Model, Message, OutMessage = undefined>(
+    simulation: SceneSimulation<Model, Message, OutMessage>,
+  ): SceneSimulation<Model, Message, OutMessage> => {
+    if (!Object.hasOwn(spec.events, eventName)) {
+      const declared = Object.keys(spec.events).join(', ')
+      throw new Error(
+        `I tried to emit "${eventName}" but the '${spec.tag}' element does not declare it.\n\n` +
+          `Declared events: ${String_.isEmpty(declared) ? '(none)' : declared}.`,
+      )
+    }
+
+    const internal = toInternal(simulation)
+    const scopedTarget = applyScopeToTarget(internal.scope, target)
+    const { maybeElement, description } = resolveTarget(
+      internal.html,
+      scopedTarget,
+    )
+
+    if (Option.isNone(maybeElement)) {
+      throw new Error(
+        `I could not find an element matching ${description}.\n\n` +
+          'Check that your selector matches an element in the current view.',
+      )
+    }
+
+    const element = maybeElement.value
+
+    if (element.data?.on?.[eventName] === undefined) {
+      throw new Error(
+        `I found an element matching ${description} but it has no ${eventName} handler.\n\n` +
+          `Make sure the element has the On${kebabToPascal(eventName)} attribute from its CustomElement builder.`,
+      )
+    }
+
+    // NOTE: the OnCustomEvent handler only dispatches when the event is a
+    // real CustomEvent instance, so the synthetic event must be constructed
+    // with `new CustomEvent(...)`, never a plain object literal like the
+    // other interaction helpers use. A None capture means nothing was
+    // dispatched, and since the handler dispatches unconditionally for a
+    // genuine CustomEvent, that can only be the instanceof check failing
+    // (a CustomEvent realm mismatch in the test environment).
+    const maybeNext = maybeCaptureFromElement(
+      simulation,
+      element,
+      description,
+      eventName,
+      handler => {
+        handler(new CustomEvent(eventName, { detail }))
+      },
+    )
+
+    return Option.getOrThrowWith(
+      maybeNext,
+      () =>
+        new Error(
+          `I dispatched "${eventName}" on the element matching ${description} but its handler produced no Message.\n\n` +
+            "The OnCustomEvent handler only dispatches for CustomEvent instances, so the synthetic event failed the runtime's instanceof check. This points to a CustomEvent realm mismatch in the test environment.",
+        ),
+    )
+  }
+
 /** Steps that operate on the pending Commands of a scene simulation.
  *  Destructure as `const { Command } = Scene` for concise call sites. */
 export const Command = {
@@ -961,6 +1208,98 @@ export const Mount = {
    *  every Mount that fires and then unmounts during a scene. */
   expectEnded: expectEndedMountsStep,
 } as const
+
+/** Steps that model Messages arriving from a Subscription.
+ *  Destructure as `const { Subscription } = Scene` for concise call sites. */
+export const Subscription = {
+  /** Feeds a Message through update as if a Subscription had emitted it,
+   *  then re-renders. Only for Messages whose real cause is a Subscription;
+   *  if the Message has a DOM affordance, click it instead. */
+  emit: emitSubscriptionMessage,
+} as const
+
+/** Steps that model the lifecycle Messages of a ManagedResource. The test
+ *  declares the lifecycle outcome the way `Scene.Command.resolve` declares a
+ *  Command result, and each step checks the current Model against the
+ *  entry's `modelToMaybeRequirements` gate first, mirroring the runtime's
+ *  None to Some and Some to None transitions. The Some to Some re-acquire
+ *  transition has no step yet. Destructure as
+ *  `const { ManagedResource } = Scene` for concise call sites. */
+export const ManagedResource = {
+  /** Declares a successful acquire, feeding the entry's `onAcquired` Message
+   *  through update. Takes exactly the arguments `onAcquired` declares. The
+   *  current Model must request the resource. */
+  acquire: acquireManagedResource,
+  /** Declares a failed acquire, feeding `onAcquireError(error)` through
+   *  update. The current Model must request the resource. */
+  failAcquire: failAcquireManagedResource,
+  /** Declares a release, feeding `onReleased()` through update. The current
+   *  Model must no longer request the resource. */
+  release: releaseManagedResource,
+} as const
+
+/** Steps that model CustomEvents arriving from a rendered custom element.
+ *  Destructure as `const { CustomElement } = Scene` for concise call sites. */
+export const CustomElement = {
+  /** Dispatches a declared CustomEvent through the element's event mapping.
+   *  The event name and detail are typed by the spec's event Schemas. */
+  emit: emitCustomElementEvent,
+} as const
+
+/** Asserts that the OutMessage is Some with the expected value.
+ *
+ *  The tracked OutMessage is the third element of the most recent update
+ *  result that had one. An update branch that returns a two-tuple leaves
+ *  the previous value latched in place, so keep every branch of an
+ *  OutMessage-returning update on the three-tuple shape, returning
+ *  `Option.none()` when there is nothing to report. */
+export const expectOutMessage =
+  <Expected>(expected: Expected) =>
+  <Model, Message, OutMessage>(
+    simulation: SceneSimulation<Model, Message, Option.Option<OutMessage>>,
+  ): SceneSimulation<Model, Message, Option.Option<OutMessage>> => {
+    const internal = toInternal(simulation)
+    const outMessage = internal.outMessage
+
+    if (
+      !Option.isOption(outMessage) ||
+      Option.isNone(outMessage) ||
+      !Equal.equals(outMessage.value, expected)
+    ) {
+      throw new Error(
+        `Expected OutMessage:\n\n    Some(${JSON.stringify(expected)})\n\nBut got:\n\n    ${JSON.stringify(outMessage)}`,
+      )
+    }
+
+    return simulation
+  }
+
+/** Asserts that the OutMessage is None.
+ *
+ *  The tracked OutMessage is the third element of the most recent update
+ *  result that had one. An update branch that returns a two-tuple leaves
+ *  the previous value latched in place, so keep every branch of an
+ *  OutMessage-returning update on the three-tuple shape, returning
+ *  `Option.none()` when there is nothing to report. */
+export const expectNoOutMessage =
+  () =>
+  <Model, Message, OutMessage>(
+    simulation: SceneSimulation<Model, Message, Option.Option<OutMessage>>,
+  ): SceneSimulation<Model, Message, Option.Option<OutMessage>> => {
+    const internal = toInternal(simulation)
+    const outMessage = internal.outMessage
+
+    if (
+      !Predicate.isUndefined(outMessage) &&
+      !(Option.isOption(outMessage) && Option.isNone(outMessage))
+    ) {
+      throw new Error(
+        `Expected no OutMessage but got:\n\n    ${JSON.stringify(outMessage)}`,
+      )
+    }
+
+    return simulation
+  }
 
 /** Runs a function for side effects (e.g. assertions) without breaking the step chain. */
 export const tap =
@@ -1992,6 +2331,37 @@ export const expectAll = (locatorAll: LocatorAll) => ({
   ...buildExpectAllChain(locatorAll, false),
   not: buildExpectAllChain(locatorAll, true),
 })
+
+// VIEW ADAPTERS
+
+/** Adapts a Submodel view that declares `ViewInputs` to the `(model, h)`
+ *  shape `Scene.scene` takes. `defaults` supplies the full `ViewInputs`
+ *  once; the returned factory accepts per-test overrides for everything
+ *  except `toView`, so tests vary value inputs while the renderer stays
+ *  pinned:
+ *
+ *  ```ts
+ *  const sceneView = Scene.withViewInputs(view, {
+ *    value: 5,
+ *    toView: testToView,
+ *  })
+ *
+ *  Scene.scene({ update, view: sceneView() }, ...)
+ *  Scene.scene({ update, view: sceneView({ isDisabled: true }) }, ...)
+ *  ```
+ */
+export const withViewInputs =
+  <Model, Message, ViewInputs extends object>(
+    view: (
+      model: Model,
+      viewInputs: ViewInputs,
+      h: HtmlBuilder<Message>,
+    ) => Html,
+    defaults: NoInfer<ViewInputs>,
+  ) =>
+  (overrides?: Omit<Partial<NoInfer<ViewInputs>>, 'toView'>) =>
+  (model: Model, h: HtmlBuilder<Message>): Html =>
+    view(model, { ...defaults, ...overrides }, h)
 
 // SCENE
 

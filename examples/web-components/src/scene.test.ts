@@ -1,13 +1,13 @@
 import { Scene } from 'foldkit'
 import { describe, test } from 'vitest'
 
-import { type Model, update, view } from './main'
+import { Model, hexColorPicker, update, view } from './main'
 
-const initialModel: Model = {
+const initialModel = Model.make({
   content: 'https://foldkit.dev',
   fillColor: '#1e1b4b',
   backgroundColor: '#fef3c7',
-}
+})
 
 describe('view', () => {
   test('initial view shows the page heading and field labels', () => {
@@ -49,6 +49,35 @@ describe('view', () => {
       Scene.expect(Scene.text('#1E1B4B')).toExist(),
       Scene.click(Scene.role('button', { name: 'Use #0f766e' })),
       Scene.expect(Scene.text('#0F766E')).toExist(),
+    )
+  })
+
+  test('a color-changed CustomEvent from the fill picker updates the hex readout', () => {
+    Scene.scene(
+      { update, view },
+      Scene.with(initialModel),
+      Scene.CustomElement.emit(
+        hexColorPicker,
+        Scene.selector('#fill-color'),
+        'color-changed',
+        { value: '#ff8800' },
+      ),
+      Scene.expect(Scene.text('#FF8800')).toExist(),
+    )
+  })
+
+  test('a color-changed CustomEvent from the background picker leaves the fill readout alone', () => {
+    Scene.scene(
+      { update, view },
+      Scene.with(initialModel),
+      Scene.CustomElement.emit(
+        hexColorPicker,
+        Scene.selector('#background-color'),
+        'color-changed',
+        { value: '#222222' },
+      ),
+      Scene.expect(Scene.text('#222222')).toExist(),
+      Scene.expect(Scene.text('#1E1B4B')).toExist(),
     )
   })
 })

@@ -1,11 +1,11 @@
 import { Match as M, Option } from 'effect'
 import * as Calendar from 'foldkit/calendar'
-import { type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
+import { inertHtml as ih } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
 
 import { describe, it } from '@effect/vitest'
 
-import type { CalendarAttributes, Message, Model, ViewInputs } from './index.js'
+import type { CalendarAttributes } from './index.js'
 import { CompletedFocusGrid, FocusGrid, init, update, view } from './index.js'
 
 const resolveFocusGrid = Scene.Command.resolve(FocusGrid, CompletedFocusGrid())
@@ -92,18 +92,10 @@ const testToView = (attrs: CalendarAttributes) =>
     }),
   )
 
-const sceneView =
-  (overrides: Omit<Partial<ViewInputs>, 'toView'> = {}) =>
-  (model: Model, h: HtmlBuilder<Message>) =>
-    view(
-      model,
-      {
-        maybeSelectedDate: Option.none(),
-        toView: testToView,
-        ...overrides,
-      },
-      h,
-    )
+const sceneView = Scene.withViewInputs(view, {
+  maybeSelectedDate: Option.none(),
+  toView: testToView,
+})
 
 const grid = Scene.role('grid')
 const previousMonthButton = Scene.label('Previous month')

@@ -111,7 +111,7 @@ describe('lift', () => {
     const { onAcquired, onReleased, onAcquireError } =
       liftedManagedResources.session
 
-    expect(onAcquired({ token: 'abc' })).toStrictEqual(
+    expect(onAcquired()).toStrictEqual(
       gotChild(childMessage('AcquiredSession')),
     )
     expect(onReleased()).toStrictEqual(

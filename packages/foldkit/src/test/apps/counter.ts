@@ -1,8 +1,9 @@
-import { Effect, Match as M, Schema as S } from 'effect'
+import { Array, Effect, Match as M, Number, Schema as S } from 'effect'
 
 import * as Command from '../../command/index.js'
 import type { Html, HtmlBuilder } from '../../html/index.js'
 import { m } from '../../message/index.js'
+import { evo } from '../../struct/index.js'
 
 // MODEL
 
@@ -18,6 +19,8 @@ export const ClickedIncrement = m('ClickedIncrement')
 export const ClickedDecrement = m('ClickedDecrement')
 export const ClickedFetch = m('ClickedFetch')
 export const ClickedFetchById = m('ClickedFetchById', { id: S.Number })
+export const Ticked = m('Ticked')
+export const PolledCount = m('PolledCount')
 export const StartedThreeFetches = m('StartedThreeFetches')
 export const StartedTwoFetchesById = m('StartedTwoFetchesById')
 export const StartedMixedFetches = m('StartedMixedFetches')
@@ -29,6 +32,8 @@ export const Message = S.Union([
   ClickedDecrement,
   ClickedFetch,
   ClickedFetchById,
+  Ticked,
+  PolledCount,
   StartedThreeFetches,
   StartedTwoFetchesById,
   StartedMixedFetches,
@@ -67,10 +72,12 @@ export const update = (
       readonly [Model, ReadonlyArray<Command.Command<Message>>]
     >(),
     M.tagsExhaustive({
-      ClickedIncrement: () => [{ ...model, count: model.count + 1 }, []],
-      ClickedDecrement: () => [{ ...model, count: model.count - 1 }, []],
+      ClickedIncrement: () => [evo(model, { count: Number.increment }), []],
+      ClickedDecrement: () => [evo(model, { count: Number.decrement }), []],
       ClickedFetch: () => [model, [FetchCount()]],
       ClickedFetchById: ({ id }) => [model, [FetchCountById({ id })]],
+      Ticked: () => [evo(model, { count: Number.increment }), []],
+      PolledCount: () => [model, [FetchCount()]],
       StartedThreeFetches: () => [
         model,
         [FetchCount(), FetchCount(), FetchCount()],
@@ -89,7 +96,7 @@ export const update = (
         ],
       ],
       SucceededFetchCount: ({ count }) => [
-        { count, log: [...model.log, count] },
+        evo(model, { count: () => count, log: Array.append(count) }),
         [],
       ],
       FailedFetchCount: () => [model, []],

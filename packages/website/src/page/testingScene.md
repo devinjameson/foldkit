@@ -166,6 +166,54 @@ Mount tracking has a few semantics worth knowing:
 
 UI components export their Mount definitions (`Popover.AnchorPopover`, `Listbox.AnchorListbox`, and so on) so consumer tests can name them in `Scene.Mount.resolve`.
 
+## Subscriptions
+
+Messages caused by a DOM event enter a scene through interactions, and Messages caused by a Command or Mount enter through `resolve`. A Message whose real cause is a [Subscription](/core/subscriptions) (a timer tick, a WebSocket frame, a global listener) has no element in the rendered tree, so `Scene.Subscription.emit(message)` feeds it through update directly and re-renders like any other step.
+
+::Snippet{name="sceneSubscriptionEmit" label="Subscription emit example"}
+
+Reach for it only when the Message's cause lives outside the rendered tree. If the Message has a DOM affordance, click the actual button instead; the interaction proves the handler wiring that `emit` skips. Like interactions, `emit` throws if unresolved Commands, unresolved Mounts, or unacknowledged unmounts are pending.
+
+## Managed Resources
+
+A [ManagedResource](/core/managed-resources) dispatches lifecycle Messages through its declared hooks: `onAcquired(value)` when acquisition succeeds, `onAcquireError(error)` when it fails, and `onReleased()` after release. The `Scene.ManagedResource` steps declare those outcomes the way `Scene.Command.resolve` declares a Command result, feeding the hook's Message through update.
+
+Each step checks the current Model against the entry's `modelToMaybeRequirements` gate first, mirroring the runtime's `None` to `Some` and `Some` to `None` transitions: `acquire` and `failAcquire` throw unless the Model requests the resource (`Some`), and `release` throws while it still does. A scene therefore has to drive the Model transition through real steps before declaring the lifecycle outcome. The runtime's third transition, the `Some` to `Some` re-acquire when the requirements change structurally (which dispatches `onReleased` and then `onAcquired` while the Model still requests the resource), has no step yet.
+
+Unlike Commands and Mounts, these steps leave nothing pending: each dispatches its Message through update immediately, so there is nothing to resolve or acknowledge at the end of the scene. The steps are also never required. Scene only sees `update` and `view`, not the application's ManagedResources record, so driving the Model into the requesting state without ever calling `acquire` is legal and ends the scene in the in-flight state, the same state the runtime sits in while its own `acquire` Effect runs. The gates work the other way around: any step you do call throws immediately when the current Model contradicts the lifecycle outcome it declares.
+
+`acquire` takes exactly the arguments the entry's `onAcquired` declares. A handler that consumes the acquired value, like `socket => Connected({ socketId: socket.socketId })`, requires the value here (what the entry's `acquire` Effect would have produced). A handler that ignores it, like `() => Connected()`, takes none, so a test never fabricates a resource value nobody reads.
+
+::Snippet{name="sceneManagedResourceSteps" label="ManagedResource steps example"}
+
+| Step                                              | Effect                                                                              |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `Scene.ManagedResource.acquire(entry, ...args)`   | Feeds `onAcquired(...args)` through update. The Model must request the resource.    |
+| `Scene.ManagedResource.failAcquire(entry, error)` | Feeds `onAcquireError(error)` through update. The Model must request the resource.  |
+| `Scene.ManagedResource.release(entry)`            | Feeds `onReleased()` through update. The Model must no longer request the resource. |
+
+## Custom Elements
+
+A [CustomElement](/core/custom-element) converts declared CustomEvents into Messages through its `On*` event attributes. `Scene.CustomElement.emit(spec, target, eventName, detail)` dispatches such an event on a rendered element: the event name and detail are typed by the spec's event Schemas, and the Message comes out of the same mapping the browser event would run. The element must be in the rendered tree with the event's attribute attached; a missing element or missing handler throws.
+
+::Snippet{name="sceneCustomElementEmit" label="CustomElement emit example"}
+
+## OutMessages
+
+When the update under test is a Submodel's three-tuple update, Scene tracks its `Option<OutMessage>` the same way Story does. `Scene.expectOutMessage(expected)` asserts the OutMessage is `Some(expected)`; `Scene.expectNoOutMessage()` asserts there is none.
+
+::Snippet{name="sceneOutMessageAssertions" label="OutMessage assertions example"}
+
+The tracked value is the third element of the most recent update result that had one. An update branch that returns a two-tuple leaves the previous value in place, so keep every branch of an OutMessage-returning update on the three-tuple shape, returning `Option.none()` when there is nothing to report.
+
+## Submodels with ViewInputs
+
+A Submodel that declares `ViewInputs` has a `(model, viewInputs, h)` view, which does not match the `(model, h)` shape `Scene.scene` takes. `Scene.withViewInputs(view, defaults)` closes the gap: pass the view and its full default inputs once, and the returned factory produces a scene view.
+
+::Snippet{name="sceneWithViewInputs" label="withViewInputs example"}
+
+The factory's overrides accept every `ViewInputs` field except `toView`, so tests vary value inputs while the renderer stays pinned. The published Submodels in `packages/ui/src/` are tested exactly this way; `packages/ui/src/slider/scene.test.ts` is the canonical example.
+
 ## A Complete Scene
 
 Here’s a Scene test for a weather app. The user types a zip code, clicks Get Weather, sees a loading state, and then the forecast appears:
