@@ -398,7 +398,7 @@ Each confirmed miss is a concrete a11y bug a screen reader user would hit.
 
 For Tier 3+ apps (routing, async Commands, forms), missing `scene.test.ts` is a **BLOCKER**. The app has not been tested from the user's perspective without it.
 
-- [ ] `scene.test.ts` exists (one root-level file; Scene always runs from the root `update`/`view`)
+- [ ] `scene.test.ts` exists: a root-level file for flows that cross pages, plus one in any page folder whose own rendering and interaction warrant it
 - [ ] View rendering test: initial view has expected elements (headings, inputs, buttons)
 - [ ] User interactions test: click, type, submit produce visible changes
 - [ ] At minimum one test per discriminated-union state that has distinct view output (loading, error, empty, populated)
