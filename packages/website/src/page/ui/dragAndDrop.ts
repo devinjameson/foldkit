@@ -86,9 +86,9 @@ const columnView = (
   dragAndDropModel: DragAndDrop.Model,
   h: HtmlBuilder<Message>,
 ): Html => {
-  const dropPlaceholder: Html = staticHtml.div(
+  const dropPlaceholder: Html = h.div(
     [
-      staticHtml.Class(
+      h.Class(
         'rounded-lg border-2 border-dashed border-accent-400/50 dark:border-accent-500/50 h-9',
       ),
     ],
