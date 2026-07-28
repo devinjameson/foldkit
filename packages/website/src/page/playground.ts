@@ -14,7 +14,7 @@ import {
   pipe,
 } from 'effect'
 import { Command, ManagedResource, Mount, Submodel } from 'foldkit'
-import { Html, type HtmlBuilder, staticHtml } from 'foldkit/html'
+import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
@@ -707,49 +707,48 @@ const fileTabButtonClassName = clsx(
   'data-[selected]:bg-gray-200 data-[selected]:dark:bg-gray-800 data-[selected]:text-gray-900 data-[selected]:dark:text-gray-100 hover:cursor-pointer',
 )
 
-const backToExampleButton = (maybeMeta: Option.Option<ExampleMeta>): Html => {
-  const h = staticHtml
-
-  return Option.match(maybeMeta, {
+const backToExampleButton = (maybeMeta: Option.Option<ExampleMeta>): Html =>
+  Option.match(maybeMeta, {
     onNone: () =>
-      h.a(
-        [h.Href(examplesRouter()), h.Class('cta-secondary')],
+      ih.a(
+        [ih.Href(examplesRouter()), ih.Class('cta-secondary')],
         [Icon.chevronLeft('w-4 h-4'), 'All Examples'],
       ),
     onSome: meta =>
-      h.a(
+      ih.a(
         [
-          h.Href(exampleDetailRouter({ exampleSlug: meta.slug })),
-          h.Class('cta-secondary'),
+          ih.Href(exampleDetailRouter({ exampleSlug: meta.slug })),
+          ih.Class('cta-secondary'),
         ],
         [Icon.chevronLeft('w-4 h-4'), `Back to ${meta.title}`],
       ),
   })
-}
 
 const messageView = (
   heading: string,
   body: string,
   maybeMeta: Option.Option<ExampleMeta>,
-): Html => {
-  const h = staticHtml
-
-  return h.div(
-    [h.Class('flex-1 flex items-center justify-center px-6 py-20 text-center')],
+): Html =>
+  ih.div(
     [
-      h.div(
-        [h.Class('max-w-md flex flex-col items-center')],
+      ih.Class(
+        'flex-1 flex items-center justify-center px-6 py-20 text-center',
+      ),
+    ],
+    [
+      ih.div(
+        [ih.Class('max-w-md flex flex-col items-center')],
         [
-          h.div(
+          ih.div(
             [
-              h.Class(
+              ih.Class(
                 'text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2',
               ),
             ],
             [heading],
           ),
-          h.div(
-            [h.Class('text-sm text-gray-600 dark:text-gray-400 mb-6')],
+          ih.div(
+            [ih.Class('text-sm text-gray-600 dark:text-gray-400 mb-6')],
             [body],
           ),
           backToExampleButton(maybeMeta),
@@ -757,60 +756,61 @@ const messageView = (
       ),
     ],
   )
-}
 
-const spinnerView = (): Html => {
-  const h = staticHtml
-  return h.div(
+const spinnerView = (): Html =>
+  ih.div(
     [
-      h.Class(
+      ih.Class(
         'w-8 h-8 mb-6 rounded-full border-2 border-gray-300 dark:border-gray-700 border-t-gray-900 dark:border-t-gray-100 animate-spin',
       ),
-      h.AriaLabel('Loading'),
-      h.Role('status'),
+      ih.AriaLabel('Loading'),
+      ih.Role('status'),
     ],
     [],
   )
-}
 
-const bootingPanelView = (heading: string, body: string): Html => {
-  const h = staticHtml
-  return h.div(
-    [h.Class('flex-1 flex items-center justify-center px-6 py-20 text-center')],
+const bootingPanelView = (heading: string, body: string): Html =>
+  ih.div(
     [
-      h.div(
-        [h.Class('max-w-sm flex flex-col items-center')],
+      ih.Class(
+        'flex-1 flex items-center justify-center px-6 py-20 text-center',
+      ),
+    ],
+    [
+      ih.div(
+        [ih.Class('max-w-sm flex flex-col items-center')],
         [
           spinnerView(),
-          h.div(
-            [h.Class('text-base font-semibold text-gray-900 mb-2')],
+          ih.div(
+            [ih.Class('text-base font-semibold text-gray-900 mb-2')],
             [heading],
           ),
-          h.div([h.Class('text-sm text-gray-600')], [body]),
+          ih.div([ih.Class('text-sm text-gray-600')], [body]),
         ],
       ),
     ],
   )
-}
 
-const failurePanelView = (reason: string): Html => {
-  const h = staticHtml
-  return h.div(
-    [h.Class('flex-1 flex items-center justify-center px-6 py-20 text-center')],
+const failurePanelView = (reason: string): Html =>
+  ih.div(
     [
-      h.div(
-        [h.Class('max-w-sm flex flex-col items-center')],
+      ih.Class(
+        'flex-1 flex items-center justify-center px-6 py-20 text-center',
+      ),
+    ],
+    [
+      ih.div(
+        [ih.Class('max-w-sm flex flex-col items-center')],
         [
-          h.div(
-            [h.Class('text-base font-semibold text-gray-900 mb-2')],
+          ih.div(
+            [ih.Class('text-base font-semibold text-gray-900 mb-2')],
             ['Playground failed to load'],
           ),
-          h.div([h.Class('text-sm text-gray-600')], [reason]),
+          ih.div([ih.Class('text-sm text-gray-600')], [reason]),
         ],
       ),
     ],
   )
-}
 
 const editorPanelContent = (
   path: string,
@@ -832,18 +832,16 @@ const editorPanelContent = (
     ],
   )
 
-const previewPaneView = (state: PlaygroundState): Html => {
-  const h = staticHtml
-
-  return h.div(
+const previewPaneView = (state: PlaygroundState): Html =>
+  ih.div(
     [
-      h.Class(
+      ih.Class(
         'flex-1 min-w-0 min-h-0 flex flex-col border-l max-playground-wide:border-l-0 max-playground-wide:border-t border-gray-200 dark:border-gray-800 bg-white',
       ),
     ],
     [
-      h.div(
-        [h.Class('flex-1 min-w-0 min-h-0 flex flex-col')],
+      ih.div(
+        [ih.Class('flex-1 min-w-0 min-h-0 flex flex-col')],
         [
           M.value(state).pipe(
             M.tagsExhaustive({
@@ -858,12 +856,12 @@ const previewPaneView = (state: PlaygroundState): Html => {
                   'Hang tight. The preview will appear automatically. First load takes about 30 seconds.',
                 ),
               PlaygroundStateBooted: ({ previewUrl }) =>
-                h.iframe(
+                ih.iframe(
                   [
-                    h.Src(previewUrl),
-                    h.Allow('cross-origin-isolated'),
-                    h.Class('w-full h-full border-0'),
-                    h.Title('Foldkit Playground'),
+                    ih.Src(previewUrl),
+                    ih.Allow('cross-origin-isolated'),
+                    ih.Class('w-full h-full border-0'),
+                    ih.Title('Foldkit Playground'),
                   ],
                   [],
                 ),
@@ -874,54 +872,49 @@ const previewPaneView = (state: PlaygroundState): Html => {
       ),
     ],
   )
-}
 
-const writeErrorBannerView = (maybeError: Option.Option<string>): Html => {
-  const h = staticHtml
-  return Option.match(maybeError, {
-    onNone: () => h.div([h.Class('hidden')], []),
+const writeErrorBannerView = (maybeError: Option.Option<string>): Html =>
+  Option.match(maybeError, {
+    onNone: () => ih.div([ih.Class('hidden')], []),
     onSome: reason =>
-      h.div(
+      ih.div(
         [
-          h.Class(
+          ih.Class(
             'shrink-0 px-4 py-2 text-xs border-b border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950 text-red-900 dark:text-red-200',
           ),
-          h.Role('alert'),
+          ih.Role('alert'),
         ],
         [`Playground write failed: ${reason}`],
       ),
   })
-}
 
-const tooNarrowMessageView = (): Html => {
-  const h = staticHtml
-  return h.div(
+const tooNarrowMessageView = (): Html =>
+  ih.div(
     [
-      h.Class(
+      ih.Class(
         'flex-1 hidden max-md:flex items-center justify-center px-6 py-20 text-center',
       ),
     ],
     [
-      h.div(
-        [h.Class('max-w-md flex flex-col items-center')],
+      ih.div(
+        [ih.Class('max-w-md flex flex-col items-center')],
         [
-          h.div(
+          ih.div(
             [
-              h.Class(
+              ih.Class(
                 'text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2',
               ),
             ],
             ['Playground needs a wider screen'],
           ),
-          h.div(
-            [h.Class('text-sm text-gray-600 dark:text-gray-400')],
+          ih.div(
+            [ih.Class('text-sm text-gray-600 dark:text-gray-400')],
             ['The live editor + preview layout needs a wider screen.'],
           ),
         ],
       ),
     ],
   )
-}
 
 const responsiveEditorView = (model: Model, h: HtmlBuilder<Message>): Html =>
   h.div(

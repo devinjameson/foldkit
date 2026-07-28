@@ -329,7 +329,7 @@ For each Foldkit module you plan to use, read the `.d.ts` at the paths below. Re
 ```text
 # Every app
 <project>/node_modules/foldkit/dist/index.d.ts          # top-level re-exports: the authoritative list of what `foldkit` exposes
-<project>/node_modules/foldkit/dist/html/index.d.ts     # HtmlBuilder<Message>, element signatures, Attribute<Message>, staticHtml
+<project>/node_modules/foldkit/dist/html/index.d.ts     # HtmlBuilder<Message>, element signatures, Attribute<Message>, inertHtml
 <project>/node_modules/foldkit/dist/message/index.d.ts  # m()
 <project>/node_modules/foldkit/dist/schema/index.d.ts   # ts(), r()
 <project>/node_modules/foldkit/dist/struct/index.d.ts   # evo(): check nested-update signature
@@ -581,7 +581,7 @@ For file uploads (resumes, images, attachments):
 ### View
 
 - Every view receives `h`, the typed Html builder, as its last parameter: the runtime passes it to the root view, and `Submodel.defineView<Model, Message>` passes the child's own to each Submodel view. Application code never constructs a builder. Reach for elements, attributes, and event handlers off `h`: `h.div`, `h.Class`, `h.OnClick`. The child dispatches in its own Message type and the parent declares the wrap at the embed site via `toParentMessage`.
-- Extracted view helpers take `h: HtmlBuilder<Message>` as their last parameter; callers thread it through. For handler-free Html at module top level, use `staticHtml` from `foldkit/html` (typed `HtmlBuilder<never>`, so no handlers can be built with it).
+- Extracted view helpers take `h: HtmlBuilder<Message>` as their last parameter; callers thread it through. Inside a view, always use the view's own `h`. Only where no builder is in scope, typically module scope, use `inertHtml` from `foldkit/html`, aliased `ih` (typed `HtmlBuilder<never>`, so no handlers can be built with it).
 - Use `h.Class(...)` for Tailwind classes
 - Use `clsx` from the `clsx` package for conditional class composition: `h.Class(clsx('base-classes', { 'active-class': isActive, 'bg-blue-500': variant === 'Primary' }))`. Use `clsx` whenever classes depend on model state, boolean flags, or discriminated union tags. Never string concatenation, template literals, or `&&` expressions.
 - Pattern match on model state: `M.value(model.state).pipe(M.tagsExhaustive({...}))`

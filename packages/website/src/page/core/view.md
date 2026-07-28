@@ -61,7 +61,9 @@ This gives you strong type safety: if you try to pass an invalid Message to `h.O
 
 Application code cannot construct a builder; `h` only enters a view as a parameter. That is what keeps the typing truthful. The builder is supplied by the render frame it will dispatch into, so its Message type cannot disagree with the boundary that routes its handlers. When you extract a view helper, take `h: HtmlBuilder<Message>` as its last parameter and let callers thread theirs through. A helper meant to work under any parent takes `ParentMessage` as a function generic with `h: HtmlBuilder<ParentMessage>`, staying decoupled from any particular parent and composing through the callbacks the parent supplies.
 
-For handler-free Html built where no view is running, typically a static fragment at module top level, `foldkit/html` exports `staticHtml`. It is typed `HtmlBuilder<never>`: elements and styling attributes work, and no event handler can be constructed with it.
+Where no builder is in scope, typically module scope, `foldkit/html` exports `inertHtml`. It is typed `HtmlBuilder<never>`: elements and styling attributes work, and no event handler can be constructed with it, so nothing built with it can dispatch a Message. Inert describes what the result can do, not how it is computed; the markup is still free to vary with runtime data. Its attributes are `Attribute<never>` and flow into any Message universe, which is what lets library code hand out handler-free attribute bundles. Import it aliased as `ih`, which reads as the inert counterpart to `h` and keeps the two distinguishable at every call site. Inside a view, use the view's own `h` rather than reaching past it.
+
+Inert to Foldkit's dispatch, not to the browser. A raw DOM attribute still does whatever the browser makes of it, which is how the [crash view](/core/crash-view) gets a working reload button with `h.Attribute('onclick', 'location.reload()')`. What `never` rules out is a Message reaching `update`, not every possible behavior.
 
 ## Event Handling
 

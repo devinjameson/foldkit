@@ -18,7 +18,7 @@ import {
   ManagedResource,
   Submodel,
 } from 'foldkit'
-import { Html, type HtmlBuilder, staticHtml } from 'foldkit/html'
+import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
@@ -854,48 +854,40 @@ const playbackControlView = (
   )
 }
 
-const audioUnavailableNoticeView = (audio: AudioState): ReadonlyArray<Html> => {
-  const h = staticHtml
-
-  return M.value(audio).pipe(
+const audioUnavailableNoticeView = (audio: AudioState): ReadonlyArray<Html> =>
+  M.value(audio).pipe(
     M.withReturnType<ReadonlyArray<Html>>(),
     M.tag('AudioUnavailable', () => [
-      h.p(
-        [h.Class('text-xs text-amber-600 dark:text-amber-500')],
+      ih.p(
+        [ih.Class('text-xs text-amber-600 dark:text-amber-500')],
         ['No audio output in this browser, so playback stays silent.'],
       ),
     ]),
     M.orElse(() => []),
   )
-}
 
-const placeholderVisualizerView = (): Html => {
-  const h = staticHtml
-
-  return h.div(
-    [h.Class('flex gap-2')],
+const placeholderVisualizerView = (): Html =>
+  ih.div(
+    [ih.Class('flex gap-2')],
     Array.makeBy(MIN_NOTES, index =>
-      h.keyed('div')(
+      ih.keyed('div')(
         `placeholder-${index}`,
         [
-          h.Class(
+          ih.Class(
             'flex-1 h-10 rounded-lg flex items-center justify-center text-sm font-bold bg-gray-200 dark:bg-gray-800 text-gray-300 dark:text-gray-600',
           ),
         ],
-        [h.span([], ['–'])],
+        [ih.span([], ['–'])],
       ),
     ),
   )
-}
 
 const noteSequenceView = (model: Model): Html => {
-  const h = staticHtml
-
   const notes = parseNotes(model.noteInput.value)
 
-  return h.div(
+  return ih.div(
     [
-      h.Class(
+      ih.Class(
         'flex flex-col gap-2 pb-3 border-b border-gray-300 dark:border-gray-800',
       ),
     ],
@@ -909,8 +901,6 @@ const noteSequenceView = (model: Model): Html => {
 }
 
 const noteVisualizerView = (model: Model, notes: ReadonlyArray<Note>): Html => {
-  const h = staticHtml
-
   const maybeCurrentIndex = M.value(model.playbackState).pipe(
     M.tag('Playing', 'Paused', ({ currentNoteIndex }) =>
       Option.some(currentNoteIndex),
@@ -919,8 +909,8 @@ const noteVisualizerView = (model: Model, notes: ReadonlyArray<Note>): Html => {
     M.exhaustive,
   )
 
-  return h.div(
-    [h.Class('flex gap-2')],
+  return ih.div(
+    [ih.Class('flex gap-2')],
     Array.map(notes, (note, index) => {
       const isCurrentNote = Option.exists(
         maybeCurrentIndex,
@@ -928,10 +918,10 @@ const noteVisualizerView = (model: Model, notes: ReadonlyArray<Note>): Html => {
       )
       const key = `${note}-${index}`
 
-      return h.keyed('div')(
+      return ih.keyed('div')(
         key,
         [
-          h.Class(
+          ih.Class(
             clsx(
               'flex-1 h-10 rounded-lg flex items-center justify-center text-sm font-bold transition-colors duration-150',
               {
@@ -943,7 +933,7 @@ const noteVisualizerView = (model: Model, notes: ReadonlyArray<Note>): Html => {
             ),
           ),
         ],
-        [h.span([], [note])],
+        [ih.span([], [note])],
       )
     }),
   )

@@ -5,7 +5,7 @@ import {
   type HtmlBuilder,
   childAttributes,
   createLazy,
-  staticHtml,
+  inertHtml as ih,
 } from 'foldkit/html'
 
 import { Menu } from '@foldkit/ui'
@@ -34,7 +34,7 @@ import { themeSelector } from './themeSelector'
 
 const PlaygroundMenu = Menu.create<ExampleSlug>()
 
-const PagefindBody = staticHtml.DataAttribute('pagefind-body', '')
+const PagefindBody = ih.DataAttribute('pagefind-body', '')
 
 // LANDING HEADER
 
@@ -88,24 +88,22 @@ const landingHeaderView = (model: Model, h: HtmlBuilder<Message>) =>
 
 // LANDING FOOTER
 
-const landingFooter = (currentYear: number): Html => {
-  const h = staticHtml
-
-  return h.footer(
+const landingFooter = (currentYear: number): Html =>
+  ih.footer(
     [
-      h.Class(
+      ih.Class(
         'px-6 py-8 md:px-12 lg:px-20 border-t border-gray-300 dark:border-gray-800 text-sm text-gray-500 dark:text-gray-400',
       ),
     ],
     [
-      h.p(
+      ih.p(
         [],
         [
           'Built with ',
-          h.a(
+          ih.a(
             [
-              h.Href(`${Link.websiteSource}/src/main.ts`),
-              h.Class(
+              ih.Href(`${Link.websiteSource}/src/main.ts`),
+              ih.Class(
                 'text-accent-600 dark:text-accent-500 underline decoration-accent-600/30 dark:decoration-accent-500/30 hover:decoration-accent-600 dark:hover:decoration-accent-500',
               ),
             ],
@@ -114,10 +112,9 @@ const landingFooter = (currentYear: number): Html => {
           '.',
         ],
       ),
-      h.p([h.Class('mt-1')], [`© ${currentYear} Devin Jameson`]),
+      ih.p([ih.Class('mt-1')], [`© ${currentYear} Devin Jameson`]),
     ],
   )
-}
 
 // DEMO TABS
 
@@ -186,39 +183,30 @@ const playgroundItemClassName =
 
 const playgroundBackdropClassName = 'fixed inset-0 z-10'
 
-const chromeRecommendedHint: Html = (() => {
-  const h = staticHtml
+const chromeRecommendedHint: Html = ih.p(
+  [ih.Class('text-xs text-gray-500 dark:text-gray-400')],
+  ['Requires a Chromium browser'],
+)
 
-  return h.p(
-    [h.Class('text-xs text-gray-500 dark:text-gray-400')],
-    ['Requires a Chromium browser'],
-  )
-})()
-
-const withChromeRecommendedHint = (menu: Html, isChromium: boolean): Html => {
-  const h = staticHtml
-
-  return isChromium
+const withChromeRecommendedHint = (menu: Html, isChromium: boolean): Html =>
+  isChromium
     ? menu
-    : h.div(
-        [h.Class('flex flex-col items-start gap-1')],
+    : ih.div(
+        [ih.Class('flex flex-col items-start gap-1')],
         [menu, chromeRecommendedHint],
       )
-}
 
-const playgroundItemContent = (meta: ExampleMeta): Html => {
-  const h = staticHtml
-
-  return h.div(
+const playgroundItemContent = (meta: ExampleMeta): Html =>
+  ih.div(
     [],
     [
-      h.div(
-        [h.Class('font-medium text-gray-900 dark:text-white text-sm mb-0.5')],
+      ih.div(
+        [ih.Class('font-medium text-gray-900 dark:text-white text-sm mb-0.5')],
         [meta.title],
       ),
-      h.p(
+      ih.p(
         [
-          h.Class(
+          ih.Class(
             'text-xs text-gray-600 dark:text-gray-400 leading-snug line-clamp-2',
           ),
         ],
@@ -226,7 +214,6 @@ const playgroundItemContent = (meta: ExampleMeta): Html => {
       ),
     ],
   )
-}
 
 const playgroundMenuView = (
   menuModel: Menu.Model,

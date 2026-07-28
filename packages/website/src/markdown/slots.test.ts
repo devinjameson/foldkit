@@ -1,10 +1,10 @@
-import { staticHtml as h } from 'foldkit/html'
+import { inertHtml as ih } from 'foldkit/html'
 import { describe, expect, test } from 'vitest'
 
 import { type Slots, renderFaqSection, resolveDemo } from './slots'
 
-const stubRenderCopyButton = () => h.empty
-const stubRenderHeadingLink = () => h.empty
+const stubRenderCopyButton = () => ih.empty
+const stubRenderHeadingLink = () => ih.empty
 
 const slotsWithoutShell: Slots<never> = {
   demos: {},
@@ -14,7 +14,7 @@ const slotsWithoutShell: Slots<never> = {
 
 describe('resolveDemo', () => {
   test('returns the demo the page registered under that name', () => {
-    const demo = h.div([h.Class('live-demo')], ['demo content'])
+    const demo = ih.div([ih.Class('live-demo')], ['demo content'])
     const slots: Slots<'registered'> = {
       demos: { registered: demo },
       renderCopyButton: stubRenderCopyButton,
@@ -25,14 +25,14 @@ describe('resolveDemo', () => {
   })
 
   test('renders empty for a name no page registered', () => {
-    expect(resolveDemo(slotsWithoutShell, 'never-registered')).toEqual(h.empty)
+    expect(resolveDemo(slotsWithoutShell, 'never-registered')).toEqual(ih.empty)
   })
 })
 
 describe('renderFaqSection', () => {
   test('hands the island id, question, and rendered children to the shell', () => {
-    const answer = [h.p([], ['Because it is.'])]
-    const wrapped = h.section([], ['wrapped'])
+    const answer = [ih.p([], ['Because it is.'])]
+    const wrapped = ih.section([], ['wrapped'])
     const received: Array<{
       id: string
       question: string
@@ -56,7 +56,7 @@ describe('renderFaqSection', () => {
   })
 
   test('falls back to the question above its answer with no shell supplied', () => {
-    const answer = h.p([], ['Because it is.'])
+    const answer = ih.p([], ['Because it is.'])
     const fallback = renderFaqSection(
       slotsWithoutShell,
       'faq-routing',

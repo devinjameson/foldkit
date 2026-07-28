@@ -1,5 +1,5 @@
 import { Option, Record as Record_ } from 'effect'
-import { Html, staticHtml } from 'foldkit/html'
+import { Html, inertHtml as ih } from 'foldkit/html'
 
 import type { RenderHeadingLink } from '../prose'
 import type { RenderCopyButton } from '../view/codeBlock'
@@ -50,7 +50,7 @@ export type Slots<DemoName extends string> = Readonly<{
  * `::Demo` registration test is there to catch.
  */
 export const resolveDemo = (slots: Slots<string>, name: string): Html =>
-  Option.getOrElse(Record_.get(slots.demos, name), () => staticHtml.empty)
+  Option.getOrElse(Record_.get(slots.demos, name), () => ih.empty)
 
 /**
  * Renders a `:::Faq` island. Without a page-supplied shell the question becomes
@@ -62,10 +62,7 @@ export const renderFaqSection = (
   id: string,
   question: string,
   content: ReadonlyArray<Html>,
-): Html => {
-  const h = staticHtml
-
-  return slots.renderFaq === undefined
-    ? h.div([], [h.p([h.Class('font-bold')], [question]), ...content])
+): Html =>
+  slots.renderFaq === undefined
+    ? ih.div([], [ih.p([ih.Class('font-bold')], [question]), ...content])
     : slots.renderFaq(id, question, content)
-}

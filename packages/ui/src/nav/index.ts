@@ -3,7 +3,7 @@ import {
   type ChildAttribute,
   type Html,
   childAttributes,
-  staticHtml as h,
+  inertHtml as ih,
 } from 'foldkit/html'
 
 // MODEL
@@ -72,12 +72,12 @@ export const view = <Value extends string = string>(
       const isCurrent = isItemCurrent(value, index)
 
       const maybeCurrentAttributes = Option.liftPredicate(
-        [h.AriaCurrent(ARIA_CURRENT_PAGE), h.DataAttribute('current', '')],
+        [ih.AriaCurrent(ARIA_CURRENT_PAGE), ih.DataAttribute('current', '')],
         () => isCurrent,
       )
 
       const linkAttributes = [
-        h.Href(toHref(value, index)),
+        ih.Href(toHref(value, index)),
         ...Option.getOrElse(maybeCurrentAttributes, () => []),
       ]
 
@@ -90,7 +90,7 @@ export const view = <Value extends string = string>(
     },
   )
 
-  const navAttributes = [h.AriaLabel(ariaLabel)]
+  const navAttributes = [ih.AriaLabel(ariaLabel)]
 
   return toView({
     nav: childAttributes(navAttributes),

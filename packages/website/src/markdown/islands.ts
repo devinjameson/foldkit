@@ -1,5 +1,5 @@
 import { Option } from 'effect'
-import { staticHtml } from 'foldkit/html'
+import { inertHtml as ih } from 'foldkit/html'
 
 import * as Markdown from '@foldkit/markdown'
 
@@ -39,18 +39,19 @@ const warnMissingSnippetOnce = createWarnOnce(
  * state rides inside the slots' `renderCopyButton`.
  */
 export const docIslands = (slots: Slots<string>): Markdown.Islands => {
-  const h = staticHtml
-
   return Markdown.islandsFor(islandAttributes, {
     Snippet: ({ name, label, class: className }) =>
       Option.match(lookupSnippet(name), {
         onNone: () => {
           warnMissingSnippetOnce(name)
-          return h.empty
+          return ih.empty
         },
         onSome: snippet =>
           highlightedCodeBlock(
-            h.div([h.Class('text-sm'), h.InnerHTML(snippet.highlighted)], []),
+            ih.div(
+              [ih.Class('text-sm'), ih.InnerHTML(snippet.highlighted)],
+              [],
+            ),
             snippet.raw,
             label === undefined
               ? 'Copy snippet to clipboard'

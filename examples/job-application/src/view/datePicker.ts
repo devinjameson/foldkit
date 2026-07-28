@@ -1,6 +1,6 @@
 import { Match as M, Option } from 'effect'
 import { type CalendarDate } from 'foldkit/calendar'
-import { type Html, staticHtml as h } from 'foldkit/html'
+import { type Html, inertHtml as ih } from 'foldkit/html'
 
 import { Calendar } from '@foldkit/ui'
 
@@ -19,14 +19,14 @@ export const triggerContent = (
   maybeDate: Option.Option<CalendarDate>,
   placeholder: string,
 ): Html =>
-  h.div(
-    [h.Class('flex w-full items-center justify-between gap-2')],
+  ih.div(
+    [ih.Class('flex w-full items-center justify-between gap-2')],
     [
       Option.match(maybeDate, {
-        onNone: () => h.span([h.Class('text-gray-400')], [placeholder]),
-        onSome: date => h.span([], [fullDate(date)]),
+        onNone: () => ih.span([ih.Class('text-gray-400')], [placeholder]),
+        onSome: date => ih.span([], [fullDate(date)]),
       }),
-      h.span([h.Class('text-gray-400 shrink-0')], [chevronDown()]),
+      ih.span([ih.Class('text-gray-400 shrink-0')], [chevronDown()]),
     ],
   )
 
@@ -54,40 +54,40 @@ export const calendarView = (attributes: Calendar.CalendarAttributes): Html =>
   M.value(attributes).pipe(
     M.tagsExhaustive({
       Days: days =>
-        h.div(
-          [...days.root, h.Class(calendarWrapperClassName)],
+        ih.div(
+          [...days.root, ih.Class(calendarWrapperClassName)],
           [
-            h.div(
-              [h.Class('flex items-center justify-between gap-2')],
+            ih.div(
+              [ih.Class('flex items-center justify-between gap-2')],
               [
-                h.button(
-                  [...days.previousMonthButton, h.Class(navButtonClassName)],
+                ih.button(
+                  [...days.previousMonthButton, ih.Class(navButtonClassName)],
                   ['‹'],
                 ),
-                h.button(
+                ih.button(
                   [
-                    h.Id(days.heading.id),
+                    ih.Id(days.heading.id),
                     ...days.headingButton,
-                    h.Class(headingButtonClassName),
+                    ih.Class(headingButtonClassName),
                   ],
                   [days.heading.text, chevronDown('w-3 h-3')],
                 ),
-                h.button(
-                  [...days.nextMonthButton, h.Class(navButtonClassName)],
+                ih.button(
+                  [...days.nextMonthButton, ih.Class(navButtonClassName)],
                   ['›'],
                 ),
               ],
             ),
-            h.div(
-              [...days.grid, h.Class('flex flex-col gap-1 outline-none')],
+            ih.div(
+              [...days.grid, ih.Class('flex flex-col gap-1 outline-none')],
               [
-                h.div(
-                  [...days.headerRow, h.Class('grid grid-cols-7 gap-1')],
+                ih.div(
+                  [...days.headerRow, ih.Class('grid grid-cols-7 gap-1')],
                   days.columnHeaders.map(header =>
-                    h.div(
+                    ih.div(
                       [
                         ...header.attributes,
-                        h.Class(
+                        ih.Class(
                           'text-center text-xs font-medium uppercase tracking-wide text-gray-500 py-1',
                         ),
                       ],
@@ -96,19 +96,19 @@ export const calendarView = (attributes: Calendar.CalendarAttributes): Html =>
                   ),
                 ),
                 ...days.weeks.map(week =>
-                  h.div(
-                    [...week.attributes, h.Class('grid grid-cols-7 gap-1')],
+                  ih.div(
+                    [...week.attributes, ih.Class('grid grid-cols-7 gap-1')],
                     week.cells.map(cell =>
-                      h.div(
+                      ih.div(
                         [
                           ...cell.cellAttributes,
-                          h.Class('group flex items-center justify-center'),
+                          ih.Class('group flex items-center justify-center'),
                         ],
                         [
-                          h.button(
+                          ih.button(
                             [
                               ...cell.buttonAttributes,
-                              h.Class(dayButtonClassName),
+                              ih.Class(dayButtonClassName),
                             ],
                             [cell.label],
                           ),
@@ -122,35 +122,35 @@ export const calendarView = (attributes: Calendar.CalendarAttributes): Html =>
           ],
         ),
       Months: months =>
-        h.div(
-          [...months.root, h.Class(calendarWrapperClassName)],
+        ih.div(
+          [...months.root, ih.Class(calendarWrapperClassName)],
           [
-            h.div(
-              [h.Class('flex items-center justify-center gap-2')],
+            ih.div(
+              [ih.Class('flex items-center justify-center gap-2')],
               [
-                h.button(
+                ih.button(
                   [
-                    h.Id(months.heading.id),
+                    ih.Id(months.heading.id),
                     ...months.headingButton,
-                    h.Class(headingButtonClassName),
+                    ih.Class(headingButtonClassName),
                   ],
                   [months.heading.text, chevronDown('w-3 h-3')],
                 ),
               ],
             ),
-            h.div(
-              [...months.grid, h.Class(monthYearGridClassName)],
+            ih.div(
+              [...months.grid, ih.Class(monthYearGridClassName)],
               months.cells.map(cell =>
-                h.div(
+                ih.div(
                   [
                     ...cell.cellAttributes,
-                    h.Class('group flex items-center justify-center'),
+                    ih.Class('group flex items-center justify-center'),
                   ],
                   [
-                    h.button(
+                    ih.button(
                       [
                         ...cell.buttonAttributes,
-                        h.Class(monthYearButtonClassName),
+                        ih.Class(monthYearButtonClassName),
                       ],
                       [cell.shortLabel],
                     ),
@@ -161,39 +161,39 @@ export const calendarView = (attributes: Calendar.CalendarAttributes): Html =>
           ],
         ),
       Years: years =>
-        h.div(
-          [...years.root, h.Class(calendarWrapperClassName)],
+        ih.div(
+          [...years.root, ih.Class(calendarWrapperClassName)],
           [
-            h.div(
-              [h.Class('flex items-center justify-between gap-2')],
+            ih.div(
+              [ih.Class('flex items-center justify-between gap-2')],
               [
-                h.button(
-                  [...years.previousPageButton, h.Class(navButtonClassName)],
+                ih.button(
+                  [...years.previousPageButton, ih.Class(navButtonClassName)],
                   ['‹'],
                 ),
-                h.h2(
-                  [h.Id(years.heading.id), h.Class(headingTextClassName)],
+                ih.h2(
+                  [ih.Id(years.heading.id), ih.Class(headingTextClassName)],
                   [years.heading.text],
                 ),
-                h.button(
-                  [...years.nextPageButton, h.Class(navButtonClassName)],
+                ih.button(
+                  [...years.nextPageButton, ih.Class(navButtonClassName)],
                   ['›'],
                 ),
               ],
             ),
-            h.div(
-              [...years.grid, h.Class(monthYearGridClassName)],
+            ih.div(
+              [...years.grid, ih.Class(monthYearGridClassName)],
               years.cells.map(cell =>
-                h.div(
+                ih.div(
                   [
                     ...cell.cellAttributes,
-                    h.Class('group flex items-center justify-center'),
+                    ih.Class('group flex items-center justify-center'),
                   ],
                   [
-                    h.button(
+                    ih.button(
                       [
                         ...cell.buttonAttributes,
-                        h.Class(monthYearButtonClassName),
+                        ih.Class(monthYearButtonClassName),
                       ],
                       [cell.label],
                     ),

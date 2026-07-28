@@ -1,7 +1,7 @@
 import { clsx } from 'clsx'
 import { Array, Match as M, Option, String, pipe } from 'effect'
 import { Submodel } from 'foldkit'
-import { Html, type HtmlBuilder, staticHtml } from 'foldkit/html'
+import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 
 import { Dialog } from '@foldkit/ui'
 
@@ -99,14 +99,11 @@ const resultLabelText = (
     ),
   ])
 
-const resultLabel = (result: typeof SearchResult.Type): ReadonlyArray<Html> => {
-  const h = staticHtml
-
-  return Option.match(resultLabelText(result), {
-    onSome: text => [h.span([h.Class(labelPillClassName)], [text])],
+const resultLabel = (result: typeof SearchResult.Type): ReadonlyArray<Html> =>
+  Option.match(resultLabelText(result), {
+    onSome: text => [ih.span([ih.Class(labelPillClassName)], [text])],
     onNone: () => [],
   })
-}
 
 const resultItemView = (
   result: typeof SearchResult.Type,
@@ -153,47 +150,36 @@ const resultItemView = (
     ],
   )
 
-const emptyPrompt: Html = (() => {
-  const h = staticHtml
+const emptyPrompt: Html = ih.div(
+  [ih.Class('px-4 py-12 text-center')],
+  [
+    ih.p(
+      [ih.Class('text-sm text-gray-500 dark:text-gray-400')],
+      ['Type to search the documentation...'],
+    ),
+  ],
+)
 
-  return h.div(
-    [h.Class('px-4 py-12 text-center')],
+const searchingIndicator: Html = ih.div(
+  [ih.Class('px-4 py-12 text-center'), ih.AriaLive('polite')],
+  [
+    ih.p(
+      [ih.Class('text-sm text-gray-500 dark:text-gray-400')],
+      ['Searching...'],
+    ),
+  ],
+)
+
+const noResultsView = (query: string): Html =>
+  ih.div(
+    [ih.Class('px-4 py-12 text-center'), ih.AriaLive('polite')],
     [
-      h.p(
-        [h.Class('text-sm text-gray-500 dark:text-gray-400')],
-        ['Type to search the documentation...'],
-      ),
-    ],
-  )
-})()
-
-const searchingIndicator: Html = (() => {
-  const h = staticHtml
-
-  return h.div(
-    [h.Class('px-4 py-12 text-center'), h.AriaLive('polite')],
-    [
-      h.p(
-        [h.Class('text-sm text-gray-500 dark:text-gray-400')],
-        ['Searching...'],
-      ),
-    ],
-  )
-})()
-
-const noResultsView = (query: string): Html => {
-  const h = staticHtml
-
-  return h.div(
-    [h.Class('px-4 py-12 text-center'), h.AriaLive('polite')],
-    [
-      h.p(
-        [h.Class('text-sm text-gray-500 dark:text-gray-400')],
+      ih.p(
+        [ih.Class('text-sm text-gray-500 dark:text-gray-400')],
         [`No results for “${query}”`],
       ),
     ],
   )
-}
 
 const resultListView = (
   results: ReadonlyArray<typeof SearchResult.Type>,
@@ -236,13 +222,11 @@ const resultsListView = (model: Model, h: HtmlBuilder<Message>): Html =>
   )
 
 const resultCountAnnouncement = (model: Model): Html => {
-  const h = staticHtml
-
   const results = resultsFromState(model.searchState)
   const count = results.length
 
-  return h.span(
-    [h.AriaLive('polite'), h.Class('sr-only')],
+  return ih.span(
+    [ih.AriaLive('polite'), ih.Class('sr-only')],
     count > 0 ? [`${count} results available`] : [],
   )
 }
@@ -256,17 +240,13 @@ const resultCountAnnouncement = (model: Model): Html => {
 // the keyboard; the `FocusSearchInput` Command then transfers focus to the
 // real input once the dialog renders, and iOS keeps the keyboard up across
 // a programmatic focus transfer between two text inputs.
-const keyboardWarmupInput: Html = (() => {
-  const h = staticHtml
-
-  return h.input([
-    h.Id(KEYBOARD_WARMUP_INPUT_ID),
-    h.Type('text'),
-    h.AriaHidden(true),
-    h.Tabindex(-1),
-    h.Class('fixed top-0 left-0 w-px h-px opacity-0 pointer-events-none -z-10'),
-  ])
-})()
+const keyboardWarmupInput: Html = ih.input([
+  ih.Id(KEYBOARD_WARMUP_INPUT_ID),
+  ih.Type('text'),
+  ih.AriaHidden(true),
+  ih.Tabindex(-1),
+  ih.Class('fixed top-0 left-0 w-px h-px opacity-0 pointer-events-none -z-10'),
+])
 
 export const view = Submodel.defineView<Model, Message>(
   (model, h): Html =>

@@ -2,7 +2,7 @@ export {
   childAttributes,
   createKeyedLazy,
   createLazy,
-  staticHtml,
+  inertHtml,
   TextDirection,
 } from './index.js'
 

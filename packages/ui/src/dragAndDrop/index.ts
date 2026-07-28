@@ -12,7 +12,7 @@ import {
 } from 'effect'
 import * as Command from 'foldkit/command'
 import * as Dom from 'foldkit/dom'
-import { type Attribute, type HtmlBuilder, staticHtml } from 'foldkit/html'
+import { type Attribute, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
@@ -904,23 +904,23 @@ export const draggable = <ParentMessage>(
 }
 
 /** Returns attributes the parent attaches to a droppable container element.
- *  Handler-free, so the bundle is built with `staticHtml` and spreads into
+ *  Handler-free, so the bundle is built with `inertHtml` and spreads into
  *  any Message universe's attribute array. */
 export const droppable = (
   containerId: string,
   label?: string,
 ): ReadonlyArray<Attribute<never>> => [
-  staticHtml.DataAttribute('droppable-id', containerId),
-  staticHtml.Role('listbox'),
-  ...(label ? [staticHtml.AriaLabel(label)] : []),
+  ih.DataAttribute('droppable-id', containerId),
+  ih.Role('listbox'),
+  ...(label ? [ih.AriaLabel(label)] : []),
 ]
 
 /** Returns attributes the parent attaches to a sortable item element.
  *  Typically combined with `draggable`. Handler-free, so the bundle is built
- *  with `staticHtml` and spreads into any Message universe's attribute
+ *  with `inertHtml` and spreads into any Message universe's attribute
  *  array. */
 export const sortable = (itemId: string): ReadonlyArray<Attribute<never>> => [
-  staticHtml.DataAttribute('sortable-id', itemId),
+  ih.DataAttribute('sortable-id', itemId),
 ]
 
 const ghostTransform = (clientX: number, clientY: number): string =>

@@ -1,9 +1,9 @@
-import { staticHtml as h } from 'foldkit/html'
+import { inertHtml as ih } from 'foldkit/html'
 
 import type { Task } from './model'
 
 export const taskList = (tasks: ReadonlyArray<Task>) =>
-  h.ul(
+  ih.ul(
     [],
-    tasks.map((task, index) => h.keyed('li')(index, [], [task.title])),
+    tasks.map((task, index) => ih.keyed('li')(index, [], [task.title])),
   )

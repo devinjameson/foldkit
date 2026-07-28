@@ -1,5 +1,5 @@
 import { Array } from 'effect'
-import { Html, staticHtml } from 'foldkit/html'
+import { Html, inertHtml as ih } from 'foldkit/html'
 
 // SHARED STYLES
 
@@ -20,17 +20,11 @@ const codeClassName =
 const wrappingCodeClassName =
   'bg-gray-200/70 dark:bg-gray-800 px-1 py-px rounded text-sm border border-gray-300/50 dark:border-gray-700/50 whitespace-pre-wrap break-normal'
 
-const inlineCode = (text: string): Html => {
-  const h = staticHtml
+const inlineCode = (text: string): Html =>
+  ih.code([ih.Class(codeClassName)], [text])
 
-  return h.code([h.Class(codeClassName)], [text])
-}
-
-const wrappingInlineCode = (text: string): Html => {
-  const h = staticHtml
-
-  return h.code([h.Class(wrappingCodeClassName)], [text])
-}
+const wrappingInlineCode = (text: string): Html =>
+  ih.code([ih.Class(wrappingCodeClassName)], [text])
 
 // PROP TABLE
 
@@ -41,59 +35,53 @@ export type PropEntry = Readonly<{
   description: string | Html
 }>
 
-const propRow = (entry: PropEntry): Html => {
-  const h = staticHtml
-
-  return h.tr(
-    [h.Class(rowClassName)],
+const propRow = (entry: PropEntry): Html =>
+  ih.tr(
+    [ih.Class(rowClassName)],
     [
-      h.td([h.Class(cellClassName)], [inlineCode(entry.name)]),
-      h.td([h.Class(typeCellClassName)], [wrappingInlineCode(entry.type)]),
-      h.td(
-        [h.Class(cellClassName)],
+      ih.td([ih.Class(cellClassName)], [inlineCode(entry.name)]),
+      ih.td([ih.Class(typeCellClassName)], [wrappingInlineCode(entry.type)]),
+      ih.td(
+        [ih.Class(cellClassName)],
         [
           entry.default !== undefined
             ? inlineCode(entry.default)
-            : h.span(
-                [h.Class('text-gray-400 dark:text-gray-500 text-sm')],
+            : ih.span(
+                [ih.Class('text-gray-400 dark:text-gray-500 text-sm')],
                 ['-'],
               ),
         ],
       ),
-      h.td([h.Class(descriptionCellClassName)], [entry.description]),
+      ih.td([ih.Class(descriptionCellClassName)], [entry.description]),
     ],
   )
-}
 
-export const propTable = (entries: ReadonlyArray<PropEntry>): Html => {
-  const h = staticHtml
-
-  return h.div(
-    [h.Class('mb-8 overflow-x-auto')],
+export const propTable = (entries: ReadonlyArray<PropEntry>): Html =>
+  ih.div(
+    [ih.Class('mb-8 overflow-x-auto')],
     [
-      h.table(
-        [h.Class('w-full text-sm')],
+      ih.table(
+        [ih.Class('w-full text-sm')],
         [
-          h.thead(
+          ih.thead(
             [],
             [
-              h.tr(
+              ih.tr(
                 [],
                 [
-                  h.th([h.Class(headerCellClassName)], ['Name']),
-                  h.th([h.Class(headerCellClassName)], ['Type']),
-                  h.th([h.Class(headerCellClassName)], ['Default']),
-                  h.th([h.Class(headerCellClassName)], ['Description']),
+                  ih.th([ih.Class(headerCellClassName)], ['Name']),
+                  ih.th([ih.Class(headerCellClassName)], ['Type']),
+                  ih.th([ih.Class(headerCellClassName)], ['Default']),
+                  ih.th([ih.Class(headerCellClassName)], ['Description']),
                 ],
               ),
             ],
           ),
-          h.tbody([], Array.map(entries, propRow)),
+          ih.tbody([], Array.map(entries, propRow)),
         ],
       ),
     ],
   )
-}
 
 // KEYBOARD TABLE
 
@@ -105,48 +93,42 @@ export type KeyboardEntry = Readonly<{
 const keyboardKeyClassName =
   'inline-flex items-center justify-center min-w-[1.5rem] px-1.5 py-0.5 rounded border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 text-sm font-mono text-gray-700 dark:text-gray-300'
 
-const keyboardRow = (entry: KeyboardEntry): Html => {
-  const h = staticHtml
-
-  return h.tr(
-    [h.Class(rowClassName)],
+const keyboardRow = (entry: KeyboardEntry): Html =>
+  ih.tr(
+    [ih.Class(rowClassName)],
     [
-      h.td(
-        [h.Class(cellClassName)],
-        [h.span([h.Class(keyboardKeyClassName)], [entry.key])],
+      ih.td(
+        [ih.Class(cellClassName)],
+        [ih.span([ih.Class(keyboardKeyClassName)], [entry.key])],
       ),
-      h.td([h.Class(descriptionCellClassName)], [entry.description]),
+      ih.td([ih.Class(descriptionCellClassName)], [entry.description]),
     ],
   )
-}
 
-export const keyboardTable = (entries: ReadonlyArray<KeyboardEntry>): Html => {
-  const h = staticHtml
-
-  return h.div(
-    [h.Class('mb-8 overflow-x-auto')],
+export const keyboardTable = (entries: ReadonlyArray<KeyboardEntry>): Html =>
+  ih.div(
+    [ih.Class('mb-8 overflow-x-auto')],
     [
-      h.table(
-        [h.Class('w-full text-sm')],
+      ih.table(
+        [ih.Class('w-full text-sm')],
         [
-          h.thead(
+          ih.thead(
             [],
             [
-              h.tr(
+              ih.tr(
                 [],
                 [
-                  h.th([h.Class(headerCellClassName)], ['Key']),
-                  h.th([h.Class(headerCellClassName)], ['Description']),
+                  ih.th([ih.Class(headerCellClassName)], ['Key']),
+                  ih.th([ih.Class(headerCellClassName)], ['Description']),
                 ],
               ),
             ],
           ),
-          h.tbody([], Array.map(entries, keyboardRow)),
+          ih.tbody([], Array.map(entries, keyboardRow)),
         ],
       ),
     ],
   )
-}
 
 // DATA ATTRIBUTE TABLE
 
@@ -155,44 +137,38 @@ export type DataAttributeEntry = Readonly<{
   condition: string
 }>
 
-const dataAttributeRow = (entry: DataAttributeEntry): Html => {
-  const h = staticHtml
-
-  return h.tr(
-    [h.Class(rowClassName)],
+const dataAttributeRow = (entry: DataAttributeEntry): Html =>
+  ih.tr(
+    [ih.Class(rowClassName)],
     [
-      h.td([h.Class(cellClassName)], [inlineCode(entry.attribute)]),
-      h.td([h.Class(descriptionCellClassName)], [entry.condition]),
+      ih.td([ih.Class(cellClassName)], [inlineCode(entry.attribute)]),
+      ih.td([ih.Class(descriptionCellClassName)], [entry.condition]),
     ],
   )
-}
 
 export const dataAttributeTable = (
   entries: ReadonlyArray<DataAttributeEntry>,
-): Html => {
-  const h = staticHtml
-
-  return h.div(
-    [h.Class('mb-8 overflow-x-auto')],
+): Html =>
+  ih.div(
+    [ih.Class('mb-8 overflow-x-auto')],
     [
-      h.table(
-        [h.Class('w-full text-sm')],
+      ih.table(
+        [ih.Class('w-full text-sm')],
         [
-          h.thead(
+          ih.thead(
             [],
             [
-              h.tr(
+              ih.tr(
                 [],
                 [
-                  h.th([h.Class(headerCellClassName)], ['Attribute']),
-                  h.th([h.Class(headerCellClassName)], ['Condition']),
+                  ih.th([ih.Class(headerCellClassName)], ['Attribute']),
+                  ih.th([ih.Class(headerCellClassName)], ['Condition']),
                 ],
               ),
             ],
           ),
-          h.tbody([], Array.map(entries, dataAttributeRow)),
+          ih.tbody([], Array.map(entries, dataAttributeRow)),
         ],
       ),
     ],
   )
-}

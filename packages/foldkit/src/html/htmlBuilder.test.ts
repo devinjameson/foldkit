@@ -12,7 +12,7 @@ import {
   type HtmlBuilder,
   __htmlBuilder,
   createLazy,
-  staticHtml,
+  inertHtml,
 } from './index.js'
 import * as HtmlPublicModule from './public.js'
 import {
@@ -142,10 +142,10 @@ describe('HtmlBuilder type guarantees', () => {
     expect(typeof embedWithForeignLift).toBe('function')
   })
 
-  it('refuses handler construction on staticHtml', () => {
-    // @ts-expect-error staticHtml's Message is never, so no handler is expressible
-    staticHtml.OnClick(ClickedApp())
-    expect(staticHtml.empty).toBeNull()
+  it('refuses handler construction on inertHtml', () => {
+    // @ts-expect-error inertHtml's Message is never, so no handler is expressible
+    inertHtml.OnClick(ClickedApp())
+    expect(inertHtml.empty).toBeNull()
   })
 })
 
@@ -164,14 +164,14 @@ describe('HtmlBuilder runtime guarantees', () => {
     const publicKeys = Object.keys(HtmlPublicModule)
     expect(publicKeys).not.toContain('html')
     expect(publicKeys).not.toContain('__htmlBuilder')
-    expect(publicKeys).toContain('staticHtml')
+    expect(publicKeys).toContain('inertHtml')
   })
 
   it('hands out one process-wide builder object across Message instantiations', () => {
     const parentBuilder: unknown = __htmlBuilder<ParentMessage>()
     const childBuilder: unknown = __htmlBuilder<ChildMessage>()
     expect(parentBuilder).toBe(childBuilder)
-    expect<unknown>(staticHtml).toBe(parentBuilder)
+    expect<unknown>(inertHtml).toBe(parentBuilder)
   })
 
   it('passes the child-typed builder to a Submodel view and routes its handlers through the boundary', () => {

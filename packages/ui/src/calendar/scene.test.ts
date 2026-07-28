@@ -1,6 +1,6 @@
 import { Match as M, Option } from 'effect'
 import * as Calendar from 'foldkit/calendar'
-import { type HtmlBuilder, staticHtml } from 'foldkit/html'
+import { type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
 
 import { describe, it } from '@effect/vitest'
@@ -15,37 +15,35 @@ const today = Calendar.make(2026, 4, 13)
 /** Wires Calendar attribute groups into actual HTML elements so the scene
  * can query them. Pattern-matches on `_tag` so each viewMode renders the
  * appropriate grid (days, months, years). */
-const testToView = (attrs: CalendarAttributes) => {
-  const h = staticHtml
-
-  return M.value(attrs).pipe(
+const testToView = (attrs: CalendarAttributes) =>
+  M.value(attrs).pipe(
     M.tagsExhaustive({
       Days: days =>
-        h.div(days.root, [
-          h.div(
+        ih.div(days.root, [
+          ih.div(
             [],
             [
-              h.button(days.previousMonthButton, ['prev']),
-              h.button(
-                [h.Id(days.heading.id), ...days.headingButton],
+              ih.button(days.previousMonthButton, ['prev']),
+              ih.button(
+                [ih.Id(days.heading.id), ...days.headingButton],
                 [days.heading.text],
               ),
-              h.button(days.nextMonthButton, ['next']),
+              ih.button(days.nextMonthButton, ['next']),
             ],
           ),
-          h.div(days.grid, [
-            h.div(
+          ih.div(days.grid, [
+            ih.div(
               days.headerRow,
               days.columnHeaders.map(header =>
-                h.div(header.attributes, [header.name]),
+                ih.div(header.attributes, [header.name]),
               ),
             ),
             ...days.weeks.map(week =>
-              h.div(
+              ih.div(
                 week.attributes,
                 week.cells.map(cell =>
-                  h.div(cell.cellAttributes, [
-                    h.button(cell.buttonAttributes, [cell.label]),
+                  ih.div(cell.cellAttributes, [
+                    ih.button(cell.buttonAttributes, [cell.label]),
                   ]),
                 ),
               ),
@@ -53,47 +51,46 @@ const testToView = (attrs: CalendarAttributes) => {
           ]),
         ]),
       Months: months =>
-        h.div(months.root, [
-          h.div(
+        ih.div(months.root, [
+          ih.div(
             [],
             [
-              h.button(
-                [h.Id(months.heading.id), ...months.headingButton],
+              ih.button(
+                [ih.Id(months.heading.id), ...months.headingButton],
                 [months.heading.text],
               ),
             ],
           ),
-          h.div(
+          ih.div(
             months.grid,
             months.cells.map(cell =>
-              h.div(cell.cellAttributes, [
-                h.button(cell.buttonAttributes, [cell.label]),
+              ih.div(cell.cellAttributes, [
+                ih.button(cell.buttonAttributes, [cell.label]),
               ]),
             ),
           ),
         ]),
       Years: years =>
-        h.div(years.root, [
-          h.div(
+        ih.div(years.root, [
+          ih.div(
             [],
             [
-              h.button(years.previousPageButton, ['prev page']),
-              h.h2([h.Id(years.heading.id)], [years.heading.text]),
-              h.button(years.nextPageButton, ['next page']),
+              ih.button(years.previousPageButton, ['prev page']),
+              ih.h2([ih.Id(years.heading.id)], [years.heading.text]),
+              ih.button(years.nextPageButton, ['next page']),
             ],
           ),
-          h.div(
+          ih.div(
             years.grid,
             years.cells.map(cell =>
-              h.div(cell.cellAttributes, [
-                h.button(cell.buttonAttributes, [cell.label]),
+              ih.div(cell.cellAttributes, [
+                ih.button(cell.buttonAttributes, [cell.label]),
               ]),
             ),
           ),
         ]),
     }),
   )
-}
 
 const sceneView =
   (overrides: Omit<Partial<ViewInputs>, 'toView'> = {}) =>

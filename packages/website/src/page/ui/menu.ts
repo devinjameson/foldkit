@@ -3,7 +3,7 @@ import {
   Html,
   type HtmlBuilder,
   childAttributes,
-  staticHtml,
+  inertHtml as ih,
 } from 'foldkit/html'
 
 import { Menu } from '@foldkit/ui'
@@ -93,12 +93,10 @@ const MENU_ANCHOR: AnchorConfig = {
 }
 
 const menuViewConfig = (itemsClassName: string) => {
-  const h = staticHtml
-
   const groupToHeading = (groupKey: string) =>
     M.value(groupKey).pipe(
       M.when('Danger', () => ({
-        content: h.span([], ['Danger Zone']),
+        content: ih.span([], ['Danger Zone']),
         className: headingClassName,
       })),
       M.orElse(() => undefined),
@@ -109,20 +107,20 @@ const menuViewConfig = (itemsClassName: string) => {
     items: MENU_ITEMS,
     itemToConfig: (item: MenuItem) => ({
       className: itemClassName,
-      content: h.div(
-        [h.Class('flex items-center gap-2.5')],
-        [menuItemIcon(item), h.span([], [item])],
+      content: ih.div(
+        [ih.Class('flex items-center gap-2.5')],
+        [menuItemIcon(item), ih.span([], [item])],
       ),
     }),
     isItemDisabled,
-    buttonContent: h.div(
-      [h.Class('flex items-center gap-4')],
-      [h.span([], ['Actions']), Icon.chevronDown('w-4 h-4')],
+    buttonContent: ih.div(
+      [ih.Class('flex items-center gap-4')],
+      [ih.span([], ['Actions']), Icon.chevronDown('w-4 h-4')],
     ),
-    buttonAttributes: childAttributes([h.Class(triggerClassName)]),
-    itemsAttributes: childAttributes([h.Class(itemsClassName)]),
-    backdropAttributes: childAttributes([h.Class(backdropClassName)]),
-    attributes: childAttributes([h.Class(wrapperClassName)]),
+    buttonAttributes: childAttributes([ih.Class(triggerClassName)]),
+    itemsAttributes: childAttributes([ih.Class(itemsClassName)]),
+    backdropAttributes: childAttributes([ih.Class(backdropClassName)]),
+    attributes: childAttributes([ih.Class(wrapperClassName)]),
     itemGroupKey,
     groupToHeading,
   }

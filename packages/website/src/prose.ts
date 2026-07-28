@@ -1,5 +1,5 @@
 import { Array } from 'effect'
-import { Html, type HtmlBuilder, staticHtml } from 'foldkit/html'
+import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import { twMerge } from 'tailwind-merge'
 
 import { Icon } from './icon'
@@ -46,34 +46,28 @@ export const defaultRenderHeadingLink =
   (id, text) =>
     headingLinkButton(id, text, h)
 
-export const link = (href: string, text: string): Html => {
-  const h = staticHtml
-
-  return h.a(
+export const link = (href: string, text: string): Html =>
+  ih.a(
     [
-      h.Href(href),
-      h.Class(
+      ih.Href(href),
+      ih.Class(
         'text-accent-600 dark:text-accent-500 underline decoration-accent-600/30 dark:decoration-accent-500/30 hover:decoration-accent-600 dark:hover:decoration-accent-500 font-normal',
       ),
     ],
     [text],
   )
-}
 
-export const pageTitle = (id: string, text: string): Html => {
-  const h = staticHtml
-
-  return h.h1(
+export const pageTitle = (id: string, text: string): Html =>
+  ih.h1(
     [
-      h.Class(
+      ih.Class(
         'text-3xl md:text-[2.5rem] leading-normal font-normal text-gray-900 dark:text-white mb-4',
       ),
-      h.Id(id),
-      h.DataAttribute('pagefind-meta', 'section'),
+      ih.Id(id),
+      ih.DataAttribute('pagefind-meta', 'section'),
     ],
     [text],
   )
-}
 
 const sectionHeadingConfig = {
   h2: {
@@ -120,34 +114,26 @@ export const headingWithContent = (
   content: ReadonlyArray<string | Html>,
   renderHeadingLink: RenderHeadingLink,
 ): Html => {
-  const h = staticHtml
-
-  const tag = { h2: h.h2, h3: h.h3, h4: h.h4, h5: h.h5, h6: h.h6 }
+  const tag = { h2: ih.h2, h3: ih.h3, h4: ih.h4, h5: ih.h5, h6: ih.h6 }
   const config = sectionHeadingConfig[level]
 
-  return h.div(
-    [h.Class(config.wrapperClassName)],
+  return ih.div(
+    [ih.Class(config.wrapperClassName)],
     [
-      tag[level]([h.Class(config.textClassName), h.Id(id)], content),
+      tag[level]([ih.Class(config.textClassName), ih.Id(id)], content),
       renderHeadingLink(id, ariaText),
     ],
   )
 }
 
-export const para = (...content: ReadonlyArray<string | Html>): Html => {
-  const h = staticHtml
+export const para = (...content: ReadonlyArray<string | Html>): Html =>
+  ih.p([ih.Class('mb-4 leading-relaxed')], content)
 
-  return h.p([h.Class('mb-4 leading-relaxed')], content)
-}
-
-export const subPara = (...content: ReadonlyArray<string | Html>): Html => {
-  const h = staticHtml
-
-  return h.p(
-    [h.Class('mb-4 text-sm leading-6 text-gray-800 dark:text-gray-400')],
+export const subPara = (...content: ReadonlyArray<string | Html>): Html =>
+  ih.p(
+    [ih.Class('mb-4 text-sm leading-6 text-gray-800 dark:text-gray-400')],
     content,
   )
-}
 
 /**
  * The heading helpers bound to a page-supplied copy-link renderer, for a page
@@ -167,93 +153,76 @@ export const headingsFor = (renderHeadingLink: RenderHeadingLink) => ({
     ),
 })
 
-export const bullets = (...items: ReadonlyArray<string | Html>): Html => {
-  const h = staticHtml
-
-  return h.ul(
-    [h.Class('list-disc mb-8 space-y-2')],
-    Array.map(items, item => h.li([], [item])),
+export const bullets = (...items: ReadonlyArray<string | Html>): Html =>
+  ih.ul(
+    [ih.Class('list-disc mb-8 space-y-2')],
+    Array.map(items, item => ih.li([], [item])),
   )
-}
 
-export const bulletPoint = (label: string, description: string): Html => {
-  const h = staticHtml
-
-  return h.span([], [h.strong([], [`${label}:`]), ` ${description}`])
-}
+export const bulletPoint = (label: string, description: string): Html =>
+  ih.span([], [ih.strong([], [`${label}:`]), ` ${description}`])
 
 const inlineCodeClassName =
   'bg-gray-200/70 dark:bg-gray-800 px-1 py-px rounded text-sm border border-gray-300/50 dark:border-gray-700/50'
 
-export const inlineCode = (text: string, className?: string): Html => {
-  const h = staticHtml
-  return h.code([h.Class(twMerge(inlineCodeClassName, className))], [text])
-}
+export const inlineCode = (text: string, className?: string): Html =>
+  ih.code([ih.Class(twMerge(inlineCodeClassName, className))], [text])
 
 export const infoCallout = (
   label: string,
   ...content: ReadonlyArray<string | Html>
-): Html => {
-  const h = staticHtml
-
-  return h.div(
+): Html =>
+  ih.div(
     [
-      h.Class(
+      ih.Class(
         'border border-gray-300 dark:border-gray-700 bg-gray-200/40 dark:bg-gray-800/40 py-3.5 px-5 mb-6 rounded-lg',
       ),
     ],
     [
-      h.p(
+      ih.p(
         [
-          h.Class(
+          ih.Class(
             'flex items-center gap-1.5 font-semibold text-gray-800 dark:text-gray-200 mb-1',
           ),
         ],
-        [Icon.informationCircle('w-5 h-5 shrink-0'), h.span([], [label])],
+        [Icon.informationCircle('w-5 h-5 shrink-0'), ih.span([], [label])],
       ),
-      h.p([h.Class('text-gray-700 dark:text-gray-300 leading-7')], content),
+      ih.p([ih.Class('text-gray-700 dark:text-gray-300 leading-7')], content),
     ],
   )
-}
 
-export const demoContainer = (...content: ReadonlyArray<Html>): Html => {
-  const h = staticHtml
-
-  return h.div(
+export const demoContainer = (...content: ReadonlyArray<Html>): Html =>
+  ih.div(
     [
-      h.Class(
+      ih.Class(
         'rounded-xl border border-gray-200 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-800/20 p-8 mb-6 flex flex-col items-center',
       ),
     ],
     content,
   )
-}
 
 export const warningCallout = (
   label: string,
   ...content: ReadonlyArray<string | Html>
-): Html => {
-  const h = staticHtml
-
-  return h.div(
+): Html =>
+  ih.div(
     [
-      h.Class(
+      ih.Class(
         'border border-amber-400 dark:border-amber-500/50 py-3.5 px-5 mb-6 rounded-lg',
       ),
     ],
     [
-      h.p(
+      ih.p(
         [
-          h.Class(
+          ih.Class(
             'flex items-center gap-1.5 font-semibold text-amber-900 dark:text-amber-200 mb-1',
           ),
         ],
-        [Icon.exclamationTriangle('w-5 h-5 shrink-0'), h.span([], [label])],
+        [Icon.exclamationTriangle('w-5 h-5 shrink-0'), ih.span([], [label])],
       ),
-      h.p([h.Class('text-gray-700 dark:text-gray-300 leading-7')], content),
+      ih.p([ih.Class('text-gray-700 dark:text-gray-300 leading-7')], content),
     ],
   )
-}
 
 const calloutBlocks = (
   config: Readonly<{
@@ -263,23 +232,21 @@ const calloutBlocks = (
     label: string
     blocks: ReadonlyArray<Html>
   }>,
-): Html => {
-  const h = staticHtml
-
-  return h.div(
-    [h.Class(`border ${config.borderClassName} py-3.5 px-5 mb-6 rounded-lg`)],
+): Html =>
+  ih.div(
+    [ih.Class(`border ${config.borderClassName} py-3.5 px-5 mb-6 rounded-lg`)],
     [
-      h.p(
+      ih.p(
         [
-          h.Class(
+          ih.Class(
             `flex items-center gap-1.5 font-semibold ${config.labelClassName} mb-1`,
           ),
         ],
-        [config.icon, h.span([], [config.label])],
+        [config.icon, ih.span([], [config.label])],
       ),
-      h.div(
+      ih.div(
         [
-          h.Class(
+          ih.Class(
             'text-gray-700 dark:text-gray-300 [&>p]:leading-7 [&>p:last-child]:mb-0',
           ),
         ],
@@ -287,7 +254,6 @@ const calloutBlocks = (
       ),
     ],
   )
-}
 
 /**
  * An informational callout wrapping block content (paragraphs, lists, code
@@ -327,33 +293,27 @@ export const warningCalloutBlocks = (
  * block in markdown renders through this. It carries no copy affordance because
  * the content is a picture, not code to lift.
  */
-export const diagram = (content: string): Html => {
-  const h = staticHtml
-
-  return h.pre(
+export const diagram = (content: string): Html =>
+  ih.pre(
     [
-      h.Class(
+      ih.Class(
         'mb-4 mx-auto w-fit max-w-full text-[#403d4a] dark:text-[#E0DEE6] text-sm p-4 overflow-x-auto rounded-lg bg-gray-100 dark:bg-[#1c1a20] border border-gray-200 dark:border-gray-700/50',
       ),
     ],
     [content],
   )
-}
 
 /**
  * A wrapping row of call-to-action links. The `:::Cta` markdown island renders
  * its link paragraphs through this, laying them out as a row and lifting the
  * links to medium weight.
  */
-export const ctaLinks = (blocks: ReadonlyArray<Html>): Html => {
-  const h = staticHtml
-
-  return h.div(
+export const ctaLinks = (blocks: ReadonlyArray<Html>): Html =>
+  ih.div(
     [
-      h.Class(
+      ih.Class(
         'mb-8 flex flex-wrap gap-x-6 gap-y-2 [&>p]:m-0 [&_a]:font-medium',
       ),
     ],
     blocks,
   )
-}

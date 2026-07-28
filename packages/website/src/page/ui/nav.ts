@@ -1,5 +1,5 @@
 import { Array, Option, Schema as S, pipe } from 'effect'
-import { type Html, type HtmlBuilder, staticHtml } from 'foldkit/html'
+import { type Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import type { Url } from 'foldkit/url'
 
 import { Nav } from '@foldkit/ui'
@@ -58,30 +58,30 @@ const linkClassName =
 
 // VIEW
 
-const urlBar = (currentSection: NavDemoSection): Html => {
-  const h = staticHtml
-
-  return h.div(
+const urlBar = (currentSection: NavDemoSection): Html =>
+  ih.div(
     [
-      h.Class(
+      ih.Class(
         'mt-3 flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2',
       ),
     ],
     [
       Icon.lockClosed('w-3.5 h-3.5 shrink-0 text-gray-400 dark:text-gray-500'),
-      h.span(
-        [h.Class('font-mono text-sm')],
+      ih.span(
+        [ih.Class('font-mono text-sm')],
         [
-          h.span([h.Class('text-gray-400 dark:text-gray-500')], ['myapp.dev/']),
-          h.span(
-            [h.Class('text-gray-700 dark:text-gray-200')],
+          ih.span(
+            [ih.Class('text-gray-400 dark:text-gray-500')],
+            ['myapp.dev/'],
+          ),
+          ih.span(
+            [ih.Class('text-gray-700 dark:text-gray-200')],
             [sectionToHref(currentSection)],
           ),
         ],
       ),
     ],
   )
-}
 
 export const basicDemo = (url: Url, h: HtmlBuilder<Message>) => {
   const currentSection = sectionFromUrl(url)
