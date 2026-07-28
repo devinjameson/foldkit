@@ -32,7 +32,7 @@ const loadersBySlug: Readonly<Record<string, SourceLoader | undefined>> = {
     import('virtual:example-sources/interrupting-commands'),
   'query-sync': () => import('virtual:example-sources/query-sync'),
   'shopping-cart': () => import('virtual:example-sources/shopping-cart'),
-  'checkout-machine': () => import('virtual:example-sources/checkout-machine'),
+  'state-machine': () => import('virtual:example-sources/state-machine'),
   auth: () => import('virtual:example-sources/auth'),
   'pixel-art': () => import('virtual:example-sources/pixel-art'),
   snake: () => import('virtual:example-sources/snake'),

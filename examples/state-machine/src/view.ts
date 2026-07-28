@@ -1510,10 +1510,12 @@ const transitionLogView = (model: Model, h: HtmlBuilder<Message>): Html => {
   })
 }
 
-const analysisView = (model: Model, h: HtmlBuilder<Message>): Html => {
-  const deadTransitions = checkoutMachine.deadTransitions()
+const DEAD_TRANSITIONS = checkoutMachine.deadTransitions()
+const UNREACHABLE_STATE_TAGS = checkoutMachine.unreachableStates()
+const MERMAID_DEFINITION = checkoutMachine.toMermaid()
 
-  return h.section(
+const analysisView = (model: Model, h: HtmlBuilder<Message>): Html =>
+  h.section(
     [
       h.AriaLabel('State machine inspector'),
       h.Class('border border-stone-800 bg-stone-900 text-stone-100'),
@@ -1556,7 +1558,7 @@ const analysisView = (model: Model, h: HtmlBuilder<Message>): Html => {
                   h.dt([h.Class('text-stone-400')], ['Unreachable']),
                   h.dd(
                     [h.Class('mt-1 font-mono text-stone-100')],
-                    [formatTags(checkoutMachine.unreachableStates())],
+                    [formatTags(UNREACHABLE_STATE_TAGS)],
                   ),
                 ],
               ),
@@ -1566,7 +1568,7 @@ const analysisView = (model: Model, h: HtmlBuilder<Message>): Html => {
                   h.dt([h.Class('text-stone-400')], ['Dead transitions']),
                   h.dd(
                     [h.Class('mt-1 font-mono text-stone-100')],
-                    [String(deadTransitions.length)],
+                    [String(DEAD_TRANSITIONS.length)],
                   ),
                 ],
               ),
@@ -1630,13 +1632,12 @@ const analysisView = (model: Model, h: HtmlBuilder<Message>): Html => {
                 'max-h-96 overflow-auto border-t border-stone-700 bg-stone-950 p-5 font-mono text-xs leading-5 text-stone-300 sm:p-7',
               ),
             ],
-            [checkoutMachine.toMermaid()],
+            [MERMAID_DEFINITION],
           ),
         ],
       ),
     ],
   )
-}
 
 export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
   title: `${stateTitle(model.checkout)} | Signal Press`,

@@ -37,7 +37,7 @@ jobs:
           - snake
           - auth
           - shopping-cart
-          - checkout-machine
+          - state-machine
           - pixel-art
           - websocket-chat
           - kanban
