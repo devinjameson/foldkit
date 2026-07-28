@@ -3,7 +3,7 @@ import {
   type ChildAttribute,
   type Html,
   childAttributes,
-  html,
+  staticHtml as h,
 } from 'foldkit/html'
 
 // MODEL
@@ -64,8 +64,6 @@ const ARIA_CURRENT_PAGE = 'page'
 export const view = <Value extends string = string>(
   viewInputs: ViewInputs<Value>,
 ): Html => {
-  const h = html<never>()
-
   const { items, ariaLabel, toHref, isItemCurrent, toView } = viewInputs
 
   const itemInfos: ReadonlyArray<ItemInfo<Value>> = Array.map(

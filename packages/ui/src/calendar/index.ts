@@ -15,8 +15,8 @@ import * as Dom from 'foldkit/dom'
 import {
   type ChildAttribute,
   type Html,
+  type HtmlBuilder,
   childAttributes,
-  html,
 } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
@@ -945,9 +945,8 @@ const isYearDisabled = (model: Model, year: number): boolean =>
 const buildDaysAttributes = (
   model: Model,
   viewInputs: ViewInputs,
+  h: HtmlBuilder<Message>,
 ): DaysModeAttributes => {
-  const h = html<Message>()
-
   const {
     id,
     viewYear,
@@ -1132,9 +1131,8 @@ const buildDaysAttributes = (
 const buildMonthsAttributes = (
   model: Model,
   viewInputs: ViewInputs,
+  h: HtmlBuilder<Message>,
 ): MonthsModeAttributes => {
-  const h = html<Message>()
-
   const {
     id,
     viewYear,
@@ -1257,9 +1255,8 @@ const buildMonthsAttributes = (
 const buildYearsAttributes = (
   model: Model,
   viewInputs: ViewInputs,
+  h: HtmlBuilder<Message>,
 ): YearsModeAttributes => {
-  const h = html<Message>()
-
   const { id, viewYear, maybeFocusedDate, today, isGridFocused } = model
 
   const previousYearsPageLabel =
@@ -1385,13 +1382,13 @@ const buildYearsAttributes = (
  *  `toView` callback. The variant of `CalendarAttributes` passed to
  *  `toView` matches `model.viewMode`. */
 export const view = defineView<Model, Message, ViewInputs>(
-  (model, viewInputs): Html =>
+  (model, viewInputs, h): Html =>
     viewInputs.toView(
       M.value(model.viewMode).pipe(
         M.withReturnType<CalendarAttributes>(),
-        M.when('Days', () => buildDaysAttributes(model, viewInputs)),
-        M.when('Months', () => buildMonthsAttributes(model, viewInputs)),
-        M.when('Years', () => buildYearsAttributes(model, viewInputs)),
+        M.when('Days', () => buildDaysAttributes(model, viewInputs, h)),
+        M.when('Months', () => buildMonthsAttributes(model, viewInputs, h)),
+        M.when('Years', () => buildYearsAttributes(model, viewInputs, h)),
         M.exhaustive,
       ),
     ),

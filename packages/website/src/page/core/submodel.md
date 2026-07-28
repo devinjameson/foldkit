@@ -93,9 +93,9 @@ About the Command mapping: the Submodel’s Commands produce child Messages when
 
 ### Wiring the View with h.submodel {#wiring-the-view}
 
-The Submodel exports a view defined with `Submodel.defineView<Model, Message>`. The function takes the child’s `model` and returns `Html`, the same shape a top-level program’s view has.
+The Submodel exports a view defined with `Submodel.defineView<Model, Message>`. The function takes the child’s `model` and the child’s typed builder `h`, and returns `Html`, the same shape a top-level program’s view has.
 
-The `<Model, Message>` type arguments aren’t just annotations: they brand the view, attaching the child’s Message type to the value at the type level. The `h.submodel` call site reads that brand to type-check the embed site without you having to spell it out. A third optional type parameter, `ViewInputs`, threads per-render data from the parent; the next section covers it.
+The `<Model, Message>` type arguments aren’t just annotations: they brand the view, attaching the child’s Message type to the value at the type level. The `h.submodel` call site reads that brand to type-check the embed site without you having to spell it out, and the runtime uses it to type the builder it hands this view, so the handlers built in the child’s body carry exactly the Messages the child’s boundary dispatches. A third optional type parameter, `ViewInputs`, threads per-render data from the parent; the next section covers it.
 
 ::Snippet{name="submodelChildView" label="child view"}
 
@@ -114,7 +114,7 @@ The same `Settings.view` embeds under any parent that supplies a compatible `toP
 
 Some Submodels need data from the parent on every render that doesn’t belong in the child’s `model`. A Listbox needs the array of items and a callback that renders each one. A Menu needs the items and the trigger button’s content. None of this is the child’s state. It’s configuration the parent supplies fresh on every render.
 
-For these Submodels, `defineView` takes a third type parameter `ViewInputs`. The view receives `viewInputs` as its second argument. Here’s a `CommandMenu` Submodel that owns a menu’s open state and selection behavior while the parent supplies the trigger content and the items:
+For these Submodels, `defineView` takes a third type parameter `ViewInputs`. The view receives `viewInputs` as its second argument, and the builder `h` moves to third position. Here’s a `CommandMenu` Submodel that owns a menu’s open state and selection behavior while the parent supplies the trigger content and the items:
 
 ::Snippet{name="submodelChildViewInputs" label="child view with view inputs"}
 
@@ -239,7 +239,7 @@ Across the stateful Foldkit UI components the choice-based setters keep domain v
 
 ## Which Boundary a Handler Dispatches Through {#which-boundary}
 
-A handler’s dispatcher is chosen by **where the element is built**, not by the Message it carries. `html<Message>()`’s type argument is erased at runtime, so the element constructor reads the boundary off the current render frame and the compiler never sees the question.
+A handler’s dispatcher is chosen by **where the element is built**, not by the Message it carries. The element constructor reads the boundary off the current render frame. This is why views receive their builder rather than constructing one: `h` arrives typed by the Message universe of the frame that will dispatch its handlers, so where the element is built and what its handlers may carry cannot quietly disagree.
 
 Inside a Submodel there are two frames, with opposite defaults:
 
@@ -250,11 +250,13 @@ Inside a Submodel there are two frames, with opposite defaults:
 
 Both defaults are usually what you want. The child’s view body is full of the child’s own Messages, and a parent’s slot callback is full of the parent’s.
 
-The case that bites is a **shared view helper** rendered inside a Submodel: a copy button, an analytics hook, a toast trigger. It builds an app-level Message in the child’s view body, so the child’s `toParentMessage` is applied to a Message the child does not own. That wrapper is a Schema constructor, so it throws inside the event listener: nothing dispatches, no `update` runs, the page keeps rendering, and the type checker never complained. Foldkit reframes that error to name the boundary and the Message, but the fix is structural. Let the parent build it and pass it down:
+The case that bites is a **shared view helper** rendered inside a Submodel: a copy button, an analytics hook, a toast trigger. It builds an app-level Message, so its `h` parameter is typed `HtmlBuilder<AppMessage>`, and the only builder in scope inside the child’s view body is the child’s own. Passing the child’s builder to the helper is a type error at the call site. The fix is structural. Let the parent build it and pass it down:
 
-::Snippet{name="submodelSharedChrome" label="shared chrome"}
+::Snippet{name="submodelSharedRenderers" label="shared renderers"}
 
 Because the renderer is a function at the top level of `viewInputs`, it runs in the parent’s boundary, so the Message it builds reaches `update` unwrapped no matter how deep the child renders it.
+
+The type tracks where a builder came from, not where it is used. A builder stashed in module state and called from another frame’s render still compiles, and the mismatch surfaces at click time as a boundary error naming the boundary and the Message. Treat `h` as a per-render parameter: thread it, never store it.
 
 ## childAttributes {#child-attributes}
 
@@ -343,13 +345,13 @@ The configuration record passed to `h.submodel`.
 
 `Submodel.defineView<Model, Message, ViewInputs = void>(fn): SubmodelView<Model, Message, ViewInputs>`
 
-Brands a view function with its Message type so `h.submodel` can type-check the embed site without a per-call type argument. The `<Model, Message>` parameters are required at the definition site; `ViewInputs` is optional and, when supplied, makes the view take a second `viewInputs` argument. Also exported as `defineView` from `foldkit/html`.
+Brands a view function with its Message type so `h.submodel` can type-check the embed site without a per-call type argument, and types the builder the runtime passes the view as its last parameter. The `<Model, Message>` parameters are required at the definition site; `ViewInputs` is optional and, when supplied, makes the view take a second `viewInputs` argument before the builder. Also exported as `defineView` from `foldkit/html`.
 
 ### Submodel.View {#api-submodel-view}
 
-`Submodel.View<Model, Message, ViewInputs = void> = (model, viewInputs) => Html`
+`Submodel.View<Model, Message, ViewInputs = void> = (model, viewInputs, h) => Html`
 
-The branded view type produced by `Submodel.defineView`. Carries the child’s Message type at the type level. Consumers don’t usually annotate values with this type directly; the brand and `Parameters<View>` carry the inference at the embed site. Also exported as `SubmodelView` from `foldkit/html`.
+The branded view type produced by `Submodel.defineView`. Without `ViewInputs` the shape is `(model, h) => Html`. Carries the child’s Message type at the type level. Consumers don’t usually annotate values with this type directly; the brand and `Parameters<View>` carry the inference at the embed site. Also exported as `SubmodelView` from `foldkit/html`.
 
 ### childAttributes {#api-child-attributes}
 

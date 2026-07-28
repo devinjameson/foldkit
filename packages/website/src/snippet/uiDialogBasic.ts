@@ -2,7 +2,7 @@
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
 import { Command } from 'foldkit'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -56,10 +56,8 @@ GotDialogMessage: ({ message }) => {
 
 // In your view, open from a trigger with the fact, and dismiss from a Cancel
 // button by spreading the `closeButton` bundle, no parent message needed:
-const view = () => {
-  const h = html<Message>()
-
-  return h.div(
+const view = (h: HtmlBuilder<Message>) =>
+  h.div(
     [],
     [
       h.button([h.OnClick(ClickedOpenDialog())], ['Open Dialog']),
@@ -113,4 +111,3 @@ const view = () => {
       }),
     ],
   )
-}

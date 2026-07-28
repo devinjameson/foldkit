@@ -8,7 +8,7 @@ import {
   Submodel,
   Subscription,
 } from 'foldkit'
-import { Document, Html, html } from 'foldkit/html'
+import { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { UrlRequest, load, pushUrl } from 'foldkit/navigation'
 import { literal, r } from 'foldkit/route'
@@ -372,10 +372,9 @@ const componentNav = (
 const navListView = (
   items: ReadonlyArray<Nav.ItemInfo>,
   linkClassName: (isActive: boolean) => string,
-): Html => {
-  const h = html<Message>()
-
-  return h.ul(
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.ul(
     [h.Class('flex flex-col gap-0.5')],
     pipe(
       NAV_ITEMS,
@@ -393,7 +392,6 @@ const navListView = (
       ),
     ),
   )
-}
 
 const navLinkClassName = (isActive: boolean): string =>
   clsx(
@@ -411,10 +409,8 @@ const mobileNavLinkClassName = (isActive: boolean): string =>
       : 'text-gray-700 hover:bg-gray-200',
   )
 
-const sidebarView = (currentRoute: AppRoute): Html => {
-  const h = html<Message>()
-
-  return componentNav(currentRoute, ({ nav, items }) =>
+const sidebarView = (currentRoute: AppRoute, h: HtmlBuilder<Message>): Html =>
+  componentNav(currentRoute, ({ nav, items }) =>
     h.nav(
       [
         ...nav,
@@ -438,19 +434,17 @@ const sidebarView = (currentRoute: AppRoute): Html => {
             h.span([h.Class('text-xs text-gray-500')], ['Component Showcase']),
           ],
         ),
-        navListView(items, navLinkClassName),
+        navListView(items, navLinkClassName, h),
       ],
     ),
   )
-}
 
 const mobileMenuContent = (
   currentRoute: AppRoute,
   closeButton: Dialog.RenderInfo['closeButton'],
-): Html => {
-  const h = html<Message>()
-
-  return h.div(
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.div(
     [h.Class('flex flex-col h-full')],
     [
       h.div(
@@ -498,17 +492,14 @@ const mobileMenuContent = (
             h.Tabindex(-1),
             h.Autofocus(true),
           ],
-          [navListView(items, mobileNavLinkClassName)],
+          [navListView(items, mobileNavLinkClassName, h)],
         ),
       ),
     ],
   )
-}
 
-const mobileHeaderView = (model: Model): Html => {
-  const h = html<Message>()
-
-  return h.header(
+const mobileHeaderView = (model: Model, h: HtmlBuilder<Message>): Html =>
+  h.header(
     [
       h.Class(
         'md:hidden sticky top-0 z-40 flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-3',
@@ -546,12 +537,9 @@ const mobileHeaderView = (model: Model): Html => {
       ),
     ],
   )
-}
 
-const mobileMenuView = (model: Model): Html => {
-  const h = html<Message>()
-
-  return h.submodel({
+const mobileMenuView = (model: Model, h: HtmlBuilder<Message>): Html =>
+  h.submodel({
     slotId: model.uiModel.mobileMenuDialog.id,
     model: model.uiModel.mobileMenuDialog,
     view: Dialog.view,
@@ -567,7 +555,7 @@ const mobileMenuView = (model: Model): Html => {
                     ...panel,
                     h.Class('fixed inset-0 z-[60] bg-white flex flex-col'),
                   ],
-                  [mobileMenuContent(model.route, closeButton)],
+                  [mobileMenuContent(model.route, closeButton, h)],
                 ),
               ]
             : [],
@@ -575,12 +563,9 @@ const mobileMenuView = (model: Model): Html => {
     },
     toParentMessage: message => toMobileMenuDialogMessage(message),
   })
-}
 
-const homeView = (): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const homeView = (h: HtmlBuilder<Message>): Html =>
+  h.div(
     [h.Class('max-w-2xl')],
     [
       h.h1(
@@ -601,12 +586,9 @@ const homeView = (): Html => {
       ),
     ],
   )
-}
 
-const notFoundView = (path: string): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const notFoundView = (path: string, h: HtmlBuilder<Message>): Html =>
+  h.div(
     [h.Class('max-w-2xl')],
     [
       h.h1(
@@ -623,11 +605,8 @@ const notFoundView = (path: string): Html => {
       ),
     ],
   )
-}
 
-const contentView = (model: Model): Html => {
-  const h = html<Message>()
-
+const contentView = (model: Model, h: HtmlBuilder<Message>): Html => {
   const embedUi = (id: string, view: Submodel.View<UiModel, UiMessage>): Html =>
     h.submodel({
       slotId: id,
@@ -638,7 +617,7 @@ const contentView = (model: Model): Html => {
 
   return M.value(model.route).pipe(
     M.tagsExhaustive({
-      Home: homeView,
+      Home: () => homeView(h),
       Button: () => embedUi('ui-button', View.button),
       Calendar: () => embedUi('ui-calendar', View.calendar),
       Checkbox: () => embedUi('ui-checkbox', View.checkbox),
@@ -663,7 +642,7 @@ const contentView = (model: Model): Html => {
       Tooltip: () => embedUi('ui-tooltip', View.tooltip),
       Animation: () => embedUi('ui-animation', View.animation),
       VirtualList: () => embedUi('ui-virtual-list', View.virtualList),
-      NotFound: ({ path }) => notFoundView(path),
+      NotFound: ({ path }) => notFoundView(path, h),
     }),
   )
 }
@@ -674,25 +653,21 @@ const routeTitle = (route: Model['route']): string =>
     M.orElse(({ _tag }) => `${_tag} | Foldkit UI Showcase`),
   )
 
-export const view = (model: Model): Document => {
-  const h = html<Message>()
-
-  return {
-    title: routeTitle(model.route),
-    body: h.div(
-      [h.Class('flex flex-col md:flex-row min-h-screen bg-white')],
-      [
-        mobileHeaderView(model),
-        mobileMenuView(model),
-        sidebarView(model.route),
-        h.main(
-          [h.Class('flex-1 p-4 md:p-8 overflow-auto')],
-          [contentView(model)],
-        ),
-      ],
-    ),
-  }
-}
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
+  title: routeTitle(model.route),
+  body: h.div(
+    [h.Class('flex flex-col md:flex-row min-h-screen bg-white')],
+    [
+      mobileHeaderView(model, h),
+      mobileMenuView(model, h),
+      sidebarView(model.route, h),
+      h.main(
+        [h.Class('flex-1 p-4 md:p-8 overflow-auto')],
+        [contentView(model, h)],
+      ),
+    ],
+  ),
+})
 
 // SUBSCRIPTION
 

@@ -1,7 +1,6 @@
 import { Match as M, Schema as S } from 'effect'
 
-import type { Attribute, Html } from '../../html/index.js'
-import { html } from '../../html/index.js'
+import type { Attribute, Html, HtmlBuilder } from '../../html/index.js'
 import { m } from '../../message/index.js'
 
 // MESSAGE
@@ -34,8 +33,6 @@ const TEST_ID = 'attribute-host'
 
 export const testId = TEST_ID
 
-export const view = (model: Model): Html => {
-  const h = html<Message>()
-
+export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
   return h.div([h.DataAttribute('testid', TEST_ID), model.attribute], [])
 }

@@ -11,7 +11,7 @@ import {
 } from 'effect'
 import { KeyValueStore } from 'effect/unstable/persistence'
 import { Command, Runtime } from 'foldkit'
-import { Document, Html, html } from 'foldkit/html'
+import { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
@@ -352,61 +352,72 @@ const editingTextFor = (
 const todoItemView = (
   todo: Todo,
   maybeEditingText: Option.Option<string>,
+  h: HtmlBuilder<Message>,
 ): Html =>
   Option.match(maybeEditingText, {
-    onNone: () => nonEditingTodoView(todo),
-    onSome: text => editingTodoView(todo, text),
+    onNone: () => nonEditingTodoView(todo, h),
+    onSome: text => editingTodoView(todo, text, h),
   })
 
-const editingTodoView = (todo: Todo, text: string): Html => {
-  const h = html<Message>()
-
-  return h.keyed('li')(
+const editingTodoView = (
+  todo: Todo,
+  text: string,
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.keyed('li')(
     todo.id,
     [h.Class('flex items-center gap-3 p-3 bg-gray-50 rounded-lg')],
     [
-      Input.view<Message>({
-        id: `edit-${todo.id}`,
-        value: text,
-        onInput: text => UpdatedEditingTodo({ text }),
-        toView: attributes =>
-          h.input([
-            ...attributes.input,
-            h.AriaLabel('Edit todo'),
-            h.Class(
-              'flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500',
+      Input.view(
+        {
+          id: `edit-${todo.id}`,
+          value: text,
+          onInput: text => UpdatedEditingTodo({ text }),
+          toView: attributes =>
+            h.input([
+              ...attributes.input,
+              h.AriaLabel('Edit todo'),
+              h.Class(
+                'flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500',
+              ),
+            ]),
+        },
+        h,
+      ),
+      Button.view(
+        {
+          onClick: SavedEdit(),
+          toView: attributes =>
+            h.button(
+              [
+                ...attributes.button,
+                h.Class(
+                  'px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600',
+                ),
+              ],
+              ['Save'],
             ),
-          ]),
-      }),
-      Button.view<Message>({
-        onClick: SavedEdit(),
-        toView: attributes =>
-          h.button(
-            [
-              ...attributes.button,
-              h.Class(
-                'px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600',
-              ),
-            ],
-            ['Save'],
-          ),
-      }),
-      Button.view<Message>({
-        onClick: CancelledEdit(),
-        toView: attributes =>
-          h.button(
-            [
-              ...attributes.button,
-              h.Class(
-                'px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600',
-              ),
-            ],
-            ['Cancel'],
-          ),
-      }),
+        },
+        h,
+      ),
+      Button.view(
+        {
+          onClick: CancelledEdit(),
+          toView: attributes =>
+            h.button(
+              [
+                ...attributes.button,
+                h.Class(
+                  'px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600',
+                ),
+              ],
+              ['Cancel'],
+            ),
+        },
+        h,
+      ),
     ],
   )
-}
 
 const checkboxBoxClassName = (isChecked: boolean): string =>
   clsx(
@@ -414,34 +425,35 @@ const checkboxBoxClassName = (isChecked: boolean): string =>
     isChecked ? 'border-blue-600 bg-blue-600' : 'border-gray-300',
   )
 
-const nonEditingTodoView = (todo: Todo): Html => {
-  const h = html<Message>()
-
-  return h.keyed('li')(
+const nonEditingTodoView = (todo: Todo, h: HtmlBuilder<Message>): Html =>
+  h.keyed('li')(
     todo.id,
     [h.Class('flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg group')],
     [
-      Checkbox.view<Message>({
-        id: `todo-${todo.id}`,
-        isChecked: todo.completed,
-        onToggle: () => ToggledTodo({ id: todo.id }),
-        toView: attributes =>
-          h.div(
-            [h.Class('flex items-center')],
-            [
-              h.div(
-                [
-                  ...attributes.checkbox,
-                  h.Class(checkboxBoxClassName(todo.completed)),
-                ],
-                todo.completed
-                  ? [h.span([h.Class('text-white text-xs')], ['✓'])]
-                  : [],
-              ),
-              h.span([...attributes.label, h.AriaLabel(todo.text)], []),
-            ],
-          ),
-      }),
+      Checkbox.view(
+        {
+          id: `todo-${todo.id}`,
+          isChecked: todo.completed,
+          onToggle: () => ToggledTodo({ id: todo.id }),
+          toView: attributes =>
+            h.div(
+              [h.Class('flex items-center')],
+              [
+                h.div(
+                  [
+                    ...attributes.checkbox,
+                    h.Class(checkboxBoxClassName(todo.completed)),
+                  ],
+                  todo.completed
+                    ? [h.span([h.Class('text-white text-xs')], ['✓'])]
+                    : [],
+                ),
+                h.span([...attributes.label, h.AriaLabel(todo.text)], []),
+              ],
+            ),
+        },
+        h,
+      ),
       h.span(
         [
           h.Class(
@@ -451,56 +463,57 @@ const nonEditingTodoView = (todo: Todo): Html => {
         ],
         [todo.text],
       ),
-      Button.view<Message>({
-        onClick: DeletedTodo({ id: todo.id }),
+      Button.view(
+        {
+          onClick: DeletedTodo({ id: todo.id }),
+          toView: attributes =>
+            h.button(
+              [
+                ...attributes.button,
+                h.AriaLabel(`Delete ${todo.text}`),
+                h.Class(
+                  'px-2 py-1 text-red-600 opacity-0 group-hover:opacity-100 hover:bg-red-100 rounded transition-opacity',
+                ),
+              ],
+              ['×'],
+            ),
+        },
+        h,
+      ),
+    ],
+  )
+
+const filterButtonView =
+  (model: Model) =>
+  (filter: Filter, label: string, h: HtmlBuilder<Message>): Html =>
+    Button.view(
+      {
+        onClick: SelectedFilter({ filter }),
         toView: attributes =>
           h.button(
             [
               ...attributes.button,
-              h.AriaLabel(`Delete ${todo.text}`),
               h.Class(
-                'px-2 py-1 text-red-600 opacity-0 group-hover:opacity-100 hover:bg-red-100 rounded transition-opacity',
+                `px-3 py-1 rounded ${
+                  model.filter === filter
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`,
               ),
             ],
-            ['×'],
+            [label],
           ),
-      }),
-    ],
-  )
-}
-
-const filterButtonView =
-  (model: Model) =>
-  (filter: Filter, label: string): Html => {
-    const h = html<Message>()
-
-    return Button.view<Message>({
-      onClick: SelectedFilter({ filter }),
-      toView: attributes =>
-        h.button(
-          [
-            ...attributes.button,
-            h.Class(
-              `px-3 py-1 rounded ${
-                model.filter === filter
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`,
-            ),
-          ],
-          [label],
-        ),
-    })
-  }
+      },
+      h,
+    )
 
 const footerView = (
   model: Model,
   activeCount: number,
   completedCount: number,
-): Html => {
-  const h = html<Message>()
-
-  return Array.match(model.todos, {
+  h: HtmlBuilder<Message>,
+): Html =>
+  Array.match(model.todos, {
     onEmpty: () => h.empty,
     onNonEmpty: () =>
       h.div(
@@ -514,9 +527,9 @@ const footerView = (
           h.div(
             [h.Class('flex justify-center gap-2')],
             [
-              filterButtonView(model)('All', 'All'),
-              filterButtonView(model)('Active', 'Active'),
-              filterButtonView(model)('Completed', 'Completed'),
+              filterButtonView(model)('All', 'All', h),
+              filterButtonView(model)('Active', 'Active', h),
+              filterButtonView(model)('Completed', 'Completed', h),
             ],
           ),
 
@@ -526,46 +539,51 @@ const footerView = (
               Array.match(model.todos, {
                 onEmpty: () => h.empty,
                 onNonEmpty: todos =>
-                  Button.view<Message>({
-                    onClick: ToggledAll(),
-                    toView: attributes =>
-                      h.button(
-                        [
-                          ...attributes.button,
-                          h.Class(
-                            'px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300',
-                          ),
-                        ],
-                        [
-                          Array.every(todos, todo => todo.completed)
-                            ? 'Mark all active'
-                            : 'Mark all complete',
-                        ],
-                      ),
-                  }),
+                  Button.view(
+                    {
+                      onClick: ToggledAll(),
+                      toView: attributes =>
+                        h.button(
+                          [
+                            ...attributes.button,
+                            h.Class(
+                              'px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300',
+                            ),
+                          ],
+                          [
+                            Array.every(todos, todo => todo.completed)
+                              ? 'Mark all active'
+                              : 'Mark all complete',
+                          ],
+                        ),
+                    },
+                    h,
+                  ),
               }),
 
               completedCount > 0
-                ? Button.view<Message>({
-                    onClick: ClearedCompleted(),
-                    toView: attributes =>
-                      h.button(
-                        [
-                          ...attributes.button,
-                          h.Class(
-                            'px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200',
-                          ),
-                        ],
-                        [`Clear ${completedCount} completed`],
-                      ),
-                  })
+                ? Button.view(
+                    {
+                      onClick: ClearedCompleted(),
+                      toView: attributes =>
+                        h.button(
+                          [
+                            ...attributes.button,
+                            h.Class(
+                              'px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200',
+                            ),
+                          ],
+                          [`Clear ${completedCount} completed`],
+                        ),
+                    },
+                    h,
+                  )
                 : h.empty,
             ],
           ),
         ],
       ),
   })
-}
 
 const filterTodos = (todos: Todos, filter: Filter): Todos =>
   M.value(filter).pipe(
@@ -575,9 +593,7 @@ const filterTodos = (todos: Todos, filter: Filter): Todos =>
     M.exhaustive,
   )
 
-export const view = (model: Model): Document => {
-  const h = html<Message>()
-
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
   const filteredTodos = filterTodos(model.todos, model.filter)
   const activeCount = Array.length(
     Array.filter(model.todos, todo => !todo.completed),
@@ -601,33 +617,39 @@ export const view = (model: Model): Document => {
               h.div(
                 [h.Class('flex gap-3')],
                 [
-                  Input.view<Message>({
-                    id: 'new-todo',
-                    value: model.newTodoText,
-                    placeholder: 'What needs to be done?',
-                    onInput: text => UpdatedNewTodo({ text }),
-                    toView: attributes =>
-                      h.input([
-                        ...attributes.input,
-                        h.AriaLabel('New todo'),
-                        h.Class(
-                          'flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
-                        ),
-                      ]),
-                  }),
-                  Button.view<Message>({
-                    type: 'submit',
-                    toView: attributes =>
-                      h.button(
-                        [
-                          ...attributes.button,
+                  Input.view(
+                    {
+                      id: 'new-todo',
+                      value: model.newTodoText,
+                      placeholder: 'What needs to be done?',
+                      onInput: text => UpdatedNewTodo({ text }),
+                      toView: attributes =>
+                        h.input([
+                          ...attributes.input,
+                          h.AriaLabel('New todo'),
                           h.Class(
-                            'px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                            'flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
                           ),
-                        ],
-                        ['Add'],
-                      ),
-                  }),
+                        ]),
+                    },
+                    h,
+                  ),
+                  Button.view(
+                    {
+                      type: 'submit',
+                      toView: attributes =>
+                        h.button(
+                          [
+                            ...attributes.button,
+                            h.Class(
+                              'px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                            ),
+                          ],
+                          ['Add'],
+                        ),
+                    },
+                    h,
+                  ),
                 ],
               ),
             ],
@@ -650,12 +672,12 @@ export const view = (model: Model): Document => {
               h.ul(
                 [h.Class('space-y-2 mb-6')],
                 Array.map(todos, todo =>
-                  todoItemView(todo, editingTextFor(model.editing, todo.id)),
+                  todoItemView(todo, editingTextFor(model.editing, todo.id), h),
                 ),
               ),
           }),
 
-          footerView(model, activeCount, completedCount),
+          footerView(model, activeCount, completedCount, h),
         ],
       ),
     ],

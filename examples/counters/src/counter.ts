@@ -1,6 +1,5 @@
 import { Match as M, Schema as S } from 'effect'
 import { Command, Submodel } from 'foldkit'
-import { Html, html } from 'foldkit/html'
 import { m } from 'foldkit/message'
 
 import { Button } from '@foldkit/ui'
@@ -38,33 +37,37 @@ export const update = (
 
 // VIEW
 
-export const view = Submodel.defineView<Model, Message>((model): Html => {
-  const h = html<Message>()
-
-  return h.div(
+export const view = Submodel.defineView<Model, Message>((model, h) =>
+  h.div(
     [
       h.Class(
         'flex items-center gap-3 rounded-lg border border-gray-200 px-4 py-3',
       ),
     ],
     [
-      Button.view<Message>({
-        onClick: ClickedDecrement(),
-        toView: attributes =>
-          h.button([...attributes.button, h.Class(buttonStyle)], ['-']),
-      }),
+      Button.view(
+        {
+          onClick: ClickedDecrement(),
+          toView: attributes =>
+            h.button([...attributes.button, h.Class(buttonStyle)], ['-']),
+        },
+        h,
+      ),
       h.span(
         [h.Class('w-12 text-center text-2xl font-mono tabular-nums')],
         [model.count.toString()],
       ),
-      Button.view<Message>({
-        onClick: ClickedIncrement(),
-        toView: attributes =>
-          h.button([...attributes.button, h.Class(buttonStyle)], ['+']),
-      }),
+      Button.view(
+        {
+          onClick: ClickedIncrement(),
+          toView: attributes =>
+            h.button([...attributes.button, h.Class(buttonStyle)], ['+']),
+        },
+        h,
+      ),
     ],
-  )
-})
+  ),
+)
 
 const buttonStyle =
   'h-9 w-9 rounded bg-gray-900 text-white text-lg leading-none hover:bg-gray-700 transition cursor-pointer'

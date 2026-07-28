@@ -1,4 +1,4 @@
-import { type Document, type TextDirection, html } from 'foldkit/html'
+import type { Document, HtmlBuilder, TextDirection } from 'foldkit/html'
 
 // TRANSLATION
 
@@ -21,19 +21,15 @@ const textDirection: Readonly<Record<Locale, TextDirection>> = {
   Japanese: 'Ltr',
 }
 
-const view = (model: Model): Document => {
-  const h = html<Message>()
-
-  return {
-    title: translate(model.locale, 'PageTitle'),
-    lang: languageTag[model.locale],
-    dir: textDirection[model.locale],
-    body: h.div(
-      [h.Class('mx-auto max-w-prose p-6')],
-      [
-        h.h1([], [translate(model.locale, 'PageTitle')]),
-        localePicker(model.locale),
-      ],
-    ),
-  }
-}
+const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
+  title: translate(model.locale, 'PageTitle'),
+  lang: languageTag[model.locale],
+  dir: textDirection[model.locale],
+  body: h.div(
+    [h.Class('mx-auto max-w-prose p-6')],
+    [
+      h.h1([], [translate(model.locale, 'PageTitle')]),
+      localePicker(model.locale, h),
+    ],
+  ),
+})

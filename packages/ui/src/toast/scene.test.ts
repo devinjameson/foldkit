@@ -1,5 +1,5 @@
 import { Duration, Option, Schema as S } from 'effect'
-import { type Html, html } from 'foldkit/html'
+import { type Html, type HtmlBuilder, staticHtml } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
 
 import { describe, it } from '@effect/vitest'
@@ -28,7 +28,7 @@ const makeSettledEntry = (overrides: Partial<Entry> = {}): Entry => ({
 })
 
 const defaultRenderEntry = (entry: Entry, _handlers: EntryHandlers) => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.div([], [h.span([], [entry.payload.body])])
 }
@@ -42,12 +42,16 @@ type ViewOverrides = {
 
 const sceneView =
   (overrides: ViewOverrides = {}) =>
-  (model: Model) =>
-    Toast.view(model, {
-      entryToView: defaultRenderEntry,
-      position: 'BottomRight',
-      ...overrides,
-    })
+  (model: Model, h: HtmlBuilder<Message>) =>
+    Toast.view(
+      model,
+      {
+        entryToView: defaultRenderEntry,
+        position: 'BottomRight',
+        ...overrides,
+      },
+      h,
+    )
 
 const container = Scene.selector('[key="test"]')
 const entryZero = Scene.selector('[key="test-entry-0"]')

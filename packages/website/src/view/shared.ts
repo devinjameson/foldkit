@@ -1,7 +1,7 @@
 import { clsx } from 'clsx'
 import { Array, Match as M, Option } from 'effect'
 import type { Field } from 'foldkit/fieldValidation'
-import { Html, html } from 'foldkit/html'
+import { Html, type HtmlBuilder, staticHtml } from 'foldkit/html'
 
 import { formatStarCount } from '../githubStars'
 import { Icon } from '../icon'
@@ -9,7 +9,7 @@ import { type EmailSubscriptionStatus } from '../main'
 import { type Message, SubmittedEmailForm, UpdatedEmailField } from '../message'
 
 export const betaTag: Html = (() => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.span(
     [
@@ -23,7 +23,7 @@ export const betaTag: Html = (() => {
 })()
 
 export const iconLink = (link: string, ariaLabel: string, icon: Html) => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.a(
     [
@@ -42,7 +42,7 @@ const STAR_COUNT_MIN_WIDTH = 'min-w-[3ch]'
 export const githubStarBadge = (
   maybeGitHubStarCount: Option.Option<number>,
 ): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   const badge = (label: Html): Html =>
     h.span(
@@ -75,7 +75,7 @@ export const githubStarBadge = (
 }
 
 export const skipNavLink: Html = (() => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.a(
     [
@@ -92,9 +92,8 @@ export const emailFormView = (
   emailField: Field<string>,
   status: 'Idle' | 'Submitting' | 'Failed',
   formClassName: string,
+  h: HtmlBuilder<Message>,
 ): Html => {
-  const h = html<Message>()
-
   const isSubmitting = status === 'Submitting'
 
   return h.div(
@@ -161,10 +160,9 @@ export const emailFormView = (
 export const emailSignupContentView = (
   emailField: Field<string>,
   emailSubscriptionStatus: EmailSubscriptionStatus,
-): Html => {
-  const h = html<Message>()
-
-  return h.div(
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.div(
     [h.Id('newsletter')],
     [
       h.h2(
@@ -195,9 +193,9 @@ export const emailSignupContentView = (
             emailField,
             status,
             'flex flex-col sm:flex-row gap-3 max-w-md',
+            h,
           ),
         ),
       ),
     ],
   )
-}

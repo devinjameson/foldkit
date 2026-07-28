@@ -9,12 +9,7 @@ import {
 } from 'effect'
 import * as Command from 'foldkit/command'
 import * as Dom from 'foldkit/dom'
-import {
-  type ChildAttribute,
-  type Html,
-  childAttributes,
-  html,
-} from 'foldkit/html'
+import { type ChildAttribute, type Html, childAttributes } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 import { type View as SubmodelView, defineView } from 'foldkit/submodel'
@@ -205,9 +200,7 @@ export type ViewInputs<Value extends string = string> = Readonly<{
 }>
 
 const internalView = defineView<Model, Message, ViewInputs>(
-  (model, viewInputs): Html => {
-    const h = html<Message>()
-
+  (model, viewInputs, h): Html => {
     const { id, activationMode, maybeFocusedIndex } = model
     const {
       tabs,

@@ -1,7 +1,5 @@
 import { Array } from 'effect'
-import { Html, html } from 'foldkit/html'
-
-import { type Message } from '../message'
+import { Html, staticHtml } from 'foldkit/html'
 
 // SHARED STYLES
 
@@ -23,13 +21,13 @@ const wrappingCodeClassName =
   'bg-gray-200/70 dark:bg-gray-800 px-1 py-px rounded text-sm border border-gray-300/50 dark:border-gray-700/50 whitespace-pre-wrap break-normal'
 
 const inlineCode = (text: string): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.code([h.Class(codeClassName)], [text])
 }
 
 const wrappingInlineCode = (text: string): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.code([h.Class(wrappingCodeClassName)], [text])
 }
@@ -44,7 +42,7 @@ export type PropEntry = Readonly<{
 }>
 
 const propRow = (entry: PropEntry): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.tr(
     [h.Class(rowClassName)],
@@ -68,7 +66,7 @@ const propRow = (entry: PropEntry): Html => {
 }
 
 export const propTable = (entries: ReadonlyArray<PropEntry>): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.div(
     [h.Class('mb-8 overflow-x-auto')],
@@ -108,7 +106,7 @@ const keyboardKeyClassName =
   'inline-flex items-center justify-center min-w-[1.5rem] px-1.5 py-0.5 rounded border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 text-sm font-mono text-gray-700 dark:text-gray-300'
 
 const keyboardRow = (entry: KeyboardEntry): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.tr(
     [h.Class(rowClassName)],
@@ -123,7 +121,7 @@ const keyboardRow = (entry: KeyboardEntry): Html => {
 }
 
 export const keyboardTable = (entries: ReadonlyArray<KeyboardEntry>): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.div(
     [h.Class('mb-8 overflow-x-auto')],
@@ -158,7 +156,7 @@ export type DataAttributeEntry = Readonly<{
 }>
 
 const dataAttributeRow = (entry: DataAttributeEntry): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.tr(
     [h.Class(rowClassName)],
@@ -172,7 +170,7 @@ const dataAttributeRow = (entry: DataAttributeEntry): Html => {
 export const dataAttributeTable = (
   entries: ReadonlyArray<DataAttributeEntry>,
 ): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.div(
     [h.Class('mb-8 overflow-x-auto')],

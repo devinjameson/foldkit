@@ -1,6 +1,6 @@
 import clsx from 'clsx'
 import { Array, Equal, Option, flow, pipe } from 'effect'
-import { Html, html } from 'foldkit/html'
+import { Html, HtmlBuilder } from 'foldkit/html'
 
 import { Button, DragAndDrop, Input } from '@foldkit/ui'
 
@@ -21,28 +21,30 @@ const addCardForm = (
   model: Model,
   columnId: string,
   toParentMessage: (message: Message) => Message,
+  h: HtmlBuilder<Message>,
 ): Html => {
-  const h = html<Message>()
-
   const isAddingToThisColumn = Option.exists(
     model.maybeNewCardColumnId,
     id => id === columnId,
   )
 
   if (!isAddingToThisColumn) {
-    return Button.view<Message>({
-      onClick: toParentMessage(ClickedAddCard({ columnId })),
-      toView: attributes =>
-        h.button(
-          [
-            ...attributes.button,
-            h.Class(
-              'w-full rounded-lg border border-dashed border-gray-300 p-2 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-600 transition-colors cursor-pointer',
-            ),
-          ],
-          ['+ Add card'],
-        ),
-    })
+    return Button.view(
+      {
+        onClick: toParentMessage(ClickedAddCard({ columnId })),
+        toView: attributes =>
+          h.button(
+            [
+              ...attributes.button,
+              h.Class(
+                'w-full rounded-lg border border-dashed border-gray-300 p-2 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-600 transition-colors cursor-pointer',
+              ),
+            ],
+            ['+ Add card'],
+          ),
+      },
+      h,
+    )
   }
 
   return h.form(
@@ -55,63 +57,71 @@ const addCardForm = (
         [h.For(ADD_CARD_INPUT_ID), h.Class('sr-only')],
         ['New card title'],
       ),
-      Input.view<Message>({
-        id: ADD_CARD_INPUT_ID,
-        onInput: value => toParentMessage(ChangedNewCardTitle({ value })),
-        value: model.newCardTitle,
-        placeholder: 'Card title...',
-        toView: attributes =>
-          h.input([
-            ...attributes.input,
-            h.Class(
-              'rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none',
-            ),
-            h.OnKeyDownPreventDefault(
-              flow(
-                Option.liftPredicate(Equal.equals('Escape')),
-                Option.map(() => toParentMessage(CancelledNewCard())),
+      Input.view(
+        {
+          id: ADD_CARD_INPUT_ID,
+          onInput: value => toParentMessage(ChangedNewCardTitle({ value })),
+          value: model.newCardTitle,
+          placeholder: 'Card title...',
+          toView: attributes =>
+            h.input([
+              ...attributes.input,
+              h.Class(
+                'rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none',
               ),
-            ),
-          ]),
-      }),
+              h.OnKeyDownPreventDefault(
+                flow(
+                  Option.liftPredicate(Equal.equals('Escape')),
+                  Option.map(() => toParentMessage(CancelledNewCard())),
+                ),
+              ),
+            ]),
+        },
+        h,
+      ),
       h.div(
         [h.Class('flex gap-2 justify-end')],
         [
-          Button.view<Message>({
-            onClick: toParentMessage(CancelledNewCard()),
-            toView: attributes =>
-              h.button(
-                [
-                  ...attributes.button,
-                  h.Class(
-                    'rounded-lg px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-100 transition-colors cursor-pointer',
-                  ),
-                ],
-                ['Cancel'],
-              ),
-          }),
-          Button.view<Message>({
-            type: 'submit',
-            toView: attributes =>
-              h.button(
-                [
-                  ...attributes.button,
-                  h.Class(
-                    'rounded-lg bg-blue-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-600 transition-colors cursor-pointer',
-                  ),
-                ],
-                ['Add'],
-              ),
-          }),
+          Button.view(
+            {
+              onClick: toParentMessage(CancelledNewCard()),
+              toView: attributes =>
+                h.button(
+                  [
+                    ...attributes.button,
+                    h.Class(
+                      'rounded-lg px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-100 transition-colors cursor-pointer',
+                    ),
+                  ],
+                  ['Cancel'],
+                ),
+            },
+            h,
+          ),
+          Button.view(
+            {
+              type: 'submit',
+              toView: attributes =>
+                h.button(
+                  [
+                    ...attributes.button,
+                    h.Class(
+                      'rounded-lg bg-blue-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-600 transition-colors cursor-pointer',
+                    ),
+                  ],
+                  ['Add'],
+                ),
+            },
+            h,
+          ),
         ],
       ),
     ],
   )
 }
 
-const dropPlaceholder = (): Html => {
-  const h = html<Message>()
-  return h.keyed('li')(
+const dropPlaceholder = (h: HtmlBuilder<Message>): Html =>
+  h.keyed('li')(
     'drop-placeholder',
     [
       h.Class(
@@ -121,7 +131,6 @@ const dropPlaceholder = (): Html => {
     ],
     [],
   )
-}
 
 const findDraggedCard = (
   model: Model,
@@ -137,10 +146,16 @@ const defaultCardElements = (
   model: Model,
   column: Column.Column,
   toParentMessage: (message: Message) => Message,
+  h: HtmlBuilder<Message>,
 ): ReadonlyArray<Html> =>
   Array.map(column.cards, (card, index) =>
-    cardView(model, card, column.id, index, message =>
-      toParentMessage(GotDragAndDropMessage({ message })),
+    cardView(
+      model,
+      card,
+      column.id,
+      index,
+      message => toParentMessage(GotDragAndDropMessage({ message })),
+      h,
     ),
   )
 
@@ -148,13 +163,14 @@ const previewCardElements = (
   model: Model,
   column: Column.Column,
   toParentMessage: (message: Message) => Message,
+  h: HtmlBuilder<Message>,
 ): ReadonlyArray<Html> => {
   if (!DragAndDrop.isDragging(model.dragAndDrop)) {
-    return defaultCardElements(model, column, toParentMessage)
+    return defaultCardElements(model, column, toParentMessage, h)
   }
 
   return Option.match(DragAndDrop.maybeDraggedItemId(model.dragAndDrop), {
-    onNone: () => defaultCardElements(model, column, toParentMessage),
+    onNone: () => defaultCardElements(model, column, toParentMessage, h),
     onSome: draggedId => {
       const maybeTarget = DragAndDrop.maybeDropTarget(model.dragAndDrop)
       const visibleCards = Array.filter(
@@ -162,8 +178,13 @@ const previewCardElements = (
         ({ id }) => id !== draggedId,
       )
       const cardElements = Array.map(visibleCards, (card, index) =>
-        cardView(model, card, column.id, index, message =>
-          toParentMessage(GotDragAndDropMessage({ message })),
+        cardView(
+          model,
+          card,
+          column.id,
+          index,
+          message => toParentMessage(GotDragAndDropMessage({ message })),
+          h,
         ),
       )
 
@@ -183,12 +204,17 @@ const previewCardElements = (
 
       const isPointerDrag = model.dragAndDrop.dragState._tag === 'Dragging'
       const insertElement = isPointerDrag
-        ? dropPlaceholder()
+        ? dropPlaceholder(h)
         : Option.match(findDraggedCard(model, draggedId), {
-            onNone: () => dropPlaceholder(),
+            onNone: () => dropPlaceholder(h),
             onSome: card =>
-              cardView(model, card, column.id, targetIndex, message =>
-                toParentMessage(GotDragAndDropMessage({ message })),
+              cardView(
+                model,
+                card,
+                column.id,
+                targetIndex,
+                message => toParentMessage(GotDragAndDropMessage({ message })),
+                h,
               ),
           })
 
@@ -205,9 +231,8 @@ export const columnView = (
   model: Model,
   column: Column.Column,
   toParentMessage: (message: Message) => Message,
+  h: HtmlBuilder<Message>,
 ): Html => {
-  const h = html<Message>()
-
   const maybeCurrentDropTarget = DragAndDrop.maybeDropTarget(model.dragAndDrop)
   const isDropTarget =
     DragAndDrop.isDragging(model.dragAndDrop) &&
@@ -253,13 +278,13 @@ export const columnView = (
       h.ul(
         [
           h.Class('flex flex-col gap-2 flex-1 overflow-y-auto min-h-0'),
-          ...DragAndDrop.droppable<Message>(column.id, column.name),
+          ...DragAndDrop.droppable(column.id, column.name),
         ],
-        previewCardElements(model, column, toParentMessage),
+        previewCardElements(model, column, toParentMessage, h),
       ),
       h.div(
         [h.Class('mt-3 pt-2 border-t border-gray-200')],
-        [addCardForm(model, column.id, toParentMessage)],
+        [addCardForm(model, column.id, toParentMessage, h)],
       ),
     ],
   )

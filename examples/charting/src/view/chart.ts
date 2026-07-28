@@ -2,7 +2,7 @@ import * as echarts from 'echarts/core'
 import { Effect, Option, Schema as S } from 'effect'
 import { Mount } from 'foldkit'
 import type { Html } from 'foldkit/html'
-import { html } from 'foldkit/html'
+import { HtmlBuilder } from 'foldkit/html'
 
 import { removeChart, setChart } from '../chartHost'
 import type { Telemetry } from '../domain'
@@ -62,10 +62,12 @@ export const MountChart = Mount.define(
       }),
 )
 
-export const chartPanelView = (model: Model, telemetry: Telemetry): Html => {
-  const h = html<Message>()
-
-  return h.section(
+export const chartPanelView = (
+  model: Model,
+  telemetry: Telemetry,
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.section(
     [
       h.Class(
         'grid min-h-[32rem] self-start grid-rows-[minmax(0,1fr)_auto] rounded-md border border-zinc-200 bg-white',
@@ -80,15 +82,16 @@ export const chartPanelView = (model: Model, telemetry: Telemetry): Html => {
         ],
         [],
       ),
-      chartFooterView(model, telemetry),
+      chartFooterView(model, telemetry, h),
     ],
   )
-}
 
-export const chartFooterView = (model: Model, telemetry: Telemetry): Html => {
-  const h = html<Message>()
-
-  return h.div(
+export const chartFooterView = (
+  model: Model,
+  telemetry: Telemetry,
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.div(
     [
       h.Class(
         'flex flex-col gap-3 border-t border-zinc-200 px-4 py-3 text-sm md:flex-row md:items-center md:justify-between',
@@ -108,10 +111,9 @@ export const chartFooterView = (model: Model, telemetry: Telemetry): Html => {
           ),
         ],
       ),
-      chartStatusView(model),
+      chartStatusView(model, h),
     ],
   )
-}
 
 export const chartFooterLabel = (model: Model, telemetry: Telemetry): string =>
   Option.getOrElse(
@@ -122,13 +124,10 @@ export const chartFooterLabel = (model: Model, telemetry: Telemetry): string =>
       )} open pull requests`,
   )
 
-export const chartStatusView = (model: Model): Html => {
-  const h = html<Message>()
-
-  return Option.match(model.maybeChartError, {
+export const chartStatusView = (model: Model, h: HtmlBuilder<Message>): Html =>
+  Option.match(model.maybeChartError, {
     onNone: () =>
       h.div([h.Class('text-xs font-medium text-emerald-700')], ['Chart ready']),
     onSome: error =>
       h.div([h.Class('max-w-md text-xs font-medium text-rose-700')], [error]),
   })
-}

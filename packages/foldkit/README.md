@@ -41,7 +41,7 @@ A complete Foldkit program. State lives in a single Model, events become Message
 // src/main.ts
 import { Match as M, Schema as S } from 'effect'
 import { Command, Runtime } from 'foldkit'
-import { Document, html } from 'foldkit/html'
+import { Document, HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 
 // MODEL
@@ -88,22 +88,18 @@ export const init: Runtime.ApplicationInit<Model, Message> = () => [
 
 // VIEW
 
-export const view = (model: Model): Document => {
-  const h = html<Message>()
-
-  return {
-    title: `Counter: ${model.count}`,
-    body: h.div(
-      [],
-      [
-        h.p([], [model.count.toString()]),
-        h.button([h.OnClick(ClickedDecrement())], ['-']),
-        h.button([h.OnClick(ClickedReset())], ['Reset']),
-        h.button([h.OnClick(ClickedIncrement())], ['+']),
-      ],
-    ),
-  }
-}
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
+  title: `Counter: ${model.count}`,
+  body: h.div(
+    [],
+    [
+      h.p([], [model.count.toString()]),
+      h.button([h.OnClick(ClickedDecrement())], ['-']),
+      h.button([h.OnClick(ClickedReset())], ['Reset']),
+      h.button([h.OnClick(ClickedIncrement())], ['+']),
+    ],
+  ),
+})
 ```
 
 ```ts

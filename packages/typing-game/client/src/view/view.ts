@@ -1,5 +1,5 @@
 import { Match as M } from 'effect'
-import { Document, Html, html } from 'foldkit/html'
+import { Document, Html, HtmlBuilder } from 'foldkit/html'
 
 import { GotHomeMessage, GotRoomMessage, Message } from '../message'
 import { Model } from '../model'
@@ -15,9 +15,7 @@ const routeTitle = (route: Model['route']): string =>
     }),
   )
 
-export const view = (model: Model): Document => {
-  const h = html<Message>()
-
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
   const content = M.value(model.route).pipe(
     M.tagsExhaustive({
       Home: () =>
@@ -35,7 +33,7 @@ export const view = (model: Model): Document => {
           viewInputs: { roomId },
           toParentMessage: message => GotRoomMessage({ message }),
         }),
-      NotFound: notFound,
+      NotFound: route => notFound(route, h),
     }),
   )
 
@@ -67,10 +65,8 @@ export const view = (model: Model): Document => {
   }
 }
 
-const notFound = ({ path }: NotFoundRoute): Html => {
-  const h = html<Message>()
-
-  return h.section(
+const notFound = ({ path }: NotFoundRoute, h: HtmlBuilder<Message>): Html =>
+  h.section(
     [h.Class('max-w-4xl')],
     [
       h.h1([h.Class('mb-6 uppercase')], ['404 - Not Found']),
@@ -78,4 +74,3 @@ const notFound = ({ path }: NotFoundRoute): Html => {
       h.div([], ['> Enter to go home']),
     ],
   )
-}

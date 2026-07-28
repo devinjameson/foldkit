@@ -1,5 +1,5 @@
 import { Option } from 'effect'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 
 import { Combobox, Dialog } from '@foldkit/ui'
 
@@ -92,9 +92,10 @@ const OVERLAY_COMBOBOX_ANCHOR = {
 
 // VIEW
 
-export const dialogDemo = (dialogModel: Dialog.Model) => {
-  const h = html<Message>()
-
+export const dialogDemo = (
+  dialogModel: Dialog.Model,
+  h: HtmlBuilder<Message>,
+) => {
   return [
     h.div(
       [h.Class('flex gap-3')],
@@ -179,9 +180,8 @@ export const overlayDialogDemo = (
   dialogModel: Dialog.Model,
   comboboxModel: Combobox.Model,
   maybeSelectedCity: Option.Option<City>,
+  h: HtmlBuilder<Message>,
 ) => {
-  const h = html<Message>()
-
   return [
     h.div(
       [h.Class('flex gap-3')],
@@ -257,9 +257,8 @@ export const overlayDialogDemo = (
 export const nestedDialogDemo = (
   parentDialogModel: Dialog.Model,
   childDialogModel: Dialog.Model,
+  h: HtmlBuilder<Message>,
 ) => {
-  const h = html<Message>()
-
   return [
     h.div(
       [h.Class('flex gap-3')],
@@ -407,9 +406,10 @@ export const nestedDialogDemo = (
   ]
 }
 
-export const dialogAnimatedDemo = (dialogModel: Dialog.Model) => {
-  const h = html<Message>()
-
+export const dialogAnimatedDemo = (
+  dialogModel: Dialog.Model,
+  h: HtmlBuilder<Message>,
+) => {
   return [
     h.div(
       [h.Class('flex gap-3')],

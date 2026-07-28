@@ -1,5 +1,5 @@
 import { Array, Option, pipe } from 'effect'
-import { Html, html } from 'foldkit/html'
+import { type Html, type HtmlBuilder, staticHtml } from 'foldkit/html'
 
 import { DragAndDrop } from '@foldkit/ui'
 
@@ -46,9 +46,8 @@ const cardView = (
   index: number,
   containerId: string,
   dragAndDropModel: DragAndDrop.Model,
+  h: HtmlBuilder<Message>,
 ): Html => {
-  const h = html<Message>()
-
   const maybeItemId = DragAndDrop.maybeDraggedItemId(dragAndDropModel)
   const isBeingDragged = Option.exists(maybeItemId, id => id === card.id)
 
@@ -65,14 +64,17 @@ const cardView = (
   return h.div(
     [
       h.Class(cardClassName + opacityClass + keyboardClass),
-      ...DragAndDrop.draggable<Message>({
-        model: dragAndDropModel,
-        toParentMessage: message => GotDragAndDropDemoMessage({ message }),
-        itemId: card.id,
-        containerId,
-        index,
-      }),
-      ...DragAndDrop.sortable<Message>(card.id),
+      ...DragAndDrop.draggable(
+        {
+          model: dragAndDropModel,
+          toParentMessage: message => GotDragAndDropDemoMessage({ message }),
+          itemId: card.id,
+          containerId,
+          index,
+        },
+        h,
+      ),
+      ...DragAndDrop.sortable(card.id),
     ],
     [card.label],
   )
@@ -82,12 +84,11 @@ const columnView = (
   columns: ReadonlyArray<DemoColumnType>,
   column: DemoColumnType,
   dragAndDropModel: DragAndDrop.Model,
+  h: HtmlBuilder<Message>,
 ): Html => {
-  const h = html<Message>()
-
-  const dropPlaceholder: Html = h.div(
+  const dropPlaceholder: Html = staticHtml.div(
     [
-      h.Class(
+      staticHtml.Class(
         'rounded-lg border-2 border-dashed border-accent-400/50 dark:border-accent-500/50 h-9',
       ),
     ],
@@ -115,11 +116,11 @@ const columnView = (
   )
 
   const cardElements = Array.map(visibleCards, (card, index) =>
-    cardView(card, index, column.id, dragAndDropModel),
+    cardView(card, index, column.id, dragAndDropModel, h),
   )
 
   if (!isTargetColumn) {
-    return renderColumn(column, dragAndDropModel, cardElements)
+    return renderColumn(column, dragAndDropModel, cardElements, h)
   }
 
   const targetIndex = pipe(
@@ -135,7 +136,7 @@ const columnView = (
     : Option.match(findDraggedCard(columns, maybeItemId), {
         onNone: () => dropPlaceholder,
         onSome: card =>
-          cardView(card, targetIndex, column.id, dragAndDropModel),
+          cardView(card, targetIndex, column.id, dragAndDropModel, h),
       })
 
   const withInsert: ReadonlyArray<Html> = pipe(
@@ -144,16 +145,15 @@ const columnView = (
     Option.getOrElse(() => [...cardElements, insertElement]),
   )
 
-  return renderColumn(column, dragAndDropModel, withInsert)
+  return renderColumn(column, dragAndDropModel, withInsert, h)
 }
 
 const renderColumn = (
   column: DemoColumnType,
   dragAndDropModel: DragAndDrop.Model,
   children: ReadonlyArray<Html>,
+  h: HtmlBuilder<Message>,
 ): Html => {
-  const h = html<Message>()
-
   const maybeTarget = DragAndDrop.maybeDropTarget(dragAndDropModel)
   const isDropTarget =
     DragAndDrop.isDragging(dragAndDropModel) &&
@@ -179,7 +179,7 @@ const renderColumn = (
                 : 'border-transparent'
             }`,
           ),
-          ...DragAndDrop.droppable<Message>(column.id, column.label),
+          ...DragAndDrop.droppable(column.id, column.label),
         ],
         [...children],
       ),
@@ -191,7 +191,7 @@ const ghostView = (
   columns: ReadonlyArray<DemoColumnType>,
   dragAndDropModel: DragAndDrop.Model,
 ): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   const maybeItemId = DragAndDrop.maybeDraggedItemId(dragAndDropModel)
 
@@ -219,9 +219,10 @@ const ghostView = (
   )
 }
 
-export const demo = (model: Model): ReadonlyArray<Html> => {
-  const h = html<Message>()
-
+export const demo = (
+  model: Model,
+  h: HtmlBuilder<Message>,
+): ReadonlyArray<Html> => {
   return [
     h.div(
       [h.Class('mb-8 w-full max-w-md')],
@@ -233,6 +234,7 @@ export const demo = (model: Model): ReadonlyArray<Html> => {
               model.dragAndDropDemoColumns,
               column,
               model.dragAndDropDemo,
+              h,
             ),
           ),
         ),

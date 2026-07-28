@@ -1,4 +1,4 @@
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
 import { expect } from 'vitest'
 
@@ -28,27 +28,28 @@ const acknowledgeBackdrop = Scene.Mount.resolve(
 
 const sceneView =
   (overrides: Omit<Partial<ViewInputs>, 'toView' | 'anchor'> = {}) =>
-  (model: Model) => {
-    const h = html<Message>()
-
-    return view(model, {
-      anchor: { placement: 'bottom-start' },
-      toView: ({ button, panel, backdrop, isVisible }) =>
-        h.div(
-          [],
-          [
-            h.keyed('button')('test-button', [...button], []),
-            ...(isVisible
-              ? [
-                  h.keyed('div')('test-backdrop', [...backdrop], []),
-                  h.keyed('div')('test-panel-container', [...panel], []),
-                ]
-              : []),
-          ],
-        ),
-      ...overrides,
-    })
-  }
+  (model: Model, h: HtmlBuilder<Message>) =>
+    view(
+      model,
+      {
+        anchor: { placement: 'bottom-start' },
+        toView: ({ button, panel, backdrop, isVisible }) =>
+          h.div(
+            [],
+            [
+              h.keyed('button')('test-button', [...button], []),
+              ...(isVisible
+                ? [
+                    h.keyed('div')('test-backdrop', [...backdrop], []),
+                    h.keyed('div')('test-panel-container', [...panel], []),
+                  ]
+                : []),
+            ],
+          ),
+        ...overrides,
+      },
+      h,
+    )
 
 const button = Scene.selector('[key="test-button"]')
 const panel = Scene.selector('[key="test-panel-container"]')

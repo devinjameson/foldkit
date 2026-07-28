@@ -1,6 +1,6 @@
 import { Schema as S } from 'effect'
 import { CustomElement } from 'foldkit'
-import { type Html, html } from 'foldkit/html'
+import type { Html, HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import 'vanilla-colorful/hex-color-picker.js'
 
@@ -37,27 +37,26 @@ const qrCode = CustomElement.define({
   events: {},
 })
 
-// Mint typed builders for your Message universe (mirrors
-// `M.withReturnType<T>()`).
-
 const ChangedFillColor = m('ChangedFillColor', { value: S.String })
 
 const Message = S.Union([ChangedFillColor])
 type Message = typeof Message.Type
 
-const fillPicker = hexColorPicker.withMessage<Message>()
-const qr = qrCode.withMessage<Message>()
-
+// Inside a view, mint typed builders with `withMessage(h)`. The view's
+// builder fixes the Message universe, so the elements' event factories can
+// only produce Messages the surrounding frame dispatches.
+//
 // Use the builders inline next to standard elements. Property factories
 // write JS properties through Snabbdom's propsModule. Event factories
 // convert kebab-case CustomEvents into Messages. The picker and the QR
 // never talk directly; they share state through the Model.
 
-export const designerView = (model: {
-  content: string
-  fillColor: string
-}): Html => {
-  const h = html<Message>()
+export const designerView = (
+  model: { content: string; fillColor: string },
+  h: HtmlBuilder<Message>,
+): Html => {
+  const fillPicker = hexColorPicker.withMessage(h)
+  const qr = qrCode.withMessage(h)
 
   return h.div(
     [h.Class('flex gap-6')],

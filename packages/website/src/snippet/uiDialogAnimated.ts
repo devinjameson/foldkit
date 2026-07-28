@@ -2,7 +2,7 @@
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
 import { Command } from 'foldkit'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -42,10 +42,8 @@ GotDialogMessage: ({ message }) => {
 
 // Inside your view function, use data-[closed] for enter/leave transitions and
 // spread the `closeButton` bundle onto your dismiss buttons:
-const view = (model: Model) => {
-  const h = html<Message>()
-
-  return h.submodel({
+const view = (model: Model, h: HtmlBuilder<Message>) =>
+  h.submodel({
     slotId: model.dialog.id,
     model: model.dialog,
     view: Dialog.view,
@@ -117,4 +115,3 @@ const view = (model: Model) => {
     },
     toParentMessage: message => GotDialogMessage({ message }),
   })
-}

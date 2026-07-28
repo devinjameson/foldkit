@@ -10,12 +10,7 @@ import {
   Schema as S,
 } from 'effect'
 import * as Command from 'foldkit/command'
-import {
-  type ChildAttribute,
-  type Html,
-  childAttributes,
-  html,
-} from 'foldkit/html'
+import { type ChildAttribute, type Html, childAttributes } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import * as Mount from 'foldkit/mount'
 import { evo } from 'foldkit/struct'
@@ -355,9 +350,7 @@ export type ViewInputs = Readonly<{
  *  Shows on hover (after delay) or focus (from keyboard, touch, or pen;
  *  mouse-click focus is excluded). Hides on leave, blur, or Escape. */
 export const view = defineView<Model, Message, ViewInputs>(
-  (model, viewInputs): Html => {
-    const h = html<Message>()
-
+  (model, viewInputs, h): Html => {
     const { id, isOpen } = model
     const { anchor, toView, isDisabled, ariaLabel, ariaLabelledBy } = viewInputs
 

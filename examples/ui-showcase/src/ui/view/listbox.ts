@@ -1,6 +1,6 @@
 import { Array, Option } from 'effect'
 import { Submodel } from 'foldkit'
-import { Html, childAttributes, html } from 'foldkit/html'
+import { type Html, childAttributes } from 'foldkit/html'
 
 import { Listbox } from '@foldkit/ui'
 
@@ -75,222 +75,236 @@ const LISTBOX_ANCHOR = {
   padding: 8,
 }
 
-export const view = Submodel.defineView<UiModel, UiMessage>((model): Html => {
-  const h = html<UiMessage>()
+export const view = Submodel.defineView<UiModel, UiMessage>(
+  (model, h): Html => {
+    const singleButtonLabel = Option.getOrElse(
+      model.maybeListboxDemoSelectedItem,
+      () => 'Select a Bluth',
+    )
 
-  const singleButtonLabel = Option.getOrElse(
-    model.maybeListboxDemoSelectedItem,
-    () => 'Select a Bluth',
-  )
+    const multiButtonLabel = Array.match(model.listboxMultiDemoSelectedItems, {
+      onEmpty: () => 'Select Bluths',
+      onNonEmpty: items =>
+        items.length === 1
+          ? Array.headNonEmpty(items)
+          : `${items.length} selected`,
+    })
 
-  const multiButtonLabel = Array.match(model.listboxMultiDemoSelectedItems, {
-    onEmpty: () => 'Select Bluths',
-    onNonEmpty: items =>
-      items.length === 1
-        ? Array.headNonEmpty(items)
-        : `${items.length} selected`,
-  })
+    const groupedButtonLabel = Option.getOrElse(
+      model.maybeListboxGroupedDemoSelectedItem,
+      () => 'Select a character',
+    )
 
-  const groupedButtonLabel = Option.getOrElse(
-    model.maybeListboxGroupedDemoSelectedItem,
-    () => 'Select a character',
-  )
+    return h.div(
+      [],
+      [
+        h.h2([h.Class('text-2xl font-bold text-gray-900 mb-6')], ['Listbox']),
 
-  return h.div(
-    [],
-    [
-      h.h2([h.Class('text-2xl font-bold text-gray-900 mb-6')], ['Listbox']),
-
-      h.h3(
-        [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
-        ['Single-Select'],
-      ),
-      h.div(
-        [h.Class(fieldClassName)],
-        [
-          h.label(
-            [
-              h.For(Listbox.buttonId(model.listboxDemo.id)),
-              h.Class(labelClassName),
-            ],
-            ['Family member'],
-          ),
-          h.div(
-            [h.Class('relative')],
-            [
-              h.submodel({
-                slotId: 'listbox-single',
-                model: model.listboxDemo,
-                view: ItemListbox.view,
-                viewInputs: {
-                  anchor: LISTBOX_ANCHOR,
-                  items: LISTBOX_ITEMS,
-                  maybeSelectedValue: model.maybeListboxDemoSelectedItem,
-                  itemToConfig: item => ({
-                    className: itemClassName,
-                    content: h.div(
-                      [h.Class('flex items-center gap-2')],
+        h.h3(
+          [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
+          ['Single-Select'],
+        ),
+        h.div(
+          [h.Class(fieldClassName)],
+          [
+            h.label(
+              [
+                h.For(Listbox.buttonId(model.listboxDemo.id)),
+                h.Class(labelClassName),
+              ],
+              ['Family member'],
+            ),
+            h.div(
+              [h.Class('relative')],
+              [
+                h.submodel({
+                  slotId: 'listbox-single',
+                  model: model.listboxDemo,
+                  view: ItemListbox.view,
+                  viewInputs: {
+                    anchor: LISTBOX_ANCHOR,
+                    items: LISTBOX_ITEMS,
+                    maybeSelectedValue: model.maybeListboxDemoSelectedItem,
+                    itemToConfig: item => ({
+                      className: itemClassName,
+                      content: h.div(
+                        [h.Class('flex items-center gap-2')],
+                        [
+                          Icon.check(
+                            'w-4 h-4 shrink-0 invisible group-data-[selected]:visible text-gray-900',
+                          ),
+                          h.span([], [item]),
+                        ],
+                      ),
+                    }),
+                    buttonContent: h.div(
                       [
-                        Icon.check(
-                          'w-4 h-4 shrink-0 invisible group-data-[selected]:visible text-gray-900',
+                        h.Class(
+                          'flex w-full items-center justify-between gap-4',
                         ),
-                        h.span([], [item]),
+                      ],
+                      [
+                        h.span([], [singleButtonLabel]),
+                        Icon.chevronDown('w-4 h-4'),
                       ],
                     ),
-                  }),
-                  buttonContent: h.div(
-                    [h.Class('flex w-full items-center justify-between gap-4')],
-                    [
-                      h.span([], [singleButtonLabel]),
-                      Icon.chevronDown('w-4 h-4'),
-                    ],
-                  ),
-                  buttonAttributes: childAttributes([
-                    h.Class(triggerClassName),
-                  ]),
-                  itemsAttributes: childAttributes([h.Class(itemsClassName)]),
-                  backdropAttributes: childAttributes([
-                    h.Class(backdropClassName),
-                  ]),
-                  attributes: childAttributes([h.Class(wrapperClassName)]),
-                },
-                toParentMessage: message => GotListboxDemoMessage({ message }),
-              }),
-            ],
-          ),
-        ],
-      ),
+                    buttonAttributes: childAttributes([
+                      h.Class(triggerClassName),
+                    ]),
+                    itemsAttributes: childAttributes([h.Class(itemsClassName)]),
+                    backdropAttributes: childAttributes([
+                      h.Class(backdropClassName),
+                    ]),
+                    attributes: childAttributes([h.Class(wrapperClassName)]),
+                  },
+                  toParentMessage: message =>
+                    GotListboxDemoMessage({ message }),
+                }),
+              ],
+            ),
+          ],
+        ),
 
-      h.h3(
-        [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
-        ['Multi-Select'],
-      ),
-      h.div(
-        [h.Class(fieldClassName)],
-        [
-          h.label(
-            [
-              h.For(Listbox.Multi.buttonId(model.listboxMultiDemo.id)),
-              h.Class(labelClassName),
-            ],
-            ['Family members'],
-          ),
-          h.div(
-            [h.Class('relative')],
-            [
-              h.submodel({
-                slotId: 'listbox-multi',
-                model: model.listboxMultiDemo,
-                view: ItemMultiListbox.view,
-                viewInputs: {
-                  anchor: LISTBOX_ANCHOR,
-                  items: LISTBOX_ITEMS,
-                  selectedValues: model.listboxMultiDemoSelectedItems,
-                  itemToConfig: item => ({
-                    className: itemClassName,
-                    content: h.div(
-                      [h.Class('flex items-center gap-2')],
+        h.h3(
+          [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
+          ['Multi-Select'],
+        ),
+        h.div(
+          [h.Class(fieldClassName)],
+          [
+            h.label(
+              [
+                h.For(Listbox.Multi.buttonId(model.listboxMultiDemo.id)),
+                h.Class(labelClassName),
+              ],
+              ['Family members'],
+            ),
+            h.div(
+              [h.Class('relative')],
+              [
+                h.submodel({
+                  slotId: 'listbox-multi',
+                  model: model.listboxMultiDemo,
+                  view: ItemMultiListbox.view,
+                  viewInputs: {
+                    anchor: LISTBOX_ANCHOR,
+                    items: LISTBOX_ITEMS,
+                    selectedValues: model.listboxMultiDemoSelectedItems,
+                    itemToConfig: item => ({
+                      className: itemClassName,
+                      content: h.div(
+                        [h.Class('flex items-center gap-2')],
+                        [
+                          Icon.check(
+                            'w-4 h-4 shrink-0 invisible group-data-[selected]:visible text-gray-900',
+                          ),
+                          h.span([], [item]),
+                        ],
+                      ),
+                    }),
+                    buttonContent: h.div(
                       [
-                        Icon.check(
-                          'w-4 h-4 shrink-0 invisible group-data-[selected]:visible text-gray-900',
+                        h.Class(
+                          'flex w-full items-center justify-between gap-4',
                         ),
-                        h.span([], [item]),
+                      ],
+                      [
+                        h.span([], [multiButtonLabel]),
+                        Icon.chevronDown('w-4 h-4'),
                       ],
                     ),
-                  }),
-                  buttonContent: h.div(
-                    [h.Class('flex w-full items-center justify-between gap-4')],
-                    [
-                      h.span([], [multiButtonLabel]),
-                      Icon.chevronDown('w-4 h-4'),
-                    ],
-                  ),
-                  buttonAttributes: childAttributes([
-                    h.Class(triggerClassName),
-                  ]),
-                  itemsAttributes: childAttributes([h.Class(itemsClassName)]),
-                  backdropAttributes: childAttributes([
-                    h.Class(backdropClassName),
-                  ]),
-                  attributes: childAttributes([h.Class(wrapperClassName)]),
-                },
-                toParentMessage: message =>
-                  GotListboxMultiDemoMessage({ message }),
-              }),
-            ],
-          ),
-        ],
-      ),
+                    buttonAttributes: childAttributes([
+                      h.Class(triggerClassName),
+                    ]),
+                    itemsAttributes: childAttributes([h.Class(itemsClassName)]),
+                    backdropAttributes: childAttributes([
+                      h.Class(backdropClassName),
+                    ]),
+                    attributes: childAttributes([h.Class(wrapperClassName)]),
+                  },
+                  toParentMessage: message =>
+                    GotListboxMultiDemoMessage({ message }),
+                }),
+              ],
+            ),
+          ],
+        ),
 
-      h.h3(
-        [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
-        ['Grouped'],
-      ),
-      h.div(
-        [h.Class(fieldClassName)],
-        [
-          h.label(
-            [
-              h.For(Listbox.buttonId(model.listboxGroupedDemo.id)),
-              h.Class(labelClassName),
-            ],
-            ['Character'],
-          ),
-          h.div(
-            [h.Class('relative')],
-            [
-              h.submodel({
-                slotId: 'listbox-grouped',
-                model: model.listboxGroupedDemo,
-                view: CharacterListbox.view,
-                viewInputs: {
-                  anchor: LISTBOX_ANCHOR,
-                  items: GROUPED_CHARACTERS,
-                  maybeSelectedValue: model.maybeListboxGroupedDemoSelectedItem,
-                  itemToValue: characterName,
-                  itemGroupKey: character => character.lastName,
-                  groupToHeading: lastName => ({
-                    content: h.span([], [`${lastName}s`]),
-                    className: groupHeadingClassName,
-                  }),
-                  separatorAttributes: childAttributes([
-                    h.Class(separatorClassName),
-                  ]),
-                  itemToConfig: character => ({
-                    className: itemClassName,
-                    content: h.div(
-                      [h.Class('flex items-center gap-2')],
+        h.h3(
+          [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
+          ['Grouped'],
+        ),
+        h.div(
+          [h.Class(fieldClassName)],
+          [
+            h.label(
+              [
+                h.For(Listbox.buttonId(model.listboxGroupedDemo.id)),
+                h.Class(labelClassName),
+              ],
+              ['Character'],
+            ),
+            h.div(
+              [h.Class('relative')],
+              [
+                h.submodel({
+                  slotId: 'listbox-grouped',
+                  model: model.listboxGroupedDemo,
+                  view: CharacterListbox.view,
+                  viewInputs: {
+                    anchor: LISTBOX_ANCHOR,
+                    items: GROUPED_CHARACTERS,
+                    maybeSelectedValue:
+                      model.maybeListboxGroupedDemoSelectedItem,
+                    itemToValue: characterName,
+                    itemGroupKey: character => character.lastName,
+                    groupToHeading: lastName => ({
+                      content: h.span([], [`${lastName}s`]),
+                      className: groupHeadingClassName,
+                    }),
+                    separatorAttributes: childAttributes([
+                      h.Class(separatorClassName),
+                    ]),
+                    itemToConfig: character => ({
+                      className: itemClassName,
+                      content: h.div(
+                        [h.Class('flex items-center gap-2')],
+                        [
+                          Icon.check(
+                            'w-4 h-4 shrink-0 invisible group-data-[selected]:visible text-gray-900',
+                          ),
+                          h.span([], [characterName(character)]),
+                        ],
+                      ),
+                    }),
+                    buttonContent: h.div(
                       [
-                        Icon.check(
-                          'w-4 h-4 shrink-0 invisible group-data-[selected]:visible text-gray-900',
+                        h.Class(
+                          'flex w-full items-center justify-between gap-4',
                         ),
-                        h.span([], [characterName(character)]),
+                      ],
+                      [
+                        h.span([], [groupedButtonLabel]),
+                        Icon.chevronDown('w-4 h-4'),
                       ],
                     ),
-                  }),
-                  buttonContent: h.div(
-                    [h.Class('flex w-full items-center justify-between gap-4')],
-                    [
-                      h.span([], [groupedButtonLabel]),
-                      Icon.chevronDown('w-4 h-4'),
-                    ],
-                  ),
-                  buttonAttributes: childAttributes([
-                    h.Class(triggerClassName),
-                  ]),
-                  itemsAttributes: childAttributes([h.Class(itemsClassName)]),
-                  backdropAttributes: childAttributes([
-                    h.Class(backdropClassName),
-                  ]),
-                  attributes: childAttributes([h.Class(wrapperClassName)]),
-                },
-                toParentMessage: message =>
-                  GotListboxGroupedDemoMessage({ message }),
-              }),
-            ],
-          ),
-        ],
-      ),
-    ],
-  )
-})
+                    buttonAttributes: childAttributes([
+                      h.Class(triggerClassName),
+                    ]),
+                    itemsAttributes: childAttributes([h.Class(itemsClassName)]),
+                    backdropAttributes: childAttributes([
+                      h.Class(backdropClassName),
+                    ]),
+                    attributes: childAttributes([h.Class(wrapperClassName)]),
+                  },
+                  toParentMessage: message =>
+                    GotListboxGroupedDemoMessage({ message }),
+                }),
+              ],
+            ),
+          ],
+        ),
+      ],
+    )
+  },
+)

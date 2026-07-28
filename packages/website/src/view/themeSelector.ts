@@ -1,5 +1,5 @@
 import { clsx } from 'clsx'
-import { Html, html } from 'foldkit/html'
+import { Html, type HtmlBuilder } from 'foldkit/html'
 
 import { Icon } from '../icon'
 import {
@@ -8,10 +8,11 @@ import {
   type ThemePreference,
 } from '../message'
 
-export const themeSelector = (activePreference: ThemePreference): Html => {
-  const h = html<Message>()
-
-  return h.div(
+export const themeSelector = (
+  activePreference: ThemePreference,
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.div(
     [
       h.Role('group'),
       h.AriaLabel('Theme preference'),
@@ -25,31 +26,32 @@ export const themeSelector = (activePreference: ThemePreference): Html => {
         activePreference,
         Icon.sun('w-4 h-4'),
         'Light mode',
+        h,
       ),
       themeSelectorButton(
         'System',
         activePreference,
         Icon.computer('w-4 h-4'),
         'System mode',
+        h,
       ),
       themeSelectorButton(
         'Dark',
         activePreference,
         Icon.moon('w-4 h-4'),
         'Dark mode',
+        h,
       ),
     ],
   )
-}
 
 const themeSelectorButton = (
   preference: ThemePreference,
   activePreference: ThemePreference,
   icon: Html,
   label: string,
+  h: HtmlBuilder<Message>,
 ) => {
-  const h = html<Message>()
-
   const isActive = preference === activePreference
 
   return h.button(

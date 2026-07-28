@@ -2,7 +2,7 @@
 // block below is an excerpt. Fit them into your own Model, Message, update,
 // and view definitions.
 import { Match as M } from 'effect'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 
 import { Nav } from '@foldkit/ui'
 
@@ -47,10 +47,8 @@ const isSectionCurrent =
 // carries aria-current="page" and a data-current attribute for styling.
 // Browser-native Tab and Enter handle keyboard navigation; Foldkit's runtime
 // turns the link clicks into route changes:
-const view = (model: Model) => {
-  const h = html<Message>()
-
-  return Nav.view<Section>({
+const view = (model: Model, h: HtmlBuilder<Message>) =>
+  Nav.view<Section>({
     items: sections,
     ariaLabel: 'Primary',
     toHref: sectionToHref,
@@ -71,4 +69,3 @@ const view = (model: Model) => {
         ),
       ),
   })
-}

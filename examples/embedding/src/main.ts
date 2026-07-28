@@ -1,6 +1,6 @@
 import { Duration, Effect, Match as M, Schema as S, Stream } from 'effect'
 import { Command, Port, Runtime, Subscription } from 'foldkit'
-import { Html, html } from 'foldkit/html'
+import { Html, HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -91,10 +91,8 @@ export const subscriptions = Subscription.make<Model, Message>()(_entry => ({
 
 // VIEW
 
-export const view = (model: Model): Html => {
-  const h = html<Message>()
-
-  return h.div(
+export const view = (model: Model, h: HtmlBuilder<Message>): Html =>
+  h.div(
     [
       h.Class(
         'flex flex-col items-center gap-4 rounded-xl border border-teal-200 bg-teal-50 p-6',
@@ -117,22 +115,24 @@ export const view = (model: Model): Html => {
         [h.Class('text-sm text-gray-600')],
         [`Ticking up by ${model.step} every second`],
       ),
-      Button.view<Message>({
-        onClick: ClickedAdvance(),
-        toView: attributes =>
-          h.button(
-            [
-              ...attributes.button,
-              h.Class(
-                'cursor-pointer rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-500',
-              ),
-            ],
-            [`Advance by ${model.step}`],
-          ),
-      }),
+      Button.view(
+        {
+          onClick: ClickedAdvance(),
+          toView: attributes =>
+            h.button(
+              [
+                ...attributes.button,
+                h.Class(
+                  'cursor-pointer rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-500',
+                ),
+              ],
+              [`Advance by ${model.step}`],
+            ),
+        },
+        h,
+      ),
     ],
   )
-}
 
 // PROGRAM
 

@@ -4,20 +4,21 @@ const rowView = (
   previewColor: HexColor,
   previewPositions: ReadonlyArray<readonly [number, number]>,
   theme: PaletteTheme,
+  h: HtmlBuilder<Message>,
 ): Html =>
-  div(
-    [Style({ display: 'flex', flex: '1' })],
+  h.div(
+    [h.Style({ display: 'flex', flex: '1' })],
     Array.map(row, (cell, x) => {
       const isPreview = previewPositions.some(
         ([previewX, previewY]) => previewX === x && previewY === y,
       )
       const displayColor = isPreview ? previewColor : resolveColor(cell, theme)
 
-      return div(
+      return h.div(
         [
-          OnMouseDown(PressedCell({ x, y })),
-          OnMouseEnter(EnteredCell({ x, y })),
-          Style({ flex: '1', backgroundColor: displayColor }),
+          h.OnMouseDown(PressedCell({ x, y })),
+          h.OnMouseEnter(EnteredCell({ x, y })),
+          h.Style({ flex: '1', backgroundColor: displayColor }),
         ],
         [],
       )

@@ -2,7 +2,7 @@ import { Effect, Fiber, Match as M, Schema as S } from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as Command from '../command/index.js'
-import { html } from '../html/index.js'
+import { __htmlBuilder } from '../html/index.js'
 import { m } from '../message/index.js'
 import { makeElement } from './runtime.js'
 
@@ -42,7 +42,7 @@ const update = (_model: Model, message: Message): UpdateReturn =>
     }),
   )
 
-const h = html<Message>()
+const h = __htmlBuilder<Message>()
 
 const view = (model: Model) => h.div([], [model.label])
 

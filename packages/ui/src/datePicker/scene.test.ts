@@ -1,6 +1,6 @@
 import { Match as M, Option } from 'effect'
 import * as Calendar from 'foldkit/calendar'
-import { html } from 'foldkit/html'
+import { type HtmlBuilder, staticHtml } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
 import { expect } from 'vitest'
 
@@ -23,7 +23,7 @@ const acknowledgePopoverBackdrop = Scene.Mount.resolve(
 const today = Calendar.make(2026, 4, 13)
 
 const testToCalendarView = (attrs: UiCalendar.CalendarAttributes) => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return M.value(attrs).pipe(
     M.tagsExhaustive({
@@ -103,7 +103,7 @@ const testToCalendarView = (attrs: UiCalendar.CalendarAttributes) => {
 }
 
 const triggerContent = (maybeDate: Option.Option<Calendar.CalendarDate>) => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.span(
     [],
@@ -123,14 +123,18 @@ const sceneView =
       'anchor' | 'triggerContent' | 'toCalendarView'
     > = {},
   ) =>
-  (model: Model) =>
-    view(model, {
-      anchor: { placement: 'bottom-start' },
-      maybeSelectedDate: Option.none(),
-      triggerContent,
-      toCalendarView: testToCalendarView,
-      ...overrides,
-    })
+  (model: Model, h: HtmlBuilder<Message>) =>
+    view(
+      model,
+      {
+        anchor: { placement: 'bottom-start' },
+        maybeSelectedDate: Option.none(),
+        triggerContent,
+        toCalendarView: testToCalendarView,
+        ...overrides,
+      },
+      h,
+    )
 
 const trigger = Scene.selector('#picker-popover-button')
 const panel = Scene.selector('#picker-popover-panel')

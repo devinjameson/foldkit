@@ -1,9 +1,7 @@
-import { Html, html } from 'foldkit/html'
+import { Html, staticHtml as h } from 'foldkit/html'
 
-export const copy = (className: string = 'w-5 h-5'): Html => {
-  const h = html()
-
-  return h.svg(
+export const copy = (className: string = 'w-5 h-5'): Html =>
+  h.svg(
     [
       h.Class(className),
       h.Xmlns('http://www.w3.org/2000/svg'),
@@ -25,4 +23,3 @@ export const copy = (className: string = 'w-5 h-5'): Html => {
       ),
     ],
   )
-}

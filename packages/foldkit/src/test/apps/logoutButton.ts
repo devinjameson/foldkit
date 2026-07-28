@@ -1,7 +1,6 @@
 import { Match as M, Option, Schema as S } from 'effect'
 
-import type { Html } from '../../html/index.js'
-import { html } from '../../html/index.js'
+import type { Html, HtmlBuilder } from '../../html/index.js'
 import { m } from '../../message/index.js'
 
 // MODEL
@@ -46,9 +45,7 @@ export const update = (
 
 // VIEW
 
-export const view = (model: Model): Html => {
-  const h = html<Message>()
-
+export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
   return h.div(
     [],
     [h.button([h.OnClick(ClickedLogout()), h.Role('button')], [model.label])],

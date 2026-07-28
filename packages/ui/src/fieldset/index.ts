@@ -1,20 +1,18 @@
-import type { Attribute } from 'foldkit/html'
-import { html } from 'foldkit/html'
-import type { Html } from 'foldkit/html'
+import type { Attribute, Html, HtmlBuilder } from 'foldkit/html'
 
 // VIEW
 
 /** Attribute groups the fieldset component provides to the consumer's `toView` callback. */
-export type FieldsetAttributes<ParentMessage> = Readonly<{
-  fieldset: ReadonlyArray<Attribute<ParentMessage>>
-  legend: ReadonlyArray<Attribute<ParentMessage>>
-  description: ReadonlyArray<Attribute<ParentMessage>>
+export type FieldsetAttributes<Message> = Readonly<{
+  fieldset: ReadonlyArray<Attribute<Message>>
+  legend: ReadonlyArray<Attribute<Message>>
+  description: ReadonlyArray<Attribute<Message>>
 }>
 
 /** Configuration for rendering a fieldset with `view`. */
-export type ViewConfig<ParentMessage> = Readonly<{
+export type ViewConfig<Message> = Readonly<{
   id: string
-  toView: (attributes: FieldsetAttributes<ParentMessage>) => Html
+  toView: (attributes: FieldsetAttributes<Message>) => Html
   isDisabled?: boolean
 }>
 
@@ -25,11 +23,10 @@ export const legendId = (id: string): string => `${id}-legend`
 export const descriptionId = (id: string): string => `${id}-description`
 
 /** Renders an accessible fieldset by building ARIA attribute groups and delegating layout to the consumer's `toView` callback. */
-export const view = <ParentMessage>(
-  config: ViewConfig<ParentMessage>,
+export const view = <Message>(
+  config: ViewConfig<Message>,
+  h: HtmlBuilder<Message>,
 ): Html => {
-  const h = html<ParentMessage>()
-
   const { toView, id, isDisabled = false } = config
 
   const disabledAttributes = isDisabled

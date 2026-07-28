@@ -1,4 +1,4 @@
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
 
 import { describe, it } from '@effect/vitest'
@@ -8,29 +8,30 @@ import { PressedThumb, init, update, view } from './index.js'
 
 const sceneView =
   (overrides: Omit<Partial<ViewInputs>, 'toView'> = {}) =>
-  (model: Model) => {
-    const h = html<Message>()
-
-    return view(model, {
-      value: 5,
-      toView: attributes =>
-        h.div(
-          [...attributes.root],
-          [
-            h.label([...attributes.label], ['Test']),
-            h.div(
-              [...attributes.track],
-              [h.div([...attributes.filledTrack], [])],
-            ),
-            h.div([...attributes.thumb], []),
-            ...(attributes.hiddenInput.length > 0
-              ? [h.span(attributes.hiddenInput, [])]
-              : []),
-          ],
-        ),
-      ...overrides,
-    })
-  }
+  (model: Model, h: HtmlBuilder<Message>) =>
+    view(
+      model,
+      {
+        value: 5,
+        toView: attributes =>
+          h.div(
+            [...attributes.root],
+            [
+              h.label([...attributes.label], ['Test']),
+              h.div(
+                [...attributes.track],
+                [h.div([...attributes.filledTrack], [])],
+              ),
+              h.div([...attributes.thumb], []),
+              ...(attributes.hiddenInput.length > 0
+                ? [h.span(attributes.hiddenInput, [])]
+                : []),
+            ],
+          ),
+        ...overrides,
+      },
+      h,
+    )
 
 const defaultModel = init({
   id: 'test',

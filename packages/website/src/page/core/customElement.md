@@ -14,7 +14,7 @@ The shape is consistent across Foldkit’s lifecycle primitives. Declare the for
 
 Foldkit only owns the typed binding. Registering the element class with the browser is the same step you would take in any other framework. Most third-party packages do it for you when imported: `import 'vanilla-colorful/hex-color-picker.js'` calls `customElements.define('hex-color-picker', HexColorPicker)` as a side effect, and `<hex-color-picker>` is then a real tag in the browser. If you author your own element, you do the same: `customElements.define('your-tag', YourClass)` once, usually alongside the class definition.
 
-A `CustomElement.define` call takes the tag name, a record of properties keyed by their JS property name, and a record of events keyed by their kebab-case event name. It returns a spec you can export and share across modules. Inside the view module, call `.withMessage<Message>()` to mint a typed builder bound to your Message universe.
+A `CustomElement.define` call takes the tag name, a record of properties keyed by their JS property name, and a record of events keyed by their kebab-case event name. It returns a spec you can export and share across modules. Inside the view, call `.withMessage(h)` with the builder the view received. That binds the element to the Message universe of the frame it renders in, so an event handler on it carries a Message the frame's dispatcher can route.
 
 ::Snippet{name="customElementDefine" label="CustomElement.define example"}
 

@@ -1,5 +1,5 @@
 import { Match as M, Option } from 'effect'
-import { Html, html } from 'foldkit/html'
+import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import type { EntryHandlers, Variant } from '@foldkit/ui/toast'
 
@@ -55,9 +55,8 @@ const buttonClassName =
 export const demo = (
   toastModel: Model,
   maybeLastDismissedTitle: Option.Option<string>,
+  h: HtmlBuilder<Message>,
 ): ReadonlyArray<Html> => {
-  const h = html<Message>()
-
   const renderToastEntry = (entry: Entry, handlers: EntryHandlers): Html =>
     h.div(
       [

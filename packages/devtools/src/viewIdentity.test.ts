@@ -1,9 +1,9 @@
-import { html } from 'foldkit/html'
+import { staticHtml } from 'foldkit/html'
 import { describe, expect, it } from 'vitest'
 
 describe('view identity branding', () => {
   it('stamps vnodes returned from devtools source modules', () => {
-    const h = html()
+    const h = staticHtml
     const panelView = () => h.div([], [])
 
     const vnode = panelView()

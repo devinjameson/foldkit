@@ -24,7 +24,7 @@ import {
   Runtime,
   Subscription,
 } from 'foldkit'
-import { type Document, html } from 'foldkit/html'
+import { type Document, type HtmlBuilder } from 'foldkit/html'
 import { load, pushUrl } from 'foldkit/navigation'
 import { evo } from 'foldkit/struct'
 import { Url, toString as urlToString } from 'foldkit/url'
@@ -1238,31 +1238,27 @@ const LoadExternal = Command.define(
 
 // VIEW
 
-export const view = (model: Model): Document => {
-  const h = html<Message>()
-
-  return {
-    title: routeTitle(model.route, model.apiReference.apiData),
-    body: M.value(model.route).pipe(
-      M.tag('Home', () => landingView(model)),
-      M.tag('Newsletter', () => newsletterView(model)),
-      M.tag('Playground', () =>
-        Option.match(model.playground, {
-          onNone: () => h.empty,
-          onSome: playgroundModel =>
-            h.submodel({
-              slotId: `playground-${playgroundModel.slug}`,
-              model: playgroundModel,
-              view: Page.Playground.view,
-              viewInputs: { isChromium: model.isChromium },
-              toParentMessage: message => GotPlaygroundMessage({ message }),
-            }),
-        }),
-      ),
-      M.orElse(route => docsView(model, route)),
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
+  title: routeTitle(model.route, model.apiReference.apiData),
+  body: M.value(model.route).pipe(
+    M.tag('Home', () => landingView(model, h)),
+    M.tag('Newsletter', () => newsletterView(model, h)),
+    M.tag('Playground', () =>
+      Option.match(model.playground, {
+        onNone: () => h.empty,
+        onSome: playgroundModel =>
+          h.submodel({
+            slotId: `playground-${playgroundModel.slug}`,
+            model: playgroundModel,
+            view: Page.Playground.view,
+            viewInputs: { isChromium: model.isChromium },
+            toParentMessage: message => GotPlaygroundMessage({ message }),
+          }),
+      }),
     ),
-  }
-}
+    M.orElse(route => docsView(model, route, h)),
+  ),
+})
 
 // TITLE
 

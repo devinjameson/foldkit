@@ -2,7 +2,7 @@ import { Array, Effect, Match as M, Number, Schema as S } from 'effect'
 
 import * as Command from '../../command/index.js'
 import * as Interruptible from '../../command/interruptible/index.js'
-import { type Document, html } from '../../html/index.js'
+import type { Document, HtmlBuilder } from '../../html/index.js'
 import { m } from '../../message/index.js'
 import { evo } from '../../struct/index.js'
 
@@ -141,9 +141,7 @@ export const update = (
 
 // VIEW
 
-export const view = (model: Model): Document => {
-  const h = html<Message>()
-
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
   const body = h.div(
     [],
     [

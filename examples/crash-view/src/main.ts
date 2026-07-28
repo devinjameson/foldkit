@@ -1,6 +1,6 @@
 import { Schema } from 'effect'
 import { Command, Runtime } from 'foldkit'
-import { Document, html } from 'foldkit/html'
+import { Document, HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 
 import { Button } from '@foldkit/ui'
@@ -32,15 +32,13 @@ export const init: Runtime.ApplicationInit<Model, Message> = () => [null, []]
 
 // VIEW
 
-export const view = (_model: Model): Document => {
-  const h = html<Message>()
-
-  return {
-    title: 'Crash View Example',
-    body: h.div(
-      [h.Class('min-h-screen bg-white flex items-center justify-center')],
-      [
-        Button.view<Message>({
+export const view = (_model: Model, h: HtmlBuilder<Message>): Document => ({
+  title: 'Crash View Example',
+  body: h.div(
+    [h.Class('min-h-screen bg-white flex items-center justify-center')],
+    [
+      Button.view(
+        {
           onClick: ClickedCrash(),
           toView: attributes =>
             h.button(
@@ -52,40 +50,37 @@ export const view = (_model: Model): Document => {
               ],
               ['Crash'],
             ),
-        }),
-      ],
-    ),
-  }
-}
+        },
+        h,
+      ),
+    ],
+  ),
+})
 
 // CRASH
 
-export const crashView = ({
-  error,
-}: Runtime.CrashContext<Model, Message>): Document => {
-  const h = html<never>()
-
-  return {
-    title: 'Crash View Example | crashed',
-    body: h.div(
-      [h.Class('min-h-screen flex items-center justify-center bg-red-50 p-8')],
-      [
-        h.div(
-          [
-            h.Class(
-              'max-w-md w-full bg-white rounded-lg border border-red-200 p-8 text-center',
-            ),
-          ],
-          [
-            h.h1(
-              [h.Class('text-red-600 text-2xl font-semibold mb-4')],
-              ['Something went wrong'],
-            ),
-            h.p(
-              [h.Class('text-gray-700 mb-6 leading-relaxed')],
-              [error.message],
-            ),
-            Button.view<never>({
+export const crashView = (
+  { error }: Runtime.CrashContext<Model, Message>,
+  h: HtmlBuilder<never>,
+): Document => ({
+  title: 'Crash View Example | crashed',
+  body: h.div(
+    [h.Class('min-h-screen flex items-center justify-center bg-red-50 p-8')],
+    [
+      h.div(
+        [
+          h.Class(
+            'max-w-md w-full bg-white rounded-lg border border-red-200 p-8 text-center',
+          ),
+        ],
+        [
+          h.h1(
+            [h.Class('text-red-600 text-2xl font-semibold mb-4')],
+            ['Something went wrong'],
+          ),
+          h.p([h.Class('text-gray-700 mb-6 leading-relaxed')], [error.message]),
+          Button.view(
+            {
               toView: attributes =>
                 h.button(
                   [
@@ -98,10 +93,11 @@ export const crashView = ({
                   ],
                   ['Reload'],
                 ),
-            }),
-          ],
-        ),
-      ],
-    ),
-  }
-}
+            },
+            h,
+          ),
+        ],
+      ),
+    ],
+  ),
+})

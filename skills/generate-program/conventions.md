@@ -99,7 +99,7 @@ pipe(
 // Model fields
 maybeError: S.Option(S.String) // not error: S.String with '' as none
 
-// Conditional rendering (inside a view function that bound `const h = html<Message>()`)
+// Conditional rendering (inside a view function, with its builder `h` in scope)
 Option.match(model.maybeError, {
   onNone: () => h.empty,
   onSome: error => h.div([h.Class('text-red-500')], [error]),
@@ -464,7 +464,7 @@ import {
   Update,
   Url,
 } from 'foldkit'
-import { Document, Html, html } from 'foldkit/html'
+import { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { r } from 'foldkit/route'
 import { ts } from 'foldkit/schema'
@@ -511,6 +511,6 @@ Notes:
 - When an Effect module name collides with a global, alias the Effect import with a trailing underscore: `String as String_`, `Array as Array_`, `Number as Number_`.
 - `Match as M` is Effect's Match module, imported from `effect`. `M.value`, `M.tagsExhaustive`, and `M.withReturnType` are Effect APIs; Foldkit does not wrap or re-export them.
 - **UI components live in a separate package.** Import them by name from `@foldkit/ui`: `import { Dialog, DatePicker, FileDrop, Toast, Tooltip } from '@foldkit/ui'`. Deep imports (`@foldkit/ui/dialog`) work too. There is no `Ui` export on the `foldkit` package, so `Ui.Dialog.view` does not resolve.
-- **`empty` and `keyed` are properties on `h`**, reached as `h.empty` / `h.keyed` after binding `const h = html<Message>()` inside the view function. They are not top-level exports of `foldkit/html`, so they never belong in that import list. Same for `h.submodel`.
+- **`empty` and `keyed` are properties on `h`**, the builder every view receives as its last parameter. They are not top-level exports of `foldkit/html`, so they never belong in that import list. Same for `h.submodel`.
 - `AsyncData` for remote data state, `Update` for the update return type and the `combine` / `refresh` combinators, `Http` for the `layer` that provides `HttpClient` to a Command.
 - HTTP types come from `effect/unstable/http`, not `@effect/platform`. `@effect/platform-browser` is a separate package used for `BrowserKeyValueStore` and `BrowserCrypto`.

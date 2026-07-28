@@ -1,5 +1,5 @@
 import { Submodel } from 'foldkit'
-import { Html, html } from 'foldkit/html'
+import type { Html } from 'foldkit/html'
 import type { Url } from 'foldkit/url'
 
 import { exampleSourceHref } from '../../link'
@@ -17,7 +17,6 @@ import {
 import { uiTabsRouter } from '../../route'
 import * as Snippet from '../../snippet'
 import {
-  type CopiedSnippets,
   type RenderCopyButton,
   highlightedCodeBlockFor,
 } from '../../view/codeBlock'
@@ -209,18 +208,13 @@ const keyboardEntries: ReadonlyArray<KeyboardEntry> = [
 // VIEW
 
 type ViewInputs = Readonly<{
-  copiedSnippets: CopiedSnippets
   renderCopyButton: RenderCopyButton
   renderHeadingLink: RenderHeadingLink
   url: Url
 }>
 
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
-  (
-    _model,
-    { copiedSnippets, renderCopyButton, renderHeadingLink, url },
-  ): Html => {
-    const h = html<Message>()
+  (_model, { renderCopyButton, renderHeadingLink, url }, h): Html => {
     const { heading, tableOfContentsEntryToHeader } =
       headingsFor(renderHeadingLink)
     const highlightedCodeBlock = highlightedCodeBlockFor(renderCopyButton)
@@ -268,7 +262,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           inlineCode('ItemInfo<Value>'),
           ' per item.',
         ),
-        demoContainer(...Nav.basicDemo(url)),
+        demoContainer(...Nav.basicDemo(url, h)),
         highlightedCodeBlock(
           h.div(
             [h.Class('text-sm'), h.InnerHTML(Snippet.uiNavBasicHighlighted)],
@@ -276,7 +270,6 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           ),
           Snippet.uiNavBasicRaw,
           'Copy nav example to clipboard',
-          copiedSnippets,
           'mb-8',
         ),
         heading(stylingHeader.level, stylingHeader.id, stylingHeader.text),

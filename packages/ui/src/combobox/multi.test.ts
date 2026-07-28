@@ -1,4 +1,5 @@
 import { Option, flow } from 'effect'
+import type { HtmlBuilder } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
 import * as Story from 'foldkit/story'
 import { expect } from 'vitest'
@@ -18,6 +19,7 @@ import {
   CompletedPortalComboboxBackdrop,
   CompletedScrollIntoView,
   FocusInput,
+  type Message,
   Opened,
   PortalComboboxBackdrop,
   ScrollIntoView,
@@ -278,18 +280,22 @@ describe('Combobox.Multi', () => {
           'items' | 'itemToConfig' | 'itemToValue' | 'itemToDisplayText'
         > = {},
       ) =>
-      (model: Model) =>
-        view(model, {
-          items: ['Apple', 'Banana'],
-          itemToConfig: () => ({
-            content: null,
-          }),
-          itemToValue: item => item,
-          itemToDisplayText: item => item,
-          selectedValues: [],
-          restingInputValue: '',
-          ...overrides,
-        })
+      (model: Model, h: HtmlBuilder<Message>) =>
+        view(
+          model,
+          {
+            items: ['Apple', 'Banana'],
+            itemToConfig: () => ({
+              content: null,
+            }),
+            itemToValue: item => item,
+            itemToDisplayText: item => item,
+            selectedValues: [],
+            restingInputValue: '',
+            ...overrides,
+          },
+          h,
+        )
 
     describe('aria-multiselectable', () => {
       it('items container has aria-multiselectable', () => {

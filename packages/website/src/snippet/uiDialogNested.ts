@@ -2,7 +2,7 @@
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
 import { Command } from 'foldkit'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -71,9 +71,7 @@ ConfirmedDeleteProject: () => {
 // focus in the topmost, and Escape closes the topmost before the one beneath
 // it. Cancel dismisses the confirmation by spreading the `closeButton` bundle; Delete
 // dispatches a fact that runs the work and closes through Dialog.close.
-const view = () => {
-  const h = html<Message>()
-
+const view = (h: HtmlBuilder<Message>) => {
   const confirmDialog = h.submodel({
     slotId: model.confirmDialog.id,
     model: model.confirmDialog,

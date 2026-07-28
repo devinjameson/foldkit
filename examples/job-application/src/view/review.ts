@@ -1,6 +1,6 @@
 import { Array, Match as M, Option, pipe } from 'effect'
 import { File } from 'foldkit'
-import { type Html, html } from 'foldkit/html'
+import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { Button } from '@foldkit/ui'
 
@@ -10,22 +10,25 @@ import type { Model } from '../model'
 import { Education, PersonalInfo, Skills, WorkHistory } from '../step'
 import { employmentRange, pluralize } from './format'
 
-const reviewSection = (title: string, content: Html): Html => {
-  const h = html<Message>()
-
-  return h.section(
+const reviewSection = (
+  title: string,
+  content: Html,
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.section(
     [h.Class('rounded-lg border border-gray-200 p-4')],
     [
       h.h3([h.Class('text-sm font-semibold text-gray-900 mb-2')], [title]),
       content,
     ],
   )
-}
 
-const fieldRow = (label: string, value: string): Html => {
-  const h = html<Message>()
-
-  return value
+const fieldRow = (
+  label: string,
+  value: string,
+  h: HtmlBuilder<Message>,
+): Html =>
+  value
     ? h.div(
         [h.Class('flex justify-between py-1')],
         [
@@ -34,15 +37,13 @@ const fieldRow = (label: string, value: string): Html => {
         ],
       )
     : h.empty
-}
 
 const personalInfoSection = (
   personalInfo: Model['personalInfo'],
   pronounLabel: string,
-): Html => {
-  const h = html<Message>()
-
-  return reviewSection(
+  h: HtmlBuilder<Message>,
+): Html =>
+  reviewSection(
     'Personal Information',
     h.div(
       [h.Class('divide-y divide-gray-100')],
@@ -50,19 +51,21 @@ const personalInfoSection = (
         fieldRow(
           'Name',
           `${personalInfo.firstName.value} ${personalInfo.lastName.value}`.trim(),
+          h,
         ),
-        fieldRow('Email', personalInfo.email.value),
-        fieldRow('Phone', personalInfo.phone.value),
-        fieldRow('Pronouns', pronounLabel),
-        fieldRow('Portfolio', personalInfo.portfolioUrl.value),
+        fieldRow('Email', personalInfo.email.value, h),
+        fieldRow('Phone', personalInfo.phone.value, h),
+        fieldRow('Pronouns', pronounLabel, h),
+        fieldRow('Portfolio', personalInfo.portfolioUrl.value, h),
       ],
     ),
+    h,
   )
-}
 
-const workEntryReview = (entry: WorkHistory.Entry.Model): Html => {
-  const h = html<Message>()
-
+const workEntryReview = (
+  entry: WorkHistory.Entry.Model,
+  h: HtmlBuilder<Message>,
+): Html => {
   const title = entry.company.value
     ? `${entry.title.value} at ${entry.company.value}`
     : entry.title.value
@@ -91,17 +94,18 @@ const workEntryReview = (entry: WorkHistory.Entry.Model): Html => {
   )
 }
 
-const workHistorySection = (workHistory: Model['workHistory']): Html => {
-  const h = html<Message>()
-
-  return reviewSection(
+const workHistorySection = (
+  workHistory: Model['workHistory'],
+  h: HtmlBuilder<Message>,
+): Html =>
+  reviewSection(
     `Work History (${pluralize(workHistory.entries.length, 'position', 'positions')})`,
     h.div(
       [h.Class('space-y-2')],
-      workHistory.entries.map(entry => workEntryReview(entry)),
+      workHistory.entries.map(entry => workEntryReview(entry, h)),
     ),
+    h,
   )
-}
 
 const educationTimeline = (entry: Education.Entry.Model): string => {
   if (entry.isCurrentlyEnrolled) {
@@ -113,9 +117,10 @@ const educationTimeline = (entry: Education.Entry.Model): string => {
   })
 }
 
-const educationEntryReview = (entry: Education.Entry.Model): Html => {
-  const h = html<Message>()
-
+const educationEntryReview = (
+  entry: Education.Entry.Model,
+  h: HtmlBuilder<Message>,
+): Html => {
   const title = entry.fieldOfStudy.value
     ? `${entry.degree.value} in ${entry.fieldOfStudy.value}`
     : entry.degree.value
@@ -133,22 +138,24 @@ const educationEntryReview = (entry: Education.Entry.Model): Html => {
   )
 }
 
-const educationSection = (education: Model['education']): Html => {
-  const h = html<Message>()
-
-  return reviewSection(
+const educationSection = (
+  education: Model['education'],
+  h: HtmlBuilder<Message>,
+): Html =>
+  reviewSection(
     `Education (${pluralize(education.entries.length, 'entry', 'entries')})`,
     h.div(
       [h.Class('space-y-2')],
-      education.entries.map(entry => educationEntryReview(entry)),
+      education.entries.map(entry => educationEntryReview(entry, h)),
     ),
+    h,
   )
-}
 
-const skillsSection = (skills: Model['skills']): Html => {
-  const h = html<Message>()
-
-  return reviewSection(
+const skillsSection = (
+  skills: Model['skills'],
+  h: HtmlBuilder<Message>,
+): Html =>
+  reviewSection(
     `Skills (${skills.entries.length})`,
     h.div(
       [h.Class('flex flex-wrap gap-1.5')],
@@ -166,13 +173,14 @@ const skillsSection = (skills: Model['skills']): Html => {
           ),
         ),
     ),
+    h,
   )
-}
 
-const coverLetterSection = (coverLetter: Model['coverLetter']): Html => {
-  const h = html<Message>()
-
-  return reviewSection(
+const coverLetterSection = (
+  coverLetter: Model['coverLetter'],
+  h: HtmlBuilder<Message>,
+): Html =>
+  reviewSection(
     'Cover Letter',
     coverLetter.content
       ? h.p(
@@ -183,13 +191,14 @@ const coverLetterSection = (coverLetter: Model['coverLetter']): Html => {
           [h.Class('text-sm text-gray-400 italic')],
           ['No cover letter provided'],
         ),
+    h,
   )
-}
 
-const attachmentsSection = (attachments: Model['attachments']): Html => {
-  const h = html<Message>()
-
-  return reviewSection(
+const attachmentsSection = (
+  attachments: Model['attachments'],
+  h: HtmlBuilder<Message>,
+): Html =>
+  reviewSection(
     'Attachments',
     h.div(
       [h.Class('space-y-1')],
@@ -220,8 +229,8 @@ const attachmentsSection = (attachments: Model['attachments']): Html => {
         ),
       ],
     ),
+    h,
   )
-}
 
 const submitButtonClass =
   'w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-700 transition cursor-pointer'
@@ -233,55 +242,62 @@ const blockedNoticeText = (attentionSteps: ReadonlyArray<Step.Step>): string =>
       `Review ${pipe(steps, Array.map(Step.show), Array.join(', '))} before submitting.`,
   })
 
-const blockedNotice = (attentionSteps: ReadonlyArray<Step.Step>): Html => {
-  const h = html<Message>()
-
-  return h.p(
+const blockedNotice = (
+  attentionSteps: ReadonlyArray<Step.Step>,
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.p(
     [h.Class('text-sm text-red-600 text-center')],
     [blockedNoticeText(attentionSteps)],
   )
-}
 
 const submissionSection = (
   submission: Model['submission'],
   shouldShowBlockedNotice: boolean,
   attentionSteps: ReadonlyArray<Step.Step>,
-): Html => {
-  const h = html<Message>()
-
-  return M.value(submission).pipe(
+  h: HtmlBuilder<Message>,
+): Html =>
+  M.value(submission).pipe(
     M.tagsExhaustive({
       NotSubmitted: () =>
         h.div(
           [h.Class('pt-4 space-y-2')],
           [
-            ...(shouldShowBlockedNotice ? [blockedNotice(attentionSteps)] : []),
-            Button.view<Message>({
-              onClick: ClickedSubmit(),
-              toView: attributes =>
-                h.button(
-                  [...attributes.button, h.Class(submitButtonClass)],
-                  ['Submit Application'],
-                ),
-            }),
+            ...(shouldShowBlockedNotice
+              ? [blockedNotice(attentionSteps, h)]
+              : []),
+            Button.view(
+              {
+                onClick: ClickedSubmit(),
+                toView: attributes =>
+                  h.button(
+                    [...attributes.button, h.Class(submitButtonClass)],
+                    ['Submit Application'],
+                  ),
+              },
+              h,
+            ),
           ],
         ),
       Submitting: () =>
         h.div(
           [h.Class('pt-4')],
           [
-            Button.view<Message>({
-              toView: attributes =>
-                h.button(
-                  [
-                    ...attributes.button,
-                    h.Class(
-                      'w-full rounded-lg bg-indigo-400 px-4 py-3 text-sm font-semibold text-white cursor-wait',
-                    ),
-                  ],
-                  ['Submitting...'],
-                ),
-            }),
+            Button.view(
+              {
+                toView: attributes =>
+                  h.button(
+                    [
+                      ...attributes.button,
+                      h.Class(
+                        'w-full rounded-lg bg-indigo-400 px-4 py-3 text-sm font-semibold text-white cursor-wait',
+                      ),
+                    ],
+                    ['Submitting...'],
+                  ),
+              },
+              h,
+            ),
           ],
         ),
       SubmitSuccess: () =>
@@ -316,27 +332,30 @@ const submissionSection = (
               ],
               [error],
             ),
-            ...(shouldShowBlockedNotice ? [blockedNotice(attentionSteps)] : []),
-            Button.view<Message>({
-              onClick: ClickedSubmit(),
-              toView: attributes =>
-                h.button(
-                  [...attributes.button, h.Class(submitButtonClass)],
-                  ['Try Again'],
-                ),
-            }),
+            ...(shouldShowBlockedNotice
+              ? [blockedNotice(attentionSteps, h)]
+              : []),
+            Button.view(
+              {
+                onClick: ClickedSubmit(),
+                toView: attributes =>
+                  h.button(
+                    [...attributes.button, h.Class(submitButtonClass)],
+                    ['Try Again'],
+                  ),
+              },
+              h,
+            ),
           ],
         ),
     }),
   )
-}
 
 export const review = (
   model: Model,
   attentionSteps: ReadonlyArray<Step.Step>,
+  h: HtmlBuilder<Message>,
 ): Html => {
-  const h = html<Message>()
-
   const pronounLabel = Option.match(model.personalInfo.maybeSelectedPronoun, {
     onNone: () => '',
     onSome: value =>
@@ -352,16 +371,17 @@ export const review = (
   return h.div(
     [h.Class('space-y-4')],
     [
-      personalInfoSection(model.personalInfo, pronounLabel),
-      workHistorySection(model.workHistory),
-      educationSection(model.education),
-      skillsSection(model.skills),
-      coverLetterSection(model.coverLetter),
-      attachmentsSection(model.attachments),
+      personalInfoSection(model.personalInfo, pronounLabel, h),
+      workHistorySection(model.workHistory, h),
+      educationSection(model.education, h),
+      skillsSection(model.skills, h),
+      coverLetterSection(model.coverLetter, h),
+      attachmentsSection(model.attachments, h),
       submissionSection(
         model.submission,
         model.isSubmitAttempted && !isApplicationComplete,
         attentionSteps,
+        h,
       ),
     ],
   )

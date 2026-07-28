@@ -3,7 +3,7 @@
 // update, view, and subscription definitions.
 import { Match as M, Option, Schema as S } from 'effect'
 import { Command, Subscription } from 'foldkit'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -91,10 +91,8 @@ const subscriptions = Subscription.aggregate<Model, Message>()(
 // Inside your view function, render the slider. You control every element's
 // markup and classes through the `toView` callback. The `attributes` groups
 // provide ARIA, pointer, and keyboard wiring:
-const view = (model: Model) => {
-  const h = html<Message>()
-
-  return h.submodel({
+const view = (model: Model, h: HtmlBuilder<Message>) =>
+  h.submodel({
     slotId: 'rating',
     model: model.ratingDemo,
     view: Slider.view,
@@ -155,4 +153,3 @@ const view = (model: Model) => {
     },
     toParentMessage: message => GotSliderMessage({ message }),
   })
-}

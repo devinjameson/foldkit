@@ -1,5 +1,5 @@
 import { Schema as S } from 'effect'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import * as Scene from 'foldkit/scene'
 import { evo } from 'foldkit/struct'
@@ -26,9 +26,7 @@ const update = (model: Model, message: Message): readonly [Model, []] => [
 
 const sectionToHref = (section: Section): string => `#${section.toLowerCase()}`
 
-const sceneView = (model: Model) => {
-  const h = html<Message>()
-
+const sceneView = (model: Model, h: HtmlBuilder<Message>) => {
   return view<Section>({
     items: sections,
     ariaLabel: 'Primary',

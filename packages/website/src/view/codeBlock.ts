@@ -1,11 +1,11 @@
 import { clsx } from 'clsx'
 import { HashSet } from 'effect'
-import { Html, html } from 'foldkit/html'
+import { Html, type HtmlBuilder, staticHtml } from 'foldkit/html'
 
 import { Icon } from '../icon'
 import { ClickedCopySnippet, type Message } from '../message'
 
-const PagefindIgnore = html<Message>().DataAttribute('pagefind-ignore', '')
+const PagefindIgnore = staticHtml.DataAttribute('pagefind-ignore', '')
 
 export type CopiedSnippets = HashSet.HashSet<string>
 
@@ -27,10 +27,9 @@ const copyButtonWithIndicator = (
   textToCopy: string,
   ariaLabel: string,
   copiedSnippets: CopiedSnippets,
-  positionClass = 'top-2 right-2',
+  positionClass: string,
+  h: HtmlBuilder<Message>,
 ) => {
-  const h = html<Message>()
-
   const isCopied = HashSet.has(copiedSnippets, textToCopy)
 
   const copiedIndicator = isCopied
@@ -66,26 +65,33 @@ const copyButtonWithIndicator = (
   )
 }
 
-/** Builds the copy control directly, which is correct outside a Submodel. */
+/**
+ * Builds a copy control bound to the root frame's builder.
+ *
+ * This is the only way to construct a {@link RenderCopyButton}, and it demands
+ * a builder typed to the app's Message. A Submodel's own builder cannot satisfy
+ * it, which is what forces the control to be created by an ancestor and passed
+ * down rather than built in place.
+ */
 export const defaultRenderCopyButton =
-  (copiedSnippets: CopiedSnippets): RenderCopyButton =>
+  (copiedSnippets: CopiedSnippets, h: HtmlBuilder<Message>): RenderCopyButton =>
   (textToCopy, ariaLabel, positionClass) =>
     copyButtonWithIndicator(
       textToCopy,
       ariaLabel,
       copiedSnippets,
       positionClass,
+      h,
     )
 
 export const codeBlock = (
   code: string,
   ariaLabel: string,
-  copiedSnippets: CopiedSnippets,
+  renderCopyButton: RenderCopyButton,
   className?: string,
   language?: string,
-  renderCopyButton?: RenderCopyButton | undefined,
 ) => {
-  const h = html<Message>()
+  const h = staticHtml
 
   const languageAttribute =
     language === undefined ? [] : [h.DataAttribute('language', language)]
@@ -112,11 +118,7 @@ export const codeBlock = (
     ],
     [
       content,
-      (renderCopyButton ?? defaultRenderCopyButton(copiedSnippets))(
-        code,
-        ariaLabel,
-        'top-1/2 -translate-y-1/2 right-2',
-      ),
+      renderCopyButton(code, ariaLabel, 'top-1/2 -translate-y-1/2 right-2'),
     ],
   )
 }
@@ -125,22 +127,14 @@ export const highlightedCodeBlock = (
   content: Html,
   rawCode: string,
   ariaLabel: string,
-  copiedSnippets: CopiedSnippets,
+  renderCopyButton: RenderCopyButton,
   className?: string,
-  renderCopyButton?: RenderCopyButton | undefined,
 ) => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.div(
     [PagefindIgnore, h.Class(clsx('relative min-w-0 mt-8', className))],
-    [
-      content,
-      (renderCopyButton ?? defaultRenderCopyButton(copiedSnippets))(
-        rawCode,
-        ariaLabel,
-        'top-2 right-2',
-      ),
-    ],
+    [content, renderCopyButton(rawCode, ariaLabel, 'top-2 right-2')],
   )
 }
 
@@ -155,14 +149,12 @@ export const highlightedCodeBlockFor =
     content: Html,
     rawCode: string,
     ariaLabel: string,
-    copiedSnippets: CopiedSnippets,
     className?: string,
   ): Html =>
     highlightedCodeBlock(
       content,
       rawCode,
       ariaLabel,
-      copiedSnippets,
-      className,
       renderCopyButton,
+      className,
     )

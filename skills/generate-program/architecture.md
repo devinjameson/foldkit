@@ -37,7 +37,7 @@ There are no escape hatches:
 - **Model** is the single source of truth: an Effect Schema struct
 - **Messages** are facts about what happened: past-tense, never imperative
 - **update** is a pure function: `(model, message) → [nextModel, commands]`
-- **view** is a pure function: `(model) → Html`
+- **view** is a pure function: `(model, h) → Html`, where `h` is the builder the runtime supplies
 - **Commands** are the only place side effects happen. They return Messages
 
 ## Core Invariants
@@ -57,7 +57,7 @@ These operations belong in Commands, which return their results as Messages.
 
 ### 2. view is Pure
 
-The view function takes the Model and returns Html. It must not:
+The view function takes the Model and the builder `h`, and returns Html. It must not:
 
 - Access external state
 - Perform side effects
@@ -279,7 +279,7 @@ GotChildMessage: ({ message }) => {
 
 ### View Delegation
 
-Child views are embedded via `h.submodel`. The child writes a pure `(model) => Html` view (no awareness of the parent); the parent declares the Message wrap as data at the embed site:
+Child views are embedded via `h.submodel`. The child writes a pure `(model, h) => Html` view (no awareness of the parent); the parent declares the Message wrap as data at the embed site:
 
 ```ts
 // Parent view
@@ -291,13 +291,12 @@ h.submodel({
 })
 
 // Child view, branded with Submodel.defineView
-export const view = Submodel.defineView<Model, Message>(model => {
-  const h = html<Message>()
-  return h.button([h.OnClick(ClickedSubmit())], ['Submit'])
-})
+export const view = Submodel.defineView<Model, Message>((model, h) =>
+  h.button([h.OnClick(ClickedSubmit())], ['Submit']),
+)
 ```
 
-The runtime resolves the `toParentMessage` wrap at event-fire time through a scope registry, so the child's view stays pure and dispatches in its own Message type. Brand the view with `Submodel.defineView<Model, Message>` so `h.submodel` can infer the child's Message type at the embed site.
+The runtime resolves the `toParentMessage` wrap at event-fire time through a scope registry, so the child's view stays pure and dispatches in its own Message type. Brand the view with `Submodel.defineView<Model, Message>` so `h.submodel` can infer the child's Message type at the embed site. The `h` the child receives is typed by the child's own Message: the runtime supplies it per frame, so handlers built in the child's body can only carry Messages the child's boundary dispatches.
 
 ## Subscriptions
 
@@ -437,7 +436,7 @@ const element = Runtime.makeElement({
   Model,
   init,
   update,
-  view, // view: (model) => Html
+  view, // view: (model, h) => Html
   container: document.getElementById('widget'),
 })
 

@@ -1,5 +1,5 @@
 import { Match as M, Option } from 'effect'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 
 import { DatePicker } from '@foldkit/ui'
 import type { AnchorConfig } from '@foldkit/ui/popover'
@@ -73,9 +73,7 @@ const formatTriggerLabel = (
 ) =>
   `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`
 
-export const basicDemo = (model: Model) => {
-  const h = html<Message>()
-
+export const basicDemo = (model: Model, h: HtmlBuilder<Message>) => {
   const triggerContent = (
     maybeDate: Option.Option<
       Readonly<{ year: number; month: number; day: number }>

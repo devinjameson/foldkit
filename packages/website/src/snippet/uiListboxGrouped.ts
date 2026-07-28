@@ -3,7 +3,7 @@
 // update, and view definitions.
 import { Match as M, Option } from 'effect'
 import { Command } from 'foldkit'
-import { childAttributes, html } from 'foldkit/html'
+import { type HtmlBuilder, childAttributes } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -87,10 +87,8 @@ const characters: ReadonlyArray<Character> = [
 // Inside your view function, group items by a key and render a heading for
 // each group. Items are grouped in the order they appear. Make sure items
 // with the same key are contiguous in the items array:
-const view = (model: Model) => {
-  const h = html<Message>()
-
-  return h.submodel({
+const view = (model: Model, h: HtmlBuilder<Message>) =>
+  h.submodel({
     slotId: 'character',
     model: model.listbox,
     view: CharacterListbox.view,
@@ -127,4 +125,3 @@ const view = (model: Model) => {
     },
     toParentMessage: message => GotListboxMessage({ message }),
   })
-}

@@ -2,7 +2,7 @@ import { Effect, Exit, Match as M, Queue, Schema as S, Stream } from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as Command from '../command/index.js'
-import { type Html, html } from '../html/index.js'
+import { type Html, __htmlBuilder } from '../html/index.js'
 import { m } from '../message/index.js'
 import * as Mount from '../mount/index.js'
 import * as Port from '../port/index.js'
@@ -107,7 +107,7 @@ const TrackHost = Mount.define(
   }),
 )
 
-const h = html<Message>()
+const h = __htmlBuilder<Message>()
 
 const view = (model: Model): Html =>
   h.div(

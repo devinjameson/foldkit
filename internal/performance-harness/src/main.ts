@@ -1,6 +1,6 @@
 import { Array, Effect, Match as M, Number, Schema as S } from 'effect'
 import { Command, Runtime } from 'foldkit'
-import { Document, html } from 'foldkit/html'
+import { Document, type HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -117,8 +117,6 @@ export const init: Runtime.ApplicationInit<Model, Message> = () => [
 
 // VIEW
 
-const { div, button, h1, h2, p, code, Class, OnClick } = html<Message>()
-
 const buttonStyle =
   'font-mono text-sm bg-black text-white hover:bg-neutral-700 px-3 py-2 transition border border-black'
 
@@ -127,107 +125,111 @@ const blurbStyle = 'text-sm text-neutral-600 mb-3'
 const rowStyle = 'flex items-center gap-3'
 const stateStyle = 'text-sm text-neutral-700'
 
-export const view = (model: Model): Document => ({
-  title: 'Foldkit performance harness',
-  body: div(
-    [Class('min-h-screen bg-white text-black p-8 font-mono max-w-3xl')],
-    [
-      h1([Class('text-2xl font-bold mb-2')], ['Foldkit performance harness']),
-      p(
-        [Class('text-sm text-neutral-600 mb-8')],
-        [
-          'Internal harness. DevTools is on. ',
-          code([], ['Tick']),
-          ' is a small Message. The other buttons load large payloads or Models so subsequent dispatches stress runtime hot paths.',
-        ],
-      ),
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
+  const { div, button, h1, h2, p, code, Class, OnClick } = h
 
-      h2([Class(headingStyle)], ['Tick (small Message)']),
-      div(
-        [Class(rowStyle)],
-        [
-          button([OnClick(ClickedTick()), Class(buttonStyle)], ['Tick']),
-          div([Class(stateStyle)], [`tickCount: ${model.tickCount}`]),
-        ],
-      ),
+  return {
+    title: 'Foldkit performance harness',
+    body: div(
+      [Class('min-h-screen bg-white text-black p-8 font-mono max-w-3xl')],
+      [
+        h1([Class('text-2xl font-bold mb-2')], ['Foldkit performance harness']),
+        p(
+          [Class('text-sm text-neutral-600 mb-8')],
+          [
+            'Internal harness. DevTools is on. ',
+            code([], ['Tick']),
+            ' is a small Message. The other buttons load large payloads or Models so subsequent dispatches stress runtime hot paths.',
+          ],
+        ),
 
-      h2([Class(headingStyle)], ['Scenario: large Message payload']),
-      p(
-        [Class(blurbStyle)],
-        [
-          'Dispatch a Message carrying a 10k-item payload. The payload is not stored in the Model (only its size is). Then click ',
-          code([], ['Tick']),
-          ' repeatedly. If the runtime hot path walks captured Messages structurally, every Tick will hang.',
-        ],
-      ),
-      div(
-        [Class(rowStyle)],
-        [
-          button(
-            [
-              OnClick(ClickedDispatchLargeMessage({ payload: heavyPayload })),
-              Class(buttonStyle),
-            ],
-            ['Dispatch large Message'],
-          ),
-          div(
-            [Class(stateStyle)],
-            [`lastReceivedPayloadSize: ${model.lastReceivedPayloadSize}`],
-          ),
-        ],
-      ),
+        h2([Class(headingStyle)], ['Tick (small Message)']),
+        div(
+          [Class(rowStyle)],
+          [
+            button([OnClick(ClickedTick()), Class(buttonStyle)], ['Tick']),
+            div([Class(stateStyle)], [`tickCount: ${model.tickCount}`]),
+          ],
+        ),
 
-      h2([Class(headingStyle)], ['Scenario: large Model array']),
-      p(
-        [Class(blurbStyle)],
-        [
-          'Fill the Model with 10k items. Then click ',
-          code([], ['Tick']),
-          ' repeatedly. Every dispatch now runs modelEquivalence over a 10k-item array.',
-        ],
-      ),
-      div(
-        [Class(rowStyle)],
-        [
-          button(
-            [
-              OnClick(ClickedFillLargeModel({ items: heavyPayload })),
-              Class(buttonStyle),
-            ],
-            ['Fill Model (10k items)'],
-          ),
-          button(
-            [OnClick(ClickedClearLargeModel()), Class(buttonStyle)],
-            ['Clear'],
-          ),
-          div(
-            [Class(stateStyle)],
-            [`largeArray.length: ${model.largeArray.length}`],
-          ),
-        ],
-      ),
+        h2([Class(headingStyle)], ['Scenario: large Message payload']),
+        p(
+          [Class(blurbStyle)],
+          [
+            'Dispatch a Message carrying a 10k-item payload. The payload is not stored in the Model (only its size is). Then click ',
+            code([], ['Tick']),
+            ' repeatedly. If the runtime hot path walks captured Messages structurally, every Tick will hang.',
+          ],
+        ),
+        div(
+          [Class(rowStyle)],
+          [
+            button(
+              [
+                OnClick(ClickedDispatchLargeMessage({ payload: heavyPayload })),
+                Class(buttonStyle),
+              ],
+              ['Dispatch large Message'],
+            ),
+            div(
+              [Class(stateStyle)],
+              [`lastReceivedPayloadSize: ${model.lastReceivedPayloadSize}`],
+            ),
+          ],
+        ),
 
-      h2([Class(headingStyle)], ['Scenario: deep history']),
-      p(
-        [Class(blurbStyle)],
-        [
-          'Dispatch 500 small Messages so the DevTools store fills its history. ',
-          'The follow-latest path used to replay up to KEYFRAME_INTERVAL user updates ',
-          'on every dispatch to recover the model the inspector pane shows. After ',
-          'filling, click ',
-          code([], ['Tick']),
-          ' rapidly. If the regression returns, every Tick will hang on the replay walk.',
-        ],
-      ),
-      div(
-        [Class(rowStyle)],
-        [
-          button(
-            [OnClick(ClickedFillHistory()), Class(buttonStyle)],
-            [`Fill history (${HISTORY_FILL_COUNT} Messages)`],
-          ),
-        ],
-      ),
-    ],
-  ),
-})
+        h2([Class(headingStyle)], ['Scenario: large Model array']),
+        p(
+          [Class(blurbStyle)],
+          [
+            'Fill the Model with 10k items. Then click ',
+            code([], ['Tick']),
+            ' repeatedly. Every dispatch now runs modelEquivalence over a 10k-item array.',
+          ],
+        ),
+        div(
+          [Class(rowStyle)],
+          [
+            button(
+              [
+                OnClick(ClickedFillLargeModel({ items: heavyPayload })),
+                Class(buttonStyle),
+              ],
+              ['Fill Model (10k items)'],
+            ),
+            button(
+              [OnClick(ClickedClearLargeModel()), Class(buttonStyle)],
+              ['Clear'],
+            ),
+            div(
+              [Class(stateStyle)],
+              [`largeArray.length: ${model.largeArray.length}`],
+            ),
+          ],
+        ),
+
+        h2([Class(headingStyle)], ['Scenario: deep history']),
+        p(
+          [Class(blurbStyle)],
+          [
+            'Dispatch 500 small Messages so the DevTools store fills its history. ',
+            'The follow-latest path used to replay up to KEYFRAME_INTERVAL user updates ',
+            'on every dispatch to recover the model the inspector pane shows. After ',
+            'filling, click ',
+            code([], ['Tick']),
+            ' rapidly. If the regression returns, every Tick will hang on the replay walk.',
+          ],
+        ),
+        div(
+          [Class(rowStyle)],
+          [
+            button(
+              [OnClick(ClickedFillHistory()), Class(buttonStyle)],
+              [`Fill history (${HISTORY_FILL_COUNT} Messages)`],
+            ),
+          ],
+        ),
+      ],
+    ),
+  }
+}

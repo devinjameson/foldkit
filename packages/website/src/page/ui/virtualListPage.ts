@@ -1,5 +1,5 @@
 import { Submodel } from 'foldkit'
-import { Html, html } from 'foldkit/html'
+import type { Html } from 'foldkit/html'
 
 import { uiShowcaseViewSourceHref } from '../../link'
 import type { TableOfContentsEntry } from '../../main'
@@ -14,7 +14,6 @@ import {
 } from '../../prose'
 import * as Snippet from '../../snippet'
 import {
-  type CopiedSnippets,
   type RenderCopyButton,
   highlightedCodeBlockFor,
 } from '../../view/codeBlock'
@@ -201,14 +200,12 @@ const dataAttributes: ReadonlyArray<DataAttributeEntry> = [
 // VIEW
 
 type ViewInputs = Readonly<{
-  copiedSnippets: CopiedSnippets
   renderCopyButton: RenderCopyButton
   renderHeadingLink: RenderHeadingLink
 }>
 
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
-  (model, { copiedSnippets, renderCopyButton, renderHeadingLink }): Html => {
-    const h = html<Message>()
+  (model, { renderCopyButton, renderHeadingLink }, h): Html => {
     const { heading, tableOfContentsEntryToHeader } =
       headingsFor(renderHeadingLink)
     const highlightedCodeBlock = highlightedCodeBlockFor(renderCopyButton)
@@ -241,7 +238,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           inlineCode('rowHeightPx'),
           '. The component divides scroll math by that constant. Prefer this path when row heights are stable.',
         ),
-        ...VirtualList.virtualListDemo(model.virtualListDemo),
+        ...VirtualList.virtualListDemo(model.virtualListDemo, h),
         highlightedCodeBlock(
           h.div(
             [
@@ -252,7 +249,6 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           ),
           Snippet.uiVirtualListBasicRaw,
           'Copy virtual list example to clipboard',
-          copiedSnippets,
           'mb-8',
         ),
         heading(variableHeader.level, variableHeader.id, variableHeader.text),
@@ -276,7 +272,10 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           inlineCode('view'),
           ' so the math agrees.',
         ),
-        ...VirtualList.virtualListVariableDemo(model.virtualListVariableDemo),
+        ...VirtualList.virtualListVariableDemo(
+          model.virtualListVariableDemo,
+          h,
+        ),
         highlightedCodeBlock(
           h.div(
             [
@@ -287,7 +286,6 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           ),
           Snippet.uiVirtualListVariableRaw,
           'Copy variable-height virtual list example to clipboard',
-          copiedSnippets,
           'mb-8',
         ),
         heading(

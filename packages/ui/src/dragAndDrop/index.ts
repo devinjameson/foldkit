@@ -12,7 +12,7 @@ import {
 } from 'effect'
 import * as Command from 'foldkit/command'
 import * as Dom from 'foldkit/dom'
-import { type Attribute, html } from 'foldkit/html'
+import { type Attribute, type HtmlBuilder, staticHtml } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
@@ -817,9 +817,12 @@ const arrowKeyToDirection = (key: string): Option.Option<Direction> =>
 // NOTE: DragAndDrop has no `view` function and is not embedded via
 // `h.submodel`. It's a behavior+helpers component: the consumer renders
 // their own elements (cards, columns) and attaches the attribute bundles
-// returned by `draggable`, `droppable`, and `sortable` below. Each helper
-// is parameterized over the consumer's `ParentMessage`; threading
-// `toParentMessage` is the consumer's responsibility.
+// returned by `draggable`, `droppable`, and `sortable` below. Only
+// `draggable` carries Messages, so only it is parameterized over the
+// consumer's `ParentMessage`, and threading `toParentMessage` is the
+// consumer's responsibility. `droppable` and `sortable` are data attributes
+// with no handlers, so they return `Attribute<never>`, which flows into any
+// Message universe.
 
 /** Messages the draggable view helper can dispatch. */
 export type DraggableMessage =
@@ -838,9 +841,8 @@ export type DraggableConfig<ParentMessage> = Readonly<{
 /** Returns attributes the parent attaches to a draggable element. Handles pointer-down, keyboard activation, and ARIA. */
 export const draggable = <ParentMessage>(
   config: DraggableConfig<ParentMessage>,
+  h: HtmlBuilder<ParentMessage>,
 ): ReadonlyArray<Attribute<ParentMessage>> => {
-  const h = html<ParentMessage>()
-
   const isKeyboardDragActivationKey = (key: string): boolean =>
     key === ' ' || key === 'Enter'
 
@@ -901,26 +903,25 @@ export const draggable = <ParentMessage>(
   ]
 }
 
-/** Returns attributes the parent attaches to a droppable container element. */
-export const droppable = <ParentMessage>(
+/** Returns attributes the parent attaches to a droppable container element.
+ *  Handler-free, so the bundle is built with `staticHtml` and spreads into
+ *  any Message universe's attribute array. */
+export const droppable = (
   containerId: string,
   label?: string,
-): ReadonlyArray<Attribute<ParentMessage>> => {
-  const h = html<ParentMessage>()
-  return [
-    h.DataAttribute('droppable-id', containerId),
-    h.Role('listbox'),
-    ...(label ? [h.AriaLabel(label)] : []),
-  ]
-}
+): ReadonlyArray<Attribute<never>> => [
+  staticHtml.DataAttribute('droppable-id', containerId),
+  staticHtml.Role('listbox'),
+  ...(label ? [staticHtml.AriaLabel(label)] : []),
+]
 
-/** Returns attributes the parent attaches to a sortable item element. Typically combined with `draggable`. */
-export const sortable = <ParentMessage>(
-  itemId: string,
-): ReadonlyArray<Attribute<ParentMessage>> => {
-  const h = html<ParentMessage>()
-  return [h.DataAttribute('sortable-id', itemId)]
-}
+/** Returns attributes the parent attaches to a sortable item element.
+ *  Typically combined with `draggable`. Handler-free, so the bundle is built
+ *  with `staticHtml` and spreads into any Message universe's attribute
+ *  array. */
+export const sortable = (itemId: string): ReadonlyArray<Attribute<never>> => [
+  staticHtml.DataAttribute('sortable-id', itemId),
+]
 
 const ghostTransform = (clientX: number, clientY: number): string =>
   `translate3d(${String(clientX)}px, ${String(clientY)}px, 0)`

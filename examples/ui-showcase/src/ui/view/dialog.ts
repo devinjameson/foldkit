@@ -1,6 +1,6 @@
 import { Option } from 'effect'
 import { Submodel } from 'foldkit'
-import { Html, html } from 'foldkit/html'
+import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { Combobox, Dialog } from '@foldkit/ui'
 
@@ -66,9 +66,8 @@ const dialogPanel = (
   closeButton: Dialog.RenderInfo['closeButton'],
   title: Dialog.RenderInfo['title'],
   description: Dialog.RenderInfo['description'],
+  h: HtmlBuilder<UiMessage>,
 ): Html => {
-  const h = html<UiMessage>()
-
   return h.div(
     [],
     [
@@ -100,9 +99,8 @@ const overlayDemo = (
   dialogModel: Dialog.Model,
   comboboxModel: Combobox.Model,
   maybeSelectedCity: Option.Option<City>,
+  h: HtmlBuilder<UiMessage>,
 ): Html => {
-  const h = html<UiMessage>()
-
   return h.div(
     [],
     [
@@ -151,15 +149,18 @@ const overlayDemo = (
                           model: comboboxModel,
                           view: CityCombobox.view,
                           viewInputs: {
-                            ...comboboxInputs({
-                              inputValue: comboboxModel.inputValue,
-                              restingInputValue: Option.getOrElse(
-                                maybeSelectedCity,
-                                () => '',
-                              ),
-                              anchor: OVERLAY_COMBOBOX_ANCHOR,
-                              wrapperClass: 'relative w-full',
-                            }),
+                            ...comboboxInputs(
+                              {
+                                inputValue: comboboxModel.inputValue,
+                                restingInputValue: Option.getOrElse(
+                                  maybeSelectedCity,
+                                  () => '',
+                                ),
+                                anchor: OVERLAY_COMBOBOX_ANCHOR,
+                                wrapperClass: 'relative w-full',
+                              },
+                              h,
+                            ),
                             maybeSelectedValue: maybeSelectedCity,
                           },
                           toParentMessage: message =>
@@ -180,9 +181,8 @@ const overlayDemo = (
 const nestedDemo = (
   parentDialogModel: Dialog.Model,
   childDialogModel: Dialog.Model,
+  h: HtmlBuilder<UiMessage>,
 ): Html => {
-  const h = html<UiMessage>()
-
   return h.div(
     [],
     [
@@ -313,118 +313,126 @@ const nestedDemo = (
   )
 }
 
-export const view = Submodel.defineView<UiModel, UiMessage>((model): Html => {
-  const h = html<UiMessage>()
+export const view = Submodel.defineView<UiModel, UiMessage>(
+  (model, h): Html => {
+    return h.div(
+      [],
+      [
+        h.h2([h.Class('text-2xl font-bold text-gray-900 mb-6')], ['Dialog']),
 
-  return h.div(
-    [],
-    [
-      h.h2([h.Class('text-2xl font-bold text-gray-900 mb-6')], ['Dialog']),
-
-      h.h3(
-        [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
-        ['Basic'],
-      ),
-      h.div(
-        [h.Class('flex gap-3')],
-        [
-          h.button(
-            [h.Class(triggerClassName), h.OnClick(ClickedOpenDialog())],
-            ['Open Dialog'],
-          ),
-        ],
-      ),
-      h.submodel({
-        slotId: model.dialogDemo.id,
-        model: model.dialogDemo,
-        view: Dialog.view,
-        viewInputs: {
-          toView: ({
-            dialog,
-            backdrop,
-            panel,
-            closeButton,
-            title,
-            description,
-            isVisible,
-          }) =>
-            h.dialog(
-              [...dialog, h.Class(dialogClassName)],
-              isVisible
-                ? [
-                    h.div([...backdrop, h.Class(backdropClassName)], []),
-                    h.div(
-                      [...panel, h.Class(panelClassName)],
-                      [dialogPanel(closeButton, title, description)],
-                    ),
-                  ]
-                : [],
+        h.h3(
+          [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
+          ['Basic'],
+        ),
+        h.div(
+          [h.Class('flex gap-3')],
+          [
+            h.button(
+              [h.Class(triggerClassName), h.OnClick(ClickedOpenDialog())],
+              ['Open Dialog'],
             ),
-        },
-        toParentMessage: message => GotDialogDemoMessage({ message }),
-      }),
+          ],
+        ),
+        h.submodel({
+          slotId: model.dialogDemo.id,
+          model: model.dialogDemo,
+          view: Dialog.view,
+          viewInputs: {
+            toView: ({
+              dialog,
+              backdrop,
+              panel,
+              closeButton,
+              title,
+              description,
+              isVisible,
+            }) =>
+              h.dialog(
+                [...dialog, h.Class(dialogClassName)],
+                isVisible
+                  ? [
+                      h.div([...backdrop, h.Class(backdropClassName)], []),
+                      h.div(
+                        [...panel, h.Class(panelClassName)],
+                        [dialogPanel(closeButton, title, description, h)],
+                      ),
+                    ]
+                  : [],
+              ),
+          },
+          toParentMessage: message => GotDialogDemoMessage({ message }),
+        }),
 
-      h.h3(
-        [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
-        ['Animated'],
-      ),
-      h.div(
-        [h.Class('flex gap-3')],
-        [
-          h.button(
-            [h.Class(triggerClassName), h.OnClick(ClickedOpenAnimatedDialog())],
-            ['Open Animated Dialog'],
-          ),
-        ],
-      ),
-      h.submodel({
-        slotId: model.dialogAnimatedDemo.id,
-        model: model.dialogAnimatedDemo,
-        view: Dialog.view,
-        viewInputs: {
-          toView: ({
-            dialog,
-            backdrop,
-            panel,
-            closeButton,
-            title,
-            description,
-            isVisible,
-          }) =>
-            h.dialog(
-              [...dialog, h.Class(dialogClassName)],
-              isVisible
-                ? [
-                    h.div(
-                      [...backdrop, h.Class(animatedBackdropClassName)],
-                      [],
-                    ),
-                    h.div(
-                      [...panel, h.Class(animatedPanelClassName)],
-                      [dialogPanel(closeButton, title, description)],
-                    ),
-                  ]
-                : [],
+        h.h3(
+          [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
+          ['Animated'],
+        ),
+        h.div(
+          [h.Class('flex gap-3')],
+          [
+            h.button(
+              [
+                h.Class(triggerClassName),
+                h.OnClick(ClickedOpenAnimatedDialog()),
+              ],
+              ['Open Animated Dialog'],
             ),
-        },
-        toParentMessage: message => GotDialogAnimatedDemoMessage({ message }),
-      }),
+          ],
+        ),
+        h.submodel({
+          slotId: model.dialogAnimatedDemo.id,
+          model: model.dialogAnimatedDemo,
+          view: Dialog.view,
+          viewInputs: {
+            toView: ({
+              dialog,
+              backdrop,
+              panel,
+              closeButton,
+              title,
+              description,
+              isVisible,
+            }) =>
+              h.dialog(
+                [...dialog, h.Class(dialogClassName)],
+                isVisible
+                  ? [
+                      h.div(
+                        [...backdrop, h.Class(animatedBackdropClassName)],
+                        [],
+                      ),
+                      h.div(
+                        [...panel, h.Class(animatedPanelClassName)],
+                        [dialogPanel(closeButton, title, description, h)],
+                      ),
+                    ]
+                  : [],
+              ),
+          },
+          toParentMessage: message => GotDialogAnimatedDemoMessage({ message }),
+        }),
 
-      h.h3(
-        [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
-        ['Field'],
-      ),
-      overlayDemo(
-        model.overlayDialogDemo,
-        model.overlayComboboxDemo,
-        model.maybeOverlayComboboxDemoSelectedCity,
-      ),
+        h.h3(
+          [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
+          ['Field'],
+        ),
+        overlayDemo(
+          model.overlayDialogDemo,
+          model.overlayComboboxDemo,
+          model.maybeOverlayComboboxDemoSelectedCity,
+          h,
+        ),
 
-      h.h3(
-        [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
-        ['Stacked'],
-      ),
-      nestedDemo(model.nestedDialogParentDemo, model.nestedDialogChildDemo),
-    ],
-  )
-})
+        h.h3(
+          [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
+          ['Stacked'],
+        ),
+        nestedDemo(
+          model.nestedDialogParentDemo,
+          model.nestedDialogChildDemo,
+          h,
+        ),
+      ],
+    )
+  },
+)

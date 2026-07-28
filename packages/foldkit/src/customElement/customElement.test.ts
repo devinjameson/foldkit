@@ -4,8 +4,8 @@ import { expect } from 'vitest'
 import { describe, it } from '@effect/vitest'
 
 import {
+  __htmlBuilder,
   __clearRuntime as clearHtmlRuntime,
-  html,
   __setRuntime as setHtmlRuntime,
 } from '../html/index.js'
 import { m } from '../message/index.js'
@@ -98,7 +98,7 @@ const patchInto = (vnode: VNode): Element => {
 
 describe('CustomElement.define', () => {
   it('renders the declared tag', () => {
-    const rating = emojiRating.withMessage<Message>()
+    const rating = emojiRating.withMessage(__htmlBuilder<Message>())
     const { dispatch } = createCapturingDispatch()
 
     const view = () => rating()
@@ -108,7 +108,7 @@ describe('CustomElement.define', () => {
   })
 
   it('produces a PascalCase factory per declared property that writes a JS property on the element', () => {
-    const rating = emojiRating.withMessage<Message>()
+    const rating = emojiRating.withMessage(__htmlBuilder<Message>())
     const { dispatch } = createCapturingDispatch()
 
     const view = () =>
@@ -131,7 +131,7 @@ describe('CustomElement.define', () => {
   })
 
   it('produces an On{PascalCase} factory per declared event that converts kebab-cased event names', () => {
-    const rating = emojiRating.withMessage<Message>()
+    const rating = emojiRating.withMessage(__htmlBuilder<Message>())
     const { dispatch, dispatched } = createCapturingDispatch()
 
     const view = () =>
@@ -153,7 +153,7 @@ describe('CustomElement.define', () => {
   })
 
   it('preserves property updates across renders via the propsModule diff', () => {
-    const rating = emojiRating.withMessage<Message>()
+    const rating = emojiRating.withMessage(__htmlBuilder<Message>())
     const { dispatch } = createCapturingDispatch()
 
     const renderWithValue = (value: number): VNode =>
@@ -172,8 +172,8 @@ describe('CustomElement.define', () => {
   })
 
   it('composes with standard html attributes from the same h factory', () => {
-    const rating = emojiRating.withMessage<Message>()
-    const h = html<Message>()
+    const h = __htmlBuilder<Message>()
+    const rating = emojiRating.withMessage(h)
     const { dispatch } = createCapturingDispatch()
 
     const view = () => rating([rating.Value(3), h.Class('block w-full')])
@@ -293,7 +293,7 @@ describe('CustomElement.define validation', () => {
       properties: {},
       events: { 'change-rating-value': S.Struct({ value: S.Number }) },
     })
-    const builder = spec.withMessage<Message>()
+    const builder = spec.withMessage(__htmlBuilder<Message>())
     expect('OnChangeRatingValue' in builder).toBe(true)
   })
 })

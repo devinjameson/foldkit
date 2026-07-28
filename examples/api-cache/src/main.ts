@@ -11,7 +11,7 @@ import {
   pipe,
 } from 'effect'
 import { AsyncData, Command, Runtime, Subscription } from 'foldkit'
-import { Document, Html, html } from 'foldkit/html'
+import { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -353,73 +353,67 @@ const tabButtonClassName =
 const toolbarButtonClassName =
   'px-3 py-1.5 bg-white text-slate-700 text-sm font-semibold rounded-md shadow hover:bg-slate-50 transition cursor-pointer data-[disabled]:opacity-50 data-[disabled]:cursor-default data-[disabled]:hover:bg-white'
 
-export const view = (model: Model): Document => {
-  const h = html<Message>()
-
-  return {
-    title: 'API Cache',
-    body: h.div(
-      [h.Class('min-h-screen bg-slate-100 flex justify-center p-6')],
-      [
-        h.div(
-          [h.Class('w-full max-w-2xl flex flex-col gap-6')],
-          [
-            headerView(),
-            h.submodel({
-              slotId: TABS_ID,
-              model: model.tabs,
-              view: AppTabs.view,
-              viewInputs: {
-                tabs: tabValues,
-                selectedValue: model.activeTab,
-                ariaLabel: 'API cache sections',
-                toView: ({ tablist, tabs }) =>
-                  h.div(
-                    [h.Class('flex flex-col gap-6')],
-                    [
-                      h.div(
-                        [...tablist, h.Class('flex gap-2')],
-                        Array.map(tabs, tabInfo =>
-                          h.keyed('button')(
-                            tabInfo.value,
-                            [...tabInfo.tab, h.Class(tabButtonClassName)],
-                            [tabInfo.value],
-                          ),
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
+  title: 'API Cache',
+  body: h.div(
+    [h.Class('min-h-screen bg-slate-100 flex justify-center p-6')],
+    [
+      h.div(
+        [h.Class('w-full max-w-2xl flex flex-col gap-6')],
+        [
+          headerView(h),
+          h.submodel({
+            slotId: TABS_ID,
+            model: model.tabs,
+            view: AppTabs.view,
+            viewInputs: {
+              tabs: tabValues,
+              selectedValue: model.activeTab,
+              ariaLabel: 'API cache sections',
+              toView: ({ tablist, tabs }) =>
+                h.div(
+                  [h.Class('flex flex-col gap-6')],
+                  [
+                    h.div(
+                      [...tablist, h.Class('flex gap-2')],
+                      Array.map(tabs, tabInfo =>
+                        h.keyed('button')(
+                          tabInfo.value,
+                          [...tabInfo.tab, h.Class(tabButtonClassName)],
+                          [tabInfo.value],
                         ),
                       ),
-                      ...pipe(
-                        tabs,
-                        Array.filter(tabInfo => tabInfo.isActive),
-                        Array.map(tabInfo =>
-                          h.keyed('div')(
-                            tabInfo.value,
-                            [...tabInfo.panel, h.Class('flex flex-col gap-4')],
-                            [
-                              M.value(tabInfo.value).pipe(
-                                M.when('Posts', () => postsTabView(model)),
-                                M.when('Stats', () => statsTabView(model)),
-                                M.exhaustive,
-                              ),
-                            ],
-                          ),
+                    ),
+                    ...pipe(
+                      tabs,
+                      Array.filter(tabInfo => tabInfo.isActive),
+                      Array.map(tabInfo =>
+                        h.keyed('div')(
+                          tabInfo.value,
+                          [...tabInfo.panel, h.Class('flex flex-col gap-4')],
+                          [
+                            M.value(tabInfo.value).pipe(
+                              M.when('Posts', () => postsTabView(model, h)),
+                              M.when('Stats', () => statsTabView(model, h)),
+                              M.exhaustive,
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-              },
-              toParentMessage: message => GotTabsMessage({ message }),
-            }),
-          ],
-        ),
-      ],
-    ),
-  }
-}
+                    ),
+                  ],
+                ),
+            },
+            toParentMessage: message => GotTabsMessage({ message }),
+          }),
+        ],
+      ),
+    ],
+  ),
+})
 
-const headerView = (): Html => {
-  const h = html<Message>()
-
-  return h.header(
+const headerView = (h: HtmlBuilder<Message>): Html =>
+  h.header(
     [h.Class('flex flex-col gap-1')],
     [
       h.h1([h.Class('text-3xl font-bold text-slate-900')], ['API Cache']),
@@ -431,26 +425,20 @@ const headerView = (): Html => {
       ),
     ],
   )
-}
 
-const postsTabView = (model: Model): Html => {
-  const h = html<Message>()
-
-  return Option.match(model.maybeSelectedPostId, {
+const postsTabView = (model: Model, h: HtmlBuilder<Message>): Html =>
+  Option.match(model.maybeSelectedPostId, {
     onNone: () =>
-      h.section([h.Class('flex flex-col gap-4')], [postsListView(model)]),
+      h.section([h.Class('flex flex-col gap-4')], [postsListView(model, h)]),
     onSome: postId =>
       h.keyed('section')(
         postId,
         [h.Class('flex flex-col gap-4')],
-        [postDetailView(model, postId)],
+        [postDetailView(model, postId, h)],
       ),
   })
-}
 
-const postsListView = (model: Model): Html => {
-  const h = html<Message>()
-
+const postsListView = (model: Model, h: HtmlBuilder<Message>): Html => {
   const isPending = AsyncData.isPending(model.posts)
 
   return h.div(
@@ -460,19 +448,22 @@ const postsListView = (model: Model): Html => {
         [h.Class('flex items-center justify-between')],
         [
           h.h2([h.Class('text-xl font-bold text-slate-800')], ['Posts']),
-          Button.view({
-            onClick: ClickedInvalidatePosts(),
-            isDisabled: isPending,
-            toView: attributes =>
-              h.button(
-                [...attributes.button, h.Class(toolbarButtonClassName)],
-                [
-                  AsyncData.isRefreshing(model.posts)
-                    ? 'Refreshing...'
-                    : 'Invalidate',
-                ],
-              ),
-          }),
+          Button.view(
+            {
+              onClick: ClickedInvalidatePosts(),
+              isDisabled: isPending,
+              toView: attributes =>
+                h.button(
+                  [...attributes.button, h.Class(toolbarButtonClassName)],
+                  [
+                    AsyncData.isRefreshing(model.posts)
+                      ? 'Refreshing...'
+                      : 'Invalidate',
+                  ],
+                ),
+            },
+            h,
+          ),
         ],
       ),
       h.p(
@@ -482,20 +473,20 @@ const postsListView = (model: Model): Html => {
         ],
       ),
       AsyncData.matchDataSplitEmpty(model.posts, {
-        onIdle: () => loadingPanel('Loading posts...'),
-        onLoading: () => loadingPanel('Loading posts...'),
-        onFailure: error => errorPanel(error, ClickedRetryPosts()),
+        onIdle: () => loadingPanel('Loading posts...', h),
+        onLoading: () => loadingPanel('Loading posts...', h),
+        onFailure: error => errorPanel(error, ClickedRetryPosts(), h),
         onData: ({ posts }) =>
           h.div(
             [h.Class('flex flex-col gap-4')],
             [
               ...Option.match(AsyncData.getError(model.posts), {
                 onNone: () => [],
-                onSome: error => [staleView(error, ClickedRetryPosts())],
+                onSome: error => [staleView(error, ClickedRetryPosts(), h)],
               }),
               h.ul(
                 [h.Class('flex flex-col gap-2')],
-                postListItems(posts, model.postDetailById),
+                postListItems(posts, model.postDetailById, h),
               ),
             ],
           ),
@@ -513,56 +504,62 @@ const isPostDetailCached = (
 const postListItems = (
   posts: ReadonlyArray<Post>,
   postDetailById: HashMap.HashMap<string, PostDetailData>,
-): ReadonlyArray<Html> => {
-  const h = html<Message>()
-
-  return Array.map(posts, post =>
+  h: HtmlBuilder<Message>,
+): ReadonlyArray<Html> =>
+  Array.map(posts, post =>
     h.keyed('li')(
       post.id,
       [],
       [
-        Button.view({
-          onClick: ClickedPost({ postId: post.id }),
-          toView: attributes =>
-            h.button(
-              [
-                ...attributes.button,
-                h.Class(
-                  'w-full text-left bg-white rounded-lg shadow px-4 py-3 hover:bg-slate-50 transition cursor-pointer flex items-center justify-between gap-4',
-                ),
-              ],
-              [
-                h.div(
-                  [],
-                  [
-                    h.div(
-                      [h.Class('font-semibold text-slate-800')],
-                      [post.title],
-                    ),
-                    h.div([h.Class('text-sm text-slate-500')], [post.excerpt]),
-                  ],
-                ),
-                isPostDetailCached(postDetailById, post.id)
-                  ? h.span(
-                      [
-                        h.Class(
-                          'shrink-0 text-xs font-semibold text-emerald-700 bg-emerald-100 rounded-full px-2 py-1',
-                        ),
-                      ],
-                      ['Cached'],
-                    )
-                  : h.empty,
-              ],
-            ),
-        }),
+        Button.view(
+          {
+            onClick: ClickedPost({ postId: post.id }),
+            toView: attributes =>
+              h.button(
+                [
+                  ...attributes.button,
+                  h.Class(
+                    'w-full text-left bg-white rounded-lg shadow px-4 py-3 hover:bg-slate-50 transition cursor-pointer flex items-center justify-between gap-4',
+                  ),
+                ],
+                [
+                  h.div(
+                    [],
+                    [
+                      h.div(
+                        [h.Class('font-semibold text-slate-800')],
+                        [post.title],
+                      ),
+                      h.div(
+                        [h.Class('text-sm text-slate-500')],
+                        [post.excerpt],
+                      ),
+                    ],
+                  ),
+                  isPostDetailCached(postDetailById, post.id)
+                    ? h.span(
+                        [
+                          h.Class(
+                            'shrink-0 text-xs font-semibold text-emerald-700 bg-emerald-100 rounded-full px-2 py-1',
+                          ),
+                        ],
+                        ['Cached'],
+                      )
+                    : h.empty,
+                ],
+              ),
+          },
+          h,
+        ),
       ],
     ),
   )
-}
 
-const postDetailView = (model: Model, postId: string): Html => {
-  const h = html<Message>()
-
+const postDetailView = (
+  model: Model,
+  postId: string,
+  h: HtmlBuilder<Message>,
+): Html => {
   const postDetailData = Option.getOrElse(
     HashMap.get(model.postDetailById, postId),
     () => PostDetailData.Idle(),
@@ -571,24 +568,27 @@ const postDetailView = (model: Model, postId: string): Html => {
   return h.div(
     [h.Class('flex flex-col gap-4')],
     [
-      Button.view({
-        onClick: ClickedBackToPosts(),
-        toView: attributes =>
-          h.button(
-            [
-              ...attributes.button,
-              h.Class(
-                'self-start text-sm font-semibold text-indigo-600 hover:underline cursor-pointer',
-              ),
-            ],
-            ['Back to posts'],
-          ),
-      }),
+      Button.view(
+        {
+          onClick: ClickedBackToPosts(),
+          toView: attributes =>
+            h.button(
+              [
+                ...attributes.button,
+                h.Class(
+                  'self-start text-sm font-semibold text-indigo-600 hover:underline cursor-pointer',
+                ),
+              ],
+              ['Back to posts'],
+            ),
+        },
+        h,
+      ),
       AsyncData.matchDataSplitEmpty(postDetailData, {
-        onIdle: () => loadingPanel('Loading post...'),
-        onLoading: () => loadingPanel('Loading post...'),
+        onIdle: () => loadingPanel('Loading post...', h),
+        onLoading: () => loadingPanel('Loading post...', h),
         onFailure: error =>
-          errorPanel(error, ClickedRetryPostDetail({ postId })),
+          errorPanel(error, ClickedRetryPostDetail({ postId }), h),
         onData: ({ detail, fetchedAt }) =>
           h.div(
             [h.Class('flex flex-col gap-4')],
@@ -596,10 +596,10 @@ const postDetailView = (model: Model, postId: string): Html => {
               ...Option.match(AsyncData.getError(postDetailData), {
                 onNone: () => [],
                 onSome: error => [
-                  staleView(error, ClickedRetryPostDetail({ postId })),
+                  staleView(error, ClickedRetryPostDetail({ postId }), h),
                 ],
               }),
-              postDetailCard(detail, fetchedAt),
+              postDetailCard(detail, fetchedAt, h),
             ],
           ),
       }),
@@ -607,10 +607,12 @@ const postDetailView = (model: Model, postId: string): Html => {
   )
 }
 
-const postDetailCard = (detail: PostDetail, fetchedAt: number): Html => {
-  const h = html<Message>()
-
-  return h.article(
+const postDetailCard = (
+  detail: PostDetail,
+  fetchedAt: number,
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.article(
     [h.Class('bg-white rounded-xl shadow p-6 flex flex-col gap-3')],
     [
       h.h2([h.Class('text-2xl font-bold text-slate-900')], [detail.title]),
@@ -624,11 +626,8 @@ const postDetailCard = (detail: PostDetail, fetchedAt: number): Html => {
       ),
     ],
   )
-}
 
-const statsTabView = (model: Model): Html => {
-  const h = html<Message>()
-
+const statsTabView = (model: Model, h: HtmlBuilder<Message>): Html => {
   const isPending = AsyncData.isPending(model.stats)
 
   return h.div(
@@ -638,15 +637,18 @@ const statsTabView = (model: Model): Html => {
         [h.Class('flex items-center justify-between')],
         [
           h.h2([h.Class('text-xl font-bold text-slate-800')], ['Stats']),
-          Button.view({
-            onClick: ClickedRefreshStats(),
-            isDisabled: isPending,
-            toView: attributes =>
-              h.button(
-                [...attributes.button, h.Class(toolbarButtonClassName)],
-                [isPending ? 'Refreshing...' : 'Refresh'],
-              ),
-          }),
+          Button.view(
+            {
+              onClick: ClickedRefreshStats(),
+              isDisabled: isPending,
+              toView: attributes =>
+                h.button(
+                  [...attributes.button, h.Class(toolbarButtonClassName)],
+                  [isPending ? 'Refreshing...' : 'Refresh'],
+                ),
+            },
+            h,
+          ),
         ],
       ),
       h.p(
@@ -656,18 +658,23 @@ const statsTabView = (model: Model): Html => {
         ],
       ),
       AsyncData.matchDataSplitEmpty(model.stats, {
-        onIdle: () => loadingPanel('Loading stats...'),
-        onLoading: () => loadingPanel('Loading stats...'),
-        onFailure: error => errorPanel(error, ClickedRetryStats()),
+        onIdle: () => loadingPanel('Loading stats...', h),
+        onLoading: () => loadingPanel('Loading stats...', h),
+        onFailure: error => errorPanel(error, ClickedRetryStats(), h),
         onData: ({ stats, fetchedAt }) =>
           h.div(
             [h.Class('flex flex-col gap-4')],
             [
               ...Option.match(AsyncData.getError(model.stats), {
                 onNone: () => [],
-                onSome: error => [staleView(error, ClickedRetryStats())],
+                onSome: error => [staleView(error, ClickedRetryStats(), h)],
               }),
-              statsCards(stats, fetchedAt, AsyncData.isRefreshing(model.stats)),
+              statsCards(
+                stats,
+                fetchedAt,
+                AsyncData.isRefreshing(model.stats),
+                h,
+              ),
             ],
           ),
       }),
@@ -679,18 +686,17 @@ const statsCards = (
   stats: Stats,
   fetchedAt: number,
   isRefreshing: boolean,
-): Html => {
-  const h = html<Message>()
-
-  return h.div(
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.div(
     [h.Class('flex flex-col gap-3')],
     [
       h.div(
         [h.Class('grid grid-cols-3 gap-4')],
         [
-          statCard('Active users', `${stats.activeUsers}`),
-          statCard('Requests per second', `${stats.requestsPerSecond}`),
-          statCard('Cache hit rate', `${stats.cacheHitRatePercent}%`),
+          statCard('Active users', `${stats.activeUsers}`, h),
+          statCard('Requests per second', `${stats.requestsPerSecond}`, h),
+          statCard('Cache hit rate', `${stats.cacheHitRatePercent}%`, h),
         ],
       ),
       h.div(
@@ -709,36 +715,38 @@ const statsCards = (
       ),
     ],
   )
-}
 
-const statCard = (label: string, value: string): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const statCard = (
+  label: string,
+  value: string,
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.div(
     [h.Class('bg-white rounded-xl shadow p-4 flex flex-col gap-1')],
     [
       h.div([h.Class('text-sm text-slate-500')], [label]),
       h.div([h.Class('text-2xl font-bold text-slate-900')], [value]),
     ],
   )
-}
 
-const loadingPanel = (text: string): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const loadingPanel = (text: string, h: HtmlBuilder<Message>): Html =>
+  h.div(
     [h.Class('bg-white rounded-lg shadow p-6 text-center text-slate-500')],
     [text],
   )
-}
 
-const staleView = (error: string, retryMessage: Message): Html =>
-  errorPanel(error, retryMessage)
+const staleView = (
+  error: string,
+  retryMessage: Message,
+  h: HtmlBuilder<Message>,
+): Html => errorPanel(error, retryMessage, h)
 
-const errorPanel = (error: string, retryMessage: Message): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const errorPanel = (
+  error: string,
+  retryMessage: Message,
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.div(
     [
       h.Class(
         'bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 flex items-center justify-between gap-4',
@@ -746,19 +754,21 @@ const errorPanel = (error: string, retryMessage: Message): Html => {
     ],
     [
       h.p([], [error]),
-      Button.view({
-        onClick: retryMessage,
-        toView: attributes =>
-          h.button(
-            [
-              ...attributes.button,
-              h.Class(
-                'shrink-0 px-3 py-1.5 bg-red-600 text-white text-sm font-semibold rounded-md hover:bg-red-700 transition cursor-pointer',
-              ),
-            ],
-            ['Retry'],
-          ),
-      }),
+      Button.view(
+        {
+          onClick: retryMessage,
+          toView: attributes =>
+            h.button(
+              [
+                ...attributes.button,
+                h.Class(
+                  'shrink-0 px-3 py-1.5 bg-red-600 text-white text-sm font-semibold rounded-md hover:bg-red-700 transition cursor-pointer',
+                ),
+              ],
+              ['Retry'],
+            ),
+        },
+        h,
+      ),
     ],
   )
-}

@@ -1,25 +1,38 @@
-import { html } from 'foldkit/html'
+import { staticHtml as h } from 'foldkit/html'
 import { describe, expect, test } from 'vitest'
 
-import { type Slots, emptySlots, renderFaqSection, resolveDemo } from './slots'
+import { type Slots, renderFaqSection, resolveDemo } from './slots'
+
+const stubRenderCopyButton = () => h.empty
+const stubRenderHeadingLink = () => h.empty
+
+const slotsWithoutShell: Slots<never> = {
+  demos: {},
+  renderCopyButton: stubRenderCopyButton,
+  renderHeadingLink: stubRenderHeadingLink,
+}
 
 describe('resolveDemo', () => {
   test('returns the demo the page registered under that name', () => {
-    const demo = html().div([html().Class('live-demo')], ['demo content'])
-    const slots: Slots<'registered'> = { demos: { registered: demo } }
+    const demo = h.div([h.Class('live-demo')], ['demo content'])
+    const slots: Slots<'registered'> = {
+      demos: { registered: demo },
+      renderCopyButton: stubRenderCopyButton,
+      renderHeadingLink: stubRenderHeadingLink,
+    }
 
     expect(resolveDemo(slots, 'registered')).toBe(demo)
   })
 
   test('renders empty for a name no page registered', () => {
-    expect(resolveDemo(emptySlots, 'never-registered')).toEqual(html().empty)
+    expect(resolveDemo(slotsWithoutShell, 'never-registered')).toEqual(h.empty)
   })
 })
 
 describe('renderFaqSection', () => {
   test('hands the island id, question, and rendered children to the shell', () => {
-    const answer = [html().p([], ['Because it is.'])]
-    const wrapped = html().section([], ['wrapped'])
+    const answer = [h.p([], ['Because it is.'])]
+    const wrapped = h.section([], ['wrapped'])
     const received: Array<{
       id: string
       question: string
@@ -28,6 +41,8 @@ describe('renderFaqSection', () => {
 
     const slots: Slots<never> = {
       demos: {},
+      renderCopyButton: stubRenderCopyButton,
+      renderHeadingLink: stubRenderHeadingLink,
       renderFaq: (id, question, content) => {
         received.push({ id, question, content })
         return wrapped
@@ -41,10 +56,13 @@ describe('renderFaqSection', () => {
   })
 
   test('falls back to the question above its answer with no shell supplied', () => {
-    const answer = html().p([], ['Because it is.'])
-    const fallback = renderFaqSection(emptySlots, 'faq-routing', 'How?', [
-      answer,
-    ])
+    const answer = h.p([], ['Because it is.'])
+    const fallback = renderFaqSection(
+      slotsWithoutShell,
+      'faq-routing',
+      'How?',
+      [answer],
+    )
 
     expect(fallback).toMatchObject({
       sel: 'div',

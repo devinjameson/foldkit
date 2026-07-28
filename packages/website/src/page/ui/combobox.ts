@@ -1,6 +1,6 @@
 import { clsx } from 'clsx'
 import { Array, Option } from 'effect'
-import { childAttributes, html } from 'foldkit/html'
+import { type HtmlBuilder, childAttributes, staticHtml } from 'foldkit/html'
 
 import { Combobox } from '@foldkit/ui'
 import type { AnchorConfig } from '@foldkit/ui/combobox'
@@ -98,7 +98,7 @@ export const comboboxViewInputs = ({
   anchor?: AnchorConfig
   wrapperClass?: string
 }>): Omit<Combobox.ViewInputs<City>, 'maybeSelectedValue'> => {
-  const h = html<Message>()
+  const h = staticHtml
   const filteredCities = filterCities(inputValue)
 
   return {
@@ -140,9 +140,8 @@ export const comboboxViewInputs = ({
 export const comboboxDemo = (
   comboboxModel: Combobox.Model,
   maybeSelectedCity: Option.Option<City>,
+  h: HtmlBuilder<Message>,
 ) => {
-  const h = html<Message>()
-
   return [
     h.div(
       [h.Class('flex flex-col gap-1.5')],
@@ -183,9 +182,8 @@ export const comboboxDemo = (
 export const nullableDemo = (
   comboboxNullableModel: Combobox.Model,
   maybeSelectedCity: Option.Option<City>,
+  h: HtmlBuilder<Message>,
 ) => {
-  const h = html<Message>()
-
   return [
     h.div(
       [h.Class('flex flex-col gap-1.5')],
@@ -227,9 +225,8 @@ export const nullableDemo = (
 export const selectOnFocusDemo = (
   comboboxSelectOnFocusModel: Combobox.Model,
   maybeSelectedCity: Option.Option<City>,
+  h: HtmlBuilder<Message>,
 ) => {
-  const h = html<Message>()
-
   return [
     subPara(
       'Pass ',
@@ -281,9 +278,8 @@ const emptyTagClassName = 'text-sm py-0.5 text-gray-400 dark:text-gray-500'
 export const multiDemo = (
   comboboxMultiModel: Combobox.Multi.Model,
   selectedCities: ReadonlyArray<City>,
+  h: HtmlBuilder<Message>,
 ) => {
-  const h = html<Message>()
-
   return [
     h.div(
       [h.Class('flex flex-col gap-1.5')],

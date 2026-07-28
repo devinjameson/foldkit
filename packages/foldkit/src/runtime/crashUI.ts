@@ -1,6 +1,6 @@
 import { Effect } from 'effect'
 
-import { Document, html } from '../html/index.js'
+import { Document, staticHtml } from '../html/index.js'
 
 export const noOpDispatch = {
   dispatchAsync: (_message: unknown) => Effect.void,
@@ -28,7 +28,7 @@ export const defaultCrashView = (
   context: Readonly<{ error: Error }>,
   viewError?: unknown,
 ): Document => {
-  const h = html()
+  const h = staticHtml
 
   const codeBlockStyle = h.Style({
     fontFamily: monoStack,

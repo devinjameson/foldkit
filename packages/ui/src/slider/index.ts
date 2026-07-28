@@ -10,12 +10,7 @@ import {
   pipe,
 } from 'effect'
 import type { Command } from 'foldkit/command'
-import {
-  type ChildAttribute,
-  type Html,
-  childAttributes,
-  html,
-} from 'foldkit/html'
+import { type ChildAttribute, type Html, childAttributes } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
@@ -539,9 +534,7 @@ export type ViewInputs = Readonly<{
  *  aria-valuemax / aria-valuenow, keyboard navigation by step / page / home /
  *  end. Pointer drag is handled by the component's drag subscriptions. */
 export const view = defineView<Model, Message, ViewInputs>(
-  (model, viewInputs): Html => {
-    const h = html<Message>()
-
+  (model, viewInputs, h): Html => {
     const {
       value,
       formatValue,

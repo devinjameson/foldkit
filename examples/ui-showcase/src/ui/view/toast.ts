@@ -1,6 +1,6 @@
 import { Match as M, Option } from 'effect'
 import { Submodel } from 'foldkit'
-import { Html, html } from 'foldkit/html'
+import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import type { EntryHandlers, Variant } from '@foldkit/ui/toast'
 
@@ -34,9 +34,11 @@ const variantClassName = (variant: Variant): string =>
 
 const entryClassName = 'w-80'
 
-const renderToastEntry = (entry: Entry, handlers: EntryHandlers): Html => {
-  const h = html<UiMessage>()
-
+const renderToastEntry = (
+  entry: Entry,
+  handlers: EntryHandlers,
+  h: HtmlBuilder<UiMessage>,
+): Html => {
   return h.div(
     [
       h.Class(
@@ -67,95 +69,102 @@ const renderToastEntry = (entry: Entry, handlers: EntryHandlers): Html => {
 const demoButtonClassName =
   'inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium cursor-pointer transition rounded-lg border border-gray-300 bg-white text-gray-900 hover:bg-gray-100 select-none'
 
-export const view = Submodel.defineView<UiModel, UiMessage>((model): Html => {
-  const h = html<UiMessage>()
+export const view = Submodel.defineView<UiModel, UiMessage>(
+  (model, h): Html => {
+    return h.div(
+      [],
+      [
+        h.h2([h.Class('text-2xl font-bold text-gray-900 mb-2')], ['Toast']),
+        h.p(
+          [h.Class('text-gray-600 mb-6 max-w-prose')],
+          [
+            'A stack of transient notifications that auto-dismiss. Hover over a toast to pause its timer.',
+          ],
+        ),
 
-  return h.div(
-    [],
-    [
-      h.h2([h.Class('text-2xl font-bold text-gray-900 mb-2')], ['Toast']),
-      h.p(
-        [h.Class('text-gray-600 mb-6 max-w-prose')],
-        [
-          'A stack of transient notifications that auto-dismiss. Hover over a toast to pause its timer.',
-        ],
-      ),
+        h.h3(
+          [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
+          ['Variants'],
+        ),
+        h.div(
+          [h.Class('flex flex-wrap gap-2')],
+          [
+            h.button(
+              [h.Class(demoButtonClassName), h.OnClick(ClickedShowInfoToast())],
+              ['Info'],
+            ),
+            h.button(
+              [
+                h.Class(demoButtonClassName),
+                h.OnClick(ClickedShowSuccessToast()),
+              ],
+              ['Success'],
+            ),
+            h.button(
+              [
+                h.Class(demoButtonClassName),
+                h.OnClick(ClickedShowWarningToast()),
+              ],
+              ['Warning'],
+            ),
+            h.button(
+              [
+                h.Class(demoButtonClassName),
+                h.OnClick(ClickedShowErrorToast()),
+              ],
+              ['Error'],
+            ),
+          ],
+        ),
 
-      h.h3(
-        [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
-        ['Variants'],
-      ),
-      h.div(
-        [h.Class('flex flex-wrap gap-2')],
-        [
-          h.button(
-            [h.Class(demoButtonClassName), h.OnClick(ClickedShowInfoToast())],
-            ['Info'],
-          ),
-          h.button(
-            [
-              h.Class(demoButtonClassName),
-              h.OnClick(ClickedShowSuccessToast()),
-            ],
-            ['Success'],
-          ),
-          h.button(
-            [
-              h.Class(demoButtonClassName),
-              h.OnClick(ClickedShowWarningToast()),
-            ],
-            ['Warning'],
-          ),
-          h.button(
-            [h.Class(demoButtonClassName), h.OnClick(ClickedShowErrorToast())],
-            ['Error'],
-          ),
-        ],
-      ),
+        h.h3(
+          [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
+          ['Sticky'],
+        ),
+        h.p(
+          [h.Class('text-gray-600 mb-4 max-w-prose')],
+          [
+            'Pass ',
+            h.span(
+              [h.Class('font-mono text-sm bg-gray-100 px-1 rounded')],
+              ['sticky: true'],
+            ),
+            ' to skip the auto-dismiss timer. The user must close it manually.',
+          ],
+        ),
+        h.div(
+          [h.Class('flex flex-wrap gap-2')],
+          [
+            h.button(
+              [
+                h.Class(demoButtonClassName),
+                h.OnClick(ClickedShowStickyToast()),
+              ],
+              ['Show sticky toast'],
+            ),
+            h.button(
+              [
+                h.Class(demoButtonClassName),
+                h.OnClick(ClickedDismissAllToasts()),
+              ],
+              ['Dismiss all'],
+            ),
+          ],
+        ),
 
-      h.h3(
-        [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
-        ['Sticky'],
-      ),
-      h.p(
-        [h.Class('text-gray-600 mb-4 max-w-prose')],
-        [
-          'Pass ',
-          h.span(
-            [h.Class('font-mono text-sm bg-gray-100 px-1 rounded')],
-            ['sticky: true'],
-          ),
-          ' to skip the auto-dismiss timer. The user must close it manually.',
-        ],
-      ),
-      h.div(
-        [h.Class('flex flex-wrap gap-2')],
-        [
-          h.button(
-            [h.Class(demoButtonClassName), h.OnClick(ClickedShowStickyToast())],
-            ['Show sticky toast'],
-          ),
-          h.button(
-            [
-              h.Class(demoButtonClassName),
-              h.OnClick(ClickedDismissAllToasts()),
-            ],
-            ['Dismiss all'],
-          ),
-        ],
-      ),
-
-      h.submodel({
-        slotId: model.toastDemo.id,
-        model: model.toastDemo,
-        view: Toast.view,
-        viewInputs: {
-          position: 'BottomRight',
-          entryToView: (entry, handlers) => renderToastEntry(entry, handlers),
-          entryClassName,
-        },
-        toParentMessage: message => GotToastDemoMessage({ message }),
-      }),
-    ],
-  )
-})
+        h.submodel({
+          slotId: model.toastDemo.id,
+          model: model.toastDemo,
+          view: Toast.view,
+          viewInputs: {
+            position: 'BottomRight',
+            entryToView: (entry, handlers) =>
+              renderToastEntry(entry, handlers, h),
+            entryClassName,
+          },
+          toParentMessage: message => GotToastDemoMessage({ message }),
+        }),
+      ],
+    )
+  },
+)

@@ -1,10 +1,5 @@
 import { Match as M, Schema as S } from 'effect'
-import {
-  type ChildAttribute,
-  type Html,
-  childAttributes,
-  html,
-} from 'foldkit/html'
+import { type ChildAttribute, type Html, childAttributes } from 'foldkit/html'
 import { defineView } from 'foldkit/submodel'
 
 import {
@@ -172,9 +167,7 @@ export const make = <A, I>(payloadSchema: S.Codec<A, I>) => {
    *  `data-transition`, `data-closed`) and `data-variant` reflecting the
    *  entry's variant. */
   const view = defineView<ToastModel, ToastMessage, ViewInputs>(
-    (model, viewInputs): Html => {
-      const h = html<ToastMessage>()
-
+    (model, viewInputs, h): Html => {
       const { id, entries } = model
       const {
         position,

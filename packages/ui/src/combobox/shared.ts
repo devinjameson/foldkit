@@ -9,7 +9,7 @@ import {
 } from 'effect'
 import * as Command from 'foldkit/command'
 import * as Dom from 'foldkit/dom'
-import { type ChildAttribute, type Html, html } from 'foldkit/html'
+import type { ChildAttribute, Html } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import * as Mount from 'foldkit/mount'
 import { makeConstrainedEvo } from 'foldkit/struct'
@@ -898,9 +898,7 @@ export type ViewBehavior = Readonly<{
 /** Creates a combobox view function from variant-specific behavior. Shared rendering logic (input, items, transitions, keyboard navigation) is handled internally; only listbox multi-select semantics vary by variant. */
 export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
   const impl = defineView<Model, Message, BaseViewInputs<string>>(
-    (model, viewInputs): Html => {
-      const h = html<Message>()
-
+    (model, viewInputs, h): Html => {
       const {
         id,
         isOpen,

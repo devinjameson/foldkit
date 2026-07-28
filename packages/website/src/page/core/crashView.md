@@ -4,13 +4,11 @@
 
 When Foldkit hits an unrecoverable error during `update`, `view`, or Command execution, it stops all processing and renders a fallback UI. This is not error handling. There is no recovery from this state. The runtime is dead.
 
-By default, Foldkit shows a built-in crash screen with the error message and a reload button. Pass a `crash.view` function to `makeApplication` to customize it. It receives a `CrashContext` containing the `error`, the `model` at the time of the crash, and the `message` being processed as an `Option` (it is absent when the crash happens during the initial render):
+By default, Foldkit shows a built-in crash screen with the error message and a reload button. Pass a `crash.view` function to `makeApplication` to customize it. It receives a `CrashContext` containing the `error`, the `model` at the time of the crash, and the `message` being processed as an `Option` (it is absent when the crash happens during the initial render), plus the builder `h` as its second parameter:
 
 ::Snippet{name="crashViewCustom" label="Custom crash view example"}
 
-Call `html<never>()` with `never` as the type parameter. Since the runtime has stopped, no Messages will ever be dispatched. `never` makes this explicit and prevents event handlers like `OnClick` from being used.
-
-Foldkit’s event handlers like `OnClick` work by dispatching Messages to the runtime. Since the runtime has stopped, those handlers are silently ignored. For interactivity, like a reload button, use `Attribute('onclick', 'location.reload()')`. This sets a raw DOM event handler directly on the element, bypassing Foldkit’s dispatch system entirely.
+The builder is typed `HtmlBuilder<never>`. The runtime has stopped, so no Message it produced could ever reach `update`, and `never` makes that structural: every handler constructor takes a Message, and no value of type `never` exists, so `h.OnClick(...)` is a compile error rather than a handler that silently does nothing. For interactivity, like a reload button, use `h.Attribute('onclick', 'location.reload()')`. This sets a raw DOM event handler directly on the element, bypassing Foldkit’s dispatch system entirely.
 
 :::Info{label="Only in crash.view"}
 In a normal Foldkit app, always use `OnClick` with Messages, never raw DOM event attributes. `crash.view` is the one exception because the runtime is no longer running.

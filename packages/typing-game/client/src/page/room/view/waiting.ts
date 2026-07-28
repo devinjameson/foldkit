@@ -1,5 +1,5 @@
 import { Array, Match, Option, flow, pipe } from 'effect'
-import { Html, html } from 'foldkit/html'
+import { Html, HtmlBuilder } from 'foldkit/html'
 
 import * as Shared from '@typing-game/shared'
 
@@ -24,10 +24,9 @@ const player = (
   players: ReadonlyArray<Shared.Player>,
   hostId: string,
   maybeSession: Option.Option<RoomPlayerSession>,
-): Array<Html> => {
-  const h = html<Message>()
-
-  return Array.map(players, player => {
+  h: HtmlBuilder<Message>,
+): Array<Html> =>
+  Array.map(players, player => {
     const badges = pipe(
       allBadges,
       Array.filter(
@@ -49,14 +48,13 @@ const player = (
       [h.span([], [player.username]), ...badges],
     )
   })
-}
 
 export const waiting = (
   players: ReadonlyArray<Shared.Player>,
   hostId: string,
   maybeSession: Option.Option<RoomPlayerSession>,
+  h: HtmlBuilder<Message>,
 ): Html => {
-  const h = html<Message>()
   const isLocalPlayerHost = Option.exists(
     maybeSession,
     session => session.player.id === hostId,
@@ -68,7 +66,7 @@ export const waiting = (
       h.h3([h.Class('uppercase mb-2')], ['[Connected users]']),
       h.div(
         [h.Class('space-y-2 mb-12')],
-        player(players, hostId, maybeSession),
+        player(players, hostId, maybeSession, h),
       ),
       ...(isLocalPlayerHost ? [h.div([], ['> Enter to start game'])] : []),
     ],

@@ -1,5 +1,5 @@
 import { Option, Record as Record_ } from 'effect'
-import { Html, html } from 'foldkit/html'
+import { Html, staticHtml } from 'foldkit/html'
 
 import type { RenderHeadingLink } from '../prose'
 import type { RenderCopyButton } from '../view/codeBlock'
@@ -30,19 +30,18 @@ export type Slots<DemoName extends string> = Readonly<{
   demos: Demos<DemoName>
   renderFaq?: RenderFaq
   /**
-   * Chrome the page does not own but its markdown renders: the snippet copy
-   * button and the heading copy-link. A page embedded with `h.submodel` must
-   * pass these down from its parent through `viewInputs`, so they are built in
-   * the parent's boundary and their app-level Messages reach `update`
-   * unwrapped. Left unset, they build themselves, which is correct for a page
-   * rendered outside any Submodel.
+   * Controls the page does not own but its markdown renders: the snippet copy
+   * button and the heading copy-link. Both dispatch app-level Messages, so only
+   * a holder of the app's builder can construct them, via
+   * `defaultRenderCopyButton` and `defaultRenderHeadingLink`. A page rendered
+   * in the root frame builds them from its own threaded builder; a page
+   * embedded with `h.submodel` receives them from its parent through
+   * `viewInputs`, so they are built in the parent's boundary and their
+   * app-level Messages reach `update` unwrapped.
    */
-  renderCopyButton?: RenderCopyButton
-  renderHeadingLink?: RenderHeadingLink
+  renderCopyButton: RenderCopyButton
+  renderHeadingLink: RenderHeadingLink
 }>
-
-/** The slots a page with no interactive islands contributes, which is none. */
-export const emptySlots: Slots<never> = { demos: {} }
 
 /**
  * Resolves a `::Demo` island to the demo the page built for it. {@link Slots}
@@ -51,7 +50,7 @@ export const emptySlots: Slots<never> = { demos: {} }
  * `::Demo` registration test is there to catch.
  */
 export const resolveDemo = (slots: Slots<string>, name: string): Html =>
-  Option.getOrElse(Record_.get(slots.demos, name), () => html().empty)
+  Option.getOrElse(Record_.get(slots.demos, name), () => staticHtml.empty)
 
 /**
  * Renders a `:::Faq` island. Without a page-supplied shell the question becomes
@@ -64,7 +63,7 @@ export const renderFaqSection = (
   question: string,
   content: ReadonlyArray<Html>,
 ): Html => {
-  const h = html()
+  const h = staticHtml
 
   return slots.renderFaq === undefined
     ? h.div([], [h.p([h.Class('font-bold')], [question]), ...content])

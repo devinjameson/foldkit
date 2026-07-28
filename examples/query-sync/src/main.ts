@@ -12,7 +12,7 @@ import {
   pipe,
 } from 'effect'
 import { Command, Route, Runtime } from 'foldkit'
-import { Document, Html, childAttributes, html } from 'foldkit/html'
+import { Document, Html, HtmlBuilder, childAttributes } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { UrlRequest, load, pushUrl, replaceUrl } from 'foldkit/navigation'
 import { r } from 'foldkit/route'
@@ -488,9 +488,8 @@ const headerButtonClass =
 
 const bodyCellClass = 'px-4 py-3 text-sm text-gray-700'
 
-const dinosaurRowView = (dinosaur: Dinosaur): Html => {
-  const h = html<Message>()
-  return h.keyed('tr')(
+const dinosaurRowView = (dinosaur: Dinosaur, h: HtmlBuilder<Message>): Html =>
+  h.keyed('tr')(
     dinosaur.name,
     [h.Class('border-b border-gray-100 hover:bg-gray-50 transition')],
     [
@@ -521,7 +520,6 @@ const dinosaurRowView = (dinosaur: Dinosaur): Html => {
       ),
     ],
   )
-}
 
 const sortAriaLabel = (column: SortColumn, sorting: Sorting): string =>
   M.value(columnSortDirection(sorting, column)).pipe(
@@ -544,9 +542,8 @@ const sortableColumnHeader = (
   displayLabel: string,
   fields: BrowseFields,
   isRightAligned: boolean,
+  h: HtmlBuilder<Message>,
 ): Html => {
-  const h = html<Message>()
-
   const indicator = h.span(
     [h.Class(clsx(SORT_INDICATOR_WIDTH, 'inline-block text-center'))],
     [sortIndicator(column, fields.sorting)],
@@ -557,18 +554,21 @@ const sortableColumnHeader = (
   return h.th(
     [h.AriaSort(ariaSortValue(column, fields.sorting))],
     [
-      Button.view<Message>({
-        onClick: ClickedColumnHeader({ column }),
-        toView: attributes =>
-          h.button(
-            [
-              ...attributes.button,
-              h.AriaLabel(sortAriaLabel(column, fields.sorting)),
-              h.Class(clsx(headerButtonClass, alignment)),
-            ],
-            isRightAligned ? [indicator, label] : [label, indicator],
-          ),
-      }),
+      Button.view(
+        {
+          onClick: ClickedColumnHeader({ column }),
+          toView: attributes =>
+            h.button(
+              [
+                ...attributes.button,
+                h.AriaLabel(sortAriaLabel(column, fields.sorting)),
+                h.Class(clsx(headerButtonClass, alignment)),
+              ],
+              isRightAligned ? [indicator, label] : [label, indicator],
+            ),
+        },
+        h,
+      ),
     ],
   )
 }
@@ -595,9 +595,10 @@ const listboxBackdropClassName = 'fixed inset-0 z-0'
 
 const listboxWrapperClassName = 'relative inline-block'
 
-const filterItemConfig = (label: string): Listbox.ItemConfig => {
-  const h = html<Message>()
-
+const filterItemConfig = (
+  label: string,
+  h: HtmlBuilder<Message>,
+): Listbox.ItemConfig => {
   return {
     className: listboxItemClassName,
     content: h.div(
@@ -617,10 +618,8 @@ const filterItemConfig = (label: string): Listbox.ItemConfig => {
   }
 }
 
-const chevronDown = (className: string): Html => {
-  const h = html<Message>()
-
-  return h.svg(
+const chevronDown = (className: string, h: HtmlBuilder<Message>): Html =>
+  h.svg(
     [
       h.AriaHidden(true),
       h.Class(className),
@@ -641,16 +640,12 @@ const chevronDown = (className: string): Html => {
       ),
     ],
   )
-}
 
-const filterButtonContent = (label: string): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const filterButtonContent = (label: string, h: HtmlBuilder<Message>): Html =>
+  h.div(
     [h.Class('flex w-full items-center justify-between gap-4')],
-    [h.span([], [label]), chevronDown('w-4 h-4 text-gray-400')],
+    [h.span([], [label]), chevronDown('w-4 h-4 text-gray-400', h)],
   )
-}
 
 const filterButtonLabel = (
   maybeSelectedItem: Option.Option<string>,
@@ -668,9 +663,11 @@ const dietLabel = (item: string): string =>
 const periodLabel = (item: string): string =>
   String.isEmpty(item) ? 'All Periods' : item
 
-const browseView = (model: Model, route: typeof BrowseRoute.Type): Html => {
-  const h = html<Message>()
-
+const browseView = (
+  model: Model,
+  route: typeof BrowseRoute.Type,
+  h: HtmlBuilder<Message>,
+): Html => {
   const fields = routeToBrowseFields(route)
   const results = filterAndSort(fields)
 
@@ -691,19 +688,22 @@ const browseView = (model: Model, route: typeof BrowseRoute.Type): Html => {
       h.div(
         [h.Class('flex flex-wrap items-start gap-3 mb-6')],
         [
-          Input.view<Message>({
-            id: 'dinosaur-search',
-            value: Option.getOrElse(fields.search, () => ''),
-            placeholder: 'Search by name…',
-            onInput: value => ChangedSearchInput({ value }),
-            toView: attributes =>
-              h.input([
-                ...attributes.input,
-                h.Class(
-                  'flex-1 min-w-48 px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500',
-                ),
-              ]),
-          }),
+          Input.view(
+            {
+              id: 'dinosaur-search',
+              value: Option.getOrElse(fields.search, () => ''),
+              placeholder: 'Search by name…',
+              onInput: value => ChangedSearchInput({ value }),
+              toView: attributes =>
+                h.input([
+                  ...attributes.input,
+                  h.Class(
+                    'flex-1 min-w-48 px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500',
+                  ),
+                ]),
+            },
+            h,
+          ),
           h.submodel({
             slotId: model.dietListbox.id,
             model: model.dietListbox,
@@ -712,10 +712,11 @@ const browseView = (model: Model, route: typeof BrowseRoute.Type): Html => {
               anchor: LISTBOX_ANCHOR,
               items: dietFilterItems,
               maybeSelectedValue: Option.orElseSome(fields.diet, () => ''),
-              itemToConfig: item => filterItemConfig(dietLabel(item)),
+              itemToConfig: item => filterItemConfig(dietLabel(item), h),
               itemToSearchText: dietLabel,
               buttonContent: filterButtonContent(
                 filterButtonLabel(fields.diet, 'All Diets'),
+                h,
               ),
               buttonAttributes: childAttributes([
                 h.Class(listboxButtonClassName),
@@ -738,10 +739,11 @@ const browseView = (model: Model, route: typeof BrowseRoute.Type): Html => {
               anchor: LISTBOX_ANCHOR,
               items: periodFilterItems,
               maybeSelectedValue: Option.orElseSome(fields.period, () => ''),
-              itemToConfig: item => filterItemConfig(periodLabel(item)),
+              itemToConfig: item => filterItemConfig(periodLabel(item), h),
               itemToSearchText: periodLabel,
               buttonContent: filterButtonContent(
                 filterButtonLabel(fields.period, 'All Periods'),
+                h,
               ),
               buttonAttributes: childAttributes([
                 h.Class(listboxButtonClassName),
@@ -791,31 +793,49 @@ const browseView = (model: Model, route: typeof BrowseRoute.Type): Html => {
                       h.tr(
                         [],
                         [
-                          sortableColumnHeader('Name', 'Name', fields, false),
+                          sortableColumnHeader(
+                            'Name',
+                            'Name',
+                            fields,
+                            false,
+                            h,
+                          ),
                           sortableColumnHeader(
                             'Period',
                             'Period',
                             fields,
                             false,
+                            h,
                           ),
-                          sortableColumnHeader('Diet', 'Diet', fields, false),
+                          sortableColumnHeader(
+                            'Diet',
+                            'Diet',
+                            fields,
+                            false,
+                            h,
+                          ),
                           sortableColumnHeader(
                             'Length',
                             'Length (m)',
                             fields,
                             true,
+                            h,
                           ),
                           sortableColumnHeader(
                             'Weight',
                             'Weight (kg)',
                             fields,
                             true,
+                            h,
                           ),
                         ],
                       ),
                     ],
                   ),
-                  h.tbody([], rows.map(dinosaurRowView)),
+                  h.tbody(
+                    [],
+                    rows.map(row => dinosaurRowView(row, h)),
+                  ),
                 ],
               ),
             ],
@@ -832,10 +852,8 @@ const browseView = (model: Model, route: typeof BrowseRoute.Type): Html => {
   )
 }
 
-const notFoundView = (path: string): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const notFoundView = (path: string, h: HtmlBuilder<Message>): Html =>
+  h.div(
     [h.Class('max-w-4xl mx-auto px-4 text-center')],
     [
       h.h1(
@@ -855,7 +873,6 @@ const notFoundView = (path: string): Html => {
       ),
     ],
   )
-}
 
 const routeTitle = (route: Model['route']): string =>
   M.value(route).pipe(
@@ -863,13 +880,11 @@ const routeTitle = (route: Model['route']): string =>
     M.orElse(() => 'Not Found | Dinosaur Explorer'),
   )
 
-export const view = (model: Model): Document => {
-  const h = html<Message>()
-
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
   const routeContent = M.value(model.route).pipe(
     M.tagsExhaustive({
-      Browse: route => browseView(model, route),
-      NotFound: ({ path }) => notFoundView(path),
+      Browse: route => browseView(model, route, h),
+      NotFound: ({ path }) => notFoundView(path, h),
     }),
   )
 

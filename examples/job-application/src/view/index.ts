@@ -1,11 +1,6 @@
 import clsx from 'clsx'
 import { Array, Equal, HashSet, Match as M, Option, pipe } from 'effect'
-import {
-  type ChildAttribute,
-  type Document,
-  type Html,
-  html,
-} from 'foldkit/html'
+import type { ChildAttribute, Document, Html, HtmlBuilder } from 'foldkit/html'
 
 import { Button, Tabs } from '@foldkit/ui'
 
@@ -72,10 +67,9 @@ const stepsNeedingAttention = (model: Model): ReadonlyArray<Step.Step> =>
 const stepContent = (
   model: Model,
   attentionSteps: ReadonlyArray<Step.Step>,
-): Html => {
-  const h = html<Message>()
-
-  return M.value(model.currentStep).pipe(
+  h: HtmlBuilder<Message>,
+): Html =>
+  M.value(model.currentStep).pipe(
     M.when('PersonalInfo', () =>
       h.submodel({
         slotId: 'personal-info',
@@ -124,10 +118,9 @@ const stepContent = (
         toParentMessage: message => GotAttachmentsMessage({ message }),
       }),
     ),
-    M.when('Review', () => review(model, attentionSteps)),
+    M.when('Review', () => review(model, attentionSteps, h)),
     M.exhaustive,
   )
-}
 
 const isFirstStep = (model: Model): boolean =>
   pipe(Step.all, Array.head, Option.exists(Equal.equals(model.currentStep)))
@@ -135,54 +128,55 @@ const isFirstStep = (model: Model): boolean =>
 const isLastStep = (model: Model): boolean =>
   pipe(Step.all, Array.last, Option.exists(Equal.equals(model.currentStep)))
 
-const navigationButtons = (model: Model): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const navigationButtons = (model: Model, h: HtmlBuilder<Message>): Html =>
+  h.div(
     [h.Class('flex justify-between pt-6 mt-8 border-t border-gray-200')],
     [
       ...(isFirstStep(model)
         ? [h.empty]
         : [
-            Button.view<Message>({
-              onClick: ClickedPrevious(),
-              toView: attributes =>
-                h.button(
-                  [
-                    ...attributes.button,
-                    h.Class(
-                      'rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer',
-                    ),
-                  ],
-                  ['← Previous'],
-                ),
-            }),
+            Button.view(
+              {
+                onClick: ClickedPrevious(),
+                toView: attributes =>
+                  h.button(
+                    [
+                      ...attributes.button,
+                      h.Class(
+                        'rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer',
+                      ),
+                    ],
+                    ['← Previous'],
+                  ),
+              },
+              h,
+            ),
           ]),
       ...(isLastStep(model)
         ? []
         : [
-            Button.view<Message>({
-              onClick: ClickedNext(),
-              toView: attributes =>
-                h.button(
-                  [
-                    ...attributes.button,
-                    h.Class(
-                      'rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition cursor-pointer',
-                    ),
-                  ],
-                  ['Next →'],
-                ),
-            }),
+            Button.view(
+              {
+                onClick: ClickedNext(),
+                toView: attributes =>
+                  h.button(
+                    [
+                      ...attributes.button,
+                      h.Class(
+                        'rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition cursor-pointer',
+                      ),
+                    ],
+                    ['Next →'],
+                  ),
+              },
+              h,
+            ),
           ]),
     ],
   )
-}
 
-const pageHeader = (): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const pageHeader = (h: HtmlBuilder<Message>): Html =>
+  h.div(
     [h.Class('mb-6')],
     [
       h.h1(
@@ -195,36 +189,35 @@ const pageHeader = (): Html => {
       ),
     ],
   )
-}
 
 const stepContentPanel = (
   model: Model,
   attentionSteps: ReadonlyArray<Step.Step>,
-  panelAttributes: ReadonlyArray<ChildAttribute> = [],
-): Html => {
-  const h = html<Message>()
-
-  return h.div(
+  panelAttributes: ReadonlyArray<ChildAttribute>,
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.div(
     [...panelAttributes, h.Class('flex-1 min-w-0')],
     [
       h.h2(
         [h.Class('text-lg font-semibold text-gray-900 mb-6')],
         [Step.show(model.currentStep)],
       ),
-      h.div([h.Class('min-h-[400px]')], [stepContent(model, attentionSteps)]),
-      ...(model.currentStep !== 'Review' ? [navigationButtons(model)] : []),
+      h.div(
+        [h.Class('min-h-[400px]')],
+        [stepContent(model, attentionSteps, h)],
+      ),
+      ...(model.currentStep !== 'Review' ? [navigationButtons(model, h)] : []),
     ],
   )
-}
 
 const stepTabsLayout = (
   model: Model,
   attentionSteps: ReadonlyArray<Step.Step>,
   attentionStepSet: HashSet.HashSet<Step.Step>,
-): Html => {
-  const h = html<Message>()
-
-  return h.submodel({
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.submodel({
     slotId: model.stepTabs.id,
     model: model.stepTabs,
     view: StepTabs.view,
@@ -246,7 +239,12 @@ const stepTabsLayout = (
                     h.div(
                       [...tablist, h.Class('space-y-0.5')],
                       Array.map(tabs, tab =>
-                        stepTabButton(tab, model.currentStep, attentionStepSet),
+                        stepTabButton(
+                          tab,
+                          model.currentStep,
+                          attentionStepSet,
+                          h,
+                        ),
                       ),
                     ),
                   ],
@@ -257,23 +255,20 @@ const stepTabsLayout = (
               tabs,
               Array.filter(tab => tab.index === activeIndex),
               Array.map(tab =>
-                stepContentPanel(model, attentionSteps, tab.panel),
+                stepContentPanel(model, attentionSteps, tab.panel, h),
               ),
             ),
-            desktopPreviewSidebar(model),
-            mobilePreviewToggle(model),
-            ...(model.isPreviewVisible ? [mobilePreviewOverlay(model)] : []),
+            desktopPreviewSidebar(model, h),
+            mobilePreviewToggle(model, h),
+            ...(model.isPreviewVisible ? [mobilePreviewOverlay(model, h)] : []),
           ],
         ),
     },
     toParentMessage: message => GotStepTabsMessage({ message }),
   })
-}
 
-const desktopPreviewSidebar = (model: Model): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const desktopPreviewSidebar = (model: Model, h: HtmlBuilder<Message>): Html =>
+  h.div(
     [h.Class('hidden w-80 shrink-0 xl:block')],
     [
       h.div(
@@ -300,40 +295,37 @@ const desktopPreviewSidebar = (model: Model): Html => {
       ),
     ],
   )
-}
 
-const mobilePreviewToggle = (model: Model): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const mobilePreviewToggle = (model: Model, h: HtmlBuilder<Message>): Html =>
+  h.div(
     [h.Class('fixed top-4 right-4 xl:hidden')],
     [
-      Button.view<Message>({
-        onClick: ToggledPreview(),
-        toView: attributes =>
-          h.button(
-            [
-              ...attributes.button,
-              h.Class(
-                clsx(
-                  'rounded-full px-4 py-2 text-sm font-medium shadow-lg transition cursor-pointer',
-                  model.isPreviewVisible
-                    ? 'bg-gray-800 text-white'
-                    : 'bg-indigo-600 text-white',
+      Button.view(
+        {
+          onClick: ToggledPreview(),
+          toView: attributes =>
+            h.button(
+              [
+                ...attributes.button,
+                h.Class(
+                  clsx(
+                    'rounded-full px-4 py-2 text-sm font-medium shadow-lg transition cursor-pointer',
+                    model.isPreviewVisible
+                      ? 'bg-gray-800 text-white'
+                      : 'bg-indigo-600 text-white',
+                  ),
                 ),
-              ),
-            ],
-            [model.isPreviewVisible ? 'Hide Preview' : 'Preview'],
-          ),
-      }),
+              ],
+              [model.isPreviewVisible ? 'Hide Preview' : 'Preview'],
+            ),
+        },
+        h,
+      ),
     ],
   )
-}
 
-const mobilePreviewOverlay = (model: Model): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const mobilePreviewOverlay = (model: Model, h: HtmlBuilder<Message>): Html =>
+  h.div(
     [
       h.Class(
         'fixed inset-x-4 top-16 bottom-4 overflow-y-auto rounded-xl border border-gray-200 bg-white p-6 shadow-2xl xl:hidden',
@@ -341,11 +333,8 @@ const mobilePreviewOverlay = (model: Model): Html => {
     ],
     [preview(model)],
   )
-}
 
-export const view = (model: Model): Document => {
-  const h = html<Message>()
-
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
   const attentionSteps = stepsNeedingAttention(model)
   const attentionStepSet = HashSet.fromIterable(attentionSteps)
   const body = h.div(
@@ -354,16 +343,19 @@ export const view = (model: Model): Document => {
       h.div(
         [h.Class('mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8')],
         [
-          pageHeader(),
+          pageHeader(h),
           h.div(
             [h.Class('mb-6 lg:hidden')],
             [
-              stepMenu(model, attentionStepSet, message =>
-                GotStepMenuMessage({ message }),
+              stepMenu(
+                model,
+                attentionStepSet,
+                message => GotStepMenuMessage({ message }),
+                h,
               ),
             ],
           ),
-          stepTabsLayout(model, attentionSteps, attentionStepSet),
+          stepTabsLayout(model, attentionSteps, attentionStepSet, h),
         ],
       ),
     ],

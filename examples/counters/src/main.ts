@@ -1,6 +1,6 @@
 import { Array, Match as M, Option, Schema as S } from 'effect'
 import { Command, Runtime } from 'foldkit'
-import { Document, Html, html } from 'foldkit/html'
+import { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -110,10 +110,8 @@ export const init: Runtime.ApplicationInit<Model, Message> = () => [
 
 // VIEW
 
-const rowView = (row: Row): Html => {
-  const h = html<Message>()
-
-  return h.keyed('div')(
+const rowView = (row: Row, h: HtmlBuilder<Message>): Html =>
+  h.keyed('div')(
     row.id,
     [h.Class('flex items-center gap-2')],
     [
@@ -129,47 +127,47 @@ const rowView = (row: Row): Html => {
           }),
         ],
       ),
-      Button.view<Message>({
-        onClick: ClickedRemoveRow({ id: row.id }),
-        toView: attributes =>
-          h.button(
-            [
-              ...attributes.button,
-              h.Class(
-                'rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:border-red-300 hover:text-red-600 transition cursor-pointer',
-              ),
-            ],
-            ['Remove'],
-          ),
-      }),
+      Button.view(
+        {
+          onClick: ClickedRemoveRow({ id: row.id }),
+          toView: attributes =>
+            h.button(
+              [
+                ...attributes.button,
+                h.Class(
+                  'rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:border-red-300 hover:text-red-600 transition cursor-pointer',
+                ),
+              ],
+              ['Remove'],
+            ),
+        },
+        h,
+      ),
     ],
   )
-}
 
-export const view = (model: Model): Document => {
-  const h = html<Message>()
-
-  return {
-    title: `Counters (${model.rows.length})`,
-    body: h.div(
-      [
-        h.Class(
-          'min-h-screen bg-white flex flex-col items-center py-12 px-6 gap-6',
-        ),
-      ],
-      [
-        h.h1([h.Class('text-2xl font-semibold text-gray-900')], ['Counters']),
-        h.p(
-          [h.Class('text-sm text-gray-500 max-w-md text-center')],
-          [
-            'Each row is a Counter Submodel. The parent has no awareness of Counter internals; it just embeds the Submodel via h.submodel and routes dispatched messages back to the right row via the GotCounterMessage wrapper.',
-          ],
-        ),
-        h.div(
-          [h.Class('flex flex-col gap-3 w-full max-w-md')],
-          model.rows.map(rowView),
-        ),
-        Button.view<Message>({
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
+  title: `Counters (${model.rows.length})`,
+  body: h.div(
+    [
+      h.Class(
+        'min-h-screen bg-white flex flex-col items-center py-12 px-6 gap-6',
+      ),
+    ],
+    [
+      h.h1([h.Class('text-2xl font-semibold text-gray-900')], ['Counters']),
+      h.p(
+        [h.Class('text-sm text-gray-500 max-w-md text-center')],
+        [
+          'Each row is a Counter Submodel. The parent has no awareness of Counter internals; it just embeds the Submodel via h.submodel and routes dispatched messages back to the right row via the GotCounterMessage wrapper.',
+        ],
+      ),
+      h.div(
+        [h.Class('flex flex-col gap-3 w-full max-w-md')],
+        model.rows.map(row => rowView(row, h)),
+      ),
+      Button.view(
+        {
           onClick: ClickedAddRow(),
           toView: attributes =>
             h.button(
@@ -181,8 +179,9 @@ export const view = (model: Model): Document => {
               ],
               ['+ Add Counter'],
             ),
-        }),
-      ],
-    ),
-  }
-}
+        },
+        h,
+      ),
+    ],
+  ),
+})

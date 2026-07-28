@@ -1,7 +1,7 @@
 import { Match as M, Schema as S } from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { type Document, html } from '../html/index.js'
+import { type Document, __htmlBuilder } from '../html/index.js'
 import { m } from '../message/index.js'
 import { evo } from '../struct/index.js'
 import { makeApplication, run } from './runtime.js'
@@ -25,7 +25,7 @@ const update = (
 
 const APP_TEXT = 'bfcache-app-content'
 
-const h = html<Message>()
+const h = __htmlBuilder<Message>()
 
 const view = (model: Model): Document => ({
   title: 'Bfcache test app',

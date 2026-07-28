@@ -123,9 +123,9 @@ grep -rn "isEmptyArray\|isNonEmptyArray" src/
 grep -rn "isArrayEmpty(model\.\|isArrayNonEmpty(model\." src/
 
 # Hand-rolled form controls: should use Input.view / Textarea.view / Button.view
-# from '@foldkit/ui'. Views bind `const h = html<Message>()`, so the call shape is
-# `h.input(...)`, not a bare `input(...)`; match both, and don't assume the element
-# starts the line or that OnClick precedes it.
+# from '@foldkit/ui'. Views build elements off their `h` parameter, so the call
+# shape is `h.input(...)`, not a bare `input(...)`; match both, and don't assume
+# the element starts the line or that OnClick precedes it.
 #
 # Legitimate exception: inside the component's own `toView` callback you DO render
 # the element, spreading the component's attribute group into it. Those calls
@@ -180,7 +180,7 @@ grep -rnE "(^|[^.[:alnum:]_])(h\.)?label\(" src/
 grep -rn "maybe[A-Z][a-zA-Z]*: [A-Z][a-zA-Z]* | undefined" src/
 grep -rn "maybe[A-Z][a-zA-Z]*: string\b\|maybe[A-Z][a-zA-Z]*: number\b\|maybe[A-Z][a-zA-Z]*: boolean\b" src/
 
-# h.span([], []): use h.empty (the empty value off h = html<Message>(), bound inside the view function)
+# h.span([], []): use h.empty (the empty value on the view's builder `h`)
 grep -rn "\.span(\[\], \[\])\|^span(\[\], \[\])" src/
 
 # Effect.ignore on infallible Effects (pushUrl, load, back, forward)

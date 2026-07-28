@@ -1,14 +1,11 @@
-import { html } from 'foldkit/html'
+import type { Html, HtmlBuilder } from 'foldkit/html'
 
-const cartView = (model: Model): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const cartView = (model: Model, h: HtmlBuilder<Message>): Html =>
+  h.div(
     [],
     [
-      summaryView(model),
-      ...(model.hasDiscount ? [discountView(model)] : []),
-      checkoutView(model),
+      summaryView(model, h),
+      ...(model.hasDiscount ? [discountView(model, h)] : []),
+      checkoutView(model, h),
     ],
   )
-}

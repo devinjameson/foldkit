@@ -1,11 +1,10 @@
-import { type Document, html } from 'foldkit/html'
+import type { Document, HtmlBuilder } from 'foldkit/html'
 
+import type { Message } from './message'
 import { Model } from './model'
 
 // ❌ Don't do this in view
-const view = (model: Model): Document => {
-  const h = html()
-
+const view = (model: Model, h: HtmlBuilder<Message>): Document => {
   // Fetching data in view
   fetch('/api/user').then(res => res.json())
 

@@ -1,6 +1,6 @@
 import { clsx } from 'clsx'
 import { Array, Option } from 'effect'
-import { type Html, html } from 'foldkit/html'
+import { type Html, type HtmlBuilder } from 'foldkit/html'
 
 import { Icon } from '../icon'
 import { type TableOfContentsEntry } from '../main'
@@ -14,10 +14,9 @@ import {
 const tableOfContentsEntryView = (
   entry: TableOfContentsEntry,
   isActive: boolean,
-): Html => {
-  const h = html<Message>()
-
-  return h.keyed('li')(
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.keyed('li')(
     entry.id,
     [
       h.Class(
@@ -45,15 +44,13 @@ const tableOfContentsEntryView = (
       ),
     ],
   )
-}
 
 export const tableOfContentsView = (
   entries: ReadonlyArray<TableOfContentsEntry>,
   maybeActiveSectionId: Option.Option<string>,
-) => {
-  const h = html<Message>()
-
-  return h.aside(
+  h: HtmlBuilder<Message>,
+) =>
+  h.aside(
     [
       h.Class(
         'hidden xl:block sticky top-[var(--header-height)] min-w-64 w-fit h-[calc(100vh-var(--header-height))] shrink-0 overflow-y-auto border-l border-gray-300 dark:border-gray-800 p-4',
@@ -81,6 +78,7 @@ export const tableOfContentsView = (
                   maybeActiveSectionId,
                   activeSectionId => activeSectionId === entry.id,
                 ),
+                h,
               ),
             ),
           ),
@@ -88,15 +86,13 @@ export const tableOfContentsView = (
       ),
     ],
   )
-}
 
 export const mobileTableOfContentsView = (
   entries: ReadonlyArray<TableOfContentsEntry>,
   maybeActiveSectionId: Option.Option<string>,
   isOpen: boolean,
+  h: HtmlBuilder<Message>,
 ) => {
-  const h = html<Message>()
-
   const firstEntryText = Array.head(entries).pipe(
     Option.match({
       onNone: () => '',

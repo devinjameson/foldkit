@@ -1,6 +1,6 @@
 import { Array, Match as M, Option, Schema as S, String } from 'effect'
 import { Command, Runtime } from 'foldkit'
-import { Document, Html, html } from 'foldkit/html'
+import { Document, Html, type HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
@@ -267,9 +267,7 @@ const todoItemClass = (todo: Todo, isEditing: boolean): string => {
   return ''
 }
 
-const nonEditingTodoView = (todo: Todo): Html => {
-  const h = html<Message>()
-
+const nonEditingTodoView = (todo: Todo, h: HtmlBuilder<Message>): Html => {
   return h.keyed('li')(
     todo.id,
     [h.Class(todoItemClass(todo, false))],
@@ -297,9 +295,11 @@ const nonEditingTodoView = (todo: Todo): Html => {
   )
 }
 
-const editingTodoView = (todo: Todo, text: string): Html => {
-  const h = html<Message>()
-
+const editingTodoView = (
+  todo: Todo,
+  text: string,
+  h: HtmlBuilder<Message>,
+): Html => {
   return h.keyed('li')(
     todo.id,
     [h.Class(todoItemClass(todo, true))],
@@ -328,12 +328,12 @@ const editingTodoView = (todo: Todo, text: string): Html => {
 // constructs a fresh matcher on every call; done per todo per frame it
 // dominates view time, so these run on the tag directly.
 const todoItemView =
-  (editing: EditingState) =>
+  (editing: EditingState, h: HtmlBuilder<Message>) =>
   (todo: Todo): Html => {
     if (editing._tag === 'Editing' && editing.id === todo.id) {
-      return editingTodoView(todo, editing.text)
+      return editingTodoView(todo, editing.text, h)
     }
-    return nonEditingTodoView(todo)
+    return nonEditingTodoView(todo, h)
   }
 
 export const filterTodos = (todos: Todos, filter: Filter): Todos => {
@@ -357,10 +357,8 @@ export const countActiveTodos = (todos: Todos): number => {
 }
 
 const filterItemView =
-  (active: Filter) =>
+  (active: Filter, h: HtmlBuilder<Message>) =>
   (filter: Filter, label: string, href: string): Html => {
-    const h = html<Message>()
-
     return h.li(
       [h.OnClick(SelectedFilter({ filter }))],
       [
@@ -372,16 +370,14 @@ const filterItemView =
     )
   }
 
-export const view = (model: Model): Document => {
-  const h = html<Message>()
-
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
   const filteredTodos = filterTodos(model.todos, model.filter)
   const activeCount = countActiveTodos(model.todos)
   const completedCount = Array.length(model.todos) - activeCount
   const allCompleted =
     Array.isReadonlyArrayNonEmpty(model.todos) && activeCount === 0
   const word = activeCount === 1 ? 'item' : 'items'
-  const filterItem = filterItemView(model.filter)
+  const filterItem = filterItemView(model.filter, h)
 
   const headerView = h.header(
     [h.Class('header')],
@@ -418,7 +414,7 @@ export const view = (model: Model): Document => {
           h.label([h.For('toggle-all')], ['Mark all as complete']),
           h.ul(
             [h.Class('todo-list')],
-            Array.map(filteredTodos, todoItemView(model.editing)),
+            Array.map(filteredTodos, todoItemView(model.editing, h)),
           ),
         ],
       ),

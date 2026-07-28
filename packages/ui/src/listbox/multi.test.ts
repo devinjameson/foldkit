@@ -1,4 +1,5 @@
 import { Option, flow } from 'effect'
+import type { HtmlBuilder } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
 import * as Story from 'foldkit/story'
 import { expect } from 'vitest'
@@ -16,6 +17,7 @@ import {
   CompletedPortalListboxBackdrop,
   CompletedScrollIntoView,
   FocusItems,
+  type Message,
   Opened,
   PortalListboxBackdrop,
   ScrollIntoView,
@@ -147,16 +149,20 @@ describe('Listbox.Multi', () => {
           'items' | 'itemToConfig' | 'buttonContent'
         > = {},
       ) =>
-      (model: Model) =>
-        view(model, {
-          items: ['Apple', 'Banana'],
-          itemToConfig: () => ({
-            content: null,
-          }),
-          buttonContent: null,
-          selectedValues: [],
-          ...overrides,
-        })
+      (model: Model, h: HtmlBuilder<Message>) =>
+        view(
+          model,
+          {
+            items: ['Apple', 'Banana'],
+            itemToConfig: () => ({
+              content: null,
+            }),
+            buttonContent: null,
+            selectedValues: [],
+            ...overrides,
+          },
+          h,
+        )
 
     describe('aria-multiselectable', () => {
       it('items container has aria-multiselectable', () => {

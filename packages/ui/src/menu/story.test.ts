@@ -1,5 +1,5 @@
 import { Option, flow } from 'effect'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
 import * as Story from 'foldkit/story'
 import { expect } from 'vitest'
@@ -58,16 +58,17 @@ const sceneView =
       'ariaLabel' | 'ariaLabelledBy'
     > = {},
   ) =>
-  (model: Model) => {
-    const h = html<Message>()
-
-    return TestMenu.view(model, {
-      items: ['Edit', 'Duplicate', 'Delete'],
-      itemToConfig: item => ({ content: h.span([], [item]) }),
-      buttonContent: h.span([], ['Actions']),
-      ...overrides,
-    })
-  }
+  (model: Model, h: HtmlBuilder<Message>) =>
+    TestMenu.view(
+      model,
+      {
+        items: ['Edit', 'Duplicate', 'Delete'],
+        itemToConfig: item => ({ content: h.span([], [item]) }),
+        buttonContent: h.span([], ['Actions']),
+        ...overrides,
+      },
+      h,
+    )
 
 const button = Scene.selector('#test-button')
 

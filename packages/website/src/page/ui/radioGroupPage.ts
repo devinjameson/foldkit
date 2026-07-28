@@ -1,5 +1,5 @@
 import { Submodel } from 'foldkit'
-import { Html, html } from 'foldkit/html'
+import type { Html } from 'foldkit/html'
 
 import { uiShowcaseViewSourceHref } from '../../link'
 import type { TableOfContentsEntry } from '../../main'
@@ -15,7 +15,6 @@ import {
 } from '../../prose'
 import * as Snippet from '../../snippet'
 import {
-  type CopiedSnippets,
   type RenderCopyButton,
   highlightedCodeBlockFor,
 } from '../../view/codeBlock'
@@ -120,7 +119,7 @@ const viewConfigProps: ReadonlyArray<PropEntry> = [
     name: 'options',
     type: 'ReadonlyArray<Value>',
     description:
-      'The list of option values, in display order. `Value` is the first type parameter of `RadioGroup.view<Value, Message>()`, so each `OptionInfo.value` is typed as `Value`.',
+      'The list of option values, in display order. `Value` is inferred from this array, so each `OptionInfo.value` is typed as your union.',
   },
   {
     name: 'ariaLabel',
@@ -197,7 +196,7 @@ const optionInfoProps: ReadonlyArray<PropEntry> = [
     name: 'value',
     type: 'Value',
     description:
-      'The option value. Typed as the `Value` type parameter of `RadioGroup.view<Value, Message>()`.',
+      'The option value, typed as the union inferred from `options`.',
   },
   {
     name: 'index',
@@ -282,14 +281,12 @@ const keyboardEntries: ReadonlyArray<KeyboardEntry> = [
 // VIEW
 
 type ViewInputs = Readonly<{
-  copiedSnippets: CopiedSnippets
   renderCopyButton: RenderCopyButton
   renderHeadingLink: RenderHeadingLink
 }>
 
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
-  (model, { copiedSnippets, renderCopyButton, renderHeadingLink }): Html => {
-    const h = html<Message>()
+  (model, { renderCopyButton, renderHeadingLink }, h): Html => {
     const { heading, tableOfContentsEntryToHeader } =
       headingsFor(renderHeadingLink)
     const highlightedCodeBlock = highlightedCodeBlockFor(renderCopyButton)
@@ -322,7 +319,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
         ),
         para(
           'Call ',
-          inlineCode('RadioGroup.view<Value, Message>()'),
+          inlineCode('RadioGroup.view(config, h)'),
           ' directly in your view. Read the current selection from your Model into ',
           inlineCode('selectedValue'),
           ', pass the typed ',
@@ -338,7 +335,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
         para(
           'In your update handler for that Message, just store the value. Moving focus onto the selected option (the roving-tabindex behavior) is handled inside the radio group’s own click and keydown handlers, so it never becomes your update’s concern.',
         ),
-        demoContainer(...RadioGroup.verticalDemo(model)),
+        demoContainer(...RadioGroup.verticalDemo(model, h)),
         highlightedCodeBlock(
           h.div(
             [
@@ -349,7 +346,6 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           ),
           Snippet.uiRadioGroupBasicRaw,
           'Copy radio group example to clipboard',
-          copiedSnippets,
           'mb-8',
         ),
         heading(
@@ -362,7 +358,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           inlineCode("orientation: 'Horizontal'"),
           ' in the ViewConfig to switch to left/right arrow navigation.',
         ),
-        demoContainer(...RadioGroup.horizontalDemo(model)),
+        demoContainer(...RadioGroup.horizontalDemo(model, h)),
         heading(stylingHeader.level, stylingHeader.id, stylingHeader.text),
         para(
           'RadioGroup is headless. The ',

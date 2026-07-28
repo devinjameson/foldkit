@@ -14,7 +14,7 @@ import {
   pipe,
 } from 'effect'
 import { Command, ManagedResource, Mount, Submodel } from 'foldkit'
-import { Html, html } from 'foldkit/html'
+import { Html, type HtmlBuilder, staticHtml } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
@@ -708,7 +708,7 @@ const fileTabButtonClassName = clsx(
 )
 
 const backToExampleButton = (maybeMeta: Option.Option<ExampleMeta>): Html => {
-  const h = html()
+  const h = staticHtml
 
   return Option.match(maybeMeta, {
     onNone: () =>
@@ -732,7 +732,7 @@ const messageView = (
   body: string,
   maybeMeta: Option.Option<ExampleMeta>,
 ): Html => {
-  const h = html()
+  const h = staticHtml
 
   return h.div(
     [h.Class('flex-1 flex items-center justify-center px-6 py-20 text-center')],
@@ -760,7 +760,7 @@ const messageView = (
 }
 
 const spinnerView = (): Html => {
-  const h = html()
+  const h = staticHtml
   return h.div(
     [
       h.Class(
@@ -774,7 +774,7 @@ const spinnerView = (): Html => {
 }
 
 const bootingPanelView = (heading: string, body: string): Html => {
-  const h = html()
+  const h = staticHtml
   return h.div(
     [h.Class('flex-1 flex items-center justify-center px-6 py-20 text-center')],
     [
@@ -794,7 +794,7 @@ const bootingPanelView = (heading: string, body: string): Html => {
 }
 
 const failurePanelView = (reason: string): Html => {
-  const h = html()
+  const h = staticHtml
   return h.div(
     [h.Class('flex-1 flex items-center justify-center px-6 py-20 text-center')],
     [
@@ -816,10 +816,9 @@ const editorPanelContent = (
   path: string,
   content: string,
   files: Readonly<Record<string, string>>,
-): Html => {
-  const h = html<Message>()
-
-  return h.div(
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.div(
     [h.Class('flex-1 min-w-0 min-h-0 flex flex-col bg-[#1e1e1e] text-sm')],
     [
       h.keyed('div')(
@@ -832,10 +831,9 @@ const editorPanelContent = (
       ),
     ],
   )
-}
 
 const previewPaneView = (state: PlaygroundState): Html => {
-  const h = html()
+  const h = staticHtml
 
   return h.div(
     [
@@ -879,7 +877,7 @@ const previewPaneView = (state: PlaygroundState): Html => {
 }
 
 const writeErrorBannerView = (maybeError: Option.Option<string>): Html => {
-  const h = html()
+  const h = staticHtml
   return Option.match(maybeError, {
     onNone: () => h.div([h.Class('hidden')], []),
     onSome: reason =>
@@ -896,7 +894,7 @@ const writeErrorBannerView = (maybeError: Option.Option<string>): Html => {
 }
 
 const tooNarrowMessageView = (): Html => {
-  const h = html()
+  const h = staticHtml
   return h.div(
     [
       h.Class(
@@ -925,24 +923,21 @@ const tooNarrowMessageView = (): Html => {
   )
 }
 
-const responsiveEditorView = (model: Model): Html => {
-  const h = html<Message>()
-  return h.div(
+const responsiveEditorView = (model: Model, h: HtmlBuilder<Message>): Html =>
+  h.div(
     [h.Class('flex-1 min-h-0 flex flex-col')],
     [
       tooNarrowMessageView(),
       h.div(
         [h.Class('flex-1 min-h-0 min-w-0 flex max-md:hidden')],
-        [editorLayoutView(model)],
+        [editorLayoutView(model, h)],
       ),
     ],
   )
-}
 
 const PlaygroundFileTabs = Tabs.create<string>()
 
-const editorLayoutView = (model: Model): Html => {
-  const h = html<Message>()
+const editorLayoutView = (model: Model, h: HtmlBuilder<Message>): Html => {
   const paths = sortedPaths(model.files)
   return h.div(
     [h.Class('flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden')],
@@ -998,6 +993,7 @@ const editorLayoutView = (model: Model): Html => {
                                 Option.getOrElse(() => ''),
                               ),
                               model.files,
+                              h,
                             ),
                           ],
                         ),
@@ -1017,9 +1013,7 @@ const editorLayoutView = (model: Model): Html => {
 type ViewInputs = Readonly<{ isChromium: boolean }>
 
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
-  (model, { isChromium }): Html => {
-    const h = html<Message>()
-
+  (model, { isChromium }, h): Html => {
     const maybeMeta = findBySlug(model.slug)
     const maybeFiles = Option.fromNullishOr(filesBySlug[model.slug])
 
@@ -1041,7 +1035,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
               'This example is not yet available in the embedded playground. Open its example detail page to see it running.',
               maybeMeta,
             ),
-          onSome: () => responsiveEditorView(model),
+          onSome: () => responsiveEditorView(model, h),
         }),
       ),
     )

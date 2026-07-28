@@ -8,7 +8,7 @@ import {
   pipe,
 } from 'effect'
 import { Command, Runtime, Subscription } from 'foldkit'
-import { type Document, type Html, createLazy, html } from 'foldkit/html'
+import { type Document, type Html, HtmlBuilder, createLazy } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -310,24 +310,25 @@ const burnCpuDuringView = (workload: Workload): void => {
   }
 }
 
-const scenarioCard = ({
-  phase,
-  thresholdMs,
-  title,
-  body,
-  buttonText,
-  message,
-}: Readonly<{
-  phase: SlowPhase
-  thresholdMs: number
-  title: string
-  body: string
-  buttonText: string
-  message: Message
-}>): Html => {
-  const h = html<Message>()
-
-  return h.article(
+const scenarioCard = (
+  {
+    phase,
+    thresholdMs,
+    title,
+    body,
+    buttonText,
+    message,
+  }: Readonly<{
+    phase: SlowPhase
+    thresholdMs: number
+    title: string
+    body: string
+    buttonText: string
+    message: Message
+  }>,
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.article(
     [h.Class(`rounded-lg border p-4 shadow-sm ${phaseAccentClass(phase)}`)],
     [
       h.div(
@@ -352,12 +353,9 @@ const scenarioCard = ({
       ),
     ],
   )
-}
 
-const warningView = (warning: SlowWarning): Html => {
-  const h = html<Message>()
-
-  return h.keyed('li')(
+const warningView = (warning: SlowWarning, h: HtmlBuilder<Message>): Html =>
+  h.keyed('li')(
     warning.id.toString(),
     [
       h.Class(
@@ -384,12 +382,12 @@ const warningView = (warning: SlowWarning): Html => {
       ),
     ],
   )
-}
 
-const warningsView = (warnings: ReadonlyArray<SlowWarning>): Html => {
-  const h = html<Message>()
-
-  return h.section(
+const warningsView = (
+  warnings: ReadonlyArray<SlowWarning>,
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.section(
     [h.Class('rounded-lg border border-zinc-200 bg-white p-4 shadow-sm')],
     [
       h.div(
@@ -429,15 +427,19 @@ const warningsView = (warnings: ReadonlyArray<SlowWarning>): Html => {
             ['Run a workload to record a warning.'],
           ),
         onNonEmpty: warnings =>
-          h.ul([h.Class('grid gap-3')], Array.map(warnings, warningView)),
+          h.ul(
+            [h.Class('grid gap-3')],
+            Array.map(warnings, warning => warningView(warning, h)),
+          ),
       }),
     ],
   )
-}
 
-const patchRowsView = (rowCount: number, patchRun: number): Html => {
-  const h = html<Message>()
-
+const patchRowsView = (
+  rowCount: number,
+  patchRun: number,
+  h: HtmlBuilder<Message>,
+): Html => {
   if (rowCount === 0) {
     return h.div(
       [
@@ -469,10 +471,8 @@ const patchRowsView = (rowCount: number, patchRun: number): Html => {
   }
 }
 
-const patchSurfaceView = (model: Model): Html => {
-  const h = html<Message>()
-
-  return h.section(
+const patchSurfaceView = (model: Model, h: HtmlBuilder<Message>): Html =>
+  h.section(
     [h.Class('rounded-lg border border-zinc-200 bg-white p-4 shadow-sm')],
     [
       h.div(
@@ -493,14 +493,11 @@ const patchSurfaceView = (model: Model): Html => {
           ),
         ],
       ),
-      lazyPatchRows(patchRowsView, [model.patchRows, model.patchRun]),
+      lazyPatchRows(patchRowsView, [model.patchRows, model.patchRun, h]),
     ],
   )
-}
 
-export const view = (model: Model): Document => {
-  const h = html<Message>()
-
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
   burnCpuDuringView(model.activeWorkload)
 
   return {
@@ -534,42 +531,54 @@ export const view = (model: Model): Document => {
             h.section(
               [h.Class('grid gap-4 md:grid-cols-2')],
               [
-                scenarioCard({
-                  phase: 'Update',
-                  thresholdMs: 4,
-                  title: 'Slow update',
-                  body: 'Runs CPU work before returning the next Model.',
-                  buttonText: 'Run update work',
-                  message: ClickedRunUpdateWork(),
-                }),
-                scenarioCard({
-                  phase: 'View',
-                  thresholdMs: 16,
-                  title: 'Slow view',
-                  body: 'Runs CPU work while the view builds the VNode tree.',
-                  buttonText: 'Run view work',
-                  message: ClickedRunViewWork(),
-                }),
-                scenarioCard({
-                  phase: 'Patch',
-                  thresholdMs: 8,
-                  title: 'Slow patch',
-                  body: 'Mounts thousands of keyed rows into the DOM.',
-                  buttonText: 'Run patch work',
-                  message: ClickedRunPatchWork(),
-                }),
-                scenarioCard({
-                  phase: 'SubscriptionDependencies',
-                  thresholdMs: 2,
-                  title: 'Slow subscription dependencies',
-                  body: 'Burns CPU while deriving subscription dependencies.',
-                  buttonText: 'Run dependency extraction',
-                  message: ClickedRunSubscriptionDependenciesWork(),
-                }),
+                scenarioCard(
+                  {
+                    phase: 'Update',
+                    thresholdMs: 4,
+                    title: 'Slow update',
+                    body: 'Runs CPU work before returning the next Model.',
+                    buttonText: 'Run update work',
+                    message: ClickedRunUpdateWork(),
+                  },
+                  h,
+                ),
+                scenarioCard(
+                  {
+                    phase: 'View',
+                    thresholdMs: 16,
+                    title: 'Slow view',
+                    body: 'Runs CPU work while the view builds the VNode tree.',
+                    buttonText: 'Run view work',
+                    message: ClickedRunViewWork(),
+                  },
+                  h,
+                ),
+                scenarioCard(
+                  {
+                    phase: 'Patch',
+                    thresholdMs: 8,
+                    title: 'Slow patch',
+                    body: 'Mounts thousands of keyed rows into the DOM.',
+                    buttonText: 'Run patch work',
+                    message: ClickedRunPatchWork(),
+                  },
+                  h,
+                ),
+                scenarioCard(
+                  {
+                    phase: 'SubscriptionDependencies',
+                    thresholdMs: 2,
+                    title: 'Slow subscription dependencies',
+                    body: 'Burns CPU while deriving subscription dependencies.',
+                    buttonText: 'Run dependency extraction',
+                    message: ClickedRunSubscriptionDependenciesWork(),
+                  },
+                  h,
+                ),
               ],
             ),
-            warningsView(model.warnings),
-            patchSurfaceView(model),
+            warningsView(model.warnings, h),
+            patchSurfaceView(model, h),
           ],
         ),
       ],

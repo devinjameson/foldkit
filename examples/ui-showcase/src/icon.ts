@@ -1,9 +1,7 @@
-import { Html, html } from 'foldkit/html'
+import { Html, staticHtml as h } from 'foldkit/html'
 
-const heroIcon = (className: string, strokeWidth: string, d: string): Html => {
-  const h = html()
-
-  return h.svg(
+const heroIcon = (className: string, strokeWidth: string, d: string): Html =>
+  h.svg(
     [
       h.AriaHidden(true),
       h.Class(className),
@@ -15,7 +13,6 @@ const heroIcon = (className: string, strokeWidth: string, d: string): Html => {
     ],
     [h.path([h.StrokeLinecap('round'), h.StrokeLinejoin('round'), h.D(d)], [])],
   )
-}
 
 export const chevronDown = (className: string = 'w-6 h-6'): Html =>
   heroIcon(className, '1.5', 'M19.5 8.25l-7.5 7.5-7.5-7.5')

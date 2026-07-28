@@ -1,5 +1,5 @@
 import { Array, Option, Schema as S, pipe } from 'effect'
-import { type Html, html } from 'foldkit/html'
+import { type Html, type HtmlBuilder, staticHtml } from 'foldkit/html'
 import type { Url } from 'foldkit/url'
 
 import { Nav } from '@foldkit/ui'
@@ -59,7 +59,7 @@ const linkClassName =
 // VIEW
 
 const urlBar = (currentSection: NavDemoSection): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.div(
     [
@@ -83,9 +83,7 @@ const urlBar = (currentSection: NavDemoSection): Html => {
   )
 }
 
-export const basicDemo = (url: Url) => {
-  const h = html<Message>()
-
+export const basicDemo = (url: Url, h: HtmlBuilder<Message>) => {
   const currentSection = sectionFromUrl(url)
 
   return [

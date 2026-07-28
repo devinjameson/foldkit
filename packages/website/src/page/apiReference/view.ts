@@ -1,7 +1,12 @@
 import { clsx } from 'clsx'
 import { Array, Option, Record, Result, pipe } from 'effect'
 import { Submodel } from 'foldkit'
-import { Html, createKeyedLazy, html } from 'foldkit/html'
+import {
+  Html,
+  type HtmlBuilder,
+  createKeyedLazy,
+  staticHtml,
+} from 'foldkit/html'
 
 import { Disclosure } from '@foldkit/ui'
 
@@ -30,7 +35,7 @@ const sourceLink = (
   sourceUrl: Option.Option<string>,
   name: string,
 ): ReadonlyArray<Html> => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return Option.match(sourceUrl, {
     onNone: () => [],
@@ -57,8 +62,8 @@ const functionView = (
   isSignatureDisclosureOpen: boolean | undefined,
   highlights: Highlights,
   renderHeadingLink: RenderHeadingLink,
+  h: HtmlBuilder<Message>,
 ): Html => {
-  const h = html<Message>()
   const id = scopedId('function', moduleName, apiFunction.name)
 
   return h.div(
@@ -97,7 +102,7 @@ const functionView = (
           renderHeadingLink(id, apiFunction.name),
         ],
       ),
-      signaturesView(id, apiFunction, isSignatureDisclosureOpen, highlights),
+      signaturesView(id, apiFunction, isSignatureDisclosureOpen, highlights, h),
     ],
   )
 }
@@ -105,7 +110,7 @@ const functionView = (
 const allParameterDescriptions = (
   apiFunction: ApiFunction,
 ): ReadonlyArray<Html> => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return pipe(
     Array.flatMap(apiFunction.signatures, signature => signature.parameters),
@@ -147,7 +152,7 @@ const allParameterDescriptions = (
 }
 
 const chevron = (isOpen: boolean): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.span(
     [
@@ -171,8 +176,8 @@ const signaturesView = (
   apiFunction: ApiFunction,
   isSignatureDisclosureOpen: boolean | undefined,
   highlights: Highlights,
+  h: HtmlBuilder<Message>,
 ): Html => {
-  const h = html<Message>()
   const maybeHighlighted = Record.get(highlights, key)
   const isInDisclosure = isSignatureDisclosureOpen !== undefined
 
@@ -206,35 +211,38 @@ const signaturesView = (
   })
 
   if (isSignatureDisclosureOpen !== undefined) {
-    return Disclosure.view<Message>({
-      id: key,
-      isOpen: isSignatureDisclosureOpen,
-      onToggle: isOpen => ToggledSignature({ id: key, isOpen }),
-      toView: attributes =>
-        h.div(
-          [],
-          [
-            h.button(
-              [...attributes.button, h.Class(disclosureButtonClassName)],
-              [
-                h.div(
-                  [h.Class('flex items-center justify-between w-full')],
-                  [
-                    h.span([], ['Show signature']),
-                    chevron(isSignatureDisclosureOpen),
-                  ],
-                ),
-              ],
-            ),
-            isSignatureDisclosureOpen
-              ? h.div(
-                  [...attributes.panel, h.Class(disclosurePanelClassName)],
-                  [h.div([h.Class(wrapperClass)], content)],
-                )
-              : h.empty,
-          ],
-        ),
-    })
+    return Disclosure.view(
+      {
+        id: key,
+        isOpen: isSignatureDisclosureOpen,
+        onToggle: isOpen => ToggledSignature({ id: key, isOpen }),
+        toView: attributes =>
+          h.div(
+            [],
+            [
+              h.button(
+                [...attributes.button, h.Class(disclosureButtonClassName)],
+                [
+                  h.div(
+                    [h.Class('flex items-center justify-between w-full')],
+                    [
+                      h.span([], ['Show signature']),
+                      chevron(isSignatureDisclosureOpen),
+                    ],
+                  ),
+                ],
+              ),
+              isSignatureDisclosureOpen
+                ? h.div(
+                    [...attributes.panel, h.Class(disclosurePanelClassName)],
+                    [h.div([h.Class(wrapperClass)], content)],
+                  )
+                : h.empty,
+            ],
+          ),
+      },
+      h,
+    )
   } else {
     return h.div([h.Class(wrapperClass)], content)
   }
@@ -243,7 +251,7 @@ const signaturesView = (
 const parameterDescriptions = (
   parameters: ReadonlyArray<ApiParameter>,
 ): ReadonlyArray<Html> => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return pipe(
     parameters,
@@ -283,14 +291,11 @@ const parameterDescriptions = (
   )
 }
 
-const punctuation = (text: string): Html => {
-  const h = html<Message>()
-
-  return h.span([h.Class('text-gray-500')], [text])
-}
+const punctuation = (text: string): Html =>
+  staticHtml.span([staticHtml.Class('text-gray-500')], [text])
 
 const parameterView = (parameter: ApiParameter): ReadonlyArray<Html> => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return [
     ...(parameter.isRest ? [punctuation('...')] : []),
@@ -307,7 +312,7 @@ const parameterView = (parameter: ApiParameter): ReadonlyArray<Html> => {
 const parameterListView = (
   parameters: ReadonlyArray<ApiParameter>,
 ): ReadonlyArray<Html> => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return Array.match(parameters, {
     onEmpty: () => [h.div([h.Class('mb-2')], [punctuation('()')])],
@@ -329,7 +334,7 @@ const parameterListView = (
 }
 
 const returnTypeView = (returnType: string): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.div(
     [h.Class('whitespace-pre-wrap')],
@@ -343,7 +348,7 @@ const returnTypeView = (returnType: string): Html => {
 const descriptionCommentFallback = (
   maybeDescription: Option.Option<string>,
 ): ReadonlyArray<Html> => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return Option.match(maybeDescription, {
     onNone: () => [],
@@ -361,7 +366,7 @@ const signatureChildrenFallback = (signature: {
   readonly returnType: string
   readonly typeParameters: ReadonlyArray<string>
 }): ReadonlyArray<Html> => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return [
     ...Array.match(signature.typeParameters, {
@@ -383,8 +388,8 @@ const typeView = (
   type: ApiType,
   highlights: Highlights,
   renderHeadingLink: RenderHeadingLink,
+  h: HtmlBuilder<Message>,
 ): Html => {
-  const h = html<Message>()
   const id = scopedId('type', moduleName, type.name)
   const maybeHighlighted = Record.get(highlights, id)
 
@@ -459,8 +464,8 @@ const interfaceView = (
   apiInterface: ApiInterface,
   highlights: Highlights,
   renderHeadingLink: RenderHeadingLink,
+  h: HtmlBuilder<Message>,
 ): Html => {
-  const h = html<Message>()
   const id = scopedId('interface', moduleName, apiInterface.name)
   const maybeHighlighted = Record.get(highlights, id)
 
@@ -535,8 +540,8 @@ const variableView = (
   variable: ApiVariable,
   highlights: Highlights,
   renderHeadingLink: RenderHeadingLink,
+  h: HtmlBuilder<Message>,
 ): Html => {
-  const h = html<Message>()
   const id = scopedId('const', moduleName, variable.name)
   const maybeHighlighted = Record.get(highlights, id)
 
@@ -644,10 +649,8 @@ type ViewInputs = Readonly<{
  * `toParentMessage`.
  */
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
-  (model, { module, highlights, renderHeadingLink }): Html => {
-    const h = html<Message>()
-
-    return h.div(
+  (model, { module, highlights, renderHeadingLink }, h): Html =>
+    h.div(
       [h.DataAttribute('pagefind-meta', 'kind:API Reference')],
       [
         pageTitle(module.name, module.name),
@@ -664,6 +667,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
               model.disclosures[key],
               highlights,
               renderHeadingLink,
+              h,
             ])
           },
         ),
@@ -679,6 +683,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
               type,
               highlights,
               renderHeadingLink,
+              h,
             ])
           },
         ),
@@ -694,6 +699,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
               apiInterface,
               highlights,
               renderHeadingLink,
+              h,
             ])
           },
         ),
@@ -709,12 +715,12 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
               variable,
               highlights,
               renderHeadingLink,
+              h,
             ])
           },
         ),
       ],
-    )
-  },
+    ),
 )
 
 const skeletonFunctionBlocks: ReadonlyArray<{
@@ -733,7 +739,7 @@ const skeletonFunctionBlocks: ReadonlyArray<{
 const skeletonSurfaceClass = 'bg-gray-200 dark:bg-gray-800'
 
 export const skeletonView = (): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.div(
     [h.Class('animate-pulse')],
@@ -765,7 +771,7 @@ export const skeletonView = (): Html => {
 }
 
 export const failureView = (error: string): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.div(
     [h.Class('rounded-lg border border-red-300 dark:border-red-800 p-6')],

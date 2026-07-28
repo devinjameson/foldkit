@@ -11,7 +11,7 @@ import {
 } from 'effect'
 import * as Command from 'foldkit/command'
 import * as Dom from 'foldkit/dom'
-import { type ChildAttribute, type Html, html } from 'foldkit/html'
+import type { ChildAttribute, Html } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import * as Mount from 'foldkit/mount'
 import { evo } from 'foldkit/struct'
@@ -845,9 +845,7 @@ const internalView = <Item extends string>() =>
   menuViewImpl as unknown as ViewForItem<Item>
 
 const menuViewImpl = defineView<Model, Message, ViewInputs<string>>(
-  (model, viewInputs) => {
-    const h = html<Message>()
-
+  (model, viewInputs, h) => {
     const {
       id,
       isOpen,

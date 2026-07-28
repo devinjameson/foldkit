@@ -3,7 +3,7 @@
 // update, and view definitions.
 import { Array, Match as M, Option } from 'effect'
 import { Command } from 'foldkit'
-import { childAttributes, html } from 'foldkit/html'
+import { type HtmlBuilder, childAttributes } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -96,9 +96,7 @@ const filteredCities =
 // from a native `<label for>`, and pass `ariaLabelledBy` so the input is named
 // by the label. The attribute is only emitted when provided, so the input
 // never carries a dangling `aria-labelledby`.
-const view = (model: Model) => {
-  const h = html<Message>()
-
+const view = (model: Model, h: HtmlBuilder<Message>) => {
   const labelId = 'city-label'
 
   return h.div(

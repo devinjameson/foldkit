@@ -2,7 +2,7 @@ import { Function, Match as M, Option, Predicate, Schema as S } from 'effect'
 import * as Calendar from 'foldkit/calendar'
 import type { CalendarDate } from 'foldkit/calendar'
 import * as Command from 'foldkit/command'
-import { type ChildAttribute, type Html, html } from 'foldkit/html'
+import type { ChildAttribute, Html } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 import { type Reflect, defineView } from 'foldkit/submodel'
@@ -440,9 +440,7 @@ export type ViewInputs = Readonly<{
  * provide the trigger face and the calendar grid layout, DatePicker handles
  * focus choreography, open/close state, and form submission. */
 export const view = defineView<Model, Message, ViewInputs>(
-  (model, viewInputs): Html => {
-    const h = html<Message>()
-
+  (model, viewInputs, h): Html => {
     const {
       anchor,
       maybeSelectedDate,

@@ -1,7 +1,7 @@
 import { Array, Effect, Match as M, Option, Schema as S, String } from 'effect'
 import { HttpClient, HttpClientRequest } from 'effect/unstable/http'
 import { AsyncData, Command, Http, Runtime } from 'foldkit'
-import { Document, Html, html } from 'foldkit/html'
+import { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -231,27 +231,25 @@ export const FetchWeather = Command.define(
 
 // VIEW
 
-export const view = (model: Model): Document => {
-  const h = html<Message>()
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
+  title: 'Weather',
+  body: h.div(
+    [
+      h.Class(
+        'min-h-screen bg-gradient-to-br from-blue-100 to-blue-300 flex flex-col items-center justify-center gap-6 p-6',
+      ),
+    ],
+    [
+      h.h1([h.Class('text-4xl font-bold text-blue-900 mb-8')], ['Weather']),
 
-  return {
-    title: 'Weather',
-    body: h.div(
-      [
-        h.Class(
-          'min-h-screen bg-gradient-to-br from-blue-100 to-blue-300 flex flex-col items-center justify-center gap-6 p-6',
-        ),
-      ],
-      [
-        h.h1([h.Class('text-4xl font-bold text-blue-900 mb-8')], ['Weather']),
-
-        h.form(
-          [
-            h.Class('flex flex-col gap-4 items-center w-full max-w-md'),
-            h.OnSubmit(SubmittedWeatherForm()),
-          ],
-          [
-            Input.view<Message>({
+      h.form(
+        [
+          h.Class('flex flex-col gap-4 items-center w-full max-w-md'),
+          h.OnSubmit(SubmittedWeatherForm()),
+        ],
+        [
+          Input.view(
+            {
               id: 'location',
               value: model.zipCodeInput,
               placeholder: 'Enter a zip code',
@@ -266,8 +264,11 @@ export const view = (model: Model): Document => {
                     'w-full px-4 py-2 rounded-lg border-2 border-blue-300 focus:border-blue-500 outline-none',
                   ),
                 ]),
-            }),
-            Button.view<Message>({
+            },
+            h,
+          ),
+          Button.view(
+            {
               type: 'submit',
               isDisabled: AsyncData.isPending(model.weather),
               toView: attributes =>
@@ -284,38 +285,37 @@ export const view = (model: Model): Document => {
                       : 'Get Weather',
                   ],
                 ),
-            }),
-          ],
-        ),
+            },
+            h,
+          ),
+        ],
+      ),
 
-        AsyncData.matchDataSplitEmpty(model.weather, {
-          onIdle: () => h.empty,
-          onLoading: () =>
-            h.div(
-              [h.Class('text-blue-600 font-semibold text-center')],
-              ['Fetching weather...'],
-            ),
-          onFailure: error =>
-            h.div(
-              [
-                h.Class(
-                  'p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg',
-                ),
-              ],
-              [error],
-            ),
-          onData: weather =>
-            h.div([h.Class('w-full max-w-md')], [weatherView(weather)]),
-        }),
-      ],
-    ),
-  }
-}
+      AsyncData.matchDataSplitEmpty(model.weather, {
+        onIdle: () => h.empty,
+        onLoading: () =>
+          h.div(
+            [h.Class('text-blue-600 font-semibold text-center')],
+            ['Fetching weather...'],
+          ),
+        onFailure: error =>
+          h.div(
+            [
+              h.Class(
+                'p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg',
+              ),
+            ],
+            [error],
+          ),
+        onData: weather =>
+          h.div([h.Class('w-full max-w-md')], [weatherView(weather, h)]),
+      }),
+    ],
+  ),
+})
 
-const weatherView = (weather: WeatherData): Html => {
-  const h = html<Message>()
-
-  return h.article(
+const weatherView = (weather: WeatherData, h: HtmlBuilder<Message>): Html =>
+  h.article(
     [h.Class('bg-white rounded-xl shadow-lg p-8 w-full')],
     [
       h.h2(
@@ -365,4 +365,3 @@ const weatherView = (weather: WeatherData): Html => {
       ),
     ],
   )
-}

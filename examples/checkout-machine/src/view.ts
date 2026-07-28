@@ -1,6 +1,6 @@
 import { clsx } from 'clsx'
 import { Array, Match as M, Option, pipe } from 'effect'
-import { Document, Html, html } from 'foldkit/html'
+import { Document, Html, HtmlBuilder } from 'foldkit/html'
 
 import { Button, Checkbox, Input, RadioGroup } from '@foldkit/ui'
 
@@ -173,8 +173,11 @@ const stateToMaybeDiscount = (
     Option.flatten,
   )
 
-const bookCoverView = (className: string, isCompact: boolean): Html => {
-  const h = html()
+const bookCoverView = (
+  className: string,
+  isCompact: boolean,
+  h: HtmlBuilder<Message>,
+): Html => {
   const coverClassName = clsx(
     'relative grid content-start overflow-hidden bg-orange-800 text-orange-50',
     className,
@@ -223,10 +226,8 @@ const bookCoverView = (className: string, isCompact: boolean): Html => {
   )
 }
 
-const pageHeaderView = (): Html => {
-  const h = html<Message>()
-
-  return h.header(
+const pageHeaderView = (h: HtmlBuilder<Message>): Html =>
+  h.header(
     [h.Class('border-b border-stone-300 bg-stone-50')],
     [
       h.div(
@@ -279,7 +280,6 @@ const pageHeaderView = (): Html => {
       ),
     ],
   )
-}
 
 const progressIndicatorClassName = (
   isActive: boolean,
@@ -300,8 +300,10 @@ const progressIndicatorClassName = (
   )
 }
 
-const progressView = (state: typeof CheckoutState.Type): Html => {
-  const h = html<Message>()
+const progressView = (
+  state: typeof CheckoutState.Type,
+  h: HtmlBuilder<Message>,
+): Html => {
   const progressIndex = currentProgressIndex(state)
 
   return h.nav(
@@ -361,8 +363,8 @@ const progressView = (state: typeof CheckoutState.Type): Html => {
 
 const editionOptionView = (
   option: RadioGroup.OptionInfo<string, Message>,
+  h: HtmlBuilder<Message>,
 ): Html => {
-  const h = html<Message>()
   const selectionBadgeClassName =
     'mt-2 inline-flex text-xs font-bold uppercase tracking-wider'
 
@@ -432,21 +434,20 @@ const editionOptionView = (
   )
 }
 
-const cancelCheckoutButton = (): Html => {
-  const h = html<Message>()
+const cancelCheckoutButton = (h: HtmlBuilder<Message>): Html =>
+  Button.view(
+    {
+      onClick: ClickedCancel(),
+      toView: attributes =>
+        h.button(
+          [...attributes.button, h.Class(cancelButtonClassName)],
+          ['Cancel checkout'],
+        ),
+    },
+    h,
+  )
 
-  return Button.view<Message>({
-    onClick: ClickedCancel(),
-    toView: attributes =>
-      h.button(
-        [...attributes.button, h.Class(cancelButtonClassName)],
-        ['Cancel checkout'],
-      ),
-  })
-}
-
-const cartView = (state: typeof Cart.Type): Html => {
-  const h = html<Message>()
+const cartView = (state: typeof Cart.Type, h: HtmlBuilder<Message>): Html => {
   const continueLabel = state.isShippingRequired
     ? 'Continue to delivery'
     : 'Continue to payment'
@@ -461,7 +462,7 @@ const cartView = (state: typeof Cart.Type): Html => {
           ),
         ],
         [
-          bookCoverView('mx-auto sm:mx-0', false),
+          bookCoverView('mx-auto sm:mx-0', false, h),
           h.div(
             [h.Class('sm:col-span-3')],
             [
@@ -495,20 +496,25 @@ const cartView = (state: typeof Cart.Type): Html => {
             [h.Class('mb-3 text-sm font-bold text-stone-900')],
             ['Choose an edition'],
           ),
-          RadioGroup.view<string, Message>({
-            id: 'edition',
-            selectedValue: Option.some(editionName(state.isShippingRequired)),
-            options: EDITIONS,
-            ariaLabel: 'Choose an edition',
-            orientation: 'Horizontal',
-            onSelect: edition =>
-              SelectedEdition({ isShippingRequired: edition === 'Hardcover' }),
-            toView: ({ group, options }) =>
-              h.div(
-                [...group, h.Class('grid gap-3 sm:grid-cols-2')],
-                Array.map(options, editionOptionView),
-              ),
-          }),
+          RadioGroup.view(
+            {
+              id: 'edition',
+              selectedValue: Option.some(editionName(state.isShippingRequired)),
+              options: EDITIONS,
+              ariaLabel: 'Choose an edition',
+              orientation: 'Horizontal',
+              onSelect: edition =>
+                SelectedEdition({
+                  isShippingRequired: edition === 'Hardcover',
+                }),
+              toView: ({ group, options }) =>
+                h.div(
+                  [...group, h.Class('grid gap-3 sm:grid-cols-2')],
+                  Array.map(options, option => editionOptionView(option, h)),
+                ),
+            },
+            h,
+          ),
         ],
       ),
       h.div(
@@ -518,25 +524,26 @@ const cartView = (state: typeof Cart.Type): Html => {
           ),
         ],
         [
-          cancelCheckoutButton(),
-          Button.view<Message>({
-            onClick: ClickedContinue(),
-            toView: attributes =>
-              h.button(
-                [...attributes.button, h.Class(primaryButtonClassName)],
-                [continueLabel, Icon.arrowRight()],
-              ),
-          }),
+          cancelCheckoutButton(h),
+          Button.view(
+            {
+              onClick: ClickedContinue(),
+              toView: attributes =>
+                h.button(
+                  [...attributes.button, h.Class(primaryButtonClassName)],
+                  [continueLabel, Icon.arrowRight()],
+                ),
+            },
+            h,
+          ),
         ],
       ),
     ],
   )
 }
 
-const shippingView = (): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const shippingView = (h: HtmlBuilder<Message>): Html =>
+  h.div(
     [h.Class('grid gap-7')],
     [
       h.section(
@@ -666,41 +673,49 @@ const shippingView = (): Html => {
           ),
         ],
         [
-          Button.view<Message>({
-            onClick: ClickedBack(),
-            toView: attributes =>
-              h.button(
-                [
-                  ...attributes.button,
-                  h.Class(
-                    clsx(secondaryButtonClassName, 'sm:justify-self-start'),
-                  ),
-                ],
-                ['Back to bag'],
-              ),
-          }),
-          h.div([h.Class('sm:justify-self-center')], [cancelCheckoutButton()]),
-          Button.view<Message>({
-            onClick: ClickedContinue(),
-            toView: attributes =>
-              h.button(
-                [
-                  ...attributes.button,
-                  h.Class(clsx(primaryButtonClassName, 'sm:justify-self-end')),
-                ],
-                ['Continue to payment', Icon.arrowRight()],
-              ),
-          }),
+          Button.view(
+            {
+              onClick: ClickedBack(),
+              toView: attributes =>
+                h.button(
+                  [
+                    ...attributes.button,
+                    h.Class(
+                      clsx(secondaryButtonClassName, 'sm:justify-self-start'),
+                    ),
+                  ],
+                  ['Back to bag'],
+                ),
+            },
+            h,
+          ),
+          h.div([h.Class('sm:justify-self-center')], [cancelCheckoutButton(h)]),
+          Button.view(
+            {
+              onClick: ClickedContinue(),
+              toView: attributes =>
+                h.button(
+                  [
+                    ...attributes.button,
+                    h.Class(
+                      clsx(primaryButtonClassName, 'sm:justify-self-end'),
+                    ),
+                  ],
+                  ['Continue to payment', Icon.arrowRight()],
+                ),
+            },
+            h,
+          ),
         ],
       ),
     ],
   )
-}
 
-const paymentView = (state: typeof Payment.Type): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const paymentView = (
+  state: typeof Payment.Type,
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.div(
     [h.Class('grid gap-7')],
     [
       h.div(
@@ -726,78 +741,81 @@ const paymentView = (state: typeof Payment.Type): Html => {
             [h.Class('text-sm font-bold text-stone-900')],
             ['Saved payment method'],
           ),
-          Checkbox.view<Message>({
-            id: 'saved-card',
-            isChecked: state.isPaymentMethodSelected,
-            onToggle: isSelected => ToggledPaymentMethod({ isSelected }),
-            toView: attributes =>
-              h.div(
-                [
-                  ...attributes.checkbox,
-                  h.Class(
-                    clsx(
-                      'mt-3 flex w-full cursor-pointer items-center justify-between gap-4 border-2 p-5 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900',
-                      {
-                        'border-stone-900 bg-white':
-                          state.isPaymentMethodSelected,
-                        'border-stone-300 bg-stone-50 transition-colors hover:border-stone-500 hover:bg-white':
-                          !state.isPaymentMethodSelected,
-                      },
-                    ),
-                  ),
-                ],
-                [
-                  h.div(
-                    [h.Class('flex items-center gap-4')],
-                    [
-                      h.div(
-                        [
-                          h.Class(
-                            'grid h-10 w-14 place-items-center border border-stone-300 bg-stone-50 text-xs font-bold tracking-widest text-stone-900',
-                          ),
-                        ],
-                        ['MC'],
-                      ),
-                      h.div(
-                        [],
-                        [
-                          h.div(
-                            [
-                              ...attributes.label,
-                              h.Class('text-sm font-bold text-stone-900'),
-                            ],
-                            ['Mastercard •••• 4242'],
-                          ),
-                          h.div(
-                            [
-                              ...attributes.description,
-                              h.Class('mt-1 text-xs text-stone-600'),
-                            ],
-                            ['Expires 08/29'],
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  h.span(
-                    [
-                      h.Class(
-                        clsx('h-6 w-6 rounded-full border', {
-                          'grid place-items-center border-stone-900 bg-stone-900 text-white':
+          Checkbox.view(
+            {
+              id: 'saved-card',
+              isChecked: state.isPaymentMethodSelected,
+              onToggle: isSelected => ToggledPaymentMethod({ isSelected }),
+              toView: attributes =>
+                h.div(
+                  [
+                    ...attributes.checkbox,
+                    h.Class(
+                      clsx(
+                        'mt-3 flex w-full cursor-pointer items-center justify-between gap-4 border-2 p-5 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900',
+                        {
+                          'border-stone-900 bg-white':
                             state.isPaymentMethodSelected,
-                          'border-stone-500': !state.isPaymentMethodSelected,
-                        }),
+                          'border-stone-300 bg-stone-50 transition-colors hover:border-stone-500 hover:bg-white':
+                            !state.isPaymentMethodSelected,
+                        },
                       ),
-                    ],
-                    [
-                      state.isPaymentMethodSelected
-                        ? Icon.check('h-3.5 w-3.5')
-                        : h.empty,
-                    ],
-                  ),
-                ],
-              ),
-          }),
+                    ),
+                  ],
+                  [
+                    h.div(
+                      [h.Class('flex items-center gap-4')],
+                      [
+                        h.div(
+                          [
+                            h.Class(
+                              'grid h-10 w-14 place-items-center border border-stone-300 bg-stone-50 text-xs font-bold tracking-widest text-stone-900',
+                            ),
+                          ],
+                          ['MC'],
+                        ),
+                        h.div(
+                          [],
+                          [
+                            h.div(
+                              [
+                                ...attributes.label,
+                                h.Class('text-sm font-bold text-stone-900'),
+                              ],
+                              ['Mastercard •••• 4242'],
+                            ),
+                            h.div(
+                              [
+                                ...attributes.description,
+                                h.Class('mt-1 text-xs text-stone-600'),
+                              ],
+                              ['Expires 08/29'],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    h.span(
+                      [
+                        h.Class(
+                          clsx('h-6 w-6 rounded-full border', {
+                            'grid place-items-center border-stone-900 bg-stone-900 text-white':
+                              state.isPaymentMethodSelected,
+                            'border-stone-500': !state.isPaymentMethodSelected,
+                          }),
+                        ),
+                      ],
+                      [
+                        state.isPaymentMethodSelected
+                          ? Icon.check('h-3.5 w-3.5')
+                          : h.empty,
+                      ],
+                    ),
+                  ],
+                ),
+            },
+            h,
+          ),
           h.p(
             [h.Class('mt-3 text-xs leading-5 text-stone-600')],
             [
@@ -813,40 +831,53 @@ const paymentView = (state: typeof Payment.Type): Html => {
           ),
         ],
         [
-          Button.view<Message>({
-            onClick: ClickedBack(),
-            toView: attributes =>
-              h.button(
-                [
-                  ...attributes.button,
-                  h.Class(
-                    clsx(secondaryButtonClassName, 'sm:justify-self-start'),
-                  ),
-                ],
-                [state.isShippingRequired ? 'Back to delivery' : 'Back to bag'],
-              ),
-          }),
-          h.div([h.Class('sm:justify-self-center')], [cancelCheckoutButton()]),
-          Button.view<Message>({
-            onClick: ClickedContinue(),
-            isDisabled: !state.isPaymentMethodSelected,
-            toView: attributes =>
-              h.button(
-                [
-                  ...attributes.button,
-                  h.Class(clsx(primaryButtonClassName, 'sm:justify-self-end')),
-                ],
-                ['Review order', Icon.arrowRight()],
-              ),
-          }),
+          Button.view(
+            {
+              onClick: ClickedBack(),
+              toView: attributes =>
+                h.button(
+                  [
+                    ...attributes.button,
+                    h.Class(
+                      clsx(secondaryButtonClassName, 'sm:justify-self-start'),
+                    ),
+                  ],
+                  [
+                    state.isShippingRequired
+                      ? 'Back to delivery'
+                      : 'Back to bag',
+                  ],
+                ),
+            },
+            h,
+          ),
+          h.div([h.Class('sm:justify-self-center')], [cancelCheckoutButton(h)]),
+          Button.view(
+            {
+              onClick: ClickedContinue(),
+              isDisabled: !state.isPaymentMethodSelected,
+              toView: attributes =>
+                h.button(
+                  [
+                    ...attributes.button,
+                    h.Class(
+                      clsx(primaryButtonClassName, 'sm:justify-self-end'),
+                    ),
+                  ],
+                  ['Review order', Icon.arrowRight()],
+                ),
+            },
+            h,
+          ),
         ],
       ),
     ],
   )
-}
 
-const reviewView = (state: typeof Review.Type): Html => {
-  const h = html<Message>()
+const reviewView = (
+  state: typeof Review.Type,
+  h: HtmlBuilder<Message>,
+): Html => {
   const isReadyToPlace = isReviewReady(state)
   const pricing = orderPricing(
     state.isShippingRequired,
@@ -948,25 +979,28 @@ const reviewView = (state: typeof Review.Type): Html => {
                     : 'Payment method required',
                 ],
               ),
-              Button.view<Message>({
-                onClick: ToggledPaymentMethod({
-                  isSelected: !state.isPaymentMethodSelected,
-                }),
-                toView: attributes =>
-                  h.button(
-                    [
-                      ...attributes.button,
-                      h.Class(
-                        'cursor-pointer text-xs font-bold uppercase tracking-wider text-orange-800 underline underline-offset-4',
-                      ),
-                    ],
-                    [
-                      state.isPaymentMethodSelected
-                        ? 'Change'
-                        : 'Use saved card',
-                    ],
-                  ),
-              }),
+              Button.view(
+                {
+                  onClick: ToggledPaymentMethod({
+                    isSelected: !state.isPaymentMethodSelected,
+                  }),
+                  toView: attributes =>
+                    h.button(
+                      [
+                        ...attributes.button,
+                        h.Class(
+                          'cursor-pointer text-xs font-bold uppercase tracking-wider text-orange-800 underline underline-offset-4',
+                        ),
+                      ],
+                      [
+                        state.isPaymentMethodSelected
+                          ? 'Change'
+                          : 'Use saved card',
+                      ],
+                    ),
+                },
+                h,
+              ),
             ],
           ),
         ],
@@ -977,40 +1011,46 @@ const reviewView = (state: typeof Review.Type): Html => {
           h.form(
             [h.Class('flex items-end gap-3'), h.OnSubmit(SubmittedPromoCode())],
             [
-              Input.view<Message>({
-                id: 'promo-code',
-                value: state.promoCodeInput,
-                onInput: value => UpdatedPromoCode({ value }),
-                toView: attributes =>
-                  h.div(
-                    [h.Class('grid flex-1 gap-2 sm:max-w-xs')],
-                    [
-                      h.label(
-                        [
-                          ...attributes.label,
-                          h.Class(
-                            'text-xs font-bold uppercase tracking-widest text-stone-600',
-                          ),
-                        ],
-                        ['Promo code'],
-                      ),
-                      h.input([
-                        ...attributes.input,
-                        h.Class(
-                          'min-h-12 border border-stone-500 bg-white px-3 text-sm text-stone-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900',
+              Input.view(
+                {
+                  id: 'promo-code',
+                  value: state.promoCodeInput,
+                  onInput: value => UpdatedPromoCode({ value }),
+                  toView: attributes =>
+                    h.div(
+                      [h.Class('grid flex-1 gap-2 sm:max-w-xs')],
+                      [
+                        h.label(
+                          [
+                            ...attributes.label,
+                            h.Class(
+                              'text-xs font-bold uppercase tracking-widest text-stone-600',
+                            ),
+                          ],
+                          ['Promo code'],
                         ),
-                      ]),
-                    ],
-                  ),
-              }),
-              Button.view<Message>({
-                type: 'submit',
-                toView: attributes =>
-                  h.button(
-                    [...attributes.button, h.Class(secondaryButtonClassName)],
-                    ['Apply'],
-                  ),
-              }),
+                        h.input([
+                          ...attributes.input,
+                          h.Class(
+                            'min-h-12 border border-stone-500 bg-white px-3 text-sm text-stone-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900',
+                          ),
+                        ]),
+                      ],
+                    ),
+                },
+                h,
+              ),
+              Button.view(
+                {
+                  type: 'submit',
+                  toView: attributes =>
+                    h.button(
+                      [...attributes.button, h.Class(secondaryButtonClassName)],
+                      ['Apply'],
+                    ),
+                },
+                h,
+              ),
             ],
           ),
           M.value(state.promo).pipe(
@@ -1030,62 +1070,65 @@ const reviewView = (state: typeof Review.Type): Html => {
           ),
         ],
       ),
-      Checkbox.view<Message>({
-        id: 'accept-terms',
-        isChecked: state.isTermsAccepted,
-        onToggle: isAccepted => ToggledTermsAccepted({ isAccepted }),
-        toView: attributes =>
-          h.div(
-            [
-              h.Class(
-                'flex items-start gap-3 text-sm leading-6 text-stone-600',
-              ),
-            ],
-            [
-              h.span(
-                [
-                  ...attributes.checkbox,
-                  h.Class(
-                    clsx(
-                      'mt-0.5 h-5 w-5 shrink-0 cursor-pointer border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900',
-                      {
-                        'grid place-items-center border-stone-900 bg-stone-900 text-white':
-                          state.isTermsAccepted,
-                        'border-stone-500 bg-white': !state.isTermsAccepted,
-                      },
-                    ),
-                  ),
-                ],
-                [state.isTermsAccepted ? Icon.check('h-3.5 w-3.5') : h.empty],
-              ),
-              h.span(
-                [],
-                [
-                  h.span(
-                    [...attributes.label, h.Class('sr-only')],
-                    ['Accept terms of sale'],
-                  ),
-                  h.span(
-                    [
-                      ...attributes.description,
-                      h.OnClick(
-                        ToggledTermsAccepted({
-                          isAccepted: !state.isTermsAccepted,
-                        }),
+      Checkbox.view(
+        {
+          id: 'accept-terms',
+          isChecked: state.isTermsAccepted,
+          onToggle: isAccepted => ToggledTermsAccepted({ isAccepted }),
+          toView: attributes =>
+            h.div(
+              [
+                h.Class(
+                  'flex items-start gap-3 text-sm leading-6 text-stone-600',
+                ),
+              ],
+              [
+                h.span(
+                  [
+                    ...attributes.checkbox,
+                    h.Class(
+                      clsx(
+                        'mt-0.5 h-5 w-5 shrink-0 cursor-pointer border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900',
+                        {
+                          'grid place-items-center border-stone-900 bg-stone-900 text-white':
+                            state.isTermsAccepted,
+                          'border-stone-500 bg-white': !state.isTermsAccepted,
+                        },
                       ),
-                      h.Class('cursor-pointer'),
-                    ],
-                    [
-                      state.isShippingRequired
-                        ? 'I agree to the terms of sale and return policy.'
-                        : 'I agree to the terms of sale and understand that digital purchases are delivered immediately.',
-                    ],
-                  ),
-                ],
-              ),
-            ],
-          ),
-      }),
+                    ),
+                  ],
+                  [state.isTermsAccepted ? Icon.check('h-3.5 w-3.5') : h.empty],
+                ),
+                h.span(
+                  [],
+                  [
+                    h.span(
+                      [...attributes.label, h.Class('sr-only')],
+                      ['Accept terms of sale'],
+                    ),
+                    h.span(
+                      [
+                        ...attributes.description,
+                        h.OnClick(
+                          ToggledTermsAccepted({
+                            isAccepted: !state.isTermsAccepted,
+                          }),
+                        ),
+                        h.Class('cursor-pointer'),
+                      ],
+                      [
+                        state.isShippingRequired
+                          ? 'I agree to the terms of sale and return policy.'
+                          : 'I agree to the terms of sale and understand that digital purchases are delivered immediately.',
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+        },
+        h,
+      ),
       h.div(
         [
           h.Class(
@@ -1093,42 +1136,48 @@ const reviewView = (state: typeof Review.Type): Html => {
           ),
         ],
         [
-          Button.view<Message>({
-            onClick: ClickedBack(),
-            toView: attributes =>
-              h.button(
-                [
-                  ...attributes.button,
-                  h.Class(
-                    clsx(secondaryButtonClassName, 'sm:justify-self-start'),
-                  ),
-                ],
-                ['Back to payment'],
-              ),
-          }),
-          h.div([h.Class('sm:justify-self-center')], [cancelCheckoutButton()]),
-          Button.view<Message>({
-            onClick: ClickedPlaceOrder(),
-            isDisabled: !isReadyToPlace,
-            toView: attributes =>
-              h.button(
-                [
-                  ...attributes.button,
-                  h.Class(clsx(primaryButtonClassName, 'sm:justify-self-end')),
-                ],
-                [`Place order · ${formatMoney(pricing.total)}`],
-              ),
-          }),
+          Button.view(
+            {
+              onClick: ClickedBack(),
+              toView: attributes =>
+                h.button(
+                  [
+                    ...attributes.button,
+                    h.Class(
+                      clsx(secondaryButtonClassName, 'sm:justify-self-start'),
+                    ),
+                  ],
+                  ['Back to payment'],
+                ),
+            },
+            h,
+          ),
+          h.div([h.Class('sm:justify-self-center')], [cancelCheckoutButton(h)]),
+          Button.view(
+            {
+              onClick: ClickedPlaceOrder(),
+              isDisabled: !isReadyToPlace,
+              toView: attributes =>
+                h.button(
+                  [
+                    ...attributes.button,
+                    h.Class(
+                      clsx(primaryButtonClassName, 'sm:justify-self-end'),
+                    ),
+                  ],
+                  [`Place order · ${formatMoney(pricing.total)}`],
+                ),
+            },
+            h,
+          ),
         ],
       ),
     ],
   )
 }
 
-const placingView = (): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const placingView = (h: HtmlBuilder<Message>): Html =>
+  h.div(
     [
       h.Role('status'),
       h.AriaLive('polite'),
@@ -1154,12 +1203,12 @@ const placingView = (): Html => {
       ),
     ],
   )
-}
 
-const confirmedView = (state: typeof Confirmed.Type): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const confirmedView = (
+  state: typeof Confirmed.Type,
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.div(
     [
       h.Class(
         'grid min-h-80 content-center justify-items-center py-8 text-center',
@@ -1194,25 +1243,25 @@ const confirmedView = (state: typeof Confirmed.Type): Html => {
         ],
         [`Order reference · ${state.orderId}`],
       ),
-      Button.view<Message>({
-        onClick: ClickedStartOver(),
-        toView: attributes =>
-          h.button(
-            [
-              ...attributes.button,
-              h.Class(clsx(primaryButtonClassName, 'mt-7')),
-            ],
-            ['Return to checkout'],
-          ),
-      }),
+      Button.view(
+        {
+          onClick: ClickedStartOver(),
+          toView: attributes =>
+            h.button(
+              [
+                ...attributes.button,
+                h.Class(clsx(primaryButtonClassName, 'mt-7')),
+              ],
+              ['Return to checkout'],
+            ),
+        },
+        h,
+      ),
     ],
   )
-}
 
-const cancelledView = (): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const cancelledView = (h: HtmlBuilder<Message>): Html =>
+  h.div(
     [
       h.Class(
         'grid min-h-72 content-center justify-items-center py-8 text-center',
@@ -1234,38 +1283,44 @@ const cancelledView = (): Html => {
           'Your checkout was cancelled before payment. You can begin again whenever you’re ready.',
         ],
       ),
-      Button.view<Message>({
-        onClick: ClickedStartOver(),
-        toView: attributes =>
-          h.button(
-            [
-              ...attributes.button,
-              h.Class(clsx(primaryButtonClassName, 'mt-7')),
-            ],
-            ['Start checkout again'],
-          ),
-      }),
+      Button.view(
+        {
+          onClick: ClickedStartOver(),
+          toView: attributes =>
+            h.button(
+              [
+                ...attributes.button,
+                h.Class(clsx(primaryButtonClassName, 'mt-7')),
+              ],
+              ['Start checkout again'],
+            ),
+        },
+        h,
+      ),
     ],
   )
-}
 
-const checkoutContentView = (state: typeof CheckoutState.Type): Html =>
+const checkoutContentView = (
+  state: typeof CheckoutState.Type,
+  h: HtmlBuilder<Message>,
+): Html =>
   M.value(state).pipe(
     M.tagsExhaustive({
-      Cart: cartView,
-      Shipping: shippingView,
-      Payment: paymentView,
-      Review: reviewView,
-      Placing: placingView,
-      Confirmed: confirmedView,
-      Cancelled: cancelledView,
+      Cart: cartState => cartView(cartState, h),
+      Shipping: () => shippingView(h),
+      Payment: paymentState => paymentView(paymentState, h),
+      Review: reviewState => reviewView(reviewState, h),
+      Placing: () => placingView(h),
+      Confirmed: confirmedState => confirmedView(confirmedState, h),
+      Cancelled: () => cancelledView(h),
     }),
   )
 
-const checkoutPanelView = (state: typeof CheckoutState.Type): Html => {
-  const h = html<Message>()
-
-  return h.section(
+const checkoutPanelView = (
+  state: typeof CheckoutState.Type,
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.section(
     [
       h.Class(
         'border border-stone-300 bg-stone-50 px-5 py-7 sm:px-8 sm:py-9 lg:col-span-2',
@@ -1293,13 +1348,14 @@ const checkoutPanelView = (state: typeof CheckoutState.Type): Html => {
           ),
         ],
       ),
-      checkoutContentView(state),
+      checkoutContentView(state, h),
     ],
   )
-}
 
-const orderSummaryView = (state: typeof CheckoutState.Type): Html => {
-  const h = html<Message>()
+const orderSummaryView = (
+  state: typeof CheckoutState.Type,
+  h: HtmlBuilder<Message>,
+): Html => {
   const pricing = orderPricing(
     state.isShippingRequired,
     stateToMaybeDiscount(state),
@@ -1323,7 +1379,7 @@ const orderSummaryView = (state: typeof CheckoutState.Type): Html => {
       h.div(
         [h.Class('mt-5 grid grid-cols-4 gap-4 border-b border-stone-300 pb-5')],
         [
-          bookCoverView('', true),
+          bookCoverView('', true, h),
           h.div(
             [h.Class('col-span-3')],
             [
@@ -1431,9 +1487,7 @@ const formatTags = (tags: ReadonlyArray<string>): string =>
     onNonEmpty: Array.join(', '),
   })
 
-const transitionLogView = (model: Model): Html => {
-  const h = html<Message>()
-
+const transitionLogView = (model: Model, h: HtmlBuilder<Message>): Html => {
   const transitionLogClassName =
     'border-l-2 border-orange-700 pl-3 font-mono text-xs leading-5 text-stone-300 lg:col-span-3'
 
@@ -1456,8 +1510,7 @@ const transitionLogView = (model: Model): Html => {
   })
 }
 
-const analysisView = (model: Model): Html => {
-  const h = html<Message>()
+const analysisView = (model: Model, h: HtmlBuilder<Message>): Html => {
   const deadTransitions = checkoutMachine.deadTransitions()
 
   return h.section(
@@ -1535,7 +1588,7 @@ const analysisView = (model: Model): Html => {
                 ],
                 ['Recent transitions'],
               ),
-              transitionLogView(model),
+              transitionLogView(model, h),
             ],
           ),
           h.ol(
@@ -1585,54 +1638,46 @@ const analysisView = (model: Model): Html => {
   )
 }
 
-export const view = (model: Model): Document => {
-  const h = html<Message>()
-
-  return {
-    title: `${stateTitle(model.checkout)} | Signal Press`,
-    body: h.div(
-      [h.Class('min-h-screen bg-stone-100 text-stone-900')],
-      [
-        pageHeaderView(),
-        h.main(
-          [
-            h.Class(
-              'mx-auto w-full max-w-6xl px-5 pb-12 pt-6 sm:px-8 sm:pb-16 sm:pt-8',
-            ),
-          ],
-          [
-            analysisView(model),
-            progressView(model.checkout),
-            h.div(
-              [
-                h.Class(
-                  'mt-6 grid gap-6 sm:mt-8 lg:grid-cols-3 lg:items-start',
-                ),
-              ],
-              [
-                checkoutPanelView(model.checkout),
-                orderSummaryView(model.checkout),
-              ],
-            ),
-          ],
-        ),
-        h.footer(
-          [h.Class('border-t border-stone-300 bg-stone-50')],
-          [
-            h.div(
-              [
-                h.Class(
-                  'mx-auto flex max-w-6xl flex-col gap-2 px-5 py-5 text-xs text-stone-600 sm:flex-row sm:items-center sm:justify-between sm:px-8',
-                ),
-              ],
-              [
-                h.div([], ['© Signal Press · Brooklyn, New York']),
-                h.div([], ['Questions? support@signalpress.example']),
-              ],
-            ),
-          ],
-        ),
-      ],
-    ),
-  }
-}
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
+  title: `${stateTitle(model.checkout)} | Signal Press`,
+  body: h.div(
+    [h.Class('min-h-screen bg-stone-100 text-stone-900')],
+    [
+      pageHeaderView(h),
+      h.main(
+        [
+          h.Class(
+            'mx-auto w-full max-w-6xl px-5 pb-12 pt-6 sm:px-8 sm:pb-16 sm:pt-8',
+          ),
+        ],
+        [
+          analysisView(model, h),
+          progressView(model.checkout, h),
+          h.div(
+            [h.Class('mt-6 grid gap-6 sm:mt-8 lg:grid-cols-3 lg:items-start')],
+            [
+              checkoutPanelView(model.checkout, h),
+              orderSummaryView(model.checkout, h),
+            ],
+          ),
+        ],
+      ),
+      h.footer(
+        [h.Class('border-t border-stone-300 bg-stone-50')],
+        [
+          h.div(
+            [
+              h.Class(
+                'mx-auto flex max-w-6xl flex-col gap-2 px-5 py-5 text-xs text-stone-600 sm:flex-row sm:items-center sm:justify-between sm:px-8',
+              ),
+            ],
+            [
+              h.div([], ['© Signal Press · Brooklyn, New York']),
+              h.div([], ['Questions? support@signalpress.example']),
+            ],
+          ),
+        ],
+      ),
+    ],
+  ),
+})

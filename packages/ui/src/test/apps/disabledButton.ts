@@ -1,6 +1,6 @@
 import { Match as M, Schema as S } from 'effect'
 import * as Command from 'foldkit/command'
-import { type Html, html } from 'foldkit/html'
+import type { Html, HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 
 import * as Dialog from '../../dialog/index.js'
@@ -61,35 +61,28 @@ export const update = (
 
 // VIEW
 
-const submitButton = (isEnabled: boolean): Html => {
-  const h = html<Message>()
-
-  return h.button(
+const submitButton = (isEnabled: boolean, h: HtmlBuilder<Message>): Html =>
+  h.button(
     [
       h.Class('submit'),
       ...(isEnabled ? [h.OnClick(ClickedSubmit())] : [h.Disabled(true)]),
     ],
     ['Submit'],
   )
-}
 
 /** Plain view, no dialog wrapper. */
-export const view = (model: Model): Html => {
-  const h = html<Message>()
-
+export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
   return h.div(
     [],
     [
       h.button([h.OnClick(ClickedToggle())], ['Toggle']),
-      submitButton(model.isEnabled),
+      submitButton(model.isEnabled, h),
     ],
   )
 }
 
 /** View with submit button inside a dialog's panel. */
-export const viewWithDialog = (model: Model): Html => {
-  const h = html<Message>()
-
+export const viewWithDialog = (model: Model, h: HtmlBuilder<Message>): Html => {
   return h.div(
     [],
     [
@@ -105,7 +98,7 @@ export const viewWithDialog = (model: Model): Html => {
               isVisible
                 ? [
                     h.div([...backdrop], []),
-                    h.div([...panel], [submitButton(model.isEnabled)]),
+                    h.div([...panel], [submitButton(model.isEnabled, h)]),
                   ]
                 : [],
             ),

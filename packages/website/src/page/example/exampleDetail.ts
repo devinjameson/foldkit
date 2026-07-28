@@ -9,7 +9,7 @@ import {
   pipe,
 } from 'effect'
 import { AsyncData, Command, Mount, Submodel } from 'foldkit'
-import { Html, html } from 'foldkit/html'
+import { Html, type HtmlBuilder, staticHtml } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -21,7 +21,6 @@ import type { TableOfContentsEntry } from '../../main'
 import { pageTitle, para } from '../../prose'
 import { examplesRouter, playgroundRouter } from '../../route'
 import {
-  type CopiedSnippets,
   type RenderCopyButton,
   highlightedCodeBlockFor,
 } from '../../view/codeBlock'
@@ -256,7 +255,7 @@ export const informRouteChanged = (model: Model, slug: string) =>
 // VIEW
 
 const featureTag = (text: string): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.div(
     [
@@ -269,7 +268,7 @@ const featureTag = (text: string): Html => {
 }
 
 const chromeRecommendedHint = (): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.p(
     [h.Class('text-xs text-gray-500 dark:text-gray-400')],
@@ -281,7 +280,7 @@ const launchPlaygroundSection = (
   meta: ExampleMeta,
   isChromium: boolean,
 ): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.div(
     [h.Class('flex flex-col items-start gap-1')],
@@ -299,7 +298,7 @@ const launchPlaygroundSection = (
 }
 
 const headerView = (meta: ExampleMeta, isChromium: boolean): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.div(
     [h.Class('mb-6')],
@@ -345,7 +344,7 @@ const urlBarContent = (
   meta.hasRouting ? Option.getOrElse(maybeExampleUrl, () => '/') : '/'
 
 const trafficLightDots = (): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.div(
     [h.Class('flex gap-1.5')],
@@ -373,7 +372,7 @@ const DISCLOSURE_PANEL_CLASS =
   'rounded-b-xl overflow-hidden border-x border-b border-gray-200 dark:border-gray-700/50 shadow-sm'
 
 const disclosureChevron = (isOpen: boolean): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.span(
     [
@@ -390,75 +389,78 @@ const livePreviewDisclosureView = (
   meta: ExampleMeta,
   slug: string,
   maybeExampleUrl: Option.Option<string>,
-): Html => {
-  const h = html<Message>()
-
-  return Disclosure.view<Message>({
-    id: 'live-preview',
-    isOpen: isLivePreviewOpen,
-    onToggle: isOpen => ToggledLivePreview({ isOpen }),
-    toView: attributes =>
-      h.div(
-        [],
-        [
-          h.button(
-            [...attributes.button, h.Class(DISCLOSURE_BUTTON_CLASS)],
-            [
-              h.div(
-                [h.Class('flex items-center justify-between w-full')],
-                [
-                  h.span([], ['Live Preview']),
-                  disclosureChevron(isLivePreviewOpen),
-                ],
-              ),
-            ],
-          ),
-          h.div(
-            [
-              ...attributes.panel,
-              h.Class(DISCLOSURE_PANEL_CLASS),
-              h.Hidden(!isLivePreviewOpen),
-              ...(isLivePreviewOpen ? [] : [h.Style({ display: 'none' })]),
-            ],
-            [
-              h.div(
-                [],
-                [
-                  h.div(
-                    [
-                      h.Class(
-                        'flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700/50',
-                      ),
-                    ],
-                    [
-                      trafficLightDots(),
-                      h.div(
-                        [
-                          h.Class(
-                            'flex-1 text-xs font-mono text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900 rounded px-3 py-1 text-center truncate',
-                          ),
-                        ],
-                        [urlBarContent(meta, maybeExampleUrl)],
-                      ),
-                    ],
-                  ),
-                  h.iframe(
-                    [
-                      h.Src(`/example-apps-embed/${slug}/index.html?embedded`),
-                      h.Class('w-full bg-white h-[40rem]'),
-                      h.AriaLabel(`${meta.title} example running live`),
-                      h.OnMount(ObserveExampleUrlMessages()),
-                    ],
-                    [],
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ],
-      ),
-  })
-}
+  h: HtmlBuilder<Message>,
+): Html =>
+  Disclosure.view(
+    {
+      id: 'live-preview',
+      isOpen: isLivePreviewOpen,
+      onToggle: isOpen => ToggledLivePreview({ isOpen }),
+      toView: attributes =>
+        h.div(
+          [],
+          [
+            h.button(
+              [...attributes.button, h.Class(DISCLOSURE_BUTTON_CLASS)],
+              [
+                h.div(
+                  [h.Class('flex items-center justify-between w-full')],
+                  [
+                    h.span([], ['Live Preview']),
+                    disclosureChevron(isLivePreviewOpen),
+                  ],
+                ),
+              ],
+            ),
+            h.div(
+              [
+                ...attributes.panel,
+                h.Class(DISCLOSURE_PANEL_CLASS),
+                h.Hidden(!isLivePreviewOpen),
+                ...(isLivePreviewOpen ? [] : [h.Style({ display: 'none' })]),
+              ],
+              [
+                h.div(
+                  [],
+                  [
+                    h.div(
+                      [
+                        h.Class(
+                          'flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700/50',
+                        ),
+                      ],
+                      [
+                        trafficLightDots(),
+                        h.div(
+                          [
+                            h.Class(
+                              'flex-1 text-xs font-mono text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900 rounded px-3 py-1 text-center truncate',
+                            ),
+                          ],
+                          [urlBarContent(meta, maybeExampleUrl)],
+                        ),
+                      ],
+                    ),
+                    h.iframe(
+                      [
+                        h.Src(
+                          `/example-apps-embed/${slug}/index.html?embedded`,
+                        ),
+                        h.Class('w-full bg-white h-[40rem]'),
+                        h.AriaLabel(`${meta.title} example running live`),
+                        h.OnMount(ObserveExampleUrlMessages()),
+                      ],
+                      [],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+    },
+    h,
+  )
 
 const SourceFileTabs = Tabs.create()
 
@@ -477,11 +479,10 @@ const sourceCodeView = (
   files: ReadonlyArray<ExampleSourceFile>,
   tabsModel: Tabs.Model,
   activeSourceFilePath: string,
-  copiedSnippets: CopiedSnippets,
   isNarrowViewport: boolean,
   renderCopyButton: RenderCopyButton,
+  h: HtmlBuilder<Message>,
 ): Html => {
-  const h = html<Message>()
   const highlightedCodeBlock = highlightedCodeBlockFor(renderCopyButton)
 
   const filePaths = Array.map(files, file => file.path)
@@ -548,7 +549,6 @@ const sourceCodeView = (
                               ),
                               file.rawCode,
                               `Copy ${file.path} to clipboard`,
-                              copiedSnippets,
                               '!mt-0',
                             ),
                           ],
@@ -572,7 +572,7 @@ const skeletonFileRowClasses: ReadonlyArray<string> = [
 ]
 
 const sourcesSkeletonView = (): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.div(
     [
@@ -632,7 +632,7 @@ const sourcesSkeletonView = (): Html => {
 }
 
 const sourcesFailureView = (error: string): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.div(
     [h.Class('rounded-lg border border-red-300 dark:border-red-800 p-6')],
@@ -652,7 +652,6 @@ const sourcesFailureView = (error: string): Html => {
 
 type ViewInputs = Readonly<{
   slug: string
-  copiedSnippets: CopiedSnippets
   isNarrowViewport: boolean
   isChromium: boolean
   renderCopyButton: RenderCopyButton
@@ -669,13 +668,8 @@ type ViewInputs = Readonly<{
  * Submodel's `toParentMessage`.
  */
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
-  (
-    model,
-    { slug, copiedSnippets, isNarrowViewport, isChromium, renderCopyButton },
-  ): Html => {
-    const h = html<Message>()
-
-    return Option.match(findBySlug(slug), {
+  (model, { slug, isNarrowViewport, isChromium, renderCopyButton }, h): Html =>
+    Option.match(findBySlug(slug), {
       onNone: () => h.div([], ['Example not found']),
       onSome: meta =>
         h.keyed('div')(
@@ -688,6 +682,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
               meta,
               slug,
               model.maybeExampleUrl,
+              h,
             ),
             h.div(
               [h.Class('mt-6')],
@@ -708,9 +703,9 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
                               model.maybeActiveSourceFilePath,
                               () => Array.headNonEmpty(files).path,
                             ),
-                            copiedSnippets,
                             isNarrowViewport,
                             renderCopyButton,
+                            h,
                           ),
                         ],
                       }),
@@ -720,8 +715,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
             ),
           ],
         ),
-    })
-  },
+    }),
 )
 
 export const tableOfContents: ReadonlyArray<TableOfContentsEntry> = []

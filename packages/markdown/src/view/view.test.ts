@@ -1,5 +1,5 @@
 import { Array, Option, Schema as S } from 'effect'
-import { html } from 'foldkit/html'
+import { staticHtml } from 'foldkit/html'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { parseMarkdown } from '../vite/vite.js'
@@ -139,7 +139,7 @@ describe('view', () => {
   })
 
   it('renders islands through the registered view with attributes and nested content', () => {
-    const h = html()
+    const h = staticHtml
     const document = parseMarkdown(
       lines(':::Note{tone="calm"}', 'Inside the island.', ':::'),
     )
@@ -162,7 +162,7 @@ describe('view', () => {
   })
 
   it('passes each island its per-name occurrence index in document order', () => {
-    const h = html()
+    const h = staticHtml
     const document = parseMarkdown(
       lines('::Slot', '', 'Between.', '', '::Slot'),
     )
@@ -207,7 +207,7 @@ describe('view', () => {
   })
 
   it('applies view overrides over the defaults', () => {
-    const h = html()
+    const h = staticHtml
     const document = parseMarkdown('A paragraph.')
 
     const root = asElement(
@@ -225,7 +225,7 @@ describe('view', () => {
   })
 
   it('islandsFor decodes attributes through the island schema before dispatch', () => {
-    const h = html()
+    const h = staticHtml
     const document = parseMarkdown('::Badge{label="hi"}')
 
     const root = asElement(
@@ -245,7 +245,7 @@ describe('view', () => {
 
   it('islandsFor warns and renders nothing when attributes fail the schema', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-    const h = html()
+    const h = staticHtml
     const document = parseMarkdown('::Gauge')
 
     const root = asElement(

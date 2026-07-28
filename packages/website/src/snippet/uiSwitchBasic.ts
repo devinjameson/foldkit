@@ -2,7 +2,7 @@
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
 import { Schema as S } from 'effect'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -42,49 +42,49 @@ ToggledNotifications: ({ isChecked }) => [
 // checked state from your Model and calls onToggle with the new state. The
 // track color keys off the data-checked attribute; the knob position derives
 // from the same Model field.
-const view = model => {
-  const h = html<Message>()
-
-  return Switch.view<Message>({
-    id: 'notifications',
-    isChecked: model.notificationsEnabled,
-    onToggle: isChecked => ToggledNotifications({ isChecked }),
-    toView: attributes =>
-      h.div(
-        [h.Class('flex items-center gap-3')],
-        [
-          h.button(
-            [
-              ...attributes.button,
-              h.Class(
-                'relative inline-flex h-6 w-11 items-center rounded-full transition-colors data-[checked]:bg-blue-600 bg-gray-200',
-              ),
-            ],
-            [
-              h.span(
-                [
-                  h.Class(
-                    `inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${model.notificationsEnabled ? 'translate-x-6' : 'translate-x-1'}`,
-                  ),
-                ],
-                [],
-              ),
-            ],
-          ),
-          h.div(
-            [],
-            [
-              h.label(
-                [...attributes.label, h.Class('text-sm font-medium')],
-                ['Enable notifications'],
-              ),
-              h.p(
-                [...attributes.description, h.Class('text-sm text-gray-500')],
-                ['Get notified when something important happens.'],
-              ),
-            ],
-          ),
-        ],
-      ),
-  })
-}
+const view = (model, h: HtmlBuilder<Message>) =>
+  Switch.view(
+    {
+      id: 'notifications',
+      isChecked: model.notificationsEnabled,
+      onToggle: isChecked => ToggledNotifications({ isChecked }),
+      toView: attributes =>
+        h.div(
+          [h.Class('flex items-center gap-3')],
+          [
+            h.button(
+              [
+                ...attributes.button,
+                h.Class(
+                  'relative inline-flex h-6 w-11 items-center rounded-full transition-colors data-[checked]:bg-blue-600 bg-gray-200',
+                ),
+              ],
+              [
+                h.span(
+                  [
+                    h.Class(
+                      `inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${model.notificationsEnabled ? 'translate-x-6' : 'translate-x-1'}`,
+                    ),
+                  ],
+                  [],
+                ),
+              ],
+            ),
+            h.div(
+              [],
+              [
+                h.label(
+                  [...attributes.label, h.Class('text-sm font-medium')],
+                  ['Enable notifications'],
+                ),
+                h.p(
+                  [...attributes.description, h.Class('text-sm text-gray-500')],
+                  ['Get notified when something important happens.'],
+                ),
+              ],
+            ),
+          ],
+        ),
+    },
+    h,
+  )

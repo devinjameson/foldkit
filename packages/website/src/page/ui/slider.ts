@@ -1,4 +1,4 @@
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 
 import { Slider } from '@foldkit/ui'
 
@@ -43,9 +43,8 @@ export const sliderDemo = (
   ratingValue: number,
   volumeModel: Slider.Model,
   volumeValue: number,
+  h: HtmlBuilder<Message>,
 ) => {
-  const h = html<Message>()
-
   return [
     h.div(
       [h.Class('flex flex-col gap-8 w-full max-w-sm')],

@@ -1,5 +1,6 @@
 import { Array, Match as M } from 'effect'
 import { type Field, allValid } from 'foldkit/fieldValidation'
+import type { HtmlBuilder } from 'foldkit/html'
 
 const borderClass = (field: Field<string>) =>
   M.value(field).pipe(
@@ -11,13 +12,13 @@ const borderClass = (field: Field<string>) =>
     }),
   )
 
-const statusIndicator = (field: Field<string>) =>
+const statusIndicator = (field: Field<string>, h: HtmlBuilder<Message>) =>
   M.value(field).pipe(
     M.tagsExhaustive({
-      NotValidated: () => empty,
-      Validating: () => span([], ['Checking...']),
-      Valid: () => span([], ['✓']),
-      Invalid: ({ errors }) => div([], [Array.headNonEmpty(errors)]),
+      NotValidated: () => h.empty,
+      Validating: () => h.span([], ['Checking...']),
+      Valid: () => h.span([], ['✓']),
+      Invalid: ({ errors }) => h.div([], [Array.headNonEmpty(errors)]),
     }),
   )
 

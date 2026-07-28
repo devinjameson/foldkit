@@ -10,7 +10,7 @@ import {
   pipe,
 } from 'effect'
 import { Command, Runtime, Subscription } from 'foldkit'
-import { Document, Html, html } from 'foldkit/html'
+import { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -180,25 +180,23 @@ const formatTime = (ms: number): string => {
 
 const floorAndPad = flow(Math.floor, v => v.toString(), String.padStart(2, '0'))
 
-export const view = (model: Model): Document => {
-  const h = html<Message>()
-
-  return {
-    title: `Stopwatch ${formatTime(model.elapsedMs)}`,
-    body: h.div(
-      [h.Class('min-h-screen bg-gray-200 flex items-center justify-center')],
-      [
-        h.div(
-          [h.Class('bg-white text-center')],
-          [
-            h.div(
-              [h.Class('text-6xl font-mono font-bold text-gray-800 p-8')],
-              [formatTime(model.elapsedMs)],
-            ),
-            h.div(
-              [h.Class('flex')],
-              [
-                Button.view<Message>({
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
+  title: `Stopwatch ${formatTime(model.elapsedMs)}`,
+  body: h.div(
+    [h.Class('min-h-screen bg-gray-200 flex items-center justify-center')],
+    [
+      h.div(
+        [h.Class('bg-white text-center')],
+        [
+          h.div(
+            [h.Class('text-6xl font-mono font-bold text-gray-800 p-8')],
+            [formatTime(model.elapsedMs)],
+          ),
+          h.div(
+            [h.Class('flex')],
+            [
+              Button.view(
+                {
                   onClick: ClickedReset(),
                   toView: attributes =>
                     h.button(
@@ -208,44 +206,48 @@ export const view = (model: Model): Document => {
                       ],
                       ['Reset'],
                     ),
-                }),
-                startStopButton(model.isRunning),
+                },
+                h,
+              ),
+              startStopButton(model.isRunning, h),
+            ],
+          ),
+        ],
+      ),
+    ],
+  ),
+})
+
+const startStopButton = (isRunning: boolean, h: HtmlBuilder<Message>): Html =>
+  isRunning
+    ? Button.view(
+        {
+          onClick: ClickedStop(),
+          toView: attributes =>
+            h.button(
+              [
+                ...attributes.button,
+                h.Class(buttonStyle + ' bg-red-500 hover:bg-red-600'),
               ],
+              ['Stop'],
             ),
-          ],
-        ),
-      ],
-    ),
-  }
-}
-
-const startStopButton = (isRunning: boolean): Html => {
-  const h = html<Message>()
-
-  return isRunning
-    ? Button.view<Message>({
-        onClick: ClickedStop(),
-        toView: attributes =>
-          h.button(
-            [
-              ...attributes.button,
-              h.Class(buttonStyle + ' bg-red-500 hover:bg-red-600'),
-            ],
-            ['Stop'],
-          ),
-      })
-    : Button.view<Message>({
-        onClick: ClickedStart(),
-        toView: attributes =>
-          h.button(
-            [
-              ...attributes.button,
-              h.Class(buttonStyle + ' bg-green-500 hover:bg-green-600'),
-            ],
-            ['Start'],
-          ),
-      })
-}
+        },
+        h,
+      )
+    : Button.view(
+        {
+          onClick: ClickedStart(),
+          toView: attributes =>
+            h.button(
+              [
+                ...attributes.button,
+                h.Class(buttonStyle + ' bg-green-500 hover:bg-green-600'),
+              ],
+              ['Start'],
+            ),
+        },
+        h,
+      )
 
 // STYLE
 

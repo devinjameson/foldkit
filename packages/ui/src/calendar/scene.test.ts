@@ -1,6 +1,6 @@
 import { Match as M, Option } from 'effect'
 import * as Calendar from 'foldkit/calendar'
-import { html } from 'foldkit/html'
+import { type HtmlBuilder, staticHtml } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
 
 import { describe, it } from '@effect/vitest'
@@ -16,7 +16,7 @@ const today = Calendar.make(2026, 4, 13)
  * can query them. Pattern-matches on `_tag` so each viewMode renders the
  * appropriate grid (days, months, years). */
 const testToView = (attrs: CalendarAttributes) => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return M.value(attrs).pipe(
     M.tagsExhaustive({
@@ -97,12 +97,16 @@ const testToView = (attrs: CalendarAttributes) => {
 
 const sceneView =
   (overrides: Omit<Partial<ViewInputs>, 'toView'> = {}) =>
-  (model: Model) =>
-    view(model, {
-      maybeSelectedDate: Option.none(),
-      toView: testToView,
-      ...overrides,
-    })
+  (model: Model, h: HtmlBuilder<Message>) =>
+    view(
+      model,
+      {
+        maybeSelectedDate: Option.none(),
+        toView: testToView,
+        ...overrides,
+      },
+      h,
+    )
 
 const grid = Scene.role('grid')
 const previousMonthButton = Scene.label('Previous month')

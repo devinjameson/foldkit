@@ -1,6 +1,6 @@
 import { Array } from 'effect'
 import { File } from 'foldkit'
-import { Html, html } from 'foldkit/html'
+import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { FileDrop } from '@foldkit/ui'
 
@@ -47,9 +47,10 @@ const formatFileSize = (bytes: number): string => {
 
 // VIEW
 
-export const basicDemo = (model: Model): ReadonlyArray<Html> => {
-  const h = html<Message>()
-
+export const basicDemo = (
+  model: Model,
+  h: HtmlBuilder<Message>,
+): ReadonlyArray<Html> => {
   return [
     h.div(
       [h.Class('flex flex-col gap-3 w-full max-w-md')],

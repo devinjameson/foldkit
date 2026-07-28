@@ -1,4 +1,4 @@
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
 
 import { describe, it } from '@effect/vitest'
@@ -38,17 +38,18 @@ const sceneView =
       'items' | 'itemToKey' | 'itemToView'
     > = {},
   ) =>
-  (model: Model) => {
-    const h = html<Message>()
-
-    return view<DemoItem>()(model, {
-      items: demoItems,
-      itemToKey: item => String(item.id),
-      itemToView: item => h.div([], [h.span([], [item.label])]),
-      overscan: 0,
-      ...overrides,
-    })
-  }
+  (model: Model, h: HtmlBuilder<Message>) =>
+    view<DemoItem>()(
+      model,
+      {
+        items: demoItems,
+        itemToKey: item => String(item.id),
+        itemToView: item => h.div([], [h.span([], [item.label])]),
+        overscan: 0,
+        ...overrides,
+      },
+      h,
+    )
 
 const unmeasuredModel = init({ id: 'test', rowHeightPx: ROW_HEIGHT })
 

@@ -1,5 +1,5 @@
 import { Match as M, Schema as S } from 'effect'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import * as Scene from 'foldkit/scene'
 import { evo } from 'foldkit/struct'
@@ -26,24 +26,24 @@ const update = (model: Model, message: Message): UpdateReturn =>
 
 const testView =
   ({ isDisabled = false }: { isDisabled?: boolean } = {}) =>
-  (model: Model) => {
-    const h = html<Message>()
-
-    return view<Message>({
-      id: 'test',
-      isOpen: model.isOpen,
-      onToggle: isOpen => Toggled({ isOpen }),
-      isDisabled,
-      toView: ({ button, panel, animatePanel }) =>
-        h.div(
-          [],
-          [
-            h.button([...button], ['Details']),
-            animatePanel(h.div([...panel], ['Panel content'])),
-          ],
-        ),
-    })
-  }
+  (model: Model, h: HtmlBuilder<Message>) =>
+    view(
+      {
+        id: 'test',
+        isOpen: model.isOpen,
+        onToggle: isOpen => Toggled({ isOpen }),
+        isDisabled,
+        toView: ({ button, panel, animatePanel }) =>
+          h.div(
+            [],
+            [
+              h.button([...button], ['Details']),
+              animatePanel(h.div([...panel], ['Panel content'])),
+            ],
+          ),
+      },
+      h,
+    )
 
 const button = Scene.selector('#test-button')
 

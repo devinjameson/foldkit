@@ -1,5 +1,5 @@
 import { Effect } from 'effect'
-import { Document } from 'foldkit/html'
+import { Document, type HtmlBuilder } from 'foldkit/html'
 import { makeApplication } from 'foldkit/runtime'
 import { describe, it } from 'vitest'
 
@@ -9,6 +9,7 @@ import { __requireDispatch } from '../../../packages/foldkit/src/html/index.js'
 import {
   AddedTodo,
   DeletedTodo,
+  type Message,
   Model,
   ToggledTodo,
   UpdatedNewTodo,
@@ -104,7 +105,7 @@ type Profile = Readonly<{
 }>
 
 const runProfile = async (
-  baseView: (model: Model) => Document,
+  baseView: (model: Model, h: HtmlBuilder<Message>) => Document,
 ): Promise<Profile> => {
   const container = document.createElement('section')
   container.id = `profile-${Math.random().toString(36).slice(2)}`
@@ -117,12 +118,12 @@ const runProfile = async (
   const wrappedView = wrap(baseView)
   const wrappedUpdate = wrap(baseUpdate)
 
-  const captureView = (model: Model) => {
+  const captureView = (model: Model, h: HtmlBuilder<Message>) => {
     if (capturedDispatch === null) {
       capturedDispatch = __requireDispatch()
     }
     latestModel = model
-    return wrappedView.fn(model)
+    return wrappedView.fn(model, h)
   }
 
   const application = makeApplication({
@@ -219,7 +220,7 @@ const printRow = (
 
 const reportSlot = async (
   label: string,
-  view: (model: Model) => Document,
+  view: (model: Model, h: HtmlBuilder<Message>) => Document,
   warmupRuns: number,
   measuredRuns: number,
 ): Promise<Profile> => {

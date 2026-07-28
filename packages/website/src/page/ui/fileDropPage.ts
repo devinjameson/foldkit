@@ -1,5 +1,5 @@
 import { Submodel } from 'foldkit'
-import { Html, html } from 'foldkit/html'
+import type { Html } from 'foldkit/html'
 
 import { uiShowcaseViewSourceHref } from '../../link'
 import type { TableOfContentsEntry } from '../../main'
@@ -15,7 +15,6 @@ import {
 } from '../../prose'
 import * as Snippet from '../../snippet'
 import {
-  type CopiedSnippets,
   type RenderCopyButton,
   highlightedCodeBlockFor,
 } from '../../view/codeBlock'
@@ -192,14 +191,12 @@ const dataAttributes: ReadonlyArray<DataAttributeEntry> = [
 // VIEW
 
 type ViewInputs = Readonly<{
-  copiedSnippets: CopiedSnippets
   renderCopyButton: RenderCopyButton
   renderHeadingLink: RenderHeadingLink
 }>
 
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
-  (model, { copiedSnippets, renderCopyButton, renderHeadingLink }): Html => {
-    const h = html<Message>()
+  (model, { renderCopyButton, renderHeadingLink }, h): Html => {
     const { heading, tableOfContentsEntryToHeader } =
       headingsFor(renderHeadingLink)
     const highlightedCodeBlock = highlightedCodeBlockFor(renderCopyButton)
@@ -241,7 +238,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           inlineCode('data-[drag-over]:*'),
           ' utilities.',
         ),
-        demoContainer(...FileDrop.basicDemo(model)),
+        demoContainer(...FileDrop.basicDemo(model, h)),
         highlightedCodeBlock(
           h.div(
             [
@@ -252,7 +249,6 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           ),
           Snippet.uiFileDropBasicRaw,
           'Copy file drop example to clipboard',
-          copiedSnippets,
           'mb-8',
         ),
         heading(stylingHeader.level, stylingHeader.id, stylingHeader.text),

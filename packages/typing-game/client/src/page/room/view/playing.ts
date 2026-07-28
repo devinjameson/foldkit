@@ -1,6 +1,6 @@
 import { clsx } from 'clsx'
 import { Array, Number, Option, Order, String as Str, pipe } from 'effect'
-import { Html, html } from 'foldkit/html'
+import { Html, HtmlBuilder } from 'foldkit/html'
 
 import { USER_GAME_TEXT_INPUT_ID } from '../../../constant'
 import { ChangedUserText } from '../message'
@@ -10,10 +10,9 @@ const typing = (
   gameText: string,
   userGameText: string,
   maybeWrongCharIndex: Option.Option<number>,
-): Html => {
-  const h = html<Message>()
-
-  return h.div(
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.div(
     [h.Class('relative')],
     [
       h.textarea(
@@ -28,32 +27,32 @@ const typing = (
         ],
         [],
       ),
-      gameTextWithProgress(gameText, userGameText, maybeWrongCharIndex),
+      gameTextWithProgress(gameText, userGameText, maybeWrongCharIndex, h),
     ],
   )
-}
 
 const gameTextWithProgress = (
   gameText: string,
   userGameText: string,
   maybeWrongCharIndex: Option.Option<number>,
-): Html => {
-  const h = html<Message>()
-
-  return h.div(
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.div(
     [h.Class('whitespace-pre-wrap')],
     pipe(
       gameText,
       Str.split(''),
-      Array.map(char(userGameText, maybeWrongCharIndex)),
+      Array.map(char(userGameText, maybeWrongCharIndex, h)),
     ),
   )
-}
 
 const char =
-  (userGameText: string, maybeWrongCharIndex: Option.Option<number>) =>
+  (
+    userGameText: string,
+    maybeWrongCharIndex: Option.Option<number>,
+    h: HtmlBuilder<Message>,
+  ) =>
   (char: string, index: number): Html => {
-    const h = html<Message>()
     const userGameTextLength = Str.length(userGameText)
     const hasNoInput = userGameTextLength === 0
     const isNext =
@@ -89,10 +88,9 @@ export const playing = (
   maybeGameText: Option.Option<string>,
   userGameText: string,
   maybeWrongCharIndex: Option.Option<number>,
-): Html => {
-  const h = html<Message>()
-
-  return h.div(
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.div(
     [h.Class('space-y-6')],
     [
       h.h3(
@@ -103,8 +101,8 @@ export const playing = (
       ),
       Option.match(maybeGameText, {
         onNone: () => h.empty,
-        onSome: gameText => typing(gameText, userGameText, maybeWrongCharIndex),
+        onSome: gameText =>
+          typing(gameText, userGameText, maybeWrongCharIndex, h),
       }),
     ],
   )
-}

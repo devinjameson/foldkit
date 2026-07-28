@@ -1,7 +1,6 @@
 import { Effect, Match as M, Option, Schema as S } from 'effect'
 
-import { html } from '../../html/index.js'
-import type { Html } from '../../html/index.js'
+import type { Html, HtmlBuilder } from '../../html/index.js'
 import { m } from '../../message/index.js'
 import * as Mount from '../../mount/index.js'
 
@@ -99,9 +98,7 @@ export const update = (
 
 // VIEW
 
-export const view = (model: Model): Html => {
-  const h = html<Message>()
-
+export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
   return h.div(
     [h.Class('panel-test')],
     [
@@ -134,9 +131,7 @@ export const view = (model: Model): Html => {
 /** A view that always renders both the toggle button and the panel, exposing
  *  two MeasurePanel mounts simultaneously so we can exercise the (name,
  *  occurrence) tracking. */
-export const twoPanelView = (model: Model): Html => {
-  const h = html<Message>()
-
+export const twoPanelView = (model: Model, h: HtmlBuilder<Message>): Html => {
   return h.div(
     [h.Class('two-panels')],
     [
@@ -154,9 +149,10 @@ export const twoPanelView = (model: Model): Html => {
  *  Instance-based mount matching (matcher's args structurally equal the
  *  pending Mount's args). The chosen `offset` flows through `ScrollList`'s
  *  args and is observable on the rendered Mount marker. */
-export const scrollListView = (offset: number): Html => {
-  const h = html<Message>()
-
+export const scrollListView = (
+  offset: number,
+  h: HtmlBuilder<Message>,
+): Html => {
   return h.div(
     [h.Class('scroll-list')],
     [h.div([h.Key('list'), h.OnMount(ScrollList({ offset }))], [])],

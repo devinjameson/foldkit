@@ -8,7 +8,7 @@ import {
   pipe,
 } from 'effect'
 import { Command, Runtime, Subscription } from 'foldkit'
-import { Document, Html, html } from 'foldkit/html'
+import { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -297,10 +297,8 @@ const cellClass = (x: number, y: number, model: Model): string => {
   )
 }
 
-const gridView = (model: Model): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const gridView = (model: Model, h: HtmlBuilder<Message>): Html =>
+  h.div(
     [h.Class('inline-block border-2 border-gray-600')],
     Array.makeBy(GAME.GRID_SIZE, y =>
       h.div(
@@ -311,7 +309,6 @@ const gridView = (model: Model): Html => {
       ),
     ),
   )
-}
 
 const gameStateView = (gameState: GameState): string =>
   M.value(gameState).pipe(
@@ -322,10 +319,8 @@ const gameStateView = (gameState: GameState): string =>
     M.exhaustive,
   )
 
-const instructionsView = (): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const instructionsView = (h: HtmlBuilder<Message>): Html =>
+  h.div(
     [h.Class('mt-4 text-sm text-gray-400')],
     [
       h.p([], ['Use ARROW KEYS or WASD to move']),
@@ -333,32 +328,27 @@ const instructionsView = (): Html => {
       h.p([], ['R to restart']),
     ],
   )
-}
 
-export const view = (model: Model): Document => {
-  const h = html<Message>()
-
-  return {
-    title: `Snake | ${model.points} pts`,
-    body: h.div(
-      [
-        h.Class(
-          'flex flex-col items-center justify-center min-h-screen bg-black text-white p-8',
-        ),
-      ],
-      [
-        h.h1([h.Class('text-4xl font-bold mb-4')], ['Snake Game']),
-        h.div(
-          [h.Class('flex gap-8 mb-4')],
-          [
-            h.p([h.Class('text-xl')], [`Score: ${model.points}`]),
-            h.p([h.Class('text-xl')], [`High Score: ${model.highScore}`]),
-          ],
-        ),
-        h.p([h.Class('text-lg mb-4')], [gameStateView(model.gameState)]),
-        gridView(model),
-        instructionsView(),
-      ],
-    ),
-  }
-}
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
+  title: `Snake | ${model.points} pts`,
+  body: h.div(
+    [
+      h.Class(
+        'flex flex-col items-center justify-center min-h-screen bg-black text-white p-8',
+      ),
+    ],
+    [
+      h.h1([h.Class('text-4xl font-bold mb-4')], ['Snake Game']),
+      h.div(
+        [h.Class('flex gap-8 mb-4')],
+        [
+          h.p([h.Class('text-xl')], [`Score: ${model.points}`]),
+          h.p([h.Class('text-xl')], [`High Score: ${model.highScore}`]),
+        ],
+      ),
+      h.p([h.Class('text-lg mb-4')], [gameStateView(model.gameState)]),
+      gridView(model, h),
+      instructionsView(h),
+    ],
+  ),
+})

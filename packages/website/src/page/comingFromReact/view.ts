@@ -1,16 +1,13 @@
 import { Option, Record } from 'effect'
 import { Submodel } from 'foldkit'
-import { Html, html } from 'foldkit/html'
+import { Html, type HtmlBuilder, staticHtml } from 'foldkit/html'
 
 import { Disclosure } from '@foldkit/ui'
 
 import { Icon } from '../../icon'
 import { slotDocPage } from '../../markdown'
 import { type RenderHeadingLink } from '../../prose'
-import {
-  type CopiedSnippets,
-  type RenderCopyButton,
-} from '../../view/codeBlock'
+import { type RenderCopyButton } from '../../view/codeBlock'
 import raw from './comingFromReact.md'
 import { type Message, ToggledFaq } from './message'
 import type { Model } from './model'
@@ -18,7 +15,7 @@ import type { Model } from './model'
 // FAQ SHELL
 
 const chevron = (isOpen: boolean): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.span(
     [
@@ -46,41 +43,42 @@ const faqItem = (
   question: string,
   answerContent: ReadonlyArray<Html>,
   model: Model,
-): Html => {
-  const h = html<Message>()
-
-  return Option.match(Record.get(model, id), {
+  h: HtmlBuilder<Message>,
+): Html =>
+  Option.match(Record.get(model, id), {
     onSome: isFaqOpen =>
-      Disclosure.view<Message>({
-        id,
-        isOpen: isFaqOpen,
-        onToggle: isOpen => ToggledFaq({ id, isOpen }),
-        toView: attributes =>
-          h.div(
-            [h.Class('mb-2')],
-            [
-              h.button(
-                [...attributes.button, h.Class(faqButtonClassName)],
-                [
-                  h.div(
-                    [h.Class('flex items-center justify-between w-full')],
-                    [h.span([], [question]), chevron(isFaqOpen)],
-                  ),
-                ],
-              ),
-              isFaqOpen
-                ? h.div(
-                    [...attributes.panel, h.Class(faqPanelClassName)],
-                    [h.div([], answerContent)],
-                  )
-                : h.empty,
-            ],
-          ),
-      }),
+      Disclosure.view(
+        {
+          id,
+          isOpen: isFaqOpen,
+          onToggle: isOpen => ToggledFaq({ id, isOpen }),
+          toView: attributes =>
+            h.div(
+              [h.Class('mb-2')],
+              [
+                h.button(
+                  [...attributes.button, h.Class(faqButtonClassName)],
+                  [
+                    h.div(
+                      [h.Class('flex items-center justify-between w-full')],
+                      [h.span([], [question]), chevron(isFaqOpen)],
+                    ),
+                  ],
+                ),
+                isFaqOpen
+                  ? h.div(
+                      [...attributes.panel, h.Class(faqPanelClassName)],
+                      [h.div([], answerContent)],
+                    )
+                  : h.empty,
+              ],
+            ),
+        },
+        h,
+      ),
     onNone: () =>
       h.div([], [h.p([h.Class('font-bold')], [question]), ...answerContent]),
   })
-}
 
 // PAGE
 
@@ -97,17 +95,16 @@ export { tableOfContents }
 // and rejected. As top-level `viewInputs` functions they run in the parent's
 // boundary instead.
 type ViewInputs = Readonly<{
-  copiedSnippets: CopiedSnippets
   renderCopyButton: RenderCopyButton
   renderHeadingLink: RenderHeadingLink
 }>
 
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
-  (model, { copiedSnippets, renderCopyButton, renderHeadingLink }): Html =>
-    renderPage(copiedSnippets, {
+  (model, { renderCopyButton, renderHeadingLink }, h): Html =>
+    renderPage({
       demos: {},
       renderFaq: (id, question, content) =>
-        faqItem(id, question, content, model),
+        faqItem(id, question, content, model, h),
       renderCopyButton,
       renderHeadingLink,
     }),

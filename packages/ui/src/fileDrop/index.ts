@@ -1,12 +1,7 @@
 import { Array, Match as M, Option, Schema as S } from 'effect'
 import * as Command from 'foldkit/command'
 import * as File from 'foldkit/file'
-import {
-  type ChildAttribute,
-  type Html,
-  childAttributes,
-  html,
-} from 'foldkit/html'
+import { type ChildAttribute, type Html, childAttributes } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 import { defineView } from 'foldkit/submodel'
@@ -157,9 +152,7 @@ const dispatchDroppedFiles = (files: ReadonlyArray<File.File>) =>
 /** Renders an accessible file-drop zone by publishing attribute groups
  *  for a `<label>`-wrapped hidden file input. */
 export const view = defineView<Model, Message, ViewInputs>(
-  (model, viewInputs): Html => {
-    const h = html<Message>()
-
+  (model, viewInputs, h): Html => {
     const { id, isDragOver } = model
     const { toView, accept, multiple = false, isDisabled = false } = viewInputs
 

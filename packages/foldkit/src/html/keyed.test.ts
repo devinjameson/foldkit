@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { html } from './index.js'
+import { staticHtml } from './index.js'
 
 describe('keyed', () => {
   it('preserves every PropertyKey without coercion', () => {
-    const h = html()
+    const h = staticHtml
     const keys: ReadonlyArray<PropertyKey> = [1, '1', Symbol('1')]
 
     for (const key of keys) {

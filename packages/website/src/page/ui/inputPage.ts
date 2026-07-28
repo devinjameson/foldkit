@@ -1,5 +1,5 @@
 import { Submodel } from 'foldkit'
-import { Html, html } from 'foldkit/html'
+import type { Html } from 'foldkit/html'
 
 import { uiShowcaseViewSourceHref } from '../../link'
 import type { TableOfContentsEntry } from '../../main'
@@ -15,7 +15,6 @@ import {
 } from '../../prose'
 import * as Snippet from '../../snippet'
 import {
-  type CopiedSnippets,
   type RenderCopyButton,
   highlightedCodeBlockFor,
 } from '../../view/codeBlock'
@@ -200,14 +199,12 @@ const keyboardEntries: ReadonlyArray<KeyboardEntry> = [
 // VIEW
 
 type ViewInputs = Readonly<{
-  copiedSnippets: CopiedSnippets
   renderCopyButton: RenderCopyButton
   renderHeadingLink: RenderHeadingLink
 }>
 
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
-  (model, { copiedSnippets, renderCopyButton, renderHeadingLink }): Html => {
-    const h = html<Message>()
+  (model, { renderCopyButton, renderHeadingLink }, h): Html => {
     const { heading, tableOfContentsEntryToHeader } =
       headingsFor(renderHeadingLink)
     const highlightedCodeBlock = highlightedCodeBlockFor(renderCopyButton)
@@ -259,7 +256,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           inlineCode('aria-describedby'),
           ').',
         ),
-        demoContainer(...Input.basicDemo(model)),
+        demoContainer(...Input.basicDemo(model, h)),
         highlightedCodeBlock(
           h.div(
             [h.Class('text-sm'), h.InnerHTML(Snippet.uiInputBasicHighlighted)],
@@ -267,7 +264,6 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           ),
           Snippet.uiInputBasicRaw,
           'Copy basic input example to clipboard',
-          copiedSnippets,
           'mb-8',
         ),
         heading(
@@ -284,7 +280,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           inlineCode('aria-disabled'),
           ', so the browser prevents interaction entirely.',
         ),
-        demoContainer(...Input.disabledDemo(model)),
+        demoContainer(...Input.disabledDemo(model, h)),
         highlightedCodeBlock(
           h.div(
             [
@@ -295,7 +291,6 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           ),
           Snippet.uiInputDisabledRaw,
           'Copy disabled input example to clipboard',
-          copiedSnippets,
           'mb-8',
         ),
         heading(stylingHeader.level, stylingHeader.id, stylingHeader.text),

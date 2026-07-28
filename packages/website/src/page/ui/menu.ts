@@ -1,5 +1,10 @@
 import { Match as M } from 'effect'
-import { Html, childAttributes, html } from 'foldkit/html'
+import {
+  Html,
+  type HtmlBuilder,
+  childAttributes,
+  staticHtml,
+} from 'foldkit/html'
 
 import { Menu } from '@foldkit/ui'
 import type { AnchorConfig } from '@foldkit/ui/menu'
@@ -88,7 +93,7 @@ const MENU_ANCHOR: AnchorConfig = {
 }
 
 const menuViewConfig = (itemsClassName: string) => {
-  const h = html<Message>()
+  const h = staticHtml
 
   const groupToHeading = (groupKey: string) =>
     M.value(groupKey).pipe(
@@ -123,9 +128,7 @@ const menuViewConfig = (itemsClassName: string) => {
   }
 }
 
-export const basicDemo = (menuModel: Menu.Model) => {
-  const h = html<Message>()
-
+export const basicDemo = (menuModel: Menu.Model, h: HtmlBuilder<Message>) => {
   return [
     h.div(
       [h.Class('flex flex-col gap-1.5')],
@@ -156,9 +159,10 @@ export const basicDemo = (menuModel: Menu.Model) => {
   ]
 }
 
-export const animatedDemo = (menuModel: Menu.Model) => {
-  const h = html<Message>()
-
+export const animatedDemo = (
+  menuModel: Menu.Model,
+  h: HtmlBuilder<Message>,
+) => {
   return [
     h.div(
       [h.Class('flex flex-col gap-1.5')],

@@ -1,8 +1,4 @@
-import { html } from 'foldkit/html'
-
-import type { Message } from './message'
-
-const h = html<Message>()
+import { staticHtml as h } from 'foldkit/html'
 
 export const docsLink = h.a(
   [h.Href('https://example.com'), h.Target('_blank')],

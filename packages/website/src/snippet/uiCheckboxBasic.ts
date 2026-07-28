@@ -2,7 +2,7 @@
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
 import { Schema as S } from 'effect'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -38,35 +38,35 @@ ToggledTerms: ({ isChecked }) => [
 
 // Inside your view function, render the checkbox with Checkbox.view. It reads
 // the checked state from your Model and calls onToggle with the new state.
-const view = model => {
-  const h = html<Message>()
-
-  return Checkbox.view<Message>({
-    id: 'accept-terms',
-    isChecked: model.acceptedTerms,
-    onToggle: isChecked => ToggledTerms({ isChecked }),
-    toView: attributes =>
-      h.div(
-        [h.Class('flex flex-col gap-1')],
-        [
-          h.div(
-            [h.Class('flex items-center gap-2')],
-            [
-              h.button(
-                [...attributes.checkbox, h.Class('h-5 w-5 rounded border')],
-                model.acceptedTerms ? ['✓'] : [],
-              ),
-              h.label(
-                [...attributes.label, h.Class('text-sm')],
-                ['Accept terms and conditions'],
-              ),
-            ],
-          ),
-          h.p(
-            [...attributes.description, h.Class('text-sm text-gray-500')],
-            ['You agree to our Terms of Service.'],
-          ),
-        ],
-      ),
-  })
-}
+const view = (model, h: HtmlBuilder<Message>) =>
+  Checkbox.view(
+    {
+      id: 'accept-terms',
+      isChecked: model.acceptedTerms,
+      onToggle: isChecked => ToggledTerms({ isChecked }),
+      toView: attributes =>
+        h.div(
+          [h.Class('flex flex-col gap-1')],
+          [
+            h.div(
+              [h.Class('flex items-center gap-2')],
+              [
+                h.button(
+                  [...attributes.checkbox, h.Class('h-5 w-5 rounded border')],
+                  model.acceptedTerms ? ['✓'] : [],
+                ),
+                h.label(
+                  [...attributes.label, h.Class('text-sm')],
+                  ['Accept terms and conditions'],
+                ),
+              ],
+            ),
+            h.p(
+              [...attributes.description, h.Class('text-sm text-gray-500')],
+              ['You agree to our Terms of Service.'],
+            ),
+          ],
+        ),
+    },
+    h,
+  )

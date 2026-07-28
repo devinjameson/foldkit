@@ -1,4 +1,4 @@
-import { type Html, html } from 'foldkit/html'
+import { type Html, type HtmlBuilder, staticHtml } from 'foldkit/html'
 
 import { Popover } from '@foldkit/ui'
 import type { AnchorConfig } from '@foldkit/ui/popover'
@@ -64,7 +64,7 @@ const NESTED_POPOVER_ANCHOR: AnchorConfig = {
 const nestedChildButtonSelector = '#popover-nested-child-demo-button'
 
 const panelContent = (): Html => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return h.div(
     [],
@@ -85,10 +85,9 @@ const popoverDemo = (
   popoverModel: Popover.Model,
   toMessage: (message: Popover.Message) => Message,
   panelClassNameValue: string,
-): Html => {
-  const h = html<Message>()
-
-  return h.submodel({
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.submodel({
     slotId: popoverModel.id,
     model: popoverModel,
     view: Popover.view,
@@ -116,11 +115,11 @@ const popoverDemo = (
     },
     toParentMessage: toMessage,
   })
-}
 
-export const basicDemo = (popoverModel: Popover.Model) => {
-  const h = html<Message>()
-
+export const basicDemo = (
+  popoverModel: Popover.Model,
+  h: HtmlBuilder<Message>,
+) => {
   return [
     h.div(
       [h.Class('flex flex-col gap-1.5')],
@@ -139,6 +138,7 @@ export const basicDemo = (popoverModel: Popover.Model) => {
               popoverModel,
               message => GotPopoverBasicDemoMessage({ message }),
               basicPanelClassName,
+              h,
             ),
           ],
         ),
@@ -147,9 +147,10 @@ export const basicDemo = (popoverModel: Popover.Model) => {
   ]
 }
 
-export const animatedDemo = (popoverModel: Popover.Model) => {
-  const h = html<Message>()
-
+export const animatedDemo = (
+  popoverModel: Popover.Model,
+  h: HtmlBuilder<Message>,
+) => {
   return [
     h.div(
       [h.Class('flex flex-col gap-1.5')],
@@ -168,6 +169,7 @@ export const animatedDemo = (popoverModel: Popover.Model) => {
               popoverModel,
               message => GotPopoverAnimatedDemoMessage({ message }),
               animatedPanelClassName,
+              h,
             ),
           ],
         ),
@@ -176,10 +178,11 @@ export const animatedDemo = (popoverModel: Popover.Model) => {
   ]
 }
 
-const nestedChildPopover = (childPopoverModel: Popover.Model): Html => {
-  const h = html<Message>()
-
-  return h.submodel({
+const nestedChildPopover = (
+  childPopoverModel: Popover.Model,
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.submodel({
     slotId: childPopoverModel.id,
     model: childPopoverModel,
     view: Popover.view,
@@ -223,14 +226,12 @@ const nestedChildPopover = (childPopoverModel: Popover.Model): Html => {
     },
     toParentMessage: message => GotPopoverNestedChildDemoMessage({ message }),
   })
-}
 
 export const nestedDemo = (
   parentPopoverModel: Popover.Model,
   childPopoverModel: Popover.Model,
+  h: HtmlBuilder<Message>,
 ) => {
-  const h = html<Message>()
-
   return [
     h.div(
       [h.Class('flex flex-col gap-1.5')],
@@ -282,7 +283,7 @@ export const nestedDemo = (
                                         'Manage account settings without leaving this panel.',
                                       ],
                                     ),
-                                    nestedChildPopover(childPopoverModel),
+                                    nestedChildPopover(childPopoverModel, h),
                                   ],
                                 ),
                               ],

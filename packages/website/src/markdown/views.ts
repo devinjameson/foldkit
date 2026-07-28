@@ -1,10 +1,9 @@
 import { Match as M, Option } from 'effect'
-import { type Attribute, Html, html } from 'foldkit/html'
+import { type Attribute, Html, staticHtml } from 'foldkit/html'
 
 import type { Alignment } from '@foldkit/markdown'
 import type * as Markdown from '@foldkit/markdown'
 
-import type { Message } from '../message'
 import {
   type RenderHeadingLink,
   diagram,
@@ -12,11 +11,7 @@ import {
   inlineCode,
   pageTitle,
 } from '../prose'
-import {
-  type CopiedSnippets,
-  type RenderCopyButton,
-  codeBlock,
-} from '../view/codeBlock'
+import { type RenderCopyButton, codeBlock } from '../view/codeBlock'
 import { parseHeadingId, stripHeadingIdMarker } from './slug'
 import { type HeadingIds, headingId } from './tableOfContents'
 
@@ -26,9 +21,8 @@ import { type HeadingIds, headingId } from './tableOfContents'
 export type DocViewConfig = Readonly<{
   pageId: string
   idByHeading: HeadingIds
-  copiedSnippets: CopiedSnippets
-  renderCopyButton?: RenderCopyButton | undefined
-  renderHeadingLink?: RenderHeadingLink | undefined
+  renderCopyButton: RenderCopyButton
+  renderHeadingLink: RenderHeadingLink
 }>
 
 const linkClassName =
@@ -56,11 +50,11 @@ const tableCellClassName =
 
 const alignmentAttributes = (
   alignment: Alignment,
-): ReadonlyArray<Attribute<Message>> => {
-  const h = html<Message>()
+): ReadonlyArray<Attribute<never>> => {
+  const h = staticHtml
 
   return M.value(alignment).pipe(
-    M.withReturnType<ReadonlyArray<Attribute<Message>>>(),
+    M.withReturnType<ReadonlyArray<Attribute<never>>>(),
     M.when('None', () => []),
     M.when('Left', () => [h.Style({ 'text-align': 'left' })]),
     M.when('Center', () => [h.Style({ 'text-align': 'center' })]),
@@ -71,8 +65,8 @@ const alignmentAttributes = (
 
 const titleAttributes = (
   maybeTitle: Option.Option<string>,
-): ReadonlyArray<Attribute<Message>> => {
-  const h = html<Message>()
+): ReadonlyArray<Attribute<never>> => {
+  const h = staticHtml
 
   return Option.match(maybeTitle, {
     onNone: () => [],
@@ -87,7 +81,7 @@ const titleAttributes = (
  * affordances and search attributes the hand-written prose helpers produce.
  */
 export const docViews = (config: DocViewConfig): Partial<Markdown.Views> => {
-  const h = html<Message>()
+  const h = staticHtml
 
   return {
     Paragraph: (_paragraph, content) =>
@@ -171,10 +165,9 @@ export const docViews = (config: DocViewConfig): Partial<Markdown.Views> => {
         : codeBlock(
             value,
             'Copy code to clipboard',
-            config.copiedSnippets,
+            config.renderCopyButton,
             'mb-8',
             Option.getOrUndefined(maybeLanguage),
-            config.renderCopyButton,
           ),
 
     List: (list, items) => {
