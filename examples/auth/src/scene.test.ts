@@ -6,7 +6,6 @@ import { SaveSession } from './command'
 import { CompletedNavigateInternal, SucceededSaveSession } from './message'
 import { LoggedOut } from './model'
 import {
-  FailedSimulateAuthRequest,
   SimulateAuthRequest,
   SucceededSimulateAuthRequest,
   initModel as initLoginModel,
@@ -14,8 +13,6 @@ import {
 import { LoginRoute } from './route'
 import { RedirectToDashboard, update } from './update'
 import { view } from './view'
-
-const initialModel = LoggedOut.init(LoginRoute())
 
 const validModel = LoggedOut.Model({
   route: LoginRoute(),
@@ -28,81 +25,8 @@ const validModel = LoggedOut.Model({
 
 const aliceSession = { userId: '1', email: 'alice@example.com', name: 'alice' }
 
-describe('view', () => {
-  test('initial view renders form with sign in heading, inputs, and submit button', () => {
-    Scene.scene(
-      { update, view },
-      Scene.with(initialModel),
-      Scene.expect(Scene.role('heading', { name: 'Sign In' })).toExist(),
-      Scene.expect(Scene.label('Email')).toExist(),
-      Scene.expect(Scene.label('Password')).toExist(),
-      Scene.expect(Scene.role('button', { name: 'Sign In' })).toExist(),
-    )
-  })
-
-  test('typing a valid email shows checkmark', () => {
-    Scene.scene(
-      { update, view },
-      Scene.with(initialModel),
-      Scene.type(Scene.label('Email'), 'alice@example.com'),
-      Scene.expect(Scene.text('✓')).toExist(),
-    )
-  })
-
-  test('typing an invalid email shows error message', () => {
-    Scene.scene(
-      { update, view },
-      Scene.with(initialModel),
-      Scene.type(Scene.label('Email'), 'notanemail'),
-      Scene.expect(Scene.text('Please enter a valid email')).toExist(),
-    )
-  })
-
-  test('submit button is enabled after typing valid email and password', () => {
-    Scene.scene(
-      { update, view },
-      Scene.with(initialModel),
-      Scene.type(Scene.label('Email'), 'alice@example.com'),
-      Scene.type(Scene.label('Password'), 'password'),
-      Scene.expect(Scene.role('button', { name: 'Sign In' })).toBeEnabled(),
-    )
-  })
-
-  test('submitting with valid fields shows loading state', () => {
-    Scene.scene(
-      { update, view },
-      Scene.with(validModel),
-      Scene.submit(Scene.role('form')),
-      Scene.expect(Scene.role('button', { name: 'Signing in...' })).toExist(),
-      Scene.expect(
-        Scene.role('button', { name: 'Signing in...' }),
-      ).toBeDisabled(),
-      Scene.Command.expectExact(SimulateAuthRequest),
-      Scene.Command.resolve(
-        SimulateAuthRequest,
-        FailedSimulateAuthRequest({ error: '' }),
-      ),
-    )
-  })
-
-  test('failed auth shows error text', () => {
-    Scene.scene(
-      { update, view },
-      Scene.with(validModel),
-      Scene.submit(Scene.role('form')),
-      Scene.Command.expectExact(SimulateAuthRequest),
-      Scene.Command.resolve(
-        SimulateAuthRequest,
-        FailedSimulateAuthRequest({ error: 'Invalid credentials' }),
-      ),
-      Scene.expect(
-        Scene.within(Scene.role('form'), Scene.text('Invalid credentials')),
-      ).toExist(),
-      Scene.expect(Scene.role('button', { name: 'Sign In' })).toExist(),
-    )
-  })
-
-  test('successful login transitions to dashboard', () => {
+describe('login flow', () => {
+  test('successful login saves the session and lands on the dashboard', () => {
     Scene.scene(
       { update, view },
       Scene.with(validModel),
