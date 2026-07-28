@@ -6,7 +6,7 @@ import {
   ChangedEmail,
   ChangedPassword,
   FailedSimulateAuthRequest,
-  type Model,
+  Model,
   SimulateAuthRequest,
   SubmittedForm,
   SucceededLogin,
@@ -15,11 +15,11 @@ import {
   update,
 } from './login'
 
-const validModel: Model = {
+const validModel = Model.make({
   ...initModel(),
   email: Valid({ value: 'alice@example.com' }),
   password: Valid({ value: 'password' }),
-}
+})
 
 const aliceSession = { userId: '1', email: 'alice@example.com', name: 'alice' }
 
