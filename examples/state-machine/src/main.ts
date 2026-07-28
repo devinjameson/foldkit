@@ -328,11 +328,11 @@ export const checkoutMachine = Machine.define({
 
 // INIT
 
-export const initialModel: Model = {
+export const initialModel = Model.make({
   checkout: checkoutMachine.initial,
   transitionLog: [],
   nextTransitionLogId: 0,
-}
+})
 
 export const init: Runtime.ApplicationInit<Model, Message> = () => [
   initialModel,

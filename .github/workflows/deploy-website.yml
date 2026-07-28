@@ -144,6 +144,9 @@ jobs:
               { "src": "^/project-organization\\.md$", "status": 308, "headers": { "Location": "/patterns/project-organization.md" } },
               { "src": "^/example-apps/upload$", "status": 308, "headers": { "Location": "/example-apps/interrupting-commands" } },
               { "src": "^/playground/upload$", "status": 308, "headers": { "Location": "/playground/interrupting-commands" } },
+              { "src": "^/example-apps/checkout-machine$", "status": 308, "headers": { "Location": "/example-apps/state-machine" } },
+              { "src": "^/example-apps/checkout-machine\\.md$", "status": 308, "headers": { "Location": "/example-apps/state-machine.md" } },
+              { "src": "^/playground/checkout-machine$", "status": 308, "headers": { "Location": "/playground/state-machine" } },
               { "handle": "filesystem" },
               {
                 "src": "/",

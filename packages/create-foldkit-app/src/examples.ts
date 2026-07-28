@@ -19,7 +19,7 @@ export const EXAMPLE_VALUES = [
   'generative-art',
   'auth',
   'shopping-cart',
-  'checkout-machine',
+  'state-machine',
   'pixel-art',
   'websocket-chat',
   'managed-resource-layer',
@@ -149,8 +149,8 @@ export const examples: ReadonlyArray<{
     description: 'Complex state management with nested models and routing',
   },
   {
-    value: 'checkout-machine',
-    title: 'checkout-machine',
+    value: 'state-machine',
+    title: 'state-machine',
     description:
       'Checkout workflow powered by the experimental state machine module with guarded branches and edge Commands',
   },

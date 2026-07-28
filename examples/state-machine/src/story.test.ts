@@ -131,6 +131,7 @@ describe('update', () => {
       Story.message(UpdatedPromoCode({ value: 'BOGUS' })),
       Story.message(SubmittedPromoCode()),
       Story.model(model => {
+        expect(model.checkout._tag).toBe('Review')
         if (model.checkout._tag === 'Review') {
           expect(model.checkout.promo).toEqual(RejectedPromo())
         }
