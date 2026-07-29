@@ -18,12 +18,17 @@
   // before
   export const view = (model: Model): Document => {
     const h = html<Message>()
-    return h.div([], [h.button([h.OnClick(Clicked())], ['go'])])
+    return {
+      title: 'Example',
+      body: h.div([], [h.button([h.OnClick(Clicked())], ['go'])]),
+    }
   }
 
   // after
-  export const view = (model: Model, h: HtmlBuilder<Message>): Document =>
-    h.div([], [h.button([h.OnClick(Clicked())], ['go'])])
+  export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
+    title: 'Example',
+    body: h.div([], [h.button([h.OnClick(Clicked())], ['go'])]),
+  })
   ```
 
   The same applies to `crash.view`, which now takes `(context, h)`, and to `Scene.scene`'s `view`.
