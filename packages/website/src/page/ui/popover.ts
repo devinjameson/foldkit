@@ -3,7 +3,6 @@ import { type Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import { Popover } from '@foldkit/ui'
 import type { AnchorConfig } from '@foldkit/ui/popover'
 
-import type { TableOfContentsEntry } from '../../main'
 import {
   GotPopoverAnimatedDemoMessage,
   GotPopoverBasicDemoMessage,
@@ -11,26 +10,6 @@ import {
   GotPopoverNestedParentDemoMessage,
   type Message,
 } from './message'
-
-// TABLE OF CONTENTS
-
-export const basicHeader: TableOfContentsEntry = {
-  level: 'h3',
-  id: 'basic-popover',
-  text: 'Basic',
-}
-
-export const animatedHeader: TableOfContentsEntry = {
-  level: 'h3',
-  id: 'animated-popover',
-  text: 'Animated',
-}
-
-export const nestedHeader: TableOfContentsEntry = {
-  level: 'h3',
-  id: 'nested-popovers',
-  text: 'Nested',
-}
 
 // DEMO CONTENT
 

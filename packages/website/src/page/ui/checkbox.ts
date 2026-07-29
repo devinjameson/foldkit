@@ -2,7 +2,6 @@ import type { HtmlBuilder } from 'foldkit/html'
 
 import { Checkbox } from '@foldkit/ui'
 
-import type { TableOfContentsEntry } from '../../main'
 import {
   type Message,
   ToggledCheckboxAllDemo,
@@ -16,20 +15,6 @@ export const CHECKBOX_BASIC_DEMO_ID = 'checkbox-basic-demo'
 export const CHECKBOX_ALL_DEMO_ID = 'checkbox-all-demo'
 export const CHECKBOX_OPTION_A_DEMO_ID = 'checkbox-option-a-demo'
 export const CHECKBOX_OPTION_B_DEMO_ID = 'checkbox-option-b-demo'
-
-// TABLE OF CONTENTS
-
-export const basicHeader: TableOfContentsEntry = {
-  level: 'h3',
-  id: 'basic',
-  text: 'Basic',
-}
-
-export const indeterminateHeader: TableOfContentsEntry = {
-  level: 'h3',
-  id: 'indeterminate',
-  text: 'Indeterminate',
-}
 
 // DEMO CONTENT
 

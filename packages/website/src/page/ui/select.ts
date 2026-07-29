@@ -3,23 +3,8 @@ import type { HtmlBuilder } from 'foldkit/html'
 import { Select } from '@foldkit/ui'
 
 import { Icon } from '../../icon'
-import type { TableOfContentsEntry } from '../../main'
 import { type Message, UpdatedSelectDemoValue } from './message'
 import type { Model } from './model'
-
-// TABLE OF CONTENTS
-
-export const basicHeader: TableOfContentsEntry = {
-  level: 'h3',
-  id: 'basic',
-  text: 'Basic',
-}
-
-export const disabledHeader: TableOfContentsEntry = {
-  level: 'h3',
-  id: 'disabled',
-  text: 'Disabled',
-}
 
 // DEMO CONTENT
 
