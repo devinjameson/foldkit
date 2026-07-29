@@ -2,6 +2,7 @@ import { Match as M, Schema as S } from 'effect'
 import { Command, Runtime } from 'foldkit'
 import type { Document, HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
+import { evo } from 'foldkit/struct'
 
 // MODEL
 
@@ -34,9 +35,9 @@ export const update = (
       readonly [Model, ReadonlyArray<Command.Command<Message>>]
     >(),
     M.tagsExhaustive({
-      ClickedDecrement: () => [{ count: model.count - 1 }, []],
-      ClickedIncrement: () => [{ count: model.count + 1 }, []],
-      ClickedReset: () => [{ count: 0 }, []],
+      ClickedDecrement: () => [evo(model, { count: count => count - 1 }), []],
+      ClickedIncrement: () => [evo(model, { count: count => count + 1 }), []],
+      ClickedReset: () => [evo(model, { count: () => 0 }), []],
     }),
   )
 

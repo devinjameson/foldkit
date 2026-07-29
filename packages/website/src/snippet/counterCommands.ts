@@ -1,6 +1,7 @@
 import { Effect, Match as M } from 'effect'
 import { Command } from 'foldkit'
 import { m } from 'foldkit/message'
+import { evo } from 'foldkit/struct'
 
 const ClickedResetAfterDelay = m('ClickedResetAfterDelay')
 const CompletedDelayReset = m('CompletedDelayReset')
@@ -25,6 +26,6 @@ const update = (
     >(),
     M.tagsExhaustive({
       ClickedResetAfterDelay: () => [model, [DelayReset()]],
-      CompletedDelayReset: () => [{ count: 0 }, []],
+      CompletedDelayReset: () => [evo(model, { count: () => 0 }), []],
     }),
   )
