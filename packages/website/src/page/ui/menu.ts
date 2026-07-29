@@ -10,26 +10,11 @@ import { Menu } from '@foldkit/ui'
 import type { AnchorConfig } from '@foldkit/ui/menu'
 
 import { Icon } from '../../icon'
-import type { TableOfContentsEntry } from '../../main'
 import {
   GotMenuAnimatedDemoMessage,
   GotMenuBasicDemoMessage,
   type Message,
 } from './message'
-
-// TABLE OF CONTENTS
-
-export const basicHeader: TableOfContentsEntry = {
-  level: 'h3',
-  id: 'basic-menu',
-  text: 'Basic',
-}
-
-export const animatedHeader: TableOfContentsEntry = {
-  level: 'h3',
-  id: 'animated-menu',
-  text: 'Animated',
-}
 
 // DEMO CONTENT
 

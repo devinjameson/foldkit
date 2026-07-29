@@ -3,7 +3,6 @@ import type { HtmlBuilder } from 'foldkit/html'
 
 import { Combobox, Dialog } from '@foldkit/ui'
 
-import type { TableOfContentsEntry } from '../../main'
 import { CityCombobox, comboboxViewInputs } from './combobox'
 import {
   ClickedDeleteProject,
@@ -20,32 +19,6 @@ import {
   type Message,
 } from './message'
 import type { City } from './model'
-
-// TABLE OF CONTENTS
-
-export const basicHeader: TableOfContentsEntry = {
-  level: 'h3',
-  id: 'dialog-basic',
-  text: 'Basic',
-}
-
-export const animatedHeader: TableOfContentsEntry = {
-  level: 'h3',
-  id: 'dialog-animated',
-  text: 'Animated',
-}
-
-export const overlayHeader: TableOfContentsEntry = {
-  level: 'h3',
-  id: 'dialog-field',
-  text: 'Field',
-}
-
-export const nestedHeader: TableOfContentsEntry = {
-  level: 'h3',
-  id: 'dialog-stacked',
-  text: 'Stacked',
-}
 
 // DEMO CONTENT
 

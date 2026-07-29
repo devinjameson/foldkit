@@ -2,7 +2,6 @@ import type { HtmlBuilder } from 'foldkit/html'
 
 import { RadioGroup } from '@foldkit/ui'
 
-import type { TableOfContentsEntry } from '../../main'
 import {
   type Message,
   SelectedHorizontalPlan,
@@ -12,20 +11,6 @@ import { type Model, type Plan } from './model'
 
 export const VERTICAL_RADIO_GROUP_ID = 'vertical-radio-group-demo'
 export const HORIZONTAL_RADIO_GROUP_ID = 'horizontal-radio-group-demo'
-
-// TABLE OF CONTENTS
-
-export const verticalHeader: TableOfContentsEntry = {
-  level: 'h3',
-  id: 'vertical',
-  text: 'Vertical',
-}
-
-export const horizontalHeader: TableOfContentsEntry = {
-  level: 'h3',
-  id: 'horizontal',
-  text: 'Horizontal',
-}
 
 // DEMO CONTENT
 

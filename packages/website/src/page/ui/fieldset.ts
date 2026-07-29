@@ -2,7 +2,6 @@ import type { HtmlBuilder } from 'foldkit/html'
 
 import { Checkbox, Fieldset, Input, Textarea } from '@foldkit/ui'
 
-import type { TableOfContentsEntry } from '../../main'
 import {
   type Message,
   ToggledFieldsetCheckboxDemo,
@@ -13,20 +12,6 @@ import type { Model } from './model'
 
 const FIELDSET_CHECKBOX_DEMO_ID = 'fieldset-checkbox-demo'
 const FIELDSET_DISABLED_CHECKBOX_ID = 'fieldset-disabled-checkbox'
-
-// TABLE OF CONTENTS
-
-export const basicHeader: TableOfContentsEntry = {
-  level: 'h3',
-  id: 'basic',
-  text: 'Basic',
-}
-
-export const disabledHeader: TableOfContentsEntry = {
-  level: 'h3',
-  id: 'disabled',
-  text: 'Disabled',
-}
 
 // SHARED STYLES
 

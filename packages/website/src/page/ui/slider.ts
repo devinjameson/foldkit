@@ -38,11 +38,15 @@ const ratingFormatted = (value: number): string => `${String(value)} of 10`
 const volumeFormatted = (value: number): string =>
   `${String(Math.round(value * 100))}%`
 
+type SliderDemoInputs = Readonly<{
+  ratingModel: Slider.Model
+  ratingValue: number
+  volumeModel: Slider.Model
+  volumeValue: number
+}>
+
 export const sliderDemo = (
-  ratingModel: Slider.Model,
-  ratingValue: number,
-  volumeModel: Slider.Model,
-  volumeValue: number,
+  { ratingModel, ratingValue, volumeModel, volumeValue }: SliderDemoInputs,
   h: HtmlBuilder<Message>,
 ) => {
   return [

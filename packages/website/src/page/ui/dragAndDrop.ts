@@ -3,18 +3,9 @@ import { type Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 
 import { DragAndDrop } from '@foldkit/ui'
 
-import type { TableOfContentsEntry } from '../../main'
 import { GotDragAndDropDemoMessage, type Message } from './message'
 import type { Model } from './model'
 import type { DemoCard, DemoColumn } from './model'
-
-// TABLE OF CONTENTS
-
-export const demoHeader: TableOfContentsEntry = {
-  level: 'h3',
-  id: 'demo',
-  text: 'Demo',
-}
 
 // HELPERS
 

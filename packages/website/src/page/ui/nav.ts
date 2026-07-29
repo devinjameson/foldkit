@@ -5,16 +5,7 @@ import type { Url } from 'foldkit/url'
 import { Nav } from '@foldkit/ui'
 
 import { Icon } from '../../icon'
-import type { TableOfContentsEntry } from '../../main'
 import type { Message } from './message'
-
-// TABLE OF CONTENTS
-
-export const basicHeader: TableOfContentsEntry = {
-  level: 'h3',
-  id: 'basic',
-  text: 'Basic',
-}
 
 // DEMO CONTENT
 

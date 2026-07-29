@@ -3,27 +3,12 @@ import type { HtmlBuilder } from 'foldkit/html'
 
 import { Tabs } from '@foldkit/ui'
 
-import type { TableOfContentsEntry } from '../../main'
 import {
   GotHorizontalTabsDemoMessage,
   GotVerticalTabsDemoMessage,
   type Message,
 } from './message'
 import type { DemoTab } from './model'
-
-// TABLE OF CONTENTS
-
-export const horizontalHeader: TableOfContentsEntry = {
-  level: 'h3',
-  id: 'horizontal',
-  text: 'Horizontal',
-}
-
-export const verticalHeader: TableOfContentsEntry = {
-  level: 'h3',
-  id: 'vertical',
-  text: 'Vertical',
-}
 
 // DEMO CONTENT
 

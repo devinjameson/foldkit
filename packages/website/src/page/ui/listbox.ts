@@ -5,7 +5,6 @@ import { Listbox } from '@foldkit/ui'
 import type { AnchorConfig } from '@foldkit/ui/listbox'
 
 import { Icon } from '../../icon'
-import type { TableOfContentsEntry } from '../../main'
 import {
   GotListboxDemoMessage,
   GotListboxGroupedDemoMessage,
@@ -13,26 +12,6 @@ import {
   type Message,
 } from './message'
 import type { ListboxItem } from './model'
-
-// TABLE OF CONTENTS
-
-export const singleSelectHeader: TableOfContentsEntry = {
-  level: 'h3',
-  id: 'single-select-listbox',
-  text: 'Single-Select',
-}
-
-export const multiSelectHeader: TableOfContentsEntry = {
-  level: 'h3',
-  id: 'multi-select-listbox',
-  text: 'Multi-select',
-}
-
-export const groupedHeader: TableOfContentsEntry = {
-  level: 'h3',
-  id: 'grouped-listbox',
-  text: 'Grouped',
-}
 
 // DEMO CONTENT
 
