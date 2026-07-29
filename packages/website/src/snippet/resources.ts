@@ -7,17 +7,16 @@ class ApiClientService extends Context.Service<ApiClientService, ApiClient>()(
   static readonly Default = Layer.effect(this, makeApiClient)
 }
 
-const LoadUser = Command.define(
-  'LoadUser',
-  { userId: S.String },
-  LoadedUser,
-)(({ userId }) =>
-  Effect.gen(function* () {
-    const apiClient = yield* ApiClientService
-    const user = yield* apiClient.getUser(userId)
-    return LoadedUser({ user })
-  }),
-)
+const LoadUser = Command.define('LoadUser', {
+  args: { userId: S.String },
+  messages: [LoadedUser],
+  execute: ({ userId }) =>
+    Effect.gen(function* () {
+      const apiClient = yield* ApiClientService
+      const user = yield* apiClient.getUser(userId)
+      return LoadedUser({ user })
+    }),
+})
 
 const application = Runtime.makeApplication({
   Model,

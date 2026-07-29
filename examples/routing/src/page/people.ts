@@ -131,30 +131,28 @@ export const init = (
 
 // COMMAND
 
-export const PushSearchUrl = Command.define(
-  'PushSearchUrl',
-  { searchText: S.Option(S.String) },
-  CompletedPushSearchUrl,
-)(({ searchText }) =>
-  pushUrl(peopleRouter({ searchText })).pipe(
-    Effect.as(CompletedPushSearchUrl()),
-  ),
-)
-
-export const FetchPeople = Command.define(
-  'FetchPeople',
-  { searchText: S.String },
-  SucceededFetchPeople,
-)(({ searchText }) =>
-  Effect.sleep(SEARCH_LATENCY).pipe(
-    Effect.as(
-      SucceededFetchPeople({
-        query: searchText,
-        people: searchPeople(searchText),
-      }),
+export const PushSearchUrl = Command.define('PushSearchUrl', {
+  args: { searchText: S.Option(S.String) },
+  messages: [CompletedPushSearchUrl],
+  execute: ({ searchText }) =>
+    pushUrl(peopleRouter({ searchText })).pipe(
+      Effect.as(CompletedPushSearchUrl()),
     ),
-  ),
-)
+})
+
+export const FetchPeople = Command.define('FetchPeople', {
+  args: { searchText: S.String },
+  messages: [SucceededFetchPeople],
+  execute: ({ searchText }) =>
+    Effect.sleep(SEARCH_LATENCY).pipe(
+      Effect.as(
+        SucceededFetchPeople({
+          query: searchText,
+          people: searchPeople(searchText),
+        }),
+      ),
+    ),
+})
 
 // UPDATE
 

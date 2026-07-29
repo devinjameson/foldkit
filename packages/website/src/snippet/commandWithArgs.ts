@@ -9,15 +9,13 @@ const SucceededFetchWeather = m('SucceededFetchWeather', {
 })
 const FailedFetchWeather = m('FailedFetchWeather', { error: S.String })
 
-const FetchWeather = Command.define(
-  'FetchWeather',
-  // Args schema: the per-dispatch inputs the factory needs.
-  { zipCode: S.String },
-  SucceededFetchWeather,
-  FailedFetchWeather,
-)(
-  // The factory receives a typed args record.
-  ({ zipCode }) =>
+const FetchWeather = Command.define('FetchWeather', {
+  // Args schema: the per-dispatch inputs the Command needs.
+  args: { zipCode: S.String },
+  // Every Message this Command can produce.
+  messages: [SucceededFetchWeather, FailedFetchWeather],
+  // The Effect receives a typed args record.
+  execute: ({ zipCode }) =>
     Effect.gen(function* () {
       const client = yield* HttpClient.HttpClient
       const response = yield* client.execute(
@@ -33,7 +31,7 @@ const FetchWeather = Command.define(
       ),
       Effect.provide(Http.layer),
     ),
-)
+})
 
 const update = (
   model: Model,

@@ -1,7 +1,6 @@
 import { Effect, Match as M, Schema as S } from 'effect'
 
 import * as Command from '../../command/index.js'
-import * as Interruptible from '../../command/interruptible/index.js'
 import type { Document, HtmlBuilder } from '../../html/index.js'
 import { m } from '../../message/index.js'
 import { evo } from '../../struct/index.js'
@@ -32,11 +31,13 @@ export type Message = typeof Message.Type
 export const SaveDraftArgs = S.Struct({ revision: S.Number })
 export type SaveDraftArgs = typeof SaveDraftArgs.Type
 
-export const SaveDraft = Interruptible.define(
-  'SaveDraft',
-  SaveDraftArgs.fields,
-  SucceededSaveDraft,
-)(({ revision }) => Effect.as(Effect.never, SucceededSaveDraft({ revision })))
+export const SaveDraft = Command.define('SaveDraft', {
+  args: SaveDraftArgs.fields,
+  messages: [SucceededSaveDraft],
+  interrupt: true,
+  execute: ({ revision }) =>
+    Effect.as(Effect.never, SucceededSaveDraft({ revision })),
+})
 
 // INIT
 

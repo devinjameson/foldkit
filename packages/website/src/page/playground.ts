@@ -541,62 +541,60 @@ const STYLES_CSS_PATH = 'src/styles.css'
 
 const WRITE_DEBOUNCE_MILLIS = 250
 
-export const WritePlaygroundFile = Command.define(
-  'WritePlaygroundFile',
-  { path: S.String, content: S.String },
-  ScheduledWritePlaygroundFile,
-  FailedWritePlaygroundFile,
-)(({ path, content }) =>
-  Effect.gen(function* () {
-    const { container, pendingWrites } = yield* WebContainerPlayground.get
-    const existing = pendingWrites.get(path)
-    if (existing !== undefined) {
-      yield* Fiber.interrupt(existing)
-    }
-    const fiber = yield* pipe(
-      Effect.gen(function* () {
-        yield* Effect.sleep(WRITE_DEBOUNCE_MILLIS)
-        yield* Effect.tryPromise(() => container.fs.writeFile(path, content))
-        if (path !== STYLES_CSS_PATH) {
-          const stylesContent = yield* Effect.tryPromise(() =>
-            container.fs.readFile(STYLES_CSS_PATH, 'utf-8'),
-          )
-          yield* Effect.tryPromise(() =>
-            container.fs.writeFile(STYLES_CSS_PATH, stylesContent),
-          )
-        }
-        pendingWrites.delete(path)
-      }),
-      // NOTE: Errors in the debounced write fiber can't reach the parent
-      // Command's return value (the Command already returned
-      // `Scheduled…` synchronously). We log so dev failures aren't
-      // entirely invisible; a Tailwind/HMR storm or container crash
-      // will appear in the console.
-      Effect.catch(error =>
-        Effect.sync(() => {
-          console.error(
-            `[playground] Debounced write failed for ${path}:`,
-            error,
-          )
+export const WritePlaygroundFile = Command.define('WritePlaygroundFile', {
+  args: { path: S.String, content: S.String },
+  messages: [ScheduledWritePlaygroundFile, FailedWritePlaygroundFile],
+  execute: ({ path, content }) =>
+    Effect.gen(function* () {
+      const { container, pendingWrites } = yield* WebContainerPlayground.get
+      const existing = pendingWrites.get(path)
+      if (existing !== undefined) {
+        yield* Fiber.interrupt(existing)
+      }
+      const fiber = yield* pipe(
+        Effect.gen(function* () {
+          yield* Effect.sleep(WRITE_DEBOUNCE_MILLIS)
+          yield* Effect.tryPromise(() => container.fs.writeFile(path, content))
+          if (path !== STYLES_CSS_PATH) {
+            const stylesContent = yield* Effect.tryPromise(() =>
+              container.fs.readFile(STYLES_CSS_PATH, 'utf-8'),
+            )
+            yield* Effect.tryPromise(() =>
+              container.fs.writeFile(STYLES_CSS_PATH, stylesContent),
+            )
+          }
+          pendingWrites.delete(path)
         }),
+        // NOTE: Errors in the debounced write fiber can't reach the parent
+        // Command's return value (the Command already returned
+        // `Scheduled…` synchronously). We log so dev failures aren't
+        // entirely invisible; a Tailwind/HMR storm or container crash
+        // will appear in the console.
+        Effect.catch(error =>
+          Effect.sync(() => {
+            console.error(
+              `[playground] Debounced write failed for ${path}:`,
+              error,
+            )
+          }),
+        ),
+        Effect.forkDetach,
+      )
+      pendingWrites.set(path, fiber)
+      return ScheduledWritePlaygroundFile()
+    }).pipe(
+      Effect.catchTag('ResourceNotAvailable', () =>
+        Effect.succeed(
+          FailedWritePlaygroundFile({ reason: 'WebContainer not yet ready' }),
+        ),
       ),
-      Effect.forkDetach,
-    )
-    pendingWrites.set(path, fiber)
-    return ScheduledWritePlaygroundFile()
-  }).pipe(
-    Effect.catchTag('ResourceNotAvailable', () =>
-      Effect.succeed(
-        FailedWritePlaygroundFile({ reason: 'WebContainer not yet ready' }),
+      Effect.catch(error =>
+        Effect.succeed(
+          FailedWritePlaygroundFile({ reason: reasonFromError(error) }),
+        ),
       ),
     ),
-    Effect.catch(error =>
-      Effect.succeed(
-        FailedWritePlaygroundFile({ reason: reasonFromError(error) }),
-      ),
-    ),
-  ),
-)
+})
 
 // UPDATE
 

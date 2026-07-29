@@ -68,11 +68,12 @@ export const init = (products: ReadonlyArray<Item.Item>): Model => ({
 
 // COMMAND
 
-const ReplaceSearchUrl = Command.define(
-  'ReplaceSearchUrl',
-  { url: S.String },
-  CompletedReplaceSearchUrl,
-)(({ url }) => replaceUrl(url).pipe(Effect.as(CompletedReplaceSearchUrl())))
+const ReplaceSearchUrl = Command.define('ReplaceSearchUrl', {
+  args: { url: S.String },
+  messages: [CompletedReplaceSearchUrl],
+  execute: ({ url }) =>
+    replaceUrl(url).pipe(Effect.as(CompletedReplaceSearchUrl())),
+})
 
 // UPDATE
 

@@ -309,78 +309,81 @@ export type SelectedItemContext = Readonly<{
 }>
 
 /** Prevents page scrolling while the combobox popup is open in modal mode. */
-export const LockScroll = Command.define(
-  'LockScroll',
-  CompletedLockScroll,
-)(Dom.lockScroll.pipe(Effect.as(CompletedLockScroll())))
+export const LockScroll = Command.define('LockScroll', {
+  messages: [CompletedLockScroll],
+  execute: Dom.lockScroll.pipe(Effect.as(CompletedLockScroll())),
+})
 /** Re-enables page scrolling after the combobox popup closes. */
-export const UnlockScroll = Command.define(
-  'UnlockScroll',
-  CompletedUnlockScroll,
-)(Dom.unlockScroll.pipe(Effect.as(CompletedUnlockScroll())))
+export const UnlockScroll = Command.define('UnlockScroll', {
+  messages: [CompletedUnlockScroll],
+  execute: Dom.unlockScroll.pipe(Effect.as(CompletedUnlockScroll())),
+})
 /** Marks all elements outside the combobox as inert for modal behavior. */
-export const InertOthers = Command.define(
-  'InertOthers',
-  { id: S.String },
-  CompletedInertOthers,
-)(({ id }) =>
-  Dom.inertOthers(id, [inputWrapperSelector(id), itemsSelector(id)]).pipe(
-    Effect.as(CompletedInertOthers()),
-  ),
-)
+export const InertOthers = Command.define('InertOthers', {
+  args: { id: S.String },
+  messages: [CompletedInertOthers],
+  execute: ({ id }) =>
+    Dom.inertOthers(id, [inputWrapperSelector(id), itemsSelector(id)]).pipe(
+      Effect.as(CompletedInertOthers()),
+    ),
+})
 /** Removes the inert attribute from elements outside the combobox. */
-export const RestoreInert = Command.define(
-  'RestoreInert',
-  { id: S.String },
-  CompletedRestoreInert,
-)(({ id }) => Dom.restoreInert(id).pipe(Effect.as(CompletedRestoreInert())))
+export const RestoreInert = Command.define('RestoreInert', {
+  args: { id: S.String },
+  messages: [CompletedRestoreInert],
+  execute: ({ id }) =>
+    Dom.restoreInert(id).pipe(Effect.as(CompletedRestoreInert())),
+})
 /** Moves focus to the combobox input after selection or close. */
-export const FocusInput = Command.define(
-  'FocusInput',
-  { id: S.String },
-  CompletedFocusInput,
-)(({ id }) =>
-  Dom.focus(inputSelector(id)).pipe(
-    Effect.ignore,
-    Effect.as(CompletedFocusInput()),
-  ),
-)
+export const FocusInput = Command.define('FocusInput', {
+  args: { id: S.String },
+  messages: [CompletedFocusInput],
+  execute: ({ id }) =>
+    Dom.focus(inputSelector(id)).pipe(
+      Effect.ignore,
+      Effect.as(CompletedFocusInput()),
+    ),
+})
 /** Scrolls the active combobox item into view after keyboard navigation. */
-export const ScrollIntoView = Command.define(
-  'ScrollIntoView',
-  { id: S.String, index: S.Number },
-  CompletedScrollIntoView,
-)(({ id, index }) =>
-  Dom.scrollIntoView(itemSelector(id, index)).pipe(
-    Effect.ignore,
-    Effect.as(CompletedScrollIntoView()),
-  ),
-)
+export const ScrollIntoView = Command.define('ScrollIntoView', {
+  args: { id: S.String, index: S.Number },
+  messages: [CompletedScrollIntoView],
+  execute: ({ id, index }) =>
+    Dom.scrollIntoView(itemSelector(id, index)).pipe(
+      Effect.ignore,
+      Effect.as(CompletedScrollIntoView()),
+    ),
+})
 /** Programmatically clicks the active combobox item's DOM element. */
-export const ClickItem = Command.define(
-  'ClickItem',
-  { id: S.String, index: S.Number },
-  CompletedClickItem,
-)(({ id, index }) =>
-  Dom.clickElement(itemSelector(id, index)).pipe(
-    Effect.ignore,
-    Effect.as(CompletedClickItem()),
-  ),
-)
+export const ClickItem = Command.define('ClickItem', {
+  args: { id: S.String, index: S.Number },
+  messages: [CompletedClickItem],
+  execute: ({ id, index }) =>
+    Dom.clickElement(itemSelector(id, index)).pipe(
+      Effect.ignore,
+      Effect.as(CompletedClickItem()),
+    ),
+})
 /** Detects whether the combobox input wrapper moved or the leave animation ended. Whichever comes first; both outcomes signal the Animation submodel that leave is complete. */
 export const DetectMovementOrAnimationEnd = Command.define(
   'DetectMovementOrAnimationEnd',
-  { id: S.String },
-  GotAnimationMessage,
-)(({ id }) =>
-  Effect.raceFirst(
-    Dom.detectElementMovement(inputWrapperSelector(id)).pipe(
-      Effect.as(GotAnimationMessage({ message: AnimationEndedAnimation() })),
-    ),
-    Dom.waitForAnimationSettled(itemsSelector(id)).pipe(
-      Effect.as(GotAnimationMessage({ message: AnimationEndedAnimation() })),
-    ),
-  ),
+  {
+    args: { id: S.String },
+    messages: [GotAnimationMessage],
+    execute: ({ id }) =>
+      Effect.raceFirst(
+        Dom.detectElementMovement(inputWrapperSelector(id)).pipe(
+          Effect.as(
+            GotAnimationMessage({ message: AnimationEndedAnimation() }),
+          ),
+        ),
+        Dom.waitForAnimationSettled(itemsSelector(id)).pipe(
+          Effect.as(
+            GotAnimationMessage({ message: AnimationEndedAnimation() }),
+          ),
+        ),
+      ),
+  },
 )
 
 const delegateToAnimation = <Model extends BaseModel>(

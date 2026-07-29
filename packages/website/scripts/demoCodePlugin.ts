@@ -153,13 +153,12 @@ type Message = typeof Message.Type
 
 // COMMAND
 
-const DelayReset = Command.define(
-  'DelayReset',
-  { seconds: S.Number },
-  CompletedDelayReset,
-)(({ seconds }) =>
-  Effect.as(Effect.sleep(\`\${seconds} seconds\`), CompletedDelayReset()),
-)
+const DelayReset = Command.define('DelayReset', {
+  args: { seconds: S.Number },
+  messages: [CompletedDelayReset],
+  execute: ({ seconds }) =>
+    Effect.as(Effect.sleep(\`\${seconds} seconds\`), CompletedDelayReset()),
+})
 
 // UPDATE
 
@@ -217,7 +216,7 @@ const COUNTER_PHASE_REGIONS: PhaseRegions = {
     { from: '      ClickedResetAfterDelay: () => [', to: '      ],' },
   ],
   ResetCommand: [
-    { from: 'const DelayReset = Command.define(', to: ')' },
+    { from: "const DelayReset = Command.define('DelayReset', {", to: '})' },
     { from: '        [DelayReset({ seconds: model.resetDuration })],' },
   ],
   ResetCommandMessage: [
@@ -369,28 +368,27 @@ class AudioContextService extends Context.Service<
 
 // COMMAND
 
-const PlayNote = Command.define(
-  'PlayNote',
-  { note: Note, duration: S.Number, noteIndex: S.Number },
-  CompletedPlayNote,
-)(({ note, duration, noteIndex }) =>
-  Effect.gen(function* () {
-    const audioContext = yield* AudioContextService
+const PlayNote = Command.define('PlayNote', {
+  args: { note: Note, duration: S.Number, noteIndex: S.Number },
+  messages: [CompletedPlayNote],
+  execute: ({ note, duration, noteIndex }) =>
+    Effect.gen(function* () {
+      const audioContext = yield* AudioContextService
 
-    return yield* Effect.callback(resume => {
-      const oscillator = audioContext.createOscillator()
-      oscillator.frequency.setValueAtTime(
-        NOTE_FREQUENCIES[note],
-        audioContext.currentTime,
-      )
-      oscillator.connect(audioContext.destination)
-      oscillator.start()
-      oscillator.stop(audioContext.currentTime + duration)
-      oscillator.onended = () =>
-        resume(Effect.succeed(CompletedPlayNote({ noteIndex })))
-    })
-  }),
-)`
+      return yield* Effect.callback(resume => {
+        const oscillator = audioContext.createOscillator()
+        oscillator.frequency.setValueAtTime(
+          NOTE_FREQUENCIES[note],
+          audioContext.currentTime,
+        )
+        oscillator.connect(audioContext.destination)
+        oscillator.start()
+        oscillator.stop(audioContext.currentTime + duration)
+        oscillator.onended = () =>
+          resume(Effect.succeed(CompletedPlayNote({ noteIndex })))
+      })
+    }),
+})`
 
 const NOTE_PLAYER_PHASE_REGIONS: PhaseRegions = {
   PlayMessage: [{ from: "const ClickedPlay = m('ClickedPlay')" }],
@@ -408,7 +406,9 @@ const NOTE_PLAYER_PHASE_REGIONS: PhaseRegions = {
     { from: 'const playNoteAt = (', to: ']' },
   ],
   NoteModel: [{ from: 'const Model = S.Struct({', to: '})' }],
-  NoteCommand: [{ from: 'const PlayNote = Command.define(', to: ')' }],
+  NoteCommand: [
+    { from: "const PlayNote = Command.define('PlayNote', {", to: '})' },
+  ],
 }
 
 /** Serves the note player demo source as a virtual module of highlighted HTML. */

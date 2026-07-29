@@ -222,12 +222,12 @@ export const fetchWeatherEffect = (zipCode: string) =>
     ),
   )
 
-export const FetchWeather = Command.define(
-  'FetchWeather',
-  { zipCode: S.String },
-  SucceededFetchWeather,
-  FailedFetchWeather,
-)(({ zipCode }) => Effect.provide(fetchWeatherEffect(zipCode), Http.layer))
+export const FetchWeather = Command.define('FetchWeather', {
+  args: { zipCode: S.String },
+  messages: [SucceededFetchWeather, FailedFetchWeather],
+  execute: ({ zipCode }) =>
+    Effect.provide(fetchWeatherEffect(zipCode), Http.layer),
+})
 
 // VIEW
 

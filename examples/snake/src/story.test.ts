@@ -3,8 +3,8 @@ import { describe, expect, test } from 'vitest'
 
 import { Snake } from './domain'
 import {
+  CompletedGenerateApplePosition,
   GenerateApplePosition,
-  GeneratedApplePosition,
   type Model,
   PressedKey,
   TickedClock,
@@ -113,7 +113,7 @@ describe('update', () => {
         Command.expectHas(GenerateApplePosition),
         Command.resolve(
           GenerateApplePosition,
-          GeneratedApplePosition({ position: { x: 5, y: 5 } }),
+          CompletedGenerateApplePosition({ position: { x: 5, y: 5 } }),
         ),
         model(model => {
           expect(model.apple).toEqual({ x: 5, y: 5 })
@@ -159,7 +159,7 @@ describe('update', () => {
         Command.expectHas(GenerateApplePosition),
         Command.resolve(
           GenerateApplePosition,
-          GeneratedApplePosition({ position: { x: 5, y: 5 } }),
+          CompletedGenerateApplePosition({ position: { x: 5, y: 5 } }),
         ),
         model(model => {
           expect(model.snake.length).toBe(lengthBefore + 1)

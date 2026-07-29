@@ -5,7 +5,7 @@ import { m } from 'foldkit/message'
 const CompletedRefreshSession = m('CompletedRefreshSession')
 const refreshSessionEffect = Effect.succeed(CompletedRefreshSession())
 
-export let RefreshSession = Command.define(
-  'RefreshSession',
-  CompletedRefreshSession,
-)(refreshSessionEffect)
+export let RefreshSession = Command.define('RefreshSession', {
+  messages: [CompletedRefreshSession],
+  execute: refreshSessionEffect,
+})

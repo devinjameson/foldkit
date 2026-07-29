@@ -46,15 +46,14 @@ export const init: Runtime.ElementInit<Model, Message, Flags> = flags => [
 
 // COMMAND
 
-export const ReportCount = Command.define(
-  'ReportCount',
-  { count: S.Number },
-  CompletedReportCount,
-)(({ count }) =>
-  Port.emit(ports.outbound.countChanged, count).pipe(
-    Effect.as(CompletedReportCount()),
-  ),
-)
+export const ReportCount = Command.define('ReportCount', {
+  args: { count: S.Number },
+  messages: [CompletedReportCount],
+  execute: ({ count }) =>
+    Port.emit(ports.outbound.countChanged, count).pipe(
+      Effect.as(CompletedReportCount()),
+    ),
+})
 
 // UPDATE
 

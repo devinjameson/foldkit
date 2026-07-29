@@ -12,10 +12,10 @@ const CompletedDoChildWork = m('CompletedDoChildWork')
 const ChildMessage = S.Union([CompletedDoChildWork])
 type ChildMessage = typeof ChildMessage.Type
 
-const DoChildWork = Command.define(
-  'DoChildWork',
-  CompletedDoChildWork,
-)(Effect.succeed(CompletedDoChildWork()))
+const DoChildWork = Command.define('DoChildWork', {
+  messages: [CompletedDoChildWork],
+  execute: Effect.succeed(CompletedDoChildWork()),
+})
 
 // PARENT
 

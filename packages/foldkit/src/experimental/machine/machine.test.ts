@@ -143,11 +143,11 @@ const connectingToMaybeNextAttempt = (
     ? Option.some({ nextAttemptCount: state.attemptCount + 1 })
     : Option.none()
 
-const LogTransition = Command.define(
-  'LogTransition',
-  { description: S.String },
-  CompletedLogTransition,
-)(() => Effect.succeed(CompletedLogTransition()))
+const LogTransition = Command.define('LogTransition', {
+  args: { description: S.String },
+  messages: [CompletedLogTransition],
+  execute: () => Effect.succeed(CompletedLogTransition()),
+})
 
 const connectionMachine = define({
   state: ConnectionState,
@@ -551,27 +551,23 @@ const SubmitMessage = S.Union([
 ])
 type SubmitMessage = typeof SubmitMessage.Type
 
-const Presign = Command.define(
-  'Presign',
-  SucceededPresign,
-)(
-  Effect.gen(function* () {
+const Presign = Command.define('Presign', {
+  messages: [SucceededPresign],
+  execute: Effect.gen(function* () {
     const client = yield* UploadsClient
     const url = yield* client.presign
     return SucceededPresign({ url })
   }),
-)
+})
 
-const Persist = Command.define(
-  'Persist',
-  SucceededPersist,
-)(
-  Effect.gen(function* () {
+const Persist = Command.define('Persist', {
+  messages: [SucceededPersist],
+  execute: Effect.gen(function* () {
     const client = yield* SaveClient
     const id = yield* client.save
     return SucceededPersist({ id })
   }),
-)
+})
 
 const inferredRequirementsMachine = define({
   state: SubmitState,

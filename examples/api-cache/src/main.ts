@@ -272,11 +272,9 @@ export const init: Runtime.ApplicationInit<Model, Message> = () => [
 
 // COMMAND
 
-export const FetchPosts = Command.define(
-  'FetchPosts',
-  SettledFetchPosts,
-)(
-  pipe(
+export const FetchPosts = Command.define('FetchPosts', {
+  messages: [SettledFetchPosts],
+  execute: pipe(
     Effect.gen(function* () {
       const posts = yield* fetchPosts
       const fetchedAt = yield* Clock.currentTimeMillis
@@ -285,29 +283,26 @@ export const FetchPosts = Command.define(
     Effect.result,
     Effect.map(result => SettledFetchPosts({ result })),
   ),
-)
+})
 
-export const FetchPostDetail = Command.define(
-  'FetchPostDetail',
-  { postId: S.String },
-  SettledFetchPostDetail,
-)(({ postId }) =>
-  pipe(
-    Effect.gen(function* () {
-      const detail = yield* fetchPostDetail(postId)
-      const fetchedAt = yield* Clock.currentTimeMillis
-      return FetchedPostDetail.make({ detail, fetchedAt })
-    }),
-    Effect.result,
-    Effect.map(result => SettledFetchPostDetail({ postId, result })),
-  ),
-)
+export const FetchPostDetail = Command.define('FetchPostDetail', {
+  args: { postId: S.String },
+  messages: [SettledFetchPostDetail],
+  execute: ({ postId }) =>
+    pipe(
+      Effect.gen(function* () {
+        const detail = yield* fetchPostDetail(postId)
+        const fetchedAt = yield* Clock.currentTimeMillis
+        return FetchedPostDetail.make({ detail, fetchedAt })
+      }),
+      Effect.result,
+      Effect.map(result => SettledFetchPostDetail({ postId, result })),
+    ),
+})
 
-export const FetchStats = Command.define(
-  'FetchStats',
-  SettledFetchStats,
-)(
-  pipe(
+export const FetchStats = Command.define('FetchStats', {
+  messages: [SettledFetchStats],
+  execute: pipe(
     Effect.gen(function* () {
       const stats = yield* fetchStats
       const fetchedAt = yield* Clock.currentTimeMillis
@@ -316,7 +311,7 @@ export const FetchStats = Command.define(
     Effect.result,
     Effect.map(result => SettledFetchStats({ result })),
   ),
-)
+})
 
 // SUBSCRIPTION
 

@@ -156,27 +156,26 @@ const isEmailTaken = (emailInput: string): Effect.Effect<boolean> =>
     return Array.contains(TAKEN_EMAILS, emailInput.toLowerCase())
   })
 
-export const ValidateEmailAsync = Command.define(
-  'ValidateEmailAsync',
-  { emailInput: S.String, validationId: S.Number },
-  ValidatedEmail,
-)(({ emailInput, validationId }) =>
-  Effect.gen(function* () {
-    if (yield* isEmailTaken(emailInput)) {
+export const ValidateEmailAsync = Command.define('ValidateEmailAsync', {
+  args: { emailInput: S.String, validationId: S.Number },
+  messages: [ValidatedEmail],
+  execute: ({ emailInput, validationId }) =>
+    Effect.gen(function* () {
+      if (yield* isEmailTaken(emailInput)) {
+        return ValidatedEmail({
+          validationId,
+          field: Invalid({
+            value: emailInput,
+            errors: ['This email is already in use'],
+          }),
+        })
+      }
       return ValidatedEmail({
         validationId,
-        field: Invalid({
-          value: emailInput,
-          errors: ['This email is already in use'],
-        }),
+        field: Valid({ value: emailInput }),
       })
-    }
-    return ValidatedEmail({
-      validationId,
-      field: Valid({ value: emailInput }),
-    })
-  }),
-)
+    }),
+})
 
 // UPDATE
 

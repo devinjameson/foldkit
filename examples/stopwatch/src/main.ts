@@ -52,27 +52,25 @@ export type Message = typeof Message.Type
 
 // COMMAND
 
-export const DetermineStartTime = Command.define(
-  'DetermineStartTime',
-  { elapsedMs: S.Number },
-  DeterminedStartTime,
-)(({ elapsedMs }) =>
-  Effect.gen(function* () {
-    const now = yield* Clock.currentTimeMillis
-    return DeterminedStartTime({ startTime: now - elapsedMs })
-  }),
-)
+export const DetermineStartTime = Command.define('DetermineStartTime', {
+  args: { elapsedMs: S.Number },
+  messages: [DeterminedStartTime],
+  execute: ({ elapsedMs }) =>
+    Effect.gen(function* () {
+      const now = yield* Clock.currentTimeMillis
+      return DeterminedStartTime({ startTime: now - elapsedMs })
+    }),
+})
 
-export const DetermineTickTime = Command.define(
-  'DetermineTickTime',
-  { startTime: S.Number },
-  DeterminedTickTime,
-)(({ startTime }) =>
-  Effect.gen(function* () {
-    const now = yield* Clock.currentTimeMillis
-    return DeterminedTickTime({ elapsedMs: now - startTime })
-  }),
-)
+export const DetermineTickTime = Command.define('DetermineTickTime', {
+  args: { startTime: S.Number },
+  messages: [DeterminedTickTime],
+  execute: ({ startTime }) =>
+    Effect.gen(function* () {
+      const now = yield* Clock.currentTimeMillis
+      return DeterminedTickTime({ elapsedMs: now - startTime })
+    }),
+})
 
 // UPDATE
 

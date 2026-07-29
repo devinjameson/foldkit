@@ -9,11 +9,12 @@ const CompletedDelayReset = m('CompletedDelayReset')
 const DelayReset = Command.define(
   // The identifier for the Command, surfaces in DevTools and Story/Scene tests
   'DelayReset',
-  // The returned Message (can be more than one)
-  CompletedDelayReset,
-)(
-  // The Effect
-  Effect.sleep('1 second').pipe(Effect.as(CompletedDelayReset())),
+  {
+    // Every Message this Command can produce
+    messages: [CompletedDelayReset],
+    // The Effect
+    execute: Effect.sleep('1 second').pipe(Effect.as(CompletedDelayReset())),
+  },
 )
 
 const update = (

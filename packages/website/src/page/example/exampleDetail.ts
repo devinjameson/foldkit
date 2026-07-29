@@ -78,21 +78,24 @@ export type Message = typeof Message.Type
 
 // COMMAND
 
-export const LoadExampleSources = Command.define(
-  'LoadExampleSources',
-  { slug: S.String },
-  SucceededLoadExampleSources,
-  FailedLoadExampleSources,
-)(({ slug }) =>
-  Effect.tryPromise({
-    try: () => loadSourcesForSlug(slug),
-    catch: error =>
-      error instanceof Error ? error.message : `Unknown example: ${slug}`,
-  }).pipe(
-    Effect.map(sources => SucceededLoadExampleSources({ sources })),
-    Effect.catch(error => Effect.succeed(FailedLoadExampleSources({ error }))),
-  ),
-)
+/** Loads the source files for the example identified by `slug`, producing the
+ *  loaded sources on success or a failure Message when the fetch does not
+ *  complete. */
+export const LoadExampleSources = Command.define('LoadExampleSources', {
+  args: { slug: S.String },
+  messages: [SucceededLoadExampleSources, FailedLoadExampleSources],
+  execute: ({ slug }) =>
+    Effect.tryPromise({
+      try: () => loadSourcesForSlug(slug),
+      catch: error =>
+        error instanceof Error ? error.message : `Unknown example: ${slug}`,
+    }).pipe(
+      Effect.map(sources => SucceededLoadExampleSources({ sources })),
+      Effect.catch(error =>
+        Effect.succeed(FailedLoadExampleSources({ error })),
+      ),
+    ),
+})
 
 // MOUNT
 

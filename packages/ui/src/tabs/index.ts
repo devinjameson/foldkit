@@ -111,16 +111,15 @@ const tabId = (id: string, index: number): string => `${id}-tab-${index}`
 const tabPanelId = (id: string, index: number): string => `${id}-panel-${index}`
 
 /** Moves focus to the tab at the given index. */
-export const FocusTab = Command.define(
-  'FocusTab',
-  { id: S.String, index: S.Number },
-  CompletedFocusTab,
-)(({ id, index }) =>
-  Dom.focus(idSelector(tabId(id, index))).pipe(
-    Effect.ignore,
-    Effect.as(CompletedFocusTab()),
-  ),
-)
+export const FocusTab = Command.define('FocusTab', {
+  args: { id: S.String, index: S.Number },
+  messages: [CompletedFocusTab],
+  execute: ({ id, index }) =>
+    Dom.focus(idSelector(tabId(id, index))).pipe(
+      Effect.ignore,
+      Effect.as(CompletedFocusTab()),
+    ),
+})
 
 type UpdateReturn = readonly [
   Model,

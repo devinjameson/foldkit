@@ -1,12 +1,9 @@
 import { Effect, Option } from 'effect'
 import { Command, File } from 'foldkit'
 
-const SelectResume = Command.define(
-  'SelectResume',
-  SelectedResume,
-  CancelledSelectResume,
-)(
-  File.select(['application/pdf']).pipe(
+const SelectResume = Command.define('SelectResume', {
+  messages: [SelectedResume, CancelledSelectResume],
+  execute: File.select(['application/pdf']).pipe(
     Effect.map(
       Option.match({
         onNone: () => CancelledSelectResume(),
@@ -14,13 +11,11 @@ const SelectResume = Command.define(
       }),
     ),
   ),
-)
+})
 
-const SelectAttachments = Command.define(
-  'SelectAttachments',
-  SelectedAttachments,
-)(
-  File.selectMultiple(['image/*', 'application/pdf']).pipe(
+const SelectAttachments = Command.define('SelectAttachments', {
+  messages: [SelectedAttachments],
+  execute: File.selectMultiple(['image/*', 'application/pdf']).pipe(
     Effect.map(files => SelectedAttachments({ files })),
   ),
-)
+})

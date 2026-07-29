@@ -202,44 +202,43 @@ export const init: Runtime.ApplicationInit<Model, Message> = () => [
 
 // COMMAND
 
-export const TimestampSentMessage = Command.define(
-  'TimestampSentMessage',
-  { text: S.String },
-  TimestampedMessage,
-)(({ text }) =>
-  getZonedTime.pipe(
-    Effect.map(zoned => TimestampedMessage({ text, zoned, isSent: true })),
-  ),
-)
+export const TimestampSentMessage = Command.define('TimestampSentMessage', {
+  args: { text: S.String },
+  messages: [TimestampedMessage],
+  execute: ({ text }) =>
+    getZonedTime.pipe(
+      Effect.map(zoned => TimestampedMessage({ text, zoned, isSent: true })),
+    ),
+})
 
 export const TimestampReceivedMessage = Command.define(
   'TimestampReceivedMessage',
-  { text: S.String },
-  TimestampedMessage,
-)(({ text }) =>
-  getZonedTime.pipe(
-    Effect.map(zoned => TimestampedMessage({ text, zoned, isSent: false })),
-  ),
+  {
+    args: { text: S.String },
+    messages: [TimestampedMessage],
+    execute: ({ text }) =>
+      getZonedTime.pipe(
+        Effect.map(zoned => TimestampedMessage({ text, zoned, isSent: false })),
+      ),
+  },
 )
 
-export const SendMessage = Command.define(
-  'SendMessage',
-  { text: S.String },
-  SucceededSendMessage,
-  FailedConnect,
-)(({ text }) =>
-  ChatSocket.get.pipe(
-    Effect.flatMap(socket =>
-      Effect.sync(() => {
-        socket.send(text)
-        return SucceededSendMessage({ text })
-      }),
+export const SendMessage = Command.define('SendMessage', {
+  args: { text: S.String },
+  messages: [SucceededSendMessage, FailedConnect],
+  execute: ({ text }) =>
+    ChatSocket.get.pipe(
+      Effect.flatMap(socket =>
+        Effect.sync(() => {
+          socket.send(text)
+          return SucceededSendMessage({ text })
+        }),
+      ),
+      Effect.catchTag('ResourceNotAvailable', () =>
+        Effect.succeed(FailedConnect({ error: 'Socket unavailable' })),
+      ),
     ),
-    Effect.catchTag('ResourceNotAvailable', () =>
-      Effect.succeed(FailedConnect({ error: 'Socket unavailable' })),
-    ),
-  ),
-)
+})
 
 // MANAGED RESOURCE
 

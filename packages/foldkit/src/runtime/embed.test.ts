@@ -34,15 +34,14 @@ const ports = {
   outbound: { countChanged: Port.outbound(S.Number) },
 }
 
-const ReportCount = Command.define(
-  'ReportCount',
-  { count: S.Number },
-  CompletedReportCount,
-)(({ count }) =>
-  Port.emit(ports.outbound.countChanged, count).pipe(
-    Effect.as(CompletedReportCount()),
-  ),
-)
+const ReportCount = Command.define('ReportCount', {
+  args: { count: S.Number },
+  messages: [CompletedReportCount],
+  execute: ({ count }) =>
+    Port.emit(ports.outbound.countChanged, count).pipe(
+      Effect.as(CompletedReportCount()),
+    ),
+})
 
 type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
 

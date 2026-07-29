@@ -151,13 +151,12 @@ type InnerUpdateReturn = readonly [
 const withUpdateReturn = M.withReturnType<InnerUpdateReturn>()
 
 /** Waits for the tooltip's show delay before emitting `ElapsedShowDelay`. */
-export const ShowAfterDelay = Command.define(
-  'ShowAfterDelay',
-  { delay: S.DurationFromMillis, version: S.Number },
-  ElapsedShowDelay,
-)(({ delay, version }) =>
-  Effect.sleep(delay).pipe(Effect.as(ElapsedShowDelay({ version }))),
-)
+export const ShowAfterDelay = Command.define('ShowAfterDelay', {
+  args: { delay: S.DurationFromMillis, version: S.Number },
+  messages: [ElapsedShowDelay],
+  execute: ({ delay, version }) =>
+    Effect.sleep(delay).pipe(Effect.as(ElapsedShowDelay({ version }))),
+})
 
 /** The anchor-positioning Mount this Tooltip renders on its panel. */
 export const AnchorTooltip = Mount.define(

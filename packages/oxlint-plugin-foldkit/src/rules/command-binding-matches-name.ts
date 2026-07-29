@@ -12,6 +12,9 @@ const innerCommandDefineCall = (
   node: ESTree.Node,
 ): ESTree.CallExpression | undefined => {
   if (!isCallExpression(node)) return undefined
+  if (AST.isCallOf(node, 'Command', 'define')) {
+    return node
+  }
   const callee = node.callee
   if (!isCallExpression(callee)) return undefined
   if (!AST.isCallOf(callee, 'Command', 'define')) return undefined

@@ -73,6 +73,7 @@ export type FoldkitPluginOptions = Readonly<{
 // source by `scripts/check-effect-prebundle.ts` (runs in `pnpm check`).
 const FORCE_INCLUDED_EFFECT_NAMESPACES: ReadonlyArray<string> = [
   'effect/Array',
+  'effect/Boolean',
   'effect/Cause',
   'effect/Clock',
   'effect/Context',

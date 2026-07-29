@@ -29,28 +29,27 @@ type Message = typeof Message.Type
 
 // COMMAND
 
-const Search = Command.define(
-  'Search',
-  { query: S.String },
-  SettledSearch,
-)(({ query }) =>
-  pipe(
-    Effect.gen(function* () {
-      const client = yield* HttpClient.HttpClient
-      const request = HttpClientRequest.get('/api/search').pipe(
-        HttpClientRequest.setUrlParams({ q: query }),
-      )
-      const response = yield* client.execute(request)
-      return yield* S.decodeUnknownEffect(S.Array(SearchResult))(
-        yield* response.json,
-      )
-    }),
-    Effect.mapError(error => String(error)),
-    Effect.result,
-    Effect.map(result => SettledSearch({ query, result })),
-    Effect.provide(Http.layer),
-  ),
-)
+const Search = Command.define('Search', {
+  args: { query: S.String },
+  messages: [SettledSearch],
+  execute: ({ query }) =>
+    pipe(
+      Effect.gen(function* () {
+        const client = yield* HttpClient.HttpClient
+        const request = HttpClientRequest.get('/api/search').pipe(
+          HttpClientRequest.setUrlParams({ q: query }),
+        )
+        const response = yield* client.execute(request)
+        return yield* S.decodeUnknownEffect(S.Array(SearchResult))(
+          yield* response.json,
+        )
+      }),
+      Effect.mapError(error => String(error)),
+      Effect.result,
+      Effect.map(result => SettledSearch({ query, result })),
+      Effect.provide(Http.layer),
+    ),
+})
 
 // UPDATE
 

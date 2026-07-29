@@ -27,19 +27,21 @@ type UpdateReturn = readonly [
 const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
 /** Advances the enter/leave lifecycle by waiting a double-rAF. */
-export const RequestFrame = Command.define(
-  'RequestFrame',
-  AdvancedAnimationFrame,
-)(Render.afterPaint.pipe(Effect.as(AdvancedAnimationFrame())))
+export const RequestFrame = Command.define('RequestFrame', {
+  messages: [AdvancedAnimationFrame],
+  execute: Render.afterPaint.pipe(Effect.as(AdvancedAnimationFrame())),
+})
 /** Waits for all CSS animations on the element to settle. Covers both CSS transitions and CSS keyframe animations. */
 export const WaitForAnimationSettled = Command.define(
   'WaitForAnimationSettled',
-  { id: S.String },
-  EndedAnimation,
-)(({ id }) =>
-  Dom.waitForAnimationSettled(elementSelector(id)).pipe(
-    Effect.as(EndedAnimation()),
-  ),
+  {
+    args: { id: S.String },
+    messages: [EndedAnimation],
+    execute: ({ id }) =>
+      Dom.waitForAnimationSettled(elementSelector(id)).pipe(
+        Effect.as(EndedAnimation()),
+      ),
+  },
 )
 
 /** Processes an animation message and returns the next model, commands, and optional OutMessage. */

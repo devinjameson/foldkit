@@ -54,17 +54,18 @@ export type ShowInput<A> = Readonly<{
  *  version so stale timers (from hover or manual dismiss) are discarded in
  *  the update function. Static. The Command definition doesn't depend on
  *  payload. */
-export const DismissAfter = Command.define(
-  'DismissAfter',
-  {
+export const DismissAfter = Command.define('DismissAfter', {
+  args: {
     entryId: S.String,
     version: S.Number,
     duration: S.DurationFromMillis,
   },
-  ElapsedDuration,
-)(({ entryId, version, duration }) =>
-  Effect.sleep(duration).pipe(Effect.as(ElapsedDuration({ entryId, version }))),
-)
+  messages: [ElapsedDuration],
+  execute: ({ entryId, version, duration }) =>
+    Effect.sleep(duration).pipe(
+      Effect.as(ElapsedDuration({ entryId, version })),
+    ),
+})
 
 const DEFAULT_VARIANT: Variant = 'Info'
 

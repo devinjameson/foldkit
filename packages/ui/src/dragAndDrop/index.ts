@@ -18,6 +18,8 @@ import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 import * as Subscription from 'foldkit/subscription'
 
+import { attributeSelector } from '../internal/selectors.js'
+
 // MODEL
 
 const Orientation = S.Literals(['Horizontal', 'Vertical'])
@@ -197,16 +199,15 @@ export const init = (config: InitConfig): Model => ({
 type Direction = (typeof PressedArrowKey.Type)['direction']
 
 /** Focuses a draggable item by ID after keyboard drop or cancel. */
-export const FocusItem = Command.define(
-  'FocusItem',
-  { itemId: S.String },
-  CompletedFocusItem,
-)(({ itemId }) =>
-  Dom.focus(`[data-draggable-id="${itemId}"]`).pipe(
-    Effect.ignore,
-    Effect.as(CompletedFocusItem()),
-  ),
-)
+export const FocusItem = Command.define('FocusItem', {
+  args: { itemId: S.String },
+  messages: [CompletedFocusItem],
+  execute: ({ itemId }) =>
+    Dom.focus(attributeSelector('data-draggable-id', itemId)).pipe(
+      Effect.ignore,
+      Effect.as(CompletedFocusItem()),
+    ),
+})
 
 const resolveWithinContainer = (
   config: Readonly<{
@@ -217,7 +218,7 @@ const resolveWithinContainer = (
   }>,
 ): typeof ResolvedKeyboardMove.Type => {
   const container = document.querySelector(
-    `[data-droppable-id="${config.containerId}"]`,
+    attributeSelector('data-droppable-id', config.containerId),
   )
   if (!container) {
     return ResolvedKeyboardMove({
@@ -318,9 +319,8 @@ const resolveKeyboardMoveTarget = (
   )
 
 /** Resolves the next keyboard drag position by querying the DOM for adjacent sortable items and containers. */
-export const ResolveKeyboardMove = Command.define(
-  'ResolveKeyboardMove',
-  {
+export const ResolveKeyboardMove = Command.define('ResolveKeyboardMove', {
+  args: {
     itemId: S.String,
     currentContainerId: S.String,
     currentIndex: S.Number,
@@ -333,8 +333,9 @@ export const ResolveKeyboardMove = Command.define(
       'PreviousContainer',
     ]),
   },
-  ResolvedKeyboardMove,
-)(resolveKeyboardMoveTarget)
+  messages: [ResolvedKeyboardMove],
+  execute: resolveKeyboardMoveTarget,
+})
 
 // UPDATE
 

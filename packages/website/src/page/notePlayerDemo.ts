@@ -202,15 +202,14 @@ const prependToLog =
   (messageLog: ReadonlyArray<string>): ReadonlyArray<string> =>
     Array.take([entry, ...messageLog], MAX_LOG_ENTRIES)
 
-const DelayAdvancePhase = Command.define(
-  'DelayAdvancePhase',
-  { generation: S.Number },
-  ProgressedNotePhase,
-)(({ generation }) =>
-  Effect.sleep(PHASE_DURATION).pipe(
-    Effect.as(ProgressedNotePhase({ generation })),
-  ),
-)
+const DelayAdvancePhase = Command.define('DelayAdvancePhase', {
+  args: { generation: S.Number },
+  messages: [ProgressedNotePhase],
+  execute: ({ generation }) =>
+    Effect.sleep(PHASE_DURATION).pipe(
+      Effect.as(ProgressedNotePhase({ generation })),
+    ),
+})
 
 const enterNoteCommandPhase = (
   model: Model,
@@ -234,16 +233,15 @@ const enterNoteCommandPhase = (
   ],
 ]
 
-const ScrollNoteHighlight = Command.define(
-  'ScrollNoteHighlight',
-  { phase: NoteHighlightPhase },
-  CompletedScrollNoteHighlight,
-)(({ phase }) =>
-  Dom.scrollIntoViewIfNotVisible(
-    `.note-demo-code-panel [data-phases~="${phase}"]`,
-    { block: 'nearest' },
-  ).pipe(Effect.ignore, Effect.as(CompletedScrollNoteHighlight())),
-)
+const ScrollNoteHighlight = Command.define('ScrollNoteHighlight', {
+  args: { phase: NoteHighlightPhase },
+  messages: [CompletedScrollNoteHighlight],
+  execute: ({ phase }) =>
+    Dom.scrollIntoViewIfNotVisible(
+      `.note-demo-code-panel [data-phases~="${phase}"]`,
+      { block: 'nearest' },
+    ).pipe(Effect.ignore, Effect.as(CompletedScrollNoteHighlight())),
+})
 
 const applyMessage = (model: Model, message: Message): UpdateReturn =>
   M.value(message).pipe(
@@ -494,60 +492,59 @@ export const managedResources = ManagedResource.make<Model, Message>()(
 
 // COMMAND
 
-const PlayNote = Command.define(
-  'PlayNote',
-  { note: Note, duration: NoteDuration, noteIndex: S.Number },
-  CompletedPlayNote,
-)(({ note, duration, noteIndex }) =>
-  Effect.gen(function* () {
-    const audioContext = yield* AudioContextResource.get
-    yield* Effect.promise(() => audioContext.resume().catch(() => undefined))
+const PlayNote = Command.define('PlayNote', {
+  args: { note: Note, duration: NoteDuration, noteIndex: S.Number },
+  messages: [CompletedPlayNote],
+  execute: ({ note, duration, noteIndex }) =>
+    Effect.gen(function* () {
+      const audioContext = yield* AudioContextResource.get
+      yield* Effect.promise(() => audioContext.resume().catch(() => undefined))
 
-    return yield* Effect.callback<typeof CompletedPlayNote.Type>(resume => {
-      if (audioContext.state === 'closed') {
-        resume(Effect.succeed(CompletedPlayNote({ noteIndex })))
-        return
-      }
+      return yield* Effect.callback<typeof CompletedPlayNote.Type>(resume => {
+        if (audioContext.state === 'closed') {
+          resume(Effect.succeed(CompletedPlayNote({ noteIndex })))
+          return
+        }
 
-      const oscillator = audioContext.createOscillator()
-      const gainNode = audioContext.createGain()
-      const durationSeconds = DURATION_MILLISECONDS[duration] / 1000
+        const oscillator = audioContext.createOscillator()
+        const gainNode = audioContext.createGain()
+        const durationSeconds = DURATION_MILLISECONDS[duration] / 1000
 
-      oscillator.type = 'triangle'
-      oscillator.frequency.setValueAtTime(
-        NOTE_FREQUENCIES[note],
-        audioContext.currentTime,
-      )
+        oscillator.type = 'triangle'
+        oscillator.frequency.setValueAtTime(
+          NOTE_FREQUENCIES[note],
+          audioContext.currentTime,
+        )
 
-      const releaseEnd =
-        audioContext.currentTime + durationSeconds - GAIN_RELEASE_TIME
+        const releaseEnd =
+          audioContext.currentTime + durationSeconds - GAIN_RELEASE_TIME
 
-      gainNode.gain.setValueAtTime(0, audioContext.currentTime)
-      gainNode.gain.linearRampToValueAtTime(
-        0.1,
-        audioContext.currentTime + GAIN_ATTACK_TIME,
-      )
-      gainNode.gain.exponentialRampToValueAtTime(GAIN_NEAR_SILENT, releaseEnd)
+        gainNode.gain.setValueAtTime(0, audioContext.currentTime)
+        gainNode.gain.linearRampToValueAtTime(
+          0.1,
+          audioContext.currentTime + GAIN_ATTACK_TIME,
+        )
+        gainNode.gain.exponentialRampToValueAtTime(GAIN_NEAR_SILENT, releaseEnd)
 
-      oscillator.connect(gainNode)
-      gainNode.connect(audioContext.destination)
+        oscillator.connect(gainNode)
+        gainNode.connect(audioContext.destination)
 
-      oscillator.start()
-      oscillator.stop(audioContext.currentTime + durationSeconds)
+        oscillator.start()
+        oscillator.stop(audioContext.currentTime + durationSeconds)
 
-      oscillator.onended = () => {
-        gainNode.disconnect()
-        resume(Effect.succeed(CompletedPlayNote({ noteIndex })))
-      }
-    })
-  }).pipe(
-    Effect.catchTag('ResourceNotAvailable', () =>
-      Effect.sleep(Duration.millis(DURATION_MILLISECONDS[duration])).pipe(
-        Effect.map(() => CompletedPlayNote({ noteIndex })),
+        oscillator.onended = () => {
+          gainNode.disconnect()
+          resume(Effect.succeed(CompletedPlayNote({ noteIndex })))
+        }
+      })
+    }).pipe(
+      Effect.catchTag('ResourceNotAvailable', () =>
+        Effect.sleep(Duration.millis(DURATION_MILLISECONDS[duration])).pipe(
+          Effect.map(() => CompletedPlayNote({ noteIndex })),
+        ),
       ),
     ),
-  ),
-)
+})
 
 export const update = (model: Model, message: Message): UpdateReturn => {
   const [nextModel, commands] = applyMessage(model, message)

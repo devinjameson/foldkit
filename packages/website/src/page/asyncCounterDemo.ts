@@ -105,23 +105,24 @@ export const init = (): readonly [
 type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
 const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
-export const DelayAdvancePhase = Command.define(
-  'DelayAdvancePhase',
-  { generation: S.Number, duration: S.DurationFromMillis },
-  ProgressedDemoPhase,
-)(({ generation, duration }) =>
-  Effect.sleep(duration).pipe(Effect.as(ProgressedDemoPhase({ generation }))),
-)
+export const DelayAdvancePhase = Command.define('DelayAdvancePhase', {
+  args: { generation: S.Number, duration: S.DurationFromMillis },
+  messages: [ProgressedDemoPhase],
+  execute: ({ generation, duration }) =>
+    Effect.sleep(duration).pipe(Effect.as(ProgressedDemoPhase({ generation }))),
+})
 
-export const ScrollDemoHighlight = Command.define(
-  'ScrollDemoHighlight',
-  { phase: AnimationPhase },
-  CompletedScrollDemoHighlight,
-)(({ phase }) =>
-  Dom.scrollIntoViewIfNotVisible(`.demo-code-panel [data-phases~="${phase}"]`, {
-    block: 'nearest',
-  }).pipe(Effect.ignore, Effect.as(CompletedScrollDemoHighlight())),
-)
+export const ScrollDemoHighlight = Command.define('ScrollDemoHighlight', {
+  args: { phase: AnimationPhase },
+  messages: [CompletedScrollDemoHighlight],
+  execute: ({ phase }) =>
+    Dom.scrollIntoViewIfNotVisible(
+      `.demo-code-panel [data-phases~="${phase}"]`,
+      {
+        block: 'nearest',
+      },
+    ).pipe(Effect.ignore, Effect.as(CompletedScrollDemoHighlight())),
+})
 
 const prependToLog =
   (entry: string) =>

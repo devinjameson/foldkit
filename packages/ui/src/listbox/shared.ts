@@ -318,99 +318,100 @@ type SelectedItemContext<Model extends BaseModel> = Readonly<{
 }>
 
 /** Prevents page scrolling while the listbox is open in modal mode. */
-export const LockScroll = Command.define(
-  'LockScroll',
-  CompletedLockScroll,
-)(Dom.lockScroll.pipe(Effect.as(CompletedLockScroll())))
+export const LockScroll = Command.define('LockScroll', {
+  messages: [CompletedLockScroll],
+  execute: Dom.lockScroll.pipe(Effect.as(CompletedLockScroll())),
+})
 /** Re-enables page scrolling after the listbox closes. */
-export const UnlockScroll = Command.define(
-  'UnlockScroll',
-  CompletedUnlockScroll,
-)(Dom.unlockScroll.pipe(Effect.as(CompletedUnlockScroll())))
+export const UnlockScroll = Command.define('UnlockScroll', {
+  messages: [CompletedUnlockScroll],
+  execute: Dom.unlockScroll.pipe(Effect.as(CompletedUnlockScroll())),
+})
 /** Marks all elements outside the listbox as inert for modal behavior. */
-export const InertOthers = Command.define(
-  'InertOthers',
-  { id: S.String },
-  CompletedInertOthers,
-)(({ id }) =>
-  Dom.inertOthers(id, [buttonSelector(id), itemsSelector(id)]).pipe(
-    Effect.as(CompletedInertOthers()),
-  ),
-)
+export const InertOthers = Command.define('InertOthers', {
+  args: { id: S.String },
+  messages: [CompletedInertOthers],
+  execute: ({ id }) =>
+    Dom.inertOthers(id, [buttonSelector(id), itemsSelector(id)]).pipe(
+      Effect.as(CompletedInertOthers()),
+    ),
+})
 /** Removes the inert attribute from elements outside the listbox. */
-export const RestoreInert = Command.define(
-  'RestoreInert',
-  { id: S.String },
-  CompletedRestoreInert,
-)(({ id }) => Dom.restoreInert(id).pipe(Effect.as(CompletedRestoreInert())))
+export const RestoreInert = Command.define('RestoreInert', {
+  args: { id: S.String },
+  messages: [CompletedRestoreInert],
+  execute: ({ id }) =>
+    Dom.restoreInert(id).pipe(Effect.as(CompletedRestoreInert())),
+})
 /** Moves focus back to the listbox button after closing. */
-export const FocusButton = Command.define(
-  'FocusButton',
-  { id: S.String },
-  CompletedFocusButton,
-)(({ id }) =>
-  Dom.focus(buttonSelector(id)).pipe(
-    Effect.ignore,
-    Effect.as(CompletedFocusButton()),
-  ),
-)
+export const FocusButton = Command.define('FocusButton', {
+  args: { id: S.String },
+  messages: [CompletedFocusButton],
+  execute: ({ id }) =>
+    Dom.focus(buttonSelector(id)).pipe(
+      Effect.ignore,
+      Effect.as(CompletedFocusButton()),
+    ),
+})
 /** Moves focus to the listbox items container after opening. */
-export const FocusItems = Command.define(
-  'FocusItems',
-  { id: S.String },
-  CompletedFocusItems,
-)(({ id }) =>
-  Dom.focus(itemsSelector(id)).pipe(
-    Effect.ignore,
-    Effect.as(CompletedFocusItems()),
-  ),
-)
+export const FocusItems = Command.define('FocusItems', {
+  args: { id: S.String },
+  messages: [CompletedFocusItems],
+  execute: ({ id }) =>
+    Dom.focus(itemsSelector(id)).pipe(
+      Effect.ignore,
+      Effect.as(CompletedFocusItems()),
+    ),
+})
 /** Scrolls the active listbox item into view after keyboard navigation. */
-export const ScrollIntoView = Command.define(
-  'ScrollIntoView',
-  { id: S.String, index: S.Number },
-  CompletedScrollIntoView,
-)(({ id, index }) =>
-  Dom.scrollIntoView(itemSelector(id, index)).pipe(
-    Effect.ignore,
-    Effect.as(CompletedScrollIntoView()),
-  ),
-)
+export const ScrollIntoView = Command.define('ScrollIntoView', {
+  args: { id: S.String, index: S.Number },
+  messages: [CompletedScrollIntoView],
+  execute: ({ id, index }) =>
+    Dom.scrollIntoView(itemSelector(id, index)).pipe(
+      Effect.ignore,
+      Effect.as(CompletedScrollIntoView()),
+    ),
+})
 /** Programmatically clicks the active listbox item's DOM element. */
-export const ClickItem = Command.define(
-  'ClickItem',
-  { id: S.String, index: S.Number },
-  CompletedClickItem,
-)(({ id, index }) =>
-  Dom.clickElement(itemSelector(id, index)).pipe(
-    Effect.ignore,
-    Effect.as(CompletedClickItem()),
-  ),
-)
+export const ClickItem = Command.define('ClickItem', {
+  args: { id: S.String, index: S.Number },
+  messages: [CompletedClickItem],
+  execute: ({ id, index }) =>
+    Dom.clickElement(itemSelector(id, index)).pipe(
+      Effect.ignore,
+      Effect.as(CompletedClickItem()),
+    ),
+})
 /** Waits for the typeahead search debounce period before clearing the query. */
-export const DelayClearSearch = Command.define(
-  'DelayClearSearch',
-  { version: S.Number },
-  ClearedSearch,
-)(({ version }) =>
-  Effect.sleep(SEARCH_DEBOUNCE_MILLISECONDS).pipe(
-    Effect.as(ClearedSearch({ version })),
-  ),
-)
+export const DelayClearSearch = Command.define('DelayClearSearch', {
+  args: { version: S.Number },
+  messages: [ClearedSearch],
+  execute: ({ version }) =>
+    Effect.sleep(SEARCH_DEBOUNCE_MILLISECONDS).pipe(
+      Effect.as(ClearedSearch({ version })),
+    ),
+})
 /** Detects whether the listbox button moved or the leave animation ended. Whichever comes first; both outcomes signal the Animation submodel that leave is complete. */
 export const DetectMovementOrAnimationEnd = Command.define(
   'DetectMovementOrAnimationEnd',
-  { id: S.String },
-  GotAnimationMessage,
-)(({ id }) =>
-  Effect.raceFirst(
-    Dom.detectElementMovement(buttonSelector(id)).pipe(
-      Effect.as(GotAnimationMessage({ message: AnimationEndedAnimation() })),
-    ),
-    Dom.waitForAnimationSettled(itemsSelector(id)).pipe(
-      Effect.as(GotAnimationMessage({ message: AnimationEndedAnimation() })),
-    ),
-  ),
+  {
+    args: { id: S.String },
+    messages: [GotAnimationMessage],
+    execute: ({ id }) =>
+      Effect.raceFirst(
+        Dom.detectElementMovement(buttonSelector(id)).pipe(
+          Effect.as(
+            GotAnimationMessage({ message: AnimationEndedAnimation() }),
+          ),
+        ),
+        Dom.waitForAnimationSettled(itemsSelector(id)).pipe(
+          Effect.as(
+            GotAnimationMessage({ message: AnimationEndedAnimation() }),
+          ),
+        ),
+      ),
+  },
 )
 
 export const makeUpdate = <Model extends BaseModel>(

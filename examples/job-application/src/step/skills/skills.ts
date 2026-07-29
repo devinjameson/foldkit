@@ -48,16 +48,14 @@ export const init = (initialEntryId: string): Model => ({
 
 // COMMAND
 
-export const AddEntry = Command.define(
-  'AddEntry',
-  AddedEntry,
-)(
-  Effect.gen(function* () {
+export const AddEntry = Command.define('AddEntry', {
+  messages: [AddedEntry],
+  execute: Effect.gen(function* () {
     const crypto = yield* Crypto.Crypto
     const entryId = yield* Effect.orDie(crypto.randomUUIDv4)
     return AddedEntry({ entryId })
   }).pipe(Effect.provide(BrowserCrypto.layer)),
-)
+})
 
 // UPDATE
 

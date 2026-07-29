@@ -17,16 +17,14 @@ const SettledFetchPosts = m('SettledFetchPosts', {
 
 // COMMAND
 
-const FetchPosts = Command.define(
-  'FetchPosts',
-  SettledFetchPosts,
-)(
-  pipe(
+const FetchPosts = Command.define('FetchPosts', {
+  messages: [SettledFetchPosts],
+  execute: pipe(
     fetchPosts,
     Effect.result,
     Effect.map(result => SettledFetchPosts({ result })),
   ),
-)
+})
 
 // UPDATE
 

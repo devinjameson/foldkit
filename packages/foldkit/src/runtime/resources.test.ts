@@ -29,15 +29,13 @@ class ResourceService extends Context.Service<ResourceService, ResourceShape>()(
   'ResourceService',
 ) {}
 
-const ReadValue = Command.define(
-  'ReadValue',
-  SucceededReadValue,
-)(
-  Effect.gen(function* () {
+const ReadValue = Command.define('ReadValue', {
+  messages: [SucceededReadValue],
+  execute: Effect.gen(function* () {
     const { value } = yield* ResourceService
     return SucceededReadValue({ value })
   }),
-)
+})
 
 const LAYER_BUILD_ERROR = 'RESOURCE_URL environment variable is not set'
 

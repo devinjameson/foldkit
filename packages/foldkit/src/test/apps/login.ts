@@ -39,11 +39,10 @@ export type Message = typeof Message.Type
 
 // COMMAND
 
-export const Authenticate = Command.define(
-  'Authenticate',
-  SucceededAuthenticate,
-  FailedAuthenticate,
-)(Effect.sync(() => SucceededAuthenticate({ username: 'alice' })))
+export const Authenticate = Command.define('Authenticate', {
+  messages: [SucceededAuthenticate, FailedAuthenticate],
+  execute: Effect.sync(() => SucceededAuthenticate({ username: 'alice' })),
+})
 
 // INIT
 

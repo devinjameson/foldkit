@@ -61,13 +61,16 @@ export type Message = typeof Message.Type
 export const UploadFileArgs = S.Struct({ uploadId: S.Number })
 export type UploadFileArgs = typeof UploadFileArgs.Type
 
-export const UploadFile = Interruptible.define(
-  'UploadFile',
-  UploadFileArgs.fields,
-  ({ uploadId }: UploadFileArgs) => String(uploadId),
-  SucceededUploadFile,
-  FailedUploadFile,
-)(({ uploadId }) => Effect.as(Effect.never, SucceededUploadFile({ uploadId })))
+export const UploadFile = Command.define('UploadFile', {
+  args: UploadFileArgs.fields,
+  messages: [SucceededUploadFile, FailedUploadFile],
+  interrupt: {
+    keyFields: ['uploadId'],
+    toKey: ({ uploadId }) => String(uploadId),
+  },
+  execute: ({ uploadId }) =>
+    Effect.as(Effect.never, SucceededUploadFile({ uploadId })),
+})
 
 export const CancelUploadFile = ({ uploadId }: UploadFileArgs) =>
   UploadFile.Interrupt({ uploadId }, outcome =>
