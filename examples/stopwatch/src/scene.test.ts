@@ -1,4 +1,13 @@
-import { Scene } from 'foldkit'
+import {
+  Command,
+  Subscription,
+  click,
+  expect,
+  given,
+  role,
+  scene,
+  text,
+} from 'foldkit/scene'
 import { describe, test } from 'vitest'
 
 import {
@@ -20,28 +29,28 @@ const initialModel = Model.make({
 
 describe('view', () => {
   test('initial view shows the zeroed time and Start + Reset buttons', () => {
-    Scene.scene(
+    scene(
       { update, view },
-      Scene.with(initialModel),
-      Scene.expect(Scene.text('00:00.00')).toExist(),
-      Scene.expect(Scene.role('button', { name: 'Start' })).toExist(),
-      Scene.expect(Scene.role('button', { name: 'Reset' })).toExist(),
-      Scene.expect(Scene.role('button', { name: 'Stop' })).toBeAbsent(),
+      given(initialModel),
+      expect(text('00:00.00')).toExist(),
+      expect(role('button', { name: 'Start' })).toExist(),
+      expect(role('button', { name: 'Reset' })).toExist(),
+      expect(role('button', { name: 'Stop' })).toBeAbsent(),
     )
   })
 
   test('clicking Start fires DetermineStartTime and switches to Stop', () => {
-    Scene.scene(
+    scene(
       { update, view },
-      Scene.with(initialModel),
-      Scene.click(Scene.role('button', { name: 'Start' })),
-      Scene.Command.expectExact(DetermineStartTime({ elapsedMs: 0 })),
-      Scene.Command.resolve(
+      given(initialModel),
+      click(role('button', { name: 'Start' })),
+      Command.expectExact(DetermineStartTime({ elapsedMs: 0 })),
+      Command.resolve(
         DetermineStartTime,
         DeterminedStartTime({ startTime: 1000 }),
       ),
-      Scene.expect(Scene.role('button', { name: 'Stop' })).toExist(),
-      Scene.expect(Scene.role('button', { name: 'Start' })).toBeAbsent(),
+      expect(role('button', { name: 'Stop' })).toExist(),
+      expect(role('button', { name: 'Start' })).toBeAbsent(),
     )
   })
 
@@ -52,13 +61,13 @@ describe('view', () => {
       startTime: 1000,
     })
 
-    Scene.scene(
+    scene(
       { update, view },
-      Scene.with(runningModel),
-      Scene.expect(Scene.role('button', { name: 'Stop' })).toExist(),
-      Scene.click(Scene.role('button', { name: 'Stop' })),
-      Scene.expect(Scene.role('button', { name: 'Start' })).toExist(),
-      Scene.expect(Scene.role('button', { name: 'Stop' })).toBeAbsent(),
+      given(runningModel),
+      expect(role('button', { name: 'Stop' })).toExist(),
+      click(role('button', { name: 'Stop' })),
+      expect(role('button', { name: 'Start' })).toExist(),
+      expect(role('button', { name: 'Stop' })).toBeAbsent(),
     )
   })
 
@@ -69,13 +78,13 @@ describe('view', () => {
       startTime: 1000,
     })
 
-    Scene.scene(
+    scene(
       { update, view },
-      Scene.with(runningModel),
-      Scene.expect(Scene.text('00:12.34')).toExist(),
-      Scene.click(Scene.role('button', { name: 'Reset' })),
-      Scene.expect(Scene.text('00:00.00')).toExist(),
-      Scene.expect(Scene.role('button', { name: 'Start' })).toExist(),
+      given(runningModel),
+      expect(text('00:12.34')).toExist(),
+      click(role('button', { name: 'Reset' })),
+      expect(text('00:00.00')).toExist(),
+      expect(role('button', { name: 'Start' })).toExist(),
     )
   })
 
@@ -87,17 +96,17 @@ describe('view', () => {
       startTime,
     })
 
-    Scene.scene(
+    scene(
       { update, view },
-      Scene.with(runningModel),
-      Scene.expect(Scene.text('00:00.00')).toExist(),
-      Scene.Subscription.emit(Ticked()),
-      Scene.Command.expectExact(DetermineTickTime({ startTime })),
-      Scene.Command.resolve(
+      given(runningModel),
+      expect(text('00:00.00')).toExist(),
+      Subscription.emit(Ticked()),
+      Command.expectExact(DetermineTickTime({ startTime })),
+      Command.resolve(
         DetermineTickTime,
         DeterminedTickTime({ elapsedMs: 4320 }),
       ),
-      Scene.expect(Scene.text('00:04.32')).toExist(),
+      expect(text('00:04.32')).toExist(),
     )
   })
 
@@ -108,10 +117,10 @@ describe('view', () => {
       startTime: 0,
     })
 
-    Scene.scene(
+    scene(
       { update, view },
-      Scene.with(longRunModel),
-      Scene.expect(Scene.text('01:07.89')).toExist(),
+      given(longRunModel),
+      expect(text('01:07.89')).toExist(),
     )
   })
 })

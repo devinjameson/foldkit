@@ -4,18 +4,20 @@
 
 The Elm Architecture makes testing straightforward. The update function is pure. Given a Model and a Message, it always returns the same result. No DOM, no HTTP calls, no timers. Just a function that takes data and returns data.
 
-`Story` tests the state machine. You send Messages through update, resolve Commands inline, and assert on the Model. The entire test is one `Story.story` call. No mocking libraries, no fake timers, no setup or teardown.
+`Story` tests the state machine. You send Messages through update, resolve Commands inline, and assert on the Model. The entire test is one `story` call. No mocking libraries, no fake timers, no setup or teardown.
 
 ## The API
 
-Import the Story namespace: `import { Story } from 'foldkit'`. The top-level steps are `story`, `with`, `message`, `model`, `expectOutMessage`, and `expectNoOutMessage`. Command resolution and assertions live under the `Story.Command` namespace: `Story.Command.resolve`, `Story.Command.resolveAll`, `Story.Command.expectHas`, `Story.Command.expectExact`, and `Story.Command.expectNone`.
+Import the steps you need from `foldkit/story`. The top-level steps are `story`, `given`, `message`, `model`, `expectOutMessage`, and `expectNoOutMessage`. Command resolution and assertions live under the `Command` namespace: `Command.resolve`, `Command.resolveAll`, `Command.expectHas`, `Command.expectExact`, and `Command.expectNone`.
+
+A test file usually needs only one of the two testing modules, so named imports keep the call sites short. When a single file tests both a story and a scene, import the namespaces instead (`import { Scene, Story } from 'foldkit'`) so `Story.given` and `Scene.given` stay distinguishable.
 
 ::Snippet{name="testingApi" label="API reference"}
 
 Command matchers (`expectHas`, `expectExact`, and `resolve`) accept either a Command Definition (matches by name) or a Command instance (matches by name AND structural-equal args). Pass a Definition when the test only cares that the Command was dispatched. Pass an instance like `FetchWeather({ zipCode: '90210' })` when the args are part of what the test is verifying. Strict matching catches regressions where a Command fires with wrong inputs, which a name-only match would silently pass.
 
 :::Info{label="Mount lifecycle is a Scene concern"}
-Story does not render the view, so the OnMount lifecycle is not observable from a Story test. Tests that need to acknowledge mounts use `Scene.Mount.resolve` and the related steps; see the [Scene](/testing/scene) page.
+Story does not render the view, so the OnMount lifecycle is not observable from a Story test. Tests that need to acknowledge mounts use Scene's `Mount.resolve` and the related steps; see the [Scene](/testing/scene) page.
 :::
 
 ## Your First Test
@@ -28,18 +30,18 @@ The test reads as a story. Start from a Model with count 5. Send `ClickedResetAf
 
 ## Multi-Step Flows
 
-Real apps have multi-step user stories. `Story.Command.resolve` and `Story.Command.resolveAll` let you resolve Commands inline at any point in the story. This keeps the resolution next to the step that produced the Command, so the test reads chronologically:
+Real apps have multi-step user stories. `Command.resolve` and `Command.resolveAll` let you resolve Commands inline at any point in the story. This keeps the resolution next to the step that produced the Command, so the test reads chronologically:
 
 ::Snippet{name="testingWeatherFlow" label="multi-step test example"}
 
-Every `Story.message` is a user action: “the user submitted the form.” Every `Story.Command.resolve` or `Story.Command.resolveAll` is world-building: “the weather API succeeded.” Every `Story.model` is a scene check: “the weather is showing.”
+Every `message` is a user action: “the user submitted the form.” Every `Command.resolve` or `Command.resolveAll` is world-building: “the weather API succeeded.” Every `model` is a scene check: “the weather is showing.”
 
 :::Info{label="Resolvers are a queue"}
 Each entry in `resolveAll` resolves exactly one matching dispatch in declaration order. `[FetchCount, m1], [FetchCount, m2], [FetchCount, m3]` reads as three responses to three dispatches. For N identical responses, compose with `Array.makeBy(n, () => [Def, message])`. Resolvers carry across calls: unused entries can match later dispatches, and a new entry replaces any leftover resolvers sharing its Definition or Instance shape (latest wins).
 :::
 
 :::Info{label="Unresolved Commands"}
-`Story.message` throws if there are pending Commands from a previous step. Resolve all Commands before sending the next Message. `Story.story` throws at the end if any Commands remain unresolved. Every Command your update function produces must be accounted for.
+`message` throws if there are pending Commands from a previous step. Resolve all Commands before sending the next Message. `story` throws at the end if any Commands remain unresolved. Every Command your update function produces must be accounted for.
 :::
 
 ## Testing Side Effects

@@ -52,7 +52,7 @@ describe('Switch controlled view', () => {
   it('reflects the checked state from the parent', () => {
     Scene.scene(
       { update, view: testView() },
-      Scene.with({ isChecked: true }),
+      Scene.given({ isChecked: true }),
       Scene.expect(toggle).toHaveAttr('aria-checked', 'true'),
       Scene.expect(toggle).toHaveAttr('data-checked', ''),
     )
@@ -61,7 +61,7 @@ describe('Switch controlled view', () => {
   it('dispatches the new checked state on click', () => {
     Scene.scene(
       { update, view: testView() },
-      Scene.with({ isChecked: false }),
+      Scene.given({ isChecked: false }),
       Scene.expect(toggle).toHaveAttr('aria-checked', 'false'),
       Scene.click(toggle),
       Scene.expect(toggle).toHaveAttr('aria-checked', 'true'),
@@ -71,7 +71,7 @@ describe('Switch controlled view', () => {
   it('dispatches the new checked state on label click', () => {
     Scene.scene(
       { update, view: testView() },
-      Scene.with({ isChecked: false }),
+      Scene.given({ isChecked: false }),
       Scene.expect(toggle).toHaveAttr('aria-checked', 'false'),
       Scene.click(label),
       Scene.expect(toggle).toHaveAttr('aria-checked', 'true'),
@@ -81,7 +81,7 @@ describe('Switch controlled view', () => {
   it('is not interactive when disabled', () => {
     Scene.scene(
       { update, view: testView({ isDisabled: true }) },
-      Scene.with({ isChecked: false }),
+      Scene.given({ isChecked: false }),
       Scene.expect(toggle).toBeDisabled(),
       Scene.expect(toggle).toHaveAttr('data-disabled', ''),
     )

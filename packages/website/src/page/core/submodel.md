@@ -296,9 +296,9 @@ Stateless render helpers like `Button` and `Input`, plus controlled render helpe
 
 ## Testing Submodels
 
-A Submodel tests the same way as a top-level program. A two-argument child `update` is a pure function from `(model, message)` to `[Model, Commands]` or `[Model, Commands, Option<OutMessage>]`, so it slots straight into `Story.story`. The child’s view is a pure function too; assert against the rendered VNode through `Scene.scene`.
+A Submodel tests the same way as a top-level program. A two-argument child `update` is a pure function from `(model, message)` to `[Model, Commands]` or `[Model, Commands, Option<OutMessage>]`, so it slots straight into `story`. The child’s view is a pure function too; assert against the rendered VNode through `scene`.
 
-For Submodels that emit OutMessages, assert the third tuple element via `Story.expectOutMessage`. For Submodels with a context-arg `update`, close the context over the two-argument function you pass to `Story.story`: `(model, message) => Settings.update(model, message, { currentUser })`. Each message step carries only a Message, so the context stays fixed for the story run.
+For Submodels that emit OutMessages, assert the third tuple element via `expectOutMessage`. For Submodels with a context-arg `update`, close the context over the two-argument function you pass to `story`: `(model, message) => Settings.update(model, message, { currentUser })`. Each message step carries only a Message, so the context stays fixed for the story run.
 
 The [counters example](/example-apps/counters) has a Story test for the parent’s wrapper-Message routing (`GotCounterMessage` delivers to the right row by `id`, unknown ids are a no-op) and a Scene test for the rendered list. See the [Testing page](/testing) for the full Story and Scene reference.
 

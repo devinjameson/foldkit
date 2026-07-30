@@ -63,7 +63,7 @@ export type StorySimulation<Model, Message, OutMessage = undefined> = Readonly<{
 }>
 
 /** A callable step that sets the initial Model. Carries phantom type for compile-time validation. */
-export type WithStep<Model> = Readonly<{ _phantomModel: Model }> &
+export type GivenStep<Model> = Readonly<{ _phantomModel: Model }> &
   (<M, Message, OutMessage = undefined>(
     simulation: StorySimulation<M, Message, OutMessage>,
   ) => StorySimulation<M, Message, OutMessage>)
@@ -74,10 +74,10 @@ export type ModelStep<Model> = Readonly<{
   readonly assert: (model: Model) => void
 }>
 
-/** A single step in a story: a {@link WithStep}, a {@link ModelStep},
+/** A single step in a story: a {@link GivenStep}, a {@link ModelStep},
  *  or a simulation transform. */
 export type StoryStep<Model> =
-  | WithStep<NoInfer<Model>>
+  | GivenStep<NoInfer<Model>>
   | ModelStep<NoInfer<Model>>
   | ((sim: StorySimulation<any, any, any>) => StorySimulation<any, any, any>)
 
@@ -110,8 +110,7 @@ const toInternal = <Model, Message, OutMessage>(
 // STEPS
 
 /** Sets the initial Model for a test story. */
-export { with_ as with }
-const with_ = <Model>(model: Model): WithStep<Model> => {
+export const given = <Model>(model: Model): GivenStep<Model> => {
   const step = <M, Message, OutMessage = undefined>(
     simulation: StorySimulation<M, Message, OutMessage>,
   ): StorySimulation<M, Message, OutMessage> => {
@@ -126,7 +125,7 @@ const with_ = <Model>(model: Model): WithStep<Model> => {
   /* eslint-disable @typescript-eslint/consistent-type-assertions */
   return Object.assign(step, {
     _phantomModel: undefined as unknown as Model,
-  }) as WithStep<Model>
+  }) as GivenStep<Model>
   /* eslint-enable @typescript-eslint/consistent-type-assertions */
 }
 

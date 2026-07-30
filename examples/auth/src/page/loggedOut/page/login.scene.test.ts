@@ -1,5 +1,16 @@
-import { Scene } from 'foldkit'
 import { Valid } from 'foldkit/fieldValidation'
+import {
+  Command,
+  expect,
+  given,
+  label,
+  role,
+  scene,
+  submit,
+  text,
+  type,
+  within,
+} from 'foldkit/scene'
 import { describe, test } from 'vitest'
 
 import {
@@ -17,69 +28,69 @@ const validModel = Model.make({
   password: Valid({ value: 'password' }),
 })
 
-const heading = Scene.role('heading', { name: 'Sign In' })
-const emailField = Scene.label('Email')
-const passwordField = Scene.label('Password')
-const submitButton = Scene.role('button', { name: 'Sign In' })
-const submittingButton = Scene.role('button', { name: 'Signing in...' })
+const heading = role('heading', { name: 'Sign In' })
+const emailField = label('Email')
+const passwordField = label('Password')
+const submitButton = role('button', { name: 'Sign In' })
+const submittingButton = role('button', { name: 'Signing in...' })
 
 describe('login', () => {
   test('renders the heading, both fields, and the submit button', () => {
-    Scene.scene(
+    scene(
       { update, view },
-      Scene.with(initModel()),
-      Scene.expect(heading).toExist(),
-      Scene.expect(emailField).toExist(),
-      Scene.expect(passwordField).toExist(),
-      Scene.expect(submitButton).toExist(),
+      given(initModel()),
+      expect(heading).toExist(),
+      expect(emailField).toExist(),
+      expect(passwordField).toExist(),
+      expect(submitButton).toExist(),
     )
   })
 
   test('submit button starts disabled', () => {
-    Scene.scene(
+    scene(
       { update, view },
-      Scene.with(initModel()),
-      Scene.expect(submitButton).toBeDisabled(),
+      given(initModel()),
+      expect(submitButton).toBeDisabled(),
     )
   })
 
   test('typing a valid email shows the checkmark', () => {
-    Scene.scene(
+    scene(
       { update, view },
-      Scene.with(initModel()),
-      Scene.type(emailField, 'alice@example.com'),
-      Scene.expect(Scene.text('✓')).toExist(),
+      given(initModel()),
+      type(emailField, 'alice@example.com'),
+      expect(text('✓')).toExist(),
     )
   })
 
   test('typing an invalid email shows the error message', () => {
-    Scene.scene(
+    scene(
       { update, view },
-      Scene.with(initModel()),
-      Scene.type(emailField, 'notanemail'),
-      Scene.expect(Scene.text('Please enter a valid email')).toExist(),
+      given(initModel()),
+      type(emailField, 'notanemail'),
+      expect(text('Please enter a valid email')).toExist(),
     )
   })
 
   test('submit button is enabled after typing a valid email and password', () => {
-    Scene.scene(
+    scene(
       { update, view },
-      Scene.with(initModel()),
-      Scene.type(emailField, 'alice@example.com'),
-      Scene.type(passwordField, 'password'),
-      Scene.expect(submitButton).toBeEnabled(),
+      given(initModel()),
+      type(emailField, 'alice@example.com'),
+      type(passwordField, 'password'),
+      expect(submitButton).toBeEnabled(),
     )
   })
 
   test('submitting with valid fields shows the loading state and requests auth', () => {
-    Scene.scene(
+    scene(
       { update, view },
-      Scene.with(validModel),
-      Scene.submit(Scene.role('form')),
-      Scene.expect(submittingButton).toExist(),
-      Scene.expect(submittingButton).toBeDisabled(),
-      Scene.Command.expectExact(SimulateAuthRequest),
-      Scene.Command.resolve(
+      given(validModel),
+      submit(role('form')),
+      expect(submittingButton).toExist(),
+      expect(submittingButton).toBeDisabled(),
+      Command.expectExact(SimulateAuthRequest),
+      Command.resolve(
         SimulateAuthRequest,
         FailedSimulateAuthRequest({ error: '' }),
       ),
@@ -87,21 +98,19 @@ describe('login', () => {
   })
 
   test('failed auth shows the error and leaves submit disabled until the password changes', () => {
-    Scene.scene(
+    scene(
       { update, view },
-      Scene.with(validModel),
-      Scene.submit(Scene.role('form')),
-      Scene.Command.expectExact(SimulateAuthRequest),
-      Scene.Command.resolve(
+      given(validModel),
+      submit(role('form')),
+      Command.expectExact(SimulateAuthRequest),
+      Command.resolve(
         SimulateAuthRequest,
         FailedSimulateAuthRequest({ error: 'Invalid credentials' }),
       ),
-      Scene.expect(
-        Scene.within(Scene.role('form'), Scene.text('Invalid credentials')),
-      ).toExist(),
-      Scene.expect(submitButton).toBeDisabled(),
-      Scene.type(passwordField, 'correcthorse'),
-      Scene.expect(submitButton).toBeEnabled(),
+      expect(within(role('form'), text('Invalid credentials'))).toExist(),
+      expect(submitButton).toBeDisabled(),
+      type(passwordField, 'correcthorse'),
+      expect(submitButton).toBeEnabled(),
     )
   })
 })

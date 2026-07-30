@@ -44,7 +44,7 @@ const DEFAULT_VERSION = 0
  *  ```ts
  *  Story.story(
  *    update,
- *    Story.with(model),
+ *    Story.given(model),
  *    Story.message(ClickedSave()),
  *    Toast.test.drainEntry({ entryId: 'toast-entry-0' }),
  *  )

@@ -74,7 +74,9 @@ Use uppercase section headers (`// MODEL`, `// MESSAGE`, `// INIT`, `// UPDATE`,
 
 ### Testing
 
-Test update functions with `foldkit/test`. Since update is pure, tests run without a runtime, DOM, or side effects. Use `Story.story` for update-level tests (send Messages, assert on Model and Commands) and `Scene.scene` for feature-level testing through the view with accessible locators.
+Test update functions with `foldkit/test`. Since update is pure, tests run without a runtime, DOM, or side effects. Use `story` for update-level tests (send Messages, assert on Model and Commands) and `scene` for feature-level testing through the view with accessible locators.
+
+Import the steps as named imports from `foldkit/story` or `foldkit/scene`: `import { Command, given, message, model, story } from 'foldkit/story'`. A test file needs only one of the two modules. If a single file ever tests both, import the namespaces instead (`import { Scene, Story } from 'foldkit'`) so `Story.given` and `Scene.given` stay distinguishable.
 
 Name each test file for its test style, beside the code under test: `story.test.ts` for the Story tests (which drive `update`) and `scene.test.ts` for the Scene tests (which drive the rendered view). The name describes how the test works, not a source file, so it stays correct whether `update` and `view` live in `main.ts` or in their own files. When one folder holds more than one test of a kind (sibling pages, component variants), prefix with the subject: `login.story.test.ts`. Scene tests always run from the root `update`/`view`, so a single root-level `scene.test.ts` is the right home even in a multi-page app. If the `repos/foldkit` subtree is available, study the `story.test.ts` and `scene.test.ts` files in `repos/foldkit/examples/`.
 

@@ -1,5 +1,5 @@
 import { Option } from 'effect'
-import { Story } from 'foldkit'
+import { Command, given, message, model, story } from 'foldkit/story'
 import { fromString } from 'foldkit/url'
 import { describe, expect, test } from 'vitest'
 
@@ -39,17 +39,17 @@ const urlOrThrow = (raw: string) =>
 describe('update', () => {
   describe('ChangedUrl', () => {
     test('parses search, sorting, diet, and period from the URL', () => {
-      Story.story(
+      story(
         update,
-        Story.with(browseModel),
-        Story.message(
+        given(browseModel),
+        message(
           ChangedUrl({
             url: urlOrThrow(
               'http://localhost/?search=raptor&sorting=Length:Ascending&diet=Carnivore&period=Cretaceous',
             ),
           }),
         ),
-        Story.model(model => {
+        model(model => {
           if (model.route._tag !== 'Browse') {
             throw new Error('Expected Browse route')
           }
@@ -64,13 +64,13 @@ describe('update', () => {
     })
 
     test('an unknown path falls through to NotFound', () => {
-      Story.story(
+      story(
         update,
-        Story.with(browseModel),
-        Story.message(
+        given(browseModel),
+        message(
           ChangedUrl({ url: urlOrThrow('http://localhost/somewhere/else') }),
         ),
-        Story.model(model => {
+        model(model => {
           expect(model.route._tag).toBe('NotFound')
         }),
       )
@@ -79,19 +79,19 @@ describe('update', () => {
 
   describe('ChangedSearchInput', () => {
     test('typing search text fires a URL replacement with the new value', () => {
-      Story.story(
+      story(
         update,
-        Story.with(browseModel),
-        Story.message(ChangedSearchInput({ value: 'rex' })),
-        Story.Command.expectHas(ReplaceFilters),
-        Story.Command.resolve(ReplaceFilters, CompletedReplaceFilters()),
+        given(browseModel),
+        message(ChangedSearchInput({ value: 'rex' })),
+        Command.expectHas(ReplaceFilters),
+        Command.resolve(ReplaceFilters, CompletedReplaceFilters()),
       )
     })
 
     test('clearing the search input fires a replacement', () => {
-      Story.story(
+      story(
         update,
-        Story.with({
+        given({
           ...browseModel,
           route: BrowseRoute({
             search: Option.some('foo'),
@@ -100,41 +100,38 @@ describe('update', () => {
             period: Option.none(),
           }),
         }),
-        Story.message(ChangedSearchInput({ value: '' })),
-        Story.Command.expectHas(ReplaceFilters),
-        Story.Command.resolve(ReplaceFilters, CompletedReplaceFilters()),
+        message(ChangedSearchInput({ value: '' })),
+        Command.expectHas(ReplaceFilters),
+        Command.resolve(ReplaceFilters, CompletedReplaceFilters()),
       )
     })
   })
 
   describe('ClickedColumnHeader', () => {
     test('first click on an Unsorted column produces an Ascending sort', () => {
-      Story.story(
+      story(
         update,
-        Story.with(browseModel),
-        Story.message(ClickedColumnHeader({ column: 'Name' })),
-        Story.Command.expectHas(ReplaceFilters),
-        Story.Command.resolve(ReplaceFilters, CompletedReplaceFilters()),
+        given(browseModel),
+        message(ClickedColumnHeader({ column: 'Name' })),
+        Command.expectHas(ReplaceFilters),
+        Command.resolve(ReplaceFilters, CompletedReplaceFilters()),
       )
     })
   })
 
   describe('Listbox SelectedItem', () => {
     test('selecting a diet refocuses the listbox button and replaces the URL', () => {
-      Story.story(
+      story(
         update,
-        Story.with(browseModel),
-        Story.message(
+        given(browseModel),
+        message(
           GotDietListboxMessage({
             message: Listbox.SelectedItem({ item: 'Carnivore' }),
           }),
         ),
-        Story.Command.resolve(
-          Listbox.FocusButton,
-          Listbox.CompletedFocusButton(),
-        ),
-        Story.Command.expectHas(ReplaceFilters),
-        Story.Command.resolve(ReplaceFilters, CompletedReplaceFilters()),
+        Command.resolve(Listbox.FocusButton, Listbox.CompletedFocusButton()),
+        Command.expectHas(ReplaceFilters),
+        Command.resolve(ReplaceFilters, CompletedReplaceFilters()),
       )
     })
   })

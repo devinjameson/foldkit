@@ -1,5 +1,5 @@
 import { Array, Option } from 'effect'
-import { Story } from 'foldkit'
+import { Command, given, message, model, story } from 'foldkit/story'
 import { evo } from 'foldkit/struct'
 import { fromString } from 'foldkit/url'
 import { describe, expect, test } from 'vitest'
@@ -68,57 +68,48 @@ describe('init', () => {
 
 describe('update', () => {
   test('entering the gallery loads the catalog and logs the transition', () => {
-    Story.story(
+    story(
       update,
-      Story.with(modelOn(HomeRoute())),
-      Story.message(
-        ChangedUrl({ url: urlOrThrow('http://localhost/gallery') }),
-      ),
-      Story.model(model => {
+      given(modelOn(HomeRoute())),
+      message(ChangedUrl({ url: urlOrThrow('http://localhost/gallery') })),
+      model(model => {
         expect(model.route._tag).toBe('Gallery')
         expect(model.catalogStatus).toBe('Loading')
         expect(model.transitionLog).toHaveLength(1)
       }),
-      Story.Command.expectHas(LoadCatalog),
-      Story.Command.resolve(LoadCatalog, SucceededLoadCatalog()),
-      Story.model(model => {
+      Command.expectHas(LoadCatalog),
+      Command.resolve(LoadCatalog, SucceededLoadCatalog()),
+      model(model => {
         expect(model.catalogStatus).toBe('Ready')
       }),
     )
   })
 
   test('re-entering the gallery while a catalog load is in flight does not fire another', () => {
-    Story.story(
+    story(
       update,
-      Story.with(evo(modelOn(HomeRoute()), { catalogStatus: () => 'Loading' })),
-      Story.message(
-        ChangedUrl({ url: urlOrThrow('http://localhost/gallery') }),
-      ),
-      Story.Command.expectNone(),
-      Story.model(model => {
+      given(evo(modelOn(HomeRoute()), { catalogStatus: () => 'Loading' })),
+      message(ChangedUrl({ url: urlOrThrow('http://localhost/gallery') })),
+      Command.expectNone(),
+      model(model => {
         expect(model.catalogStatus).toBe('Loading')
       }),
     )
   })
 
   test('entering a painting loads it with the payload from the route', () => {
-    Story.story(
+    story(
       update,
-      Story.with(modelOn(GalleryRoute())),
-      Story.message(
-        ChangedUrl({ url: urlOrThrow('http://localhost/gallery/3') }),
-      ),
-      Story.model(model => {
+      given(modelOn(GalleryRoute())),
+      message(ChangedUrl({ url: urlOrThrow('http://localhost/gallery/3') })),
+      model(model => {
         expect(model.paintingStatus).toStrictEqual(
           PaintingLoading({ paintingId: 3 }),
         )
       }),
-      Story.Command.expectHas(LoadPainting),
-      Story.Command.resolve(
-        LoadPainting,
-        SucceededLoadPainting({ paintingId: 3 }),
-      ),
-      Story.model(model => {
+      Command.expectHas(LoadPainting),
+      Command.resolve(LoadPainting, SucceededLoadPainting({ paintingId: 3 })),
+      model(model => {
         expect(model.paintingStatus).toStrictEqual(
           PaintingReady({ paintingId: 3 }),
         )
@@ -127,17 +118,15 @@ describe('update', () => {
   })
 
   test('staying on the painting route with a new id refetches', () => {
-    Story.story(
+    story(
       update,
-      Story.with(
+      given(
         evo(modelOn(PaintingRoute({ paintingId: 1 })), {
           paintingStatus: () => PaintingReady({ paintingId: 1 }),
         }),
       ),
-      Story.message(
-        ChangedUrl({ url: urlOrThrow('http://localhost/gallery/2') }),
-      ),
-      Story.model(model => {
+      message(ChangedUrl({ url: urlOrThrow('http://localhost/gallery/2') })),
+      model(model => {
         expect(model.paintingStatus).toStrictEqual(
           PaintingLoading({ paintingId: 2 }),
         )
@@ -145,12 +134,9 @@ describe('update', () => {
           Array.map(model.transitionLog, entry => entry.maybePreviousRoute),
         ).toStrictEqual([Option.some(PaintingRoute({ paintingId: 1 }))])
       }),
-      Story.Command.expectHas(LoadPainting),
-      Story.Command.resolve(
-        LoadPainting,
-        SucceededLoadPainting({ paintingId: 2 }),
-      ),
-      Story.model(model => {
+      Command.expectHas(LoadPainting),
+      Command.resolve(LoadPainting, SucceededLoadPainting({ paintingId: 2 })),
+      model(model => {
         expect(model.paintingStatus).toStrictEqual(
           PaintingReady({ paintingId: 2 }),
         )
@@ -159,18 +145,16 @@ describe('update', () => {
   })
 
   test('staying on the painting route with the same id does not refetch', () => {
-    Story.story(
+    story(
       update,
-      Story.with(
+      given(
         evo(modelOn(PaintingRoute({ paintingId: 1 })), {
           paintingStatus: () => PaintingReady({ paintingId: 1 }),
         }),
       ),
-      Story.message(
-        ChangedUrl({ url: urlOrThrow('http://localhost/gallery/1') }),
-      ),
-      Story.Command.expectNone(),
-      Story.model(model => {
+      message(ChangedUrl({ url: urlOrThrow('http://localhost/gallery/1') })),
+      Command.expectNone(),
+      model(model => {
         expect(model.paintingStatus).toStrictEqual(
           PaintingReady({ paintingId: 1 }),
         )
@@ -179,15 +163,15 @@ describe('update', () => {
   })
 
   test('a stale painting response for another id is ignored', () => {
-    Story.story(
+    story(
       update,
-      Story.with(
+      given(
         evo(modelOn(PaintingRoute({ paintingId: 2 })), {
           paintingStatus: () => PaintingLoading({ paintingId: 2 }),
         }),
       ),
-      Story.message(SucceededLoadPainting({ paintingId: 1 })),
-      Story.model(model => {
+      message(SucceededLoadPainting({ paintingId: 1 })),
+      model(model => {
         expect(model.paintingStatus).toStrictEqual(
           PaintingLoading({ paintingId: 2 }),
         )
@@ -196,20 +180,20 @@ describe('update', () => {
   })
 
   test('leaving the studio saves the draft', () => {
-    Story.story(
+    story(
       update,
-      Story.with(
+      given(
         evo(modelOn(StudioRoute()), {
           studioDraft: () => 'half-finished thought',
         }),
       ),
-      Story.message(ChangedUrl({ url: urlOrThrow('http://localhost/') })),
-      Story.Command.expectHas(SaveDraft),
-      Story.Command.resolve(
+      message(ChangedUrl({ url: urlOrThrow('http://localhost/') })),
+      Command.expectHas(SaveDraft),
+      Command.resolve(
         SaveDraft,
         SucceededSaveDraft({ draft: 'half-finished thought' }),
       ),
-      Story.model(model => {
+      model(model => {
         expect(model.maybeSavedDraft).toStrictEqual(
           Option.some('half-finished thought'),
         )
@@ -218,11 +202,11 @@ describe('update', () => {
   })
 
   test('leaving the studio with an empty draft saves nothing', () => {
-    Story.story(
+    story(
       update,
-      Story.with(modelOn(StudioRoute())),
-      Story.message(ChangedUrl({ url: urlOrThrow('http://localhost/') })),
-      Story.Command.expectNone(),
+      given(modelOn(StudioRoute())),
+      message(ChangedUrl({ url: urlOrThrow('http://localhost/') })),
+      Command.expectNone(),
     )
   })
 })

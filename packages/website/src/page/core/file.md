@@ -28,8 +28,8 @@ For drop zones and inline file pickers, reach for `FileDrop`. It is a Submodel t
 
 ## Testing
 
-Scene tests exercise file flows through two helpers. `Scene.dropFiles` dispatches a synthetic drop event on a drop zone (e.g. the root of a `FileDrop`), and `Scene.changeFiles` dispatches a synthetic change event on a file input. Both accept a target locator and a `ReadonlyArray<File>`, and throw a clear error if the target element does not have the matching file-event handler registered.
+Scene tests exercise file flows through two helpers. `dropFiles` dispatches a synthetic drop event on a drop zone (e.g. the root of a `FileDrop`), and `changeFiles` dispatches a synthetic change event on a file input. Both accept a target locator and a `ReadonlyArray<File>`, and throw a clear error if the target element does not have the matching file-event handler registered.
 
-For button-triggered pickers that use the `File.select` Command, scene tests use `Scene.click` on the button and then `Scene.Command.resolve` to synthesize the result, bypassing the native file picker entirely. Use `Scene.Command.resolveAll` when an update returns multiple Commands at once, or when resolving one Command cascades into others, like reading a preview immediately after a successful selection.
+For button-triggered pickers that use the `File.select` Command, scene tests use `click` on the button and then `Command.resolve` to synthesize the result, bypassing the native file picker entirely. Use `Command.resolveAll` when an update returns multiple Commands at once, or when resolving one Command cascades into others, like reading a preview immediately after a successful selection.
 
 ::Snippet{name="fileSceneTest" label="file scene test example"}

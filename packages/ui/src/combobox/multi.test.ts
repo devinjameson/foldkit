@@ -40,10 +40,10 @@ const acknowledgeBackdrop = Scene.Mount.resolve(
   CompletedPortalComboboxBackdrop(),
 )
 
-const withClosed = Story.with(init({ id: 'test' }))
+const givenClosed = Story.given(init({ id: 'test' }))
 
-const withOpenMulti = flow(
-  withClosed,
+const givenOpenMulti = flow(
+  givenClosed,
   Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
 )
 
@@ -72,7 +72,7 @@ describe('Combobox.Multi', () => {
       it('emits Selected with the item value', () => {
         Story.story(
           update,
-          withOpenMulti,
+          givenOpenMulti,
           Story.message(
             SelectedItem({
               item: 'apple',
@@ -87,7 +87,7 @@ describe('Combobox.Multi', () => {
       it('stays open after selection', () => {
         Story.story(
           update,
-          withOpenMulti,
+          givenOpenMulti,
           Story.message(
             SelectedItem({
               item: 'apple',
@@ -104,7 +104,7 @@ describe('Combobox.Multi', () => {
       it('emits Selected again when the same item is activated (parent toggles off)', () => {
         Story.story(
           update,
-          withOpenMulti,
+          givenOpenMulti,
           Story.message(
             SelectedItem({
               item: 'apple',
@@ -127,7 +127,7 @@ describe('Combobox.Multi', () => {
       it('emits Selected for each activated item', () => {
         Story.story(
           update,
-          withOpenMulti,
+          givenOpenMulti,
           Story.message(
             SelectedItem({
               item: 'apple',
@@ -150,7 +150,7 @@ describe('Combobox.Multi', () => {
       it('preserves active item after selection', () => {
         Story.story(
           update,
-          withOpenMulti,
+          givenOpenMulti,
           Story.message(
             ActivatedItem({
               index: 2,
@@ -177,7 +177,7 @@ describe('Combobox.Multi', () => {
       it('resets input to empty regardless of the resting input value', () => {
         Story.story(
           update,
-          Story.with({
+          Story.given({
             ...init({ id: 'test' }),
             isOpen: true,
             inputValue: 'app',
@@ -194,7 +194,7 @@ describe('Combobox.Multi', () => {
       it('emits ClearedSelection when nullable and input is empty', () => {
         Story.story(
           update,
-          Story.with(init({ id: 'test', nullable: true })),
+          Story.given(init({ id: 'test', nullable: true })),
           Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
           Story.message(Closed({ restingInputValue: '' })),
           Story.expectOutMessage(ClearedSelection()),
@@ -210,7 +210,7 @@ describe('Combobox.Multi', () => {
 
         Story.story(
           update,
-          Story.with(closedModel),
+          Story.given(closedModel),
           Story.message(Closed({ restingInputValue: 'Stale' })),
           Story.expectNoOutMessage(),
           Story.Command.expectNone(),
@@ -226,7 +226,7 @@ describe('Combobox.Multi', () => {
       it('emits Selected on each immediate activation (parent toggles)', () => {
         Story.story(
           update,
-          Story.with(init({ id: 'test', immediate: true })),
+          Story.given(init({ id: 'test', immediate: true })),
           Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
           Story.message(
             ActivatedItem({
@@ -265,7 +265,7 @@ describe('Combobox.Multi', () => {
       let model!: Model
       Story.story(
         update,
-        withOpenMulti,
+        givenOpenMulti,
         Story.model(extractedModel => {
           model = extractedModel
         }),
@@ -301,7 +301,7 @@ describe('Combobox.Multi', () => {
       it('items container has aria-multiselectable', () => {
         Scene.scene(
           { update, view: sceneView() },
-          Scene.with(openMultiModel()),
+          Scene.given(openMultiModel()),
           Scene.tap(({ html }) => {
             expect(Scene.find(html, '[key="test-items-container"]')).toHaveAttr(
               'aria-multiselectable',
@@ -321,7 +321,7 @@ describe('Combobox.Multi', () => {
             update,
             view: sceneView({ selectedValues: ['Apple', 'Banana'] }),
           },
-          Scene.with(openMultiModel()),
+          Scene.given(openMultiModel()),
           Scene.tap(({ html }) => {
             expect(Scene.find(html, '[key="test-item-0"]')).toHaveAttr(
               'data-selected',
@@ -348,7 +348,7 @@ describe('Combobox.Multi', () => {
               selectedValues: ['Apple', 'Banana'],
             }),
           },
-          Scene.with(closedModel()),
+          Scene.given(closedModel()),
           Scene.tap(({ html }) => {
             const inputs = Scene.findAll(html, 'input[type="hidden"]')
             expect(inputs).toHaveLength(2)
@@ -361,7 +361,7 @@ describe('Combobox.Multi', () => {
       it('renders empty hidden input when no items selected', () => {
         Scene.scene(
           { update, view: sceneView({ formName: 'fruit' }) },
-          Scene.with(closedModel()),
+          Scene.given(closedModel()),
           Scene.tap(({ html }) => {
             const inputs = Scene.findAll(html, 'input[type="hidden"]')
             expect(inputs).toHaveLength(1)
@@ -377,7 +377,7 @@ describe('Combobox.Multi', () => {
       it('no aria-label or aria-labelledby on the input by default', () => {
         Scene.scene(
           { update, view: sceneView() },
-          Scene.with(closedModel()),
+          Scene.given(closedModel()),
           Scene.tap(({ html }) => {
             const input = Scene.find(html, 'input[role="combobox"]')
             expect(input).not.toHaveAttr('aria-label')
@@ -389,7 +389,7 @@ describe('Combobox.Multi', () => {
       it('applies aria-label to the input when ariaLabel is provided', () => {
         Scene.scene(
           { update, view: sceneView({ ariaLabel: 'Fruit' }) },
-          Scene.with(closedModel()),
+          Scene.given(closedModel()),
           Scene.tap(({ html }) => {
             const input = Scene.find(html, 'input[role="combobox"]')
             expect(input).toHaveAttr('aria-label', 'Fruit')
@@ -401,7 +401,7 @@ describe('Combobox.Multi', () => {
       it('applies aria-labelledby to the input when ariaLabelledBy is provided', () => {
         Scene.scene(
           { update, view: sceneView({ ariaLabelledBy: 'fruit-label' }) },
-          Scene.with(closedModel()),
+          Scene.given(closedModel()),
           Scene.tap(({ html }) => {
             const input = Scene.find(html, 'input[role="combobox"]')
             expect(input).toHaveAttr('aria-labelledby', 'fruit-label')
@@ -419,7 +419,7 @@ describe('Combobox.Multi', () => {
               ariaLabelledBy: 'fruit-label',
             }),
           },
-          Scene.with(closedModel()),
+          Scene.given(closedModel()),
           Scene.tap(({ html }) => {
             const input = Scene.find(html, 'input[role="combobox"]')
             expect(input).toHaveAttr('aria-label', 'Fruit')

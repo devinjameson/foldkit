@@ -56,7 +56,7 @@ describe('message', () => {
   test('multiple Messages update the Model sequentially', () => {
     Story.story(
       update,
-      Story.with({ count: 0, log: [] }),
+      Story.given({ count: 0, log: [] }),
       Story.message(ClickedIncrement()),
       Story.message(ClickedIncrement()),
       Story.message(ClickedDecrement()),
@@ -69,7 +69,7 @@ describe('message', () => {
   test('Message produces Commands that stay pending', () => {
     Story.story(
       update,
-      Story.with({ count: 0, log: [] }),
+      Story.given({ count: 0, log: [] }),
       Story.message(ClickedFetch()),
       Story.Command.expectHas(FetchCount),
       Story.Command.resolveAll([
@@ -85,7 +85,7 @@ describe('resolve', () => {
     expect(() =>
       Story.story(
         update,
-        Story.with({ count: 0, log: [] }),
+        Story.given({ count: 0, log: [] }),
         Story.message(ClickedIncrement()),
         Story.Command.resolve(FetchCount, SucceededFetchCount({ count: 42 })),
       ),
@@ -98,7 +98,7 @@ describe('resolve', () => {
     expect(() =>
       Story.story(
         update,
-        Story.with({ count: 0, log: [] }),
+        Story.given({ count: 0, log: [] }),
         Story.message(ClickedFetch()),
         Story.Command.resolve(SubmitForm, SucceededSubmit({ id: 'abc' })),
       ),
@@ -110,7 +110,7 @@ describe('resolve', () => {
   test('resolve feeds the result Message through update', () => {
     Story.story(
       update,
-      Story.with({ count: 0, log: [] }),
+      Story.given({ count: 0, log: [] }),
       Story.message(ClickedFetch()),
       Story.model(model => {
         expect(model.count).toBe(0)
@@ -126,7 +126,7 @@ describe('resolve', () => {
     expect(() =>
       Story.story(
         update,
-        Story.with({ count: 0, log: [] }),
+        Story.given({ count: 0, log: [] }),
         Story.message(StartedThreeFetches()),
         Story.Command.resolve(FetchCount, SucceededFetchCount({ count: 42 })),
       ),
@@ -139,7 +139,7 @@ describe('resolve', () => {
     expect(() =>
       Story.story(
         update,
-        Story.with({ count: 0, log: [] }),
+        Story.given({ count: 0, log: [] }),
         Story.message(StartedTwoFetchesById()),
         Story.Command.resolve(
           FetchCountById({ id: 5 }),
@@ -156,7 +156,7 @@ describe('resolveAll', () => {
   test('resolveAll resolves multiple Commands at once', () => {
     Story.story(
       update,
-      Story.with({ count: 0, log: [] }),
+      Story.given({ count: 0, log: [] }),
       Story.message(ClickedFetch()),
       Story.Command.resolveAll([
         FetchCount,
@@ -171,7 +171,7 @@ describe('resolveAll', () => {
   test('resolveAll handles cascading resolution', () => {
     Story.story(
       childUpdate,
-      Story.with({ status: 'Idle' }),
+      Story.given({ status: 'Idle' }),
       Story.message(SubmittedForm()),
       Story.Command.resolveAll(
         [SubmitForm, SucceededSubmit({ id: 'abc' })],
@@ -186,7 +186,7 @@ describe('resolveAll', () => {
   test('repeated Definition entries dispatch in declaration order', () => {
     Story.story(
       update,
-      Story.with({ count: 0, log: [] }),
+      Story.given({ count: 0, log: [] }),
       Story.message(StartedThreeFetches()),
       Story.Command.resolveAll(
         [FetchCount, SucceededFetchCount({ count: 1 })],
@@ -203,7 +203,7 @@ describe('resolveAll', () => {
   test('Array.makeBy declares N identical responses for N dispatches', () => {
     Story.story(
       update,
-      Story.with({ count: 0, log: [] }),
+      Story.given({ count: 0, log: [] }),
       Story.message(StartedThreeFetches()),
       Story.Command.resolveAll(
         ...Array.makeBy(
@@ -221,7 +221,7 @@ describe('resolveAll', () => {
   test('repeated Instance entries dispatch in declaration order', () => {
     Story.story(
       update,
-      Story.with({ count: 0, log: [] }),
+      Story.given({ count: 0, log: [] }),
       Story.message(StartedTwoFetchesById()),
       Story.Command.resolveAll(
         [FetchCountById({ id: 5 }), SucceededFetchCount({ count: 10 })],
@@ -236,7 +236,7 @@ describe('resolveAll', () => {
   test('Array.makeBy composes with single entries in the same call', () => {
     Story.story(
       update,
-      Story.with({ count: 0, log: [] }),
+      Story.given({ count: 0, log: [] }),
       Story.message(StartedMixedFetches()),
       Story.Command.resolveAll(
         [FetchCount, SucceededFetchCount({ count: 1 })],
@@ -255,7 +255,7 @@ describe('resolveAll', () => {
   test('extra entries leave leftovers without error', () => {
     Story.story(
       update,
-      Story.with({ count: 0, log: [] }),
+      Story.given({ count: 0, log: [] }),
       Story.message(ClickedFetch()),
       Story.Command.resolveAll(
         [FetchCount, SucceededFetchCount({ count: 1 })],
@@ -271,7 +271,7 @@ describe('resolveAll', () => {
   test('leftover entries are consumed by a later cascade', () => {
     Story.story(
       update,
-      Story.with({ count: 0, log: [] }),
+      Story.given({ count: 0, log: [] }),
       Story.message(ClickedFetch()),
       Story.Command.resolveAll(
         [FetchCount, SucceededFetchCount({ count: 1 })],
@@ -292,7 +292,7 @@ describe('resolveAll', () => {
     expect(() =>
       Story.story(
         update,
-        Story.with({ count: 0, log: [] }),
+        Story.given({ count: 0, log: [] }),
         Story.message(StartedThreeFetches()),
         Story.Command.resolveAll([
           FetchCount,
@@ -305,7 +305,7 @@ describe('resolveAll', () => {
   test('latest-wins eviction replaces all same-fingerprint leftovers', () => {
     Story.story(
       update,
-      Story.with({ count: 0, log: [] }),
+      Story.given({ count: 0, log: [] }),
       Story.Command.resolveAll(
         [FetchCount, SucceededFetchCount({ count: 100 })],
         [FetchCount, SucceededFetchCount({ count: 200 })],
@@ -323,7 +323,7 @@ describe('expectExactCommands', () => {
   test('passes when pending Commands match exactly', () => {
     Story.story(
       update,
-      Story.with({ count: 0, log: [] }),
+      Story.given({ count: 0, log: [] }),
       Story.message(ClickedFetch()),
       Story.Command.expectExact(FetchCount),
       Story.Command.resolveAll([
@@ -337,7 +337,7 @@ describe('expectExactCommands', () => {
     expect(() =>
       Story.story(
         update,
-        Story.with({ count: 0, log: [] }),
+        Story.given({ count: 0, log: [] }),
         Story.message(ClickedFetch()),
         Story.Command.expectExact(FetchCount, SubmitForm),
         Story.Command.resolveAll([
@@ -352,7 +352,7 @@ describe('expectExactCommands', () => {
     expect(() =>
       Story.story(
         update,
-        Story.with({ count: 0, log: [] }),
+        Story.given({ count: 0, log: [] }),
         Story.message(ClickedFetch()),
         Story.Command.expectExact(),
         Story.Command.resolveAll([
@@ -368,7 +368,7 @@ describe('instance-strict Command matching', () => {
   test('expectHas with a Command instance matches by name AND args', () => {
     Story.story(
       update,
-      Story.with({ count: 0, log: [] }),
+      Story.given({ count: 0, log: [] }),
       Story.message(ClickedFetchById({ id: 7 })),
       Story.Command.expectHas(FetchCountById({ id: 7 })),
       Story.Command.resolveAll([
@@ -382,7 +382,7 @@ describe('instance-strict Command matching', () => {
     expect(() =>
       Story.story(
         update,
-        Story.with({ count: 0, log: [] }),
+        Story.given({ count: 0, log: [] }),
         Story.message(ClickedFetchById({ id: 7 })),
         Story.Command.expectHas(FetchCountById({ id: 99 })),
         Story.Command.resolveAll([
@@ -396,7 +396,7 @@ describe('instance-strict Command matching', () => {
   test('expectExact with a Command instance asserts the exact args', () => {
     Story.story(
       update,
-      Story.with({ count: 0, log: [] }),
+      Story.given({ count: 0, log: [] }),
       Story.message(ClickedFetchById({ id: 42 })),
       Story.Command.expectExact(FetchCountById({ id: 42 })),
       Story.Command.resolveAll([
@@ -410,7 +410,7 @@ describe('instance-strict Command matching', () => {
     expect(() =>
       Story.story(
         update,
-        Story.with({ count: 0, log: [] }),
+        Story.given({ count: 0, log: [] }),
         Story.message(ClickedFetchById({ id: 7 })),
         Story.Command.resolve(
           FetchCountById({ id: 99 }),
@@ -425,7 +425,7 @@ describe('instance-strict Command matching', () => {
   test('resolve with a Command instance feeds the result through update', () => {
     Story.story(
       update,
-      Story.with({ count: 0, log: [] }),
+      Story.given({ count: 0, log: [] }),
       Story.message(ClickedFetchById({ id: 42 })),
       Story.Command.resolve(
         FetchCountById({ id: 42 }),
@@ -440,7 +440,7 @@ describe('instance-strict Command matching', () => {
   test('resolveAll keeps Instance matchers distinct across Messages', () => {
     Story.story(
       update,
-      Story.with({ count: 0, log: [] }),
+      Story.given({ count: 0, log: [] }),
       Story.message(ClickedFetchById({ id: 1 })),
       Story.Command.resolveAll([
         FetchCountById({ id: 1 }),
@@ -460,7 +460,7 @@ describe('instance-strict Command matching', () => {
   test('mixed Definition and Instance matchers in resolveAll', () => {
     Story.story(
       update,
-      Story.with({ count: 0, log: [] }),
+      Story.given({ count: 0, log: [] }),
       Story.message(ClickedFetchById({ id: 5 })),
       Story.Command.resolveAll([
         FetchCountById,
@@ -478,7 +478,7 @@ describe('story', () => {
     expect(() =>
       Story.story(
         update,
-        Story.with({ count: 0, log: [] }),
+        Story.given({ count: 0, log: [] }),
         Story.message(ClickedFetch()),
       ),
     ).toThrow('I found Commands without resolvers')
@@ -488,7 +488,7 @@ describe('story', () => {
     expect(() =>
       Story.story(
         update,
-        Story.with({ count: 0, log: [] }),
+        Story.given({ count: 0, log: [] }),
         Story.message(ClickedFetch()),
         Story.message(ClickedIncrement()),
       ),
@@ -498,7 +498,7 @@ describe('story', () => {
   test('succeeds with a Message that produces no Commands', () => {
     Story.story(
       update,
-      Story.with({ count: 0, log: [] }),
+      Story.given({ count: 0, log: [] }),
       Story.message(ClickedIncrement()),
       Story.model(model => {
         expect(model.count).toBe(1)
@@ -512,7 +512,7 @@ describe('interruptible Commands', () => {
   test('a keyed Command may stay pending across Messages and is dropped when its Interrupt resolves', () => {
     Story.story(
       uploadsUpdate,
-      Story.with(initialUploadsModel),
+      Story.given(initialUploadsModel),
       Story.message(ClickedStartUpload()),
       Story.Command.expectHas(UploadFile),
       Story.message(ClickedCancelUpload({ uploadId: 0 })),
@@ -533,7 +533,7 @@ describe('interruptible Commands', () => {
   test('resolves a keyed Command by its bare Definition, matching by name', () => {
     Story.story(
       uploadsUpdate,
-      Story.with(initialUploadsModel),
+      Story.given(initialUploadsModel),
       Story.message(ClickedStartUpload()),
       Story.Command.resolve(UploadFile, SucceededUploadFile({ uploadId: 0 })),
       Story.model(model => {
@@ -546,7 +546,7 @@ describe('interruptible Commands', () => {
   test('resolves a name-keyed Command by its bare Definition, matching by name', () => {
     Story.story(
       draftsUpdate,
-      Story.with(initialDraftsModel),
+      Story.given(initialDraftsModel),
       Story.message(ClickedSaveDraft()),
       Story.Command.resolve(SaveDraft, SucceededSaveDraft({ revision: 0 })),
       Story.model(model => {
@@ -559,7 +559,7 @@ describe('interruptible Commands', () => {
   test('resolveAll resolves keyed Commands by their bare Definition', () => {
     Story.story(
       uploadsUpdate,
-      Story.with(initialUploadsModel),
+      Story.given(initialUploadsModel),
       Story.message(ClickedStartUpload()),
       Story.message(ClickedStartUpload()),
       Story.Command.resolveAll(
@@ -579,7 +579,7 @@ describe('interruptible Commands', () => {
   test('resolving an Interrupt with NotFound keeps nothing pending and skips the status change', () => {
     Story.story(
       uploadsUpdate,
-      Story.with(initialUploadsModel),
+      Story.given(initialUploadsModel),
       Story.message(ClickedStartUpload()),
       Story.Command.resolve(
         UploadFile({ uploadId: 0 }),
@@ -602,7 +602,7 @@ describe('interruptible Commands', () => {
   test('interrupting one key leaves Commands under other keys pending', () => {
     Story.story(
       uploadsUpdate,
-      Story.with(initialUploadsModel),
+      Story.given(initialUploadsModel),
       Story.message(ClickedStartUpload()),
       Story.message(ClickedStartUpload()),
       Story.Command.expectHas(
@@ -634,7 +634,7 @@ describe('interruptible Commands', () => {
   test('same-key Commands stay pending together and an Interrupt resolution drops them all', () => {
     Story.story(
       uploadsUpdate,
-      Story.with(initialUploadsModel),
+      Story.given(initialUploadsModel),
       Story.message(ClickedStartUpload()),
       Story.message(ClickedRetryUpload({ uploadId: 0 })),
       Story.Command.expectExact(
@@ -660,7 +660,7 @@ describe('interruptible Commands', () => {
     expect(() =>
       Story.story(
         uploadsUpdate,
-        Story.with(initialUploadsModel),
+        Story.given(initialUploadsModel),
         Story.message(ClickedStartUpload()),
       ),
     ).toThrow('I found Commands without resolvers')
@@ -671,7 +671,7 @@ describe('outMessage', () => {
   test('OutMessage updates at each step in the story', () => {
     Story.story(
       childUpdate,
-      Story.with({ status: 'Idle' }),
+      Story.given({ status: 'Idle' }),
       Story.message(SubmittedForm()),
       Story.expectNoOutMessage(),
       Story.Command.resolve(SubmitForm, SucceededSubmit({ id: 'abc' })),
@@ -684,7 +684,7 @@ describe('outMessage', () => {
   test('Message that produces no Commands can still emit an OutMessage', () => {
     Story.story(
       childUpdate,
-      Story.with({ status: 'Idle' }),
+      Story.given({ status: 'Idle' }),
       Story.message(CancelledForm()),
       Story.expectOutMessage(RequestedCancel()),
     )
@@ -695,7 +695,7 @@ describe("resolve applies the Command's own message mapping", () => {
   test('parent resolves mapped child Commands with the raw result Message', () => {
     Story.story(
       parentUpdate,
-      Story.with(initialParentModel),
+      Story.given(initialParentModel),
       Story.message(GotChildMessage({ message: SubmittedForm() })),
       Story.model(model => {
         expect(model.child.status).toBe('Submitting')
@@ -719,7 +719,7 @@ describe("resolveAll applies each Command's own message mapping", () => {
   test('parent resolves mapped child Commands with the raw result Messages', () => {
     Story.story(
       parentUpdate,
-      Story.with(initialParentModel),
+      Story.given(initialParentModel),
       Story.message(GotChildMessage({ message: SubmittedForm() })),
       Story.model(model => {
         expect(model.child.status).toBe('Submitting')
@@ -737,15 +737,15 @@ describe("resolveAll applies each Command's own message mapping", () => {
 })
 
 describe('type safety', () => {
-  test('with returns a WithStep', () => {
-    const step = Story.with({ count: 0, log: [] })
-    expectTypeOf(step).toMatchTypeOf<Story.WithStep<{ count: number }>>()
+  test('given returns a GivenStep', () => {
+    const step = Story.given({ count: 0, log: [] })
+    expectTypeOf(step).toMatchTypeOf<Story.GivenStep<{ count: number }>>()
   })
 
   test('story infers OutMessage from a 3-tuple update', () => {
     Story.story(
       childUpdate,
-      Story.with({ status: 'Idle' }),
+      Story.given({ status: 'Idle' }),
       Story.expectNoOutMessage(),
     )
   })

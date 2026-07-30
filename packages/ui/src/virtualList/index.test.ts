@@ -52,7 +52,7 @@ describe('VirtualList', () => {
     it('writes the new scrollTop into the model', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(ScrolledContainer({ scrollTop: 450 })),
         Story.model(model => {
           expect(model.scrollTop).toBe(450)
@@ -65,7 +65,7 @@ describe('VirtualList', () => {
     it('transitions Unmeasured to Measured with the reported height', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(MeasuredContainer({ containerHeight: 600 })),
         Story.model(model => {
           expect(model.measurement._tag).toBe('Measured')
@@ -79,7 +79,7 @@ describe('VirtualList', () => {
     it('updates the height when already Measured', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(MeasuredContainer({ containerHeight: 600 })),
         Story.message(MeasuredContainer({ containerHeight: 720 })),
         Story.model(model => {
@@ -93,7 +93,7 @@ describe('VirtualList', () => {
     it('issues no Command on the initial Unmeasured to Measured transition when scrollTop is 0', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(MeasuredContainer({ containerHeight: 600 })),
         Story.Command.expectNone(),
       )
@@ -102,7 +102,7 @@ describe('VirtualList', () => {
     it('issues an apply-scroll Command on the initial transition when scrollTop is non-zero', () => {
       Story.story(
         update,
-        Story.with(
+        Story.given(
           init({ id: 'test', rowHeightPx: 30, initialScrollTop: 600 }),
         ),
         Story.message(MeasuredContainer({ containerHeight: 300 })),
@@ -124,7 +124,7 @@ describe('VirtualList', () => {
     it('issues no Command on subsequent MeasuredContainer once already Measured (resize-only path)', () => {
       Story.story(
         update,
-        Story.with(
+        Story.given(
           init({ id: 'test', rowHeightPx: 30, initialScrollTop: 600 }),
         ),
         Story.message(MeasuredContainer({ containerHeight: 300 })),

@@ -32,14 +32,14 @@ const animationEndMessage = GotAnimationMessage({
   message: Animation.EndedAnimation(),
 })
 
-const withClosed = Story.with(init({ id: 'test' }))
+const givenClosed = Story.given(init({ id: 'test' }))
 
-const withOpen = flow(withClosed, Story.message(RequestedOpen()))
+const givenOpen = flow(givenClosed, Story.message(RequestedOpen()))
 
-const withClosedAnimated = Story.with(init({ id: 'test', isAnimated: true }))
+const givenClosedAnimated = Story.given(init({ id: 'test', isAnimated: true }))
 
-const withOpenAnimated = flow(
-  withClosedAnimated,
+const givenOpenAnimated = flow(
+  givenClosedAnimated,
   Story.message(RequestedOpen()),
   Story.Command.resolveAll(
     [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
@@ -93,7 +93,7 @@ describe('Popover', () => {
       it('opens the popover', () => {
         Story.story(
           update,
-          withClosed,
+          givenClosed,
           Story.message(RequestedOpen()),
           Story.model(model => {
             expect(model.isOpen).toBe(true)
@@ -104,7 +104,7 @@ describe('Popover', () => {
       it('does not dispatch focus commands when opening', () => {
         Story.story(
           update,
-          withClosed,
+          givenClosed,
           Story.message(RequestedOpen()),
           Story.Command.expectNone(),
           Story.model(model => {
@@ -118,7 +118,7 @@ describe('Popover', () => {
       it('closes the popover and returns a focus command', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(RequestedClose()),
           Story.Command.resolve(FocusButton, CompletedFocusButton()),
           Story.model(model => {
@@ -133,7 +133,7 @@ describe('Popover', () => {
       it('is idempotent when already closed', () => {
         Story.story(
           update,
-          withClosed,
+          givenClosed,
           Story.message(RequestedClose()),
           Story.Command.resolve(FocusButton, CompletedFocusButton()),
           Story.model(model => {
@@ -147,7 +147,7 @@ describe('Popover', () => {
       it('closes the popover without restoring button focus', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(BlurredPanel()),
           Story.model(model => {
             expect(model.isOpen).toBe(false)
@@ -163,7 +163,7 @@ describe('Popover', () => {
       it('records pointer type for touch without toggling', () => {
         Story.story(
           update,
-          withClosed,
+          givenClosed,
           Story.message(
             PressedPointerOnButton({ pointerType: 'touch', button: 0 }),
           ),
@@ -179,7 +179,7 @@ describe('Popover', () => {
       it('records pointer type for pen without toggling', () => {
         Story.story(
           update,
-          withClosed,
+          givenClosed,
           Story.message(
             PressedPointerOnButton({ pointerType: 'pen', button: 0 }),
           ),
@@ -195,7 +195,7 @@ describe('Popover', () => {
       it('opens the popover on mouse left button when closed', () => {
         Story.story(
           update,
-          withClosed,
+          givenClosed,
           Story.message(
             PressedPointerOnButton({ pointerType: 'mouse', button: 0 }),
           ),
@@ -211,7 +211,7 @@ describe('Popover', () => {
       it('closes the popover on mouse left button when open and preserves pointer type', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(
             PressedPointerOnButton({ pointerType: 'mouse', button: 0 }),
           ),
@@ -228,7 +228,7 @@ describe('Popover', () => {
       it('does not toggle on mouse right button', () => {
         Story.story(
           update,
-          withClosed,
+          givenClosed,
           Story.message(
             PressedPointerOnButton({ pointerType: 'mouse', button: 2 }),
           ),
@@ -244,7 +244,7 @@ describe('Popover', () => {
       it('always records maybeLastButtonPointerType', () => {
         Story.story(
           update,
-          withClosed,
+          givenClosed,
           Story.message(
             PressedPointerOnButton({ pointerType: 'touch', button: 0 }),
           ),
@@ -269,7 +269,7 @@ describe('Popover', () => {
       it('resets maybeLastButtonPointerType', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(
             PressedPointerOnButton({ pointerType: 'mouse', button: 0 }),
           ),
@@ -294,7 +294,7 @@ describe('Popover', () => {
       it('returns model unchanged', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(CompletedFocusPanel()),
           Story.model(model => {
             expect(model.isOpen).toBe(true)
@@ -308,7 +308,7 @@ describe('Popover', () => {
         it('starts enter animation and emits RequestFrame on RequestedOpen', () => {
           Story.story(
             update,
-            withClosedAnimated,
+            givenClosedAnimated,
             Story.message(RequestedOpen()),
             Story.model(model => {
               expect(model.isOpen).toBe(true)
@@ -325,7 +325,7 @@ describe('Popover', () => {
         it('advances EnterStart to EnterAnimating on AdvancedAnimationFrame', () => {
           Story.story(
             update,
-            withClosedAnimated,
+            givenClosedAnimated,
             Story.message(RequestedOpen()),
             Story.Command.resolve(
               Animation.RequestFrame,
@@ -344,7 +344,7 @@ describe('Popover', () => {
         it('completes EnterAnimating to Idle on EndedAnimation', () => {
           Story.story(
             update,
-            withClosedAnimated,
+            givenClosedAnimated,
             Story.message(RequestedOpen()),
             Story.Command.resolveAll(
               [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
@@ -361,7 +361,7 @@ describe('Popover', () => {
         it('sets LeaveStart on RequestedClose', () => {
           Story.story(
             update,
-            withOpenAnimated,
+            givenOpenAnimated,
             Story.message(RequestedClose()),
             Story.model(model => {
               expect(model.isOpen).toBe(false)
@@ -378,7 +378,7 @@ describe('Popover', () => {
         it('begins the leave animation when the panel blurs', () => {
           Story.story(
             update,
-            withOpenAnimated,
+            givenOpenAnimated,
             Story.message(BlurredPanel()),
             Story.model(model => {
               expect(model.isOpen).toBe(false)
@@ -394,7 +394,7 @@ describe('Popover', () => {
         it('advances LeaveStart to LeaveAnimating with DetectMovementOrAnimationEnd', () => {
           Story.story(
             update,
-            withOpenAnimated,
+            givenOpenAnimated,
             Story.message(RequestedClose()),
             Story.Command.resolve(
               Animation.RequestFrame,
@@ -414,7 +414,7 @@ describe('Popover', () => {
         it('completes LeaveAnimating to Idle on animation end', () => {
           Story.story(
             update,
-            withOpenAnimated,
+            givenOpenAnimated,
             Story.message(RequestedClose()),
             Story.Command.resolveAll(
               [FocusButton, CompletedFocusButton()],
@@ -432,7 +432,7 @@ describe('Popover', () => {
         it('keeps transitionState Idle on RequestedOpen', () => {
           Story.story(
             update,
-            withClosed,
+            givenClosed,
             Story.message(RequestedOpen()),
             Story.model(model => {
               expect(model.animation.transitionState).toBe('Idle')
@@ -443,7 +443,7 @@ describe('Popover', () => {
         it('keeps transitionState Idle on RequestedClose', () => {
           Story.story(
             update,
-            withOpen,
+            givenOpen,
             Story.message(RequestedClose()),
             Story.Command.resolve(FocusButton, CompletedFocusButton()),
             Story.model(model => {
@@ -457,7 +457,7 @@ describe('Popover', () => {
         it('ignores GotAnimationMessage with AdvancedAnimationFrame when Idle', () => {
           Story.story(
             update,
-            withOpen,
+            givenOpen,
             Story.message(
               GotAnimationMessage({
                 message: Animation.AdvancedAnimationFrame(),
@@ -473,7 +473,7 @@ describe('Popover', () => {
         it('ignores GotAnimationMessage with EndedAnimation when Idle', () => {
           Story.story(
             update,
-            withOpen,
+            givenOpen,
             Story.message(animationEndMessage),
             Story.model(model => {
               expect(model.isOpen).toBe(true)
@@ -487,7 +487,7 @@ describe('Popover', () => {
         it('transitions to LeaveStart when RequestedClose during enter', () => {
           Story.story(
             update,
-            withClosedAnimated,
+            givenClosedAnimated,
             Story.message(RequestedOpen()),
             Story.Command.resolveAll(
               [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
@@ -510,10 +510,10 @@ describe('Popover', () => {
   })
 
   describe('modal commands', () => {
-    const withClosedModal = Story.with(init({ id: 'test', isModal: true }))
+    const givenClosedModal = Story.given(init({ id: 'test', isModal: true }))
 
-    const withOpenModal = flow(
-      withClosedModal,
+    const givenOpenModal = flow(
+      givenClosedModal,
       Story.message(RequestedOpen()),
       Story.Command.resolveAll(
         [LockScroll, CompletedLockScroll()],
@@ -524,7 +524,7 @@ describe('Popover', () => {
     it('emits lockScroll and inertOthers commands on RequestedOpen when isModal is true', () => {
       Story.story(
         update,
-        withClosedModal,
+        givenClosedModal,
         Story.message(RequestedOpen()),
         Story.Command.resolveAll(
           [LockScroll, CompletedLockScroll()],
@@ -539,7 +539,7 @@ describe('Popover', () => {
     it('emits unlockScroll and restoreInert commands on RequestedClose when isModal is true', () => {
       Story.story(
         update,
-        withOpenModal,
+        givenOpenModal,
         Story.message(RequestedClose()),
         Story.Command.resolveAll(
           [FocusButton, CompletedFocusButton()],
@@ -555,7 +555,7 @@ describe('Popover', () => {
     it('emits unlockScroll and restoreInert commands when the panel blurs in modal mode', () => {
       Story.story(
         update,
-        withOpenModal,
+        givenOpenModal,
         Story.message(BlurredPanel()),
         Story.Command.resolveAll(
           [UnlockScroll, CompletedUnlockScroll()],
@@ -570,7 +570,7 @@ describe('Popover', () => {
     it('does not emit modal commands when isModal is false', () => {
       Story.story(
         update,
-        withClosed,
+        givenClosed,
         Story.message(RequestedOpen()),
         Story.model(model => {
           expect(model.isOpen).toBe(true)

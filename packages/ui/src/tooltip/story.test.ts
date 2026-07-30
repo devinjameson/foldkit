@@ -27,15 +27,15 @@ const resolveShowAsStale = Story.Command.resolve(
   ElapsedShowDelay({ version: STALE_SHOW_VERSION }),
 )
 
-const withHidden = Story.with(init({ id: 'test' }))
+const givenHidden = Story.given(init({ id: 'test' }))
 
-const withHoveredOpen = flow(
-  withHidden,
+const givenHoveredOpen = flow(
+  givenHidden,
   Story.message(EnteredTrigger()),
   Story.Command.resolve(ShowAfterDelay, ElapsedShowDelay({ version: 1 })),
 )
 
-const withFocusedOpen = flow(withHidden, Story.message(FocusedTrigger()))
+const givenFocusedOpen = flow(givenHidden, Story.message(FocusedTrigger()))
 
 describe('Tooltip', () => {
   describe('init', () => {
@@ -68,7 +68,7 @@ describe('Tooltip', () => {
       it('starts a show-delay timer when hidden', () => {
         Story.story(
           update,
-          withHidden,
+          givenHidden,
           Story.message(EnteredTrigger()),
           Story.model(model => {
             expect(model.isHovered).toBe(true)
@@ -86,7 +86,7 @@ describe('Tooltip', () => {
       it('opens the tooltip and emits Shown when the delay completes while hovering', () => {
         Story.story(
           update,
-          withHidden,
+          givenHidden,
           Story.message(EnteredTrigger()),
           Story.Command.resolve(
             ShowAfterDelay,
@@ -103,7 +103,7 @@ describe('Tooltip', () => {
       it('does not start a new timer when already open via focus', () => {
         Story.story(
           update,
-          withFocusedOpen,
+          givenFocusedOpen,
           Story.message(EnteredTrigger()),
           Story.Command.expectNone(),
           Story.model(model => {
@@ -117,7 +117,7 @@ describe('Tooltip', () => {
       it('schedules a show on re-hover after Escape even while focus stays active', () => {
         Story.story(
           update,
-          withHidden,
+          givenHidden,
           Story.message(FocusedTrigger()),
           Story.message(EnteredTrigger()),
           Story.message(PressedEscape()),
@@ -145,7 +145,7 @@ describe('Tooltip', () => {
       it('cancels a pending show-delay by advancing the version', () => {
         Story.story(
           update,
-          withHidden,
+          givenHidden,
           Story.message(EnteredTrigger()),
           Story.model(model => {
             expect(model.pendingShowVersion).toBe(1)
@@ -163,7 +163,7 @@ describe('Tooltip', () => {
       it('hides the tooltip and emits Hidden when hover was the only source', () => {
         Story.story(
           update,
-          withHoveredOpen,
+          givenHoveredOpen,
           Story.message(LeftTrigger()),
           Story.expectOutMessage(Hidden()),
           Story.model(model => {
@@ -176,7 +176,7 @@ describe('Tooltip', () => {
       it('keeps the tooltip open when focus is still active', () => {
         Story.story(
           update,
-          withFocusedOpen,
+          givenFocusedOpen,
           Story.message(EnteredTrigger()),
           Story.message(LeftTrigger()),
           Story.model(model => {
@@ -192,7 +192,7 @@ describe('Tooltip', () => {
       it('shows the tooltip immediately', () => {
         Story.story(
           update,
-          withHidden,
+          givenHidden,
           Story.message(FocusedTrigger()),
           Story.Command.expectNone(),
           Story.model(model => {
@@ -205,7 +205,7 @@ describe('Tooltip', () => {
       it('invalidates a pending hover-delay', () => {
         Story.story(
           update,
-          withHidden,
+          givenHidden,
           Story.message(EnteredTrigger()),
           resolveShowAsStale,
           Story.message(FocusedTrigger()),
@@ -221,7 +221,7 @@ describe('Tooltip', () => {
       it('hides the tooltip when focus was the only source', () => {
         Story.story(
           update,
-          withFocusedOpen,
+          givenFocusedOpen,
           Story.message(BlurredTrigger()),
           Story.model(model => {
             expect(model.isOpen).toBe(false)
@@ -233,7 +233,7 @@ describe('Tooltip', () => {
       it('keeps the tooltip open when hover is still active', () => {
         Story.story(
           update,
-          withHoveredOpen,
+          givenHoveredOpen,
           Story.message(FocusedTrigger()),
           Story.message(BlurredTrigger()),
           Story.model(model => {
@@ -249,7 +249,7 @@ describe('Tooltip', () => {
       it('hides the tooltip without lying about hover or focus state', () => {
         Story.story(
           update,
-          withHoveredOpen,
+          givenHoveredOpen,
           Story.message(PressedEscape()),
           Story.model(model => {
             expect(model.isOpen).toBe(false)
@@ -262,7 +262,7 @@ describe('Tooltip', () => {
       it('does not re-open on hover until the pointer leaves', () => {
         Story.story(
           update,
-          withHoveredOpen,
+          givenHoveredOpen,
           Story.message(PressedEscape()),
           Story.Command.expectNone(),
           Story.message(EnteredTrigger()),
@@ -277,7 +277,7 @@ describe('Tooltip', () => {
       it('does not re-open on focus until the trigger blurs', () => {
         Story.story(
           update,
-          withFocusedOpen,
+          givenFocusedOpen,
           Story.message(PressedEscape()),
           Story.message(FocusedTrigger()),
           Story.model(model => {
@@ -291,7 +291,7 @@ describe('Tooltip', () => {
       it('clears the dismissed flag on leave', () => {
         Story.story(
           update,
-          withHoveredOpen,
+          givenHoveredOpen,
           Story.message(PressedEscape()),
           Story.message(LeftTrigger()),
           Story.model(model => {
@@ -304,7 +304,7 @@ describe('Tooltip', () => {
       it('clears the dismissed flag on blur', () => {
         Story.story(
           update,
-          withFocusedOpen,
+          givenFocusedOpen,
           Story.message(PressedEscape()),
           Story.message(BlurredTrigger()),
           Story.model(model => {
@@ -317,7 +317,7 @@ describe('Tooltip', () => {
       it('re-opens on a fresh hover after leaving', () => {
         Story.story(
           update,
-          withHoveredOpen,
+          givenHoveredOpen,
           Story.message(PressedEscape()),
           Story.message(LeftTrigger()),
           Story.message(EnteredTrigger()),
@@ -338,7 +338,7 @@ describe('Tooltip', () => {
       it('ignores a stale delay whose version does not match', () => {
         Story.story(
           update,
-          withHidden,
+          givenHidden,
           Story.message(EnteredTrigger()),
           Story.Command.resolve(
             ShowAfterDelay,
@@ -353,7 +353,7 @@ describe('Tooltip', () => {
       it('stays hidden when a stale delay fires and the user then leaves', () => {
         Story.story(
           update,
-          withHidden,
+          givenHidden,
           Story.message(EnteredTrigger()),
           resolveShowAsStale,
           Story.message(LeftTrigger()),
@@ -370,7 +370,7 @@ describe('Tooltip', () => {
       it('records the pointer type without opening when closed', () => {
         Story.story(
           update,
-          withHidden,
+          givenHidden,
           Story.message(PressedPointerOnTrigger({ pointerType: 'mouse' })),
           Story.Command.expectNone(),
           Story.model(model => {
@@ -385,7 +385,7 @@ describe('Tooltip', () => {
       it('suppresses the auto-show on focus that follows a mouse press and does not count it as keyboard focus', () => {
         Story.story(
           update,
-          withHidden,
+          givenHidden,
           Story.message(PressedPointerOnTrigger({ pointerType: 'mouse' })),
           Story.message(FocusedTrigger()),
           Story.model(model => {
@@ -399,7 +399,7 @@ describe('Tooltip', () => {
       it('does not suppress focus from a touch or pen press', () => {
         Story.story(
           update,
-          withHidden,
+          givenHidden,
           Story.message(PressedPointerOnTrigger({ pointerType: 'touch' })),
           Story.message(FocusedTrigger()),
           Story.model(model => {
@@ -412,7 +412,7 @@ describe('Tooltip', () => {
       it('does not suppress a keyboard focus with no preceding pointer press', () => {
         Story.story(
           update,
-          withHidden,
+          givenHidden,
           Story.message(FocusedTrigger()),
           Story.model(model => {
             expect(model.isFocused).toBe(true)
@@ -424,7 +424,7 @@ describe('Tooltip', () => {
       it('clears the recorded pointer type on blur', () => {
         Story.story(
           update,
-          withHidden,
+          givenHidden,
           Story.message(PressedPointerOnTrigger({ pointerType: 'mouse' })),
           Story.message(FocusedTrigger()),
           Story.message(BlurredTrigger()),
@@ -437,7 +437,7 @@ describe('Tooltip', () => {
       it('keeps an open tooltip visible when the trigger is pressed', () => {
         Story.story(
           update,
-          withHoveredOpen,
+          givenHoveredOpen,
           Story.message(PressedPointerOnTrigger({ pointerType: 'mouse' })),
           Story.Command.expectNone(),
           Story.expectNoOutMessage(),
@@ -455,7 +455,7 @@ describe('Tooltip', () => {
       it('stays open across the focus that follows a press while hovering', () => {
         Story.story(
           update,
-          withHoveredOpen,
+          givenHoveredOpen,
           Story.message(PressedPointerOnTrigger({ pointerType: 'mouse' })),
           Story.message(FocusedTrigger()),
           Story.model(model => {
@@ -470,7 +470,7 @@ describe('Tooltip', () => {
       it('still hides on leave after the trigger is pressed while hovering', () => {
         Story.story(
           update,
-          withHoveredOpen,
+          givenHoveredOpen,
           Story.message(PressedPointerOnTrigger({ pointerType: 'mouse' })),
           Story.message(FocusedTrigger()),
           Story.message(LeftTrigger()),
@@ -486,7 +486,7 @@ describe('Tooltip', () => {
       it('does not dismiss, so a re-hover after leaving still schedules a show', () => {
         Story.story(
           update,
-          withHoveredOpen,
+          givenHoveredOpen,
           Story.message(PressedPointerOnTrigger({ pointerType: 'mouse' })),
           Story.message(LeftTrigger()),
           Story.message(EnteredTrigger()),
@@ -510,7 +510,7 @@ describe('Tooltip', () => {
       it('uses the reflected delay on a fresh hover', () => {
         Story.story(
           update,
-          Story.with(
+          Story.given(
             reflectShowDelay(init({ id: 'test' }), Duration.millis(50)),
           ),
           Story.message(EnteredTrigger()),

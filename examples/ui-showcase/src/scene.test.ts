@@ -1,4 +1,5 @@
-import { Calendar, Scene } from 'foldkit'
+import { Calendar } from 'foldkit'
+import { expect, given, role, scene, text } from 'foldkit/scene'
 import { describe, test } from 'vitest'
 
 import {
@@ -32,26 +33,24 @@ const homeModel = modelForRoute(HomeRoute())
 
 describe('view', () => {
   test('the sidebar nav lists a sample of every component link', () => {
-    Scene.scene(
+    scene(
       { update, view },
-      Scene.with(homeModel),
-      Scene.expect(Scene.role('link', { name: 'Button' })).toExist(),
-      Scene.expect(Scene.role('link', { name: 'Calendar' })).toExist(),
-      Scene.expect(Scene.role('link', { name: 'Dialog' })).toExist(),
-      Scene.expect(Scene.role('link', { name: 'Toast' })).toExist(),
-      Scene.expect(Scene.role('link', { name: 'Virtual List' })).toExist(),
+      given(homeModel),
+      expect(role('link', { name: 'Button' })).toExist(),
+      expect(role('link', { name: 'Calendar' })).toExist(),
+      expect(role('link', { name: 'Dialog' })).toExist(),
+      expect(role('link', { name: 'Toast' })).toExist(),
+      expect(role('link', { name: 'Virtual List' })).toExist(),
     )
   })
 
   test('the Home route shows the showcase heading and description', () => {
-    Scene.scene(
+    scene(
       { update, view },
-      Scene.with(homeModel),
-      Scene.expect(
-        Scene.role('heading', { name: 'Foldkit UI Showcase' }),
-      ).toExist(),
-      Scene.expect(
-        Scene.text('This is a showcase of every Foldkit UI component.', {
+      given(homeModel),
+      expect(role('heading', { name: 'Foldkit UI Showcase' })).toExist(),
+      expect(
+        text('This is a showcase of every Foldkit UI component.', {
           exact: false,
         }),
       ).toExist(),
@@ -73,33 +72,31 @@ describe('view', () => {
     ]
 
     routes.forEach(route => {
-      Scene.scene(
+      scene(
         { update, view },
-        Scene.with(modelForRoute(route)),
-        Scene.expect(Scene.role('link', { name: 'Button' })).toExist(),
+        given(modelForRoute(route)),
+        expect(role('link', { name: 'Button' })).toExist(),
       )
     })
   })
 
   test('the Disclosure panel stays mounted while collapsed so it can animate', () => {
-    Scene.scene(
+    scene(
       { update, view },
-      Scene.with(modelForRoute(DisclosureRoute())),
-      Scene.expect(
-        Scene.text('Foldkit is an Elm-inspired UI framework', { exact: false }),
+      given(modelForRoute(DisclosureRoute())),
+      expect(
+        text('Foldkit is an Elm-inspired UI framework', { exact: false }),
       ).toExist(),
     )
   })
 
   test('the NotFound route renders the 404 panel and a Go Home link', () => {
-    Scene.scene(
+    scene(
       { update, view },
-      Scene.with(modelForRoute(NotFoundRoute({ path: '/oops' }))),
-      Scene.expect(
-        Scene.role('heading', { name: '404 — Page Not Found' }),
-      ).toExist(),
-      Scene.expect(Scene.text('The path "/oops" was not found.')).toExist(),
-      Scene.expect(Scene.role('link', { name: 'Go Home' })).toExist(),
+      given(modelForRoute(NotFoundRoute({ path: '/oops' }))),
+      expect(role('heading', { name: '404 — Page Not Found' })).toExist(),
+      expect(text('The path "/oops" was not found.')).toExist(),
+      expect(role('link', { name: 'Go Home' })).toExist(),
     )
   })
 })

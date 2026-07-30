@@ -1,14 +1,14 @@
-import { Scene } from 'foldkit'
 import { inertHtml as ih } from 'foldkit/html'
+import { expect, given, role, scene, withViewInputs } from 'foldkit/scene'
 
 import { Slider } from '@foldkit/ui'
 
 const model = Slider.init({ id: 'volume', min: 0, max: 10, step: 1 })
 
 // Defaults supply the full ViewInputs once. The returned factory produces
-// a (model, h) view for Scene.scene, taking per-test overrides for
+// a (model, h) view for scene, taking per-test overrides for
 // everything except toView.
-const sceneView = Scene.withViewInputs(Slider.view, {
+const sceneView = withViewInputs(Slider.view, {
   value: 5,
   toView: attributes =>
     ih.div(
@@ -18,14 +18,14 @@ const sceneView = Scene.withViewInputs(Slider.view, {
 })
 
 // Vary value inputs per test while the renderer stays pinned.
-Scene.scene(
+scene(
   { update: Slider.update, view: sceneView() },
-  Scene.with(model),
-  Scene.expect(Scene.role('slider')).toHaveAttr('aria-valuenow', '5'),
+  given(model),
+  expect(role('slider')).toHaveAttr('aria-valuenow', '5'),
 )
 
-Scene.scene(
+scene(
   { update: Slider.update, view: sceneView({ isDisabled: true }) },
-  Scene.with(model),
-  Scene.expect(Scene.role('slider')).toHaveAttr('aria-disabled', 'true'),
+  given(model),
+  expect(role('slider')).toHaveAttr('aria-disabled', 'true'),
 )

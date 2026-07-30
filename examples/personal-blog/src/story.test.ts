@@ -1,5 +1,5 @@
 import { Option } from 'effect'
-import { Story } from 'foldkit'
+import { Command, given, message, model, story } from 'foldkit/story'
 import { fromString } from 'foldkit/url'
 import { describe, expect, test } from 'vitest'
 
@@ -17,39 +17,37 @@ const urlOrThrow = (raw: string) =>
 describe('update', () => {
   describe('ChangedUrl', () => {
     test('navigating to / parses to the Home route', () => {
-      Story.story(
+      story(
         update,
-        Story.with(home),
-        Story.message(ChangedUrl({ url: urlOrThrow('http://localhost/') })),
-        Story.model(model => {
+        given(home),
+        message(ChangedUrl({ url: urlOrThrow('http://localhost/') })),
+        model(model => {
           expect(model.route._tag).toBe('Home')
         }),
       )
     })
 
     test('navigating to /posts parses to the Posts route', () => {
-      Story.story(
+      story(
         update,
-        Story.with(home),
-        Story.message(
-          ChangedUrl({ url: urlOrThrow('http://localhost/posts') }),
-        ),
-        Story.model(model => {
+        given(home),
+        message(ChangedUrl({ url: urlOrThrow('http://localhost/posts') })),
+        model(model => {
           expect(model.route._tag).toBe('Posts')
         }),
       )
     })
 
     test('navigating to /posts/making-this-blog captures the slug', () => {
-      Story.story(
+      story(
         update,
-        Story.with(home),
-        Story.message(
+        given(home),
+        message(
           ChangedUrl({
             url: urlOrThrow('http://localhost/posts/making-this-blog'),
           }),
         ),
-        Story.model(model => {
+        model(model => {
           if (model.route._tag === 'Post') {
             expect(model.route.slug).toBe('making-this-blog')
           } else {
@@ -60,13 +58,11 @@ describe('update', () => {
     })
 
     test('an unknown path falls through to NotFound with the path captured', () => {
-      Story.story(
+      story(
         update,
-        Story.with(home),
-        Story.message(
-          ChangedUrl({ url: urlOrThrow('http://localhost/missing') }),
-        ),
-        Story.model(model => {
+        given(home),
+        message(ChangedUrl({ url: urlOrThrow('http://localhost/missing') })),
+        model(model => {
           if (model.route._tag === 'NotFound') {
             expect(model.route.path).toBe('/missing')
           } else {
@@ -79,38 +75,30 @@ describe('update', () => {
 
   describe('GotCounterMessage', () => {
     test('increments route through the Counter submodel without commands', () => {
-      Story.story(
+      story(
         update,
-        Story.with(home),
-        Story.message(
-          GotCounterMessage({ message: Counter.ClickedIncrement() }),
-        ),
-        Story.message(
-          GotCounterMessage({ message: Counter.ClickedIncrement() }),
-        ),
-        Story.Command.expectNone(),
-        Story.model(model => {
+        given(home),
+        message(GotCounterMessage({ message: Counter.ClickedIncrement() })),
+        message(GotCounterMessage({ message: Counter.ClickedIncrement() })),
+        Command.expectNone(),
+        model(model => {
           expect(model.counter.count).toBe(2)
         }),
       )
     })
 
     test('the count survives navigating between routes', () => {
-      Story.story(
+      story(
         update,
-        Story.with(home),
-        Story.message(
-          GotCounterMessage({ message: Counter.ClickedIncrement() }),
-        ),
-        Story.message(
-          ChangedUrl({ url: urlOrThrow('http://localhost/posts') }),
-        ),
-        Story.message(
+        given(home),
+        message(GotCounterMessage({ message: Counter.ClickedIncrement() })),
+        message(ChangedUrl({ url: urlOrThrow('http://localhost/posts') })),
+        message(
           ChangedUrl({
             url: urlOrThrow('http://localhost/posts/making-this-blog'),
           }),
         ),
-        Story.model(model => {
+        model(model => {
           expect(model.counter.count).toBe(1)
         }),
       )

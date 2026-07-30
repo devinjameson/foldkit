@@ -67,7 +67,7 @@ describe('Popover', () => {
     it('renders button with aria-expanded false when closed', () => {
       Scene.scene(
         { update, view: sceneView() },
-        Scene.with(closedModel),
+        Scene.given(closedModel),
         Scene.expect(button).toHaveAttr('aria-expanded', 'false'),
         Scene.expect(button).toHaveAttr('aria-controls', 'test-panel'),
       )
@@ -76,7 +76,7 @@ describe('Popover', () => {
     it('renders button with aria-expanded true when open', () => {
       Scene.scene(
         { update, view: sceneView() },
-        Scene.with(openModel),
+        Scene.given(openModel),
         Scene.expect(button).toHaveAttr('aria-expanded', 'true'),
         acknowledgeAnchor,
         acknowledgeBackdrop,
@@ -86,7 +86,7 @@ describe('Popover', () => {
     it('renders panel when open', () => {
       Scene.scene(
         { update, view: sceneView() },
-        Scene.with(openModel),
+        Scene.given(openModel),
         Scene.expect(panel).toExist(),
         Scene.expect(panel).toHaveAttr('tabIndex', '0'),
         acknowledgeAnchor,
@@ -97,7 +97,7 @@ describe('Popover', () => {
     it('does not render panel when closed', () => {
       Scene.scene(
         { update, view: sceneView() },
-        Scene.with(closedModel),
+        Scene.given(closedModel),
         Scene.expect(panel).toBeAbsent(),
       )
     })
@@ -105,7 +105,7 @@ describe('Popover', () => {
     it('renders backdrop when open', () => {
       Scene.scene(
         { update, view: sceneView() },
-        Scene.with(openModel),
+        Scene.given(openModel),
         Scene.expect(backdrop).toExist(),
         acknowledgeAnchor,
         acknowledgeBackdrop,
@@ -115,7 +115,7 @@ describe('Popover', () => {
     it('does not have aria-haspopup on the button', () => {
       Scene.scene(
         { update, view: sceneView() },
-        Scene.with(closedModel),
+        Scene.given(closedModel),
         Scene.expect(button).toExist(),
         Scene.expect(button).not.toHaveAttr('aria-haspopup'),
       )
@@ -124,7 +124,7 @@ describe('Popover', () => {
     it('does not have role on the panel', () => {
       Scene.scene(
         { update, view: sceneView() },
-        Scene.with(openModel),
+        Scene.given(openModel),
         Scene.expect(panel).toExist(),
         Scene.expect(panel).not.toHaveAttr('role'),
         acknowledgeAnchor,
@@ -135,7 +135,7 @@ describe('Popover', () => {
     it('adds anchor positioning styles and hooks', () => {
       Scene.scene(
         { update, view: sceneView() },
-        Scene.with(openModel),
+        Scene.given(openModel),
         Scene.expect(panel).toHaveStyle('position', 'absolute'),
         Scene.expect(panel).toHaveStyle('margin', '0'),
         Scene.expect(panel).toHaveStyle('visibility', 'hidden'),
@@ -150,7 +150,7 @@ describe('Popover', () => {
       it('renders panel without tabindex when contentFocus is enabled', () => {
         Scene.scene(
           { update, view: sceneView() },
-          Scene.with(openContentFocusModel),
+          Scene.given(openContentFocusModel),
           Scene.expect(panel).toExist(),
           Scene.expect(panel).not.toHaveAttr('tabIndex'),
           acknowledgeAnchor,
@@ -161,7 +161,7 @@ describe('Popover', () => {
       it('renders panel without blur handler when contentFocus is enabled', () => {
         Scene.scene(
           { update, view: sceneView() },
-          Scene.with(openContentFocusModel),
+          Scene.given(openContentFocusModel),
           Scene.expect(panel).not.toHaveHandler('blur'),
           acknowledgeAnchor,
           acknowledgeBackdrop,
@@ -171,7 +171,7 @@ describe('Popover', () => {
       it('keeps the panel keydown handler when contentFocus is enabled', () => {
         Scene.scene(
           { update, view: sceneView() },
-          Scene.with(openContentFocusModel),
+          Scene.given(openContentFocusModel),
           Scene.expect(panel).toHaveHandler('keydown'),
           acknowledgeAnchor,
           acknowledgeBackdrop,
@@ -183,7 +183,7 @@ describe('Popover', () => {
       it('no aria-label or aria-labelledby on the button by default', () => {
         Scene.scene(
           { update, view: sceneView() },
-          Scene.with(closedModel),
+          Scene.given(closedModel),
           Scene.expect(button).not.toHaveAttr('aria-label'),
           Scene.expect(button).not.toHaveAttr('aria-labelledby'),
         )
@@ -192,7 +192,7 @@ describe('Popover', () => {
       it('applies aria-label to the button when ariaLabel is provided', () => {
         Scene.scene(
           { update, view: sceneView({ ariaLabel: 'Options' }) },
-          Scene.with(closedModel),
+          Scene.given(closedModel),
           Scene.expect(button).toHaveAttr('aria-label', 'Options'),
           Scene.expect(button).not.toHaveAttr('aria-labelledby'),
         )
@@ -201,7 +201,7 @@ describe('Popover', () => {
       it('applies aria-labelledby to the button when ariaLabelledBy is provided', () => {
         Scene.scene(
           { update, view: sceneView({ ariaLabelledBy: 'options-label' }) },
-          Scene.with(closedModel),
+          Scene.given(closedModel),
           Scene.expect(button).toHaveAttr('aria-labelledby', 'options-label'),
           Scene.expect(button).not.toHaveAttr('aria-label'),
         )
@@ -216,7 +216,7 @@ describe('Popover', () => {
               ariaLabelledBy: 'options-label',
             }),
           },
-          Scene.with(closedModel),
+          Scene.given(closedModel),
           Scene.expect(button).toHaveAttr('aria-label', 'Options'),
           Scene.expect(button).not.toHaveAttr('aria-labelledby'),
         )

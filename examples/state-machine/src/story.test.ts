@@ -1,6 +1,6 @@
 import { Array, Effect, Fiber, Option, Ref, pipe } from 'effect'
 import { TestClock } from 'effect/testing'
-import { Story } from 'foldkit'
+import { Command, given, message, model, story } from 'foldkit/story'
 import { describe, expect, test } from 'vitest'
 
 import {
@@ -54,19 +54,19 @@ describe('update', () => {
     ))
 
   test('physical carts visit Shipping before Payment', () => {
-    Story.story(
+    story(
       update,
-      Story.with(initialModel),
-      Story.message(ClickedContinue()),
-      Story.Command.expectNone(),
-      Story.model(model => {
+      given(initialModel),
+      message(ClickedContinue()),
+      Command.expectNone(),
+      model(model => {
         expect(model.checkout._tag).toBe('Shipping')
         expect(maybeLatestTransitionSummary(model)).toEqual(
           Option.some('Cart -> Shipping on ClickedContinue'),
         )
       }),
-      Story.message(ClickedContinue()),
-      Story.model(model => {
+      message(ClickedContinue()),
+      model(model => {
         expect(model.checkout._tag).toBe('Payment')
         expect(Array.map(model.transitionLog, entry => entry.summary)).toEqual([
           'Shipping -> Payment on ClickedContinue',
@@ -77,32 +77,32 @@ describe('update', () => {
   })
 
   test('digital carts skip Shipping through the otherwise branch', () => {
-    Story.story(
+    story(
       update,
-      Story.with(initialModel),
-      Story.message(SelectedEdition({ isShippingRequired: false })),
-      Story.message(ClickedContinue()),
-      Story.model(model => {
+      given(initialModel),
+      message(SelectedEdition({ isShippingRequired: false })),
+      message(ClickedContinue()),
+      model(model => {
         expect(model.checkout._tag).toBe('Payment')
       }),
-      Story.message(ClickedBack()),
-      Story.model(model => {
+      message(ClickedBack()),
+      model(model => {
         expect(model.checkout._tag).toBe('Cart')
       }),
     )
   })
 
   test('starting over after cancelling keeps the selected edition', () => {
-    Story.story(
+    story(
       update,
-      Story.with(initialModel),
-      Story.message(SelectedEdition({ isShippingRequired: false })),
-      Story.message(ClickedCancel()),
-      Story.model(model => {
+      given(initialModel),
+      message(SelectedEdition({ isShippingRequired: false })),
+      message(ClickedCancel()),
+      model(model => {
         expect(model.checkout._tag).toBe('Cancelled')
       }),
-      Story.message(ClickedStartOver()),
-      Story.model(model => {
+      message(ClickedStartOver()),
+      model(model => {
         expect(model.checkout).toStrictEqual(
           Cart({ isShippingRequired: false }),
         )
@@ -111,16 +111,16 @@ describe('update', () => {
   })
 
   test('a known promo code resolves to a discount and an unknown one clears it', () => {
-    Story.story(
+    story(
       update,
-      Story.with(initialModel),
-      Story.message(SelectedEdition({ isShippingRequired: false })),
-      Story.message(ClickedContinue()),
-      Story.message(ToggledPaymentMethod({ isSelected: true })),
-      Story.message(ClickedContinue()),
-      Story.message(UpdatedPromoCode({ value: ' reader10 ' })),
-      Story.message(SubmittedPromoCode()),
-      Story.model(model => {
+      given(initialModel),
+      message(SelectedEdition({ isShippingRequired: false })),
+      message(ClickedContinue()),
+      message(ToggledPaymentMethod({ isSelected: true })),
+      message(ClickedContinue()),
+      message(UpdatedPromoCode({ value: ' reader10 ' })),
+      message(SubmittedPromoCode()),
+      model(model => {
         expect(model.checkout._tag).toBe('Review')
         if (model.checkout._tag === 'Review') {
           expect(model.checkout.promo).toEqual(
@@ -128,9 +128,9 @@ describe('update', () => {
           )
         }
       }),
-      Story.message(UpdatedPromoCode({ value: 'BOGUS' })),
-      Story.message(SubmittedPromoCode()),
-      Story.model(model => {
+      message(UpdatedPromoCode({ value: 'BOGUS' })),
+      message(SubmittedPromoCode()),
+      model(model => {
         expect(model.checkout._tag).toBe('Review')
         if (model.checkout._tag === 'Review') {
           expect(model.checkout.promo).toEqual(RejectedPromo())
@@ -143,16 +143,16 @@ describe('update', () => {
   })
 
   test('unaccepted review ignores place order without a Command', () => {
-    Story.story(
+    story(
       update,
-      Story.with(initialModel),
-      Story.message(SelectedEdition({ isShippingRequired: false })),
-      Story.message(ClickedContinue()),
-      Story.message(ToggledPaymentMethod({ isSelected: true })),
-      Story.message(ClickedContinue()),
-      Story.message(ClickedPlaceOrder()),
-      Story.Command.expectNone(),
-      Story.model(model => {
+      given(initialModel),
+      message(SelectedEdition({ isShippingRequired: false })),
+      message(ClickedContinue()),
+      message(ToggledPaymentMethod({ isSelected: true })),
+      message(ClickedContinue()),
+      message(ClickedPlaceOrder()),
+      Command.expectNone(),
+      model(model => {
         expect(model.checkout._tag).toBe('Review')
         expect(maybeLatestTransitionSummary(model)).toEqual(
           Option.some('ClickedPlaceOrder ignored in Review'),
@@ -162,21 +162,21 @@ describe('update', () => {
   })
 
   test('ready review emits PlaceOrder after its guard passes', () => {
-    Story.story(
+    story(
       update,
-      Story.with(initialModel),
-      Story.message(SelectedEdition({ isShippingRequired: false })),
-      Story.message(ClickedContinue()),
-      Story.message(ToggledPaymentMethod({ isSelected: true })),
-      Story.message(ClickedContinue()),
-      Story.message(ToggledTermsAccepted({ isAccepted: true })),
-      Story.message(ClickedPlaceOrder()),
-      Story.Command.expectExact(PlaceOrder({ isShippingRequired: false })),
-      Story.Command.resolve(
+      given(initialModel),
+      message(SelectedEdition({ isShippingRequired: false })),
+      message(ClickedContinue()),
+      message(ToggledPaymentMethod({ isSelected: true })),
+      message(ClickedContinue()),
+      message(ToggledTermsAccepted({ isAccepted: true })),
+      message(ClickedPlaceOrder()),
+      Command.expectExact(PlaceOrder({ isShippingRequired: false })),
+      Command.resolve(
         PlaceOrder,
         SucceededPlaceOrder({ orderId: 'DIGI-1001' }),
       ),
-      Story.model(model => {
+      model(model => {
         expect(model.checkout._tag).toBe('Confirmed')
         if (model.checkout._tag === 'Confirmed') {
           expect(model.checkout.orderId).toBe('DIGI-1001')

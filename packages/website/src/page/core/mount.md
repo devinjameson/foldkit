@@ -61,7 +61,7 @@ Mount factories often need a value that varies per instance: an element id to an
 Args carry per-instance inputs only. Everything else the factory needs comes from outside args: module-level constants via lexical scope, app-wide services via Foldkit `Resources`, Model-driven handles via `ManagedResources`, and any Effect service via `yield*` inside the factory body.
 
 :::Info{label="Args surface in DevTools and tests"}
-Mount args appear in DevTools alongside the Mount name, and Scene tests can match a specific instance by passing the same args record to `Scene.Mount.expectHas` or `Scene.Mount.resolve`. See [Scene](/testing/scene) for the Definition-vs-Instance matcher contract.
+Mount args appear in DevTools alongside the Mount name, and Scene tests can match a specific instance by passing the same args record to `Mount.expectHas` or `Mount.resolve`. See [Scene](/testing/scene) for the Definition-vs-Instance matcher contract.
 :::
 
 :::Warning{label="Args are captured at mount, not refreshed on subsequent renders"}

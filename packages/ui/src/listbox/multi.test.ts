@@ -38,10 +38,10 @@ const acknowledgeBackdrop = Scene.Mount.resolve(
   CompletedPortalListboxBackdrop(),
 )
 
-const withClosed = Story.with(init({ id: 'test' }))
+const givenClosed = Story.given(init({ id: 'test' }))
 
-const withOpenMulti = flow(
-  withClosed,
+const givenOpenMulti = flow(
+  givenClosed,
   Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
   Story.Command.resolve(FocusItems, CompletedFocusItems()),
 )
@@ -71,7 +71,7 @@ describe('Listbox.Multi', () => {
       it('emits Selected with the item value', () => {
         Story.story(
           update,
-          withOpenMulti,
+          givenOpenMulti,
           Story.message(SelectedItem({ item: 'apple' })),
           Story.expectOutMessage(Selected({ value: 'apple' })),
         )
@@ -80,7 +80,7 @@ describe('Listbox.Multi', () => {
       it('stays open after selection', () => {
         Story.story(
           update,
-          withOpenMulti,
+          givenOpenMulti,
           Story.message(SelectedItem({ item: 'apple' })),
           Story.model(model => {
             expect(model.isOpen).toBe(true)
@@ -91,7 +91,7 @@ describe('Listbox.Multi', () => {
       it('emits Selected again when the same item is activated (parent toggles off)', () => {
         Story.story(
           update,
-          withOpenMulti,
+          givenOpenMulti,
           Story.message(SelectedItem({ item: 'apple' })),
           Story.expectOutMessage(Selected({ value: 'apple' })),
           Story.message(SelectedItem({ item: 'apple' })),
@@ -102,7 +102,7 @@ describe('Listbox.Multi', () => {
       it('emits Selected for each activated item', () => {
         Story.story(
           update,
-          withOpenMulti,
+          givenOpenMulti,
           Story.message(SelectedItem({ item: 'apple' })),
           Story.expectOutMessage(Selected({ value: 'apple' })),
           Story.message(SelectedItem({ item: 'banana' })),
@@ -113,7 +113,7 @@ describe('Listbox.Multi', () => {
       it('preserves active item after selection', () => {
         Story.story(
           update,
-          withOpenMulti,
+          givenOpenMulti,
           Story.message(
             ActivatedItem({ index: 2, activationTrigger: 'Keyboard' }),
           ),
@@ -134,7 +134,7 @@ describe('Listbox.Multi', () => {
       let model!: Model
       Story.story(
         update,
-        withOpenMulti,
+        givenOpenMulti,
         Story.model(extractedModel => {
           model = extractedModel
         }),
@@ -168,7 +168,7 @@ describe('Listbox.Multi', () => {
       it('items container has aria-multiselectable', () => {
         Scene.scene(
           { update, view: sceneView() },
-          Scene.with(openMultiModel()),
+          Scene.given(openMultiModel()),
           Scene.tap(({ html }) => {
             expect(Scene.find(html, '[key="test-items-container"]')).toHaveAttr(
               'aria-multiselectable',
@@ -185,7 +185,7 @@ describe('Listbox.Multi', () => {
       it('no aria-label or aria-labelledby on the trigger by default', () => {
         Scene.scene(
           { update, view: sceneView() },
-          Scene.with(closedModel()),
+          Scene.given(closedModel()),
           Scene.tap(({ html }) => {
             const button = Scene.find(html, '[key="test-button"]')
             expect(button).not.toHaveAttr('aria-label')
@@ -197,7 +197,7 @@ describe('Listbox.Multi', () => {
       it('applies aria-label to the trigger when ariaLabel is provided', () => {
         Scene.scene(
           { update, view: sceneView({ ariaLabel: 'Fruit' }) },
-          Scene.with(closedModel()),
+          Scene.given(closedModel()),
           Scene.tap(({ html }) => {
             const button = Scene.find(html, '[key="test-button"]')
             expect(button).toHaveAttr('aria-label', 'Fruit')
@@ -209,7 +209,7 @@ describe('Listbox.Multi', () => {
       it('applies aria-labelledby to the trigger when ariaLabelledBy is provided', () => {
         Scene.scene(
           { update, view: sceneView({ ariaLabelledBy: 'fruit-label' }) },
-          Scene.with(closedModel()),
+          Scene.given(closedModel()),
           Scene.tap(({ html }) => {
             const button = Scene.find(html, '[key="test-button"]')
             expect(button).toHaveAttr('aria-labelledby', 'fruit-label')
@@ -227,7 +227,7 @@ describe('Listbox.Multi', () => {
               ariaLabelledBy: 'fruit-label',
             }),
           },
-          Scene.with(closedModel()),
+          Scene.given(closedModel()),
           Scene.tap(({ html }) => {
             const button = Scene.find(html, '[key="test-button"]')
             expect(button).toHaveAttr('aria-label', 'Fruit')
@@ -248,7 +248,7 @@ describe('Listbox.Multi', () => {
             update,
             view: sceneView({ selectedValues: ['Apple', 'Banana'] }),
           },
-          Scene.with(openMultiModel()),
+          Scene.given(openMultiModel()),
           Scene.tap(({ html }) => {
             expect(Scene.find(html, '[key="test-item-0"]')).toHaveAttr(
               'data-selected',
@@ -275,7 +275,7 @@ describe('Listbox.Multi', () => {
               selectedValues: ['Apple', 'Banana'],
             }),
           },
-          Scene.with(closedModel()),
+          Scene.given(closedModel()),
           Scene.tap(({ html }) => {
             const inputs = Scene.findAll(html, 'input[type="hidden"]')
             expect(inputs).toHaveLength(2)
@@ -288,7 +288,7 @@ describe('Listbox.Multi', () => {
       it('renders empty hidden input when no items selected', () => {
         Scene.scene(
           { update, view: sceneView({ name: 'fruit' }) },
-          Scene.with(closedModel()),
+          Scene.given(closedModel()),
           Scene.tap(({ html }) => {
             const inputs = Scene.findAll(html, 'input[type="hidden"]')
             expect(inputs).toHaveLength(1)

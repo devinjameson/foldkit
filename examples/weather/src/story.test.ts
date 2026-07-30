@@ -1,6 +1,6 @@
 import { Effect, Layer, Match as M, String } from 'effect'
 import { HttpClient, HttpClientResponse } from 'effect/unstable/http'
-import { Story } from 'foldkit'
+import { Command, given, message, model, story } from 'foldkit/story'
 import { expect, test } from 'vitest'
 
 import {
@@ -19,18 +19,18 @@ import {
 } from './main.fixtures'
 
 test('submitting the weather form fetches weather and shows result', () => {
-  Story.story(
+  story(
     update,
-    Story.with(weatherModel),
-    Story.message(SubmittedWeatherForm()),
-    Story.model(model => {
+    given(weatherModel),
+    message(SubmittedWeatherForm()),
+    model(model => {
       expect(model.weather._tag).toBe('Loading')
     }),
-    Story.Command.resolve(
+    Command.resolve(
       FetchWeather,
       SucceededFetchWeather({ weather: weatherData }),
     ),
-    Story.model(model => {
+    model(model => {
       expect(model.weather._tag).toBe('Success')
       if (model.weather._tag === 'Success') {
         expect(model.weather.data.temperature).toBe(72)
@@ -41,15 +41,15 @@ test('submitting the weather form fetches weather and shows result', () => {
 })
 
 test('failed fetch shows failure state', () => {
-  Story.story(
+  story(
     update,
-    Story.with(weatherModel),
-    Story.message(SubmittedWeatherForm()),
-    Story.Command.resolve(
+    given(weatherModel),
+    message(SubmittedWeatherForm()),
+    Command.resolve(
       FetchWeather,
       FailedFetchWeather({ error: 'Network error' }),
     ),
-    Story.model(model => {
+    model(model => {
       expect(model.weather._tag).toBe('Failure')
       if (model.weather._tag === 'Failure') {
         expect(model.weather.error).toBe('Network error')
@@ -77,17 +77,17 @@ test('fetchWeather returns SucceededFetchWeather with data on success', async ()
 
   const HttpClientTest = Layer.succeed(HttpClient.HttpClient, mockClient)
 
-  const message = await fetchWeatherEffect('90210').pipe(
+  const resultMessage = await fetchWeatherEffect('90210').pipe(
     Effect.provide(HttpClientTest),
     Effect.runPromise,
   )
 
-  expect(message._tag).toBe('SucceededFetchWeather')
-  if (message._tag === 'SucceededFetchWeather') {
-    expect(message.weather.temperature).toBe(72)
-    expect(message.weather.locationName).toBe('Beverly Hills')
-    expect(message.weather.description).toBe('Clear sky')
-    expect(message.weather.windSpeed).toBe(10)
+  expect(resultMessage._tag).toBe('SucceededFetchWeather')
+  if (resultMessage._tag === 'SucceededFetchWeather') {
+    expect(resultMessage.weather.temperature).toBe(72)
+    expect(resultMessage.weather.locationName).toBe('Beverly Hills')
+    expect(resultMessage.weather.description).toBe('Clear sky')
+    expect(resultMessage.weather.windSpeed).toBe(10)
   }
 })
 
@@ -100,12 +100,12 @@ test('fetchWeather returns FailedFetchWeather on HTTP failure', async () => {
 
   const HttpClientTest = Layer.succeed(HttpClient.HttpClient, mockClient)
 
-  const message = await fetchWeatherEffect('invalid').pipe(
+  const resultMessage = await fetchWeatherEffect('invalid').pipe(
     Effect.provide(HttpClientTest),
     Effect.runPromise,
   )
 
-  expect(message._tag).toBe('FailedFetchWeather')
+  expect(resultMessage._tag).toBe('FailedFetchWeather')
 })
 
 test('fetchWeather returns FailedFetchWeather when no results found', async () => {
@@ -120,13 +120,13 @@ test('fetchWeather returns FailedFetchWeather when no results found', async () =
 
   const HttpClientTest = Layer.succeed(HttpClient.HttpClient, mockClient)
 
-  const message = await fetchWeatherEffect('00000').pipe(
+  const resultMessage = await fetchWeatherEffect('00000').pipe(
     Effect.provide(HttpClientTest),
     Effect.runPromise,
   )
 
-  expect(message._tag).toBe('FailedFetchWeather')
-  if (message._tag === 'FailedFetchWeather') {
-    expect(message.error).toBe('Location not found')
+  expect(resultMessage._tag).toBe('FailedFetchWeather')
+  if (resultMessage._tag === 'FailedFetchWeather') {
+    expect(resultMessage.error).toBe('Location not found')
   }
 })

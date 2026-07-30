@@ -89,7 +89,7 @@ describe('DragAndDrop', () => {
     it('transitions from Idle to Pending on PressedDraggable', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(pressedDraggable),
         Story.model(model => {
           expect(model.dragState._tag).toBe('Pending')
@@ -109,7 +109,7 @@ describe('DragAndDrop', () => {
     it('stays Pending when pointer moves below activation threshold', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(pressedDraggable),
         Story.message(movedPointerBelowThreshold),
         Story.model(model => {
@@ -121,7 +121,7 @@ describe('DragAndDrop', () => {
     it('transitions from Pending to Dragging when pointer exceeds threshold', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(pressedDraggable),
         Story.message(movedPointerAboveThreshold),
         Story.model(model => {
@@ -147,7 +147,7 @@ describe('DragAndDrop', () => {
     it('transitions from Pending to Idle on ReleasedPointer (click)', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(pressedDraggable),
         Story.message(ReleasedPointer()),
         Story.model(model => {
@@ -160,7 +160,7 @@ describe('DragAndDrop', () => {
       const dropTarget = Option.some({ containerId: 'list-1', index: 2 })
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(pressedDraggable),
         Story.message(movedPointerAboveThreshold),
         Story.message(
@@ -188,7 +188,7 @@ describe('DragAndDrop', () => {
     it('transitions from Dragging to Idle on ReleasedPointer (drop)', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(pressedDraggable),
         Story.message(movedPointerAboveThreshold),
         Story.message(ReleasedPointer()),
@@ -201,7 +201,7 @@ describe('DragAndDrop', () => {
     it('transitions from Dragging to Idle on CancelledDrag', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(pressedDraggable),
         Story.message(movedPointerAboveThreshold),
         Story.message(CancelledDrag()),
@@ -215,7 +215,7 @@ describe('DragAndDrop', () => {
       const originalModel = defaultInit()
       Story.story(
         update,
-        Story.with(originalModel),
+        Story.given(originalModel),
         Story.message(movedPointerAboveThreshold),
         Story.model(model => {
           expect(model).toBe(originalModel)
@@ -227,7 +227,7 @@ describe('DragAndDrop', () => {
       const originalModel = defaultInit()
       Story.story(
         update,
-        Story.with(originalModel),
+        Story.given(originalModel),
         Story.message(ReleasedPointer()),
         Story.model(model => {
           expect(model).toBe(originalModel)
@@ -238,7 +238,7 @@ describe('DragAndDrop', () => {
     it('returns to Idle when CancelledDrag received while Pending', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(pressedDraggable),
         Story.message(CancelledDrag()),
         Story.model(model => {
@@ -253,7 +253,7 @@ describe('DragAndDrop', () => {
       const dropTarget = Option.some({ containerId: 'list-1', index: 2 })
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(pressedDraggable),
         Story.message(movedPointerAboveThreshold),
         Story.message(movedPointer({ maybeDropTarget: dropTarget })),
@@ -273,7 +273,7 @@ describe('DragAndDrop', () => {
     it('emits Cancelled when dropping without a drop target', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(pressedDraggable),
         Story.message(movedPointerAboveThreshold),
         Story.message(ReleasedPointer()),
@@ -284,7 +284,7 @@ describe('DragAndDrop', () => {
     it('emits Cancelled when CancelledDrag while Dragging', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(pressedDraggable),
         Story.message(movedPointerAboveThreshold),
         Story.message(CancelledDrag()),
@@ -295,7 +295,7 @@ describe('DragAndDrop', () => {
     it('emits no OutMessage when CancelledDrag while Pending', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(pressedDraggable),
         Story.message(CancelledDrag()),
         Story.expectNoOutMessage(),
@@ -305,7 +305,7 @@ describe('DragAndDrop', () => {
     it('emits no OutMessage on PressedDraggable', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(pressedDraggable),
         Story.expectNoOutMessage(),
       )
@@ -314,7 +314,7 @@ describe('DragAndDrop', () => {
     it('emits no OutMessage on MovedPointer', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(pressedDraggable),
         Story.message(movedPointerAboveThreshold),
         Story.expectNoOutMessage(),
@@ -326,7 +326,7 @@ describe('DragAndDrop', () => {
     it('returns None when Idle', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.model(model => {
           expect(ghostStyle(model)).toStrictEqual(Option.none())
         }),
@@ -336,7 +336,7 @@ describe('DragAndDrop', () => {
     it('returns None when Pending', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(pressedDraggable),
         Story.model(model => {
           expect(ghostStyle(model)).toStrictEqual(Option.none())
@@ -347,7 +347,7 @@ describe('DragAndDrop', () => {
     it('returns Some with client-coordinate positioning when Dragging', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(pressedDraggable),
         Story.message(movedPointerAboveThreshold),
         Story.model(model => {
@@ -369,7 +369,7 @@ describe('DragAndDrop', () => {
     it('returns false when Idle', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.model(model => {
           expect(isDragging(model)).toBe(false)
         }),
@@ -379,7 +379,7 @@ describe('DragAndDrop', () => {
     it('returns false when Pending', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(pressedDraggable),
         Story.model(model => {
           expect(isDragging(model)).toBe(false)
@@ -390,7 +390,7 @@ describe('DragAndDrop', () => {
     it('returns true when Dragging', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(pressedDraggable),
         Story.message(movedPointerAboveThreshold),
         Story.model(model => {
@@ -404,7 +404,7 @@ describe('DragAndDrop', () => {
     it('returns None when Idle', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.model(model => {
           expect(maybeDraggedItemId(model)).toStrictEqual(Option.none())
         }),
@@ -414,7 +414,7 @@ describe('DragAndDrop', () => {
     it('returns Some with itemId when Pending', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(pressedDraggable),
         Story.model(model => {
           expect(maybeDraggedItemId(model)).toStrictEqual(Option.some('item-1'))
@@ -425,7 +425,7 @@ describe('DragAndDrop', () => {
     it('returns Some with itemId when Dragging', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(pressedDraggable),
         Story.message(movedPointerAboveThreshold),
         Story.model(model => {
@@ -439,7 +439,7 @@ describe('DragAndDrop', () => {
     it('returns None when Idle', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.model(model => {
           expect(maybeDropTarget(model)).toStrictEqual(Option.none())
         }),
@@ -449,7 +449,7 @@ describe('DragAndDrop', () => {
     it('returns None when Pending', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(pressedDraggable),
         Story.model(model => {
           expect(maybeDropTarget(model)).toStrictEqual(Option.none())
@@ -460,7 +460,7 @@ describe('DragAndDrop', () => {
     it('returns None when Dragging without a drop target', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(pressedDraggable),
         Story.message(movedPointerAboveThreshold),
         Story.model(model => {
@@ -473,7 +473,7 @@ describe('DragAndDrop', () => {
       const target = Option.some({ containerId: 'list-1', index: 2 })
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(pressedDraggable),
         Story.message(movedPointerAboveThreshold),
         Story.message(movedPointer({ maybeDropTarget: target })),
@@ -486,7 +486,7 @@ describe('DragAndDrop', () => {
     it('returns Some when KeyboardDragging', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(activatedKeyboardDrag),
         Story.model(model => {
           expect(maybeDropTarget(model)).toStrictEqual(
@@ -501,7 +501,7 @@ describe('DragAndDrop', () => {
     it('transitions from Idle to KeyboardDragging on ActivatedKeyboardDrag', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(activatedKeyboardDrag),
         Story.model(model => {
           expect(model.dragState._tag).toBe('KeyboardDragging')
@@ -519,7 +519,7 @@ describe('DragAndDrop', () => {
     it('creates ResolveKeyboardMove command on PressedArrowKey and resolves target', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(activatedKeyboardDrag),
         Story.message(PressedArrowKey({ direction: 'Down' })),
         Story.Command.resolve(
@@ -538,7 +538,7 @@ describe('DragAndDrop', () => {
     it('updates target on ResolvedKeyboardMove', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(activatedKeyboardDrag),
         Story.message(
           ResolvedKeyboardMove({
@@ -559,7 +559,7 @@ describe('DragAndDrop', () => {
     it('emits Reordered on ConfirmedKeyboardDrop', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(activatedKeyboardDrag),
         Story.message(
           ResolvedKeyboardMove({
@@ -587,7 +587,7 @@ describe('DragAndDrop', () => {
     it('emits Cancelled on CancelledDrag while KeyboardDragging', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(activatedKeyboardDrag),
         Story.message(CancelledDrag()),
         Story.model(model => {
@@ -601,7 +601,7 @@ describe('DragAndDrop', () => {
     it('isDragging returns true when KeyboardDragging', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(activatedKeyboardDrag),
         Story.model(model => {
           expect(isDragging(model)).toBe(true)
@@ -612,7 +612,7 @@ describe('DragAndDrop', () => {
     it('maybeDraggedItemId returns Some when KeyboardDragging', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(activatedKeyboardDrag),
         Story.model(model => {
           expect(maybeDraggedItemId(model)).toStrictEqual(Option.some('item-1'))
@@ -623,7 +623,7 @@ describe('DragAndDrop', () => {
     it('ghostStyle returns None when KeyboardDragging', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(activatedKeyboardDrag),
         Story.model(model => {
           expect(ghostStyle(model)).toStrictEqual(Option.none())

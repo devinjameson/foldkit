@@ -1,5 +1,6 @@
 import { Array } from 'effect'
-import { Command, Scene } from 'foldkit'
+import { Interruptible } from 'foldkit/command'
+import { Command, click, expect, given, role, scene, text } from 'foldkit/scene'
 import { describe, test } from 'vitest'
 
 import {
@@ -17,75 +18,73 @@ const firstFile = Array.headNonEmpty(FAKE_FILES)
 
 describe('view', () => {
   test('initial view shows the start button and an empty state', () => {
-    Scene.scene(
+    scene(
       { update, view },
-      Scene.with(initialModel),
-      Scene.expect(Scene.role('heading', { name: 'File Uploads' })).toExist(),
-      Scene.expect(Scene.role('button', { name: 'Upload a file' })).toExist(),
-      Scene.expect(Scene.text('Nothing here yet. Start an upload.')).toExist(),
+      given(initialModel),
+      expect(role('heading', { name: 'File Uploads' })).toExist(),
+      expect(role('button', { name: 'Upload a file' })).toExist(),
+      expect(text('Nothing here yet. Start an upload.')).toExist(),
     )
   })
 
   test('starting an upload shows an Uploading row with a cancel button', () => {
-    Scene.scene(
+    scene(
       { update, view },
-      Scene.with(initialModel),
-      Scene.click(Scene.role('button', { name: 'Upload a file' })),
-      Scene.expect(Scene.text(firstFile.name)).toExist(),
-      Scene.expect(Scene.text('Uploading')).toExist(),
-      Scene.expect(Scene.role('button', { name: 'Cancel upload 0' })).toExist(),
-      Scene.Command.resolve(
+      given(initialModel),
+      click(role('button', { name: 'Upload a file' })),
+      expect(text(firstFile.name)).toExist(),
+      expect(text('Uploading')).toExist(),
+      expect(role('button', { name: 'Cancel upload 0' })).toExist(),
+      Command.resolve(
         UploadFile({ uploadId: 0, sizeMegabytes: firstFile.sizeMegabytes }),
         SucceededUploadFile({ uploadId: 0 }),
       ),
-      Scene.expect(Scene.text('Done')).toExist(),
+      expect(text('Done')).toExist(),
     )
   })
 
   test('cancelling an upload marks it Cancelled and offers a restart', () => {
-    Scene.scene(
+    scene(
       { update, view },
-      Scene.with(initialModel),
-      Scene.click(Scene.role('button', { name: 'Upload a file' })),
-      Scene.click(Scene.role('button', { name: 'Cancel upload 0' })),
-      Scene.Command.resolve(
+      given(initialModel),
+      click(role('button', { name: 'Upload a file' })),
+      click(role('button', { name: 'Cancel upload 0' })),
+      Command.resolve(
         CancelUploadFile({ uploadId: 0 }),
         CompletedCancelUploadFile({
           uploadId: 0,
-          outcome: Command.Interruptible.Interrupted(),
+          outcome: Interruptible.Interrupted(),
         }),
       ),
-      Scene.expect(Scene.text('Cancelled')).toExist(),
-      Scene.expect(
-        Scene.role('button', { name: 'Restart upload 0' }),
-      ).toExist(),
-      Scene.click(Scene.role('button', { name: 'Restart upload 0' })),
-      Scene.expect(Scene.text('Uploading')).toExist(),
-      Scene.Command.resolve(
+      expect(text('Cancelled')).toExist(),
+      expect(role('button', { name: 'Restart upload 0' })).toExist(),
+      click(role('button', { name: 'Restart upload 0' })),
+      expect(text('Uploading')).toExist(),
+      Command.resolve(
         UploadFile({ uploadId: 0, sizeMegabytes: firstFile.sizeMegabytes }),
         SucceededUploadFile({ uploadId: 0 }),
       ),
-      Scene.expect(Scene.text('Done')).toExist(),
+      expect(text('Done')).toExist(),
     )
   })
 
   test('the cancel all button appears only while an upload is running', () => {
-    Scene.scene(
+    scene(
       { update, view },
-      Scene.with(initialModel),
-      Scene.expect(Scene.role('button', { name: 'Cancel all' })).toBeAbsent(),
-      Scene.click(Scene.role('button', { name: 'Upload a file' })),
-      Scene.expect(Scene.role('button', { name: 'Cancel all' })).toExist(),
-      Scene.click(Scene.role('button', { name: 'Cancel all' })),
-      Scene.Command.resolve(
+      given(initialModel),
+      expect(role('button', { name: 'Cancel all' })).toBeAbsent(),
+      click(role('button', { name: 'Upload a file' })),
+      expect(role('button', { name: 'Cancel all' })).toExist(),
+      click(role('button', { name: 'Cancel all' })),
+      Command.resolve(
         CancelUploadFile({ uploadId: 0 }),
         CompletedCancelUploadFile({
           uploadId: 0,
-          outcome: Command.Interruptible.Interrupted(),
+          outcome: Interruptible.Interrupted(),
         }),
       ),
-      Scene.expect(Scene.role('button', { name: 'Cancel all' })).toBeAbsent(),
-      Scene.expect(Scene.text('Cancelled')).toExist(),
+      expect(role('button', { name: 'Cancel all' })).toBeAbsent(),
+      expect(text('Cancelled')).toExist(),
     )
   })
 })

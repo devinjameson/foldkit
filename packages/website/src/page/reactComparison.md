@@ -134,11 +134,11 @@ Both projects have full test suites covering the same behaviors. The experience 
 
 React’s reducer tests dispatch actions and assert on the resulting state. That’s it. They have no way to verify which effects should fire, because effects don’t exist in the reducer’s return type. To test side effects, you need a completely different paradigm: render the full `<App />` component in jsdom, mock browser APIs, fire DOM events, and poll with `vi.waitFor()`.
 
-Foldkit’s tests tell a different story. Look at the `Story.Command.resolve` call in the snippet below: it asserts that releasing the mouse produced a `SaveCanvas` Command, provides the Message that Command will return, and advances the story. State and side effects get verified in the same synchronous pipeline, and every test that fires a Command resolves it by construction, not just the “side effect” tests. Any test that paints, undoes, or exports has Command resolution baked in. Delete a Command from the update function and every test that depended on it breaks. In React, that regression is silent.
+Foldkit’s tests tell a different story. Look at the `Command.resolve` call in the snippet below: it asserts that releasing the mouse produced a `SaveCanvas` Command, provides the Message that Command will return, and advances the story. State and side effects get verified in the same synchronous pipeline, and every test that fires a Command resolves it by construction, not just the “side effect” tests. Any test that paints, undoes, or exports has Command resolution baked in. Delete a Command from the update function and every test that depended on it breaks. In React, that regression is silent.
 
 ### Foldkit test (state + side effects in one story) {#foldkit-test}
 
-`Story.story()` feeds Messages into the update function and inspects both Model and Commands at every step.
+`story()` feeds Messages into the update function and inspects both Model and Commands at every step.
 
 ::Snippet{name="comparisonFoldkitTest" label="Foldkit test"}
 
@@ -158,14 +158,14 @@ The persistence test below spies on `localStorage.setItem`, renders the full `<A
 Foldkit’s update is a pure function. Side effects are return values, not imperative calls. That means you can test state transitions and side effects together in a unit test with zero mocking, zero DOM, and zero async. In React, testing a side effect means rendering the full component tree in jsdom, mocking browser APIs, firing synthetic events, and polling for async results.
 :::
 
-|                         | Foldkit                                                 | React                                                                      |
-| ----------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------- |
-| State testing           | Inspect Model at any point in story                     | Assert on final state after dispatch                                       |
-| Effect testing          | Resolve Commands in same pipeline                       | Separate tests with mocking + DOM                                          |
-| Test reads as           | Chronological user story                                | State threading with intermediate variables                                |
-| Catches removed effects | Yes: unresolved Command fails the story                 | No: reducer tests can’t see effects                                        |
-| Infrastructure          | `Story.story()` from `foldkit/test` (no test libraries) | `@testing-library/react`, `jsdom`, `@testing-library/jest-dom`, setup file |
-| Async                   | Never: everything is synchronous                        | Required for `useEffect` (`vi.waitFor`)                                    |
+|                         | Foldkit                                           | React                                                                      |
+| ----------------------- | ------------------------------------------------- | -------------------------------------------------------------------------- |
+| State testing           | Inspect Model at any point in story               | Assert on final state after dispatch                                       |
+| Effect testing          | Resolve Commands in same pipeline                 | Separate tests with mocking + DOM                                          |
+| Test reads as           | Chronological user story                          | State threading with intermediate variables                                |
+| Catches removed effects | Yes: unresolved Command fails the story           | No: reducer tests can’t see effects                                        |
+| Infrastructure          | `story()` from `foldkit/test` (no test libraries) | `@testing-library/react`, `jsdom`, `@testing-library/jest-dom`, setup file |
+| Async                   | Never: everything is synchronous                  | Required for `useEffect` (`vi.waitFor`)                                    |
 
 ## Interaction Testing Without a DOM {#interaction-testing}
 
@@ -173,11 +173,11 @@ Foldkit’s update is a pure function. Side effects are return values, not imper
 
 ### Foldkit Scene test (virtual DOM, synchronous) {#foldkit-scene-test}
 
-`Scene.scene()` renders the view against a virtual DOM, finds elements by accessible role and text content, dispatches click events through the same update function, and resolves Commands inline. The entire test is synchronous. There is no DOM, no `jsdom`, no `render()`, no cleanup.
+`scene()` renders the view against a virtual DOM, finds elements by accessible role and text content, dispatches click events through the same update function, and resolves Commands inline. The entire test is synchronous. There is no DOM, no `jsdom`, no `render()`, no cleanup.
 
 ::Snippet{name="comparisonFoldkitSceneTest" label="Foldkit scene test"}
 
-Scene finds the Dismiss button by `Scene.role('button', { name: 'Dismiss' })`, the same accessible name a screen reader would announce. The click dispatches `GotErrorDialogMessage` through update, which returns a `CloseDialog` Command. Resolve it, and the dialog is gone. Every step is visible, every side effect is accounted for, and the test reads as a chronological user story.
+Scene finds the Dismiss button by `role('button', { name: 'Dismiss' })`, the same accessible name a screen reader would announce. The click dispatches `GotErrorDialogMessage` through update, which returns a `CloseDialog` Command. Resolve it, and the dialog is gone. Every step is visible, every side effect is accounted for, and the test reads as a chronological user story.
 
 ### React Testing Library (jsdom, mocking, imperative) {#react-scene-test}
 
@@ -187,19 +187,19 @@ The same test in React requires jsdom, browser API mocking, and async waiting. Y
 
 The React test is shorter, but shorter is not the same as simpler. The Scene test shows every step of the causality chain as a value: the dispatched Message, the Command the update function returned, the Message that resolution produced, the next state. Each one is a verifiable assertion point. The React test is a black box with assertions at the edges: click, wait, check the DOM. If it fails with `"Export Failed" not in document`, you do not know which step broke: did the click fire, did the handler run, did state update, did React re-render, did the mock work? The Scene test tells you exactly.
 
-The React test also is not testing the real failure case. It mocks `HTMLCanvasElement.prototype.getContext` to return null and hopes the component’s error path responds the same way it would in a real browser. The Scene test says `FailedExportPng({ error: … })` directly. No fake reality, no assumption that the mock behaves like production. And because Commands are values, you can assert on what a click produces without resolving it. `Scene.Command.expectExact(ExportPng)` verifies intent in isolation from outcome. React cannot separate the two: you either mock the effect and run the whole flow, or you do not test it at all.
+The React test also is not testing the real failure case. It mocks `HTMLCanvasElement.prototype.getContext` to return null and hopes the component’s error path responds the same way it would in a real browser. The Scene test says `FailedExportPng({ error: … })` directly. No fake reality, no assumption that the mock behaves like production. And because Commands are values, you can assert on what a click produces without resolving it. `Command.expectExact(ExportPng)` verifies intent in isolation from outcome. React cannot separate the two: you either mock the effect and run the whole flow, or you do not test it at all.
 
 Finally, the React test is coupled to the export implementation. Swap `getContext` for a different library and the test breaks at the mock, even though user-facing behavior is unchanged. The Scene test does not care how export is implemented. It only cares that a `FailedExportPng` Message arrives. It tests behavior, not mechanics.
 
-|              | Foldkit Scene                                   | React Testing Library                      |
-| ------------ | ----------------------------------------------- | ------------------------------------------ |
-| DOM          | Virtual (no jsdom)                              | jsdom (full browser simulation)            |
-| Events       | Direct handler invocation                       | Synthetic event simulation                 |
-| Mocking      | None                                            | Browser APIs (canvas, localStorage, …)     |
-| Side effects | Commands resolved inline                        | Fire imperatively, assert on DOM after     |
-| Timing       | Synchronous                                     | May require `act()` or `waitFor()`         |
-| Queries      | `Scene.role()`, `Scene.text()`, `Scene.label()` | `screen.getByRole()`, `screen.getByText()` |
-| Cleanup      | None                                            | `cleanup()` in `afterEach`                 |
+|              | Foldkit Scene                 | React Testing Library                      |
+| ------------ | ----------------------------- | ------------------------------------------ |
+| DOM          | Virtual (no jsdom)            | jsdom (full browser simulation)            |
+| Events       | Direct handler invocation     | Synthetic event simulation                 |
+| Mocking      | None                          | Browser APIs (canvas, localStorage, …)     |
+| Side effects | Commands resolved inline      | Fire imperatively, assert on DOM after     |
+| Timing       | Synchronous                   | May require `act()` or `waitFor()`         |
+| Queries      | `role()`, `text()`, `label()` | `screen.getByRole()`, `screen.getByText()` |
+| Cleanup      | None                          | `cleanup()` in `afterEach`                 |
 
 ## Streams vs Hooks
 
@@ -278,7 +278,7 @@ Add a `Message` variant and `M.tagsExhaustive` turns every update-function site 
 
 ### Side effects as assertable values {#side-effects-as-values}
 
-A Command is a plain value. It has a name. It appears in [DevTools](/core/devtools) next to the Message that produced it. You can assert on it with `Scene.Command.expectExact` or resolve it with a synthetic return Message via `Story.Command.resolve`. Two testing affordances against the same value the runtime executes in production: tests and runtime operate on the identical Command, not a mock of one. `useEffect` has none of those: no name, no identity in DevTools, no connection back to the action that caused it, no way to assert intent without also asserting outcome.
+A Command is a plain value. It has a name. It appears in [DevTools](/core/devtools) next to the Message that produced it. You can assert on it with `Command.expectExact` or resolve it with a synthetic return Message via `Command.resolve`. Two testing affordances against the same value the runtime executes in production: tests and runtime operate on the identical Command, not a mock of one. `useEffect` has none of those: no name, no identity in DevTools, no connection back to the action that caused it, no way to assert intent without also asserting outcome.
 
 ### Time-travel that covers UI internals {#time-travel}
 
@@ -286,7 +286,7 @@ React DevTools shows you the current component tree. [Foldkit DevTools](/core/de
 
 ### Tests share the runtime’s pipeline {#tests-share-runtime-pipeline}
 
-The test suite runs the same pipeline the runtime runs. `Story.story` calls the same update function. `Scene.scene` dispatches through the same view. Commands resolve through the same surface. There are no test doubles because there is nothing structurally in the way that would require them: update is pure, Commands are values, Submodels are data. Remove a Command from the update function and every test that depended on it fails. React’s test stack has to simulate a browser to reach production code paths that would otherwise be unreachable from a unit test. Foldkit tests reach them directly, because there is only one kind of code path.
+The test suite runs the same pipeline the runtime runs. `story` calls the same update function. `scene` dispatches through the same view. Commands resolve through the same surface. There are no test doubles because there is nothing structurally in the way that would require them: update is pure, Commands are values, Submodels are data. Remove a Command from the update function and every test that depended on it fails. React’s test stack has to simulate a browser to reach production code paths that would otherwise be unreachable from a unit test. Foldkit tests reach them directly, because there is only one kind of code path.
 
 ### One place to look when the Model is wrong {#one-update-function}
 

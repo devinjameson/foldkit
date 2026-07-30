@@ -1,5 +1,13 @@
-import { Scene } from 'foldkit'
 import { Valid } from 'foldkit/fieldValidation'
+import {
+  Command,
+  expect,
+  given,
+  role,
+  scene,
+  submit,
+  text,
+} from 'foldkit/scene'
 import { describe, test } from 'vitest'
 
 import { SaveSession } from './command'
@@ -27,21 +35,21 @@ const aliceSession = { userId: '1', email: 'alice@example.com', name: 'alice' }
 
 describe('login flow', () => {
   test('successful login saves the session and lands on the dashboard', () => {
-    Scene.scene(
+    scene(
       { update, view },
-      Scene.with(validModel),
-      Scene.submit(Scene.role('form')),
-      Scene.Command.expectExact(SimulateAuthRequest),
-      Scene.Command.resolve(
+      given(validModel),
+      submit(role('form')),
+      Command.expectExact(SimulateAuthRequest),
+      Command.resolve(
         SimulateAuthRequest,
         SucceededSimulateAuthRequest({ session: aliceSession }),
       ),
-      Scene.Command.expectExact(SaveSession, RedirectToDashboard),
-      Scene.Command.resolveAll(
+      Command.expectExact(SaveSession, RedirectToDashboard),
+      Command.resolveAll(
         [SaveSession, SucceededSaveSession()],
         [RedirectToDashboard, CompletedNavigateInternal()],
       ),
-      Scene.expect(Scene.text('Welcome back, alice!')).toExist(),
+      expect(text('Welcome back, alice!')).toExist(),
     )
   })
 })

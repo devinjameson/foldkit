@@ -52,7 +52,7 @@ const dialogHasOnUnmount = (model: Model): boolean => {
       h,
     )
 
-  Scene.scene({ update, view: sceneView }, Scene.with(model))
+  Scene.scene({ update, view: sceneView }, Scene.given(model))
   return hasOnUnmount
 }
 
@@ -75,7 +75,7 @@ const renderGroup = (
       h,
     )
 
-  Scene.scene({ update, view: sceneView }, Scene.with(model))
+  Scene.scene({ update, view: sceneView }, Scene.given(model))
   return captured
 }
 
@@ -141,7 +141,7 @@ describe('Dialog', () => {
       it('opens when closed on RequestedOpen and emits Opened', () => {
         Story.story(
           update,
-          Story.with(init({ id: 'test' })),
+          Story.given(init({ id: 'test' })),
           Story.message(RequestedOpen()),
           Story.expectOutMessage(Opened()),
           Story.Command.resolve(ShowDialog, CompletedShowDialog()),
@@ -154,7 +154,7 @@ describe('Dialog', () => {
       it('shows with the initialFocus marker selector when no focusSelector is configured', () => {
         Story.story(
           update,
-          Story.with(init({ id: 'test' })),
+          Story.given(init({ id: 'test' })),
           Story.message(RequestedOpen()),
           Story.Command.resolve(
             ShowDialog({
@@ -169,7 +169,7 @@ describe('Dialog', () => {
       it('shows with the configured focusSelector, which wins over the marker', () => {
         Story.story(
           update,
-          Story.with(init({ id: 'test', focusSelector: '#search-input' })),
+          Story.given(init({ id: 'test', focusSelector: '#search-input' })),
           Story.message(RequestedOpen()),
           Story.Command.resolve(
             ShowDialog({ id: 'test', focusSelector: '#search-input' }),
@@ -181,7 +181,7 @@ describe('Dialog', () => {
       it('opens without command or OutMessage when already open on RequestedOpen', () => {
         Story.story(
           update,
-          Story.with(init({ id: 'test', isOpen: true })),
+          Story.given(init({ id: 'test', isOpen: true })),
           Story.message(RequestedOpen()),
           Story.expectNoOutMessage(),
           Story.model(model => {
@@ -193,7 +193,7 @@ describe('Dialog', () => {
       it('closes when open on RequestedClose and emits Closed', () => {
         Story.story(
           update,
-          Story.with(init({ id: 'test', isOpen: true })),
+          Story.given(init({ id: 'test', isOpen: true })),
           Story.message(RequestedClose()),
           Story.expectOutMessage(Closed()),
           Story.Command.resolve(CloseDialog, CompletedCloseDialog()),
@@ -206,7 +206,7 @@ describe('Dialog', () => {
       it('closes without command or OutMessage when already closed on RequestedClose', () => {
         Story.story(
           update,
-          Story.with(init({ id: 'test' })),
+          Story.given(init({ id: 'test' })),
           Story.message(RequestedClose()),
           Story.expectNoOutMessage(),
           Story.model(model => {
@@ -219,7 +219,7 @@ describe('Dialog', () => {
         const originalModel = init({ id: 'test' })
         Story.story(
           update,
-          Story.with(originalModel),
+          Story.given(originalModel),
           Story.message(CompletedShowDialog()),
           Story.model(model => {
             expect(model).toBe(originalModel)
@@ -232,7 +232,7 @@ describe('Dialog', () => {
       it('opens with enter animation on RequestedOpen', () => {
         Story.story(
           update,
-          Story.with(init({ id: 'test', isAnimated: true })),
+          Story.given(init({ id: 'test', isAnimated: true })),
           Story.message(RequestedOpen()),
           Story.Command.expectHas(ShowDialog, Animation.RequestFrame),
           Story.Command.resolveAll(
@@ -250,7 +250,7 @@ describe('Dialog', () => {
       it('closes with leave animation and CloseDialog on RequestedClose', () => {
         Story.story(
           update,
-          Story.with(init({ id: 'test', isOpen: true, isAnimated: true })),
+          Story.given(init({ id: 'test', isOpen: true, isAnimated: true })),
           Story.message(RequestedClose()),
           Story.model(model => {
             expect(model.isOpen).toBe(false)
@@ -279,7 +279,7 @@ describe('Dialog', () => {
         }
         Story.story(
           update,
-          Story.with(leavingModel),
+          Story.given(leavingModel),
           Story.message(RequestedClose()),
           Story.model(model => {
             expect(model).toBe(leavingModel)
@@ -300,7 +300,7 @@ describe('Dialog', () => {
         }
         Story.story(
           update,
-          Story.with(leavingModel),
+          Story.given(leavingModel),
           Story.message(RequestedClose()),
           Story.model(model => {
             expect(model).toBe(leavingModel)
@@ -314,7 +314,7 @@ describe('Dialog', () => {
       it('resets the model to closed and releases resources without emitting Closed', () => {
         Story.story(
           update,
-          Story.with(init({ id: 'test', isOpen: true })),
+          Story.given(init({ id: 'test', isOpen: true })),
           Story.message(Unmounted()),
           Story.expectNoOutMessage(),
           Story.model(model => {
@@ -339,7 +339,7 @@ describe('Dialog', () => {
         }
         Story.story(
           update,
-          Story.with(leavingModel),
+          Story.given(leavingModel),
           Story.message(Unmounted()),
           Story.expectNoOutMessage(),
           Story.model(model => {
@@ -357,7 +357,7 @@ describe('Dialog', () => {
         const closedModel = init({ id: 'test' })
         Story.story(
           update,
-          Story.with(closedModel),
+          Story.given(closedModel),
           Story.message(Unmounted()),
           Story.expectNoOutMessage(),
           Story.model(model => {
@@ -371,7 +371,7 @@ describe('Dialog', () => {
         const originalModel = init({ id: 'test' })
         Story.story(
           update,
-          Story.with(originalModel),
+          Story.given(originalModel),
           Story.message(CompletedReleaseDialogResources()),
           Story.model(model => {
             expect(model).toBe(originalModel)

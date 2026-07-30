@@ -674,7 +674,9 @@ Fix ALL output from all four before declaring Phase 5 done. "Typecheck clean and
 
 ### Type errors first
 
-Then generate tests using `foldkit/test`. There are two test styles. Name each test file for its style, beside the code under test: `story.test.ts` for Story tests (the state machine, driving `update`) and `scene.test.ts` for Scene tests (the rendered view). The name describes how the test works, not a source file, so it holds whether `update` and `view` live in `main.ts` or their own files. When a folder holds more than one test of a kind (sibling pages, component variants), prefix with the subject: `login.story.test.ts`. Scene runs at any level: `Submodel.defineView` produces a plain `(model, h) => Html`, so a page's view drops into `Scene.scene` unmodified, and a Submodel declaring `ViewInputs` takes a second argument the test supplies through `Scene.withViewInputs(view, defaults)`, whose returned factory takes per-test overrides for everything except `toView`. A page-level Scene asserts the OutMessage a Submodel emits with `Scene.expectOutMessage` / `Scene.expectNoOutMessage`, and drives Messages from the non-view lifecycle causes with cause-named steps: `Scene.Subscription.emit` (only when the Message has no DOM affordance; click the actual button when it does), `Scene.ManagedResource.acquire` / `release` / `failAcquire` (gated on the entry's `modelToMaybeRequirements`, so drive the Model transition first), and `Scene.CustomElement.emit` (typed by the spec's event Schemas). Put a `scene.test.ts` in the page folder for behavior that page owns, and keep a root-level `scene.test.ts` for flows that cross pages, which covers how the parent folds an OutMessage, a Command the parent lifts, a route change, and view inputs the parent computes.
+Then generate tests using `foldkit/test`. There are two test styles. Name each test file for its style, beside the code under test: `story.test.ts` for Story tests (the state machine, driving `update`) and `scene.test.ts` for Scene tests (the rendered view). The name describes how the test works, not a source file, so it holds whether `update` and `view` live in `main.ts` or their own files. When a folder holds more than one test of a kind (sibling pages, component variants), prefix with the subject: `login.story.test.ts`. Scene runs at any level: `Submodel.defineView` produces a plain `(model, h) => Html`, so a page's view drops into `scene` unmodified, and a Submodel declaring `ViewInputs` takes a second argument the test supplies through `withViewInputs(view, defaults)`, whose returned factory takes per-test overrides for everything except `toView`. A page-level Scene asserts the OutMessage a Submodel emits with `expectOutMessage` / `expectNoOutMessage`, and drives Messages from the non-view lifecycle causes with cause-named steps: `Subscription.emit` (only when the Message has no DOM affordance; click the actual button when it does), `ManagedResource.acquire` / `release` / `failAcquire` (gated on the entry's `modelToMaybeRequirements`, so drive the Model transition first), and `CustomElement.emit` (typed by the spec's event Schemas). Put a `scene.test.ts` in the page folder for behavior that page owns, and keep a root-level `scene.test.ts` for flows that cross pages, which covers how the parent folds an OutMessage, a Command the parent lifts, a route change, and view inputs the parent computes.
+
+Import the steps as named imports from `foldkit/story` or `foldkit/scene`: `import { Command, given, message, model, story } from 'foldkit/story'`. A test file needs only one of the two modules, so this keeps call sites short. In the rare case a single file tests both a story and a scene, import the namespaces instead (`import { Scene, Story } from 'foldkit'`) so `Story.given` and `Scene.given` stay distinguishable.
 
 **Story tests** (`story.test.ts`) test the update function directly. You send Messages and assert on the Model and Commands. Study these exemplars:
 
@@ -682,7 +684,7 @@ Then generate tests using `foldkit/test`. There are two test styles. Name each t
 - `${CLAUDE_SKILL_DIR}/../../examples/auth/src/page/loggedOut/page/login.story.test.ts`: Submodel with OutMessage assertions, field validation
 - `${CLAUDE_SKILL_DIR}/../../packages/website/src/search/story.test.ts`: multi-step interactions (arrow key cycling, stale result handling)
 
-Write `Story.story` pipelines covering:
+Write `story` pipelines covering:
 
 - **Happy path**: the primary user flow from start to finish
 - **Error path**: every fallible Command resolved with its `Failed*` Message
@@ -695,14 +697,14 @@ Write `Story.story` pipelines covering:
 - `${CLAUDE_SKILL_DIR}/../../examples/auth/src/scene.test.ts`: a multi-page app's root-level Scene driving the login flow through the root view
 - `${CLAUDE_SKILL_DIR}/../../examples/kanban/src/scene.test.ts`: scoped queries with `within`, `toHaveValue`, explicit test data
 
-Write `Scene.scene` pipelines covering:
+Write `scene` pipelines covering:
 
 - **View rendering**: initial view has expected elements (headings, inputs, buttons)
 - **User interactions**: click, type, submit produce visible changes
 - **Loading states**: submitting shows loading indicator
 - **Error states**: failed Commands show error messages in the view
-- **Scoped queries**: use `Scene.within(parent, child)` to compose a single scoped Locator (good for one-off scoped assertions or reusable named locators). Use `Scene.inside(parent, ...steps)` to scope a whole block of steps to the same parent. Every Locator referenced by the nested steps resolves within the parent's subtree. Reach for `inside` when two or more steps share a scope; reach for `within` for single-use scoping.
-- Prefer accessible locators: `Scene.label(...)`, `Scene.role(...)`, `Scene.text(...)` over `Scene.placeholder(...)` or CSS selectors
+- **Scoped queries**: use `within(parent, child)` to compose a single scoped Locator (good for one-off scoped assertions or reusable named locators). Use `inside(parent, ...steps)` to scope a whole block of steps to the same parent. Every Locator referenced by the nested steps resolves within the parent's subtree. Reach for `inside` when two or more steps share a scope; reach for `within` for single-use scoping.
+- Prefer accessible locators: `label(...)`, `role(...)`, `text(...)` over `placeholder(...)` or CSS selectors
 
 Run the project's test script (`npm run test`, or your package manager's equivalent) to verify tests pass.
 

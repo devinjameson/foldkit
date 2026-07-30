@@ -1,5 +1,5 @@
 import { Array, Option } from 'effect'
-import { Story } from 'foldkit'
+import { Command, given, message, model, story } from 'foldkit/story'
 import { describe, expect, test } from 'vitest'
 
 import { Slider } from '@foldkit/ui'
@@ -65,30 +65,30 @@ const makeParticle = (id: number, x: number, y: number): Particle => ({
 
 describe('update', () => {
   test('ClickedTogglePlay flips isRunning', () => {
-    Story.story(
+    story(
       update,
-      Story.with(initialModel),
-      Story.message(ClickedTogglePlay()),
-      Story.model(model => {
+      given(initialModel),
+      message(ClickedTogglePlay()),
+      model(model => {
         expect(model.isRunning).toBe(false)
       }),
-      Story.message(ClickedTogglePlay()),
-      Story.model(model => {
+      message(ClickedTogglePlay()),
+      model(model => {
         expect(model.isRunning).toBe(true)
       }),
     )
   })
 
   test('ClickedReset clears particles and the mouse position', () => {
-    Story.story(
+    story(
       update,
-      Story.with({
+      given({
         ...initialModel,
         particles: [makeParticle(0, 100, 100), makeParticle(1, 200, 200)],
         maybeMousePosition: Option.some({ x: 300, y: 300 }),
       }),
-      Story.message(ClickedReset()),
-      Story.model(model => {
+      message(ClickedReset()),
+      model(model => {
         expect(model.particles).toHaveLength(0)
         expect(Option.isNone(model.maybeMousePosition)).toBe(true)
       }),
@@ -96,11 +96,11 @@ describe('update', () => {
   })
 
   test('MovedPointer sets maybeMousePosition to the new coordinates', () => {
-    Story.story(
+    story(
       update,
-      Story.with(initialModel),
-      Story.message(MovedPointer({ x: 250, y: 175 })),
-      Story.model(model => {
+      given(initialModel),
+      message(MovedPointer({ x: 250, y: 175 })),
+      model(model => {
         expect(Option.getOrThrow(model.maybeMousePosition)).toEqual({
           x: 250,
           y: 175,
@@ -110,10 +110,10 @@ describe('update', () => {
   })
 
   test('SpawnedAmbientParticle appends a particle and increments nextId', () => {
-    Story.story(
+    story(
       update,
-      Story.with(initialModel),
-      Story.message(
+      given(initialModel),
+      message(
         SpawnedAmbientParticle({
           x: 50,
           y: 75,
@@ -125,7 +125,7 @@ describe('update', () => {
           initialSpeedScale: 1,
         }),
       ),
-      Story.model(model => {
+      model(model => {
         expect(model.particles).toHaveLength(1)
         expect(model.particles[0]?.trail).toEqual([{ x: 50, y: 75 }])
         expect(model.particles[0]?.baseHue).toBe(120)
@@ -138,15 +138,15 @@ describe('update', () => {
     const startingParticles = [makeParticle(0, 200, 200)]
     const startingParticleCount = startingParticles.length
 
-    Story.story(
+    story(
       update,
-      Story.with({
+      given({
         ...initialModel,
         particles: startingParticles,
         nextId: startingParticleCount,
       }),
-      Story.message(TickedFrame({ deltaTimeMs: 16 })),
-      Story.model(model => {
+      message(TickedFrame({ deltaTimeMs: 16 })),
+      model(model => {
         expect(model.elapsedSeconds).toBeGreaterThan(0)
         expect(model.elapsedSeconds).toBeLessThanOrEqual(DELTA_SECONDS_CAP)
         const advanced = model.particles[0]
@@ -154,7 +154,7 @@ describe('update', () => {
         expect(advanced?.ageMs).toBeGreaterThan(0)
         expect(model.particles).toHaveLength(startingParticleCount)
       }),
-      Story.Command.resolveAll(
+      Command.resolveAll(
         ...Array.makeBy(
           SPAWN_PER_FRAME_MAX,
           () =>
@@ -173,7 +173,7 @@ describe('update', () => {
             ] as const,
         ),
       ),
-      Story.model(model => {
+      model(model => {
         expect(model.particles).toHaveLength(
           startingParticleCount + SPAWN_PER_FRAME_MAX,
         )
@@ -183,10 +183,10 @@ describe('update', () => {
   })
 
   test('SpawnedBurstParticle appends a particle with its initial angle preserved', () => {
-    Story.story(
+    story(
       update,
-      Story.with(initialModel),
-      Story.message(
+      given(initialModel),
+      message(
         SpawnedBurstParticle({
           x: 100,
           y: 100,
@@ -198,7 +198,7 @@ describe('update', () => {
           initialSpeedScale: 1.8,
         }),
       ),
-      Story.model(model => {
+      model(model => {
         expect(model.particles).toHaveLength(1)
         expect(Option.getOrThrow(model.particles[0]!.initialAngle)).toBe(1.5)
         expect(model.particles[0]?.initialSpeedScale).toBe(1.8)

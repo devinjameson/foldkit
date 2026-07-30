@@ -1,6 +1,7 @@
 import { Array, Option, pipe } from 'effect'
-import { Calendar, Story } from 'foldkit'
+import { Calendar } from 'foldkit'
 import { Valid, Validating } from 'foldkit/fieldValidation'
+import { Command, given, message, model, story } from 'foldkit/story'
 import { describe, expect, test } from 'vitest'
 
 import { FileDrop, Menu, Tabs } from '@foldkit/ui'
@@ -85,14 +86,11 @@ const completeModel: Model = {
   },
 }
 
-const withInitial = Story.with(initialModel)
+const givenInitial = given(initialModel)
 
-const resolveFocusTab = Story.Command.resolve(
-  Tabs.FocusTab,
-  Tabs.CompletedFocusTab(),
-)
+const resolveFocusTab = Command.resolve(Tabs.FocusTab, Tabs.CompletedFocusTab())
 
-const resolveFocusMenuButton = Story.Command.resolve(
+const resolveFocusMenuButton = Command.resolve(
   Menu.FocusButton,
   Menu.CompletedFocusButton(),
 )
@@ -100,71 +98,71 @@ const resolveFocusMenuButton = Story.Command.resolve(
 describe('update', () => {
   describe('navigation', () => {
     test('ClickedNext advances to the next step', () => {
-      Story.story(
+      story(
         update,
-        withInitial,
-        Story.message(ClickedNext()),
-        Story.Command.expectNone(),
-        Story.model(model => {
+        givenInitial,
+        message(ClickedNext()),
+        Command.expectNone(),
+        model(model => {
           expect(model.currentStep).toBe('WorkHistory')
         }),
       )
     })
 
     test('ClickedPrevious goes back to the previous step', () => {
-      Story.story(
+      story(
         update,
-        Story.with({ ...initialModel, currentStep: 'Education' }),
-        Story.message(ClickedPrevious()),
-        Story.model(model => {
+        given({ ...initialModel, currentStep: 'Education' }),
+        message(ClickedPrevious()),
+        model(model => {
           expect(model.currentStep).toBe('WorkHistory')
         }),
       )
     })
 
     test('ClickedPrevious on the first step stays put', () => {
-      Story.story(
+      story(
         update,
-        withInitial,
-        Story.message(ClickedPrevious()),
-        Story.model(model => {
+        givenInitial,
+        message(ClickedPrevious()),
+        model(model => {
           expect(model.currentStep).toBe('PersonalInfo')
         }),
       )
     })
 
     test('ClickedNext on the last step stays put', () => {
-      Story.story(
+      story(
         update,
-        Story.with({ ...initialModel, currentStep: 'Review' }),
-        Story.message(ClickedNext()),
-        Story.model(model => {
+        given({ ...initialModel, currentStep: 'Review' }),
+        message(ClickedNext()),
+        model(model => {
           expect(model.currentStep).toBe('Review')
         }),
       )
     })
 
     test('NavigatedToStep jumps directly to a step', () => {
-      Story.story(
+      story(
         update,
-        withInitial,
-        Story.message(NavigatedToStep({ step: 'Skills' })),
-        Story.model(model => {
+        givenInitial,
+        message(NavigatedToStep({ step: 'Skills' })),
+        model(model => {
           expect(model.currentStep).toBe('Skills')
         }),
       )
     })
 
     test('GotStepTabsMessage selects the matching step', () => {
-      Story.story(
+      story(
         update,
-        withInitial,
-        Story.message(
+        givenInitial,
+        message(
           GotStepTabsMessage({
             message: Tabs.SelectedTab({ index: 6, value: 'Review' }),
           }),
         ),
-        Story.model(model => {
+        model(model => {
           expect(model.currentStep).toBe('Review')
         }),
         resolveFocusTab,
@@ -172,15 +170,15 @@ describe('update', () => {
     })
 
     test('GotStepMenuMessage selects the matching step', () => {
-      Story.story(
+      story(
         update,
-        withInitial,
-        Story.message(
+        givenInitial,
+        message(
           GotStepMenuMessage({
             message: Menu.SelectedItem({ index: 5, item: 'Attachments' }),
           }),
         ),
-        Story.model(model => {
+        model(model => {
           expect(model.currentStep).toBe('Attachments')
         }),
         resolveFocusMenuButton,
@@ -190,15 +188,15 @@ describe('update', () => {
 
   describe('preview toggle', () => {
     test('ToggledPreview flips visibility', () => {
-      Story.story(
+      story(
         update,
-        withInitial,
-        Story.message(ToggledPreview()),
-        Story.model(model => {
+        givenInitial,
+        message(ToggledPreview()),
+        model(model => {
           expect(model.isPreviewVisible).toBe(true)
         }),
-        Story.message(ToggledPreview()),
-        Story.model(model => {
+        message(ToggledPreview()),
+        model(model => {
           expect(model.isPreviewVisible).toBe(false)
         }),
       )
@@ -207,15 +205,15 @@ describe('update', () => {
 
   describe('personal info delegation', () => {
     test('first name update is delegated to personal info step', () => {
-      Story.story(
+      story(
         update,
-        withInitial,
-        Story.message(
+        givenInitial,
+        message(
           GotPersonalInfoMessage({
             message: PersonalInfo.UpdatedFirstName({ value: 'Jane' }),
           }),
         ),
-        Story.model(model => {
+        model(model => {
           expect(model.personalInfo.firstName.value).toBe('Jane')
           expect(model.personalInfo.firstName._tag).toBe('Valid')
         }),
@@ -223,54 +221,54 @@ describe('update', () => {
     })
 
     test('short first name produces validation error', () => {
-      Story.story(
+      story(
         update,
-        withInitial,
-        Story.message(
+        givenInitial,
+        message(
           GotPersonalInfoMessage({
             message: PersonalInfo.UpdatedFirstName({ value: 'J' }),
           }),
         ),
-        Story.model(model => {
+        model(model => {
           expect(model.personalInfo.firstName._tag).toBe('Invalid')
         }),
       )
     })
 
     test('email triggers async validation after passing sync checks', () => {
-      Story.story(
+      story(
         update,
-        withInitial,
-        Story.message(
+        givenInitial,
+        message(
           GotPersonalInfoMessage({
             message: PersonalInfo.UpdatedEmail({ value: 'jane@example.com' }),
           }),
         ),
-        Story.Command.expectHas(PersonalInfo.ValidateEmailAsync),
-        Story.Command.resolve(
+        Command.expectHas(PersonalInfo.ValidateEmailAsync),
+        Command.resolve(
           PersonalInfo.ValidateEmailAsync,
           PersonalInfo.ValidatedEmail({
             validationId: 1,
             field: Valid({ value: 'jane@example.com' }),
           }),
         ),
-        Story.model(model => {
+        model(model => {
           expect(model.personalInfo.email._tag).toBe('Valid')
         }),
       )
     })
 
     test('malformed email fails sync validation without async command', () => {
-      Story.story(
+      story(
         update,
-        withInitial,
-        Story.message(
+        givenInitial,
+        message(
           GotPersonalInfoMessage({
             message: PersonalInfo.UpdatedEmail({ value: 'not-email' }),
           }),
         ),
-        Story.Command.expectNone(),
-        Story.model(model => {
+        Command.expectNone(),
+        model(model => {
           expect(model.personalInfo.email._tag).toBe('Invalid')
         }),
       )
@@ -286,10 +284,10 @@ describe('update', () => {
         },
       }
 
-      Story.story(
+      story(
         update,
-        Story.with(modelWithInFlightValidation),
-        Story.message(
+        given(modelWithInFlightValidation),
+        message(
           GotPersonalInfoMessage({
             message: PersonalInfo.ValidatedEmail({
               validationId: 3,
@@ -297,7 +295,7 @@ describe('update', () => {
             }),
           }),
         ),
-        Story.model(model => {
+        model(model => {
           expect(model.personalInfo.email._tag).toBe('Validating')
           expect(model.personalInfo.email.value).toBe('jane@example.com')
           expect(model.personalInfo.emailValidationId).toBe(5)
@@ -308,15 +306,15 @@ describe('update', () => {
 
   describe('work history delegation', () => {
     test('adds a new work entry', () => {
-      Story.story(
+      story(
         update,
-        withInitial,
-        Story.message(
+        givenInitial,
+        message(
           GotWorkHistoryMessage({
             message: WorkHistory.AddedEntry({ entryId: 'test-work-1' }),
           }),
         ),
-        Story.model(model => {
+        model(model => {
           expect(model.workHistory.entries.length).toBe(2)
         }),
       )
@@ -327,15 +325,15 @@ describe('update', () => {
         Array.head(initialModel.workHistory.entries),
       )
 
-      Story.story(
+      story(
         update,
-        withInitial,
-        Story.message(
+        givenInitial,
+        message(
           GotWorkHistoryMessage({
             message: WorkHistory.RemovedEntry({ entryId: firstEntry.id }),
           }),
         ),
-        Story.model(model => {
+        model(model => {
           expect(model.workHistory.entries.length).toBe(0)
         }),
       )
@@ -346,10 +344,10 @@ describe('update', () => {
         Array.head(initialModel.workHistory.entries),
       )
 
-      Story.story(
+      story(
         update,
-        withInitial,
-        Story.message(
+        givenInitial,
+        message(
           GotWorkHistoryMessage({
             message: WorkHistory.GotEntryMessage({
               entryId: firstEntry.id,
@@ -359,7 +357,7 @@ describe('update', () => {
             }),
           }),
         ),
-        Story.model(model => {
+        model(model => {
           expect(
             pipe(
               model.workHistory.entries,
@@ -375,15 +373,15 @@ describe('update', () => {
 
   describe('education delegation', () => {
     test('adds a new education entry', () => {
-      Story.story(
+      story(
         update,
-        withInitial,
-        Story.message(
+        givenInitial,
+        message(
           GotEducationMessage({
             message: Education.AddedEntry({ entryId: 'test-edu-1' }),
           }),
         ),
-        Story.model(model => {
+        model(model => {
           expect(model.education.entries.length).toBe(2)
         }),
       )
@@ -394,15 +392,15 @@ describe('update', () => {
         Array.head(initialModel.education.entries),
       )
 
-      Story.story(
+      story(
         update,
-        withInitial,
-        Story.message(
+        givenInitial,
+        message(
           GotEducationMessage({
             message: Education.RemovedEntry({ entryId: firstEntry.id }),
           }),
         ),
-        Story.model(model => {
+        model(model => {
           expect(model.education.entries.length).toBe(0)
         }),
       )
@@ -413,10 +411,10 @@ describe('update', () => {
         Array.head(initialModel.education.entries),
       )
 
-      Story.story(
+      story(
         update,
-        withInitial,
-        Story.message(
+        givenInitial,
+        message(
           GotEducationMessage({
             message: Education.GotEntryMessage({
               entryId: firstEntry.id,
@@ -424,7 +422,7 @@ describe('update', () => {
             }),
           }),
         ),
-        Story.model(model => {
+        model(model => {
           expect(
             pipe(
               model.education.entries,
@@ -442,10 +440,10 @@ describe('update', () => {
         Array.head(initialModel.education.entries),
       )
 
-      Story.story(
+      story(
         update,
-        withInitial,
-        Story.message(
+        givenInitial,
+        message(
           GotEducationMessage({
             message: Education.GotEntryMessage({
               entryId: firstEntry.id,
@@ -453,7 +451,7 @@ describe('update', () => {
             }),
           }),
         ),
-        Story.message(
+        message(
           GotEducationMessage({
             message: Education.GotEntryMessage({
               entryId: firstEntry.id,
@@ -461,7 +459,7 @@ describe('update', () => {
             }),
           }),
         ),
-        Story.model(model => {
+        model(model => {
           expect(
             pipe(
               model.education.entries,
@@ -477,15 +475,15 @@ describe('update', () => {
 
   describe('skills delegation', () => {
     test('adds a new skill entry', () => {
-      Story.story(
+      story(
         update,
-        withInitial,
-        Story.message(
+        givenInitial,
+        message(
           GotSkillsMessage({
             message: Skills.AddedEntry({ entryId: 'test-skill-1' }),
           }),
         ),
-        Story.model(model => {
+        model(model => {
           expect(model.skills.entries.length).toBe(2)
         }),
       )
@@ -496,10 +494,10 @@ describe('update', () => {
         Array.head(initialModel.skills.entries),
       )
 
-      Story.story(
+      story(
         update,
-        withInitial,
-        Story.message(
+        givenInitial,
+        message(
           GotSkillsMessage({
             message: Skills.GotEntryMessage({
               entryId: firstEntry.id,
@@ -509,7 +507,7 @@ describe('update', () => {
             }),
           }),
         ),
-        Story.model(model => {
+        model(model => {
           expect(
             pipe(
               model.skills.entries,
@@ -525,17 +523,17 @@ describe('update', () => {
 
   describe('cover letter delegation', () => {
     test('updates content', () => {
-      Story.story(
+      story(
         update,
-        withInitial,
-        Story.message(
+        givenInitial,
+        message(
           GotCoverLetterMessage({
             message: CoverLetter.UpdatedContent({
               value: 'I love the Elm Architecture.',
             }),
           }),
         ),
-        Story.model(model => {
+        model(model => {
           expect(model.coverLetter.content).toBe('I love the Elm Architecture.')
         }),
       )
@@ -547,17 +545,17 @@ describe('update', () => {
       const resume = new globalThis.File(['pdf-bytes'], 'resume.pdf', {
         type: 'application/pdf',
       })
-      Story.story(
+      story(
         update,
-        withInitial,
-        Story.message(
+        givenInitial,
+        message(
           GotAttachmentsMessage({
             message: Attachments.GotResumeDropMessage({
               message: FileDrop.DroppedFiles({ files: [resume] }),
             }),
           }),
         ),
-        Story.model(model => {
+        model(model => {
           expect(model.attachments.maybeResume._tag).toBe('Some')
         }),
       )
@@ -567,17 +565,17 @@ describe('update', () => {
       const file = new globalThis.File(['content'], 'portfolio.pdf', {
         type: 'application/pdf',
       })
-      Story.story(
+      story(
         update,
-        withInitial,
-        Story.message(
+        givenInitial,
+        message(
           GotAttachmentsMessage({
             message: Attachments.GotAdditionalFilesDropMessage({
               message: FileDrop.DroppedFiles({ files: [file] }),
             }),
           }),
         ),
-        Story.model(model => {
+        model(model => {
           expect(model.attachments.additionalFiles).toHaveLength(1)
         }),
       )
@@ -586,13 +584,13 @@ describe('update', () => {
 
   describe('submission', () => {
     test('ClickedSubmit on a complete application transitions to Submitting and fires command', () => {
-      Story.story(
+      story(
         update,
-        Story.with({ ...completeModel, currentStep: 'Review' }),
-        Story.message(ClickedSubmit()),
-        Story.Command.expectExact(SubmitApplication),
-        Story.Command.resolve(SubmitApplication, SucceededSubmitApplication()),
-        Story.model(model => {
+        given({ ...completeModel, currentStep: 'Review' }),
+        message(ClickedSubmit()),
+        Command.expectExact(SubmitApplication),
+        Command.resolve(SubmitApplication, SucceededSubmitApplication()),
+        model(model => {
           expect(model.submission._tag).toBe('SubmitSuccess')
           expect(model.isSubmitAttempted).toBe(true)
         }),
@@ -600,12 +598,12 @@ describe('update', () => {
     })
 
     test('ClickedSubmit on an incomplete application reveals errors and does not submit', () => {
-      Story.story(
+      story(
         update,
-        Story.with({ ...initialModel, currentStep: 'Review' }),
-        Story.message(ClickedSubmit()),
-        Story.Command.expectNone(),
-        Story.model(model => {
+        given({ ...initialModel, currentStep: 'Review' }),
+        message(ClickedSubmit()),
+        Command.expectNone(),
+        model(model => {
           expect(model.submission._tag).toBe('NotSubmitted')
           expect(model.isSubmitAttempted).toBe(true)
           expect(model.personalInfo.firstName._tag).toBe('Invalid')
@@ -640,9 +638,9 @@ describe('update', () => {
     })
 
     test('ClickedSubmit with pending validation does not submit', () => {
-      Story.story(
+      story(
         update,
-        Story.with({
+        given({
           ...completeModel,
           currentStep: 'Review',
           personalInfo: {
@@ -650,9 +648,9 @@ describe('update', () => {
             email: Validating({ value: 'jane@example.com' }),
           },
         }),
-        Story.message(ClickedSubmit()),
-        Story.Command.expectNone(),
-        Story.model(model => {
+        message(ClickedSubmit()),
+        Command.expectNone(),
+        model(model => {
           expect(model.submission._tag).toBe('NotSubmitted')
           expect(model.isSubmitAttempted).toBe(true)
           expect(model.personalInfo.email._tag).toBe('Validating')
@@ -661,12 +659,12 @@ describe('update', () => {
     })
 
     test('ClickedSubmit preserves Valid fields rather than re-running validation', () => {
-      Story.story(
+      story(
         update,
-        Story.with({ ...completeModel, currentStep: 'Review' }),
-        Story.message(ClickedSubmit()),
-        Story.Command.resolve(SubmitApplication, SucceededSubmitApplication()),
-        Story.model(model => {
+        given({ ...completeModel, currentStep: 'Review' }),
+        message(ClickedSubmit()),
+        Command.resolve(SubmitApplication, SucceededSubmitApplication()),
+        model(model => {
           expect(model.personalInfo.firstName._tag).toBe('Valid')
           expect(model.personalInfo.firstName.value).toBe('Jane')
         }),
@@ -674,30 +672,30 @@ describe('update', () => {
     })
 
     test('successful submission shows success', () => {
-      Story.story(
+      story(
         update,
-        Story.with({
+        given({
           ...initialModel,
           currentStep: 'Review',
           submission: Submitting(),
         }),
-        Story.message(SucceededSubmitApplication()),
-        Story.model(model => {
+        message(SucceededSubmitApplication()),
+        model(model => {
           expect(model.submission._tag).toBe('SubmitSuccess')
         }),
       )
     })
 
     test('failed submission shows error', () => {
-      Story.story(
+      story(
         update,
-        Story.with({
+        given({
           ...initialModel,
           currentStep: 'Review',
           submission: Submitting(),
         }),
-        Story.message(FailedSubmitApplication({ error: 'Server down' })),
-        Story.model(model => {
+        message(FailedSubmitApplication({ error: 'Server down' })),
+        model(model => {
           expect(model.submission._tag).toBe('SubmitError')
         }),
       )

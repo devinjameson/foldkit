@@ -47,7 +47,7 @@ describe('Tabs', () => {
     it('clears focus divergence on SelectedTab and emits Selected', () => {
       Story.story(
         update,
-        Story.with(init({ id: 'test' })),
+        Story.given(init({ id: 'test' })),
         Story.message(SelectedTab({ index: 3, value: 'tab-3' })),
         Story.expectOutMessage(Selected({ value: 'tab-3', index: 3 })),
         Story.Command.resolve(FocusTab, CompletedFocusTab()),
@@ -60,7 +60,7 @@ describe('Tabs', () => {
     it('emits Selected with the committed value on a subsequent SelectedTab', () => {
       Story.story(
         update,
-        Story.with({
+        Story.given({
           ...init({ id: 'test' }),
           maybeFocusedIndex: Option.some(1),
         }),
@@ -76,7 +76,7 @@ describe('Tabs', () => {
     it('sets focus divergence on FocusedTab without an OutMessage', () => {
       Story.story(
         update,
-        Story.with(init({ id: 'test', activationMode: 'Manual' })),
+        Story.given(init({ id: 'test', activationMode: 'Manual' })),
         Story.message(FocusedTab({ index: 2 })),
         Story.Command.resolve(FocusTab, CompletedFocusTab()),
         Story.model(model => {
@@ -88,7 +88,7 @@ describe('Tabs', () => {
     it('SelectedTab in manual mode emits Selected and clears divergence', () => {
       Story.story(
         update,
-        Story.with({
+        Story.given({
           ...init({ id: 'test', activationMode: 'Manual' }),
           maybeFocusedIndex: Option.some(2),
         }),

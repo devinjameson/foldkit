@@ -40,7 +40,7 @@ describe('Animation', () => {
       it('starts enter lifecycle when hidden', () => {
         Story.story(
           update,
-          Story.with(init({ id: 'test' })),
+          Story.given(init({ id: 'test' })),
           Story.message(Showed()),
           Story.model(model => {
             expect(model.isShowing).toBe(true)
@@ -62,7 +62,7 @@ describe('Animation', () => {
       it('does nothing when already showing', () => {
         Story.story(
           update,
-          Story.with(init({ id: 'test', isShowing: true })),
+          Story.given(init({ id: 'test', isShowing: true })),
           Story.message(Showed()),
           Story.model(model => {
             expect(model.isShowing).toBe(true)
@@ -78,7 +78,7 @@ describe('Animation', () => {
       it('starts leave lifecycle when showing', () => {
         Story.story(
           update,
-          Story.with(init({ id: 'test', isShowing: true })),
+          Story.given(init({ id: 'test', isShowing: true })),
           Story.message(Hid()),
           Story.model(model => {
             expect(model.isShowing).toBe(false)
@@ -102,7 +102,7 @@ describe('Animation', () => {
       it('does nothing when already hidden', () => {
         Story.story(
           update,
-          Story.with(init({ id: 'test' })),
+          Story.given(init({ id: 'test' })),
           Story.message(Hid()),
           Story.model(model => {
             expect(model.isShowing).toBe(false)
@@ -115,7 +115,7 @@ describe('Animation', () => {
       it('does nothing when already in LeaveAnimating', () => {
         Story.story(
           update,
-          Story.with(init({ id: 'test', isShowing: true })),
+          Story.given(init({ id: 'test', isShowing: true })),
           Story.message(Hid()),
           Story.Command.expectHas(RequestFrame),
           Story.Command.resolve(RequestFrame, AdvancedAnimationFrame()),
@@ -138,7 +138,7 @@ describe('Animation', () => {
       it('does nothing when Idle', () => {
         Story.story(
           update,
-          Story.with(init({ id: 'test' })),
+          Story.given(init({ id: 'test' })),
           Story.message(AdvancedAnimationFrame()),
           Story.model(model => {
             expect(model.transitionState).toBe('Idle')
@@ -152,7 +152,7 @@ describe('Animation', () => {
       it('does nothing when Idle', () => {
         Story.story(
           update,
-          Story.with(init({ id: 'test' })),
+          Story.given(init({ id: 'test' })),
           Story.message(EndedAnimation()),
           Story.model(model => {
             expect(model.transitionState).toBe('Idle')

@@ -93,6 +93,12 @@ Don't add inline or block comments to explain code. If code needs explanation, r
 - Commands are colocated with the update function that returns them. Never centralize all Commands in one file.
 - Expose a `boot()` helper alongside `init()` when a submodel applies a boot-time Message. `init()` returns clean state with no boot effects. `boot()` applies the boot Message via `update` and returns `[Model, Commands]`.
 
+## Test Imports
+
+- App code (`examples/`, `packages/website/`, `packages/typing-game/`) imports Scene and Story steps as named imports from `foldkit/scene` or `foldkit/story`: `import { Command, given, message, model, story } from 'foldkit/story'`. A test file needs only one of the two modules, so this keeps call sites short.
+- When one file tests both a story and a scene, import the namespaces instead (`import { Scene, Story } from 'foldkit'`) so `Story.given` and `Scene.given` stay distinguishable. `packages/ui/` and `packages/foldkit/` keep the namespace form throughout, since their tests routinely mix both.
+- The step that sets the initial Model is `given`, not `with`. `with` is a reserved word and cannot be a named import binding.
+
 ## Choosing Lifecycle Primitives
 
 Five primitives: Command, Mount, Subscription, ManagedResource, CustomElement. Pick by what causes the side effect. The `skills/foldkit` skill and the docs at `packages/website/src/page/core/` cover this in depth. Read them when ambiguous. Quick rule:

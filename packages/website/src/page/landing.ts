@@ -698,12 +698,25 @@ const testingSection = (renderCopyButton: RenderCopyButton): Html =>
             ih.div(
               [
                 ih.Class('text-sm'),
-                ih.InnerHTML(Snippet.landingTestHighlighted),
+                ih.InnerHTML(Snippet.landingStoryTestHighlighted),
               ],
               [],
             ),
-            Snippet.landingTestRaw,
-            'Copy test example to clipboard',
+            Snippet.landingStoryTestRaw,
+            'Copy Story test example to clipboard',
+            renderCopyButton,
+            '',
+          ),
+          highlightedCodeBlock(
+            ih.div(
+              [
+                ih.Class('text-sm'),
+                ih.InnerHTML(Snippet.landingSceneTestHighlighted),
+              ],
+              [],
+            ),
+            Snippet.landingSceneTestRaw,
+            'Copy Scene test example to clipboard',
             renderCopyButton,
             '',
           ),
