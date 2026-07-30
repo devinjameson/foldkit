@@ -3,7 +3,7 @@ import type { ChildAttribute, Html, TagName } from 'foldkit/html'
 import { defineView } from 'foldkit/submodel'
 
 import {
-  AdvancedAnimationFrame,
+  CompletedWaitForPaint,
   EndedAnimation,
   Hid,
   Message,
@@ -16,15 +16,15 @@ import {
   init,
 } from './schema.js'
 import {
-  RequestFrame,
   WaitForAnimationSettled,
+  WaitForPaint,
   defaultLeaveCommand,
   update,
 } from './update.js'
 
 export type { InitConfig } from './schema.js'
 export {
-  AdvancedAnimationFrame,
+  CompletedWaitForPaint,
   EndedAnimation,
   Hid,
   init,
@@ -37,7 +37,7 @@ export {
   TransitionedOut,
 }
 
-export { RequestFrame, WaitForAnimationSettled, defaultLeaveCommand, update }
+export { WaitForAnimationSettled, WaitForPaint, defaultLeaveCommand, update }
 
 // VIEW
 

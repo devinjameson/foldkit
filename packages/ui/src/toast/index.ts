@@ -3,16 +3,16 @@ import { type ChildAttribute, type Html, childAttributes } from 'foldkit/html'
 import { defineView } from 'foldkit/submodel'
 
 import {
+  CompletedWaitBeforeDismissal,
   Dismissed,
   DismissedAll,
-  ElapsedDuration,
   GotAnimationMessage,
   HoveredEntry,
   LeftEntry,
   Position,
   Variant,
 } from './schema.js'
-import { DismissAfter, makeRuntime } from './update.js'
+import { WaitBeforeDismissal, makeRuntime } from './update.js'
 
 export type { InitConfig } from './schema.js'
 export type { ShowInput } from './update.js'
@@ -24,11 +24,11 @@ export {
   Position,
   Dismissed,
   DismissedAll,
-  ElapsedDuration,
+  CompletedWaitBeforeDismissal,
   HoveredEntry,
   LeftEntry,
   GotAnimationMessage,
-  DismissAfter,
+  WaitBeforeDismissal,
 }
 
 // VIEW
@@ -127,7 +127,8 @@ const DEFAULT_ARIA_LABEL = 'Notifications'
  *  Consume the bound module's exports everywhere. `Toast.Model` in your app
  *  Model, `Toast.Message` in your parent Message union, `Toast.show` /
  *  `Toast.dismiss` in your update, `Toast.view` in your view. The top-level
- *  exports (`Variant`, `Position`, static message tags, `DismissAfter`) are
+ *  exports (`Variant`, `Position`, static message tags,
+ *  `WaitBeforeDismissal`) are
  *  payload-independent and safe to reference when you need them without a
  *  bound module, but the typical path is through the factory return.
  *

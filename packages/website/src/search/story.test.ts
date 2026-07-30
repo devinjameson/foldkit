@@ -5,10 +5,10 @@ import { FetchSearchResults, NavigateToResult, ScrollToResult } from './command'
 import { init } from './init'
 import {
   ClearedSearchQuery,
+  CompletedFetchSearchResults,
   CompletedNavigateToResult,
   CompletedScrollToResult,
   PressedArrowKey,
-  ReceivedSearchResults,
   SelectedSearchResult,
   UpdatedSearchQuery,
 } from './message'
@@ -47,7 +47,10 @@ describe('search', () => {
       Command.expectHas(FetchSearchResults),
       Command.resolve(
         FetchSearchResults,
-        ReceivedSearchResults({ results: searchResults, query: 'routing' }),
+        CompletedFetchSearchResults({
+          results: searchResults,
+          query: 'routing',
+        }),
       ),
       model(model => {
         expect(model.searchState).toMatchObject({
@@ -104,7 +107,7 @@ describe('search', () => {
       }),
       Command.resolve(
         FetchSearchResults,
-        ReceivedSearchResults({ results: [], query: 'testing' }),
+        CompletedFetchSearchResults({ results: [], query: 'testing' }),
       ),
     )
   })
@@ -114,7 +117,10 @@ describe('search', () => {
       update,
       given({ ...initialModel, query: 'testing' }),
       message(
-        ReceivedSearchResults({ results: searchResults, query: 'routing' }),
+        CompletedFetchSearchResults({
+          results: searchResults,
+          query: 'routing',
+        }),
       ),
       model(model => {
         expect(model.searchState._tag).toBe('Idle')

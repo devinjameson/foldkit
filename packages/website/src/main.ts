@@ -54,6 +54,7 @@ import {
   CompletedScrollSidebarActiveLinkIntoView,
   CompletedScrollToAnchor,
   CompletedScrollToTop,
+  CompletedWaitBeforeHidingCopiedIndicator,
   FailedCopyLink,
   FailedCopySnippet,
   FailedSubscribeToNewsletter,
@@ -68,7 +69,6 @@ import {
   GotPlaygroundMessage,
   GotSearchMessage,
   GotUiPageMessage,
-  HidCopiedIndicator,
   Message,
   ResolvedTheme,
   SucceededCopyLink,
@@ -664,10 +664,10 @@ export const update = (
               evo(model, {
                 copiedSnippets: HashSet.add(text),
               }),
-              [HideCopiedIndicator({ text })],
+              [WaitBeforeHidingCopiedIndicator({ text })],
             ],
 
-      HidCopiedIndicator: ({ text }) => [
+      CompletedWaitBeforeHidingCopiedIndicator: ({ text }) => [
         evo(model, {
           copiedSnippets: HashSet.remove(text),
         }),
@@ -1083,14 +1083,17 @@ const CopyLink = Command.define('CopyLink', {
 
 const COPY_INDICATOR_DURATION = '2 seconds'
 
-const HideCopiedIndicator = Command.define('HideCopiedIndicator', {
-  args: { text: S.String },
-  messages: [HidCopiedIndicator],
-  execute: ({ text }) =>
-    Effect.sleep(COPY_INDICATOR_DURATION).pipe(
-      Effect.as(HidCopiedIndicator({ text })),
-    ),
-})
+const WaitBeforeHidingCopiedIndicator = Command.define(
+  'WaitBeforeHidingCopiedIndicator',
+  {
+    args: { text: S.String },
+    messages: [CompletedWaitBeforeHidingCopiedIndicator],
+    execute: ({ text }) =>
+      Effect.sleep(COPY_INDICATOR_DURATION).pipe(
+        Effect.as(CompletedWaitBeforeHidingCopiedIndicator({ text })),
+      ),
+  },
+)
 
 const ScrollToTop = Command.define('ScrollToTop', {
   messages: [CompletedScrollToTop],

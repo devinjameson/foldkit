@@ -67,12 +67,12 @@ export type Model = typeof Model.Type
 
 export const UpdatedName = m('UpdatedName', { value: S.String })
 export const UpdatedEmail = m('UpdatedEmail', { value: S.String })
-export const ValidatedEmail = m('ValidatedEmail', {
+export const CompletedValidateEmail = m('CompletedValidateEmail', {
   field: Field(S.String),
 })
 export const UpdatedMessageText = m('UpdatedMessageText', { value: S.String })
 export const ClickedFormSubmit = m('ClickedFormSubmit')
-export const SubmittedForm = m('SubmittedForm', {
+export const CompletedSubmitForm = m('CompletedSubmitForm', {
   success: S.Boolean,
   name: S.String,
   email: S.String,
@@ -82,10 +82,10 @@ export const SubmittedForm = m('SubmittedForm', {
 export const Message = S.Union([
   UpdatedName,
   UpdatedEmail,
-  ValidatedEmail,
+  CompletedValidateEmail,
   UpdatedMessageText,
   ClickedFormSubmit,
-  SubmittedForm,
+  CompletedSubmitForm,
 ])
 export type Message = typeof Message.Type
 
@@ -119,18 +119,18 @@ const isEmailOnWaitlist = (email: string): Effect.Effect<boolean> =>
 
 export const ValidateEmail = Command.define('ValidateEmail', {
   args: { email: S.String },
-  messages: [ValidatedEmail],
+  messages: [CompletedValidateEmail],
   execute: ({ email }) =>
     Effect.gen(function* () {
       if (yield* isEmailOnWaitlist(email)) {
-        return ValidatedEmail({
+        return CompletedValidateEmail({
           field: Invalid({
             value: email,
             errors: ['This email is already on our waitlist'],
           }),
         })
       } else {
-        return ValidatedEmail({
+        return CompletedValidateEmail({
           field: Valid({ value: email }),
         })
       }
@@ -184,7 +184,7 @@ export const update = (
         }
       },
 
-      ValidatedEmail: ({ field }) => {
+      CompletedValidateEmail: ({ field }) => {
         if (field.value === model.email.value) {
           return [
             evo(model, {
@@ -227,7 +227,7 @@ export const update = (
         ]
       },
 
-      SubmittedForm: ({ success, name }) => {
+      CompletedSubmitForm: ({ success, name }) => {
         if (success) {
           return [
             evo(model, {
@@ -260,14 +260,14 @@ const FAKE_API_DELAY_MS = 500
 
 export const SubmitForm = Command.define('SubmitForm', {
   args: { name: S.String, email: S.String, messageText: S.String },
-  messages: [SubmittedForm],
+  messages: [CompletedSubmitForm],
   execute: ({ name, email, messageText }) =>
     Effect.gen(function* () {
       yield* Effect.sleep(`${FAKE_API_DELAY_MS} millis`)
 
       const success = yield* Random.nextBoolean
 
-      return SubmittedForm({
+      return CompletedSubmitForm({
         success,
         name,
         email,

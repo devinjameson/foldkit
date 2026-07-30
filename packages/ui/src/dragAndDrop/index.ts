@@ -106,7 +106,7 @@ export const ActivatedKeyboardDrag = m('ActivatedKeyboardDrag', {
   index: S.Number,
 })
 /** The ResolveKeyboardMove Command resolved the next keyboard drag position. */
-export const ResolvedKeyboardMove = m('ResolvedKeyboardMove', {
+export const CompletedResolveKeyboardMove = m('CompletedResolveKeyboardMove', {
   targetContainerId: S.String,
   targetIndex: S.Number,
 })
@@ -136,7 +136,7 @@ export const Message: S.Union<
     typeof ReleasedPointer,
     typeof CancelledDrag,
     typeof ActivatedKeyboardDrag,
-    typeof ResolvedKeyboardMove,
+    typeof CompletedResolveKeyboardMove,
     typeof ConfirmedKeyboardDrop,
     typeof PressedArrowKey,
     typeof AdvancedAutoScrollFrame,
@@ -148,7 +148,7 @@ export const Message: S.Union<
   ReleasedPointer,
   CancelledDrag,
   ActivatedKeyboardDrag,
-  ResolvedKeyboardMove,
+  CompletedResolveKeyboardMove,
   ConfirmedKeyboardDrop,
   PressedArrowKey,
   AdvancedAutoScrollFrame,
@@ -216,12 +216,12 @@ const resolveWithinContainer = (
     currentIndex: number
     isForward: boolean
   }>,
-): typeof ResolvedKeyboardMove.Type => {
+): typeof CompletedResolveKeyboardMove.Type => {
   const container = document.querySelector(
     attributeSelector('data-droppable-id', config.containerId),
   )
   if (!container) {
-    return ResolvedKeyboardMove({
+    return CompletedResolveKeyboardMove({
       targetContainerId: config.containerId,
       targetIndex: config.currentIndex,
     })
@@ -238,7 +238,7 @@ const resolveWithinContainer = (
     ? Math.min(config.currentIndex + 1, itemCount)
     : Math.max(config.currentIndex - 1, 0)
 
-  return ResolvedKeyboardMove({
+  return CompletedResolveKeyboardMove({
     targetContainerId: config.containerId,
     targetIndex: nextIndex,
   })
@@ -249,7 +249,7 @@ const resolveBetweenContainers = (
     currentContainerId: string
     isForward: boolean
   }>,
-): typeof ResolvedKeyboardMove.Type => {
+): typeof CompletedResolveKeyboardMove.Type => {
   const allContainers = Array.fromIterable(
     document.querySelectorAll<HTMLElement>('[data-droppable-id]'),
   )
@@ -269,7 +269,7 @@ const resolveBetweenContainers = (
     allContainers[nextContainerIndex]?.dataset['droppableId'] ??
     config.currentContainerId
 
-  return ResolvedKeyboardMove({
+  return CompletedResolveKeyboardMove({
     targetContainerId: nextContainerId,
     targetIndex: 0,
   })
@@ -282,10 +282,10 @@ const resolveKeyboardMoveTarget = (
     currentIndex: number
     direction: Direction
   }>,
-): Effect.Effect<typeof ResolvedKeyboardMove.Type> =>
+): Effect.Effect<typeof CompletedResolveKeyboardMove.Type> =>
   Effect.sync(() =>
     M.value(config.direction).pipe(
-      M.withReturnType<typeof ResolvedKeyboardMove.Type>(),
+      M.withReturnType<typeof CompletedResolveKeyboardMove.Type>(),
       M.whenOr('Down', 'Right', () =>
         resolveWithinContainer({
           itemId: config.itemId,
@@ -333,7 +333,7 @@ export const ResolveKeyboardMove = Command.define('ResolveKeyboardMove', {
       'PreviousContainer',
     ]),
   },
-  messages: [ResolvedKeyboardMove],
+  messages: [CompletedResolveKeyboardMove],
   execute: resolveKeyboardMoveTarget,
 })
 
@@ -474,7 +474,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         Option.none(),
       ],
 
-      ResolvedKeyboardMove: ({ targetContainerId, targetIndex }) =>
+      CompletedResolveKeyboardMove: ({ targetContainerId, targetIndex }) =>
         M.value(model.dragState).pipe(
           withUpdateReturn,
           M.tag('KeyboardDragging', keyboardDragging => [

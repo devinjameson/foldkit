@@ -4,7 +4,7 @@ import { evo } from 'foldkit/struct'
 
 import { Slider } from '@foldkit/ui'
 
-import { SpawnAmbientParticle, SpawnBurstParticle } from './command'
+import { GenerateAmbientParticle, GenerateBurstParticle } from './command'
 import {
   BURST_BOOST_DURATION_MS,
   BURST_HUE_ANCHOR_DRIFT_DEG_PER_SECOND,
@@ -32,11 +32,11 @@ import {
   TWO_PI,
 } from './constant'
 import {
+  CompletedGenerateAmbientParticle,
+  CompletedGenerateBurstParticle,
   GotFlowStrengthSliderMessage,
   GotNoiseScaleSliderMessage,
   Message,
-  SpawnedAmbientParticle,
-  SpawnedBurstParticle,
 } from './message'
 import { Model, Particle, Point } from './model'
 import { fractalNoise } from './noise'
@@ -186,7 +186,7 @@ const spawnBurstParticles = (
   hueAnchor: number,
 ): ReadonlyArray<Command.Command<Message>> =>
   Array.makeBy(BURST_PARTICLE_COUNT, index =>
-    SpawnBurstParticle({
+    GenerateBurstParticle({
       x,
       y,
       angle: burstAngleAt(index),
@@ -199,27 +199,27 @@ const spawnAmbientParticles = (
 ): ReadonlyArray<Command.Command<Message>> => {
   const missing = TARGET_PARTICLE_COUNT - particleCount
   const clamped = Math.max(0, Math.min(missing, SPAWN_PER_FRAME_MAX))
-  return Array.makeBy(clamped, () => SpawnAmbientParticle())
+  return Array.makeBy(clamped, () => GenerateAmbientParticle())
 }
 
-const appendSpawnedParticle =
+const appendGeneratedParticle =
   (model: Model) =>
   (
-    spawn:
-      | typeof SpawnedAmbientParticle.Type
-      | typeof SpawnedBurstParticle.Type,
+    generatedParticle:
+      | typeof CompletedGenerateAmbientParticle.Type
+      | typeof CompletedGenerateBurstParticle.Type,
   ): UpdateReturn => {
     const newParticle: Particle = {
       id: model.nextId,
-      trail: [{ x: spawn.x, y: spawn.y }],
-      baseHue: spawn.baseHue,
-      hueDriftPerSecond: spawn.hueDriftPerSecond,
+      trail: [{ x: generatedParticle.x, y: generatedParticle.y }],
+      baseHue: generatedParticle.baseHue,
+      hueDriftPerSecond: generatedParticle.hueDriftPerSecond,
       ageMs: 0,
-      lifespanMs: spawn.lifespanMs,
-      speed: spawn.speed,
+      lifespanMs: generatedParticle.lifespanMs,
+      speed: generatedParticle.speed,
       bornAtSeconds: model.elapsedSeconds,
-      initialAngle: spawn.initialAngle,
-      initialSpeedScale: spawn.initialSpeedScale,
+      initialAngle: generatedParticle.initialAngle,
+      initialSpeedScale: generatedParticle.initialSpeedScale,
     }
     return [
       evo(model, {
@@ -254,9 +254,9 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         return [nextModel, spawnAmbientParticles(advancedParticles.length)]
       },
 
-      SpawnedAmbientParticle: appendSpawnedParticle(model),
+      CompletedGenerateAmbientParticle: appendGeneratedParticle(model),
 
-      SpawnedBurstParticle: appendSpawnedParticle(model),
+      CompletedGenerateBurstParticle: appendGeneratedParticle(model),
 
       PressedCanvas: ({ x, y }) => [
         model,

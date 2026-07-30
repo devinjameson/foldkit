@@ -20,7 +20,7 @@ export {
   CompletedPortalListboxBackdrop,
   AnchorListbox,
   PortalListboxBackdrop,
-  ClearedSearch,
+  CompletedDelayClearSearch,
   GotAnimationMessage,
   LockScroll,
   UnlockScroll,

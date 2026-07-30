@@ -234,10 +234,10 @@ describe('Dialog', () => {
           update,
           Story.given(init({ id: 'test', isAnimated: true })),
           Story.message(RequestedOpen()),
-          Story.Command.expectHas(ShowDialog, Animation.RequestFrame),
+          Story.Command.expectHas(ShowDialog, Animation.WaitForPaint),
           Story.Command.resolveAll(
             [ShowDialog, CompletedShowDialog()],
-            [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
+            [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
             [Animation.WaitForAnimationSettled, Animation.EndedAnimation()],
           ),
           Story.model(model => {
@@ -257,7 +257,7 @@ describe('Dialog', () => {
             expect(model.animation.transitionState).toBe('LeaveStart')
           }),
           Story.Command.resolveAll(
-            [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
+            [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
             [Animation.WaitForAnimationSettled, Animation.EndedAnimation()],
             [CloseDialog, CompletedCloseDialog()],
           ),

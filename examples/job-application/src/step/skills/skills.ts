@@ -25,7 +25,10 @@ export type Model = typeof Model.Type
 // MESSAGE
 
 export const ClickedAddEntry = m('ClickedAddEntry')
-export const AddedEntry = m('AddedEntry', { entryId: S.String })
+export const SucceededGenerateEntryId = m('SucceededGenerateEntryId', {
+  entryId: S.String,
+})
+export const FailedGenerateEntryId = m('FailedGenerateEntryId')
 export const RemovedEntry = m('RemovedEntry', { entryId: S.String })
 export const GotEntryMessage = m('GotEntryMessage', {
   entryId: S.String,
@@ -34,7 +37,8 @@ export const GotEntryMessage = m('GotEntryMessage', {
 
 export const Message = S.Union([
   ClickedAddEntry,
-  AddedEntry,
+  SucceededGenerateEntryId,
+  FailedGenerateEntryId,
   RemovedEntry,
   GotEntryMessage,
 ])
@@ -48,13 +52,16 @@ export const init = (initialEntryId: string): Model => ({
 
 // COMMAND
 
-export const AddEntry = Command.define('AddEntry', {
-  messages: [AddedEntry],
+export const GenerateEntryId = Command.define('GenerateEntryId', {
+  messages: [SucceededGenerateEntryId, FailedGenerateEntryId],
   execute: Effect.gen(function* () {
     const crypto = yield* Crypto.Crypto
-    const entryId = yield* Effect.orDie(crypto.randomUUIDv4)
-    return AddedEntry({ entryId })
-  }).pipe(Effect.provide(BrowserCrypto.layer)),
+    const entryId = yield* crypto.randomUUIDv4
+    return SucceededGenerateEntryId({ entryId })
+  }).pipe(
+    Effect.provide(BrowserCrypto.layer),
+    Effect.catch(() => Effect.succeed(FailedGenerateEntryId())),
+  ),
 })
 
 // UPDATE
@@ -73,14 +80,16 @@ export const update = (model: Model, message: Message): UpdateReturn =>
   M.value(message).pipe(
     M.withReturnType<UpdateReturn>(),
     M.tagsExhaustive({
-      ClickedAddEntry: () => [model, [AddEntry()]],
+      ClickedAddEntry: () => [model, [GenerateEntryId()]],
 
-      AddedEntry: ({ entryId }) => [
+      SucceededGenerateEntryId: ({ entryId }) => [
         evo(model, {
           entries: Array.append(Entry.init(entryId)),
         }),
         [],
       ],
+
+      FailedGenerateEntryId: () => [model, []],
 
       RemovedEntry: ({ entryId }) => [
         evo(model, {

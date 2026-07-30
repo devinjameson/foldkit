@@ -23,10 +23,10 @@ import {
 } from '../animation/update.js'
 import * as OptionExt from '../internal/optionExtensions.js'
 import {
+  CompletedWaitBeforeDismissal,
   DEFAULT_DURATION,
   Dismissed,
   DismissedAll,
-  ElapsedDuration,
   GotAnimationMessage,
   type InitConfig,
   type Variant,
@@ -54,16 +54,16 @@ export type ShowInput<A> = Readonly<{
  *  version so stale timers (from hover or manual dismiss) are discarded in
  *  the update function. Static. The Command definition doesn't depend on
  *  payload. */
-export const DismissAfter = Command.define('DismissAfter', {
+export const WaitBeforeDismissal = Command.define('WaitBeforeDismissal', {
   args: {
     entryId: S.String,
     version: S.Number,
     duration: S.DurationFromMillis,
   },
-  messages: [ElapsedDuration],
+  messages: [CompletedWaitBeforeDismissal],
   execute: ({ entryId, version, duration }) =>
     Effect.sleep(duration).pipe(
-      Effect.as(ElapsedDuration({ entryId, version })),
+      Effect.as(CompletedWaitBeforeDismissal({ entryId, version })),
     ),
 })
 
@@ -121,7 +121,8 @@ export const makeRuntime = <A, I>(payloadSchema: S.Codec<A, I>) => {
     entryId: string,
     version: number,
     duration: Duration.Duration,
-  ): Command.Command<Message> => DismissAfter({ entryId, version, duration })
+  ): Command.Command<Message> =>
+    WaitBeforeDismissal({ entryId, version, duration })
 
   const rescheduleDismissCommands = (
     entry: Entry,
@@ -302,7 +303,7 @@ export const makeRuntime = <A, I>(payloadSchema: S.Codec<A, I>) => {
             },
           ),
 
-        ElapsedDuration: ({ entryId, version }) => {
+        CompletedWaitBeforeDismissal: ({ entryId, version }) => {
           const maybeEntry = Array.findFirst(
             model.entries,
             ({ id }) => id === entryId,

@@ -32,7 +32,9 @@ const ClickedFillLargeModel = m('ClickedFillLargeModel', {
 })
 const ClickedClearLargeModel = m('ClickedClearLargeModel')
 const ClickedFillHistory = m('ClickedFillHistory')
-const FilledHistoryStep = m('FilledHistoryStep', { remaining: S.Number })
+const CompletedFillHistoryStep = m('CompletedFillHistoryStep', {
+  remaining: S.Number,
+})
 
 export const Message = S.Union([
   ClickedTick,
@@ -40,7 +42,7 @@ export const Message = S.Union([
   ClickedFillLargeModel,
   ClickedClearLargeModel,
   ClickedFillHistory,
-  FilledHistoryStep,
+  CompletedFillHistoryStep,
 ])
 type Message = typeof Message.Type
 
@@ -63,9 +65,9 @@ const heavyPayload = makeHeavyArray(HEAVY_ITEM_COUNT)
 
 const FillHistoryStep = Command.define('FillHistoryStep', {
   args: { remaining: S.Number },
-  messages: [FilledHistoryStep],
+  messages: [CompletedFillHistoryStep],
   execute: ({ remaining }) =>
-    Effect.sync(() => FilledHistoryStep({ remaining })),
+    Effect.sync(() => CompletedFillHistoryStep({ remaining })),
 })
 
 // UPDATE
@@ -96,7 +98,7 @@ export const update = (
         model,
         [FillHistoryStep({ remaining: HISTORY_FILL_COUNT })],
       ],
-      FilledHistoryStep: ({ remaining }) => [
+      CompletedFillHistoryStep: ({ remaining }) => [
         evo(model, { tickCount: tickCount => Number.increment(tickCount) }),
         remaining > 1
           ? [FillHistoryStep({ remaining: Number.decrement(remaining) })]

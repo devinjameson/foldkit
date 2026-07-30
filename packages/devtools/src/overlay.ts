@@ -173,9 +173,9 @@ const ClickedFollowLatest = m('ClickedFollowLatest')
 const ClickedScrollToTopPill = m('ClickedScrollToTopPill')
 const ScrolledMessageList = m('ScrolledMessageList', { scrollTop: S.Number })
 const CompletedClear = m('CompletedClear')
-const LockedScroll = m('LockedScroll')
-const UnlockedScroll = m('UnlockedScroll')
-const ScrolledToTop = m('ScrolledToTop')
+const CompletedLockScroll = m('CompletedLockScroll')
+const CompletedUnlockScroll = m('CompletedUnlockScroll')
+const CompletedScrollToTop = m('CompletedScrollToTop')
 const CrossedMobileBreakpoint = m('CrossedMobileBreakpoint', {
   isMobile: S.Boolean,
 })
@@ -219,9 +219,9 @@ const Message = S.Union([
   ScrolledMessageList,
   CompletedResume,
   CompletedClear,
-  LockedScroll,
-  UnlockedScroll,
-  ScrolledToTop,
+  CompletedLockScroll,
+  CompletedUnlockScroll,
+  CompletedScrollToTop,
   CrossedMobileBreakpoint,
   ReceivedInspectedState,
   ToggledTreeNode,
@@ -364,13 +364,13 @@ class ShadowRootService extends Context.Service<
 >()('foldkit/DevToolsShadowRoot') {}
 
 export const LockScroll = Command.define('LockScroll', {
-  messages: [LockedScroll],
-  execute: lockScroll.pipe(Effect.as(LockedScroll())),
+  messages: [CompletedLockScroll],
+  execute: lockScroll.pipe(Effect.as(CompletedLockScroll())),
 })
 
 export const UnlockScroll = Command.define('UnlockScroll', {
-  messages: [UnlockedScroll],
-  execute: unlockScroll.pipe(Effect.as(UnlockedScroll())),
+  messages: [CompletedUnlockScroll],
+  execute: unlockScroll.pipe(Effect.as(CompletedUnlockScroll())),
 })
 
 const maybeToggleScrollLock = (isEnabled: boolean, shouldLock: boolean) =>
@@ -487,14 +487,14 @@ export const Clear = Command.define('Clear', {
 })
 
 export const ScrollToTop = Command.define('ScrollToTop', {
-  messages: [ScrolledToTop],
+  messages: [CompletedScrollToTop],
   execute: Effect.gen(function* () {
     const shadow = yield* ShadowRootService
     const messageList = shadow.querySelector(MESSAGE_LIST_SELECTOR)
     if (messageList instanceof HTMLElement) {
       messageList.scrollTop = 0
     }
-    return ScrolledToTop()
+    return CompletedScrollToTop()
   }),
 })
 
@@ -827,9 +827,9 @@ const makeUpdate = (
         'CompletedResume',
         'CompletedClear',
         'CompletedPersistDevToolsState',
-        'LockedScroll',
-        'UnlockedScroll',
-        'ScrolledToTop',
+        'CompletedLockScroll',
+        'CompletedUnlockScroll',
+        'CompletedScrollToTop',
         () => [model, []],
       ),
       M.exhaustive,

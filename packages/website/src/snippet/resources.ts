@@ -9,12 +9,12 @@ class ApiClientService extends Context.Service<ApiClientService, ApiClient>()(
 
 const LoadUser = Command.define('LoadUser', {
   args: { userId: S.String },
-  messages: [LoadedUser],
+  messages: [CompletedLoadUser],
   execute: ({ userId }) =>
     Effect.gen(function* () {
       const apiClient = yield* ApiClientService
       const user = yield* apiClient.getUser(userId)
-      return LoadedUser({ user })
+      return CompletedLoadUser({ user })
     }),
 })
 

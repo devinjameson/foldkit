@@ -15,10 +15,10 @@ export const CompletedNavigateHome = m('CompletedNavigateHome')
 export const SucceededStartGame = m('SucceededStartGame')
 export const FailedStartGame = m('FailedStartGame')
 export const CompletedUpdatePlayerProgress = m('CompletedUpdatePlayerProgress')
-export const CompletedSaveSession = m('CompletedSaveSession')
+export const CompletedSavePlayerSession = m('CompletedSavePlayerSession')
 export const CompletedClearSession = m('CompletedClearSession')
 export const FailedJoinRoom = m('FailedJoinRoom')
-export const FailedCopyClipboard = m('FailedCopyClipboard')
+export const FailedCopyRoomId = m('FailedCopyRoomId')
 export const PressedKey = m('PressedKey', { key: S.String })
 export const ChangedUserText = m('ChangedUserText', { value: S.String })
 export const BlurredRoomPageUsernameInput = m('BlurredRoomPageUsernameInput')
@@ -31,15 +31,19 @@ export const UpdatedRoom = m('UpdatedRoom', {
   maybePlayerProgress: S.Option(Shared.PlayerProgress),
 })
 export const FailedStreamRoom = m('FailedStreamRoom', { error: S.String })
-export const LoadedSession = m('LoadedSession', {
+export const CompletedLoadSession = m('CompletedLoadSession', {
   maybeSession: S.Option(RoomPlayerSession),
 })
 export const SucceededFetchRoom = m('SucceededFetchRoom', { room: Shared.Room })
 export const FailedFetchRoom = m('FailedFetchRoom')
 export const ClickedCopyRoomId = m('ClickedCopyRoomId')
 export const SucceededCopyRoomId = m('SucceededCopyRoomId')
-export const HidRoomIdCopiedIndicator = m('HidRoomIdCopiedIndicator')
-export const TickedExitCountdown = m('TickedExitCountdown')
+export const CompletedWaitBeforeHidingRoomIdCopiedIndicator = m(
+  'CompletedWaitBeforeHidingRoomIdCopiedIndicator',
+)
+export const CompletedWaitForExitCountdownInterval = m(
+  'CompletedWaitForExitCountdownInterval',
+)
 export const SucceededJoinRoom = m('SucceededJoinRoom', {
   player: Shared.Player,
 })
@@ -51,10 +55,10 @@ export const Message = S.Union([
   SucceededStartGame,
   FailedStartGame,
   CompletedUpdatePlayerProgress,
-  CompletedSaveSession,
+  CompletedSavePlayerSession,
   CompletedClearSession,
   FailedJoinRoom,
-  FailedCopyClipboard,
+  FailedCopyRoomId,
   PressedKey,
   ChangedUserText,
   BlurredRoomPageUsernameInput,
@@ -62,13 +66,13 @@ export const Message = S.Union([
   SubmittedJoinRoomFromPage,
   UpdatedRoom,
   FailedStreamRoom,
-  LoadedSession,
+  CompletedLoadSession,
   SucceededFetchRoom,
   FailedFetchRoom,
   ClickedCopyRoomId,
   SucceededCopyRoomId,
-  HidRoomIdCopiedIndicator,
-  TickedExitCountdown,
+  CompletedWaitBeforeHidingRoomIdCopiedIndicator,
+  CompletedWaitForExitCountdownInterval,
   SucceededJoinRoom,
 ])
 export type Message = typeof Message.Type

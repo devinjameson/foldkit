@@ -72,7 +72,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         ]
       },
 
-      ReceivedSearchResults: ({ results, query }) => {
+      CompletedFetchSearchResults: ({ results, query }) => {
         if (query !== model.query) {
           return [model, []]
         }

@@ -11,11 +11,11 @@ import {
   ActivatedItem,
   AnchorListbox,
   BlurredItems,
-  ClearedSearch,
   ClickItem,
   Closed,
   CompletedAnchorListbox,
   CompletedClickItem,
+  CompletedDelayClearSearch,
   CompletedFocusButton,
   CompletedFocusItems,
   CompletedInertOthers,
@@ -84,7 +84,7 @@ const givenOpenAnimated = flow(
   Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
   Story.Command.resolveAll(
     [FocusItems, CompletedFocusItems()],
-    [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
+    [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
     [Animation.WaitForAnimationSettled, Animation.EndedAnimation()],
   ),
 )
@@ -575,7 +575,7 @@ describe('Listbox', () => {
           ),
           Story.Command.resolve(
             DelayClearSearch,
-            ClearedSearch({ version: STALE_CLEAR_SEARCH_VERSION }),
+            CompletedDelayClearSearch({ version: STALE_CLEAR_SEARCH_VERSION }),
           ),
           Story.model(model => {
             expect(model.searchQuery).toBe('a')
@@ -585,7 +585,7 @@ describe('Listbox', () => {
           ),
           Story.Command.resolve(
             DelayClearSearch,
-            ClearedSearch({ version: STALE_CLEAR_SEARCH_VERSION }),
+            CompletedDelayClearSearch({ version: STALE_CLEAR_SEARCH_VERSION }),
           ),
           Story.model(model => {
             expect(model.searchQuery).toBe('ab')
@@ -602,7 +602,7 @@ describe('Listbox', () => {
           ),
           Story.Command.resolve(
             DelayClearSearch,
-            ClearedSearch({ version: STALE_CLEAR_SEARCH_VERSION }),
+            CompletedDelayClearSearch({ version: STALE_CLEAR_SEARCH_VERSION }),
           ),
           Story.model(model => {
             expect(model.searchVersion).toBe(1)
@@ -612,7 +612,7 @@ describe('Listbox', () => {
           ),
           Story.Command.resolve(
             DelayClearSearch,
-            ClearedSearch({ version: STALE_CLEAR_SEARCH_VERSION }),
+            CompletedDelayClearSearch({ version: STALE_CLEAR_SEARCH_VERSION }),
           ),
           Story.model(model => {
             expect(model.searchVersion).toBe(2)
@@ -629,7 +629,7 @@ describe('Listbox', () => {
           ),
           Story.Command.resolve(
             DelayClearSearch,
-            ClearedSearch({ version: STALE_CLEAR_SEARCH_VERSION }),
+            CompletedDelayClearSearch({ version: STALE_CLEAR_SEARCH_VERSION }),
           ),
           Story.model(model => {
             expect(model.maybeActiveItemIndex).toStrictEqual(Option.some(3))
@@ -646,7 +646,7 @@ describe('Listbox', () => {
           ),
           Story.Command.resolve(
             DelayClearSearch,
-            ClearedSearch({ version: STALE_CLEAR_SEARCH_VERSION }),
+            CompletedDelayClearSearch({ version: STALE_CLEAR_SEARCH_VERSION }),
           ),
           Story.model(model => {
             expect(model.maybeActiveItemIndex).toStrictEqual(Option.some(0))
@@ -663,7 +663,7 @@ describe('Listbox', () => {
           ),
           Story.Command.resolve(
             DelayClearSearch,
-            ClearedSearch({ version: STALE_CLEAR_SEARCH_VERSION }),
+            CompletedDelayClearSearch({ version: STALE_CLEAR_SEARCH_VERSION }),
           ),
           Story.model(model => {
             expect(model.searchQuery).toBe('a')
@@ -672,7 +672,7 @@ describe('Listbox', () => {
       })
     })
 
-    describe('ClearedSearch', () => {
+    describe('CompletedDelayClearSearch', () => {
       it('clears search query when version matches', () => {
         Story.story(
           update,
@@ -682,12 +682,12 @@ describe('Listbox', () => {
           ),
           Story.Command.resolve(
             DelayClearSearch,
-            ClearedSearch({ version: STALE_CLEAR_SEARCH_VERSION }),
+            CompletedDelayClearSearch({ version: STALE_CLEAR_SEARCH_VERSION }),
           ),
           Story.model(model => {
             expect(model.searchVersion).toBe(1)
           }),
-          Story.message(ClearedSearch({ version: 1 })),
+          Story.message(CompletedDelayClearSearch({ version: 1 })),
           Story.model(model => {
             expect(model.searchQuery).toBe('')
           }),
@@ -703,19 +703,19 @@ describe('Listbox', () => {
           ),
           Story.Command.resolve(
             DelayClearSearch,
-            ClearedSearch({ version: STALE_CLEAR_SEARCH_VERSION }),
+            CompletedDelayClearSearch({ version: STALE_CLEAR_SEARCH_VERSION }),
           ),
           Story.message(
             Searched({ key: 'b', maybeTargetIndex: Option.none() }),
           ),
           Story.Command.resolve(
             DelayClearSearch,
-            ClearedSearch({ version: STALE_CLEAR_SEARCH_VERSION }),
+            CompletedDelayClearSearch({ version: STALE_CLEAR_SEARCH_VERSION }),
           ),
           Story.model(model => {
             expect(model.searchVersion).toBe(2)
           }),
-          Story.message(ClearedSearch({ version: 1 })),
+          Story.message(CompletedDelayClearSearch({ version: 1 })),
           Story.model(model => {
             expect(model.searchQuery).toBe('ab')
           }),
@@ -783,20 +783,20 @@ describe('Listbox', () => {
             }),
             Story.Command.resolveAll(
               [FocusItems, CompletedFocusItems()],
-              [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
+              [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
               [Animation.WaitForAnimationSettled, Animation.EndedAnimation()],
             ),
           )
         })
 
-        it('advances EnterStart to EnterAnimating on GotAnimationMessage(AdvancedAnimationFrame)', () => {
+        it('advances EnterStart to EnterAnimating on GotAnimationMessage(CompletedWaitForPaint)', () => {
           Story.story(
             update,
             givenClosedAnimated,
             Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
             Story.Command.resolve(
-              Animation.RequestFrame,
-              Animation.AdvancedAnimationFrame(),
+              Animation.WaitForPaint,
+              Animation.CompletedWaitForPaint(),
             ),
             Story.model(model => {
               expect(model.animation.transitionState).toBe('EnterAnimating')
@@ -815,7 +815,7 @@ describe('Listbox', () => {
             Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
             Story.Command.resolveAll(
               [FocusItems, CompletedFocusItems()],
-              [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
+              [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
               [Animation.WaitForAnimationSettled, Animation.EndedAnimation()],
             ),
             Story.model(model => {
@@ -837,7 +837,7 @@ describe('Listbox', () => {
             }),
             Story.Command.resolveAll(
               [FocusButton, CompletedFocusButton()],
-              [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
+              [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
               [Animation.WaitForAnimationSettled, Animation.EndedAnimation()],
               [DetectMovementOrAnimationEnd, animationEndMessage],
             ),
@@ -854,7 +854,7 @@ describe('Listbox', () => {
               expect(model.animation.transitionState).toBe('LeaveStart')
             }),
             Story.Command.resolveAll(
-              [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
+              [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
               [Animation.WaitForAnimationSettled, Animation.EndedAnimation()],
               [DetectMovementOrAnimationEnd, animationEndMessage],
             ),
@@ -872,21 +872,21 @@ describe('Listbox', () => {
             }),
             Story.Command.resolveAll(
               [FocusButton, CompletedFocusButton()],
-              [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
+              [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
               [Animation.WaitForAnimationSettled, Animation.EndedAnimation()],
               [DetectMovementOrAnimationEnd, animationEndMessage],
             ),
           )
         })
 
-        it('advances LeaveStart to LeaveAnimating on GotAnimationMessage(AdvancedAnimationFrame)', () => {
+        it('advances LeaveStart to LeaveAnimating on GotAnimationMessage(CompletedWaitForPaint)', () => {
           Story.story(
             update,
             givenOpenAnimated,
             Story.message(Closed()),
             Story.Command.resolve(
-              Animation.RequestFrame,
-              Animation.AdvancedAnimationFrame(),
+              Animation.WaitForPaint,
+              Animation.CompletedWaitForPaint(),
             ),
             Story.model(model => {
               expect(model.animation.transitionState).toBe('LeaveAnimating')
@@ -906,7 +906,7 @@ describe('Listbox', () => {
             Story.message(Closed()),
             Story.Command.resolveAll(
               [FocusButton, CompletedFocusButton()],
-              [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
+              [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
               [Animation.WaitForAnimationSettled, Animation.EndedAnimation()],
               [DetectMovementOrAnimationEnd, animationEndMessage],
             ),
@@ -944,13 +944,13 @@ describe('Listbox', () => {
       })
 
       describe('stale messages', () => {
-        it('ignores GotAnimationMessage with AdvancedAnimationFrame when Idle', () => {
+        it('ignores GotAnimationMessage with CompletedWaitForPaint when Idle', () => {
           Story.story(
             update,
             givenOpen,
             Story.message(
               GotAnimationMessage({
-                message: Animation.AdvancedAnimationFrame(),
+                message: Animation.CompletedWaitForPaint(),
               }),
             ),
             Story.model(model => {
@@ -981,7 +981,7 @@ describe('Listbox', () => {
             Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
             Story.Command.resolveAll(
               [FocusItems, CompletedFocusItems()],
-              [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
+              [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
               [Animation.WaitForAnimationSettled, Animation.EndedAnimation()],
             ),
             Story.message(Closed()),
@@ -991,7 +991,7 @@ describe('Listbox', () => {
             }),
             Story.Command.resolveAll(
               [FocusButton, CompletedFocusButton()],
-              [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
+              [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
               [Animation.WaitForAnimationSettled, Animation.EndedAnimation()],
               [DetectMovementOrAnimationEnd, animationEndMessage],
             ),
@@ -1005,7 +1005,7 @@ describe('Listbox', () => {
             Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
             Story.Command.resolveAll(
               [FocusItems, CompletedFocusItems()],
-              [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
+              [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
               [Animation.WaitForAnimationSettled, Animation.EndedAnimation()],
             ),
             Story.message(Closed()),
@@ -1015,7 +1015,7 @@ describe('Listbox', () => {
             }),
             Story.Command.resolveAll(
               [FocusButton, CompletedFocusButton()],
-              [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
+              [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
               [Animation.WaitForAnimationSettled, Animation.EndedAnimation()],
               [DetectMovementOrAnimationEnd, animationEndMessage],
             ),

@@ -130,7 +130,7 @@ const ClickedPlay = m('ClickedPlay')
 const ClickedPause = m('ClickedPause')
 const ClickedStop = m('ClickedStop')
 const CompletedPlayNote = m('CompletedPlayNote', { noteIndex: S.Number })
-const ProgressedNotePhase = m('ProgressedNotePhase', {
+const CompletedDelayAdvancePhase = m('CompletedDelayAdvancePhase', {
   generation: S.Number,
 })
 const SucceededAcquireAudioContext = m('SucceededAcquireAudioContext')
@@ -145,7 +145,7 @@ export const Message = S.Union([
   ClickedPause,
   ClickedStop,
   CompletedPlayNote,
-  ProgressedNotePhase,
+  CompletedDelayAdvancePhase,
   SucceededAcquireAudioContext,
   FailedAcquireAudioContext,
   ReleasedAudioContext,
@@ -204,10 +204,10 @@ const prependToLog =
 
 const DelayAdvancePhase = Command.define('DelayAdvancePhase', {
   args: { generation: S.Number },
-  messages: [ProgressedNotePhase],
+  messages: [CompletedDelayAdvancePhase],
   execute: ({ generation }) =>
     Effect.sleep(PHASE_DURATION).pipe(
-      Effect.as(ProgressedNotePhase({ generation })),
+      Effect.as(CompletedDelayAdvancePhase({ generation })),
     ),
 })
 
@@ -388,7 +388,7 @@ const applyMessage = (model: Model, message: Message): UpdateReturn =>
         ]
       },
 
-      ProgressedNotePhase: ({ generation }) => {
+      CompletedDelayAdvancePhase: ({ generation }) => {
         if (generation !== model.generation) {
           return [model, []]
         }

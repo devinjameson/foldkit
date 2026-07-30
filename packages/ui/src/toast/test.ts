@@ -1,18 +1,18 @@
 import * as Story from 'foldkit/story'
 
 import {
-  AdvancedAnimationFrame,
+  CompletedWaitForPaint,
   EndedAnimation,
-  RequestFrame,
   WaitForAnimationSettled,
+  WaitForPaint,
 } from '../animation/index.js'
-import { ElapsedDuration } from './schema.js'
-import { DismissAfter } from './update.js'
+import { CompletedWaitBeforeDismissal } from './schema.js'
+import { WaitBeforeDismissal } from './update.js'
 
 /** Input for {@link drainEntry}. `entryId` selects the entry whose lifecycle
  *  to drain. `version` is the auto-dismiss timer version echoed back by
- *  `ElapsedDuration`; it defaults to `0`, the version a freshly shown entry
- *  carries. */
+ *  `CompletedWaitBeforeDismissal`; it defaults to `0`, the version a freshly
+ *  shown entry carries. */
 export type DrainEntryInput = Readonly<{
   entryId: string
   version?: number
@@ -30,10 +30,11 @@ const DEFAULT_VERSION = 0
  *  test must resolve in full or the story fails on leftover Commands. The
  *  steps are:
  *
- *  - enter animation: `RequestFrame` then `AdvancedAnimationFrame`
+ *  - enter animation: `WaitForPaint` then `CompletedWaitForPaint`
  *  - enter settle: `WaitForAnimationSettled` then `EndedAnimation`
- *  - auto-dismiss: `DismissAfter` then `ElapsedDuration`
- *  - exit animation: `RequestFrame` then `AdvancedAnimationFrame`
+ *  - auto-dismiss: `WaitBeforeDismissal` then
+ *    `CompletedWaitBeforeDismissal`
+ *  - exit animation: `WaitForPaint` then `CompletedWaitForPaint`
  *  - exit settle: `WaitForAnimationSettled` then `EndedAnimation`
  *
  *  Each step resolves with the child's raw result Message. `resolveAll` replays
@@ -55,9 +56,9 @@ export const drainEntry = ({
   version = DEFAULT_VERSION,
 }: DrainEntryInput) =>
   Story.Command.resolveAll(
-    [RequestFrame, AdvancedAnimationFrame()],
+    [WaitForPaint, CompletedWaitForPaint()],
     [WaitForAnimationSettled, EndedAnimation()],
-    [DismissAfter, ElapsedDuration({ entryId, version })],
-    [RequestFrame, AdvancedAnimationFrame()],
+    [WaitBeforeDismissal, CompletedWaitBeforeDismissal({ entryId, version })],
+    [WaitForPaint, CompletedWaitForPaint()],
     [WaitForAnimationSettled, EndedAnimation()],
   )

@@ -6,13 +6,13 @@ import { describe, it } from '@effect/vitest'
 
 import * as Animation from '../animation/index.js'
 import {
-  DismissAfter,
+  CompletedWaitBeforeDismissal,
   Dismissed,
   DismissedAll,
-  ElapsedDuration,
   GotAnimationMessage,
   HoveredEntry,
   LeftEntry,
+  WaitBeforeDismissal,
   make,
   test as toastTest,
 } from './index.js'
@@ -30,9 +30,6 @@ type Entry = typeof Toast.Entry.Type
 
 const STALE_VERSION = -1
 
-// A post-enter entry: isShowing true, transition Idle. Use this for tests
-// that exercise behavior after the enter animation has settled. Dismissed,
-// ElapsedDuration, HoveredEntry / LeftEntry, etc.
 const makeSettledEntry = (overrides: Partial<Entry> = {}): Entry => ({
   id: 'test-entry-0',
   variant: 'Info',
@@ -148,7 +145,7 @@ describe('Toast', () => {
   })
 
   describe('update', () => {
-    describe('ElapsedDuration', () => {
+    describe('CompletedWaitBeforeDismissal', () => {
       it('ignores a stale version', () => {
         const model: Model = {
           ...Toast.init({ id: 'test' }),
@@ -159,7 +156,7 @@ describe('Toast', () => {
           Toast.update,
           Story.given(model),
           Story.message(
-            ElapsedDuration({
+            CompletedWaitBeforeDismissal({
               entryId: firstEntryId,
               version: STALE_VERSION,
             }),
@@ -180,14 +177,19 @@ describe('Toast', () => {
         Story.story(
           Toast.update,
           Story.given(model),
-          Story.message(ElapsedDuration({ entryId: firstEntryId, version: 0 })),
+          Story.message(
+            CompletedWaitBeforeDismissal({
+              entryId: firstEntryId,
+              version: 0,
+            }),
+          ),
           Story.model((next: Model) => {
             expect(next.entries[0]?.animation.transitionState).toBe(
               'LeaveStart',
             )
           }),
           Story.Command.resolveAll(
-            [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
+            [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
             [Animation.WaitForAnimationSettled, Animation.EndedAnimation()],
           ),
         )
@@ -197,7 +199,9 @@ describe('Toast', () => {
         Story.story(
           Toast.update,
           givenEmpty,
-          Story.message(ElapsedDuration({ entryId: 'nope', version: 0 })),
+          Story.message(
+            CompletedWaitBeforeDismissal({ entryId: 'nope', version: 0 }),
+          ),
           Story.Command.expectNone(),
         )
       })
@@ -242,10 +246,13 @@ describe('Toast', () => {
             expect(entry?.isHovered).toBe(false)
             expect(entry?.pendingDismissVersion).toBe(2)
           }),
-          Story.Command.expectHas(DismissAfter),
+          Story.Command.expectHas(WaitBeforeDismissal),
           Story.Command.resolve(
-            DismissAfter,
-            ElapsedDuration({ entryId: firstEntryId, version: STALE_VERSION }),
+            WaitBeforeDismissal,
+            CompletedWaitBeforeDismissal({
+              entryId: firstEntryId,
+              version: STALE_VERSION,
+            }),
           ),
         )
       })
@@ -281,7 +288,12 @@ describe('Toast', () => {
           Story.model((next: Model) => {
             expect(next.entries[0]?.pendingDismissVersion).toBe(1)
           }),
-          Story.message(ElapsedDuration({ entryId: firstEntryId, version: 0 })),
+          Story.message(
+            CompletedWaitBeforeDismissal({
+              entryId: firstEntryId,
+              version: 0,
+            }),
+          ),
           Story.model((next: Model) => {
             expect(next.entries[0]?.animation.transitionState).toBe('Idle')
             expect(next.entries[0]?.isHovered).toBe(true)
@@ -337,7 +349,7 @@ describe('Toast', () => {
             )
           }),
           Story.Command.resolveAll(
-            [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
+            [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
             [Animation.WaitForAnimationSettled, Animation.EndedAnimation()],
           ),
           Story.model((next: Model) => {
@@ -434,8 +446,8 @@ describe('Toast', () => {
             )
           }),
           Story.Command.resolveAll(
-            [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
-            [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
+            [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
+            [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
             [
               Animation.WaitForAnimationSettled({ id: 'test-entry-0' }),
               Animation.EndedAnimation(),
@@ -463,21 +475,24 @@ describe('Toast', () => {
         givenEmpty,
         Story.message(Toast.Added({ entry })),
         Story.Command.resolveAll(
-          [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
+          [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
           [Animation.WaitForAnimationSettled, Animation.EndedAnimation()],
         ),
         Story.model((next: Model) => {
           expect(next.entries[0]?.animation.transitionState).toBe('Idle')
         }),
         Story.Command.resolve(
-          DismissAfter,
-          ElapsedDuration({ entryId: firstEntryId, version: 0 }),
+          WaitBeforeDismissal,
+          CompletedWaitBeforeDismissal({
+            entryId: firstEntryId,
+            version: 0,
+          }),
         ),
         Story.model((next: Model) => {
           expect(next.entries[0]?.animation.transitionState).toBe('LeaveStart')
         }),
         Story.Command.resolveAll(
-          [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
+          [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
           [Animation.WaitForAnimationSettled, Animation.EndedAnimation()],
         ),
         Story.model((next: Model) => {

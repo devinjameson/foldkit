@@ -4,7 +4,7 @@ import { describe, expect, test } from 'vitest'
 
 import { Slider } from '@foldkit/ui'
 
-import { SpawnAmbientParticle } from './command'
+import { GenerateAmbientParticle } from './command'
 import {
   DELTA_SECONDS_CAP,
   FLOW_STRENGTH_MAX,
@@ -20,9 +20,9 @@ import {
 import {
   ClickedReset,
   ClickedTogglePlay,
+  CompletedGenerateAmbientParticle,
+  CompletedGenerateBurstParticle,
   MovedPointer,
-  SpawnedAmbientParticle,
-  SpawnedBurstParticle,
   TickedFrame,
 } from './message'
 import { type Model, type Particle } from './model'
@@ -109,12 +109,12 @@ describe('update', () => {
     )
   })
 
-  test('SpawnedAmbientParticle appends a particle and increments nextId', () => {
+  test('CompletedGenerateAmbientParticle appends a particle and increments nextId', () => {
     story(
       update,
       given(initialModel),
       message(
-        SpawnedAmbientParticle({
+        CompletedGenerateAmbientParticle({
           x: 50,
           y: 75,
           baseHue: 120,
@@ -127,8 +127,9 @@ describe('update', () => {
       ),
       model(model => {
         expect(model.particles).toHaveLength(1)
-        expect(model.particles[0]?.trail).toEqual([{ x: 50, y: 75 }])
-        expect(model.particles[0]?.baseHue).toBe(120)
+        const particle = Option.getOrThrow(Array.head(model.particles))
+        expect(particle.trail).toEqual([{ x: 50, y: 75 }])
+        expect(particle.baseHue).toBe(120)
         expect(model.nextId).toBe(1)
       }),
     )
@@ -149,9 +150,9 @@ describe('update', () => {
       model(model => {
         expect(model.elapsedSeconds).toBeGreaterThan(0)
         expect(model.elapsedSeconds).toBeLessThanOrEqual(DELTA_SECONDS_CAP)
-        const advanced = model.particles[0]
-        expect(advanced?.trail.length).toBe(2)
-        expect(advanced?.ageMs).toBeGreaterThan(0)
+        const advanced = Option.getOrThrow(Array.head(model.particles))
+        expect(advanced.trail.length).toBe(2)
+        expect(advanced.ageMs).toBeGreaterThan(0)
         expect(model.particles).toHaveLength(startingParticleCount)
       }),
       Command.resolveAll(
@@ -159,8 +160,8 @@ describe('update', () => {
           SPAWN_PER_FRAME_MAX,
           () =>
             [
-              SpawnAmbientParticle,
-              SpawnedAmbientParticle({
+              GenerateAmbientParticle,
+              CompletedGenerateAmbientParticle({
                 x: 50,
                 y: 50,
                 baseHue: 0,
@@ -182,12 +183,12 @@ describe('update', () => {
     )
   })
 
-  test('SpawnedBurstParticle appends a particle with its initial angle preserved', () => {
+  test('CompletedGenerateBurstParticle appends a particle with its initial angle preserved', () => {
     story(
       update,
       given(initialModel),
       message(
-        SpawnedBurstParticle({
+        CompletedGenerateBurstParticle({
           x: 100,
           y: 100,
           baseHue: 200,
@@ -200,8 +201,9 @@ describe('update', () => {
       ),
       model(model => {
         expect(model.particles).toHaveLength(1)
-        expect(Option.getOrThrow(model.particles[0]!.initialAngle)).toBe(1.5)
-        expect(model.particles[0]?.initialSpeedScale).toBe(1.8)
+        const particle = Option.getOrThrow(Array.head(model.particles))
+        expect(Option.getOrThrow(particle.initialAngle)).toBe(1.5)
+        expect(particle.initialSpeedScale).toBe(1.8)
       }),
     )
   })

@@ -75,7 +75,7 @@ export const StartedEngine = m('StartedEngine', { engineId: S.String })
 export const StoppedEngine = m('StoppedEngine')
 export const FailedStartEngine = m('FailedStartEngine', { reason: S.String })
 export const ClickedCompute = m('ClickedCompute')
-export const ComputedSquare = m('ComputedSquare', { result: S.Number })
+export const CompletedCompute = m('CompletedCompute', { result: S.Number })
 export const SkippedCompute = m('SkippedCompute')
 
 export const Message = S.Union([
@@ -85,7 +85,7 @@ export const Message = S.Union([
   StoppedEngine,
   FailedStartEngine,
   ClickedCompute,
-  ComputedSquare,
+  CompletedCompute,
   SkippedCompute,
 ])
 export type Message = typeof Message.Type
@@ -94,11 +94,11 @@ export type Message = typeof Message.Type
 
 export const Compute = Command.define('Compute', {
   args: { value: S.Number },
-  messages: [ComputedSquare, SkippedCompute],
+  messages: [CompletedCompute, SkippedCompute],
   execute: ({ value }) =>
     Effect.gen(function* () {
       const engine = yield* Engine.get
-      return ComputedSquare({ result: engine.square(value) })
+      return CompletedCompute({ result: engine.square(value) })
     }).pipe(
       Effect.catchTag('ResourceNotAvailable', () =>
         Effect.succeed(SkippedCompute()),
@@ -144,7 +144,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         ]
       },
 
-      ComputedSquare: ({ result }) => [
+      CompletedCompute: ({ result }) => [
         evo(model, { maybeSquareResult: () => Option.some(result) }),
         [],
       ],

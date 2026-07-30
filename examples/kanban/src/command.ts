@@ -8,19 +8,19 @@ import { ADD_CARD_INPUT_ID, STORAGE_KEY } from './constant'
 import { Column } from './domain'
 import {
   CompletedFocusAddCardInput,
+  CompletedGenerateCardId,
   CompletedSaveBoard,
-  GeneratedCardId,
 } from './message'
 import { SavedBoard } from './model'
 
 export const GenerateCardId = Command.define('GenerateCardId', {
   args: { columnId: S.String, title: S.String },
-  messages: [GeneratedCardId],
+  messages: [CompletedGenerateCardId],
   execute: ({ columnId, title }) =>
     Effect.gen(function* () {
       const crypto = yield* Crypto.Crypto
       const cardId = yield* Effect.orDie(crypto.randomUUIDv4)
-      return GeneratedCardId({ cardId, columnId, title })
+      return CompletedGenerateCardId({ cardId, columnId, title })
     }).pipe(Effect.provide(BrowserCrypto.layer)),
 })
 

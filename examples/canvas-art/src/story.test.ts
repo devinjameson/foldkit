@@ -5,9 +5,9 @@ import {
   ClickedCanvas,
   ClickedClear,
   ClickedTogglePlay,
+  CompletedGenerateBall,
+  GenerateBall,
   type Model,
-  SpawnBall,
-  SpawnedBall,
   TickedFrame,
   update,
 } from './main'
@@ -29,15 +29,15 @@ const populatedModel: Model = {
 
 describe('update', () => {
   describe('spawning balls', () => {
-    test('ClickedCanvas fires SpawnBall with the click coordinates', () => {
+    test('ClickedCanvas fires GenerateBall with the click coordinates', () => {
       story(
         update,
         given(emptyModel),
         message(ClickedCanvas({ x: 150, y: 200 })),
-        Command.expectHas(SpawnBall),
+        Command.expectHas(GenerateBall),
         Command.resolve(
-          SpawnBall,
-          SpawnedBall({
+          GenerateBall,
+          CompletedGenerateBall({
             x: 150,
             y: 200,
             vx: 10,
@@ -60,12 +60,12 @@ describe('update', () => {
       )
     })
 
-    test('SpawnedBall increments nextId for each ball added', () => {
+    test('CompletedGenerateBall increments nextId for each ball added', () => {
       story(
         update,
         given(emptyModel),
         message(
-          SpawnedBall({
+          CompletedGenerateBall({
             x: 10,
             y: 10,
             vx: 0,
@@ -75,7 +75,7 @@ describe('update', () => {
           }),
         ),
         message(
-          SpawnedBall({
+          CompletedGenerateBall({
             x: 20,
             y: 20,
             vx: 0,

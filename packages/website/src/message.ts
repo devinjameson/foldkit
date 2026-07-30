@@ -50,9 +50,10 @@ export const SucceededCopySnippet = m('SucceededCopySnippet', {
   text: S.String,
 })
 export const FailedCopySnippet = m('FailedCopySnippet')
-export const HidCopiedIndicator = m('HidCopiedIndicator', {
-  text: S.String,
-})
+export const CompletedWaitBeforeHidingCopiedIndicator = m(
+  'CompletedWaitBeforeHidingCopiedIndicator',
+  { text: S.String },
+)
 export const UpdatedEmailField = m('UpdatedEmailField', { value: S.String })
 export const SubmittedEmailForm = m('SubmittedEmailForm')
 export const SucceededSubscribeToNewsletter = m(
@@ -144,7 +145,7 @@ export const Message = S.Union([
   ClickedCopyLink,
   SucceededCopySnippet,
   FailedCopySnippet,
-  HidCopiedIndicator,
+  CompletedWaitBeforeHidingCopiedIndicator,
   UpdatedEmailField,
   SubmittedEmailForm,
   SucceededSubscribeToNewsletter,

@@ -24,7 +24,7 @@ import {
 } from './apps/drafts.js'
 import {
   CancelledForm,
-  CompletedReset,
+  CompletedResetForm,
   GotChildMessage,
   RequestedCancel,
   RequestedSave,
@@ -175,7 +175,7 @@ describe('resolveAll', () => {
       Story.message(SubmittedForm()),
       Story.Command.resolveAll(
         [SubmitForm, SucceededSubmit({ id: 'abc' })],
-        [ResetForm, CompletedReset()],
+        [ResetForm, CompletedResetForm()],
       ),
       Story.model(model => {
         expect(model.status).toBe('Idle')
@@ -676,7 +676,7 @@ describe('outMessage', () => {
       Story.expectNoOutMessage(),
       Story.Command.resolve(SubmitForm, SucceededSubmit({ id: 'abc' })),
       Story.expectOutMessage(RequestedSave({ id: 'abc' })),
-      Story.Command.resolve(ResetForm, CompletedReset()),
+      Story.Command.resolve(ResetForm, CompletedResetForm()),
       Story.expectNoOutMessage(),
     )
   })
@@ -706,7 +706,7 @@ describe("resolve applies the Command's own message mapping", () => {
         expect(model.child.status).toBe('Submitted')
         expect(model.savedIds).toEqual(['abc'])
       }),
-      Story.Command.resolve(ResetForm, CompletedReset()),
+      Story.Command.resolve(ResetForm, CompletedResetForm()),
       Story.model(model => {
         expect(model.child.status).toBe('Idle')
         expect(model.savedIds).toEqual(['abc'])
@@ -726,7 +726,7 @@ describe("resolveAll applies each Command's own message mapping", () => {
       }),
       Story.Command.resolveAll(
         [SubmitForm, SucceededSubmit({ id: 'abc' })],
-        [ResetForm, CompletedReset()],
+        [ResetForm, CompletedResetForm()],
       ),
       Story.model(model => {
         expect(model.child.status).toBe('Idle')

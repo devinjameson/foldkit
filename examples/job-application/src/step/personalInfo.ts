@@ -52,7 +52,7 @@ export type Model = typeof Model.Type
 export const UpdatedFirstName = m('UpdatedFirstName', { value: S.String })
 export const UpdatedLastName = m('UpdatedLastName', { value: S.String })
 export const UpdatedEmail = m('UpdatedEmail', { value: S.String })
-export const ValidatedEmail = m('ValidatedEmail', {
+export const CompletedValidateEmailAsync = m('CompletedValidateEmailAsync', {
   validationId: S.Number,
   field: Field(S.String),
 })
@@ -74,7 +74,7 @@ export const Message = S.Union([
   UpdatedFirstName,
   UpdatedLastName,
   UpdatedEmail,
-  ValidatedEmail,
+  CompletedValidateEmailAsync,
   UpdatedPhone,
   GotPronounsMessage,
   UpdatedCustomPronouns,
@@ -158,11 +158,11 @@ const isEmailTaken = (emailInput: string): Effect.Effect<boolean> =>
 
 export const ValidateEmailAsync = Command.define('ValidateEmailAsync', {
   args: { emailInput: S.String, validationId: S.Number },
-  messages: [ValidatedEmail],
+  messages: [CompletedValidateEmailAsync],
   execute: ({ emailInput, validationId }) =>
     Effect.gen(function* () {
       if (yield* isEmailTaken(emailInput)) {
-        return ValidatedEmail({
+        return CompletedValidateEmailAsync({
           validationId,
           field: Invalid({
             value: emailInput,
@@ -170,7 +170,7 @@ export const ValidateEmailAsync = Command.define('ValidateEmailAsync', {
           }),
         })
       }
-      return ValidatedEmail({
+      return CompletedValidateEmailAsync({
         validationId,
         field: Valid({ value: emailInput }),
       })
@@ -216,7 +216,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         )
       },
 
-      ValidatedEmail: ({ validationId, field }) => {
+      CompletedValidateEmailAsync: ({ validationId, field }) => {
         if (validationId === model.emailValidationId) {
           return [evo(model, { email: () => field }), []]
         } else {

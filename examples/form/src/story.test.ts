@@ -4,14 +4,14 @@ import { describe, expect, test } from 'vitest'
 
 import {
   ClickedFormSubmit,
+  CompletedSubmitForm,
+  CompletedValidateEmail,
   type Model,
   SubmitForm,
-  SubmittedForm,
   UpdatedEmail,
   UpdatedMessageText,
   UpdatedName,
   ValidateEmail,
-  ValidatedEmail,
   initialModel,
   update,
 } from './main'
@@ -65,7 +65,7 @@ describe('update', () => {
         Command.expectHas(ValidateEmail),
         Command.resolve(
           ValidateEmail,
-          ValidatedEmail({
+          CompletedValidateEmail({
             field: FieldValidation.Valid({ value: 'alice@example.com' }),
           }),
         ),
@@ -97,7 +97,7 @@ describe('update', () => {
         update,
         given(inFlightModel),
         message(
-          ValidatedEmail({
+          CompletedValidateEmail({
             field: FieldValidation.Valid({ value: 'old@example.com' }),
           }),
         ),
@@ -117,7 +117,7 @@ describe('update', () => {
         update,
         given(inFlightModel),
         message(
-          ValidatedEmail({
+          CompletedValidateEmail({
             field: FieldValidation.Invalid({
               value: 'taken@example.com',
               errors: ['This email is already on our waitlist'],
@@ -169,7 +169,7 @@ describe('update', () => {
         Command.expectHas(SubmitForm),
         Command.resolve(
           SubmitForm,
-          SubmittedForm({
+          CompletedSubmitForm({
             success: true,
             name: 'Alice',
             email: 'alice@example.com',
@@ -185,14 +185,14 @@ describe('update', () => {
       )
     })
 
-    test('failed SubmittedForm sets SubmitError', () => {
+    test('failed CompletedSubmitForm sets SubmitError', () => {
       story(
         update,
         given(validModel),
         message(ClickedFormSubmit()),
         Command.resolve(
           SubmitForm,
-          SubmittedForm({
+          CompletedSubmitForm({
             success: false,
             name: 'Alice',
             email: 'alice@example.com',

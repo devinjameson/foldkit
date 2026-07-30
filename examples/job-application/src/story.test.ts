@@ -247,7 +247,7 @@ describe('update', () => {
         Command.expectHas(PersonalInfo.ValidateEmailAsync),
         Command.resolve(
           PersonalInfo.ValidateEmailAsync,
-          PersonalInfo.ValidatedEmail({
+          PersonalInfo.CompletedValidateEmailAsync({
             validationId: 1,
             field: Valid({ value: 'jane@example.com' }),
           }),
@@ -289,7 +289,7 @@ describe('update', () => {
         given(modelWithInFlightValidation),
         message(
           GotPersonalInfoMessage({
-            message: PersonalInfo.ValidatedEmail({
+            message: PersonalInfo.CompletedValidateEmailAsync({
               validationId: 3,
               field: Valid({ value: 'old@example.com' }),
             }),
@@ -311,11 +311,29 @@ describe('update', () => {
         givenInitial,
         message(
           GotWorkHistoryMessage({
-            message: WorkHistory.AddedEntry({ entryId: 'test-work-1' }),
+            message: WorkHistory.SucceededGenerateEntryId({
+              entryId: 'test-work-1',
+            }),
           }),
         ),
         model(model => {
           expect(model.workHistory.entries.length).toBe(2)
+        }),
+      )
+    })
+
+    test('keeps work history unchanged when entry ID generation fails', () => {
+      story(
+        update,
+        givenInitial,
+        message(
+          GotWorkHistoryMessage({
+            message: WorkHistory.FailedGenerateEntryId(),
+          }),
+        ),
+        Command.expectNone(),
+        model(model => {
+          expect(model.workHistory).toEqual(initialModel.workHistory)
         }),
       )
     })
@@ -378,11 +396,29 @@ describe('update', () => {
         givenInitial,
         message(
           GotEducationMessage({
-            message: Education.AddedEntry({ entryId: 'test-edu-1' }),
+            message: Education.SucceededGenerateEntryId({
+              entryId: 'test-edu-1',
+            }),
           }),
         ),
         model(model => {
           expect(model.education.entries.length).toBe(2)
+        }),
+      )
+    })
+
+    test('keeps education unchanged when entry ID generation fails', () => {
+      story(
+        update,
+        givenInitial,
+        message(
+          GotEducationMessage({
+            message: Education.FailedGenerateEntryId(),
+          }),
+        ),
+        Command.expectNone(),
+        model(model => {
+          expect(model.education).toEqual(initialModel.education)
         }),
       )
     })
@@ -480,11 +516,29 @@ describe('update', () => {
         givenInitial,
         message(
           GotSkillsMessage({
-            message: Skills.AddedEntry({ entryId: 'test-skill-1' }),
+            message: Skills.SucceededGenerateEntryId({
+              entryId: 'test-skill-1',
+            }),
           }),
         ),
         model(model => {
           expect(model.skills.entries.length).toBe(2)
+        }),
+      )
+    })
+
+    test('keeps skills unchanged when entry ID generation fails', () => {
+      story(
+        update,
+        givenInitial,
+        message(
+          GotSkillsMessage({
+            message: Skills.FailedGenerateEntryId(),
+          }),
+        ),
+        Command.expectNone(),
+        model(model => {
+          expect(model.skills).toEqual(initialModel.skills)
         }),
       )
     })

@@ -4,11 +4,11 @@ export {
   Position,
   Dismissed,
   DismissedAll,
-  ElapsedDuration,
+  CompletedWaitBeforeDismissal,
   HoveredEntry,
   LeftEntry,
   GotAnimationMessage,
-  DismissAfter,
+  WaitBeforeDismissal,
 } from './index.js'
 
 export * as test from './test.js'

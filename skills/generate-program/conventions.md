@@ -19,13 +19,16 @@ Messages use past-tense, verb-first naming. The verb prefix acts as a category m
 | `Toggled*`   | Binary state flip                           | `ToggledDarkMode`, `ToggledSidebar`                 |
 | `Succeeded*` | Async success (fallible)                    | `SucceededFetchWeather`, `SucceededLogin`           |
 | `Failed*`    | Async failure (fallible)                    | `FailedFetchWeather`, `FailedLogin`                 |
-| `Completed*` | Fire-and-forget acknowledged                | `CompletedFocusInput`, `CompletedLockScroll`        |
+| `Completed*` | Command result                              | `CompletedFocusInput`, `CompletedLockScroll`        |
 | `Got*`       | Child module OutMessage                     | `GotHomeMessage`, `GotRoomMessage`                  |
-| `Loaded*`    | Data restored                               | `LoadedSession`, `LoadedPreferences`                |
-| `Hid*`       | UI element dismissed                        | `HidToast`, `HidCopiedIndicator`                    |
-| `Ticked*`    | Timer/interval tick                         | `TickedCountdown`, `TickedExitCountdown`            |
+| `Hid*`       | UI element dismissed                        | `Hid`, `HidOverlay`                                 |
+| `Ticked*`    | Timer/interval tick                         | `TickedClock`, `TickedFrame`                        |
 
 `Updated*` covers both user input changes (`UpdatedEmail`, `UpdatedNewTodo`) and external state updates from subscriptions (`UpdatedRoom`, `UpdatedPlayerProgress`). The prefix describes the fact ("the value was updated"). Whether it came from a keystroke or a WebSocket doesn't change the Message category.
+
+The prefixes above other than `Succeeded*`, `Failed*`, and `Completed*` are for facts that originate in the view, a Subscription, a Mount, or flags. A Command's own result Message is named from the Command, never from the fact it reports.
+
+Audit the Command name before deriving its result Message. Name the effect its `execute` body performs, not the later Model transition caused when update handles the result. A timer that only waits before update starts a dismissal is `WaitBeforeDismissal`, not `DismissAfter`; its result is `CompletedWaitBeforeDismissal`.
 
 #### Completed\* naming
 
@@ -44,6 +47,48 @@ CompletedScrollLock
 CompletedDialogShow
 CompletedItemsFocus
 ```
+
+`Completed*` is not only for empty acknowledgments. A Command that resolves to a value with no meaningful failure still names its result after the Command, and the value rides along as the payload.
+
+```ts
+// RIGHT: the Message is named from the Command that caused it
+Command.define('DetermineStartTime', {
+  args: { elapsedMs: S.Number },
+  messages: [CompletedDetermineStartTime],
+  execute: ({ elapsedMs }) =>
+    Clock.currentTimeMillis.pipe(
+      Effect.map(now =>
+        CompletedDetermineStartTime({ startTime: now - elapsedMs }),
+      ),
+    ),
+})
+Command.define('GenerateCardId', {
+  args: { columnId: S.String },
+  messages: [CompletedGenerateCardId],
+  execute: ({ columnId }) =>
+    Effect.uuid.pipe(
+      Effect.map(cardId => CompletedGenerateCardId({ cardId, columnId })),
+    ),
+})
+Command.define('SaveTodos', {
+  args: { todos: Todos },
+  messages: [SucceededSaveTodos, FailedSaveTodos],
+  execute: ({ todos }) =>
+    saveTodos(todos).pipe(
+      Effect.match({
+        onFailure: () => FailedSaveTodos(),
+        onSuccess: () => SucceededSaveTodos({ todos }),
+      }),
+    ),
+})
+
+// WRONG: the Command verb conjugated to past tense
+DeterminedStartTime
+GeneratedCardId
+SavedTodos
+```
+
+The exception is a Message with more than one cause. When several Commands resolve to the same Message, or a Command synthesizes a Message that a Subscription also emits, name it for the fact instead: `EndedAnimation` is produced both by the `WaitForAnimationSettled` Command and by each component's `DetectMovementOrAnimationEnd` race, so no single Command owns the name.
 
 #### Succeeded/Failed pairing
 

@@ -3,7 +3,7 @@ import { Runtime } from 'foldkit'
 
 import { Slider } from '@foldkit/ui'
 
-import { SpawnAmbientParticle } from './command'
+import { GenerateAmbientParticle } from './command'
 import {
   FLOW_STRENGTH_MAX,
   FLOW_STRENGTH_MIN,
@@ -53,7 +53,7 @@ export const init: Runtime.ApplicationInit<Model, Message> = () => [
       step: NOISE_SCALE_STEP,
     }),
   },
-  Array.makeBy(INITIAL_PARTICLE_COUNT, () => SpawnAmbientParticle()),
+  Array.makeBy(INITIAL_PARTICLE_COUNT, () => GenerateAmbientParticle()),
 ]
 
 export { Message, Model, subscriptions, update, view }

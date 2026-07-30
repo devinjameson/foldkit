@@ -5,9 +5,9 @@ import {
   ChangedDemoResetDuration,
   ClickedDemoIncrement,
   ClickedDemoReset,
+  CompletedDelayAdvancePhase,
   type Message,
   type Model,
-  ProgressedDemoPhase,
   init,
   update,
 } from './asyncCounterDemo'
@@ -31,7 +31,7 @@ const advancePhases = (model: Model, steps: number): Model =>
   send(
     model,
     Array.makeBy(steps, () =>
-      ProgressedDemoPhase({ generation: model.generation }),
+      CompletedDelayAdvancePhase({ generation: model.generation }),
     ),
   )
 
@@ -55,7 +55,7 @@ describe('async counter demo', () => {
     const resetting = send(initialModel, [
       ClickedDemoIncrement(),
       ...Array.makeBy(INCREMENT_PHASE_STEPS, () =>
-        ProgressedDemoPhase({ generation: 1 }),
+        CompletedDelayAdvancePhase({ generation: 1 }),
       ),
       ClickedDemoReset(),
     ])
@@ -101,11 +101,11 @@ describe('async counter demo', () => {
     ])
     expect(resetting.resetDuration).toBe(1)
     const atUpdate = send(resetting, [
-      ProgressedDemoPhase({ generation: resetting.generation }),
+      CompletedDelayAdvancePhase({ generation: resetting.generation }),
     ])
     const [atCommand, commands] = update(
       atUpdate,
-      ProgressedDemoPhase({ generation: resetting.generation }),
+      CompletedDelayAdvancePhase({ generation: resetting.generation }),
     )
 
     expect(atCommand.phase).toBe('ResetCommand')
@@ -127,7 +127,9 @@ describe('async counter demo', () => {
     expect(resetting.phase).toBe('ResetMessage')
     expect(resetting.generation).toBe(2)
 
-    const stale = send(resetting, [ProgressedDemoPhase({ generation: 1 })])
+    const stale = send(resetting, [
+      CompletedDelayAdvancePhase({ generation: 1 }),
+    ])
     expect(stale.phase).toBe('ResetMessage')
   })
 })

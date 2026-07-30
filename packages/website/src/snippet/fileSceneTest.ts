@@ -34,7 +34,7 @@ describe('resume upload flow', () => {
       given(initialModel),
       click(role('button', { name: 'Choose resume' })),
       Command.resolveAll(
-        [SelectResume, SelectedResume({ file: resume })],
+        [SelectResume, CompletedSelectResume({ file: resume })],
         [ReadResumePreview, SucceededReadPreview({ dataUrl: previewDataUrl })],
       ),
       expect(role('img', { name: 'Resume preview' })).toExist(),

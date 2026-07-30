@@ -15,8 +15,8 @@ export {
   BlurredTrigger,
   PressedEscape,
   PressedPointerOnTrigger,
-  ElapsedShowDelay,
-  ShowAfterDelay,
+  CompletedWaitBeforeShowing,
+  WaitBeforeShowing,
   CompletedAnchorTooltip,
   AnchorTooltip,
 } from './index.js'

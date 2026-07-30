@@ -3,7 +3,7 @@ import { m } from 'foldkit/message'
 
 import { Slider } from '@foldkit/ui'
 
-const spawnedParticleFields = {
+const generatedParticleFields = {
   x: S.Number,
   y: S.Number,
   baseHue: S.Number,
@@ -17,13 +17,13 @@ const spawnedParticleFields = {
 export const TickedFrame = m('TickedFrame', {
   deltaTimeMs: S.Number,
 })
-export const SpawnedAmbientParticle = m(
-  'SpawnedAmbientParticle',
-  spawnedParticleFields,
+export const CompletedGenerateAmbientParticle = m(
+  'CompletedGenerateAmbientParticle',
+  generatedParticleFields,
 )
-export const SpawnedBurstParticle = m(
-  'SpawnedBurstParticle',
-  spawnedParticleFields,
+export const CompletedGenerateBurstParticle = m(
+  'CompletedGenerateBurstParticle',
+  generatedParticleFields,
 )
 export const PressedCanvas = m('PressedCanvas', {
   x: S.Number,
@@ -44,8 +44,8 @@ export const GotNoiseScaleSliderMessage = m('GotNoiseScaleSliderMessage', {
 
 export const Message = S.Union([
   TickedFrame,
-  SpawnedAmbientParticle,
-  SpawnedBurstParticle,
+  CompletedGenerateAmbientParticle,
+  CompletedGenerateBurstParticle,
   PressedCanvas,
   MovedPointer,
   ClickedTogglePlay,

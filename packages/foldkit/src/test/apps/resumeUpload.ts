@@ -19,7 +19,7 @@ export type Model = typeof Model.Type
 // MESSAGE
 
 export const ClickedChooseResume = m('ClickedChooseResume')
-export const SelectedResume = m('SelectedResume', {
+export const CompletedSelectResume = m('CompletedSelectResume', {
   file: File.File,
 })
 export const CancelledSelectResume = m('CancelledSelectResume')
@@ -31,7 +31,7 @@ export const ClickedRemoveResume = m('ClickedRemoveResume')
 
 export const Message = S.Union([
   ClickedChooseResume,
-  SelectedResume,
+  CompletedSelectResume,
   CancelledSelectResume,
   SucceededReadPreview,
   FailedReadPreview,
@@ -42,12 +42,12 @@ export type Message = typeof Message.Type
 // COMMAND
 
 export const SelectResume = Command.define('SelectResume', {
-  messages: [SelectedResume, CancelledSelectResume],
+  messages: [CompletedSelectResume, CancelledSelectResume],
   execute: File.select(['application/pdf']).pipe(
     Effect.map(
       Option.match({
         onNone: () => CancelledSelectResume(),
-        onSome: file => SelectedResume({ file }),
+        onSome: file => CompletedSelectResume({ file }),
       }),
     ),
   ),
@@ -80,7 +80,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
     M.withReturnType<UpdateReturn>(),
     M.tagsExhaustive({
       ClickedChooseResume: () => [model, [SelectResume()]],
-      SelectedResume: ({ file }) => [
+      CompletedSelectResume: ({ file }) => [
         evo(model, {
           maybeResume: () => Option.some(file),
           maybePreviewDataUrl: () => Option.none(),

@@ -6,17 +6,17 @@ import {
   AddedTodo,
   CancelledEdit,
   ClearedCompleted,
+  CompletedGenerateTodo,
   DeletedTodo,
   Editing,
   GenerateTodo,
-  GeneratedTodo,
   type Model,
   NotEditing,
   SaveTodos,
   SavedEdit,
-  SavedTodos,
   SelectedFilter,
   StartedEditing,
+  SucceededSaveTodos,
   ToggledAll,
   ToggledTodo,
   UpdatedEditingTodo,
@@ -67,11 +67,15 @@ describe('update', () => {
         Command.expectHas(GenerateTodo),
         Command.resolve(
           GenerateTodo,
-          GeneratedTodo({ id: 'abc', timestamp: 1000, text: 'Buy milk' }),
+          CompletedGenerateTodo({
+            id: 'abc',
+            timestamp: 1000,
+            text: 'Buy milk',
+          }),
         ),
         Command.resolve(
           SaveTodos,
-          SavedTodos({
+          SucceededSaveTodos({
             todos: [
               {
                 id: 'abc',
@@ -131,7 +135,7 @@ describe('update', () => {
         update,
         given(modelWithTodos),
         message(ToggledTodo({ id: 'abc' })),
-        Command.resolve(SaveTodos, SavedTodos({ todos: toggledTodos })),
+        Command.resolve(SaveTodos, SucceededSaveTodos({ todos: toggledTodos })),
         model(model => {
           const todo = Array.findFirst(model.todos, ({ id }) => id === 'abc')
           expect(Option.map(todo, ({ completed }) => completed)).toStrictEqual(
@@ -150,7 +154,7 @@ describe('update', () => {
         update,
         given(modelWithTodos),
         message(ToggledTodo({ id: 'ghi' })),
-        Command.resolve(SaveTodos, SavedTodos({ todos: toggledTodos })),
+        Command.resolve(SaveTodos, SucceededSaveTodos({ todos: toggledTodos })),
         model(model => {
           const todo = Array.findFirst(model.todos, ({ id }) => id === 'ghi')
           expect(Option.map(todo, ({ completed }) => completed)).toStrictEqual(
@@ -169,7 +173,10 @@ describe('update', () => {
         update,
         given(modelWithTodos),
         message(DeletedTodo({ id: 'abc' })),
-        Command.resolve(SaveTodos, SavedTodos({ todos: remainingTodos })),
+        Command.resolve(
+          SaveTodos,
+          SucceededSaveTodos({ todos: remainingTodos }),
+        ),
         model(model => {
           expect(model.todos).toHaveLength(2)
           expect(
@@ -226,7 +233,7 @@ describe('update', () => {
         update,
         given(editingModel),
         message(SavedEdit()),
-        Command.resolve(SaveTodos, SavedTodos({ todos: editedTodos })),
+        Command.resolve(SaveTodos, SucceededSaveTodos({ todos: editedTodos })),
         model(model => {
           const todo = Array.findFirst(model.todos, ({ id }) => id === 'abc')
           expect(Option.map(todo, ({ text }) => text)).toStrictEqual(
@@ -290,7 +297,10 @@ describe('update', () => {
         update,
         given(modelWithTodos),
         message(ToggledAll()),
-        Command.resolve(SaveTodos, SavedTodos({ todos: allCompletedTodos })),
+        Command.resolve(
+          SaveTodos,
+          SucceededSaveTodos({ todos: allCompletedTodos }),
+        ),
         model(model => {
           expect(Array.every(model.todos, ({ completed }) => completed)).toBe(
             true,
@@ -317,7 +327,10 @@ describe('update', () => {
         update,
         given(allCompletedModel),
         message(ToggledAll()),
-        Command.resolve(SaveTodos, SavedTodos({ todos: allActiveTodos })),
+        Command.resolve(
+          SaveTodos,
+          SucceededSaveTodos({ todos: allActiveTodos }),
+        ),
         model(model => {
           expect(Array.every(model.todos, ({ completed }) => !completed)).toBe(
             true,
@@ -335,7 +348,7 @@ describe('update', () => {
         update,
         given(modelWithTodos),
         message(ClearedCompleted()),
-        Command.resolve(SaveTodos, SavedTodos({ todos: activeTodos })),
+        Command.resolve(SaveTodos, SucceededSaveTodos({ todos: activeTodos })),
         model(model => {
           expect(model.todos).toHaveLength(2)
           expect(Array.every(model.todos, ({ completed }) => !completed)).toBe(

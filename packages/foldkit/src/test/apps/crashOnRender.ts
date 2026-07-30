@@ -30,13 +30,15 @@ export type Model = typeof Model.Type
 // MESSAGE
 
 export const ClickedReload = m('ClickedReload')
-export const LoadedSources = m('LoadedSources', { sources: S.Array(RawSource) })
+export const CompletedReloadSources = m('CompletedReloadSources', {
+  sources: S.Array(RawSource),
+})
 export const SelectedSource = m('SelectedSource', { source: Source })
 export const SubmittedNewSourceId = m('SubmittedNewSourceId', { id: S.String })
 
 export const Message = S.Union([
   ClickedReload,
-  LoadedSources,
+  CompletedReloadSources,
   SelectedSource,
   SubmittedNewSourceId,
 ])
@@ -52,8 +54,8 @@ export const reloadedSources: ReadonlyArray<RawSource> = [
 ]
 
 export const ReloadSources = Command.define('ReloadSources', {
-  messages: [LoadedSources],
-  execute: Effect.succeed(LoadedSources({ sources: reloadedSources })),
+  messages: [CompletedReloadSources],
+  execute: Effect.succeed(CompletedReloadSources({ sources: reloadedSources })),
 })
 
 // INIT
@@ -80,7 +82,7 @@ export const update = (
     >(),
     M.tagsExhaustive({
       ClickedReload: () => [model, [ReloadSources()]],
-      LoadedSources: ({ sources }) => [
+      CompletedReloadSources: ({ sources }) => [
         evo(model, { sources: () => sources }),
         [],
       ],
