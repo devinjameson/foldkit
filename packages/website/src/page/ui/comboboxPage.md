@@ -22,14 +22,6 @@ Pass `itemToValue` and `itemToDisplayText` to control how items map to values an
 
 ::Snippet{name="uiComboboxBasic" label="combobox example"}
 
-### Locked Placement {#combobox-locked-placement}
-
-Set `anchor.isPlacementLocked` when a panel should keep the side chosen when it opens, even if its size changes. Open the list, then type `Zurich`. The tall list initially opens above the input; after filtering makes it short enough to fit below, it stays above until it closes.
-
-To make the behavior reproducible at any scroll position, this demo keeps the panel inside a constrained container. In normal use, you can leave the portal enabled.
-
-::Demo{name="locked-placement"}
-
 ### Nullable {#combobox-nullable}
 
 Pass `nullable: true` at init to allow clearing the selection by clicking the selected item again, or by emptying the input and closing. Both paths reach the parent as OutMessages (`Selected` toggles, `ClearedSelection` clears), so the parent decides what an empty selection looks like.
@@ -41,6 +33,14 @@ Pass `nullable: true` at init to allow clearing the selection by clicking the se
 Pass `selectInputOnFocus: true` at init to highlight the input text when the combobox receives focus. Typing immediately replaces the current value, making it easy to start a new search.
 
 ::Demo{name="select-on-focus"}
+
+### Locked Placement {#combobox-locked-placement}
+
+Set `anchor.isPlacementLocked` to `true` when a panel should keep the side chosen when it opens, even if its size changes. Open the list, then type `Zurich`. The tall list initially opens above the input. After filtering, the list is short enough to fit below, but it stays above until it closes.
+
+To make the behavior reproducible at any scroll position, this demo keeps the panel inside a constrained container. In normal use, you can leave the portal enabled.
+
+::Demo{name="locked-placement"}
 
 ### Multi-Select {#combobox-multi}
 

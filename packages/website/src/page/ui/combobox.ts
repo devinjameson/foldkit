@@ -11,7 +11,6 @@ import type { AnchorConfig } from '@foldkit/ui/combobox'
 
 import { Icon } from '../../icon'
 import type { TableOfContentsEntry } from '../../main'
-import { inlineCode, subPara } from '../../prose'
 import {
   GotComboboxDemoMessage,
   GotComboboxMultiDemoMessage,
@@ -30,12 +29,6 @@ export const singleSelectHeader: TableOfContentsEntry = {
   text: 'Single-Select',
 }
 
-export const placementLockHeader: TableOfContentsEntry = {
-  level: 'h3',
-  id: 'combobox-locked-placement',
-  text: 'Locked Placement',
-}
-
 export const nullableHeader: TableOfContentsEntry = {
   level: 'h3',
   id: 'combobox-nullable',
@@ -46,6 +39,12 @@ export const selectOnFocusHeader: TableOfContentsEntry = {
   level: 'h3',
   id: 'combobox-select-on-focus',
   text: 'Select on Focus',
+}
+
+export const placementLockHeader: TableOfContentsEntry = {
+  level: 'h3',
+  id: 'combobox-locked-placement',
+  text: 'Locked Placement',
 }
 
 export const multiHeader: TableOfContentsEntry = {
@@ -232,6 +231,49 @@ export const nullableDemo = (
   ]
 }
 
+export const selectOnFocusDemo = (
+  comboboxSelectOnFocusModel: Combobox.Model,
+  maybeSelectedCity: Option.Option<City>,
+  h: HtmlBuilder<Message>,
+) => {
+  return [
+    h.div(
+      [h.Class('flex flex-col gap-1.5')],
+      [
+        h.label(
+          [
+            h.For(Combobox.inputId(comboboxSelectOnFocusModel.id)),
+            h.Class('text-sm font-medium text-gray-900 dark:text-white'),
+          ],
+          ['City'],
+        ),
+        h.div(
+          [h.Class('relative')],
+          [
+            h.submodel({
+              slotId: comboboxSelectOnFocusModel.id,
+              model: comboboxSelectOnFocusModel,
+              view: CityCombobox.view,
+              viewInputs: {
+                ...comboboxViewInputs({
+                  inputValue: comboboxSelectOnFocusModel.inputValue,
+                  restingInputValue: Option.getOrElse(
+                    maybeSelectedCity,
+                    () => '',
+                  ),
+                }),
+                maybeSelectedValue: maybeSelectedCity,
+              },
+              toParentMessage: message =>
+                GotComboboxSelectOnFocusDemoMessage({ message }),
+            }),
+          ],
+        ),
+      ],
+    ),
+  ]
+}
+
 export const placementLockDemo = (
   comboboxPlacementLockModel: Combobox.Model,
   maybeSelectedCity: Option.Option<City>,
@@ -282,54 +324,6 @@ export const placementLockDemo = (
                 }),
               ],
             ),
-          ],
-        ),
-      ],
-    ),
-  ]
-}
-
-export const selectOnFocusDemo = (
-  comboboxSelectOnFocusModel: Combobox.Model,
-  maybeSelectedCity: Option.Option<City>,
-  h: HtmlBuilder<Message>,
-) => {
-  return [
-    subPara(
-      'Pass ',
-      inlineCode('selectInputOnFocus: true', 'text-xs px-0.5'),
-      ' to highlight the input text when the combobox receives focus. Typing immediately replaces the current value, making it easy to start a new search without manually clearing the input.',
-    ),
-    h.div(
-      [h.Class('flex flex-col gap-1.5')],
-      [
-        h.label(
-          [
-            h.For(Combobox.inputId(comboboxSelectOnFocusModel.id)),
-            h.Class('text-sm font-medium text-gray-900 dark:text-white'),
-          ],
-          ['City'],
-        ),
-        h.div(
-          [h.Class('relative')],
-          [
-            h.submodel({
-              slotId: comboboxSelectOnFocusModel.id,
-              model: comboboxSelectOnFocusModel,
-              view: CityCombobox.view,
-              viewInputs: {
-                ...comboboxViewInputs({
-                  inputValue: comboboxSelectOnFocusModel.inputValue,
-                  restingInputValue: Option.getOrElse(
-                    maybeSelectedCity,
-                    () => '',
-                  ),
-                }),
-                maybeSelectedValue: maybeSelectedCity,
-              },
-              toParentMessage: message =>
-                GotComboboxSelectOnFocusDemoMessage({ message }),
-            }),
           ],
         ),
       ],

@@ -11,9 +11,9 @@ import type { Model } from './model'
 
 const { tableOfContents, view: renderPage } = slotDocPage<
   | 'single-select'
-  | 'locked-placement'
   | 'nullable'
   | 'select-on-focus'
+  | 'locked-placement'
   | 'multi'
 >(raw, 'ui/combobox')
 
@@ -40,18 +40,6 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
             ),
           ],
         ),
-        'locked-placement': h.section(
-          [h.AriaLabelledBy(Combobox.placementLockHeader.id)],
-          [
-            demoContainer(
-              ...Combobox.placementLockDemo(
-                model.comboboxPlacementLockDemo,
-                model.maybeComboboxPlacementLockDemoSelectedCity,
-                h,
-              ),
-            ),
-          ],
-        ),
         nullable: h.section(
           [h.AriaLabelledBy(Combobox.nullableHeader.id)],
           [
@@ -71,6 +59,18 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
               ...Combobox.selectOnFocusDemo(
                 model.comboboxSelectOnFocusDemo,
                 model.maybeComboboxSelectOnFocusDemoSelectedCity,
+                h,
+              ),
+            ),
+          ],
+        ),
+        'locked-placement': h.section(
+          [h.AriaLabelledBy(Combobox.placementLockHeader.id)],
+          [
+            demoContainer(
+              ...Combobox.placementLockDemo(
+                model.comboboxPlacementLockDemo,
+                model.maybeComboboxPlacementLockDemoSelectedCity,
                 h,
               ),
             ),
