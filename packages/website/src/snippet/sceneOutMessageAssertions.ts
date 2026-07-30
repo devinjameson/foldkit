@@ -1,13 +1,21 @@
-import { Scene } from 'foldkit'
+import {
+  Subscription,
+  click,
+  expectNoOutMessage,
+  expectOutMessage,
+  given,
+  role,
+  scene,
+} from 'foldkit/scene'
 
 // A Submodel's update returns [Model, Commands, Option<OutMessage>]. Scene
 // tracks the third element, so a page-level test asserts what the child
 // announced to its parent.
-Scene.scene(
+scene(
   { update, view },
-  Scene.with(initialModel),
-  Scene.click(Scene.role('button', { name: 'Log out' })),
-  Scene.expectOutMessage(RequestedLogout()),
-  Scene.Subscription.emit(CompletedAction()),
-  Scene.expectNoOutMessage(),
+  given(initialModel),
+  click(role('button', { name: 'Log out' })),
+  expectOutMessage(RequestedLogout()),
+  Subscription.emit(CompletedAction()),
+  expectNoOutMessage(),
 )

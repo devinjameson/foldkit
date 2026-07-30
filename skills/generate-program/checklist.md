@@ -149,12 +149,12 @@ grep -rl "evo(" src/ | xargs grep -Hn "\.\.\."
 # Option ceremony: Array.findFirst(...)._tag === 'Some' should be Array.some(...)
 grep -rn "Array\.findFirst.*_tag" src/
 
-# Scene tests without assertions: Scene.scene(...) calls that only do Scene.with()
-# and nothing else verify only that the view doesn't throw. Each test needs at least
-# one Scene.expect(...) OR a Scene.click/type/submit followed by Scene.Command.resolve(...).
-# Eyeball every Scene.scene block: if it contains no "Scene.expect" and no "Scene.Command.resolve",
-# it's a no-op test.
-grep -rn "Scene.scene(" src/ -A 3 | grep -B 2 "Scene.with" | grep -v "Scene.expect\|Scene.Command\|Scene.Mount\|Scene.click\|Scene.type" || echo "(all Scene.scene blocks appear to contain assertions)"
+# Scene tests without assertions: a scene(...) block that only does given(model)
+# verifies the view doesn't throw and nothing else. Each block needs at least
+# one expect(...) OR a click/type/submit followed by Command.resolve(...).
+# Lists every scene block with its following lines. Eyeball each: if it contains
+# no expect(...) and no Command.resolve(...), it's a no-op test.
+grep -rnE -A 6 "(^|[^.[:alnum:]_])scene\(" src/ --include="*.test.ts"
 
 # Single-op pipe: pipe(x, Option.match(...)) should be Option.match(x, ...)
 # These are common patterns; eyeball each hit.
@@ -310,7 +310,7 @@ Run these greps against `src/`. Every hit needs an explanation: a sanctioned `to
 grep -rnE "(^|[^.[:alnum:]_])(h\.)?(input|textarea|button)\(" src/
 
 # Hand-rolled ARIA: should use Dialog / Menu / Tabs. Capital-R `Role(` is the
-# view attribute; lowercase `Scene.role(` is a test locator and is not a finding.
+# view attribute; lowercase `role(` is a test locator and is not a finding.
 grep -rnE "(^|[^.[:alnum:]_])(h\.)?Role\(['\"](dialog|menu|tab)" src/
 ```
 
@@ -387,11 +387,11 @@ Each confirmed miss is a concrete a11y bug a screen reader user would hit.
 
 **Story tests** (required at every tier):
 
-- [ ] `story.test.ts` exists with `Story.story` pipelines (sibling pages or component variants use a subject prefix: `login.story.test.ts`)
+- [ ] `story.test.ts` exists with `story` pipelines (sibling pages or component variants use a subject prefix: `login.story.test.ts`)
 - [ ] Every fallible Command (`Succeeded*`/`Failed*` pair) tested for both outcomes
 - [ ] At least one multi-step test that chains Messages and Command resolutions
 - [ ] Submodel tests assert `outMessage` when the child signals to parent
-- [ ] Tests use `Story.Command.resolve(Definition, resultMessage)`. Never run Command Effects directly in story tests
+- [ ] Tests use `Command.resolve(Definition, resultMessage)`. Never run Command Effects directly in story tests
 - [ ] All tests pass with the project's test script
 
 **Scene tests** (REQUIRED at Tier 3+; strongly encouraged at Tier 2):
@@ -402,8 +402,8 @@ For Tier 3+ apps (routing, async Commands, forms), missing `scene.test.ts` is a 
 - [ ] View rendering test: initial view has expected elements (headings, inputs, buttons)
 - [ ] User interactions test: click, type, submit produce visible changes
 - [ ] At minimum one test per discriminated-union state that has distinct view output (loading, error, empty, populated)
-- [ ] Uses accessible locators: `Scene.role(...)`, `Scene.label(...)`, `Scene.text(...)`. Not `Scene.placeholder` or CSS selectors.
-- [ ] Scoped queries with `Scene.within` or `Scene.inside` when a parent container contains multiple similar elements
+- [ ] Uses accessible locators: `role(...)`, `label(...)`, `text(...)`. Not `placeholder` or CSS selectors.
+- [ ] Scoped queries with `within` or `inside` when a parent container contains multiple similar elements
 
 ---
 
@@ -494,9 +494,9 @@ Items without a tier marker apply universally (even to a 50-line counter). When 
 ## Testing quality
 
 - [ ] Test names state the behavior being tested: `it('surfaces a validation error when email is malformed')`, not `it('tests validation')` or `it('handles the reported bug')`.
-- [ ] Each `Story.story` pipeline reads as a narrative: initial model → action → assert → action → assert. Not a dump of unrelated assertions.
-- [ ] Scene tests use accessible locators (`Scene.role('button', { name: /submit/i })`, `Scene.label('Email')`) over `Scene.placeholder` or CSS selectors.
-- [ ] Commands in tests are resolved with `Story.Command.resolve(Definition, resultMessage)`. Never run Command Effects directly.
+- [ ] Each `story` pipeline reads as a narrative: initial model → action → assert → action → assert. Not a dump of unrelated assertions.
+- [ ] Scene tests use accessible locators (`role('button', { name: /submit/i })`, `label('Email')`) over `placeholder` or CSS selectors.
+- [ ] Commands in tests are resolved with `Command.resolve(Definition, resultMessage)`. Never run Command Effects directly.
 
 ## Residual code smells (each is a fail)
 

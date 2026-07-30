@@ -36,7 +36,7 @@ Commands aren’t just a fancy way to organize side effects. They’re the reaso
 
 The test reads as a story: start from a Model with count 5, send `ClickedResetAfterDelay()`, verify that update returned a `DelayReset` Command, resolve it with `CompletedDelayReset()`, and verify the count is 0. Every step is visible. The simulation called update, resolved the Command with the Message you provided, fed that back through update, and arrived at the final state.
 
-Send Messages with `Story.message`, resolve Commands inline with `Story.Command.resolve`, and assert with `Story.model`. See the [Testing](/testing) guide for the full API.
+Send Messages with `message`, resolve Commands inline with `Command.resolve`, and assert with `model`. See the [Testing](/testing) guide for the full API.
 
 ## HTTP Requests
 
@@ -56,7 +56,7 @@ The Commands so far have taken no inputs. But many Commands need values that var
 
 ::Snippet{name="commandWithArgs" label="command with args example"}
 
-Args appear in DevTools alongside the Command name and let Story/Scene tests assert on the exact dispatch with `Scene.Command.expectExact(FetchWeather({ zipCode: '90210' }))`.
+Args appear in DevTools alongside the Command name and let Story/Scene tests assert on the exact dispatch with `Command.expectExact(FetchWeather({ zipCode: '90210' }))`.
 
 ## Interrupting Commands
 

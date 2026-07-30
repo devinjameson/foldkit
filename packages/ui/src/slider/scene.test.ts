@@ -42,7 +42,7 @@ describe('Slider', () => {
     it('renders the root with data-slider-id and data-orientation', () => {
       Scene.scene(
         { update, view: sceneView() },
-        Scene.with(defaultModel),
+        Scene.given(defaultModel),
         Scene.expect(root).toExist(),
         Scene.expect(root).toHaveAttr('data-orientation', 'horizontal'),
       )
@@ -51,7 +51,7 @@ describe('Slider', () => {
     it('renders the track with the data-slider-track-id selector the pointer subscription relies on', () => {
       Scene.scene(
         { update, view: sceneView() },
-        Scene.with(defaultModel),
+        Scene.given(defaultModel),
         Scene.expect(track).toExist(),
       )
     })
@@ -59,7 +59,7 @@ describe('Slider', () => {
     it('renders the thumb with role=slider and aria value / orientation attributes', () => {
       Scene.scene(
         { update, view: sceneView() },
-        Scene.with(defaultModel),
+        Scene.given(defaultModel),
         Scene.expect(thumb).toExist(),
         Scene.expect(thumb).toHaveAttr('aria-valuemin', '0'),
         Scene.expect(thumb).toHaveAttr('aria-valuemax', '10'),
@@ -73,7 +73,7 @@ describe('Slider', () => {
     it('falls back to aria-labelledby pointing at the label id', () => {
       Scene.scene(
         { update, view: sceneView() },
-        Scene.with(defaultModel),
+        Scene.given(defaultModel),
         Scene.expect(thumb).toHaveAttr('aria-labelledby', 'test-label'),
       )
     })
@@ -81,7 +81,7 @@ describe('Slider', () => {
     it('uses explicit ariaLabel when provided', () => {
       Scene.scene(
         { update, view: sceneView({ ariaLabel: 'Volume' }) },
-        Scene.with(defaultModel),
+        Scene.given(defaultModel),
         Scene.expect(thumb).toHaveAttr('aria-label', 'Volume'),
         Scene.expect(thumb).not.toHaveAttr('aria-labelledby'),
       )
@@ -90,7 +90,7 @@ describe('Slider', () => {
     it('uses explicit ariaLabelledBy when provided, overriding the default', () => {
       Scene.scene(
         { update, view: sceneView({ ariaLabelledBy: 'external-label' }) },
-        Scene.with(defaultModel),
+        Scene.given(defaultModel),
         Scene.expect(thumb).toHaveAttr('aria-labelledby', 'external-label'),
       )
     })
@@ -100,7 +100,7 @@ describe('Slider', () => {
     it('is absent by default', () => {
       Scene.scene(
         { update, view: sceneView() },
-        Scene.with(defaultModel),
+        Scene.given(defaultModel),
         Scene.expect(thumb).not.toHaveAttr('aria-valuetext'),
       )
     })
@@ -111,7 +111,7 @@ describe('Slider', () => {
           update,
           view: sceneView({ formatValue: value => `${value} of 10` }),
         },
-        Scene.with(defaultModel),
+        Scene.given(defaultModel),
         Scene.expect(thumb).toHaveAttr('aria-valuetext', '5 of 10'),
       )
     })
@@ -125,7 +125,7 @@ describe('Slider', () => {
       )
       Scene.scene(
         { update, view: sceneView() },
-        Scene.with(draggingModel),
+        Scene.given(draggingModel),
         Scene.expect(root).toHaveAttr('data-dragging', ''),
         Scene.expect(track).toHaveAttr('data-dragging', ''),
         Scene.expect(thumb).toHaveAttr('data-dragging', ''),
@@ -135,7 +135,7 @@ describe('Slider', () => {
     it('marks disabled with aria-disabled and data-disabled', () => {
       Scene.scene(
         { update, view: sceneView({ isDisabled: true }) },
-        Scene.with(defaultModel),
+        Scene.given(defaultModel),
         Scene.expect(root).toHaveAttr('data-disabled', ''),
         Scene.expect(thumb).toHaveAttr('aria-disabled', 'true'),
         Scene.expect(thumb).toHaveAttr('data-disabled', ''),
@@ -147,7 +147,7 @@ describe('Slider', () => {
     it('is absent when no name is provided', () => {
       Scene.scene(
         { update, view: sceneView() },
-        Scene.with(defaultModel),
+        Scene.given(defaultModel),
         Scene.expect(hiddenInput).toBeAbsent(),
       )
     })
@@ -155,7 +155,7 @@ describe('Slider', () => {
     it('renders with the name and current value when name is provided', () => {
       Scene.scene(
         { update, view: sceneView({ name: 'volume' }) },
-        Scene.with(defaultModel),
+        Scene.given(defaultModel),
         Scene.expect(hiddenInput).toExist(),
         Scene.expect(hiddenInput).toHaveAttr('name', 'volume'),
         Scene.expect(hiddenInput).toHaveAttr('value', '5'),

@@ -57,7 +57,7 @@ describe('Nav', () => {
     it('renders a nav landmark labelled by ariaLabel', () => {
       Scene.scene(
         { update, view: sceneView },
-        Scene.with(initialModel),
+        Scene.given(initialModel),
         Scene.expect(navLandmark).toExist(),
         Scene.expect(navLandmark).toHaveAttr('aria-label', 'Primary'),
       )
@@ -66,7 +66,7 @@ describe('Nav', () => {
     it('renders one link per item with its href and label', () => {
       Scene.scene(
         { update, view: sceneView },
-        Scene.with(initialModel),
+        Scene.given(initialModel),
         Scene.expect(dashboardLink).toHaveText('Dashboard'),
         Scene.expect(projectsLink).toHaveText('Projects'),
         Scene.expect(settingsLink).toHaveText('Settings'),
@@ -78,7 +78,7 @@ describe('Nav', () => {
     it('marks the current link with aria-current="page" and data-current', () => {
       Scene.scene(
         { update, view: sceneView },
-        Scene.with(initialModel),
+        Scene.given(initialModel),
         Scene.expect(dashboardLink).toHaveAttr('aria-current', 'page'),
         Scene.expect(dashboardLink).toHaveAttr('data-current'),
       )
@@ -87,7 +87,7 @@ describe('Nav', () => {
     it('leaves non-current links without aria-current or data-current', () => {
       Scene.scene(
         { update, view: sceneView },
-        Scene.with(initialModel),
+        Scene.given(initialModel),
         Scene.expect(projectsLink).not.toHaveAttr('aria-current'),
         Scene.expect(projectsLink).not.toHaveAttr('data-current'),
         Scene.expect(settingsLink).not.toHaveAttr('aria-current'),
@@ -97,7 +97,7 @@ describe('Nav', () => {
     it('moves aria-current to the newly current link', () => {
       Scene.scene(
         { update, view: sceneView },
-        Scene.with(initialModel),
+        Scene.given(initialModel),
         Scene.click(projectsLink),
         Scene.expect(projectsLink).toHaveAttr('aria-current', 'page'),
         Scene.expect(dashboardLink).not.toHaveAttr('aria-current'),

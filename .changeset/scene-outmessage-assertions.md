@@ -2,18 +2,18 @@
 'foldkit': minor
 ---
 
-Add `Scene.expectOutMessage` and `Scene.expectNoOutMessage`.
+Add `expectOutMessage` and `expectNoOutMessage`.
 
-`Scene.scene` already accepted a Submodel's three-tuple update and tracked its `Option<OutMessage>`, but asserting on it required `Scene.tap`. The new steps mirror `Story.expectOutMessage` and `Story.expectNoOutMessage`, failure messages included.
+`scene` already accepted a Submodel's three-tuple update and tracked its `Option<OutMessage>`, but asserting on it required `tap`. The new steps mirror `expectOutMessage` and `expectNoOutMessage`, failure messages included.
 
 ```ts
-Scene.scene(
+scene(
   { update, view },
-  Scene.with(initialModel),
-  Scene.click(Scene.role('button', { name: 'Log out' })),
-  Scene.expectOutMessage(RequestedLogout()),
-  Scene.Subscription.emit(CompletedAction()),
-  Scene.expectNoOutMessage(),
+  given(initialModel),
+  click(role('button', { name: 'Log out' })),
+  expectOutMessage(RequestedLogout()),
+  Subscription.emit(CompletedAction()),
+  expectNoOutMessage(),
 )
 ```
 

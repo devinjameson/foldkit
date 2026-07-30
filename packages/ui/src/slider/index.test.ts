@@ -52,7 +52,7 @@ describe('Slider', () => {
     it('increments by step on StepIncrement', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(
           PressedKeyboardNavigation({ direction: 'StepIncrement', value: 5 }),
         ),
@@ -63,7 +63,7 @@ describe('Slider', () => {
     it('decrements by step on StepDecrement', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(
           PressedKeyboardNavigation({ direction: 'StepDecrement', value: 5 }),
         ),
@@ -74,7 +74,7 @@ describe('Slider', () => {
     it('increments by 10 steps on PageIncrement', () => {
       Story.story(
         update,
-        Story.with(init({ id: 'test', min: 0, max: 100, step: 1 })),
+        Story.given(init({ id: 'test', min: 0, max: 100, step: 1 })),
         Story.message(
           PressedKeyboardNavigation({ direction: 'PageIncrement', value: 20 }),
         ),
@@ -85,7 +85,7 @@ describe('Slider', () => {
     it('decrements by 10 steps on PageDecrement', () => {
       Story.story(
         update,
-        Story.with(init({ id: 'test', min: 0, max: 100, step: 1 })),
+        Story.given(init({ id: 'test', min: 0, max: 100, step: 1 })),
         Story.message(
           PressedKeyboardNavigation({ direction: 'PageDecrement', value: 30 }),
         ),
@@ -96,7 +96,7 @@ describe('Slider', () => {
     it('jumps to min on Min', () => {
       Story.story(
         update,
-        Story.with(init({ id: 'test', min: 2, max: 20, step: 1 })),
+        Story.given(init({ id: 'test', min: 2, max: 20, step: 1 })),
         Story.message(
           PressedKeyboardNavigation({ direction: 'Min', value: 10 }),
         ),
@@ -107,7 +107,7 @@ describe('Slider', () => {
     it('jumps to max on Max', () => {
       Story.story(
         update,
-        Story.with(init({ id: 'test', min: 0, max: 99, step: 1 })),
+        Story.given(init({ id: 'test', min: 0, max: 99, step: 1 })),
         Story.message(
           PressedKeyboardNavigation({ direction: 'Max', value: 10 }),
         ),
@@ -118,7 +118,7 @@ describe('Slider', () => {
     it('emits no OutMessage when a step increment is clamped to the same value', () => {
       Story.story(
         update,
-        Story.with(init({ id: 'test', min: 0, max: 10, step: 1 })),
+        Story.given(init({ id: 'test', min: 0, max: 10, step: 1 })),
         Story.message(
           PressedKeyboardNavigation({ direction: 'StepIncrement', value: 10 }),
         ),
@@ -129,7 +129,7 @@ describe('Slider', () => {
     it('emits no OutMessage when a step decrement is clamped to the same value', () => {
       Story.story(
         update,
-        Story.with(init({ id: 'test', min: 0, max: 10, step: 1 })),
+        Story.given(init({ id: 'test', min: 0, max: 10, step: 1 })),
         Story.message(
           PressedKeyboardNavigation({ direction: 'StepDecrement', value: 0 }),
         ),
@@ -140,7 +140,7 @@ describe('Slider', () => {
     it('respects fractional step (0.1)', () => {
       Story.story(
         update,
-        Story.with(init({ id: 'test', min: 0, max: 1, step: 0.1 })),
+        Story.given(init({ id: 'test', min: 0, max: 1, step: 0.1 })),
         Story.message(
           PressedKeyboardNavigation({ direction: 'StepIncrement', value: 0.2 }),
         ),
@@ -153,7 +153,7 @@ describe('Slider', () => {
     it('starts a drag without emitting an OutMessage', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(PressedThumb({ originValue: 5 })),
         Story.expectNoOutMessage(),
         Story.model(model => {
@@ -168,7 +168,7 @@ describe('Slider', () => {
     it('ignores a bubbled PressedPointer after PressedThumb so the value is not shifted', () => {
       Story.story(
         update,
-        Story.with(init({ id: 'test', min: 0, max: 1, step: 0.05 })),
+        Story.given(init({ id: 'test', min: 0, max: 1, step: 0.05 })),
         Story.message(PressedThumb({ originValue: 0.5 })),
         Story.message(PressedPointer({ value: 0.45, originValue: 0.5 })),
         Story.expectNoOutMessage(),
@@ -184,7 +184,7 @@ describe('Slider', () => {
     it('is a no-op when already Dragging', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(PressedPointer({ value: 9, originValue: 5 })),
         Story.message(PressedThumb({ originValue: 99 })),
         Story.model(model => {
@@ -201,7 +201,7 @@ describe('Slider', () => {
     it('snaps value and starts a drag on track press', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(PressedPointer({ value: 7, originValue: 5 })),
         Story.expectOutMessage(ChangedValue({ value: 7 })),
         Story.model(model => {
@@ -216,7 +216,7 @@ describe('Slider', () => {
     it('ignores PressedPointer while Dragging (absorbs the thumb→track bubble)', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(PressedPointer({ value: 7, originValue: 5 })),
         Story.message(PressedPointer({ value: 8, originValue: 7 })),
         Story.expectNoOutMessage(),
@@ -232,7 +232,7 @@ describe('Slider', () => {
     it('snaps PressedPointer value to step', () => {
       Story.story(
         update,
-        Story.with(init({ id: 'test', min: 0, max: 10, step: 2 })),
+        Story.given(init({ id: 'test', min: 0, max: 10, step: 2 })),
         Story.message(PressedPointer({ value: 4.7, originValue: 0 })),
         Story.expectOutMessage(ChangedValue({ value: 4 })),
       )
@@ -241,7 +241,7 @@ describe('Slider', () => {
     it('emits the snapped value on MovedDragPointer while Dragging', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(PressedPointer({ value: 3, originValue: 5 })),
         Story.message(MovedDragPointer({ value: 8 })),
         Story.expectOutMessage(ChangedValue({ value: 8 })),
@@ -255,7 +255,7 @@ describe('Slider', () => {
       const originalModel = defaultInit()
       Story.story(
         update,
-        Story.with(originalModel),
+        Story.given(originalModel),
         Story.message(MovedDragPointer({ value: 8 })),
         Story.expectNoOutMessage(),
         Story.model(model => {
@@ -267,7 +267,7 @@ describe('Slider', () => {
     it('transitions from Dragging to Idle on ReleasedDragPointer', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(PressedPointer({ value: 3, originValue: 5 })),
         Story.message(ReleasedDragPointer()),
         Story.expectNoOutMessage(),
@@ -281,7 +281,7 @@ describe('Slider', () => {
       const originalModel = defaultInit()
       Story.story(
         update,
-        Story.with(originalModel),
+        Story.given(originalModel),
         Story.message(ReleasedDragPointer()),
         Story.model(model => {
           expect(model).toBe(originalModel)
@@ -292,7 +292,7 @@ describe('Slider', () => {
     it('emits the origin value on CancelledDrag while Dragging', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(PressedPointer({ value: 9, originValue: 5 })),
         Story.message(MovedDragPointer({ value: 2 })),
         Story.message(CancelledDrag()),
@@ -306,7 +306,7 @@ describe('Slider', () => {
     it('emits the origin value on CancelledDrag after PressedThumb', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(PressedThumb({ originValue: 5 })),
         Story.message(MovedDragPointer({ value: 9 })),
         Story.message(CancelledDrag()),
@@ -321,7 +321,7 @@ describe('Slider', () => {
       const originalModel = defaultInit()
       Story.story(
         update,
-        Story.with(originalModel),
+        Story.given(originalModel),
         Story.message(CancelledDrag()),
         Story.model(model => {
           expect(model).toBe(originalModel)
@@ -332,7 +332,7 @@ describe('Slider', () => {
     it('clamps MovedDragPointer above max', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(PressedPointer({ value: 5, originValue: 5 })),
         Story.message(MovedDragPointer({ value: 42 })),
         Story.expectOutMessage(ChangedValue({ value: 10 })),
@@ -342,7 +342,7 @@ describe('Slider', () => {
     it('clamps MovedDragPointer below min', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(PressedPointer({ value: 5, originValue: 5 })),
         Story.message(MovedDragPointer({ value: -4 })),
         Story.expectOutMessage(ChangedValue({ value: 0 })),
@@ -354,7 +354,7 @@ describe('Slider', () => {
     it('emits ChangedValue on StepIncrement when value changes', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(
           PressedKeyboardNavigation({ direction: 'StepIncrement', value: 5 }),
         ),
@@ -365,7 +365,7 @@ describe('Slider', () => {
     it('emits ChangedValue when restoring origin on CancelledDrag', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(PressedPointer({ value: 9, originValue: 5 })),
         Story.message(CancelledDrag()),
         Story.expectOutMessage(ChangedValue({ value: 5 })),
@@ -375,7 +375,7 @@ describe('Slider', () => {
     it('emits no OutMessage on ReleasedDragPointer (value already set during drag)', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(PressedPointer({ value: 3, originValue: 5 })),
         Story.message(ReleasedDragPointer()),
         Story.expectNoOutMessage(),
@@ -385,7 +385,7 @@ describe('Slider', () => {
     it('emits no OutMessage when PressedPointer snaps to the current value', () => {
       Story.story(
         update,
-        Story.with(defaultInit()),
+        Story.given(defaultInit()),
         Story.message(PressedPointer({ value: 5, originValue: 5 })),
         Story.expectNoOutMessage(),
       )

@@ -1,4 +1,4 @@
-import { Story } from 'foldkit'
+import { Command, given, message, model, story } from 'foldkit/story'
 import { describe, expect, test } from 'vitest'
 
 import {
@@ -29,19 +29,19 @@ const runningModel: Model = {
 describe('update', () => {
   describe('start', () => {
     test('ClickedStart fires DetermineStartTime with current elapsed time', () => {
-      Story.story(
+      story(
         update,
-        Story.with({ ...idleModel, elapsedMs: 2000 }),
-        Story.message(ClickedStart()),
-        Story.Command.expectHas(DetermineStartTime),
-        Story.model(model => {
+        given({ ...idleModel, elapsedMs: 2000 }),
+        message(ClickedStart()),
+        Command.expectHas(DetermineStartTime),
+        model(model => {
           expect(model.isRunning).toBe(false)
         }),
-        Story.Command.resolve(
+        Command.resolve(
           DetermineStartTime,
           DeterminedStartTime({ startTime: 500 }),
         ),
-        Story.model(model => {
+        model(model => {
           expect(model.isRunning).toBe(true)
           expect(model.startTime).toBe(500)
         }),
@@ -49,11 +49,11 @@ describe('update', () => {
     })
 
     test('DeterminedStartTime stores the offset start time and starts running', () => {
-      Story.story(
+      story(
         update,
-        Story.with(idleModel),
-        Story.message(DeterminedStartTime({ startTime: 1000 })),
-        Story.model(model => {
+        given(idleModel),
+        message(DeterminedStartTime({ startTime: 1000 })),
+        model(model => {
           expect(model.isRunning).toBe(true)
           expect(model.startTime).toBe(1000)
         }),
@@ -63,11 +63,11 @@ describe('update', () => {
 
   describe('stop and reset', () => {
     test('ClickedStop pauses the stopwatch without zeroing time', () => {
-      Story.story(
+      story(
         update,
-        Story.with(runningModel),
-        Story.message(ClickedStop()),
-        Story.model(model => {
+        given(runningModel),
+        message(ClickedStop()),
+        model(model => {
           expect(model.isRunning).toBe(false)
           expect(model.elapsedMs).toBe(5000)
           expect(model.startTime).toBe(1000)
@@ -76,11 +76,11 @@ describe('update', () => {
     })
 
     test('ClickedReset zeros elapsedMs, isRunning, and startTime', () => {
-      Story.story(
+      story(
         update,
-        Story.with(runningModel),
-        Story.message(ClickedReset()),
-        Story.model(model => {
+        given(runningModel),
+        message(ClickedReset()),
+        model(model => {
           expect(model.elapsedMs).toBe(0)
           expect(model.isRunning).toBe(false)
           expect(model.startTime).toBe(0)
@@ -89,11 +89,11 @@ describe('update', () => {
     })
 
     test('ClickedReset on an idle stopwatch is a no-op', () => {
-      Story.story(
+      story(
         update,
-        Story.with(idleModel),
-        Story.message(ClickedReset()),
-        Story.model(model => {
+        given(idleModel),
+        message(ClickedReset()),
+        model(model => {
           expect(model).toEqual(idleModel)
         }),
       )
@@ -102,27 +102,27 @@ describe('update', () => {
 
   describe('ticking', () => {
     test('Ticked fires DetermineTickTime with the stored startTime', () => {
-      Story.story(
+      story(
         update,
-        Story.with(runningModel),
-        Story.message(Ticked()),
-        Story.Command.expectHas(DetermineTickTime),
-        Story.Command.resolve(
+        given(runningModel),
+        message(Ticked()),
+        Command.expectHas(DetermineTickTime),
+        Command.resolve(
           DetermineTickTime,
           DeterminedTickTime({ elapsedMs: 6000 }),
         ),
-        Story.model(model => {
+        model(model => {
           expect(model.elapsedMs).toBe(6000)
         }),
       )
     })
 
     test('DeterminedTickTime stores the new elapsed time', () => {
-      Story.story(
+      story(
         update,
-        Story.with(runningModel),
-        Story.message(DeterminedTickTime({ elapsedMs: 7500 })),
-        Story.model(model => {
+        given(runningModel),
+        message(DeterminedTickTime({ elapsedMs: 7500 })),
+        model(model => {
           expect(model.elapsedMs).toBe(7500)
         }),
       )

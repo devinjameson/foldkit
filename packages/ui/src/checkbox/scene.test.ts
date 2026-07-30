@@ -56,7 +56,7 @@ describe('Checkbox controlled view', () => {
   it('reflects the checked state from the parent', () => {
     Scene.scene(
       { update, view: testView() },
-      Scene.with({ isChecked: true }),
+      Scene.given({ isChecked: true }),
       Scene.expect(checkbox).toHaveAttr('aria-checked', 'true'),
       Scene.expect(checkbox).toHaveAttr('data-checked', ''),
     )
@@ -65,7 +65,7 @@ describe('Checkbox controlled view', () => {
   it('dispatches the new checked state on click', () => {
     Scene.scene(
       { update, view: testView() },
-      Scene.with({ isChecked: false }),
+      Scene.given({ isChecked: false }),
       Scene.expect(checkbox).toHaveAttr('aria-checked', 'false'),
       Scene.click(checkbox),
       Scene.expect(checkbox).toHaveAttr('aria-checked', 'true'),
@@ -75,7 +75,7 @@ describe('Checkbox controlled view', () => {
   it('dispatches the new checked state on label click', () => {
     Scene.scene(
       { update, view: testView() },
-      Scene.with({ isChecked: false }),
+      Scene.given({ isChecked: false }),
       Scene.expect(checkbox).toHaveAttr('aria-checked', 'false'),
       Scene.click(label),
       Scene.expect(checkbox).toHaveAttr('aria-checked', 'true'),
@@ -85,7 +85,7 @@ describe('Checkbox controlled view', () => {
   it('is not interactive when disabled', () => {
     Scene.scene(
       { update, view: testView({ isDisabled: true }) },
-      Scene.with({ isChecked: false }),
+      Scene.given({ isChecked: false }),
       Scene.expect(checkbox).toBeDisabled(),
       Scene.expect(checkbox).toHaveAttr('data-disabled', ''),
     )
@@ -94,7 +94,7 @@ describe('Checkbox controlled view', () => {
   it('renders aria-checked mixed when indeterminate', () => {
     Scene.scene(
       { update, view: testView({ isIndeterminate: true }) },
-      Scene.with({ isChecked: false }),
+      Scene.given({ isChecked: false }),
       Scene.expect(checkbox).toHaveAttr('aria-checked', 'mixed'),
       Scene.expect(checkbox).toHaveAttr('data-indeterminate', ''),
     )

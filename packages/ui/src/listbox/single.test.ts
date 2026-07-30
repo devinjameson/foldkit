@@ -69,18 +69,18 @@ const animationEndMessage = GotAnimationMessage({
 
 const STALE_CLEAR_SEARCH_VERSION = 9999
 
-const withClosed = Story.with(init({ id: 'test' }))
+const givenClosed = Story.given(init({ id: 'test' }))
 
-const withOpen = flow(
-  withClosed,
+const givenOpen = flow(
+  givenClosed,
   Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
   Story.Command.resolve(FocusItems, CompletedFocusItems()),
 )
 
-const withClosedAnimated = Story.with(init({ id: 'test', isAnimated: true }))
+const givenClosedAnimated = Story.given(init({ id: 'test', isAnimated: true }))
 
-const withOpenAnimated = flow(
-  withClosedAnimated,
+const givenOpenAnimated = flow(
+  givenClosedAnimated,
   Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
   Story.Command.resolveAll(
     [FocusItems, CompletedFocusItems()],
@@ -140,7 +140,7 @@ describe('Listbox', () => {
       it('opens the listbox with the given active item', () => {
         Story.story(
           update,
-          withClosed,
+          givenClosed,
           Story.message(Opened({ maybeActiveItemIndex: Option.some(2) })),
           Story.Command.resolve(FocusItems, CompletedFocusItems()),
           Story.model(model => {
@@ -153,7 +153,7 @@ describe('Listbox', () => {
       it('resets search state on open', () => {
         Story.story(
           update,
-          Story.with({
+          Story.given({
             ...init({ id: 'test' }),
             searchQuery: 'stale',
             searchVersion: 1,
@@ -170,7 +170,7 @@ describe('Listbox', () => {
       it('sets trigger to Keyboard when opened with active item', () => {
         Story.story(
           update,
-          withClosed,
+          givenClosed,
           Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
           Story.Command.resolve(FocusItems, CompletedFocusItems()),
           Story.model(model => {
@@ -182,7 +182,7 @@ describe('Listbox', () => {
       it('sets trigger to Pointer when opened without active item', () => {
         Story.story(
           update,
-          withClosed,
+          givenClosed,
           Story.message(Opened({ maybeActiveItemIndex: Option.none() })),
           Story.Command.resolve(FocusItems, CompletedFocusItems()),
           Story.model(model => {
@@ -195,7 +195,7 @@ describe('Listbox', () => {
       it('resets pointer position on open', () => {
         Story.story(
           update,
-          Story.with({
+          Story.given({
             ...init({ id: 'test' }),
             maybeLastPointerPosition: Option.some({
               screenX: 100,
@@ -215,7 +215,7 @@ describe('Listbox', () => {
       it('closes the listbox and resets state', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(Closed()),
           Story.Command.resolve(FocusButton, CompletedFocusButton()),
           Story.model(model => {
@@ -237,7 +237,7 @@ describe('Listbox', () => {
       it('closes the listbox without restoring button focus', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(BlurredItems()),
           Story.model(model => {
             expect(model.isOpen).toBe(false)
@@ -252,7 +252,7 @@ describe('Listbox', () => {
       it('records pointer type for touch without toggling', () => {
         Story.story(
           update,
-          withClosed,
+          givenClosed,
           Story.message(
             PressedPointerOnButton({ pointerType: 'touch', button: 0 }),
           ),
@@ -268,7 +268,7 @@ describe('Listbox', () => {
       it('records pointer type for pen without toggling', () => {
         Story.story(
           update,
-          withClosed,
+          givenClosed,
           Story.message(
             PressedPointerOnButton({ pointerType: 'pen', button: 0 }),
           ),
@@ -284,7 +284,7 @@ describe('Listbox', () => {
       it('opens the listbox on mouse left button when closed', () => {
         Story.story(
           update,
-          withClosed,
+          givenClosed,
           Story.message(
             PressedPointerOnButton({ pointerType: 'mouse', button: 0 }),
           ),
@@ -303,7 +303,7 @@ describe('Listbox', () => {
       it('closes the listbox on mouse left button when open and preserves pointer type', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(
             PressedPointerOnButton({ pointerType: 'mouse', button: 0 }),
           ),
@@ -320,7 +320,7 @@ describe('Listbox', () => {
       it('does not toggle on mouse right button', () => {
         Story.story(
           update,
-          withClosed,
+          givenClosed,
           Story.message(
             PressedPointerOnButton({ pointerType: 'mouse', button: 2 }),
           ),
@@ -336,7 +336,7 @@ describe('Listbox', () => {
       it('always records maybeLastButtonPointerType', () => {
         Story.story(
           update,
-          withClosed,
+          givenClosed,
           Story.message(
             PressedPointerOnButton({ pointerType: 'touch', button: 0 }),
           ),
@@ -362,7 +362,7 @@ describe('Listbox', () => {
       it('sets the active item index', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(
             ActivatedItem({ index: 3, activationTrigger: 'Keyboard' }),
           ),
@@ -376,7 +376,7 @@ describe('Listbox', () => {
       it('replaces the previous active item', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(
             ActivatedItem({ index: 1, activationTrigger: 'Keyboard' }),
           ),
@@ -394,7 +394,7 @@ describe('Listbox', () => {
       it('stores activation trigger in model', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(
             ActivatedItem({ index: 1, activationTrigger: 'Pointer' }),
           ),
@@ -407,7 +407,7 @@ describe('Listbox', () => {
       it('returns scroll command for keyboard activation', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(
             ActivatedItem({ index: 2, activationTrigger: 'Keyboard' }),
           ),
@@ -423,7 +423,7 @@ describe('Listbox', () => {
       it('clears active item when pointer-activated', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(
             ActivatedItem({ index: 1, activationTrigger: 'Pointer' }),
           ),
@@ -437,7 +437,7 @@ describe('Listbox', () => {
       it('preserves active item when keyboard-activated', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(
             ActivatedItem({ index: 2, activationTrigger: 'Keyboard' }),
           ),
@@ -454,7 +454,7 @@ describe('Listbox', () => {
       it('activates item on first pointer move', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(
             MovedPointerOverItem({ index: 2, screenX: 100, screenY: 200 }),
           ),
@@ -471,7 +471,7 @@ describe('Listbox', () => {
       it('activates when position differs from stored', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(
             MovedPointerOverItem({ index: 1, screenX: 100, screenY: 200 }),
           ),
@@ -490,7 +490,7 @@ describe('Listbox', () => {
       it('returns model unchanged when position matches', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(
             MovedPointerOverItem({ index: 1, screenX: 100, screenY: 200 }),
           ),
@@ -508,7 +508,7 @@ describe('Listbox', () => {
       it('emits Selected with the item value', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(SelectedItem({ item: 'apple' })),
           Story.expectOutMessage(Selected({ value: 'apple' })),
           Story.Command.resolve(FocusButton, CompletedFocusButton()),
@@ -518,7 +518,7 @@ describe('Listbox', () => {
       it('closes the listbox on selection', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(SelectedItem({ item: 'apple' })),
           Story.Command.resolve(FocusButton, CompletedFocusButton()),
           Story.model(model => {
@@ -531,7 +531,7 @@ describe('Listbox', () => {
       it('returns a focus button command', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(SelectedItem({ item: 'apple' })),
           Story.expectOutMessage(Selected({ value: 'apple' })),
           Story.Command.resolve(FocusButton, CompletedFocusButton()),
@@ -541,7 +541,7 @@ describe('Listbox', () => {
       it('emits Selected with the newly chosen value across selections', () => {
         Story.story(
           update,
-          withClosed,
+          givenClosed,
           Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
           Story.Command.resolve(FocusItems, CompletedFocusItems()),
           Story.message(SelectedItem({ item: 'banana' })),
@@ -555,7 +555,7 @@ describe('Listbox', () => {
       it('returns model unchanged with a click command', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(RequestedItemClick({ index: 2 })),
           Story.Command.resolve(ClickItem, CompletedClickItem()),
           Story.model(model => {
@@ -569,7 +569,7 @@ describe('Listbox', () => {
       it('appends the key to the search query', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(
             Searched({ key: 'a', maybeTargetIndex: Option.none() }),
           ),
@@ -596,7 +596,7 @@ describe('Listbox', () => {
       it('bumps the search version', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(
             Searched({ key: 'x', maybeTargetIndex: Option.none() }),
           ),
@@ -623,7 +623,7 @@ describe('Listbox', () => {
       it('updates active item when a match is found', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(
             Searched({ key: 'd', maybeTargetIndex: Option.some(3) }),
           ),
@@ -640,7 +640,7 @@ describe('Listbox', () => {
       it('keeps existing active item when no match is found', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(
             Searched({ key: 'z', maybeTargetIndex: Option.none() }),
           ),
@@ -657,7 +657,7 @@ describe('Listbox', () => {
       it('returns a delay command for debounce', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(
             Searched({ key: 'a', maybeTargetIndex: Option.none() }),
           ),
@@ -676,7 +676,7 @@ describe('Listbox', () => {
       it('clears search query when version matches', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(
             Searched({ key: 'a', maybeTargetIndex: Option.none() }),
           ),
@@ -697,7 +697,7 @@ describe('Listbox', () => {
       it('ignores stale version', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(
             Searched({ key: 'a', maybeTargetIndex: Option.none() }),
           ),
@@ -727,7 +727,7 @@ describe('Listbox', () => {
       it('returns model unchanged for CompletedLockScroll', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(CompletedLockScroll()),
           Story.model(model => {
             expect(model.isOpen).toBe(true)
@@ -738,7 +738,7 @@ describe('Listbox', () => {
       it('resets maybeLastButtonPointerType for IgnoredMouseClick', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(
             PressedPointerOnButton({ pointerType: 'mouse', button: 0 }),
           ),
@@ -761,7 +761,7 @@ describe('Listbox', () => {
       it('returns model unchanged for SuppressedSpaceScroll', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(SuppressedSpaceScroll()),
           Story.model(model => {
             expect(model.isOpen).toBe(true)
@@ -775,7 +775,7 @@ describe('Listbox', () => {
         it('sets EnterStart and emits focus + afterPaint on Opened', () => {
           Story.story(
             update,
-            withClosedAnimated,
+            givenClosedAnimated,
             Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
             Story.model(model => {
               expect(model.isOpen).toBe(true)
@@ -792,7 +792,7 @@ describe('Listbox', () => {
         it('advances EnterStart to EnterAnimating on GotAnimationMessage(AdvancedAnimationFrame)', () => {
           Story.story(
             update,
-            withClosedAnimated,
+            givenClosedAnimated,
             Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
             Story.Command.resolve(
               Animation.RequestFrame,
@@ -811,7 +811,7 @@ describe('Listbox', () => {
         it('completes EnterAnimating to Idle on GotAnimationMessage(EndedAnimation)', () => {
           Story.story(
             update,
-            withClosedAnimated,
+            givenClosedAnimated,
             Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
             Story.Command.resolveAll(
               [FocusItems, CompletedFocusItems()],
@@ -829,7 +829,7 @@ describe('Listbox', () => {
         it('sets LeaveStart on Closed', () => {
           Story.story(
             update,
-            withOpenAnimated,
+            givenOpenAnimated,
             Story.message(Closed()),
             Story.model(model => {
               expect(model.isOpen).toBe(false)
@@ -847,7 +847,7 @@ describe('Listbox', () => {
         it('begins the leave animation when the items container blurs', () => {
           Story.story(
             update,
-            withOpenAnimated,
+            givenOpenAnimated,
             Story.message(BlurredItems()),
             Story.model(model => {
               expect(model.isOpen).toBe(false)
@@ -864,7 +864,7 @@ describe('Listbox', () => {
         it('sets LeaveStart on SelectedItem', () => {
           Story.story(
             update,
-            withOpenAnimated,
+            givenOpenAnimated,
             Story.message(SelectedItem({ item: 'apple' })),
             Story.model(model => {
               expect(model.isOpen).toBe(false)
@@ -882,7 +882,7 @@ describe('Listbox', () => {
         it('advances LeaveStart to LeaveAnimating on GotAnimationMessage(AdvancedAnimationFrame)', () => {
           Story.story(
             update,
-            withOpenAnimated,
+            givenOpenAnimated,
             Story.message(Closed()),
             Story.Command.resolve(
               Animation.RequestFrame,
@@ -902,7 +902,7 @@ describe('Listbox', () => {
         it('completes LeaveAnimating to Idle on GotAnimationMessage(EndedAnimation)', () => {
           Story.story(
             update,
-            withOpenAnimated,
+            givenOpenAnimated,
             Story.message(Closed()),
             Story.Command.resolveAll(
               [FocusButton, CompletedFocusButton()],
@@ -921,7 +921,7 @@ describe('Listbox', () => {
         it('keeps transitionState Idle on Opened', () => {
           Story.story(
             update,
-            withClosed,
+            givenClosed,
             Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
             Story.Command.resolve(FocusItems, CompletedFocusItems()),
             Story.model(model => {
@@ -933,7 +933,7 @@ describe('Listbox', () => {
         it('keeps transitionState Idle on Closed', () => {
           Story.story(
             update,
-            withOpen,
+            givenOpen,
             Story.message(Closed()),
             Story.Command.resolve(FocusButton, CompletedFocusButton()),
             Story.model(model => {
@@ -947,7 +947,7 @@ describe('Listbox', () => {
         it('ignores GotAnimationMessage with AdvancedAnimationFrame when Idle', () => {
           Story.story(
             update,
-            withOpen,
+            givenOpen,
             Story.message(
               GotAnimationMessage({
                 message: Animation.AdvancedAnimationFrame(),
@@ -963,7 +963,7 @@ describe('Listbox', () => {
         it('ignores GotAnimationMessage with EndedAnimation when Idle', () => {
           Story.story(
             update,
-            withOpen,
+            givenOpen,
             Story.message(animationEndMessage),
             Story.model(model => {
               expect(model.isOpen).toBe(true)
@@ -977,7 +977,7 @@ describe('Listbox', () => {
         it('transitions to LeaveStart when Closed during EnterStart', () => {
           Story.story(
             update,
-            withClosedAnimated,
+            givenClosedAnimated,
             Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
             Story.Command.resolveAll(
               [FocusItems, CompletedFocusItems()],
@@ -1001,7 +1001,7 @@ describe('Listbox', () => {
         it('transitions to LeaveStart when Closed during EnterAnimating', () => {
           Story.story(
             update,
-            withClosedAnimated,
+            givenClosedAnimated,
             Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
             Story.Command.resolveAll(
               [FocusItems, CompletedFocusItems()],
@@ -1026,10 +1026,10 @@ describe('Listbox', () => {
   })
 
   describe('modal commands', () => {
-    const withClosedModal = Story.with(init({ id: 'test', isModal: true }))
+    const givenClosedModal = Story.given(init({ id: 'test', isModal: true }))
 
-    const withOpenModal = flow(
-      withClosedModal,
+    const givenOpenModal = flow(
+      givenClosedModal,
       Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
       Story.Command.resolveAll(
         [FocusItems, CompletedFocusItems()],
@@ -1041,7 +1041,7 @@ describe('Listbox', () => {
     it('emits lockScroll and inertOthers commands on Opened when isModal is true', () => {
       Story.story(
         update,
-        withClosedModal,
+        givenClosedModal,
         Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
         Story.Command.resolveAll(
           [FocusItems, CompletedFocusItems()],
@@ -1057,7 +1057,7 @@ describe('Listbox', () => {
     it('emits unlockScroll and restoreInert commands on Closed when isModal is true', () => {
       Story.story(
         update,
-        withOpenModal,
+        givenOpenModal,
         Story.message(Closed()),
         Story.Command.resolveAll(
           [FocusButton, CompletedFocusButton()],
@@ -1073,7 +1073,7 @@ describe('Listbox', () => {
     it('emits unlockScroll and restoreInert commands when the items container blurs in modal mode', () => {
       Story.story(
         update,
-        withOpenModal,
+        givenOpenModal,
         Story.message(BlurredItems()),
         Story.Command.resolveAll(
           [UnlockScroll, CompletedUnlockScroll()],
@@ -1088,7 +1088,7 @@ describe('Listbox', () => {
     it('emits unlockScroll and restoreInert commands on SelectedItem when isModal is true', () => {
       Story.story(
         update,
-        withOpenModal,
+        givenOpenModal,
         Story.message(SelectedItem({ item: 'apple' })),
         Story.Command.resolveAll(
           [FocusButton, CompletedFocusButton()],
@@ -1104,7 +1104,7 @@ describe('Listbox', () => {
     it('does not emit modal commands when isModal is false', () => {
       Story.story(
         update,
-        withClosed,
+        givenClosed,
         Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
         Story.Command.resolve(FocusItems, CompletedFocusItems()),
         Story.model(model => {
@@ -1125,7 +1125,7 @@ describe('Listbox', () => {
       let model!: Model
       Story.story(
         update,
-        withOpen,
+        givenOpen,
         Story.model(extractedModel => {
           model = extractedModel
         }),
@@ -1157,7 +1157,7 @@ describe('Listbox', () => {
       it('button has aria-haspopup="listbox"', () => {
         Scene.scene(
           { update, view: sceneView() },
-          Scene.with(openModel()),
+          Scene.given(openModel()),
           Scene.tap(({ html }) => {
             expect(Scene.find(html, '[key="test-button"]')).toHaveAttr(
               'aria-haspopup',
@@ -1172,7 +1172,7 @@ describe('Listbox', () => {
       it('items container has role="listbox"', () => {
         Scene.scene(
           { update, view: sceneView() },
-          Scene.with(openModel()),
+          Scene.given(openModel()),
           Scene.tap(({ html }) => {
             expect(Scene.find(html, '[key="test-items-container"]')).toHaveAttr(
               'role',
@@ -1187,7 +1187,7 @@ describe('Listbox', () => {
       it('items have role="option"', () => {
         Scene.scene(
           { update, view: sceneView() },
-          Scene.with(openModel()),
+          Scene.given(openModel()),
           Scene.tap(({ html }) => {
             expect(Scene.find(html, '[key="test-item-0"]')).toHaveAttr(
               'role',
@@ -1209,7 +1209,7 @@ describe('Listbox', () => {
             update,
             view: sceneView({ maybeSelectedValue: Option.some('Apple') }),
           },
-          Scene.with(openModel()),
+          Scene.given(openModel()),
           Scene.tap(({ html }) => {
             expect(Scene.find(html, '[key="test-item-0"]')).toHaveAttr(
               'aria-selected',
@@ -1227,7 +1227,7 @@ describe('Listbox', () => {
             update,
             view: sceneView({ maybeSelectedValue: Option.some('Apple') }),
           },
-          Scene.with(openModel()),
+          Scene.given(openModel()),
           Scene.tap(({ html }) => {
             expect(Scene.find(html, '[key="test-item-1"]')).toHaveAttr(
               'aria-selected',
@@ -1245,7 +1245,7 @@ describe('Listbox', () => {
             update,
             view: sceneView({ maybeSelectedValue: Option.some('Banana') }),
           },
-          Scene.with(openModel()),
+          Scene.given(openModel()),
           Scene.tap(({ html }) => {
             expect(Scene.find(html, '[key="test-item-0"]')).not.toHaveAttr(
               'data-selected',
@@ -1263,7 +1263,7 @@ describe('Listbox', () => {
       it('items container has no aria-multiselectable', () => {
         Scene.scene(
           { update, view: sceneView() },
-          Scene.with(openModel()),
+          Scene.given(openModel()),
           Scene.tap(({ html }) => {
             expect(
               Scene.find(html, '[key="test-items-container"]'),
@@ -1279,7 +1279,7 @@ describe('Listbox', () => {
       it('renders hidden input when name is provided', () => {
         Scene.scene(
           { update, view: sceneView({ name: 'fruit' }) },
-          Scene.with(closedModel()),
+          Scene.given(closedModel()),
           Scene.tap(({ html }) => {
             const hiddenInput = Scene.find(html, 'input[type="hidden"]')
             expect(hiddenInput).toExist()
@@ -1297,7 +1297,7 @@ describe('Listbox', () => {
               maybeSelectedValue: Option.some('Apple'),
             }),
           },
-          Scene.with(closedModel()),
+          Scene.given(closedModel()),
           Scene.tap(({ html }) => {
             expect(Scene.find(html, 'input[type="hidden"]')).toHaveAttr(
               'value',
@@ -1310,7 +1310,7 @@ describe('Listbox', () => {
       it('no hidden input when name is not provided', () => {
         Scene.scene(
           { update, view: sceneView() },
-          Scene.with(closedModel()),
+          Scene.given(closedModel()),
           Scene.tap(({ html }) => {
             expect(Scene.find(html, 'input[type="hidden"]')).toBeAbsent()
           }),
@@ -1320,7 +1320,7 @@ describe('Listbox', () => {
       it('no value attribute on hidden input when nothing selected', () => {
         Scene.scene(
           { update, view: sceneView({ name: 'fruit' }) },
-          Scene.with(closedModel()),
+          Scene.given(closedModel()),
           Scene.tap(({ html }) => {
             expect(Scene.find(html, 'input[type="hidden"]')).not.toHaveAttr(
               'value',
@@ -1334,7 +1334,7 @@ describe('Listbox', () => {
       it('no aria-label or aria-labelledby on the trigger by default', () => {
         Scene.scene(
           { update, view: sceneView() },
-          Scene.with(closedModel()),
+          Scene.given(closedModel()),
           Scene.tap(({ html }) => {
             const button = Scene.find(html, '[key="test-button"]')
             expect(button).not.toHaveAttr('aria-label')
@@ -1346,7 +1346,7 @@ describe('Listbox', () => {
       it('applies aria-label to the trigger when ariaLabel is provided', () => {
         Scene.scene(
           { update, view: sceneView({ ariaLabel: 'Fruit' }) },
-          Scene.with(closedModel()),
+          Scene.given(closedModel()),
           Scene.tap(({ html }) => {
             const button = Scene.find(html, '[key="test-button"]')
             expect(button).toHaveAttr('aria-label', 'Fruit')
@@ -1358,7 +1358,7 @@ describe('Listbox', () => {
       it('applies aria-labelledby to the trigger when ariaLabelledBy is provided', () => {
         Scene.scene(
           { update, view: sceneView({ ariaLabelledBy: 'fruit-label' }) },
-          Scene.with(closedModel()),
+          Scene.given(closedModel()),
           Scene.tap(({ html }) => {
             const button = Scene.find(html, '[key="test-button"]')
             expect(button).toHaveAttr('aria-labelledby', 'fruit-label')
@@ -1376,7 +1376,7 @@ describe('Listbox', () => {
               ariaLabelledBy: 'fruit-label',
             }),
           },
-          Scene.with(closedModel()),
+          Scene.given(closedModel()),
           Scene.tap(({ html }) => {
             const button = Scene.find(html, '[key="test-button"]')
             expect(button).toHaveAttr('aria-label', 'Fruit')
@@ -1417,7 +1417,7 @@ describe('Listbox', () => {
               },
             }),
           },
-          Scene.with(openModel()),
+          Scene.given(openModel()),
           Scene.tap(() => {
             expect(contexts[0]?.isSelected).toBe(true)
           }),
@@ -1452,7 +1452,7 @@ describe('Listbox', () => {
               },
             }),
           },
-          Scene.with(openModel()),
+          Scene.given(openModel()),
           Scene.tap(() => {
             expect(contexts[1]?.isSelected).toBe(false)
           }),
@@ -1471,7 +1471,7 @@ describe('Listbox', () => {
               anchor: { placement: 'bottom-start' as const },
             }),
           },
-          Scene.with(openModel()),
+          Scene.given(openModel()),
           Scene.tap(({ html }) => {
             const itemsContainer = Scene.find(
               html,
@@ -1491,7 +1491,7 @@ describe('Listbox', () => {
       it('applies anchor positioning by default when anchor is absent', () => {
         Scene.scene(
           { update, view: sceneView() },
-          Scene.with(openModel()),
+          Scene.given(openModel()),
           Scene.tap(({ html }) => {
             const itemsContainer = Scene.find(
               html,
@@ -1513,7 +1513,7 @@ describe('Listbox', () => {
       it('items container has aria-orientation="vertical" by default', () => {
         Scene.scene(
           { update, view: sceneView() },
-          Scene.with(openModel()),
+          Scene.given(openModel()),
           Scene.tap(({ html }) => {
             expect(Scene.find(html, '[key="test-items-container"]')).toHaveAttr(
               'aria-orientation',
@@ -1529,7 +1529,7 @@ describe('Listbox', () => {
         const model = { ...openModel(), orientation: 'Horizontal' as const }
         Scene.scene(
           { update, view: sceneView() },
-          Scene.with(model),
+          Scene.given(model),
           Scene.tap(({ html }) => {
             expect(Scene.find(html, '[key="test-items-container"]')).toHaveAttr(
               'aria-orientation',
@@ -1546,7 +1546,7 @@ describe('Listbox', () => {
       it('wrapper has data-disabled when isDisabled is true', () => {
         Scene.scene(
           { update, view: sceneView({ isDisabled: true }) },
-          Scene.with(closedModel()),
+          Scene.given(closedModel()),
           Scene.tap(({ html }) => {
             expect(html.data?.attrs?.['data-disabled']).toBe('')
           }),
@@ -1556,7 +1556,7 @@ describe('Listbox', () => {
       it('wrapper does not have data-disabled when isDisabled is false', () => {
         Scene.scene(
           { update, view: sceneView() },
-          Scene.with(closedModel()),
+          Scene.given(closedModel()),
           Scene.tap(({ html }) => {
             expect(html.data?.attrs?.['data-disabled']).toBeUndefined()
           }),
@@ -1566,7 +1566,7 @@ describe('Listbox', () => {
       it('button has aria-disabled when isDisabled is true', () => {
         Scene.scene(
           { update, view: sceneView({ isDisabled: true }) },
-          Scene.with(closedModel()),
+          Scene.given(closedModel()),
           Scene.tap(({ html }) => {
             expect(Scene.find(html, '[key="test-button"]')).toHaveAttr(
               'aria-disabled',
@@ -1583,7 +1583,7 @@ describe('Listbox', () => {
       it('button has no event handlers when isDisabled is true', () => {
         Scene.scene(
           { update, view: sceneView({ isDisabled: true }) },
-          Scene.with(closedModel()),
+          Scene.given(closedModel()),
           Scene.tap(({ html }) => {
             const button = Scene.find(html, '[key="test-button"]')
             expect(button).not.toHaveHandler('pointerdown')
@@ -1597,7 +1597,7 @@ describe('Listbox', () => {
       it('wrapper has data-invalid when isInvalid is true', () => {
         Scene.scene(
           { update, view: sceneView({ isInvalid: true }) },
-          Scene.with(closedModel()),
+          Scene.given(closedModel()),
           Scene.tap(({ html }) => {
             expect(html.data?.attrs?.['data-invalid']).toBe('')
           }),
@@ -1607,7 +1607,7 @@ describe('Listbox', () => {
       it('wrapper does not have data-invalid when isInvalid is false', () => {
         Scene.scene(
           { update, view: sceneView() },
-          Scene.with(closedModel()),
+          Scene.given(closedModel()),
           Scene.tap(({ html }) => {
             expect(html.data?.attrs?.['data-invalid']).toBeUndefined()
           }),
@@ -1617,7 +1617,7 @@ describe('Listbox', () => {
       it('button has data-invalid when isInvalid is true', () => {
         Scene.scene(
           { update, view: sceneView({ isInvalid: true }) },
-          Scene.with(closedModel()),
+          Scene.given(closedModel()),
           Scene.tap(({ html }) => {
             expect(Scene.find(html, '[key="test-button"]')).toHaveAttr(
               'data-invalid',
@@ -1635,7 +1635,7 @@ describe('Listbox', () => {
             update,
             view: sceneView({ name: 'fruit', form: 'my-form' }),
           },
-          Scene.with(closedModel()),
+          Scene.given(closedModel()),
           Scene.tap(({ html }) => {
             expect(Scene.find(html, 'input[type="hidden"]')).toHaveAttr(
               'form',
@@ -1648,7 +1648,7 @@ describe('Listbox', () => {
       it('hidden input has no form attribute when form is not provided', () => {
         Scene.scene(
           { update, view: sceneView({ name: 'fruit' }) },
-          Scene.with(closedModel()),
+          Scene.given(closedModel()),
           Scene.tap(({ html }) => {
             expect(Scene.find(html, 'input[type="hidden"]')).not.toHaveAttr(
               'form',
@@ -1692,7 +1692,7 @@ describe('Listbox', () => {
       it('items have click handlers with object items', () => {
         Scene.scene(
           { update, view: personSceneView() },
-          Scene.with(openModel()),
+          Scene.given(openModel()),
           Scene.tap(({ html }) => {
             expect(Scene.find(html, '[key="test-item-0"]')).toHaveHandler(
               'click',
@@ -1709,7 +1709,7 @@ describe('Listbox', () => {
             update,
             view: personSceneView({ maybeSelectedValue: Option.some('2') }),
           },
-          Scene.with(openModel()),
+          Scene.given(openModel()),
           Scene.tap(({ html }) => {
             expect(Scene.find(html, '[key="test-item-1"]')).toHaveAttr(
               'aria-selected',
@@ -1731,7 +1731,7 @@ describe('Listbox', () => {
             update,
             view: personSceneView({ maybeSelectedValue: Option.some('2') }),
           },
-          Scene.with(openModel()),
+          Scene.given(openModel()),
           Scene.tap(({ html }) => {
             expect(Scene.find(html, '[key="test-item-0"]')).toHaveAttr(
               'aria-selected',
@@ -1755,7 +1755,7 @@ describe('Listbox', () => {
               maybeSelectedValue: Option.some('1'),
             }),
           },
-          Scene.with(closedModel()),
+          Scene.given(closedModel()),
           Scene.tap(({ html }) => {
             expect(Scene.find(html, 'input[type="hidden"]')).toHaveAttr(
               'value',

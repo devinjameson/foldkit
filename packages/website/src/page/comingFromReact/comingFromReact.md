@@ -126,7 +126,7 @@ Return a Command from your update function. The runtime runs the Command (an HTT
 :::Faq{id="faq-testing" question="How do I test my app?"}
 Foldkit ships two built-in testing APIs that share the runtime’s pipeline. No jsdom, no mocking, no async waiting.
 
-[Story](/testing/story) tests the state machine. You feed Messages into update, resolve Commands inline by providing the Message they would return, and assert on the Model at any step. The test reads as a chronological user story: `Story.message` to dispatch, `Story.Command.resolve` to settle a Command, `Story.Command.expectExact` to assert which Commands were produced.
+[Story](/testing/story) tests the state machine. You feed Messages into update, resolve Commands inline by providing the Message they would return, and assert on the Model at any step. The test reads as a chronological user story: `message` to dispatch, `Command.resolve` to settle a Command, `Command.expectExact` to assert which Commands were produced.
 
 [Scene](/testing/scene) tests through the rendered view. Locate elements by accessible role, label, or text (the same way a screen reader does), click and type to dispatch the same Messages a user would, and assert on the rendered VNode tree. Scene runs against the virtual DOM, so the entire test stays synchronous.
 

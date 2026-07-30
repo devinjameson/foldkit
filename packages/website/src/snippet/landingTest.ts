@@ -5,7 +5,7 @@ import { expect, test } from 'vitest'
 test('fetch weather updates the model', () => {
   Story.story(
     update,
-    Story.with(model),
+    Story.given(model),
     Story.message(SubmittedWeatherForm()),
     Story.model(model => {
       expect(model.weather._tag).toBe('WeatherLoading')
@@ -22,7 +22,7 @@ test('fetch weather updates the model', () => {
 test('type a zip code, click get weather, see the forecast', () => {
   Scene.scene(
     { update, view },
-    Scene.with(model),
+    Scene.given(model),
     Scene.type(Scene.label('Zip code'), '90210'),
     Scene.click(Scene.role('button', { name: 'Get Weather' })),
     Scene.expect(Scene.role('button', { name: 'Loading...' })).toExist(),

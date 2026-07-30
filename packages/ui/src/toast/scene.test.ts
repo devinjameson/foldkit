@@ -64,7 +64,7 @@ describe('Toast', () => {
     it('renders the container with role=region and aria-live=polite', () => {
       Scene.scene(
         { update: Toast.update, view: sceneView() },
-        Scene.with(Toast.init({ id: 'test' })),
+        Scene.given(Toast.init({ id: 'test' })),
         Scene.expect(container).toExist(),
         Scene.expect(container).toHaveAttr('role', 'region'),
         Scene.expect(container).toHaveAttr('aria-live', 'polite'),
@@ -74,7 +74,7 @@ describe('Toast', () => {
     it('renders the container even when empty, for a11y live-region setup', () => {
       Scene.scene(
         { update: Toast.update, view: sceneView() },
-        Scene.with(Toast.init({ id: 'test' })),
+        Scene.given(Toast.init({ id: 'test' })),
         Scene.expect(container).toExist(),
       )
     })
@@ -82,7 +82,7 @@ describe('Toast', () => {
     it('renders an Info entry with role=status', () => {
       Scene.scene(
         { update: Toast.update, view: sceneView() },
-        Scene.with(withEntry({ variant: 'Info' })),
+        Scene.given(withEntry({ variant: 'Info' })),
         Scene.expect(entryZero).toExist(),
         Scene.expect(entryZero).toHaveAttr('role', 'status'),
       )
@@ -91,7 +91,7 @@ describe('Toast', () => {
     it('renders an Error entry with role=alert', () => {
       Scene.scene(
         { update: Toast.update, view: sceneView() },
-        Scene.with(withEntry({ variant: 'Error' })),
+        Scene.given(withEntry({ variant: 'Error' })),
         Scene.expect(entryZero).toHaveAttr('role', 'alert'),
       )
     })
@@ -99,7 +99,7 @@ describe('Toast', () => {
     it('surfaces the entry variant via data-variant', () => {
       Scene.scene(
         { update: Toast.update, view: sceneView() },
-        Scene.with(withEntry({ variant: 'Warning' })),
+        Scene.given(withEntry({ variant: 'Warning' })),
         Scene.expect(entryZero).toHaveAttr('data-variant', 'Warning'),
       )
     })
@@ -120,7 +120,7 @@ describe('Toast', () => {
       }
       Scene.scene(
         { update: Toast.update, view: sceneView() },
-        Scene.with(model),
+        Scene.given(model),
         Scene.expect(entryZero).toHaveAttr('data-enter', ''),
         Scene.expect(entryZero).toHaveAttr('data-transition', ''),
       )
@@ -142,7 +142,7 @@ describe('Toast', () => {
       }
       Scene.scene(
         { update: Toast.update, view: sceneView() },
-        Scene.with(model),
+        Scene.given(model),
         Scene.expect(entryZero).toHaveAttr('data-leave', ''),
         Scene.expect(entryZero).toHaveAttr('data-closed', ''),
       )
@@ -151,7 +151,7 @@ describe('Toast', () => {
     it('attaches mouse enter and leave handlers for pause-on-hover', () => {
       Scene.scene(
         { update: Toast.update, view: sceneView() },
-        Scene.with(withEntry()),
+        Scene.given(withEntry()),
         Scene.expect(entryZero).toHaveHandler('mouseenter'),
         Scene.expect(entryZero).toHaveHandler('mouseleave'),
       )
@@ -160,7 +160,7 @@ describe('Toast', () => {
     it('uses a custom aria-label when provided', () => {
       Scene.scene(
         { update: Toast.update, view: sceneView({ ariaLabel: 'Toasts' }) },
-        Scene.with(Toast.init({ id: 'test' })),
+        Scene.given(Toast.init({ id: 'test' })),
         Scene.expect(container).toHaveAttr('aria-label', 'Toasts'),
       )
     })
@@ -177,7 +177,7 @@ describe('Toast', () => {
       it(`maps ${variant} to role=${expectedRole}`, () => {
         Scene.scene(
           { update: Toast.update, view: sceneView() },
-          Scene.with(withEntry({ variant })),
+          Scene.given(withEntry({ variant })),
           Scene.expect(entryZero).toHaveAttr('role', expectedRole),
         )
       })

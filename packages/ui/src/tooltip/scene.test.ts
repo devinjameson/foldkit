@@ -59,7 +59,7 @@ describe('Tooltip', () => {
     it('renders the trigger with aria-describedby and no data-open when hidden', () => {
       Scene.scene(
         { update, view: sceneView() },
-        Scene.with(hiddenModel),
+        Scene.given(hiddenModel),
         Scene.expect(trigger).toHaveAttr('aria-describedby', 'test-panel'),
         Scene.expect(trigger).not.toHaveAttr('data-open'),
       )
@@ -68,7 +68,7 @@ describe('Tooltip', () => {
     it('does not render the panel when hidden', () => {
       Scene.scene(
         { update, view: sceneView() },
-        Scene.with(hiddenModel),
+        Scene.given(hiddenModel),
         Scene.expect(panel).toBeAbsent(),
       )
     })
@@ -76,7 +76,7 @@ describe('Tooltip', () => {
     it('renders the panel with role=tooltip when open', () => {
       Scene.scene(
         { update, view: sceneView() },
-        Scene.with(openModel),
+        Scene.given(openModel),
         Scene.expect(panel).toExist(),
         Scene.expect(panel).toHaveAttr('role', 'tooltip'),
         Scene.expect(panel).toHaveAttr('id', 'test-panel'),
@@ -87,7 +87,7 @@ describe('Tooltip', () => {
     it('marks the trigger with data-open when visible', () => {
       Scene.scene(
         { update, view: sceneView() },
-        Scene.with(openModel),
+        Scene.given(openModel),
         Scene.expect(trigger).toHaveAttr('data-open', ''),
         acknowledgeAnchor,
       )
@@ -96,7 +96,7 @@ describe('Tooltip', () => {
     it('adds anchor positioning styles and hooks to the panel', () => {
       Scene.scene(
         { update, view: sceneView() },
-        Scene.with(openModel),
+        Scene.given(openModel),
         Scene.expect(panel).toHaveStyle('position', 'absolute'),
         Scene.expect(panel).toHaveStyle('margin', '0'),
         Scene.expect(panel).toHaveStyle('visibility', 'hidden'),
@@ -110,7 +110,7 @@ describe('Tooltip', () => {
     it('does not attach interaction handlers when disabled', () => {
       Scene.scene(
         { update, view: sceneView({ isDisabled: true }) },
-        Scene.with(hiddenModel),
+        Scene.given(hiddenModel),
         Scene.expect(trigger).toHaveAttr('aria-disabled', 'true'),
         Scene.expect(trigger).toHaveAttr('data-disabled', ''),
         Scene.expect(trigger).not.toHaveHandler('mouseenter'),
@@ -123,7 +123,7 @@ describe('Tooltip', () => {
     it('no aria-label or aria-labelledby on the trigger by default', () => {
       Scene.scene(
         { update, view: sceneView() },
-        Scene.with(hiddenModel),
+        Scene.given(hiddenModel),
         Scene.expect(trigger).not.toHaveAttr('aria-label'),
         Scene.expect(trigger).not.toHaveAttr('aria-labelledby'),
       )
@@ -132,7 +132,7 @@ describe('Tooltip', () => {
     it('applies aria-label to the trigger when ariaLabel is provided', () => {
       Scene.scene(
         { update, view: sceneView({ ariaLabel: 'More info' }) },
-        Scene.with(hiddenModel),
+        Scene.given(hiddenModel),
         Scene.expect(trigger).toHaveAttr('aria-label', 'More info'),
         Scene.expect(trigger).not.toHaveAttr('aria-labelledby'),
       )
@@ -141,7 +141,7 @@ describe('Tooltip', () => {
     it('applies aria-labelledby to the trigger when ariaLabelledBy is provided', () => {
       Scene.scene(
         { update, view: sceneView({ ariaLabelledBy: 'info-label' }) },
-        Scene.with(hiddenModel),
+        Scene.given(hiddenModel),
         Scene.expect(trigger).toHaveAttr('aria-labelledby', 'info-label'),
         Scene.expect(trigger).not.toHaveAttr('aria-label'),
       )
@@ -156,7 +156,7 @@ describe('Tooltip', () => {
             ariaLabelledBy: 'info-label',
           }),
         },
-        Scene.with(hiddenModel),
+        Scene.given(hiddenModel),
         Scene.expect(trigger).toHaveAttr('aria-label', 'More info'),
         Scene.expect(trigger).not.toHaveAttr('aria-labelledby'),
       )

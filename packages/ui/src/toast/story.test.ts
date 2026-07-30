@@ -58,7 +58,7 @@ const makeFreshEntry = (overrides: Partial<Entry> = {}): Entry => ({
   ...overrides,
 })
 
-const withEmpty = Story.with(Toast.init({ id: 'test' }))
+const givenEmpty = Story.given(Toast.init({ id: 'test' }))
 
 const firstEntryId = 'test-entry-0'
 
@@ -157,7 +157,7 @@ describe('Toast', () => {
         }
         Story.story(
           Toast.update,
-          Story.with(model),
+          Story.given(model),
           Story.message(
             ElapsedDuration({
               entryId: firstEntryId,
@@ -179,7 +179,7 @@ describe('Toast', () => {
         }
         Story.story(
           Toast.update,
-          Story.with(model),
+          Story.given(model),
           Story.message(ElapsedDuration({ entryId: firstEntryId, version: 0 })),
           Story.model((next: Model) => {
             expect(next.entries[0]?.animation.transitionState).toBe(
@@ -196,7 +196,7 @@ describe('Toast', () => {
       it('does nothing for a missing entry', () => {
         Story.story(
           Toast.update,
-          withEmpty,
+          givenEmpty,
           Story.message(ElapsedDuration({ entryId: 'nope', version: 0 })),
           Story.Command.expectNone(),
         )
@@ -212,7 +212,7 @@ describe('Toast', () => {
         }
         Story.story(
           Toast.update,
-          Story.with(model),
+          Story.given(model),
           Story.message(HoveredEntry({ entryId: firstEntryId })),
           Story.model((next: Model) => {
             const [entry] = next.entries
@@ -235,7 +235,7 @@ describe('Toast', () => {
         }
         Story.story(
           Toast.update,
-          Story.with(model),
+          Story.given(model),
           Story.message(LeftEntry({ entryId: firstEntryId })),
           Story.model((next: Model) => {
             const [entry] = next.entries
@@ -262,7 +262,7 @@ describe('Toast', () => {
         }
         Story.story(
           Toast.update,
-          Story.with(model),
+          Story.given(model),
           Story.message(LeftEntry({ entryId: firstEntryId })),
           Story.Command.expectNone(),
         )
@@ -276,7 +276,7 @@ describe('Toast', () => {
         }
         Story.story(
           Toast.update,
-          Story.with(model),
+          Story.given(model),
           Story.message(HoveredEntry({ entryId: firstEntryId })),
           Story.model((next: Model) => {
             expect(next.entries[0]?.pendingDismissVersion).toBe(1)
@@ -295,7 +295,7 @@ describe('Toast', () => {
       it('Dismissed', () => {
         Story.story(
           Toast.update,
-          withEmpty,
+          givenEmpty,
           Story.message(Dismissed({ entryId: 'nope' })),
           Story.Command.expectNone(),
         )
@@ -304,7 +304,7 @@ describe('Toast', () => {
       it('HoveredEntry', () => {
         Story.story(
           Toast.update,
-          withEmpty,
+          givenEmpty,
           Story.message(HoveredEntry({ entryId: 'nope' })),
           Story.Command.expectNone(),
         )
@@ -313,7 +313,7 @@ describe('Toast', () => {
       it('LeftEntry', () => {
         Story.story(
           Toast.update,
-          withEmpty,
+          givenEmpty,
           Story.message(LeftEntry({ entryId: 'nope' })),
           Story.Command.expectNone(),
         )
@@ -329,7 +329,7 @@ describe('Toast', () => {
         }
         Story.story(
           Toast.update,
-          Story.with(model),
+          Story.given(model),
           Story.message(Dismissed({ entryId: firstEntryId })),
           Story.model((next: Model) => {
             expect(next.entries[0]?.animation.transitionState).toBe(
@@ -361,7 +361,7 @@ describe('Toast', () => {
         }
         Story.story(
           Toast.update,
-          Story.with(model),
+          Story.given(model),
           Story.message(Dismissed({ entryId: firstEntryId })),
           Story.Command.expectNone(),
           Story.model((next: Model) => {
@@ -385,7 +385,7 @@ describe('Toast', () => {
         }
         Story.story(
           Toast.update,
-          Story.with(model),
+          Story.given(model),
           Story.message(
             GotAnimationMessage({
               entryId: firstEntryId,
@@ -423,7 +423,7 @@ describe('Toast', () => {
         }
         Story.story(
           Toast.update,
-          Story.with(model),
+          Story.given(model),
           Story.message(DismissedAll()),
           Story.model((next: Model) => {
             expect(next.entries[0]?.animation.transitionState).toBe(
@@ -460,7 +460,7 @@ describe('Toast', () => {
       })
       Story.story(
         Toast.update,
-        withEmpty,
+        givenEmpty,
         Story.message(Toast.Added({ entry })),
         Story.Command.resolveAll(
           [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
@@ -492,7 +492,7 @@ describe('Toast', () => {
       })
       Story.story(
         Toast.update,
-        withEmpty,
+        givenEmpty,
         Story.message(Toast.Added({ entry })),
         toastTest.drainEntry({ entryId: firstEntryId }),
         Story.model((next: Model) => {

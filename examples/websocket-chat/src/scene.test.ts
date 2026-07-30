@@ -1,5 +1,17 @@
 import { DateTime } from 'effect'
-import { Scene } from 'foldkit'
+import {
+  Command,
+  ManagedResource,
+  Subscription,
+  click,
+  expect,
+  given,
+  placeholder,
+  role,
+  scene,
+  text,
+  type,
+} from 'foldkit/scene'
 import { describe, test } from 'vitest'
 
 import {
@@ -30,52 +42,52 @@ const zonedAt = (timestamp: number) =>
 
 describe('view', () => {
   test('initial view shows the heading, status, and a Connect button', () => {
-    Scene.scene(
+    scene(
       { update, view },
-      Scene.with(idleModel),
-      Scene.expect(Scene.text('WebSocket Chat')).toExist(),
-      Scene.expect(Scene.text('Disconnected')).toExist(),
-      Scene.expect(Scene.role('button', { name: 'Connect to Chat' })).toExist(),
-      Scene.expect(Scene.text('No messages yet')).toExist(),
+      given(idleModel),
+      expect(text('WebSocket Chat')).toExist(),
+      expect(text('Disconnected')).toExist(),
+      expect(role('button', { name: 'Connect to Chat' })).toExist(),
+      expect(text('No messages yet')).toExist(),
     )
   })
 
   test('connecting state renders the Connecting message', () => {
-    Scene.scene(
+    scene(
       { update, view },
-      Scene.with({ ...idleModel, connection: ConnectionConnecting() }),
-      Scene.expect(Scene.text('Connecting...')).toExist(),
+      given({ ...idleModel, connection: ConnectionConnecting() }),
+      expect(text('Connecting...')).toExist(),
     )
   })
 
   test('connected state shows the message input and Send button', () => {
-    Scene.scene(
+    scene(
       { update, view },
-      Scene.with({ ...idleModel, connection: ConnectionConnected() }),
-      Scene.expect(Scene.placeholder('Type a message...')).toExist(),
-      Scene.expect(Scene.role('button', { name: 'Send' })).toBeDisabled(),
-      Scene.type(Scene.placeholder('Type a message...'), 'hi'),
-      Scene.expect(Scene.role('button', { name: 'Send' })).toBeEnabled(),
+      given({ ...idleModel, connection: ConnectionConnected() }),
+      expect(placeholder('Type a message...')).toExist(),
+      expect(role('button', { name: 'Send' })).toBeDisabled(),
+      type(placeholder('Type a message...'), 'hi'),
+      expect(role('button', { name: 'Send' })).toBeEnabled(),
     )
   })
 
   test('error state renders the error and a Try Again button', () => {
-    Scene.scene(
+    scene(
       { update, view },
-      Scene.with({
+      given({
         ...idleModel,
         connection: ConnectionError({ error: 'Connection refused' }),
       }),
-      Scene.expect(Scene.text('Connection Error')).toExist(),
-      Scene.expect(Scene.text('Connection refused')).toExist(),
-      Scene.expect(Scene.role('button', { name: 'Try Again' })).toExist(),
+      expect(text('Connection Error')).toExist(),
+      expect(text('Connection refused')).toExist(),
+      expect(role('button', { name: 'Try Again' })).toExist(),
     )
   })
 
   test('messages render in the conversation list', () => {
-    Scene.scene(
+    scene(
       { update, view },
-      Scene.with({
+      given({
         ...idleModel,
         connection: ConnectionConnected(),
         messages: [
@@ -83,28 +95,25 @@ describe('view', () => {
           { text: 'General Kenobi', zoned: zonedAt(0), isSent: false },
         ],
       }),
-      Scene.expect(Scene.text('Hello there')).toExist(),
-      Scene.expect(Scene.text('General Kenobi')).toExist(),
-      Scene.expect(Scene.text('No messages yet')).toBeAbsent(),
+      expect(text('Hello there')).toExist(),
+      expect(text('General Kenobi')).toExist(),
+      expect(text('No messages yet')).toBeAbsent(),
     )
   })
 
   test('a successful acquisition connects the chat and the user can send a message', () => {
-    Scene.scene(
+    scene(
       { update, view },
-      Scene.with(idleModel),
-      Scene.click(Scene.role('button', { name: 'Connect to Chat' })),
-      Scene.expect(Scene.text('Connecting...')).toExist(),
-      Scene.ManagedResource.acquire(managedResources.chatSocket),
-      Scene.expect(Scene.placeholder('Type a message...')).toExist(),
-      Scene.type(Scene.placeholder('Type a message...'), 'hi there'),
-      Scene.click(Scene.role('button', { name: 'Send' })),
-      Scene.Command.expectExact(SendMessage({ text: 'hi there' })),
-      Scene.Command.resolve(
-        SendMessage,
-        SucceededSendMessage({ text: 'hi there' }),
-      ),
-      Scene.Command.resolve(
+      given(idleModel),
+      click(role('button', { name: 'Connect to Chat' })),
+      expect(text('Connecting...')).toExist(),
+      ManagedResource.acquire(managedResources.chatSocket),
+      expect(placeholder('Type a message...')).toExist(),
+      type(placeholder('Type a message...'), 'hi there'),
+      click(role('button', { name: 'Send' })),
+      Command.expectExact(SendMessage({ text: 'hi there' })),
+      Command.resolve(SendMessage, SucceededSendMessage({ text: 'hi there' })),
+      Command.resolve(
         TimestampSentMessage,
         TimestampedMessage({
           text: 'hi there',
@@ -112,36 +121,36 @@ describe('view', () => {
           isSent: true,
         }),
       ),
-      Scene.expect(Scene.text('hi there')).toExist(),
-      Scene.expect(Scene.text('No messages yet')).toBeAbsent(),
+      expect(text('hi there')).toExist(),
+      expect(text('No messages yet')).toBeAbsent(),
     )
   })
 
   test('a failed socket acquisition shows the connection error', () => {
-    Scene.scene(
+    scene(
       { update, view },
-      Scene.with(idleModel),
-      Scene.click(Scene.role('button', { name: 'Connect to Chat' })),
-      Scene.expect(Scene.text('Connecting...')).toExist(),
-      Scene.ManagedResource.failAcquire(
+      given(idleModel),
+      click(role('button', { name: 'Connect to Chat' })),
+      expect(text('Connecting...')).toExist(),
+      ManagedResource.failAcquire(
         managedResources.chatSocket,
         new Error('Connection timeout'),
       ),
-      Scene.expect(Scene.text('Connection Error')).toExist(),
-      Scene.expect(Scene.text('Connection timeout')).toExist(),
-      Scene.expect(Scene.role('button', { name: 'Try Again' })).toExist(),
+      expect(text('Connection Error')).toExist(),
+      expect(text('Connection timeout')).toExist(),
+      expect(role('button', { name: 'Try Again' })).toExist(),
     )
   })
 
   test('a message arriving on the socket Subscription lands in the conversation', () => {
-    Scene.scene(
+    scene(
       { update, view },
-      Scene.with({ ...idleModel, connection: ConnectionConnected() }),
-      Scene.Subscription.emit(ReceivedMessage({ text: 'hello from echo' })),
-      Scene.Command.expectExact(
+      given({ ...idleModel, connection: ConnectionConnected() }),
+      Subscription.emit(ReceivedMessage({ text: 'hello from echo' })),
+      Command.expectExact(
         TimestampReceivedMessage({ text: 'hello from echo' }),
       ),
-      Scene.Command.resolve(
+      Command.resolve(
         TimestampReceivedMessage,
         TimestampedMessage({
           text: 'hello from echo',
@@ -149,8 +158,8 @@ describe('view', () => {
           isSent: false,
         }),
       ),
-      Scene.expect(Scene.text('hello from echo')).toExist(),
-      Scene.expect(Scene.text('No messages yet')).toBeAbsent(),
+      expect(text('hello from echo')).toExist(),
+      expect(text('No messages yet')).toBeAbsent(),
     )
   })
 })

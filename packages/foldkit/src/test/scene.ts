@@ -169,14 +169,14 @@ export type SceneSimulation<Model, Message, OutMessage = undefined> = Readonly<{
 }>
 
 /** A callable step that sets the initial Model. Carries phantom type for compile-time validation. */
-type WithStep<Model> = Readonly<{ _phantomModel: Model }> &
+type GivenStep<Model> = Readonly<{ _phantomModel: Model }> &
   (<M, Message, OutMessage = undefined>(
     simulation: SceneSimulation<M, Message, OutMessage>,
   ) => SceneSimulation<M, Message, OutMessage>)
 
-/** A single step in a scene: either a `with` step or a scene simulation transform. */
+/** A single step in a scene: either a `given` step or a scene simulation transform. */
 export type SceneStep<Model, Message, OutMessage> =
-  | WithStep<NoInfer<Model>>
+  | GivenStep<NoInfer<Model>>
   | ((
       simulation: SceneSimulation<Model, Message, OutMessage>,
     ) => SceneSimulation<Model, Message, OutMessage>)
@@ -639,8 +639,7 @@ const assertFileHandler = (
 // STEPS
 
 /** Sets the initial Model for a scene test. */
-export { with_ as with }
-const with_ = <Model>(model: Model): WithStep<Model> => {
+export const given = <Model>(model: Model): GivenStep<Model> => {
   const step = <M, Message, OutMessage = undefined>(
     simulation: SceneSimulation<M, Message, OutMessage>,
   ): SceneSimulation<M, Message, OutMessage> => {
@@ -655,7 +654,7 @@ const with_ = <Model>(model: Model): WithStep<Model> => {
   /* eslint-disable @typescript-eslint/consistent-type-assertions */
   return Object.assign(step, {
     _phantomModel: undefined as unknown as Model,
-  }) as WithStep<Model>
+  }) as GivenStep<Model>
   /* eslint-enable @typescript-eslint/consistent-type-assertions */
 }
 

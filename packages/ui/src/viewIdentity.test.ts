@@ -24,7 +24,7 @@ describe('view identity branding', () => {
           return renderedVNode
         },
       },
-      Scene.with(model),
+      Scene.given(model),
     )
 
     expect(renderedVNode?.identity).toMatch(/^src\/animation\/index\.ts#/)

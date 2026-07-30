@@ -1,4 +1,4 @@
-import { Story } from 'foldkit'
+import { Command, given, message, model, story } from 'foldkit/story'
 import { describe, expect, test } from 'vitest'
 
 import {
@@ -30,12 +30,12 @@ const populatedModel: Model = {
 describe('update', () => {
   describe('spawning balls', () => {
     test('ClickedCanvas fires SpawnBall with the click coordinates', () => {
-      Story.story(
+      story(
         update,
-        Story.with(emptyModel),
-        Story.message(ClickedCanvas({ x: 150, y: 200 })),
-        Story.Command.expectHas(SpawnBall),
-        Story.Command.resolve(
+        given(emptyModel),
+        message(ClickedCanvas({ x: 150, y: 200 })),
+        Command.expectHas(SpawnBall),
+        Command.resolve(
           SpawnBall,
           SpawnedBall({
             x: 150,
@@ -46,7 +46,7 @@ describe('update', () => {
             color: '#ff2d55',
           }),
         ),
-        Story.model(model => {
+        model(model => {
           expect(model.balls).toHaveLength(1)
           expect(model.balls[0]).toMatchObject({
             id: 0,
@@ -61,10 +61,10 @@ describe('update', () => {
     })
 
     test('SpawnedBall increments nextId for each ball added', () => {
-      Story.story(
+      story(
         update,
-        Story.with(emptyModel),
-        Story.message(
+        given(emptyModel),
+        message(
           SpawnedBall({
             x: 10,
             y: 10,
@@ -74,7 +74,7 @@ describe('update', () => {
             color: '#fff',
           }),
         ),
-        Story.message(
+        message(
           SpawnedBall({
             x: 20,
             y: 20,
@@ -84,7 +84,7 @@ describe('update', () => {
             color: '#fff',
           }),
         ),
-        Story.model(model => {
+        model(model => {
           expect(model.balls.map(({ id }) => id)).toEqual([0, 1])
           expect(model.nextId).toBe(2)
         }),
@@ -94,11 +94,11 @@ describe('update', () => {
 
   describe('TickedFrame', () => {
     test('advances ball positions based on velocity and delta time', () => {
-      Story.story(
+      story(
         update,
-        Story.with(populatedModel),
-        Story.message(TickedFrame({ deltaTime: 1000 })),
-        Story.model(model => {
+        given(populatedModel),
+        message(TickedFrame({ deltaTime: 1000 })),
+        model(model => {
           expect(model.balls[0]?.x).toBe(150)
           expect(model.balls[0]?.y).toBe(150)
         }),
@@ -122,11 +122,11 @@ describe('update', () => {
         nextId: 1,
       }
 
-      Story.story(
+      story(
         update,
-        Story.with(movingRightModel),
-        Story.message(TickedFrame({ deltaTime: 1000 })),
-        Story.model(model => {
+        given(movingRightModel),
+        message(TickedFrame({ deltaTime: 1000 })),
+        model(model => {
           expect(model.balls[0]?.vx).toBe(-100)
           expect(model.balls[0]?.x).toBe(590)
         }),
@@ -136,26 +136,26 @@ describe('update', () => {
 
   describe('controls', () => {
     test('ClickedClear empties the balls list', () => {
-      Story.story(
+      story(
         update,
-        Story.with(populatedModel),
-        Story.message(ClickedClear()),
-        Story.model(model => {
+        given(populatedModel),
+        message(ClickedClear()),
+        model(model => {
           expect(model.balls).toHaveLength(0)
         }),
       )
     })
 
     test('ClickedTogglePlay flips the isRunning flag', () => {
-      Story.story(
+      story(
         update,
-        Story.with(emptyModel),
-        Story.message(ClickedTogglePlay()),
-        Story.model(model => {
+        given(emptyModel),
+        message(ClickedTogglePlay()),
+        model(model => {
           expect(model.isRunning).toBe(false)
         }),
-        Story.message(ClickedTogglePlay()),
-        Story.model(model => {
+        message(ClickedTogglePlay()),
+        model(model => {
           expect(model.isRunning).toBe(true)
         }),
       )

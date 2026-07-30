@@ -63,7 +63,7 @@ describe('RadioGroup controlled view', () => {
   it('gives the first option a roving tabindex when nothing is selected', () => {
     Scene.scene(
       { update, view: testView() },
-      Scene.with(init),
+      Scene.given(init),
       Scene.expect(option(0)).toHaveAttr('tabIndex', '0'),
       Scene.expect(option(1)).toHaveAttr('tabIndex', '-1'),
       Scene.expect(option(0)).toHaveAttr('aria-checked', 'false'),
@@ -73,7 +73,7 @@ describe('RadioGroup controlled view', () => {
   it('checks the clicked option and dispatches the parent Message', () => {
     Scene.scene(
       { update, view: testView() },
-      Scene.with(init),
+      Scene.given(init),
       Scene.click(option(1)),
       Scene.expect(option(1)).toHaveAttr('aria-checked', 'true'),
       Scene.expect(option(1)).toHaveAttr('data-checked', ''),
@@ -85,7 +85,7 @@ describe('RadioGroup controlled view', () => {
   it('moves the selection with the arrow keys', () => {
     Scene.scene(
       { update, view: testView() },
-      Scene.with({ selectedValue: Option.some('Brush') }),
+      Scene.given({ selectedValue: Option.some('Brush') }),
       Scene.keydown(option(0), 'ArrowDown'),
       Scene.expect(option(1)).toHaveAttr('aria-checked', 'true'),
     )
@@ -94,7 +94,7 @@ describe('RadioGroup controlled view', () => {
   it('selects the focused option on Space', () => {
     Scene.scene(
       { update, view: testView() },
-      Scene.with(init),
+      Scene.given(init),
       Scene.keydown(option(0), ' '),
       Scene.expect(option(0)).toHaveAttr('aria-checked', 'true'),
     )
@@ -103,7 +103,7 @@ describe('RadioGroup controlled view', () => {
   it('skips a disabled option when navigating', () => {
     Scene.scene(
       { update, view: testView('Eraser') },
-      Scene.with({ selectedValue: Option.some('Fill') }),
+      Scene.given({ selectedValue: Option.some('Fill') }),
       Scene.expect(option(2)).toHaveAttr('aria-disabled', 'true'),
       Scene.keydown(option(1), 'ArrowDown'),
       Scene.expect(option(0)).toHaveAttr('aria-checked', 'true'),
@@ -113,7 +113,7 @@ describe('RadioGroup controlled view', () => {
   it('keeps the tab stop on an enabled option when the selection is disabled', () => {
     Scene.scene(
       { update, view: testView('Brush') },
-      Scene.with({ selectedValue: Option.some('Brush') }),
+      Scene.given({ selectedValue: Option.some('Brush') }),
       Scene.expect(option(0)).toHaveAttr('aria-disabled', 'true'),
       Scene.expect(option(0)).toHaveAttr('tabIndex', '-1'),
       Scene.expect(option(1)).toHaveAttr('tabIndex', '0'),

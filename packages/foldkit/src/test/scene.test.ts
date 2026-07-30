@@ -1438,7 +1438,7 @@ describe('scene', () => {
   test('renders the view after with', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.expect(Scene.label('Email')).toExist(),
       Scene.expect(Scene.label('Password')).toExist(),
       Scene.expect(Scene.role('button')).toHaveText('Sign in'),
@@ -1448,7 +1448,7 @@ describe('scene', () => {
   test('type updates the Model through the view', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.type(Scene.label('Email'), 'alice@example.com'),
       Scene.expect(Scene.label('Email')).toHaveValue('alice@example.com'),
     )
@@ -1457,7 +1457,7 @@ describe('scene', () => {
   test('submit dispatches the form Message', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.type(Scene.label('Email'), 'alice@example.com'),
       Scene.type(Scene.label('Password'), 'secret'),
       Scene.submit(Scene.role('form')),
@@ -1485,7 +1485,7 @@ describe('scene', () => {
     expect(() =>
       Scene.scene(
         { update, view },
-        Scene.with(submittingModel),
+        Scene.given(submittingModel),
         Scene.click(Scene.role('button', { name: 'Signing in...' })),
       ),
     ).toThrow(/it is disabled/)
@@ -1494,7 +1494,7 @@ describe('scene', () => {
   test('clicking a submit button falls through to the enclosing form', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.type(Scene.label('Email'), 'alice@example.com'),
       Scene.type(Scene.label('Password'), 'secret'),
       Scene.click(Scene.role('button', { name: 'Sign in' })),
@@ -1516,7 +1516,7 @@ describe('scene', () => {
 
     Scene.scene(
       { update, view },
-      Scene.with(loggedInModel),
+      Scene.given(loggedInModel),
       Scene.tap(({ html }) => {
         expect(find(html, '[role="status"]')).toHaveText('Welcome, alice!')
       }),
@@ -1529,7 +1529,7 @@ describe('scene', () => {
   test('re-renders after resolve', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.submit(Scene.role('form')),
       Scene.expect(Scene.role('button')).toHaveText('Signing in...'),
       Scene.Command.resolve<
@@ -1546,7 +1546,7 @@ describe('scene', () => {
   test('resolves a keyed Command by its bare Definition, matching by name', () => {
     Scene.scene(
       { update: uploadsUpdate, view: uploadsView },
-      Scene.with(initialUploadsModel),
+      Scene.given(initialUploadsModel),
       Scene.click(Scene.role('button', { name: 'Start upload' })),
       Scene.Command.expectExact(UploadFile),
       Scene.Command.resolve(UploadFile, SucceededUploadFile({ uploadId: 0 })),
@@ -1560,7 +1560,7 @@ describe('scene', () => {
   test('resolves a name-keyed Command by its bare Definition, matching by name', () => {
     Scene.scene(
       { update: draftsUpdate, view: draftsView },
-      Scene.with(initialDraftsModel),
+      Scene.given(initialDraftsModel),
       Scene.click(Scene.role('button', { name: 'Save draft' })),
       Scene.Command.resolve(SaveDraft, SucceededSaveDraft({ revision: 0 })),
       Scene.Command.expectNone(),
@@ -1573,7 +1573,7 @@ describe('scene', () => {
   test('keydown dispatches the key Message', () => {
     Scene.scene(
       { update: keyUpdate, view: keyView },
-      Scene.with({ lastKey: '', isShifted: false }),
+      Scene.given({ lastKey: '', isShifted: false }),
       Scene.keydown(Scene.role('application', { name: 'Key press area' }), 'a'),
       Scene.expect(Scene.label('Last key')).toHaveText('a'),
       Scene.expect(Scene.label('Shift pressed')).toHaveText('false'),
@@ -1583,7 +1583,7 @@ describe('scene', () => {
   test('keydown with modifiers', () => {
     Scene.scene(
       { update: keyUpdate, view: keyView },
-      Scene.with({ lastKey: '', isShifted: false }),
+      Scene.given({ lastKey: '', isShifted: false }),
       Scene.keydown(
         Scene.role('application', { name: 'Key press area' }),
         'A',
@@ -1597,7 +1597,7 @@ describe('scene', () => {
   test('re-renders after keydown so updated text is visible', () => {
     Scene.scene(
       { update: keyUpdate, view: keyView },
-      Scene.with({ lastKey: '', isShifted: false }),
+      Scene.given({ lastKey: '', isShifted: false }),
       Scene.keydown(Scene.role('application', { name: 'Key press area' }), 'x'),
       Scene.tap(({ html }) => {
         expect(getByLabel('Last key')(html)).toHaveText('x')
@@ -1616,7 +1616,7 @@ describe('scene with locators', () => {
 
     Scene.scene(
       { update, view },
-      Scene.with(loggedInModel),
+      Scene.given(loggedInModel),
       Scene.click(Scene.role('button', { name: 'Log out' })),
       Scene.expect(Scene.role('button')).toHaveText('Sign in'),
     )
@@ -1625,7 +1625,7 @@ describe('scene with locators', () => {
   test('type accepts a Locator', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.type(Scene.label('Email'), 'alice@example.com'),
       Scene.expect(Scene.label('Email')).toHaveValue('alice@example.com'),
     )
@@ -1634,7 +1634,7 @@ describe('scene with locators', () => {
   test('submit accepts a Locator', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.type(Scene.label('Email'), 'alice@example.com'),
       Scene.type(Scene.label('Password'), 'secret'),
       Scene.submit(Scene.role('form')),
@@ -1649,7 +1649,7 @@ describe('scene with locators', () => {
   test('type is dual: data-last pipes the target', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       pipe(Scene.label('Email'), Scene.type('alice@example.com')),
       Scene.expect(Scene.label('Email')).toHaveValue('alice@example.com'),
     )
@@ -1658,7 +1658,7 @@ describe('scene with locators', () => {
   test('keydown is dual: data-last pipes the target', () => {
     Scene.scene(
       { update: keyUpdate, view: keyView },
-      Scene.with({ lastKey: '', isShifted: false }),
+      Scene.given({ lastKey: '', isShifted: false }),
       pipe(
         Scene.role('application', { name: 'Key press area' }),
         Scene.keydown('a'),
@@ -1670,7 +1670,7 @@ describe('scene with locators', () => {
   test('keydown data-last with modifiers', () => {
     Scene.scene(
       { update: keyUpdate, view: keyView },
-      Scene.with({ lastKey: '', isShifted: false }),
+      Scene.given({ lastKey: '', isShifted: false }),
       pipe(
         Scene.role('application', { name: 'Key press area' }),
         Scene.keydown('A', { shiftKey: true }),
@@ -1684,7 +1684,7 @@ describe('scene with locators', () => {
     expect(() =>
       Scene.scene(
         { update, view },
-        Scene.with(initialModel),
+        Scene.given(initialModel),
         Scene.click(Scene.role('button', { name: 'Nonexistent' })),
       ),
     ).toThrow('I could not find an element matching button "Nonexistent"')
@@ -1695,7 +1695,7 @@ describe('scene with expect', () => {
   test('toExist passes when element exists', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.expect(Scene.role('form')).toExist(),
     )
   })
@@ -1704,7 +1704,7 @@ describe('scene with expect', () => {
     expect(() =>
       Scene.scene(
         { update, view },
-        Scene.with(initialModel),
+        Scene.given(initialModel),
         Scene.expect(Scene.role('dialog')).toExist(),
       ),
     ).toThrow('Expected element matching dialog to exist but it does not.')
@@ -1713,7 +1713,7 @@ describe('scene with expect', () => {
   test('toBeAbsent passes when element is missing', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.expect(Scene.role('dialog')).toBeAbsent(),
     )
   })
@@ -1721,7 +1721,7 @@ describe('scene with expect', () => {
   test('toHaveText checks text content', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.expect(Scene.role('button')).toHaveText('Sign in'),
     )
   })
@@ -1735,7 +1735,7 @@ describe('scene with expect', () => {
 
     Scene.scene(
       { update, view },
-      Scene.with(loggedInModel),
+      Scene.given(loggedInModel),
       Scene.expect(Scene.role('status')).toContainText('alice'),
     )
   })
@@ -1743,7 +1743,7 @@ describe('scene with expect', () => {
   test('toHaveAttr checks attribute value', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.expect(Scene.label('Email')).toHaveAttr('type', 'email'),
     )
   })
@@ -1751,7 +1751,7 @@ describe('scene with expect', () => {
   test('not.toExist passes when element is missing', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.expect(Scene.role('dialog')).not.toExist(),
     )
   })
@@ -1759,7 +1759,7 @@ describe('scene with expect', () => {
   test('not.toHaveAttr checks attribute absence', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.expect(Scene.role('button')).not.toHaveAttr('disabled', 'true'),
     )
   })
@@ -1767,7 +1767,7 @@ describe('scene with expect', () => {
   test('works between interaction steps', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.expect(Scene.role('button')).toHaveText('Sign in'),
       Scene.type(Scene.label('Email'), 'alice@example.com'),
       Scene.type(Scene.label('Password'), 'secret'),
@@ -1784,7 +1784,7 @@ describe('scene with expect', () => {
   test('toHaveId checks element id', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.expect(Scene.selector('#app')).toHaveId('app'),
       Scene.expect(Scene.label('Email')).toHaveId('email'),
     )
@@ -1794,7 +1794,7 @@ describe('scene with expect', () => {
     expect(() =>
       Scene.scene(
         { update, view },
-        Scene.with(initialModel),
+        Scene.given(initialModel),
         Scene.expect(Scene.label('Email')).toHaveId('wrong'),
       ),
     ).toThrow(
@@ -1805,7 +1805,7 @@ describe('scene with expect', () => {
   test('toHaveId not.toHaveId passes for different id', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.expect(Scene.label('Email')).not.toHaveId('wrong'),
     )
   })
@@ -1818,7 +1818,7 @@ describe('scene with expect', () => {
     }
     Scene.scene(
       { update, view: (_model, h) => view(loggedInModel, h) },
-      Scene.with(loggedInModel),
+      Scene.given(loggedInModel),
       Scene.expect(Scene.role('status')).not.toBeEmpty(),
     )
   })
@@ -1827,7 +1827,7 @@ describe('scene with expect', () => {
     expect(() =>
       Scene.scene(
         { update, view },
-        Scene.with(initialModel),
+        Scene.given(initialModel),
         Scene.expect(Scene.role('button')).toBeEmpty(),
       ),
     ).toThrow(
@@ -1838,7 +1838,7 @@ describe('scene with expect', () => {
   test('toHaveText accepts a regex', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.expect(Scene.role('button')).toHaveText(/^Sign in$/),
     )
   })
@@ -1847,7 +1847,7 @@ describe('scene with expect', () => {
     expect(() =>
       Scene.scene(
         { update, view },
-        Scene.with(initialModel),
+        Scene.given(initialModel),
         Scene.expect(Scene.role('button')).toHaveText(/^Log in$/),
       ),
     ).toThrow('to have text /^Log in$/ but received "Sign in"')
@@ -1856,7 +1856,7 @@ describe('scene with expect', () => {
   test('toContainText accepts a regex', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.expect(Scene.role('button')).toContainText(/ign/),
     )
   })
@@ -1869,7 +1869,7 @@ describe('scene with expect', () => {
     }
     Scene.scene(
       { update, view },
-      Scene.with(loggedInModel),
+      Scene.given(loggedInModel),
       Scene.expect(Scene.role('region')).toHaveAccessibleName('User session'),
     )
   })
@@ -1877,7 +1877,7 @@ describe('scene with expect', () => {
   test('toHaveAccessibleName matches via regex', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.expect(Scene.role('button')).toHaveAccessibleName(/^Sign/),
     )
   })
@@ -1885,7 +1885,7 @@ describe('scene with expect', () => {
   test('toBeVisible passes for visible element', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.expect(Scene.role('button')).toBeVisible(),
     )
   })
@@ -1895,7 +1895,7 @@ describe('scene with extra interactions', () => {
   test('doubleClick fires the dblclick handler', () => {
     Scene.scene(
       { update: interactionsUpdate, view: interactionsView },
-      Scene.with(interactionsInitialModel),
+      Scene.given(interactionsInitialModel),
       Scene.doubleClick(Scene.label('action')),
       Scene.expect(Scene.label('action')).toContainText('dbl=1'),
     )
@@ -1904,7 +1904,7 @@ describe('scene with extra interactions', () => {
   test('hover fires mouseenter handler', () => {
     Scene.scene(
       { update: interactionsUpdate, view: interactionsView },
-      Scene.with(interactionsInitialModel),
+      Scene.given(interactionsInitialModel),
       Scene.hover(Scene.label('action')),
       Scene.tap(({ html }) => {
         expect(html).toBeDefined()
@@ -1915,7 +1915,7 @@ describe('scene with extra interactions', () => {
   test('focus fires focus handler; blur fires blur handler', () => {
     Scene.scene(
       { update: interactionsUpdate, view: interactionsView },
-      Scene.with(interactionsInitialModel),
+      Scene.given(interactionsInitialModel),
       Scene.focus(Scene.label('name')),
       Scene.blur(Scene.label('name')),
     )
@@ -1924,7 +1924,7 @@ describe('scene with extra interactions', () => {
   test('change fires change handler with the new value', () => {
     Scene.scene(
       { update: interactionsUpdate, view: interactionsView },
-      Scene.with(interactionsInitialModel),
+      Scene.given(interactionsInitialModel),
       Scene.change(Scene.label('fruit'), 'banana'),
     )
   })
@@ -1932,7 +1932,7 @@ describe('scene with extra interactions', () => {
   test('change is dual: data-last form works in pipe', () => {
     Scene.scene(
       { update: interactionsUpdate, view: interactionsView },
-      Scene.with(interactionsInitialModel),
+      Scene.given(interactionsInitialModel),
       pipe(Scene.label('fruit'), Scene.change('apple')),
     )
   })
@@ -1940,7 +1940,7 @@ describe('scene with extra interactions', () => {
   test('click still works through the new event-name map', () => {
     Scene.scene(
       { update: interactionsUpdate, view: interactionsView },
-      Scene.with(interactionsInitialModel),
+      Scene.given(interactionsInitialModel),
       Scene.click(Scene.label('action')),
       Scene.expect(Scene.label('action')).toContainText('clicks=1'),
     )
@@ -1961,7 +1961,7 @@ describe('scene with file uploads', () => {
   test('changeFiles captures a single file on an OnFileChange input', () => {
     Scene.scene(
       { update: fileUploadUpdate, view: fileUploadView },
-      Scene.with(fileUploadInitialModel),
+      Scene.given(fileUploadInitialModel),
       Scene.changeFiles(Scene.label('resume'), [resumePdf]),
       Scene.expect(Scene.selector('[key="received-count"]')).toContainText(
         'count=1',
@@ -1975,7 +1975,7 @@ describe('scene with file uploads', () => {
   test('changeFiles captures multiple files in one dispatch', () => {
     Scene.scene(
       { update: fileUploadUpdate, view: fileUploadView },
-      Scene.with(fileUploadInitialModel),
+      Scene.given(fileUploadInitialModel),
       Scene.changeFiles(Scene.label('resume'), [
         resumePdf,
         coverLetter,
@@ -1993,7 +1993,7 @@ describe('scene with file uploads', () => {
   test('changeFiles dispatches an empty array when no files are provided', () => {
     Scene.scene(
       { update: fileUploadUpdate, view: fileUploadView },
-      Scene.with({
+      Scene.given({
         ...fileUploadInitialModel,
         receivedFiles: [resumePdf],
       }),
@@ -2007,7 +2007,7 @@ describe('scene with file uploads', () => {
   test('changeFiles is dual: data-last form works in pipe', () => {
     Scene.scene(
       { update: fileUploadUpdate, view: fileUploadView },
-      Scene.with(fileUploadInitialModel),
+      Scene.given(fileUploadInitialModel),
       pipe(Scene.label('resume'), Scene.changeFiles([resumePdf])),
       Scene.expect(Scene.selector('[key="received-count"]')).toContainText(
         'count=1',
@@ -2018,7 +2018,7 @@ describe('scene with file uploads', () => {
   test('dropFiles captures files dropped on an OnDropFiles zone', () => {
     Scene.scene(
       { update: fileUploadUpdate, view: fileUploadView },
-      Scene.with(fileUploadInitialModel),
+      Scene.given(fileUploadInitialModel),
       Scene.dropFiles(Scene.label('attachments'), [portfolio]),
       Scene.expect(Scene.selector('[key="received-count"]')).toContainText(
         'count=1',
@@ -2032,7 +2032,7 @@ describe('scene with file uploads', () => {
   test('dropFiles captures multiple dropped files', () => {
     Scene.scene(
       { update: fileUploadUpdate, view: fileUploadView },
-      Scene.with(fileUploadInitialModel),
+      Scene.given(fileUploadInitialModel),
       Scene.dropFiles(Scene.label('attachments'), [coverLetter, portfolio]),
       Scene.expect(Scene.selector('[key="received-count"]')).toContainText(
         'count=2',
@@ -2046,7 +2046,7 @@ describe('scene with file uploads', () => {
   test('dropFiles is dual: data-last form works in pipe', () => {
     Scene.scene(
       { update: fileUploadUpdate, view: fileUploadView },
-      Scene.with(fileUploadInitialModel),
+      Scene.given(fileUploadInitialModel),
       pipe(Scene.label('attachments'), Scene.dropFiles([resumePdf])),
       Scene.expect(Scene.selector('[key="received-count"]')).toContainText(
         'count=1',
@@ -2058,7 +2058,7 @@ describe('scene with file uploads', () => {
     expect(() =>
       Scene.scene(
         { update: interactionsUpdate, view: interactionsView },
-        Scene.with(interactionsInitialModel),
+        Scene.given(interactionsInitialModel),
         Scene.dropFiles(Scene.label('action'), [resumePdf]),
       ),
     ).toThrow(/drop/)
@@ -2068,7 +2068,7 @@ describe('scene with file uploads', () => {
     expect(() =>
       Scene.scene(
         { update: interactionsUpdate, view: interactionsView },
-        Scene.with(interactionsInitialModel),
+        Scene.given(interactionsInitialModel),
         Scene.changeFiles(Scene.label('fruit'), [resumePdf]),
       ),
     ).toThrow(/OnFileChange/)
@@ -2097,7 +2097,7 @@ describe('scene with Command-based file upload flow', () => {
   test('happy path: click → resolve select → resolve preview → file visible', () => {
     Scene.scene(
       { update: resumeUpdate, view: resumeView },
-      Scene.with(resumeInitialModel),
+      Scene.given(resumeInitialModel),
       Scene.expect(chooseButton).toExist(),
       Scene.click(chooseButton),
       Scene.Command.resolve(SelectResume, SelectedResume({ file: resumePdf })),
@@ -2116,7 +2116,7 @@ describe('scene with Command-based file upload flow', () => {
   test('cancel path: resolve SelectResume with CancelledSelectResume leaves view unchanged', () => {
     Scene.scene(
       { update: resumeUpdate, view: resumeView },
-      Scene.with(resumeInitialModel),
+      Scene.given(resumeInitialModel),
       Scene.click(chooseButton),
       Scene.Command.resolve(SelectResume, CancelledSelectResume()),
       Scene.expect(chooseButton).toExist(),
@@ -2127,7 +2127,7 @@ describe('scene with Command-based file upload flow', () => {
   test('preview failure: reading fails → file still visible, alert shown', () => {
     Scene.scene(
       { update: resumeUpdate, view: resumeView },
-      Scene.with(resumeInitialModel),
+      Scene.given(resumeInitialModel),
       Scene.click(chooseButton),
       Scene.Command.resolve(SelectResume, SelectedResume({ file: resumePdf })),
       Scene.Command.resolve(ReadResumePreview, FailedReadPreview()),
@@ -2141,7 +2141,7 @@ describe('scene with Command-based file upload flow', () => {
   test('remove flow: clicking Remove clears the resume', () => {
     Scene.scene(
       { update: resumeUpdate, view: resumeView },
-      Scene.with(resumeSelectedModel),
+      Scene.given(resumeSelectedModel),
       Scene.expect(Scene.text('resume.pdf')).toExist(),
       Scene.expect(removeButton).toExist(),
       Scene.click(removeButton),
@@ -2159,7 +2159,7 @@ describe('scene with Command-based file upload flow', () => {
 
     Scene.scene(
       { update: resumeUpdate, view: resumeView },
-      Scene.with(resumeInitialModel),
+      Scene.given(resumeInitialModel),
       Scene.click(chooseButton),
       Scene.Command.resolveAll(
         [SelectResume, SelectedResume({ file: resumePdf })],
@@ -2189,7 +2189,7 @@ describe('scene with expectAll', () => {
   test('toHaveCount matches the number of elements', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.expectAll(Scene.all.role('button')).toHaveCount(1),
       Scene.expectAll(Scene.all.role('textbox')).toHaveCount(2),
     )
@@ -2199,7 +2199,7 @@ describe('scene with expectAll', () => {
     expect(() =>
       Scene.scene(
         { update, view },
-        Scene.with(initialModel),
+        Scene.given(initialModel),
         Scene.expectAll(Scene.all.role('button')).toHaveCount(3),
       ),
     ).toThrow(
@@ -2210,7 +2210,7 @@ describe('scene with expectAll', () => {
   test('toBeEmpty passes when no matches', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.expectAll(Scene.all.role('dialog')).toBeEmpty(),
     )
   })
@@ -2219,7 +2219,7 @@ describe('scene with expectAll', () => {
     expect(() =>
       Scene.scene(
         { update, view },
-        Scene.with(initialModel),
+        Scene.given(initialModel),
         Scene.expectAll(Scene.all.role('button')).toBeEmpty(),
       ),
     ).toThrow(
@@ -2230,7 +2230,7 @@ describe('scene with expectAll', () => {
   test('not.toHaveCount inverts the assertion', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.expectAll(Scene.all.role('button')).not.toHaveCount(3),
     )
   })
@@ -2238,7 +2238,7 @@ describe('scene with expectAll', () => {
   test('expectAll respects Scene.inside scope', () => {
     Scene.scene(
       { update, view },
-      Scene.with(loggedInModel),
+      Scene.given(loggedInModel),
       Scene.inside(
         Scene.role('region', { name: 'User session' }),
         Scene.expectAll(Scene.all.role('button')).toHaveCount(1),
@@ -2253,7 +2253,7 @@ describe('scene errors', () => {
     expect(() =>
       Scene.scene(
         { update, view },
-        Scene.with(initialModel),
+        Scene.given(initialModel),
         Scene.click('#nonexistent'),
       ),
     ).toThrow('I could not find an element matching "#nonexistent"')
@@ -2263,7 +2263,7 @@ describe('scene errors', () => {
     expect(() =>
       Scene.scene(
         { update, view },
-        Scene.with(initialModel),
+        Scene.given(initialModel),
         Scene.click('#email'),
       ),
     ).toThrow('neither it nor any ancestor has a click handler')
@@ -2273,7 +2273,7 @@ describe('scene errors', () => {
     expect(() =>
       Scene.scene(
         { update, view },
-        Scene.with(initialModel),
+        Scene.given(initialModel),
         Scene.submit(Scene.role('form')),
       ),
     ).toThrow('I found Commands without resolvers')
@@ -2284,7 +2284,7 @@ describe('scene with resolveAll', () => {
   test('resolveAll works in scene context', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.submit(Scene.role('form')),
       Scene.Command.resolveAll([
         Authenticate,
@@ -2300,7 +2300,7 @@ describe('scene with resolve ambiguity', () => {
     expect(() =>
       Scene.scene(
         { update: counterUpdate, view: counterView },
-        Scene.with(counterInitialModel),
+        Scene.given(counterInitialModel),
         Scene.click(Scene.role('button', { name: 'Start three fetches' })),
         Scene.Command.resolve(FetchCount, SucceededFetchCount({ count: 42 })),
       ),
@@ -2313,7 +2313,7 @@ describe('scene with resolve ambiguity', () => {
     expect(() =>
       Scene.scene(
         { update: counterUpdate, view: counterView },
-        Scene.with(counterInitialModel),
+        Scene.given(counterInitialModel),
         Scene.click(Scene.role('button', { name: 'Start two fetches by id' })),
         Scene.Command.resolve(
           FetchCountById({ id: 5 }),
@@ -2330,7 +2330,7 @@ describe('scene with outMessage', () => {
   test('outMessage is tracked in scene', () => {
     Scene.scene(
       { update: logoutUpdate, view: logoutView },
-      Scene.with(logoutInitialModel),
+      Scene.given(logoutInitialModel),
       Scene.click(Scene.role('button', { name: 'Log out' })),
       Scene.tap(({ outMessage }) => {
         expect(outMessage).toEqual(Option.some(RequestedLogout()))
@@ -2343,7 +2343,7 @@ describe('Scene.Subscription.emit', () => {
   test('drives a Message into a running scene and re-renders', () => {
     Scene.scene(
       { update: counterUpdate, view: counterView },
-      Scene.with(counterInitialModel),
+      Scene.given(counterInitialModel),
       Scene.expect(Scene.role('status')).toHaveText('count: 0'),
       Scene.Subscription.emit(Ticked()),
       Scene.expect(Scene.role('status')).toHaveText('count: 1'),
@@ -2355,7 +2355,7 @@ describe('Scene.Subscription.emit', () => {
   test('Commands produced by an emitted Message become pending', () => {
     Scene.scene(
       { update: counterUpdate, view: counterView },
-      Scene.with(counterInitialModel),
+      Scene.given(counterInitialModel),
       Scene.Subscription.emit(PolledCount()),
       Scene.Command.expectExact(FetchCount),
       Scene.Command.resolve(FetchCount, SucceededFetchCount({ count: 7 })),
@@ -2367,7 +2367,7 @@ describe('Scene.Subscription.emit', () => {
     expect(() =>
       Scene.scene(
         { update: counterUpdate, view: counterView },
-        Scene.with(counterInitialModel),
+        Scene.given(counterInitialModel),
         Scene.click(Scene.role('button', { name: 'Start three fetches' })),
         Scene.Subscription.emit(Ticked()),
       ),
@@ -2381,7 +2381,7 @@ describe('Scene.Subscription.emit', () => {
     expect(() =>
       Scene.scene(
         { update: mountUpdate, view: mountView },
-        Scene.with(openModel),
+        Scene.given(openModel),
         Scene.Subscription.emit(CompletedFocusButton()),
       ),
     ).toThrow(
@@ -2394,7 +2394,7 @@ describe('Scene.Subscription.emit', () => {
     expect(() =>
       Scene.scene(
         { update: mountUpdate, view: mountView },
-        Scene.with(openModel),
+        Scene.given(openModel),
         Scene.Mount.resolve(MeasurePanel, MeasuredPanel({ width: 400 })),
         Scene.Mount.resolve(FocusButton, CompletedFocusButton()),
         Scene.click(Scene.role('button')),
@@ -2410,7 +2410,7 @@ describe('Scene.ManagedResource', () => {
   test('acquire and release drive the declared lifecycle Messages through update', () => {
     Scene.scene(
       { update: feedSocketUpdate, view: feedSocketView },
-      Scene.with(feedSocketInitialModel),
+      Scene.given(feedSocketInitialModel),
       Scene.expect(Scene.role('status')).toHaveText('Disconnected'),
       Scene.click(Scene.role('button', { name: 'Open feed' })),
       Scene.ManagedResource.acquire(feedResources.feedSocket, {
@@ -2426,7 +2426,7 @@ describe('Scene.ManagedResource', () => {
   test('failAcquire drives onAcquireError through update', () => {
     Scene.scene(
       { update: feedSocketUpdate, view: feedSocketView },
-      Scene.with(feedSocketInitialModel),
+      Scene.given(feedSocketInitialModel),
       Scene.click(Scene.role('button', { name: 'Open feed' })),
       Scene.ManagedResource.failAcquire(
         feedResources.feedSocket,
@@ -2440,7 +2440,7 @@ describe('Scene.ManagedResource', () => {
     expect(() =>
       Scene.scene(
         { update: feedSocketUpdate, view: feedSocketView },
-        Scene.with(feedSocketInitialModel),
+        Scene.given(feedSocketInitialModel),
         Scene.ManagedResource.acquire(feedResources.feedSocket, {
           socketId: 'sock-1',
         }),
@@ -2454,7 +2454,7 @@ describe('Scene.ManagedResource', () => {
     expect(() =>
       Scene.scene(
         { update: feedSocketUpdate, view: feedSocketView },
-        Scene.with(feedSocketInitialModel),
+        Scene.given(feedSocketInitialModel),
         Scene.ManagedResource.failAcquire(
           feedResources.feedSocket,
           new Error('offline'),
@@ -2469,7 +2469,7 @@ describe('Scene.ManagedResource', () => {
     expect(() =>
       Scene.scene(
         { update: feedSocketUpdate, view: feedSocketView },
-        Scene.with(feedSocketInitialModel),
+        Scene.given(feedSocketInitialModel),
         Scene.click(Scene.role('button', { name: 'Open feed' })),
         Scene.ManagedResource.release(feedResources.feedSocket),
       ),
@@ -2481,7 +2481,7 @@ describe('Scene.ManagedResource', () => {
   test('acquire takes no value when the entry onAcquired ignores it', () => {
     Scene.scene(
       { update: feedSocketUpdate, view: feedSocketView },
-      Scene.with(feedSocketInitialModel),
+      Scene.given(feedSocketInitialModel),
       Scene.click(Scene.role('button', { name: 'Open feed' })),
       Scene.ManagedResource.acquire(feedResources.presence),
       Scene.expect(Scene.role('status')).toHaveText('Connected'),
@@ -2504,7 +2504,7 @@ describe('Scene.CustomElement.emit', () => {
   test('dispatches a declared CustomEvent through the element mapping and re-renders', () => {
     Scene.scene(
       { update: colorPickerUpdate, view: colorPickerView },
-      Scene.with(colorPickerInitialModel),
+      Scene.given(colorPickerInitialModel),
       Scene.expect(Scene.role('status')).toHaveText('#000000'),
       Scene.CustomElement.emit(
         hexColorPicker,
@@ -2520,7 +2520,7 @@ describe('Scene.CustomElement.emit', () => {
     expect(() =>
       Scene.scene(
         { update: colorPickerUpdate, view: colorPickerViewWithoutHandler },
-        Scene.with(colorPickerInitialModel),
+        Scene.given(colorPickerInitialModel),
         Scene.CustomElement.emit(
           hexColorPicker,
           Scene.selector('hex-color-picker'),
@@ -2538,7 +2538,7 @@ describe('Scene.CustomElement.emit', () => {
     expect(() =>
       Scene.scene(
         { update: colorPickerUpdate, view: colorPickerView },
-        Scene.with(colorPickerInitialModel),
+        Scene.given(colorPickerInitialModel),
         Scene.CustomElement.emit(
           hexColorPicker,
           Scene.selector('rgb-color-picker'),
@@ -2563,7 +2563,7 @@ describe('Scene.CustomElement.emit', () => {
     expect(() =>
       Scene.scene(
         { update: colorPickerUpdate, view: colorPickerView },
-        Scene.with(colorPickerInitialModel),
+        Scene.given(colorPickerInitialModel),
         Scene.CustomElement.emit(
           hexColorPicker,
           Scene.selector('hex-color-picker'),
@@ -2614,7 +2614,7 @@ describe('Scene.expectOutMessage and Scene.expectNoOutMessage', () => {
   test('assert the OutMessage across steps', () => {
     Scene.scene(
       { update: logoutUpdate, view: logoutView },
-      Scene.with(logoutInitialModel),
+      Scene.given(logoutInitialModel),
       Scene.expectNoOutMessage(),
       Scene.click(Scene.role('button', { name: 'Log out' })),
       Scene.expectOutMessage(RequestedLogout()),
@@ -2627,7 +2627,7 @@ describe('Scene.expectOutMessage and Scene.expectNoOutMessage', () => {
     expect(() =>
       Scene.scene(
         { update: logoutUpdate, view: logoutView },
-        Scene.with(logoutInitialModel),
+        Scene.given(logoutInitialModel),
         Scene.expectOutMessage(RequestedLogout()),
       ),
     ).toThrow('Expected OutMessage:')
@@ -2637,7 +2637,7 @@ describe('Scene.expectOutMessage and Scene.expectNoOutMessage', () => {
     expect(() =>
       Scene.scene(
         { update: logoutUpdate, view: logoutView },
-        Scene.with(logoutInitialModel),
+        Scene.given(logoutInitialModel),
         Scene.click(Scene.role('button', { name: 'Log out' })),
         Scene.expectOutMessage(CompletedAction()),
       ),
@@ -2650,7 +2650,7 @@ describe('Scene.expectOutMessage and Scene.expectNoOutMessage', () => {
     expect(() =>
       Scene.scene(
         { update: logoutUpdate, view: logoutView },
-        Scene.with(logoutInitialModel),
+        Scene.given(logoutInitialModel),
         Scene.click(Scene.role('button', { name: 'Log out' })),
         Scene.expectNoOutMessage(),
       ),
@@ -2660,7 +2660,7 @@ describe('Scene.expectOutMessage and Scene.expectNoOutMessage', () => {
   test('a two-tuple update result leaves the previous OutMessage latched', () => {
     Scene.scene(
       { update: mixedArityUpdate, view: logoutView },
-      Scene.with(logoutInitialModel),
+      Scene.given(logoutInitialModel),
       Scene.click(Scene.role('button', { name: 'Log out' })),
       Scene.expectOutMessage(RequestedLogout()),
       Scene.Subscription.emit(CompletedAction()),
@@ -2679,7 +2679,7 @@ describe('Scene.withViewInputs', () => {
   test('adapts a ViewInputs view to the shape Scene.scene takes', () => {
     Scene.scene(
       { update: scorePanelUpdate, view: sceneView() },
-      Scene.with(scorePanelInitialModel),
+      Scene.given(scorePanelInitialModel),
       Scene.expect(Scene.role('status')).toHaveText('Score: 0'),
       Scene.click(Scene.role('button', { name: 'Increment' })),
       Scene.expect(Scene.role('status')).toHaveText('Score: 1'),
@@ -2689,7 +2689,7 @@ describe('Scene.withViewInputs', () => {
   test('overrides vary value inputs while the renderer stays pinned', () => {
     Scene.scene(
       { update: scorePanelUpdate, view: sceneView({ label: 'Points' }) },
-      Scene.with(scorePanelInitialModel),
+      Scene.given(scorePanelInitialModel),
       Scene.expect(Scene.role('status')).toHaveText('Points: 0'),
     )
   })
@@ -2710,7 +2710,7 @@ describe('scene with within', () => {
 
     Scene.scene(
       { update, view },
-      Scene.with(loggedInModel),
+      Scene.given(loggedInModel),
       Scene.expect(
         Scene.within(
           Scene.role('region', { name: 'User session' }),
@@ -2723,7 +2723,7 @@ describe('scene with within', () => {
   test('within returns absent when parent is not found', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.expect(
         Scene.within(Scene.selector('.nonexistent'), Scene.role('button')),
       ).toBeAbsent(),
@@ -2733,7 +2733,7 @@ describe('scene with within', () => {
   test('within returns absent when child is not in parent', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.expect(
         Scene.within(Scene.role('form'), Scene.role('status')),
       ).toBeAbsent(),
@@ -2743,7 +2743,7 @@ describe('scene with within', () => {
   test('within composes in pipe chains', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.expect(
         pipe(Scene.role('form'), Scene.within(Scene.label('Email'))),
       ).toExist(),
@@ -2759,7 +2759,7 @@ describe('scene with within', () => {
 
     Scene.scene(
       { update, view },
-      Scene.with(loggedInModel),
+      Scene.given(loggedInModel),
       Scene.click(
         Scene.within(
           Scene.role('region', { name: 'User session' }),
@@ -2774,7 +2774,7 @@ describe('scene with within', () => {
     expect(() =>
       Scene.scene(
         { update, view },
-        Scene.with(initialModel),
+        Scene.given(initialModel),
         Scene.click(
           Scene.within(
             Scene.role('form'),
@@ -2798,7 +2798,7 @@ describe('scene with inside', () => {
   test('inside scopes multiple assertion steps to a parent', () => {
     Scene.scene(
       { update, view },
-      Scene.with(loggedInModel),
+      Scene.given(loggedInModel),
       Scene.inside(
         Scene.role('region', { name: 'User session' }),
         Scene.expect(Scene.role('status')).toContainText('Welcome, alice!'),
@@ -2810,7 +2810,7 @@ describe('scene with inside', () => {
   test('inside scopes interaction steps to a parent', () => {
     Scene.scene(
       { update, view },
-      Scene.with(loggedInModel),
+      Scene.given(loggedInModel),
       Scene.inside(
         Scene.role('region', { name: 'User session' }),
         Scene.click(Scene.role('button', { name: 'Log out' })),
@@ -2822,7 +2822,7 @@ describe('scene with inside', () => {
   test('inside restores the prior scope after its block', () => {
     Scene.scene(
       { update, view },
-      Scene.with(loggedInModel),
+      Scene.given(loggedInModel),
       Scene.inside(
         Scene.role('region', { name: 'User session' }),
         Scene.expect(Scene.role('button', { name: 'Log out' })).toExist(),
@@ -2834,7 +2834,7 @@ describe('scene with inside', () => {
   test('inside composes with nested inside via within', () => {
     Scene.scene(
       { update, view },
-      Scene.with(loggedInModel),
+      Scene.given(loggedInModel),
       Scene.inside(
         Scene.role('region', { name: 'User session' }),
         Scene.inside(
@@ -2849,7 +2849,7 @@ describe('scene with inside', () => {
     expect(() =>
       Scene.scene(
         { update, view },
-        Scene.with(loggedInModel),
+        Scene.given(loggedInModel),
         Scene.inside(
           Scene.role('region', { name: 'User session' }),
           Scene.expect(Scene.role('button', { name: 'Sign in' })).toExist(),
@@ -2864,7 +2864,7 @@ describe('scene with inside', () => {
     expect(() =>
       Scene.scene(
         { update, view },
-        Scene.with(initialModel),
+        Scene.given(initialModel),
         Scene.inside(
           Scene.role('region', { name: 'User session' }),
           Scene.expect(Scene.role('button')).toExist(),
@@ -2876,7 +2876,7 @@ describe('scene with inside', () => {
   test('inside scopes a CSS selector target', () => {
     Scene.scene(
       { update, view },
-      Scene.with(loggedInModel),
+      Scene.given(loggedInModel),
       Scene.inside(
         Scene.role('region', { name: 'User session' }),
         Scene.click('button'),
@@ -2888,7 +2888,7 @@ describe('scene with inside', () => {
   test('inside passes the full html to tap (tap ignores scope)', () => {
     Scene.scene(
       { update, view },
-      Scene.with(loggedInModel),
+      Scene.given(loggedInModel),
       Scene.inside(
         Scene.role('region', { name: 'User session' }),
         Scene.tap(({ html }) => {
@@ -2903,7 +2903,7 @@ describe('scene with text locator', () => {
   test('text locator finds by exact text', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.expect(Scene.text('Sign in')).toExist(),
     )
   })
@@ -2911,7 +2911,7 @@ describe('scene with text locator', () => {
   test('text locator returns absent for non-matching text', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.expect(Scene.text('Nonexistent')).toBeAbsent(),
     )
   })
@@ -2993,7 +2993,7 @@ describe('new matchers', () => {
   test('Scene.expect toHaveValue works in scene context', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.type(Scene.label('Email'), 'alice@example.com'),
       Scene.expect(Scene.label('Email')).toHaveValue('alice@example.com'),
     )
@@ -3002,7 +3002,7 @@ describe('new matchers', () => {
   test('Scene.expect toBeDisabled works in scene context', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.expect(Scene.role('button')).not.toBeDisabled(),
     )
   })
@@ -3010,7 +3010,7 @@ describe('new matchers', () => {
   test('Scene.expect toBeEnabled works in scene context', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.expect(Scene.role('button')).toBeEnabled(),
     )
   })
@@ -3018,7 +3018,7 @@ describe('new matchers', () => {
   test('Scene.role matches any token in a fallback role list', () => {
     Scene.scene(
       { update: multiRoleUpdate, view: multiRoleView },
-      Scene.with(multiRoleInitialModel),
+      Scene.given(multiRoleInitialModel),
       Scene.expect(Scene.role('doc-subtitle')).toExist(),
       Scene.expect(Scene.role('heading')).toContainText('clicks=0'),
       Scene.click(Scene.role('heading')),
@@ -3029,7 +3029,7 @@ describe('new matchers', () => {
   test('Scene.role accepts RegExp for accessible name matching', () => {
     Scene.scene(
       { update, view },
-      Scene.with(initialModel),
+      Scene.given(initialModel),
       Scene.expect(Scene.role('button', { name: /Sign/ })).toExist(),
       Scene.expect(Scene.role('button', { name: /sign/i })).toExist(),
       Scene.expect(Scene.role('button', { name: /Nonexistent/ })).not.toExist(),
@@ -3041,7 +3041,7 @@ describe('scene with click bubbling', () => {
   test('click bubbles from child to parent with handler', () => {
     Scene.scene(
       { update: bubblingUpdate, view: bubblingView },
-      Scene.with(bubblingInitialModel),
+      Scene.given(bubblingInitialModel),
       Scene.click(Scene.text('clicks=0')),
       Scene.expect(Scene.text('clicks=1')).toExist(),
     )
@@ -3050,7 +3050,7 @@ describe('scene with click bubbling', () => {
   test('doubleClick bubbles from child to parent with handler', () => {
     Scene.scene(
       { update: bubblingUpdate, view: bubblingView },
-      Scene.with(bubblingInitialModel),
+      Scene.given(bubblingInitialModel),
       Scene.doubleClick(Scene.text('dbl=0')),
       Scene.expect(Scene.text('dbl=1')).toExist(),
     )
@@ -3060,7 +3060,7 @@ describe('scene with click bubbling', () => {
     expect(() =>
       Scene.scene(
         { update: bubblingUpdate, view: bubblingView },
-        Scene.with(bubblingInitialModel),
+        Scene.given(bubblingInitialModel),
         Scene.click(Scene.text('dbl=0')),
       ),
     ).toThrow(/neither it nor any ancestor has a click handler/)
@@ -3070,7 +3070,7 @@ describe('scene with click bubbling', () => {
     expect(() =>
       Scene.scene(
         { update: bubblingUpdate, view: bubblingView },
-        Scene.with(bubblingInitialModel),
+        Scene.given(bubblingInitialModel),
         Scene.doubleClick(Scene.text('clicks=0')),
       ),
     ).toThrow(/neither it nor any ancestor has a dblclick handler/)
@@ -3081,7 +3081,7 @@ describe('scene with pointer events', () => {
   test('pointerDown dispatches the handler', () => {
     Scene.scene(
       { update: pointerUpdate, view: pointerView },
-      Scene.with(pointerInitialModel),
+      Scene.given(pointerInitialModel),
       Scene.pointerDown(Scene.label('pointer target')),
       Scene.expect(Scene.label('pointer target')).toContainText('down=1'),
     )
@@ -3090,7 +3090,7 @@ describe('scene with pointer events', () => {
   test('pointerDown passes pointerType option', () => {
     Scene.scene(
       { update: pointerUpdate, view: pointerView },
-      Scene.with(pointerInitialModel),
+      Scene.given(pointerInitialModel),
       Scene.pointerDown(Scene.label('pointer target'), {
         pointerType: 'touch',
       }),
@@ -3105,7 +3105,7 @@ describe('scene with pointer events', () => {
   test('pointerDown defaults to mouse', () => {
     Scene.scene(
       { update: pointerUpdate, view: pointerView },
-      Scene.with(pointerInitialModel),
+      Scene.given(pointerInitialModel),
       Scene.pointerDown(Scene.label('nested target')),
       Scene.expect(
         Scene.within(Scene.label('nested target'), Scene.selector('span')),
@@ -3116,7 +3116,7 @@ describe('scene with pointer events', () => {
   test('pointerDown bubbles from child to parent', () => {
     Scene.scene(
       { update: pointerUpdate, view: pointerView },
-      Scene.with(pointerInitialModel),
+      Scene.given(pointerInitialModel),
       Scene.pointerDown(Scene.text('type=')),
       Scene.expect(
         Scene.within(Scene.label('nested target'), Scene.selector('span')),
@@ -3127,7 +3127,7 @@ describe('scene with pointer events', () => {
   test('pointerUp dispatches the handler', () => {
     Scene.scene(
       { update: pointerUpdate, view: pointerView },
-      Scene.with(pointerInitialModel),
+      Scene.given(pointerInitialModel),
       Scene.pointerUp(Scene.label('pointer target')),
       Scene.expect(Scene.label('pointer target')).toContainText('up=1'),
     )
@@ -3136,7 +3136,7 @@ describe('scene with pointer events', () => {
   test('pointerUp passes pointerType option', () => {
     Scene.scene(
       { update: pointerUpdate, view: pointerView },
-      Scene.with(pointerInitialModel),
+      Scene.given(pointerInitialModel),
       Scene.pointerUp(Scene.label('pointer target'), {
         pointerType: 'touch',
       }),
@@ -3152,7 +3152,7 @@ describe('scene with pointer events', () => {
     expect(() =>
       Scene.scene(
         { update: pointerUpdate, view: pointerView },
-        Scene.with(pointerInitialModel),
+        Scene.given(pointerInitialModel),
         Scene.pointerDown(Scene.label('no handler')),
       ),
     ).toThrow(/neither it nor any ancestor has a pointerdown handler/)
@@ -3162,7 +3162,7 @@ describe('scene with pointer events', () => {
     expect(() =>
       Scene.scene(
         { update: pointerUpdate, view: pointerView },
-        Scene.with(pointerInitialModel),
+        Scene.given(pointerInitialModel),
         Scene.pointerUp(Scene.label('no handler')),
       ),
     ).toThrow(/neither it nor any ancestor has a pointerup handler/)
@@ -3178,7 +3178,7 @@ describe('scene mounts', () => {
   test('expectHasMounts succeeds when the named mount is rendered', () => {
     Scene.scene(
       { update: mountUpdate, view: mountView },
-      Scene.with(mountInitialModel),
+      Scene.given(mountInitialModel),
       Scene.Mount.expectHas(FocusButton),
       acknowledgeFocusButton,
     )
@@ -3188,7 +3188,7 @@ describe('scene mounts', () => {
     expect(() =>
       Scene.scene(
         { update: mountUpdate, view: mountView },
-        Scene.with(mountInitialModel),
+        Scene.given(mountInitialModel),
         Scene.Mount.expectHas(MeasurePanel),
         acknowledgeFocusButton,
       ),
@@ -3198,7 +3198,7 @@ describe('scene mounts', () => {
   test('expectExactMounts succeeds when the rendered mounts match', () => {
     Scene.scene(
       { update: mountUpdate, view: mountView },
-      Scene.with(mountInitialModel),
+      Scene.given(mountInitialModel),
       Scene.Mount.expectExact(FocusButton),
       acknowledgeFocusButton,
     )
@@ -3209,7 +3209,7 @@ describe('scene mounts', () => {
     expect(() =>
       Scene.scene(
         { update: mountUpdate, view: mountView },
-        Scene.with(openModel),
+        Scene.given(openModel),
         Scene.Mount.expectExact(FocusButton),
       ),
     ).toThrow(/Expected exactly these Mounts/)
@@ -3224,7 +3224,7 @@ describe('scene mounts', () => {
         ] => [mountInitialModel, []],
         view: () => h('div', {}, []),
       },
-      Scene.with(mountInitialModel),
+      Scene.given(mountInitialModel),
       Scene.Mount.expectNone(),
     )
   })
@@ -3233,7 +3233,7 @@ describe('scene mounts', () => {
     expect(() =>
       Scene.scene(
         { update: mountUpdate, view: mountView },
-        Scene.with(mountInitialModel),
+        Scene.given(mountInitialModel),
         Scene.Mount.expectNone(),
       ),
     ).toThrow(/Expected no Mounts/)
@@ -3243,7 +3243,7 @@ describe('scene mounts', () => {
     const openModel = { ...mountInitialModel, isOpen: true }
     Scene.scene(
       { update: mountUpdate, view: mountView },
-      Scene.with(openModel),
+      Scene.given(openModel),
       Scene.Mount.expectHas(MeasurePanel, FocusButton),
       Scene.Mount.resolve(MeasurePanel, MeasuredPanel({ width: 200 })),
       Scene.tap(({ html }) => {
@@ -3257,7 +3257,7 @@ describe('scene mounts', () => {
     expect(() =>
       Scene.scene(
         { update: mountUpdate, view: mountView },
-        Scene.with(mountInitialModel),
+        Scene.given(mountInitialModel),
         Scene.Mount.resolve(MeasurePanel, MeasuredPanel({ width: 0 })),
       ),
     ).toThrow(/I tried to resolve Mount MeasurePanel/)
@@ -3267,7 +3267,7 @@ describe('scene mounts', () => {
     const openModel = { ...mountInitialModel, isOpen: true }
     Scene.scene(
       { update: mountUpdate, view: mountView },
-      Scene.with(openModel),
+      Scene.given(openModel),
       Scene.Mount.resolveAll(
         [FocusButton, CompletedFocusButton()],
         [MeasurePanel, MeasuredPanel({ width: 100 })],
@@ -3282,7 +3282,7 @@ describe('scene mounts', () => {
     const openModel = { ...mountInitialModel, isOpen: true }
     Scene.scene(
       { update: mountUpdate, view: mountView },
-      Scene.with(openModel),
+      Scene.given(openModel),
       Scene.Mount.expectHas(MeasurePanel, FocusButton),
       Scene.Mount.resolve(MeasurePanel, MeasuredPanel({ width: 400 })),
       acknowledgeFocusButton,
@@ -3297,7 +3297,7 @@ describe('scene mounts', () => {
     expect(() =>
       Scene.scene(
         { update: mountUpdate, view: mountView },
-        Scene.with(openModel),
+        Scene.given(openModel),
         Scene.click(Scene.role('button')),
       ),
     ).toThrow(/I found unresolved Mounts/)
@@ -3307,7 +3307,7 @@ describe('scene mounts', () => {
     expect(() =>
       Scene.scene(
         { update: mountUpdate, view: mountView },
-        Scene.with(mountInitialModel),
+        Scene.given(mountInitialModel),
       ),
     ).toThrow(/I found Mounts without resolvers/)
   })
@@ -3316,7 +3316,7 @@ describe('scene mounts', () => {
     const openModel = { ...mountInitialModel, isOpen: true }
     Scene.scene(
       { update: mountUpdate, view: mountView },
-      Scene.with(openModel),
+      Scene.given(openModel),
       acknowledgeFocusButton,
       Scene.Mount.resolve(MeasurePanel, MeasuredPanel({ width: 50 })),
       Scene.Mount.expectNone(),
@@ -3326,7 +3326,7 @@ describe('scene mounts', () => {
   test('two same-named mounts get distinct occurrence indices', () => {
     Scene.scene(
       { update: mountUpdate, view: mountTwoPanelView },
-      Scene.with(mountInitialModel),
+      Scene.given(mountInitialModel),
       Scene.tap(({ mounts }) => {
         expect(mounts).toHaveLength(2)
         expect(mounts[0]).toEqual({ name: 'MeasurePanel', occurrence: 0 })
@@ -3385,7 +3385,7 @@ describe('scene mounts', () => {
 
     Scene.scene(
       { update: parentUpdate, view: parentView },
-      Scene.with({ child: { focused: false } }),
+      Scene.given({ child: { focused: false } }),
       Scene.Mount.expectHas(FocusButton),
       Scene.Mount.resolve(FocusButton, CompletedFocusButton()),
     )
@@ -3408,7 +3408,7 @@ describe('scene mounts', () => {
 
     Scene.scene(
       { update: mountUpdate, view: documentView },
-      Scene.with(mountInitialModel),
+      Scene.given(mountInitialModel),
       Scene.Mount.expectHas(FocusButton),
       acknowledgeFocusButton,
     )
@@ -3427,7 +3427,7 @@ describe('scene mounts', () => {
 
     Scene.scene(
       { update: closingUpdate, view: mountView },
-      Scene.with(openModel),
+      Scene.given(openModel),
       Scene.Mount.expectHas(MeasurePanel, FocusButton),
       acknowledgeFocusButton,
       Scene.Mount.expectEnded(MeasurePanel),
@@ -3438,7 +3438,7 @@ describe('scene mounts', () => {
   test('a mount that appears mid-scene becomes pending', () => {
     Scene.scene(
       { update: mountUpdate, view: mountView },
-      Scene.with(mountInitialModel),
+      Scene.given(mountInitialModel),
       Scene.Mount.expectExact(FocusButton),
       acknowledgeFocusButton,
       Scene.click(Scene.role('button')),
@@ -3464,7 +3464,7 @@ describe('scene mounts', () => {
     expect(() => {
       Scene.scene(
         { update: closingUpdate, view: mountView },
-        Scene.with(openModel),
+        Scene.given(openModel),
         acknowledgeFocusButton,
       )
     }).toThrow(/MeasurePanel/)
@@ -3475,7 +3475,7 @@ describe('scene mounts', () => {
     expect(() => {
       Scene.scene(
         { update: mountUpdate, view: mountView },
-        Scene.with(openModel),
+        Scene.given(openModel),
         Scene.Mount.resolve(MeasurePanel, MeasuredPanel({ width: 200 })),
         acknowledgeFocusButton,
         Scene.click(Scene.role('button')),
@@ -3487,7 +3487,7 @@ describe('scene mounts', () => {
     expect(() => {
       Scene.scene(
         { update: mountUpdate, view: mountView },
-        Scene.with(mountInitialModel),
+        Scene.given(mountInitialModel),
         Scene.Mount.expectEnded(MeasurePanel),
       )
     }).toThrow(/MeasurePanel/)
@@ -3498,7 +3498,7 @@ describe('scene mounts', () => {
     expect(() => {
       Scene.scene(
         { update: mountUpdate, view: mountView },
-        Scene.with(openModel),
+        Scene.given(openModel),
         Scene.Mount.resolve(MeasurePanel, MeasuredPanel({ width: 200 })),
         acknowledgeFocusButton,
         Scene.click(Scene.role('button')),
@@ -3511,7 +3511,7 @@ describe('scene mounts', () => {
     const openModel = { ...mountInitialModel, isOpen: true }
     Scene.scene(
       { update: mountUpdate, view: mountView },
-      Scene.with(openModel),
+      Scene.given(openModel),
       Scene.Mount.resolve(MeasurePanel, MeasuredPanel({ width: 200 })),
       acknowledgeFocusButton,
       Scene.click(Scene.role('button')),
@@ -3529,7 +3529,7 @@ describe('scene mounts', () => {
         update: mountUpdate,
         view: (_model, h) => mountScrollListView(offset, h),
       },
-      Scene.with(mountInitialModel),
+      Scene.given(mountInitialModel),
       Scene.Mount.expectHas(ScrollList({ offset })),
       Scene.Mount.resolve(ScrollList({ offset }), ScrolledTo({ offset })),
     )
@@ -3543,7 +3543,7 @@ describe('scene mounts', () => {
           update: mountUpdate,
           view: (_model, h) => mountScrollListView(offset, h),
         },
-        Scene.with(mountInitialModel),
+        Scene.given(mountInitialModel),
         Scene.Mount.expectHas(ScrollList({ offset: 999 })),
       ),
     ).toThrow(/Expected to find Mounts/)
@@ -3556,7 +3556,7 @@ describe('scene mounts', () => {
         update: mountUpdate,
         view: (_model, h) => mountScrollListView(offset, h),
       },
-      Scene.with(mountInitialModel),
+      Scene.given(mountInitialModel),
       Scene.Mount.expectHas(ScrollList),
       Scene.Mount.resolve(ScrollList, ScrolledTo({ offset })),
     )
@@ -3569,7 +3569,7 @@ describe('scene mounts', () => {
           update: mountUpdate,
           view: (_model, h) => mountScrollListView(240, h),
         },
-        Scene.with(mountInitialModel),
+        Scene.given(mountInitialModel),
         Scene.Mount.resolve(
           ScrollList({ offset: 999 }),
           ScrolledTo({ offset: 999 }),
@@ -4844,7 +4844,7 @@ describe('attribute builders map to DOM names', () => {
 
       Scene.scene(
         { update: attributeUpdate, view: attributeView },
-        Scene.with(model),
+        Scene.given(model),
         Scene.expect(Scene.testId(attributeTestId)).toHaveAttr(domName, value),
       )
     },

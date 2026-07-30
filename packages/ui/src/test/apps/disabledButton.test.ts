@@ -8,7 +8,7 @@ describe('disabled button cleanup', () => {
     test('submit becomes clickable after toggle', () => {
       Scene.scene(
         { update, view },
-        Scene.with(initialModel),
+        Scene.given(initialModel),
         Scene.expect(Scene.text('Submit')).toBeDisabled(),
         Scene.click(Scene.text('Toggle')),
         Scene.expect(Scene.text('Submit')).not.toBeDisabled(),
@@ -19,7 +19,7 @@ describe('disabled button cleanup', () => {
     test('submit starts enabled when model says so', () => {
       Scene.scene(
         { update, view },
-        Scene.with({ ...initialModel, isEnabled: true }),
+        Scene.given({ ...initialModel, isEnabled: true }),
         Scene.expect(Scene.text('Submit')).not.toBeDisabled(),
         Scene.click(Scene.text('Submit')),
       )
@@ -30,7 +30,7 @@ describe('disabled button cleanup', () => {
     test('submit becomes clickable after toggle', () => {
       Scene.scene(
         { update, view: viewWithDialog },
-        Scene.with(initialModel),
+        Scene.given(initialModel),
         Scene.expect(Scene.text('Submit')).toBeDisabled(),
         Scene.click(Scene.text('Toggle')),
         Scene.expect(Scene.text('Submit')).not.toBeDisabled(),

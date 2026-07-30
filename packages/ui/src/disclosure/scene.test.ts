@@ -51,7 +51,7 @@ describe('Disclosure controlled view', () => {
   it('reflects the open state from the parent', () => {
     Scene.scene(
       { update, view: testView() },
-      Scene.with({ isOpen: true }),
+      Scene.given({ isOpen: true }),
       Scene.expect(button).toHaveAttr('aria-expanded', 'true'),
       Scene.expect(button).toHaveAttr('data-open', ''),
     )
@@ -60,7 +60,7 @@ describe('Disclosure controlled view', () => {
   it('dispatches the new open state on click', () => {
     Scene.scene(
       { update, view: testView() },
-      Scene.with({ isOpen: false }),
+      Scene.given({ isOpen: false }),
       Scene.expect(button).toHaveAttr('aria-expanded', 'false'),
       Scene.click(button),
       Scene.expect(button).toHaveAttr('aria-expanded', 'true'),
@@ -70,7 +70,7 @@ describe('Disclosure controlled view', () => {
   it('toggles on Enter', () => {
     Scene.scene(
       { update, view: testView() },
-      Scene.with({ isOpen: false }),
+      Scene.given({ isOpen: false }),
       Scene.keydown(button, 'Enter'),
       Scene.expect(button).toHaveAttr('aria-expanded', 'true'),
     )
@@ -79,7 +79,7 @@ describe('Disclosure controlled view', () => {
   it('toggles on Space', () => {
     Scene.scene(
       { update, view: testView() },
-      Scene.with({ isOpen: false }),
+      Scene.given({ isOpen: false }),
       Scene.keydown(button, ' '),
       Scene.expect(button).toHaveAttr('aria-expanded', 'true'),
     )
@@ -88,7 +88,7 @@ describe('Disclosure controlled view', () => {
   it('is not interactive when disabled', () => {
     Scene.scene(
       { update, view: testView({ isDisabled: true }) },
-      Scene.with({ isOpen: false }),
+      Scene.given({ isOpen: false }),
       Scene.expect(button).toBeDisabled(),
       Scene.expect(button).toHaveAttr('data-disabled', ''),
     )

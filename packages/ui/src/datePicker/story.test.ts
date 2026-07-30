@@ -32,9 +32,9 @@ import {
 
 const today = Calendar.make(2026, 4, 13)
 
-const withClosed = Story.with(init({ id: 'picker', today }))
+const givenClosed = Story.given(init({ id: 'picker', today }))
 
-const withOpen = flow(withClosed, Story.message(Opened()))
+const givenOpen = flow(givenClosed, Story.message(Opened()))
 
 describe('DatePicker', () => {
   describe('init', () => {
@@ -83,7 +83,7 @@ describe('DatePicker', () => {
       it('opens the popover', () => {
         Story.story(
           update,
-          withClosed,
+          givenClosed,
           Story.message(Opened()),
           Story.model(model => {
             expect(model.popover.isOpen).toBe(true)
@@ -95,7 +95,7 @@ describe('DatePicker', () => {
       it('does not dispatch focus commands when opening', () => {
         Story.story(
           update,
-          withClosed,
+          givenClosed,
           Story.message(Opened()),
           Story.Command.expectNone(),
         )
@@ -104,7 +104,7 @@ describe('DatePicker', () => {
       it('drops the calendar back to Days mode if a previous session left it drilled into Months or Years', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(
             GotCalendarMessage({ message: UiCalendar.ClickedHeading() }),
           ),
@@ -139,7 +139,7 @@ describe('DatePicker', () => {
       it('closes the popover and returns focus to the trigger button', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(Closed()),
           Story.Command.resolve(
             Popover.FocusButton,
@@ -155,7 +155,7 @@ describe('DatePicker', () => {
       it('drops the calendar back to Days mode if the user closed while drilled into Months or Years', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(
             GotCalendarMessage({ message: UiCalendar.ClickedHeading() }),
           ),
@@ -187,7 +187,7 @@ describe('DatePicker', () => {
       it('reconciles the calendar focus after Years-mode paging so reopening does not drift the day grid', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(
             GotCalendarMessage({ message: UiCalendar.ClickedHeading() }),
           ),
@@ -229,7 +229,7 @@ describe('DatePicker', () => {
         const target = Calendar.make(2026, 4, 20)
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(RequestedSelectDate({ date: target })),
           Story.expectOutMessage(SelectedDate({ date: target })),
           Story.Command.resolve(
@@ -249,7 +249,7 @@ describe('DatePicker', () => {
         const target = Calendar.make(2026, 6, 5)
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(RequestedSelectDate({ date: target })),
           Story.Command.resolve(
             Popover.FocusButton,
@@ -272,7 +272,7 @@ describe('DatePicker', () => {
         })
         Story.story(
           update,
-          flow(Story.with(seeded), Story.message(Opened())),
+          flow(Story.given(seeded), Story.message(Opened())),
           Story.message(Cleared()),
           Story.Command.expectNone(),
           Story.model(model => {
@@ -287,7 +287,7 @@ describe('DatePicker', () => {
       it('propagates Calendar ChangedViewMonth as DatePicker ChangedViewMonth', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(
             GotCalendarMessage({
               message: UiCalendar.ClickedNextMonthButton(),
@@ -303,7 +303,7 @@ describe('DatePicker', () => {
       it('passes keyboard navigation through to the calendar grid', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(
             GotCalendarMessage({
               message: UiCalendar.PressedKeyOnGrid({
@@ -325,7 +325,7 @@ describe('DatePicker', () => {
       it('routes popover messages through the popover update', () => {
         Story.story(
           update,
-          withOpen,
+          givenOpen,
           Story.message(
             GotPopoverMessage({ message: Popover.RequestedClose() }),
           ),

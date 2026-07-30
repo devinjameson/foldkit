@@ -159,4 +159,4 @@ Checkboxes use `Role('checkbox')` + `AriaChecked(boolean)`; screen readers annou
 
 `scene.test.ts` is REQUIRED at Tier 3+. Absent is a BLOCKER, not a QUALITY item.
 
-Present but with no `Scene.expect(...)` and no interactive resolution in a block is the same finding. A `Scene.scene(...)` that only does `Scene.with(model)` verifies that the view doesn't throw and nothing else.
+Present but with no `expect(...)` and no interactive resolution in a block is the same finding. A `scene(...)` that only does `given(model)` verifies that the view doesn't throw and nothing else.
