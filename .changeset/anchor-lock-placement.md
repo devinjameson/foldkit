@@ -11,3 +11,5 @@ When `isPlacementLocked` is true, the first `computePosition` still runs with `f
 The same ticks write the locked side to `data-placement` on the floating element, as one of `'top'`, `'right'`, `'bottom'`, or `'left'`. A panel that opens upwards usually needs its content reversed, so that the row closest to the trigger stays closest to the trigger. With the side in an attribute, CSS can do this on its own, and the placement does not have to live in a Model.
 
 `isPlacementLocked` defaults to false. Both behaviors only apply when it is true, so a caller that does not opt in is positioned exactly as before and gets no new attribute. It works in every component that already accepts an `anchor` config, including `Combobox`, `Listbox`, `Menu`, `Popover`, `Tooltip`, and `DatePicker`.
+
+Thanks @wmaurer!

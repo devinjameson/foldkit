@@ -16,6 +16,7 @@ import {
   GotComboboxDemoMessage,
   GotComboboxMultiDemoMessage,
   GotComboboxNullableDemoMessage,
+  GotComboboxPlacementLockDemoMessage,
   GotComboboxSelectOnFocusDemoMessage,
   type Message,
 } from './message'
@@ -27,6 +28,12 @@ export const singleSelectHeader: TableOfContentsEntry = {
   level: 'h3',
   id: 'combobox-single-select',
   text: 'Single-Select',
+}
+
+export const placementLockHeader: TableOfContentsEntry = {
+  level: 'h3',
+  id: 'combobox-locked-placement',
+  text: 'Locked Placement',
 }
 
 export const nullableHeader: TableOfContentsEntry = {
@@ -218,6 +225,63 @@ export const nullableDemo = (
               toParentMessage: message =>
                 GotComboboxNullableDemoMessage({ message }),
             }),
+          ],
+        ),
+      ],
+    ),
+  ]
+}
+
+export const placementLockDemo = (
+  comboboxPlacementLockModel: Combobox.Model,
+  maybeSelectedCity: Option.Option<City>,
+  h: HtmlBuilder<Message>,
+) => {
+  return [
+    h.div(
+      [
+        h.Class(
+          'relative flex h-96 w-full items-end justify-center overflow-hidden rounded-lg border border-dashed border-gray-300 bg-cream/60 pb-20 dark:border-gray-700 dark:bg-gray-900/40',
+        ),
+      ],
+      [
+        h.div(
+          [h.Class('flex flex-col gap-1.5')],
+          [
+            h.label(
+              [
+                h.For(Combobox.inputId(comboboxPlacementLockModel.id)),
+                h.Class('text-sm font-medium text-gray-900 dark:text-white'),
+              ],
+              ['City'],
+            ),
+            h.div(
+              [h.Class('relative')],
+              [
+                h.submodel({
+                  slotId: comboboxPlacementLockModel.id,
+                  model: comboboxPlacementLockModel,
+                  view: CityCombobox.view,
+                  viewInputs: {
+                    ...comboboxViewInputs({
+                      inputValue: comboboxPlacementLockModel.inputValue,
+                      restingInputValue: Option.getOrElse(
+                        maybeSelectedCity,
+                        () => '',
+                      ),
+                      anchor: {
+                        ...COMBOBOX_ANCHOR,
+                        isPlacementLocked: true,
+                        portal: false,
+                      },
+                    }),
+                    maybeSelectedValue: maybeSelectedCity,
+                  },
+                  toParentMessage: message =>
+                    GotComboboxPlacementLockDemoMessage({ message }),
+                }),
+              ],
+            ),
           ],
         ),
       ],

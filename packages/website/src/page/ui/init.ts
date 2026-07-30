@@ -51,6 +51,10 @@ export const init = (today: Calendar.CalendarDate): InitReturn => [
     isCheckboxOptionBDemoChecked: false,
     comboboxDemo: Combobox.init({ id: 'combobox-demo' }),
     maybeComboboxDemoSelectedCity: Option.none(),
+    comboboxPlacementLockDemo: Combobox.init({
+      id: 'combobox-placement-lock-demo',
+    }),
+    maybeComboboxPlacementLockDemoSelectedCity: Option.none(),
     comboboxNullableDemo: Combobox.init({
       id: 'combobox-nullable-demo',
       nullable: true,

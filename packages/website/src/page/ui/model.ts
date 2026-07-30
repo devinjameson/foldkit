@@ -76,6 +76,8 @@ export const Model = S.Struct({
   isCheckboxOptionBDemoChecked: S.Boolean,
   comboboxDemo: Combobox.Model,
   maybeComboboxDemoSelectedCity: S.Option(City),
+  comboboxPlacementLockDemo: Combobox.Model,
+  maybeComboboxPlacementLockDemoSelectedCity: S.Option(City),
   comboboxNullableDemo: Combobox.Model,
   maybeComboboxNullableDemoSelectedCity: S.Option(City),
   comboboxMultiDemo: Combobox.Multi.Model,

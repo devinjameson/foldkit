@@ -61,6 +61,12 @@ export const ToggledCheckboxOptionBDemo = m('ToggledCheckboxOptionBDemo', {
 export const GotComboboxDemoMessage = m('GotComboboxDemoMessage', {
   message: Combobox.Message,
 })
+export const GotComboboxPlacementLockDemoMessage = m(
+  'GotComboboxPlacementLockDemoMessage',
+  {
+    message: Combobox.Message,
+  },
+)
 export const GotComboboxNullableDemoMessage = m(
   'GotComboboxNullableDemoMessage',
   {
@@ -227,6 +233,7 @@ export const Message = S.Union([
   ToggledCheckboxOptionADemo,
   ToggledCheckboxOptionBDemo,
   GotComboboxDemoMessage,
+  GotComboboxPlacementLockDemoMessage,
   GotComboboxNullableDemoMessage,
   GotComboboxMultiDemoMessage,
   GotComboboxSelectOnFocusDemoMessage,
