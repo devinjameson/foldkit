@@ -22,10 +22,11 @@ Hover or tab into the trigger to reveal the tooltip. Hover waits for `showDelay`
 
 Tooltip is headless. The `toView` callback receives attribute bundles for the trigger and panel, and the consumer composes the markup. The panel is rendered with `pointer-events: none` so it never captures hover or clicks, which keeps the open/close logic tied to the trigger.
 
-| Attribute       | Condition                                                 |
-| --------------- | --------------------------------------------------------- |
-| `data-open`     | Present on trigger and panel when the tooltip is visible. |
-| `data-disabled` | Present on the trigger when disabled.                     |
+| Attribute        | Condition                                                                                                 |
+| ---------------- | --------------------------------------------------------------------------------------------------------- |
+| `data-open`      | Present on trigger and panel when the tooltip is visible.                                                 |
+| `data-disabled`  | Present on the trigger when disabled.                                                                     |
+| `data-placement` | Present on the panel when isPlacementLocked is true, set to the locked side: top, right, bottom, or left. |
 
 ## Keyboard Interaction
 
@@ -56,15 +57,15 @@ Configuration object passed to `Tooltip.init()`.
 
 Configuration object passed to `Tooltip.view()`.
 
-| Name              | Type                                               | Default | Description                                                                                                                                                  |
-| ----------------- | -------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `model`           | `Tooltip.Model`                                    | —       | The tooltip state from your parent Model.                                                                                                                    |
-| `toParentMessage` | `(childMessage: Tooltip.Message) => ParentMessage` | —       | Wraps Tooltip Messages in your parent Message type for Submodel delegation.                                                                                  |
-| `anchor`          | `AnchorConfig`                                     | —       | Floating positioning config: placement, gap, and padding. Required.                                                                                          |
-| `toView`          | `(render: RenderInfo) => Html`                     | —       | Callback that receives the `trigger` and `panel` attribute bundles plus a derived `isVisible` flag, and returns the composed layout.                         |
-| `isDisabled`      | `boolean`                                          | `false` | Disables the trigger. Hover, focus, and keyboard events are ignored and the tooltip will not open.                                                           |
-| `ariaLabel`       | `string`                                           | —       | Accessible name for the trigger button. Use for an icon-only trigger with no visible label. Applied as aria-label, and takes precedence over ariaLabelledBy. |
-| `ariaLabelledBy`  | `string`                                           | —       | Id of an external element that labels the trigger button, applied as aria-labelledby. Pair with a visible label element.                                     |
+| Name              | Type                                               | Default | Description                                                                                                                                                                                               |
+| ----------------- | -------------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `model`           | `Tooltip.Model`                                    | —       | The tooltip state from your parent Model.                                                                                                                                                                 |
+| `toParentMessage` | `(childMessage: Tooltip.Message) => ParentMessage` | —       | Wraps Tooltip Messages in your parent Message type for Submodel delegation.                                                                                                                               |
+| `anchor`          | `AnchorConfig`                                     | —       | Floating positioning config: placement, gap, offset, padding, isPlacementLocked, and portal. Required. Portaled to the document body by default; pass portal: false to keep the panel inside its wrapper. |
+| `toView`          | `(render: RenderInfo) => Html`                     | —       | Callback that receives the `trigger` and `panel` attribute bundles plus a derived `isVisible` flag, and returns the composed layout.                                                                      |
+| `isDisabled`      | `boolean`                                          | `false` | Disables the trigger. Hover, focus, and keyboard events are ignored and the tooltip will not open.                                                                                                        |
+| `ariaLabel`       | `string`                                           | —       | Accessible name for the trigger button. Use for an icon-only trigger with no visible label. Applied as aria-label, and takes precedence over ariaLabelledBy.                                              |
+| `ariaLabelledBy`  | `string`                                           | —       | Id of an external element that labels the trigger button, applied as aria-labelledby. Pair with a visible label element.                                                                                  |
 
 ### RenderInfo {#render-info}
 

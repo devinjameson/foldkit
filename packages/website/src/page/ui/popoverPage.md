@@ -40,11 +40,12 @@ Popover is headless. The `toView` callback receives attribute bundles for the bu
 
 When `isAnimated` is true, enter/leave animations flow through the [Animation](/ui/animation) module. Style with CSS transitions or CSS keyframe animations. Animation advances once every animation on the element has settled.
 
-| Attribute       | Condition                              |
-| --------------- | -------------------------------------- |
-| `data-open`     | Present on button and panel when open. |
-| `data-disabled` | Present on the button when disabled.   |
-| `data-closed`   | Present during close animation.        |
+| Attribute        | Condition                                                                                                 |
+| ---------------- | --------------------------------------------------------------------------------------------------------- |
+| `data-open`      | Present on button and panel when open.                                                                    |
+| `data-disabled`  | Present on the button when disabled.                                                                      |
+| `data-closed`    | Present during close animation.                                                                           |
+| `data-placement` | Present on the panel when isPlacementLocked is true, set to the locked side: top, right, bottom, or left. |
 
 ## Keyboard Interaction
 
@@ -81,16 +82,16 @@ Configuration object passed to `Popover.init()`.
 
 Configuration object passed to `Popover.view()`.
 
-| Name              | Type                                               | Default | Description                                                                                                                                                  |
-| ----------------- | -------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `model`           | `Popover.Model`                                    | —       | The popover state from your parent Model.                                                                                                                    |
-| `toParentMessage` | `(childMessage: Popover.Message) => ParentMessage` | —       | Wraps Popover Messages in your parent Message type for Submodel delegation.                                                                                  |
-| `anchor`          | `AnchorConfig`                                     | —       | Floating positioning config: placement, gap, and padding. Required.                                                                                          |
-| `toView`          | `(render: RenderInfo) => Html`                     | —       | Callback that receives the button, panel, and backdrop attribute bundles plus a derived `isVisible` flag, and returns the composed layout.                   |
-| `isDisabled`      | `boolean`                                          | `false` | Disables the trigger button.                                                                                                                                 |
-| `focusSelector`   | `string`                                           | —       | CSS selector for the element to focus after the panel is positioned. Defaults to the panel itself.                                                           |
-| `ariaLabel`       | `string`                                           | —       | Accessible name for the trigger button. Use for an icon-only trigger with no visible label. Applied as aria-label, and takes precedence over ariaLabelledBy. |
-| `ariaLabelledBy`  | `string`                                           | —       | Id of an external element that labels the trigger button, applied as aria-labelledby. Pair with a visible label element.                                     |
+| Name              | Type                                               | Default | Description                                                                                                                                                                                               |
+| ----------------- | -------------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `model`           | `Popover.Model`                                    | —       | The popover state from your parent Model.                                                                                                                                                                 |
+| `toParentMessage` | `(childMessage: Popover.Message) => ParentMessage` | —       | Wraps Popover Messages in your parent Message type for Submodel delegation.                                                                                                                               |
+| `anchor`          | `AnchorConfig`                                     | —       | Floating positioning config: placement, gap, offset, padding, isPlacementLocked, and portal. Required. Portaled to the document body by default; pass portal: false to keep the panel inside its wrapper. |
+| `toView`          | `(render: RenderInfo) => Html`                     | —       | Callback that receives the button, panel, and backdrop attribute bundles plus a derived `isVisible` flag, and returns the composed layout.                                                                |
+| `isDisabled`      | `boolean`                                          | `false` | Disables the trigger button.                                                                                                                                                                              |
+| `focusSelector`   | `string`                                           | —       | CSS selector for the element to focus after the panel is positioned. Defaults to the panel itself.                                                                                                        |
+| `ariaLabel`       | `string`                                           | —       | Accessible name for the trigger button. Use for an icon-only trigger with no visible label. Applied as aria-label, and takes precedence over ariaLabelledBy.                                              |
+| `ariaLabelledBy`  | `string`                                           | —       | Id of an external element that labels the trigger button, applied as aria-labelledby. Pair with a visible label element.                                                                                  |
 
 ### RenderInfo {#render-info}
 

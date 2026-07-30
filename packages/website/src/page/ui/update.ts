@@ -27,6 +27,7 @@ import {
   GotComboboxDemoMessage,
   GotComboboxMultiDemoMessage,
   GotComboboxNullableDemoMessage,
+  GotComboboxPlacementLockDemoMessage,
   GotComboboxSelectOnFocusDemoMessage,
   GotDatePickerBasicDemoMessage,
   GotDialogAnimatedDemoMessage,
@@ -298,6 +299,39 @@ export const update = (model: Model, message: Message): UpdateReturn =>
           }),
           Command.mapMessages(comboboxCommands, message =>
             GotComboboxDemoMessage({ message }),
+          ),
+        ]
+      },
+
+      GotComboboxPlacementLockDemoMessage: ({ message }) => {
+        const [
+          nextComboboxPlacementLockDemo,
+          comboboxPlacementLockCommands,
+          maybeOutMessage,
+        ] = CityCombobox.update(model.comboboxPlacementLockDemo, message)
+
+        const nextMaybeComboboxPlacementLockDemoSelectedCity = Option.match(
+          maybeOutMessage,
+          {
+            onNone: () => model.maybeComboboxPlacementLockDemoSelectedCity,
+            onSome: M.type<Combobox.OutMessage<City>>().pipe(
+              M.tagsExhaustive({
+                Selected: ({ value }) => Option.some(value),
+                ClearedSelection: () =>
+                  model.maybeComboboxPlacementLockDemoSelectedCity,
+              }),
+            ),
+          },
+        )
+
+        return [
+          evo(model, {
+            comboboxPlacementLockDemo: () => nextComboboxPlacementLockDemo,
+            maybeComboboxPlacementLockDemoSelectedCity: () =>
+              nextMaybeComboboxPlacementLockDemoSelectedCity,
+          }),
+          Command.mapMessages(comboboxPlacementLockCommands, message =>
+            GotComboboxPlacementLockDemoMessage({ message }),
           ),
         ]
       },

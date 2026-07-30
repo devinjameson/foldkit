@@ -11,6 +11,7 @@ import {
   GotComboboxDemoMessage,
   GotComboboxMultiDemoMessage,
   GotComboboxNullableDemoMessage,
+  GotComboboxPlacementLockDemoMessage,
   GotComboboxSelectOnFocusDemoMessage,
   type UiMessage,
 } from '../message'
@@ -152,6 +153,55 @@ export const view = Submodel.defineView<UiModel, UiMessage>(
                 maybeSelectedValue: model.maybeComboboxDemoSelectedCity,
               },
               toParentMessage: message => GotComboboxDemoMessage({ message }),
+            }),
+          ],
+        ),
+
+        h.h3(
+          [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-2')],
+          ['Locked Placement'],
+        ),
+        h.p(
+          [h.Class('text-sm text-gray-600 mb-4')],
+          [
+            'The panel keeps the side chosen when it opens as filtering changes its height.',
+          ],
+        ),
+        h.label(
+          [
+            h.For(Combobox.inputId(model.comboboxPlacementLockDemo.id)),
+            h.Class('block mb-1.5 text-sm font-medium text-gray-900'),
+          ],
+          ['City'],
+        ),
+        h.div(
+          [h.Class('relative')],
+          [
+            h.submodel({
+              slotId: model.comboboxPlacementLockDemo.id,
+              model: model.comboboxPlacementLockDemo,
+              view: CityCombobox.view,
+              viewInputs: {
+                ...comboboxInputs(
+                  {
+                    inputValue: model.comboboxPlacementLockDemo.inputValue,
+                    restingInputValue: Option.getOrElse(
+                      model.maybeComboboxPlacementLockDemoSelectedCity,
+                      () => '',
+                    ),
+                    anchor: {
+                      ...COMBOBOX_ANCHOR,
+                      isPlacementLocked: true,
+                    },
+                  },
+                  h,
+                ),
+                maybeSelectedValue:
+                  model.maybeComboboxPlacementLockDemoSelectedCity,
+                openOnFocus: true,
+              },
+              toParentMessage: message =>
+                GotComboboxPlacementLockDemoMessage({ message }),
             }),
           ],
         ),

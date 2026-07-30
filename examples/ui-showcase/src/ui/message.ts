@@ -70,6 +70,12 @@ export const GotComboboxNullableDemoMessage = m(
 export const GotComboboxMultiDemoMessage = m('GotComboboxMultiDemoMessage', {
   message: Combobox.Message,
 })
+export const GotComboboxPlacementLockDemoMessage = m(
+  'GotComboboxPlacementLockDemoMessage',
+  {
+    message: Combobox.Message,
+  },
+)
 export const GotComboboxSelectOnFocusDemoMessage = m(
   'GotComboboxSelectOnFocusDemoMessage',
   {
@@ -247,6 +253,7 @@ export const UiMessage = S.Union([
   GotComboboxDemoMessage,
   GotComboboxNullableDemoMessage,
   GotComboboxMultiDemoMessage,
+  GotComboboxPlacementLockDemoMessage,
   GotComboboxSelectOnFocusDemoMessage,
   GotDialogDemoMessage,
   GotDialogAnimatedDemoMessage,

@@ -10,7 +10,11 @@ import type { Message } from './message'
 import type { Model } from './model'
 
 const { tableOfContents, view: renderPage } = slotDocPage<
-  'single-select' | 'nullable' | 'select-on-focus' | 'multi'
+  | 'single-select'
+  | 'nullable'
+  | 'select-on-focus'
+  | 'locked-placement'
+  | 'multi'
 >(raw, 'ui/combobox')
 
 export { tableOfContents }
@@ -55,6 +59,18 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
               ...Combobox.selectOnFocusDemo(
                 model.comboboxSelectOnFocusDemo,
                 model.maybeComboboxSelectOnFocusDemoSelectedCity,
+                h,
+              ),
+            ),
+          ],
+        ),
+        'locked-placement': h.section(
+          [h.AriaLabelledBy(Combobox.placementLockHeader.id)],
+          [
+            demoContainer(
+              ...Combobox.placementLockDemo(
+                model.comboboxPlacementLockDemo,
+                model.maybeComboboxPlacementLockDemoSelectedCity,
                 h,
               ),
             ),

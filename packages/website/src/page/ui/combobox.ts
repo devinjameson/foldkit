@@ -11,11 +11,11 @@ import type { AnchorConfig } from '@foldkit/ui/combobox'
 
 import { Icon } from '../../icon'
 import type { TableOfContentsEntry } from '../../main'
-import { inlineCode, subPara } from '../../prose'
 import {
   GotComboboxDemoMessage,
   GotComboboxMultiDemoMessage,
   GotComboboxNullableDemoMessage,
+  GotComboboxPlacementLockDemoMessage,
   GotComboboxSelectOnFocusDemoMessage,
   type Message,
 } from './message'
@@ -39,6 +39,12 @@ export const selectOnFocusHeader: TableOfContentsEntry = {
   level: 'h3',
   id: 'combobox-select-on-focus',
   text: 'Select on Focus',
+}
+
+export const placementLockHeader: TableOfContentsEntry = {
+  level: 'h3',
+  id: 'combobox-locked-placement',
+  text: 'Locked Placement',
 }
 
 export const multiHeader: TableOfContentsEntry = {
@@ -231,11 +237,6 @@ export const selectOnFocusDemo = (
   h: HtmlBuilder<Message>,
 ) => {
   return [
-    subPara(
-      'Pass ',
-      inlineCode('selectInputOnFocus: true', 'text-xs px-0.5'),
-      ' to highlight the input text when the combobox receives focus. Typing immediately replaces the current value, making it easy to start a new search without manually clearing the input.',
-    ),
     h.div(
       [h.Class('flex flex-col gap-1.5')],
       [
@@ -272,6 +273,62 @@ export const selectOnFocusDemo = (
     ),
   ]
 }
+
+export const placementLockDemo = (
+  comboboxPlacementLockModel: Combobox.Model,
+  maybeSelectedCity: Option.Option<City>,
+  h: HtmlBuilder<Message>,
+) => [
+  h.div(
+    [
+      h.Class(
+        'relative flex h-96 w-full items-end justify-center overflow-hidden rounded-lg border border-dashed border-gray-300 bg-cream/60 pb-20 dark:border-gray-700 dark:bg-gray-900/40',
+      ),
+    ],
+    [
+      h.div(
+        [h.Class('flex flex-col gap-1.5')],
+        [
+          h.label(
+            [
+              h.For(Combobox.inputId(comboboxPlacementLockModel.id)),
+              h.Class('text-sm font-medium text-gray-900 dark:text-white'),
+            ],
+            ['City'],
+          ),
+          h.div(
+            [h.Class('relative')],
+            [
+              h.submodel({
+                slotId: comboboxPlacementLockModel.id,
+                model: comboboxPlacementLockModel,
+                view: CityCombobox.view,
+                viewInputs: {
+                  ...comboboxViewInputs({
+                    inputValue: comboboxPlacementLockModel.inputValue,
+                    restingInputValue: Option.getOrElse(
+                      maybeSelectedCity,
+                      () => '',
+                    ),
+                    anchor: {
+                      ...COMBOBOX_ANCHOR,
+                      isPlacementLocked: true,
+                      portal: false,
+                    },
+                  }),
+                  maybeSelectedValue: maybeSelectedCity,
+                  openOnFocus: true,
+                },
+                toParentMessage: message =>
+                  GotComboboxPlacementLockDemoMessage({ message }),
+              }),
+            ],
+          ),
+        ],
+      ),
+    ],
+  ),
+]
 
 const tagClassName =
   'inline-flex items-center gap-1 px-2 py-0.5 text-sm rounded-md bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200'

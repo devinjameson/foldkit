@@ -83,6 +83,8 @@ export const UiModel = S.Struct({
   maybeComboboxNullableDemoSelectedCity: S.Option(City),
   comboboxMultiDemo: Combobox.Multi.Model,
   comboboxMultiDemoSelectedCities: S.Array(City),
+  comboboxPlacementLockDemo: Combobox.Model,
+  maybeComboboxPlacementLockDemoSelectedCity: S.Option(City),
   comboboxSelectOnFocusDemo: Combobox.Model,
   maybeComboboxSelectOnFocusDemoSelectedCity: S.Option(City),
   dialogDemo: Dialog.Model,
