@@ -14,6 +14,13 @@ type MockComputePositionReturn = {
   placement: FloatingPlacement
 }
 
+type SizeApply = (
+  args: Readonly<{
+    rects: Readonly<{ reference: Readonly<{ width: number }> }>
+    availableHeight: number
+  }>,
+) => void
+
 type DeferredPosition = Readonly<{
   promise: Promise<MockComputePositionReturn>
   resolve: (value: MockComputePositionReturn) => void
@@ -33,6 +40,9 @@ const flushPromises = (): Promise<void> =>
   })
 
 const BUTTON_ID = 'btn'
+
+const isSizeApply = (value: unknown): value is SizeApply =>
+  typeof value === 'function'
 
 const computePositionMock =
   vi.fn<
@@ -70,7 +80,7 @@ vi.mock('@floating-ui/dom', async importOriginal => {
   }
 })
 
-describe('anchorSetup lockPlacement', () => {
+describe('anchorSetup isPlacementLocked', () => {
   afterEach(() => {
     computePositionMock.mockReset()
     updateCallbacks.length = 0
@@ -93,6 +103,24 @@ describe('anchorSetup lockPlacement', () => {
       Array_.flatMap(middleware => (middleware ? [middleware.name] : [])),
     )
 
+  const sizeApplyOfCall = (callIndex: number): SizeApply => {
+    const middleware = pipe(
+      optionsOfCall(callIndex).middleware ?? [],
+      Array_.flatMap(middleware => (middleware ? [middleware] : [])),
+      Array_.findFirst(({ name }) => name === 'size'),
+      Option.getOrThrowWith(
+        () => new Error(`Expected size middleware at call index ${callIndex}`),
+      ),
+    )
+    const apply: unknown = middleware.options?.apply
+
+    if (isSizeApply(apply)) {
+      return apply
+    } else {
+      throw new Error(`Expected size.apply at call index ${callIndex}`)
+    }
+  }
+
   const triggerUpdate = (callbackIndex: number): void => {
     const update = pipe(
       Array_.get(updateCallbacks, callbackIndex),
@@ -106,13 +134,15 @@ describe('anchorSetup lockPlacement', () => {
     update()
   }
 
-  const mountAnchor = (anchor: AnchorConfig): HTMLElement => {
+  const mountAnchor = (
+    anchor: AnchorConfig,
+  ): Readonly<{ element: HTMLElement; cleanup: () => void }> => {
     const button = document.createElement('button')
     button.id = BUTTON_ID
     const element = document.createElement('div')
     document.body.append(button, element)
-    anchorSetup({ buttonId: BUTTON_ID, anchor })(element)
-    return element
+    const cleanup = anchorSetup({ buttonId: BUTTON_ID, anchor })(element)
+    return { element, cleanup }
   }
 
   const waitForPosition = (
@@ -129,9 +159,9 @@ describe('anchorSetup lockPlacement', () => {
     computePositionMock
       .mockResolvedValueOnce({ x: 10, y: 20, placement: 'top-start' })
       .mockResolvedValueOnce({ x: 11, y: 21, placement: 'top-start' })
-    const element = mountAnchor({
+    const { element } = mountAnchor({
       placement: 'bottom-start',
-      lockPlacement: true,
+      isPlacementLocked: true,
       portal: false,
     })
 
@@ -147,11 +177,14 @@ describe('anchorSetup lockPlacement', () => {
     expect(middlewareNamesOfCall(1)).toEqual(['offset', 'shift', 'size'])
   })
 
-  it('keeps flip and writes no attribute without lockPlacement', async () => {
+  it('keeps flip and writes no attribute without isPlacementLocked', async () => {
     computePositionMock
       .mockResolvedValueOnce({ x: 10, y: 20, placement: 'top-start' })
       .mockResolvedValueOnce({ x: 11, y: 21, placement: 'bottom-start' })
-    const element = mountAnchor({ placement: 'bottom-start', portal: false })
+    const { element } = mountAnchor({
+      placement: 'bottom-start',
+      portal: false,
+    })
 
     await waitForPosition(element, 10, 20)
 
@@ -166,13 +199,33 @@ describe('anchorSetup lockPlacement', () => {
     expect(element.hasAttribute('data-placement')).toBe(false)
   })
 
+  it('clamps negative available height to zero', async () => {
+    computePositionMock.mockResolvedValue({
+      x: 10,
+      y: 20,
+      placement: 'bottom-start',
+    })
+    const { element } = mountAnchor({
+      placement: 'bottom-start',
+      portal: false,
+    })
+
+    sizeApplyOfCall(0)({
+      rects: { reference: { width: 160 } },
+      availableHeight: -20,
+    })
+
+    expect(element.style.getPropertyValue('--button-width')).toBe('160px')
+    expect(element.style.maxHeight).toBe('0px')
+  })
+
   it('writes the locked side to data-placement', async () => {
     computePositionMock
       .mockResolvedValueOnce({ x: 10, y: 20, placement: 'bottom-end' })
       .mockResolvedValueOnce({ x: 11, y: 21, placement: 'bottom-end' })
-    const element = mountAnchor({
+    const { element } = mountAnchor({
       placement: 'bottom-start',
-      lockPlacement: true,
+      isPlacementLocked: true,
       portal: false,
     })
 
@@ -191,9 +244,9 @@ describe('anchorSetup lockPlacement', () => {
     computePositionMock
       .mockResolvedValueOnce({ x: 10, y: 20, placement: 'top-start' })
       .mockResolvedValueOnce({ x: 140, y: 320, placement: 'top-start' })
-    const element = mountAnchor({
+    const { element } = mountAnchor({
       placement: 'bottom-start',
-      lockPlacement: true,
+      isPlacementLocked: true,
       portal: false,
     })
 
@@ -205,37 +258,35 @@ describe('anchorSetup lockPlacement', () => {
     expect(element.getAttribute('data-placement')).toBe('top')
   })
 
-  it('discards a stale tick that resolves after the placement locks', async () => {
+  it('coalesces updates that arrive while positioning', async () => {
     const firstTick = deferPosition()
     const secondTick = deferPosition()
     computePositionMock
       .mockReturnValueOnce(firstTick.promise)
       .mockReturnValueOnce(secondTick.promise)
-      .mockResolvedValue({ x: 30, y: 40, placement: 'top-start' })
-    const element = mountAnchor({
+    const { element } = mountAnchor({
       placement: 'bottom-start',
-      lockPlacement: true,
+      isPlacementLocked: true,
       portal: false,
     })
 
     triggerUpdate(0)
+    triggerUpdate(0)
 
-    expect(middlewareNamesOfCall(1)).toContain('flip')
+    expect(computePositionMock).toHaveBeenCalledTimes(1)
 
-    secondTick.resolve({ x: 5, y: 6, placement: 'top-start' })
+    firstTick.resolve({ x: 5, y: 6, placement: 'top-start' })
     await waitForPosition(element, 5, 6)
 
-    expect(element.getAttribute('data-placement')).toBe('top')
+    await vi.waitFor(() => {
+      expect(computePositionMock).toHaveBeenCalledTimes(2)
+    })
+    expect(optionsOfCall(1).placement).toBe('top-start')
+    expect(middlewareNamesOfCall(1)).toEqual(['offset', 'shift', 'size'])
 
-    firstTick.resolve({ x: 7, y: 8, placement: 'bottom-end' })
-    await flushPromises()
-
-    expect(element.style.left).toBe('5px')
-    expect(element.style.top).toBe('6px')
-    expect(element.getAttribute('data-placement')).toBe('top')
-
-    triggerUpdate(0)
-    expect(optionsOfCall(2).placement).toBe('top-start')
+    secondTick.resolve({ x: 30, y: 40, placement: 'top-start' })
+    await waitForPosition(element, 30, 40)
+    expect(computePositionMock).toHaveBeenCalledTimes(2)
   })
 
   it('exposes a horizontal side, not only top and bottom', async () => {
@@ -244,14 +295,59 @@ describe('anchorSetup lockPlacement', () => {
       y: 20,
       placement: 'left-start',
     })
-    const element = mountAnchor({
+    const { element } = mountAnchor({
       placement: 'right-start',
-      lockPlacement: true,
+      isPlacementLocked: true,
       portal: false,
     })
 
     await waitForPosition(element, 10, 20)
 
     expect(element.getAttribute('data-placement')).toBe('left')
+  })
+
+  it('does not write a pending position after cleanup', async () => {
+    const firstTick = deferPosition()
+    computePositionMock.mockReturnValue(firstTick.promise)
+    const { element, cleanup } = mountAnchor({
+      placement: 'bottom-start',
+      isPlacementLocked: true,
+      portal: false,
+    })
+    const sizeApply = sizeApplyOfCall(0)
+
+    cleanup()
+    sizeApply({
+      rects: { reference: { width: 160 } },
+      availableHeight: 100,
+    })
+    firstTick.resolve({ x: 10, y: 20, placement: 'top-start' })
+    await flushPromises()
+
+    expect(element.style.getPropertyValue('--button-width')).toBe('')
+    expect(element.style.maxHeight).toBe('')
+    expect(element.style.left).toBe('')
+    expect(element.style.top).toBe('')
+    expect(element.hasAttribute('data-placement')).toBe(false)
+  })
+
+  it('removes data-placement on cleanup', async () => {
+    computePositionMock.mockResolvedValue({
+      x: 10,
+      y: 20,
+      placement: 'top-start',
+    })
+    const { element, cleanup } = mountAnchor({
+      placement: 'bottom-start',
+      isPlacementLocked: true,
+      portal: false,
+    })
+
+    await waitForPosition(element, 10, 20)
+    expect(element.getAttribute('data-placement')).toBe('top')
+
+    cleanup()
+
+    expect(element.hasAttribute('data-placement')).toBe(false)
   })
 })

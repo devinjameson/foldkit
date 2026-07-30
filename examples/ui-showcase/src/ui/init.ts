@@ -61,6 +61,10 @@ export const uiInit = (
       id: 'combobox-multi-demo',
     }),
     comboboxMultiDemoSelectedCities: [],
+    comboboxPlacementLockDemo: Combobox.init({
+      id: 'combobox-placement-lock-demo',
+    }),
+    maybeComboboxPlacementLockDemoSelectedCity: Option.none(),
     comboboxSelectOnFocusDemo: Combobox.init({
       id: 'combobox-select-on-focus-demo',
       selectInputOnFocus: true,

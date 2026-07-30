@@ -34,7 +34,7 @@ export const AnchorConfig = S.Struct({
   offset: S.optional(S.Number),
   padding: S.optional(S.Number),
   portal: S.optional(S.Boolean),
-  lockPlacement: S.optional(S.Boolean),
+  isPlacementLocked: S.optional(S.Boolean),
 })
 
 export type AnchorConfig = typeof AnchorConfig.Type
@@ -105,11 +105,11 @@ const toSide = (placement: FloatingPlacement): string =>
  *  requestAnimationFrame so the element is painted before focus fires.
  *  `focusSelector` optionally targets a descendant (e.g. a calendar grid
  *  inside a popover panel) instead of the panel itself.
- *  When `lockPlacement` is true, the element keeps the side that the first
+ *  When `isPlacementLocked` is true, the element keeps the side that the first
  *  positioning picks, and `flip` is removed from every later update. The locked
  *  side is also written to `data-placement` on the element, so CSS can react to
- *  it. None of this happens unless `lockPlacement` is set, so existing callers
- *  render exactly as before. */
+ *  it. None of this happens unless `isPlacementLocked` is set, so existing
+ *  callers render exactly as before. */
 export const anchorSetup =
   (config: {
     buttonId: string
@@ -150,20 +150,32 @@ export const anchorSetup =
       gap,
       offset: crossAxis,
       padding,
-      lockPlacement,
+      isPlacementLocked,
     } = config.anchor
     const shouldInterceptTab = config.interceptTab ?? true
-    const shouldLockPlacement = lockPlacement ?? false
+    const isPlacementLockEnabled = isPlacementLocked ?? false
 
     let isFirstUpdate = true
+    let isActive = true
+    let isPositioning = false
+    let isPositioningQueued = false
     let lockedPlacement: FloatingPlacement | undefined
-    let latestRequestId = 0
 
-    const floatingCleanup = autoUpdate(button, element, () => {
-      const isLocked = shouldLockPlacement && lockedPlacement !== undefined
+    const positionElement = (): void => {
+      if (!isActive) {
+        return
+      }
+
+      if (isPlacementLockEnabled && isPositioning) {
+        isPositioningQueued = true
+        return
+      }
+
+      if (isPlacementLockEnabled) {
+        isPositioning = true
+      }
+      const isLocked = isPlacementLockEnabled && lockedPlacement !== undefined
       const requestedPlacement = lockedPlacement ?? placement ?? 'bottom-start'
-      latestRequestId = latestRequestId + 1
-      const requestId = latestRequestId
 
       computePosition(button, element, {
         placement: requestedPlacement,
@@ -178,70 +190,93 @@ export const anchorSetup =
           size({
             padding: padding ?? 0,
             apply({ rects, availableHeight }) {
+              if (!isActive) {
+                return
+              }
+
               element.style.setProperty(
                 '--button-width',
                 `${rects.reference.width}px`,
               )
-              element.style.maxHeight = `${availableHeight}px`
+              element.style.maxHeight = `${Math.max(0, availableHeight)}px`
               element.style.overflowY = 'auto'
               element.style.overscrollBehavior = 'none'
             },
           }),
         ],
-      }).then(({ x, y, placement: resolvedPlacement }) => {
-        // NOTE: autoUpdate can start a second tick before this promise
-        // settles. Both ticks still carry flip, so they can resolve to
-        // different sides. Without this guard an older tick can finish last
-        // and write coordinates for the side that the lock did not pick.
-        if (shouldLockPlacement && requestId !== latestRequestId) {
-          return
-        }
-
-        element.style.left = `${x}px`
-        element.style.top = `${y}px`
-
-        if (shouldLockPlacement) {
-          const nextLockedPlacement = lockedPlacement ?? resolvedPlacement
-          lockedPlacement = nextLockedPlacement
-          element.setAttribute('data-placement', toSide(nextLockedPlacement))
-        }
-
-        if (isFirstUpdate) {
-          isFirstUpdate = false
-          element.style.visibility = ''
-
-          if (config.focusAfterPosition ?? false) {
-            requestAnimationFrame(() => {
-              const target = config.focusSelector
-                ? owner.querySelector(config.focusSelector)
-                : element
-              if (target instanceof HTMLElement) {
-                target.focus()
-              }
-            })
-          }
-        }
       })
-    })
+        .then(({ x, y, placement: resolvedPlacement }) => {
+          if (!isActive) {
+            return
+          }
 
-    if (isPortal && shouldInterceptTab) {
-      const handleTabKey = (event: Event): void => {
-        if (event instanceof KeyboardEvent && event.key === 'Tab') {
-          button.focus()
-        }
+          element.style.left = `${x}px`
+          element.style.top = `${y}px`
+
+          if (isPlacementLockEnabled) {
+            const nextLockedPlacement = lockedPlacement ?? resolvedPlacement
+            lockedPlacement = nextLockedPlacement
+            element.setAttribute('data-placement', toSide(nextLockedPlacement))
+          }
+
+          if (isFirstUpdate) {
+            isFirstUpdate = false
+            element.style.visibility = ''
+
+            if (config.focusAfterPosition ?? false) {
+              requestAnimationFrame(() => {
+                if (!isActive) {
+                  return
+                }
+
+                const target = config.focusSelector
+                  ? owner.querySelector(config.focusSelector)
+                  : element
+                if (target instanceof HTMLElement) {
+                  target.focus()
+                }
+              })
+            }
+          }
+        })
+        .finally(() => {
+          if (isPlacementLockEnabled) {
+            isPositioning = false
+          }
+
+          if (isActive && isPositioningQueued) {
+            isPositioningQueued = false
+            positionElement()
+          }
+        })
+    }
+
+    const floatingCleanup = autoUpdate(button, element, positionElement)
+
+    const handleTabKey = (event: Event): void => {
+      if (event instanceof KeyboardEvent && event.key === 'Tab') {
+        button.focus()
       }
+    }
 
+    const isTabIntercepted = isPortal && shouldInterceptTab
+    if (isTabIntercepted) {
       element.addEventListener('keydown', handleTabKey)
+    }
 
-      return () => {
-        floatingCleanup()
+    return () => {
+      isActive = false
+      isPositioningQueued = false
+      floatingCleanup()
+
+      if (isTabIntercepted) {
         element.removeEventListener('keydown', handleTabKey)
-        portalCleanup?.()
       }
-    } else {
-      return () => {
-        floatingCleanup()
-        portalCleanup?.()
+
+      if (isPlacementLockEnabled) {
+        element.removeAttribute('data-placement')
       }
+
+      portalCleanup?.()
     }
   }

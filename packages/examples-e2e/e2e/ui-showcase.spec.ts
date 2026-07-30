@@ -118,6 +118,51 @@ test.describe('ui-showcase example', () => {
     await expect(trigger).toHaveAttribute('aria-expanded', 'false')
   })
 
+  test('keeps a combobox panel on its initial side while filtering', async ({
+    page,
+  }) => {
+    await page.goto('/')
+    await page
+      .getByRole('link', { name: 'Combobox', exact: true })
+      .first()
+      .click()
+    await expect(page).toHaveURL(/\/combobox$/)
+
+    const trigger = page.locator('#combobox-placement-lock-demo-input')
+    const panel = page.locator('#combobox-placement-lock-demo-items')
+    await page
+      .locator('#combobox-placement-lock-demo-input-wrapper')
+      .evaluate(element => {
+        element.setAttribute(
+          'style',
+          'position: fixed; left: 32px; bottom: 96px; width: 288px',
+        )
+      })
+
+    await trigger.press('ArrowDown')
+    await expect(panel).toHaveAttribute('data-placement', 'top')
+
+    const isPanelAboveTrigger = async (): Promise<boolean> => {
+      const [triggerBox, panelBox] = await Promise.all([
+        trigger.boundingBox(),
+        panel.boundingBox(),
+      ])
+
+      if (triggerBox && panelBox) {
+        return panelBox.y + panelBox.height <= triggerBox.y
+      } else {
+        return false
+      }
+    }
+
+    await expect.poll(isPanelAboveTrigger).toBe(true)
+
+    await trigger.fill('Zurich')
+    await expect(panel.getByRole('option')).toHaveCount(1)
+    await expect(panel).toHaveAttribute('data-placement', 'top')
+    await expect.poll(isPanelAboveTrigger).toBe(true)
+  })
+
   test('focuses the tooltip trigger when its external label is clicked', async ({
     page,
   }) => {
