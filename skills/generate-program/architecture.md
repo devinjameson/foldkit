@@ -68,9 +68,9 @@ Event handlers in the view dispatch Messages. They don't perform actions directl
 
 ### 3. Commands Catch All Errors
 
-Define Command identities with `Command.define`, which is curried: the first call binds the name (optional args schema, then result Message schemas), and the second call binds the Effect. Every Command must handle its own errors via `Effect.catch(() => Effect.succeed(FailedX(...)))` and convert them to Messages. Commands never throw, so the app never crashes from an unhandled side effect.
+Define Command identities with `Command.define`, whose second argument is a config object: `args` (optional) declares the args Schema, `messages` lists every Message the Command can produce, `execute` holds the Effect, and `interrupt` opts into interruption. Every Command must handle its own errors via `Effect.catch(() => Effect.succeed(FailedX(...)))` and convert them to Messages. Commands never throw, so the app never crashes from an unhandled side effect.
 
-Always assign definitions to PascalCase constants. Never use `Command.define` inline in a pipe chain. Definitions live where they're produced, colocated with the update function. Let TypeScript infer Command return types. The result Message schemas constrain the Effect's return type at the type level.
+Always assign definitions to PascalCase constants. Never use `Command.define` inline in a pipe chain. Definitions live where they're produced, colocated with the update function. Let TypeScript infer Command return types. The `messages` array constrains the Effect's return type at the type level.
 
 For the canonical shapes, study the live examples directly. They stay synced with the API:
 

@@ -13,7 +13,7 @@ import { describe, test } from 'vitest'
 
 import { SyncChart } from './command'
 import { loadingModel, readyModel, sampleTelemetry } from './main.fixtures'
-import { CompletedSyncChart, SucceededMountChart } from './message'
+import { SucceededMountChart, SucceededSyncChart } from './message'
 import { TelemetryAsyncData } from './model'
 import { update } from './update'
 import { CHART_HOST_ID, MountChart } from './view/chart'
@@ -24,7 +24,7 @@ const acknowledgeChartMount = Mount.resolve(
   SucceededMountChart({ hostId: CHART_HOST_ID }),
 )
 
-const acknowledgeChartSync = Command.resolve(SyncChart, CompletedSyncChart())
+const acknowledgeChartSync = Command.resolve(SyncChart, SucceededSyncChart())
 
 describe('view', () => {
   test('loading view shows a telemetry progress state', () => {
@@ -55,7 +55,7 @@ describe('view', () => {
       acknowledgeChartMount,
       acknowledgeChartSync,
       click(role('radio', { name: 'Velocity' })),
-      Command.resolve(SyncChart, CompletedSyncChart()),
+      Command.resolve(SyncChart, SucceededSyncChart()),
       expect(role('radio', { name: 'Velocity' })).toHaveAttr(
         'aria-checked',
         'true',

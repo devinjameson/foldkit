@@ -14,21 +14,22 @@ const CompletedCancelUploadFile = m('CompletedCancelUploadFile', {
 const UploadKey = S.Struct({ uploadId: S.Number })
 type UploadKey = typeof UploadKey.Type
 
-const UploadFile = Command.Interruptible.define(
-  'UploadFile',
-  { ...UploadKey.fields, file: S.instanceOf(File) },
+const UploadFile = Command.define('UploadFile', {
+  args: { ...UploadKey.fields, file: S.instanceOf(File) },
+  messages: [SucceededUploadFile, FailedUploadFile],
   // The key function maps args to what distinguishes invocations. Foldkit
   // prefixes the Command name automatically, so the full key for upload 7
   // is "UploadFile:7".
-  ({ uploadId }: UploadKey) => String(uploadId),
-  SucceededUploadFile,
-  FailedUploadFile,
-)(({ uploadId, file }) =>
-  postFile(file).pipe(
-    Effect.as(SucceededUploadFile({ uploadId })),
-    Effect.catch(() => Effect.succeed(FailedUploadFile({ uploadId }))),
-  ),
-)
+  interrupt: {
+    keyFields: ['uploadId'],
+    toKey: ({ uploadId }) => String(uploadId),
+  },
+  execute: ({ uploadId, file }) =>
+    postFile(file).pipe(
+      Effect.as(SucceededUploadFile({ uploadId })),
+      Effect.catch(() => Effect.succeed(FailedUploadFile({ uploadId }))),
+    ),
+})
 
 const setStatusForId = (uploadId: number, status: UploadStatus) =>
   Array.map((upload: Upload) =>

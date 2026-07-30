@@ -195,67 +195,71 @@ type UpdateReturn = readonly [
 const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
 /** Prevents page scrolling while the popover is open in modal mode. */
-export const LockScroll = Command.define(
-  'LockScroll',
-  CompletedLockScroll,
-)(Dom.lockScroll.pipe(Effect.as(CompletedLockScroll())))
+export const LockScroll = Command.define('LockScroll', {
+  messages: [CompletedLockScroll],
+  execute: Dom.lockScroll.pipe(Effect.as(CompletedLockScroll())),
+})
 /** Re-enables page scrolling after the popover closes. */
-export const UnlockScroll = Command.define(
-  'UnlockScroll',
-  CompletedUnlockScroll,
-)(Dom.unlockScroll.pipe(Effect.as(CompletedUnlockScroll())))
+export const UnlockScroll = Command.define('UnlockScroll', {
+  messages: [CompletedUnlockScroll],
+  execute: Dom.unlockScroll.pipe(Effect.as(CompletedUnlockScroll())),
+})
 /** Marks all elements outside the popover as inert for modal behavior. */
-export const InertOthers = Command.define(
-  'InertOthers',
-  { id: S.String },
-  CompletedInertOthers,
-)(({ id }) =>
-  Dom.inertOthers(id, [buttonSelector(id), panelSelector(id)]).pipe(
-    Effect.as(CompletedInertOthers()),
-  ),
-)
+export const InertOthers = Command.define('InertOthers', {
+  args: { id: S.String },
+  messages: [CompletedInertOthers],
+  execute: ({ id }) =>
+    Dom.inertOthers(id, [buttonSelector(id), panelSelector(id)]).pipe(
+      Effect.as(CompletedInertOthers()),
+    ),
+})
 /** Removes the inert attribute from elements outside the popover. */
-export const RestoreInert = Command.define(
-  'RestoreInert',
-  { id: S.String },
-  CompletedRestoreInert,
-)(({ id }) => Dom.restoreInert(id).pipe(Effect.as(CompletedRestoreInert())))
+export const RestoreInert = Command.define('RestoreInert', {
+  args: { id: S.String },
+  messages: [CompletedRestoreInert],
+  execute: ({ id }) =>
+    Dom.restoreInert(id).pipe(Effect.as(CompletedRestoreInert())),
+})
 /** Moves focus to the popover panel after opening. */
-export const FocusPanel = Command.define(
-  'FocusPanel',
-  { id: S.String },
-  CompletedFocusPanel,
-)(({ id }) =>
-  Dom.focus(panelSelector(id)).pipe(
-    Effect.ignore,
-    Effect.as(CompletedFocusPanel()),
-  ),
-)
+export const FocusPanel = Command.define('FocusPanel', {
+  args: { id: S.String },
+  messages: [CompletedFocusPanel],
+  execute: ({ id }) =>
+    Dom.focus(panelSelector(id)).pipe(
+      Effect.ignore,
+      Effect.as(CompletedFocusPanel()),
+    ),
+})
 /** Moves focus back to the popover button after closing. */
-export const FocusButton = Command.define(
-  'FocusButton',
-  { id: S.String },
-  CompletedFocusButton,
-)(({ id }) =>
-  Dom.focus(buttonSelector(id)).pipe(
-    Effect.ignore,
-    Effect.as(CompletedFocusButton()),
-  ),
-)
+export const FocusButton = Command.define('FocusButton', {
+  args: { id: S.String },
+  messages: [CompletedFocusButton],
+  execute: ({ id }) =>
+    Dom.focus(buttonSelector(id)).pipe(
+      Effect.ignore,
+      Effect.as(CompletedFocusButton()),
+    ),
+})
 /** Detects whether the popover button moved or the leave animation ended. Whichever comes first; both outcomes signal the Animation submodel that leave is complete. */
 export const DetectMovementOrAnimationEnd = Command.define(
   'DetectMovementOrAnimationEnd',
-  { id: S.String },
-  GotAnimationMessage,
-)(({ id }) =>
-  Effect.raceFirst(
-    Dom.detectElementMovement(buttonSelector(id)).pipe(
-      Effect.as(GotAnimationMessage({ message: AnimationEndedAnimation() })),
-    ),
-    Dom.waitForAnimationSettled(panelSelector(id)).pipe(
-      Effect.as(GotAnimationMessage({ message: AnimationEndedAnimation() })),
-    ),
-  ),
+  {
+    args: { id: S.String },
+    messages: [GotAnimationMessage],
+    execute: ({ id }) =>
+      Effect.raceFirst(
+        Dom.detectElementMovement(buttonSelector(id)).pipe(
+          Effect.as(
+            GotAnimationMessage({ message: AnimationEndedAnimation() }),
+          ),
+        ),
+        Dom.waitForAnimationSettled(panelSelector(id)).pipe(
+          Effect.as(
+            GotAnimationMessage({ message: AnimationEndedAnimation() }),
+          ),
+        ),
+      ),
+  },
 )
 
 const delegateToAnimation = (

@@ -254,30 +254,30 @@ const selectionToParam = <A extends string>(
   )
 }
 
-export const ReplaceFilters = Command.define(
-  'ReplaceFilters',
-  {
+export const ReplaceFilters = Command.define('ReplaceFilters', {
+  args: {
     search: S.Option(S.String),
     sorting: Sorting,
     diet: S.Option(Diet),
     period: S.Option(Period),
   },
-  CompletedReplaceFilters,
-)(fields =>
-  replaceUrl(browseRouter(fields)).pipe(Effect.as(CompletedReplaceFilters())),
-)
+  messages: [CompletedReplaceFilters],
+  execute: fields =>
+    replaceUrl(browseRouter(fields)).pipe(Effect.as(CompletedReplaceFilters())),
+})
 
-const NavigateInternal = Command.define(
-  'NavigateInternal',
-  { url: S.String },
-  CompletedNavigateInternal,
-)(({ url }) => pushUrl(url).pipe(Effect.as(CompletedNavigateInternal())))
+const NavigateInternal = Command.define('NavigateInternal', {
+  args: { url: S.String },
+  messages: [CompletedNavigateInternal],
+  execute: ({ url }) =>
+    pushUrl(url).pipe(Effect.as(CompletedNavigateInternal())),
+})
 
-const LoadExternal = Command.define(
-  'LoadExternal',
-  { href: S.String },
-  CompletedLoadExternal,
-)(({ href }) => load(href).pipe(Effect.as(CompletedLoadExternal())))
+const LoadExternal = Command.define('LoadExternal', {
+  args: { href: S.String },
+  messages: [CompletedLoadExternal],
+  execute: ({ href }) => load(href).pipe(Effect.as(CompletedLoadExternal())),
+})
 
 type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
 const withUpdateReturn = M.withReturnType<UpdateReturn>()

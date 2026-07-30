@@ -6,12 +6,12 @@ import { loadingModel, readyModel, sampleTelemetry } from './main.fixtures'
 import {
   ClickedChartDatum,
   ClickedRefresh,
-  CompletedSyncChart,
   FailedFetchTelemetry,
   SelectedChartMode,
   SelectedPackage,
   SucceededFetchTelemetry,
   SucceededMountChart,
+  SucceededSyncChart,
 } from './message'
 import { TelemetryAsyncData } from './model'
 import { update } from './update'
@@ -22,7 +22,7 @@ test('mounting the chart syncs current telemetry into ECharts', () => {
     given(readyModel),
     message(SucceededMountChart({ hostId: 'chart-host' })),
     Command.expectHas(SyncChart),
-    Command.resolve(SyncChart, CompletedSyncChart()),
+    Command.resolve(SyncChart, SucceededSyncChart()),
   )
 })
 
@@ -31,14 +31,14 @@ test('selecting a chart mode clears selected datum and syncs the chart', () => {
     update,
     given(readyModel),
     message(ClickedChartDatum({ datumId: 'Velocity:Commits:2026-06-15' })),
-    Command.resolve(SyncChart, CompletedSyncChart()),
+    Command.resolve(SyncChart, SucceededSyncChart()),
     message(SelectedChartMode({ chartMode: 'Velocity' })),
     model(model => {
       expect(model.chartMode).toBe('Velocity')
       expect(model.maybeSelectedDatumId._tag).toBe('None')
     }),
     Command.expectHas(SyncChart),
-    Command.resolve(SyncChart, CompletedSyncChart()),
+    Command.resolve(SyncChart, SucceededSyncChart()),
   )
 })
 
@@ -51,7 +51,7 @@ test('selecting a package syncs the selected package into the chart', () => {
       expect(model.selectedPackageId).toBe('Ui')
     }),
     Command.expectHas(SyncChart),
-    Command.resolve(SyncChart, CompletedSyncChart()),
+    Command.resolve(SyncChart, SucceededSyncChart()),
   )
 })
 
@@ -115,6 +115,6 @@ test('successful fetch stores data and syncs when mounted', () => {
       expect(model.telemetry._tag).toBe('Success')
     }),
     Command.expectHas(SyncChart),
-    Command.resolve(SyncChart, CompletedSyncChart()),
+    Command.resolve(SyncChart, SucceededSyncChart()),
   )
 })

@@ -25,12 +25,9 @@ import { FetchHttpClient, HttpClient } from 'effect/unstable/http'
  * ```typescript
  * import { Http } from 'foldkit'
  *
- * const FetchCount = Command.define(
- *   'FetchCount',
- *   SucceededFetchCount,
- *   FailedFetchCount,
- * )(
- *   Effect.gen(function* () {
+ * const FetchCount = Command.define('FetchCount', {
+ *   messages: [SucceededFetchCount, FailedFetchCount],
+ *   execute: Effect.gen(function* () {
  *     const client = yield* HttpClient.HttpClient
  *     const response = yield* client.get('/api/count')
  *     const { count } = yield* S.decodeUnknownEffect(CountResponse)(
@@ -43,7 +40,7 @@ import { FetchHttpClient, HttpClient } from 'effect/unstable/http'
  *     ),
  *     Effect.provide(Http.layer),
  *   ),
- * )
+ * })
  * ```
  */
 export const layer: Layer.Layer<HttpClient.HttpClient> = Layer.provide(

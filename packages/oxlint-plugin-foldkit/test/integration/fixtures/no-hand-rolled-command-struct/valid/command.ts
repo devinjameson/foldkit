@@ -5,7 +5,7 @@ import { m } from 'foldkit/message'
 const CompletedSaveDraft = m('CompletedSaveDraft')
 const saveDraftEffect = Effect.succeed(CompletedSaveDraft())
 
-export const SaveDraft = Command.define(
-  'SaveDraft',
-  CompletedSaveDraft,
-)(saveDraftEffect)
+export const SaveDraft = Command.define('SaveDraft', {
+  messages: [CompletedSaveDraft],
+  execute: saveDraftEffect,
+})

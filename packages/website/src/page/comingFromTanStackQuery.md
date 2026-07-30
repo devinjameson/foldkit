@@ -74,7 +74,7 @@ This snippet also shows where `keepPreviousData` went. `UpdatedQuery` transition
 It is tempting to read the guard as boilerplate you tolerate until something better comes along. It is not. The behavior you want, newest request wins, has to live somewhere. Here it lives in update as a comparison against the Model you can read and test. That visibility is the point, not a tax on it. The shape generalizes: tag each async result with what the Model wanted when you started it, then ignore any result that no longer matches. The same few lines that resolve this fetch race also resolve a debounced search box firing on every keystroke, because the question is identical: is this result still the one the Model is waiting for?
 :::
 
-Judging at receipt is the correctness layer, and it is never optional. There is a second, situational layer: when the superseded request is worth stopping, because the fetch is expensive or the user gets a Cancel button, define the Command with `Command.Interruptible.define` and dispatch its `Interrupt` Command to stop the in-flight work explicitly. The guard stays either way: a result can already be in the queue when the interrupt lands. See [Interrupting Commands](/core/commands#interrupting-commands).
+Judging at receipt is the correctness layer, and it is never optional. There is a second, situational layer: when the superseded request is worth stopping, because the fetch is expensive or the user gets a Cancel button, define the Command with an `interrupt` field and dispatch its `Interrupt` Command to stop the in-flight work explicitly. The guard stays either way: a result can already be in the queue when the interrupt lands. See [Interrupting Commands](/core/commands#interrupting-commands).
 
 ## FAQ
 

@@ -1,17 +1,13 @@
-import { Array, Effect, Function, Predicate, Schema } from 'effect'
+import { Array, Effect, Function, Option, Predicate, Schema } from 'effect'
 
-/** Type-level brand for CommandDefinition values. */
-/* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-export const CommandDefinitionTypeId: unique symbol = Symbol.for(
-  'foldkit/CommandDefinition',
-) as unknown as CommandDefinitionTypeId
+import { CommandDefinitionTypeId, brandAsDefinition } from './brand.js'
+import * as Interruptible from './interruptible/index.js'
 
-/** Type-level brand for CommandDefinition values. */
-export type CommandDefinitionTypeId = typeof CommandDefinitionTypeId
+export { CommandDefinitionTypeId }
 
 /** A named Effect that produces a message, optionally carrying the args used
  *  to construct it. `key` is present on Commands built by
- *  `Interruptible.define`: it addresses the invocation in the runtime's
+ *  `define` with `interrupt`: it addresses the invocation in the runtime's
  *  interrupt registry so a later Interrupt Command can stop it. */
 export type Command<T, E = never, R = never> = [T] extends [Schema.Top]
   ? Readonly<{
@@ -84,108 +80,293 @@ export type CommandDefinition<
   | CommandDefinitionNoArgs<Name, Effect.Effect<ResultMessage, any, any>>
   | CommandDefinitionWithArgs<Name, any, Effect.Effect<ResultMessage, any, any>>
 
+/** Makes a Command interruptible. `true` keys every invocation by the Command
+ *  name, which is what you want when at most one invocation is meaningfully in
+ *  flight. `{ keyFields, toKey }` derives the key part from declared args, so
+ *  invocations that run concurrently can be interrupted independently.
+ *  `keyFields` declares the exact args the Interrupt constructor requires.
+ *  Derive the key part from the Model identity that owns the in-flight work (a
+ *  list item id, an entity id), never from a generated value: update is pure,
+ *  and any invocation you can meaningfully target is already distinguished by
+ *  data in the Model. */
+export type InterruptOption<
+  Args,
+  KeyField extends keyof Args & string = keyof Args & string,
+> =
+  | true
+  | Readonly<{
+      keyFields: Array.NonEmptyReadonlyArray<KeyField>
+      toKey: (keyArgs: Pick<Args, KeyField>) => string
+    }>
+
+/** @internal The shape {@link define} reads at runtime. The public overloads
+ *  carry the precise types; this is only what the implementation destructures. */
+type DefineConfig = Readonly<{
+  args?: Schema.Struct.Fields
+  messages: ReadonlyArray<Schema.Top>
+  interrupt?:
+    | true
+    | Readonly<{
+        keyFields?: ReadonlyArray<string>
+        toKey?: (keyArgs: any) => string
+      }>
+  execute: any
+}>
+
 /**
- * Defines a Command. Two forms, distinguished by whether the second argument
- * is a Schema (a result message) or a record of Schemas (the args declaration).
+ * Defines a Command. Every input is a named field: `args` declares the args
+ * Schema, `messages` lists the Messages this Command can produce, `execute`
+ * holds the Effect, and `interrupt` opts into interruption.
  *
- * The Effect (or effect builder) is bound at definition time. The returned
- * Definition is callable: with no args for a Command that doesn't declare any,
- * or with the declared args record otherwise.
+ * `args` is optional. Omit it and `execute` is a bare Effect and the Definition
+ * is callable as `Definition()`; declare it and `execute` receives the args and
+ * the Definition is callable as `Definition(args)`.
+ *
+ * With `interrupt`, every invocation registers under a key in the runtime's
+ * interrupt registry for the duration of its Effect, and the returned Definition
+ * carries an `Interrupt` constructor that builds an ordinary Command to stop it.
+ * See {@link InterruptOption} for how the key is chosen. Semantics:
+ *
+ * - A key is an address, not a lock. Any number of invocations may run under one
+ *   key concurrently, and dispatching never interrupts anything. Interruption
+ *   only happens when update returns an Interrupt Command.
+ * - `Definition.Interrupt` interrupts every current holder of the key and
+ *   results in `toMessage(outcome)`. The outcome is `Interrupted` when at least
+ *   one holder was stopped (their Messages are guaranteed never to dispatch) or
+ *   `NotFound` when nothing held the key. Name the Message
+ *   `CompletedCancel<CommandName>`.
+ * - To dispatch a replacement after cancelling, sequence through the Interrupt's
+ *   result Message. Commands in one batch run concurrently with no
+ *   execution-order guarantee, so `[Interrupt, Next]` in one list is a race.
+ *
+ * Interruption is for one-shot async work that is structurally a Command (an
+ * in-flight HTTP request, a file read, an upload), fired once and normally left
+ * to finish, where stopping it is the exception. Work whose lifetime is derived
+ * from the Model belongs in a Subscription or ManagedResource instead: the
+ * runtime starts and tears those down as the Model declares them, so there is
+ * no in-flight Command to interrupt.
  *
  * @example No args
  * ```ts
- * const LockScroll = Command.define('LockScroll', CompletedLockScroll)(
- *   Dom.lockScroll.pipe(Effect.as(CompletedLockScroll())),
- * )
+ * const LockScroll = Command.define('LockScroll', {
+ *   messages: [CompletedLockScroll],
+ *   execute: Dom.lockScroll.pipe(Effect.as(CompletedLockScroll())),
+ * })
  * // Call site:
  * LockScroll()
  * ```
  *
  * @example With args
  * ```ts
- * const FetchWeather = Command.define(
- *   'FetchWeather',
- *   { zipCode: S.String },
- *   SucceededFetchWeather,
- *   FailedFetchWeather,
- * )(({ zipCode }) =>
- *   Effect.gen(function* () { ... }),
- * )
+ * const FetchWeather = Command.define('FetchWeather', {
+ *   args: { zipCode: S.String },
+ *   messages: [SucceededFetchWeather, FailedFetchWeather],
+ *   execute: ({ zipCode }) => Effect.gen(function* () { ... }),
+ * })
  * // Call site:
  * FetchWeather({ zipCode: '90210' })
+ * ```
+ *
+ * @example Interruptible, keyed by the Command name
+ * ```ts
+ * const SaveDraft = Command.define('SaveDraft', {
+ *   args: { draftId: S.String, body: S.String },
+ *   messages: [SucceededSaveDraft, FailedSaveDraft],
+ *   interrupt: true,
+ *   execute: ({ draftId, body }) => Effect.gen(function* () { ... }),
+ * })
+ * // Call sites:
+ * SaveDraft({ draftId: 'abc', body })
+ * SaveDraft.Interrupt(outcome => CompletedCancelSaveDraft({ outcome }))
+ * ```
+ *
+ * @example Interruptible, keyed by args
+ * ```ts
+ * const UploadFile = Command.define('UploadFile', {
+ *   args: { uploadId: S.Number, file: S.instanceOf(File) },
+ *   messages: [SucceededUploadFile, FailedUploadFile],
+ *   interrupt: {
+ *     keyFields: ['uploadId'],
+ *     toKey: ({ uploadId }) => String(uploadId),
+ *   },
+ *   execute: ({ uploadId, file }) => Effect.gen(function* () { ... }),
+ * })
+ * // Call sites:
+ * UploadFile({ uploadId: 1, file })
+ * UploadFile.Interrupt({ uploadId: 1 }, outcome =>
+ *   CompletedCancelUploadFile({ uploadId: 1, outcome }),
+ * )
  * ```
  */
 export function define<
   const Name extends string,
-  Results extends ReadonlyArray<Schema.Top>,
+  Fields extends Schema.Struct.Fields,
+  const Messages extends ReadonlyArray<Schema.Top>,
+  const KeyField extends keyof Schema.Schema.Type<Schema.Struct<Fields>> &
+    string,
+  Eff extends Effect.Effect<Schema.Schema.Type<Messages[number]>, any, any>,
 >(
   name: Name,
-  ...results: Results
-): <Eff extends Effect.Effect<Schema.Schema.Type<Results[number]>, any, any>>(
-  effect: Eff,
-) => CommandDefinitionNoArgs<Name, Eff>
+  config: Readonly<{
+    args: Fields
+    messages: Messages
+    interrupt: Readonly<{
+      keyFields: Array.NonEmptyReadonlyArray<KeyField>
+      toKey: (
+        keyArgs: Pick<Schema.Schema.Type<Schema.Struct<Fields>>, KeyField>,
+      ) => string
+    }>
+    execute: (args: Schema.Schema.Type<Schema.Struct<Fields>>) => Eff
+  }>,
+): Interruptible.DefinitionWithArgs<
+  Name,
+  Fields,
+  Pick<Schema.Schema.Type<Schema.Struct<Fields>>, KeyField>,
+  Eff
+>
 
 export function define<
   const Name extends string,
   Fields extends Schema.Struct.Fields,
-  Results extends ReadonlyArray<Schema.Top>,
+  const Messages extends ReadonlyArray<Schema.Top>,
+  Eff extends Effect.Effect<Schema.Schema.Type<Messages[number]>, any, any>,
 >(
   name: Name,
-  args: Fields,
-  ...results: Results
-): <Eff extends Effect.Effect<Schema.Schema.Type<Results[number]>, any, any>>(
-  effectBuilder: (args: Schema.Schema.Type<Schema.Struct<Fields>>) => Eff,
-) => CommandDefinitionWithArgs<Name, Fields, Eff>
+  config: Readonly<{
+    args: Fields
+    messages: Messages
+    interrupt: true
+    execute: (args: Schema.Schema.Type<Schema.Struct<Fields>>) => Eff
+  }>,
+): Interruptible.DefinitionWithArgsNameKeyed<Name, Fields, Eff>
 
-export function define(name: string, ...rest: ReadonlyArray<unknown>): unknown {
-  const [maybeArgs] = rest
+export function define<
+  const Name extends string,
+  Fields extends Schema.Struct.Fields,
+  const Messages extends ReadonlyArray<Schema.Top>,
+  Eff extends Effect.Effect<Schema.Schema.Type<Messages[number]>, any, any>,
+>(
+  name: Name,
+  config: Readonly<{
+    args: Fields
+    messages: Messages
+    interrupt?: never
+    execute: (args: Schema.Schema.Type<Schema.Struct<Fields>>) => Eff
+  }>,
+): CommandDefinitionWithArgs<Name, Fields, Eff>
 
-  const isArgsRecord =
-    Predicate.isObject(maybeArgs) && !Schema.isSchema(maybeArgs)
+export function define<
+  const Name extends string,
+  const Messages extends ReadonlyArray<Schema.Top>,
+  Eff extends Effect.Effect<Schema.Schema.Type<Messages[number]>, any, any>,
+>(
+  name: Name,
+  config: Readonly<{
+    messages: Messages
+    interrupt: true
+    execute: Eff
+  }>,
+): Interruptible.DefinitionNoArgs<Name, Eff>
 
-  if (isArgsRecord) {
-    return (
-      effectBuilder: (args: any) => Effect.Effect<any, any, any>,
-    ): CommandDefinitionWithArgs<string, any, Effect.Effect<any, any, any>> => {
+export function define<
+  const Name extends string,
+  const Messages extends ReadonlyArray<Schema.Top>,
+  Eff extends Effect.Effect<Schema.Schema.Type<Messages[number]>, any, any>,
+>(
+  name: Name,
+  config: Readonly<{
+    messages: Messages
+    interrupt?: never
+    execute: Eff
+  }>,
+): CommandDefinitionNoArgs<Name, Eff>
+
+export function define(name: string, config: DefineConfig): unknown {
+  const isArgsDeclared = Predicate.isNotUndefined(config.args)
+  const maybeInterrupt = Option.fromNullishOr(config.interrupt)
+
+  if (Option.isNone(maybeInterrupt)) {
+    if (isArgsDeclared) {
       const definition = (args: any) => ({
         name,
         args,
-        effect: effectBuilder(args),
+        effect: config.execute(args),
         messageMappers: [],
       })
-      Object.defineProperty(definition, 'name', {
-        value: name,
-        configurable: true,
+      brandAsDefinition(definition, name)
+      return definition
+    } else {
+      const definition = () => ({
+        name,
+        effect: config.execute,
+        messageMappers: [],
       })
-      Object.defineProperty(definition, CommandDefinitionTypeId, {
-        value: CommandDefinitionTypeId,
-      })
-      /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-      return definition as unknown as CommandDefinitionWithArgs<
-        string,
-        any,
-        Effect.Effect<any, any, any>
-      >
+      brandAsDefinition(definition, name)
+      return definition
     }
   }
 
-  return (
-    effect: Effect.Effect<any, any, any>,
-  ): CommandDefinitionNoArgs<string, Effect.Effect<any, any, any>> => {
-    const definition = () => ({ name, effect, messageMappers: [] })
-    Object.defineProperty(definition, 'name', {
-      value: name,
-      configurable: true,
+  const interrupt = maybeInterrupt.value
+  const maybeToKey =
+    Predicate.isObject(interrupt) &&
+    Predicate.hasProperty(interrupt, 'toKey') &&
+    Predicate.isFunction(interrupt.toKey)
+      ? Option.some(interrupt.toKey)
+      : Option.none<(keyArgs: any) => string>()
+
+  if (!isArgsDeclared) {
+    const definition = () => ({
+      name,
+      key: name,
+      effect: Interruptible.__registerKeyWhileRunning(name, config.execute),
+      messageMappers: [],
     })
-    Object.defineProperty(definition, CommandDefinitionTypeId, {
-      value: CommandDefinitionTypeId,
+    brandAsDefinition(definition, name)
+    Object.defineProperty(definition, 'Interrupt', {
+      value: Interruptible.__makeInterruptDefinitionNoArgs(name, name),
     })
-    /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-    return definition as unknown as CommandDefinitionNoArgs<
-      string,
-      Effect.Effect<any, any, any>
-    >
+    return definition
   }
+
+  if (Option.isNone(maybeToKey)) {
+    const definition = (args: any) => ({
+      name,
+      args,
+      key: name,
+      effect: Interruptible.__registerKeyWhileRunning(
+        name,
+        config.execute(args),
+      ),
+      messageMappers: [],
+    })
+    brandAsDefinition(definition, name)
+    Object.defineProperty(definition, 'Interrupt', {
+      value: Interruptible.__makeInterruptDefinitionNoArgs(name, name),
+    })
+    return definition
+  }
+
+  const toKey = maybeToKey.value
+  const toFullKey = (keyArgs: any): string => `${name}:${toKey(keyArgs)}`
+
+  const definition = (args: any) => {
+    const key = toFullKey(args)
+    return {
+      name,
+      args,
+      key,
+      effect: Interruptible.__registerKeyWhileRunning(
+        key,
+        config.execute(args),
+      ),
+      messageMappers: [],
+    }
+  }
+  brandAsDefinition(definition, name)
+  Object.defineProperty(definition, 'Interrupt', {
+    value: Interruptible.__makeInterruptDefinitionWithArgs(name, toFullKey),
+  })
+  return definition
 }
 
 /** Transforms the Effect inside a Command while preserving its name, args, and

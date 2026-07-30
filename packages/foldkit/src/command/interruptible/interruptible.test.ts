@@ -4,12 +4,8 @@ import { expect } from 'vitest'
 import { describe, it } from '@effect/vitest'
 
 import { m } from '../../message/index.js'
-import {
-  __CurrentRegistry,
-  type __Registry,
-  __makeRegistry,
-  define,
-} from './index.js'
+import * as Command from '../index.js'
+import { __CurrentRegistry, type __Registry, __makeRegistry } from './index.js'
 
 const CompletedWork = m('CompletedWork')
 const SucceededTask = m('SucceededTask', { taskId: S.Number })
@@ -19,31 +15,42 @@ const provideRegistry =
   <A, E, R>(effect: Effect.Effect<A, E, R>) =>
     Effect.provideService(effect, __CurrentRegistry, registry)
 
-describe('Interruptible.define', () => {
+describe('interruptible Command.define', () => {
   it('derives the key from args at construction, prefixed by the Command name', () => {
-    const RunTask = define(
-      'RunTask',
-      { taskId: S.Number },
-      ({ taskId }: { taskId: number }) => String(taskId),
-      SucceededTask,
-    )(({ taskId }) => Effect.succeed(SucceededTask({ taskId })))
+    const RunTask = Command.define('RunTask', {
+      args: { taskId: S.Number, label: S.String },
+      messages: [SucceededTask],
+      interrupt: {
+        keyFields: ['taskId'],
+        toKey: ({ taskId }) => taskId.toString(),
+      },
+      execute: ({ taskId }) => Effect.succeed(SucceededTask({ taskId })),
+    })
 
-    const instance = RunTask({ taskId: 7 })
+    const instance = RunTask({ taskId: 7, label: 'seven' })
     expect(instance.name).toBe('RunTask')
-    expect(instance.args).toEqual({ taskId: 7 })
+    expect(instance.args).toEqual({ taskId: 7, label: 'seven' })
     expect(instance.key).toBe('RunTask:7')
 
     const interrupt = RunTask.Interrupt({ taskId: 7 }, outcome => outcome)
     expect(interrupt.name).toBe('RunTask.Interrupt')
     expect(interrupt.args).toEqual({ taskId: 7 })
     expect(interrupt.interruptsKey).toBe('RunTask:7')
+
+    if (false) {
+      // @ts-expect-error taskId is required to derive the interrupt key
+      RunTask.Interrupt({}, outcome => outcome)
+      // @ts-expect-error label is not an interrupt key field
+      RunTask.Interrupt({ label: 'seven' }, outcome => outcome)
+    }
   })
 
   it('uses the Command name as the key on the no-args form', () => {
-    const SyncLibrary = define(
-      'SyncLibrary',
-      CompletedWork,
-    )(Effect.succeed(CompletedWork()))
+    const SyncLibrary = Command.define('SyncLibrary', {
+      messages: [CompletedWork],
+      interrupt: true,
+      execute: Effect.succeed(CompletedWork()),
+    })
 
     const instance = SyncLibrary()
     expect(instance.name).toBe('SyncLibrary')
@@ -55,11 +62,12 @@ describe('Interruptible.define', () => {
   })
 
   it('uses the Command name as the key on the with-args form when toKey is omitted', () => {
-    const SaveDraft = define(
-      'SaveDraft',
-      { taskId: S.Number },
-      SucceededTask,
-    )(({ taskId }) => Effect.succeed(SucceededTask({ taskId })))
+    const SaveDraft = Command.define('SaveDraft', {
+      args: { taskId: S.Number },
+      messages: [SucceededTask],
+      interrupt: true,
+      execute: ({ taskId }) => Effect.succeed(SucceededTask({ taskId })),
+    })
 
     const instance = SaveDraft({ taskId: 7 })
     expect(instance.name).toBe('SaveDraft')
@@ -77,11 +85,13 @@ describe('Interruptible.define', () => {
       Effect.gen(function* () {
         const registry = __makeRegistry()
 
-        const SaveDraft = define(
-          'SaveDraft',
-          { taskId: S.Number },
-          SucceededTask,
-        )(({ taskId }) => Effect.as(Effect.never, SucceededTask({ taskId })))
+        const SaveDraft = Command.define('SaveDraft', {
+          args: { taskId: S.Number },
+          messages: [SucceededTask],
+          interrupt: true,
+          execute: ({ taskId }) =>
+            Effect.as(Effect.never, SucceededTask({ taskId })),
+        })
 
         const fiber = yield* Effect.forkChild(
           SaveDraft({ taskId: 7 }).effect.pipe(provideRegistry(registry)),
@@ -112,11 +122,12 @@ describe('Interruptible.define', () => {
       Effect.gen(function* () {
         const registry = __makeRegistry()
 
-        const SaveDraft = define(
-          'SaveDraft',
-          { taskId: S.Number },
-          SucceededTask,
-        )(({ taskId }) => Effect.succeed(SucceededTask({ taskId })))
+        const SaveDraft = Command.define('SaveDraft', {
+          args: { taskId: S.Number },
+          messages: [SucceededTask],
+          interrupt: true,
+          execute: ({ taskId }) => Effect.succeed(SucceededTask({ taskId })),
+        })
 
         const message = yield* SaveDraft({ taskId: 7 }).effect.pipe(
           provideRegistry(registry),
@@ -137,15 +148,15 @@ describe('Interruptible.define', () => {
       Effect.gen(function* () {
         const registry = __makeRegistry()
 
-        const SaveDraft = define(
-          'SaveDraft',
-          { taskId: S.Number },
-          SucceededTask,
-        )(({ taskId }) =>
-          Effect.flatMap(Effect.fail('boom'), () =>
-            Effect.succeed(SucceededTask({ taskId })),
-          ),
-        )
+        const SaveDraft = Command.define('SaveDraft', {
+          args: { taskId: S.Number },
+          messages: [SucceededTask],
+          interrupt: true,
+          execute: ({ taskId }) =>
+            Effect.flatMap(Effect.fail('boom'), () =>
+              Effect.succeed(SucceededTask({ taskId })),
+            ),
+        })
 
         const exit = yield* Effect.exit(
           SaveDraft({ taskId: 7 }).effect.pipe(provideRegistry(registry)),
@@ -163,10 +174,11 @@ describe('Interruptible.define', () => {
       const registry = __makeRegistry()
       let didProduceResult = false
 
-      const RunForever = define(
-        'RunForever',
-        CompletedWork,
-      )(Effect.as(Effect.never, CompletedWork()))
+      const RunForever = Command.define('RunForever', {
+        messages: [CompletedWork],
+        interrupt: true,
+        execute: Effect.as(Effect.never, CompletedWork()),
+      })
 
       const fiber = yield* Effect.forkChild(
         RunForever().effect.pipe(
@@ -203,10 +215,11 @@ describe('Interruptible.define', () => {
     Effect.gen(function* () {
       const registry = __makeRegistry()
 
-      const RunForever = define(
-        'RunForever',
-        CompletedWork,
-      )(Effect.as(Effect.never, CompletedWork()))
+      const RunForever = Command.define('RunForever', {
+        messages: [CompletedWork],
+        interrupt: true,
+        execute: Effect.as(Effect.never, CompletedWork()),
+      })
 
       const outcome = yield* RunForever.Interrupt(
         outcome => outcome,
@@ -220,12 +233,15 @@ describe('Interruptible.define', () => {
     Effect.gen(function* () {
       const registry = __makeRegistry()
 
-      const RunTask = define(
-        'RunTask',
-        { taskId: S.Number },
-        ({ taskId }: { taskId: number }) => String(taskId),
-        SucceededTask,
-      )(({ taskId }) => Effect.succeed(SucceededTask({ taskId })))
+      const RunTask = Command.define('RunTask', {
+        args: { taskId: S.Number },
+        messages: [SucceededTask],
+        interrupt: {
+          keyFields: ['taskId'],
+          toKey: ({ taskId }) => String(taskId),
+        },
+        execute: ({ taskId }) => Effect.succeed(SucceededTask({ taskId })),
+      })
 
       const message = yield* RunTask({ taskId: 1 }).effect.pipe(
         provideRegistry(registry),
@@ -246,20 +262,22 @@ describe('Interruptible.define', () => {
       const registry = __makeRegistry()
       const interruptedTaskIds: Array<number> = []
 
-      const RunTask = define(
-        'RunTask',
-        { taskId: S.Number },
-        ({ taskId }: { taskId: number }) => String(taskId),
-        SucceededTask,
-      )(({ taskId }) =>
-        Effect.onInterrupt(
-          Effect.as(Effect.never, SucceededTask({ taskId })),
-          () =>
-            Effect.sync(() => {
-              interruptedTaskIds.push(taskId)
-            }),
-        ),
-      )
+      const RunTask = Command.define('RunTask', {
+        args: { taskId: S.Number },
+        messages: [SucceededTask],
+        interrupt: {
+          keyFields: ['taskId'],
+          toKey: ({ taskId }) => String(taskId),
+        },
+        execute: ({ taskId }) =>
+          Effect.onInterrupt(
+            Effect.as(Effect.never, SucceededTask({ taskId })),
+            () =>
+              Effect.sync(() => {
+                interruptedTaskIds.push(taskId)
+              }),
+          ),
+      })
 
       const firstFiber = yield* Effect.forkChild(
         RunTask({ taskId: 1 }).effect.pipe(provideRegistry(registry)),
@@ -296,11 +314,10 @@ describe('Interruptible.define', () => {
         const events: Array<string> = []
         let runCount = 0
 
-        const Watch = define(
-          'Watch',
-          CompletedWork,
-        )(
-          Effect.suspend(() => {
+        const Watch = Command.define('Watch', {
+          messages: [CompletedWork],
+          interrupt: true,
+          execute: Effect.suspend(() => {
             runCount = runCount + 1
             const runId = runCount
             events.push(`started:${runId}`)
@@ -312,7 +329,7 @@ describe('Interruptible.define', () => {
                 }),
             )
           }),
-        )
+        })
 
         const firstFiber = yield* Effect.forkChild(
           Watch().effect.pipe(provideRegistry(registry)),
@@ -347,14 +364,13 @@ describe('Interruptible.define', () => {
     Effect.gen(function* () {
       const registry = __makeRegistry()
 
-      const FailingTask = define(
-        'FailingTask',
-        CompletedWork,
-      )(
-        Effect.flatMap(Effect.fail('boom'), () =>
+      const FailingTask = Command.define('FailingTask', {
+        messages: [CompletedWork],
+        interrupt: true,
+        execute: Effect.flatMap(Effect.fail('boom'), () =>
           Effect.succeed(CompletedWork()),
         ),
-      )
+      })
 
       const exit = yield* Effect.exit(
         FailingTask().effect.pipe(provideRegistry(registry)),

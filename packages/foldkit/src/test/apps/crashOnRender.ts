@@ -51,10 +51,10 @@ export const reloadedSources: ReadonlyArray<RawSource> = [
   { kind: 'Book', id: '' },
 ]
 
-export const ReloadSources = Command.define(
-  'ReloadSources',
-  LoadedSources,
-)(Effect.succeed(LoadedSources({ sources: reloadedSources })))
+export const ReloadSources = Command.define('ReloadSources', {
+  messages: [LoadedSources],
+  execute: Effect.succeed(LoadedSources({ sources: reloadedSources })),
+})
 
 // INIT
 

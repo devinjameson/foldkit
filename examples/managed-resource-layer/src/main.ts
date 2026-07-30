@@ -92,21 +92,19 @@ export type Message = typeof Message.Type
 
 // COMMAND
 
-export const Compute = Command.define(
-  'Compute',
-  { value: S.Number },
-  ComputedSquare,
-  SkippedCompute,
-)(({ value }) =>
-  Effect.gen(function* () {
-    const engine = yield* Engine.get
-    return ComputedSquare({ result: engine.square(value) })
-  }).pipe(
-    Effect.catchTag('ResourceNotAvailable', () =>
-      Effect.succeed(SkippedCompute()),
+export const Compute = Command.define('Compute', {
+  args: { value: S.Number },
+  messages: [ComputedSquare, SkippedCompute],
+  execute: ({ value }) =>
+    Effect.gen(function* () {
+      const engine = yield* Engine.get
+      return ComputedSquare({ result: engine.square(value) })
+    }).pipe(
+      Effect.catchTag('ResourceNotAvailable', () =>
+        Effect.succeed(SkippedCompute()),
+      ),
     ),
-  ),
-)
+})
 
 // UPDATE
 

@@ -35,7 +35,7 @@ type AnyCommandInstance<ResultMessage = unknown> = Readonly<{
 
 /** A Command Definition accepted by `Story.Command.resolve` as a name matcher:
  *  a plain `Command.define` Definition or an interruptible
- *  `Command.Interruptible.define` Definition. Both carry the
+ *  interruptible `Command.define` Definition. Both carry the
  *  `CommandDefinitionTypeId` brand and match by name at runtime, so `resolve`
  *  accepts either, the way `expectHas`/`expectExact` already do. */
 type ResolvableCommandDefinition<Name extends string, ResultMessage> =

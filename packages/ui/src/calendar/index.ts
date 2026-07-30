@@ -193,16 +193,15 @@ const gridSelector = (modelId: string): string => idSelector(gridId(modelId))
 
 /** Focuses the calendar grid container. Parent components like DatePicker
  * dispatch this after opening to hand focus to the grid's keyboard layer. */
-export const FocusGrid = Command.define(
-  'FocusGrid',
-  { id: S.String },
-  CompletedFocusGrid,
-)(({ id }) =>
-  Dom.focus(gridSelector(id)).pipe(
-    Effect.ignore,
-    Effect.as(CompletedFocusGrid()),
-  ),
-)
+export const FocusGrid = Command.define('FocusGrid', {
+  args: { id: S.String },
+  messages: [CompletedFocusGrid],
+  execute: ({ id }) =>
+    Dom.focus(gridSelector(id)).pipe(
+      Effect.ignore,
+      Effect.as(CompletedFocusGrid()),
+    ),
+})
 
 /** Programmatically selects a date on the calendar, committing it as the
  * chosen value and moving the cursor onto it. Use this in controlled-mode

@@ -100,19 +100,21 @@ const MILLISECONDS_PER_MEGABYTE = 100
 export const UploadKey = S.Struct({ uploadId: S.Number })
 export type UploadKey = typeof UploadKey.Type
 
-export const UploadFile = Command.Interruptible.define(
-  'UploadFile',
-  { ...UploadKey.fields, sizeMegabytes: S.Number },
-  ({ uploadId }: UploadKey) => String(uploadId),
-  SucceededUploadFile,
-)(({ uploadId, sizeMegabytes }) =>
-  Effect.gen(function* () {
-    yield* Effect.sleep(
-      Duration.millis(sizeMegabytes * MILLISECONDS_PER_MEGABYTE),
-    )
-    return SucceededUploadFile({ uploadId })
-  }),
-)
+export const UploadFile = Command.define('UploadFile', {
+  args: { ...UploadKey.fields, sizeMegabytes: S.Number },
+  messages: [SucceededUploadFile],
+  interrupt: {
+    keyFields: ['uploadId'],
+    toKey: ({ uploadId }) => String(uploadId),
+  },
+  execute: ({ uploadId, sizeMegabytes }) =>
+    Effect.gen(function* () {
+      yield* Effect.sleep(
+        Duration.millis(sizeMegabytes * MILLISECONDS_PER_MEGABYTE),
+      )
+      return SucceededUploadFile({ uploadId })
+    }),
+})
 
 export const CancelUploadFile = ({ uploadId }: UploadKey) =>
   UploadFile.Interrupt({ uploadId }, outcome =>

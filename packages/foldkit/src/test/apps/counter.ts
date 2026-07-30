@@ -44,18 +44,16 @@ export type Message = typeof Message.Type
 
 // COMMAND
 
-export const FetchCount = Command.define(
-  'FetchCount',
-  SucceededFetchCount,
-  FailedFetchCount,
-)(Effect.sync(() => SucceededFetchCount({ count: 0 })))
+export const FetchCount = Command.define('FetchCount', {
+  messages: [SucceededFetchCount, FailedFetchCount],
+  execute: Effect.sync(() => SucceededFetchCount({ count: 0 })),
+})
 
-export const FetchCountById = Command.define(
-  'FetchCountById',
-  { id: S.Number },
-  SucceededFetchCount,
-  FailedFetchCount,
-)(({ id }) => Effect.sync(() => SucceededFetchCount({ count: id })))
+export const FetchCountById = Command.define('FetchCountById', {
+  args: { id: S.Number },
+  messages: [SucceededFetchCount, FailedFetchCount],
+  execute: ({ id }) => Effect.sync(() => SucceededFetchCount({ count: id })),
+})
 
 // INIT
 

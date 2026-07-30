@@ -147,7 +147,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         [],
       ],
 
-      CompletedSyncChart: () => [
+      SucceededSyncChart: () => [
         evo(model, {
           maybeChartError: () => Option.none(),
         }),

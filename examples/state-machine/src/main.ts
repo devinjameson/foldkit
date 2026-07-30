@@ -119,18 +119,17 @@ export type Message = typeof Message.Type
 
 const PLACE_ORDER_DELAY = Duration.seconds(1)
 
-export const PlaceOrder = Command.define(
-  'PlaceOrder',
-  { isShippingRequired: S.Boolean },
-  SucceededPlaceOrder,
-)(({ isShippingRequired }) =>
-  Effect.gen(function* () {
-    yield* Effect.sleep(PLACE_ORDER_DELAY)
-    return SucceededPlaceOrder({
-      orderId: isShippingRequired ? 'SHIP-1001' : 'DIGI-1001',
-    })
-  }),
-)
+export const PlaceOrder = Command.define('PlaceOrder', {
+  args: { isShippingRequired: S.Boolean },
+  messages: [SucceededPlaceOrder],
+  execute: ({ isShippingRequired }) =>
+    Effect.gen(function* () {
+      yield* Effect.sleep(PLACE_ORDER_DELAY)
+      return SucceededPlaceOrder({
+        orderId: isShippingRequired ? 'SHIP-1001' : 'DIGI-1001',
+      })
+    }),
+})
 
 // MACHINE
 

@@ -117,26 +117,25 @@ const isEmailOnWaitlist = (email: string): Effect.Effect<boolean> =>
     return Array.contains(EMAILS_ON_WAITLIST, email.toLowerCase())
   })
 
-export const ValidateEmail = Command.define(
-  'ValidateEmail',
-  { email: S.String },
-  ValidatedEmail,
-)(({ email }) =>
-  Effect.gen(function* () {
-    if (yield* isEmailOnWaitlist(email)) {
-      return ValidatedEmail({
-        field: Invalid({
-          value: email,
-          errors: ['This email is already on our waitlist'],
-        }),
-      })
-    } else {
-      return ValidatedEmail({
-        field: Valid({ value: email }),
-      })
-    }
-  }),
-)
+export const ValidateEmail = Command.define('ValidateEmail', {
+  args: { email: S.String },
+  messages: [ValidatedEmail],
+  execute: ({ email }) =>
+    Effect.gen(function* () {
+      if (yield* isEmailOnWaitlist(email)) {
+        return ValidatedEmail({
+          field: Invalid({
+            value: email,
+            errors: ['This email is already on our waitlist'],
+          }),
+        })
+      } else {
+        return ValidatedEmail({
+          field: Valid({ value: email }),
+        })
+      }
+    }),
+})
 
 const validateName = validate(nameRules)
 const validateEmail = validate(emailRules)
@@ -259,24 +258,23 @@ export const update = (
 
 const FAKE_API_DELAY_MS = 500
 
-export const SubmitForm = Command.define(
-  'SubmitForm',
-  { name: S.String, email: S.String, messageText: S.String },
-  SubmittedForm,
-)(({ name, email, messageText }) =>
-  Effect.gen(function* () {
-    yield* Effect.sleep(`${FAKE_API_DELAY_MS} millis`)
+export const SubmitForm = Command.define('SubmitForm', {
+  args: { name: S.String, email: S.String, messageText: S.String },
+  messages: [SubmittedForm],
+  execute: ({ name, email, messageText }) =>
+    Effect.gen(function* () {
+      yield* Effect.sleep(`${FAKE_API_DELAY_MS} millis`)
 
-    const success = yield* Random.nextBoolean
+      const success = yield* Random.nextBoolean
 
-    return SubmittedForm({
-      success,
-      name,
-      email,
-      messageText,
-    })
-  }),
-)
+      return SubmittedForm({
+        success,
+        name,
+        email,
+        messageText,
+      })
+    }),
+})
 
 // VIEW
 

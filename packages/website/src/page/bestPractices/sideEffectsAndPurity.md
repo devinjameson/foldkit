@@ -72,6 +72,6 @@ Instead, return a Command that generates the value and sends it back as a Messag
 
 ::Snippet{name="pureUpdateGood" label="good example"}
 
-This “request/response” pattern keeps `update` pure. The `RequestedApple` handler always returns the same result. It just emits a Command. The actual random generation happens in the Effect, and the result comes back via `GeneratedApple`.
+This “request/response” pattern keeps `update` pure. The `RequestedApple` handler always returns the same result. It just emits a Command. The actual random generation happens in the Effect, and the result comes back via `CompletedGenerateApplePosition`.
 
 See the [Snake example](https://github.com/foldkit/foldkit/blob/main/examples/snake/src/main.ts#L220-L234) for a complete implementation of this pattern.

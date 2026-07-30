@@ -212,7 +212,6 @@ Alongside the greps, eyeball each file's imports. Every symbol you imported shou
 ## Commands
 
 - [ ] Every Command identity defined with `Command.define` and assigned to a PascalCase constant
-- [ ] Every `Command.define` includes result Message schemas after the name
 - [ ] No inline `Command.define` in pipe chains. Always stored as a constant
 - [ ] Definitions colocated with the update that produces them
 - [ ] Every _fallible_ Command catches all errors: `Effect.catch(() => Effect.succeed(FailedX(...)))`. Infallible Effects (`Clock.currentTimeMillis`, `Random.nextIntBetween`, `Effect.uuid`, `Calendar.today.local`) do NOT need catch. If the type system shows no error channel, there's nothing to catch, and no paired `Failed*` Message is needed either.

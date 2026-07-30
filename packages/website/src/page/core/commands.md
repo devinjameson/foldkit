@@ -20,7 +20,7 @@ So far, update has been returning an empty Commands array. Let’s put it to use
 
 Look at what update does when `ClickedResetAfterDelay` arrives: it returns the Model unchanged, along with `DelayReset()`, a Command that describes a one-second delay. The update function didn’t start a timer. It handed the runtime a description that says “wait one second, then send me `CompletedDelayReset`.” The runtime does the waiting. When the delay fires, `CompletedDelayReset` arrives as a new Message, and update resets the count to zero.
 
-A Command is a struct with three fields: `name`, identifying what the Command does; `args`, the typed input record (when declared); and `effect`, the Effect the runtime executes. You create one in two curried steps: first, declare the identity and shape with `Command.define`; then call the result with an Effect (or with a builder that receives the typed args, when args are declared) to produce the Command value.
+A Command is a struct with three fields: `name`, identifying what the Command does; `args`, the typed input record (when declared); and `effect`, the Effect the runtime executes. You declare one with `Command.define`, which takes the name and then a config object whose fields name each input: `args` declares the args Schema, `messages` lists every Message the Command can produce, and `execute` holds the Effect (or a builder that receives the typed args, when args are declared).
 
 This is the same idea as Messages. Just as `m()` gives a Message a name that the type system knows, `Command.define` gives a Command a name and shape that DevTools can display, tests can reference, and traces can track. The name and args aren’t debug strings. They’re first-class values.
 
@@ -60,7 +60,9 @@ Args appear in DevTools alongside the Command name and let Story/Scene tests ass
 
 ## Interrupting Commands
 
-Commands normally run to completion. Sometimes the user changes their mind first, for example an upload they no longer want or a search superseded by new input. `Command.Interruptible.define` declares a Command that can be stopped mid-flight. It works like `Command.define` with one addition: a key that identifies the invocation. The key function is stated once at the definition and maps the args to whatever distinguishes invocations; Foldkit prefixes it with the Command name automatically, so keys never collide across definitions. A Command with no declared args needs no key function at all: its key is the Command name. The key function is optional even with declared args: omit it when at most one invocation is meaningfully in flight, and the key falls back to the Command name, so `Interrupt` takes only `toMessage`; provide it, derived from the owning Model identity, when invocations run concurrently and must be interrupted independently.
+Commands normally run to completion. Sometimes the user changes their mind first, for example an upload they no longer want or a search superseded by new input. Adding an `interrupt` field to the config declares a Command that can be stopped mid-flight, and gives the Definition an `Interrupt` constructor.
+
+`interrupt` chooses the key that identifies the invocation. `interrupt: true` keys every invocation by the Command name, which is what you want when at most one invocation is meaningfully in flight; `Interrupt` then takes only `toMessage`. `interrupt: { keyFields, toKey }` selects the args that distinguish invocations and maps them to the key part, so concurrent invocations can be interrupted independently. The selected fields become the exact args required by `Interrupt`. Foldkit prefixes the Command name automatically, so keys never collide across definitions. Derive the key part from the Model identity that owns the in-flight work. A Command with no declared args has nothing to derive a key from, so `interrupt: true` is its only option.
 
 ::Snippet{name="commandInterruptible" label="interruptible command example"}
 

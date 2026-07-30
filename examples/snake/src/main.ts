@@ -42,16 +42,19 @@ export const TickedClock = m('TickedClock')
 export const PressedKey = m('PressedKey', { key: S.String })
 export const PausedGame = m('PausedGame')
 export const RestartedGame = m('RestartedGame')
-export const GeneratedApplePosition = m('GeneratedApplePosition', {
-  position: Position.Position,
-})
+export const CompletedGenerateApplePosition = m(
+  'CompletedGenerateApplePosition',
+  {
+    position: Position.Position,
+  },
+)
 
 export const Message = S.Union([
   TickedClock,
   PressedKey,
   PausedGame,
   RestartedGame,
-  GeneratedApplePosition,
+  CompletedGenerateApplePosition,
 ])
 export type Message = typeof Message.Type
 
@@ -222,7 +225,7 @@ export const update = (
         ]
       },
 
-      GeneratedApplePosition: ({ position }) => [
+      CompletedGenerateApplePosition: ({ position }) => [
         evo(model, {
           apple: () => position,
         }),
@@ -233,15 +236,14 @@ export const update = (
 
 // COMMAND
 
-export const GenerateApplePosition = Command.define(
-  'GenerateApplePosition',
-  { snake: Snake.Snake },
-  GeneratedApplePosition,
-)(({ snake }) =>
-  Apple.generatePosition(snake).pipe(
-    Effect.map(position => GeneratedApplePosition({ position })),
-  ),
-)
+export const GenerateApplePosition = Command.define('GenerateApplePosition', {
+  args: { snake: Snake.Snake },
+  messages: [CompletedGenerateApplePosition],
+  execute: ({ snake }) =>
+    Apple.generatePosition(snake).pipe(
+      Effect.map(position => CompletedGenerateApplePosition({ position })),
+    ),
+})
 
 // SUBSCRIPTION
 

@@ -1,22 +1,16 @@
 import { Effect, Match as M, Option, Schema as S } from 'effect'
 import { KeyValueStore } from 'effect/unstable/persistence'
 import { Command, Runtime } from 'foldkit'
-import { replaceUrl } from 'foldkit/navigation'
 import { Url } from 'foldkit/url'
 
 import { BrowserKeyValueStore } from '@effect/platform-browser'
 
 import { SESSION_STORAGE_KEY } from './constant'
 import { Session } from './domain/session'
-import { CompletedNavigateInternal, Message } from './message'
+import { Message } from './message'
 import { LoggedIn, LoggedOut, Model } from './model'
-import {
-  DashboardRoute,
-  LoginRoute,
-  dashboardRouter,
-  loginRouter,
-  urlToAppRoute,
-} from './route'
+import { DashboardRoute, LoginRoute, urlToAppRoute } from './route'
+import { RedirectToDashboard, RedirectToLogin } from './update'
 
 // FLAGS
 
@@ -42,18 +36,6 @@ export const flags: Effect.Effect<Flags> = Effect.gen(function* () {
 )
 
 export type Flags = typeof Flags.Type
-
-// COMMAND
-
-const RedirectToLogin = Command.define(
-  'RedirectToLogin',
-  CompletedNavigateInternal,
-)(replaceUrl(loginRouter()).pipe(Effect.as(CompletedNavigateInternal())))
-
-const RedirectToDashboard = Command.define(
-  'RedirectToDashboard',
-  CompletedNavigateInternal,
-)(replaceUrl(dashboardRouter()).pipe(Effect.as(CompletedNavigateInternal())))
 
 // INIT
 

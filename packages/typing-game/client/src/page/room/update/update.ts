@@ -37,10 +37,10 @@ import { Model, RoomAsyncData } from '../model'
 import { validateUserTextInput } from '../userGameText'
 import { handleRoomUpdated } from './handleRoomUpdates'
 
-const NavigateHome = Command.define(
-  'NavigateHome',
-  CompletedNavigateHome,
-)(pushUrl(homeRouter()).pipe(Effect.as(CompletedNavigateHome())))
+const NavigateHome = Command.define('NavigateHome', {
+  messages: [CompletedNavigateHome],
+  execute: pushUrl(homeRouter()).pipe(Effect.as(CompletedNavigateHome())),
+})
 
 export type UpdateReturn = readonly [
   Model,

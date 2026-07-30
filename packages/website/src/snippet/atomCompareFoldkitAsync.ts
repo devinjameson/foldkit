@@ -27,12 +27,9 @@ type Message = typeof Message.Type
 // COMMAND
 
 // Api is an Effect service; Api.Default is its layer.
-const FetchUser = Command.define(
-  'FetchUser',
-  SucceededLoadUser,
-  FailedLoadUser,
-)(
-  Effect.gen(function* () {
+const FetchUser = Command.define('FetchUser', {
+  messages: [SucceededLoadUser, FailedLoadUser],
+  execute: Effect.gen(function* () {
     const api = yield* Api
     const user = yield* api.getUser()
     return SucceededLoadUser({ user })
@@ -40,7 +37,7 @@ const FetchUser = Command.define(
     Effect.catch(error => Effect.succeed(FailedLoadUser({ error }))),
     Effect.provide(Api.Default),
   ),
-)
+})
 
 // UPDATE
 

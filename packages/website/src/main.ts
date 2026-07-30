@@ -1041,181 +1041,175 @@ export const update = (
 
 // COMMAND
 
-const InjectAnalytics = Command.define(
-  'InjectAnalytics',
-  CompletedInjectAnalytics,
-)(Effect.sync(() => inject()).pipe(Effect.as(CompletedInjectAnalytics())))
+const InjectAnalytics = Command.define('InjectAnalytics', {
+  messages: [CompletedInjectAnalytics],
+  execute: Effect.sync(() => inject()).pipe(
+    Effect.as(CompletedInjectAnalytics()),
+  ),
+})
 
-const InjectSpeedInsights = Command.define(
-  'InjectSpeedInsights',
-  CompletedInjectSpeedInsights,
-)(
-  Effect.sync(() => SpeedInsights.injectSpeedInsights()).pipe(
+const InjectSpeedInsights = Command.define('InjectSpeedInsights', {
+  messages: [CompletedInjectSpeedInsights],
+  execute: Effect.sync(() => SpeedInsights.injectSpeedInsights()).pipe(
     Effect.as(CompletedInjectSpeedInsights()),
   ),
-)
+})
 
-const CopySnippet = Command.define(
-  'CopySnippet',
-  { text: S.String },
-  SucceededCopySnippet,
-  FailedCopySnippet,
-)(({ text }) =>
-  Effect.tryPromise({
-    try: () => navigator.clipboard.writeText(text),
-    catch: () => new Error('Failed to copy to clipboard'),
-  }).pipe(
-    Effect.as(SucceededCopySnippet({ text })),
-    Effect.catch(() => Effect.succeed(FailedCopySnippet())),
-  ),
-)
+const CopySnippet = Command.define('CopySnippet', {
+  args: { text: S.String },
+  messages: [SucceededCopySnippet, FailedCopySnippet],
+  execute: ({ text }) =>
+    Effect.tryPromise({
+      try: () => navigator.clipboard.writeText(text),
+      catch: () => new Error('Failed to copy to clipboard'),
+    }).pipe(
+      Effect.as(SucceededCopySnippet({ text })),
+      Effect.catch(() => Effect.succeed(FailedCopySnippet())),
+    ),
+})
 
-const CopyLink = Command.define(
-  'CopyLink',
-  { url: S.String },
-  SucceededCopyLink,
-  FailedCopyLink,
-)(({ url }) =>
-  Effect.tryPromise({
-    try: () => navigator.clipboard.writeText(url),
-    catch: () => new Error('Failed to copy link to clipboard'),
-  }).pipe(
-    Effect.as(SucceededCopyLink()),
-    Effect.catch(() => Effect.succeed(FailedCopyLink())),
-  ),
-)
+const CopyLink = Command.define('CopyLink', {
+  args: { url: S.String },
+  messages: [SucceededCopyLink, FailedCopyLink],
+  execute: ({ url }) =>
+    Effect.tryPromise({
+      try: () => navigator.clipboard.writeText(url),
+      catch: () => new Error('Failed to copy link to clipboard'),
+    }).pipe(
+      Effect.as(SucceededCopyLink()),
+      Effect.catch(() => Effect.succeed(FailedCopyLink())),
+    ),
+})
 
 const COPY_INDICATOR_DURATION = '2 seconds'
 
-const HideCopiedIndicator = Command.define(
-  'HideCopiedIndicator',
-  { text: S.String },
-  HidCopiedIndicator,
-)(({ text }) =>
-  Effect.sleep(COPY_INDICATOR_DURATION).pipe(
-    Effect.as(HidCopiedIndicator({ text })),
-  ),
-)
+const HideCopiedIndicator = Command.define('HideCopiedIndicator', {
+  args: { text: S.String },
+  messages: [HidCopiedIndicator],
+  execute: ({ text }) =>
+    Effect.sleep(COPY_INDICATOR_DURATION).pipe(
+      Effect.as(HidCopiedIndicator({ text })),
+    ),
+})
 
-const ScrollToTop = Command.define(
-  'ScrollToTop',
-  CompletedScrollToTop,
-)(
-  Effect.sync(() => {
+const ScrollToTop = Command.define('ScrollToTop', {
+  messages: [CompletedScrollToTop],
+  execute: Effect.sync(() => {
     window.scrollTo({ top: 0, behavior: 'instant' })
     return CompletedScrollToTop()
   }),
-)
+})
 
-const ScrollToAnchor = Command.define(
-  'ScrollToAnchor',
-  { hash: S.String },
-  CompletedScrollToAnchor,
-)(({ hash }) =>
-  Effect.gen(function* () {
-    const target = `#${CSS.escape(hash)}`
-    yield* Dom.scrollIntoViewAfterPaint(target, { block: 'start' })
-    yield* Dom.focus(target, { preventScroll: true, makeFocusable: true })
-  }).pipe(Effect.ignore, Effect.as(CompletedScrollToAnchor())),
-)
+const ScrollToAnchor = Command.define('ScrollToAnchor', {
+  args: { hash: S.String },
+  messages: [CompletedScrollToAnchor],
+  execute: ({ hash }) =>
+    Effect.gen(function* () {
+      const target = `#${CSS.escape(hash)}`
+      yield* Dom.scrollIntoViewAfterPaint(target, { block: 'start' })
+      yield* Dom.focus(target, { preventScroll: true, makeFocusable: true })
+    }).pipe(Effect.ignore, Effect.as(CompletedScrollToAnchor())),
+})
 
 const ScrollSidebarActiveLinkIntoView = Command.define(
   'ScrollSidebarActiveLinkIntoView',
-  CompletedScrollSidebarActiveLinkIntoView,
-)(
-  Dom.scrollIntoViewIfNotVisible(
-    `#${DOCS_SIDEBAR_NAV_ID} [aria-current="page"]`,
-  ).pipe(Effect.ignore, Effect.as(CompletedScrollSidebarActiveLinkIntoView())),
+  {
+    messages: [CompletedScrollSidebarActiveLinkIntoView],
+    execute: Dom.scrollIntoViewIfNotVisible(
+      `#${DOCS_SIDEBAR_NAV_ID} [aria-current="page"]`,
+    ).pipe(
+      Effect.ignore,
+      Effect.as(CompletedScrollSidebarActiveLinkIntoView()),
+    ),
+  },
 )
 
 const MOBILE_MENU_ACTIVE_LINK = `#${MOBILE_MENU_NAV_ID} [aria-current="page"]`
 
 const ScrollMobileMenuActiveLinkIntoView = Command.define(
   'ScrollMobileMenuActiveLinkIntoView',
-  CompletedScrollMobileMenuActiveLinkIntoView,
-)(
-  Dom.scrollIntoViewIfNotVisible(MOBILE_MENU_ACTIVE_LINK, {
-    when: 'Commit',
-  }).pipe(
-    Effect.ignore,
-    Effect.as(CompletedScrollMobileMenuActiveLinkIntoView()),
-  ),
+  {
+    messages: [CompletedScrollMobileMenuActiveLinkIntoView],
+    execute: Dom.scrollIntoViewIfNotVisible(MOBILE_MENU_ACTIVE_LINK, {
+      when: 'Commit',
+    }).pipe(
+      Effect.ignore,
+      Effect.as(CompletedScrollMobileMenuActiveLinkIntoView()),
+    ),
+  },
 )
 
-const ApplyTheme = Command.define(
-  'ApplyTheme',
-  { theme: ResolvedTheme },
-  CompletedApplyTheme,
-)(({ theme }) =>
-  Effect.sync(() => {
-    M.value(theme).pipe(
-      M.when('Dark', () => document.documentElement.classList.add('dark')),
-      M.when('Light', () => document.documentElement.classList.remove('dark')),
-      M.exhaustive,
-    )
-    return CompletedApplyTheme()
-  }),
-)
+const ApplyTheme = Command.define('ApplyTheme', {
+  args: { theme: ResolvedTheme },
+  messages: [CompletedApplyTheme],
+  execute: ({ theme }) =>
+    Effect.sync(() => {
+      M.value(theme).pipe(
+        M.when('Dark', () => document.documentElement.classList.add('dark')),
+        M.when('Light', () =>
+          document.documentElement.classList.remove('dark'),
+        ),
+        M.exhaustive,
+      )
+      return CompletedApplyTheme()
+    }),
+})
 
 const BUTTONDOWN_SUBSCRIBE_URL =
   'https://buttondown.com/api/emails/embed-subscribe/foldkit'
 
 const validateEmail = FieldValidation.validate(emailRules)
 
-const SubscribeToNewsletter = Command.define(
-  'SubscribeToNewsletter',
-  { email: S.String },
-  SucceededSubscribeToNewsletter,
-  FailedSubscribeToNewsletter,
-)(({ email }) =>
-  Effect.gen(function* () {
-    const client = yield* HttpClient.HttpClient
-    const request = HttpClientRequest.post(BUTTONDOWN_SUBSCRIBE_URL).pipe(
-      HttpClientRequest.bodyUrlParams({ email }),
-    )
-    const response = yield* client.execute(request)
+const SubscribeToNewsletter = Command.define('SubscribeToNewsletter', {
+  args: { email: S.String },
+  messages: [SucceededSubscribeToNewsletter, FailedSubscribeToNewsletter],
+  execute: ({ email }) =>
+    Effect.gen(function* () {
+      const client = yield* HttpClient.HttpClient
+      const request = HttpClientRequest.post(BUTTONDOWN_SUBSCRIBE_URL).pipe(
+        HttpClientRequest.bodyUrlParams({ email }),
+      )
+      const response = yield* client.execute(request)
 
-    if (response.status >= 400) {
-      return yield* Effect.fail('Subscription failed')
-    }
+      if (response.status >= 400) {
+        return yield* Effect.fail('Subscription failed')
+      }
 
-    return SucceededSubscribeToNewsletter()
-  }).pipe(
-    Effect.catch(() => Effect.succeed(FailedSubscribeToNewsletter())),
-    Effect.provide(Http.layer),
-  ),
-)
+      return SucceededSubscribeToNewsletter()
+    }).pipe(
+      Effect.catch(() => Effect.succeed(FailedSubscribeToNewsletter())),
+      Effect.provide(Http.layer),
+    ),
+})
 
-const SaveThemePreference = Command.define(
-  'SaveThemePreference',
-  { preference: ThemePreference },
-  CompletedSaveThemePreference,
-)(({ preference }) =>
-  Effect.gen(function* () {
-    const store = yield* KeyValueStore.KeyValueStore
-    yield* store.set(THEME_STORAGE_KEY, JSON.stringify(preference))
-    return CompletedSaveThemePreference()
-  }).pipe(
-    Effect.catch(() => Effect.succeed(CompletedSaveThemePreference())),
-    Effect.provide(BrowserKeyValueStore.layerLocalStorage),
-  ),
-)
+const SaveThemePreference = Command.define('SaveThemePreference', {
+  args: { preference: ThemePreference },
+  messages: [CompletedSaveThemePreference],
+  execute: ({ preference }) =>
+    Effect.gen(function* () {
+      const store = yield* KeyValueStore.KeyValueStore
+      yield* store.set(THEME_STORAGE_KEY, JSON.stringify(preference))
+      return CompletedSaveThemePreference()
+    }).pipe(
+      Effect.catch(() => Effect.succeed(CompletedSaveThemePreference())),
+      Effect.provide(BrowserKeyValueStore.layerLocalStorage),
+    ),
+})
 
-const SaveSidebarState = Command.define(
-  'SaveSidebarState',
-  { state: SidebarState },
-  CompletedSaveSidebarState,
-)(({ state }) =>
-  Effect.gen(function* () {
-    const store = yield* KeyValueStore.KeyValueStore
-    const json = yield* S.encodeEffect(SidebarStateJsonString)(state)
-    yield* store.set(SIDEBAR_STORAGE_KEY, json)
-    return CompletedSaveSidebarState()
-  }).pipe(
-    Effect.catch(() => Effect.succeed(CompletedSaveSidebarState())),
-    Effect.provide(BrowserKeyValueStore.layerSessionStorage),
-  ),
-)
+const SaveSidebarState = Command.define('SaveSidebarState', {
+  args: { state: SidebarState },
+  messages: [CompletedSaveSidebarState],
+  execute: ({ state }) =>
+    Effect.gen(function* () {
+      const store = yield* KeyValueStore.KeyValueStore
+      const json = yield* S.encodeEffect(SidebarStateJsonString)(state)
+      yield* store.set(SIDEBAR_STORAGE_KEY, json)
+      return CompletedSaveSidebarState()
+    }).pipe(
+      Effect.catch(() => Effect.succeed(CompletedSaveSidebarState())),
+      Effect.provide(BrowserKeyValueStore.layerSessionStorage),
+    ),
+})
 
 const modelToSidebarState = (model: Model): SidebarState => ({
   open: model.sidebarGroups,
@@ -1224,17 +1218,18 @@ const modelToSidebarState = (model: Model): SidebarState => ({
 const saveSidebarState = (model: Model) =>
   SaveSidebarState({ state: modelToSidebarState(model) })
 
-const NavigateInternal = Command.define(
-  'NavigateInternal',
-  { url: S.String },
-  CompletedNavigateInternal,
-)(({ url }) => pushUrl(url).pipe(Effect.as(CompletedNavigateInternal())))
+const NavigateInternal = Command.define('NavigateInternal', {
+  args: { url: S.String },
+  messages: [CompletedNavigateInternal],
+  execute: ({ url }) =>
+    pushUrl(url).pipe(Effect.as(CompletedNavigateInternal())),
+})
 
-const LoadExternal = Command.define(
-  'LoadExternal',
-  { href: S.String },
-  CompletedLoadExternal,
-)(({ href }) => load(href).pipe(Effect.as(CompletedLoadExternal())))
+const LoadExternal = Command.define('LoadExternal', {
+  args: { href: S.String },
+  messages: [CompletedLoadExternal],
+  execute: ({ href }) => load(href).pipe(Effect.as(CompletedLoadExternal())),
+})
 
 // VIEW
 

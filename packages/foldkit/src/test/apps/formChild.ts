@@ -35,15 +35,15 @@ export type ChildOutMessage = typeof ChildOutMessage.Type
 
 // CHILD COMMAND
 
-export const SubmitForm = Command.define(
-  'SubmitForm',
-  SucceededSubmit,
-)(Effect.sync(() => SucceededSubmit({ id: 'abc' })))
+export const SubmitForm = Command.define('SubmitForm', {
+  messages: [SucceededSubmit],
+  execute: Effect.sync(() => SucceededSubmit({ id: 'abc' })),
+})
 
-export const ResetForm = Command.define(
-  'ResetForm',
-  CompletedReset,
-)(Effect.sync(() => CompletedReset()))
+export const ResetForm = Command.define('ResetForm', {
+  messages: [CompletedReset],
+  execute: Effect.sync(() => CompletedReset()),
+})
 
 // CHILD INIT
 

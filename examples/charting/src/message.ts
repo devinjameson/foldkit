@@ -27,7 +27,7 @@ export const SucceededMountChart = m('SucceededMountChart', {
   hostId: S.String,
 })
 export const FailedMountChart = m('FailedMountChart', { reason: S.String })
-export const CompletedSyncChart = m('CompletedSyncChart')
+export const SucceededSyncChart = m('SucceededSyncChart')
 export const FailedSyncChart = m('FailedSyncChart', { reason: S.String })
 
 export const Message = S.Union([
@@ -41,7 +41,7 @@ export const Message = S.Union([
   FailedFetchTelemetry,
   SucceededMountChart,
   FailedMountChart,
-  CompletedSyncChart,
+  SucceededSyncChart,
   FailedSyncChart,
 ])
 export type Message = typeof Message.Type

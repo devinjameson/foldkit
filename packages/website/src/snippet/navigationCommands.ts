@@ -19,40 +19,40 @@ const Message = S.Union([
 ])
 type Message = typeof Message.Type
 
-const NavigateInternal = Command.define(
-  'NavigateInternal',
-  { url: S.String },
-  CompletedNavigateInternal,
-)(({ url }) =>
-  Navigation.pushUrl(url).pipe(Effect.as(CompletedNavigateInternal())),
-)
+const NavigateInternal = Command.define('NavigateInternal', {
+  args: { url: S.String },
+  messages: [CompletedNavigateInternal],
+  execute: ({ url }) =>
+    Navigation.pushUrl(url).pipe(Effect.as(CompletedNavigateInternal())),
+})
 
-const ReplaceUrl = Command.define(
-  'ReplaceUrl',
-  { url: S.String },
-  CompletedReplaceUrl,
-)(({ url }) =>
-  Navigation.replaceUrl(url).pipe(Effect.as(CompletedReplaceUrl())),
-)
+const ReplaceUrl = Command.define('ReplaceUrl', {
+  args: { url: S.String },
+  messages: [CompletedReplaceUrl],
+  execute: ({ url }) =>
+    Navigation.replaceUrl(url).pipe(Effect.as(CompletedReplaceUrl())),
+})
 
-const GoBack = Command.define(
-  'GoBack',
-  CompletedGoBack,
-)(Navigation.back().pipe(Effect.as(CompletedGoBack())))
+const GoBack = Command.define('GoBack', {
+  messages: [CompletedGoBack],
+  execute: Navigation.back().pipe(Effect.as(CompletedGoBack())),
+})
 
-const GoForward = Command.define(
-  'GoForward',
-  CompletedGoForward,
-)(Navigation.forward().pipe(Effect.as(CompletedGoForward())))
+const GoForward = Command.define('GoForward', {
+  messages: [CompletedGoForward],
+  execute: Navigation.forward().pipe(Effect.as(CompletedGoForward())),
+})
 
-const LoadExternal = Command.define(
-  'LoadExternal',
-  { href: S.String },
-  CompletedLoadExternal,
-)(({ href }) => Navigation.load(href).pipe(Effect.as(CompletedLoadExternal())))
+const LoadExternal = Command.define('LoadExternal', {
+  args: { href: S.String },
+  messages: [CompletedLoadExternal],
+  execute: ({ href }) =>
+    Navigation.load(href).pipe(Effect.as(CompletedLoadExternal())),
+})
 
-const OpenUrl = Command.define(
-  'OpenUrl',
-  { url: S.String },
-  CompletedOpenUrl,
-)(({ url }) => Navigation.openUrl(url).pipe(Effect.as(CompletedOpenUrl())))
+const OpenUrl = Command.define('OpenUrl', {
+  args: { url: S.String },
+  messages: [CompletedOpenUrl],
+  execute: ({ url }) =>
+    Navigation.openUrl(url).pipe(Effect.as(CompletedOpenUrl())),
+})

@@ -2,27 +2,32 @@ import { Effect, Match, Random } from 'effect'
 import { Command } from 'foldkit'
 
 import { GRID_SIZE } from './constants'
-import { GeneratedApple, Message, RequestedApple } from './message'
+import {
+  CompletedGenerateApplePosition,
+  Message,
+  RequestedApple,
+} from './message'
 import { Model } from './model'
 
 const update = (model: Model, message: Message) =>
   Match.value(message).pipe(
     Match.tagsExhaustive({
       RequestedApple: () => [model, [GenerateApplePosition()]],
-      GeneratedApple: ({ position }) => [{ ...model, apple: position }, []],
+      CompletedGenerateApplePosition: ({ position }) => [
+        { ...model, apple: position },
+        [],
+      ],
     }),
   )
 
-const GenerateApplePosition = Command.define(
-  'GenerateApplePosition',
-  GeneratedApple,
-)(
-  Effect.gen(function* () {
+const GenerateApplePosition = Command.define('GenerateApplePosition', {
+  messages: [CompletedGenerateApplePosition],
+  execute: Effect.gen(function* () {
     const x = yield* Random.nextIntBetween(0, GRID_SIZE, { halfOpen: true })
     const y = yield* Random.nextIntBetween(0, GRID_SIZE, { halfOpen: true })
-    return GeneratedApple({ position: { x, y } })
+    return CompletedGenerateApplePosition({ position: { x, y } })
   }),
-)
+})
 
 const model = { snake: [{ x: 0, y: 0 }], apple: { x: 5, y: 5 } }
 const message = RequestedApple()

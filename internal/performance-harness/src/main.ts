@@ -61,11 +61,12 @@ const heavyPayload = makeHeavyArray(HEAVY_ITEM_COUNT)
 
 // COMMAND
 
-const FillHistoryStep = Command.define(
-  'FillHistoryStep',
-  { remaining: S.Number },
-  FilledHistoryStep,
-)(({ remaining }) => Effect.sync(() => FilledHistoryStep({ remaining })))
+const FillHistoryStep = Command.define('FillHistoryStep', {
+  args: { remaining: S.Number },
+  messages: [FilledHistoryStep],
+  execute: ({ remaining }) =>
+    Effect.sync(() => FilledHistoryStep({ remaining })),
+})
 
 // UPDATE
 

@@ -18,7 +18,7 @@ import { type MountDefinition, MountDefinitionTypeId } from '../mount/index.js'
  *  without the test restating it. Absent on synthetic matchers built for
  *  formatting; treated as empty then.
  *
- *  `key` is present on Commands built with `Command.Interruptible.define`:
+ *  `key` is present on Commands built with an interruptible `Command.define`:
  *  such Commands may stay pending across Messages (they model long-running
  *  work). `interruptsKey` is present on Interrupt Commands: resolving one
  *  drops every pending Command holding that key, mirroring the runtime
@@ -464,7 +464,7 @@ export const assertZeroCommands = (
 }
 
 /** Throws when trying to send a message with unresolved Commands. Keyed
- *  Commands (built with `Command.Interruptible.define`) and Interrupt
+ *  Commands (built with an interruptible `Command.define`) and Interrupt
  *  Commands are exempt: they model in-flight async work that legitimately
  *  stays pending while later Messages arrive, so a story can dispatch the
  *  Message that interrupts a keyed Command, or keep typing while a

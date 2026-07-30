@@ -88,33 +88,32 @@ export const init: Runtime.ApplicationInit<Model, Message> = () => [
 
 // COMMAND
 
-export const SpawnBall = Command.define(
-  'SpawnBall',
-  { x: S.Number, y: S.Number },
-  SpawnedBall,
-)(({ x, y }) =>
-  Effect.gen(function* () {
-    const angle = yield* Random.nextBetween(0, FULL_CIRCLE_RADIANS)
-    const speed = yield* Random.nextBetween(BALL_SPEED_MIN, BALL_SPEED_MAX)
-    const radius = yield* Random.nextBetween(BALL_RADIUS_MIN, BALL_RADIUS_MAX)
-    const colorIndex = yield* Random.nextIntBetween(0, PALETTE.length, {
-      halfOpen: true,
-    })
-    const color = pipe(
-      PALETTE,
-      Array.get(colorIndex),
-      Option.getOrElse(() => FALLBACK_COLOR),
-    )
-    return SpawnedBall({
-      x,
-      y,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      radius,
-      color,
-    })
-  }),
-)
+export const SpawnBall = Command.define('SpawnBall', {
+  args: { x: S.Number, y: S.Number },
+  messages: [SpawnedBall],
+  execute: ({ x, y }) =>
+    Effect.gen(function* () {
+      const angle = yield* Random.nextBetween(0, FULL_CIRCLE_RADIANS)
+      const speed = yield* Random.nextBetween(BALL_SPEED_MIN, BALL_SPEED_MAX)
+      const radius = yield* Random.nextBetween(BALL_RADIUS_MIN, BALL_RADIUS_MAX)
+      const colorIndex = yield* Random.nextIntBetween(0, PALETTE.length, {
+        halfOpen: true,
+      })
+      const color = pipe(
+        PALETTE,
+        Array.get(colorIndex),
+        Option.getOrElse(() => FALLBACK_COLOR),
+      )
+      return SpawnedBall({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        radius,
+        color,
+      })
+    }),
+})
 
 // UPDATE
 

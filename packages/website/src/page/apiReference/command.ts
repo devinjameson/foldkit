@@ -4,12 +4,11 @@ import { Command } from 'foldkit'
 import { ParsedApiReference } from './domain'
 import { FailedLoadApiData, SucceededLoadApiData } from './message'
 
-export const LoadApiData = Command.define(
-  'LoadApiData',
-  SucceededLoadApiData,
-  FailedLoadApiData,
-)(
-  Effect.gen(function* () {
+/** Loads the generated API reference data, producing the parsed reference on
+ *  success or a failure Message when the fetch or decode does not complete. */
+export const LoadApiData = Command.define('LoadApiData', {
+  messages: [SucceededLoadApiData, FailedLoadApiData],
+  execute: Effect.gen(function* () {
     const [parsedApiModule, highlightsModule] = yield* Effect.tryPromise({
       try: () =>
         Promise.all([
@@ -39,4 +38,4 @@ export const LoadApiData = Command.define(
       ),
     ),
   ),
-)
+})

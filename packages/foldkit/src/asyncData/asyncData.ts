@@ -815,16 +815,14 @@ export const all: <
  *  import { AsyncData, Command } from 'foldkit'
  *
  *  // The Command settles the fetch into a Result instead of throwing:
- *  const LoadNotes = Command.define(
- *    'LoadNotes',
- *    SettledLoadNotes,
- *  )(
- *    pipe(
+ *  const LoadNotes = Command.define('LoadNotes', {
+ *    messages: [SettledLoadNotes],
+ *    execute: pipe(
  *      fetchNotes,
  *      Effect.result,
  *      Effect.map(result => SettledLoadNotes({ result })),
  *    ),
- *  )
+ *  })
  *
  *  // One update arm folds it in, whatever the previous state was:
  *  SettledLoadNotes: ({ result }) => [

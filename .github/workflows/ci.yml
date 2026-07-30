@@ -72,8 +72,14 @@ jobs:
       - name: Check circular dependencies
         run: pnpm check:circular-deps
 
+      - name: Typecheck scripts
+        run: pnpm typecheck:scripts
+
       - name: Build packages
         run: pnpm -r --filter './packages/**' build
+
+      - name: Check Effect prebundle namespaces
+        run: pnpm check:effect-prebundle
 
       - name: Typecheck
         run: pnpm -r typecheck

@@ -41,12 +41,9 @@ export type Message = typeof Message.Type
 
 // COMMAND
 
-export const SelectResume = Command.define(
-  'SelectResume',
-  SelectedResume,
-  CancelledSelectResume,
-)(
-  File.select(['application/pdf']).pipe(
+export const SelectResume = Command.define('SelectResume', {
+  messages: [SelectedResume, CancelledSelectResume],
+  execute: File.select(['application/pdf']).pipe(
     Effect.map(
       Option.match({
         onNone: () => CancelledSelectResume(),
@@ -54,19 +51,17 @@ export const SelectResume = Command.define(
       }),
     ),
   ),
-)
+})
 
-export const ReadResumePreview = Command.define(
-  'ReadResumePreview',
-  { file: File.File },
-  SucceededReadPreview,
-  FailedReadPreview,
-)(({ file }) =>
-  File.readAsDataUrl(file).pipe(
-    Effect.map(dataUrl => SucceededReadPreview({ dataUrl })),
-    Effect.catch(() => Effect.succeed(FailedReadPreview())),
-  ),
-)
+export const ReadResumePreview = Command.define('ReadResumePreview', {
+  args: { file: File.File },
+  messages: [SucceededReadPreview, FailedReadPreview],
+  execute: ({ file }) =>
+    File.readAsDataUrl(file).pipe(
+      Effect.map(dataUrl => SucceededReadPreview({ dataUrl })),
+      Effect.catch(() => Effect.succeed(FailedReadPreview())),
+    ),
+})
 
 // INIT
 

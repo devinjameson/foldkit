@@ -80,16 +80,13 @@ const Model = S.Struct({
 })
 type Model = typeof Model.Type
 
-const ReadEngine = Command.define(
-  'ReadEngine',
-  SucceededRead,
-  FailedRead,
-)(
-  Engine.get.pipe(
+const ReadEngine = Command.define('ReadEngine', {
+  messages: [SucceededRead, FailedRead],
+  execute: Engine.get.pipe(
     Effect.map(({ id }) => SucceededRead({ value: id })),
     Effect.catchTag('ResourceNotAvailable', () => Effect.succeed(FailedRead())),
   ),
-)
+})
 
 type UpdateReturn = readonly [
   Model,

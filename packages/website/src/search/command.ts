@@ -55,69 +55,66 @@ export class PagefindService extends Context.Service<
   )
 }
 
-export const FetchSearchResults = Command.define(
-  'FetchSearchResults',
-  { query: S.String },
-  ReceivedSearchResults,
-)(({ query }) =>
-  Effect.gen(function* () {
-    const pagefind = yield* PagefindService
+export const FetchSearchResults = Command.define('FetchSearchResults', {
+  args: { query: S.String },
+  messages: [ReceivedSearchResults],
+  execute: ({ query }) =>
+    Effect.gen(function* () {
+      const pagefind = yield* PagefindService
 
-    const searchResponse = yield* Effect.tryPromise({
-      try: () => pagefind.search(query),
-      catch: () => new Error('Pagefind search failed'),
-    })
+      const searchResponse = yield* Effect.tryPromise({
+        try: () => pagefind.search(query),
+        catch: () => new Error('Pagefind search failed'),
+      })
 
-    const topResults = Array.take(searchResponse.results, MAX_RESULTS)
+      const topResults = Array.take(searchResponse.results, MAX_RESULTS)
 
-    const loadedResults = yield* Effect.tryPromise({
-      try: () => Promise.all(topResults.map(result => result.data())),
-      catch: () => new Error('Failed to load result data'),
-    })
+      const loadedResults = yield* Effect.tryPromise({
+        try: () => Promise.all(topResults.map(result => result.data())),
+        catch: () => new Error('Failed to load result data'),
+      })
 
-    const results = Array.map(loadedResults, data =>
-      SearchResult.make({
-        url: data.url,
-        title: data.meta?.title ?? 'Untitled',
-        excerpt: data.excerpt,
-        section: data.meta?.section ?? '',
-        kind: data.meta?.kind ?? '',
-      }),
-    )
+      const results = Array.map(loadedResults, data =>
+        SearchResult.make({
+          url: data.url,
+          title: data.meta?.title ?? 'Untitled',
+          excerpt: data.excerpt,
+          section: data.meta?.section ?? '',
+          kind: data.meta?.kind ?? '',
+        }),
+      )
 
-    return ReceivedSearchResults({ results, query })
-  }).pipe(
-    Effect.catch(() =>
-      Effect.succeed(ReceivedSearchResults({ results: [], query })),
+      return ReceivedSearchResults({ results, query })
+    }).pipe(
+      Effect.catch(() =>
+        Effect.succeed(ReceivedSearchResults({ results: [], query })),
+      ),
     ),
-  ),
-)
+})
 
-export const ScrollToResult = Command.define(
-  'ScrollToResult',
-  { index: S.Number },
-  CompletedScrollToResult,
-)(({ index }) =>
-  Dom.scrollIntoView(`${SEARCH_RESULT_SELECTOR}"${index}"]`).pipe(
-    Effect.ignore,
-    Effect.as(CompletedScrollToResult()),
-  ),
-)
+export const ScrollToResult = Command.define('ScrollToResult', {
+  args: { index: S.Number },
+  messages: [CompletedScrollToResult],
+  execute: ({ index }) =>
+    Dom.scrollIntoView(`${SEARCH_RESULT_SELECTOR}"${index}"]`).pipe(
+      Effect.ignore,
+      Effect.as(CompletedScrollToResult()),
+    ),
+})
 
-export const NavigateToResult = Command.define(
-  'NavigateToResult',
-  { url: S.String },
-  CompletedNavigateToResult,
-)(({ url }) => pushUrl(url).pipe(Effect.as(CompletedNavigateToResult())))
+export const NavigateToResult = Command.define('NavigateToResult', {
+  args: { url: S.String },
+  messages: [CompletedNavigateToResult],
+  execute: ({ url }) =>
+    pushUrl(url).pipe(Effect.as(CompletedNavigateToResult())),
+})
 
-export const FocusSearchInput = Command.define(
-  'FocusSearchInput',
-  CompletedFocusSearchInput,
-)(
-  Dom.focus(`#${SEARCH_INPUT_ID}`).pipe(
+export const FocusSearchInput = Command.define('FocusSearchInput', {
+  messages: [CompletedFocusSearchInput],
+  execute: Dom.focus(`#${SEARCH_INPUT_ID}`).pipe(
     Effect.ignore,
     Effect.as(CompletedFocusSearchInput()),
   ),
-)
+})
 
 export { SEARCH_INPUT_ID, KEYBOARD_WARMUP_INPUT_ID }

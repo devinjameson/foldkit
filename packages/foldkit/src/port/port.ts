@@ -229,15 +229,14 @@ export const subscription = <Value, Encoded, Message>(
  * Effect:
  *
  * ```ts
- * const ReportCount = Command.define(
- *   'ReportCount',
- *   { count: S.Number },
- *   CompletedReportCount,
- * )(({ count }) =>
- *   Port.emit(ports.outbound.countChanged, count).pipe(
- *     Effect.as(CompletedReportCount()),
- *   ),
- * )
+ * const ReportCount = Command.define('ReportCount', {
+ *   args: { count: S.Number },
+ *   messages: [CompletedReportCount],
+ *   execute: ({ count }) =>
+ *     Port.emit(ports.outbound.countChanged, count).pipe(
+ *       Effect.as(CompletedReportCount()),
+ *     ),
+ * })
  * ```
  *
  * When the program runs without an embed handle (started with `Runtime.run`),

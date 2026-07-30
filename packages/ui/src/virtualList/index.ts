@@ -113,19 +113,18 @@ export const init = (config: InitConfig): Model => ({
 
 // UPDATE
 
-export const ApplyScroll = Command.define(
-  'ApplyScroll',
-  { id: S.String, scrollTop: S.Number, version: S.Number },
-  CompletedApplyScroll,
-)(({ id, scrollTop, version }) =>
-  Effect.sync(() => {
-    const element = document.getElementById(id)
-    if (element !== null) {
-      element.scrollTop = scrollTop
-    }
-    return CompletedApplyScroll({ version })
-  }),
-)
+export const ApplyScroll = Command.define('ApplyScroll', {
+  args: { id: S.String, scrollTop: S.Number, version: S.Number },
+  messages: [CompletedApplyScroll],
+  execute: ({ id, scrollTop, version }) =>
+    Effect.sync(() => {
+      const element = document.getElementById(id)
+      if (element !== null) {
+        element.scrollTop = scrollTop
+      }
+      return CompletedApplyScroll({ version })
+    }),
+})
 
 /** Processes a virtual list message and returns the next model and commands. */
 export const update = (

@@ -17,6 +17,8 @@ import { evo } from 'foldkit/struct'
 import { type Reflect, defineView } from 'foldkit/submodel'
 import * as Subscription from 'foldkit/subscription'
 
+import { attributeSelector } from '../internal/selectors.js'
+
 // MODEL
 
 const Idle = ts('Idle')
@@ -353,7 +355,9 @@ const trackElement = (
   root: Document | ShadowRoot,
 ): Option.Option<HTMLElement> =>
   Option.fromNullishOr(
-    root.querySelector<HTMLElement>(`[data-slider-track-id="${id}"]`),
+    root.querySelector<HTMLElement>(
+      attributeSelector('data-slider-track-id', id),
+    ),
   )
 
 const valueFromClientX = (

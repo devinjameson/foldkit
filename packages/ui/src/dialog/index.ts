@@ -173,45 +173,44 @@ const withUpdateReturn = M.withReturnType<UpdateReturn>()
  *  high-z-index overlays stay interactive. It layers the dialog with a high
  *  z-index, traps focus, and dispatches a `cancel` event on Esc. The Dialog
  *  component supplies its own backdrop. */
-export const ShowDialog = Command.define(
-  'ShowDialog',
-  { id: S.String, focusSelector: S.String },
-  CompletedShowDialog,
-)(({ id, focusSelector }) =>
-  Dom.lockScroll.pipe(
-    Effect.andThen(() => Dom.showDialog(dialogSelector(id), { focusSelector })),
-    Effect.ignore,
-    Effect.as(CompletedShowDialog()),
-  ),
-)
+export const ShowDialog = Command.define('ShowDialog', {
+  args: { id: S.String, focusSelector: S.String },
+  messages: [CompletedShowDialog],
+  execute: ({ id, focusSelector }) =>
+    Dom.lockScroll.pipe(
+      Effect.andThen(() =>
+        Dom.showDialog(dialogSelector(id), { focusSelector }),
+      ),
+      Effect.ignore,
+      Effect.as(CompletedShowDialog()),
+    ),
+})
 
 /** Calls `close()` on the native dialog element and unlocks page scroll. */
-export const CloseDialog = Command.define(
-  'CloseDialog',
-  { id: S.String },
-  CompletedCloseDialog,
-)(({ id }) =>
-  Dom.closeDialog(dialogSelector(id)).pipe(
-    Effect.andThen(() => Dom.unlockScroll),
-    Effect.ignore,
-    Effect.as(CompletedCloseDialog()),
-  ),
-)
+export const CloseDialog = Command.define('CloseDialog', {
+  args: { id: S.String },
+  messages: [CompletedCloseDialog],
+  execute: ({ id }) =>
+    Dom.closeDialog(dialogSelector(id)).pipe(
+      Effect.andThen(() => Dom.unlockScroll),
+      Effect.ignore,
+      Effect.as(CompletedCloseDialog()),
+    ),
+})
 
 /** Releases the framework hygiene the dialog holds while open (scroll lock,
  *  focus trap, return focus, stack entry) when the element unmounts without a
  *  purposeful close. Idempotent: a no-op if the dialog already released its
  *  resources through `CloseDialog`. */
-export const ReleaseDialogResources = Command.define(
-  'ReleaseDialogResources',
-  { id: S.String },
-  CompletedReleaseDialogResources,
-)(({ id }) =>
-  Dom.releaseDialogResources(id).pipe(
-    Effect.ignore,
-    Effect.as(CompletedReleaseDialogResources()),
-  ),
-)
+export const ReleaseDialogResources = Command.define('ReleaseDialogResources', {
+  args: { id: S.String },
+  messages: [CompletedReleaseDialogResources],
+  execute: ({ id }) =>
+    Dom.releaseDialogResources(id).pipe(
+      Effect.ignore,
+      Effect.as(CompletedReleaseDialogResources()),
+    ),
+})
 
 const wrapAnimationMessage = (message: AnimationMessage): Message =>
   GotAnimationMessage({ message })

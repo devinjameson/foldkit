@@ -13,12 +13,9 @@ const FailedFetchCount = m('FailedFetchCount', {
 
 const CountResponse = S.Struct({ count: S.Number })
 
-const FetchCount = Command.define(
-  'FetchCount',
-  SucceededFetchCount,
-  FailedFetchCount,
-)(
-  Effect.gen(function* () {
+const FetchCount = Command.define('FetchCount', {
+  messages: [SucceededFetchCount, FailedFetchCount],
+  execute: Effect.gen(function* () {
     const client = yield* HttpClient.HttpClient
     const response = yield* client.execute(HttpClientRequest.get('/api/count'))
 
@@ -36,7 +33,7 @@ const FetchCount = Command.define(
     ),
     Effect.provide(Http.layer),
   ),
-)
+})
 
 const update = (
   model: Model,

@@ -363,15 +363,15 @@ class ShadowRootService extends Context.Service<
   ShadowRoot
 >()('foldkit/DevToolsShadowRoot') {}
 
-export const LockScroll = Command.define(
-  'LockScroll',
-  LockedScroll,
-)(lockScroll.pipe(Effect.as(LockedScroll())))
+export const LockScroll = Command.define('LockScroll', {
+  messages: [LockedScroll],
+  execute: lockScroll.pipe(Effect.as(LockedScroll())),
+})
 
-export const UnlockScroll = Command.define(
-  'UnlockScroll',
-  UnlockedScroll,
-)(unlockScroll.pipe(Effect.as(UnlockedScroll())))
+export const UnlockScroll = Command.define('UnlockScroll', {
+  messages: [UnlockedScroll],
+  execute: unlockScroll.pipe(Effect.as(UnlockedScroll())),
+})
 
 const maybeToggleScrollLock = (isEnabled: boolean, shouldLock: boolean) =>
   OptionExt.when(isEnabled, shouldLock ? LockScroll() : UnlockScroll())
@@ -403,24 +403,23 @@ const readPersistedState: Effect.Effect<DevToolsPersistedState> = Effect.gen(
   Effect.provide(BrowserKeyValueStore.layerLocalStorage),
 )
 
-export const PersistDevToolsState = Command.define(
-  'PersistDevToolsState',
-  { isOpen: S.Boolean, isFlattened: S.Boolean },
-  CompletedPersistDevToolsState,
-)(({ isOpen, isFlattened }) =>
-  Effect.gen(function* () {
-    const store = yield* KeyValueStore.KeyValueStore
-    const json = yield* S.encodeEffect(DevToolsPersistedStateJson)({
-      isOpen,
-      isFlattened,
-    })
-    yield* store.set(DEVTOOLS_STORAGE_KEY, json)
-    return CompletedPersistDevToolsState()
-  }).pipe(
-    Effect.catch(() => Effect.succeed(CompletedPersistDevToolsState())),
-    Effect.provide(BrowserKeyValueStore.layerLocalStorage),
-  ),
-)
+export const PersistDevToolsState = Command.define('PersistDevToolsState', {
+  args: { isOpen: S.Boolean, isFlattened: S.Boolean },
+  messages: [CompletedPersistDevToolsState],
+  execute: ({ isOpen, isFlattened }) =>
+    Effect.gen(function* () {
+      const store = yield* KeyValueStore.KeyValueStore
+      const json = yield* S.encodeEffect(DevToolsPersistedStateJson)({
+        isOpen,
+        isFlattened,
+      })
+      yield* store.set(DEVTOOLS_STORAGE_KEY, json)
+      return CompletedPersistDevToolsState()
+    }).pipe(
+      Effect.catch(() => Effect.succeed(CompletedPersistDevToolsState())),
+      Effect.provide(BrowserKeyValueStore.layerLocalStorage),
+    ),
+})
 
 const buildInspectionFromModel = (index: number, model: unknown) =>
   Effect.gen(function* () {
@@ -443,62 +442,53 @@ const buildInspectionEffect = (index: number) =>
 // returns the model it resolved so the inspector reuses that single
 // resolution. Inspect-only navigation (no host pause) still uses
 // `InspectState`, which resolves once on its own.
-export const JumpToAndInspect = Command.define(
-  'JumpToAndInspect',
-  { index: S.Number },
-  ReceivedInspectedState,
-)(({ index }) =>
-  Effect.gen(function* () {
-    const store = yield* StoreService
-    const model = yield* store.jumpTo(index)
-    return yield* buildInspectionFromModel(index, model)
-  }),
-)
+export const JumpToAndInspect = Command.define('JumpToAndInspect', {
+  args: { index: S.Number },
+  messages: [ReceivedInspectedState],
+  execute: ({ index }) =>
+    Effect.gen(function* () {
+      const store = yield* StoreService
+      const model = yield* store.jumpTo(index)
+      return yield* buildInspectionFromModel(index, model)
+    }),
+})
 
-export const InspectState = Command.define(
-  'InspectState',
-  { index: S.Number },
-  ReceivedInspectedState,
-)(({ index }) => buildInspectionEffect(index))
+export const InspectState = Command.define('InspectState', {
+  args: { index: S.Number },
+  messages: [ReceivedInspectedState],
+  execute: ({ index }) => buildInspectionEffect(index),
+})
 
-export const InspectLatest = Command.define(
-  'InspectLatest',
-  ReceivedInspectedState,
-)(
-  Effect.gen(function* () {
+export const InspectLatest = Command.define('InspectLatest', {
+  messages: [ReceivedInspectedState],
+  execute: Effect.gen(function* () {
     const store = yield* StoreService
     const state = yield* SubscriptionRef.get(store.stateRef)
     return yield* buildInspectionEffect(latestEntryIndex(state))
   }),
-)
+})
 
-export const Resume = Command.define(
-  'Resume',
-  CompletedResume,
-)(
-  Effect.gen(function* () {
+export const Resume = Command.define('Resume', {
+  messages: [CompletedResume],
+  execute: Effect.gen(function* () {
     const store = yield* StoreService
     yield* store.resume
     return CompletedResume()
   }),
-)
+})
 
-export const Clear = Command.define(
-  'Clear',
-  CompletedClear,
-)(
-  Effect.gen(function* () {
+export const Clear = Command.define('Clear', {
+  messages: [CompletedClear],
+  execute: Effect.gen(function* () {
     const store = yield* StoreService
     yield* store.clear
     return CompletedClear()
   }),
-)
+})
 
-export const ScrollToTop = Command.define(
-  'ScrollToTop',
-  ScrolledToTop,
-)(
-  Effect.gen(function* () {
+export const ScrollToTop = Command.define('ScrollToTop', {
+  messages: [ScrolledToTop],
+  execute: Effect.gen(function* () {
     const shadow = yield* ShadowRootService
     const messageList = shadow.querySelector(MESSAGE_LIST_SELECTOR)
     if (messageList instanceof HTMLElement) {
@@ -506,7 +496,7 @@ export const ScrollToTop = Command.define(
     }
     return ScrolledToTop()
   }),
-)
+})
 
 const makeUpdate = (
   store: DevToolsStore,

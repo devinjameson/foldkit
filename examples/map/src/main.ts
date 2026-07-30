@@ -130,34 +130,29 @@ const flyToMap = (
       }),
   })
 
-export const FlyTo = Command.define(
-  'FlyTo',
-  {
+export const FlyTo = Command.define('FlyTo', {
+  args: {
     maybeHostId: S.Option(S.String),
     lng: S.Number,
     lat: S.Number,
     zoom: S.Number,
   },
-  SucceededFlyTo,
-  FailedFlyTo,
-)(({ maybeHostId, lng, lat, zoom }) =>
-  Option.match(maybeHostId, {
-    onNone: () =>
-      Effect.succeed(
-        FailedFlyTo({
-          reason: 'FlyTo dispatched before the map mounted.',
-        }),
-      ),
-    onSome: hostId => flyToMap(hostId, lng, lat, zoom),
-  }),
-)
+  messages: [SucceededFlyTo, FailedFlyTo],
+  execute: ({ maybeHostId, lng, lat, zoom }) =>
+    Option.match(maybeHostId, {
+      onNone: () =>
+        Effect.succeed(
+          FailedFlyTo({
+            reason: 'FlyTo dispatched before the map mounted.',
+          }),
+        ),
+      onSome: hostId => flyToMap(hostId, lng, lat, zoom),
+    }),
+})
 
-export const Geolocate = Command.define(
-  'Geolocate',
-  SucceededGeolocate,
-  FailedGeolocate,
-)(
-  Effect.gen(function* () {
+export const Geolocate = Command.define('Geolocate', {
+  messages: [SucceededGeolocate, FailedGeolocate],
+  execute: Effect.gen(function* () {
     const position = yield* Effect.callback<GeolocationPosition, Error>(
       resume => {
         if (typeof navigator === 'undefined' || !navigator.geolocation) {
@@ -193,39 +188,33 @@ export const Geolocate = Command.define(
       ),
     ),
   ),
-)
+})
 
 const SEARCH_INPUT_ID = 'map-search-input'
 
-export const FocusSearchInput = Command.define(
-  'FocusSearchInput',
-  CompletedFocusSearchInput,
-)(
-  Dom.focus(`#${SEARCH_INPUT_ID}`).pipe(
+export const FocusSearchInput = Command.define('FocusSearchInput', {
+  messages: [CompletedFocusSearchInput],
+  execute: Dom.focus(`#${SEARCH_INPUT_ID}`).pipe(
     Effect.ignore,
     Effect.as(CompletedFocusSearchInput()),
   ),
-)
+})
 
-export const LockBodyScroll = Command.define(
-  'LockBodyScroll',
-  CompletedLockBodyScroll,
-)(
-  Effect.sync(() => {
+export const LockBodyScroll = Command.define('LockBodyScroll', {
+  messages: [CompletedLockBodyScroll],
+  execute: Effect.sync(() => {
     document.body.classList.add('overflow-hidden')
     return CompletedLockBodyScroll()
   }),
-)
+})
 
-export const UnlockBodyScroll = Command.define(
-  'UnlockBodyScroll',
-  CompletedUnlockBodyScroll,
-)(
-  Effect.sync(() => {
+export const UnlockBodyScroll = Command.define('UnlockBodyScroll', {
+  messages: [CompletedUnlockBodyScroll],
+  execute: Effect.sync(() => {
     document.body.classList.remove('overflow-hidden')
     return CompletedUnlockBodyScroll()
   }),
-)
+})
 
 // UPDATE
 

@@ -342,7 +342,7 @@ For each Foldkit module you plan to use, read the `.d.ts` at the paths below. Re
 <project>/node_modules/foldkit/dist/navigation/index.d.ts # pushUrl, load: all return Effect<void> (no Effect.ignore needed)
 
 # If using async / side effects
-<project>/node_modules/foldkit/dist/command/index.d.ts  # Command.define: result schemas are required. Command.mapMessages for parent<-child mapping
+<project>/node_modules/foldkit/dist/command/index.d.ts  # Command.define: config object with args/messages/interrupt/execute. Command.mapMessages for parent<-child mapping
 <project>/node_modules/foldkit/dist/asyncData/public.d.ts # AsyncData: Idle/Loading/Refreshing/Failure/Stale/Success + Schema, match, isPending, hasData, revalidate
 <project>/node_modules/foldkit/dist/http/public.d.ts     # Http.layer: provide it to Commands that use HttpClient
 <project>/node_modules/foldkit/dist/dom/index.d.ts      # focus, advanceFocus, scrollIntoView, showDialog, closeDialog, clickElement, lockScroll, unlockScroll, inertOthers, restoreInert, detectElementMovement, waitForAnimationSettled. For time/random/uuid/delay use Effect's Clock, Random, Effect.uuid, Effect.sleep + Duration directly.
@@ -389,10 +389,14 @@ AsyncData.match(value, { onIdle, onLoading, onRefreshing, onFailure, onStale, on
   //   onIdle: () => B          onLoading: () => B
   //   onRefreshing: (data) => B     onSuccess: (data) => B
   //   onFailure: (error) => B       onStale: ({ error, data }) => B
-Command.define(name, argsSchema, Ok, Err)(({ id }) => Effect): the Effect factory
-  binds at DEFINITION and receives the decoded args object directly, so you
-  destructure the fields themselves; the call site passes args:
-  const Fetch = Command.define('Fetch', { id: S.String }, Ok, Err)(({ id }) => ...)
+Command.define(name, { args, messages, execute }): every input is a named field.
+  `execute` binds at DEFINITION and receives the decoded args object directly, so
+  you destructure the fields themselves; the call site passes args:
+  const Fetch = Command.define('Fetch', {
+    args: { id: S.String },
+    messages: [Ok, Err],
+    execute: ({ id }) => ...,
+  })
   update: [Fetch({ id })]     // NOT Fetch({ id })(effect)
 Document: NOT generic, and `body` is a single Html, not an array
 Input.view({ id, value, onInput, isInvalid?, type?, placeholder?, toView: (attrs) => Html }, h)
@@ -413,7 +417,7 @@ Record these in the crib and keep them visible while generating:
 - **`ApplicationInit<Model, Message, Flags>` has no URL parameter.** For routed apps, use `RoutingApplicationInit<Model, Message, Flags>`: the second arg is `url: Url`.
 - **`Route.mapTo` takes the route schema, not a factory function.** `pipe(literal('new'), Route.mapTo(NewLinkRoute))`. NOT `Route.mapTo(() => NewLinkRoute())`.
 - **`Effect.ignore` is ONLY for fallible Effects.** `pushUrl(path).pipe(Effect.as(Message()))`. No `Effect.ignore` because `pushUrl` returns `Effect<void>`.
-- **`Command.define` requires result Message schemas after the name**: `Command.define('Fetch', SucceededFetch, FailedFetch)`. Infallible Commands only need one result: `Command.define('ReadClock', RecordedTime)`.
+- **`Command.define` takes a config object with a `messages` array**: `Command.define('Fetch', { messages: [SucceededFetch, FailedFetch], execute })`. `messages` is required and is always an array, even for one Message: `Command.define('ReadClock', { messages: [RecordedTime], execute })`.
 - **`makeRules` takes `{ required?: Rule.RuleMessage, rules: Array<Rule.Rule> }` where `Rule.Rule = [Predicate, Rule.RuleMessage]`**: a tuple, NOT `{ test, message }`. Rule constructors live on the `Rule` namespace (`Rule.url({ message })`, `Rule.email(message?)`, `Rule.minLength(n, message?)`, `Rule.pattern(regex, message?)`, `Rule.fromSchema(schema, message)`).
 - **`Field.Invalid` has `errors: NonEmptyArray<string>`, not `error: string`.** Use `Array.headNonEmpty(errors)` to get the first message; use `Rule.resolveMessage(message, value)` to resolve a rule message to its final string.
 - **Route variants are `HomeRoute`, `NewLinkRoute`, etc., with the `Route` suffix.** Every exemplar uses this convention.
@@ -513,7 +517,8 @@ Every message must carry meaning. No `NoOp`.
 
 ### Commands
 
-- Define Command identities with `Command.define`, passing result Message schemas after the name. Result types are required. With an args schema the shape is `Command.define('Fetch', { id: S.String }, Ok, Err)(({ id }) => Effect)`: the Effect factory binds at definition and receives the args, and the update returns `Fetch({ id })`. Getting that currying backwards is the most common way to misuse it
+- Define Command identities with `Command.define`, whose second argument is a config object: `args` (optional) declares the args Schema, `messages` lists every Message the Command can produce, and `execute` holds the Effect. With args the shape is `Command.define('Fetch', { args: { id: S.String }, messages: [Ok, Err], execute: ({ id }) => Effect })`: `execute` binds at definition and receives the args, and the update returns `Fetch({ id })`
+- To make a Command interruptible, add `interrupt`. `interrupt: true` keys every invocation by the Command name; `interrupt: { keyFields, toKey }` selects the args that identify an invocation and derives its key so concurrent invocations can be cancelled independently. The selected fields become the args required by the Definition's `Interrupt` constructor
 - Always assign definitions to PascalCase constants. Never inline in pipe chains
 - Definitions live where they're produced, colocated with the update function
 - Let TypeScript infer return types. No explicit `Command<typeof A>` annotations

@@ -100,40 +100,41 @@ export type Message = typeof Message.Type
 
 // COMMAND
 
-const NavigateInternal = Command.define(
-  'NavigateInternal',
-  { url: S.String },
-  CompletedNavigateInternal,
-)(({ url }) => pushUrl(url).pipe(Effect.as(CompletedNavigateInternal())))
+const NavigateInternal = Command.define('NavigateInternal', {
+  args: { url: S.String },
+  messages: [CompletedNavigateInternal],
+  execute: ({ url }) =>
+    pushUrl(url).pipe(Effect.as(CompletedNavigateInternal())),
+})
 
-const LoadExternal = Command.define(
-  'LoadExternal',
-  { href: S.String },
-  CompletedLoadExternal,
-)(({ href }) => load(href).pipe(Effect.as(CompletedLoadExternal())))
+const LoadExternal = Command.define('LoadExternal', {
+  args: { href: S.String },
+  messages: [CompletedLoadExternal],
+  execute: ({ href }) => load(href).pipe(Effect.as(CompletedLoadExternal())),
+})
 
-export const LoadCatalog = Command.define(
-  'LoadCatalog',
-  SucceededLoadCatalog,
-)(Effect.sleep(CATALOG_LATENCY).pipe(Effect.as(SucceededLoadCatalog())))
-
-export const LoadPainting = Command.define(
-  'LoadPainting',
-  { paintingId: S.Number },
-  SucceededLoadPainting,
-)(({ paintingId }) =>
-  Effect.sleep(PAINTING_LATENCY).pipe(
-    Effect.as(SucceededLoadPainting({ paintingId })),
+export const LoadCatalog = Command.define('LoadCatalog', {
+  messages: [SucceededLoadCatalog],
+  execute: Effect.sleep(CATALOG_LATENCY).pipe(
+    Effect.as(SucceededLoadCatalog()),
   ),
-)
+})
 
-export const SaveDraft = Command.define(
-  'SaveDraft',
-  { draft: S.String },
-  SucceededSaveDraft,
-)(({ draft }) =>
-  Effect.sleep(SAVE_LATENCY).pipe(Effect.as(SucceededSaveDraft({ draft }))),
-)
+export const LoadPainting = Command.define('LoadPainting', {
+  args: { paintingId: S.Number },
+  messages: [SucceededLoadPainting],
+  execute: ({ paintingId }) =>
+    Effect.sleep(PAINTING_LATENCY).pipe(
+      Effect.as(SucceededLoadPainting({ paintingId })),
+    ),
+})
+
+export const SaveDraft = Command.define('SaveDraft', {
+  args: { draft: S.String },
+  messages: [SucceededSaveDraft],
+  execute: ({ draft }) =>
+    Effect.sleep(SAVE_LATENCY).pipe(Effect.as(SucceededSaveDraft({ draft }))),
+})
 
 // UPDATE
 
