@@ -1,5 +1,159 @@
 # foldkit
 
+## 0.135.0
+
+### Minor Changes
+
+- cf98218: Rename the Scene and Story `with` step to `given`.
+
+  `Scene.with` and `Story.with` are now `Scene.given` and `Story.given`. Story's exported `WithStep` type is now `Story.GivenStep`. Scene's equivalent stays module-private, as it was before; `Scene.SceneStep` is the exported step type there.
+
+  `with` is a reserved word, so it could never be a named import binding. The module worked around that internally by defining `with_` and exporting it as `with`, which kept `Story.with` readable at the cost of forcing `import { with as with_ }` on anyone importing the steps by name. `given` has no such problem, reads the same in both call styles, and names what the step does: it establishes the precondition the rest of the chain runs against. It also lines up with the Given/When/Then vocabulary the steps already follow, since a story is `given`, then `message`, then `model`.
+
+  ## Migration
+
+  Rename the step at every call site.
+
+  ```ts
+  // before
+  Story.story(update, Story.with(model), Story.message(Clicked()))
+  Scene.scene({ update, view }, Scene.with(model), Scene.click(role('button')))
+
+  // after
+  Story.story(update, Story.given(model), Story.message(Clicked()))
+  Scene.scene({ update, view }, Scene.given(model), Scene.click(role('button')))
+  ```
+
+  If you referenced the step type, rename it too:
+
+  ```ts
+  // before
+  const step: Story.WithStep<Model> = Story.with(model)
+  // after
+  const step: Story.GivenStep<Model> = Story.given(model)
+  ```
+
+  ## Importing the steps by name
+
+  Because `given` is a legal binding, a test file can now import the steps it uses instead of the whole namespace, which removes the prefix from every call site:
+
+  ```ts
+  import { Command, given, message, model, story } from 'foldkit/story'
+
+  test('restarting resets the score', () => {
+    story(
+      update,
+      given(playingModel),
+      message(PressedKey({ key: 'r' })),
+      model(model => {
+        expect(model.points).toBe(0)
+      }),
+      Command.expectHas(GenerateApplePosition),
+    )
+  })
+  ```
+
+  A test file normally needs only one of the two testing modules, so this reads well in practice. When one file tests both a story and a scene, keep the namespace imports so `Story.given` and `Scene.given` stay distinguishable.
+
+- 2162bf2: Add `CustomElement.emit` for dispatching declared CustomEvents in a scene.
+
+  A CustomElement converts declared CustomEvents into Messages through its `On*` event attributes, and those events had no entry point into a scene: interactions only cover the standard DOM event set. `CustomElement.emit(spec, target, eventName, detail)` dispatches a declared event on a rendered element, running the same event-to-Message mapping the browser event would. The event name and detail are typed by the spec's event Schemas, and a missing element or missing handler throws.
+
+  ```ts
+  scene(
+    { update, view },
+    given(initialModel),
+    CustomElement.emit(
+      hexColorPicker,
+      selector('hex-color-picker'),
+      'color-changed',
+      { value: '#ff0000' },
+    ),
+    expect(role('status')).toHaveText('#ff0000'),
+  )
+  ```
+
+- 2162bf2: Add `ManagedResource.acquire`, `ManagedResource.failAcquire`, and `ManagedResource.release`.
+
+  A ManagedResource dispatches lifecycle Messages through its declared hooks (`onAcquired`, `onAcquireError`, `onReleased`), and those Messages had no entry point into a scene. The new steps declare the lifecycle outcome the way `Command.resolve` declares a Command result, feeding the hook's Message through update and re-rendering.
+
+  Each step checks the current Model against the entry's `modelToMaybeRequirements` gate first, mirroring the runtime's `None` to `Some` and `Some` to `None` transitions: `acquire` and `failAcquire` throw unless the Model requests the resource, and `release` throws while it still does, so a scene must drive the Model transition through real steps before declaring the outcome. The runtime's `Some` to `Some` re-acquire transition (structurally changed requirements, which dispatches `onReleased` and then `onAcquired` while the Model still requests the resource) has no step yet.
+
+  Unlike Commands and Mounts, these steps leave nothing pending: each dispatches its Message through update immediately, so there is nothing to resolve or acknowledge at the end of the scene. `acquire` takes exactly the arguments the entry's `onAcquired` declares: a handler that consumes the acquired value (what the entry's `acquire` Effect would have produced) requires it here, and a handler like `() => Connected()` that ignores the value takes none, so a test never fabricates a resource value nobody reads. Entries preserve the handler's type to make this work, so `ManagedResource.Entry` gained an `OnAcquired` type parameter (defaulted, so existing type annotations are unaffected).
+
+  ```ts
+  scene(
+    { update, view },
+    given(initialModel),
+    click(role('button', { name: 'Open feed' })),
+    ManagedResource.acquire(resources.feedSocket, { socketId: 'sock-1' }),
+    expect(role('status')).toHaveText('Connected'),
+    click(role('button', { name: 'Close feed' })),
+    ManagedResource.release(resources.feedSocket),
+    expect(role('status')).toHaveText('Disconnected'),
+  )
+  ```
+
+- 2162bf2: Add `expectOutMessage` and `expectNoOutMessage`.
+
+  `scene` already accepted a Submodel's three-tuple update and tracked its `Option<OutMessage>`, but asserting on it required `tap`. The new steps mirror `expectOutMessage` and `expectNoOutMessage`, failure messages included.
+
+  ```ts
+  scene(
+    { update, view },
+    given(initialModel),
+    click(role('button', { name: 'Log out' })),
+    expectOutMessage(RequestedLogout()),
+    Subscription.emit(CompletedAction()),
+    expectNoOutMessage(),
+  )
+  ```
+
+  The tracked value is the third element of the most recent update result that had one. An update branch that returns a two-tuple leaves the previous value in place, so keep every branch of an OutMessage-returning update on the three-tuple shape, returning `Option.none()` when there is nothing to report.
+
+- 2162bf2: Add `Subscription.emit` for driving a Message into a running scene.
+
+  Messages whose real cause is a Subscription (a timer tick, a WebSocket frame, a global listener) had no entry point into a scene; every Message had to originate from a DOM event, a Command resolution, or a Mount result. `Subscription.emit(message)` feeds such a Message through update mid-chain and re-renders like any other step. It follows the existing cause-named step namespaces (`Command.*`, `Mount.*`). Do not reach for it when the Message has a DOM affordance; click the actual button instead.
+
+  ```ts
+  scene(
+    { update, view },
+    given(initialModel),
+    expect(role('status')).toHaveText('count: 0'),
+    Subscription.emit(Ticked()),
+    expect(role('status')).toHaveText('count: 1'),
+  )
+  ```
+
+  Like interactions, `emit` throws if unresolved Commands, unresolved Mounts, or unacknowledged unmounts are pending.
+
+- 2162bf2: Add `withViewInputs` for testing Submodels that declare `ViewInputs`.
+
+  A Submodel view that declares `ViewInputs` has a `(model, viewInputs, h)` signature, which does not match the `(model, h)` shape `scene` takes, so every such test hand-rolled the same wrapper. `withViewInputs(view, defaults)` captures it: `defaults` supplies the full `ViewInputs` once, and the returned factory takes per-test overrides for everything except `toView`, so tests vary value inputs while the renderer stays pinned.
+
+  ```ts
+  const sceneView = withViewInputs(Slider.view, {
+    value: 5,
+    toView: testToView,
+  })
+
+  scene(
+    { update, view: sceneView() },
+    given(model),
+    expect(role('slider')).toHaveAttr('aria-valuenow', '5'),
+  )
+
+  scene(
+    { update, view: sceneView({ isDisabled: true }) },
+    given(model),
+    expect(role('slider')).toHaveAttr('aria-disabled', 'true'),
+  )
+  ```
+
+### Patch Changes
+
+- 35c2560: Correct the root view example in the 0.134.0 migration guide. The snippet returned an `Html` value annotated as `Document`, which does not compile. `Document` is `{ title, body, ... }`, so both the before and after form now return that struct.
+
 ## 0.134.0
 
 ### Minor Changes
