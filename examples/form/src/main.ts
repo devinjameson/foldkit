@@ -72,12 +72,8 @@ export const CompletedValidateEmail = m('CompletedValidateEmail', {
 })
 export const UpdatedMessageText = m('UpdatedMessageText', { value: S.String })
 export const ClickedFormSubmit = m('ClickedFormSubmit')
-export const CompletedSubmitForm = m('CompletedSubmitForm', {
-  success: S.Boolean,
-  name: S.String,
-  email: S.String,
-  messageText: S.String,
-})
+export const SucceededSubmitForm = m('SucceededSubmitForm', { name: S.String })
+export const FailedSubmitForm = m('FailedSubmitForm')
 
 export const Message = S.Union([
   UpdatedName,
@@ -85,7 +81,8 @@ export const Message = S.Union([
   CompletedValidateEmail,
   UpdatedMessageText,
   ClickedFormSubmit,
-  CompletedSubmitForm,
+  SucceededSubmitForm,
+  FailedSubmitForm,
 ])
 export type Message = typeof Message.Type
 
@@ -227,30 +224,26 @@ export const update = (
         ]
       },
 
-      CompletedSubmitForm: ({ success, name }) => {
-        if (success) {
-          return [
-            evo(model, {
-              submission: () =>
-                SubmitSuccess({
-                  confirmationText: `Welcome to the waitlist, ${name}! We'll be in touch soon.`,
-                }),
+      SucceededSubmitForm: ({ name }) => [
+        evo(model, {
+          submission: () =>
+            SubmitSuccess({
+              confirmationText: `Welcome to the waitlist, ${name}! We'll be in touch soon.`,
             }),
-            [],
-          ]
-        } else {
-          return [
-            evo(model, {
-              submission: () =>
-                SubmitError({
-                  error:
-                    'Sorry, there was an error adding you to the waitlist. Please try again.',
-                }),
+        }),
+        [],
+      ],
+
+      FailedSubmitForm: () => [
+        evo(model, {
+          submission: () =>
+            SubmitError({
+              error:
+                'Sorry, there was an error adding you to the waitlist. Please try again.',
             }),
-            [],
-          ]
-        }
-      },
+        }),
+        [],
+      ],
     }),
   )
 
@@ -260,19 +253,17 @@ const FAKE_API_DELAY_MS = 500
 
 export const SubmitForm = Command.define('SubmitForm', {
   args: { name: S.String, email: S.String, messageText: S.String },
-  messages: [CompletedSubmitForm],
-  execute: ({ name, email, messageText }) =>
+  messages: [SucceededSubmitForm, FailedSubmitForm],
+  execute: ({ name }) =>
     Effect.gen(function* () {
       yield* Effect.sleep(`${FAKE_API_DELAY_MS} millis`)
 
-      const success = yield* Random.nextBoolean
-
-      return CompletedSubmitForm({
-        success,
-        name,
-        email,
-        messageText,
-      })
+      const isSuccess = yield* Random.nextBoolean
+      if (isSuccess) {
+        return SucceededSubmitForm({ name })
+      } else {
+        return FailedSubmitForm()
+      }
     }),
 })
 

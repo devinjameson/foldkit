@@ -4,10 +4,11 @@ import { describe, expect, test } from 'vitest'
 
 import {
   ClickedFormSubmit,
-  CompletedSubmitForm,
   CompletedValidateEmail,
+  FailedSubmitForm,
   type Model,
   SubmitForm,
+  SucceededSubmitForm,
   UpdatedEmail,
   UpdatedMessageText,
   UpdatedName,
@@ -167,15 +168,7 @@ describe('update', () => {
           expect(model.submission._tag).toBe('Submitting')
         }),
         Command.expectHas(SubmitForm),
-        Command.resolve(
-          SubmitForm,
-          CompletedSubmitForm({
-            success: true,
-            name: 'Alice',
-            email: 'alice@example.com',
-            messageText: '',
-          }),
-        ),
+        Command.resolve(SubmitForm, SucceededSubmitForm({ name: 'Alice' })),
         model(model => {
           expect(model.submission._tag).toBe('SubmitSuccess')
           if (model.submission._tag === 'SubmitSuccess') {
@@ -185,20 +178,12 @@ describe('update', () => {
       )
     })
 
-    test('failed CompletedSubmitForm sets SubmitError', () => {
+    test('FailedSubmitForm sets SubmitError', () => {
       story(
         update,
         given(validModel),
         message(ClickedFormSubmit()),
-        Command.resolve(
-          SubmitForm,
-          CompletedSubmitForm({
-            success: false,
-            name: 'Alice',
-            email: 'alice@example.com',
-            messageText: '',
-          }),
-        ),
+        Command.resolve(SubmitForm, FailedSubmitForm()),
         model(model => {
           expect(model.submission._tag).toBe('SubmitError')
         }),
