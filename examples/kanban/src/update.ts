@@ -191,7 +191,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
           },
         }),
 
-      GeneratedCardId: ({ cardId, columnId, title }) => {
+      CompletedGenerateCardId: ({ cardId, columnId, title }) => {
         const nextColumns = Array.map(model.columns, column => {
           if (column.id !== columnId) {
             return column

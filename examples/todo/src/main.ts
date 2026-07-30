@@ -64,7 +64,7 @@ export type Model = typeof Model.Type
 export const UpdatedNewTodo = m('UpdatedNewTodo', { text: S.String })
 export const UpdatedEditingTodo = m('UpdatedEditingTodo', { text: S.String })
 export const AddedTodo = m('AddedTodo')
-export const GeneratedTodo = m('GeneratedTodo', {
+export const CompletedGenerateTodo = m('CompletedGenerateTodo', {
   id: S.String,
   timestamp: S.Number,
   text: S.String,
@@ -77,13 +77,14 @@ export const CancelledEdit = m('CancelledEdit')
 export const ToggledAll = m('ToggledAll')
 export const ClearedCompleted = m('ClearedCompleted')
 export const SelectedFilter = m('SelectedFilter', { filter: Filter })
-export const SavedTodos = m('SavedTodos', { todos: Todos })
+export const SucceededSaveTodos = m('SucceededSaveTodos', { todos: Todos })
+export const FailedSaveTodos = m('FailedSaveTodos')
 
 export const Message = S.Union([
   UpdatedNewTodo,
   UpdatedEditingTodo,
   AddedTodo,
-  GeneratedTodo,
+  CompletedGenerateTodo,
   DeletedTodo,
   ToggledTodo,
   StartedEditing,
@@ -92,7 +93,8 @@ export const Message = S.Union([
   ToggledAll,
   ClearedCompleted,
   SelectedFilter,
-  SavedTodos,
+  SucceededSaveTodos,
+  FailedSaveTodos,
 ])
 export type Message = typeof Message.Type
 
@@ -154,7 +156,7 @@ export const update = (
         return [model, [GenerateTodo({ text: String.trim(model.newTodoText) })]]
       },
 
-      GeneratedTodo: ({ id, timestamp, text }) => {
+      CompletedGenerateTodo: ({ id, timestamp, text }) => {
         const newTodo: Todo = {
           id,
           text,
@@ -292,12 +294,14 @@ export const update = (
         [],
       ],
 
-      SavedTodos: ({ todos }) => [
+      SucceededSaveTodos: ({ todos }) => [
         evo(model, {
           todos: () => todos,
         }),
         [],
       ],
+
+      FailedSaveTodos: () => [model, []],
     }),
   )
 
@@ -305,20 +309,20 @@ export const update = (
 
 export const GenerateTodo = Command.define('GenerateTodo', {
   args: { text: S.String },
-  messages: [GeneratedTodo],
+  messages: [CompletedGenerateTodo],
   execute: ({ text }) =>
     Effect.gen(function* () {
       const id = yield* Random.nextIntBetween(0, Number.MAX_SAFE_INTEGER).pipe(
         Effect.map(value => value.toString(36)),
       )
       const timestamp = yield* Clock.currentTimeMillis
-      return GeneratedTodo({ id, timestamp, text })
+      return CompletedGenerateTodo({ id, timestamp, text })
     }),
 })
 
 export const SaveTodos = Command.define('SaveTodos', {
   args: { todos: Todos },
-  messages: [SavedTodos],
+  messages: [SucceededSaveTodos, FailedSaveTodos],
   execute: ({ todos }) =>
     Effect.gen(function* () {
       const store = yield* KeyValueStore.KeyValueStore
@@ -326,9 +330,9 @@ export const SaveTodos = Command.define('SaveTodos', {
         TODOS_STORAGE_KEY,
         S.encodeSync(S.fromJsonString(Todos))(todos),
       )
-      return SavedTodos({ todos })
+      return SucceededSaveTodos({ todos })
     }).pipe(
-      Effect.catch(() => Effect.succeed(SavedTodos({ todos }))),
+      Effect.catch(() => Effect.succeed(FailedSaveTodos())),
       Effect.provide(BrowserKeyValueStore.layerLocalStorage),
     ),
 })

@@ -8,12 +8,12 @@ export {
   OutMessage,
   Showed,
   Hid,
-  AdvancedAnimationFrame,
+  CompletedWaitForPaint,
   EndedAnimation,
   StartedLeaveAnimating,
   TransitionedOut,
   TransitionState,
-  RequestFrame,
+  WaitForPaint,
   WaitForAnimationSettled,
 } from './index.js'
 

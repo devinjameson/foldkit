@@ -105,7 +105,9 @@ export const Searched = m('Searched', {
   maybeTargetIndex: S.Option(S.Number),
 })
 /** Sent after the search debounce period to clear the accumulated query. */
-export const ClearedSearch = m('ClearedSearch', { version: S.Number })
+export const CompletedDelayClearSearch = m('CompletedDelayClearSearch', {
+  version: S.Number,
+})
 /** Sent when the pointer moves over a menu item, carrying screen coordinates for tracked-pointer comparison. */
 export const MovedPointerOverItem = m('MovedPointerOverItem', {
   index: S.Number,
@@ -167,7 +169,7 @@ export const Message: S.Union<
     typeof MovedPointerOverItem,
     typeof RequestedItemClick,
     typeof Searched,
-    typeof ClearedSearch,
+    typeof CompletedDelayClearSearch,
     typeof CompletedFocusItems,
     typeof CompletedFocusButton,
     typeof CompletedLockScroll,
@@ -194,7 +196,7 @@ export const Message: S.Union<
   MovedPointerOverItem,
   RequestedItemClick,
   Searched,
-  ClearedSearch,
+  CompletedDelayClearSearch,
   CompletedFocusItems,
   CompletedFocusButton,
   CompletedLockScroll,
@@ -245,7 +247,7 @@ export type SelectedItem = typeof SelectedItem.Type
 export type MovedPointerOverItem = typeof MovedPointerOverItem.Type
 export type RequestedItemClick = typeof RequestedItemClick.Type
 export type Searched = typeof Searched.Type
-export type ClearedSearch = typeof ClearedSearch.Type
+export type CompletedDelayClearSearch = typeof CompletedDelayClearSearch.Type
 export type IgnoredMouseClick = typeof IgnoredMouseClick.Type
 export type SuppressedSpaceScroll = typeof SuppressedSpaceScroll.Type
 export type PressedPointerOnButton = typeof PressedPointerOnButton.Type
@@ -381,10 +383,10 @@ export const ClickItem = Command.define('ClickItem', {
 /** Waits for the typeahead search debounce period before clearing the query. */
 export const DelayClearSearch = Command.define('DelayClearSearch', {
   args: { version: S.Number },
-  messages: [ClearedSearch],
+  messages: [CompletedDelayClearSearch],
   execute: ({ version }) =>
     Effect.sleep(SEARCH_DEBOUNCE_MILLISECONDS).pipe(
-      Effect.as(ClearedSearch({ version })),
+      Effect.as(CompletedDelayClearSearch({ version })),
     ),
 })
 /** Detects whether the menu button moved or the leave animation ended. Whichever comes first; both outcomes signal the Animation submodel that leave is complete. */
@@ -621,7 +623,7 @@ export const update = (model: Model, message: Message): UpdateReturn => {
         ]
       },
 
-      ClearedSearch: ({ version }) => {
+      CompletedDelayClearSearch: ({ version }) => {
         if (version !== model.searchVersion) {
           return [model, [], Option.none()]
         }

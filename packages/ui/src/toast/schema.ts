@@ -73,7 +73,7 @@ export const DismissedAll = m('DismissedAll')
 /** Sent when an entry's auto-dismiss timer fires. Carries a version echoed
  *  from the scheduling moment so stale timers (from hover or manual dismiss)
  *  are discarded. */
-export const ElapsedDuration = m('ElapsedDuration', {
+export const CompletedWaitBeforeDismissal = m('CompletedWaitBeforeDismissal', {
   entryId: S.String,
   version: S.Number,
 })
@@ -91,7 +91,8 @@ export const GotAnimationMessage = m('GotAnimationMessage', {
 
 export type Dismissed = typeof Dismissed.Type
 export type DismissedAll = typeof DismissedAll.Type
-export type ElapsedDuration = typeof ElapsedDuration.Type
+export type CompletedWaitBeforeDismissal =
+  typeof CompletedWaitBeforeDismissal.Type
 export type HoveredEntry = typeof HoveredEntry.Type
 export type LeftEntry = typeof LeftEntry.Type
 export type GotAnimationMessage = typeof GotAnimationMessage.Type
@@ -107,7 +108,7 @@ export const makeMessage = <A, I>(payloadSchema: S.Codec<A, I>) =>
     makeAdded(payloadSchema),
     Dismissed,
     DismissedAll,
-    ElapsedDuration,
+    CompletedWaitBeforeDismissal,
     HoveredEntry,
     LeftEntry,
     GotAnimationMessage,

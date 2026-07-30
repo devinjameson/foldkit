@@ -13,10 +13,10 @@ import {
 import { describe, test } from 'vitest'
 
 import {
+  CompletedSubmitForm,
+  CompletedValidateEmail,
   SubmitForm,
-  SubmittedForm,
   ValidateEmail,
-  ValidatedEmail,
   initialModel,
   update,
   view,
@@ -72,7 +72,7 @@ describe('view', () => {
       Command.expectExact(ValidateEmail),
       Command.resolve(
         ValidateEmail,
-        ValidatedEmail({
+        CompletedValidateEmail({
           field: FieldValidation.Valid({ value: 'alice@example.com' }),
         }),
       ),
@@ -88,7 +88,7 @@ describe('view', () => {
       Command.expectExact(ValidateEmail),
       Command.resolve(
         ValidateEmail,
-        ValidatedEmail({
+        CompletedValidateEmail({
           field: FieldValidation.Invalid({
             value: 'test@example.com',
             errors: ['This email is already on our waitlist'],
@@ -130,7 +130,7 @@ describe('view', () => {
       Command.expectExact(SubmitForm),
       Command.resolve(
         SubmitForm,
-        SubmittedForm({
+        CompletedSubmitForm({
           success: true,
           name: 'Alice',
           email: 'alice@example.com',
@@ -156,7 +156,7 @@ describe('view', () => {
       Command.expectExact(SubmitForm),
       Command.resolve(
         SubmitForm,
-        SubmittedForm({
+        CompletedSubmitForm({
           success: false,
           name: 'Alice',
           email: 'alice@example.com',

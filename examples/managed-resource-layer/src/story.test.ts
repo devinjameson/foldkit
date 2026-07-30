@@ -6,8 +6,8 @@ import {
   ClickedCompute,
   ClickedStartEngine,
   ClickedStopEngine,
+  CompletedCompute,
   Compute,
-  ComputedSquare,
   EngineBooting,
   EngineFailed,
   EngineOff,
@@ -104,7 +104,7 @@ describe('update', () => {
           expect(model.computeCount).toBe(3)
         }),
         Command.expectExact(Compute({ value: 3 })),
-        Command.resolve(Compute, ComputedSquare({ result: 9 })),
+        Command.resolve(Compute, CompletedCompute({ result: 9 })),
         model(model => {
           expect(model.maybeSquareResult).toStrictEqual(Option.some(9))
         }),

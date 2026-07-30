@@ -59,7 +59,7 @@ export type Model = typeof Model.Type
 
 export const TickedFrame = m('TickedFrame', { deltaTime: S.Number })
 export const ClickedCanvas = m('ClickedCanvas', { x: S.Number, y: S.Number })
-export const SpawnedBall = m('SpawnedBall', {
+export const CompletedGenerateBall = m('CompletedGenerateBall', {
   x: S.Number,
   y: S.Number,
   vx: S.Number,
@@ -73,7 +73,7 @@ export const ClickedTogglePlay = m('ClickedTogglePlay')
 export const Message = S.Union([
   TickedFrame,
   ClickedCanvas,
-  SpawnedBall,
+  CompletedGenerateBall,
   ClickedClear,
   ClickedTogglePlay,
 ])
@@ -88,9 +88,9 @@ export const init: Runtime.ApplicationInit<Model, Message> = () => [
 
 // COMMAND
 
-export const SpawnBall = Command.define('SpawnBall', {
+export const GenerateBall = Command.define('GenerateBall', {
   args: { x: S.Number, y: S.Number },
-  messages: [SpawnedBall],
+  messages: [CompletedGenerateBall],
   execute: ({ x, y }) =>
     Effect.gen(function* () {
       const angle = yield* Random.nextBetween(0, FULL_CIRCLE_RADIANS)
@@ -104,7 +104,7 @@ export const SpawnBall = Command.define('SpawnBall', {
         Array.get(colorIndex),
         Option.getOrElse(() => FALLBACK_COLOR),
       )
-      return SpawnedBall({
+      return CompletedGenerateBall({
         x,
         y,
         vx: Math.cos(angle) * speed,
@@ -152,9 +152,9 @@ export const update = (
         [],
       ],
 
-      ClickedCanvas: ({ x, y }) => [model, [SpawnBall({ x, y })]],
+      ClickedCanvas: ({ x, y }) => [model, [GenerateBall({ x, y })]],
 
-      SpawnedBall: ({ x, y, vx, vy, radius, color }) => [
+      CompletedGenerateBall: ({ x, y, vx, vy, radius, color }) => [
         evo(model, {
           balls: balls => [
             ...balls,

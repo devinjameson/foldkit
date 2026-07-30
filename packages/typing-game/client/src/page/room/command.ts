@@ -14,19 +14,19 @@ import {
   CompletedClearSession,
   CompletedFocusRoomPageUsernameInput,
   CompletedFocusUserGameTextInput,
-  CompletedSaveSession,
+  CompletedLoadSession,
+  CompletedSavePlayerSession,
   CompletedUpdatePlayerProgress,
-  FailedCopyClipboard,
+  CompletedWaitBeforeHidingRoomIdCopiedIndicator,
+  CompletedWaitForExitCountdownInterval,
+  FailedCopyRoomId,
   FailedFetchRoom,
   FailedJoinRoom,
   FailedStartGame,
-  HidRoomIdCopiedIndicator,
-  LoadedSession,
   SucceededCopyRoomId,
   SucceededFetchRoom,
   SucceededJoinRoom,
   SucceededStartGame,
-  TickedExitCountdown,
 } from './message'
 import { RoomPlayerSession } from './model'
 
@@ -43,7 +43,7 @@ export const FetchRoom = Command.define('FetchRoom', {
 
 export const LoadSession = Command.define('LoadSession', {
   args: { roomId: S.String },
-  messages: [LoadedSession],
+  messages: [CompletedLoadSession],
   execute: ({ roomId }) =>
     Effect.gen(function* () {
       const store = yield* KeyValueStore.KeyValueStore
@@ -56,7 +56,7 @@ export const LoadSession = Command.define('LoadSession', {
 
       return yield* decodeSession(sessionJson).pipe(
         Effect.map(session =>
-          LoadedSession({
+          CompletedLoadSession({
             maybeSession: Option.liftPredicate(
               session,
               session => session.roomId === roomId,
@@ -66,7 +66,7 @@ export const LoadSession = Command.define('LoadSession', {
       )
     }).pipe(
       Effect.catch(() =>
-        Effect.succeed(LoadedSession({ maybeSession: Option.none() })),
+        Effect.succeed(CompletedLoadSession({ maybeSession: Option.none() })),
       ),
       Effect.provide(BrowserKeyValueStore.layerSessionStorage),
     ),
@@ -119,30 +119,35 @@ export const UpdatePlayerProgress = Command.define('UpdatePlayerProgress', {
 
 export const CopyRoomId = Command.define('CopyRoomId', {
   args: { roomId: S.String },
-  messages: [SucceededCopyRoomId, FailedCopyClipboard],
+  messages: [SucceededCopyRoomId, FailedCopyRoomId],
   execute: ({ roomId }) =>
     Effect.tryPromise({
       try: () => navigator.clipboard.writeText(roomId),
       catch: () => new Error('Failed to copy to clipboard'),
     }).pipe(
       Effect.as(SucceededCopyRoomId()),
-      Effect.catch(() => Effect.succeed(FailedCopyClipboard())),
+      Effect.catch(() => Effect.succeed(FailedCopyRoomId())),
     ),
 })
 
-export const TickExitCountdown = Command.define('TickExitCountdown', {
-  messages: [TickedExitCountdown],
-  execute: Effect.sleep('1 second').pipe(Effect.as(TickedExitCountdown())),
-})
+export const WaitForExitCountdownInterval = Command.define(
+  'WaitForExitCountdownInterval',
+  {
+    messages: [CompletedWaitForExitCountdownInterval],
+    execute: Effect.sleep('1 second').pipe(
+      Effect.as(CompletedWaitForExitCountdownInterval()),
+    ),
+  },
+)
 
 const COPY_INDICATOR_DURATION = '2 seconds'
 
-export const HideRoomIdCopiedIndicator = Command.define(
-  'HideRoomIdCopiedIndicator',
+export const WaitBeforeHidingRoomIdCopiedIndicator = Command.define(
+  'WaitBeforeHidingRoomIdCopiedIndicator',
   {
-    messages: [HidRoomIdCopiedIndicator],
+    messages: [CompletedWaitBeforeHidingRoomIdCopiedIndicator],
     execute: Effect.sleep(COPY_INDICATOR_DURATION).pipe(
-      Effect.as(HidRoomIdCopiedIndicator()),
+      Effect.as(CompletedWaitBeforeHidingRoomIdCopiedIndicator()),
     ),
   },
 )
@@ -151,16 +156,16 @@ export const HideRoomIdCopiedIndicator = Command.define(
 
 export const SavePlayerSession = Command.define('SavePlayerSession', {
   args: { session: RoomPlayerSession },
-  messages: [CompletedSaveSession],
+  messages: [CompletedSavePlayerSession],
   execute: ({ session }) =>
     Effect.gen(function* () {
       const store = yield* KeyValueStore.KeyValueStore
       const encodeSession = S.encodeEffect(S.fromJsonString(RoomPlayerSession))
       const sessionJson = yield* encodeSession(session)
       yield* store.set(ROOM_PLAYER_SESSION_KEY, sessionJson)
-      return CompletedSaveSession()
+      return CompletedSavePlayerSession()
     }).pipe(
-      Effect.catch(() => Effect.succeed(CompletedSaveSession())),
+      Effect.catch(() => Effect.succeed(CompletedSavePlayerSession())),
       Effect.provide(BrowserKeyValueStore.layerSessionStorage),
     ),
 })

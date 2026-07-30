@@ -30,23 +30,23 @@ export type Model = typeof Model.Type
 // MESSAGE
 
 export const ClickedStart = m('ClickedStart')
-export const DeterminedStartTime = m('DeterminedStartTime', {
+export const CompletedDetermineStartTime = m('CompletedDetermineStartTime', {
   startTime: S.Number,
 })
 export const ClickedStop = m('ClickedStop')
 export const ClickedReset = m('ClickedReset')
 export const Ticked = m('Ticked')
-export const DeterminedTickTime = m('DeterminedTickTime', {
+export const CompletedDetermineTickTime = m('CompletedDetermineTickTime', {
   elapsedMs: S.Number,
 })
 
 export const Message = S.Union([
   ClickedStart,
-  DeterminedStartTime,
+  CompletedDetermineStartTime,
   ClickedStop,
   ClickedReset,
   Ticked,
-  DeterminedTickTime,
+  CompletedDetermineTickTime,
 ])
 export type Message = typeof Message.Type
 
@@ -54,21 +54,21 @@ export type Message = typeof Message.Type
 
 export const DetermineStartTime = Command.define('DetermineStartTime', {
   args: { elapsedMs: S.Number },
-  messages: [DeterminedStartTime],
+  messages: [CompletedDetermineStartTime],
   execute: ({ elapsedMs }) =>
     Effect.gen(function* () {
       const now = yield* Clock.currentTimeMillis
-      return DeterminedStartTime({ startTime: now - elapsedMs })
+      return CompletedDetermineStartTime({ startTime: now - elapsedMs })
     }),
 })
 
 export const DetermineTickTime = Command.define('DetermineTickTime', {
   args: { startTime: S.Number },
-  messages: [DeterminedTickTime],
+  messages: [CompletedDetermineTickTime],
   execute: ({ startTime }) =>
     Effect.gen(function* () {
       const now = yield* Clock.currentTimeMillis
-      return DeterminedTickTime({ elapsedMs: now - startTime })
+      return CompletedDetermineTickTime({ elapsedMs: now - startTime })
     }),
 })
 
@@ -88,7 +88,7 @@ export const update = (
         [DetermineStartTime({ elapsedMs: model.elapsedMs })],
       ],
 
-      DeterminedStartTime: ({ startTime }) => [
+      CompletedDetermineStartTime: ({ startTime }) => [
         evo(model, {
           isRunning: () => true,
           startTime: () => startTime,
@@ -117,7 +117,7 @@ export const update = (
         [DetermineTickTime({ startTime: model.startTime })],
       ],
 
-      DeterminedTickTime: ({ elapsedMs }) => [
+      CompletedDetermineTickTime: ({ elapsedMs }) => [
         evo(model, {
           elapsedMs: () => elapsedMs,
         }),

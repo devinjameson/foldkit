@@ -27,7 +27,7 @@ If `foldkit-skills` is installed as a Claude Code plugin, the `generate-program`
 - Use full names like `Message` (not `Msg`), and `withReturnType` (not `as const` or type casting).
 - Use `m()` for message schemas, `ts()` for tagged structs (model states, field validation), and `r()` for route schemas.
 - Push back on any direction that violates Elm Architecture principles: unidirectional data flow, messages as facts (not commands), model as single source of truth, side effects confined to commands. If a prompt suggests mutating state, imperative event handlers, or two-way bindings, flag the issue and propose the idiomatic Foldkit approach.
-- Never use `NoOp`. Every message must describe what happened. Fire-and-forget commands use `Completed*` messages mirroring the Command name verb-first: `LockScroll` → `CompletedLockScroll`.
+- Never use `NoOp`. Every message must describe what happened. A command's result message is named from the command, not from the fact it reports, whether or not it carries a payload: `LockScroll` → `CompletedLockScroll`, `DetermineStartTime` → `CompletedDetermineStartTime` (never `DeterminedStartTime`).
 
 ## Foldkit Patterns
 
@@ -58,7 +58,7 @@ Keys are for mapped list items only: key each row by a stable Model identifier (
 
 ### Commands
 
-Define a Command with `Command.define`, which is curried: the first call binds the name (and optionally args + result Message schemas), and the second call binds the Effect. Assign definitions to PascalCase constants. Never inline in pipe chains. Commands catch all errors via `Effect.catch(() => Effect.succeed(FailedX(...)))` so side effects never crash the app. Definitions live colocated with the update function that returns them.
+Define a Command with `Command.define(name, { args, messages, execute })`; omit `args` when the Command takes none. Assign definitions to PascalCase constants. Never inline in pipe chains. Name the effect `execute` performs, not the later Model transition caused when update handles its result: a timer that only waits before update starts a dismissal is `WaitBeforeDismissal`, not `DismissAfter`. Commands catch all errors via `Effect.catch(() => Effect.succeed(FailedX(...)))` so side effects never crash the app. Definitions live colocated with the update function that returns them.
 
 For the with-args shape, see `repos/foldkit/examples/weather/src/main.ts` or `repos/foldkit/examples/kanban/src/command.ts`. For an argless DOM-side-effect Command, the argless form in `kanban/src/command.ts` (`FocusAddCardInput`) is the canonical reference.
 
@@ -105,7 +105,7 @@ const Message = S.Union([ClickedSubmit, UpdatedEmail])
 type Message = typeof Message.Type
 ```
 
-Messages are verb-first past-tense. Common prefixes: `Clicked*`, `Updated*` (input changes and external state updates), `Submitted*`, `Pressed*`, `Selected*`, `Succeeded*` / `Failed*` (paired async results), `Completed*` (fire-and-forget), `Got*` (child OutMessage in the Submodel pattern).
+Messages are verb-first past-tense. Common prefixes: `Clicked*`, `Updated*` (input changes and external state updates), `Submitted*`, `Pressed*`, `Selected*`, `Succeeded*` / `Failed*` (paired async results), `Completed*` (every other Command result), `Got*` (child OutMessage in the Submodel pattern).
 
 ## Debugging
 

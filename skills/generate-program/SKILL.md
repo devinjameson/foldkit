@@ -472,9 +472,8 @@ Name messages by category:
 - `Updated*`: input value changes (with `{ value: S.String }`) and external state updates from subscriptions (`UpdatedRoom`, `UpdatedPlayerProgress`)
 - `Submitted*`: form submissions
 - `Succeeded*` / `Failed*`: paired, for commands that can meaningfully fail
-- `Completed*`: fire-and-forget (verb+object: `CompletedFocusInput`)
+- `Completed*`: every other Command result, named from the Command (verb+object: `CompletedFocusInput`, `CompletedGenerateCardId`)
 - `Got*`: child module results via OutMessage pattern
-- `Loaded*`: data restored from storage
 - `Pressed*`: keyboard input
 - `Blurred*`: focus loss
 - `Selected*`: choice made from a list
@@ -526,7 +525,8 @@ Every message must carry meaning. No `NoOp`.
 - Always `Effect.catch(() => Effect.succeed(FailedX(...)))` for fallible Effects. Commands never throw. **Exception:** if the Effect is infallible at the type level (`Clock.currentTimeMillis`, `Effect.uuid`, `Random.nextIntBetween`, etc.), no `catch` is needed and no `Failed*` Message is needed. Follow the types: if there's no error channel, there's nothing to catch.
 - Use `Effect.provide` for services
 - Factory functions named by action: `fetchWeather`, not `fetchWeatherCommand`
-- Fire-and-forget Commands return `Completed*` Messages
+- Name each Command for the effect its `execute` body performs, not the later Model transition caused when update handles its result. A timer that only waits before update starts a dismissal is `WaitBeforeDismissal`, not `DismissAfter`
+- Commands that can't meaningfully fail return `Completed*` Messages named from the Command, payload-carrying ones included: `DetermineStartTime` → `CompletedDetermineStartTime`, not `DeterminedStartTime`
 - Use Foldkit's `Dom` module for DOM operations (`Dom.focus`, `Dom.scrollIntoView`, `Dom.showDialog`, `Dom.lockScroll`, etc.) and Effect built-ins for everything else (`Clock.currentTimeMillis`, `Random.nextIntBetween`, `Effect.uuid`, `Effect.sleep(Duration.millis(...))`). See DOM and Effect Helpers in [architecture.md](architecture.md)
 - For HTTP requests, use `HttpClient` and `HttpClientRequest` from `effect/unstable/http`, and provide the client with `Effect.provide(effect, Http.layer)` where `Http` comes from `foldkit`. See `examples/weather/src/main.ts` for the pattern
 - To re-tag a child Submodel's Commands for the parent, use `Command.mapMessages(childCommands, message => GotChildMessage({ message }))`

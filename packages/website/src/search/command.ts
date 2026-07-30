@@ -4,10 +4,10 @@ import * as Dom from 'foldkit/dom'
 import { pushUrl } from 'foldkit/navigation'
 
 import {
+  CompletedFetchSearchResults,
   CompletedFocusSearchInput,
   CompletedNavigateToResult,
   CompletedScrollToResult,
-  ReceivedSearchResults,
   SearchResult,
 } from './message'
 
@@ -57,7 +57,7 @@ export class PagefindService extends Context.Service<
 
 export const FetchSearchResults = Command.define('FetchSearchResults', {
   args: { query: S.String },
-  messages: [ReceivedSearchResults],
+  messages: [CompletedFetchSearchResults],
   execute: ({ query }) =>
     Effect.gen(function* () {
       const pagefind = yield* PagefindService
@@ -84,10 +84,10 @@ export const FetchSearchResults = Command.define('FetchSearchResults', {
         }),
       )
 
-      return ReceivedSearchResults({ results, query })
+      return CompletedFetchSearchResults({ results, query })
     }).pipe(
       Effect.catch(() =>
-        Effect.succeed(ReceivedSearchResults({ results: [], query })),
+        Effect.succeed(CompletedFetchSearchResults({ results: [], query })),
       ),
     ),
 })

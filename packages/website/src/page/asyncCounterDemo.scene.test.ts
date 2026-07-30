@@ -3,9 +3,9 @@ import { Command, click, expect, given, role, scene, text } from 'foldkit/scene'
 import { describe, test } from 'vitest'
 
 import {
+  CompletedDelayAdvancePhase,
   CompletedScrollDemoHighlight,
   DelayAdvancePhase,
-  ProgressedDemoPhase,
   ScrollDemoHighlight,
   init,
   update,
@@ -19,7 +19,10 @@ const [initialModel] = init()
 const advancePhases = (steps: number, generation: number) =>
   Array.makeBy(steps, () => [
     Command.resolve(ScrollDemoHighlight, CompletedScrollDemoHighlight()),
-    Command.resolve(DelayAdvancePhase, ProgressedDemoPhase({ generation })),
+    Command.resolve(
+      DelayAdvancePhase,
+      CompletedDelayAdvancePhase({ generation }),
+    ),
   ]).flat()
 
 describe('async counter demo view', () => {

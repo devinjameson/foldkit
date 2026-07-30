@@ -20,12 +20,12 @@ import {
   ClearSession,
   CopyRoomId,
   FocusRoomPageUsernameInput,
-  HideRoomIdCopiedIndicator,
   JoinRoom,
   SavePlayerSession,
   StartGame,
-  TickExitCountdown,
   UpdatePlayerProgress,
+  WaitBeforeHidingRoomIdCopiedIndicator,
+  WaitForExitCountdownInterval,
 } from '../command'
 import {
   CompletedNavigateHome,
@@ -133,7 +133,7 @@ export const update = (
         return [model, []]
       },
 
-      LoadedSession: ({ maybeSession }) => {
+      CompletedLoadSession: ({ maybeSession }) => {
         const maybeFocus = optionWhen(
           Option.isNone(maybeSession) &&
             AsyncData.isSuccess(model.roomAsyncData),
@@ -179,20 +179,20 @@ export const update = (
               evo(model, {
                 isRoomIdCopyIndicatorVisible: () => true,
               }),
-              [HideRoomIdCopiedIndicator()],
+              [WaitBeforeHidingRoomIdCopiedIndicator()],
             ],
 
-      HidRoomIdCopiedIndicator: () => [
+      CompletedWaitBeforeHidingRoomIdCopiedIndicator: () => [
         evo(model, {
           isRoomIdCopyIndicatorVisible: () => false,
         }),
         [],
       ],
 
-      TickedExitCountdown: () => {
+      CompletedWaitForExitCountdownInterval: () => {
         const nextSecondsLeft = Number.decrement(model.exitCountdownSecondsLeft)
         const maybeTick = optionWhen(nextSecondsLeft > 0, () =>
-          TickExitCountdown(),
+          WaitForExitCountdownInterval(),
         )
 
         return [
@@ -220,10 +220,10 @@ export const update = (
       'SucceededStartGame',
       'FailedStartGame',
       'CompletedUpdatePlayerProgress',
-      'CompletedSaveSession',
+      'CompletedSavePlayerSession',
       'CompletedClearSession',
       'FailedJoinRoom',
-      'FailedCopyClipboard',
+      'FailedCopyRoomId',
       () => [model, []],
     ),
     M.exhaustive,

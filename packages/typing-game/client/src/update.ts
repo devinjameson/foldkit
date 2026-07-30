@@ -137,7 +137,7 @@ export const update = (
     M.tag(
       'CompletedNavigateInternal',
       'CompletedLoadExternal',
-      'CompletedNavigateRoom',
+      'CompletedNavigateToRoom',
       () => [model, []],
     ),
     M.exhaustive,

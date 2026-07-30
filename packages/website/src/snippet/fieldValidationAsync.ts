@@ -7,11 +7,11 @@ const validateEmail = validate(emailRules)
 
 const CheckEmailAvailable = Command.define('CheckEmailAvailable', {
   args: { email: S.String, validationId: S.Number },
-  messages: [ValidatedEmail],
+  messages: [CompletedCheckEmailAvailable],
   execute: ({ email, validationId }) =>
     Effect.gen(function* () {
       const isAvailable = yield* apiCheckEmail(email)
-      return ValidatedEmail({
+      return CompletedCheckEmailAvailable({
         validationId,
         field: isAvailable
           ? Valid({ value: email })
@@ -23,7 +23,7 @@ const CheckEmailAvailable = Command.define('CheckEmailAvailable', {
     }).pipe(
       Effect.catch(() =>
         Effect.succeed(
-          ValidatedEmail({
+          CompletedCheckEmailAvailable({
             validationId,
             field: Invalid({
               value: email,
@@ -60,7 +60,7 @@ const update = (model: Model, message: Message) =>
         )
       },
 
-      ValidatedEmail: ({ validationId, field }) => {
+      CompletedCheckEmailAvailable: ({ validationId, field }) => {
         if (validationId === model.emailValidationId) {
           return [evo(model, { email: () => field }), []]
         } else {

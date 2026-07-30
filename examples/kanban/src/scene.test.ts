@@ -22,8 +22,8 @@ import type { Card } from './domain/card'
 import type { Column } from './domain/column'
 import {
   CompletedFocusAddCardInput,
+  CompletedGenerateCardId,
   CompletedSaveBoard,
-  GeneratedCardId,
 } from './message'
 import type { Model } from './model'
 import { update } from './update'
@@ -135,7 +135,7 @@ describe('view', () => {
         Command.expectExact(GenerateCardId),
         Command.resolve(
           GenerateCardId,
-          GeneratedCardId({
+          CompletedGenerateCardId({
             cardId: 'test-uuid',
             columnId: 'todo',
             title: 'Buy groceries',

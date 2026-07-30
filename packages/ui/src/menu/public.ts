@@ -19,7 +19,7 @@ export {
   CompletedPortalMenuBackdrop,
   AnchorMenu,
   PortalMenuBackdrop,
-  ClearedSearch,
+  CompletedDelayClearSearch,
   GotAnimationMessage,
   LockScroll,
   UnlockScroll,

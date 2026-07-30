@@ -5,7 +5,10 @@ import { evo } from 'foldkit/struct'
 import * as Shared from '@typing-game/shared'
 
 import { optionWhen } from '../../../optionWhen'
-import { FocusUserGameTextInput, TickExitCountdown } from '../command'
+import {
+  FocusUserGameTextInput,
+  WaitForExitCountdownInterval,
+} from '../command'
 import { Model, RoomAsyncData } from '../model'
 import type { UpdateReturn } from './update'
 
@@ -61,7 +64,7 @@ export const handleRoomUpdated =
         })
 
     const maybeExitCountdown = optionWhen(gameJustFinished, () =>
-      TickExitCountdown(),
+      WaitForExitCountdownInterval(),
     )
     const maybeFocusUserGameText = optionWhen(gameJustStarted, () =>
       FocusUserGameTextInput(),

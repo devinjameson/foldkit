@@ -15,13 +15,13 @@ export type ChildModel = typeof ChildModel.Type
 export const SubmittedForm = m('SubmittedForm')
 export const SucceededSubmit = m('SucceededSubmit', { id: S.String })
 export const CancelledForm = m('CancelledForm')
-export const CompletedReset = m('CompletedReset')
+export const CompletedResetForm = m('CompletedResetForm')
 
 export const ChildMessage = S.Union([
   SubmittedForm,
   SucceededSubmit,
   CancelledForm,
-  CompletedReset,
+  CompletedResetForm,
 ])
 export type ChildMessage = typeof ChildMessage.Type
 
@@ -41,8 +41,8 @@ export const SubmitForm = Command.define('SubmitForm', {
 })
 
 export const ResetForm = Command.define('ResetForm', {
-  messages: [CompletedReset],
-  execute: Effect.sync(() => CompletedReset()),
+  messages: [CompletedResetForm],
+  execute: Effect.sync(() => CompletedResetForm()),
 })
 
 // CHILD INIT
@@ -83,7 +83,7 @@ export const childUpdate = (
         [],
         Option.some(RequestedCancel()),
       ],
-      CompletedReset: () => [{ status: 'Idle' }, [], Option.none()],
+      CompletedResetForm: () => [{ status: 'Idle' }, [], Option.none()],
     }),
   )
 

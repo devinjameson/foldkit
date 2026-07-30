@@ -9,6 +9,7 @@ import {
   Cancelled,
   CancelledDrag,
   CompletedFocusItem,
+  CompletedResolveKeyboardMove,
   ConfirmedKeyboardDrop,
   FocusItem,
   MovedPointer,
@@ -17,7 +18,6 @@ import {
   ReleasedPointer,
   Reordered,
   ResolveKeyboardMove,
-  ResolvedKeyboardMove,
   ghostStyle,
   init,
   isDragging,
@@ -524,7 +524,10 @@ describe('DragAndDrop', () => {
         Story.message(PressedArrowKey({ direction: 'Down' })),
         Story.Command.resolve(
           ResolveKeyboardMove,
-          ResolvedKeyboardMove({ targetContainerId: 'list-1', targetIndex: 1 }),
+          CompletedResolveKeyboardMove({
+            targetContainerId: 'list-1',
+            targetIndex: 1,
+          }),
         ),
         Story.model(model => {
           expect(model.dragState._tag).toBe('KeyboardDragging')
@@ -535,13 +538,13 @@ describe('DragAndDrop', () => {
       )
     })
 
-    it('updates target on ResolvedKeyboardMove', () => {
+    it('updates target on CompletedResolveKeyboardMove', () => {
       Story.story(
         update,
         Story.given(defaultInit()),
         Story.message(activatedKeyboardDrag),
         Story.message(
-          ResolvedKeyboardMove({
+          CompletedResolveKeyboardMove({
             targetContainerId: 'list-2',
             targetIndex: 3,
           }),
@@ -562,7 +565,7 @@ describe('DragAndDrop', () => {
         Story.given(defaultInit()),
         Story.message(activatedKeyboardDrag),
         Story.message(
-          ResolvedKeyboardMove({
+          CompletedResolveKeyboardMove({
             targetContainerId: 'list-2',
             targetIndex: 1,
           }),

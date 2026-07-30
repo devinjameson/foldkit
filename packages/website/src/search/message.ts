@@ -14,7 +14,7 @@ export const SearchResult = S.Struct({
 export const UpdatedSearchQuery = m('UpdatedSearchQuery', {
   query: S.String,
 })
-export const ReceivedSearchResults = m('ReceivedSearchResults', {
+export const CompletedFetchSearchResults = m('CompletedFetchSearchResults', {
   results: S.Array(SearchResult),
   query: S.String,
 })
@@ -36,7 +36,7 @@ export const PressedArrowKey = m('PressedArrowKey', {
 
 export const Message = S.Union([
   UpdatedSearchQuery,
-  ReceivedSearchResults,
+  CompletedFetchSearchResults,
   SelectedSearchResult,
   GotSearchDialogMessage,
   ClickedOpenSearch,

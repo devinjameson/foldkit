@@ -5,10 +5,10 @@ import {
   ClickedReset,
   ClickedStart,
   ClickedStop,
+  CompletedDetermineStartTime,
+  CompletedDetermineTickTime,
   DetermineStartTime,
   DetermineTickTime,
-  DeterminedStartTime,
-  DeterminedTickTime,
   type Model,
   Ticked,
   update,
@@ -39,7 +39,7 @@ describe('update', () => {
         }),
         Command.resolve(
           DetermineStartTime,
-          DeterminedStartTime({ startTime: 500 }),
+          CompletedDetermineStartTime({ startTime: 500 }),
         ),
         model(model => {
           expect(model.isRunning).toBe(true)
@@ -48,11 +48,11 @@ describe('update', () => {
       )
     })
 
-    test('DeterminedStartTime stores the offset start time and starts running', () => {
+    test('CompletedDetermineStartTime stores the offset start time and starts running', () => {
       story(
         update,
         given(idleModel),
-        message(DeterminedStartTime({ startTime: 1000 })),
+        message(CompletedDetermineStartTime({ startTime: 1000 })),
         model(model => {
           expect(model.isRunning).toBe(true)
           expect(model.startTime).toBe(1000)
@@ -109,7 +109,7 @@ describe('update', () => {
         Command.expectHas(DetermineTickTime),
         Command.resolve(
           DetermineTickTime,
-          DeterminedTickTime({ elapsedMs: 6000 }),
+          CompletedDetermineTickTime({ elapsedMs: 6000 }),
         ),
         model(model => {
           expect(model.elapsedMs).toBe(6000)
@@ -117,11 +117,11 @@ describe('update', () => {
       )
     })
 
-    test('DeterminedTickTime stores the new elapsed time', () => {
+    test('CompletedDetermineTickTime stores the new elapsed time', () => {
       story(
         update,
         given(runningModel),
-        message(DeterminedTickTime({ elapsedMs: 7500 })),
+        message(CompletedDetermineTickTime({ elapsedMs: 7500 })),
         model(model => {
           expect(model.elapsedMs).toBe(7500)
         }),

@@ -69,7 +69,7 @@ export const ChangedDemoResetDuration = m('ChangedDemoResetDuration', {
   seconds: S.Number,
 })
 export const ClickedDemoReset = m('ClickedDemoReset')
-export const ProgressedDemoPhase = m('ProgressedDemoPhase', {
+export const CompletedDelayAdvancePhase = m('CompletedDelayAdvancePhase', {
   generation: S.Number,
 })
 export const CompletedScrollDemoHighlight = m('CompletedScrollDemoHighlight')
@@ -78,7 +78,7 @@ export const Message = S.Union([
   ClickedDemoIncrement,
   ChangedDemoResetDuration,
   ClickedDemoReset,
-  ProgressedDemoPhase,
+  CompletedDelayAdvancePhase,
   CompletedScrollDemoHighlight,
 ])
 export type Message = typeof Message.Type
@@ -107,9 +107,11 @@ const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
 export const DelayAdvancePhase = Command.define('DelayAdvancePhase', {
   args: { generation: S.Number, duration: S.DurationFromMillis },
-  messages: [ProgressedDemoPhase],
+  messages: [CompletedDelayAdvancePhase],
   execute: ({ generation, duration }) =>
-    Effect.sleep(duration).pipe(Effect.as(ProgressedDemoPhase({ generation }))),
+    Effect.sleep(duration).pipe(
+      Effect.as(CompletedDelayAdvancePhase({ generation })),
+    ),
 })
 
 export const ScrollDemoHighlight = Command.define('ScrollDemoHighlight', {
@@ -191,7 +193,7 @@ const applyMessage = (model: Model, message: Message): UpdateReturn =>
         ]
       },
 
-      ProgressedDemoPhase: ({ generation }) => {
+      CompletedDelayAdvancePhase: ({ generation }) => {
         if (generation !== model.generation) {
           return [model, []]
         } else {

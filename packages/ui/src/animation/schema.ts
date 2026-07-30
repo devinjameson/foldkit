@@ -31,7 +31,7 @@ export const Showed = m('Showed')
 /** Sent when the animation should leave (become hidden). Starts the leave sequence. */
 export const Hid = m('Hid')
 /** Sent internally when a double-rAF completes, advancing the lifecycle to its animating phase. */
-export const AdvancedAnimationFrame = m('AdvancedAnimationFrame')
+export const CompletedWaitForPaint = m('CompletedWaitForPaint')
 /** Sent internally when all CSS animations on the element have settled. Covers both CSS transitions and CSS keyframe animations. */
 export const EndedAnimation = m('EndedAnimation')
 
@@ -40,10 +40,10 @@ export const Message: S.Union<
   [
     typeof Showed,
     typeof Hid,
-    typeof AdvancedAnimationFrame,
+    typeof CompletedWaitForPaint,
     typeof EndedAnimation,
   ]
-> = S.Union([Showed, Hid, AdvancedAnimationFrame, EndedAnimation])
+> = S.Union([Showed, Hid, CompletedWaitForPaint, EndedAnimation])
 export type Message = typeof Message.Type
 
 export type Showed = typeof Showed.Type

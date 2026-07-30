@@ -75,7 +75,7 @@ const givenOpenAnimated = flow(
   givenClosedAnimated,
   Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
   Story.Command.resolveAll(
-    [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
+    [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
     [Animation.WaitForAnimationSettled, Animation.EndedAnimation()],
   ),
 )
@@ -689,7 +689,7 @@ describe('Combobox', () => {
 
     describe('transitions', () => {
       describe('enter flow', () => {
-        it('starts enter transition and emits RequestFrame on Opened', () => {
+        it('starts enter transition and emits WaitForPaint on Opened', () => {
           Story.story(
             update,
             givenClosedAnimated,
@@ -698,22 +698,22 @@ describe('Combobox', () => {
               expect(model.isOpen).toBe(true)
               expect(model.animation.transitionState).toBe('EnterStart')
             }),
-            Story.Command.expectHas(Animation.RequestFrame),
+            Story.Command.expectHas(Animation.WaitForPaint),
             Story.Command.resolveAll(
-              [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
+              [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
               [Animation.WaitForAnimationSettled, Animation.EndedAnimation()],
             ),
           )
         })
 
-        it('advances EnterStart to EnterAnimating on AdvancedAnimationFrame', () => {
+        it('advances EnterStart to EnterAnimating on CompletedWaitForPaint', () => {
           Story.story(
             update,
             givenClosedAnimated,
             Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
             Story.Command.resolve(
-              Animation.RequestFrame,
-              Animation.AdvancedAnimationFrame(),
+              Animation.WaitForPaint,
+              Animation.CompletedWaitForPaint(),
             ),
             Story.model(model => {
               expect(model.animation.transitionState).toBe('EnterAnimating')
@@ -731,7 +731,7 @@ describe('Combobox', () => {
             givenClosedAnimated,
             Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
             Story.Command.resolveAll(
-              [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
+              [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
               [Animation.WaitForAnimationSettled, Animation.EndedAnimation()],
             ),
             Story.model(model => {
@@ -753,7 +753,7 @@ describe('Combobox', () => {
             }),
             Story.Command.resolveAll(
               [FocusInput, CompletedFocusInput()],
-              [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
+              [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
               [DetectMovementOrAnimationEnd, animationEndMessage],
             ),
           )
@@ -769,7 +769,7 @@ describe('Combobox', () => {
               expect(model.animation.transitionState).toBe('LeaveStart')
             }),
             Story.Command.resolveAll(
-              [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
+              [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
               [DetectMovementOrAnimationEnd, animationEndMessage],
             ),
           )
@@ -792,7 +792,7 @@ describe('Combobox', () => {
             }),
             Story.Command.resolveAll(
               [FocusInput, CompletedFocusInput()],
-              [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
+              [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
               [DetectMovementOrAnimationEnd, animationEndMessage],
             ),
           )
@@ -804,8 +804,8 @@ describe('Combobox', () => {
             givenOpenAnimated,
             Story.message(Closed({ restingInputValue: '' })),
             Story.Command.resolve(
-              Animation.RequestFrame,
-              Animation.AdvancedAnimationFrame(),
+              Animation.WaitForPaint,
+              Animation.CompletedWaitForPaint(),
             ),
             Story.model(model => {
               expect(model.animation.transitionState).toBe('LeaveAnimating')
@@ -825,7 +825,7 @@ describe('Combobox', () => {
             Story.message(Closed({ restingInputValue: '' })),
             Story.Command.resolveAll(
               [FocusInput, CompletedFocusInput()],
-              [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
+              [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
               [DetectMovementOrAnimationEnd, animationEndMessage],
             ),
             Story.model(model => {
@@ -861,13 +861,13 @@ describe('Combobox', () => {
       })
 
       describe('stale messages', () => {
-        it('ignores GotAnimationMessage with AdvancedAnimationFrame when Idle', () => {
+        it('ignores GotAnimationMessage with CompletedWaitForPaint when Idle', () => {
           Story.story(
             update,
             givenOpen,
             Story.message(
               GotAnimationMessage({
-                message: Animation.AdvancedAnimationFrame(),
+                message: Animation.CompletedWaitForPaint(),
               }),
             ),
             Story.model(model => {
@@ -897,7 +897,7 @@ describe('Combobox', () => {
             givenClosedAnimated,
             Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
             Story.Command.resolveAll(
-              [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
+              [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
               [Animation.WaitForAnimationSettled, Animation.EndedAnimation()],
             ),
             Story.message(Closed({ restingInputValue: '' })),
@@ -907,7 +907,7 @@ describe('Combobox', () => {
             }),
             Story.Command.resolveAll(
               [FocusInput, CompletedFocusInput()],
-              [Animation.RequestFrame, Animation.AdvancedAnimationFrame()],
+              [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
               [DetectMovementOrAnimationEnd, animationEndMessage],
             ),
           )

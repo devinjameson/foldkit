@@ -17,7 +17,7 @@ const application = Runtime.makeApplication({
     excludeFromHistory: [
       'TickedFrame',
       'MovedPointer',
-      'SpawnedAmbientParticle',
+      'CompletedGenerateAmbientParticle',
     ],
   },
 })

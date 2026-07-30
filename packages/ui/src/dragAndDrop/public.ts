@@ -17,7 +17,7 @@ export {
   ReleasedPointer,
   CancelledDrag,
   ActivatedKeyboardDrag,
-  ResolvedKeyboardMove,
+  CompletedResolveKeyboardMove,
   ConfirmedKeyboardDrop,
   PressedArrowKey,
   AdvancedAutoScrollFrame,

@@ -13,8 +13,8 @@ import {
   ChangedNewCardTitle,
   ClickedAddCard,
   CompletedFocusAddCardInput,
+  CompletedGenerateCardId,
   CompletedSaveBoard,
-  GeneratedCardId,
   GotDragAndDropMessage,
   SubmittedNewCard,
 } from './message'
@@ -110,7 +110,7 @@ describe('update', () => {
         message(SubmittedNewCard()),
         Command.resolve(
           GenerateCardId,
-          GeneratedCardId({
+          CompletedGenerateCardId({
             cardId: 'test-uuid',
             columnId: 'done',
             title: 'Ship it',
@@ -263,7 +263,7 @@ describe('update', () => {
         ),
         message(
           GotDragAndDropMessage({
-            message: DragAndDrop.ResolvedKeyboardMove({
+            message: DragAndDrop.CompletedResolveKeyboardMove({
               targetContainerId: 'todo',
               targetIndex: 2,
             }),
@@ -303,7 +303,7 @@ describe('update', () => {
         ),
         message(
           GotDragAndDropMessage({
-            message: DragAndDrop.ResolvedKeyboardMove({
+            message: DragAndDrop.CompletedResolveKeyboardMove({
               targetContainerId: 'in-progress',
               targetIndex: 0,
             }),

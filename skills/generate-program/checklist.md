@@ -217,7 +217,7 @@ Alongside the greps, eyeball each file's imports. Every symbol you imported shou
 - [ ] Every _fallible_ Command catches all errors: `Effect.catch(() => Effect.succeed(FailedX(...)))`. Infallible Effects (`Clock.currentTimeMillis`, `Random.nextIntBetween`, `Effect.uuid`, `Calendar.today.local`) do NOT need catch. If the type system shows no error channel, there's nothing to catch, and no paired `Failed*` Message is needed either.
 - [ ] Return types inferred. No explicit `Command<typeof A>` annotations
 - [ ] Factory functions named by action: `fetchWeather`, not `fetchWeatherCommand`
-- [ ] Fire-and-forget Commands return `Completed*` Messages
+- [ ] Commands that can't meaningfully fail return `Completed*` Messages, payload-carrying ones included
 
 ## Mount, Command, Subscription, ManagedResource, CustomElement: pick by what causes the side effect
 
@@ -455,8 +455,10 @@ Items without a tier marker apply universally (even to a 50-line counter). When 
 - [ ] Boolean fields prefixed `is*`: `isPlaying`, `isDismissed`, `isMenuOpen`.
 - [ ] Command function names are verbs describing the action: `fetchWeather`, `focusButton`, `scrollToItem`. Never `fetchWeatherCommand` or `weatherFetcher`.
 - [ ] Command `define` names are verb-first PascalCase imperatives: `FetchWeather`, `FocusButton`, `LockScroll`.
+- [ ] Command names describe the effect their `execute` bodies perform, not the later Model transition: a timer that only waits before dismissal is `WaitBeforeDismissal`, not `DismissAfter`.
 - [ ] Message names are verb-first past-tense: `ClickedSubmit`, `UpdatedEmail`, `SucceededFetchWeather`. Never noun-first (`SubmitClicked`) or imperative (`FetchWeather` as a Message).
 - [ ] `Completed*` Messages mirror the Command name verb-first: Command `LockScroll` → Message `CompletedLockScroll`. Never `CompletedScrollLock`.
+- [ ] A Command's result Message is named from the Command, not from the fact it reports: `DetermineStartTime` → `CompletedDetermineStartTime`, never `DeterminedStartTime`. The only exception is a Message with more than one cause.
 - [ ] Named helpers use specific verbs, not generic ones: `enqueueMessage` not `addMessage`, `announceKeyboardDrag` not `announce`, `whenSelectAction` not `handleSelect`. The verb eliminates ambiguity.
 - [ ] Names are immediately understandable in context: `signature` not `sig`, `tickCount` not `t`, `message` not `msg`, `index` not `i`. Callback parameters are included. Conventional technical shorthand is allowed when it is the normal domain spelling, such as `attrs`, `props`, `args`, `dir`, `ctx`, `fn`, `DOM`, `URL`, and `VNode`. Established API and DSL bindings such as `h` are also allowed. Prefer a precise semantic name such as `toMessage` over an unexplained `f`.
 

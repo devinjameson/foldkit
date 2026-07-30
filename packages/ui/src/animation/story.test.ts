@@ -4,14 +4,14 @@ import { expect } from 'vitest'
 import { describe, it } from '@effect/vitest'
 
 import {
-  AdvancedAnimationFrame,
+  CompletedWaitForPaint,
   EndedAnimation,
   Hid,
-  RequestFrame,
   Showed,
   StartedLeaveAnimating,
   TransitionedOut,
   WaitForAnimationSettled,
+  WaitForPaint,
   init,
   update,
 } from './index.js'
@@ -46,8 +46,8 @@ describe('Animation', () => {
             expect(model.isShowing).toBe(true)
             expect(model.transitionState).toBe('EnterStart')
           }),
-          Story.Command.expectHas(RequestFrame),
-          Story.Command.resolve(RequestFrame, AdvancedAnimationFrame()),
+          Story.Command.expectHas(WaitForPaint),
+          Story.Command.resolve(WaitForPaint, CompletedWaitForPaint()),
           Story.model(model => {
             expect(model.transitionState).toBe('EnterAnimating')
           }),
@@ -84,8 +84,8 @@ describe('Animation', () => {
             expect(model.isShowing).toBe(false)
             expect(model.transitionState).toBe('LeaveStart')
           }),
-          Story.Command.expectHas(RequestFrame),
-          Story.Command.resolve(RequestFrame, AdvancedAnimationFrame()),
+          Story.Command.expectHas(WaitForPaint),
+          Story.Command.resolve(WaitForPaint, CompletedWaitForPaint()),
           Story.model(model => {
             expect(model.transitionState).toBe('LeaveAnimating')
           }),
@@ -117,8 +117,8 @@ describe('Animation', () => {
           update,
           Story.given(init({ id: 'test', isShowing: true })),
           Story.message(Hid()),
-          Story.Command.expectHas(RequestFrame),
-          Story.Command.resolve(RequestFrame, AdvancedAnimationFrame()),
+          Story.Command.expectHas(WaitForPaint),
+          Story.Command.resolve(WaitForPaint, CompletedWaitForPaint()),
           Story.model(model => {
             expect(model.transitionState).toBe('LeaveAnimating')
           }),
@@ -134,12 +134,12 @@ describe('Animation', () => {
       })
     })
 
-    describe('AdvancedAnimationFrame', () => {
+    describe('CompletedWaitForPaint', () => {
       it('does nothing when Idle', () => {
         Story.story(
           update,
           Story.given(init({ id: 'test' })),
-          Story.message(AdvancedAnimationFrame()),
+          Story.message(CompletedWaitForPaint()),
           Story.model(model => {
             expect(model.transitionState).toBe('Idle')
           }),

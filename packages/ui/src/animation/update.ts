@@ -6,7 +6,7 @@ import { evo } from 'foldkit/struct'
 
 import { idSelector } from '../internal/selectors.js'
 import {
-  AdvancedAnimationFrame,
+  CompletedWaitForPaint,
   EndedAnimation,
   type Message,
   type Model,
@@ -26,10 +26,10 @@ type UpdateReturn = readonly [
 ]
 const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
-/** Advances the enter/leave lifecycle by waiting a double-rAF. */
-export const RequestFrame = Command.define('RequestFrame', {
-  messages: [AdvancedAnimationFrame],
-  execute: Render.afterPaint.pipe(Effect.as(AdvancedAnimationFrame())),
+/** Waits for paint via double-rAF before the enter/leave lifecycle advances. */
+export const WaitForPaint = Command.define('WaitForPaint', {
+  messages: [CompletedWaitForPaint],
+  execute: Render.afterPaint.pipe(Effect.as(CompletedWaitForPaint())),
 })
 /** Waits for all CSS animations on the element to settle. Covers both CSS transitions and CSS keyframe animations. */
 export const WaitForAnimationSettled = Command.define(
@@ -46,7 +46,7 @@ export const WaitForAnimationSettled = Command.define(
 
 /** Processes an animation message and returns the next model, commands, and optional OutMessage. */
 export const update = (model: Model, message: Message): UpdateReturn => {
-  const maybeNextFrame = RequestFrame()
+  const maybeNextFrame = WaitForPaint()
 
   return M.value(message).pipe(
     withUpdateReturn,
@@ -85,7 +85,7 @@ export const update = (model: Model, message: Message): UpdateReturn => {
         ]
       },
 
-      AdvancedAnimationFrame: () =>
+      CompletedWaitForPaint: () =>
         M.value(model.transitionState).pipe(
           withUpdateReturn,
           M.when('EnterStart', () => [

@@ -111,10 +111,10 @@ import {
 } from './apps/pointer.js'
 import {
   CancelledSelectResume,
+  CompletedSelectResume,
   FailedReadPreview,
   ReadResumePreview,
   SelectResume,
-  SelectedResume,
   SucceededReadPreview,
   initialModel as resumeInitialModel,
   update as resumeUpdate,
@@ -2100,7 +2100,10 @@ describe('scene with Command-based file upload flow', () => {
       Scene.given(resumeInitialModel),
       Scene.expect(chooseButton).toExist(),
       Scene.click(chooseButton),
-      Scene.Command.resolve(SelectResume, SelectedResume({ file: resumePdf })),
+      Scene.Command.resolve(
+        SelectResume,
+        CompletedSelectResume({ file: resumePdf }),
+      ),
       Scene.expect(Scene.text('resume.pdf')).toExist(),
       Scene.expect(readingStatus).toHaveText('Reading preview...'),
       Scene.Command.resolve(
@@ -2129,7 +2132,10 @@ describe('scene with Command-based file upload flow', () => {
       { update: resumeUpdate, view: resumeView },
       Scene.given(resumeInitialModel),
       Scene.click(chooseButton),
-      Scene.Command.resolve(SelectResume, SelectedResume({ file: resumePdf })),
+      Scene.Command.resolve(
+        SelectResume,
+        CompletedSelectResume({ file: resumePdf }),
+      ),
       Scene.Command.resolve(ReadResumePreview, FailedReadPreview()),
       Scene.expect(Scene.text('resume.pdf')).toExist(),
       Scene.expect(errorAlert).toHaveText('Could not read preview'),
@@ -2162,7 +2168,7 @@ describe('scene with Command-based file upload flow', () => {
       Scene.given(resumeInitialModel),
       Scene.click(chooseButton),
       Scene.Command.resolveAll(
-        [SelectResume, SelectedResume({ file: resumePdf })],
+        [SelectResume, CompletedSelectResume({ file: resumePdf })],
         [ReadResumePreview, SucceededReadPreview({ dataUrl: previewDataUrl })],
       ),
       Scene.expect(Scene.text('resume.pdf')).toExist(),
@@ -2170,7 +2176,7 @@ describe('scene with Command-based file upload flow', () => {
       Scene.expect(chooseButton).toExist(),
       Scene.click(chooseButton),
       Scene.Command.resolveAll(
-        [SelectResume, SelectedResume({ file: secondResume })],
+        [SelectResume, CompletedSelectResume({ file: secondResume })],
         [ReadResumePreview, SucceededReadPreview({ dataUrl: secondDataUrl })],
       ),
       Scene.expect(Scene.text('resume-v2.pdf')).toExist(),
