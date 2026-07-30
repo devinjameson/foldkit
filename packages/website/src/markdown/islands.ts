@@ -11,23 +11,6 @@ import { lookupSnippet } from './snippets'
 
 // ISLANDS
 
-const createWarnOnce = (buildMessage: (name: string) => string) => {
-  const warned = new Set<string>()
-
-  return (name: string): void => {
-    if (!warned.has(name)) {
-      warned.add(name)
-      console.warn(buildMessage(name))
-    }
-  }
-}
-
-const warnMissingSnippetOnce = createWarnOnce(
-  name =>
-    `[docs] No snippet registered for "${name}". ` +
-    'Add the file under src/snippet, or fix the ::Snippet name attribute.',
-)
-
 /**
  * The site's island views, paired with {@link islandAttributes} so attributes
  * arrive already decoded. `Snippet` renders a build-time highlighted source file
@@ -37,15 +20,16 @@ const warnMissingSnippetOnce = createWarnOnce(
  * name; `Faq` hands its rendered children to the page's collapsible shell. The
  * page's slots live in the app Model, so the views close over `slots`; the copy
  * state rides inside the slots' `renderCopyButton`.
+ *
+ * A `::Snippet` name with no matching file under `src/snippet` renders nothing,
+ * which the snippet registration test is there to catch. The views stay pure, so
+ * a missing snippet reports at test time rather than warning from a render.
  */
 export const docIslands = (slots: Slots<string>): Markdown.Islands => {
   return Markdown.islandsFor(islandAttributes, {
     Snippet: ({ name, label, class: className }) =>
       Option.match(lookupSnippet(name), {
-        onNone: () => {
-          warnMissingSnippetOnce(name)
-          return ih.empty
-        },
+        onNone: () => ih.empty,
         onSome: snippet =>
           highlightedCodeBlock(
             ih.div(
