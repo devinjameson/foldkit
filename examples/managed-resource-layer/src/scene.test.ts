@@ -7,22 +7,23 @@ import {
   ComputedSquare,
   EngineOff,
   EngineReady,
-  type Model,
+  Model,
+  managedResources,
   update,
   view,
 } from './main'
 
-const offModel: Model = {
+const offModel = Model.make({
   engine: EngineOff(),
   computeCount: 0,
   maybeSquareResult: Option.none(),
-}
+})
 
-const readyModel: Model = {
+const readyModel = Model.make({
   engine: EngineReady({ engineId: 'engine-1' }),
   computeCount: 2,
   maybeSquareResult: Option.none(),
-}
+})
 
 describe('view', () => {
   test('initial view shows the engine off with a Start button', () => {
@@ -70,6 +71,42 @@ describe('view', () => {
       Scene.Command.expectExact(Compute({ value: 3 })),
       Scene.Command.resolve(Compute, ComputedSquare({ result: 9 })),
       Scene.expect(Scene.text('Square result: 9')).toExist(),
+    )
+  })
+
+  test('the engine lifecycle drives boot, ready, and stop through the resource steps', () => {
+    Scene.scene(
+      { update, view },
+      Scene.with(offModel),
+      Scene.click(Scene.role('button', { name: 'Start engine' })),
+      Scene.expect(Scene.text('Booting engine...')).toExist(),
+      Scene.ManagedResource.acquire(managedResources.engine, {
+        engineId: 'engine-1',
+        square: value => value * value,
+      }),
+      Scene.expect(Scene.text('Engine ready: engine-1')).toExist(),
+      Scene.expect(
+        Scene.role('button', { name: 'Compute next square' }),
+      ).not.toBeDisabled(),
+      Scene.click(Scene.role('button', { name: 'Stop engine' })),
+      Scene.ManagedResource.release(managedResources.engine),
+      Scene.expect(Scene.text('Engine is off.')).toExist(),
+    )
+  })
+
+  test('a failed engine boot shows the failure reason', () => {
+    Scene.scene(
+      { update, view },
+      Scene.with(offModel),
+      Scene.click(Scene.role('button', { name: 'Start engine' })),
+      Scene.ManagedResource.failAcquire(
+        managedResources.engine,
+        'Error: crypto unavailable',
+      ),
+      Scene.expect(
+        Scene.text('Engine failed: Error: crypto unavailable'),
+      ).toExist(),
+      Scene.expect(Scene.role('button', { name: 'Start engine' })).toExist(),
     )
   })
 })

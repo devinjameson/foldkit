@@ -71,7 +71,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
 
 // WEB COMPONENT
 
-const hexColorPicker = CustomElement.define({
+export const hexColorPicker = CustomElement.define({
   tag: 'hex-color-picker',
   properties: {
     color: S.String,

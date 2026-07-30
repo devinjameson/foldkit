@@ -1,9 +1,10 @@
-import { Option, pipe } from 'effect'
+import { Match as M, Option, pipe } from 'effect'
 import { describe, expect, test } from 'vitest'
 
 import {
   type HtmlBuilder,
   __htmlBuilder as attributeHtml,
+  inertHtml,
 } from '../html/index.js'
 import { h } from '../snabbdom/index.js'
 import type { VNode } from '../snabbdom/index.js'
@@ -23,9 +24,18 @@ import {
   view as bubblingView,
 } from './apps/bubbling.js'
 import {
+  initialModel as colorPickerInitialModel,
+  update as colorPickerUpdate,
+  view as colorPickerView,
+  viewWithoutHandler as colorPickerViewWithoutHandler,
+  hexColorPicker,
+} from './apps/colorPicker.js'
+import {
   FetchCount,
   FetchCountById,
+  PolledCount,
   SucceededFetchCount,
+  Ticked,
   initialModel as counterInitialModel,
   update as counterUpdate,
   view as counterView,
@@ -37,6 +47,12 @@ import {
   view as draftsView,
   initialModel as initialDraftsModel,
 } from './apps/drafts.js'
+import {
+  feedResources,
+  initialModel as feedSocketInitialModel,
+  update as feedSocketUpdate,
+  view as feedSocketView,
+} from './apps/feedSocket.js'
 import {
   initialModel as fileUploadInitialModel,
   update as fileUploadUpdate,
@@ -58,10 +74,16 @@ import {
 } from './apps/login.js'
 import type { Model } from './apps/login.js'
 import {
+  CompletedAction,
   RequestedLogout,
   initialModel as logoutInitialModel,
   update as logoutUpdate,
   view as logoutView,
+} from './apps/logoutButton.js'
+import type {
+  Message as LogoutMessage,
+  Model as LogoutModel,
+  OutMessage as LogoutOutMessage,
 } from './apps/logoutButton.js'
 import {
   CompletedFocusButton,
@@ -99,6 +121,11 @@ import {
   view as resumeView,
 } from './apps/resumeUpload.js'
 import type { Model as ResumeModel } from './apps/resumeUpload.js'
+import {
+  initialModel as scorePanelInitialModel,
+  update as scorePanelUpdate,
+  view as scorePanelView,
+} from './apps/scorePanel.js'
 import {
   SucceededUploadFile,
   UploadFile,
@@ -2309,6 +2336,367 @@ describe('scene with outMessage', () => {
         expect(outMessage).toEqual(Option.some(RequestedLogout()))
       }),
     )
+  })
+})
+
+describe('Scene.Subscription.emit', () => {
+  test('drives a Message into a running scene and re-renders', () => {
+    Scene.scene(
+      { update: counterUpdate, view: counterView },
+      Scene.with(counterInitialModel),
+      Scene.expect(Scene.role('status')).toHaveText('count: 0'),
+      Scene.Subscription.emit(Ticked()),
+      Scene.expect(Scene.role('status')).toHaveText('count: 1'),
+      Scene.Subscription.emit(Ticked()),
+      Scene.expect(Scene.role('status')).toHaveText('count: 2'),
+    )
+  })
+
+  test('Commands produced by an emitted Message become pending', () => {
+    Scene.scene(
+      { update: counterUpdate, view: counterView },
+      Scene.with(counterInitialModel),
+      Scene.Subscription.emit(PolledCount()),
+      Scene.Command.expectExact(FetchCount),
+      Scene.Command.resolve(FetchCount, SucceededFetchCount({ count: 7 })),
+      Scene.expect(Scene.role('status')).toHaveText('count: 7'),
+    )
+  })
+
+  test('throws when unresolved Commands are pending', () => {
+    expect(() =>
+      Scene.scene(
+        { update: counterUpdate, view: counterView },
+        Scene.with(counterInitialModel),
+        Scene.click(Scene.role('button', { name: 'Start three fetches' })),
+        Scene.Subscription.emit(Ticked()),
+      ),
+    ).toThrow(
+      'I found unresolved Commands when a Subscription emitted a new Message',
+    )
+  })
+
+  test('throws when unresolved Mounts are pending', () => {
+    const openModel = { ...mountInitialModel, isOpen: true }
+    expect(() =>
+      Scene.scene(
+        { update: mountUpdate, view: mountView },
+        Scene.with(openModel),
+        Scene.Subscription.emit(CompletedFocusButton()),
+      ),
+    ).toThrow(
+      'I found unresolved Mounts when a Subscription emitted a new Message',
+    )
+  })
+
+  test('throws when unacknowledged unmounts are pending', () => {
+    const openModel = { ...mountInitialModel, isOpen: true }
+    expect(() =>
+      Scene.scene(
+        { update: mountUpdate, view: mountView },
+        Scene.with(openModel),
+        Scene.Mount.resolve(MeasurePanel, MeasuredPanel({ width: 400 })),
+        Scene.Mount.resolve(FocusButton, CompletedFocusButton()),
+        Scene.click(Scene.role('button')),
+        Scene.Subscription.emit(CompletedFocusButton()),
+      ),
+    ).toThrow(
+      'I found unacknowledged unmounts when a Subscription emitted a new Message',
+    )
+  })
+})
+
+describe('Scene.ManagedResource', () => {
+  test('acquire and release drive the declared lifecycle Messages through update', () => {
+    Scene.scene(
+      { update: feedSocketUpdate, view: feedSocketView },
+      Scene.with(feedSocketInitialModel),
+      Scene.expect(Scene.role('status')).toHaveText('Disconnected'),
+      Scene.click(Scene.role('button', { name: 'Open feed' })),
+      Scene.ManagedResource.acquire(feedResources.feedSocket, {
+        socketId: 'sock-1',
+      }),
+      Scene.expect(Scene.role('status')).toHaveText('Connected'),
+      Scene.click(Scene.role('button', { name: 'Close feed' })),
+      Scene.ManagedResource.release(feedResources.feedSocket),
+      Scene.expect(Scene.role('status')).toHaveText('Disconnected'),
+    )
+  })
+
+  test('failAcquire drives onAcquireError through update', () => {
+    Scene.scene(
+      { update: feedSocketUpdate, view: feedSocketView },
+      Scene.with(feedSocketInitialModel),
+      Scene.click(Scene.role('button', { name: 'Open feed' })),
+      Scene.ManagedResource.failAcquire(
+        feedResources.feedSocket,
+        new Error('offline'),
+      ),
+      Scene.expect(Scene.role('status')).toHaveText('Failed'),
+    )
+  })
+
+  test('acquire throws when the Model does not request the resource', () => {
+    expect(() =>
+      Scene.scene(
+        { update: feedSocketUpdate, view: feedSocketView },
+        Scene.with(feedSocketInitialModel),
+        Scene.ManagedResource.acquire(feedResources.feedSocket, {
+          socketId: 'sock-1',
+        }),
+      ),
+    ).toThrow(
+      'I tried to acquire the ManagedResource "FeedSocket" but the current Model does not request it',
+    )
+  })
+
+  test('failAcquire throws when the Model does not request the resource', () => {
+    expect(() =>
+      Scene.scene(
+        { update: feedSocketUpdate, view: feedSocketView },
+        Scene.with(feedSocketInitialModel),
+        Scene.ManagedResource.failAcquire(
+          feedResources.feedSocket,
+          new Error('offline'),
+        ),
+      ),
+    ).toThrow(
+      'I tried to fail acquiring the ManagedResource "FeedSocket" but the current Model does not request it',
+    )
+  })
+
+  test('release throws while the Model still requests the resource', () => {
+    expect(() =>
+      Scene.scene(
+        { update: feedSocketUpdate, view: feedSocketView },
+        Scene.with(feedSocketInitialModel),
+        Scene.click(Scene.role('button', { name: 'Open feed' })),
+        Scene.ManagedResource.release(feedResources.feedSocket),
+      ),
+    ).toThrow(
+      'I tried to release the ManagedResource "FeedSocket" but the current Model still requests it',
+    )
+  })
+
+  test('acquire takes no value when the entry onAcquired ignores it', () => {
+    Scene.scene(
+      { update: feedSocketUpdate, view: feedSocketView },
+      Scene.with(feedSocketInitialModel),
+      Scene.click(Scene.role('button', { name: 'Open feed' })),
+      Scene.ManagedResource.acquire(feedResources.presence),
+      Scene.expect(Scene.role('status')).toHaveText('Connected'),
+    )
+  })
+
+  test('acquire arguments mirror the entry onAcquired at the type level', () => {
+    // @ts-expect-error the feedSocket onAcquired consumes the value, so it is required
+    Scene.ManagedResource.acquire(feedResources.feedSocket)
+
+    Scene.ManagedResource.acquire(
+      feedResources.presence,
+      // @ts-expect-error the presence onAcquired ignores the value, so none is accepted
+      'online',
+    )
+  })
+})
+
+describe('Scene.CustomElement.emit', () => {
+  test('dispatches a declared CustomEvent through the element mapping and re-renders', () => {
+    Scene.scene(
+      { update: colorPickerUpdate, view: colorPickerView },
+      Scene.with(colorPickerInitialModel),
+      Scene.expect(Scene.role('status')).toHaveText('#000000'),
+      Scene.CustomElement.emit(
+        hexColorPicker,
+        Scene.selector('hex-color-picker'),
+        'color-changed',
+        { value: '#ff0000' },
+      ),
+      Scene.expect(Scene.role('status')).toHaveText('#ff0000'),
+    )
+  })
+
+  test('throws when the element has no handler for the event', () => {
+    expect(() =>
+      Scene.scene(
+        { update: colorPickerUpdate, view: colorPickerViewWithoutHandler },
+        Scene.with(colorPickerInitialModel),
+        Scene.CustomElement.emit(
+          hexColorPicker,
+          Scene.selector('hex-color-picker'),
+          'color-changed',
+          { value: '#ff0000' },
+        ),
+      ),
+    ).toThrow(
+      'has no color-changed handler.\n\n' +
+        'Make sure the element has the OnColorChanged attribute from its CustomElement builder.',
+    )
+  })
+
+  test('throws when no element matches the target', () => {
+    expect(() =>
+      Scene.scene(
+        { update: colorPickerUpdate, view: colorPickerView },
+        Scene.with(colorPickerInitialModel),
+        Scene.CustomElement.emit(
+          hexColorPicker,
+          Scene.selector('rgb-color-picker'),
+          'color-changed',
+          { value: '#ff0000' },
+        ),
+      ),
+    ).toThrow('I could not find an element matching')
+  })
+
+  test('detail is typed by the declared event Schema', () => {
+    Scene.CustomElement.emit(
+      hexColorPicker,
+      Scene.selector('hex-color-picker'),
+      'color-changed',
+      // @ts-expect-error detail must match the color-changed Schema
+      { value: 5 },
+    )
+  })
+
+  test('throws when the event is not declared by the spec', () => {
+    expect(() =>
+      Scene.scene(
+        { update: colorPickerUpdate, view: colorPickerView },
+        Scene.with(colorPickerInitialModel),
+        Scene.CustomElement.emit(
+          hexColorPicker,
+          Scene.selector('hex-color-picker'),
+          // @ts-expect-error the spec declares only color-changed
+          'size-changed',
+          { value: '#ff0000' },
+        ),
+      ),
+    ).toThrow(
+      'I tried to emit "size-changed" but the \'hex-color-picker\' element does not declare it',
+    )
+  })
+})
+
+const mixedArityUpdate = (
+  model: LogoutModel,
+  message: LogoutMessage,
+): readonly [
+  LogoutModel,
+  ReadonlyArray<never>,
+  Option.Option<LogoutOutMessage>,
+] =>
+  M.value(message).pipe(
+    M.withReturnType<
+      readonly [
+        LogoutModel,
+        ReadonlyArray<never>,
+        Option.Option<LogoutOutMessage>,
+      ]
+    >(),
+    M.tagsExhaustive({
+      ClickedLogout: () => [model, [], Option.some(RequestedLogout())],
+      CompletedAction: () =>
+        // NOTE: deliberately returns a two-tuple, against the convention that
+        // an OutMessage-returning update keeps every branch on the three-tuple
+        // shape. It pins the latching behavior the OutMessage assertion steps
+        // document: a two-tuple result leaves the previous value in place.
+        /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+        [model, []] as unknown as readonly [
+          LogoutModel,
+          ReadonlyArray<never>,
+          Option.Option<LogoutOutMessage>,
+        ],
+    }),
+  )
+
+describe('Scene.expectOutMessage and Scene.expectNoOutMessage', () => {
+  test('assert the OutMessage across steps', () => {
+    Scene.scene(
+      { update: logoutUpdate, view: logoutView },
+      Scene.with(logoutInitialModel),
+      Scene.expectNoOutMessage(),
+      Scene.click(Scene.role('button', { name: 'Log out' })),
+      Scene.expectOutMessage(RequestedLogout()),
+      Scene.Subscription.emit(CompletedAction()),
+      Scene.expectNoOutMessage(),
+    )
+  })
+
+  test('expectOutMessage fails when no OutMessage was emitted', () => {
+    expect(() =>
+      Scene.scene(
+        { update: logoutUpdate, view: logoutView },
+        Scene.with(logoutInitialModel),
+        Scene.expectOutMessage(RequestedLogout()),
+      ),
+    ).toThrow('Expected OutMessage:')
+  })
+
+  test('expectOutMessage fails with expected and actual values when the OutMessage is wrong', () => {
+    expect(() =>
+      Scene.scene(
+        { update: logoutUpdate, view: logoutView },
+        Scene.with(logoutInitialModel),
+        Scene.click(Scene.role('button', { name: 'Log out' })),
+        Scene.expectOutMessage(CompletedAction()),
+      ),
+    ).toThrow(
+      `Expected OutMessage:\n\n    Some(${JSON.stringify(CompletedAction())})\n\nBut got:\n\n    ${JSON.stringify(Option.some(RequestedLogout()))}`,
+    )
+  })
+
+  test('expectNoOutMessage fails when an OutMessage is present', () => {
+    expect(() =>
+      Scene.scene(
+        { update: logoutUpdate, view: logoutView },
+        Scene.with(logoutInitialModel),
+        Scene.click(Scene.role('button', { name: 'Log out' })),
+        Scene.expectNoOutMessage(),
+      ),
+    ).toThrow('Expected no OutMessage but got:')
+  })
+
+  test('a two-tuple update result leaves the previous OutMessage latched', () => {
+    Scene.scene(
+      { update: mixedArityUpdate, view: logoutView },
+      Scene.with(logoutInitialModel),
+      Scene.click(Scene.role('button', { name: 'Log out' })),
+      Scene.expectOutMessage(RequestedLogout()),
+      Scene.Subscription.emit(CompletedAction()),
+      Scene.expectOutMessage(RequestedLogout()),
+    )
+  })
+})
+
+describe('Scene.withViewInputs', () => {
+  const sceneView = Scene.withViewInputs(scorePanelView, {
+    label: 'Score',
+    toView: ({ label, score }) =>
+      inertHtml.span([inertHtml.Role('status')], [`${label}: ${score}`]),
+  })
+
+  test('adapts a ViewInputs view to the shape Scene.scene takes', () => {
+    Scene.scene(
+      { update: scorePanelUpdate, view: sceneView() },
+      Scene.with(scorePanelInitialModel),
+      Scene.expect(Scene.role('status')).toHaveText('Score: 0'),
+      Scene.click(Scene.role('button', { name: 'Increment' })),
+      Scene.expect(Scene.role('status')).toHaveText('Score: 1'),
+    )
+  })
+
+  test('overrides vary value inputs while the renderer stays pinned', () => {
+    Scene.scene(
+      { update: scorePanelUpdate, view: sceneView({ label: 'Points' }) },
+      Scene.with(scorePanelInitialModel),
+      Scene.expect(Scene.role('status')).toHaveText('Points: 0'),
+    )
+  })
+
+  test('toView is not overridable', () => {
+    // @ts-expect-error toView is pinned by the defaults
+    sceneView({ toView: () => null })
   })
 })
 

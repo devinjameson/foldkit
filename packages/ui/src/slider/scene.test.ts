@@ -1,37 +1,29 @@
-import type { HtmlBuilder } from 'foldkit/html'
+import { Array } from 'effect'
+import { inertHtml as ih } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
 
 import { describe, it } from '@effect/vitest'
 
-import type { Message, Model, ViewInputs } from './index.js'
+import type { SliderAttributes } from './index.js'
 import { PressedThumb, init, update, view } from './index.js'
 
-const sceneView =
-  (overrides: Omit<Partial<ViewInputs>, 'toView'> = {}) =>
-  (model: Model, h: HtmlBuilder<Message>) =>
-    view(
-      model,
-      {
-        value: 5,
-        toView: attributes =>
-          h.div(
-            [...attributes.root],
-            [
-              h.label([...attributes.label], ['Test']),
-              h.div(
-                [...attributes.track],
-                [h.div([...attributes.filledTrack], [])],
-              ),
-              h.div([...attributes.thumb], []),
-              ...(attributes.hiddenInput.length > 0
-                ? [h.span(attributes.hiddenInput, [])]
-                : []),
-            ],
-          ),
-        ...overrides,
-      },
-      h,
-    )
+const testToView = (attributes: SliderAttributes) =>
+  ih.div(
+    [...attributes.root],
+    [
+      ih.label([...attributes.label], ['Test']),
+      ih.div([...attributes.track], [ih.div([...attributes.filledTrack], [])]),
+      ih.div([...attributes.thumb], []),
+      ...(Array.isReadonlyArrayNonEmpty(attributes.hiddenInput)
+        ? [ih.span(attributes.hiddenInput, [])]
+        : []),
+    ],
+  )
+
+const sceneView = Scene.withViewInputs(view, {
+  value: 5,
+  toView: testToView,
+})
 
 const defaultModel = init({
   id: 'test',

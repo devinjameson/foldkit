@@ -99,8 +99,8 @@ export type ManagedResources<Model, Message, Services = never> = Record<
   readonly __managedResourceServices?: Services
 }
 
-type EntryBrand = {
-  readonly __managedResourceEntry: never
+type EntryBrand<Model, Message> = {
+  readonly __managedResourceEntry: (model: Model) => Message
 }
 
 /**
@@ -124,8 +124,20 @@ type AcquireParams<Requirements> =
  * The `Service` parameter carries the resource tag's identity so `make`,
  * `lift`, and `aggregate` can union the services a record requires. Read the
  * union off a finished record with `ManagedResource.ServicesOf`.
+ *
+ * The `OnAcquired` parameter preserves the arity of the `onAcquired` handler:
+ * an entry whose handler ignores the acquired value keeps that fact in its
+ * type, so callers that replay the handler (the Scene test steps) only demand
+ * the value when the handler consumes it.
  */
-export type Entry<Model, Message, Requirements, Value, Service = unknown> = {
+export type Entry<
+  Model,
+  Message,
+  Requirements,
+  Value,
+  Service = unknown,
+  OnAcquired extends (...args: any) => Message = (value: Value) => Message,
+> = {
   readonly schema: Schema.Schema<Requirements>
   readonly resource: ManagedResource<Value, Service>
   readonly modelToMaybeRequirements: (model: Model) => Requirements
@@ -133,10 +145,10 @@ export type Entry<Model, Message, Requirements, Value, Service = unknown> = {
     params: AcquireParams<Requirements>,
   ) => Effect.Effect<Value, unknown, Scope.Scope>
   readonly release: (value: Value) => Effect.Effect<void>
-  readonly onAcquired: (value: Value) => Message
+  readonly onAcquired: OnAcquired
   readonly onReleased: () => Message
   readonly onAcquireError: (error: unknown) => Message
-} & EntryBrand
+} & EntryBrand<Model, Message>
 
 /** Type-level utility to extract the service union from a Managed Resources record. */
 export type ServicesOf<Resources> = {
@@ -154,11 +166,18 @@ export type ServicesOf<Resources> = {
  * before contextually typing `modelToMaybeRequirements` and `acquire`, so
  * destructuring patterns are inferred correctly even when the schema uses
  * transforms like `S.Option`.
+ *
+ * The `onAcquired` field is typed as `OnAcquired` intersected with the
+ * concrete `(value: Value) => Message` signature: the concrete member keeps
+ * contextual typing intact for destructured handler parameters, while the
+ * naked generic captures the handler's own type so the Entry records its
+ * arity.
  */
 export type EntryBuilder<Model, Message> = <
   RequirementsSchema extends Schema.Schema<any>,
   Value,
   Service,
+  OnAcquired extends (value: Value) => Message,
 >(
   schema: RequirementsSchema,
   config: {
@@ -170,7 +189,7 @@ export type EntryBuilder<Model, Message> = <
       params: AcquireParams<Schema.Schema.Type<RequirementsSchema>>,
     ) => Effect.Effect<Value, unknown, Scope.Scope>
     readonly release: (value: Value) => Effect.Effect<void>
-    readonly onAcquired: (value: Value) => Message
+    readonly onAcquired: OnAcquired & ((value: Value) => Message)
     readonly onReleased: () => Message
     readonly onAcquireError: (error: unknown) => Message
   },
@@ -179,7 +198,8 @@ export type EntryBuilder<Model, Message> = <
   Message,
   Schema.Schema.Type<RequirementsSchema>,
   Value,
-  Service
+  Service,
+  OnAcquired
 >
 
 /**
@@ -271,7 +291,11 @@ export type EntryBuilder<Model, Message> = <
  */
 export const make =
   <Model, Message>() =>
-  <Entries extends Record<string, Entry<Model, Message, any, any, any>>>(
+  // NOTE: the Entries constraint is the brand alone, not Entry. Naming Entry
+  // here hands the checker a concrete onAcquired signature through the return
+  // position, which poisons contextual typing of destructured onAcquired
+  // parameters at every entry call site (their bindings become any).
+  <Entries extends Record<string, EntryBrand<Model, Message>>>(
     build: (entry: EntryBuilder<Model, Message>) => Entries,
   ): Entries => {
     /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
@@ -335,9 +359,17 @@ export const lift =
       any,
       infer Requirements,
       infer Value,
-      infer Service
+      infer Service,
+      infer OnAcquired extends (...args: ReadonlyArray<any>) => any
     >
-      ? Entry<ParentModel, ParentMessage, Requirements, Value, Service>
+      ? Entry<
+          ParentModel,
+          ParentMessage,
+          Requirements,
+          Value,
+          Service,
+          (...args: Parameters<OnAcquired>) => ParentMessage
+        >
       : never
   } =>
     /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */

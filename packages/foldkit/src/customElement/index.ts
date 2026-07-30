@@ -92,7 +92,9 @@ export type Builder<Spec, Message> =
     ? ElementBuilder<Message, Properties, Events>
     : never
 
-const kebabToPascal = (input: string): string =>
+/** @internal Shared with the Scene test helpers so their error messages name
+ *  the same `On*` factory this module generates. */
+export const kebabToPascal = (input: string): string =>
   pipe(input, String.split('-'), Array.map(String.capitalize), Array.join(''))
 
 const IDENTIFIER_PATTERN = /^[A-Za-z_$][A-Za-z0-9_$]*$/
