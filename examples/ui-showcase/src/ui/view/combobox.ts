@@ -198,6 +198,7 @@ export const view = Submodel.defineView<UiModel, UiMessage>(
                 ),
                 maybeSelectedValue:
                   model.maybeComboboxPlacementLockDemoSelectedCity,
+                openOnFocus: true,
               },
               toParentMessage: message =>
                 GotComboboxPlacementLockDemoMessage({ message }),

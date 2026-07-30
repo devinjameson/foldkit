@@ -139,7 +139,7 @@ test.describe('ui-showcase example', () => {
         )
       })
 
-    await trigger.press('ArrowDown')
+    await trigger.focus()
     await expect(panel).toHaveAttribute('data-placement', 'top')
 
     const isPanelAboveTrigger = async (): Promise<boolean> => {
@@ -157,10 +157,24 @@ test.describe('ui-showcase example', () => {
 
     await expect.poll(isPanelAboveTrigger).toBe(true)
 
-    await trigger.fill('Zurich')
+    const panelHeight = async (): Promise<number> =>
+      (await panel.boundingBox())?.height ?? 0
+
+    const expandedPanelHeight = await panelHeight()
+
+    await trigger.fill('z')
     await expect(panel.getByRole('option')).toHaveCount(1)
     await expect(panel).toHaveAttribute('data-placement', 'top')
     await expect.poll(isPanelAboveTrigger).toBe(true)
+
+    const filteredPanelHeight = await panelHeight()
+    expect(filteredPanelHeight).toBeLessThan(expandedPanelHeight)
+
+    await trigger.press('Backspace')
+    await expect(panel.getByRole('option')).toHaveCount(7)
+    await expect(panel).toHaveAttribute('data-placement', 'top')
+    await expect.poll(isPanelAboveTrigger).toBe(true)
+    await expect.poll(panelHeight).toBeGreaterThan(filteredPanelHeight)
   })
 
   test('focuses the tooltip trigger when its external label is clicked', async ({

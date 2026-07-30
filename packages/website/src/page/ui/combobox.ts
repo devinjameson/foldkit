@@ -318,6 +318,7 @@ export const placementLockDemo = (
                       },
                     }),
                     maybeSelectedValue: maybeSelectedCity,
+                    openOnFocus: true,
                   },
                   toParentMessage: message =>
                     GotComboboxPlacementLockDemoMessage({ message }),
