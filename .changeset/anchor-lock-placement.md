@@ -6,7 +6,7 @@ Add `isPlacementLocked` to `AnchorConfig`. It keeps the placement that an anchor
 
 Foldkit uses Floating UI to position anchored panels. Its `autoUpdate` helper calls `computePosition` again when the trigger, panel, or viewport changes. The positioning call uses Floating UI middleware: `flip` can move the panel to another side when its preferred side overflows, `shift` moves it to keep it in view, and `size` reports the available space so Foldkit can constrain its height.
 
-Without placement locking, `flip` runs after every observed change. A panel that changes height while it is open can therefore move from below the trigger to above it, and back again, as its content grows and shrinks. In a filterable dropdown this can happen on every keystroke. The panel jumps to the other side while the user types, and the option under the pointer moves away. Each placement is correct on its own, but the sequence is disruptive because the user is already reading the panel.
+Without placement locking, `flip` runs after every observed change. A panel that changes height while it is open can therefore move from below the trigger to above it, and back again, as its content grows and shrinks. In a filterable dropdown this can happen on every keystroke. The panel can jump to the other side while the user types. Even if each placement is correct on its own, repeatedly switching sides disrupts what the user is reading and makes options harder to select.
 
 When `isPlacementLocked` is true, the first positioning call can still choose the side with enough room. Later calls keep that resolved side. Scrolling and resizing still reposition the panel, and the panel still shrinks when its available space runs out, but it does not move to another side.
 
