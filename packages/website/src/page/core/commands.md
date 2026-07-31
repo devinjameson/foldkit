@@ -20,7 +20,7 @@ So far, update has been returning an empty Commands array. Let’s put it to use
 
 Look at what update does when `ClickedResetAfterDelay` arrives: it returns the Model unchanged, along with `DelayReset()`, a Command that describes a one-second delay. The update function didn’t start a timer. It handed the runtime a description that says “wait one second, then send me `CompletedDelayReset`.” The runtime does the waiting. When the delay fires, `CompletedDelayReset` arrives as a new Message, and update resets the count to zero.
 
-A Command is a struct with three fields: `name`, identifying what the Command does; `args`, the typed input record (when declared); and `effect`, the Effect the runtime executes. You declare one with `Command.define`, which takes the name and then a config object whose fields name each input: `args` declares the args Schema, `messages` lists every Message the Command can produce, and `execute` holds the Effect (or a builder that receives the typed args, when args are declared).
+Every Command declares three things: a name identifying what it does, the Messages it can produce, and the Effect that produces one of them. You write all three with `Command.define`, which takes the name and then a config object where `messages` lists the Messages and `execute` holds the Effect. Two optional fields extend that. `args` declares a Schema of the inputs that vary per dispatch, which makes `execute` a builder that receives them, and `interrupt` makes the Command interruptible.
 
 This is the same idea as Messages. Just as `m()` gives a Message a name that the type system knows, `Command.define` gives a Command a name and shape that DevTools can display, tests can reference, and traces can track. The name and args aren’t debug strings. They’re first-class values.
 
@@ -52,7 +52,7 @@ Commands use Effect’s typed error channel: if a Command can fail, the type sig
 
 ## Commands with Args
 
-The Commands so far have taken no inputs. But many Commands need values that vary per dispatch: the zip code for a weather lookup, the element id for a focus call, the duration for a delay. Declare those values as an args schema between the Command name and the result Messages. The factory then receives them as a typed record, and call sites pass them in when dispatching.
+The Commands so far have taken no inputs. But many Commands need values that vary per dispatch: for example, the zip code for a weather lookup, the element id for a focus call, or the duration for a delay. Declare those values in the config object’s `args` field. The Definition then accepts them as a typed record, and each call supplies the values for that dispatch.
 
 ::Snippet{name="commandWithArgs" label="command with args example"}
 
