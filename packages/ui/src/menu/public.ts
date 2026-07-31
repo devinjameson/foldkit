@@ -31,10 +31,6 @@ export {
   ClickItem,
   DelayClearSearch,
   DetectMovementOrAnimationEnd,
-} from './index.js'
-
-export type {
-  ActivationTrigger,
   Opened,
   Closed,
   BlurredItems,
@@ -47,6 +43,10 @@ export type {
   ReleasedPointerOnItems,
   IgnoredMouseClick,
   SuppressedSpaceScroll,
+} from './index.js'
+
+export type {
+  ActivationTrigger,
   InitConfig,
   ViewInputs,
   ItemConfig,
