@@ -1,5 +1,60 @@
 # @foldkit/ui
 
+## 0.137.0
+
+### Minor Changes
+
+- d31d95a: Add `isPlacementLocked` to `AnchorConfig`. It keeps the placement that an anchored panel resolves the first time it is positioned.
+
+  Foldkit uses Floating UI to position anchored panels. Its `autoUpdate` helper calls `computePosition` again when the trigger, panel, or viewport changes. The positioning call uses Floating UI middleware: `flip` can move the panel to another side when its preferred side overflows, `shift` moves it to keep it in view, and `size` reports the available space so Foldkit can constrain its height.
+
+  Without placement locking, `flip` runs after every observed change. A panel that changes height while it is open can therefore move from below the trigger to above it, and back again, as its content grows and shrinks. In a filterable dropdown this can happen on every keystroke. The panel can jump to the other side while the user types. Even if each placement is correct on its own, repeatedly switching sides disrupts what the user is reading and makes options harder to select.
+
+  When `isPlacementLocked` is true, the first positioning call can still choose the side with enough room. Later calls keep that resolved side. Scrolling and resizing still reposition the panel, and the panel still shrinks when its available space runs out, but it does not move to another side.
+
+  The same ticks write the locked side to `data-placement` on the floating element, as one of `'top'`, `'right'`, `'bottom'`, or `'left'`. A panel that opens upwards usually needs its content reversed, so that the row closest to the trigger stays closest to the trigger. With the side in an attribute, CSS can do this on its own, and the placement does not have to live in a Model.
+
+  `isPlacementLocked` defaults to false. Both behaviors only apply when it is true, so a caller that does not opt in is positioned exactly as before and gets no new attribute. It works in every component that already accepts an `anchor` config, including `Combobox`, `Listbox`, `Menu`, `Popover`, `Tooltip`, and `DatePicker`.
+
+  Thanks @wmaurer for contributing this feature!
+
+- 1c6ed84: Breaking: align Command result pairs with the effects they represent.
+
+  The convention already said `Completed*` mirrors the Command name verb-first, but it was written as a rule for fire-and-forget acknowledgments, so Commands that resolved to a value drifted into conjugating their own verb instead: `DetermineStartTime` produced `DeterminedStartTime`, `GenerateCardId` produced `GeneratedCardId`, `SaveTodos` produced `SavedTodos`. Those names read like facts that arrived on their own, which hides the Command→Message pair in a DevTools timeline and in Story and Scene tests.
+
+  A payload does not change the rule. A Command whose result cannot meaningfully fail names that result `Completed<Command>` and carries the value as the payload. `Succeeded*`/`Failed*` still cover Commands that can fail. The one exception is a Message with more than one cause: when several Commands resolve to the same Message, or a Command synthesizes a Message another source also emits, name it for the fact. `EndedAnimation` stays as it is because both the `WaitForAnimationSettled` Command and each component's `DetectMovementOrAnimationEnd` race produce it.
+
+  Derive the result only after checking that the Command itself names the effect its `execute` body performs. Timer Commands that only wait now say so instead of claiming the later Model transition.
+
+  ## Migration
+
+  Renamed Command result pairs on `@foldkit/ui`:
+
+  | Component     | Command                                | Message                                                 |
+  | ------------- | -------------------------------------- | ------------------------------------------------------- |
+  | `Animation`   | `RequestFrame` → `WaitForPaint`        | `AdvancedAnimationFrame` → `CompletedWaitForPaint`      |
+  | `DragAndDrop` | `ResolveKeyboardMove`                  | `ResolvedKeyboardMove` → `CompletedResolveKeyboardMove` |
+  | `Listbox`     | `DelayClearSearch`                     | `ClearedSearch` → `CompletedDelayClearSearch`           |
+  | `Menu`        | `DelayClearSearch`                     | `ClearedSearch` → `CompletedDelayClearSearch`           |
+  | `Toast`       | `DismissAfter` → `WaitBeforeDismissal` | `ElapsedDuration` → `CompletedWaitBeforeDismissal`      |
+  | `Tooltip`     | `ShowAfterDelay` → `WaitBeforeShowing` | `ElapsedShowDelay` → `CompletedWaitBeforeShowing`       |
+
+  Apps reference these when they resolve a component Command in a Story or Scene test, or match on a component Message they forwarded through `Got*`. Update both names in those call sites when the Command changed.
+
+### Patch Changes
+
+- 1e3dcbe: Defer a Command's `execute` body until the runtime executes it.
+
+  `Command.define` invoked the `execute` body as soon as update constructed the Command. Only the resulting Effect was deferred, so every expression the body evaluated on the way to returning that Effect ran immediately, inside a pure reducer.
+
+  A body that reaches for a browser API therefore threw from update itself. `Popover.update` raised `ReferenceError: CSS is not defined` outside a browser, because `InertOthers` builds its selectors with `CSS.escape` and update constructs that Command unconditionally. It threw for a non-modal popover too, where the Command is built and then discarded. That made `@foldkit/ui` popovers, and the picker, combobox, menu, and date picker built on them, unusable in a headless Story even though no Effect ever ran.
+
+  The body is now suspended, so constructing a Command runs none of it. No side effect the body performs and no exception it raises can reach update, a Command that update builds and discards runs nothing at all, and a throwing body surfaces as a contained Effect failure the runtime reports with the Message that caused it, rather than an exception escaping the reducer.
+
+  This applies to Commands that declare `args`, on both the plain and the interruptible paths. A Command with no `args` already received `execute` as an Effect value and never had the problem. Interrupt keys are still derived at construction, so nothing about interrupt addressing changes.
+
+  Thanks @artile for the report and the diagnosis.
+
 ## 0.136.0
 
 ### Minor Changes
