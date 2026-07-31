@@ -46,15 +46,15 @@ The items panel is portaled to the document body and positioned relative to the 
 
 To make the items panel match the trigger button width, set `width: var(--button-width)` (or Tailwind `w-(--button-width)`) on the items class. The anchor system writes the trigger button’s measured width to this CSS variable on the items element every time it positions the panel, so the panel always matches the button even as content or viewport sizes change. Without it, the items panel sizes to its content.
 
-| Attribute        | Condition                                                                                                       |
-| ---------------- | --------------------------------------------------------------------------------------------------------------- |
-| `data-open`      | Present on button and wrapper when the dropdown is open.                                                        |
-| `data-active`    | Present on the item currently highlighted by keyboard or pointer.                                               |
-| `data-selected`  | Present on selected item(s).                                                                                    |
-| `data-disabled`  | Present on disabled items and on the button when the listbox is disabled.                                       |
-| `data-invalid`   | Present on the button and wrapper when isInvalid is true.                                                       |
-| `data-closed`    | Present during close animation when isAnimated is true.                                                         |
-| `data-placement` | Present on the items panel when isPlacementLocked is true, set to the locked side: top, right, bottom, or left. |
+| Attribute        | Condition                                                                                                                                                       |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data-open`      | Present on button and wrapper when the dropdown is open.                                                                                                        |
+| `data-active`    | Present on the item currently highlighted by keyboard or pointer.                                                                                               |
+| `data-selected`  | Present on selected item(s).                                                                                                                                    |
+| `data-disabled`  | Present on disabled items and on the button when the listbox is disabled.                                                                                       |
+| `data-invalid`   | Present on the button and wrapper when isInvalid is true.                                                                                                       |
+| `data-closed`    | Present during close animation when isAnimated is true.                                                                                                         |
+| `data-placement` | Present on the items panel, set to the side it currently sits on: top, right, bottom, or left. Fixed to the first resolved side when isPlacementLocked is true. |
 
 ## Keyboard Interaction
 

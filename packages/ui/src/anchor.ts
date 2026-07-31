@@ -105,11 +105,11 @@ const toSide = (placement: FloatingPlacement): string =>
  *  requestAnimationFrame so the element is painted before focus fires.
  *  `focusSelector` optionally targets a descendant (e.g. a calendar grid
  *  inside a popover panel) instead of the panel itself.
- *  When `isPlacementLocked` is true, the element keeps the side that the first
- *  positioning picks, and `flip` is removed from every later update. The locked
- *  side is also written to `data-placement` on the element, so CSS can react to
- *  it. None of this happens unless `isPlacementLocked` is set, so existing
- *  callers render exactly as before. */
+ *  The side the element currently sits on is written to `data-placement`, so
+ *  CSS can react to it. When `isPlacementLocked` is true, the element keeps the
+ *  side that the first positioning picks, `flip` is removed from every later
+ *  update, and `data-placement` holds that locked side. Otherwise the attribute
+ *  tracks the side each update resolves to, including the ones `flip` moves. */
 export const anchorSetup =
   (config: {
     buttonId: string
@@ -214,10 +214,13 @@ export const anchorSetup =
           element.style.top = `${y}px`
 
           if (isPlacementLockEnabled) {
-            const nextLockedPlacement = lockedPlacement ?? resolvedPlacement
-            lockedPlacement = nextLockedPlacement
-            element.setAttribute('data-placement', toSide(nextLockedPlacement))
+            lockedPlacement = lockedPlacement ?? resolvedPlacement
           }
+
+          element.setAttribute(
+            'data-placement',
+            toSide(lockedPlacement ?? resolvedPlacement),
+          )
 
           if (isFirstUpdate) {
             isFirstUpdate = false
@@ -273,9 +276,7 @@ export const anchorSetup =
         element.removeEventListener('keydown', handleTabKey)
       }
 
-      if (isPlacementLockEnabled) {
-        element.removeAttribute('data-placement')
-      }
+      element.removeAttribute('data-placement')
 
       portalCleanup?.()
     }

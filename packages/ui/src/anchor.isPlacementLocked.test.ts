@@ -177,7 +177,7 @@ describe('anchorSetup isPlacementLocked', () => {
     expect(middlewareNamesOfCall(1)).toEqual(['offset', 'shift', 'size'])
   })
 
-  it('keeps flip and writes no attribute without isPlacementLocked', async () => {
+  it('keeps flip and follows the resolved side without isPlacementLocked', async () => {
     computePositionMock
       .mockResolvedValueOnce({ x: 10, y: 20, placement: 'top-start' })
       .mockResolvedValueOnce({ x: 11, y: 21, placement: 'bottom-start' })
@@ -189,14 +189,14 @@ describe('anchorSetup isPlacementLocked', () => {
     await waitForPosition(element, 10, 20)
 
     expect(middlewareNamesOfCall(0)).toContain('flip')
-    expect(element.hasAttribute('data-placement')).toBe(false)
+    expect(element.getAttribute('data-placement')).toBe('top')
 
     triggerUpdate(0)
     await waitForPosition(element, 11, 21)
 
     expect(middlewareNamesOfCall(1)).toContain('flip')
     expect(optionsOfCall(1).placement).toBe('bottom-start')
-    expect(element.hasAttribute('data-placement')).toBe(false)
+    expect(element.getAttribute('data-placement')).toBe('bottom')
   })
 
   it('clamps negative available height to zero', async () => {
@@ -340,6 +340,25 @@ describe('anchorSetup isPlacementLocked', () => {
     const { element, cleanup } = mountAnchor({
       placement: 'bottom-start',
       isPlacementLocked: true,
+      portal: false,
+    })
+
+    await waitForPosition(element, 10, 20)
+    expect(element.getAttribute('data-placement')).toBe('top')
+
+    cleanup()
+
+    expect(element.hasAttribute('data-placement')).toBe(false)
+  })
+
+  it('removes data-placement on cleanup without isPlacementLocked', async () => {
+    computePositionMock.mockResolvedValue({
+      x: 10,
+      y: 20,
+      placement: 'top-start',
+    })
+    const { element, cleanup } = mountAnchor({
+      placement: 'bottom-start',
       portal: false,
     })
 
