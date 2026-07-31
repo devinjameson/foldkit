@@ -13,9 +13,10 @@ import {
 import { describe, test } from 'vitest'
 
 import {
-  CompletedSubmitForm,
   CompletedValidateEmail,
+  FailedSubmitForm,
   SubmitForm,
+  SucceededSubmitForm,
   ValidateEmail,
   initialModel,
   update,
@@ -128,15 +129,7 @@ describe('view', () => {
       click(role('button', { name: 'Join Waitlist' })),
       expect(role('button', { name: 'Joining...' })).toBeDisabled(),
       Command.expectExact(SubmitForm),
-      Command.resolve(
-        SubmitForm,
-        CompletedSubmitForm({
-          success: true,
-          name: 'Alice',
-          email: 'alice@example.com',
-          messageText: '',
-        }),
-      ),
+      Command.resolve(SubmitForm, SucceededSubmitForm({ name: 'Alice' })),
       expect(role('status')).toContainText('Welcome to the waitlist, Alice!'),
       expect(role('button', { name: 'Join Waitlist' })).toExist(),
     )
@@ -154,15 +147,7 @@ describe('view', () => {
       given(validModel),
       submit(role('form')),
       Command.expectExact(SubmitForm),
-      Command.resolve(
-        SubmitForm,
-        CompletedSubmitForm({
-          success: false,
-          name: 'Alice',
-          email: 'alice@example.com',
-          messageText: '',
-        }),
-      ),
+      Command.resolve(SubmitForm, FailedSubmitForm()),
       expect(role('alert')).toContainText('Sorry, there was an error'),
     )
   })
