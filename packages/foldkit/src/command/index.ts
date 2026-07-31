@@ -113,6 +113,20 @@ type DefineConfig = Readonly<{
   execute: any
 }>
 
+// NOTE: The suspend is load bearing, not a redundant wrapper. Without it the
+// `execute` body runs the moment update constructs the Command, so any
+// expression it evaluates on the way to returning its Effect runs inside a pure
+// reducer. Every side effect the body performs runs there, and every exception
+// it raises escapes update, even when update discards the Command instead of
+// returning it. Reading a missing browser global is one instance, the one that
+// surfaced this, not the boundary of it. Suspending defers the body to
+// execution, where the runtime can contain any failure it produces.
+// A no-args `execute` is already an Effect value and needs no equivalent.
+const suspendExecute = (
+  config: DefineConfig,
+  args: any,
+): Effect.Effect<any, any, any> => Effect.suspend(() => config.execute(args))
+
 /**
  * Defines a Command. Every input is a named field: `args` declares the args
  * Schema, `messages` lists the Messages this Command can produce, `execute`
@@ -121,6 +135,11 @@ type DefineConfig = Readonly<{
  * `args` is optional. Omit it and `execute` is a bare Effect and the Definition
  * is callable as `Definition()`; declare it and `execute` receives the args and
  * the Definition is callable as `Definition(args)`.
+ *
+ * Constructing a Command never runs `execute`. When `args` is declared the body
+ * is deferred until the runtime executes the Command, so no side effect the
+ * body performs and no exception it raises can reach update, and a Command that
+ * update builds and then discards runs nothing at all.
  *
  * With `interrupt`, every invocation registers under a key in the runtime's
  * interrupt registry for the duration of its Effect, and the returned Definition
@@ -290,7 +309,7 @@ export function define(name: string, config: DefineConfig): unknown {
       const definition = (args: any) => ({
         name,
         args,
-        effect: config.execute(args),
+        effect: suspendExecute(config, args),
         messageMappers: [],
       })
       brandAsDefinition(definition, name)
@@ -335,7 +354,7 @@ export function define(name: string, config: DefineConfig): unknown {
       key: name,
       effect: Interruptible.__registerKeyWhileRunning(
         name,
-        config.execute(args),
+        suspendExecute(config, args),
       ),
       messageMappers: [],
     })
@@ -357,7 +376,7 @@ export function define(name: string, config: DefineConfig): unknown {
       key,
       effect: Interruptible.__registerKeyWhileRunning(
         key,
-        config.execute(args),
+        suspendExecute(config, args),
       ),
       messageMappers: [],
     }
