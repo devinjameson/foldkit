@@ -1,6 +1,8 @@
 import {
+  Cause,
   Context,
   Effect,
+  Exit,
   Fiber,
   Layer,
   Match as M,
@@ -13,7 +15,8 @@ import * as Command from '../command/index.js'
 import { __htmlBuilder } from '../html/index.js'
 import { m } from '../message/index.js'
 import * as Subscription from '../subscription/subscription.js'
-import { makeElement } from './runtime.js'
+import type { ApplicationConfigWithFlags } from './runtime.js'
+import { makeApplication, makeElement } from './runtime.js'
 
 const ClickedReadValue = m('ClickedReadValue')
 const SucceededReadValue = m('SucceededReadValue', { value: S.String })
@@ -22,6 +25,9 @@ type Message = typeof Message.Type
 
 const Model = S.Struct({ label: S.String })
 type Model = typeof Model.Type
+
+const Flags = S.Struct({ initialLabel: S.String })
+type Flags = typeof Flags.Type
 
 type ResourceShape = Readonly<{ value: string }>
 
@@ -255,5 +261,233 @@ describe('resources', () => {
     }
 
     expect(releaseCount).toBe(1)
+  })
+
+  it('builds the Layer once when flags and a Command both consume it', async () => {
+    let buildCount = 0
+    let releaseCount = 0
+
+    const CountedResourceLive = Layer.effect(
+      ResourceService,
+      Effect.acquireRelease(
+        Effect.sync((): ResourceShape => {
+          buildCount += 1
+          return { value: `build-${buildCount}` }
+        }),
+        () =>
+          Effect.sync(() => {
+            releaseCount += 1
+          }),
+      ),
+    )
+
+    const flags = Effect.gen(function* () {
+      const { value } = yield* ResourceService
+      return { initialLabel: `flags-${value}` }
+    })
+
+    const element = makeElement({
+      Model,
+      Flags,
+      flags,
+      init: ({ initialLabel }) => [{ label: initialLabel }, [ReadValue()]],
+      update,
+      view,
+      crash,
+      container,
+      resources: CountedResourceLive,
+    })
+
+    const fiber = Effect.runFork(element.start())
+
+    try {
+      await awaitBodyText('flags-build-1 build-1')
+      expect(buildCount).toBe(1)
+      expect(releaseCount).toBe(0)
+    } finally {
+      await Effect.runPromise(Fiber.interrupt(fiber))
+    }
+
+    expect(releaseCount).toBe(1)
+  })
+
+  it('still reaches the crash view when flags do not consume the failing Layer', async () => {
+    const element = makeElement({
+      Model,
+      Flags,
+      flags: Effect.succeed({ initialLabel: 'ready' }),
+      init: ({ initialLabel }) => [{ label: initialLabel }, [ReadValue()]],
+      update,
+      view,
+      crash,
+      container,
+      resources: FailingResourceLive,
+    })
+
+    const fiber = Effect.runFork(element.start())
+
+    try {
+      await awaitBodyText(`Crash view: ${LAYER_BUILD_ERROR}`)
+    } finally {
+      await Effect.runPromise(Fiber.interrupt(fiber))
+    }
+  })
+
+  it('reports both causes when the Layer fails and flags fail for their own reason', async () => {
+    const FLAGS_ERROR = 'flags blew up on their own'
+
+    const element = makeElement({
+      Model,
+      Flags,
+      flags: Effect.sync((): Flags => {
+        throw new Error(FLAGS_ERROR)
+      }),
+      init: ({ initialLabel }) => [{ label: initialLabel }, []],
+      update,
+      view,
+      crash,
+      container,
+      resources: FailingResourceLive,
+    })
+
+    const exit = await Effect.runPromiseExit(element.start())
+
+    expect(Exit.isFailure(exit)).toBe(true)
+    if (Exit.isFailure(exit)) {
+      const reported = exit.cause.reasons.map(reason => String(reason)).join('')
+      expect(reported).toContain(FLAGS_ERROR)
+      expect(reported).toContain(LAYER_BUILD_ERROR)
+    }
+  })
+
+  it('fails startup without a crash view when the Layer fails to build for flags', async () => {
+    const flags = Effect.gen(function* () {
+      const { value } = yield* ResourceService
+      return { initialLabel: value }
+    })
+
+    const element = makeElement({
+      Model,
+      Flags,
+      flags,
+      init: ({ initialLabel }) => [{ label: initialLabel }, []],
+      update,
+      view,
+      crash,
+      container,
+      resources: FailingResourceLive,
+    })
+
+    const exit = await Effect.runPromiseExit(element.start())
+
+    expect(Exit.isFailure(exit)).toBe(true)
+    if (Exit.isFailure(exit)) {
+      expect(String(Cause.squash(exit.cause))).toContain(LAYER_BUILD_ERROR)
+    }
+    expect(document.body.textContent).not.toContain('Crash view:')
+  })
+
+  it('leaves the Layer unbuilt at startup when the app declares no flags', async () => {
+    let buildCount = 0
+
+    const CountedResourceLive = Layer.sync(
+      ResourceService,
+      (): ResourceShape => {
+        buildCount += 1
+        return { value: `build-${buildCount}` }
+      },
+    )
+
+    const element = makeElement({
+      Model,
+      init: () => [{ label: 'ready' }, []],
+      update,
+      view,
+      crash,
+      container,
+      resources: CountedResourceLive,
+    })
+
+    const fiber = Effect.runFork(element.start())
+
+    try {
+      await awaitBodyText('ready')
+      expect(buildCount).toBe(0)
+    } finally {
+      await Effect.runPromise(Fiber.interrupt(fiber))
+    }
+  })
+
+  it('rejects a flags Effect requiring a service that resources does not provide', () => {
+    const flagsNeedingResource: Effect.Effect<Flags, never, ResourceService> =
+      Effect.gen(function* () {
+        const { value } = yield* ResourceService
+        return { initialLabel: value }
+      })
+
+    const documentView = (model: Model) => ({
+      title: '',
+      body: h.div([], [model.label]),
+    })
+
+    const resourceFreeUpdate = (
+      model: Model,
+    ): readonly [Model, ReadonlyArray<never>] => [model, []]
+
+    const resourceFreeInit = (
+      flags: Flags,
+    ): readonly [Model, ReadonlyArray<never>] => [
+      { label: flags.initialLabel },
+      [],
+    ]
+
+    expect(Effect.isEffect(flagsNeedingResource)).toBe(true)
+
+    if (false) {
+      // NOTE: `pnpm typecheck` is the assertion for this block, not vitest.
+      // The call below is the one that guards `NoInfer` on the `flags` field:
+      // it leaves `Resources` to inference, so dropping `NoInfer` would let it
+      // infer `ResourceService` from `flags`, leave the optional `resources`
+      // absent, and compile. It has to be `makeElement`. `makeApplication` has
+      // four overloads, so TypeScript reports only the last one and blames
+      // `init` for an arity mismatch, which a directive here cannot pin.
+      // @ts-expect-error the flags Effect requires ResourceService and no `resources` Layer provides it
+      makeElement({
+        Model,
+        Flags,
+        flags: flagsNeedingResource,
+        init: resourceFreeInit,
+        update: resourceFreeUpdate,
+        view,
+        container,
+      })
+
+      const configWithoutResources: ApplicationConfigWithFlags<
+        Model,
+        Message,
+        Flags
+      > = {
+        Model,
+        Flags,
+        // @ts-expect-error ResourceService is absent from `resources`
+        flags: flagsNeedingResource,
+        init: resourceFreeInit,
+        update: resourceFreeUpdate,
+        view: documentView,
+        container,
+      }
+      void configWithoutResources
+
+      makeApplication({
+        Model,
+        Flags,
+        flags: flagsNeedingResource,
+        init: ({ initialLabel }) => [{ label: initialLabel }, [ReadValue()]],
+        update,
+        view: documentView,
+        container,
+        resources: FailingResourceLive,
+      })
+    }
   })
 })
