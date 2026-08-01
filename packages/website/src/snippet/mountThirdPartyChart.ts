@@ -43,4 +43,4 @@ const MountChart = Mount.define(
 )
 
 const chartView = (data: ChartData, h: HtmlBuilder<Message>): Html =>
-  h.div([h.Class('w-[480px] h-[320px]'), h.OnMount(MountChart({ data }))], [])
+  h.div([h.Class('w-[480px] h-[320px]'), h.OnMount(MountChart({ data }))])

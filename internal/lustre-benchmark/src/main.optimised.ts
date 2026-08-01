@@ -64,10 +64,10 @@ const nonEditingTodoView = (todo: Todo, h: HtmlBuilder<Message>): Html => {
             [h.OnDoubleClick(StartedEditing({ id: todo.id }))],
             [todo.text],
           ),
-          h.button(
-            [h.Class('destroy'), h.OnClick(DeletedTodo({ id: todo.id }))],
-            [],
-          ),
+          h.button([
+            h.Class('destroy'),
+            h.OnClick(DeletedTodo({ id: todo.id })),
+          ]),
         ],
       ),
     ],

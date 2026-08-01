@@ -450,7 +450,7 @@ const nonEditingTodoView = (todo: Todo, h: HtmlBuilder<Message>): Html =>
                     ? [h.span([h.Class('text-white text-xs')], ['✓'])]
                     : [],
                 ),
-                h.span([...attributes.label, h.AriaLabel(todo.text)], []),
+                h.span([...attributes.label, h.AriaLabel(todo.text)]),
               ],
             ),
         },

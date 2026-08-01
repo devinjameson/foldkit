@@ -1227,17 +1227,11 @@ const menuViewImpl = defineView<Model, Message, ViewInputs<string>>(
           (separatorClassName ||
             Array.isReadonlyArrayNonEmpty(separatorAttributes))
             ? [
-                h.keyed('div')(
-                  `${id}-separator-${segmentIndex}`,
-                  [
-                    h.Role('separator'),
-                    ...(separatorClassName
-                      ? [h.Class(separatorClassName)]
-                      : []),
-                    ...separatorAttributes,
-                  ],
-                  [],
-                ),
+                h.keyed('div')(`${id}-separator-${segmentIndex}`, [
+                  h.Role('separator'),
+                  ...(separatorClassName ? [h.Class(separatorClassName)] : []),
+                  ...separatorAttributes,
+                ]),
               ]
             : []
 
@@ -1245,16 +1239,12 @@ const menuViewImpl = defineView<Model, Message, ViewInputs<string>>(
       })
     }
 
-    const backdrop = h.keyed('div')(
-      `${id}-backdrop`,
-      [
-        h.OnMount(PortalMenuBackdrop()),
-        ...(isLeaving ? [] : [h.OnClick(Closed())]),
-        ...(backdropClassName ? [h.Class(backdropClassName)] : []),
-        ...backdropAttributes,
-      ],
-      [],
-    )
+    const backdrop = h.keyed('div')(`${id}-backdrop`, [
+      h.OnMount(PortalMenuBackdrop()),
+      ...(isLeaving ? [] : [h.OnClick(Closed())]),
+      ...(backdropClassName ? [h.Class(backdropClassName)] : []),
+      ...backdropAttributes,
+    ])
 
     const renderedItems = renderGroupedItems()
 

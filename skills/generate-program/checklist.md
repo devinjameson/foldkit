@@ -180,8 +180,9 @@ grep -rnE "(^|[^.[:alnum:]_])(h\.)?label\(" src/
 grep -rn "maybe[A-Z][a-zA-Z]*: [A-Z][a-zA-Z]* | undefined" src/
 grep -rn "maybe[A-Z][a-zA-Z]*: string\b\|maybe[A-Z][a-zA-Z]*: number\b\|maybe[A-Z][a-zA-Z]*: boolean\b" src/
 
-# h.span([], []): use h.empty (the empty value on the view's builder `h`)
-grep -rn "\.span(\[\], \[\])\|^span(\[\], \[\])" src/
+# h.span([]): use h.empty (the empty value on the view's builder `h`). The
+# children argument is optional, so the placeholder has two spellings.
+grep -rnE "(^|\.)span\(\[\](, \[\])?\)" src/
 
 # Effect.ignore on infallible Effects (pushUrl, load, back, forward)
 grep -rn "pushUrl.*Effect\.ignore\|load(.*)\.pipe.*Effect\.ignore" src/

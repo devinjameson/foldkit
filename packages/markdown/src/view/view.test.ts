@@ -170,7 +170,7 @@ describe('view', () => {
       islands: {
         Slot: (_attributes, _content, occurrenceIndex) => {
           receivedIndexes.push(occurrenceIndex)
-          return ih.div([], [])
+          return ih.div([])
         },
       },
     })

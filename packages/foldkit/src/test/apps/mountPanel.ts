@@ -155,6 +155,6 @@ export const scrollListView = (
 ): Html => {
   return h.div(
     [h.Class('scroll-list')],
-    [h.div([h.Key('list'), h.OnMount(ScrollList({ offset }))], [])],
+    [h.div([h.Key('list'), h.OnMount(ScrollList({ offset }))])],
   )
 }

@@ -39,10 +39,7 @@ const sceneView =
         toView: ({ trigger, panel, isVisible }) =>
           h.div(
             [],
-            [
-              h.button([...trigger], []),
-              ...(isVisible ? [h.div([...panel], [])] : []),
-            ],
+            [h.button([...trigger]), ...(isVisible ? [h.div([...panel])] : [])],
           ),
       },
       toParentMessage: message => message,

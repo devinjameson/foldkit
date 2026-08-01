@@ -72,15 +72,12 @@ const mapMessagesUnderHoodDemo = (
                       [h.Class('-mt-8')],
                       [
                         highlightedCodeBlock(
-                          h.div(
-                            [
-                              h.Class('text-sm'),
-                              h.InnerHTML(
-                                Snippet.commandMapMessagesUnderHoodHighlighted,
-                              ),
-                            ],
-                            [],
-                          ),
+                          h.div([
+                            h.Class('text-sm'),
+                            h.InnerHTML(
+                              Snippet.commandMapMessagesUnderHoodHighlighted,
+                            ),
+                          ]),
                           Snippet.commandMapMessagesUnderHoodRaw,
                           'Copy snippet to clipboard',
                           renderCopyButton,

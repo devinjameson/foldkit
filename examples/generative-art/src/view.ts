@@ -327,16 +327,13 @@ const slider = (
                 h.div(
                   [...attributes.track, h.Class(sliderTrackClass)],
                   [
-                    h.div(
-                      [
-                        ...attributes.filledTrack,
-                        h.Class(sliderFilledTrackClass),
-                      ],
-                      [],
-                    ),
+                    h.div([
+                      ...attributes.filledTrack,
+                      h.Class(sliderFilledTrackClass),
+                    ]),
                   ],
                 ),
-                h.div([...attributes.thumb, h.Class(sliderThumbClass)], []),
+                h.div([...attributes.thumb, h.Class(sliderThumbClass)]),
               ],
             ),
           ],

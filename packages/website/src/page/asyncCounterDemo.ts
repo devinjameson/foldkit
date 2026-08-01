@@ -585,21 +585,18 @@ const progressBarView = (model: Model, isCommand: boolean): Html =>
       ),
     ],
     [
-      ih.div(
-        [
-          ih.Class(
-            clsx(
-              'demo-progress-bar h-full rounded-full bg-violet-600 dark:bg-violet-400',
-              {
-                'demo-progress-bar-active': isCommand,
-              },
-            ),
+      ih.div([
+        ih.Class(
+          clsx(
+            'demo-progress-bar h-full rounded-full bg-violet-600 dark:bg-violet-400',
+            {
+              'demo-progress-bar-active': isCommand,
+            },
           ),
-          ih.Style({
-            '--reset-duration': String(clampResetSeconds(model.resetDuration)),
-          }),
-        ],
-        [],
-      ),
+        ),
+        ih.Style({
+          '--reset-duration': String(clampResetSeconds(model.resetDuration)),
+        }),
+      ]),
     ],
   )

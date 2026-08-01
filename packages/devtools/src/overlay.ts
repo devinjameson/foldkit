@@ -997,14 +997,11 @@ const buildOverlayView = (
         h.Stroke('currentColor'),
       ],
       [
-        h.path(
-          [
-            h.StrokeLinecap('round'),
-            h.StrokeLinejoin('round'),
-            h.D(isExpanded ? CHEVRON_DOWN : CHEVRON_RIGHT),
-          ],
-          [],
-        ),
+        h.path([
+          h.StrokeLinecap('round'),
+          h.StrokeLinejoin('round'),
+          h.D(isExpanded ? CHEVRON_DOWN : CHEVRON_RIGHT),
+        ]),
       ],
     )
 
@@ -1014,8 +1011,8 @@ const buildOverlayView = (
   const previewView = (preview: string): Html =>
     h.span([h.Class('json-preview')], [preview])
 
-  const diffDotView: Html = h.span([h.Class('diff-dot')], [])
-  const inlineDiffDotView: Html = h.span([h.Class('diff-dot-inline')], [])
+  const diffDotView: Html = h.span([h.Class('diff-dot')])
+  const inlineDiffDotView: Html = h.span([h.Class('diff-dot-inline')])
 
   const ArrowSegment = ts('ArrowSegment', { isExpanded: S.Boolean })
   const DiffDotSegment = ts('DiffDotSegment')
@@ -1774,14 +1771,11 @@ const buildOverlayView = (
                 h.Style({ width: '12px', height: '12px' }),
               ],
               [
-                h.path(
-                  [
-                    h.StrokeLinecap('round'),
-                    h.StrokeLinejoin('round'),
-                    h.D('M6 18L18 6M6 6l12 12'),
-                  ],
-                  [],
-                ),
+                h.path([
+                  h.StrokeLinecap('round'),
+                  h.StrokeLinejoin('round'),
+                  h.D('M6 18L18 6M6 6l12 12'),
+                ]),
               ],
             )
           : h.div(
@@ -1828,10 +1822,11 @@ const buildOverlayView = (
       h.Stroke('currentColor'),
     ],
     [
-      h.path(
-        [h.D(CHECK_ICON), h.StrokeLinecap('round'), h.StrokeLinejoin('round')],
-        [],
-      ),
+      h.path([
+        h.D(CHECK_ICON),
+        h.StrokeLinecap('round'),
+        h.StrokeLinejoin('round'),
+      ]),
     ],
   )
 
@@ -1851,10 +1846,11 @@ const buildOverlayView = (
       h.Stroke('currentColor'),
     ],
     [
-      h.path(
-        [h.D(ARROW_UP), h.StrokeLinecap('round'), h.StrokeLinejoin('round')],
-        [],
-      ),
+      h.path([
+        h.D(ARROW_UP),
+        h.StrokeLinecap('round'),
+        h.StrokeLinejoin('round'),
+      ]),
     ],
   )
 
@@ -1905,14 +1901,11 @@ const buildOverlayView = (
                 h.Stroke('currentColor'),
               ],
               [
-                h.path(
-                  [
-                    h.D(CHEVRON_DOWN),
-                    h.StrokeLinecap('round'),
-                    h.StrokeLinejoin('round'),
-                  ],
-                  [],
-                ),
+                h.path([
+                  h.D(CHEVRON_DOWN),
+                  h.StrokeLinecap('round'),
+                  h.StrokeLinejoin('round'),
+                ]),
               ],
             ),
           ],
@@ -1940,7 +1933,7 @@ const buildOverlayView = (
             [
               h.div(
                 [...attributes.button, h.Class('dt-switch')],
-                [h.span([h.Class('dt-switch-thumb')], [])],
+                [h.span([h.Class('dt-switch-thumb')])],
               ),
               h.div(
                 [h.Class('dt-settings-row-text')],
@@ -2059,8 +2052,8 @@ const buildOverlayView = (
             isPausedHere ? [pauseIconView] : [],
           ),
         ).pipe(Option.toArray),
-        h.span([h.Class('dot-column')], []),
-        h.span([h.Class(indexClass)], []),
+        h.span([h.Class('dot-column')]),
+        h.span([h.Class(indexClass)]),
         h.span([h.Class('text-base text-dt-muted font-mono')], ['init']),
       ],
     )
@@ -2076,14 +2069,11 @@ const buildOverlayView = (
       h.Stroke('currentColor'),
     ],
     [
-      h.path(
-        [
-          h.StrokeLinecap('round'),
-          h.StrokeLinejoin('round'),
-          h.D('M5.75 3v18M18.25 3v18'),
-        ],
-        [],
-      ),
+      h.path([
+        h.StrokeLinecap('round'),
+        h.StrokeLinejoin('round'),
+        h.D('M5.75 3v18M18.25 3v18'),
+      ]),
     ],
   )
 
@@ -2270,17 +2260,14 @@ const buildOverlayView = (
                   h.div(
                     [...attributes.track, h.Class('dt-scrubber-track')],
                     [
-                      h.div(
-                        [
-                          ...attributes.filledTrack,
-                          h.Class('dt-scrubber-fill'),
-                        ],
-                        [],
-                      ),
-                      h.div(
-                        [...attributes.thumb, h.Class('dt-scrubber-thumb')],
-                        [],
-                      ),
+                      h.div([
+                        ...attributes.filledTrack,
+                        h.Class('dt-scrubber-fill'),
+                      ]),
+                      h.div([
+                        ...attributes.thumb,
+                        h.Class('dt-scrubber-thumb'),
+                      ]),
                     ],
                   ),
                 ],
@@ -2320,14 +2307,16 @@ const buildOverlayView = (
       h.Stroke('currentColor'),
     ],
     [
-      h.path(
-        [h.D(GEAR_OUTER), h.StrokeLinecap('round'), h.StrokeLinejoin('round')],
-        [],
-      ),
-      h.path(
-        [h.D(GEAR_INNER), h.StrokeLinecap('round'), h.StrokeLinejoin('round')],
-        [],
-      ),
+      h.path([
+        h.D(GEAR_OUTER),
+        h.StrokeLinecap('round'),
+        h.StrokeLinejoin('round'),
+      ]),
+      h.path([
+        h.D(GEAR_INNER),
+        h.StrokeLinecap('round'),
+        h.StrokeLinejoin('round'),
+      ]),
     ],
   )
 
@@ -2342,10 +2331,11 @@ const buildOverlayView = (
       h.Stroke('currentColor'),
     ],
     [
-      h.path(
-        [h.D(X_MARK), h.StrokeLinecap('round'), h.StrokeLinejoin('round')],
-        [],
-      ),
+      h.path([
+        h.D(X_MARK),
+        h.StrokeLinecap('round'),
+        h.StrokeLinejoin('round'),
+      ]),
     ],
   )
 
@@ -2446,7 +2436,7 @@ const buildOverlayView = (
     )
 
   const interactionBlocker = (): Html =>
-    h.div([h.Class('dt-interaction-blocker')], [])
+    h.div([h.Class('dt-interaction-blocker')])
 
   return (model: Model): Html =>
     h.div(

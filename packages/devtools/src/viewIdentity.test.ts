@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 describe('view identity branding', () => {
   it('stamps vnodes returned from devtools source modules', () => {
-    const panelView = () => ih.div([], [])
+    const panelView = () => ih.div([])
 
     const vnode = panelView()
 

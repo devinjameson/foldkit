@@ -12,13 +12,10 @@ export const chevronDown = (className: string = 'w-4 h-4'): Html =>
       ih.Stroke('currentColor'),
     ],
     [
-      ih.path(
-        [
-          ih.StrokeLinecap('round'),
-          ih.StrokeLinejoin('round'),
-          ih.D('M19.5 8.25l-7.5 7.5-7.5-7.5'),
-        ],
-        [],
-      ),
+      ih.path([
+        ih.StrokeLinecap('round'),
+        ih.StrokeLinejoin('round'),
+        ih.D('M19.5 8.25l-7.5 7.5-7.5-7.5'),
+      ]),
     ],
   )

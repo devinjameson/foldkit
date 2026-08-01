@@ -32,10 +32,7 @@ export const docIslands = (slots: Slots<string>): Markdown.Islands => {
         onNone: () => ih.empty,
         onSome: snippet =>
           highlightedCodeBlock(
-            ih.div(
-              [ih.Class('text-sm'), ih.InnerHTML(snippet.highlighted)],
-              [],
-            ),
+            ih.div([ih.Class('text-sm'), ih.InnerHTML(snippet.highlighted)]),
             snippet.raw,
             label === undefined
               ? 'Copy snippet to clipboard'

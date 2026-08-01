@@ -60,14 +60,11 @@ const view = (model, h: HtmlBuilder<Message>) =>
                 ),
               ],
               [
-                h.span(
-                  [
-                    h.Class(
-                      `inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${model.notificationsEnabled ? 'translate-x-6' : 'translate-x-1'}`,
-                    ),
-                  ],
-                  [],
-                ),
+                h.span([
+                  h.Class(
+                    `inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${model.notificationsEnabled ? 'translate-x-6' : 'translate-x-1'}`,
+                  ),
+                ]),
               ],
             ),
             h.div(

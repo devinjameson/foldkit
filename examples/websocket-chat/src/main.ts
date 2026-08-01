@@ -426,16 +426,15 @@ const connectionStatusView = (
       M.value(connection).pipe(
         M.tagsExhaustive({
           ConnectionDisconnected: () =>
-            h.div([h.Class('w-3 h-3 rounded-full bg-red-500')], []),
+            h.div([h.Class('w-3 h-3 rounded-full bg-red-500')]),
           ConnectionConnecting: () =>
-            h.div(
-              [h.Class('w-3 h-3 rounded-full bg-yellow-500 animate-pulse')],
-              [],
-            ),
+            h.div([
+              h.Class('w-3 h-3 rounded-full bg-yellow-500 animate-pulse'),
+            ]),
           ConnectionConnected: () =>
-            h.div([h.Class('w-3 h-3 rounded-full bg-green-500')], []),
+            h.div([h.Class('w-3 h-3 rounded-full bg-green-500')]),
           ConnectionError: () =>
-            h.div([h.Class('w-3 h-3 rounded-full bg-red-500')], []),
+            h.div([h.Class('w-3 h-3 rounded-full bg-red-500')]),
         }),
       ),
       M.value(connection).pipe(

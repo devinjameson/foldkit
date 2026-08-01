@@ -72,7 +72,7 @@ export const educationEntryView = Submodel.defineView<
             content: h.div(
               [h.Class('flex items-center gap-2 w-full')],
               [
-                isSelected ? h.span([], ['✓']) : h.span([h.Class('w-4')], []),
+                isSelected ? h.span([], ['✓']) : h.span([h.Class('w-4')]),
                 h.span([], [year]),
               ],
             ),

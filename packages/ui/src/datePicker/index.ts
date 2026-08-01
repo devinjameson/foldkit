@@ -505,16 +505,13 @@ export const view = defineView<Model, Message, ViewInputs>(
               ),
               ...(isVisible
                 ? [
-                    h.div(
-                      [
-                        ...backdrop,
-                        ...(backdropClassName !== undefined
-                          ? [h.Class(backdropClassName)]
-                          : []),
-                        ...backdropAttributes,
-                      ],
-                      [],
-                    ),
+                    h.div([
+                      ...backdrop,
+                      ...(backdropClassName !== undefined
+                        ? [h.Class(backdropClassName)]
+                        : []),
+                      ...backdropAttributes,
+                    ]),
                     h.div(
                       [
                         ...panel,

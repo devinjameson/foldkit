@@ -102,7 +102,7 @@ const view = (h: HtmlBuilder<Message>) => {
             ),
             ...(isVisible
               ? [
-                  h.div([...backdrop, h.Class('fixed inset-0')], []),
+                  h.div([...backdrop, h.Class('fixed inset-0')]),
                   h.div(
                     [...panel, h.Class('rounded-lg border shadow-lg p-4 w-80')],
                     [

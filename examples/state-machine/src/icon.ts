@@ -11,12 +11,7 @@ const icon = (d: string, className: string): Html =>
       ih.StrokeWidth('1.75'),
       ih.Stroke('currentColor'),
     ],
-    [
-      ih.path(
-        [ih.StrokeLinecap('round'), ih.StrokeLinejoin('round'), ih.D(d)],
-        [],
-      ),
-    ],
+    [ih.path([ih.StrokeLinecap('round'), ih.StrokeLinejoin('round'), ih.D(d)])],
   )
 
 export const arrowRight = (className: string = 'h-4 w-4'): Html =>

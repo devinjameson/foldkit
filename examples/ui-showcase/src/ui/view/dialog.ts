@@ -130,7 +130,7 @@ const overlayDemo = (
               [...dialog, h.Class(dialogClassName)],
               isVisible
                 ? [
-                    h.div([...backdrop, h.Class(backdropClassName)], []),
+                    h.div([...backdrop, h.Class(backdropClassName)]),
                     h.div(
                       [...panel, h.Class(panelClassName)],
                       [
@@ -216,7 +216,7 @@ const nestedDemo = (
               [...dialog, h.Class(dialogClassName)],
               isVisible
                 ? [
-                    h.div([...backdrop, h.Class(backdropClassName)], []),
+                    h.div([...backdrop, h.Class(backdropClassName)]),
                     h.div(
                       [...panel, h.Class(settingsPanelClassName)],
                       [
@@ -273,7 +273,7 @@ const nestedDemo = (
               [...dialog, h.Class(dialogClassName)],
               isVisible
                 ? [
-                    h.div([...backdrop, h.Class(backdropClassName)], []),
+                    h.div([...backdrop, h.Class(backdropClassName)]),
                     h.div(
                       [...panel, h.Class(confirmPanelClassName)],
                       [
@@ -351,7 +351,7 @@ export const view = Submodel.defineView<UiModel, UiMessage>(
                 [...dialog, h.Class(dialogClassName)],
                 isVisible
                   ? [
-                      h.div([...backdrop, h.Class(backdropClassName)], []),
+                      h.div([...backdrop, h.Class(backdropClassName)]),
                       h.div(
                         [...panel, h.Class(panelClassName)],
                         [dialogPanel(closeButton, title, description, h)],
@@ -397,10 +397,7 @@ export const view = Submodel.defineView<UiModel, UiMessage>(
                 [...dialog, h.Class(dialogClassName)],
                 isVisible
                   ? [
-                      h.div(
-                        [...backdrop, h.Class(animatedBackdropClassName)],
-                        [],
-                      ),
+                      h.div([...backdrop, h.Class(animatedBackdropClassName)]),
                       h.div(
                         [...panel, h.Class(animatedPanelClassName)],
                         [dialogPanel(closeButton, title, description, h)],

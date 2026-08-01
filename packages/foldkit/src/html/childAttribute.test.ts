@@ -109,7 +109,7 @@ describe('childAttributes', () => {
       viewInputs: {
         toView: attributes => {
           const hParent = __htmlBuilder<ParentDirect>()
-          return hParent.div([...attributes.checkbox], [])
+          return hParent.div([...attributes.checkbox])
         },
       },
       toParentMessage: message => GotChild({ message }),
@@ -159,15 +159,12 @@ describe('childAttributes', () => {
           // adding their own keyup handler. The keyup should dispatch
           // ParentDirect (no wrap); the click should dispatch
           // GotChild({ ChildClicked }).
-          return hParent.button(
-            [
-              ...attributes.checkbox,
-              hParent.OnKeyPress(() => ({
-                _tag: 'ParentDirect' as const,
-              })),
-            ],
-            [],
-          )
+          return hParent.button([
+            ...attributes.checkbox,
+            hParent.OnKeyPress(() => ({
+              _tag: 'ParentDirect' as const,
+            })),
+          ])
         },
       },
       toParentMessage: message => GotChild({ message }),
@@ -262,7 +259,7 @@ describe('childAttributes', () => {
     // Build a parent vnode using both attribute sets and verify each
     // routes correctly.
     const hParent = __htmlBuilder<ParentDirect>()
-    const merged = hParent.div([...firstAttributes, ...secondAttributes], [])
+    const merged = hParent.div([...firstAttributes, ...secondAttributes])
 
     /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
     const onClick = merged?.data?.on?.click as () => void
@@ -300,10 +297,10 @@ describe('childAttributes', () => {
       viewInputs: {
         toView: inputs => {
           const hParent = __htmlBuilder<ParentDirect>()
-          return hParent.button(
-            [...inputs.attributes, hParent.OnClick({ _tag: 'ParentDirect' })],
-            [],
-          )
+          return hParent.button([
+            ...inputs.attributes,
+            hParent.OnClick({ _tag: 'ParentDirect' }),
+          ])
         },
       },
       toParentMessage: message => GotChild({ message }),

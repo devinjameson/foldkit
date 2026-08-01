@@ -87,8 +87,8 @@ describe('OnUnmount', () => {
     const h = __htmlBuilder<typeof Unmounted.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
 
-    const withChild = () => h.div([], [h.span([h.OnUnmount(Unmounted())], [])])
-    const withoutChild = () => h.div([], [])
+    const withChild = () => h.div([], [h.span([h.OnUnmount(Unmounted())])])
+    const withoutChild = () => h.div([])
 
     const mounted = patch(
       toVNode(makeRootContainer()),
@@ -107,7 +107,7 @@ describe('OnUnmount', () => {
     const { dispatch, dispatched } = createCapturingDispatch()
 
     const buildView = (key: string) => () =>
-      h.div([], [h.span([h.Key(key), h.OnUnmount(Unmounted())], [])])
+      h.div([], [h.span([h.Key(key), h.OnUnmount(Unmounted())])])
 
     const mounted = patch(
       toVNode(makeRootContainer()),
@@ -132,7 +132,7 @@ describe('OnUnmount', () => {
         [
           h.div(
             [h.Key(key)],
-            [h.div([], [h.span([h.OnUnmount(Unmounted())], [])])],
+            [h.div([], [h.span([h.OnUnmount(Unmounted())])])],
           ),
         ],
       )
@@ -151,8 +151,8 @@ describe('OnUnmount', () => {
     const h = __htmlBuilder<typeof Unmounted.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
 
-    const withChild = () => h.div([], [h.span([h.OnUnmount(Unmounted())], [])])
-    const withoutChild = () => h.div([], [])
+    const withChild = () => h.div([], [h.span([h.OnUnmount(Unmounted())])])
+    const withoutChild = () => h.div([])
 
     const mounted = patch(
       toVNode(makeRootContainer()),
@@ -177,8 +177,8 @@ describe('OnUnmount', () => {
     const h = __htmlBuilder<typeof Unmounted.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
 
-    const withChild = () => h.div([], [h.span([h.OnUnmount(Unmounted())], [])])
-    const withoutChild = () => h.div([], [])
+    const withChild = () => h.div([], [h.span([h.OnUnmount(Unmounted())])])
+    const withoutChild = () => h.div([])
 
     const firstMount = patch(
       toVNode(makeRootContainer()),
@@ -226,8 +226,8 @@ describe('OnUnmount', () => {
     }
 
     const withChild = () =>
-      h.div([], [h.span([h.OnMount(action), h.OnUnmount(Unmounted())], [])])
-    const withoutChild = () => h.div([], [])
+      h.div([], [h.span([h.OnMount(action), h.OnUnmount(Unmounted())])])
+    const withoutChild = () => h.div([])
 
     const mounted = patch(
       toVNode(makeRootContainer()),
@@ -271,8 +271,8 @@ describe('OnUnmount', () => {
     }
 
     const withChild = () =>
-      h.div([], [h.span([h.OnUnmount(Unmounted()), h.OnMount(action)], [])])
-    const withoutChild = () => h.div([], [])
+      h.div([], [h.span([h.OnUnmount(Unmounted()), h.OnMount(action)])])
+    const withoutChild = () => h.div([])
 
     const mounted = patch(
       toVNode(makeRootContainer()),
@@ -373,13 +373,13 @@ describe('OnUnmount across a Submodel boundary', () => {
             model: { id: 'child-dialog' },
             view: childView,
             viewInputs: {
-              toView: dialog => h.dialog([...dialog], []),
+              toView: dialog => h.dialog([...dialog]),
             },
             toParentMessage: message => GotChildMessage(message),
           }),
         ],
       )
-    const withoutChild = () => h.div([], [])
+    const withoutChild = () => h.div([])
 
     const mounted = patch(
       toVNode(makeRootContainer()),

@@ -448,10 +448,7 @@ const paintingGridView = (h: HtmlBuilder<Message>): Html =>
               ),
             ],
             [
-              h.div(
-                [h.Class(`h-28 bg-gradient-to-br ${painting.gradient}`)],
-                [],
-              ),
+              h.div([h.Class(`h-28 bg-gradient-to-br ${painting.gradient}`)]),
               h.div(
                 [h.Class('p-4')],
                 [
@@ -571,10 +568,7 @@ const foundPaintingView = (
         ? h.article(
             [h.Class('bg-white rounded-lg shadow overflow-hidden')],
             [
-              h.div(
-                [h.Class(`h-56 bg-gradient-to-br ${painting.gradient}`)],
-                [],
-              ),
+              h.div([h.Class(`h-56 bg-gradient-to-br ${painting.gradient}`)]),
               h.div(
                 [h.Class('p-6')],
                 [
@@ -619,17 +613,14 @@ const studioView = (
           'Write something, then leave. Exiting this route fires a one-shot SaveDraft Command with whatever is here.',
         ],
       ),
-      h.textarea(
-        [
-          h.Value(studioDraft),
-          h.OnInput(value => UpdatedStudioDraft({ value })),
-          h.Placeholder('A half-finished thought…'),
-          h.Class(
-            'w-full h-40 bg-white border border-gray-300 rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-indigo-500',
-          ),
-        ],
-        [],
-      ),
+      h.textarea([
+        h.Value(studioDraft),
+        h.OnInput(value => UpdatedStudioDraft({ value })),
+        h.Placeholder('A half-finished thought…'),
+        h.Class(
+          'w-full h-40 bg-white border border-gray-300 rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-indigo-500',
+        ),
+      ]),
       h.div(
         [h.Class('mt-6')],
         [

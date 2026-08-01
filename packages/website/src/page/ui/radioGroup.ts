@@ -55,20 +55,17 @@ export const verticalDemo = (model: Model, h: HtmlBuilder<Message>) => {
       h.Class('size-5 text-accent-600 dark:text-accent-400'),
     ],
     [
-      h.path(
-        [
-          h.D('M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z'),
-          h.Stroke('currentColor'),
-          h.StrokeWidth('1.5'),
-          h.StrokeLinecap('round'),
-          h.StrokeLinejoin('round'),
-        ],
-        [],
-      ),
+      h.path([
+        h.D('M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z'),
+        h.Stroke('currentColor'),
+        h.StrokeWidth('1.5'),
+        h.StrokeLinecap('round'),
+        h.StrokeLinejoin('round'),
+      ]),
     ],
   )
 
-  const checkPlaceholder = h.div([h.Class('size-5')], [])
+  const checkPlaceholder = h.div([h.Class('size-5')])
 
   return [
     RadioGroup.view(
@@ -132,20 +129,17 @@ export const horizontalDemo = (model: Model, h: HtmlBuilder<Message>) => {
       h.Class('size-5 text-accent-600 dark:text-accent-400'),
     ],
     [
-      h.path(
-        [
-          h.D('M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z'),
-          h.Stroke('currentColor'),
-          h.StrokeWidth('1.5'),
-          h.StrokeLinecap('round'),
-          h.StrokeLinejoin('round'),
-        ],
-        [],
-      ),
+      h.path([
+        h.D('M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z'),
+        h.Stroke('currentColor'),
+        h.StrokeWidth('1.5'),
+        h.StrokeLinecap('round'),
+        h.StrokeLinejoin('round'),
+      ]),
     ],
   )
 
-  const checkPlaceholder = h.div([h.Class('size-5')], [])
+  const checkPlaceholder = h.div([h.Class('size-5')])
 
   return [
     RadioGroup.view(

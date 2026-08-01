@@ -14,13 +14,10 @@ const rowView = (
       )
       const displayColor = isPreview ? previewColor : resolveColor(cell, theme)
 
-      return h.div(
-        [
-          h.OnMouseDown(PressedCell({ x, y })),
-          h.OnMouseEnter(EnteredCell({ x, y })),
-          h.Style({ flex: '1', backgroundColor: displayColor }),
-        ],
-        [],
-      )
+      return h.div([
+        h.OnMouseDown(PressedCell({ x, y })),
+        h.OnMouseEnter(EnteredCell({ x, y })),
+        h.Style({ flex: '1', backgroundColor: displayColor }),
+      ])
     }),
   )

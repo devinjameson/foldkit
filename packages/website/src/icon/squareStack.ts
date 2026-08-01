@@ -12,15 +12,12 @@ export const squareStack = (className: string = 'w-5 h-5'): Html =>
       ih.Stroke('currentColor'),
     ],
     [
-      ih.path(
-        [
-          ih.StrokeLinecap('round'),
-          ih.StrokeLinejoin('round'),
-          ih.D(
-            'M6.429 9.75 2.25 12l9.75 5.25 9.75-5.25-4.179-2.25m-11.142 0 5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0L12 12.75 6.429 9.75',
-          ),
-        ],
-        [],
-      ),
+      ih.path([
+        ih.StrokeLinecap('round'),
+        ih.StrokeLinejoin('round'),
+        ih.D(
+          'M6.429 9.75 2.25 12l9.75 5.25 9.75-5.25-4.179-2.25m-11.142 0 5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0L12 12.75 6.429 9.75',
+        ),
+      ]),
     ],
   )

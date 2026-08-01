@@ -74,14 +74,11 @@ export const chartPanelView = (
       ),
     ],
     [
-      h.div(
-        [
-          h.Class('min-h-[26rem] w-full'),
-          h.AriaLabel('Adoption chart'),
-          h.OnMount(MountChart({ hostId: CHART_HOST_ID })),
-        ],
-        [],
-      ),
+      h.div([
+        h.Class('min-h-[26rem] w-full'),
+        h.AriaLabel('Adoption chart'),
+        h.OnMount(MountChart({ hostId: CHART_HOST_ID })),
+      ]),
       chartFooterView(model, telemetry, h),
     ],
   )

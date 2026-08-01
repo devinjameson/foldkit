@@ -12,13 +12,10 @@ export const chevronLeft = (className: string = 'w-6 h-6'): Html =>
       ih.Stroke('currentColor'),
     ],
     [
-      ih.path(
-        [
-          ih.StrokeLinecap('round'),
-          ih.StrokeLinejoin('round'),
-          ih.D('M15.75 19.5L8.25 12l7.5-7.5'),
-        ],
-        [],
-      ),
+      ih.path([
+        ih.StrokeLinecap('round'),
+        ih.StrokeLinejoin('round'),
+        ih.D('M15.75 19.5L8.25 12l7.5-7.5'),
+      ]),
     ],
   )

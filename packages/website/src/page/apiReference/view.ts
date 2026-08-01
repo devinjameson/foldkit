@@ -183,7 +183,7 @@ const signaturesView = (
         },
       ),
       content: [
-        h.div([h.InnerHTML(highlighted)], []),
+        h.div([h.InnerHTML(highlighted)]),
         ...allParameterDescriptions(apiFunction),
       ],
     }),
@@ -402,15 +402,12 @@ const typeView = (
       ),
       ...Option.match(maybeHighlighted, {
         onSome: highlighted => [
-          h.div(
-            [
-              h.Class(
-                'rounded text-sm [&_pre]:!rounded [&_pre]:!py-4 [&_pre]:!pl-4 [&_pre]:!pr-0 [&_code]:block [&_code]:w-fit [&_code]:min-w-full [&_code]:pr-4',
-              ),
-              h.InnerHTML(highlighted),
-            ],
-            [],
-          ),
+          h.div([
+            h.Class(
+              'rounded text-sm [&_pre]:!rounded [&_pre]:!py-4 [&_pre]:!pl-4 [&_pre]:!pr-0 [&_code]:block [&_code]:w-fit [&_code]:min-w-full [&_code]:pr-4',
+            ),
+            h.InnerHTML(highlighted),
+          ]),
         ],
         onNone: () => [
           h.div(
@@ -478,15 +475,12 @@ const interfaceView = (
       ),
       ...Option.match(maybeHighlighted, {
         onSome: highlighted => [
-          h.div(
-            [
-              h.Class(
-                'rounded text-sm [&_pre]:!rounded [&_pre]:!py-4 [&_pre]:!pl-4 [&_pre]:!pr-0 [&_code]:block [&_code]:w-fit [&_code]:min-w-full [&_code]:pr-4',
-              ),
-              h.InnerHTML(highlighted),
-            ],
-            [],
-          ),
+          h.div([
+            h.Class(
+              'rounded text-sm [&_pre]:!rounded [&_pre]:!py-4 [&_pre]:!pl-4 [&_pre]:!pr-0 [&_code]:block [&_code]:w-fit [&_code]:min-w-full [&_code]:pr-4',
+            ),
+            h.InnerHTML(highlighted),
+          ]),
         ],
         onNone: () => [
           h.div(
@@ -554,15 +548,12 @@ const variableView = (
       ),
       ...Option.match(maybeHighlighted, {
         onSome: highlighted => [
-          h.div(
-            [
-              h.Class(
-                'rounded text-sm [&_pre]:!rounded [&_pre]:!py-4 [&_pre]:!pl-4 [&_pre]:!pr-0 [&_code]:block [&_code]:w-fit [&_code]:min-w-full [&_code]:pr-4',
-              ),
-              h.InnerHTML(highlighted),
-            ],
-            [],
-          ),
+          h.div([
+            h.Class(
+              'rounded text-sm [&_pre]:!rounded [&_pre]:!py-4 [&_pre]:!pl-4 [&_pre]:!pr-0 [&_code]:block [&_code]:w-fit [&_code]:min-w-full [&_code]:pr-4',
+            ),
+            h.InnerHTML(highlighted),
+          ]),
         ],
         onNone: () => [
           h.div(
@@ -713,29 +704,21 @@ export const skeletonView = (): Html =>
   ih.div(
     [ih.Class('animate-pulse')],
     [
-      ih.div([ih.Class(`h-10 w-72 mb-10 rounded ${skeletonSurfaceClass}`)], []),
-      ih.div([ih.Class(`h-7 w-36 mb-6 rounded ${skeletonSurfaceClass}`)], []),
+      ih.div([ih.Class(`h-10 w-72 mb-10 rounded ${skeletonSurfaceClass}`)]),
+      ih.div([ih.Class(`h-7 w-36 mb-6 rounded ${skeletonSurfaceClass}`)]),
       ...Array.map(skeletonFunctionBlocks, ({ id, labelWidth, bodyHeight }) =>
         ih.keyed('div')(
           id,
           [ih.Class('mb-8')],
           [
-            ih.div(
-              [
-                ih.Class(
-                  `h-5 ${labelWidth} mb-3 rounded ${skeletonSurfaceClass}`,
-                ),
-              ],
-              [],
-            ),
-            ih.div(
-              [
-                ih.Class(
-                  `${bodyHeight} w-full rounded ${skeletonSurfaceClass}`,
-                ),
-              ],
-              [],
-            ),
+            ih.div([
+              ih.Class(
+                `h-5 ${labelWidth} mb-3 rounded ${skeletonSurfaceClass}`,
+              ),
+            ]),
+            ih.div([
+              ih.Class(`${bodyHeight} w-full rounded ${skeletonSurfaceClass}`),
+            ]),
           ],
         ),
       ),

@@ -47,22 +47,19 @@ const checkIcon = (h: HtmlBuilder<UiMessage>): Html => {
   return h.svg(
     [h.ViewBox('0 0 24 24'), h.Fill('none'), h.Class('size-5 text-accent-600')],
     [
-      h.path(
-        [
-          h.D('M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z'),
-          h.Stroke('currentColor'),
-          h.StrokeWidth('1.5'),
-          h.StrokeLinecap('round'),
-          h.StrokeLinejoin('round'),
-        ],
-        [],
-      ),
+      h.path([
+        h.D('M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z'),
+        h.Stroke('currentColor'),
+        h.StrokeWidth('1.5'),
+        h.StrokeLinecap('round'),
+        h.StrokeLinejoin('round'),
+      ]),
     ],
   )
 }
 
 const checkPlaceholder = (h: HtmlBuilder<UiMessage>): Html => {
-  return h.div([h.Class('size-5')], [])
+  return h.div([h.Class('size-5')])
 }
 
 export const view = Submodel.defineView<UiModel, UiMessage>(

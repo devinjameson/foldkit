@@ -83,16 +83,13 @@ export const sliderDemo = (
                       h.div(
                         [...attributes.track, h.Class(trackClassName)],
                         [
-                          h.div(
-                            [
-                              ...attributes.filledTrack,
-                              h.Class(filledTrackClassName),
-                            ],
-                            [],
-                          ),
+                          h.div([
+                            ...attributes.filledTrack,
+                            h.Class(filledTrackClassName),
+                          ]),
                         ],
                       ),
-                      h.div([...attributes.thumb, h.Class(thumbClassName)], []),
+                      h.div([...attributes.thumb, h.Class(thumbClassName)]),
                     ],
                   ),
                 ],
@@ -130,16 +127,13 @@ export const sliderDemo = (
                       h.div(
                         [...attributes.track, h.Class(trackClassName)],
                         [
-                          h.div(
-                            [
-                              ...attributes.filledTrack,
-                              h.Class(filledTrackClassName),
-                            ],
-                            [],
-                          ),
+                          h.div([
+                            ...attributes.filledTrack,
+                            h.Class(filledTrackClassName),
+                          ]),
                         ],
                       ),
-                      h.div([...attributes.thumb, h.Class(thumbClassName)], []),
+                      h.div([...attributes.thumb, h.Class(thumbClassName)]),
                     ],
                   ),
                 ],

@@ -103,7 +103,7 @@ const view = (model: Model, h: HtmlBuilder<Message>) =>
             content: h.div(
               [h.Class('flex items-center gap-2 px-3 py-2')],
               [
-                isSelected ? h.span([], ['✓']) : h.span([h.Class('w-4')], []),
+                isSelected ? h.span([], ['✓']) : h.span([h.Class('w-4')]),
                 h.span([], [plan]),
               ],
             ),

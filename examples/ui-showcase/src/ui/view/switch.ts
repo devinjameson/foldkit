@@ -20,17 +20,14 @@ const labelClassName =
 const descriptionClassName = 'text-sm text-gray-500'
 
 const knob = (isChecked: boolean, h: HtmlBuilder<UiMessage>): Html => {
-  return h.span(
-    [
-      h.Class(
-        clsx(
-          'pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transition-transform',
-          isChecked ? 'translate-x-6' : 'translate-x-1',
-        ),
+  return h.span([
+    h.Class(
+      clsx(
+        'pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transition-transform',
+        isChecked ? 'translate-x-6' : 'translate-x-1',
       ),
-    ],
-    [],
-  )
+    ),
+  ])
 }
 
 export const view = Submodel.defineView<UiModel, UiMessage>(

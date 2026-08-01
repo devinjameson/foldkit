@@ -39,7 +39,7 @@ const testView =
         toView: ({ button, label }) =>
           h.div(
             [],
-            [h.button([...button], []), h.span([...label], ['Notifications'])],
+            [h.button([...button]), h.span([...label], ['Notifications'])],
           ),
       },
       h,

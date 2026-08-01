@@ -12,13 +12,10 @@ export const menu = (className: string = 'w-6 h-6'): Html =>
       ih.Stroke('currentColor'),
     ],
     [
-      ih.path(
-        [
-          ih.StrokeLinecap('round'),
-          ih.StrokeLinejoin('round'),
-          ih.D('M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5'),
-        ],
-        [],
-      ),
+      ih.path([
+        ih.StrokeLinecap('round'),
+        ih.StrokeLinejoin('round'),
+        ih.D('M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5'),
+      ]),
     ],
   )

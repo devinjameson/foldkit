@@ -391,10 +391,10 @@ const textareaFieldView = (
                 statusIndicator(field, h),
               ],
             ),
-            h.textarea(
-              [...attributes.textarea, h.Class(inputClassName(field))],
-              [],
-            ),
+            h.textarea([
+              ...attributes.textarea,
+              h.Class(inputClassName(field)),
+            ]),
             descriptionView(field, attributes.description, h),
           ],
         ),

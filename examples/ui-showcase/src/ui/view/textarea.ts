@@ -42,10 +42,10 @@ export const view = Submodel.defineView<UiModel, UiMessage>(
                         [...attributes.label, h.Class(labelClassName)],
                         ['Bio'],
                       ),
-                      h.textarea(
-                        [...attributes.textarea, h.Class(textareaClassName)],
-                        [],
-                      ),
+                      h.textarea([
+                        ...attributes.textarea,
+                        h.Class(textareaClassName),
+                      ]),
                       h.span(
                         [
                           ...attributes.description,
@@ -80,10 +80,10 @@ export const view = Submodel.defineView<UiModel, UiMessage>(
                     [...attributes.label, h.Class(labelClassName)],
                     ['Bio'],
                   ),
-                  h.textarea(
-                    [...attributes.textarea, h.Class(textareaClassName)],
-                    [],
-                  ),
+                  h.textarea([
+                    ...attributes.textarea,
+                    h.Class(textareaClassName),
+                  ]),
                   h.span(
                     [...attributes.description, h.Class(descriptionClassName)],
                     ['This textarea is disabled.'],

@@ -122,6 +122,8 @@ export { default as lintNoHardcodedRouteStringsRaw } from './lintNoHardcodedRout
 export { default as lintNoHardcodedRouteStringsHighlighted } from './lintNoHardcodedRouteStrings.ts?highlighted'
 export { default as lintNoRawDomEventAttributesRaw } from './lintNoRawDomEventAttributes.ts?raw'
 export { default as lintNoRawDomEventAttributesHighlighted } from './lintNoRawDomEventAttributes.ts?highlighted'
+export { default as lintNoEmptyChildrenArrayRaw } from './lintNoEmptyChildrenArray.ts?raw'
+export { default as lintNoEmptyChildrenArrayHighlighted } from './lintNoEmptyChildrenArray.ts?highlighted'
 export { default as lintNoSpreadInEvoRaw } from './lintNoSpreadInEvo.ts?raw'
 export { default as lintNoSpreadInEvoHighlighted } from './lintNoSpreadInEvo.ts?highlighted'
 export { default as lintRequireRelForExternalLinkRaw } from './lintRequireRelForExternalLink.ts?raw'

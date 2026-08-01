@@ -46,7 +46,7 @@ const dialogHasOnUnmount = (model: Model): boolean => {
       {
         toView: ({ dialog }) => {
           hasOnUnmount = dialog.some(isOnUnmount)
-          return h.dialog([...dialog], [])
+          return h.dialog([...dialog])
         },
       },
       h,
@@ -69,7 +69,7 @@ const renderGroup = (
       {
         toView: render => {
           captured = selectGroup(render)
-          return h.dialog([...render.dialog], [])
+          return h.dialog([...render.dialog])
         },
       },
       h,

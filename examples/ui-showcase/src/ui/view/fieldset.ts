@@ -126,13 +126,10 @@ export const view = Submodel.defineView<UiModel, UiMessage>(
                                   ],
                                   ['Bio'],
                                 ),
-                                h.textarea(
-                                  [
-                                    ...textareaAttributes.textarea,
-                                    h.Class(textareaClassName),
-                                  ],
-                                  [],
-                                ),
+                                h.textarea([
+                                  ...textareaAttributes.textarea,
+                                  h.Class(textareaClassName),
+                                ]),
                                 h.span(
                                   [
                                     ...textareaAttributes.description,
@@ -267,13 +264,10 @@ export const view = Submodel.defineView<UiModel, UiMessage>(
                                   ],
                                   ['Bio'],
                                 ),
-                                h.textarea(
-                                  [
-                                    ...textareaAttributes.textarea,
-                                    h.Class(textareaClassName),
-                                  ],
-                                  [],
-                                ),
+                                h.textarea([
+                                  ...textareaAttributes.textarea,
+                                  h.Class(textareaClassName),
+                                ]),
                               ],
                             ),
                         },

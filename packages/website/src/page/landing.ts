@@ -61,18 +61,15 @@ const glyph = (symbol: string, offsetY?: string): Html =>
       ih.div(
         [ih.Class('max-w-6xl mx-auto')],
         [
-          ih.span(
-            [
-              ih.Class(
-                clsx(
-                  'inline-block -translate-x-1/4 text-accent-200/18 dark:text-accent-400/4 font-mono text-[18rem] md:text-[27rem] font-extrabold leading-none -z-10 relative whitespace-nowrap',
-                  offsetY,
-                ),
+          ih.span([
+            ih.Class(
+              clsx(
+                'inline-block -translate-x-1/4 text-accent-200/18 dark:text-accent-400/4 font-mono text-[18rem] md:text-[27rem] font-extrabold leading-none -z-10 relative whitespace-nowrap',
+                offsetY,
               ),
-              ih.DataAttribute('glyph', symbol),
-            ],
-            [],
-          ),
+            ),
+            ih.DataAttribute('glyph', symbol),
+          ]),
         ],
       ),
     ],
@@ -695,26 +692,20 @@ const testingSection = (renderCopyButton: RenderCopyButton): Html =>
             ['Learn about testing', Icon.arrowRight('w-5 h-5')],
           ),
           highlightedCodeBlock(
-            ih.div(
-              [
-                ih.Class('text-sm'),
-                ih.InnerHTML(Snippet.landingStoryTestHighlighted),
-              ],
-              [],
-            ),
+            ih.div([
+              ih.Class('text-sm'),
+              ih.InnerHTML(Snippet.landingStoryTestHighlighted),
+            ]),
             Snippet.landingStoryTestRaw,
             'Copy Story test example to clipboard',
             renderCopyButton,
             '',
           ),
           highlightedCodeBlock(
-            ih.div(
-              [
-                ih.Class('text-sm'),
-                ih.InnerHTML(Snippet.landingSceneTestHighlighted),
-              ],
-              [],
-            ),
+            ih.div([
+              ih.Class('text-sm'),
+              ih.InnerHTML(Snippet.landingSceneTestHighlighted),
+            ]),
             Snippet.landingSceneTestRaw,
             'Copy Scene test example to clipboard',
             renderCopyButton,

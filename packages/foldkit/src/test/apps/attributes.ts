@@ -34,5 +34,5 @@ const TEST_ID = 'attribute-host'
 export const testId = TEST_ID
 
 export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
-  return h.div([h.DataAttribute('testid', TEST_ID), model.attribute], [])
+  return h.div([h.DataAttribute('testid', TEST_ID), model.attribute])
 }

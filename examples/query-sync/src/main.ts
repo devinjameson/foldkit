@@ -630,14 +630,11 @@ const chevronDown = (className: string, h: HtmlBuilder<Message>): Html =>
       h.Stroke('currentColor'),
     ],
     [
-      h.path(
-        [
-          h.StrokeLinecap('round'),
-          h.StrokeLinejoin('round'),
-          h.D('M19.5 8.25l-7.5 7.5-7.5-7.5'),
-        ],
-        [],
-      ),
+      h.path([
+        h.StrokeLinecap('round'),
+        h.StrokeLinejoin('round'),
+        h.D('M19.5 8.25l-7.5 7.5-7.5-7.5'),
+      ]),
     ],
   )
 
