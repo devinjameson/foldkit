@@ -28,4 +28,6 @@ Both the schema and the Effect are passed to `makeApplication` as `Flags` and `f
 
 ::Snippet{name="counterEntryWithFlags" label="flags wiring"}
 
+The example above discharges its own `KeyValueStore` requirement with `Effect.provide`, which is the right placement for a service used only at startup. When the flags Effect needs an app-wide singleton that Commands also use, leave the requirement in its type and let the `resources` Layer provide it. The runtime builds that Layer once and shares it, so [Resources](/core/resources) covers the details.
+
 Once your app outgrows a single Model, Message, and update, the next step is to decompose it into [Submodels](/core/submodel): self-contained modules with their own state, Messages, and update, embedded under a parent.

@@ -230,6 +230,8 @@ const application = Runtime.makeApplication({
 })
 ```
 
+A service used only at startup is discharged inside `flags` with `Effect.provide`, the same way a Command discharges its own (`Effect.provide(BrowserKeyValueStore.layerLocalStorage)`). When the service is an app-wide singleton that Commands also use, leave the requirement in the flags type as `Effect<Flags, never, ApiClientService>` and let `resources` provide it. The runtime builds that Layer once and shares it with flags, Commands, and Subscriptions. Never provide the same Layer to `flags` and pass it as `resources`: that builds it twice and hands the app two instances of whatever it holds.
+
 ## The Submodel Pattern
 
 When a module grows too large, extract a Submodel: a child module with its own Model, Message, init, update, and view.

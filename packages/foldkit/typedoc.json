@@ -28,6 +28,7 @@
     "Evolved",
     "EvolveTransform",
     "FilterOptions",
+    "FlagsConfig",
     "InferParsed",
     "ManagedResourceTypeId",
     "MergeRecords",

@@ -596,7 +596,7 @@ type RuntimeConfig<
   ports: P
   Model: Schema.Codec<Model, any, unknown, unknown>
   Flags: Schema.Codec<Flags, any, unknown, unknown>
-  flags: Effect.Effect<Flags>
+  flags: Option.Option<Effect.Effect<Flags, never, Resources>>
   init: (
     flags: Flags,
     url?: Url,
@@ -660,12 +660,13 @@ type RuntimeConfig<
    */
   preserveScroll?: boolean
   /**
-   * An Effect Layer providing services shared by every Command and
-   * Subscription. The runtime builds the Layer once, the first time it is
-   * needed: at startup in an app that declares Subscriptions (their
-   * pipelines run for the application's lifetime), otherwise when the first
-   * Command runs. The built services are reused for the application's
-   * lifetime and released at runtime teardown.
+   * An Effect Layer providing services shared by the `flags` Effect and
+   * every Command and Subscription. The runtime builds the Layer once, the
+   * first time it is needed: at startup in an app that declares `flags` (it
+   * resolves before `init`) or Subscriptions (their pipelines run for the
+   * application's lifetime), otherwise when the first Command runs. The
+   * built services are reused for the application's lifetime and released
+   * at runtime teardown.
    *
    * Put a service here when it is a genuine app-wide singleton: when
    * construction is expensive relative to how often Commands need it (an
@@ -674,7 +675,12 @@ type RuntimeConfig<
    * graph, an RTCPeerConnection). A Layer that fails to build crashes the
    * app with the crash view: the runtime provides this Layer to every
    * Command, so a service that cannot be constructed leaves no Command
-   * safe to run.
+   * safe to run. The one exception is a Layer that fails while `flags` are
+   * resolving and the flags Effect needs it: that lands before the first
+   * render, where there is no Model to render a crash view against, so
+   * startup fails instead. Neither cause is swallowed, so a flags Effect
+   * that fails for its own unrelated reason stays visible alongside the
+   * build error.
    *
    * Provide a service inside the Command's Effect instead when
    * construction is cheap and stateless (an HTTP client via `foldkit/http`
@@ -729,6 +735,21 @@ type BaseApplicationConfig<
   devTools?: DevToolsConfig
 }>
 
+type FlagsConfig<Flags, Resources> = Readonly<{
+  Flags: Schema.Codec<Flags, any, unknown, unknown>
+  /**
+   * Resolves the flags once at startup, before `init` runs. Services this
+   * Effect requires are provided from the `resources` Layer, which the
+   * runtime builds a single time and shares with every Command and
+   * Subscription, so a client or connection needed both at startup and by
+   * Commands is constructed once. A requirement that `resources` does not
+   * provide is a compile error here. The error channel is `never`, so this
+   * Effect handles its own failures with `Effect.catch`, the same contract
+   * a Command's Effect has.
+   */
+  flags: Effect.Effect<Flags, never, NoInfer<Resources>>
+}>
+
 /** Configuration for `makeApplication` with flags and URL routing. */
 export type RoutingApplicationConfigWithFlags<
   Model,
@@ -744,9 +765,8 @@ export type RoutingApplicationConfigWithFlags<
   ManagedResourceServices,
   P
 > &
+  FlagsConfig<Flags, Resources> &
   Readonly<{
-    Flags: Schema.Codec<Flags, any, unknown, unknown>
-    flags: Effect.Effect<Flags>
     routing: RoutingConfig<Message>
     init: (
       flags: Flags,
@@ -800,9 +820,8 @@ export type ApplicationConfigWithFlags<
   ManagedResourceServices,
   P
 > &
+  FlagsConfig<Flags, Resources> &
   Readonly<{
-    Flags: Schema.Codec<Flags, any, unknown, unknown>
-    flags: Effect.Effect<Flags>
     init: (
       flags: Flags,
     ) => readonly [
@@ -884,9 +903,8 @@ export type ElementConfigWithFlags<
   ManagedResourceServices = never,
   P extends Ports | undefined = undefined,
 > = BaseElementConfig<Model, Message, Resources, ManagedResourceServices, P> &
+  FlagsConfig<Flags, Resources> &
   Readonly<{
-    Flags: Schema.Codec<Flags, any, unknown, unknown>
-    flags: Effect.Effect<Flags>
     init: (
       flags: Flags,
     ) => readonly [
@@ -1271,7 +1289,7 @@ const makeRuntime = <
 >({
   ports,
   Model,
-  flags: resolveFlags,
+  flags: maybeResolveFlags,
   init,
   update,
   view,
@@ -1529,7 +1547,63 @@ const makeRuntime = <
           )
         }
 
-        const flags = yield* resolveFlags
+        // NOTE: flags run through the same cached build that Commands and
+        // Subscriptions use, rather than being handed the Layer again, so a
+        // service needed both at startup and by a Command is constructed
+        // once. An app without flags never reaches it, which keeps the Layer
+        // lazy when the first thing that needs it is a Command.
+        //
+        // NOTE: a Layer that fails to build is not fatal here. Flags resolve
+        // before `init`, so there is no Model for a crash view to render
+        // against and a failure escaping this point kills the app with a
+        // blank container. Running flags against an empty context instead
+        // lets an app whose flags never touch the Layer boot as it did
+        // before flags could consume `resources`: the cached failure then
+        // surfaces at the first Command or Subscription, where `crashWith`
+        // does render the crash view. Flags that do need the Layer still
+        // fail here, and both causes are reported: the `Service not found`
+        // defect the empty context produced is useless on its own, and the
+        // build failure that explains it would be lost if it replaced the
+        // flags cause outright. Combining them also keeps a flags Effect
+        // that fails for its own unrelated reason visible instead of
+        // attributing its defect to the Layer. Interrupts propagate
+        // untouched on both sides, because dispose racing either the build
+        // or the flags run is not a failure to recover from, and
+        // `Effect.catchCause` hands the handler interrupt causes too.
+        const provideResources = <A>(
+          effect: Effect.Effect<A, never, Resources>,
+        ): Effect.Effect<A> =>
+          Option.match(maybeAcquireResourceContext, {
+            /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+            onNone: () => effect as Effect.Effect<A>,
+            onSome: acquireResourceContext =>
+              Effect.matchCauseEffect(acquireResourceContext, {
+                onFailure: buildCause =>
+                  Cause.hasInterruptsOnly(buildCause)
+                    ? Effect.failCause(buildCause)
+                    : Effect.catchCause(
+                        Effect.provideContext(
+                          effect,
+                          /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+                          Context.empty() as Context.Context<Resources>,
+                        ),
+                        flagsCause =>
+                          Cause.hasInterruptsOnly(flagsCause)
+                            ? Effect.failCause(flagsCause)
+                            : Effect.failCause(
+                                Cause.combine(buildCause, flagsCause),
+                              ),
+                      ),
+                onSuccess: resourceContext =>
+                  Effect.provideContext(effect, resourceContext),
+              }),
+          })
+
+        const flags = yield* Option.match(maybeResolveFlags, {
+          /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+          onNone: () => Effect.succeed(undefined as Flags),
+          onSome: provideResources,
+        })
 
         const ModelJsonCodec = Schema.toCodecJson(
           /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
@@ -3052,7 +3126,7 @@ export function makeApplication<
     return makeRuntime({
       ...baseConfig,
       Flags: config.Flags,
-      flags: config.flags,
+      flags: Option.some(config.flags),
       init: (flags: unknown, url) =>
         (
           config as RoutingApplicationConfigWithFlags<
@@ -3075,7 +3149,7 @@ export function makeApplication<
     return makeRuntime({
       ...baseConfig,
       Flags: Schema.Void,
-      flags: Effect.succeed(undefined),
+      flags: Option.none(),
       init: (_flags, url) =>
         (
           config as RoutingApplicationConfig<
@@ -3097,7 +3171,7 @@ export function makeApplication<
     return makeRuntime({
       ...baseConfig,
       Flags: config.Flags,
-      flags: config.flags,
+      flags: Option.some(config.flags),
       init: (flags: unknown) =>
         (
           config as ApplicationConfigWithFlags<
@@ -3120,7 +3194,7 @@ export function makeApplication<
     return makeRuntime({
       ...baseConfig,
       Flags: Schema.Void,
-      flags: Effect.succeed(undefined),
+      flags: Option.none(),
       init: () =>
         (
           config as ApplicationConfig<
@@ -3275,7 +3349,7 @@ export function makeElement<
     return makeRuntime({
       ...baseConfig,
       Flags: config.Flags,
-      flags: config.flags,
+      flags: Option.some(config.flags),
       init: (flags: unknown) =>
         (
           config as ElementConfigWithFlags<
@@ -3298,7 +3372,7 @@ export function makeElement<
     return makeRuntime({
       ...baseConfig,
       Flags: Schema.Void,
-      flags: Effect.succeed(undefined),
+      flags: Option.none(),
       init: () =>
         (
           config as ElementConfig<
