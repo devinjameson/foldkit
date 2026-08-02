@@ -12,13 +12,10 @@ export const check = (className: string = 'w-6 h-6'): Html =>
       ih.Stroke('currentColor'),
     ],
     [
-      ih.path(
-        [
-          ih.StrokeLinecap('round'),
-          ih.StrokeLinejoin('round'),
-          ih.D('M4.5 12.75l6 6 9-13.5'),
-        ],
-        [],
-      ),
+      ih.path([
+        ih.StrokeLinecap('round'),
+        ih.StrokeLinejoin('round'),
+        ih.D('M4.5 12.75l6 6 9-13.5'),
+      ]),
     ],
   )

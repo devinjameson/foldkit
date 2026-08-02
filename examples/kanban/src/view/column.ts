@@ -121,16 +121,12 @@ const addCardForm = (
 }
 
 const dropPlaceholder = (h: HtmlBuilder<Message>): Html =>
-  h.keyed('li')(
-    'drop-placeholder',
-    [
-      h.Class(
-        'rounded-lg border-2 border-dashed border-blue-300 bg-blue-50 h-12',
-      ),
-      h.AriaHidden(true),
-    ],
-    [],
-  )
+  h.keyed('li')('drop-placeholder', [
+    h.Class(
+      'rounded-lg border-2 border-dashed border-blue-300 bg-blue-50 h-12',
+    ),
+    h.AriaHidden(true),
+  ])
 
 const findDraggedCard = (
   model: Model,

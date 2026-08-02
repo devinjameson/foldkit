@@ -1279,17 +1279,13 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
             (separatorClassName ||
               Array.isReadonlyArrayNonEmpty(separatorAttributes))
               ? [
-                  h.keyed('div')(
-                    `${id}-separator-${segmentIndex}`,
-                    [
-                      h.Role('separator'),
-                      ...(separatorClassName
-                        ? [h.Class(separatorClassName)]
-                        : []),
-                      ...separatorAttributes,
-                    ],
-                    [],
-                  ),
+                  h.keyed('div')(`${id}-separator-${segmentIndex}`, [
+                    h.Role('separator'),
+                    ...(separatorClassName
+                      ? [h.Class(separatorClassName)]
+                      : []),
+                    ...separatorAttributes,
+                  ]),
                 ]
               : []
 
@@ -1297,16 +1293,12 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
         })
       }
 
-      const backdrop = h.keyed('div')(
-        `${id}-backdrop`,
-        [
-          h.OnMount(PortalListboxBackdrop()),
-          ...(isLeaving ? [] : [h.OnClick(Closed())]),
-          ...(backdropClassName ? [h.Class(backdropClassName)] : []),
-          ...backdropAttributes,
-        ],
-        [],
-      )
+      const backdrop = h.keyed('div')(`${id}-backdrop`, [
+        h.OnMount(PortalListboxBackdrop()),
+        ...(isLeaving ? [] : [h.OnClick(Closed())]),
+        ...(backdropClassName ? [h.Class(backdropClassName)] : []),
+        ...backdropAttributes,
+      ])
 
       const renderedItems = renderGroupedItems()
 

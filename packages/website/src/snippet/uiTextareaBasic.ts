@@ -20,13 +20,10 @@ const view = (model: Model, h: HtmlBuilder<Message>) =>
               [...attributes.label, h.Class('text-sm font-medium')],
               ['Bio'],
             ),
-            h.textarea(
-              [
-                ...attributes.textarea,
-                h.Class('w-full rounded-lg border border-gray-300 px-3 py-2'),
-              ],
-              [],
-            ),
+            h.textarea([
+              ...attributes.textarea,
+              h.Class('w-full rounded-lg border border-gray-300 px-3 py-2'),
+            ]),
             h.span(
               [...attributes.description, h.Class('text-sm text-gray-500')],
               ['A brief introduction about yourself.'],

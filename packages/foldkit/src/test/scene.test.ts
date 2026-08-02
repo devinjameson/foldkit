@@ -3359,7 +3359,7 @@ describe('scene mounts', () => {
 
     const childView = defineView<ChildModel, ChildMessage>(() => {
       const h = attributeHtml<ChildMessage>()
-      return h.button([h.OnMount(FocusButton())], [])
+      return h.button([h.OnMount(FocusButton())])
     })
 
     const seen: Array<ParentMessage> = []

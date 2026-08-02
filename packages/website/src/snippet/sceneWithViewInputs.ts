@@ -13,7 +13,7 @@ const sceneView = withViewInputs(Slider.view, {
   toView: attributes =>
     ih.div(
       [...attributes.root],
-      [ih.div([...attributes.track], []), ih.div([...attributes.thumb], [])],
+      [ih.div([...attributes.track]), ih.div([...attributes.thumb])],
     ),
 })
 

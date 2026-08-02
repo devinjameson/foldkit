@@ -288,18 +288,15 @@ const swatchRow = (
         {
           onClick: onChange(color),
           toView: attributes =>
-            h.button(
-              [
-                ...attributes.button,
-                h.Title(color),
-                h.AriaLabel(`Use ${color}`),
-                h.Class(
-                  swatchClass(color.toLowerCase() === active.toLowerCase()),
-                ),
-                h.Style({ backgroundColor: color }),
-              ],
-              [],
-            ),
+            h.button([
+              ...attributes.button,
+              h.Title(color),
+              h.AriaLabel(`Use ${color}`),
+              h.Class(
+                swatchClass(color.toLowerCase() === active.toLowerCase()),
+              ),
+              h.Style({ backgroundColor: color }),
+            ]),
         },
         h,
       ),

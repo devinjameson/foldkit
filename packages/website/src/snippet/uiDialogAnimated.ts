@@ -64,15 +64,12 @@ const view = (model: Model, h: HtmlBuilder<Message>) =>
           ],
           isVisible
             ? [
-                h.div(
-                  [
-                    ...backdrop,
-                    h.Class(
-                      'fixed inset-0 bg-black/50 transition duration-150 ease-out data-[closed]:opacity-0',
-                    ),
-                  ],
-                  [],
-                ),
+                h.div([
+                  ...backdrop,
+                  h.Class(
+                    'fixed inset-0 bg-black/50 transition duration-150 ease-out data-[closed]:opacity-0',
+                  ),
+                ]),
                 h.div(
                   [
                     ...panel,

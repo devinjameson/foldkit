@@ -301,7 +301,7 @@ const uploadView = (upload: Upload, h: HtmlBuilder<Message>): Html =>
         ],
       ),
       upload.status === 'Uploading'
-        ? h.div([h.Class('h-1.5 rounded-full bg-blue-400 animate-pulse')], [])
+        ? h.div([h.Class('h-1.5 rounded-full bg-blue-400 animate-pulse')])
         : h.empty,
     ],
   )

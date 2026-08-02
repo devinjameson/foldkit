@@ -43,7 +43,7 @@ const testView =
         toView: ({ checkbox, label }) =>
           h.div(
             [],
-            [h.div([...checkbox], []), h.span([...label], ['Accept terms'])],
+            [h.div([...checkbox]), h.span([...label], ['Accept terms'])],
           ),
       },
       h,

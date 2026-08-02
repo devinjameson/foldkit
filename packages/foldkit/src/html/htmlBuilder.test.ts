@@ -147,6 +147,18 @@ describe('HtmlBuilder type guarantees', () => {
     inertHtml.OnClick(ClickedApp())
     expect(inertHtml.empty).toBeNull()
   })
+
+  it('rejects children on a void element', () => {
+    // @ts-expect-error a void element takes attributes only
+    const imgWithChildren = () => inertHtml.img([inertHtml.Src('logo.png')], []) // oxlint-disable-line foldkit/no-empty-children-array -- the rejected call is the assertion
+    expect(imgWithChildren).toBeTypeOf('function')
+  })
+
+  it('rejects an element builder call that omits attributes', () => {
+    // @ts-expect-error children are optional, attributes are not
+    const divWithoutAttributes = () => inertHtml.div()
+    expect(divWithoutAttributes).toBeTypeOf('function')
+  })
 })
 
 // RUNTIME GUARANTEES
@@ -165,6 +177,13 @@ describe('HtmlBuilder runtime guarantees', () => {
     expect(publicKeys).not.toContain('html')
     expect(publicKeys).not.toContain('__htmlBuilder')
     expect(publicKeys).toContain('inertHtml')
+  })
+
+  it('builds the same vnode whether children are omitted or passed empty', () => {
+    const omitted = inertHtml.div([inertHtml.Class('card')])
+    // oxlint-disable-next-line foldkit/no-empty-children-array -- the redundant form is what this compares against
+    const explicit = inertHtml.div([inertHtml.Class('card')], [])
+    expect(omitted).toEqual(explicit)
   })
 
   it('hands out one process-wide builder object across Message instantiations', () => {

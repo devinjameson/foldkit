@@ -2362,7 +2362,7 @@ const keyed =
 
 type ElementFunction<Message> = (
   attributes: ReadonlyArray<Attribute<Message> | ChildAttribute>,
-  children: ReadonlyArray<Child>,
+  children?: ReadonlyArray<Child>,
 ) => Html
 
 type VoidElementFunction<Message> = (

@@ -638,14 +638,11 @@ const mapPaneView = (model: Model, h: HtmlBuilder<Message>): Html =>
   h.main(
     [h.Class('flex-1 relative')],
     [
-      h.div(
-        [
-          h.Class('h-full w-full'),
-          h.AriaLabel('Map'),
-          h.OnMount(MountMap({ hostId: HOST_ID })),
-        ],
-        [],
-      ),
+      h.div([
+        h.Class('h-full w-full'),
+        h.AriaLabel('Map'),
+        h.OnMount(MountMap({ hostId: HOST_ID })),
+      ]),
       mapErrorBannerView(model.maybeMapError, h),
       boundsBadgeView(model.maybeBounds, h),
     ],
@@ -778,15 +775,12 @@ const spinnerView = (h: HtmlBuilder<Message>): Html =>
   h.div(
     [h.Class('flex justify-center mt-4')],
     [
-      h.span(
-        [
-          h.Class(
-            'inline-block w-6 h-6 border-2 border-slate-300 border-t-slate-900 rounded-full motion-safe:animate-spin',
-          ),
-          h.AriaLabel('Loading'),
-        ],
-        [],
-      ),
+      h.span([
+        h.Class(
+          'inline-block w-6 h-6 border-2 border-slate-300 border-t-slate-900 rounded-full motion-safe:animate-spin',
+        ),
+        h.AriaLabel('Loading'),
+      ]),
     ],
   )
 

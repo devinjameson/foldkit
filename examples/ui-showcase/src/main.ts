@@ -550,7 +550,7 @@ const mobileMenuView = (model: Model, h: HtmlBuilder<Message>): Html =>
           [...dialog, h.Class('md:hidden')],
           isVisible
             ? [
-                h.div([...backdrop, h.Class('fixed inset-0 z-[59]')], []),
+                h.div([...backdrop, h.Class('fixed inset-0 z-[59]')]),
                 h.div(
                   [
                     ...panel,

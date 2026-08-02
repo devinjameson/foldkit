@@ -12,10 +12,10 @@ const testToView = (attributes: SliderAttributes) =>
     [...attributes.root],
     [
       ih.label([...attributes.label], ['Test']),
-      ih.div([...attributes.track], [ih.div([...attributes.filledTrack], [])]),
-      ih.div([...attributes.thumb], []),
+      ih.div([...attributes.track], [ih.div([...attributes.filledTrack])]),
+      ih.div([...attributes.thumb]),
       ...(Array.isReadonlyArrayNonEmpty(attributes.hiddenInput)
-        ? [ih.span(attributes.hiddenInput, [])]
+        ? [ih.span(attributes.hiddenInput)]
         : []),
     ],
   )

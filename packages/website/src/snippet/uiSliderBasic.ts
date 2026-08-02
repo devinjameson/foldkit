@@ -128,24 +128,18 @@ const view = (model: Model, h: HtmlBuilder<Message>) =>
                     h.Class('h-1.5 w-full rounded-full bg-gray-200'),
                   ],
                   [
-                    h.div(
-                      [
-                        ...attributes.filledTrack,
-                        h.Class('h-full rounded-full bg-blue-600'),
-                      ],
-                      [],
-                    ),
+                    h.div([
+                      ...attributes.filledTrack,
+                      h.Class('h-full rounded-full bg-blue-600'),
+                    ]),
                   ],
                 ),
-                h.div(
-                  [
-                    ...attributes.thumb,
-                    h.Class(
-                      'h-5 w-5 rounded-full bg-white border-2 border-blue-600 shadow cursor-grab focus-visible:ring-2 focus-visible:ring-blue-600 data-[dragging]:cursor-grabbing',
-                    ),
-                  ],
-                  [],
-                ),
+                h.div([
+                  ...attributes.thumb,
+                  h.Class(
+                    'h-5 w-5 rounded-full bg-white border-2 border-blue-600 shadow cursor-grab focus-visible:ring-2 focus-visible:ring-blue-600 data-[dragging]:cursor-grabbing',
+                  ),
+                ]),
               ],
             ),
           ],

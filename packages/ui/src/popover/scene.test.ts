@@ -37,11 +37,11 @@ const sceneView =
           h.div(
             [],
             [
-              h.keyed('button')('test-button', [...button], []),
+              h.keyed('button')('test-button', [...button]),
               ...(isVisible
                 ? [
-                    h.keyed('div')('test-backdrop', [...backdrop], []),
-                    h.keyed('div')('test-panel-container', [...panel], []),
+                    h.keyed('div')('test-backdrop', [...backdrop]),
+                    h.keyed('div')('test-panel-container', [...panel]),
                   ]
                 : []),
             ],

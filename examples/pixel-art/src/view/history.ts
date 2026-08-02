@@ -195,16 +195,13 @@ const thumbnailEntry = (
         ],
         Array.flatMap(grid, row =>
           Array.map(row, cell =>
-            h.div(
-              [
-                h.Style({
-                  width: `${THUMBNAIL_CELL_SIZE}px`,
-                  height: `${THUMBNAIL_CELL_SIZE}px`,
-                  backgroundColor: resolveColor(cell, theme),
-                }),
-              ],
-              [],
-            ),
+            h.div([
+              h.Style({
+                width: `${THUMBNAIL_CELL_SIZE}px`,
+                height: `${THUMBNAIL_CELL_SIZE}px`,
+                backgroundColor: resolveColor(cell, theme),
+              }),
+            ]),
           ),
         ),
       ),

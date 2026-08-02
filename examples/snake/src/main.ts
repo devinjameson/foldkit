@@ -306,7 +306,7 @@ const gridView = (model: Model, h: HtmlBuilder<Message>): Html =>
       h.div(
         [h.Class('flex')],
         Array.makeBy(GAME.GRID_SIZE, x =>
-          h.div([h.Class(`w-6 h-6 ${cellClass(x, y, model)}`)], []),
+          h.div([h.Class(`w-6 h-6 ${cellClass(x, y, model)}`)]),
         ),
       ),
     ),

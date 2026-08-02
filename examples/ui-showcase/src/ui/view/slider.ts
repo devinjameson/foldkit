@@ -71,19 +71,13 @@ export const view = Submodel.defineView<UiModel, UiMessage>(
                           h.div(
                             [...attributes.track, h.Class(trackClassName)],
                             [
-                              h.div(
-                                [
-                                  ...attributes.filledTrack,
-                                  h.Class(filledTrackClassName),
-                                ],
-                                [],
-                              ),
+                              h.div([
+                                ...attributes.filledTrack,
+                                h.Class(filledTrackClassName),
+                              ]),
                             ],
                           ),
-                          h.div(
-                            [...attributes.thumb, h.Class(thumbClassName)],
-                            [],
-                          ),
+                          h.div([...attributes.thumb, h.Class(thumbClassName)]),
                         ],
                       ),
                     ],
@@ -122,19 +116,13 @@ export const view = Submodel.defineView<UiModel, UiMessage>(
                           h.div(
                             [...attributes.track, h.Class(trackClassName)],
                             [
-                              h.div(
-                                [
-                                  ...attributes.filledTrack,
-                                  h.Class(filledTrackClassName),
-                                ],
-                                [],
-                              ),
+                              h.div([
+                                ...attributes.filledTrack,
+                                h.Class(filledTrackClassName),
+                              ]),
                             ],
                           ),
-                          h.div(
-                            [...attributes.thumb, h.Class(thumbClassName)],
-                            [],
-                          ),
+                          h.div([...attributes.thumb, h.Class(thumbClassName)]),
                         ],
                       ),
                     ],

@@ -97,7 +97,7 @@ export const viewWithDialog = (model: Model, h: HtmlBuilder<Message>): Html => {
               [...dialog],
               isVisible
                 ? [
-                    h.div([...backdrop], []),
+                    h.div([...backdrop]),
                     h.div([...panel], [submitButton(model.isEnabled, h)]),
                   ]
                 : [],

@@ -25,14 +25,11 @@ export const basicDemo = (
   h: HtmlBuilder<Message>,
 ) => {
   const knob = (isKnobRight: boolean) =>
-    h.span(
-      [
-        h.Class(
-          `pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${isKnobRight ? 'translate-x-6' : 'translate-x-1'}`,
-        ),
-      ],
-      [],
-    )
+    h.span([
+      h.Class(
+        `pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${isKnobRight ? 'translate-x-6' : 'translate-x-1'}`,
+      ),
+    ])
 
   return [
     Switch.view(

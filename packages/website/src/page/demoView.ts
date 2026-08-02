@@ -75,10 +75,7 @@ export const phaseIndicatorView = (
           ),
         ],
         [
-          ih.div(
-            [ih.Class('w-2 h-2 rounded-full bg-current ' + colorClass)],
-            [],
-          ),
+          ih.div([ih.Class('w-2 h-2 rounded-full bg-current ' + colorClass)]),
           ih.span([ih.Class(colorClass)], [label]),
           ...extraChildren,
         ],
@@ -103,7 +100,7 @@ export const codePanelView = (
     [
       ih.div(
         [ih.Class('demo-code-scroll overflow-auto')],
-        [ih.div([ih.InnerHTML(htmlString)], [])],
+        [ih.div([ih.InnerHTML(htmlString)])],
       ),
     ],
   )

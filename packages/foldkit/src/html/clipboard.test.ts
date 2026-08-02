@@ -102,10 +102,9 @@ describe('clipboard attributes', () => {
   describe('OnPastePreventDefault', () => {
     it('prevents default and dispatches when the handler returns Some', () => {
       const h = __htmlBuilder<Message>()
-      const vnode = h.div(
-        [h.OnPastePreventDefault(text => Option.some(PastedText({ text })))],
-        [],
-      )
+      const vnode = h.div([
+        h.OnPastePreventDefault(text => Option.some(PastedText({ text }))),
+      ])
 
       const fake = fakeClipboardEvent({ 'text/plain': 'pasted content' })
       handlerOf(vnode, 'paste')(fake.event)
@@ -118,7 +117,7 @@ describe('clipboard attributes', () => {
 
     it('leaves the paste to the browser when the handler returns None', () => {
       const h = __htmlBuilder<Message>()
-      const vnode = h.div([h.OnPastePreventDefault(() => Option.none())], [])
+      const vnode = h.div([h.OnPastePreventDefault(() => Option.none())])
 
       const fake = fakeClipboardEvent({ 'text/plain': 'pasted content' })
       handlerOf(vnode, 'paste')(fake.event)
@@ -129,10 +128,9 @@ describe('clipboard attributes', () => {
 
     it('passes an empty string when the event carries no clipboardData', () => {
       const h = __htmlBuilder<Message>()
-      const vnode = h.div(
-        [h.OnPastePreventDefault(text => Option.some(PastedText({ text })))],
-        [],
-      )
+      const vnode = h.div([
+        h.OnPastePreventDefault(text => Option.some(PastedText({ text }))),
+      ])
 
       const fake = fakeClipboardEventWithoutData()
       handlerOf(vnode, 'paste')(fake.event)
@@ -145,7 +143,7 @@ describe('clipboard attributes', () => {
   describe('OnCopyText', () => {
     it('writes the text to the clipboard and prevents default', () => {
       const h = __htmlBuilder<Message>()
-      const vnode = h.div([h.OnCopyText('serialized selection')], [])
+      const vnode = h.div([h.OnCopyText('serialized selection')])
 
       const fake = fakeClipboardEvent()
       handlerOf(vnode, 'copy')(fake.event)
@@ -157,7 +155,7 @@ describe('clipboard attributes', () => {
 
     it('leaves the copy to the browser when the event carries no clipboardData', () => {
       const h = __htmlBuilder<Message>()
-      const vnode = h.div([h.OnCopyText('serialized selection')], [])
+      const vnode = h.div([h.OnCopyText('serialized selection')])
 
       const fake = fakeClipboardEventWithoutData()
       handlerOf(vnode, 'copy')(fake.event)
@@ -169,10 +167,7 @@ describe('clipboard attributes', () => {
   describe('OnCutText', () => {
     it('writes the text to the clipboard, prevents default, and dispatches', () => {
       const h = __htmlBuilder<Message>()
-      const vnode = h.div(
-        [h.OnCutText('serialized selection', CutSelection())],
-        [],
-      )
+      const vnode = h.div([h.OnCutText('serialized selection', CutSelection())])
 
       const fake = fakeClipboardEvent()
       handlerOf(vnode, 'cut')(fake.event)
@@ -184,10 +179,7 @@ describe('clipboard attributes', () => {
 
     it('leaves the cut to the browser when the event carries no clipboardData', () => {
       const h = __htmlBuilder<Message>()
-      const vnode = h.div(
-        [h.OnCutText('serialized selection', CutSelection())],
-        [],
-      )
+      const vnode = h.div([h.OnCutText('serialized selection', CutSelection())])
 
       const fake = fakeClipboardEventWithoutData()
       handlerOf(vnode, 'cut')(fake.event)

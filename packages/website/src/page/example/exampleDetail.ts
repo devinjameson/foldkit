@@ -338,18 +338,13 @@ const trafficLightDots = (): Html =>
   ih.div(
     [ih.Class('flex gap-1.5')],
     [
-      ih.div(
-        [ih.Class('w-3 h-3 rounded-full bg-red-400 dark:bg-red-500/60')],
-        [],
-      ),
-      ih.div(
-        [ih.Class('w-3 h-3 rounded-full bg-yellow-400 dark:bg-yellow-500/60')],
-        [],
-      ),
-      ih.div(
-        [ih.Class('w-3 h-3 rounded-full bg-green-400 dark:bg-green-500/60')],
-        [],
-      ),
+      ih.div([ih.Class('w-3 h-3 rounded-full bg-red-400 dark:bg-red-500/60')]),
+      ih.div([
+        ih.Class('w-3 h-3 rounded-full bg-yellow-400 dark:bg-yellow-500/60'),
+      ]),
+      ih.div([
+        ih.Class('w-3 h-3 rounded-full bg-green-400 dark:bg-green-500/60'),
+      ]),
     ],
   )
 
@@ -426,17 +421,12 @@ const livePreviewDisclosureView = (
                         ),
                       ],
                     ),
-                    h.iframe(
-                      [
-                        h.Src(
-                          `/example-apps-embed/${slug}/index.html?embedded`,
-                        ),
-                        h.Class('w-full bg-white h-[40rem]'),
-                        h.AriaLabel(`${meta.title} example running live`),
-                        h.OnMount(ObserveExampleUrlMessages()),
-                      ],
-                      [],
-                    ),
+                    h.iframe([
+                      h.Src(`/example-apps-embed/${slug}/index.html?embedded`),
+                      h.Class('w-full bg-white h-[40rem]'),
+                      h.AriaLabel(`${meta.title} example running live`),
+                      h.OnMount(ObserveExampleUrlMessages()),
+                    ]),
                   ],
                 ),
               ],
@@ -525,13 +515,10 @@ const sourceCodeView = (
                           [h.Class('code-embed-scroll')],
                           [
                             highlightedCodeBlock(
-                              h.div(
-                                [
-                                  h.Class('code-embed'),
-                                  h.InnerHTML(file.highlightedHtml),
-                                ],
-                                [],
-                              ),
+                              h.div([
+                                h.Class('code-embed'),
+                                h.InnerHTML(file.highlightedHtml),
+                              ]),
                               file.rawCode,
                               `Copy ${file.path} to clipboard`,
                               '!mt-0',
@@ -571,14 +558,9 @@ const sourcesSkeletonView = (): Html =>
           ),
         ],
         Array.map(skeletonFileRowClasses, widthClass =>
-          ih.div(
-            [
-              ih.Class(
-                `h-5 ${widthClass} rounded bg-gray-300 dark:bg-gray-700`,
-              ),
-            ],
-            [],
-          ),
+          ih.div([
+            ih.Class(`h-5 ${widthClass} rounded bg-gray-300 dark:bg-gray-700`),
+          ]),
         ),
       ),
       ih.div(
@@ -588,30 +570,20 @@ const sourcesSkeletonView = (): Html =>
           ),
         ],
         [
-          ih.div(
-            [ih.Class('h-4 w-11/12 rounded bg-gray-300 dark:bg-gray-700')],
-            [],
-          ),
-          ih.div(
-            [ih.Class('h-4 w-10/12 rounded bg-gray-300 dark:bg-gray-700')],
-            [],
-          ),
-          ih.div(
-            [ih.Class('h-4 w-8/12 rounded bg-gray-300 dark:bg-gray-700')],
-            [],
-          ),
-          ih.div(
-            [ih.Class('h-4 w-11/12 rounded bg-gray-300 dark:bg-gray-700')],
-            [],
-          ),
-          ih.div(
-            [ih.Class('h-4 w-9/12 rounded bg-gray-300 dark:bg-gray-700')],
-            [],
-          ),
-          ih.div(
-            [ih.Class('h-4 w-10/12 rounded bg-gray-300 dark:bg-gray-700')],
-            [],
-          ),
+          ih.div([
+            ih.Class('h-4 w-11/12 rounded bg-gray-300 dark:bg-gray-700'),
+          ]),
+          ih.div([
+            ih.Class('h-4 w-10/12 rounded bg-gray-300 dark:bg-gray-700'),
+          ]),
+          ih.div([ih.Class('h-4 w-8/12 rounded bg-gray-300 dark:bg-gray-700')]),
+          ih.div([
+            ih.Class('h-4 w-11/12 rounded bg-gray-300 dark:bg-gray-700'),
+          ]),
+          ih.div([ih.Class('h-4 w-9/12 rounded bg-gray-300 dark:bg-gray-700')]),
+          ih.div([
+            ih.Class('h-4 w-10/12 rounded bg-gray-300 dark:bg-gray-700'),
+          ]),
         ],
       ),
     ],

@@ -79,7 +79,7 @@ const popoverDemo = (
             ),
             ...(isVisible
               ? [
-                  h.div([...backdrop, h.Class(backdropClassName)], []),
+                  h.div([...backdrop, h.Class(backdropClassName)]),
                   h.div(
                     [...panel, h.Class(panelClassNameValue)],
                     [panelContent()],
@@ -175,7 +175,7 @@ const nestedChildPopover = (
             ),
             ...(isVisible
               ? [
-                  h.div([...backdrop, h.Class(backdropClassName)], []),
+                  h.div([...backdrop, h.Class(backdropClassName)]),
                   h.div(
                     [...panel, h.Class(basicPanelClassName)],
                     [
@@ -239,10 +239,7 @@ export const nestedDemo = (
                       ),
                       ...(isVisible
                         ? [
-                            h.div(
-                              [...backdrop, h.Class(backdropClassName)],
-                              [],
-                            ),
+                            h.div([...backdrop, h.Class(backdropClassName)]),
                             h.div(
                               [...panel, h.Class(basicPanelClassName)],
                               [

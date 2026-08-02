@@ -97,7 +97,7 @@ export const dialogDemo = (
             [...dialog, h.Class(dialogClassName)],
             isVisible
               ? [
-                  h.div([...backdrop, h.Class(backdropClassName)], []),
+                  h.div([...backdrop, h.Class(backdropClassName)]),
                   h.div(
                     [...panel, h.Class(panelClassName)],
                     [
@@ -175,7 +175,7 @@ export const overlayDialogDemo = (
             [...dialog, h.Class(dialogClassName)],
             isVisible
               ? [
-                  h.div([...backdrop, h.Class(backdropClassName)], []),
+                  h.div([...backdrop, h.Class(backdropClassName)]),
                   h.div(
                     [...panel, h.Class(panelClassName)],
                     [
@@ -260,7 +260,7 @@ export const nestedDialogDemo = (
             [...dialog, h.Class(dialogClassName)],
             isVisible
               ? [
-                  h.div([...backdrop, h.Class(backdropClassName)], []),
+                  h.div([...backdrop, h.Class(backdropClassName)]),
                   h.div(
                     [...panel, h.Class(settingsPanelClassName)],
                     [
@@ -327,7 +327,7 @@ export const nestedDialogDemo = (
             [...dialog, h.Class(dialogClassName)],
             isVisible
               ? [
-                  h.div([...backdrop, h.Class(backdropClassName)], []),
+                  h.div([...backdrop, h.Class(backdropClassName)]),
                   h.div(
                     [...panel, h.Class(confirmPanelClassName)],
                     [
@@ -411,7 +411,7 @@ export const dialogAnimatedDemo = (
             [...dialog, h.Class(dialogClassName)],
             isVisible
               ? [
-                  h.div([...backdrop, h.Class(animatedBackdropClassName)], []),
+                  h.div([...backdrop, h.Class(animatedBackdropClassName)]),
                   h.div(
                     [...panel, h.Class(animatedPanelClassName)],
                     [

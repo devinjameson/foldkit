@@ -206,16 +206,13 @@ const bookCoverView = (
   return h.div(
     [h.AriaHidden(true), h.Class(coverClassName)],
     [
-      h.div([h.Class('absolute inset-y-0 left-3 w-px bg-orange-100/30')], []),
-      h.div(
-        [
-          h.Class(
-            'absolute inset-x-0 bottom-0 h-1 border-t border-stone-900/25 bg-orange-50',
-          ),
-        ],
-        [],
-      ),
-      h.div([h.Class(ruleClassName)], []),
+      h.div([h.Class('absolute inset-y-0 left-3 w-px bg-orange-100/30')]),
+      h.div([
+        h.Class(
+          'absolute inset-x-0 bottom-0 h-1 border-t border-stone-900/25 bg-orange-50',
+        ),
+      ]),
+      h.div([h.Class(ruleClassName)]),
       h.div([h.Class(eyebrowClassName)], ['Signal Press']),
       h.div(
         [h.Class(titleClassName)],
@@ -1187,14 +1184,11 @@ const placingView = (h: HtmlBuilder<Message>): Html =>
       h.div(
         [],
         [
-          h.div(
-            [
-              h.Class(
-                'mx-auto h-12 w-12 animate-spin rounded-full border-2 border-stone-300 border-t-stone-900 motion-reduce:animate-none',
-              ),
-            ],
-            [],
-          ),
+          h.div([
+            h.Class(
+              'mx-auto h-12 w-12 animate-spin rounded-full border-2 border-stone-300 border-t-stone-900 motion-reduce:animate-none',
+            ),
+          ]),
           h.p(
             [h.Class('mt-6 text-sm leading-6 text-stone-600')],
             ['Authorizing payment and reserving your copy…'],

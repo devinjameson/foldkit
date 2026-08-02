@@ -103,15 +103,12 @@ export const loadingView = (h: HtmlBuilder<Message>): Html =>
       h.div(
         [h.Class('text-center')],
         [
-          h.div(
-            [
-              h.Class(
-                'mx-auto h-8 w-8 rounded-full border-2 border-zinc-200 border-t-emerald-600 motion-safe:animate-spin',
-              ),
-              h.AriaLabel('Loading'),
-            ],
-            [],
-          ),
+          h.div([
+            h.Class(
+              'mx-auto h-8 w-8 rounded-full border-2 border-zinc-200 border-t-emerald-600 motion-safe:animate-spin',
+            ),
+            h.AriaLabel('Loading'),
+          ]),
           h.p(
             [h.Class('mt-4 text-sm font-medium text-zinc-700')],
             ['Fetching public telemetry'],

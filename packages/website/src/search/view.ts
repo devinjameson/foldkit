@@ -138,15 +138,12 @@ const resultItemView = (
           ...resultLabel(result),
         ],
       ),
-      h.div(
-        [
-          h.Class(
-            'text-xs text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-2 [&_mark]:bg-accent-200/60 [&_mark]:dark:bg-accent-800/40 [&_mark]:text-inherit [&_mark]:rounded-sm',
-          ),
-          h.InnerHTML(result.excerpt),
-        ],
-        [],
-      ),
+      h.div([
+        h.Class(
+          'text-xs text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-2 [&_mark]:bg-accent-200/60 [&_mark]:dark:bg-accent-800/40 [&_mark]:text-inherit [&_mark]:rounded-sm',
+        ),
+        h.InnerHTML(result.excerpt),
+      ]),
     ],
   )
 
@@ -264,15 +261,12 @@ export const view = Submodel.defineView<Model, Message>(
                 [...dialog],
                 isVisible
                   ? [
-                      h.div(
-                        [
-                          ...backdrop,
-                          h.Class(
-                            'fixed inset-0 z-[59] bg-black/50 dark:bg-black/70',
-                          ),
-                        ],
-                        [],
-                      ),
+                      h.div([
+                        ...backdrop,
+                        h.Class(
+                          'fixed inset-0 z-[59] bg-black/50 dark:bg-black/70',
+                        ),
+                      ]),
                       h.div(
                         [
                           ...panel,

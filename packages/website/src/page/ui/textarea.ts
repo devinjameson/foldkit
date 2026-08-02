@@ -37,10 +37,10 @@ export const basicDemo = (model: Model, h: HtmlBuilder<Message>) => {
                     [...attributes.label, h.Class(labelClassName)],
                     ['Bio'],
                   ),
-                  h.textarea(
-                    [...attributes.textarea, h.Class(textareaClassName)],
-                    [],
-                  ),
+                  h.textarea([
+                    ...attributes.textarea,
+                    h.Class(textareaClassName),
+                  ]),
                   h.span(
                     [...attributes.description, h.Class(descriptionClassName)],
                     ['A brief introduction about yourself.'],
@@ -69,10 +69,7 @@ export const disabledDemo = (_model: Model, h: HtmlBuilder<Message>) => {
             [h.Class('flex flex-col gap-1.5 w-full max-w-md')],
             [
               h.label([...attributes.label, h.Class(labelClassName)], ['Bio']),
-              h.textarea(
-                [...attributes.textarea, h.Class(textareaClassName)],
-                [],
-              ),
+              h.textarea([...attributes.textarea, h.Class(textareaClassName)]),
               h.span(
                 [...attributes.description, h.Class(descriptionClassName)],
                 ['This textarea is disabled.'],

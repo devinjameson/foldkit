@@ -100,6 +100,12 @@ Rejects raw DOM event attributes. Use the typed event helpers so handlers dispat
 
 ::Snippet{name="lintNoRawDomEventAttributes" label="foldkit/no-raw-dom-event-attributes example"}
 
+### foldkit/no-empty-children-array {#no-empty-children-array}
+
+Catches an inline empty array in the children slot, on element builders and on keyed. The argument is optional, so an element with no children omits it. The shorter form needs the Foldkit release that made children optional, so bump `foldkit` alongside the plugin.
+
+::Snippet{name="lintNoEmptyChildrenArray" label="foldkit/no-empty-children-array example"}
+
 ## Purity Boundaries {#purity-rules}
 
 ### foldkit/no-module-level-mutable-state {#no-module-level-mutable-state}

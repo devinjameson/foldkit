@@ -67,11 +67,9 @@ const cardView = (
 }
 
 const dropPlaceholder = (h: HtmlBuilder<UiMessage>): Html => {
-  return h.keyed('div')(
-    'drop-placeholder',
-    [h.Class('rounded-lg border-2 border-dashed border-accent-400/50 h-9')],
-    [],
-  )
+  return h.keyed('div')('drop-placeholder', [
+    h.Class('rounded-lg border-2 border-dashed border-accent-400/50 h-9'),
+  ])
 }
 
 const renderColumn = (

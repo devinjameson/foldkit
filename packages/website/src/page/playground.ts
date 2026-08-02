@@ -756,16 +756,13 @@ const messageView = (
   )
 
 const spinnerView = (): Html =>
-  ih.div(
-    [
-      ih.Class(
-        'w-8 h-8 mb-6 rounded-full border-2 border-gray-300 dark:border-gray-700 border-t-gray-900 dark:border-t-gray-100 animate-spin',
-      ),
-      ih.AriaLabel('Loading'),
-      ih.Role('status'),
-    ],
-    [],
-  )
+  ih.div([
+    ih.Class(
+      'w-8 h-8 mb-6 rounded-full border-2 border-gray-300 dark:border-gray-700 border-t-gray-900 dark:border-t-gray-100 animate-spin',
+    ),
+    ih.AriaLabel('Loading'),
+    ih.Role('status'),
+  ])
 
 const bootingPanelView = (heading: string, body: string): Html =>
   ih.div(
@@ -819,14 +816,10 @@ const editorPanelContent = (
   h.div(
     [h.Class('flex-1 min-w-0 min-h-0 flex flex-col bg-[#1e1e1e] text-sm')],
     [
-      h.keyed('div')(
-        `editor-${path}`,
-        [
-          h.Class('flex-1 min-h-0 min-w-0 overflow-hidden'),
-          h.OnMount(PlaygroundEditor({ path, initialContent: content, files })),
-        ],
-        [],
-      ),
+      h.keyed('div')(`editor-${path}`, [
+        h.Class('flex-1 min-h-0 min-w-0 overflow-hidden'),
+        h.OnMount(PlaygroundEditor({ path, initialContent: content, files })),
+      ]),
     ],
   )
 
@@ -854,15 +847,12 @@ const previewPaneView = (state: PlaygroundState): Html =>
                   'Hang tight. The preview will appear automatically. First load takes about 30 seconds.',
                 ),
               PlaygroundStateBooted: ({ previewUrl }) =>
-                ih.iframe(
-                  [
-                    ih.Src(previewUrl),
-                    ih.Allow('cross-origin-isolated'),
-                    ih.Class('w-full h-full border-0'),
-                    ih.Title('Foldkit Playground'),
-                  ],
-                  [],
-                ),
+                ih.iframe([
+                  ih.Src(previewUrl),
+                  ih.Allow('cross-origin-isolated'),
+                  ih.Class('w-full h-full border-0'),
+                  ih.Title('Foldkit Playground'),
+                ]),
               PlaygroundStateFailed: ({ reason }) => failurePanelView(reason),
             }),
           ),
@@ -873,7 +863,7 @@ const previewPaneView = (state: PlaygroundState): Html =>
 
 const writeErrorBannerView = (maybeError: Option.Option<string>): Html =>
   Option.match(maybeError, {
-    onNone: () => ih.div([ih.Class('hidden')], []),
+    onNone: () => ih.div([ih.Class('hidden')]),
     onSome: reason =>
       ih.div(
         [

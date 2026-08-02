@@ -624,20 +624,15 @@ const viewImpl = defineView<Model, Message, ViewInputs<unknown>>(
       }) => {
         const visibleItems = items.slice(startIndex, endIndex)
 
-        const topSpacer = h.keyed('li')(
-          `${model.id}-top-spacer`,
-          [h.Role('presentation'), h.Style({ height: `${topSpacerHeight}px` })],
-          [],
-        )
+        const topSpacer = h.keyed('li')(`${model.id}-top-spacer`, [
+          h.Role('presentation'),
+          h.Style({ height: `${topSpacerHeight}px` }),
+        ])
 
-        const bottomSpacer = h.keyed('li')(
-          `${model.id}-bottom-spacer`,
-          [
-            h.Role('presentation'),
-            h.Style({ height: `${bottomSpacerHeight}px` }),
-          ],
-          [],
-        )
+        const bottomSpacer = h.keyed('li')(`${model.id}-bottom-spacer`, [
+          h.Role('presentation'),
+          h.Style({ height: `${bottomSpacerHeight}px` }),
+        ])
 
         const renderedRows = Array.map(visibleItems, (item, sliceIndex) => {
           const dataIndex = startIndex + sliceIndex

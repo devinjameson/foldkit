@@ -39,7 +39,7 @@ export const errorDialogView = (
           [...dialog, h.Class(dialogClassName)],
           isVisible
             ? [
-                h.div([...backdrop, h.Class(backdropClassName)], []),
+                h.div([...backdrop, h.Class(backdropClassName)]),
                 h.div(
                   [...panel, h.Class(panelClassName)],
                   Option.match(maybeExportError, {
@@ -98,7 +98,7 @@ export const gridSizeConfirmDialogView = (
           [...dialog, h.Class(dialogClassName)],
           isVisible
             ? [
-                h.div([...backdrop, h.Class(backdropClassName)], []),
+                h.div([...backdrop, h.Class(backdropClassName)]),
                 h.div(
                   [...panel, h.Class(panelClassName)],
                   Option.match(maybePendingGridSize, {

@@ -15,18 +15,15 @@ const typing = (
   h.div(
     [h.Class('relative')],
     [
-      h.textarea(
-        [
-          h.Id(USER_GAME_TEXT_INPUT_ID),
-          h.Value(userGameText),
-          h.Class('absolute inset-0 opacity-0 z-10 resize-none'),
-          h.OnInput(value => ChangedUserText({ value })),
-          h.Spellcheck(false),
-          h.Autocorrect('off'),
-          h.Autocapitalize('none'),
-        ],
-        [],
-      ),
+      h.textarea([
+        h.Id(USER_GAME_TEXT_INPUT_ID),
+        h.Value(userGameText),
+        h.Class('absolute inset-0 opacity-0 z-10 resize-none'),
+        h.OnInput(value => ChangedUserText({ value })),
+        h.Spellcheck(false),
+        h.Autocorrect('off'),
+        h.Autocapitalize('none'),
+      ]),
       gameTextWithProgress(gameText, userGameText, maybeWrongCharIndex, h),
     ],
   )

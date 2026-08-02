@@ -51,7 +51,7 @@ afterEach(() => {
 
 describe('AllowDrop', () => {
   it('registers a dragover handler that prevents the default', () => {
-    const vnode = h.div([h.AllowDrop()], [])
+    const vnode = h.div([h.AllowDrop()])
 
     const dragoverHandler = vnode?.data?.on?.['dragover']
     expect(typeof dragoverHandler).toBe('function')

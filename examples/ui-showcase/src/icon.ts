@@ -11,12 +11,7 @@ const heroIcon = (className: string, strokeWidth: string, d: string): Html =>
       ih.StrokeWidth(strokeWidth),
       ih.Stroke('currentColor'),
     ],
-    [
-      ih.path(
-        [ih.StrokeLinecap('round'), ih.StrokeLinejoin('round'), ih.D(d)],
-        [],
-      ),
-    ],
+    [ih.path([ih.StrokeLinecap('round'), ih.StrokeLinejoin('round'), ih.D(d)])],
   )
 
 export const chevronDown = (className: string = 'w-6 h-6'): Html =>

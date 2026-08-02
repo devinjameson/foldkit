@@ -12,13 +12,10 @@ export const arrowRight = (className: string = 'w-5 h-5'): Html =>
       ih.Stroke('currentColor'),
     ],
     [
-      ih.path(
-        [
-          ih.StrokeLinecap('round'),
-          ih.StrokeLinejoin('round'),
-          ih.D('M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3'),
-        ],
-        [],
-      ),
+      ih.path([
+        ih.StrokeLinecap('round'),
+        ih.StrokeLinejoin('round'),
+        ih.D('M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3'),
+      ]),
     ],
   )

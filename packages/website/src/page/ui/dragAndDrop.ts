@@ -77,14 +77,11 @@ const columnView = (
   dragAndDropModel: DragAndDrop.Model,
   h: HtmlBuilder<Message>,
 ): Html => {
-  const dropPlaceholder: Html = h.div(
-    [
-      h.Class(
-        'rounded-lg border-2 border-dashed border-accent-400/50 dark:border-accent-500/50 h-9',
-      ),
-    ],
-    [],
-  )
+  const dropPlaceholder: Html = h.div([
+    h.Class(
+      'rounded-lg border-2 border-dashed border-accent-400/50 dark:border-accent-500/50 h-9',
+    ),
+  ])
 
   const maybeItemId = DragAndDrop.maybeDraggedItemId(dragAndDropModel)
   const maybeTarget = DragAndDrop.maybeDropTarget(dragAndDropModel)

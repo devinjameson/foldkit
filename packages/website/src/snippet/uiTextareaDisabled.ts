@@ -19,15 +19,12 @@ const view = (h: HtmlBuilder<Message>) =>
               [...attributes.label, h.Class('text-sm font-medium')],
               ['Bio'],
             ),
-            h.textarea(
-              [
-                ...attributes.textarea,
-                h.Class(
-                  'w-full rounded-lg border px-3 py-2 data-[disabled]:opacity-50',
-                ),
-              ],
-              [],
-            ),
+            h.textarea([
+              ...attributes.textarea,
+              h.Class(
+                'w-full rounded-lg border px-3 py-2 data-[disabled]:opacity-50',
+              ),
+            ]),
             h.span(
               [...attributes.description, h.Class('text-sm text-gray-500')],
               ['This textarea is disabled.'],

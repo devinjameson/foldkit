@@ -79,10 +79,7 @@ const view = (h: HtmlBuilder<Message>) =>
               [...dialog],
               isVisible
                 ? [
-                    h.div(
-                      [...backdrop, h.Class('fixed inset-0 bg-black/50')],
-                      [],
-                    ),
+                    h.div([...backdrop, h.Class('fixed inset-0 bg-black/50')]),
                     h.div(
                       [
                         ...panel,
