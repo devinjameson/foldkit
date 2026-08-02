@@ -65,6 +65,7 @@ import {
   type __PortChannels,
   __makeInboundChannel,
 } from '../port/index.js'
+import { RenderCommit, createCommitNotifier } from '../render/commit.js'
 import type { Subscriptions } from '../subscription/subscription.js'
 import { Url, fromString as urlFromString } from '../url/index.js'
 import { VNode, __patchVNode } from '../vdom.js'
@@ -84,12 +85,30 @@ import {
   restorePreservedScrollPosition,
 } from './hmrScroll.js'
 import { makePreserveScheduler } from './preserveScheduler.js'
+import {
+  type StartViewTransition,
+  type ViewTransitionConfig,
+  type ViewTransitionHandle,
+  __decideViewTransition,
+  __resolveStartViewTransition,
+  __silenceViewTransitionRejections,
+} from './viewTransition.js'
 
 type AnyCommand<T, E = never, R = never> = {
   readonly name: string
   readonly args?: Record<string, unknown>
   readonly effect: Effect.Effect<T, E, R>
 }
+
+/** The `viewTransition` config resolved against the running browser: the
+ *  predicate, the feature-detected `startViewTransition`, and the cached
+ *  reduced-motion query. Absent (the runtime holds `Option.none()`) when the
+ *  app did not configure `viewTransition` or the browser lacks the API. */
+type ResolvedViewTransition<Model, Message> = Readonly<{
+  decide: ViewTransitionConfig<Model, Message>
+  startViewTransition: StartViewTransition
+  reducedMotionQuery: MediaQueryList
+}>
 
 const toCommandRecord = (
   command: Readonly<{ name: string; args?: Record<string, unknown> }>,
@@ -631,6 +650,26 @@ type RuntimeConfig<
   crash?: CrashConfig<Model, Message>
   slow?: SlowConfig<Model, Message>
   /**
+   * Wraps qualifying renders in `document.startViewTransition` so the browser
+   * animates between the old and new DOM states. Return `false` for a plain
+   * render, `true` to transition, or `{ types }` to tag the transition for
+   * `:active-view-transition-type(...)` CSS scoping.
+   *
+   * The predicate runs after `update` and before the render it is deciding
+   * about, and receives both states: `context.previousModel` is the Model
+   * behind the DOM on screen, `context.model` is the one the render will
+   * paint. Comparing the two is how a predicate derives direction without the
+   * application keeping route history in its Model.
+   *
+   * Renders fall through to the plain path when the browser lacks the API,
+   * when `prefers-reduced-motion: reduce` is set, and during DevTools replay,
+   * crash, and initial renders.
+   *
+   * Defaults to `undefined`: no render is wrapped in a transition, and the
+   * runtime resolves nothing about the browser's support for them.
+   */
+  viewTransition?: ViewTransitionConfig<Model, Message>
+  /**
    * Deep-freezes the Model after `init` and after every `update`, so accidental
    * mutations (e.g. `model.items.push(...)`) throw a `TypeError` at the exact
    * write site with a stack trace, rather than silently corrupting state or
@@ -728,6 +767,7 @@ type BaseApplicationConfig<
   ports?: P
   crash?: CrashConfig<Model, Message>
   slow?: SlowConfig<Model, Message>
+  viewTransition?: ViewTransitionConfig<Model, Message>
   freezeModel?: boolean
   preserveScroll?: boolean
   resources?: Layer.Layer<Resources>
@@ -888,6 +928,7 @@ type BaseElementConfig<
   ports?: P
   crash?: ElementCrashConfig<Model, Message>
   slow?: SlowConfig<Model, Message>
+  viewTransition?: ViewTransitionConfig<Model, Message>
   freezeModel?: boolean
   resources?: Layer.Layer<Resources>
   managedResources?: ManagedResources<Model, Message, ManagedResourceServices>
@@ -1299,6 +1340,7 @@ const makeRuntime = <
   routing: routingConfig,
   crash,
   slow,
+  viewTransition,
   freezeModel,
   preserveScroll,
   resources,
@@ -1332,6 +1374,25 @@ const makeRuntime = <
   const resolvedSlowSubscriptionDependencies = Option.flatMap(
     resolvedSlow,
     ({ subscriptionDependencies }) => subscriptionDependencies,
+  )
+
+  // NOTE: detection sits inside the flatMap so it runs only for applications
+  // that configured the option. Resolved eagerly it would read
+  // `document.startViewTransition` and call `window.matchMedia` during
+  // `makeRuntime`, which otherwise touches no DOM global at construction.
+  const maybeResolvedViewTransition: Option.Option<
+    ResolvedViewTransition<Model, Message>
+  > = pipe(
+    Option.fromNullishOr(viewTransition),
+    Option.flatMap(decide =>
+      Option.map(__resolveStartViewTransition(), startViewTransition => ({
+        decide,
+        startViewTransition,
+        reducedMotionQuery: window.matchMedia(
+          '(prefers-reduced-motion: reduce)',
+        ),
+      })),
+    ),
   )
 
   const isFreezeModelActive = freezeModel !== false && !!import.meta.hot
@@ -1390,8 +1451,14 @@ const makeRuntime = <
   const startWith = (
     maybeConnector: Option.Option<HostConnector>,
     hmrModel?: unknown,
-  ): Effect.Effect<void> =>
-    Effect.scoped(
+  ): Effect.Effect<void> => {
+    // NOTE: one notifier per runtime, provided across the whole runtime
+    // Effect so Commands, Subscriptions, and Mount-forked Effects all resolve
+    // the same signal. A commit in one embedded application must never wake a
+    // `Render.afterCommit` awaiting inside another.
+    const commitNotifier = createCommitNotifier()
+
+    return Effect.scoped(
       Effect.gen(function* () {
         if (runtimeId === '') {
           return yield* Effect.die(
@@ -1682,6 +1749,10 @@ const makeRuntime = <
         // buffered until the frame completes.
         let pendingMessages: Array<Message> = []
         let isProcessingMessages = false
+        // NOTE: `isRenderFrameScheduled` clears when the frame callback
+        // starts, which on the View Transition path is before the patch runs.
+        // `commitNotifier` tracks the patch itself, so `Render.afterCommit`
+        // waits for the commit rather than for the frame that scheduled it.
         let isRenderFrameScheduled = false
         // NOTE: mirrors the old queue's boot behavior: a Message arriving
         // before boot completes (for example, a navigation event during an
@@ -1780,6 +1851,35 @@ const makeRuntime = <
         // replay render) read the same variables synchronously, so no Ref
         // is needed.
         let liveModel: Model = initModel
+        // NOTE: the Model behind the DOM currently on screen, which is what a
+        // View Transition animates away from. Seeded with `initModel` because
+        // the init render paints it, and advanced only where a render actually
+        // commits. The `viewTransition` predicate never runs before a Message
+        // has dirtied the Model, and the init render completes behind the boot
+        // barrier, so this is always the model of a paint that happened.
+        let lastRenderedModel: Model = initModel
+
+        // NOTE: the transition the browser is still animating, if any. Held so
+        // the runtime can skip it: when a later frame supersedes it, when the
+        // runtime crashes, and at teardown, where the browser would otherwise
+        // animate over a released container. Declared above `crashWith`, which
+        // calls the skip and can run as early as the init render.
+        let maybePendingViewTransition = Option.none<ViewTransitionHandle>()
+
+        const skipPendingViewTransition = (): void => {
+          if (Option.isSome(maybePendingViewTransition)) {
+            const { value: pendingViewTransition } = maybePendingViewTransition
+            // NOTE: cleared first. An implementation that runs the update
+            // callback synchronously would otherwise re-enter this.
+            maybePendingViewTransition = Option.none()
+            try {
+              pendingViewTransition.skipTransition()
+            } catch {
+              // NOTE: skipping runs on teardown and crash paths, so a refusal
+              // must not propagate into them.
+            }
+          }
+        }
 
         const vnodeSlot: VNodeSlot = { maybeCurrentVNode: Option.none() }
 
@@ -1839,6 +1939,9 @@ const makeRuntime = <
               return
             }
             isCrashed = true
+            // NOTE: the crash view should appear at once, not animate in from
+            // a snapshot of the state that crashed.
+            skipPendingViewTransition()
             const model = liveModel
             const squashed = Cause.squash(cause)
             const error =
@@ -2300,14 +2403,32 @@ const makeRuntime = <
               // don't get attributed to the next user-initiated dispatch.
               render: model =>
                 Effect.gen(function* () {
+                  /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+                  const replayedModel = model as Model
+                  // NOTE: a transition still animating belongs to the live
+                  // state this replay is about to paint over. Left running it
+                  // animates a dead snapshot across the replayed DOM.
+                  skipPendingViewTransition()
                   yield* render(
-                    /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-                    model as Model,
+                    replayedModel,
                     Option.none(),
                     noOpDispatch,
                     'Replay',
                   )
                   drainMountEvents()
+                  // NOTE: a replay paints a past Model, so it owns the DOM on
+                  // screen until the next live frame. Leaving
+                  // `lastRenderedModel` on the pre-pause Model would hand the
+                  // `viewTransition` predicate a `previousModel` describing a
+                  // DOM that no longer exists, and the frame `resume`
+                  // schedules would animate the wrong direction out of the
+                  // wrong snapshot.
+                  lastRenderedModel = replayedModel
+                  // NOTE: the Message that dirtied the pre-pause frame does not
+                  // describe this repaint. Clearing it means the frame `resume`
+                  // schedules renders plainly, matching the documented rule
+                  // that time-travel never animates.
+                  maybeLastDirtyMessage = Option.none()
                 }),
               // NOTE: `resume` calls this after a jumpTo render attached DOM
               // listeners to `noOpDispatch`. Scheduling a frame renders the
@@ -2396,29 +2517,27 @@ const makeRuntime = <
           mountTracker,
         )
 
-        const renderFramePlain = (): void => {
-          isRenderFrameScheduled = false
-          // NOTE: a frame scheduled before disposal fires after it; a
-          // disposed runtime must not repaint the released container.
-          if (isRuntimeDisposed) {
-            return
-          }
-          // NOTE: a frame is running, so the browser got control back; the
-          // drain budget starts fresh.
-          syncWorkMsSinceYield = 0
-          // NOTE: a Message that dirtied the model can also be the one
-          // whose Command crashed the runtime. Without this guard the
-          // next animation frame would render the live view over the
-          // crash view.
-          if (isCrashed) {
-            return
-          }
-          if (isPausedNow()) {
-            return
-          }
+        // NOTE: the render, Mount drain, DevTools attribution, and
+        // patch-time-buffer flush. Shared by the plain path (called directly)
+        // and the View Transition path (called from the transition's update
+        // callback), which run identical work; only whether they run inside
+        // `document.startViewTransition` differs. `isRenderingFrame` gates the
+        // buffering of Messages dispatched by patch-time hooks, so it must
+        // wrap the actual patch, which on the transition path happens inside
+        // the callback, not when the frame is scheduled.
+        const runRenderFrameBody = (): void => {
           isRenderingFrame = true
+          // NOTE: captured before the patch, because `drainPendingMessages`
+          // below can advance `liveModel` again before the next frame reads
+          // it. What this frame painted is what the next transition animates
+          // away from.
+          const renderedModel = liveModel
           try {
             renderSyncPlain(liveModel, maybeLastDirtyMessage)
+            // NOTE: after the patch, so a render that threw leaves this on the
+            // Model still on screen, and before `drainPendingMessages` below,
+            // whose handlers can advance `liveModel` again.
+            lastRenderedModel = renderedModel
             if (devToolsStore !== null) {
               const mountEvents = drainMountEvents()
               Effect.runFork(
@@ -2438,6 +2557,106 @@ const makeRuntime = <
           // frame held the stack; they process now, after the patch has
           // committed and the frame's Mount events are attributed.
           drainPendingMessages()
+          // NOTE: last, so a waiter resumed by the commit observes the same
+          // DOM and the same processed-Message ordering it saw when
+          // `afterCommit` counted frames.
+          commitNotifier.notifyCommitted()
+        }
+
+        // NOTE: starts a View Transition around this frame's render when the
+        // `viewTransition` predicate matches, returning `true` when it did.
+        // `startViewTransition` invokes its update callback asynchronously
+        // after snapshotting the old DOM, so the callback reads `liveModel`
+        // and `maybeLastDirtyMessage` fresh (the plain loop may have advanced
+        // the model while the browser suppressed rendering) and re-checks the
+        // disposal and crash guards, which can flip while the transition is
+        // pending. The unconfigured path never reaches this function; the
+        // `Option.isNone` check in `renderFramePlain` returns first, so a
+        // runtime without `viewTransition` allocates no per-frame callback.
+        const startFrameViewTransition = (
+          resolved: ResolvedViewTransition<Model, Message>,
+        ): boolean => {
+          if (resolved.reducedMotionQuery.matches) {
+            return false
+          }
+          if (Option.isNone(maybeLastDirtyMessage)) {
+            return false
+          }
+          const maybeDecision = __decideViewTransition(resolved.decide, {
+            previousModel: lastRenderedModel,
+            model: liveModel,
+            message: maybeLastDirtyMessage.value,
+          })
+          if (Option.isNone(maybeDecision)) {
+            return false
+          }
+          // NOTE: the superseded transition's update callback still runs, so
+          // the patch it was holding is not lost. Skipping explicitly makes
+          // the hand-off deterministic rather than implementation-defined.
+          skipPendingViewTransition()
+          try {
+            const handle = resolved.startViewTransition(() => {
+              // NOTE: `isPausedNow` as well as the disposal and crash guards.
+              // A DevTools jumpTo landing while this callback is outstanding
+              // has already painted a past Model, and patching `liveModel`
+              // over it would replace the replayed DOM the user is inspecting.
+              if (isRuntimeDisposed || isCrashed || isPausedNow()) {
+                commitNotifier.notifyCommitted()
+                return
+              }
+              runRenderFrameBody()
+            }, maybeDecision.value.maybeTypes)
+            maybePendingViewTransition = Option.some(handle)
+            __silenceViewTransitionRejections(handle)
+            return true
+          } catch {
+            // NOTE: an escaping throw would leave the rAF callback without a
+            // patch and without settling the commit notifier, parking every
+            // `Render.afterCommit` on this frame forever.
+            return false
+          }
+        }
+
+        // NOTE: every path out of a scheduled frame settles the commit
+        // notifier, whether or not it patched. A frame abandoned silently
+        // would strand any `Render.afterCommit` registered against it, and
+        // the Dom helpers that gate on it would never run their DOM work.
+        const renderFramePlain = (): void => {
+          isRenderFrameScheduled = false
+          // NOTE: a frame scheduled before disposal fires after it; a
+          // disposed runtime must not repaint the released container.
+          if (isRuntimeDisposed) {
+            commitNotifier.notifyCommitted()
+            return
+          }
+          // NOTE: a frame is running, so the browser got control back; the
+          // drain budget starts fresh.
+          syncWorkMsSinceYield = 0
+          // NOTE: a Message that dirtied the model can also be the one
+          // whose Command crashed the runtime. Without this guard the
+          // next animation frame would render the live view over the
+          // crash view.
+          if (isCrashed) {
+            commitNotifier.notifyCommitted()
+            return
+          }
+          if (isPausedNow()) {
+            commitNotifier.notifyCommitted()
+            return
+          }
+          // NOTE: the unconfigured path pays one `Option.isNone` check and
+          // renders directly, allocating no per-frame callback. Only a
+          // runtime configured with `viewTransition` reaches
+          // `startFrameViewTransition`, which decides per frame whether to
+          // wrap the render in `document.startViewTransition`. When it does,
+          // the render runs later, inside the transition's update callback.
+          if (Option.isNone(maybeResolvedViewTransition)) {
+            runRenderFrameBody()
+            return
+          }
+          if (!startFrameViewTransition(maybeResolvedViewTransition.value)) {
+            runRenderFrameBody()
+          }
         }
 
         const renderSyncPlain = (
@@ -2510,6 +2729,7 @@ const makeRuntime = <
             return
           }
           isRenderFrameScheduled = true
+          commitNotifier.markCommitPending()
           requestAnimationFrame(renderFramePlain)
         }
 
@@ -2742,6 +2962,9 @@ const makeRuntime = <
         yield* Effect.addFinalizer(() =>
           Effect.sync(() => {
             isRuntimeDisposed = true
+            // NOTE: a transition outliving the runtime would keep animating
+            // over a container the teardown is about to restore.
+            skipPendingViewTransition()
           }),
         )
 
@@ -2774,7 +2997,8 @@ const makeRuntime = <
         // runtime scope open until interruption (dispose, or page unload).
         yield* Effect.never
       }),
-    )
+    ).pipe(Effect.provideService(RenderCommit, commitNotifier.service))
+  }
 
   const start = (hmrModel?: unknown): Effect.Effect<void> =>
     startWith(Option.none(), hmrModel)
@@ -3106,6 +3330,9 @@ export function makeApplication<
     ...(Predicate.isNotUndefined(config.slow) && {
       slow: config.slow,
     }),
+    ...(Predicate.isNotUndefined(config.viewTransition) && {
+      viewTransition: config.viewTransition,
+    }),
     ...(Predicate.isNotUndefined(config.freezeModel) && {
       freezeModel: config.freezeModel,
     }),
@@ -3331,6 +3558,9 @@ export function makeElement<
     ...(Predicate.isNotUndefined(crash) && { crash }),
     ...(Predicate.isNotUndefined(config.slow) && {
       slow: config.slow,
+    }),
+    ...(Predicate.isNotUndefined(config.viewTransition) && {
+      viewTransition: config.viewTransition,
     }),
     ...(Predicate.isNotUndefined(config.freezeModel) && {
       freezeModel: config.freezeModel,

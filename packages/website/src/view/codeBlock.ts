@@ -114,10 +114,7 @@ export const codeBlock = (
         ),
       ),
     ],
-    [
-      content,
-      renderCopyButton(code, ariaLabel, 'top-1/2 -translate-y-1/2 right-2'),
-    ],
+    [content, renderCopyButton(code, ariaLabel, 'top-2 right-2')],
   )
 }
 

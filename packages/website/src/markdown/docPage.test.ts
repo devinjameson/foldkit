@@ -406,12 +406,12 @@ describe('demo island registration', () => {
 // import graph.
 const SNIPPET_ISLAND_PATTERN = /::Snippet\{[^}]*name="([^"]+)"/g
 
-const SNIPPET_EXTENSION_PATTERN = /\.(?:ts|tsx|elm|json)$/
+const SNIPPET_EXTENSION_PATTERN = /\.(?:ts|tsx|elm|json|css)$/
 
 describe('snippet island registration', () => {
   const snippetFileNames = new Set(
     Array.filterMap(
-      Object.keys(import.meta.glob('../snippet/*.{ts,tsx,elm,json}')),
+      Object.keys(import.meta.glob('../snippet/*.{ts,tsx,elm,json,css}')),
       path =>
         Result.fromOption(
           Option.map(Array.last(String_.split(path, '/')), fileName =>
