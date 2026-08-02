@@ -68,6 +68,43 @@ export type ViewInputs<Item, Value extends string = string> = BaseViewInputs<
 
 const internalView = makeView<Model>({ ariaMultiSelectable: true })
 
+export interface Created<
+  Item = string,
+  Value extends string = Item extends string ? Item : string,
+> {
+  readonly view: SubmodelView<Model, Message, ViewInputs<Item, Value>>
+  readonly update: (
+    model: Model,
+    message: Message,
+  ) => readonly [
+    Model,
+    ReadonlyArray<Command.Command<Message>>,
+    Option.Option<OutMessage<Value>>,
+  ]
+  readonly selectItem: (
+    model: Model,
+    item: Value,
+  ) => readonly [
+    Model,
+    ReadonlyArray<Command.Command<Message>>,
+    Option.Option<OutMessage<Value>>,
+  ]
+  readonly open: (
+    model: Model,
+  ) => readonly [
+    Model,
+    ReadonlyArray<Command.Command<Message>>,
+    Option.Option<OutMessage<Value>>,
+  ]
+  readonly close: (
+    model: Model,
+  ) => readonly [
+    Model,
+    ReadonlyArray<Command.Command<Message>>,
+    Option.Option<OutMessage<Value>>,
+  ]
+}
+
 /** Pairs the multi-select listbox's `view` and `update` (and programmatic
  *  helpers) behind a single Item-typed entry point. Same shape as
  *  `Listbox.create`. Two type params support object-typed items via
@@ -76,39 +113,7 @@ const internalView = makeView<Model>({ ariaMultiSelectable: true })
 export const create = <
   Item = string,
   Value extends string = Item extends string ? Item : string,
->(): Readonly<{
-  view: SubmodelView<Model, Message, BaseViewInputs<Item, Value>>
-  update: (
-    model: Model,
-    message: Message,
-  ) => readonly [
-    Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Value>>,
-  ]
-  selectItem: (
-    model: Model,
-    item: Value,
-  ) => readonly [
-    Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Value>>,
-  ]
-  open: (
-    model: Model,
-  ) => readonly [
-    Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Value>>,
-  ]
-  close: (
-    model: Model,
-  ) => readonly [
-    Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Value>>,
-  ]
-}> => {
+>(): Created<Item, Value> => {
   type UpdateReturn = readonly [
     Model,
     ReadonlyArray<Command.Command<Message>>,

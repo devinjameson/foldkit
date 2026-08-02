@@ -843,6 +843,41 @@ type ViewForItem<Item extends string> = SubmodelView<
   ViewInputs<Item>
 >
 
+export interface Created<Item extends string = string> {
+  readonly view: ViewForItem<Item>
+  readonly update: (
+    model: Model,
+    message: Message,
+  ) => readonly [
+    Model,
+    ReadonlyArray<Command.Command<Message>>,
+    Option.Option<OutMessage<Item>>,
+  ]
+  readonly selectItem: (
+    model: Model,
+    item: Item,
+    index: number,
+  ) => readonly [
+    Model,
+    ReadonlyArray<Command.Command<Message>>,
+    Option.Option<OutMessage<Item>>,
+  ]
+  readonly open: (
+    model: Model,
+  ) => readonly [
+    Model,
+    ReadonlyArray<Command.Command<Message>>,
+    Option.Option<OutMessage<Item>>,
+  ]
+  readonly close: (
+    model: Model,
+  ) => readonly [
+    Model,
+    ReadonlyArray<Command.Command<Message>>,
+    Option.Option<OutMessage<Item>>,
+  ]
+}
+
 const internalView = <Item extends string>() =>
   /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
   menuViewImpl as unknown as ViewForItem<Item>
@@ -1314,40 +1349,7 @@ const menuViewImpl = defineView<Model, Message, ViewInputs<string>>(
  *  // maybeOutMessage: Option<Menu.OutMessage<Action>>
  *  ```
  */
-export const create = <Item extends string = string>(): Readonly<{
-  view: ViewForItem<Item>
-  update: (
-    model: Model,
-    message: Message,
-  ) => readonly [
-    Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Item>>,
-  ]
-  selectItem: (
-    model: Model,
-    item: Item,
-    index: number,
-  ) => readonly [
-    Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Item>>,
-  ]
-  open: (
-    model: Model,
-  ) => readonly [
-    Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Item>>,
-  ]
-  close: (
-    model: Model,
-  ) => readonly [
-    Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Item>>,
-  ]
-}> => {
+export const create = <Item extends string = string>(): Created<Item> => {
   type GenericReturn = readonly [
     Model,
     ReadonlyArray<Command.Command<Message>>,

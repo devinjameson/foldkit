@@ -198,6 +198,18 @@ export type ViewInputs<Value extends string = string> = Readonly<{
   orientation?: Orientation
 }>
 
+export interface Created<Value extends string = string> {
+  readonly view: SubmodelView<Model, Message, ViewInputs<Value>>
+  readonly update: (
+    model: Model,
+    message: Message,
+  ) => readonly [
+    Model,
+    ReadonlyArray<Command.Command<Message>>,
+    Option.Option<OutMessage<Value>>,
+  ]
+}
+
 const internalView = defineView<Model, Message, ViewInputs>(
   (model, viewInputs, h): Html => {
     const { id, activationMode, maybeFocusedIndex } = model
@@ -372,17 +384,7 @@ const internalView = defineView<Model, Message, ViewInputs>(
  *  The internal view stays typed `ReadonlyArray<string>`; consumers can
  *  pass a `ReadonlyArray<MyUnion>` (assignable) and the fenced cast inside
  *  `create` types `TabInfo.value` as `MyUnion`. */
-export const create = <Value extends string = string>(): Readonly<{
-  view: SubmodelView<Model, Message, ViewInputs<Value>>
-  update: (
-    model: Model,
-    message: Message,
-  ) => readonly [
-    Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Value>>,
-  ]
-}> => {
+export const create = <Value extends string = string>(): Created<Value> => {
   type GenericReturn = readonly [
     Model,
     ReadonlyArray<Command.Command<Message>>,

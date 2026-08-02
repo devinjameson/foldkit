@@ -53,7 +53,7 @@ export type {
   ItemToValueInput,
 } from './shared.js'
 
-export type { InitConfig, ViewInputs } from './single.js'
+export type { Created, InitConfig, ViewInputs } from './single.js'
 
 export type { AnchorConfig } from '../anchor.js'
 

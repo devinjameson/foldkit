@@ -18,4 +18,5 @@ export type {
   ViewInputs,
   RenderInfo,
   TabInfo,
+  Created,
 } from './index.js'
