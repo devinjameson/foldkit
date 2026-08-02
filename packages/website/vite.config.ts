@@ -93,6 +93,90 @@ const highlightCodePlugin = (): Plugin => ({
   },
 })
 
+const CSS_SNIPPETS_ID = 'virtual:css-snippets'
+const RESOLVED_CSS_SNIPPETS_ID = '\0' + CSS_SNIPPETS_ID
+
+/**
+ * Highlights `src/snippet/*.css` and serves the results as one virtual module.
+ *
+ * The other snippet types ride `import.meta.glob` with a `?highlighted` query,
+ * which cannot work here: Vite routes every `.css` id into its own stylesheet
+ * pipeline no matter what query is attached, so the module's JavaScript output
+ * reaches lightningcss as if it were CSS source and the build fails. Reading
+ * the files at config time keeps them out of the module graph entirely.
+ *
+ * Being outside the module graph is also why `load` registers each file as a
+ * watch dependency and `hotUpdate` invalidates the virtual module: nothing else
+ * connects a `.css` snippet to the dev server, so without this an edit is
+ * invisible until restart while every `.ts` snippet hot-updates.
+ */
+const cssSnippetsPlugin = (): Plugin => {
+  const snippetDirectory = resolve(__dirname, 'src/snippet')
+  const isCssSnippet = (filePath: string): boolean =>
+    filePath.startsWith(snippetDirectory) && filePath.endsWith('.css')
+
+  return {
+    name: 'css-snippets',
+    resolveId(id) {
+      return id === CSS_SNIPPETS_ID ? RESOLVED_CSS_SNIPPETS_ID : undefined
+    },
+    async load(id) {
+      if (id !== RESOLVED_CSS_SNIPPETS_ID) {
+        return undefined
+      }
+
+      const fileNames = (await readdir(snippetDirectory)).filter(fileName =>
+        fileName.endsWith('.css'),
+      )
+
+      const entries = await Promise.all(
+        fileNames.map(async fileName => {
+          const filePath = join(snippetDirectory, fileName)
+          this.addWatchFile(filePath)
+          const raw = (await readFile(filePath, 'utf-8')).trimEnd()
+          const lines = raw.split('\n')
+
+          const html = await codeToHtml(raw, {
+            lang: 'css',
+            themes: shikiThemes,
+            decorations: lines.map((line, index) => ({
+              start: { line: index, character: 0 },
+              end: { line: index, character: line.length },
+              properties: { 'data-line': index + 1 },
+            })),
+          })
+
+          const highlighted = html.replace(
+            '<pre ',
+            `<pre data-line-digits="${String(lines.length).length}" `,
+          )
+
+          return [fileName.replace(/\.css$/, ''), { raw, highlighted }] as const
+        }),
+      )
+
+      return `export default ${JSON.stringify(Object.fromEntries(entries))}`
+    },
+    // NOTE: Vite runs this once per environment. Without the client guard a
+    // single snippet edit sends a full reload for the client and again for
+    // ssr.
+    hotUpdate({ file, server, modules }) {
+      if (this.environment.name !== 'client' || !isCssSnippet(file)) {
+        return undefined
+      }
+
+      const virtualModule = server.moduleGraph.getModuleById(
+        RESOLVED_CSS_SNIPPETS_ID,
+      )
+      if (virtualModule !== undefined) {
+        server.moduleGraph.invalidateModule(virtualModule)
+      }
+      server.ws.send({ type: 'full-reload' })
+      return modules
+    },
+  }
+}
+
 const VIRTUAL_MODULE_ID = 'virtual:api-highlights'
 const RESOLVED_VIRTUAL_MODULE_ID = '\0' + VIRTUAL_MODULE_ID
 
@@ -785,6 +869,7 @@ export default defineConfig({
     playgroundIsolationHeadersPlugin(),
     playgroundShellFallbackPlugin(),
     highlightCodePlugin(),
+    cssSnippetsPlugin(),
     highlightApiSignaturesPlugin(),
     apiModuleIndexPlugin(),
     parsedApiPlugin(),

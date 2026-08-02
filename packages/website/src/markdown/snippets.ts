@@ -1,4 +1,5 @@
 import { Array, Option, Record as Record_, Result, String, pipe } from 'effect'
+import cssSnippets from 'virtual:css-snippets'
 
 // SNIPPETS
 
@@ -27,6 +28,11 @@ const snippetName = (path: string): Option.Option<string> =>
     Option.map(String.replace(/\.(?:ts|tsx|elm|json)$/, '')),
   )
 
+// NOTE: CSS snippets arrive through a virtual module rather than the glob
+// above. Vite claims every `.css` id for its own pipeline regardless of the
+// query, so a `?highlighted` CSS file gets parsed as stylesheet source and
+// breaks the bundle. Highlighting them at config time and handing over a plain
+// record sidesteps the pipeline entirely.
 const registry: Record<string, Snippet> = pipe(
   Record_.toEntries(rawByPath),
   Array.filterMap(([path, raw]) =>
@@ -39,6 +45,7 @@ const registry: Record<string, Snippet> = pipe(
     ),
   ),
   Record_.fromEntries,
+  existing => ({ ...existing, ...cssSnippets }),
 )
 
 /**

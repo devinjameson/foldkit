@@ -64,6 +64,7 @@
     "dev:example:embedding": "pnpm --filter embedding-example dev",
     "dev:example:ui-showcase": "pnpm --filter ui-showcase dev",
     "dev:example:personal-blog": "pnpm --filter personal-blog-example dev",
+    "dev:example:view-transitions": "pnpm --filter view-transitions-example dev",
     "changeset": "changeset",
     "version-packages": "changeset version && tsx scripts/reset-peer-deps.ts && pnpm install --no-frozen-lockfile",
     "release": "pnpm -r build && changeset publish"

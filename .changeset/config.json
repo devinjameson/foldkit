@@ -48,6 +48,7 @@
     "charting-example",
     "state-machine-example",
     "personal-blog-example",
-    "interrupting-commands-example"
+    "interrupting-commands-example",
+    "view-transitions-example"
   ]
 }

@@ -12,6 +12,7 @@ export const EXAMPLE_VALUES = [
   'charting',
   'routing',
   'route-transitions',
+  'view-transitions',
   'interrupting-commands',
   'query-sync',
   'snake',
@@ -107,6 +108,12 @@ export const examples: ReadonlyArray<{
     title: 'route-transitions',
     description:
       'Live transition log with entry, exit, and stayed navigation policies',
+  },
+  {
+    value: 'view-transitions',
+    title: 'view-transitions',
+    description:
+      'Shared-element morphs and direction-aware route animations via the View Transitions API',
   },
   {
     value: 'interrupting-commands',
