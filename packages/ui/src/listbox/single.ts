@@ -90,6 +90,43 @@ const singleViewImpl = defineView<Model, Message, ViewInputs<unknown, string>>(
     ),
 )
 
+export interface Created<
+  Item = string,
+  Value extends string = Item extends string ? Item : string,
+> {
+  readonly view: SubmodelView<Model, Message, ViewInputs<Item, Value>>
+  readonly update: (
+    model: Model,
+    message: Message,
+  ) => readonly [
+    Model,
+    ReadonlyArray<Command.Command<Message>>,
+    Option.Option<OutMessage<Value>>,
+  ]
+  readonly selectItem: (
+    model: Model,
+    item: Value,
+  ) => readonly [
+    Model,
+    ReadonlyArray<Command.Command<Message>>,
+    Option.Option<OutMessage<Value>>,
+  ]
+  readonly open: (
+    model: Model,
+  ) => readonly [
+    Model,
+    ReadonlyArray<Command.Command<Message>>,
+    Option.Option<OutMessage<Value>>,
+  ]
+  readonly close: (
+    model: Model,
+  ) => readonly [
+    Model,
+    ReadonlyArray<Command.Command<Message>>,
+    Option.Option<OutMessage<Value>>,
+  ]
+}
+
 /** Pairs the single-select listbox's `view` and `update` (and programmatic
  *  helpers) behind a single Item-typed entry point. Declaring the listbox
  *  once at module scope ensures the view's `Item` type and the update's
@@ -113,39 +150,7 @@ const singleViewImpl = defineView<Model, Message, ViewInputs<unknown, string>>(
 export const create = <
   Item = string,
   Value extends string = Item extends string ? Item : string,
->(): Readonly<{
-  view: SubmodelView<Model, Message, ViewInputs<Item, Value>>
-  update: (
-    model: Model,
-    message: Message,
-  ) => readonly [
-    Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Value>>,
-  ]
-  selectItem: (
-    model: Model,
-    item: Value,
-  ) => readonly [
-    Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Value>>,
-  ]
-  open: (
-    model: Model,
-  ) => readonly [
-    Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Value>>,
-  ]
-  close: (
-    model: Model,
-  ) => readonly [
-    Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Value>>,
-  ]
-}> => {
+>(): Created<Item, Value> => {
   type UpdateReturn = readonly [
     Model,
     ReadonlyArray<Command.Command<Message>>,

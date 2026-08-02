@@ -117,15 +117,9 @@ export type ViewInputs<Item extends string> = BaseViewInputsCommon<Item> &
 
 const internalView = makeView<Model>({ ariaMultiSelectable: false })
 
-/** Pairs the single-select combobox's `view` and `update` (and programmatic
- *  helpers) behind a single Item-typed entry point. See `Listbox.create`
- *  for the rationale; the combobox factory follows the same shape with
- *  `selectItem` taking both `item` and `displayText`. `selectItem` emits
- *  `Selected({ value })` with the input resting on `displayText`; what the
- *  selection becomes is the parent's fold to decide. */
-export const create = <Item extends string = string>(): Readonly<{
-  view: SubmodelView<Model, Message, ViewInputs<Item>>
-  update: (
+export interface Created<Item extends string = string> {
+  readonly view: SubmodelView<Model, Message, ViewInputs<Item>>
+  readonly update: (
     model: Model,
     message: Message,
   ) => readonly [
@@ -133,7 +127,7 @@ export const create = <Item extends string = string>(): Readonly<{
     ReadonlyArray<Command.Command<Message>>,
     Option.Option<OutMessage<Item>>,
   ]
-  selectItem: (
+  readonly selectItem: (
     model: Model,
     item: Item,
     displayText: string,
@@ -142,14 +136,14 @@ export const create = <Item extends string = string>(): Readonly<{
     ReadonlyArray<Command.Command<Message>>,
     Option.Option<OutMessage<Item>>,
   ]
-  open: (
+  readonly open: (
     model: Model,
   ) => readonly [
     Model,
     ReadonlyArray<Command.Command<Message>>,
     Option.Option<OutMessage<Item>>,
   ]
-  close: (
+  readonly close: (
     model: Model,
     restingInputValue: string,
   ) => readonly [
@@ -157,7 +151,15 @@ export const create = <Item extends string = string>(): Readonly<{
     ReadonlyArray<Command.Command<Message>>,
     Option.Option<OutMessage<Item>>,
   ]
-}> => {
+}
+
+/** Pairs the single-select combobox's `view` and `update` (and programmatic
+ *  helpers) behind a single Item-typed entry point. See `Listbox.create`
+ *  for the rationale; the combobox factory follows the same shape with
+ *  `selectItem` taking both `item` and `displayText`. `selectItem` emits
+ *  `Selected({ value })` with the input resting on `displayText`; what the
+ *  selection becomes is the parent's fold to decide. */
+export const create = <Item extends string = string>(): Created<Item> => {
   type UpdateReturn = readonly [
     Model,
     ReadonlyArray<Command.Command<Message>>,
