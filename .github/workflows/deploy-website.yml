@@ -12,9 +12,15 @@ on:
       - 'packages/markdown/**'
       - 'packages/vite-plugin-foldkit/**'
       - 'examples/**'
-      - 'scripts/**'
+      - 'scripts/build-examples.ts'
+      - 'scripts/example-bridge.js'
+      - 'scripts/restore-website-fonts.sh'
       - 'pnpm-lock.yaml'
       - '.github/workflows/deploy-website.yml'
+
+concurrency:
+  group: deploy-website-production
+  cancel-in-progress: true
 
 jobs:
   deploy:
@@ -34,10 +40,10 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --filter . --filter website... --filter '{examples/**}...'
 
       - name: Build core packages
-        run: pnpm --filter foldkit --filter @foldkit/ui --filter @foldkit/devtools --filter @foldkit/markdown --filter @foldkit/vite-plugin... build
+        run: pnpm --filter 'website^...' build
 
       - name: Build examples
         run: pnpm build:examples
@@ -62,7 +68,7 @@ jobs:
           echo "count=${count}" >> "$GITHUB_OUTPUT"
 
       - name: Build website
-        run: pnpm build:website
+        run: pnpm --filter website build
         env:
           FOLDKIT_GITHUB_STAR_COUNT: ${{ steps.github-stars.outputs.count }}
 
@@ -160,7 +166,8 @@ jobs:
           EOF
 
       - name: Deploy to Vercel
-        run: npx vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        run: pnpm dlx vercel@55.0.0 deploy --prebuilt --prod --token "$VERCEL_TOKEN"
         env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_WEBSITE_PROJECT_ID }}
