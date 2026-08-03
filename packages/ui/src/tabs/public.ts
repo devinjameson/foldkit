@@ -9,10 +9,10 @@ export {
   FocusedTab,
   CompletedFocusTab,
   FocusTab,
+  Orientation,
 } from './index.js'
 
 export type {
-  Orientation,
   ActivationMode,
   InitConfig,
   ViewInputs,
