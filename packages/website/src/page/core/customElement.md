@@ -24,7 +24,11 @@ The element constructor is callable. Pass attributes (including the property and
 
 Each property in the config becomes a PascalCase factory: `value` → `Value`, `isDisabled` → `IsDisabled`. The factory writes a JS property on the live element through `propsModule`, not an HTML attribute. That distinction matters: properties can carry any JS value (arrays, dates, objects), and `propsModule` diffs them across renders so the element only receives writes when the value actually changes. Removed boolean properties get reset to `false` on cleanup.
 
-Each event becomes an `On{PascalCase}` factory derived from the kebab-case name: `"color-changed"` → `OnColorChanged`. The factory takes a `(detail) => Message` callback. When the element dispatches the CustomEvent, the runtime extracts `event.detail`, runs your callback, and dispatches the resulting Message just like any other handler.
+Each event becomes an `On{PascalCase}` factory derived from the kebab-case name: `"color-changed"` → `OnColorChanged`. The factory takes a `(detail) => Message` callback. When the element dispatches the CustomEvent, the runtime extracts `event.detail`, decodes it against the event's declared Schema, runs your callback with the decoded value, and dispatches the resulting Message just like any other handler.
+
+The decode is what makes the declared Schema load-bearing rather than a type-level annotation. A third-party element is code you do not control, and the shape of its `detail` is a promise its next version can quietly break. When a `detail` fails to decode, the runtime reports it on the console and dispatches nothing, so a changed payload surfaces as a visible error instead of an unchecked value reaching update. Undeclared fields are dropped, so what your callback receives is exactly what you declared.
+
+An event that carries no payload is declared as `S.Struct({})`. The DOM leaves `detail` as `null` on such an event, and the runtime decodes that as an empty detail.
 
 :::Info{label="Validation runs at define time"}
 `CustomElement.define` validates property and event names up front. Property names must be valid JS identifiers; event names must be hyphen-separated lowercase segments. Collisions between factory names (e.g. a `click` event and an `onClick` property both producing `OnClick`) throw immediately so you catch them before they ship.

@@ -135,8 +135,14 @@ jobs:
           # NOTE: pnpm compares the ref against the working tree, so pass the
           # merge base rather than the base tip. Otherwise a base branch that
           # has moved on makes its own commits look like this branch's changes.
+          #
+          # NOTE: the root project is excluded because a changeset (or any
+          # other root-level file) marks it changed, and its own `test` script
+          # fans back out across every package. Left in, each affected package
+          # runs twice at once, and the two `vitest run --coverage` processes
+          # race on one `coverage/.tmp`.
           base=$(git merge-base "$BASE_SHA" HEAD || echo "$BASE_SHA")
-          pnpm -r --filter "...[$base]" run --if-present test
+          pnpm -r --filter "...[$base]" --filter '!foldkit-monorepo' run --if-present test
 
       - name: Install Playwright browsers
         if: steps.scope.outputs.website == 'true'
