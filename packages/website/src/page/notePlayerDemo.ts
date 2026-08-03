@@ -11,13 +11,7 @@ import {
   String as Str,
   pipe,
 } from 'effect'
-import {
-  Command,
-  Dom,
-  FieldValidation,
-  ManagedResource,
-  Submodel,
-} from 'foldkit'
+import { Command, FieldValidation, ManagedResource, Submodel } from 'foldkit'
 import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { ts } from 'foldkit/schema'
@@ -136,7 +130,6 @@ const CompletedDelayAdvancePhase = m('CompletedDelayAdvancePhase', {
 const SucceededAcquireAudioContext = m('SucceededAcquireAudioContext')
 const FailedAcquireAudioContext = m('FailedAcquireAudioContext')
 const ReleasedAudioContext = m('ReleasedAudioContext')
-const CompletedScrollNoteHighlight = m('CompletedScrollNoteHighlight')
 
 export const Message = S.Union([
   ChangedNoteInput,
@@ -149,7 +142,6 @@ export const Message = S.Union([
   SucceededAcquireAudioContext,
   FailedAcquireAudioContext,
   ReleasedAudioContext,
-  CompletedScrollNoteHighlight,
 ])
 export type Message = typeof Message.Type
 
@@ -233,22 +225,10 @@ const enterNoteCommandPhase = (
   ],
 ]
 
-const ScrollNoteHighlight = Command.define('ScrollNoteHighlight', {
-  args: { phase: NoteHighlightPhase },
-  messages: [CompletedScrollNoteHighlight],
-  execute: ({ phase }) =>
-    Dom.scrollIntoViewIfNotVisible(
-      `.note-demo-code-panel [data-phases~="${phase}"]`,
-      { block: 'nearest' },
-    ).pipe(Effect.ignore, Effect.as(CompletedScrollNoteHighlight())),
-})
-
-const applyMessage = (model: Model, message: Message): UpdateReturn =>
+export const update = (model: Model, message: Message): UpdateReturn =>
   M.value(message).pipe(
     withUpdateReturn,
     M.tagsExhaustive({
-      CompletedScrollNoteHighlight: () => [model, []],
-
       ChangedNoteInput: ({ value }) => {
         const uppercased = Str.toUpperCase(value)
         const fieldState = Str.isEmpty(uppercased)
@@ -545,22 +525,6 @@ const PlayNote = Command.define('PlayNote', {
       ),
     ),
 })
-
-export const update = (model: Model, message: Message): UpdateReturn => {
-  const [nextModel, commands] = applyMessage(model, message)
-
-  if (
-    nextModel.highlightPhase === model.highlightPhase ||
-    nextModel.highlightPhase === 'Idle'
-  ) {
-    return [nextModel, commands]
-  } else {
-    return [
-      nextModel,
-      [...commands, ScrollNoteHighlight({ phase: nextModel.highlightPhase })],
-    ]
-  }
-}
 
 // VIEW
 
