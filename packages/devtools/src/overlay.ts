@@ -2454,6 +2454,52 @@ const buildOverlayView = (
 
 // CREATE
 
+const VIEW_TRANSITION_NAME = 'foldkit-devtools'
+const VIEW_TRANSITION_STYLE_ID = 'foldkit-devtools-view-transition'
+
+/**
+ * Holds the overlay still through an application's View Transitions.
+ *
+ * The host's `view-transition-name` lifts the overlay out of the page's root
+ * snapshot, which is what stops it cross-fading with the page. The browser then
+ * gives it its own pair of snapshots and cross-fades those against each other
+ * instead. The overlay is identical on both sides of any application render, so
+ * rather than rely on that cross-fade being lossless, the outgoing snapshot is
+ * hidden and the incoming one held opaque.
+ *
+ * Only the two snapshots are pinned. The host spans the viewport, so its old
+ * and new geometry are identical and the group's animation is already a no-op;
+ * there is nothing to gain by overriding it.
+ *
+ * These pseudo-elements live on the top-level document, which the overlay's own
+ * shadow styles cannot reach, so the rule goes in `document.head`.
+ */
+const installViewTransitionStyle = (): void => {
+  if (document.getElementById(VIEW_TRANSITION_STYLE_ID) !== null) {
+    return
+  }
+
+  const style = document.createElement('style')
+  style.id = VIEW_TRANSITION_STYLE_ID
+  // NOTE: the UA composites these snapshots with `plus-lighter`, which is
+  // right for a cross-fade and wrong for a snapshot held opaque: it adds to
+  // the backdrop and washes the overlay out.
+  style.textContent = `
+::view-transition-old(${VIEW_TRANSITION_NAME}) {
+  animation: none;
+  opacity: 0;
+  mix-blend-mode: normal;
+}
+
+::view-transition-new(${VIEW_TRANSITION_NAME}) {
+  animation: none;
+  opacity: 1;
+  mix-blend-mode: normal;
+}
+`
+  document.head.appendChild(style)
+}
+
 const createShadowContainer = (): Readonly<{
   container: HTMLElement
   shadow: ShadowRoot
@@ -2462,6 +2508,8 @@ const createShadowContainer = (): Readonly<{
   if (existingHost) {
     existingHost.remove()
   }
+
+  installViewTransitionStyle()
 
   const host = document.createElement('div')
   host.id = DEVTOOLS_HOST_ID
@@ -2479,6 +2527,15 @@ const createShadowContainer = (): Readonly<{
     },
     { capture: true },
   )
+  // NOTE: the name is set here, not on `:host` alongside every other host
+  // property. A `view-transition-name` reaching the host through a shadow
+  // `:host` rule computes (`getComputedStyle` reports it) but Chromium does
+  // not then capture the element as its own snapshot, so the overlay stays in
+  // the page's root snapshot and cross-fades with it. Authored from the light
+  // DOM it captures. Observed in Chromium 149 and not checked elsewhere;
+  // moving this into the stylesheet reintroduces the fade with no other
+  // symptom.
+  host.style.viewTransitionName = VIEW_TRANSITION_NAME
   document.body.appendChild(host)
 
   const shadow = host.attachShadow({ mode: 'open' })
@@ -2505,6 +2562,7 @@ export const createOverlay = (
       createdShadowContainer =>
         Effect.sync(() => {
           createdShadowContainer.shadow.host.remove()
+          document.getElementById(VIEW_TRANSITION_STYLE_ID)?.remove()
         }),
     )
     container.id = '__foldkit_devtools_overlay__'
