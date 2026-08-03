@@ -311,6 +311,99 @@ describe('resources', () => {
     expect(releaseCount).toBe(1)
   })
 
+  it('leaves the Layer unbuilt when an HMR restore skips init', async () => {
+    let buildCount = 0
+
+    const CountedResourceLive = Layer.effect(
+      ResourceService,
+      Effect.sync((): ResourceShape => {
+        buildCount += 1
+        return { value: `build-${buildCount}` }
+      }),
+    )
+
+    const element = makeElement({
+      Model,
+      Flags,
+      flags: Effect.succeed({ initialLabel: 'fresh' }),
+      init: ({ initialLabel }) => [{ label: initialLabel }, []],
+      update,
+      view,
+      crash,
+      container,
+      resources: CountedResourceLive,
+    })
+
+    const fiber = Effect.runFork(element.start({ label: 'restored' }))
+
+    try {
+      await awaitBodyText('restored')
+      expect(buildCount).toBe(0)
+    } finally {
+      await Effect.runPromise(Fiber.interrupt(fiber))
+    }
+  })
+
+  it('does not run the flags Effect when an HMR restore skips init', async () => {
+    let flagsRunCount = 0
+
+    const element = makeElement({
+      Model,
+      Flags,
+      flags: Effect.sync(() => {
+        flagsRunCount += 1
+        return { initialLabel: 'fresh' }
+      }),
+      init: ({ initialLabel }) => [{ label: initialLabel }, []],
+      update,
+      view,
+      crash,
+      container,
+    })
+
+    const fiber = Effect.runFork(element.start({ label: 'restored' }))
+
+    try {
+      await awaitBodyText('restored')
+      expect(flagsRunCount).toBe(0)
+    } finally {
+      await Effect.runPromise(Fiber.interrupt(fiber))
+    }
+  })
+
+  it('builds the Layer when an unreadable HMR Model falls back to init', async () => {
+    let buildCount = 0
+
+    const CountedResourceLive = Layer.effect(
+      ResourceService,
+      Effect.sync((): ResourceShape => {
+        buildCount += 1
+        return { value: `build-${buildCount}` }
+      }),
+    )
+
+    const element = makeElement({
+      Model,
+      Flags,
+      flags: Effect.succeed({ initialLabel: 'fresh' }),
+      init: ({ initialLabel }) => [{ label: initialLabel }, []],
+      update,
+      view,
+      crash,
+      container,
+      resources: CountedResourceLive,
+    })
+
+    const fiber = Effect.runFork(element.start({ notALabel: 0 }))
+
+    try {
+      await awaitBodyText('fresh')
+      expect(buildCount).toBe(1)
+    } finally {
+      await Effect.runPromise(Fiber.interrupt(fiber))
+    }
+  })
+
   it('still reaches the crash view when flags do not consume the failing Layer', async () => {
     const element = makeElement({
       Model,
@@ -485,6 +578,20 @@ describe('resources', () => {
         init: ({ initialLabel }) => [{ label: initialLabel }, [ReadValue()]],
         update,
         view: documentView,
+        container,
+        resources: FailingResourceLive,
+      })
+
+      // NOTE: `init` and `update` here contribute a `ReadonlyArray<never>`
+      // inference candidate for `Resources`, which must not pin it to `never`
+      // and reject a flags Effect the `resources` Layer does satisfy.
+      makeElement({
+        Model,
+        Flags,
+        flags: flagsNeedingResource,
+        init: resourceFreeInit,
+        update: resourceFreeUpdate,
+        view,
         container,
         resources: FailingResourceLive,
       })

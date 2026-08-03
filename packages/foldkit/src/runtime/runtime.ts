@@ -1666,11 +1666,14 @@ const makeRuntime = <
               }),
           })
 
-        const flags = yield* Option.match(maybeResolveFlags, {
-          /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-          onNone: () => Effect.succeed(undefined as Flags),
-          onSome: provideResources,
-        })
+        const resolveFlags: Effect.Effect<Flags> = Option.match(
+          maybeResolveFlags,
+          {
+            /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+            onNone: () => Effect.succeed(undefined as Flags),
+            onSome: provideResources,
+          },
+        )
 
         const ModelJsonCodec = Schema.toCodecJson(
           /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
@@ -1678,6 +1681,32 @@ const makeRuntime = <
         )
         const decodeHmrModel = Schema.decodeUnknownExit(ModelJsonCodec)
         const encodeHmrModel = Schema.encodeUnknownSync(ModelJsonCodec)
+
+        const currentUrl: Option.Option<Url> = Option.fromNullishOr(
+          routingConfig,
+        ).pipe(Option.flatMap(() => urlFromString(window.location.href)))
+
+        type InitResult = ReturnType<typeof init>
+
+        // NOTE: a restored Model skips `init`, so resolving flags on that
+        // path would build the `resources` Layer only to discard what it
+        // produced. Gating the resolution on the restore decision is what
+        // stops a reload from reconnecting whatever the Layer holds. It has
+        // to stay ahead of the preserve-scheduler and HMR finalizers: a
+        // flags Effect that fails after those are registered tears down more
+        // than it used to, and their release defects would bury its cause.
+        const runInit: Effect.Effect<InitResult> = Effect.map(
+          resolveFlags,
+          flags => init(flags, Option.getOrUndefined(currentUrl)),
+        )
+
+        const [initModelRaw, initCommands] = yield* hmrModel !== undefined
+          ? Exit.match(decodeHmrModel(hmrModel), {
+              onFailure: () => runInit,
+              onSuccess: restoredModel =>
+                Effect.succeed<InitResult>([restoredModel, []]),
+            })
+          : runInit
 
         // NOTE: keep `encodeHmrModel` off the dispatch hot path. It walks
         // the entire Model graph (O(modelSize) per call) and blocks input
@@ -1802,28 +1831,6 @@ const makeRuntime = <
 
         const enqueueMessageEffect = (message: Message) =>
           Effect.sync(() => enqueueMessage(message))
-
-        const currentUrl: Option.Option<Url> = Option.fromNullishOr(
-          routingConfig,
-        ).pipe(Option.flatMap(() => urlFromString(window.location.href)))
-
-        const [initModelRaw, initCommands] = Predicate.isNotUndefined(hmrModel)
-          ? Exit.match(decodeHmrModel(hmrModel), {
-              onFailure: () => init(flags, Option.getOrUndefined(currentUrl)),
-              onSuccess: (
-                restoredModel: Model,
-              ): readonly [
-                Model,
-                ReadonlyArray<
-                  AnyCommand<
-                    Message,
-                    never,
-                    Resources | ManagedResourceServices
-                  >
-                >,
-              ] => [restoredModel, []],
-            })
-          : init(flags, Option.getOrUndefined(currentUrl))
 
         const initModel = maybeFreezeModel(initModelRaw)
 
