@@ -729,8 +729,17 @@ export const update = (model: Model, message: Message): UpdateReturn => {
 /** The anchor-positioning Mount this Menu renders on its panel. The panel is
  *  always anchored to the button via Floating UI and portaled to the document
  *  body (opt out of portaling with `anchor.portal: false`), so it escapes
- *  ancestor stacking contexts and overflow clipping. Exposed so Scene tests
- *  can call `Scene.Mount.resolve(AnchorMenu, CompletedAnchorMenu())`. */
+ *  ancestor stacking contexts and overflow clipping.
+ *
+ *  It also carries the open-focus for the anchored panel. An anchored panel
+ *  renders `visibility: hidden` until Floating UI resolves its first position,
+ *  and `.focus()` does not land on a hidden element, so `FocusItems` alone
+ *  cannot focus it. `focusAfterPosition` focuses the panel as part of that
+ *  first reveal. `FocusItems` still focuses the panel when no anchor is
+ *  configured, where the panel is visible as soon as the render commits.
+ *
+ *  Exposed so Scene tests can call
+ *  `Scene.Mount.resolve(AnchorMenu, CompletedAnchorMenu())`. */
 export const AnchorMenu = Mount.define(
   'AnchorMenu',
   { buttonId: S.String, anchor: AnchorConfig },
@@ -740,7 +749,11 @@ export const AnchorMenu = Mount.define(
     element =>
       Effect.gen(function* () {
         yield* Effect.acquireRelease(
-          Effect.sync(() => anchorSetup({ buttonId, anchor })(element)),
+          Effect.sync(() =>
+            anchorSetup({ buttonId, anchor, focusAfterPosition: true })(
+              element,
+            ),
+          ),
           cleanup => Effect.sync(cleanup),
         )
         return CompletedAnchorMenu()

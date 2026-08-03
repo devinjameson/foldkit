@@ -69,6 +69,19 @@ const queryHTMLElement = (
  * effects bound to a VNode existing where the live element handle is
  * needed (positioning, portaling, observer attachment, library setup).
  *
+ * Waiting for the commit puts the element in the DOM. It does not make the
+ * element focusable. `.focus()` is a no-op on an element that is not
+ * rendered, so a target behind `visibility: hidden` or `display: none`
+ * leaves focus where it was, with nothing to distinguish that from focus
+ * having landed. This is worth knowing when something asynchronous reveals
+ * the target after the render commits: a panel held at `visibility: hidden`
+ * until a positioning library resolves its first layout is still hidden
+ * when the Command runs, however long the Command waits. Focus a target
+ * like that from whatever performs the reveal, which is the one place that
+ * knows the element has become focusable. The Message still causes the
+ * reveal, so the focus belongs to that Message rather than to a lifecycle
+ * effect standing in for it.
+ *
  * Section headings, articles, and other non-natively-focusable elements
  * are common URL fragment targets, but `.focus()` is a no-op on them
  * without a `tabindex`. Pass `makeFocusable: true` to inject
