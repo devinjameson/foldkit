@@ -843,41 +843,6 @@ type ViewForItem<Item extends string> = SubmodelView<
   ViewInputs<Item>
 >
 
-export interface Created<Item extends string = string> {
-  readonly view: ViewForItem<Item>
-  readonly update: (
-    model: Model,
-    message: Message,
-  ) => readonly [
-    Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Item>>,
-  ]
-  readonly selectItem: (
-    model: Model,
-    item: Item,
-    index: number,
-  ) => readonly [
-    Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Item>>,
-  ]
-  readonly open: (
-    model: Model,
-  ) => readonly [
-    Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Item>>,
-  ]
-  readonly close: (
-    model: Model,
-  ) => readonly [
-    Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Item>>,
-  ]
-}
-
 const internalView = <Item extends string>() =>
   /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
   menuViewImpl as unknown as ViewForItem<Item>
@@ -1333,6 +1298,46 @@ const menuViewImpl = defineView<Model, Message, ViewInputs<string>>(
   },
 )
 
+/** The `view`, `update`, and programmatic helpers that `Menu.create`
+ *  returns, bound to one `Item` type. Name it to annotate a value that
+ *  holds a created bundle, such as a field on a config object or a
+ *  function parameter that takes the bundle rather than calling `create`
+ *  itself. */
+export type Bundle<Item extends string = string> = Readonly<{
+  view: SubmodelView<Model, Message, ViewInputs<Item>>
+  update: (
+    model: Model,
+    message: Message,
+  ) => readonly [
+    Model,
+    ReadonlyArray<Command.Command<Message>>,
+    Option.Option<OutMessage<Item>>,
+  ]
+  selectItem: (
+    model: Model,
+    item: Item,
+    index: number,
+  ) => readonly [
+    Model,
+    ReadonlyArray<Command.Command<Message>>,
+    Option.Option<OutMessage<Item>>,
+  ]
+  open: (
+    model: Model,
+  ) => readonly [
+    Model,
+    ReadonlyArray<Command.Command<Message>>,
+    Option.Option<OutMessage<Item>>,
+  ]
+  close: (
+    model: Model,
+  ) => readonly [
+    Model,
+    ReadonlyArray<Command.Command<Message>>,
+    Option.Option<OutMessage<Item>>,
+  ]
+}>
+
 /** Pairs the menu's `view` and `update` (and programmatic helpers)
  *  behind a single Item-typed entry point. Declaring the menu once at
  *  module scope ensures the view's `Item` type and the OutMessage's
@@ -1349,7 +1354,7 @@ const menuViewImpl = defineView<Model, Message, ViewInputs<string>>(
  *  // maybeOutMessage: Option<Menu.OutMessage<Action>>
  *  ```
  */
-export const create = <Item extends string = string>(): Created<Item> => {
+export const create = <Item extends string = string>(): Bundle<Item> => {
   type GenericReturn = readonly [
     Model,
     ReadonlyArray<Command.Command<Message>>,

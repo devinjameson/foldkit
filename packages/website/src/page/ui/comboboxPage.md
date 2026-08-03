@@ -8,6 +8,8 @@ Embed Combobox via the [`create<Item>()` factory](/ui/selection-submodels) at mo
 
 For programmatic control in update functions, use `CityCombobox.open(model)`, `CityCombobox.close(model, restingInputValue)`, and `CityCombobox.selectItem(model, item, displayText)`. Each returns `[Model, Commands, Option<OutMessage>]` directly. Single-select `close` takes the resting input text (the selected display text, or empty); `Combobox.Multi` closes with `close(model)` since the multi-select input always rests empty.
 
+What the factory returns is typed [`Combobox.Bundle<Item>`](/ui/selection-submodels#bundle-type) (`Combobox.Multi.Bundle` for the multi-select variant), for the cases where a created bundle has to be named rather than called directly.
+
 :::Info{label="See it in an app"}
 Check out how Combobox is wired up in a [real Foldkit app](https://github.com/foldkit/foldkit/blob/main/examples/ui-showcase/src/ui/view/combobox.ts).
 :::

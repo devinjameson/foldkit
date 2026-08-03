@@ -8,6 +8,8 @@ Embed Listbox via the [`create<Item, Value?>()` factory](/ui/selection-submodels
 
 For programmatic control in update functions, use the factory instance helpers `PlanListbox.open(model)`, `PlanListbox.close(model)`, and `PlanListbox.selectItem(model, item)`. Each returns `[Model, Commands, Option<OutMessage>]` directly.
 
+What the factory returns is typed [`Listbox.Bundle<Item, Value>`](/ui/selection-submodels#bundle-type) (`Listbox.Multi.Bundle` for the multi-select variant), for the cases where a created bundle has to be named rather than called directly.
+
 :::Info{label="See it in an app"}
 Check out how Listbox is wired up in a [real Foldkit app](https://github.com/foldkit/foldkit/blob/main/examples/ui-showcase/src/ui/view/listbox.ts).
 :::

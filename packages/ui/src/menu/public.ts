@@ -51,7 +51,7 @@ export type {
   ViewInputs,
   ItemConfig,
   GroupHeading,
-  Created,
+  Bundle,
 } from './index.js'
 
 export type { AnchorConfig } from '../anchor.js'
