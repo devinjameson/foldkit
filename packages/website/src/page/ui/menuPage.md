@@ -6,6 +6,8 @@ A dropdown menu for actions, like a macOS context menu. Menu is fire-and-forget:
 
 For programmatic control in update functions, use the factory’s `open(model)`, `close(model)`, and `selectItem(model, item, index)` methods. Each returns the same `[Model, Commands, Option<OutMessage>]` tuple as `update`.
 
+What `Menu.create<Item>()` returns is typed [`Menu.Bundle<Item>`](/ui/selection-submodels#bundle-type), for the cases where a created bundle has to be named rather than called directly.
+
 :::Info{label="See it in an app"}
 Check out how Menu is wired up in a [real Foldkit app](https://github.com/foldkit/foldkit/blob/main/examples/ui-showcase/src/ui/view/menu.ts).
 :::

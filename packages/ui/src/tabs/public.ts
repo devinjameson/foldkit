@@ -18,5 +18,5 @@ export type {
   ViewInputs,
   RenderInfo,
   TabInfo,
-  Created,
+  Bundle,
 } from './index.js'

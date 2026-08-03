@@ -6,6 +6,8 @@ Tab panel navigation with roving tabindex keyboard support, horizontal and verti
 
 Tabs is a Submodel that keeps its own keyboard-focus state, but the parent owns the active tab. Store the active value in your Model, pass it in as `selectedValue`, and fold the `Selected` OutMessage back into that field in your `GotTabsMessage` handler.
 
+What `Tabs.create<Value>()` returns is typed [`Tabs.Bundle<Value>`](/ui/selection-submodels#bundle-type), for the cases where a created bundle has to be named rather than called directly.
+
 :::Info{label="See it in an app"}
 Check out how Tabs is wired up in a [real Foldkit app](https://github.com/foldkit/foldkit/blob/main/examples/ui-showcase/src/ui/view/tabs.ts).
 :::

@@ -198,18 +198,6 @@ export type ViewInputs<Value extends string = string> = Readonly<{
   orientation?: Orientation
 }>
 
-export interface Created<Value extends string = string> {
-  readonly view: SubmodelView<Model, Message, ViewInputs<Value>>
-  readonly update: (
-    model: Model,
-    message: Message,
-  ) => readonly [
-    Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Value>>,
-  ]
-}
-
 const internalView = defineView<Model, Message, ViewInputs>(
   (model, viewInputs, h): Html => {
     const { id, activationMode, maybeFocusedIndex } = model
@@ -366,6 +354,22 @@ const internalView = defineView<Model, Message, ViewInputs>(
   },
 )
 
+/** The `view` and `update` pair that `Tabs.create` returns, bound to one
+ *  `Value` type. Name it to annotate a value that holds a created bundle,
+ *  such as a field on a config object or a function parameter that takes
+ *  the bundle rather than calling `create` itself. */
+export type Bundle<Value extends string = string> = Readonly<{
+  view: SubmodelView<Model, Message, ViewInputs<Value>>
+  update: (
+    model: Model,
+    message: Message,
+  ) => readonly [
+    Model,
+    ReadonlyArray<Command.Command<Message>>,
+    Option.Option<OutMessage<Value>>,
+  ]
+}>
+
 /** Pairs the tabs `view` and `update` behind a single Value-typed entry
  *  point. Declare once at module scope so consumers receive
  *  `tab.value: Value` in `toView` and the `Selected` OutMessage without an
@@ -384,7 +388,7 @@ const internalView = defineView<Model, Message, ViewInputs>(
  *  The internal view stays typed `ReadonlyArray<string>`; consumers can
  *  pass a `ReadonlyArray<MyUnion>` (assignable) and the fenced cast inside
  *  `create` types `TabInfo.value` as `MyUnion`. */
-export const create = <Value extends string = string>(): Created<Value> => {
+export const create = <Value extends string = string>(): Bundle<Value> => {
   type GenericReturn = readonly [
     Model,
     ReadonlyArray<Command.Command<Message>>,

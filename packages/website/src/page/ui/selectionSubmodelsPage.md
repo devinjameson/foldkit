@@ -16,6 +16,14 @@ A call to `Listbox.create<Plan>()` returns an object whose entry points are all 
 
 There is no inbound reflect helper for the selection: the parent owns it outright and passes it in as `maybeSelectedValue` (`selectedValues` for multi-select), so there is nothing on the Listbox or Combobox to reflect onto. When an external value (a URL parameter, restored storage, a server push) changes the selection, the parent writes its own field. The `reflect*` family lives on the components with configuration the parent feeds in: `reflectMinDate`, `reflectMaxDate`, `reflectDisabledDates`, and `reflectDisabledDaysOfWeek` on Calendar and DatePicker, and `reflectRange` on Slider. See [Reflecting External State](/core/submodel#reflecting-external-state) for the concept.
 
+## Naming What `create` Returns {#bundle-type}
+
+Each component exports a `Bundle` type for what its factory returns, taking the same type parameters as the factory itself. `Listbox.Bundle<Plan>` is what `Listbox.create<Plan>()` produces, `Menu.Bundle<Action>` is what `Menu.create<Action>()` produces, and the multi-select variants export their own under `Listbox.Multi.Bundle` and `Combobox.Multi.Bundle`.
+
+Declaring the factory at module scope and using it directly needs no annotation, since inference covers it. Reach for `Bundle` when a created bundle has to be named instead. For example: a config object with a field typed `Combobox.Bundle<City>`, or a view helper whose parameter is `Listbox.Bundle<Plan>` because it receives the bundle rather than calling `create` itself.
+
+The name also matters to consumers that emit their own declarations. Without it, TypeScript has to expand the factory's whole result into the generated `.d.ts` at every use site, and it refuses where that expansion reaches a type the consumer cannot name.
+
 ## The Submodel Doesn’t Own Your Selection {#submodel-doesnt-own-selection}
 
 A common first question is: if the Listbox is Item-typed, why does my own Model still hold an `Option<Plan>` for the picked value? Isn’t that the same state twice?

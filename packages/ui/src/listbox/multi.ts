@@ -68,12 +68,17 @@ export type ViewInputs<Item, Value extends string = string> = BaseViewInputs<
 
 const internalView = makeView<Model>({ ariaMultiSelectable: true })
 
-export interface Created<
+/** The `view`, `update`, and programmatic helpers that
+ *  `Listbox.Multi.create` returns, bound to one `Item` and `Value` pair.
+ *  Name it to annotate a value that holds a created bundle, such as a
+ *  field on a config object or a function parameter that takes the bundle
+ *  rather than calling `create` itself. */
+export type Bundle<
   Item = string,
   Value extends string = Item extends string ? Item : string,
-> {
-  readonly view: SubmodelView<Model, Message, ViewInputs<Item, Value>>
-  readonly update: (
+> = Readonly<{
+  view: SubmodelView<Model, Message, ViewInputs<Item, Value>>
+  update: (
     model: Model,
     message: Message,
   ) => readonly [
@@ -81,7 +86,7 @@ export interface Created<
     ReadonlyArray<Command.Command<Message>>,
     Option.Option<OutMessage<Value>>,
   ]
-  readonly selectItem: (
+  selectItem: (
     model: Model,
     item: Value,
   ) => readonly [
@@ -89,21 +94,21 @@ export interface Created<
     ReadonlyArray<Command.Command<Message>>,
     Option.Option<OutMessage<Value>>,
   ]
-  readonly open: (
+  open: (
     model: Model,
   ) => readonly [
     Model,
     ReadonlyArray<Command.Command<Message>>,
     Option.Option<OutMessage<Value>>,
   ]
-  readonly close: (
+  close: (
     model: Model,
   ) => readonly [
     Model,
     ReadonlyArray<Command.Command<Message>>,
     Option.Option<OutMessage<Value>>,
   ]
-}
+}>
 
 /** Pairs the multi-select listbox's `view` and `update` (and programmatic
  *  helpers) behind a single Item-typed entry point. Same shape as
@@ -113,7 +118,7 @@ export interface Created<
 export const create = <
   Item = string,
   Value extends string = Item extends string ? Item : string,
->(): Created<Item, Value> => {
+>(): Bundle<Item, Value> => {
   type UpdateReturn = readonly [
     Model,
     ReadonlyArray<Command.Command<Message>>,

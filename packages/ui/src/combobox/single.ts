@@ -117,9 +117,14 @@ export type ViewInputs<Item extends string> = BaseViewInputsCommon<Item> &
 
 const internalView = makeView<Model>({ ariaMultiSelectable: false })
 
-export interface Created<Item extends string = string> {
-  readonly view: SubmodelView<Model, Message, ViewInputs<Item>>
-  readonly update: (
+/** The `view`, `update`, and programmatic helpers that `Combobox.create`
+ *  returns, bound to one `Item` type. Name it to annotate a value that
+ *  holds a created bundle, such as a field on a config object or a
+ *  function parameter that takes the bundle rather than calling `create`
+ *  itself. */
+export type Bundle<Item extends string = string> = Readonly<{
+  view: SubmodelView<Model, Message, ViewInputs<Item>>
+  update: (
     model: Model,
     message: Message,
   ) => readonly [
@@ -127,7 +132,7 @@ export interface Created<Item extends string = string> {
     ReadonlyArray<Command.Command<Message>>,
     Option.Option<OutMessage<Item>>,
   ]
-  readonly selectItem: (
+  selectItem: (
     model: Model,
     item: Item,
     displayText: string,
@@ -136,14 +141,14 @@ export interface Created<Item extends string = string> {
     ReadonlyArray<Command.Command<Message>>,
     Option.Option<OutMessage<Item>>,
   ]
-  readonly open: (
+  open: (
     model: Model,
   ) => readonly [
     Model,
     ReadonlyArray<Command.Command<Message>>,
     Option.Option<OutMessage<Item>>,
   ]
-  readonly close: (
+  close: (
     model: Model,
     restingInputValue: string,
   ) => readonly [
@@ -151,7 +156,7 @@ export interface Created<Item extends string = string> {
     ReadonlyArray<Command.Command<Message>>,
     Option.Option<OutMessage<Item>>,
   ]
-}
+}>
 
 /** Pairs the single-select combobox's `view` and `update` (and programmatic
  *  helpers) behind a single Item-typed entry point. See `Listbox.create`
@@ -159,7 +164,7 @@ export interface Created<Item extends string = string> {
  *  `selectItem` taking both `item` and `displayText`. `selectItem` emits
  *  `Selected({ value })` with the input resting on `displayText`; what the
  *  selection becomes is the parent's fold to decide. */
-export const create = <Item extends string = string>(): Created<Item> => {
+export const create = <Item extends string = string>(): Bundle<Item> => {
   type UpdateReturn = readonly [
     Model,
     ReadonlyArray<Command.Command<Message>>,
