@@ -32,10 +32,6 @@ export {
   ClickItem,
   DelayClearSearch,
   DetectMovementOrAnimationEnd,
-} from './shared.js'
-
-export type {
-  ActivationTrigger,
   Opened,
   Closed,
   BlurredItems,
@@ -47,6 +43,10 @@ export type {
   PressedPointerOnButton,
   IgnoredMouseClick,
   SuppressedSpaceScroll,
+} from './shared.js'
+
+export type {
+  ActivationTrigger,
   ItemConfig,
   GroupHeading,
   BaseViewInputsCommon,

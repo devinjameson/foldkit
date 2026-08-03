@@ -32,10 +32,6 @@ export {
   ScrollIntoView,
   ClickItem,
   DetectMovementOrAnimationEnd,
-} from './shared.js'
-
-export type {
-  ActivationTrigger,
   Opened,
   Closed,
   BlurredInput,
@@ -45,6 +41,10 @@ export type {
   RequestedItemClick,
   UpdatedInputValue,
   PressedToggleButton,
+} from './shared.js'
+
+export type {
+  ActivationTrigger,
   ItemConfig,
   GroupHeading,
   BaseViewInputsCommon,

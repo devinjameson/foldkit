@@ -30,16 +30,12 @@ export {
   FocusPanel,
   FocusButton,
   DetectMovementOrAnimationEnd,
-} from './index.js'
-
-export type {
   BlurredPanel,
   PressedPointerOnButton,
   IgnoredMouseClick,
   SuppressedSpaceScroll,
-  InitConfig,
-  ViewInputs,
-  RenderInfo,
 } from './index.js'
+
+export type { InitConfig, ViewInputs, RenderInfo } from './index.js'
 
 export type { AnchorConfig } from '../anchor.js'
