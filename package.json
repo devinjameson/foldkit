@@ -25,7 +25,7 @@
     "test:e2e": "pnpm --filter website test:e2e",
     "format": "prettier -w .",
     "format:check": "prettier --check .",
-    "dev:libs": "pnpm --filter foldkit --filter @foldkit/ui --filter @foldkit/devtools --filter @foldkit/markdown --parallel watch",
+    "dev:libs": "pnpm --filter foldkit --filter @foldkit/ui --filter @foldkit/devtools --filter @foldkit/markdown --filter @foldkit/vite-plugin --parallel watch",
     "dev:website": "pnpm --filter website dev",
     "build:examples": "tsx scripts/build-examples.ts",
     "build:website": "pnpm --filter website... build",
