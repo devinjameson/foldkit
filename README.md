@@ -172,6 +172,8 @@ Some of what you can build with Foldkit. [See all example apps on foldkit.dev](h
 
 ## Development
 
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for the checks, commit conventions, and changeset expectations, and [AGENTS.md](./AGENTS.md) for code style.
+
 ```bash
 git clone https://github.com/foldkit/foldkit.git
 cd foldkit

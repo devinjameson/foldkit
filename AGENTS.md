@@ -121,7 +121,7 @@ If a Mount factory doesn't read or write its element, you've misidentified the c
 
 ## Commits and Releases
 
-- Conventional Commits. Add `!` after the scope for breaking changes (e.g. `refactor(schema)!:`).
+- Conventional Commits. Add `!` after the scope for breaking changes (e.g. `refactor(foldkit)!:`).
 - Valid scopes: package directories (`foldkit`, `ui`, `devtools`, `create-foldkit-app`, `vite-plugin`, `devtools-mcp`, `oxlint-plugin`, `markdown`, `website`, `typing-game`, `examples-e2e`), example directory names, `skills`, `ci`, and `release`. Never internal module names.
 - The `skills` scope means the shipped Foldkit app skills (`skills/foldkit`, `skills/generate-program`, `skills/audit-program`) and their packaging. Do not use it for repo-maintenance helper skills such as `.agents/skills/commit-changes`. Omit the scope when no valid scope fits the whole change.
 - Do not invent broad scopes such as `tooling` or `infrastructure`. Use the literal valid scopes above.
@@ -153,3 +153,5 @@ Apps in `examples/` ship with `@foldkit/devtools-mcp` wired up. When the Foldkit
 No em dashes in prose. You compulsively reach for `—` as a substitute for a period, comma, colon, parentheses, or semicolon, and the user has been removing them by hand for a long time. Default to a period and a fresh sentence. Comma, semicolon, parentheses, or colon also work. Applies to comments, TSDoc, docs, snippets, website copy, conversation, commit messages, and changesets. Document and page titles use a spaced pipe (`|`) as the breadcrumb separator (`"Calendar | API | Foldkit"`), never a dash. The only fine structural use of `—` is as a placeholder value in a table cell, standing in for empty or not applicable. Only fix em dashes when removing them makes the writing clearer.
 
 Never describe our own writing as honest ("an honest note", "an honest ledger", "honestly"). We are honest by default; labeling it reads as a tell and implies the rest is less honest. Delete the label and say the thing plainly. Applies everywhere: docs, page metadata, commit messages, conversation.
+
+Write "For example:" when a colon introduces illustrations rather than the complete set. A bare colon reads as an exhaustive enumeration, so a reader takes three illustrations for the only three cases that exist. Use the bare colon when the list really is exhaustive, which is what makes the distinction worth keeping. Applies to docs, TSDoc, changesets, commit messages, and website copy.
