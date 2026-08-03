@@ -23,10 +23,22 @@ export default defineConfig({
   use: {
     baseURL: BASE_URL,
     trace: 'on-first-retry',
+    // NOTE: sandboxes without network access to the browser CDN can point
+    // this at a preinstalled chromium; CI leaves it unset and uses the
+    // version playwright installs.
+    ...(process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE'] !== undefined && {
+      launchOptions: {
+        executablePath: process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE'],
+      },
+    }),
   },
   projects: [{ name: 'chromium', use: devices['Desktop Chrome'] }],
   webServer: {
-    command: `pnpm -C ../../examples/${exampleSlug} exec vite --port ${PORT} --strictPort`,
+    command:
+      exampleSlug === 'ssr'
+        ? `pnpm -C ../../examples/ssr exec tsx server/dev.ts`
+        : `pnpm -C ../../examples/${exampleSlug} exec vite --port ${PORT} --strictPort`,
+    env: { PORT: String(PORT) },
     url: BASE_URL,
     reuseExistingServer: false,
     timeout: 120_000,
