@@ -5,6 +5,7 @@ import {
   HttpServerRequest,
   HttpServerResponse,
 } from 'effect/unstable/http'
+import { injectIntoTemplate } from 'foldkit/experimental/server'
 import { createServer } from 'node:http'
 import { dirname, relative, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -16,7 +17,6 @@ import {
 } from '@effect/platform-node'
 
 import type * as EntryServer from '../src/entry.server'
-import { injectIntoTemplate } from './page'
 
 const EXAMPLE_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const CLIENT_DIR = resolve(EXAMPLE_DIR, 'dist/client')
@@ -48,6 +48,16 @@ const serveAsset = (path: string) => {
   )
 }
 
+const toWebRequest = (
+  request: HttpServerRequest.HttpServerRequest,
+): Request => {
+  const headers = new Headers()
+  for (const [name, value] of Object.entries(request.headers)) {
+    headers.set(name, value)
+  }
+  return new Request(new URL(request.url, 'http://localhost'), { headers })
+}
+
 const handler = (entryServer: typeof EntryServer, template: string) =>
   Effect.gen(function* () {
     const request = yield* HttpServerRequest.HttpServerRequest
@@ -57,9 +67,8 @@ const handler = (entryServer: typeof EntryServer, template: string) =>
       return yield* serveAsset(path)
     }
 
-    const rendered = yield* pipe(
-      entryServer.renderPage(request.headers['cookie'] ?? ''),
-      Effect.orDie,
+    const rendered = yield* Effect.promise(() =>
+      entryServer.renderPage(toWebRequest(request)),
     )
     return HttpServerResponse.html(injectIntoTemplate(template, rendered))
   })

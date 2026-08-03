@@ -34,11 +34,7 @@ export default defineConfig({
   },
   projects: [{ name: 'chromium', use: devices['Desktop Chrome'] }],
   webServer: {
-    command:
-      exampleSlug === 'ssr'
-        ? `pnpm -C ../../examples/ssr exec tsx server/dev.ts`
-        : `pnpm -C ../../examples/${exampleSlug} exec vite --port ${PORT} --strictPort`,
-    env: { PORT: String(PORT) },
+    command: `pnpm -C ../../examples/${exampleSlug} exec vite --port ${PORT} --strictPort`,
     url: BASE_URL,
     reuseExistingServer: false,
     timeout: 120_000,

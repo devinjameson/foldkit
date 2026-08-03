@@ -10,16 +10,19 @@ const flagsForRequest = (cookieHeader: string): Flags => ({
   renderedOn: 'Server',
 })
 
-/** Renders one request. The host passes the request's `Cookie` header and
- *  places the returned markup into the HTML template; the flags produced
- *  here ride along in the payload script, so the hydrating client calls
- *  `init` with exactly the values this render used. Rendering lives in this
- *  module's graph so the server host never loads a second copy of Foldkit
- *  alongside the bundled one. */
+/** Renders one request. The host (the dev server plugin, or `server/main.ts`
+ *  in production) passes the request and places the returned markup into the
+ *  HTML template; the flags produced here ride along in the payload script,
+ *  so the hydrating client calls `init` with exactly the values this render
+ *  used. The boundary is a `Promise` because the host holds a different
+ *  module graph than this bundle, so the render's Effect runs to completion
+ *  here and only the settled result crosses the seam. */
 export const renderPage = (
-  cookieHeader: string,
-): Effect.Effect<Server.RenderedApplication, Server.ServerRenderError> =>
-  Server.renderToString(
-    { Flags, init, view },
-    { flags: flagsForRequest(cookieHeader) },
+  request: Request,
+): Promise<Server.RenderedApplication> =>
+  Effect.runPromise(
+    Server.renderToString(
+      { Flags, init, view },
+      { flags: flagsForRequest(request.headers.get('cookie') ?? '') },
+    ),
   )

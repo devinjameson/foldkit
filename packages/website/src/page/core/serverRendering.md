@@ -18,18 +18,24 @@ import * as Server from 'foldkit/experimental/server'
 
 import { Flags, init, view } from './main'
 
-const flagsForRequest = (cookieHeader: string): Flags => ({
-  initialCount: readCountCookie(cookieHeader),
+const flagsForRequest = (request: Request): Flags => ({
+  initialCount: readCountCookie(request.headers.get('cookie') ?? ''),
   renderedAt: new Date().toISOString(),
   renderedOn: 'Server',
 })
 
-export const renderPage = (cookieHeader: string) =>
-  Server.renderToString(
-    { Flags, init, view },
-    { flags: flagsForRequest(cookieHeader) },
+export const renderPage = (
+  request: Request,
+): Promise<Server.RenderedApplication> =>
+  Effect.runPromise(
+    Server.renderToString(
+      { Flags, init, view },
+      { flags: flagsForRequest(request) },
+    ),
   )
 ```
+
+`renderPage` is the whole contract between the entry and whatever hosts it: one request in, one rendered page out. The boundary is a `Promise` rather than an `Effect` on purpose. A host holds a different module graph than the entry (Vite bundles linked workspace packages into an SSR build, and the dev server loads the entry through its own module loader), and an `Effect` value only composes inside the runtime that created it. The entry runs its own Effect and settles the result before it crosses the seam; inside the entry, everything stays Effect.
 
 `renderToString` takes the server-relevant subset of a `makeApplication` config: `init`, `view`, plus `Flags` and `routing` when the application declares them. `container`, `update`, `subscriptions`, and the client `flags` Effect play no part in a server render, and the full client config is structurally assignable, so one shared module can feed both sides.
 
@@ -54,7 +60,7 @@ type RenderedApplication = Readonly<{
 
 The host places `html` where the container placeholder sits in the HTML template. The served page has the application root in the container's place, which is the same shape the runtime produces on a client-only boot.
 
-The other fields are the `Document`'s head state, ready for the host to stamp into the shell so the served HTML is correct before the runtime boots. `title` becomes the `<title>`, `canonical` the `href` of the `<link rel="canonical">` element, `ogUrl` the `og:url` meta value, and `lang` and `dir` (already lowercased from the view's `TextDirection`) become the `<html>` attributes, so a localized page carries its language on first paint for crawlers and screen readers. The runtime keeps all of them in sync from the first render on, so the host only needs to place the initial values. When the view omits one of the optional fields (`lang`, `dir`, `canonical`, `ogUrl`), it is absent from the result and the host leaves the shell's value in place; `title` is always present. The reference `injectIntoTemplate` in the example host shows the stamping.
+The other fields are the `Document`'s head state, ready for the host to stamp into the shell so the served HTML is correct before the runtime boots. `title` becomes the `<title>`, `canonical` the `href` of the `<link rel="canonical">` element, `ogUrl` the `og:url` meta value, and `lang` and `dir` (already lowercased from the view's `TextDirection`) become the `<html>` attributes, so a localized page carries its language on first paint for crawlers and screen readers. The runtime keeps all of them in sync from the first render on, so the host only needs to place the initial values. When the view omits one of the optional fields (`lang`, `dir`, `canonical`, `ogUrl`), it is absent from the result and the host leaves the shell's value in place; `title` is always present. `injectIntoTemplate` from `foldkit/experimental/server` does all of this stamping for a standard `index.html`; a host with a bespoke shell can place the fields itself.
 
 Commands returned by `init` are not run on the server. The rendered HTML is the post-`init` state, and the client runs those Commands after hydration, so data that arrives through Commands appears exactly as it would on a client-only boot. Running Commands on the server is [under consideration](/what-about-ssr) as a separate capability.
 
@@ -81,9 +87,19 @@ That constraint is not a Foldkit rule, it follows from wanting HTML rendered bef
 
 ## Serving
 
-The [SSR example](https://github.com/foldkit/foldkit/tree/main/examples/ssr) is the reference server. In development, a Node server hosts Vite in middleware mode, so HMR and the client entry are served by Vite while page requests go through `renderPage` via `ssrLoadModule`. In production, an Effect `HttpServer` serves the built client assets and renders each page from the built server bundle.
+In development, server rendering is a `@foldkit/vite-plugin` option:
 
-One rule matters when bundling: render inside the server entry's module graph. Vite bundles linked workspace packages into an SSR build, so a host process that imports `foldkit/experimental/server` itself would hold a second copy of Foldkit alongside the bundled one, and the render frame the host pushes would not be the one the bundled view reads. Export a render function from the server entry, as `renderPage` above does, and let the host call it.
+```typescript
+foldkit({ ssr: { serverEntry: '/src/entry.server.ts' } })
+```
+
+With the option set, plain `vite` serves the whole story. The client entry, HMR, and assets flow through Vite untouched, and a GET request that falls through is rendered: the plugin loads the server entry through Vite's SSR module loader (so server-side edits take effect without a restart), calls `renderPage` with the request, and places the result into the transformed `index.html` with `injectIntoTemplate`. There is no separate dev server process and nothing to wire up.
+
+`injectIntoTemplate` expects the template to carry an empty container element where the application root belongs, `<div id="root"></div>` by default (pass `containerId` when the template uses a different id). It stamps `title` always, `lang` and `dir` onto `<html>` when the render carries them, and `canonical` and `ogUrl` when the template has the matching `<link>` and `<meta>` elements.
+
+In production, hosting is the application's business: any process that can read the built template, import the built server bundle, and call its `renderPage` will do. The [SSR example](https://github.com/foldkit/foldkit/tree/main/examples/ssr) is the reference host, an Effect `HttpServer` that serves the built client assets and renders each page from the built server bundle.
+
+One rule matters when bundling: render inside the server entry's module graph. Vite bundles linked workspace packages into an SSR build, so a host process that imports `foldkit/experimental/server` and rendered there would hold a second copy of Foldkit alongside the bundled one, and the render frame the host pushes would not be the one the bundled view reads. Export `renderPage` from the server entry and let the host call it. `injectIntoTemplate` is the one exception: it is pure string work with no module state, so a host may import it directly for the stamping.
 
 ## Static generation
 

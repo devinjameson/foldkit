@@ -3,10 +3,12 @@ export {
   FOLDKIT_FLAGS_ATTRIBUTE,
   InvalidServerUrl,
   ServerFlagsEncodeError,
+  injectIntoTemplate,
   renderToString,
 } from './index.js'
 
 export type {
+  InjectIntoTemplateOptions,
   RenderedApplication,
   RenderOptions,
   RenderUrlOptions,
@@ -14,6 +16,7 @@ export type {
   RenderUrlFlagsOptions,
   ServerApplicationConfig,
   ServerApplicationConfigWithFlags,
+  ServerEntryModule,
   ServerRenderError,
   ServerRoutingApplicationConfig,
   ServerRoutingApplicationConfigWithFlags,
