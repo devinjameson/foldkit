@@ -22,11 +22,11 @@ Hover or tab into the trigger to reveal the tooltip. Hover waits for `showDelay`
 
 Tooltip is headless. The `toView` callback receives attribute bundles for the trigger and panel, and the consumer composes the markup. The panel is rendered with `pointer-events: none` so it never captures hover or clicks, which keeps the open/close logic tied to the trigger.
 
-| Attribute        | Condition                                                                                                 |
-| ---------------- | --------------------------------------------------------------------------------------------------------- |
-| `data-open`      | Present on trigger and panel when the tooltip is visible.                                                 |
-| `data-disabled`  | Present on the trigger when disabled.                                                                     |
-| `data-placement` | Present on the panel when isPlacementLocked is true, set to the locked side: top, right, bottom, or left. |
+| Attribute        | Condition                                                                                                                                                 |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data-open`      | Present on trigger and panel when the tooltip is visible.                                                                                                 |
+| `data-disabled`  | Present on the trigger when disabled.                                                                                                                     |
+| `data-placement` | Present on the panel, set to the side it currently sits on: top, right, bottom, or left. Fixed to the first resolved side when isPlacementLocked is true. |
 
 ## Keyboard Interaction
 

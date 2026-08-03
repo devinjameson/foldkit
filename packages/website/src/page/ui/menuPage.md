@@ -36,13 +36,13 @@ The items panel is portaled to the document body and positioned relative to the 
 
 When `isAnimated` is true, enter/leave animations flow through the [Animation](/ui/animation) module. Style with CSS transitions or CSS keyframe animations. Animation advances once every animation on the element has settled.
 
-| Attribute        | Condition                                                                                                       |
-| ---------------- | --------------------------------------------------------------------------------------------------------------- |
-| `data-open`      | Present on the button when the menu is open.                                                                    |
-| `data-active`    | Present on the highlighted menu item.                                                                           |
-| `data-disabled`  | Present on disabled menu items.                                                                                 |
-| `data-closed`    | Present during close animation.                                                                                 |
-| `data-placement` | Present on the items panel when isPlacementLocked is true, set to the locked side: top, right, bottom, or left. |
+| Attribute        | Condition                                                                                                                                                       |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data-open`      | Present on the button when the menu is open.                                                                                                                    |
+| `data-active`    | Present on the highlighted menu item.                                                                                                                           |
+| `data-disabled`  | Present on disabled menu items.                                                                                                                                 |
+| `data-closed`    | Present during close animation.                                                                                                                                 |
+| `data-placement` | Present on the items panel, set to the side it currently sits on: top, right, bottom, or left. Fixed to the first resolved side when isPlacementLocked is true. |
 
 ## Keyboard Interaction
 

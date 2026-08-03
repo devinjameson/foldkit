@@ -56,13 +56,13 @@ Combobox is headless. The `itemToConfig` callback controls all item markup. Styl
 
 The items panel is portaled to the document body and positioned relative to the input wrapper with Floating UI. Ancestor stacking contexts and overflow clipping no longer apply, so a clipped container or a sibling overlay wrapper cannot hide the open panel. The panel still stacks at the document level: give it a z-index above elevated content like sticky headers or toasts, as the demos on this page do with `z-10`. Pass `anchor: { portal: false }` to keep the panel inside the wrapper instead.
 
-| Attribute        | Condition                                                                                                       |
-| ---------------- | --------------------------------------------------------------------------------------------------------------- |
-| `data-active`    | Present on the item currently highlighted by keyboard or pointer.                                               |
-| `data-selected`  | Present on the selected item(s).                                                                                |
-| `data-disabled`  | Present on disabled items.                                                                                      |
-| `data-closed`    | Present during close animation when isAnimated is true.                                                         |
-| `data-placement` | Present on the items panel when isPlacementLocked is true, set to the locked side: top, right, bottom, or left. |
+| Attribute        | Condition                                                                                                                                                       |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data-active`    | Present on the item currently highlighted by keyboard or pointer.                                                                                               |
+| `data-selected`  | Present on the selected item(s).                                                                                                                                |
+| `data-disabled`  | Present on disabled items.                                                                                                                                      |
+| `data-closed`    | Present during close animation when isAnimated is true.                                                                                                         |
+| `data-placement` | Present on the items panel, set to the side it currently sits on: top, right, bottom, or left. Fixed to the first resolved side when isPlacementLocked is true. |
 
 ## Keyboard Interaction
 

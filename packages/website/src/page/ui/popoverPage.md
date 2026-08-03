@@ -40,12 +40,12 @@ Popover is headless. The `toView` callback receives attribute bundles for the bu
 
 When `isAnimated` is true, enter/leave animations flow through the [Animation](/ui/animation) module. Style with CSS transitions or CSS keyframe animations. Animation advances once every animation on the element has settled.
 
-| Attribute        | Condition                                                                                                 |
-| ---------------- | --------------------------------------------------------------------------------------------------------- |
-| `data-open`      | Present on button and panel when open.                                                                    |
-| `data-disabled`  | Present on the button when disabled.                                                                      |
-| `data-closed`    | Present during close animation.                                                                           |
-| `data-placement` | Present on the panel when isPlacementLocked is true, set to the locked side: top, right, bottom, or left. |
+| Attribute        | Condition                                                                                                                                                 |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data-open`      | Present on button and panel when open.                                                                                                                    |
+| `data-disabled`  | Present on the button when disabled.                                                                                                                      |
+| `data-closed`    | Present during close animation.                                                                                                                           |
+| `data-placement` | Present on the panel, set to the side it currently sits on: top, right, bottom, or left. Fixed to the first resolved side when isPlacementLocked is true. |
 
 ## Keyboard Interaction
 

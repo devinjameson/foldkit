@@ -32,7 +32,7 @@ DatePicker is headless. You control the trigger button via `triggerContent` and 
 | `data-outside-month` | (Days mode only.) Present on cells that fall outside the currently-viewed month (leading/trailing grid rows).                                                                 |
 | `data-disabled`      | Present on cells disabled by min/max, disabledDaysOfWeek, or disabledDates.                                                                                                   |
 | `data-open`          | Present on the trigger button and wrapper while the popover is open.                                                                                                          |
-| `data-placement`     | Present on the calendar panel when isPlacementLocked is true, set to the locked side: top, right, bottom, or left.                                                            |
+| `data-placement`     | Present on the calendar panel, set to the side it currently sits on: top, right, bottom, or left. Fixed to the first resolved side when isPlacementLocked is true.            |
 
 ## Keyboard Interaction
 
