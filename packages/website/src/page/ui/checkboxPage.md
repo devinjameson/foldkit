@@ -46,6 +46,8 @@ Checkbox is headless. Your `toView` callback controls all markup and styling. Us
 
 The checkbox element receives `role="checkbox"` and `aria-checked` which is set to `"true"`, `"false"`, or `"mixed"` depending on the checked and indeterminate state. The label is linked via `aria-labelledby` and the description via `aria-describedby`.
 
+The `label` attribute group includes an id (accessible via `Checkbox.labelId(id)`) and the `description` group includes an id (accessible via `Checkbox.descriptionId(id)`), so a consumer can reference either element without re-declaring the naming convention.
+
 ## API Reference
 
 ### ViewConfig {#view-config}
