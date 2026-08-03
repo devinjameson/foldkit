@@ -1,5 +1,37 @@
 # foldkit
 
+## 0.138.0
+
+### Minor Changes
+
+- 72e8ea0: Let the `flags` Effect require services from the `resources` Layer.
+
+  `flags` was typed `Effect<Flags>`, so an app whose flags and its Commands or Subscriptions needed the same service had to discharge the requirement inside `flags` with `Effect.provide(flags, AppLayer)` and pass the same `AppLayer` again as `resources`. Effect memoizes a Layer per build, and those are two builds, so the app silently got two instances of whatever the Layer holds. For a stateless Layer that is invisible. For one holding a socket, a connection, a cache, or a `Ref`, half the app talked to one instance and half to the other.
+
+  `flags` now accepts `Effect<Flags, never, Resources>`, where `Resources` is what the `resources` Layer provides. The runtime resolves flags through the same cached build it gives Commands and Subscriptions, so the Layer is constructed once and shared. A requirement that `resources` does not provide is a compile error at the `makeApplication` and `makeElement` boundaries rather than a missing-service failure at runtime, whenever `Resources` is inferred from `resources` rather than named explicitly in the type arguments.
+
+  The error channel stays `never`. Every other effectful boundary in the runtime pins it there too, including `resources` itself, Commands, and Subscription streams, and `flags` resolve before there is a Model or a Message channel to carry a failure. Handling errors inside `flags` with `Effect.catch` remains the contract.
+
+  Existing call sites keep compiling unchanged: an `Effect<Flags>` requires nothing, and providing a Layer inside `flags` is still the right placement for a service used only at startup, such as `KeyValueStore` reading persisted state. Moving a shared Layer out of `flags` and into `resources` is what stops the second build, which is the point.
+
+  Flags resolve before `init`, so an app that declares them builds the `resources` Layer at startup rather than on its first Command, whether or not the flags Effect touches it. A Layer that fails to build still reaches the crash view unless the flags Effect itself needs the broken service, in which case startup fails before the first render, where there is no Model to render a crash view against. Neither cause is swallowed, so a flags Effect that fails for its own unrelated reason stays visible alongside the build error.
+
+- 23423bd: Element builders now take their children argument optionally. `h.div([h.Class('divider')])` and `h.div([h.Class('divider')], [])` build the same vnode, so an element with no children no longer needs a trailing empty array. Attributes stay required, so `h.div([])` remains the spelling for an element with neither. Void elements such as `img`, `input`, and `br` are unchanged and still accept attributes only. The scaffolded app's `AGENTS.md` teaches the shorter form.
+- 08560ba: `Render.afterCommit` and `Render.afterPaint` now wait on a commit signal the runtime publishes, instead of counting animation frames. Frame counting only lined up with the patch while the runtime committed inside its own `requestAnimationFrame` callback, so a render that the runtime hands to `document.startViewTransition` resumed waiters against the pre-patch DOM. Every `Dom` helper gates on `afterCommit` internally, so this affects `focus`, `clickElement`, `scrollIntoView`, and the rest inside a transitioning frame. Signatures are unchanged: the signal is read through `Effect.serviceOption`, so neither primitive gains a requirement and Effects built outside a runtime keep the previous frame-counting behavior.
+- 08560ba: Add a `viewTransition` option to `makeApplication` and `makeElement`. When the predicate matches a render, the runtime performs that render inside `document.startViewTransition`, so route changes and other Model-driven updates can animate with the View Transitions API, including shared-element morphs via `viewTransitionName` styles. A transition is between two states, so the predicate receives both: `previousModel` is the Model behind the DOM the browser is about to snapshot, `model` is the one the pending render will paint, and `message` is the Message that dirtied it. Comparing the two Models is how a predicate derives direction without keeping route history in the Model. It returns `false`, `true`, or `{ types }` to tag the transition for `:active-view-transition-type(...)` CSS scoping. Renders fall back to the plain synchronous path when the browser lacks the API, when `prefers-reduced-motion: reduce` is set, and for DevTools replay, crash, and initial renders. Defaults to `undefined`, so an application that does not pass a predicate animates nothing and the runtime resolves nothing about browser support.
+
+### Patch Changes
+
+- 399bddd: Document what `Dom.focus`'s commit gate does not cover.
+
+  Waiting for the commit puts the element in the DOM. It does not make the element focusable, and `.focus()` is a no-op on an element that is not rendered. A target that something asynchronous reveals after the render commits, such as a panel held at `visibility: hidden` until a positioning library resolves its first layout, is still hidden when the Command runs, however long the Command waits. Focus a target like that from whatever performs the reveal.
+
+- ea4161c: Stop an HMR reload from running the `flags` Effect when it restores a Model.
+
+  Flags resolve before `init`, and the runtime resolved them ahead of the HMR restore decision. A reload that successfully restores a preserved Model skips `init` entirely, so the flags value was computed and then discarded. The resolution now sits behind that decision, so a restored Model never runs `flags` at all. A reload that cannot read the preserved Model still falls back to `init` and resolves them exactly as before.
+
+  This shows up two ways on a restore, both development-only, because a production build has no HMR path. A `flags` Effect that performs a side effect of its own, seeding a store or writing a session id, no longer performs it on every reload. A `flags` Effect that requires services no longer forces the `resources` Layer to build, so a Layer holding a connection stops reconnecting on every save. Subscriptions whose pipelines run for the application's lifetime still build the Layer at startup either way.
+
 ## 0.137.0
 
 ### Patch Changes
