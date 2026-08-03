@@ -8,7 +8,7 @@ import {
   Schema as S,
   pipe,
 } from 'effect'
-import { Command, Dom, Submodel } from 'foldkit'
+import { Command, Submodel } from 'foldkit'
 import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
@@ -72,14 +72,12 @@ export const ClickedDemoReset = m('ClickedDemoReset')
 export const CompletedDelayAdvancePhase = m('CompletedDelayAdvancePhase', {
   generation: S.Number,
 })
-export const CompletedScrollDemoHighlight = m('CompletedScrollDemoHighlight')
 
 export const Message = S.Union([
   ClickedDemoIncrement,
   ChangedDemoResetDuration,
   ClickedDemoReset,
   CompletedDelayAdvancePhase,
-  CompletedScrollDemoHighlight,
 ])
 export type Message = typeof Message.Type
 
@@ -114,29 +112,15 @@ export const DelayAdvancePhase = Command.define('DelayAdvancePhase', {
     ),
 })
 
-export const ScrollDemoHighlight = Command.define('ScrollDemoHighlight', {
-  args: { phase: AnimationPhase },
-  messages: [CompletedScrollDemoHighlight],
-  execute: ({ phase }) =>
-    Dom.scrollIntoViewIfNotVisible(
-      `.demo-code-panel [data-phases~="${phase}"]`,
-      {
-        block: 'nearest',
-      },
-    ).pipe(Effect.ignore, Effect.as(CompletedScrollDemoHighlight())),
-})
-
 const prependToLog =
   (entry: string) =>
   (messageLog: ReadonlyArray<string>): ReadonlyArray<string> =>
     pipe([entry, ...messageLog], Array.take(MAX_LOG_ENTRIES))
 
-const applyMessage = (model: Model, message: Message): UpdateReturn =>
+export const update = (model: Model, message: Message): UpdateReturn =>
   M.value(message).pipe(
     withUpdateReturn,
     M.tagsExhaustive({
-      CompletedScrollDemoHighlight: () => [model, []],
-
       ClickedDemoIncrement: () => {
         const nextModel = evo(model, {
           count: N.increment,
@@ -308,19 +292,6 @@ const applyMessage = (model: Model, message: Message): UpdateReturn =>
       },
     }),
   )
-
-export const update = (model: Model, message: Message): UpdateReturn => {
-  const [nextModel, commands] = applyMessage(model, message)
-
-  if (nextModel.phase === model.phase || nextModel.phase === 'Idle') {
-    return [nextModel, commands]
-  } else {
-    return [
-      nextModel,
-      [...commands, ScrollDemoHighlight({ phase: nextModel.phase })],
-    ]
-  }
-}
 
 // VIEW
 

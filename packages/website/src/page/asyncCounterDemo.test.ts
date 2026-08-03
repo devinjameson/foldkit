@@ -43,7 +43,6 @@ describe('async counter demo', () => {
     expect(incremented.generation).toBe(1)
     expect(Array.map(commands, command => command.name)).toStrictEqual([
       'DelayAdvancePhase',
-      'ScrollDemoHighlight',
     ])
 
     const settled = advancePhases(incremented, INCREMENT_PHASE_STEPS)
