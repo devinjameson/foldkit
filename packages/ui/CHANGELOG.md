@@ -1,5 +1,91 @@
 # @foldkit/ui
 
+## 0.138.0
+
+### Minor Changes
+
+- dcc207f: Write `data-placement` on every anchored panel, not only the placement-locked ones.
+
+  `anchorSetup` set `data-placement` inside the `isPlacementLocked` branch and removed it on cleanup under the same condition. A panel that did not opt into placement locking exposed nothing to CSS, so side-specific rules such as an arrow's edge styling or a `data-[placement=top]` reordering had no attribute to match. The only way to get the attribute was to lock the placement, which also drops `flip` from every later update. That is a positioning decision, unrelated to wanting to style the side the panel landed on.
+
+  The attribute is now written on every reposition. Without `isPlacementLocked` it tracks the side each update resolves to, including the ones `flip` moves. With `isPlacementLocked` it holds the locked side, exactly as before. Cleanup removes it either way.
+
+  This affects Popover, Tooltip, Listbox, Menu, Combobox, and DatePicker panels, all of which position through `anchorSetup`. Any `data-[placement=...]` rule already written against a panel that is not placement-locked was inert and now applies.
+
+- b4b5eb9: Export `Checkbox.labelId` and `Checkbox.descriptionId`
+
+  The checkbox derived `${id}-label` and `${id}-description` from module-private consts, so a consumer that needed to reference the label or description element, to point `aria-details` at it, to style it, or to find it in a test, had to re-declare the convention and hope it did not drift. `Fieldset` already exports its equivalents (`legendId`, `descriptionId`); the checkbox now matches. No behaviour change.
+
+- 1f1703f: Export a `Bundle` type alongside every `create` factory, covering `Menu`, `Tabs`, `Listbox`, `Listbox.Multi`, `Combobox`, and `Combobox.Multi`.
+
+  Each factory declared its return type inline, so what `create` produced had no name. That stays invisible while the value is only ever called at module scope, since inference covers it. It surfaces when a consumer emits its own declarations: TypeScript has to write the factory's result into the generated `.d.ts`, and with no name to reference it expands the whole structure at every use site. Where that expansion reaches a type the consumer cannot name, the compiler refuses and reports the inferred type as not portable without an explicit annotation.
+
+  `Bundle` is that name. It takes the same type parameters as the factory that returns it, so `Menu.Bundle<Action>` describes exactly what `Menu.create<Action>()` produces, with `Action` threaded through `view`, `update`, and the programmatic helpers the same way.
+
+  Naming the result also makes a bundle something you can pass around rather than only call. A config object with a field typed `Combobox.Bundle<City>`, or a helper that accepts a created bundle instead of calling `create` itself, previously had no way to spell the annotation.
+
+  ```ts
+  const ColorListbox = Listbox.create<Color>()
+
+  const toPickerView = (listbox: Listbox.Bundle<Color>, colors: ReadonlyArray<Color>): Html =>
+    h.submodel({ view: listbox.view, viewInputs: { items: colors, ... }, ... })
+  ```
+
+  Additive only. The object each factory builds is unchanged, every existing call site keeps compiling, and nothing needs updating to take the new type.
+
+  Thanks @IMax153 for contributing this fix!
+
+- 722ffe2: Export the Message constructors that `Combobox`, `Listbox`, `Menu`, `Popover`, and `Slider` only re-exported as types.
+
+  Each of these barrels listed part of its Message union under `export type { ... }`. That re-exports the type and shadows the value, so the constructor was unreachable even though it was implemented and exported from the module behind the barrel. The deep import path resolved to the same barrel, so there was no way around it.
+
+  ```ts
+  import { Combobox } from '@foldkit/ui'
+
+  typeof Combobox.Selected // 'function'
+  typeof Combobox.UpdatedInputValue // was 'undefined', now 'function'
+  ```
+
+  42 constructors across the five components are now callable. Each already had both a `const` and a matching type alias in its source module, so a value re-export carries the type as well and nothing that referenced these names as types has to change.
+
+  | Namespace  | Union members | Previously constructible | Restored |
+  | ---------- | ------------- | ------------------------ | -------- |
+  | `Combobox` | 22            | 13                       | 9        |
+  | `Listbox`  | 24            | 13                       | 11       |
+  | `Menu`     | 25            | 13                       | 12       |
+  | `Popover`  | 15            | 11                       | 4        |
+  | `Slider`   | 6             | 0                        | 6        |
+
+  This matters for writing a headless `Story` against a component that embeds one of these, where driving the component means dispatching its Messages. It also matters for tooling that reads a Message union as a schema, such as the DevTools surface, which advertised tags that could not be built.
+
+  `AnchorConfig` stays type-only, since exposing the schema value is the subject of a separate question about the anchor runtime surface. So do the `ActivationTrigger` and `ActivationMode` literal schemas, which name no Message and need no constructor. `Orientation` is a literal schema of the same kind, already exported as a value by `Listbox` and type-only on `Tabs`, and this change leaves both as they were.
+
+  A test now audits every component barrel and fails when a Message union declares a tag the barrel does not export as a callable.
+
+  Thanks @artile for the report.
+
+- d16b69c: Export `Orientation` as a value from `Tabs`, matching `Listbox` and `RadioGroup`.
+
+  Three components define an `Orientation` literal schema for the same consumer-facing config field. `Listbox` and `RadioGroup` re-exported it from their barrel as a value. `Tabs` listed it under `export type { ... }`, which re-exports the type and shadows the value, so the schema was unreachable.
+
+  ```ts
+  import { Tabs } from '@foldkit/ui'
+
+  typeof Tabs.Orientation // was 'undefined', now 'function'
+  ```
+
+  `ActivationMode` on `Tabs` and `ActivationTrigger` on `Combobox`, `Listbox`, and `Menu` stay type-only. No barrel exports either of them as a value, so they are already consistent, and promoting them would widen the public surface rather than settle a disagreement between barrels. `AnchorConfig` stays type-only as well, since its runtime side is the subject of a separate question about the anchor surface.
+
+### Patch Changes
+
+- 399bddd: Focus the anchored items panel on open for `Listbox` and `Menu`.
+
+  An anchored panel renders `visibility: hidden` and stays hidden until Floating UI resolves its first position. `.focus()` does not land on a hidden element, so the `FocusItems` Command that runs once the render commits had nothing to focus, and opening the panel left focus on the button.
+
+  The panel is what carries `role="listbox"` (or `role="menu"`) and `aria-activedescendant`, so assistive technology never followed the user into the open panel. Closing on blur is also armed by the panel holding focus, so a panel opened from the keyboard stayed open when the user tabbed away. Arrow keys and typeahead still worked, since the button's key handler delegates to the panel's while the panel is open.
+
+  Both components now pass `focusAfterPosition` to their anchor Mount, focusing the panel as part of the same reveal that clears `visibility`. `Popover` already did this. `FocusItems` still focuses the panel when no anchor is configured, where the panel is visible as soon as the render commits.
+
 ## 0.137.0
 
 ### Minor Changes

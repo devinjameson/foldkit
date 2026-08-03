@@ -1,5 +1,15 @@
 # create-foldkit-app
 
+## 0.24.0
+
+### Minor Changes
+
+- 08560ba: Add the `view-transitions` example: a gallery whose artwork grows from grid card to detail hero through the browser's View Transitions API, demonstrating the runtime's `viewTransition` option, shared-element morphs via `viewTransitionName`, and direction-aware transition types derived from the route pair.
+
+### Patch Changes
+
+- 23423bd: Element builders now take their children argument optionally. `h.div([h.Class('divider')])` and `h.div([h.Class('divider')], [])` build the same vnode, so an element with no children no longer needs a trailing empty array. Attributes stay required, so `h.div([])` remains the spelling for an element with neither. Void elements such as `img`, `input`, and `br` are unchanged and still accept attributes only. The scaffolded app's `AGENTS.md` teaches the shorter form.
+
 ## 0.23.2
 
 ### Patch Changes
