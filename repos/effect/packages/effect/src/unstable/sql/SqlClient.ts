@@ -254,11 +254,10 @@ export const makeWithTransaction = <I, S>(options: {
                 Effect.flatMap(() =>
                   Effect.provideContext(
                     restore(effect),
-                    Context.mutate(services, (services) =>
-                      services.pipe(
-                        Context.add(options.transactionService, [conn, id]),
-                        Context.add(Tracer.ParentSpan, span)
-                      ))
+                    services.pipe(
+                      Context.add(options.transactionService, [conn, id]),
+                      Context.add(Tracer.ParentSpan, span)
+                    )
                   )
                 ),
                 Effect.exit,
@@ -333,7 +332,7 @@ export const TransactionConnection = (
  * Context reference used by SQL integrations to opt in to safe integer
  * handling; defaults to `false`.
  *
- * @category references
+ * @category services
  * @since 4.0.0
  */
 export const SafeIntegers = Context.Reference<boolean>("effect/sql/SqlClient/SafeIntegers", {

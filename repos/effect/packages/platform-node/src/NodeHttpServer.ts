@@ -63,6 +63,26 @@ import * as NodeServices from "./NodeServices.ts"
 import { NodeWS } from "./NodeSocket.ts"
 
 /**
+ * Options accepted by the Node `HttpServer` constructors and layers.
+ *
+ * @category options
+ * @since 4.0.0
+ */
+export interface Options extends Net.ListenOptions {
+  readonly disablePreemptiveShutdown?: boolean | undefined
+  readonly gracefulShutdownTimeout?: Duration.Input | undefined
+  /**
+   * Options forwarded to the underlying `ws` `WebSocketServer`, minus the
+   * wiring options the server manages itself. Use this to enable
+   * `permessage-deflate` compression or tune payload limits, e.g.
+   * `websocket: { perMessageDeflate: true }`.
+   */
+  readonly websocket?:
+    | Omit<NodeWS.ServerOptions, "noServer" | "server" | "host" | "port" | "path">
+    | undefined
+}
+
+/**
  * Creates a scoped `HttpServer` from a Node `http.Server`, starts listening
  * with the supplied options, registers request and upgrade handling, and closes
  * the server during scope finalization with optional graceful-shutdown control.
@@ -72,10 +92,7 @@ import { NodeWS } from "./NodeSocket.ts"
  */
 export const make = Effect.fnUntraced(function*(
   evaluate: LazyArg<Http.Server>,
-  options: Net.ListenOptions & {
-    readonly disablePreemptiveShutdown?: boolean | undefined
-    readonly gracefulShutdownTimeout?: Duration.Input | undefined
-  }
+  options: Options
 ) {
   const scope = yield* Effect.scope
   const server = evaluate()
@@ -116,7 +133,7 @@ export const make = Effect.fnUntraced(function*(
   const address = server.address()!
 
   const wss = yield* Effect.acquireRelease(
-    Effect.sync(() => new NodeWS.WebSocketServer({ noServer: true })),
+    Effect.sync(() => new NodeWS.WebSocketServer({ ...options.websocket, noServer: true })),
     (wss) =>
       Effect.callback<void>((resume) => {
         wss.close(() => resume(Effect.void))
@@ -189,9 +206,8 @@ export const makeHandler = <
       nodeRequest: Http.IncomingMessage,
       nodeResponse: Http.ServerResponse
     ) {
-      const map = new Map(services.mapUnsafe)
-      map.set(HttpServerRequest.key, new ServerRequestImpl(nodeRequest, nodeResponse))
-      const fiber = Fiber.runIn(Effect.runForkWith(Context.makeUnsafe<any>(map))(handled), options.scope)
+      const context = Context.add(services, HttpServerRequest, new ServerRequestImpl(nodeRequest, nodeResponse))
+      const fiber = Fiber.runIn(Effect.runForkWith(context as Context.Context<any>)(handled), options.scope)
       nodeResponse.on("close", () => {
         if (!nodeResponse.writableEnded) {
           fiber.interruptUnsafe(parent.id, ClientAbort.annotation)
@@ -256,9 +272,12 @@ export const makeUpgradeHandler = <
             (ws) => Effect.sync(() => ws.close())
           )
       ))
-      const map = new Map(services.mapUnsafe)
-      map.set(HttpServerRequest.key, new ServerRequestImpl(nodeRequest, nodeResponse, upgradeEffect))
-      const fiber = Fiber.runIn(Effect.runForkWith(Context.makeUnsafe<any>(map))(handledApp), options.scope)
+      const context = Context.add(
+        services,
+        HttpServerRequest,
+        new ServerRequestImpl(nodeRequest, nodeResponse, upgradeEffect)
+      )
+      const fiber = Fiber.runIn(Effect.runForkWith(context as Context.Context<any>)(handledApp), options.scope)
       socket.on("close", () => {
         if (!socket.writableEnded) {
           fiber.interruptUnsafe(parent.id, ClientAbort.annotation)
@@ -330,8 +349,9 @@ class ServerRequestImpl extends NodeHttpIncomingMessage<HttpServerError> impleme
     return this.source.url!
   }
 
+  private cachedMethod: HttpMethod | undefined
   get method(): HttpMethod {
-    return this.source.method!.toUpperCase() as HttpMethod
+    return this.cachedMethod ??= this.source.method!.toUpperCase() as HttpMethod
   }
 
   override get headers(): Headers.Headers {
@@ -397,10 +417,7 @@ class ServerRequestImpl extends NodeHttpIncomingMessage<HttpServerError> impleme
  */
 export const layerServer: (
   evaluate: LazyArg<Http.Server<typeof Http.IncomingMessage, typeof Http.ServerResponse>>,
-  options: Net.ListenOptions & {
-    readonly disablePreemptiveShutdown?: boolean | undefined
-    readonly gracefulShutdownTimeout?: Duration.Input | undefined
-  }
+  options: Options
 ) => Layer.Layer<HttpServer.HttpServer, ServeError> = flow(make, Layer.effect(HttpServer.HttpServer))
 
 /**
@@ -427,10 +444,7 @@ export const layerHttpServices: Layer.Layer<
  */
 export const layer = (
   evaluate: LazyArg<Http.Server>,
-  options: Net.ListenOptions & {
-    readonly disablePreemptiveShutdown?: boolean | undefined
-    readonly gracefulShutdownTimeout?: Duration.Input | undefined
-  }
+  options: Options
 ): Layer.Layer<
   HttpServer.HttpServer | NodeServices.NodeServices | HttpPlatform.HttpPlatform | Etag.Generator,
   ServeError
@@ -450,12 +464,7 @@ export const layer = (
  */
 export const layerConfig = (
   evaluate: LazyArg<Http.Server>,
-  options: Config.Wrap<
-    Net.ListenOptions & {
-      readonly disablePreemptiveShutdown?: boolean | undefined
-      readonly gracefulShutdownTimeout?: Duration.Input | undefined
-    }
-  >
+  options: Config.Wrap<Options>
 ): Layer.Layer<
   HttpServer.HttpServer | NodeServices.NodeServices | HttpPlatform.HttpPlatform | Etag.Generator,
   ServeError | Config.ConfigError
@@ -517,14 +526,20 @@ const handleResponse = (
 
   if (request.method === "HEAD") {
     nodeResponse.writeHead(response.status, headers)
-    return Effect.callback<void>((resume) => {
-      const done = () => {
-        nodeResponse.off("close", done)
-        resume(Effect.void)
-      }
-      nodeResponse.once("close", done)
-      nodeResponse.end(done)
-    })
+    return Effect.andThen(
+      cancelResponseBody(response.body),
+      Effect.callback<void>((resume) => {
+        let completed = false
+        const done = () => {
+          if (completed) return
+          completed = true
+          nodeResponse.off("close", done)
+          resume(Effect.void)
+        }
+        nodeResponse.once("close", done)
+        nodeResponse.end(done)
+      })
+    )
   }
   const body = response.body
   switch (body._tag) {
@@ -608,17 +623,9 @@ const handleResponse = (
       return body.stream.pipe(
         Stream.orDie,
         Stream.runForEachArray((array) => {
-          let needDrain = false
-          for (let i = 0; i < array.length; i++) {
-            const written = nodeResponse.write(array[i])
-            if (!written && !needDrain) {
-              needDrain = true
-              drainLatch.closeUnsafe()
-            } else if (written && needDrain) {
-              needDrain = false
-            }
-          }
-          if (!needDrain) return Effect.void
+          const chunk = array.length > 1 ? Buffer.concat(array) : array[0]
+          if (nodeResponse.write(chunk)) return Effect.void
+          drainLatch.closeUnsafe()
           return drainLatch.await
         }),
         Effect.interruptible,
@@ -629,6 +636,14 @@ const handleResponse = (
       )
     }
   }
+}
+
+const cancelResponseBody = (body: HttpServerResponse["body"]): Effect.Effect<void> => {
+  const stream = body._tag === "Raw" ? body.body : undefined
+  if (stream instanceof Readable) {
+    return Effect.sync(() => stream.destroy())
+  }
+  return Effect.void
 }
 
 const handleCause = (

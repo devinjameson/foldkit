@@ -16,7 +16,6 @@ import type * as Context from "../../Context.ts"
 import * as Effect from "../../Effect.ts"
 import { identity } from "../../Function.ts"
 import * as InternalRecord from "../../internal/record.ts"
-import * as Option from "../../Option.ts"
 import * as Predicate from "../../Predicate.ts"
 import * as Schema from "../../Schema.ts"
 import * as SchemaAST from "../../SchemaAST.ts"
@@ -62,7 +61,7 @@ export type Client<Groups extends HttpApiGroup.Constraint, E = never, R = never>
  * Derives the typed client interface for an `HttpApi`, preserving any additional
  * client error and service requirements supplied by the caller.
  *
- * @category models
+ * @category utility types
  * @since 4.0.0
  */
 export type ForApi<Api extends HttpApi.Constraint, E = never, R = never> = Api extends
@@ -75,7 +74,7 @@ type SuccessType<S> = S extends HttpApiSchema.StreamSse<
   infer _Value
 > ? Stream.Stream<
     _Value,
-    _Error["Type"] | HttpClientError.HttpClientError | Schema.SchemaError | Sse.Retry,
+    _Error["Type"] | HttpClientError.HttpClientError | Schema.SchemaError | Sse.Retry | Sse.SseError,
     never
   >
   : S extends HttpApiSchema.StreamUint8Array ? Stream.Stream<Uint8Array, HttpClientError.HttpClientError, never>
@@ -629,7 +628,7 @@ export const endpoint = <
  *
  * **Example** (Building typed URLs)
  *
- * ```ts
+ * ```ts import.meta.vitest
  * import { Schema } from "effect"
  * import { HttpApi, HttpApiClient, HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
  *
@@ -647,8 +646,7 @@ export const endpoint = <
  *
  * buildUrl.users.getUser({
  *   params: { id: "123" }
- * })
- * //=> "https://api.example.com/users/123"
+ * }) // => "https://api.example.com/users/123"
  * ```
  *
  * @category constructors
@@ -1004,39 +1002,41 @@ function getEncodePayloadSchemaFromBody(
   const out = $HttpBody.pipe(Schema.decodeTo(
     schema,
     SchemaTransformation.transformOrFail<unknown, HttpBody.HttpBody>({
-      decode(httpBody) {
-        return Effect.fail(new SchemaIssue.Forbidden(Option.some(httpBody), { message: "Encode only schema" }))
+      decode() {
+        return Effect.fail(new SchemaIssue.Forbidden({ message: "Encode only schema" }))
       },
       encode(t) {
         switch (encoding._tag) {
           case "Multipart":
-            return Effect.fail(new SchemaIssue.Forbidden(Option.some(t), { message: "Payload must be a FormData" }))
+            return Effect.fail(new SchemaIssue.Forbidden({ message: "Payload must be a FormData" }))
           case "Json": {
             try {
               const body = JSON.stringify(t)
               return Effect.succeed(HttpBody.text(body, encoding.contentType))
-            } catch (error) {
-              return Effect.fail(new SchemaIssue.InvalidValue(Option.some(t), { message: globalThis.String(error) }))
+            } catch {
+              return Effect.fail(
+                new SchemaIssue.InvalidValue({ message: "Expected a JSON-serializable request body" })
+              )
             }
           }
           case "Text": {
             if (typeof t !== "string") {
               return Effect.fail(
-                new SchemaIssue.InvalidValue(Option.some(t), { message: "Expected a string" })
+                new SchemaIssue.InvalidValue({ message: "Expected a string" })
               )
             }
             return Effect.succeed(HttpBody.text(t, encoding.contentType))
           }
           case "FormUrlEncoded": {
             if (!Predicate.isObject(t)) {
-              return Effect.fail(new SchemaIssue.InvalidValue(Option.some(t), { message: "Expected a record" }))
+              return Effect.fail(new SchemaIssue.InvalidValue({ message: "Expected a record" }))
             }
             return Effect.succeed(HttpBody.urlParams(UrlParams.fromInput(t as any), encoding.contentType))
           }
           case "Uint8Array": {
             if (!(t instanceof Uint8Array)) {
               return Effect.fail(
-                new SchemaIssue.InvalidValue(Option.some(t), { message: "Expected a Uint8Array" })
+                new SchemaIssue.InvalidValue({ message: "Expected a Uint8Array" })
               )
             }
             return Effect.succeed(HttpBody.uint8Array(t, encoding.contentType))

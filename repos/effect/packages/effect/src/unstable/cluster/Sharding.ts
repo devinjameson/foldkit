@@ -771,7 +771,7 @@ const make = Effect.gen(function*() {
         const resumptionState = Option.getOrThrow(MutableHashMap.get(entityResumptionState, address))
         let done = false
 
-        while (!done) {
+        while (!done) { // oxlint-disable-line no-unmodified-loop-condition
           // if the shard is no longer assigned to this runner, we stop
           if (!MutableHashSet.has(acquiredShards, address.shardId)) {
             return
@@ -1202,7 +1202,7 @@ const make = Effect.gen(function*() {
               if (!options.discard) {
                 const entry: ClientRequestEntry = {
                   rpc: rpc as any,
-                  context: fiber.currentContext,
+                  context: fiber.context,
                   message
                 }
                 clientRequests.set(id, entry)
@@ -1436,12 +1436,11 @@ const make = Effect.gen(function*() {
         runnerAddress,
         sharding
       }).pipe(
-        Effect.provideContext(Context.mutate(services, (services) =>
-          services.pipe(
-            Context.add(EntityReaper, reaper),
-            Context.add(Scope.Scope, scope),
-            Context.add(Snowflake.Generator, snowflakeGen)
-          )))
+        Effect.provideContext(services.pipe(
+          Context.add(EntityReaper, reaper),
+          Context.add(Scope.Scope, scope),
+          Context.add(Snowflake.Generator, snowflakeGen)
+        ))
       ) as Effect.Effect<EntityManager.EntityManager>
       const state: EntityManagerState = {
         entity,

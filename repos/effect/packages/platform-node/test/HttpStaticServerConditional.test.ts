@@ -55,12 +55,19 @@ const fileInfo: FileSystem.File.Info = {
   blocks: Option.none()
 }
 
+const stubCompression: HttpPlatform.Compression = {
+  algorithms: new Set(),
+  compressResponse: Effect.succeed
+}
+
 const makeHandler = async () => {
   const fileSystem = FileSystem.makeNoop({
     stat: (path) => path === filePath ? Effect.succeed(fileInfo) : Effect.fail(notFoundError(path))
   })
 
   const httpPlatform = HttpPlatform.HttpPlatform.of({
+    platform: "node",
+    compression: stubCompression,
     fileResponse: (_path, options) =>
       Effect.succeed(HttpServerResponse.text(fileBody, {
         status: options?.status,
@@ -100,6 +107,8 @@ const makeFailingApp = async (options: {
   })
 
   const httpPlatform = HttpPlatform.HttpPlatform.of({
+    platform: "node",
+    compression: stubCompression,
     fileResponse: (_path, fileOptions) => {
       if (options.fileResponseError !== undefined) {
         return Effect.fail(options.fileResponseError)
@@ -137,6 +146,8 @@ const makeLayerHandler = (options: {
     }
   })
   const httpPlatform = HttpPlatform.HttpPlatform.of({
+    platform: "node",
+    compression: stubCompression,
     fileResponse: () =>
       options.fileResponseError !== undefined
         ? Effect.fail(options.fileResponseError)

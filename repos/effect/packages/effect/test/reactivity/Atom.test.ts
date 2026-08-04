@@ -15,7 +15,7 @@ import {
 } from "effect"
 import { TestClock } from "effect/testing"
 import { KeyValueStore } from "effect/unstable/persistence"
-import { AsyncResult, Atom, AtomRegistry } from "effect/unstable/reactivity"
+import { AsyncResult, Atom, AtomRegistry, Hydration } from "effect/unstable/reactivity"
 
 declare const global: any
 
@@ -859,6 +859,64 @@ describe.sequential("Atom", () => {
     })
     expect(count).toEqual(2)
     expect(r.get(derived)).toEqual("2b")
+  })
+
+  it.effect("retains method-form dependencies added during a batch rebuild", () =>
+    Effect.gen(function*() {
+      const registry = AtomRegistry.make()
+      const source = Atom.make(Option.none<string>())
+      const gate = yield* Latch.make()
+      const asyncAtom = Atom.make((get) =>
+        Effect.gen(function*() {
+          const value = get(source)
+          if (Option.isNone(value)) {
+            return yield* Effect.fail("SourceIsNone" as const)
+          }
+          yield* gate.await
+          return `computed-${value.value}`
+        })
+      )
+      const derived = Atom.make((get): unknown => {
+        const value = get.get(source)
+        if (Option.isNone(value)) {
+          return "empty"
+        }
+        return get.get(asyncAtom)
+      })
+
+      registry.subscribe(derived, () => {}, { immediate: true })
+      registry.subscribe(asyncAtom, () => {}, { immediate: true })
+
+      Atom.batch(() => registry.set(source, Option.some("a")))
+
+      yield* gate.open
+      yield* Effect.yieldNow
+
+      const result = registry.get(derived) as AsyncResult.AsyncResult<string, "SourceIsNone">
+      assert(AsyncResult.isSuccess(result))
+      assert.strictEqual(result.value, "computed-a")
+    }))
+
+  it("rebuilds an atom invalidated during its own batch rebuild", () => {
+    const registry = AtomRegistry.make()
+    const source = Atom.make(0)
+    const enabled = Atom.make(false)
+    const updateSource = Atom.make((get) => {
+      get.set(source, 1)
+    })
+    const derived = Atom.make((get) => {
+      const value = get(source)
+      if (get(enabled)) {
+        get(updateSource)
+      }
+      return value
+    })
+
+    registry.subscribe(derived, () => {}, { immediate: true })
+
+    Atom.batch(() => registry.set(enabled, true))
+
+    assert.strictEqual(registry.get(derived), 1)
   })
 
   it("nested batch", async () => {
@@ -2281,6 +2339,42 @@ describe.sequential("Atom", () => {
         }),
         { reactivityKeys: ["counter"] }
       )
+      r.mount(atom)
+
+      assert.strictEqual(r.get(atom), 10)
+      assert.strictEqual(rebuilds, 1)
+
+      value = 11
+      r.set(fn, void 0)
+
+      assert.strictEqual(r.get(atom), 11)
+      assert.strictEqual(rebuilds, 2)
+    })
+
+    it("rebuilds on mutation with a hydrated value", async () => {
+      let rebuilds = 0
+      let value = 0
+      const atom = Atom.make(() => {
+        rebuilds++
+        return value
+      }).pipe(
+        Atom.withReactivity(["counter"]),
+        Atom.serializable({ key: "hydrated-counter", schema: Schema.Number }),
+        Atom.keepAlive
+      )
+      const r = AtomRegistry.make()
+      const fn = counterRuntime.fn(
+        Effect.fn(function*() {
+        }),
+        { reactivityKeys: ["counter"] }
+      )
+      const dehydratedState: Array<Hydration.DehydratedAtomValue> = [{
+        "~effect/reactivity/DehydratedAtom": true,
+        key: "hydrated-counter",
+        value: 10,
+        dehydratedAt: 0
+      }]
+      Hydration.hydrate(r, dehydratedState)
       r.mount(atom)
 
       assert.strictEqual(r.get(atom), 10)
