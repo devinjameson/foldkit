@@ -1,6 +1,7 @@
 import { Match as M, Schema as S } from 'effect'
 import { Command, Submodel } from 'foldkit'
 import { m } from 'foldkit/message'
+import { evo } from 'foldkit/struct'
 
 import { Button } from '@foldkit/ui'
 
@@ -30,8 +31,8 @@ export const update = (
       readonly [Model, ReadonlyArray<Command.Command<Message>>]
     >(),
     M.tagsExhaustive({
-      ClickedDecrement: () => [{ count: model.count - 1 }, []],
-      ClickedIncrement: () => [{ count: model.count + 1 }, []],
+      ClickedDecrement: () => [evo(model, { count: count => count - 1 }), []],
+      ClickedIncrement: () => [evo(model, { count: count => count + 1 }), []],
     }),
   )
 

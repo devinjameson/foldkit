@@ -1,8 +1,9 @@
-import { Effect, Match as M, Predicate, Schema as S } from 'effect'
+import { Effect, Match as M, Number, Predicate, Schema as S } from 'effect'
 import { describe, it } from 'vitest'
 
 import { Document, __htmlBuilder, __requireDispatch } from '../html/index.js'
 import { m } from '../message/index.js'
+import { evo } from '../struct/index.js'
 import { makeApplication } from './runtime.js'
 
 /**
@@ -75,7 +76,7 @@ const runOnce = async (messageCount: number): Promise<number> => {
     M.value(message).pipe(
       M.withReturnType<readonly [Model, ReadonlyArray<never>]>(),
       M.tagsExhaustive({
-        Increment: () => [{ count: model.count + 1 }, []],
+        Increment: () => [evo(model, { count: Number.increment }), []],
         Done: () => {
           resolveDone()
           return [model, []]

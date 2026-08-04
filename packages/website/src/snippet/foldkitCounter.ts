@@ -2,10 +2,13 @@ import { Match as M, Schema as S } from 'effect'
 import { Command } from 'foldkit'
 import type { Document, HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
+import { evo } from 'foldkit/struct'
 
 // MODEL - Your entire application state
 
-const Model = S.Number
+const Model = S.Struct({
+  count: S.Number,
+})
 type Model = typeof Model.Type
 
 // MESSAGE - Events that can happen in your app
@@ -24,18 +27,18 @@ const update = (model: Model, message: Message): UpdateReturn =>
   M.value(message).pipe(
     withUpdateReturn,
     M.tagsExhaustive({
-      ClickedIncrement: () => [model + 1, []],
+      ClickedIncrement: () => [evo(model, { count: count => count + 1 }), []],
     }),
   )
 
 // VIEW - A pure function from Model to a Document
 
 const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
-  title: `Count: ${model}`,
+  title: `Count: ${model.count}`,
   body: h.div(
     [],
     [
-      h.p([], [`Count: ${model}`]),
+      h.p([], [`Count: ${model.count}`]),
       h.button([h.OnClick(ClickedIncrement())], ['Increment']),
     ],
   ),

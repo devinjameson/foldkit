@@ -1,9 +1,18 @@
-import { Effect, Fiber, Match as M, Option, Schema as S, Stream } from 'effect'
+import {
+  Effect,
+  Fiber,
+  Match as M,
+  Number,
+  Option,
+  Schema as S,
+  Stream,
+} from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { Command } from '../command/index.js'
 import { __htmlBuilder } from '../html/index.js'
 import { m } from '../message/index.js'
+import { evo } from '../struct/index.js'
 import * as Subscription from '../subscription/subscription.js'
 import {
   type SlowContext,
@@ -27,7 +36,7 @@ const update = (model: Model, message: Message): UpdateReturn =>
   M.value(message).pipe(
     M.withReturnType<UpdateReturn>(),
     M.tagsExhaustive({
-      ClickedIncrement: () => [{ count: model.count + 1 }, []],
+      ClickedIncrement: () => [evo(model, { count: Number.increment }), []],
       ClickedKeptModel: () => [model, []],
     }),
   )

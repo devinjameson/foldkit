@@ -3,6 +3,7 @@ import {
   Effect,
   HashSet,
   Match,
+  Number,
   Option,
   Schema,
   SubscriptionRef,
@@ -11,6 +12,7 @@ import {
 import { describe, expect, it, vi } from 'vitest'
 
 import { m } from '../message/index.js'
+import { evo } from '../struct/index.js'
 import {
   type Bridge,
   type DevToolsStore,
@@ -130,15 +132,15 @@ const ClickedDecrement = m('ClickedDecrement')
 const CounterMessage = Schema.Union([ClickedIncrement, ClickedDecrement])
 
 const counterReplay = (model: unknown, message: unknown): unknown => {
-  const { count } = Schema.decodeUnknownSync(CounterModel)(model)
+  const counterModel = Schema.decodeUnknownSync(CounterModel)(model)
 
   return pipe(
     message,
     Schema.decodeUnknownSync(CounterMessage),
     Match.value,
     Match.tagsExhaustive({
-      ClickedIncrement: () => ({ count: count + 1 }),
-      ClickedDecrement: () => ({ count: count - 1 }),
+      ClickedIncrement: () => evo(counterModel, { count: Number.increment }),
+      ClickedDecrement: () => evo(counterModel, { count: Number.decrement }),
     }),
   )
 }

@@ -1,10 +1,11 @@
-import { Context, Schema as S } from 'effect'
+import { Context, Number, Schema as S } from 'effect'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { m } from '../message/index.js'
 import { MountTracker } from '../mount/index.js'
 import { Dispatch } from '../runtime/index.js'
 import { embed, makeElement } from '../runtime/runtime.js'
+import { evo } from '../struct/index.js'
 import { beginRender, createBoundaryRegistry } from './boundary.js'
 import * as HtmlModule from './index.js'
 import {
@@ -284,7 +285,7 @@ describe('HtmlBuilder runtime guarantees', () => {
         model: Model,
         _message: Message,
       ): readonly [Model, ReadonlyArray<never>] => [
-        { count: model.count + 1 },
+        evo(model, { count: Number.increment }),
         [],
       ],
       view: (model, h) =>
