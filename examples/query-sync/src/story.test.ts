@@ -126,6 +126,12 @@ describe('update', () => {
         given(browseModel),
         message(
           GotDietListboxMessage({
+            message: Listbox.Opened({ maybeActiveItemIndex: Option.none() }),
+          }),
+        ),
+        Command.resolve(Listbox.FocusItems, Listbox.CompletedFocusItems()),
+        message(
+          GotDietListboxMessage({
             message: Listbox.SelectedItem({ item: 'Carnivore' }),
           }),
         ),

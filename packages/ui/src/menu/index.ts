@@ -495,6 +495,10 @@ export const update = (model: Model, message: Message): UpdateReturn => {
     commands: ReadonlyArray<Command.Command<Message>>,
     maybeOutMessage: Option.Option<OutMessage> = Option.none(),
   ): UpdateReturn => {
+    if (!baseModel.isOpen) {
+      return [baseModel, [], maybeOutMessage]
+    }
+
     const closed = closedModel(baseModel)
 
     if (model.isAnimated) {
@@ -781,8 +785,10 @@ export const PortalMenuBackdrop = Mount.define(
 export const open = (model: Model): UpdateReturn =>
   update(model, Opened({ maybeActiveItemIndex: Option.none() }))
 
-/** Programmatically closes the menu, updating the model and returning
- *  focus and modal commands. Use this in domain-event handlers to close the menu. */
+/** Programmatically closes the menu. If it is open, returns the closed Model
+ *  with focus and modal Commands. If it is already closed, returns the Model
+ *  unchanged with no Commands. Use this in domain-event handlers to close the
+ *  menu. */
 export const close = (model: Model): UpdateReturn => update(model, Closed())
 
 /** Programmatically selects a menu item, closing the menu and returning

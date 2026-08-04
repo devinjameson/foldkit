@@ -50,8 +50,10 @@ type UpdateReturn = ReturnType<typeof update>
 export const open = (model: Model): UpdateReturn =>
   update(model, Opened({ maybeActiveItemIndex: Option.none() }))
 
-/** Programmatically closes the listbox, updating the model and returning
- *  focus and modal commands. Use this in domain-event handlers to close the listbox. */
+/** Programmatically closes the listbox. If it is open, returns the closed Model
+ *  with focus and modal Commands. If it is already closed, returns the Model
+ *  unchanged with no Commands. Use this in domain-event handlers to close the
+ *  listbox. */
 export const close = (model: Model): UpdateReturn => update(model, Closed())
 
 /** Programmatically activates an item in the multi-select listbox. Emits `Selected({ value })`; the parent toggles the value's membership. */

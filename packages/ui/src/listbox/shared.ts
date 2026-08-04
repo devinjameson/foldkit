@@ -494,6 +494,10 @@ export const makeUpdate = <Model extends BaseModel>(
     commands: ReadonlyArray<Command.Command<Message>>,
     maybeOutMessage: Option.Option<OutMessage> = Option.none(),
   ): UpdateReturn => {
+    if (!baseModel.isOpen) {
+      return [baseModel, [], maybeOutMessage]
+    }
+
     const closed = closedModel(baseModel)
 
     if (baseModel.isAnimated) {
