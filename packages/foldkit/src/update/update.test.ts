@@ -1,4 +1,4 @@
-import { Effect, HashMap, Match as M, Option } from 'effect'
+import { Effect, HashMap, Match as M, Number, Option } from 'effect'
 import { expect, expectTypeOf } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
@@ -6,6 +6,7 @@ import { describe, it } from '@effect/vitest'
 import * as AsyncData from '../asyncData/index.js'
 import { type Command } from '../command/index.js'
 import { m } from '../message/index.js'
+import { evo } from '../struct/index.js'
 import {
   type Commands,
   type Return,
@@ -32,12 +33,12 @@ const loadTags = makeLoad('LoadTags')
 const loadFolders = makeLoad('LoadFolders')
 
 const incrementCount: Step<TestModel, TestMessage> = model => [
-  { count: model.count + 1 },
+  evo(model, { count: Number.increment }),
   [],
 ]
 
 const doubleCount: Step<TestModel, TestMessage> = model => [
-  { count: model.count * 2 },
+  evo(model, { count: Number.multiply(2) }),
   [],
 ]
 
@@ -52,7 +53,7 @@ const emitLoadTagsAndFolders: Step<TestModel, TestMessage> = model => [
 ]
 
 const incrementAndEmitLoadNotes: Step<TestModel, TestMessage> = model => [
-  { count: model.count + 1 },
+  evo(model, { count: Number.increment }),
   [loadNotes],
 ]
 
@@ -287,7 +288,7 @@ describe('types', () => {
       M.value(message).pipe(
         withUpdateReturn,
         M.tagsExhaustive({
-          IncrementedCount: () => [{ count: model.count + 1 }, []],
+          IncrementedCount: () => [evo(model, { count: Number.increment }), []],
           CompletedLoad: () => [model, []],
         }),
       )

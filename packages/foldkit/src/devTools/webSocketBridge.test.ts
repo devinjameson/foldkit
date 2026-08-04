@@ -1,7 +1,16 @@
-import { Array, Effect, Match, Option, Schema, SubscriptionRef } from 'effect'
+import {
+  Array,
+  Effect,
+  Match,
+  Number,
+  Option,
+  Schema,
+  SubscriptionRef,
+} from 'effect'
 import { describe, expect, it } from 'vitest'
 
 import { m } from '../message/index.js'
+import { evo } from '../struct/index.js'
 import {
   MAX_DISPATCH_BATCH_SIZE,
   type Request,
@@ -33,8 +42,8 @@ const update = (model: CounterModel, message: CounterMessage): CounterModel =>
   Match.value(message).pipe(
     Match.withReturnType<CounterModel>(),
     Match.tagsExhaustive({
-      ClickedIncrement: () => ({ count: model.count + 1 }),
-      ClickedDecrement: () => ({ count: model.count - 1 }),
+      ClickedIncrement: () => evo(model, { count: Number.increment }),
+      ClickedDecrement: () => evo(model, { count: Number.decrement }),
     }),
   )
 

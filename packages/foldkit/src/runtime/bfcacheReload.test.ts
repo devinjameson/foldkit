@@ -1,4 +1,4 @@
-import { Match as M, Schema as S } from 'effect'
+import { Match as M, Number, Schema as S } from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { type Document, __htmlBuilder } from '../html/index.js'
@@ -19,7 +19,7 @@ const update = (
 ): readonly [Model, ReadonlyArray<never>] =>
   M.value(message).pipe(
     M.withReturnType<readonly [Model, ReadonlyArray<never>]>(),
-    M.tag('Incremented', () => [evo(model, { count: count => count + 1 }), []]),
+    M.tag('Incremented', () => [evo(model, { count: Number.increment }), []]),
     M.exhaustive,
   )
 

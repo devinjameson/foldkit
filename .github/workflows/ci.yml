@@ -105,7 +105,11 @@ jobs:
           # merge base rather than the base tip. Otherwise a base branch that
           # has moved on makes its own commits look like this branch's changes.
           base=$(git merge-base "$BASE_SHA" HEAD || echo "$BASE_SHA")
-          pnpm -r --filter "...[$base]" run --if-present typecheck
+          # NOTE: excluding foldkit-monorepo is not redundant. A changeset or
+          # any other root-level file makes the root project itself "changed",
+          # and its own scripts recurse over the whole workspace, so leaving it
+          # in runs every package a second time concurrently.
+          pnpm -r --filter "...[$base]" --filter '!foldkit-monorepo' run --if-present typecheck
 
       - name: Smoke test create-foldkit-app
         if: steps.scope.outputs.create_foldkit_smoke == 'true'
@@ -136,7 +140,13 @@ jobs:
           # merge base rather than the base tip. Otherwise a base branch that
           # has moved on makes its own commits look like this branch's changes.
           base=$(git merge-base "$BASE_SHA" HEAD || echo "$BASE_SHA")
-          pnpm -r --filter "...[$base]" run --if-present test
+          # NOTE: excluding foldkit-monorepo is not redundant. A changeset or
+          # any other root-level file makes the root project itself "changed",
+          # and the root test script recurses over the whole workspace, so
+          # leaving it in runs a second copy of every package's tests
+          # concurrently with this one. Two `vitest run --coverage` processes
+          # in the same package then race on coverage/.tmp.
+          pnpm -r --filter "...[$base]" --filter '!foldkit-monorepo' run --if-present test
 
       - name: Install Playwright browsers
         if: steps.scope.outputs.website == 'true'

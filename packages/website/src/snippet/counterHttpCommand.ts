@@ -2,6 +2,7 @@ import { Effect, Match as M, Schema as S } from 'effect'
 import { HttpClient, HttpClientRequest } from 'effect/unstable/http'
 import { Command, Http } from 'foldkit'
 import { m } from 'foldkit/message'
+import { evo } from 'foldkit/struct'
 
 const ClickedFetchCount = m('ClickedFetchCount')
 const SucceededFetchCount = m('SucceededFetchCount', {
@@ -45,7 +46,10 @@ const update = (
     >(),
     M.tagsExhaustive({
       ClickedFetchCount: () => [model, [FetchCount()]],
-      SucceededFetchCount: ({ count }) => [{ count }, []],
+      SucceededFetchCount: ({ count }) => [
+        evo(model, { count: () => count }),
+        [],
+      ],
       FailedFetchCount: () => [model, []],
     }),
   )
