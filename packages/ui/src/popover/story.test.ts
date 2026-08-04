@@ -7,6 +7,7 @@ import { describe, it } from '@effect/vitest'
 import * as Animation from '../animation/index.js'
 import {
   BlurredPanel,
+  Closed,
   CompletedFocusButton,
   CompletedFocusPanel,
   CompletedInertOthers,
@@ -120,6 +121,8 @@ describe('Popover', () => {
           update,
           givenOpen,
           Story.message(RequestedClose()),
+          Story.expectOutMessage(Closed()),
+          Story.Command.expectExact(FocusButton),
           Story.Command.resolve(FocusButton, CompletedFocusButton()),
           Story.model(model => {
             expect(model.isOpen).toBe(false)
@@ -130,12 +133,13 @@ describe('Popover', () => {
         )
       })
 
-      it('is idempotent when already closed', () => {
+      it('returns no command and no OutMessage when already closed', () => {
         Story.story(
           update,
           givenClosed,
           Story.message(RequestedClose()),
-          Story.Command.resolve(FocusButton, CompletedFocusButton()),
+          Story.expectNoOutMessage(),
+          Story.Command.expectNone(),
           Story.model(model => {
             expect(model.isOpen).toBe(false)
           }),
@@ -375,6 +379,20 @@ describe('Popover', () => {
           )
         })
 
+        it('starts no leave cascade on RequestedClose when already closed', () => {
+          Story.story(
+            update,
+            givenClosedAnimated,
+            Story.message(RequestedClose()),
+            Story.expectNoOutMessage(),
+            Story.Command.expectNone(),
+            Story.model(model => {
+              expect(model.isOpen).toBe(false)
+              expect(model.animation.transitionState).toBe('Idle')
+            }),
+          )
+        })
+
         it('begins the leave animation when the panel blurs', () => {
           Story.story(
             update,
@@ -552,6 +570,19 @@ describe('Popover', () => {
       )
     })
 
+    it('emits no commands on RequestedClose when already closed in modal mode', () => {
+      Story.story(
+        update,
+        givenClosedModal,
+        Story.message(RequestedClose()),
+        Story.expectNoOutMessage(),
+        Story.Command.expectNone(),
+        Story.model(model => {
+          expect(model.isOpen).toBe(false)
+        }),
+      )
+    })
+
     it('emits unlockScroll and restoreInert commands when the panel blurs in modal mode', () => {
       Story.story(
         update,
@@ -561,6 +592,19 @@ describe('Popover', () => {
           [UnlockScroll, CompletedUnlockScroll()],
           [RestoreInert, CompletedRestoreInert()],
         ),
+        Story.model(model => {
+          expect(model.isOpen).toBe(false)
+        }),
+      )
+    })
+
+    it('emits no commands when the panel blurs on a closed popover in modal mode', () => {
+      Story.story(
+        update,
+        givenClosedModal,
+        Story.message(BlurredPanel()),
+        Story.expectNoOutMessage(),
+        Story.Command.expectNone(),
         Story.model(model => {
           expect(model.isOpen).toBe(false)
         }),
