@@ -12,8 +12,8 @@ import {
 describe('buildUnresolvedDeps', () => {
   it('keeps third-party versions, resolves Foldkit workspace deps to latest, and drops foreign workspace deps', () => {
     const result = buildUnresolvedDeps({
-      effect: '4.0.0-beta.102',
-      '@effect/platform-browser': '4.0.0-beta.102',
+      effect: '4.0.0-beta.103',
+      '@effect/platform-browser': '4.0.0-beta.103',
       foldkit: 'workspace:*',
       '@foldkit/ui': 'workspace:*',
       tailwindcss: '^4.3.1',
@@ -21,8 +21,8 @@ describe('buildUnresolvedDeps', () => {
     })
 
     expect(result).toEqual({
-      effect: { _tag: 'Keep', version: '4.0.0-beta.102' },
-      '@effect/platform-browser': { _tag: 'Keep', version: '4.0.0-beta.102' },
+      effect: { _tag: 'Keep', version: '4.0.0-beta.103' },
+      '@effect/platform-browser': { _tag: 'Keep', version: '4.0.0-beta.103' },
       foldkit: { _tag: 'Latest' },
       '@foldkit/ui': { _tag: 'Latest' },
       tailwindcss: { _tag: 'Keep', version: '^4.3.1' },

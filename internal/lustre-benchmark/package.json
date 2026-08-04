@@ -15,7 +15,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "effect": "4.0.0-beta.102",
+    "effect": "4.0.0-beta.103",
     "foldkit": "workspace:*"
   },
   "devDependencies": {

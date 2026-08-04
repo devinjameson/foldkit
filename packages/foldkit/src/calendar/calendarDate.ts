@@ -1,10 +1,4 @@
-import {
-  Effect,
-  Option,
-  Schema as S,
-  SchemaIssue,
-  SchemaTransformation,
-} from 'effect'
+import { Effect, Schema as S, SchemaIssue, SchemaTransformation } from 'effect'
 
 /**
  * Determines if a year is a leap year in the Gregorian calendar.
@@ -222,8 +216,8 @@ export const CalendarDateFromIsoString = S.String.pipe(
         const match = input.match(isoPattern)
         if (match === null) {
           return Effect.fail(
-            new SchemaIssue.InvalidValue(Option.some(input), {
-              description: `Expected ISO date (YYYY-MM-DD), got ${JSON.stringify(input)}`,
+            new SchemaIssue.InvalidValue({
+              message: `Expected ISO date (YYYY-MM-DD), got ${JSON.stringify(input)}`,
             }),
           )
         }

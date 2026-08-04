@@ -234,16 +234,17 @@ export const layer: Layer.Layer<
  *
  * **Example** (Applying rate limits to effects)
  *
- * ```ts
- * import { Effect } from "effect"
+ * ```ts import.meta.vitest
+ * import { Effect, Layer } from "effect"
  * import { RateLimiter } from "effect/unstable/persistence"
  *
- * Effect.gen(function*() {
+ * const messages: Array<string> = []
+ * const program = Effect.gen(function*() {
  *   // Access the `withLimiter` function from the RateLimiter module
  *   const withLimiter = yield* RateLimiter.makeWithRateLimiter
  *
  *   // Apply a rate limiter to an effect
- *   yield* Effect.log("Making a request with rate limiting").pipe(
+ *   yield* Effect.sync(() => messages.push("Making a request with rate limiting")).pipe(
  *     withLimiter({
  *       key: "some-key",
  *       limit: 10,
@@ -252,7 +253,12 @@ export const layer: Layer.Layer<
  *       algorithm: "fixed-window"
  *     })
  *   )
- * })
+ * }).pipe(
+ *   Effect.provide(RateLimiter.layer.pipe(Layer.provide(RateLimiter.layerStoreMemory)))
+ * )
+ *
+ * await Effect.runPromise(program)
+ * messages // => ["Making a request with rate limiting"]
  * ```
  *
  * @category accessors
@@ -283,23 +289,28 @@ export const makeWithRateLimiter: Effect.Effect<
  *
  * **Example** (Sleeping until rate limit permits)
  *
- * ```ts
- * import { Effect } from "effect"
+ * ```ts import.meta.vitest
+ * import { Effect, Layer } from "effect"
  * import { RateLimiter } from "effect/unstable/persistence"
  *
- * Effect.gen(function*() {
+ * const program = Effect.gen(function*() {
  *   // Access the `sleep` function from the RateLimiter module
  *   const sleep = yield* RateLimiter.makeSleep
  *
  *   // Use the `sleep` function with specific rate limiting parameters.
  *   // This will only sleep if the rate limit has been exceeded.
- *   yield* sleep({
+ *   const result = yield* sleep({
  *     key: "some-key",
  *     limit: 10,
  *     window: "5 seconds",
  *     algorithm: "fixed-window"
  *   })
- * })
+ *   return result.remaining
+ * }).pipe(
+ *   Effect.provide(RateLimiter.layer.pipe(Layer.provide(RateLimiter.layerStoreMemory)))
+ * )
+ *
+ * await Effect.runPromise(program) // => 9
  * ```
  *
  * @category accessors
@@ -486,7 +497,7 @@ export type AdaptivePhase = "inactive" | "cooldown" | "learning" | "learned"
 /**
  * Options for consuming tokens from the adaptive rate limiter store.
  *
- * @category models
+ * @category options
  * @since 4.0.0
  */
 export interface AdaptiveConsumeOptions {
@@ -537,7 +548,7 @@ export interface AdaptiveConsumeResult {
 /**
  * Options for reporting response feedback to the adaptive rate limiter store.
  *
- * @category models
+ * @category options
  * @since 4.0.0
  */
 export interface AdaptiveFeedbackOptions {
@@ -575,7 +586,7 @@ export interface AdaptiveFeedbackOptions {
  * Use to provide the shared counter storage and adaptive feedback state used by
  * persistent rate-limit checks.
  *
- * @category store
+ * @category services
  * @since 4.0.0
  */
 export class RateLimiterStore extends Context.Service<
@@ -655,7 +666,7 @@ interface AdaptiveState {
 /**
  * Provides a process-local in-memory `RateLimiterStore`.
  *
- * @category RateLimiterStore
+ * @category layers
  * @since 4.0.0
  */
 export const layerStoreMemory: Layer.Layer<
@@ -874,7 +885,7 @@ export const layerStoreMemory: Layer.Layer<
  * Creates a Redis-backed `RateLimiterStore` using Lua scripts and the
  * configured key prefix.
  *
- * @category RateLimiterStore
+ * @category constructors
  * @since 4.0.0
  */
 export const makeStoreRedis = Effect.fnUntraced(function*(

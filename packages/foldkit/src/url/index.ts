@@ -47,8 +47,8 @@ const LocationAndHrefFromString = S.String.pipe(
             }
           },
           catch: () =>
-            new SchemaIssue.InvalidValue(Option.some(urlString), {
-              description: `Invalid URL: ${urlString}`,
+            new SchemaIssue.InvalidValue({
+              message: `Invalid URL: ${urlString}`,
             }),
         }),
       encode: ({ href, location }) => {

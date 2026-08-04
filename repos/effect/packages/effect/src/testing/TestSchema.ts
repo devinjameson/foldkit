@@ -30,7 +30,7 @@ import * as FastCheck from "../testing/FastCheck.ts"
  *
  * **Example** (Decoding and encoding a struct)
  *
- * ```ts
+ * ```ts import.meta.vitest
  * import { Schema } from "effect"
  * import { TestSchema } from "effect/testing"
  *
@@ -38,10 +38,10 @@ import * as FastCheck from "../testing/FastCheck.ts"
  * const asserts = new TestSchema.Asserts(schema)
  *
  * // decoding
- * await asserts.decoding().succeed({ name: "Alice" })
+ * await asserts.decoding().succeed({ name: "Alice" }) // => undefined
  *
  * // encoding
- * await asserts.encoding().succeed({ name: "Alice" })
+ * await asserts.encoding().succeed({ name: "Alice" }) // => undefined
  * ```
  *
  * @see {@link Decoding}
@@ -64,13 +64,13 @@ export class Asserts<S extends Schema.Constraint> {
    *
    * **Example** (Comparing struct fields)
    *
-   * ```ts
+   * ```ts import.meta.vitest
    * import { Schema } from "effect"
    * import { TestSchema } from "effect/testing"
    *
    * const fieldsA = { name: Schema.String }
    * const fieldsB = { name: Schema.String }
-   * TestSchema.Asserts.ast.fields.equals(fieldsA, fieldsB) // no error
+   * TestSchema.Asserts.ast.fields.equals(fieldsA, fieldsB) // => undefined
    * ```
    */
   static ast = {
@@ -104,13 +104,13 @@ export class Asserts<S extends Schema.Constraint> {
    *
    * **Example** (Testing make)
    *
-   * ```ts
+   * ```ts import.meta.vitest
    * import { Schema } from "effect"
    * import { TestSchema } from "effect/testing"
    *
    * const schema = Schema.String
    * const asserts = new TestSchema.Asserts(schema)
-   * await asserts.make().succeed("hello")
+   * await asserts.make().succeed("hello") // => undefined
    * ```
    *
    * @see {@link decoding} for assertions against decoded input
@@ -157,12 +157,12 @@ export class Asserts<S extends Schema.Constraint> {
    *
    * **Example** (Verifying round trips)
    *
-   * ```ts
+   * ```ts import.meta.vitest
    * import { Schema } from "effect"
    * import { TestSchema } from "effect/testing"
    *
-   * const asserts = new TestSchema.Asserts(Schema.NumberFromString)
-   * await asserts.verifyLosslessTransformation()
+   * const asserts = new TestSchema.Asserts(Schema.String)
+   * await asserts.verifyLosslessTransformation({ params: { seed: 1, numRuns: 20 } }) // => undefined
    * ```
    *
    * @see {@link arbitrary} for checking that generated values satisfy the schema
@@ -200,14 +200,14 @@ export class Asserts<S extends Schema.Constraint> {
    *
    * **Example** (Decoding assertions)
    *
-   * ```ts
+   * ```ts import.meta.vitest
    * import { Schema } from "effect"
    * import { TestSchema } from "effect/testing"
    *
    * const asserts = new TestSchema.Asserts(Schema.NumberFromString)
    * const decoding = asserts.decoding()
-   * await decoding.succeed("42", 42)
-   * await decoding.fail(null, "Expected string, got null")
+   * await decoding.succeed("42", 42) // => undefined
+   * await decoding.fail(null, "Expected string") // => undefined
    * ```
    *
    * @see {@link Decoding}
@@ -231,13 +231,13 @@ export class Asserts<S extends Schema.Constraint> {
    *
    * **Example** (Encoding assertions)
    *
-   * ```ts
+   * ```ts import.meta.vitest
    * import { Schema } from "effect"
    * import { TestSchema } from "effect/testing"
    *
    * const asserts = new TestSchema.Asserts(Schema.NumberFromString)
    * const encoding = asserts.encoding()
-   * await encoding.succeed(42, "42")
+   * await encoding.succeed(42, "42") // => undefined
    * ```
    *
    * @see {@link Encoding}
@@ -262,12 +262,12 @@ export class Asserts<S extends Schema.Constraint> {
    *
    * **Example** (Verifying arbitrary generation)
    *
-   * ```ts
+   * ```ts import.meta.vitest
    * import { Schema } from "effect"
    * import { TestSchema } from "effect/testing"
    *
    * const asserts = new TestSchema.Asserts(Schema.String)
-   * asserts.arbitrary().verifyGeneration()
+   * asserts.arbitrary().verifyGeneration({ params: { seed: 1, numRuns: 20 } }) // => undefined
    * ```
    *
    * @see {@link verifyLosslessTransformation} for property-based round-trip checks
@@ -300,13 +300,13 @@ export class Asserts<S extends Schema.Constraint> {
  *
  * **Example** (Decoding with service provision)
  *
- * ```ts
+ * ```ts import.meta.vitest
  * import { Schema } from "effect"
  * import { TestSchema } from "effect/testing"
  *
  * const asserts = new TestSchema.Asserts(Schema.String)
  * const decoding = asserts.decoding()
- * await decoding.succeed("hello")
+ * await decoding.succeed("hello") // => undefined
  * ```
  *
  * @see {@link Asserts}
@@ -341,12 +341,12 @@ export class Decoding<S extends Schema.Constraint> {
    *
    * **Example** (Testing identity and transformed decoding)
    *
-   * ```ts
+   * ```ts import.meta.vitest
    * import { Schema } from "effect"
    * import { TestSchema } from "effect/testing"
    *
    * const decoding = new TestSchema.Asserts(Schema.NumberFromString).decoding()
-   * await decoding.succeed("1", 1) // transformed
+   * await decoding.succeed("1", 1) // => undefined
    * ```
    *
    * @see {@link fail} for asserting decoding failures
@@ -384,12 +384,12 @@ export class Decoding<S extends Schema.Constraint> {
    *
    * **Example** (Asserting a decoding failure)
    *
-   * ```ts
+   * ```ts import.meta.vitest
    * import { Schema } from "effect"
    * import { TestSchema } from "effect/testing"
    *
    * const decoding = new TestSchema.Asserts(Schema.String).decoding()
-   * await decoding.fail(42, "Expected string, got 42")
+   * await decoding.fail(42, "Expected string") // => undefined
    * ```
    *
    * @see {@link succeed} for asserting successful decoding
@@ -440,12 +440,12 @@ export class Decoding<S extends Schema.Constraint> {
  *
  * **Example** (Encoding assertions)
  *
- * ```ts
+ * ```ts import.meta.vitest
  * import { Schema } from "effect"
  * import { TestSchema } from "effect/testing"
  *
  * const encoding = new TestSchema.Asserts(Schema.NumberFromString).encoding()
- * await encoding.succeed(42, "42")
+ * await encoding.succeed(42, "42") // => undefined
  * ```
  *
  * @see {@link Asserts}
@@ -481,12 +481,12 @@ export class Encoding<S extends Schema.Constraint> {
    *
    * **Example** (Testing identity and transformed encoding)
    *
-   * ```ts
+   * ```ts import.meta.vitest
    * import { Schema } from "effect"
    * import { TestSchema } from "effect/testing"
    *
    * const encoding = new TestSchema.Asserts(Schema.NumberFromString).encoding()
-   * await encoding.succeed(1, "1") // transformed
+   * await encoding.succeed(1, "1") // => undefined
    * ```
    *
    * @see {@link fail} for asserting encoding failures
@@ -524,12 +524,12 @@ export class Encoding<S extends Schema.Constraint> {
    *
    * **Example** (Asserting an encoding failure)
    *
-   * ```ts
+   * ```ts import.meta.vitest
    * import { Schema } from "effect"
    * import { TestSchema } from "effect/testing"
    *
    * const encoding = new TestSchema.Asserts(Schema.NumberFromString).encoding()
-   * await encoding.fail("not-a-number", "Expected number, got \"not-a-number\"")
+   * await encoding.fail("not-a-number", "Expected number") // => undefined
    * ```
    *
    * @see {@link succeed} for asserting successful encoding
