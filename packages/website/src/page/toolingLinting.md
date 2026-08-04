@@ -74,6 +74,22 @@ Rejects hardcoded path and URL strings passed to link and navigation helpers. Bu
 
 ::Snippet{name="lintNoHardcodedRouteStrings" label="foldkit/no-hardcoded-route-strings example"}
 
+## Page Modules {#page-module-rules}
+
+These two read the file's own path, so they apply to a project laid out the way [Project Organization](/patterns/project-organization) describes, with a page module per folder under `src/page/`. A file that sits directly in `src/page/` is left alone, since nothing in the path tells a single file page apart from a helper that lives beside the pages.
+
+### foldkit/no-cross-page-imports {#no-cross-page-imports}
+
+Rejects one page module importing another, and rejects a page importing the page barrel. Pages are siblings that the app composes, so shared code belongs in a domain module or at the app level.
+
+::Snippet{name="lintNoCrossPageImports" label="foldkit/no-cross-page-imports example"}
+
+### foldkit/no-app-update-or-view-import-in-page {#no-app-update-or-view-import-in-page}
+
+Rejects a page importing the app level `update` or `view`. Composition runs one way, so a page that imports what folds it in closes a cycle. A shared module inside the app view directory is still fine.
+
+::Snippet{name="lintNoAppUpdateOrViewImportInPage" label="foldkit/no-app-update-or-view-import-in-page example"}
+
 ## View Keying and Accessibility {#view-rules}
 
 ### foldkit/no-array-index-view-keys {#no-array-index-view-keys}

@@ -9,8 +9,10 @@ import { keyedRequiredForMappedRows } from './rules/keyed-required-for-mapped-ro
 import { lazyViewStableReferences } from './rules/lazy-view-stable-references.ts'
 import { messageBindingMatchesTag } from './rules/message-binding-matches-tag.ts'
 import { mountFactoryMustUseElement } from './rules/mount-factory-must-use-element.ts'
+import { noAppUpdateOrViewImportInPage } from './rules/no-app-update-or-view-import-in-page.ts'
 import { noArrayIndexViewKeys } from './rules/no-array-index-view-keys.ts'
 import { noChildMessageConstructionInRoot } from './rules/no-child-message-construction-in-root.ts'
+import { noCrossPageImports } from './rules/no-cross-page-imports.ts'
 import { noDisablingDevGuardrails } from './rules/no-disabling-dev-guardrails.ts'
 import { noDuplicateOnmountPerElement } from './rules/no-duplicate-onmount-per-element.ts'
 import { noEmptyChildrenArray } from './rules/no-empty-children-array.ts'
@@ -39,8 +41,10 @@ const basePlugin = Plugin.define({
     'lazy-view-stable-references': lazyViewStableReferences,
     'message-binding-matches-tag': messageBindingMatchesTag,
     'mount-factory-must-use-element': mountFactoryMustUseElement,
+    'no-app-update-or-view-import-in-page': noAppUpdateOrViewImportInPage,
     'no-array-index-view-keys': noArrayIndexViewKeys,
     'no-child-message-construction-in-root': noChildMessageConstructionInRoot,
+    'no-cross-page-imports': noCrossPageImports,
     'no-disabling-dev-guardrails': noDisablingDevGuardrails,
     'no-duplicate-onmount-per-element': noDuplicateOnmountPerElement,
     'no-empty-children-array': noEmptyChildrenArray,

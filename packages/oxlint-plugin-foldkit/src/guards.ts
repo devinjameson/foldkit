@@ -129,6 +129,19 @@ export const isProgram = (node: unknown): node is ESTree.Program =>
   'type' in node &&
   node.type === 'Program'
 
+export const isImportDeclaration = (
+  node: unknown,
+): node is ESTree.ImportDeclaration =>
+  typeof node === 'object' &&
+  node !== null &&
+  'type' in node &&
+  node.type === 'ImportDeclaration'
+
+export const importSource = (node: unknown): Option.Option<string> =>
+  isImportDeclaration(node) && isStringLiteral(node.source)
+    ? Option.some(node.source.value)
+    : Option.none()
+
 export const firstStringArgument = (
   node: ESTree.CallExpression,
 ): ESTree.StringLiteral | undefined => {
