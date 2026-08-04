@@ -30,8 +30,13 @@ const update = (model: Model, message: Message): UpdateReturn =>
 const testView =
   ({
     isDisabled = false,
+    isReadOnly = false,
     isIndeterminate = false,
-  }: { isDisabled?: boolean; isIndeterminate?: boolean } = {}) =>
+  }: {
+    isDisabled?: boolean
+    isReadOnly?: boolean
+    isIndeterminate?: boolean
+  } = {}) =>
   (model: Model, h: HtmlBuilder<Message>) =>
     view(
       {
@@ -39,6 +44,7 @@ const testView =
         isChecked: model.isChecked,
         onToggle: isChecked => Toggled({ isChecked }),
         isDisabled,
+        isReadOnly,
         isIndeterminate,
         toView: ({ checkbox, label }) =>
           h.div(
@@ -88,6 +94,39 @@ describe('Checkbox controlled view', () => {
       Scene.given({ isChecked: false }),
       Scene.expect(checkbox).toBeDisabled(),
       Scene.expect(checkbox).toHaveAttr('data-disabled', ''),
+    )
+  })
+
+  it('emits read-only attributes without disabled attributes', () => {
+    Scene.scene(
+      { update, view: testView({ isReadOnly: true }) },
+      Scene.given({ isChecked: false }),
+      Scene.expect(checkbox).toHaveAttr('aria-readonly', 'true'),
+      Scene.expect(checkbox).toHaveAttr('data-readonly', ''),
+      Scene.expect(checkbox).not.toBeDisabled(),
+      Scene.expect(checkbox).not.toHaveAttr('data-disabled'),
+    )
+  })
+
+  it('stays focusable but drops every handler when read-only', () => {
+    Scene.scene(
+      { update, view: testView({ isReadOnly: true }) },
+      Scene.given({ isChecked: false }),
+      Scene.expect(checkbox).toHaveAttr('tabIndex', '0'),
+      Scene.expect(checkbox).not.toHaveHandler('click'),
+      Scene.expect(checkbox).not.toHaveHandler('keyup'),
+      Scene.expect(label).not.toHaveHandler('click'),
+    )
+  })
+
+  it('emits both attribute sets when disabled and read-only are combined', () => {
+    Scene.scene(
+      { update, view: testView({ isDisabled: true, isReadOnly: true }) },
+      Scene.given({ isChecked: false }),
+      Scene.expect(checkbox).toBeDisabled(),
+      Scene.expect(checkbox).toHaveAttr('data-disabled', ''),
+      Scene.expect(checkbox).toHaveAttr('aria-readonly', 'true'),
+      Scene.expect(checkbox).toHaveAttr('data-readonly', ''),
     )
   })
 

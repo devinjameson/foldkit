@@ -33,13 +33,18 @@ export type CheckboxAttributes<Message> = Readonly<{
  *    the checkbox or its label, or presses Space. Handle it in the parent's
  *    `update` by storing the value.
  *  - `toView`: receives the {@link CheckboxAttributes} and lays out the
- *    checkbox. */
+ *    checkbox.
+ *  - `isReadOnly`: prevents toggling while exposing read-only semantics with
+ *    `aria-readonly="true"` and `data-readonly`. The checkbox remains
+ *    focusable. Independent of `isDisabled`: setting both emits both
+ *    attribute sets, and either one removes the interaction handlers. */
 export type ViewConfig<Message> = Readonly<{
   id: string
   isChecked: boolean
   onToggle: (isChecked: boolean) => Message
   toView: (attributes: CheckboxAttributes<Message>) => Html
   isDisabled?: boolean
+  isReadOnly?: boolean
   isIndeterminate?: boolean
   name?: string
   value?: string
@@ -83,6 +88,7 @@ export const view = <Message>(
     onToggle,
     toView,
     isDisabled = false,
+    isReadOnly = false,
     isIndeterminate = false,
     name,
     value: formValue = 'on',
@@ -110,6 +116,12 @@ export const view = <Message>(
     ? [h.AriaDisabled(true), h.DataAttribute('disabled', '')]
     : []
 
+  const readOnlyAttributes = isReadOnly
+    ? [h.AriaReadonly(true), h.DataAttribute('readonly', '')]
+    : []
+
+  const isInteractive = !isDisabled && !isReadOnly
+
   const checkboxAttributes = [
     h.Role('checkbox'),
     h.AriaChecked(isIndeterminate ? 'mixed' : isChecked),
@@ -118,17 +130,15 @@ export const view = <Message>(
     h.Tabindex(0),
     ...resolveStateAttributes(),
     ...disabledAttributes,
-    ...(isDisabled
-      ? []
-      : [
-          h.OnClick(onToggle(nextChecked)),
-          h.OnKeyUpPreventDefault(handleKeyUp),
-        ]),
+    ...readOnlyAttributes,
+    ...(isInteractive
+      ? [h.OnClick(onToggle(nextChecked)), h.OnKeyUpPreventDefault(handleKeyUp)]
+      : []),
   ]
 
   const labelAttributes = [
     h.Id(labelId(id)),
-    ...(isDisabled ? [] : [h.OnClick(onToggle(nextChecked))]),
+    ...(isInteractive ? [h.OnClick(onToggle(nextChecked))] : []),
   ]
 
   const descriptionAttributes = [h.Id(descriptionId(id))]
