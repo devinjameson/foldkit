@@ -529,6 +529,10 @@ describe('DragAndDrop', () => {
             targetIndex: 1,
           }),
         ),
+        Story.Command.resolve(
+          FocusItem({ itemId: 'item-1' }),
+          CompletedFocusItem(),
+        ),
         Story.model(model => {
           expect(model.dragState._tag).toBe('KeyboardDragging')
           if (model.dragState._tag === 'KeyboardDragging') {
@@ -548,6 +552,10 @@ describe('DragAndDrop', () => {
             targetContainerId: 'list-2',
             targetIndex: 3,
           }),
+        ),
+        Story.Command.resolve(
+          FocusItem({ itemId: 'item-1' }),
+          CompletedFocusItem(),
         ),
         Story.model(model => {
           expect(model.dragState._tag).toBe('KeyboardDragging')
@@ -569,6 +577,10 @@ describe('DragAndDrop', () => {
             targetContainerId: 'list-2',
             targetIndex: 1,
           }),
+        ),
+        Story.Command.resolve(
+          FocusItem({ itemId: 'item-1' }),
+          CompletedFocusItem(),
         ),
         Story.message(ConfirmedKeyboardDrop()),
         Story.model(model => {
