@@ -185,7 +185,7 @@ export class CloseEvent {
 /**
  * Returns `true` when a value is a `CloseEvent`.
  *
- * @category refinements
+ * @category guards
  * @since 4.0.0
  */
 export const isCloseEvent = (u: unknown): u is CloseEvent => Predicate.hasProperty(u, CloseEventTypeId)
@@ -209,7 +209,7 @@ export const SocketErrorTypeId: SocketErrorTypeId = "~effect/socket/Socket/Socke
 /**
  * Returns `true` when a value is a `SocketError`.
  *
- * @category refinements
+ * @category guards
  * @since 4.0.0
  */
 export const isSocketError = (u: unknown): u is SocketError => Predicate.hasProperty(u, SocketErrorTypeId)
@@ -608,10 +608,19 @@ export const fromWebSocket = <RO>(
   options?: {
     readonly closeCodeIsError?: ((code: number) => boolean) | undefined
     readonly openTimeout?: Duration.Input | undefined
+    /**
+     * Replays buffered events on the first run after the socket opens and before
+     * the run's `onOpen` effect.
+     *
+     * @category options
+     * @since 4.0.0
+     */
+    readonly onInitialRun?: ((ws: globalThis.WebSocket) => ReadonlyArray<MessageEvent>) | undefined
   } | undefined
 ): Effect.Effect<Socket, never, Exclude<RO, Scope.Scope>> =>
   Effect.withFiber((fiber) => {
     let currentWS: globalThis.WebSocket | undefined
+    let initial = true
     const latch = Latch.makeUnsafe(false)
     const acquireContext = fiber.context as Context.Context<RO>
     const closeCodeIsError = options?.closeCodeIsError ?? defaultCloseCodeIsError
@@ -638,7 +647,7 @@ export const fromWebSocket = <RO>(
             )
             return run(effect)
           }
-          const result = handler(event.data)
+          const result = handler(event.data instanceof ArrayBuffer ? new Uint8Array(event.data) : event.data)
           if (Effect.isEffect(result)) {
             run(result)
           }
@@ -708,6 +717,10 @@ export const fromWebSocket = <RO>(
         open = true
         currentWS = ws
         latch.openUnsafe()
+        if (initial && options?.onInitialRun) {
+          initial = false
+          for (const event of options.onInitialRun(ws)) onMessage(event)
+        }
         if (opts?.onOpen) yield* opts.onOpen
         return yield* Effect.catchFilter(
           FiberSet.join(fiberSet),
@@ -783,7 +796,7 @@ export const layerWebSocket: (
 /**
  * Context reference for socket send queue capacity, defaulting to `16`.
  *
- * @category fiber refs
+ * @category services
  * @since 4.0.0
  */
 export const SendQueueCapacity = Context.Reference<number>("~effect/socket/Socket/SendQueueCapacity", {

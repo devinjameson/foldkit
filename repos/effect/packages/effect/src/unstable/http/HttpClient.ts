@@ -34,6 +34,7 @@ import type { EqualsWith, ExcludeTag, ExtractTag, NoExcessProperties, NoInfer, T
 import type * as RateLimiter from "../persistence/RateLimiter.ts"
 import * as Cookies from "./Cookies.ts"
 import * as Headers from "./Headers.ts"
+import * as HttpBody from "./HttpBody.ts"
 import * as Error from "./HttpClientError.ts"
 import * as HttpClientRequest from "./HttpClientRequest.ts"
 import * as HttpClientResponse from "./HttpClientResponse.ts"
@@ -257,7 +258,7 @@ export const options: (url: string | URL, options?: HttpClientRequest.Options.No
  *
  * The transformation receives both the response effect and the original request, allowing it to change success, error, and environment behavior.
  *
- * @category mapping & sequencing
+ * @category mapping
  * @since 4.0.0
  */
 export const transform: {
@@ -289,7 +290,7 @@ export const transform: {
 /**
  * Transforms a client by applying an effectful transformation to each response effect.
  *
- * @category mapping & sequencing
+ * @category mapping
  * @since 4.0.0
  */
 export const transformResponse: {
@@ -476,7 +477,7 @@ export const catchTags: {
 /**
  * Filters the result of a response, or runs an alternative effect if the predicate fails.
  *
- * @category filters
+ * @category filtering
  * @since 4.0.0
  */
 export const filterOrElse: {
@@ -521,7 +522,7 @@ export const filterOrElse: {
 /**
  * Filters successful responses, or fails with the error produced by `orFailWith` when the predicate does not match.
  *
- * @category filters
+ * @category filtering
  * @since 4.0.0
  */
 export const filterOrFail: {
@@ -548,7 +549,7 @@ export const filterOrFail: {
 /**
  * Filters responses by HTTP status code.
  *
- * @category filters
+ * @category filtering
  * @since 4.0.0
  */
 export const filterStatus: {
@@ -563,7 +564,7 @@ export const filterStatus: {
 /**
  * Filters responses that return a 2xx status code.
  *
- * @category filters
+ * @category filtering
  * @since 4.0.0
  */
 export const filterStatusOk: <E, R>(self: HttpClient.With<E, R>) => HttpClient.With<E | Error.HttpClientError, R> =
@@ -686,8 +687,10 @@ export const make = (
               span.attribute("url.query", query)
             }
             const redactedHeaderNames = fiber.getRef(Headers.CurrentRedactedNames)
+            const headerFilter = fiber.getRef(TracerHeaderFilter)
             const redactedHeaders = Headers.redact(request.headers, redactedHeaderNames)
             for (const name in redactedHeaders) {
+              if (!headerFilter(name, "request")) continue
               span.attribute(`http.request.header.${name}`, String(redactedHeaders[name]))
             }
             request = fiber.getRef(TracerPropagationEnabled)
@@ -701,6 +704,7 @@ export const make = (
                     span.attribute("http.response.status_code", response.status)
                     const redactedHeaders = Headers.redact(response.headers, redactedHeaderNames)
                     for (const name in redactedHeaders) {
+                      if (!headerFilter(name, "response")) continue
                       span.attribute(`http.response.header.${name}`, String(redactedHeaders[name]))
                     }
 
@@ -724,7 +728,7 @@ export const make = (
 /**
  * Appends a transformation of the request object before sending it.
  *
- * @category mapping & sequencing
+ * @category mapping
  * @since 4.0.0
  */
 export const mapRequest: {
@@ -746,7 +750,7 @@ export const mapRequest: {
 /**
  * Appends an effectful transformation of the request object before sending it.
  *
- * @category mapping & sequencing
+ * @category mapping
  * @since 4.0.0
  */
 export const mapRequestEffect: {
@@ -769,7 +773,7 @@ export const mapRequestEffect: {
 /**
  * Prepends a transformation of the request object before sending it.
  *
- * @category mapping & sequencing
+ * @category mapping
  * @since 4.0.0
  */
 export const mapRequestInput: {
@@ -791,7 +795,7 @@ export const mapRequestInput: {
 /**
  * Prepends an effectful transformation of the request object before sending it.
  *
- * @category mapping & sequencing
+ * @category mapping
  * @since 4.0.0
  */
 export const mapRequestInputEffect: {
@@ -1322,7 +1326,7 @@ const getHeader = (headers: Headers.Headers, ...keys: Array<string>): string | u
 /**
  * Performs an additional effect after a successful request.
  *
- * @category mapping & sequencing
+ * @category sequencing
  * @since 4.0.0
  */
 export const tap: {
@@ -1344,7 +1348,7 @@ export const tap: {
 /**
  * Performs an additional effect after an unsuccessful request.
  *
- * @category mapping & sequencing
+ * @category sequencing
  * @since 4.0.0
  */
 export const tapError: {
@@ -1366,7 +1370,7 @@ export const tapError: {
 /**
  * Performs an additional effect on the request before sending it.
  *
- * @category mapping & sequencing
+ * @category sequencing
  * @since 4.0.0
  */
 export const tapRequest: {
@@ -1466,17 +1470,29 @@ export const followRedirects: {
       ): Effect.Effect<HttpClientResponse.HttpClientResponse, E, R> =>
         Effect.flatMap(
           self.postprocess(Effect.succeed(request)),
-          (response) =>
-            response.status >= 300 && response.status < 400 && response.headers.location &&
-              redirects < (maxRedirects ?? 10)
-              ? loop(
-                HttpClientRequest.setUrl(
-                  request,
-                  new URL(response.headers.location, response.request.url)
-                ),
-                redirects + 1
-              )
-              : Effect.succeed(response)
+          (response) => {
+            if (
+              response.status < 300 || response.status >= 400 || !response.headers.location ||
+              redirects >= (maxRedirects ?? 10)
+            ) {
+              return Effect.succeed(response)
+            }
+            const url = new URL(response.headers.location, response.request.url)
+            let nextRequest = request
+            if (
+              ((response.status === 301 || response.status === 302) && request.method === "POST") ||
+              (response.status === 303 && request.method !== "GET" && request.method !== "HEAD")
+            ) {
+              nextRequest = HttpClientRequest.setMethod(nextRequest, "GET")
+              nextRequest = HttpClientRequest.setBody(nextRequest, HttpBody.empty)
+            }
+            if (url.origin !== new URL(response.request.url).origin) {
+              nextRequest = HttpClientRequest.removeHeader(nextRequest, "authorization")
+              nextRequest = HttpClientRequest.removeHeader(nextRequest, "proxy-authorization")
+              nextRequest = HttpClientRequest.removeHeader(nextRequest, "cookie")
+            }
+            return loop(HttpClientRequest.setUrl(nextRequest, url), redirects + 1)
+          }
         )
       return Effect.flatMap(request, (request) => loop(request, 0))
     },
@@ -1486,7 +1502,7 @@ export const followRedirects: {
 /**
  * Context reference for a predicate that disables client-side tracing for matching outgoing requests.
  *
- * @category references
+ * @category services
  * @since 4.0.0
  */
 export const TracerDisabledWhen = Context.Reference<
@@ -1496,9 +1512,21 @@ export const TracerDisabledWhen = Context.Reference<
 })
 
 /**
+ * Context reference for filtering request and response headers added to client spans.
+ *
+ * @category services
+ * @since 4.0.0
+ */
+export const TracerHeaderFilter = Context.Reference<
+  (headerName: string, phase: "request" | "response") => boolean
+>("effect/http/HttpClient/TracerHeaderFilter", {
+  defaultValue: () => constTrue
+})
+
+/**
  * Context reference that controls whether outgoing client spans are propagated to request headers.
  *
- * @category references
+ * @category services
  * @since 4.0.0
  */
 export const TracerPropagationEnabled = Context.Reference<boolean>("effect/HttpClient/TracerPropagationEnabled", {
@@ -1508,7 +1536,7 @@ export const TracerPropagationEnabled = Context.Reference<boolean>("effect/HttpC
 /**
  * Context reference for generating the span name used for outgoing client request spans.
  *
- * @category references
+ * @category services
  * @since 4.0.0
  */
 export const SpanNameGenerator = Context.Reference<

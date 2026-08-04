@@ -29,7 +29,7 @@ const clientErrors = [
  *
  * **Example** (Deriving RPC endpoints from an entity)
  *
- * ```ts
+ * ```ts import.meta.vitest
  * import { Layer, Schema } from "effect"
  * import { ClusterSchema, Entity, EntityProxy, EntityProxyServer } from "effect/unstable/cluster"
  * import { Rpc, RpcServer } from "effect/unstable/rpc"
@@ -50,6 +50,7 @@ const clientErrors = [
  * const RpcServerLayer = RpcServer.layer(MyRpcs).pipe(
  *   Layer.provide(EntityProxyServer.layerRpcHandlers(Counter))
  * )
+ * const result = [MyRpcs.requests.size, Layer.isLayer(RpcServerLayer)] // => [2, true]
  * ```
  *
  * @category constructors
@@ -147,7 +148,7 @@ const entityIdPath = {
  *
  * **Example** (Deriving HTTP API endpoints from an entity)
  *
- * ```ts
+ * ```ts import.meta.vitest
  * import { Layer, Schema } from "effect"
  * import { ClusterSchema, Entity, EntityProxy, EntityProxyServer } from "effect/unstable/cluster"
  * import { HttpApi, HttpApiBuilder } from "effect/unstable/httpapi"
@@ -175,6 +176,7 @@ const entityIdPath = {
  * const ApiLayer = HttpApiBuilder.layer(MyApi).pipe(
  *   Layer.provide(EntityProxyServer.layerHttpApi(MyApi, "counter", Counter))
  * )
+ * const result = [Object.keys(MyApi.groups.counter.endpoints).length, Layer.isLayer(ApiLayer)] // => [2, true]
  * ```
  *
  * @category constructors

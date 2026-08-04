@@ -32,11 +32,10 @@ import type { Apply, Lambda } from "./Struct.ts"
  *
  * **Example** (Creating a tuple)
  *
- * ```ts
+ * ```ts import.meta.vitest
  * import { Tuple } from "effect"
  *
- * const point = Tuple.make(10, 20, "red")
- * console.log(point) // [10, 20, "red"]
+ * Tuple.make(10, 20, "red") // => [10, 20, "red"]
  * ```
  *
  * @see {@link get} – access a single element by index
@@ -61,11 +60,10 @@ type Indices<T extends ReadonlyArray<unknown>> = Exclude<Partial<T>["length"], T
  *
  * **Example** (Extracting an element by index)
  *
- * ```ts
+ * ```ts import.meta.vitest
  * import { pipe, Tuple } from "effect"
  *
- * const last = pipe(Tuple.make(1, true, "hello"), Tuple.get(2))
- * console.log(last) // "hello"
+ * pipe(Tuple.make(1, true, "hello"), Tuple.get(2)) // => "hello"
  * ```
  *
  * @see {@link make} – create a tuple
@@ -107,11 +105,10 @@ type PickTuple<T extends ReadonlyArray<unknown>, K> = _BuildTuple<T, K>
  *
  * **Example** (Selecting elements by index)
  *
- * ```ts
+ * ```ts import.meta.vitest
  * import { Tuple } from "effect"
  *
- * const result = Tuple.pick(["a", "b", "c", "d"], [0, 2, 3])
- * console.log(result) // ["a", "c", "d"]
+ * Tuple.pick(["a", "b", "c", "d"], [0, 2, 3]) // => ["a", "c", "d"]
  * ```
  *
  * @see {@link omit} – the inverse (exclude indices instead)
@@ -152,11 +149,10 @@ type OmitTuple<T extends ReadonlyArray<unknown>, K> = _BuildTuple<T, Exclude<Ind
  *
  * **Example** (Removing elements by index)
  *
- * ```ts
+ * ```ts import.meta.vitest
  * import { Tuple } from "effect"
  *
- * const result = Tuple.omit(["a", "b", "c", "d"], [1, 3])
- * console.log(result) // ["a", "c"]
+ * Tuple.omit(["a", "b", "c", "d"], [1, 3]) // => ["a", "c"]
  * ```
  *
  * @see {@link pick} – the inverse (keep only specified indices)
@@ -196,11 +192,10 @@ export const omit: {
  *
  * **Example** (Appending an element)
  *
- * ```ts
+ * ```ts import.meta.vitest
  * import { pipe, Tuple } from "effect"
  *
- * const result = pipe(Tuple.make(1, 2), Tuple.appendElement("end"))
- * console.log(result) // [1, 2, "end"]
+ * pipe(Tuple.make(1, 2), Tuple.appendElement("end")) // => [1, 2, "end"]
  * ```
  *
  * @see {@link appendElements} – append multiple elements (another tuple)
@@ -226,11 +221,10 @@ export const appendElement: {
  *
  * **Example** (Concatenating tuples)
  *
- * ```ts
+ * ```ts import.meta.vitest
  * import { pipe, Tuple } from "effect"
  *
- * const result = pipe(Tuple.make(1, 2), Tuple.appendElements(["a", "b"] as const))
- * console.log(result) // [1, 2, "a", "b"]
+ * pipe(Tuple.make(1, 2), Tuple.appendElements(["a", "b"] as const)) // => [1, 2, "a", "b"]
  * ```
  *
  * @see {@link appendElement} – append a single element
@@ -270,17 +264,16 @@ type Evolved<T, E> = { [I in keyof T]: I extends keyof E ? (E[I] extends (...a: 
  *
  * **Example** (Transforming selected elements)
  *
- * ```ts
+ * ```ts import.meta.vitest
  * import { pipe, Tuple } from "effect"
  *
- * const result = pipe(
+ * pipe(
  *   Tuple.make("hello", 42, true),
  *   Tuple.evolve([
  *     (s) => s.toUpperCase(),
  *     (n) => n * 2
  *   ])
- * )
- * console.log(result) // ["HELLO", 84, true]
+ * ) // => ["HELLO", 84, true]
  * ```
  *
  * @see {@link map} – apply the same transformation to all elements
@@ -317,18 +310,17 @@ export const evolve: {
  *
  * **Example** (Swapping elements)
  *
- * ```ts
+ * ```ts import.meta.vitest
  * import { pipe, Tuple } from "effect"
  *
- * const result = pipe(
+ * pipe(
  *   Tuple.make("a", "b", "c"),
  *   Tuple.renameIndices(["2", "1", "0"])
- * )
- * console.log(result) // ["c", "b", "a"]
+ * ) // => ["c", "b", "a"]
  * ```
  *
  * @see {@link evolve} – transform element values instead of positions
- * @category Index utilities
+ * @category transforming
  * @since 4.0.0
  */
 export const renameIndices: {
@@ -367,7 +359,7 @@ export const renameIndices: {
  *
  * **Example** (Wrapping every element in an array)
  *
- * ```ts
+ * ```ts import.meta.vitest
  * import { pipe, Struct, Tuple } from "effect"
  *
  * interface AsArray extends Struct.Lambda {
@@ -376,8 +368,7 @@ export const renameIndices: {
  * }
  *
  * const asArray = Struct.lambda<AsArray>((a) => [a])
- * const result = pipe(Tuple.make(1, "hello", true), Tuple.map(asArray))
- * console.log(result) // [[1], ["hello"], [true]]
+ * pipe(Tuple.make(1, "hello", true), Tuple.map(asArray)) // => [[1], ["hello"], [true]]
  * ```
  *
  * @see {@link mapPick} – apply a lambda only to selected indices
@@ -414,7 +405,7 @@ export const map: {
  *
  * **Example** (Wrapping only selected elements in arrays)
  *
- * ```ts
+ * ```ts import.meta.vitest
  * import { pipe, Struct, Tuple } from "effect"
  *
  * interface AsArray extends Struct.Lambda {
@@ -423,11 +414,10 @@ export const map: {
  * }
  *
  * const asArray = Struct.lambda<AsArray>((a) => [a])
- * const result = pipe(
+ * pipe(
  *   Tuple.make(1, "hello", true),
  *   Tuple.mapPick([0, 2], asArray)
- * )
- * console.log(result) // [[1], "hello", [true]]
+ * ) // => [[1], "hello", [true]]
  * ```
  *
  * @see {@link map} – apply a lambda to all elements
@@ -470,7 +460,7 @@ export const mapPick: {
  *
  * **Example** (Wrapping all elements except one in arrays)
  *
- * ```ts
+ * ```ts import.meta.vitest
  * import { pipe, Struct, Tuple } from "effect"
  *
  * interface AsArray extends Struct.Lambda {
@@ -479,11 +469,10 @@ export const mapPick: {
  * }
  *
  * const asArray = Struct.lambda<AsArray>((a) => [a])
- * const result = pipe(
+ * pipe(
  *   Tuple.make(1, "hello", true),
  *   Tuple.mapOmit([1], asArray)
- * )
- * console.log(result) // [[1], "hello", [true]]
+ * ) // => [[1], "hello", [true]]
  * ```
  *
  * @see {@link map} – apply a lambda to all elements
@@ -530,7 +519,7 @@ export const mapOmit: {
  *
  * **Example** (Comparing tuples for equivalence)
  *
- * ```ts
+ * ```ts import.meta.vitest
  * import { Equivalence, Tuple } from "effect"
  *
  * const eq = Tuple.makeEquivalence([
@@ -538,8 +527,8 @@ export const mapOmit: {
  *   Equivalence.strictEqual<number>()
  * ])
  *
- * console.log(eq(["Alice", 30], ["Alice", 30])) // true
- * console.log(eq(["Alice", 30], ["Bob", 30]))   // false
+ * eq(["Alice", 30], ["Alice", 30]) // => true
+ * eq(["Alice", 30], ["Bob", 30]) // => false
  * ```
  *
  * @see {@link makeOrder} – create an `Order` for tuples
@@ -564,13 +553,13 @@ export const makeEquivalence = Equivalence.Tuple
  *
  * **Example** (Ordering tuples)
  *
- * ```ts
+ * ```ts import.meta.vitest
  * import { Number, String, Tuple } from "effect"
  *
  * const ord = Tuple.makeOrder([String.Order, Number.Order])
  *
- * console.log(ord(["Alice", 30], ["Bob", 25]))   // -1
- * console.log(ord(["Alice", 30], ["Alice", 30])) // 0
+ * ord(["Alice", 30], ["Bob", 25]) // => -1
+ * ord(["Alice", 30], ["Alice", 30]) // => 0
  * ```
  *
  * @see {@link makeEquivalence} – create an `Equivalence` for tuples
@@ -600,13 +589,12 @@ export {
    *
    * **Example** (Checking exact length)
    *
-   * ```ts
+   * ```ts import.meta.vitest
    * import { Tuple } from "effect"
    *
    * const arr: Array<number> = [1, 2, 3]
    * if (Tuple.isTupleOf(arr, 3)) {
-   *   console.log(arr)
-   *   // ^? [number, number, number]
+   *   arr // => [1, 2, 3]
    * }
    * ```
    *
@@ -635,13 +623,12 @@ export {
    *
    * **Example** (Checking minimum length)
    *
-   * ```ts
+   * ```ts import.meta.vitest
    * import { Tuple } from "effect"
    *
    * const arr: Array<number> = [1, 2, 3, 4]
    * if (Tuple.isTupleOfAtLeast(arr, 3)) {
-   *   console.log(arr)
-   *   // ^? [number, number, number, ...number[]]
+   *   arr // => [1, 2, 3, 4]
    * }
    * ```
    *
@@ -664,7 +651,7 @@ export {
  *
  * **Example** (Combining tuple elements)
  *
- * ```ts
+ * ```ts import.meta.vitest
  * import { Number, String, Tuple } from "effect"
  *
  * const C = Tuple.makeCombiner<readonly [number, string]>([
@@ -672,8 +659,7 @@ export {
  *   String.ReducerConcat
  * ])
  *
- * const result = C.combine([1, "hello"], [2, " world"])
- * console.log(result) // [3, "hello world"]
+ * C.combine([1, "hello"], [2, " world"]) // => [3, "hello world"]
  * ```
  *
  * @see {@link makeReducer} – like `makeCombiner` but with an initial value
@@ -705,7 +691,7 @@ export function makeCombiner<A extends ReadonlyArray<unknown>>(
  *
  * **Example** (Reducing a collection of tuples)
  *
- * ```ts
+ * ```ts import.meta.vitest
  * import { Number, String, Tuple } from "effect"
  *
  * const R = Tuple.makeReducer<readonly [number, string]>([
@@ -713,12 +699,11 @@ export function makeCombiner<A extends ReadonlyArray<unknown>>(
  *   String.ReducerConcat
  * ])
  *
- * const result = R.combineAll([
+ * R.combineAll([
  *   [1, "a"],
  *   [2, "b"],
  *   [3, "c"]
- * ])
- * console.log(result) // [6, "abc"]
+ * ]) // => [6, "abc"]
  * ```
  *
  * @see {@link makeCombiner} – like `makeReducer` but without an initial value
