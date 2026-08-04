@@ -175,6 +175,12 @@ describe('update', () => {
         givenInitial,
         message(
           GotStepMenuMessage({
+            message: Menu.Opened({ maybeActiveItemIndex: Option.none() }),
+          }),
+        ),
+        Command.resolve(Menu.FocusItems, Menu.CompletedFocusItems()),
+        message(
+          GotStepMenuMessage({
             message: Menu.SelectedItem({ index: 5, item: 'Attachments' }),
           }),
         ),

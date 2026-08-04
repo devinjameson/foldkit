@@ -39,6 +39,7 @@ import {
   RestoreInert,
   ScrollIntoView,
   Searched,
+  Selected,
   SelectedItem,
   UnlockScroll,
   buttonId,
@@ -233,6 +234,19 @@ describe('Menu', () => {
               Option.none(),
             )
             expect(model.maybePointerOrigin).toStrictEqual(Option.none())
+          }),
+        )
+      })
+
+      it('returns no Command and no OutMessage when already closed', () => {
+        Story.story(
+          update,
+          givenClosed,
+          Story.message(Closed()),
+          Story.expectNoOutMessage(),
+          Story.Command.expectNone(),
+          Story.model(model => {
+            expect(model.isOpen).toBe(false)
           }),
         )
       })
@@ -739,6 +753,19 @@ describe('Menu', () => {
           }),
         )
       })
+
+      it('returns no Command when an item is selected while already closed', () => {
+        Story.story(
+          update,
+          givenClosed,
+          Story.message(SelectedItem({ index: 2, item: 'item-2' })),
+          Story.expectOutMessage(Selected({ value: 'item-2', index: 2 })),
+          Story.Command.expectNone(),
+          Story.model(model => {
+            expect(model.isOpen).toBe(false)
+          }),
+        )
+      })
     })
 
     describe('RequestedItemClick', () => {
@@ -985,6 +1012,20 @@ describe('Menu', () => {
       })
 
       describe('leave flow', () => {
+        it('starts no leave cascade on Closed when already closed', () => {
+          Story.story(
+            update,
+            givenClosedAnimated,
+            Story.message(Closed()),
+            Story.expectNoOutMessage(),
+            Story.Command.expectNone(),
+            Story.model(model => {
+              expect(model.isOpen).toBe(false)
+              expect(model.animation.transitionState).toBe('Idle')
+            }),
+          )
+        })
+
         it('sets LeaveStart on Closed', () => {
           Story.story(
             update,
@@ -1231,6 +1272,19 @@ describe('Menu', () => {
       )
     })
 
+    it('emits no Commands on Closed when already closed in modal mode', () => {
+      Story.story(
+        update,
+        givenClosedModal,
+        Story.message(Closed()),
+        Story.expectNoOutMessage(),
+        Story.Command.expectNone(),
+        Story.model(model => {
+          expect(model.isOpen).toBe(false)
+        }),
+      )
+    })
+
     it('emits unlockScroll and restoreInert commands when the items container blurs in modal mode', () => {
       Story.story(
         update,
@@ -1240,6 +1294,19 @@ describe('Menu', () => {
           [UnlockScroll, CompletedUnlockScroll()],
           [RestoreInert, CompletedRestoreInert()],
         ),
+        Story.model(model => {
+          expect(model.isOpen).toBe(false)
+        }),
+      )
+    })
+
+    it('emits no Commands when the items container blurs on a closed menu in modal mode', () => {
+      Story.story(
+        update,
+        givenClosedModal,
+        Story.message(BlurredItems()),
+        Story.expectNoOutMessage(),
+        Story.Command.expectNone(),
         Story.model(model => {
           expect(model.isOpen).toBe(false)
         }),
