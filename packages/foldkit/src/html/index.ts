@@ -804,7 +804,7 @@ export type Attribute<Message> = Data.TaggedEnum<{
   Prop: { readonly key: string; readonly value: unknown }
   OnCustomEvent: {
     readonly name: string
-    readonly f: (event: CustomEvent<any>) => Message
+    readonly f: (event: CustomEvent<unknown>) => Option.Option<Message>
   }
   OnMount: {
     readonly action: MountAction<Message, any>
@@ -2057,11 +2057,14 @@ const attributeHandlers: AttributeHandlers = {
   PreserveAspectRatio: ({ value }, ctx: BuildContext) =>
     setDataAttr(ctx, 'preserveAspectRatio', value),
   Prop: ({ key, value }, ctx: BuildContext) => setDataProp(ctx, key, value),
-  OnCustomEvent: ({ name, f: toMessage }, ctx: BuildContext) =>
+  OnCustomEvent: ({ name, f: toMaybeMessage }, ctx: BuildContext) =>
     updateDataOn(ctx, {
       [name]: (event: Event) => {
         if (event instanceof CustomEvent) {
-          ctx.dispatch(toMessage(event))
+          const maybeMessage = toMaybeMessage(event)
+          if (Option.isSome(maybeMessage)) {
+            ctx.dispatch(maybeMessage.value)
+          }
         }
       },
     }),

@@ -1,5 +1,5 @@
 import { Context, Effect, Schema as S } from 'effect'
-import { expect } from 'vitest'
+import { expect, vi } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
 
@@ -150,6 +150,83 @@ describe('CustomElement.define', () => {
       RatingChanged({ value: 5 }),
       RatingCleared(),
     ])
+  })
+
+  it('decodes the event detail against the declared Schema before the callback runs', () => {
+    const spec = CustomElement.define({
+      tag: 'fk-decoding-rating',
+      properties: {},
+      events: { 'change-rating': S.Struct({ value: S.Number }) },
+    })
+    const rating = spec.withMessage(__htmlBuilder<Message>())
+    const { dispatch, dispatched } = createCapturingDispatch()
+
+    const received: Array<unknown> = []
+    const view = () =>
+      rating([
+        rating.OnChangeRating(detail => {
+          received.push(detail)
+          return RatingChanged({ value: detail.value })
+        }),
+      ])
+    const element = patchInto(renderView(view, dispatch))
+
+    element.dispatchEvent(
+      new CustomEvent('change-rating', {
+        detail: { value: 5, undeclared: 'dropped' },
+      }),
+    )
+
+    expect(received).toStrictEqual([{ value: 5 }])
+    expect(dispatched).toStrictEqual([RatingChanged({ value: 5 })])
+  })
+
+  it('dispatches no Message when the event detail fails to decode', () => {
+    const spec = CustomElement.define({
+      tag: 'fk-rejecting-rating',
+      properties: {},
+      events: { 'change-rating': S.Struct({ value: S.Number }) },
+    })
+    const rating = spec.withMessage(__htmlBuilder<Message>())
+    const { dispatch, dispatched } = createCapturingDispatch()
+
+    const view = () =>
+      rating([
+        rating.OnChangeRating(detail => RatingChanged({ value: detail.value })),
+      ])
+    const element = patchInto(renderView(view, dispatch))
+
+    const reported: Array<unknown> = []
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation((...args) => {
+        reported.push(args.at(0))
+      })
+    try {
+      element.dispatchEvent(
+        new CustomEvent('change-rating', { detail: { value: 'five' } }),
+      )
+    } finally {
+      consoleError.mockRestore()
+    }
+
+    expect(dispatched).toStrictEqual([])
+    expect(reported).toHaveLength(1)
+    expect(String(reported.at(0))).toContain(
+      `CustomElement 'fk-rejecting-rating' rejected the detail of a "change-rating" event`,
+    )
+  })
+
+  it('decodes a payload-less event, whose detail the DOM leaves as null', () => {
+    const rating = emojiRating.withMessage(__htmlBuilder<Message>())
+    const { dispatch, dispatched } = createCapturingDispatch()
+
+    const view = () => rating([rating.OnClearRating(() => RatingCleared())])
+    const element = patchInto(renderView(view, dispatch))
+
+    element.dispatchEvent(new CustomEvent('clear-rating'))
+
+    expect(dispatched).toStrictEqual([RatingCleared()])
   })
 
   it('preserves property updates across renders via the propsModule diff', () => {

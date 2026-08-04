@@ -15,7 +15,7 @@ import { dual } from 'effect/Function'
 import type { CommandDefinition } from '../command/index.js'
 import type * as Interruptible from '../command/interruptible/index.js'
 import { kebabToPascal } from '../customElement/index.js'
-import type { CustomElementSpec } from '../customElement/index.js'
+import type { CustomElementSpec, EventSchema } from '../customElement/index.js'
 import type { File } from '../file/index.js'
 import type { FoldkitMountMarker } from '../html/index.js'
 import {
@@ -1096,19 +1096,21 @@ const releaseManagedResource =
   }
 
 /** Dispatches a CustomEvent a rendered custom element declares, feeding the
- *  Message its `On*` event mapping produces through update. The event name
- *  and detail are typed by the spec's event Schemas. The element must be in
- *  the rendered tree with the event's attribute attached, so the test
- *  exercises the same mapping the browser event would. */
+ *  Message its `On*` event mapping produces through update. The event name is
+ *  typed by the spec's event Schemas, and the detail takes each Schema's
+ *  encoded shape, matching what a real element puts on the event before the
+ *  runtime decodes it. The element must be in the rendered tree with the
+ *  event's attribute attached, so the test exercises the same mapping and the
+ *  same decode the browser event would. */
 const emitCustomElementEvent =
   <
-    Events extends Record<string, Schema.Top>,
+    Events extends Record<string, EventSchema>,
     Name extends keyof Events & string,
   >(
     spec: CustomElementSpec<string, Record<string, Schema.Top>, Events>,
     target: string | Locator,
     eventName: Name,
-    detail: Schema.Schema.Type<Events[Name]>,
+    detail: Schema.Codec.Encoded<Events[Name]>,
   ) =>
   <Model, Message, OutMessage = undefined>(
     simulation: SceneSimulation<Model, Message, OutMessage>,
@@ -1147,10 +1149,7 @@ const emitCustomElementEvent =
     // NOTE: the OnCustomEvent handler only dispatches when the event is a
     // real CustomEvent instance, so the synthetic event must be constructed
     // with `new CustomEvent(...)`, never a plain object literal like the
-    // other interaction helpers use. A None capture means nothing was
-    // dispatched, and since the handler dispatches unconditionally for a
-    // genuine CustomEvent, that can only be the instanceof check failing
-    // (a CustomEvent realm mismatch in the test environment).
+    // other interaction helpers use.
     const maybeNext = maybeCaptureFromElement(
       simulation,
       element,
@@ -1166,7 +1165,7 @@ const emitCustomElementEvent =
       () =>
         new Error(
           `I dispatched "${eventName}" on the element matching ${description} but its handler produced no Message.\n\n` +
-            "The OnCustomEvent handler only dispatches for CustomEvent instances, so the synthetic event failed the runtime's instanceof check. This points to a CustomEvent realm mismatch in the test environment.",
+            `The detail failed to decode against the Schema '${spec.tag}' declares for "${eventName}", so the handler dispatched nothing. Check the console for the decode error, and check that the detail this step passes matches the declared Schema's encoded shape.`,
         ),
     )
   }
