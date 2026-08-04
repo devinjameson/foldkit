@@ -481,9 +481,9 @@ export const PortalPopoverBackdrop = Mount.define(
 export const open = (model: Model): UpdateReturn =>
   update(model, RequestedOpen())
 
-/** Programmatically closes the popover. When it was open, updates the model
- *  and returns focus and modal commands plus a `Closed` OutMessage. When it
- *  was already closed, it is a no-op: no commands and no OutMessage. */
+/** Programmatically closes the popover. When it was open, updates the Model
+ *  and returns focus and modal Commands plus a `Closed` OutMessage. When it
+ *  was already closed, it is a no-op: no Commands and no OutMessage. */
 export const close = (model: Model): UpdateReturn =>
   update(model, RequestedClose())
 

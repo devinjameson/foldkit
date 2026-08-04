@@ -133,7 +133,7 @@ describe('Popover', () => {
         )
       })
 
-      it('returns no command and no OutMessage when already closed', () => {
+      it('returns no Command and no OutMessage when already closed', () => {
         Story.story(
           update,
           givenClosed,
@@ -570,7 +570,7 @@ describe('Popover', () => {
       )
     })
 
-    it('emits no commands on RequestedClose when already closed in modal mode', () => {
+    it('emits no Commands on RequestedClose when already closed in modal mode', () => {
       Story.story(
         update,
         givenClosedModal,
@@ -598,7 +598,7 @@ describe('Popover', () => {
       )
     })
 
-    it('emits no commands when the panel blurs on a closed popover in modal mode', () => {
+    it('emits no Commands when the panel blurs on a closed popover in modal mode', () => {
       Story.story(
         update,
         givenClosedModal,
