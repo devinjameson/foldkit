@@ -1,5 +1,48 @@
 # @foldkit/ui
 
+## 0.139.0
+
+### Minor Changes
+
+- c4822d9: Add `isReadOnly` to Checkbox's `ViewConfig`.
+
+  A read-only Checkbox emits `aria-readonly="true"` and `data-readonly`, remains focusable, and omits its click and Space handlers. `isReadOnly` and `isDisabled` are independent, and either one removes the interaction handlers.
+
+  Thanks @wmaurer!
+
+### Patch Changes
+
+- aa1c805: Preserve focus on a draggable item after each keyboard move. Moving a lifted item re-renders it at its next position and can replace or detach the focused element, which previously left focus on the document body until the drag was dropped or cancelled. DragAndDrop now focuses the item again after resolving every keyboard move, matching its existing drop and cancel behavior.
+
+  Thanks @artile!
+
+- c947f47: Bump Effect to `4.0.0-beta.103` (from `4.0.0-beta.102`). Foldkit's peer dependencies now require `effect@4.0.0-beta.103` and `@effect/platform-browser@4.0.0-beta.103`.
+
+  Pin your Effect packages to `4.0.0-beta.103` to match this release. While Effect v4 is in beta, pin the exact version rather than a range:
+
+  ```sh
+  pnpm add effect@4.0.0-beta.103 @effect/platform-browser@4.0.0-beta.103
+  pnpm add -D @effect/vitest@4.0.0-beta.103
+  ```
+
+  `SchemaIssue.InvalidValue` dropped its `actual` argument in this Effect release and now takes annotations as its only argument. Decode failures for `CalendarDateFromIsoString` and `Url` are migrated to the new signature and carry their detail on the `message` annotation, which is the key the default formatter reads. Those two failures previously passed their detail as `description`, which the formatter ignored, so the messages now read as intended instead of falling back to a generic one. If you construct `SchemaIssue.InvalidValue` in your own schemas, drop the leading `Option` argument and move any detail to `message`.
+
+- d50f8a5: Closing an already-closed Menu or Listbox no longer returns Commands. `closeMenu` and `closeListbox` had no open check, so `Closed` on a closed component returned `FocusButton` and focus jumped to a trigger whose panel was never open. A modal Menu or Listbox also returned `UnlockScroll` and `RestoreInert` for a scroll lock and an inert tree it never applied, the same pair leaked when the items container blurred while closed, and an animated component started a leave cascade for a panel that was not showing. Popover and Dialog already treat closing a closed Model as a no-op, and this brings Menu and Listbox in line with them.
+
+  An open Menu or Listbox is unchanged. It still returns `FocusButton`, still returns the modal Commands when `isModal` is set, still emits `Selected` on selection, and an animated one still runs its full leave cascade.
+
+  `SelectedItem` on a closed Menu or single-select Listbox still emits the `Selected` OutMessage. Selection is independent of the open-state transition: programmatic selection has no open precondition, and multi-select Listbox also emits while closed. This fix changes only the leaked Commands.
+
+  Thanks @artile!
+
+- f639d3f: Closing an already-closed Popover no longer returns Commands. `RequestedClose` on a closed Popover returned the caller's Commands unchanged, so `FocusButton` survived and focus jumped to a trigger whose panel was never open. A modal Popover also returned `UnlockScroll` and `RestoreInert` for a scroll lock and an inert tree it never applied, and the same leak reached `BlurredPanel`. The docs already described `Popover.close` on a closed Model as a no-op, and Dialog already behaves that way, so this brings the code in line with both.
+
+  An open Popover is unchanged. It still returns `FocusButton`, still returns the modal Commands when `isModal` is set, still emits `Closed`, and an animated Popover still runs its full leave cascade. Only the already-closed path changed, and it now returns no Commands and no OutMessage, matching `RequestedOpen` on an already-open Popover.
+
+  DatePicker picks this up for free, since its `Closed` Message delegates to `Popover.close`.
+
+  Thanks @artile!
+
 ## 0.138.0
 
 ### Minor Changes

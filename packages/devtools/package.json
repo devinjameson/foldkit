@@ -1,6 +1,6 @@
 {
   "name": "@foldkit/devtools",
-  "version": "0.138.0",
+  "version": "0.139.0",
   "description": "In-browser DevTools overlay for Foldkit applications",
   "type": "module",
   "exports": {
