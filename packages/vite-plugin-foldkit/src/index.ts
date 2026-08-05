@@ -43,9 +43,11 @@ import type {
 import { type WebSocket, WebSocketServer } from 'ws'
 
 import { devToolsOverlayPlugin } from './devToolsOverlay.js'
+import { type FoldkitSsrOptions, foldkitSsr } from './ssr.js'
 import { foldkitViewIdentity } from './viewIdentity.js'
 
 export { type BrandDistResult, brandDistDirectory } from './brandDist.js'
+export { type FoldkitSsrOptions, foldkitSsr } from './ssr.js'
 export {
   type ViewIdentityTransformResult,
   foldkitViewIdentity,
@@ -61,6 +63,13 @@ export type FoldkitPluginOptions = Readonly<{
    * the Foldkit DevTools MCP server.
    */
   devToolsMcpPort?: number
+  /**
+   * Serve server-rendered pages from the Vite dev server. When set, `vite`
+   * passes HTML navigations that fall through Vite, plus non-GET requests, to
+   * `renderPage` from the module at `ssr.serverEntry`. When `undefined` (the
+   * default), the dev server serves the client entry only.
+   */
+  ssr?: FoldkitSsrOptions
 }>
 
 // NOTE: Vite's dep optimizer scans the consumer's source for `effect`
@@ -720,5 +729,12 @@ export const foldkit = (options: FoldkitPluginOptions = {}): Array<Plugin> => {
     },
   }
 
-  return [foldkitViewIdentity(), devToolsOverlayPlugin(), hmrPlugin]
+  return options.ssr === undefined
+    ? [foldkitViewIdentity(), devToolsOverlayPlugin(), hmrPlugin]
+    : [
+        foldkitViewIdentity(),
+        devToolsOverlayPlugin(),
+        hmrPlugin,
+        foldkitSsr(options.ssr),
+      ]
 }

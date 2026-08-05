@@ -863,7 +863,10 @@ const playgroundShellFallbackPlugin = (): Plugin => ({
 export default defineConfig({
   plugins: [
     tailwindcss(),
-    foldkit({ devToolsMcpPort: 9988 }),
+    foldkit({
+      devToolsMcpPort: 9988,
+      ssr: { serverEntry: '/src/entry.server.ts' },
+    }),
     markdown({ islands: islandAttributes }),
     embeddedExampleRedirectPlugin(),
     playgroundIsolationHeadersPlugin(),
