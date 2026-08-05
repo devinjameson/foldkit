@@ -52,7 +52,11 @@ const EXPECTED_SKIP_EXTENSIONS = new Set([
 ])
 const EXCLUDED_DIRECTORIES = new Set(['node_modules', 'dist'])
 
-const RUNTIME_DEV_DEPENDENCIES = new Set(['@foldkit/vite-plugin', 'vite'])
+const RUNTIME_DEV_DEPENDENCIES = new Set([
+  '@foldkit/devtools',
+  '@foldkit/vite-plugin',
+  'vite',
+])
 
 // NOTE: vite 8 bundles rolldown, whose wasm binding crashes in the WebContainer
 // ("RangeError: Invalid atomic access index" out of @emnapi's atomics). Pin the

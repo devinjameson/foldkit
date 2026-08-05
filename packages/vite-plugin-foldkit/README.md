@@ -53,6 +53,12 @@ The plugin uses Vite's WebSocket connection to communicate between the dev serve
 
 Model is preserved across hot reloads but cleared on manual browser refreshes, giving you control over when to reset your app.
 
+## DevTools overlay
+
+When `@foldkit/devtools` is installed as a development dependency, the plugin mounts its overlay automatically during development and leaves it out of production builds. No application import or `devTools.overlay` field is needed.
+
+To include the overlay in production, list `@foldkit/devtools` in regular `dependencies` and set `devTools.show` to `'Always'`. Dependency placement controls whether Vite includes the overlay, and `show` controls whether the Foldkit runtime mounts it.
+
 ## DevTools MCP relay
 
 Pass `devToolsMcpPort` to enable the relay that exposes your running Foldkit app to AI agents via the [`@foldkit/devtools-mcp`](https://www.npmjs.com/package/@foldkit/devtools-mcp) MCP server:

@@ -4,7 +4,6 @@ import { Html, HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
-import { overlay } from '@foldkit/devtools'
 import { Button } from '@foldkit/ui'
 
 // MODEL
@@ -147,7 +146,6 @@ export const makeElement = (container: HTMLElement, flags: Flags) =>
     ports,
     container,
     devTools: {
-      overlay,
       Message,
     },
   })

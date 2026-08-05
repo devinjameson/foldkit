@@ -5,7 +5,7 @@ import type { Command } from '../command/index.js'
 import { type DevToolsStore, INIT_INDEX } from '../devTools/store.js'
 import { __htmlBuilder } from '../html/index.js'
 import { m } from '../message/index.js'
-import { makeElement } from './runtime.js'
+import { __setDevToolsOverlay, makeElement } from './runtime.js'
 import {
   __decideViewTransition,
   __resolveStartViewTransition,
@@ -194,6 +194,7 @@ describe('makeElement with viewTransition', () => {
   })
 
   afterEach(() => {
+    __setDevToolsOverlay(undefined)
     document.body.innerHTML = ''
     Reflect.deleteProperty(document, 'startViewTransition')
   })
@@ -205,8 +206,8 @@ describe('makeElement with viewTransition', () => {
 
   // NOTE: DevTools time-travel is the one path that repaints the container
   // without going through a render frame, so it is the only way the DOM and
-  // `lastRenderedModel` can disagree. The overlay callback is the seam: it
-  // receives the store, so a fake overlay can drive `jumpTo` from a test.
+  // `lastRenderedModel` can disagree. The registered overlay callback is the
+  // seam: it receives the store, so a fake can drive `jumpTo` from a test.
   it('does not let a pending transition paint over a time-travel replay', async () => {
     let maybeUpdate: (() => void) | null = null
     const skipCalls: Array<string> = []
@@ -222,6 +223,10 @@ describe('makeElement with viewTransition', () => {
     })
 
     let maybeStore: DevToolsStore | null = null
+    __setDevToolsOverlay(store => {
+      maybeStore = store
+      return Effect.void
+    })
 
     const element = makeElement({
       Model,
@@ -236,10 +241,6 @@ describe('makeElement with viewTransition', () => {
       viewTransition: () => true,
       devTools: {
         show: 'Always',
-        overlay: store => {
-          maybeStore = store
-          return Effect.void
-        },
       },
     })
 

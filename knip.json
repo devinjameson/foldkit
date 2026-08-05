@@ -25,7 +25,7 @@
       "entry": ["typedoc-entry.ts", "src/index.ts"]
     },
     "packages/devtools": {
-      "entry": ["src/index.ts"]
+      "entry": ["src/vite.ts"]
     },
     "packages/markdown": {
       "entry": ["src/index.ts", "src/vite/public.ts"]
@@ -41,13 +41,18 @@
     },
     "packages/website": {
       "entry": ["src/main.ts", "src/**/*.test.ts", "scripts/**/*.test.ts"],
-      "ignore": ["src/snippet/**", "public/**"]
+      "ignore": ["src/snippet/**", "public/**"],
+      "ignoreDependencies": ["@foldkit/devtools"]
+    },
+    "packages/typing-game/client": {
+      "ignoreDependencies": ["@foldkit/devtools"]
     },
     "packages/oxlint-plugin-foldkit": {
       "ignore": ["test/integration/fixtures/**"]
     },
     "examples/*": {
       "ignoreDependencies": [
+        "@foldkit/devtools",
         "@trivago/prettier-plugin-sort-imports",
         "prettier",
         "tailwindcss"
@@ -56,6 +61,7 @@
     "examples/charting": {
       "entry": [],
       "ignoreDependencies": [
+        "@foldkit/devtools",
         "@trivago/prettier-plugin-sort-imports",
         "prettier",
         "tailwindcss"
@@ -65,6 +71,7 @@
       "entry": ["src/**/*.test.ts", "src/vitest-*.ts"],
       "ignoreFiles": ["vite.config.playground.ts"],
       "ignoreDependencies": [
+        "@foldkit/devtools",
         "@trivago/prettier-plugin-sort-imports",
         "prettier",
         "tailwindcss"

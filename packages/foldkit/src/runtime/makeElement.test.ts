@@ -5,7 +5,11 @@ import type { Command } from '../command/index.js'
 import { TextDirection, __htmlBuilder } from '../html/index.js'
 import { m } from '../message/index.js'
 import { evo } from '../struct/index.js'
-import { makeApplication, makeElement } from './runtime.js'
+import {
+  __setDevToolsOverlay,
+  makeApplication,
+  makeElement,
+} from './runtime.js'
 
 const Rendered = m('Rendered')
 const ClickedBump = m('ClickedBump')
@@ -96,6 +100,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  __setDevToolsOverlay(undefined)
   document.body.innerHTML = ''
   document.title = HOST_TITLE
   removeHeadMetadata()
@@ -116,6 +121,33 @@ const expectDocumentUntouched = (): void => {
 }
 
 describe('makeElement', () => {
+  it('mounts a registered DevTools overlay when DevTools are active', async () => {
+    const mountedOverlays: Array<string> = []
+    __setDevToolsOverlay(() => {
+      mountedOverlays.push('registered')
+      return Effect.void
+    })
+
+    const element = makeElement({
+      Model,
+      init: () => [{ label: 'hello' }, []],
+      update,
+      view: model => h.div([], [model.label]),
+      container,
+      devTools: { show: 'Always' },
+    })
+
+    const fiber = Effect.runFork(element.start())
+
+    try {
+      await vi.waitFor(() => {
+        expect(mountedOverlays).toEqual(['registered'])
+      })
+    } finally {
+      await Effect.runPromise(Fiber.interrupt(fiber))
+    }
+  })
+
   it('renders into its container without touching the document head', async () => {
     const element = makeElement({
       Model,
