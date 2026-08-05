@@ -74,9 +74,27 @@ Rejects hardcoded path and URL strings passed to link and navigation helpers. Bu
 
 ::Snippet{name="lintNoHardcodedRouteStrings" label="foldkit/no-hardcoded-route-strings example"}
 
-## Page Modules {#page-module-rules}
+## Project Organization {#project-organization-rules}
 
-These two read the file's own path, so they apply to a project laid out the way [Project Organization](/patterns/project-organization) describes, with a page module per folder under `src/page/`. A file that sits directly in `src/page/` is left alone, since nothing in the path tells a single file page apart from a helper that lives beside the pages.
+These read the file's own path, so they apply to a project laid out the way [Project Organization](/patterns/project-organization) describes: `entry.ts` boots, role files hold the parts of The Elm Architecture, page modules sit under `src/page/`, and shared concepts sit under `src/domain/`. None of them assumes a composition model, so a page that owns its Model and folds through a Submodel and a page that contributes fields to the app's own Model are governed alike. A file that sits directly in `src/page/` is left alone throughout, since nothing in a path tells a single file page apart from a helper that lives beside the pages.
+
+### foldkit/runtime-boot-only-in-entry {#runtime-boot-only-in-entry}
+
+Rejects a `Runtime.run` or `Runtime.embed` evaluated at module scope in a module that also exports bindings. The split between `main.ts` and `entry.ts` is what lets a test import the definitions without a runtime starting as a side effect.
+
+::Snippet{name="lintRuntimeBootOnlyInEntry" label="foldkit/runtime-boot-only-in-entry example"}
+
+### foldkit/primitives-declared-in-role-files {#primitives-declared-in-role-files}
+
+Requires a Message, a Command, or a Subscription to be declared in the role file named for it. Fires only on a file that has claimed a role through its name or its folder, so an app that still keeps everything in `main.ts` stays untouched.
+
+::Snippet{name="lintPrimitivesDeclaredInRoleFiles" label="foldkit/primitives-declared-in-role-files example"}
+
+### foldkit/index-is-a-barrel {#index-is-a-barrel}
+
+Rejects code declared in an `index.ts` that also re-exports a value. A barrel lists what a module exposes; every definition belongs in the named file beside it.
+
+::Snippet{name="lintIndexIsABarrel" label="foldkit/index-is-a-barrel example"}
 
 ### foldkit/no-cross-page-imports {#no-cross-page-imports}
 
@@ -89,6 +107,18 @@ Rejects one page module importing another, and rejects a page importing the page
 Rejects a page importing the app level `update` or `view`. Composition runs one way, so a page that imports what folds it in closes a cycle. A shared module inside the app view directory is still fine.
 
 ::Snippet{name="lintNoAppUpdateOrViewImportInPage" label="foldkit/no-app-update-or-view-import-in-page example"}
+
+### foldkit/no-upward-imports-in-domain {#no-upward-imports-in-domain}
+
+Rejects a `domain/` module importing a page or an app level role module. The domain is the bottom layer: everything imports it and it imports nothing of theirs.
+
+::Snippet{name="lintNoUpwardImportsInDomain" label="foldkit/no-upward-imports-in-domain example"}
+
+### foldkit/no-tea-primitives-in-domain {#no-tea-primitives-in-domain}
+
+Rejects a Message, a Command, a Subscription, or view markup declared inside `domain/`. A domain module holds a schema and pure functions, which is what lets several pages share it and what lets it take an ordinary test.
+
+::Snippet{name="lintNoTeaPrimitivesInDomain" label="foldkit/no-tea-primitives-in-domain example"}
 
 ## View Keying and Accessibility {#view-rules}
 

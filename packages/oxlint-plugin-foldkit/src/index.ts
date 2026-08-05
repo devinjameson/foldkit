@@ -5,6 +5,7 @@ import { commandDefinePascalConst } from './rules/command-define-pascal-const.ts
 import { gotPrefixRequiresSubmodelPayload } from './rules/got-prefix-requires-submodel-payload.ts'
 import { gotSubmodelMessageName } from './rules/got-submodel-message-name.ts'
 import { gotWrapperCarriesOnlyRouting } from './rules/got-wrapper-carries-only-routing.ts'
+import { indexIsABarrel } from './rules/index-is-a-barrel.ts'
 import { keyedRequiredForMappedRows } from './rules/keyed-required-for-mapped-rows.ts'
 import { lazyViewStableReferences } from './rules/lazy-view-stable-references.ts'
 import { messageBindingMatchesTag } from './rules/message-binding-matches-tag.ts'
@@ -23,8 +24,12 @@ import { noModuleLevelMutableState } from './rules/no-module-level-mutable-state
 import { noNoopMessage } from './rules/no-noop-message.ts'
 import { noRawDomEventAttributes } from './rules/no-raw-dom-event-attributes.ts'
 import { noSpreadInEvo } from './rules/no-spread-in-evo.ts'
+import { noTeaPrimitivesInDomain } from './rules/no-tea-primitives-in-domain.ts'
+import { noUpwardImportsInDomain } from './rules/no-upward-imports-in-domain.ts'
 import { preferCallableMessageConstructor } from './rules/prefer-callable-message-constructor.ts'
+import { primitivesDeclaredInRoleFiles } from './rules/primitives-declared-in-role-files.ts'
 import { requireRelForExternalLink } from './rules/require-rel-for-external-link.ts'
+import { runtimeBootOnlyInEntry } from './rules/runtime-boot-only-in-entry.ts'
 import { selectionSubmodelFactoryAtModuleScope } from './rules/selection-submodel-factory-at-module-scope.ts'
 import { wrapChildOutputInGotMessage } from './rules/wrap-child-output-in-got-message.ts'
 
@@ -37,6 +42,7 @@ const basePlugin = Plugin.define({
     'got-prefix-requires-submodel-payload': gotPrefixRequiresSubmodelPayload,
     'got-submodel-message-name': gotSubmodelMessageName,
     'got-wrapper-carries-only-routing': gotWrapperCarriesOnlyRouting,
+    'index-is-a-barrel': indexIsABarrel,
     'keyed-required-for-mapped-rows': keyedRequiredForMappedRows,
     'lazy-view-stable-references': lazyViewStableReferences,
     'message-binding-matches-tag': messageBindingMatchesTag,
@@ -55,8 +61,12 @@ const basePlugin = Plugin.define({
     'no-noop-message': noNoopMessage,
     'no-raw-dom-event-attributes': noRawDomEventAttributes,
     'no-spread-in-evo': noSpreadInEvo,
+    'no-tea-primitives-in-domain': noTeaPrimitivesInDomain,
+    'no-upward-imports-in-domain': noUpwardImportsInDomain,
     'prefer-callable-message-constructor': preferCallableMessageConstructor,
+    'primitives-declared-in-role-files': primitivesDeclaredInRoleFiles,
     'require-rel-for-external-link': requireRelForExternalLink,
+    'runtime-boot-only-in-entry': runtimeBootOnlyInEntry,
     'selection-submodel-factory-at-module-scope':
       selectionSubmodelFactoryAtModuleScope,
     'wrap-child-output-in-got-message': wrapChildOutputInGotMessage,

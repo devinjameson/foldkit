@@ -1,16 +1,16 @@
-import { Array, Option, String, pipe } from 'effect'
+import { Array, Option, pipe } from 'effect'
 
-const SEPARATOR = '/'
+import {
+  BARREL_NAME,
+  isRelative,
+  outermostContainerIndex,
+  resolveRelative,
+  sameSegments,
+  startsWithSegments,
+  toSegments,
+} from './modulePath.ts'
 
 const PAGE_DIRECTORY_NAME = 'page'
-
-const BARREL_NAME = 'index'
-
-const toSegments = (filePath: string): ReadonlyArray<string> =>
-  pipe(
-    filePath.replaceAll('\\', SEPARATOR).split(SEPARATOR),
-    Array.filter(segment => !String.isEmpty(segment)),
-  )
 
 /**
  * A file inside a page module directory, such as `src/page/cart/view.ts`.
@@ -30,13 +30,7 @@ export interface PageModule {
 const outermostPageIndex = (
   segments: ReadonlyArray<string>,
 ): Option.Option<number> =>
-  pipe(
-    segments,
-    Array.findFirstIndex(
-      (segment, index) =>
-        segment === PAGE_DIRECTORY_NAME && index < segments.length - 1,
-    ),
-  )
+  outermostContainerIndex(segments, PAGE_DIRECTORY_NAME)
 
 /**
  * Read the page module a file belongs to from its path alone.
@@ -85,32 +79,6 @@ export const pageFileOf = (filename: string): Option.Option<PageFile> => {
   )
 }
 
-const isRelative = (specifier: string): boolean =>
-  specifier.startsWith('./') || specifier.startsWith('../')
-
-const resolveRelative = (
-  fromDirectorySegments: ReadonlyArray<string>,
-  specifier: string,
-): ReadonlyArray<string> =>
-  pipe(
-    specifier.split(SEPARATOR),
-    Array.reduce(fromDirectorySegments, (resolved, part) => {
-      if (part === '' || part === '.') {
-        return resolved
-      }
-      return part === '..'
-        ? resolved.slice(0, -1)
-        : Array.append(resolved, part)
-    }),
-  )
-
-const startsWithSegments = (
-  segments: ReadonlyArray<string>,
-  prefix: ReadonlyArray<string>,
-): boolean =>
-  segments.length > prefix.length &&
-  prefix.every((segment, index) => segments[index] === segment)
-
 /**
  * Resolve a relative import to the page module it lands in, when that module
  * is a different one from `page`.
@@ -142,13 +110,6 @@ export const crossPageImportTarget = (
 }
 
 const APP_COMPOSITION_ROLES: ReadonlyArray<string> = ['update', 'view']
-
-const sameSegments = (
-  segments: ReadonlyArray<string>,
-  other: ReadonlyArray<string>,
-): boolean =>
-  segments.length === other.length &&
-  segments.every((segment, index) => other[index] === segment)
 
 /**
  * Resolve a relative import to the app level role module it lands in, when

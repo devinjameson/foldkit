@@ -90,3 +90,21 @@ Then import and use the namespace:
 ::Snippet{name="indexUsage" label="namespace usage"}
 
 This pattern gives you discoverability (`Home.` shows everything available) while keeping imports clean.
+
+## Enforcing This Page {#enforcement}
+
+Everything above is a convention, and a convention holds only as long as everyone writing the code has read the page. `@foldkit/oxlint-plugin` turns the parts of it that a linter can decide into rules, so a layout that drifts fails the lint rather than the review. Seven rules cover this page, all off by default and all documented on [Oxlint Plugin](/tooling/oxlint-plugin):
+
+| Rule                                                                                                  | What it holds                                                                  |
+| ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| [`runtime-boot-only-in-entry`](/tooling/oxlint-plugin#runtime-boot-only-in-entry)                     | Only `entry.ts` boots the runtime, so `main.ts` stays importable from a test.  |
+| [`primitives-declared-in-role-files`](/tooling/oxlint-plugin#primitives-declared-in-role-files)       | A Message, Command, or Subscription is declared in the role file named for it. |
+| [`index-is-a-barrel`](/tooling/oxlint-plugin#index-is-a-barrel)                                       | An `index.ts` re-exports and holds no code of its own.                         |
+| [`no-cross-page-imports`](/tooling/oxlint-plugin#no-cross-page-imports)                               | One page module does not reach into another.                                   |
+| [`no-app-update-or-view-import-in-page`](/tooling/oxlint-plugin#no-app-update-or-view-import-in-page) | A page does not import the app level `update` or `view`.                       |
+| [`no-upward-imports-in-domain`](/tooling/oxlint-plugin#no-upward-imports-in-domain)                   | A `domain/` module imports neither a page nor an app level role module.        |
+| [`no-tea-primitives-in-domain`](/tooling/oxlint-plugin#no-tea-primitives-in-domain)                   | A `domain/` module holds a schema and pure functions, not Messages or views.   |
+
+Each one decides from the file's own path and its syntax, so none of them needs a build or a type checker. What they cannot see is the filesystem: whether a route has a page folder at all, whether a page has a test beside it. That half is a directory scan, and it belongs in an ordinary test in your own suite rather than in a lint rule.
+
+None of these rules assumes a composition model. A page that owns its Model and folds through a Submodel and a page that contributes fields to the app's own Model are both governed by the same seven.
