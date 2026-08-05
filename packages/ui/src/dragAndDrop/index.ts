@@ -198,7 +198,7 @@ export const init = (config: InitConfig): Model => ({
 
 type Direction = (typeof PressedArrowKey.Type)['direction']
 
-/** Focuses a draggable item by ID after keyboard drop or cancel. */
+/** Focuses a draggable item by ID after a keyboard move, drop, or cancel. */
 export const FocusItem = Command.define('FocusItem', {
   args: { itemId: S.String },
   messages: [CompletedFocusItem],
@@ -486,7 +486,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
                   targetIndex,
                 }),
             }),
-            [],
+            [FocusItem({ itemId: keyboardDragging.itemId })],
             Option.none(),
           ]),
           M.orElse(() => [model, [], Option.none()]),

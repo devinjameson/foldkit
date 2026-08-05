@@ -269,6 +269,10 @@ describe('update', () => {
             }),
           }),
         ),
+        Command.resolve(
+          DragAndDrop.FocusItem({ itemId: firstCardId }),
+          DragAndDrop.CompletedFocusItem(),
+        ),
         message(
           GotDragAndDropMessage({
             message: DragAndDrop.ConfirmedKeyboardDrop(),
@@ -308,6 +312,10 @@ describe('update', () => {
               targetIndex: 0,
             }),
           }),
+        ),
+        Command.resolve(
+          DragAndDrop.FocusItem({ itemId: cardId }),
+          DragAndDrop.CompletedFocusItem(),
         ),
         message(
           GotDragAndDropMessage({
