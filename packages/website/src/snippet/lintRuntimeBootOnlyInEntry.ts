@@ -7,8 +7,8 @@ import { Runtime } from 'foldkit'
 // ❌ Bad
 // The runtime starts as a side effect of importing this module, so a test that
 // only wants `update` gets a running application, a DOM, and every boot Command.
-export const application = Runtime.makeApplication({ init, update, view })
-Runtime.run(application)
+export const badApplication = Runtime.makeApplication({ init, update, view })
+Runtime.run(badApplication)
 
 // ✅ Good
 // `main.ts` defines and exports. Building an application description starts

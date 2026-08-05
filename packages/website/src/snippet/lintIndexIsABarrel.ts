@@ -3,22 +3,17 @@
 // src/page/cart/index.ts
 
 // ❌ Bad
-// The barrel grew a definition of its own. A sibling that wants `totalItems`
-// now has to import the file that re-exports every other module beside it.
+// The barrel grew a definition of its own. A sibling that wants the total now
+// has to import the file that re-exports every other module beside it.
 export * from './model'
 export { update } from './update'
 export { view } from './view'
 
-export const totalItems = (cart: Cart): number =>
-  pipe(
-    cart.items,
-    Array.reduce(0, (total, item) => total + item.quantity),
-  )
+export const badTotalItems = (cart: Cart): number =>
+  Array.reduce(cart.items, 0, (total, item) => total + item.quantity)
 
 // ✅ Good
-// `totalItems` moves into the file that owns it, and the barrel goes back to
-// listing what the page exposes.
-export * from './model'
-export { totalItems } from './model'
-export { update } from './update'
-export { view } from './view'
+// The definition moves into src/page/cart/model.ts, which the barrel already
+// re-exports, so the barrel needs no new line and no call site changes.
+export const totalItems = (cart: Cart): number =>
+  Array.reduce(cart.items, 0, (total, item) => total + item.quantity)

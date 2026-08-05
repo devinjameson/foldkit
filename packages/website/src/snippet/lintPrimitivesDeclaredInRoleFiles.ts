@@ -8,11 +8,13 @@ import { m } from 'foldkit/message'
 // ❌ Bad
 // A Message declared in the view splits the page's vocabulary in two. Whoever
 // reads `message.ts` to find every event the update handles will miss it.
-export const ClickedClearCart = m('ClickedClearCart')
+export const ClickedClearCartInView = m('ClickedClearCart')
 
 // ❌ Bad
 // Same for a Command declared in the view.
-export const FetchCart = Command.define('FetchCart', { execute: fetchCart })
+export const FetchCartInView = Command.define('FetchCart', {
+  execute: fetchCart,
+})
 
 // src/page/cart/message.ts
 
@@ -31,4 +33,4 @@ export const FetchCart = Command.define('FetchCart', { execute: fetchCart })
 // ✅ Good
 // An app that has not split into role files yet claims no role, so nothing here
 // is reported.
-export const ClickedClearCart = m('ClickedClearCart')
+export const ClickedClearCartInMain = m('ClickedClearCart')
