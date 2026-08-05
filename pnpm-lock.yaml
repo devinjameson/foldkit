@@ -103,9 +103,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@foldkit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -122,6 +119,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -149,9 +149,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@foldkit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -171,6 +168,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -198,9 +198,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@foldkit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -217,6 +214,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -244,9 +244,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@foldkit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -269,6 +266,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -296,9 +296,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@foldkit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -315,6 +312,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -342,9 +342,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@foldkit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -361,6 +358,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -388,9 +388,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@foldkit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -407,6 +404,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -434,9 +434,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@foldkit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -453,6 +450,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -480,9 +480,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@foldkit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -502,6 +499,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -529,9 +529,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@foldkit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -548,6 +545,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -575,9 +575,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@tailwindcss/vite':
         specifier: ^4.3.1
         version: 4.3.1(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0))
@@ -594,6 +591,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -621,9 +621,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@foldkit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -643,6 +640,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -670,9 +670,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@foldkit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -695,6 +692,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -722,9 +722,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@foldkit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -741,6 +738,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -768,9 +768,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@foldkit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -793,6 +790,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -820,9 +820,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@foldkit/markdown':
         specifier: workspace:*
         version: link:../../packages/markdown
@@ -845,6 +842,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -872,9 +872,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@foldkit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -894,6 +891,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -921,9 +921,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@foldkit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -943,6 +940,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -970,9 +970,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@tailwindcss/vite':
         specifier: ^4.3.1
         version: 4.3.1(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0))
@@ -986,6 +983,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -1013,9 +1013,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@foldkit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -1032,6 +1029,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -1059,9 +1059,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@foldkit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -1078,6 +1075,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -1105,9 +1105,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@tailwindcss/vite':
         specifier: ^4.3.1
         version: 4.3.1(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0))
@@ -1121,6 +1118,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -1148,9 +1148,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@tailwindcss/vite':
         specifier: ^4.3.1
         version: 4.3.1(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0))
@@ -1164,6 +1161,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -1191,9 +1191,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@foldkit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -1213,6 +1210,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -1240,9 +1240,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@foldkit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -1259,6 +1256,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -1286,9 +1286,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@foldkit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -1308,6 +1305,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -1335,9 +1335,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@foldkit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -1357,6 +1354,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -1384,9 +1384,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@tailwindcss/vite':
         specifier: ^4.3.1
         version: 4.3.1(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0))
@@ -1400,6 +1397,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -1427,9 +1427,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@foldkit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -1446,6 +1443,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -1473,9 +1473,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@foldkit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -1501,6 +1498,9 @@ importers:
         specifier: ^0.7.2
         version: 0.7.2
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -1528,9 +1528,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../packages/devtools
       '@foldkit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -1547,6 +1544,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
@@ -1860,9 +1860,6 @@ importers:
       '@effect/platform-browser':
         specifier: 4.0.0-beta.103
         version: 4.0.0-beta.103(effect@4.0.0-beta.103)
-      '@foldkit/devtools':
-        specifier: workspace:*
-        version: link:../../devtools
       '@tailwindcss/vite':
         specifier: ^4.3.1
         version: 4.3.1(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0))
@@ -1882,6 +1879,9 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1
     devDependencies:
+      '@foldkit/devtools':
+        specifier: workspace:*
+        version: link:../../devtools
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../vite-plugin-foldkit

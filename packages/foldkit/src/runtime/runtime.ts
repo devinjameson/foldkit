@@ -150,7 +150,8 @@ export type DevToolsModeConfig =
  * overlay is injected so it can live in `@foldkit/devtools` and pull in
  * `@foldkit/ui` without coupling the core runtime to either.
  *
- * Pass `overlay` from `@foldkit/devtools` as `DevToolsConfig.overlay`.
+ * Foldkit's Vite plugin supplies the installed overlay automatically. It is
+ * included in production when `@foldkit/devtools` is a regular dependency.
  */
 export type DevToolsOverlay = (
   store: DevToolsStore,
@@ -168,7 +169,6 @@ export type DevToolsOverlay = (
  * - `position`: Where the badge and panel appear. Defaults to `'BottomRight'`.
  * - `mode`: `'TimeTravel'` (default) enables full time-travel debugging. `'Inspect'` allows browsing state snapshots without pausing the app. Pass `{ development, production }` to use different modes per environment. Useful when DevTools is shown in production (`show: 'Always'`) and you want `'TimeTravel'` only in local development.
  * - `banner`: Optional text shown as a banner at the top of the panel.
- * - `overlay`: The in-browser overlay factory from `@foldkit/devtools`. Without it, DevTools still records history and serves the WebSocket bridge (so the DevTools MCP server works), but no visual overlay is mounted. Pass `DevTools.overlay` to show the panel.
  * - `excludeFromHistory`: Message `_tag` values whose dispatches should not be recorded in DevTools history. The Messages still drive `update` and the runtime as usual; they just don't appear in the history panel and don't pay the per-Message diff cost. Use for high-frequency Messages (animation frames, pointer moves, scroll events) that would flood history without adding insight.
  * - `maxEntries`: Maximum number of recorded Messages retained in history before the oldest is evicted. Defaults to 100. Clamped to the range 20-500: smaller values keep the panel snappy under high message rates, larger values give you more scroll-back. Each retained entry stores a full Model snapshot, so memory cost scales linearly with both `maxEntries` and your Model size.
  * - `keyframeInterval`: Number of recorded Messages between full Model snapshots. Defaults to 31. Time-travel to an index replays `update` forward from the nearest earlier keyframe, so this is a memory/time tradeoff: smaller values store more snapshots (more memory) but make each jump cheaper, down to `1` where every jump is a constant-time snapshot lookup with no replay. Reach for a denser interval when the app has a heavy `update` and time-travel jumps feel sluggish. Clamped to a minimum of 1. Forced to 1 automatically when `excludeFromHistory` is active, since excluded Messages are never replayed.
@@ -180,7 +180,6 @@ export type DevToolsConfig =
       position?: DevToolsPosition
       mode?: DevToolsModeConfig
       banner?: string
-      overlay?: DevToolsOverlay
       excludeFromHistory?: ReadonlyArray<string>
       maxEntries?: number
       keyframeInterval?: number
@@ -195,6 +194,15 @@ export type DevToolsConfig =
        */
       Message?: Schema.Codec<any, any, unknown, unknown>
     }>
+
+let registeredDevToolsOverlay: DevToolsOverlay | undefined
+
+/** Registers the overlay supplied by the Foldkit Vite plugin. */
+export const __setDevToolsOverlay = (
+  overlay: DevToolsOverlay | undefined,
+): void => {
+  registeredDevToolsOverlay = overlay
+}
 
 const DEFAULT_DEV_TOOLS_SHOW: Visibility = 'Development'
 const DEFAULT_DEV_TOOLS_POSITION: DevToolsPosition = 'BottomRight'
@@ -2375,7 +2383,7 @@ const makeRuntime = <
             position: config.position ?? DEFAULT_DEV_TOOLS_POSITION,
             mode: resolveDevToolsMode(config.mode ?? DEFAULT_DEV_TOOLS_MODE),
             maybeBanner: Option.fromNullishOr(config.banner),
-            maybeOverlay: Option.fromNullishOr(config.overlay),
+            maybeOverlay: Option.fromNullishOr(registeredDevToolsOverlay),
           })),
         )
 

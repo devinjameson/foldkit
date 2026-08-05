@@ -12,7 +12,9 @@ Open the panel and you’ll see a scrolling list of every Message dispatched so 
 Foldkit also exposes DevTools to AI agents over the Model Context Protocol. See the [DevTools MCP](/ai/mcp) page for setup.
 :::
 
-DevTools are enabled by default in development. Recording and the MCP bridge live in the core runtime, so a `devTools` object on `makeApplication` is enough for the MCP integration. The in-browser overlay ships separately in `@foldkit/devtools`: install it and pass its `overlay` to mount the panel.
+DevTools are enabled by default in development. Recording and the MCP bridge live in the core runtime. The in-browser overlay ships separately in `@foldkit/devtools`, and `@foldkit/vite-plugin` mounts it automatically during development when the package is installed as a development dependency. Production builds omit it without any application-level environment check.
+
+A `devTools` object on `makeApplication` is needed only for configuration or MCP dispatch. To include the overlay in production, list `@foldkit/devtools` in regular `dependencies` and set `show: 'Always'`. No overlay import is needed.
 
 ::Snippet{name="devtoolsBasic" label="Configuring DevTools"}
 

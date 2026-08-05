@@ -1,8 +1,6 @@
 import { Layer } from 'effect'
 import { Runtime } from 'foldkit'
 
-import { overlay } from '@foldkit/devtools'
-
 import {
   type AppManagedResources,
   type AppResources,
@@ -46,7 +44,6 @@ const application = Runtime.makeApplication<
   },
   resources: Layer.mergeAll(Search.PagefindService.Default, devTracerLayer),
   devTools: {
-    overlay,
     show: 'Always',
     mode: { development: 'TimeTravel', production: 'Inspect' },
     banner:

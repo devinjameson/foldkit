@@ -40,6 +40,7 @@ describe('buildUnresolvedDevDeps', () => {
     })
 
     expect(result).toEqual({
+      '@foldkit/devtools': { _tag: 'Latest' },
       '@foldkit/vite-plugin': { _tag: 'Latest' },
       '@foldkit/devtools-mcp': { _tag: 'Latest' },
       '@foldkit/oxlint-plugin': { _tag: 'Latest' },

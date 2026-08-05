@@ -190,9 +190,9 @@ export const foldkitAliases = (dirname: string) => ({
     dirname,
     '../../packages/markdown/src/index',
   ),
-  '@foldkit/devtools': path.resolve(
+  '@foldkit/devtools/vite': path.resolve(
     dirname,
-    '../../packages/devtools/src/index',
+    '../../packages/devtools/src/vite',
   ),
   foldkit: path.resolve(dirname, '../../packages/foldkit/src/index'),
 })

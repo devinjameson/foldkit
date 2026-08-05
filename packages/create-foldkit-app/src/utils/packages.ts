@@ -60,6 +60,7 @@ const NpmPackument = Schema.Struct({
 })
 
 const TEMPLATE_DEV_DEPENDENCIES = [
+  '@foldkit/devtools',
   '@foldkit/vite-plugin',
   '@foldkit/devtools-mcp',
   '@foldkit/oxlint-plugin',
