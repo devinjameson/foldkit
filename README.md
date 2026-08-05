@@ -171,6 +171,10 @@ Some of what you can build with Foldkit. [See all example apps on foldkit.dev](h
 - **[UI Showcase](https://foldkit.dev/example-apps/ui-showcase)**: Interactive showcase of every Foldkit UI component
 - **[Typing Game](packages/typing-game)**: Multiplayer typing game with Effect RPC backend ([play it live](https://typingterminal.com))
 
+## Community Projects
+
+Building something for the Foldkit ecosystem? You're welcome to use the Foldkit name, logo, and visual language without advance permission. See the [community branding guidelines](./BRANDING.md).
+
 ## Development
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for the checks, commit conventions, and changeset expectations, and [AGENTS.md](./AGENTS.md) for code style.
