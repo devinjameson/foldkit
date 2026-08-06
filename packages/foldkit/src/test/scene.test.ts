@@ -135,6 +135,8 @@ import {
 } from './apps/uploads.js'
 import { parseSelector } from './query.js'
 import {
+  accessibleDescription,
+  accessibleName,
   attr,
   find,
   findAll,
@@ -341,6 +343,113 @@ describe('query functions', () => {
       const element = Option.getOrThrow(find(tree, '#email'))
       expect(Option.isNone(attr(element, 'role'))).toBe(true)
     })
+  })
+})
+
+describe('accessible name hidden content', () => {
+  test('ignores an aria-hidden decorative child and retains sibling text', () => {
+    const option = h('div', { attrs: { role: 'option' } }, [
+      h('span', { attrs: { 'aria-hidden': 'true' } }, ['check']),
+      'Triage',
+    ])
+
+    expect(accessibleName(option)(option)).toBe('Triage')
+  })
+
+  test('ignores a hidden descendant subtree and retains visible nested text', () => {
+    const option = h('div', { attrs: { role: 'option' } }, [
+      'Triage ',
+      h('span', { attrs: { hidden: 'true' } }, [
+        h('span', {}, ['hidden subtree']),
+      ]),
+      h('span', {}, ['visible ', h('strong', {}, ['nested text'])]),
+    ])
+
+    expect(accessibleName(option)(option)).toBe('Triage visible nested text')
+  })
+
+  test('ignores a descendant with hidden="false"', () => {
+    const option = h('div', { attrs: { role: 'option' } }, [
+      h('span', { attrs: { hidden: 'false' } }, ['archived']),
+      'Triage',
+    ])
+
+    expect(accessibleName(option)(option)).toBe('Triage')
+  })
+
+  test('includes a descendant with Hidden(false)', () => {
+    const option = Option.getOrThrow(
+      Option.fromNullishOr(
+        inertHtml.div(
+          [inertHtml.Role('option')],
+          ['Triage ', inertHtml.span([inertHtml.Hidden(false)], ['visible'])],
+        ),
+      ),
+    )
+
+    expect(accessibleName(option)(option)).toBe('Triage visible')
+  })
+
+  test('ignores a descendant styled with display none', () => {
+    const option = h('div', { attrs: { role: 'option' } }, [
+      h('span', { style: { display: 'none' } }, ['archived']),
+      'Triage',
+    ])
+
+    expect(accessibleName(option)(option)).toBe('Triage')
+  })
+
+  test('ignores a descendant styled with visibility hidden', () => {
+    const option = h('div', { attrs: { role: 'option' } }, [
+      h('span', { style: { visibility: 'hidden' } }, ['archived']),
+      'Triage',
+    ])
+
+    expect(accessibleName(option)(option)).toBe('Triage')
+  })
+
+  test('includes the full subtree of a hidden aria-labelledby reference', () => {
+    const tree = h('div', {}, [
+      h('span', { attrs: { id: 'hidden-label', 'aria-hidden': 'true' } }, [
+        h('span', { style: { display: 'none' } }, ['Hidden']),
+        ' label',
+      ]),
+      h('button', { attrs: { 'aria-labelledby': 'hidden-label' } }, []),
+    ])
+    const button = Option.getOrThrow(find(tree, 'button'))
+
+    expect(accessibleName(tree)(button)).toBe('Hidden label')
+  })
+
+  test('includes the full subtree of a hidden aria-describedby reference', () => {
+    const tree = h('div', {}, [
+      h('span', { attrs: { id: 'hidden-description', hidden: 'true' } }, [
+        h('span', { style: { visibility: 'hidden' } }, ['Hidden']),
+        ' description',
+      ]),
+      h('button', {
+        attrs: { 'aria-describedby': 'hidden-description' },
+      }),
+    ])
+    const button = Option.getOrThrow(find(tree, 'button'))
+
+    expect(accessibleDescription(tree)(button)).toBe('Hidden description')
+  })
+
+  test('resolves a role by name while literal text still sees hidden content', () => {
+    Scene.scene(
+      {
+        update,
+        view: (_model, html) =>
+          html.div(
+            [html.Role('option')],
+            [html.span([html.AriaHidden(true)], ['check']), 'Triage'],
+          ),
+      },
+      Scene.given(initialModel),
+      Scene.expect(Scene.role('option', { name: 'Triage' })).toExist(),
+      Scene.expect(Scene.text('check')).toExist(),
+    )
   })
 })
 
@@ -1401,6 +1510,20 @@ describe('custom matchers', () => {
     )
   })
 
+  test('toBeVisible fails for hidden="false"', () => {
+    const hidden: VNode = h('div', { attrs: { hidden: 'false' } }, [])
+    expect(() => expect(Option.some(hidden)).toBeVisible()).toThrow(
+      'Expected element to be visible',
+    )
+  })
+
+  test('toBeVisible passes for Hidden(false)', () => {
+    const visible = Option.getOrThrow(
+      Option.fromNullishOr(inertHtml.div([inertHtml.Hidden(false)])),
+    )
+    expect(Option.some(visible)).toBeVisible()
+  })
+
   test('toBeVisible fails for element with aria-hidden="true"', () => {
     const hidden: VNode = h('div', { attrs: { 'aria-hidden': 'true' } }, [])
     expect(() => expect(Option.some(hidden)).toBeVisible()).toThrow(
@@ -1715,6 +1838,62 @@ describe('scene with expect', () => {
       { update, view },
       Scene.given(initialModel),
       Scene.expect(Scene.role('dialog')).toBeAbsent(),
+    )
+  })
+
+  test('not.toBeAbsent passes when element exists', () => {
+    Scene.scene(
+      { update, view },
+      Scene.given(initialModel),
+      Scene.expect(Scene.role('button')).not.toBeAbsent(),
+    )
+  })
+
+  test('positive property assertion throws when the element is missing', () => {
+    expect(() =>
+      Scene.scene(
+        { update, view },
+        Scene.given(initialModel),
+        Scene.expect(Scene.role('dialog')).toHaveText('Settings'),
+      ),
+    ).toThrow(
+      'Expected element matching dialog to have text "Settings" but the element does not exist.',
+    )
+  })
+
+  test('negated property assertion throws when the element is missing', () => {
+    expect(() =>
+      Scene.scene(
+        { update, view },
+        Scene.given(initialModel),
+        Scene.expect(Scene.role('dialog')).not.toHaveAttr('aria-modal'),
+      ),
+    ).toThrow(
+      'Expected element matching dialog not to have attribute "aria-modal" but the element does not exist.',
+    )
+  })
+
+  test('negated state assertion throws when the element is missing', () => {
+    expect(() =>
+      Scene.scene(
+        { update, view },
+        Scene.given(initialModel),
+        Scene.expect(Scene.role('dialog')).not.toBeDisabled(),
+      ),
+    ).toThrow(
+      'Expected element matching dialog not to be disabled but the element does not exist.',
+    )
+  })
+
+  test('negated accessibility assertion throws when the element is missing', () => {
+    expect(() =>
+      Scene.scene(
+        { update, view },
+        Scene.given(initialModel),
+        Scene.expect(Scene.role('dialog')).not.toHaveAccessibleName('Settings'),
+      ),
+    ).toThrow(
+      'Expected element matching dialog not to have accessible name "Settings" but the element does not exist.',
     )
   })
 

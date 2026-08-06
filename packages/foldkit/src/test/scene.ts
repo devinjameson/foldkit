@@ -76,6 +76,7 @@ import {
   accessibleName,
   ancestorsOf,
   attr,
+  isHidden,
   resolveTarget,
   selector,
   textContent,
@@ -1971,12 +1972,10 @@ const assertOnElement =
   ): SceneAssertion =>
   (maybeElement, description, isNot, root) => {
     if (Option.isNone(maybeElement)) {
-      if (!isNot) {
-        throw new Error(
-          `Expected element matching ${description} to ${expectation} but the element does not exist.`,
-        )
-      }
-      return
+      const negation = isNot ? 'not ' : ''
+      throw new Error(
+        `Expected element matching ${description} ${negation}to ${expectation} but the element does not exist.`,
+      )
     }
     const { pass, actual } = check(maybeElement.value, root)
     if (isNot ? pass : !pass) {
@@ -2168,18 +2167,6 @@ const assertIsChecked: SceneAssertion = assertOnElement(vnode => {
     (Option.isSome(ariaChecked) && ariaChecked.value === 'true')
   return { pass, actual: 'it is not checked' }
 }, 'be checked')
-
-const isHidden = (vnode: VNode): boolean => {
-  const hiddenAttr = attr(vnode, 'hidden')
-  if (Option.isSome(hiddenAttr) && hiddenAttr.value !== 'false') return true
-  const ariaHidden = attr(vnode, 'aria-hidden')
-  if (Option.isSome(ariaHidden) && ariaHidden.value === 'true') return true
-  const display = vnode.data?.style?.['display']
-  if (display === 'none') return true
-  const visibility = vnode.data?.style?.['visibility']
-  if (visibility === 'hidden') return true
-  return false
-}
 
 const assertIsVisible: SceneAssertion = assertOnElement(
   vnode => ({ pass: !isHidden(vnode), actual: 'it is hidden' }),
