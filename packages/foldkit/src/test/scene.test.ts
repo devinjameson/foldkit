@@ -2287,6 +2287,11 @@ describe('scene errors', () => {
 })
 
 describe('scene with resolveAll', () => {
+  test('requires each result Message to belong to its Command', () => {
+    // @ts-expect-error CompletedAction is not an Authenticate result Message
+    Scene.Command.resolveAll([Authenticate, CompletedAction()])
+  })
+
   test('resolveAll works in scene context', () => {
     Scene.scene(
       { update, view },
@@ -2297,6 +2302,43 @@ describe('scene with resolveAll', () => {
         SucceededAuthenticate({ username: 'bob' }),
       ]),
       Scene.expect(Scene.role('status')).toHaveText('Welcome, bob!'),
+    )
+  })
+})
+
+describe('scene with resolveAllExact', () => {
+  test('requires each result Message to belong to its Command', () => {
+    // @ts-expect-error CompletedAction is not an Authenticate result Message
+    Scene.Command.resolveAllExact([Authenticate, CompletedAction()])
+  })
+
+  test('resolveAllExact works in scene context', () => {
+    Scene.scene(
+      { update, view },
+      Scene.given(initialModel),
+      Scene.submit(Scene.role('form')),
+      Scene.Command.resolveAllExact([
+        Authenticate,
+        SucceededAuthenticate({ username: 'bob' }),
+      ]),
+      Scene.expect(Scene.role('status')).toHaveText('Welcome, bob!'),
+    )
+  })
+
+  test('resolveAllExact rejects an unmatched expected Command', () => {
+    expect(() =>
+      Scene.scene(
+        { update, view },
+        Scene.given(initialModel),
+        Scene.submit(Scene.role('form')),
+        Scene.Command.resolveAllExact(
+          [Authenticate, SucceededAuthenticate({ username: 'bob' })],
+          [FetchCount, SucceededFetchCount({ count: 1 })],
+        ),
+      ),
+    ).toThrow(
+      'resolveAllExact expected Commands that were not dispatched:\n\n' +
+        '    FetchCount',
     )
   })
 })

@@ -29,6 +29,14 @@ Command.resolveAll(
   [ScrollToTop, CompletedScrollToTop()],
 )
 
+// Resolve and assert a batch. Every listed resolver must match in this call,
+// and no actual Command may remain unresolved.
+message(ClickedSubmit())
+Command.resolveAllExact(
+  [FocusInput, CompletedFocusInput()],
+  [ScrollToTop, CompletedScrollToTop()],
+)
+
 // For N identical responses, compose with Array.makeBy.
 Command.resolveAll(
   ...Array.makeBy(3, () => [AnimationTick, CompletedTick()] as const),

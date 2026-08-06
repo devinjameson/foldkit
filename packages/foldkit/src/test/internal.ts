@@ -1,9 +1,11 @@
 import { Array, Equal, Option, Order, Predicate, pipe } from 'effect'
+import type { Effect } from 'effect'
 
 import {
   type CommandDefinition,
   CommandDefinitionTypeId,
 } from '../command/index.js'
+import type * as Interruptible from '../command/interruptible/index.js'
 import { type MountDefinition, MountDefinitionTypeId } from '../mount/index.js'
 
 /** A Command in a test simulation. Carries `name` and optionally the `args`
@@ -42,6 +44,44 @@ export type AnyCommand = Readonly<{
  *  test is verifying, the right assertion is usually against the Model that
  *  the Command's result fed through update, not a partial Command shape. */
 export type CommandMatcher = CommandDefinition<string, unknown> | AnyCommand
+
+/** A typed Command instance carrying the result Message type through its
+ * `effect` field. */
+export type AnyCommandInstance<ResultMessage = unknown> = Readonly<{
+  name: string
+  args?: Record<string, unknown>
+  effect: Effect.Effect<ResultMessage, any, any>
+}>
+
+/** A Command Definition whose result Message can be supplied by Story and
+ * Scene resolution APIs. */
+export type ResolvableCommandDefinition<Name extends string, ResultMessage> =
+  | CommandDefinition<Name, ResultMessage>
+  | Interruptible.DefinitionNoArgs<Name, Effect.Effect<ResultMessage, any, any>>
+  | Interruptible.DefinitionWithArgs<
+      Name,
+      any,
+      any,
+      Effect.Effect<ResultMessage, any, any>
+    >
+  | Interruptible.DefinitionWithArgsNameKeyed<
+      Name,
+      any,
+      Effect.Effect<ResultMessage, any, any>
+    >
+
+/** A Definition or Command instance accepted by Story and Scene resolution
+ * APIs. */
+export type ResolvableCommandMatcher =
+  | ResolvableCommandDefinition<string, unknown>
+  | AnyCommandInstance<unknown>
+
+type ResultMessageForMatcher<Matcher extends ResolvableCommandMatcher> =
+  Matcher extends ResolvableCommandDefinition<string, infer ResultMessage>
+    ? ResultMessage
+    : Matcher extends AnyCommandInstance<infer ResultMessage>
+      ? ResultMessage
+      : never
 
 const isCommandDefinitionMatcher = (
   matcher: CommandMatcher,
@@ -136,11 +176,10 @@ type UpdateResult<Model, OutMessage> =
  *  name; an Instance matcher resolves only the pending Command whose name AND
  *  args match. The matched Command's own message-mapping chain is applied to
  *  the result, so pass the child's raw result Message, not a parent-wrapped
- *  one. */
-export type Resolver<ResultMessage = unknown> = readonly [
-  CommandMatcher,
-  ResultMessage,
-]
+ *  one. The result Message must belong to the matched Command. */
+export type Resolver<
+  Matcher extends ResolvableCommandMatcher = ResolvableCommandMatcher,
+> = readonly [Matcher, ResultMessageForMatcher<Matcher>]
 
 /** A Mount matcher (Definition or Instance) paired with the raw result Message
  *  to resolve it with. Mirrors `Resolver` for Commands. When the mount lives
@@ -161,6 +200,11 @@ export type MountResolver<ResultMessage = unknown> = readonly [
 export type ResolverEntry = Readonly<{
   matcher: CommandMatcher
   resultMessage: unknown
+}>
+
+type MatchedResolver = Readonly<{
+  entry: ResolverEntry
+  resolverIndex: number
 }>
 
 /** Base shape of an internal simulation — shared between Story and Scene. */
@@ -207,11 +251,11 @@ const foldMessageMappers = (
  *  chain to `resultMessage` first. Returns `undefined` when no pending Command
  *  matches. Definition matchers match by name; Instance matchers match by
  *  name + args. */
-export const resolveByMatcher = <Model, Message>(
-  internal: BaseInternal<Model, Message, unknown>,
+export const resolveByMatcher = <Model, Message, OutMessage>(
+  internal: BaseInternal<Model, Message, OutMessage>,
   matcher: CommandMatcher,
   resultMessage: unknown,
-): BaseInternal<Model, Message, unknown> | undefined =>
+): BaseInternal<Model, Message, OutMessage> | undefined =>
   pipe(
     internal.commands,
     Array.findFirstIndex(command => commandMatches(matcher, command)),
@@ -260,6 +304,24 @@ const matcherFingerprint = (matcher: CommandMatcher): string =>
     ? `def:${matcher.name}`
     : `inst:${matcher.name}:${JSON.stringify(matcher.args ?? null)}`
 
+const findNextMatch = (
+  commands: ReadonlyArray<AnyCommand>,
+  resolvers: ReadonlyArray<ResolverEntry>,
+): Option.Option<MatchedResolver> => {
+  const toMatchedResolver = (
+    command: AnyCommand,
+  ): Option.Option<MatchedResolver> =>
+    pipe(
+      resolvers,
+      Array.findFirstWithIndex(({ matcher }) =>
+        commandMatches(matcher, command),
+      ),
+      Option.map(([entry, resolverIndex]) => ({ entry, resolverIndex })),
+    )
+
+  return Array.findFirst(commands, toMatchedResolver)
+}
+
 /** Resolves all listed Commands, cascading through any Commands produced by
  *  the result. Each entry is consumed by exactly one matching dispatch in
  *  declaration order; for N identical responses, compose with
@@ -288,25 +350,8 @@ export const resolveAllInternal = <Model, Message, OutMessage>(
     resolvers: [...survivingExisting, ...newEntries],
   } as BaseInternal<Model, Message, unknown>
 
-  const findNextMatch = (
-    state: BaseInternal<Model, Message, unknown>,
-  ): Option.Option<{ entry: ResolverEntry; resolverIndex: number }> =>
-    Array.findFirst(state.commands, command =>
-      pipe(
-        state.resolvers,
-        Array.findFirstIndex(({ matcher }) => commandMatches(matcher, command)),
-        Option.flatMap(resolverIndex =>
-          pipe(
-            state.resolvers,
-            Array.get(resolverIndex),
-            Option.map(entry => ({ entry, resolverIndex })),
-          ),
-        ),
-      ),
-    )
-
   for (let depth = 0; depth < MAX_CASCADE_DEPTH; depth++) {
-    const matched = findNextMatch(current)
+    const matched = findNextMatch(current.commands, current.resolvers)
 
     if (Option.isNone(matched)) {
       break
@@ -337,6 +382,64 @@ export const resolveAllInternal = <Model, Message, OutMessage>(
 
   return current as BaseInternal<Model, Message, OutMessage>
   /* eslint-enable @typescript-eslint/consistent-type-assertions */
+}
+
+/** Resolves only the listed Command resolvers, cascading through result
+ *  Messages, and throws unless every resolver matches one dispatched Command.
+ *  Unlike `resolveAllInternal`, unmatched entries never carry forward. */
+export const resolveAllExactInternal = <Model, Message, OutMessage>(
+  internal: BaseInternal<Model, Message, OutMessage>,
+  resolvers: ReadonlyArray<Resolver>,
+): BaseInternal<Model, Message, OutMessage> => {
+  let remainingResolvers: ReadonlyArray<ResolverEntry> = Array.map(
+    resolvers,
+    ([matcher, resultMessage]) => ({ matcher, resultMessage }),
+  )
+
+  let current = internal
+
+  for (let depth = 0; depth < MAX_CASCADE_DEPTH; depth++) {
+    const matched = findNextMatch(current.commands, remainingResolvers)
+
+    if (Option.isNone(matched)) {
+      break
+    }
+
+    const next = resolveByMatcher(
+      current,
+      matched.value.entry.matcher,
+      matched.value.entry.resultMessage,
+    )
+
+    if (Predicate.isUndefined(next)) {
+      break
+    }
+
+    current = next
+    remainingResolvers = Array.remove(
+      remainingResolvers,
+      matched.value.resolverIndex,
+    )
+
+    if (depth === MAX_CASCADE_DEPTH - 1) {
+      throw new Error(
+        'resolveAllExact hit the maximum cascade depth (100). ' +
+          'This usually means Commands are producing Commands in an infinite cycle.',
+      )
+    }
+  }
+
+  if (Array.isReadonlyArrayNonEmpty(remainingResolvers)) {
+    throw new Error(
+      `resolveAllExact expected Commands that were not dispatched:\n\n${formatMatcherList(
+        Array.map(remainingResolvers, ({ matcher }) => matcher),
+      )}\n\nPending Commands after resolving matches:\n\n${formatCommandList(current.commands)}`,
+    )
+  }
+
+  assertAllCommandsResolved(current.commands)
+
+  return current
 }
 
 const formatCommandList = (commands: ReadonlyArray<AnyCommand>): string =>

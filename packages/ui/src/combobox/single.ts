@@ -1,4 +1,4 @@
-import { Array, Option, Schema as S, pipe } from 'effect'
+import { Option, Schema as S } from 'effect'
 import type * as Command from 'foldkit/command'
 import { evo } from 'foldkit/struct'
 import { type View as SubmodelView, defineView } from 'foldkit/submodel'
@@ -58,16 +58,12 @@ export const update = makeUpdate<Model>({
   handleSelectedItem: (model, item, displayText, wasSelected, context) => {
     const nullableDeselect = model.nullable && wasSelected
 
-    return [
+    return context.closeWithFocus(
       evo(closedBaseModel(model), {
         inputValue: () => (nullableDeselect ? '' : displayText),
       }),
-      pipe(
-        Array.getSomes([context.maybeUnlockScroll, context.maybeRestoreInert]),
-        Array.prepend(context.focusInput),
-      ),
       Option.some(SharedSelected({ value: item })),
-    ]
+    )
   },
 
   handleImmediateActivation: (model, item) => [

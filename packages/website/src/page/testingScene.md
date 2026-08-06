@@ -124,18 +124,20 @@ Command tracking has a few semantics worth knowing:
 - Pending Commands accumulate in the order `update` returns them, across as many steps as the test takes.
 - Resolving a Command feeds its result Message through `update`; new Commands produced by that update join the pending list.
 - `Command.resolveAll` walks cascades within the batch. If resolving Command A produces Command B and B’s resolver is in the same call, B resolves without a separate step.
+- `Command.resolveAllExact` walks the same cascades while requiring every listed resolver to match within that call and every actual Command to be resolved.
 - Interactions throw if there are unresolved Commands when they try to dispatch a Message.
 - `scene` throws at the end if any Command remains unresolved.
 
 ::Snippet{name="sceneCommandAssertions" label="command assertions example"}
 
-| Step                                            | Effect                                                                                                                                                                                                                                       |
-| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Command.resolve(Def, ResultMessage)`           | Resolves the first pending Command with the given name by feeding `ResultMessage` through update. For a child Submodel Command, pass the child’s raw result Message; resolve replays the Command’s own `mapMessages` wrapping automatically. |
-| `Command.resolveAll([Def, ResultMessage], ...)` | Resolves a batch of pending Commands, walking cascades. Each entry resolves exactly one matching dispatch in declaration order; compose with Array.makeBy for N identical responses.                                                         |
-| `Command.expectExact(A, B)`                     | The pending Commands are exactly A and B (order-independent).                                                                                                                                                                                |
-| `Command.expectHas(A)`                          | A is among the pending Commands (subset check).                                                                                                                                                                                              |
-| `Command.expectNone()`                          | There are no pending Commands.                                                                                                                                                                                                               |
+| Step                                                 | Effect                                                                                                                                                                                                                                       |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Command.resolve(Def, ResultMessage)`                | Resolves the first pending Command with the given name by feeding `ResultMessage` through update. For a child Submodel Command, pass the child’s raw result Message; resolve replays the Command’s own `mapMessages` wrapping automatically. |
+| `Command.resolveAll([Def, ResultMessage], ...)`      | Resolves a batch of pending Commands, walking cascades. Each entry resolves exactly one matching dispatch in declaration order and unmatched entries carry forward; compose with Array.makeBy for N identical responses.                     |
+| `Command.resolveAllExact([Def, ResultMessage], ...)` | Resolves a batch and throws unless every listed resolver matches within the call and no actual Commands remain unresolved. Repeated Definition entries consume repeated dispatches in declaration order.                                     |
+| `Command.expectExact(A, B)`                          | The pending Commands are exactly A and B (order-independent).                                                                                                                                                                                |
+| `Command.expectHas(A)`                               | A is among the pending Commands (subset check).                                                                                                                                                                                              |
+| `Command.expectNone()`                               | There are no pending Commands.                                                                                                                                                                                                               |
 
 Prefer `Command.expectExact` as the default. It catches bugs where an interaction produces unexpected Commands. Use `Command.expectHas` when you only care about a subset of the pending Commands.
 
