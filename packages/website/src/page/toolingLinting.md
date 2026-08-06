@@ -124,13 +124,13 @@ Flags turning off the freezeModel or slow dev guardrails. Fix the mutation or sl
 
 ### foldkit/got-submodel-message-name {#got-submodel-message-name}
 
-Requires wrapper Messages around Submodel Messages to use the Got\*Message convention.
+Reserves the message payload field for Submodel wrappers and requires those wrappers to use the Got\*Message convention. Rename the field when it contains domain data instead of a child Message.
 
 ::Snippet{name="lintGotSubmodelMessageName" label="foldkit/got-submodel-message-name example"}
 
 ### foldkit/got-prefix-requires-submodel-payload {#got-prefix-requires-submodel-payload}
 
-Reserves the Got\* prefix for Submodel wrappers. Any Got-prefixed Message must include a child Message payload named message.
+Reserves the Got\* prefix for Submodel wrappers. Any Got-prefixed Message must include a child Message payload named message, and an obviously primitive Schema cannot occupy that reserved field.
 
 ::Snippet{name="lintGotPrefixRequiresSubmodelPayload" label="foldkit/got-prefix-requires-submodel-payload example"}
 

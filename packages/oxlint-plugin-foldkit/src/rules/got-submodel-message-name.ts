@@ -37,7 +37,7 @@ export const gotSubmodelMessageName = Rule.define({
           Diagnostic.make({
             node: messageName,
             message:
-              'Submodel wrapper Messages should be named Got*Message so Foldkit DevTools can filter them.',
+              'The message payload field is reserved for Submodel wrappers. Name the wrapper Got*Message, or rename the field when it contains domain data.',
           }),
         )
       },

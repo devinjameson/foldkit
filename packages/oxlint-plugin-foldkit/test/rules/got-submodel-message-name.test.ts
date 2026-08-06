@@ -20,7 +20,11 @@ describe('got-submodel-message-name', () => {
     )
 
     expect(result).toHaveLength(1)
+    expect(result[0]?.diagnostic.message).toContain(
+      'reserved for Submodel wrappers',
+    )
     expect(result[0]?.diagnostic.message).toContain('Got*Message')
+    expect(result[0]?.diagnostic.message).toContain('rename the field')
   })
 
   it('allows Got*Message wrappers around Submodel Messages', () => {

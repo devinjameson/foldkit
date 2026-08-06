@@ -25,6 +25,13 @@ import * as Child from './child'
 }
 
 {
+  // ❌ Bad: message is reserved for a child Message Schema.
+  const GotReceipt = m('GotReceipt', {
+    message: S.String,
+  })
+}
+
+{
   // ✅ Good: Got wraps a child Message.
   const GotChildMessage = m('GotChildMessage', {
     id: S.String,

@@ -43,6 +43,27 @@ describe('got-prefix-requires-submodel-payload', () => {
     expect(suspendedPayload).toHaveLength(0)
   })
 
+  it.each([
+    Testing.memberExpr('S', 'String'),
+    Testing.memberExpr('S', 'Number'),
+    Testing.memberExpr('S', 'Boolean'),
+    Testing.memberExpr('S', 'BigInt'),
+    Testing.callOfMember('S', 'Literal', []),
+    Testing.callOfMember('S', 'Literals', []),
+  ])('rejects a primitive Schema in the reserved message field', schema => {
+    const result = Testing.runRule(
+      gotPrefixRequiresSubmodelPayload,
+      'CallExpression',
+      m('GotReceipt', Testing.objectExpr([{ key: 'message', value: schema }])),
+    )
+
+    expect(result).toHaveLength(1)
+    expect(result[0]?.diagnostic.message).toContain(
+      'reserved message payload field',
+    )
+    expect(result[0]?.diagnostic.message).toContain('Rename the field')
+  })
+
   it('reserves Got-prefixed Messages for Submodel wrappers', () => {
     const result = Testing.runRule(
       gotPrefixRequiresSubmodelPayload,

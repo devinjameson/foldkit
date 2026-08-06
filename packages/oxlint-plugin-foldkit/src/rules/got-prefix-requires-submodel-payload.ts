@@ -2,7 +2,11 @@ import { Effect } from 'effect'
 import { Diagnostic, type ESTree, Rule, RuleContext } from 'effect-oxlint'
 
 import { firstStringArgument, isCallExpression } from '../guards.ts'
-import { hasMessagePayloadProperty, isMCall } from '../message.ts'
+import {
+  hasMessagePayloadProperty,
+  hasPrimitiveMessagePayloadProperty,
+  isMCall,
+} from '../message.ts'
 
 /**
  * Requires Got-prefixed m() Messages to carry a { message: Child.Message }
@@ -19,13 +23,23 @@ export const gotPrefixRequiresSubmodelPayload = Rule.define({
     const ctx = yield* RuleContext
     return {
       CallExpression: (node: ESTree.Node) => {
-        if (!isCallExpression(node) || !isMCall(node)) return Effect.void
+        if (!isCallExpression(node) || !isMCall(node)) {
+          return Effect.void
+        }
         const messageName = firstStringArgument(node)
-        if (
-          messageName === undefined ||
-          !/^Got[A-Z]/.test(messageName.value) ||
-          hasMessagePayloadProperty(node)
-        ) {
+        if (messageName === undefined || !/^Got[A-Z]/.test(messageName.value)) {
+          return Effect.void
+        }
+        if (hasPrimitiveMessagePayloadProperty(node)) {
+          return ctx.report(
+            Diagnostic.make({
+              node: messageName,
+              message:
+                'The reserved message payload field must carry a Submodel Message Schema. Rename the field when it contains domain data.',
+            }),
+          )
+        }
+        if (hasMessagePayloadProperty(node)) {
           return Effect.void
         }
         return ctx.report(
