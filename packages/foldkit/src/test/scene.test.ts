@@ -3362,6 +3362,19 @@ describe('scene with click bubbling', () => {
     )
   })
 
+  test('contextMenu throws when the target matches multiple elements', () => {
+    expect(() =>
+      Scene.scene(
+        { update: contextMenuUpdate, view: contextMenuView },
+        Scene.given(contextMenuInitialModel),
+        Scene.contextMenu('span'),
+      ),
+    ).toThrow(
+      'I found multiple elements matching "span".\n\n' +
+        'Use a more specific selector or Locator that matches one element.',
+    )
+  })
+
   test('contextMenu throws when no handler exists in the ancestor chain', () => {
     expect(() =>
       Scene.scene(

@@ -30,10 +30,10 @@ type Message = typeof Message.Type
 
 // INIT
 
-export const initialModel: Model = {
+export const initialModel = Model.make({
   contextMenu: { _tag: 'Closed' },
   openCount: 0,
-}
+})
 
 // UPDATE
 
