@@ -28,7 +28,10 @@ const update = (model: Model, message: Message): UpdateReturn =>
   )
 
 const testView =
-  ({ isDisabled = false }: { isDisabled?: boolean } = {}) =>
+  ({
+    isDisabled = false,
+    isReadOnly = false,
+  }: { isDisabled?: boolean; isReadOnly?: boolean } = {}) =>
   (model: Model, h: HtmlBuilder<Message>) =>
     view(
       {
@@ -36,6 +39,7 @@ const testView =
         isChecked: model.isChecked,
         onToggle: isChecked => Toggled({ isChecked }),
         isDisabled,
+        isReadOnly,
         toView: ({ button, label }) =>
           h.div(
             [],
@@ -84,6 +88,39 @@ describe('Switch controlled view', () => {
       Scene.given({ isChecked: false }),
       Scene.expect(toggle).toBeDisabled(),
       Scene.expect(toggle).toHaveAttr('data-disabled', ''),
+    )
+  })
+
+  it('emits read-only attributes without disabled attributes', () => {
+    Scene.scene(
+      { update, view: testView({ isReadOnly: true }) },
+      Scene.given({ isChecked: false }),
+      Scene.expect(toggle).toHaveAttr('aria-readonly', 'true'),
+      Scene.expect(toggle).toHaveAttr('data-readonly', ''),
+      Scene.expect(toggle).not.toBeDisabled(),
+      Scene.expect(toggle).not.toHaveAttr('data-disabled'),
+    )
+  })
+
+  it('stays focusable but drops every handler when read-only', () => {
+    Scene.scene(
+      { update, view: testView({ isReadOnly: true }) },
+      Scene.given({ isChecked: false }),
+      Scene.expect(toggle).toHaveAttr('tabIndex', '0'),
+      Scene.expect(toggle).not.toHaveHandler('click'),
+      Scene.expect(toggle).not.toHaveHandler('keyup'),
+      Scene.expect(label).not.toHaveHandler('click'),
+    )
+  })
+
+  it('emits both attribute sets when disabled and read-only are combined', () => {
+    Scene.scene(
+      { update, view: testView({ isDisabled: true, isReadOnly: true }) },
+      Scene.given({ isChecked: false }),
+      Scene.expect(toggle).toBeDisabled(),
+      Scene.expect(toggle).toHaveAttr('data-disabled', ''),
+      Scene.expect(toggle).toHaveAttr('aria-readonly', 'true'),
+      Scene.expect(toggle).toHaveAttr('data-readonly', ''),
     )
   })
 })
