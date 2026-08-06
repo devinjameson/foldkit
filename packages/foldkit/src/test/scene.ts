@@ -441,6 +441,7 @@ const isDocument = (value: Html | Document): value is Document =>
 const EVENT_NAMES: Record<string, string> = {
   click: 'OnClick',
   dblclick: 'OnDoubleClick',
+  contextmenu: 'OnContextMenu',
   submit: 'OnSubmit',
   input: 'OnInput',
   change: 'OnChange',
@@ -1534,6 +1535,66 @@ export const doubleClick =
     const attributeName = EVENT_NAMES['dblclick'] ?? 'dblclick'
     throw new Error(
       `I found an element matching ${description} but neither it nor any ancestor has a dblclick handler.\n\n` +
+        `Make sure the element or a parent has an ${attributeName} attribute.`,
+    )
+  }
+
+/** Simulates a contextmenu event on the element matching the target.
+ *  When the element has no contextmenu handler, the event bubbles up to the
+ *  nearest ancestor with one, mirroring browser event propagation. */
+export const contextMenu =
+  (target: string | Locator) =>
+  <Model, Message, OutMessage = undefined>(
+    simulation: SceneSimulation<Model, Message, OutMessage>,
+  ): SceneSimulation<Model, Message, OutMessage> => {
+    const internal = toInternal(simulation)
+    const scopedTarget = applyScopeToTarget(internal.scope, target)
+    const { maybeElement, description } = resolveTarget(
+      internal.html,
+      scopedTarget,
+    )
+
+    if (Option.isNone(maybeElement)) {
+      throw new Error(
+        `I could not find an element matching ${description}.\n\n` +
+          'Check that your selector matches an element in the current view.',
+      )
+    }
+
+    const element = maybeElement.value
+    const invokeHandler = (handler: Function) => {
+      handler({ preventDefault: Function.constVoid })
+    }
+
+    if (element.data?.on?.['contextmenu'] !== undefined) {
+      return captureFromElement(
+        simulation,
+        element,
+        description,
+        'contextmenu',
+        invokeHandler,
+      )
+    }
+
+    const maybeAncestor = findAncestorWithHandler(
+      internal.html,
+      element,
+      'contextmenu',
+    )
+
+    if (Option.isSome(maybeAncestor)) {
+      return captureFromElement(
+        simulation,
+        maybeAncestor.value,
+        `ancestor of ${description}`,
+        'contextmenu',
+        invokeHandler,
+      )
+    }
+
+    const attributeName = EVENT_NAMES['contextmenu'] ?? 'contextmenu'
+    throw new Error(
+      `I found an element matching ${description} but neither it nor any ancestor has a contextmenu handler.\n\n` +
         `Make sure the element or a parent has an ${attributeName} attribute.`,
     )
   }

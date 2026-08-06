@@ -71,6 +71,7 @@ Interactions exercise the view by invoking event handlers on matched elements. E
 | ---------------------------------- | ------------------------------------------------------------------------------------------------ |
 | `click(target)`                    | `OnClick` (bubbles to ancestors)                                                                 |
 | `doubleClick(target)`              | `OnDoubleClick` (bubbles to ancestors)                                                           |
+| `contextMenu(target)`              | `OnContextMenu` (bubbles to ancestors)                                                           |
 | `pointerDown(target, options?)`    | `OnPointerDown` with optional `{ pointerType, button, screenX, screenY }` (bubbles to ancestors) |
 | `pointerUp(target, options?)`      | `OnPointerUp` with optional `{ pointerType, screenX, screenY }` (bubbles to ancestors)           |
 | `hover(target)`                    | `OnMouseEnter` (falls back to `OnMouseOver`)                                                     |
@@ -80,6 +81,8 @@ Interactions exercise the view by invoking event handlers on matched elements. E
 | `change(target, value)`            | `OnChange` with the given value, for `<select>` and similar                                      |
 | `keydown(target, key, modifiers?)` | `OnKeyDown` or `OnKeyDownPreventDefault` with optional `{ shiftKey, ctrlKey, altKey, metaKey }`  |
 | `submit(target)`                   | `OnSubmit`                                                                                       |
+
+`contextMenu(target)` invokes the target's `OnContextMenu` handler, or the nearest ancestor handler when the target has none. It fails when the target and its ancestors have no matching handler.
 
 `tap(fn)` runs a function for side effects (like ad-hoc assertions on raw VNodes or accumulated Commands) without breaking the step chain.
 

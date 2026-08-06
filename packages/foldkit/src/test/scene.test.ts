@@ -31,6 +31,11 @@ import {
   hexColorPicker,
 } from './apps/colorPicker.js'
 import {
+  initialModel as contextMenuInitialModel,
+  update as contextMenuUpdate,
+  view as contextMenuView,
+} from './apps/contextMenu.js'
+import {
   FetchCount,
   FetchCountById,
   PolledCount,
@@ -2080,6 +2085,25 @@ describe('scene with extra interactions', () => {
     )
   })
 
+  test('contextMenu fires a direct handler and renders the resulting menu', () => {
+    Scene.scene(
+      { update: contextMenuUpdate, view: contextMenuView },
+      Scene.given(contextMenuInitialModel),
+      Scene.contextMenu(Scene.label('direct target')),
+      Scene.expect(
+        Scene.role('menu', { name: 'Direct context menu' }),
+      ).toHaveText('Direct context menu opens=1'),
+    )
+  })
+
+  test('toHaveHandler recognizes OnContextMenu', () => {
+    Scene.scene(
+      { update: contextMenuUpdate, view: contextMenuView },
+      Scene.given(contextMenuInitialModel),
+      Scene.expect(Scene.label('direct target')).toHaveHandler('contextmenu'),
+    )
+  })
+
   test('hover fires mouseenter handler', () => {
     Scene.scene(
       { update: interactionsUpdate, view: interactionsView },
@@ -3280,6 +3304,74 @@ describe('scene with click bubbling', () => {
       Scene.given(bubblingInitialModel),
       Scene.doubleClick(Scene.text('dbl=0')),
       Scene.expect(Scene.text('dbl=1')).toExist(),
+    )
+  })
+
+  test('contextMenu bubbles from child to an ancestor with a handler', () => {
+    Scene.scene(
+      { update: contextMenuUpdate, view: contextMenuView },
+      Scene.given(contextMenuInitialModel),
+      Scene.contextMenu(Scene.label('outer target')),
+      Scene.expect(
+        Scene.role('menu', { name: 'Outer context menu' }),
+      ).toHaveText('Outer context menu opens=1'),
+    )
+  })
+
+  test('contextMenu invokes the nearest ancestor handler', () => {
+    Scene.scene(
+      { update: contextMenuUpdate, view: contextMenuView },
+      Scene.given(contextMenuInitialModel),
+      Scene.contextMenu(Scene.label('nearest target')),
+      Scene.expect(
+        Scene.role('menu', { name: 'Inner context menu' }),
+      ).toHaveText('Inner context menu opens=1'),
+      Scene.expect(
+        Scene.role('menu', { name: 'Outer context menu' }),
+      ).toBeAbsent(),
+    )
+  })
+
+  test('a direct contextMenu handler prevents ancestor handlers from firing', () => {
+    Scene.scene(
+      { update: contextMenuUpdate, view: contextMenuView },
+      Scene.given(contextMenuInitialModel),
+      Scene.contextMenu(Scene.label('direct target')),
+      Scene.expect(
+        Scene.role('menu', { name: 'Direct context menu' }),
+      ).toHaveText('Direct context menu opens=1'),
+      Scene.expect(
+        Scene.role('menu', { name: 'Inner context menu' }),
+      ).toBeAbsent(),
+      Scene.expect(
+        Scene.role('menu', { name: 'Outer context menu' }),
+      ).toBeAbsent(),
+    )
+  })
+
+  test('contextMenu throws when the target does not exist', () => {
+    expect(() =>
+      Scene.scene(
+        { update: contextMenuUpdate, view: contextMenuView },
+        Scene.given(contextMenuInitialModel),
+        Scene.contextMenu(Scene.label('missing target')),
+      ),
+    ).toThrow(
+      'I could not find an element matching label "missing target".\n\n' +
+        'Check that your selector matches an element in the current view.',
+    )
+  })
+
+  test('contextMenu throws when no handler exists in the ancestor chain', () => {
+    expect(() =>
+      Scene.scene(
+        { update: contextMenuUpdate, view: contextMenuView },
+        Scene.given(contextMenuInitialModel),
+        Scene.contextMenu(Scene.label('no handler')),
+      ),
+    ).toThrow(
+      'I found an element matching label "no handler" but neither it nor any ancestor has a contextmenu handler.\n\n' +
+        'Make sure the element or a parent has an OnContextMenu attribute.',
     )
   })
 
