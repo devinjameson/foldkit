@@ -1,11 +1,11 @@
-import { Array, Effect, Equal, Option, Predicate, pipe } from 'effect'
+import { Array, Equal, Option, Predicate, pipe } from 'effect'
 
-import type { CommandDefinition } from '../command/index.js'
-import type * as Interruptible from '../command/interruptible/index.js'
 import type {
   AnyCommand,
-  BaseInternal,
+  AnyCommandInstance,
   CommandMatcher,
+  ResolvableCommandDefinition,
+  ResolvableCommandMatcher,
   Resolver,
   ResolverEntry,
 } from './internal.js'
@@ -18,40 +18,12 @@ import {
   assertZeroCommands,
   formatCommand,
   formatMatcher,
+  resolveAllExactInternal,
   resolveAllInternal,
   resolveByMatcher,
 } from './internal.js'
 
 export type { AnyCommand, CommandMatcher, Resolver }
-
-/** A typed Command instance carrying the result Message type via its
- *  `effect` field, so passing `FetchWeather({ zipCode })` to `Story.Command.resolve`
- *  preserves the link between the Command and its declared result Message. */
-type AnyCommandInstance<ResultMessage = unknown> = Readonly<{
-  name: string
-  args?: Record<string, unknown>
-  effect: Effect.Effect<ResultMessage, any, any>
-}>
-
-/** A Command Definition accepted by `Story.Command.resolve` as a name matcher:
- *  a plain `Command.define` Definition or an interruptible
- *  interruptible `Command.define` Definition. Both carry the
- *  `CommandDefinitionTypeId` brand and match by name at runtime, so `resolve`
- *  accepts either, the way `expectHas`/`expectExact` already do. */
-type ResolvableCommandDefinition<Name extends string, ResultMessage> =
-  | CommandDefinition<Name, ResultMessage>
-  | Interruptible.DefinitionNoArgs<Name, Effect.Effect<ResultMessage, any, any>>
-  | Interruptible.DefinitionWithArgs<
-      Name,
-      any,
-      any,
-      Effect.Effect<ResultMessage, any, any>
-    >
-  | Interruptible.DefinitionWithArgsNameKeyed<
-      Name,
-      any,
-      Effect.Effect<ResultMessage, any, any>
-    >
 
 /** An immutable test simulation of a Foldkit program. */
 export type StorySimulation<Model, Message, OutMessage = undefined> = Readonly<{
@@ -178,14 +150,9 @@ const resolveCommand: {
   <Model, Message, OutMessage = undefined>(
     simulation: StorySimulation<Model, Message, OutMessage>,
   ): StorySimulation<Model, Message, OutMessage> => {
-    /* eslint-disable @typescript-eslint/consistent-type-assertions */
     const internal = toInternal(simulation)
     assertResolveUnambiguous(internal.commands, matcher)
-    const next = resolveByMatcher(
-      internal as BaseInternal<Model, Message, unknown>,
-      matcher,
-      resultMessage,
-    )
+    const next = resolveByMatcher(internal, matcher, resultMessage)
 
     if (Predicate.isUndefined(next)) {
       const pending = Array.match(internal.commands, {
@@ -204,8 +171,7 @@ const resolveCommand: {
       )
     }
 
-    return next as StorySimulation<Model, Message, OutMessage>
-    /* eslint-enable @typescript-eslint/consistent-type-assertions */
+    return next
   }
 
 /** Resolves listed Commands with their result Messages, cascading through any
@@ -218,8 +184,8 @@ const resolveCommand: {
  *  entry replaces any leftover resolvers sharing its Definition or Instance
  *  shape (latest wins). */
 const resolveAllCommands =
-  <R extends ReadonlyArray<unknown>>(
-    ...resolvers: { [K in keyof R]: Resolver<R[K]> }
+  <Matchers extends ReadonlyArray<ResolvableCommandMatcher>>(
+    ...resolvers: { [K in keyof Matchers]: Resolver<Matchers[K]> }
   ) =>
   <Model, Message, OutMessage = undefined>(
     simulation: StorySimulation<Model, Message, OutMessage>,
@@ -230,6 +196,19 @@ const resolveAllCommands =
       Message,
       OutMessage
     >
+
+/** Resolves listed Commands with their result Messages, cascading through any
+ *  Commands the results produce. Every resolver must match one dispatch in
+ *  this call, and no actual Commands may remain unresolved. Supplied resolvers
+ *  do not carry forward. */
+const resolveAllExactCommands =
+  <Matchers extends ReadonlyArray<ResolvableCommandMatcher>>(
+    ...resolvers: { [K in keyof Matchers]: Resolver<Matchers[K]> }
+  ) =>
+  <Model, Message, OutMessage = undefined>(
+    simulation: StorySimulation<Model, Message, OutMessage>,
+  ): StorySimulation<Model, Message, OutMessage> =>
+    resolveAllExactInternal(toInternal(simulation), resolvers)
 
 /** Runs an assertion function against the current Model. */
 export const model = <Model>(f: (model: Model) => void): ModelStep<Model> => ({
@@ -283,6 +262,10 @@ export const Command = {
    *  identical responses. Resolvers carry across calls; a new entry replaces
    *  any leftovers sharing its Definition or Instance shape (latest wins). */
   resolveAll: resolveAllCommands,
+  /** Resolves listed Commands and throws unless every resolver matches one
+   *  dispatch and no actual Commands remain unresolved. Entries apply only to
+   *  this call and never carry forward. */
+  resolveAllExact: resolveAllExactCommands,
   /** Asserts that every given Command is among the pending Commands. */
   expectHas: expectHasCommandsStep,
   /** Asserts that the pending Commands match the given definitions exactly (order-independent). */

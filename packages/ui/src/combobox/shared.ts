@@ -301,11 +301,15 @@ export const closedBaseModel = <Model extends BaseModel>(model: Model): Model =>
 
 // UPDATE FACTORY
 
-/** Context passed to the `handleSelectedItem` handler with commands for focus management and modal cleanup. */
-export type SelectedItemContext = Readonly<{
-  focusInput: Command.Command<Message>
-  maybeUnlockScroll: Option.Option<Command.Command<Message>>
-  maybeRestoreInert: Option.Option<Command.Command<Message>>
+type SelectedItemContext<Model extends BaseModel> = Readonly<{
+  closeWithFocus: (
+    model: Model,
+    maybeOutMessage?: Option.Option<OutMessage>,
+  ) => readonly [
+    Model,
+    ReadonlyArray<Command.Command<Message>>,
+    Option.Option<OutMessage>,
+  ]
 }>
 
 /** Prevents page scrolling while the combobox popup is open in modal mode. */
@@ -434,7 +438,7 @@ export const makeUpdate = <Model extends BaseModel>(
       item: string,
       displayText: string,
       wasSelected: boolean,
-      context: SelectedItemContext,
+      context: SelectedItemContext<Model>,
     ) => readonly [
       Model,
       ReadonlyArray<Command.Command<Message>>,
@@ -466,6 +470,38 @@ export const makeUpdate = <Model extends BaseModel>(
     )
 
     const focusInput = FocusInput({ id: model.id })
+
+    const closeWithFocusCommands = [
+      focusInput,
+      ...Array.getSomes([maybeUnlockScroll, maybeRestoreInert]),
+    ]
+
+    const closeWithoutFocusCommands = Array.getSomes([
+      maybeUnlockScroll,
+      maybeRestoreInert,
+    ])
+
+    const closeSelectedItemWithFocus = (
+      nextModel: Model,
+      maybeOutMessage: Option.Option<OutMessage> = Option.none(),
+    ): UpdateReturn => {
+      const didClose = model.isOpen && !nextModel.isOpen
+      const commands = didClose ? closeWithFocusCommands : [focusInput]
+
+      if (didClose && model.isAnimated) {
+        const [transitionedModel, animationCommands] = delegateToAnimation(
+          nextModel,
+          AnimationHid(),
+        )
+        return [
+          transitionedModel,
+          [...commands, ...animationCommands],
+          maybeOutMessage,
+        ]
+      }
+
+      return [nextModel, commands, maybeOutMessage]
+    }
 
     const openCombobox = (baseModel: Model): UpdateReturn => {
       if (model.isAnimated) {
@@ -551,12 +587,12 @@ export const makeUpdate = <Model extends BaseModel>(
         // restingInputValue or re-emit ClearedSelection while closed.
         Closed: ({ restingInputValue }) =>
           model.isOpen
-            ? closeCombobox(model, [focusInput], restingInputValue)
+            ? closeCombobox(model, closeWithFocusCommands, restingInputValue)
             : [model, [], Option.none()],
 
         BlurredInput: ({ restingInputValue }) =>
           model.isOpen
-            ? closeCombobox(model, [], restingInputValue)
+            ? closeCombobox(model, closeWithoutFocusCommands, restingInputValue)
             : [model, [], Option.none()],
 
         ActivatedItem: ({
@@ -623,28 +659,10 @@ export const makeUpdate = <Model extends BaseModel>(
               ]
             : [model, [], Option.none()],
 
-        SelectedItem: ({ item, displayText, wasSelected }) => {
-          const [nextModel, commands, maybeOutMessage] =
-            handlers.handleSelectedItem(model, item, displayText, wasSelected, {
-              focusInput,
-              maybeUnlockScroll,
-              maybeRestoreInert,
-            })
-
-          if (model.isOpen && !nextModel.isOpen && model.isAnimated) {
-            const [transitionedModel, animationCommands] = delegateToAnimation(
-              nextModel,
-              AnimationHid(),
-            )
-            return [
-              transitionedModel,
-              [...commands, ...animationCommands],
-              maybeOutMessage,
-            ]
-          }
-
-          return [nextModel, commands, maybeOutMessage]
-        },
+        SelectedItem: ({ item, displayText, wasSelected }) =>
+          handlers.handleSelectedItem(model, item, displayText, wasSelected, {
+            closeWithFocus: closeSelectedItemWithFocus,
+          }),
 
         RequestedItemClick: ({ index }) => [
           model,
@@ -677,7 +695,11 @@ export const makeUpdate = <Model extends BaseModel>(
 
         PressedToggleButton: ({ restingInputValue }) => {
           if (model.isOpen) {
-            return closeCombobox(model, [focusInput], restingInputValue)
+            return closeCombobox(
+              model,
+              closeWithFocusCommands,
+              restingInputValue,
+            )
           }
 
           const [nextModel, commands] = openCombobox(

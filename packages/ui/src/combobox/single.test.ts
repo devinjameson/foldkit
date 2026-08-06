@@ -922,7 +922,7 @@ describe('Combobox', () => {
     const givenOpenModal = flow(
       givenClosedModal,
       Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
-      Story.Command.resolveAll(
+      Story.Command.resolveAllExact(
         [LockScroll, CompletedLockScroll()],
         [InertOthers, CompletedInertOthers()],
       ),
@@ -933,7 +933,7 @@ describe('Combobox', () => {
         update,
         givenClosedModal,
         Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
-        Story.Command.resolveAll(
+        Story.Command.resolveAllExact(
           [LockScroll, CompletedLockScroll()],
           [InertOthers, CompletedInertOthers()],
         ),
@@ -948,7 +948,7 @@ describe('Combobox', () => {
         update,
         givenOpenModal,
         Story.message(Closed({ restingInputValue: '' })),
-        Story.Command.resolveAll(
+        Story.Command.resolveAllExact(
           [FocusInput, CompletedFocusInput()],
           [UnlockScroll, CompletedUnlockScroll()],
           [RestoreInert, CompletedRestoreInert()],
@@ -964,7 +964,7 @@ describe('Combobox', () => {
         update,
         givenOpenModal,
         Story.message(BlurredInput({ restingInputValue: '' })),
-        Story.Command.resolveAll(
+        Story.Command.resolveAllExact(
           [UnlockScroll, CompletedUnlockScroll()],
           [RestoreInert, CompletedRestoreInert()],
         ),
@@ -985,13 +985,48 @@ describe('Combobox', () => {
             wasSelected: false,
           }),
         ),
-        Story.Command.resolveAll(
+        Story.Command.resolveAllExact(
           [FocusInput, CompletedFocusInput()],
           [UnlockScroll, CompletedUnlockScroll()],
           [RestoreInert, CompletedRestoreInert()],
         ),
         Story.model(model => {
           expect(model.isOpen).toBe(false)
+        }),
+      )
+    })
+
+    it('emits unlockScroll and restoreInert commands when the toggle button closes a modal combobox', () => {
+      Story.story(
+        update,
+        givenOpenModal,
+        Story.message(PressedToggleButton({ restingInputValue: '' })),
+        Story.Command.resolveAllExact(
+          [FocusInput, CompletedFocusInput()],
+          [UnlockScroll, CompletedUnlockScroll()],
+          [RestoreInert, CompletedRestoreInert()],
+        ),
+        Story.model(model => {
+          expect(model.isOpen).toBe(false)
+        }),
+      )
+    })
+
+    it('does not emit cleanup commands for a stale close message', () => {
+      Story.story(
+        update,
+        givenOpenModal,
+        Story.message(Closed({ restingInputValue: '' })),
+        Story.Command.resolveAllExact(
+          [FocusInput, CompletedFocusInput()],
+          [UnlockScroll, CompletedUnlockScroll()],
+          [RestoreInert, CompletedRestoreInert()],
+        ),
+        Story.message(Closed({ restingInputValue: 'Stale' })),
+        Story.Command.expectNone(),
+        Story.model(model => {
+          expect(model.isOpen).toBe(false)
+          expect(model.inputValue).toBe('')
         }),
       )
     })
@@ -1005,7 +1040,7 @@ describe('Combobox', () => {
           expect(model.isOpen).toBe(true)
         }),
         Story.message(Closed({ restingInputValue: '' })),
-        Story.Command.resolve(FocusInput, CompletedFocusInput()),
+        Story.Command.resolveAllExact([FocusInput, CompletedFocusInput()]),
         Story.model(model => {
           expect(model.isOpen).toBe(false)
         }),

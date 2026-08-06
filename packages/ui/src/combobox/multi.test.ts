@@ -16,15 +16,23 @@ import {
   Closed,
   CompletedAnchorCombobox,
   CompletedFocusInput,
+  CompletedInertOthers,
+  CompletedLockScroll,
   CompletedPortalComboboxBackdrop,
+  CompletedRestoreInert,
   CompletedScrollIntoView,
+  CompletedUnlockScroll,
   FocusInput,
+  InertOthers,
+  LockScroll,
   type Message,
   Opened,
   PortalComboboxBackdrop,
+  RestoreInert,
   ScrollIntoView,
   Selected,
   SelectedItem,
+  UnlockScroll,
   inputId,
 } from './shared.js'
 
@@ -255,6 +263,52 @@ describe('Combobox.Multi', () => {
           }),
         )
       })
+    })
+  })
+
+  describe('modal commands', () => {
+    const givenOpenModal = flow(
+      Story.given(init({ id: 'test', isModal: true })),
+      Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
+      Story.Command.resolveAllExact(
+        [LockScroll, CompletedLockScroll()],
+        [InertOthers, CompletedInertOthers()],
+      ),
+    )
+
+    it('unwinds modal commands when closed', () => {
+      Story.story(
+        update,
+        givenOpenModal,
+        Story.message(Closed({ restingInputValue: '' })),
+        Story.Command.resolveAllExact(
+          [FocusInput, CompletedFocusInput()],
+          [UnlockScroll, CompletedUnlockScroll()],
+          [RestoreInert, CompletedRestoreInert()],
+        ),
+        Story.model(model => {
+          expect(model.isOpen).toBe(false)
+        }),
+      )
+    })
+
+    it('stays open without unwinding modal commands after selection', () => {
+      Story.story(
+        update,
+        givenOpenModal,
+        Story.message(
+          SelectedItem({
+            item: 'apple',
+            displayText: 'Apple',
+            wasSelected: false,
+          }),
+        ),
+        Story.Command.expectNone(),
+        Story.model(model => {
+          expect(model.isOpen).toBe(true)
+        }),
+        Story.expectOutMessage(Selected({ value: 'apple' })),
+      )
     })
   })
 

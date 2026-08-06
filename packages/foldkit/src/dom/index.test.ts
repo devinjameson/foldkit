@@ -1,8 +1,9 @@
-import { Effect } from 'effect'
+import { Effect, Fiber } from 'effect'
 import { expect, vi } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
 
+import { RenderCommit, createCommitNotifier } from '../render/commit.js'
 import {
   ElementNotFound,
   closeDialog,
@@ -276,6 +277,88 @@ describe('inertOthers', () => {
       expect(items.inert).toBeFalsy()
 
       yield* restoreInert('test')
+      cleanupDom()
+    }),
+  )
+
+  it.effect('resolves the allowed elements after the render commits', () =>
+    Effect.gen(function* () {
+      const main = document.createElement('main')
+      const button = document.createElement('button')
+      button.id = 'menu-button'
+      main.appendChild(button)
+
+      const portalRoot = document.createElement('div')
+      portalRoot.id = 'portal-root'
+      const footer = document.createElement('footer')
+      document.body.appendChild(main)
+      document.body.appendChild(portalRoot)
+      document.body.appendChild(footer)
+
+      const notifier = createCommitNotifier()
+      notifier.markCommitPending()
+
+      expect(document.querySelector('#menu-items')).toBeNull()
+
+      const fiber = yield* Effect.forkChild(
+        inertOthers('test', ['#menu-button', '#menu-items']).pipe(
+          Effect.provideService(RenderCommit, notifier.service),
+        ),
+        { startImmediately: true },
+      )
+
+      yield* Effect.promise(
+        () =>
+          new Promise<void>(resolve => {
+            queueMicrotask(() => {
+              const items = document.createElement('div')
+              items.id = 'menu-items'
+              portalRoot.appendChild(items)
+              resolve()
+            })
+          }),
+      )
+
+      expect(document.querySelector('#menu-items')).not.toBeNull()
+      expect(fiber.pollUnsafe()).toBeUndefined()
+
+      notifier.notifyCommitted()
+      yield* Fiber.join(fiber)
+
+      expect(portalRoot.inert).toBeFalsy()
+      expect(portalRoot.getAttribute('aria-hidden')).toBeNull()
+      expect(footer.inert).toBe(true)
+      expect(footer.getAttribute('aria-hidden')).toBe('true')
+
+      yield* restoreInert('test')
+      cleanupDom()
+    }),
+  )
+
+  it.effect('stays restored when closed before the render commits', () =>
+    Effect.gen(function* () {
+      const { header, footer } = buildDom()
+      const notifier = createCommitNotifier()
+      notifier.markCommitPending()
+
+      const fiber = yield* Effect.forkChild(
+        inertOthers('test', ['#menu-button', '#menu-items']).pipe(
+          Effect.provideService(RenderCommit, notifier.service),
+        ),
+        { startImmediately: true },
+      )
+
+      expect(fiber.pollUnsafe()).toBeUndefined()
+
+      yield* restoreInert('test')
+      notifier.notifyCommitted()
+      yield* Fiber.join(fiber)
+
+      expect(header.inert).toBeFalsy()
+      expect(header.getAttribute('aria-hidden')).toBeNull()
+      expect(footer.inert).toBeFalsy()
+      expect(footer.getAttribute('aria-hidden')).toBeNull()
+
       cleanupDom()
     }),
   )

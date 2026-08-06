@@ -13,13 +13,13 @@ export type ChildModel = typeof ChildModel.Type
 // CHILD MESSAGE
 
 export const SubmittedForm = m('SubmittedForm')
-export const SucceededSubmit = m('SucceededSubmit', { id: S.String })
+export const SucceededSubmitForm = m('SucceededSubmitForm', { id: S.String })
 export const CancelledForm = m('CancelledForm')
 export const CompletedResetForm = m('CompletedResetForm')
 
 export const ChildMessage = S.Union([
   SubmittedForm,
-  SucceededSubmit,
+  SucceededSubmitForm,
   CancelledForm,
   CompletedResetForm,
 ])
@@ -36,8 +36,8 @@ export type ChildOutMessage = typeof ChildOutMessage.Type
 // CHILD COMMAND
 
 export const SubmitForm = Command.define('SubmitForm', {
-  messages: [SucceededSubmit],
-  execute: Effect.sync(() => SucceededSubmit({ id: 'abc' })),
+  messages: [SucceededSubmitForm],
+  execute: Effect.sync(() => SucceededSubmitForm({ id: 'abc' })),
 })
 
 export const ResetForm = Command.define('ResetForm', {
@@ -73,7 +73,7 @@ export const childUpdate = (
         [SubmitForm()],
         Option.none(),
       ],
-      SucceededSubmit: ({ id }) => [
+      SucceededSubmitForm: ({ id }) => [
         { status: 'Submitted' },
         [ResetForm()],
         Option.some(RequestedSave({ id })),

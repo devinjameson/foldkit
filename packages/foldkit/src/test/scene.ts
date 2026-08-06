@@ -12,8 +12,6 @@ import {
 } from 'effect'
 import { dual } from 'effect/Function'
 
-import type { CommandDefinition } from '../command/index.js'
-import type * as Interruptible from '../command/interruptible/index.js'
 import { kebabToPascal } from '../customElement/index.js'
 import type { CustomElementSpec } from '../customElement/index.js'
 import type { File } from '../file/index.js'
@@ -38,12 +36,15 @@ import { Dispatch } from '../runtime/index.js'
 import type { VNode } from '../vdom.js'
 import type {
   AnyCommand,
+  AnyCommandInstance,
   AnyMount,
   BaseInternal,
   CommandMatcher,
   MountMatcher,
   MountResolver,
   PendingMount,
+  ResolvableCommandDefinition,
+  ResolvableCommandMatcher,
   Resolver,
   ResolverEntry,
 } from './internal.js'
@@ -66,6 +67,7 @@ import {
   formatMountList,
   formatMountMatcher,
   mountMatches,
+  resolveAllExactInternal,
   resolveAllInternal,
   resolveByMatcher,
   resolveMountByMatcher,
@@ -231,35 +233,6 @@ type InternalSceneSimulation<
     scope: Option.Option<Locator>
     mountSlots: ReadonlyArray<MountSlotState>
   }>
-
-/** A typed Command instance carrying the result Message type via its
- *  `effect` field, so passing `FetchWeather({ zipCode })` to `Scene.Command.resolve`
- *  preserves the link between the Command and its declared result Message. */
-type SceneCommandInstance<ResultMessage = unknown> = Readonly<{
-  name: string
-  args?: Record<string, unknown>
-  effect: Effect.Effect<ResultMessage, any, any>
-}>
-
-/** A Command Definition accepted by `Scene.Command.resolve` as a name matcher:
- *  a plain `Command.define` Definition or an interruptible
- *  interruptible `Command.define` Definition. Both carry the
- *  `CommandDefinitionTypeId` brand and match by name at runtime, so `resolve`
- *  accepts either, the way `expectHas`/`expectExact` already do. */
-type ResolvableCommandDefinition<Name extends string, ResultMessage> =
-  | CommandDefinition<Name, ResultMessage>
-  | Interruptible.DefinitionNoArgs<Name, Effect.Effect<ResultMessage, any, any>>
-  | Interruptible.DefinitionWithArgs<
-      Name,
-      any,
-      any,
-      Effect.Effect<ResultMessage, any, any>
-    >
-  | Interruptible.DefinitionWithArgsNameKeyed<
-      Name,
-      any,
-      Effect.Effect<ResultMessage, any, any>
-    >
 
 const slotKey = ({ name, occurrence }: PendingMount): string =>
   `${name}#${occurrence}`
@@ -669,7 +642,7 @@ const resolveCommand: {
     simulation: SceneSimulation<Model, Message, OutMessage>,
   ) => SceneSimulation<Model, Message, OutMessage>
   <ResultMessage>(
-    instance: SceneCommandInstance<ResultMessage>,
+    instance: AnyCommandInstance<ResultMessage>,
     resultMessage: ResultMessage,
   ): <Model, Message, OutMessage = undefined>(
     simulation: SceneSimulation<Model, Message, OutMessage>,
@@ -679,14 +652,9 @@ const resolveCommand: {
   <Model, Message, OutMessage = undefined>(
     simulation: SceneSimulation<Model, Message, OutMessage>,
   ): SceneSimulation<Model, Message, OutMessage> => {
-    /* eslint-disable @typescript-eslint/consistent-type-assertions */
     const internal = toInternal(simulation)
     assertResolveUnambiguous(internal.commands, matcher)
-    const next = resolveByMatcher(
-      internal as BaseInternal<Model, Message, unknown>,
-      matcher,
-      resultMessage,
-    )
+    const next = resolveByMatcher(internal, matcher, resultMessage)
 
     if (Predicate.isUndefined(next)) {
       const pending = Array.match(internal.commands, {
@@ -705,8 +673,7 @@ const resolveCommand: {
       )
     }
 
-    return next as unknown as SceneSimulation<Model, Message, OutMessage>
-    /* eslint-enable @typescript-eslint/consistent-type-assertions */
+    return { ...internal, ...next }
   }
 
 /** Resolves listed Commands with their result Messages, cascading through any
@@ -719,8 +686,8 @@ const resolveCommand: {
  *  entry replaces any leftover resolvers sharing its Definition or Instance
  *  shape (latest wins). */
 const resolveAllCommands =
-  <R extends ReadonlyArray<unknown>>(
-    ...resolvers: { [K in keyof R]: Resolver<R[K]> }
+  <Matchers extends ReadonlyArray<ResolvableCommandMatcher>>(
+    ...resolvers: { [K in keyof Matchers]: Resolver<Matchers[K]> }
   ) =>
   <Model, Message, OutMessage = undefined>(
     simulation: SceneSimulation<Model, Message, OutMessage>,
@@ -730,6 +697,22 @@ const resolveAllCommands =
       toInternal(simulation),
       resolvers,
     ) as unknown as SceneSimulation<Model, Message, OutMessage>
+
+/** Resolves listed Commands with their result Messages, cascading through any
+ *  Commands the results produce. Every resolver must match one dispatch in
+ *  this call, and no actual Commands may remain unresolved. Supplied resolvers
+ *  do not carry forward. */
+const resolveAllExactCommands =
+  <Matchers extends ReadonlyArray<ResolvableCommandMatcher>>(
+    ...resolvers: { [K in keyof Matchers]: Resolver<Matchers[K]> }
+  ) =>
+  <Model, Message, OutMessage = undefined>(
+    simulation: SceneSimulation<Model, Message, OutMessage>,
+  ): SceneSimulation<Model, Message, OutMessage> => {
+    const internal = toInternal(simulation)
+    const next = resolveAllExactInternal(internal, resolvers)
+    return { ...internal, ...next }
+  }
 
 /** Asserts that every given matcher matches a pending Command. Definition
  *  matchers match by name only; Instance matchers match by name + args. */
@@ -1182,6 +1165,10 @@ export const Command = {
    *  identical responses. Resolvers carry across calls; a new entry replaces
    *  any leftovers sharing its Definition or Instance shape (latest wins). */
   resolveAll: resolveAllCommands,
+  /** Resolves listed Commands and throws unless every resolver matches one
+   *  dispatch and no actual Commands remain unresolved. Entries apply only to
+   *  this call and never carry forward. */
+  resolveAllExact: resolveAllExactCommands,
   /** Asserts that every given Command is among the pending Commands. */
   expectHas: expectHasCommandsStep,
   /** Asserts that the pending Commands match the given definitions exactly (order-independent). */

@@ -31,7 +31,7 @@ import {
   ResetForm,
   SubmitForm,
   SubmittedForm,
-  SucceededSubmit,
+  SucceededSubmitForm,
   childUpdate,
   initialParentModel,
   parentUpdate,
@@ -100,7 +100,7 @@ describe('resolve', () => {
         update,
         Story.given({ count: 0, log: [] }),
         Story.message(ClickedFetch()),
-        Story.Command.resolve(SubmitForm, SucceededSubmit({ id: 'abc' })),
+        Story.Command.resolve(SubmitForm, SucceededSubmitForm({ id: 'abc' })),
       ),
     ).toThrow(
       'I tried to resolve "SubmitForm" but no matching pending Command was found',
@@ -174,7 +174,7 @@ describe('resolveAll', () => {
       Story.given({ status: 'Idle' }),
       Story.message(SubmittedForm()),
       Story.Command.resolveAll(
-        [SubmitForm, SucceededSubmit({ id: 'abc' })],
+        [SubmitForm, SucceededSubmitForm({ id: 'abc' })],
         [ResetForm, CompletedResetForm()],
       ),
       Story.model(model => {
@@ -316,6 +316,99 @@ describe('resolveAll', () => {
         expect(model.log).toEqual([7])
       }),
     )
+  })
+
+  test('requires each result Message to belong to its Command', () => {
+    // @ts-expect-error CompletedResetForm is not a FetchCount result Message
+    Story.Command.resolveAll([FetchCount, CompletedResetForm()])
+  })
+})
+
+describe('resolveAllExact', () => {
+  test('requires each result Message to belong to its Command', () => {
+    // @ts-expect-error CompletedResetForm is not a FetchCount result Message
+    Story.Command.resolveAllExact([FetchCount, CompletedResetForm()])
+  })
+
+  test('resolves cascading Commands', () => {
+    Story.story(
+      childUpdate,
+      Story.given({ status: 'Idle' }),
+      Story.message(SubmittedForm()),
+      Story.Command.resolveAllExact(
+        [SubmitForm, SucceededSubmitForm({ id: 'abc' })],
+        [ResetForm, CompletedResetForm()],
+      ),
+      Story.model(model => {
+        expect(model.status).toBe('Idle')
+      }),
+    )
+  })
+
+  test('resolves repeated Definition entries in declaration order', () => {
+    Story.story(
+      update,
+      Story.given({ count: 0, log: [] }),
+      Story.message(StartedThreeFetches()),
+      Story.Command.resolveAllExact(
+        [FetchCount, SucceededFetchCount({ count: 1 })],
+        [FetchCount, SucceededFetchCount({ count: 2 })],
+        [FetchCount, SucceededFetchCount({ count: 3 })],
+      ),
+      Story.model(model => {
+        expect(model.log).toEqual([1, 2, 3])
+      }),
+    )
+  })
+
+  test('throws with every expected Command that was not dispatched', () => {
+    expect(() =>
+      Story.story(
+        update,
+        Story.given({ count: 0, log: [] }),
+        Story.message(ClickedFetch()),
+        Story.Command.resolveAllExact(
+          [FetchCount, SucceededFetchCount({ count: 1 })],
+          [SubmitForm, SucceededSubmitForm({ id: 'abc' })],
+          [ResetForm, CompletedResetForm()],
+        ),
+      ),
+    ).toThrow(
+      'resolveAllExact expected Commands that were not dispatched:\n\n' +
+        '    SubmitForm\n' +
+        '    ResetForm',
+    )
+  })
+
+  test('throws when repeated entries outnumber matching dispatches', () => {
+    expect(() =>
+      Story.story(
+        update,
+        Story.given({ count: 0, log: [] }),
+        Story.message(ClickedFetch()),
+        Story.Command.resolveAllExact(
+          [FetchCount, SucceededFetchCount({ count: 1 })],
+          [FetchCount, SucceededFetchCount({ count: 2 })],
+        ),
+      ),
+    ).toThrow(
+      'resolveAllExact expected Commands that were not dispatched:\n\n' +
+        '    FetchCount',
+    )
+  })
+
+  test('retains the unresolved actual Command failure', () => {
+    expect(() =>
+      Story.story(
+        update,
+        Story.given({ count: 0, log: [] }),
+        Story.message(StartedThreeFetches()),
+        Story.Command.resolveAllExact(
+          [FetchCount, SucceededFetchCount({ count: 1 })],
+          [FetchCount, SucceededFetchCount({ count: 2 })],
+        ),
+      ),
+    ).toThrow('I found Commands without resolvers:\n\n    FetchCount')
   })
 })
 
@@ -674,7 +767,7 @@ describe('outMessage', () => {
       Story.given({ status: 'Idle' }),
       Story.message(SubmittedForm()),
       Story.expectNoOutMessage(),
-      Story.Command.resolve(SubmitForm, SucceededSubmit({ id: 'abc' })),
+      Story.Command.resolve(SubmitForm, SucceededSubmitForm({ id: 'abc' })),
       Story.expectOutMessage(RequestedSave({ id: 'abc' })),
       Story.Command.resolve(ResetForm, CompletedResetForm()),
       Story.expectNoOutMessage(),
@@ -701,7 +794,7 @@ describe("resolve applies the Command's own message mapping", () => {
         expect(model.child.status).toBe('Submitting')
       }),
       Story.Command.expectHas(SubmitForm),
-      Story.Command.resolve(SubmitForm, SucceededSubmit({ id: 'abc' })),
+      Story.Command.resolve(SubmitForm, SucceededSubmitForm({ id: 'abc' })),
       Story.model(model => {
         expect(model.child.status).toBe('Submitted')
         expect(model.savedIds).toEqual(['abc'])
@@ -725,7 +818,7 @@ describe("resolveAll applies each Command's own message mapping", () => {
         expect(model.child.status).toBe('Submitting')
       }),
       Story.Command.resolveAll(
-        [SubmitForm, SucceededSubmit({ id: 'abc' })],
+        [SubmitForm, SucceededSubmitForm({ id: 'abc' })],
         [ResetForm, CompletedResetForm()],
       ),
       Story.model(model => {
