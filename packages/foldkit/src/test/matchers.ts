@@ -1,7 +1,7 @@
 import { Option, String as String_ } from 'effect'
 
 import type { VNode } from '../vdom.js'
-import { attr, textContent } from './query.js'
+import { attr, isHidden, textContent } from './query.js'
 
 type MatcherContext = Readonly<{ isNot: boolean }>
 
@@ -345,21 +345,8 @@ export const sceneMatchers = {
           'Expected element to be visible but the element does not exist.',
       }),
       onSome: vnode => {
-        const hiddenAttr = attr(vnode, 'hidden')
-        const hiddenByAttr =
-          Option.isSome(hiddenAttr) && hiddenAttr.value !== 'false'
-        const ariaHidden = attr(vnode, 'aria-hidden')
-        const hiddenByAria =
-          Option.isSome(ariaHidden) && ariaHidden.value === 'true'
-        const display = vnode.data?.style?.['display']
-        const visibility = vnode.data?.style?.['visibility']
-        const isHidden =
-          hiddenByAttr ||
-          hiddenByAria ||
-          display === 'none' ||
-          visibility === 'hidden'
         return {
-          pass: !isHidden,
+          pass: !isHidden(vnode),
           message: () =>
             // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
             (this as unknown as MatcherContext).isNot

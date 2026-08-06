@@ -196,6 +196,40 @@ const lookupStringAttribute =
   (vnode: VNode): Option.Option<string> =>
     pipe(vnode, lookupAttribute(name), Option.map(String))
 
+/** Returns whether an element is hidden from the accessibility tree. */
+export const isHidden = (vnode: VNode): boolean => {
+  const maybeHiddenProperty = Option.fromNullishOr(
+    vnode.data?.props?.['hidden'],
+  )
+  if (Option.exists(maybeHiddenProperty, Boolean)) {
+    return true
+  }
+  if (Option.isNone(maybeHiddenProperty)) {
+    const maybeHiddenAttribute = Option.fromNullishOr(
+      vnode.data?.attrs?.['hidden'],
+    )
+    if (
+      Option.isSome(maybeHiddenAttribute) &&
+      maybeHiddenAttribute.value !== false
+    ) {
+      return true
+    }
+  }
+  const maybeAriaHidden = lookupStringAttribute('aria-hidden')(vnode)
+  if (Option.isSome(maybeAriaHidden) && maybeAriaHidden.value === 'true') {
+    return true
+  }
+  const display = vnode.data?.style?.['display']
+  if (display === 'none') {
+    return true
+  }
+  const visibility = vnode.data?.style?.['visibility']
+  if (visibility === 'hidden') {
+    return true
+  }
+  return false
+}
+
 const isElement = (node: VNode): boolean => !Predicate.isUndefined(node.sel)
 
 const isVNode = (child: VNode | string): child is VNode =>
@@ -510,6 +544,26 @@ const resolveRoles =
 const nonEmptyString = (value: unknown): Option.Option<string> =>
   Option.filter(Option.some(String(value)), String_.isNonEmpty)
 
+const accessibleTextContent = (vnode: VNode): string => {
+  if (Predicate.isString(vnode.text)) {
+    return vnode.text
+  }
+
+  return pipe(
+    vnode.children ?? [],
+    Array.map(child => {
+      if (Predicate.isString(child)) {
+        return child
+      }
+      return isHidden(child) ? '' : accessibleTextContent(child)
+    }),
+    Array.join(''),
+  )
+}
+
+const referencedTextContent = (vnode: VNode): string =>
+  isHidden(vnode) ? textContent(vnode) : accessibleTextContent(vnode)
+
 const nameFromLabelledBy =
   (root: VNode) =>
   (vnode: VNode): Option.Option<string> =>
@@ -524,7 +578,7 @@ const nameFromLabelledBy =
           Array.filterMap(
             flow(
               findById(root),
-              Option.map(textContent),
+              Option.map(referencedTextContent),
               Result.fromOption(() => undefined),
             ),
           ),
@@ -555,13 +609,13 @@ const nameFromLabelFor =
                 Option.exists(Equal.equals(idString)),
               ),
           ),
-          Option.map(textContent),
+          Option.map(referencedTextContent),
         ),
       ),
     )
 
 const nameFromTextContent = (vnode: VNode): Option.Option<string> =>
-  Option.filter(Option.some(textContent(vnode)), String_.isNonEmpty)
+  Option.filter(Option.some(accessibleTextContent(vnode)), String_.isNonEmpty)
 
 const nameFromTitle = (vnode: VNode): Option.Option<string> =>
   pipe(vnode, lookupAttribute('title'), Option.flatMap(nonEmptyString))
@@ -577,7 +631,8 @@ const nameFromChildTag =
     pipe(
       vnode,
       findFirstDirectChildWithTag(childTag),
-      Option.map(textContent),
+      Option.filter(child => !isHidden(child)),
+      Option.map(accessibleTextContent),
       Option.flatMap(nonEmptyString),
     )
 
@@ -613,7 +668,7 @@ const nameFromNativeHost = (vnode: VNode): Option.Option<string> =>
 /** Computes the accessible name of an element. Resolves via
  *  `aria-labelledby`, `aria-label`, `<label for>`, native host language
  *  attributes and child elements (img/area alt, input value/alt,
- *  fieldset legend, figure figcaption, table caption), text content,
+ *  fieldset legend, figure figcaption, table caption), accessible text content,
  *  then `title`. */
 export const accessibleName =
   (root: VNode) =>
@@ -645,7 +700,7 @@ export const accessibleDescription =
           Array.filterMap(
             flow(
               findById(root),
-              Option.map(textContent),
+              Option.map(referencedTextContent),
               Result.fromOption(() => undefined),
             ),
           ),

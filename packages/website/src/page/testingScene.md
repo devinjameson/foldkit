@@ -87,26 +87,30 @@ Interactions exercise the view by invoking event handlers on matched elements. E
 
 `expect(locator)` creates an inline assertion step against a single element. Every matcher has a `.not` variant that inverts the assertion.
 
+Property, state, and accessibility matchers require the Locator to match an element, including their `.not` variants. Use `.toBeAbsent()` or `.not.toExist()` when the intended assertion is that no element matches.
+
 ::Snippet{name="sceneAssertions" label="assertion examples"}
 
-| Matcher                                     | Asserts that the element                                                                       |
-| ------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `.toExist()`                                | Is present in the tree                                                                         |
-| `.toBeAbsent()`                             | Is not present in the tree                                                                     |
-| `.toBeVisible()`                            | Is not hidden via the hidden attribute, aria-hidden, display: none, or visibility: hidden      |
-| `.toBeEmpty()`                              | Has no text content or child elements                                                          |
-| `.toHaveText(value)`                        | Has text content equal to the given string or matching the given regex                         |
-| `.toContainText(value)`                     | Has text content including the given substring or matching the regex                           |
-| `.toHaveAccessibleName(name)`               | Has the given accessible name (resolves aria-labelledby, aria-label, label[for], text content) |
-| `.toHaveAccessibleDescription(description)` | Has the given accessible description (resolves aria-describedby)                               |
-| `.toBeDisabled()`                           | Has aria-disabled or the disabled attribute                                                    |
-| `.toBeEnabled()`                            | Is not disabled                                                                                |
-| `.toBeChecked()`                            | Has aria-checked="true" or the checked attribute                                               |
-| `.toHaveValue(value)`                       | Has the given current form-control value                                                       |
-| `.toHaveAttr(name, value)`                  | Has the given attribute set to the given value                                                 |
-| `.toHaveId(id)`                             | Has the given id                                                                               |
-| `.toHaveClass(name)`                        | Has the given CSS class                                                                        |
-| `.toHaveStyle(name, value)`                 | Has the given inline style property                                                            |
+| Matcher                                     | Asserts that the element                                                                                                                           |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.toExist()`                                | Is present in the tree                                                                                                                             |
+| `.toBeAbsent()`                             | Is not present in the tree                                                                                                                         |
+| `.toBeVisible()`                            | Is not hidden via the hidden attribute, aria-hidden, display: none, or visibility: hidden                                                          |
+| `.toBeEmpty()`                              | Has no text content or child elements                                                                                                              |
+| `.toHaveText(value)`                        | Has text content equal to the given string or matching the given regex                                                                             |
+| `.toContainText(value)`                     | Has text content including the given substring or matching the regex                                                                               |
+| `.toHaveAccessibleName(name)`               | Has the given accessible name (resolves aria-labelledby, aria-label, label[for], native host-language sources, accessible text content, and title) |
+| `.toHaveAccessibleDescription(description)` | Has the given accessible description (resolves aria-describedby)                                                                                   |
+| `.toBeDisabled()`                           | Has aria-disabled or the disabled attribute                                                                                                        |
+| `.toBeEnabled()`                            | Is not disabled                                                                                                                                    |
+| `.toBeChecked()`                            | Has aria-checked="true" or the checked attribute                                                                                                   |
+| `.toHaveValue(value)`                       | Has the given current form-control value                                                                                                           |
+| `.toHaveAttr(name, value)`                  | Has the given attribute set to the given value                                                                                                     |
+| `.toHaveId(id)`                             | Has the given id                                                                                                                                   |
+| `.toHaveClass(name)`                        | Has the given CSS class                                                                                                                            |
+| `.toHaveStyle(name, value)`                 | Has the given inline style property                                                                                                                |
+
+Accessible-name and accessible-description matching excludes hidden descendant content. A hidden node directly referenced by `aria-labelledby` or `aria-describedby` contributes its full subtree text.
 
 For `LocatorAll` (from `all.*`), use `expectAll(locatorAll)` for count-based assertions:
 
