@@ -93,4 +93,20 @@ describe('Disclosure controlled view', () => {
       Scene.expect(button).toHaveAttr('data-disabled', ''),
     )
   })
+
+  it('sets type button so the trigger does not submit a form', () => {
+    Scene.scene(
+      { update, view: testView() },
+      Scene.given({ isOpen: false }),
+      Scene.expect(button).toHaveAttr('type', 'button'),
+    )
+  })
+
+  it('keeps type button when disabled', () => {
+    Scene.scene(
+      { update, view: testView({ isDisabled: true }) },
+      Scene.given({ isOpen: false }),
+      Scene.expect(button).toHaveAttr('type', 'button'),
+    )
+  })
 })

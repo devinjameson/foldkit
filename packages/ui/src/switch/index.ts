@@ -7,7 +7,13 @@ import type { Attribute, Html, HtmlBuilder } from 'foldkit/html'
  *  Each group is a `ReadonlyArray<Attribute<Message>>` the consumer
  *  spreads into its own element attribute arrays. The `button` and `label`
  *  bundles carry the click and Space handlers that dispatch the configured
- *  `onToggle` Message. */
+ *  `onToggle` Message.
+ *
+ *  The `button` bundle sets `type="button"` so that rendering the switch as a
+ *  `button` element inside a `form` element toggles without also submitting the
+ *  form. Setting it is harmless on the other elements a switch might use, such
+ *  as a `div` or a `span`, because the builder assigns a DOM property rather
+ *  than an HTML attribute. Spread a later `h.Type` to override it. */
 export type SwitchAttributes<Message> = Readonly<{
   button: ReadonlyArray<Attribute<Message>>
   label: ReadonlyArray<Attribute<Message>>
@@ -104,6 +110,7 @@ export const view = <Message>(
   const isInteractive = !isDisabled && !isReadOnly
 
   const buttonAttributes = [
+    h.Type('button'),
     h.Role('switch'),
     h.AriaChecked(isChecked),
     h.AriaLabelledBy(labelId(id)),

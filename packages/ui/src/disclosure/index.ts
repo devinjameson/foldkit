@@ -16,7 +16,13 @@ const panelSizeTransition = 'grid-template-rows 200ms ease-out'
 /** Attribute groups the disclosure provides to the consumer's `toView`
  *  callback. The consumer composes the button + panel layout themselves using
  *  these bundles. The `button` bundle carries the click and Enter/Space
- *  handlers that dispatch the configured `onToggle` Message. */
+ *  handlers that dispatch the configured `onToggle` Message.
+ *
+ *  The `button` bundle sets `type="button"` so that rendering the trigger as a
+ *  `button` element inside a `form` element toggles without also submitting the
+ *  form. Setting it is harmless on the other elements a trigger might use, such
+ *  as a `div` or a `span`, because the builder assigns a DOM property rather
+ *  than an HTML attribute. Spread a later `h.Type` to override it. */
 export type DisclosureAttributes<Message> = Readonly<{
   button: ReadonlyArray<Attribute<Message>>
   panel: ReadonlyArray<Attribute<Message>>
@@ -112,6 +118,7 @@ export const view = <Message>(
 
   const buttonAttributes = [
     h.Id(buttonId(id)),
+    h.Type('button'),
     h.AriaExpanded(isOpen),
     h.AriaControls(panelId(id)),
     ...resolveButtonLabel(),

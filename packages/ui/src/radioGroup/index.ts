@@ -32,7 +32,13 @@ const descriptionId = (id: string, index: number): string =>
  *  spreads `option`, `label`, and `description` onto whichever elements carry
  *  that role in their layout. Generic over `Value extends string` so
  *  `option.value` carries the consumer's union type, and over `Message`
- *  so the attribute bundles dispatch the parent's own Message. */
+ *  so the attribute bundles dispatch the parent's own Message.
+ *
+ *  The `option` bundle sets `type="button"` so that rendering the option as a
+ *  `button` element inside a `form` element selects without also submitting the
+ *  form. Setting it is harmless on the other elements an option might use, such
+ *  as a `div` or a `span`, because the builder assigns a DOM property rather
+ *  than an HTML attribute. Spread a later `h.Type` to override it. */
 export type OptionInfo<Value extends string, Message> = Readonly<{
   value: Value
   index: number
@@ -235,6 +241,7 @@ export const view = <Value extends string, Message>(
 
       const optionAttributes = [
         h.Id(optionId(id, index)),
+        h.Type('button'),
         h.Role('radio'),
         h.AriaChecked(isSelected),
         h.AriaLabelledBy(labelId(id, index)),

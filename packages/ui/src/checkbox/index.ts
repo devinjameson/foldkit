@@ -16,7 +16,13 @@ import type { Attribute, Html, HtmlBuilder } from 'foldkit/html'
  *  ```
  *
  *  The `checkbox` and `label` bundles carry the click and Space handlers that
- *  dispatch the configured `onToggle` Message. */
+ *  dispatch the configured `onToggle` Message.
+ *
+ *  The `checkbox` bundle sets `type="button"` so that rendering the control as a
+ *  `button` element inside a `form` element toggles without also submitting the
+ *  form. Setting it is harmless on the other elements a control might use, such
+ *  as a `div` or a `span`, because the builder assigns a DOM property rather
+ *  than an HTML attribute. Spread a later `h.Type` to override it. */
 export type CheckboxAttributes<Message> = Readonly<{
   checkbox: ReadonlyArray<Attribute<Message>>
   label: ReadonlyArray<Attribute<Message>>
@@ -123,6 +129,7 @@ export const view = <Message>(
   const isInteractive = !isDisabled && !isReadOnly
 
   const checkboxAttributes = [
+    h.Type('button'),
     h.Role('checkbox'),
     h.AriaChecked(isIndeterminate ? 'mixed' : isChecked),
     h.AriaLabelledBy(labelId(id)),

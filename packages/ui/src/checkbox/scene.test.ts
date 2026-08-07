@@ -130,6 +130,22 @@ describe('Checkbox controlled view', () => {
     )
   })
 
+  it('sets type button so a button control does not submit a form', () => {
+    Scene.scene(
+      { update, view: testView() },
+      Scene.given({ isChecked: false }),
+      Scene.expect(checkbox).toHaveAttr('type', 'button'),
+    )
+  })
+
+  it('keeps type button when disabled and read-only', () => {
+    Scene.scene(
+      { update, view: testView({ isDisabled: true, isReadOnly: true }) },
+      Scene.given({ isChecked: false }),
+      Scene.expect(checkbox).toHaveAttr('type', 'button'),
+    )
+  })
+
   it('renders aria-checked mixed when indeterminate', () => {
     Scene.scene(
       { update, view: testView({ isIndeterminate: true }) },

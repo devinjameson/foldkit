@@ -101,6 +101,14 @@ const hasDataAttribute = (
       attribute.key === key,
   )
 
+const hasButtonType = (group: ReadonlyArray<ChildAttribute>): boolean =>
+  group.some(
+    ({ attribute }) =>
+      Predicate.isTagged(attribute, 'Type') &&
+      Predicate.hasProperty(attribute, 'value') &&
+      attribute.value === 'button',
+  )
+
 describe('Dialog', () => {
   describe('init', () => {
     it('defaults isOpen to false', () => {
@@ -413,6 +421,30 @@ describe('Dialog', () => {
           renderGroup(model, render => render.description),
           descriptionId(model),
         ),
+      ).toBe(true)
+    })
+  })
+
+  describe('RenderInfo closeButton', () => {
+    it('publishes type button so a close control does not submit a form', () => {
+      const model = init({ id: 'my-dialog', isOpen: true })
+      expect(
+        hasButtonType(renderGroup(model, render => render.closeButton)),
+      ).toBe(true)
+    })
+
+    it('publishes type button while the leave animation runs', () => {
+      const leavingModel = {
+        ...init({ id: 'my-dialog', isOpen: true, isAnimated: true }),
+        isOpen: false,
+        animation: {
+          id: 'my-dialog-panel',
+          isShowing: false,
+          transitionState: 'LeaveStart' as const,
+        },
+      }
+      expect(
+        hasButtonType(renderGroup(leavingModel, render => render.closeButton)),
       ).toBe(true)
     })
   })

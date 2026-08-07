@@ -123,4 +123,20 @@ describe('Switch controlled view', () => {
       Scene.expect(toggle).toHaveAttr('data-readonly', ''),
     )
   })
+
+  it('sets type button so a button control does not submit a form', () => {
+    Scene.scene(
+      { update, view: testView() },
+      Scene.given({ isChecked: false }),
+      Scene.expect(toggle).toHaveAttr('type', 'button'),
+    )
+  })
+
+  it('keeps type button when disabled and read-only', () => {
+    Scene.scene(
+      { update, view: testView({ isDisabled: true, isReadOnly: true }) },
+      Scene.given({ isChecked: false }),
+      Scene.expect(toggle).toHaveAttr('type', 'button'),
+    )
+  })
 })
