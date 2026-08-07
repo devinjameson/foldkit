@@ -384,7 +384,7 @@ const hasMultipleTargetMatches = (
   html: VNode,
   target: string | Locator,
 ): boolean => {
-  if (typeof target !== 'string') {
+  if (!Predicate.isString(target)) {
     return false
   }
 

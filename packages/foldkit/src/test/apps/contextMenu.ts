@@ -2,12 +2,13 @@ import { Match as M, Number, Schema as S } from 'effect'
 
 import type { Html, HtmlBuilder } from '../../html/index.js'
 import { m } from '../../message/index.js'
+import { ts } from '../../schema/index.js'
 import { evo } from '../../struct/index.js'
 
 // MODEL
 
-const Closed = S.TaggedStruct('Closed', {})
-const Open = S.TaggedStruct('Open', {
+const Closed = ts('Closed')
+const Open = ts('Open', {
   source: S.Literals(['Direct', 'Inner', 'Outer']),
 })
 
@@ -32,7 +33,7 @@ type Message = typeof Message.Type
 // INIT
 
 export const initialModel = Model.make({
-  contextMenu: Closed.make({}),
+  contextMenu: Closed(),
   openCount: 0,
 })
 
@@ -47,7 +48,7 @@ export const update = (
     M.tagsExhaustive({
       OpenedContextMenu: ({ source }) => [
         evo(model, {
-          contextMenu: () => Open.make({ source }),
+          contextMenu: () => Open({ source }),
           openCount: Number.increment,
         }),
         [],
