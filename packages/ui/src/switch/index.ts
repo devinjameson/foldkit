@@ -35,8 +35,11 @@ export type ViewConfig<Message> = Readonly<{
   value?: string
 }>
 
-const labelId = (id: string): string => `${id}-label`
-const descriptionId = (id: string): string => `${id}-description`
+/** Generates the label element ID from the switch's base ID. */
+export const labelId = (id: string): string => `${id}-label`
+
+/** Generates the description element ID from the switch's base ID. */
+export const descriptionId = (id: string): string => `${id}-description`
 
 /** Renders an accessible switch as a stateless controlled component. The
  *  parent owns the checked state (`isChecked`) and receives the new state via

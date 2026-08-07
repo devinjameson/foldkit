@@ -35,6 +35,8 @@ Switch is headless. Your `toView` callback controls all markup and styling. Use 
 
 The switch button receives `role="switch"` and `aria-checked`. The label is linked via `aria-labelledby` and the description via `aria-describedby`. Clicking the label toggles the switch.
 
+The `label` attribute group includes an id (accessible via `Switch.labelId(id)`) and the `description` group includes an id (accessible via `Switch.descriptionId(id)`), so a consumer can reference either element without re-declaring the naming convention.
+
 ## API Reference
 
 ### ViewConfig {#view-config}
