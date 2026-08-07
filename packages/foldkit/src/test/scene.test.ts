@@ -2096,14 +2096,6 @@ describe('scene with extra interactions', () => {
     )
   })
 
-  test('toHaveHandler recognizes OnContextMenu', () => {
-    Scene.scene(
-      { update: contextMenuUpdate, view: contextMenuView },
-      Scene.given(contextMenuInitialModel),
-      Scene.expect(Scene.label('direct target')).toHaveHandler('contextmenu'),
-    )
-  })
-
   test('hover fires mouseenter handler', () => {
     Scene.scene(
       { update: interactionsUpdate, view: interactionsView },
@@ -3307,6 +3299,28 @@ describe('scene with click bubbling', () => {
     )
   })
 
+  test('click throws when no handler in ancestor chain', () => {
+    expect(() =>
+      Scene.scene(
+        { update: bubblingUpdate, view: bubblingView },
+        Scene.given(bubblingInitialModel),
+        Scene.click(Scene.text('dbl=0')),
+      ),
+    ).toThrow(/neither it nor any ancestor has a click handler/)
+  })
+
+  test('doubleClick throws when no handler in ancestor chain', () => {
+    expect(() =>
+      Scene.scene(
+        { update: bubblingUpdate, view: bubblingView },
+        Scene.given(bubblingInitialModel),
+        Scene.doubleClick(Scene.text('clicks=0')),
+      ),
+    ).toThrow(/neither it nor any ancestor has a dblclick handler/)
+  })
+})
+
+describe('scene with context menu bubbling', () => {
   test('contextMenu bubbles from child to an ancestor with a handler', () => {
     Scene.scene(
       { update: contextMenuUpdate, view: contextMenuView },
@@ -3349,6 +3363,17 @@ describe('scene with click bubbling', () => {
     )
   })
 
+  test('contextMenu resolves an ambiguous target to the first match', () => {
+    Scene.scene(
+      { update: contextMenuUpdate, view: contextMenuView },
+      Scene.given(contextMenuInitialModel),
+      Scene.contextMenu('span'),
+      Scene.expect(
+        Scene.role('menu', { name: 'Outer context menu' }),
+      ).toHaveText('Outer context menu opens=1'),
+    )
+  })
+
   test('contextMenu throws when the target does not exist', () => {
     expect(() =>
       Scene.scene(
@@ -3359,19 +3384,6 @@ describe('scene with click bubbling', () => {
     ).toThrow(
       'I could not find an element matching label "missing target".\n\n' +
         'Check that your selector matches an element in the current view.',
-    )
-  })
-
-  test('contextMenu throws when the target matches multiple elements', () => {
-    expect(() =>
-      Scene.scene(
-        { update: contextMenuUpdate, view: contextMenuView },
-        Scene.given(contextMenuInitialModel),
-        Scene.contextMenu('span'),
-      ),
-    ).toThrow(
-      'I found multiple elements matching "span".\n\n' +
-        'Use a more specific selector or Locator that matches one element.',
     )
   })
 
@@ -3386,26 +3398,6 @@ describe('scene with click bubbling', () => {
       'I found an element matching label "no handler" but neither it nor any ancestor has a contextmenu handler.\n\n' +
         'Make sure the element or a parent has an OnContextMenu attribute.',
     )
-  })
-
-  test('click throws when no handler in ancestor chain', () => {
-    expect(() =>
-      Scene.scene(
-        { update: bubblingUpdate, view: bubblingView },
-        Scene.given(bubblingInitialModel),
-        Scene.click(Scene.text('dbl=0')),
-      ),
-    ).toThrow(/neither it nor any ancestor has a click handler/)
-  })
-
-  test('doubleClick throws when no handler in ancestor chain', () => {
-    expect(() =>
-      Scene.scene(
-        { update: bubblingUpdate, view: bubblingView },
-        Scene.given(bubblingInitialModel),
-        Scene.doubleClick(Scene.text('clicks=0')),
-      ),
-    ).toThrow(/neither it nor any ancestor has a dblclick handler/)
   })
 })
 

@@ -379,23 +379,6 @@ const applyScopeToLocatorAll = (
     },
   })
 
-const hasMultipleTargetMatches = (
-  scope: Option.Option<Locator>,
-  html: VNode,
-  target: string | Locator,
-): boolean => {
-  if (!Predicate.isString(target)) {
-    return false
-  }
-
-  return pipe(
-    html,
-    applyScopeToLocatorAll(scope, allSelector(target)),
-    Array.drop(1),
-    Array.isArrayNonEmpty,
-  )
-}
-
 // CAPTURING DISPATCH
 
 const createCapturingDispatch = (): CapturingDispatch => {
@@ -1565,14 +1548,6 @@ export const contextMenu =
     simulation: SceneSimulation<Model, Message, OutMessage>,
   ): SceneSimulation<Model, Message, OutMessage> => {
     const internal = toInternal(simulation)
-
-    if (hasMultipleTargetMatches(internal.scope, internal.html, target)) {
-      throw new Error(
-        `I found multiple elements matching "${target}".\n\n` +
-          'Use a more specific selector or Locator that matches one element.',
-      )
-    }
-
     const scopedTarget = applyScopeToTarget(internal.scope, target)
     const { maybeElement, description } = resolveTarget(
       internal.html,
@@ -1586,7 +1561,7 @@ export const contextMenu =
       )
     }
 
-    const element = maybeElement.value
+    const { value: element } = maybeElement
     const invokeHandler = (handler: Function) => {
       handler({ preventDefault: Function.constVoid })
     }

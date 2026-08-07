@@ -7,9 +7,11 @@ import { evo } from '../../struct/index.js'
 
 // MODEL
 
+const ContextMenuSource = S.Literals(['Direct', 'Inner', 'Outer'])
+
 const Closed = ts('Closed')
 const Open = ts('Open', {
-  source: S.Literals(['Direct', 'Inner', 'Outer']),
+  source: ContextMenuSource,
 })
 
 const ContextMenuState = S.Union([Closed, Open])
@@ -24,7 +26,7 @@ export type Model = typeof Model.Type
 // MESSAGE
 
 const OpenedContextMenu = m('OpenedContextMenu', {
-  source: S.Literals(['Direct', 'Inner', 'Outer']),
+  source: ContextMenuSource,
 })
 
 const Message = S.Union([OpenedContextMenu])
