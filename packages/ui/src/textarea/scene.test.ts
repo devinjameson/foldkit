@@ -68,6 +68,15 @@ describe('Textarea controlled view', () => {
     )
   })
 
+  it('carries the disabled state natively, without aria-disabled', () => {
+    Scene.scene(
+      { update, view: testView({ isDisabled: true }) },
+      Scene.given({ value: '' }),
+      Scene.expect(field).toBeDisabled(),
+      Scene.expect(field).not.toHaveAttr('aria-disabled'),
+    )
+  })
+
   it('emits read-only attributes without disabled attributes', () => {
     Scene.scene(
       { update, view: testView({ isReadOnly: true }) },
