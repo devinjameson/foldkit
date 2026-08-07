@@ -4,6 +4,7 @@ import {
   Option,
   Order,
   Predicate,
+  Record,
   Schema as S,
   String,
   flow,
@@ -487,3 +488,14 @@ export const moduleNameToSlug = (name: string): string =>
 
 export const slugToModuleName = (slug: string): string =>
   pipe(slug, String.split('-'), Array.map(String.capitalize), Array.join(''))
+
+const modulesBySlug = (
+  modules: ReadonlyArray<ApiModule>,
+): Record<string, ApiModule> =>
+  Record.fromIterableBy(modules, module => moduleNameToSlug(module.name))
+
+export const resolveModule = (
+  parsedApi: ParsedApiReference,
+  slug: string,
+): Option.Option<ApiModule> =>
+  Record.get(modulesBySlug(parsedApi.modules), slug)
