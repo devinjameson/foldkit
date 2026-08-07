@@ -69,9 +69,9 @@ Configuration object passed to `Switch.view()`.
 
 Attribute groups provided to the `toView` callback.
 
-| Name          | Type                                | Default | Description                                                                                                    |
-| ------------- | ----------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------- |
-| `button`      | `ReadonlyArray<Attribute<Message>>` | —       | Spread onto the switch button element. Includes role, aria-checked, tabindex, and click/keyboard handlers.     |
-| `label`       | `ReadonlyArray<Attribute<Message>>` | —       | Spread onto the label element. Includes an id for aria-labelledby and a click handler that toggles the switch. |
-| `description` | `ReadonlyArray<Attribute<Message>>` | —       | Spread onto a description element. Includes an id referenced by aria-describedby on the switch.                |
-| `hiddenInput` | `ReadonlyArray<Attribute<Message>>` | —       | Spread onto a hidden `<input>` for form submission. Only needed when the name prop is set.                     |
+| Name          | Type                                | Default | Description                                                                                                                                                              |
+| ------------- | ----------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `button`      | `ReadonlyArray<Attribute<Message>>` | —       | Spread onto the switch button element. Includes role, aria-checked, tabindex, click/keyboard handlers, and `type="button"` so a switch inside a form does not submit it. |
+| `label`       | `ReadonlyArray<Attribute<Message>>` | —       | Spread onto the label element. Includes an id for aria-labelledby and a click handler that toggles the switch.                                                           |
+| `description` | `ReadonlyArray<Attribute<Message>>` | —       | Spread onto a description element. Includes an id referenced by aria-describedby on the switch.                                                                          |
+| `hiddenInput` | `ReadonlyArray<Attribute<Message>>` | —       | Spread onto a hidden `<input>` for form submission. Only needed when the name prop is set.                                                                               |

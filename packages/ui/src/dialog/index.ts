@@ -416,7 +416,10 @@ export const descriptionId = (model: Model): string =>
  *  - `closeButton`: attributes for an in-panel close control such as a Cancel
  *    or dismiss button. Carries the `OnClick` handler that closes the
  *    dialog (suppressed while a leave animation is in progress). Spread
- *    onto your own button so a plain close needs no parent message.
+ *    onto your own button so a plain close needs no parent message. Sets
+ *    `type="button"` so that a close control inside a `form` element in the
+ *    panel closes without also submitting the form. Spread a later `h.Type`
+ *    to override it.
  *  - `isVisible`: derived from `isOpen` and the Animation
  *    `transitionState`. The consumer renders backdrop + panel only
  *    while this is true. */
@@ -512,7 +515,10 @@ export const view = defineView<Model, Message, ViewInputs>(
       h.DataAttribute(initialFocusMarkerAttribute, ''),
     ]
 
-    const closeButtonAttributes = isLeaving ? [] : [h.OnClick(RequestedClose())]
+    const closeButtonAttributes = [
+      h.Type('button'),
+      ...(isLeaving ? [] : [h.OnClick(RequestedClose())]),
+    ]
 
     return toView({
       dialog: childAttributes(dialogAttributes),

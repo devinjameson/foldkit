@@ -119,4 +119,21 @@ describe('RadioGroup controlled view', () => {
       Scene.expect(option(1)).toHaveAttr('tabIndex', '0'),
     )
   })
+
+  it('sets type button so a button option does not submit a form', () => {
+    Scene.scene(
+      { update, view: testView() },
+      Scene.given({ selectedValue: Option.none() }),
+      Scene.expect(option(0)).toHaveAttr('type', 'button'),
+      Scene.expect(option(1)).toHaveAttr('type', 'button'),
+    )
+  })
+
+  it('keeps type button on a disabled option', () => {
+    Scene.scene(
+      { update, view: testView('Brush') },
+      Scene.given({ selectedValue: Option.none() }),
+      Scene.expect(option(0)).toHaveAttr('type', 'button'),
+    )
+  })
 })
