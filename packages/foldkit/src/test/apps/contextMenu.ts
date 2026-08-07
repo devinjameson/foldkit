@@ -1,16 +1,17 @@
-import { Match as M, Schema as S } from 'effect'
+import { Match as M, Number, Schema as S } from 'effect'
 
 import type { Html, HtmlBuilder } from '../../html/index.js'
 import { m } from '../../message/index.js'
+import { evo } from '../../struct/index.js'
 
 // MODEL
 
-const ContextMenuState = S.Union([
-  S.TaggedStruct('Closed', {}),
-  S.TaggedStruct('Open', {
-    source: S.Literals(['Direct', 'Inner', 'Outer']),
-  }),
-])
+const Closed = S.TaggedStruct('Closed', {})
+const Open = S.TaggedStruct('Open', {
+  source: S.Literals(['Direct', 'Inner', 'Outer']),
+})
+
+const ContextMenuState = S.Union([Closed, Open])
 type ContextMenuState = typeof ContextMenuState.Type
 
 export const Model = S.Struct({
@@ -31,7 +32,7 @@ type Message = typeof Message.Type
 // INIT
 
 export const initialModel = Model.make({
-  contextMenu: { _tag: 'Closed' },
+  contextMenu: Closed.make({}),
   openCount: 0,
 })
 
@@ -45,10 +46,10 @@ export const update = (
     M.withReturnType<readonly [Model, ReadonlyArray<never>]>(),
     M.tagsExhaustive({
       OpenedContextMenu: ({ source }) => [
-        {
-          contextMenu: { _tag: 'Open', source },
-          openCount: model.openCount + 1,
-        },
+        evo(model, {
+          contextMenu: () => Open.make({ source }),
+          openCount: Number.increment,
+        }),
         [],
       ],
     }),
@@ -57,9 +58,9 @@ export const update = (
 // VIEW
 
 export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
-  const maybeContextMenu = M.value(model.contextMenu).pipe(
+  const contextMenu = M.value(model.contextMenu).pipe(
     M.tagsExhaustive({
-      Closed: () => null,
+      Closed: () => h.empty,
       Open: ({ source }) =>
         h.div(
           [h.Role('menu'), h.AriaLabel(`${source} context menu`)],
@@ -97,7 +98,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
         ],
       ),
       h.span([h.AriaLabel('no handler')], ['No handler']),
-      maybeContextMenu,
+      contextMenu,
     ],
   )
 }
