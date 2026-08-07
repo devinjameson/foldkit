@@ -1,5 +1,15 @@
 # foldkit
 
+## 0.140.0
+
+### Minor Changes
+
+- 23d9329: Add `Story.Command.resolveAllExact` and `Scene.Command.resolveAllExact` for asserting that every expected Command was dispatched while preserving the carry-forward behavior of `resolveAll`. Both batch resolver APIs now type-check each result Message against its Command, so previously accepted mismatched pairs must be corrected. Resolve `Dom.inertOthers` selectors after the pending render commits so portaled modal content remains interactive, and invalidate pending inert work when an overlay closes before that commit.
+- 166c7ba: Add `Scene.contextMenu` so Scene tests can exercise `h.OnContextMenu` behavior with normal event bubbling.
+- 7f7cd45: Make negated Scene property, state, accessible-name, and accessible-description assertions require their target element to exist. Use `toBeAbsent()` or `not.toExist()` when absence is the intended assertion.
+
+  Accessible-name and accessible-description queries now exclude descendants hidden with `aria-hidden`, the `hidden` attribute, `display: none`, or `visibility: hidden`. Hidden elements directly referenced by `aria-labelledby` or `aria-describedby` continue to contribute their full subtree text.
+
 ## 0.139.0
 
 ### Minor Changes

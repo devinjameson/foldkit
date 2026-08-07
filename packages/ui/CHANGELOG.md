@@ -1,5 +1,38 @@
 # @foldkit/ui
 
+## 0.140.0
+
+### Minor Changes
+
+- 107cfa5: Stop emitting `aria-disabled` from Input, Select, and Textarea
+
+  These three set the native `disabled` attribute, which already carries the state, so the extra `aria-disabled` restated native semantics in ARIA. The native attribute and `data-disabled` are unchanged. If you select on `[aria-disabled]` in CSS for one of these three, switch to `[data-disabled]`.
+
+- cfe987a: Add `isReadOnly` to Input's and Textarea's `ViewConfig`.
+
+  A read-only field sets the native `readonly` attribute plus `data-readonly`, stays focusable and selectable, and omits its input handler. `isReadOnly` and `isDisabled` are independent, and either one removes the input handler.
+
+- d5566ad: Export `Switch.labelId` and `Switch.descriptionId`
+
+  Switch derived `${id}-label` and `${id}-description` from module-private consts, so a consumer that needed to reference the label or description element, to point `aria-details` at it, to style it, or to find it in a test, had to re-declare the convention and hope it did not drift. `Checkbox`, `Fieldset`, `Dialog`, `Select`, `Textarea`, `Input`, and `Popover` already export their equivalents; Switch now matches. No behavior change.
+
+- 5926900: Add `isReadOnly` to Switch's `ViewConfig`.
+
+  A read-only Switch emits `aria-readonly="true"` and `data-readonly`, remains focusable, and omits its click and Space handlers. `isReadOnly` and `isDisabled` are independent, and either one removes the interaction handlers.
+
+### Patch Changes
+
+- 23d9329: Release scroll locks and inert page content whenever a modal Combobox closes, while keeping multi-select Comboboxes open and modal after selection.
+- 6396b63: Set `type="button"` on the headless attribute groups a consumer can render as a `button`.
+
+  A `button` element with no `type` defaults to `type="submit"`, and `h.OnClick` dispatches a Message without calling `preventDefault`. Checkbox, Switch, Disclosure, RadioGroup, and Dialog hand their control attributes to the consumer's `toView` callback, so the consumer picks the element and the component could not know it was a button. Spreading one of those groups onto a `button` inside a `form`, which is an expected setup given that Checkbox, Switch, and RadioGroup support forms through `name` and `value`, meant a click both toggled the control and submitted the form.
+
+  The affected groups now emit `type="button"`: Checkbox's `checkbox`, Switch's `button`, Disclosure's `button`, RadioGroup's `option`, and Dialog's `closeButton`. It is emitted in every state, including disabled, read-only, and while a Dialog leave animation runs, because a bare `button` submits its form whether or not the component attached a handler.
+
+  Setting it is harmless on the other elements these groups target, such as a `div` or a `span`, because the builder assigns a DOM property rather than an HTML attribute. Nothing is serialized into the markup. Attributes apply in order, so a consumer who wants a submit control spreads a later `h.Type` to override it.
+
+  Menu, Listbox, and Combobox render their own `div` for items, so the consumer never chooses that element and they are unaffected.
+
 ## 0.139.0
 
 ### Minor Changes
