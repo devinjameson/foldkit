@@ -24,13 +24,18 @@ export type SwitchAttributes<Message> = Readonly<{
  *    the switch or its label, or presses Space. Handle it in the parent's
  *    `update` by storing the value.
  *  - `toView`: receives the {@link SwitchAttributes} and lays out the
- *    switch. */
+ *    switch.
+ *  - `isReadOnly`: prevents toggling while exposing read-only semantics with
+ *    `aria-readonly="true"` and `data-readonly`. The switch remains
+ *    focusable. Independent of `isDisabled`: setting both emits both
+ *    attribute sets, and either one removes the interaction handlers. */
 export type ViewConfig<Message> = Readonly<{
   id: string
   isChecked: boolean
   onToggle: (isChecked: boolean) => Message
   toView: (attributes: SwitchAttributes<Message>) => Html
   isDisabled?: boolean
+  isReadOnly?: boolean
   name?: string
   value?: string
 }>
@@ -73,6 +78,7 @@ export const view = <Message>(
     onToggle,
     toView,
     isDisabled = false,
+    isReadOnly = false,
     name,
     value: formValue = 'on',
   } = config
@@ -91,6 +97,12 @@ export const view = <Message>(
     ? [h.AriaDisabled(true), h.DataAttribute('disabled', '')]
     : []
 
+  const readOnlyAttributes = isReadOnly
+    ? [h.AriaReadonly(true), h.DataAttribute('readonly', '')]
+    : []
+
+  const isInteractive = !isDisabled && !isReadOnly
+
   const buttonAttributes = [
     h.Role('switch'),
     h.AriaChecked(isChecked),
@@ -99,17 +111,15 @@ export const view = <Message>(
     h.Tabindex(0),
     ...checkedAttributes,
     ...disabledAttributes,
-    ...(isDisabled
-      ? []
-      : [
-          h.OnClick(onToggle(nextChecked)),
-          h.OnKeyUpPreventDefault(handleKeyUp),
-        ]),
+    ...readOnlyAttributes,
+    ...(isInteractive
+      ? [h.OnClick(onToggle(nextChecked)), h.OnKeyUpPreventDefault(handleKeyUp)]
+      : []),
   ]
 
   const labelAttributes = [
     h.Id(labelId(id)),
-    ...(isDisabled ? [] : [h.OnClick(onToggle(nextChecked))]),
+    ...(isInteractive ? [h.OnClick(onToggle(nextChecked))] : []),
   ]
 
   const descriptionAttributes = [h.Id(descriptionId(id))]
