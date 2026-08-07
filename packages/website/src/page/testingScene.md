@@ -71,6 +71,7 @@ Interactions exercise the view by invoking event handlers on matched elements. E
 | ---------------------------------- | ------------------------------------------------------------------------------------------------ |
 | `click(target)`                    | `OnClick` (bubbles to ancestors)                                                                 |
 | `doubleClick(target)`              | `OnDoubleClick` (bubbles to ancestors)                                                           |
+| `contextMenu(target)`              | `OnContextMenu` (bubbles to ancestors)                                                           |
 | `pointerDown(target, options?)`    | `OnPointerDown` with optional `{ pointerType, button, screenX, screenY }` (bubbles to ancestors) |
 | `pointerUp(target, options?)`      | `OnPointerUp` with optional `{ pointerType, screenX, screenY }` (bubbles to ancestors)           |
 | `hover(target)`                    | `OnMouseEnter` (falls back to `OnMouseOver`)                                                     |
