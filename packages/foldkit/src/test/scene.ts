@@ -1120,7 +1120,7 @@ const emitCustomElementEvent =
       )
     }
 
-    const element = maybeElement.value
+    const { value: element } = maybeElement
 
     if (element.data?.on?.[eventName] === undefined) {
       throw new Error(
@@ -1407,7 +1407,7 @@ export const click =
       )
     }
 
-    const element = maybeElement.value
+    const { value: element } = maybeElement
 
     if (isElementDisabled(element)) {
       throw new Error(
@@ -1499,7 +1499,7 @@ export const doubleClick =
       )
     }
 
-    const element = maybeElement.value
+    const { value: element } = maybeElement
     const hasHandler = element.data?.on?.['dblclick'] !== undefined
 
     if (hasHandler) {
@@ -1640,7 +1640,7 @@ export const pointerDown =
       )
     }
 
-    const element = maybeElement.value
+    const { value: element } = maybeElement
     const { pointerType, button, screenX, screenY, clientX, clientY } = {
       ...DEFAULT_POINTER_DOWN_OPTIONS,
       ...options,
@@ -1724,7 +1724,7 @@ export const pointerUp =
       )
     }
 
-    const element = maybeElement.value
+    const { value: element } = maybeElement
     const { pointerType, screenX, screenY } = {
       ...DEFAULT_POINTER_UP_OPTIONS,
       ...options,
