@@ -50,10 +50,10 @@ export type ViewConfig<Message> = Readonly<{
   value?: string
 }>
 
-/** Generates the label element ID from the checkbox's base ID. */
+/** Returns the label element id, derived from the checkbox's base id. */
 export const labelId = (id: string): string => `${id}-label`
 
-/** Generates the description element ID from the checkbox's base ID. */
+/** Returns the description element id, derived from the checkbox's base id. */
 export const descriptionId = (id: string): string => `${id}-description`
 
 /** Renders an accessible checkbox as a stateless controlled component. The
