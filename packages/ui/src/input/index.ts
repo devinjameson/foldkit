@@ -17,6 +17,7 @@ export type ViewConfig<Message> = Readonly<{
   onInput?: (value: string) => Message
   value?: string
   isDisabled?: boolean
+  isReadOnly?: boolean
   isInvalid?: boolean
   isAutofocus?: boolean
   name?: string
@@ -38,6 +39,7 @@ export const view = <Message>(
     onInput,
     value,
     isDisabled = false,
+    isReadOnly = false,
     isInvalid = false,
     isAutofocus = false,
     name,
@@ -49,12 +51,20 @@ export const view = <Message>(
     ? [h.AriaDisabled(true), h.Disabled(true), h.DataAttribute('disabled', '')]
     : []
 
+  const readOnlyAttributes = isReadOnly
+    ? [h.Readonly(true), h.DataAttribute('readonly', '')]
+    : []
+
   const invalidAttributes = isInvalid
     ? [h.AriaInvalid(true), h.DataAttribute('invalid', '')]
     : []
 
+  const isInteractive = !isDisabled && !isReadOnly
+
   const inputAttributes =
-    Predicate.isNotUndefined(onInput) && !isDisabled ? [h.OnInput(onInput)] : []
+    Predicate.isNotUndefined(onInput) && isInteractive
+      ? [h.OnInput(onInput)]
+      : []
 
   const valueAttributes = Predicate.isNotUndefined(value)
     ? [h.Value(value)]
@@ -73,6 +83,7 @@ export const view = <Message>(
     h.Type(type),
     h.AriaDescribedBy(descriptionId(id)),
     ...disabledAttributes,
+    ...readOnlyAttributes,
     ...invalidAttributes,
     ...inputAttributes,
     ...valueAttributes,
