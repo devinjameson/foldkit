@@ -42,7 +42,7 @@ export const view = <Message>(
   } = config
 
   const disabledAttributes = isDisabled
-    ? [h.AriaDisabled(true), h.Disabled(true), h.DataAttribute('disabled', '')]
+    ? [h.Disabled(true), h.DataAttribute('disabled', '')]
     : []
 
   const invalidAttributes = isInvalid
