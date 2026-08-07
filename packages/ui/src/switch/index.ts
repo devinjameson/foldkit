@@ -40,10 +40,10 @@ export type ViewConfig<Message> = Readonly<{
   value?: string
 }>
 
-/** Generates the label element ID from the switch's base ID. */
+/** Returns the label element id, derived from the switch's base id. */
 export const labelId = (id: string): string => `${id}-label`
 
-/** Generates the description element ID from the switch's base ID. */
+/** Returns the description element id, derived from the switch's base id. */
 export const descriptionId = (id: string): string => `${id}-description`
 
 /** Renders an accessible switch as a stateless controlled component. The

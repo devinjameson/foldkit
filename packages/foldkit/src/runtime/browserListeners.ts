@@ -59,7 +59,7 @@ export const addLinkClickListener = <Message>(
       return
     }
 
-    const link = maybeLink.value
+    const { value: link } = maybeLink
     const { href } = link
     if (String.isEmpty(href)) {
       return

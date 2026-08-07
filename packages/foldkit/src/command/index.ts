@@ -325,7 +325,7 @@ export function define(name: string, config: DefineConfig): unknown {
     }
   }
 
-  const interrupt = maybeInterrupt.value
+  const { value: interrupt } = maybeInterrupt
   const maybeToKey =
     Predicate.isObject(interrupt) &&
     Predicate.hasProperty(interrupt, 'toKey') &&
@@ -365,7 +365,7 @@ export function define(name: string, config: DefineConfig): unknown {
     return definition
   }
 
-  const toKey = maybeToKey.value
+  const { value: toKey } = maybeToKey
   const toFullKey = (keyArgs: any): string => `${name}:${toKey(keyArgs)}`
 
   const definition = (args: any) => {

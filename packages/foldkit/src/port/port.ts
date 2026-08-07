@@ -143,7 +143,7 @@ export const __makeInboundChannel = (): __InboundChannel => {
   const attach = (push: (value: unknown) => void): (() => void) => {
     subscribers.add(push)
     if (Option.isSome(maybeBacklog)) {
-      const backlog = maybeBacklog.value
+      const { value: backlog } = maybeBacklog
       maybeBacklog = Option.none()
       backlog.forEach(push)
     }

@@ -91,7 +91,7 @@ export const noHardcodedRouteStrings = Rule.define({
         if (Option.isNone(maybeFunctionName)) {
           return Effect.void
         }
-        const functionName = maybeFunctionName.value
+        const { value: functionName } = maybeFunctionName
         const [firstArgument] = node.arguments
         if (
           isStringLiteral(firstArgument) &&

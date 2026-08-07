@@ -24,7 +24,7 @@ export type ViewConfig<Message> = Readonly<{
   placeholder?: string
 }>
 
-/** Generates the description element ID from the textarea's base ID. */
+/** Returns the description element id, derived from the textarea's base id. */
 export const descriptionId = (id: string): string => `${id}-description`
 
 /** Renders an accessible textarea by building ARIA attribute groups and delegating layout to the consumer's `toView` callback. */
