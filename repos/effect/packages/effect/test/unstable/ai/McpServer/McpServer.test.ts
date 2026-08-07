@@ -34,7 +34,7 @@ const OptionalStringTool = Tool.make("OptionalStringTool", {
 
 const PublicFailureTool = Tool.make("PublicFailureTool", {
   success: Schema.String,
-  failure: Schema.Error()
+  failure: Schema.ErrorInstance()
 })
 
 const InternalAiErrorTool = Tool.make("InternalAiErrorTool", {
@@ -279,6 +279,24 @@ describe("McpServer", () => {
           new McpSchema.CallToolResult({
             isError: false,
             content: [{ type: "text", text: JSON.stringify("omitted") }]
+          })
+        )
+      }))
+
+    it.effect("keeps void tool results successful", () =>
+      Effect.gen(function*() {
+        const client = yield* makeToolkitTestClient()
+
+        const result = yield* client["tools/call"]({
+          name: "UntypedTool",
+          arguments: {}
+        })
+
+        assert.deepStrictEqual(
+          result,
+          new McpSchema.CallToolResult({
+            isError: false,
+            content: []
           })
         )
       }))

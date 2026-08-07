@@ -2281,10 +2281,10 @@ const URLSchema = Schema.declare(
         // How to convert between URL and string
         SchemaTransformation.transformOrFail<URL, string>({
           // JSON string -> URL (may fail if the string is not a valid URL)
-          decode: (s) =>
+          decode: (s, options) =>
             Effect.try({
               try: () => new URL(s),
-              catch: () => new SchemaIssue.InvalidValue({ message: "Invalid URL string" })
+              catch: () => new SchemaIssue.InvalidValue({ message: "Invalid URL string" }, s, options)
             }),
           // URL -> JSON string (always succeeds)
           encode: (url) => Effect.succeed(url.href)
@@ -2360,7 +2360,7 @@ const Box = <A extends Schema.Top>(item: A) =>
     (u, ast, options) => {
       // First, check the outer shape
       if (!isBox(u)) {
-        return Effect.fail(new SchemaIssue.InvalidType(ast))
+        return Effect.fail(new SchemaIssue.InvalidType(ast, u, options))
       }
       // Then, decode the inner value using the item codec
       return Effect.mapBothEager(
@@ -2741,13 +2741,15 @@ const myapi = (userId: number) =>
 
 const schema = Schema.Finite.pipe(
   Schema.decode({
-    decode: SchemaGetter.checkEffect((n) =>
+    decode: SchemaGetter.checkEffect((n, options) =>
       Effect.gen(function*() {
         // Call the async API and wrap the result in a Result
         const user = yield* Effect.result(myapi(n))
 
         // If the result is an error, return a SchemaIssue
-        return Result.isFailure(user) ? new SchemaIssue.InvalidValue({ title: "not found" }) : undefined // No issue, value is valid
+        return Result.isFailure(user)
+          ? new SchemaIssue.InvalidValue({ message: "not found" }, n, options)
+          : undefined // No issue, value is valid
       })
     ),
     encode: SchemaGetter.passthrough()
@@ -3216,10 +3218,10 @@ const URLFromString = Schema.String.pipe(
   Schema.decodeTo(
     Schema.instanceOf(URL),
     SchemaTransformation.transformOrFail({
-      decode: (s) =>
+      decode: (s, options) =>
         Effect.try({
           try: () => new URL(s),
-          catch: () => new SchemaIssue.InvalidValue({ message: "Invalid URL string" })
+          catch: () => new SchemaIssue.InvalidValue({ message: "Invalid URL string" }, s, options)
         }),
       encode: (url) => Effect.succeed(url.href)
     })
@@ -4418,19 +4420,19 @@ console.log(Schema.decodeUnknownSync(Animal)({ _tag: "Cat", lives: 9 }))
 
 All features from `Class` are available: `extend`, `annotate`, `check`, branded classes, and recursive definitions.
 
-### ErrorClass
+### Error
 
 ```ts
 import { Schema } from "effect"
 
-class E extends Schema.ErrorClass<E>("E")({
+class E extends Schema.Error<E>("E")({
   id: Schema.Number
 }) {}
 ```
 
-### TaggedErrorClass
+### TaggedError
 
-`TaggedErrorClass` combines `ErrorClass` with an automatic `_tag` field, giving you a tagged error that can be caught with `Effect.catchTag`.
+`TaggedError` combines `Error` with an automatic `_tag` field, giving you a tagged error that can be caught with `Effect.catchTag`.
 
 Like `TaggedClass`, the tag value doubles as the identifier by default, and you can pass an explicit identifier as the first argument to override it.
 
@@ -4439,7 +4441,7 @@ Like `TaggedClass`, the tag value doubles as the identifier by default, and you 
 ```ts
 import { Effect, Schema } from "effect"
 
-class HttpError extends Schema.TaggedErrorClass<HttpError>()("HttpError", {
+class HttpError extends Schema.TaggedError<HttpError>()("HttpError", {
   status: Schema.Number,
   message: Schema.String
 }) {}
@@ -4458,11 +4460,11 @@ const recovered = program.pipe(
 ```ts
 import { Effect, Schema } from "effect"
 
-class NotFound extends Schema.TaggedErrorClass<NotFound>()("NotFound", {
+class NotFound extends Schema.TaggedError<NotFound>()("NotFound", {
   path: Schema.String
 }) {}
 
-class Unauthorized extends Schema.TaggedErrorClass<Unauthorized>()("Unauthorized", {
+class Unauthorized extends Schema.TaggedError<Unauthorized>()("Unauthorized", {
   reason: Schema.String
 }) {}
 
@@ -4483,7 +4485,7 @@ const recovered = program.pipe(
 )
 ```
 
-All features from `ErrorClass` are available: `extend`, `annotate`, and `check`.
+All features from `Error` are available: `extend`, `annotate`, and `check`.
 
 # Serialization
 
@@ -5858,7 +5860,7 @@ const BoxSchema = <A extends Schema.Top>(value: A) =>
     [value],
     ([valueCodec]) => (input, ast, options) => {
       if (!isBox(input)) {
-        return Effect.fail(new SchemaIssue.InvalidType(ast))
+        return Effect.fail(new SchemaIssue.InvalidType(ast, input, options))
       }
       return Effect.map(
         SchemaParser.decodeUnknownEffect(valueCodec)(Box.unbox(input), options),
@@ -6070,6 +6072,8 @@ console.log(_s.replace("b", new B({ a: new A({ s: "a" }) })))
 // B { a: A { s: 'b' } }
 ```
 
+Reading through the generated `Iso` encodes the schema value, while replacing through it decodes the new focus. Either direction can throw an `Error` with the generic message `"Schema validation failed"` and a `SchemaIssue.Issue` in its `cause`. Use `SchemaIssue.makeFormatterDefault()` to format that cause when human-readable details are needed.
+
 ### Using the Differ Module for Type-Safe JSON Patches
 
 The `Differ` module lets you compute and apply JSON Patch (RFC 6902) changes for any value described by a `Schema`. You give it a schema once, then use the returned differ to produce a patch from an old value to a new value, and to apply that patch.
@@ -6148,6 +6152,8 @@ The idea is simple: if you have a `Schema` for a type `T`, you can serialize any
   3. Decode the patched JSON back to `T` using the schema.
 
 This approach keeps patches independent from TypeScript types and uses the schema as the guardrail when turning JSON back into `T`.
+
+Schema conversion failures from `diff` or `patch` throw an `Error` with the generic message `"Schema validation failed"` and a `SchemaIssue.Issue` in its `cause`. Format that cause explicitly with `SchemaIssue.makeFormatterDefault()`. Errors raised while applying an invalid JSON Patch operation are separate `JsonPatch` errors rather than schema validation failures.
 
 # Schema Representation
 
@@ -6443,6 +6449,31 @@ reviver option. To generate code from persisted JSON, first reconstruct the sche
 # Error Handling and Formatting
 
 When validation fails, Schema produces structured error objects that describe what went wrong. Formatters turn those error objects into human-readable messages you can display to users or write to logs.
+
+### Reporting Rejected Inputs
+
+By default, schema issues neither retain rejected input values nor include them in formatted messages. Pass `{ reportInput: true }` to a parser when the additional diagnostic context is worth the disclosure and retention risk:
+
+```ts
+import { Result, Schema, SchemaIssue, SchemaParser } from "effect"
+
+const result = SchemaParser.decodeUnknownResult(Schema.String)(1, { reportInput: true })
+const formatIssue = SchemaIssue.makeFormatterDefault()
+
+if (Result.isFailure(result)) {
+  SchemaIssue.hasInput(result.failure) // true
+  if (SchemaIssue.hasInput(result.failure)) {
+    result.failure.input // 1
+  }
+  formatIssue(result.failure) // "Expected string, got 1"
+}
+```
+
+Value-bearing issues created by the parser then expose an enumerable own `input` field. The input is retained by reference, not copied. Use `SchemaIssue.hasInput(issue)` instead of checking `issue.input !== undefined`, because a present input whose value is `undefined` is distinct from an issue that does not retain input.
+
+Enabling this option can retain or disclose secrets, personally identifiable information, and large object graphs. Object enumeration, spread, serialization, `SchemaIssue.makeFormatterDefault()`, `SchemaError.message`, and Standard Schema messages may expose the retained value. A Standard Schema failure still contains only its standard `message` and `path` fields; the input can appear inside `message`, but no non-standard `input` field is added.
+
+User-created `SchemaIssue.Issue` values returned directly by declarations, checks, transformations, or middleware are not modified. To make a custom value-bearing issue honor `reportInput`, pass the callback's input and effective parse options to its constructor, for example `new SchemaIssue.InvalidValue(annotations, input, options)`.
 
 ### Formatters
 

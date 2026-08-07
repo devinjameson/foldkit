@@ -19,6 +19,7 @@ import { describe, it } from "vitest"
 import { assertTrue, deepStrictEqual, strictEqual, throws } from "../utils/assert.ts"
 
 const isDeno = "Deno" in globalThis
+const formatIssue = SchemaIssue.makeFormatterDefault()
 
 const FiniteFromDate = Schema.Date.pipe(Schema.decodeTo(
   Schema.Number,
@@ -334,11 +335,11 @@ describe("Serializers", () => {
           strictEqual(ast._tag, "Objects")
           if (ast._tag === "Objects") {
             const type = ast.propertySignatures[0].type
-            assertTrue(type.context?.defaultValue !== undefined)
+            assertTrue(type.context?.constructorDefault !== undefined)
             const encoded = SchemaAST.getLastEncoding(type)
             strictEqual(encoded.context?.isOptional, true)
             strictEqual(encoded.context?.isMutable, true)
-            strictEqual(encoded.context?.defaultValue, undefined)
+            strictEqual(encoded.context?.constructorDefault, undefined)
             deepStrictEqual(encoded.context?.annotations, { description: "a" })
           }
         })
@@ -941,8 +942,8 @@ describe("Serializers", () => {
         await decoding.succeed({ a: 0 }, new A({ a: 0 }))
       })
 
-      it("ErrorClass", async () => {
-        class E extends Schema.ErrorClass<E>("E")({
+      it("Error", async () => {
+        class E extends Schema.Error<E>("E")({
           a: Schema.Finite
         }) {}
         const asserts = new TestSchema.Asserts(Schema.toCodecJson(Schema.toType(E)))
@@ -966,7 +967,7 @@ describe("Serializers", () => {
       })
 
       it("Error", async () => {
-        const schema = Schema.Error()
+        const schema = Schema.ErrorInstance()
         const asserts = new TestSchema.Asserts(Schema.toCodecJson(schema))
 
         const encoding = asserts.encoding()
@@ -1038,7 +1039,7 @@ describe("Serializers", () => {
       })
 
       it("Error with stack", async () => {
-        const schema = Schema.Error({ includeStack: true })
+        const schema = Schema.ErrorInstance({ includeStack: true })
         const asserts = new TestSchema.Asserts(Schema.toCodecJson(schema))
         const error = new Error("a")
         error.stack = "stack"
@@ -1062,7 +1063,7 @@ describe("Serializers", () => {
       })
 
       it("Error with excluded cause", async () => {
-        const schema = Schema.Error({ excludeCause: true })
+        const schema = Schema.ErrorInstance({ excludeCause: true })
         const asserts = new TestSchema.Asserts(Schema.toCodecJson(schema))
 
         const encoding = asserts.encoding()
@@ -1430,7 +1431,7 @@ describe("Serializers", () => {
       })
 
       it("Error", async () => {
-        class E extends Schema.ErrorClass<E>("E")({
+        class E extends Schema.Error<E>("E")({
           a: FiniteFromDate
         }) {}
         const asserts = new TestSchema.Asserts(Schema.toCodecJson(E))
@@ -1636,11 +1637,11 @@ describe("Serializers", () => {
       strictEqual(ast._tag, "Objects")
       if (ast._tag === "Objects") {
         const type = ast.propertySignatures[0].type
-        assertTrue(type.context?.defaultValue !== undefined)
+        assertTrue(type.context?.constructorDefault !== undefined)
         const encoded = SchemaAST.getLastEncoding(type)
         strictEqual(encoded.context?.isOptional, true)
         strictEqual(encoded.context?.isMutable, true)
-        strictEqual(encoded.context?.defaultValue, undefined)
+        strictEqual(encoded.context?.constructorDefault, undefined)
         deepStrictEqual(encoded.context?.annotations, { description: "a" })
       }
     })
@@ -1666,11 +1667,11 @@ describe("Serializers", () => {
       strictEqual(ast._tag, "Objects")
       if (ast._tag === "Objects") {
         const type = ast.propertySignatures[0].type
-        assertTrue(type.context?.defaultValue !== undefined)
+        assertTrue(type.context?.constructorDefault !== undefined)
         const encoded = SchemaAST.getLastEncoding(type)
         strictEqual(encoded.context?.isOptional, true)
         strictEqual(encoded.context?.isMutable, true)
-        strictEqual(encoded.context?.defaultValue, undefined)
+        strictEqual(encoded.context?.constructorDefault, undefined)
         deepStrictEqual(encoded.context?.annotations, { description: "a" })
       }
     })
@@ -2499,8 +2500,8 @@ Expected "Infinity" | "-Infinity" | "NaN"`
         await decoding.succeed({ a: "0" }, new A({ a: 0 }))
       })
 
-      it("ErrorClass", async () => {
-        class E extends Schema.ErrorClass<E>("E")({
+      it("Error", async () => {
+        class E extends Schema.Error<E>("E")({
           a: Schema.Finite
         }) {}
         const asserts = new TestSchema.Asserts(Schema.toCodecStringTree(Schema.toType(E)))
@@ -2524,7 +2525,7 @@ Expected "Infinity" | "-Infinity" | "NaN"`
       })
 
       it("Error", async () => {
-        const schema = Schema.Error()
+        const schema = Schema.ErrorInstance()
         const asserts = new TestSchema.Asserts(Schema.toCodecStringTree(schema))
 
         const encoding = asserts.encoding()
@@ -2812,7 +2813,7 @@ Expected "Infinity" | "-Infinity" | "NaN"`
     async function assertXmlFailure<T, E, RD>(schema: Schema.Codec<T, E, RD>, value: T, message: string) {
       const serializer = Schema.toEncoderXml(Schema.toCodecStringTree(schema))
       const r = await serializer(value).pipe(
-        Effect.mapError((err) => err.issue.toString()),
+        Effect.mapError((err) => formatIssue(err.issue)),
         Effect.result,
         Effect.runPromise
       )

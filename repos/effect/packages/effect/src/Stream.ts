@@ -5920,6 +5920,13 @@ const retryWithoutReset = <A, E, R, X, E2, R2>(
  * `preventFallbackOnPartialStream` to fail instead of mixing partial output with
  * a later fallback.
  *
+ * Attempts can be observed from outside the stream by passing
+ * `options.onEvent`, which receives an `ExecutionPlan.Event` before each
+ * attempt and after it settles; see `Effect.withExecutionPlan` for the handler
+ * semantics. When a downstream consumer stops pulling early (for example
+ * `Stream.take` outside the plan), the truncated attempt reports
+ * `AttemptSuccess`: the consumer stopped, not the source.
+ *
  * **Example** (Applying an execution plan)
  *
  * ```ts import.meta.vitest
@@ -5953,16 +5960,22 @@ const retryWithoutReset = <A, E, R, X, E2, R2>(
  * @since 3.16.0
  */
 export const withExecutionPlan: {
-  <Input, R2, Provides, PolicyE>(
+  <Input, R2, Provides, PolicyE, RX = never>(
     policy: ExecutionPlan.ExecutionPlan<{ provides: Provides; input: Input; error: PolicyE; requirements: R2 }>,
-    options?: { readonly preventFallbackOnPartialStream?: boolean | undefined }
-  ): <A, E extends Input, R>(self: Stream<A, E, R>) => Stream<A, E | PolicyE, R2 | Exclude<R, Provides>>
-  <A, E extends Input, R, R2, Input, Provides, PolicyE>(
+    options?: {
+      readonly preventFallbackOnPartialStream?: boolean | undefined
+      readonly onEvent?: ((event: ExecutionPlan.Event<Input | PolicyE>) => Effect.Effect<void, never, RX>) | undefined
+    }
+  ): <A, E extends Input, R>(self: Stream<A, E, R>) => Stream<A, E | PolicyE, R2 | Exclude<R, Provides> | RX>
+  <A, E extends Input, R, R2, Input, Provides, PolicyE, RX = never>(
     self: Stream<A, E, R>,
     policy: ExecutionPlan.ExecutionPlan<{ provides: Provides; input: Input; error: PolicyE; requirements: R2 }>,
-    options?: { readonly preventFallbackOnPartialStream?: boolean | undefined }
-  ): Stream<A, E | PolicyE, R2 | Exclude<R, Provides>>
-} = dual((args) => isStream(args[0]), <A, E extends Input, R, R2, Input, Provides, PolicyE>(
+    options?: {
+      readonly preventFallbackOnPartialStream?: boolean | undefined
+      readonly onEvent?: ((event: ExecutionPlan.Event<E | PolicyE>) => Effect.Effect<void, never, RX>) | undefined
+    }
+  ): Stream<A, E | PolicyE, R2 | Exclude<R, Provides> | RX>
+} = dual((args) => isStream(args[0]), <A, E extends Input, R, R2, Input, Provides, PolicyE, RX>(
   self: Stream<A, E, R>,
   policy: ExecutionPlan.ExecutionPlan<{
     provides: Provides
@@ -5972,8 +5985,9 @@ export const withExecutionPlan: {
   }>,
   options?: {
     readonly preventFallbackOnPartialStream?: boolean | undefined
+    readonly onEvent?: ((event: ExecutionPlan.Event<E | PolicyE>) => Effect.Effect<void, never, RX>) | undefined
   }
-): Stream<A, E | PolicyE, R2 | Exclude<R, Provides>> =>
+): Stream<A, E | PolicyE, R2 | Exclude<R, Provides> | RX> =>
   suspend(() => {
     const preventFallbackOnPartialStream = options?.preventFallbackOnPartialStream ?? false
     let i = 0
@@ -5991,6 +6005,28 @@ export const withExecutionPlan: {
         return meta
       })
     )
+    const emitter = options?.onEvent === undefined
+      ? undefined
+      : internalExecutionPlan.makeEventEmitter(options.onEvent, () => meta)
+    let attemptState: internalExecutionPlan.AttemptState | undefined
+    const instrument: (attempt: Stream<A, E | PolicyE, any>) => Stream<A, E | PolicyE, any> = emitter === undefined
+      ? identity
+      : (attempt) =>
+        onExit(
+          onStart(
+            attempt,
+            Effect.map(emitter.begin, (state) => {
+              attemptState = state
+            })
+          ),
+          (exit) =>
+            Effect.suspend(() => {
+              if (attemptState === undefined) return Effect.void
+              const state = attemptState
+              attemptState = undefined
+              return emitter.end(state, exit)
+            })
+        )
     let lastError = Option.none<E | PolicyE>()
     const loop: Stream<
       A,
@@ -6002,7 +6038,9 @@ export const withExecutionPlan: {
         return fail(Option.getOrThrow(lastError))
       }
 
-      let nextStream: Stream<A, E | PolicyE, R2 | Exclude<R, Provides>> = provideMeta(provide(self, step.provide))
+      let nextStream: Stream<A, E | PolicyE, R2 | Exclude<R, Provides>> = provideMeta(
+        instrument(provide(self, step.provide))
+      )
       let receivedElements = false
 
       if (Option.isSome(lastError)) {
@@ -6924,12 +6962,18 @@ export const slidingSize: {
         let cause: Cause.Cause<E | Cause.Done> | null = null
         const list = MutableList.make<A>()
         let emitted = false
+        let skip = 0
         const pull: Pull.Pull<
           Arr.NonEmptyReadonlyArray<Arr.NonEmptyReadonlyArray<A>>,
           E | Cause.Done
         > = Effect.matchCauseEffect(upstream, {
           onSuccess(arr) {
             MutableList.appendAllUnsafe(list, arr)
+            if (skip > 0) {
+              const length = list.length
+              MutableList.takeNVoid(list, skip)
+              skip = Math.max(0, skip - length)
+            }
             if (list.length < chunkSize) return pull
             emitted = true
             const chunks = [] as any as Arr.NonEmptyArray<Arr.NonEmptyReadonlyArray<A>>
@@ -6938,10 +6982,12 @@ export const slidingSize: {
                 chunks.push(MutableList.takeN(list, chunkSize) as any)
               } else {
                 chunks.push(MutableList.toArrayN(list, chunkSize) as any)
-                if (chunkSize === 1) {
+                if (chunkSize === 1 && stepSize <= 0) {
                   MutableList.take(list)
                 } else {
+                  const length = list.length
                   MutableList.takeNVoid(list, stepSize)
+                  skip = Math.max(0, stepSize - length)
                 }
               }
             }

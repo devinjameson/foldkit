@@ -77,14 +77,14 @@ export type Room = typeof Room.Type
 export const RoomById = S.HashMap(S.String, Room)
 export type RoomById = typeof RoomById.Type
 
-export class RoomNotFoundError extends S.TaggedErrorClass<RoomNotFoundError>()(
+export class RoomNotFoundError extends S.TaggedError<RoomNotFoundError>()(
   'RoomNotFoundError',
   {
     roomId: S.String,
   },
 ) {}
 
-export class UnauthorizedError extends S.TaggedErrorClass<UnauthorizedError>()(
+export class UnauthorizedError extends S.TaggedError<UnauthorizedError>()(
   'UnauthorizedError',
   {
     message: S.String,
