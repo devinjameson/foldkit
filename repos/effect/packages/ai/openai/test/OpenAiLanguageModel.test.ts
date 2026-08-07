@@ -342,7 +342,8 @@ describe("OpenAiLanguageModel", () => {
                       id: "call_abc",
                       name: "TestTool",
                       isFailure: false,
-                      result: { output: "result" }
+                      result: { output: "result" },
+                      providerExecuted: false
                     })
                   ]
                 }
@@ -384,7 +385,8 @@ describe("OpenAiLanguageModel", () => {
                       id: "call_abc",
                       name: "TestTool",
                       isFailure: false,
-                      result: { output: "result" }
+                      result: { output: "result" },
+                      providerExecuted: false
                     })
                   ]
                 }
@@ -425,7 +427,8 @@ describe("OpenAiLanguageModel", () => {
                     id: "call_apply_patch",
                     name: "OpenAiApplyPatch",
                     isFailure: false,
-                    result: { status: "completed", output: "deleted" }
+                    result: { status: "completed", output: "deleted" },
+                    providerExecuted: false
                   })]
                 }
               ]),
@@ -475,7 +478,8 @@ describe("OpenAiLanguageModel", () => {
                         stderr: "",
                         outcome: { type: "exit", exit_code: 0 }
                       }]
-                    }
+                    },
+                    providerExecuted: false
                   })]
                 }
               ]),
@@ -519,7 +523,8 @@ describe("OpenAiLanguageModel", () => {
                     id: "call_local_shell",
                     name: "OpenAiLocalShell",
                     isFailure: false,
-                    result: { output: "hello\n" }
+                    result: { output: "hello\n" },
+                    providerExecuted: false
                   })]
                 }
               ]),

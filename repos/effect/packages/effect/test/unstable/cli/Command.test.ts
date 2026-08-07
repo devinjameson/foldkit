@@ -725,6 +725,24 @@ describe("Command", () => {
   })
 
   describe("withSubcommands", () => {
+    it("preserves unlisted metadata when adding subcommands", () => {
+      const withChild = Command.make("internal").pipe(
+        Command.unlisted,
+        Command.withSubcommands([Command.make("child")])
+      )
+
+      assert.isTrue(withChild.unlisted)
+    })
+
+    it("preserves unlisted metadata when adding shared flags", () => {
+      const withShared = Command.make("internal").pipe(
+        Command.unlisted,
+        Command.withSharedFlags({ verbose: Flag.boolean("verbose") })
+      )
+
+      assert.isTrue(withShared.unlisted)
+    })
+
     it.effect("should execute parent handler when no subcommand provided", () =>
       Effect.gen(function*() {
         const command = "git"

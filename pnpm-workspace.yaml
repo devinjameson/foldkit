@@ -12,15 +12,15 @@ allowBuilds:
   simple-git-hooks: true
 
 minimumReleaseAgeExclude:
-  - '@effect/platform-browser@4.0.0-beta.103'
-  - '@effect/platform-node-shared@4.0.0-beta.103'
-  - '@effect/platform-node@4.0.0-beta.103'
-  - '@effect/vitest@4.0.0-beta.103'
-  - effect@4.0.0-beta.103
+  - '@effect/platform-browser@4.0.0-beta.105'
+  - '@effect/platform-node-shared@4.0.0-beta.105'
+  - '@effect/platform-node@4.0.0-beta.105'
+  - '@effect/vitest@4.0.0-beta.105'
+  - effect@4.0.0-beta.105
 
 overrides:
-  effect: 4.0.0-beta.103
-  '@effect/platform-browser': 4.0.0-beta.103
-  '@effect/platform-node': 4.0.0-beta.103
-  '@effect/platform-node-shared': 4.0.0-beta.103
-  '@effect/vitest': 4.0.0-beta.103
+  effect: 4.0.0-beta.105
+  '@effect/platform-browser': 4.0.0-beta.105
+  '@effect/platform-node': 4.0.0-beta.105
+  '@effect/platform-node-shared': 4.0.0-beta.105
+  '@effect/vitest': 4.0.0-beta.105

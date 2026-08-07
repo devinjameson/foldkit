@@ -1,9 +1,10 @@
 import { NodeFileSystem } from "@effect/platform-node"
 import { SqliteClient } from "@effect/sql-sqlite-node"
 import { assert, describe, expect, it } from "@effect/vitest"
-import { Duration, Effect, Exit, FileSystem, Layer, Schedule } from "effect"
+import { Cause, Duration, Effect, Exit, FileSystem, Layer, Schedule } from "effect"
 import { TestClock } from "effect/testing"
 import {
+  ClusterError,
   Runner,
   RunnerAddress,
   RunnerStorage,
@@ -48,7 +49,8 @@ describe("SqlRunnerStorage", () => {
           TestClock.withLive
         )
         assert(Exit.isFailure(exit))
-        assert.isAtLeast(Duration.toMillis(elapsed), 90)
+        const error = Cause.squash(exit.cause)
+        assert(error instanceof ClusterError.PersistenceError)
         assert.isBelow(Duration.toMillis(elapsed), 1000)
         yield* Effect.sleep(20).pipe(TestClock.withLive)
       })
@@ -110,7 +112,7 @@ describe("SqlRunnerStorage", () => {
       yield* storage.acquire(runnerAddress1, shards)
       partitioned.current = true
       yield* storage.refresh(runnerAddress1, shards).pipe(Effect.exit, TestClock.withLive)
-      yield* Effect.sleep(150).pipe(TestClock.withLive)
+      yield* waitUntil(() => partitioned.activeQueries === 0)
 
       partitioned.current = false
       expect(
@@ -229,6 +231,7 @@ describe("SqlRunnerStorage", () => {
       expect(yield* storageA.acquire(runnerAddress1, [shard])).toEqual([shard])
       expect(yield* storageB.acquire(runnerAddress2, [shard])).toEqual([shard])
     }).pipe(
+      // Release the advisory-lock connections before the PostgreSQL layer.
       Effect.scoped,
       Effect.provide(PgContainer.layerClient),
       Effect.provide(ShardingConfig.layer())
@@ -243,6 +246,7 @@ describe("SqlRunnerStorage", () => {
       expect(yield* storageA.acquire(runnerAddress1, [shard])).toEqual([shard])
       expect(yield* storageB.acquire(runnerAddress2, [shard])).toEqual([])
     }).pipe(
+      // Release the advisory-lock connections before the PostgreSQL layer.
       Effect.scoped,
       Effect.provide(PgContainer.layerClient),
       Effect.provide(ShardingConfig.layer())

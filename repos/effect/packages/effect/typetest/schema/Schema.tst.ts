@@ -8,6 +8,7 @@ import {
   Schema,
   type SchemaAST,
   SchemaGetter,
+  type SchemaIssue,
   SchemaTransformation,
   Struct,
   Tuple
@@ -19,7 +20,7 @@ type Make<In, Out> = (input: In, options?: Schema.MakeOptions | undefined) => Ou
 type MakeEffect<In, Out> = (
   input: In,
   options?: Schema.MakeOptions | undefined
-) => Effect.Effect<Out, Schema.SchemaError>
+) => Effect.Effect<Out, SchemaIssue.Issue>
 
 const revealClass = <Self, S extends Schema.Struct<Schema.Struct.Fields>, Inherited>(
   klass: Schema.Class<Self, S, Inherited>
@@ -338,16 +339,16 @@ describe("Schema", () => {
       })
     })
 
-    describe("ErrorClass", () => {
+    describe("Error", () => {
       it("make with void input", () => {
-        class E extends Schema.ErrorClass<E>("E")({}) {}
+        class E extends Schema.Error<E>("E")({}) {}
         expect(E.make).type.toBe<Make<void | {}, E>>()
       })
     })
 
-    describe("TaggedErrorClass", () => {
+    describe("TaggedError", () => {
       it("make with void input", () => {
-        class E extends Schema.TaggedErrorClass<E>()("E", {}) {}
+        class E extends Schema.TaggedError<E>()("E", {}) {}
         expect(E.make).type.toBe<Make<void | { readonly _tag?: "E" }, E>>()
       })
     })
@@ -1441,7 +1442,7 @@ describe("Schema", () => {
 
     describe("Error", () => {
       it("extend Fields", () => {
-        class E extends Schema.ErrorClass<E>("E")({
+        class E extends Schema.Error<E>("E")({
           a: Schema.String
         }) {}
 
@@ -1455,7 +1456,7 @@ describe("Schema", () => {
       })
 
       it("extend Struct", () => {
-        class E extends Schema.ErrorClass<E>("E")(Schema.Struct({
+        class E extends Schema.Error<E>("E")(Schema.Struct({
           a: Schema.String
         })) {}
 
@@ -1469,7 +1470,7 @@ describe("Schema", () => {
       })
 
       it("should reject non existing props", () => {
-        class E extends Schema.ErrorClass<E>("E")({
+        class E extends Schema.Error<E>("E")({
           a: Schema.String
         }) {}
 
@@ -1478,7 +1479,7 @@ describe("Schema", () => {
       })
 
       it("mutable field", () => {
-        class E extends Schema.ErrorClass<E>("E")({
+        class E extends Schema.Error<E>("E")({
           a: Schema.String.pipe(Schema.mutableKey)
         }) {}
 
@@ -1506,15 +1507,15 @@ describe("Schema", () => {
         )
       })
 
-      it("ErrorClass", () => {
-        expect(Schema.ErrorClass("A")({})).type.toBe(
-          "Missing `Self` generic - use `class Self extends Schema.ErrorClass<Self>(...)`"
+      it("Error", () => {
+        expect(Schema.Error("A")({})).type.toBe(
+          "Missing `Self` generic - use `class Self extends Schema.Error<Self>(...)`"
         )
       })
 
-      it("TaggedErrorClass", () => {
-        expect(Schema.TaggedErrorClass("A")("A", {})).type.toBe(
-          "Missing `Self` generic - use `class Self extends Schema.TaggedErrorClass<Self>(...)`"
+      it("TaggedError", () => {
+        expect(Schema.TaggedError("A")("A", {})).type.toBe(
+          "Missing `Self` generic - use `class Self extends Schema.TaggedError<Self>(...)`"
         )
       })
     })
