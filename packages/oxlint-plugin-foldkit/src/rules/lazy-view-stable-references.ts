@@ -251,12 +251,12 @@ const unstableViewOffenses = (
   if (Option.isNone(maybeSlot)) {
     return []
   }
-  const slot = maybeSlot.value
+  const { value: slot } = maybeSlot
   const maybeViewArgument = Array.get(node.arguments, slot.viewArgumentIndex)
   if (Option.isNone(maybeViewArgument)) {
     return []
   }
-  const viewArgument = maybeViewArgument.value
+  const { value: viewArgument } = maybeViewArgument
   if (viewArgument.type === 'SpreadElement') {
     return []
   }

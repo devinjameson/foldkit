@@ -232,7 +232,7 @@ export const noArrayIndexViewKeys = Rule.define({
           if (Option.isNone(maybeKeyExpression)) {
             return
           }
-          const keyExpression = maybeKeyExpression.value
+          const { value: keyExpression } = maybeKeyExpression
           const maybeIndexName = Array.findFirst(activeIndexNames, indexName =>
             referencesIndexName(keyExpression, indexName),
           )
