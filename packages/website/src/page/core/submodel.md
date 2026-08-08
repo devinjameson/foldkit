@@ -91,6 +91,16 @@ About the Command mapping: the Submodel’s Commands produce child Messages when
 
 ::Demo{name="map-messages-under-hood"}
 
+### Folding with Update.foldChild {#fold-child}
+
+The handler above is written out once so you can see the full mechanics of embedding a child. In practice you reach for `Update.foldChild`, which manages this wiring and exposes only the parts that change per child: the child's update, how to read the child out of the parent Model, how to write it back, and the `Got*` wrapper. The handler collapses to one line:
+
+::Snippet{name="submodelFoldChild" label="foldChild"}
+
+`read` returns an `Option` because a child may not be mounted (for example, a page behind a route or an entry in a keyed collection); a single always-present field wraps in `Option.some`. When `read` returns `None` the fold is a no-op, `[model, []]`: a Message for an unmounted child does nothing. `toParentMessage` is the same contract `h.submodel` takes on the view half, and the fold lifts the child's Commands through it with `Command.mapMessages`.
+
+`foldChild` returns a dual function. Called with the parent Model and a child Message (`foldSettings(model, message)`) it runs the fold now, which is the handler shape. Called with only the Message (`foldSettings(message)`) it returns an `Update.Step`, which composes with `Update.combine` like any other Step. A child update that needs per-dispatch context is closed over in the `update` field (`update: (child, message) => Room.update(child, message, { roomId })`), and deciding _whether_ to run the fold (a route gate, for example) happens in the update branch before you call it.
+
 ### Wiring the View with h.submodel {#wiring-the-view}
 
 The Submodel exports a view defined with `Submodel.defineView<Model, Message>`. The function takes the child’s `model` and the child’s typed builder `h`, and returns `Html`, the same shape a top-level program’s view has.
@@ -218,6 +228,12 @@ The parent uses `Option.match` on the OutMessage. `onNone` means the child handl
 ::Snippet{name="outMessageParentHandle" label="parent handling"}
 
 This is where the power of the boundary shows. When `SucceededLogin` arrives, the parent can do things the child has no knowledge of: transition to a completely different Model state, save the session, redirect the URL. The child stays focused on its domain; the parent handles cross-cutting concerns.
+
+With [Update.foldChild](#fold-child), the same handling moves into the fold's `foldOutMessage` field: a function from the OutMessage to an `Update.Step`. The Step receives the parent Model with the child already written back, and the batch the fold returns places the Step's Commands after the child's mapped Commands, the same order the hand-written version produces. Bind it as an annotated standalone const and match on the OutMessage tag inside it, even when the union has one variant:
+
+::Snippet{name="outMessageFoldChild" label="foldChild with foldOutMessage"}
+
+A parent that is itself a Submodel adds `toParentOutMessage` to the config, lifting the child's OutMessage into the parent's own (`() => Option.none()` when the parent has nothing to pass upward). That fold returns `Update.ReturnWithOutMessage`, so the intermediate handler stays one line. The [Auth example](/example-apps/auth)'s login page does exactly this: it folds its Login child and lifts `SucceededLogin` into its own OutMessage for the root to act on.
 
 See the [Auth example](/example-apps/auth) for a complete implementation: a login module emits `SucceededLogin` when authentication completes, and the parent transitions to the logged-in state, saves the session, and updates the URL, all triggered by a single OutMessage.
 
