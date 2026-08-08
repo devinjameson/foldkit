@@ -79,7 +79,15 @@ export type RenderInfo<Value extends string, Message> = Readonly<{
  *    navigated to. Handle it in the parent's `update` by storing the value.
  *    The radio group manages focus itself, so the handler needs to do nothing
  *    else.
- *  - `toView`: receives the {@link RenderInfo} and lays out the group. */
+ *  - `toView`: receives the {@link RenderInfo} and lays out the group.
+ *  - `isReadOnly`: prevents selection changes while exposing read-only
+ *    semantics with `aria-readonly="true"` and `data-readonly` on the group
+ *    and on each option. Arrow, Home, End, PageUp, and PageDown still move
+ *    focus between options; Space and clicking do nothing. The roving tab stop
+ *    stays on the selected option, since it derives from `selectedValue`, so
+ *    tabbing out of the group and back returns to the selection rather than to
+ *    the last focused option. Independent of `isDisabled`: setting both emits
+ *    both attribute sets, and either one prevents selection. */
 export type ViewConfig<Value extends string, Message> = Readonly<{
   id: string
   selectedValue: Option.Option<Value>
@@ -90,6 +98,7 @@ export type ViewConfig<Value extends string, Message> = Readonly<{
   orientation?: Orientation
   isOptionDisabled?: (value: Value, index: number) => boolean
   isDisabled?: boolean
+  isReadOnly?: boolean
   name?: string
 }>
 
@@ -131,6 +140,7 @@ export const view = <Value extends string, Message>(
     orientation = 'Vertical',
     isOptionDisabled: isOptionDisabledFn,
     isDisabled: isGroupDisabled = false,
+    isReadOnly = false,
     name,
   } = config
 
@@ -219,6 +229,51 @@ export const view = <Value extends string, Message>(
         M.orElse(() => Option.none()),
       )
 
+  const focusSelectorAt = (index: number): Option.Option<string> =>
+    pipe(options, Array.get(index), Option.as(idSelector(optionId(id, index))))
+
+  const resolveReadOnlyKeyIndex = (
+    currentIndex: number,
+  ): ((key: string) => number) =>
+    keyToIndex(nextKey, previousKey, options.length, currentIndex, isDisabled)
+
+  // NOTE: The read-only path resolves from the option the key came from, not
+  // from the derived `focusedIndex`. Nothing dispatches, so `selectedValue`
+  // never moves, and resolving from it would return the same neighbor for
+  // every arrow press.
+  const handleReadOnlyKeyDown =
+    (currentIndex: number) =>
+    (key: string): Option.Option<string> =>
+      M.value(key).pipe(
+        M.whenOr(
+          nextKey,
+          previousKey,
+          'Home',
+          'End',
+          'PageUp',
+          'PageDown',
+          () => focusSelectorAt(resolveReadOnlyKeyIndex(currentIndex)(key)),
+        ),
+        M.orElse(() => Option.none()),
+      )
+
+  const interactionAttributesAt = (
+    index: number,
+    value: Value,
+    isOptionDisabledNow: boolean,
+  ): ReadonlyArray<Attribute<Message>> => {
+    if (isOptionDisabledNow) {
+      return []
+    } else if (isReadOnly) {
+      return [h.OnKeyDownFocusOnly(handleReadOnlyKeyDown(index))]
+    } else {
+      return [
+        h.OnClickFocus(idSelector(optionId(id, index)), onSelect(value)),
+        h.OnKeyDownFocus(handleKeyDown(index)),
+      ]
+    }
+  }
+
   const optionInfos: ReadonlyArray<OptionInfo<Value, Message>> = Array.map(
     options,
     (value, index) => {
@@ -238,6 +293,9 @@ export const view = <Value extends string, Message>(
       const disabledAttributes = isOptionDisabledNow
         ? [h.AriaDisabled(true), h.DataAttribute('disabled', '')]
         : []
+      const readOnlyAttributes = isReadOnly
+        ? [h.DataAttribute('readonly', '')]
+        : []
 
       const optionAttributes = [
         h.Id(optionId(id, index)),
@@ -250,12 +308,8 @@ export const view = <Value extends string, Message>(
         ...checkedAttributes,
         ...activeAttributes,
         ...disabledAttributes,
-        ...(isOptionDisabledNow
-          ? []
-          : [
-              h.OnClickFocus(idSelector(optionId(id, index)), onSelect(value)),
-              h.OnKeyDownFocus(handleKeyDown(index)),
-            ]),
+        ...readOnlyAttributes,
+        ...interactionAttributesAt(index, value, isOptionDisabledNow),
       ]
 
       const labelAttributes = [h.Id(labelId(id, index))]
@@ -274,10 +328,15 @@ export const view = <Value extends string, Message>(
     },
   )
 
+  const groupReadOnlyAttributes = isReadOnly
+    ? [h.AriaReadonly(true), h.DataAttribute('readonly', '')]
+    : []
+
   const groupAttributes = [
     h.Role('radiogroup'),
     h.AriaOrientation(String.toLowerCase(orientation)),
     h.AriaLabel(ariaLabel),
+    ...groupReadOnlyAttributes,
   ]
 
   const hiddenInputAttributes = pipe(
