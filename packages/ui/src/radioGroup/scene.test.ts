@@ -34,7 +34,16 @@ const update = (model: Model, message: Message): UpdateReturn =>
   )
 
 const testView =
-  (disabledValue?: string) => (model: Model, h: HtmlBuilder<Message>) =>
+  ({
+    disabledValue,
+    isDisabled = false,
+    isReadOnly = false,
+  }: {
+    disabledValue?: string
+    isDisabled?: boolean
+    isReadOnly?: boolean
+  } = {}) =>
+  (model: Model, h: HtmlBuilder<Message>) =>
     view(
       {
         id: RADIO_ID,
@@ -43,6 +52,8 @@ const testView =
         ariaLabel: 'Tool',
         onSelect: value => SelectedOption({ value }),
         isOptionDisabled: value => value === disabledValue,
+        isDisabled,
+        isReadOnly,
         toView: ({ group, options: optionInfos }) =>
           h.div(
             [...group],
@@ -57,6 +68,7 @@ const testView =
       h,
     )
 
+const group = Scene.role('radiogroup')
 const option = (index: number) => Scene.selector(`#${RADIO_ID}-option-${index}`)
 
 describe('RadioGroup controlled view', () => {
@@ -102,7 +114,7 @@ describe('RadioGroup controlled view', () => {
 
   it('skips a disabled option when navigating', () => {
     Scene.scene(
-      { update, view: testView('Eraser') },
+      { update, view: testView({ disabledValue: 'Eraser' }) },
       Scene.given({ selectedValue: Option.some('Fill') }),
       Scene.expect(option(2)).toHaveAttr('aria-disabled', 'true'),
       Scene.keydown(option(1), 'ArrowDown'),
@@ -112,7 +124,7 @@ describe('RadioGroup controlled view', () => {
 
   it('keeps the tab stop on an enabled option when the selection is disabled', () => {
     Scene.scene(
-      { update, view: testView('Brush') },
+      { update, view: testView({ disabledValue: 'Brush' }) },
       Scene.given({ selectedValue: Option.some('Brush') }),
       Scene.expect(option(0)).toHaveAttr('aria-disabled', 'true'),
       Scene.expect(option(0)).toHaveAttr('tabIndex', '-1'),
@@ -131,9 +143,82 @@ describe('RadioGroup controlled view', () => {
 
   it('keeps type button on a disabled option', () => {
     Scene.scene(
-      { update, view: testView('Brush') },
+      { update, view: testView({ disabledValue: 'Brush' }) },
       Scene.given({ selectedValue: Option.none() }),
       Scene.expect(option(0)).toHaveAttr('type', 'button'),
+    )
+  })
+
+  it('emits read-only attributes without disabled attributes', () => {
+    Scene.scene(
+      { update, view: testView({ isReadOnly: true }) },
+      Scene.given({ selectedValue: Option.some('Brush') }),
+      Scene.expect(group).toHaveAttr('aria-readonly', 'true'),
+      Scene.expect(group).toHaveAttr('data-readonly', ''),
+      Scene.expect(option(0)).toHaveAttr('data-readonly', ''),
+      Scene.expect(option(0)).not.toHaveAttr('aria-disabled'),
+      Scene.expect(option(0)).not.toHaveAttr('data-disabled'),
+    )
+  })
+
+  it('marks the selected option active while interactive', () => {
+    Scene.scene(
+      { update, view: testView() },
+      Scene.given({ selectedValue: Option.some('Brush') }),
+      Scene.expect(option(0)).toHaveAttr('data-active', ''),
+      Scene.expect(option(1)).not.toHaveAttr('data-active'),
+    )
+  })
+
+  it('marks no option active while read-only, keeping the tab stop', () => {
+    Scene.scene(
+      { update, view: testView({ isReadOnly: true }) },
+      Scene.given({ selectedValue: Option.some('Brush') }),
+      Scene.expect(option(0)).not.toHaveAttr('data-active'),
+      Scene.expect(option(1)).not.toHaveAttr('data-active'),
+      Scene.expect(option(0)).toHaveAttr('tabIndex', '0'),
+    )
+  })
+
+  it('keeps arrow navigation without changing the selection', () => {
+    Scene.scene(
+      { update, view: testView({ isReadOnly: true }) },
+      Scene.given({ selectedValue: Option.some('Brush') }),
+      Scene.expect(option(1)).toHaveHandler('keydown'),
+      Scene.keydown(option(0), 'ArrowDown'),
+      Scene.expect(option(0)).toHaveAttr('aria-checked', 'true'),
+      Scene.expect(option(1)).toHaveAttr('aria-checked', 'false'),
+    )
+  })
+
+  it('ignores Space when read-only', () => {
+    Scene.scene(
+      { update, view: testView({ isReadOnly: true }) },
+      Scene.given(init),
+      Scene.keydown(option(0), ' '),
+      Scene.expect(option(0)).toHaveAttr('aria-checked', 'false'),
+    )
+  })
+
+  it('drops the click handler when read-only', () => {
+    Scene.scene(
+      { update, view: testView({ isReadOnly: true }) },
+      Scene.given(init),
+      Scene.expect(option(0)).not.toHaveHandler('click'),
+      Scene.expect(option(0)).toHaveAttr('tabIndex', '0'),
+    )
+  })
+
+  it('emits both attribute sets when disabled and read-only are combined', () => {
+    Scene.scene(
+      { update, view: testView({ isDisabled: true, isReadOnly: true }) },
+      Scene.given({ selectedValue: Option.some('Brush') }),
+      Scene.expect(group).toHaveAttr('aria-readonly', 'true'),
+      Scene.expect(group).toHaveAttr('data-readonly', ''),
+      Scene.expect(option(0)).toHaveAttr('aria-disabled', 'true'),
+      Scene.expect(option(0)).toHaveAttr('data-disabled', ''),
+      Scene.expect(option(0)).toHaveAttr('data-readonly', ''),
+      Scene.expect(option(0)).not.toHaveHandler('keydown'),
     )
   })
 })

@@ -514,6 +514,12 @@ export type Attribute<Message> = Data.TaggedEnum<{
       modifiers: KeyboardModifiers,
     ) => Option.Option<Readonly<{ focusSelector: string; message: Message }>>
   }
+  OnKeyDownFocusOnly: {
+    readonly f: (
+      key: string,
+      modifiers: KeyboardModifiers,
+    ) => Option.Option<string>
+  }
   OnKeyUp: {
     readonly f: (key: string, modifiers: KeyboardModifiers) => Message
   }
@@ -852,6 +858,7 @@ const {
   OnKeyDown,
   OnKeyDownPreventDefault,
   OnKeyDownFocus,
+  OnKeyDownFocusOnly,
   OnKeyUp,
   OnKeyUpPreventDefault,
   OnKeyPress,
@@ -1441,6 +1448,22 @@ const attributeHandlers: AttributeHandlers = {
             focusTarget.focus()
           }
           ctx.dispatch(message)
+        }
+      },
+    }),
+  OnKeyDownFocusOnly: ({ f: toMaybeFocusSelector }, ctx: BuildContext) =>
+    updateDataOn(ctx, {
+      keydown: (event: KeyboardEvent) => {
+        const maybeFocusSelector = toMaybeFocusSelector(
+          event.key,
+          keyboardModifiers(event),
+        )
+        if (Option.isSome(maybeFocusSelector)) {
+          event.preventDefault()
+          const focusTarget = document.querySelector(maybeFocusSelector.value)
+          if (focusTarget instanceof HTMLElement) {
+            focusTarget.focus()
+          }
         }
       },
     }),
@@ -2978,6 +3001,18 @@ type HtmlAttributes<Message> = {
       modifiers: KeyboardModifiers,
     ) => Option.Option<Readonly<{ focusSelector: string; message: Message }>>
   }
+  OnKeyDownFocusOnly: (
+    toMaybeFocusSelector: (
+      key: string,
+      modifiers: KeyboardModifiers,
+    ) => Option.Option<string>,
+  ) => {
+    readonly _tag: 'OnKeyDownFocusOnly'
+    readonly f: (
+      key: string,
+      modifiers: KeyboardModifiers,
+    ) => Option.Option<string>
+  }
   OnKeyDownPreventDefault: (
     toMaybeMessage: (
       key: string,
@@ -4049,6 +4084,34 @@ const htmlAttributes = <Message>(): HtmlAttributes<Message> => ({
       modifiers: KeyboardModifiers,
     ) => Option.Option<Readonly<{ focusSelector: string; message: Message }>>,
   ) => OnKeyDownFocus({ f: toMaybeFocusAndMessage }),
+  /**
+   * Keydown handler that, for a handled key, synchronously focuses the element
+   * matching the returned selector and dispatches nothing. Returns
+   * `Option.none()` for keys it does not handle, leaving default behavior
+   * intact; a `Some` result also `preventDefault`s.
+   *
+   * Use this when a key should move focus and change nothing else. Arrow
+   * navigation through a composite widget is the usual case: menubars,
+   * toolbars, tab lists, and listboxes all move focus between items while the
+   * selection is committed by a separate key, and a read-only radio group moves
+   * focus without ever committing.
+   *
+   * Reach for `OnKeyDownFocus` instead when one keypress both moves focus and
+   * commits a value.
+   *
+   * @example
+   * ```typescript
+   * h.OnKeyDownFocusOnly(key =>
+   *   key === 'ArrowDown' ? Option.some('#option-2') : Option.none(),
+   * )
+   * ```
+   */
+  OnKeyDownFocusOnly: (
+    toMaybeFocusSelector: (
+      key: string,
+      modifiers: KeyboardModifiers,
+    ) => Option.Option<string>,
+  ) => OnKeyDownFocusOnly({ f: toMaybeFocusSelector }),
   OnKeyUp: (
     toMessage: (key: string, modifiers: KeyboardModifiers) => Message,
   ) => OnKeyUp({ f: toMessage }),

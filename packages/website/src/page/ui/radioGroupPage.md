@@ -30,11 +30,12 @@ Pass `orientation: 'Horizontal'` in the ViewConfig to switch to left/right arrow
 
 RadioGroup is headless. The `toView` callback owns all option markup and styling, spreading the attribute bundles from each `OptionInfo` onto the consumer's elements. Use the data attributes below to style selected, focused, and disabled states.
 
-| Attribute       | Condition                                               |
-| --------------- | ------------------------------------------------------- |
-| `data-checked`  | Present on the selected option.                         |
-| `data-active`   | Present on the option that has focus (roving tabindex). |
-| `data-disabled` | Present on disabled options.                            |
+| Attribute       | Condition                                                                                    |
+| --------------- | -------------------------------------------------------------------------------------------- |
+| `data-checked`  | Present on the selected option.                                                              |
+| `data-active`   | Present on the option that has focus (roving tabindex). Absent throughout a read-only group. |
+| `data-disabled` | Present on disabled options.                                                                 |
+| `data-readonly` | Present on the group and on every option when `isReadOnly` is `true`.                        |
 
 ## Keyboard Interaction
 
@@ -48,9 +49,29 @@ RadioGroup uses roving tabindex: only the active option is in the tab order. Arr
 | `End`                | Move focus and select the last option.             |
 | `Space`              | Select the focused option.                         |
 
+When `isReadOnly` is `true`, the same navigation keys move focus without changing the selection, and `Space` does nothing.
+
+| Key                  | Description (read-only)                    |
+| -------------------- | ------------------------------------------ |
+| `Arrow Down / Right` | Move focus to the next option (wraps).     |
+| `Arrow Up / Left`    | Move focus to the previous option (wraps). |
+| `Home`               | Move focus to the first option.            |
+| `End`                | Move focus to the last option.             |
+| `Space`              | Does nothing.                              |
+
+Navigation keys move focus without dispatching, so nothing tells the component where focus landed. `data-active` and `isActive` derive from `selectedValue`, which means they would keep pointing at the selection while focus sat on another option. Rather than publish a marker it cannot keep truthful, RadioGroup marks no option active while read-only. Style focus with `:focus-visible` in this mode.
+
+For the same reason the roving tab stop stays on the selected option. Tabbing out of the group and back returns to the selection rather than to the last focused option.
+
 ## Accessibility
 
 The group element receives `role="radiogroup"` and `aria-orientation`. Each option receives `role="radio"` with `aria-checked`, `aria-labelledby`, and `aria-describedby`.
+
+`isReadOnly` adds `aria-readonly="true"` to the group. It differs from `isDisabled` in the semantics exposed to assistive technology, so the two are not interchangeable. `aria-disabled="true"`, which `isDisabled` emits on each option, communicates that the options are unavailable. `aria-readonly="true"` communicates that the selection cannot be changed but remains relevant to the user, which is why read-only keeps arrow navigation while disabled removes it.
+
+Assistive technology support for `aria-readonly` on radio groups varies. Pair it with a visible read-only treatment or explanatory text when users must distinguish it from disabled, and test the browser and assistive technology combinations your app supports.
+
+The two flags are independent. Setting both emits both sets of attributes, and either one on its own prevents selection.
 
 ## API Reference
 
@@ -69,6 +90,7 @@ Configuration object passed to `RadioGroup.view()`.
 | `toView`           | `(render: RenderInfo<Value>) => Html`      | —            | Callback that receives the `group` attribute bundle, one `OptionInfo<Value>` per option, the current `selectedValue`, and the `hiddenInput` attributes. Returns the composed layout.                                                      |
 | `isOptionDisabled` | `(value: Value, index: number) => boolean` | —            | Disables individual options.                                                                                                                                                                                                              |
 | `isDisabled`       | `boolean`                                  | `false`      | Disables all options.                                                                                                                                                                                                                     |
+| `isReadOnly`       | `boolean`                                  | `false`      | Prevents selection changes while keeping keyboard navigation between options. Carries `aria-readonly` on the group rather than `aria-disabled` on the options. Independent of `isDisabled`.                                               |
 | `name`             | `string`                                   | —            | Form field name. When provided, `RenderInfo.hiddenInput` carries the attributes for a hidden `<input>` holding the selected value (the consumer renders the element).                                                                     |
 
 ### RenderInfo {#render-info}
@@ -91,7 +113,7 @@ Each entry in `RenderInfo.options`. Carries the value, derived state flags, and 
 | `value`       | `Value`                             | —       | The option value, typed as the union inferred from `options`.                                                                                                                                                           |
 | `index`       | `number`                            | —       | Position in the `options` array.                                                                                                                                                                                        |
 | `isSelected`  | `boolean`                           | —       | Whether this option is currently selected.                                                                                                                                                                              |
-| `isActive`    | `boolean`                           | —       | Whether this option owns the roving tabindex (the one in the tab order).                                                                                                                                                |
+| `isActive`    | `boolean`                           | —       | Whether this option owns the roving tabindex (the one in the tab order). Always `false` in a read-only group, where focus moves without the component being told.                                                       |
 | `isDisabled`  | `boolean`                           | —       | Whether this option is disabled (either individually via `isOptionDisabled` or because `isDisabled` is set on the whole group).                                                                                         |
 | `option`      | `ReadonlyArray<Attribute<Message>>` | —       | Spread onto the option element. Includes `role="radio"`, `aria-checked`, `aria-labelledby`, `aria-describedby`, `tabindex`, click/keyboard handlers, and `type="button"` so an option inside a form does not submit it. |
 | `label`       | `ReadonlyArray<Attribute<Message>>` | —       | Spread onto the label element. Includes an id for `aria-labelledby`.                                                                                                                                                    |
