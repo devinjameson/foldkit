@@ -471,6 +471,12 @@ export const init: Runtime.RoutingApplicationInit<
 
 // UPDATE
 
+type UpdateStep = Update.Step<
+  Model,
+  Message,
+  AppResources | AppManagedResources
+>
+
 const isPathnameEqual = (a: Url, b: Url): boolean => a.pathname === b.pathname
 
 const foldMobileMenuDialogOutMessage: (
@@ -483,12 +489,30 @@ const foldMobileMenuDialogOutMessage: (
   }),
 )
 
+const readMobileMenuDialog = (model: Model): Option.Option<Dialog.Model> =>
+  Option.some(model.mobileMenuDialog)
+
+const writeMobileMenuDialog = (
+  model: Model,
+  nextMobileMenuDialog: Dialog.Model,
+): Model => evo(model, { mobileMenuDialog: () => nextMobileMenuDialog })
+
+const toGotMobileMenuDialogMessage = (message: Dialog.Message): Message =>
+  GotMobileMenuDialogMessage({ message })
+
 const foldMobileMenuDialog = Update.foldChild({
   update: Dialog.update,
-  read: (model: Model) => Option.some(model.mobileMenuDialog),
-  write: (model, nextMobileMenuDialog) =>
-    evo(model, { mobileMenuDialog: () => nextMobileMenuDialog }),
-  toParentMessage: message => GotMobileMenuDialogMessage({ message }),
+  read: readMobileMenuDialog,
+  write: writeMobileMenuDialog,
+  toParentMessage: toGotMobileMenuDialogMessage,
+  foldOutMessage: foldMobileMenuDialogOutMessage,
+})
+
+const foldMobileMenuDialogClose = Update.foldChildStep({
+  update: Dialog.close,
+  read: readMobileMenuDialog,
+  write: writeMobileMenuDialog,
+  toParentMessage: toGotMobileMenuDialogMessage,
   foldOutMessage: foldMobileMenuDialogOutMessage,
 })
 
@@ -579,12 +603,31 @@ const foldComingFromReact = Update.foldChild({
   toParentMessage: message => GotComingFromReactMessage({ message }),
 })
 
+const readApiReference = (
+  model: Model,
+): Option.Option<Page.ApiReference.Model> => Option.some(model.apiReference)
+
+const writeApiReference = (
+  model: Model,
+  nextApiReference: Page.ApiReference.Model,
+): Model => evo(model, { apiReference: () => nextApiReference })
+
+const toGotApiReferenceMessage = (
+  message: Page.ApiReference.Message,
+): Message => GotApiReferenceMessage({ message })
+
 const foldApiReference = Update.foldChild({
   update: Page.ApiReference.update,
-  read: (model: Model) => Option.some(model.apiReference),
-  write: (model, nextApiReference) =>
-    evo(model, { apiReference: () => nextApiReference }),
-  toParentMessage: message => GotApiReferenceMessage({ message }),
+  read: readApiReference,
+  write: writeApiReference,
+  toParentMessage: toGotApiReferenceMessage,
+})
+
+const foldApiReferenceRouteChanged = Update.foldChildStep({
+  update: Page.ApiReference.informRouteChanged,
+  read: readApiReference,
+  write: writeApiReference,
+  toParentMessage: toGotApiReferenceMessage,
 })
 
 const foldUiPages = Update.foldChild({
@@ -594,19 +637,55 @@ const foldUiPages = Update.foldChild({
   toParentMessage: message => GotUiPageMessage({ message }),
 })
 
+const readExampleDetail = (
+  model: Model,
+): Option.Option<Page.Example.ExampleDetail.Model> =>
+  Option.some(model.exampleDetail)
+
+const writeExampleDetail = (
+  model: Model,
+  nextExampleDetail: Page.Example.ExampleDetail.Model,
+): Model => evo(model, { exampleDetail: () => nextExampleDetail })
+
+const toGotExampleDetailMessage = (
+  message: Page.Example.ExampleDetail.Message,
+): Message => GotExampleDetailMessage({ message })
+
 const foldExampleDetail = Update.foldChild({
   update: Page.Example.ExampleDetail.update,
-  read: (model: Model) => Option.some(model.exampleDetail),
-  write: (model, nextExampleDetail) =>
-    evo(model, { exampleDetail: () => nextExampleDetail }),
-  toParentMessage: message => GotExampleDetailMessage({ message }),
+  read: readExampleDetail,
+  write: writeExampleDetail,
+  toParentMessage: toGotExampleDetailMessage,
 })
+
+const foldExampleDetailRouteChanged = Update.foldChild({
+  update: Page.Example.ExampleDetail.informRouteChanged,
+  read: readExampleDetail,
+  write: writeExampleDetail,
+  toParentMessage: toGotExampleDetailMessage,
+})
+
+const readSearch = (model: Model): Option.Option<Search.Model> =>
+  Option.some(model.search)
+
+const writeSearch = (model: Model, nextSearch: Search.Model): Model =>
+  evo(model, { search: () => nextSearch })
+
+const toGotSearchMessage = (message: Search.Message): Message =>
+  GotSearchMessage({ message })
 
 const foldSearch = Update.foldChild({
   update: Search.update,
-  read: (model: Model) => Option.some(model.search),
-  write: (model, nextSearch) => evo(model, { search: () => nextSearch }),
-  toParentMessage: message => GotSearchMessage({ message }),
+  read: readSearch,
+  write: writeSearch,
+  toParentMessage: toGotSearchMessage,
+})
+
+const foldSearchRouteChanged = Update.foldChildStep({
+  update: Search.informRouteChanged,
+  read: readSearch,
+  write: writeSearch,
+  toParentMessage: toGotSearchMessage,
 })
 
 const foldPlayground = Update.foldChild({
@@ -692,37 +771,13 @@ export const update = (
               : Record_.set(model.sidebarGroups, activeSectionKey, true),
         })
 
-        const [closedMobileMenu, closeMobileMenuCommands] = Dialog.close(
-          model.mobileMenuDialog,
-        )
-
-        const [nextSearch, searchResetCommands] = Search.informRouteChanged(
-          model.search,
-        )
-
-        const [nextApiReference, apiReferenceLoadCommands] = M.value(
-          nextRoute,
-        ).pipe(
-          M.withReturnType<ReturnType<typeof Page.ApiReference.update>>(),
-          M.tag('ApiModule', () =>
-            Page.ApiReference.informRouteChanged(model.apiReference),
-          ),
-          M.orElse(() => [model.apiReference, []]),
-        )
-
-        const [nextExampleDetail, exampleDetailLoadCommands] = M.value(
-          nextRoute,
-        ).pipe(
-          M.withReturnType<
-            ReturnType<typeof Page.Example.ExampleDetail.update>
-          >(),
-          M.tag('ExampleDetail', ({ exampleSlug }) =>
-            Page.Example.ExampleDetail.informRouteChanged(
-              model.exampleDetail,
-              exampleSlug,
-            ),
-          ),
-          M.orElse(() => [model.exampleDetail, []]),
+        const routeSteps = M.value(nextRoute).pipe(
+          M.withReturnType<ReadonlyArray<UpdateStep>>(),
+          M.tag('ApiModule', () => [foldApiReferenceRouteChanged]),
+          M.tag('ExampleDetail', ({ exampleSlug }) => [
+            foldExampleDetailRouteChanged(exampleSlug),
+          ]),
+          M.orElse(() => []),
         )
 
         const maybeScrollSidebar = Option.liftPredicate(
@@ -751,32 +806,21 @@ export const update = (
           Option.map(({ exampleSlug }) => Page.Playground.init(exampleSlug)),
         )
 
-        return [
+        const writeRouteFields: UpdateStep = model => [
           evo(model, {
             route: () => nextRoute,
             url: () => url,
             asyncCounterDemo: () => nextAsyncCounterDemo,
             notePlayerDemo: () => nextNotePlayerDemo,
-            mobileMenuDialog: () => closedMobileMenu,
-            apiReference: () => nextApiReference,
-            exampleDetail: () => nextExampleDetail,
             playground: () => nextPlaygroundRoute,
-            search: () => nextSearch,
             sidebarGroups: () => nextSidebarGroups,
           }),
+          [],
+        ]
+
+        const scrollToRoute: UpdateStep = model => [
+          model,
           [
-            ...Command.mapMessages(closeMobileMenuCommands, message =>
-              GotMobileMenuDialogMessage({ message }),
-            ),
-            ...Command.mapMessages(searchResetCommands, message =>
-              GotSearchMessage({ message }),
-            ),
-            ...Command.mapMessages(apiReferenceLoadCommands, message =>
-              GotApiReferenceMessage({ message }),
-            ),
-            ...Command.mapMessages(exampleDetailLoadCommands, message =>
-              GotExampleDetailMessage({ message }),
-            ),
             ...Option.match(url.hash, {
               onNone: () => Option.toArray(maybeScrollToTop),
               onSome: hash => [ScrollToAnchor({ hash })],
@@ -784,6 +828,14 @@ export const update = (
             ...Option.toArray(maybeScrollSidebar),
           ],
         ]
+
+        return Update.combine(model, [
+          writeRouteFields,
+          foldMobileMenuDialogClose,
+          foldSearchRouteChanged,
+          ...routeSteps,
+          scrollToRoute,
+        ])
       },
 
       ClickedCopySnippet: ({ text }) => [model, [CopySnippet({ text })]],

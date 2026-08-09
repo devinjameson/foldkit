@@ -624,7 +624,7 @@ For file uploads (resumes, images, attachments):
 - `dependenciesToStream` builds `Stream<Message>` from dependencies
 - Subscriptions auto-start/stop based on Model state. Never manually managed
 - For Subscriptions with no Model dependencies (always active), pass `{}` as the `entry` fields argument and return `{}` from `modelToDependencies`
-- To embed child Subscriptions, use `Subscription.lift(childRecord)<Parent, Parent>({ toChildModel, toParentMessage })`. To combine multiple records, use `Subscription.aggregate<Model, Message>()(...records)`
+- To embed child Subscriptions, use `Subscription.lift(childRecord)<Parent, Parent>({ toChildModel, toParentMessage })`. Add `when` on the parent's lift call to gate on a parent fact the child cannot see (the route a page Submodel sits behind); the parent owns the gate and reads the parent Model, and a closed gate tears the entry's Stream down. `when: parentModel => boolean` gates every entry; `when: { entryName: parentModel => boolean }` gates only the entries it names, so a child never splits its record to suit its parent's gating. To combine multiple records, use `Subscription.aggregate<Model, Message>()(...records)`
 
 ### Managed Resources (if stateful runtime handles)
 
