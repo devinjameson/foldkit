@@ -316,13 +316,23 @@ declare module "effect/unstable/ai/Prompt" {
    *
    * **Details**
    *
-   * Controls Anthropic prompt caching for tool result content.
+   * Carries Anthropic MCP metadata and controls prompt caching for tool result
+   * content.
    *
    * @category models
    * @since 4.0.0
    */
   export interface ToolResultPartOptions extends ProviderOptions {
     readonly anthropic?: {
+      /**
+       * Contains details about the MCP tool that produced the result.
+       */
+      readonly mcp_tool?: {
+        /**
+         * The name of the MCP server
+         */
+        readonly server: string
+      } | null
       /**
        * A breakpoint which marks the end of reusable content eligible for caching.
        */
@@ -2974,13 +2984,20 @@ interface ModelCapabilities {
  */
 const getModelCapabilities = (modelId: string): ModelCapabilities => {
   if (
-    modelId.includes("claude-sonnet-4-5") ||
-    modelId.includes("claude-opus-4-5") ||
-    modelId.includes("claude-haiku-4-5") ||
     modelId.includes("claude-opus-4-6") ||
     modelId.includes("claude-sonnet-4-6") ||
     modelId.includes("claude-opus-4-7") ||
     modelId.includes("claude-opus-4-8")
+  ) {
+    return {
+      maxOutputTokens: 128000,
+      supportsStructuredOutput: true,
+      isKnownModel: true
+    }
+  } else if (
+    modelId.includes("claude-sonnet-4-5") ||
+    modelId.includes("claude-opus-4-5") ||
+    modelId.includes("claude-haiku-4-5")
   ) {
     return {
       maxOutputTokens: 64000,
