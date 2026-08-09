@@ -233,6 +233,10 @@ With [Update.foldChild](#fold-child), the same handling moves into the fold's `f
 
 ::Snippet{name="outMessageFoldChild" label="foldChild with foldOutMessage"}
 
+Sometimes the Step itself returns a Command the child defines, one whose result is a child Message. This happens when the Command needs context only the parent holds. In the example below, the magic link carries a redirect destination, and only the parent knows the current Route. The Login child cannot build `Login.SendMagicLink` itself, so it emits `RequestedMagicLink` as a fact and the parent returns the Command with the Route filled in. That Command's result Message still belongs to the Login Submodel, so it needs the same lift the fold applies to the child's own Commands. For that case `foldOutMessage` takes an optional second parameter, an `Update.FoldContext` carrying `liftCommand` and `liftCommands` already bound to the config's `toParentMessage`, so there is no `Command.mapMessage` call to write and no second copy of the wrapper to keep in sync:
+
+::Snippet{name="outMessageFoldContext" label="foldOutMessage with FoldContext"}
+
 A parent that is itself a Submodel adds `toParentOutMessage` to the config, lifting the child's OutMessage into the parent's own (`() => Option.none()` when the parent has nothing to pass upward). That fold returns `Update.ReturnWithOutMessage`, so the intermediate handler stays one line. The [Auth example](/example-apps/auth)'s login page does exactly this: it folds its Login child and lifts `SucceededLogin` into its own OutMessage for the root to act on.
 
 See the [Auth example](/example-apps/auth) for a complete implementation: a login module emits `SucceededLogin` when authentication completes, and the parent transitions to the logged-in state, saves the session, and updates the URL, all triggered by a single OutMessage.

@@ -10,6 +10,7 @@ export type {
   ChildFold,
   ChildFoldWithOutMessage,
   ChildFoldWithParentOutMessage,
+  FoldContext,
   Fold,
   FoldWithOutMessage,
 } from './index.js'

@@ -761,21 +761,18 @@ const foldTooltipNoDelayDemo = Update.foldChild({
 
 const foldAnimationDemoOutMessage: (
   outMessage: Animation.OutMessage,
-) => Update.Step<UiModel, UiMessage> = M.type<Animation.OutMessage>().pipe(
-  M.withReturnType<Update.Step<UiModel, UiMessage>>(),
-  M.tagsExhaustive({
-    StartedLeaveAnimating: () => model => [
-      model,
-      [
-        Command.mapMessage(
-          Animation.defaultLeaveCommand(model.animationDemo),
-          message => GotAnimationDemoMessage({ message }),
-        ),
+  context: Update.FoldContext<Animation.Message, UiMessage>,
+) => Update.Step<UiModel, UiMessage> = (outMessage, { liftCommand }) =>
+  M.value(outMessage).pipe(
+    M.withReturnType<Update.Step<UiModel, UiMessage>>(),
+    M.tagsExhaustive({
+      StartedLeaveAnimating: () => model => [
+        model,
+        [liftCommand(Animation.defaultLeaveCommand(model.animationDemo))],
       ],
-    ],
-    TransitionedOut: () => model => [model, []],
-  }),
-)
+      TransitionedOut: () => model => [model, []],
+    }),
+  )
 
 const foldAnimationDemo = Update.foldChild({
   update: Animation.update,

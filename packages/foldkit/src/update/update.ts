@@ -1,7 +1,7 @@
 import { Array, Function, Option, pipe } from 'effect'
 
 import { type AsyncData } from '../asyncData/index.js'
-import { type Command, mapMessages } from '../command/index.js'
+import { type Command, mapMessage, mapMessages } from '../command/index.js'
 
 /** The Commands half of an update return: every Command the update wants
  *  the runtime to run, in order. `R` is the services the Commands need
@@ -177,6 +177,52 @@ export type ChildFold<
   toParentMessage: (message: ChildMessage) => ParentMessage
 }>
 
+/** The lifters a `foldOutMessage` receives as its second parameter,
+ *  already bound to the fold config's `toParentMessage`.
+ *
+ *  The fold lifts the Commands the child's `update` returns on its own.
+ *  This covers the other case: a Command the parent returns on the
+ *  child's behalf from the OutMessage Step, whose result Message is the
+ *  child's and therefore still needs wrapping, such as a parent handling
+ *  a child's `Requested*` fact by returning the child's Command that
+ *  fulfills it, built with context only the parent holds.
+ *
+ *  The lifters apply the same lift the fold gives the child's own
+ *  Commands, so the Step writes no `Command.mapMessage` call and keeps
+ *  no second copy of the wrapper, and the mapping stays recorded on the
+ *  Command for `Story.Command.resolve` and `Scene.Command.resolve`.
+ *
+ *  The annotated standalone const takes both parameters, so the match
+ *  moves from `M.type` to `M.value` on the OutMessage:
+ *
+ *  ```ts
+ *  const foldLoginOutMessage: (
+ *    outMessage: Login.OutMessage,
+ *    context: Update.FoldContext<Login.Message, Message>,
+ *  ) => Update.Step<Model, Message> = (outMessage, { liftCommand }) =>
+ *    M.value(outMessage).pipe(
+ *      M.withReturnType<Update.Step<Model, Message>>(),
+ *      M.tagsExhaustive({
+ *        RequestedMagicLink: ({ email }) => model => [
+ *          model,
+ *          [
+ *            liftCommand(
+ *              Login.SendMagicLink({ email, redirectRoute: model.route }),
+ *            ),
+ *          ],
+ *        ],
+ *      }),
+ *    )
+ *  ``` */
+export type FoldContext<ChildMessage, ParentMessage> = Readonly<{
+  liftCommand: <E = never, R = never>(
+    command: Command<ChildMessage, E, R>,
+  ) => Command<ParentMessage, E, R>
+  liftCommands: <E = never, R = never>(
+    commands: ReadonlyArray<Command<ChildMessage, E, R>>,
+  ) => ReadonlyArray<Command<ParentMessage, E, R>>
+}>
+
 /** {@link ChildFold} for a child whose update returns
  *  {@link ReturnWithOutMessage}, adding the fifth capability:
  *
@@ -185,7 +231,9 @@ export type ChildFold<
  *    already written back, and its Commands follow the child's in the
  *    returned batch. Match on the OutMessage tag inside
  *    (`M.tagsExhaustive`), and build a multi-step fold with
- *    {@link combine}. */
+ *    {@link combine}. Takes an optional second parameter, a
+ *    {@link FoldContext} of lifters bound to `toParentMessage`, for a
+ *    Command the Step returns whose result is the child's Message. */
 export type ChildFoldWithOutMessage<
   ParentModel,
   ParentMessage,
@@ -204,6 +252,7 @@ export type ChildFoldWithOutMessage<
   toParentMessage: (message: ChildMessage) => ParentMessage
   foldOutMessage: (
     outMessage: ChildOutMessage,
+    context: FoldContext<ChildMessage, ParentMessage>,
   ) => Step<ParentModel, ParentMessage, R>
 }>
 
@@ -242,6 +291,7 @@ export type ChildFoldWithParentOutMessage<
   ) => Option.Option<ParentOutMessage>
   foldOutMessage?: (
     outMessage: ChildOutMessage,
+    context: FoldContext<ChildMessage, ParentMessage>,
   ) => Step<ParentModel, ParentMessage, R>
 }>
 
@@ -259,7 +309,10 @@ type AnyChildFold = Readonly<{
   write: (model: any, nextChildModel: any) => any
   toParentMessage: (message: any) => any
   toParentOutMessage?: (outMessage: any) => Option.Option<any>
-  foldOutMessage?: (outMessage: any) => Step<any, any, any>
+  foldOutMessage?: (
+    outMessage: any,
+    context: FoldContext<any, any>,
+  ) => Step<any, any, any>
 }>
 
 /** {@link Step} for an update that also surfaces an OutMessage to its
@@ -323,6 +376,12 @@ export type FoldWithOutMessage<
  *  child's update returns an OutMessage, `foldOutMessage` runs against
  *  the Model with the child already written back, and its Commands
  *  follow the child's in the returned batch.
+ *
+ *  `foldOutMessage` takes an optional second parameter, a
+ *  {@link FoldContext} carrying `liftCommand` and `liftCommands` bound to
+ *  this config's `toParentMessage`. Reach for it when the Step returns a
+ *  Command that produces the child's Message, such as an animating
+ *  component's overridable leave Command.
  *
  *  A parent that is itself a Submodel passes a
  *  {@link ChildFoldWithParentOutMessage} and receives a
@@ -397,8 +456,13 @@ export const foldChild: {
       R
     >,
   ): Fold<ParentModel, ParentMessage, Input, R>
-} = (childFold: AnyChildFold) =>
-  Function.dual(2, (model: any, input: any) =>
+} = (childFold: AnyChildFold) => {
+  const context: FoldContext<any, any> = {
+    liftCommand: command => mapMessage(command, childFold.toParentMessage),
+    liftCommands: commands => mapMessages(commands, childFold.toParentMessage),
+  }
+
+  return Function.dual(2, (model: any, input: any) =>
     pipe(
       model,
       childFold.read,
@@ -424,6 +488,7 @@ export const foldChild: {
               : appendOutMessageStep(
                   childFold.foldOutMessage,
                   maybeOutMessage.value,
+                  context,
                   modelWithChild,
                   mappedCommands,
                 )
@@ -441,13 +506,21 @@ export const foldChild: {
       }),
     ),
   )
+}
 
 const appendOutMessageStep = (
-  foldOutMessage: (outMessage: any) => Step<any, any, any>,
+  foldOutMessage: (
+    outMessage: any,
+    context: FoldContext<any, any>,
+  ) => Step<any, any, any>,
   outMessage: any,
+  context: FoldContext<any, any>,
   modelWithChild: any,
   mappedCommands: Commands<any, any>,
 ): Return<any, any, any> => {
-  const [nextModel, outCommands] = foldOutMessage(outMessage)(modelWithChild)
+  const [nextModel, outCommands] = foldOutMessage(
+    outMessage,
+    context,
+  )(modelWithChild)
   return [nextModel, [...mappedCommands, ...outCommands]]
 }
