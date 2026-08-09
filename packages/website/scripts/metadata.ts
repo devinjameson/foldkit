@@ -440,33 +440,39 @@ export const routeToMetadata = (
         'API Reference',
       )
     }),
-    M.tag('BlogPost', ({ postSlug }) =>
-      Option.match(
+    M.tag('BlogPost', ({ postSlug }) => {
+      const { frontmatter } = Option.getOrThrowWith(
         Array.findFirst(blogPosts, ({ slug }) => slug === postSlug),
-        {
-          onNone: () => docs(BLOG_TITLE, 'A Foldkit blog post.', BLOG_SECTION),
-          onSome: ({ frontmatter }) =>
-            docs(frontmatter.title, frontmatter.description, BLOG_SECTION),
-        },
-      ),
-    ),
-    M.tag('ExampleDetail', ({ exampleSlug }) =>
-      Option.match(findBySlug(exampleSlug), {
-        onNone: () =>
-          docs('Example', 'A Foldkit example application.', 'Examples'),
-        onSome: example => docs(example.title, example.description, 'Examples'),
-      }),
-    ),
-    M.tag('Playground', ({ exampleSlug }) =>
-      Option.match(findBySlug(exampleSlug), {
-        onNone: () => docs('Playground', 'Foldkit playground.', 'Playground'),
-        onSome: example =>
-          docs(
-            `${example.title} playground`,
-            `Edit and run the ${example.title} example live in your browser.`,
-            'Playground',
+        () =>
+          new Error(
+            `Blog post "${postSlug}" is missing from the blog post registry.`,
           ),
-      }),
-    ),
+      )
+      return docs(frontmatter.title, frontmatter.description, BLOG_SECTION)
+    }),
+    M.tag('ExampleDetail', ({ exampleSlug }) => {
+      const example = Option.getOrThrowWith(
+        findBySlug(exampleSlug),
+        () =>
+          new Error(
+            `Example "${exampleSlug}" is missing from the example registry.`,
+          ),
+      )
+      return docs(example.title, example.description, 'Examples')
+    }),
+    M.tag('Playground', ({ exampleSlug }) => {
+      const example = Option.getOrThrowWith(
+        findBySlug(exampleSlug),
+        () =>
+          new Error(
+            `Playground example "${exampleSlug}" is missing from the example registry.`,
+          ),
+      )
+      return docs(
+        `${example.title} playground`,
+        `Edit and run the ${example.title} example live in your browser.`,
+        'Playground',
+      )
+    }),
     M.orElse(({ _tag }) => METADATA_BY_TAG[_tag]),
   )
