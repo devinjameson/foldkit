@@ -523,6 +523,10 @@ export type ViewInputs = Readonly<{
   ariaLabel?: string
   ariaLabelledBy?: string
   formatValue?: (value: number) => string
+  /** Marks the Slider unavailable with `aria-disabled="true"` and
+   *  `data-disabled`. The thumb remains focusable, following Foldkit's
+   *  convention that unavailable controls stay discoverable by keyboard and
+   *  assistive technology. */
   isDisabled?: boolean
   /** Prevents value changes while exposing read-only semantics with
    *  `aria-readonly="true"` and `data-readonly`. The thumb remains focusable.
