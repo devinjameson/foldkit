@@ -1,6 +1,6 @@
 import { clsx } from 'clsx'
 import { Array, Equal, Option, pipe } from 'effect'
-import { Html, type HtmlBuilder, createLazy } from 'foldkit/html'
+import { Html, type HtmlBuilder, createKeyedLazy } from 'foldkit/html'
 import apiModuleIndex from 'virtual:api-module-index'
 
 import { Dialog, Disclosure } from '@foldkit/ui'
@@ -265,12 +265,14 @@ const blogSection = (route: Model['route'], h: HtmlBuilder<Message>): Html =>
     ],
   )
 
-const lazyDesktopNavLinks = createLazy()
-const lazyMobileNavLinks = createLazy()
+const DESKTOP_ID_PREFIX = 'desktop'
+const MOBILE_ID_PREFIX = 'mobile'
+
+const lazyNavLinks = createKeyedLazy()
 
 export const sidebarView = (model: Model, h: HtmlBuilder<Message>): Html => {
-  const desktopNavLinks = lazyDesktopNavLinks(computeNavLinks, [
-    'desktop',
+  const desktopNavLinks = lazyNavLinks(DESKTOP_ID_PREFIX, computeNavLinks, [
+    DESKTOP_ID_PREFIX,
     model.route,
     model.sidebarGroups,
     h,
@@ -297,8 +299,8 @@ export const sidebarView = (model: Model, h: HtmlBuilder<Message>): Html => {
 }
 
 export const mobileMenuView = (model: Model, h: HtmlBuilder<Message>): Html => {
-  const mobileNavLinks = lazyMobileNavLinks(computeNavLinks, [
-    'mobile',
+  const mobileNavLinks = lazyNavLinks(MOBILE_ID_PREFIX, computeNavLinks, [
+    MOBILE_ID_PREFIX,
     model.route,
     model.sidebarGroups,
     h,
