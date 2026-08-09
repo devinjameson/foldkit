@@ -7,9 +7,11 @@ import * as AsyncData from '../asyncData/index.js'
 import { type Command } from '../command/index.js'
 import { m } from '../message/index.js'
 import { evo } from '../struct/index.js'
+import * as Story from '../test/story.js'
 import {
   type Commands,
   type Fold,
+  type FoldContext,
   type FoldWithOutMessage,
   type Return,
   type ReturnWithOutMessage,
@@ -504,6 +506,145 @@ describe('foldChild', () => {
       'NotifyValueChanged',
       'SaveCount',
     ])
+  })
+})
+
+const settleCounter: Command<CounterMessage> = {
+  name: 'SettleCounter',
+  effect: Effect.succeed(BumpedValue()),
+}
+
+const trimCounter: Command<CounterMessage> = {
+  name: 'TrimCounter',
+  effect: Effect.succeed(CompletedSaveCount()),
+}
+
+const foldSettlingCounterOutMessage: (
+  outMessage: ChangedValue,
+  context: FoldContext<CounterMessage, DashboardMessage>,
+) => Step<DashboardModel, DashboardMessage> = (outMessage, { liftCommand }) =>
+  M.value(outMessage).pipe(
+    M.withReturnType<Step<DashboardModel, DashboardMessage>>(),
+    M.tagsExhaustive({
+      ChangedValue: () => model => [model, [liftCommand(settleCounter)]],
+    }),
+  )
+
+const foldSettlingCounter = foldChild({
+  update: counterUpdateWithOutMessage,
+  read: (model: DashboardModel) => Option.some(model.counter),
+  write: (model, nextCounter) => ({ ...model, counter: nextCounter }),
+  toParentMessage: GotCounterMessage,
+  foldOutMessage: foldSettlingCounterOutMessage,
+})
+
+const dashboardUpdate = (
+  model: DashboardModel,
+  message: DashboardMessage,
+): Return<DashboardModel, DashboardMessage> =>
+  M.value(message).pipe(
+    M.withReturnType<Return<DashboardModel, DashboardMessage>>(),
+    M.tagsExhaustive({
+      GotCounterMessage: ({ message: counterMessage }) =>
+        foldSettlingCounter(model, counterMessage),
+      NotifiedValueChanged: () => [model, []],
+    }),
+  )
+
+describe('foldChild fold context', () => {
+  it('lifts a Command the OutMessage Step returns through toParentMessage', () => {
+    const [, commands] = foldSettlingCounter(dashboardModel, BumpedValue())
+
+    expect(commands.map(command => command.name)).toEqual([
+      'SaveCount',
+      'SettleCounter',
+    ])
+
+    const maybeSettle = Array.last(commands)
+    expect(Option.isSome(maybeSettle)).toBe(true)
+    if (Option.isSome(maybeSettle)) {
+      expect(Effect.runSync(maybeSettle.value.effect)).toEqual(
+        GotCounterMessage(BumpedValue()),
+      )
+    }
+  })
+
+  it('lifts a list of Commands through liftCommands', () => {
+    const foldTrimmingCounter = foldChild({
+      update: counterUpdateWithOutMessage,
+      read: (model: DashboardModel) => Option.some(model.counter),
+      write: (model, nextCounter) => ({ ...model, counter: nextCounter }),
+      toParentMessage: GotCounterMessage,
+      foldOutMessage:
+        (_outMessage, { liftCommands }) =>
+        model => [model, liftCommands([settleCounter, trimCounter])],
+    })
+
+    const [, commands] = foldTrimmingCounter(dashboardModel, BumpedValue())
+
+    expect(commands.map(command => command.name)).toEqual([
+      'SaveCount',
+      'SettleCounter',
+      'TrimCounter',
+    ])
+    expect(commands.map(command => Effect.runSync(command.effect))).toEqual([
+      GotCounterMessage(CompletedSaveCount()),
+      GotCounterMessage(BumpedValue()),
+      GotCounterMessage(CompletedSaveCount()),
+    ])
+  })
+
+  it('records the mapping chain so a Story resolves with the child result', () => {
+    Story.story(
+      dashboardUpdate,
+      Story.given(dashboardModel),
+      Story.message(GotCounterMessage(BumpedValue())),
+      Story.model(model => {
+        expect(model.counter.value).toBe(4)
+      }),
+      Story.Command.resolve(settleCounter, BumpedValue()),
+      Story.model(model => {
+        expect(model.counter.value).toBe(5)
+      }),
+      Story.Command.resolveAll(
+        [saveCount, CompletedSaveCount()],
+        [saveCount, CompletedSaveCount()],
+        [settleCounter, CompletedSaveCount()],
+      ),
+    )
+  })
+
+  it('keeps a one-parameter foldOutMessage assignable', () => {
+    const foldReportedValueOutMessage: (
+      outMessage: ChangedValue,
+    ) => Step<DashboardModel, DashboardMessage> = M.type<ChangedValue>().pipe(
+      M.withReturnType<Step<DashboardModel, DashboardMessage>>(),
+      M.tagsExhaustive({
+        ChangedValue: () => model => [
+          { ...model, lastReportedValue: model.counter.value },
+          [],
+        ],
+      }),
+    )
+
+    const foldReportedValue = foldChild({
+      update: counterUpdateWithOutMessage,
+      read: (model: DashboardModel) => Option.some(model.counter),
+      write: (model, nextCounter) => ({ ...model, counter: nextCounter }),
+      toParentMessage: GotCounterMessage,
+      foldOutMessage: foldReportedValueOutMessage,
+    })
+
+    expectTypeOf(foldReportedValue).toEqualTypeOf<
+      Fold<DashboardModel, DashboardMessage, CounterMessage>
+    >()
+
+    const [nextModel, commands] = foldReportedValue(
+      dashboardModel,
+      BumpedValue(),
+    )
+    expect(nextModel.lastReportedValue).toBe(4)
+    expect(commands.map(command => command.name)).toEqual(['SaveCount'])
   })
 })
 
