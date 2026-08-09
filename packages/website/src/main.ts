@@ -81,7 +81,6 @@ import * as Page from './page'
 import { type ExampleSlug } from './page/example/meta'
 import {
   AppRoute,
-  isLandingHeaderAlwaysVisible,
   isPlaygroundRoute,
   playgroundRouter,
   urlToAppRoute,
@@ -96,7 +95,7 @@ import {
   SidebarStateJsonString,
 } from './sidebarStorage'
 import * as Subscriptions from './subscription'
-import { docsView, landingView, newsletterView } from './view'
+import { blogView, docsView, landingView, newsletterView } from './view'
 
 export type { Message } from './message'
 
@@ -242,7 +241,6 @@ export const Model = S.Struct({
   mobileMenuDialog: Dialog.Model,
   isMobileTableOfContentsOpen: S.Boolean,
   activeSection: S.Option(S.String),
-  isLandingHeaderVisible: S.Boolean,
   isNarrowViewport: S.Boolean,
   isChromium: S.Boolean,
   playground: S.Option(Page.Playground.Model),
@@ -428,7 +426,6 @@ export const init: Runtime.RoutingApplicationInit<
       isMobileTableOfContentsOpen: false,
       activeSection: Option.none(),
       aiHeadingToggleCount: 0,
-      isLandingHeaderVisible: isLandingHeaderAlwaysVisible(initialRoute),
       isNarrowViewport: flags.isNarrowViewport,
       isChromium: flags.isChromium,
       playground: pipe(
@@ -765,8 +762,6 @@ export const update = (
             exampleDetail: () => nextExampleDetail,
             playground: () => nextPlaygroundRoute,
             search: () => nextSearch,
-            isLandingHeaderVisible: () =>
-              isLandingHeaderAlwaysVisible(nextRoute),
             sidebarGroups: () => nextSidebarGroups,
           }),
           [
@@ -894,11 +889,6 @@ export const update = (
         evo(model, {
           activeSection: () => Option.some(sectionId),
         }),
-        [],
-      ],
-
-      ChangedHeroVisibility: ({ isVisible }) => [
-        evo(model, { isLandingHeaderVisible: () => !isVisible }),
         [],
       ],
 
@@ -1200,6 +1190,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
   body: M.value(model.route).pipe(
     M.tag('Home', () => landingView(model, h)),
     M.tag('Newsletter', () => newsletterView(model, h)),
+    M.tag('Blog', 'BlogPost', route => blogView(model, route, h)),
     M.tag('Playground', () =>
       Option.match(model.playground, {
         onNone: () => h.empty,
@@ -1244,6 +1235,14 @@ const routeTitle = (
   M.value(route).pipe(
     M.tag('Home', () => SITE_NAME),
     M.tag('Newsletter', () => `Newsletter | ${SITE_NAME}`),
+    M.tag('Blog', () => `Blog | ${SITE_NAME}`),
+    M.tag('BlogPost', ({ postSlug }) =>
+      Option.match(Page.Blog.findPostBySlug(postSlug), {
+        onNone: () => `Not Found | ${SITE_NAME}`,
+        onSome: ({ frontmatter }) =>
+          `${frontmatter.title} | Blog | ${SITE_NAME}`,
+      }),
+    ),
     M.tag('NotFound', () => `Not Found | ${SITE_NAME}`),
     M.tag(
       'ApiModule',
