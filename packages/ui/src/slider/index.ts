@@ -524,6 +524,16 @@ export type ViewInputs = Readonly<{
   ariaLabelledBy?: string
   formatValue?: (value: number) => string
   isDisabled?: boolean
+  /** Prevents value changes while exposing read-only semantics with
+   *  `aria-readonly="true"` and `data-readonly`. The thumb remains focusable.
+   *  Independent of `isDisabled`: setting both emits both attribute sets, and
+   *  either one removes the pointer and keyboard handlers.
+   *
+   *  A drag already in flight is not interrupted. The handlers this flag
+   *  removes are what start a drag, and the pointermove Subscription runs off
+   *  `dragState` in the Model until pointerup. `isDisabled` behaves the same
+   *  way. */
+  isReadOnly?: boolean
   name?: string
   /** Resolves the root that holds the slider track when looking it up by its
    *  `data-slider-track-id` attribute. Defaults to `document`. Provide a
@@ -543,6 +553,7 @@ export const view = defineView<Model, Message, ViewInputs>(
       value,
       formatValue,
       isDisabled = false,
+      isReadOnly = false,
       name,
       getTrackRoot = () => document,
     } = viewInputs
@@ -590,6 +601,7 @@ export const view = defineView<Model, Message, ViewInputs>(
     const stateAttributes = [
       ...(isDragging ? [h.DataAttribute('dragging', '')] : []),
       ...(isDisabled ? [h.DataAttribute('disabled', '')] : []),
+      ...(isReadOnly ? [h.DataAttribute('readonly', '')] : []),
     ]
 
     const rootAttributes = [
@@ -598,9 +610,11 @@ export const view = defineView<Model, Message, ViewInputs>(
       ...stateAttributes,
     ]
 
-    const trackInteractionAttributes = isDisabled
-      ? []
-      : [h.OnPointerDown(trackPointerHandler)]
+    const isInteractive = !isDisabled && !isReadOnly
+
+    const trackInteractionAttributes = isInteractive
+      ? [h.OnPointerDown(trackPointerHandler)]
+      : []
 
     const trackAttributes = [
       h.DataAttribute('slider-track-id', id),
@@ -635,12 +649,12 @@ export const view = defineView<Model, Message, ViewInputs>(
     const maybeAriaValuetext =
       formatValue !== undefined ? [h.AriaValuetext(formatValue(value))] : []
 
-    const thumbInteractionAttributes = isDisabled
-      ? []
-      : [
+    const thumbInteractionAttributes = isInteractive
+      ? [
           h.OnPointerDown(thumbPointerHandler),
           h.OnKeyDownPreventDefault(handleKeyDown),
         ]
+      : []
 
     const thumbAttributes = [
       h.Id(`${id}-thumb`),
@@ -653,6 +667,7 @@ export const view = defineView<Model, Message, ViewInputs>(
       ...maybeAriaValuetext,
       ...thumbLabelAttributes,
       ...(isDisabled ? [h.AriaDisabled(true)] : []),
+      ...(isReadOnly ? [h.AriaReadonly(true)] : []),
       h.Style({
         position: 'absolute',
         left: percentString(fraction),
