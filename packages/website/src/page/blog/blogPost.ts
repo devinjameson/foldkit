@@ -1,6 +1,11 @@
-import { type Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
+import {
+  type Html,
+  type HtmlBuilder,
+  createKeyedLazy,
+  inertHtml as ih,
+} from 'foldkit/html'
 
-import { type DocPage, docPage } from '../../markdown'
+import { docPage } from '../../markdown'
 import { type Message } from '../../message'
 import { pageTitle } from '../../prose'
 import { blogRouter } from '../../route'
@@ -9,22 +14,6 @@ import { BLOG_AUTHOR } from './meta'
 import { type BlogPost, formatPostDate } from './posts'
 
 // VIEW
-
-// NOTE: `docPage` decodes the compiled document and numbers its headings, so
-// it must not run inside `view`, which runs on every render. The cache builds
-// each post's DocPage on its first render rather than eagerly for every post
-// at module load.
-const docPageCache = new Map<string, DocPage>()
-
-const postDocPage = (post: BlogPost): DocPage => {
-  const cachedPage = docPageCache.get(post.slug)
-  if (cachedPage !== undefined) {
-    return cachedPage
-  }
-  const page = docPage(post.document, post.slug)
-  docPageCache.set(post.slug, page)
-  return page
-}
 
 const backToBlogLink: Html = ih.a(
   [
@@ -36,7 +25,7 @@ const backToBlogLink: Html = ih.a(
   ['← Blog'],
 )
 
-export const view = (
+const postView = (
   post: BlogPost,
   copiedSnippets: CopiedSnippets,
   h: HtmlBuilder<Message>,
@@ -55,6 +44,14 @@ export const view = (
           ),
         ],
       ),
-      postDocPage(post).view(copiedSnippets, h),
+      docPage(post.document, post.slug).view(copiedSnippets, h),
     ],
   )
+
+const lazyPostView = createKeyedLazy()
+
+export const view = (
+  post: BlogPost,
+  copiedSnippets: CopiedSnippets,
+  h: HtmlBuilder<Message>,
+): Html => lazyPostView(post.slug, postView, [post, copiedSnippets, h])
