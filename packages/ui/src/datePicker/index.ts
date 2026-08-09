@@ -6,6 +6,7 @@ import type { ChildAttribute, Html } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 import { type Reflect, defineView } from 'foldkit/submodel'
+import * as Update from 'foldkit/update'
 
 import type { AnchorConfig } from '../anchor.js'
 import * as UiCalendar from '../calendar/index.js'
@@ -163,72 +164,67 @@ const mapPopoverCommands = (
 ): ReadonlyArray<Command.Command<Message>> =>
   Command.mapMessages(commands, message => GotPopoverMessage({ message }))
 
-const delegateToCalendar = (
-  model: Model,
-  calendarMessage: UiCalendar.Message,
-): UpdateReturn => {
-  const [nextCalendar, calendarCommands, maybeCalendarOutMessage] =
-    UiCalendar.update(model.calendar, calendarMessage)
-
-  const modelWithCalendar = evo(model, { calendar: () => nextCalendar })
-
-  return Option.match(maybeCalendarOutMessage, {
-    onNone: (): UpdateReturn => [
-      modelWithCalendar,
-      mapCalendarCommands(calendarCommands),
-      Option.none(),
-    ],
-    onSome: M.type<UiCalendar.OutMessage>().pipe(
-      M.withReturnType<UpdateReturn>(),
-      M.tagsExhaustive({
-        ChangedViewMonth: ({ year, month }) => [
-          modelWithCalendar,
-          mapCalendarCommands(calendarCommands),
-          Option.some(ChangedViewMonth({ year, month })),
-        ],
-        SelectedDate: ({ date }) => {
-          const [nextPopover, popoverCommands] = Popover.close(model.popover)
-          return [
-            evo(modelWithCalendar, {
-              popover: () => nextPopover,
-            }),
-            [
-              ...mapCalendarCommands(calendarCommands),
-              ...mapPopoverCommands(popoverCommands),
-            ],
-            Option.some(SelectedDate({ date })),
-          ]
-        },
-      }),
-    ),
-  })
+const closePopover: Update.Step<Model, Message> = model => {
+  const [nextPopover, popoverCommands] = Popover.close(model.popover)
+  return [
+    evo(model, { popover: () => nextPopover }),
+    mapPopoverCommands(popoverCommands),
+  ]
 }
 
-const delegateToPopover = (
-  model: Model,
-  popoverMessage: Popover.Message,
-): UpdateReturn => {
-  const [nextPopover, popoverCommands, maybePopoverOutMessage] = Popover.update(
-    model.popover,
-    popoverMessage,
-  )
-  const modelWithPopover = evo(model, { popover: () => nextPopover })
+const dropCalendarToDays: Update.Step<Model, Message> = model => [
+  evo(model, { calendar: () => UiCalendar.dropToDays(model.calendar) }),
+  [],
+]
 
-  return Option.match(maybePopoverOutMessage, {
-    onNone: (): UpdateReturn => [
-      modelWithPopover,
-      mapPopoverCommands(popoverCommands),
-      Option.none(),
-    ],
-    onSome: (): UpdateReturn => [
-      evo(modelWithPopover, {
-        calendar: () => UiCalendar.dropToDays(modelWithPopover.calendar),
-      }),
-      mapPopoverCommands(popoverCommands),
-      Option.none(),
-    ],
-  })
-}
+const foldCalendarOutMessage: (
+  outMessage: UiCalendar.OutMessage,
+) => Update.Step<Model, Message> = M.type<UiCalendar.OutMessage>().pipe(
+  M.withReturnType<Update.Step<Model, Message>>(),
+  M.tagsExhaustive({
+    ChangedViewMonth: () => model => [model, []],
+    SelectedDate: () => closePopover,
+  }),
+)
+
+const toDatePickerOutMessage: (
+  outMessage: UiCalendar.OutMessage,
+) => Option.Option<OutMessage> = M.type<UiCalendar.OutMessage>().pipe(
+  M.withReturnType<Option.Option<OutMessage>>(),
+  M.tagsExhaustive({
+    ChangedViewMonth: ({ year, month }) =>
+      Option.some(ChangedViewMonth({ year, month })),
+    SelectedDate: ({ date }) => Option.some(SelectedDate({ date })),
+  }),
+)
+
+const foldCalendar = Update.foldChild({
+  update: UiCalendar.update,
+  read: (model: Model) => Option.some(model.calendar),
+  write: (model, nextCalendar) => evo(model, { calendar: () => nextCalendar }),
+  toParentMessage: message => GotCalendarMessage({ message }),
+  toParentOutMessage: toDatePickerOutMessage,
+  foldOutMessage: foldCalendarOutMessage,
+})
+
+const foldPopoverOutMessage: (
+  outMessage: Popover.OutMessage,
+) => Update.Step<Model, Message> = M.type<Popover.OutMessage>().pipe(
+  M.withReturnType<Update.Step<Model, Message>>(),
+  M.tagsExhaustive({
+    Opened: () => dropCalendarToDays,
+    Closed: () => dropCalendarToDays,
+  }),
+)
+
+const foldPopover = Update.foldChild({
+  update: Popover.update,
+  read: (model: Model) => Option.some(model.popover),
+  write: (model, nextPopover) => evo(model, { popover: () => nextPopover }),
+  toParentMessage: message => GotPopoverMessage({ message }),
+  toParentOutMessage: () => Option.none(),
+  foldOutMessage: foldPopoverOutMessage,
+})
 
 /** Processes a date picker message and returns the next model, commands, and
  * optional OutMessage. */
@@ -237,10 +233,10 @@ export const update = (model: Model, message: Message): UpdateReturn =>
     withUpdateReturn,
     M.tagsExhaustive({
       GotCalendarMessage: ({ message: calendarMessage }) =>
-        delegateToCalendar(model, calendarMessage),
+        foldCalendar(model, calendarMessage),
 
       GotPopoverMessage: ({ message: popoverMessage }) =>
-        delegateToPopover(model, popoverMessage),
+        foldPopover(model, popoverMessage),
 
       Opened: () => {
         const [nextPopover, popoverCommands] = Popover.open(model.popover)
