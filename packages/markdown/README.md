@@ -54,6 +54,8 @@ const view = (h: HtmlBuilder<Message>): Html =>
   h.div([], [Markdown.view(about)])
 ```
 
+`decodeDocument` memoizes on the wire object, so calling it inside a view decodes each module once rather than once per render.
+
 `Markdown.view` renders every node through unstyled semantic defaults. Restyle any node by overriding its view:
 
 ```typescript
