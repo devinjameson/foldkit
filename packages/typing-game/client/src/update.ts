@@ -61,12 +61,12 @@ const navigateToRoom =
   (roomId: string): UpdateStep =>
   model => [model, [NavigateToRoom({ roomId })]]
 
-const joinRoom = (roomId: string, player: Shared.Player): UpdateStep =>
+const enterJoinedRoom = (roomId: string, player: Shared.Player): UpdateStep =>
   Update.combine([
     navigateToRoom(roomId),
     Update.foldChild({
-      update: (roomModel: Room.Model.Model, joiningPlayer: Shared.Player) =>
-        Room.join(roomModel, joiningPlayer, { roomId }),
+      update: (roomModel: Room.Model.Model, joinedPlayer: Shared.Player) =>
+        Room.informJoined(roomModel, joinedPlayer, { roomId }),
       read: readRoom,
       write: writeRoom,
       toParentMessage: toGotRoomMessage,
@@ -78,7 +78,7 @@ const foldHomeOutMessage: (outMessage: Home.Message.OutMessage) => UpdateStep =
     M.value(outMessage).pipe(
       withUpdateReturn,
       M.tag('SucceededCreateRoom', 'SucceededJoinRoom', ({ roomId, player }) =>
-        joinRoom(roomId, player)(model),
+        enterJoinedRoom(roomId, player)(model),
       ),
       M.exhaustive,
     )

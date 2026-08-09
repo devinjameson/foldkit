@@ -289,7 +289,7 @@ const handleStartGame = (model: Model, room: Shared.Room) => (): UpdateReturn =>
     onNone: () => [model, []],
   })
 
-export const join = (
+export const informJoined = (
   model: Model,
   player: Shared.Player,
   context: Context,
