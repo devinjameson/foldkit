@@ -1,5 +1,15 @@
 # @foldkit/markdown
 
+## 0.3.0
+
+### Minor Changes
+
+- 96303a5: Add opt-in Schema-validated frontmatter support to the Vite plugin. Pass a `frontmatter` Schema struct in the plugin options to enable flat `key: value` frontmatter blocks: fields are validated at build time the same way island attributes are, and the validated fields are emitted as a `frontmatter` named export on the compiled module. `parseMarkdownWithFrontmatter` exposes the same parsing for scripts. Documents with frontmatter still fail the build when no schema is configured.
+
+### Patch Changes
+
+- 4a351f0: Memoize `decodeDocument` on a `WeakMap` keyed by the wire object, so decoding the same compiled markdown module again returns the document from the first decode. A module's wire object is immutable build output and the decode is deterministic, so a cached document can never disagree with a fresh one, and each entry is collected along with the module holding its key. Calling `decodeDocument` from a view no longer re-decodes on every render, and consumers no longer need a cache of their own.
+
 ## 0.2.1
 
 ### Patch Changes
