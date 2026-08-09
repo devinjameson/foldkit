@@ -334,12 +334,12 @@ export type FoldWithOutMessage<
  *  of the child's:
  *
  *  ```ts
- *  const joinRoom = (roomId: string, player: Player): UpdateStep =>
+ *  const enterJoinedRoom = (roomId: string, player: Player): UpdateStep =>
  *    Update.combine([
  *      model => [model, [NavigateToRoom({ roomId })]],
  *      Update.foldChild({
- *        update: (room: Room.Model, player: Player) =>
- *          Room.join(room, player, { roomId }),
+ *        update: (room: Room.Model, joinedPlayer: Player) =>
+ *          Room.informJoined(room, joinedPlayer, { roomId }),
  *        read: readRoom,
  *        write: writeRoom,
  *        toParentMessage: toGotRoomMessage,
