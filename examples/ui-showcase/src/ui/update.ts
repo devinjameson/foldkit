@@ -13,6 +13,7 @@ import {
   Listbox,
   Menu,
   Popover,
+  RadioGroup,
   Slider,
   Tabs,
   Tooltip,
@@ -32,6 +33,7 @@ import {
   GotDialogDemoMessage,
   GotDragAndDropDemoMessage,
   GotFileDropBasicDemoMessage,
+  GotHorizontalRadioGroupDemoMessage,
   GotHorizontalTabsDemoMessage,
   GotListboxDemoMessage,
   GotListboxGroupedDemoMessage,
@@ -52,15 +54,24 @@ import {
   GotToastDemoMessage,
   GotTooltipBasicDemoMessage,
   GotTooltipNoDelayDemoMessage,
+  GotVerticalRadioGroupDemoMessage,
   GotVerticalTabsDemoMessage,
   GotVirtualListDemoMessage,
   GotVirtualListVariableDemoMessage,
   type UiMessage,
 } from './message'
-import type { City, DemoColumn, DemoTab, ListboxItem, UiModel } from './model'
+import type {
+  City,
+  DemoColumn,
+  DemoTab,
+  ListboxItem,
+  Plan,
+  UiModel,
+} from './model'
 import { Toast } from './toast'
 import { CityCombobox, CityMultiCombobox } from './view/combobox'
 import { CharacterListbox, ItemListbox, ItemMultiListbox } from './view/listbox'
+import { PlanRadioGroup } from './view/radioGroup'
 import { DemoTabs } from './view/tabs'
 import {
   ROW_COUNT as VIRTUAL_LIST_ROW_COUNT,
@@ -115,9 +126,7 @@ const withUpdateReturn = M.withReturnType<UiUpdateReturn>()
 
 const DemoMenu = Menu.create<string>()
 
-const ignoreDialogOutMessage: (
-  outMessage: Dialog.OutMessage,
-) => Update.Step<UiModel, UiMessage> = M.type<Dialog.OutMessage>().pipe(
+const foldDialogOutMessage = M.type<Dialog.OutMessage>().pipe(
   M.withReturnType<Update.Step<UiModel, UiMessage>>(),
   M.tagsExhaustive({
     Opened: () => model => [model, []],
@@ -125,18 +134,14 @@ const ignoreDialogOutMessage: (
   }),
 )
 
-const ignoreMenuOutMessage: (
-  outMessage: Menu.OutMessage<string>,
-) => Update.Step<UiModel, UiMessage> = M.type<Menu.OutMessage<string>>().pipe(
+const foldMenuOutMessage = M.type<Menu.OutMessage<string>>().pipe(
   M.withReturnType<Update.Step<UiModel, UiMessage>>(),
   M.tagsExhaustive({
     Selected: () => model => [model, []],
   }),
 )
 
-const ignorePopoverOutMessage: (
-  outMessage: Popover.OutMessage,
-) => Update.Step<UiModel, UiMessage> = M.type<Popover.OutMessage>().pipe(
+const foldPopoverOutMessage = M.type<Popover.OutMessage>().pipe(
   M.withReturnType<Update.Step<UiModel, UiMessage>>(),
   M.tagsExhaustive({
     Opened: () => model => [model, []],
@@ -144,20 +149,14 @@ const ignorePopoverOutMessage: (
   }),
 )
 
-const ignoreToastOutMessage: (
-  outMessage: typeof Toast.OutMessage.Type,
-) => Update.Step<UiModel, UiMessage> = M.type<
-  typeof Toast.OutMessage.Type
->().pipe(
+const foldToastOutMessage = M.type<typeof Toast.OutMessage.Type>().pipe(
   M.withReturnType<Update.Step<UiModel, UiMessage>>(),
   M.tagsExhaustive({
     DismissedToast: () => model => [model, []],
   }),
 )
 
-const ignoreTooltipOutMessage: (
-  outMessage: Tooltip.OutMessage,
-) => Update.Step<UiModel, UiMessage> = M.type<Tooltip.OutMessage>().pipe(
+const foldTooltipOutMessage = M.type<Tooltip.OutMessage>().pipe(
   M.withReturnType<Update.Step<UiModel, UiMessage>>(),
   M.tagsExhaustive({
     Shown: () => model => [model, []],
@@ -171,12 +170,10 @@ const foldMobileMenuDialog = Update.foldChild({
   write: (model, nextMobileMenuDialog) =>
     evo(model, { mobileMenuDialog: () => nextMobileMenuDialog }),
   toParentMessage: message => GotMobileMenuDialogMessage({ message }),
-  foldOutMessage: ignoreDialogOutMessage,
+  foldOutMessage: foldDialogOutMessage,
 })
 
-const foldComboboxDemoOutMessage: (
-  outMessage: Combobox.OutMessage<City>,
-) => Update.Step<UiModel, UiMessage> = M.type<Combobox.OutMessage<City>>().pipe(
+const foldComboboxDemoOutMessage = M.type<Combobox.OutMessage<City>>().pipe(
   M.withReturnType<Update.Step<UiModel, UiMessage>>(),
   M.tagsExhaustive({
     Selected:
@@ -200,9 +197,9 @@ const foldComboboxDemo = Update.foldChild({
   foldOutMessage: foldComboboxDemoOutMessage,
 })
 
-const foldComboboxNullableDemoOutMessage: (
-  outMessage: Combobox.OutMessage<City>,
-) => Update.Step<UiModel, UiMessage> = M.type<Combobox.OutMessage<City>>().pipe(
+const foldComboboxNullableDemoOutMessage = M.type<
+  Combobox.OutMessage<City>
+>().pipe(
   M.withReturnType<Update.Step<UiModel, UiMessage>>(),
   M.tagsExhaustive({
     Selected:
@@ -234,9 +231,9 @@ const foldComboboxNullableDemo = Update.foldChild({
   foldOutMessage: foldComboboxNullableDemoOutMessage,
 })
 
-const foldComboboxMultiDemoOutMessage: (
-  outMessage: Combobox.OutMessage<City>,
-) => Update.Step<UiModel, UiMessage> = M.type<Combobox.OutMessage<City>>().pipe(
+const foldComboboxMultiDemoOutMessage = M.type<
+  Combobox.OutMessage<City>
+>().pipe(
   M.withReturnType<Update.Step<UiModel, UiMessage>>(),
   M.tagsExhaustive({
     Selected:
@@ -266,9 +263,9 @@ const foldComboboxMultiDemo = Update.foldChild({
   foldOutMessage: foldComboboxMultiDemoOutMessage,
 })
 
-const foldComboboxPlacementLockDemoOutMessage: (
-  outMessage: Combobox.OutMessage<City>,
-) => Update.Step<UiModel, UiMessage> = M.type<Combobox.OutMessage<City>>().pipe(
+const foldComboboxPlacementLockDemoOutMessage = M.type<
+  Combobox.OutMessage<City>
+>().pipe(
   M.withReturnType<Update.Step<UiModel, UiMessage>>(),
   M.tagsExhaustive({
     Selected:
@@ -294,9 +291,9 @@ const foldComboboxPlacementLockDemo = Update.foldChild({
   foldOutMessage: foldComboboxPlacementLockDemoOutMessage,
 })
 
-const foldComboboxSelectOnFocusDemoOutMessage: (
-  outMessage: Combobox.OutMessage<City>,
-) => Update.Step<UiModel, UiMessage> = M.type<Combobox.OutMessage<City>>().pipe(
+const foldComboboxSelectOnFocusDemoOutMessage = M.type<
+  Combobox.OutMessage<City>
+>().pipe(
   M.withReturnType<Update.Step<UiModel, UiMessage>>(),
   M.tagsExhaustive({
     Selected:
@@ -328,7 +325,7 @@ const foldDialogDemo = Update.foldChild({
   write: (model, nextDialogDemo) =>
     evo(model, { dialogDemo: () => nextDialogDemo }),
   toParentMessage: message => GotDialogDemoMessage({ message }),
-  foldOutMessage: ignoreDialogOutMessage,
+  foldOutMessage: foldDialogOutMessage,
 })
 
 const foldDialogAnimatedDemo = Update.foldChild({
@@ -337,7 +334,7 @@ const foldDialogAnimatedDemo = Update.foldChild({
   write: (model, nextDialogAnimatedDemo) =>
     evo(model, { dialogAnimatedDemo: () => nextDialogAnimatedDemo }),
   toParentMessage: message => GotDialogAnimatedDemoMessage({ message }),
-  foldOutMessage: ignoreDialogOutMessage,
+  foldOutMessage: foldDialogOutMessage,
 })
 
 const foldOverlayDialogDemo = Update.foldChild({
@@ -346,12 +343,12 @@ const foldOverlayDialogDemo = Update.foldChild({
   write: (model, nextOverlayDialogDemo) =>
     evo(model, { overlayDialogDemo: () => nextOverlayDialogDemo }),
   toParentMessage: message => GotOverlayDialogDemoMessage({ message }),
-  foldOutMessage: ignoreDialogOutMessage,
+  foldOutMessage: foldDialogOutMessage,
 })
 
-const foldOverlayComboboxDemoOutMessage: (
-  outMessage: Combobox.OutMessage<City>,
-) => Update.Step<UiModel, UiMessage> = M.type<Combobox.OutMessage<City>>().pipe(
+const foldOverlayComboboxDemoOutMessage = M.type<
+  Combobox.OutMessage<City>
+>().pipe(
   M.withReturnType<Update.Step<UiModel, UiMessage>>(),
   M.tagsExhaustive({
     Selected:
@@ -381,7 +378,7 @@ const foldNestedDialogParentDemo = Update.foldChild({
   write: (model, nextNestedDialogParentDemo) =>
     evo(model, { nestedDialogParentDemo: () => nextNestedDialogParentDemo }),
   toParentMessage: message => GotNestedDialogParentDemoMessage({ message }),
-  foldOutMessage: ignoreDialogOutMessage,
+  foldOutMessage: foldDialogOutMessage,
 })
 
 const foldNestedDialogChildDemo = Update.foldChild({
@@ -390,12 +387,10 @@ const foldNestedDialogChildDemo = Update.foldChild({
   write: (model, nextNestedDialogChildDemo) =>
     evo(model, { nestedDialogChildDemo: () => nextNestedDialogChildDemo }),
   toParentMessage: message => GotNestedDialogChildDemoMessage({ message }),
-  foldOutMessage: ignoreDialogOutMessage,
+  foldOutMessage: foldDialogOutMessage,
 })
 
-const foldCalendarBasicDemoOutMessage: (
-  outMessage: Calendar.OutMessage,
-) => Update.Step<UiModel, UiMessage> = M.type<Calendar.OutMessage>().pipe(
+const foldCalendarBasicDemoOutMessage = M.type<Calendar.OutMessage>().pipe(
   M.withReturnType<Update.Step<UiModel, UiMessage>>(),
   M.tagsExhaustive({
     SelectedDate:
@@ -419,9 +414,7 @@ const foldCalendarBasicDemo = Update.foldChild({
   foldOutMessage: foldCalendarBasicDemoOutMessage,
 })
 
-const foldDatePickerBasicDemoOutMessage: (
-  outMessage: DatePicker.OutMessage,
-) => Update.Step<UiModel, UiMessage> = M.type<DatePicker.OutMessage>().pipe(
+const foldDatePickerBasicDemoOutMessage = M.type<DatePicker.OutMessage>().pipe(
   M.withReturnType<Update.Step<UiModel, UiMessage>>(),
   M.tagsExhaustive({
     SelectedDate:
@@ -451,9 +444,7 @@ const foldDatePickerBasicDemo = Update.foldChild({
   foldOutMessage: foldDatePickerBasicDemoOutMessage,
 })
 
-const foldDragAndDropDemoOutMessage: (
-  outMessage: DragAndDrop.OutMessage,
-) => Update.Step<UiModel, UiMessage> = M.type<DragAndDrop.OutMessage>().pipe(
+const foldDragAndDropDemoOutMessage = M.type<DragAndDrop.OutMessage>().pipe(
   M.withReturnType<Update.Step<UiModel, UiMessage>>(),
   M.tagsExhaustive({
     Reordered:
@@ -484,9 +475,7 @@ const foldDragAndDropDemo = Update.foldChild({
   foldOutMessage: foldDragAndDropDemoOutMessage,
 })
 
-const foldFileDropBasicDemoOutMessage: (
-  outMessage: FileDrop.OutMessage,
-) => Update.Step<UiModel, UiMessage> = M.type<FileDrop.OutMessage>().pipe(
+const foldFileDropBasicDemoOutMessage = M.type<FileDrop.OutMessage>().pipe(
   M.withReturnType<Update.Step<UiModel, UiMessage>>(),
   M.tagsExhaustive({
     ReceivedFiles:
@@ -513,9 +502,7 @@ const foldFileDropBasicDemo = Update.foldChild({
   foldOutMessage: foldFileDropBasicDemoOutMessage,
 })
 
-const foldListboxDemoOutMessage: (
-  outMessage: Listbox.OutMessage<ListboxItem>,
-) => Update.Step<UiModel, UiMessage> = M.type<
+const foldListboxDemoOutMessage = M.type<
   Listbox.OutMessage<ListboxItem>
 >().pipe(
   M.withReturnType<Update.Step<UiModel, UiMessage>>(),
@@ -573,9 +560,7 @@ const foldListboxMultiDemo = Update.foldChild({
   foldOutMessage: foldListboxMultiDemoOutMessage,
 })
 
-const foldListboxGroupedDemoOutMessage: (
-  outMessage: Listbox.OutMessage,
-) => Update.Step<UiModel, UiMessage> = M.type<Listbox.OutMessage>().pipe(
+const foldListboxGroupedDemoOutMessage = M.type<Listbox.OutMessage>().pipe(
   M.withReturnType<Update.Step<UiModel, UiMessage>>(),
   M.tagsExhaustive({
     Selected:
@@ -604,7 +589,7 @@ const foldMenuBasicDemo = Update.foldChild({
   write: (model, nextMenuBasicDemo) =>
     evo(model, { menuBasicDemo: () => nextMenuBasicDemo }),
   toParentMessage: message => GotMenuBasicDemoMessage({ message }),
-  foldOutMessage: ignoreMenuOutMessage,
+  foldOutMessage: foldMenuOutMessage,
 })
 
 const foldMenuAnimatedDemo = Update.foldChild({
@@ -613,7 +598,7 @@ const foldMenuAnimatedDemo = Update.foldChild({
   write: (model, nextMenuAnimatedDemo) =>
     evo(model, { menuAnimatedDemo: () => nextMenuAnimatedDemo }),
   toParentMessage: message => GotMenuAnimatedDemoMessage({ message }),
-  foldOutMessage: ignoreMenuOutMessage,
+  foldOutMessage: foldMenuOutMessage,
 })
 
 const foldPopoverBasicDemo = Update.foldChild({
@@ -622,7 +607,7 @@ const foldPopoverBasicDemo = Update.foldChild({
   write: (model, nextPopoverBasicDemo) =>
     evo(model, { popoverBasicDemo: () => nextPopoverBasicDemo }),
   toParentMessage: message => GotPopoverBasicDemoMessage({ message }),
-  foldOutMessage: ignorePopoverOutMessage,
+  foldOutMessage: foldPopoverOutMessage,
 })
 
 const foldPopoverAnimatedDemo = Update.foldChild({
@@ -631,7 +616,7 @@ const foldPopoverAnimatedDemo = Update.foldChild({
   write: (model, nextPopoverAnimatedDemo) =>
     evo(model, { popoverAnimatedDemo: () => nextPopoverAnimatedDemo }),
   toParentMessage: message => GotPopoverAnimatedDemoMessage({ message }),
-  foldOutMessage: ignorePopoverOutMessage,
+  foldOutMessage: foldPopoverOutMessage,
 })
 
 const foldPopoverNestedParentDemo = Update.foldChild({
@@ -640,7 +625,7 @@ const foldPopoverNestedParentDemo = Update.foldChild({
   write: (model, nextPopoverNestedParentDemo) =>
     evo(model, { popoverNestedParentDemo: () => nextPopoverNestedParentDemo }),
   toParentMessage: message => GotPopoverNestedParentDemoMessage({ message }),
-  foldOutMessage: ignorePopoverOutMessage,
+  foldOutMessage: foldPopoverOutMessage,
 })
 
 const foldPopoverNestedChildDemo = Update.foldChild({
@@ -649,12 +634,58 @@ const foldPopoverNestedChildDemo = Update.foldChild({
   write: (model, nextPopoverNestedChildDemo) =>
     evo(model, { popoverNestedChildDemo: () => nextPopoverNestedChildDemo }),
   toParentMessage: message => GotPopoverNestedChildDemoMessage({ message }),
-  foldOutMessage: ignorePopoverOutMessage,
+  foldOutMessage: foldPopoverOutMessage,
 })
 
-const foldSliderRatingDemoOutMessage: (
-  outMessage: Slider.OutMessage,
-) => Update.Step<UiModel, UiMessage> = M.type<Slider.OutMessage>().pipe(
+const foldVerticalRadioGroupDemoOutMessage = M.type<
+  RadioGroup.OutMessage<Plan>
+>().pipe(
+  M.withReturnType<Update.Step<UiModel, UiMessage>>(),
+  M.tagsExhaustive({
+    Selected:
+      ({ value }) =>
+      model => [
+        evo(model, { verticalRadioGroupDemoValue: () => Option.some(value) }),
+        [],
+      ],
+  }),
+)
+
+const foldVerticalRadioGroupDemo = Update.foldChild({
+  update: PlanRadioGroup.update,
+  read: (model: UiModel) => Option.some(model.verticalRadioGroupDemo),
+  write: (model, nextVerticalRadioGroupDemo) =>
+    evo(model, { verticalRadioGroupDemo: () => nextVerticalRadioGroupDemo }),
+  toParentMessage: message => GotVerticalRadioGroupDemoMessage({ message }),
+  foldOutMessage: foldVerticalRadioGroupDemoOutMessage,
+})
+
+const foldHorizontalRadioGroupDemoOutMessage = M.type<
+  RadioGroup.OutMessage<Plan>
+>().pipe(
+  M.withReturnType<Update.Step<UiModel, UiMessage>>(),
+  M.tagsExhaustive({
+    Selected:
+      ({ value }) =>
+      model => [
+        evo(model, { horizontalRadioGroupDemoValue: () => Option.some(value) }),
+        [],
+      ],
+  }),
+)
+
+const foldHorizontalRadioGroupDemo = Update.foldChild({
+  update: PlanRadioGroup.update,
+  read: (model: UiModel) => Option.some(model.horizontalRadioGroupDemo),
+  write: (model, nextHorizontalRadioGroupDemo) =>
+    evo(model, {
+      horizontalRadioGroupDemo: () => nextHorizontalRadioGroupDemo,
+    }),
+  toParentMessage: message => GotHorizontalRadioGroupDemoMessage({ message }),
+  foldOutMessage: foldHorizontalRadioGroupDemoOutMessage,
+})
+
+const foldSliderRatingDemoOutMessage = M.type<Slider.OutMessage>().pipe(
   M.withReturnType<Update.Step<UiModel, UiMessage>>(),
   M.tagsExhaustive({
     ChangedValue:
@@ -672,9 +703,7 @@ const foldSliderRatingDemo = Update.foldChild({
   foldOutMessage: foldSliderRatingDemoOutMessage,
 })
 
-const foldSliderVolumeDemoOutMessage: (
-  outMessage: Slider.OutMessage,
-) => Update.Step<UiModel, UiMessage> = M.type<Slider.OutMessage>().pipe(
+const foldSliderVolumeDemoOutMessage = M.type<Slider.OutMessage>().pipe(
   M.withReturnType<Update.Step<UiModel, UiMessage>>(),
   M.tagsExhaustive({
     ChangedValue:
@@ -692,9 +721,9 @@ const foldSliderVolumeDemo = Update.foldChild({
   foldOutMessage: foldSliderVolumeDemoOutMessage,
 })
 
-const foldHorizontalTabsDemoOutMessage: (
-  outMessage: Tabs.OutMessage<DemoTab>,
-) => Update.Step<UiModel, UiMessage> = M.type<Tabs.OutMessage<DemoTab>>().pipe(
+const foldHorizontalTabsDemoOutMessage = M.type<
+  Tabs.OutMessage<DemoTab>
+>().pipe(
   M.withReturnType<Update.Step<UiModel, UiMessage>>(),
   M.tagsExhaustive({
     Selected:
@@ -712,9 +741,7 @@ const foldHorizontalTabsDemo = Update.foldChild({
   foldOutMessage: foldHorizontalTabsDemoOutMessage,
 })
 
-const foldVerticalTabsDemoOutMessage: (
-  outMessage: Tabs.OutMessage<DemoTab>,
-) => Update.Step<UiModel, UiMessage> = M.type<Tabs.OutMessage<DemoTab>>().pipe(
+const foldVerticalTabsDemoOutMessage = M.type<Tabs.OutMessage<DemoTab>>().pipe(
   M.withReturnType<Update.Step<UiModel, UiMessage>>(),
   M.tagsExhaustive({
     Selected:
@@ -738,7 +765,7 @@ const foldToastDemo = Update.foldChild({
   write: (model, nextToastDemo) =>
     evo(model, { toastDemo: () => nextToastDemo }),
   toParentMessage: message => GotToastDemoMessage({ message }),
-  foldOutMessage: ignoreToastOutMessage,
+  foldOutMessage: foldToastOutMessage,
 })
 
 const foldTooltipBasicDemo = Update.foldChild({
@@ -747,7 +774,7 @@ const foldTooltipBasicDemo = Update.foldChild({
   write: (model, nextTooltipBasicDemo) =>
     evo(model, { tooltipBasicDemo: () => nextTooltipBasicDemo }),
   toParentMessage: message => GotTooltipBasicDemoMessage({ message }),
-  foldOutMessage: ignoreTooltipOutMessage,
+  foldOutMessage: foldTooltipOutMessage,
 })
 
 const foldTooltipNoDelayDemo = Update.foldChild({
@@ -756,7 +783,7 @@ const foldTooltipNoDelayDemo = Update.foldChild({
   write: (model, nextTooltipNoDelayDemo) =>
     evo(model, { tooltipNoDelayDemo: () => nextTooltipNoDelayDemo }),
   toParentMessage: message => GotTooltipNoDelayDemoMessage({ message }),
-  foldOutMessage: ignoreTooltipOutMessage,
+  foldOutMessage: foldTooltipOutMessage,
 })
 
 const foldAnimationDemoOutMessage: (
@@ -1045,19 +1072,11 @@ export const uiUpdate = (model: UiModel, message: UiMessage): UiUpdateReturn =>
       GotPopoverNestedChildDemoMessage: ({ message }) =>
         foldPopoverNestedChildDemo(model, message),
 
-      SelectedVerticalPlan: ({ plan }) => [
-        evo(model, {
-          verticalRadioGroupDemoValue: () => Option.some(plan),
-        }),
-        [],
-      ],
+      GotVerticalRadioGroupDemoMessage: ({ message }) =>
+        foldVerticalRadioGroupDemo(model, message),
 
-      SelectedHorizontalPlan: ({ plan }) => [
-        evo(model, {
-          horizontalRadioGroupDemoValue: () => Option.some(plan),
-        }),
-        [],
-      ],
+      GotHorizontalRadioGroupDemoMessage: ({ message }) =>
+        foldHorizontalRadioGroupDemo(model, message),
 
       GotSliderRatingDemoMessage: ({ message }) =>
         foldSliderRatingDemo(model, message),
