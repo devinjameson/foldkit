@@ -740,6 +740,7 @@ describe('remote data machine', () => {
       stateTag: 'Idle',
       messageTag: 'ClickedRetry',
       state: RemoteData.Idle(),
+      reason: 'NotApplicable',
     })
 
     const ignoredRetry = remoteDataMachine.transition(
@@ -884,6 +885,7 @@ describe('connection machine', () => {
       stateTag: 'Disconnected',
       messageTag: 'TimedOutBackoff',
       state: ConnectionState.Disconnected(),
+      reason: 'NotApplicable',
     })
   })
 
@@ -1014,6 +1016,7 @@ describe('guard lists', () => {
       stateTag: 'Connecting',
       messageTag: 'SocketErrored',
       state: atLimit,
+      reason: 'GuardsFellThrough',
     })
 
     const declinedSocketError = guardValueMachine.transition(
@@ -1021,6 +1024,74 @@ describe('guard lists', () => {
       ConnectionMessage.SocketErrored({ reason: 'boom' }),
     )
     expect(declinedSocketError).toEqual({ model: atLimit })
+  })
+})
+
+describe('ignored reasons', () => {
+  it('reports a message that appears in no state entry as OutOfAlphabet', () => {
+    const result = connectionMachine.step(
+      ConnectionState.Disconnected(),
+      ConnectionMessage.CompletedLogTransition(),
+    )
+    expect(result).toEqual({
+      _tag: 'Ignored',
+      stateTag: 'Disconnected',
+      messageTag: 'CompletedLogTransition',
+      state: ConnectionState.Disconnected(),
+      reason: 'OutOfAlphabet',
+    })
+  })
+
+  it('reports a state with no table entry as NotApplicable when the message is in the alphabet', () => {
+    const result = narrowingMachine.step(
+      ConnectionState.Disconnected(),
+      ConnectionMessage.SocketErrored({ reason: 'boom' }),
+    )
+    expect(result).toEqual({
+      _tag: 'Ignored',
+      stateTag: 'Disconnected',
+      messageTag: 'SocketErrored',
+      state: ConnectionState.Disconnected(),
+      reason: 'NotApplicable',
+    })
+  })
+
+  it('includes a declared empty guard list in the message alphabet', () => {
+    const emptyGuardListMachine = define({
+      state: ConnectionState,
+      message: ConnectionMessage,
+    })({
+      initial: ConnectionState.Disconnected(),
+      states: {
+        Connecting: {
+          on: { SocketErrored: [] },
+        },
+      },
+    })
+
+    const notApplicable = emptyGuardListMachine.step(
+      ConnectionState.Disconnected(),
+      ConnectionMessage.SocketErrored({ reason: 'boom' }),
+    )
+    expect(notApplicable).toEqual({
+      _tag: 'Ignored',
+      stateTag: 'Disconnected',
+      messageTag: 'SocketErrored',
+      state: ConnectionState.Disconnected(),
+      reason: 'NotApplicable',
+    })
+
+    const guardsFellThrough = emptyGuardListMachine.step(
+      ConnectionState.Connecting({ attemptCount: 1 }),
+      ConnectionMessage.SocketErrored({ reason: 'boom' }),
+    )
+    expect(guardsFellThrough).toEqual({
+      _tag: 'Ignored',
+      stateTag: 'Connecting',
+      messageTag: 'SocketErrored',
+      state: ConnectionState.Connecting({ attemptCount: 1 }),
+      reason: 'GuardsFellThrough',
+    })
   })
 })
 

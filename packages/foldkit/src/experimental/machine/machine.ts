@@ -1,4 +1,13 @@
-import { Array, Match, Option, Predicate, Record, Schema, pipe } from 'effect'
+import {
+  Array,
+  HashSet,
+  Match,
+  Option,
+  Predicate,
+  Record,
+  Schema,
+  pipe,
+} from 'effect'
 
 import type { Command } from '../../command/index.js'
 import type * as Update from '../../update/index.js'
@@ -311,12 +320,29 @@ export type Transitioned<
   commands: ReadonlyArray<Command<Message, never, R>>
 }>
 
-/** A step that matched no Edge: the state is unchanged and the Message is observable as ignored. */
+/**
+ * Why a step matched no Edge. `OutOfAlphabet` means the Message tag appears
+ * in no state's `on` record anywhere in the table, so the Message is outside
+ * the Machine's alphabet. `NotApplicable` means the Message tag is in the
+ * alphabet, but no Edge for it exists from the current state, whether the
+ * state is absent from the table or its `on` record lacks the tag.
+ * `GuardsFellThrough` means an Edge entry exists for this state and Message,
+ * but every guard declined and no {@link otherwise} fallback was present.
+ */
+export type IgnoredReason =
+  'OutOfAlphabet' | 'NotApplicable' | 'GuardsFellThrough'
+
+/**
+ * A step that matched no Edge: the state is unchanged and the Message is
+ * observable as ignored. `reason` distinguishes the three causes, described
+ * on {@link IgnoredReason}.
+ */
 export type Ignored<State extends Tagged, Message extends Tagged> = Readonly<{
   _tag: 'Ignored'
   stateTag: TagOf<State>
   messageTag: TagOf<Message>
   state: State
+  reason: IgnoredReason
 }>
 
 /** The observable outcome of one step: `Transitioned` or `Ignored`.
@@ -628,6 +654,12 @@ export const define =
       ),
     )
 
+    const messageAlphabet: HashSet.HashSet<TagOf<Message>> = pipe(
+      Record.values(looseStates),
+      Array.flatMap(stateEntry => Record.keys(stateEntry.on)),
+      HashSet.fromIterable,
+    )
+
     const selectFromGuardList = (
       guardedEdges: ReadonlyArray<LooseGuardedEdge<State, Message, R>>,
       state: State,
@@ -695,11 +727,13 @@ export const define =
     const makeIgnored = (
       state: State,
       message: Message,
+      reason: IgnoredReason,
     ): Ignored<State, Message> => ({
       _tag: 'Ignored',
       stateTag: state._tag,
       messageTag: message._tag,
       state,
+      reason,
     })
 
     const step = (
@@ -709,13 +743,21 @@ export const define =
       pipe(
         Record.get(looseStates, state._tag),
         Option.flatMap(stateEntry => Record.get(stateEntry.on, message._tag)),
-        Option.flatMap(edgeOrGuardedEdges =>
-          chooseEdge(edgeOrGuardedEdges, state, message),
-        ),
         Option.match({
-          onNone: () => makeIgnored(state, message),
-          onSome: selectedEdge =>
-            makeTransitioned(state, message, selectedEdge),
+          onNone: () =>
+            makeIgnored(
+              state,
+              message,
+              HashSet.has(messageAlphabet, message._tag)
+                ? 'NotApplicable'
+                : 'OutOfAlphabet',
+            ),
+          onSome: edgeOrGuardedEdges =>
+            Option.match(chooseEdge(edgeOrGuardedEdges, state, message), {
+              onNone: () => makeIgnored(state, message, 'GuardsFellThrough'),
+              onSome: selectedEdge =>
+                makeTransitioned(state, message, selectedEdge),
+            }),
         }),
       )
 
