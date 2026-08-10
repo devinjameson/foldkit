@@ -35,9 +35,7 @@ export const initialModel: Model = {
 
 // UPDATE
 
-const foldDialogOutMessage: (
-  outMessage: Dialog.OutMessage,
-) => Update.Step<Model, Message> = M.type<Dialog.OutMessage>().pipe(
+const foldDialogOutMessage = M.type<Dialog.OutMessage>().pipe(
   M.withReturnType<Update.Step<Model, Message>>(),
   M.tagsExhaustive({
     Opened: () => model => [model, []],

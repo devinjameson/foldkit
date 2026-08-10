@@ -230,9 +230,7 @@ const appendGeneratedParticle =
     ]
   }
 
-const foldFlowStrengthSliderOutMessage: (
-  outMessage: Slider.OutMessage,
-) => Update.Step<Model, Message> = M.type<Slider.OutMessage>().pipe(
+const foldFlowStrengthSliderOutMessage = M.type<Slider.OutMessage>().pipe(
   M.withReturnType<Update.Step<Model, Message>>(),
   M.tagsExhaustive({
     ChangedValue:
@@ -250,9 +248,7 @@ const foldFlowStrengthSlider = Update.foldChild({
   foldOutMessage: foldFlowStrengthSliderOutMessage,
 })
 
-const foldNoiseScaleSliderOutMessage: (
-  outMessage: Slider.OutMessage,
-) => Update.Step<Model, Message> = M.type<Slider.OutMessage>().pipe(
+const foldNoiseScaleSliderOutMessage = M.type<Slider.OutMessage>().pipe(
   M.withReturnType<Update.Step<Model, Message>>(),
   M.tagsExhaustive({
     ChangedValue:

@@ -105,9 +105,7 @@ type UpdateReturn = readonly [
   Option.Option<OutMessage>,
 ]
 
-const foldGraduationYearListboxOutMessage: (
-  outMessage: Listbox.OutMessage,
-) => Update.Step<Model, Message> = M.type<Listbox.OutMessage>().pipe(
+const foldGraduationYearListboxOutMessage = M.type<Listbox.OutMessage>().pipe(
   M.withReturnType<Update.Step<Model, Message>>(),
   M.tagsExhaustive({
     Selected:

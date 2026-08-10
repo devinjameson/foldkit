@@ -50,9 +50,7 @@ export const init = (): Model => ({
 
 type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
 
-const foldResumeDropOutMessage: (
-  outMessage: FileDrop.OutMessage,
-) => Update.Step<Model, Message> = M.type<FileDrop.OutMessage>().pipe(
+const foldResumeDropOutMessage = M.type<FileDrop.OutMessage>().pipe(
   M.withReturnType<Update.Step<Model, Message>>(),
   M.tagsExhaustive({
     ReceivedFiles:
@@ -81,9 +79,7 @@ const foldResumeDrop = Update.foldChild({
   foldOutMessage: foldResumeDropOutMessage,
 })
 
-const foldAdditionalFilesDropOutMessage: (
-  outMessage: FileDrop.OutMessage,
-) => Update.Step<Model, Message> = M.type<FileDrop.OutMessage>().pipe(
+const foldAdditionalFilesDropOutMessage = M.type<FileDrop.OutMessage>().pipe(
   M.withReturnType<Update.Step<Model, Message>>(),
   M.tagsExhaustive({
     ReceivedFiles:

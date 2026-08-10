@@ -100,9 +100,7 @@ const foldAttachments = Update.foldChild({
   toParentMessage: message => GotAttachmentsMessage({ message }),
 })
 
-const foldStepMenuOutMessage: (
-  outMessage: Menu.OutMessage<Step.Step>,
-) => Update.Step<Model, Message> = M.type<Menu.OutMessage<Step.Step>>().pipe(
+const foldStepMenuOutMessage = M.type<Menu.OutMessage<Step.Step>>().pipe(
   M.withReturnType<Update.Step<Model, Message>>(),
   M.tagsExhaustive({
     Selected:
@@ -119,9 +117,7 @@ const foldStepMenu = Update.foldChild({
   foldOutMessage: foldStepMenuOutMessage,
 })
 
-const foldStepTabsOutMessage: (
-  outMessage: Tabs.OutMessage<Step.Step>,
-) => Update.Step<Model, Message> = M.type<Tabs.OutMessage<Step.Step>>().pipe(
+const foldStepTabsOutMessage = M.type<Tabs.OutMessage<Step.Step>>().pipe(
   M.withReturnType<Update.Step<Model, Message>>(),
   M.tagsExhaustive({
     Selected:

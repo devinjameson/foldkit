@@ -106,9 +106,7 @@ const LoadExternal = Command.define('LoadExternal', {
 type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
 const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
-const foldProductsOutMessage: (
-  outMessage: Products.OutMessage,
-) => Update.Step<Model, Message> = M.type<Products.OutMessage>().pipe(
+const foldProductsOutMessage = M.type<Products.OutMessage>().pipe(
   M.withReturnType<Update.Step<Model, Message>>(),
   M.tagsExhaustive({
     AddedToCart:

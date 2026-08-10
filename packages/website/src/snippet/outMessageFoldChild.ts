@@ -2,9 +2,7 @@ import { Match as M, Option } from 'effect'
 import { Command, Update } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
-const foldLoginOutMessage: (
-  outMessage: Login.OutMessage,
-) => Update.Step<Model, Message> = M.type<Login.OutMessage>().pipe(
+const foldLoginOutMessage = M.type<Login.OutMessage>().pipe(
   M.withReturnType<Update.Step<Model, Message>>(),
   M.tagsExhaustive({
     SucceededLogin:

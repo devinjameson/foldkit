@@ -479,9 +479,7 @@ type UpdateStep = Update.Step<
 
 const isPathnameEqual = (a: Url, b: Url): boolean => a.pathname === b.pathname
 
-const foldMobileMenuDialogOutMessage: (
-  outMessage: Dialog.OutMessage,
-) => Update.Step<Model, Message> = M.type<Dialog.OutMessage>().pipe(
+const foldMobileMenuDialogOutMessage = M.type<Dialog.OutMessage>().pipe(
   M.withReturnType<Update.Step<Model, Message>>(),
   M.tagsExhaustive({
     Opened: () => model => [model, []],
@@ -516,9 +514,7 @@ const foldMobileMenuDialogClose = Update.foldChildStep({
   foldOutMessage: foldMobileMenuDialogOutMessage,
 })
 
-const foldDemoTabsOutMessage: (
-  outMessage: Tabs.OutMessage<DemoTab.Tab>,
-) => Update.Step<Model, Message> = M.type<Tabs.OutMessage<DemoTab.Tab>>().pipe(
+const foldDemoTabsOutMessage = M.type<Tabs.OutMessage<DemoTab.Tab>>().pipe(
   M.withReturnType<Update.Step<Model, Message>>(),
   M.tagsExhaustive({
     Selected:
