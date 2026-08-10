@@ -1,5 +1,5 @@
 import { Array, Match as M, Number, Option, pipe } from 'effect'
-import { Command } from 'foldkit'
+import { Command, Update } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
 import {
@@ -12,6 +12,7 @@ import {
   FileDrop,
   Listbox,
   Popover,
+  RadioGroup,
   Slider,
   Tabs,
   Tooltip,
@@ -34,6 +35,7 @@ import {
   GotDialogDemoMessage,
   GotDragAndDropDemoMessage,
   GotFileDropBasicDemoMessage,
+  GotHorizontalRadioGroupDemoMessage,
   GotHorizontalTabsDemoMessage,
   GotListboxDemoMessage,
   GotListboxGroupedDemoMessage,
@@ -52,13 +54,22 @@ import {
   GotSliderVolumeDemoMessage,
   GotToastDemoMessage,
   GotTooltipDemoMessage,
+  GotVerticalRadioGroupDemoMessage,
   GotVerticalTabsDemoMessage,
   GotVirtualListDemoMessage,
   GotVirtualListVariableDemoMessage,
   type Message,
 } from './message'
 import type { Model } from './model'
-import type { City, DemoCard, DemoColumn, DemoTab, ListboxItem } from './model'
+import type {
+  City,
+  DemoCard,
+  DemoColumn,
+  DemoTab,
+  ListboxItem,
+  Plan,
+} from './model'
+import { PlanRadioGroup } from './radioGroup'
 import { DemoTabs } from './tabs'
 import { Toast } from './toastModule'
 import {
@@ -145,6 +156,54 @@ const delegateToAnimationDemo = (
 
   return [nextAnimation, [...mappedCommands, ...additionalCommands]]
 }
+
+const foldVerticalRadioGroupDemoOutMessage = M.type<
+  RadioGroup.OutMessage<Plan>
+>().pipe(
+  M.withReturnType<Update.Step<Model, Message>>(),
+  M.tagsExhaustive({
+    Selected:
+      ({ value }) =>
+      model => [
+        evo(model, { verticalRadioGroupDemoValue: () => Option.some(value) }),
+        [],
+      ],
+  }),
+)
+
+const foldVerticalRadioGroupDemo = Update.foldChild({
+  update: PlanRadioGroup.update,
+  read: (model: Model) => Option.some(model.verticalRadioGroupDemo),
+  write: (model, nextVerticalRadioGroupDemo) =>
+    evo(model, { verticalRadioGroupDemo: () => nextVerticalRadioGroupDemo }),
+  toParentMessage: message => GotVerticalRadioGroupDemoMessage({ message }),
+  foldOutMessage: foldVerticalRadioGroupDemoOutMessage,
+})
+
+const foldHorizontalRadioGroupDemoOutMessage = M.type<
+  RadioGroup.OutMessage<Plan>
+>().pipe(
+  M.withReturnType<Update.Step<Model, Message>>(),
+  M.tagsExhaustive({
+    Selected:
+      ({ value }) =>
+      model => [
+        evo(model, { horizontalRadioGroupDemoValue: () => Option.some(value) }),
+        [],
+      ],
+  }),
+)
+
+const foldHorizontalRadioGroupDemo = Update.foldChild({
+  update: PlanRadioGroup.update,
+  read: (model: Model) => Option.some(model.horizontalRadioGroupDemo),
+  write: (model, nextHorizontalRadioGroupDemo) =>
+    evo(model, {
+      horizontalRadioGroupDemo: () => nextHorizontalRadioGroupDemo,
+    }),
+  toParentMessage: message => GotHorizontalRadioGroupDemoMessage({ message }),
+  foldOutMessage: foldHorizontalRadioGroupDemoOutMessage,
+})
 
 export const update = (model: Model, message: Message): UpdateReturn =>
   M.value(message).pipe(
@@ -804,19 +863,11 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         ]
       },
 
-      SelectedVerticalPlan: ({ plan }) => [
-        evo(model, {
-          verticalRadioGroupDemoValue: () => Option.some(plan),
-        }),
-        [],
-      ],
+      GotVerticalRadioGroupDemoMessage: ({ message }) =>
+        foldVerticalRadioGroupDemo(model, message),
 
-      SelectedHorizontalPlan: ({ plan }) => [
-        evo(model, {
-          horizontalRadioGroupDemoValue: () => Option.some(plan),
-        }),
-        [],
-      ],
+      GotHorizontalRadioGroupDemoMessage: ({ message }) =>
+        foldHorizontalRadioGroupDemo(model, message),
 
       GotSliderRatingDemoMessage: ({ message }) => {
         const [nextSliderRatingDemo, sliderRatingCommands, maybeOutMessage] =

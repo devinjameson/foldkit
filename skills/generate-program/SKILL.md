@@ -115,7 +115,7 @@ Before generating, check if any part of the app maps to a built-in component:
 | Dropdown menu                   | `Menu`        | Arrow keys, typeahead search, aria-expanded, click-outside      |
 | Autocomplete/tag input          | `Combobox`    | Filtering, arrow key selection, aria-activedescendant           |
 | Select dropdown                 | `Select`      | Keyboard selection, aria-selected, positioning                  |
-| Single selection from options   | `RadioGroup`  | Arrow key cycling, aria-checked                                 |
+| Single selection from options   | `RadioGroup`  | Arrow key cycling, aria-checked, read-only navigation           |
 | On/off toggle                   | `Switch`      | Spacebar toggle, aria-checked                                   |
 | Boolean option                  | `Checkbox`    | Spacebar toggle, aria-checked, indeterminate                    |
 | Expandable section              | `Disclosure`  | Enter/Space toggle, aria-expanded                               |
@@ -137,11 +137,11 @@ Before generating, check if any part of the app maps to a built-in component:
 
 The package is not one shape.
 
-**Stateful Submodels** carry their own Model, Message, update, and (mostly) OutMessage, and are embedded via `h.submodel`: `Menu`, `Listbox`, `Combobox`, `Calendar`, `DatePicker`, `Dialog`, `Popover`, `Tabs`, `Tooltip`, `FileDrop`, `DragAndDrop`, `Slider`, `VirtualList`, plus `Toast` once built through `Toast.make(PayloadSchema)`.
+**Stateful Submodels** carry their own Model, Message, update, and (mostly) OutMessage, and are embedded via `h.submodel`: `Menu`, `Listbox`, `Combobox`, `Calendar`, `DatePicker`, `Dialog`, `Popover`, `RadioGroup`, `Tabs`, `Tooltip`, `FileDrop`, `DragAndDrop`, `Slider`, `VirtualList`, plus `Toast` once built through `Toast.make(PayloadSchema)`.
 
-**Stateless render helpers** have no Model at all. You call `view` directly with a ViewConfig and your own `h`, and store the value in your own Model: `Button`, `Input`, `Textarea`, `Select`, `Fieldset`, `Checkbox`, `Switch`, `Disclosure`, `RadioGroup`, `Nav`.
+**Stateless render helpers** have no Model at all. You call `view` directly with a ViewConfig and your own `h`, and store the value in your own Model: `Button`, `Input`, `Textarea`, `Select`, `Fieldset`, `Checkbox`, `Switch`, `Disclosure`, `Nav`.
 
-Don't take that split on faith, because components have moved across it (`Checkbox`, `Switch`, and `Disclosure` became controlled render helpers; `Tabs` and `Slider` moved their selection to the parent Model). Read the component's `public.d.ts`: exporting `Model` and `update` means Submodel, exporting only `view` and a `ViewConfig` / `ViewInputs` type means render helper. A render helper does not want a `Got*` Message.
+Don't take that split on faith, because components have moved across it (`Checkbox`, `Switch`, and `Disclosure` became controlled render helpers; `RadioGroup` became a Submodel; `Tabs` and `Slider` moved their selection to the parent Model). Read the component's `public.d.ts`: exporting `Model` and `update` means Submodel, exporting only `view` and a `ViewConfig` / `ViewInputs` type means render helper. A render helper does not want a `Got*` Message.
 
 To use a stateful Submodel:
 
@@ -364,7 +364,7 @@ For each Foldkit module you plan to use, read the `.d.ts` at the paths below. Re
 
 # If using any UI component (SEPARATE PACKAGE)
 <project>/node_modules/@foldkit/ui/dist/<component>/public.d.ts  # Model, Message, init, update, view (Submodel-shaped) or ViewConfig (render-helper-shaped), OutMessage when applicable
-# Check: is it a Submodel (Menu/Listbox/Combobox/Calendar/DatePicker/Dialog/Popover/Tabs/Tooltip/FileDrop/DragAndDrop/Slider/VirtualList/Toast) embedded via h.submodel, or a stateless render helper (Button/Input/Textarea/Select/Fieldset/Checkbox/Switch/Disclosure/RadioGroup/Nav) called directly? Submodels carry their own Model/Message/update/OutMessage; render helpers don't. Check ViewInputs (for Submodels) or ViewConfig (for helpers) for the slot callbacks (toView, itemToConfig, etc.).
+# Check: is it a Submodel (Menu/Listbox/Combobox/Calendar/DatePicker/Dialog/Popover/RadioGroup/Tabs/Tooltip/FileDrop/DragAndDrop/Slider/VirtualList/Toast) embedded via h.submodel, or a stateless render helper (Button/Input/Textarea/Select/Fieldset/Checkbox/Switch/Disclosure/Nav) called directly? Submodels carry their own Model/Message/update/OutMessage; render helpers don't. Check ViewInputs (for Submodels) or ViewConfig (for helpers) for the slot callbacks (toView, itemToConfig, etc.).
 
 # If using dates
 <project>/node_modules/foldkit/dist/calendar/index.d.ts # CalendarDate, today.local (returns Effect<CalendarDate>); for raw millis use Clock.currentTimeMillis
