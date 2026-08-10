@@ -104,9 +104,7 @@ type UpdateReturn = readonly [
   Option.Option<OutMessage>,
 ]
 
-const foldStartDateOutMessage: (
-  outMessage: DatePicker.OutMessage,
-) => Update.Step<Model, Message> = M.type<DatePicker.OutMessage>().pipe(
+const foldStartDateOutMessage = M.type<DatePicker.OutMessage>().pipe(
   M.withReturnType<Update.Step<Model, Message>>(),
   M.tagsExhaustive({
     ChangedViewMonth: () => model => [model, []],
@@ -139,9 +137,7 @@ const foldStartDate = Update.foldChild({
   foldOutMessage: foldStartDateOutMessage,
 })
 
-const foldEndDateOutMessage: (
-  outMessage: DatePicker.OutMessage,
-) => Update.Step<Model, Message> = M.type<DatePicker.OutMessage>().pipe(
+const foldEndDateOutMessage = M.type<DatePicker.OutMessage>().pipe(
   M.withReturnType<Update.Step<Model, Message>>(),
   M.tagsExhaustive({
     ChangedViewMonth: () => model => [model, []],

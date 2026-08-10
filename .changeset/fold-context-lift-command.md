@@ -11,9 +11,7 @@ In the example below, the magic link carries a redirect destination, and only th
 Before:
 
 ```ts
-const foldLoginOutMessage: (
-  outMessage: Login.OutMessage,
-) => Update.Step<Model, Message> = M.type<Login.OutMessage>().pipe(
+const foldLoginOutMessage = M.type<Login.OutMessage>().pipe(
   M.withReturnType<Update.Step<Model, Message>>(),
   M.tagsExhaustive({
     RequestedMagicLink:

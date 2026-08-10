@@ -181,9 +181,7 @@ export const ValidateEmailAsync = Command.define('ValidateEmailAsync', {
 
 type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
 
-const foldPronounsOutMessage: (
-  outMessage: Listbox.OutMessage,
-) => Update.Step<Model, Message> = M.type<Listbox.OutMessage>().pipe(
+const foldPronounsOutMessage = M.type<Listbox.OutMessage>().pipe(
   M.withReturnType<Update.Step<Model, Message>>(),
   M.tagsExhaustive({
     Selected:
@@ -203,9 +201,7 @@ const foldPronouns = Update.foldChild({
   foldOutMessage: foldPronounsOutMessage,
 })
 
-const foldAvailableDateOutMessage: (
-  outMessage: DatePicker.OutMessage,
-) => Update.Step<Model, Message> = M.type<DatePicker.OutMessage>().pipe(
+const foldAvailableDateOutMessage = M.type<DatePicker.OutMessage>().pipe(
   M.withReturnType<Update.Step<Model, Message>>(),
   M.tagsExhaustive({
     SelectedDate:

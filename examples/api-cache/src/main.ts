@@ -158,9 +158,7 @@ const activateTab = (model: Model, tab: Tab): UpdateReturn => {
   )
 }
 
-const foldTabsOutMessage: (
-  outMessage: Tabs.OutMessage<Tab>,
-) => Update.Step<Model, Message> = M.type<Tabs.OutMessage<Tab>>().pipe(
+const foldTabsOutMessage = M.type<Tabs.OutMessage<Tab>>().pipe(
   M.withReturnType<Update.Step<Model, Message>>(),
   M.tagsExhaustive({
     Selected:

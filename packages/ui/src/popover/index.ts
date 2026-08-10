@@ -263,9 +263,7 @@ export const DetectMovementOrAnimationEnd = Command.define(
   },
 )
 
-const foldAnimationOutMessage: (
-  outMessage: AnimationOutMessage,
-) => Update.Step<Model, Message> = M.type<AnimationOutMessage>().pipe(
+const foldAnimationOutMessage = M.type<AnimationOutMessage>().pipe(
   M.withReturnType<Update.Step<Model, Message>>(),
   M.tagsExhaustive({
     StartedLeaveAnimating: () => model => [
