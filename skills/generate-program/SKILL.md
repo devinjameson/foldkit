@@ -449,7 +449,7 @@ Generate files following the architecture and conventions guides exactly. Write 
 Follow the four-group layout strictly:
 
 ```ts
-// Group 1: All m() declarations, no blank lines between them
+// Group 1: All m() declarations
 const ClickedSubmit = m('ClickedSubmit')
 const UpdatedEmail = m('UpdatedEmail', { value: S.String })
 const SucceededLogin = m('SucceededLogin', { user: User })
@@ -466,6 +466,8 @@ const Message = S.Union([
 ])
 type Message = typeof Message.Type
 ```
+
+Keep Group 1 in one unbroken block while the union is small, up to roughly a dozen Messages. Past that, blank-line thematic clusters (navigation, session, one per feature) are equally fine, so pick whichever reads better for the union at hand. Group 2 stays adjacent, directly after the declarations, either way.
 
 Name messages by category:
 
@@ -701,6 +703,7 @@ Write `story` pipelines covering:
 
 - `${CLAUDE_SKILL_DIR}/../../examples/weather/src/scene.test.ts`: basic Scene flow with form interaction and Command resolution
 - `${CLAUDE_SKILL_DIR}/../../examples/auth/src/scene.test.ts`: a multi-page app's root-level Scene driving the login flow through the root view
+- `${CLAUDE_SKILL_DIR}/../../examples/auth/src/page/loggedOut/page/login.scene.test.ts`: a page-scoped Scene in that same app, driving the page's own `update`/`view` rather than the root pair
 - `${CLAUDE_SKILL_DIR}/../../examples/kanban/src/scene.test.ts`: scoped queries with `within`, `toHaveValue`, explicit test data
 
 Write `scene` pipelines covering:
