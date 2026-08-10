@@ -155,6 +155,15 @@ const refreshOrLoadNotes: Step<CacheModel, TestMessage> = refresh({
   load: loadNotes,
 })
 
+const refreshNotesWrittenDataLast: Step<CacheModel, TestMessage> = refresh({
+  read: (model: CacheModel) => Option.some(model.notes),
+  revalidate: AsyncData.revalidate,
+  write:
+    (notes: AsyncData.AsyncData<number, string>) =>
+    (model: CacheModel): CacheModel => ({ ...model, notes }),
+  load: loadNotes,
+})
+
 const refreshNoteById = (noteId: string): Step<CacheModel, TestMessage> =>
   refresh({
     read: (model: CacheModel) => HashMap.get(model.notesById, noteId),
@@ -172,6 +181,14 @@ describe('refresh', () => {
     const [nextModel, commands] = refreshNoteById('missing')(model)
     expect(nextModel).toBe(model)
     expect(commands).toEqual([])
+  })
+
+  it('accepts a data-last write and writes the transitioned entry back the same way', () => {
+    const [nextModel, commands] = refreshNotesWrittenDataLast(
+      makeCacheModel(AsyncData.Success({ data: 1 })),
+    )
+    expect(nextModel.notes).toEqual(AsyncData.Refreshing({ data: 1 }))
+    expect(commands).toEqual([loadNotes])
   })
 
   it('is a no-op when revalidate declines the states without data', () => {
@@ -323,6 +340,18 @@ const foldReportingCounter = foldChild({
   ],
 })
 
+const foldCounterWrittenDataLast = foldChild({
+  update: counterUpdate,
+  read: (model: DashboardModel) => Option.some(model.counter),
+  write:
+    (nextCounter: CounterModel) =>
+    (model: DashboardModel): DashboardModel => ({
+      ...model,
+      counter: nextCounter,
+    }),
+  toParentMessage: GotCounterMessage,
+})
+
 type GatedDashboardModel = Readonly<{
   maybeCounter: Option.Option<CounterModel>
 }>
@@ -342,6 +371,15 @@ describe('foldChild', () => {
     const [nextModel, commands] = foldCounter(dashboardModel, BumpedValue())
     expect(nextModel.counter).toEqual({ value: 4 })
     expect(nextModel.lastReportedValue).toBe(0)
+    expect(commands.map(command => command.name)).toEqual(['SaveCount'])
+  })
+
+  it('accepts a data-last write and writes the child back the same way', () => {
+    const [nextModel, commands] = foldCounterWrittenDataLast(
+      dashboardModel,
+      BumpedValue(),
+    )
+    expect(nextModel.counter).toEqual({ value: 4 })
     expect(commands.map(command => command.name)).toEqual(['SaveCount'])
   })
 

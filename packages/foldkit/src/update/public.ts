@@ -15,4 +15,5 @@ export type {
   FoldContext,
   Fold,
   FoldWithOutMessage,
+  Write,
 } from './index.js'

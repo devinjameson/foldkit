@@ -98,6 +98,42 @@ export const combine: {
   },
 )
 
+/** The setter half of a lens onto a field, in either form. Data-first
+ *  takes the Model and the next value together and infers both parameters
+ *  from the config's `read`:
+ *
+ *  ```ts
+ *  write: (model, nextSearch) => evo(model, { search: () => nextSearch })
+ *  ```
+ *
+ *  Data-last takes the next value and returns the Model transform. It
+ *  must annotate both parameters, because TypeScript resolves a
+ *  contextual signature from a union only when exactly one constituent
+ *  survives the arity filter, and a one-parameter function excludes
+ *  neither constituent:
+ *
+ *  ```ts
+ *  write: (nextSearch: Search.Model) => (model: Model): Model =>
+ *    evo(model, { search: () => nextSearch })
+ *  ```
+ *
+ *  Those annotations make the data-last form the longer of the two, so
+ *  prefer data-first unless the setter already exists in curried form. */
+export type Write<Model, Value> =
+  | ((model: Model, next: Value) => Model)
+  | ((next: Value) => (model: Model) => Model)
+
+const DATA_FIRST_WRITE_ARITY = 2
+
+const applyWrite = (
+  write: (...args: ReadonlyArray<any>) => any,
+  model: any,
+  next: any,
+): any =>
+  write.length >= DATA_FIRST_WRITE_ARITY
+    ? write(model, next)
+    : write(next)(model)
+
 /** The four capabilities that make one cache field revalidatable.
  *
  *  - `read`: gets the field's AsyncData out of the Model. Returns an
@@ -107,12 +143,14 @@ export const combine: {
  *    Usually exactly `AsyncData.revalidate` (refresh after a mutation:
  *    only `Success` and `Stale` move to `Refreshing`). Pass
  *    `AsyncData.revalidateOrLoad` instead for load-on-entry semantics.
- *  - `write`: puts the transitioned entry back into the Model.
+ *  - `write`: puts the transitioned entry back into the Model. A
+ *    {@link Write}, so either form works; prefer data-first, which infers
+ *    both parameters.
  *  - `load`: the Command that refetches the data. */
 export type Refreshable<Model, Message, A, E, R = never> = Readonly<{
   read: (model: Model) => Option.Option<AsyncData<A, E>>
   revalidate: (current: AsyncData<A, E>) => Option.Option<AsyncData<A, E>>
-  write: (model: Model, next: AsyncData<A, E>) => Model
+  write: Write<Model, AsyncData<A, E>>
   load: Command<Message, never, R>
 }>
 
@@ -142,7 +180,10 @@ export const refresh =
       Option.flatMap(refreshable.revalidate),
       Option.match({
         onNone: () => [model, []],
-        onSome: next => [refreshable.write(model, next), [refreshable.load]],
+        onSome: next => [
+          applyWrite(refreshable.write, model, next),
+          [refreshable.load],
+        ],
       }),
     )
 
@@ -156,7 +197,8 @@ export const refresh =
  *    collection miss); a single always-present field wraps in
  *    `Option.some`.
  *  - `write`: the setter half of the lens: writes the updated child
- *    Model back into the parent Model.
+ *    Model back into the parent Model. A {@link Write}, so either form
+ *    works; prefer data-first, which infers both parameters.
  *  - `toParentMessage`: lifts a child Message into the parent's Message,
  *    the same contract `h.submodel` takes for the view half. Always the
  *    child's `Got*` wrapper: `message => GotSearchMessage({ message })`. */
@@ -173,7 +215,7 @@ export type ChildFold<
     input: Input,
   ) => Return<ChildModel, ChildMessage, R>
   read: (model: ParentModel) => Option.Option<ChildModel>
-  write: (model: ParentModel, nextChildModel: ChildModel) => ParentModel
+  write: Write<ParentModel, ChildModel>
   toParentMessage: (message: ChildMessage) => ParentMessage
 }>
 
@@ -248,7 +290,7 @@ export type ChildFoldWithOutMessage<
     input: Input,
   ) => ReturnWithOutMessage<ChildModel, ChildMessage, ChildOutMessage, R>
   read: (model: ParentModel) => Option.Option<ChildModel>
-  write: (model: ParentModel, nextChildModel: ChildModel) => ParentModel
+  write: Write<ParentModel, ChildModel>
   toParentMessage: (message: ChildMessage) => ParentMessage
   foldOutMessage: (
     outMessage: ChildOutMessage,
@@ -284,7 +326,7 @@ export type ChildFoldWithParentOutMessage<
     input: Input,
   ) => ReturnWithOutMessage<ChildModel, ChildMessage, ChildOutMessage, R>
   read: (model: ParentModel) => Option.Option<ChildModel>
-  write: (model: ParentModel, nextChildModel: ChildModel) => ParentModel
+  write: Write<ParentModel, ChildModel>
   toParentMessage: (message: ChildMessage) => ParentMessage
   toParentOutMessage: (
     outMessage: ChildOutMessage,
@@ -306,7 +348,7 @@ type AnyChildFold = Readonly<{
     input: any,
   ) => readonly [any, Commands<any, any>, Option.Option<any>?]
   read: (model: any) => Option.Option<any>
-  write: (model: any, nextChildModel: any) => any
+  write: Write<any, any>
   toParentMessage: (message: any) => any
   toParentOutMessage?: (outMessage: any) => Option.Option<any>
   foldOutMessage?: (
@@ -492,7 +534,11 @@ const runChildFold = (
       onSome: childModel => {
         const [nextChildModel, childCommands, maybeOutMessage] =
           childFold.update(childModel, input)
-        const modelWithChild = childFold.write(model, nextChildModel)
+        const modelWithChild = applyWrite(
+          childFold.write,
+          model,
+          nextChildModel,
+        )
         const mappedCommands = mapMessages(
           childCommands,
           childFold.toParentMessage,
@@ -538,7 +584,7 @@ export type ChildStepFold<
 > = Readonly<{
   update: (childModel: ChildModel) => Return<ChildModel, ChildMessage, R>
   read: (model: ParentModel) => Option.Option<ChildModel>
-  write: (model: ParentModel, nextChildModel: ChildModel) => ParentModel
+  write: Write<ParentModel, ChildModel>
   toParentMessage: (message: ChildMessage) => ParentMessage
 }>
 
@@ -558,7 +604,7 @@ export type ChildStepFoldWithOutMessage<
     childModel: ChildModel,
   ) => ReturnWithOutMessage<ChildModel, ChildMessage, ChildOutMessage, R>
   read: (model: ParentModel) => Option.Option<ChildModel>
-  write: (model: ParentModel, nextChildModel: ChildModel) => ParentModel
+  write: Write<ParentModel, ChildModel>
   toParentMessage: (message: ChildMessage) => ParentMessage
   foldOutMessage: (
     outMessage: ChildOutMessage,
@@ -574,7 +620,7 @@ type AnyChildStepFold = Readonly<{
     childModel: any,
   ) => readonly [any, Commands<any, any>, Option.Option<any>?]
   read: (model: any) => Option.Option<any>
-  write: (model: any, nextChildModel: any) => any
+  write: Write<any, any>
   toParentMessage: (message: any) => any
   foldOutMessage?: (
     outMessage: any,
