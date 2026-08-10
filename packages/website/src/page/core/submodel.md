@@ -101,6 +101,8 @@ The handler above is written out once so you can see the full mechanics of embed
 
 `foldChild` returns a dual function. Called with the parent Model and a child Message (`foldSettings(model, message)`) it runs the fold now, which is the handler shape. Called with only the Message (`foldSettings(message)`) it returns an `Update.Step`, which composes with `Update.combine` like any other Step. A child update that needs per-dispatch context is closed over in the `update` field (`update: (child, message) => Room.update(child, message, { roomId })`), and deciding _whether_ to run the fold (a route gate, for example) happens in the update branch before you call it.
 
+Some entry points take nothing but the child Model, such as `Dialog.close` or an `informRouteChanged` that derives everything from the child's own state. There is no input to pass, so fold those with `Update.foldChildStep`, which takes the same fields and returns the `Update.Step` itself instead of a dual function.
+
 ### Wiring the View with h.submodel {#wiring-the-view}
 
 The Submodel exports a view defined with `Submodel.defineView<Model, Message>`. The function takes the child’s `model` and the child’s typed builder `h`, and returns `Html`, the same shape a top-level program’s view has.
@@ -236,6 +238,8 @@ With [Update.foldChild](#fold-child), the same handling moves into the fold's `f
 Sometimes the Step itself returns a Command the child defines, one whose result is a child Message. This happens when the Command needs context only the parent holds. In the example below, the magic link carries a redirect destination, and only the parent knows the current Route. The Login child cannot build `Login.SendMagicLink` itself, so it emits `RequestedMagicLink` as a fact and the parent returns the Command with the Route filled in. That Command's result Message still belongs to the Login Submodel, so it needs the same lift the fold applies to the child's own Commands. For that case `foldOutMessage` takes an optional second parameter, an `Update.FoldContext` carrying `liftCommand` and `liftCommands` already bound to the config's `toParentMessage`, so there is no `Command.mapMessage` call to write and no second copy of the wrapper to keep in sync:
 
 ::Snippet{name="outMessageFoldContext" label="foldOutMessage with FoldContext"}
+
+[Update.foldChildStep](#fold-child) takes the same `foldOutMessage`, fold context and all, so a no-argument entry point lifts a child Command exactly this way.
 
 A parent that is itself a Submodel adds `toParentOutMessage` to the config, lifting the child's OutMessage into the parent's own (`() => Option.none()` when the parent has nothing to pass upward). That fold returns `Update.ReturnWithOutMessage`, so the intermediate handler stays one line. The [Auth example](/example-apps/auth)'s login page does exactly this: it folds its Login child and lifts `SucceededLogin` into its own OutMessage for the root to act on.
 

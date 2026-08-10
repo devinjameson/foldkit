@@ -388,6 +388,10 @@ export type FoldWithOutMessage<
  *  {@link FoldWithOutMessage}, whose results carry the parent's own
  *  OutMessage channel as a third element.
  *
+ *  An entry point that takes nothing but the child Model, such as
+ *  `Dialog.close`, has no input to pass: fold it with
+ *  {@link foldChildStep}, which returns the {@link Step} directly.
+ *
  *  `update` closes over per-dispatch context, and the data-last form
  *  composes with {@link combine}, here to put a navigation Command ahead
  *  of the child's:
@@ -457,55 +461,189 @@ export const foldChild: {
     >,
   ): Fold<ParentModel, ParentMessage, Input, R>
 } = (childFold: AnyChildFold) => {
-  const context: FoldContext<any, any> = {
-    liftCommand: command => mapMessage(command, childFold.toParentMessage),
-    liftCommands: commands => mapMessages(commands, childFold.toParentMessage),
-  }
+  const context = makeFoldContext(childFold.toParentMessage)
 
   return Function.dual(2, (model: any, input: any) =>
-    pipe(
-      model,
-      childFold.read,
-      Option.match({
-        onNone: () =>
-          childFold.toParentOutMessage === undefined
-            ? [model, []]
-            : [model, [], Option.none()],
-        onSome: childModel => {
-          const [nextChildModel, childCommands, maybeOutMessage] =
-            childFold.update(childModel, input)
-          const modelWithChild = childFold.write(model, nextChildModel)
-          const mappedCommands = mapMessages(
-            childCommands,
-            childFold.toParentMessage,
-          )
-
-          const [nextModel, commands] =
-            childFold.foldOutMessage === undefined ||
-            maybeOutMessage === undefined ||
-            Option.isNone(maybeOutMessage)
-              ? [modelWithChild, mappedCommands]
-              : appendOutMessageStep(
-                  childFold.foldOutMessage,
-                  maybeOutMessage.value,
-                  context,
-                  modelWithChild,
-                  mappedCommands,
-                )
-
-          if (childFold.toParentOutMessage === undefined) {
-            return [nextModel, commands]
-          }
-
-          const maybeParentOutMessage =
-            maybeOutMessage === undefined
-              ? Option.none()
-              : Option.flatMap(maybeOutMessage, childFold.toParentOutMessage)
-          return [nextModel, commands, maybeParentOutMessage]
-        },
-      }),
-    ),
+    runChildFold(childFold, context, model, input),
   )
+}
+
+const makeFoldContext = (
+  toParentMessage: (message: any) => any,
+): FoldContext<any, any> => ({
+  liftCommand: command => mapMessage(command, toParentMessage),
+  liftCommands: commands => mapMessages(commands, toParentMessage),
+})
+
+const runChildFold = (
+  childFold: AnyChildFold,
+  context: FoldContext<any, any>,
+  model: any,
+  input: any,
+): any =>
+  pipe(
+    model,
+    childFold.read,
+    Option.match({
+      onNone: () =>
+        childFold.toParentOutMessage === undefined
+          ? [model, []]
+          : [model, [], Option.none()],
+      onSome: childModel => {
+        const [nextChildModel, childCommands, maybeOutMessage] =
+          childFold.update(childModel, input)
+        const modelWithChild = childFold.write(model, nextChildModel)
+        const mappedCommands = mapMessages(
+          childCommands,
+          childFold.toParentMessage,
+        )
+
+        const [nextModel, commands] =
+          childFold.foldOutMessage === undefined ||
+          maybeOutMessage === undefined ||
+          Option.isNone(maybeOutMessage)
+            ? [modelWithChild, mappedCommands]
+            : appendOutMessageStep(
+                childFold.foldOutMessage,
+                maybeOutMessage.value,
+                context,
+                modelWithChild,
+                mappedCommands,
+              )
+
+        if (childFold.toParentOutMessage === undefined) {
+          return [nextModel, commands]
+        }
+
+        const maybeParentOutMessage =
+          maybeOutMessage === undefined
+            ? Option.none()
+            : Option.flatMap(maybeOutMessage, childFold.toParentOutMessage)
+        return [nextModel, commands, maybeParentOutMessage]
+      },
+    }),
+  )
+
+/** {@link ChildFold} for an entry point that takes nothing but the child
+ *  Model, such as `Dialog.close` or a Submodel's `informRouteChanged` that
+ *  derives everything it needs from its own state. There is no `input`, so
+ *  {@link foldChildStep} returns the {@link Step} itself rather than a dual
+ *  {@link Fold}. */
+export type ChildStepFold<
+  ParentModel,
+  ParentMessage,
+  ChildModel,
+  ChildMessage,
+  R = never,
+> = Readonly<{
+  update: (childModel: ChildModel) => Return<ChildModel, ChildMessage, R>
+  read: (model: ParentModel) => Option.Option<ChildModel>
+  write: (model: ParentModel, nextChildModel: ChildModel) => ParentModel
+  toParentMessage: (message: ChildMessage) => ParentMessage
+}>
+
+/** {@link ChildStepFold} for an entry point whose return carries the child's
+ *  OutMessage channel, adding `foldOutMessage`. It behaves exactly as it does
+ *  in {@link ChildFoldWithOutMessage}, down to the optional second parameter,
+ *  a {@link FoldContext} of lifters bound to `toParentMessage`. */
+export type ChildStepFoldWithOutMessage<
+  ParentModel,
+  ParentMessage,
+  ChildModel,
+  ChildMessage,
+  ChildOutMessage,
+  R = never,
+> = Readonly<{
+  update: (
+    childModel: ChildModel,
+  ) => ReturnWithOutMessage<ChildModel, ChildMessage, ChildOutMessage, R>
+  read: (model: ParentModel) => Option.Option<ChildModel>
+  write: (model: ParentModel, nextChildModel: ChildModel) => ParentModel
+  toParentMessage: (message: ChildMessage) => ParentMessage
+  foldOutMessage: (
+    outMessage: ChildOutMessage,
+    context: FoldContext<ChildMessage, ParentMessage>,
+  ) => Step<ParentModel, ParentMessage, R>
+}>
+
+/** @internal Implementation-facing view of both {@link ChildStepFold}
+ *  shapes. The overloads on {@link foldChildStep} carry the public
+ *  contract. */
+type AnyChildStepFold = Readonly<{
+  update: (
+    childModel: any,
+  ) => readonly [any, Commands<any, any>, Option.Option<any>?]
+  read: (model: any) => Option.Option<any>
+  write: (model: any, nextChildModel: any) => any
+  toParentMessage: (message: any) => any
+  foldOutMessage?: (
+    outMessage: any,
+    context: FoldContext<any, any>,
+  ) => Step<any, any, any>
+}>
+
+/** Folds a child entry point that takes nothing but the child Model, and
+ *  returns the {@link Step} directly. Everything else matches
+ *  {@link foldChild}: the child is read, updated, and written back, its
+ *  Commands are lifted through `toParentMessage`, a `None` from `read` makes
+ *  the Step a no-op, and `foldOutMessage` runs against the Model with the
+ *  child already written back.
+ *
+ *  Reach for it wherever a Submodel exposes a no-argument entry point, so the
+ *  call site composes with {@link combine} as a plain Step and never invents
+ *  an input the child does not take:
+ *
+ *  ```ts
+ *  const foldMobileMenuDialogClose = Update.foldChildStep({
+ *    update: Dialog.close,
+ *    read: readMobileMenuDialog,
+ *    write: writeMobileMenuDialog,
+ *    toParentMessage: toGotMobileMenuDialogMessage,
+ *    foldOutMessage: foldMobileMenuDialogOutMessage,
+ *  })
+ *
+ *  // in the parent update
+ *  Update.combine(model, [writeRouteFields, foldMobileMenuDialogClose])
+ *  ```
+ *
+ *  `foldOutMessage` takes the same optional second parameter `foldChild`'s
+ *  does, a {@link FoldContext} carrying `liftCommand` and `liftCommands` bound
+ *  to this config's `toParentMessage`, for a Command the Step returns whose
+ *  result is the child's Message.
+ *
+ *  A parent that is itself a Submodel, and so needs its own OutMessage
+ *  channel on the result, uses {@link foldChild}. */
+export const foldChildStep: {
+  <
+    ParentModel,
+    ParentMessage,
+    ChildModel,
+    ChildMessage,
+    ChildOutMessage,
+    R = never,
+  >(
+    childFold: ChildStepFoldWithOutMessage<
+      ParentModel,
+      ParentMessage,
+      ChildModel,
+      ChildMessage,
+      ChildOutMessage,
+      R
+    >,
+  ): Step<ParentModel, ParentMessage, R>
+  <ParentModel, ParentMessage, ChildModel, ChildMessage, R = never>(
+    childFold: ChildStepFold<
+      ParentModel,
+      ParentMessage,
+      ChildModel,
+      ChildMessage,
+      R
+    >,
+  ): Step<ParentModel, ParentMessage, R>
+} = (childFold: AnyChildStepFold): Step<any, any, any> => {
+  const context = makeFoldContext(childFold.toParentMessage)
+
+  return model => runChildFold(childFold, context, model, undefined)
 }
 
 const appendOutMessageStep = (

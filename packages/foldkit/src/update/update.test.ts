@@ -18,6 +18,7 @@ import {
   type Step,
   combine,
   foldChild,
+  foldChildStep,
   refresh,
 } from './update.js'
 
@@ -645,6 +646,120 @@ describe('foldChild fold context', () => {
     )
     expect(nextModel.lastReportedValue).toBe(4)
     expect(commands.map(command => command.name)).toEqual(['SaveCount'])
+  })
+})
+
+const resetCounter = (
+  model: CounterModel,
+): Return<CounterModel, CounterMessage> => [{ ...model, value: 0 }, [saveCount]]
+
+const resetCounterWithOutMessage = (
+  model: CounterModel,
+): ReturnWithOutMessage<CounterModel, CounterMessage, ChangedValue> => [
+  { ...model, value: 0 },
+  [saveCount],
+  Option.some(ChangedValue()),
+]
+
+describe('foldChildStep', () => {
+  const foldCounterReset = foldChildStep({
+    update: resetCounter,
+    read: (model: DashboardModel) => Option.some(model.counter),
+    write: (model, nextCounter) => ({ ...model, counter: nextCounter }),
+    toParentMessage: GotCounterMessage,
+  })
+
+  it('folds an entry point that takes nothing but the child Model', () => {
+    const [nextModel, commands] = foldCounterReset(dashboardModel)
+
+    expect(nextModel.counter).toEqual({ value: 0 })
+    expect(commands.map(command => command.name)).toEqual(['SaveCount'])
+  })
+
+  it('is an ordinary Step that composes with combine', () => {
+    expectTypeOf(foldCounterReset).toEqualTypeOf<
+      Step<DashboardModel, GotCounterMessage>
+    >()
+
+    const [nextModel, commands] = combine(dashboardModel, [
+      foldCounter(BumpedValue()),
+      foldCounterReset,
+    ])
+
+    expect(nextModel.counter).toEqual({ value: 0 })
+    expect(commands.map(command => command.name)).toEqual([
+      'SaveCount',
+      'SaveCount',
+    ])
+  })
+
+  it('is a no-op when read finds no mounted child', () => {
+    const foldGatedCounterReset = foldChildStep({
+      update: resetCounter,
+      read: (model: GatedDashboardModel) => model.maybeCounter,
+      write: (model, nextCounter) => ({
+        ...model,
+        maybeCounter: Option.some(nextCounter),
+      }),
+      toParentMessage: GotCounterMessage,
+    })
+
+    const model: GatedDashboardModel = { maybeCounter: Option.none() }
+    const [nextModel, commands] = foldGatedCounterReset(model)
+
+    expect(nextModel).toBe(model)
+    expect(commands).toEqual([])
+  })
+
+  it('runs foldOutMessage against the Model with the child already written', () => {
+    const foldReportingCounterReset = foldChildStep({
+      update: (model: CounterModel) => [
+        { ...model, value: 0 },
+        [saveCount],
+        Option.some(ChangedValue()),
+      ],
+      read: (model: DashboardModel) => Option.some(model.counter),
+      write: (model, nextCounter) => ({ ...model, counter: nextCounter }),
+      toParentMessage: GotCounterMessage,
+      foldOutMessage: () => model => [
+        { ...model, lastReportedValue: model.counter.value },
+        [notifyValueChanged],
+      ],
+    })
+
+    const [nextModel, commands] = foldReportingCounterReset(dashboardModel)
+
+    expect(nextModel.counter).toEqual({ value: 0 })
+    expect(nextModel.lastReportedValue).toBe(0)
+    expect(commands.map(command => command.name)).toEqual([
+      'SaveCount',
+      'NotifyValueChanged',
+    ])
+  })
+
+  it('lifts a Command the OutMessage Step returns through toParentMessage', () => {
+    const foldSettlingCounterReset = foldChildStep({
+      update: resetCounterWithOutMessage,
+      read: (model: DashboardModel) => Option.some(model.counter),
+      write: (model, nextCounter) => ({ ...model, counter: nextCounter }),
+      toParentMessage: GotCounterMessage,
+      foldOutMessage: foldSettlingCounterOutMessage,
+    })
+
+    const [, commands] = foldSettlingCounterReset(dashboardModel)
+
+    expect(commands.map(command => command.name)).toEqual([
+      'SaveCount',
+      'SettleCounter',
+    ])
+
+    const maybeSettle = Array.last(commands)
+    expect(Option.isSome(maybeSettle)).toBe(true)
+    if (Option.isSome(maybeSettle)) {
+      expect(Effect.runSync(maybeSettle.value.effect)).toEqual(
+        GotCounterMessage(BumpedValue()),
+      )
+    }
   })
 })
 

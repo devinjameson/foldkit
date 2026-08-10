@@ -91,27 +91,10 @@ const foldHomeMessage = Update.foldChild({
   foldOutMessage: foldHomeOutMessage,
 })
 
-const foldHomeKeyPress = Update.foldChild({
-  update: Home.informPressedKey,
-  read: readHome,
-  write: writeHome,
-  toParentMessage: toGotHomeMessage,
-  foldOutMessage: foldHomeOutMessage,
-})
-
 const foldRoomMessage = (roomId: string) =>
   Update.foldChild({
     update: (roomModel: Room.Model.Model, message: Room.Message.Message) =>
       Room.update(roomModel, message, { roomId }),
-    read: readRoom,
-    write: writeRoom,
-    toParentMessage: toGotRoomMessage,
-  })
-
-const foldRoomKeyPress = (roomId: string) =>
-  Update.foldChild({
-    update: (roomModel: Room.Model.Model, key: string) =>
-      Room.informPressedKey(roomModel, key, { roomId }),
     read: readRoom,
     write: writeRoom,
     toParentMessage: toGotRoomMessage,
@@ -152,16 +135,6 @@ export const update = (
             foldRoomMessage(roomId)(model, message),
           ),
           M.orElse(() => [model, []]),
-        ),
-
-      PressedKey: ({ key }) =>
-        M.value(model.route).pipe(
-          withUpdateReturn,
-          M.tagsExhaustive({
-            Home: () => foldHomeKeyPress(model, key),
-            Room: ({ roomId }) => foldRoomKeyPress(roomId)(model, key),
-            NotFound: () => [model, []],
-          }),
         ),
     }),
     M.tag(

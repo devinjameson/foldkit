@@ -108,13 +108,24 @@ const LoadExternal = Command.define('LoadExternal', {
 type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
 const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
-const foldPeople = Update.foldChild({
-  update: People.update,
-  read: (model: Model) => Option.some(model.peoplePage),
-  write: (model, nextPeoplePage) =>
-    evo(model, { peoplePage: () => nextPeoplePage }),
-  toParentMessage: message => GotPeopleMessage({ message }),
-})
+const foldPeopleEntry = <Input>(
+  update: (peoplePage: People.Model, input: Input) => People.UpdateReturn,
+): Update.Fold<Model, Message, Input> =>
+  Update.foldChild({
+    update,
+    read: model => Option.some(model.peoplePage),
+    write: (model, nextPeoplePage) =>
+      evo(model, { peoplePage: () => nextPeoplePage }),
+    toParentMessage: message => GotPeopleMessage({ message }),
+  })
+
+const foldPeople = foldPeopleEntry(People.update)
+
+const foldPeopleRouteChanged = foldPeopleEntry(People.informRouteChanged)
+
+const setRoute =
+  (nextRoute: AppRoute): Update.Step<Model, Message> =>
+  model => [evo(model, { route: () => nextRoute }), []]
 
 export const update = (model: Model, message: Message): UpdateReturn =>
   M.value(message).pipe(
@@ -137,24 +148,14 @@ export const update = (model: Model, message: Message): UpdateReturn =>
 
       ChangedUrl: ({ url }) => {
         const nextRoute = urlToAppRoute(url)
-        const modelWithNextRoute = evo(model, { route: () => nextRoute })
 
-        return M.value(nextRoute).pipe(
-          withUpdateReturn,
-          M.tag('People', peopleRoute => {
-            const [nextPeoplePage, peopleCommands] = People.informRouteChanged(
-              modelWithNextRoute.peoplePage,
-              peopleRoute,
-            )
-            return [
-              evo(modelWithNextRoute, { peoplePage: () => nextPeoplePage }),
-              Command.mapMessages(peopleCommands, childMessage =>
-                GotPeopleMessage({ message: childMessage }),
-              ),
-            ]
-          }),
-          M.orElse(() => [modelWithNextRoute, []]),
+        const routeSteps = M.value(nextRoute).pipe(
+          M.withReturnType<ReadonlyArray<Update.Step<Model, Message>>>(),
+          M.tag('People', peopleRoute => [foldPeopleRouteChanged(peopleRoute)]),
+          M.orElse(() => []),
         )
+
+        return Update.combine(model, [setRoute(nextRoute), ...routeSteps])
       },
 
       GotPeopleMessage: ({ message }) => foldPeople(model, message),
