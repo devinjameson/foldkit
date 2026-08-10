@@ -155,6 +155,8 @@ export const CompletedClickItem = m('CompletedClickItem')
 export const IgnoredMouseClick = m('IgnoredMouseClick')
 /** Sent when a Space key-up is captured to prevent page scrolling. */
 export const SuppressedSpaceScroll = m('SuppressedSpaceScroll')
+/** Sent when Enter or Space would commit the active item but the listbox is read-only. Update no-ops; the Message keeps the keypress visible and lets the view prevent the browser's default Space scroll. */
+export const SuppressedItemCommit = m('SuppressedItemCommit')
 /** Sent when the listbox items panel mounts and Floating UI has positioned it. Update no-ops; surfaces the positioning side effect for DevTools. */
 export const CompletedAnchorListbox = m('CompletedAnchorListbox')
 /** Sent when the listbox backdrop mounts and is portaled to the document body. Update no-ops; surfaces the portal side effect for DevTools. */
@@ -194,6 +196,7 @@ export const Message: S.Union<
     typeof CompletedClickItem,
     typeof IgnoredMouseClick,
     typeof SuppressedSpaceScroll,
+    typeof SuppressedItemCommit,
     typeof CompletedAnchorListbox,
     typeof CompletedPortalListboxBackdrop,
     typeof GotAnimationMessage,
@@ -220,6 +223,7 @@ export const Message: S.Union<
   CompletedClickItem,
   IgnoredMouseClick,
   SuppressedSpaceScroll,
+  SuppressedItemCommit,
   CompletedAnchorListbox,
   CompletedPortalListboxBackdrop,
   GotAnimationMessage,
@@ -238,6 +242,7 @@ export type Searched = typeof Searched.Type
 export type CompletedDelayClearSearch = typeof CompletedDelayClearSearch.Type
 export type IgnoredMouseClick = typeof IgnoredMouseClick.Type
 export type SuppressedSpaceScroll = typeof SuppressedSpaceScroll.Type
+export type SuppressedItemCommit = typeof SuppressedItemCommit.Type
 export type PressedPointerOnButton = typeof PressedPointerOnButton.Type
 
 export type Message = typeof Message.Type
@@ -545,6 +550,7 @@ export const makeUpdate = <Model extends BaseModel>(
         'CompletedScrollIntoView',
         'CompletedClickItem',
         'SuppressedSpaceScroll',
+        'SuppressedItemCommit',
         'CompletedAnchorListbox',
         'CompletedPortalListboxBackdrop',
         () => [model, [], Option.none()],
@@ -802,6 +808,9 @@ export type BaseViewInputsCommon<Item> = Readonly<{
     context: Readonly<{
       isActive: boolean
       isDisabled: boolean
+      /** Mirrors the view input of the same name, so `itemToConfig` can
+       *  style items for read-only state without closing over `viewInputs`. */
+      isReadOnly: boolean
       isSelected: boolean
     }>,
   ) => ItemConfig
@@ -828,7 +837,16 @@ export type BaseViewInputsCommon<Item> = Readonly<{
   anchor?: AnchorConfig
   name?: string
   form?: string
+  /** Marks the Listbox unavailable with `aria-disabled="true"` and
+   *  `data-disabled` on the button, and removes its handlers so the dropdown
+   *  cannot be opened. */
   isDisabled?: boolean
+  /** Prevents committing a selection while exposing read-only semantics
+   *  with `aria-readonly="true"` and `data-readonly` on the items panel, and
+   *  `data-readonly` on the wrapper, button, and every item. The Listbox
+   *  still opens, navigates, and searches. Independent of `isDisabled`:
+   *  setting both emits both attribute sets. */
+  isReadOnly?: boolean
   isInvalid?: boolean
   ariaLabel?: string
   ariaLabelledBy?: string
@@ -907,6 +925,7 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
         name,
         form,
         isDisabled,
+        isReadOnly = false,
         isInvalid,
         ariaLabel,
         ariaLabelledBy,
@@ -1077,20 +1096,24 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
         return Option.some(Searched({ key, maybeTargetIndex }))
       }
 
+      const resolveCommitKey = (): Option.Option<Message> => {
+        if (isReadOnly) {
+          return Option.as(maybeActiveItemIndex, SuppressedItemCommit())
+        } else {
+          return Option.map(maybeActiveItemIndex, index =>
+            RequestedItemClick({ index }),
+          )
+        }
+      }
+
       const handleItemsKeyDown = (key: string): Option.Option<Message> =>
         M.value(key).pipe(
           M.when('Escape', () => Option.some(Closed())),
-          M.when('Enter', () =>
-            Option.map(maybeActiveItemIndex, index =>
-              RequestedItemClick({ index }),
-            ),
-          ),
+          M.when('Enter', resolveCommitKey),
           M.when(' ', () =>
             Str.isNonEmpty(searchQuery)
               ? searchForKey(' ')
-              : Option.map(maybeActiveItemIndex, index =>
-                  RequestedItemClick({ index }),
-                ),
+              : resolveCommitKey(),
           ),
           M.when(isNavigationKey, () =>
             Option.some(
@@ -1137,6 +1160,7 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
               h.Style({ position: 'relative', zIndex: '1' }),
             ]
           : []),
+        ...(isReadOnly ? [h.DataAttribute('readonly', '')] : []),
         ...(isInvalid ? [h.DataAttribute('invalid', '')] : []),
         ...(buttonClassName ? [h.Class(buttonClassName)] : []),
         ...buttonAttributes,
@@ -1161,6 +1185,9 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
         h.Role('listbox'),
         h.AriaOrientation(Str.toLowerCase(orientation)),
         ...(behavior.ariaMultiSelectable ? [h.AriaMultiSelectable(true)] : []),
+        ...(isReadOnly
+          ? [h.AriaReadonly(true), h.DataAttribute('readonly', '')]
+          : []),
         h.AriaLabelledBy(`${id}-button`),
         ...maybeActiveDescendant,
         h.Tabindex(0),
@@ -1187,10 +1214,12 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
         const itemConfig = itemToConfig(item, {
           isActive: isActiveItem,
           isDisabled: isDisabledItem,
+          isReadOnly,
           isSelected: isSelectedItem,
         })
 
-        const isInteractive = !isDisabledItem && !isLeaving
+        const isHoverable = !isDisabledItem && !isLeaving
+        const isClickable = isHoverable && !isReadOnly
 
         return h.keyed('div')(
           itemId(id, index),
@@ -1203,9 +1232,12 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
             ...(isDisabledItem
               ? [h.AriaDisabled(true), h.DataAttribute('disabled', '')]
               : []),
-            ...(isInteractive
+            ...(isReadOnly ? [h.DataAttribute('readonly', '')] : []),
+            ...(isClickable
+              ? [h.OnClick(SelectedItem({ item: itemToValue(item) }))]
+              : []),
+            ...(isHoverable
               ? [
-                  h.OnClick(SelectedItem({ item: itemToValue(item) })),
                   ...(isActiveItem
                     ? []
                     : [
@@ -1358,6 +1390,7 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
         ...attributes,
         ...(isVisible ? [h.DataAttribute('open', '')] : []),
         ...(isDisabled ? [h.DataAttribute('disabled', '')] : []),
+        ...(isReadOnly ? [h.DataAttribute('readonly', '')] : []),
         ...(isInvalid ? [h.DataAttribute('invalid', '')] : []),
       ]
 
