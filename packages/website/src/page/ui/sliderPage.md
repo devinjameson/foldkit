@@ -105,8 +105,8 @@ Attribute groups provided to the `toView` callback.
 
 ### OutMessage {#out-messages}
 
-Messages emitted to the parent through the third element of `[Model, Commands, Option<OutMessage>]`. Parents pattern-match on the OutMessage in their own update handler.
+Messages emitted to the parent through the third element of `[Model, Commands, Option<OutMessage>]`. Parents fold the OutMessage in the `foldOutMessage` of their [`Update.foldChild`](/core/submodel#fold-child) config.
 
-| Name           | Type                | Default | Description                                                                                                                                                                                                                                                |
-| -------------- | ------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ChangedValue` | `{ value: number }` | —       | Emitted whenever the slider value changes via drag, click-to-jump, or keyboard navigation. Pattern-match the third tuple element of Slider.update in your GotSliderMessage handler to react: persist the value, validate, or trigger a downstream Command. |
+| Name           | Type                | Default | Description                                                                                                                                                                                                                         |
+| -------------- | ------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ChangedValue` | `{ value: number }` | —       | Emitted whenever the slider value changes via drag, click-to-jump, or keyboard navigation. Fold it in the `foldOutMessage` of your Slider fold to react, for example: persist the value, validate, or trigger a downstream Command. |
