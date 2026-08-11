@@ -129,6 +129,8 @@ export const MovedPointerOverItem = m('MovedPointerOverItem', {
 export const RequestedItemClick = m('RequestedItemClick', {
   index: S.Number,
 })
+/** Sent when Enter is pressed on the active item of a read-only combobox. Update no-ops; the Message exists so the keydown handler returns `Option.some` and calls `preventDefault`, which stops a surrounding form from submitting, and so the keypress stays visible for DevTools. */
+export const SuppressedItemCommit = m('SuppressedItemCommit')
 /** Sent when the scroll lock command completes. */
 export const CompletedLockScroll = m('CompletedLockScroll')
 /** Sent when the scroll unlock command completes. */
@@ -181,6 +183,7 @@ export const Message: S.Union<
     typeof SelectedItem,
     typeof MovedPointerOverItem,
     typeof RequestedItemClick,
+    typeof SuppressedItemCommit,
     typeof CompletedLockScroll,
     typeof CompletedUnlockScroll,
     typeof CompletedInertOthers,
@@ -205,6 +208,7 @@ export const Message: S.Union<
   SelectedItem,
   MovedPointerOverItem,
   RequestedItemClick,
+  SuppressedItemCommit,
   CompletedLockScroll,
   CompletedUnlockScroll,
   CompletedInertOthers,
@@ -229,6 +233,7 @@ export type DeactivatedItem = typeof DeactivatedItem.Type
 export type SelectedItem = typeof SelectedItem.Type
 export type MovedPointerOverItem = typeof MovedPointerOverItem.Type
 export type RequestedItemClick = typeof RequestedItemClick.Type
+export type SuppressedItemCommit = typeof SuppressedItemCommit.Type
 export type CompletedLockScroll = typeof CompletedLockScroll.Type
 export type CompletedUnlockScroll = typeof CompletedUnlockScroll.Type
 export type CompletedInertOthers = typeof CompletedInertOthers.Type
@@ -547,6 +552,7 @@ export const makeUpdate = <Model extends BaseModel>(
         'CompletedFocusInput',
         'CompletedScrollIntoView',
         'CompletedClickItem',
+        'SuppressedItemCommit',
         'CompletedAnchorCombobox',
         'CompletedAttachComboboxPreventBlur',
         'CompletedAttachComboboxSelectOnFocus',
