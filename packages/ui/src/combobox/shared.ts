@@ -1054,14 +1054,19 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
 
       const resolveImmediateSelection = (
         targetIndex: number,
-      ): Option.Option<{ item: string }> =>
-        pipe(
-          OptionExt.when(immediate, targetIndex),
-          Option.flatMap(index => Array.get(items, index)),
-          Option.map(targetItem => ({
-            item: itemToValue(targetItem, targetIndex),
-          })),
-        )
+      ): Option.Option<{ item: string }> => {
+        if (isReadOnly) {
+          return Option.none()
+        } else {
+          return pipe(
+            OptionExt.when(immediate, targetIndex),
+            Option.flatMap(index => Array.get(items, index)),
+            Option.map(targetItem => ({
+              item: itemToValue(targetItem, targetIndex),
+            })),
+          )
+        }
+      }
 
       const resolveCommitMessage = (): Option.Option<Message> => {
         if (isReadOnly) {
