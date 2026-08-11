@@ -1,6 +1,6 @@
 {
   "name": "@foldkit/devtools-mcp",
-  "version": "0.14.3",
+  "version": "0.14.4",
   "description": "MCP server exposing Foldkit DevTools to AI agents (Claude Code, Cursor, etc.)",
   "type": "module",
   "main": "./dist/server.js",
