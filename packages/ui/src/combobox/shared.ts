@@ -14,6 +14,7 @@ import { m } from 'foldkit/message'
 import * as Mount from 'foldkit/mount'
 import { makeConstrainedEvo } from 'foldkit/struct'
 import { type View as SubmodelView, defineView } from 'foldkit/submodel'
+import * as Update from 'foldkit/update'
 
 import { AnchorConfig, anchorSetup, portalToContainingRoot } from '../anchor.js'
 // NOTE: Animation imports are split across schema + update to avoid a circular
@@ -390,42 +391,6 @@ export const DetectMovementOrAnimationEnd = Command.define(
   },
 )
 
-const delegateToAnimation = <Model extends BaseModel>(
-  model: Model,
-  animationMessage: AnimationMessage,
-): readonly [
-  Model,
-  ReadonlyArray<Command.Command<Message>>,
-  Option.Option<OutMessage>,
-] => {
-  const [nextAnimation, animationCommands, maybeOutMessage] = animationUpdate(
-    model.animation,
-    animationMessage,
-  )
-
-  const mappedCommands = Command.mapMessages(animationCommands, message =>
-    GotAnimationMessage({ message }),
-  )
-
-  const additionalCommands = Option.match(maybeOutMessage, {
-    onNone: () => [],
-    onSome: M.type<AnimationOutMessage>().pipe(
-      M.tagsExhaustive({
-        StartedLeaveAnimating: () => [
-          DetectMovementOrAnimationEnd({ id: model.id }),
-        ],
-        TransitionedOut: () => [],
-      }),
-    ),
-  })
-
-  return [
-    constrainedEvo(model, { animation: () => nextAnimation }),
-    [...mappedCommands, ...additionalCommands],
-    Option.none(),
-  ]
-}
-
 /** Creates a combobox update function from variant-specific handlers. Shared logic (open, close, activate, transition) is handled internally; only close, selection, and immediate-activation behavior varies by variant. */
 export const makeUpdate = <Model extends BaseModel>(
   handlers: Readonly<{
@@ -456,6 +421,27 @@ export const makeUpdate = <Model extends BaseModel>(
     Option.Option<OutMessage>,
   ]
   const withUpdateReturn = M.withReturnType<UpdateReturn>()
+
+  const foldAnimationOutMessage = M.type<AnimationOutMessage>().pipe(
+    M.withReturnType<Update.Step<Model, Message>>(),
+    M.tagsExhaustive({
+      StartedLeaveAnimating: () => model => [
+        model,
+        [DetectMovementOrAnimationEnd({ id: model.id })],
+      ],
+      TransitionedOut: () => model => [model, []],
+    }),
+  )
+
+  const foldAnimation = Update.foldChild({
+    update: animationUpdate,
+    read: (model: Model) => Option.some(model.animation),
+    write: (model, nextAnimation) =>
+      constrainedEvo(model, { animation: () => nextAnimation }),
+    toParentMessage: message => GotAnimationMessage({ message }),
+    toParentOutMessage: () => Option.none(),
+    foldOutMessage: foldAnimationOutMessage,
+  })
 
   const internalUpdate = (model: Model, message: Message): UpdateReturn => {
     const maybeLockScroll = OptionExt.when(model.isModal, LockScroll())
@@ -489,7 +475,7 @@ export const makeUpdate = <Model extends BaseModel>(
       const commands = didClose ? closeWithFocusCommands : [focusInput]
 
       if (didClose && model.isAnimated) {
-        const [transitionedModel, animationCommands] = delegateToAnimation(
+        const [transitionedModel, animationCommands] = foldAnimation(
           nextModel,
           AnimationHid(),
         )
@@ -505,7 +491,7 @@ export const makeUpdate = <Model extends BaseModel>(
 
     const openCombobox = (baseModel: Model): UpdateReturn => {
       if (model.isAnimated) {
-        const [nextModel, animationCommands] = delegateToAnimation(
+        const [nextModel, animationCommands] = foldAnimation(
           baseModel,
           AnimationShowed(),
         )
@@ -537,7 +523,7 @@ export const makeUpdate = <Model extends BaseModel>(
       )
 
       if (model.isAnimated) {
-        const [nextModel, animationCommands] = delegateToAnimation(
+        const [nextModel, animationCommands] = foldAnimation(
           closed,
           AnimationHid(),
         )
@@ -714,7 +700,7 @@ export const makeUpdate = <Model extends BaseModel>(
         },
 
         GotAnimationMessage: ({ message: animationMessage }) =>
-          delegateToAnimation(model, animationMessage),
+          foldAnimation(model, animationMessage),
       }),
     )
   }

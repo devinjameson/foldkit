@@ -13,7 +13,7 @@ import {
 import { FileSystem } from 'effect'
 import * as Server from 'foldkit/experimental/server'
 import { Window } from 'happy-dom'
-import { dirname, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import { NodeRuntime, NodeServices } from '@effect/platform-node'
@@ -26,6 +26,7 @@ import {
   slugToModuleName,
 } from '../src/page/apiReference/domain'
 import { TypeDocJson } from '../src/page/apiReference/typedoc'
+import { BLOG_DESCRIPTION, BLOG_RSS_PATH } from '../src/page/blog/meta'
 import { exampleSlugs } from '../src/page/example/meta'
 import {
   AiMcpRoute,
@@ -38,6 +39,8 @@ import {
   BestPracticesKeyingRoute,
   BestPracticesMessagesRoute,
   BestPracticesSideEffectsRoute,
+  BlogPostRoute,
+  BlogRoute,
   ComingFromReactRoute,
   ComingFromTanStackQueryRoute,
   CoreArchitectureRoute,
@@ -128,6 +131,8 @@ import {
   bestPracticesKeyingRouter,
   bestPracticesMessagesRouter,
   bestPracticesSideEffectsRouter,
+  blogPostRouter,
+  blogRouter,
   comingFromReactRouter,
   comingFromTanStackQueryRouter,
   coreArchitectureRouter,
@@ -211,6 +216,7 @@ import {
   whatAboutSsrRouter,
   whyNoJsxRouter,
 } from '../src/route'
+import { type BlogPostEntry, blogPostSlugs, blogPosts } from './blogPosts'
 import {
   type LlmsFullEntry,
   type LlmsIndexEntry,
@@ -315,6 +321,8 @@ export const STATIC_ROUTES: ReadonlyArray<AppRoute> = [
   AiOverviewRoute(),
   AiSkillsRoute(),
   AiMcpRoute(),
+  BlogRoute(),
+  ...Array.map(blogPostSlugs, slug => BlogPostRoute({ postSlug: slug })),
 ]
 
 export const routeToUrlPath = (route: AppRoute): string =>
@@ -413,6 +421,8 @@ export const routeToUrlPath = (route: AppRoute): string =>
       ApiModule: ({ moduleSlug }) => apiModuleRouter({ moduleSlug }),
       Playground: ({ exampleSlug }) => playgroundRouter({ exampleSlug }),
       Newsletter: () => newsletterRouter(),
+      Blog: () => blogRouter(),
+      BlogPost: ({ postSlug }) => blogPostRouter({ postSlug }),
       NotFound: () => '/',
     }),
   )
@@ -691,6 +701,66 @@ ${entries}
 </urlset>`
 }
 
+// RSS
+
+// NOTE: index.html advertises the feed with this same title on its
+// `rel="alternate"` link, which is static HTML and cannot import it.
+const RSS_FEED_TITLE = 'Foldkit Blog'
+
+const escapeXml = (text: string): string =>
+  text
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+
+const toRfc822Date = (date: string): string =>
+  Option.match(DateTime.make(date), {
+    onNone: () => date,
+    onSome: dateTime => DateTime.toDateUtc(dateTime).toUTCString(),
+  })
+
+const blogPostRssItem = (entry: BlogPostEntry): string => {
+  const postUrl = `${SITE_URL}${blogPostRouter({ postSlug: entry.slug })}`
+  return `<item>
+  <title>${escapeXml(entry.frontmatter.title)}</title>
+  <link>${escapeXml(postUrl)}</link>
+  <guid>${escapeXml(postUrl)}</guid>
+  <description>${escapeXml(entry.frontmatter.description)}</description>
+  <pubDate>${toRfc822Date(entry.frontmatter.date)}</pubDate>
+</item>`
+}
+
+// NOTE: posts arrive newest first, so the newest post's date is the feed's last
+// build date. Deriving it from the content rather than the clock keeps two
+// builds of the same commit byte-identical.
+const rssChannelHeader = (posts: ReadonlyArray<BlogPostEntry>): string => {
+  const channel = `<title>${RSS_FEED_TITLE}</title>
+<link>${SITE_URL}${blogRouter()}</link>
+<atom:link href="${SITE_URL}${BLOG_RSS_PATH}" rel="self" type="application/rss+xml" />
+<description>${escapeXml(BLOG_DESCRIPTION)}</description>`
+
+  return Option.match(Array.head(posts), {
+    onNone: () => channel,
+    onSome: newest =>
+      `${channel}\n<lastBuildDate>${toRfc822Date(newest.frontmatter.date)}</lastBuildDate>`,
+  })
+}
+
+export const buildBlogRssFeed = (
+  posts: ReadonlyArray<BlogPostEntry>,
+): string => {
+  const items = pipe(posts, Array.map(blogPostRssItem), Array.join('\n'))
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+${rssChannelHeader(posts)}
+${items}
+</channel>
+</rss>`
+}
+
 // PROGRAM
 
 const resultToIndexEntry =
@@ -765,6 +835,11 @@ const program = Effect.scoped(
       resolve(DIST_DIR, 'sitemap.xml'),
       buildSitemap(routes, lastModification),
     )
+
+    const rssFilePath = join(DIST_DIR, BLOG_RSS_PATH)
+    yield* fs.makeDirectory(dirname(rssFilePath), { recursive: true })
+    yield* fs.writeFileString(rssFilePath, buildBlogRssFeed(blogPosts))
+    yield* Console.log(`  ✓ ${BLOG_RSS_PATH}`)
 
     const indexEntries = Array.map(
       markdownResults,

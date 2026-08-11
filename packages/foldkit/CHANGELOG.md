@@ -1,5 +1,155 @@
 # foldkit
 
+## 0.142.0
+
+### Minor Changes
+
+- 0262c9b: `Update.foldChild`'s `foldOutMessage` now receives an optional second parameter, an `Update.FoldContext` carrying `liftCommand` and `liftCommands` bound to the config's `toParentMessage`. The fold already lifts the Commands the child's update returns. The context covers the other case: a Command the parent returns on the child's behalf from the OutMessage Step, built with context only the parent holds, whose result Message is still the child's. The lifters apply the same lift the fold gives the child's own Commands, so there is no `Command.mapMessage` call to write and no second copy of the wrapper to keep in sync.
+
+  Existing one-parameter `foldOutMessage` functions keep working unchanged.
+
+  In the example below, the magic link carries a redirect destination, and only the parent knows the current Route. The Login child cannot build `Login.SendMagicLink` itself, so it emits `RequestedMagicLink` as a fact and the parent returns the Command with the Route filled in.
+
+  Before:
+
+  ```ts
+  const foldLoginOutMessage = M.type<Login.OutMessage>().pipe(
+    M.withReturnType<Update.Step<Model, Message>>(),
+    M.tagsExhaustive({
+      RequestedMagicLink:
+        ({ email }) =>
+        model => [
+          model,
+          [
+            Command.mapMessage(
+              Login.SendMagicLink({ email, redirectRoute: model.route }),
+              message => GotLoginMessage({ message }),
+            ),
+          ],
+        ],
+    }),
+  )
+  ```
+
+  After:
+
+  ```ts
+  const foldLoginOutMessage: (
+    outMessage: Login.OutMessage,
+    context: Update.FoldContext<Login.Message, Message>,
+  ) => Update.Step<Model, Message> = (outMessage, { liftCommand }) =>
+    M.value(outMessage).pipe(
+      M.withReturnType<Update.Step<Model, Message>>(),
+      M.tagsExhaustive({
+        RequestedMagicLink:
+          ({ email }) =>
+          model => [
+            model,
+            [
+              liftCommand(
+                Login.SendMagicLink({ email, redirectRoute: model.route }),
+              ),
+            ],
+          ],
+      }),
+    )
+  ```
+
+- dbacfa5: Add an optional `when` gate to `Subscription.lift`. It is a parent-side field on the parent's `lift` call and it receives the parent Model, so the parent holds the half of a condition the child cannot see, such as the route a page Submodel sits behind. The child neither declares nor sees the gate; it keeps holding its own half in `modelToDependencies`. Pass one predicate to gate every entry in the record, or a `Subscription.EntryGates` map keyed by entry name to gate entries individually, which leaves entries the map omits lifted ungated. A closed gate is a real teardown: the entry's Stream stops, and the child's `modelToDependencies` does not run again until the parent reopens the gate, so child state that changes behind a closed gate causes no restarts. Gating rewrites a gated entry's dependencies to `Subscription.GatedDependencies`, whose `maybeDependencies` is `None` while the gate is closed; a gated entry's `readDependencies` returns the last dependencies seen through an open gate. Ungated entries and lifts without `when` are unchanged. Lifts chain, so a record can pass through intermediate levels and pick up a gate at whichever level knows the condition.
+
+  One predicate gates the whole record. The Settings page keeps declaring its own Subscriptions, and the parent adds the route condition the page cannot answer:
+
+  ```ts
+  const settingsSubscriptions = Subscription.lift(Settings.subscriptions)<
+    Model,
+    Message
+  >({
+    toChildModel: model => model.settings,
+    toParentMessage: message => GotSettingsMessage({ message }),
+    when: ({ route }) => route._tag === 'Settings',
+  })
+  ```
+
+  A gate map names the entries to gate. The Room page holds a WebSocket stream that should outlive navigation and a keyboard listener that should not, so naming one entry gates it and leaves the other lifted ungated:
+
+  ```ts
+  const roomSubscriptions = Subscription.lift(Room.subscriptions)({
+    toChildModel: (model: Model) => model.room,
+    toParentMessage: (message: Room.Message): Message =>
+      GotRoomMessage({ message }),
+    when: { roomKeyboard: ({ route }) => route._tag === 'Room' },
+  })
+  ```
+
+- dbacfa5: Add `Update.foldChildStep`, the `Update.foldChild` variant for a child entry point that takes nothing but the child Model, such as `Dialog.close` or a Submodel's `informRouteChanged` that derives everything from its own state. It returns the `Update.Step` itself rather than a dual `Update.Fold`, so the call site composes with `Update.combine` without inventing an input the child does not take. Reading, writing, Command lifting, the no-op on a `None` from `read`, and `foldOutMessage` all behave exactly as they do in `foldChild`, down to the optional second parameter `foldOutMessage` receives, an `Update.FoldContext` carrying `liftCommand` and `liftCommands` bound to the config's `toParentMessage`.
+
+## 0.141.2
+
+### Patch Changes
+
+- 84050fc: Bump Effect to `4.0.0-beta.106` (from `4.0.0-beta.105`). Foldkit's peer dependencies now require `effect@4.0.0-beta.106` and `@effect/platform-browser@4.0.0-beta.106`.
+
+  Pin your Effect packages to `4.0.0-beta.106` to match this release. While Effect v4 is in beta, pin the exact version rather than a range:
+
+  ```sh
+  pnpm add effect@4.0.0-beta.106 @effect/platform-browser@4.0.0-beta.106
+  pnpm add -D @effect/vitest@4.0.0-beta.106
+  ```
+
+## 0.141.1
+
+### Patch Changes
+
+- 8d139ff: Document `createKeyedLazy`'s key contract. The TSDoc now states that a key should be the identifier that already gives the rendered thing its DOM identity, so the memo and the DOM invalidate together, and that entries are never evicted, so keys are expected to be bounded. For example: an entity registry, a route table, a fixed set of call sites. It also names the upgrade path for an unbounded key space, which is a variant that drops keys absent from the latest render pass rather than a cap on this one.
+- dc6682f: Rename the `Update.foldChild` TSDoc example's step from `joinRoom` to `enterJoinedRoom` and the child helper it calls from `Room.join` to `Room.informJoined`. The step runs after the join has already succeeded, so the old names read as initiating a join the example is actually reporting.
+
+## 0.141.0
+
+### Minor Changes
+
+- ea9c4f3: Add `Update.foldChild`, the update half of embedding a child Submodel. It takes the facts that vary per child (the child `update`, an `Option`-returning `read`, `write`, `toParentMessage`, and `foldOutMessage` for children that emit OutMessages) and returns a dual `Update.Fold`: call it data-first in a handler (`foldSearch(model, message)`) or data-last to build an `Update.Step` that composes with `Update.combine` (`foldSearch(message)`). When `read` returns `None` the fold is a no-op, so a Message for an unmounted child does nothing. A parent that is itself a Submodel adds `toParentOutMessage` to lift the child's OutMessage into its own; that fold returns `Update.ReturnWithOutMessage`, carrying the parent's OutMessage channel.
+
+  Existing hand-rolled `Got*` handlers keep working unchanged. To adopt, a handler like this:
+
+  ```ts
+  GotSettingsMessage: ({ message }) => {
+    const [nextSettings, commands] = Settings.update(model.settings, message)
+    return [
+      evo(model, { settings: () => nextSettings }),
+      Command.mapMessages(commands, message => GotSettingsMessage({ message })),
+    ]
+  },
+  ```
+
+  becomes a module-scope fold and a one-line handler:
+
+  ```ts
+  const foldSettings = Update.foldChild({
+    update: Settings.update,
+    read: (model: Model) => Option.some(model.settings),
+    write: (model, nextSettings) => evo(model, { settings: () => nextSettings }),
+    toParentMessage: message => GotSettingsMessage({ message }),
+  })
+
+  GotSettingsMessage: ({ message }) => foldSettings(model, message),
+  ```
+
+  See the [Submodel docs](https://foldkit.dev/core/submodel#fold-child) for OutMessage folding and the call-site conventions.
+
+### Patch Changes
+
+- 35621da: Type `Command.mapEffect`, `Command.mapMessage`, and `Command.mapMessages` against `Command` in argument and result positions instead of structural command shapes. Inside a generic combinator the Message is an open type parameter, so `Command<Message>` stayed a deferred conditional that never unified with the structural shapes. A parent lifting a child Submodel's Commands, generic over the Message types, can now annotate arguments and returns as `Command.Command<Message>` directly:
+
+  ```ts
+  const liftCommands = <ChildMessage, ParentMessage>(
+    commands: ReadonlyArray<Command.Command<ChildMessage>>,
+    toParent: (message: ChildMessage) => ParentMessage,
+  ): ReadonlyArray<Command.Command<ParentMessage>> =>
+    Command.mapMessages(commands, toParent)
+  ```
+
+  Concrete call sites infer exactly as before.
+
 ## 0.140.1
 
 ### Patch Changes

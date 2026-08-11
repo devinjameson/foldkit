@@ -63,7 +63,7 @@ import type * as SchemaRepresentation from "./SchemaRepresentation.ts"
 import * as SchemaTransformation from "./SchemaTransformation.ts"
 import type { Assign, Lambda, Mutable, Simplify } from "./Struct.ts"
 import * as Struct_ from "./Struct.ts"
-import * as FastCheck from "./testing/FastCheck.ts"
+import type * as FastCheck from "./testing/FastCheck.ts"
 import type { RequiredKeys, UnionToIntersection } from "./Types.ts"
 import type { Unify } from "./Unify.ts"
 
@@ -2476,7 +2476,10 @@ interface optionalLambda extends Lambda {
  * @category combinators
  * @since 3.10.0
  */
-export const optional = Struct_.lambda<optionalLambda>((self) => optionalKey(UndefinedOr(self)))
+export const optional = Struct_.lambda<optionalLambda>((self) => {
+  const schema = UndefinedOr(self)
+  return make(SchemaAST.optional(self.ast), { schema })
+})
 
 interface requiredLambda extends Lambda {
   <S extends Constraint>(self: optional<S>): S
@@ -5617,7 +5620,7 @@ export function decodeTo<To extends Constraint, From extends Constraint, RD = ne
  * ```
  *
  * @category transforming
- * @since 3.10.0
+ * @since 4.0.0
  */
 export function decode<S extends Constraint, RD = never, RE = never>(transformation: {
   readonly decode: SchemaGetter.Getter<S["Type"], S["Type"], RD>
@@ -5706,7 +5709,7 @@ export function encodeTo<To extends Constraint, From extends Constraint, RD = ne
  * ```
  *
  * @category transforming
- * @since 3.10.0
+ * @since 4.0.0
  */
 export function encode<S extends Constraint, RD = never, RE = never>(transformation: {
   readonly decode: SchemaGetter.Getter<S["Encoded"], S["Encoded"], RD>
@@ -14504,44 +14507,32 @@ export const TaggedError: {
 // -----------------------------------------------------------------------------
 
 /**
- * A thunk that, given the `fast-check` module, returns an `Arbitrary<T>`.
- * Use this type when you need to defer instantiation of the arbitrary, for
- * example to support recursive schemas.
+ * Represents a function that builds a fast-check `Arbitrary<T>` from the
+ * `fast-check` module.
+ *
+ * **When to use**
+ *
+ * Use as the result type of schema arbitrary derivation.
  *
  * @category utility types
  * @since 4.0.0
  */
-export type LazyArbitrary<T> = (fc: typeof FastCheck) => FastCheck.Arbitrary<T>
+export type Arbitrary<T> = (fc: typeof FastCheck) => FastCheck.Arbitrary<T>
 
 /**
- * Derives a {@link LazyArbitrary} from a schema. The result is memoized so
- * repeated calls with the same schema are cheap.
+ * Returns an {@link Arbitrary} factory derived from a schema. The generated
+ * values satisfy the schema and use its decoded `Type`.
  *
- * **Details**
+ * **When to use**
  *
- * Prefer {@link toArbitrary} when you need the arbitrary directly, or when you
- * want derivation diagnostics via `{ report: true }`. Unsupported schema
- * nodes, impossible constraints, invalid candidates, and recursive schemas
- * without a finite terminal path fail immediately.
- *
- * @category generators
- * @since 4.0.0
- */
-export function toArbitraryLazy<S extends Constraint>(schema: S): LazyArbitrary<S["Type"]> {
-  const lawc = InternalArbitrary.memoized(schema.ast)
-  return (fc) => lawc(fc, {})
-}
-
-/**
- * Derives a `fast-check` `Arbitrary` from a schema for property-based
- * testing. The derived arbitrary generates values that satisfy the schema.
+ * Use when you need a fast-check generator for values accepted by a schema.
  *
  * **Details**
  *
  * Constraints refine base generators; candidates add weighted sources while
- * filters still validate every value. `{ report: true }` returns warnings such
- * as `OpaqueFilter`, while derivation errors remain fail-fast. Recursive
- * schemas use terminal branches and fail when no finite terminal path exists.
+ * filters still validate every value. Recursive schemas use terminal branches
+ * and fail when no finite terminal path exists. The result is memoized so
+ * repeated calls with the same schema are cheap.
  *
  * **Example** (Generating arbitrary values)
  *
@@ -14549,36 +14540,20 @@ export function toArbitraryLazy<S extends Constraint>(schema: S): LazyArbitrary<
  * import { Schema } from "effect"
  * import * as FastCheck from "fast-check"
  *
- * const PersonArb = Schema.toArbitrary(
+ * const makePersonArbitrary = Schema.toArbitrary(
  *   Schema.Struct({ name: Schema.String, age: Schema.Number })
  * )
  *
- * // Sample a random value
- * FastCheck.sample(PersonArb, 1)
+ * const PersonArbitrary = makePersonArbitrary(FastCheck)
+ * FastCheck.sample(PersonArbitrary, 1)
  * ```
  *
  * @category generators
  * @since 4.0.0
  */
-export function toArbitrary<S extends Constraint>(schema: S): FastCheck.Arbitrary<S["Type"]>
-export function toArbitrary<S extends Constraint>(
-  schema: S,
-  options: { readonly report: true }
-): Annotations.ToArbitrary.WithReport<FastCheck.Arbitrary<S["Type"]>>
-export function toArbitrary<S extends Constraint>(
-  schema: S,
-  options?: { readonly report?: boolean }
-): FastCheck.Arbitrary<S["Type"]> | Annotations.ToArbitrary.WithReport<FastCheck.Arbitrary<S["Type"]>> {
-  if (options?.report === true) {
-    const lawc = InternalArbitrary.memoized(schema.ast)
-    const report = InternalArbitrary.makeReport()
-    InternalArbitrary.collectReport(schema.ast, report)
-    return {
-      value: lawc(FastCheck, {}),
-      report: InternalArbitrary.toReport(report)
-    }
-  }
-  return toArbitraryLazy(schema)(FastCheck)
+export function toArbitrary<S extends Constraint>(schema: S): Arbitrary<S["Type"]> {
+  const lawc = InternalArbitrary.memoized(schema.ast)
+  return (fc) => lawc(fc, {})
 }
 
 // -----------------------------------------------------------------------------
@@ -14914,7 +14889,10 @@ export function toJsonSchemaDocument(
   schema: Constraint,
   options?: ToJsonSchemaOptions
 ): JsonSchema.Document<"draft-2020-12"> {
-  const document = InternalToRepresentation.toRepresentation(toCodecJsonAST(schema.ast))
+  const document = InternalToRepresentation.toRepresentation(
+    toCodecJsonAST(schema.ast),
+    InternalToJsonSchemaDocument.toRepresentationOptions
+  )
   return InternalToJsonSchemaDocument.toJsonSchemaDocument(document, options)
 }
 
@@ -14969,15 +14947,13 @@ export function toCodecJson<S extends Constraint>(schema: S): toCodecJson<S> {
   return make(toCodecJsonAST(schema.ast), { schema })
 }
 
-const toCodecJsonASTBase = SchemaAST.applyToSelfOrLastLinkEncoding((ast) => {
-  const out = toCodecJsonBase(ast, toCodecJsonAST)
+/** @internal */
+export const toCodecJsonAST = SchemaAST.applyToSelfOrLastLinkEncodingIdempotent((ast) => {
+  const out = toCodecJsonASTStep(ast, toCodecJsonAST)
   const context = ast.context
   if (out === ast || context === undefined) return out
   return SchemaAST.replaceContextLastLink(out, withoutConstructorDefault(context))
 })
-
-/** @internal */
-export const toCodecJsonAST = memoize(toCodecJsonASTBase)
 
 function withoutConstructorDefault(context: SchemaAST.Context): SchemaAST.Context {
   return context.constructorDefault === undefined ?
@@ -15029,7 +15005,7 @@ const toCodecJsonReorder = makeReorder((ast: SchemaAST.AST) => {
   }
 })
 
-function toCodecJsonBase(ast: SchemaAST.AST, recur: (ast: SchemaAST.AST) => SchemaAST.AST): SchemaAST.AST {
+function toCodecJsonASTStep(ast: SchemaAST.AST, recur: (ast: SchemaAST.AST) => SchemaAST.AST): SchemaAST.AST {
   switch (ast._tag) {
     case "Declaration": {
       const getLink = ast.annotations?.toCodecJson ?? ast.annotations?.toCodec
@@ -15088,17 +15064,17 @@ function toCodecJsonBase(ast: SchemaAST.AST, recur: (ast: SchemaAST.AST) => Sche
  * @since 4.0.0
  */
 export function toCodecIso<S extends Constraint>(schema: S): Codec<S["Type"], S["Iso"]> {
-  return make(toCodecIsoTop(SchemaAST.toType(schema.ast)))
+  return make(toCodecIsoAST(SchemaAST.toType(schema.ast)))
 }
 
-const toCodecIsoTop = memoize((ast: SchemaAST.AST): SchemaAST.AST => {
-  const out = toCodecIsoBase(ast, toCodecIsoTop)
+const toCodecIsoAST = memoize((ast: SchemaAST.AST): SchemaAST.AST => {
+  const out = toCodecIsoASTStep(ast, toCodecIsoAST)
   return out !== ast && ast.context !== undefined ?
     SchemaAST.replaceContextLastLink(out, withoutConstructorDefault(ast.context)) :
     out
 })
 
-function toCodecIsoBase(ast: SchemaAST.AST, recur: (ast: SchemaAST.AST) => SchemaAST.AST): SchemaAST.AST {
+function toCodecIsoASTStep(ast: SchemaAST.AST, recur: (ast: SchemaAST.AST) => SchemaAST.AST): SchemaAST.AST {
   switch (ast._tag) {
     case "Declaration": {
       const getLink = ast.annotations?.toCodecIso ?? ast.annotations?.toCodec
@@ -15168,7 +15144,7 @@ export interface toCodecStringTree<S extends Constraint> extends
  * @since 4.0.0
  */
 export function toCodecStringTree<S extends Constraint>(schema: S): toCodecStringTree<S> {
-  return make(serializerStringTree(schema.ast), { schema })
+  return make(toCodecStringTreeAST(schema.ast), { schema })
 }
 
 /**
@@ -15217,7 +15193,7 @@ export interface toCodecArrayFromSingle<S extends Constraint> extends
  * @since 4.0.0
  */
 export function toCodecArrayFromSingle<S extends Constraint>(schema: S): toCodecArrayFromSingle<S> {
-  return make(toCodecArrayFromSingleTop(schema.ast))
+  return make(toCodecArrayFromSingleAST(schema.ast))
 }
 
 type XmlEncoderOptions = {
@@ -15354,7 +15330,7 @@ const toStringTreeReorder = makeReorder((ast: SchemaAST.AST) => {
   }
 })
 
-function serializerTree(
+function toCodecStringTreeASTStep(
   ast: SchemaAST.AST,
   recur: (ast: SchemaAST.AST) => SchemaAST.AST,
   onMissingAnnotation: (ast: SchemaAST.AST) => SchemaAST.AST
@@ -15433,37 +15409,29 @@ const booleanToString = new SchemaAST.Link(
   )
 )
 
-const SERIALIZER_ENSURE_ARRAY = "~effect/Schema/SERIALIZER_ENSURE_ARRAY"
+const arrayFromSingleTransformation = new SchemaTransformation.Transformation(
+  SchemaGetter.transform((input: ReadonlyArray<unknown> | string) => typeof input === "string" ? [input] : input),
+  SchemaGetter.passthrough()
+)
 
-const isSerializerArrayFromSingle = (ast: SchemaAST.AST): boolean =>
-  SchemaAST.isUnion(ast) && ast.annotations?.[SERIALIZER_ENSURE_ARRAY] === true
+const isCodecArrayFromSingleLink = (link: SchemaAST.Link): boolean =>
+  link.transformation === arrayFromSingleTransformation
 
-const serializerStringTree = SchemaAST.applyToSelfOrLastLinkEncoding((ast) => {
-  if (isSerializerArrayFromSingle(ast)) {
-    return ast
-  }
-  const out = serializerTree(ast, serializerStringTree, (ast) => {
+const toCodecStringTreeAST = SchemaAST.applyToSelfOrLastLinkEncodingIdempotent((ast) => {
+  const out = toCodecStringTreeASTStep(ast, toCodecStringTreeAST, (ast) => {
     throw new globalThis.Error("Missing structural codec for StringTree", { cause: ast })
   })
   if (out !== ast && ast.context !== undefined) {
     return SchemaAST.replaceContextLastLink(out, withoutConstructorDefault(ast.context))
   }
   return out
-})
+}, { stopAt: isCodecArrayFromSingleLink })
 
 const toArrayFromSingleInputElement = (ast: SchemaAST.AST): SchemaAST.AST =>
   SchemaAST.isOptional(ast) ? SchemaAST.optionalKey(SchemaAST.unknown) : SchemaAST.unknown
 
-const arrayFromSingleTransformation = new SchemaTransformation.Transformation(
-  SchemaGetter.transform((input: ReadonlyArray<unknown> | string) => typeof input === "string" ? [input] : input),
-  SchemaGetter.passthrough()
-)
-
-const toCodecArrayFromSingleTop = SchemaAST.applyToSelfOrLastLinkEncoding((ast) => {
-  if (isSerializerArrayFromSingle(ast)) {
-    return ast
-  }
-  const out = onSerializerArrayFromSingle(ast)
+const toCodecArrayFromSingleAST = SchemaAST.applyToSelfOrLastLinkEncodingIdempotent((ast) => {
+  const out = toCodecArrayFromSingleASTStep(ast)
   if (SchemaAST.isArrays(out)) {
     const ensure = SchemaAST.decodeTo(
       new SchemaAST.Union(
@@ -15475,8 +15443,7 @@ const toCodecArrayFromSingleTop = SchemaAST.applyToSelfOrLastLinkEncoding((ast) 
           ),
           SchemaAST.string
         ],
-        "anyOf",
-        { [SERIALIZER_ENSURE_ARRAY]: true }
+        "anyOf"
       ),
       out,
       arrayFromSingleTransformation
@@ -15484,12 +15451,12 @@ const toCodecArrayFromSingleTop = SchemaAST.applyToSelfOrLastLinkEncoding((ast) 
     return SchemaAST.isOptional(ast) ? SchemaAST.optionalKey(ensure) : ensure
   }
   return out
-})
+}, { stopAt: isCodecArrayFromSingleLink })
 
-function onSerializerArrayFromSingle(ast: SchemaAST.AST): SchemaAST.AST {
+function toCodecArrayFromSingleASTStep(ast: SchemaAST.AST): SchemaAST.AST {
   return ast._tag === "Declaration" || ast._tag === "Arrays" || ast._tag === "Objects" || ast._tag === "Union" ||
       ast._tag === "Suspend"
-    ? ast.recur(toCodecArrayFromSingleTop)
+    ? ast.recur(toCodecArrayFromSingleAST)
     : ast
 }
 
@@ -16315,6 +16282,15 @@ export declare namespace Annotations {
     readonly representation?:
       | SchemaRepresentation.CheckRepresentationAnnotation<SchemaAST.AST>
       | undefined
+    /**
+     * Compiles this filter to a JSON Schema fragment.
+     *
+     * **Gotchas**
+     *
+     * Treat the input schemas as immutable. The returned value must be a valid JSON Schema object graph and must not be
+     * mutated after this function returns. Return a new object graph to produce different output during a later
+     * compilation.
+     */
     readonly toJsonSchema?: SchemaRepresentation.ToJsonSchema.Check | undefined
     readonly toCode?: SchemaRepresentation.Generation.Check | undefined
     /**
@@ -16365,8 +16341,7 @@ export declare namespace Annotations {
 
   /**
    * Types used by arbitrary-derivation annotations to configure `toArbitrary`
-   * hooks, filter hints, candidate sources, diagnostics, and merged generation
-   * constraints.
+   * hooks, filter hints, candidate sources, and merged generation constraints.
    *
    * @since 4.0.0
    */
@@ -16379,8 +16354,7 @@ export declare namespace Annotations {
      * `constraint` refines the schema node's base generator. `candidate` adds a
      * weighted source before all filters run. If neither hint is provided, the
      * filter does not guide generation; generated values are still checked by
-     * the filter predicate. With `{ report: true }`, this is reported as
-     * `OpaqueFilter`.
+     * the filter predicate.
      *
      * @category models
      * @since 4.0.0
@@ -16567,58 +16541,6 @@ export declare namespace Annotations {
         /* Arbitrary derivations for any type parameters of the schema (if present) */
         typeParameters: { readonly [K in keyof TypeParameters]: TypeParameter<TypeParameters[K]["Type"]> }
       ): (fc: typeof FastCheck, context: Context) => Output<T>
-    }
-
-    /**
-     * Wraps a derived value together with arbitrary-derivation diagnostics.
-     *
-     * @category models
-     * @since 4.0.0
-     */
-    export interface WithReport<A> {
-      readonly value: A
-      readonly report: Report
-    }
-
-    /**
-     * Diagnostics collected while deriving an arbitrary.
-     *
-     * **Details**
-     *
-     * Reports contain warnings only. Unsupported schema nodes, impossible
-     * constraints, invalid candidate weights, and throwing candidate factories
-     * fail immediately.
-     *
-     * @category models
-     * @since 4.0.0
-     */
-    export interface Report {
-      readonly warnings: ReadonlyArray<Warning>
-    }
-
-    /**
-     * Non-fatal arbitrary-derivation warning.
-     *
-     * @category models
-     * @since 4.0.0
-     */
-    export type Warning = OpaqueFilterWarning
-
-    /**
-     * Warning emitted when a filter is handled only by the final `.filter`.
-     *
-     * **Details**
-     *
-     * The filter is still enforced. The warning means it did not contribute
-     * a constraint or candidate, so generation may rely on fast-check discards.
-     *
-     * @category models
-     * @since 4.0.0
-     */
-    export interface OpaqueFilterWarning {
-      readonly _tag: "OpaqueFilter"
-      readonly path: ReadonlyArray<PropertyKey>
-      readonly description?: string | undefined
     }
   }
 
