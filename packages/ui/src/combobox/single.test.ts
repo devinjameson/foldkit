@@ -1707,6 +1707,41 @@ describe('Combobox', () => {
           acknowledgeBackdrop,
         )
       })
+
+      it('emits Selected on item click when not read-only', () => {
+        Scene.scene(
+          {
+            update,
+            view: sceneView({
+              maybeSelectedValue: Option.some('Apple'),
+              restingInputValue: 'Apple',
+            }),
+          },
+          Scene.given(openModel()),
+          acknowledgeAnchor,
+          acknowledgeBackdrop,
+          Scene.click(item(1)),
+          Scene.expectOutMessage(Selected({ value: 'Banana' })),
+          Scene.Command.resolve(FocusInput, CompletedFocusInput()),
+          Scene.Mount.expectEnded(AnchorCombobox, PortalComboboxBackdrop),
+        )
+      })
+
+      it('drops the item click handler while keeping the pointer handlers', () => {
+        Scene.scene(
+          {
+            update,
+            view: readOnlyView(),
+          },
+          Scene.given(openModel()),
+          Scene.expect(item(0)).not.toHaveHandler('click'),
+          Scene.expect(item(1)).not.toHaveHandler('click'),
+          Scene.expect(item(1)).toHaveHandler('pointermove'),
+          Scene.expect(item(1)).toHaveHandler('pointerleave'),
+          acknowledgeAnchor,
+          acknowledgeBackdrop,
+        )
+      })
     })
   })
 })

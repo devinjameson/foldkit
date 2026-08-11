@@ -1219,7 +1219,8 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
           isSelected: isSelectedItem,
         })
 
-        const isInteractive = !isDisabledItem && !isLeaving
+        const isHoverable = !isDisabledItem && !isLeaving
+        const isClickable = isHoverable && !isReadOnly
 
         return h.keyed('div')(
           itemId(id, index),
@@ -1233,7 +1234,7 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
               ? [h.AriaDisabled(true), h.DataAttribute('disabled', '')]
               : []),
             ...(isReadOnly ? [h.DataAttribute('readonly', '')] : []),
-            ...(isInteractive
+            ...(isClickable
               ? [
                   h.OnClick(
                     SelectedItem({
@@ -1242,6 +1243,10 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
                       wasSelected: isValueSelected(itemToValue(item, index)),
                     }),
                   ),
+                ]
+              : []),
+            ...(isHoverable
+              ? [
                   ...(isActiveItem
                     ? []
                     : [
