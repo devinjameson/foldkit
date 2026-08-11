@@ -1675,6 +1675,38 @@ describe('Combobox', () => {
           acknowledgePreventBlur,
         )
       })
+
+      it('drops the input handler while keeping keydown, blur, and focus', () => {
+        Scene.scene(
+          {
+            update,
+            view: readOnlyView({ openOnFocus: true }),
+          },
+          Scene.given(openModel()),
+          Scene.expect(input).not.toHaveHandler('input'),
+          Scene.expect(input).toHaveHandler('keydown'),
+          Scene.expect(input).toHaveHandler('blur'),
+          Scene.expect(input).toHaveHandler('focus'),
+          acknowledgeAnchor,
+          acknowledgeBackdrop,
+        )
+      })
+
+      it('keeps the input handler when not read-only', () => {
+        Scene.scene(
+          {
+            update,
+            view: sceneView({
+              maybeSelectedValue: Option.some('Apple'),
+              restingInputValue: 'Apple',
+            }),
+          },
+          Scene.given(openModel()),
+          Scene.expect(input).toHaveHandler('input'),
+          acknowledgeAnchor,
+          acknowledgeBackdrop,
+        )
+      })
     })
   })
 })
