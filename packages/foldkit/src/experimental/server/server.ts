@@ -328,17 +328,15 @@ export function renderToString(
     const hasRouting = config.routing !== undefined
     const FlagsCodec = config.Flags
 
-    const maybeUrl = hasRouting
-      ? yield* parseUrl(options?.url ?? '')
-      : undefined
+    const url = hasRouting ? yield* parseUrl(options?.url ?? '') : undefined
 
     const initReturn = ((): InitReturn<unknown> => {
       if (FlagsCodec !== undefined) {
         return hasRouting
-          ? config.init(options?.flags, maybeUrl)
+          ? config.init(options?.flags, url)
           : config.init(options?.flags)
       }
-      return hasRouting ? config.init(maybeUrl) : config.init()
+      return hasRouting ? config.init(url) : config.init()
     })()
     const [model] = initReturn
 

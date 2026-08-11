@@ -111,14 +111,14 @@ const sendWebResponse = async (
     nodeResponse.statusMessage = webResponse.statusText
   }
 
-  const maybeGetSetCookie = Predicate.hasProperty(
+  const getSetCookie = Predicate.hasProperty(
     webResponse.headers,
     'getSetCookie',
   )
     ? webResponse.headers.getSetCookie
     : undefined
-  const setCookieHeaders = Predicate.isFunction(maybeGetSetCookie)
-    ? maybeGetSetCookie.call(webResponse.headers)
+  const setCookieHeaders = Predicate.isFunction(getSetCookie)
+    ? getSetCookie.call(webResponse.headers)
     : []
 
   for (const [name, value] of webResponse.headers) {
