@@ -1149,7 +1149,9 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
         ...(isDisabled
           ? [h.AriaDisabled(true), h.DataAttribute('disabled', '')]
           : [
-              h.OnInput(value => UpdatedInputValue({ value })),
+              ...(isReadOnly
+                ? []
+                : [h.OnInput(value => UpdatedInputValue({ value }))]),
               h.OnKeyDownPreventDefault(handleInputKeyDown),
               h.OnBlur(BlurredInput({ restingInputValue })),
               ...(openOnFocus
