@@ -80,7 +80,7 @@ The items panel is portaled to the document body and positioned relative to the 
 | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `data-active`    | Present on the item currently highlighted by keyboard or pointer.                                                                                               |
 | `data-selected`  | Present on the selected item(s).                                                                                                                                |
-| `data-disabled`  | Present on disabled items.                                                                                                                                      |
+| `data-disabled`  | Present on disabled items, and on the wrapper, the input, and the toggle button when the combobox is disabled.                                                  |
 | `data-readonly`  | Present on the wrapper, the input, the toggle button, the items panel, and every item when isReadOnly is true.                                                  |
 | `data-closed`    | Present during close animation when isAnimated is true.                                                                                                         |
 | `data-placement` | Present on the items panel, set to the side it currently sits on: top, right, bottom, or left. Fixed to the first resolved side when isPlacementLocked is true. |
@@ -94,6 +94,8 @@ Focus stays on the input while arrow keys navigate items via `aria-activedescend
 | `Arrow Down`       | Opens the dropdown or moves to the next item.                                                                        |
 | `Arrow Up`         | Moves to the previous item.                                                                                          |
 | `Enter`            | Selects the active item. Inert when isReadOnly is set.                                                               |
+| `Home`             | Moves to the first enabled item.                                                                                     |
+| `End`              | Moves to the last enabled item.                                                                                      |
 | `Escape`           | Closes the dropdown.                                                                                                 |
 | `Type a character` | Filters the items list. You control filtering in your view by passing filtered items. Frozen when isReadOnly is set. |
 
