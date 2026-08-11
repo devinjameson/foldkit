@@ -1,5 +1,5 @@
 import { Option, flow } from 'effect'
-import type { HtmlBuilder } from 'foldkit/html'
+import { type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
 import * as Story from 'foldkit/story'
 import { expect } from 'vitest'
@@ -12,9 +12,11 @@ import type { Model, ViewInputs } from './multi.js'
 import {
   ActivatedItem,
   AnchorCombobox,
+  AttachComboboxPreventBlur,
   ClearedSelection,
   Closed,
   CompletedAnchorCombobox,
+  CompletedAttachComboboxPreventBlur,
   CompletedFocusInput,
   CompletedInertOthers,
   CompletedLockScroll,
@@ -46,6 +48,10 @@ const acknowledgeAnchor = Scene.Mount.resolve(
 const acknowledgeBackdrop = Scene.Mount.resolve(
   PortalComboboxBackdrop,
   CompletedPortalComboboxBackdrop(),
+)
+const acknowledgePreventBlur = Scene.Mount.resolve(
+  AttachComboboxPreventBlur,
+  CompletedAttachComboboxPreventBlur(),
 )
 
 const givenClosed = Story.given(init({ id: 'test' }))
@@ -490,7 +496,10 @@ describe('Combobox.Multi', () => {
     describe('read-only', () => {
       const input = Scene.selector('#test-input')
       const itemsContainer = Scene.selector('#test-items')
+      const button = Scene.selector('#test-button')
       const item = (index: number) => Scene.selector(`#test-item-${index}`)
+
+      const toggleButtonContent = ih.span([])
 
       it('emits the read-only attributes on the input, panel, and items', () => {
         Scene.scene(
@@ -511,6 +520,44 @@ describe('Combobox.Multi', () => {
           Scene.expect(item(1)).toHaveAttr('data-readonly', ''),
           acknowledgeAnchor,
           acknowledgeBackdrop,
+        )
+      })
+
+      it('emits data-readonly on the wrapper', () => {
+        Scene.scene(
+          {
+            update,
+            view: sceneView({
+              isReadOnly: true,
+              selectedValues: ['Apple'],
+              className: 'test-wrapper',
+            }),
+          },
+          Scene.given(openMultiModel()),
+          Scene.expect(Scene.selector('.test-wrapper')).toHaveAttr(
+            'data-readonly',
+            '',
+          ),
+          acknowledgeAnchor,
+          acknowledgeBackdrop,
+        )
+      })
+
+      it('emits data-readonly on the toggle button', () => {
+        Scene.scene(
+          {
+            update,
+            view: sceneView({
+              isReadOnly: true,
+              selectedValues: ['Apple'],
+              buttonContent: toggleButtonContent,
+            }),
+          },
+          Scene.given(openMultiModel()),
+          Scene.expect(button).toHaveAttr('data-readonly', ''),
+          acknowledgeAnchor,
+          acknowledgeBackdrop,
+          acknowledgePreventBlur,
         )
       })
 
