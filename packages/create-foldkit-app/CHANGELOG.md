@@ -1,5 +1,13 @@
 # create-foldkit-app
 
+## 0.24.5
+
+### Patch Changes
+
+- 87e9dbf: Bump bundled Effect dependencies to `4.0.0-beta.107`. No user-facing changes. Newly scaffolded apps will get the updated pins from the example sources.
+
+  The CLI now pins `effect`, `@effect/platform-node`, and `@effect/platform-node-shared` to exactly `4.0.0-beta.107` to match this release (exact versions, not ranges, while Effect v4 is in beta).
+
 ## 0.24.4
 
 ### Patch Changes
