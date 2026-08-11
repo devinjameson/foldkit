@@ -149,7 +149,10 @@ const sendWebResponse = async (
  */
 export const foldkitSsr = (options: FoldkitSsrOptions): Plugin => ({
   name: 'foldkit-ssr',
-  apply: 'serve',
+  // NOTE: `vite preview` also resolves with command 'serve', but it serves
+  // built output and never runs configureServer, so applying there would
+  // only set appType 'custom' and strip preview's HTML middleware.
+  apply: (_config, env) => env.command === 'serve' && env.isPreview !== true,
   config: () => ({ appType: 'custom' }),
   configureServer: server => () => {
     server.middlewares.use(
