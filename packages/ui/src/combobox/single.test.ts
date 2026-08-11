@@ -1862,6 +1862,53 @@ describe('Combobox', () => {
         )
       })
 
+      it('does not emit ClearedSelection while nullable with a selection present', () => {
+        Scene.scene(
+          {
+            update,
+            view: readOnlyView(),
+          },
+          Scene.given({
+            ...openModel(),
+            nullable: true,
+            inputValue: 'Apple',
+          }),
+          acknowledgeAnchor,
+          acknowledgeBackdrop,
+          Scene.keydown(input, 'Escape'),
+          Scene.expectNoOutMessage(),
+          Scene.Command.resolve(FocusInput, CompletedFocusInput()),
+          Scene.Mount.expectEnded(AnchorCombobox, PortalComboboxBackdrop),
+        )
+      })
+
+      it('does not report SuppressedItemCommit when no item is active', () => {
+        const seen: Array<Message> = []
+
+        Scene.scene(
+          {
+            update: (model: Model, message: Message) => {
+              seen.push(message)
+              return update(model, message)
+            },
+            view: readOnlyView(),
+          },
+          Scene.given({
+            ...openModel(),
+            maybeActiveItemIndex: Option.none(),
+          }),
+          acknowledgeAnchor,
+          acknowledgeBackdrop,
+          Scene.keydown(input, 'Enter'),
+          Scene.tap(() => {
+            expect(seen.map(message => message._tag)).not.toContain(
+              'SuppressedItemCommit',
+            )
+          }),
+          Scene.expectNoOutMessage(),
+        )
+      })
+
       it('still opens from the toggle button', () => {
         Scene.scene(
           {
