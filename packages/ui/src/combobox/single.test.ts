@@ -1,5 +1,5 @@
 import { Option, flow } from 'effect'
-import type { HtmlBuilder } from 'foldkit/html'
+import { type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
 import * as Story from 'foldkit/story'
 import { expect } from 'vitest'
@@ -10,11 +10,13 @@ import * as Animation from '../animation/index.js'
 import {
   ActivatedItem,
   AnchorCombobox,
+  AttachComboboxPreventBlur,
   BlurredInput,
   ClearedSelection,
   ClickItem,
   Closed,
   CompletedAnchorCombobox,
+  CompletedAttachComboboxPreventBlur,
   CompletedClickItem,
   CompletedFocusInput,
   CompletedInertOthers,
@@ -57,6 +59,10 @@ const acknowledgeAnchor = Scene.Mount.resolve(
 const acknowledgeBackdrop = Scene.Mount.resolve(
   PortalComboboxBackdrop,
   CompletedPortalComboboxBackdrop(),
+)
+const acknowledgePreventBlur = Scene.Mount.resolve(
+  AttachComboboxPreventBlur,
+  CompletedAttachComboboxPreventBlur(),
 )
 
 const animationEndMessage = GotAnimationMessage({
@@ -1080,6 +1086,8 @@ describe('Combobox', () => {
       return model
     }
 
+    const toggleButtonContent = ih.span([])
+
     const sceneView =
       (
         overrides: Omit<
@@ -1536,6 +1544,136 @@ describe('Combobox', () => {
 
       it('inputId derives the input id from the base id', () => {
         expect(inputId('test')).toBe('test-input')
+      })
+    })
+
+    describe('read-only', () => {
+      const input = Scene.selector('#test-input')
+      const itemsContainer = Scene.selector('#test-items')
+      const button = Scene.selector('#test-button')
+      const item = (index: number) => Scene.selector(`#test-item-${index}`)
+
+      const readOnlyView = (
+        overrides: Parameters<typeof sceneView>[0] = {},
+      ) =>
+        sceneView({
+          isReadOnly: true,
+          maybeSelectedValue: Option.some('Apple'),
+          restingInputValue: 'Apple',
+          ...overrides,
+        })
+
+      it('emits readonly, aria-readonly, and data-readonly on the input', () => {
+        Scene.scene(
+          { update, view: readOnlyView() },
+          Scene.given(openModel()),
+          Scene.expect(input).toHaveAttr('readOnly', 'true'),
+          Scene.expect(input).toHaveAttr('aria-readonly', 'true'),
+          Scene.expect(input).toHaveAttr('data-readonly', ''),
+          acknowledgeAnchor,
+          acknowledgeBackdrop,
+        )
+      })
+
+      it('emits aria-readonly and data-readonly on the items panel, and data-readonly on the button and every item', () => {
+        Scene.scene(
+          {
+            update,
+            view: readOnlyView({ buttonContent: toggleButtonContent }),
+          },
+          Scene.given(openModel()),
+          Scene.expect(itemsContainer).toHaveAttr('aria-readonly', 'true'),
+          Scene.expect(itemsContainer).toHaveAttr('data-readonly', ''),
+          Scene.expect(button).toHaveAttr('data-readonly', ''),
+          Scene.expect(item(0)).toHaveAttr('data-readonly', ''),
+          Scene.expect(item(1)).toHaveAttr('data-readonly', ''),
+          acknowledgeAnchor,
+          acknowledgeBackdrop,
+          acknowledgePreventBlur,
+        )
+      })
+
+      it('emits data-readonly on the wrapper', () => {
+        Scene.scene(
+          {
+            update,
+            view: readOnlyView({ className: 'test-wrapper' }),
+          },
+          Scene.given(openModel()),
+          Scene.expect(Scene.selector('.test-wrapper')).toHaveAttr(
+            'data-readonly',
+            '',
+          ),
+          acknowledgeAnchor,
+          acknowledgeBackdrop,
+        )
+      })
+
+      it('emits no read-only attributes by default', () => {
+        Scene.scene(
+          {
+            update,
+            view: sceneView({
+              buttonContent: toggleButtonContent,
+              maybeSelectedValue: Option.some('Apple'),
+              restingInputValue: 'Apple',
+            }),
+          },
+          Scene.given(openModel()),
+          Scene.expect(input).not.toHaveAttr('readOnly'),
+          Scene.expect(input).not.toHaveAttr('aria-readonly'),
+          Scene.expect(input).not.toHaveAttr('data-readonly'),
+          Scene.expect(itemsContainer).not.toHaveAttr('aria-readonly'),
+          Scene.expect(itemsContainer).not.toHaveAttr('data-readonly'),
+          Scene.expect(button).not.toHaveAttr('data-readonly'),
+          Scene.expect(item(0)).not.toHaveAttr('data-readonly'),
+          acknowledgeAnchor,
+          acknowledgeBackdrop,
+          acknowledgePreventBlur,
+        )
+      })
+
+      it('passes isReadOnly to itemToConfig', () => {
+        Scene.scene(
+          {
+            update,
+            view: readOnlyView({
+              itemToConfig: (_item, context) => ({
+                content: null,
+                className: context.isReadOnly ? 'is-read-only' : 'is-editable',
+              }),
+            }),
+          },
+          Scene.given(openModel()),
+          Scene.expect(item(0)).toHaveClass('is-read-only'),
+          acknowledgeAnchor,
+          acknowledgeBackdrop,
+        )
+      })
+
+      it('emits both read-only and disabled attribute sets when set together', () => {
+        Scene.scene(
+          {
+            update,
+            view: readOnlyView({
+              isDisabled: true,
+              buttonContent: toggleButtonContent,
+            }),
+          },
+          Scene.given(openModel()),
+          Scene.expect(input).toHaveAttr('aria-readonly', 'true'),
+          Scene.expect(input).toHaveAttr('data-readonly', ''),
+          Scene.expect(input).toHaveAttr('aria-disabled', 'true'),
+          Scene.expect(input).toHaveAttr('data-disabled', ''),
+          Scene.expect(button).toHaveAttr('data-readonly', ''),
+          Scene.expect(button).toHaveAttr('data-disabled', ''),
+          Scene.expect(button).toHaveAttr('aria-disabled', 'true'),
+          Scene.expect(button).not.toHaveHandler('click'),
+          Scene.expect(input).not.toHaveHandler('keydown'),
+          acknowledgeAnchor,
+          acknowledgeBackdrop,
+          acknowledgePreventBlur,
+        )
       })
     })
   })

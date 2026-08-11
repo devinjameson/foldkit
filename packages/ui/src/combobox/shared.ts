@@ -856,6 +856,9 @@ export type BaseViewInputsCommon<Item extends string> = Readonly<{
     context: Readonly<{
       isActive: boolean
       isDisabled: boolean
+      /** Mirrors the view input of the same name, so `itemToConfig` can
+       *  style items for read-only state without closing over `viewInputs`. */
+      isReadOnly: boolean
       isSelected: boolean
     }>,
   ) => ItemConfig
@@ -879,7 +882,21 @@ export type BaseViewInputsCommon<Item extends string> = Readonly<{
   buttonClassName?: string
   buttonAttributes?: ReadonlyArray<ChildAttribute>
   formName?: string
+  /** Marks the Combobox unavailable with `aria-disabled="true"` on the input
+   *  and the toggle button and `data-disabled` on both plus the wrapper, and
+   *  removes their handlers so the dropdown cannot be opened. */
   isDisabled?: boolean
+  /** Prevents committing a selection while exposing read-only semantics with
+   *  the native `readonly` attribute plus `aria-readonly="true"` on the input,
+   *  `aria-readonly="true"` on the items panel, and `data-readonly` on the
+   *  wrapper, input, toggle button, items panel, and every item. The Combobox
+   *  still opens, navigates, and closes, and the input still takes focus and
+   *  allows text selection and copying. Typing is frozen, since the input
+   *  value doubles as the display of the selection. Independent of
+   *  `isDisabled`: setting both emits both attribute sets, and `isDisabled`
+   *  still wins for interaction, since it drops every handler, so a Combobox
+   *  that is both read-only and disabled cannot be opened at all. */
+  isReadOnly?: boolean
   isInvalid?: boolean
   openOnFocus?: boolean
   itemGroupKey?: (item: Item, index: number) => string
@@ -950,6 +967,7 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
         buttonAttributes = [],
         formName,
         isDisabled,
+        isReadOnly = false,
         isInvalid,
         openOnFocus,
         itemGroupKey,
@@ -1138,6 +1156,13 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
                 ? [h.OnFocus(Opened({ maybeActiveItemIndex: Option.none() }))]
                 : []),
             ]),
+        ...(isReadOnly
+          ? [
+              h.Readonly(true),
+              h.AriaReadonly(true),
+              h.DataAttribute('readonly', ''),
+            ]
+          : []),
         ...(isInvalid
           ? [h.AriaInvalid(true), h.DataAttribute('invalid', '')]
           : []),
@@ -1169,6 +1194,9 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
         ...(behavior.ariaMultiSelectable ? [h.AriaMultiSelectable(true)] : []),
         h.AriaLabelledBy(`${id}-input`),
         h.Tabindex(-1),
+        ...(isReadOnly
+          ? [h.AriaReadonly(true), h.DataAttribute('readonly', '')]
+          : []),
         ...anchorAttributes,
         ...animationAttributes,
         ...(itemsClassName ? [h.Class(itemsClassName)] : []),
@@ -1185,6 +1213,7 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
         const itemConfig = itemToConfig(item, {
           isActive: isActiveItem,
           isDisabled: isDisabledItem,
+          isReadOnly,
           isSelected: isSelectedItem,
         })
 
@@ -1201,6 +1230,7 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
             ...(isDisabledItem
               ? [h.AriaDisabled(true), h.DataAttribute('disabled', '')]
               : []),
+            ...(isReadOnly ? [h.DataAttribute('readonly', '')] : []),
             ...(isInteractive
               ? [
                   h.OnClick(
@@ -1355,6 +1385,7 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
                 ...(isDisabled
                   ? [h.AriaDisabled(true), h.DataAttribute('disabled', '')]
                   : [h.OnClick(PressedToggleButton({ restingInputValue }))]),
+                ...(isReadOnly ? [h.DataAttribute('readonly', '')] : []),
                 h.OnMount(AttachComboboxPreventBlur()),
                 ...(buttonClassName ? [h.Class(buttonClassName)] : []),
                 ...buttonAttributes,
@@ -1382,6 +1413,7 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
         ...attributes,
         ...(isVisible ? [h.DataAttribute('open', '')] : []),
         ...(isDisabled ? [h.DataAttribute('disabled', '')] : []),
+        ...(isReadOnly ? [h.DataAttribute('readonly', '')] : []),
         ...(isInvalid ? [h.DataAttribute('invalid', '')] : []),
       ]
 
