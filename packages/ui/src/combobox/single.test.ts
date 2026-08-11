@@ -39,6 +39,7 @@ import {
   ScrollIntoView,
   Selected,
   SelectedItem,
+  SuppressedItemCommit,
   UnlockScroll,
   UpdatedInputValue,
   inputId,
@@ -611,6 +612,23 @@ describe('Combobox', () => {
           Story.model(model => {
             expect(model.isOpen).toBe(true)
           }),
+        )
+      })
+    })
+
+    describe('SuppressedItemCommit', () => {
+      it('leaves the model unchanged and emits no OutMessage', () => {
+        Story.story(
+          update,
+          givenOpen,
+          Story.message(SuppressedItemCommit()),
+          Story.model(model => {
+            expect(model.isOpen).toBe(true)
+            expect(model.maybeActiveItemIndex).toStrictEqual(Option.some(0))
+            expect(model.inputValue).toBe('')
+          }),
+          Story.expectNoOutMessage(),
+          Story.Command.expectNone(),
         )
       })
     })
