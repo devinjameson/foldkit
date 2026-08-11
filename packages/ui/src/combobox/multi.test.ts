@@ -13,7 +13,6 @@ import {
   ActivatedItem,
   AnchorCombobox,
   AttachComboboxPreventBlur,
-  ClearedSelection,
   Closed,
   CompletedAnchorCombobox,
   CompletedAttachComboboxPreventBlur,
@@ -207,13 +206,13 @@ describe('Combobox.Multi', () => {
         )
       })
 
-      it('emits ClearedSelection when nullable and input is empty', () => {
+      it('does not emit ClearedSelection when nullable, since the input rests empty', () => {
         Story.story(
           update,
           Story.given(init({ id: 'test', nullable: true })),
           Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
           Story.message(Closed({ restingInputValue: '', isClearable: true })),
-          Story.expectOutMessage(ClearedSelection()),
+          Story.expectNoOutMessage(),
           Story.Command.resolve(FocusInput, CompletedFocusInput()),
           Story.model(model => {
             expect(model.isOpen).toBe(false)
@@ -713,7 +712,7 @@ describe('Combobox.Multi', () => {
         )
       })
 
-      it('clears the selection when Escape closes a nullable group that is not read-only', () => {
+      it('does not clear the selection when Escape closes a nullable group that is not read-only', () => {
         Scene.scene(
           {
             update,
@@ -723,7 +722,7 @@ describe('Combobox.Multi', () => {
           acknowledgeAnchor,
           acknowledgeBackdrop,
           Scene.keydown(input, 'Escape'),
-          Scene.expectOutMessage(ClearedSelection()),
+          Scene.expectNoOutMessage(),
           Scene.Command.resolve(FocusInput, CompletedFocusInput()),
           Scene.Mount.expectEnded(AnchorCombobox, PortalComboboxBackdrop),
         )
