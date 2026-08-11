@@ -1063,6 +1063,16 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
           })),
         )
 
+      const resolveCommitMessage = (): Option.Option<Message> => {
+        if (isReadOnly) {
+          return Option.as(maybeActiveItemIndex, SuppressedItemCommit())
+        } else {
+          return Option.map(maybeActiveItemIndex, index =>
+            RequestedItemClick({ index }),
+          )
+        }
+      }
+
       const handleInputKeyDown = (key: string): Option.Option<Message> =>
         M.value(key).pipe(
           M.when('ArrowDown', () => {
@@ -1103,9 +1113,7 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
             if (!isOpen) {
               return Option.none()
             }
-            return Option.map(maybeActiveItemIndex, index =>
-              RequestedItemClick({ index }),
-            )
+            return resolveCommitMessage()
           }),
           M.when('Escape', () => {
             if (!isOpen) {

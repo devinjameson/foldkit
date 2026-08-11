@@ -1742,6 +1742,57 @@ describe('Combobox', () => {
           acknowledgeBackdrop,
         )
       })
+
+      it('reports Enter on the active item as SuppressedItemCommit', () => {
+        const seen: Array<Message> = []
+
+        Scene.scene(
+          {
+            update: (model: Model, message: Message) => {
+              seen.push(message)
+              return update(model, message)
+            },
+            view: readOnlyView(),
+          },
+          Scene.given(openModel()),
+          acknowledgeAnchor,
+          acknowledgeBackdrop,
+          Scene.keydown(input, 'Enter'),
+          Scene.tap(() => {
+            expect(seen.map(message => message._tag)).toContain(
+              'SuppressedItemCommit',
+            )
+          }),
+          Scene.expectNoOutMessage(),
+        )
+      })
+
+      it('emits RequestedItemClick on Enter when not read-only', () => {
+        const seen: Array<Message> = []
+
+        Scene.scene(
+          {
+            update: (model: Model, message: Message) => {
+              seen.push(message)
+              return update(model, message)
+            },
+            view: sceneView({
+              maybeSelectedValue: Option.some('Apple'),
+              restingInputValue: 'Apple',
+            }),
+          },
+          Scene.given(openModel()),
+          acknowledgeAnchor,
+          acknowledgeBackdrop,
+          Scene.keydown(input, 'Enter'),
+          Scene.tap(() => {
+            expect(seen.map(message => message._tag)).toContain(
+              'RequestedItemClick',
+            )
+          }),
+          Scene.Command.resolve(ClickItem, CompletedClickItem()),
+        )
+      })
     })
   })
 })
