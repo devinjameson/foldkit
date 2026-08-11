@@ -64,6 +64,8 @@ Typing is frozen rather than left to filter, because `model.inputValue` is one f
 
 A read-only single-select Combobox whose parent holds a preloaded selection renders an empty input until an open and close cycle happens, since `model.inputValue` starts empty and only becomes the selection's display text through a selection or a close. Read-only removes the user's usual recovery path, since they cannot type to surface it. Seed the Model at boot with `selectItem`, which sets `inputValue` to the display text; the `boot()` convention is the idiomatic place for that.
 
+Seeding interacts with filtering. You derive `items` from `model.inputValue`, so a read-only Combobox seeded with its selection opens showing only the items matching that text, often just the one. Filter on a separate field, or skip filtering while read-only, when the full list should stay visible.
+
 `isReadOnly` and `isDisabled` both stop the Combobox from committing, and setting both emits both attribute sets. They differ in the semantics exposed to assistive technology, so they are not interchangeable. `aria-disabled="true"`, which `isDisabled` emits on the input and the toggle button, communicates that the Combobox is unavailable, and it removes their handlers so the dropdown cannot be opened at all. `aria-readonly="true"`, which `isReadOnly` emits on the input carrying `role="combobox"` and on the items panel carrying `role="listbox"`, communicates that the value cannot be changed but remains relevant to the user.
 
 Assistive technology support for `aria-readonly` on comboboxes varies. Pair it with a visible read-only treatment or explanatory text when users must distinguish it from disabled, and test the browser and assistive technology combinations your app supports.
