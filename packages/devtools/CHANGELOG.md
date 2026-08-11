@@ -1,5 +1,7 @@
 # @foldkit/devtools
 
+## 0.142.0
+
 ## 0.141.2
 
 ### Patch Changes

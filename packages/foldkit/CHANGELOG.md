@@ -1,5 +1,88 @@
 # foldkit
 
+## 0.142.0
+
+### Minor Changes
+
+- 0262c9b: `Update.foldChild`'s `foldOutMessage` now receives an optional second parameter, an `Update.FoldContext` carrying `liftCommand` and `liftCommands` bound to the config's `toParentMessage`. The fold already lifts the Commands the child's update returns. The context covers the other case: a Command the parent returns on the child's behalf from the OutMessage Step, built with context only the parent holds, whose result Message is still the child's. The lifters apply the same lift the fold gives the child's own Commands, so there is no `Command.mapMessage` call to write and no second copy of the wrapper to keep in sync.
+
+  Existing one-parameter `foldOutMessage` functions keep working unchanged.
+
+  In the example below, the magic link carries a redirect destination, and only the parent knows the current Route. The Login child cannot build `Login.SendMagicLink` itself, so it emits `RequestedMagicLink` as a fact and the parent returns the Command with the Route filled in.
+
+  Before:
+
+  ```ts
+  const foldLoginOutMessage = M.type<Login.OutMessage>().pipe(
+    M.withReturnType<Update.Step<Model, Message>>(),
+    M.tagsExhaustive({
+      RequestedMagicLink:
+        ({ email }) =>
+        model => [
+          model,
+          [
+            Command.mapMessage(
+              Login.SendMagicLink({ email, redirectRoute: model.route }),
+              message => GotLoginMessage({ message }),
+            ),
+          ],
+        ],
+    }),
+  )
+  ```
+
+  After:
+
+  ```ts
+  const foldLoginOutMessage: (
+    outMessage: Login.OutMessage,
+    context: Update.FoldContext<Login.Message, Message>,
+  ) => Update.Step<Model, Message> = (outMessage, { liftCommand }) =>
+    M.value(outMessage).pipe(
+      M.withReturnType<Update.Step<Model, Message>>(),
+      M.tagsExhaustive({
+        RequestedMagicLink:
+          ({ email }) =>
+          model => [
+            model,
+            [
+              liftCommand(
+                Login.SendMagicLink({ email, redirectRoute: model.route }),
+              ),
+            ],
+          ],
+      }),
+    )
+  ```
+
+- dbacfa5: Add an optional `when` gate to `Subscription.lift`. It is a parent-side field on the parent's `lift` call and it receives the parent Model, so the parent holds the half of a condition the child cannot see, such as the route a page Submodel sits behind. The child neither declares nor sees the gate; it keeps holding its own half in `modelToDependencies`. Pass one predicate to gate every entry in the record, or a `Subscription.EntryGates` map keyed by entry name to gate entries individually, which leaves entries the map omits lifted ungated. A closed gate is a real teardown: the entry's Stream stops, and the child's `modelToDependencies` does not run again until the parent reopens the gate, so child state that changes behind a closed gate causes no restarts. Gating rewrites a gated entry's dependencies to `Subscription.GatedDependencies`, whose `maybeDependencies` is `None` while the gate is closed; a gated entry's `readDependencies` returns the last dependencies seen through an open gate. Ungated entries and lifts without `when` are unchanged. Lifts chain, so a record can pass through intermediate levels and pick up a gate at whichever level knows the condition.
+
+  One predicate gates the whole record. The Settings page keeps declaring its own Subscriptions, and the parent adds the route condition the page cannot answer:
+
+  ```ts
+  const settingsSubscriptions = Subscription.lift(Settings.subscriptions)<
+    Model,
+    Message
+  >({
+    toChildModel: model => model.settings,
+    toParentMessage: message => GotSettingsMessage({ message }),
+    when: ({ route }) => route._tag === 'Settings',
+  })
+  ```
+
+  A gate map names the entries to gate. The Room page holds a WebSocket stream that should outlive navigation and a keyboard listener that should not, so naming one entry gates it and leaves the other lifted ungated:
+
+  ```ts
+  const roomSubscriptions = Subscription.lift(Room.subscriptions)({
+    toChildModel: (model: Model) => model.room,
+    toParentMessage: (message: Room.Message): Message =>
+      GotRoomMessage({ message }),
+    when: { roomKeyboard: ({ route }) => route._tag === 'Room' },
+  })
+  ```
+
+- dbacfa5: Add `Update.foldChildStep`, the `Update.foldChild` variant for a child entry point that takes nothing but the child Model, such as `Dialog.close` or a Submodel's `informRouteChanged` that derives everything from its own state. It returns the `Update.Step` itself rather than a dual `Update.Fold`, so the call site composes with `Update.combine` without inventing an input the child does not take. Reading, writing, Command lifting, the no-op on a `None` from `read`, and `foldOutMessage` all behave exactly as they do in `foldChild`, down to the optional second parameter `foldOutMessage` receives, an `Update.FoldContext` carrying `liftCommand` and `liftCommands` bound to the config's `toParentMessage`.
+
 ## 0.141.2
 
 ### Patch Changes
