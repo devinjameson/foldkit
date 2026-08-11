@@ -60,6 +60,8 @@ What a read-only Combobox never does is commit. Its input carries the native `re
 
 Typing is frozen rather than left to filter, because `model.inputValue` is one field serving two purposes. It is the filter query you read to narrow `items`, and it is the display of the current selection, restored to `restingInputValue` on close and on blur. Letting a read-only Combobox be typed into would give the user a widget whose visible value they can change and which only snaps back on blur.
 
+Freezing typing removes an open path along with it. An interactive Combobox opens on the first keystroke, since `UpdatedInputValue` opens a closed one, which makes clicking into the input feel like it opens the dropdown. A read-only Combobox has no `OnInput` handler, so that path is gone and the toggle button and the arrow keys are what remain. Pass `openOnFocus` when focusing the input should open it; it is unaffected by `isReadOnly`.
+
 `isReadOnly` describes what the user may do, not what the program may do. `selectItem` and a directly dispatched `SelectedItem` Message still select, because the parent owns the selection.
 
 A read-only single-select Combobox whose parent holds a preloaded selection renders an empty input until an open and close cycle happens, since `model.inputValue` starts empty and only becomes the selection's display text through a selection or a close. Read-only removes the user's usual recovery path, since they cannot type to surface it. Seed the Model at boot with `selectItem`, which sets `inputValue` to the display text; the `boot()` convention is the idiomatic place for that.
