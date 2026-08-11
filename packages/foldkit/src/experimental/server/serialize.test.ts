@@ -187,6 +187,16 @@ describe('serializeHtml', () => {
     )
   })
 
+  it('collapses option label whitespace when matching a controlled select value', () => {
+    const view = h.select(
+      [h.Value('Two words')],
+      [h.option([], ['One']), h.option([], ['Two\n      words'])],
+    )
+    expect(serializeHtml(view)).toBe(
+      '<select><option>One</option><option selected="">Two\n      words</option></select>',
+    )
+  })
+
   it('omits a redundant empty value attribute on an input', () => {
     const view = h.input([h.Type('text'), h.Value('')])
     expect(serializeHtml(view)).toBe('<input type="text">')

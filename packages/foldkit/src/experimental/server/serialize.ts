@@ -9,7 +9,7 @@ import { tagNameFromSelector } from '../../tagName.js'
  *  the vnode's own data, so the stamp always wins over a same-named
  *  attribute in the view.
  *
- * @experimental Ships from `foldkit/experimental/server`; expect breaking changes while the API settles.
+ * @internal Not part of the `foldkit/experimental/server` surface; `renderToString` is the public entry to serialization.
  */
 export type SerializeOptions = Readonly<{
   rootAttributes?: Readonly<Record<string, string>>
@@ -177,12 +177,16 @@ const ATTRIBUTE_ESCAPES: Readonly<Record<string, string>> = {
   '<': '&lt;',
 }
 
-const escapeText = (value: string): string =>
+/** Escapes a string for use as HTML text content.
+ *
+ * @internal Shared with the template injector; not part of the `foldkit/experimental/server` surface.
+ */
+export const escapeText = (value: string): string =>
   value.replace(/[&<>]/g, character => TEXT_ESCAPES[character] ?? character)
 
 /** Escapes a string for use inside a double-quoted HTML attribute value.
  *
- * @experimental Ships from `foldkit/experimental/server`; expect breaking changes while the API settles.
+ * @internal Shared with the template injector; not part of the `foldkit/experimental/server` surface.
  */
 export const escapeAttributeValue = (value: string): string =>
   value.replace(
@@ -392,12 +396,18 @@ const serializeChildren = (
   }
 }
 
+// NOTE: an option without a value prop falls back to its label the way the
+// DOM does: `option.value` reflects the text content with ASCII whitespace
+// stripped and internal runs collapsed, so a label wrapped across source
+// lines still matches the select value.
 const optionValue = (node: VNode): string => {
   const value = node.data?.props?.['value']
   if (typeof value === 'string') {
     return value
   }
-  return collectRawText(node).trim()
+  return collectRawText(node)
+    .replace(/[\t\n\f\r ]+/g, ' ')
+    .trim()
 }
 
 const selectValueForChildren = (
@@ -530,7 +540,7 @@ const serializeNode = (
  *  emitted in that order. A `null` tree serializes to an empty comment,
  *  mirroring how the runtime patches `null` as a comment node.
  *
- * @experimental Ships from `foldkit/experimental/server`; expect breaking changes while the API settles.
+ * @internal Not part of the `foldkit/experimental/server` surface; `renderToString` is the public entry to serialization.
  */
 export const serializeHtml = (
   root: VNode | null,

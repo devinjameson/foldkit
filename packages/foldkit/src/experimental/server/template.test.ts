@@ -43,6 +43,42 @@ describe('injectIntoTemplate', () => {
     expect(result).toContain('<html lang="en">')
   })
 
+  it('replaces a single-quoted template lang without duplicating the attribute', () => {
+    const template =
+      "<!doctype html><html lang='en'><head><title>old</title></head>" +
+      '<body><div id="root"></div></body></html>'
+    const result = injectIntoTemplate(template, rendered({ lang: 'ar' }))
+    expect(result).toContain('<html lang="ar">')
+    expect(result).not.toContain("lang='en'")
+  })
+
+  it('replaces an unquoted template lang without duplicating the attribute', () => {
+    const template =
+      '<!doctype html><html lang=en><head><title>old</title></head>' +
+      '<body><div id="root"></div></body></html>'
+    const result = injectIntoTemplate(template, rendered({ lang: 'ar' }))
+    expect(result).toContain('<html lang="ar">')
+    expect(result).not.toContain('lang=en')
+  })
+
+  it('stamps single-quoted canonical and og:url head elements', () => {
+    const template =
+      '<!doctype html><html><head><title>old</title>' +
+      "<link rel='canonical' href='https://example.com/old' />" +
+      "<meta property='og:url' content='https://example.com/old' />" +
+      '</head><body><div id="root"></div></body></html>'
+    const result = injectIntoTemplate(
+      template,
+      rendered({
+        canonical: 'https://example.com/fresh',
+        ogUrl: 'https://example.com/fresh',
+      }),
+    )
+    expect(result).toContain('href="https://example.com/fresh"')
+    expect(result).toContain('content="https://example.com/fresh"')
+    expect(result).not.toContain('https://example.com/old')
+  })
+
   it('inserts a $ sequence in the body verbatim', () => {
     const result = injectIntoTemplate(
       TEMPLATE,

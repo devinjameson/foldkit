@@ -1,17 +1,25 @@
+import { escapeAttributeValue, escapeText } from './serialize.js'
 import { type RenderedApplication } from './server.js'
 
 const TITLE_PATTERN = /<title>[^<]*<\/title>/
 const HTML_OPEN_TAG_PATTERN = /<html([^>]*)>/
-const CANONICAL_LINK_PATTERN = /<link([^>]*rel="canonical"[^>]*?)\s*\/?>/
-const OG_URL_META_PATTERN = /<meta([^>]*property="og:url"[^>]*?)\s*\/?>/
+
+// NOTE: hand-written templates use any of HTML's three attribute forms, so
+// the head element matchers and the attribute stripper accept double-quoted,
+// single-quoted, and unquoted values. Matching only one form would silently
+// skip the element or emit a duplicate attribute whose stale first value
+// wins when the browser parses the page.
+const attributeWithValuePattern = (name: string, value: string): string =>
+  `${name}\\s*=\\s*(?:"${value}"|'${value}'|${value}(?=[\\s/>]))`
+
+const CANONICAL_LINK_PATTERN = new RegExp(
+  `<link([^>]*${attributeWithValuePattern('rel', 'canonical')}[^>]*?)\\s*/?>`,
+)
+const OG_URL_META_PATTERN = new RegExp(
+  `<meta([^>]*${attributeWithValuePattern('property', 'og:url')}[^>]*?)\\s*/?>`,
+)
 
 const DEFAULT_CONTAINER_ID = 'root'
-
-const escapeText = (value: string): string =>
-  value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-
-const escapeAttribute = (value: string): string =>
-  value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
 
 const setAttribute = (
   attributes: string,
@@ -19,10 +27,13 @@ const setAttribute = (
   value: string,
 ): string => {
   const withoutExisting = attributes.replace(
-    new RegExp(`\\s${name}="[^"]*"`, 'i'),
+    new RegExp(
+      `\\s${name}(?:\\s*=\\s*(?:"[^"]*"|'[^']*'|[^\\s>]+)|(?=[\\s>]|$))`,
+      'i',
+    ),
     '',
   )
-  return `${withoutExisting} ${name}="${escapeAttribute(value)}"`
+  return `${withoutExisting} ${name}="${escapeAttributeValue(value)}"`
 }
 
 // NOTE: rewrites the `<html>` element's `lang` and `dir` from the server
