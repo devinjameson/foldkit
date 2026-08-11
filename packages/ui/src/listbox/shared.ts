@@ -835,15 +835,17 @@ export type BaseViewInputsCommon<Item> = Readonly<{
   anchor?: AnchorConfig
   name?: string
   form?: string
-  /** Marks the Listbox unavailable with `aria-disabled="true"` and
-   *  `data-disabled` on the button, and removes its handlers so the dropdown
-   *  cannot be opened. */
+  /** Marks the Listbox unavailable with `aria-disabled="true"` on the button
+   *  and `data-disabled` on the button and the wrapper, and removes the
+   *  button's handlers so the dropdown cannot be opened. */
   isDisabled?: boolean
   /** Prevents committing a selection while exposing read-only semantics
    *  with `aria-readonly="true"` and `data-readonly` on the items panel, and
    *  `data-readonly` on the wrapper, button, and every item. The Listbox
    *  still opens, navigates, and searches. Independent of `isDisabled`:
-   *  setting both emits both attribute sets. */
+   *  setting both emits both attribute sets, and `isDisabled` still wins for
+   *  interaction, since its button drops every handler, so a Listbox that is
+   *  both read-only and disabled cannot be opened at all. */
   isReadOnly?: boolean
   isInvalid?: boolean
   ariaLabel?: string
@@ -1094,7 +1096,7 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
         return Option.some(Searched({ key, maybeTargetIndex }))
       }
 
-      const resolveCommitKey = (): Option.Option<Message> => {
+      const resolveCommitMessage = (): Option.Option<Message> => {
         if (isReadOnly) {
           return Option.as(maybeActiveItemIndex, SuppressedItemCommit())
         } else {
@@ -1107,11 +1109,11 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
       const handleItemsKeyDown = (key: string): Option.Option<Message> =>
         M.value(key).pipe(
           M.when('Escape', () => Option.some(Closed())),
-          M.when('Enter', resolveCommitKey),
+          M.when('Enter', resolveCommitMessage),
           M.when(' ', () =>
             Str.isNonEmpty(searchQuery)
               ? searchForKey(' ')
-              : resolveCommitKey(),
+              : resolveCommitMessage(),
           ),
           M.when(isNavigationKey, () =>
             Option.some(

@@ -1521,6 +1521,80 @@ describe('Listbox', () => {
         )
       })
 
+      it('moves the active item off the selection without changing it', () => {
+        Scene.scene(
+          {
+            update,
+            view: sceneView({
+              isReadOnly: true,
+              maybeSelectedValue: Option.some('Apple'),
+            }),
+          },
+          Scene.given(openModel()),
+          acknowledgeAnchor,
+          acknowledgeBackdrop,
+          Scene.expect(item(0)).toHaveAttr('data-selected', ''),
+          Scene.expect(item(0)).toHaveAttr('data-active', ''),
+          Scene.keydown(itemsContainer, 'ArrowDown'),
+          Scene.Command.resolve(ScrollIntoView, CompletedScrollIntoView()),
+          Scene.expect(item(1)).toHaveAttr('data-active', ''),
+          Scene.expect(item(0)).not.toHaveAttr('data-active'),
+          Scene.expect(item(0)).toHaveAttr('data-selected', ''),
+          Scene.expect(item(1)).not.toHaveAttr('data-selected'),
+          Scene.expect(itemsContainer).toHaveAttr(
+            'aria-activedescendant',
+            'test-item-1',
+          ),
+          Scene.expectNoOutMessage(),
+        )
+      })
+
+      it('reports Enter on the active item as SuppressedItemCommit', () => {
+        const seen: Array<Message> = []
+
+        Scene.scene(
+          {
+            update: (model: Model, message: Message) => {
+              seen.push(message)
+              return update(model, message)
+            },
+            view: sceneView({ isReadOnly: true }),
+          },
+          Scene.given(openModel()),
+          acknowledgeAnchor,
+          acknowledgeBackdrop,
+          Scene.keydown(itemsContainer, 'Enter'),
+          Scene.tap(() => {
+            expect(seen.map(message => message._tag)).toContain(
+              'SuppressedItemCommit',
+            )
+          }),
+        )
+      })
+
+      it('reports Space on the active item as SuppressedItemCommit', () => {
+        const seen: Array<Message> = []
+
+        Scene.scene(
+          {
+            update: (model: Model, message: Message) => {
+              seen.push(message)
+              return update(model, message)
+            },
+            view: sceneView({ isReadOnly: true }),
+          },
+          Scene.given(openModel()),
+          acknowledgeAnchor,
+          acknowledgeBackdrop,
+          Scene.keydown(itemsContainer, ' '),
+          Scene.tap(() => {
+            expect(seen.map(message => message._tag)).toContain(
+              'SuppressedItemCommit',
+            )
+          }),
+        )
+      })
+
       it('still opens from the button and closes on Escape', () => {
         Scene.scene(
           { update, view: sceneView({ isReadOnly: true }) },

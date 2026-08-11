@@ -65,7 +65,7 @@ To make the items panel match the trigger button width, set `width: var(--button
 | `data-open`      | Present on button and wrapper when the dropdown is open.                                                                                                        |
 | `data-active`    | Present on the item currently highlighted by keyboard or pointer.                                                                                               |
 | `data-selected`  | Present on selected item(s).                                                                                                                                    |
-| `data-disabled`  | Present on disabled items and on the button when the listbox is disabled.                                                                                       |
+| `data-disabled`  | Present on disabled items, and on the button and the wrapper when the listbox is disabled.                                                                      |
 | `data-readonly`  | Present on the wrapper, the button, the items panel, and every item when isReadOnly is true.                                                                    |
 | `data-invalid`   | Present on the button and wrapper when isInvalid is true.                                                                                                       |
 | `data-closed`    | Present during close animation when isAnimated is true.                                                                                                         |
@@ -75,17 +75,17 @@ To make the items panel match the trigger button width, set `width: var(--button
 
 Listbox uses typeahead search: typing printable characters jumps to the first matching item. Characters accumulate for 350ms before the search resets.
 
-| Key                | Description                                                                           |
-| ------------------ | ------------------------------------------------------------------------------------- |
-| `Enter / Space`    | Opens the dropdown (from button) or selects the active item (from items).             |
-| `Arrow Down`       | Opens with first item active (from button) or moves to next item.                     |
-| `Arrow Up`         | Opens with last item active (from button) or moves to previous item.                  |
-| `Home`             | Moves to the first enabled item.                                                      |
-| `End`              | Moves to the last enabled item.                                                       |
-| `Escape`           | Closes the dropdown and returns focus to the button.                                  |
-| `Type a character` | Typeahead search: jumps to the first matching item. Accumulates characters for 350ms. |
+| Key                | Description                                                                                                                              |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `Enter / Space`    | Opens the dropdown (from button) or selects the active item (from items). Read-only reports `SuppressedItemCommit` instead of selecting. |
+| `Arrow Down`       | Opens with first item active (from button) or moves to next item.                                                                        |
+| `Arrow Up`         | Opens with last item active (from button) or moves to previous item.                                                                     |
+| `Home`             | Moves to the first enabled item.                                                                                                         |
+| `End`              | Moves to the last enabled item.                                                                                                          |
+| `Escape`           | Closes the dropdown and returns focus to the button.                                                                                     |
+| `Type a character` | Typeahead search: jumps to the first matching item. Accumulates characters for 350ms.                                                    |
 
-When `isReadOnly` is true, every key in this table keeps working except the commit path: `Enter`, and `Space` with no pending search query, report `SuppressedItemCommit` on the active item instead of selecting it. Opening, closing, navigation, and typeahead are unaffected. See [Read-Only](#read-only).
+`Space` reaches the commit path only when no search query is pending; with one in flight it types into the query instead. Opening, closing, navigation, and typeahead are unaffected by `isReadOnly`. See [Read-Only](#read-only).
 
 ## Accessibility
 
