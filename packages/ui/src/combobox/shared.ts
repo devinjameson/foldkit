@@ -1147,6 +1147,10 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
         onSome: index => [h.AriaActiveDescendant(itemId(id, index))],
       })
 
+      const onInputAttributes = isReadOnly
+        ? []
+        : [h.OnInput(value => UpdatedInputValue({ value }))]
+
       const resolvedInputAttributes = [
         h.Id(`${id}-input`),
         h.Role('combobox'),
@@ -1162,9 +1166,7 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
         ...(isDisabled
           ? [h.AriaDisabled(true), h.DataAttribute('disabled', '')]
           : [
-              ...(isReadOnly
-                ? []
-                : [h.OnInput(value => UpdatedInputValue({ value }))]),
+              ...onInputAttributes,
               h.OnKeyDownPreventDefault(handleInputKeyDown),
               h.OnBlur(BlurredInput({ restingInputValue })),
               ...(openOnFocus
