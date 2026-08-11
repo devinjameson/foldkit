@@ -6,7 +6,13 @@ import tailwindcss from '@tailwindcss/vite'
 import { foldkitAliases } from '../vite.aliases'
 
 export default defineConfig({
-  plugins: [tailwindcss(), foldkit({ devToolsMcpPort: 9993 })],
+  plugins: [
+    tailwindcss(),
+    foldkit({
+      devToolsMcpPort: 9993,
+      ssr: { serverEntry: '/src/entry.server.ts' },
+    }),
+  ],
   resolve: {
     alias: foldkitAliases(__dirname),
   },
