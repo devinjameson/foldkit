@@ -41,8 +41,8 @@ export const init = (config: InitConfig): Model => baseInit(config)
 
 /** Processes a combobox message and returns the next model, commands, and optional OutMessage. Stays open on selection (multi-select behavior); emits a `Selected({ value })` OutMessage the parent folds by toggling the value's membership, and `ClearedSelection` when a nullable combobox closes with an empty input. The multi-select input always rests empty on close, so it ignores the message's `restingInputValue`; multi consumers pass `''`. */
 export const update = makeUpdate<Model>({
-  handleClose: model => {
-    if (model.nullable && model.inputValue === '') {
+  handleClose: (model, _restingInputValue, isClearable) => {
+    if (isClearable && model.nullable && model.inputValue === '') {
       return [
         evo(closedBaseModel(model), { inputValue: () => '' }),
         Option.some(ClearedSelection()),
@@ -78,7 +78,7 @@ export const open = (model: Model): UpdateReturn =>
  *  focus and modal commands. The multi-select input always rests empty on
  *  close. Use this in domain-event handlers to close the combobox. */
 export const close = (model: Model): UpdateReturn =>
-  update(model, Closed({ restingInputValue: '' }))
+  update(model, Closed({ restingInputValue: '', isClearable: true }))
 
 /** Programmatically activates an item in the multi-select combobox. Emits
  *  `Selected({ value })`; the parent toggles the value's membership. */
@@ -152,6 +152,7 @@ export const create = <Item extends string = string>(): Bundle<Item> => {
       ),
     open: model =>
       typedUpdate(model, Opened({ maybeActiveItemIndex: Option.none() })),
-    close: model => typedUpdate(model, Closed({ restingInputValue: '' })),
+    close: model =>
+      typedUpdate(model, Closed({ restingInputValue: '', isClearable: true })),
   }
 }

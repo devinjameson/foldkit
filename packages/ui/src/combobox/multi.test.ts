@@ -196,7 +196,9 @@ describe('Combobox.Multi', () => {
             isOpen: true,
             inputValue: 'app',
           }),
-          Story.message(Closed({ restingInputValue: 'Apple' })),
+          Story.message(
+            Closed({ restingInputValue: 'Apple', isClearable: true }),
+          ),
           Story.Command.resolve(FocusInput, CompletedFocusInput()),
           Story.model(model => {
             expect(model.isOpen).toBe(false)
@@ -210,7 +212,7 @@ describe('Combobox.Multi', () => {
           update,
           Story.given(init({ id: 'test', nullable: true })),
           Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
-          Story.message(Closed({ restingInputValue: '' })),
+          Story.message(Closed({ restingInputValue: '', isClearable: true })),
           Story.expectOutMessage(ClearedSelection()),
           Story.Command.resolve(FocusInput, CompletedFocusInput()),
           Story.model(model => {
@@ -225,7 +227,9 @@ describe('Combobox.Multi', () => {
         Story.story(
           update,
           Story.given(closedModel),
-          Story.message(Closed({ restingInputValue: 'Stale' })),
+          Story.message(
+            Closed({ restingInputValue: 'Stale', isClearable: true }),
+          ),
           Story.expectNoOutMessage(),
           Story.Command.expectNone(),
           Story.model(model => {
@@ -286,7 +290,7 @@ describe('Combobox.Multi', () => {
       Story.story(
         update,
         givenOpenModal,
-        Story.message(Closed({ restingInputValue: '' })),
+        Story.message(Closed({ restingInputValue: '', isClearable: true })),
         Story.Command.resolveAllExact(
           [FocusInput, CompletedFocusInput()],
           [UnlockScroll, CompletedUnlockScroll()],
@@ -690,6 +694,38 @@ describe('Combobox.Multi', () => {
           Scene.expect(item(0)).toHaveClass('is-read-only'),
           acknowledgeAnchor,
           acknowledgeBackdrop,
+        )
+      })
+
+      it('does not clear the selection when Escape closes a nullable group', () => {
+        Scene.scene(
+          {
+            update,
+            view: sceneView({ isReadOnly: true, selectedValues: ['Apple'] }),
+          },
+          Scene.given({ ...openMultiModel(), nullable: true, inputValue: '' }),
+          acknowledgeAnchor,
+          acknowledgeBackdrop,
+          Scene.keydown(input, 'Escape'),
+          Scene.expectNoOutMessage(),
+          Scene.Command.resolve(FocusInput, CompletedFocusInput()),
+          Scene.Mount.expectEnded(AnchorCombobox, PortalComboboxBackdrop),
+        )
+      })
+
+      it('clears the selection when Escape closes a nullable group that is not read-only', () => {
+        Scene.scene(
+          {
+            update,
+            view: sceneView({ selectedValues: ['Apple'] }),
+          },
+          Scene.given({ ...openMultiModel(), nullable: true, inputValue: '' }),
+          acknowledgeAnchor,
+          acknowledgeBackdrop,
+          Scene.keydown(input, 'Escape'),
+          Scene.expectOutMessage(ClearedSelection()),
+          Scene.Command.resolve(FocusInput, CompletedFocusInput()),
+          Scene.Mount.expectEnded(AnchorCombobox, PortalComboboxBackdrop),
         )
       })
     })
