@@ -1553,9 +1553,7 @@ describe('Combobox', () => {
       const button = Scene.selector('#test-button')
       const item = (index: number) => Scene.selector(`#test-item-${index}`)
 
-      const readOnlyView = (
-        overrides: Parameters<typeof sceneView>[0] = {},
-      ) =>
+      const readOnlyView = (overrides: Parameters<typeof sceneView>[0] = {}) =>
         sceneView({
           isReadOnly: true,
           maybeSelectedValue: Option.some('Apple'),
@@ -1764,6 +1762,119 @@ describe('Combobox', () => {
             )
           }),
           Scene.expectNoOutMessage(),
+        )
+      })
+
+      it('does not commit while navigating an immediate combobox', () => {
+        Scene.scene(
+          {
+            update,
+            view: readOnlyView(),
+          },
+          Scene.given({ ...openModel(), immediate: true }),
+          acknowledgeAnchor,
+          acknowledgeBackdrop,
+          Scene.keydown(input, 'ArrowDown'),
+          Scene.expect(item(1)).toHaveAttr('data-active', ''),
+          Scene.expectNoOutMessage(),
+          Scene.Command.resolve(ScrollIntoView, CompletedScrollIntoView()),
+        )
+      })
+
+      it('commits while navigating an immediate combobox when not read-only', () => {
+        Scene.scene(
+          {
+            update,
+            view: sceneView({
+              maybeSelectedValue: Option.some('Apple'),
+              restingInputValue: 'Apple',
+            }),
+          },
+          Scene.given({ ...openModel(), immediate: true }),
+          acknowledgeAnchor,
+          acknowledgeBackdrop,
+          Scene.keydown(input, 'ArrowDown'),
+          Scene.expectOutMessage(Selected({ value: 'Banana' })),
+          Scene.Command.resolve(ScrollIntoView, CompletedScrollIntoView()),
+        )
+      })
+
+      it('moves the active item off the selection without changing it', () => {
+        Scene.scene(
+          {
+            update,
+            view: readOnlyView(),
+          },
+          Scene.given(openModel()),
+          acknowledgeAnchor,
+          acknowledgeBackdrop,
+          Scene.expect(item(0)).toHaveAttr('data-selected', ''),
+          Scene.expect(item(0)).toHaveAttr('data-active', ''),
+          Scene.keydown(input, 'ArrowDown'),
+          Scene.expect(item(1)).toHaveAttr('data-active', ''),
+          Scene.expect(item(0)).not.toHaveAttr('data-active'),
+          Scene.expect(item(0)).toHaveAttr('data-selected', ''),
+          Scene.expect(item(1)).not.toHaveAttr('data-selected'),
+          Scene.expect(input).toHaveAttr(
+            'aria-activedescendant',
+            'test-item-1',
+          ),
+          Scene.expectNoOutMessage(),
+          Scene.Command.resolve(ScrollIntoView, CompletedScrollIntoView()),
+        )
+      })
+
+      it('keeps Home and End navigation live', () => {
+        Scene.scene(
+          {
+            update,
+            view: readOnlyView(),
+          },
+          Scene.given(openModel()),
+          acknowledgeAnchor,
+          acknowledgeBackdrop,
+          Scene.keydown(input, 'End'),
+          Scene.expect(item(1)).toHaveAttr('data-active', ''),
+          Scene.expectNoOutMessage(),
+          Scene.Command.resolve(ScrollIntoView, CompletedScrollIntoView()),
+          Scene.keydown(input, 'Home'),
+          Scene.expect(item(0)).toHaveAttr('data-active', ''),
+          Scene.expectNoOutMessage(),
+          Scene.Command.resolve(ScrollIntoView, CompletedScrollIntoView()),
+        )
+      })
+
+      it('still opens with ArrowDown and closes on Escape', () => {
+        Scene.scene(
+          {
+            update,
+            view: readOnlyView(),
+          },
+          Scene.given(closedModel()),
+          Scene.keydown(input, 'ArrowDown'),
+          Scene.expect(itemsContainer).toExist(),
+          acknowledgeAnchor,
+          acknowledgeBackdrop,
+          Scene.keydown(input, 'Escape'),
+          Scene.Command.resolve(FocusInput, CompletedFocusInput()),
+          Scene.expect(itemsContainer).toBeAbsent(),
+          Scene.Mount.expectEnded(AnchorCombobox, PortalComboboxBackdrop),
+        )
+      })
+
+      it('still opens from the toggle button', () => {
+        Scene.scene(
+          {
+            update,
+            view: readOnlyView({ buttonContent: toggleButtonContent }),
+          },
+          Scene.given(closedModel()),
+          acknowledgePreventBlur,
+          Scene.click(button),
+          Scene.Command.resolve(FocusInput, CompletedFocusInput()),
+          Scene.expect(itemsContainer).toExist(),
+          acknowledgeAnchor,
+          acknowledgeBackdrop,
         )
       })
 
