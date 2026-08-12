@@ -1,5 +1,6 @@
 import { Array, Option, Schema as S, pipe } from 'effect'
-import { existsSync } from 'node:fs'
+import { imageSize } from 'image-size'
+import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, test } from 'vitest'
@@ -102,23 +103,34 @@ describe('post covers', () => {
     '../../../public',
   )
 
-  test('every declared cover file exists in public/', () => {
-    const declaredCovers = pipe(
-      posts,
-      Array.map(post =>
-        Option.map(maybePostCover(post.frontmatter), cover => ({
-          slug: post.slug,
-          cover,
-        })),
-      ),
-      Array.getSomes,
-    )
+  const declaredCovers = pipe(
+    posts,
+    Array.map(post =>
+      Option.map(maybePostCover(post.frontmatter), cover => ({
+        slug: post.slug,
+        cover,
+      })),
+    ),
+    Array.getSomes,
+  )
 
+  test('every declared cover file exists in public/', () => {
     for (const { slug, cover } of declaredCovers) {
       expect(
         existsSync(join(PUBLIC_DIR, cover.src)),
         `${slug} declares cover ${cover.src}, which is not in public/`,
       ).toBe(true)
+    }
+  })
+
+  test('every declared cover matches its file dimensions', () => {
+    for (const { slug, cover } of declaredCovers) {
+      const measured = imageSize(readFileSync(join(PUBLIC_DIR, cover.src)))
+
+      expect(
+        { width: measured.width, height: measured.height },
+        `${slug} declares ${cover.width}x${cover.height} for ${cover.src}`,
+      ).toEqual({ width: cover.width, height: cover.height })
     }
   })
 })
@@ -167,17 +179,20 @@ describe('PostFrontmatter covers', () => {
     date: '2026-08-01',
   }
 
+  const coverFields = {
+    coverImage: '/blog/some-post/cover.webp',
+    coverImageAlt: 'A paper crane mid-fold',
+    coverImageWidth: '1600',
+    coverImageHeight: '1067',
+  }
+
   test('accepts a post with no cover', () => {
     expect(() => decodePostFrontmatter(withoutCover)).not.toThrow()
   })
 
-  test('accepts coverImage and coverImageAlt declared together', () => {
+  test('accepts the four cover fields declared together', () => {
     expect(() =>
-      decodePostFrontmatter({
-        ...withoutCover,
-        coverImage: '/blog/some-post/cover.webp',
-        coverImageAlt: 'A paper crane mid-fold',
-      }),
+      decodePostFrontmatter({ ...withoutCover, ...coverFields }),
     ).not.toThrow()
   })
 
@@ -185,27 +200,24 @@ describe('PostFrontmatter covers', () => {
     expect(() =>
       decodePostFrontmatter({
         ...withoutCover,
-        coverImage: '/blog/some-post/cover.webp',
+        ...coverFields,
         coverImageAlt: '',
       }),
     ).not.toThrow()
   })
 
-  test('rejects coverImage without coverImageAlt', () => {
-    expect(() =>
-      decodePostFrontmatter({
-        ...withoutCover,
-        coverImage: '/blog/some-post/cover.webp',
-      }),
-    ).toThrow()
-  })
+  test.each([
+    'coverImage',
+    'coverImageAlt',
+    'coverImageWidth',
+    'coverImageHeight',
+  ])('rejects a cover missing %s', missingField => {
+    const partialCover = Object.fromEntries(
+      Object.entries(coverFields).filter(([field]) => field !== missingField),
+    )
 
-  test('rejects coverImageAlt without coverImage', () => {
     expect(() =>
-      decodePostFrontmatter({
-        ...withoutCover,
-        coverImageAlt: 'A paper crane mid-fold',
-      }),
+      decodePostFrontmatter({ ...withoutCover, ...partialCover }),
     ).toThrow()
   })
 
@@ -213,11 +225,24 @@ describe('PostFrontmatter covers', () => {
     expect(() =>
       decodePostFrontmatter({
         ...withoutCover,
+        ...coverFields,
         coverImage: 'blog/some-post/cover.webp',
-        coverImageAlt: 'A paper crane mid-fold',
       }),
     ).toThrow()
   })
+
+  test.each(['0', '-100', '1600.5', '16 00', 'wide'])(
+    'rejects the dimension %s',
+    dimension => {
+      expect(() =>
+        decodePostFrontmatter({
+          ...withoutCover,
+          ...coverFields,
+          coverImageWidth: dimension,
+        }),
+      ).toThrow()
+    },
+  )
 })
 
 describe('maybePostCover', () => {
@@ -230,11 +255,15 @@ describe('maybePostCover', () => {
       date: '2026-08-01',
       coverImage: '/blog/some-post/cover.webp',
       coverImageAlt: 'A paper crane mid-fold',
+      coverImageWidth: '1600',
+      coverImageHeight: '1067',
     })
 
     expect(Option.getOrThrow(maybePostCover(frontmatter))).toEqual({
       src: '/blog/some-post/cover.webp',
       alt: 'A paper crane mid-fold',
+      width: 1600,
+      height: 1067,
     })
   })
 

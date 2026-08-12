@@ -16,12 +16,22 @@ import { type BlogPost, formatPostDate, posts } from './posts'
 // VIEW
 
 const entryCoverImageView = (cover: PostCover, isFirstEntry: boolean): Html =>
-  ih.img([
-    ih.Src(cover.src),
-    ih.Alt(cover.alt),
-    ...(isFirstEntry ? [] : [ih.Loading('lazy')]),
-    ih.Class('w-full rounded-lg mb-4'),
-  ])
+  ih.div(
+    [ih.Class('relative overflow-hidden rounded-lg mb-4')],
+    [
+      ih.div([
+        ih.Class('absolute inset-0 bg-gray-200 dark:bg-gray-800 animate-pulse'),
+      ]),
+      ih.img([
+        ih.Src(cover.src),
+        ih.Alt(cover.alt),
+        ih.Width(String(cover.width)),
+        ih.Height(String(cover.height)),
+        ...(isFirstEntry ? [] : [ih.Loading('lazy')]),
+        ih.Class('relative w-full h-auto'),
+      ]),
+    ],
+  )
 
 const postEntry = (post: BlogPost, isFirstEntry: boolean): Html =>
   ih.keyed('article')(

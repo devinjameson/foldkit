@@ -28,11 +28,21 @@ const backToBlogLink: Html = ih.a(
 )
 
 const coverImageView = (cover: PostCover): Html =>
-  ih.img([
-    ih.Src(cover.src),
-    ih.Alt(cover.alt),
-    ih.Class('w-full rounded-lg mb-8'),
-  ])
+  ih.div(
+    [ih.Class('relative overflow-hidden rounded-lg mb-8')],
+    [
+      ih.div([
+        ih.Class('absolute inset-0 bg-gray-200 dark:bg-gray-800 animate-pulse'),
+      ]),
+      ih.img([
+        ih.Src(cover.src),
+        ih.Alt(cover.alt),
+        ih.Width(String(cover.width)),
+        ih.Height(String(cover.height)),
+        ih.Class('relative w-full h-auto'),
+      ]),
+    ],
+  )
 
 const postView = (
   post: BlogPost,

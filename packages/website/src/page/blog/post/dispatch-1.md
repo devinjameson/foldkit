@@ -4,6 +4,8 @@ description: APS-4 is on the fritz again.
 date: 2026-08-11
 coverImage: /blog/dispatch-1/cover.webp
 coverImageAlt: Yellow and coral triangles glide toward a huge dark planet across a teal sky, past dashed flight paths and a small green moon, with bands of green, yellow, and gray along the left edge.
+coverImageWidth: 1600
+coverImageHeight: 1067
 ---
 
 _Beep. Beep. Beep._

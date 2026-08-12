@@ -45,6 +45,7 @@
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
     "esbuild": "^0.28.1",
     "happy-dom": "^20.10.4",
+    "image-size": "^2.0.2",
     "pagefind": "^1.5.2",
     "playwright": "^1.61.0",
     "prettier": "^3.8.4",

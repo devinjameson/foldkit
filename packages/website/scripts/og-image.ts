@@ -5,7 +5,6 @@ import {
   Effect,
   Match as M,
   Option,
-  Record as Record_,
   String as String_,
   pipe,
 } from 'effect'
@@ -63,12 +62,6 @@ const loadFonts = Effect.gen(function* () {
 
 const OG_WIDTH = 1200
 const OG_HEIGHT = 630
-
-export type OgImageSize = Readonly<{ width: number; height: number }>
-
-export type OgImageSizeBySlug = Readonly<Record<string, OgImageSize>>
-
-const SATORI_OG_IMAGE_SIZE: OgImageSize = { width: OG_WIDTH, height: OG_HEIGHT }
 
 const escapeHtml = (text: string): string =>
   text
@@ -206,8 +199,6 @@ const urlPathToSlug = (urlPath: string): string => {
 
 // COVER IMAGES
 
-const OG_COVER_MAX_WIDTH = 1200
-
 const maybeRouteCover = (route: AppRoute): Option.Option<PostCover> =>
   M.value(route).pipe(
     M.tag('BlogPost', ({ postSlug }) =>
@@ -228,12 +219,12 @@ const coverMimeType = (src: string): Effect.Effect<string, Error> =>
     onSome: Effect.succeed,
   })
 
-type RenderedOgImage = Readonly<{ bytes: Uint8Array; size: OgImageSize }>
-
 // NOTE: Chromium decodes the cover and re-encodes it as PNG because resvg
 // cannot embed webp sources, and PNG is the one format every OG consumer
-// renders. The string-form evaluate polyfills the `__name` helper tsx injects
-// into compiled callbacks; see the note on PAGE_INIT_SCRIPT in prerender.ts.
+// renders. The cover is center-cropped onto the standard 1200x630 card so
+// every platform shows the same crop instead of choosing its own. The
+// string-form evaluate polyfills the `__name` helper tsx injects into
+// compiled callbacks; see the note on PAGE_INIT_SCRIPT in prerender.ts.
 const renderCoverOgImage = (browser: Browser, cover: PostCover) =>
   Effect.gen(function* () {
     const mimeType = yield* coverMimeType(cover.src)
@@ -241,7 +232,7 @@ const renderCoverOgImage = (browser: Browser, cover: PostCover) =>
     const coverBytes = yield* fs.readFile(join(PUBLIC_DIR, cover.src))
     const sourceUri = `data:${mimeType};base64,${Buffer.from(coverBytes).toString('base64')}`
 
-    const rendered = yield* Effect.acquireUseRelease(
+    const pngBase64 = yield* Effect.acquireUseRelease(
       Effect.tryPromise(() => browser.newPage()),
       page =>
         Effect.gen(function* () {
@@ -250,47 +241,50 @@ const renderCoverOgImage = (browser: Browser, cover: PostCover) =>
           )
           return yield* Effect.tryPromise(() =>
             page.evaluate(
-              async ({ maxWidth, source }) => {
+              async ({ source, targetHeight, targetWidth }) => {
                 const image = new Image()
                 image.src = source
                 await image.decode()
-                if (image.naturalWidth === 0) {
+                if (image.naturalWidth === 0 || image.naturalHeight === 0) {
                   throw new Error(
-                    'Cover image decoded with no intrinsic width.',
+                    'Cover image decoded with no intrinsic dimensions.',
                   )
                 }
-                const scale = Math.min(1, maxWidth / image.naturalWidth)
-                const width = Math.round(image.naturalWidth * scale)
-                const height = Math.round(image.naturalHeight * scale)
                 const canvas = document.createElement('canvas')
-                canvas.width = width
-                canvas.height = height
+                canvas.width = targetWidth
+                canvas.height = targetHeight
                 const context = canvas.getContext('2d')
                 if (context === null) {
                   throw new Error('Canvas 2d context is unavailable.')
                 }
-                context.drawImage(image, 0, 0, width, height)
+                const scale = Math.max(
+                  targetWidth / image.naturalWidth,
+                  targetHeight / image.naturalHeight,
+                )
+                const drawWidth = image.naturalWidth * scale
+                const drawHeight = image.naturalHeight * scale
+                context.drawImage(
+                  image,
+                  (targetWidth - drawWidth) / 2,
+                  (targetHeight - drawHeight) / 2,
+                  drawWidth,
+                  drawHeight,
+                )
                 const pngPrefix = 'data:image/png;base64,'
-                return {
-                  height,
-                  pngBase64: canvas
-                    .toDataURL('image/png')
-                    .slice(pngPrefix.length),
-                  width,
-                }
+                return canvas.toDataURL('image/png').slice(pngPrefix.length)
               },
-              { maxWidth: OG_COVER_MAX_WIDTH, source: sourceUri },
+              {
+                source: sourceUri,
+                targetHeight: OG_HEIGHT,
+                targetWidth: OG_WIDTH,
+              },
             ),
           )
         }),
       page => Effect.promise(() => page.close()),
     )
 
-    const renderedOgImage: RenderedOgImage = {
-      bytes: Buffer.from(rendered.pngBase64, 'base64'),
-      size: { width: rendered.width, height: rendered.height },
-    }
-    return renderedOgImage
+    return Buffer.from(pngBase64, 'base64')
   })
 
 // GENERATION
@@ -312,14 +306,8 @@ const renderSatoriOgImage = (fonts: Array<Font>, metadata: PageMetadata) =>
       fitTo: { mode: 'width', value: OG_WIDTH },
     })
 
-    const renderedOgImage: RenderedOgImage = {
-      bytes: resvg.render().asPng(),
-      size: SATORI_OG_IMAGE_SIZE,
-    }
-    return renderedOgImage
+    return resvg.render().asPng()
   })
-
-type OgImageEntry = Readonly<{ slug: string; size: OgImageSize }>
 
 const renderOgImage =
   (
@@ -333,7 +321,7 @@ const renderOgImage =
     const slug = urlPathToSlug(routeToUrlPath(route))
     return pipe(
       Effect.gen(function* () {
-        const rendered = yield* Option.match(maybeRouteCover(route), {
+        const png = yield* Option.match(maybeRouteCover(route), {
           onNone: () =>
             renderSatoriOgImage(
               fonts,
@@ -343,14 +331,14 @@ const renderOgImage =
         })
 
         const fs = yield* FileSystem.FileSystem
-        yield* fs.writeFile(resolve(ogDir, `${slug}.png`), rendered.bytes)
+        yield* fs.writeFile(resolve(ogDir, `${slug}.png`), png)
         yield* Console.log(`  ✓ og/${slug}.png`)
-        return Option.some<OgImageEntry>({ slug, size: rendered.size })
+        return Option.some(slug)
       }),
       Effect.catch(error =>
         Effect.as(
           Console.warn(`  ✗ og/${slug}.png: ${String(error)}`),
-          Option.none<OgImageEntry>(),
+          Option.none<string>(),
         ),
       ),
     )
@@ -371,7 +359,7 @@ export const generateOgImages = (
     const ogDir = resolve(distDir, 'og')
     yield* fs.makeDirectory(ogDir, { recursive: true })
 
-    const entries = yield* Effect.forEach(
+    const results = yield* Effect.forEach(
       routes,
       renderOgImage(
         fonts,
@@ -383,14 +371,9 @@ export const generateOgImages = (
       { concurrency: 8 },
     )
 
-    const ogImageEntries = Array.getSomes(entries)
-
-    yield* Console.log(`Generated ${Array.length(ogImageEntries)} OG images.`)
-
-    return Record_.fromIterableWith(ogImageEntries, ({ slug, size }) => [
-      slug,
-      size,
-    ])
+    yield* Console.log(
+      `Generated ${Array.length(Array.getSomes(results))} OG images.`,
+    )
   })
 
 // STRUCTURED DATA
@@ -451,7 +434,6 @@ export const injectMetaTags = (
   route: AppRoute,
   urlPath: string,
   resolveApiModuleName: ApiModuleNameResolver,
-  ogImageSizes: OgImageSizeBySlug,
 ): string => {
   const metadata = routeToMetadata(route, resolveApiModuleName)
   const slug = urlPathToSlug(urlPath)
@@ -461,11 +443,6 @@ export const injectMetaTags = (
     metadata.title === 'Foldkit'
       ? 'Foldkit - TypeScript Frontend Framework Built on Effect-TS | Elm Architecture'
       : `${metadata.title} - Foldkit | Effect-TS Frontend Framework`
-
-  const ogImageSize = Option.getOrElse(
-    Record_.get(ogImageSizes, slug),
-    () => SATORI_OG_IMAGE_SIZE,
-  )
 
   const ogImageAlt = pipe(
     maybeRouteCover(route),
@@ -502,14 +479,6 @@ export const injectMetaTags = (
     [
       /property="og:image"\s+content="[^"]*"/,
       `property="og:image" content="${ogImageUrl}"`,
-    ],
-    [
-      /property="og:image:width"\s+content="[^"]*"/,
-      `property="og:image:width" content="${ogImageSize.width}"`,
-    ],
-    [
-      /property="og:image:height"\s+content="[^"]*"/,
-      `property="og:image:height" content="${ogImageSize.height}"`,
     ],
     [
       /property="og:image:alt"\s+content="[^"]*"/,

@@ -1,4 +1,4 @@
-import { Array, Option, Schema as S, String as String_ } from 'effect'
+import { Array, Option, Schema as S, String as String_, pipe } from 'effect'
 
 // POST FRONTMATTER
 
@@ -46,6 +46,21 @@ const PostCoverImagePath = S.String.check(
   ),
 )
 
+const POSITIVE_INTEGER_PATTERN = /^[1-9][0-9]*$/
+
+const PostCoverImageDimension = S.String.check(
+  S.makeFilter(
+    value =>
+      POSITIVE_INTEGER_PATTERN.test(value)
+        ? undefined
+        : 'not a positive integer',
+    {
+      identifier: 'PostCoverImageDimension',
+      description: 'a positive integer pixel count',
+    },
+  ),
+)
+
 /**
  * Frontmatter schema for blog posts. One schema drives both halves of the
  * pipeline: the markdown Vite plugin validates every post's frontmatter
@@ -54,10 +69,12 @@ const PostCoverImagePath = S.String.check(
  * `frontmatter` export with it at module load. Dates must be real calendar
  * dates in `YYYY-MM-DD` form, leap years included.
  *
- * A post with a cover declares `coverImage` and `coverImageAlt` together.
+ * A post with a cover declares all four `coverImage*` fields together.
  * `coverImage` is a root-relative path to a file under `public/`, by
  * convention `/blog/<slug>/cover.<ext>`. An empty `coverImageAlt` marks the
- * image decorative.
+ * image decorative. `coverImageWidth` and `coverImageHeight` are the file's
+ * pixel dimensions, which the views use to reserve layout space before the
+ * image loads.
  *
  * Kept dependency-light (Schema only) so `vite.config.ts` and
  * `vitest.config.ts` can import it without pulling in the browser view layer.
@@ -76,15 +93,29 @@ export const PostFrontmatter = S.Struct({
   ),
   coverImage: S.optional(PostCoverImagePath),
   coverImageAlt: S.optional(S.String),
+  coverImageWidth: S.optional(PostCoverImageDimension),
+  coverImageHeight: S.optional(PostCoverImageDimension),
 }).check(
   S.makeFilter(
-    fields =>
-      (fields.coverImage === undefined) === (fields.coverImageAlt === undefined)
+    fields => {
+      const coverFields = [
+        fields.coverImage,
+        fields.coverImageAlt,
+        fields.coverImageWidth,
+        fields.coverImageHeight,
+      ]
+      const declaredCount = pipe(
+        coverFields,
+        Array.filter(field => field !== undefined),
+        Array.length,
+      )
+      return declaredCount === 0 || declaredCount === coverFields.length
         ? undefined
-        : 'coverImage and coverImageAlt must be declared together',
+        : 'coverImage, coverImageAlt, coverImageWidth, and coverImageHeight must be declared together'
+    },
     {
-      identifier: 'PostCoverPair',
-      description: 'coverImage and coverImageAlt declared together',
+      identifier: 'PostCoverFields',
+      description: 'the four coverImage* fields declared together',
     },
   ),
 )
@@ -94,18 +125,21 @@ export type PostFrontmatter = typeof PostFrontmatter.Type
 // POST COVER
 
 /**
- * A post's cover image: the root-relative path it serves from and its alt
- * text, which is empty for a decorative image.
+ * A post's cover image: the root-relative path it serves from, its alt text
+ * (empty for a decorative image), and its pixel dimensions, which reserve
+ * layout space before the image loads.
  */
 export type PostCover = Readonly<{
   src: string
   alt: string
+  width: number
+  height: number
 }>
 
 /**
  * The cover a post's frontmatter declares, when it declares one. The schema
- * guarantees the two cover fields travel together, so a lone field reads as
- * no cover rather than a partial one.
+ * guarantees the four cover fields travel together, so a partial declaration
+ * reads as no cover rather than a broken one.
  */
 export const maybePostCover = (
   frontmatter: PostFrontmatter,
@@ -113,4 +147,12 @@ export const maybePostCover = (
   Option.all({
     src: Option.fromNullishOr(frontmatter.coverImage),
     alt: Option.fromNullishOr(frontmatter.coverImageAlt),
+    width: Option.map(
+      Option.fromNullishOr(frontmatter.coverImageWidth),
+      Number,
+    ),
+    height: Option.map(
+      Option.fromNullishOr(frontmatter.coverImageHeight),
+      Number,
+    ),
   })

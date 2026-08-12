@@ -45,15 +45,7 @@ describe('injectMetaTags', () => {
     const urlPath = `/blog/${coverPost.slug}`
     const ogSlug = `blog-${coverPost.slug}`
 
-    const html = injectMetaTags(
-      baseHtml,
-      route,
-      urlPath,
-      resolveApiModuleName,
-      {
-        [ogSlug]: { width: 1200, height: 800 },
-      },
-    )
+    const html = injectMetaTags(baseHtml, route, urlPath, resolveApiModuleName)
 
     it('keeps the og image at the generated PNG path', () => {
       expect(html).toContain(
@@ -64,9 +56,9 @@ describe('injectMetaTags', () => {
       )
     })
 
-    it('reports the generated image dimensions', () => {
+    it('keeps the standard card dimensions', () => {
       expect(html).toContain('property="og:image:width" content="1200"')
-      expect(html).toContain('property="og:image:height" content="800"')
+      expect(html).toContain('property="og:image:height" content="630"')
     })
 
     it('uses the cover alt text for og:image:alt', () => {
@@ -79,23 +71,12 @@ describe('injectMetaTags', () => {
     const route = BlogPostRoute({ postSlug: coverlessPost.slug })
     const urlPath = `/blog/${coverlessPost.slug}`
 
-    const html = injectMetaTags(
-      baseHtml,
-      route,
-      urlPath,
-      resolveApiModuleName,
-      {},
-    )
+    const html = injectMetaTags(baseHtml, route, urlPath, resolveApiModuleName)
 
     it('falls back to the full title for og:image:alt', () => {
       expect(html).toContain(
         `property="og:image:alt" content="${coverlessPost.frontmatter.title} - Foldkit | Effect-TS Frontend Framework"`,
       )
-    })
-
-    it('falls back to the satori card dimensions', () => {
-      expect(html).toContain('property="og:image:width" content="1200"')
-      expect(html).toContain('property="og:image:height" content="630"')
     })
   })
 
@@ -105,17 +86,12 @@ describe('injectMetaTags', () => {
       HomeRoute(),
       '/',
       resolveApiModuleName,
-      {
-        home: { width: 1200, height: 630 },
-      },
     )
 
-    it('uses the full title for og:image:alt and the satori card dimensions', () => {
+    it('uses the full title for og:image:alt', () => {
       expect(html).toContain(
         'property="og:image:alt" content="Foldkit - TypeScript Frontend Framework Built on Effect-TS | Elm Architecture"',
       )
-      expect(html).toContain('property="og:image:width" content="1200"')
-      expect(html).toContain('property="og:image:height" content="630"')
     })
   })
 })

@@ -226,11 +226,7 @@ import {
   urlPathToMarkdownPath,
 } from './markdown'
 import { type ApiModuleNameResolver, routeToMetadata } from './metadata'
-import {
-  type OgImageSizeBySlug,
-  generateOgImages,
-  injectMetaTags,
-} from './og-image'
+import { generateOgImages, injectMetaTags } from './og-image'
 
 // ROUTES
 
@@ -621,7 +617,6 @@ const prerenderRoute =
     browser: Browser,
     baseHtml: string,
     resolveApiModuleName: ApiModuleNameResolver,
-    ogImageSizes: OgImageSizeBySlug,
   ) =>
   (route: AppRoute) =>
     Effect.gen(function* () {
@@ -637,7 +632,6 @@ const prerenderRoute =
         route,
         urlPath,
         resolveApiModuleName,
-        ogImageSizes,
       )
 
       const fs = yield* FileSystem.FileSystem
@@ -806,7 +800,7 @@ const program = Effect.scoped(
     const resolveApiModuleName = buildApiModuleNameResolver(apiModules)
     const routes = enumerateRoutes(apiModuleSlugs)
 
-    const ogImageSizes = yield* generateOgImages(
+    yield* generateOgImages(
       routes,
       routeToUrlPath,
       DIST_DIR,
@@ -827,7 +821,7 @@ const program = Effect.scoped(
 
     const results = yield* Effect.forEach(
       routes,
-      prerenderRoute(browser, baseHtml, resolveApiModuleName, ogImageSizes),
+      prerenderRoute(browser, baseHtml, resolveApiModuleName),
       { concurrency: 4 },
     )
 
