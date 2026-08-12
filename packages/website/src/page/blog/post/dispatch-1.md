@@ -38,7 +38,7 @@ But I’m past the point of commanding this thing with my own two hands. Not in 
 
 APS-4 has 10,000 hands. Each hand has 10,000 fingers. Even its fingers have fingers.
 
-I’m not proud enough to cosplay as one billion fingers.
+I’m not proud enough to cosplay as a billion fingers.
 
 _Beep. Beep. Beep._
 
