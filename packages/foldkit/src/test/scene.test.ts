@@ -132,6 +132,12 @@ import {
   view as scorePanelView,
 } from './apps/scorePanel.js'
 import {
+  appId as selectiveKeysAppId,
+  initialModel as selectiveKeysInitialModel,
+  update as selectiveKeysUpdate,
+  view as selectiveKeysView,
+} from './apps/selectiveKeys.js'
+import {
   SucceededUploadFile,
   UploadFile,
   initialModel as initialUploadsModel,
@@ -5173,4 +5179,87 @@ describe('attribute builders map to DOM names', () => {
       )
     },
   )
+})
+
+describe('expectHandled and expectIgnored', () => {
+  const app = { update: selectiveKeysUpdate, view: selectiveKeysView }
+  const target = Scene.selector(`#${selectiveKeysAppId}`)
+
+  test('expectHandled passes when the handler produced a Message', () => {
+    Scene.scene(
+      app,
+      Scene.given(selectiveKeysInitialModel),
+      Scene.keydown(target, 'Enter'),
+      Scene.expectHandled(),
+      Scene.expect(Scene.selector('.commits')).toHaveText('1'),
+    )
+  })
+
+  test('expectIgnored passes when the handler let the key fall through', () => {
+    Scene.scene(
+      app,
+      Scene.given(selectiveKeysInitialModel),
+      Scene.keydown(target, 'a'),
+      Scene.expectIgnored(),
+      Scene.expect(Scene.selector('.commits')).toHaveText('0'),
+    )
+  })
+
+  test('expectHandled throws when the handler produced nothing', () => {
+    expect(() =>
+      Scene.scene(
+        app,
+        Scene.given(selectiveKeysInitialModel),
+        Scene.keydown(target, 'a'),
+        Scene.expectHandled(),
+      ),
+    ).toThrow('its handler produced no Message')
+  })
+
+  test('expectIgnored throws when the handler produced a Message', () => {
+    expect(() =>
+      Scene.scene(
+        app,
+        Scene.given(selectiveKeysInitialModel),
+        Scene.keydown(target, 'Enter'),
+        Scene.expectIgnored(),
+      ),
+    ).toThrow('but its handler produced a Message')
+  })
+
+  test('expectIgnored throws when no interaction has run', () => {
+    expect(() =>
+      Scene.scene(
+        app,
+        Scene.given(selectiveKeysInitialModel),
+        Scene.expectIgnored(),
+      ),
+    ).toThrow('no interaction has run yet')
+  })
+
+  test('expectHandled throws when no interaction has run', () => {
+    expect(() =>
+      Scene.scene(
+        app,
+        Scene.given(selectiveKeysInitialModel),
+        Scene.expectHandled(),
+      ),
+    ).toThrow('no interaction has run yet')
+  })
+
+  // NOTE: the reason the pair exists. A read-only widget that stops
+  // committing keeps its handler and returns None, which changes no Model,
+  // no OutMessage, and no DOM. Without expectIgnored the only available
+  // assertions hold just as well against a handler that was deleted, so a
+  // regression to a silently falling-through key would pass.
+  test('an ignored key is indistinguishable without the pair', () => {
+    Scene.scene(
+      app,
+      Scene.given(selectiveKeysInitialModel),
+      Scene.keydown(target, 'a'),
+      Scene.Command.expectNone(),
+      Scene.expect(Scene.selector('.commits')).toHaveText('0'),
+      Scene.expectIgnored(),
+    )
+  })
 })
