@@ -1,3 +1,4 @@
+import { Option } from 'effect'
 import { describe, expect, it } from 'vitest'
 
 import { SECTION_ORDER } from './markdown'
@@ -71,6 +72,7 @@ describe('buildBlogRssFeed', () => {
   const entry = (slug: string, title: string, date: string) => ({
     slug,
     frontmatter: { title, description: `About ${title}.`, date },
+    maybeCoverAsset: Option.none(),
   })
 
   it('declares itself with an atom self link and the newest post as last build date', () => {
@@ -98,6 +100,29 @@ describe('buildBlogRssFeed', () => {
     expect(feed.indexOf('<title>Newer</title>')).toBeLessThan(
       feed.indexOf('<title>Older</title>'),
     )
+  })
+
+  it('attaches the cover as an enclosure when a post declares one', () => {
+    const feed = buildBlogRssFeed([
+      {
+        ...entry('covered', 'Covered', '2026-08-01'),
+        maybeCoverAsset: Option.some({
+          src: '/blog/covered/cover.webp',
+          mimeType: 'image/webp',
+          byteLength: 23072,
+        }),
+      },
+    ])
+
+    expect(feed).toContain(
+      '<enclosure url="https://foldkit.dev/blog/covered/cover.webp" length="23072" type="image/webp" />',
+    )
+  })
+
+  it('omits the enclosure when a post has no cover', () => {
+    const feed = buildBlogRssFeed([entry('plain', 'Plain', '2026-08-01')])
+
+    expect(feed).not.toContain('<enclosure')
   })
 
   it('escapes markup characters in post fields', () => {

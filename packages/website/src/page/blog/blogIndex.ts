@@ -1,9 +1,10 @@
-import { Array } from 'effect'
+import { Array, Option } from 'effect'
 import { type Html, inertHtml as ih } from 'foldkit/html'
 
 import { Icon } from '../../icon'
 import { pageTitle, para } from '../../prose'
 import { blogPostRouter } from '../../route'
+import { type PostCover, maybePostCover } from './frontmatter'
 import {
   BLOG_AUTHOR,
   BLOG_DESCRIPTION,
@@ -14,11 +15,23 @@ import { type BlogPost, formatPostDate, posts } from './posts'
 
 // VIEW
 
-const postEntry = (post: BlogPost): Html =>
+const entryCoverImageView = (cover: PostCover, isFirstEntry: boolean): Html =>
+  ih.img([
+    ih.Src(cover.src),
+    ih.Alt(cover.alt),
+    ...(isFirstEntry ? [] : [ih.Loading('lazy')]),
+    ih.Class('w-full rounded-lg mb-4'),
+  ])
+
+const postEntry = (post: BlogPost, isFirstEntry: boolean): Html =>
   ih.keyed('article')(
     post.slug,
     [ih.Class('py-8 border-b border-gray-200 dark:border-gray-800')],
     [
+      ...Option.match(maybePostCover(post.frontmatter), {
+        onNone: () => [],
+        onSome: cover => [entryCoverImageView(cover, isFirstEntry)],
+      }),
       ih.p(
         [ih.Class('text-sm text-gray-500 dark:text-gray-400 mb-1')],
         [`${formatPostDate(post.frontmatter.date)} · ${BLOG_AUTHOR}`],
@@ -76,6 +89,9 @@ export const view = (): Html =>
         [pageTitle('blog', BLOG_TITLE), rssLink],
       ),
       para(BLOG_DESCRIPTION),
-      ih.div([ih.Class('mt-4')], Array.map(posts, postEntry)),
+      ih.div(
+        [ih.Class('mt-4')],
+        Array.map(posts, (post, index) => postEntry(post, index === 0)),
+      ),
     ],
   )

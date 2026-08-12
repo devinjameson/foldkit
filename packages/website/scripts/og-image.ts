@@ -1,12 +1,24 @@
 import { FileSystem } from 'effect'
-import { Array, Console, Effect, pipe } from 'effect'
+import {
+  Array,
+  Console,
+  Effect,
+  Match as M,
+  Option,
+  Record as Record_,
+  String as String_,
+  pipe,
+} from 'effect'
 import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { join, resolve } from 'node:path'
+import { type Browser } from 'playwright'
 import satori, { type Font } from 'satori'
 
 import { Resvg } from '@resvg/resvg-js'
 
+import { type PostCover, maybePostCover } from '../src/page/blog/frontmatter'
 import { type AppRoute } from '../src/route'
+import { PUBLIC_DIR, blogPosts, maybeCoverMimeType } from './blogPosts'
 import {
   type ApiModuleNameResolver,
   type PageMetadata,
@@ -51,6 +63,12 @@ const loadFonts = Effect.gen(function* () {
 
 const OG_WIDTH = 1200
 const OG_HEIGHT = 630
+
+export type OgImageSize = Readonly<{ width: number; height: number }>
+
+export type OgImageSizeBySlug = Readonly<Record<string, OgImageSize>>
+
+const SATORI_OG_IMAGE_SIZE: OgImageSize = { width: OG_WIDTH, height: OG_HEIGHT }
 
 const escapeHtml = (text: string): string =>
   text
@@ -186,7 +204,122 @@ const urlPathToSlug = (urlPath: string): string => {
   return urlPath.slice(1).replace(/\//g, '-')
 }
 
+// COVER IMAGES
+
+const OG_COVER_MAX_WIDTH = 1200
+
+const maybeRouteCover = (route: AppRoute): Option.Option<PostCover> =>
+  M.value(route).pipe(
+    M.tag('BlogPost', ({ postSlug }) =>
+      pipe(
+        Array.findFirst(blogPosts, ({ slug }) => slug === postSlug),
+        Option.flatMap(({ frontmatter }) => maybePostCover(frontmatter)),
+      ),
+    ),
+    M.orElse(() => Option.none()),
+  )
+
+const coverMimeType = (src: string): Effect.Effect<string, Error> =>
+  Option.match(maybeCoverMimeType(src), {
+    onNone: () =>
+      Effect.fail(
+        new Error(`Cover image ${src} has no recognized image extension.`),
+      ),
+    onSome: Effect.succeed,
+  })
+
+type RenderedOgImage = Readonly<{ bytes: Uint8Array; size: OgImageSize }>
+
+// NOTE: Chromium decodes the cover and re-encodes it as PNG because resvg
+// cannot embed webp sources, and PNG is the one format every OG consumer
+// renders. The string-form evaluate polyfills the `__name` helper tsx injects
+// into compiled callbacks; see the note on PAGE_INIT_SCRIPT in prerender.ts.
+const renderCoverOgImage = (browser: Browser, cover: PostCover) =>
+  Effect.gen(function* () {
+    const mimeType = yield* coverMimeType(cover.src)
+    const fs = yield* FileSystem.FileSystem
+    const coverBytes = yield* fs.readFile(join(PUBLIC_DIR, cover.src))
+    const sourceUri = `data:${mimeType};base64,${Buffer.from(coverBytes).toString('base64')}`
+
+    const rendered = yield* Effect.acquireUseRelease(
+      Effect.tryPromise(() => browser.newPage()),
+      page =>
+        Effect.gen(function* () {
+          yield* Effect.tryPromise(() =>
+            page.evaluate('window.__name = (target) => target'),
+          )
+          return yield* Effect.tryPromise(() =>
+            page.evaluate(
+              async ({ maxWidth, source }) => {
+                const image = new Image()
+                image.src = source
+                await image.decode()
+                if (image.naturalWidth === 0) {
+                  throw new Error(
+                    'Cover image decoded with no intrinsic width.',
+                  )
+                }
+                const scale = Math.min(1, maxWidth / image.naturalWidth)
+                const width = Math.round(image.naturalWidth * scale)
+                const height = Math.round(image.naturalHeight * scale)
+                const canvas = document.createElement('canvas')
+                canvas.width = width
+                canvas.height = height
+                const context = canvas.getContext('2d')
+                if (context === null) {
+                  throw new Error('Canvas 2d context is unavailable.')
+                }
+                context.drawImage(image, 0, 0, width, height)
+                const pngPrefix = 'data:image/png;base64,'
+                return {
+                  height,
+                  pngBase64: canvas
+                    .toDataURL('image/png')
+                    .slice(pngPrefix.length),
+                  width,
+                }
+              },
+              { maxWidth: OG_COVER_MAX_WIDTH, source: sourceUri },
+            ),
+          )
+        }),
+      page => Effect.promise(() => page.close()),
+    )
+
+    const renderedOgImage: RenderedOgImage = {
+      bytes: Buffer.from(rendered.pngBase64, 'base64'),
+      size: { width: rendered.width, height: rendered.height },
+    }
+    return renderedOgImage
+  })
+
 // GENERATION
+
+const renderSatoriOgImage = (fonts: Array<Font>, metadata: PageMetadata) =>
+  Effect.gen(function* () {
+    const template = ogTemplate(metadata)
+
+    const svg = yield* Effect.tryPromise(() =>
+      // @ts-expect-error satori expects ReactNode but accepts plain {type, props} objects at runtime
+      satori(template, {
+        width: OG_WIDTH,
+        height: OG_HEIGHT,
+        fonts,
+      }),
+    )
+
+    const resvg = new Resvg(svg, {
+      fitTo: { mode: 'width', value: OG_WIDTH },
+    })
+
+    const renderedOgImage: RenderedOgImage = {
+      bytes: resvg.render().asPng(),
+      size: SATORI_OG_IMAGE_SIZE,
+    }
+    return renderedOgImage
+  })
+
+type OgImageEntry = Readonly<{ slug: string; size: OgImageSize }>
 
 const renderOgImage =
   (
@@ -194,44 +327,41 @@ const renderOgImage =
     ogDir: string,
     routeToUrlPath: (route: AppRoute) => string,
     resolveApiModuleName: ApiModuleNameResolver,
+    browser: Browser,
   ) =>
-  (route: AppRoute) =>
-    pipe(
+  (route: AppRoute) => {
+    const slug = urlPathToSlug(routeToUrlPath(route))
+    return pipe(
       Effect.gen(function* () {
-        const metadata = routeToMetadata(route, resolveApiModuleName)
-        const template = ogTemplate(metadata)
-        const slug = urlPathToSlug(routeToUrlPath(route))
-
-        const svg = yield* Effect.tryPromise(() =>
-          // @ts-expect-error satori expects ReactNode but accepts plain {type, props} objects at runtime
-          satori(template, {
-            width: OG_WIDTH,
-            height: OG_HEIGHT,
-            fonts,
-          }),
-        )
-
-        const resvg = new Resvg(svg, {
-          fitTo: { mode: 'width', value: OG_WIDTH },
+        const rendered = yield* Option.match(maybeRouteCover(route), {
+          onNone: () =>
+            renderSatoriOgImage(
+              fonts,
+              routeToMetadata(route, resolveApiModuleName),
+            ),
+          onSome: cover => renderCoverOgImage(browser, cover),
         })
-        const png = resvg.render().asPng()
 
         const fs = yield* FileSystem.FileSystem
-        yield* fs.writeFile(resolve(ogDir, `${slug}.png`), png)
+        yield* fs.writeFile(resolve(ogDir, `${slug}.png`), rendered.bytes)
         yield* Console.log(`  ✓ og/${slug}.png`)
+        return Option.some<OgImageEntry>({ slug, size: rendered.size })
       }),
       Effect.catch(error =>
-        Console.warn(
-          `  ✗ og/${urlPathToSlug(routeToUrlPath(route))}.png: ${String(error)}`,
+        Effect.as(
+          Console.warn(`  ✗ og/${slug}.png: ${String(error)}`),
+          Option.none<OgImageEntry>(),
         ),
       ),
     )
+  }
 
 export const generateOgImages = (
   routes: ReadonlyArray<AppRoute>,
   routeToUrlPath: (route: AppRoute) => string,
   distDir: string,
   resolveApiModuleName: ApiModuleNameResolver,
+  browser: Browser,
 ) =>
   Effect.gen(function* () {
     yield* Console.log('Generating OG images...')
@@ -241,13 +371,26 @@ export const generateOgImages = (
     const ogDir = resolve(distDir, 'og')
     yield* fs.makeDirectory(ogDir, { recursive: true })
 
-    yield* Effect.forEach(
+    const entries = yield* Effect.forEach(
       routes,
-      renderOgImage(fonts, ogDir, routeToUrlPath, resolveApiModuleName),
+      renderOgImage(
+        fonts,
+        ogDir,
+        routeToUrlPath,
+        resolveApiModuleName,
+        browser,
+      ),
       { concurrency: 8 },
     )
 
-    yield* Console.log(`Generated ${Array.length(routes)} OG images.`)
+    const ogImageEntries = Array.getSomes(entries)
+
+    yield* Console.log(`Generated ${Array.length(ogImageEntries)} OG images.`)
+
+    return Record_.fromIterableWith(ogImageEntries, ({ slug, size }) => [
+      slug,
+      size,
+    ])
   })
 
 // STRUCTURED DATA
@@ -300,7 +443,7 @@ const replaceOrThrow = (
     )
   }
 
-  return html.replace(pattern, replacement)
+  return html.replace(pattern, () => replacement)
 }
 
 export const injectMetaTags = (
@@ -308,6 +451,7 @@ export const injectMetaTags = (
   route: AppRoute,
   urlPath: string,
   resolveApiModuleName: ApiModuleNameResolver,
+  ogImageSizes: OgImageSizeBySlug,
 ): string => {
   const metadata = routeToMetadata(route, resolveApiModuleName)
   const slug = urlPathToSlug(urlPath)
@@ -318,14 +462,30 @@ export const injectMetaTags = (
       ? 'Foldkit - TypeScript Frontend Framework Built on Effect-TS | Elm Architecture'
       : `${metadata.title} - Foldkit | Effect-TS Frontend Framework`
 
+  const ogImageSize = Option.getOrElse(
+    Record_.get(ogImageSizes, slug),
+    () => SATORI_OG_IMAGE_SIZE,
+  )
+
+  const ogImageAlt = pipe(
+    maybeRouteCover(route),
+    Option.map(cover => cover.alt),
+    Option.filter(String_.isNonEmpty),
+    Option.getOrElse(() => fullTitle),
+  )
+
+  const escapedTitle = escapeHtml(fullTitle)
+  const escapedDescription = escapeHtml(metadata.description)
+  const escapedOgImageAlt = escapeHtml(ogImageAlt)
+
   const jsonLd = metadata.title === 'Foldkit' ? HOMEPAGE_JSON_LD : ''
 
   const metaTagReplacements: ReadonlyArray<readonly [RegExp, string]> = [
-    [/<title>[^<]*<\/title>/, `<title>${fullTitle}</title>`],
+    [/<title>[^<]*<\/title>/, `<title>${escapedTitle}</title>`],
     [/rel="canonical"\s+href="[^"]*"/, `rel="canonical" href="${pageUrl}"`],
     [
       /name="description"\s+content="[^"]*"/,
-      `name="description" content="${metadata.description}"`,
+      `name="description" content="${escapedDescription}"`,
     ],
     [
       /property="og:url"\s+content="[^"]*"/,
@@ -333,27 +493,35 @@ export const injectMetaTags = (
     ],
     [
       /property="og:title"\s+content="[^"]*"/,
-      `property="og:title" content="${fullTitle}"`,
+      `property="og:title" content="${escapedTitle}"`,
     ],
     [
       /property="og:description"\s+content="[^"]*"/,
-      `property="og:description" content="${metadata.description}"`,
+      `property="og:description" content="${escapedDescription}"`,
     ],
     [
       /property="og:image"\s+content="[^"]*"/,
       `property="og:image" content="${ogImageUrl}"`,
     ],
     [
+      /property="og:image:width"\s+content="[^"]*"/,
+      `property="og:image:width" content="${ogImageSize.width}"`,
+    ],
+    [
+      /property="og:image:height"\s+content="[^"]*"/,
+      `property="og:image:height" content="${ogImageSize.height}"`,
+    ],
+    [
       /property="og:image:alt"\s+content="[^"]*"/,
-      `property="og:image:alt" content="${fullTitle}"`,
+      `property="og:image:alt" content="${escapedOgImageAlt}"`,
     ],
     [
       /name="twitter:title"\s+content="[^"]*"/,
-      `name="twitter:title" content="${fullTitle}"`,
+      `name="twitter:title" content="${escapedTitle}"`,
     ],
     [
       /name="twitter:description"\s+content="[^"]*"/,
-      `name="twitter:description" content="${metadata.description}"`,
+      `name="twitter:description" content="${escapedDescription}"`,
     ],
     [
       /name="twitter:image"\s+content="[^"]*"/,

@@ -226,7 +226,11 @@ import {
   urlPathToMarkdownPath,
 } from './markdown'
 import { type ApiModuleNameResolver, routeToMetadata } from './metadata'
-import { generateOgImages, injectMetaTags } from './og-image'
+import {
+  type OgImageSizeBySlug,
+  generateOgImages,
+  injectMetaTags,
+} from './og-image'
 
 // ROUTES
 
@@ -617,6 +621,7 @@ const prerenderRoute =
     browser: Browser,
     baseHtml: string,
     resolveApiModuleName: ApiModuleNameResolver,
+    ogImageSizes: OgImageSizeBySlug,
   ) =>
   (route: AppRoute) =>
     Effect.gen(function* () {
@@ -632,6 +637,7 @@ const prerenderRoute =
         route,
         urlPath,
         resolveApiModuleName,
+        ogImageSizes,
       )
 
       const fs = yield* FileSystem.FileSystem
@@ -724,12 +730,17 @@ const toRfc822Date = (date: string): string =>
 
 const blogPostRssItem = (entry: BlogPostEntry): string => {
   const postUrl = `${SITE_URL}${blogPostRouter({ postSlug: entry.slug })}`
+  const enclosure = Option.match(entry.maybeCoverAsset, {
+    onNone: () => '',
+    onSome: cover =>
+      `\n  <enclosure url="${escapeXml(`${SITE_URL}${cover.src}`)}" length="${cover.byteLength}" type="${cover.mimeType}" />`,
+  })
   return `<item>
   <title>${escapeXml(entry.frontmatter.title)}</title>
   <link>${escapeXml(postUrl)}</link>
   <guid>${escapeXml(postUrl)}</guid>
   <description>${escapeXml(entry.frontmatter.description)}</description>
-  <pubDate>${toRfc822Date(entry.frontmatter.date)}</pubDate>
+  <pubDate>${toRfc822Date(entry.frontmatter.date)}</pubDate>${enclosure}
 </item>`
 }
 
@@ -795,11 +806,12 @@ const program = Effect.scoped(
     const resolveApiModuleName = buildApiModuleNameResolver(apiModules)
     const routes = enumerateRoutes(apiModuleSlugs)
 
-    yield* generateOgImages(
+    const ogImageSizes = yield* generateOgImages(
       routes,
       routeToUrlPath,
       DIST_DIR,
       resolveApiModuleName,
+      browser,
     )
 
     const fs = yield* FileSystem.FileSystem
@@ -815,7 +827,7 @@ const program = Effect.scoped(
 
     const results = yield* Effect.forEach(
       routes,
-      prerenderRoute(browser, baseHtml, resolveApiModuleName),
+      prerenderRoute(browser, baseHtml, resolveApiModuleName, ogImageSizes),
       { concurrency: 4 },
     )
 

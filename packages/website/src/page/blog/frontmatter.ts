@@ -36,6 +36,16 @@ const isCalendarDate = (value: string): boolean =>
     },
   })
 
+const PostCoverImagePath = S.String.check(
+  S.makeFilter(
+    value => (value.startsWith('/') ? undefined : 'not a root-relative path'),
+    {
+      identifier: 'PostCoverImagePath',
+      description: 'a root-relative image path starting with "/"',
+    },
+  ),
+)
+
 /**
  * Frontmatter schema for blog posts. One schema drives both halves of the
  * pipeline: the markdown Vite plugin validates every post's frontmatter
@@ -43,6 +53,11 @@ const isCalendarDate = (value: string): boolean =>
  * values all fail the build), and the post registry decodes the emitted
  * `frontmatter` export with it at module load. Dates must be real calendar
  * dates in `YYYY-MM-DD` form, leap years included.
+ *
+ * A post with a cover declares `coverImage` and `coverImageAlt` together.
+ * `coverImage` is a root-relative path to a file under `public/`, by
+ * convention `/blog/<slug>/cover.<ext>`. An empty `coverImageAlt` marks the
+ * image decorative.
  *
  * Kept dependency-light (Schema only) so `vite.config.ts` and
  * `vitest.config.ts` can import it without pulling in the browser view layer.
@@ -59,6 +74,43 @@ export const PostFrontmatter = S.Struct({
       },
     ),
   ),
-})
+  coverImage: S.optional(PostCoverImagePath),
+  coverImageAlt: S.optional(S.String),
+}).check(
+  S.makeFilter(
+    fields =>
+      (fields.coverImage === undefined) === (fields.coverImageAlt === undefined)
+        ? undefined
+        : 'coverImage and coverImageAlt must be declared together',
+    {
+      identifier: 'PostCoverPair',
+      description: 'coverImage and coverImageAlt declared together',
+    },
+  ),
+)
 
 export type PostFrontmatter = typeof PostFrontmatter.Type
+
+// POST COVER
+
+/**
+ * A post's cover image: the root-relative path it serves from and its alt
+ * text, which is empty for a decorative image.
+ */
+export type PostCover = Readonly<{
+  src: string
+  alt: string
+}>
+
+/**
+ * The cover a post's frontmatter declares, when it declares one. The schema
+ * guarantees the two cover fields travel together, so a lone field reads as
+ * no cover rather than a partial one.
+ */
+export const maybePostCover = (
+  frontmatter: PostFrontmatter,
+): Option.Option<PostCover> =>
+  Option.all({
+    src: Option.fromNullishOr(frontmatter.coverImage),
+    alt: Option.fromNullishOr(frontmatter.coverImageAlt),
+  })
