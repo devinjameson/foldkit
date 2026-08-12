@@ -1773,6 +1773,14 @@ describe('Combobox', () => {
       })
 
       it('reports Enter on the active item as SuppressedItemCommit', () => {
+        // NOTE: wrapping update to record dispatched Messages stands in for
+        // a missing Scene primitive. What the component promises is that the
+        // keypress is consumed, so OnKeyDownPreventDefault suppresses the
+        // browser default; the Message tag is only the mechanism. Scene
+        // cannot express that today, and silently tolerates an interaction
+        // whose handler produces nothing, so a plain expectNoOutMessage()
+        // here would pass against a handler that was deleted outright (see
+        // issue #1008).
         const seen: Array<Message> = []
 
         Scene.scene(
@@ -1964,6 +1972,14 @@ describe('Combobox', () => {
       })
 
       it('does not report SuppressedItemCommit when no item is active', () => {
+        // NOTE: wrapping update to record dispatched Messages stands in for
+        // a missing Scene primitive. What the component promises is that the
+        // keypress is consumed, so OnKeyDownPreventDefault suppresses the
+        // browser default; the Message tag is only the mechanism. Scene
+        // cannot express that today, and silently tolerates an interaction
+        // whose handler produces nothing, so a plain expectNoOutMessage()
+        // here would pass against a handler that was deleted outright (see
+        // issue #1008).
         const seen: Array<Message> = []
 
         Scene.scene(
@@ -2007,6 +2023,14 @@ describe('Combobox', () => {
       })
 
       it('emits RequestedItemClick on Enter when not read-only', () => {
+        // NOTE: wrapping update to record dispatched Messages stands in for
+        // a missing Scene primitive. What the component promises is that the
+        // keypress is consumed, so OnKeyDownPreventDefault suppresses the
+        // browser default; the Message tag is only the mechanism. Scene
+        // cannot express that today, and silently tolerates an interaction
+        // whose handler produces nothing, so a plain expectNoOutMessage()
+        // here would pass against a handler that was deleted outright (see
+        // issue #1008).
         const seen: Array<Message> = []
 
         Scene.scene(
