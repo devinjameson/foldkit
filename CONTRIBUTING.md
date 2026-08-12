@@ -112,6 +112,8 @@ Describe the change the way the commit body does: what was wrong, what you chang
 
 Pull requests are squash-merged, so the description becomes the commit body on `main`. Strip any bot-generated summary sections before merging.
 
+Squashing collapses per-commit authorship into a single author. When the branch carries commits from more than one person, GitHub pre-fills the squash body with a `Co-authored-by:` trailer for each of them, and replacing that body with the description drops them. Keep those lines: they are the only thing crediting a contributor on `main` and in the contributor graph. The rule against AI co-author trailers above is about assistants, not people.
+
 ## A Note on Style Review
 
 Foldkit is opinionated, and review comments here tend to be about conventions rather than correctness. For example: a type name that collides with the Message naming scheme, a missing TSDoc on a public export, or an `interface` where the repository uses `Readonly<{...}>`. None of that is a judgment on the change. It is what keeps a codebase this size readable by everyone working in it.
