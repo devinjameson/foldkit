@@ -16,8 +16,14 @@ import satori, { type Font } from 'satori'
 import { Resvg } from '@resvg/resvg-js'
 
 import { type PostCover, maybePostCover } from '../src/page/blog/frontmatter'
+import { BLOG_AUTHOR } from '../src/page/blog/meta'
 import { type AppRoute } from '../src/route'
-import { PUBLIC_DIR, blogPosts, maybeCoverMimeType } from './blogPosts'
+import {
+  type BlogPostEntry,
+  PUBLIC_DIR,
+  blogPosts,
+  maybeCoverMimeType,
+} from './blogPosts'
 import {
   type ApiModuleNameResolver,
   type PageMetadata,
@@ -199,15 +205,17 @@ const urlPathToSlug = (urlPath: string): string => {
 
 // COVER IMAGES
 
-const maybeRouteCover = (route: AppRoute): Option.Option<PostCover> =>
+const maybeRoutePostEntry = (route: AppRoute): Option.Option<BlogPostEntry> =>
   M.value(route).pipe(
     M.tag('BlogPost', ({ postSlug }) =>
-      pipe(
-        Array.findFirst(blogPosts, ({ slug }) => slug === postSlug),
-        Option.flatMap(({ frontmatter }) => maybePostCover(frontmatter)),
-      ),
+      Array.findFirst(blogPosts, ({ slug }) => slug === postSlug),
     ),
     M.orElse(() => Option.none()),
+  )
+
+const maybeRouteCover = (route: AppRoute): Option.Option<PostCover> =>
+  Option.flatMap(maybeRoutePostEntry(route), ({ frontmatter }) =>
+    maybePostCover(frontmatter),
   )
 
 const coverMimeType = (src: string): Effect.Effect<string, Error> =>
@@ -412,6 +420,23 @@ const HOMEPAGE_JSON_LD = [
   jsonLdTag(WEBSITE_SCHEMA),
 ].join('\n    ')
 
+const blogPostingJsonLd = (
+  entry: BlogPostEntry,
+  pageUrl: string,
+  ogImageUrl: string,
+): string =>
+  jsonLdTag({
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: entry.frontmatter.title,
+    description: entry.frontmatter.description,
+    datePublished: entry.frontmatter.date,
+    author: { '@type': 'Person', name: BLOG_AUTHOR },
+    image: ogImageUrl,
+    url: pageUrl,
+    mainEntityOfPage: pageUrl,
+  })
+
 // META TAG INJECTION
 
 const replaceOrThrow = (
@@ -455,11 +480,31 @@ export const injectMetaTags = (
   const escapedDescription = escapeHtml(metadata.description)
   const escapedOgImageAlt = escapeHtml(ogImageAlt)
 
-  const jsonLd = metadata.title === 'Foldkit' ? HOMEPAGE_JSON_LD : ''
+  const maybePostEntry = maybeRoutePostEntry(route)
+
+  const ogType = Option.match(maybePostEntry, {
+    onNone: () => 'website',
+    onSome: () => 'article',
+  })
+
+  const headAppends = [
+    ...(metadata.title === 'Foldkit' ? [HOMEPAGE_JSON_LD] : []),
+    ...Option.match(maybePostEntry, {
+      onNone: () => [],
+      onSome: entry => [
+        `<meta property="article:published_time" content="${entry.frontmatter.date}" />`,
+        blogPostingJsonLd(entry, pageUrl, ogImageUrl),
+      ],
+    }),
+  ]
 
   const metaTagReplacements: ReadonlyArray<readonly [RegExp, string]> = [
     [/<title>[^<]*<\/title>/, `<title>${escapedTitle}</title>`],
     [/rel="canonical"\s+href="[^"]*"/, `rel="canonical" href="${pageUrl}"`],
+    [
+      /property="og:type"\s+content="[^"]*"/,
+      `property="og:type" content="${ogType}"`,
+    ],
     [
       /name="description"\s+content="[^"]*"/,
       `name="description" content="${escapedDescription}"`,
@@ -508,7 +553,9 @@ export const injectMetaTags = (
   return replaceOrThrow(
     withMetaTags,
     /<\/head>/,
-    jsonLd ? `${jsonLd}\n  </head>` : '</head>',
+    Array.isArrayNonEmpty(headAppends)
+      ? `${Array.join(headAppends, '\n    ')}\n  </head>`
+      : '</head>',
     urlPath,
   )
 }

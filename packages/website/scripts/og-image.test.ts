@@ -12,6 +12,7 @@ const baseHtml = `<html><head>
     <title>Foldkit</title>
     <link rel="canonical" href="https://foldkit.dev" />
     <meta name="description" content="base" />
+    <meta property="og:type" content="website" />
     <meta property="og:url" content="base" />
     <meta property="og:title" content="base" />
     <meta property="og:description" content="base" />
@@ -65,6 +66,21 @@ describe('injectMetaTags', () => {
       const cover = Option.getOrThrow(maybePostCover(coverPost.frontmatter))
       expect(html).toContain(`property="og:image:alt" content="${cover.alt}"`)
     })
+
+    it('marks the page an article with its publication date', () => {
+      expect(html).toContain('property="og:type" content="article"')
+      expect(html).toContain(
+        `property="article:published_time" content="${coverPost.frontmatter.date}"`,
+      )
+    })
+
+    it('injects BlogPosting structured data', () => {
+      expect(html).toContain('"@type":"BlogPosting"')
+      expect(html).toContain(
+        `"headline":${JSON.stringify(coverPost.frontmatter.title)}`,
+      )
+      expect(html).toContain(`"datePublished":"${coverPost.frontmatter.date}"`)
+    })
   })
 
   describe('a blog post without a cover', () => {
@@ -92,6 +108,12 @@ describe('injectMetaTags', () => {
       expect(html).toContain(
         'property="og:image:alt" content="Foldkit - TypeScript Frontend Framework Built on Effect-TS | Elm Architecture"',
       )
+    })
+
+    it('stays og:type website and keeps the homepage structured data', () => {
+      expect(html).toContain('property="og:type" content="website"')
+      expect(html).toContain('"@type":"SoftwareApplication"')
+      expect(html).not.toContain('article:published_time')
     })
   })
 })
