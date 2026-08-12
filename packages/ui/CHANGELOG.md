@@ -1,5 +1,25 @@
 # @foldkit/ui
 
+## 0.143.0
+
+### Minor Changes
+
+- a614c5e: Stop a multi-select Combobox emitting `ClearedSelection` when it closes.
+
+  `handleClose` read an empty `inputValue` on close as the user having cleared the selection. That inference holds for single-select, where the input displays the current selection and the user has to empty it deliberately. It never held for multi-select, whose `restingInputValue` is an empty string by design, so the condition was true on every close. A nullable multi-select therefore wiped the parent's whole selection each time it closed, by `Escape`, blur, the toggle button, or a backdrop click, without the user doing anything to ask for it.
+
+  Multi-select now never emits `ClearedSelection`. Clearing a multi-select is toggling its values off, one `Selected` at a time, which is the channel it already had. Single-select is unchanged, and `nullable` continues to govern its empty-input close.
+
+- a614c5e: Add `isReadOnly` to the view inputs of both Combobox variants.
+
+  A read-only Combobox emits the native `readonly` attribute plus `aria-readonly="true"` on the input, `aria-readonly="true"` on the items panel, and `data-readonly` on the wrapper, input, toggle button, items panel, and every item. It still opens, navigates, and closes, and the input still takes focus and allows text selection and copying. Five paths that would change the parent's selection close: typing is frozen, items carry no click handler, `Enter` on the active item emits a `SuppressedItemCommit` Message instead of selecting, an `immediate` Combobox stops committing as the arrow keys move, and a nullable Combobox no longer emits `ClearedSelection` when a user close finds an empty input. `itemToConfig`'s context gains `isReadOnly`, so an item can style itself for the state without closing over the view inputs.
+
+  `Closed`, `BlurredInput`, and `PressedToggleButton` gained an `isClearable` field, since the close path lives in `update` and cannot see `isReadOnly`, which is a view input. The view passes it, and the programmatic `close` helpers pass `true`, so `close(model)` clears exactly as before.
+
+  Typing is frozen rather than left to filter because `inputValue` is both the filter query and the display of the selection, so a typable read-only Combobox would have a visible value the user can change.
+
+  `isReadOnly` and `isDisabled` are independent: setting both emits both attribute sets, and `isDisabled` still wins for interaction, since it drops every handler, so a Combobox that is both read-only and disabled cannot be opened at all.
+
 ## 0.142.1
 
 ### Patch Changes
