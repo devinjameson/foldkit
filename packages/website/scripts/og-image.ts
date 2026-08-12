@@ -317,6 +317,9 @@ const renderSatoriOgImage = (fonts: Array<Font>, metadata: PageMetadata) =>
     return resvg.render().asPng()
   })
 
+// NOTE: a failed render fails the whole prerender on purpose. The page's meta
+// tags point at this file unconditionally, so shipping without it would ship
+// an og:image URL that 404s.
 const renderOgImage =
   (
     fonts: Array<Font>,
@@ -341,13 +344,9 @@ const renderOgImage =
         const fs = yield* FileSystem.FileSystem
         yield* fs.writeFile(resolve(ogDir, `${slug}.png`), png)
         yield* Console.log(`  ✓ og/${slug}.png`)
-        return Option.some(slug)
       }),
-      Effect.catch(error =>
-        Effect.as(
-          Console.warn(`  ✗ og/${slug}.png: ${String(error)}`),
-          Option.none<string>(),
-        ),
+      Effect.mapError(
+        error => new Error(`og/${slug}.png failed to render: ${String(error)}`),
       ),
     )
   }
@@ -367,7 +366,7 @@ export const generateOgImages = (
     const ogDir = resolve(distDir, 'og')
     yield* fs.makeDirectory(ogDir, { recursive: true })
 
-    const results = yield* Effect.forEach(
+    yield* Effect.forEach(
       routes,
       renderOgImage(
         fonts,
@@ -379,9 +378,7 @@ export const generateOgImages = (
       { concurrency: 8 },
     )
 
-    yield* Console.log(
-      `Generated ${Array.length(Array.getSomes(results))} OG images.`,
-    )
+    yield* Console.log(`Generated ${Array.length(routes)} OG images.`)
   })
 
 // STRUCTURED DATA

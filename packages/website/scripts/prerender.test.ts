@@ -8,7 +8,9 @@ import {
   buildBlogRssFeed,
   buildPlaygroundShellHtml,
   enumerateRoutes,
+  extractPostArticleHtml,
   injectHtml,
+  toFeedArticleHtml,
 } from './prerender'
 
 describe('injectHtml', () => {
@@ -75,11 +77,16 @@ describe('buildBlogRssFeed', () => {
     maybeCoverAsset: Option.none(),
   })
 
+  const NO_ARTICLES: ReadonlyMap<string, string> = new Map()
+
   it('declares itself with an atom self link and the newest post as last build date', () => {
-    const feed = buildBlogRssFeed([
-      entry('newer', 'Newer', '2026-08-01'),
-      entry('older', 'Older', '2026-07-01'),
-    ])
+    const feed = buildBlogRssFeed(
+      [
+        entry('newer', 'Newer', '2026-08-01'),
+        entry('older', 'Older', '2026-07-01'),
+      ],
+      NO_ARTICLES,
+    )
 
     expect(feed).toContain('xmlns:atom="http://www.w3.org/2005/Atom"')
     expect(feed).toContain(
@@ -91,10 +98,13 @@ describe('buildBlogRssFeed', () => {
   })
 
   it('emits one item per post, newest first, with an absolute guid', () => {
-    const feed = buildBlogRssFeed([
-      entry('newer', 'Newer', '2026-08-01'),
-      entry('older', 'Older', '2026-07-01'),
-    ])
+    const feed = buildBlogRssFeed(
+      [
+        entry('newer', 'Newer', '2026-08-01'),
+        entry('older', 'Older', '2026-07-01'),
+      ],
+      NO_ARTICLES,
+    )
 
     expect(feed).toContain('<guid>https://foldkit.dev/blog/newer</guid>')
     expect(feed.indexOf('<title>Newer</title>')).toBeLessThan(
@@ -103,16 +113,19 @@ describe('buildBlogRssFeed', () => {
   })
 
   it('attaches the cover as an enclosure when a post declares one', () => {
-    const feed = buildBlogRssFeed([
-      {
-        ...entry('covered', 'Covered', '2026-08-01'),
-        maybeCoverAsset: Option.some({
-          src: '/blog/covered/cover.webp',
-          mimeType: 'image/webp',
-          byteLength: 23072,
-        }),
-      },
-    ])
+    const feed = buildBlogRssFeed(
+      [
+        {
+          ...entry('covered', 'Covered', '2026-08-01'),
+          maybeCoverAsset: Option.some({
+            src: '/blog/covered/cover.webp',
+            mimeType: 'image/webp',
+            byteLength: 23072,
+          }),
+        },
+      ],
+      NO_ARTICLES,
+    )
 
     expect(feed).toContain(
       '<enclosure url="https://foldkit.dev/blog/covered/cover.webp" length="23072" type="image/webp" />',
@@ -120,24 +133,97 @@ describe('buildBlogRssFeed', () => {
   })
 
   it('omits the enclosure when a post has no cover', () => {
-    const feed = buildBlogRssFeed([entry('plain', 'Plain', '2026-08-01')])
+    const feed = buildBlogRssFeed(
+      [entry('plain', 'Plain', '2026-08-01')],
+      NO_ARTICLES,
+    )
 
     expect(feed).not.toContain('<enclosure')
   })
 
+  it('embeds a post article as CDATA content when one is provided', () => {
+    const feed = buildBlogRssFeed(
+      [entry('full', 'Full', '2026-08-01')],
+      new Map([['full', '<article><p>Hello.</p></article>']]),
+    )
+
+    expect(feed).toContain(
+      'xmlns:content="http://purl.org/rss/1.0/modules/content/"',
+    )
+    expect(feed).toContain(
+      '<content:encoded><![CDATA[<article><p>Hello.</p></article>]]></content:encoded>',
+    )
+  })
+
+  it('splits CDATA-terminating sequences inside article content', () => {
+    const feed = buildBlogRssFeed(
+      [entry('tricky', 'Tricky', '2026-08-01')],
+      new Map([['tricky', '<article><p>a ]]> b</p></article>']]),
+    )
+
+    expect(feed).toContain('a ]]]]><![CDATA[> b')
+  })
+
+  it('omits content:encoded when no article is provided', () => {
+    const feed = buildBlogRssFeed(
+      [entry('plain', 'Plain', '2026-08-01')],
+      NO_ARTICLES,
+    )
+
+    expect(feed).not.toContain('<content:encoded>')
+  })
+
   it('escapes markup characters in post fields', () => {
-    const feed = buildBlogRssFeed([
-      entry('escaping', 'Types & <script>', '2026-08-01'),
-    ])
+    const feed = buildBlogRssFeed(
+      [entry('escaping', 'Types & <script>', '2026-08-01')],
+      NO_ARTICLES,
+    )
 
     expect(feed).toContain('<title>Types &amp; &lt;script&gt;</title>')
     expect(feed).not.toContain('<script>')
   })
 
   it('omits the last build date when there are no posts', () => {
-    const feed = buildBlogRssFeed([])
+    const feed = buildBlogRssFeed([], NO_ARTICLES)
 
     expect(feed).not.toContain('<lastBuildDate>')
     expect(feed).not.toContain('<item>')
+  })
+})
+
+describe('extractPostArticleHtml', () => {
+  it('extracts the article element from a page', () => {
+    const page =
+      '<div><header>chrome</header><article class="post"><p>Body.</p></article><footer>chrome</footer></div>'
+
+    expect(Option.getOrThrow(extractPostArticleHtml(page))).toBe(
+      '<article class="post"><p>Body.</p></article>',
+    )
+  })
+
+  it('returns none for a page without an article', () => {
+    expect(Option.isNone(extractPostArticleHtml('<div>no article</div>'))).toBe(
+      true,
+    )
+  })
+})
+
+describe('toFeedArticleHtml', () => {
+  it('absolutizes root-relative links and image sources', () => {
+    const article =
+      '<article><img src="/blog/post/cover.webp" /><a href="/core/model">Model</a></article>'
+
+    expect(toFeedArticleHtml(article)).toBe(
+      '<article><img src="https://foldkit.dev/blog/post/cover.webp" /><a href="https://foldkit.dev/core/model">Model</a></article>',
+    )
+  })
+
+  it('drops the back-to-blog link and keeps other anchors', () => {
+    const article =
+      '<article><a class="back" href="/blog">← Blog</a><p>Body with <a href="https://example.com">a link</a>.</p></article>'
+
+    expect(toFeedArticleHtml(article)).toBe(
+      '<article><p>Body with <a href="https://example.com">a link</a>.</p></article>',
+    )
   })
 })

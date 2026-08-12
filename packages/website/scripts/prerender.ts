@@ -8,8 +8,8 @@ import {
   Option,
   Record,
   Schema as S,
-  String as Str,
   Stream,
+  String as String_,
   pipe,
 } from 'effect'
 import { FileSystem } from 'effect'
@@ -595,6 +595,7 @@ type PrerenderResult = Readonly<{
   route: AppRoute
   urlPath: string
   markdown: string
+  html: string
 }>
 
 const buildApiModuleNameResolver = (
@@ -656,6 +657,7 @@ const prerenderRoute =
         route,
         urlPath,
         markdown: captured.markdown,
+        html: captured.html,
       })
     }).pipe(
       Effect.catch(error =>
@@ -674,7 +676,7 @@ const formatDateIso = (dateTime: DateTime.DateTime): string => {
   const { year, month, day } = DateTime.toPartsUtc(dateTime)
   return pipe(
     [String(year), String(month), String(day)],
-    Array.map(Str.padStart(2, '0')),
+    Array.map(String_.padStart(2, '0')),
     Array.join('-'),
   )
 }
@@ -722,19 +724,69 @@ const toRfc822Date = (date: string): string =>
     onSome: dateTime => DateTime.toDateUtc(dateTime).toUTCString(),
   })
 
-const blogPostRssItem = (entry: BlogPostEntry): string => {
+/**
+ * Extracts a prerendered blog post page's `article` element, the cover, the
+ * header, and the rendered prose, leaving out the surrounding site chrome.
+ */
+export const extractPostArticleHtml = (
+  pageHtml: string,
+): Option.Option<string> =>
+  pipe(
+    String_.indexOf('<article')(pageHtml),
+    Option.flatMap(startIndex =>
+      Option.map(String_.indexOf('</article>')(pageHtml), endIndex =>
+        pageHtml.slice(startIndex, endIndex + '</article>'.length),
+      ),
+    ),
+  )
+
+/**
+ * Prepares an extracted article for the feed: root-relative links and image
+ * sources become absolute, since feed readers resolve them against nothing,
+ * and the back-to-blog link is dropped, since it only makes sense on the site.
+ */
+export const toFeedArticleHtml = (articleHtml: string): string =>
+  articleHtml
+    .replace(/<a[^>]*>←[^<]*<\/a>/, '')
+    .replace(/(href|src)="\//g, `$1="${SITE_URL}/`)
+
+const escapeCdataContent = (html: string): string =>
+  html.replaceAll(']]>', ']]]]><![CDATA[>')
+
+const maybeFeedArticleEntry = (
+  result: PrerenderResult,
+): Option.Option<readonly [string, string]> =>
+  M.value(result.route).pipe(
+    M.tag('BlogPost', ({ postSlug }) =>
+      Option.map(
+        extractPostArticleHtml(result.html),
+        articleHtml => [postSlug, toFeedArticleHtml(articleHtml)] as const,
+      ),
+    ),
+    M.orElse(() => Option.none()),
+  )
+
+const blogPostRssItem = (
+  entry: BlogPostEntry,
+  maybeArticleHtml: Option.Option<string>,
+): string => {
   const postUrl = `${SITE_URL}${blogPostRouter({ postSlug: entry.slug })}`
   const enclosure = Option.match(entry.maybeCoverAsset, {
     onNone: () => '',
     onSome: cover =>
       `\n  <enclosure url="${escapeXml(`${SITE_URL}${cover.src}`)}" length="${cover.byteLength}" type="${cover.mimeType}" />`,
   })
+  const contentEncoded = Option.match(maybeArticleHtml, {
+    onNone: () => '',
+    onSome: articleHtml =>
+      `\n  <content:encoded><![CDATA[${escapeCdataContent(articleHtml)}]]></content:encoded>`,
+  })
   return `<item>
   <title>${escapeXml(entry.frontmatter.title)}</title>
   <link>${escapeXml(postUrl)}</link>
   <guid>${escapeXml(postUrl)}</guid>
   <description>${escapeXml(entry.frontmatter.description)}</description>
-  <pubDate>${toRfc822Date(entry.frontmatter.date)}</pubDate>${enclosure}
+  <pubDate>${toRfc822Date(entry.frontmatter.date)}</pubDate>${enclosure}${contentEncoded}
 </item>`
 }
 
@@ -756,11 +808,21 @@ const rssChannelHeader = (posts: ReadonlyArray<BlogPostEntry>): string => {
 
 export const buildBlogRssFeed = (
   posts: ReadonlyArray<BlogPostEntry>,
+  articleHtmlBySlug: ReadonlyMap<string, string>,
 ): string => {
-  const items = pipe(posts, Array.map(blogPostRssItem), Array.join('\n'))
+  const items = pipe(
+    posts,
+    Array.map(entry =>
+      blogPostRssItem(
+        entry,
+        Option.fromNullishOr(articleHtmlBySlug.get(entry.slug)),
+      ),
+    ),
+    Array.join('\n'),
+  )
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
 <channel>
 ${rssChannelHeader(posts)}
 ${items}
@@ -837,9 +899,16 @@ const program = Effect.scoped(
       buildSitemap(routes, lastModification),
     )
 
+    const feedArticleHtmlBySlug = new Map(
+      pipe(successfulResults, Array.map(maybeFeedArticleEntry), Array.getSomes),
+    )
+
     const rssFilePath = join(DIST_DIR, BLOG_RSS_PATH)
     yield* fs.makeDirectory(dirname(rssFilePath), { recursive: true })
-    yield* fs.writeFileString(rssFilePath, buildBlogRssFeed(blogPosts))
+    yield* fs.writeFileString(
+      rssFilePath,
+      buildBlogRssFeed(blogPosts, feedArticleHtmlBySlug),
+    )
     yield* Console.log(`  ✓ ${BLOG_RSS_PATH}`)
 
     const indexEntries = Array.map(

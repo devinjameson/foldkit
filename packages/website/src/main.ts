@@ -1139,16 +1139,32 @@ const ScrollMobileMenuActiveLinkIntoView = Command.define(
   },
 )
 
+// NOTE: mirrors --color-cream and --color-gray-900 in styles.css.
+// src/themeColor.test.ts fails when these drift.
+const LIGHT_THEME_COLOR = '#f8f7fb'
+const DARK_THEME_COLOR = '#1e1c21'
+
+const setThemeColorMeta = (color: string): void => {
+  const themeColorMeta = document.querySelector('meta[name="theme-color"]')
+  if (themeColorMeta !== null) {
+    themeColorMeta.setAttribute('content', color)
+  }
+}
+
 const ApplyTheme = Command.define('ApplyTheme', {
   args: { theme: ResolvedTheme },
   messages: [CompletedApplyTheme],
   execute: ({ theme }) =>
     Effect.sync(() => {
       M.value(theme).pipe(
-        M.when('Dark', () => document.documentElement.classList.add('dark')),
-        M.when('Light', () =>
-          document.documentElement.classList.remove('dark'),
-        ),
+        M.when('Dark', () => {
+          document.documentElement.classList.add('dark')
+          setThemeColorMeta(DARK_THEME_COLOR)
+        }),
+        M.when('Light', () => {
+          document.documentElement.classList.remove('dark')
+          setThemeColorMeta(LIGHT_THEME_COLOR)
+        }),
         M.exhaustive,
       )
       return CompletedApplyTheme()
