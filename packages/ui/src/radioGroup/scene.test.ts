@@ -258,6 +258,7 @@ describe('RadioGroup', () => {
         { update, view: testView({ isReadOnly: true }) },
         Scene.given(nothingSelected),
         Scene.keydown(option(1), ' '),
+        Scene.expectIgnored(),
         Scene.Command.expectNone(),
         Scene.expect(option(1)).toHaveAttr('aria-checked', 'false'),
       )

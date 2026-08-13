@@ -4,6 +4,7 @@ import {
   Effect,
   Equal,
   Function,
+  Match as M,
   Option,
   Predicate,
   type Schema,
@@ -197,6 +198,16 @@ type CapturingDispatch = Readonly<{
   reset: () => void
 }>
 
+/** Whether the most recent interaction step's event handler produced a
+ *  Message. `NotRun` is the seed state, before any interaction has run. */
+type InteractionOutcome = Readonly<
+  { _tag: 'NotRun' } | { _tag: 'Handled' } | { _tag: 'Ignored' }
+>
+
+const NotRun: InteractionOutcome = { _tag: 'NotRun' }
+const Handled: InteractionOutcome = { _tag: 'Handled' }
+const Ignored: InteractionOutcome = { _tag: 'Ignored' }
+
 type UpdateResult<Model, OutMessage> =
   | readonly [Model, ReadonlyArray<AnyCommand>]
   | readonly [Model, ReadonlyArray<AnyCommand>, OutMessage]
@@ -233,6 +244,7 @@ type InternalSceneSimulation<
     capturingDispatch: CapturingDispatch
     scope: Option.Option<Locator>
     mountSlots: ReadonlyArray<MountSlotState>
+    lastInteractionOutcome: InteractionOutcome
   }>
 
 const slotKey = ({ name, occurrence }: PendingMount): string =>
@@ -487,6 +499,21 @@ const maybeCaptureFromElement = <Model, Message, OutMessage>(
   )
 }
 
+/** Records whether the interaction just run produced a Message, so
+ *  {@link expectHandled} and {@link expectIgnored} can assert on it. An
+ *  interaction whose handler returns no Message leaves the simulation
+ *  otherwise untouched, which is indistinguishable from a correctly inert
+ *  one without this. */
+const withInteractionOutcome = <Model, Message, OutMessage>(
+  simulation: SceneSimulation<Model, Message, OutMessage>,
+  outcome: InteractionOutcome,
+): SceneSimulation<Model, Message, OutMessage> =>
+  /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+  ({
+    ...simulation,
+    lastInteractionOutcome: outcome,
+  }) as SceneSimulation<Model, Message, OutMessage>
+
 const captureFromElement = <Model, Message, OutMessage>(
   simulation: SceneSimulation<Model, Message, OutMessage>,
   element: VNode,
@@ -494,7 +521,7 @@ const captureFromElement = <Model, Message, OutMessage>(
   eventName: string,
   invokeHandler: (handler: Function) => void,
 ): SceneSimulation<Model, Message, OutMessage> =>
-  Option.getOrElse(
+  Option.match(
     maybeCaptureFromElement(
       simulation,
       element,
@@ -502,7 +529,10 @@ const captureFromElement = <Model, Message, OutMessage>(
       eventName,
       invokeHandler,
     ),
-    () => simulation,
+    {
+      onNone: () => withInteractionOutcome(simulation, Ignored),
+      onSome: next => withInteractionOutcome(next, Handled),
+    },
   )
 
 const invokeAndCapture = <Model, Message, OutMessage>(
@@ -1146,13 +1176,16 @@ const emitCustomElementEvent =
       },
     )
 
-    return Option.getOrThrowWith(
-      maybeNext,
-      () =>
-        new Error(
-          `I dispatched "${eventName}" on the element matching ${description} but its handler produced no Message.\n\n` +
-            "The OnCustomEvent handler only dispatches for CustomEvent instances, so the synthetic event failed the runtime's instanceof check. This points to a CustomEvent realm mismatch in the test environment.",
-        ),
+    return withInteractionOutcome(
+      Option.getOrThrowWith(
+        maybeNext,
+        () =>
+          new Error(
+            `I dispatched "${eventName}" on the element matching ${description} but its handler produced no Message.\n\n` +
+              "The OnCustomEvent handler only dispatches for CustomEvent instances, so the synthetic event failed the runtime's instanceof check. This points to a CustomEvent realm mismatch in the test environment.",
+          ),
+      ),
+      Handled,
     )
   }
 
@@ -1288,6 +1321,84 @@ export const expectNoOutMessage =
 
     return simulation
   }
+
+/** Asserts that the preceding interaction was handled: its event handler
+ *  produced a Message.
+ *
+ *  This is the assertion behind "the key is consumed here". A Foldkit
+ *  handler that returns a Message is what makes `h.OnKeyDownPreventDefault`
+ *  call `preventDefault()`, so a handled keydown is one whose browser
+ *  default is suppressed: `Space` does not scroll the page and `Enter` does
+ *  not submit a surrounding form.
+ *
+ *  Reach for this rather than asserting the Message's tag. The tag is the
+ *  mechanism a component happens to use; being consumed is the contract, and
+ *  it survives renaming the Message.
+ *
+ *  An interaction on an element with no handler at all throws from the
+ *  interaction step itself, so this distinguishes the narrower case of a
+ *  handler that ran and chose to produce nothing.
+ *
+ *  Only interaction steps set the outcome. `Command.resolve`, `Mount.resolve`,
+ *  and plain `expect` leave it alone, so the value is the last *interaction*
+ *  rather than the last step. Keep the assertion next to the interaction it
+ *  covers. */
+export const expectHandled =
+  () =>
+  <Model, Message, OutMessage>(
+    simulation: SceneSimulation<Model, Message, OutMessage>,
+  ): SceneSimulation<Model, Message, OutMessage> =>
+    M.value(toInternal(simulation).lastInteractionOutcome).pipe(
+      M.withReturnType<SceneSimulation<Model, Message, OutMessage>>(),
+      M.tagsExhaustive({
+        NotRun: () => {
+          throw new Error(
+            'I was asked whether the last interaction was handled, but no interaction has run yet.\n\n' +
+              'Put `expectHandled()` after a step like `click`, `keydown`, or `change`.',
+          )
+        },
+        Handled: () => simulation,
+        Ignored: () => {
+          throw new Error(
+            'Expected the last interaction to be handled, but its handler produced no Message.\n\n' +
+              'The handler ran and returned nothing, so the event falls through and the browser default is not prevented.',
+          )
+        },
+      }),
+    )
+
+/** Asserts that the preceding interaction was ignored: its event handler ran
+ *  and produced no Message, so the event falls through and the browser
+ *  default stands.
+ *
+ *  The complement of {@link expectHandled}. Use it where falling through is
+ *  the intended behavior, so the intent is stated rather than left as the
+ *  absence of any assertion.
+ *
+ *  Carries the same adjacency caveat: only interaction steps set the
+ *  outcome, so keep the assertion next to the interaction it covers. */
+export const expectIgnored =
+  () =>
+  <Model, Message, OutMessage>(
+    simulation: SceneSimulation<Model, Message, OutMessage>,
+  ): SceneSimulation<Model, Message, OutMessage> =>
+    M.value(toInternal(simulation).lastInteractionOutcome).pipe(
+      M.withReturnType<SceneSimulation<Model, Message, OutMessage>>(),
+      M.tagsExhaustive({
+        NotRun: () => {
+          throw new Error(
+            'I was asked whether the last interaction was ignored, but no interaction has run yet.\n\n' +
+              'Put `expectIgnored()` after a step like `click`, `keydown`, or `change`.',
+          )
+        },
+        Handled: () => {
+          throw new Error(
+            'Expected the last interaction to be ignored, but its handler produced a Message.',
+          )
+        },
+        Ignored: () => simulation,
+      }),
+    )
 
 /** Runs a function for side effects (e.g. assertions) without breaking the step chain. */
 export const tap =
@@ -2444,6 +2555,7 @@ export const scene: {
     viewFn: config.view,
     capturingDispatch,
     scope: Option.none(),
+    lastInteractionOutcome: NotRun,
   } as unknown as SceneSimulation<Model, Message, OutMessage>
 
   const result = runSteps(seed, steps)

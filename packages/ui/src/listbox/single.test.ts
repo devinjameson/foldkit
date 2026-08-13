@@ -1549,49 +1549,35 @@ describe('Listbox', () => {
         )
       })
 
-      it('reports Enter on the active item as SuppressedItemCommit', () => {
-        const seen: Array<Message> = []
-
+      it('consumes Enter on the active item without committing', () => {
         Scene.scene(
           {
-            update: (model: Model, message: Message) => {
-              seen.push(message)
-              return update(model, message)
-            },
+            update,
             view: sceneView({ isReadOnly: true }),
           },
           Scene.given(openModel()),
           acknowledgeAnchor,
           acknowledgeBackdrop,
           Scene.keydown(itemsContainer, 'Enter'),
-          Scene.tap(() => {
-            expect(seen.map(message => message._tag)).toContain(
-              'SuppressedItemCommit',
-            )
-          }),
+          Scene.expectHandled(),
+          Scene.expectNoOutMessage(),
+          Scene.Command.expectNone(),
         )
       })
 
-      it('reports Space on the active item as SuppressedItemCommit', () => {
-        const seen: Array<Message> = []
-
+      it('consumes Space on the active item without committing', () => {
         Scene.scene(
           {
-            update: (model: Model, message: Message) => {
-              seen.push(message)
-              return update(model, message)
-            },
+            update,
             view: sceneView({ isReadOnly: true }),
           },
           Scene.given(openModel()),
           acknowledgeAnchor,
           acknowledgeBackdrop,
           Scene.keydown(itemsContainer, ' '),
-          Scene.tap(() => {
-            expect(seen.map(message => message._tag)).toContain(
-              'SuppressedItemCommit',
-            )
-          }),
+          Scene.expectHandled(),
+          Scene.expectNoOutMessage(),
+          Scene.Command.expectNone(),
         )
       })
 
