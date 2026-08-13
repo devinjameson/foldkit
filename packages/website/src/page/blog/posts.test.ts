@@ -1,8 +1,12 @@
-import { Array, Option, Schema as S } from 'effect'
+import { Array, Option, Schema as S, pipe } from 'effect'
+import { imageSize } from 'image-size'
+import { existsSync, readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, test } from 'vitest'
 
 import { BLOG_POST_SLUG_PATTERN } from '../../route'
-import { PostFrontmatter } from './frontmatter'
+import { PostFrontmatter, maybePostCover } from './frontmatter'
 import { byDateThenSlugDescending } from './meta'
 import { findPostBySlug, formatPostDate, posts } from './posts'
 
@@ -90,6 +94,47 @@ describe('post sources', () => {
   )
 })
 
+// NOTE: happy-dom replaces the global URL constructor and resolves
+// `new URL(relative, base)` against its own http document base, dropping the
+// file scheme. Anchor through `fileURLToPath(import.meta.url)` directly.
+describe('post covers', () => {
+  const PUBLIC_DIR = join(
+    dirname(fileURLToPath(import.meta.url)),
+    '../../../public',
+  )
+
+  const declaredCovers = pipe(
+    posts,
+    Array.map(post =>
+      Option.map(maybePostCover(post.frontmatter), cover => ({
+        slug: post.slug,
+        cover,
+      })),
+    ),
+    Array.getSomes,
+  )
+
+  test('every declared cover file exists in public/', () => {
+    for (const { slug, cover } of declaredCovers) {
+      expect(
+        existsSync(join(PUBLIC_DIR, cover.src)),
+        `${slug} declares cover ${cover.src}, which is not in public/`,
+      ).toBe(true)
+    }
+  })
+
+  test('every declared cover matches its file dimensions', () => {
+    for (const { slug, cover } of declaredCovers) {
+      const measured = imageSize(readFileSync(join(PUBLIC_DIR, cover.src)))
+
+      expect(
+        { width: measured.width, height: measured.height },
+        `${slug} declares ${cover.width}x${cover.height} for ${cover.src}`,
+      ).toEqual({ width: cover.width, height: cover.height })
+    }
+  })
+})
+
 describe('formatPostDate', () => {
   test('formats an ISO date for display', () => {
     expect(formatPostDate('2026-08-01')).toBe('August 1, 2026')
@@ -122,5 +167,113 @@ describe('PostFrontmatter dates', () => {
     'August 1, 2026',
   ])('rejects %s', date => {
     expect(() => decodePostFrontmatter(withDate(date))).toThrow()
+  })
+})
+
+describe('PostFrontmatter covers', () => {
+  const decodePostFrontmatter = S.decodeUnknownSync(PostFrontmatter)
+
+  const withoutCover = {
+    title: 'Title',
+    description: 'Description',
+    date: '2026-08-01',
+  }
+
+  const coverFields = {
+    coverImage: '/blog/some-post/cover.webp',
+    coverImageAlt: 'A paper crane mid-fold',
+    coverImageWidth: '1600',
+    coverImageHeight: '1067',
+  }
+
+  test('accepts a post with no cover', () => {
+    expect(() => decodePostFrontmatter(withoutCover)).not.toThrow()
+  })
+
+  test('accepts the four cover fields declared together', () => {
+    expect(() =>
+      decodePostFrontmatter({ ...withoutCover, ...coverFields }),
+    ).not.toThrow()
+  })
+
+  test('accepts an empty coverImageAlt for a decorative cover', () => {
+    expect(() =>
+      decodePostFrontmatter({
+        ...withoutCover,
+        ...coverFields,
+        coverImageAlt: '',
+      }),
+    ).not.toThrow()
+  })
+
+  test.each([
+    'coverImage',
+    'coverImageAlt',
+    'coverImageWidth',
+    'coverImageHeight',
+  ])('rejects a cover missing %s', missingField => {
+    const partialCover = Object.fromEntries(
+      Object.entries(coverFields).filter(([field]) => field !== missingField),
+    )
+
+    expect(() =>
+      decodePostFrontmatter({ ...withoutCover, ...partialCover }),
+    ).toThrow()
+  })
+
+  test('rejects a coverImage that is not root-relative', () => {
+    expect(() =>
+      decodePostFrontmatter({
+        ...withoutCover,
+        ...coverFields,
+        coverImage: 'blog/some-post/cover.webp',
+      }),
+    ).toThrow()
+  })
+
+  test.each(['0', '-100', '1600.5', '16 00', 'wide'])(
+    'rejects the dimension %s',
+    dimension => {
+      expect(() =>
+        decodePostFrontmatter({
+          ...withoutCover,
+          ...coverFields,
+          coverImageWidth: dimension,
+        }),
+      ).toThrow()
+    },
+  )
+})
+
+describe('maybePostCover', () => {
+  const decodePostFrontmatter = S.decodeUnknownSync(PostFrontmatter)
+
+  test('returns the cover a post declares', () => {
+    const frontmatter = decodePostFrontmatter({
+      title: 'Title',
+      description: 'Description',
+      date: '2026-08-01',
+      coverImage: '/blog/some-post/cover.webp',
+      coverImageAlt: 'A paper crane mid-fold',
+      coverImageWidth: '1600',
+      coverImageHeight: '1067',
+    })
+
+    expect(Option.getOrThrow(maybePostCover(frontmatter))).toEqual({
+      src: '/blog/some-post/cover.webp',
+      alt: 'A paper crane mid-fold',
+      width: 1600,
+      height: 1067,
+    })
+  })
+
+  test('returns none for a post without a cover', () => {
+    const frontmatter = decodePostFrontmatter({
+      title: 'Title',
+      description: 'Description',
+      date: '2026-08-01',
+    })
+
+    expect(Option.isNone(maybePostCover(frontmatter))).toBe(true)
   })
 })

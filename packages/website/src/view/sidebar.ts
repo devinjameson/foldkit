@@ -315,7 +315,7 @@ export const mobileMenuView = (model: Model, h: HtmlBuilder<Message>): Html => {
         h.div(
           [
             h.Class(
-              'flex justify-between items-center h-[var(--header-height)] pt-[env(safe-area-inset-top,0px)] px-3 border-b border-gray-300 dark:border-gray-800 shrink-0',
+              'flex justify-between items-center h-[var(--header-height)] pt-[env(safe-area-inset-top,0px)] px-4 border-b border-gray-300 dark:border-gray-800 shrink-0',
             ),
           ],
           [

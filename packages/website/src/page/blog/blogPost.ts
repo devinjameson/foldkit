@@ -1,3 +1,4 @@
+import { Option } from 'effect'
 import {
   type Html,
   type HtmlBuilder,
@@ -10,6 +11,7 @@ import { type Message } from '../../message'
 import { pageTitle } from '../../prose'
 import { blogRouter } from '../../route'
 import { type CopiedSnippets } from '../../view/codeBlock'
+import { type PostCover, maybePostCover } from './frontmatter'
 import { BLOG_AUTHOR } from './meta'
 import { type BlogPost, formatPostDate } from './posts'
 
@@ -25,6 +27,23 @@ const backToBlogLink: Html = ih.a(
   ['← Blog'],
 )
 
+const coverImageView = (cover: PostCover): Html =>
+  ih.div(
+    [ih.Class('relative overflow-hidden rounded-lg mb-8')],
+    [
+      ih.div([
+        ih.Class('absolute inset-0 bg-gray-200 dark:bg-gray-800 animate-pulse'),
+      ]),
+      ih.img([
+        ih.Src(cover.src),
+        ih.Alt(cover.alt),
+        ih.Width(String(cover.width)),
+        ih.Height(String(cover.height)),
+        ih.Class('relative w-full h-auto'),
+      ]),
+    ],
+  )
+
 const postView = (
   post: BlogPost,
   copiedSnippets: CopiedSnippets,
@@ -34,12 +53,16 @@ const postView = (
     [],
     [
       backToBlogLink,
+      ...Option.match(maybePostCover(post.frontmatter), {
+        onNone: () => [],
+        onSome: cover => [coverImageView(cover)],
+      }),
       ih.header(
         [ih.Class('mb-8')],
         [
           pageTitle(post.slug, post.frontmatter.title),
           ih.p(
-            [ih.Class('text-sm text-gray-500 dark:text-gray-400')],
+            [ih.Class('text-gray-500 dark:text-gray-400')],
             [`${formatPostDate(post.frontmatter.date)} · ${BLOG_AUTHOR}`],
           ),
         ],

@@ -1,5 +1,54 @@
 # effect
 
+## 4.0.0-rc.108
+
+### Patch Changes
+
+- [#6546](https://github.com/Effect-TS/effect/pull/6546) [`dfb173e`](https://github.com/Effect-TS/effect/commit/dfb173efffd20c4feded4efe409018dd55acdca8) Thanks @xianjianlf2! - Handle BigInt values safely and consistently across JSON diagnostics and logger formats.
+
+- [#7174](https://github.com/Effect-TS/effect/pull/7174) [`005e090`](https://github.com/Effect-TS/effect/commit/005e0902cace9f8960a4f43573665a3a9b53b6fa) Thanks @tim-smart! - Fix `Queue.await` failing with `Cause.Done` when registered before the queue ends.
+
+- [#7180](https://github.com/Effect-TS/effect/pull/7180) [`c82c532`](https://github.com/Effect-TS/effect/commit/c82c53228dc1c50cc99654ce6de7766b4de09e75) Thanks @gcanti! - Prioritize redacted representations in formatters and normalize text logger levels to uppercase.
+
+- [#7193](https://github.com/Effect-TS/effect/pull/7193) [`22b579f`](https://github.com/Effect-TS/effect/commit/22b579f6c582e6e2d951784791fea6f1802517ed) Thanks @kitlangton! - Fix `Deferred.await` dying with a `TypeError` when a waiter is interrupted after the `Deferred` has been completed.
+
+- [#7179](https://github.com/Effect-TS/effect/pull/7179) [`3e19539`](https://github.com/Effect-TS/effect/commit/3e19539205082b1006d84553045d1b03db9cc8a1) Thanks @tim-smart! - Fix `DurableDeferred.raceAll` so a completed deferred can wake an active workflow without changing success-biased race semantics
+
+- [#7189](https://github.com/Effect-TS/effect/pull/7189) [`08a3c74`](https://github.com/Effect-TS/effect/commit/08a3c74133206fc1cc728e0aa96d02e672fd80bd) Thanks @gcanti! - Fix `HttpApi` query decoding for array parameters with a single value.
+
+- [#6550](https://github.com/Effect-TS/effect/pull/6550) [`eb0bae0`](https://github.com/Effect-TS/effect/commit/eb0bae08d543d58754c9bb7a57e67c1e2bb3f55a) Thanks @xianjianlf2! - Return fresh OpenAPI specs from cached `OpenApi.fromApi` calls.
+
+- [#7188](https://github.com/Effect-TS/effect/pull/7188) [`97b544d`](https://github.com/Effect-TS/effect/commit/97b544d8b636587647b90691d669305c0eb4fc66) Thanks @gcanti! - Mark the internal `~sentinels` Schema annotation as `@internal` so release declaration stripping removes it together with `SchemaAST.Sentinel`. This keeps the published declarations self-consistent for consumers that type-check dependencies with `skipLibCheck: false`.
+
+- [#7158](https://github.com/Effect-TS/effect/pull/7158) [`4f6d131`](https://github.com/Effect-TS/effect/commit/4f6d131e85d74ab0ec0300e52e503a5f943fc576) Thanks @k3dom! - Improve Union candidate selection: a nested union member is dispatched by the sentinels common to all its members, and candidates whose sentinel the input contradicts are excluded.
+
+- [#7178](https://github.com/Effect-TS/effect/pull/7178) [`fad4b7c`](https://github.com/Effect-TS/effect/commit/fad4b7c5138b3f38c2427436da2e0685c1ca4e9b) Thanks @tim-smart! - Use Promise microtasks for synchronous Scheduler dispatch.
+
+- [#7181](https://github.com/Effect-TS/effect/pull/7181) [`accf447`](https://github.com/Effect-TS/effect/commit/accf4474513064e2a21d14b1937503261b4f34dc) Thanks @gcanti! - Move `SchemaError` into the `Schema` module and remove the standalone `SchemaError` module.
+
+- [#7195](https://github.com/Effect-TS/effect/pull/7195) [`31b27e4`](https://github.com/Effect-TS/effect/commit/31b27e49903c351588435f666c953aaac28f6120) Thanks @tim-smart! - Ensure discarded non-persisted cluster messages complete without waiting for the entity reply.
+
+- [#7191](https://github.com/Effect-TS/effect/pull/7191) [`8458951`](https://github.com/Effect-TS/effect/commit/84589518c3966c63d7f3679a5296d380eb1ba887) Thanks @Digifox03! - Fix `HttpRouter.Middleware.layer` to provide request error services for errors declared in `handles`, and expose global
+  middleware errors from `HttpRouter.toHttpEffect`.
+
+## 4.0.0-beta.107
+
+### Patch Changes
+
+- [#7156](https://github.com/Effect-TS/effect/pull/7156) [`596f3f9`](https://github.com/Effect-TS/effect/commit/596f3f92d7fe355811b815cb212332b082268ce8) Thanks @tim-smart! - Terminate active multipart file streams when a parser limit is exceeded or the body ends unexpectedly, so file parts fail instead of hanging.
+
+- [#7153](https://github.com/Effect-TS/effect/pull/7153) [`9611ed4`](https://github.com/Effect-TS/effect/commit/9611ed42d11300546b339ab13492a0f7bdb1ebfb) Thanks @rajanpanth! - Fix `Duration`'s `Hash.symbol` implementation to hash a canonical nanoseconds form instead of the raw internal `Millis`/`Nanos` representation. Two durations that `Duration.equals`/`Equal.equals` consider equal (e.g. `Duration.seconds(5)` and `Duration.nanos(5_000_000_000n)`) previously hashed differently, violating the Hash/Equal contract and silently breaking `HashSet`/`HashMap` lookups keyed by `Duration`.
+
+- [#7166](https://github.com/Effect-TS/effect/pull/7166) [`8b91605`](https://github.com/Effect-TS/effect/commit/8b9160548556e4b0ec7ee2f2707716776be49018) Thanks @CDVolvik! - Import migrations through a file URL in `Migrator.fromFileSystem`, so absolute Windows paths are accepted by the ESM loader.
+  
+  Previously the directory and file name were passed to `import` as a plain path. On Windows that produced a specifier such as `D:\migrations\1_init.ts`, which the ESM loader rejects with `Only URLs with a scheme in: file, data, and node are supported`.
+  
+  `fromFileSystem` now resolves the specifier through the `Path` service, so its type widens from `Loader<FileSystem>` to `Loader<FileSystem | Path>`. Callers that already provide an aggregate platform layer such as `NodeServices.layer` are unaffected; callers that provide `FileSystem` on its own now also need a `Path` layer, and on Windows it must be a platform-aware one rather than the POSIX `Path.layer`.
+
+- [#7157](https://github.com/Effect-TS/effect/pull/7157) [`d901928`](https://github.com/Effect-TS/effect/commit/d901928efa44f573ed1247f53fdb203a8e4fcede) Thanks @tim-smart! - Add `Channel.mkUint8Array` and reuse it from `Stream` and multipart file collection. This also fixes quadratic buffering in `File.contentEffect`, improving collection of a 16 MiB chunked upload by approximately 90x.
+
+- [#7149](https://github.com/Effect-TS/effect/pull/7149) [`b32bdef`](https://github.com/Effect-TS/effect/commit/b32bdef0d119a1ad1463dc01a46763ffee1f9bd9) Thanks @gcanti! - Require explicit handling for regular expression pattern constraints translated from JSON Schema documents, with modes to apply trusted patterns or ignore their constraints.
+
 ## 4.0.0-beta.106
 
 ### Patch Changes
@@ -2472,7 +2521,7 @@
 - [#1725](https://github.com/Effect-TS/effect-smol/pull/1725) [`27fea0f`](https://github.com/Effect-TS/effect-smol/commit/27fea0f66910de5905f40fd63f8ddbb6f7ac5aba) Thanks @tim-smart! - Improve unstable HttpApi runtime failures for missing server middleware and missing group implementations.
   - HttpApiBuilder.applyMiddleware now resolves middleware services via Context.getUnsafe, so missing middleware fails with a clear "Service not found: <middleware>" error instead of an opaque is not a function TypeError.
   - HttpApiBuilder.layer now reports missing groups with actionable context (group identifier, service key, suggested HttpApiBuilder.group(...) call, and available group keys).
-  - Added regression tests in packages/platform-node/test/HttpApi.test.ts covering:
+  - Added regression tests in packages/platform/node/test/HttpApi.test.ts covering:
     - addHttpApi + API-level middleware applied across merged groups
     - missing middleware service diagnostics
     - missing addHttpApi group layer diagnostics
