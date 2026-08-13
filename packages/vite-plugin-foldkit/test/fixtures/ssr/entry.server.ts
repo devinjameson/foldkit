@@ -1,4 +1,4 @@
-import * as Server from 'foldkit/experimental/server'
+import { Server } from 'foldkit/experimental'
 
 const renderedHeaders = new Headers({ 'x-rendered': 'yes' })
 renderedHeaders.append('set-cookie', 'first=1; Path=/')

@@ -11,7 +11,7 @@ import {
   pipe,
 } from 'effect'
 import { FileSystem } from 'effect'
-import * as Server from 'foldkit/experimental/server'
+import { Server } from 'foldkit/experimental'
 import { Window } from 'happy-dom'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'

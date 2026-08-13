@@ -1,6 +1,6 @@
 import { Console, Effect } from 'effect'
 import { FileSystem } from 'effect'
-import * as Server from 'foldkit/experimental/server'
+import { Server } from 'foldkit/experimental'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 

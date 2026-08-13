@@ -6,7 +6,7 @@ import {
   Schema as S,
 } from 'effect'
 import { Calendar } from 'foldkit'
-import * as Server from 'foldkit/experimental/server'
+import { Server } from 'foldkit/experimental'
 import { fromString as urlFromString } from 'foldkit/url'
 
 import { Flags, init, view } from './main'

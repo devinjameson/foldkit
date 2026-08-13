@@ -41,6 +41,16 @@ declare module '*.json?raw' {
   export default content
 }
 
+declare module '*.html?raw' {
+  const content: string
+  export default content
+}
+
+declare module '*.html?highlighted' {
+  const html: string
+  export default html
+}
+
 declare module 'virtual:css-snippets' {
   const snippets: Record<string, { raw: string; highlighted: string }>
   export default snippets

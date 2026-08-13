@@ -1,5 +1,5 @@
 import { Array, Effect, Predicate, String as String_ } from 'effect'
-import { type ServerEntryModule, toResponse } from 'foldkit/experimental/server'
+import { Server } from 'foldkit/experimental'
 import { readFile } from 'node:fs/promises'
 import type { ServerResponse } from 'node:http'
 import { resolve } from 'node:path'
@@ -24,7 +24,7 @@ export type FoldkitSsrOptions = Readonly<{
 
 const isServerEntryModule = (
   loadedModule: unknown,
-): loadedModule is ServerEntryModule =>
+): loadedModule is Server.ServerEntryModule =>
   Predicate.isObject(loadedModule) &&
   Predicate.hasProperty(loadedModule, 'renderPage') &&
   Predicate.isFunction(loadedModule.renderPage)
@@ -92,7 +92,7 @@ const renderRequest = (
     const result = yield* Effect.promise(() =>
       loadedModule.renderPage(toWebRequest(url, nodeRequest)),
     )
-    return toResponse(
+    return Server.toResponse(
       template,
       result,
       options.containerId === undefined

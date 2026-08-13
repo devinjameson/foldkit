@@ -7,7 +7,7 @@ import {
   HttpServerResponse,
   HttpStaticServer,
 } from 'effect/unstable/http'
-import { toResponse } from 'foldkit/experimental/server'
+import { Server } from 'foldkit/experimental'
 import { createServer } from 'node:http'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -35,7 +35,7 @@ const renderRequest = (
   Effect.gen(function* () {
     const webRequest = yield* HttpServerRequest.toWeb(request)
     const result = yield* Effect.promise(() => renderPage(webRequest))
-    return HttpServerResponse.fromWeb(toResponse(template, result))
+    return HttpServerResponse.fromWeb(Server.toResponse(template, result))
   })
 
 const isRouteNotFound = (error: HttpServerError.HttpServerError): boolean =>

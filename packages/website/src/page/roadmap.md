@@ -20,7 +20,7 @@ Day-to-day work is tracked at ticket granularity in a private tracker, and that 
 
 ## After 1.0
 
-Build-time static generation and per-request server rendering share one experimental hydration handoff: `renderToString` in `foldkit/experimental/server` and explicit adoption via `Runtime.hydrate`. The [Server Rendering](/core/server-rendering) and [What about SSR?](/faq/what-about-ssr) pages cover the architecture, with separate SSG and SSR reference applications.
+Build-time static generation and per-request server rendering share one experimental hydration handoff: `Server.renderToString` in `foldkit/experimental` and explicit adoption via `Runtime.hydrate`. The [Server Rendering](/core/server-rendering) and [What about SSR?](/faq/what-about-ssr) pages cover the architecture, with separate SSG and SSR reference applications.
 
 Beyond that, these are directions being explored, not commitments:
 

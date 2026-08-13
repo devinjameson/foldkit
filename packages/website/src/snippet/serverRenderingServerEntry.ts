@@ -1,24 +1,19 @@
 import { Effect } from 'effect'
 import { Server } from 'foldkit/experimental'
 
-import { readCountCookie } from './cookie'
 import { Flags, init, view } from './main'
 
-const flagsForRequest = (cookieHeader: string): Flags => ({
-  initialCount: readCountCookie(cookieHeader),
-  renderedAt: new Date().toISOString(),
-  renderedOn: 'Server',
+const flagsForRequest = (request: Request): Flags => ({
+  initialCount: readCountCookie(request.headers.get('cookie') ?? ''),
 })
 
-// NOTE: request Flags are serialized with the rendered application, so the
-// hydrating client calls init with the exact values this render used.
 export const renderPage = (
   request: Request,
 ): Promise<Server.ServerEntryResult> =>
   Effect.gen(function* () {
     const application = yield* Server.renderToString(
       { Flags, init, view },
-      { flags: flagsForRequest(request.headers.get('cookie') ?? '') },
+      { flags: flagsForRequest(request) },
     )
 
     return Server.Rendered(application, {
