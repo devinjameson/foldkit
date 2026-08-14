@@ -44,9 +44,11 @@ const toWebRequest = (
       }
     }
   }
+
   const host = nodeRequest.headers.host ?? 'localhost'
   const method = nodeRequest.method ?? 'GET'
   const requestInit: RequestInit & { duplex?: 'half' } = { headers, method }
+
   if (method !== 'GET' && method !== 'HEAD') {
     // NOTE: Node and the DOM library declare structurally different
     // ReadableStream interfaces even though Node's `Readable.toWeb` returns
@@ -54,6 +56,7 @@ const toWebRequest = (
     requestInit.body = Readable.toWeb(nodeRequest) as ReadableStream<Uint8Array>
     requestInit.duplex = 'half'
   }
+
   return new Request(new URL(url, `http://${host}`), requestInit)
 }
 
@@ -73,20 +76,25 @@ const renderRequest = (
 ): Effect.Effect<Response> =>
   Effect.gen(function* () {
     const url = nodeRequest.originalUrl ?? nodeRequest.url ?? '/'
+
     const rawTemplate = yield* Effect.promise(() =>
       readFile(resolve(server.config.root, 'index.html'), 'utf-8'),
     )
+
     // NOTE: the first argument tells Vite where the HTML lives, and Vite
     // resolves the template's relative URLs (such as a `./src/entry.ts`
     // script) against it. The template always lives at the site root, so
     // that argument must stay `/index.html` no matter which route is being
-    // rendered; the requested route is passed separately as `originalUrl`.
+    // rendered. The third argument, named `originalUrl` in Vite's signature,
+    // carries the route actually being requested.
     const template = yield* Effect.promise(() =>
       server.transformIndexHtml('/index.html', rawTemplate, url),
     )
+
     const loadedModule = yield* Effect.promise(() =>
       server.ssrLoadModule(options.serverEntry),
     )
+
     if (!isServerEntryModule(loadedModule)) {
       return yield* Effect.die(
         new Error(
@@ -94,9 +102,11 @@ const renderRequest = (
         ),
       )
     }
+
     const result = yield* Effect.promise(() =>
       loadedModule.renderPage(toWebRequest(url, nodeRequest)),
     )
+
     return Server.toResponse(
       template,
       result,
@@ -122,6 +132,7 @@ const sendWebResponse = async (
   )
     ? webResponse.headers.getSetCookie
     : undefined
+
   const setCookieHeaders = Predicate.isFunction(getSetCookie)
     ? getSetCookie.call(webResponse.headers)
     : []
@@ -131,6 +142,7 @@ const sendWebResponse = async (
       nodeResponse.setHeader(name, value)
     }
   }
+
   if (Array.isArrayNonEmpty(setCookieHeaders)) {
     nodeResponse.setHeader('set-cookie', setCookieHeaders)
   }
