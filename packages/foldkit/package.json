@@ -162,12 +162,12 @@
     "docs": "typedoc"
   },
   "peerDependencies": {
-    "effect": "4.0.0-rc.108"
+    "effect": "4.0.0-rc.109"
   },
   "devDependencies": {
-    "@effect/vitest": "4.0.0-rc.108",
+    "@effect/vitest": "4.0.0-rc.109",
     "@vitest/coverage-v8": "^4.1.9",
-    "effect": "4.0.0-rc.108",
+    "effect": "4.0.0-rc.109",
     "happy-dom": "^20.10.4",
     "rimraf": "^6.1.3",
     "typedoc": "^0.28.19",
