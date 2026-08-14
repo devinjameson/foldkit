@@ -21,18 +21,18 @@ const OG_URL_META_PATTERN = new RegExp(
 
 const DEFAULT_CONTAINER_ID = 'root'
 
+const existingAttributePattern = (name: string): RegExp =>
+  new RegExp(
+    `\\s${name}(?:\\s*=\\s*(?:"[^"]*"|'[^']*'|[^\\s>]+)|(?=[\\s>]|$))`,
+    'i',
+  )
+
 const setAttribute = (
   attributes: string,
   name: string,
   value: string,
 ): string => {
-  const withoutExisting = attributes.replace(
-    new RegExp(
-      `\\s${name}(?:\\s*=\\s*(?:"[^"]*"|'[^']*'|[^\\s>]+)|(?=[\\s>]|$))`,
-      'i',
-    ),
-    '',
-  )
+  const withoutExisting = attributes.replace(existingAttributePattern(name), '')
   return `${withoutExisting} ${name}="${escapeAttributeValue(value)}"`
 }
 
@@ -48,15 +48,13 @@ const applyRootAttributes = (
   if (lang === undefined && dir === undefined) {
     return template
   }
+
   return template.replace(HTML_OPEN_TAG_PATTERN, (_match, attributes) => {
-    let nextAttributes = attributes
-    if (lang !== undefined) {
-      nextAttributes = setAttribute(nextAttributes, 'lang', lang)
-    }
-    if (dir !== undefined) {
-      nextAttributes = setAttribute(nextAttributes, 'dir', dir)
-    }
-    return `<html${nextAttributes}>`
+    const withLang =
+      lang === undefined ? attributes : setAttribute(attributes, 'lang', lang)
+    const withLangAndDir =
+      dir === undefined ? withLang : setAttribute(withLang, 'dir', dir)
+    return `<html${withLangAndDir}>`
   })
 }
 
@@ -67,6 +65,7 @@ const stampCanonical = (
   if (canonical === undefined) {
     return template
   }
+
   return template.replace(
     CANONICAL_LINK_PATTERN,
     (_match, attributes) =>
@@ -78,6 +77,7 @@ const stampOgUrl = (template: string, ogUrl: string | undefined): string => {
   if (ogUrl === undefined) {
     return template
   }
+
   return template.replace(
     OG_URL_META_PATTERN,
     (_match, attributes) =>
@@ -136,30 +136,35 @@ export const injectIntoTemplate = (
 ): string => {
   const containerId = options?.containerId ?? DEFAULT_CONTAINER_ID
   const placeholder = containerPlaceholder(containerId)
+
   if (!template.includes(placeholder)) {
     throw new Error(
       `[foldkit] injectIntoTemplate found no exact ${placeholder} placeholder in the template. ` +
         'Add that markup where the application root belongs, or pass the container id the template uses.',
     )
   }
+
   if (template.replace(placeholder, '').includes(placeholder)) {
     throw new Error(
       `[foldkit] injectIntoTemplate found more than one ${placeholder} placeholder in the template. ` +
         'Keep exactly one placeholder for each application root.',
     )
   }
+
   if (!TITLE_PATTERN.test(template)) {
     throw new Error(
       '[foldkit] injectIntoTemplate found no <title> element in the template. ' +
         'Add exactly one <title> where the rendered Document title belongs.',
     )
   }
+
   if (TITLE_PATTERN.test(template.replace(TITLE_PATTERN, ''))) {
     throw new Error(
       '[foldkit] injectIntoTemplate found more than one <title> element in the template. ' +
         'Keep exactly one title for the rendered Document.',
     )
   }
+
   const withHeadFields = stampOgUrl(
     stampCanonical(
       applyRootAttributes(template, rendered.lang, rendered.dir),
@@ -167,6 +172,7 @@ export const injectIntoTemplate = (
     ),
     rendered.ogUrl,
   )
+
   // NOTE: the body and title replacements are passed as functions. A string
   // second argument to `String.replace` treats `$&`, `$\``, `$'`, and `$$` as
   // insertion patterns, so a `$` sequence in the rendered markup or title

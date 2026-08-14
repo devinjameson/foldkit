@@ -1,4 +1,4 @@
-import { Context, Data, Effect, Option, Predicate, Schema } from 'effect'
+import { Context, Data, Effect, Option, Predicate, Schema, pipe } from 'effect'
 
 import { beginRender, createBoundaryRegistry } from '../../html/boundary.js'
 import {
@@ -189,14 +189,16 @@ export type RenderUrlFlagsOptions<Flags> = RenderUrlOptions &
 
 const noOpDispatch: DispatchSync = () => {}
 
-// NOTE: the html builder reads a process-wide frame stack (`setRuntime` /
-// `clearRuntime`), so this bracket is safe only because it is fully
-// synchronous: `view` returns a Document without awaiting, and there is no
-// yield between push and pop. On one single-threaded runtime, two concurrent
-// `renderToString` calls therefore cannot interleave their frames, so no
-// per-request context (AsyncLocalStorage) is needed. This mirrors how the
-// Scene test harness and the client runtime drive a view. A `view` that
-// suspended mid-render would break the invariant; views are pure and cannot.
+// NOTE: the html builder reads its dispatch context from a process-wide
+// frame stack (`setRuntime` / `clearRuntime`) rather than an argument, so
+// this push/render/pop bracket must never interleave with another render's.
+// It cannot: JavaScript switches tasks only at async boundaries, and the
+// bracket is fully synchronous (`view` returns a Document without awaiting),
+// so it runs to completion before any other render can start. That atomicity
+// is why no per-request context (AsyncLocalStorage) is needed. The Scene
+// test harness and the client runtime drive a view the same way. A `view`
+// that suspended mid-render would break the invariant; views are pure and
+// cannot.
 const runView = <Model>(
   view: (model: Model, h: HtmlBuilder<any>) => Document,
   model: Model,
@@ -211,6 +213,16 @@ const runView = <Model>(
   }
 }
 
+// NOTE: `<` becomes `\u003c` inside the payload so no embedded value can
+// form a `</script>` sequence and close the element early. The escape is
+// JSON-native, so `JSON.parse` restores the original character during
+// hydration.
+const escapeJsonForScriptElement = (json: string): string =>
+  json.replace(/</g, '\\u003c')
+
+const flagsPayloadScript = (runtimeId: string, json: string): string =>
+  `<script type="application/json" ${FOLDKIT_FLAGS_ATTRIBUTE}="${escapeAttributeValue(runtimeId)}">${escapeJsonForScriptElement(json)}</script>`
+
 const encodeFlagsPayload = <Flags>(
   FlagsCodec: Schema.Codec<Flags, any, unknown, never>,
   flags: Flags,
@@ -218,9 +230,10 @@ const encodeFlagsPayload = <Flags>(
 ): Effect.Effect<string, ServerFlagsEncodeError> =>
   Effect.gen(function* () {
     const FlagsJsonCodec = Schema.toCodecJson(FlagsCodec)
-    const encodedFlags = yield* Effect.mapError(
-      Schema.encodeEffect(FlagsJsonCodec)(flags),
-      cause => new ServerFlagsEncodeError({ cause }),
+    const encodedFlags = yield* pipe(
+      flags,
+      Schema.encodeEffect(FlagsJsonCodec),
+      Effect.mapError(cause => new ServerFlagsEncodeError({ cause })),
     )
     const json = yield* Effect.try({
       try: () => JSON.stringify(encodedFlags),
@@ -235,9 +248,7 @@ const encodeFlagsPayload = <Flags>(
         }),
       )
     }
-    const escapedJson = json.replace(/</g, '\\u003c')
-    const escapedRuntimeId = escapeAttributeValue(runtimeId)
-    return `<script type="application/json" ${FOLDKIT_FLAGS_ATTRIBUTE}="${escapedRuntimeId}">${escapedJson}</script>`
+    return flagsPayloadScript(runtimeId, json)
   })
 
 const parseUrl = (url: string): Effect.Effect<Url, InvalidServerUrl> =>

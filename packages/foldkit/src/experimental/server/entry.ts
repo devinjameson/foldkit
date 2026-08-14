@@ -1,3 +1,5 @@
+import { Match as M } from 'effect'
+
 import type { RenderedApplication } from './server.js'
 import {
   type InjectIntoTemplateOptions,
@@ -92,21 +94,23 @@ export const toResponse = (
   template: string,
   result: ServerEntryResult,
   options?: InjectIntoTemplateOptions,
-): Response => {
-  if (result._tag === 'Responded') {
-    return result.response
-  }
+): Response =>
+  M.value(result).pipe(
+    M.tagsExhaustive({
+      Responded: ({ response }) => response,
+      Rendered: rendered => {
+        const headers = new Headers(rendered.headers)
+        if (!headers.has('content-type')) {
+          headers.set('content-type', 'text/html; charset=utf-8')
+        }
 
-  const headers = new Headers(result.headers)
-  if (!headers.has('content-type')) {
-    headers.set('content-type', 'text/html; charset=utf-8')
-  }
-
-  return new Response(
-    injectIntoTemplate(template, result.application, options),
-    {
-      status: result.status ?? 200,
-      headers,
-    },
+        return new Response(
+          injectIntoTemplate(template, rendered.application, options),
+          {
+            status: rendered.status ?? 200,
+            headers,
+          },
+        )
+      },
+    }),
   )
-}
