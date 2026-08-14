@@ -1,6 +1,6 @@
 {
   "name": "foldkit",
-  "version": "0.143.0",
+  "version": "0.144.0",
   "description": "A TypeScript frontend framework, built on Effect and architected like Elm",
   "type": "module",
   "main": "./dist/index.js",
@@ -166,11 +166,9 @@
     "docs": "typedoc"
   },
   "peerDependencies": {
-    "@effect/platform-browser": "4.0.0-rc.108",
     "effect": "4.0.0-rc.108"
   },
   "devDependencies": {
-    "@effect/platform-browser": "4.0.0-rc.108",
     "@effect/vitest": "4.0.0-rc.108",
     "@vitest/coverage-v8": "^4.1.9",
     "effect": "4.0.0-rc.108",
