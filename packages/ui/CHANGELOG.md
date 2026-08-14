@@ -1,5 +1,23 @@
 # @foldkit/ui
 
+## 0.145.0
+
+### Minor Changes
+
+- 1dc70c7: Widen `AnchorConfig.padding` to accept a partial per-side object alongside the existing scalar, mirroring `@floating-ui/dom`'s `Padding` type. A number still pads every side uniformly; `{ top: 88, right: 16, bottom: 16, left: 16 }` bounds each side independently. The value is forwarded unchanged to the `flip`, `shift`, and `size` middleware.
+
+  With a single scalar, a panel that `flip` moves above its button can slide to within that scalar of the viewport top, under fixed chrome such as a sticky site header, which then paints over the panel. Per-side padding gives the top the extra clearance the header needs while the other sides keep the tighter viewport bound.
+
+### Patch Changes
+
+- 71556de: Assert the read-only commit suppression through `Scene.expectHandled()` instead of a hand-rolled `update` wrapper, and harden three tests that asserted nothing.
+
+  Listbox and Combobox recorded dispatched Messages by wrapping `update` and matching on the `SuppressedItemCommit` tag, because Scene could not express what the component actually promises. It promises the keypress is consumed, so the browser default is suppressed; the Message tag is the mechanism. Those four sites now use `expectHandled()` and `expectIgnored()` and drop the wrapper.
+
+  Three tests elsewhere asserted inertness with no assertion behind it, and now say so: RadioGroup's read-only Space, and Calendar's disabled-month and disabled-year Enter. Each held whether the key was correctly ignored or its handler had started producing a Message with no visible effect, which is the regression they exist to catch. Removing the handler outright has always thrown from the interaction step.
+
+  Test-only change. No API or behavior change.
+
 ## 0.144.0
 
 ### Minor Changes
