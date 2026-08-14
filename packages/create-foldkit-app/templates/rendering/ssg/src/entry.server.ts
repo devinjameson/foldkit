@@ -9,8 +9,12 @@ export const renderPage = (
   request: Request,
 ): Promise<Server.ServerEntryResult> =>
   Effect.runPromise(
-    Server.renderToString(
-      { routing: {}, init, view },
-      { url: request.url },
-    ).pipe(Effect.map(Server.Rendered)),
+    Effect.gen(function* () {
+      const renderedApplication = yield* Server.renderToString(
+        { routing: {}, init, view },
+        { url: request.url },
+      )
+
+      return Server.Rendered(renderedApplication)
+    }),
   )

@@ -111,6 +111,18 @@ A static file cannot preserve arbitrary response behavior. The build should reje
 
 The [SSG example](https://github.com/foldkit/foldkit/tree/main/examples/ssg) is the minimal reference. This website is the production-scale reference: its prerender host uses the same `renderPage(Request)` contract, seeds route content through universal Flags, and writes every route as hydratable static HTML.
 
+## Deploying
+
+A deployed SSG build is static files. Any static host or CDN serves the generated directory as is; the hydration handoff already lives inside the HTML, so nothing beyond serving files is required.
+
+A deployed SSR application needs a host with two jobs: serve the built client assets, and call `renderPage` for page requests. On Node, the [SSR example's server](https://github.com/foldkit/foldkit/tree/main/examples/ssr/server) is the reference: an Effect `HttpServer` that serves static files first and sends `Server.toResponse(template, await renderPage(request))` for everything else.
+
+Fetch-native runtimes such as Cloudflare Workers, Deno, and Bun run the entry without an adapter, because those platforms already speak Web `Request` and `Response`:
+
+::Snippet{name="serverRenderingWorkersHost" label="Workers host example"}
+
+The platform serves the built client assets, the bundler inlines the template through a text-module rule, and the handler covers page requests. The same built server entry works on every host, so choosing a platform is a delivery decision, not an application change.
+
 ## One application using both
 
 SSG and SSR are route delivery policies, not separate Foldkit application types. A hybrid deployment can generate stable routes during the build and send the remaining URLs to a request-time host. Both hosts import the same server entry, and every delivered page hydrates through the same client entry.

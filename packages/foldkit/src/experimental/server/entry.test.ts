@@ -9,7 +9,7 @@ const TEMPLATE =
   '<!doctype html><html><head><title>Old</title></head>' +
   '<body><div id="root"></div></body></html>'
 
-const application = {
+const renderedApplication = {
   html: '<main data-foldkit-app="app">Hello</main>',
   title: 'New',
 }
@@ -18,7 +18,7 @@ describe('server entry results', () => {
   it('turns rendered markup and HTTP metadata into a Web Response', async () => {
     const response = toResponse(
       TEMPLATE,
-      Rendered(application, {
+      Rendered(renderedApplication, {
         status: 404,
         headers: { 'cache-control': 'private, no-store' },
       }),
@@ -37,7 +37,7 @@ describe('server entry results', () => {
   it('preserves an explicit rendered content type', () => {
     const response = toResponse(
       TEMPLATE,
-      Rendered(application, {
+      Rendered(renderedApplication, {
         headers: { 'content-type': 'application/xhtml+xml' },
       }),
     )

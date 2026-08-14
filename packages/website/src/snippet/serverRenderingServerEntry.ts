@@ -10,16 +10,18 @@ const flagsForRequest = (request: Request): Flags => ({
 export const renderPage = (
   request: Request,
 ): Promise<Server.ServerEntryResult> =>
-  Effect.gen(function* () {
-    const application = yield* Server.renderToString(
-      { Flags, init, view },
-      { flags: flagsForRequest(request) },
-    )
+  Effect.runPromise(
+    Effect.gen(function* () {
+      const renderedApplication = yield* Server.renderToString(
+        { Flags, init, view },
+        { flags: flagsForRequest(request) },
+      )
 
-    return Server.Rendered(application, {
-      headers: {
-        'cache-control': 'private, no-store',
-        vary: 'cookie',
-      },
-    })
-  }).pipe(Effect.runPromise)
+      return Server.Rendered(renderedApplication, {
+        headers: {
+          'cache-control': 'private, no-store',
+          vary: 'cookie',
+        },
+      })
+    }),
+  )

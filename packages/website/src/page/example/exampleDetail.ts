@@ -364,6 +364,20 @@ const disclosureChevron = (isOpen: boolean): Html =>
     [Icon.chevronDown('w-4 h-4')],
   )
 
+const playgroundOnlyNotice = (meta: ExampleMeta): Html =>
+  ih.div(
+    [
+      ih.Class(
+        'rounded-xl border border-gray-200 dark:border-gray-700/50 px-4 py-3 text-sm text-gray-700 dark:text-gray-300',
+      ),
+    ],
+    [
+      `${meta.title} renders each page on a server at request time, so a ` +
+        'static preview cannot demonstrate it. Launch the playground to see ' +
+        'the server round-trip live, or run the example locally.',
+    ],
+  )
+
 const livePreviewDisclosureView = (
   isLivePreviewOpen: boolean,
   meta: ExampleMeta,
@@ -636,13 +650,15 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           [],
           [
             headerView(meta, isShowingChromeHint),
-            livePreviewDisclosureView(
-              model.isLivePreviewOpen,
-              meta,
-              slug,
-              model.maybeExampleUrl,
-              h,
-            ),
+            meta.livePreview === 'PlaygroundOnly'
+              ? playgroundOnlyNotice(meta)
+              : livePreviewDisclosureView(
+                  model.isLivePreviewOpen,
+                  meta,
+                  slug,
+                  model.maybeExampleUrl,
+                  h,
+                ),
             h.div(
               [h.Class('mt-6')],
               [

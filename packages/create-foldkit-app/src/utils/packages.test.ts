@@ -2,11 +2,14 @@ import { expect } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
 
+import { Spa, Ssg, Ssr } from '../rendering.js'
 import {
   buildUnresolvedDeps,
   buildUnresolvedDevDeps,
+  dependencyExample,
   devCommand,
   installCommand,
+  scaffoldDevDependencies,
 } from './packages.js'
 
 describe('buildUnresolvedDeps', () => {
@@ -32,12 +35,15 @@ describe('buildUnresolvedDeps', () => {
 
 describe('buildUnresolvedDevDeps', () => {
   it('merges template tooling with the example, letting concrete example versions win over the template latest marker', () => {
-    const result = buildUnresolvedDevDeps({
-      prettier: '^3.8.4',
-      typescript: '^6.0.3',
-      vite: '^8.0.16',
-      '@foldkit/vite-plugin': 'workspace:*',
-    })
+    const result = buildUnresolvedDevDeps(
+      {
+        prettier: '^3.8.4',
+        typescript: '^6.0.3',
+        vite: '^8.0.16',
+        '@foldkit/vite-plugin': 'workspace:*',
+      },
+      [],
+    )
 
     expect(result).toEqual({
       '@foldkit/devtools': { _tag: 'Latest' },
@@ -52,6 +58,29 @@ describe('buildUnresolvedDevDeps', () => {
       typescript: { _tag: 'Keep', version: '^6.0.3' },
       vite: { _tag: 'Keep', version: '^8.0.16' },
     })
+  })
+
+  it('marks extra scaffold devDependencies for latest-version resolution', () => {
+    const result = buildUnresolvedDevDeps({ tsx: '^4.22.4' }, ['@types/node'])
+
+    expect(result['@types/node']).toEqual({ _tag: 'Latest' })
+    expect(result['tsx']).toEqual({ _tag: 'Keep', version: '^4.22.4' })
+  })
+})
+
+describe('dependencyExample', () => {
+  it('reads spa dependencies from the chosen example and server-rendered dependencies from the reference apps', () => {
+    expect(dependencyExample(Spa('counter'))).toBe('counter')
+    expect(dependencyExample(Ssg)).toBe('ssg')
+    expect(dependencyExample(Ssr)).toBe('ssr')
+  })
+})
+
+describe('scaffoldDevDependencies', () => {
+  it('adds @types/node for the server-rendered scaffolds only', () => {
+    expect(scaffoldDevDependencies(Spa('counter'))).toEqual([])
+    expect(scaffoldDevDependencies(Ssg)).toEqual(['@types/node'])
+    expect(scaffoldDevDependencies(Ssr)).toEqual(['@types/node'])
   })
 })
 

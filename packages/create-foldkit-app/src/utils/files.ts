@@ -19,6 +19,7 @@ import {
 } from 'effect/unstable/http'
 import { fileURLToPath } from 'node:url'
 
+import { type Scaffold } from '../rendering.js'
 import { type PackageManager, devCommand, installCommand } from './packages.js'
 
 const GITHUB_API_BASE_URL =
@@ -160,17 +161,44 @@ const createPackageManagerFiles = (
     yield* createFiles(projectPath, packageManagerFiles)
   })
 
+const overlayRenderingFiles = (projectPath: string, rendering: 'ssg' | 'ssr') =>
+  Effect.gen(function* () {
+    const path = yield* Path.Path
+
+    const templateRoot = yield* getTemplateRoot
+    const renderingFiles = yield* getTemplateFiles(
+      path.join(templateRoot, 'rendering', rendering),
+    )
+    yield* createFiles(projectPath, renderingFiles)
+  })
+
+const createRenderingFiles = (projectPath: string, scaffold: Scaffold) =>
+  Match.value(scaffold).pipe(
+    Match.tagsExhaustive({
+      Spa: () => Effect.void,
+      Ssg: () => overlayRenderingFiles(projectPath, 'ssg'),
+      Ssr: () => overlayRenderingFiles(projectPath, 'ssr'),
+    }),
+  )
+
 export const createProject = (
   name: string,
   projectPath: string,
-  example: string,
+  scaffold: Scaffold,
   packageManager: PackageManager,
 ) =>
   Effect.gen(function* () {
     yield* createBaseFiles(projectPath)
+    yield* createRenderingFiles(projectPath, scaffold)
     yield* modifyBaseFiles(projectPath, name, packageManager)
     yield* createPackageManagerFiles(projectPath, packageManager)
-    yield* createExampleFiles(projectPath, example)
+    yield* Match.value(scaffold).pipe(
+      Match.tagsExhaustive({
+        Spa: ({ example }) => createExampleFiles(projectPath, example),
+        Ssg: () => Effect.void,
+        Ssr: () => Effect.void,
+      }),
+    )
   })
 
 export const applyPackageManager = (

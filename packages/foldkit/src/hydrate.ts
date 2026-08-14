@@ -5,14 +5,22 @@ import { h, toVNode } from './snabbdom/index.js'
 import { tagNameFromSelector } from './tagName.js'
 import { dedupeSharedVNodes, patch } from './vdom.js'
 
-// NOTE: hydration builds the "old" side of the first patch as a structural
-// clone of the NEW vnode tree with `elm` pointers adopted from the server
-// DOM. The clone copies `sel`, `key`, `identity`, and `data.is`, so
-// `sameVnode` passes at every adopted position and `patchVnode` reuses the
-// existing element; its `data` is otherwise empty, so every module update
-// hook applies the new tree's attrs, props, classes, styles, and listeners
-// onto the adopted element. This leaves the vendored differ untouched: the
-// whole hydration pass is expressible against `patch`'s public contract.
+// NOTE: the differ only knows the page through the `elm` pointers on its
+// vnodes; `patch` never queries the document. A server-rendered page is real
+// DOM the browser parsed from HTML, so no vnode anywhere points at it and
+// the differ cannot see it. Hydration's whole job is to make that DOM
+// visible to the differ, then let one ordinary patch attach behavior to it.
+//
+// The mechanism: walk the first render's vnode tree and the server DOM in
+// lockstep, building the "old" side of the first patch as a skeleton clone
+// of the NEW tree whose `elm` pointers are adopted from the existing nodes.
+// The clone copies exactly what `sameVnode` compares (`sel`, `key`,
+// `identity`, `data.is`), so `patchVnode` reuses every adopted element, and
+// deliberately nothing else, so every module update hook re-asserts the new
+// tree's attrs, props, classes, styles, and listeners onto the adopted
+// elements. `patch(clone, newTree)` then runs as a completely ordinary
+// update: the vendored differ stays untouched, and it never learns the
+// nodes came from a server.
 //
 // Where the DOM disagrees with the vnode tree, the walk clears the nearest
 // parent's children and hands `patch` an empty child list, so the subtree is

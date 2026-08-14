@@ -290,7 +290,7 @@ const validateHydrationRoot = (
  *
  * @example
  * ```typescript
- * const rendered = yield* Server.renderToString(config, {
+ * const renderedApplication = yield* Server.renderToString(config, {
  *   url: request.url,
  *   flags: { theme },
  * })
