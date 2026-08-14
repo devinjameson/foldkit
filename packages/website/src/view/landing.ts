@@ -340,7 +340,7 @@ export const landingView = (model: Model, h: HtmlBuilder<Message>) => {
       tabs: DemoTab.all,
       selectedValue: model.activeDemoTab,
       ariaLabel: 'Demo tabs',
-      orientation: model.isNarrowViewport ? 'Horizontal' : 'Vertical',
+      orientation: 'Responsive',
       toView: ({ tablist, tabs, activeIndex }) =>
         h.div(
           [h.Class('lg:flex')],

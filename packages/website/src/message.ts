@@ -82,9 +82,6 @@ export const SelectedThemePreference = m('SelectedThemePreference', {
 export const ChangedSystemTheme = m('ChangedSystemTheme', {
   theme: ResolvedTheme,
 })
-export const ChangedViewportWidth = m('ChangedViewportWidth', {
-  isNarrow: S.Boolean,
-})
 export const ToggledAiHeading = m('ToggledAiHeading')
 export const GotDemoTabsMessage = m('GotDemoTabsMessage', {
   message: Tabs.Message,
@@ -156,7 +153,6 @@ export const Message = S.Union([
   ChangedActiveSection,
   SelectedThemePreference,
   ChangedSystemTheme,
-  ChangedViewportWidth,
   ToggledAiHeading,
   GotDemoTabsMessage,
   GotPlaygroundMenuMessage,

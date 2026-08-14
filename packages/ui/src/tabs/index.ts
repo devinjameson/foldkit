@@ -1,6 +1,7 @@
 import {
   Array,
   Effect,
+  Function,
   Match as M,
   Option,
   Schema as S,
@@ -24,6 +25,29 @@ export { wrapIndex, findFirstEnabledIndex, keyToIndex } from '../keyboard.js'
 /** Controls the tab list layout direction and which arrow keys navigate between tabs. */
 export const Orientation = S.Literals(['Horizontal', 'Vertical'])
 export type Orientation = typeof Orientation.Type
+
+/** What the `orientation` view input accepts: a fixed `Orientation`, or
+ *  `Responsive` when the consumer's own CSS owns the direction.
+ *
+ *  Reach for `Responsive` when responsive classes flip the tab list between a
+ *  row and a column, so no single direction is true at every viewport width.
+ *  Both arrow axes then navigate: ArrowRight and ArrowDown move to the next
+ *  tab, ArrowLeft and ArrowUp to the previous. Because both axes navigate,
+ *  ArrowUp and ArrowDown stop scrolling the page whenever a tab holds focus,
+ *  including at the widths where the tab list renders as a row.
+ *
+ *  The tab list emits no `aria-orientation`, rather than carry a value that is
+ *  wrong at half the widths. Assistive technology reads an absent
+ *  `aria-orientation` on a tablist as the implicit `horizontal`, so a
+ *  `Responsive` tab list is announced as horizontal even at the widths where
+ *  it renders as a column. Everything else, including Home, End, PageUp,
+ *  PageDown, Enter, and Space, behaves as it does under a fixed
+ *  orientation. */
+export const TabListOrientation = S.Union([
+  Orientation,
+  S.Literal('Responsive'),
+])
+export type TabListOrientation = typeof TabListOrientation.Type
 
 /** Controls whether tabs activate on focus (`Automatic`) or require an explicit selection (`Manual`). */
 export const ActivationMode = S.Literals(['Automatic', 'Manual'])
@@ -195,7 +219,7 @@ export type ViewInputs<Value extends string = string> = Readonly<{
   ariaLabel: string
   toView: (render: RenderInfo<Value>) => Html
   isTabDisabled?: (value: Value, index: number) => boolean
-  orientation?: Orientation
+  orientation?: TabListOrientation
 }>
 
 const internalView = defineView<Model, Message, ViewInputs>(
@@ -230,14 +254,26 @@ const internalView = defineView<Model, Message, ViewInputs>(
         Option.exists(tab => isTabDisabled(tab, index)),
       )
 
-    const { nextKey, previousKey } = M.value(orientation).pipe(
+    const { nextKey, previousKey, toNavigationKey } = M.value(orientation).pipe(
       M.when('Horizontal', () => ({
         nextKey: 'ArrowRight',
         previousKey: 'ArrowLeft',
+        toNavigationKey: Function.identity<string>,
       })),
       M.when('Vertical', () => ({
         nextKey: 'ArrowDown',
         previousKey: 'ArrowUp',
+        toNavigationKey: Function.identity<string>,
+      })),
+      M.when('Responsive', () => ({
+        nextKey: 'ArrowRight',
+        previousKey: 'ArrowLeft',
+        toNavigationKey: (key: string) =>
+          M.value(key).pipe(
+            M.when('ArrowDown', () => 'ArrowRight'),
+            M.when('ArrowUp', () => 'ArrowLeft'),
+            M.orElse(() => key),
+          ),
       })),
       M.exhaustive,
     )
@@ -257,8 +293,12 @@ const internalView = defineView<Model, Message, ViewInputs>(
         Option.map(value => SelectedTab({ index, value })),
       )
 
-    const handleAutomaticKeyDown = (key: string): Option.Option<SelectedTab> =>
-      M.value(key).pipe(
+    const handleAutomaticKeyDown = (
+      key: string,
+    ): Option.Option<SelectedTab> => {
+      const navigationKey = toNavigationKey(key)
+
+      return M.value(navigationKey).pipe(
         M.whenOr(
           nextKey,
           previousKey,
@@ -266,16 +306,19 @@ const internalView = defineView<Model, Message, ViewInputs>(
           'End',
           'PageUp',
           'PageDown',
-          () => tabSelectedAt(resolveKeyIndex(key)),
+          () => tabSelectedAt(resolveKeyIndex(navigationKey)),
         ),
         M.whenOr('Enter', ' ', () => tabSelectedAt(focusedIndex)),
         M.orElse(() => Option.none()),
       )
+    }
 
     const handleManualKeyDown = (
       key: string,
-    ): Option.Option<SelectedTab | FocusedTab> =>
-      M.value(key).pipe(
+    ): Option.Option<SelectedTab | FocusedTab> => {
+      const navigationKey = toNavigationKey(key)
+
+      return M.value(navigationKey).pipe(
         M.whenOr(
           nextKey,
           previousKey,
@@ -283,11 +326,13 @@ const internalView = defineView<Model, Message, ViewInputs>(
           'End',
           'PageUp',
           'PageDown',
-          () => Option.some(FocusedTab({ index: resolveKeyIndex(key) })),
+          () =>
+            Option.some(FocusedTab({ index: resolveKeyIndex(navigationKey) })),
         ),
         M.whenOr('Enter', ' ', () => tabSelectedAt(focusedIndex)),
         M.orElse(() => Option.none()),
       )
+    }
 
     const handleKeyDown = (
       key: string,
@@ -342,7 +387,9 @@ const internalView = defineView<Model, Message, ViewInputs>(
 
     const tablistAttributes = [
       h.Role('tablist'),
-      h.AriaOrientation(String.toLowerCase(orientation)),
+      ...(orientation === 'Responsive'
+        ? []
+        : [h.AriaOrientation(String.toLowerCase(orientation))]),
       h.AriaLabel(ariaLabel),
     ]
 

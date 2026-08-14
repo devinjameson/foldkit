@@ -148,15 +148,12 @@ export const Flags = S.Struct({
   themePreference: S.Option(ThemePreference),
   maybeSidebarState: S.Option(SidebarState),
   systemTheme: ResolvedTheme,
-  isNarrowViewport: S.Boolean,
   isChromium: S.Boolean,
   currentYear: S.Number,
   today: Calendar.CalendarDate,
 })
 
 type Flags = typeof Flags.Type
-
-export const NARROW_VIEWPORT_QUERY = '(max-width: 1023px)'
 
 const CHROMIUM_BRANDS = new Set(['Chromium', 'Google Chrome', 'Microsoft Edge'])
 const CHROMIUM_UA_PATTERN = /Chrome\/|Chromium\/|Edg\/|OPR\//
@@ -205,10 +202,6 @@ export const flags: Effect.Effect<Flags> = Effect.gen(function* () {
       : 'Light',
   )
 
-  const isNarrowViewport = yield* Effect.sync(
-    () => window.matchMedia(NARROW_VIEWPORT_QUERY).matches,
-  )
-
   const isChromium = yield* Effect.sync(detectChromium)
 
   const currentYear = yield* DateTime.now.pipe(
@@ -221,7 +214,6 @@ export const flags: Effect.Effect<Flags> = Effect.gen(function* () {
     themePreference,
     maybeSidebarState,
     systemTheme,
-    isNarrowViewport,
     isChromium,
     currentYear,
     today,
@@ -241,7 +233,6 @@ export const Model = S.Struct({
   mobileMenuDialog: Dialog.Model,
   isMobileTableOfContentsOpen: S.Boolean,
   activeSection: S.Option(S.String),
-  isNarrowViewport: S.Boolean,
   isChromium: S.Boolean,
   playground: S.Option(Page.Playground.Model),
   sidebarGroups: SidebarGroups,
@@ -426,7 +417,6 @@ export const init: Runtime.RoutingApplicationInit<
       isMobileTableOfContentsOpen: false,
       activeSection: Option.none(),
       aiHeadingToggleCount: 0,
-      isNarrowViewport: flags.isNarrowViewport,
       isChromium: flags.isChromium,
       playground: pipe(
         initialRoute,
@@ -940,11 +930,6 @@ export const update = (
         [],
       ],
 
-      ChangedViewportWidth: ({ isNarrow }) => [
-        evo(model, { isNarrowViewport: () => isNarrow }),
-        [],
-      ],
-
       ToggledAiHeading: () => [
         evo(model, {
           aiHeadingToggleCount: Number_.increment,
@@ -1361,7 +1346,6 @@ export const subscriptions = Subscription.aggregate<Model, Message>()(
   uiPagesSubscriptions,
   Subscriptions.SearchShortcut.subscriptions,
   Subscriptions.SystemTheme.subscriptions,
-  Subscriptions.ViewportWidth.subscriptions,
 )
 
 // MANAGED RESOURCES

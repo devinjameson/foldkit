@@ -2,7 +2,7 @@
 
 ## Overview
 
-Tab panel navigation with roving tabindex keyboard support, horizontal and vertical orientation, and automatic or manual activation modes. Tabs renders a tab list with buttons and corresponding panels. Only the active panel is visible.
+Tab panel navigation with roving tabindex keyboard support, horizontal, vertical, and responsive orientation, and automatic or manual activation modes. Tabs renders a tab list with buttons and corresponding panels. Only the active panel is visible.
 
 Tabs is a Submodel that keeps its own keyboard-focus state, but the parent owns the active tab. Store the active value in your Model, pass it in as `selectedValue`, and fold the `Selected` OutMessage back into that field in your `GotTabsMessage` handler.
 
@@ -45,7 +45,7 @@ Tabs is headless. The `toView` callback owns all tab and panel markup, spreading
 
 ## Keyboard Interaction
 
-Tabs uses roving tabindex: only the focused tab is in the tab order. Arrow direction depends on orientation: left/right for horizontal, up/down for vertical. Disabled tabs are skipped during navigation.
+Tabs uses roving tabindex: only the focused tab is in the tab order. Arrow direction depends on orientation: left/right for horizontal, up/down for vertical, and both axes at once for responsive. Disabled tabs are skipped during navigation. A key that navigates suppresses its default, so under `Responsive` the up and down arrows stop scrolling the page whenever a tab holds focus, at every width.
 
 | Key                  | Description                                                            |
 | -------------------- | ---------------------------------------------------------------------- |
@@ -58,6 +58,8 @@ Tabs uses roving tabindex: only the focused tab is in the tab order. Arrow direc
 ## Accessibility
 
 The tab list receives `role="tablist"` with `aria-orientation` and `aria-label`. Each tab button gets `role="tab"` with `aria-selected` and `aria-controls` linking to its panel. Panels receive `role="tabpanel"` with `aria-labelledby` pointing back to the tab.
+
+Under `orientation: 'Responsive'` the tab list carries no `aria-orientation` at all. The direction is whatever your breakpoints say, so no single value is true at every viewport width, and prerendered HTML cannot know which one the visitor will see. Note what an absent attribute means to a screen reader: a tablist without `aria-orientation` is read as the implicit `horizontal`, so a `Responsive` tab list is announced as horizontal even at the widths where your classes render it as a column. Omitting the attribute avoids shipping a value that is wrong at half the widths. It does not make the orientation unspecified.
 
 ## API Reference
 
@@ -83,7 +85,7 @@ Configuration object passed to the view returned by `Tabs.create<Value>()`.
 | `ariaLabel`       | `string`                                        | —              | Accessible label for the tab list.                                                                                                                                                                                                                                            |
 | `toView`          | `(render: RenderInfo<Value>) => Html`           | —              | Callback that receives the `tablist` attribute bundle, one `TabInfo<Value>` per tab, and the current `activeIndex`. Returns the composed layout.                                                                                                                              |
 | `isTabDisabled`   | `(value: Value, index: number) => boolean`      | —              | Disables individual tabs.                                                                                                                                                                                                                                                     |
-| `orientation`     | `'Horizontal' \| 'Vertical'`                    | `'Horizontal'` | Controls arrow key direction and `aria-orientation`. Horizontal uses left/right, vertical uses up/down.                                                                                                                                                                       |
+| `orientation`     | `'Horizontal' \| 'Vertical' \| 'Responsive'`    | `'Horizontal'` | Controls arrow key direction and `aria-orientation`. Horizontal uses left/right, vertical uses up/down. `Responsive` is for a tab list whose direction comes from your own responsive classes: both arrow axes navigate and no `aria-orientation` is asserted.                |
 
 ### RenderInfo {#render-info}
 
@@ -91,7 +93,7 @@ Payload delivered to the `toView` callback each render.
 
 | Name          | Type                            | Default | Description                                                                                                                                       |
 | ------------- | ------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tablist`     | `ReadonlyArray<ChildAttribute>` | —       | Spread onto the tab list container. Includes `role="tablist"`, `aria-orientation`, and `aria-label`.                                              |
+| `tablist`     | `ReadonlyArray<ChildAttribute>` | —       | Spread onto the tab list container. Includes `role="tablist"`, `aria-label`, and `aria-orientation` unless the orientation is `Responsive`.       |
 | `tabs`        | `ReadonlyArray<TabInfo<Value>>` | —       | One entry per tab in `ViewConfig.tabs`, in the same order. See TabInfo below.                                                                     |
 | `activeIndex` | `number`                        | —       | The currently-active tab index. Convenient when the consumer wants to render only the active panel (vs all panels with `hidden` for transitions). |
 

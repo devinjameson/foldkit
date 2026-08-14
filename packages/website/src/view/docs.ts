@@ -516,7 +516,6 @@ export const docsView = (
             view: Page.Example.ExampleDetail.view,
             viewInputs: {
               slug: exampleSlug,
-              isNarrowViewport: model.isNarrowViewport,
               isChromium: model.isChromium,
               renderCopyButton,
             },

@@ -454,7 +454,6 @@ const sourceCodeView = (
   files: ReadonlyArray<ExampleSourceFile>,
   tabsModel: Tabs.Model,
   activeSourceFilePath: string,
-  isNarrowViewport: boolean,
   renderCopyButton: RenderCopyButton,
   h: HtmlBuilder<Message>,
 ): Html => {
@@ -470,7 +469,7 @@ const sourceCodeView = (
       tabs: filePaths,
       selectedValue: activeSourceFilePath,
       ariaLabel: 'Source files',
-      orientation: isNarrowViewport ? 'Horizontal' : 'Vertical',
+      orientation: 'Responsive',
       toView: ({ tablist, tabs, activeIndex }) =>
         h.div(
           [
@@ -607,7 +606,6 @@ const sourcesFailureView = (error: string): Html =>
 
 type ViewInputs = Readonly<{
   slug: string
-  isNarrowViewport: boolean
   isChromium: boolean
   renderCopyButton: RenderCopyButton
 }>
@@ -623,7 +621,7 @@ type ViewInputs = Readonly<{
  * Submodel's `toParentMessage`.
  */
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
-  (model, { slug, isNarrowViewport, isChromium, renderCopyButton }, h): Html =>
+  (model, { slug, isChromium, renderCopyButton }, h): Html =>
     Option.match(findBySlug(slug), {
       onNone: () => h.div([], ['Example not found']),
       onSome: meta =>
@@ -658,7 +656,6 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
                               model.maybeActiveSourceFilePath,
                               () => Array.headNonEmpty(files).path,
                             ),
-                            isNarrowViewport,
                             renderCopyButton,
                             h,
                           ),

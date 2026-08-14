@@ -10,6 +10,7 @@ export {
   CompletedFocusTab,
   FocusTab,
   Orientation,
+  TabListOrientation,
 } from './index.js'
 
 export type {
