@@ -208,6 +208,15 @@ const NotRun: InteractionOutcome = { _tag: 'NotRun' }
 const Handled: InteractionOutcome = { _tag: 'Handled' }
 const Ignored: InteractionOutcome = { _tag: 'Ignored' }
 
+/** An interaction whose handler let the event fall through and which no
+ *  `expectIgnored` has acknowledged yet. Carries the event and target so the
+ *  failure can name them, since it is raised at the next interaction or at
+ *  the end of the scene rather than at the step itself. */
+type IgnoredInteraction = Readonly<{
+  eventName: string
+  description: string
+}>
+
 type UpdateResult<Model, OutMessage> =
   | readonly [Model, ReadonlyArray<AnyCommand>]
   | readonly [Model, ReadonlyArray<AnyCommand>, OutMessage]
@@ -245,6 +254,7 @@ type InternalSceneSimulation<
     scope: Option.Option<Locator>
     mountSlots: ReadonlyArray<MountSlotState>
     lastInteractionOutcome: InteractionOutcome
+    maybeUnacknowledgedIgnored: Option.Option<IgnoredInteraction>
   }>
 
 const slotKey = ({ name, occurrence }: PendingMount): string =>
@@ -499,20 +509,57 @@ const maybeCaptureFromElement = <Model, Message, OutMessage>(
   )
 }
 
-/** Records whether the interaction just run produced a Message, so
- *  {@link expectHandled} and {@link expectIgnored} can assert on it. An
- *  interaction whose handler returns no Message leaves the simulation
- *  otherwise untouched, which is indistinguishable from a correctly inert
- *  one without this. */
-const withInteractionOutcome = <Model, Message, OutMessage>(
+/** Clears the pending fall-through, marking it acknowledged. Paired with
+ *  {@link assertNoUnacknowledgedIgnored}, which is what it silences. */
+const withNoUnacknowledgedIgnored = <Model, Message, OutMessage>(
   simulation: SceneSimulation<Model, Message, OutMessage>,
-  outcome: InteractionOutcome,
 ): SceneSimulation<Model, Message, OutMessage> =>
   /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
   ({
     ...simulation,
-    lastInteractionOutcome: outcome,
+    maybeUnacknowledgedIgnored: Option.none(),
   }) as SceneSimulation<Model, Message, OutMessage>
+
+/** Fails on an interaction whose handler let the event fall through and
+ *  which no `expectIgnored` acknowledged. Called at the next interaction and
+ *  again when the scene ends, which are the two points by which the
+ *  acknowledgement must have arrived. */
+const assertNoUnacknowledgedIgnored = <Model, Message, OutMessage>(
+  simulation: SceneSimulation<Model, Message, OutMessage>,
+): void => {
+  const { maybeUnacknowledgedIgnored } = toInternal(simulation)
+
+  if (Option.isSome(maybeUnacknowledgedIgnored)) {
+    const { eventName, description } = maybeUnacknowledgedIgnored.value
+    throw new Error(
+      `I dispatched "${eventName}" on the element matching ${description} but its handler produced no Message, and nothing asserted that.\n\n` +
+        'The handler ran and returned nothing, so the event falls through and the browser default is not prevented. A test that leaves this unsaid passes whether the interaction is correctly inert or its handler regressed.\n\n' +
+        'Add `expectIgnored()` after the interaction if falling through is what you meant. If the event should have been consumed, the handler is the bug; `expectHandled()` states that expectation and will fail until it is fixed.',
+    )
+  }
+}
+
+/** Advances the simulation past an interaction: records whether its handler
+ *  produced a Message, so {@link expectHandled} and {@link expectIgnored} can
+ *  assert on it, and tracks a fall-through until something acknowledges it.
+ *
+ *  Fails first on any fall-through the previous interaction left
+ *  unacknowledged, so the error lands one interaction later rather than at
+ *  the end of the scene wherever possible. */
+const advanceInteraction = <Model, Message, OutMessage>(
+  simulation: SceneSimulation<Model, Message, OutMessage>,
+  outcome: InteractionOutcome,
+  maybeIgnored: Option.Option<IgnoredInteraction>,
+): SceneSimulation<Model, Message, OutMessage> => {
+  assertNoUnacknowledgedIgnored(simulation)
+
+  /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+  return {
+    ...simulation,
+    lastInteractionOutcome: outcome,
+    maybeUnacknowledgedIgnored: maybeIgnored,
+  } as SceneSimulation<Model, Message, OutMessage>
+}
 
 const captureFromElement = <Model, Message, OutMessage>(
   simulation: SceneSimulation<Model, Message, OutMessage>,
@@ -530,8 +577,13 @@ const captureFromElement = <Model, Message, OutMessage>(
       invokeHandler,
     ),
     {
-      onNone: () => withInteractionOutcome(simulation, Ignored),
-      onSome: next => withInteractionOutcome(next, Handled),
+      onNone: () =>
+        advanceInteraction(
+          simulation,
+          Ignored,
+          Option.some({ eventName, description }),
+        ),
+      onSome: next => advanceInteraction(next, Handled, Option.none()),
     },
   )
 
@@ -1176,7 +1228,7 @@ const emitCustomElementEvent =
       },
     )
 
-    return withInteractionOutcome(
+    return advanceInteraction(
       Option.getOrThrowWith(
         maybeNext,
         () =>
@@ -1186,6 +1238,7 @@ const emitCustomElementEvent =
           ),
       ),
       Handled,
+      Option.none(),
     )
   }
 
@@ -1342,7 +1395,12 @@ export const expectNoOutMessage =
  *  Only interaction steps set the outcome. `Command.resolve`, `Mount.resolve`,
  *  and plain `expect` leave it alone, so the value is the last *interaction*
  *  rather than the last step. Keep the assertion next to the interaction it
- *  covers. */
+ *  covers.
+ *
+ *  Where the event should have been consumed but was not, this is the
+ *  assertion that says so, and it fails until the handler is fixed. Where
+ *  falling through is intended, reach for {@link expectIgnored} instead,
+ *  which a fall-through requires. */
 export const expectHandled =
   () =>
   <Model, Message, OutMessage>(
@@ -1371,12 +1429,19 @@ export const expectHandled =
  *  and produced no Message, so the event falls through and the browser
  *  default stands.
  *
- *  The complement of {@link expectHandled}. Use it where falling through is
- *  the intended behavior, so the intent is stated rather than left as the
- *  absence of any assertion.
+ *  Required after any interaction that falls through, and it acknowledges
+ *  that fall-through as intended. Saying nothing is not an available
+ *  position: Scene fails at the next interaction, or at the end of the
+ *  scene, on a fall-through nothing acknowledged, because a test that leaves
+ *  it unsaid passes whether the interaction is correctly inert or its
+ *  handler regressed.
  *
- *  Carries the same adjacency caveat: only interaction steps set the
- *  outcome, so keep the assertion next to the interaction it covers. */
+ *  One acknowledgement covers one fall-through. Two in a row need one each,
+ *  and each must come before the next interaction.
+ *
+ *  Carries the same adjacency caveat as {@link expectHandled}: only
+ *  interaction steps set the outcome, so keep the assertion next to the
+ *  interaction it covers. */
 export const expectIgnored =
   () =>
   <Model, Message, OutMessage>(
@@ -1396,7 +1461,7 @@ export const expectIgnored =
             'Expected the last interaction to be ignored, but its handler produced a Message.',
           )
         },
-        Ignored: () => simulation,
+        Ignored: () => withNoUnacknowledgedIgnored(simulation),
       }),
     )
 
@@ -2510,7 +2575,9 @@ export const withViewInputs =
 
 // SCENE
 
-/** Executes a scene test. Throws if any Commands remain unresolved. */
+/** Executes a scene test. Throws if any Commands or Mounts remain
+ *  unresolved, any unmount is unacknowledged, or any interaction fell
+ *  through unacknowledged. */
 export const scene: {
   <Model, Message, OutMessage>(
     config: Readonly<{
@@ -2556,6 +2623,7 @@ export const scene: {
     capturingDispatch,
     scope: Option.none(),
     lastInteractionOutcome: NotRun,
+    maybeUnacknowledgedIgnored: Option.none(),
   } as unknown as SceneSimulation<Model, Message, OutMessage>
 
   const result = runSteps(seed, steps)
@@ -2567,4 +2635,5 @@ export const scene: {
   assertAllUnmountsAcknowledged(
     unacknowledgedEndedMountsOf(internal.mountSlots),
   )
+  assertNoUnacknowledgedIgnored(internal)
 }

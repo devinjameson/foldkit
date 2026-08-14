@@ -134,6 +134,7 @@ import {
 import {
   appId as selectiveKeysAppId,
   initialModel as selectiveKeysInitialModel,
+  resetId as selectiveKeysResetId,
   update as selectiveKeysUpdate,
   view as selectiveKeysView,
 } from './apps/selectiveKeys.js'
@@ -5245,6 +5246,109 @@ describe('expectHandled and expectIgnored', () => {
         Scene.expectHandled(),
       ),
     ).toThrow('no interaction has run yet')
+  })
+
+  test('an unacknowledged fall-through fails at the end of the scene', () => {
+    expect(() =>
+      Scene.scene(
+        app,
+        Scene.given(selectiveKeysInitialModel),
+        Scene.keydown(target, 'a'),
+        Scene.expect(Scene.selector('.commits')).toHaveText('0'),
+      ),
+    ).toThrow('nothing asserted that')
+  })
+
+  test('an unacknowledged fall-through names the event and the target', () => {
+    expect(() =>
+      Scene.scene(
+        app,
+        Scene.given(selectiveKeysInitialModel),
+        Scene.keydown(target, 'a'),
+      ),
+    ).toThrow(/keydown.*selective-keys/s)
+  })
+
+  test('an unacknowledged fall-through fails at the next interaction', () => {
+    expect(() =>
+      Scene.scene(
+        app,
+        Scene.given(selectiveKeysInitialModel),
+        Scene.keydown(target, 'a'),
+        Scene.keydown(target, 'Enter'),
+        Scene.expectHandled(),
+      ),
+    ).toThrow('nothing asserted that')
+  })
+
+  test('expectIgnored acknowledges the fall-through for later interactions', () => {
+    Scene.scene(
+      app,
+      Scene.given(selectiveKeysInitialModel),
+      Scene.keydown(target, 'a'),
+      Scene.expectIgnored(),
+      Scene.keydown(target, 'Enter'),
+      Scene.expectHandled(),
+      Scene.expect(Scene.selector('.commits')).toHaveText('1'),
+    )
+  })
+
+  test('a handled interaction needs no acknowledgement', () => {
+    Scene.scene(
+      app,
+      Scene.given(selectiveKeysInitialModel),
+      Scene.keydown(target, 'Enter'),
+      Scene.expect(Scene.selector('.commits')).toHaveText('1'),
+    )
+  })
+
+  test('two fall-throughs need one acknowledgement each', () => {
+    expect(() =>
+      Scene.scene(
+        app,
+        Scene.given(selectiveKeysInitialModel),
+        Scene.keydown(target, 'a'),
+        Scene.keydown(target, 'b'),
+        Scene.expectIgnored(),
+      ),
+    ).toThrow('nothing asserted that')
+  })
+
+  test('an acknowledgement does not cover a later fall-through', () => {
+    expect(() =>
+      Scene.scene(
+        app,
+        Scene.given(selectiveKeysInitialModel),
+        Scene.keydown(target, 'a'),
+        Scene.expectIgnored(),
+        Scene.keydown(target, 'b'),
+      ),
+    ).toThrow('nothing asserted that')
+  })
+
+  // NOTE: a second helper, because the check lives in one place and a helper
+  // added later could bypass it. `CustomElement.emit` did exactly that when
+  // the pair was introduced.
+  test('a fall-through fails at a following interaction of any kind', () => {
+    expect(() =>
+      Scene.scene(
+        app,
+        Scene.given(selectiveKeysInitialModel),
+        Scene.keydown(target, 'a'),
+        Scene.click(Scene.selector(`#${selectiveKeysResetId}`)),
+      ),
+    ).toThrow('nothing asserted that')
+  })
+
+  test('bookkeeping failures surface before an unacknowledged fall-through', () => {
+    expect(() =>
+      Scene.scene(
+        app,
+        Scene.given(selectiveKeysInitialModel),
+        Scene.click(Scene.selector(`#${selectiveKeysResetId}`)),
+        Scene.keydown(target, 'a'),
+      ),
+    ).toThrow(/unresolved Commands|Commands without resolvers/)
   })
 
   // NOTE: the reason the pair exists. A read-only widget that stops
