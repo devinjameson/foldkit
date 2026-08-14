@@ -119,7 +119,7 @@ export const docsHeaderView = (model: Model, h: HtmlBuilder<Message>) =>
               ),
             ],
           ),
-          themeSelector(model.themePreference, h),
+          themeSelector(model.maybeThemePreference, h),
           h.div(
             [h.Class('hidden md:flex items-center gap-3 md:gap-4')],
             [
@@ -517,7 +517,10 @@ export const docsView = (
             viewInputs: {
               slug: exampleSlug,
               isNarrowViewport: model.isNarrowViewport,
-              isChromium: model.isChromium,
+              isShowingChromeHint: Option.contains(
+                model.maybeIsChromium,
+                false,
+              ),
               renderCopyButton,
             },
             toParentMessage: message => GotExampleDetailMessage({ message }),

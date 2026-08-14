@@ -123,11 +123,11 @@ const THEME_STORAGE_KEY = 'theme-preference'
 export { type ThemePreference, type ResolvedTheme } from './message'
 
 const resolveTheme = (
-  preference: typeof ThemePreference.Type,
-  systemTheme: typeof ResolvedTheme.Type,
-): typeof ResolvedTheme.Type =>
+  preference: ThemePreference,
+  systemTheme: ResolvedTheme,
+): ResolvedTheme =>
   M.value(preference).pipe(
-    M.withReturnType<typeof ResolvedTheme.Type>(),
+    M.withReturnType<ResolvedTheme>(),
     M.when('Dark', () => 'Dark'),
     M.when('Light', () => 'Light'),
     M.when('System', () => systemTheme),
@@ -170,8 +170,8 @@ const detectChromium = (): boolean =>
   })
 
 const loadBrowserEnvironment = Effect.gen(function* () {
-  const themePreference: Option.Option<typeof ThemePreference.Type> =
-    yield* Effect.gen(function* () {
+  const themePreference: Option.Option<ThemePreference> = yield* Effect.gen(
+    function* () {
       const store = yield* KeyValueStore.KeyValueStore
       const json = yield* Effect.fromOption(
         Option.fromNullishOr(yield* store.get(THEME_STORAGE_KEY)),
@@ -180,12 +180,11 @@ const loadBrowserEnvironment = Effect.gen(function* () {
         json,
       )
       return Option.some(theme)
-    }).pipe(
-      Effect.catch(() =>
-        Effect.succeed(Option.none<typeof ThemePreference.Type>()),
-      ),
-      Effect.provide(BrowserKeyValueStore.layerLocalStorage),
-    )
+    },
+  ).pipe(
+    Effect.catch(() => Effect.succeed(Option.none<ThemePreference>())),
+    Effect.provide(BrowserKeyValueStore.layerLocalStorage),
+  )
 
   const maybeSidebarState: Option.Option<SidebarState> = yield* Effect.gen(
     function* () {
@@ -201,7 +200,7 @@ const loadBrowserEnvironment = Effect.gen(function* () {
     Effect.provide(BrowserKeyValueStore.layerSessionStorage),
   )
 
-  const systemTheme: typeof ResolvedTheme.Type = yield* Effect.sync(() =>
+  const systemTheme: ResolvedTheme = yield* Effect.sync(() =>
     window.matchMedia('(prefers-color-scheme: dark)').matches
       ? 'Dark'
       : 'Light',
@@ -244,12 +243,12 @@ export const Model = S.Struct({
   isMobileTableOfContentsOpen: S.Boolean,
   activeSection: S.Option(S.String),
   isNarrowViewport: S.Boolean,
-  isChromium: S.Boolean,
+  maybeIsChromium: S.Option(S.Boolean),
   playground: S.Option(Page.Playground.Model),
   sidebarGroups: SidebarGroups,
   isMapMessagesUnderHoodOpen: S.Boolean,
   aiHeadingToggleCount: S.Number,
-  themePreference: ThemePreference,
+  maybeThemePreference: S.Option(ThemePreference),
   systemTheme: ResolvedTheme,
   resolvedTheme: ResolvedTheme,
   demoTabs: Tabs.Model,
@@ -383,9 +382,9 @@ export const init: Runtime.RoutingApplicationInit<
   AppResources,
   AppManagedResources
 > = (flags: Flags, url: Url) => {
-  const themePreference: typeof ThemePreference.Type = 'System'
-  const systemTheme: typeof ResolvedTheme.Type = 'Light'
-  const resolvedTheme = resolveTheme(themePreference, systemTheme)
+  const maybeThemePreference = Option.none<ThemePreference>()
+  const systemTheme: ResolvedTheme = 'Light'
+  const resolvedTheme = systemTheme
 
   const demoTabs = Tabs.init({
     id: 'demo-tabs',
@@ -464,7 +463,7 @@ export const init: Runtime.RoutingApplicationInit<
       activeSection: Option.none(),
       aiHeadingToggleCount: 0,
       isNarrowViewport: false,
-      isChromium: false,
+      maybeIsChromium: Option.none(),
       playground: pipe(
         initialRoute,
         Option.liftPredicate(isPlaygroundRoute),
@@ -475,7 +474,7 @@ export const init: Runtime.RoutingApplicationInit<
         maybeInitialActiveSectionKey,
       ),
       isMapMessagesUnderHoodOpen: false,
-      themePreference,
+      maybeThemePreference,
       systemTheme,
       resolvedTheme,
       demoTabs,
@@ -991,7 +990,7 @@ export const update = (
         currentYear,
         today,
       }) => {
-        const themePreference: typeof ThemePreference.Type = Option.getOrElse(
+        const themePreference: ThemePreference = Option.getOrElse(
           maybeThemePreference,
           () => 'System',
         )
@@ -1011,10 +1010,10 @@ export const update = (
           evo(model, {
             currentYear: () => currentYear,
             isNarrowViewport: () => isNarrowViewport,
-            isChromium: () => isChromium,
+            maybeIsChromium: () => Option.some(isChromium),
             sidebarGroups: () =>
               initialSidebarGroups(maybeSidebarState, maybeActiveSectionKey),
-            themePreference: () => themePreference,
+            maybeThemePreference: () => Option.some(themePreference),
             systemTheme: () => systemTheme,
             resolvedTheme: () => resolvedTheme,
             uiPages: () => uiPages,
@@ -1040,7 +1039,7 @@ export const update = (
 
         return [
           evo(model, {
-            themePreference: () => preference,
+            maybeThemePreference: () => Option.some(preference),
             resolvedTheme: () => resolvedTheme,
           }),
           [
@@ -1062,7 +1061,10 @@ export const update = (
         foldNotePlayerDemo(model, message),
 
       ChangedSystemTheme: ({ theme }) => {
-        const resolvedTheme = resolveTheme(model.themePreference, theme)
+        const resolvedTheme = resolveTheme(
+          Option.getOrElse(model.maybeThemePreference, () => 'System'),
+          theme,
+        )
 
         return [
           evo(model, {
@@ -1351,7 +1353,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
             slotId: `playground-${playgroundModel.slug}`,
             model: playgroundModel,
             view: Page.Playground.view,
-            viewInputs: { isChromium: model.isChromium },
+            viewInputs: { maybeIsChromium: model.maybeIsChromium },
             toParentMessage: message => GotPlaygroundMessage({ message }),
           }),
       }),

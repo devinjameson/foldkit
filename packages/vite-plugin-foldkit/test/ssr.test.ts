@@ -80,6 +80,17 @@ describe('foldkitSsr', () => {
     expect(response.headers.get('location')).toBe(`${origin}/rendered`)
   })
 
+  it('resolves relative template assets against the template on nested routes', async () => {
+    const origin = await startServer()
+    const response = await fetch(`${origin}/deep/nested`, {
+      headers: { accept: 'text/html' },
+    })
+
+    const html = await response.text()
+    expect(html).toContain('src="/entry.client.ts"')
+    expect(html).not.toContain('src="./entry.client.ts"')
+  })
+
   it('does not send a body for HEAD requests', async () => {
     const origin = await startServer()
     const response = await fetch(`${origin}/rendered`, {
