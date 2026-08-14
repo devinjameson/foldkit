@@ -179,10 +179,23 @@ const lazyNotePlayerDemo = createLazy()
 
 // PLAYGROUND MENU
 
+const VIEWPORT_PADDING = 16
+
+// NOTE: mirrors the md+ CSS --header-height (4.5rem); the variable's
+// env(safe-area-inset-top) term is not readable from static config.
+const MD_HEADER_HEIGHT = 72
+
+const HEADER_CLEARANCE = MD_HEADER_HEIGHT + VIEWPORT_PADDING
+
 const PLAYGROUND_MENU_ANCHOR = {
   placement: 'bottom-start' as const,
   gap: 8,
-  padding: 16,
+  padding: {
+    top: HEADER_CLEARANCE,
+    right: VIEWPORT_PADDING,
+    bottom: VIEWPORT_PADDING,
+    left: VIEWPORT_PADDING,
+  },
 }
 
 const playgroundButtonClassName = 'cta-amber cursor-pointer'
