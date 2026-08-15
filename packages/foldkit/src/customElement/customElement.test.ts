@@ -218,6 +218,16 @@ describe('CustomElement.define validation', () => {
     ).toThrowError(/is not a valid custom element name/)
   })
 
+  it('throws when the tag is a browser-reserved custom element name', () => {
+    expect(() =>
+      CustomElement.define({
+        tag: 'annotation-xml',
+        properties: {},
+        events: {},
+      }),
+    ).toThrowError(/reserved custom element name/)
+  })
+
   it('throws when a property name collides with an event factory name', () => {
     expect(() =>
       CustomElement.define({

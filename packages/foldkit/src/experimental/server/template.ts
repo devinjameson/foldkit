@@ -52,8 +52,15 @@ type TemplateRegion = Readonly<{ start: number; end: number }>
 // them in document order means a comment that contains `<script` is taken as
 // one comment, and a script whose text contains `<!--` is taken as one
 // script, rather than the two interleaving incorrectly.
+//
+// The raw-text end tag matches the tokenizer's appropriate-end-tag rule
+// rather than a bare `</tag>`: the tag name must be followed by ASCII
+// whitespace, `/`, or `>` (so `</script ignored>` and `</script/>` close the
+// element the way a browser reads them), and any attributes or junk before
+// the final `>` are consumed. A raw-text element that never closes runs to
+// the end of the template, so its content is never mistaken for markup.
 const INERT_REGION_PATTERN =
-  /<!--[\s\S]*?-->|<script\b[^>]*>[\s\S]*?<\/script\s*>|<style\b[^>]*>[\s\S]*?<\/style\s*>/gi
+  /<!--[\s\S]*?--!?>|<script\b[^>]*>[\s\S]*?(?:<\/script(?=[\t\n\f\r />])[^>]*>|$)|<style\b[^>]*>[\s\S]*?(?:<\/style(?=[\t\n\f\r />])[^>]*>|$)/gi
 const HEAD_OPEN_PATTERN = /<head[^>]*>/gi
 const HEAD_CLOSE_PATTERN = /<\/head>/gi
 
