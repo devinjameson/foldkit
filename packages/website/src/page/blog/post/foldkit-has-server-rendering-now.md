@@ -1,16 +1,32 @@
 ---
 title: Foldkit Has Server Rendering Now
-description: The same program now renders to HTML at build time or per request, then hydrates in place. Here is what shipped and why it fits the architecture.
+description: Your Foldkit application can now render to HTML at build time or per request, then hydrate in place on the client.
 date: 2026-08-15
+coverImage: /blog/foldkit-has-server-rendering-now/cover.webp
+coverImageAlt: The letters SSR in cyan set over a large black circle on a coral background.
+coverImageWidth: 1600
+coverImageHeight: 1066
 ---
 
-Hey, Devin here. Foldkit renders on the server now.
+Until today, Foldkit was purely an SPA framework. The server sent an HTML file to the client, the client requested the JavaScript bundle from the server, and once all the JavaScript loaded, the application booted.
 
-`foldkit/experimental` ships `Server.renderToString`, and the runtime ships `Runtime.hydrate`. Together they give a Foldkit application two new ways to reach the browser: generate static HTML for every route during the build, or render each request on a server. Either way, the browser hydrates the served HTML in place, and the application it boots is the one you wrote. Same `init`, same view, same `update`, same Model.
+There are issues with this approach in isolation:
 
-## One pipeline, two delivery policies
+- The user sees the HTML sent from the server before the JavaScript loads. Unless you prerender and serve HTML matching what the user sees after load, this is typically a blank page.
+- There is no way to do SSG without a heavy prerender step: for example, using Playwright to visit each route and capture HTML (which the Foldkit website used to do).
+- There is no way to do any kind of request-time SSR: for example, the server sending the client an initial HTML file personalized to the user.
 
-I did not want two rendering products. SSG and SSR are the same machinery run at different times: a build script calls your server entry once per URL and writes files, or a server calls it once per request and sends the response. The entry is a small module that derives Flags from a `Request` and asks Foldkit to render:
+The other issue is that Foldkit not having SSR was the deal-breaker for Michael, the BDFL of Effect. And that simply will not do.
+
+[![Michael Arnaldi on X: "Personally it's the deal breaker for me, I can't see myself writing 500+ lines of code to do SSG and not have a solution for SSR. I think we made the same mistakes over and over again, server side rendering is strictly necessary for good DX. I like the rest of the design."](/blog/foldkit-has-server-rendering-now/michael-ssr-dealbreaker.webp)](https://x.com/MichaelArnaldi/status/2059527426833592755)
+
+So, Foldkit renders on the server now. It shipped today under `foldkit/experimental/server`. It will be promoted to `foldkit/server` once the community puts it through its paces.
+
+`foldkit/experimental/server` ships `renderToString`, and `foldkit/runtime` ships `hydrate`. Together, they give a Foldkit application two new ways to reach the browser: generate static HTML for every route during the build, or render each request on a server. Either way, the browser hydrates the served HTML in place, and the application it boots is the same Foldkit application you wrote yesterday.
+
+## SSG vs SSR
+
+SSG and SSR are the same thing run at different times. Either a build script calls your server entry once per URL and writes files, or a server calls it once per request and sends the response. The entry is a small module that derives Flags from a `Request` and asks Foldkit to render:
 
 ```ts
 export const renderPage = (
@@ -28,32 +44,39 @@ export const renderPage = (
   )
 ```
 
+The Flags Schema, init, view, and flagsForRequest are provided by you. The rest is wiring.
+
 The same entry serves Vite in development, a Node host in production, a build script for static generation, and fetch-native runtimes like Cloudflare Workers. Hosts are interchangeable because the entry only speaks Web `Request` and `Response`.
 
-## Why this was natural
+## How it Works
 
-Foldkit's view is a pure function of the Model. That made most of server rendering less "add SSR to the framework" and more "call the same function somewhere else." No component lifecycles to simulate, no effects to suppress, no second flavor of data fetching to invent. `renderToString` resolves `init`, runs the view once, and serializes the result.
+Foldkit's view is a pure function of the Model, so most of server rendering was less "add SSR to the framework" and more "call the same function somewhere else."
 
-The genuinely interesting part is the handoff. The server embeds the Schema-encoded Flags that produced the render in the HTML, and `Runtime.hydrate` reads them back, calls the same `init`, and adopts the existing DOM instead of rebuilding it. Element identity, focus, and scroll survive; listeners and Mounts attach to the markup that is already on screen. Because both sides construct the first Model from the same Flags, there is no semantic mismatch to reconcile.
+Without SSR, the browser runs the whole sequence: your Flags Effect produces the flags, `init` turns them into the first Model, and `view` renders it.
 
-And the handoff is strict on purpose. A missing or undecodable payload fails startup loudly instead of silently booting a different application on top of your rendered page. Stale HTML and mismatched bundles are deployment bugs, and I want them to look like bugs.
+With SSR, the server runs the front of that sequence and the browser finishes it:
 
-## What shipped
+- **On the server**, `flagsForRequest` turns the request into flags, `init` builds the first Model, and `view` renders it to HTML. That HTML ships to the browser with the flags serialized alongside it.
+- **On the client**, `init` runs again with those same flags, rebuilds the identical Model, and `view` renders it. Instead of replacing the server's HTML, hydration adopts it in place.
 
-- `Server.renderToString`, `Server.Rendered` / `Server.Responded`, `Server.toResponse`, and `Server.injectIntoTemplate` in `foldkit/experimental`
-- `Runtime.hydrate` for the client side of the handoff
-- A dev host in `@foldkit/vite-plugin`: page requests render through your server entry while Vite keeps serving HMR and assets
-- `create-foldkit-app --rendering spa|ssg|ssr`, so a new project starts server-rendered if you want it to
-- [SSG](/example-apps/ssg) and [SSR](/example-apps/ssr) reference examples, and a [Server Rendering](/core/server-rendering) docs page covering the whole lifecycle, deployment included
+Same flags, same `init`, same `view` on both sides. That is why there is nothing to reconcile.
 
-It is dogfooded, too: foldkit.dev now prerenders every route through the same `renderPage` contract, and the page you are reading hydrated in place.
+## What Shipped
 
-## What it means for the framework
+Check out the [release notes](https://github.com/foldkit/foldkit/blob/main/packages/foldkit/CHANGELOG.md) and the new docs page on [Server Rendering](/core/server-rendering).
 
-Foldkit stays one programming model. There are no server components, no `'use client'` or `'use server'` boundaries, and no plan for them: the view is one function of one Model, and cutting that tree across a network boundary breaks the architecture. Server rendering changes where the first paint comes from, not how you write applications. The open question I am still designing is running Commands on the server during the initial render; [What about SSR?](/faq/what-about-ssr) covers where that stands.
+foldkit.dev now prerenders every route through the same `renderPage` contract (SSG), and the page you are reading hydrated in place.
 
-Server rendering ships from `foldkit/experimental` while the API settles, and any release may change it. Please try it and tell me what breaks:
+## What this means for Foldkit
+
+Foldkit is not getting more complicated. It is gaining a crucial capability.
+
+Foldkit stays one programming model. There are no server components, no `'use client'` or `'use server'` boundaries, and no plan for them: the view is one function of one Model. Server rendering changes where the first paint comes from, not how you write applications.
 
 ```sh
 npx create-foldkit-app@latest --rendering ssr
 ```
+
+Check it out and tell me what breaks. And don't be a stranger!
+
+Devin
