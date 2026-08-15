@@ -1,10 +1,9 @@
 import {
+  Config,
   Effect,
   FileSystem,
   Layer,
   Match as M,
-  Number,
-  Option,
   String as String_,
 } from 'effect'
 import {
@@ -31,10 +30,6 @@ import { renderPage } from '../src/entry.server'
 const PROJECT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const CLIENT_DIR = resolve(PROJECT_DIR, 'dist/client')
 const DEFAULT_PORT = 3000
-const PORT = Option.fromNullishOr(process.env['PORT']).pipe(
-  Option.flatMap(Number.parse),
-  Option.getOrElse(() => DEFAULT_PORT),
-)
 
 const acceptsHtml = (request: HttpServerRequest.HttpServerRequest): boolean =>
   String_.includes('text/html')(request.headers['accept'] ?? '')
@@ -108,7 +103,11 @@ const Main = Layer.unwrap(
   Effect.map(makeHandler, handler => HttpServer.serve(handler)),
 ).pipe(
   HttpServer.withLogAddress,
-  Layer.provide(NodeHttpServer.layer(createServer, { port: PORT })),
+  Layer.provide(
+    NodeHttpServer.layerConfig(createServer, {
+      port: Config.withDefault(Config.port('PORT'), DEFAULT_PORT),
+    }),
+  ),
   Layer.provide(NodeHttpPlatform.layer),
   Layer.provide(NodeServices.layer),
 )

@@ -141,11 +141,9 @@ export const scopedIdBelongsToModule = (
   id: string,
   moduleName: string,
 ): boolean =>
-  Option.match(String.indexOf('-')(id), {
-    onNone: () => false,
-    onSome: kindSeparatorIndex =>
-      id.startsWith(`${moduleName}/`, kindSeparatorIndex + 1),
-  })
+  Option.exists(String.indexOf('-')(id), kindSeparatorIndex =>
+    id.startsWith(`${moduleName}/`, kindSeparatorIndex + 1),
+  )
 
 export const sectionId = (moduleName: string, label: string): string =>
   `${moduleName}-${label.toLowerCase()}`
