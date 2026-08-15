@@ -8,12 +8,12 @@ Server rendering ships from `foldkit/experimental` while the API settles, and an
 
 Foldkit renders on the server with the same program the browser runs. `renderToString` resolves `init`, runs the pure view, and returns HTML. `Runtime.hydrate` then adopts that HTML in place. The same init, view, update, and Model work whether the HTML was rendered during a build (SSG) or while handling a request (SSR).
 
-That gives Foldkit one rendering pipeline with two possible schedules:
+That gives Foldkit one rendering pipeline with two delivery policies:
 
 - **Static site generation (SSG):** a build script renders a finite set of URLs and writes HTML files.
 - **Server-side rendering (SSR):** a server renders a URL when its request arrives.
 
-An application can use either schedule, or use SSG for some URLs and SSR for others. The application code does not need a second rendering API.
+An application can use either policy, or use SSG for some URLs and SSR for others. The application code does not need a second rendering API.
 
 One page, end to end. The left column marks who supplies each step:
 

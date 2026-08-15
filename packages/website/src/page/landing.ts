@@ -17,7 +17,6 @@ import {
   coreSubmodelRouter,
   coreSubscriptionsRouter,
   examplesRouter,
-  fieldValidationRouter,
   routingAndNavigationRouter,
   testingRouter,
   typingTerminalRouter,
@@ -482,7 +481,7 @@ const includedSection = (): Html =>
                 Icon.server('w-6 h-6'),
                 'Server Rendering',
                 [
-                  'One rendering pipeline with two schedules: generate static HTML during the build, or render each request on a server. The same init, view, and Model run on both sides, and the browser hydrates the served HTML in place.',
+                  'One rendering pipeline: generate static HTML during the build, or render each request on a server. The same init, view, and Model run on both sides, and the browser hydrates the served HTML in place.',
                 ],
                 {
                   href: coreServerRenderingRouter(),
@@ -562,17 +561,6 @@ const includedSection = (): Html =>
                 {
                   href: coreManagedResourcesRouter(),
                   label: 'Explore Managed Resources',
-                },
-              ),
-              includedFeature(
-                Icon.shieldCheck('w-6 h-6'),
-                'Field Validation',
-                [
-                  'Per-field validation with sync and async support. Define rules as predicates, apply them in update, and the Model tracks every field state.',
-                ],
-                {
-                  href: fieldValidationRouter(),
-                  label: 'Explore field validation',
                 },
               ),
               includedFeature(

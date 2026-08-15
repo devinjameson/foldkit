@@ -61,7 +61,7 @@ Pass `ssr` with the path to your server entry to render page requests through it
 plugins: [foldkit({ ssr: { serverEntry: '/src/entry.server.ts' } })]
 ```
 
-With this set, the dev server converts HTML page requests to Web `Request` values, passes them to the entry's `renderPage`, and serves the returned `Response`. Vite continues to serve the client entry, HMR, and assets, and the server entry runs through Vite's module graph, so edits to it apply without a restart. The option shapes only the dev server; production hosts import the built server entry themselves. See the [Server Rendering documentation](https://foldkit.dev/core/server-rendering) for the full contract.
+With this set, the dev server converts HTML page requests to Web `Request` values, passes them to the entry's `renderPage`, and serves the returned `Response`. Vite continues to serve the client entry, HMR, and assets, and the server entry runs through Vite's module graph, so edits to it apply without a restart. The client side of the handoff needs no plugin configuration: a server-rendered application's client entry calls `Runtime.hydrate` instead of `Runtime.run`, and hydrate adopts the served HTML in place. The option shapes only the dev server; production hosts import the built server entry themselves. See the [Server Rendering documentation](https://foldkit.dev/core/server-rendering) for the full contract.
 
 ## DevTools overlay
 

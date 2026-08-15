@@ -8,7 +8,7 @@ Hey, Devin here. Foldkit renders on the server now.
 
 `foldkit/experimental` ships `Server.renderToString`, and the runtime ships `Runtime.hydrate`. Together they give a Foldkit application two new ways to reach the browser: generate static HTML for every route during the build, or render each request on a server. Either way, the browser hydrates the served HTML in place, and the application it boots is the one you wrote. Same `init`, same view, same `update`, same Model.
 
-## One pipeline, two schedules
+## One pipeline, two delivery policies
 
 I did not want two rendering products. SSG and SSR are the same machinery run at different times: a build script calls your server entry once per URL and writes files, or a server calls it once per request and sends the response. The entry is a small module that derives Flags from a `Request` and asks Foldkit to render:
 

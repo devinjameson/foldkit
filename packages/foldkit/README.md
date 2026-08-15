@@ -137,7 +137,7 @@ A complete system, not a collection of libraries you stitch together. Each of th
 - **UI Components**: Accessible, keyboard-friendly primitives in the `@foldkit/ui` package.
 - **Field Validation**: Per-field validation state modeled as a discriminated union.
 - **Virtual DOM**: Declarative views with lazy memoization and keyed diffing, powered by [Snabbdom](https://github.com/snabbdom/snabbdom).
-- **Server Rendering**: The same program rendered to HTML at build time (SSG) or per request (SSR), then hydrated in place. Experimental, from `foldkit/experimental`.
+- **Server Rendering**: The same program rendered to HTML at build time (SSG) or per request (SSR), then hydrated in place.
 - **DevTools**: In-browser overlay for inspecting Messages, Model, and Commands, with time-travel.
 - **DevTools MCP**: Expose a running app to AI agents over the Model Context Protocol.
 - **Crash View and Reporting**: A custom fallback UI when the update loop throws, plus a report callback.
