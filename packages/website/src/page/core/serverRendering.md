@@ -70,9 +70,11 @@ For a routing application, pass the request URL so `init` receives it exactly as
 A server entry returns one of two variants:
 
 - `Server.Rendered(application, options)` asks the host to place Foldkit's rendered application in its HTML template. Its options can carry an HTTP status and headers.
-- `Server.Responded(response)` bypasses template injection with a complete Web `Response`. Use it for redirects, API responses, or any request the application handles without rendering its page shell.
+- `Server.Responded(response)` bypasses template injection with a complete Web `Response`. Use it for redirects and other non-page responses the page request itself resolves without rendering the shell.
 
 `Server.toResponse(template, result)` folds either variant into the Web `Response` the host sends, so a request-time host handles both cases with one call instead of matching on the result itself. It injects a `Rendered` application into the template, defaults to status 200 and a UTF-8 HTML content type, and passes a `Responded` response through unchanged.
+
+The render host serves pages, not a data API. When a client needs JSON, put that endpoint on a separate backend (an Effect `HttpApi` service is the natural fit) rather than answering it from the server entry. Foldkit keeps the line between server and client at the data: the backend returns data, the frontend renders it.
 
 The rendered application contains the body markup and the Document's initial head state:
 

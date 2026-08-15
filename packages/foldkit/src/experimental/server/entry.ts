@@ -43,7 +43,10 @@ export const Rendered = (
 })
 
 /** A server entry result that bypasses application rendering and returns a
- * complete Web `Response`, such as a redirect or an API response.
+ * complete Web `Response`, such as a redirect or another non-page response to
+ * a page request. A dedicated data API belongs on a separate backend rather
+ * than the render host; this is for responses the page request itself
+ * resolves without rendering the shell.
  *
  * @experimental Ships from `foldkit/experimental/server`; expect breaking changes while the API settles.
  */
