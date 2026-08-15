@@ -292,6 +292,19 @@ describe('__hydrateVNode', () => {
     expect(root.textContent).toBe('say "hi"')
   })
 
+  it('adopts an SVG innerHTML subtree whose markup uses camelCase attributes', () => {
+    const authoredMarkup = '<path pathLength="100" d="M0 0L10 10"></path>'
+    const svgView = () => h.svg([h.InnerHTML(authoredMarkup)])
+    const view = buildView(svgView)
+    const root = mountServerHtml(serializeHtml(view))
+    const serverPath = root.querySelector('path')
+    expect(serverPath).not.toBeNull()
+
+    buildView(() => __hydrateVNode(root, svgView()))
+
+    expect(root.querySelector('path')).toBe(serverPath)
+  })
+
   it('removes the server-stamped selected attribute from an adopted option', () => {
     const selectView = () =>
       h.select(

@@ -107,7 +107,10 @@ const makeRenderContextLoader = (): (() => Promise<RenderContext>) => {
         sourcesBySlug: loadAllExampleSources,
         baseFlags,
       }),
-    )
+    ).catch((error: unknown) => {
+      renderContextPromise = undefined
+      throw error
+    })
     return renderContextPromise
   }
 }

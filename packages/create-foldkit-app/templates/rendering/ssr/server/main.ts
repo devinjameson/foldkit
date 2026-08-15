@@ -31,14 +31,37 @@ const PROJECT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const CLIENT_DIR = resolve(PROJECT_DIR, 'dist/client')
 const DEFAULT_PORT = 3000
 
-const acceptsHtml = (request: HttpServerRequest.HttpServerRequest): boolean =>
-  String_.includes('text/html')(request.headers['accept'] ?? '')
+// NOTE: wildcard and absent Accept headers count as HTML-accepting, so a
+// static miss from fetch defaults (*/*), curl, and health checks renders
+// the application, matching the dev host.
+const acceptsHtml = (request: HttpServerRequest.HttpServerRequest): boolean => {
+  const accept = request.headers['accept']
+  if (accept === undefined) {
+    return true
+  }
+  return (
+    String_.includes('text/html')(accept) || String_.includes('*/*')(accept)
+  )
+}
 
+const decodedPathname = (pathname: string): string => {
+  try {
+    return decodeURIComponent(pathname)
+  } catch {
+    return pathname
+  }
+}
+
+// NOTE: the static file server percent-decodes paths before resolving them,
+// so the template guard decodes and lowercases the same way; otherwise
+// /%69ndex.html or /INDEX.HTML slips past it and the raw unfilled template
+// is served as a static file.
 const isTemplateRequest = (
   request: HttpServerRequest.HttpServerRequest,
 ): boolean => {
   const { pathname } = new URL(request.url, 'http://localhost')
-  return pathname === '/' || pathname === '/index.html'
+  const normalizedPathname = decodedPathname(pathname).toLowerCase()
+  return normalizedPathname === '/' || normalizedPathname === '/index.html'
 }
 
 const renderRequest = (

@@ -115,6 +115,29 @@ describe('injectIntoTemplate', () => {
     expect(result).not.toContain('https://example.com/current')
   })
 
+  it('stamps the head even when a comment contains a closing head tag', () => {
+    const template =
+      '<!doctype html><html><head>' +
+      '<!-- do not remove </head> without updating the shell -->' +
+      '<title>old</title></head>' +
+      '<body><div id="root"></div></body></html>'
+    const result = injectIntoTemplate(template, rendered())
+    expect(result).toContain('<title>New Title</title>')
+    expect(result).toContain(
+      '<!-- do not remove </head> without updating the shell -->',
+    )
+  })
+
+  it('finds the real head when a leading comment contains a head open tag', () => {
+    const template =
+      '<!doctype html><html><!-- <head> was reworked in v2 -->' +
+      '<head><title>old</title></head>' +
+      '<body><svg><title>icon label</title></svg><div id="root"></div></body></html>'
+    const result = injectIntoTemplate(template, rendered())
+    expect(result).toContain('<title>New Title</title>')
+    expect(result).toContain('<svg><title>icon label</title></svg>')
+  })
+
   it('stamps single-quoted canonical and og:url head elements', () => {
     const template =
       '<!doctype html><html><head><title>old</title>' +

@@ -47,28 +47,72 @@ const setAttribute = (
 
 type TemplateRegion = Readonly<{ start: number; end: number }>
 
-const HEAD_PATTERN = /<head[^>]*>[\s\S]*?<\/head>/i
+const COMMENT_PATTERN = /<!--[\s\S]*?-->/g
+const HEAD_OPEN_PATTERN = /<head[^>]*>/gi
+const HEAD_CLOSE_PATTERN = /<\/head>/gi
+
+const commentRegionsOf = (template: string): ReadonlyArray<TemplateRegion> => {
+  COMMENT_PATTERN.lastIndex = 0
+  const regions: Array<TemplateRegion> = []
+  let match = COMMENT_PATTERN.exec(template)
+  while (match !== null) {
+    regions.push({ start: match.index, end: match.index + match[0].length })
+    match = COMMENT_PATTERN.exec(template)
+  }
+  return regions
+}
+
+const isInsideAny = (
+  regions: ReadonlyArray<TemplateRegion>,
+  index: number,
+): boolean =>
+  regions.some(region => index >= region.start && index < region.end)
+
+const execOutsideRegions = (
+  template: string,
+  pattern: RegExp,
+  excluded: ReadonlyArray<TemplateRegion>,
+  fromIndex: number,
+): RegExpExecArray | null => {
+  pattern.lastIndex = fromIndex
+  let match = pattern.exec(template)
+  while (match !== null && isInsideAny(excluded, match.index)) {
+    match = pattern.exec(template)
+  }
+  return match
+}
 
 // NOTE: title and head-element matching are scoped to the template's head
 // and split at comment boundaries: an SVG accessibility <title> in the body
 // is content, not the document title, and a commented-out head element must
-// be left alone rather than stamped inside the comment. A template without a
-// <head> falls back to whole-document scanning.
+// be left alone rather than stamped inside the comment. The head's own
+// boundaries are located outside comments too, so a <head> or </head>
+// inside a comment neither starts nor truncates the search. A template
+// without a <head> falls back to whole-document scanning.
 const headSearchRegions = (template: string): ReadonlyArray<TemplateRegion> => {
-  const headMatch = HEAD_PATTERN.exec(template)
-  const start = headMatch === null ? 0 : headMatch.index
+  const comments = commentRegionsOf(template)
+  const headOpen = execOutsideRegions(template, HEAD_OPEN_PATTERN, comments, 0)
+  const start = headOpen === null ? 0 : headOpen.index
+  const headClose =
+    headOpen === null
+      ? null
+      : execOutsideRegions(
+          template,
+          HEAD_CLOSE_PATTERN,
+          comments,
+          headOpen.index + headOpen[0].length,
+        )
   const end =
-    headMatch === null ? template.length : headMatch.index + headMatch[0].length
+    headClose === null ? template.length : headClose.index + headClose[0].length
 
-  const commentPattern = /<!--[\s\S]*?-->/g
-  commentPattern.lastIndex = start
   const regions: Array<TemplateRegion> = []
   let segmentStart = start
-  let commentMatch = commentPattern.exec(template)
-  while (commentMatch !== null && commentMatch.index < end) {
-    regions.push({ start: segmentStart, end: commentMatch.index })
-    segmentStart = commentMatch.index + commentMatch[0].length
-    commentMatch = commentPattern.exec(template)
+  for (const comment of comments) {
+    if (comment.end <= start || comment.start >= end) {
+      continue
+    }
+    regions.push({ start: segmentStart, end: comment.start })
+    segmentStart = comment.end
   }
   regions.push({ start: segmentStart, end })
   return regions

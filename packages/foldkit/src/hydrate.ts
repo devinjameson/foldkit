@@ -33,6 +33,8 @@ import { dedupeSharedVNodes, patch } from './vdom.js'
 // no DOM counterpart are simply absent from the clone; `updateChildren`
 // appends them.
 
+const HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml'
+
 type AdoptedElements = Set<Node>
 type HydrationStatus = { isMismatchDetected: boolean }
 
@@ -158,9 +160,19 @@ const adoptElement = (
     // the authored one byte for byte. Parsing the authored string through a
     // probe element of the same tag compares the two in normalized form;
     // when they agree the clone carries the authored string, the props
-    // module sees no change, and the adopted subtree survives.
+    // module sees no change, and the adopted subtree survives. The probe is
+    // created in the element's own namespace: foreign content such as SVG
+    // parses with case-preserved names (pathLength, viewBox) that an
+    // HTML-context parse would lowercase, false-mismatching every camelCase
+    // attribute.
     if (typeof authoredInnerHtml === 'string') {
-      const probe = element.ownerDocument.createElement(element.tagName)
+      const probe =
+        element.namespaceURI === null || element.namespaceURI === HTML_NAMESPACE
+          ? element.ownerDocument.createElement(element.tagName)
+          : element.ownerDocument.createElementNS(
+              element.namespaceURI,
+              element.tagName,
+            )
       probe.innerHTML = authoredInnerHtml
       const isEquivalentMarkup = probe.innerHTML === element.innerHTML
       if (!isEquivalentMarkup) {
