@@ -26,7 +26,7 @@ So, Foldkit can render on the server now. It shipped today under `foldkit/experi
 
 ## SSG vs SSR
 
-SSG and SSR are the same thing run at different times. Either a build script calls your server entry once per URL and writes files, or a server calls it once per request and sends the response. The entry is a small module that derives Flags from a `Request` and asks Foldkit to render:
+SSG and SSR are the same thing run at different times. Either a build script calls your server entry once per URL and writes files, or a server calls it once per request and sends the response. The entry is a small module that derives flags from a `Request` and asks Foldkit to render:
 
 ```ts
 export const renderPage = (
@@ -52,14 +52,14 @@ The same entry serves Vite in development, a Node host in production, a build sc
 
 Foldkit's view is a pure function of the Model, so most of server rendering was less "add SSR to the framework" and more "call the same function somewhere else."
 
-If you are using Foldkit without SSR, the browser runs the whole sequence: your Flags Effect produces the Flags, `init` turns them into the first Model, and `view` renders it.
+If you are using Foldkit without SSR, the browser runs the whole sequence: your `flags` Effect produces the flags, `init` turns them into the first Model, and `view` renders it.
 
 With SSR, the server runs the front of that sequence and the browser finishes it:
 
-- **On the server**, `flagsForRequest` turns the request into Flags, `init` builds the first Model, and `view` renders it to HTML. That HTML ships to the browser with the Flags serialized alongside it.
-- **On the client**, `init` runs again with those same Flags, rebuilds the identical Model, and `view` renders it. Instead of replacing the server's HTML, hydration adopts it in place.
+- **On the server**, `flagsForRequest` turns the request into flags, `init` builds the first Model, and `view` renders it to HTML. That HTML ships to the browser with the flags serialized alongside it.
+- **On the client**, `init` runs again with those same flags, rebuilds the identical Model, and `view` renders it. Instead of replacing the server's HTML, hydration adopts it in place.
 
-Same Flags, same `init`, same `view` on both sides. That is why there is nothing to reconcile.
+Same flags, same `init`, same `view` on both sides. That is why there is nothing to reconcile.
 
 After hydration, the initial Commands run, and your Foldkit application behaves like a typical SPA with client-side navigation.
 
