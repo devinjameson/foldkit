@@ -8,15 +8,15 @@ coverImageWidth: 1600
 coverImageHeight: 1066
 ---
 
-Until today, Foldkit was purely an SPA framework. The server sent an HTML file to the client, the client requested the JavaScript bundle from the server, and once all the JavaScript loaded, the application booted.
+Until today, Foldkit was purely an SPA framework. The server sent an HTML file to the client, the client requested the JavaScript bundle, and once it loaded, the application booted.
 
 There are issues with this approach in isolation:
 
-- The user sees the HTML sent from the server before the JavaScript loads. Unless you prerender and serve HTML matching what the user sees after load, this is typically a blank page.
+- The user sees the server's HTML before the JavaScript loads. Unless you prerender HTML that matches the loaded app, that is typically a blank page.
 - There is no way to do SSG without a heavy prerender step: for example, using Playwright to visit each route and capture HTML (which the Foldkit website used to do).
-- There is no way to do any kind of request-time SSR: for example, the server sending the client an initial HTML file personalized to the logged-in user.
+- There is no way to do request-time SSR: for example, the server sending the client an initial HTML file personalized to the logged-in user.
 
-The other issue is that Foldkit not having SSR was the deal-breaker for [Michael Arnaldi](https://x.com/MichaelArnaldi), the BDFL of Effect. And that simply will not do.
+There was one more problem. Foldkit not having SSR was the deal-breaker for [Michael Arnaldi](https://x.com/MichaelArnaldi), the BDFL of Effect. And that simply will not do.
 
 [![Michael Arnaldi on X: "Personally it's the deal breaker for me, I can't see myself writing 500+ lines of code to do SSG and not have a solution for SSR. I think we made the same mistakes over and over again, server side rendering is strictly necessary for good DX. I like the rest of the design."](/blog/foldkit-has-server-rendering-now/michael-ssr-dealbreaker.webp)](https://x.com/MichaelArnaldi/status/2059527426833592755)
 
@@ -48,7 +48,7 @@ The `Flags` Schema, `init`, `view`, and `flagsForRequest` are provided by you. T
 
 The same entry serves Vite in development, a Node host in production, a build script for static generation, and fetch-native runtimes like Cloudflare Workers. Hosts are interchangeable because the entry only speaks Web `Request` and `Response`.
 
-## How it Works
+## How it works
 
 Foldkit's view is a pure function of the Model, so most of server rendering was less "add SSR to the framework" and more "call the same function somewhere else."
 
@@ -63,7 +63,7 @@ Same flags, same `init`, same `view` on both sides. That is why there is nothing
 
 After hydration, the initial Commands run, and your Foldkit application behaves like a typical SPA with client-side navigation.
 
-## What Shipped
+## What shipped
 
 Check out the [release notes](https://github.com/foldkit/foldkit/blob/main/packages/foldkit/CHANGELOG.md) and the new docs page on [Server Rendering](/core/server-rendering).
 
