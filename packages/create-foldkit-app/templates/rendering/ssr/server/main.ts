@@ -2,6 +2,7 @@ import {
   Effect,
   FileSystem,
   Layer,
+  Match as M,
   Number,
   Option,
   String as String_,
@@ -58,6 +59,24 @@ const renderRequest = (
 const isRouteNotFound = (error: HttpServerError.HttpServerError): boolean =>
   error.reason._tag === 'RouteNotFound'
 
+type RequestKind = 'Application' | 'StaticFile'
+
+// NOTE: `/` and `/index.html` are application requests even though a file
+// exists for them: the file on disk is the unfilled template, and serving it
+// raw would hand the browser an unstamped shell that Runtime.hydrate
+// refuses.
+const requestKind = (
+  request: HttpServerRequest.HttpServerRequest,
+): RequestKind => {
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    return 'Application'
+  }
+  if (isTemplateRequest(request)) {
+    return 'Application'
+  }
+  return 'StaticFile'
+}
+
 const makeHandler = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem
   const template = yield* fs.readFileString(resolve(CLIENT_DIR, 'index.html'))
@@ -66,22 +85,23 @@ const makeHandler = Effect.gen(function* () {
     index: undefined,
   })
 
-  return HttpServerRequest.HttpServerRequest.use(request => {
-    if (request.method !== 'GET' && request.method !== 'HEAD') {
-      return renderRequest(request, template)
-    }
-
-    if (isTemplateRequest(request)) {
-      return renderRequest(request, template)
-    }
-
-    return staticFiles.pipe(
+  // NOTE: a static miss from an HTML-accepting client falls through to the
+  // application: deep links to client routes have no file on disk.
+  const serveStaticFile = (request: HttpServerRequest.HttpServerRequest) =>
+    staticFiles.pipe(
       Effect.catchIf(
         error => isRouteNotFound(error) && acceptsHtml(request),
         () => renderRequest(request, template),
       ),
     )
-  })
+
+  return HttpServerRequest.HttpServerRequest.use(request =>
+    M.value(requestKind(request)).pipe(
+      M.when('Application', () => renderRequest(request, template)),
+      M.when('StaticFile', () => serveStaticFile(request)),
+      M.exhaustive,
+    ),
+  )
 })
 
 const Main = Layer.unwrap(

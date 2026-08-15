@@ -12,8 +12,8 @@ const flagsForRequest = (cookieHeader: string): Flags => ({
 
 // NOTE: the Flags built from this request are serialized into the rendered
 // HTML and travel to the browser with it. The hydrating client reads them
-// back and calls init with the exact values this render used; it computes
-// no Flags of its own.
+// back and calls init with the exact values this render used; the client
+// computes no Flags of its own.
 export const renderPage = (
   request: Request,
 ): Promise<Server.ServerEntryResult> =>

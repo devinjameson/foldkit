@@ -161,13 +161,18 @@ const createPackageManagerFiles = (
     yield* createFiles(projectPath, packageManagerFiles)
   })
 
-const overlayRenderingFiles = (projectPath: string, rendering: 'ssg' | 'ssr') =>
+type OverlayDirectory = 'ssg' | 'ssr'
+
+const overlayRenderingFiles = (
+  projectPath: string,
+  directory: OverlayDirectory,
+) =>
   Effect.gen(function* () {
     const path = yield* Path.Path
 
     const templateRoot = yield* getTemplateRoot
     const renderingFiles = yield* getTemplateFiles(
-      path.join(templateRoot, 'rendering', rendering),
+      path.join(templateRoot, 'rendering', directory),
     )
     yield* createFiles(projectPath, renderingFiles)
   })

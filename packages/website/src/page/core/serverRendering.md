@@ -15,6 +15,40 @@ That gives Foldkit one rendering pipeline with two possible schedules:
 
 An application can use either schedule, or use SSG for some URLs and SSR for others. The application code does not need a second rendering API.
 
+One page, end to end. The left column marks who supplies each step:
+
+```diagram
+ browser ------ GET /page ------> host
+                                  (Vite in dev; your server
+                                   in production)
+                                    |
+                                    | Web Request
+                                    ↓
+                                  renderPage [you write]
+                                    |
+                                    | Flags you derive from the request
+                                    ↓
+                                  renderToString [Foldkit]
+                                  calls your init, runs your view
+                                    |
+                                    | rendered application
+                                    ↓
+                                  toResponse [Foldkit]
+                                  fills your index.html
+                                    |
+ browser <--- HTML: your page + Flags payload --- host
+    |
+    | Runtime.hydrate [Foldkit] reads the Flags,
+    | calls the same init, adopts the DOM
+    ↓
+ live application: listeners and Mounts
+ attach to the existing elements
+```
+
+From the live application on, the page is an ordinary Foldkit application: routing, update, Commands, and Subscriptions all run in the browser, and navigation moves between routes without contacting the server. The server renders again only on the next full page load, such as a reload or a link the runtime does not handle.
+
+For SSG the picture is identical with one substitution: the host is a build script, and the response is written to a file that a static server or CDN delivers later.
+
 ## The server entry
 
 A server entry is the boundary between the application and its host, a dedicated module the examples keep in `src/entry.server.ts`. It accepts a Web `Request` and returns a `Promise<ServerEntryResult>`:
@@ -121,7 +155,7 @@ Fetch-native runtimes such as Cloudflare Workers, Deno, and Bun run the entry wi
 
 ::Snippet{name="serverRenderingWorkersHost" label="Workers host example"}
 
-The platform serves the built client assets, the bundler inlines the template through a text-module rule, and the handler covers page requests. The same built server entry works on every host, so choosing a platform is a delivery decision, not an application change.
+The platform serves the built client assets, and the handler covers page requests. The template `import` works because the bundler is told to treat `.html` imports as plain strings; Cloudflare's Wrangler CLI, the tool that builds and deploys Workers, calls this a `Text` module rule. The same built server entry runs unchanged on each of these hosts.
 
 ## One application using both
 

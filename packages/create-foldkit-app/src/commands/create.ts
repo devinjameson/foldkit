@@ -1,17 +1,10 @@
 import chalk from 'chalk'
-import { Console, Effect, FileSystem, Match, Option, Path } from 'effect'
+import { Console, Effect, FileSystem, Match, Option, Path, pipe } from 'effect'
 import { Prompt } from 'effect/unstable/cli'
 import { spawnSync } from 'node:child_process'
 
 import { type Example, examples } from '../examples.js'
-import {
-  type Rendering,
-  type Scaffold,
-  Spa,
-  Ssg,
-  Ssr,
-  renderings,
-} from '../rendering.js'
+import { type Rendering, Scaffold, renderings } from '../rendering.js'
 import { createProject } from '../utils/files.js'
 import {
   type PackageManager,
@@ -72,16 +65,17 @@ const resolveScaffold = (
 ) =>
   Match.value(rendering).pipe(
     Match.when('spa', () =>
-      Effect.map(
-        Option.match(maybeExample, {
+      pipe(
+        maybeExample,
+        Option.match({
           onNone: () => promptForExample,
           onSome: Effect.succeed,
         }),
-        Spa,
+        Effect.map(example => Scaffold.Spa({ example })),
       ),
     ),
-    Match.when('ssg', () => Effect.succeed(Ssg)),
-    Match.when('ssr', () => Effect.succeed(Ssr)),
+    Match.when('ssg', () => Effect.succeed(Scaffold.Ssg())),
+    Match.when('ssr', () => Effect.succeed(Scaffold.Ssr())),
     Match.exhaustive,
   )
 

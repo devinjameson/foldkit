@@ -1,3 +1,5 @@
+import { Data } from 'effect'
+
 import { type Example } from './examples.js'
 
 export const RENDERING_VALUES = ['spa', 'ssg', 'ssr'] as const
@@ -28,11 +30,10 @@ export const renderings: ReadonlyArray<{
   },
 ]
 
-export type Scaffold =
-  | Readonly<{ _tag: 'Spa'; example: Example }>
-  | Readonly<{ _tag: 'Ssg' }>
-  | Readonly<{ _tag: 'Ssr' }>
+export type Scaffold = Data.TaggedEnum<{
+  Spa: { readonly example: Example }
+  Ssg: {}
+  Ssr: {}
+}>
 
-export const Spa = (example: Example): Scaffold => ({ _tag: 'Spa', example })
-export const Ssg: Scaffold = { _tag: 'Ssg' }
-export const Ssr: Scaffold = { _tag: 'Ssr' }
+export const Scaffold = Data.taggedEnum<Scaffold>()

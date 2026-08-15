@@ -6,21 +6,25 @@ import { tagNameFromSelector } from './tagName.js'
 import { dedupeSharedVNodes, patch } from './vdom.js'
 
 // NOTE: the differ only knows the page through the `elm` pointers on its
-// vnodes; `patch` never queries the document. A server-rendered page is real
-// DOM the browser parsed from HTML, so no vnode anywhere points at it and
-// the differ cannot see it. Hydration's whole job is to make that DOM
-// visible to the differ, then let one ordinary patch attach behavior to it.
+// vnodes; `patch` never queries the document. On a server-rendered page the
+// browser has already built real DOM by parsing the HTML the server sent
+// (the "server DOM" below), but snabbdom did not create those nodes, so no
+// vnode anywhere points at them and the differ cannot see them. Hydration's
+// whole job is to make that DOM visible to the differ, then let one
+// ordinary patch attach behavior to it.
 //
-// The mechanism: walk the first render's vnode tree and the server DOM in
-// lockstep, building the "old" side of the first patch as a skeleton clone
-// of the NEW tree whose `elm` pointers are adopted from the existing nodes.
-// The clone copies exactly what `sameVnode` compares (`sel`, `key`,
-// `identity`, `data.is`), so `patchVnode` reuses every adopted element, and
-// deliberately nothing else, so every module update hook re-asserts the new
-// tree's attrs, props, classes, styles, and listeners onto the adopted
-// elements. `patch(clone, newTree)` then runs as a completely ordinary
-// update: the vendored differ stays untouched, and it never learns the
-// nodes came from a server.
+// The mechanism has three steps. First, walk the first render's vnode tree
+// and the server DOM together, position by position. Second, wherever the
+// two agree, record the existing DOM node: those records form a second
+// vnode tree, a clone of the first render's tree whose `elm` fields point
+// at the server DOM nodes. The clone copies exactly what `sameVnode`
+// compares (`sel`, `key`, `identity`, `data.is`), so `patchVnode` reuses
+// every adopted element, and deliberately nothing else, so every module
+// update hook re-asserts the new tree's attrs, props, classes, styles, and
+// listeners onto the adopted elements. Third, run `patch(clone, newTree)`:
+// to the differ this is a completely ordinary update from a tree that
+// happens to point at existing nodes, so the vendored differ stays
+// untouched and never learns the nodes came from a server.
 //
 // Where the DOM disagrees with the vnode tree, the walk clears the nearest
 // parent's children and hands `patch` an empty child list, so the subtree is

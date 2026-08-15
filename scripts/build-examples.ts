@@ -1,3 +1,4 @@
+import { Match as M } from 'effect'
 import { spawn } from 'node:child_process'
 import {
   copyFileSync,
@@ -130,11 +131,13 @@ const buildExample = async (
   const exampleDir = resolve(EXAMPLES_DIR, slug)
   const outputDir = resolve(OUTPUT_DIR, slug)
 
-  if (livePreview === 'Prerendered') {
-    await buildPrerenderedExample(exampleDir, slug, outputDir)
-  } else {
-    await buildSpaExample(exampleDir, slug, outputDir)
-  }
+  await M.value(livePreview).pipe(
+    M.when('Prerendered', () =>
+      buildPrerenderedExample(exampleDir, slug, outputDir),
+    ),
+    M.when('Spa', () => buildSpaExample(exampleDir, slug, outputDir)),
+    M.exhaustive,
+  )
 
   injectBridgeScript(outputDir)
 

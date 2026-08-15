@@ -94,22 +94,25 @@ type RenderContext = Readonly<{
   baseFlags: typeof Flags.Type
 }>
 
-let renderContextPromise: Promise<RenderContext> | undefined
-
 // NOTE: the context loads on the first renderPage call, not at module scope.
 // An eager module-scope Effect.runPromise rejects with no awaiting caller
 // when a load fails, killing the host process as an opaque unhandled
 // rejection, and dev HMR reloads of this module would re-pay the full load.
-const loadRenderContext = (): Promise<RenderContext> => {
-  renderContextPromise ??= Effect.runPromise(
-    Effect.all({
-      apiData: loadApiData,
-      sourcesBySlug: loadAllExampleSources,
-      baseFlags,
-    }),
-  )
-  return renderContextPromise
+const makeRenderContextLoader = (): (() => Promise<RenderContext>) => {
+  let renderContextPromise: Promise<RenderContext> | undefined
+  return () => {
+    renderContextPromise ??= Effect.runPromise(
+      Effect.all({
+        apiData: loadApiData,
+        sourcesBySlug: loadAllExampleSources,
+        baseFlags,
+      }),
+    )
+    return renderContextPromise
+  }
 }
+
+const loadRenderContext = makeRenderContextLoader()
 
 // NOTE: rendering stays in this bundle so the application view and server
 // renderer share the module-local HTML render frame. The expensive content

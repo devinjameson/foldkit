@@ -1,4 +1,4 @@
-import { Effect, Match as M, Schema as S } from 'effect'
+import { Effect, Match as M, Schema as S, pipe } from 'effect'
 import { Command, Runtime } from 'foldkit'
 import { type Document, type Html, type HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
@@ -87,13 +87,19 @@ export const update = (model: Model, message: Message): UpdateReturn =>
 
 // VIEW
 
+const APP_NAME = 'Foldkit App'
+
+const appendAppName = (page: string): string => `${page} | ${APP_NAME}`
+
 const routeTitle = (route: AppRoute): string =>
-  M.value(route).pipe(
+  pipe(
+    M.value(route),
     M.tagsExhaustive({
-      Home: () => 'Home | Foldkit App',
-      About: () => 'About | Foldkit App',
-      NotFound: () => 'Not Found | Foldkit App',
+      Home: () => 'Home',
+      About: () => 'About',
+      NotFound: () => 'Not Found',
     }),
+    appendAppName,
   )
 
 const navigationView = (h: HtmlBuilder<Message>): Html =>

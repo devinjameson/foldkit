@@ -2,7 +2,7 @@ import { expect } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
 
-import { Spa, Ssg, Ssr } from '../rendering.js'
+import { Scaffold } from '../rendering.js'
 import {
   buildUnresolvedDeps,
   buildUnresolvedDevDeps,
@@ -70,17 +70,21 @@ describe('buildUnresolvedDevDeps', () => {
 
 describe('dependencyExample', () => {
   it('reads spa dependencies from the chosen example and server-rendered dependencies from the reference apps', () => {
-    expect(dependencyExample(Spa('counter'))).toBe('counter')
-    expect(dependencyExample(Ssg)).toBe('ssg')
-    expect(dependencyExample(Ssr)).toBe('ssr')
+    expect(dependencyExample(Scaffold.Spa({ example: 'counter' }))).toBe(
+      'counter',
+    )
+    expect(dependencyExample(Scaffold.Ssg())).toBe('ssg')
+    expect(dependencyExample(Scaffold.Ssr())).toBe('ssr')
   })
 })
 
 describe('scaffoldDevDependencies', () => {
   it('adds @types/node for the server-rendered scaffolds only', () => {
-    expect(scaffoldDevDependencies(Spa('counter'))).toEqual([])
-    expect(scaffoldDevDependencies(Ssg)).toEqual(['@types/node'])
-    expect(scaffoldDevDependencies(Ssr)).toEqual(['@types/node'])
+    expect(
+      scaffoldDevDependencies(Scaffold.Spa({ example: 'counter' })),
+    ).toEqual([])
+    expect(scaffoldDevDependencies(Scaffold.Ssg())).toEqual(['@types/node'])
+    expect(scaffoldDevDependencies(Scaffold.Ssr())).toEqual(['@types/node'])
   })
 })
 

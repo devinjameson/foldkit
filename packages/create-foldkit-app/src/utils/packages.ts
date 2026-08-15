@@ -1,5 +1,6 @@
 import {
   Array,
+  Data,
   Effect,
   FileSystem,
   Match,
@@ -78,21 +79,22 @@ const SERVER_RENDERING_DEV_DEPENDENCIES = ['@types/node']
 const isFoldkitPackage = (name: string): boolean =>
   name === 'foldkit' || name.startsWith(FOLDKIT_SCOPE_PREFIX)
 
-type UnresolvedSpec =
-  | Readonly<{ _tag: 'Keep'; version: string }>
-  | Readonly<{ _tag: 'Latest' }>
+type UnresolvedSpec = Data.TaggedEnum<{
+  Keep: { readonly version: string }
+  Latest: {}
+}>
 
-const Keep = (version: string): UnresolvedSpec => ({ _tag: 'Keep', version })
-const Latest: UnresolvedSpec = { _tag: 'Latest' }
+const UnresolvedSpec = Data.taggedEnum<UnresolvedSpec>()
+const { Keep, Latest } = UnresolvedSpec
 
 const toUnresolvedSpec = (
   spec: string,
   name: string,
 ): Result.Result<UnresolvedSpec, void> => {
   if (spec.includes('workspace:')) {
-    return isFoldkitPackage(name) ? Result.succeed(Latest) : Result.failVoid
+    return isFoldkitPackage(name) ? Result.succeed(Latest()) : Result.failVoid
   } else {
-    return Result.succeed(Keep(spec))
+    return Result.succeed(Keep({ version: spec }))
   }
 }
 
@@ -119,7 +121,7 @@ export const buildUnresolvedDevDeps = (
 ): Record<string, UnresolvedSpec> => {
   const templateSpecs = Record.fromIterableWith(
     [...TEMPLATE_DEV_DEPENDENCIES, ...extraDevDependencies],
-    name => [name, Latest],
+    name => [name, Latest()],
   )
   const exampleSpecs = Record.filterMap(exampleDevDeps, toUnresolvedSpec)
   return Record.union(
