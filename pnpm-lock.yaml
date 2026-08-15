@@ -27,6 +27,9 @@ importers:
       '@types/node':
         specifier: ^25.9.3
         version: 25.9.3
+      effect:
+        specifier: 4.0.0-rc.109
+        version: 4.0.0-rc.109
       knip:
         specifier: ^6.12.2
         version: 6.17.1

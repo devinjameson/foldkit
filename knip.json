@@ -78,6 +78,17 @@
     },
     "examples/ssr": {
       "entry": ["server/main.ts", "src/entry.server.ts"],
+      "ignoreFiles": ["vite.config.playground.ts"],
+      "ignoreDependencies": [
+        "@foldkit/devtools",
+        "@trivago/prettier-plugin-sort-imports",
+        "prettier",
+        "tailwindcss"
+      ]
+    },
+    "examples/ssg": {
+      "entry": ["src/entry.server.ts"],
+      "ignoreFiles": ["vite.config.playground.ts"],
       "ignoreDependencies": [
         "@foldkit/devtools",
         "@trivago/prettier-plugin-sort-imports",
