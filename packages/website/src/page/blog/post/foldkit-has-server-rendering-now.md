@@ -14,13 +14,13 @@ There are issues with this approach in isolation:
 
 - The user sees the HTML sent from the server before the JavaScript loads. Unless you prerender and serve HTML matching what the user sees after load, this is typically a blank page.
 - There is no way to do SSG without a heavy prerender step: for example, using Playwright to visit each route and capture HTML (which the Foldkit website used to do).
-- There is no way to do any kind of request-time SSR: for example, the server sending the client an initial HTML file personalized to the user.
+- There is no way to do any kind of request-time SSR: for example, the server sending the client an initial HTML file personalized to the logged-in user.
 
-The other issue is that Foldkit not having SSR was the deal-breaker for Michael, the BDFL of Effect. And that simply will not do.
+The other issue is that Foldkit not having SSR was the deal-breaker for [Michael Arnaldi](https://x.com/MichaelArnaldi), the BDFL of Effect. And that simply will not do.
 
 [![Michael Arnaldi on X: "Personally it's the deal breaker for me, I can't see myself writing 500+ lines of code to do SSG and not have a solution for SSR. I think we made the same mistakes over and over again, server side rendering is strictly necessary for good DX. I like the rest of the design."](/blog/foldkit-has-server-rendering-now/michael-ssr-dealbreaker.webp)](https://x.com/MichaelArnaldi/status/2059527426833592755)
 
-So, Foldkit renders on the server now. It shipped today under `foldkit/experimental/server`. It will be promoted to `foldkit/server` once the community puts it through its paces.
+So, Foldkit can render on the server now. It shipped today under `foldkit/experimental/server`. It will be promoted to `foldkit/server` once the community puts it through its paces.
 
 `foldkit/experimental/server` ships `renderToString`, and `foldkit/runtime` ships `hydrate`. Together, they give a Foldkit application two new ways to reach the browser: generate static HTML for every route during the build, or render each request on a server. Either way, the browser hydrates the served HTML in place, and the application it boots is the same Foldkit application you wrote yesterday.
 
@@ -44,7 +44,7 @@ export const renderPage = (
   )
 ```
 
-The Flags Schema, init, view, and flagsForRequest are provided by you. The rest is wiring.
+The `Flags` Schema, `init`, `view`, and `flagsForRequest` are provided by you. The rest is wiring.
 
 The same entry serves Vite in development, a Node host in production, a build script for static generation, and fetch-native runtimes like Cloudflare Workers. Hosts are interchangeable because the entry only speaks Web `Request` and `Response`.
 
@@ -52,14 +52,16 @@ The same entry serves Vite in development, a Node host in production, a build sc
 
 Foldkit's view is a pure function of the Model, so most of server rendering was less "add SSR to the framework" and more "call the same function somewhere else."
 
-Without SSR, the browser runs the whole sequence: your Flags Effect produces the flags, `init` turns them into the first Model, and `view` renders it.
+If you are using Foldkit without SSR, the browser runs the whole sequence: your Flags Effect produces the Flags, `init` turns them into the first Model, and `view` renders it.
 
 With SSR, the server runs the front of that sequence and the browser finishes it:
 
-- **On the server**, `flagsForRequest` turns the request into flags, `init` builds the first Model, and `view` renders it to HTML. That HTML ships to the browser with the flags serialized alongside it.
-- **On the client**, `init` runs again with those same flags, rebuilds the identical Model, and `view` renders it. Instead of replacing the server's HTML, hydration adopts it in place.
+- **On the server**, `flagsForRequest` turns the request into Flags, `init` builds the first Model, and `view` renders it to HTML. That HTML ships to the browser with the Flags serialized alongside it.
+- **On the client**, `init` runs again with those same Flags, rebuilds the identical Model, and `view` renders it. Instead of replacing the server's HTML, hydration adopts it in place.
 
-Same flags, same `init`, same `view` on both sides. That is why there is nothing to reconcile.
+Same Flags, same `init`, same `view` on both sides. That is why there is nothing to reconcile.
+
+After hydration, the initial Commands run, and your Foldkit application behaves like a typical SPA with client-side navigation.
 
 ## What Shipped
 
@@ -71,12 +73,12 @@ foldkit.dev now prerenders every route through the same `renderPage` contract (S
 
 Foldkit is not getting more complicated. It is gaining a crucial capability.
 
-Foldkit stays one programming model. There are no server components, no `'use client'` or `'use server'` boundaries, and no plan for them: the view is one function of one Model. Server rendering changes where the first paint comes from, not how you write applications.
+There is still a single programming model. There are no server components, no `'use client'` or `'use server'` boundaries, and no plan for them: the view is one function of one Model. Server rendering changes where the first paint comes from, not how you write applications.
 
 ```sh
 npx create-foldkit-app@latest --rendering ssr
 ```
 
-Check it out and tell me what breaks. And don't be a stranger!
+Check it out and tell me what breaks. Or what you yearn for. And don't be a stranger!
 
 Devin
