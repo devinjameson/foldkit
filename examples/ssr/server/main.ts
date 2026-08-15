@@ -9,7 +9,7 @@ import {
 } from 'effect/unstable/http'
 import { Server } from 'foldkit/experimental'
 import { createServer } from 'node:http'
-import { dirname, resolve } from 'node:path'
+import { dirname, posix, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import {
@@ -38,24 +38,30 @@ const acceptsHtml = (request: HttpServerRequest.HttpServerRequest): boolean => {
   )
 }
 
-const decodedPathname = (pathname: string): string => {
-  try {
-    return decodeURIComponent(pathname)
-  } catch {
-    return pathname
-  }
-}
-
-// NOTE: the static file server percent-decodes paths before resolving them,
-// so the template guard decodes and lowercases the same way; otherwise
-// /%69ndex.html or /INDEX.HTML slips past it and the raw unfilled template
-// is served as a static file.
-const isTemplateRequest = (
+// NOTE: the static file server percent-decodes and path-normalizes before
+// resolving a file, so the template guard resolves the request the same way.
+// Comparing the raw pathname lets /%2findex.html, /%69ndex.html, /INDEX.HTML,
+// and /foo/../index.html slip past and serve the raw unfilled template that
+// Runtime.hydrate refuses. Backslashes and repeated slashes are collapsed and
+// dot segments resolved before the comparison; an undecodable or null-byte
+// path is treated as non-template and left to the static server to reject.
+const resolvesToTemplate = (
   request: HttpServerRequest.HttpServerRequest,
 ): boolean => {
   const { pathname } = new URL(request.url, 'http://localhost')
-  const normalizedPathname = decodedPathname(pathname).toLowerCase()
-  return normalizedPathname === '/' || normalizedPathname === '/index.html'
+  let decoded: string
+  try {
+    decoded = decodeURIComponent(pathname)
+  } catch {
+    return false
+  }
+  if (decoded.includes('\0')) {
+    return false
+  }
+  const collapsed = decoded.replace(/\\/g, '/').replace(/\/{2,}/g, '/')
+  const normalized = posix.normalize(collapsed)
+  const relative = normalized.startsWith('/') ? normalized.slice(1) : normalized
+  return relative === '' || relative.toLowerCase() === 'index.html'
 }
 
 const renderRequest = (
@@ -83,7 +89,7 @@ const requestKind = (
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     return 'Application'
   }
-  if (isTemplateRequest(request)) {
+  if (resolvesToTemplate(request)) {
     return 'Application'
   }
   return 'StaticFile'

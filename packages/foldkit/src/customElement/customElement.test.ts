@@ -208,6 +208,16 @@ describe('CustomElement.define validation', () => {
     ).toThrowError(/tag 'rating' is not a valid custom element name/)
   })
 
+  it('throws when the tag carries markup characters despite a hyphen', () => {
+    expect(() =>
+      CustomElement.define({
+        tag: 'x-a><script>alert(1)</script><x-a',
+        properties: {},
+        events: {},
+      }),
+    ).toThrowError(/is not a valid custom element name/)
+  })
+
   it('throws when a property name collides with an event factory name', () => {
     expect(() =>
       CustomElement.define({

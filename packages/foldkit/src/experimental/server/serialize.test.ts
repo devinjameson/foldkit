@@ -142,6 +142,32 @@ describe('serializeHtml', () => {
     expect(() => serializeHtml(style)).toThrow('</style')
   })
 
+  it('rejects a tag name carrying markup so it cannot inject elements', () => {
+    const injected: VNode = {
+      sel: 'x-a><script>globalThis.pwned=1</script><x-a',
+      data: {},
+      children: [],
+      elm: undefined,
+      text: undefined,
+      key: undefined,
+    }
+    expect(() => serializeHtml(injected)).toThrow('invalid tag name')
+  })
+
+  it('rejects a <!-- sequence in script content that would escape the parser', () => {
+    const script = h.script([], ['<!--<script>globalThis.pwned=1;'])
+    expect(() => serializeHtml(script)).toThrow('<!--')
+    const throughInnerHtml = h.script([h.InnerHTML('<!--<script>evil()')])
+    expect(() => serializeHtml(throughInnerHtml)).toThrow('<!--')
+  })
+
+  it('leaves a <!-- sequence in non-script raw text alone', () => {
+    const style = h.style([], ['/* <!-- not special in CSS --> */'])
+    expect(serializeHtml(style)).toBe(
+      '<style>/* <!-- not special in CSS --> */</style>',
+    )
+  })
+
   it('rejects a terminating sequence inside comment text', () => {
     const comment: VNode = {
       sel: '!',

@@ -138,6 +138,38 @@ describe('injectIntoTemplate', () => {
     expect(result).toContain('<svg><title>icon label</title></svg>')
   })
 
+  it('rewrites the real canonical, not the canonical-looking string in a head script', () => {
+    const scriptBlock =
+      '<script>const fallback = \'<link rel="canonical" href="x">\'</script>'
+    const template =
+      '<!doctype html><html><head><title>old</title>' +
+      scriptBlock +
+      '<link rel="canonical" href="https://example.com/current" />' +
+      '</head><body><div id="root"></div></body></html>'
+    const result = injectIntoTemplate(
+      template,
+      rendered({ canonical: 'https://example.com/fresh' }),
+    )
+    expect(result).toContain(scriptBlock)
+    expect(result).toContain(
+      '<link rel="canonical" href="https://example.com/fresh" />',
+    )
+    expect(result).not.toContain('https://example.com/current')
+  })
+
+  it('finds the real head title past a head-looking string in a script', () => {
+    const template =
+      '<!doctype html><html><head>' +
+      "<script>const markup = '<title>fake</title></head>'</script>" +
+      '<title>old</title></head>' +
+      '<body><div id="root"></div></body></html>'
+    const result = injectIntoTemplate(template, rendered())
+    expect(result).toContain('<title>New Title</title>')
+    expect(result).toContain(
+      "<script>const markup = '<title>fake</title></head>'</script>",
+    )
+  })
+
   it('stamps single-quoted canonical and og:url head elements', () => {
     const template =
       '<!doctype html><html><head><title>old</title>' +

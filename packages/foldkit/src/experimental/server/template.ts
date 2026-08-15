@@ -47,17 +47,28 @@ const setAttribute = (
 
 type TemplateRegion = Readonly<{ start: number; end: number }>
 
-const COMMENT_PATTERN = /<!--[\s\S]*?-->/g
+// A single alternation scanned left to right so the earliest opener wins:
+// an HTML comment, a `<script>` element, or a `<style>` element. Matching
+// them in document order means a comment that contains `<script` is taken as
+// one comment, and a script whose text contains `<!--` is taken as one
+// script, rather than the two interleaving incorrectly.
+const INERT_REGION_PATTERN =
+  /<!--[\s\S]*?-->|<script\b[^>]*>[\s\S]*?<\/script\s*>|<style\b[^>]*>[\s\S]*?<\/style\s*>/gi
 const HEAD_OPEN_PATTERN = /<head[^>]*>/gi
 const HEAD_CLOSE_PATTERN = /<\/head>/gi
 
-const commentRegionsOf = (template: string): ReadonlyArray<TemplateRegion> => {
-  COMMENT_PATTERN.lastIndex = 0
+// NOTE: the head scan skips comments and raw-text elements. Comments and the
+// content of <script> and <style> can contain strings that look like head
+// elements (a `<link rel=canonical>` inside an inline script's source), and
+// stamping a metadata value into a script's JavaScript string would escape
+// it for an HTML attribute, not a JS string, producing executable output.
+const inertRegionsOf = (template: string): ReadonlyArray<TemplateRegion> => {
+  INERT_REGION_PATTERN.lastIndex = 0
   const regions: Array<TemplateRegion> = []
-  let match = COMMENT_PATTERN.exec(template)
+  let match = INERT_REGION_PATTERN.exec(template)
   while (match !== null) {
     regions.push({ start: match.index, end: match.index + match[0].length })
-    match = COMMENT_PATTERN.exec(template)
+    match = INERT_REGION_PATTERN.exec(template)
   }
   return regions
 }
@@ -83,15 +94,21 @@ const execOutsideRegions = (
 }
 
 // NOTE: title and head-element matching are scoped to the template's head
-// and split at comment boundaries: an SVG accessibility <title> in the body
-// is content, not the document title, and a commented-out head element must
-// be left alone rather than stamped inside the comment. The head's own
-// boundaries are located outside comments too, so a <head> or </head>
-// inside a comment neither starts nor truncates the search. A template
-// without a <head> falls back to whole-document scanning.
+// and split at inert boundaries: an SVG accessibility <title> in the body is
+// content, not the document title, and a commented-out or scripted head
+// element must be left alone rather than stamped inside inert text. The
+// head's own boundaries are located outside inert regions too, so a <head>
+// or </head> inside a comment or a script string neither starts nor
+// truncates the search. A template without a <head> falls back to
+// whole-document scanning.
 const headSearchRegions = (template: string): ReadonlyArray<TemplateRegion> => {
-  const comments = commentRegionsOf(template)
-  const headOpen = execOutsideRegions(template, HEAD_OPEN_PATTERN, comments, 0)
+  const inertRegions = inertRegionsOf(template)
+  const headOpen = execOutsideRegions(
+    template,
+    HEAD_OPEN_PATTERN,
+    inertRegions,
+    0,
+  )
   const start = headOpen === null ? 0 : headOpen.index
   const headClose =
     headOpen === null
@@ -99,7 +116,7 @@ const headSearchRegions = (template: string): ReadonlyArray<TemplateRegion> => {
       : execOutsideRegions(
           template,
           HEAD_CLOSE_PATTERN,
-          comments,
+          inertRegions,
           headOpen.index + headOpen[0].length,
         )
   const end =
@@ -107,12 +124,12 @@ const headSearchRegions = (template: string): ReadonlyArray<TemplateRegion> => {
 
   const regions: Array<TemplateRegion> = []
   let segmentStart = start
-  for (const comment of comments) {
-    if (comment.end <= start || comment.start >= end) {
+  for (const inertRegion of inertRegions) {
+    if (inertRegion.end <= start || inertRegion.start >= end) {
       continue
     }
-    regions.push({ start: segmentStart, end: comment.start })
-    segmentStart = comment.end
+    regions.push({ start: segmentStart, end: inertRegion.start })
+    segmentStart = inertRegion.end
   }
   regions.push({ start: segmentStart, end })
   return regions

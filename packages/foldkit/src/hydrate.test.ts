@@ -329,6 +329,38 @@ describe('__hydrateVNode', () => {
     expect(root.value).toBe('us')
   })
 
+  it('removes the server-stamped value attribute so an adopted input matches a fresh boot', () => {
+    const inputView = () => h.input([h.Type('text'), h.Value('hello')])
+    const view = buildView(inputView)
+    const root = mountServerHtml(serializeHtml(view))
+    if (!(root instanceof HTMLInputElement)) {
+      throw new Error('expected an input root')
+    }
+    expect(root.hasAttribute('value')).toBe(true)
+
+    buildView(() => __hydrateVNode(root, inputView()))
+
+    expect(root.value).toBe('hello')
+    expect(root.hasAttribute('value')).toBe(false)
+    expect(root.defaultValue).toBe('')
+  })
+
+  it('removes the server-stamped checked attribute from an adopted checkbox', () => {
+    const checkboxView = () => h.input([h.Type('checkbox'), h.Checked(true)])
+    const view = buildView(checkboxView)
+    const root = mountServerHtml(serializeHtml(view))
+    if (!(root instanceof HTMLInputElement)) {
+      throw new Error('expected an input root')
+    }
+    expect(root.hasAttribute('checked')).toBe(true)
+
+    buildView(() => __hydrateVNode(root, checkboxView()))
+
+    expect(root.checked).toBe(true)
+    expect(root.hasAttribute('checked')).toBe(false)
+    expect(root.defaultChecked).toBe(false)
+  })
+
   it('rebuilds when the server element holds markup where the view expects text children', () => {
     const root = mountServerHtml('<p><b>stale</b> markup</p>')
 

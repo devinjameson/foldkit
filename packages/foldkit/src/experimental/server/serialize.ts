@@ -44,6 +44,14 @@ const RAW_TEXT_ELEMENTS: ReadonlySet<string> = new Set(['script', 'style'])
 const rawTextClosingSequence = (tagName: string): RegExp =>
   new RegExp(`</${tagName}(?=[\\t\\n\\f\\r />]|$)`, 'i')
 
+// NOTE: `<script>` content has more parser states than the closing-tag check
+// covers. A `<!--` sequence moves the tokenizer into the script-data-escaped
+// state, and a following `<script` moves it into script-data-double-escaped,
+// where the serializer's own `</script>` no longer closes the element and
+// the rest of the document is swallowed as script text. There is no escaping
+// for it, so it is refused the same way the closing-tag sequence is.
+const SCRIPT_ESCAPE_OPENER = /<!--/
+
 const assertRawTextIsSafe = (tagName: string, content: string): void => {
   if (rawTextClosingSequence(tagName).test(content)) {
     throw new Error(
@@ -51,6 +59,17 @@ const assertRawTextIsSafe = (tagName: string, content: string): void => {
         'which cannot be represented in a raw-text element and would break ' +
         'out of the tag when the HTML is parsed. Remove the closing-tag ' +
         'sequence from the content.',
+    )
+  }
+  if (
+    tagName.toLowerCase() === 'script' &&
+    SCRIPT_ESCAPE_OPENER.test(content)
+  ) {
+    throw new Error(
+      '[foldkit] <script> content contains a <!-- sequence, which moves the ' +
+        'HTML parser into a script-data-escaped state where the closing ' +
+        '</script> tag no longer ends the element. Remove the <!-- sequence ' +
+        'from the content.',
     )
   }
 }
@@ -164,6 +183,14 @@ const STYLE_LIFECYCLE_KEYS: ReadonlySet<string> = new Set([
 
 const CAPS_REGEX = /[A-Z]/g
 const ATTRIBUTE_NAME_PATTERN = /^[A-Za-z_:][A-Za-z0-9_.:-]*$/
+
+// NOTE: the tag name is written verbatim into the opening and closing markup,
+// so it must not carry markup-significant characters. CustomElement.define
+// only checks that a tag contains a hyphen, so a string such as
+// `x-a><script>` would pass validation and inject live elements. This is the
+// serializer's own defense: any tag it cannot represent as a bare name is a
+// hard error rather than emitted markup.
+const TAG_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9._-]*$/
 
 // NOTE: `\r` is escaped because the HTML parser normalizes CR and CRLF to LF
 // before tokenization; a verbatim carriage return would read back as a
@@ -457,6 +484,13 @@ const serializeElement = (
   selectValue?: string,
 ): void => {
   const tagName = tagNameFromSelector(selector)
+  if (!TAG_NAME_PATTERN.test(tagName)) {
+    throw new Error(
+      `[foldkit] Cannot serialize the invalid tag name "${tagName}". Tag ` +
+        'names must start with a letter and use only letters, numbers, ' +
+        'hyphens, dots, and underscores.',
+    )
+  }
   const data = node.data
   const attributes = new Map<string, string>()
 

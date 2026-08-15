@@ -35,6 +35,17 @@ import { dedupeSharedVNodes, patch } from './vdom.js'
 
 const HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml'
 
+// Properties the serializer reflects as attributes for correct pre-hydration
+// markup, paired with the attribute name it writes. Each is removed from the
+// adopted element so the client's property-driven state, not the served
+// attribute, is the element's default.
+const REFLECTED_PROPERTY_ATTRIBUTES: ReadonlyArray<readonly [string, string]> =
+  [
+    ['value', 'value'],
+    ['checked', 'checked'],
+    ['muted', 'muted'],
+  ]
+
 type AdoptedElements = Set<Node>
 type HydrationStatus = { isMismatchDetected: boolean }
 
@@ -143,14 +154,28 @@ const adoptElement = (
   const clone = cloneOf(vnode, element)
   adopted.add(element)
 
-  // NOTE: the serializer stamps `selected` on the option matching the
-  // select's value so the served page is correct before hydration. The
-  // client drives selection through `select.value` and its vnodes carry no
-  // `selected` attribute, so the clone records the stamped attribute for the
-  // attributes module to remove; left in place it would win as the form's
-  // default state on reset.
+  // NOTE: the serializer reflects some properties as attributes so the served
+  // page is correct before hydration: `selected` on the chosen option, and
+  // `value`/`checked`/`muted` on form controls. The client drives these
+  // through DOM properties, and its vnodes carry no such attribute, so a
+  // fresh client boot never sets the attribute. Recording the stamped
+  // attribute in the clone lets the attributes module remove it during the
+  // adopting patch, so the adopted element's `defaultValue`, `defaultChecked`,
+  // and reset behavior match a fresh boot rather than the served markup.
+  const stampedAttributes: Record<string, string> = {}
   if (element.tagName === 'OPTION' && element.hasAttribute('selected')) {
-    clone.data = { ...clone.data, attrs: { selected: '' } }
+    stampedAttributes['selected'] = ''
+  }
+  for (const [property, attribute] of REFLECTED_PROPERTY_ATTRIBUTES) {
+    if (
+      vnode.data?.props?.[property] !== undefined &&
+      element.hasAttribute(attribute)
+    ) {
+      stampedAttributes[attribute] = ''
+    }
+  }
+  if (Object.keys(stampedAttributes).length > 0) {
+    clone.data = { ...clone.data, attrs: stampedAttributes }
   }
 
   const authoredInnerHtml = vnode.data?.props?.['innerHTML']
