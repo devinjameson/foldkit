@@ -26,7 +26,7 @@ npm install @effect/platform-browser@4.0.0-rc.109
 
 ## Quick Start
 
-[Create Foldkit app](https://github.com/foldkit/foldkit/tree/main/packages/create-foldkit-app) is the recommended way to get started. You’ll select an [example](/example-apps) to start with and the package manager you’d like to use.
+[Create Foldkit app](https://github.com/foldkit/foldkit/tree/main/packages/create-foldkit-app) is the recommended way to get started. You’ll pick a rendering mode (a browser-only SPA, static generation, or [server rendering](/core/server-rendering)), an [example](/example-apps) to start from when scaffolding a SPA, and the package manager you’d like to use.
 
 ```sh
 npx create-foldkit-app@latest

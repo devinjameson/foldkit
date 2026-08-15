@@ -13,6 +13,7 @@ import {
   coreDevToolsRouter,
   coreEmbeddingRouter,
   coreManagedResourcesRouter,
+  coreServerRenderingRouter,
   coreSubmodelRouter,
   coreSubscriptionsRouter,
   examplesRouter,
@@ -477,6 +478,17 @@ const includedSection = (): Html =>
                   label: 'Explore routing',
                 },
               ),
+              includedFeature(
+                Icon.server('w-6 h-6'),
+                'Server Rendering',
+                [
+                  'One rendering pipeline with two schedules: generate static HTML during the build, or render each request on a server. The same init, view, and Model run on both sides, and the browser hydrates the served HTML in place.',
+                ],
+                {
+                  href: coreServerRenderingRouter(),
+                  label: 'Explore server rendering',
+                },
+              ),
               ih.div(
                 [ih.Class('landing-card')],
                 [
@@ -914,8 +926,8 @@ const audienceSection = (): Html =>
                         'No React component libraries, no Next.js, no existing middleware. You’re building on different foundations.',
                       ),
                       audienceNotItem(
-                        'Teams that need server-side rendering',
-                        'Foldkit is a client-side SPA framework. Static generation is possible, but you’ll roll your own (like we do for this website).',
+                        'Sites that are mostly static content',
+                        'A site that is mostly prose with a sprinkle of interactivity is better served by a content-first tool like Astro. Foldkit renders on the server too, but it is built for applications.',
                       ),
                     ],
                   ),

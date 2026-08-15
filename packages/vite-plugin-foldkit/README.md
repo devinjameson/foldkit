@@ -53,6 +53,16 @@ The plugin uses Vite's WebSocket connection to communicate between the dev serve
 
 Model is preserved across hot reloads but cleared on manual browser refreshes, giving you control over when to reset your app.
 
+## Server rendering dev host
+
+Pass `ssr` with the path to your server entry to render page requests through it during development:
+
+```typescript
+plugins: [foldkit({ ssr: { serverEntry: '/src/entry.server.ts' } })]
+```
+
+With this set, the dev server converts HTML page requests to Web `Request` values, passes them to the entry's `renderPage`, and serves the returned `Response`. Vite continues to serve the client entry, HMR, and assets, and the server entry runs through Vite's module graph, so edits to it apply without a restart. The option shapes only the dev server; production hosts import the built server entry themselves. See the [Server Rendering documentation](https://foldkit.dev/core/server-rendering) for the full contract.
+
 ## DevTools overlay
 
 When `@foldkit/devtools` is installed as a development dependency, the plugin mounts its overlay automatically during development and leaves it out of production builds. No application import or `devTools.overlay` field is needed.
