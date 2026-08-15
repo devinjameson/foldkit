@@ -61,6 +61,60 @@ describe('injectIntoTemplate', () => {
     expect(result).not.toContain('lang=en')
   })
 
+  it('keeps an attribute whose value contains the stamped attribute name intact', () => {
+    const template =
+      '<!doctype html><html data-note="my lang here"><head><title>old</title></head>' +
+      '<body><div id="root"></div></body></html>'
+    const result = injectIntoTemplate(template, rendered({ lang: 'en' }))
+    expect(result).toContain('<html data-note="my lang here" lang="en">')
+    expect(result.match(/lang="en"/g)).toHaveLength(1)
+  })
+
+  it('replaces only the canonical href, keeping sibling attributes intact', () => {
+    const template =
+      '<!doctype html><html><head><title>old</title>' +
+      '<link rel="canonical" title="site href list" href="https://example.com/old" />' +
+      '</head><body><div id="root"></div></body></html>'
+    const result = injectIntoTemplate(
+      template,
+      rendered({ canonical: 'https://example.com/fresh' }),
+    )
+    expect(result).toContain(
+      '<link rel="canonical" title="site href list" href="https://example.com/fresh" />',
+    )
+    expect(result.match(/href=/g)).toHaveLength(1)
+    expect(result).not.toContain('https://example.com/old')
+  })
+
+  it('replaces only the head title, leaving an SVG title in the body alone', () => {
+    const template =
+      '<!doctype html><html><head><title>old</title></head>' +
+      '<body><svg><title>icon label</title></svg><div id="root"></div></body></html>'
+    const result = injectIntoTemplate(template, rendered())
+    expect(result).toContain('<title>New Title</title>')
+    expect(result).toContain('<svg><title>icon label</title></svg>')
+    expect(result).not.toContain('<title>old</title>')
+  })
+
+  it('stamps past a commented-out canonical onto the real one, leaving the comment untouched', () => {
+    const template =
+      '<!doctype html><html><head><title>old</title>' +
+      '<!-- <link rel="canonical" href="https://example.com/old" /> -->' +
+      '<link rel="canonical" href="https://example.com/current" />' +
+      '</head><body><div id="root"></div></body></html>'
+    const result = injectIntoTemplate(
+      template,
+      rendered({ canonical: 'https://example.com/fresh' }),
+    )
+    expect(result).toContain(
+      '<!-- <link rel="canonical" href="https://example.com/old" /> -->',
+    )
+    expect(result).toContain(
+      '<link rel="canonical" href="https://example.com/fresh" />',
+    )
+    expect(result).not.toContain('https://example.com/current')
+  })
+
   it('stamps single-quoted canonical and og:url head elements', () => {
     const template =
       '<!doctype html><html><head><title>old</title>' +

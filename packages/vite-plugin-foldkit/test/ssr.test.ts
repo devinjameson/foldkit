@@ -80,6 +80,16 @@ describe('foldkitSsr', () => {
     expect(response.headers.get('location')).toBe(`${origin}/rendered`)
   })
 
+  it('renders for clients that accept anything, matching a production host', async () => {
+    const origin = await startServer()
+    const response = await fetch(`${origin}/rendered`, {
+      headers: { accept: '*/*' },
+    })
+
+    expect(response.status).toBe(203)
+    expect(await response.text()).toContain('data-foldkit-app="app"')
+  })
+
   it('resolves relative template assets against the template on nested routes', async () => {
     const origin = await startServer()
     const response = await fetch(`${origin}/deep/nested`, {

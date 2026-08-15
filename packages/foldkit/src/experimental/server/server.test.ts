@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { Effect, Schema } from 'effect'
+import { Effect, Schema, SchemaIssue, SchemaTransformation } from 'effect'
 import { expect } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
@@ -114,6 +114,63 @@ describe('renderToString', () => {
       expect(rendered.html).not.toContain('</script><script>alert(1)')
       expect(rendered.html).toContain('\\u003c/script>')
     }),
+  )
+
+  it.effect('renders from the encode-then-decode round trip of the flags', () =>
+    Effect.gen(function* () {
+      const TrimmedTheme = Schema.String.pipe(
+        Schema.decodeTo(
+          Schema.String,
+          SchemaTransformation.transform({
+            decode: raw => raw.trim(),
+            encode: theme => theme,
+          }),
+        ),
+      )
+      const rendered = yield* renderToString(
+        { ...routingConfig, Flags: Schema.Struct({ theme: TrimmedTheme }) },
+        { url: 'https://example.com/', flags: { theme: '  dark  ' } },
+      )
+
+      expect(rendered.html).toContain(
+        `<div class="dark" ${FOLDKIT_APP_ATTRIBUTE}="app">`,
+      )
+      expect(rendered.html).toContain('{"theme":"  dark  "}')
+    }),
+  )
+
+  it.effect(
+    'fails with ServerFlagsEncodeError when the encoded flags cannot be decoded back',
+    () =>
+      Effect.gen(function* () {
+        const PrefixedTheme = Schema.String.pipe(
+          Schema.decodeTo(
+            Schema.String,
+            SchemaTransformation.transformOrFail({
+              decode: raw =>
+                raw.startsWith('theme:')
+                  ? Effect.succeed(raw.slice('theme:'.length))
+                  : Effect.fail(
+                      new SchemaIssue.InvalidValue({
+                        message: `Expected a theme: prefix, got ${raw}`,
+                      }),
+                    ),
+              encode: theme => Effect.succeed(theme),
+            }),
+          ),
+        )
+        const error = yield* Effect.flip(
+          renderToString(
+            {
+              ...routingConfig,
+              Flags: Schema.Struct({ theme: PrefixedTheme }),
+            },
+            { url: 'https://example.com/', flags: { theme: 'dark' } },
+          ),
+        )
+
+        expect(error).toMatchObject({ _tag: 'ServerFlagsEncodeError' })
+      }),
   )
 
   it.effect('renders a config without flags and emits no payload', () =>

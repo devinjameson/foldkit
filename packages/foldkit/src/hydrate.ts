@@ -137,9 +137,40 @@ const adoptElement = (
   const clone = cloneOf(vnode, element)
   adopted.add(element)
 
-  const isInnerHtmlOwned = vnode.data?.props?.['innerHTML'] !== undefined
-  if (isInnerHtmlOwned) {
-    clone.data = { ...clone.data, props: { innerHTML: element.innerHTML } }
+  // NOTE: the serializer stamps `selected` on the option matching the
+  // select's value so the served page is correct before hydration. The
+  // client drives selection through `select.value` and its vnodes carry no
+  // `selected` attribute, so the clone records the stamped attribute for the
+  // attributes module to remove; left in place it would win as the form's
+  // default state on reset.
+  if (element.tagName === 'OPTION' && element.hasAttribute('selected')) {
+    clone.data = { ...clone.data, attrs: { selected: '' } }
+  }
+
+  const authoredInnerHtml = vnode.data?.props?.['innerHTML']
+  if (authoredInnerHtml !== undefined) {
+    // NOTE: the browser normalizes markup as it parses (entity forms, tag
+    // case, attribute order), so the served innerHTML string rarely equals
+    // the authored one byte for byte. Parsing the authored string through a
+    // probe element of the same tag compares the two in normalized form;
+    // when they agree the clone carries the authored string, the props
+    // module sees no change, and the adopted subtree survives.
+    if (typeof authoredInnerHtml === 'string') {
+      const probe = element.ownerDocument.createElement(element.tagName)
+      probe.innerHTML = authoredInnerHtml
+      const isEquivalentMarkup = probe.innerHTML === element.innerHTML
+      if (!isEquivalentMarkup) {
+        detectMismatch(status)
+      }
+      clone.data = {
+        ...clone.data,
+        props: {
+          innerHTML: isEquivalentMarkup ? authoredInnerHtml : element.innerHTML,
+        },
+      }
+    } else {
+      clone.data = { ...clone.data, props: { innerHTML: element.innerHTML } }
+    }
     clone.children = []
     return clone
   }
@@ -152,9 +183,13 @@ const adoptElement = (
     // to the vnode text and leave that markup in place. Leaving `clone.text`
     // undefined makes `patchVnode` overwrite the element's content with the
     // vnode text instead, rebuilding the mismatching shape.
-    if (vnode.text !== undefined && hasOnlyTextContent(element)) {
-      clone.text = element.textContent ?? ''
-      if (clone.text !== vnode.text) {
+    if (vnode.text !== undefined) {
+      if (hasOnlyTextContent(element)) {
+        clone.text = element.textContent ?? ''
+        if (clone.text !== vnode.text) {
+          detectMismatch(status)
+        }
+      } else {
         detectMismatch(status)
       }
     }

@@ -47,7 +47,9 @@ export class InvalidServerUrl extends Data.TaggedError('InvalidServerUrl')<{
 }> {}
 
 /** Failure producing the Flags payload: the Schema encode step rejected the
- *  Flags value, or the encoded value could not be serialized to JSON.
+ *  Flags value, the encoded value could not be serialized to JSON, or the
+ *  encoded value could not be decoded back for the hydration-consistent
+ *  render.
  *
  * @experimental Ships from `foldkit/experimental/server`; expect breaking changes while the API settles.
  */
@@ -107,7 +109,7 @@ type InitReturn<Model> = readonly [Model, ReadonlyArray<unknown>]
  * @experimental Ships from `foldkit/experimental/server`; expect breaking changes while the API settles.
  */
 export type ServerRoutingApplicationConfigWithFlags<Model, Flags> = Readonly<{
-  Flags: Schema.Codec<Flags, any, unknown, never>
+  Flags: Schema.Codec<Flags, any, never, never>
   routing: unknown
   init: (flags: Flags, url: Url) => InitReturn<Model>
   view: (model: Model, h: HtmlBuilder<any>) => Document
@@ -128,7 +130,7 @@ export type ServerRoutingApplicationConfig<Model> = Readonly<{
  * @experimental Ships from `foldkit/experimental/server`; expect breaking changes while the API settles.
  */
 export type ServerApplicationConfigWithFlags<Model, Flags> = Readonly<{
-  Flags: Schema.Codec<Flags, any, unknown, never>
+  Flags: Schema.Codec<Flags, any, never, never>
   init: (flags: Flags) => InitReturn<Model>
   view: (model: Model, h: HtmlBuilder<any>) => Document
 }>
@@ -223,11 +225,14 @@ const escapeJsonForScriptElement = (json: string): string =>
 const flagsPayloadScript = (runtimeId: string, json: string): string =>
   `<script type="application/json" ${FOLDKIT_FLAGS_ATTRIBUTE}="${escapeAttributeValue(runtimeId)}">${escapeJsonForScriptElement(json)}</script>`
 
-const encodeFlagsPayload = <Flags>(
-  FlagsCodec: Schema.Codec<Flags, any, unknown, never>,
+const encodeFlagsHandoff = <Flags>(
+  FlagsCodec: Schema.Codec<Flags, any, never, never>,
   flags: Flags,
   runtimeId: string,
-): Effect.Effect<string, ServerFlagsEncodeError> =>
+): Effect.Effect<
+  Readonly<{ payloadScript: string; hydrationFlags: Flags }>,
+  ServerFlagsEncodeError
+> =>
   Effect.gen(function* () {
     const FlagsJsonCodec = Schema.toCodecJson(FlagsCodec)
     const encodedFlags = yield* pipe(
@@ -248,7 +253,19 @@ const encodeFlagsPayload = <Flags>(
         }),
       )
     }
-    return flagsPayloadScript(runtimeId, json)
+    // NOTE: the hydrating client calls init with decode(encode(flags)), so
+    // the server render must too. A codec whose round trip is not the
+    // identity would otherwise serve DOM the client's first render disagrees
+    // with on every load.
+    const hydrationFlags = yield* pipe(
+      encodedFlags,
+      Schema.decodeEffect(FlagsJsonCodec),
+      Effect.mapError(cause => new ServerFlagsEncodeError({ cause })),
+    )
+    return {
+      payloadScript: flagsPayloadScript(runtimeId, json),
+      hydrationFlags,
+    }
   })
 
 const parseUrl = (url: string): Effect.Effect<Url, InvalidServerUrl> =>
@@ -288,6 +305,11 @@ const validateHydrationRoot = (
  * Commands returned by `init` are not run: the rendered HTML is the
  * post-`init` state, and the client runs those Commands after hydration.
  *
+ * A hydratable Flags render calls `init` with the encode-then-decode round
+ * trip of the given Flags, the exact value the hydrating client will
+ * reconstruct, so the served DOM and the client's first render agree by
+ * construction even for codecs whose round trip is not the identity.
+ *
  * @example
  * ```typescript
  * const renderedApplication = yield* Server.renderToString(config, {
@@ -316,7 +338,7 @@ export function renderToString<Model>(
 ): Effect.Effect<RenderedApplication, ServerRenderError>
 export function renderToString(
   config: Readonly<{
-    Flags?: Schema.Codec<unknown, any, unknown, never>
+    Flags?: Schema.Codec<unknown, any, never, never>
     routing?: unknown
     init: (...initArguments: ReadonlyArray<any>) => InitReturn<unknown>
     view: (model: any, h: HtmlBuilder<any>) => Document
@@ -338,22 +360,28 @@ export function renderToString(
     }
     const hasRouting = config.routing !== undefined
     const FlagsCodec = config.Flags
+    const isHydratable = options?.isHydratable ?? true
 
     const url = hasRouting ? yield* parseUrl(options?.url ?? '') : undefined
+
+    const flagsHandoff =
+      isHydratable && FlagsCodec !== undefined
+        ? yield* encodeFlagsHandoff(FlagsCodec, options?.flags, runtimeId)
+        : undefined
+    const flagsForInit =
+      flagsHandoff !== undefined ? flagsHandoff.hydrationFlags : options?.flags
 
     const initReturn = ((): InitReturn<unknown> => {
       if (FlagsCodec !== undefined) {
         return hasRouting
-          ? config.init(options?.flags, url)
-          : config.init(options?.flags)
+          ? config.init(flagsForInit, url)
+          : config.init(flagsForInit)
       }
       return hasRouting ? config.init(url) : config.init()
     })()
     const [model] = initReturn
 
     const nextDocument = runView(config.view, model)
-
-    const isHydratable = options?.isHydratable ?? true
 
     if (isHydratable) {
       yield* validateHydrationRoot(nextDocument.body)
@@ -371,9 +399,7 @@ export function renderToString(
     })
 
     const flagsPayload =
-      isHydratable && FlagsCodec !== undefined
-        ? yield* encodeFlagsPayload(FlagsCodec, options?.flags, runtimeId)
-        : ''
+      flagsHandoff !== undefined ? flagsHandoff.payloadScript : ''
 
     return {
       html: `${rootHtml}${flagsPayload}`,

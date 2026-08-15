@@ -278,6 +278,56 @@ describe('__hydrateVNode', () => {
     expect(root.textContent).toBe('raw')
   })
 
+  it('adopts an innerHTML subtree the parser normalized away from the authored markup', () => {
+    const authoredMarkup = '<em>say &quot;hi&quot;</em>'
+    const view = buildView(() => h.div([h.InnerHTML(authoredMarkup)]))
+    const root = mountServerHtml(serializeHtml(view))
+    const emphasis = root.querySelector('em')
+    expect(emphasis).not.toBeNull()
+    expect(root.innerHTML).not.toBe(authoredMarkup)
+
+    buildView(() => __hydrateVNode(root, h.div([h.InnerHTML(authoredMarkup)])))
+
+    expect(root.querySelector('em')).toBe(emphasis)
+    expect(root.textContent).toBe('say "hi"')
+  })
+
+  it('removes the server-stamped selected attribute from an adopted option', () => {
+    const selectView = () =>
+      h.select(
+        [h.Value('us')],
+        [
+          h.option([h.Value('')], ['Choose']),
+          h.option([h.Value('us')], ['United States']),
+        ],
+      )
+    const view = buildView(selectView)
+    const root = mountServerHtml(serializeHtml(view))
+    if (!(root instanceof HTMLSelectElement)) {
+      throw new Error('expected a select root')
+    }
+    const serverOption = root.querySelector('option[value="us"]')
+    expect(serverOption?.hasAttribute('selected')).toBe(true)
+
+    buildView(() => __hydrateVNode(root, selectView()))
+
+    expect(root.querySelector('option[value="us"]')).toBe(serverOption)
+    expect(serverOption?.hasAttribute('selected')).toBe(false)
+    expect(root.value).toBe('us')
+  })
+
+  it('rebuilds when the server element holds markup where the view expects text children', () => {
+    const root = mountServerHtml('<p><b>stale</b> markup</p>')
+
+    const patchedVNode = buildView(() =>
+      __hydrateVNode(root, h.p([], ['plain ', 'text'])),
+    )
+
+    expect(patchedVNode.elm).toBe(root)
+    expect(root.querySelector('b')).toBeNull()
+    expect(root.textContent).toBe('plain text')
+  })
+
   it('adopts comment children and text-shortcut elements', () => {
     const root = mountServerHtml('<div><!--note--><span>after</span></div>')
     const commentNode = root.firstChild

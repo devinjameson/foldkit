@@ -85,6 +85,7 @@ import {
   PatternsInformingSubmodelsRoute,
   PatternsSubscriptionOrganizationRoute,
   PerformanceRoute,
+  PlaygroundRoute,
   ProjectOrganizationRoute,
   ReactComparisonRoute,
   RoadmapRoute,
@@ -433,37 +434,6 @@ export const routeToOutputPath = (route: AppRoute): string => {
   return urlPath === '/' ? 'index.html' : `${urlPath.slice(1)}/index.html`
 }
 
-const ROOT_PLACEHOLDER = '<div id="root"></div>'
-
-// NOTE: the replacement is a function so `$` sequences in rendered markup
-// (code snippets routinely contain `$&`, `$'`, and the like) are inserted
-// verbatim. A string second argument to `String.replace` would treat them as
-// match-insertion patterns and corrupt the page.
-export const injectHtml = (baseHtml: string, renderedHtml: string): string =>
-  baseHtml.replace(
-    ROOT_PLACEHOLDER,
-    () => `<div id="root">${renderedHtml}</div>`,
-  )
-
-// PLAYGROUND SHELL
-
-// NOTE: Playground routes are deliberately excluded from STATIC_ROUTES: the
-// WebContainer editor can't be statically rendered, and every entry into it is
-// a full document load for cross-origin isolation. With no file of its own,
-// Vercel's SPA catch-all serves the prerendered home page for
-// `/playground/<slug>`, so the landing view flashes before the app boots and
-// swaps in the editor. We prerender this neutral shell once and route
-// `/playground/*` to it instead (see deploy-website.yml and the preview
-// fallback in vite.config.ts). The markup mirrors the booting spinner in
-// `src/page/playground.ts`; every class here must already appear in app source
-// because Tailwind scans source, not this injected string.
-const PLAYGROUND_SHELL_MARKUP = `<div class="flex flex-col h-screen bg-white dark:bg-gray-900"><div class="flex-1 flex items-center justify-center px-6 py-20 text-center"><div class="max-w-sm flex flex-col items-center"><div class="w-8 h-8 mb-6 rounded-full border-2 border-gray-300 dark:border-gray-700 border-t-gray-900 dark:border-t-gray-100 animate-spin" role="status" aria-label="Loading"></div><div class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Starting playground…</div><div class="text-sm text-gray-600 dark:text-gray-400">Hang tight. The preview will appear automatically. First load takes about 30 seconds.</div></div></div></div>`
-
-const PLAYGROUND_SHELL_OUTPUT_PATH = 'playground/index.html'
-
-export const buildPlaygroundShellHtml = (baseHtml: string): string =>
-  injectHtml(baseHtml, PLAYGROUND_SHELL_MARKUP)
-
 export const enumerateRoutes = (
   apiModuleSlugs: ReadonlyArray<string>,
 ): ReadonlyArray<AppRoute> =>
@@ -666,6 +636,39 @@ const prerenderRoute =
         ),
       ),
     )
+
+// PLAYGROUND SHELL
+
+// NOTE: Playground routes are deliberately excluded from STATIC_ROUTES: the
+// WebContainer editor can't be statically rendered per slug, and every entry
+// into it is a full document load for cross-origin isolation. With no file of
+// its own, Vercel's SPA catch-all serves the prerendered home page for
+// `/playground/<slug>`, so the landing view flashes before the app boots and
+// swaps in the editor. Instead, one canonical playground page renders through
+// the server entry and `/playground/*` routes to it (see deploy-website.yml
+// and the preview fallback in vite.config.ts), so the shell carries the
+// `data-foldkit-app` stamp and the Flags payload that `Runtime.hydrate`
+// requires. A visitor loading a different slug hydrates against this shell
+// and the mismatching subtree rebuilds, the designed hydration fallback.
+const PLAYGROUND_SHELL_ROUTE = PlaygroundRoute({ exampleSlug: 'counter' })
+
+const PLAYGROUND_SHELL_OUTPUT_PATH = 'playground/index.html'
+
+const prerenderPlaygroundShell = (
+  serverEntry: typeof ServerEntry,
+  baseHtml: string,
+) =>
+  Effect.gen(function* () {
+    const captured = yield* renderRoutePage(serverEntry, PLAYGROUND_SHELL_ROUTE)
+    const outputHtml = Server.injectIntoTemplate(baseHtml, captured.application)
+    const outputFilePath = resolve(DIST_DIR, PLAYGROUND_SHELL_OUTPUT_PATH)
+
+    const fs = yield* FileSystem.FileSystem
+    yield* fs.makeDirectory(dirname(outputFilePath), { recursive: true })
+    yield* fs.writeFileString(outputFilePath, outputHtml)
+
+    yield* Console.log('  ✓ /playground/* shell')
+  })
 
 // SITEMAP
 
@@ -880,13 +883,7 @@ const program = Effect.scoped(
     const fs = yield* FileSystem.FileSystem
     const baseHtml = yield* fs.readFileString(resolve(DIST_DIR, 'index.html'))
 
-    const playgroundShellPath = resolve(DIST_DIR, PLAYGROUND_SHELL_OUTPUT_PATH)
-    yield* fs.makeDirectory(dirname(playgroundShellPath), { recursive: true })
-    yield* fs.writeFileString(
-      playgroundShellPath,
-      buildPlaygroundShellHtml(baseHtml),
-    )
-    yield* Console.log('  ✓ /playground/* shell')
+    yield* prerenderPlaygroundShell(serverEntry, baseHtml)
 
     const results = yield* Effect.forEach(
       routes,

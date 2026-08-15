@@ -42,7 +42,7 @@ const RAW_TEXT_ELEMENTS: ReadonlySet<string> = new Set(['script', 'style'])
 // text node. There is no valid escaping, so a closing-tag sequence is a hard
 // error, matching how other renderers refuse it.
 const rawTextClosingSequence = (tagName: string): RegExp =>
-  new RegExp(`</${tagName}(?=[\\t\\n\\f />]|$)`, 'i')
+  new RegExp(`</${tagName}(?=[\\t\\n\\f\\r />]|$)`, 'i')
 
 const assertRawTextIsSafe = (tagName: string, content: string): void => {
   if (rawTextClosingSequence(tagName).test(content)) {
@@ -165,10 +165,15 @@ const STYLE_LIFECYCLE_KEYS: ReadonlySet<string> = new Set([
 const CAPS_REGEX = /[A-Z]/g
 const ATTRIBUTE_NAME_PATTERN = /^[A-Za-z_:][A-Za-z0-9_.:-]*$/
 
+// NOTE: `\r` is escaped because the HTML parser normalizes CR and CRLF to LF
+// before tokenization; a verbatim carriage return would read back as a
+// different string and guarantee a hydration mismatch. The entity survives
+// tokenization and decodes back to the original character.
 const TEXT_ESCAPES: Readonly<Record<string, string>> = {
   '&': '&amp;',
   '<': '&lt;',
   '>': '&gt;',
+  '\r': '&#13;',
 }
 
 const ATTRIBUTE_ESCAPES: Readonly<Record<string, string>> = {
@@ -182,7 +187,7 @@ const ATTRIBUTE_ESCAPES: Readonly<Record<string, string>> = {
  * @internal Shared with the template injector; not part of the `foldkit/experimental/server` surface.
  */
 export const escapeText = (value: string): string =>
-  value.replace(/[&<>]/g, character => TEXT_ESCAPES[character] ?? character)
+  value.replace(/[&<>\r]/g, character => TEXT_ESCAPES[character] ?? character)
 
 /** Escapes a string for use inside a double-quoted HTML attribute value.
  *
@@ -381,6 +386,25 @@ const collectRawText = (node: VNode): string => {
   return parts.join('')
 }
 
+// NOTE: the HTML parser drops a single newline immediately after the start
+// tag of <textarea>, <pre>, and <listing>, so serialized content that starts
+// with one needs an extra newline to survive the round-trip.
+const NEWLINE_DROPPING_ELEMENTS: ReadonlySet<string> = new Set([
+  'pre',
+  'listing',
+])
+
+const leadingTextOf = (node: VNode): string | undefined => {
+  if (node.text !== undefined) {
+    return node.text
+  }
+  const [firstChild] = node.children ?? []
+  if (typeof firstChild === 'string') {
+    return firstChild
+  }
+  return firstChild?.text
+}
+
 const serializeChildren = (
   output: Array<string>,
   node: VNode,
@@ -484,16 +508,21 @@ const serializeElement = (
   } else if (tagName === 'textarea') {
     const content = textareaContent(data?.props)
     if (content !== undefined) {
-      // NOTE: the HTML parser drops a single newline immediately after
-      // <textarea>, so content that starts with one needs an extra newline
-      // to survive the round-trip.
       if (content.startsWith('\n')) {
         output.push('\n')
       }
       output.push(escapeText(content))
     } else {
+      if (leadingTextOf(node)?.startsWith('\n')) {
+        output.push('\n')
+      }
       serializeChildren(output, node, childSelectValue)
     }
+  } else if (NEWLINE_DROPPING_ELEMENTS.has(tagName)) {
+    if (leadingTextOf(node)?.startsWith('\n')) {
+      output.push('\n')
+    }
+    serializeChildren(output, node, childSelectValue)
   } else if (RAW_TEXT_ELEMENTS.has(tagName)) {
     const rawText = collectRawText(node)
     assertRawTextIsSafe(tagName, rawText)

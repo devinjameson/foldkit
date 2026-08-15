@@ -1,4 +1,4 @@
-import { Effect, Layer, String as String_ } from 'effect'
+import { Effect, Layer, Number, Option, String as String_ } from 'effect'
 import { FileSystem } from 'effect'
 import {
   HttpServer,
@@ -23,10 +23,21 @@ import { renderPage } from '../src/entry.server'
 
 const EXAMPLE_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const CLIENT_DIR = resolve(EXAMPLE_DIR, 'dist/client')
-const PORT = Number(process.env['PORT'] ?? 3000)
+const DEFAULT_PORT = 3000
+const PORT = Option.fromNullishOr(process.env['PORT']).pipe(
+  Option.flatMap(Number.parse),
+  Option.getOrElse(() => DEFAULT_PORT),
+)
 
 const acceptsHtml = (request: HttpServerRequest.HttpServerRequest): boolean =>
   String_.includes('text/html')(request.headers['accept'] ?? '')
+
+const isTemplateRequest = (
+  request: HttpServerRequest.HttpServerRequest,
+): boolean => {
+  const { pathname } = new URL(request.url, 'http://localhost')
+  return pathname === '/' || pathname === '/index.html'
+}
 
 const renderRequest = (
   request: HttpServerRequest.HttpServerRequest,
@@ -51,6 +62,10 @@ const makeHandler = Effect.gen(function* () {
 
   return HttpServerRequest.HttpServerRequest.use(request => {
     if (request.method !== 'GET' && request.method !== 'HEAD') {
+      return renderRequest(request, template)
+    }
+
+    if (isTemplateRequest(request)) {
       return renderRequest(request, template)
     }
 

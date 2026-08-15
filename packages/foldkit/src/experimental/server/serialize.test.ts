@@ -42,6 +42,16 @@ describe('serializeHtml', () => {
     expect(serializeHtml(view)).toBe('<div>a &lt; b &amp; "c" &gt; d</div>')
   })
 
+  it('escapes a carriage return so text round-trips through an HTML parser', () => {
+    const view = h.p([], ['a\r\nb'])
+    const serialized = serializeHtml(view)
+    expect(serialized).toBe('<p>a&#13;\nb</p>')
+
+    const container = document.createElement('div')
+    container.innerHTML = serialized
+    expect(container.textContent).toBe('a\r\nb')
+  })
+
   it('escapes attribute values', () => {
     const view = h.div([h.Title('a "quoted" <value> & more')])
     expect(serializeHtml(view)).toBe(
@@ -125,6 +135,13 @@ describe('serializeHtml', () => {
     )
   })
 
+  it('rejects a raw-text closing-tag sequence followed by a carriage return', () => {
+    const script = h.script([], ['const html = "</script\r>"'])
+    expect(() => serializeHtml(script)).toThrow('</script')
+    const style = h.style([], ['.a::after { content: "</style\r>" }'])
+    expect(() => serializeHtml(style)).toThrow('</style')
+  })
+
   it('rejects a terminating sequence inside comment text', () => {
     const comment: VNode = {
       sel: '!',
@@ -140,6 +157,16 @@ describe('serializeHtml', () => {
   it('preserves a leading newline in controlled textarea content', () => {
     const view = h.textarea([h.Value('\nfirst line')])
     expect(serializeHtml(view)).toBe('<textarea>\n\nfirst line</textarea>')
+  })
+
+  it('preserves a leading newline in children-rendered textarea content', () => {
+    const view = h.textarea([], ['\nfirst line'])
+    expect(serializeHtml(view)).toBe('<textarea>\n\nfirst line</textarea>')
+  })
+
+  it('preserves a leading newline in pre content', () => {
+    const view = h.pre([], ['\nline1'])
+    expect(serializeHtml(view)).toBe('<pre>\n\nline1</pre>')
   })
 
   it('rejects a closing-tag sequence arriving through InnerHTML on raw-text elements', () => {

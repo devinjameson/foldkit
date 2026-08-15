@@ -11,7 +11,7 @@ import { fromString as urlFromString } from 'foldkit/url'
 
 import { Flags, init, view } from './main'
 import { ParsedApiReference } from './page/apiReference/domain'
-import { type ApiData } from './page/apiReference/model'
+import { type ApiData, sliceApiDataToModule } from './page/apiReference/model'
 import { exampleSlugs } from './page/example/meta'
 import { type ExampleSources, loadSourcesForSlug } from './page/example/sources'
 import { urlToAppRoute } from './route'
@@ -78,7 +78,9 @@ const flagsForRequest = (
   return Flags.make({
     ...baseFlags,
     maybeApiData:
-      route._tag === 'ApiModule' ? Option.some(apiData) : Option.none(),
+      route._tag === 'ApiModule'
+        ? sliceApiDataToModule(apiData, route.moduleSlug)
+        : Option.none(),
     maybeExampleSources:
       route._tag === 'ExampleDetail'
         ? Record_.get(sourcesBySlug, route.exampleSlug)
@@ -86,13 +88,28 @@ const flagsForRequest = (
   })
 }
 
-const renderContext = Effect.runPromise(
-  Effect.all({
-    apiData: loadApiData,
-    sourcesBySlug: loadAllExampleSources,
-    baseFlags,
-  }),
-)
+type RenderContext = Readonly<{
+  apiData: ApiData
+  sourcesBySlug: SourcesBySlug
+  baseFlags: typeof Flags.Type
+}>
+
+let renderContextPromise: Promise<RenderContext> | undefined
+
+// NOTE: the context loads on the first renderPage call, not at module scope.
+// An eager module-scope Effect.runPromise rejects with no awaiting caller
+// when a load fails, killing the host process as an opaque unhandled
+// rejection, and dev HMR reloads of this module would re-pay the full load.
+const loadRenderContext = (): Promise<RenderContext> => {
+  renderContextPromise ??= Effect.runPromise(
+    Effect.all({
+      apiData: loadApiData,
+      sourcesBySlug: loadAllExampleSources,
+      baseFlags,
+    }),
+  )
+  return renderContextPromise
+}
 
 // NOTE: rendering stays in this bundle so the application view and server
 // renderer share the module-local HTML render frame. The expensive content
@@ -100,7 +117,7 @@ const renderContext = Effect.runPromise(
 export const renderPage = (
   request: Request,
 ): Promise<Server.ServerEntryResult> =>
-  renderContext.then(({ apiData, sourcesBySlug, baseFlags }) => {
+  loadRenderContext().then(({ apiData, sourcesBySlug, baseFlags }) => {
     const requestFlags = flagsForRequest(
       baseFlags,
       apiData,

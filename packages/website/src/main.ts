@@ -352,7 +352,10 @@ const initApiReference = (
         apiReference,
         SucceededLoadApiData({ apiData }),
       )
-      return [seededApiReference, []]
+      // NOTE: prerendered module pages seed a per-module slice of the API
+      // data, so the boot Commands still run: the full reference replaces
+      // the slice after hydration, keeping cross-module navigation working.
+      return [seededApiReference, apiReferenceCommands]
     },
   })
 }

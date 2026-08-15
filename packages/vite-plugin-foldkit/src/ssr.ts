@@ -60,13 +60,23 @@ const toWebRequest = (
   return new Request(new URL(url, `http://${host}`), requestInit)
 }
 
+// NOTE: this middleware runs after Vite's own, so a GET reaching it is not a
+// servable module or asset, and a production host would render HTML for it.
+// Dev matches: render for browsers (text/html), for clients accepting
+// anything (*/*, the fetch default), and for clients sending no Accept
+// header at all, such as curl and health checks.
 const shouldRenderRequest = (nodeRequest: Connect.IncomingMessage): boolean => {
   const method = nodeRequest.method ?? 'GET'
   if (method !== 'GET' && method !== 'HEAD') {
     return true
   }
   const accept = nodeRequest.headers.accept
-  return Predicate.isString(accept) && String_.includes('text/html')(accept)
+  if (!Predicate.isString(accept)) {
+    return true
+  }
+  return (
+    String_.includes('text/html')(accept) || String_.includes('*/*')(accept)
+  )
 }
 
 const renderRequest = (

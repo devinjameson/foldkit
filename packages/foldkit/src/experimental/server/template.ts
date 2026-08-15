@@ -21,19 +21,87 @@ const OG_URL_META_PATTERN = new RegExp(
 
 const DEFAULT_CONTAINER_ID = 'root'
 
-const existingAttributePattern = (name: string): RegExp =>
-  new RegExp(
-    `\\s${name}(?:\\s*=\\s*(?:"[^"]*"|'[^']*'|[^\\s>]+)|(?=[\\s>]|$))`,
-    'i',
-  )
+const ATTRIBUTE_TOKEN_PATTERN =
+  /[^\s=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?/g
 
+const attributeNameOf = (token: string): string => {
+  const nameMatch = /^[^\s=]+/.exec(token)
+  return nameMatch === null ? token : nameMatch[0]
+}
+
+// NOTE: the attribute string is tokenized rather than searched, so an
+// attribute-name lookalike inside another attribute's quoted value can
+// neither be corrupted nor shadow the replacement.
 const setAttribute = (
   attributes: string,
   name: string,
   value: string,
 ): string => {
-  const withoutExisting = attributes.replace(existingAttributePattern(name), '')
-  return `${withoutExisting} ${name}="${escapeAttributeValue(value)}"`
+  const tokens = attributes.match(ATTRIBUTE_TOKEN_PATTERN) ?? []
+  const keptTokens = tokens.filter(
+    token => attributeNameOf(token).toLowerCase() !== name.toLowerCase(),
+  )
+  const kept = keptTokens.map(token => ` ${token}`).join('')
+  return `${kept} ${name}="${escapeAttributeValue(value)}"`
+}
+
+type TemplateRegion = Readonly<{ start: number; end: number }>
+
+const HEAD_PATTERN = /<head[^>]*>[\s\S]*?<\/head>/i
+
+// NOTE: title and head-element matching are scoped to the template's head
+// and split at comment boundaries: an SVG accessibility <title> in the body
+// is content, not the document title, and a commented-out head element must
+// be left alone rather than stamped inside the comment. A template without a
+// <head> falls back to whole-document scanning.
+const headSearchRegions = (template: string): ReadonlyArray<TemplateRegion> => {
+  const headMatch = HEAD_PATTERN.exec(template)
+  const start = headMatch === null ? 0 : headMatch.index
+  const end =
+    headMatch === null ? template.length : headMatch.index + headMatch[0].length
+
+  const commentPattern = /<!--[\s\S]*?-->/g
+  commentPattern.lastIndex = start
+  const regions: Array<TemplateRegion> = []
+  let segmentStart = start
+  let commentMatch = commentPattern.exec(template)
+  while (commentMatch !== null && commentMatch.index < end) {
+    regions.push({ start: segmentStart, end: commentMatch.index })
+    segmentStart = commentMatch.index + commentMatch[0].length
+    commentMatch = commentPattern.exec(template)
+  }
+  regions.push({ start: segmentStart, end })
+  return regions
+}
+
+const countInHead = (template: string, pattern: RegExp): number => {
+  const globalPattern = new RegExp(pattern.source, `${pattern.flags}g`)
+  return headSearchRegions(template).reduce(
+    (count, region) =>
+      count +
+      (template.slice(region.start, region.end).match(globalPattern)?.length ??
+        0),
+    0,
+  )
+}
+
+const replaceFirstInHead = (
+  template: string,
+  pattern: RegExp,
+  replacer: (match: RegExpExecArray) => string,
+): string => {
+  for (const region of headSearchRegions(template)) {
+    const segment = template.slice(region.start, region.end)
+    const match = pattern.exec(segment)
+    if (match !== null) {
+      return (
+        template.slice(0, region.start + match.index) +
+        replacer(match) +
+        template.slice(region.start + match.index + match[0].length)
+      )
+    }
+  }
+  return template
 }
 
 // NOTE: rewrites the `<html>` element's `lang` and `dir` from the server
@@ -66,11 +134,10 @@ const stampCanonical = (
     return template
   }
 
-  return template.replace(
-    CANONICAL_LINK_PATTERN,
-    (_match, attributes) =>
-      `<link${setAttribute(attributes, 'href', canonical)} />`,
-  )
+  return replaceFirstInHead(template, CANONICAL_LINK_PATTERN, match => {
+    const [, attributes] = match
+    return `<link${setAttribute(attributes ?? '', 'href', canonical)} />`
+  })
 }
 
 const stampOgUrl = (template: string, ogUrl: string | undefined): string => {
@@ -78,11 +145,10 @@ const stampOgUrl = (template: string, ogUrl: string | undefined): string => {
     return template
   }
 
-  return template.replace(
-    OG_URL_META_PATTERN,
-    (_match, attributes) =>
-      `<meta${setAttribute(attributes, 'content', ogUrl)} />`,
-  )
+  return replaceFirstInHead(template, OG_URL_META_PATTERN, match => {
+    const [, attributes] = match
+    return `<meta${setAttribute(attributes ?? '', 'content', ogUrl)} />`
+  })
 }
 
 const containerPlaceholder = (containerId: string): string =>
@@ -151,16 +217,17 @@ export const injectIntoTemplate = (
     )
   }
 
-  if (!TITLE_PATTERN.test(template)) {
+  const titleCount = countInHead(template, TITLE_PATTERN)
+  if (titleCount === 0) {
     throw new Error(
-      '[foldkit] injectIntoTemplate found no <title> element in the template. ' +
+      '[foldkit] injectIntoTemplate found no <title> element in the template head. ' +
         'Add exactly one <title> where the rendered Document title belongs.',
     )
   }
 
-  if (TITLE_PATTERN.test(template.replace(TITLE_PATTERN, ''))) {
+  if (titleCount > 1) {
     throw new Error(
-      '[foldkit] injectIntoTemplate found more than one <title> element in the template. ' +
+      '[foldkit] injectIntoTemplate found more than one <title> element in the template head. ' +
         'Keep exactly one title for the rendered Document.',
     )
   }
@@ -173,15 +240,14 @@ export const injectIntoTemplate = (
     rendered.ogUrl,
   )
 
-  // NOTE: the body and title replacements are passed as functions. A string
-  // second argument to `String.replace` treats `$&`, `$\``, `$'`, and `$$` as
-  // insertion patterns, so a `$` sequence in the rendered markup or title
-  // would corrupt the output; a replacer function inserts its return value
-  // verbatim.
-  return withHeadFields
-    .replace(
-      TITLE_PATTERN,
-      () => `<title>${escapeText(rendered.title)}</title>`,
-    )
-    .replace(placeholder, () => rendered.html)
+  // NOTE: the body replacement is passed as a function. A string second
+  // argument to `String.replace` treats `$&`, `$\``, `$'`, and `$$` as
+  // insertion patterns, so a `$` sequence in the rendered markup would
+  // corrupt the output; a replacer function inserts its return value
+  // verbatim. `replaceFirstInHead` splices without insertion patterns.
+  return replaceFirstInHead(
+    withHeadFields,
+    TITLE_PATTERN,
+    () => `<title>${escapeText(rendered.title)}</title>`,
+  ).replace(placeholder, () => rendered.html)
 }
