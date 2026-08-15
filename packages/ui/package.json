@@ -11,6 +11,10 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./anchor": {
+      "types": "./dist/anchor/public.d.ts",
+      "import": "./dist/anchor/public.js"
+    },
     "./animation": {
       "types": "./dist/animation/public.d.ts",
       "import": "./dist/animation/public.js"

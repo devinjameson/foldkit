@@ -15,7 +15,7 @@ import * as Mount from 'foldkit/mount'
 import { evo } from 'foldkit/struct'
 import { type Reflect, defineView } from 'foldkit/submodel'
 
-import { AnchorConfig, anchorSetup } from '../anchor.js'
+import { AnchorConfig, anchorSetup } from '../anchor/index.js'
 import * as OptionExt from '../internal/optionExtensions.js'
 import {
   BlurredTrigger,
