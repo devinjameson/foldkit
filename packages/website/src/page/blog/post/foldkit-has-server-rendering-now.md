@@ -16,7 +16,7 @@ There are issues with this approach in isolation:
 - There is no way to do SSG without a heavy prerender step: for example, using Playwright to visit each route and capture HTML (which the Foldkit website used to do).
 - There is no way to do request-time SSR: for example, the server sending the client an initial HTML file personalized to the logged-in user.
 
-There was one more problem. Foldkit not having SSR was the deal-breaker for [Michael Arnaldi](https://x.com/MichaelArnaldi), the BDFL of Effect. And that simply will not do.
+There was one more problem. Foldkit not having SSR was the deal-breaker for [Michael Arnaldi](https://x.com/MichaelArnaldi), BDFL of Effect. And that simply will not do.
 
 [![Michael Arnaldi on X: "Personally it's the deal breaker for me, I can't see myself writing 500+ lines of code to do SSG and not have a solution for SSR. I think we made the same mistakes over and over again, server side rendering is strictly necessary for good DX. I like the rest of the design."](/blog/foldkit-has-server-rendering-now/michael-ssr-dealbreaker.webp)](https://x.com/MichaelArnaldi/status/2059527426833592755)
 
@@ -28,25 +28,11 @@ So, Foldkit can render on the server now. It shipped today under `foldkit/experi
 
 SSG and SSR are the same thing run at different times. Either a build script calls your server entry once per URL and writes files, or a server calls it once per request and sends the response. The entry is a small module that derives flags from a `Request` and asks Foldkit to render:
 
-```ts
-export const renderPage = (
-  request: Request,
-): Promise<Server.ServerEntryResult> =>
-  Effect.runPromise(
-    Effect.gen(function* () {
-      const renderedApplication = yield* Server.renderToString(
-        { Flags, init, view },
-        { flags: flagsForRequest(request) },
-      )
-
-      return Server.Rendered(renderedApplication)
-    }),
-  )
-```
+::Snippet{name="serverRenderingServerEntry" label="server entry example"}
 
 The `Flags` Schema, `init`, `view`, and `flagsForRequest` are provided by you. The rest is wiring.
 
-The same entry serves Vite in development, a Node host in production, a build script for static generation, and fetch-native runtimes like Cloudflare Workers. Hosts are interchangeable because the entry only speaks Web `Request` and `Response`.
+The same entry serves Vite in development, a Node host in production, a build script for static generation, and fetch-native runtimes like Cloudflare Workers. Hosts are interchangeable because the entry takes a Web `Request`, and its result becomes a Web `Response`.
 
 ## How it works
 
@@ -67,7 +53,7 @@ After hydration, the initial Commands run, and your Foldkit application behaves 
 
 Check out the [release notes](https://github.com/foldkit/foldkit/blob/main/packages/foldkit/CHANGELOG.md) and the new docs page on [Server Rendering](/core/server-rendering).
 
-foldkit.dev now prerenders every route through the same `renderPage` contract (SSG), and the page you are reading hydrated in place.
+This website ([foldkit.dev](https://foldkit.dev)) now prerenders every route through the same `renderPage` contract (SSG). The page you are reading hydrated in place.
 
 ## What this means for Foldkit
 
@@ -75,10 +61,12 @@ Foldkit is not getting more complicated. It is gaining a crucial capability.
 
 There is still a single programming model. There are no server components, no `'use client'` or `'use server'` boundaries, and no plan for them: the view is one function of one Model. Server rendering changes where the first paint comes from, not how you write applications.
 
+Scaffold a Foldkit SSR application:
+
 ```sh
 npx create-foldkit-app@latest --rendering ssr
 ```
 
-Check it out and tell me what breaks. Or what you yearn for. And don't be a stranger!
+Check it out and let me know what breaks. And don't be a stranger!
 
 Devin
