@@ -168,6 +168,22 @@ describe('serializeHtml', () => {
     )
   })
 
+  it('serializes a moderately deep tree without exhausting the stack', () => {
+    let node: Html = h.span([], ['leaf'])
+    for (let level = 0; level < 200; level += 1) {
+      node = h.div([], [node])
+    }
+    expect(serializeHtml(node)).toContain('<span>leaf</span>')
+  })
+
+  it('refuses a tree nested past the maximum render depth', () => {
+    let node: Html = h.span([], ['leaf'])
+    for (let level = 0; level < 1500; level += 1) {
+      node = h.div([], [node])
+    }
+    expect(() => serializeHtml(node)).toThrow('maximum render depth')
+  })
+
   it('rejects a terminating sequence inside comment text', () => {
     const comment: VNode = {
       sel: '!',

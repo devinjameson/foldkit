@@ -432,15 +432,23 @@ const leadingTextOf = (node: VNode): string | undefined => {
   return firstChild?.text
 }
 
+// NOTE: the serializer recurses per element, so a tree nested thousands of
+// elements deep, typically from mapping untrusted hierarchical data straight
+// to markup, would exhaust the call stack. The depth is bounded well above any
+// real view and refused past the limit, so a hostile input becomes a typed
+// ServerSerializationError rather than a stack overflow.
+const MAX_RENDER_DEPTH = 1000
+
 const serializeChildren = (
   output: Array<string>,
   node: VNode,
+  depth: number,
   selectValue?: string,
 ): void => {
   const children = node.children
   if (children !== undefined) {
     for (const child of children) {
-      serializeNode(output, child, undefined, selectValue)
+      serializeNode(output, child, depth + 1, undefined, selectValue)
     }
   } else if (node.text !== undefined) {
     output.push(escapeText(node.text))
@@ -480,6 +488,7 @@ const serializeElement = (
   output: Array<string>,
   node: VNode,
   selector: string,
+  depth: number,
   extraAttributes?: Readonly<Record<string, string>>,
   selectValue?: string,
 ): void => {
@@ -559,19 +568,19 @@ const serializeElement = (
       if (leadingTextOf(node)?.startsWith('\n')) {
         output.push('\n')
       }
-      serializeChildren(output, node, childSelectValue)
+      serializeChildren(output, node, depth, childSelectValue)
     }
   } else if (NEWLINE_DROPPING_ELEMENTS.has(tagName)) {
     if (leadingTextOf(node)?.startsWith('\n')) {
       output.push('\n')
     }
-    serializeChildren(output, node, childSelectValue)
+    serializeChildren(output, node, depth, childSelectValue)
   } else if (isHtmlRawText) {
     const rawText = collectRawText(node)
     assertRawTextIsSafe(tagName, rawText)
     output.push(rawText)
   } else {
-    serializeChildren(output, node, childSelectValue)
+    serializeChildren(output, node, depth, childSelectValue)
   }
 
   output.push(`</${tagName}>`)
@@ -580,9 +589,18 @@ const serializeElement = (
 const serializeNode = (
   output: Array<string>,
   node: VNode | string | null,
+  depth: number,
   extraAttributes?: Readonly<Record<string, string>>,
   selectValue?: string,
 ): void => {
+  if (depth > MAX_RENDER_DEPTH) {
+    throw new Error(
+      `[foldkit] renderToString exceeded the maximum render depth of ${MAX_RENDER_DEPTH}. ` +
+        'A view nesting elements this deeply, often from mapping untrusted ' +
+        'hierarchical data straight to markup, is refused to protect the ' +
+        'render stack.',
+    )
+  }
   if (node === null) {
     return
   }
@@ -603,7 +621,7 @@ const serializeNode = (
     output.push(`<!--${commentText}-->`)
     return
   }
-  serializeElement(output, node, selector, extraAttributes, selectValue)
+  serializeElement(output, node, selector, depth, extraAttributes, selectValue)
 }
 
 /** Serializes a view-produced vnode tree to an HTML string. Event handlers,
@@ -622,6 +640,6 @@ export const serializeHtml = (
     return '<!---->'
   }
   const output: Array<string> = []
-  serializeNode(output, root, options?.rootAttributes)
+  serializeNode(output, root, 0, options?.rootAttributes)
   return output.join('')
 }
