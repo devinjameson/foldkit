@@ -375,6 +375,23 @@ describe('renderToString', () => {
     ),
   )
 
+  it.effect('renders an element whose only text child is empty', () =>
+    Effect.gen(function* () {
+      const rendered = yield* renderToString({
+        init: (): readonly [Model, ReadonlyArray<never>] => [
+          Model.make({ theme: 'plain', pathname: '/' }),
+          [],
+        ],
+        view: () => ({
+          title: 'Empty text',
+          body: h.div([], [h.span([], ['']), h.span([], ['', 'kept', ''])]),
+        }),
+      })
+
+      expect(rendered.html).toContain('<span></span><span>kept</span>')
+    }),
+  )
+
   it.effect('renders a table with an explicit tbody unchanged', () =>
     Effect.gen(function* () {
       const rendered = yield* renderToString({

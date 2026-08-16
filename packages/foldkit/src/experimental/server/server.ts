@@ -64,12 +64,15 @@ const normalizeVnodeChildren = (vnode: VNode): ReadonlyArray<VnodeChild> => {
   const items: Array<VnodeChild> = []
   let text = ''
   let hasText = false
+  // NOTE: an empty text run serializes to no markup at all, so the parser
+  // never produces a node for it; flushing it would report a phantom child
+  // the parsed side can never match.
   const flush = (): void => {
-    if (hasText) {
+    if (hasText && text !== '') {
       items.push({ kind: 'Text', text })
-      text = ''
-      hasText = false
     }
+    text = ''
+    hasText = false
   }
   for (const child of children) {
     if (typeof child === 'string') {
@@ -100,11 +103,11 @@ const normalizeParsedChildren = (
   let text = ''
   let hasText = false
   const flush = (): void => {
-    if (hasText) {
+    if (hasText && text !== '') {
       items.push({ kind: 'Text', text })
-      text = ''
-      hasText = false
     }
+    text = ''
+    hasText = false
   }
   for (const child of node.childNodes) {
     if (isParse5Element(child)) {
