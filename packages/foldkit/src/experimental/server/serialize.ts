@@ -533,9 +533,18 @@ const serializeElement = (
 
   const childSelectValue = selectValueForChildren(tagName, node, selectValue)
 
+  // NOTE: `script` and `style` are HTML raw-text elements only in the HTML
+  // namespace. In SVG or MathML foreign content the parser reads their
+  // children as ordinary markup, so emitting text verbatim there lets a
+  // string like `<img onerror=...>` parse into a live element. Raw-text
+  // handling is therefore gated on the element being in the HTML namespace;
+  // foreign-content children fall through to escaped serialization.
+  const isForeignNamespace = data?.ns !== undefined
+  const isHtmlRawText = !isForeignNamespace && RAW_TEXT_ELEMENTS.has(tagName)
+
   const innerHtml = data?.props?.['innerHTML']
   if (typeof innerHtml === 'string') {
-    if (RAW_TEXT_ELEMENTS.has(tagName)) {
+    if (isHtmlRawText) {
       assertRawTextIsSafe(tagName, innerHtml)
     }
     output.push(innerHtml)
@@ -557,7 +566,7 @@ const serializeElement = (
       output.push('\n')
     }
     serializeChildren(output, node, childSelectValue)
-  } else if (RAW_TEXT_ELEMENTS.has(tagName)) {
+  } else if (isHtmlRawText) {
     const rawText = collectRawText(node)
     assertRawTextIsSafe(tagName, rawText)
     output.push(rawText)

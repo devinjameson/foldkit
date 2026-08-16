@@ -286,6 +286,15 @@ describe('serializeHtml', () => {
     )
   })
 
+  it('escapes text children of a foreign-namespace script instead of emitting raw text', () => {
+    const view = h.svg([], [h.script([], ['<img src=x onerror="evil()">'])])
+    const serialized = serializeHtml(view)
+    expect(serialized).not.toContain('<img')
+    expect(serialized).toBe(
+      '<svg><script>&lt;img src=x onerror="evil()"&gt;</script></svg>',
+    )
+  })
+
   it('emits InnerHTML raw', () => {
     const view = h.div([h.InnerHTML('<em>raw</em>')])
     expect(serializeHtml(view)).toBe('<div><em>raw</em></div>')
