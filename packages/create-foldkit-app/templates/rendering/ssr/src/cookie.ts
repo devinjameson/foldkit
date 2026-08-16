@@ -1,22 +1,12 @@
-import {
-  Array,
-  Number as Number_,
-  Option,
-  String as String_,
-  pipe,
-} from 'effect'
+import { Number as Number_, Option, Record, pipe } from 'effect'
+import { Cookies } from 'effect/unstable/http'
 
 export const COUNT_COOKIE = 'count'
 
-const COUNT_COOKIE_PREFIX = `${COUNT_COOKIE}=`
-
 export const readCountCookie = (cookieHeader: string): number =>
   pipe(
-    cookieHeader,
-    String_.split(';'),
-    Array.map(String_.trim),
-    Array.findFirst(String_.startsWith(COUNT_COOKIE_PREFIX)),
-    Option.map(String_.slice(COUNT_COOKIE_PREFIX.length)),
+    Cookies.parseHeader(cookieHeader),
+    Record.get(COUNT_COOKIE),
     Option.flatMap(Number_.parse),
     Option.filter(Number.isSafeInteger),
     Option.getOrElse(() => 0),
