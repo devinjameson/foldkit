@@ -356,6 +356,28 @@ describe('renderToString', () => {
     failsHydratableRender(h.svg([h.InnerHTML('<strike>escaped</strike>')])),
   )
 
+  it.effect(
+    'rejects a bare <tr> that parsing wraps in an implicit <tbody>',
+    () => failsHydratableRender(h.table([], [h.tr([], [h.td([], ['cell'])])])),
+  )
+
+  it.effect('renders a table with an explicit tbody unchanged', () =>
+    Effect.gen(function* () {
+      const rendered = yield* renderToString({
+        init: (): readonly [Model, ReadonlyArray<never>] => [
+          Model.make({ theme: 'plain', pathname: '/' }),
+          [],
+        ],
+        view: () => ({
+          title: 'Table',
+          body: h.table([], [h.tbody([], [h.tr([], [h.td([], ['cell'])])])]),
+        }),
+      })
+
+      expect(rendered.html).toContain('<tbody><tr><td>cell</td></tr></tbody>')
+    }),
+  )
+
   it.effect('renders a valid svg root that parses back to one element', () =>
     Effect.gen(function* () {
       const rendered = yield* renderToString({

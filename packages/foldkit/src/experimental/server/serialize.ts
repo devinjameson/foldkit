@@ -32,15 +32,20 @@ const VOID_ELEMENTS: ReadonlySet<string> = new Set([
   'wbr',
 ])
 
-const RAW_TEXT_ELEMENTS: ReadonlySet<string> = new Set(['script', 'style'])
+const RAW_TEXT_ELEMENTS: ReadonlySet<string> = new Set([
+  'script',
+  'style',
+  'iframe',
+])
 
-// NOTE: raw-text elements (`script`, `style`) parse their content as text
-// until the first `</tagname`, so HTML entities do not work inside them and a
-// closing-tag sequence in the content ends the element early. That is an
-// injection vector on the server (a `</style>` in CSS text breaks out into
-// live markup) that never surfaces client-side, where the content is a DOM
-// text node. There is no valid escaping, so a closing-tag sequence is a hard
-// error, matching how other renderers refuse it.
+// NOTE: raw-text elements (`script`, `style`, `iframe`) parse their content as
+// text until the first `</tagname`, so HTML entities are not decoded and a
+// closing-tag sequence in the content ends the element early. Escaping a text
+// child, correct for a normal element, is wrong here: the browser reads the
+// escaped `&lt;` back as the literal characters, not `<`, so the server DOM
+// text disagrees with the view. The content is therefore emitted verbatim, and
+// a closing-tag sequence, which would break out into live markup on the
+// server, is a hard error since there is no valid escaping for it.
 const rawTextClosingSequence = (tagName: string): RegExp =>
   new RegExp(`</${tagName}(?=[\\t\\n\\f\\r />]|$)`, 'i')
 

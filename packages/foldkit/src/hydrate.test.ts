@@ -99,6 +99,32 @@ describe('__hydrateVNode', () => {
     expect(dispatched).toEqual([ClickedButton()])
   })
 
+  it('hydrates a table with an explicit tbody and an interactive cell', () => {
+    const view = () =>
+      h.table(
+        [],
+        [
+          h.tbody(
+            [],
+            [
+              h.tr(
+                [],
+                [h.td([], [h.button([h.OnClick(ClickedButton())], ['Go'])])],
+              ),
+            ],
+          ),
+        ],
+      )
+    const root = mountServerHtml(serializeHtml(buildView(view)))
+    const button = root.querySelector('button')
+
+    buildView(() => __hydrateVNode(root, view()))
+
+    expect(root.querySelector('button')).toBe(button)
+    button?.dispatchEvent(new MouseEvent('click'))
+    expect(dispatched).toEqual([ClickedButton()])
+  })
+
   it('splits merged text nodes for adjacent text children', () => {
     const view = buildView(() => h.p([], ['count: ', '42']))
     const root = mountServerHtml(serializeHtml(view))

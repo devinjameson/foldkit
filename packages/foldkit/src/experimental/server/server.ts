@@ -1,4 +1,13 @@
-import { Context, Data, Effect, Option, Predicate, Schema, pipe } from 'effect'
+import {
+  Array as Array_,
+  Context,
+  Data,
+  Effect,
+  Option,
+  Predicate,
+  Schema,
+  pipe,
+} from 'effect'
 import type { DefaultTreeAdapterMap } from 'parse5'
 import { parseFragment } from 'parse5'
 
@@ -18,6 +27,7 @@ import {
   FOLDKIT_APP_ATTRIBUTE,
   FOLDKIT_FLAGS_ATTRIBUTE,
 } from '../../hydrationMarker.js'
+import type { VNode } from '../../snabbdom/vnode.js'
 import { tagNameFromSelector } from '../../tagName.js'
 import { Url, fromString } from '../../url/index.js'
 import { escapeAttributeValue, serializeHtml } from './serialize.js'
@@ -32,6 +42,75 @@ const isParse5Element = (node: Parse5ChildNode): node is Parse5Element =>
 
 const isIgnorableText = (node: Parse5ChildNode): boolean =>
   node.nodeName === '#text' && 'value' in node && node.value.trim() === ''
+
+// The element children a vnode declares, in order. Text and comment children
+// are not compared here (entity decoding and text merges round-trip
+// separately); the concern is elements HTML parsing inserts or moves.
+const vnodeElementChildren = (vnode: VNode): ReadonlyArray<VNode> => {
+  const children = vnode.children
+  if (children === undefined) {
+    return []
+  }
+  const elements: Array<VNode> = []
+  for (const child of children) {
+    if (typeof child === 'string') {
+      continue
+    }
+    const selector = child.sel
+    if (selector === undefined || selector === '' || selector === '!') {
+      continue
+    }
+    elements.push(child)
+  }
+  return elements
+}
+
+// Compare the element structure the browser parsed against the structure the
+// view declared. The top-level check rejects a root that splits into siblings;
+// this rejects a parser correction inside the root, such as the `<tbody>` a
+// browser inserts around a bare `<tr>` in a `<table>`, which hydration would
+// otherwise see as a whole-subtree mismatch. A vnode carrying InnerHTML owns an
+// opaque, parser-produced subtree, so it is not walked.
+const assertStructureMatches = (parsed: Parse5Element, vnode: VNode): void => {
+  if (vnode.data?.props?.['innerHTML'] !== undefined) {
+    return
+  }
+  const vnodeChildren = vnodeElementChildren(vnode)
+  const parsedChildren = parsed.childNodes.filter(isParse5Element)
+  if (parsedChildren.length !== vnodeChildren.length) {
+    throw new Error(
+      `[foldkit] HTML parsing changed the element structure inside ` +
+        `<${parsed.tagName}>. It inserts or moves elements the view did not ` +
+        'write (a <tbody> around a bare <tr> in a <table>, an element ' +
+        'foster-parented out of its parent), which hydration would rebuild ' +
+        'as a mismatch. Write the structure HTML parsing produces, such as an ' +
+        'explicit <tbody>.',
+    )
+  }
+  for (const [parsedChild, vnodeChild] of Array_.zip(
+    parsedChildren,
+    vnodeChildren,
+  )) {
+    const expectedTag = tagNameFromSelector(vnodeChild.sel ?? '').toLowerCase()
+    const expectedNamespace =
+      typeof vnodeChild.data?.ns === 'string'
+        ? vnodeChild.data.ns
+        : HTML_NAMESPACE
+    if (
+      parsedChild.tagName.toLowerCase() !== expectedTag ||
+      parsedChild.namespaceURI !== expectedNamespace
+    ) {
+      throw new Error(
+        `[foldkit] HTML parsing produced <${parsedChild.tagName}> where the ` +
+          `view declared <${expectedTag}> inside <${parsed.tagName}>. The ` +
+          'browser inserts or reorders elements (a <tbody> around a bare ' +
+          '<tr> in a <table>) that hydration would rebuild as a mismatch. ' +
+          'Write the structure HTML parsing produces.',
+      )
+    }
+    assertStructureMatches(parsedChild, vnodeChild)
+  }
+}
 
 // After serialization, parse the stamped root markup with the same HTML parser
 // a browser uses and require it to describe exactly one element: the stamped
@@ -86,6 +165,7 @@ const assertSingleStampedRoot = (
         'root a single, structurally valid element.',
     )
   }
+  assertStructureMatches(only, root)
 }
 
 export { FOLDKIT_APP_ATTRIBUTE, FOLDKIT_FLAGS_ATTRIBUTE }

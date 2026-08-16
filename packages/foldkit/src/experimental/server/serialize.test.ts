@@ -363,6 +363,16 @@ describe('serializeHtml', () => {
     )
   })
 
+  it('serializes iframe text children as raw text, not escaped', () => {
+    const view = h.iframe([], ['<b>&'])
+    expect(serializeHtml(view)).toBe('<iframe><b>&</iframe>')
+  })
+
+  it('rejects iframe content that contains a closing-tag sequence', () => {
+    const view = h.iframe([], ['</iframe>'])
+    expect(() => serializeHtml(view)).toThrow(/<\/iframe/)
+  })
+
   it('emits InnerHTML raw', () => {
     const view = h.div([h.InnerHTML('<em>raw</em>')])
     expect(serializeHtml(view)).toBe('<div><em>raw</em></div>')
