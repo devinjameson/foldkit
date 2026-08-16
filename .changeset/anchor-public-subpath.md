@@ -21,3 +21,5 @@ import {
 The module is also reachable as `Ui.Anchor` from the root barrel and appears in the API reference.
 
 Nothing is removed or renamed. `src/anchor.ts` moved to `src/anchor/`, which is internal layout only.
+
+Thanks @wmaurer for contributing this feature!

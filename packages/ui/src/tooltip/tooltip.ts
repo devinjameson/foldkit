@@ -113,11 +113,11 @@ export const AnchorTooltip = Mount.define(
       Effect.gen(function* () {
         yield* Effect.acquireRelease(
           Effect.sync(() =>
-            anchorSetup({
+            anchorSetup(element, {
               buttonId,
               anchor,
               interceptTab: false,
-            })(element),
+            }),
           ),
           cleanup => Effect.sync(cleanup),
         )
