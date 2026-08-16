@@ -1247,22 +1247,19 @@ importers:
       '@foldkit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
-      '@tailwindcss/vite':
-        specifier: ^4.3.1
-        version: 4.3.1(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0))
       effect:
         specifier: 4.0.0-rc.109
         version: 4.0.0-rc.109
       foldkit:
         specifier: workspace:*
         version: link:../../packages/foldkit
-      tailwindcss:
-        specifier: ^4.3.1
-        version: 4.3.1
     devDependencies:
       '@foldkit/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-foldkit
+      '@tailwindcss/vite':
+        specifier: ^4.3.1
+        version: 4.3.1(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0))
       '@trivago/prettier-plugin-sort-imports':
         specifier: ^6.0.2
         version: 6.0.2(@vue/compiler-sfc@3.5.38)(prettier@3.8.4)
@@ -1272,6 +1269,9 @@ importers:
       prettier:
         specifier: ^3.8.4
         version: 3.8.4
+      tailwindcss:
+        specifier: ^4.3.1
+        version: 4.3.1
       tsx:
         specifier: ^4.22.4
         version: 4.22.4
