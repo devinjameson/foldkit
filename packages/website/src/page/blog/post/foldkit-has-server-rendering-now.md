@@ -34,7 +34,7 @@ SSG and SSR are the same thing run at different times. Either a build script cal
 
 The `Flags` Schema, `init`, `view`, and `flagsForRequest` are provided by you. The rest is wiring.
 
-The same entry serves Vite in development, a Node host in production, a build script for static generation, and fetch-native runtimes like Cloudflare Workers. Hosts are interchangeable because the entry deals only in Web standards: it takes a Web `Request` and returns a `Server.ServerEntryResult`, which the host turns into a Web `Response` with `Server.toResponse`.
+The same entry serves Vite in development, a Node host in production, a build script for static generation, and fetch-native runtimes like Cloudflare Workers. Hosts are interchangeable because the entry deals only in Web standards: a Web `Request` goes in, and the host turns the result into a Web `Response`.
 
 ## How it works
 
