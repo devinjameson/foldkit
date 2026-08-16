@@ -24,7 +24,7 @@ So, Foldkit can render on the server now. It shipped today under `foldkit/experi
 
 `foldkit/experimental/server` ships `renderToString`, and `foldkit/runtime` ships `hydrate`. Together, they give a Foldkit application two new ways to reach the browser: generate static HTML for every route during the build, or render each request on a server. Either way, the browser hydrates the served HTML in place, and the application it boots is the same Foldkit application you wrote yesterday.
 
-None of this is required. A Foldkit app can still be a pure client-side SPA with no server rendering at all, unchanged from before. Server rendering is opt-in, a capability you add per route rather than a new default you inherit.
+None of this is required. A Foldkit app can still be a pure client-side SPA with no server rendering at all, unchanged from before. Server rendering is a choice you opt into, not a new default.
 
 ## SSG vs SSR
 
