@@ -361,6 +361,20 @@ describe('renderToString', () => {
     () => failsHydratableRender(h.table([], [h.tr([], [h.td([], ['cell'])])])),
   )
 
+  it.effect('rejects text a <table> foster-parents out of its structure', () =>
+    failsHydratableRender(
+      h.div(
+        [],
+        [
+          h.table(
+            [],
+            [h.tbody([], [h.tr([], [h.td([], ['cell'])]), 'stray text'])],
+          ),
+        ],
+      ),
+    ),
+  )
+
   it.effect('renders a table with an explicit tbody unchanged', () =>
     Effect.gen(function* () {
       const rendered = yield* renderToString({

@@ -43,72 +43,158 @@ const isParse5Element = (node: Parse5ChildNode): node is Parse5Element =>
 const isIgnorableText = (node: Parse5ChildNode): boolean =>
   node.nodeName === '#text' && 'value' in node && node.value.trim() === ''
 
-// The element children a vnode declares, in order. Text and comment children
-// are not compared here (entity decoding and text merges round-trip
-// separately); the concern is elements HTML parsing inserts or moves.
-const vnodeElementChildren = (vnode: VNode): ReadonlyArray<VNode> => {
+type VnodeChild =
+  | Readonly<{ kind: 'Element'; vnode: VNode }>
+  | Readonly<{ kind: 'Text'; text: string }>
+  | Readonly<{ kind: 'Comment'; text: string }>
+
+type ParsedChild =
+  | Readonly<{ kind: 'Element'; element: Parse5Element }>
+  | Readonly<{ kind: 'Text'; text: string }>
+  | Readonly<{ kind: 'Comment'; text: string }>
+
+// The children a vnode declares, with consecutive text merged into one run.
+// The serializer emits adjacent text children back to back, so the parser
+// reads them as a single text node; merging both sides makes them comparable.
+const normalizeVnodeChildren = (vnode: VNode): ReadonlyArray<VnodeChild> => {
   const children = vnode.children
   if (children === undefined) {
     return []
   }
-  const elements: Array<VNode> = []
+  const items: Array<VnodeChild> = []
+  let text = ''
+  let hasText = false
+  const flush = (): void => {
+    if (hasText) {
+      items.push({ kind: 'Text', text })
+      text = ''
+      hasText = false
+    }
+  }
   for (const child of children) {
     if (typeof child === 'string') {
+      text += child
+      hasText = true
       continue
     }
     const selector = child.sel
-    if (selector === undefined || selector === '' || selector === '!') {
-      continue
+    if (selector === undefined || selector === '') {
+      text += child.text ?? ''
+      hasText = true
+    } else if (selector === '!') {
+      flush()
+      items.push({ kind: 'Comment', text: child.text ?? '' })
+    } else {
+      flush()
+      items.push({ kind: 'Element', vnode: child })
     }
-    elements.push(child)
   }
-  return elements
+  flush()
+  return items
 }
 
-// Compare the element structure the browser parsed against the structure the
-// view declared. The top-level check rejects a root that splits into siblings;
-// this rejects a parser correction inside the root, such as the `<tbody>` a
-// browser inserts around a bare `<tr>` in a `<table>`, which hydration would
-// otherwise see as a whole-subtree mismatch. A vnode carrying InnerHTML owns an
-// opaque, parser-produced subtree, so it is not walked.
+const normalizeParsedChildren = (
+  node: Parse5Element,
+): ReadonlyArray<ParsedChild> => {
+  const items: Array<ParsedChild> = []
+  let text = ''
+  let hasText = false
+  const flush = (): void => {
+    if (hasText) {
+      items.push({ kind: 'Text', text })
+      text = ''
+      hasText = false
+    }
+  }
+  for (const child of node.childNodes) {
+    if (isParse5Element(child)) {
+      flush()
+      items.push({ kind: 'Element', element: child })
+    } else if (child.nodeName === '#text' && 'value' in child) {
+      text += child.value
+      hasText = true
+    } else if (child.nodeName === '#comment' && 'data' in child) {
+      flush()
+      items.push({ kind: 'Comment', text: child.data })
+    }
+  }
+  flush()
+  return items
+}
+
+// A vnode whose content the parser owns or the vnode does not carry as
+// children: an InnerHTML string parses into an opaque subtree, and a
+// `<textarea>`'s value serializes as text content the vnode holds as a prop,
+// not a child. Neither can contain elements, so skipping them drops no
+// structural check.
+const isStructurallyOpaque = (vnode: VNode, tagName: string): boolean =>
+  vnode.data?.props?.['innerHTML'] !== undefined || tagName === 'textarea'
+
+const structureMismatch = (parsed: Parse5Element): Error =>
+  new Error(
+    `[foldkit] HTML parsing changed the child structure inside ` +
+      `<${parsed.tagName}>. It inserts, moves, or drops nodes the view did ` +
+      'not write (a <tbody> around a bare <tr> in a <table>, text ' +
+      'foster-parented out of a <table>), which hydration would rebuild as a ' +
+      'mismatch. Write the structure HTML parsing produces, such as explicit ' +
+      'table sections.',
+  )
+
+// Compare the child structure the browser parsed against the structure the
+// view declared, recursively. The top-level check rejects a root that splits
+// into siblings; this rejects a parser correction inside the root, whether an
+// inserted element (the `<tbody>` a browser adds around a bare `<tr>`) or
+// foster-parented text, which hydration would otherwise see as a whole-subtree
+// mismatch.
 const assertStructureMatches = (parsed: Parse5Element, vnode: VNode): void => {
-  if (vnode.data?.props?.['innerHTML'] !== undefined) {
+  if (isStructurallyOpaque(vnode, parsed.tagName.toLowerCase())) {
     return
   }
-  const vnodeChildren = vnodeElementChildren(vnode)
-  const parsedChildren = parsed.childNodes.filter(isParse5Element)
+  const vnodeChildren = normalizeVnodeChildren(vnode)
+  const parsedChildren = normalizeParsedChildren(parsed)
   if (parsedChildren.length !== vnodeChildren.length) {
-    throw new Error(
-      `[foldkit] HTML parsing changed the element structure inside ` +
-        `<${parsed.tagName}>. It inserts or moves elements the view did not ` +
-        'write (a <tbody> around a bare <tr> in a <table>, an element ' +
-        'foster-parented out of its parent), which hydration would rebuild ' +
-        'as a mismatch. Write the structure HTML parsing produces, such as an ' +
-        'explicit <tbody>.',
-    )
+    throw structureMismatch(parsed)
   }
   for (const [parsedChild, vnodeChild] of Array_.zip(
     parsedChildren,
     vnodeChildren,
   )) {
-    const expectedTag = tagNameFromSelector(vnodeChild.sel ?? '').toLowerCase()
-    const expectedNamespace =
-      typeof vnodeChild.data?.ns === 'string'
-        ? vnodeChild.data.ns
-        : HTML_NAMESPACE
-    if (
-      parsedChild.tagName.toLowerCase() !== expectedTag ||
-      parsedChild.namespaceURI !== expectedNamespace
-    ) {
-      throw new Error(
-        `[foldkit] HTML parsing produced <${parsedChild.tagName}> where the ` +
-          `view declared <${expectedTag}> inside <${parsed.tagName}>. The ` +
-          'browser inserts or reorders elements (a <tbody> around a bare ' +
-          '<tr> in a <table>) that hydration would rebuild as a mismatch. ' +
-          'Write the structure HTML parsing produces.',
-      )
+    if (parsedChild.kind !== vnodeChild.kind) {
+      throw structureMismatch(parsed)
     }
-    assertStructureMatches(parsedChild, vnodeChild)
+    if (parsedChild.kind === 'Element' && vnodeChild.kind === 'Element') {
+      const expectedTag = tagNameFromSelector(
+        vnodeChild.vnode.sel ?? '',
+      ).toLowerCase()
+      const expectedNamespace =
+        typeof vnodeChild.vnode.data?.ns === 'string'
+          ? vnodeChild.vnode.data.ns
+          : HTML_NAMESPACE
+      if (
+        parsedChild.element.tagName.toLowerCase() !== expectedTag ||
+        parsedChild.element.namespaceURI !== expectedNamespace
+      ) {
+        throw new Error(
+          `[foldkit] HTML parsing produced <${parsedChild.element.tagName}> ` +
+            `where the view declared <${expectedTag}> inside ` +
+            `<${parsed.tagName}>. The browser inserts or reorders elements (a ` +
+            '<tbody> around a bare <tr> in a <table>) that hydration would ' +
+            'rebuild as a mismatch. Write the structure HTML parsing produces.',
+        )
+      }
+      assertStructureMatches(parsedChild.element, vnodeChild.vnode)
+    } else if (parsedChild.kind === 'Text' && vnodeChild.kind === 'Text') {
+      if (parsedChild.text !== vnodeChild.text) {
+        throw structureMismatch(parsed)
+      }
+    } else if (
+      parsedChild.kind === 'Comment' &&
+      vnodeChild.kind === 'Comment'
+    ) {
+      if (parsedChild.text !== vnodeChild.text) {
+        throw structureMismatch(parsed)
+      }
+    }
   }
 }
 
