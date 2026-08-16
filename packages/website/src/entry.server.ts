@@ -77,14 +77,22 @@ const flagsForRequest = (
 
   return Flags.make({
     ...baseFlags,
-    maybeApiData:
-      route._tag === 'ApiModule'
-        ? sliceApiDataToModule(apiData, route.moduleSlug)
-        : Option.none(),
-    maybeExampleSources:
-      route._tag === 'ExampleDetail'
-        ? Record_.get(sourcesBySlug, route.exampleSlug)
-        : Option.none(),
+    maybeApiData: Option.liftPredicate(
+      route,
+      candidate => candidate._tag === 'ApiModule',
+    ).pipe(
+      Option.flatMap(({ moduleSlug }) =>
+        sliceApiDataToModule(apiData, moduleSlug),
+      ),
+    ),
+    maybeExampleSources: Option.liftPredicate(
+      route,
+      candidate => candidate._tag === 'ExampleDetail',
+    ).pipe(
+      Option.flatMap(({ exampleSlug }) =>
+        Record_.get(sourcesBySlug, exampleSlug),
+      ),
+    ),
   })
 }
 
