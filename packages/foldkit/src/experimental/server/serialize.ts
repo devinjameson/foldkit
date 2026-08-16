@@ -430,15 +430,35 @@ const NEWLINE_DROPPING_ELEMENTS: ReadonlySet<string> = new Set([
   'listing',
 ])
 
+// The text the serialized content begins with, used to decide whether a
+// newline-dropping element (`pre`, `listing`, `textarea`) needs an extra
+// leading newline to survive the parser's leading-newline strip. Empty string
+// children and empty text VNodes serialize to nothing, so they are skipped to
+// reach the first run that actually emits text. The scan stops at the first
+// element or comment: past it the serialized content no longer begins with
+// text, so no padding is needed.
 const leadingTextOf = (node: VNode): string | undefined => {
   if (node.text !== undefined) {
     return node.text
   }
-  const [firstChild] = node.children ?? []
-  if (typeof firstChild === 'string') {
-    return firstChild
+  for (const child of node.children ?? []) {
+    if (typeof child === 'string') {
+      if (child !== '') {
+        return child
+      }
+      continue
+    }
+    const selector = child.sel
+    if (selector === undefined || selector === '') {
+      const text = child.text ?? ''
+      if (text !== '') {
+        return text
+      }
+      continue
+    }
+    return undefined
   }
-  return firstChild?.text
+  return undefined
 }
 
 // NOTE: the serializer recurses per element, so a tree nested thousands of

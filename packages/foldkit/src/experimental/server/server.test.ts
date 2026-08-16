@@ -447,6 +447,32 @@ describe('renderToString', () => {
     () => failsHydratableRender(h.textarea([], [h.b([], ['x'])])),
   )
 
+  it.effect(
+    'pads a <pre> whose empty text precedes newline-prefixed text',
+    () => rendersHydratable(h.pre([], ['', '\nfirst']), '\n\nfirst</pre>'),
+  )
+
+  it.effect(
+    'pads an uncontrolled <textarea> with empty then newline-prefixed text',
+    () =>
+      rendersHydratable(
+        h.textarea([], ['', '\nfirst']),
+        '\n\nfirst</textarea>',
+      ),
+  )
+
+  it.effect(
+    'pads a <pre> with multiple empty text runs before the newline',
+    () => rendersHydratable(h.pre([], ['', '', '\nfirst']), '\n\nfirst</pre>'),
+  )
+
+  it.effect('does not pad a <pre> whose first emitted node is an element', () =>
+    rendersHydratable(
+      h.pre([], [h.span([], ['x']), '\nfirst']),
+      '"app"><span>x</span>\nfirst</pre>',
+    ),
+  )
+
   it.effect('renders a valid svg root that parses back to one element', () =>
     Effect.gen(function* () {
       const rendered = yield* renderToString({
