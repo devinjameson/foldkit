@@ -43,6 +43,24 @@ describe('injectIntoTemplate', () => {
     expect(result).toContain('<html lang="en">')
   })
 
+  it('rejects a template with no explicit <html> tag when lang or dir is requested', () => {
+    const template =
+      '<!doctype html><head><title>old</title></head>' +
+      '<body><div id="root"></div></body>'
+    expect(() =>
+      injectIntoTemplate(template, rendered({ lang: 'fr' })),
+    ).toThrow(/no explicit <html> start tag/)
+  })
+
+  it('injects a template with no explicit <html> tag when lang and dir are omitted', () => {
+    const template =
+      '<!doctype html><head><title>old</title></head>' +
+      '<body><div id="root"></div></body>'
+    const result = injectIntoTemplate(template, rendered())
+    expect(result).toContain('<title>New Title</title>')
+    expect(result).toContain('<div data-foldkit-app="app">hi</div>')
+  })
+
   it('replaces a single-quoted template lang without duplicating the attribute', () => {
     const template =
       "<!doctype html><html lang='en'><head><title>old</title></head>" +

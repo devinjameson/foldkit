@@ -536,19 +536,20 @@ const serializeElement = (
   serializeAttributes(output, attributes)
   output.push('>')
 
-  if (VOID_ELEMENTS.has(tagName)) {
+  // NOTE: void elements have no closing tag only in the HTML namespace. In
+  // SVG or MathML foreign content the same names (`input`, `br`) are ordinary
+  // elements, so omitting the closing tag would let a following sibling parse
+  // as a child. Void handling and raw-text handling below are both gated on
+  // the element being in the HTML namespace; foreign content always closes
+  // and serializes its children through escaping.
+  const isForeignNamespace = data?.ns !== undefined
+
+  if (!isForeignNamespace && VOID_ELEMENTS.has(tagName)) {
     return
   }
 
   const childSelectValue = selectValueForChildren(tagName, node, selectValue)
 
-  // NOTE: `script` and `style` are HTML raw-text elements only in the HTML
-  // namespace. In SVG or MathML foreign content the parser reads their
-  // children as ordinary markup, so emitting text verbatim there lets a
-  // string like `<img onerror=...>` parse into a live element. Raw-text
-  // handling is therefore gated on the element being in the HTML namespace;
-  // foreign-content children fall through to escaped serialization.
-  const isForeignNamespace = data?.ns !== undefined
   const isHtmlRawText = !isForeignNamespace && RAW_TEXT_ELEMENTS.has(tagName)
 
   const innerHtml = data?.props?.['innerHTML']

@@ -222,10 +222,19 @@ export const injectIntoTemplate = (
   }
 
   const html = firstMatching(document, element => element.tagName === 'html')
-  if (
-    (rendered.lang !== undefined || rendered.dir !== undefined) &&
-    html?.sourceCodeLocation?.startTag != null
-  ) {
+  if (rendered.lang !== undefined || rendered.dir !== undefined) {
+    // HTML lets the <html> start tag be omitted, in which case parse5 builds an
+    // implicit html element with no start-tag location to mutate. Rather than
+    // silently drop the language or direction the page requested, fail so the
+    // author adds an explicit tag.
+    const startTag = html?.sourceCodeLocation?.startTag
+    if (html === undefined || startTag == null) {
+      throw new Error(
+        '[foldkit] injectIntoTemplate cannot stamp the language or direction ' +
+          'because the template has no explicit <html> start tag to mutate. ' +
+          'Add an <html> tag to the template so lang and dir can be set.',
+      )
+    }
     let attributes: ReadonlyArray<Attribute> = html.attrs
     if (rendered.lang !== undefined) {
       attributes = withAttribute(attributes, 'lang', rendered.lang)
@@ -234,8 +243,8 @@ export const injectIntoTemplate = (
       attributes = withAttribute(attributes, 'dir', rendered.dir)
     }
     mutations.push({
-      start: html.sourceCodeLocation.startTag.startOffset,
-      end: html.sourceCodeLocation.startTag.endOffset,
+      start: startTag.startOffset,
+      end: startTag.endOffset,
       replacement: renderStartTag('html', attributes),
     })
   }

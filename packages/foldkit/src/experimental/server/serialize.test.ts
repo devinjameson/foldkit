@@ -337,6 +337,25 @@ describe('serializeHtml', () => {
     )
   })
 
+  it('closes an HTML void element name in the SVG namespace so siblings stay siblings', () => {
+    const view = h.svg([], [h.input([]), h.circle([])])
+    expect(serializeHtml(view)).toBe(
+      '<svg><input></input><circle></circle></svg>',
+    )
+  })
+
+  it('treats an HTML void element as void inside a foreignObject integration point', () => {
+    const view = h.svg([], [h.foreignObject([], [h.input([])])])
+    expect(serializeHtml(view)).toBe(
+      '<svg><foreignObject><input></foreignObject></svg>',
+    )
+  })
+
+  it('serializes HTML content inside an SVG desc in the HTML namespace', () => {
+    const view = h.svg([], [h.desc([], [h.input([])])])
+    expect(serializeHtml(view)).toBe('<svg><desc><input></desc></svg>')
+  })
+
   it('emits InnerHTML raw', () => {
     const view = h.div([h.InnerHTML('<em>raw</em>')])
     expect(serializeHtml(view)).toBe('<div><em>raw</em></div>')

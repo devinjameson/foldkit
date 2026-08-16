@@ -63,6 +63,39 @@ export const acceptsHtml = (acceptHeader: string | undefined): boolean => {
   return bestSpecificity > 0 && bestQuality > 0
 }
 
+/**
+ * Merges the `Accept` field name into an existing `Vary` header value, parsing
+ * it as a comma-separated, case-insensitive list of field names. `Vary: *`
+ * already varies on everything and is returned unchanged, an existing `Accept`
+ * token (in any case, and distinct from `Accept-Language` or `Accept-Encoding`)
+ * is not duplicated, and otherwise `Accept` is appended.
+ *
+ * A page host that negotiates HTML on the `Accept` header must declare that in
+ * `Vary` so a shared cache does not serve one representation in place of the
+ * other. The dev host, reference server, and scaffold merge through this one
+ * helper so a comma-joined field-name string like `Accept-Language` is never
+ * mistaken for the `Accept` field.
+ *
+ * @experimental Ships from `foldkit/experimental/server`; expect breaking changes while the API settles.
+ */
+export const varyWithAccept = (existing: string | undefined): string => {
+  const tokens =
+    existing === undefined
+      ? []
+      : existing
+          .split(',')
+          .map(token => token.trim())
+          .filter(token => token !== '')
+  const lowered = tokens.map(token => token.toLowerCase())
+  if (lowered.includes('*')) {
+    return '*'
+  }
+  if (lowered.includes('accept')) {
+    return tokens.join(', ')
+  }
+  return [...tokens, 'Accept'].join(', ')
+}
+
 const normalizePath = (path: string): string => {
   const segments: Array<string> = []
   for (const segment of path.split('/')) {

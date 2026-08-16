@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { acceptsHtml, resolvesToIndexHtml } from './host.js'
+import { acceptsHtml, resolvesToIndexHtml, varyWithAccept } from './host.js'
 
 describe('acceptsHtml', () => {
   it('accepts an absent or empty header', () => {
@@ -61,5 +61,34 @@ describe('resolvesToIndexHtml', () => {
 
   it('rejects a null-byte path', () => {
     expect(resolvesToIndexHtml('/%00index.html')).toBe(false)
+  })
+})
+
+describe('varyWithAccept', () => {
+  it('sets Accept when there is no existing Vary', () => {
+    expect(varyWithAccept(undefined)).toBe('Accept')
+    expect(varyWithAccept('')).toBe('Accept')
+  })
+
+  it('appends Accept to other field names', () => {
+    expect(varyWithAccept('Cookie')).toBe('Cookie, Accept')
+    expect(varyWithAccept('cookie, accept-encoding')).toBe(
+      'cookie, accept-encoding, Accept',
+    )
+  })
+
+  it('does not mistake Accept-Language or Accept-Encoding for Accept', () => {
+    expect(varyWithAccept('Accept-Language')).toBe('Accept-Language, Accept')
+    expect(varyWithAccept('Accept-Encoding')).toBe('Accept-Encoding, Accept')
+  })
+
+  it('does not duplicate an existing Accept token in any case', () => {
+    expect(varyWithAccept('accept')).toBe('accept')
+    expect(varyWithAccept('Cookie, Accept')).toBe('Cookie, Accept')
+  })
+
+  it('leaves a wildcard Vary as the wildcard', () => {
+    expect(varyWithAccept('*')).toBe('*')
+    expect(varyWithAccept('Cookie, *')).toBe('*')
   })
 })

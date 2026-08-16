@@ -387,6 +387,43 @@ describe('__hydrateVNode', () => {
     expect(root.style.color).toBe('')
   })
 
+  it('converges a deterministic class and style set through raw attributes', () => {
+    const view = () =>
+      h.div(
+        [h.Attribute('class', 'same'), h.Attribute('style', 'color: blue')],
+        ['content'],
+      )
+    const root = mountServerHtml(serializeHtml(buildView(view)))
+    if (!(root instanceof HTMLDivElement)) {
+      throw new Error('expected a div root')
+    }
+
+    buildView(() => __hydrateVNode(root, view()))
+
+    expect(root.getAttribute('class')).toBe('same')
+    expect(root.className).toBe('same')
+    expect(root.getAttribute('style')).toBe('color: blue')
+    expect(root.style.color).toBe('blue')
+  })
+
+  it('rebuilds an adopted element whose namespace disagrees with the DOM', () => {
+    const root = mountServerHtml('<div><a>link</a></div>')
+    const originalAnchor = root.firstElementChild
+
+    buildView(() =>
+      __hydrateVNode(
+        root,
+        snabbdomH('div', {}, [
+          snabbdomH('a', { ns: 'http://www.w3.org/2000/svg' }, 'link'),
+        ]),
+      ),
+    )
+
+    const anchor = root.firstElementChild
+    expect(anchor).not.toBe(originalAnchor)
+    expect(anchor?.namespaceURI).toBe('http://www.w3.org/2000/svg')
+  })
+
   it('resets a controlled textarea default so hydration matches a fresh boot', () => {
     const textareaView = () => h.textarea([h.Value('model')])
     const root = mountServerHtml(serializeHtml(buildView(textareaView)))

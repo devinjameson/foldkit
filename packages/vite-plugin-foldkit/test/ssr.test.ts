@@ -100,6 +100,28 @@ describe('foldkitSsr', () => {
     expect(await response.text()).toContain('data-foldkit-app="app"')
   })
 
+  it('marks an Accept-negotiated deep route with Vary: Accept', async () => {
+    const origin = await startServer()
+    const response = await fetch(`${origin}/rendered`, {
+      headers: { accept: 'text/html' },
+    })
+
+    expect((response.headers.get('vary') ?? '').toLowerCase()).toContain(
+      'accept',
+    )
+  })
+
+  it('does not add Accept to the Vary of a template request', async () => {
+    const origin = await startServer()
+    const response = await fetch(`${origin}/index.html`, {
+      headers: { accept: 'text/html' },
+    })
+
+    expect((response.headers.get('vary') ?? '').toLowerCase()).not.toContain(
+      'accept',
+    )
+  })
+
   it('does not render for a client that refuses HTML with q=0', async () => {
     const origin = await startServer()
     const response = await fetch(`${origin}/rendered`, {

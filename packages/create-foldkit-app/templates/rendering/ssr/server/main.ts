@@ -38,17 +38,18 @@ const renderRequest = (
 // A static miss is answered by content negotiation, so the representation
 // depends on the Accept header. Vary: Accept keeps a shared cache from
 // serving one client's representation to another, merged with any Vary the
-// render already set.
+// render already set. The merge parses Vary as field-name tokens so
+// Accept-Language or Accept-Encoding is never mistaken for the Accept field.
 const withVaryAccept = (
   response: HttpServerResponse.HttpServerResponse,
-): HttpServerResponse.HttpServerResponse => {
-  const vary = Option.match(HttpHeaders.get('vary')(response.headers), {
-    onNone: () => 'accept',
-    onSome: value =>
-      value.toLowerCase().includes('accept') ? value : `${value}, accept`,
-  })
-  return HttpServerResponse.setHeader(response, 'vary', vary)
-}
+): HttpServerResponse.HttpServerResponse =>
+  HttpServerResponse.setHeader(
+    response,
+    'vary',
+    Server.varyWithAccept(
+      Option.getOrUndefined(HttpHeaders.get('vary')(response.headers)),
+    ),
+  )
 
 const isRouteNotFound = (error: HttpServerError.HttpServerError): boolean =>
   error.reason._tag === 'RouteNotFound'

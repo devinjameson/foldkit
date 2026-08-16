@@ -46,35 +46,15 @@ const styleModuleKey = (property: string): string =>
         character.toUpperCase(),
       )
 
-// NOTE: reconcile stale server DOM against the client's first render by
-// seeding the adopted clone with the element's current attributes, classes,
-// and inline styles. Server DOM state is all view-produced, so the diff
-// modules remove any value the client tree does not reassert, converging a
-// nondeterministic render instead of leaving stale, behavior-affecting state
-// (a stale href, a stale class) on the page. class and inline style are
-// partitioned into their own module data so they are not double-managed; the
-// serializer-reflected form attributes (value, checked, selected) land in
-// attrs and are removed the same way, matching a fresh client boot's
-// defaults. The hydration stamp is never seeded, so it is never removed.
-const seedAdoptedState = (element: Element, clone: VNode): void => {
-  const attrs: Record<string, string> = {}
-  for (const attribute of Array.from(element.attributes)) {
-    const name = attribute.name
-    if (
-      name === 'class' ||
-      name === 'style' ||
-      name === HYDRATION_STAMP_ATTRIBUTE
-    ) {
-      continue
-    }
-    attrs[name] = attribute.value
-  }
-
+const classListOf = (element: Element): Record<string, boolean> => {
   const classes: Record<string, boolean> = {}
   for (const className of Array.from(element.classList)) {
     classes[className] = true
   }
+  return classes
+}
 
+const inlineStyleOf = (element: Element): Record<string, string> => {
   const style: Record<string, string> = {}
   if (element instanceof HTMLElement || element instanceof SVGElement) {
     const inlineStyle = element.style
@@ -83,12 +63,119 @@ const seedAdoptedState = (element: Element, clone: VNode): void => {
       style[styleModuleKey(property)] = inlineStyle.getPropertyValue(property)
     }
   }
+  return style
+}
+
+const classTokenSet = (value: string): Set<string> =>
+  new Set(value.split(/\s+/).filter(token => token !== ''))
+
+const declaredClassTokens = (vnode: VNode): Set<string> => {
+  const moduleClass = vnode.data?.class
+  if (moduleClass !== undefined) {
+    return new Set(
+      Object.keys(moduleClass).filter(name => moduleClass[name] === true),
+    )
+  }
+  const attrClass = vnode.data?.attrs?.['class']
+  return typeof attrClass === 'string' ? classTokenSet(attrClass) : new Set()
+}
+
+const setsEqual = (left: Set<string>, right: Set<string>): boolean => {
+  if (left.size !== right.size) {
+    return false
+  }
+  for (const value of left) {
+    if (!right.has(value)) {
+      return false
+    }
+  }
+  return true
+}
+
+// NOTE: attribute-only divergence has no structural signal, so hydration
+// compares the adopted DOM against what the client vnode declares. Class and
+// the client's own raw attributes are compared. Reflected props (href, value)
+// are not in `attrs`, and inline style is subject to browser CSS
+// normalization, so neither is used as a mismatch signal here to avoid
+// false positives. Only whether the values agree is used, never the values.
+const hasAttributeMismatch = (element: Element, vnode: VNode): boolean => {
+  const actualClasses = new Set(Array.from(element.classList))
+  if (!setsEqual(declaredClassTokens(vnode), actualClasses)) {
+    return true
+  }
+
+  const declaredAttrs = vnode.data?.attrs
+  if (declaredAttrs !== undefined) {
+    for (const name of Object.keys(declaredAttrs)) {
+      if (name === 'class' || name === 'style') {
+        continue
+      }
+      const declared = declaredAttrs[name]
+      if (typeof declared === 'boolean') {
+        if (declared !== element.hasAttribute(name)) {
+          return true
+        }
+      } else if (declared === undefined) {
+        if (element.hasAttribute(name)) {
+          return true
+        }
+      } else if (element.getAttribute(name) !== String(declared)) {
+        return true
+      }
+    }
+  }
+
+  return false
+}
+
+// NOTE: reconcile stale server DOM against the client's first render by
+// seeding the adopted clone with the element's current attributes, classes,
+// and inline styles. Server DOM state is all view-produced, so the diff
+// modules remove any value the client tree does not reassert, converging a
+// nondeterministic render instead of leaving stale, behavior-affecting state
+// (a stale href, a stale class) on the page. Each piece of state is seeded
+// into the channel the client vnode owns it through: class and inline style
+// go to their modules only when the client uses those modules, and otherwise
+// ride in attrs (alongside the reflected form attributes value, checked, and
+// selected), so no value is written by one module and then removed as stale
+// state by another. The hydration stamp is never seeded, so it is never
+// removed.
+const seedAdoptedState = (
+  element: Element,
+  vnode: VNode,
+  clone: VNode,
+  status: HydrationStatus,
+): void => {
+  const usesClassModule = vnode.data?.class !== undefined
+  const usesStyleModule = vnode.data?.style !== undefined
+
+  const attrs: Record<string, string> = {}
+  for (const attribute of Array.from(element.attributes)) {
+    const name = attribute.name
+    if (name === HYDRATION_STAMP_ATTRIBUTE) {
+      continue
+    }
+    if (name === 'class' && usesClassModule) {
+      continue
+    }
+    if (name === 'style' && usesStyleModule) {
+      continue
+    }
+    attrs[name] = attribute.value
+  }
+
+  const classes = usesClassModule ? classListOf(element) : {}
+  const style = usesStyleModule ? inlineStyleOf(element) : {}
 
   clone.data = {
     ...clone.data,
     ...(Object.keys(attrs).length > 0 ? { attrs } : {}),
     ...(Object.keys(classes).length > 0 ? { class: classes } : {}),
     ...(Object.keys(style).length > 0 ? { style } : {}),
+  }
+
+  if (hasAttributeMismatch(element, vnode)) {
+    detectMismatch(status)
   }
 }
 
@@ -127,6 +214,16 @@ const hasOnlyTextContent = (element: Element): boolean => {
 
 const matchesTag = (element: Element, selector: string): boolean =>
   element.tagName.toLowerCase() === tagNameFromSelector(selector).toLowerCase()
+
+// The namespace a vnode expects is carried in `data.ns` for foreign content
+// (SVG, MathML) and is otherwise HTML. An element whose namespace disagrees
+// (an HTML element parsed inside an SVG integration point, say) must be
+// rebuilt rather than adopted, since the two are not interchangeable.
+const namespaceOf = (vnode: VNode): string =>
+  typeof vnode.data?.ns === 'string' ? vnode.data.ns : HTML_NAMESPACE
+
+const matchesNamespace = (element: Element, vnode: VNode): boolean =>
+  (element.namespaceURI ?? HTML_NAMESPACE) === namespaceOf(vnode)
 
 const cloneOf = (vnode: VNode, elm: Node): VNode => {
   const clone: VNode = {
@@ -200,7 +297,7 @@ const adoptElement = (
   const clone = cloneOf(vnode, element)
   adopted.add(element)
 
-  seedAdoptedState(element, clone)
+  seedAdoptedState(element, vnode, clone, status)
 
   // NOTE: a controlled textarea serializes its value as text content, which
   // sets the element's defaultValue. A fresh boot sets only the value
@@ -321,7 +418,11 @@ const adoptElement = (
       continue
     }
 
-    if (!isElement(domChild) || !matchesTag(domChild, child.sel)) {
+    if (
+      !isElement(domChild) ||
+      !matchesTag(domChild, child.sel) ||
+      !matchesNamespace(domChild, child)
+    ) {
       detectMismatch(status)
       clearChildren(element)
       clone.children = []

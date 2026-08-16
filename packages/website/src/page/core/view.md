@@ -67,11 +67,17 @@ Where no builder is in scope, typically module scope, `foldkit/html` exports `in
 
 Inert to Foldkit's dispatch, not to the browser. A raw DOM attribute still does whatever the browser makes of it, which is how the [crash view](/core/crash-view) gets a working reload button with `h.Attribute('onclick', 'location.reload()')`. What `never` rules out is a Message reaching `update`, not every possible behavior.
 
-:::Warning{label="Raw HTML and script attributes need trusted content"}
-`h.InnerHTML` and `h.Srcdoc` render their strings as raw HTML, and a raw `onclick`-style attribute runs its string as script. Foldkit does not sanitize these: it passes the content through verbatim, in the browser and in server-rendered HTML alike. Only ever pass content you control. A value built from user input, a URL parameter, or an API response is a cross-site scripting vector here, so escape or sanitize it first, or build the markup with `h` elements instead.
+:::Warning{label="Raw HTML, script sources, and script attributes need trusted content"}
+Several inputs run whatever you pass them, in the browser and in server-rendered HTML alike, and Foldkit does not sanitize them:
+
+- `h.InnerHTML` and `h.Srcdoc` render their strings as raw HTML.
+- A raw `onclick`-style attribute runs its string as script.
+- The `src` of a `<script>` or `<iframe>`, and the `data` of an `<object>`, load and run whatever they point at, an `http(s)` or `data:` URL included.
+
+Only ever pass content you control to these. A value built from user input, a URL parameter, or an API response is a cross-site scripting vector here, so build the markup from trusted inputs, or use `h` elements instead of raw HTML.
 :::
 
-Navigation and resource URL attributes are safer by default. `h.Href`, `h.Src`, `h.Action`, and `h.Formaction` neutralize a `javascript:` or `vbscript:` URL (control-character obfuscation included) to an empty value, so an untrusted value bound to them cannot execute script. Every other URL, including relative paths, `http(s)`, `mailto`, `tel`, and `data:`, passes through unchanged.
+`h.Href`, `h.Src`, `h.Action`, and `h.Formaction` neutralize a `javascript:` or `vbscript:` URL (control-character obfuscation included) to an empty value, which stops the classic scheme-based injection on a link or form. That is a safety net, not a guarantee that any URL is safe: a `<script>` or `<iframe>` still runs an `http(s)` or `data:` source it is handed, so a URL that loads code must be trusted content like the sinks above.
 
 ## Event Handling
 

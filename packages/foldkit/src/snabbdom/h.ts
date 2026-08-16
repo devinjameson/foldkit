@@ -13,13 +13,21 @@ export type VNodeChildElement =
 export type ArrayOrElement<T> = T | Array<T>
 export type VNodeChildren = ArrayOrElement<VNodeChildElement>
 
+// Inside SVG, the content of foreignObject, desc, and title is parsed in the
+// HTML namespace (they are SVG's HTML integration points), so the SVG
+// namespace must not propagate to their children.
+const SVG_HTML_INTEGRATION_POINTS = new Set(['foreignObject', 'desc', 'title'])
+
 export function addNS(
   data: any,
   children: Array<VNode | string> | undefined,
   sel: string | undefined,
 ): void {
   data.ns = 'http://www.w3.org/2000/svg'
-  if (sel !== 'foreignObject' && children !== undefined) {
+  if (
+    (sel === undefined || !SVG_HTML_INTEGRATION_POINTS.has(sel)) &&
+    children !== undefined
+  ) {
     for (let i = 0; i < children.length; ++i) {
       const child = children[i]!
       if (typeof child === 'string') continue

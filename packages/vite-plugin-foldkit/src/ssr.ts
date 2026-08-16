@@ -67,20 +67,29 @@ const toWebRequest = (
 // path resolves to the template or the client accepts HTML (Accept parsed
 // with quality values, so `text/html;q=0` is refused); OPTIONS and TRACE are
 // left to Vite; other methods reach the entry, which may respond directly.
-const shouldRenderRequest = (nodeRequest: Connect.IncomingMessage): boolean => {
+// 'RenderVaryAccept' marks a render whose HTML-or-not decision hinged on the
+// Accept header (a deep route, not a template path), so the response must
+// carry Vary: Accept for shared caches, matching a production host.
+type RenderDecision = 'Skip' | 'Render' | 'RenderVaryAccept'
+
+const renderDecision = (
+  nodeRequest: Connect.IncomingMessage,
+): RenderDecision => {
   const method = nodeRequest.method ?? 'GET'
   const url = nodeRequest.originalUrl ?? nodeRequest.url ?? '/'
   if (method === 'GET' || method === 'HEAD') {
+    if (Server.resolvesToIndexHtml(url)) {
+      return 'Render'
+    }
     const accept = nodeRequest.headers.accept
-    return (
-      Server.resolvesToIndexHtml(url) ||
-      Server.acceptsHtml(Predicate.isString(accept) ? accept : undefined)
-    )
+    return Server.acceptsHtml(Predicate.isString(accept) ? accept : undefined)
+      ? 'RenderVaryAccept'
+      : 'Skip'
   }
   if (method === 'OPTIONS' || method === 'TRACE') {
-    return false
+    return 'Skip'
   }
-  return true
+  return 'Render'
 }
 
 const renderRequest = (
@@ -130,10 +139,23 @@ const renderRequest = (
     )
   })
 
+const varyHeaderValue = (
+  value: string | number | Array<string> | undefined,
+): string | undefined => {
+  if (Array.isArray(value)) {
+    return value.join(', ')
+  }
+  if (typeof value === 'string') {
+    return value
+  }
+  return undefined
+}
+
 const sendWebResponse = async (
   webResponse: Response,
   nodeRequest: Connect.IncomingMessage,
   nodeResponse: ServerResponse,
+  varyAccept: boolean,
 ): Promise<void> => {
   nodeResponse.statusCode = webResponse.status
   if (webResponse.statusText !== '') {
@@ -159,6 +181,15 @@ const sendWebResponse = async (
 
   if (Array.isArrayNonEmpty(setCookieHeaders)) {
     nodeResponse.setHeader('set-cookie', setCookieHeaders)
+  }
+
+  if (varyAccept) {
+    // Merge into whatever Vary already sits on the node response (the app's
+    // own, plus Vite's own Vary: Origin), so declaring Accept does not drop it.
+    nodeResponse.setHeader(
+      'vary',
+      Server.varyWithAccept(varyHeaderValue(nodeResponse.getHeader('vary'))),
+    )
   }
 
   if (nodeRequest.method === 'HEAD' || webResponse.body === null) {
@@ -192,13 +223,15 @@ export const foldkitSsr = (options: FoldkitSsrOptions): Plugin => ({
         nodeResponse: ServerResponse,
         next: Connect.NextFunction,
       ) => {
-        if (!shouldRenderRequest(nodeRequest)) {
+        const decision = renderDecision(nodeRequest)
+        if (decision === 'Skip') {
           next()
           return
         }
+        const varyAccept = decision === 'RenderVaryAccept'
         void Effect.runPromise(renderRequest(server, options, nodeRequest))
           .then(response =>
-            sendWebResponse(response, nodeRequest, nodeResponse),
+            sendWebResponse(response, nodeRequest, nodeResponse, varyAccept),
           )
           .catch((error: unknown) => {
             if (error instanceof Error) {

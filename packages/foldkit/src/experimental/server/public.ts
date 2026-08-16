@@ -13,6 +13,7 @@ export {
   renderToString,
   resolvesToIndexHtml,
   toResponse,
+  varyWithAccept,
 } from './index.js'
 
 export type {
