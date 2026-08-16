@@ -13,7 +13,7 @@ Until today, Foldkit was purely an SPA framework. The server sent an HTML file t
 There are issues with this approach in isolation:
 
 - The user sees the server's HTML before the JavaScript loads. Unless you prerender HTML that matches the loaded app, that is typically a blank page.
-- There is no first-class way to do SSG, only a heavy prerender step: for example, using Playwright to visit each route and capture HTML (which the Foldkit website used to do).
+- There is no first-class way to do SSG. The workaround is a heavy prerender step: for example, using Playwright to visit each route and capture HTML (which the Foldkit website used to do).
 - There is no first-class way to do request-time SSR: for example, the server sending the client an initial HTML file personalized to the logged-in user.
 
 There was one more problem. Foldkit not having SSR was the deal-breaker for [Michael Arnaldi](https://x.com/MichaelArnaldi), BDFL of Effect. And that simply will not do.
@@ -48,8 +48,6 @@ With SSR, the server runs the front of that sequence and the browser finishes it
 - **On the client**, `init` runs again with those same flags, rebuilds the identical Model, and `view` renders it. Instead of replacing the server's HTML, hydration adopts it in place.
 
 Same flags, same `init`, same `view` on both sides, so there is no separate server-side Model to reconcile with the client's.
-
-Those serialized flags are public HTML, visible in the page source, so keep secrets out of them.
 
 After hydration, the initial Commands run, and your Foldkit application behaves like a typical SPA with client-side navigation.
 
