@@ -1,226 +1,118 @@
+import type { DefaultTreeAdapterMap } from 'parse5'
+import { parse } from 'parse5'
+
 import { escapeAttributeValue, escapeText } from './serialize.js'
 import { type RenderedApplication } from './server.js'
 
-const TITLE_PATTERN = /<title>[^<]*<\/title>/
-const HTML_OPEN_TAG_PATTERN = /<html([^>]*)>/
-
-// NOTE: hand-written templates use any of HTML's three attribute forms, so
-// the head element matchers and the attribute stripper accept double-quoted,
-// single-quoted, and unquoted values. Matching only one form would silently
-// skip the element or emit a duplicate attribute whose stale first value
-// wins when the browser parses the page.
-const attributeWithValuePattern = (name: string, value: string): string =>
-  `${name}\\s*=\\s*(?:"${value}"|'${value}'|${value}(?=[\\s/>]))`
-
-const CANONICAL_LINK_PATTERN = new RegExp(
-  `<link([^>]*${attributeWithValuePattern('rel', 'canonical')}[^>]*?)\\s*/?>`,
-)
-const OG_URL_META_PATTERN = new RegExp(
-  `<meta([^>]*${attributeWithValuePattern('property', 'og:url')}[^>]*?)\\s*/?>`,
-)
-
 const DEFAULT_CONTAINER_ID = 'root'
 
-const ATTRIBUTE_TOKEN_PATTERN =
-  /[^\s=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?/g
+// NOTE: the template's mutation targets (the container, the <title>, the
+// <html> element, and the canonical/og:url head elements) are located by
+// parsing the template with a real HTML tokenizer and reading each element's
+// source offsets, not by matching regular expressions. A regex cannot model
+// the tokenizer's states, so a `>` inside a quoted attribute, a
+// canonical-looking or container-looking string inside a <script>, the
+// script-data-double-escaped state, and a comment-terminating metadata value
+// all let context-blind matching write request or application text into an
+// executable JavaScript or unintended markup position. Parsing resolves every
+// target to an actual element position; the untouched bytes of the template
+// are spliced through verbatim.
 
-const attributeNameOf = (token: string): string => {
-  const nameMatch = /^[^\s=]+/.exec(token)
-  return nameMatch === null ? token : nameMatch[0]
+type Element = DefaultTreeAdapterMap['element']
+type ChildNode = DefaultTreeAdapterMap['childNode']
+type Attribute = Readonly<{ name: string; value: string }>
+type ParentNode = Readonly<{ childNodes: ReadonlyArray<ChildNode> }>
+
+type Mutation = Readonly<{ start: number; end: number; replacement: string }>
+
+const isElement = (node: ChildNode): node is Element => 'tagName' in node
+
+const collectMatching = (
+  root: ParentNode,
+  predicate: (element: Element) => boolean,
+): ReadonlyArray<Element> => {
+  const found: Array<Element> = []
+  const walk = (node: ParentNode): void => {
+    for (const child of node.childNodes) {
+      if (isElement(child)) {
+        if (predicate(child)) {
+          found.push(child)
+        }
+        walk(child)
+      }
+    }
+  }
+  walk(root)
+  return found
 }
 
-// NOTE: the attribute string is tokenized rather than searched, so an
-// attribute-name lookalike inside another attribute's quoted value can
-// neither be corrupted nor shadow the replacement.
-const setAttribute = (
-  attributes: string,
+const firstMatching = (
+  root: ParentNode,
+  predicate: (element: Element) => boolean,
+): Element | undefined => collectMatching(root, predicate)[0]
+
+const attributeValue = (element: Element, name: string): string | undefined =>
+  element.attrs.find(attribute => attribute.name === name)?.value
+
+const withAttribute = (
+  attributes: ReadonlyArray<Attribute>,
   name: string,
   value: string,
-): string => {
-  const tokens = attributes.match(ATTRIBUTE_TOKEN_PATTERN) ?? []
-  const keptTokens = tokens.filter(
-    token => attributeNameOf(token).toLowerCase() !== name.toLowerCase(),
-  )
-  const kept = keptTokens.map(token => ` ${token}`).join('')
-  return `${kept} ${name}="${escapeAttributeValue(value)}"`
-}
-
-type TemplateRegion = Readonly<{ start: number; end: number }>
-
-// A single alternation scanned left to right so the earliest opener wins:
-// an HTML comment, a `<script>` element, or a `<style>` element. Matching
-// them in document order means a comment that contains `<script` is taken as
-// one comment, and a script whose text contains `<!--` is taken as one
-// script, rather than the two interleaving incorrectly.
-//
-// The raw-text end tag matches the tokenizer's appropriate-end-tag rule
-// rather than a bare `</tag>`: the tag name must be followed by ASCII
-// whitespace, `/`, or `>` (so `</script ignored>` and `</script/>` close the
-// element the way a browser reads them), and any attributes or junk before
-// the final `>` are consumed. A raw-text element that never closes runs to
-// the end of the template, so its content is never mistaken for markup.
-const INERT_REGION_PATTERN =
-  /<!--[\s\S]*?--!?>|<script\b[^>]*>[\s\S]*?(?:<\/script(?=[\t\n\f\r />])[^>]*>|$)|<style\b[^>]*>[\s\S]*?(?:<\/style(?=[\t\n\f\r />])[^>]*>|$)/gi
-const HEAD_OPEN_PATTERN = /<head[^>]*>/gi
-const HEAD_CLOSE_PATTERN = /<\/head>/gi
-
-// NOTE: the head scan skips comments and raw-text elements. Comments and the
-// content of <script> and <style> can contain strings that look like head
-// elements (a `<link rel=canonical>` inside an inline script's source), and
-// stamping a metadata value into a script's JavaScript string would escape
-// it for an HTML attribute, not a JS string, producing executable output.
-const inertRegionsOf = (template: string): ReadonlyArray<TemplateRegion> => {
-  INERT_REGION_PATTERN.lastIndex = 0
-  const regions: Array<TemplateRegion> = []
-  let match = INERT_REGION_PATTERN.exec(template)
-  while (match !== null) {
-    regions.push({ start: match.index, end: match.index + match[0].length })
-    match = INERT_REGION_PATTERN.exec(template)
+): ReadonlyArray<Attribute> => {
+  const exists = attributes.some(attribute => attribute.name === name)
+  if (exists) {
+    return attributes.map(attribute =>
+      attribute.name === name ? { name, value } : attribute,
+    )
   }
-  return regions
+  return [...attributes, { name, value }]
 }
 
-const isInsideAny = (
-  regions: ReadonlyArray<TemplateRegion>,
-  index: number,
+const renderAttributes = (attributes: ReadonlyArray<Attribute>): string =>
+  attributes
+    .map(
+      attribute =>
+        ` ${attribute.name}="${escapeAttributeValue(attribute.value)}"`,
+    )
+    .join('')
+
+const renderStartTag = (
+  tagName: string,
+  attributes: ReadonlyArray<Attribute>,
+): string => `<${tagName}${renderAttributes(attributes)}>`
+
+const renderVoidElement = (
+  tagName: string,
+  attributes: ReadonlyArray<Attribute>,
+): string => `<${tagName}${renderAttributes(attributes)} />`
+
+const applyMutations = (
+  template: string,
+  mutations: ReadonlyArray<Mutation>,
+): string => {
+  const ordered = [...mutations].sort((left, right) => right.start - left.start)
+  let result = template
+  for (const mutation of ordered) {
+    result =
+      result.slice(0, mutation.start) +
+      mutation.replacement +
+      result.slice(mutation.end)
+  }
+  return result
+}
+
+// A valid container is `<div id="{containerId}"></div>` with no other
+// attributes and no children, so the rendered application replaces the exact
+// placeholder and nothing else.
+const isContainerPlaceholder = (
+  element: Element,
+  containerId: string,
 ): boolean =>
-  regions.some(region => index >= region.start && index < region.end)
-
-const execOutsideRegions = (
-  template: string,
-  pattern: RegExp,
-  excluded: ReadonlyArray<TemplateRegion>,
-  fromIndex: number,
-): RegExpExecArray | null => {
-  pattern.lastIndex = fromIndex
-  let match = pattern.exec(template)
-  while (match !== null && isInsideAny(excluded, match.index)) {
-    match = pattern.exec(template)
-  }
-  return match
-}
-
-// NOTE: title and head-element matching are scoped to the template's head
-// and split at inert boundaries: an SVG accessibility <title> in the body is
-// content, not the document title, and a commented-out or scripted head
-// element must be left alone rather than stamped inside inert text. The
-// head's own boundaries are located outside inert regions too, so a <head>
-// or </head> inside a comment or a script string neither starts nor
-// truncates the search. A template without a <head> falls back to
-// whole-document scanning.
-const headSearchRegions = (template: string): ReadonlyArray<TemplateRegion> => {
-  const inertRegions = inertRegionsOf(template)
-  const headOpen = execOutsideRegions(
-    template,
-    HEAD_OPEN_PATTERN,
-    inertRegions,
-    0,
-  )
-  const start = headOpen === null ? 0 : headOpen.index
-  const headClose =
-    headOpen === null
-      ? null
-      : execOutsideRegions(
-          template,
-          HEAD_CLOSE_PATTERN,
-          inertRegions,
-          headOpen.index + headOpen[0].length,
-        )
-  const end =
-    headClose === null ? template.length : headClose.index + headClose[0].length
-
-  const regions: Array<TemplateRegion> = []
-  let segmentStart = start
-  for (const inertRegion of inertRegions) {
-    if (inertRegion.end <= start || inertRegion.start >= end) {
-      continue
-    }
-    regions.push({ start: segmentStart, end: inertRegion.start })
-    segmentStart = inertRegion.end
-  }
-  regions.push({ start: segmentStart, end })
-  return regions
-}
-
-const countInHead = (template: string, pattern: RegExp): number => {
-  const globalPattern = new RegExp(pattern.source, `${pattern.flags}g`)
-  return headSearchRegions(template).reduce(
-    (count, region) =>
-      count +
-      (template.slice(region.start, region.end).match(globalPattern)?.length ??
-        0),
-    0,
-  )
-}
-
-const replaceFirstInHead = (
-  template: string,
-  pattern: RegExp,
-  replacer: (match: RegExpExecArray) => string,
-): string => {
-  for (const region of headSearchRegions(template)) {
-    const segment = template.slice(region.start, region.end)
-    const match = pattern.exec(segment)
-    if (match !== null) {
-      return (
-        template.slice(0, region.start + match.index) +
-        replacer(match) +
-        template.slice(region.start + match.index + match[0].length)
-      )
-    }
-  }
-  return template
-}
-
-// NOTE: rewrites the `<html>` element's `lang` and `dir` from the server
-// render so the served shell carries the right language on first paint,
-// before the runtime boots. Only sets an attribute the render provides,
-// leaving the template's value in place otherwise.
-const applyRootAttributes = (
-  template: string,
-  lang: string | undefined,
-  dir: string | undefined,
-): string => {
-  if (lang === undefined && dir === undefined) {
-    return template
-  }
-
-  return template.replace(HTML_OPEN_TAG_PATTERN, (_match, attributes) => {
-    const withLang =
-      lang === undefined ? attributes : setAttribute(attributes, 'lang', lang)
-    const withLangAndDir =
-      dir === undefined ? withLang : setAttribute(withLang, 'dir', dir)
-    return `<html${withLangAndDir}>`
-  })
-}
-
-const stampCanonical = (
-  template: string,
-  canonical: string | undefined,
-): string => {
-  if (canonical === undefined) {
-    return template
-  }
-
-  return replaceFirstInHead(template, CANONICAL_LINK_PATTERN, match => {
-    const [, attributes] = match
-    return `<link${setAttribute(attributes ?? '', 'href', canonical)} />`
-  })
-}
-
-const stampOgUrl = (template: string, ogUrl: string | undefined): string => {
-  if (ogUrl === undefined) {
-    return template
-  }
-
-  return replaceFirstInHead(template, OG_URL_META_PATTERN, match => {
-    const [, attributes] = match
-    return `<meta${setAttribute(attributes ?? '', 'content', ogUrl)} />`
-  })
-}
-
-const containerPlaceholder = (containerId: string): string =>
-  `<div id="${containerId}"></div>`
+  element.tagName === 'div' &&
+  element.attrs.length === 1 &&
+  element.attrs[0]?.name === 'id' &&
+  element.attrs[0]?.value === containerId &&
+  element.childNodes.length === 0
 
 /** Options for {@link injectIntoTemplate}.
  *
@@ -246,15 +138,17 @@ export type InjectIntoTemplateOptions = Readonly<{
  * element the template does not carry, leaves the template untouched at that
  * spot.
  *
- * The container contract is deliberately exact. The template must contain
- * one `<div id="root"></div>` placeholder, or the equivalent exact markup for
- * `containerId`, with no additional attributes or whitespace inside it. It
- * must also contain exactly one `<title>` element. Throws when either required
- * location is missing or appears more than once.
+ * The template is parsed with an HTML tokenizer, so every mutation targets a
+ * real element rather than a byte pattern. The container contract is
+ * deliberately exact: the template must contain one `<div id="root"></div>`
+ * placeholder, or the equivalent for `containerId`, with no additional
+ * attributes and no content. It must also contain exactly one `<title>`
+ * element in its head. Throws when either required location is missing or
+ * appears more than once.
  *
- * This helper is pure string work with no module state, so a host process may
- * import it directly even when the render itself must stay inside the server
- * entry's module graph.
+ * This helper is pure with no module state, so a host process may import it
+ * directly even when the render itself must stay inside the server entry's
+ * module graph.
  *
  * @example
  * ```typescript
@@ -269,53 +163,120 @@ export const injectIntoTemplate = (
   options?: InjectIntoTemplateOptions,
 ): string => {
   const containerId = options?.containerId ?? DEFAULT_CONTAINER_ID
-  const placeholder = containerPlaceholder(containerId)
+  const document = parse(template, { sourceCodeLocationInfo: true })
 
-  if (!template.includes(placeholder)) {
+  const containers = collectMatching(document, element =>
+    isContainerPlaceholder(element, containerId),
+  )
+  if (containers.length === 0) {
     throw new Error(
-      `[foldkit] injectIntoTemplate found no exact ${placeholder} placeholder in the template. ` +
+      `[foldkit] injectIntoTemplate found no exact <div id="${containerId}"></div> placeholder in the template. ` +
         'Add that markup where the application root belongs, or pass the container id the template uses.',
     )
   }
-
-  if (template.replace(placeholder, '').includes(placeholder)) {
+  if (containers.length > 1) {
     throw new Error(
-      `[foldkit] injectIntoTemplate found more than one ${placeholder} placeholder in the template. ` +
+      `[foldkit] injectIntoTemplate found more than one <div id="${containerId}"></div> placeholder in the template. ` +
         'Keep exactly one placeholder for each application root.',
     )
   }
 
-  const titleCount = countInHead(template, TITLE_PATTERN)
-  if (titleCount === 0) {
+  const head = firstMatching(document, element => element.tagName === 'head')
+  const titles =
+    head === undefined
+      ? []
+      : collectMatching(head, element => element.tagName === 'title')
+  if (titles.length === 0) {
     throw new Error(
       '[foldkit] injectIntoTemplate found no <title> element in the template head. ' +
         'Add exactly one <title> where the rendered Document title belongs.',
     )
   }
-
-  if (titleCount > 1) {
+  if (titles.length > 1) {
     throw new Error(
       '[foldkit] injectIntoTemplate found more than one <title> element in the template head. ' +
         'Keep exactly one title for the rendered Document.',
     )
   }
 
-  const withHeadFields = stampOgUrl(
-    stampCanonical(
-      applyRootAttributes(template, rendered.lang, rendered.dir),
-      rendered.canonical,
-    ),
-    rendered.ogUrl,
-  )
+  const mutations: Array<Mutation> = []
 
-  // NOTE: the body replacement is passed as a function. A string second
-  // argument to `String.replace` treats `$&`, `$\``, `$'`, and `$$` as
-  // insertion patterns, so a `$` sequence in the rendered markup would
-  // corrupt the output; a replacer function inserts its return value
-  // verbatim. `replaceFirstInHead` splices without insertion patterns.
-  return replaceFirstInHead(
-    withHeadFields,
-    TITLE_PATTERN,
-    () => `<title>${escapeText(rendered.title)}</title>`,
-  ).replace(placeholder, () => rendered.html)
+  const container = containers[0]!
+  const containerLocation = container.sourceCodeLocation
+  if (containerLocation != null) {
+    mutations.push({
+      start: containerLocation.startOffset,
+      end: containerLocation.endOffset,
+      replacement: rendered.html,
+    })
+  }
+
+  const title = titles[0]!
+  const titleLocation = title.sourceCodeLocation
+  if (titleLocation?.startTag != null && titleLocation.endTag != null) {
+    mutations.push({
+      start: titleLocation.startTag.endOffset,
+      end: titleLocation.endTag.startOffset,
+      replacement: escapeText(rendered.title),
+    })
+  }
+
+  const html = firstMatching(document, element => element.tagName === 'html')
+  if (
+    (rendered.lang !== undefined || rendered.dir !== undefined) &&
+    html?.sourceCodeLocation?.startTag != null
+  ) {
+    let attributes: ReadonlyArray<Attribute> = html.attrs
+    if (rendered.lang !== undefined) {
+      attributes = withAttribute(attributes, 'lang', rendered.lang)
+    }
+    if (rendered.dir !== undefined) {
+      attributes = withAttribute(attributes, 'dir', rendered.dir)
+    }
+    mutations.push({
+      start: html.sourceCodeLocation.startTag.startOffset,
+      end: html.sourceCodeLocation.startTag.endOffset,
+      replacement: renderStartTag('html', attributes),
+    })
+  }
+
+  if (rendered.canonical !== undefined && head !== undefined) {
+    const canonical = firstMatching(
+      head,
+      element =>
+        element.tagName === 'link' &&
+        attributeValue(element, 'rel')?.toLowerCase() === 'canonical',
+    )
+    if (canonical?.sourceCodeLocation != null) {
+      mutations.push({
+        start: canonical.sourceCodeLocation.startOffset,
+        end: canonical.sourceCodeLocation.endOffset,
+        replacement: renderVoidElement(
+          'link',
+          withAttribute(canonical.attrs, 'href', rendered.canonical),
+        ),
+      })
+    }
+  }
+
+  if (rendered.ogUrl !== undefined && head !== undefined) {
+    const ogUrl = firstMatching(
+      head,
+      element =>
+        element.tagName === 'meta' &&
+        attributeValue(element, 'property')?.toLowerCase() === 'og:url',
+    )
+    if (ogUrl?.sourceCodeLocation != null) {
+      mutations.push({
+        start: ogUrl.sourceCodeLocation.startOffset,
+        end: ogUrl.sourceCodeLocation.endOffset,
+        replacement: renderVoidElement(
+          'meta',
+          withAttribute(ogUrl.attrs, 'content', rendered.ogUrl),
+        ),
+      })
+    }
+  }
+
+  return applyMutations(template, mutations)
 }

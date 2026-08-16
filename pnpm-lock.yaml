@@ -1847,6 +1847,10 @@ importers:
         version: 6.0.3
 
   packages/foldkit:
+    dependencies:
+      parse5:
+        specifier: ^8.0.1
+        version: 8.0.1
     devDependencies:
       '@effect/vitest':
         specifier: 4.0.0-rc.109

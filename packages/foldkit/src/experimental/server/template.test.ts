@@ -201,6 +201,77 @@ describe('injectIntoTemplate', () => {
     )
   })
 
+  it('ignores a canonical-looking string in a script whose open tag has a quoted >', () => {
+    const scriptBlock =
+      '<script data-x="a>b">const c = \'<link rel="canonical" href="x">\'</script>'
+    const template =
+      '<!doctype html><html><head><title>old</title>' +
+      scriptBlock +
+      '<link rel="canonical" href="https://example.com/current" />' +
+      '</head><body><div id="root"></div></body></html>'
+    const result = injectIntoTemplate(
+      template,
+      rendered({ canonical: 'https://example.com/fresh' }),
+    )
+    expect(result).toContain(scriptBlock)
+    expect(result).toContain(
+      '<link rel="canonical" href="https://example.com/fresh" />',
+    )
+  })
+
+  it('ignores head-looking strings in a double-escaped script', () => {
+    const scriptBlock =
+      '<script><!--<script>const c = \'<link rel="canonical" href="x">\';</script>--></script>'
+    const template =
+      '<!doctype html><html><head><title>old</title>' +
+      scriptBlock +
+      '<link rel="canonical" href="https://example.com/current" />' +
+      '</head><body><div id="root"></div></body></html>'
+    const result = injectIntoTemplate(
+      template,
+      rendered({ canonical: 'https://example.com/fresh' }),
+    )
+    expect(result).toContain(scriptBlock)
+    expect(result).toContain(
+      '<link rel="canonical" href="https://example.com/fresh" />',
+    )
+  })
+
+  it('replaces the real container, not a container-looking string in a script', () => {
+    const scriptBlock =
+      '<script>const placeholder = \'<div id="root"></div>\';</script>'
+    const template =
+      '<!doctype html><html><head><title>old</title>' +
+      scriptBlock +
+      '</head><body><div id="root"></div></body></html>'
+    const result = injectIntoTemplate(template, rendered())
+    expect(result).toContain(scriptBlock)
+    expect(result).toContain(
+      '<body><div data-foldkit-app="app">hi</div></body>',
+    )
+  })
+
+  it('stamps the real html lang, leaving an html-looking comment untouched', () => {
+    const comment = '<!-- example shell: <html lang=""> -->'
+    const template =
+      '<!doctype html><html lang="en"><head>' +
+      comment +
+      '<title>old</title></head>' +
+      '<body><div id="root"></div></body></html>'
+    const result = injectIntoTemplate(template, rendered({ lang: 'ar' }))
+    expect(result).toContain('<html lang="ar">')
+    expect(result).toContain(comment)
+  })
+
+  it('escapes an attribute-breaking lang value into the html element', () => {
+    const result = injectIntoTemplate(
+      TEMPLATE,
+      rendered({ lang: 'en" onload="evil()' }),
+    )
+    expect(result).toContain('<html lang="en&quot; onload=&quot;evil()">')
+    expect(result).not.toContain('onload="evil()"')
+  })
+
   it('stamps single-quoted canonical and og:url head elements', () => {
     const template =
       '<!doctype html><html><head><title>old</title>' +

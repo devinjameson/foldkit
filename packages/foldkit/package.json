@@ -165,6 +165,9 @@
     "test": "vitest run --coverage",
     "docs": "typedoc"
   },
+  "dependencies": {
+    "parse5": "^8.0.1"
+  },
   "peerDependencies": {
     "effect": "4.0.0-rc.109"
   },
