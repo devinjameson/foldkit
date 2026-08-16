@@ -67,6 +67,10 @@ Where no builder is in scope, typically module scope, `foldkit/html` exports `in
 
 Inert to Foldkit's dispatch, not to the browser. A raw DOM attribute still does whatever the browser makes of it, which is how the [crash view](/core/crash-view) gets a working reload button with `h.Attribute('onclick', 'location.reload()')`. What `never` rules out is a Message reaching `update`, not every possible behavior.
 
+:::Warning{label="Raw HTML and script attributes need trusted content"}
+`h.InnerHTML` renders its string as raw HTML, and a raw `onclick`-style attribute runs its string as script. Foldkit does not sanitize either one: it passes the content through verbatim, in the browser and in server-rendered HTML alike. Only ever pass content you control. A value built from user input, a URL parameter, or an API response is a cross-site scripting vector here, so escape or sanitize it first, or build the markup with `h` elements instead.
+:::
+
 ## Event Handling
 
 When the customer flags the waiter, that’s a Message. In the view, event handlers work the same way. Instead of imperative callbacks that modify state, you pass a Message, or a function that maps an event to a Message.
