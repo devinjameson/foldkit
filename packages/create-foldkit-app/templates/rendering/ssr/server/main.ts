@@ -1,12 +1,6 @@
+import { Config, Effect, FileSystem, Layer, Match as M, Option } from 'effect'
 import {
-  Config,
-  Effect,
-  FileSystem,
-  Layer,
-  Match as M,
-  String as String_,
-} from 'effect'
-import {
+  Headers as HttpHeaders,
   HttpServer,
   HttpServerError,
   HttpServerRequest,
@@ -15,7 +9,7 @@ import {
 } from 'effect/unstable/http'
 import { Server } from 'foldkit/experimental'
 import { createServer } from 'node:http'
-import { dirname, posix, resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import {
@@ -31,45 +25,6 @@ const PROJECT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const CLIENT_DIR = resolve(PROJECT_DIR, 'dist/client')
 const DEFAULT_PORT = 3000
 
-// NOTE: wildcard and absent Accept headers count as HTML-accepting, so a
-// static miss from fetch defaults (*/*), curl, and health checks renders
-// the application, matching the dev host.
-const acceptsHtml = (request: HttpServerRequest.HttpServerRequest): boolean => {
-  const accept = request.headers['accept']
-  if (accept === undefined) {
-    return true
-  }
-  return (
-    String_.includes('text/html')(accept) || String_.includes('*/*')(accept)
-  )
-}
-
-// NOTE: the static file server percent-decodes and path-normalizes before
-// resolving a file, so the template guard resolves the request the same way.
-// Comparing the raw pathname lets /%2findex.html, /%69ndex.html, /INDEX.HTML,
-// and /foo/../index.html slip past and serve the raw unfilled template that
-// Runtime.hydrate refuses. Backslashes and repeated slashes are collapsed and
-// dot segments resolved before the comparison; an undecodable or null-byte
-// path is treated as non-template and left to the static server to reject.
-const resolvesToTemplate = (
-  request: HttpServerRequest.HttpServerRequest,
-): boolean => {
-  const { pathname } = new URL(request.url, 'http://localhost')
-  let decoded: string
-  try {
-    decoded = decodeURIComponent(pathname)
-  } catch {
-    return false
-  }
-  if (decoded.includes('\0')) {
-    return false
-  }
-  const collapsed = decoded.replace(/\\/g, '/').replace(/\/{2,}/g, '/')
-  const normalized = posix.normalize(collapsed)
-  const relative = normalized.startsWith('/') ? normalized.slice(1) : normalized
-  return relative === '' || relative.toLowerCase() === 'index.html'
-}
-
 const renderRequest = (
   request: HttpServerRequest.HttpServerRequest,
   template: string,
@@ -80,25 +35,42 @@ const renderRequest = (
     return HttpServerResponse.fromWeb(Server.toResponse(template, result))
   })
 
+// A static miss is answered by content negotiation, so the representation
+// depends on the Accept header. Vary: Accept keeps a shared cache from
+// serving one client's representation to another, merged with any Vary the
+// render already set.
+const withVaryAccept = (
+  response: HttpServerResponse.HttpServerResponse,
+): HttpServerResponse.HttpServerResponse => {
+  const vary = Option.match(HttpHeaders.get('vary')(response.headers), {
+    onNone: () => 'accept',
+    onSome: value =>
+      value.toLowerCase().includes('accept') ? value : `${value}, accept`,
+  })
+  return HttpServerResponse.setHeader(response, 'vary', vary)
+}
+
 const isRouteNotFound = (error: HttpServerError.HttpServerError): boolean =>
   error.reason._tag === 'RouteNotFound'
 
-type RequestKind = 'Application' | 'StaticFile'
+type RequestKind = 'Render' | 'StaticOrRender' | 'MethodNotAllowed'
 
-// NOTE: `/` and `/index.html` are application requests even though a file
-// exists for them: the file on disk is the unfilled template, and serving it
-// raw would hand the browser an unstamped shell that Runtime.hydrate
-// refuses.
+// NOTE: `/` and `/index.html` (and the encoded paths that resolve to them)
+// are application requests even though a file exists for them: the file on
+// disk is the unfilled template, and serving it raw would hand the browser an
+// unstamped shell that Runtime.hydrate refuses. OPTIONS and other non-page
+// methods are not rendered.
 const requestKind = (
   request: HttpServerRequest.HttpServerRequest,
 ): RequestKind => {
-  if (request.method !== 'GET' && request.method !== 'HEAD') {
-    return 'Application'
+  const method = request.method
+  if (method === 'GET' || method === 'HEAD') {
+    return Server.resolvesToIndexHtml(request.url) ? 'Render' : 'StaticOrRender'
   }
-  if (resolvesToTemplate(request)) {
-    return 'Application'
+  if (method === 'OPTIONS' || method === 'TRACE') {
+    return 'MethodNotAllowed'
   }
-  return 'StaticFile'
+  return 'Render'
 }
 
 const makeHandler = Effect.gen(function* () {
@@ -109,20 +81,27 @@ const makeHandler = Effect.gen(function* () {
     index: undefined,
   })
 
-  // NOTE: a static miss from an HTML-accepting client falls through to the
-  // application: deep links to client routes have no file on disk.
-  const serveStaticFile = (request: HttpServerRequest.HttpServerRequest) =>
+  // A GET/HEAD miss is Accept-negotiated: an HTML-accepting client (a deep
+  // link into a client route, a browser, curl, a health check) renders the
+  // application; anything else gets a 404. Both carry Vary: Accept.
+  const serveStaticOrRender = (request: HttpServerRequest.HttpServerRequest) =>
     staticFiles.pipe(
-      Effect.catchIf(
-        error => isRouteNotFound(error) && acceptsHtml(request),
-        () => renderRequest(request, template),
+      Effect.catchIf(isRouteNotFound, () =>
+        Server.acceptsHtml(request.headers['accept'])
+          ? renderRequest(request, template).pipe(Effect.map(withVaryAccept))
+          : Effect.succeed(
+              withVaryAccept(HttpServerResponse.empty({ status: 404 })),
+            ),
       ),
     )
 
   return HttpServerRequest.HttpServerRequest.use(request =>
     M.value(requestKind(request)).pipe(
-      M.when('Application', () => renderRequest(request, template)),
-      M.when('StaticFile', () => serveStaticFile(request)),
+      M.when('Render', () => renderRequest(request, template)),
+      M.when('StaticOrRender', () => serveStaticOrRender(request)),
+      M.when('MethodNotAllowed', () =>
+        Effect.succeed(HttpServerResponse.empty({ status: 405 })),
+      ),
       M.exhaustive,
     ),
   )

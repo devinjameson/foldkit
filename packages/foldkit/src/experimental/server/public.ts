@@ -8,8 +8,10 @@ export {
   Responded,
   ServerFlagsEncodeError,
   ServerSerializationError,
+  acceptsHtml,
   injectIntoTemplate,
   renderToString,
+  resolvesToIndexHtml,
   toResponse,
 } from './index.js'
 

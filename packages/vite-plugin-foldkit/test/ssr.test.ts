@@ -90,6 +90,26 @@ describe('foldkitSsr', () => {
     expect(await response.text()).toContain('data-foldkit-app="app"')
   })
 
+  it('renders a template request regardless of Accept, matching a production host', async () => {
+    const origin = await startServer()
+    const response = await fetch(`${origin}/index.html`, {
+      headers: { accept: 'application/json' },
+    })
+
+    expect(response.status).toBe(203)
+    expect(await response.text()).toContain('data-foldkit-app="app"')
+  })
+
+  it('does not render for a client that refuses HTML with q=0', async () => {
+    const origin = await startServer()
+    const response = await fetch(`${origin}/rendered`, {
+      headers: { accept: 'text/html;q=0' },
+    })
+
+    expect(response.status).not.toBe(203)
+    expect(await response.text()).not.toContain('data-foldkit-app')
+  })
+
   it('resolves relative template assets against the template on nested routes', async () => {
     const origin = await startServer()
     const response = await fetch(`${origin}/deep/nested`, {

@@ -1,4 +1,4 @@
-import { Array, Effect, Predicate, String as String_ } from 'effect'
+import { Array, Effect, Predicate } from 'effect'
 import { Server } from 'foldkit/experimental'
 import { readFile } from 'node:fs/promises'
 import type { ServerResponse } from 'node:http'
@@ -60,23 +60,27 @@ const toWebRequest = (
   return new Request(new URL(url, `http://${host}`), requestInit)
 }
 
-// NOTE: this middleware runs after Vite's own, so a GET reaching it is not a
-// servable module or asset, and a production host would render HTML for it.
-// Dev matches: render for browsers (text/html), for clients accepting
-// anything (*/*, the fetch default), and for clients sending no Accept
-// header at all, such as curl and health checks.
+// NOTE: this middleware runs after Vite's own, so a request reaching it is
+// not a servable module or asset. It classifies the request the same way a
+// production host does, through the shared `foldkit/experimental/server`
+// helpers, so development predicts production: a GET or HEAD renders when the
+// path resolves to the template or the client accepts HTML (Accept parsed
+// with quality values, so `text/html;q=0` is refused); OPTIONS and TRACE are
+// left to Vite; other methods reach the entry, which may respond directly.
 const shouldRenderRequest = (nodeRequest: Connect.IncomingMessage): boolean => {
   const method = nodeRequest.method ?? 'GET'
-  if (method !== 'GET' && method !== 'HEAD') {
-    return true
+  const url = nodeRequest.originalUrl ?? nodeRequest.url ?? '/'
+  if (method === 'GET' || method === 'HEAD') {
+    const accept = nodeRequest.headers.accept
+    return (
+      Server.resolvesToIndexHtml(url) ||
+      Server.acceptsHtml(Predicate.isString(accept) ? accept : undefined)
+    )
   }
-  const accept = nodeRequest.headers.accept
-  if (!Predicate.isString(accept)) {
-    return true
+  if (method === 'OPTIONS' || method === 'TRACE') {
+    return false
   }
-  return (
-    String_.includes('text/html')(accept) || String_.includes('*/*')(accept)
-  )
+  return true
 }
 
 const renderRequest = (
