@@ -65,15 +65,15 @@ type RequestKind = 'Render' | 'StaticOrRender' | 'MethodNotAllowed'
 const requestKind = ({
   method,
   url,
-}: HttpServerRequest.HttpServerRequest): RequestKind => {
-  if (method === 'GET' || method === 'HEAD') {
-    return Server.resolvesToIndexHtml(url) ? 'Render' : 'StaticOrRender'
-  } else if (method === 'OPTIONS' || method === 'TRACE') {
-    return 'MethodNotAllowed'
-  } else {
-    return 'Render'
-  }
-}
+}: HttpServerRequest.HttpServerRequest): RequestKind =>
+  M.value(method).pipe(
+    M.withReturnType<RequestKind>(),
+    M.whenOr('GET', 'HEAD', () =>
+      Server.resolvesToIndexHtml(url) ? 'Render' : 'StaticOrRender',
+    ),
+    M.whenOr('OPTIONS', 'TRACE', () => 'MethodNotAllowed'),
+    M.orElse(() => 'Render'),
+  )
 
 const makeHandler = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem
