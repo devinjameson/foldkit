@@ -51,6 +51,8 @@ To mark up a passage in a different language from the page, use the `Lang` attri
 
 Set neither and both fall back to the current URL, which is what a routed app usually wants. The two are chained rather than independent: `canonical` falls back to the current URL, and `ogUrl` falls back to the resolved `canonical`, so setting `canonical` alone moves both. Set them explicitly when the canonical URL differs from the address bar, such as a paginated list whose later pages should point back at the first.
 
+On a server render this default is the full request URL, query string included, so set `canonical` explicitly when the query is not part of the page's identity, such as tracking parameters or a session token. Left to the default, a crawler indexes every query variant as its own canonical page.
+
 ## Typed HTML Helpers
 
 Foldkit’s HTML functions are typed to your Message type. This ensures event handlers only accept valid Messages from your application. Every view receives `h`, the typed Html builder, alongside the Model: the runtime passes one to your root view, and `Submodel.defineView` passes one to each child view. Reach for `h.div`, `h.OnClick`, and the rest off it:
@@ -66,6 +68,18 @@ Application code cannot construct a builder; `h` only enters a view as a paramet
 Where no builder is in scope, typically module scope, `foldkit/html` exports `inertHtml`. It is typed `HtmlBuilder<never>`: elements and styling attributes work, and no event handler can be constructed with it, so nothing built with it can dispatch a Message. Inert describes what the result can do, not how it is computed; the markup is still free to vary with runtime data. Its attributes are `Attribute<never>` and flow into any Message universe, which is what lets library code hand out handler-free attribute bundles. Import it aliased as `ih`, which reads as the inert counterpart to `h` and keeps the two distinguishable at every call site. Inside a view, use the view's own `h` rather than reaching past it.
 
 Inert to Foldkit's dispatch, not to the browser. A raw DOM attribute still does whatever the browser makes of it, which is how the [crash view](/core/crash-view) gets a working reload button with `h.Attribute('onclick', 'location.reload()')`. What `never` rules out is a Message reaching `update`, not every possible behavior.
+
+:::Warning{label="Raw HTML, script sources, and script attributes need trusted content"}
+Several inputs run whatever you pass them, in the browser and in server-rendered HTML alike, and Foldkit does not sanitize them:
+
+- `h.InnerHTML` and `h.Srcdoc` render their strings as raw HTML.
+- A raw `onclick`-style attribute runs its string as script.
+- The `src` of a `<script>` or `<iframe>`, and the `data` of an `<object>`, load and run whatever they point at, an `http(s)` or `data:` URL included.
+
+Only ever pass content you control to these. A value built from user input, a URL parameter, or an API response is a cross-site scripting vector here, so build the markup from trusted inputs, or use `h` elements instead of raw HTML.
+:::
+
+`h.Href`, `h.Src`, `h.Action`, and `h.Formaction` neutralize a `javascript:` or `vbscript:` URL (control-character obfuscation included) to an empty value, which stops the classic scheme-based injection on a link or form. That is a safety net, not a guarantee that any URL is safe: a `<script>` or `<iframe>` still runs an `http(s)` or `data:` source it is handed, so a URL that loads code must be trusted content like the sinks above.
 
 ## Event Handling
 

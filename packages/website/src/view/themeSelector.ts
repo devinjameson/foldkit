@@ -1,4 +1,5 @@
 import { clsx } from 'clsx'
+import { Option } from 'effect'
 import { Html, type HtmlBuilder } from 'foldkit/html'
 
 import { Icon } from '../icon'
@@ -9,7 +10,7 @@ import {
 } from '../message'
 
 export const themeSelector = (
-  activePreference: ThemePreference,
+  maybeActivePreference: Option.Option<ThemePreference>,
   h: HtmlBuilder<Message>,
 ): Html =>
   h.div(
@@ -23,21 +24,21 @@ export const themeSelector = (
     [
       themeSelectorButton(
         'Light',
-        activePreference,
+        maybeActivePreference,
         Icon.sun('w-4 h-4'),
         'Light mode',
         h,
       ),
       themeSelectorButton(
         'System',
-        activePreference,
+        maybeActivePreference,
         Icon.computer('w-4 h-4'),
         'System mode',
         h,
       ),
       themeSelectorButton(
         'Dark',
-        activePreference,
+        maybeActivePreference,
         Icon.moon('w-4 h-4'),
         'Dark mode',
         h,
@@ -47,12 +48,15 @@ export const themeSelector = (
 
 const themeSelectorButton = (
   preference: ThemePreference,
-  activePreference: ThemePreference,
+  maybeActivePreference: Option.Option<ThemePreference>,
   icon: Html,
   label: string,
   h: HtmlBuilder<Message>,
 ) => {
-  const isActive = preference === activePreference
+  const isActive = Option.exists(
+    maybeActivePreference,
+    activePreference => activePreference === preference,
+  )
 
   return h.button(
     [

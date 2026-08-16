@@ -1,5 +1,6 @@
 import {
   Array,
+  Data,
   Effect,
   FileSystem,
   Match,
@@ -12,6 +13,8 @@ import {
 } from 'effect'
 import { HttpClient, HttpClientRequest } from 'effect/unstable/http'
 import { spawn } from 'node:child_process'
+
+import { type Scaffold } from '../rendering.js'
 
 export type PackageManager = 'pnpm' | 'npm' | 'yarn' | 'bun'
 
@@ -71,24 +74,27 @@ const TEMPLATE_DEV_DEPENDENCIES = [
   'vitest',
 ]
 
+const SERVER_RENDERING_DEV_DEPENDENCIES = ['@types/node']
+
 const isFoldkitPackage = (name: string): boolean =>
   name === 'foldkit' || name.startsWith(FOLDKIT_SCOPE_PREFIX)
 
-type UnresolvedSpec =
-  | Readonly<{ _tag: 'Keep'; version: string }>
-  | Readonly<{ _tag: 'Latest' }>
+type UnresolvedSpec = Data.TaggedEnum<{
+  Keep: { readonly version: string }
+  Latest: {}
+}>
 
-const Keep = (version: string): UnresolvedSpec => ({ _tag: 'Keep', version })
-const Latest: UnresolvedSpec = { _tag: 'Latest' }
+const UnresolvedSpec = Data.taggedEnum<UnresolvedSpec>()
+const { Keep, Latest } = UnresolvedSpec
 
 const toUnresolvedSpec = (
   spec: string,
   name: string,
 ): Result.Result<UnresolvedSpec, void> => {
   if (spec.includes('workspace:')) {
-    return isFoldkitPackage(name) ? Result.succeed(Latest) : Result.failVoid
+    return isFoldkitPackage(name) ? Result.succeed(Latest()) : Result.failVoid
   } else {
-    return Result.succeed(Keep(spec))
+    return Result.succeed(Keep({ version: spec }))
   }
 }
 
@@ -105,15 +111,17 @@ export const buildUnresolvedDeps = (
 
 /**
  * Build the devDependency map for a scaffolded project by merging the always-on
- * template tooling with the example's own `devDependencies`. A concrete version
- * from the example wins over the template's latest marker for the same package.
+ * template tooling and any extra scaffold devDependencies with the example's
+ * own `devDependencies`. A concrete version from the example wins over a
+ * latest marker for the same package.
  */
 export const buildUnresolvedDevDeps = (
   exampleDevDeps: Record<string, string>,
+  extraDevDependencies: ReadonlyArray<string>,
 ): Record<string, UnresolvedSpec> => {
   const templateSpecs = Record.fromIterableWith(
-    TEMPLATE_DEV_DEPENDENCIES,
-    name => [name, Latest],
+    [...TEMPLATE_DEV_DEPENDENCIES, ...extraDevDependencies],
+    name => [name, Latest()],
   )
   const exampleSpecs = Record.filterMap(exampleDevDeps, toUnresolvedSpec)
   return Record.union(
@@ -122,6 +130,36 @@ export const buildUnresolvedDevDeps = (
     (_templateSpec, exampleSpec) => exampleSpec,
   )
 }
+
+/**
+ * The repo example whose `package.json` supplies a scaffold's dependency
+ * versions. An SPA scaffold reads from its chosen starter example; the SSG and
+ * SSR scaffolds read from the reference apps their overlay files mirror.
+ */
+export const dependencyExample = (scaffold: Scaffold): string =>
+  Match.value(scaffold).pipe(
+    Match.tagsExhaustive({
+      Spa: ({ example }) => example,
+      Ssg: () => 'ssg',
+      Ssr: () => 'ssr',
+    }),
+  )
+
+/**
+ * The devDependencies a scaffold needs beyond the template tooling and the
+ * example's own list. The server-rendered scaffolds ship Node build and host
+ * scripts, so they need `@types/node` to typecheck.
+ */
+export const scaffoldDevDependencies = (
+  scaffold: Scaffold,
+): ReadonlyArray<string> =>
+  Match.value(scaffold).pipe(
+    Match.tagsExhaustive({
+      Spa: () => [],
+      Ssg: () => SERVER_RENDERING_DEV_DEPENDENCIES,
+      Ssr: () => SERVER_RENDERING_DEV_DEPENDENCIES,
+    }),
+  )
 
 const resolveLatestVersion = (name: string) =>
   Effect.gen(function* () {
@@ -242,16 +280,21 @@ const runCommand = (
 export const installDependencies = (
   projectPath: string,
   packageManager: PackageManager,
-  example: string,
+  scaffold: Scaffold,
 ) =>
   Effect.gen(function* () {
-    const examplePackageJson = yield* fetchExamplePackageJson(example)
+    const examplePackageJson = yield* fetchExamplePackageJson(
+      dependencyExample(scaffold),
+    )
 
     const dependencies = yield* resolveSpecs(
       buildUnresolvedDeps(examplePackageJson.dependencies),
     )
     const devDependencies = yield* resolveSpecs(
-      buildUnresolvedDevDeps(examplePackageJson.devDependencies),
+      buildUnresolvedDevDeps(
+        examplePackageJson.devDependencies,
+        scaffoldDevDependencies(scaffold),
+      ),
     )
 
     yield* writeManifest(

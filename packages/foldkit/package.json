@@ -47,6 +47,10 @@
       "types": "./dist/experimental/machine/public.d.ts",
       "import": "./dist/experimental/machine/public.js"
     },
+    "./experimental/server": {
+      "types": "./dist/experimental/server/public.d.ts",
+      "import": "./dist/experimental/server/public.js"
+    },
     "./html": {
       "types": "./dist/html/public.d.ts",
       "import": "./dist/html/public.js"
@@ -160,6 +164,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --coverage",
     "docs": "typedoc"
+  },
+  "dependencies": {
+    "parse5": "^8.0.1"
   },
   "peerDependencies": {
     "effect": "4.0.0-rc.109"

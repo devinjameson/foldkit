@@ -24,3 +24,7 @@ overrides:
   '@effect/platform-node': 4.0.0-rc.109
   '@effect/platform-node-shared': 4.0.0-rc.109
   '@effect/vitest': 4.0.0-rc.109
+  # @effect/platform-node@4.0.0-rc.109 pins undici 8.7.0, which carries a
+  # high-severity advisory; hold it at the patched 8.9.0 line until the pin
+  # moves upstream. Scoped to the SSR runtime so jsdom keeps its tested 7.x.
+  '@effect/platform-node>undici': '^8.9.0'

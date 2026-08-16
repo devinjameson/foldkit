@@ -55,6 +55,9 @@ const highlightLanguage = (filePath: string): string => {
   if (filePath.endsWith('.json')) {
     return 'json'
   }
+  if (filePath.endsWith('.html')) {
+    return 'html'
+  }
   return 'typescript'
 }
 
@@ -668,12 +671,19 @@ const langFromExtension = (filePath: string): string => {
   return 'typescript'
 }
 
+const EXAMPLE_SOURCE_ROOTS = ['src', 'server', 'scripts']
+
 const collectSourceFiles = async (
   directory: string,
 ): Promise<ReadonlyArray<string>> => {
   const entries = await readdir(directory, {
     recursive: true,
     withFileTypes: true,
+  }).catch((error: unknown) => {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+      return []
+    }
+    throw error
   })
   return entries
     .filter(
@@ -762,9 +772,12 @@ const highlightExampleSourcesPlugin = (): Plugin => ({
     }
 
     const exampleDirectory = resolve(__dirname, `../../examples/${slug}`)
-    const sourceDirectory = join(exampleDirectory, 'src')
-    const allFiles = await collectSourceFiles(sourceDirectory)
-    const sortedFiles = sortExampleFiles(allFiles, exampleDirectory)
+    const collected = await Promise.all(
+      EXAMPLE_SOURCE_ROOTS.map(root =>
+        collectSourceFiles(join(exampleDirectory, root)),
+      ),
+    )
+    const sortedFiles = sortExampleFiles(collected.flat(), exampleDirectory)
 
     const files = await Promise.all(
       sortedFiles.map(filePath =>
@@ -864,7 +877,10 @@ const playgroundShellFallbackPlugin = (): Plugin => ({
 export default defineConfig({
   plugins: [
     tailwindcss(),
-    foldkit({ devToolsMcpPort: 9988 }),
+    foldkit({
+      devToolsMcpPort: 9988,
+      ssr: { serverEntry: '/src/entry.server.ts' },
+    }),
     markdown({ islands: islandAttributes, frontmatter: PostFrontmatter }),
     embeddedExampleRedirectPlugin(),
     playgroundIsolationHeadersPlugin(),

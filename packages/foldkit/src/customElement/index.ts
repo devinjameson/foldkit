@@ -99,6 +99,25 @@ export const kebabToPascal = (input: string): string =>
 
 const IDENTIFIER_PATTERN = /^[A-Za-z_$][A-Za-z0-9_$]*$/
 
+// A conservative subset of the custom-element name grammar: lowercase start,
+// then only characters that cannot carry markup. The hyphen requirement is
+// checked separately so its message stays specific.
+const CUSTOM_ELEMENT_NAME_PATTERN = /^[a-z][a-z0-9._-]*$/
+
+// Hyphenated names the custom-element spec reserves for SVG and MathML, which
+// `customElements.define` rejects with a SyntaxError. They pass the character
+// grammar, so they are excluded by name.
+const RESERVED_CUSTOM_ELEMENT_NAMES: ReadonlySet<string> = new Set([
+  'annotation-xml',
+  'color-profile',
+  'font-face',
+  'font-face-src',
+  'font-face-uri',
+  'font-face-format',
+  'font-face-name',
+  'missing-glyph',
+])
+
 const isValidPropertyName = (name: string): boolean =>
   IDENTIFIER_PATTERN.test(name)
 
@@ -238,6 +257,18 @@ const validateNames = (input: {
   if (!input.tag.includes('-')) {
     throw new Error(
       `${context}: tag '${input.tag}' is not a valid custom element name. Autonomous custom elements must contain at least one hyphen (e.g. 'fk-emoji-rating').`,
+    )
+  }
+
+  if (!CUSTOM_ELEMENT_NAME_PATTERN.test(input.tag)) {
+    throw new Error(
+      `${context}: tag '${input.tag}' is not a valid custom element name. Names must be lowercase, start with a letter, and use only letters, numbers, hyphens, dots, and underscores.`,
+    )
+  }
+
+  if (RESERVED_CUSTOM_ELEMENT_NAMES.has(input.tag)) {
+    throw new Error(
+      `${context}: tag '${input.tag}' is a reserved custom element name that the browser rejects.`,
     )
   }
 

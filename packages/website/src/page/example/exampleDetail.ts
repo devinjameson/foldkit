@@ -275,7 +275,7 @@ const chromeRecommendedHint = (): Html =>
 
 const launchPlaygroundSection = (
   meta: ExampleMeta,
-  isChromium: boolean,
+  isShowingChromeHint: boolean,
 ): Html =>
   ih.div(
     [ih.Class('flex flex-col items-start gap-1')],
@@ -287,11 +287,11 @@ const launchPlaygroundSection = (
         ],
         [Icon.bolt('w-4 h-4'), 'Launch Playground'],
       ),
-      ...(isChromium ? [] : [chromeRecommendedHint()]),
+      ...(isShowingChromeHint ? [chromeRecommendedHint()] : []),
     ],
   )
 
-const headerView = (meta: ExampleMeta, isChromium: boolean): Html =>
+const headerView = (meta: ExampleMeta, isShowingChromeHint: boolean): Html =>
   ih.div(
     [ih.Class('mb-6')],
     [
@@ -313,7 +313,7 @@ const headerView = (meta: ExampleMeta, isChromium: boolean): Html =>
       ih.div(
         [ih.Class('flex flex-col items-start gap-3 mt-3')],
         [
-          launchPlaygroundSection(meta, isChromium),
+          launchPlaygroundSection(meta, isShowingChromeHint),
           ih.a(
             [
               ih.Href(exampleSourceHref(meta.slug)),
@@ -362,6 +362,20 @@ const disclosureChevron = (isOpen: boolean): Html =>
       ),
     ],
     [Icon.chevronDown('w-4 h-4')],
+  )
+
+const playgroundOnlyNotice = (meta: ExampleMeta): Html =>
+  ih.div(
+    [
+      ih.Class(
+        'rounded-xl border border-gray-200 dark:border-gray-700/50 px-4 py-3 text-sm text-gray-700 dark:text-gray-300',
+      ),
+    ],
+    [
+      `${meta.title} renders each page on a server at request time, so a ` +
+        'static preview cannot demonstrate it. Launch the playground to see ' +
+        'the server round-trip live, or run the example locally.',
+    ],
   )
 
 const livePreviewDisclosureView = (
@@ -608,7 +622,7 @@ const sourcesFailureView = (error: string): Html =>
 type ViewInputs = Readonly<{
   slug: string
   isNarrowViewport: boolean
-  isChromium: boolean
+  isShowingChromeHint: boolean
   renderCopyButton: RenderCopyButton
 }>
 
@@ -623,7 +637,11 @@ type ViewInputs = Readonly<{
  * Submodel's `toParentMessage`.
  */
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
-  (model, { slug, isNarrowViewport, isChromium, renderCopyButton }, h): Html =>
+  (
+    model,
+    { slug, isNarrowViewport, isShowingChromeHint, renderCopyButton },
+    h,
+  ): Html =>
     Option.match(findBySlug(slug), {
       onNone: () => h.div([], ['Example not found']),
       onSome: meta =>
@@ -631,14 +649,16 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           slug,
           [],
           [
-            headerView(meta, isChromium),
-            livePreviewDisclosureView(
-              model.isLivePreviewOpen,
-              meta,
-              slug,
-              model.maybeExampleUrl,
-              h,
-            ),
+            headerView(meta, isShowingChromeHint),
+            meta.livePreview === 'PlaygroundOnly'
+              ? playgroundOnlyNotice(meta)
+              : livePreviewDisclosureView(
+                  model.isLivePreviewOpen,
+                  meta,
+                  slug,
+                  model.maybeExampleUrl,
+                  h,
+                ),
             h.div(
               [h.Class('mt-6')],
               [

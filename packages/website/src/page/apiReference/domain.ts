@@ -132,6 +132,19 @@ export const scopedId = (
   name: string,
 ): string => `${kind}-${moduleName}/${name}`
 
+// NOTE: highlight ids read `${kind}-${moduleName}/${name}`, and for items
+// inside namespaces the name itself contains further slashes
+// (`function-Http/Task/attempt`). The kind never contains a dash, so the id
+// belongs to a module exactly when the segment after the first dash starts
+// with `${moduleName}/`.
+export const scopedIdBelongsToModule = (
+  id: string,
+  moduleName: string,
+): boolean =>
+  Option.exists(String.indexOf('-')(id), kindSeparatorIndex =>
+    id.startsWith(`${moduleName}/`, kindSeparatorIndex + 1),
+  )
+
 export const sectionId = (moduleName: string, label: string): string =>
   `${moduleName}-${label.toLowerCase()}`
 

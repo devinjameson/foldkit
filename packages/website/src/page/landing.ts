@@ -13,10 +13,10 @@ import {
   coreDevToolsRouter,
   coreEmbeddingRouter,
   coreManagedResourcesRouter,
+  coreServerRenderingRouter,
   coreSubmodelRouter,
   coreSubscriptionsRouter,
   examplesRouter,
-  fieldValidationRouter,
   routingAndNavigationRouter,
   testingRouter,
   typingTerminalRouter,
@@ -477,6 +477,17 @@ const includedSection = (): Html =>
                   label: 'Explore routing',
                 },
               ),
+              includedFeature(
+                Icon.server('w-6 h-6'),
+                'Server Rendering',
+                [
+                  'One rendering pipeline: generate static HTML during the build, or render each request on a server. The same init, view, and Model run on both sides, and the browser hydrates the served HTML in place.',
+                ],
+                {
+                  href: coreServerRenderingRouter(),
+                  label: 'Explore server rendering',
+                },
+              ),
               ih.div(
                 [ih.Class('landing-card')],
                 [
@@ -550,17 +561,6 @@ const includedSection = (): Html =>
                 {
                   href: coreManagedResourcesRouter(),
                   label: 'Explore Managed Resources',
-                },
-              ),
-              includedFeature(
-                Icon.shieldCheck('w-6 h-6'),
-                'Field Validation',
-                [
-                  'Per-field validation with sync and async support. Define rules as predicates, apply them in update, and the Model tracks every field state.',
-                ],
-                {
-                  href: fieldValidationRouter(),
-                  label: 'Explore field validation',
                 },
               ),
               includedFeature(
@@ -914,8 +914,8 @@ const audienceSection = (): Html =>
                         'No React component libraries, no Next.js, no existing middleware. You’re building on different foundations.',
                       ),
                       audienceNotItem(
-                        'Teams that need server-side rendering',
-                        'Foldkit is a client-side SPA framework. Static generation is possible, but you’ll roll your own (like we do for this website).',
+                        'Sites that are mostly static content',
+                        'A site that is mostly prose with a sprinkle of interactivity is better served by a content-first tool like Astro. Foldkit renders on the server too, but it is built for applications.',
                       ),
                     ],
                   ),

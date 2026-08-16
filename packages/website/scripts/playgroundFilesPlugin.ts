@@ -52,9 +52,16 @@ const EXPECTED_SKIP_EXTENSIONS = new Set([
 ])
 const EXCLUDED_DIRECTORIES = new Set(['node_modules', 'dist'])
 
+// The playground's vite config always loads @tailwindcss/vite (both the
+// standalone config and the SSR examples' vite.config.playground.ts import it),
+// so Tailwind must survive into the WebContainer even for an example that keeps
+// it in devDependencies. Without it here the dev server cannot resolve the
+// plugin and never starts.
 const RUNTIME_DEV_DEPENDENCIES = new Set([
   '@foldkit/devtools',
   '@foldkit/vite-plugin',
+  '@tailwindcss/vite',
+  'tailwindcss',
   'vite',
 ])
 
@@ -81,6 +88,12 @@ export default defineConfig({
 // vite.config.playground.ts written against published packages; when present,
 // its contents become the WebContainer's vite.config.ts instead.
 const PLAYGROUND_VITE_CONFIG_FILENAME = 'vite.config.playground.ts'
+
+// An example that ships this server entry is server-rendered, so its root is
+// filled at request time and must not receive the client-only Loading
+// placeholder. Built with `join` so the comparison uses the OS separator that
+// `relative` produced for the collected paths.
+const SERVER_ENTRY_PATH = join('src', 'entry.server.ts')
 
 const ROOT_LOADING_MARKUP = `<div id="root"><div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:#9ca3af">Loading\u2026</div></div>`
 
@@ -253,6 +266,13 @@ const buildExampleFileMap = async (
     () => STANDALONE_VITE_CONFIG,
   )
 
+  // A server-rendered example (one that ships src/entry.server.ts) fills its
+  // root at request time through the SSR dev middleware, which requires the
+  // template's `<div id="root"></div>` to stay exactly empty. Injecting the
+  // client-only Loading placeholder into it would make every render throw, so
+  // the placeholder is only added to SPA examples.
+  const isServerRendered = rawFiles.some(([path]) => path === SERVER_ENTRY_PATH)
+
   // NOTE: Markdown is bundled only from src/, where it is app content compiled
   // by @foldkit/markdown. Root-level markdown (README, CHANGELOG) is
   // documentation and stays out of the WebContainer.
@@ -276,7 +296,12 @@ const buildExampleFileMap = async (
         return [path, standaloneViteConfig] as const
       }
       if (path === 'index.html') {
-        return [path, injectLoadingPlaceholder(contents, slug)] as const
+        return [
+          path,
+          isServerRendered
+            ? contents
+            : injectLoadingPlaceholder(contents, slug),
+        ] as const
       }
       return [path, contents] as const
     })

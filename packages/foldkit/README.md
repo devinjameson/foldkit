@@ -18,7 +18,7 @@
 
 ---
 
-Foldkit is a TypeScript frontend framework built on [Effect](https://effect.website/) and architected like [Elm](https://guide.elm-lang.org/architecture/). One Model, one update function, one way to do things. No hooks, no local state, no hidden mutations. It's all in on Effect with no escape hatch, though a program doesn't have to own the whole page: [`Runtime.embed`](https://foldkit.dev/core/embedding) runs a Foldkit widget inside any existing app, React included.
+Foldkit is a TypeScript frontend framework built on [Effect](https://effect.website/) and architected like [Elm](https://guide.elm-lang.org/architecture/). One Model, one update function, one way to do things. No hooks, no local state, no hidden mutations. It's all in on Effect with no escape hatch, though a program doesn't have to own the whole page: [`Runtime.embed`](https://foldkit.dev/core/embedding) runs a Foldkit widget inside any existing app, React included. The same program also [renders on the server](https://foldkit.dev/core/server-rendering), at build time or per request, and hydrates in place.
 
 Your Model is a [Schema](https://effect.website/docs/schema/introduction/) and side effects are values you return, not callbacks you fire. If you know Effect, Foldkit feels natural. If you're new to it, Foldkit is a good way in. Coming from React? [Start here](https://foldkit.dev/react/coming-from-react), or read the [same pixel-art editor built in both frameworks](https://foldkit.dev/react/foldkit-vs-react-side-by-side).
 
@@ -27,7 +27,7 @@ Your Model is a [Schema](https://effect.website/docs/schema/introduction/) and s
 
 ## Get Started
 
-`create-foldkit-app` scaffolds a complete setup with Tailwind, TypeScript, [Oxlint](https://foldkit.dev/tooling/oxlint-plugin), Prettier, and the Vite plugin for state-preserving HMR, starting from an example you choose.
+`create-foldkit-app` scaffolds a complete setup with Tailwind, TypeScript, [Oxlint](https://foldkit.dev/tooling/oxlint-plugin), Prettier, and the Vite plugin for state-preserving HMR. Pick a rendering mode (browser-only SPA, static generation, or server rendering) and, for a SPA, the example to start from.
 
 ```bash
 npx create-foldkit-app@latest
@@ -137,6 +137,7 @@ A complete system, not a collection of libraries you stitch together. Each of th
 - **UI Components**: Accessible, keyboard-friendly primitives in the `@foldkit/ui` package.
 - **Field Validation**: Per-field validation state modeled as a discriminated union.
 - **Virtual DOM**: Declarative views with lazy memoization and keyed diffing, powered by [Snabbdom](https://github.com/snabbdom/snabbdom).
+- **Server Rendering**: The same program rendered to HTML at build time (SSG) or per request (SSR), then hydrated in place.
 - **DevTools**: In-browser overlay for inspecting Messages, Model, and Commands, with time-travel.
 - **DevTools MCP**: Expose a running app to AI agents over the Model Context Protocol.
 - **Crash View and Reporting**: A custom fallback UI when the update loop throws, plus a report callback.
@@ -169,6 +170,8 @@ Some of what you can build with Foldkit. [See all example apps on foldkit.dev](h
 - **[Kanban](https://foldkit.dev/example-apps/kanban)**: Drag-and-drop kanban board with cross-column reordering and keyboard navigation
 - **[Pixel Art](https://foldkit.dev/example-apps/pixel-art)**: Grid-based pixel editor with painting, erasing, and palette selection
 - **[UI Showcase](https://foldkit.dev/example-apps/ui-showcase)**: Interactive showcase of every Foldkit UI component
+- **[Static Site Generation](https://foldkit.dev/example-apps/ssg)**: Build-time prerendering with client hydration
+- **[Server-Side Rendering](https://foldkit.dev/example-apps/ssr)**: Per-request rendering on an Effect HttpServer with cookie-derived Flags
 - **[Typing Game](https://github.com/foldkit/foldkit/tree/main/packages/typing-game)**: Multiplayer typing game with Effect RPC backend ([play it live](https://typingterminal.com))
 
 ## License

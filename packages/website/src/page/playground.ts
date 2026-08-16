@@ -991,16 +991,20 @@ const editorLayoutView = (model: Model, h: HtmlBuilder<Message>): Html => {
   )
 }
 
-type ViewInputs = Readonly<{ isChromium: boolean }>
+type ViewInputs = Readonly<{ maybeIsChromium: Option.Option<boolean> }>
 
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
-  (model, { isChromium }, h): Html => {
+  (model, { maybeIsChromium }, h): Html => {
     const maybeMeta = findBySlug(model.slug)
     const maybeFiles = Option.fromNullishOr(filesBySlug[model.slug])
 
-    const content = M.value({ isChromium, maybeMeta, maybeFiles }).pipe(
+    const content = M.value({ maybeIsChromium, maybeMeta, maybeFiles }).pipe(
       M.when(
-        ({ isChromium }) => !isChromium,
+        ({ maybeIsChromium }) => Option.isNone(maybeIsChromium),
+        () => h.empty,
+      ),
+      M.when(
+        ({ maybeIsChromium }) => Option.contains(maybeIsChromium, false),
         () =>
           messageView(
             'Playground requires a Chromium browser',
