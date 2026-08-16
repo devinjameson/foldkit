@@ -315,6 +315,65 @@ describe('renderToString', () => {
     }),
   )
 
+  const failsHydratableRender = (body: Document['body']) =>
+    Effect.gen(function* () {
+      const error = yield* Effect.flip(
+        renderToString({
+          init: (): readonly [Model, ReadonlyArray<never>] => [
+            Model.make({ theme: 'plain', pathname: '/' }),
+            [],
+          ],
+          view: () => ({ title: 'Escapes', body }),
+        }),
+      )
+
+      expect(error).toMatchObject({ _tag: 'ServerSerializationError' })
+    })
+
+  it.effect(
+    'rejects a block element inside a <p> that parsing splits out',
+    () =>
+      failsHydratableRender(
+        h.p([], [h.div([], ['inside']), h.span([], ['after'])]),
+      ),
+  )
+
+  it.effect(
+    'rejects a stray element inside a <table> parsing fosters out',
+    () =>
+      failsHydratableRender(
+        h.table([], [h.div([], ['inside']), h.tr([], [h.td([], ['cell'])])]),
+      ),
+  )
+
+  it.effect('rejects an HTML element inside an <svg> that breaks out', () =>
+    failsHydratableRender(
+      h.svg([], [h.div([h.Id('escaped')], ['inside']), h.circle([])]),
+    ),
+  )
+
+  it.effect('rejects foreign InnerHTML that escapes the <svg> namespace', () =>
+    failsHydratableRender(h.svg([h.InnerHTML('<strike>escaped</strike>')])),
+  )
+
+  it.effect('renders a valid svg root that parses back to one element', () =>
+    Effect.gen(function* () {
+      const rendered = yield* renderToString({
+        init: (): readonly [Model, ReadonlyArray<never>] => [
+          Model.make({ theme: 'plain', pathname: '/' }),
+          [],
+        ],
+        view: () => ({
+          title: 'Svg',
+          body: h.svg([], [h.circle([])]),
+        }),
+      })
+
+      expect(rendered.html).toContain(`<svg ${FOLDKIT_APP_ATTRIBUTE}="app">`)
+      expect(rendered.html).toContain('<circle></circle>')
+    }),
+  )
+
   it.effect('allows a non-element root for static, non-hydratable markup', () =>
     Effect.gen(function* () {
       const rendered = yield* renderToString(

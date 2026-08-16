@@ -15,7 +15,7 @@ import {
   clearRuntime,
   setRuntime,
 } from './html/runtimeSingleton.js'
-import { __hydrateVNode } from './hydrate.js'
+import { __elementSignature, __hydrateVNode } from './hydrate.js'
 import { type VNode, h as snabbdomH } from './snabbdom/index.js'
 
 type Message = Readonly<{ _tag: 'ClickedButton' }>
@@ -522,5 +522,73 @@ describe('__hydrateVNode', () => {
 
     expect(patchedVNode.sel).toBe('!')
     expect(host.firstElementChild).toBeNull()
+  })
+})
+
+describe('__elementSignature', () => {
+  it('is order-independent across attributes, classes, and styles', () => {
+    const a = document.createElement('div')
+    a.setAttribute('title', 'x')
+    a.setAttribute('lang', 'en')
+    a.className = 'one two'
+    a.style.color = 'red'
+    a.style.margin = '0px'
+
+    const b = document.createElement('div')
+    b.setAttribute('lang', 'en')
+    b.setAttribute('title', 'x')
+    b.className = 'two one'
+    b.style.margin = '0px'
+    b.style.color = 'red'
+
+    const vnode = snabbdomH('div', {}, [])
+    expect(__elementSignature(a, vnode)).toBe(__elementSignature(b, vnode))
+  })
+
+  it('catches a raw value attribute disagreement the client owns as an attribute', () => {
+    const server = document.createElement('input')
+    server.setAttribute('value', 'server')
+    const client = document.createElement('input')
+    client.setAttribute('value', 'client')
+
+    const vnode = snabbdomH('input', { attrs: { value: 'client' } }, [])
+    expect(__elementSignature(server, vnode)).not.toBe(
+      __elementSignature(client, vnode),
+    )
+  })
+
+  it('does not flag a props-managed attribute the client drops from the DOM', () => {
+    const server = document.createElement('input')
+    server.setAttribute('value', 'text')
+    server.value = 'text'
+    const client = document.createElement('input')
+    client.value = 'text'
+
+    const vnode = snabbdomH('input', { props: { value: 'text' } }, [])
+    expect(__elementSignature(server, vnode)).toBe(
+      __elementSignature(client, vnode),
+    )
+  })
+
+  it('catches a props-managed value disagreement through the property', () => {
+    const server = document.createElement('input')
+    server.value = 'server'
+    const client = document.createElement('input')
+    client.value = 'client'
+
+    const vnode = snabbdomH('input', { props: { value: 'client' } }, [])
+    expect(__elementSignature(server, vnode)).not.toBe(
+      __elementSignature(client, vnode),
+    )
+  })
+
+  it('keeps attribute values with delimiter characters distinct', () => {
+    const a = document.createElement('div')
+    a.setAttribute('data-note', 'p:q;r|s')
+    const b = document.createElement('div')
+    b.setAttribute('data-note', 'p:q;r|t')
+
+    const vnode = snabbdomH('div', {}, [])
+    expect(__elementSignature(a, vnode)).not.toBe(__elementSignature(b, vnode))
   })
 })

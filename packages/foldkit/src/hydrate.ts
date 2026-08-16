@@ -66,52 +66,69 @@ const inlineStyleOf = (element: Element): Record<string, string> => {
   return style
 }
 
-// The reflected form attributes: the server serializes these as attributes,
-// but the client sets them as DOM properties that do not write back to the
-// attribute, so the attribute is dropped during a correct hydration. They are
-// excluded from the signature below so that expected drop is not read as a
-// server/client disagreement.
-const PROPERTY_MANAGED_ATTRIBUTES: ReadonlySet<string> = new Set([
+// Properties the serializer emits as attributes but the client sets as DOM
+// properties that do not reflect back to the attribute, so a correct hydration
+// drops the server attribute. When a vnode owns one of these through
+// `data.props`, the signature compares the live property value instead of the
+// attribute, so that expected drop is not read as a disagreement. A view that
+// instead sets the same name as a raw attribute keeps it in the attribute set.
+const NON_REFLECTING_PROPERTIES: ReadonlySet<string> = new Set([
   'value',
   'checked',
   'selected',
+  'muted',
 ])
 
-// A normalized snapshot of an element's attributes, class set, and inline
-// style, read entirely through the DOM. Comparing the snapshot taken during
-// adoption (the server DOM) with the element's state after the client patch
-// flags any attribute, class, or style the two disagree on. Because both sides
-// pass through the same DOM APIs, spelling differences (attribute order, class
-// order, CSS serialization) never register, so a deterministic render never
-// reports a mismatch. Values feed the comparison but are never surfaced.
-const attributeSignature = (element: Element): string => {
-  const attributes: Array<string> = []
+const propertyManagedNames = (vnode: VNode): ReadonlyArray<string> => {
+  const props = vnode.data?.props
+  if (props === undefined) {
+    return []
+  }
+  return Array.from(NON_REFLECTING_PROPERTIES).filter(name => name in props)
+}
+
+const byName = (
+  [leftName]: readonly [string, string],
+  [rightName]: readonly [string, string],
+): number => leftName.localeCompare(rightName)
+
+// A structured, order-independent snapshot of the state an element and its
+// vnode share: the DOM attributes, the non-reflecting properties the vnode
+// owns (read from the element, not the attribute), the class set, and inline
+// style. Comparing the snapshot taken during adoption (the server DOM) with
+// the element's state after the client patch flags any attribute, property,
+// class, or style the two disagree on. Both sides pass through the same DOM
+// APIs, so spelling differences never register, and the snapshot is JSON so no
+// value can collide with a delimiter. Values feed the comparison, never a log.
+export const __elementSignature = (element: Element, vnode: VNode): string => {
+  const propertyNames = propertyManagedNames(vnode)
+
+  const attributes: Array<[string, string]> = []
   for (const attribute of Array.from(element.attributes)) {
     const name = attribute.name
     if (
       name === HYDRATION_STAMP_ATTRIBUTE ||
       name === 'class' ||
       name === 'style' ||
-      PROPERTY_MANAGED_ATTRIBUTES.has(name)
+      propertyNames.includes(name)
     ) {
       continue
     }
-    attributes.push(`${name}=${attribute.value}`)
+    attributes.push([name, attribute.value])
   }
-  attributes.sort()
+  attributes.sort(byName)
+
+  const properties: Array<[string, string]> = []
+  for (const name of propertyNames) {
+    properties.push([name, String(Reflect.get(element, name))])
+  }
+  properties.sort(byName)
+
+  const styles = Object.entries(inlineStyleOf(element)).sort(byName)
 
   const classes = Array.from(element.classList).sort()
 
-  const style = inlineStyleOf(element)
-  const styleProperties = Object.keys(style)
-    .sort()
-    .map(property => `${property}:${style[property]}`)
-
-  return [
-    attributes.join('|'),
-    `class:${classes.join(' ')}`,
-    `style:${styleProperties.join(';')}`,
-  ].join('||')
+  return JSON.stringify({ attributes, properties, classes, styles })
 }
 
 // NOTE: reconcile stale server DOM against the client's first render by
@@ -168,14 +185,18 @@ const seedAdoptedState = (
   // report an attribute-only mismatch the structural walk cannot see. Gated on
   // the dev flag so a production hydrate does no extra work.
   if (import.meta.hot) {
-    status.serverSignatures.set(element, attributeSignature(element))
+    status.adoptedSignatures.set(element, {
+      vnode,
+      server: __elementSignature(element, vnode),
+    })
   }
 }
 
 type AdoptedElements = Set<Node>
+type AdoptedSignature = Readonly<{ vnode: VNode; server: string }>
 type HydrationStatus = {
   isMismatchDetected: boolean
-  serverSignatures: Map<Element, string>
+  adoptedSignatures: Map<Element, AdoptedSignature>
 }
 
 const detectMismatch = (status: HydrationStatus): void => {
@@ -496,7 +517,7 @@ export const __hydrateVNode = (
     nextVNode !== null ? dedupeSharedVNodes(nextVNode, seen) : h('!')
   const status: HydrationStatus = {
     isMismatchDetected: false,
-    serverSignatures: new Map(),
+    adoptedSignatures: new Map(),
   }
 
   if (
@@ -521,8 +542,8 @@ export const __hydrateVNode = (
   )
   const patchedVNode = patch(adoptedClone, dedupedVNode)
   if (import.meta.hot && !status.isMismatchDetected) {
-    for (const [element, serverSignature] of status.serverSignatures) {
-      if (attributeSignature(element) !== serverSignature) {
+    for (const [element, { vnode, server }] of status.adoptedSignatures) {
+      if (__elementSignature(element, vnode) !== server) {
         detectMismatch(status)
         break
       }

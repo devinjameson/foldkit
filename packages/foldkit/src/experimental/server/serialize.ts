@@ -34,57 +34,6 @@ const VOID_ELEMENTS: ReadonlySet<string> = new Set([
 
 const RAW_TEXT_ELEMENTS: ReadonlySet<string> = new Set(['script', 'style'])
 
-// The HTML element names that, encountered inside SVG or MathML foreign
-// content, make the parser pop out of the foreign context (the "in foreign
-// content" breakout list). An element carrying the foreign namespace with one
-// of these names cannot be represented: the browser would reparse it as a
-// sibling outside the foreign root, leaving nodes hydration does not own.
-const FOREIGN_BREAKOUT_ELEMENTS: ReadonlySet<string> = new Set([
-  'b',
-  'big',
-  'blockquote',
-  'body',
-  'br',
-  'center',
-  'code',
-  'dd',
-  'div',
-  'dl',
-  'dt',
-  'em',
-  'embed',
-  'h1',
-  'h2',
-  'h3',
-  'h4',
-  'h5',
-  'h6',
-  'head',
-  'hr',
-  'i',
-  'img',
-  'li',
-  'listing',
-  'menu',
-  'meta',
-  'nobr',
-  'ol',
-  'p',
-  'pre',
-  'ruby',
-  's',
-  'small',
-  'span',
-  'strong',
-  'sub',
-  'sup',
-  'table',
-  'tt',
-  'u',
-  'ul',
-  'var',
-])
-
 // NOTE: raw-text elements (`script`, `style`) parse their content as text
 // until the first `</tagname`, so HTML entities do not work inside them and a
 // closing-tag sequence in the content ends the element early. That is an
@@ -553,15 +502,6 @@ const serializeElement = (
   }
   const data = node.data
   const isForeignNamespace = data?.ns !== undefined
-
-  if (isForeignNamespace && FOREIGN_BREAKOUT_ELEMENTS.has(tagName)) {
-    throw new Error(
-      `[foldkit] Cannot serialize <${tagName}> inside SVG or MathML foreign ` +
-        'content. HTML parsing pops it out of the foreign context, so the ' +
-        'served markup would not match the view and would leave nodes ' +
-        'outside the hydration root. Wrap HTML content in a <foreignObject>.',
-    )
-  }
 
   const attributes = new Map<string, string>()
 

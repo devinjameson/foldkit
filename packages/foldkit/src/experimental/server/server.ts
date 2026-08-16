@@ -1,4 +1,6 @@
 import { Context, Data, Effect, Option, Predicate, Schema, pipe } from 'effect'
+import type { DefaultTreeAdapterMap } from 'parse5'
+import { parseFragment } from 'parse5'
 
 import { beginRender, createBoundaryRegistry } from '../../html/boundary.js'
 import {
@@ -16,8 +18,75 @@ import {
   FOLDKIT_APP_ATTRIBUTE,
   FOLDKIT_FLAGS_ATTRIBUTE,
 } from '../../hydrationMarker.js'
+import { tagNameFromSelector } from '../../tagName.js'
 import { Url, fromString } from '../../url/index.js'
 import { escapeAttributeValue, serializeHtml } from './serialize.js'
+
+const HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml'
+
+type Parse5ChildNode = DefaultTreeAdapterMap['childNode']
+type Parse5Element = DefaultTreeAdapterMap['element']
+
+const isParse5Element = (node: Parse5ChildNode): node is Parse5Element =>
+  'tagName' in node
+
+const isIgnorableText = (node: Parse5ChildNode): boolean =>
+  node.nodeName === '#text' && 'value' in node && node.value.trim() === ''
+
+// After serialization, parse the stamped root markup with the same HTML parser
+// a browser uses and require it to describe exactly one element: the stamped
+// root, with the tag and namespace the view produced. A view can serialize a
+// structurally invalid shape the parser rearranges (a block element inside a
+// `<p>`, a stray element inside a `<table>`, an HTML element inside `<svg>`),
+// moving nodes outside the element the client hydrates. Hydration owns only
+// that root, so it cannot remove escaped siblings; rejecting here keeps the
+// invariant that the served root parses back to the single intended element.
+const assertSingleStampedRoot = (
+  html: string,
+  runtimeId: string,
+  root: NonNullable<Document['body']>,
+): void => {
+  const fragment = parseFragment(html)
+  const significant = fragment.childNodes.filter(node => !isIgnorableText(node))
+  const only = significant[0]
+  if (
+    significant.length !== 1 ||
+    only === undefined ||
+    !isParse5Element(only)
+  ) {
+    throw new Error(
+      '[foldkit] The rendered root serialized to markup that HTML parsing ' +
+        'splits into more than one top-level node. An element the parser ' +
+        'moves out of its parent (a block element inside a <p>, a stray ' +
+        'element inside a <table>, or an HTML element inside an <svg>) ' +
+        'leaves content outside the application root that hydration cannot ' +
+        'own. Keep the view root a single, structurally valid element tree.',
+    )
+  }
+  const stamp = only.attrs.find(
+    attribute => attribute.name === FOLDKIT_APP_ATTRIBUTE,
+  )
+  if (stamp?.value !== runtimeId) {
+    throw new Error(
+      '[foldkit] HTML parsing moved the hydration marker off the rendered ' +
+        'root, so the served DOM would not carry the stamp the client ' +
+        'adopts. Keep the view root a single, structurally valid element.',
+    )
+  }
+  const expectedTag = tagNameFromSelector(root.sel ?? '').toLowerCase()
+  const expectedNamespace =
+    typeof root.data?.ns === 'string' ? root.data.ns : HTML_NAMESPACE
+  if (
+    only.tagName.toLowerCase() !== expectedTag ||
+    only.namespaceURI !== expectedNamespace
+  ) {
+    throw new Error(
+      '[foldkit] HTML parsing reinterpreted the rendered root as a ' +
+        `<${only.tagName}>, not the view's <${expectedTag}>. Keep the view ` +
+        'root a single, structurally valid element.',
+    )
+  }
+}
 
 export { FOLDKIT_APP_ATTRIBUTE, FOLDKIT_FLAGS_ATTRIBUTE }
 
@@ -388,13 +457,18 @@ export function renderToString(
     }
 
     const rootHtml = yield* Effect.try({
-      try: () =>
-        serializeHtml(
+      try: () => {
+        const html = serializeHtml(
           nextDocument.body,
           isHydratable
             ? { rootAttributes: { [FOLDKIT_APP_ATTRIBUTE]: runtimeId } }
             : {},
-        ),
+        )
+        if (isHydratable && nextDocument.body !== null) {
+          assertSingleStampedRoot(html, runtimeId, nextDocument.body)
+        }
+        return html
+      },
       catch: cause => new ServerSerializationError({ cause }),
     })
 
