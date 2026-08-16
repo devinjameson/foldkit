@@ -5,3 +5,5 @@ export {
   Placement,
   Padding,
 } from './index.js'
+
+export type { SetupConfig } from './index.js'

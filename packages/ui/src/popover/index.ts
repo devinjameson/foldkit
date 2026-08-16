@@ -440,13 +440,13 @@ export const AnchorPopover = Mount.define(
       Effect.gen(function* () {
         yield* Effect.acquireRelease(
           Effect.sync(() =>
-            anchorSetup({
+            anchorSetup(element, {
               buttonId,
               anchor,
               interceptTab: false,
               focusAfterPosition: true,
               ...(focusSelector !== undefined && { focusSelector }),
-            })(element),
+            }),
           ),
           cleanup => Effect.sync(cleanup),
         )

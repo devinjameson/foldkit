@@ -758,9 +758,11 @@ export const AnchorListbox = Mount.define(
       Effect.gen(function* () {
         yield* Effect.acquireRelease(
           Effect.sync(() =>
-            anchorSetup({ buttonId, anchor, focusAfterPosition: true })(
-              element,
-            ),
+            anchorSetup(element, {
+              buttonId,
+              anchor,
+              focusAfterPosition: true,
+            }),
           ),
           cleanup => Effect.sync(cleanup),
         )

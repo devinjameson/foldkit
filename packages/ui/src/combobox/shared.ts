@@ -761,11 +761,11 @@ export const AnchorCombobox = Mount.define(
             element.addEventListener('pointerdown', preventBlur, {
               capture: true,
             })
-            const teardownAnchor = anchorSetup({
+            const teardownAnchor = anchorSetup(element, {
               buttonId,
               anchor,
               interceptTab: false,
-            })(element)
+            })
             return () => {
               element.removeEventListener('pointerdown', preventBlur, {
                 capture: true,
