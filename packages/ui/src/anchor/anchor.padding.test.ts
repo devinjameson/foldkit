@@ -6,7 +6,7 @@ import type {
   Placement as FloatingPlacement,
 } from '@floating-ui/dom'
 
-import { type AnchorConfig, anchorSetup } from './anchor.js'
+import { type AnchorConfig, anchorSetup } from './index.js'
 
 type MockComputePositionReturn = {
   x: number
