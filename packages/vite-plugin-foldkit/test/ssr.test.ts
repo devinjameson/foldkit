@@ -132,6 +132,18 @@ describe('foldkitSsr', () => {
     expect(await response.text()).not.toContain('data-foldkit-app')
   })
 
+  it('varies the refused-HTML deep route 404 on Accept', async () => {
+    const origin = await startServer()
+    const response = await fetch(`${origin}/rendered`, {
+      headers: { accept: 'text/html;q=0' },
+    })
+
+    expect(response.status).toBe(404)
+    expect((response.headers.get('vary') ?? '').toLowerCase()).toContain(
+      'accept',
+    )
+  })
+
   it('resolves relative template assets against the template on nested routes', async () => {
     const origin = await startServer()
     const response = await fetch(`${origin}/deep/nested`, {

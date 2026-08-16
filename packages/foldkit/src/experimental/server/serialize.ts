@@ -34,6 +34,57 @@ const VOID_ELEMENTS: ReadonlySet<string> = new Set([
 
 const RAW_TEXT_ELEMENTS: ReadonlySet<string> = new Set(['script', 'style'])
 
+// The HTML element names that, encountered inside SVG or MathML foreign
+// content, make the parser pop out of the foreign context (the "in foreign
+// content" breakout list). An element carrying the foreign namespace with one
+// of these names cannot be represented: the browser would reparse it as a
+// sibling outside the foreign root, leaving nodes hydration does not own.
+const FOREIGN_BREAKOUT_ELEMENTS: ReadonlySet<string> = new Set([
+  'b',
+  'big',
+  'blockquote',
+  'body',
+  'br',
+  'center',
+  'code',
+  'dd',
+  'div',
+  'dl',
+  'dt',
+  'em',
+  'embed',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'head',
+  'hr',
+  'i',
+  'img',
+  'li',
+  'listing',
+  'menu',
+  'meta',
+  'nobr',
+  'ol',
+  'p',
+  'pre',
+  'ruby',
+  's',
+  'small',
+  'span',
+  'strong',
+  'sub',
+  'sup',
+  'table',
+  'tt',
+  'u',
+  'ul',
+  'var',
+])
+
 // NOTE: raw-text elements (`script`, `style`) parse their content as text
 // until the first `</tagname`, so HTML entities do not work inside them and a
 // closing-tag sequence in the content ends the element early. That is an
@@ -501,6 +552,17 @@ const serializeElement = (
     )
   }
   const data = node.data
+  const isForeignNamespace = data?.ns !== undefined
+
+  if (isForeignNamespace && FOREIGN_BREAKOUT_ELEMENTS.has(tagName)) {
+    throw new Error(
+      `[foldkit] Cannot serialize <${tagName}> inside SVG or MathML foreign ` +
+        'content. HTML parsing pops it out of the foreign context, so the ' +
+        'served markup would not match the view and would leave nodes ' +
+        'outside the hydration root. Wrap HTML content in a <foreignObject>.',
+    )
+  }
+
   const attributes = new Map<string, string>()
 
   if (data !== undefined) {
@@ -516,6 +578,7 @@ const serializeElement = (
   }
 
   if (
+    !isForeignNamespace &&
     tagName === 'option' &&
     selectValue !== undefined &&
     optionValue(node) === selectValue
@@ -539,16 +602,17 @@ const serializeElement = (
   // NOTE: void elements have no closing tag only in the HTML namespace. In
   // SVG or MathML foreign content the same names (`input`, `br`) are ordinary
   // elements, so omitting the closing tag would let a following sibling parse
-  // as a child. Void handling and raw-text handling below are both gated on
-  // the element being in the HTML namespace; foreign content always closes
-  // and serializes its children through escaping.
-  const isForeignNamespace = data?.ns !== undefined
-
+  // as a child. Void handling, raw-text handling, and the form-control text
+  // rules below are all gated on the element being in the HTML namespace;
+  // foreign content always closes and serializes its children through
+  // escaping.
   if (!isForeignNamespace && VOID_ELEMENTS.has(tagName)) {
     return
   }
 
-  const childSelectValue = selectValueForChildren(tagName, node, selectValue)
+  const childSelectValue = isForeignNamespace
+    ? undefined
+    : selectValueForChildren(tagName, node, selectValue)
 
   const isHtmlRawText = !isForeignNamespace && RAW_TEXT_ELEMENTS.has(tagName)
 
@@ -558,7 +622,7 @@ const serializeElement = (
       assertRawTextIsSafe(tagName, innerHtml)
     }
     output.push(innerHtml)
-  } else if (tagName === 'textarea') {
+  } else if (!isForeignNamespace && tagName === 'textarea') {
     const content = textareaContent(data?.props)
     if (content !== undefined) {
       if (content.startsWith('\n')) {
@@ -571,7 +635,7 @@ const serializeElement = (
       }
       serializeChildren(output, node, depth, childSelectValue)
     }
-  } else if (NEWLINE_DROPPING_ELEMENTS.has(tagName)) {
+  } else if (!isForeignNamespace && NEWLINE_DROPPING_ELEMENTS.has(tagName)) {
     if (leadingTextOf(node)?.startsWith('\n')) {
       output.push('\n')
     }

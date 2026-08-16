@@ -66,66 +66,52 @@ const inlineStyleOf = (element: Element): Record<string, string> => {
   return style
 }
 
-const classTokenSet = (value: string): Set<string> =>
-  new Set(value.split(/\s+/).filter(token => token !== ''))
+// The reflected form attributes: the server serializes these as attributes,
+// but the client sets them as DOM properties that do not write back to the
+// attribute, so the attribute is dropped during a correct hydration. They are
+// excluded from the signature below so that expected drop is not read as a
+// server/client disagreement.
+const PROPERTY_MANAGED_ATTRIBUTES: ReadonlySet<string> = new Set([
+  'value',
+  'checked',
+  'selected',
+])
 
-const declaredClassTokens = (vnode: VNode): Set<string> => {
-  const moduleClass = vnode.data?.class
-  if (moduleClass !== undefined) {
-    return new Set(
-      Object.keys(moduleClass).filter(name => moduleClass[name] === true),
-    )
-  }
-  const attrClass = vnode.data?.attrs?.['class']
-  return typeof attrClass === 'string' ? classTokenSet(attrClass) : new Set()
-}
-
-const setsEqual = (left: Set<string>, right: Set<string>): boolean => {
-  if (left.size !== right.size) {
-    return false
-  }
-  for (const value of left) {
-    if (!right.has(value)) {
-      return false
+// A normalized snapshot of an element's attributes, class set, and inline
+// style, read entirely through the DOM. Comparing the snapshot taken during
+// adoption (the server DOM) with the element's state after the client patch
+// flags any attribute, class, or style the two disagree on. Because both sides
+// pass through the same DOM APIs, spelling differences (attribute order, class
+// order, CSS serialization) never register, so a deterministic render never
+// reports a mismatch. Values feed the comparison but are never surfaced.
+const attributeSignature = (element: Element): string => {
+  const attributes: Array<string> = []
+  for (const attribute of Array.from(element.attributes)) {
+    const name = attribute.name
+    if (
+      name === HYDRATION_STAMP_ATTRIBUTE ||
+      name === 'class' ||
+      name === 'style' ||
+      PROPERTY_MANAGED_ATTRIBUTES.has(name)
+    ) {
+      continue
     }
+    attributes.push(`${name}=${attribute.value}`)
   }
-  return true
-}
+  attributes.sort()
 
-// NOTE: attribute-only divergence has no structural signal, so hydration
-// compares the adopted DOM against what the client vnode declares. Class and
-// the client's own raw attributes are compared. Reflected props (href, value)
-// are not in `attrs`, and inline style is subject to browser CSS
-// normalization, so neither is used as a mismatch signal here to avoid
-// false positives. Only whether the values agree is used, never the values.
-const hasAttributeMismatch = (element: Element, vnode: VNode): boolean => {
-  const actualClasses = new Set(Array.from(element.classList))
-  if (!setsEqual(declaredClassTokens(vnode), actualClasses)) {
-    return true
-  }
+  const classes = Array.from(element.classList).sort()
 
-  const declaredAttrs = vnode.data?.attrs
-  if (declaredAttrs !== undefined) {
-    for (const name of Object.keys(declaredAttrs)) {
-      if (name === 'class' || name === 'style') {
-        continue
-      }
-      const declared = declaredAttrs[name]
-      if (typeof declared === 'boolean') {
-        if (declared !== element.hasAttribute(name)) {
-          return true
-        }
-      } else if (declared === undefined) {
-        if (element.hasAttribute(name)) {
-          return true
-        }
-      } else if (element.getAttribute(name) !== String(declared)) {
-        return true
-      }
-    }
-  }
+  const style = inlineStyleOf(element)
+  const styleProperties = Object.keys(style)
+    .sort()
+    .map(property => `${property}:${style[property]}`)
 
-  return false
+  return [
+    attributes.join('|'),
+    `class:${classes.join(' ')}`,
+    `style:${styleProperties.join(';')}`,
+  ].join('||')
 }
 
 // NOTE: reconcile stale server DOM against the client's first render by
@@ -133,21 +119,25 @@ const hasAttributeMismatch = (element: Element, vnode: VNode): boolean => {
 // and inline styles. Server DOM state is all view-produced, so the diff
 // modules remove any value the client tree does not reassert, converging a
 // nondeterministic render instead of leaving stale, behavior-affecting state
-// (a stale href, a stale class) on the page. Each piece of state is seeded
-// into the channel the client vnode owns it through: class and inline style
-// go to their modules only when the client uses those modules, and otherwise
-// ride in attrs (alongside the reflected form attributes value, checked, and
-// selected), so no value is written by one module and then removed as stale
-// state by another. The hydration stamp is never seeded, so it is never
-// removed.
+// (a stale href, a stale class) on the page. class and inline style are
+// seeded into their own module only when the client view owns them solely
+// through that module. When the view also sets `class` or `style` through a
+// raw attribute, or does not use the module at all, the whole attribute rides
+// in attrs and the module (if present) re-asserts its tokens on top, so no
+// value is written by one module and then removed as stale state by another.
+// The hydration stamp is never seeded, so it is never removed.
 const seedAdoptedState = (
   element: Element,
   vnode: VNode,
   clone: VNode,
   status: HydrationStatus,
 ): void => {
-  const usesClassModule = vnode.data?.class !== undefined
-  const usesStyleModule = vnode.data?.style !== undefined
+  const classOwnedByModule =
+    vnode.data?.class !== undefined &&
+    vnode.data?.attrs?.['class'] === undefined
+  const styleOwnedByModule =
+    vnode.data?.style !== undefined &&
+    vnode.data?.attrs?.['style'] === undefined
 
   const attrs: Record<string, string> = {}
   for (const attribute of Array.from(element.attributes)) {
@@ -155,17 +145,17 @@ const seedAdoptedState = (
     if (name === HYDRATION_STAMP_ATTRIBUTE) {
       continue
     }
-    if (name === 'class' && usesClassModule) {
+    if (name === 'class' && classOwnedByModule) {
       continue
     }
-    if (name === 'style' && usesStyleModule) {
+    if (name === 'style' && styleOwnedByModule) {
       continue
     }
     attrs[name] = attribute.value
   }
 
-  const classes = usesClassModule ? classListOf(element) : {}
-  const style = usesStyleModule ? inlineStyleOf(element) : {}
+  const classes = classOwnedByModule ? classListOf(element) : {}
+  const style = styleOwnedByModule ? inlineStyleOf(element) : {}
 
   clone.data = {
     ...clone.data,
@@ -174,13 +164,19 @@ const seedAdoptedState = (
     ...(Object.keys(style).length > 0 ? { style } : {}),
   }
 
-  if (hasAttributeMismatch(element, vnode)) {
-    detectMismatch(status)
+  // In development, record the server DOM signature so the post-patch pass can
+  // report an attribute-only mismatch the structural walk cannot see. Gated on
+  // the dev flag so a production hydrate does no extra work.
+  if (import.meta.hot) {
+    status.serverSignatures.set(element, attributeSignature(element))
   }
 }
 
 type AdoptedElements = Set<Node>
-type HydrationStatus = { isMismatchDetected: boolean }
+type HydrationStatus = {
+  isMismatchDetected: boolean
+  serverSignatures: Map<Element, string>
+}
 
 const detectMismatch = (status: HydrationStatus): void => {
   status.isMismatchDetected = true
@@ -475,6 +471,22 @@ const fireAdoptedInsertHooks = (
  *  to the pre-hydration replace boot. Development builds warn when
  *  reconciliation is required. Returns the patched vnode to store as the
  *  runtime's current tree. */
+// Replace the hydration root with a fresh render of the vnode. snabbdom's
+// sameVnode compares tag but not namespace, so patching the root directly
+// would reuse a same-tag element even across a namespace change. Patching
+// against a comment placed where the root was is never sameVnode with a new
+// element, so the differ builds a fresh node in the correct namespace and
+// swaps it in.
+const replaceHydrationRoot = (hydrationRoot: Element, vnode: VNode): VNode => {
+  const parent = hydrationRoot.parentNode
+  if (parent === null) {
+    return patch(toVNode(hydrationRoot), vnode)
+  }
+  const placeholder = hydrationRoot.ownerDocument.createComment('')
+  parent.replaceChild(placeholder, hydrationRoot)
+  return patch(toVNode(placeholder), vnode)
+}
+
 export const __hydrateVNode = (
   hydrationRoot: Element,
   nextVNode: VNode | null,
@@ -482,16 +494,20 @@ export const __hydrateVNode = (
 ): VNode => {
   const dedupedVNode =
     nextVNode !== null ? dedupeSharedVNodes(nextVNode, seen) : h('!')
-  const status: HydrationStatus = { isMismatchDetected: false }
+  const status: HydrationStatus = {
+    isMismatchDetected: false,
+    serverSignatures: new Map(),
+  }
 
   if (
     dedupedVNode.sel === undefined ||
     dedupedVNode.sel === '' ||
     dedupedVNode.sel === '!' ||
-    !matchesTag(hydrationRoot, dedupedVNode.sel)
+    !matchesTag(hydrationRoot, dedupedVNode.sel) ||
+    !matchesNamespace(hydrationRoot, dedupedVNode)
   ) {
     detectMismatch(status)
-    const patchedVNode = patch(toVNode(hydrationRoot), dedupedVNode)
+    const patchedVNode = replaceHydrationRoot(hydrationRoot, dedupedVNode)
     reportMismatch(status)
     return patchedVNode
   }
@@ -504,6 +520,14 @@ export const __hydrateVNode = (
     status,
   )
   const patchedVNode = patch(adoptedClone, dedupedVNode)
+  if (import.meta.hot && !status.isMismatchDetected) {
+    for (const [element, serverSignature] of status.serverSignatures) {
+      if (attributeSignature(element) !== serverSignature) {
+        detectMismatch(status)
+        break
+      }
+    }
+  }
   fireAdoptedInsertHooks(patchedVNode, adopted)
   reportMismatch(status)
   return patchedVNode

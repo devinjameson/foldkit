@@ -406,6 +406,42 @@ describe('__hydrateVNode', () => {
     expect(root.style.color).toBe('blue')
   })
 
+  it('converges class and style set through both a raw attribute and the typed module', () => {
+    const view = () =>
+      h.div(
+        [
+          h.Attribute('class', 'raw'),
+          h.Class('typed'),
+          h.Attribute('style', 'background: red'),
+          h.Style({ color: 'blue' }),
+        ],
+        ['content'],
+      )
+    const root = mountServerHtml(serializeHtml(buildView(view)))
+    if (!(root instanceof HTMLDivElement)) {
+      throw new Error('expected a div root')
+    }
+
+    buildView(() => __hydrateVNode(root, view()))
+
+    expect(root.classList.contains('raw')).toBe(true)
+    expect(root.classList.contains('typed')).toBe(true)
+    expect(root.style.getPropertyValue('background')).toContain('red')
+    expect(root.style.color).toBe('blue')
+  })
+
+  it('replaces a hydration root whose namespace disagrees with the vnode', () => {
+    const htmlSvg = document.createElement('svg')
+    htmlSvg.setAttribute('data-foldkit-app', 'app')
+    host.appendChild(htmlSvg)
+
+    buildView(() => __hydrateVNode(htmlSvg, h.svg([], [h.circle([])])))
+
+    const root = host.firstElementChild
+    expect(root).not.toBe(htmlSvg)
+    expect(root?.namespaceURI).toBe('http://www.w3.org/2000/svg')
+  })
+
   it('rebuilds an adopted element whose namespace disagrees with the DOM', () => {
     const root = mountServerHtml('<div><a>link</a></div>')
     const originalAnchor = root.firstElementChild

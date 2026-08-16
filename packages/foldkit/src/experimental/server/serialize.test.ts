@@ -356,6 +356,18 @@ describe('serializeHtml', () => {
     expect(serializeHtml(view)).toBe('<svg><desc><input></desc></svg>')
   })
 
+  it('rejects an HTML element inside SVG that HTML parsing would break out', () => {
+    const view = h.svg([], [h.div([h.Id('escaped')], ['inside']), h.circle([])])
+    expect(() => serializeHtml(view)).toThrow(/foreign content/)
+  })
+
+  it('serializes HTML content wrapped in a foreignObject', () => {
+    const view = h.svg([], [h.foreignObject([], [h.div([], ['inside'])])])
+    expect(serializeHtml(view)).toBe(
+      '<svg><foreignObject><div>inside</div></foreignObject></svg>',
+    )
+  })
+
   it('emits InnerHTML raw', () => {
     const view = h.div([h.InnerHTML('<em>raw</em>')])
     expect(serializeHtml(view)).toBe('<div><em>raw</em></div>')

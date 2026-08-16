@@ -67,10 +67,15 @@ const toWebRequest = (
 // path resolves to the template or the client accepts HTML (Accept parsed
 // with quality values, so `text/html;q=0` is refused); OPTIONS and TRACE are
 // left to Vite; other methods reach the entry, which may respond directly.
-// 'RenderVaryAccept' marks a render whose HTML-or-not decision hinged on the
-// Accept header (a deep route, not a template path), so the response must
-// carry Vary: Accept for shared caches, matching a production host.
-type RenderDecision = 'Skip' | 'Render' | 'RenderVaryAccept'
+// A deep route's HTML-or-not decision hinges on the Accept header, so both the
+// rendered representation ('RenderVaryAccept') and the refused one
+// ('RefusedVaryAccept', a 404) must carry Vary: Accept for shared caches, the
+// same as a production host.
+type RenderDecision =
+  | 'Skip'
+  | 'Render'
+  | 'RenderVaryAccept'
+  | 'RefusedVaryAccept'
 
 const renderDecision = (
   nodeRequest: Connect.IncomingMessage,
@@ -84,7 +89,7 @@ const renderDecision = (
     const accept = nodeRequest.headers.accept
     return Server.acceptsHtml(Predicate.isString(accept) ? accept : undefined)
       ? 'RenderVaryAccept'
-      : 'Skip'
+      : 'RefusedVaryAccept'
   }
   if (method === 'OPTIONS' || method === 'TRACE') {
     return 'Skip'
@@ -226,6 +231,20 @@ export const foldkitSsr = (options: FoldkitSsrOptions): Plugin => ({
         const decision = renderDecision(nodeRequest)
         if (decision === 'Skip') {
           next()
+          return
+        }
+        if (decision === 'RefusedVaryAccept') {
+          // The 404 depends on Accept (an HTML-accepting client would have
+          // rendered), so it varies on Accept for a shared cache, the same as
+          // a production host's refused response.
+          nodeResponse.statusCode = 404
+          nodeResponse.setHeader(
+            'vary',
+            Server.varyWithAccept(
+              varyHeaderValue(nodeResponse.getHeader('vary')),
+            ),
+          )
+          nodeResponse.end()
           return
         }
         const varyAccept = decision === 'RenderVaryAccept'
