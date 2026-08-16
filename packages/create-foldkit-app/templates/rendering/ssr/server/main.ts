@@ -35,11 +35,11 @@ const renderRequest = (
     return HttpServerResponse.fromWeb(Server.toResponse(template, result))
   })
 
-// A static miss is answered by content negotiation, so the representation
-// depends on the Accept header. Vary: Accept keeps a shared cache from
-// serving one client's representation to another, merged with any Vary the
-// render already set. The merge parses Vary as field-name tokens so
-// Accept-Language or Accept-Encoding is never mistaken for the Accept field.
+// NOTE: Vary: Accept keeps a shared cache from serving one client's
+// representation to another when a static miss is answered by content
+// negotiation. It is merged with any Vary the render already set, parsing
+// Vary as field-name tokens so Accept-Language or Accept-Encoding is never
+// mistaken for the Accept field.
 const withVaryAccept = (
   response: HttpServerResponse.HttpServerResponse,
 ): HttpServerResponse.HttpServerResponse =>
@@ -61,17 +61,17 @@ type RequestKind = 'Render' | 'StaticOrRender' | 'MethodNotAllowed'
 // disk is the unfilled template, and serving it raw would hand the browser an
 // unstamped shell that Runtime.hydrate refuses. OPTIONS and other non-page
 // methods are not rendered.
-const requestKind = (
-  request: HttpServerRequest.HttpServerRequest,
-): RequestKind => {
-  const method = request.method
+const requestKind = ({
+  method,
+  url,
+}: HttpServerRequest.HttpServerRequest): RequestKind => {
   if (method === 'GET' || method === 'HEAD') {
-    return Server.resolvesToIndexHtml(request.url) ? 'Render' : 'StaticOrRender'
-  }
-  if (method === 'OPTIONS' || method === 'TRACE') {
+    return Server.resolvesToIndexHtml(url) ? 'Render' : 'StaticOrRender'
+  } else if (method === 'OPTIONS' || method === 'TRACE') {
     return 'MethodNotAllowed'
+  } else {
+    return 'Render'
   }
-  return 'Render'
 }
 
 const makeHandler = Effect.gen(function* () {
@@ -82,9 +82,9 @@ const makeHandler = Effect.gen(function* () {
     index: undefined,
   })
 
-  // A GET/HEAD miss is Accept-negotiated: an HTML-accepting client (a deep
-  // link into a client route, a browser, curl, a health check) renders the
-  // application; anything else gets a 404. Both carry Vary: Accept.
+  // NOTE: a static miss is Accept-negotiated because a deep link into a client
+  // route has no file on disk but an HTML client should still get the app
+  // shell. It renders, anything else 404s, and both carry Vary: Accept.
   const serveStaticOrRender = (request: HttpServerRequest.HttpServerRequest) =>
     staticFiles.pipe(
       Effect.catchIf(isRouteNotFound, () =>
