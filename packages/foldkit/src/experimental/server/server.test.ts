@@ -330,6 +330,19 @@ describe('renderToString', () => {
       expect(error).toMatchObject({ _tag: 'ServerSerializationError' })
     })
 
+  const rendersHydratable = (body: Document['body'], contains: string) =>
+    Effect.gen(function* () {
+      const rendered = yield* renderToString({
+        init: (): readonly [Model, ReadonlyArray<never>] => [
+          Model.make({ theme: 'plain', pathname: '/' }),
+          [],
+        ],
+        view: () => ({ title: 'Renders', body }),
+      })
+
+      expect(rendered.html).toContain(contains)
+    })
+
   it.effect(
     'rejects a block element inside a <p> that parsing splits out',
     () =>
@@ -407,6 +420,31 @@ describe('renderToString', () => {
 
       expect(rendered.html).toContain('<tbody><tr><td>cell</td></tr></tbody>')
     }),
+  )
+
+  it.effect('renders a standalone empty text child', () =>
+    rendersHydratable(h.div([], ['']), `<div ${FOLDKIT_APP_ATTRIBUTE}="app">`),
+  )
+
+  it.effect('renders empty text before and after an element', () =>
+    rendersHydratable(h.div([], ['', h.span([], ['x']), '']), '<span>x</span>'),
+  )
+
+  it.effect('renders consecutive empty and non-empty text', () =>
+    rendersHydratable(h.div([], ['', 'kept', '']), '>kept</div>'),
+  )
+
+  it.effect('renders a controlled textarea value as its text content', () =>
+    rendersHydratable(h.textarea([h.Value('model')]), '>model</textarea>'),
+  )
+
+  it.effect('renders an uncontrolled textarea with text children', () =>
+    rendersHydratable(h.textarea([], ['hello']), '>hello</textarea>'),
+  )
+
+  it.effect(
+    'rejects a textarea with element children parsing folds to text',
+    () => failsHydratableRender(h.textarea([], [h.b([], ['x'])])),
   )
 
   it.effect('renders a valid svg root that parses back to one element', () =>

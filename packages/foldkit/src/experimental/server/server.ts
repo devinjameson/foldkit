@@ -30,7 +30,11 @@ import {
 import type { VNode } from '../../snabbdom/vnode.js'
 import { tagNameFromSelector } from '../../tagName.js'
 import { Url, fromString } from '../../url/index.js'
-import { escapeAttributeValue, serializeHtml } from './serialize.js'
+import {
+  escapeAttributeValue,
+  serializeHtml,
+  textareaContent,
+} from './serialize.js'
 
 const HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml'
 
@@ -56,6 +60,8 @@ type ParsedChild =
 // The children a vnode declares, with consecutive text merged into one run.
 // The serializer emits adjacent text children back to back, so the parser
 // reads them as a single text node; merging both sides makes them comparable.
+// A zero-length run is dropped: the serializer emits no node for empty text,
+// so the parser produces none either.
 const normalizeVnodeChildren = (vnode: VNode): ReadonlyArray<VnodeChild> => {
   const children = vnode.children
   if (children === undefined) {
@@ -63,27 +69,20 @@ const normalizeVnodeChildren = (vnode: VNode): ReadonlyArray<VnodeChild> => {
   }
   const items: Array<VnodeChild> = []
   let text = ''
-  let hasText = false
-  // NOTE: an empty text run serializes to no markup at all, so the parser
-  // never produces a node for it; flushing it would report a phantom child
-  // the parsed side can never match.
   const flush = (): void => {
-    if (hasText && text !== '') {
+    if (text !== '') {
       items.push({ kind: 'Text', text })
     }
     text = ''
-    hasText = false
   }
   for (const child of children) {
     if (typeof child === 'string') {
       text += child
-      hasText = true
       continue
     }
     const selector = child.sel
     if (selector === undefined || selector === '') {
       text += child.text ?? ''
-      hasText = true
     } else if (selector === '!') {
       flush()
       items.push({ kind: 'Comment', text: child.text ?? '' })
@@ -101,13 +100,11 @@ const normalizeParsedChildren = (
 ): ReadonlyArray<ParsedChild> => {
   const items: Array<ParsedChild> = []
   let text = ''
-  let hasText = false
   const flush = (): void => {
-    if (hasText && text !== '') {
+    if (text !== '') {
       items.push({ kind: 'Text', text })
     }
     text = ''
-    hasText = false
   }
   for (const child of node.childNodes) {
     if (isParse5Element(child)) {
@@ -115,7 +112,6 @@ const normalizeParsedChildren = (
       items.push({ kind: 'Element', element: child })
     } else if (child.nodeName === '#text' && 'value' in child) {
       text += child.value
-      hasText = true
     } else if (child.nodeName === '#comment' && 'data' in child) {
       flush()
       items.push({ kind: 'Comment', text: child.data })
@@ -125,13 +121,20 @@ const normalizeParsedChildren = (
   return items
 }
 
-// A vnode whose content the parser owns or the vnode does not carry as
-// children: an InnerHTML string parses into an opaque subtree, and a
-// `<textarea>`'s value serializes as text content the vnode holds as a prop,
-// not a child. Neither can contain elements, so skipping them drops no
-// structural check.
-const isStructurallyOpaque = (vnode: VNode, tagName: string): boolean =>
-  vnode.data?.props?.['innerHTML'] !== undefined || tagName === 'textarea'
+// The children a `<textarea>` serializes to. A controlled textarea emits its
+// `value` prop as its text content (the serializer's leading-newline padding
+// and the parser's leading-newline strip cancel, so the parsed text is the
+// value verbatim), which the walk represents as a single text run, empty value
+// omitted. An uncontrolled textarea serializes its own children, so they are
+// validated normally, rejecting element children the parser folds into RCDATA
+// text.
+const expectedTextareaChildren = (vnode: VNode): ReadonlyArray<VnodeChild> => {
+  const content = textareaContent(vnode.data?.props)
+  if (content === undefined) {
+    return normalizeVnodeChildren(vnode)
+  }
+  return content === '' ? [] : [{ kind: 'Text', text: content }]
+}
 
 const structureMismatch = (parsed: Parse5Element): Error =>
   new Error(
@@ -150,11 +153,16 @@ const structureMismatch = (parsed: Parse5Element): Error =>
 // foster-parented text, which hydration would otherwise see as a whole-subtree
 // mismatch.
 const assertStructureMatches = (parsed: Parse5Element, vnode: VNode): void => {
-  if (isStructurallyOpaque(vnode, parsed.tagName.toLowerCase())) {
+  // InnerHTML owns an opaque, parser-produced subtree that the vnode does not
+  // model as children, so it is left unwalked.
+  if (vnode.data?.props?.['innerHTML'] !== undefined) {
     return
   }
-  const vnodeChildren = normalizeVnodeChildren(vnode)
   const parsedChildren = normalizeParsedChildren(parsed)
+  const vnodeChildren =
+    parsed.tagName.toLowerCase() === 'textarea'
+      ? expectedTextareaChildren(vnode)
+      : normalizeVnodeChildren(vnode)
   if (parsedChildren.length !== vnodeChildren.length) {
     throw structureMismatch(parsed)
   }

@@ -390,7 +390,11 @@ const serializeAttributes = (
   }
 }
 
-const textareaContent = (
+// The text a controlled `<textarea>` serializes: its `value` prop when set,
+// or `undefined` when the textarea is uncontrolled and its children are its
+// content. Exported so the render-time structure check can predict the text
+// content the serializer produces without re-deriving the rule.
+export const textareaContent = (
   properties: Readonly<Record<string, unknown>> | undefined,
 ): string | undefined => {
   const value = properties?.['value']

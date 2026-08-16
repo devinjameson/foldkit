@@ -500,6 +500,30 @@ describe('__hydrateVNode', () => {
     expect(root.defaultValue).toBe('')
   })
 
+  it('hydrates an uncontrolled textarea preserving its server content', () => {
+    const view = () => h.textarea([], ['default text'])
+    const root = mountServerHtml(serializeHtml(buildView(view)))
+    if (!(root instanceof HTMLTextAreaElement)) {
+      throw new Error('expected a textarea root')
+    }
+
+    const patchedVNode = buildView(() => __hydrateVNode(root, view()))
+
+    expect(patchedVNode.elm).toBe(root)
+    expect(root.value).toBe('default text')
+  })
+
+  it('hydrates empty text children without rebuilding the root', () => {
+    const view = () => h.div([], ['', h.span([h.Id('inner')], ['x']), ''])
+    const root = mountServerHtml(serializeHtml(buildView(view)))
+    const span = root.querySelector('#inner')
+
+    const patchedVNode = buildView(() => __hydrateVNode(root, view()))
+
+    expect(patchedVNode.elm).toBe(root)
+    expect(root.querySelector('#inner')).toBe(span)
+  })
+
   it('rebuilds when the server element holds markup where the view expects text children', () => {
     const root = mountServerHtml('<p><b>stale</b> markup</p>')
 
