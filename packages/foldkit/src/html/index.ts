@@ -1307,6 +1307,36 @@ const classObjectFor = (value: string): Readonly<Record<string, true>> => {
   return classObject
 }
 
+// NOTE: navigation and resource URL attributes (href, src, action,
+// formaction) execute script when their scheme is `javascript:` or
+// `vbscript:`, so an untrusted value bound to them is an XSS sink. Browsers
+// ignore ASCII control characters embedded in a scheme (`java\tscript:`
+// still runs), so those are stripped before the scheme is read. A dangerous
+// scheme neutralizes to an empty value; every other URL, including relative
+// paths, http(s), mailto, tel, and data URLs, passes through unchanged.
+const DANGEROUS_URL_SCHEMES: ReadonlySet<string> = new Set([
+  'javascript',
+  'vbscript',
+])
+const URL_CONTROL_CHARACTERS = /[\u0000-\u001F\u007F-\u009F]/g
+const URL_SCHEME_PATTERN = /^\s*([a-zA-Z][a-zA-Z0-9+.-]*)\s*:/
+
+const sanitizeUrl = (value: string): string => {
+  const match = URL_SCHEME_PATTERN.exec(
+    value.replace(URL_CONTROL_CHARACTERS, ''),
+  )
+  if (match !== null) {
+    const scheme = match[1]
+    if (
+      scheme !== undefined &&
+      DANGEROUS_URL_SCHEMES.has(scheme.toLowerCase())
+    ) {
+      return ''
+    }
+  }
+  return value
+}
+
 // NOTE: Built once at module load. Handlers are keyed by `_tag` and apply
 // their mutation to a per-VNode BuildContext directly, so applying an
 // attribute is one map lookup and one call with no per-attribute closure
@@ -1749,20 +1779,23 @@ const attributeHandlers: AttributeHandlers = {
   Min: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'min', value),
   Step: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'step', value),
   For: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'htmlFor', value),
-  Href: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'href', value),
-  Src: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'src', value),
+  Href: ({ value }, ctx: BuildContext) =>
+    setDataProp(ctx, 'href', sanitizeUrl(value)),
+  Src: ({ value }, ctx: BuildContext) =>
+    setDataProp(ctx, 'src', sanitizeUrl(value)),
   Alt: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'alt', value),
   Target: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'target', value),
   Rel: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'rel', value),
   Download: ({ value }, ctx: BuildContext) =>
     setDataProp(ctx, 'download', value),
-  Action: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'action', value),
+  Action: ({ value }, ctx: BuildContext) =>
+    setDataProp(ctx, 'action', sanitizeUrl(value)),
   Method: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'method', value),
   Enctype: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'enctype', value),
   Novalidate: ({ value }, ctx: BuildContext) =>
     setDataProp(ctx, 'noValidate', value),
   Formaction: ({ value }, ctx: BuildContext) =>
-    setDataProp(ctx, 'formAction', value),
+    setDataProp(ctx, 'formAction', sanitizeUrl(value)),
   Formmethod: ({ value }, ctx: BuildContext) =>
     setDataProp(ctx, 'formMethod', value),
   Formnovalidate: ({ value }, ctx: BuildContext) =>

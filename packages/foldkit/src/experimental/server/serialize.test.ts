@@ -286,6 +286,32 @@ describe('serializeHtml', () => {
     )
   })
 
+  it('neutralizes a javascript: URL on navigation and resource attributes', () => {
+    expect(serializeHtml(h.a([h.Href('javascript:evil()')], ['go']))).toBe(
+      '<a href="">go</a>',
+    )
+    expect(serializeHtml(h.img([h.Src('vbscript:evil()')]))).toBe(
+      '<img src="">',
+    )
+    expect(serializeHtml(h.form([h.Action('JavaScript:evil()')]))).toBe(
+      '<form action=""></form>',
+    )
+  })
+
+  it('neutralizes a javascript: URL obfuscated with control characters', () => {
+    const view = h.a([h.Href('java\tscript:evil()')], ['go'])
+    expect(serializeHtml(view)).toBe('<a href="">go</a>')
+  })
+
+  it('leaves safe URLs on navigation attributes unchanged', () => {
+    expect(serializeHtml(h.a([h.Href('/route?x=a:b')], ['go']))).toBe(
+      '<a href="/route?x=a:b">go</a>',
+    )
+    expect(
+      serializeHtml(h.a([h.Href('mailto:hi@example.com')], ['mail'])),
+    ).toBe('<a href="mailto:hi@example.com">mail</a>')
+  })
+
   it('escapes text children of a foreign-namespace script instead of emitting raw text', () => {
     const view = h.svg([], [h.script([], ['<img src=x onerror="evil()">'])])
     const serialized = serializeHtml(view)
