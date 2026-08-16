@@ -361,6 +361,46 @@ describe('__hydrateVNode', () => {
     expect(root.defaultChecked).toBe(false)
   })
 
+  it('removes stale server attributes, classes, and styles the client view drops', () => {
+    const serverView = () =>
+      h.a(
+        [
+          h.Class('stale'),
+          h.DataAttribute('old', 'yes'),
+          h.Href('/stale'),
+          h.Style({ color: 'red' }),
+        ],
+        ['same'],
+      )
+    const clientView = () => h.a([h.Class('fresh'), h.Title('new')], ['same'])
+    const root = mountServerHtml(serializeHtml(buildView(serverView)))
+    if (!(root instanceof HTMLAnchorElement)) {
+      throw new Error('expected an anchor root')
+    }
+
+    buildView(() => __hydrateVNode(root, clientView()))
+
+    expect(root.className).toBe('fresh')
+    expect(root.getAttribute('title')).toBe('new')
+    expect(root.hasAttribute('data-old')).toBe(false)
+    expect(root.hasAttribute('href')).toBe(false)
+    expect(root.style.color).toBe('')
+  })
+
+  it('resets a controlled textarea default so hydration matches a fresh boot', () => {
+    const textareaView = () => h.textarea([h.Value('model')])
+    const root = mountServerHtml(serializeHtml(buildView(textareaView)))
+    if (!(root instanceof HTMLTextAreaElement)) {
+      throw new Error('expected a textarea root')
+    }
+    expect(root.textContent).toBe('model')
+
+    buildView(() => __hydrateVNode(root, textareaView()))
+
+    expect(root.value).toBe('model')
+    expect(root.defaultValue).toBe('')
+  })
+
   it('rebuilds when the server element holds markup where the view expects text children', () => {
     const root = mountServerHtml('<p><b>stale</b> markup</p>')
 

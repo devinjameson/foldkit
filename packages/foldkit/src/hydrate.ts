@@ -34,17 +34,63 @@ import { dedupeSharedVNodes, patch } from './vdom.js'
 // appends them.
 
 const HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml'
+const HYDRATION_STAMP_ATTRIBUTE = 'data-foldkit-app'
 
-// Properties the serializer reflects as attributes for correct pre-hydration
-// markup, paired with the attribute name it writes. Each is removed from the
-// adopted element so the client's property-driven state, not the served
-// attribute, is the element's default.
-const REFLECTED_PROPERTY_ATTRIBUTES: ReadonlyArray<readonly [string, string]> =
-  [
-    ['value', 'value'],
-    ['checked', 'checked'],
-    ['muted', 'muted'],
-  ]
+// The style module keys regular properties in camelCase (`backgroundColor`)
+// and custom properties as written (`--accent`), so a property read from the
+// DOM in kebab case is converted to the module's key form before seeding.
+const styleModuleKey = (property: string): string =>
+  property.startsWith('--')
+    ? property
+    : property.replace(/-([a-z])/g, (_match, character: string) =>
+        character.toUpperCase(),
+      )
+
+// NOTE: reconcile stale server DOM against the client's first render by
+// seeding the adopted clone with the element's current attributes, classes,
+// and inline styles. Server DOM state is all view-produced, so the diff
+// modules remove any value the client tree does not reassert, converging a
+// nondeterministic render instead of leaving stale, behavior-affecting state
+// (a stale href, a stale class) on the page. class and inline style are
+// partitioned into their own module data so they are not double-managed; the
+// serializer-reflected form attributes (value, checked, selected) land in
+// attrs and are removed the same way, matching a fresh client boot's
+// defaults. The hydration stamp is never seeded, so it is never removed.
+const seedAdoptedState = (element: Element, clone: VNode): void => {
+  const attrs: Record<string, string> = {}
+  for (const attribute of Array.from(element.attributes)) {
+    const name = attribute.name
+    if (
+      name === 'class' ||
+      name === 'style' ||
+      name === HYDRATION_STAMP_ATTRIBUTE
+    ) {
+      continue
+    }
+    attrs[name] = attribute.value
+  }
+
+  const classes: Record<string, boolean> = {}
+  for (const className of Array.from(element.classList)) {
+    classes[className] = true
+  }
+
+  const style: Record<string, string> = {}
+  if (element instanceof HTMLElement || element instanceof SVGElement) {
+    const inlineStyle = element.style
+    for (let index = 0; index < inlineStyle.length; index += 1) {
+      const property = inlineStyle.item(index)
+      style[styleModuleKey(property)] = inlineStyle.getPropertyValue(property)
+    }
+  }
+
+  clone.data = {
+    ...clone.data,
+    ...(Object.keys(attrs).length > 0 ? { attrs } : {}),
+    ...(Object.keys(classes).length > 0 ? { class: classes } : {}),
+    ...(Object.keys(style).length > 0 ? { style } : {}),
+  }
+}
 
 type AdoptedElements = Set<Node>
 type HydrationStatus = { isMismatchDetected: boolean }
@@ -154,28 +200,21 @@ const adoptElement = (
   const clone = cloneOf(vnode, element)
   adopted.add(element)
 
-  // NOTE: the serializer reflects some properties as attributes so the served
-  // page is correct before hydration: `selected` on the chosen option, and
-  // `value`/`checked`/`muted` on form controls. The client drives these
-  // through DOM properties, and its vnodes carry no such attribute, so a
-  // fresh client boot never sets the attribute. Recording the stamped
-  // attribute in the clone lets the attributes module remove it during the
-  // adopting patch, so the adopted element's `defaultValue`, `defaultChecked`,
-  // and reset behavior match a fresh boot rather than the served markup.
-  const stampedAttributes: Record<string, string> = {}
-  if (element.tagName === 'OPTION' && element.hasAttribute('selected')) {
-    stampedAttributes['selected'] = ''
-  }
-  for (const [property, attribute] of REFLECTED_PROPERTY_ATTRIBUTES) {
-    if (
-      vnode.data?.props?.[property] !== undefined &&
-      element.hasAttribute(attribute)
-    ) {
-      stampedAttributes[attribute] = ''
-    }
-  }
-  if (Object.keys(stampedAttributes).length > 0) {
-    clone.data = { ...clone.data, attrs: stampedAttributes }
+  seedAdoptedState(element, clone)
+
+  // NOTE: a controlled textarea serializes its value as text content, which
+  // sets the element's defaultValue. A fresh boot sets only the value
+  // property and leaves defaultValue empty, so the server text is cleared
+  // before the props module applies the value; otherwise the adopted
+  // textarea's defaultValue and form.reset would differ from a fresh boot.
+  // An uncontrolled textarea, whose content is its default, is left alone.
+  if (
+    element.tagName === 'TEXTAREA' &&
+    vnode.data?.props?.['value'] !== undefined
+  ) {
+    clearChildren(element)
+    clone.children = []
+    return clone
   }
 
   const authoredInnerHtml = vnode.data?.props?.['innerHTML']
