@@ -527,7 +527,7 @@ describe('__hydrateVNode', () => {
   it('hydrates a pre whose empty text precedes newline-prefixed text', () => {
     // The serializer pads this view to <pre>\n\nfirst</pre>; a real browser
     // strips one leading newline from <pre>, so the accepted server DOM holds
-    // "\nfirst". (jsdom's innerHTML parser does not strip it, so the DOM is
+    // "\nfirst". (happy-dom's innerHTML parser does not strip it, so the DOM is
     // built directly to match what the render walk's parser and a browser see.)
     const root = document.createElement('pre')
     root.textContent = '\nfirst'
