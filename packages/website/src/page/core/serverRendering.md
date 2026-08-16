@@ -135,7 +135,9 @@ Vite continues to serve the client entry, HMR, and assets. Requests that reach t
 
 In production, build the client and the server host separately. The host serves static assets first, imports the built server entry, and sends `Server.toResponse(template, await renderPage(request))`. The [SSR example](https://github.com/foldkit/foldkit/tree/main/examples/ssr) uses an Effect `HttpServer` for that thin delivery layer.
 
-Personalized HTML must not enter a shared cache. Set an appropriate `cache-control` policy and `vary` headers when Flags depend on cookies, authorization, locale, or other request data. The SSR example uses `private, no-store` and `vary: cookie` because its initial counter comes from a cookie.
+:::Warning{label="Caching personalized responses"}
+When Flags depend on the request, such as a cookie, an authorization header, or locale, the rendered HTML is specific to that visitor. Set `cache-control` and `vary` so it cannot be stored in a shared cache and served to someone else. The SSR example uses `private, no-store` and `vary: cookie` because its initial count comes from a cookie.
+:::
 
 ## Build-time SSG
 
@@ -152,6 +154,8 @@ The [SSG example](https://github.com/foldkit/foldkit/tree/main/examples/ssg) is 
 A deployed SSG build is static files. Any static host or CDN serves the generated directory as is; the hydration handoff already lives inside the HTML, so nothing beyond serving files is required.
 
 A deployed SSR application needs a host with two jobs: serve the built client assets, and call `renderPage` for page requests. On Node, the [SSR example's server](https://github.com/foldkit/foldkit/tree/main/examples/ssr/server) is the reference: an Effect `HttpServer` that serves static files first and sends `Server.toResponse(template, await renderPage(request))` for everything else.
+
+Behind a CDN or reverse proxy, a route whose Flags read from the request produces visitor-specific HTML. Keep those responses out of shared caches with `cache-control` and `vary`, so an edge cache never serves one visitor's page to another.
 
 Fetch-native runtimes such as Cloudflare Workers, Deno, and Bun run the entry without an adapter, because those platforms already speak Web `Request` and `Response`:
 
