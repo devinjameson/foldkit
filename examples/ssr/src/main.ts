@@ -1,6 +1,6 @@
 import { Effect, Match as M, Schema as S } from 'effect'
 import { Command, Runtime } from 'foldkit'
-import { type Document, type HtmlBuilder } from 'foldkit/html'
+import { type Document, type Html, type HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -146,9 +146,32 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
             'renders your latest count into the HTML before any JavaScript runs.',
         ],
       ),
+      parseEquivalenceView(h),
     ],
   ),
 })
+
+// NOTE: elements whose served markup and whose freshly built DOM are easy to
+// get subtly different. A browser gives a later `selected` option ownership
+// while the DOM `value` setter takes the first match, and it drops one newline
+// after a <pre> or <textarea> start tag that assigning `innerHTML` would keep.
+// The e2e suite loads this page once with scripting off and once hydrated, and
+// requires the two readings to agree.
+const parseEquivalenceView = (h: HtmlBuilder<Message>): Html =>
+  h.div(
+    [h.Id('parse-equivalence'), h.Class('hidden')],
+    [
+      h.select(
+        [h.Id('equivalence-select'), h.Value('a')],
+        [
+          h.option([h.Value('a')], ['A']),
+          h.option([h.Value('b'), h.Selected(true)], ['B']),
+        ],
+      ),
+      h.pre([h.Id('equivalence-pre'), h.InnerHTML('\nleading')]),
+      h.textarea([h.Id('equivalence-textarea'), h.Value('\nleading')]),
+    ],
+  )
 
 // STYLE
 

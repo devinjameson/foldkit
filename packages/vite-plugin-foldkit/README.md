@@ -30,7 +30,7 @@ export default defineConfig({
 
 Foldkit's differ tracks two independent kinds of identity: user keys, which match siblings in dynamic lists, and a framework-managed identity, which decides whether a matched position is still the same thing. When the producing view function changes, the differ replaces the node instead of patching it, so DOM state cannot bleed across an identity change. Branches rendered inline by one view function share that function's identity and patch in place, exactly as same-type elements do in React; extracting the branches into named view functions makes them identity boundaries.
 
-This plugin supplies that identity. At build time, in dev and production alike, it wraps every function return in your application modules with a branding call that stamps returned vnodes with the function's id (module path plus function name), set-if-absent. Identity therefore attaches at view-function boundaries, and any branching syntax behaves the same: if/else, ternaries, Effect Match, switch statements, and pattern-matching libraries are all equivalent, because identity belongs to the function that produced the subtree, not to the branch that selected it.
+This plugin supplies that identity. At build time, in dev and production alike, it wraps every function return in your application modules with a branding call that stamps returned vnodes with the function's id (module path plus function name), set-if-absent. The identity is nothing else: it ships in the client bundle, so anything derived from the module's contents would be a published check against those contents. Identity therefore attaches at view-function boundaries, and any branching syntax behaves the same: if/else, ternaries, Effect Match, switch statements, and pattern-matching libraries are all equivalent, because identity belongs to the function that produced the subtree, not to the branch that selected it.
 
 Foldkit core modules are never instrumented, and functions that never return vnodes are wrapped inertly. Builds without this plugin fall back to positional matching plus keys, where branch points need hand-written keys.
 
@@ -61,7 +61,36 @@ Pass `ssr` with the path to your server entry to render page requests through it
 plugins: [foldkit({ ssr: { serverEntry: '/src/entry.server.ts' } })]
 ```
 
-With this set, the dev server converts HTML page requests to Web `Request` values, passes them to the entry's `renderPage`, and serves the returned `Response`. Vite continues to serve the client entry, HMR, and assets, and the server entry runs through Vite's module graph, so edits to it apply without a restart. The client side of the handoff needs no plugin configuration: a server-rendered application's client entry calls `Runtime.hydrate` instead of `Runtime.run`, and hydrate adopts the served HTML in place. The option shapes only the dev server; production hosts import the built server entry themselves. See the [Server Rendering documentation](https://foldkit.dev/core/server-rendering) for the full contract.
+With this set, the dev server converts HTML page requests to Web `Request` values, passes them to the entry's `renderPage`, and serves the returned `Response`. The request URL retains Vite's configured `base` prefix and the browser's query string. Vite continues to serve the client entry, HMR, and assets, and the server entry runs through Vite's module graph, so edits to it apply without a restart. The client side of the handoff needs no plugin configuration: a server-rendered application's client entry calls `Runtime.hydrate` instead of `Runtime.run`. Hydration adopts matching DOM, rebuilds mismatched subtrees, and refuses an invalid or cross-deployment handoff. The option shapes only the dev server; production hosts import the built server entry themselves. See the [Server Rendering documentation](https://foldkit.dev/core/server-rendering) for the full contract.
+
+Vite retains ownership of configured proxy routes before Foldkit handles application requests. Vite's `server.cors` option applies to Vite-owned source modules, assets, and HMR. It does not add headers to application responses or answer their preflights. Preflight ownership follows `Access-Control-Request-Method`, so a preflight for an application `POST` reaches `renderPage` even when its path looks like an asset. An `OPTIONS` request without both `Origin` and `Access-Control-Request-Method` is not a preflight and also reaches `renderPage`. Define application CORS in `renderPage`, where development and the deployed host share one policy. Vite's `allowedHosts` check runs before proxy and application handling, including `OPTIONS` and methods the Web `Request` API cannot represent.
+
+## Build id
+
+A server-rendered build carries an id naming the deployment it came from. `renderToString` stamps it on the rendered root and `Runtime.hydrate` compares it before accessing the Flags payload text or adopting DOM, so a page served by an earlier deployment is refused rather than reconciled against a client that no longer means the same thing by it. Startup stops, and the page is contained: the document's body is marked `inert`, and a nondismissable modal shield covers its controls and existing top-layer content without closing author-owned dialogs. Nothing is moved, so no custom element reconnects and no frame reloads. This boundary blocks native page interaction; it is not a script or global-event sandbox. A client already running in an open tab is not rechecked when a deployment lands: the comparison happens when a client boots against a page.
+
+The plugin compiles the id into application code as `import.meta.env.FOLDKIT_BUILD_ID`, from its `buildId` option or from the `FOLDKIT_BUILD_ID` environment variable:
+
+```typescript
+plugins: [foldkit({ buildId: process.env.DEPLOYMENT_SHA })]
+```
+
+The entries pass it explicitly, because Vite externalizes an installed dependency from a server build, where a compile-time define never reaches the framework itself:
+
+```typescript
+// src/entry.server.ts
+Server.renderToString(config, {
+  flags,
+  buildId: import.meta.env.FOLDKIT_BUILD_ID,
+})
+
+// src/entry.ts
+Runtime.hydrate(application, { buildId: import.meta.env.FOLDKIT_BUILD_ID })
+```
+
+Nothing is derived from the project. Use a value the deployment already has, such as a commit, a release tag, or a container digest. Three rules govern it: the id is published in the HTML every visitor receives, so it must never contain a secret; it must identify one deployment, so two deployments can never share one; and the same value must reach the client build and the server build, which run as separate commands. A hydratable render given no id fails with `MissingBuildId`. Only a build takes the id from the deployment. The dev server compiles a fixed one because one live source session supplies both transforms and has no deployment identity to derive.
+
+The standalone `foldkitSsr({ serverEntry, buildId })` export compiles the same define for its server entry. When it runs in development without an explicit value, it uses the fixed development id too. The aggregate `foldkit({ buildId, ssr })` plugin passes its top-level value through automatically.
 
 ## DevTools overlay
 

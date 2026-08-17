@@ -11,6 +11,10 @@ const MISSING_SHA_A = 'deadbeef'.repeat(5)
 const MISSING_SHA_B = 'cafebabe'.repeat(5)
 const SCOPES = [
   'create_foldkit_smoke',
+  'packed_ssr_consumer',
+  'scaffold_server_rendering',
+  'host_parity',
+  'dom_state_parity',
   'typing_game',
   'website',
   'full_workspace_checks',
@@ -71,6 +75,17 @@ test('a markdown change reaches the website', () => {
   assert.equal(scopes['typing_game'], 'false')
 })
 
+test('an example or playground build change reaches the website', () => {
+  for (const fileName of [
+    'examples/ssg/package.json',
+    'examples/ssr/scripts/build.mjs',
+    'scripts/build-examples.ts',
+    'scripts/check-playground-ssg-build.ts',
+  ]) {
+    assert.equal(planCiForFile(fileName)['website'], 'true', fileName)
+  }
+})
+
 test('a create-foldkit-app change selects the smoke test', () => {
   assert.equal(
     planCiForFile('packages/create-foldkit-app/src/index.ts')[
@@ -87,6 +102,70 @@ test('an oxlint plugin change selects the smoke test', () => {
     ],
     'true',
   )
+})
+
+test('a foldkit change selects the packed consumer externalization gate', () => {
+  // The gate exists for what only an installed Foldkit shows: it is
+  // externalized from a server build, so a compile-time define never reaches
+  // it. Both packages that decide that have to select it.
+  assert.equal(
+    planCiForFile('packages/foldkit/src/hydrate.ts')['packed_ssr_consumer'],
+    'true',
+  )
+  assert.equal(
+    planCiForFile('packages/vite-plugin-foldkit/src/buildToken.ts')[
+      'packed_ssr_consumer'
+    ],
+    'true',
+  )
+})
+
+test('a website-only change leaves the packed consumer gate alone', () => {
+  assert.equal(
+    planCiForFile('packages/website/src/page/landing.ts')[
+      'packed_ssr_consumer'
+    ],
+    'false',
+  )
+})
+
+test('a scaffold or framework change selects the generated-app build gate', () => {
+  // The scaffold's build command is where the build id contract is kept or
+  // lost, and it depends on the templates, on the render that stamps the id,
+  // and on the plugin that compiles it in.
+  for (const file of [
+    'packages/create-foldkit-app/templates/rendering/ssr/scripts/build.mjs',
+    'packages/foldkit/src/experimental/server/server.ts',
+    'packages/vite-plugin-foldkit/src/buildToken.ts',
+  ]) {
+    assert.equal(
+      planCiForFile(file)['scaffold_server_rendering'],
+      'true',
+      `${file} should select the gate`,
+    )
+  }
+})
+
+test('an ssr host or framework change selects the host parity gate', () => {
+  // The dev host and the generated production host are different code reading
+  // one server entry, so either side, or the entry contract between them, can
+  // make them disagree.
+  for (const file of [
+    'examples/ssr/server/main.ts',
+    'packages/vite-plugin-foldkit/src/ssr.ts',
+    'packages/foldkit/src/experimental/server/host.ts',
+  ]) {
+    assert.equal(planCiForFile(file)['host_parity'], 'true', file)
+  }
+})
+
+test('a host parity fixture change selects only its focused gate', () => {
+  const scopes = planCiForFile('scripts/fixtures/host-parity/entry.server.ts')
+
+  assert.equal(scopes['host_parity'], 'true')
+  for (const scope of SCOPES.filter(scope => scope !== 'host_parity')) {
+    assert.equal(scopes[scope], 'false', `${scope} should be false`)
+  }
 })
 
 test('a typing game change stays out of the website scope', () => {

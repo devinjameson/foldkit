@@ -10,7 +10,7 @@ const TEMPLATE =
   '<body><div id="root"></div></body></html>'
 
 const renderedApplication = {
-  html: '<main data-foldkit-app="app">Hello</main>',
+  html: '<main data-foldkit-app="app" data-foldkit-build="fixture">Hello</main>',
   title: 'New',
 }
 
@@ -30,7 +30,7 @@ describe('server entry results', () => {
     )
     expect(response.headers.get('cache-control')).toBe('private, no-store')
     expect(await response.text()).toContain(
-      '<body><main data-foldkit-app="app">Hello</main></body>',
+      '<body><main data-foldkit-app="app" data-foldkit-build="fixture">Hello</main></body>',
     )
   })
 

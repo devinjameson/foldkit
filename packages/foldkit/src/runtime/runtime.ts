@@ -23,6 +23,7 @@ import {
   pipe,
 } from 'effect'
 
+import { HYDRATION_BUILD_ATTRIBUTE } from '../buildToken.js'
 import type { Command } from '../command/index.js'
 import {
   __CurrentRegistry as __CurrentInterruptRegistry,
@@ -613,10 +614,13 @@ export type CrashConfig<Model, Message> = Readonly<{
 }>
 
 /** Full runtime configuration including Model Schema, Flags, init, update, view, and optional routing/stream config. */
+// NOTE: the payload scripts are held as elements, not as their text. Reading
+// the text is the first step of consuming another deployment's handoff, and the
+// build id has not been compared yet at the point this runs.
 type HydrationConfig = Readonly<{
   root: HTMLElement
   runtimeId: string
-  flagsPayloads: ReadonlyArray<string>
+  flagsScripts: ReadonlyArray<HTMLScriptElement>
   isFlagsRequired: boolean
 }>
 
@@ -625,7 +629,7 @@ const hydrationForRoot = (
   isFlagsRequired: boolean,
 ): HydrationConfig => {
   const runtimeId = root.getAttribute(FOLDKIT_APP_ATTRIBUTE) ?? ''
-  const flagsPayloads = pipe(
+  const flagsScripts = pipe(
     Array.fromIterable(
       document.querySelectorAll<HTMLScriptElement>(
         `script[${FOLDKIT_FLAGS_ATTRIBUTE}]`,
@@ -634,9 +638,8 @@ const hydrationForRoot = (
     Array.filter(
       script => script.getAttribute(FOLDKIT_FLAGS_ATTRIBUTE) === runtimeId,
     ),
-    Array.map(script => script.textContent ?? ''),
   )
-  return { root, runtimeId, flagsPayloads, isFlagsRequired }
+  return { root, runtimeId, flagsScripts, isFlagsRequired }
 }
 
 // NOTE: hydration is scoped to the app's own stamped root so a server-rendered
@@ -653,6 +656,220 @@ const hydrationForRoot = (
 // root took the placeholder's place and `getElementById` no longer finds it, so
 // the stamp is the only handle; more than one stamped root is then ambiguous and
 // a hard error rather than a silent wrong-DOM adoption.
+// A runtime id names one application for the whole page: it pairs a root with
+// its Flags payload, and it keys the Model and scroll position hot reloading
+// preserves. Two roots sharing one are not two applications but one claimed
+// twice, so whichever boots second would read the other's handoff and restore
+// the other's Model. `injectIntoTemplate` refuses to build such a page; this is
+// the check for a page assembled some other way.
+//
+// Distinct ids do not make two hydrated applications independent, which is not
+// a supported arrangement: each page-owning application rewrites the document's
+// metadata and installs document-wide navigation listeners.
+const assertRuntimeIdsAreUnique = (
+  stampedRoots: ReadonlyArray<HTMLElement>,
+): void => {
+  const seen = new Set<string>()
+  for (const root of stampedRoots) {
+    const runtimeId = root.getAttribute(FOLDKIT_APP_ATTRIBUTE) ?? ''
+    if (seen.has(runtimeId)) {
+      containRefusedPage(root.ownerDocument)
+      throw new Error(
+        `[foldkit] Found more than one server-rendered root stamped ` +
+          `"${runtimeId}". A runtime id names one application for the whole ` +
+          'page: it pairs a root with its Flags payload and keys the Model and ' +
+          'scroll position hot reloading preserves, so two roots sharing one ' +
+          "would take each other's state. Render each application with its " +
+          'own `runtimeId`.',
+      )
+    }
+    seen.add(runtimeId)
+  }
+}
+
+// The reason this page cannot be adopted by this client, or `undefined` when
+// the two name the same deployment.
+//
+// The client's id is required and must be non-empty. An absent one would
+// otherwise equal the absent marker on a page served before build ids existed,
+// which reads a page from an unknown deployment as one of this build's own: the
+// exact case the id exists to refuse.
+const buildSkew = (
+  root: HTMLElement,
+  buildId: string | undefined,
+  runtimeId: string,
+): Error | undefined => {
+  if (buildId === undefined || buildId === '') {
+    return new Error(
+      '[foldkit] Runtime.hydrate was given no build id. Hydration compares ' +
+        'the id the server stamped on the root with this client’s own before ' +
+        'it adopts any DOM, and without one a page from any deployment would ' +
+        'be adopted as this one. Pass ' +
+        '`buildId: import.meta.env.FOLDKIT_BUILD_ID`, the same value the ' +
+        'server entry passes to `renderToString`.',
+    )
+  }
+  const servedBuild = root.getAttribute(HYDRATION_BUILD_ATTRIBUTE)
+  if (servedBuild === buildId) {
+    return undefined
+  }
+  return new Error(
+    `[foldkit] Runtime.hydrate found application "${runtimeId}" served by ` +
+      `${servedBuild === null ? 'no known deployment' : `deployment "${servedBuild}"`}` +
+      `, but this client belongs to deployment "${buildId}". Startup stops ` +
+      'here rather than reading a handoff written by other code: the Flags in ' +
+      'the page are that deployment’s, and this build could accept them while ' +
+      'every value in them means something else. Serve the page from the ' +
+      'running deployment, and keep stale HTML out of shared caches.',
+  )
+}
+
+// Take the served page out of reach before startup stops.
+//
+// Refusing to adopt a page keeps this build's code away from it, but the markup
+// is still a live document: its links navigate, its forms submit to whatever
+// action the deployment that wrote them intended, and its controls take focus.
+// A visitor who clicks after a failed handoff would be acting on a page with no
+// running code to reconsider.
+//
+// The boundary is an element the served page already has, marked in place.
+// Nothing moves. Wrapping the root in a fresh inert element would reparent it:
+// every upgraded custom element in the subtree would run `disconnectedCallback`
+// and then `connectedCallback` again, and every embedded browsing context would
+// reload. Marking a stable ancestor costs neither.
+//
+// That ancestor is the document's body, which is where a hydratable root always
+// sits: `renderToString` refuses to render `html`, `head`, or `body` as the
+// root, and `hydrate` is for an application that owns the page. Inertness
+// propagates from an inert HTML element to every descendant whatever their
+// namespace, so an SVG or MathML root is covered too. `inert` is an HTML
+// attribute, so marking such a root directly would only create an expando.
+// Verified in Chromium for HTML, SVG foreign content, and MathML.
+//
+// A modal dialog lives in the top layer, where ancestor inertness does not reach
+// it. The refusal shield is itself a modal dialog opened after the served page's
+// top-layer content, so it covers an old dialog even inside a closed shadow
+// root. It is a sibling of `body`, outside the inert and `aria-hidden` boundary,
+// covers the viewport, and refuses its cancel action. Existing dialogs are not
+// closed: calling author-owned `close` or `cancel` listeners while startup is
+// failing can run arbitrary stale code.
+//
+// This runs when the client reaches the failure, so it cannot undo what the page
+// already did: subresources the parser fetched, custom elements that upgraded,
+// scripts the served deployment authored, or anything a visitor managed before
+// the client entry ran. Nor is this a script sandbox. A capture listener on
+// `window` or `document` runs before an event reaches the shield, and a timer or
+// listener can open newer top-layer UI. The boundary disables the old page's
+// native links, forms, controls, and focus targets without reconnecting its DOM.
+// NOTE: this module declares its own `Document` (the page metadata a view
+// describes), so the DOM interface is reached through the global binding.
+type DomDocument = typeof document
+
+const REFUSED_ATTRIBUTE = 'data-foldkit-refused'
+const REFUSAL_SHIELD_ATTRIBUTE = 'data-foldkit-refusal-shield'
+const refusalShields = new WeakMap<DomDocument, HTMLDialogElement>()
+const REFUSAL_SHIELD_INPUT_EVENTS: ReadonlyArray<keyof HTMLElementEventMap> = [
+  'auxclick',
+  'click',
+  'contextmenu',
+  'dblclick',
+  'keydown',
+  'keypress',
+  'keyup',
+  'mousedown',
+  'mouseup',
+  'pointerdown',
+  'pointerup',
+  'touchend',
+  'touchstart',
+]
+
+const preventRefusalShieldInteraction = (event: Event): void => {
+  event.preventDefault()
+  event.stopImmediatePropagation()
+}
+
+const openRefusalShield = (shield: HTMLDialogElement): void => {
+  shield.inert = true
+  shield.setAttribute('inert', '')
+  if (shield.open && typeof shield.close === 'function') {
+    shield.close()
+  }
+  if (typeof shield.showModal === 'function') {
+    shield.showModal()
+  } else {
+    shield.setAttribute('open', '')
+  }
+  shield.inert = false
+  shield.removeAttribute('inert')
+  shield.focus({ preventScroll: true })
+}
+
+const installRefusalShield = (ownerDocument: DomDocument): void => {
+  const existing = refusalShields.get(ownerDocument)
+  if (existing !== undefined && existing.isConnected) {
+    openRefusalShield(existing)
+    return
+  }
+
+  const shield = ownerDocument.createElement('dialog')
+  shield.setAttribute(REFUSAL_SHIELD_ATTRIBUTE, '')
+  shield.setAttribute('aria-label', 'Page unavailable')
+  shield.setAttribute('aria-modal', 'true')
+  shield.setAttribute('closedby', 'none')
+  shield.tabIndex = -1
+  shield.textContent =
+    'This page could not start safely. Reload to get the current version.'
+  shield.style.alignItems = 'center'
+  shield.style.background = 'rgba(15, 23, 42, 0.96)'
+  shield.style.border = '0'
+  shield.style.boxSizing = 'border-box'
+  shield.style.color = 'white'
+  shield.style.font = '600 1rem/1.5 system-ui, sans-serif'
+  shield.style.display = 'grid'
+  shield.style.height = '100vh'
+  shield.style.inset = '0'
+  shield.style.margin = '0'
+  shield.style.maxHeight = 'none'
+  shield.style.maxWidth = 'none'
+  shield.style.overflow = 'hidden'
+  shield.style.padding = '2rem'
+  shield.style.position = 'fixed'
+  shield.style.touchAction = 'none'
+  shield.style.userSelect = 'none'
+  shield.style.width = '100vw'
+  shield.addEventListener('cancel', preventRefusalShieldInteraction)
+  for (const eventName of REFUSAL_SHIELD_INPUT_EVENTS) {
+    shield.addEventListener(eventName, preventRefusalShieldInteraction, {
+      capture: true,
+      passive: false,
+    })
+  }
+  ownerDocument.documentElement.appendChild(shield)
+  refusalShields.set(ownerDocument, shield)
+  openRefusalShield(shield)
+}
+
+const containRefusedPage = (ownerDocument: DomDocument): void => {
+  const boundary = ownerDocument.body ?? ownerDocument.documentElement
+  boundary.inert = true
+  boundary.setAttribute('inert', '')
+  boundary.setAttribute('aria-hidden', 'true')
+  boundary.setAttribute(REFUSED_ATTRIBUTE, '')
+  installRefusalShield(ownerDocument)
+}
+
+// Whether this page carries anything a Foldkit server render leaves behind. A
+// resolution failure on such a page is a refused handoff, and the markup is
+// contained; the same failure on a page with none of these markers is a client
+// application whose container never existed, where there is no server render to
+// refuse and nothing to take out of reach.
+const hasServerRenderedMarkup = (ownerDocument: DomDocument): boolean =>
+  ownerDocument.querySelector(
+    `[${FOLDKIT_APP_ATTRIBUTE}], [${HYDRATION_BUILD_ATTRIBUTE}], ` +
+      `[${FOLDKIT_FLAGS_ATTRIBUTE}]`,
+  ) !== null
+
 const findDocumentHydration = (
   container: HTMLElement | null,
   isFlagsRequired: boolean,
@@ -660,6 +877,7 @@ const findDocumentHydration = (
   const stampedRoots = Array.fromIterable(
     document.querySelectorAll<HTMLElement>(`[${FOLDKIT_APP_ATTRIBUTE}]`),
   )
+  assertRuntimeIdsAreUnique(stampedRoots)
   if (container !== null) {
     if (container.hasAttribute(FOLDKIT_APP_ATTRIBUTE)) {
       return hydrationForRoot(container, isFlagsRequired)
@@ -676,6 +894,7 @@ const findDocumentHydration = (
     })
   }
   if (stampedRoots.length > 1) {
+    containRefusedPage(document)
     throw new Error(
       '[foldkit] Found multiple server-rendered roots stamped with ' +
         `\`${FOLDKIT_APP_ATTRIBUTE}\` but no container to disambiguate them. ` +
@@ -1440,6 +1659,7 @@ type RuntimeInternals = {
     hmrModel?: unknown,
     bootMode?: BootMode,
     flags?: Effect.Effect<any, never, any>,
+    buildId?: string,
   ) => Effect.Effect<void>
   kind: 'Application' | 'Element'
   isEmbedActive: boolean
@@ -1596,6 +1816,7 @@ const makeRuntime = <
     hmrModel?: unknown,
     bootMode: BootMode = 'Fresh',
     bootFlags?: Effect.Effect<Flags, never, Resources>,
+    buildId?: string,
   ): Effect.Effect<void> => {
     // NOTE: one notifier per runtime, provided across the whole runtime
     // Effect so Commands, Subscriptions, and Mount-forked Effects all resolve
@@ -1834,9 +2055,27 @@ const makeRuntime = <
           },
         )
 
+        // Every hydration refusal that knows which root it was going to adopt
+        // contains that root first. The build id is one reason to refuse; a
+        // missing, duplicated, malformed, or Schema-incompatible Flags payload
+        // is another, and the page left behind is just as live in each case.
+        const refuseHydration = <A>(
+          root: Element,
+          message: string,
+          cause?: unknown,
+        ): Effect.Effect<A> => {
+          containRefusedPage(root.ownerDocument)
+          return Effect.die(
+            cause === undefined
+              ? new Error(message)
+              : new Error(message, { cause }),
+          )
+        }
+
         const decodeFlagsPayload = (
           payload: string,
           runtimeId: string,
+          root: Element,
         ): Effect.Effect<Flags> =>
           Effect.try({
             try: () => {
@@ -1848,14 +2087,18 @@ const makeRuntime = <
                 decode => decode(parsedPayload),
               )
             },
-            catch: cause =>
-              new Error(
+            catch: cause => cause,
+          }).pipe(
+            Effect.catch(cause =>
+              refuseHydration<Flags>(
+                root,
                 '[foldkit] Runtime.hydrate could not decode the server ' +
                   `Flags payload for application "${runtimeId}". The HTML ` +
                   'and client bundle must use the same Flags Schema.',
-                { cause },
+                cause,
               ),
-          }).pipe(Effect.orDie)
+            ),
+          )
 
         const maybeRequestedHydration =
           bootMode === 'Hydrate'
@@ -1863,6 +2106,12 @@ const makeRuntime = <
             : Option.none<HydrationConfig>()
 
         if (bootMode === 'Hydrate' && Option.isNone(maybeRequestedHydration)) {
+          // A hydrating client that finds no stamped root will not adopt
+          // whatever the page holds, so the page is contained whether or not the
+          // caller named a container.
+          containRefusedPage(
+            container === null ? document : container.ownerDocument,
+          )
           return yield* Effect.die(
             new Error(
               '[foldkit] Runtime.hydrate could not find a server-rendered ' +
@@ -1870,6 +2119,26 @@ const makeRuntime = <
                 'Runtime.run for a fresh client boot.',
             ),
           )
+        }
+
+        // The build the served page came from is settled here, before the Flags
+        // payload text is accessed, parsed, or decoded, before `init` runs, and
+        // therefore before any Command, Subscription, ManagedResource, or port
+        // this boot would start. A page from another deployment carries that
+        // deployment's Flags, which the current Schema may well accept while
+        // every value in them means something else, so deferring the comparison
+        // to the DOM patch lets stale data reach new code that already acted on
+        // it.
+        if (Option.isSome(maybeRequestedHydration)) {
+          const skew = buildSkew(
+            maybeRequestedHydration.value.root,
+            buildId,
+            maybeRequestedHydration.value.runtimeId,
+          )
+          if (skew !== undefined) {
+            containRefusedPage(maybeRequestedHydration.value.root.ownerDocument)
+            return yield* Effect.die(skew)
+          }
         }
 
         // NOTE: an HMR-restored Model wins over DOM adoption because the
@@ -1891,27 +2160,26 @@ const makeRuntime = <
             onSome: requestedHydration =>
               Effect.map(
                 requestedHydration.isFlagsRequired
-                  ? Array.match(requestedHydration.flagsPayloads, {
+                  ? Array.match(requestedHydration.flagsScripts, {
                       onEmpty: () =>
-                        Effect.die(
-                          new Error(
-                            '[foldkit] Runtime.hydrate found application ' +
-                              `"${requestedHydration.runtimeId}" but its ` +
-                              'server Flags payload is missing.',
-                          ),
+                        refuseHydration(
+                          requestedHydration.root,
+                          '[foldkit] Runtime.hydrate found application ' +
+                            `"${requestedHydration.runtimeId}" but its ` +
+                            'server Flags payload is missing.',
                         ),
-                      onNonEmpty: ([payload, ...remainingPayloads]) =>
-                        Array.isArrayNonEmpty(remainingPayloads)
-                          ? Effect.die(
-                              new Error(
-                                '[foldkit] Runtime.hydrate found multiple ' +
-                                  'server Flags payloads for application ' +
-                                  `"${requestedHydration.runtimeId}".`,
-                              ),
+                      onNonEmpty: ([payloadScript, ...remainingScripts]) =>
+                        Array.isArrayNonEmpty(remainingScripts)
+                          ? refuseHydration(
+                              requestedHydration.root,
+                              '[foldkit] Runtime.hydrate found multiple ' +
+                                'server Flags payloads for application ' +
+                                `"${requestedHydration.runtimeId}".`,
                             )
                           : decodeFlagsPayload(
-                              payload,
+                              payloadScript.textContent ?? '',
                               requestedHydration.runtimeId,
+                              requestedHydration.root,
                             ),
                     })
                   : /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
@@ -2590,10 +2858,15 @@ const makeRuntime = <
                   // container (a dispose-then-embed remount) from re-detecting
                   // this now-consumed root as hydratable.
                   hydrationRoot.removeAttribute(FOLDKIT_APP_ATTRIBUTE)
+                  // An empty id reaches the adoption step's own check as a
+                  // value that matches nothing. Boot already refused a
+                  // hydration without an id, so this stands in only for a
+                  // caller that reached here another way.
                   return __hydrateVNode(
                     hydrationRoot,
                     nextVNode,
                     boundaryRegistry.dedupeSeen,
+                    buildId ?? '',
                   )
                 }
                 return __patchVNode(
@@ -3278,8 +3551,8 @@ const makeRuntime = <
     ports,
   }
   runtimeInternals.set(program, {
-    startWith: (maybeConnector, hmrModel, bootMode, flags) =>
-      startWith(maybeConnector, hmrModel, bootMode, flags),
+    startWith: (maybeConnector, hmrModel, bootMode, flags, buildId) =>
+      startWith(maybeConnector, hmrModel, bootMode, flags, buildId),
     kind,
     isEmbedActive: false,
     maybeActiveFiber: Option.none(),
@@ -3577,6 +3850,14 @@ export function makeApplication<
 
   const resolvedContainer = hydration?.root ?? container
   if (resolvedContainer === null) {
+    // A server-rendered page whose root lost its stamp reaches exactly here:
+    // template injection put the render where the placeholder was, so
+    // `getElementById` finds nothing and the stamp that would have named the
+    // root is gone. There is no handoff to refuse further along, and the markup
+    // is as live as any other refused page, so it is contained here.
+    if (hasServerRenderedMarkup(document)) {
+      containRefusedPage(document)
+    }
     throw new Error(
       '[foldkit] Container is null. Make sure the element exists in the DOM ' +
         'before calling makeApplication (e.g. that your <div id="root"></div> has ' +
@@ -4012,6 +4293,7 @@ export const __startProgram = (
   hmrModel: unknown,
   bootMode: BootMode,
   flags?: Effect.Effect<unknown, never, any>,
+  buildId?: string,
 ): Effect.Effect<void> => {
   const internals = runtimeInternals.get(program)
   if (Predicate.isUndefined(internals)) {
@@ -4032,7 +4314,7 @@ export const __startProgram = (
     )
   }
 
-  return internals.startWith(Option.none(), hmrModel, bootMode, flags)
+  return internals.startWith(Option.none(), hmrModel, bootMode, flags, buildId)
 }
 
 // NOTE: deliberately not `BrowserRuntime.runMain`, which interrupts the
@@ -4051,11 +4333,12 @@ const startProgram = (
   program: RuntimeProgram,
   bootMode: BootMode,
   flags?: Effect.Effect<unknown, never, any>,
+  buildId?: string,
 ): void => {
   runMainWithoutUnloadInterrupt(
     provideBrowserScheduler(
       Effect.flatMap(resolveHmrModel(program.runtimeId), hmrModel =>
-        __startProgram(program, hmrModel, bootMode, flags),
+        __startProgram(program, hmrModel, bootMode, flags, buildId),
       ),
     ),
   )
@@ -4087,21 +4370,47 @@ export function run(
   startProgram(program, 'Fresh', options?.flags)
 }
 
+/** Options for {@link hydrate}. */
+export type HydrateOptions = Readonly<{
+  /**
+   * The deployment this client belongs to, compared against the id the server
+   * stamped on the root before the Flags payload text is accessed or decoded,
+   * so a page from a different deployment stops startup rather than handing its
+   * Flags to this build. Required, and must be non-empty: an absent id would
+   * equal the absent marker on a page served before build ids existed.
+   *
+   * Pass `import.meta.env.FOLDKIT_BUILD_ID`, which `@foldkit/vite-plugin` fills
+   * from its `buildId` option or the `FOLDKIT_BUILD_ID` environment variable,
+   * the same value the server entry passes to `renderToString`.
+   */
+  buildId: string
+}>
+
 /** Starts a Foldkit runtime by adopting a server-rendered DOM in place instead
  *  of building it fresh. Use this as the client entry for a page served by
  *  `renderToString`: the first render attaches to the stamped root, keeps the
  *  existing nodes, and reconstructs the Model from the Flags the server
- *  embedded. The handoff is strict: a missing server root, missing Flags
- *  payload, or undecodable payload terminates startup and leaves the server
- *  HTML visible but inert. Use `run` in a separate client-only entry when the
- *  page should boot without server output.
+ *  embedded. The handoff is strict: a missing server root, a root stamped more
+ *  than once, more than one root with no container to choose between them, a
+ *  missing Flags payload, an undecodable payload, or a page from another
+ *  deployment terminates startup. Every one of those contains the page first:
+ *  the document's body is marked `inert` and a nondismissable modal shield is
+ *  opened above existing top-layer content, so native links, forms, controls,
+ *  and focus targets stop responding. Containment leaves author-owned dialogs
+ *  open without calling `close` or dispatching `cancel`. Nothing is moved, so
+ *  no custom element reconnects and no frame reloads. This is not a script or
+ *  event sandbox: existing capture-phase handlers, browser-generated top-layer
+ *  events, timers, and other stale scripts can still run and can open newer
+ *  top-layer UI. Use `run` in a separate client-only entry when the page should
+ *  boot without server output.
  *
  * @experimental Server rendering and hydration are experimental while their
  * contracts settle. */
 export const hydrate = <P extends Ports | undefined, Flags, Resources>(
   program: MakeRuntimeReturn<P, Flags, Resources, 'Application'>,
+  options: HydrateOptions,
 ): void => {
-  startProgram(program, 'Hydrate')
+  startProgram(program, 'Hydrate', undefined, options.buildId)
 }
 
 const buildPortHandles = <P extends Ports | undefined>(

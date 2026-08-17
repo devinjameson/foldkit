@@ -139,7 +139,11 @@ export const renderPage = (request: Request): Promise<Server.EntryResult> =>
     return Effect.runPromise(
       Server.renderToString(
         { Flags, routing: {}, init, view },
-        { url: request.url, flags: requestFlags },
+        {
+          url: request.url,
+          flags: requestFlags,
+          buildId: import.meta.env.FOLDKIT_BUILD_ID,
+        },
       ).pipe(Effect.map(Server.Rendered)),
     )
   })

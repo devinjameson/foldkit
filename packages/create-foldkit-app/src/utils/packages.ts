@@ -31,6 +31,18 @@ const DEV_COMMANDS: Record<PackageManager, string> = {
 export const devCommand = (packageManager: PackageManager): string =>
   DEV_COMMANDS[packageManager]
 
+const RUN_SCRIPT_PREFIXES: Record<PackageManager, string> = {
+  pnpm: 'pnpm',
+  npm: 'npm run',
+  yarn: 'yarn',
+  bun: 'bun run',
+}
+
+export const runScriptCommand = (
+  packageManager: PackageManager,
+  script: string,
+): string => `${RUN_SCRIPT_PREFIXES[packageManager]} ${script}`
+
 const GITHUB_RAW_BASE_URL =
   'https://raw.githubusercontent.com/foldkit/foldkit/main/examples'
 

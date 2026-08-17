@@ -73,7 +73,10 @@ Inert to Foldkit's dispatch, not to the browser. A raw DOM attribute still does 
 Several inputs run whatever you pass them, in the browser and in server-rendered HTML alike, and Foldkit does not sanitize them:
 
 - `h.InnerHTML` and `h.Srcdoc` render their strings as raw HTML.
+- A property named `innerHTML` from `CustomElement.define` writes raw HTML when the client assigns it, even though server rendering does not serialize that property.
+- `h.Attribute` writes a raw DOM attribute, including URL and event-handler attributes, without the sanitization a typed builder may apply.
 - A raw `onclick`-style attribute runs its string as script.
+- Text or `h.InnerHTML` inside a `script` or `style` element is emitted as trusted raw-text content. Script content executes, and style content can load resources and change the page.
 - The `src` of a `<script>` or `<iframe>`, and the `data` of an `<object>`, load and run whatever they point at, an `http(s)` or `data:` URL included.
 
 Only ever pass content you control to these. A value built from user input, a URL parameter, or an API response is a cross-site scripting vector here, so build the markup from trusted inputs, or use `h` elements instead of raw HTML.

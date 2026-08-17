@@ -97,7 +97,7 @@ const testView =
           h.div(
             [...group],
             optionInfos.map(option =>
-              h.div(
+              h.button(
                 [...option.option],
                 [h.span([...option.label], [option.value])],
               ),

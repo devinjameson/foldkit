@@ -42,6 +42,7 @@ import type {
 } from 'vite'
 import { type WebSocket, WebSocketServer } from 'ws'
 
+import { foldkitBuildToken } from './buildToken.js'
 import { devToolsOverlayPlugin } from './devToolsOverlay.js'
 import { type FoldkitSsrOptions, foldkitSsr } from './ssr.js'
 import { foldkitViewIdentity } from './viewIdentity.js'
@@ -69,7 +70,21 @@ export type FoldkitPluginOptions = Readonly<{
    * `renderPage` from the module at `ssr.serverEntry`. When `undefined` (the
    * default), the dev server serves the client entry only.
    */
-  ssr?: FoldkitSsrOptions
+  ssr?: Omit<FoldkitSsrOptions, 'buildId'>
+  /**
+   * The deployment this build belongs to, compiled into application code as
+   * `import.meta.env.FOLDKIT_BUILD_ID` for the entries to pass to
+   * `renderToString` and `Runtime.hydrate`. Hydration compares it against the id
+   * the server stamped and refuses a page from another deployment rather than
+   * adopting it: startup stops and the page is contained, with the document's
+   * body marked `inert`.
+   *
+   * Defaults to the `FOLDKIT_BUILD_ID` environment variable. Use a value the
+   * deployment already has, such as a commit or a release tag, and give the
+   * client build and the server build the same one. It is published in the
+   * page, so it must not be a secret.
+   */
+  buildId?: string
 }>
 
 // NOTE: Vite's dep optimizer scans the consumer's source for `effect`
@@ -731,11 +746,22 @@ export const foldkit = (options: FoldkitPluginOptions = {}): Array<Plugin> => {
   }
 
   return options.ssr === undefined
-    ? [foldkitViewIdentity(), devToolsOverlayPlugin(), hmrPlugin]
-    : [
+    ? [
+        foldkitBuildToken(options.buildId),
         foldkitViewIdentity(),
         devToolsOverlayPlugin(),
         hmrPlugin,
-        foldkitSsr(options.ssr),
+      ]
+    : [
+        foldkitBuildToken(options.buildId),
+        foldkitViewIdentity(),
+        devToolsOverlayPlugin(),
+        hmrPlugin,
+        foldkitSsr({
+          ...options.ssr,
+          ...(options.buildId === undefined
+            ? {}
+            : { buildId: options.buildId }),
+        }),
       ]
 }

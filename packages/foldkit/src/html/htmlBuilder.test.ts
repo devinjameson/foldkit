@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { m } from '../message/index.js'
 import { MountTracker } from '../mount/index.js'
+import { isClientOnlyProperty } from '../propertyProvenance.js'
 import { Dispatch } from '../runtime/index.js'
 import { embed, makeElement } from '../runtime/runtime.js'
 import { evo } from '../struct/index.js'
@@ -165,6 +166,13 @@ describe('HtmlBuilder type guarantees', () => {
 // RUNTIME GUARANTEES
 
 describe('HtmlBuilder runtime guarantees', () => {
+  it('keeps a typed property client-only where the element does not reflect it', () => {
+    const div = __htmlBuilder<never>().div([inertHtml.Type('button')])
+
+    expect(div?.data?.props?.['type']).toBe('button')
+    expect(isClientOnlyProperty(div?.data?.props, 'type')).toBe(true)
+  })
+
   afterEach(() => {
     document.body.innerHTML = ''
   })

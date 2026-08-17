@@ -96,7 +96,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
         M.withReturnType<Html>(),
         M.when('Submitting', () =>
           h.form(
-            [h.Class('login-form'), h.Disabled(true)],
+            [h.Class('login-form')],
             [h.button([h.Type('submit'), h.Disabled(true)], ['Signing in...'])],
           ),
         ),

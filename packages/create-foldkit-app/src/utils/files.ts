@@ -20,7 +20,12 @@ import {
 import { fileURLToPath } from 'node:url'
 
 import { type Scaffold } from '../rendering.js'
-import { type PackageManager, devCommand, installCommand } from './packages.js'
+import {
+  type PackageManager,
+  devCommand,
+  installCommand,
+  runScriptCommand,
+} from './packages.js'
 
 const GITHUB_API_BASE_URL =
   'https://api.github.com/repos/foldkit/foldkit/contents/examples'
@@ -212,8 +217,20 @@ export const applyPackageManager = (
 ): string =>
   pipe(
     readme,
-    String.replace('{{installCommand}}', installCommand(packageManager)),
-    String.replace('{{devCommand}}', devCommand(packageManager)),
+    String.replaceAll('{{installCommand}}', installCommand(packageManager)),
+    String.replaceAll('{{devCommand}}', devCommand(packageManager)),
+    String.replaceAll(
+      '{{buildCommand}}',
+      runScriptCommand(packageManager, 'build'),
+    ),
+    String.replaceAll(
+      '{{previewCommand}}',
+      runScriptCommand(packageManager, 'preview'),
+    ),
+    String.replaceAll(
+      '{{startCommand}}',
+      runScriptCommand(packageManager, 'start'),
+    ),
   )
 
 const modifyBaseFiles = (

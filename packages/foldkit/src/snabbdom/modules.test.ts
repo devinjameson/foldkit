@@ -40,6 +40,71 @@ describe('attributesModule', () => {
     expect(patchedElement.hasAttribute('draggable')).toBe(false)
     expect(patchedElement.hasAttribute('tabindex')).toBe(false)
   })
+
+  it('uses the standard namespaces for qualified foreign attributes only', () => {
+    const container = document.createElement('div')
+    const mounted = patch(
+      container,
+      h('svg', {
+        ns: 'http://www.w3.org/2000/svg',
+        attrs: {
+          'xlink:href': '#target',
+          'xml:lang': 'en',
+          'xmlns:xlink': 'http://www.w3.org/1999/xlink',
+          'other:value': 'plain',
+        },
+      }),
+    )
+    const element = mounted.elm
+    if (!(element instanceof SVGElement)) {
+      throw new Error('expected an SVG element')
+    }
+
+    expect(element.getAttributeNode('xlink:href')?.namespaceURI).toBe(
+      'http://www.w3.org/1999/xlink',
+    )
+    expect(element.getAttributeNode('xml:lang')?.namespaceURI).toBe(
+      'http://www.w3.org/XML/1998/namespace',
+    )
+    expect(element.getAttributeNode('xmlns:xlink')?.namespaceURI).toBe(
+      'http://www.w3.org/2000/xmlns/',
+    )
+    expect(element.getAttributeNode('other:value')?.namespaceURI).toBeNull()
+
+    const patched = patch(
+      mounted,
+      h('svg', {
+        ns: 'http://www.w3.org/2000/svg',
+        attrs: { 'other:value': 'next' },
+      }),
+    )
+    const patchedElement = patched.elm
+    if (!(patchedElement instanceof SVGElement)) {
+      throw new Error('expected an SVG element')
+    }
+    expect(
+      patchedElement.hasAttributeNS('http://www.w3.org/1999/xlink', 'href'),
+    ).toBe(false)
+    expect(
+      patchedElement.hasAttributeNS(
+        'http://www.w3.org/XML/1998/namespace',
+        'lang',
+      ),
+    ).toBe(false)
+    expect(patchedElement.getAttribute('other:value')).toBe('next')
+  })
+
+  it('keeps colon-named HTML attributes unnamespaced', () => {
+    const container = document.createElement('div')
+    const mounted = patch(
+      container,
+      h('div', { attrs: { 'xlink:href': '#html' } }),
+    )
+    const element = elementOf(mounted)
+
+    expect(element.getAttribute('xlink:href')).toBe('#html')
+    expect(element.getAttributeNode('xlink:href')?.namespaceURI).toBeNull()
+  })
 })
 
 describe('classModule', () => {
@@ -99,5 +164,73 @@ describe('styleModule', () => {
 
     expect(patchedElement.style.color).toBe('green')
     expect(patchedElement.style.getPropertyValue('--accent')).toBe('')
+  })
+
+  it('applies typed styles through individual CSSOM properties', () => {
+    const container = document.createElement('div')
+    const mounted = patch(
+      container,
+      h('div', { style: { color: '#ff0000', opacity: 'bogus' } }),
+    )
+    const element = elementOf(mounted)
+
+    expect(element.style.color).toBe('#ff0000')
+    expect(element.style.opacity).toBe('bogus')
+
+    patch(mounted, h('div', { style: { color: '#ff0000', opacity: 'bogus' } }))
+    expect(element.style.color).toBe('#ff0000')
+    expect(element.style.opacity).toBe('bogus')
+  })
+
+  it('preserves inline properties that the view does not own', () => {
+    const container = document.createElement('div')
+    const mounted = patch(container, h('div', { style: { color: 'red' } }))
+    const element = elementOf(mounted)
+    element.style.position = 'fixed'
+
+    const updated = patch(mounted, h('div', { style: { color: 'blue' } }))
+    expect(elementOf(updated).style.color).toBe('blue')
+    expect(elementOf(updated).style.position).toBe('fixed')
+
+    const removed = patch(updated, h('div', { style: {} }))
+    expect(elementOf(removed).style.color).toBe('')
+    expect(elementOf(removed).style.position).toBe('fixed')
+  })
+
+  it('ignores inherited style entries in every module path', () => {
+    const container = document.createElement('div')
+    const inherited: Record<string, string> = Object.create({
+      color: 'red',
+      cssText: 'position: fixed; inset: 0',
+    })
+    const mounted = patch(container, h('div', { style: inherited }))
+    const element = elementOf(mounted)
+
+    expect(element.hasAttribute('style')).toBe(false)
+  })
+
+  it('preserves styles owned by an autonomous custom element', () => {
+    class XStyleOwner extends HTMLElement {
+      connectedCallback(): void {
+        this.style.backgroundColor = 'red'
+      }
+    }
+    if (customElements.get('x-style-owner') === undefined) {
+      customElements.define('x-style-owner', XStyleOwner)
+    }
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const mounted = patch(
+      container,
+      h('x-style-owner', { style: { color: 'blue' } }),
+    )
+    const element = elementOf(mounted)
+
+    expect(element.style.color).toBe('blue')
+    expect(element.style.backgroundColor).toBe('red')
+
+    patch(mounted, h('x-style-owner', { style: { color: 'green' } }))
+    expect(element.style.color).toBe('green')
+    expect(element.style.backgroundColor).toBe('red')
   })
 })

@@ -29,13 +29,17 @@ const TS_CONFIG_BASE_PATH = resolve(WEBSITE_ROOT, '../../tsconfig.base.json')
 const VIRTUAL_MODULE_ID = 'virtual:playground-files'
 const RESOLVED_VIRTUAL_MODULE_ID = '\0' + VIRTUAL_MODULE_ID
 
-const INCLUDED_EXTENSIONS = new Set([
+export const INCLUDED_EXTENSIONS: ReadonlySet<string> = new Set([
   '.ts',
   '.tsx',
   '.css',
   '.html',
   '.json',
   '.md',
+  // The server-rendered examples build through `scripts/build.mjs`, and their
+  // package.json names it. A playground that shipped the manifest without the
+  // script would offer a build command that cannot run.
+  '.mjs',
 ])
 const EXPECTED_SKIP_EXTENSIONS = new Set([
   '.gif',
@@ -52,16 +56,17 @@ const EXPECTED_SKIP_EXTENSIONS = new Set([
 ])
 const EXCLUDED_DIRECTORIES = new Set(['node_modules', 'dist'])
 
-// The playground's vite config always loads @tailwindcss/vite (both the
-// standalone config and the SSR examples' vite.config.playground.ts import it),
-// so Tailwind must survive into the WebContainer even for an example that keeps
-// it in devDependencies. Without it here the dev server cannot resolve the
-// plugin and never starts.
-const RUNTIME_DEV_DEPENDENCIES = new Set([
+// NOTE: The playground preserves the development dependencies its shipped
+// commands execute. Its Vite config always loads @tailwindcss/vite, and an SSG
+// build runs its prerender through tsx. Omitting either produces a manifest
+// whose own scripts cannot run in a clean WebContainer or disposable npm
+// project.
+const PLAYGROUND_DEV_DEPENDENCIES = new Set([
   '@foldkit/devtools',
   '@foldkit/vite-plugin',
   '@tailwindcss/vite',
   'tailwindcss',
+  'tsx',
   'vite',
 ])
 
@@ -113,14 +118,18 @@ type TsConfig = Readonly<{
   [key: string]: unknown
 }>
 
+// NOTE: pinned exactly rather than as a caret range. A playground manifest is
+// deployed with the site and installs from npm long afterward, so a range can
+// resolve a future plugin release whose Foldkit peer floor is newer than the
+// deployed site's package. An exact version installs what the site was built
+// against, and a site rebuilt from the version commit is what moves it.
 const rewriteWorkspaceSpec =
   (versions: Readonly<Record<string, string>>) =>
   (name: string, specifier: string): string => {
     if (specifier !== 'workspace:*') {
       return specifier
     }
-    const version = versions[name]
-    return version === undefined ? specifier : `^${version}`
+    return versions[name] ?? specifier
   }
 
 const rewriteDependencyMap = (
@@ -145,7 +154,7 @@ const filterToRuntimeDevDependencies = (
     return undefined
   }
   const entries = Object.entries(devDependencies).filter(([name]) =>
-    RUNTIME_DEV_DEPENDENCIES.has(name),
+    PLAYGROUND_DEV_DEPENDENCIES.has(name),
   )
   return entries.length === 0 ? undefined : Object.fromEntries(entries)
 }
@@ -231,7 +240,7 @@ const collectFiles = async (
           join(entry.parentPath, entry.name),
         )
         console.warn(
-          `[playground-files] Skipping ${relativePath} — extension "${extension}" is not in the playground allowlist. ` +
+          `[playground-files] Skipping ${relativePath}: extension "${extension}" is not in the playground allowlist. ` +
             `If this file is needed at runtime, add the extension to INCLUDED_EXTENSIONS in playgroundFilesPlugin.ts. ` +
             `If it is intentionally not bundled, add the extension to EXPECTED_SKIP_EXTENSIONS to silence this warning.`,
         )
@@ -322,38 +331,50 @@ export const playgroundFilesPlugin = (): Plugin => ({
       return undefined
     }
 
-    const versionEntries = await Promise.all(
-      Object.entries(WORKSPACE_PACKAGE_JSON_PATHS).map(
-        async ([name, packageJsonPath]) => {
-          const packageJson: { version: string } = JSON.parse(
-            await readFile(packageJsonPath, 'utf-8'),
-          )
-          return [name, packageJson.version] as const
-        },
-      ),
-    )
-    const versions = Object.fromEntries(versionEntries)
-    const tsConfigBase: TsConfig = JSON.parse(
-      await readFile(TS_CONFIG_BASE_PATH, 'utf-8'),
-    )
-
-    const baseCompilerOptions = tsConfigBase.compilerOptions ?? {}
-    const baseExclude = tsConfigBase.exclude ?? []
-
-    const entries = await Promise.all(
-      exampleSlugs.map(async slug => {
-        const files = await buildExampleFileMap(
-          slug,
-          versions,
-          baseCompilerOptions,
-          baseExclude,
-        )
-        return [slug, { files }] as const
-      }),
-    )
-
-    const bySlug = Object.fromEntries(entries)
-
-    return `export default ${JSON.stringify(bySlug)}`
+    return `export default ${JSON.stringify(await loadPlaygroundFiles())}`
   },
 })
+
+export const loadPlaygroundWorkspacePackageVersions = async (): Promise<
+  Readonly<Record<string, string>>
+> => {
+  const entries = await Promise.all(
+    Object.entries(WORKSPACE_PACKAGE_JSON_PATHS).map(
+      async ([name, packageJsonPath]) => {
+        const packageJson: { version: string } = JSON.parse(
+          await readFile(packageJsonPath, 'utf-8'),
+        )
+        return [name, packageJson.version] as const
+      },
+    ),
+  )
+  return Object.fromEntries(entries)
+}
+
+export const loadPlaygroundFiles = async (): Promise<
+  Readonly<
+    Record<string, Readonly<{ files: Readonly<Record<string, string>> }>>
+  >
+> => {
+  const versions = await loadPlaygroundWorkspacePackageVersions()
+  const tsConfigBase: TsConfig = JSON.parse(
+    await readFile(TS_CONFIG_BASE_PATH, 'utf-8'),
+  )
+
+  const baseCompilerOptions = tsConfigBase.compilerOptions ?? {}
+  const baseExclude = tsConfigBase.exclude ?? []
+
+  const entries = await Promise.all(
+    exampleSlugs.map(async slug => {
+      const files = await buildExampleFileMap(
+        slug,
+        versions,
+        baseCompilerOptions,
+        baseExclude,
+      )
+      return [slug, { files }] as const
+    }),
+  )
+
+  return Object.fromEntries(entries)
+}

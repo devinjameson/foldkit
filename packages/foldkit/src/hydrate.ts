@@ -1,5 +1,27 @@
 import { Option } from 'effect'
 
+import { HYDRATION_BUILD_ATTRIBUTE } from './buildToken.js'
+import { controlledStatePropertyNames } from './controlledDomState.js'
+import {
+  BOOLEAN_PROPERTIES,
+  htmlAttributeValue,
+  parsedAttributeName,
+  reflectedAttributeName,
+  serializedHtmlPropertyValue,
+  serializedStylePropertyName,
+} from './domReflection.js'
+import {
+  HYDRATION_IDENTITY_ATTRIBUTE,
+  HYDRATION_KEY_ATTRIBUTE,
+  hydrationIdentityMarker,
+  hydrationKeyMarker,
+} from './hydrationMarkers.js'
+import { readNativeInnerHtml, writeNativeInnerHtml } from './nativeInnerHtml.js'
+import {
+  hasTrustedInnerHtml,
+  isClientOnlyProperty,
+  markTrustedInnerHtml,
+} from './propertyProvenance.js'
 import type { VNode } from './snabbdom/index.js'
 import { h, toVNode } from './snabbdom/index.js'
 import { tagNameFromSelector } from './tagName.js'
@@ -27,24 +49,15 @@ import { dedupeSharedVNodes, patch } from './vdom.js'
 // untouched and never learns the nodes came from a server.
 //
 // Where the DOM disagrees with the vnode tree, the walk clears the nearest
-// parent's children and hands `patch` an empty child list, so the subtree is
-// rebuilt through `createElm`, which is exactly the pre-hydration replace
-// behavior scoped to the mismatching subtree. Trailing vnode children with
-// no DOM counterpart are simply absent from the clone; `updateChildren`
-// appends them.
+// ordinary parent's children and hands `patch` an empty child list, so the
+// subtree is rebuilt through `createElm`. A Custom Element whose light DOM is
+// declared by the view is a replacement boundary instead: the host and its
+// children are built while detached, exactly as they are during a fresh
+// render. Trailing vnode children with no DOM counterpart are simply absent
+// from the clone; `updateChildren` appends them.
 
 const HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml'
 const HYDRATION_STAMP_ATTRIBUTE = 'data-foldkit-app'
-
-// The style module keys regular properties in camelCase (`backgroundColor`)
-// and custom properties as written (`--accent`), so a property read from the
-// DOM in kebab case is converted to the module's key form before seeding.
-const styleModuleKey = (property: string): string =>
-  property.startsWith('--')
-    ? property
-    : property.replace(/-([a-z])/g, (_match, character: string) =>
-        character.toUpperCase(),
-      )
 
 const classListOf = (element: Element): Record<string, boolean> => {
   const classes: Record<string, boolean> = {}
@@ -56,11 +69,13 @@ const classListOf = (element: Element): Record<string, boolean> => {
 
 const inlineStyleOf = (element: Element): Record<string, string> => {
   const style: Record<string, string> = {}
-  if (element instanceof HTMLElement || element instanceof SVGElement) {
+  if ('style' in element && element.style instanceof CSSStyleDeclaration) {
     const inlineStyle = element.style
     for (let index = 0; index < inlineStyle.length; index += 1) {
       const property = inlineStyle.item(index)
-      style[styleModuleKey(property)] = inlineStyle.getPropertyValue(property)
+      const value = inlineStyle.getPropertyValue(property)
+      const priority = inlineStyle.getPropertyPriority(property)
+      style[property] = priority === '' ? value : `${value} !${priority}`
     }
   }
   return style
@@ -103,38 +118,143 @@ const seedStyle = (
   if (!styleOwnedByModule) {
     return {}
   }
-  if (!isCustomElement) {
-    return inlineStyleOf(element)
+  const vnodeStyle = vnode.data?.style ?? {}
+  const declared = Object.fromEntries(
+    Object.entries(vnodeStyle).flatMap(([key, value]) =>
+      typeof value === 'string'
+        ? [[serializedStylePropertyName(key), value]]
+        : [],
+    ),
+  )
+  const style = Reflect.get(element, 'style')
+  if (!(style instanceof CSSStyleDeclaration)) {
+    return {}
   }
-  const current = inlineStyleOf(element)
-  const declared: Record<string, string> = {}
-  for (const [key, value] of Object.entries(vnode.data?.style ?? {})) {
-    if (typeof value === 'string') {
-      declared[key] = current[key] ?? ''
+  const seeded: Record<string, string> = isCustomElement
+    ? {}
+    : inlineStyleOf(element)
+  const expected = element.ownerDocument.createElement('span').style
+  const ownedProperties = new Set<string>()
+  for (const [propertyName, value] of Object.entries(declared)) {
+    expected.setProperty(propertyName, value)
+    const ownershipProbe = element.ownerDocument.createElement('span').style
+    ownershipProbe.setProperty(propertyName, value)
+    ownedProperties.add(propertyName)
+    for (let index = 0; index < ownershipProbe.length; index += 1) {
+      ownedProperties.add(ownershipProbe.item(index))
     }
   }
-  return declared
+  for (const propertyName of ownedProperties) {
+    delete seeded[propertyName]
+  }
+  const isEquivalent = Object.keys(declared).every(
+    propertyName =>
+      style.getPropertyValue(propertyName) ===
+        expected.getPropertyValue(propertyName) &&
+      style.getPropertyPriority(propertyName) ===
+        expected.getPropertyPriority(propertyName),
+  )
+  if (isEquivalent) {
+    Object.assign(seeded, declared)
+  }
+  return seeded
 }
 
-// Properties the serializer emits as attributes but the client sets as DOM
-// properties that do not reflect back to the attribute, so a correct hydration
-// drops the server attribute. When a vnode owns one of these through
-// `data.props`, the signature compares the live property value instead of the
-// attribute, so that expected drop is not read as a disagreement. A view that
-// instead sets the same name as a raw attribute keeps it in the attribute set.
-const NON_REFLECTING_PROPERTIES: ReadonlySet<string> = new Set([
-  'value',
-  'checked',
-  'selected',
-  'muted',
-])
+const createInertProbe = (element: Element): Element => {
+  const inertDocument =
+    element.ownerDocument.implementation.createHTMLDocument()
+  const base = inertDocument.createElement('base')
+  base.href = element.ownerDocument.baseURI
+  inertDocument.head.appendChild(base)
+  if (
+    element.namespaceURI === null ||
+    element.namespaceURI === HTML_NAMESPACE
+  ) {
+    return inertDocument.createElement(element.localName)
+  }
+  return inertDocument.createElementNS(element.namespaceURI, element.localName)
+}
 
-const propertyManagedNames = (vnode: VNode): ReadonlyArray<string> => {
-  const props = vnode.data?.props
-  if (props === undefined) {
+const reflectedPropertyNames = (vnode: VNode): ReadonlyArray<string> => {
+  const properties = vnode.data?.props
+  if (properties === undefined) {
     return []
   }
-  return Array.from(NON_REFLECTING_PROPERTIES).filter(name => name in props)
+  return Object.keys(properties).filter(
+    name =>
+      !isClientOnlyProperty(properties, name) &&
+      reflectedAttributeName(name) !== undefined,
+  )
+}
+
+const reflectedAttributeValue = (
+  tagName: string,
+  propertyName: string,
+  value: unknown,
+): string | null => {
+  if (BOOLEAN_PROPERTIES.has(propertyName)) {
+    return value === true ? '' : null
+  }
+  if (value === false) {
+    return propertyName === 'draggable' ? 'false' : String(value)
+  }
+  if (propertyName === 'draggable') {
+    return value === true ? 'true' : 'false'
+  }
+  return serializedHtmlPropertyValue(tagName, propertyName, value)
+}
+
+const isControlledCurrentState = (
+  element: Element,
+  propertyName: string,
+): boolean => {
+  const tagName = element.localName
+  return (
+    (propertyName === 'value' &&
+      (tagName === 'input' ||
+        tagName === 'textarea' ||
+        tagName === 'output' ||
+        tagName === 'select')) ||
+    (propertyName === 'checked' && tagName === 'input') ||
+    (propertyName === 'selected' && tagName === 'option') ||
+    (propertyName === 'muted' && (tagName === 'audio' || tagName === 'video'))
+  )
+}
+
+const STALE_REFLECTED_PROPERTY = Symbol('foldkit/stale-reflected-property')
+
+const seedReflectedProperties = (
+  element: Element,
+  vnode: VNode,
+  propertyNames: ReadonlyArray<string>,
+  isCustomElement: boolean,
+  status: HydrationStatus,
+): Record<string, unknown> => {
+  const properties = vnode.data?.props
+  if (properties === undefined || propertyNames.length === 0) {
+    return {}
+  }
+
+  const seeded: Record<string, unknown> = {}
+  for (const name of propertyNames) {
+    const authored = properties[name]
+    const attributeName = reflectedAttributeName(name)
+    if (attributeName === undefined) {
+      continue
+    }
+    const isEquivalent =
+      !isCustomElement && isControlledCurrentState(element, name)
+        ? Object.is(Reflect.get(element, name), authored)
+        : element.getAttribute(attributeName) ===
+          reflectedAttributeValue(element.localName, name, authored)
+    if (isEquivalent) {
+      seeded[name] = authored
+    } else {
+      seeded[name] = STALE_REFLECTED_PROPERTY
+      detectMismatch(status)
+    }
+  }
+  return seeded
 }
 
 const byName = (
@@ -151,7 +271,7 @@ const byName = (
 // APIs, so spelling differences never register, and the snapshot is JSON so no
 // value can collide with a delimiter. Values feed the comparison, never a log.
 export const __elementSignature = (element: Element, vnode: VNode): string => {
-  const propertyNames = propertyManagedNames(vnode)
+  const propertyNames = controlledStatePropertyNames(element, vnode.data?.props)
 
   const attributes: Array<[string, string]> = []
   for (const attribute of Array.from(element.attributes)) {
@@ -159,8 +279,7 @@ export const __elementSignature = (element: Element, vnode: VNode): string => {
     if (
       name === HYDRATION_STAMP_ATTRIBUTE ||
       name === 'class' ||
-      name === 'style' ||
-      propertyNames.includes(name)
+      name === 'style'
     ) {
       continue
     }
@@ -202,10 +321,25 @@ const seedAdoptedState = (
 ): void => {
   const classOwnedByModule =
     vnode.data?.class !== undefined &&
-    vnode.data?.attrs?.['class'] === undefined
+    htmlAttributeValue(vnode.data?.attrs, 'class') === undefined
   const styleOwnedByModule =
     vnode.data?.style !== undefined &&
-    vnode.data?.attrs?.['style'] === undefined
+    htmlAttributeValue(vnode.data?.attrs, 'style') === undefined
+  const propertyNames = reflectedPropertyNames(vnode)
+  const propertyAttributeNames = new Set(
+    propertyNames.flatMap(name => {
+      const attributeName = reflectedAttributeName(name)
+      return attributeName === undefined
+        ? []
+        : [parsedAttributeName(element.namespaceURI, attributeName)]
+    }),
+  )
+  const datasetAttributeNames = new Map(
+    Object.keys(vnode.data?.dataset ?? {}).map(name => [
+      `data-${name.replace(/[A-Z]/g, match => `-${match.toLowerCase()}`)}`,
+      name,
+    ]),
+  )
 
   // NOTE: a custom element that upgraded before hydration adds attributes of its
   // own in connectedCallback. Seeding only the attributes the vnode declares
@@ -229,6 +363,12 @@ const seedAdoptedState = (
     if (name === 'style' && styleOwnedByModule) {
       continue
     }
+    if (propertyAttributeNames.has(name)) {
+      continue
+    }
+    if (datasetAttributeNames.has(name)) {
+      continue
+    }
     if (
       declaredAttributes !== undefined &&
       !declaredAttributes.has(name.toLowerCase())
@@ -245,18 +385,36 @@ const seedAdoptedState = (
     isCustomElement,
   )
   const style = seedStyle(element, vnode, styleOwnedByModule, isCustomElement)
+  const props = seedReflectedProperties(
+    element,
+    vnode,
+    propertyNames,
+    isCustomElement,
+    status,
+  )
+  const dataset: Record<string, string> = {}
+  for (const [attributeName, propertyName] of datasetAttributeNames) {
+    const value = element.getAttribute(attributeName)
+    if (value !== null) {
+      dataset[propertyName] = value
+    }
+  }
 
   clone.data = {
     ...clone.data,
     ...(Object.keys(attrs).length > 0 ? { attrs } : {}),
     ...(Object.keys(classes).length > 0 ? { class: classes } : {}),
     ...(Object.keys(style).length > 0 ? { style } : {}),
+    ...(Object.keys(props).length > 0
+      ? { props: { ...clone.data?.props, ...props } }
+      : {}),
+    ...(Object.keys(dataset).length > 0 ? { dataset } : {}),
   }
 
   // In development, record the server DOM signature so the post-patch pass can
   // report an attribute-only mismatch the structural walk cannot see. Gated on
   // the dev flag so a production hydrate does no extra work.
-  if (import.meta.hot) {
+  if (import.meta.hot && !status.adoptedSignatures.has(element)) {
     status.adoptedSignatures.set(element, {
       vnode,
       server: __elementSignature(element, vnode),
@@ -264,7 +422,6 @@ const seedAdoptedState = (
   }
 }
 
-type AdoptedElements = Set<Node>
 type AdoptedSignature = Readonly<{ vnode: VNode; server: string }>
 type HydrationStatus = {
   isMismatchDetected: boolean
@@ -301,8 +458,12 @@ const hasOnlyTextContent = (element: Element): boolean => {
   )
 }
 
-const matchesTag = (element: Element, selector: string): boolean =>
-  element.tagName.toLowerCase() === tagNameFromSelector(selector).toLowerCase()
+const matchesTag = (element: Element, vnode: VNode): boolean => {
+  const authored = tagNameFromSelector(vnode.sel ?? '')
+  const expected =
+    vnode.data?.ns === undefined ? authored.toLowerCase() : authored
+  return element.localName === expected
+}
 
 // The namespace a vnode expects is carried in `data.ns` for foreign content
 // (SVG, MathML) and is otherwise HTML. An element whose namespace disagrees
@@ -313,6 +474,41 @@ const namespaceOf = (vnode: VNode): string =>
 
 const matchesNamespace = (element: Element, vnode: VNode): boolean =>
   (element.namespaceURI ?? HTML_NAMESPACE) === namespaceOf(vnode)
+
+// The server DOM does not encode a vnode's key or identity, so a positional
+// match on tag and namespace alone could adopt a different logical entity: a
+// reordered or stale keyed list would take over the wrong DOM node, and the user
+// state sitting on it. The serializer stamps a digest of key and identity; here
+// the same digest is computed for the vnode and compared, so a mismatch rebuilds
+// instead of transferring state to the wrong row or branch. A key type the
+// digest does not support (a symbol, which a hydratable render refuses) never
+// matches, so it rebuilds rather than adopting on a guess.
+const matchesAdoptionKey = (element: Element, vnode: VNode): boolean => {
+  const serverKey = element.getAttribute(HYDRATION_KEY_ATTRIBUTE)
+  if (vnode.key === undefined) {
+    return serverKey === null
+  }
+  const clientKey = hydrationKeyMarker(vnode.key)
+  if (clientKey === undefined) {
+    // A key type the digest cannot represent (a symbol, which a hydratable
+    // render refuses) cannot be compared, so it never matches: rebuilding beats
+    // adopting on a guess.
+    return false
+  }
+  return serverKey === clientKey
+}
+
+const matchesAdoptionIdentity = (element: Element, vnode: VNode): boolean => {
+  if (!matchesAdoptionKey(element, vnode)) {
+    return false
+  }
+  const serverIdentity = element.getAttribute(HYDRATION_IDENTITY_ATTRIBUTE)
+  const clientIdentity =
+    vnode.identity === undefined
+      ? null
+      : hydrationIdentityMarker(vnode.identity)
+  return serverIdentity === clientIdentity
+}
 
 const cloneOf = (vnode: VNode, elm: Node): VNode => {
   const clone: VNode = {
@@ -329,6 +525,79 @@ const cloneOf = (vnode: VNode, elm: Node): VNode => {
   return clone
 }
 
+const isAutonomousCustomElement = (element: Element): boolean =>
+  (element.namespaceURI === null || element.namespaceURI === HTML_NAMESPACE) &&
+  element.localName.includes('-')
+
+const hasViewOwnedLightDom = (vnode: VNode): boolean =>
+  vnode.text !== undefined ||
+  (vnode.children !== undefined && vnode.children.length > 0) ||
+  hasTrustedInnerHtml(vnode.data?.props)
+
+const shouldRebuildCustomElement = (element: Element, vnode: VNode): boolean =>
+  isAutonomousCustomElement(element) && hasViewOwnedLightDom(vnode)
+
+type DeferredInsertHook = Readonly<{
+  vnode: VNode
+  insert: (vnode: VNode) => void
+}>
+
+const collectInsertHooks = (
+  vnode: VNode,
+  collected: Array<DeferredInsertHook>,
+): void => {
+  const children = vnode.children
+  if (children !== undefined) {
+    for (const child of children) {
+      if (typeof child !== 'string') {
+        collectInsertHooks(child, collected)
+      }
+    }
+  }
+  const insert = vnode.data?.hook?.insert
+  if (insert !== undefined) {
+    collected.push({ vnode, insert })
+  }
+}
+
+const withoutInsertHooks = <A>(vnode: VNode, body: () => A): A => {
+  const deferred: Array<DeferredInsertHook> = []
+  collectInsertHooks(vnode, deferred)
+  for (const { vnode: deferredVNode } of deferred) {
+    const hook = deferredVNode.data?.hook
+    if (hook !== undefined) {
+      delete hook.insert
+    }
+  }
+  try {
+    return body()
+  } finally {
+    for (const { vnode: deferredVNode, insert } of deferred) {
+      const hook = deferredVNode.data?.hook
+      if (hook !== undefined) {
+        hook.insert = insert
+      }
+    }
+  }
+}
+
+// NOTE: removing children from an adopted Custom Element would run their
+// disconnected callbacks while the host was still live. Those callbacks can
+// synchronously mutate the host after hydration has sampled it. Replace the
+// host with a comment first, then let the ordinary differ build the vnode while
+// detached and insert it in the same position. Its insert hooks remain deferred
+// until the whole hydration tree can fire them in render order.
+const replaceHydrationElement = (element: Element, vnode: VNode): VNode => {
+  const ownerDocument = element.ownerDocument
+  const parent = element.parentNode ?? ownerDocument.createDocumentFragment()
+  if (element.parentNode === null) {
+    parent.appendChild(element)
+  }
+  const placeholder = ownerDocument.createComment('')
+  parent.replaceChild(placeholder, element)
+  return withoutInsertHooks(vnode, () => patch(toVNode(placeholder), vnode))
+}
+
 const asVNode = (child: VNode | string): VNode =>
   typeof child === 'string'
     ? {
@@ -340,6 +609,35 @@ const asVNode = (child: VNode | string): VNode =>
         key: undefined,
       }
     : child
+
+const clonePreparedTree = (vnode: VNode): VNode => {
+  const elm = vnode.elm
+  if (elm === undefined) {
+    throw new Error('[foldkit] A prepared hydration vnode has no DOM node.')
+  }
+  const clone = cloneOf(vnode, elm)
+  clone.data = {
+    ...clone.data,
+    ...(vnode.data?.on === undefined ? {} : { on: vnode.data.on }),
+    ...(vnode.data?.props === undefined ? {} : { props: vnode.data.props }),
+  }
+  clone.text = vnode.text
+  const children = vnode.children
+  if (children !== undefined) {
+    const cloneChildren: Array<VNode> = []
+    let domChild = elm.firstChild
+    for (const rawChild of children) {
+      const child = asVNode(rawChild)
+      if (child.elm === undefined) {
+        child.elm = domChild ?? undefined
+      }
+      cloneChildren.push(clonePreparedTree(child))
+      domChild = child.elm?.nextSibling ?? null
+    }
+    clone.children = cloneChildren
+  }
+  return clone
+}
 
 const clearChildren = (element: Element): void => {
   element.textContent = ''
@@ -380,52 +678,60 @@ const adoptText = (
 const adoptElement = (
   element: Element,
   vnode: VNode,
-  adopted: AdoptedElements,
   status: HydrationStatus,
 ): VNode => {
+  if (shouldRebuildCustomElement(element, vnode)) {
+    return clonePreparedTree(replaceHydrationElement(element, vnode))
+  }
   const clone = cloneOf(vnode, element)
-  adopted.add(element)
+  // Strip the hydration markers the serializer stamped: they are internal to the
+  // handoff, already verified by the parent's positional walk before this call,
+  // and must not remain on the adopted element.
+  element.removeAttribute(HYDRATION_KEY_ATTRIBUTE)
+  element.removeAttribute(HYDRATION_IDENTITY_ATTRIBUTE)
 
   // NOTE: an autonomous custom element (an HTML-namespace element whose name
   // carries a hyphen) that upgraded before hydration adds attributes, classes,
   // styles, and light DOM of its own in connectedCallback. The attributes, class
   // tokens, and style properties the vnode does not declare are always preserved
-  // (here and in seedAdoptedState). Light DOM ownership follows the vnode: a
-  // childless vnode leaves the component's light DOM untouched, while a vnode
-  // that declares children owns the light DOM and reconciles it like any
-  // element. The two cannot share: once both write same-tag nodes a positional
-  // walk cannot tell a component node from a view node, so declared children
-  // take full ownership rather than interleave. The test is the name shape, not
+  // (here and in seedAdoptedState). One that declares no content leaves the
+  // component's light DOM untouched. A host with view-owned text, children, or
+  // trusted innerHTML is rebuilt before reaching this state-seeding path. The
+  // two cannot share because hydration cannot distinguish a component node from
+  // a matching view node. The test is the name shape, not
   // `customElements.get`: whether the element has upgraded is timing-dependent
   // at hydration (its definition may register after the server DOM parses), so a
   // name test is deterministic. A hyphenated element that never upgrades is
-  // treated the same way, which is safe: with no component light DOM, a
-  // childless vnode leaves an empty element and a vnode with children reconciles
-  // normally.
-  const isCustomElement =
-    (element.namespaceURI === null ||
-      element.namespaceURI === HTML_NAMESPACE) &&
-    element.localName.includes('-')
+  // treated the same way, which is safe: with no component light DOM,
+  // undeclared content leaves an empty element and declared content is rebuilt.
+  const isCustomElement = isAutonomousCustomElement(element)
+  const finishAdoption = (): VNode => {
+    if (!isCustomElement) {
+      return clone
+    }
+    seedAdoptedState(element, vnode, clone, status, true)
+    withoutInsertHooks(vnode, () => patch(clone, vnode))
+    return clonePreparedTree(vnode)
+  }
 
-  seedAdoptedState(element, vnode, clone, status, isCustomElement)
-
-  // NOTE: a controlled textarea serializes its value as text content, which
-  // sets the element's defaultValue. A fresh boot sets only the value
-  // property and leaves defaultValue empty, so the server text is cleared
-  // before the props module applies the value; otherwise the adopted
-  // textarea's defaultValue and form.reset would differ from a fresh boot.
-  // An uncontrolled textarea, whose content is its default, is left alone.
+  // A controlled textarea or output serializes its value as text content.
+  // That text is its parsed default state, which the fresh client path now
+  // synchronizes as well. Keep the server text outside the vnode child walk;
+  // the controlled property owns it and its insert hook reasserts both current
+  // and default state after the patch.
   if (
-    element.tagName === 'TEXTAREA' &&
+    (element.tagName === 'TEXTAREA' || element.tagName === 'OUTPUT') &&
     vnode.data?.props?.['value'] !== undefined
   ) {
-    clearChildren(element)
     clone.children = []
-    return clone
+    return finishAdoption()
   }
 
   const authoredInnerHtml = vnode.data?.props?.['innerHTML']
-  if (authoredInnerHtml !== undefined) {
+  const hasAuthoredInnerHtml =
+    authoredInnerHtml !== undefined && hasTrustedInnerHtml(vnode.data?.props)
+  const vnodeChildren = vnode.children
+  if (hasAuthoredInnerHtml) {
     // NOTE: the browser normalizes markup as it parses (entity forms, tag
     // case, attribute order), so the served innerHTML string rarely equals
     // the authored one byte for byte. Parsing the authored string through a
@@ -437,32 +743,38 @@ const adoptElement = (
     // HTML-context parse would lowercase, false-mismatching every camelCase
     // attribute.
     if (typeof authoredInnerHtml === 'string') {
-      const probe =
-        element.namespaceURI === null || element.namespaceURI === HTML_NAMESPACE
-          ? element.ownerDocument.createElement(element.tagName)
-          : element.ownerDocument.createElementNS(
-              element.namespaceURI,
-              element.tagName,
-            )
-      probe.innerHTML = authoredInnerHtml
-      const isEquivalentMarkup = probe.innerHTML === element.innerHTML
+      const probe = createInertProbe(element)
+      writeNativeInnerHtml(probe, authoredInnerHtml)
+      const currentInnerHtml = readNativeInnerHtml(element)
+      const isEquivalentMarkup = readNativeInnerHtml(probe) === currentInnerHtml
       if (!isEquivalentMarkup) {
         detectMismatch(status)
+        writeNativeInnerHtml(element, authoredInnerHtml)
       }
+      const props = {
+        ...clone.data?.props,
+        innerHTML: authoredInnerHtml,
+      }
+      markTrustedInnerHtml(props, props.innerHTML)
       clone.data = {
         ...clone.data,
-        props: {
-          innerHTML: isEquivalentMarkup ? authoredInnerHtml : element.innerHTML,
-        },
+        props,
       }
     } else {
-      clone.data = { ...clone.data, props: { innerHTML: element.innerHTML } }
+      const props = {
+        ...clone.data?.props,
+        innerHTML: readNativeInnerHtml(element),
+      }
+      markTrustedInnerHtml(props, props.innerHTML)
+      clone.data = {
+        ...clone.data,
+        props,
+      }
     }
     clone.children = []
-    return clone
+    return finishAdoption()
   }
 
-  const vnodeChildren = vnode.children
   // NOTE: no children (undefined) and an empty child list both mean the view
   // declares no children, so they share the childless path. This is also where
   // a custom element's ownership splits: a childless vnode has no view child to
@@ -496,7 +808,7 @@ const adoptElement = (
       clearChildren(element)
       clone.children = []
     }
-    return clone
+    return finishAdoption()
   }
 
   const cloneChildren: Array<VNode> = []
@@ -515,7 +827,7 @@ const adoptElement = (
         }
         clearChildren(element)
         clone.children = []
-        return clone
+        return finishAdoption()
       }
       const adoption = maybeAdoption.value
       const textClone = cloneOf(child, adoption.adoptedNode)
@@ -535,7 +847,7 @@ const adoptElement = (
         detectMismatch(status)
         clearChildren(element)
         clone.children = []
-        return clone
+        return finishAdoption()
       }
       const commentClone = cloneOf(child, domChild)
       commentClone.text = domChild.data
@@ -546,16 +858,18 @@ const adoptElement = (
 
     if (
       !isElement(domChild) ||
-      !matchesTag(domChild, child.sel) ||
-      !matchesNamespace(domChild, child)
+      !matchesTag(domChild, child) ||
+      !matchesNamespace(domChild, child) ||
+      !matchesAdoptionIdentity(domChild, child)
     ) {
       detectMismatch(status)
       clearChildren(element)
       clone.children = []
-      return clone
+      return finishAdoption()
     }
-    cloneChildren.push(adoptElement(domChild, child, adopted, status))
-    domChild = domChild.nextSibling
+    const nextDomChild = domChild.nextSibling
+    cloneChildren.push(adoptElement(domChild, child, status))
+    domChild = nextDomChild
   }
 
   while (domChild !== null) {
@@ -566,53 +880,127 @@ const adoptElement = (
   }
 
   clone.children = cloneChildren
-  return clone
+  return finishAdoption()
 }
 
-const fireAdoptedInsertHooks = (
+// NOTE: structural reconciliation can run Custom Element lifecycle callbacks.
+// One replacement may mutate an ancestor or an earlier sibling after that node
+// was first visited. Sample retained element state and text or comment data only
+// after the entire walk has completed, so the ordinary patch compares the view
+// against the final values those synchronous callbacks left behind. Custom
+// Element code that changes another subtree's structure is outside this pass;
+// components must keep structural DOM writes within their own host.
+const resampleAdoptedTree = (
+  clone: VNode,
   vnode: VNode,
-  adopted: AdoptedElements,
+  status: HydrationStatus,
 ): void => {
-  const children = vnode.children
-  if (children !== undefined) {
-    for (const child of children) {
-      if (typeof child !== 'string') {
-        fireAdoptedInsertHooks(child, adopted)
+  const elm = clone.elm
+  if (elm !== undefined && isElement(elm)) {
+    seedAdoptedState(elm, vnode, clone, status, isAutonomousCustomElement(elm))
+    if (vnode.text !== undefined) {
+      clone.text = hasOnlyTextContent(elm) ? (elm.textContent ?? '') : undefined
+    }
+  } else if (elm !== undefined && (isText(elm) || isComment(elm))) {
+    clone.text = elm.data
+  }
+  const cloneChildren = clone.children
+  const vnodeChildren = vnode.children
+  if (cloneChildren === undefined || vnodeChildren === undefined) {
+    return
+  }
+  const vnodeChildrenIterator = vnodeChildren.values()
+  for (const rawCloneChild of cloneChildren) {
+    const nextVnodeChild = vnodeChildrenIterator.next()
+    if (nextVnodeChild.done) {
+      return
+    }
+    resampleAdoptedTree(
+      asVNode(rawCloneChild),
+      asVNode(nextVnodeChild.value),
+      status,
+    )
+  }
+}
+
+// NOTE: hydration cannot let the patch fire its own `insert` hooks. The differ
+// queues a hook when it creates a node and flushes the queue when the patch
+// ends, which covers a fresh render but not a hydration, where some nodes are
+// adopted and never created. Firing the created ones from the queue and the
+// adopted ones afterward orders every created node before every adopted one:
+// a `<main>` that adopts one child and creates its sibling ran the sibling's
+// Mount first and the adopted child's second, the reverse of what a fresh
+// render does. A Mount that depends on a sibling being initialized would work
+// on a fresh boot and break on a hydrated one.
+//
+// So the hooks are detached before the patch, which leaves the differ's queue
+// empty, and fired afterward in one pass over the whole tree, children first,
+// the order the differ creates in. Adopted and created nodes are not
+// distinguished, because every node in the new tree has a DOM node by then and
+// a fresh render would have fired all of them.
+const patchFiringInsertHooksInRenderOrder = (
+  adoptedClone: VNode,
+  nextVNode: VNode,
+): VNode => {
+  const deferred: Array<DeferredInsertHook> = []
+  collectInsertHooks(nextVNode, deferred)
+
+  for (const { vnode } of deferred) {
+    const hook = vnode.data?.hook
+    if (hook !== undefined) {
+      delete hook.insert
+    }
+  }
+
+  let patchedVNode: VNode
+  try {
+    patchedVNode = patch(adoptedClone, nextVNode)
+  } finally {
+    for (const { vnode, insert } of deferred) {
+      const hook = vnode.data?.hook
+      if (hook !== undefined) {
+        hook.insert = insert
       }
     }
   }
-  const insertHook = vnode.data?.hook?.insert
-  if (
-    insertHook !== undefined &&
-    vnode.elm !== undefined &&
-    adopted.has(vnode.elm)
-  ) {
-    insertHook(vnode)
+
+  for (const { vnode, insert } of deferred) {
+    insert(vnode)
   }
+
+  return patchedVNode
 }
 
 /** Hydrates a server-rendered root element against the first render's vnode
- *  tree. Matching DOM nodes are adopted in place, so pre-rendered content is
- *  never torn down on boot: module hooks attach listeners and re-assert
- *  attrs and props onto the existing elements, and `insert` hooks (Mounts)
- *  fire for adopted nodes in the same children-first order the differ uses
- *  for created ones. A mismatching subtree falls back to a rebuild through
- *  `createElm` at the nearest parent, and a root-level mismatch falls back
- *  to the pre-hydration replace boot. Development builds warn when
- *  reconciliation is required. Returns the patched vnode to store as the
- *  runtime's current tree. */
+ *  tree. Matching DOM nodes are adopted in place: module hooks attach
+ *  listeners and re-assert attrs and props onto the existing elements, and
+ *  `insert` hooks (Mounts) fire for adopted nodes in the same children-first
+ *  order the differ uses for created ones. A mismatching subtree falls back to
+ *  a rebuild through `createElm` at the nearest parent. A Custom Element with
+ *  view-owned light DOM is replaced so creation follows the fresh-render
+ *  lifecycle. Any root-level mismatch also replaces the root. Development
+ *  builds warn when reconciliation is required. Returns the patched vnode to
+ *  store as the runtime's current tree. */
 // Replace the hydration root with a fresh render of the vnode. snabbdom's
 // sameVnode compares tag but not namespace, so patching the root directly
 // would reuse a same-tag element even across a namespace change. Patching
 // against a comment placed where the root was is never sameVnode with a new
 // element, so the differ builds a fresh node in the correct namespace and
 // swaps it in.
+// A root with no parent gets one. Patching a detached root directly is the same
+// reuse this function exists to avoid: snabbdom's sameVnode compares tag alone,
+// so a same-tag root is kept along with the DOM state on it and its insert hooks
+// never fire, which is how a rejected page could keep its own elements and their
+// typed values. A fragment gives the placeholder a parent, so the replacement is
+// built and swapped in exactly as it is for an attached root.
 const replaceHydrationRoot = (hydrationRoot: Element, vnode: VNode): VNode => {
-  const parent = hydrationRoot.parentNode
-  if (parent === null) {
-    return patch(toVNode(hydrationRoot), vnode)
+  const ownerDocument = hydrationRoot.ownerDocument
+  const parent =
+    hydrationRoot.parentNode ?? ownerDocument.createDocumentFragment()
+  if (hydrationRoot.parentNode === null) {
+    parent.appendChild(hydrationRoot)
   }
-  const placeholder = hydrationRoot.ownerDocument.createComment('')
+  const placeholder = ownerDocument.createComment('')
   parent.replaceChild(placeholder, hydrationRoot)
   return patch(toVNode(placeholder), vnode)
 }
@@ -620,7 +1008,8 @@ const replaceHydrationRoot = (hydrationRoot: Element, vnode: VNode): VNode => {
 export const __hydrateVNode = (
   hydrationRoot: Element,
   nextVNode: VNode | null,
-  seen?: Set<object>,
+  seen: Set<object> | undefined,
+  buildId: string,
 ): VNode => {
   const dedupedVNode =
     nextVNode !== null ? dedupeSharedVNodes(nextVNode, seen) : h('!')
@@ -629,27 +1018,44 @@ export const __hydrateVNode = (
     adoptedSignatures: new Map(),
   }
 
-  if (
+  // The build token is checked again here, though the runtime has already
+  // refused a mismatch before reading the handoff. This is the last line of
+  // defense for a caller reaching the adoption step directly, and it never
+  // matches an absent marker: `buildId` is required and non-empty, so a page
+  // served before build ids existed cannot pass for one of this build's.
+  const servedBuild = hydrationRoot.getAttribute(HYDRATION_BUILD_ATTRIBUTE)
+  const isSameBuild = buildId !== '' && servedBuild === buildId
+  hydrationRoot.removeAttribute(HYDRATION_BUILD_ATTRIBUTE)
+
+  // The root is checked for logical identity the same way every other adopted
+  // element is. A root whose key or view identity disagrees with the served one
+  // is a different logical root, so it is rebuilt rather than adopted: adopting
+  // it would carry the previous root's DOM state (a typed input's value) into a
+  // root the client never rendered there.
+  const isRootMismatch =
+    !isSameBuild ||
     dedupedVNode.sel === undefined ||
     dedupedVNode.sel === '' ||
     dedupedVNode.sel === '!' ||
-    !matchesTag(hydrationRoot, dedupedVNode.sel) ||
-    !matchesNamespace(hydrationRoot, dedupedVNode)
-  ) {
+    !matchesTag(hydrationRoot, dedupedVNode) ||
+    !matchesNamespace(hydrationRoot, dedupedVNode) ||
+    !matchesAdoptionIdentity(hydrationRoot, dedupedVNode)
+  if (isRootMismatch) {
     detectMismatch(status)
     const patchedVNode = replaceHydrationRoot(hydrationRoot, dedupedVNode)
     reportMismatch(status)
     return patchedVNode
   }
+  if (shouldRebuildCustomElement(hydrationRoot, dedupedVNode)) {
+    return replaceHydrationRoot(hydrationRoot, dedupedVNode)
+  }
 
-  const adopted: AdoptedElements = new Set()
-  const adoptedClone = adoptElement(
-    hydrationRoot,
+  const adoptedClone = adoptElement(hydrationRoot, dedupedVNode, status)
+  resampleAdoptedTree(adoptedClone, dedupedVNode, status)
+  const patchedVNode = patchFiringInsertHooksInRenderOrder(
+    adoptedClone,
     dedupedVNode,
-    adopted,
-    status,
   )
-  const patchedVNode = patch(adoptedClone, dedupedVNode)
   if (import.meta.hot && !status.isMismatchDetected) {
     for (const [element, { vnode, server }] of status.adoptedSignatures) {
       if (__elementSignature(element, vnode) !== server) {
@@ -658,7 +1064,6 @@ export const __hydrateVNode = (
       }
     }
   }
-  fireAdoptedInsertHooks(patchedVNode, adopted)
   reportMismatch(status)
   return patchedVNode
 }
