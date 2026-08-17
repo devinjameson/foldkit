@@ -1,5 +1,13 @@
 import { Option } from 'effect'
 
+import { HYDRATION_BUILD_ATTRIBUTE } from './buildToken.js'
+import {
+  HYDRATION_IDENTITY_ATTRIBUTE,
+  HYDRATION_KEY_ATTRIBUTE,
+  hydrationIdentityMarker,
+  hydrationKeyMarker,
+} from './hydrationMarkers.js'
+import { hasTrustedInnerHtml } from './propertyProvenance.js'
 import type { VNode } from './snabbdom/index.js'
 import { h, toVNode } from './snabbdom/index.js'
 import { tagNameFromSelector } from './tagName.js'
@@ -314,6 +322,41 @@ const namespaceOf = (vnode: VNode): string =>
 const matchesNamespace = (element: Element, vnode: VNode): boolean =>
   (element.namespaceURI ?? HTML_NAMESPACE) === namespaceOf(vnode)
 
+// The server DOM does not encode a vnode's key or identity, so a positional
+// match on tag and namespace alone could adopt a different logical entity: a
+// reordered or stale keyed list would take over the wrong DOM node, and the user
+// state sitting on it. The serializer stamps a digest of key and identity; here
+// the same digest is computed for the vnode and compared, so a mismatch rebuilds
+// instead of transferring state to the wrong row or branch. A key type the
+// digest does not support (a symbol, which a hydratable render refuses) never
+// matches, so it rebuilds rather than adopting on a guess.
+const matchesAdoptionKey = (element: Element, vnode: VNode): boolean => {
+  const serverKey = element.getAttribute(HYDRATION_KEY_ATTRIBUTE)
+  if (vnode.key === undefined) {
+    return serverKey === null
+  }
+  const clientKey = hydrationKeyMarker(vnode.key)
+  if (clientKey === undefined) {
+    // A key type the digest cannot represent (a symbol, which a hydratable
+    // render refuses) cannot be compared, so it never matches: rebuilding beats
+    // adopting on a guess.
+    return false
+  }
+  return serverKey === clientKey
+}
+
+const matchesAdoptionIdentity = (element: Element, vnode: VNode): boolean => {
+  if (!matchesAdoptionKey(element, vnode)) {
+    return false
+  }
+  const serverIdentity = element.getAttribute(HYDRATION_IDENTITY_ATTRIBUTE)
+  const clientIdentity =
+    vnode.identity === undefined
+      ? null
+      : hydrationIdentityMarker(vnode.identity)
+  return serverIdentity === clientIdentity
+}
+
 const cloneOf = (vnode: VNode, elm: Node): VNode => {
   const clone: VNode = {
     sel: vnode.sel,
@@ -385,6 +428,11 @@ const adoptElement = (
 ): VNode => {
   const clone = cloneOf(vnode, element)
   adopted.add(element)
+  // Strip the hydration markers the serializer stamped: they are internal to the
+  // handoff, already verified by the parent's positional walk before this call,
+  // and must not remain on the adopted element.
+  element.removeAttribute(HYDRATION_KEY_ATTRIBUTE)
+  element.removeAttribute(HYDRATION_IDENTITY_ATTRIBUTE)
 
   // NOTE: an autonomous custom element (an HTML-namespace element whose name
   // carries a hyphen) that upgraded before hydration adds attributes, classes,
@@ -425,7 +473,10 @@ const adoptElement = (
   }
 
   const authoredInnerHtml = vnode.data?.props?.['innerHTML']
-  if (authoredInnerHtml !== undefined) {
+  if (
+    authoredInnerHtml !== undefined &&
+    hasTrustedInnerHtml(vnode.data?.props)
+  ) {
     // NOTE: the browser normalizes markup as it parses (entity forms, tag
     // case, attribute order), so the served innerHTML string rarely equals
     // the authored one byte for byte. Parsing the authored string through a
@@ -547,7 +598,8 @@ const adoptElement = (
     if (
       !isElement(domChild) ||
       !matchesTag(domChild, child.sel) ||
-      !matchesNamespace(domChild, child)
+      !matchesNamespace(domChild, child) ||
+      !matchesAdoptionIdentity(domChild, child)
     ) {
       detectMismatch(status)
       clearChildren(element)
@@ -569,26 +621,75 @@ const adoptElement = (
   return clone
 }
 
-const fireAdoptedInsertHooks = (
+// NOTE: hydration cannot let the patch fire its own `insert` hooks. The differ
+// queues a hook when it creates a node and flushes the queue when the patch
+// ends, which covers a fresh render but not a hydration, where some nodes are
+// adopted and never created. Firing the created ones from the queue and the
+// adopted ones afterward orders every created node before every adopted one:
+// a `<main>` that adopts one child and creates its sibling ran the sibling's
+// Mount first and the adopted child's second, the reverse of what a fresh
+// render does. A Mount that depends on a sibling being initialized would work
+// on a fresh boot and break on a hydrated one.
+//
+// So the hooks are detached before the patch, which leaves the differ's queue
+// empty, and fired afterward in one pass over the whole tree, children first,
+// the order the differ creates in. Adopted and created nodes are not
+// distinguished, because every node in the new tree has a DOM node by then and
+// a fresh render would have fired all of them.
+type DeferredInsertHook = Readonly<{
+  vnode: VNode
+  insert: (vnode: VNode) => void
+}>
+
+const collectInsertHooks = (
   vnode: VNode,
-  adopted: AdoptedElements,
+  collected: Array<DeferredInsertHook>,
 ): void => {
   const children = vnode.children
   if (children !== undefined) {
     for (const child of children) {
       if (typeof child !== 'string') {
-        fireAdoptedInsertHooks(child, adopted)
+        collectInsertHooks(child, collected)
       }
     }
   }
-  const insertHook = vnode.data?.hook?.insert
-  if (
-    insertHook !== undefined &&
-    vnode.elm !== undefined &&
-    adopted.has(vnode.elm)
-  ) {
-    insertHook(vnode)
+  const insert = vnode.data?.hook?.insert
+  if (insert !== undefined) {
+    collected.push({ vnode, insert })
   }
+}
+
+const patchFiringInsertHooksInRenderOrder = (
+  adoptedClone: VNode,
+  nextVNode: VNode,
+): VNode => {
+  const deferred: Array<DeferredInsertHook> = []
+  collectInsertHooks(nextVNode, deferred)
+
+  for (const { vnode } of deferred) {
+    const hook = vnode.data?.hook
+    if (hook !== undefined) {
+      delete hook.insert
+    }
+  }
+
+  let patchedVNode: VNode
+  try {
+    patchedVNode = patch(adoptedClone, nextVNode)
+  } finally {
+    for (const { vnode, insert } of deferred) {
+      const hook = vnode.data?.hook
+      if (hook !== undefined) {
+        hook.insert = insert
+      }
+    }
+  }
+
+  for (const { vnode, insert } of deferred) {
+    insert(vnode)
+  }
+
+  return patchedVNode
 }
 
 /** Hydrates a server-rendered root element against the first render's vnode
@@ -621,6 +722,7 @@ export const __hydrateVNode = (
   hydrationRoot: Element,
   nextVNode: VNode | null,
   seen?: Set<object>,
+  buildId?: string,
 ): VNode => {
   const dedupedVNode =
     nextVNode !== null ? dedupeSharedVNodes(nextVNode, seen) : h('!')
@@ -629,12 +731,29 @@ export const __hydrateVNode = (
     adoptedSignatures: new Map(),
   }
 
+  // The build token is checked before anything else, and before any DOM state
+  // can move. A page from another deployment may render the same tags in the
+  // same positions while every one of them means something else, which no
+  // per-element comparison can see: the constants a view imports, the
+  // configuration it reads, and the arguments its caller passes all change what
+  // it renders without changing the view itself.
+  const servedBuild = hydrationRoot.getAttribute(HYDRATION_BUILD_ATTRIBUTE)
+  const isSameBuild = servedBuild === (buildId ?? null)
+  hydrationRoot.removeAttribute(HYDRATION_BUILD_ATTRIBUTE)
+
+  // The root is checked for logical identity the same way every other adopted
+  // element is. A root whose key or view identity disagrees with the served one
+  // is a different logical root, so it is rebuilt rather than adopted: adopting
+  // it would carry the previous root's DOM state (a typed input's value) into a
+  // root the client never rendered there.
   if (
+    !isSameBuild ||
     dedupedVNode.sel === undefined ||
     dedupedVNode.sel === '' ||
     dedupedVNode.sel === '!' ||
     !matchesTag(hydrationRoot, dedupedVNode.sel) ||
-    !matchesNamespace(hydrationRoot, dedupedVNode)
+    !matchesNamespace(hydrationRoot, dedupedVNode) ||
+    !matchesAdoptionIdentity(hydrationRoot, dedupedVNode)
   ) {
     detectMismatch(status)
     const patchedVNode = replaceHydrationRoot(hydrationRoot, dedupedVNode)
@@ -649,7 +768,10 @@ export const __hydrateVNode = (
     adopted,
     status,
   )
-  const patchedVNode = patch(adoptedClone, dedupedVNode)
+  const patchedVNode = patchFiringInsertHooksInRenderOrder(
+    adoptedClone,
+    dedupedVNode,
+  )
   if (import.meta.hot && !status.isMismatchDetected) {
     for (const [element, { vnode, server }] of status.adoptedSignatures) {
       if (__elementSignature(element, vnode) !== server) {
@@ -658,7 +780,6 @@ export const __hydrateVNode = (
       }
     }
   }
-  fireAdoptedInsertHooks(patchedVNode, adopted)
   reportMismatch(status)
   return patchedVNode
 }

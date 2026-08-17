@@ -18,6 +18,15 @@ export const renderPage = async (
     )
   }
 
+  if (url.pathname === '/request-info') {
+    return Server.Responded(
+      new Response(request.url, {
+        status: 200,
+        headers: { 'content-type': 'text/plain' },
+      }),
+    )
+  }
+
   if (url.pathname === '/redirect') {
     return Server.Responded(
       Response.redirect(new URL('/rendered', request.url), 307),

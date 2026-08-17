@@ -1,15 +1,22 @@
 import { parseAst } from 'vite'
 import { describe, expect, it } from 'vitest'
 
-import { transformViewIdentity } from '../src/viewIdentity.ts'
+import { moduleDigest, transformViewIdentity } from '../src/viewIdentity.ts'
 
 const MODULE_ID = '/app/src/View.ts'
 const ROOT = '/app'
+// A fixed digest keeps the identity assertions readable. The plugin mixes a
+// digest of the module's own source into every identity it defines, so an edit
+// to a view's implementation gives it a new identity and hydration rebuilds
+// rather than adopting a stale page's element for it.
+const DIGEST = 'testdigest00'
 const ALIAS = '__foldkitBrandViewResult'
 const IMPORT_LINE = `import { brandViewResult as ${ALIAS} } from 'foldkit/brand'`
 
 const requireTransform = (code: string, id: string = MODULE_ID) => {
-  const result = transformViewIdentity(code, id, ROOT)
+  const result = transformViewIdentity(code, id, ROOT, {
+    sourceDigest: DIGEST,
+  })
   expect(result).not.toBeNull()
   if (result === null) {
     throw new Error('expected a transform result')
@@ -26,7 +33,9 @@ describe('function naming', () => {
   return 1
 }
 `)
-    expect(result.code).toContain(`return ${ALIAS}((1), "src/View.ts#view")`)
+    expect(result.code).toContain(
+      `return ${ALIAS}((1), "src/View.ts#view@${DIGEST}")`,
+    )
   })
 
   it('brands returns of a const arrow with a block body', () => {
@@ -34,14 +43,16 @@ describe('function naming', () => {
   return 1
 }
 `)
-    expect(result.code).toContain(`return ${ALIAS}((1), "src/View.ts#view")`)
+    expect(result.code).toContain(
+      `return ${ALIAS}((1), "src/View.ts#view@${DIGEST}")`,
+    )
   })
 
   it('wraps the body of an expression-body arrow', () => {
     const result = requireTransform(`const view = () => 1
 `)
     expect(result.code).toContain(
-      `const view = () => ${ALIAS}((1), "src/View.ts#view")`,
+      `const view = () => ${ALIAS}((1), "src/View.ts#view@${DIGEST}")`,
     )
   })
 
@@ -52,7 +63,9 @@ describe('function naming', () => {
   },
 }
 `)
-    expect(result.code).toContain(`return ${ALIAS}((1), "src/View.ts#render")`)
+    expect(result.code).toContain(
+      `return ${ALIAS}((1), "src/View.ts#render@${DIGEST}")`,
+    )
   })
 
   it('names an object property arrow by its key', () => {
@@ -61,7 +74,7 @@ describe('function naming', () => {
 }
 `)
     expect(result.code).toContain(
-      `Viewing: () => ${ALIAS}((1), "src/View.ts#Viewing")`,
+      `Viewing: () => ${ALIAS}((1), "src/View.ts#Viewing@${DIGEST}")`,
     )
   })
 
@@ -72,7 +85,9 @@ describe('function naming', () => {
   }
 }
 `)
-    expect(result.code).toContain(`return ${ALIAS}((1), "src/View.ts#render")`)
+    expect(result.code).toContain(
+      `return ${ALIAS}((1), "src/View.ts#render@${DIGEST}")`,
+    )
   })
 
   it('names an export-default function "default"', () => {
@@ -80,14 +95,16 @@ describe('function naming', () => {
   return 1
 }
 `)
-    expect(result.code).toContain(`return ${ALIAS}((1), "src/View.ts#default")`)
+    expect(result.code).toContain(
+      `return ${ALIAS}((1), "src/View.ts#default@${DIGEST}")`,
+    )
   })
 
   it('names an export-default arrow "default"', () => {
     const result = requireTransform(`export default () => 1
 `)
     expect(result.code).toContain(
-      `export default () => ${ALIAS}((1), "src/View.ts#default")`,
+      `export default () => ${ALIAS}((1), "src/View.ts#default@${DIGEST}")`,
     )
   })
 
@@ -97,13 +114,17 @@ host.render = function () {
   return 1
 }
 `)
-    expect(result.code).toContain(`return ${ALIAS}((1), "src/View.ts#render")`)
+    expect(result.code).toContain(
+      `return ${ALIAS}((1), "src/View.ts#render@${DIGEST}")`,
+    )
   })
 
   it('falls back to "anonymous" for unnameable functions', () => {
     const result = requireTransform(`const views = [() => 1]
 `)
-    expect(result.code).toContain(`${ALIAS}((1), "src/View.ts#anonymous")`)
+    expect(result.code).toContain(
+      `${ALIAS}((1), "src/View.ts#anonymous@${DIGEST}")`,
+    )
   })
 })
 
@@ -115,10 +136,10 @@ describe('nested functions', () => {
 }
 `)
     expect(result.code).toContain(
-      `const inner = () => ${ALIAS}((1), "src/View.ts#inner")`,
+      `const inner = () => ${ALIAS}((1), "src/View.ts#inner@${DIGEST}")`,
     )
     expect(result.code).toContain(
-      `return ${ALIAS}((inner()), "src/View.ts#outer")`,
+      `return ${ALIAS}((inner()), "src/View.ts#outer@${DIGEST}")`,
     )
     expect(countOccurrences(result.code, `${ALIAS}((`)).toBe(2)
   })
@@ -130,15 +151,19 @@ describe('nested functions', () => {
   }
 }
 `)
-    expect(countOccurrences(result.code, '"src/View.ts#outer"')).toBe(1)
-    expect(countOccurrences(result.code, '"src/View.ts#inner"')).toBe(1)
+    expect(countOccurrences(result.code, `"src/View.ts#outer@${DIGEST}"`)).toBe(
+      1,
+    )
+    expect(countOccurrences(result.code, `"src/View.ts#inner@${DIGEST}"`)).toBe(
+      1,
+    )
   })
 
   it('nests calls correctly when inner and outer targets share an end', () => {
     const result = requireTransform(`const outer = () => () => 1
 `)
     expect(result.code).toContain(
-      `${ALIAS}((() => ${ALIAS}((1), "src/View.ts#anonymous")), "src/View.ts#outer")`,
+      `${ALIAS}((() => ${ALIAS}((1), "src/View.ts#anonymous@${DIGEST}")), "src/View.ts#outer@${DIGEST}")`,
     )
     expect(() => parseAst(result.code)).not.toThrow()
   })
@@ -150,10 +175,10 @@ describe('duplicate names', () => {
 const panel = { render: () => 2 }
 `)
     expect(result.code).toContain(
-      `const render = () => ${ALIAS}((1), "src/View.ts#render")`,
+      `const render = () => ${ALIAS}((1), "src/View.ts#render@${DIGEST}")`,
     )
     expect(result.code).toContain(
-      `render: () => ${ALIAS}((2), "src/View.ts#render~2")`,
+      `render: () => ${ALIAS}((2), "src/View.ts#render~2@${DIGEST}")`,
     )
   })
 })
@@ -195,7 +220,7 @@ const view = () => 2
       `import { brandViewResult as ${ALIAS}2 } from 'foldkit/brand'`,
     )
     expect(result.code).toContain(
-      `const view = () => ${ALIAS}2((2), "src/View.ts#view")`,
+      `const view = () => ${ALIAS}2((2), "src/View.ts#view@${DIGEST}")`,
     )
   })
 
@@ -229,10 +254,10 @@ describe('eligibility', () => {
       FUNCTION_SOURCE,
       '/work/app/packages/foldkit/View.ts',
       '/work/app',
-      { isFoldkitCoreResolved: true },
+      { isFoldkitCoreResolved: true, sourceDigest: DIGEST },
     )
     expect(result).not.toBeNull()
-    expect(result?.code).toContain('"packages/foldkit/View.ts#view"')
+    expect(result?.code).toContain(`"packages/foldkit/View.ts#view@${DIGEST}"`)
   })
 
   it('skips foldkit core under node_modules', () => {
@@ -250,7 +275,9 @@ describe('eligibility', () => {
       FUNCTION_SOURCE,
       '/app/packages/ui/src/button/button.ts',
     )
-    expect(result.code).toContain('"packages/ui/src/button/button.ts#view"')
+    expect(result.code).toContain(
+      `"packages/ui/src/button/button.ts#view@${DIGEST}"`,
+    )
   })
 
   it('skips virtual modules', () => {
@@ -267,7 +294,7 @@ describe('eligibility', () => {
 
   it('strips the query before checking the extension', () => {
     const result = requireTransform(FUNCTION_SOURCE, '/app/src/View.ts?v=123')
-    expect(result.code).toContain('"src/View.ts#view"')
+    expect(result.code).toContain(`"src/View.ts#view@${DIGEST}"`)
   })
 
   it('skips only whole node_modules path segments', () => {
@@ -283,21 +310,21 @@ describe('eligibility', () => {
       FUNCTION_SOURCE,
       '/app/src/node_modules-demo.ts',
     )
-    expect(result.code).toContain('"src/node_modules-demo.ts#view"')
+    expect(result.code).toContain(`"src/node_modules-demo.ts#view@${DIGEST}"`)
   })
 })
 
 describe('already-branded modules', () => {
   it('returns null when the module already imports foldkit/brand', () => {
     const brandedSource = `${IMPORT_LINE}
-const view = () => ${ALIAS}((1), "src/View.ts#view")
+const view = () => ${ALIAS}((1), "src/View.ts#view@${DIGEST}")
 `
     expect(transformViewIdentity(brandedSource, MODULE_ID, ROOT)).toBeNull()
   })
 
   it('recognizes a double-quoted foldkit/brand specifier', () => {
     const brandedSource = `import { brandViewResult } from "foldkit/brand"
-const view = () => brandViewResult(1, "src/View.ts#view")
+const view = () => brandViewResult(1, "src/View.ts#view@${DIGEST}")
 `
     expect(transformViewIdentity(brandedSource, MODULE_ID, ROOT)).toBeNull()
   })
@@ -318,7 +345,7 @@ const view = () => 1
     const result = requireTransform(`// see 'foldkit/brand' for details
 const view = () => 1
 `)
-    expect(result.code).toContain(`${ALIAS}((1), "src/View.ts#view")`)
+    expect(result.code).toContain(`${ALIAS}((1), "src/View.ts#view@${DIGEST}")`)
     expect(countOccurrences(result.code, "from 'foldkit/brand'")).toBe(1)
   })
 
@@ -326,7 +353,7 @@ const view = () => 1
     const result = requireTransform(`const specifier = 'foldkit/brand'
 const view = () => 1
 `)
-    expect(result.code).toContain(`${ALIAS}((1), "src/View.ts#view")`)
+    expect(result.code).toContain(`${ALIAS}((1), "src/View.ts#view@${DIGEST}")`)
   })
 })
 
@@ -357,7 +384,7 @@ const view = () => 1
     expect(hashbangIndex).toBe(0)
     expect(strictIndex).toBeGreaterThan(hashbangIndex)
     expect(importIndex).toBeGreaterThan(strictIndex)
-    expect(result.code).toContain(`${ALIAS}((1), "src/View.ts#view")`)
+    expect(result.code).toContain(`${ALIAS}((1), "src/View.ts#view@${DIGEST}")`)
     expect(() => parseAst(result.code)).not.toThrow()
   })
 
@@ -388,5 +415,44 @@ const panel = () => {
   it('produces a source map', () => {
     const result = requireTransform('const view = () => 1\n')
     expect(result.map.mappings.length).toBeGreaterThan(0)
+  })
+})
+
+describe('build skew', () => {
+  const VIEW_SOURCE = `export const field = () => h.input([h.Name('email')])\n`
+  const CHANGED_VIEW_SOURCE = `export const field = () => h.input([h.Name('ssn')])\n`
+
+  const identityOf = (source: string): string => {
+    const result = transformViewIdentity(source, MODULE_ID, ROOT, {
+      sourceDigest: moduleDigest(source),
+    })
+    if (result === null) {
+      throw new Error('expected a transform result')
+    }
+    const match = /"(src\/View\.ts#[^"]+)"/.exec(result.code)
+    if (match?.[1] === undefined) {
+      throw new Error(`no identity found in ${result.code}`)
+    }
+    return match[1]
+  }
+
+  it('gives a view a new identity when its implementation changes', () => {
+    // A stale page's `<input name="email">` and a new build's
+    // `<input name="ssn">` come from the same source position, so an identity
+    // that named only the position would let hydration adopt the served input
+    // for the new one and carry the value the visitor typed into a field that
+    // means something else. The identity has to move when the code does.
+    expect(identityOf(VIEW_SOURCE)).not.toBe(identityOf(CHANGED_VIEW_SOURCE))
+  })
+
+  it('gives a view the same identity across builds of one revision', () => {
+    // The client bundle and the server bundle are separate builds of the same
+    // file. If their identities disagreed, every hydration would rebuild the
+    // page, so the digest has to be a function of the source alone.
+    expect(identityOf(VIEW_SOURCE)).toBe(identityOf(VIEW_SOURCE))
+  })
+
+  it('keeps the source position readable in the identity', () => {
+    expect(identityOf(VIEW_SOURCE)).toMatch(/^src\/View\.ts#field@[0-9a-f]+$/)
   })
 })

@@ -53,7 +53,7 @@ const serverConfig = { Flags, init, view }
 
 const renderServerPage = async (flags: Flags): Promise<void> => {
   const rendered = await Effect.runPromise(
-    renderToString(serverConfig, { flags }),
+    renderToString(serverConfig, { flags, buildId: BUILD_ID }),
   )
   document.body.innerHTML = rendered.html
 }
@@ -86,6 +86,8 @@ afterEach(() => {
   resetRootAttributes()
 })
 
+const BUILD_ID = 'test-build-id'
+
 describe('hydrating boot', () => {
   it('re-asserts the Document lang and dir on <html> matching the server stamp', async () => {
     const localizedView = (model: Model): Document => ({
@@ -96,7 +98,10 @@ describe('hydrating boot', () => {
     })
     const localizedConfig = { Flags, init, view: localizedView }
     const rendered = await Effect.runPromise(
-      renderToString(localizedConfig, { flags: { start: 5 } }),
+      renderToString(localizedConfig, {
+        flags: { start: 5 },
+        buildId: BUILD_ID,
+      }),
     )
     document.body.innerHTML = rendered.html
     if (rendered.lang !== undefined) {
@@ -117,7 +122,7 @@ describe('hydrating boot', () => {
       container: nullContainer(),
     })
     const fiber = Effect.runFork(
-      __startProgram(application, undefined, 'Hydrate'),
+      __startProgram(application, undefined, 'Hydrate', undefined, BUILD_ID),
     )
 
     try {
@@ -140,7 +145,7 @@ describe('hydrating boot', () => {
     const application = makeClientApplication()
 
     const fiber = Effect.runFork(
-      __startProgram(application, undefined, 'Hydrate'),
+      __startProgram(application, undefined, 'Hydrate', undefined, BUILD_ID),
     )
 
     try {
@@ -175,7 +180,7 @@ describe('hydrating boot', () => {
     const rendered = await Effect.runPromise(
       renderToString(
         { Flags: OptionalFlags, init: optionalInit, view },
-        { flags: { maybeStart: Option.some(8) } },
+        { flags: { maybeStart: Option.some(8) }, buildId: BUILD_ID },
       ),
     )
     document.body.innerHTML = rendered.html
@@ -190,7 +195,7 @@ describe('hydrating boot', () => {
       container: nullContainer(),
     })
     const fiber = Effect.runFork(
-      __startProgram(application, undefined, 'Hydrate'),
+      __startProgram(application, undefined, 'Hydrate', undefined, BUILD_ID),
     )
 
     try {
@@ -211,7 +216,9 @@ describe('hydrating boot', () => {
     const application = makeClientApplication()
 
     await expect(
-      Effect.runPromise(__startProgram(application, undefined, 'Hydrate')),
+      Effect.runPromise(
+        __startProgram(application, undefined, 'Hydrate', undefined, BUILD_ID),
+      ),
     ).rejects.toThrow('could not decode the server Flags payload')
     expect(document.getElementById('count')?.textContent).toBe('5')
   })
@@ -240,7 +247,9 @@ describe('hydrating boot', () => {
     const application = makeClientApplication()
 
     await expect(
-      Effect.runPromise(__startProgram(application, undefined, 'Hydrate')),
+      Effect.runPromise(
+        __startProgram(application, undefined, 'Hydrate', undefined, BUILD_ID),
+      ),
     ).rejects.toThrow('server Flags payload is missing')
     expect(document.getElementById('count')?.textContent).toBe('5')
   })
@@ -256,7 +265,9 @@ describe('hydrating boot', () => {
     const application = makeClientApplication()
 
     await expect(
-      Effect.runPromise(__startProgram(application, undefined, 'Hydrate')),
+      Effect.runPromise(
+        __startProgram(application, undefined, 'Hydrate', undefined, BUILD_ID),
+      ),
     ).rejects.toThrow('multiple server Flags payloads')
     expect(document.getElementById('count')?.textContent).toBe('5')
   })
@@ -358,7 +369,7 @@ describe('hydrating boot', () => {
     const rendered = await Effect.runPromise(
       renderToString(
         { Flags, init, view: nestedView },
-        { flags: { start: 5 } },
+        { flags: { start: 5 }, buildId: BUILD_ID },
       ),
     )
     document.body.innerHTML = rendered.html
@@ -375,7 +386,7 @@ describe('hydrating boot', () => {
       container: document.getElementById('root'),
     })
     const fiber = Effect.runFork(
-      __startProgram(application, undefined, 'Hydrate'),
+      __startProgram(application, undefined, 'Hydrate', undefined, BUILD_ID),
     )
 
     try {
@@ -407,7 +418,9 @@ describe('hydrating boot', () => {
     })
 
     await expect(
-      Effect.runPromise(__startProgram(application, undefined, 'Hydrate')),
+      Effect.runPromise(
+        __startProgram(application, undefined, 'Hydrate', undefined, BUILD_ID),
+      ),
     ).rejects.toThrow('could not find a server-rendered root')
     expect(ownRoot?.isConnected).toBe(true)
     expect(otherRoot.getAttribute('data-foldkit-app')).toBe('other')

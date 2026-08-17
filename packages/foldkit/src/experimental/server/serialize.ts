@@ -1,5 +1,15 @@
 import { Array as Array_ } from 'effect'
 
+import {
+  HYDRATION_IDENTITY_ATTRIBUTE,
+  HYDRATION_KEY_ATTRIBUTE,
+  hydrationIdentityMarker,
+  hydrationKeyMarker,
+} from '../../hydrationMarkers.js'
+import {
+  hasTrustedInnerHtml,
+  isClientOnlyProperty,
+} from '../../propertyProvenance.js'
 import type { VNode } from '../../snabbdom/vnode.js'
 import { tagNameFromSelector } from '../../tagName.js'
 
@@ -9,11 +19,18 @@ import { tagNameFromSelector } from '../../tagName.js'
  *  the vnode's own data, so the stamp always wins over a same-named
  *  attribute in the view.
  *
+ * `emitHydrationMarkers` turns on the key and identity markers hydration
+ * verifies adoption against. They are part of the hydration handoff, so a
+ * render nobody will hydrate carries none of them.
+ *
  * @internal Not part of the `foldkit/experimental/server` surface; `renderToString` is the public entry to serialization.
  */
 export type SerializeOptions = Readonly<{
   rootAttributes?: Readonly<Record<string, string>>
+  emitHydrationMarkers?: boolean
 }>
+
+type SerializeContext = Readonly<{ emitHydrationMarkers: boolean }>
 
 const VOID_ELEMENTS: ReadonlySet<string> = new Set([
   'area',
@@ -47,10 +64,12 @@ const RAW_TEXT_ELEMENTS: ReadonlySet<string> = new Set([
 // view. The content is therefore emitted verbatim, and a closing-tag sequence,
 // which would break out into live markup on the server, is a hard error since
 // there is no valid escaping for it. `<noscript>` is raw text only while
-// scripting is enabled, which is exactly the hydrating client's state, so it
-// serializes the same way; its text (including `&`, `<`, and `>`) round-trips
-// verbatim, and element children it cannot represent still fail the structure
-// check.
+// scripting is enabled, the hydrating client's state, so plain text round-trips
+// verbatim. With scripting disabled, the state noscript targets, a browser
+// parses noscript content as ordinary HTML, so a `<` in its text would become
+// live markup; text carrying one is refused (see `assertNoscriptTextIsSafe`).
+// Element children it cannot represent still fail the structure check, and
+// intended fallback markup is authored through `h.InnerHTML`.
 const rawTextClosingSequence = (tagName: string): RegExp =>
   new RegExp(`</${tagName}(?=[\\t\\n\\f\\r />]|$)`, 'i')
 
@@ -80,6 +99,28 @@ const assertRawTextIsSafe = (tagName: string, content: string): void => {
         'HTML parser into a script-data-escaped state where the closing ' +
         '</script> tag no longer ends the element. Remove the <!-- sequence ' +
         'from the content.',
+    )
+  }
+}
+
+// NOTE: `<noscript>` is raw text only with scripting enabled. With scripting
+// disabled, the state noscript exists for, a browser parses its content as HTML,
+// so markup-significant text (a `<meta>`, `<style>`, `<iframe>`, `<form>`, or an
+// image with an `onerror`) would become live for exactly the users noscript
+// targets. Plain text without a `<` is identical in both parser modes and safe;
+// text carrying a `<` is refused. Intended fallback markup is authored through
+// `h.InnerHTML`, which is trusted and rendered as raw HTML.
+// A `<` opens a tag, comment, or end tag only when followed by an ASCII letter,
+// `!`, `/`, or `?`. A bare `<` (as in `a < b` or `<3`) is literal text in both
+// parser modes, so it is left alone.
+const NOSCRIPT_MARKUP_OPENER = /<[A-Za-z!/?]/
+const assertNoscriptTextIsSafe = (content: string): void => {
+  if (NOSCRIPT_MARKUP_OPENER.test(content)) {
+    throw new Error(
+      '[foldkit] <noscript> text content contains markup (a "<" that opens a ' +
+        'tag or comment), which a browser with scripting disabled parses as ' +
+        'live markup. Remove the markup, or author trusted fallback markup with ' +
+        'h.InnerHTML.',
     )
   }
 }
@@ -185,6 +226,28 @@ const PASSTHROUGH_PROPERTIES: ReadonlySet<string> = new Set([
   'wrap',
 ])
 
+// The property names that are universal HTML global attributes. On a custom
+// element they reflect to the server markup only when a typed attribute builder
+// wrote them, because the name alone does not say what the property is: `h.Id`
+// sets the reflected `id` attribute every element has, while a
+// `CustomElement.define` property that happens to be named `id` is a
+// component-private value that never becomes markup, and is marked client-only
+// where it is written. Every other property on a
+// custom element is a client-only DOM property, not markup, so it must not
+// reflect through the native property maps below (which would emit, for example,
+// `value` from a custom element property that shadows the native input
+// property).
+const GLOBAL_ATTRIBUTE_PROPERTIES: ReadonlySet<string> = new Set([
+  'id',
+  'title',
+  'lang',
+  'dir',
+  'tabIndex',
+  'hidden',
+  'inert',
+  'draggable',
+])
+
 const STYLE_LIFECYCLE_KEYS: ReadonlySet<string> = new Set([
   'delayed',
   'remove',
@@ -217,24 +280,47 @@ const ATTRIBUTE_ESCAPES: Readonly<Record<string, string>> = {
   '&': '&amp;',
   '"': '&quot;',
   '<': '&lt;',
+  // As in text, a carriage return is normalized away (CR and CRLF collapse to LF
+  // before tokenization) unless encoded as a character reference, which decodes
+  // back to the original after normalization.
+  '\r': '&#13;',
+}
+
+// NUL (U+0000) has no HTML representation: the tokenizer replaces it with U+FFFD
+// or drops it, so it can never round-trip. It is rejected wherever a value is
+// escaped for output rather than silently corrupted.
+const assertNoNul = (value: string, context: string): void => {
+  if (value.includes('\u0000')) {
+    throw new Error(
+      `[foldkit] ${context} contains a NUL (U+0000) character, which has no ` +
+        'HTML representation and cannot round-trip. Remove it from the value.',
+    )
+  }
 }
 
 /** Escapes a string for use as HTML text content.
  *
  * @internal Shared with the template injector; not part of the `foldkit/experimental/server` surface.
  */
-export const escapeText = (value: string): string =>
-  value.replace(/[&<>\r]/g, character => TEXT_ESCAPES[character] ?? character)
+export const escapeText = (value: string): string => {
+  assertNoNul(value, 'text content')
+  return value.replace(
+    /[&<>\r]/g,
+    character => TEXT_ESCAPES[character] ?? character,
+  )
+}
 
 /** Escapes a string for use inside a double-quoted HTML attribute value.
  *
  * @internal Shared with the template injector; not part of the `foldkit/experimental/server` surface.
  */
-export const escapeAttributeValue = (value: string): string =>
-  value.replace(
-    /[&"<]/g,
+export const escapeAttributeValue = (value: string): string => {
+  assertNoNul(value, 'attribute value')
+  return value.replace(
+    /[&"<\r]/g,
     character => ATTRIBUTE_ESCAPES[character] ?? character,
   )
+}
 
 const toKebabCase = (value: string): string =>
   value.replace(CAPS_REGEX, '-$&').toLowerCase()
@@ -329,10 +415,20 @@ const collectPropertyAttributes = (
   attributes: Map<string, string>,
   tagName: string,
   properties: Readonly<Record<string, unknown>>,
+  isCustomElement: boolean,
 ): void => {
   for (const name of Object.keys(properties)) {
     const value = properties[name]
     if (value === undefined || name === 'innerHTML') {
+      continue
+    }
+    if (
+      isCustomElement &&
+      !(
+        GLOBAL_ATTRIBUTE_PROPERTIES.has(name) &&
+        !isClientOnlyProperty(properties, name)
+      )
+    ) {
       continue
     }
     // NOTE: `value` on textarea/output/select is not a serializable attribute
@@ -484,6 +580,7 @@ type SelectSelection = { value: string; consumed: boolean }
 
 const serializeChildren = (
   output: Array<string>,
+  context: SerializeContext,
   node: VNode,
   depth: number,
   selectValue?: SelectSelection,
@@ -491,7 +588,7 @@ const serializeChildren = (
   const children = node.children
   if (children !== undefined) {
     for (const child of children) {
-      serializeNode(output, child, depth + 1, undefined, selectValue)
+      serializeNode(output, context, child, depth + 1, undefined, selectValue)
     }
   } else if (node.text !== undefined) {
     output.push(escapeText(node.text))
@@ -529,6 +626,7 @@ const selectValueForChildren = (
 
 const serializeElement = (
   output: Array<string>,
+  context: SerializeContext,
   node: VNode,
   selector: string,
   depth: number,
@@ -545,6 +643,7 @@ const serializeElement = (
   }
   const data = node.data
   const isForeignNamespace = data?.ns !== undefined
+  const isCustomElement = !isForeignNamespace && tagName.includes('-')
 
   const attributes = new Map<string, string>()
 
@@ -552,7 +651,12 @@ const serializeElement = (
     collectDataAttributes(attributes, data)
     const properties = data.props
     if (properties !== undefined) {
-      collectPropertyAttributes(attributes, tagName, properties)
+      collectPropertyAttributes(
+        attributes,
+        tagName,
+        properties,
+        isCustomElement,
+      )
     }
     const style = data.style
     if (style !== undefined) {
@@ -580,6 +684,34 @@ const serializeElement = (
     }
   }
 
+  // The server HTML does not otherwise carry a vnode's key or identity, so
+  // hydration would adopt keyed children positionally. Stamp a digest of each so
+  // hydration can verify it is adopting the same logical entity without the raw
+  // key or source identity appearing in public markup; it strips the markers as
+  // it adopts.
+  if (context.emitHydrationMarkers) {
+    if (node.key !== undefined) {
+      const keyMarker = hydrationKeyMarker(node.key)
+      if (keyMarker === undefined) {
+        throw new Error(
+          '[foldkit] Cannot server-render an element keyed by a symbol. A ' +
+            'symbol key cannot be compared across the server and the client ' +
+            '(a local symbol is a new value in every realm, so hydration ' +
+            'could not tell two rows apart). Key hydratable elements by a ' +
+            'string or a number.',
+        )
+      }
+      setAttribute(attributes, HYDRATION_KEY_ATTRIBUTE, keyMarker)
+    }
+    if (node.identity !== undefined) {
+      setAttribute(
+        attributes,
+        HYDRATION_IDENTITY_ATTRIBUTE,
+        hydrationIdentityMarker(node.identity),
+      )
+    }
+  }
+
   output.push(`<${tagName}`)
   serializeAttributes(output, attributes)
   output.push('>')
@@ -602,7 +734,7 @@ const serializeElement = (
   const isHtmlRawText = !isForeignNamespace && RAW_TEXT_ELEMENTS.has(tagName)
 
   const innerHtml = data?.props?.['innerHTML']
-  if (typeof innerHtml === 'string') {
+  if (typeof innerHtml === 'string' && hasTrustedInnerHtml(data?.props)) {
     if (isHtmlRawText) {
       assertRawTextIsSafe(tagName, innerHtml)
     }
@@ -618,7 +750,7 @@ const serializeElement = (
       if (leadingTextOf(node)?.startsWith('\n')) {
         output.push('\n')
       }
-      serializeChildren(output, node, depth, childSelectValue)
+      serializeChildren(output, context, node, depth, childSelectValue)
     }
   } else if (!isForeignNamespace && tagName === 'output') {
     // A controlled <output> reflects its value prop as text content the same
@@ -628,19 +760,22 @@ const serializeElement = (
     if (content !== undefined) {
       output.push(escapeText(content))
     } else {
-      serializeChildren(output, node, depth, childSelectValue)
+      serializeChildren(output, context, node, depth, childSelectValue)
     }
   } else if (!isForeignNamespace && NEWLINE_DROPPING_ELEMENTS.has(tagName)) {
     if (leadingTextOf(node)?.startsWith('\n')) {
       output.push('\n')
     }
-    serializeChildren(output, node, depth, childSelectValue)
+    serializeChildren(output, context, node, depth, childSelectValue)
   } else if (isHtmlRawText) {
     const rawText = collectRawText(node)
     assertRawTextIsSafe(tagName, rawText)
+    if (tagName === 'noscript') {
+      assertNoscriptTextIsSafe(rawText)
+    }
     output.push(rawText)
   } else {
-    serializeChildren(output, node, depth, childSelectValue)
+    serializeChildren(output, context, node, depth, childSelectValue)
   }
 
   output.push(`</${tagName}>`)
@@ -648,6 +783,7 @@ const serializeElement = (
 
 const serializeNode = (
   output: Array<string>,
+  context: SerializeContext,
   node: VNode | string | null,
   depth: number,
   extraAttributes?: Readonly<Record<string, string>>,
@@ -681,14 +817,27 @@ const serializeNode = (
     output.push(`<!--${commentText}-->`)
     return
   }
-  serializeElement(output, node, selector, depth, extraAttributes, selectValue)
+  serializeElement(
+    output,
+    context,
+    node,
+    selector,
+    depth,
+    extraAttributes,
+    selectValue,
+  )
 }
 
-/** Serializes a view-produced vnode tree to an HTML string. Event handlers,
- *  hooks, keys, and identity are behavior, not markup, and are skipped;
- *  attrs, class, dataset, prop-backed attributes, and inline style are
- *  emitted in that order. A `null` tree serializes to an empty comment,
- *  mirroring how the runtime patches `null` as a comment node.
+/** Serializes a view-produced vnode tree to an HTML string. Event handlers and
+ *  hooks are behavior, not markup, and are skipped; attrs, class, dataset,
+ *  prop-backed attributes, and inline style are emitted in that order. A `null`
+ *  tree serializes to an empty comment, mirroring how the runtime patches
+ *  `null` as a comment node.
+ *
+ * A hydratable render also stamps a digest of each vnode's key and identity, so
+ * hydration can tell one logical entity from another; the raw key and the
+ * compiler's source identity never appear in the markup. A render that is not
+ * hydratable emits neither.
  *
  * @internal Not part of the `foldkit/experimental/server` surface; `renderToString` is the public entry to serialization.
  */
@@ -699,7 +848,10 @@ export const serializeHtml = (
   if (root === null) {
     return '<!---->'
   }
+  const context: SerializeContext = {
+    emitHydrationMarkers: options?.emitHydrationMarkers ?? false,
+  }
   const output: Array<string> = []
-  serializeNode(output, root, 0, options?.rootAttributes)
+  serializeNode(output, context, root, 0, options?.rootAttributes)
   return output.join('')
 }

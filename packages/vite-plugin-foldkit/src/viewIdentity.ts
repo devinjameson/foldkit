@@ -1,4 +1,5 @@
 import MagicString, { type SourceMap } from 'magic-string'
+import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, realpathSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { join, relative, resolve, sep } from 'node:path'
@@ -301,10 +302,31 @@ const rawFunctionName = (
   return ANONYMOUS_FUNCTION_NAME
 }
 
+// NOTE: a view identity names a source position, and a source position outlives
+// the code that occupied it. Hydration compares identities to decide whether the
+// server DOM and the client's first render describe the same logical element, so
+// an identity that stays the same while the function's body changes tells it two
+// different views are the same one: a stale page's `<input name="email">` is
+// adopted by a new build's `<input name="ssn">`, and the value the visitor typed
+// before hydration is carried into a field that means something else and submits
+// under a new name. Mixing a digest of the module's source into every identity
+// it defines closes that: any edit to the module gives its views new identities,
+// the markers in the served HTML no longer match, and hydration rebuilds instead
+// of adopting. The digest is over the file's own bytes, so the client build and
+// the server build of one revision agree and only a real change moves it.
+const MODULE_DIGEST_LENGTH = 12
+
+export const moduleDigest = (source: string): string =>
+  createHash('sha256')
+    .update(source)
+    .digest('hex')
+    .slice(0, MODULE_DIGEST_LENGTH)
+
 const assignFunctionIds = (
   functionNodes: ReadonlyArray<FunctionNode>,
   parentByNode: ReadonlyMap<AstNode, AstNode>,
   modulePath: string,
+  digest: string,
 ): ReadonlyMap<FunctionNode, string> => {
   const functionIds = new Map<FunctionNode, string>()
   const occurrenceCountsByName = new Map<string, number>()
@@ -316,7 +338,10 @@ const assignFunctionIds = (
       occurrenceCount < FIRST_DUPLICATE_NAME_SUFFIX
         ? functionName
         : `${functionName}~${occurrenceCount}`
-    functionIds.set(functionNode, `${modulePath}#${uniqueFunctionName}`)
+    functionIds.set(
+      functionNode,
+      `${modulePath}#${uniqueFunctionName}@${digest}`,
+    )
   }
   return functionIds
 }
@@ -459,7 +484,13 @@ export const transformViewIdentity = (
   code: string,
   id: string,
   root: string,
-  options?: Readonly<{ isFoldkitCoreResolved?: boolean }>,
+  options?: Readonly<{
+    isFoldkitCoreResolved?: boolean
+    /** Digest of the module's own source, mixed into every identity the module
+     *  defines so a changed implementation is never mistaken for the old one.
+     *  Defaults to a digest of `code`. */
+    sourceDigest?: string
+  }>,
 ): ViewIdentityTransformResult | null => {
   if (!isEligibleModuleId(id, options?.isFoldkitCoreResolved ?? false)) {
     return null
@@ -473,7 +504,12 @@ export const transformViewIdentity = (
   }
   const { functionNodes, parentByNode } = collectFunctionNodes(program)
   const modulePath = toPosixPath(relative(root, stripQuery(id)))
-  const functionIds = assignFunctionIds(functionNodes, parentByNode, modulePath)
+  const functionIds = assignFunctionIds(
+    functionNodes,
+    parentByNode,
+    modulePath,
+    options?.sourceDigest ?? moduleDigest(code),
+  )
   const wraps = collectWraps(functionNodes, functionIds)
   if (wraps.length === 0) {
     return null
@@ -575,6 +611,17 @@ const isUnderDirectory = (posixPath: string, posixDirectory: string): boolean =>
  * `resolve.alias` entry, so the injected import keeps resolving in configs
  * whose own `foldkit` alias would otherwise swallow the subpath.
  */
+const sourceDigestOf = (
+  path: string,
+  code: string,
+): Readonly<{ sourceDigest: string }> => {
+  try {
+    return { sourceDigest: moduleDigest(readFileSync(path, 'utf8')) }
+  } catch {
+    return { sourceDigest: moduleDigest(code) }
+  }
+}
+
 export const foldkitViewIdentity = (): Plugin => {
   let resolvedRoot = process.cwd()
   let foldkitPackageRoot: string | undefined
@@ -612,8 +659,17 @@ export const foldkitViewIdentity = (): Plugin => {
       ) {
         return null
       }
+      // NOTE: the digest is taken over the file on disk rather than the `code`
+      // this transform receives, because the client build and the server build
+      // do not necessarily hand it the same string: an earlier plugin may have
+      // already replaced `import.meta.env.SSR` differently for each. The bytes
+      // on disk are the one input both builds share, so digesting them keeps a
+      // single revision's identities identical across the two bundles, which is
+      // what lets hydration read a mismatch as a stale page rather than as
+      // noise from the build.
       return transformViewIdentity(code, id, resolvedRoot, {
         isFoldkitCoreResolved: foldkitPackageRoot !== undefined,
+        ...sourceDigestOf(stripQuery(id), code),
       })
     },
   }

@@ -98,21 +98,25 @@ export const acceptsHtml = (acceptHeader: string | undefined): boolean => {
 }
 
 /**
- * Merges the `Accept` field name into an existing `Vary` header value, parsing
- * it as a comma-separated, case-insensitive list of field names. `Vary: *`
- * already varies on everything and is returned unchanged, an existing `Accept`
- * token (in any case, and distinct from `Accept-Language` or `Accept-Encoding`)
- * is not duplicated, and otherwise `Accept` is appended.
+ * Merges a field name into an existing `Vary` header value, parsing it as a
+ * comma-separated, case-insensitive list of field names. `Vary: *` already
+ * varies on everything and is returned unchanged, a token already present (in
+ * any case, and distinct from a longer name that merely starts with it, such as
+ * `Accept-Language` beside `Accept`) is not duplicated, and otherwise the field
+ * name is appended.
  *
- * A page host that negotiates HTML on the `Accept` header must declare that in
- * `Vary` so a shared cache does not serve one representation in place of the
- * other. The dev host, reference server, and scaffold merge through this one
- * helper so a comma-joined field-name string like `Accept-Language` is never
- * mistaken for the `Accept` field.
+ * A host whose response depends on a request header must declare that header in
+ * `Vary` so a shared cache does not serve one client's representation to
+ * another. The dev host, reference server, and scaffold merge through this one
+ * helper rather than assigning `Vary`, which would drop the fields already
+ * there.
  *
  * @experimental Ships from `foldkit/experimental/server`; expect breaking changes while the API settles.
  */
-export const varyWithAccept = (existing: string | undefined): string => {
+export const varyWith = (
+  existing: string | undefined,
+  fieldName: string,
+): string => {
   const tokens =
     existing === undefined
       ? []
@@ -124,10 +128,58 @@ export const varyWithAccept = (existing: string | undefined): string => {
   if (lowered.includes('*')) {
     return '*'
   }
-  if (lowered.includes('accept')) {
+  if (lowered.includes(fieldName.toLowerCase())) {
     return tokens.join(', ')
   }
-  return [...tokens, 'Accept'].join(', ')
+  return [...tokens, fieldName].join(', ')
+}
+
+/**
+ * Merges the `Accept` field name into an existing `Vary` header value.
+ *
+ * A page host that negotiates HTML on the `Accept` header must declare that in
+ * `Vary` so a shared cache does not serve one representation in place of the
+ * other.
+ *
+ * @experimental Ships from `foldkit/experimental/server`; expect breaking changes while the API settles.
+ */
+export const varyWithAccept = (existing: string | undefined): string =>
+  varyWith(existing, 'Accept')
+
+/**
+ * Resolves a request target against the origin the host serves, returning the
+ * absolute URL to hand the server entry, or `undefined` when the target names
+ * a different origin.
+ *
+ * A request target is not a URL. HTTP allows origin-form (`/page?q=1`) and
+ * absolute-form (`http://host/page`), and a client can send a network-path
+ * reference (`//elsewhere.example/page`) that resolves against no scheme at
+ * all. Resolving one of those against the host origin silently adopts the
+ * origin the client wrote, so an entry that derives redirects, canonical URLs,
+ * cookie domains, or tenant selection from `Request.url` would take them from
+ * the request rather than from the deployment. Only a target that resolves to
+ * the host's own origin is accepted; a host behind a proxy that must serve a
+ * different public origin passes that origin in explicitly.
+ *
+ * @experimental Ships from `foldkit/experimental/server`; expect breaking changes while the API settles.
+ */
+export const resolveRequestUrl = (
+  requestTarget: string,
+  origin: string,
+): string | undefined => {
+  let base: URL
+  try {
+    base = new URL(origin)
+  } catch {
+    return undefined
+  }
+  let resolved: URL
+  try {
+    resolved = new URL(requestTarget, base)
+  } catch {
+    return undefined
+  }
+  return resolved.origin === base.origin ? resolved.href : undefined
 }
 
 const normalizePath = (path: string): string => {
@@ -143,6 +195,124 @@ const normalizePath = (path: string): string => {
     segments.push(segment)
   }
   return segments.join('/')
+}
+
+// The `Sec-Fetch-Dest` values a browser sends for a subresource it fetches for
+// an already-loaded page, as opposed to a navigation (`document`, `iframe`,
+// `frame`) or a scripted fetch whose destination is `empty`. A request carrying
+// one of these is never a page request, whatever it says it accepts.
+const SUBRESOURCE_FETCH_DESTINATIONS: ReadonlySet<string> = new Set([
+  'audio',
+  'audioworklet',
+  'embed',
+  'font',
+  'image',
+  'manifest',
+  'object',
+  'paintworklet',
+  'script',
+  'serviceworker',
+  'sharedworker',
+  'style',
+  'track',
+  'video',
+  'worker',
+  'xslt',
+])
+
+const ASSET_EXTENSIONS: ReadonlySet<string> = new Set([
+  'avif',
+  'bmp',
+  'cjs',
+  'css',
+  'csv',
+  'eot',
+  'gif',
+  'gz',
+  'ico',
+  'jpeg',
+  'jpg',
+  'js',
+  'json',
+  'map',
+  'mjs',
+  'mp3',
+  'mp4',
+  'ogg',
+  'otf',
+  'pdf',
+  'png',
+  'svg',
+  'ttf',
+  'txt',
+  'wasm',
+  'wav',
+  'webm',
+  'webmanifest',
+  'webp',
+  'woff',
+  'woff2',
+  'xml',
+  'zip',
+])
+
+/** How a host should read a request that no static file answered.
+ *
+ * `PathAsset`: the path names an asset, whatever the request headers say, so a
+ * refusal is the same for every client and needs no `Vary`.
+ *
+ * `DestinationAsset`: the path could be a page, and only the request's
+ * `Sec-Fetch-Dest` says otherwise. A refusal here depends on that header, so it
+ * has to declare it in `Vary` before a shared cache may store it: a cross-site
+ * script request would otherwise seed a cached 404 for a real page.
+ *
+ * `Page`: nothing marks it as an asset, so the usual `Accept` negotiation
+ * decides.
+ *
+ * @experimental Ships from `foldkit/experimental/server`; expect breaking changes while the API settles.
+ */
+export type RequestClassification = 'PathAsset' | 'DestinationAsset' | 'Page'
+
+/**
+ * Classifies a request that no static file answered, from its path and, when
+ * the client sent one, its `Sec-Fetch-Dest`.
+ *
+ * A host answers a static miss by content negotiation, and a browser requests
+ * scripts, stylesheets, and images with `Accept: *​/*`, which accepts HTML. A
+ * request for a hashed asset that is no longer deployed would therefore be
+ * answered with the application shell at 200, so a stale bundle reads as a
+ * blank page rather than the 404 it is.
+ *
+ * The path is read first, so a request the URL alone settles is never made to
+ * depend on a header the client may or may not send.
+ *
+ * @experimental Ships from `foldkit/experimental/server`; expect breaking changes while the API settles.
+ */
+export const classifyRequest = (
+  requestUrl: string,
+  fetchDestination?: string,
+): RequestClassification => {
+  let pathname: string
+  try {
+    pathname = new URL(requestUrl, 'http://localhost').pathname
+  } catch {
+    pathname = ''
+  }
+  const lastSegment = pathname.slice(pathname.lastIndexOf('/') + 1)
+  const separator = lastSegment.lastIndexOf('.')
+  if (
+    separator > 0 &&
+    ASSET_EXTENSIONS.has(lastSegment.slice(separator + 1).toLowerCase())
+  ) {
+    return 'PathAsset'
+  }
+  if (
+    fetchDestination !== undefined &&
+    SUBRESOURCE_FETCH_DESTINATIONS.has(fetchDestination.trim().toLowerCase())
+  ) {
+    return 'DestinationAsset'
+  }
+  return 'Page'
 }
 
 /**

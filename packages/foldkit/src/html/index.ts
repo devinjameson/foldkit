@@ -15,6 +15,11 @@ import type { File } from '../file/index.js'
 import type { MountAction } from '../mount/index.js'
 import { MountTracker } from '../mount/index.js'
 import {
+  markClientOnlyProperty,
+  markTrustedInnerHtml,
+  unmarkClientOnlyProperty,
+} from '../propertyProvenance.js'
+import {
   type On,
   type VNodeData,
   VNodeDataMask,
@@ -1186,11 +1191,53 @@ const setModuleData = <K extends keyof VNodeData>(
 // NOTE: single-key fast paths. The bulk of attribute handlers set exactly
 // one prop, attr, or event handler; writing it directly into the vnode data
 // avoids allocating a `{ key: value }` literal and merging it per attribute.
-const setDataProp = (ctx: BuildContext, key: string, value: unknown): void => {
+const writeDataProp = (
+  ctx: BuildContext,
+  key: string,
+  value: unknown,
+): Record<string, unknown> => {
   /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
   const props = (ctx.data.props ??= {}) as Record<string, unknown>
   props[key] = value
   addVNodeDataMask(ctx, VNodeDataMask.Props)
+  return props
+}
+
+// A typed attribute builder writes the DOM property that reflects the HTML
+// attribute it is named after, so the server serializer can emit it as that
+// attribute even on a custom element, where a same-named component property
+// would mean something else entirely. Overwriting a property a generic write
+// left behind takes the name back, so the mark always describes the value that
+// is actually in the bag. The unmark is a no-op unless a generic write happened
+// on this element, which keeps the common path free of any bookkeeping.
+const setDataProp = (ctx: BuildContext, key: string, value: unknown): void => {
+  const props = writeDataProp(ctx, key, value)
+  unmarkClientOnlyProperty(props, key)
+}
+
+// `h.Prop` writes a DOM property and claims nothing about what it means: the
+// value may be a client-only component property, and the name may collide with
+// one an attribute builder owns. `CustomElement.define` property factories
+// produce `h.Prop`, so a declared component property lands here too.
+const setClientOnlyDataProp = (
+  ctx: BuildContext,
+  key: string,
+  value: unknown,
+): void => {
+  const props = writeDataProp(ctx, key, value)
+  markClientOnlyProperty(props, key)
+}
+
+// NOTE: `h.InnerHTML` marks the value it wrote as markup the view author intends
+// to be parsed as HTML, which is what lets the server serializer write it to the
+// raw sink. The mark is the value, so an arbitrary property that happens to be
+// named `innerHTML` (a `CustomElement.define` property, a raw
+// `h.Prop('innerHTML', ...)`) never reaches that sink in either order: writing
+// one leaves a value the mark no longer matches, and writing this one last makes
+// the trusted value the one that matches and the one that is emitted.
+const setTrustedInnerHtml = (ctx: BuildContext, value: string): void => {
+  const props = writeDataProp(ctx, 'innerHTML', value)
+  markTrustedInnerHtml(props, value)
 }
 
 const setDataAttr = (
@@ -1958,8 +2005,7 @@ const attributeHandlers: AttributeHandlers = {
     setDataAttr(ctx, `data-${key}`, value),
   Style: ({ value }, ctx: BuildContext) =>
     setModuleData(ctx, 'style', value, VNodeDataMask.Style),
-  InnerHTML: ({ value }, ctx: BuildContext) =>
-    setDataProp(ctx, 'innerHTML', value),
+  InnerHTML: ({ value }, ctx: BuildContext) => setTrustedInnerHtml(ctx, value),
   ViewBox: ({ value }, ctx: BuildContext) => setDataAttr(ctx, 'viewBox', value),
   Xmlns: ({ value }, ctx: BuildContext) => setDataAttr(ctx, 'xmlns', value),
   Fill: ({ value }, ctx: BuildContext) => setDataAttr(ctx, 'fill', value),
@@ -2105,7 +2151,8 @@ const attributeHandlers: AttributeHandlers = {
   Orient: ({ value }, ctx: BuildContext) => setDataAttr(ctx, 'orient', value),
   PreserveAspectRatio: ({ value }, ctx: BuildContext) =>
     setDataAttr(ctx, 'preserveAspectRatio', value),
-  Prop: ({ key, value }, ctx: BuildContext) => setDataProp(ctx, key, value),
+  Prop: ({ key, value }, ctx: BuildContext) =>
+    setClientOnlyDataProp(ctx, key, value),
   OnCustomEvent: ({ name, f: toMessage }, ctx: BuildContext) =>
     updateDataOn(ctx, {
       [name]: (event: Event) => {

@@ -76,10 +76,12 @@ The rendered application contains the body markup and the Document's initial hea
 
 ## The hydration handoff
 
-A hydratable render carries two markers:
+A hydratable render carries four markers:
 
 - The application root has `data-foldkit-app`. Its value identifies the runtime.
+- The root also has `data-foldkit-build`, the token identifying the build that rendered it, which hydration compares against its own before adopting anything.
 - A Flags application also emits a JSON script carrying the Schema-encoded Flags that produced the server Model.
+- A keyed element carries `data-foldkit-key`, and an element the build gave a view identity carries `data-foldkit-identity`. Both values are digests, never the key or the identity itself, so a key holding an account id or an email address and a build's source paths stay out of the served markup. Hydration only compares them, then strips both from the element as it adopts. A render made with `isHydratable: false` emits neither.
 
 Conceptually, the handoff appears next to the rendered root:
 
@@ -97,7 +99,13 @@ The client opts into the handoff explicitly, in the client entry (`src/entry.ts`
 
 `Runtime.hydrate` accepts no client Flags producer. It reads the serialized Flags, calls the same `init`, and adopts matching server DOM nodes rather than replacing them. Element identity, focus, scroll position, and media state survive while listeners and Mounts attach. This adoption is the hydration step. A mismatching subtree rebuilds at the nearest parent, with a development warning that points back to nondeterministic Flags, init, or view output.
 
-Calling `hydrate` declares that a complete server handoff exists. A missing stamped root, missing Flags payload, or undecodable Flags payload terminates startup and leaves the rendered HTML visible but inert. The failure is a descriptive `[foldkit]` error logged through the runtime's error reporting, where the console and error monitoring pick it up; there is no application-level hook because startup never reaches a Model. This catches stale HTML, mismatched client bundles, and deployment mistakes instead of silently booting a different client Model. Use `run` in a separate client entry when a page must support a fresh SPA boot.
+Calling `hydrate` declares that a complete server handoff exists. A missing stamped root, missing Flags payload, or undecodable Flags payload terminates startup and leaves the rendered HTML visible but inert. The failure is a descriptive `[foldkit]` error logged through the runtime's error reporting, where the console and error monitoring pick it up; there is no application-level hook because startup never reaches a Model. This catches a deployment that serves HTML without a handoff, or with one the client cannot read, instead of silently booting a different client Model. Use `run` in a separate client entry when a page must support a fresh SPA boot.
+
+A page served from an earlier deployment is caught by the build token rather than by that startup check. `@foldkit/vite-plugin` compiles the same token into the client bundle and the server bundle of one build and stamps it on the rendered root, and hydration compares the two before it adopts anything. A page from another deployment is rebuilt rather than reconciled, so nothing on it can carry state into a view that now means something else.
+
+The token is derived from the deployment's inputs: the source files the project tracks, the lockfile that pins its dependencies, and Foldkit's own version and hydration protocol. It therefore moves for a change anywhere in the application, not only in a view: a constant a view imports, a value from configuration, an argument a caller passes. Set `FOLDKIT_BUILD_ID` to name builds yourself, from a commit or a release, and that value is used instead. Development carries no token, since the render and the client run from one module graph in one process.
+
+Within a build, identities do the finer-grained work. The build stamps a digest of each view module's source into the identities it assigns, so a subtree whose view changed rebuilds on its own.
 
 One development-only exception: when a hot update restarts the runtime, the Model HMR preserved wins and the view rebuilds from it instead of adopting the served DOM, since that DOM was rendered by code from before the update. The handoff contract still holds, so the stamped server root must exist.
 
@@ -170,5 +178,5 @@ For example: product documentation and marketing pages can be generated at build
 - `makeElement` and `embed` applications do not hydrate yet. Server rendering is for page-owning `makeApplication` programs.
 - A custom element that upgrades before hydration keeps the attributes its `connectedCallback` adds that the view does not declare on the element. When the view drives class and style through `h.Class` and `h.Style`, component-added class tokens and style properties the view does not declare are kept as well; a raw `h.Attribute('class', ...)` or `h.Attribute('style', ...)` instead owns the whole attribute and replaces it, dropping component additions. Component-built light DOM is preserved only when the view declares no children for the element; a view that declares children owns the element's light DOM.
 - Text typed into a controlled input before hydration yields to the Model when controlled values are reasserted. The element, focus, and page scroll survive.
-- Arbitrary properties set through `h.Prop` are client behavior rather than markup, so they take effect after hydration. A `<select>` value comes from its selected `<option>` in server HTML and settles from the Model after hydration.
+- A custom element's declared properties, and any `h.Prop` on it, are client behavior rather than markup: they apply after hydration and never serialize as attributes. This holds for a property named after a global attribute too, so a component property named `id` or `title` stays client-side while `h.Id` and `h.Title`, which set the reflected attribute every element has, still serialize. Native elements reflect their standard properties, so a `<select>` value comes from its selected `<option>` in server HTML and settles from the Model after hydration.
 - Raw-text elements such as `script` and `style` cannot contain their literal closing-tag sequence. `renderToString` rejects content that would break out of the element.

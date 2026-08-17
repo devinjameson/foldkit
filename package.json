@@ -20,6 +20,7 @@
     "check:commit-message-line-length": "bash scripts/check-commit-message-line-length.sh",
     "check:changeset-unwrapped": "tsx scripts/check-changeset-unwrapped.ts",
     "check:circular-deps": "bash scripts/check-circular-deps.sh",
+    "check:peer-floors": "tsx scripts/check-peer-floors.ts",
     "check:create-foldkit-app-smoke": "tsx scripts/check-create-foldkit-app-smoke.ts",
     "check:create-foldkit-app-smoke:ci": "tsx scripts/check-create-foldkit-app-smoke.ts --skip-build",
     "pre-push": "pnpm check:no-claude-comments && pnpm check:commit-message-line-length && pnpm check:changeset-unwrapped && pnpm format:check && pnpm check:skill-version && pnpm check:no-major-changesets && pnpm check:changeset-ignore && pnpm changeset status --since=origin/main && pnpm lint && pnpm check:dead-code && pnpm typecheck:scripts && pnpm test:scripts && pnpm check:effect-prebundle && pnpm check:circular-deps && pnpm build && pnpm -r typecheck && pnpm test && bash scripts/run-website-e2e.sh",
@@ -73,7 +74,7 @@
     "dev:example:ssr": "pnpm --filter ssr-example dev",
     "changeset": "changeset",
     "version-packages": "changeset version && tsx scripts/reset-peer-deps.ts && pnpm install --no-frozen-lockfile",
-    "release": "pnpm build:packages && changeset publish"
+    "release": "pnpm check:peer-floors && pnpm build:packages && changeset publish"
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.0",

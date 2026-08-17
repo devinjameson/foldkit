@@ -7,6 +7,11 @@ describe('view identity branding', () => {
 
     const vnode = panelView()
 
-    expect(vnode?.identity).toBe('src/viewIdentity.test.ts#panelView')
+    // The identity carries a digest of the module's source after the source
+    // position, so a view whose implementation changes gets a new identity and
+    // hydration rebuilds rather than adopting a stale page's element for it.
+    expect(vnode?.identity).toMatch(
+      /^src\/viewIdentity\.test\.ts#panelView@[0-9a-f]+$/,
+    )
   })
 })

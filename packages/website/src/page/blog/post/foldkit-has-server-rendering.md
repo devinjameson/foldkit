@@ -53,7 +53,7 @@ After hydration, the initial Commands run, and your Foldkit application behaves 
 
 ## What shipped
 
-Check out the [release notes](https://github.com/foldkit/foldkit/releases/tag/foldkit%400.147.0), the new docs page on [Server Rendering](/core/server-rendering), and the runnable [Static Site Generation](/example-apps/ssg) and [Server-Side Rendering](/example-apps/ssr) examples.
+Check out the new docs page on [Server Rendering](/core/server-rendering), and the runnable [Static Site Generation](/example-apps/ssg) and [Server-Side Rendering](/example-apps/ssr) examples.
 
 This website ([foldkit.dev](https://foldkit.dev)) now prerenders every route through the same `renderPage` contract (SSG). The page you are reading hydrated in place.
 

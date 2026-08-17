@@ -16,7 +16,8 @@ import {
   setRuntime,
 } from './html/runtimeSingleton.js'
 import { __elementSignature, __hydrateVNode } from './hydrate.js'
-import { type VNode, h as snabbdomH } from './snabbdom/index.js'
+import { type VNode, h as snabbdomH, toVNode } from './snabbdom/index.js'
+import { patch } from './vdom.js'
 
 type Message = Readonly<{ _tag: 'ClickedButton' }>
 
@@ -43,6 +44,12 @@ describe('__hydrateVNode', () => {
     }
   }
 
+  // The server renders every page the client hydrates with the hydration
+  // markers on, so the tests serialize the same way rather than through the
+  // marker-free static form.
+  const serializeHydratable = (root: VNode | null): string =>
+    serializeHtml(root, { emitHydrationMarkers: true })
+
   const mountServerHtml = (markup: string): Element => {
     host.innerHTML = markup
     const root = host.firstElementChild
@@ -66,7 +73,7 @@ describe('__hydrateVNode', () => {
     const view = buildView(() =>
       h.div([h.Class('page')], [h.span([h.Id('greeting')], ['hello'])]),
     )
-    const root = mountServerHtml(serializeHtml(view))
+    const root = mountServerHtml(serializeHydratable(view))
     const span = root.firstElementChild
 
     const patchedVNode = buildView(() =>
@@ -86,7 +93,7 @@ describe('__hydrateVNode', () => {
     const view = buildView(() =>
       h.button([h.Id('go'), h.OnClick(ClickedButton())], ['Go']),
     )
-    const root = mountServerHtml(serializeHtml(view))
+    const root = mountServerHtml(serializeHydratable(view))
 
     buildView(() =>
       __hydrateVNode(
@@ -115,7 +122,7 @@ describe('__hydrateVNode', () => {
           ),
         ],
       )
-    const root = mountServerHtml(serializeHtml(buildView(view)))
+    const root = mountServerHtml(serializeHydratable(buildView(view)))
     const button = root.querySelector('button')
 
     buildView(() => __hydrateVNode(root, view()))
@@ -127,7 +134,7 @@ describe('__hydrateVNode', () => {
 
   it('splits merged text nodes for adjacent text children', () => {
     const view = buildView(() => h.p([], ['count: ', '42']))
-    const root = mountServerHtml(serializeHtml(view))
+    const root = mountServerHtml(serializeHydratable(view))
     expect(root.childNodes.length).toBe(1)
 
     const patchedVNode = buildView(() =>
@@ -183,9 +190,356 @@ describe('__hydrateVNode', () => {
     expect(root.lastElementChild?.textContent).toBe('two')
   })
 
+  it('rebuilds keyed rows instead of transferring state to the wrong entity', () => {
+    // Server rendered rows A then B; the client's first view is B then A (stale
+    // or reordered HTML). Positional adoption would hand client row B the server
+    // node still holding A's typed value. The key markers must force a rebuild.
+    const serverView = () =>
+      h.div(
+        [],
+        [
+          h.keyed('input')('A', [h.Type('text'), h.DataAttribute('row', 'A')]),
+          h.keyed('input')('B', [h.Type('text'), h.DataAttribute('row', 'B')]),
+        ],
+      )
+    const root = mountServerHtml(serializeHydratable(buildView(serverView)))
+    const [serverNodeA, serverNodeB] = Array.from(
+      root.querySelectorAll('input'),
+    )
+    if (
+      !(serverNodeA instanceof HTMLInputElement) ||
+      !(serverNodeB instanceof HTMLInputElement)
+    ) {
+      throw new Error('expected two server input rows')
+    }
+    serverNodeA.value = 'typed-into-A'
+    serverNodeB.value = 'typed-into-B'
+
+    const clientView = () =>
+      h.div(
+        [],
+        [
+          h.keyed('input')('B', [h.Type('text'), h.DataAttribute('row', 'B')]),
+          h.keyed('input')('A', [h.Type('text'), h.DataAttribute('row', 'A')]),
+        ],
+      )
+    buildView(() => __hydrateVNode(root, clientView()))
+
+    const firstInput = root.querySelector('input')
+    expect(firstInput?.getAttribute('data-row')).toBe('B')
+    expect(firstInput).not.toBe(serverNodeA)
+    if (firstInput instanceof HTMLInputElement) {
+      expect(firstInput.value).not.toBe('typed-into-A')
+    }
+    expect(root.querySelector('[data-foldkit-key]')).toBeNull()
+  })
+
+  it('rebuilds a row keyed by a number when the client keys it by the same digits as a string', () => {
+    // The runtime compares keys with `===`, so the number 1 and the string '1'
+    // are different entities. A marker that collapsed the two would hand the
+    // string-keyed client row the number-keyed server node, and the value typed
+    // into it.
+    const root = mountServerHtml(
+      serializeHydratable(
+        buildView(() => h.div([], [h.keyed('input')(1, [h.Type('text')])])),
+      ),
+    )
+    const serverInput = root.querySelector('input')
+    if (!(serverInput instanceof HTMLInputElement)) {
+      throw new Error('expected a server input row')
+    }
+    serverInput.value = 'typed-into-1'
+
+    buildView(() =>
+      __hydrateVNode(
+        root,
+        h.div([], [h.keyed('input')('1', [h.Type('text')])]),
+      ),
+    )
+
+    const hydratedInput = root.querySelector('input')
+    expect(hydratedInput).not.toBe(serverInput)
+    if (hydratedInput instanceof HTMLInputElement) {
+      expect(hydratedInput.value).not.toBe('typed-into-1')
+    }
+  })
+
+  it('refuses a page from another build before it can move any DOM state', () => {
+    // Reproduction A: the view module is byte-identical across the two builds
+    // and only a constant it imports changed, so every view identity matches
+    // and no per-element comparison can see the difference. The build token is
+    // what separates the two deployments.
+    const serverRoot = buildView(() =>
+      h.form([], [h.input([h.Type('text'), h.Name('email')])]),
+    )
+    if (serverRoot === null) {
+      throw new Error('expected a server root')
+    }
+    const identity = 'src/page/account.ts#field@1111aaaa2222'
+    const [serverField] = (serverRoot.children ?? []).filter(
+      (candidate): candidate is VNode => typeof candidate !== 'string',
+    )
+    if (serverField === undefined) {
+      throw new Error('expected a server field')
+    }
+    serverField.identity = identity
+
+    const root = mountServerHtml(serializeHydratable(serverRoot))
+    // The served page came from a build that stamped its own token.
+    root.setAttribute('data-foldkit-build', 'build-one')
+    const servedInput = root.querySelector('input')
+    if (!(servedInput instanceof HTMLInputElement)) {
+      throw new Error('expected a served input')
+    }
+    servedInput.value = 'alice@example.com'
+
+    const clientRoot = buildView(() =>
+      h.form([], [h.input([h.Type('text'), h.Name('ssn')])]),
+    )
+    if (clientRoot === null) {
+      throw new Error('expected a client root')
+    }
+    const [clientField] = (clientRoot.children ?? []).filter(
+      (candidate): candidate is VNode => typeof candidate !== 'string',
+    )
+    if (clientField === undefined) {
+      throw new Error('expected a client field')
+    }
+    // The same identity on both sides: only the imported constant changed.
+    clientField.identity = identity
+
+    const patchedVNode = buildView(() =>
+      __hydrateVNode(root, clientRoot, undefined, 'build-two'),
+    )
+
+    expect(patchedVNode.elm).not.toBe(root)
+    const hydratedInput =
+      patchedVNode.elm instanceof Element
+        ? patchedVNode.elm.querySelector('input')
+        : null
+    expect(hydratedInput).not.toBe(servedInput)
+    if (hydratedInput instanceof HTMLInputElement) {
+      expect(hydratedInput.getAttribute('name')).toBe('ssn')
+      expect(hydratedInput.value).not.toBe('alice@example.com')
+    }
+  })
+
+  it('refuses a page whose build id is absent from a client that has one', () => {
+    // Reproduction B: the parent's call changed while the component it calls
+    // did not, so the winning identity is the component's and matches on both
+    // sides. A page built without the plugin meeting a client built with it is
+    // the same disagreement seen from the other direction.
+    const root = mountServerHtml(
+      serializeHydratable(
+        buildView(() =>
+          h.form([], [h.input([h.Type('text'), h.Name('email')])]),
+        ),
+      ),
+    )
+    const servedInput = root.querySelector('input')
+    if (!(servedInput instanceof HTMLInputElement)) {
+      throw new Error('expected a served input')
+    }
+    servedInput.value = 'alice@example.com'
+
+    const patchedVNode = buildView(() =>
+      __hydrateVNode(
+        root,
+        h.form([], [h.input([h.Type('text'), h.Name('ssn')])]),
+        undefined,
+        'build-two',
+      ),
+    )
+
+    expect(patchedVNode.elm).not.toBe(root)
+  })
+
+  it('adopts a page whose build id matches the client', () => {
+    // The counterpart: corresponding artifacts still adopt, so the id costs a
+    // matching deployment nothing.
+    const root = mountServerHtml(
+      serializeHydratable(buildView(() => h.main([], [h.span([], ['hi'])]))),
+    )
+    root.setAttribute('data-foldkit-build', 'build-one')
+    const servedSpan = root.querySelector('span')
+
+    const patchedVNode = buildView(() =>
+      __hydrateVNode(
+        root,
+        h.main([], [h.span([], ['hi'])]),
+        undefined,
+        'build-one',
+      ),
+    )
+
+    expect(patchedVNode.elm).toBe(root)
+    expect(root.querySelector('span')).toBe(servedSpan)
+    expect(root.getAttribute('data-foldkit-build')).toBeNull()
+  })
+
+  it('rebuilds a stale field rather than carrying its value into a changed view', () => {
+    // Build skew: the served page came from a build whose view rendered an
+    // email field, and the client bundle renders a social security number from
+    // the same source position. The build stamps a digest of the view module
+    // into its identity, so the two identities differ and the served input is
+    // rebuilt. Adopting it would move what the visitor typed into a field that
+    // means something else and submits under a different name.
+    const serverRoot = buildView(() =>
+      h.form([], [h.input([h.Type('text'), h.Name('email')])]),
+    )
+    if (serverRoot === null) {
+      throw new Error('expected a server root')
+    }
+    const [serverField] = (serverRoot.children ?? []).filter(
+      (candidate): candidate is VNode => typeof candidate !== 'string',
+    )
+    if (serverField === undefined) {
+      throw new Error('expected a server field')
+    }
+    serverField.identity = 'src/page/account.ts#field@1111aaaa2222'
+
+    const root = mountServerHtml(serializeHydratable(serverRoot))
+    const servedInput = root.querySelector('input')
+    if (!(servedInput instanceof HTMLInputElement)) {
+      throw new Error('expected a served input')
+    }
+    servedInput.value = 'alice@example.com'
+
+    const clientRoot = buildView(() =>
+      h.form([], [h.input([h.Type('text'), h.Name('ssn')])]),
+    )
+    if (clientRoot === null) {
+      throw new Error('expected a client root')
+    }
+    const [clientField] = (clientRoot.children ?? []).filter(
+      (candidate): candidate is VNode => typeof candidate !== 'string',
+    )
+    if (clientField === undefined) {
+      throw new Error('expected a client field')
+    }
+    clientField.identity = 'src/page/account.ts#field@3333bbbb4444'
+
+    buildView(() => __hydrateVNode(root, clientRoot))
+
+    const hydratedInput = root.querySelector('input')
+    expect(hydratedInput?.getAttribute('name')).toBe('ssn')
+    expect(hydratedInput).not.toBe(servedInput)
+    if (hydratedInput instanceof HTMLInputElement) {
+      expect(hydratedInput.value).not.toBe('alice@example.com')
+    }
+  })
+
+  it('rebuilds a root whose key disagrees with the served one', () => {
+    // The root is a logical entity like any other node. A served root keyed A
+    // and a client root keyed B are different entities, so adopting would carry
+    // A's typed state into a root the client never rendered there.
+    const root = mountServerHtml(
+      serializeHydratable(
+        buildView(() => h.keyed('input')('A', [h.Type('text')])),
+      ),
+    )
+    if (!(root instanceof HTMLInputElement)) {
+      throw new Error('expected an input root')
+    }
+    root.value = 'typed-into-A'
+
+    const patchedVNode = buildView(() =>
+      __hydrateVNode(root, h.keyed('input')('B', [h.Type('text')])),
+    )
+
+    const hydratedRoot = patchedVNode.elm
+    expect(hydratedRoot).not.toBe(root)
+    if (hydratedRoot instanceof HTMLInputElement) {
+      expect(hydratedRoot.value).not.toBe('typed-into-A')
+      expect(hydratedRoot.getAttribute('data-foldkit-key')).toBeNull()
+    }
+  })
+
+  it('rebuilds a root whose view identity disagrees with the served one', () => {
+    // Two branches of a route can render the same tag from different view
+    // functions. The compiler identity is what tells them apart, so a served
+    // root from one branch is never adopted by the other.
+    const serverRoot = buildView(() => h.form([], [h.input([h.Type('text')])]))
+    if (serverRoot === null) {
+      throw new Error('expected a server root')
+    }
+    serverRoot.identity = 'src/page/sign-in.ts:SignInView'
+    const root = mountServerHtml(serializeHydratable(serverRoot))
+    const serverInput = root.querySelector('input')
+    if (!(serverInput instanceof HTMLInputElement)) {
+      throw new Error('expected a server input')
+    }
+    serverInput.value = 'typed-into-sign-in'
+
+    const clientRoot = buildView(() => h.form([], [h.input([h.Type('text')])]))
+    if (clientRoot === null) {
+      throw new Error('expected a client root')
+    }
+    clientRoot.identity = 'src/page/sign-up.ts:SignUpView'
+    const patchedVNode = buildView(() => __hydrateVNode(root, clientRoot))
+
+    const hydratedRoot = patchedVNode.elm
+    expect(hydratedRoot).not.toBe(root)
+    if (hydratedRoot instanceof Element) {
+      const hydratedInput = hydratedRoot.querySelector('input')
+      expect(hydratedInput).not.toBe(serverInput)
+      if (hydratedInput instanceof HTMLInputElement) {
+        expect(hydratedInput.value).not.toBe('typed-into-sign-in')
+      }
+      expect(hydratedRoot.getAttribute('data-foldkit-identity')).toBeNull()
+    }
+  })
+
+  it('adopts a root whose key and view identity agree with the served one', () => {
+    // The counterpart: an agreeing root is adopted in place, so the identity
+    // check costs a matching render nothing.
+    const serverRoot = buildView(() =>
+      h.keyed('form')('sign-in', [], [h.input([h.Type('text')])]),
+    )
+    if (serverRoot === null) {
+      throw new Error('expected a server root')
+    }
+    serverRoot.identity = 'src/page/sign-in.ts:SignInView'
+    const root = mountServerHtml(serializeHydratable(serverRoot))
+    const serverInput = root.querySelector('input')
+
+    const clientRoot = buildView(() =>
+      h.keyed('form')('sign-in', [], [h.input([h.Type('text')])]),
+    )
+    if (clientRoot === null) {
+      throw new Error('expected a client root')
+    }
+    clientRoot.identity = 'src/page/sign-in.ts:SignInView'
+    const patchedVNode = buildView(() => __hydrateVNode(root, clientRoot))
+
+    expect(patchedVNode.elm).toBe(root)
+    expect(root.querySelector('input')).toBe(serverInput)
+    expect(root.getAttribute('data-foldkit-key')).toBeNull()
+    expect(root.getAttribute('data-foldkit-identity')).toBeNull()
+  })
+
+  it('rebuilds a keyed root when the served markup carries no hydration markers', () => {
+    // Markup rendered as static output carries no marker channel at all, so a
+    // client that hydrates it cannot confirm the root is the same entity. The
+    // safe reading of a missing marker is disagreement.
+    const root = mountServerHtml(
+      serializeHtml(buildView(() => h.keyed('input')('A', [h.Type('text')]))),
+    )
+    if (!(root instanceof HTMLInputElement)) {
+      throw new Error('expected an input root')
+    }
+    root.value = 'typed-into-A'
+
+    const patchedVNode = buildView(() =>
+      __hydrateVNode(root, h.keyed('input')('A', [h.Type('text')])),
+    )
+
+    expect(patchedVNode.elm).not.toBe(root)
+  })
+
   it('fires insert hooks once for adopted elements, children first', () => {
     const view = buildView(() => h.div([], [h.span([h.Id('inner')], ['x'])]))
-    const root = mountServerHtml(serializeHtml(view))
+    const root = mountServerHtml(serializeHydratable(view))
 
     const inserted: Array<string> = []
     const nextVNode = buildView(() =>
@@ -214,6 +568,118 @@ describe('__hydrateVNode', () => {
     buildView(() => __hydrateVNode(root, nextVNode))
 
     expect(inserted).toEqual(['child', 'parent'])
+  })
+
+  it('fires insert hooks children-first across adopted and created siblings', () => {
+    // The server rendered one child; the client's first view has two. The
+    // differ queues a hook when it creates a node and flushes at the end of the
+    // patch, so firing created hooks from that queue and adopted hooks
+    // afterward would run the created sibling's Mount before the adopted one's,
+    // the reverse of a fresh render. A Mount that depends on a sibling being
+    // initialized would work on a fresh boot and break on a hydrated one.
+    const root = mountServerHtml(
+      serializeHydratable(
+        buildView(() => h.main([], [h.span([h.Id('first')], ['a'])])),
+      ),
+    )
+
+    const inserted: Array<string> = []
+    const attachInsertHook = (vnode: VNode, name: string): void => {
+      vnode.data ??= {}
+      vnode.data.hook = {
+        insert: () => {
+          inserted.push(name)
+        },
+      }
+    }
+
+    const buildTree = (): VNode => {
+      const tree = buildView(() =>
+        h.main(
+          [],
+          [h.span([h.Id('first')], ['a']), h.div([h.Id('second')], ['b'])],
+        ),
+      )
+      if (tree === null) {
+        throw new Error('expected the view to produce a vnode')
+      }
+      const [first, second] = (tree.children ?? []).filter(
+        (candidate): candidate is VNode => typeof candidate !== 'string',
+      )
+      attachInsertHook(tree, 'root')
+      if (first !== undefined) {
+        attachInsertHook(first, 'first')
+      }
+      if (second !== undefined) {
+        attachInsertHook(second, 'second')
+      }
+      return tree
+    }
+
+    buildView(() => __hydrateVNode(root, buildTree()))
+
+    expect(inserted).toEqual(['first', 'second', 'root'])
+  })
+
+  it('fires insert hooks in the same order as a fresh render', () => {
+    // The same tree rendered from nothing is the reference order, so hydration
+    // is compared against it rather than against a hand-written expectation.
+    const inserted: Array<string> = []
+    const attachInsertHook = (vnode: VNode, name: string): void => {
+      vnode.data ??= {}
+      vnode.data.hook = {
+        insert: () => {
+          inserted.push(name)
+        },
+      }
+    }
+    const buildTree = (): VNode => {
+      const tree = buildView(() =>
+        h.main(
+          [],
+          [
+            h.span([h.Id('first')], ['a']),
+            h.div([h.Id('second')], [h.em([h.Id('nested')], ['c'])]),
+          ],
+        ),
+      )
+      if (tree === null) {
+        throw new Error('expected the view to produce a vnode')
+      }
+      attachInsertHook(tree, 'root')
+      const [first, second] = (tree.children ?? []).filter(
+        (candidate): candidate is VNode => typeof candidate !== 'string',
+      )
+      if (first !== undefined) {
+        attachInsertHook(first, 'first')
+      }
+      if (second !== undefined) {
+        attachInsertHook(second, 'second')
+        const [nested] = (second.children ?? []).filter(
+          (candidate): candidate is VNode => typeof candidate !== 'string',
+        )
+        if (nested !== undefined) {
+          attachInsertHook(nested, 'nested')
+        }
+      }
+      return tree
+    }
+
+    const freshHost = document.createElement('div')
+    document.body.appendChild(freshHost)
+    buildView(() => patch(toVNode(freshHost), buildTree()))
+    const freshOrder = [...inserted]
+    freshHost.remove()
+
+    inserted.length = 0
+    const root = mountServerHtml(
+      serializeHydratable(
+        buildView(() => h.main([], [h.span([h.Id('first')], ['a'])])),
+      ),
+    )
+    buildView(() => __hydrateVNode(root, buildTree()))
+
+    expect(inserted).toEqual(freshOrder)
   })
 
   it('rebuilds a text vnode when the server element carries stray markup', () => {
@@ -252,7 +718,7 @@ describe('__hydrateVNode', () => {
 
   it('re-asserts controlled input values over user edits', () => {
     const view = buildView(() => h.input([h.Type('text'), h.Value('model')]))
-    const root = mountServerHtml(serializeHtml(view))
+    const root = mountServerHtml(serializeHydratable(view))
     if (!(root instanceof HTMLInputElement)) {
       throw new Error('expected an input root')
     }
@@ -267,7 +733,7 @@ describe('__hydrateVNode', () => {
 
   it('re-asserts controlled textarea values over user edits', () => {
     const view = buildView(() => h.textarea([h.Value('model')]))
-    const root = mountServerHtml(serializeHtml(view))
+    const root = mountServerHtml(serializeHydratable(view))
     if (!(root instanceof HTMLTextAreaElement)) {
       throw new Error('expected a textarea root')
     }
@@ -288,7 +754,7 @@ describe('__hydrateVNode', () => {
         ],
       )
     const view = buildView(selectView)
-    const root = mountServerHtml(serializeHtml(view))
+    const root = mountServerHtml(serializeHydratable(view))
     if (!(root instanceof HTMLSelectElement)) {
       throw new Error('expected a select root')
     }
@@ -304,7 +770,7 @@ describe('__hydrateVNode', () => {
 
   it('keeps an adopted innerHTML subtree when the markup round-trips unchanged', () => {
     const view = buildView(() => h.div([h.InnerHTML('<em>raw</em>')]))
-    const root = mountServerHtml(serializeHtml(view))
+    const root = mountServerHtml(serializeHydratable(view))
     const emphasis = root.querySelector('em')
     expect(emphasis).not.toBeNull()
 
@@ -317,7 +783,7 @@ describe('__hydrateVNode', () => {
   it('adopts an innerHTML subtree the parser normalized away from the authored markup', () => {
     const authoredMarkup = '<em>say &quot;hi&quot;</em>'
     const view = buildView(() => h.div([h.InnerHTML(authoredMarkup)]))
-    const root = mountServerHtml(serializeHtml(view))
+    const root = mountServerHtml(serializeHydratable(view))
     const emphasis = root.querySelector('em')
     expect(emphasis).not.toBeNull()
     expect(root.innerHTML).not.toBe(authoredMarkup)
@@ -332,7 +798,7 @@ describe('__hydrateVNode', () => {
     const authoredMarkup = '<path pathLength="100" d="M0 0L10 10"></path>'
     const svgView = () => h.svg([h.InnerHTML(authoredMarkup)])
     const view = buildView(svgView)
-    const root = mountServerHtml(serializeHtml(view))
+    const root = mountServerHtml(serializeHydratable(view))
     const serverPath = root.querySelector('path')
     expect(serverPath).not.toBeNull()
 
@@ -524,7 +990,7 @@ describe('__hydrateVNode', () => {
         ],
       )
     const view = buildView(selectView)
-    const root = mountServerHtml(serializeHtml(view))
+    const root = mountServerHtml(serializeHydratable(view))
     if (!(root instanceof HTMLSelectElement)) {
       throw new Error('expected a select root')
     }
@@ -541,7 +1007,7 @@ describe('__hydrateVNode', () => {
   it('removes the server-stamped value attribute so an adopted input matches a fresh boot', () => {
     const inputView = () => h.input([h.Type('text'), h.Value('hello')])
     const view = buildView(inputView)
-    const root = mountServerHtml(serializeHtml(view))
+    const root = mountServerHtml(serializeHydratable(view))
     if (!(root instanceof HTMLInputElement)) {
       throw new Error('expected an input root')
     }
@@ -557,7 +1023,7 @@ describe('__hydrateVNode', () => {
   it('removes the server-stamped checked attribute from an adopted checkbox', () => {
     const checkboxView = () => h.input([h.Type('checkbox'), h.Checked(true)])
     const view = buildView(checkboxView)
-    const root = mountServerHtml(serializeHtml(view))
+    const root = mountServerHtml(serializeHydratable(view))
     if (!(root instanceof HTMLInputElement)) {
       throw new Error('expected an input root')
     }
@@ -582,7 +1048,7 @@ describe('__hydrateVNode', () => {
         ['same'],
       )
     const clientView = () => h.a([h.Class('fresh'), h.Title('new')], ['same'])
-    const root = mountServerHtml(serializeHtml(buildView(serverView)))
+    const root = mountServerHtml(serializeHydratable(buildView(serverView)))
     if (!(root instanceof HTMLAnchorElement)) {
       throw new Error('expected an anchor root')
     }
@@ -602,7 +1068,7 @@ describe('__hydrateVNode', () => {
         [h.Attribute('class', 'same'), h.Attribute('style', 'color: blue')],
         ['content'],
       )
-    const root = mountServerHtml(serializeHtml(buildView(view)))
+    const root = mountServerHtml(serializeHydratable(buildView(view)))
     if (!(root instanceof HTMLDivElement)) {
       throw new Error('expected a div root')
     }
@@ -626,7 +1092,7 @@ describe('__hydrateVNode', () => {
         ],
         ['content'],
       )
-    const root = mountServerHtml(serializeHtml(buildView(view)))
+    const root = mountServerHtml(serializeHydratable(buildView(view)))
     if (!(root instanceof HTMLDivElement)) {
       throw new Error('expected a div root')
     }
@@ -671,7 +1137,7 @@ describe('__hydrateVNode', () => {
 
   it('resets a controlled textarea default so hydration matches a fresh boot', () => {
     const textareaView = () => h.textarea([h.Value('model')])
-    const root = mountServerHtml(serializeHtml(buildView(textareaView)))
+    const root = mountServerHtml(serializeHydratable(buildView(textareaView)))
     if (!(root instanceof HTMLTextAreaElement)) {
       throw new Error('expected a textarea root')
     }
@@ -685,7 +1151,7 @@ describe('__hydrateVNode', () => {
 
   it('hydrates an uncontrolled textarea preserving its server content', () => {
     const view = () => h.textarea([], ['default text'])
-    const root = mountServerHtml(serializeHtml(buildView(view)))
+    const root = mountServerHtml(serializeHydratable(buildView(view)))
     if (!(root instanceof HTMLTextAreaElement)) {
       throw new Error('expected a textarea root')
     }
@@ -698,7 +1164,7 @@ describe('__hydrateVNode', () => {
 
   it('hydrates empty text children without rebuilding the root', () => {
     const view = () => h.div([], ['', h.span([h.Id('inner')], ['x']), ''])
-    const root = mountServerHtml(serializeHtml(buildView(view)))
+    const root = mountServerHtml(serializeHydratable(buildView(view)))
     const span = root.querySelector('#inner')
 
     const patchedVNode = buildView(() => __hydrateVNode(root, view()))

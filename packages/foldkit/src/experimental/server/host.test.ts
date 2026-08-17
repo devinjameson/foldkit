@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
-import { acceptsHtml, resolvesToIndexHtml, varyWithAccept } from './host.js'
+import {
+  acceptsHtml,
+  classifyRequest,
+  resolveRequestUrl,
+  resolvesToIndexHtml,
+  varyWith,
+  varyWithAccept,
+} from './host.js'
 
 describe('acceptsHtml', () => {
   it('accepts an absent or empty header', () => {
@@ -99,5 +106,142 @@ describe('varyWithAccept', () => {
   it('leaves a wildcard Vary as the wildcard', () => {
     expect(varyWithAccept('*')).toBe('*')
     expect(varyWithAccept('Cookie, *')).toBe('*')
+  })
+})
+
+describe('resolveRequestUrl', () => {
+  const origin = 'http://127.0.0.1:5173'
+
+  it('resolves an origin-form target against the host origin', () => {
+    expect(resolveRequestUrl('/page?q=1', origin)).toBe(
+      'http://127.0.0.1:5173/page?q=1',
+    )
+  })
+
+  it('resolves the root target', () => {
+    expect(resolveRequestUrl('/', origin)).toBe('http://127.0.0.1:5173/')
+  })
+
+  it('refuses a network-path reference that names another origin', () => {
+    // `//evil.example/request-info` is a protocol-relative reference: resolving
+    // it against the host origin keeps the scheme and takes the authority from
+    // the request, handing the entry an origin the client chose.
+    expect(
+      resolveRequestUrl('//evil.example/request-info', origin),
+    ).toBeUndefined()
+  })
+
+  it('refuses an absolute-form target that names another origin', () => {
+    expect(
+      resolveRequestUrl('http://evil.example/request-info', origin),
+    ).toBeUndefined()
+    expect(
+      resolveRequestUrl('https://evil.example/request-info', origin),
+    ).toBeUndefined()
+  })
+
+  it('accepts an absolute-form target that names the host origin', () => {
+    expect(resolveRequestUrl('http://127.0.0.1:5173/page', origin)).toBe(
+      'http://127.0.0.1:5173/page',
+    )
+  })
+
+  it('refuses a target whose port or scheme differs from the host origin', () => {
+    expect(
+      resolveRequestUrl('http://127.0.0.1:9999/page', origin),
+    ).toBeUndefined()
+    expect(
+      resolveRequestUrl('https://127.0.0.1:5173/page', origin),
+    ).toBeUndefined()
+  })
+
+  it('resolves against an https origin', () => {
+    expect(resolveRequestUrl('/page', 'https://app.example')).toBe(
+      'https://app.example/page',
+    )
+    expect(
+      resolveRequestUrl('//evil.example/page', 'https://app.example'),
+    ).toBeUndefined()
+  })
+
+  it('refuses a hostile Host value that cannot form an origin', () => {
+    expect(resolveRequestUrl('/page', 'http://')).toBeUndefined()
+    expect(resolveRequestUrl('/page', 'not an origin')).toBeUndefined()
+  })
+})
+
+describe('classifyRequest', () => {
+  it('classifies a hashed script by its path', () => {
+    expect(classifyRequest('/assets/stale-hash.js')).toBe('PathAsset')
+  })
+
+  it('classifies stylesheets, source maps, and images by their path', () => {
+    expect(classifyRequest('/assets/index-abc123.css')).toBe('PathAsset')
+    expect(classifyRequest('/assets/index-abc123.js.map')).toBe('PathAsset')
+    expect(classifyRequest('/logo.svg')).toBe('PathAsset')
+    expect(classifyRequest('/photo.PNG')).toBe('PathAsset')
+  })
+
+  it('ignores the query string when reading the extension', () => {
+    expect(classifyRequest('/assets/app.js?v=2')).toBe('PathAsset')
+  })
+
+  it('reads the path before the fetch destination', () => {
+    // A request the URL alone settles must not be made to depend on a header
+    // the client may or may not send, or the refusal would need to vary on it.
+    expect(classifyRequest('/assets/app.js', 'document')).toBe('PathAsset')
+  })
+
+  it('classifies a subresource destination on an extensionless path', () => {
+    // A browser fetching a script or stylesheet sends `Accept: */*`, which
+    // accepts HTML, so the destination is what separates it from a navigation.
+    expect(classifyRequest('/deep/route', 'script')).toBe('DestinationAsset')
+    expect(classifyRequest('/deep/route', 'style')).toBe('DestinationAsset')
+    expect(classifyRequest('/deep/route', 'image')).toBe('DestinationAsset')
+    expect(classifyRequest('/deep/route', 'font')).toBe('DestinationAsset')
+  })
+
+  it('classifies a navigation as a page request', () => {
+    expect(classifyRequest('/deep/route', 'document')).toBe('Page')
+    expect(classifyRequest('/deep/route', 'empty')).toBe('Page')
+    expect(classifyRequest('/deep/route')).toBe('Page')
+    expect(classifyRequest('/')).toBe('Page')
+  })
+
+  it('classifies an html path as a page request', () => {
+    expect(classifyRequest('/index.html')).toBe('Page')
+    expect(classifyRequest('/about/index.htm')).toBe('Page')
+  })
+
+  it('does not read a dot in a directory segment as an extension', () => {
+    expect(classifyRequest('/v1.2/route')).toBe('Page')
+  })
+
+  it('does not read a dotfile as an extension', () => {
+    expect(classifyRequest('/.well-known/foo')).toBe('Page')
+  })
+})
+
+describe('varyWith', () => {
+  it('appends a field name to an existing Vary', () => {
+    expect(varyWith('Cookie', 'Sec-Fetch-Dest')).toBe('Cookie, Sec-Fetch-Dest')
+  })
+
+  it('preserves existing fields', () => {
+    expect(varyWith('Origin, Accept', 'Sec-Fetch-Dest')).toBe(
+      'Origin, Accept, Sec-Fetch-Dest',
+    )
+  })
+
+  it('does not duplicate a field already present in any case', () => {
+    expect(varyWith('sec-fetch-dest', 'Sec-Fetch-Dest')).toBe('sec-fetch-dest')
+  })
+
+  it('leaves a wildcard Vary alone', () => {
+    expect(varyWith('*', 'Sec-Fetch-Dest')).toBe('*')
+  })
+
+  it('starts a Vary that does not exist yet', () => {
+    expect(varyWith(undefined, 'Sec-Fetch-Dest')).toBe('Sec-Fetch-Dest')
   })
 })

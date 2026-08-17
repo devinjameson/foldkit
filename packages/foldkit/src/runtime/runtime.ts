@@ -1440,6 +1440,7 @@ type RuntimeInternals = {
     hmrModel?: unknown,
     bootMode?: BootMode,
     flags?: Effect.Effect<any, never, any>,
+    buildId?: string,
   ) => Effect.Effect<void>
   kind: 'Application' | 'Element'
   isEmbedActive: boolean
@@ -1596,6 +1597,7 @@ const makeRuntime = <
     hmrModel?: unknown,
     bootMode: BootMode = 'Fresh',
     bootFlags?: Effect.Effect<Flags, never, Resources>,
+    buildId?: string,
   ): Effect.Effect<void> => {
     // NOTE: one notifier per runtime, provided across the whole runtime
     // Effect so Commands, Subscriptions, and Mount-forked Effects all resolve
@@ -2594,6 +2596,7 @@ const makeRuntime = <
                     hydrationRoot,
                     nextVNode,
                     boundaryRegistry.dedupeSeen,
+                    buildId,
                   )
                 }
                 return __patchVNode(
@@ -3278,8 +3281,8 @@ const makeRuntime = <
     ports,
   }
   runtimeInternals.set(program, {
-    startWith: (maybeConnector, hmrModel, bootMode, flags) =>
-      startWith(maybeConnector, hmrModel, bootMode, flags),
+    startWith: (maybeConnector, hmrModel, bootMode, flags, buildId) =>
+      startWith(maybeConnector, hmrModel, bootMode, flags, buildId),
     kind,
     isEmbedActive: false,
     maybeActiveFiber: Option.none(),
@@ -4012,6 +4015,7 @@ export const __startProgram = (
   hmrModel: unknown,
   bootMode: BootMode,
   flags?: Effect.Effect<unknown, never, any>,
+  buildId?: string,
 ): Effect.Effect<void> => {
   const internals = runtimeInternals.get(program)
   if (Predicate.isUndefined(internals)) {
@@ -4032,7 +4036,7 @@ export const __startProgram = (
     )
   }
 
-  return internals.startWith(Option.none(), hmrModel, bootMode, flags)
+  return internals.startWith(Option.none(), hmrModel, bootMode, flags, buildId)
 }
 
 // NOTE: deliberately not `BrowserRuntime.runMain`, which interrupts the
@@ -4051,11 +4055,12 @@ const startProgram = (
   program: RuntimeProgram,
   bootMode: BootMode,
   flags?: Effect.Effect<unknown, never, any>,
+  buildId?: string,
 ): void => {
   runMainWithoutUnloadInterrupt(
     provideBrowserScheduler(
       Effect.flatMap(resolveHmrModel(program.runtimeId), hmrModel =>
-        __startProgram(program, hmrModel, bootMode, flags),
+        __startProgram(program, hmrModel, bootMode, flags, buildId),
       ),
     ),
   )
@@ -4087,6 +4092,19 @@ export function run(
   startProgram(program, 'Fresh', options?.flags)
 }
 
+/** Options for {@link hydrate}. */
+export type HydrateOptions = Readonly<{
+  /**
+   * The deployment this client belongs to, compared against the id the server
+   * stamped on the root before anything is adopted, so a page from a different
+   * deployment is rebuilt rather than reconciled. Pass
+   * `import.meta.env.FOLDKIT_BUILD_ID`, which `@foldkit/vite-plugin` fills from
+   * its `buildId` option or the `FOLDKIT_BUILD_ID` environment variable, the
+   * same value the server entry passes to `renderToString`.
+   */
+  buildId?: string | undefined
+}>
+
 /** Starts a Foldkit runtime by adopting a server-rendered DOM in place instead
  *  of building it fresh. Use this as the client entry for a page served by
  *  `renderToString`: the first render attaches to the stamped root, keeps the
@@ -4100,8 +4118,9 @@ export function run(
  * contracts settle. */
 export const hydrate = <P extends Ports | undefined, Flags, Resources>(
   program: MakeRuntimeReturn<P, Flags, Resources, 'Application'>,
+  options?: HydrateOptions,
 ): void => {
-  startProgram(program, 'Hydrate')
+  startProgram(program, 'Hydrate', undefined, options?.buildId)
 }
 
 const buildPortHandles = <P extends Ports | undefined>(

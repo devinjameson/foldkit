@@ -3,14 +3,22 @@ import { afterEach, beforeEach, expect } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
 
+import * as CustomElement from '../../customElement/index.js'
 import {
   type BoundaryRegistry,
   beginRender,
   createBoundaryRegistry,
 } from '../../html/boundary.js'
-import { type Html, __htmlBuilder } from '../../html/index.js'
+import { type Html, Prop, __htmlBuilder } from '../../html/index.js'
 import { clearRuntime, setRuntime } from '../../html/runtimeSingleton.js'
+import {
+  HYDRATION_IDENTITY_ATTRIBUTE,
+  HYDRATION_KEY_ATTRIBUTE,
+  hydrationIdentityMarker,
+  hydrationKeyMarker,
+} from '../../hydrationMarkers.js'
 import { m } from '../../message/index.js'
+import { h as snabbdomH } from '../../snabbdom/index.js'
 import type { VNode } from '../../snabbdom/vnode.js'
 import { serializeHtml } from './serialize.js'
 
@@ -62,6 +70,163 @@ describe('serializeHtml', () => {
   it('rejects attribute names that cannot be represented safely', () => {
     const view = h.div([h.Attribute('x=y onmouseover', 'alert(1)')])
     expect(() => serializeHtml(view)).toThrow('invalid attribute name')
+  })
+
+  it('does not treat a non-authored innerHTML property as raw markup', () => {
+    // A property named `innerHTML` that did not come from `h.InnerHTML` (a
+    // CustomElement.define property, a raw `h.Prop('innerHTML', ...)`) carries no
+    // provenance marker, so the serializer must never route it to the raw-HTML
+    // sink. The injected markup is dropped rather than emitted verbatim.
+    const view = snabbdomH('x-card', {
+      props: { innerHTML: '<img src=x onerror=alert(1)>' },
+    })
+    expect(serializeHtml(view)).toBe('<x-card></x-card>')
+  })
+
+  it('renders builder-authored innerHTML as raw markup', () => {
+    const view = h.div([h.InnerHTML('<b>trusted</b>')])
+    expect(serializeHtml(view)).toBe('<div><b>trusted</b></div>')
+  })
+
+  it('does not treat innerHTML as raw markup when a later property overwrites it', () => {
+    // Provenance belongs to the value, not to the props bag: a generic property
+    // written after `h.InnerHTML` owns the name from then on, so the markup it
+    // wrote never reaches the raw sink.
+    const view = h.div([
+      h.InnerHTML('<b>trusted</b>'),
+      Prop({ key: 'innerHTML', value: '<img src=x onerror=alert(1)>' }),
+    ])
+    const serialized = serializeHtml(view)
+
+    expect(serialized).not.toContain('onerror')
+    expect(serialized).toBe('<div></div>')
+  })
+
+  it('renders builder-authored innerHTML when it overwrites an earlier property', () => {
+    // The mirror of the case above: the last write owns the name, and here it is
+    // the trusted one, so the trusted markup is what is emitted.
+    const view = h.div([
+      Prop({ key: 'innerHTML', value: '<img src=x onerror=alert(1)>' }),
+      h.InnerHTML('<b>trusted</b>'),
+    ])
+    const serialized = serializeHtml(view)
+
+    expect(serialized).not.toContain('onerror')
+    expect(serialized).toBe('<div><b>trusted</b></div>')
+  })
+
+  it('does not treat a custom element innerHTML property as raw markup in either order', () => {
+    // A `CustomElement.define` property named `innerHTML` is a client-only
+    // component property. Declaring it beside `h.InnerHTML` must not launder it,
+    // whichever the view writes last.
+    const card = CustomElement.define({
+      tag: 'x-inner',
+      properties: { innerHTML: S.String },
+      events: {},
+    }).withMessage(h)
+
+    const propertyLast = card([
+      h.InnerHTML('<b>trusted</b>'),
+      card.InnerHTML('<img src=x onerror=alert(1)>'),
+    ])
+    const trustedLast = card([
+      card.InnerHTML('<img src=x onerror=alert(1)>'),
+      h.InnerHTML('<b>trusted</b>'),
+    ])
+
+    expect(serializeHtml(propertyLast)).toBe('<x-inner></x-inner>')
+    expect(serializeHtml(trustedLast)).toBe('<x-inner><b>trusted</b></x-inner>')
+  })
+
+  it('does not reflect declared custom element properties that collide with global attribute names', () => {
+    // A `CustomElement.define` property is a client-only DOM property even when
+    // it carries the name of a global HTML attribute, so none of these reach the
+    // markup. The values would otherwise disclose component state the view never
+    // rendered.
+    const card = CustomElement.define({
+      tag: 'x-card',
+      properties: {
+        id: S.Unknown,
+        title: S.String,
+        lang: S.String,
+        dir: S.String,
+        tabIndex: S.Number,
+        hidden: S.Boolean,
+        inert: S.Boolean,
+        draggable: S.Boolean,
+      },
+      events: {},
+    }).withMessage(h)
+
+    const view = card([
+      card.Id({ accountId: 42 }),
+      card.Title('leaked-title'),
+      card.Lang('leaked-lang'),
+      card.Dir('leaked-dir'),
+      card.TabIndex(3),
+      card.Hidden(true),
+      card.Inert(true),
+      card.Draggable(true),
+    ])
+
+    expect(serializeHtml(view)).toBe('<x-card></x-card>')
+  })
+
+  it('reflects builder-authored global attributes on a custom element', () => {
+    // The counterpart: `h.Id` sets the reflected `id` attribute every element
+    // has, so it is real markup and still serializes.
+    const plain = CustomElement.define({
+      tag: 'x-plain',
+      properties: {},
+      events: {},
+    }).withMessage(h)
+
+    const view = plain([h.Id('card-1'), h.Title('Card')])
+    expect(serializeHtml(view)).toBe(
+      '<x-plain id="card-1" title="Card"></x-plain>',
+    )
+  })
+
+  it('does not reflect custom element properties through native property maps', () => {
+    // A custom element's `value` property is a client-only DOM property, not the
+    // native input `value` attribute, so it must not reflect. Only the global
+    // attributes every element carries survive on a custom element.
+    const view = snabbdomH('x-card', {
+      props: { value: { id: 1 }, id: 'card-1' },
+    })
+    expect(serializeHtml(view)).toBe('<x-card id="card-1"></x-card>')
+  })
+
+  it('rejects markup-significant text in a noscript element', () => {
+    const view = h.noscript(
+      [],
+      ['<meta http-equiv="refresh" content="0;url=/evil">'],
+    )
+    expect(() => serializeHtml(view)).toThrow(
+      '<noscript> text content contains markup',
+    )
+  })
+
+  it('renders trusted innerHTML fallback markup inside a noscript element', () => {
+    const view = h.noscript([h.InnerHTML('<p>Enable JavaScript</p>')])
+    expect(serializeHtml(view)).toBe(
+      '<noscript><p>Enable JavaScript</p></noscript>',
+    )
+  })
+
+  it('escapes carriage returns in attribute values so they round-trip', () => {
+    const view = h.div([h.Title('a\r\nb')])
+    const serialized = serializeHtml(view)
+    expect(serialized).toBe('<div title="a&#13;\nb"></div>')
+
+    const container = document.createElement('div')
+    container.innerHTML = serialized
+    expect(container.firstElementChild?.getAttribute('title')).toBe('a\r\nb')
+  })
+
+  it('rejects NUL characters in text and attribute values', () => {
+    expect(() => serializeHtml(h.div([], ['a\u0000b']))).toThrow('NUL')
+    expect(() => serializeHtml(h.div([h.Title('a\u0000b')]))).toThrow('NUL')
   })
 
   it('serializes class, style, and data attributes', () => {
@@ -278,13 +443,70 @@ describe('serializeHtml', () => {
     )
   })
 
-  it('drops event handlers, keys, and mount markers from markup', () => {
+  it('drops event handlers and emits no key marker when the render is not hydratable', () => {
+    // Event handlers and mount markers are client behavior and never serialize.
+    // The key marker is part of the hydration handoff, so output nobody will
+    // hydrate carries none of it either.
     const view = h.keyed('button')(
       'submit',
       [h.OnClick(ClickedButton()), h.Id('submit')],
       ['Send'],
     )
     expect(serializeHtml(view)).toBe('<button id="submit">Send</button>')
+  })
+
+  it('stamps a hydratable key as a digest rather than the key itself', () => {
+    // A key is application data (a row id, an account identifier, an email) that
+    // the view never renders, so hydration compares digests and the key itself
+    // never reaches the markup.
+    const view = h.keyed('li')('user@example.com', [], ['Ada'])
+    const serialized = serializeHtml(view, { emitHydrationMarkers: true })
+
+    expect(serialized).not.toContain('user@example.com')
+    expect(serialized).toBe(
+      `<li ${HYDRATION_KEY_ATTRIBUTE}="${hydrationKeyMarker('user@example.com')}">Ada</li>`,
+    )
+  })
+
+  it('stamps a hydratable view identity as a digest rather than the source path', () => {
+    // The compiler's identity spells out a relative source path and function
+    // name. Digesting it keeps the build's file layout out of public HTML.
+    const view = h.div([], ['Home'])
+    if (view === null) {
+      throw new Error('expected the view to produce a vnode')
+    }
+    view.identity = 'src/page/account/billing.ts:BillingView'
+    const serialized = serializeHtml(view, { emitHydrationMarkers: true })
+
+    expect(serialized).not.toContain('src/page/account/billing.ts')
+    expect(serialized).not.toContain('BillingView')
+    expect(serialized).toBe(
+      `<div ${HYDRATION_IDENTITY_ATTRIBUTE}="${hydrationIdentityMarker('src/page/account/billing.ts:BillingView')}">Home</div>`,
+    )
+  })
+
+  it('digests a numeric key differently from the same digits as a string', () => {
+    // The runtime compares keys with `===`, so 1 and '1' are different keys. A
+    // digest that collapsed them would let a numeric server row adopt a string
+    // client row, carrying one row's typed state onto another.
+    const numeric = serializeHtml(h.keyed('li')(1, [], ['one']), {
+      emitHydrationMarkers: true,
+    })
+    const string = serializeHtml(h.keyed('li')('1', [], ['one']), {
+      emitHydrationMarkers: true,
+    })
+
+    expect(numeric).not.toBe(string)
+    expect(hydrationKeyMarker(1)).not.toBe(hydrationKeyMarker('1'))
+  })
+
+  it('refuses to render an element keyed by a symbol as hydratable', () => {
+    // A local symbol is a new value in every realm, so the server's key and the
+    // client's cannot be compared. Rejecting beats adopting on a guess.
+    const view = h.keyed('li')(Symbol('row'), [], ['one'])
+    expect(() => serializeHtml(view, { emitHydrationMarkers: true })).toThrow(
+      'keyed by a symbol',
+    )
   })
 
   it('filters null children', () => {

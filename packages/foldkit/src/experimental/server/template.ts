@@ -6,6 +6,15 @@ import { type RenderedApplication } from './server.js'
 
 const DEFAULT_CONTAINER_ID = 'root'
 
+const HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml'
+
+// NOTE: assembled by concatenation rather than through String.replace, whose
+// replacement string reads `$&` and `` $` `` as patterns. Rendered markup is
+// application data and may contain either.
+const NEUTRAL_CONTEXT_PREFIX =
+  '<!doctype html><html><head><title>x</title></head><body>'
+const NEUTRAL_CONTEXT_SUFFIX = '</body></html>'
+
 // NOTE: the template's mutation targets (the container, the <title>, the
 // <html> element, and the canonical/og:url head elements) are located by
 // parsing the template with a real HTML tokenizer and reading each element's
@@ -53,6 +62,348 @@ const firstMatching = (
 
 const attributeValue = (element: Element, name: string): string | undefined =>
   element.attrs.find(attribute => attribute.name === name)?.value
+
+// The path from an element to the document as (tag name, index among element
+// siblings) steps, innermost first. Tag names alone cannot say which of two
+// sibling `<div>`s held the placeholder, and the index is what lets the same
+// position be found again in the finished page.
+type PathStep = Readonly<{ tagName: string; index: number }>
+
+const elementChildren = (
+  node: Readonly<{ childNodes: ReadonlyArray<ChildNode> }>,
+): ReadonlyArray<Element> => node.childNodes.filter(isElement)
+
+const parentOf = (element: Element): Element | undefined => {
+  const parent = element.parentNode
+  return parent !== null && 'tagName' in parent ? parent : undefined
+}
+
+// Each step names the element itself and where it sits among its parent's
+// element children, outermost last.
+const ancestorPath = (element: Element): ReadonlyArray<PathStep> => {
+  const path: Array<PathStep> = []
+  let current: Element | undefined = element
+  while (current !== undefined) {
+    const parent = parentOf(current)
+    path.push({
+      tagName: current.tagName.toLowerCase(),
+      index:
+        parent === undefined ? 0 : elementChildren(parent).indexOf(current),
+    })
+    if (parent === undefined) {
+      break
+    }
+    current = parent
+  }
+  return path
+}
+
+// Each step is resolved by the index it recorded, not by the first element that
+// happens to carry the tag name. Two sibling `<section>`s are an ordinary
+// template, and taking the first would both reject the valid one and let an
+// earlier same-tag sibling stand in for the position the placeholder actually
+// held, so a corrupted injection could be validated against an intact copy.
+const elementAtPath = (
+  document: ParentNode,
+  path: ReadonlyArray<PathStep>,
+): Element | undefined => {
+  let node: Element | undefined
+  let children = elementChildren(document)
+  for (const step of [...path].reverse()) {
+    const child = children[step.index]
+    if (
+      child === undefined ||
+      child.tagName.toLowerCase() !== step.tagName ||
+      (node !== undefined && child.namespaceURI !== node.namespaceURI)
+    ) {
+      return undefined
+    }
+    node = child
+    children = elementChildren(child)
+  }
+  return node
+}
+
+// A structural description of a subtree, used to compare what the rendered
+// markup describes on its own with what the finished page describes in the
+// place the placeholder held. Attributes are sorted so a parser that reorders
+// them does not read as a difference, and text runs are merged because adjacent
+// text serializes back to one node.
+type Shape =
+  | Readonly<{
+      kind: 'Element'
+      tagName: string
+      namespace: string
+      attributes: ReadonlyArray<readonly [string, string]>
+      children: ReadonlyArray<Shape>
+    }>
+  | Readonly<{ kind: 'Text'; text: string }>
+  | Readonly<{ kind: 'Comment'; text: string }>
+
+const shapeOfElement = (element: Element): Shape => ({
+  kind: 'Element',
+  tagName: element.tagName.toLowerCase(),
+  namespace: element.namespaceURI,
+  attributes: [...element.attrs]
+    .map(attribute => [attribute.name, attribute.value] as const)
+    .sort(([left], [right]) => left.localeCompare(right)),
+  children: shapesOf(element),
+})
+
+const shapesOf = (
+  node: Readonly<{ childNodes: ReadonlyArray<ChildNode> }>,
+): ReadonlyArray<Shape> => {
+  const shapes: Array<Shape> = []
+  let text = ''
+  const flush = (): void => {
+    if (text !== '') {
+      shapes.push({ kind: 'Text', text })
+    }
+    text = ''
+  }
+  for (const child of node.childNodes) {
+    if (isElement(child)) {
+      flush()
+      shapes.push(shapeOfElement(child))
+    } else if (child.nodeName === '#text' && 'value' in child) {
+      text += child.value
+    } else if (child.nodeName === '#comment' && 'data' in child) {
+      flush()
+      shapes.push({ kind: 'Comment', text: child.data })
+    }
+  }
+  flush()
+  return shapes
+}
+
+const isSameShape = (left: Shape, right: Shape): boolean =>
+  JSON.stringify(left) === JSON.stringify(right)
+
+// The insertion contexts this API supports, stated rather than inferred. A
+// placeholder reached from `<body>` through nothing but flow containers parses
+// the same way a body does, which is the context `renderToString` already
+// validated the rendered markup against. Every other context (a `<form>`, a
+// `<table>`, a `<select>`, foreign content, template content) makes the final
+// parse depend on where the markup landed, and is refused with a clear error
+// rather than modeled.
+const NEUTRAL_ANCESTOR_TAGS: ReadonlySet<string> = new Set([
+  'article',
+  'aside',
+  'body',
+  'div',
+  'footer',
+  'header',
+  'main',
+  'section',
+])
+
+const assertNeutralInsertionContext = (
+  container: Element,
+  containerId: string,
+): void => {
+  let current = parentOf(container)
+  while (current !== undefined) {
+    const tagName = current.tagName.toLowerCase()
+    if (tagName === 'html') {
+      return
+    }
+    if (
+      !NEUTRAL_ANCESTOR_TAGS.has(tagName) ||
+      current.namespaceURI !== HTML_NAMESPACE
+    ) {
+      throw new Error(
+        `[foldkit] injectIntoTemplate found the <div id="${containerId}"></div> placeholder inside <${tagName}>, which is not a supported insertion context. ` +
+          'HTML parsing rearranges what an element with a restrictive content ' +
+          'model may hold, so the rendered application could be moved, dropped, ' +
+          'or reshaped once it sat there. Place the placeholder in the body or ' +
+          'inside plain flow containers (div, main, section, article, aside, ' +
+          'header, footer).',
+      )
+    }
+    current = parentOf(current)
+  }
+}
+
+// Declarative shadow DOM is refused rather than modeled. A browser turns a
+// `<template shadowrootmode>` into a shadow root as it parses, moving its
+// content out of the light DOM entirely, which neither the parser this check
+// uses nor hydration's own probe reproduces. Rendering one would mean comparing
+// trees that no longer describe the page.
+const DECLARATIVE_SHADOW_ROOT_ATTRIBUTES: ReadonlyArray<string> = [
+  'shadowrootmode',
+  'shadowroot',
+]
+
+const assertNoDeclarativeShadowRoot = (renderedHtml: string): void => {
+  const parsed = parse(
+    `${NEUTRAL_CONTEXT_PREFIX}${renderedHtml}${NEUTRAL_CONTEXT_SUFFIX}`,
+  )
+  for (const template of collectMatching(
+    parsed,
+    element => element.tagName === 'template',
+  )) {
+    if (
+      DECLARATIVE_SHADOW_ROOT_ATTRIBUTES.some(
+        name => attributeValue(template, name) !== undefined,
+      )
+    ) {
+      throw new Error(
+        '[foldkit] A rendered <template> declares a shadow root, which server ' +
+          'rendering does not support. A browser turns it into a shadow root ' +
+          'while parsing, moving its content out of the light DOM, so the ' +
+          'served page and the tree hydration reconciles no longer describe ' +
+          'the same thing. Attach shadow roots from a custom element instead.',
+      )
+    }
+  }
+}
+
+// The rendered markup describes a subtree. Whether the finished page still
+// describes it depends on where the placeholder sat: HTML parsing drops a
+// `<form>` nested in another `<form>`, foster-parents a `<div>` out of a
+// `<table>`, and empties a `<select>` of anything that is not an option. The
+// splice itself is always correct, so the only way to see any of that is to
+// parse the finished page and compare.
+//
+// The comparison is of the placeholder's whole parent, not of the root alone.
+// What the template says that parent should hold after injection is its own
+// children with the placeholder replaced by what the rendered markup describes
+// on its own, in the neutral context `renderToString` already validated it
+// against. Comparing the whole parent covers the rendered subtree, the nodes
+// around it, and the boundaries between them, and it identifies the injection by
+// the position its placeholder held rather than by any attribute, so a marker
+// authored inside the markup cannot stand in for a root the parser dropped, and
+// another application's root elsewhere in the document is not counted against
+// this one.
+//
+// Both parses run with scripting enabled and disabled, because a `<noscript>`
+// in the rendered markup changes the tree for exactly the visitors it targets.
+
+const renderedShapes = (
+  renderedHtml: string,
+  isScriptingEnabled: boolean,
+): ReadonlyArray<Shape> => {
+  const neutral = parse(
+    `${NEUTRAL_CONTEXT_PREFIX}${renderedHtml}${NEUTRAL_CONTEXT_SUFFIX}`,
+    { scriptingEnabled: isScriptingEnabled },
+  )
+  const body = firstMatching(neutral, element => element.tagName === 'body')
+  return body === undefined ? [] : shapesOf(body)
+}
+
+// Adjacent text runs merge, because a parser reads back-to-back text as one
+// node however it was written. Splicing the rendered shapes into the template's
+// own children can put text beside text, so the result is merged the same way
+// before it is compared.
+const mergeAdjacentText = (
+  shapes: ReadonlyArray<Shape>,
+): ReadonlyArray<Shape> => {
+  const merged: Array<Shape> = []
+  for (const shape of shapes) {
+    const previous = merged[merged.length - 1]
+    if (shape.kind === 'Text' && previous?.kind === 'Text') {
+      merged[merged.length - 1] = {
+        kind: 'Text',
+        text: previous.text + shape.text,
+      }
+      continue
+    }
+    merged.push(shape)
+  }
+  return merged.filter(shape => shape.kind !== 'Text' || shape.text !== '')
+}
+
+// The shapes of a node's children, plus where in that list a given child lands.
+const shapesAround = (
+  parent: Element,
+  child: Element,
+): Readonly<{ shapes: ReadonlyArray<Shape>; index: number }> => {
+  const shapes = shapesOf(parent)
+  let index = 0
+  let isTextOpen = false
+  for (const candidate of parent.childNodes) {
+    if (isElement(candidate)) {
+      if (candidate === child) {
+        return { shapes, index }
+      }
+      isTextOpen = false
+      index += 1
+    } else if (candidate.nodeName === '#text' && 'value' in candidate) {
+      if (!isTextOpen && candidate.value !== '') {
+        isTextOpen = true
+        index += 1
+      }
+    } else if (candidate.nodeName === '#comment') {
+      isTextOpen = false
+      index += 1
+    }
+  }
+  return { shapes, index }
+}
+
+const assertInjectionIsFaithful = (
+  page: string,
+  template: string,
+  renderedHtml: string,
+  containerId: string,
+  isScriptingEnabled: boolean,
+): void => {
+  const parsedTemplate = parse(template, {
+    scriptingEnabled: isScriptingEnabled,
+  })
+  const container = firstMatching(parsedTemplate, element =>
+    isContainerPlaceholder(element, containerId),
+  )
+  const containerParent =
+    container === undefined ? undefined : parentOf(container)
+  if (container === undefined || containerParent === undefined) {
+    // The placeholder does not survive this parser mode at all, so whatever
+    // replaced it does not either: markup before it swallowed the rest of the
+    // shell. Losing the application root for the visitors of one mode is the
+    // failure this check exists to catch, not a reason to skip it.
+    throw new Error(
+      `[foldkit] The <div id="${containerId}"></div> placeholder does not survive when a browser parses the template with scripting ${isScriptingEnabled ? 'enabled' : 'disabled'}. ` +
+        'Markup before it leaves an element open (an unterminated <textarea>, ' +
+        '<style>, or comment inside a <noscript> fallback), so the application ' +
+        'root and the rest of the shell are swallowed as its content. Ensure ' +
+        'the template is complete and balanced in both parser modes.',
+    )
+  }
+
+  const { shapes: templateShapes, index } = shapesAround(
+    containerParent,
+    container,
+  )
+  const expected = mergeAdjacentText([
+    ...templateShapes.slice(0, index),
+    ...renderedShapes(renderedHtml, isScriptingEnabled),
+    ...templateShapes.slice(index + 1),
+  ])
+
+  const parsedPage = parse(page, { scriptingEnabled: isScriptingEnabled })
+  const pageParent = elementAtPath(parsedPage, ancestorPath(containerParent))
+  const actual =
+    pageParent === undefined ? [] : mergeAdjacentText(shapesOf(pageParent))
+
+  const isFaithful =
+    expected.length === actual.length &&
+    expected.every((shape, offset) => {
+      const candidate = actual[offset]
+      return candidate !== undefined && isSameShape(shape, candidate)
+    })
+
+  if (!isFaithful) {
+    throw new Error(
+      `[foldkit] injectIntoTemplate produced a page that no longer describes the rendered markup${isScriptingEnabled ? '' : ' when a browser parses it with scripting disabled'}. ` +
+        'HTML parsing moved, dropped, or reshaped the rendered nodes once they ' +
+        `sat where the <div id="${containerId}"></div> placeholder was, which ` +
+        'happens when the placeholder is nested inside an element with a ' +
+        'restrictive content model (a <form> inside another <form>, anything ' +
+        'inside a <table> or <select>, or foreign content such as <svg> or ' +
+        '<math>). Move the placeholder to the body or another neutral container.',
+    )
+  }
+}
 
 const withAttribute = (
   attributes: ReadonlyArray<Attribute>,
@@ -213,6 +564,8 @@ export const injectIntoTemplate = (
   const mutations: Array<Mutation> = []
 
   const container = containers[0]!
+  assertNeutralInsertionContext(container, containerId)
+  assertNoDeclarativeShadowRoot(rendered.html)
   const containerLocation = container.sourceCodeLocation
   if (containerLocation != null) {
     mutations.push({
@@ -298,5 +651,20 @@ export const injectIntoTemplate = (
     }
   }
 
-  return applyMutations(template, mutations)
+  const page = applyMutations(template, mutations)
+
+  // Checked for every render, hydratable or not. Static markup is placed into a
+  // document the same way, and markup the parser drops is lost with no
+  // hydration to rebuild it.
+  for (const isScriptingEnabled of [true, false]) {
+    assertInjectionIsFaithful(
+      page,
+      template,
+      rendered.html,
+      containerId,
+      isScriptingEnabled,
+    )
+  }
+
+  return page
 }

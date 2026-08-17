@@ -72,13 +72,14 @@ describe('rendering templates', () => {
       'src/main.ts',
       'src/route.ts',
       'src/scene.test.ts',
+      'src/vite-env.d.ts',
       'tsconfig.json',
       'vite.config.ts',
     ])
 
     const packageJson = readTemplatePackageJson('rendering/ssg/package.json')
     expect(packageJson.scripts['build']).toBe(
-      'vite build --outDir dist/client && vite build --ssr src/entry.server.ts --outDir dist/server && tsx scripts/prerender.ts',
+      'export FOLDKIT_BUILD_ID="${FOLDKIT_BUILD_ID:-$(git rev-parse HEAD 2>/dev/null || echo dev)}"; vite build --outDir dist/client && vite build --ssr src/entry.server.ts --outDir dist/server && tsx scripts/prerender.ts',
     )
     expect(packageJson.scripts['preview']).toBe(
       'vite preview --outDir dist/client',
@@ -91,7 +92,7 @@ describe('rendering templates', () => {
       'export const prerenderPaths',
     )
     expect(readTemplateFile('rendering/ssg/src/entry.ts')).toContain(
-      'Runtime.hydrate(application)',
+      'Runtime.hydrate(application, { buildId: import.meta.env.FOLDKIT_BUILD_ID })',
     )
     expect(readTemplateFile('rendering/ssg/scripts/prerender.ts')).toContain(
       'Server.injectIntoTemplate',
@@ -107,13 +108,14 @@ describe('rendering templates', () => {
       'src/entry.ts',
       'src/main.ts',
       'src/scene.test.ts',
+      'src/vite-env.d.ts',
       'tsconfig.json',
       'vite.config.ts',
     ])
 
     const packageJson = readTemplatePackageJson('rendering/ssr/package.json')
     expect(packageJson.scripts['build']).toBe(
-      'vite build --outDir dist/client && vite build --ssr server/main.ts --outDir dist/server',
+      'export FOLDKIT_BUILD_ID="${FOLDKIT_BUILD_ID:-$(git rev-parse HEAD 2>/dev/null || echo dev)}"; vite build --outDir dist/client && vite build --ssr server/main.ts --outDir dist/server',
     )
     expect(packageJson.scripts['start']).toBe('node dist/server/main.js')
 
@@ -124,7 +126,7 @@ describe('rendering templates', () => {
       'flags: flagsForRequest(',
     )
     expect(readTemplateFile('rendering/ssr/src/entry.ts')).toContain(
-      'Runtime.hydrate(application)',
+      'Runtime.hydrate(application, { buildId: import.meta.env.FOLDKIT_BUILD_ID })',
     )
     expect(readTemplateFile('rendering/ssr/server/main.ts')).toContain(
       'HttpServer.serve(handler)',

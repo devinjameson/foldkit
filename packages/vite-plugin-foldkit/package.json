@@ -24,7 +24,7 @@
   },
   "peerDependencies": {
     "effect": "4.0.0-rc.109",
-    "foldkit": "workspace:^0",
+    "foldkit": ">=0.148.0",
     "vite": "^7.0.0 || ^8.0.0"
   },
   "dependencies": {

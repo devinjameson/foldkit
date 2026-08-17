@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build --outDir dist/client && vite build --ssr server/main.ts --outDir dist/server",
+    "build": "export FOLDKIT_BUILD_ID=\"${FOLDKIT_BUILD_ID:-$(git rev-parse HEAD 2>/dev/null || echo dev)}\"; vite build --outDir dist/client && vite build --ssr server/main.ts --outDir dist/server",
     "start": "node dist/server/main.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"

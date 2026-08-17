@@ -11,6 +11,7 @@ import {
 import type { DefaultTreeAdapterMap } from 'parse5'
 import { parseFragment } from 'parse5'
 
+import { HYDRATION_BUILD_ATTRIBUTE } from '../../buildToken.js'
 import { beginRender, createBoundaryRegistry } from '../../html/boundary.js'
 import {
   type Document,
@@ -27,6 +28,7 @@ import {
   FOLDKIT_APP_ATTRIBUTE,
   FOLDKIT_FLAGS_ATTRIBUTE,
 } from '../../hydrationMarker.js'
+import { hasTrustedInnerHtml } from '../../propertyProvenance.js'
 import type { VNode } from '../../snabbdom/vnode.js'
 import { tagNameFromSelector } from '../../tagName.js'
 import { Url, fromString } from '../../url/index.js'
@@ -104,7 +106,7 @@ const normalizeVnodeChildren = (vnode: VNode): ReadonlyArray<VnodeChild> => {
 }
 
 const normalizeParsedChildren = (
-  node: Parse5Element,
+  node: Readonly<{ childNodes: ReadonlyArray<Parse5ChildNode> }>,
 ): ReadonlyArray<ParsedChild> => {
   const items: Array<ParsedChild> = []
   let text = ''
@@ -187,9 +189,11 @@ const structureMismatch = (parsed: Parse5Element): Error => {
 // foster-parented text, which hydration would otherwise see as a whole-subtree
 // mismatch.
 const assertStructureMatches = (parsed: Parse5Element, vnode: VNode): void => {
-  // InnerHTML owns an opaque, parser-produced subtree that the vnode does not
-  // model as children, so it is left unwalked.
-  if (vnode.data?.props?.['innerHTML'] !== undefined) {
+  // `h.InnerHTML` owns an opaque, parser-produced subtree that the vnode does
+  // not model as children, so it is left unwalked. A property that merely
+  // carries the name is not that: the serializer emits the vnode's own children
+  // for it, so they are walked like any others.
+  if (hasTrustedInnerHtml(vnode.data?.props)) {
     return
   }
   const parsedChildren = normalizeParsedChildren(parsed)
@@ -261,6 +265,184 @@ const buildDivFragmentContext = (): Parse5Element => {
   return onlyChild
 }
 const DIV_FRAGMENT_CONTEXT = buildDivFragmentContext()
+
+// After serialization, confirm the root closes cleanly. An unterminated element
+// inside the root (an unclosed `<textarea>`, `<script>`, `<style>`, comment, or
+// `<plaintext>`, typically from an incomplete `InnerHTML` fragment) does not end
+// at the root's own close tag, so it would swallow the Flags payload, the client
+// entry, and everything after the root when the served document is parsed. The
+// per-element structure walk skips `InnerHTML` subtrees, so this parses the root
+// markup with a trailing sentinel comment and requires the sentinel to survive
+// as a top-level sibling: if the root consumed it, so would the rest of the page.
+//
+// NOTE: the parse runs twice, because `<noscript>` has two parser modes and the
+// document has to survive both. With scripting enabled, the state a hydrating
+// visitor's browser is in, noscript content is raw text. With scripting
+// disabled, the state noscript exists to serve, the same content parses as HTML,
+// so an unterminated element inside a noscript fallback swallows the rest of the
+// page for exactly the visitors the fallback was written for. Both modes are
+// checked, so a fallback that frames cleanly for one visitor cannot break the
+// document for the other.
+const TRAILING_SENTINEL_DATA = 'foldkit-trailing-boundary'
+const TRAILING_SENTINEL = `<!--${TRAILING_SENTINEL_DATA}-->`
+
+const closesCleanly = (html: string, isScriptingEnabled: boolean): boolean => {
+  const fragment = parseFragment(
+    DIV_FRAGMENT_CONTEXT,
+    html + TRAILING_SENTINEL,
+    {
+      scriptingEnabled: isScriptingEnabled,
+    },
+  )
+  const significant = fragment.childNodes.filter(node => !isIgnorableText(node))
+  const last = significant[significant.length - 1]
+  return (
+    last !== undefined &&
+    last.nodeName === '#comment' &&
+    'data' in last &&
+    last.data === TRAILING_SENTINEL_DATA
+  )
+}
+
+// Framing is not the only thing `<noscript>` can break. An element the fallback
+// leaves open does not have to reach the end of the document to do damage: with
+// scripting disabled an unclosed `<form>` or `<table>` stops at the root's close
+// tag, so the document still frames cleanly, while everything between it and
+// that close tag is pulled inside the fallback and disappears from the page a
+// visitor without JavaScript sees.
+//
+// The check is a comparison rather than a scan, because the two parser modes
+// have to agree on everything except the one place they are meant to differ.
+// The serialized root is parsed both ways and the trees compared, descending
+// into every element except `<noscript>`, whose content is raw text in one mode
+// and markup in the other by design. What must match is where each `<noscript>`
+// sits and what follows it. Comparing the parsed output rather than the declared
+// vnodes also covers a `<noscript>` that arrives inside an `h.InnerHTML`
+// fragment, which no walk over the view's own children can see.
+// `<noscript>` means something to the parser only in the HTML namespace. Inside
+// SVG or MathML an element of that name is an ordinary foreign element whose
+// content parses the same way in both modes, so skipping it there would leave a
+// real HTML `<noscript>` nested below it unchecked. `<template>` holds its
+// children in a separate content fragment rather than in `childNodes`, so its
+// content is traversed explicitly; a fallback inside one is invisible otherwise,
+// and declarative shadow DOM makes that content live in the page.
+const isHtmlNoscript = (element: Parse5Element): boolean =>
+  element.tagName.toLowerCase() === 'noscript' &&
+  element.namespaceURI === HTML_NAMESPACE
+
+const traversableContent = (
+  element: Parse5Element,
+): Readonly<{ childNodes: ReadonlyArray<Parse5ChildNode> }> => {
+  if (
+    element.tagName.toLowerCase() === 'template' &&
+    element.namespaceURI === HTML_NAMESPACE &&
+    'content' in element
+  ) {
+    const content = element.content
+    if (
+      Predicate.isObject(content) &&
+      Predicate.hasProperty(content, 'childNodes')
+    ) {
+      /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+      return content as Readonly<{ childNodes: ReadonlyArray<Parse5ChildNode> }>
+    }
+  }
+  return element
+}
+
+const parsedChildrenAgree = (
+  scripted: Readonly<{ childNodes: ReadonlyArray<Parse5ChildNode> }>,
+  unscripted: Readonly<{ childNodes: ReadonlyArray<Parse5ChildNode> }>,
+): boolean => {
+  const scriptedChildren = normalizeParsedChildren(scripted)
+  const unscriptedChildren = normalizeParsedChildren(unscripted)
+  if (scriptedChildren.length !== unscriptedChildren.length) {
+    return false
+  }
+  for (const [scriptedChild, unscriptedChild] of Array_.zip(
+    scriptedChildren,
+    unscriptedChildren,
+  )) {
+    if (scriptedChild.kind !== unscriptedChild.kind) {
+      return false
+    }
+    if (
+      scriptedChild.kind === 'Element' &&
+      unscriptedChild.kind === 'Element'
+    ) {
+      const tagName = scriptedChild.element.tagName.toLowerCase()
+      if (
+        tagName !== unscriptedChild.element.tagName.toLowerCase() ||
+        scriptedChild.element.namespaceURI !==
+          unscriptedChild.element.namespaceURI
+      ) {
+        return false
+      }
+      if (isHtmlNoscript(scriptedChild.element)) {
+        continue
+      }
+      if (
+        !parsedChildrenAgree(
+          traversableContent(scriptedChild.element),
+          traversableContent(unscriptedChild.element),
+        )
+      ) {
+        return false
+      }
+    } else if (
+      scriptedChild.kind === 'Text' &&
+      unscriptedChild.kind === 'Text'
+    ) {
+      if (scriptedChild.text !== unscriptedChild.text) {
+        return false
+      }
+    } else if (
+      scriptedChild.kind === 'Comment' &&
+      unscriptedChild.kind === 'Comment'
+    ) {
+      if (scriptedChild.text !== unscriptedChild.text) {
+        return false
+      }
+    }
+  }
+  return true
+}
+
+const assertNoscriptModesAgree = (html: string): void => {
+  const scripted = parseFragment(DIV_FRAGMENT_CONTEXT, html, {
+    scriptingEnabled: true,
+  })
+  const unscripted = parseFragment(DIV_FRAGMENT_CONTEXT, html, {
+    scriptingEnabled: false,
+  })
+  if (parsedChildrenAgree(scripted, unscripted)) {
+    return
+  }
+  throw new Error(
+    '[foldkit] <noscript> content changes the rest of the page when a browser ' +
+      'parses it with scripting disabled. Its content is raw text while ' +
+      'scripting is enabled and ordinary HTML when it is not, so fallback ' +
+      'markup that leaves an element open (a <form>, <table>, <textarea>, ' +
+      '<style>, or comment) pulls the markup that follows the <noscript> ' +
+      'inside it, and the visitors the fallback was written for never see it. ' +
+      'Ensure the fallback is complete and balanced.',
+  )
+}
+
+const assertRootClosesCleanly = (html: string): void => {
+  if (closesCleanly(html, true) && closesCleanly(html, false)) {
+    return
+  }
+  throw new Error(
+    '[foldkit] The rendered root does not close cleanly. An unterminated ' +
+      'element (an unclosed <textarea>, <script>, <style>, comment, or ' +
+      '<plaintext>, typically inside an InnerHTML fragment) would swallow the ' +
+      'Flags payload, the client entry, and the rest of the document when the ' +
+      'page is parsed. The check covers <noscript> fallback markup with ' +
+      'scripting disabled too, where the content parses as HTML rather than as ' +
+      'raw text. Ensure InnerHTML fragments are complete and balanced.',
+  )
+}
 
 // After serialization, parse the stamped root markup with the same HTML parser
 // a browser uses and require it to describe exactly one element: the stamped
@@ -384,11 +566,25 @@ export class InvalidHydrationRoot extends Data.TaggedError(
   rootKind: 'Empty' | 'Text' | 'Comment'
 }> {}
 
+/** Failure of a hydratable render that was given no build id. Hydration
+ * compares the id on the served root with the client's own to refuse a page
+ * from another deployment, so a render that carries none has no such
+ * protection. Supply one from a value the deployment already has, such as a
+ * commit or a release tag, through `@foldkit/vite-plugin`'s `buildId` option or
+ * the `FOLDKIT_BUILD_ID` environment variable, and pass
+ * `import.meta.env.FOLDKIT_BUILD_ID` to `renderToString` and `Runtime.hydrate`.
+ * A render that nothing will hydrate (`isHydratable: false`) needs none.
+ *
+ * @experimental Ships from `foldkit/experimental/server`; expect breaking changes while the API settles.
+ */
+export class MissingBuildId extends Data.TaggedError('MissingBuildId')<{}> {}
+
 /** Union of the failures {@link renderToString} can produce.
  *
  * @experimental Ships from `foldkit/experimental/server`; expect breaking changes while the API settles.
  */
 export type RenderError =
+  | MissingBuildId
   | InvalidUrl
   | FlagsEncodeError
   | SerializationError
@@ -447,6 +643,14 @@ export type ApplicationConfig<Model, Message> = Readonly<{
  */
 export type RenderOptions = Readonly<{
   runtimeId?: string
+  /**
+   * The deployment this render belongs to, stamped on the root so hydration can
+   * refuse a page from a different one before adopting its DOM. Required for a
+   * hydratable render. Pass `import.meta.env.FOLDKIT_BUILD_ID`, which
+   * `@foldkit/vite-plugin` fills from its `buildId` option or the
+   * `FOLDKIT_BUILD_ID` environment variable.
+   */
+  buildId?: string | undefined
   /**
    * Whether the output carries the hydration contract: the
    * `data-foldkit-app` root stamp and, for Flags applications, the Flags
@@ -688,6 +892,21 @@ export function renderToString(
     const FlagsCodec = config.Flags
     const isHydratable = options?.isHydratable ?? true
 
+    // A hydratable render must say which deployment it came from. Deriving it
+    // here is not possible: the render cannot see the sources, the
+    // configuration, or the dependencies that decide what the view produced, so
+    // an id it invented would either differ between the client and server
+    // builds of one deployment or be shared by two that render differently.
+    // Refusing is the only honest answer, and it names what to supply.
+    const configuredBuildId = options?.buildId
+    if (
+      isHydratable &&
+      (configuredBuildId === undefined || configuredBuildId === '')
+    ) {
+      return yield* Effect.fail(new MissingBuildId())
+    }
+    const buildId = configuredBuildId ?? ''
+
     const url = hasRouting ? yield* parseUrl(options?.url ?? '') : undefined
 
     const flagsHandoff =
@@ -715,12 +934,25 @@ export function renderToString(
 
     const rootHtml = yield* Effect.try({
       try: () => {
+        // The build id rides on the root so hydration can refuse a page from
+        // another deployment before it adopts any of its DOM.
         const html = serializeHtml(
           nextDocument.body,
           isHydratable
-            ? { rootAttributes: { [FOLDKIT_APP_ATTRIBUTE]: runtimeId } }
+            ? {
+                rootAttributes: {
+                  [FOLDKIT_APP_ATTRIBUTE]: runtimeId,
+                  [HYDRATION_BUILD_ATTRIBUTE]: buildId,
+                },
+                emitHydrationMarkers: true,
+              }
             : {},
         )
+        // Framing is checked for every render, hydratable or not. Static markup
+        // is placed into a document the same way, so a root that does not close
+        // cleanly swallows whatever the host writes after it either way.
+        assertRootClosesCleanly(html)
+        assertNoscriptModesAgree(html)
         if (isHydratable && nextDocument.body !== null) {
           assertSingleStampedRoot(html, runtimeId, nextDocument.body)
         }

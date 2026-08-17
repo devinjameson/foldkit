@@ -26,8 +26,10 @@ test.describe('ssr example', () => {
   test('hydrates the server DOM and replays the server flags', async ({
     page,
   }) => {
+    await Page.captureServerRoot(page)
     await page.goto('/', { waitUntil: 'networkidle' })
 
+    await Page.assertAdoptedServerRoot(page)
     await expect(page.locator('#provenance')).toContainText(
       'Rendered on the Server',
     )
@@ -65,5 +67,107 @@ test.describe('ssr example', () => {
 
     expect(response.status()).toBe(200)
     expect(await response.text()).toContain('data-foldkit-app')
+  })
+
+  // A browser fetches scripts and stylesheets with `Accept: */*`, which accepts
+  // HTML. Answering a miss with the app shell at 200 turns a stale deployment
+  // into a blank page instead of the 404 it is.
+  test('returns 404 rather than the app shell for a missing asset', async ({
+    request,
+  }) => {
+    for (const path of [
+      '/assets/stale-hash.js',
+      '/assets/stale-hash.css',
+      '/assets/stale-hash.js.map',
+      '/assets/missing.png',
+    ]) {
+      const response = await request.get(path, {
+        headers: { accept: '*/*' },
+      })
+
+      expect(response.status(), path).toBe(404)
+      expect(await response.text()).not.toContain('data-foldkit-app')
+    }
+  })
+
+  test('returns 404 for a missing asset fetched as a subresource', async ({
+    request,
+  }) => {
+    const response = await request.get('/deep/stale-chunk', {
+      headers: { accept: '*/*', 'sec-fetch-dest': 'script' },
+    })
+
+    expect(response.status()).toBe(404)
+  })
+
+  // The same extensionless URL answers 404 to a script request and HTML to a
+  // navigation, so the refusal must declare the header it turned on. Without
+  // that, a shared cache could store the 404 a cross-site script request
+  // produced and serve it for the real page.
+  test('declares Sec-Fetch-Dest on a refusal that depends on it', async ({
+    request,
+  }) => {
+    const asScript = await request.get('/deep/stale-chunk', {
+      headers: { accept: '*/*', 'sec-fetch-dest': 'script' },
+    })
+    expect(asScript.status()).toBe(404)
+    expect((asScript.headers()['vary'] ?? '').toLowerCase()).toContain(
+      'sec-fetch-dest',
+    )
+
+    const asDocument = await request.get('/deep/stale-chunk', {
+      headers: { accept: 'text/html', 'sec-fetch-dest': 'document' },
+    })
+    expect(asDocument.status()).toBe(200)
+    expect(await asDocument.text()).toContain('data-foldkit-app')
+  })
+
+  test('does not vary a refusal the path alone settles', async ({
+    request,
+  }) => {
+    const response = await request.get('/assets/stale-hash.js', {
+      headers: { accept: '*/*', 'sec-fetch-dest': 'script' },
+    })
+
+    expect(response.status()).toBe(404)
+    expect((response.headers()['vary'] ?? '').toLowerCase()).not.toContain(
+      'sec-fetch-dest',
+    )
+  })
+
+  test('returns 404 for a missing asset requested with HEAD', async ({
+    request,
+  }) => {
+    const response = await request.head('/assets/stale-hash.js', {
+      headers: { accept: '*/*' },
+    })
+
+    expect(response.status()).toBe(404)
+  })
+
+  test('still renders a deep route that accepts anything', async ({
+    request,
+  }) => {
+    const response = await request.get('/', {
+      headers: { accept: '*/*' },
+    })
+
+    expect(response.status()).toBe(200)
+    expect(await response.text()).toContain('data-foldkit-app')
+  })
+
+  // The request target is not a URL: `//evil.example/` resolves against the
+  // host origin to `http://evil.example/`. The host refuses it rather than
+  // handing the entry an origin the client chose.
+  test('refuses a request target that names another origin', async ({
+    baseURL,
+  }) => {
+    const response = await Page.requestWithTarget(
+      baseURL ?? '',
+      '//evil.example/',
+    )
+
+    expect(response.status).toBe(400)
+    expect(response.body).not.toContain('data-foldkit-app')
   })
 })

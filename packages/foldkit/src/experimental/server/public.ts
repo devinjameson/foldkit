@@ -9,15 +9,19 @@ export {
   Responded,
   SerializationError,
   acceptsHtml,
+  classifyRequest,
   injectIntoTemplate,
   renderToString,
+  resolveRequestUrl,
   resolvesToIndexHtml,
   toResponse,
+  varyWith,
   varyWithAccept,
 } from './index.js'
 
 export type {
   InjectIntoTemplateOptions,
+  RequestClassification,
   ResponseOptions,
   RenderedApplication,
   RenderOptions,

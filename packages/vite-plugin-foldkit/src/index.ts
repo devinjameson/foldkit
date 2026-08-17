@@ -42,6 +42,7 @@ import type {
 } from 'vite'
 import { type WebSocket, WebSocketServer } from 'ws'
 
+import { foldkitBuildToken } from './buildToken.js'
 import { devToolsOverlayPlugin } from './devToolsOverlay.js'
 import { type FoldkitSsrOptions, foldkitSsr } from './ssr.js'
 import { foldkitViewIdentity } from './viewIdentity.js'
@@ -70,6 +71,19 @@ export type FoldkitPluginOptions = Readonly<{
    * default), the dev server serves the client entry only.
    */
   ssr?: FoldkitSsrOptions
+  /**
+   * The deployment this build belongs to, compiled into application code as
+   * `import.meta.env.FOLDKIT_BUILD_ID` for the entries to pass to
+   * `renderToString` and `Runtime.hydrate`. Hydration compares it against the id
+   * the server stamped and rebuilds rather than adopting a page from another
+   * deployment.
+   *
+   * Defaults to the `FOLDKIT_BUILD_ID` environment variable. Use a value the
+   * deployment already has, such as a commit or a release tag, and give the
+   * client build and the server build the same one. It is published in the
+   * page, so it must not be a secret.
+   */
+  buildId?: string
 }>
 
 // NOTE: Vite's dep optimizer scans the consumer's source for `effect`
@@ -731,8 +745,14 @@ export const foldkit = (options: FoldkitPluginOptions = {}): Array<Plugin> => {
   }
 
   return options.ssr === undefined
-    ? [foldkitViewIdentity(), devToolsOverlayPlugin(), hmrPlugin]
+    ? [
+        foldkitBuildToken(options.buildId),
+        foldkitViewIdentity(),
+        devToolsOverlayPlugin(),
+        hmrPlugin,
+      ]
     : [
+        foldkitBuildToken(options.buildId),
         foldkitViewIdentity(),
         devToolsOverlayPlugin(),
         hmrPlugin,
