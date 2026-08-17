@@ -7,7 +7,6 @@ import {
   Flags,
   Model,
   devTracerLayer,
-  flags,
   init,
   managedResources,
   subscriptions,
@@ -31,7 +30,6 @@ const application = Runtime.makeApplication<
 >({
   Model,
   Flags,
-  flags,
   init,
   update,
   view,
@@ -52,4 +50,4 @@ const application = Runtime.makeApplication<
   },
 })
 
-Runtime.run(application)
+Runtime.hydrate(application)

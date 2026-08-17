@@ -77,6 +77,8 @@ jobs:
 
       - name: Prerender
         run: pnpm --filter website prerender
+        env:
+          FOLDKIT_GITHUB_STAR_COUNT: ${{ steps.github-stars.outputs.count }}
 
       - name: Prepare Vercel output
         run: |

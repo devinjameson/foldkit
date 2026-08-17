@@ -71,7 +71,7 @@ const landingHeaderView = (model: Model, h: HtmlBuilder<Message>) =>
           ),
           h.div(
             [h.Class('hidden md:flex')],
-            [themeSelector(model.themePreference, h)],
+            [themeSelector(model.maybeThemePreference, h)],
           ),
           h.a(
             [
@@ -213,13 +213,13 @@ const chromeRecommendedHint: Html = ih.p(
   ['Requires a Chromium browser'],
 )
 
-const withChromeRecommendedHint = (menu: Html, isChromium: boolean): Html =>
-  isChromium
-    ? menu
-    : ih.div(
+const withChromeRecommendedHint = (menu: Html, isShowingHint: boolean): Html =>
+  isShowingHint
+    ? ih.div(
         [ih.Class('flex flex-col items-start gap-1')],
         [menu, chromeRecommendedHint],
       )
+    : menu
 
 const playgroundItemContent = (meta: ExampleMeta): Html =>
   ih.div(
@@ -315,7 +315,7 @@ export const landingView = (model: Model, h: HtmlBuilder<Message>) => {
       examples.map(example => example.slug),
       h,
     ),
-    model.isChromium,
+    Option.contains(model.maybeIsChromium, false),
   )
 
   const buttonLabelFor = (tab: DemoTab.Tab): string =>

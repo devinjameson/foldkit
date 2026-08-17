@@ -1,12 +1,16 @@
+import { readFileSync } from 'node:fs'
 import { expect } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
 
+import { Scaffold } from '../rendering.js'
 import {
   buildUnresolvedDeps,
   buildUnresolvedDevDeps,
+  dependencyExample,
   devCommand,
   installCommand,
+  scaffoldDevDependencies,
 } from './packages.js'
 
 describe('buildUnresolvedDeps', () => {
@@ -32,12 +36,15 @@ describe('buildUnresolvedDeps', () => {
 
 describe('buildUnresolvedDevDeps', () => {
   it('merges template tooling with the example, letting concrete example versions win over the template latest marker', () => {
-    const result = buildUnresolvedDevDeps({
-      prettier: '^3.8.4',
-      typescript: '^6.0.3',
-      vite: '^8.0.16',
-      '@foldkit/vite-plugin': 'workspace:*',
-    })
+    const result = buildUnresolvedDevDeps(
+      {
+        prettier: '^3.8.4',
+        typescript: '^6.0.3',
+        vite: '^8.0.16',
+        '@foldkit/vite-plugin': 'workspace:*',
+      },
+      [],
+    )
 
     expect(result).toEqual({
       '@foldkit/devtools': { _tag: 'Latest' },
@@ -52,6 +59,33 @@ describe('buildUnresolvedDevDeps', () => {
       typescript: { _tag: 'Keep', version: '^6.0.3' },
       vite: { _tag: 'Keep', version: '^8.0.16' },
     })
+  })
+
+  it('marks extra scaffold devDependencies for latest-version resolution', () => {
+    const result = buildUnresolvedDevDeps({ tsx: '^4.22.4' }, ['@types/node'])
+
+    expect(result['@types/node']).toEqual({ _tag: 'Latest' })
+    expect(result['tsx']).toEqual({ _tag: 'Keep', version: '^4.22.4' })
+  })
+})
+
+describe('dependencyExample', () => {
+  it('reads spa dependencies from the chosen example and server-rendered dependencies from the reference apps', () => {
+    expect(dependencyExample(Scaffold.Spa({ example: 'counter' }))).toBe(
+      'counter',
+    )
+    expect(dependencyExample(Scaffold.Ssg())).toBe('ssg')
+    expect(dependencyExample(Scaffold.Ssr())).toBe('ssr')
+  })
+})
+
+describe('scaffoldDevDependencies', () => {
+  it('adds @types/node for the server-rendered scaffolds only', () => {
+    expect(
+      scaffoldDevDependencies(Scaffold.Spa({ example: 'counter' })),
+    ).toEqual([])
+    expect(scaffoldDevDependencies(Scaffold.Ssg())).toEqual(['@types/node'])
+    expect(scaffoldDevDependencies(Scaffold.Ssr())).toEqual(['@types/node'])
   })
 })
 
@@ -71,4 +105,38 @@ describe('devCommand', () => {
     expect(devCommand('yarn')).toBe('yarn dev')
     expect(devCommand('bun')).toBe('bun dev')
   })
+})
+
+// A server-rendered scaffold derives its production `dependencies` from the
+// reference example's manifest (buildUnresolvedDeps keeps every @foldkit/*
+// workspace dependency), so @foldkit/devtools must stay in devDependencies
+// there. In production `dependencies` it would make `vite build` inject the
+// DevTools overlay into the shipped client template, and every SSR response and
+// prerendered page would carry it.
+describe('server-rendered example manifests', () => {
+  const readManifest = (
+    example: string,
+  ): Readonly<{
+    dependencies?: Record<string, string>
+    devDependencies?: Record<string, string>
+  }> =>
+    JSON.parse(
+      readFileSync(
+        new URL(
+          `../../../../examples/${example}/package.json`,
+          import.meta.url,
+        ),
+        'utf-8',
+      ),
+    )
+
+  for (const example of ['ssr', 'ssg']) {
+    it(`keeps @foldkit/devtools out of production dependencies (${example})`, () => {
+      const manifest = readManifest(example)
+      expect(manifest.dependencies?.['@foldkit/devtools']).toBeUndefined()
+      expect(manifest.devDependencies?.['@foldkit/devtools']).toBe(
+        'workspace:*',
+      )
+    })
+  }
 })

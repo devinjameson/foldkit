@@ -69,6 +69,8 @@
     "dev:example:ui-showcase": "pnpm --filter ui-showcase dev",
     "dev:example:personal-blog": "pnpm --filter personal-blog-example dev",
     "dev:example:view-transitions": "pnpm --filter view-transitions-example dev",
+    "dev:example:ssg": "pnpm --filter ssg-example dev",
+    "dev:example:ssr": "pnpm --filter ssr-example dev",
     "changeset": "changeset",
     "version-packages": "changeset version && tsx scripts/reset-peer-deps.ts && pnpm install --no-frozen-lockfile",
     "release": "pnpm build:packages && changeset publish"
@@ -78,6 +80,7 @@
     "@foldkit/oxlint-plugin": "workspace:*",
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
     "@types/node": "^25.9.3",
+    "effect": "4.0.0-rc.109",
     "knip": "^6.12.2",
     "madge": "^8.0.0",
     "oxlint": "^1.70.0",

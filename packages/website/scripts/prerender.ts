@@ -2,24 +2,24 @@ import {
   Array,
   Console,
   DateTime,
-  Deferred,
   Effect,
   Match as M,
   Option,
   Record,
   Schema as S,
-  Stream,
   String as String_,
   pipe,
 } from 'effect'
 import { FileSystem } from 'effect'
-import { ChildProcess } from 'effect/unstable/process'
+import { Server } from 'foldkit/experimental'
+import { Window } from 'happy-dom'
 import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { type Browser, chromium } from 'playwright'
+import { fileURLToPath, pathToFileURL } from 'node:url'
+import { chromium } from 'playwright'
 
 import { NodeRuntime, NodeServices } from '@effect/platform-node'
 
+import type * as ServerEntry from '../src/entry.server'
 import {
   type ApiModule,
   moduleNameToSlug,
@@ -65,6 +65,7 @@ import {
   CoreRenderRoute,
   CoreResourcesRoute,
   CoreRuntimeRoute,
+  CoreServerRenderingRoute,
   CoreSlowWarningsRoute,
   CoreSubmodelRoute,
   CoreSubscriptionsRoute,
@@ -84,6 +85,7 @@ import {
   PatternsInformingSubmodelsRoute,
   PatternsSubscriptionOrganizationRoute,
   PerformanceRoute,
+  PlaygroundRoute,
   ProjectOrganizationRoute,
   ReactComparisonRoute,
   RoadmapRoute,
@@ -157,6 +159,7 @@ import {
   coreRenderRouter,
   coreResourcesRouter,
   coreRuntimeRouter,
+  coreServerRenderingRouter,
   coreSlowWarningsRouter,
   coreSubmodelRouter,
   coreSubscriptionsRouter,
@@ -223,7 +226,7 @@ import {
   type LlmsIndexEntry,
   buildLlmsFull,
   buildLlmsIndex,
-  extractPageMarkdown,
+  extractMarkdownFromRenderedDocument,
   shouldExportMarkdown,
   urlPathToMarkdownPath,
 } from './markdown'
@@ -277,6 +280,7 @@ export const STATIC_ROUTES: ReadonlyArray<AppRoute> = [
   CoreHttpRoute(),
   CoreCanvasRoute(),
   CoreRuntimeRoute(),
+  CoreServerRenderingRoute(),
   CoreResourcesRoute(),
   CoreManagedResourcesRoute(),
   CoreDevToolsRoute(),
@@ -373,6 +377,7 @@ export const routeToUrlPath = (route: AppRoute): string =>
       CoreHttp: () => coreHttpRouter(),
       CoreCanvas: () => coreCanvasRouter(),
       CoreRuntime: () => coreRuntimeRouter(),
+      CoreServerRendering: () => coreServerRenderingRouter(),
       CoreResources: () => coreResourcesRouter(),
       CoreManagedResources: () => coreManagedResourcesRouter(),
       CoreDevTools: () => coreDevToolsRouter(),
@@ -433,30 +438,6 @@ export const routeToOutputPath = (route: AppRoute): string => {
   return urlPath === '/' ? 'index.html' : `${urlPath.slice(1)}/index.html`
 }
 
-const ROOT_PLACEHOLDER = '<div id="root"></div>'
-
-export const injectHtml = (baseHtml: string, renderedHtml: string): string =>
-  baseHtml.replace(ROOT_PLACEHOLDER, `<div id="root">${renderedHtml}</div>`)
-
-// PLAYGROUND SHELL
-
-// NOTE: Playground routes are deliberately excluded from STATIC_ROUTES: the
-// WebContainer editor can't be statically rendered, and every entry into it is
-// a full document load for cross-origin isolation. With no file of its own,
-// Vercel's SPA catch-all serves the prerendered home page for
-// `/playground/<slug>`, so the landing view flashes before the app boots and
-// swaps in the editor. We prerender this neutral shell once and route
-// `/playground/*` to it instead (see deploy-website.yml and the preview
-// fallback in vite.config.ts). The markup mirrors the booting spinner in
-// `src/page/playground.ts`; every class here must already appear in app source
-// because Tailwind scans source, not this injected string.
-const PLAYGROUND_SHELL_MARKUP = `<div class="flex flex-col h-screen bg-white dark:bg-gray-900"><div class="flex-1 flex items-center justify-center px-6 py-20 text-center"><div class="max-w-sm flex flex-col items-center"><div class="w-8 h-8 mb-6 rounded-full border-2 border-gray-300 dark:border-gray-700 border-t-gray-900 dark:border-t-gray-100 animate-spin" role="status" aria-label="Loading"></div><div class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Starting playground…</div><div class="text-sm text-gray-600 dark:text-gray-400">Hang tight. The preview will appear automatically. First load takes about 30 seconds.</div></div></div></div>`
-
-const PLAYGROUND_SHELL_OUTPUT_PATH = 'playground/index.html'
-
-export const buildPlaygroundShellHtml = (baseHtml: string): string =>
-  injectHtml(baseHtml, PLAYGROUND_SHELL_MARKUP)
-
 export const enumerateRoutes = (
   apiModuleSlugs: ReadonlyArray<string>,
 ): ReadonlyArray<AppRoute> =>
@@ -475,102 +456,88 @@ const DIST_DIR = resolve(WEBSITE_DIR, 'dist')
 const API_JSON_PATH = resolve(WEBSITE_DIR, 'src/generated/api.json')
 const API_UI_JSON_PATH = resolve(WEBSITE_DIR, 'src/generated/api-ui.json')
 
-// SERVICES
+// SERVER ENTRY
 
-const PREVIEW_PORT = 4173
-const PREVIEW_BASE_URL = `http://localhost:${PREVIEW_PORT}`
+const SERVER_ENTRY_PATH = resolve(WEBSITE_DIR, 'dist-server/entry.server.js')
 
-const previewServerResource = Effect.acquireRelease(
-  Effect.gen(function* () {
-    const cmd = ChildProcess.make(
-      'pnpm',
-      [
-        'exec',
-        'vite',
-        'preview',
-        '--port',
-        String(PREVIEW_PORT),
-        '--strictPort',
-      ],
-      { cwd: WEBSITE_DIR },
-    )
-
-    const serverProcess = yield* cmd
-    const ready = yield* Deferred.make<void>()
-
-    const checkLine = (line: string): Effect.Effect<void> =>
-      line.includes('localhost')
-        ? Deferred.succeed(ready, undefined).pipe(Effect.asVoid)
-        : Effect.void
-
-    yield* serverProcess.stdout.pipe(
-      Stream.decodeText({ encoding: 'utf-8' }),
-      Stream.splitLines,
-      Stream.runForEach(checkLine),
-      Effect.forkDetach,
-    )
-
-    yield* Deferred.await(ready)
-    return serverProcess
-  }),
-  serverProcess => Effect.ignore(serverProcess.kill()),
-).pipe(Effect.asVoid)
-
-const playwrightBrowserResource = Effect.acquireRelease(
-  Effect.tryPromise(() => chromium.launch({ headless: true })),
-  browser => Effect.promise(() => browser.close()),
+// NOTE: the app module graph uses Vite-only specifiers (`virtual:*`, `.md`,
+// `?raw`, `import.meta.glob`), so it cannot be imported by tsx directly. The
+// `preprerender` script builds `src/entry.server.ts` with `vite build --ssr`
+// first, and this dynamic import loads that bundle.
+const loadServerEntry: Effect.Effect<typeof ServerEntry> = Effect.promise(
+  () => import(pathToFileURL(SERVER_ENTRY_PATH).href),
 )
 
-type CapturedPage = Readonly<{ html: string; markdown: string }>
+type RenderedPage = Readonly<{
+  application: Server.RenderedApplication
+  markdown: string
+}>
 
-// NOTE: tsx/esbuild wraps named arrow functions with a `__name(fn, "name")`
-// helper to preserve debug names. When Playwright ships our extraction
-// function to the page via `fn.toString()`, the body still references
-// `__name`, which doesn't exist in browser scope. The no-op polyfill keeps
-// `page.evaluate` calls from crashing without touching the foldkit bundle
-// (Vite scopes its own `__name` per module, so the global shim is never
-// reached by app code).
-const PAGE_INIT_SCRIPT = `
-  Object.defineProperty(window, "__FOLDKIT_PRERENDER__", {
-    value: true,
-    writable: false,
-  });
-  window.__name = (target) => target;
-`
+const API_SECTION_MARKER = 'data-pagefind-meta="section"'
 
-const captureRoutePage = (browser: Browser, url: string, route: AppRoute) =>
+const extractMarkdownFromHtml = (html: string): Effect.Effect<string> =>
   Effect.acquireUseRelease(
-    Effect.tryPromise(() => browser.newPage()),
-    page =>
-      Effect.gen(function* () {
-        yield* Effect.tryPromise(() => page.addInitScript(PAGE_INIT_SCRIPT))
-        yield* Effect.tryPromise(() => page.goto(url))
-        yield* Effect.tryPromise(() =>
-          page.waitForFunction(() => {
-            const firstChild = document.body.firstElementChild
-            return (
-              firstChild !== null &&
-              firstChild.id !== 'root' &&
-              firstChild.children.length > 0
-            )
-          }),
-        )
-        if (route._tag === 'ApiModule') {
-          yield* Effect.tryPromise(() =>
-            page.waitForSelector('h1[data-pagefind-meta="section"]'),
-          )
-        }
-        const html = yield* Effect.tryPromise(() =>
-          page.evaluate(() => document.body.firstElementChild?.outerHTML ?? ''),
-        )
-        const markdown = shouldExportMarkdown(route)
-          ? yield* extractPageMarkdown(page)
-          : ''
-        const captured: CapturedPage = { html, markdown }
-        return captured
+    Effect.sync(() => new Window()),
+    window =>
+      Effect.sync(() => {
+        window.document.body.innerHTML = html
+        /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+        const renderedDocument = window.document as unknown as Document
+        return extractMarkdownFromRenderedDocument(renderedDocument)
       }),
-    page => Effect.promise(() => page.close()),
+    window => Effect.promise(() => window.happyDOM.close()),
   )
+
+const renderRoutePage = (serverEntry: typeof ServerEntry, route: AppRoute) =>
+  Effect.gen(function* () {
+    const urlPath = routeToUrlPath(route)
+    const result = yield* Effect.promise(() =>
+      serverEntry.renderPage(new Request(`${SITE_URL}${urlPath}`)),
+    )
+    if (result._tag === 'Responded') {
+      return yield* Effect.fail(
+        new Error(
+          `The server entry returned a complete Response while prerendering ${urlPath}; static HTML generation requires a Rendered result.`,
+        ),
+      )
+    }
+    if (result.status !== undefined && result.status !== 200) {
+      return yield* Effect.fail(
+        new Error(
+          `The server entry returned status ${result.status} while prerendering ${urlPath}; the static host cannot preserve that status in an HTML file.`,
+        ),
+      )
+    }
+    if (result.headers !== undefined) {
+      return yield* Effect.fail(
+        new Error(
+          `The server entry returned response headers while prerendering ${urlPath}; the static host cannot preserve them in an HTML file.`,
+        ),
+      )
+    }
+    const rendered = result.application
+
+    if (
+      route._tag === 'ApiModule' &&
+      !rendered.html.includes(API_SECTION_MARKER)
+    ) {
+      return yield* Effect.fail(
+        new Error(
+          `API module page ${urlPath} rendered without its section heading; ` +
+            'the API data seeding in entry.server.ts has regressed.',
+        ),
+      )
+    }
+
+    const markdown = shouldExportMarkdown(route)
+      ? yield* extractMarkdownFromHtml(rendered.html)
+      : ''
+    const renderedPage: RenderedPage = {
+      application: rendered,
+      markdown,
+    }
+    return renderedPage
+  })
 
 // PRERENDER
 
@@ -619,7 +586,7 @@ const buildApiModuleNameResolver = (
 
 const prerenderRoute =
   (
-    browser: Browser,
+    serverEntry: typeof ServerEntry,
     baseHtml: string,
     resolveApiModuleName: ApiModuleNameResolver,
   ) =>
@@ -627,11 +594,13 @@ const prerenderRoute =
     Effect.gen(function* () {
       const urlPath = routeToUrlPath(route)
       const outputPath = routeToOutputPath(route)
-      const url = `${PREVIEW_BASE_URL}${urlPath}`
       const outputFilePath = resolve(DIST_DIR, outputPath)
 
-      const captured = yield* captureRoutePage(browser, url, route)
-      const injectedHtml = injectHtml(baseHtml, captured.html)
+      const captured = yield* renderRoutePage(serverEntry, route)
+      const injectedHtml = Server.injectIntoTemplate(
+        baseHtml,
+        captured.application,
+      )
       const outputHtml = injectMetaTags(
         injectedHtml,
         route,
@@ -661,7 +630,7 @@ const prerenderRoute =
         route,
         urlPath,
         markdown: captured.markdown,
-        html: captured.html,
+        html: captured.application.html,
       })
     }).pipe(
       Effect.catch(error =>
@@ -671,6 +640,39 @@ const prerenderRoute =
         ),
       ),
     )
+
+// PLAYGROUND SHELL
+
+// NOTE: Playground routes are deliberately excluded from STATIC_ROUTES: the
+// WebContainer editor can't be statically rendered per slug, and every entry
+// into it is a full document load for cross-origin isolation. With no file of
+// its own, Vercel's SPA catch-all serves the prerendered home page for
+// `/playground/<slug>`, so the landing view flashes before the app boots and
+// swaps in the editor. Instead, one canonical playground page renders through
+// the server entry and `/playground/*` routes to it (see deploy-website.yml
+// and the preview fallback in vite.config.ts), so the shell carries the
+// `data-foldkit-app` stamp and the Flags payload that `Runtime.hydrate`
+// requires. A visitor loading a different slug hydrates against this shell
+// and the mismatching subtree rebuilds, the designed hydration fallback.
+const PLAYGROUND_SHELL_ROUTE = PlaygroundRoute({ exampleSlug: 'counter' })
+
+const PLAYGROUND_SHELL_OUTPUT_PATH = 'playground/index.html'
+
+const prerenderPlaygroundShell = (
+  serverEntry: typeof ServerEntry,
+  baseHtml: string,
+) =>
+  Effect.gen(function* () {
+    const captured = yield* renderRoutePage(serverEntry, PLAYGROUND_SHELL_ROUTE)
+    const outputHtml = Server.injectIntoTemplate(baseHtml, captured.application)
+    const outputFilePath = resolve(DIST_DIR, PLAYGROUND_SHELL_OUTPUT_PATH)
+
+    const fs = yield* FileSystem.FileSystem
+    yield* fs.makeDirectory(dirname(outputFilePath), { recursive: true })
+    yield* fs.writeFileString(outputFilePath, outputHtml)
+
+    yield* Console.log('  ✓ /playground/* shell')
+  })
 
 // SITEMAP
 
@@ -852,11 +854,19 @@ const resultToFullEntry =
     orderIndex,
   })
 
+// NOTE: page rendering runs through the server bundle with no browser, but
+// blog cover share cards still rasterize through a real page, so OG image
+// generation holds the one remaining Playwright browser.
+const playwrightBrowserResource = Effect.acquireRelease(
+  Effect.tryPromise(() => chromium.launch({ headless: true })),
+  browser => Effect.promise(() => browser.close()),
+)
+
 const program = Effect.scoped(
   Effect.gen(function* () {
     yield* Console.log('Starting prerender...')
 
-    yield* previewServerResource
+    const serverEntry = yield* loadServerEntry
     const browser = yield* playwrightBrowserResource
 
     const apiModules = yield* readApiModules
@@ -877,21 +887,23 @@ const program = Effect.scoped(
     const fs = yield* FileSystem.FileSystem
     const baseHtml = yield* fs.readFileString(resolve(DIST_DIR, 'index.html'))
 
-    const playgroundShellPath = resolve(DIST_DIR, PLAYGROUND_SHELL_OUTPUT_PATH)
-    yield* fs.makeDirectory(dirname(playgroundShellPath), { recursive: true })
-    yield* fs.writeFileString(
-      playgroundShellPath,
-      buildPlaygroundShellHtml(baseHtml),
-    )
-    yield* Console.log('  ✓ /playground/* shell')
+    yield* prerenderPlaygroundShell(serverEntry, baseHtml)
 
     const results = yield* Effect.forEach(
       routes,
-      prerenderRoute(browser, baseHtml, resolveApiModuleName),
+      prerenderRoute(serverEntry, baseHtml, resolveApiModuleName),
       { concurrency: 4 },
     )
 
     const successfulResults = Array.getSomes(results)
+    const failedResults = Array.filter(results, Option.isNone)
+    if (Array.isArrayNonEmpty(failedResults)) {
+      return yield* Effect.die(
+        new Error(
+          `Failed to prerender ${failedResults.length} routes. See the errors above.`,
+        ),
+      )
+    }
     const markdownResults = Array.filter(
       successfulResults,
       result => result.markdown.length > 0,

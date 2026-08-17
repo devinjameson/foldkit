@@ -32,10 +32,14 @@ export const ExampleSlug = S.Literals([
   'generative-art',
   'web-components',
   'embedding',
+  'ssg',
+  'ssr',
   'ui-showcase',
   'personal-blog',
 ])
 export type ExampleSlug = typeof ExampleSlug.Type
+
+export type LivePreview = 'Spa' | 'Prerendered' | 'PlaygroundOnly'
 
 export type ExampleMeta = Readonly<{
   slug: ExampleSlug
@@ -44,6 +48,7 @@ export type ExampleMeta = Readonly<{
   difficulty: Difficulty
   tags: ReadonlyArray<string>
   hasRouting: boolean
+  livePreview: LivePreview
 }>
 
 export const examples: ReadonlyArray<ExampleMeta> = [
@@ -55,6 +60,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Beginner',
     tags: ['State'],
     hasRouting: false,
+    livePreview: 'Spa',
   },
   {
     slug: 'counters',
@@ -64,6 +70,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Beginner',
     tags: ['Submodels'],
     hasRouting: false,
+    livePreview: 'Spa',
   },
   {
     slug: 'todo',
@@ -73,6 +80,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Beginner',
     tags: ['Storage'],
     hasRouting: false,
+    livePreview: 'Spa',
   },
   {
     slug: 'stopwatch',
@@ -82,6 +90,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Beginner',
     tags: ['Subscriptions'],
     hasRouting: false,
+    livePreview: 'Spa',
   },
   {
     slug: 'crash-view',
@@ -91,6 +100,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Beginner',
     tags: ['Fallback UI'],
     hasRouting: false,
+    livePreview: 'Spa',
   },
   {
     slug: 'slow-warnings',
@@ -100,6 +110,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Intermediate',
     tags: ['Performance', 'Diagnostics'],
     hasRouting: false,
+    livePreview: 'Spa',
   },
   {
     slug: 'form',
@@ -109,6 +120,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Intermediate',
     tags: ['Validation'],
     hasRouting: false,
+    livePreview: 'Spa',
   },
   {
     slug: 'weather',
@@ -118,6 +130,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Intermediate',
     tags: ['HTTP'],
     hasRouting: false,
+    livePreview: 'Spa',
   },
   {
     slug: 'api-cache',
@@ -127,6 +140,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Intermediate',
     tags: ['Caching', 'Subscriptions', 'UI Components'],
     hasRouting: false,
+    livePreview: 'Spa',
   },
   {
     slug: 'charting',
@@ -136,6 +150,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Advanced',
     tags: ['Charts', 'HTTP', 'Mount', 'Subscriptions', 'Third-Party Library'],
     hasRouting: false,
+    livePreview: 'Spa',
   },
   {
     slug: 'routing',
@@ -145,6 +160,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Intermediate',
     tags: ['Routing'],
     hasRouting: true,
+    livePreview: 'Spa',
   },
   {
     slug: 'route-transitions',
@@ -154,6 +170,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Intermediate',
     tags: ['Routing', 'Transitions', 'Commands'],
     hasRouting: true,
+    livePreview: 'Spa',
   },
   {
     slug: 'interrupting-commands',
@@ -163,6 +180,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Intermediate',
     tags: ['Commands', 'Concurrency'],
     hasRouting: false,
+    livePreview: 'Spa',
   },
   {
     slug: 'view-transitions',
@@ -172,6 +190,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Intermediate',
     tags: ['Routing', 'Animation'],
     hasRouting: true,
+    livePreview: 'Spa',
   },
   {
     slug: 'query-sync',
@@ -181,6 +200,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Intermediate',
     tags: ['Routing', 'Query Params'],
     hasRouting: true,
+    livePreview: 'Spa',
   },
   {
     slug: 'snake',
@@ -190,6 +210,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Advanced',
     tags: ['Game'],
     hasRouting: false,
+    livePreview: 'Spa',
   },
   {
     slug: 'auth',
@@ -199,6 +220,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Advanced',
     tags: ['Auth', 'Routing', 'Submodels', 'OutMessage'],
     hasRouting: true,
+    livePreview: 'Spa',
   },
   {
     slug: 'shopping-cart',
@@ -208,6 +230,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Advanced',
     tags: ['Routing'],
     hasRouting: true,
+    livePreview: 'Spa',
   },
   {
     slug: 'state-machine',
@@ -217,6 +240,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Advanced',
     tags: ['State Machines', 'Commands', 'Experimental'],
     hasRouting: false,
+    livePreview: 'Spa',
   },
   {
     slug: 'pixel-art',
@@ -226,6 +250,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Advanced',
     tags: ['Undo/Redo', 'UI Components', 'Storage'],
     hasRouting: false,
+    livePreview: 'Spa',
   },
   {
     slug: 'job-application',
@@ -235,6 +260,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Advanced',
     tags: ['Validation', 'Multi-step', 'UI Components'],
     hasRouting: false,
+    livePreview: 'Spa',
   },
   {
     slug: 'websocket-chat',
@@ -244,6 +270,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Advanced',
     tags: ['Managed Resources', 'WebSocket'],
     hasRouting: false,
+    livePreview: 'Spa',
   },
   {
     slug: 'managed-resource-layer',
@@ -253,6 +280,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Advanced',
     tags: ['Managed Resources', 'Effect Layer', 'Commands'],
     hasRouting: false,
+    livePreview: 'Spa',
   },
   {
     slug: 'kanban',
@@ -262,6 +290,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Advanced',
     tags: ['Drag & Drop', 'Submodels', 'OutMessage', 'Storage'],
     hasRouting: false,
+    livePreview: 'Spa',
   },
   {
     slug: 'map',
@@ -271,6 +300,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Advanced',
     tags: ['Mount', 'Subscriptions', 'Third-Party Library'],
     hasRouting: false,
+    livePreview: 'Spa',
   },
   {
     slug: 'canvas-art',
@@ -280,6 +310,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Intermediate',
     tags: ['Canvas', 'Animation', 'Subscriptions'],
     hasRouting: false,
+    livePreview: 'Spa',
   },
   {
     slug: 'generative-art',
@@ -289,6 +320,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Advanced',
     tags: ['Canvas', 'Animation', 'Subscriptions', 'Generative'],
     hasRouting: false,
+    livePreview: 'Spa',
   },
   {
     slug: 'web-components',
@@ -298,6 +330,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Advanced',
     tags: ['Web Components', 'CustomElement', 'Third-Party Library'],
     hasRouting: false,
+    livePreview: 'Spa',
   },
   {
     slug: 'embedding',
@@ -307,6 +340,27 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Advanced',
     tags: ['Embedding', 'Ports', 'makeElement', 'Host Interop'],
     hasRouting: false,
+    livePreview: 'Spa',
+  },
+  {
+    slug: 'ssg',
+    title: 'Static Site Generation',
+    description:
+      'A build script renders every route to static HTML through a server entry, and the client hydrates the served markup in place. The same init, view, and Model produce the build output and the running application.',
+    difficulty: 'Advanced',
+    tags: ['Server Rendering', 'Hydration', 'Routing'],
+    hasRouting: true,
+    livePreview: 'Prerendered',
+  },
+  {
+    slug: 'ssr',
+    title: 'Server-Side Rendering',
+    description:
+      'A server renders each request into HTML using Flags read from a cookie, and the client hydrates with the exact values the server used. Reload the page and your latest count arrives already in the markup, before any JavaScript runs.',
+    difficulty: 'Advanced',
+    tags: ['Server Rendering', 'Hydration', 'Flags'],
+    hasRouting: false,
+    livePreview: 'PlaygroundOnly',
   },
   {
     slug: 'ui-showcase',
@@ -316,6 +370,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Advanced',
     tags: ['UI Components', 'Routing'],
     hasRouting: true,
+    livePreview: 'Spa',
   },
   {
     slug: 'personal-blog',
@@ -325,6 +380,7 @@ export const examples: ReadonlyArray<ExampleMeta> = [
     difficulty: 'Advanced',
     tags: ['Markdown', 'Islands', 'Submodels', 'Routing'],
     hasRouting: true,
+    livePreview: 'Spa',
   },
 ]
 

@@ -78,6 +78,7 @@ Here’s how React patterns map to Foldkit:
 | Component state                     | Part of the single Model                                                 |
 | Event handlers                      | Messages dispatched to `update`                                          |
 | React Router / TanStack Router      | Built-in typed routing                                                   |
+| Next.js SSR / SSG                   | Server rendering: one pipeline, build-time or per-request                |
 | React Hook Form / Formik            | Model + Messages + `foldkit/fieldValidation`                             |
 | Event streams (useEffect / RxJS)    | Subscriptions (automatic lifecycle)                                      |
 | Headless UI / Radix UI              | Foldkit UI (headless, typed components)                                  |
@@ -121,6 +122,10 @@ Foldkit’s equivalent of memoization is [createLazy and createKeyedLazy](/core/
 
 :::Faq{id="faq-data-fetching" question="How do I fetch data?"}
 Return a Command from your update function. The runtime runs the Command (an HTTP request, a localStorage read, a DOM focus call, whatever side effect you need) and feeds the resulting Message back into update. No `useEffect`, no cleanup functions, no race conditions. See the [Weather example](https://github.com/foldkit/foldkit/blob/main/examples/weather/src/main.ts#L153-L232) for a complete implementation.
+:::
+
+:::Faq{id="faq-ssr" question="Does Foldkit do SSR like Next.js?"}
+Yes. [Server rendering](/core/server-rendering) runs the same program on the server that the browser runs: `renderToString` produces the HTML during a build (SSG) or per request (SSR), and `Runtime.hydrate` adopts it in place. There is no separate server component model and no second flavor of data fetching; the same init, view, and Model serve both sides. After hydration the page is an ordinary client-side Foldkit application: routing, update, and Commands run in the browser, and navigation stays client-side until the next full page load. [What about SSR?](/faq/what-about-ssr) covers the philosophy and the boundaries.
 :::
 
 :::Faq{id="faq-testing" question="How do I test my app?"}

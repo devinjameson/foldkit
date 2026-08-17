@@ -47,6 +47,7 @@ import {
   CompletedApplyTheme,
   CompletedInjectAnalytics,
   CompletedInjectSpeedInsights,
+  CompletedLoadBrowserEnvironment,
   CompletedLoadExternal,
   CompletedNavigateInternal,
   CompletedSaveSidebarState,
@@ -78,7 +79,11 @@ import {
   ThemePreference,
 } from './message'
 import * as Page from './page'
+import { SucceededLoadApiData } from './page/apiReference/message'
+import { ApiData } from './page/apiReference/model'
+import { SucceededLoadExampleSources } from './page/example/exampleDetail'
 import { type ExampleSlug } from './page/example/meta'
+import { ExampleSources } from './page/example/sources'
 import {
   AppRoute,
   isPlaygroundRoute,
@@ -118,11 +123,11 @@ const THEME_STORAGE_KEY = 'theme-preference'
 export { type ThemePreference, type ResolvedTheme } from './message'
 
 const resolveTheme = (
-  preference: typeof ThemePreference.Type,
-  systemTheme: typeof ResolvedTheme.Type,
-): typeof ResolvedTheme.Type =>
+  preference: ThemePreference,
+  systemTheme: ResolvedTheme,
+): ResolvedTheme =>
   M.value(preference).pipe(
-    M.withReturnType<typeof ResolvedTheme.Type>(),
+    M.withReturnType<ResolvedTheme>(),
     M.when('Dark', () => 'Dark'),
     M.when('Light', () => 'Light'),
     M.when('System', () => systemTheme),
@@ -145,13 +150,10 @@ export type EmailSubscriptionStatus = typeof EmailSubscriptionStatus.Type
 // FLAGS
 
 export const Flags = S.Struct({
-  themePreference: S.Option(ThemePreference),
-  maybeSidebarState: S.Option(SidebarState),
-  systemTheme: ResolvedTheme,
-  isNarrowViewport: S.Boolean,
-  isChromium: S.Boolean,
   currentYear: S.Number,
   today: Calendar.CalendarDate,
+  maybeApiData: S.Option(ApiData),
+  maybeExampleSources: S.Option(ExampleSources),
 })
 
 type Flags = typeof Flags.Type
@@ -167,9 +169,9 @@ const detectChromium = (): boolean =>
     onSome: brands => brands.some(({ brand }) => CHROMIUM_BRANDS.has(brand)),
   })
 
-export const flags: Effect.Effect<Flags> = Effect.gen(function* () {
-  const themePreference: Option.Option<typeof ThemePreference.Type> =
-    yield* Effect.gen(function* () {
+const loadBrowserEnvironment = Effect.gen(function* () {
+  const themePreference: Option.Option<ThemePreference> = yield* Effect.gen(
+    function* () {
       const store = yield* KeyValueStore.KeyValueStore
       const json = yield* Effect.fromOption(
         Option.fromNullishOr(yield* store.get(THEME_STORAGE_KEY)),
@@ -178,12 +180,11 @@ export const flags: Effect.Effect<Flags> = Effect.gen(function* () {
         json,
       )
       return Option.some(theme)
-    }).pipe(
-      Effect.catch(() =>
-        Effect.succeed(Option.none<typeof ThemePreference.Type>()),
-      ),
-      Effect.provide(BrowserKeyValueStore.layerLocalStorage),
-    )
+    },
+  ).pipe(
+    Effect.catch(() => Effect.succeed(Option.none<ThemePreference>())),
+    Effect.provide(BrowserKeyValueStore.layerLocalStorage),
+  )
 
   const maybeSidebarState: Option.Option<SidebarState> = yield* Effect.gen(
     function* () {
@@ -199,7 +200,7 @@ export const flags: Effect.Effect<Flags> = Effect.gen(function* () {
     Effect.provide(BrowserKeyValueStore.layerSessionStorage),
   )
 
-  const systemTheme: typeof ResolvedTheme.Type = yield* Effect.sync(() =>
+  const systemTheme: ResolvedTheme = yield* Effect.sync(() =>
     window.matchMedia('(prefers-color-scheme: dark)').matches
       ? 'Dark'
       : 'Light',
@@ -217,15 +218,15 @@ export const flags: Effect.Effect<Flags> = Effect.gen(function* () {
 
   const today = yield* Calendar.today.local
 
-  return {
-    themePreference,
+  return CompletedLoadBrowserEnvironment({
+    maybeThemePreference: themePreference,
     maybeSidebarState,
     systemTheme,
     isNarrowViewport,
     isChromium,
     currentYear,
     today,
-  }
+  })
 })
 
 // MODEL
@@ -242,12 +243,12 @@ export const Model = S.Struct({
   isMobileTableOfContentsOpen: S.Boolean,
   activeSection: S.Option(S.String),
   isNarrowViewport: S.Boolean,
-  isChromium: S.Boolean,
+  maybeIsChromium: S.Option(S.Boolean),
   playground: S.Option(Page.Playground.Model),
   sidebarGroups: SidebarGroups,
   isMapMessagesUnderHoodOpen: S.Boolean,
   aiHeadingToggleCount: S.Number,
-  themePreference: ThemePreference,
+  maybeThemePreference: S.Option(ThemePreference),
   systemTheme: ResolvedTheme,
   resolvedTheme: ResolvedTheme,
   demoTabs: Tabs.Model,
@@ -340,6 +341,43 @@ const reflectNotePlayerDemoPresence = (
   }
 }
 
+const initApiReference = (
+  maybeApiData: Option.Option<typeof ApiData.Type>,
+): ReturnType<typeof Page.ApiReference.boot> => {
+  const [apiReference, apiReferenceCommands] = Page.ApiReference.boot()
+  return Option.match(maybeApiData, {
+    onNone: () => [apiReference, apiReferenceCommands],
+    onSome: apiData => {
+      const [seededApiReference] = Page.ApiReference.update(
+        apiReference,
+        SucceededLoadApiData({ apiData }),
+      )
+      // NOTE: prerendered module pages seed a per-module slice of the API
+      // data, so the boot Commands still run: the full reference replaces
+      // the slice after hydration, keeping cross-module navigation working.
+      return [seededApiReference, apiReferenceCommands]
+    },
+  })
+}
+
+const initExampleDetail = (
+  maybeInitialSlug: Option.Option<string>,
+  maybeExampleSources: Option.Option<typeof ExampleSources.Type>,
+): ReturnType<typeof Page.Example.ExampleDetail.boot> => {
+  const [exampleDetail, exampleDetailCommands] =
+    Page.Example.ExampleDetail.boot(maybeInitialSlug)
+  return Option.match(maybeExampleSources, {
+    onNone: () => [exampleDetail, exampleDetailCommands],
+    onSome: sources => {
+      const [seededExampleDetail] = Page.Example.ExampleDetail.update(
+        exampleDetail,
+        SucceededLoadExampleSources({ sources }),
+      )
+      return [seededExampleDetail, []]
+    },
+  })
+}
+
 export const init: Runtime.RoutingApplicationInit<
   Model,
   Message,
@@ -347,12 +385,9 @@ export const init: Runtime.RoutingApplicationInit<
   AppResources,
   AppManagedResources
 > = (flags: Flags, url: Url) => {
-  const themePreference = Option.getOrElse(
-    flags.themePreference,
-    () => 'System' as const,
-  )
-  const { systemTheme } = flags
-  const resolvedTheme = resolveTheme(themePreference, systemTheme)
+  const maybeThemePreference = Option.none<ThemePreference>()
+  const systemTheme: ResolvedTheme = 'Light'
+  const resolvedTheme = systemTheme
 
   const demoTabs = Tabs.init({
     id: 'demo-tabs',
@@ -379,15 +414,19 @@ export const init: Runtime.RoutingApplicationInit<
     isNotePlayerDemoVisible(initialRoute, activeDemoTab),
   )
 
-  const [apiReference, apiReferenceCommands] = Page.ApiReference.boot()
-
   const maybeInitialExampleSlug = pipe(
     initialRoute,
     Option.liftPredicate(route => route._tag === 'ExampleDetail'),
     Option.map(({ exampleSlug }) => exampleSlug),
   )
-  const [exampleDetail, exampleDetailCommands] =
-    Page.Example.ExampleDetail.boot(maybeInitialExampleSlug)
+  const [apiReference, apiReferenceCommands] = initApiReference(
+    flags.maybeApiData,
+  )
+
+  const [exampleDetail, exampleDetailCommands] = initExampleDetail(
+    maybeInitialExampleSlug,
+    flags.maybeExampleSources,
+  )
 
   const maybeInitialActiveSectionKey = findActiveSectionKey(
     initialRoute._tag,
@@ -426,19 +465,19 @@ export const init: Runtime.RoutingApplicationInit<
       isMobileTableOfContentsOpen: false,
       activeSection: Option.none(),
       aiHeadingToggleCount: 0,
-      isNarrowViewport: flags.isNarrowViewport,
-      isChromium: flags.isChromium,
+      isNarrowViewport: false,
+      maybeIsChromium: Option.none(),
       playground: pipe(
         initialRoute,
         Option.liftPredicate(isPlaygroundRoute),
         Option.map(({ exampleSlug }) => Page.Playground.init(exampleSlug)),
       ),
       sidebarGroups: initialSidebarGroups(
-        flags.maybeSidebarState,
+        Option.none(),
         maybeInitialActiveSectionKey,
       ),
       isMapMessagesUnderHoodOpen: false,
-      themePreference,
+      maybeThemePreference,
       systemTheme,
       resolvedTheme,
       demoTabs,
@@ -453,9 +492,9 @@ export const init: Runtime.RoutingApplicationInit<
       search: Search.init()[0],
     },
     [
+      LoadBrowserEnvironment(),
       InjectAnalytics(),
       InjectSpeedInsights(),
-      ApplyTheme({ theme: resolvedTheme }),
       ...mappedUiPagesCommands,
       ...mappedComingFromReactCommands,
       ...mappedApiReferenceCommands,
@@ -945,6 +984,52 @@ export const update = (
         [],
       ],
 
+      CompletedLoadBrowserEnvironment: ({
+        maybeThemePreference,
+        maybeSidebarState,
+        systemTheme,
+        isNarrowViewport,
+        isChromium,
+        currentYear,
+        today,
+      }) => {
+        const themePreference: ThemePreference = Option.getOrElse(
+          maybeThemePreference,
+          () => 'System',
+        )
+        const resolvedTheme = resolveTheme(themePreference, systemTheme)
+        const maybeExampleSlug = pipe(
+          model.route,
+          Option.liftPredicate(route => route._tag === 'ExampleDetail'),
+          Option.map(({ exampleSlug }) => exampleSlug),
+        )
+        const maybeActiveSectionKey = findActiveSectionKey(
+          model.route._tag,
+          maybeExampleSlug,
+        )
+        const [uiPages, uiPagesCommands] = Page.UiPages.init(today)
+
+        return [
+          evo(model, {
+            currentYear: () => currentYear,
+            isNarrowViewport: () => isNarrowViewport,
+            maybeIsChromium: () => Option.some(isChromium),
+            sidebarGroups: () =>
+              initialSidebarGroups(maybeSidebarState, maybeActiveSectionKey),
+            maybeThemePreference: () => Option.some(themePreference),
+            systemTheme: () => systemTheme,
+            resolvedTheme: () => resolvedTheme,
+            uiPages: () => uiPages,
+          }),
+          [
+            ApplyTheme({ theme: resolvedTheme }),
+            ...Command.mapMessages(uiPagesCommands, message =>
+              GotUiPageMessage({ message }),
+            ),
+          ],
+        ]
+      },
+
       ToggledAiHeading: () => [
         evo(model, {
           aiHeadingToggleCount: Number_.increment,
@@ -957,7 +1042,7 @@ export const update = (
 
         return [
           evo(model, {
-            themePreference: () => preference,
+            maybeThemePreference: () => Option.some(preference),
             resolvedTheme: () => resolvedTheme,
           }),
           [
@@ -979,7 +1064,10 @@ export const update = (
         foldNotePlayerDemo(model, message),
 
       ChangedSystemTheme: ({ theme }) => {
-        const resolvedTheme = resolveTheme(model.themePreference, theme)
+        const resolvedTheme = resolveTheme(
+          Option.getOrElse(model.maybeThemePreference, () => 'System'),
+          theme,
+        )
 
         return [
           evo(model, {
@@ -1043,6 +1131,11 @@ const InjectAnalytics = Command.define('InjectAnalytics', {
   execute: Effect.sync(() => inject()).pipe(
     Effect.as(CompletedInjectAnalytics()),
   ),
+})
+
+const LoadBrowserEnvironment = Command.define('LoadBrowserEnvironment', {
+  messages: [CompletedLoadBrowserEnvironment],
+  execute: loadBrowserEnvironment,
 })
 
 const InjectSpeedInsights = Command.define('InjectSpeedInsights', {
@@ -1263,7 +1356,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
             slotId: `playground-${playgroundModel.slug}`,
             model: playgroundModel,
             view: Page.Playground.view,
-            viewInputs: { isChromium: model.isChromium },
+            viewInputs: { maybeIsChromium: model.maybeIsChromium },
             toParentMessage: message => GotPlaygroundMessage({ message }),
           }),
       }),
