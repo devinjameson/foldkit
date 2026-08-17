@@ -1,7 +1,14 @@
-import { Effect, Equivalence, Option, Schema, Stream } from 'effect'
+import { Context, Effect, Equivalence, Option, Schema, Stream } from 'effect'
 import { describe, expect, expectTypeOf, it } from 'vitest'
 
-import { type GatedDependencies, lift, make } from './subscription.js'
+import {
+  type GatedDependencies,
+  type Subscriptions,
+  aggregate,
+  lift,
+  make,
+  persistent,
+} from './subscription.js'
 
 type ChildModel = Readonly<{
   isRunning: boolean
@@ -504,4 +511,224 @@ describe('lift over lift', () => {
       ),
     ).toEqual([toGrandparentMessage(toParentMessage('pulses-a'))])
   })
+})
+
+type StreamMessage<AnyStream> =
+  AnyStream extends Stream.Stream<infer Message, any, any> ? Message : never
+
+type StreamServices<AnyStream> =
+  AnyStream extends Stream.Stream<any, any, infer Services> ? Services : never
+
+describe('aggregate', () => {
+  type ThemeModel = Readonly<{ isDark: boolean }>
+
+  type ThemeMessage = Readonly<{ _tag: 'ChangedTheme'; isDark: boolean }>
+
+  type ViewportMessage = Readonly<{ _tag: 'ResizedViewport'; width: number }>
+
+  type StrangerModel = Readonly<{ unrelated: string }>
+
+  class Clock extends Context.Service<Clock, { readonly now: number }>()(
+    'Clock',
+  ) {}
+
+  const themeSubscriptions = make<ThemeModel, ThemeMessage>()(entry => ({
+    systemTheme: entry(
+      { isDark: Schema.Boolean },
+      {
+        modelToDependencies: model => ({ isDark: model.isDark }),
+        dependenciesToStream: ({ isDark }) =>
+          Stream.succeed<ThemeMessage>({ _tag: 'ChangedTheme', isDark }),
+      },
+    ),
+    scroll: entry(
+      { isDark: Schema.Boolean },
+      {
+        modelToDependencies: model => ({ isDark: model.isDark }),
+        keepAliveEquivalence: Equivalence.make<{ readonly isDark: boolean }>(
+          (left, right) => left.isDark === right.isDark,
+        ),
+        dependenciesToStream: (_dependencies, readDependencies) =>
+          Stream.succeed<ThemeMessage>({
+            _tag: 'ChangedTheme',
+            isDark: readDependencies().isDark,
+          }),
+      },
+    ),
+  }))
+
+  const viewportSubscriptions = make<ThemeModel, ViewportMessage>()(() => ({
+    viewportWidth: persistent(
+      Stream.succeed<ViewportMessage>({ _tag: 'ResizedViewport', width: 0 }),
+    ),
+  }))
+
+  const clockSubscriptions = make<ThemeModel, ViewportMessage, Clock>()(
+    entry => ({
+      clockTick: entry(
+        {},
+        {
+          modelToDependencies: () => ({}),
+          dependenciesToStream: () =>
+            Stream.fromEffect(
+              Effect.map(
+                Effect.gen(function* () {
+                  return yield* Clock
+                }),
+                ({ now }): ViewportMessage => ({
+                  _tag: 'ResizedViewport',
+                  width: now,
+                }),
+              ),
+            ),
+        },
+      ),
+    }),
+  )
+
+  const focusSubscriptions = make<ThemeModel, ThemeMessage>()(entry => ({
+    windowFocus: entry(
+      { isDark: Schema.Boolean },
+      {
+        modelToDependencies: model => ({ isDark: model.isDark }),
+        dependenciesToStream: ({ isDark }) =>
+          Stream.succeed<ThemeMessage>({ _tag: 'ChangedTheme', isDark }),
+      },
+    ),
+  }))
+
+  // Differs from the theme records in Model alone, so a negative that fires on
+  // it is proving the Model check rather than the Message check.
+  const strangerSubscriptions = make<StrangerModel, ThemeMessage>()(entry => ({
+    unrelated: entry(
+      {},
+      {
+        modelToDependencies: () => ({}),
+        dependenciesToStream: () =>
+          Stream.succeed<ThemeMessage>({ _tag: 'ChangedTheme', isDark: false }),
+      },
+    ),
+  }))
+
+  const gatedChildSubscriptions = lift(makeChildSubscriptions([]))({
+    toChildModel: (model: ParentModel) => model.child,
+    toParentMessage: (message: string): ParentMessage =>
+      toParentMessage(message),
+    when: { ticks: (model: ParentModel) => model.isChildActive },
+  })
+
+  it('combines records into one keyed by entry name', () => {
+    const combined = aggregate(themeSubscriptions, viewportSubscriptions)
+
+    expect(Object.keys(combined).sort()).toStrictEqual([
+      'scroll',
+      'systemTheme',
+      'viewportWidth',
+    ])
+  })
+
+  it('throws on a duplicate key across records', () => {
+    expect(() => aggregate(themeSubscriptions, themeSubscriptions)).toThrow(
+      'duplicate key "systemTheme"',
+    )
+  })
+
+  it('still throws on a duplicate key through the curried form', () => {
+    expect(() =>
+      aggregate<ThemeModel, ThemeMessage>()(
+        themeSubscriptions,
+        themeSubscriptions,
+      ),
+    ).toThrow('duplicate key "systemTheme"')
+  })
+
+  // NOTE: `pnpm typecheck` is the assertion for the block below, not vitest.
+  if (false) {
+    const combined = aggregate(
+      themeSubscriptions,
+      viewportSubscriptions,
+      clockSubscriptions,
+    )
+
+    expectTypeOf<keyof typeof combined>().toEqualTypeOf<
+      'systemTheme' | 'scroll' | 'viewportWidth' | 'clockTick'
+    >()
+
+    expectTypeOf(
+      combined.systemTheme.modelToDependencies,
+    ).parameters.toEqualTypeOf<[ThemeModel]>()
+
+    // Each entry keeps its own Message. The union appears in the check the
+    // records are held to, not in the result.
+    expectTypeOf<
+      StreamMessage<
+        ReturnType<typeof combined.systemTheme.dependenciesToStream>
+      >
+    >().toEqualTypeOf<ThemeMessage>()
+
+    // The record as a whole speaks the widened Message the runtime wants.
+    expectTypeOf(combined).toExtend<
+      Subscriptions<ThemeModel, ThemeMessage | ViewportMessage, Clock>
+    >()
+
+    expectTypeOf<
+      StreamServices<
+        ReturnType<typeof combined.systemTheme.dependenciesToStream>
+      >
+    >().toEqualTypeOf<never>()
+
+    expectTypeOf<
+      StreamServices<ReturnType<typeof combined.clockTick.dependenciesToStream>>
+    >().toEqualTypeOf<Clock>()
+
+    expectTypeOf(combined.scroll.keepAliveEquivalence).toEqualTypeOf<
+      Equivalence.Equivalence<Readonly<{ isDark: boolean }>>
+    >()
+
+    expectTypeOf(combined.scroll.dependenciesToStream).parameters.toEqualTypeOf<
+      [Readonly<{ isDark: boolean }>, () => Readonly<{ isDark: boolean }>]
+    >()
+
+    expectTypeOf(
+      combined.systemTheme.dependenciesToStream,
+    ).parameters.toEqualTypeOf<[Readonly<{ isDark: boolean }>]>()
+
+    expectTypeOf(
+      combined.viewportWidth.modelToDependencies,
+    ).returns.toEqualTypeOf<Record<string, never>>()
+
+    // A `persistent` entry belongs to every Model universe, so it neither
+    // pins the common Model nor rejects the Model-reading entries beside it.
+    const persistentFirst = aggregate(viewportSubscriptions, themeSubscriptions)
+
+    expectTypeOf(
+      persistentFirst.systemTheme.modelToDependencies,
+    ).parameters.toEqualTypeOf<[ThemeModel]>()
+
+    // A lifted entry keeps the gated dependency shape it was lifted with.
+    const withLifted = aggregate(gatedChildSubscriptions)
+
+    expectTypeOf(withLifted.ticks.modelToDependencies).returns.toEqualTypeOf<
+      GatedDependencies<Readonly<{ isRunning: boolean; label: string }>>
+    >()
+
+    // An aggregate is itself a record, so aggregates compose.
+    const nested = aggregate(combined, focusSubscriptions)
+
+    expectTypeOf<keyof typeof nested>().toEqualTypeOf<
+      'systemTheme' | 'scroll' | 'viewportWidth' | 'clockTick' | 'windowFocus'
+    >()
+
+    aggregate(
+      themeSubscriptions,
+      // @ts-expect-error strangerSubscriptions is declared over another Model
+      strangerSubscriptions,
+    )
+
+    aggregate<ThemeModel, ThemeMessage>()(
+      themeSubscriptions,
+      // @ts-expect-error the curried form rejects it the same way
+      strangerSubscriptions,
+    )
+  }
 })

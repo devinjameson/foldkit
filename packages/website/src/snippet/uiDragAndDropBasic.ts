@@ -86,7 +86,7 @@ const dragAndDropSubscriptions = Subscription.lift({
   toParentMessage: message => GotDragAndDropMessage({ message }),
 })
 
-const subscriptions = Subscription.aggregate<Model, Message>()(
+const subscriptions = Subscription.aggregate(
   dragAndDropSubscriptions,
   // ...your other subscription records
 )

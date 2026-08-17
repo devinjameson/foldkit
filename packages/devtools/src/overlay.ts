@@ -889,10 +889,7 @@ const makeOverlaySubscriptions = (store: DevToolsStore, shadow: ShadowRoot) => {
     ),
   }))
 
-  return Subscription.aggregate<Model, Message>()(
-    ownSubscriptions,
-    scrubberSubscriptions,
-  )
+  return Subscription.aggregate(ownSubscriptions, scrubberSubscriptions)
 }
 
 // VIEW

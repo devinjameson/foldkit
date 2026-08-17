@@ -1448,7 +1448,7 @@ const uiPagesSubscriptions = Subscription.lift(Page.UiPages.subscriptions)<
   toParentMessage: message => GotUiPageMessage({ message }),
 })
 
-export const subscriptions = Subscription.aggregate<Model, Message>()(
+export const subscriptions = Subscription.aggregate(
   Subscriptions.AiHeading.subscriptions,
   Subscriptions.ActiveSection.subscriptions,
   uiPagesSubscriptions,
@@ -1473,7 +1473,7 @@ const notePlayerDemoManagedResources = ManagedResource.lift(
   toParentMessage: message => GotNotePlayerDemoMessage({ message }),
 })
 
-export const managedResources = ManagedResource.aggregate<Model, Message>()(
+export const managedResources = ManagedResource.aggregate(
   playgroundManagedResources,
   notePlayerDemoManagedResources,
 )
