@@ -189,6 +189,7 @@ export const anchorSetup = (
   let isActive = true
   let isPositioning = false
   let isPositioningQueued = false
+  let hasWarnedFailure = false
   let lockedPlacement: FloatingPlacement | undefined
 
   const positionElement = (): void => {
@@ -196,18 +197,23 @@ export const anchorSetup = (
       return
     }
 
-    if (isPlacementLockEnabled && isPositioning) {
+    // NOTE: with the current `@floating-ui/dom` a tick settles inside a
+    // microtask chain and each `autoUpdate` callback returns through a
+    // microtask checkpoint, so this never engages. It holds the invariant by
+    // construction if that changes.
+    if (isPositioning) {
       isPositioningQueued = true
       return
     }
 
-    if (isPlacementLockEnabled) {
-      isPositioning = true
-    }
     const isLocked = isPlacementLockEnabled && lockedPlacement !== undefined
     const requestedPlacement = lockedPlacement ?? placement ?? 'bottom-start'
 
-    computePosition(button, element, {
+    // NOTE: the promise is built before the gate closes, so a synchronous
+    // throw from `computePosition` or a middleware factory cannot leave
+    // `isPositioning` latched with no `finally` attached to release it. That
+    // would wedge every later tick behind the gate.
+    const tick = computePosition(button, element, {
       placement: requestedPlacement,
       strategy,
       middleware: [
@@ -235,47 +241,67 @@ export const anchorSetup = (
         }),
       ],
     })
-      .then(({ x, y, placement: resolvedPlacement }) => {
-        if (!isActive) {
-          return
-        }
 
-        element.style.left = `${x}px`
-        element.style.top = `${y}px`
+    isPositioning = true
 
-        if (isPlacementLockEnabled) {
-          lockedPlacement = lockedPlacement ?? resolvedPlacement
-        }
+    tick
+      .then(
+        ({ x, y, placement: resolvedPlacement }) => {
+          hasWarnedFailure = false
 
-        element.setAttribute(
-          'data-placement',
-          toSide(lockedPlacement ?? resolvedPlacement),
-        )
-
-        if (isFirstUpdate) {
-          isFirstUpdate = false
-          element.style.visibility = ''
-
-          if (config.focusAfterPosition ?? false) {
-            requestAnimationFrame(() => {
-              if (!isActive) {
-                return
-              }
-
-              const target = config.focusSelector
-                ? owner.querySelector(config.focusSelector)
-                : element
-              if (target instanceof HTMLElement) {
-                target.focus()
-              }
-            })
+          if (!isActive) {
+            return
           }
-        }
-      })
+
+          element.style.left = `${x}px`
+          element.style.top = `${y}px`
+
+          if (isPlacementLockEnabled) {
+            lockedPlacement = lockedPlacement ?? resolvedPlacement
+          }
+
+          element.setAttribute(
+            'data-placement',
+            toSide(lockedPlacement ?? resolvedPlacement),
+          )
+
+          if (isFirstUpdate) {
+            isFirstUpdate = false
+            element.style.visibility = ''
+
+            if (config.focusAfterPosition ?? false) {
+              requestAnimationFrame(() => {
+                if (!isActive) {
+                  return
+                }
+
+                const target = config.focusSelector
+                  ? owner.querySelector(config.focusSelector)
+                  : element
+                if (target instanceof HTMLElement) {
+                  target.focus()
+                }
+              })
+            }
+          }
+        },
+        // NOTE: `computePosition` awaits platform measurement and every
+        // middleware, so a throw in any of them rejects the tick. Reported
+        // once per run of consecutive failures, since `autoUpdate` would
+        // otherwise repeat a persistent failure on every scroll and resize,
+        // while a fresh failure after a recovery still gets its own report.
+        (error: unknown) => {
+          if (!hasWarnedFailure) {
+            hasWarnedFailure = true
+            console.error(
+              '[@foldkit/ui] anchorSetup could not position the panel. It keeps the visibility its caller rendered until positioning succeeds.',
+              error,
+            )
+          }
+        },
+      )
       .finally(() => {
-        if (isPlacementLockEnabled) {
-          isPositioning = false
-        }
+        isPositioning = false
 
         if (isActive && isPositioningQueued) {
           isPositioningQueued = false
