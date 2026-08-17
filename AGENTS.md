@@ -81,6 +81,11 @@ Don't add inline or block comments to explain code. If code needs explanation, r
 - Section headers: `// MODEL`, `// MESSAGE`, `// INIT`, `// UPDATE`, `// VIEW`, `// COMMAND`, and short descriptive headers for sections outside that set (`// SHARED STYLES`, `// TABLE OF CONTENTS`).
 - TSDoc (`/** ... */`) on all public exports of a published package (`packages/*`). An `export const` in `examples/` is module wiring so `entry.ts` and scene tests can import it, not public API, and takes a `// NOTE:` like any other explanatory comment.
 - `// NOTE:` comments, with a high bar. Only for behavior that would mislead a careful reader (timing dependency, upstream bug workaround, browser quirk). Not for normal patterns, state machine shapes, framework idioms, or what a function does.
+- Ground-truth annotations on fixtures and expected values. These cite external truth a reader cannot derive rather than explaining behavior, so they take no prefix. For example: `// 2000-01-01 was a Saturday`, `// 2026-04-15 is a Wednesday; Sunday before is 2026-04-12`. A comment that explains why the assertion is shaped the way it is, rather than stating the fact it rests on, is a `// NOTE:` like any other.
+
+These rules apply in test files exactly as they do in source. Tests carry more comments because they encode more ground truth and more multi-step sequences, not because the bar is lower. A step marker in a multi-phase test earns a `// NOTE:` when the sequence position is load-bearing and is deleted otherwise.
+
+Vendored code is out of scope. `packages/foldkit/src/snabbdom/` keeps its upstream comments so the fork stays diffable against snabbdom v3.6.3.
 
 ## View Architecture
 
