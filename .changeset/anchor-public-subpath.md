@@ -18,7 +18,7 @@ import {
 
 `anchorSetup` and `portalToContainingRoot` are plain DOM functions that return a cleanup, meant to be called inside `Effect.sync` in a Mount and stashed in the Mount result. `AnchorConfig`, `Placement` and `Padding` are now available as Schema values, not only as types.
 
-The module is also reachable as `Ui.Anchor` from the root barrel and appears in the API reference.
+The module is also exported from the root barrel, as `import { Anchor } from '@foldkit/ui'`, and appears in the API reference as `Ui.Anchor`.
 
 Nothing is removed or renamed. `src/anchor.ts` moved to `src/anchor/`, which is internal layout only.
 
