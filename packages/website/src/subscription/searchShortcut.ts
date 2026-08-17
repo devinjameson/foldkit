@@ -15,10 +15,7 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
       }),
       dependenciesToStream: ({ isDocsPage }) =>
         Stream.when(
-          Subscription.fromEventFilterMap<
-            KeyboardEvent,
-            typeof GotSearchMessage.Type
-          >({
+          Subscription.fromEventFilterMap({
             target: document,
             type: 'keydown',
             toMessage: event => {

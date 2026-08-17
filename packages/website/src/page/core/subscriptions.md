@@ -91,7 +91,15 @@ Because `fromEvent` is a Stream rather than a complete entry, you gate it the sa
 
 The `toMessage` mapper runs synchronously in the same call stack as the browser’s event dispatch, so calling `event.preventDefault()` inside it works. Pass the `target` as a thunk when it may not exist until the scope opens, or directly for always-present globals like `window` and `document`. For events tied to a specific rendered element, reach for [Mount](/core/mount) instead, which hands you the element directly.
 
-When only some events should become Messages, use `Subscription.fromEventFilterMap`. Its `toMessage` returns `Option.some(message)` to emit a Message or `Option.none()` to ignore the event.
+The target, the event name, and the event your mapper receives are one fact rather than three. `type` is constrained to the events the target declares, so a misspelled name is a compile error rather than a listener that never fires, and `event` follows from both: `window` plus `'keydown'` gives you a `KeyboardEvent` with no type argument to write. A target with no declared event map, such as a bare `EventTarget`, accepts any name and reports `Event`. Annotate one with `Subscription.TypedEventTarget` to have its own events resolved the same way, `CustomEvent` detail included:
+
+```ts
+const slowWarningTarget: Subscription.TypedEventTarget<{
+  'foldkit:slow-warning': CustomEvent<SlowWarningReport>
+}> = new EventTarget()
+```
+
+When only some events should become Messages, use `Subscription.fromEventFilterMap`. Its `toMessage` returns `Option.some(message)` to emit a Message or `Option.none()` to ignore the event. A mapper that never emits produces a `Stream<never>`, which still composes wherever a Message-producing Stream is expected.
 
 ## Advanced
 

@@ -4,7 +4,7 @@ import { Subscription } from 'foldkit'
 export const capturedKeyDownStream = <Message>(
   toMessage: (key: string) => Message,
 ): Stream.Stream<Message> =>
-  Subscription.fromEvent<KeyboardEvent, Message>({
+  Subscription.fromEvent({
     target: document,
     type: 'keydown',
     toMessage: keyboardEvent => {

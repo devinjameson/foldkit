@@ -1,7 +1,14 @@
 import { Effect, Option, Schema as S } from 'effect'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, expectTypeOf, it } from 'vitest'
 
-import { aggregate, lift, make, tag } from './managedResource.js'
+import {
+  type ServiceOf,
+  type ServicesOf,
+  aggregate,
+  lift,
+  make,
+  tag,
+} from './managedResource.js'
 
 // A child Submodel owns a session resource and mounts/unmounts.
 
@@ -127,9 +134,29 @@ describe('lift', () => {
   })
 })
 
+type StrangerModel = Readonly<{ unrelated: string }>
+
+const StrangerResource = tag<string>()('StrangerResource')
+
+// Differs from the parent records in Model alone, so a negative that fires on
+// it is proving the Model check rather than the Message check.
+const strangerManagedResources = make<StrangerModel, ParentMessage>()(
+  entry => ({
+    stranger: entry(S.Option(S.Null), {
+      resource: StrangerResource,
+      modelToMaybeRequirements: () => Option.some(null),
+      acquire: () => Effect.succeed('value'),
+      release: () => Effect.void,
+      onAcquired: pinged,
+      onReleased: pinged,
+      onAcquireError: pinged,
+    }),
+  }),
+)
+
 describe('aggregate', () => {
   it('combines records into one keyed by resource name', () => {
-    const combined = aggregate<ParentModel, ParentMessage>()(
+    const combined = aggregate(
       liftedManagedResources,
       parentLocalManagedResources,
     )
@@ -139,10 +166,65 @@ describe('aggregate', () => {
 
   it('throws on a duplicate key across records', () => {
     expect(() =>
+      aggregate(parentLocalManagedResources, parentLocalManagedResources),
+    ).toThrow('duplicate key "ping"')
+  })
+
+  it('still throws on a duplicate key through the curried form', () => {
+    expect(() =>
       aggregate<ParentModel, ParentMessage>()(
         parentLocalManagedResources,
         parentLocalManagedResources,
       ),
     ).toThrow('duplicate key "ping"')
   })
+
+  // NOTE: `pnpm typecheck` is the assertion for the block below, not vitest.
+  if (false) {
+    const combined = aggregate(
+      liftedManagedResources,
+      parentLocalManagedResources,
+    )
+
+    expectTypeOf<keyof typeof combined>().toEqualTypeOf<'session' | 'ping'>()
+
+    expectTypeOf<ServicesOf<typeof combined>>().toEqualTypeOf<
+      ServiceOf<typeof SessionResource> | ServiceOf<typeof PingResource>
+    >()
+
+    expectTypeOf(
+      combined.session.modelToMaybeRequirements,
+    ).parameters.toEqualTypeOf<[ParentModel]>()
+
+    expectTypeOf(
+      combined.session.modelToMaybeRequirements,
+    ).returns.toEqualTypeOf<Option.Option<Readonly<{ token: string }>>>()
+
+    expectTypeOf(combined.ping.release).parameters.toEqualTypeOf<[number]>()
+
+    expectTypeOf(
+      combined.session.onReleased,
+    ).returns.toEqualTypeOf<ParentMessage>()
+
+    // The arity of each `onAcquired` handler survives, so the Scene steps
+    // still only demand a value where the handler consumes one.
+    expectTypeOf(combined.session.onAcquired).parameters.toEqualTypeOf<[]>()
+
+    // An aggregate is itself a record, so aggregates compose.
+    const nested = aggregate(combined, parentLocalManagedResources)
+
+    expectTypeOf<keyof typeof nested>().toEqualTypeOf<'session' | 'ping'>()
+
+    aggregate(
+      parentLocalManagedResources,
+      // @ts-expect-error strangerManagedResources is declared over another Model
+      strangerManagedResources,
+    )
+
+    aggregate<ParentModel, ParentMessage>()(
+      parentLocalManagedResources,
+      // @ts-expect-error the curried form rejects it the same way
+      strangerManagedResources,
+    )
+  }
 })

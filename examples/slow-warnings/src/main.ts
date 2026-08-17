@@ -79,7 +79,9 @@ export const Message = S.Union([
 ])
 export type Message = typeof Message.Type
 
-const slowWarningTarget = new EventTarget()
+const slowWarningTarget: Subscription.TypedEventTarget<{
+  [SLOW_WARNING_EVENT]: CustomEvent<SlowWarningReport>
+}> = new EventTarget()
 
 const burnCpu = (durationMs: number): number => {
   const stopAt = performance.now() + durationMs
@@ -248,10 +250,7 @@ export const init: Runtime.ApplicationInit<Model, Message> = () => [
 
 export const subscriptions = Subscription.make<Model, Message>()(entry => ({
   slowWarnings: Subscription.persistent(
-    Subscription.fromEventFilterMap<
-      CustomEvent,
-      typeof RecordedSlowWarning.Type
-    >({
+    Subscription.fromEventFilterMap({
       target: slowWarningTarget,
       type: SLOW_WARNING_EVENT,
       toMessage: event =>
