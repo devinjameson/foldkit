@@ -23,12 +23,10 @@ const navButtonClassName =
 
 const gridClassName = 'flex flex-col gap-1 outline-none'
 
-const headerRowClassName = 'grid grid-cols-7 gap-1'
+const rowClassName = 'grid grid-cols-7 gap-1'
 
 const columnHeaderClassName =
   'text-center text-xs font-medium uppercase tracking-wide text-gray-500 py-1'
-
-const weekRowClassName = 'grid grid-cols-7 gap-1'
 
 const cellClassName = 'group flex items-center justify-center'
 
@@ -61,7 +59,7 @@ const headingButton = (
 
 const weekRow = (week: Calendar.Week, h: HtmlBuilder<UiMessage>): Html =>
   h.div(
-    [...week.attributes, h.Class(weekRowClassName)],
+    [...week.attributes, h.Class(rowClassName)],
     week.cells.map(cell =>
       h.div(
         [...cell.cellAttributes, h.Class(cellClassName)],
@@ -96,7 +94,7 @@ const daysView = (
         [...days.grid, h.Class(gridClassName)],
         [
           h.div(
-            [...days.headerRow, h.Class(headerRowClassName)],
+            [...days.headerRow, h.Class(rowClassName)],
             days.columnHeaders.map(header =>
               h.div(
                 [...header.attributes, h.Class(columnHeaderClassName)],
