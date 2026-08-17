@@ -4610,14 +4610,14 @@ export const whileLoop: <A, E, R>(options: {
 
 /** @internal */
 export const forEach: {
-  <B, E, R, S extends Iterable<any>, const Discard extends boolean = false>(
-    f: (a: Arr.ReadonlyArray.Infer<S>, i: number) => Effect.Effect<B, E, R>,
+  <A, B, E, R, S extends Iterable<A> = Iterable<A>, const Discard extends boolean = false>(
+    f: (a: A, i: number) => Effect.Effect<B, E, R>,
     options?: {
       readonly concurrency?: Concurrency | undefined
       readonly discard?: Discard | undefined
     } | undefined
   ): (
-    self: S
+    self: [S] extends [never] ? Iterable<A> : S
   ) => Effect.Effect<Discard extends false ? Arr.ReadonlyArray.With<S, B> : void, E, R>
   <B, E, R, S extends Iterable<any>, const Discard extends boolean = false>(
     self: S,
@@ -4657,6 +4657,15 @@ export const forEach: {
     const eff = forEachConcurrent({ f, out }, items, { concurrency })
     return eff ? as(eff, out as any) : succeed(out as any)
   }))
+
+/** @internal */
+export const head = <A, E, R>(
+  self: Effect.Effect<Iterable<A>, E, R>
+): Effect.Effect<A, E | Cause.NoSuchElementError, R> =>
+  flatMap(self, (elements) => {
+    const result = elements[Symbol.iterator]().next()
+    return result.done ? fail(new NoSuchElementError()) : succeed(result.value)
+  })
 
 const forEachSequential = <A, B, E, R>(
   iterable: Iterable<A>,
@@ -5712,7 +5721,9 @@ export const makeSpanUnsafe = <XA, XE>(
 
     const links = options?.links !== undefined ?
       [...linksFromEnv, ...options.links] :
-      linksFromEnv.slice()
+      linksFromEnv.length === 0
+      ? []
+      : linksFromEnv.slice()
 
     span = tracer.span({
       name,
@@ -5728,12 +5739,12 @@ export const makeSpanUnsafe = <XA, XE>(
           : !isLogLevelGreaterThan(fiber.getRef(Tracer.MinimumTraceLevel), level))
     })
 
-    for (const [key, value] of Object.entries(annotationsFromEnv)) {
-      span.attribute(key, value)
+    for (const key in annotationsFromEnv) {
+      span.attribute(key, annotationsFromEnv[key])
     }
     if (options?.attributes !== undefined) {
-      for (const [key, value] of Object.entries(options.attributes)) {
-        span.attribute(key, value)
+      for (const key in options.attributes) {
+        span.attribute(key, options.attributes[key])
       }
     }
   }

@@ -777,16 +777,46 @@ export const findFirstFilter: {
  * @since 2.0.0
  */
 export const forEach: {
-  <B, E, R, S extends Iterable<any>, const Discard extends boolean = false>(
-    f: (a: Arr.ReadonlyArray.Infer<S>, i: number) => Effect<B, E, R>,
+  <A, B, E, R, S extends Iterable<A> = Iterable<A>, const Discard extends boolean = false>(
+    f: (a: A, i: number) => Effect<B, E, R>,
     options?: { readonly concurrency?: Concurrency | undefined; readonly discard?: Discard | undefined } | undefined
-  ): (self: S) => Effect<Discard extends false ? Arr.ReadonlyArray.With<S, B> : void, E, R>
+  ): (
+    self: [S] extends [never] ? Iterable<A> : S
+  ) => Effect<Discard extends false ? Arr.ReadonlyArray.With<S, B> : void, E, R>
   <B, E, R, S extends Iterable<any>, const Discard extends boolean = false>(
     self: S,
     f: (a: Arr.ReadonlyArray.Infer<S>, i: number) => Effect<B, E, R>,
     options?: { readonly concurrency?: Concurrency | undefined; readonly discard?: Discard | undefined } | undefined
   ): Effect<Discard extends false ? Arr.ReadonlyArray.With<S, B> : void, E, R>
 } = internal.forEach
+
+/**
+ * Returns the first element of the iterable produced by an effect, or fails
+ * with `NoSuchElementError` if the iterable is empty.
+ *
+ * **When to use**
+ *
+ * Use when an effect produces a collection that must contain at least one
+ * element and absence should be represented in the typed error channel.
+ *
+ * **Example** (Getting the first element)
+ *
+ * ```ts import.meta.vitest
+ * import { Effect, Option } from "effect"
+ *
+ * const first = await Effect.runPromise(Effect.head(Effect.succeed([1, 2, 3])))
+ * first // => 1
+ *
+ * const empty = Effect.head(Effect.succeed([] as Array<number>)).pipe(Effect.catchNoSuchElement)
+ * await Effect.runPromise(empty) // => Option.none()
+ * ```
+ *
+ * @category getters
+ * @since 2.0.0
+ */
+export const head: <A, E, R>(
+  self: Effect<Iterable<A>, E, R>
+) => Effect<A, E | Cause.NoSuchElementError, R> = internal.head
 
 /**
  * Executes a body effect repeatedly while a condition holds true.
