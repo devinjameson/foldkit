@@ -1,8 +1,8 @@
 ---
-title: Foldkit Has Server Rendering Now
+title: Foldkit Has Server Rendering
 description: Your Foldkit application can now render to HTML at build time or per request, then hydrate in place on the client.
 date: 2026-08-15
-coverImage: /blog/foldkit-has-server-rendering-now/cover.webp
+coverImage: /blog/foldkit-has-server-rendering/cover.webp
 coverImageAlt: The letters SSR in cyan set over a large black circle on a coral background.
 coverImageWidth: 1600
 coverImageHeight: 1066
@@ -18,7 +18,7 @@ There are issues with this approach in isolation:
 
 There was one more problem. Foldkit not having SSR was the deal-breaker for [Michael Arnaldi](https://x.com/MichaelArnaldi), BDFL of Effect. And that simply will not do.
 
-[![Michael Arnaldi on X: "Personally it's the deal breaker for me, I can't see myself writing 500+ lines of code to do SSG and not have a solution for SSR. I think we made the same mistakes over and over again, server side rendering is strictly necessary for good DX. I like the rest of the design."](/blog/foldkit-has-server-rendering-now/michael-ssr-dealbreaker.webp)](https://x.com/MichaelArnaldi/status/2059527426833592755)
+[![Michael Arnaldi on X: "Personally it's the deal breaker for me, I can't see myself writing 500+ lines of code to do SSG and not have a solution for SSR. I think we made the same mistakes over and over again, server side rendering is strictly necessary for good DX. I like the rest of the design."](/blog/foldkit-has-server-rendering/michael-ssr-dealbreaker.webp)](https://x.com/MichaelArnaldi/status/2059527426833592755)
 
 So, Foldkit can render on the server now. It shipped today under `foldkit/experimental/server`. It will be promoted to `foldkit/server` once the community puts it through its paces.
 
