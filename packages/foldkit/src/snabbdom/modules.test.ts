@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { attributesModule } from './attributes.js'
 import { classModule } from './class.js'
@@ -195,6 +195,46 @@ describe('styleModule', () => {
     const removed = patch(updated, h('div', { style: {} }))
     expect(elementOf(removed).style.color).toBe('')
     expect(elementOf(removed).style.position).toBe('fixed')
+  })
+
+  it('hands complete ownership to a raw style attribute', () => {
+    const container = document.createElement('div')
+    const mounted = patch(
+      container,
+      h('div', {
+        style: {
+          color: 'red',
+          borderLeftColor: 'red',
+          margin: '1px',
+          '--accent': 'old',
+        },
+      }),
+    )
+    const element = elementOf(mounted)
+    const rawStyle =
+      'color: blue; border: 2px solid black; margin-left: 12px; --accent: next'
+    const next = h('div', { attrs: { STYLE: rawStyle } })
+    next.elm = element
+    element.setAttribute('style', rawStyle)
+    const getAttribute = vi.spyOn(element, 'getAttribute')
+    const removeProperty = vi.spyOn(element.style, 'removeProperty')
+
+    if (styleModule.update === undefined) {
+      throw new Error('expected a style update hook')
+    }
+    styleModule.update(mounted, next)
+
+    expect(elementOf(next)).toBe(element)
+    expect(getAttribute).not.toHaveBeenCalled()
+    expect(removeProperty).not.toHaveBeenCalled()
+    getAttribute.mockRestore()
+    removeProperty.mockRestore()
+    expect(element.style.color).toBe('blue')
+    expect(element.style.borderLeftWidth).toBe('2px')
+    expect(element.style.borderLeftStyle).toBe('solid')
+    expect(element.style.borderLeftColor).toBe('black')
+    expect(element.style.marginLeft).toBe('12px')
+    expect(element.style.getPropertyValue('--accent')).toBe('next')
   })
 
   it('ignores inherited style entries in every module path', () => {

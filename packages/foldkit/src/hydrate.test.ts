@@ -2023,6 +2023,46 @@ describe('__hydrateVNode', () => {
     expect(root.style.color).toBe('blue')
   })
 
+  it('hands hydrated typed style ownership to a raw style attribute', () => {
+    const typedView = () =>
+      h.div(
+        [
+          h.Style({
+            color: 'red',
+            borderLeftColor: 'red',
+            margin: '1px',
+            '--accent': 'old',
+          }),
+        ],
+        ['content'],
+      )
+    const rawView = () =>
+      h.div(
+        [
+          h.Attribute(
+            'STYLE',
+            'color: blue; border: 2px solid black; margin-left: 12px; --accent: next',
+          ),
+        ],
+        ['content'],
+      )
+    const root = mountServerHtml(serializeHydratable(buildView(typedView)))
+    if (!(root instanceof HTMLDivElement)) {
+      throw new Error('expected a div root')
+    }
+
+    const hydrated = buildView(() => hydrateVNode(root, typedView()))
+    const updated = buildView(() => patch(hydrated, requireVNode(rawView())))
+
+    expect(updated.elm).toBe(root)
+    expect(root.style.color).toBe('blue')
+    expect(root.style.borderLeftWidth).toBe('2px')
+    expect(root.style.borderLeftStyle).toBe('solid')
+    expect(root.style.borderLeftColor).toBe('black')
+    expect(root.style.marginLeft).toBe('12px')
+    expect(root.style.getPropertyValue('--accent')).toBe('next')
+  })
+
   it('converges class and typed style state together', () => {
     const view = () =>
       h.div(

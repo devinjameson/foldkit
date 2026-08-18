@@ -1,5 +1,8 @@
 /* eslint-disable @typescript-eslint/consistent-type-assertions */
-import { serializedStylePropertyName } from '../domReflection.js'
+import {
+  htmlAttributeValue,
+  serializedStylePropertyName,
+} from '../domReflection.js'
 import type { Module } from './module.js'
 import { type VNode, type VNodeData, VNodeDataMask } from './vnode.js'
 
@@ -75,6 +78,12 @@ function updateStyle(oldVnode: VNode, vnode: VNode): void {
 
   if (!oldStyle && !style) return
   if (oldStyle === style) return
+  if (
+    style === undefined &&
+    htmlAttributeValue((vnode.data as VNodeData).attrs, 'style') !== undefined
+  ) {
+    return
+  }
   oldStyle = oldStyle || ({} as VNodeStyle)
   style = style || ({} as VNodeStyle)
   const oldHasDel = Object.hasOwn(oldStyle, 'delayed')
