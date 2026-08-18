@@ -65,6 +65,7 @@ const scaffoldServerRendering =
     files: [
       'examples/ssg/package.json',
       'examples/ssr/package.json',
+      'packages/examples-e2e/package.json',
       'scripts/check-scaffold-server-rendering.ts',
     ],
     prefixes: [
