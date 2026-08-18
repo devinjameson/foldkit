@@ -15,6 +15,7 @@ const SCOPES = [
   'scaffold_server_rendering',
   'host_parity',
   'dom_state_parity',
+  'peer_floors',
   'typing_game',
   'website',
   'full_workspace_checks',
@@ -125,6 +126,31 @@ test('a website-only change leaves the packed consumer gate alone', () => {
     planCiForFile('packages/website/src/page/landing.ts')[
       'packed_ssr_consumer'
     ],
+    'false',
+  )
+})
+
+test('browser-backed gate manifests select their consumers', () => {
+  const ssrManifest = planCiForFile('examples/ssr/package.json')
+  assert.equal(ssrManifest['packed_ssr_consumer'], 'true')
+
+  const browserManifest = planCiForFile('packages/examples-e2e/package.json')
+  assert.equal(browserManifest['packed_ssr_consumer'], 'true')
+  assert.equal(browserManifest['dom_state_parity'], 'true')
+})
+
+test('peer floor inputs select their packed-manifest gate', () => {
+  for (const fileName of [
+    '.changeset/plugin-peer-floor.md',
+    'packages/vite-plugin-foldkit/package.json',
+    'scripts/check-peer-floors.ts',
+    'scripts/reset-peer-deps.ts',
+  ]) {
+    assert.equal(planCiForFile(fileName)['peer_floors'], 'true', fileName)
+  }
+
+  assert.equal(
+    planCiForFile('packages/website/src/page/landing.ts')['peer_floors'],
     'false',
   )
 })

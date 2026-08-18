@@ -41,7 +41,11 @@ const createFoldkitSmoke =
 const packedSsrConsumer =
   fullWorkspaceChecks ||
   hasChanged({
-    files: ['scripts/check-packed-ssr-consumer.ts'],
+    files: [
+      'examples/ssr/package.json',
+      'packages/examples-e2e/package.json',
+      'scripts/check-packed-ssr-consumer.ts',
+    ],
     prefixes: ['packages/foldkit/', 'packages/vite-plugin-foldkit/'],
   })
 const hostParity =
@@ -68,8 +72,21 @@ const scaffoldServerRendering =
 const domStateParity =
   fullWorkspaceChecks ||
   hasChanged({
-    files: ['scripts/check-dom-state-parity.mts'],
+    files: [
+      'packages/examples-e2e/package.json',
+      'scripts/check-dom-state-parity.mts',
+    ],
     prefixes: ['packages/foldkit/'],
+  })
+const peerFloors =
+  fullWorkspaceChecks ||
+  hasChanged({
+    files: [
+      'packages/vite-plugin-foldkit/package.json',
+      'scripts/check-peer-floors.ts',
+      'scripts/reset-peer-deps.ts',
+    ],
+    prefixes: ['.changeset/'],
   })
 const typingGame =
   fullWorkspaceChecks ||
@@ -121,6 +138,7 @@ process.stdout.write(`packed_ssr_consumer=${packedSsrConsumer}\n`)
 process.stdout.write(`scaffold_server_rendering=${scaffoldServerRendering}\n`)
 process.stdout.write(`host_parity=${hostParity}\n`)
 process.stdout.write(`dom_state_parity=${domStateParity}\n`)
+process.stdout.write(`peer_floors=${peerFloors}\n`)
 process.stdout.write(`typing_game=${typingGame}\n`)
 process.stdout.write(`website=${website}\n`)
 process.stdout.write(`full_workspace_checks=${fullWorkspaceChecks}\n`)
