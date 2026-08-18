@@ -336,6 +336,18 @@ describe('renderToString', () => {
     }),
   )
 
+  it.effect('fails when the build id is not a string', () =>
+    Effect.gen(function* () {
+      for (const buildId of [null, 0, false, {}]) {
+        const error = yield* Effect.flip(
+          renderToStringUnchecked(configWithoutFlags, { buildId }),
+        )
+
+        expect(error).toMatchObject({ _tag: 'MissingBuildId' })
+      }
+    }),
+  )
+
   it.effect('renders without a build id when nothing will hydrate', () =>
     Effect.gen(function* () {
       // Static output carries no hydration contract, so there is nothing for a
