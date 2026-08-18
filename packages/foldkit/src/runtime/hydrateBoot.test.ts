@@ -592,8 +592,11 @@ describe('hydrating boot', () => {
       run(application, { flags: Effect.succeed({ start: 1 }) })
       // @ts-expect-error hydration requires the client's build id
       hydrate(application)
-      // @ts-expect-error hydration owns Flags and accepts no client producer
-      hydrate(application, { flags: Effect.succeed({ start: 1 }) })
+      hydrate(application, {
+        buildId: BUILD_ID,
+        // @ts-expect-error hydration owns Flags and accepts no client producer
+        flags: Effect.succeed({ start: 1 }),
+      })
       hydrate(application, { buildId: BUILD_ID })
     }
   })
