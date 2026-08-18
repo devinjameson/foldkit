@@ -752,15 +752,17 @@ const buildSkew = (
 // root. It is a sibling of `body`, outside the inert and `aria-hidden` boundary,
 // covers the viewport, and refuses its cancel action. Existing dialogs are not
 // closed: calling author-owned `close` or `cancel` listeners while startup is
-// failing can run arbitrary stale code.
+// failing can run arbitrary stale code. Same-document input guards stop
+// physical keyboard input if older top-layer content requests focus.
 //
 // This runs when the client reaches the failure, so it cannot undo what the page
 // already did: subresources the parser fetched, custom elements that upgraded,
 // scripts the served deployment authored, or anything a visitor managed before
 // the client entry ran. Nor is this a script sandbox. A capture listener on
 // `window` or `document` runs before an event reaches the shield, and a timer or
-// listener can open newer top-layer UI. The boundary disables the old page's
-// native links, forms, controls, and focus targets without reconnecting its DOM.
+// listener can open newer top-layer UI. The boundary stops pointer and physical
+// keyboard input from activating the old page's same-document native links,
+// forms, and controls without reconnecting its DOM.
 // NOTE: this module declares its own `Document` (the page metadata a view
 // describes), so the DOM interface is reached through the global binding.
 type DomDocument = typeof document
@@ -783,6 +785,8 @@ const REFUSAL_SHIELD_INPUT_EVENTS: ReadonlyArray<keyof HTMLElementEventMap> = [
   'touchend',
   'touchstart',
 ]
+const REFUSAL_DOCUMENT_INPUT_EVENTS: ReadonlyArray<keyof HTMLElementEventMap> =
+  ['keydown', 'keypress', 'keyup']
 
 const preventRefusalShieldInteraction = (event: Event): void => {
   event.preventDefault()
@@ -841,6 +845,12 @@ const installRefusalShield = (ownerDocument: DomDocument): void => {
   shield.addEventListener('cancel', preventRefusalShieldInteraction)
   for (const eventName of REFUSAL_SHIELD_INPUT_EVENTS) {
     shield.addEventListener(eventName, preventRefusalShieldInteraction, {
+      capture: true,
+      passive: false,
+    })
+  }
+  for (const eventName of REFUSAL_DOCUMENT_INPUT_EVENTS) {
+    ownerDocument.addEventListener(eventName, preventRefusalShieldInteraction, {
       capture: true,
       passive: false,
     })
@@ -4395,12 +4405,15 @@ export type HydrateOptions = Readonly<{
  *  missing Flags payload, an undecodable payload, or a page from another
  *  deployment terminates startup. Every one of those contains the page first:
  *  the document's body is marked `inert` and a nondismissable modal shield is
- *  opened above existing top-layer content, so native links, forms, controls,
- *  and focus targets stop responding. Containment leaves author-owned dialogs
- *  open without calling `close` or dispatching `cancel`. Nothing is moved, so
- *  no custom element reconnects and no frame reloads. This is not a script or
- *  event sandbox: existing capture-phase handlers, browser-generated top-layer
- *  events, timers, and other stale scripts can still run and can open newer
+ *  opened above existing top-layer content, so pointer and physical keyboard
+ *  input do not activate same-document native links, forms, or controls.
+ *  Containment leaves author-owned dialogs open without calling `close` or
+ *  dispatching `cancel`.
+ *  Nothing is moved, so no custom element reconnects and no frame reloads.
+ *  This is not a script, event, or embedded-document sandbox: existing
+ *  capture-phase handlers, browser-generated top-layer events, timers, and
+ *  stale scripts can still run. Controls in embedded documents can still
+ *  receive input if stale code focuses them. Stale code can also open newer
  *  top-layer UI. Use `run` in a separate client-only entry when the page should
  *  boot without server output.
  *

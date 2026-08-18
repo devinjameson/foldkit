@@ -299,11 +299,11 @@ Every other refusal contains the page. This includes calling `Runtime.hydrate` w
 
 ### Page containment
 
-Foldkit marks the document body with `inert`, `aria-hidden`, and `data-foldkit-refused`. It opens a nondismissable modal shield beside the body and above existing top-layer content, including dialogs in closed shadow roots. The shield takes focus so physical keyboard input cannot reach stale body handlers.
+Foldkit marks the document body with `inert`, `aria-hidden`, and `data-foldkit-refused`. It opens a nondismissable modal shield beside the body and above existing top-layer content, including dialogs in closed shadow roots. The shield takes focus. Document-level input guards keep physical keyboard input from reaching stale handlers in the same document if older top-layer content requests focus.
 
 Author-owned dialogs remain open behind the shield. Containment does not call `close()` or dispatch `cancel`, either of which could run a stale listener while startup is failing.
 
-Links, forms, and focusable controls stop responding. The shield asks the visitor to reload. The served DOM remains connected, and `data-foldkit-refused` is available for styling or monitoring. Nothing else in Foldkit sets that attribute.
+Pointer and physical keyboard input do not activate links, forms, or controls in that document. The shield asks the visitor to reload. The served DOM remains connected, and `data-foldkit-refused` is available for styling or monitoring. Nothing else in Foldkit sets that attribute.
 
 Nothing moves. Foldkit marks the existing body instead of wrapping the application root. Wrapping would reparent the subtree, call `disconnectedCallback` and then `connectedCallback` on every upgraded custom element, and reload every iframe. Marking the body avoids those lifecycle effects.
 
@@ -317,6 +317,7 @@ Containment starts only after the client detects a refusal. It cannot undo earli
 - A custom element may already have run `connectedCallback`.
 - A visitor may have interacted with the page before the client entry ran. A script can still submit a form programmatically despite `inert`.
 - Containment is not a script or global-event sandbox. Capture listeners on `window` or `document` run before an event reaches the shield. The browser may also dispatch global or top-layer events.
+- An iframe has its own document. Stale code can focus a control inside it, and physical keyboard input dispatched there does not reach the parent document's guards.
 - A timer or stale listener can open a new dialog after containment. That dialog enters the top layer above the shield. The shield covers top-layer content that existed when refusal began without invoking its lifecycle.
 
 ### Stale HTML and caches
