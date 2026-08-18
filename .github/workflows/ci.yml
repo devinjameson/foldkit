@@ -67,8 +67,12 @@ jobs:
         run: pnpm check:changeset-unwrapped
 
       - name: Check changeset status
-        if: github.event_name == 'pull_request'
-        run: pnpm changeset status --since=origin/main
+        env:
+          FOLDKIT_CI_EVENT_NAME: ${{ github.event_name }}
+          FOLDKIT_CI_HEAD_REF: ${{ github.head_ref }}
+          FOLDKIT_CI_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          FOLDKIT_CI_REPOSITORY: ${{ github.repository }}
+        run: node scripts/check-changeset-status.mjs
 
       - name: Lint
         run: pnpm --filter @foldkit/oxlint-plugin build && pnpm lint:ci
