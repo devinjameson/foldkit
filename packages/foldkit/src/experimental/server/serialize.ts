@@ -829,14 +829,22 @@ const serializeElement = (
   }
 
   // The server HTML does not otherwise carry a vnode's key or identity, so
-  // hydration would adopt keyed children positionally. Stamp a digest of each so
-  // hydration can verify it is adopting the same logical entity without the raw
-  // key or source identity appearing in public markup; it strips the markers as
-  // it adopts.
+  // hydration would adopt keyed children positionally. Stamp a fingerprint of
+  // each so hydration can verify it is adopting the same logical entity without
+  // the raw key or source identity appearing in public markup; it strips the
+  // markers as it adopts.
   if (context.emitHydrationMarkers) {
     if (node.key !== undefined) {
       const keyMarker = hydrationKeyMarker(node.key)
       if (keyMarker === undefined) {
+        if (typeof node.key === 'number' && Number.isNaN(node.key)) {
+          throw new Error(
+            '[foldkit] Cannot server-render an element keyed by NaN as ' +
+              'hydratable. NaN is not equal to itself, so hydration cannot ' +
+              'tell whether the server and client mean the same element. ' +
+              'Key hydratable elements by a string or a number other than NaN.',
+          )
+        }
         throw new Error(
           '[foldkit] Cannot server-render an element keyed by a symbol. A ' +
             'symbol key cannot be compared across the server and the client ' +
@@ -1013,10 +1021,10 @@ const serializeNode = (
  *  tree serializes to an empty comment, mirroring how the runtime patches
  *  `null` as a comment node.
  *
- * A hydratable render also stamps a digest of each vnode's key and identity, so
- * hydration can tell one logical entity from another; the raw key and the
- * compiler's source identity never appear in the markup. A render that is not
- * hydratable emits neither.
+ * A hydratable render also stamps a fingerprint of each vnode's key and
+ * identity, so hydration can tell one logical entity from another; the raw key
+ * and the compiler's source identity never appear in the markup. A render that
+ * is not hydratable emits neither.
  *
  * @internal Not part of the `foldkit/experimental/server` surface; `renderToString` is the public entry to serialization.
  */

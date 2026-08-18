@@ -19,27 +19,27 @@ One program gives Foldkit one rendering pipeline with two delivery policies:
 
 An application can use either policy, or use SSG for some URLs and SSR for others. The application code does not need a second rendering API.
 
-Here is one page from request to live application:
+For an application with Flags, here is the handoff from server input to a live application:
 
 ```diagram
-GET /page  (from the browser)
-   │
-   ▼
-── on the host ──  Vite in dev, your server in production
-     renderPage      [you write]
-        derives Flags from the request
-     renderToString  [Foldkit]
-        calls your init, runs your view → HTML
-     toResponse      [Foldkit]
-        fills index.html, embeds the Flags payload
-   │
-   ▼  HTML page + Flags payload
-── on the browser ──
-     Runtime.hydrate [Foldkit]
-        reads the Flags, calls the same init
-        adopts matching DOM, rebuilds mismatches
-     live application
-        listeners and Mounts attach to the existing elements
+              SERVER                         BROWSER
+
+request or build input                 normal Foldkit app
+         │                                     ▲
+         ▼                                     │
+       Flags                           adopt matching DOM
+         │                                     ▲
+         ▼                                     │
+        init                                same view
+         │                                     ▲
+         ▼                                     │
+       Model                          equivalent Model
+         │                                     ▲
+         ▼                                     │
+        view                               same init
+         │                                     ▲
+         ▼                                     │
+HTML + serialized Flags ────────► Runtime.hydrate reads Flags
 ```
 
 Once the live application takes over, it behaves like any other Foldkit application. Routing, update, Commands, and Subscriptions run in the browser. Navigation moves between routes without contacting the server. The server renders again only on a full page load, such as a reload or a link the runtime does not handle.
@@ -124,9 +124,9 @@ A hydratable render carries these markers:
 - The application root has `data-foldkit-app`. Its value is the `runtimeId`.
 - The root also has `data-foldkit-build`. Its value identifies the deployment that rendered the page.
 - An application with Flags emits a `<script type="application/json" data-foldkit-flags="...">`. It carries the Schema-encoded Flags that produced the server Model. The attribute value matches the root's `runtimeId`.
-- Keyed elements carry `data-foldkit-key`. Elements with build-assigned view identity carry `data-foldkit-identity`. Both values are digests. The marker contains neither the original key, which may hold an account id or email address, nor the build's source path. Hydration compares each digest and removes the marker as it adopts the element. A render with `isHydratable: false` emits neither marker.
+- Keyed elements carry `data-foldkit-key`. Elements with build-assigned view identity carry `data-foldkit-identity`. Both values are deterministic, non-cryptographic fingerprints. Neither marker contains the original key, which may hold an account id or email address, or the build's source path. Hydration compares each fingerprint and removes the marker as it adopts the element. A render with `isHydratable: false` emits neither marker.
 
-  A digest is a comparison token, not a secret. A reader cannot reverse it directly, but can hash a guessed value and test for a match. Key by values that are safe to publish.
+  A fingerprint is a public comparison token, not a secret or an authentication check. A reader can compute the fingerprint of a guessed key or view identity and test for a match. An attacker can also construct two values with the same fingerprint. Key by values that are safe to publish. Hydratable keys must be strings or numbers other than `NaN`.
 
 Conceptually, the handoff appears next to the rendered root:
 

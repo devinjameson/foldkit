@@ -478,11 +478,11 @@ const matchesNamespace = (element: Element, vnode: VNode): boolean =>
 // The server DOM does not encode a vnode's key or identity, so a positional
 // match on tag and namespace alone could adopt a different logical entity: a
 // reordered or stale keyed list would take over the wrong DOM node, and the user
-// state sitting on it. The serializer stamps a digest of key and identity; here
-// the same digest is computed for the vnode and compared, so a mismatch rebuilds
-// instead of transferring state to the wrong row or branch. A key type the
-// digest does not support (a symbol, which a hydratable render refuses) never
-// matches, so it rebuilds rather than adopting on a guess.
+// state sitting on it. The serializer stamps a fingerprint of the key and
+// identity; here the same fingerprint is computed for the vnode and compared,
+// so a mismatch rebuilds instead of transferring state to the wrong row or
+// branch. An unsupported key (NaN or a symbol, which a hydratable render
+// refuses) never matches, so it rebuilds rather than adopting on a guess.
 const matchesAdoptionKey = (element: Element, vnode: VNode): boolean => {
   const serverKey = element.getAttribute(HYDRATION_KEY_ATTRIBUTE)
   if (vnode.key === undefined) {
@@ -490,9 +490,9 @@ const matchesAdoptionKey = (element: Element, vnode: VNode): boolean => {
   }
   const clientKey = hydrationKeyMarker(vnode.key)
   if (clientKey === undefined) {
-    // A key type the digest cannot represent (a symbol, which a hydratable
-    // render refuses) cannot be compared, so it never matches: rebuilding beats
-    // adopting on a guess.
+    // An unsupported key (NaN or a symbol, which a hydratable render refuses)
+    // cannot be compared, so it never matches: rebuilding beats adopting on a
+    // guess.
     return false
   }
   return serverKey === clientKey

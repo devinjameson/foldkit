@@ -586,10 +586,10 @@ describe('serializeHtml', () => {
     expect(serializeHtml(view)).toBe('<button id="submit">Send</button>')
   })
 
-  it('stamps a hydratable key as a digest rather than the key itself', () => {
+  it('stamps a hydratable key as a fingerprint rather than the key itself', () => {
     // A key is application data (a row id, an account identifier, an email) that
-    // the view never renders, so hydration compares digests and the key itself
-    // never reaches the markup.
+    // the view never renders, so hydration compares fingerprints and the key
+    // itself never reaches the markup.
     const view = h.keyed('li')('user@example.com', [], ['Ada'])
     const serialized = serializeHtml(view, { emitHydrationMarkers: true })
 
@@ -599,9 +599,9 @@ describe('serializeHtml', () => {
     )
   })
 
-  it('stamps a hydratable view identity as a digest rather than the source path', () => {
+  it('stamps a hydratable view identity as a fingerprint rather than the source path', () => {
     // The compiler's identity spells out a relative source path and function
-    // name. Digesting it keeps the build's file layout out of public HTML.
+    // name. Fingerprinting it keeps the build's file layout out of public HTML.
     const view = h.div([], ['Home'])
     if (view === null) {
       throw new Error('expected the view to produce a vnode')
@@ -616,10 +616,10 @@ describe('serializeHtml', () => {
     )
   })
 
-  it('digests a numeric key differently from the same digits as a string', () => {
+  it('fingerprints a numeric key differently from the same digits as a string', () => {
     // The runtime compares keys with `===`, so 1 and '1' are different keys. A
-    // digest that collapsed them would let a numeric server row adopt a string
-    // client row, carrying one row's typed state onto another.
+    // fingerprint that collapsed them would let a numeric server row adopt a
+    // string client row, carrying one row's typed state onto another.
     const numeric = serializeHtml(h.keyed('li')(1, [], ['one']), {
       emitHydrationMarkers: true,
     })
@@ -629,6 +629,16 @@ describe('serializeHtml', () => {
 
     expect(numeric).not.toBe(string)
     expect(hydrationKeyMarker(1)).not.toBe(hydrationKeyMarker('1'))
+  })
+
+  it('refuses to render an element keyed by NaN as hydratable', () => {
+    expect(hydrationKeyMarker(Number.NaN)).toBeUndefined()
+
+    const view = h.keyed('li')(Number.NaN, [], ['one'])
+    expect(() => serializeHtml(view, { emitHydrationMarkers: true })).toThrow(
+      'keyed by NaN',
+    )
+    expect(serializeHtml(view)).toBe('<li>one</li>')
   })
 
   it('refuses to render an element keyed by a symbol as hydratable', () => {
