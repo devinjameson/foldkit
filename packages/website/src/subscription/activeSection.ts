@@ -29,7 +29,6 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
           M.tags({
             Manifesto: () => Page.Manifesto.tableOfContents,
             WhyNoJsx: () => Page.WhyNoJsx.tableOfContents,
-            WhatAboutSsr: () => Page.WhatAboutSsr.tableOfContents,
             Performance: () => Page.Performance.tableOfContents,
             GettingStarted: () => Page.GettingStarted.tableOfContents,
             Roadmap: () => Page.Roadmap.tableOfContents,

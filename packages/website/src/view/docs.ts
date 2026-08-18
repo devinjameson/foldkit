@@ -338,7 +338,6 @@ export const searchWeight = (tag: string): string =>
       'EffectAtomComparison',
       'ElmComparison',
       'WhyNoJsx',
-      'WhatAboutSsr',
       'Performance',
       'Roadmap',
       S.startsWith('Testing'),
@@ -422,11 +421,6 @@ export const docsView = (
         withTableOfContents(
           lazyDocsContent(Page.WhyNoJsx.view, [model.copiedSnippets, h]),
           Page.WhyNoJsx.tableOfContents,
-        ),
-      WhatAboutSsr: () =>
-        withTableOfContents(
-          Page.WhatAboutSsr.view(h),
-          Page.WhatAboutSsr.tableOfContents,
         ),
       Roadmap: () =>
         withTableOfContents(Page.Roadmap.view(h), Page.Roadmap.tableOfContents),

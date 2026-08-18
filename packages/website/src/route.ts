@@ -16,7 +16,6 @@ import {
 export const HomeRoute = r('Home')
 export const ManifestoRoute = r('Manifesto')
 export const WhyNoJsxRoute = r('WhyNoJsx')
-export const WhatAboutSsrRoute = r('WhatAboutSsr')
 export const PerformanceRoute = r('Performance')
 export const ComingFromReactRoute = r('ComingFromReact')
 export const ComingFromTanStackQueryRoute = r('ComingFromTanStackQuery')
@@ -127,7 +126,6 @@ export const NotFoundRoute = r('NotFound', { path: S.String })
 export const DocsRoute = S.Union([
   ManifestoRoute,
   WhyNoJsxRoute,
-  WhatAboutSsrRoute,
   PerformanceRoute,
   ComingFromReactRoute,
   ComingFromTanStackQueryRoute,
@@ -280,7 +278,6 @@ export const gettingStartedRouter = getStarted(
 export const roadmapRouter = page('roadmap', RoadmapRoute)
 
 export const whyNoJsxRouter = faq('why-no-jsx', WhyNoJsxRoute)
-export const whatAboutSsrRouter = faq('what-about-ssr', WhatAboutSsrRoute)
 export const performanceRouter = faq('performance', PerformanceRoute)
 
 export const comingFromReactRouter = react(
@@ -479,7 +476,7 @@ export const aiMcpRouter = ai('mcp', AiMcpRoute)
 
 const getStartedParser = oneOf(manifestoRouter, gettingStartedRouter)
 
-const faqParser = oneOf(whyNoJsxRouter, whatAboutSsrRouter, performanceRouter)
+const faqParser = oneOf(whyNoJsxRouter, performanceRouter)
 
 const reactParser = oneOf(
   comingFromReactRouter,

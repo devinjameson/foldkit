@@ -20,7 +20,7 @@ Day-to-day work is tracked at ticket granularity in a private tracker, and that 
 
 ## After 1.0
 
-Build-time static generation and per-request server rendering share one experimental hydration handoff: `Server.renderToString` in `foldkit/experimental` and explicit adoption via `Runtime.hydrate`. The [Server Rendering](/core/server-rendering) and [What about SSR?](/faq/what-about-ssr) pages cover the architecture, with separate SSG and SSR reference applications.
+Build-time static generation and per-request server rendering share one experimental hydration handoff: `Server.renderToString` in `foldkit/experimental` and explicit adoption via `Runtime.hydrate`. The [Server Rendering](/core/server-rendering) page covers the architecture, with separate SSG and SSR reference applications.
 
 Beyond that, these are directions being explored, not commitments:
 
@@ -30,7 +30,7 @@ Beyond that, these are directions being explored, not commitments:
 
 ## What Foldkit will not do
 
-Two stances are settled and will survive 1.0. Foldkit will not split the view into server and client halves the way React Server Components do: the view is one function of one Model, and cutting that tree across a network boundary breaks the architecture. And Foldkit will not adopt JSX. Both are explained in depth in [What about SSR?](/faq/what-about-ssr) and [Why no JSX?](/faq/why-no-jsx).
+Two stances are settled and will survive 1.0. Foldkit will not split the view into server and client halves the way React Server Components do: the view is one function of one Model, and cutting that tree across a network boundary breaks the architecture. There are no `'use client'` or `'use server'` annotations and no second flavor of data fetching. The line between server and client stays at the data, not the view. And Foldkit will not adopt JSX, explained in depth on [Why no JSX?](/faq/why-no-jsx).
 
 ## How to follow along
 
