@@ -655,7 +655,13 @@ const RESOLVED_EXAMPLE_SOURCES_PREFIX = '\0' + EXAMPLE_SOURCES_PREFIX
 
 const EXAMPLE_SLUG_SET: Set<string> = new Set(exampleSlugs)
 
-const EXAMPLE_FILE_EXTENSIONS = new Set(['.ts', '.tsx', '.css', '.md'])
+export const EXAMPLE_FILE_EXTENSIONS: ReadonlySet<string> = new Set([
+  '.ts',
+  '.tsx',
+  '.css',
+  '.md',
+  '.mjs',
+])
 
 const langFromExtension = (filePath: string): string => {
   const extension = extname(filePath)
@@ -668,10 +674,17 @@ const langFromExtension = (filePath: string): string => {
   if (extension === '.md') {
     return 'markdown'
   }
+  if (extension === '.mjs') {
+    return 'javascript'
+  }
   return 'typescript'
 }
 
-const EXAMPLE_SOURCE_ROOTS = ['src', 'server', 'scripts']
+export const EXAMPLE_SOURCE_ROOTS: ReadonlyArray<string> = [
+  'src',
+  'server',
+  'scripts',
+]
 
 const collectSourceFiles = async (
   directory: string,

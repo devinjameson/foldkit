@@ -10,7 +10,7 @@ export const renderPage = (request: Request): Promise<Server.EntryResult> =>
     Effect.gen(function* () {
       const renderedApplication = yield* Server.renderToString(
         { routing: {}, init, view },
-        { url: request.url },
+        { url: request.url, buildId: import.meta.env.FOLDKIT_BUILD_ID },
       )
 
       return Server.Rendered(renderedApplication)

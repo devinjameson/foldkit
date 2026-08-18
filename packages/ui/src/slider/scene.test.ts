@@ -15,7 +15,7 @@ const testToView = (attributes: SliderAttributes) =>
       ih.div([...attributes.track], [ih.div([...attributes.filledTrack])]),
       ih.div([...attributes.thumb]),
       ...(Array.isReadonlyArrayNonEmpty(attributes.hiddenInput)
-        ? [ih.span(attributes.hiddenInput)]
+        ? [ih.input(attributes.hiddenInput)]
         : []),
     ],
   )

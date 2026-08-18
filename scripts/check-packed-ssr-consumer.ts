@@ -1,0 +1,2350 @@
+import { spawnSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
+import { type Server, createServer } from 'node:http'
+import { createRequire } from 'node:module'
+import { tmpdir } from 'node:os'
+import { extname, join } from 'node:path'
+import { pathToFileURL } from 'node:url'
+
+// A Foldkit application built outside this repository, from packed tarballs,
+// with no source alias and no workspace link. Everything about the build id
+// depends on that shape and cannot be observed inside the monorepo: an
+// installed Foldkit is externalized from the server bundle, where the plugin's
+// compile-time define never reaches it, while a source-aliased one is bundled
+// and every define lands. A check that runs against the workspace copy proves
+// nothing about the artifacts a consumer installs.
+//
+// What this gate holds:
+//
+//   1. The server bundle really externalizes Foldkit.
+//   2. One deployment id reaches the client bundle and the served root alike.
+//   3. Hydration of a same-build page keeps the root and the input element, so
+//      live DOM state the markup never carried survives.
+//   4. A parser-upgraded Custom Element with view-owned light DOM is replaced.
+//      Disconnect-time mutations cannot survive on the old host, an ancestor,
+//      or an earlier adopted sibling.
+//   5. Hydration of a page from another deployment stops before it reads the
+//      handoff, so no code from this build ever owns that page's DOM.
+//   6. A hydratable render with no build id fails with the typed error that
+//      names what to supply, rather than serving an unprotected page.
+
+const REPO_ROOT = process.cwd()
+const FOLDKIT_DIR = 'packages/foldkit'
+const PLUGIN_DIR = 'packages/vite-plugin-foldkit'
+
+const BUILD_ID_SERVED = 'deployment-alpha'
+const BUILD_ID_CURRENT = 'deployment-beta'
+const TYPED_VALUE = 'typed-before-hydration'
+const PORT = 5199
+const ORIGIN = `http://127.0.0.1:${PORT}`
+const DOM_COMMIT_TIMEOUT_MS = 10_000
+
+const isSkipBuild = process.argv.includes('--skip-build')
+
+class ConsumerCheckError extends Error {}
+
+const log = (message: string): void => {
+  console.log(`[packed-ssr] ${message}`)
+}
+
+const fail = (message: string): never => {
+  throw new ConsumerCheckError(message)
+}
+
+const assertConsumer: (
+  condition: boolean,
+  message: string,
+) => asserts condition = (
+  condition: boolean,
+  message: string,
+): asserts condition => {
+  if (!condition) {
+    fail(message)
+  }
+}
+
+type RunOptions = Readonly<{
+  cwd?: string
+  env?: Readonly<Record<string, string>>
+  inherit?: boolean
+  timeoutMs?: number
+}>
+
+type RunResult = Readonly<{
+  stdout: string
+  stderr: string
+  status: number | null
+}>
+
+const run = (
+  command: string,
+  args: ReadonlyArray<string>,
+  options: RunOptions = {},
+): RunResult => {
+  const result = spawnSync(command, [...args], {
+    cwd: options.cwd,
+    encoding: 'utf-8',
+    env: { ...process.env, ...options.env },
+    stdio: options.inherit ? 'inherit' : 'pipe',
+    timeout: options.timeoutMs ?? 300_000,
+  })
+
+  return {
+    stdout: typeof result.stdout === 'string' ? result.stdout : '',
+    stderr: typeof result.stderr === 'string' ? result.stderr : '',
+    status: result.status,
+  }
+}
+
+const runRequired = (
+  label: string,
+  command: string,
+  args: ReadonlyArray<string>,
+  options: RunOptions = {},
+): RunResult => {
+  log(label)
+  const result = run(command, args, options)
+  if (result.status !== 0) {
+    const output = `${result.stdout}${result.stderr}`.trim()
+    fail(`${label} failed${output === '' ? '' : `:\n${output}`}`)
+  }
+  return result
+}
+
+type PackOutput = ReadonlyArray<Readonly<{ filename?: string }>>
+
+const parseJson = <T>(raw: string): T => JSON.parse(raw)
+
+const readJson = <T>(path: string): T =>
+  parseJson<T>(readFileSync(path, 'utf8'))
+
+const packPackage = (label: string, packageDir: string): string => {
+  const result = runRequired(label, 'npm', ['pack', '--json'], {
+    cwd: join(REPO_ROOT, packageDir),
+  })
+  const filename = parseJson<PackOutput>(result.stdout)[0]?.filename
+  assertConsumer(
+    filename !== undefined,
+    `${label} did not return a tarball filename`,
+  )
+  log(`Packed ${filename}`)
+  return join(REPO_ROOT, packageDir, filename)
+}
+
+// CONSUMER SOURCES
+
+const INDEX_HTML = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Packed consumer</title>
+    <script>
+      window.__adoptedFrameDocuments = []
+      window.__recordAdoptedFrame = function (frameDocument) {
+        window.__adoptedFrameDocuments.push(frameDocument)
+      }
+      window.__parserOwnedConnectionChildCounts = []
+      window.__parserChildDisconnections = 0
+      class ParserChild extends HTMLElement {
+        connectedCallback() {
+          this.ownerHost = this.parentElement
+        }
+        disconnectedCallback() {
+          window.__parserChildDisconnections++
+          var ownerHost = this.ownerHost
+          if (ownerHost === null || ownerHost === undefined) {
+            return
+          }
+          ownerHost.removeAttribute('title')
+          var reinserted = document.createElement('span')
+          reinserted.setAttribute('data-parser-reinserted', '')
+          ownerHost.appendChild(reinserted)
+        }
+      }
+      customElements.define('x-parser-child', ParserChild)
+      class ParserOwned extends HTMLElement {
+        connectedCallback() {
+          this.ownerParent = this.parentElement
+          this.ownerEarlierSibling = this.previousElementSibling
+          window.__parserOwnedConnectionChildCounts.push(this.childNodes.length)
+          if (this.childNodes.length > 0) {
+            return
+          }
+          var child = document.createElement('x-parser-child')
+          child.id = 'parser-view-child'
+          child.textContent = 'view'
+          this.componentOwnedChild = child
+          this.appendChild(child)
+        }
+        disconnectedCallback() {
+          this.ownerParent?.removeAttribute('title')
+          this.ownerEarlierSibling?.removeAttribute('title')
+          var earlierText = this.ownerEarlierSibling?.firstChild
+          if (earlierText !== null && earlierText !== undefined) {
+            earlierText.data = 'component-mutated'
+          }
+        }
+        mutateOwned() {
+          this.componentOwnedChild.textContent = 'component-mutated'
+        }
+      }
+      customElements.define('x-parser-owned', ParserOwned)
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      window.__probe = (function () {
+        var root = document.querySelector('[data-foldkit-app]')
+        var field = document.querySelector('#field')
+        if (field !== null) {
+          field.value = '${TYPED_VALUE}'
+        }
+        window.__observedIdChanges = []
+        window.__customElementConstructions = { holder: 0, inner: 0 }
+        window.__idPropertyWrites = 0
+        window.__innerHtmlPropertyWrites = 0
+        class ObservedId extends HTMLElement {
+          constructor() {
+            super()
+            window.__customElementConstructions.holder++
+          }
+          static get observedAttributes() { return ['id', 'dir'] }
+          get id() { return 'component-id' }
+          set id(value) { window.__idPropertyWrites++ }
+          get innerHTML() { return 'component markup' }
+          set innerHTML(value) { window.__innerHtmlPropertyWrites++ }
+          attributeChangedCallback(name, oldValue, newValue) {
+            window.__observedIdChanges.push([name, oldValue, newValue])
+          }
+        }
+        customElements.define('x-observed-id', ObservedId)
+        class InnerProbe extends HTMLElement {
+          constructor() {
+            super()
+            window.__customElementConstructions.inner++
+          }
+        }
+        customElements.define('x-inner-probe', InnerProbe)
+        var styled = document.querySelector('#styled')
+        window.__styleMutations = []
+        var styleObserver = new MutationObserver(function (records) {
+          window.__styleMutations.push.apply(window.__styleMutations, records)
+        })
+        window.__readStyleMutationCount = function () {
+          window.__styleMutations.push.apply(
+            window.__styleMutations,
+            styleObserver.takeRecords(),
+          )
+          return window.__styleMutations.length
+        }
+        if (styled !== null) {
+          styleObserver.observe(styled, {
+            attributes: true,
+            attributeFilter: ['style'],
+          })
+        }
+        var controlledNodes = {}
+        for (var id of [
+          'equal-value',
+          'equal-checked',
+          'raw-select',
+          'released-textarea',
+          'released-output',
+          'inner-select',
+          'released-file',
+          'released-size',
+          'released-tabindex',
+          'released-dimensions',
+          'released-start',
+          'styled',
+          'observed-id',
+          'custom-inner-probe',
+          'native-inner-html',
+          'native-inner-probe',
+        ]) {
+          controlledNodes[id] = document.getElementById(id)
+        }
+        var parserOwnedHost = document.getElementById('parser-owned')
+        return {
+          root: root,
+          field: field,
+          controlledNodes: controlledNodes,
+          observedIdChangesAtDefinition: window.__observedIdChanges.length,
+          customElementConstructionsAtDefinition: {
+            holder: window.__customElementConstructions.holder,
+            inner: window.__customElementConstructions.inner,
+          },
+          adoptedFrame: document.getElementById('adopted-frame'),
+          parserOwnedHost: parserOwnedHost,
+          parserComponentChild: parserOwnedHost.componentOwnedChild,
+          parserServerChild: parserOwnedHost.lastElementChild,
+          parserChildrenBeforeHydration: parserOwnedHost.childElementCount,
+          styleObserver: styleObserver,
+        }
+      })()
+    </script>
+    <script type="module" src="/src/entry.ts"></script>
+  </body>
+</html>
+`
+
+const VITE_CONFIG = `import { defineConfig } from 'vite'
+
+import { foldkit } from '@foldkit/vite-plugin'
+
+export default defineConfig({
+  plugins: [foldkit({ ssr: { serverEntry: '/src/entry.server.ts' } })],
+})
+`
+
+// A low-entropy value the build removes from the client. It exists to prove
+// that nothing derived from this module's contents ships: an identity or marker
+// carrying a truncated hash of the source would be a published check against
+// it, and a four-digit PIN falls to ten thousand guesses.
+const SERVER_ONLY_PIN = '0427'
+
+const MAIN_TS = `import { Match as M, Schema as S } from 'effect'
+import { CustomElement, type Runtime } from 'foldkit'
+import { type Document, type HtmlBuilder } from 'foldkit/html'
+import { m } from 'foldkit/message'
+import { evo } from 'foldkit/struct'
+
+export const Model = S.Struct({
+  count: S.Number,
+  formState: S.Literals(['Controlled', 'Released']),
+})
+export type Model = typeof Model.Type
+
+export const Flags = S.Struct({ start: S.Number })
+export type Flags = typeof Flags.Type
+
+export const ClickedIncrement = m('ClickedIncrement')
+export const ClickedRelease = m('ClickedRelease')
+
+export const Message = S.Union([ClickedIncrement, ClickedRelease])
+export type Message = typeof Message.Type
+
+export const init: Runtime.ApplicationInit<Model, Message, Flags> = flags => [
+  { count: flags.start, formState: 'Controlled' },
+  [],
+]
+
+type UpdateReturn = readonly [Model, ReadonlyArray<never>]
+
+export const update = (model: Model, message: Message): UpdateReturn =>
+  M.value(message).pipe(
+    M.withReturnType<UpdateReturn>(),
+    M.tagsExhaustive({
+      ClickedIncrement: () => [evo(model, { count: count => count + 1 }), []],
+      ClickedRelease: () => [
+        evo(model, { formState: () => 'Released' }),
+        [],
+      ],
+    }),
+  )
+
+const serverOnlyPin = import.meta.env.SSR ? '${SERVER_ONLY_PIN}' : ''
+const observedId = CustomElement.define({
+  tag: 'x-observed-id',
+  properties: {},
+  events: {},
+})
+const parserOwned = CustomElement.define({
+  tag: 'x-parser-owned',
+  properties: {},
+  events: {},
+})
+const parserChild = CustomElement.define({
+  tag: 'x-parser-child',
+  properties: {},
+  events: {},
+})
+
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
+  const observedIdElement = observedId.withMessage(h)
+  const parserOwnedElement = parserOwned.withMessage(h)
+  const parserChildElement = parserChild.withMessage(h)
+  return {
+    title: \`Count \${model.count}\`,
+    body: h.main(
+    [h.Id('app-root')],
+    [
+      h.h1([h.Id('heading')], [serverOnlyPin === '' ? 'Packed consumer' : 'Packed consumer']),
+      h.input([h.Id('field'), h.Type('text'), h.Name('email')]),
+      h.iframe([
+        h.Id('adopted-frame'),
+        h.Src('/adopted-frame'),
+        h.Title('Adopted frame'),
+      ]),
+      h.button(
+        [h.Id('increment'), h.OnClick(ClickedIncrement())],
+        [\`Count: \${model.count}\`],
+      ),
+      // Browser behavior that needs no Foldkit listener: a link that
+      // navigates, a form that submits, and a control that takes focus. A page
+      // this build refused must do none of it.
+      h.a([h.Id('native-link'), h.Href('/navigated')], ['Go']),
+      h.form(
+        [h.Id('native-form'), h.Action('/submitted'), h.Method('get')],
+        [
+          h.input([h.Type('hidden'), h.Name('account'), h.Value('old-account')]),
+          h.button([h.Id('native-submit'), h.Type('submit')], ['Send']),
+        ],
+      ),
+      h.form(
+        [h.Id('release-form'), h.Title('form-owned')],
+        [
+          h.input([
+            h.Id('equal-value'),
+            ...(model.formState === 'Released'
+              ? []
+              : [h.Value('same')]),
+          ]),
+          h.input([
+            h.Id('equal-checked'),
+            h.Type('checkbox'),
+            ...(model.formState === 'Released'
+              ? []
+              : [h.Checked(true)]),
+          ]),
+          h.select(
+            model.formState === 'Released'
+              ? [h.Id('raw-select')]
+              : [h.Id('raw-select'), h.Value('a')],
+            [
+              h.option([h.Value('a')], ['A']),
+              h.option(
+                model.formState === 'Released'
+                  ? [h.Value('b'), h.Attribute('selected', '')]
+                  : [h.Value('b')],
+                ['B'],
+              ),
+            ],
+          ),
+          h.textarea(
+            model.formState === 'Released'
+              ? [h.Id('released-textarea'), h.InnerHTML('textarea default')]
+              : [h.Id('released-textarea'), h.Value('controlled')],
+          ),
+          h.output(
+            model.formState === 'Released'
+              ? [
+                  h.Id('released-output'),
+                  h.InnerHTML('<span id="output-child">output default</span>'),
+                ]
+              : [h.Id('released-output'), h.Value('controlled')],
+          ),
+          h.select(
+            model.formState === 'Released'
+              ? [
+                  h.Id('inner-select'),
+                  h.InnerHTML(
+                    '<option value="a" selected>A</option><option value="b">B</option>',
+                  ),
+                ]
+              : [h.Id('inner-select'), h.Value('b')],
+            model.formState === 'Released'
+              ? undefined
+              : [
+                  h.option([h.Value('a')], ['A']),
+                  h.option([h.Value('b')], ['B']),
+                ],
+          ),
+          h.input(
+            model.formState === 'Released'
+              ? [
+                  h.Id('released-file'),
+                  h.Attribute('type', 'FiLe'),
+                  h.Attribute('value', 'default-file-name'),
+                ]
+              : [
+                  h.Id('released-file'),
+                  h.Type('text'),
+                  h.Value('controlled'),
+                ],
+          ),
+          h.input(
+            model.formState === 'Released'
+              ? [h.Id('released-size')]
+              : [h.Id('released-size'), h.Size(3)],
+          ),
+          h.div(
+            model.formState === 'Released'
+              ? [h.Id('released-tabindex')]
+              : [
+                  h.Id('released-tabindex'),
+                  h.Tabindex(4),
+                  h.Title('owned'),
+                ],
+          ),
+          h.textarea(
+            model.formState === 'Released'
+              ? [h.Id('released-dimensions')]
+              : [h.Id('released-dimensions'), h.Cols(4), h.Rows(5)],
+          ),
+          h.ol(
+            model.formState === 'Released'
+              ? [h.Id('released-start')]
+              : [h.Id('released-start'), h.Start(6)],
+            [h.li([], ['item'])],
+          ),
+          h.div([
+            h.Id('styled'),
+            h.Style({
+              '--accent': 'packed',
+              color:
+                model.formState === 'Released' ? '#0000ff' : '#ff0000',
+            }),
+          ]),
+          observedIdElement([
+            h.Id('observed-id'),
+            h.Dir('LTR'),
+            h.InnerHTML(
+              '<x-inner-probe id="custom-inner-probe"></x-inner-probe>',
+            ),
+          ]),
+          h.div([
+            h.Id('native-inner-html'),
+            h.InnerHTML(
+              '<x-inner-probe id="native-inner-probe"></x-inner-probe>',
+            ),
+          ]),
+          h.div(
+            [h.Id('parser-earlier'), h.Title('earlier-owned')],
+            ['earlier-text'],
+          ),
+          parserOwnedElement(
+            [h.Id('parser-owned'), h.Title('view-owned')],
+            [parserChildElement([h.Id('parser-view-child')], ['view'])],
+          ),
+          h.button(
+            [h.Id('release'), h.Type('button'), h.OnClick(ClickedRelease())],
+            ['Release ownership'],
+          ),
+        ],
+      ),
+    ],
+    ),
+  }
+}
+`
+
+const ENTRY_TS = `import { Runtime } from 'foldkit'
+
+import { Flags, Message, Model, init, update, view } from './main'
+
+const application = Runtime.makeApplication({
+  Model,
+  Flags,
+  init,
+  update,
+  view,
+  container: document.getElementById('root'),
+  devTools: { Message },
+})
+
+Runtime.hydrate(application, { buildId: import.meta.env.FOLDKIT_BUILD_ID })
+`
+
+const TYPESCRIPT_VERSION = '^6.0.3'
+
+const CONSUMER_TSCONFIG = `${JSON.stringify(
+  {
+    compilerOptions: {
+      strict: true,
+      noEmit: true,
+      module: 'nodenext',
+      moduleResolution: 'nodenext',
+      target: 'es2022',
+      lib: ['esnext', 'dom'],
+      types: [],
+    },
+    include: ['src/packed-types.ts'],
+  },
+  null,
+  2,
+)}\n`
+
+const PACKED_TYPES_TS = `import type {
+  ApplicationConfig,
+  ApplicationConfigWithFlags,
+  EntryResult,
+  HydratableRenderOptions,
+  InjectIntoTemplateOptions,
+  RenderFlagsOptions,
+  RenderOptions,
+  RenderUrlFlagsOptions,
+  RenderUrlOptions,
+  RenderedApplication,
+  RequestClassification,
+  ResponseOptions,
+  StaticRenderOptions,
+} from 'foldkit/experimental/server'
+import type { HydrateOptions } from 'foldkit/runtime'
+
+const hydratable: HydratableRenderOptions = { buildId: 'deployment-1' }
+const staticOnly: StaticRenderOptions = { isHydratable: false }
+const either: ReadonlyArray<RenderOptions> = [hydratable, staticOnly]
+const hydrate: HydrateOptions = { buildId: 'deployment-1' }
+
+export type Used = [
+  ApplicationConfig<never, never>,
+  ApplicationConfigWithFlags<never, never, never>,
+  EntryResult,
+  InjectIntoTemplateOptions,
+  RenderFlagsOptions<never>,
+  RenderUrlFlagsOptions<never>,
+  RenderUrlOptions,
+  RenderedApplication,
+  RequestClassification,
+  ResponseOptions,
+]
+
+export const count = either.length + Number(hydrate.buildId === '')
+`
+
+const ENTRY_SERVER_TS = `import { Effect } from 'effect'
+import { Server } from 'foldkit/experimental'
+
+import { Flags, init, view } from './main'
+
+export const buildId = import.meta.env.FOLDKIT_BUILD_ID
+
+export const renderHtml = (template: string): Promise<string> =>
+  Effect.runPromise(
+    Server.renderToString({ Flags, init, view }, { flags: { start: 0 }, buildId }).pipe(
+      Effect.map(rendered =>
+        Server.toResponse(template, Server.Rendered(rendered)),
+      ),
+      Effect.flatMap(response => Effect.promise(() => response.text())),
+    ),
+  )
+
+export const renderWithoutBuildIdTag = (): Promise<string> =>
+  Effect.runPromise(
+    Effect.map(
+      // NOTE: no buildId, which the types refuse and the runtime has to catch
+      // for a JavaScript caller. Vite does not typecheck, so this reaches the
+      // check it is written for.
+      Effect.flip(
+        Server.renderToString({ Flags, init, view }, { flags: { start: 0 } }),
+      ),
+      error => error._tag,
+    ),
+  )
+`
+
+// Asserted through the subpaths a consumer imports, against the installed
+// package rather than the workspace source. A promoted subpath that omits an
+// export the umbrella namespace has is invisible from inside this repository,
+// where everything resolves to source.
+const ENTRYPOINTS_MJS = `import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+
+const server = await import('foldkit/experimental/server')
+const runtime = await import('foldkit/runtime')
+const umbrella = await import('foldkit/experimental')
+
+const failures = []
+const check = (condition, message) => {
+  if (!condition) {
+    failures.push(message)
+  }
+}
+
+check(
+  typeof server.MissingBuildId === 'function',
+  'foldkit/experimental/server does not export MissingBuildId',
+)
+check(
+  typeof server.renderToString === 'function',
+  'foldkit/experimental/server does not export renderToString',
+)
+check(
+  typeof umbrella.Server?.MissingBuildId === 'function',
+  'foldkit/experimental Server namespace does not expose MissingBuildId',
+)
+check(
+  typeof runtime.hydrate === 'function',
+  'foldkit/runtime does not export hydrate',
+)
+
+// The build id is settled before the view runs, so this view is never called.
+const { Effect } = await import('effect')
+const error = await Effect.runPromise(
+  Effect.flip(
+    server.renderToString({
+      init: () => [{}, []],
+      view: () => ({ title: 't', body: null }),
+    }),
+  ),
+)
+check(
+  error._tag === 'MissingBuildId',
+  'expected MissingBuildId, got ' + String(error._tag),
+)
+check(
+  error instanceof server.MissingBuildId,
+  'the failure is not an instance of the exported MissingBuildId',
+)
+
+// HydrateOptions is a type, so it is asserted through the emitted declarations.
+const runtimeTypes = readFileSync(
+  resolve(process.cwd(), 'node_modules/foldkit/dist/runtime/public.d.ts'),
+  'utf8',
+)
+check(
+  runtimeTypes.includes('HydrateOptions'),
+  'foldkit/runtime declarations do not export HydrateOptions',
+)
+
+if (failures.length > 0) {
+  console.error(failures.join('\\n'))
+  process.exit(1)
+}
+`
+
+const VITE_ENV_D_TS = `/// <reference types="vite/client" />
+
+interface ImportMetaEnv {
+  readonly FOLDKIT_BUILD_ID?: string
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv
+}
+`
+
+const BUILD_MJS = `import { spawnSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
+
+const buildId = process.env.FOLDKIT_BUILD_ID ?? randomUUID()
+const outRoot = process.argv[2]
+const base = process.argv[3]
+
+const steps = [
+  ['vite', ['build', '--base', base, '--outDir', outRoot + '/client', '--emptyOutDir']],
+  ['vite', ['build', '--ssr', 'src/entry.server.ts', '--outDir', outRoot + '/server', '--emptyOutDir']],
+]
+
+for (const [command, args] of steps) {
+  const { status } = spawnSync(command, args, {
+    stdio: 'inherit',
+    shell: process.platform === 'win32',
+    env: { ...process.env, FOLDKIT_BUILD_ID: buildId },
+  })
+  if (status !== 0) {
+    process.exit(status ?? 1)
+  }
+}
+`
+
+// CONSUMER PROJECT
+
+type Manifest = Readonly<{
+  name?: string
+  version?: string
+  peerDependencies?: Readonly<Record<string, string>>
+  devDependencies?: Readonly<Record<string, string>>
+}>
+
+const writeConsumerProject = (
+  projectDir: string,
+  foldkitTarball: string,
+  pluginTarball: string,
+): void => {
+  const foldkitManifest = readJson<Manifest>(
+    join(REPO_ROOT, FOLDKIT_DIR, 'package.json'),
+  )
+  const exampleManifest = readJson<Manifest>(
+    join(REPO_ROOT, 'examples/ssr/package.json'),
+  )
+  const effectVersion = foldkitManifest.peerDependencies?.['effect']
+  const viteVersion = exampleManifest.devDependencies?.['vite']
+  assertConsumer(
+    effectVersion !== undefined && viteVersion !== undefined,
+    'could not read the effect and vite versions the consumer must install',
+  )
+
+  mkdirSync(join(projectDir, 'src'), { recursive: true })
+  mkdirSync(join(projectDir, 'scripts'), { recursive: true })
+
+  writeFileSync(
+    join(projectDir, 'package.json'),
+    `${JSON.stringify(
+      {
+        name: 'packed-ssr-consumer',
+        private: true,
+        version: '0.0.0',
+        type: 'module',
+        scripts: { build: 'node scripts/build.mjs' },
+        dependencies: {
+          effect: effectVersion,
+          foldkit: `file:${foldkitTarball}`,
+        },
+        devDependencies: {
+          '@foldkit/vite-plugin': `file:${pluginTarball}`,
+          typescript: TYPESCRIPT_VERSION,
+          vite: viteVersion,
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  )
+  writeFileSync(join(projectDir, 'index.html'), INDEX_HTML)
+  writeFileSync(join(projectDir, 'vite.config.ts'), VITE_CONFIG)
+  writeFileSync(join(projectDir, 'scripts/build.mjs'), BUILD_MJS)
+  writeFileSync(join(projectDir, 'scripts/entrypoints.mjs'), ENTRYPOINTS_MJS)
+  writeFileSync(join(projectDir, 'src/main.ts'), MAIN_TS)
+  writeFileSync(join(projectDir, 'src/entry.ts'), ENTRY_TS)
+  writeFileSync(join(projectDir, 'src/entry.server.ts'), ENTRY_SERVER_TS)
+  writeFileSync(join(projectDir, 'src/vite-env.d.ts'), VITE_ENV_D_TS)
+  writeFileSync(join(projectDir, 'src/packed-types.ts'), PACKED_TYPES_TS)
+  writeFileSync(join(projectDir, 'tsconfig.json'), CONSUMER_TSCONFIG)
+}
+
+// Every name the published documentation says ships from
+// `foldkit/experimental/server`, imported the way a consumer would. Two of them
+// were documented as shipping from there while the packed declarations omitted
+// them, which nothing inside the workspace could show: a source path resolves
+// them whether or not the barrel re-exports them.
+const assertPackedTypesResolve = (projectDir: string): void => {
+  const result = spawnSync('npx', ['tsc', '--noEmit'], {
+    cwd: projectDir,
+    encoding: 'utf8',
+  })
+  assertConsumer(
+    result.status === 0,
+    'a consumer importing the documented types from ' +
+      '`foldkit/experimental/server` does not typecheck against the packed ' +
+      `declarations:\n${result.stdout}${result.stderr}`,
+  )
+  log('Packed declarations carry the documented render option types')
+}
+
+// ASSERTIONS ON THE BUILT ARTIFACTS
+
+const IMPORT_SPECIFIER =
+  /(?:^|[\s;}])(?:import|export)[^'"]*?from\s*['"]([^'"]+)['"]/g
+
+const importSpecifiers = (source: string): ReadonlyArray<string> =>
+  [...source.matchAll(IMPORT_SPECIFIER)].map(match => match[1] ?? '')
+
+// A string that only exists inside Foldkit's own source. If the server bundle
+// inlined the framework rather than importing it, this travels with it.
+const FOLDKIT_INTERNAL_MARKER = 'data-foldkit-build'
+
+const assertServerBundleExternalizesFoldkit = (buildDir: string): void => {
+  const bundle = readFileSync(join(buildDir, 'server/entry.server.js'), 'utf8')
+  const foldkitImports = importSpecifiers(bundle).filter(
+    specifier => specifier === 'foldkit' || specifier.startsWith('foldkit/'),
+  )
+
+  assertConsumer(
+    foldkitImports.length > 0,
+    'the server bundle names no `foldkit` import, so Foldkit was bundled into ' +
+      'it rather than externalized. Every build-id assertion below would then ' +
+      'describe an inlined copy the plugin could transform, which is not what ' +
+      'an installed consumer runs.',
+  )
+  assertConsumer(
+    !bundle.includes(FOLDKIT_INTERNAL_MARKER),
+    'the server bundle contains Foldkit internals, so it inlined the framework ' +
+      'despite naming an import for it.',
+  )
+  log(
+    `Server bundle imports Foldkit: ${[...new Set(foldkitImports)].join(', ')}`,
+  )
+}
+
+const clientBundleSources = (buildDir: string): ReadonlyArray<string> => {
+  const assetsDir = join(buildDir, 'client/assets')
+  return readdirSync(assetsDir)
+    .filter(name => extname(name) === '.js')
+    .map(name => readFileSync(join(assetsDir, name), 'utf8'))
+}
+
+// Nothing the client bundle ships may be a check against the module's source.
+// A truncated digest of the whole file would still publish a check against a
+// server-only PIN that the client build correctly strips, so the PIN could be
+// recovered by hashing the ten thousand candidates until one digest matched.
+const assertNoSourceOracle = (buildDir: string): void => {
+  const sources = clientBundleSources(buildDir)
+
+  for (const source of sources) {
+    if (source.includes(SERVER_ONLY_PIN)) {
+      fail(
+        'the client bundle contains the server-only value verbatim, so this ' +
+          'check cannot say anything about digests of it.',
+      )
+    }
+  }
+
+  // The identity literal the plugin emits. A bundler may keep it as a backtick
+  // template, a single-quoted string, or a double-quoted one, so all three are
+  // read.
+  const IDENTITY_LITERAL = /[`'"]([^`'"\n]*#[A-Za-z_$][^`'"\n]*)[`'"]/g
+  const identities = sources
+    .flatMap(source => [...source.matchAll(IDENTITY_LITERAL)])
+    .filter(([, identity]) => (identity ?? '').includes('/'))
+  assertConsumer(
+    identities.length > 0,
+    'no view identity was found in the client bundle, so this check would ' +
+      'pass without looking at anything.',
+  )
+  for (const [, identity] of identities) {
+    assertConsumer(
+      !/@[0-9a-f]{8,}/.test(identity ?? ''),
+      `the identity "${String(identity)}" carries a digest. A hash of the ` +
+        'module source is a published check against that source, which a ' +
+        'low-entropy server-only value does not survive.',
+    )
+  }
+
+  const digestsOfSource = new Set(
+    [8, 10, 12, 16].map(length =>
+      createHash('sha256')
+        .update(readFileSync(join(buildDir, '..', 'src/main.ts'), 'utf8'))
+        .digest('hex')
+        .slice(0, length),
+    ),
+  )
+  for (const digest of digestsOfSource) {
+    for (const source of sources) {
+      assertConsumer(
+        !source.includes(digest),
+        `the client bundle contains "${digest}", a digest of the module's ` +
+          'own source.',
+      )
+    }
+  }
+
+  log(
+    `No source-derived digest in the client bundle (${identities.length} identities)`,
+  )
+}
+
+const assertClientCarriesBuildId = (
+  buildDir: string,
+  expected: string,
+  other: string,
+): void => {
+  const sources = clientBundleSources(buildDir)
+  assertConsumer(
+    sources.some(source => source.includes(expected)),
+    `no client bundle in ${buildDir} carries the build id "${expected}", so ` +
+      'the plugin never compiled it into the client entry.',
+  )
+  assertConsumer(
+    sources.every(source => !source.includes(other)),
+    `a client bundle in ${buildDir} carries the other build's id "${other}".`,
+  )
+  log(`Client bundle carries ${expected}`)
+}
+
+// THE SERVED PAGES
+
+type ServerEntry = Readonly<{
+  buildId?: string
+  renderHtml: (template: string) => Promise<string>
+  renderWithoutBuildIdTag: () => Promise<string>
+}>
+
+const loadServerEntry = async (buildDir: string): Promise<ServerEntry> => {
+  const entry: ServerEntry = await import(
+    pathToFileURL(join(buildDir, 'server/entry.server.js')).href
+  )
+  return entry
+}
+
+const CONTENT_TYPES: Readonly<Record<string, string>> = {
+  '.css': 'text/css; charset=utf-8',
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.svg': 'image/svg+xml',
+}
+
+type Pages = Readonly<{
+  same: string
+  csp: string
+  stale: string
+  noFlags: string
+  duplicateFlags: string
+  malformedFlags: string
+  incompatibleFlags: string
+  modal: string
+  noStamp: string
+  duplicateRoots: string
+  ambiguousRoots: string
+  lifecycle: string
+}>
+
+// Every way a hydration can refuse once it knows which root it was going to
+// adopt. Each leaves the same live page behind, so each has to leave it
+// contained.
+const PAGE_PATHS: Readonly<Record<string, keyof Pages | undefined>> = {
+  '/same': 'same',
+  '/csp': 'csp',
+  '/stale': 'stale',
+  '/no-flags': 'noFlags',
+  '/duplicate-flags': 'duplicateFlags',
+  '/malformed-flags': 'malformedFlags',
+  '/incompatible-flags': 'incompatibleFlags',
+  '/modal': 'modal',
+  '/no-stamp': 'noStamp',
+  '/duplicate-roots': 'duplicateRoots',
+  '/ambiguous-roots': 'ambiguousRoots',
+  '/lifecycle': 'lifecycle',
+}
+
+// An embedded document the host counts. Containment used to reparent the served
+// root, which reloads every browsing context inside it, so a second request for
+// this path is the reload itself rather than a proxy for one.
+const FRAME_PATH = '/probe-frame'
+const ADOPTED_FRAME_PATH = '/adopted-frame'
+
+const startServer = (
+  pages: Pages,
+  assetRoots: Readonly<Record<string, string>>,
+  requestedPaths: Array<string>,
+): Promise<Server> =>
+  new Promise(resolveServer => {
+    const server = createServer((request, response) => {
+      const path = new URL(request.url ?? '/', ORIGIN).pathname
+      requestedPaths.push(path)
+      if (path === FRAME_PATH || path === ADOPTED_FRAME_PATH) {
+        response.writeHead(200, { 'content-type': CONTENT_TYPES['.html'] })
+        response.end(
+          path === ADOPTED_FRAME_PATH
+            ? '<!doctype html><script>parent.__recordAdoptedFrame(document)</script><p>adopted frame</p>'
+            : '<!doctype html><p>frame</p>',
+        )
+        return
+      }
+      const page = PAGE_PATHS[path]
+      if (page !== undefined) {
+        response.writeHead(200, {
+          'content-type': CONTENT_TYPES['.html'],
+          ...(path === '/csp'
+            ? { 'content-security-policy': "style-src-attr 'none'" }
+            : {}),
+        })
+        response.end(pages[page])
+        return
+      }
+      const prefix = Object.keys(assetRoots).find(candidate =>
+        path.startsWith(candidate),
+      )
+      const root = prefix === undefined ? undefined : assetRoots[prefix]
+      if (prefix === undefined || root === undefined) {
+        response.writeHead(404)
+        response.end()
+        return
+      }
+      try {
+        const file = readFileSync(join(root, path.slice(prefix.length)))
+        response.writeHead(200, {
+          'content-type':
+            CONTENT_TYPES[extname(path)] ?? 'application/octet-stream',
+        })
+        response.end(file)
+      } catch {
+        response.writeHead(404)
+        response.end()
+      }
+    })
+    server.listen(PORT, '127.0.0.1', () => resolveServer(server))
+  })
+
+// THE BROWSER
+
+type Probe = Readonly<{
+  rootIsConnected: boolean
+  fieldIsSameElement: boolean
+  fieldValue: string
+  adoptedFrameIsSameElement: boolean
+  adoptedFrameLoads: number
+  adoptedFrameDocumentIsSame: boolean
+  customHolderConstructions: number
+  innerProbeConstructions: number
+  idPropertyWrites: number
+  innerHtmlPropertyWrites: number
+  renderedCount: string
+  rootIsContained: boolean
+  shieldIsVisible: boolean
+  customElementConnections: number
+  reconnectModalIsOpen: boolean
+  parserConnectionChildCount: number
+  parserConnectionCount: number
+  parserChildrenBeforeHydration: number
+  parserOwnedHostIsFresh: boolean
+  parserOldHostIsDisconnected: boolean
+  parserViewChildIsFresh: boolean
+  parserComponentChildIsDisconnected: boolean
+  parserServerChildIsDisconnected: boolean
+  parserLiveTitleIsRestored: boolean
+  parserAncestorTitleIsRestored: boolean
+  parserEarlierSiblingTitleIsRestored: boolean
+  parserEarlierSiblingTextIsRestored: boolean
+  parserDisconnectMutationsAreIsolated: boolean
+  parserRetainedMutationIsIsolated: boolean
+}>
+
+type TopLayerProbe = Readonly<{
+  shieldIsOpen: boolean
+  shieldIsVisible: boolean
+  shieldHasFocus: boolean
+  shieldCount: number
+  dialogsAreOpen: boolean
+  closeEvents: number
+  cancelEvents: number
+  controlClicks: number
+  documentInputs: number
+  bodyKeyEvents: number
+  modalNodesAreConnected: boolean
+  openShadowIdentityIsIntact: boolean
+  frameIdentityIsIntact: boolean
+  customElementIdentityIsIntact: boolean
+  customElementConnections: number
+  customElementDisconnections: number
+  points: ReadonlyArray<Readonly<{ x: number; y: number }>>
+}>
+
+type ControlledDomProbe = Readonly<{
+  nodeIdentityIsIntact: boolean
+  observedIdChangesAtDefinition: number
+  observedIdChanges: number
+  observedDirection: string | null
+  customHolderConstructions: number
+  innerProbeConstructions: number
+  idPropertyWrites: number
+  innerHtmlPropertyWrites: number
+  customInnerHtmlHostWasRebuilt: boolean
+  customInnerHtmlWasRebuilt: boolean
+  nativeInnerHtmlWasAdopted: boolean
+  styleMutations: number
+  value: string
+  defaultValue: string
+  valueAttribute: string | null
+  checked: boolean
+  defaultChecked: boolean
+  hasCheckedAttribute: boolean
+  rawSelectValue: string
+  rawSelectIndex: number
+  rawSelectFirstDefault: boolean
+  rawSelectSecondDefault: boolean
+  textareaValue: string
+  textareaDefaultValue: string
+  outputValue: string
+  outputDefaultValue: string
+  outputChild: string | null
+  innerSelectValue: string
+  innerSelectIndex: number
+  fileType: string
+  fileValue: string
+  fileDefaultValue: string
+  fileValueAttribute: string | null
+  inputSize: number
+  tabIndex: number
+  title: string
+  textareaCols: number
+  textareaRows: number
+  orderedStart: number
+  styleColor: string
+  customStyleValue: string
+  valueAfterReset: string
+  checkedAfterReset: boolean
+}>
+
+type ConsoleMessage = Readonly<{ type: () => string; text: () => string }>
+
+type PlaywrightPage = Readonly<{
+  goto: (url: string, options: { waitUntil: 'networkidle' }) => Promise<unknown>
+  evaluate: <A>(body: string) => Promise<A>
+  waitForFunction: (
+    body: string,
+    arg?: unknown,
+    options?: Readonly<{ timeout?: number }>,
+  ) => Promise<unknown>
+  click: (
+    selector: string,
+    options?: { force?: boolean; timeout?: number },
+  ) => Promise<unknown>
+  keyboard: Readonly<{ press: (key: string) => Promise<void> }>
+  mouse: Readonly<{
+    click: (x: number, y: number) => Promise<void>
+  }>
+  url: () => string
+  on: (event: 'console' | 'pageerror', listener: (value: never) => void) => void
+}>
+
+type PlaywrightBrowser = Readonly<{
+  newPage: () => Promise<PlaywrightPage>
+  close: () => Promise<void>
+}>
+
+type PlaywrightBrowserType = Readonly<{
+  launch: (options: { executablePath?: string }) => Promise<PlaywrightBrowser>
+}>
+
+// Playwright is installed for the browser suites in `packages/examples-e2e`
+// rather than at the root, and it is CommonJS, so it is required from that
+// package rather than imported from here.
+const loadChromium = (): PlaywrightBrowserType => {
+  const requireFromE2e = createRequire(
+    join(REPO_ROOT, 'packages/examples-e2e/package.json'),
+  )
+  const playwright: Readonly<{ chromium: PlaywrightBrowserType }> =
+    requireFromE2e('playwright')
+  return playwright.chromium
+}
+
+const PROBE_SCRIPT = `(() => {
+  const probe = window.__probe
+  const field = document.querySelector('#field')
+  const increment = document.querySelector('#increment')
+  const root = document.querySelector('#app-root')
+  const shield = document.querySelector('[data-foldkit-refusal-shield]')
+  const adoptedFrame = document.querySelector('#adopted-frame')
+  const frameDocuments = window.__adoptedFrameDocuments
+  const parserOwnedHost = document.querySelector('#parser-owned')
+  const parserViewChild = parserOwnedHost?.querySelector('#parser-view-child')
+  if (
+    !document.body.hasAttribute('inert') &&
+    typeof probe.parserOwnedHost?.mutateOwned === 'function'
+  ) {
+    probe.parserOwnedHost.mutateOwned()
+  }
+  return {
+    rootIsConnected: probe.root instanceof Element && probe.root.isConnected,
+    fieldIsSameElement: field === probe.field,
+    fieldValue: field === null ? '<no field>' : field.value,
+    adoptedFrameIsSameElement: adoptedFrame === probe.adoptedFrame,
+    adoptedFrameLoads: frameDocuments.length,
+    adoptedFrameDocumentIsSame:
+      adoptedFrame instanceof HTMLIFrameElement &&
+      frameDocuments.length === 1 &&
+      frameDocuments[0] === adoptedFrame.contentDocument,
+    customHolderConstructions:
+      window.__customElementConstructions.holder,
+    innerProbeConstructions: window.__customElementConstructions.inner,
+    idPropertyWrites: window.__idPropertyWrites,
+    innerHtmlPropertyWrites: window.__innerHtmlPropertyWrites,
+    renderedCount: increment === null ? '<no button>' : increment.textContent,
+    // Marked in place, not wrapped. A single marker in the whole document is
+    // what says nothing was reparented: an inserted shield would be a second.
+    rootIsContained:
+      document.body.hasAttribute('inert') &&
+      document.body.getAttribute('aria-hidden') === 'true' &&
+      document.body.hasAttribute('data-foldkit-refused') &&
+      document.querySelectorAll('[data-foldkit-refused]').length === 1 &&
+      document.querySelectorAll('[data-foldkit-refusal-shield]').length === 1 &&
+      shield.open === true &&
+      (root === null || root.isConnected),
+    shieldIsVisible:
+      shield instanceof HTMLDialogElement &&
+      shield.open === true &&
+      shield.getBoundingClientRect().width > 0 &&
+      shield.getBoundingClientRect().height > 0 &&
+      getComputedStyle(shield).visibility === 'visible',
+    customElementConnections:
+      typeof window.__connections === 'number' ? window.__connections : 0,
+    reconnectModalIsOpen: (() => {
+      const dialog = document.querySelector('#reconnect-modal')
+      return dialog === null ? false : dialog.open === true
+    })(),
+    parserConnectionChildCount:
+      window.__parserOwnedConnectionChildCounts[0] ?? -1,
+    parserConnectionCount: window.__parserOwnedConnectionChildCounts.length,
+    parserChildrenBeforeHydration: probe.parserChildrenBeforeHydration,
+    parserOwnedHostIsFresh: parserOwnedHost !== probe.parserOwnedHost,
+    parserOldHostIsDisconnected: probe.parserOwnedHost?.isConnected === false,
+    parserViewChildIsFresh:
+      parserOwnedHost?.childElementCount === 1 &&
+      parserViewChild !== probe.parserComponentChild &&
+      parserViewChild !== probe.parserServerChild,
+    parserComponentChildIsDisconnected:
+      probe.parserComponentChild?.isConnected === false,
+    parserServerChildIsDisconnected:
+      probe.parserServerChild?.isConnected === false,
+    parserLiveTitleIsRestored:
+      parserOwnedHost?.getAttribute('title') === 'view-owned',
+    parserAncestorTitleIsRestored:
+      document.querySelector('#release-form')?.getAttribute('title') ===
+      'form-owned',
+    parserEarlierSiblingTitleIsRestored:
+      document.querySelector('#parser-earlier')?.getAttribute('title') ===
+      'earlier-owned',
+    parserEarlierSiblingTextIsRestored:
+      document.querySelector('#parser-earlier')?.textContent === 'earlier-text',
+    parserDisconnectMutationsAreIsolated:
+      window.__parserChildDisconnections === 2 &&
+      probe.parserOwnedHost?.querySelectorAll('[data-parser-reinserted]').length === 2 &&
+      parserOwnedHost?.querySelector('[data-parser-reinserted]') === null,
+    parserRetainedMutationIsIsolated:
+      probe.parserComponentChild?.textContent === 'component-mutated' &&
+      parserViewChild?.textContent === 'view',
+  }
+})()`
+
+const TOP_LAYER_PROBE_SCRIPT = `(() => {
+  const probe = window.__topLayerProbe
+  const shield = document.querySelector(
+    ':root > dialog[data-foldkit-refusal-shield]',
+  )
+  const pointOf = element => {
+    const bounds = element.getBoundingClientRect()
+    return {
+      x: bounds.left + bounds.width / 2,
+      y: bounds.top + bounds.height / 2,
+    }
+  }
+  return {
+    shieldIsOpen: shield instanceof HTMLDialogElement && shield.open === true,
+    shieldIsVisible:
+      shield instanceof HTMLDialogElement &&
+      shield.getBoundingClientRect().width > 0 &&
+      shield.getBoundingClientRect().height > 0 &&
+      getComputedStyle(shield).visibility === 'visible',
+    shieldHasFocus: document.activeElement === shield,
+    shieldCount:
+      document.querySelectorAll(
+        ':root > dialog[data-foldkit-refusal-shield]',
+      ).length,
+    dialogsAreOpen: probe.dialogs.every(dialog => dialog.open === true),
+    closeEvents: probe.events.close,
+    cancelEvents: probe.events.cancel,
+    controlClicks: probe.events.click,
+    documentInputs: probe.events.documentInput,
+    bodyKeyEvents: probe.events.bodyKey,
+    modalNodesAreConnected:
+      probe.dialogs.every(dialog => dialog.isConnected) &&
+      probe.fields.every(field => field.isConnected),
+    openShadowIdentityIsIntact:
+      probe.openHost.shadowRoot.querySelector('dialog') === probe.openDialog,
+    frameIdentityIsIntact:
+      document.querySelector('#modal-frame') === probe.frame,
+    customElementIdentityIsIntact:
+      document.querySelector('x-closed-modal-host') === probe.closedHost,
+    customElementConnections: probe.events.connected,
+    customElementDisconnections: probe.events.disconnected,
+    points: probe.actions.map(pointOf),
+  }
+})()`
+
+const CONTROLLED_DOM_PROBE_SCRIPT = `(() => {
+  const probe = window.__probe
+  const value = document.querySelector('#equal-value')
+  const checked = document.querySelector('#equal-checked')
+  const rawSelect = document.querySelector('#raw-select')
+  const textarea = document.querySelector('#released-textarea')
+  const output = document.querySelector('#released-output')
+  const innerSelect = document.querySelector('#inner-select')
+  const file = document.querySelector('#released-file')
+  const sized = document.querySelector('#released-size')
+  const tabbed = document.querySelector('#released-tabindex')
+  const dimensions = document.querySelector('#released-dimensions')
+  const ordered = document.querySelector('#released-start')
+  const styled = document.querySelector('#styled')
+  return {
+    nodeIdentityIsIntact: Object.keys(probe.controlledNodes)
+      .filter(id => id !== 'observed-id' && id !== 'custom-inner-probe')
+      .every(id => probe.controlledNodes[id] === document.getElementById(id)),
+    customInnerHtmlHostWasRebuilt:
+      probe.controlledNodes['observed-id'] !==
+      document.getElementById('observed-id'),
+    customInnerHtmlWasRebuilt:
+      probe.controlledNodes['custom-inner-probe'] !==
+      document.getElementById('custom-inner-probe'),
+    nativeInnerHtmlWasAdopted:
+      probe.controlledNodes['native-inner-probe'] ===
+      document.getElementById('native-inner-probe'),
+    observedIdChangesAtDefinition: probe.observedIdChangesAtDefinition,
+    observedIdChanges: window.__observedIdChanges.length,
+    observedDirection:
+      document.querySelector('#observed-id')?.getAttribute('dir') ?? null,
+    customHolderConstructions:
+      window.__customElementConstructions.holder,
+    innerProbeConstructions: window.__customElementConstructions.inner,
+    idPropertyWrites: window.__idPropertyWrites,
+    innerHtmlPropertyWrites: window.__innerHtmlPropertyWrites,
+    styleMutations: window.__readStyleMutationCount(),
+    value: value.value,
+    defaultValue: value.defaultValue,
+    valueAttribute: value.getAttribute('value'),
+    checked: checked.checked,
+    defaultChecked: checked.defaultChecked,
+    hasCheckedAttribute: checked.hasAttribute('checked'),
+    rawSelectValue: rawSelect.value,
+    rawSelectIndex: rawSelect.selectedIndex,
+    rawSelectFirstDefault: rawSelect.options.item(0).defaultSelected,
+    rawSelectSecondDefault: rawSelect.options.item(1).defaultSelected,
+    textareaValue: textarea.value,
+    textareaDefaultValue: textarea.defaultValue,
+    outputValue: output.value,
+    outputDefaultValue: output.defaultValue,
+    outputChild: output.querySelector('#output-child')?.textContent ?? null,
+    innerSelectValue: innerSelect.value,
+    innerSelectIndex: innerSelect.selectedIndex,
+    fileType: file.type,
+    fileValue: file.value,
+    fileDefaultValue: file.defaultValue,
+    fileValueAttribute: file.getAttribute('value'),
+    inputSize: sized.size,
+    tabIndex: tabbed.tabIndex,
+    title: tabbed.title,
+    textareaCols: dimensions.cols,
+    textareaRows: dimensions.rows,
+    orderedStart: ordered.start,
+    styleColor: getComputedStyle(styled).color,
+    customStyleValue: styled.style.getPropertyValue('--accent'),
+    valueAfterReset: value.value,
+    checkedAfterReset: checked.checked,
+  }
+})()`
+
+const RELEASED_DOM_PROBE_SCRIPT = `(async () => {
+  await Promise.resolve()
+  const form = document.querySelector('#release-form')
+  const beforeReset = ${CONTROLLED_DOM_PROBE_SCRIPT}
+  form.reset()
+  const afterReset = ${CONTROLLED_DOM_PROBE_SCRIPT}
+  return {
+    ...beforeReset,
+    valueAfterReset: afterReset.value,
+    checkedAfterReset: afterReset.checked,
+  }
+})()`
+
+type PageReading = Readonly<{
+  probe: Probe
+  diagnostics: ReadonlyArray<string>
+}>
+
+const readPage = async (
+  browser: PlaywrightBrowser,
+  path: string,
+): Promise<PageReading> => {
+  const page = await browser.newPage()
+  // Every console level, not only `error`. What matters is that an operator
+  // can see why a page went inert; which console method Effect's logger reaches
+  // for is its business.
+  const diagnostics: Array<string> = []
+  page.on('console', (message: never) => {
+    const consoleMessage: ConsoleMessage = message
+    diagnostics.push(`${consoleMessage.type()}: ${consoleMessage.text()}`)
+  })
+  page.on('pageerror', (error: never) => {
+    const raised: Readonly<{ message: string }> = error
+    diagnostics.push(raised.message)
+  })
+  await page.goto(`${ORIGIN}${path}`, { waitUntil: 'networkidle' })
+  return { probe: await page.evaluate<Probe>(PROBE_SCRIPT), diagnostics }
+}
+
+const assertAdoptsSameBuild = (probe: Probe): void => {
+  assertConsumer(
+    probe.rootIsConnected,
+    'hydration replaced the root of a page from its own build. Every load ' +
+      'would rebuild, and the assertions below would pass for the wrong reason.',
+  )
+  assertConsumer(
+    probe.fieldIsSameElement,
+    'hydration replaced the input on a page from its own build.',
+  )
+  assertConsumer(
+    probe.fieldValue === TYPED_VALUE,
+    `hydration lost the DOM value typed before it ran (saw "${probe.fieldValue}").`,
+  )
+  assertConsumer(
+    probe.adoptedFrameIsSameElement &&
+      probe.adoptedFrameLoads === 1 &&
+      probe.adoptedFrameDocumentIsSame,
+    'hydration replaced or reloaded an agreeing iframe from its own build.',
+  )
+  assertConsumer(
+    probe.customHolderConstructions === 2 &&
+      probe.innerProbeConstructions === 3 &&
+      probe.idPropertyWrites === 0 &&
+      probe.innerHtmlPropertyWrites === 0,
+    'hydration built the wrong number of custom-element hosts or raw-HTML ' +
+      'children, or invoked a component setter for view-owned state: ' +
+      JSON.stringify(probe),
+  )
+  assertConsumer(
+    probe.parserConnectionChildCount === 0 &&
+      probe.parserConnectionCount === 2 &&
+      probe.parserChildrenBeforeHydration === 2,
+    'the browser did not exercise parser-time custom-element light DOM: ' +
+      JSON.stringify(probe),
+  )
+  assertConsumer(
+    probe.parserOwnedHostIsFresh &&
+      probe.parserOldHostIsDisconnected &&
+      probe.parserViewChildIsFresh &&
+      probe.parserComponentChildIsDisconnected &&
+      probe.parserServerChildIsDisconnected &&
+      probe.parserLiveTitleIsRestored &&
+      probe.parserAncestorTitleIsRestored &&
+      probe.parserEarlierSiblingTitleIsRestored &&
+      probe.parserEarlierSiblingTextIsRestored &&
+      probe.parserDisconnectMutationsAreIsolated &&
+      probe.parserRetainedMutationIsIsolated,
+    'hydration retained a custom-element host with view-owned light DOM, or ' +
+      'allowed disconnect-time mutations to reach the replacement: ' +
+      JSON.stringify(probe),
+  )
+  assertConsumer(
+    probe.renderedCount === 'Count: 0',
+    `the hydrated application did not render (saw "${probe.renderedCount}").`,
+  )
+  log(
+    'Same build: root, input, and iframe adopted; view-owned custom-element ' +
+      'host rebuilt',
+  )
+}
+
+const assertProbeValues = (
+  label: string,
+  probe: ControlledDomProbe,
+  expected: Readonly<Record<string, unknown>>,
+): void => {
+  for (const [name, expectedValue] of Object.entries(expected)) {
+    const actual = Reflect.get(probe, name)
+    assertConsumer(
+      Object.is(actual, expectedValue),
+      `${label}: ${name} was ${JSON.stringify(actual)}, expected ` +
+        `${JSON.stringify(expectedValue)}. Full probe: ${JSON.stringify(probe)}`,
+    )
+  }
+}
+
+const releaseControlledDomOwnership = async (
+  page: PlaywrightPage,
+): Promise<void> => {
+  await page.click('#release')
+  await page.waitForFunction(
+    `document.querySelector('#output-child')?.textContent === 'output default'`,
+    undefined,
+    { timeout: DOM_COMMIT_TIMEOUT_MS },
+  )
+}
+
+const assertControlledDomTransitions = async (
+  browser: PlaywrightBrowser,
+): Promise<void> => {
+  const page = await browser.newPage()
+  await page.goto(`${ORIGIN}/same`, { waitUntil: 'networkidle' })
+  const controlled = await page.evaluate<ControlledDomProbe>(
+    CONTROLLED_DOM_PROBE_SCRIPT,
+  )
+  assertProbeValues('controlled hydration', controlled, {
+    nodeIdentityIsIntact: true,
+    observedIdChangesAtDefinition: 2,
+    observedIdChanges: 4,
+    observedDirection: 'LTR',
+    customHolderConstructions: 2,
+    innerProbeConstructions: 3,
+    idPropertyWrites: 0,
+    innerHtmlPropertyWrites: 0,
+    customInnerHtmlHostWasRebuilt: true,
+    customInnerHtmlWasRebuilt: true,
+    nativeInnerHtmlWasAdopted: true,
+    styleMutations: 0,
+    value: 'same',
+    defaultValue: 'same',
+    valueAttribute: 'same',
+    checked: true,
+    defaultChecked: true,
+    hasCheckedAttribute: true,
+    rawSelectValue: 'a',
+    rawSelectIndex: 0,
+    rawSelectFirstDefault: true,
+    rawSelectSecondDefault: false,
+    textareaValue: 'controlled',
+    textareaDefaultValue: 'controlled',
+    outputValue: 'controlled',
+    outputDefaultValue: 'controlled',
+    outputChild: null,
+    innerSelectValue: 'b',
+    innerSelectIndex: 1,
+    fileType: 'text',
+    fileValue: 'controlled',
+    fileDefaultValue: 'controlled',
+    fileValueAttribute: 'controlled',
+    inputSize: 3,
+    tabIndex: 4,
+    title: 'owned',
+    textareaCols: 4,
+    textareaRows: 5,
+    orderedStart: 6,
+    styleColor: 'rgb(255, 0, 0)',
+    customStyleValue: 'packed',
+  })
+
+  await releaseControlledDomOwnership(page)
+  const released = await page.evaluate<ControlledDomProbe>(
+    RELEASED_DOM_PROBE_SCRIPT,
+  )
+  assertProbeValues('released ownership', released, {
+    nodeIdentityIsIntact: true,
+    observedIdChangesAtDefinition: 2,
+    observedIdChanges: 4,
+    observedDirection: 'LTR',
+    customHolderConstructions: 2,
+    innerProbeConstructions: 3,
+    idPropertyWrites: 0,
+    innerHtmlPropertyWrites: 0,
+    customInnerHtmlHostWasRebuilt: true,
+    customInnerHtmlWasRebuilt: true,
+    nativeInnerHtmlWasAdopted: true,
+    styleMutations: 1,
+    value: '',
+    defaultValue: '',
+    valueAttribute: null,
+    checked: false,
+    defaultChecked: false,
+    hasCheckedAttribute: false,
+    rawSelectValue: 'b',
+    rawSelectIndex: 1,
+    rawSelectFirstDefault: false,
+    rawSelectSecondDefault: true,
+    textareaValue: 'textarea default',
+    textareaDefaultValue: 'textarea default',
+    outputValue: 'output default',
+    outputDefaultValue: 'output default',
+    outputChild: 'output default',
+    innerSelectValue: 'a',
+    innerSelectIndex: 0,
+    fileType: 'file',
+    fileValue: '',
+    fileDefaultValue: 'default-file-name',
+    fileValueAttribute: 'default-file-name',
+    inputSize: 20,
+    tabIndex: -1,
+    title: '',
+    textareaCols: 20,
+    textareaRows: 2,
+    orderedStart: 1,
+    styleColor: 'rgb(0, 0, 255)',
+    customStyleValue: 'packed',
+    valueAfterReset: '',
+    checkedAfterReset: false,
+  })
+
+  const cspPage = await browser.newPage()
+  await cspPage.goto(`${ORIGIN}/csp`, { waitUntil: 'networkidle' })
+  const cspBefore = await cspPage.evaluate<ControlledDomProbe>(
+    CONTROLLED_DOM_PROBE_SCRIPT,
+  )
+  assertProbeValues('strict CSP hydration', cspBefore, {
+    nodeIdentityIsIntact: true,
+    observedIdChanges: 4,
+    observedDirection: 'LTR',
+    customHolderConstructions: 2,
+    innerProbeConstructions: 3,
+    idPropertyWrites: 0,
+    innerHtmlPropertyWrites: 0,
+    customInnerHtmlHostWasRebuilt: true,
+    customInnerHtmlWasRebuilt: true,
+    nativeInnerHtmlWasAdopted: true,
+    styleMutations: 2,
+    styleColor: 'rgb(255, 0, 0)',
+    customStyleValue: 'packed',
+  })
+  await releaseControlledDomOwnership(cspPage)
+  const cspReleased = await cspPage.evaluate<ControlledDomProbe>(
+    RELEASED_DOM_PROBE_SCRIPT,
+  )
+  assertProbeValues('strict CSP style update', cspReleased, {
+    nodeIdentityIsIntact: true,
+    observedIdChanges: 4,
+    observedDirection: 'LTR',
+    customHolderConstructions: 2,
+    innerProbeConstructions: 3,
+    idPropertyWrites: 0,
+    innerHtmlPropertyWrites: 0,
+    customInnerHtmlHostWasRebuilt: true,
+    customInnerHtmlWasRebuilt: true,
+    nativeInnerHtmlWasAdopted: true,
+    styleMutations: 3,
+    styleColor: 'rgb(0, 0, 255)',
+    customStyleValue: 'packed',
+  })
+  log(
+    'Packed Chromium: hydration, ownership release, reset, custom-element, ' +
+      'style mutation, and strict CSP behavior agree',
+  )
+}
+
+const assertRefusesOtherBuild = (reading: PageReading): void => {
+  // The policy for a page from another deployment is to stop before reading
+  // anything it carries, so the served DOM is left exactly as it arrived and no
+  // code from this build ever owns it. What must be true is that this build
+  // took nothing from the page: it did not adopt the root, and it did not
+  // render over it.
+  assertConsumer(
+    reading.diagnostics.some(message =>
+      message.includes('this client belongs to deployment'),
+    ),
+    'a page served by another deployment produced no build mismatch ' +
+      `diagnostic. Saw: ${JSON.stringify(reading.diagnostics)}`,
+  )
+  assertConsumer(
+    reading.probe.rootIsConnected && reading.probe.fieldIsSameElement,
+    'the served DOM was replaced on a page from another deployment. Startup ' +
+      'is supposed to stop before it reads the handoff at all, which leaves ' +
+      'the served markup untouched.',
+  )
+  assertConsumer(
+    reading.probe.renderedCount === 'Count: 0',
+    'the application rendered over a page from another deployment ' +
+      `(saw "${reading.probe.renderedCount}").`,
+  )
+  assertConsumer(
+    reading.probe.rootIsContained,
+    'the refused root is still interactive. Its links navigate and its forms ' +
+      'submit to whatever the deployment that served it wrote, with none of ' +
+      'that deployment’s code running to reconsider.',
+  )
+  log('Other build: refused before adoption, served DOM left untouched')
+}
+
+// What a refused page must not do on its own. The button is the weak case: no
+// Foldkit listener was ever attached to it, so a click proving nothing happens
+// proves only that Foldkit did not start. The link, the form, and focus are
+// browser behavior that needs no listener at all, and they are what would
+// otherwise act on a page whose deployment is gone.
+const assertPageIsInert = async (
+  browser: PlaywrightBrowser,
+  path: string,
+  requestedPaths: ReadonlyArray<string>,
+): Promise<void> => {
+  const page = await browser.newPage()
+  await page.goto(`${ORIGIN}${path}`, { waitUntil: 'networkidle' })
+  const before = requestedPaths.length
+
+  await page.click('#increment', { force: true, timeout: 2_000 })
+  await page.click('#native-link', { force: true, timeout: 2_000 })
+  await page.click('#native-submit', { force: true, timeout: 2_000 })
+  await page.evaluate(
+    `(() => {
+      const field = document.querySelector('#field')
+      if (field !== null) {
+        field.focus()
+      }
+      return null
+    })()`,
+  )
+
+  const after = await page.evaluate<Probe>(PROBE_SCRIPT)
+  const focused = await page.evaluate<string>(
+    `(() => document.activeElement === null ? '<none>' : document.activeElement.id)()`,
+  )
+
+  assertConsumer(
+    after.renderedCount === 'Count: 0',
+    'a page from another deployment responded to input, so this build was ' +
+      `driving it after all (saw "${after.renderedCount}").`,
+  )
+  assertConsumer(
+    page.url() === `${ORIGIN}${path}`,
+    `a click navigated a refused page to ${page.url()}.`,
+  )
+  assertConsumer(
+    String(focused) !== 'field',
+    'a control inside a refused page took focus.',
+  )
+  const newRequests = requestedPaths.slice(before)
+  assertConsumer(
+    newRequests.length === 0,
+    `a refused page sent the host ${JSON.stringify(newRequests)}.`,
+  )
+  log(`${path}: inert to links, forms, and focus`)
+}
+
+const assertTopLayerIsContained = async (
+  browser: PlaywrightBrowser,
+  requestedPaths: ReadonlyArray<string>,
+): Promise<void> => {
+  const page = await browser.newPage()
+  await page.goto(`${ORIGIN}/modal`, { waitUntil: 'networkidle' })
+  const requestsBeforeInteraction = requestedPaths.length
+  const before = await page.evaluate<TopLayerProbe>(TOP_LAYER_PROBE_SCRIPT)
+
+  assertConsumer(
+    before.shieldIsOpen &&
+      before.shieldIsVisible &&
+      before.shieldHasFocus &&
+      before.shieldCount === 1,
+    'the refusal shield is not one visible, focused active modal above the ' +
+      'served page.',
+  )
+  assertConsumer(
+    before.dialogsAreOpen &&
+      before.closeEvents === 0 &&
+      before.cancelEvents === 0,
+    'containment changed an author-owned dialog or invoked its close/cancel ' +
+      `lifecycle (${String(before.closeEvents)} close, ` +
+      `${String(before.cancelEvents)} cancel).`,
+  )
+  assertConsumer(
+    before.modalNodesAreConnected && before.openShadowIdentityIsIntact,
+    'containment moved or replaced modal content in a light, open-shadow, or ' +
+      'closed-shadow tree.',
+  )
+  assertConsumer(
+    before.frameIdentityIsIntact &&
+      before.customElementIdentityIsIntact &&
+      before.customElementConnections === 1 &&
+      before.customElementDisconnections === 0,
+    'containment changed an embedded document or custom-element lifecycle.',
+  )
+
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('Space')
+  await page.keyboard.press('Enter')
+  for (const point of before.points) {
+    await page.mouse.click(point.x, point.y)
+  }
+  await page.evaluate(
+    `(() => {
+      const probe = window.__topLayerProbe
+      for (const field of probe.fields) {
+        field.focus()
+      }
+      return null
+    })()`,
+  )
+  await page.keyboard.press('Tab')
+
+  const after = await page.evaluate<TopLayerProbe>(TOP_LAYER_PROBE_SCRIPT)
+  assertConsumer(
+    after.shieldIsOpen &&
+      after.shieldIsVisible &&
+      after.shieldHasFocus &&
+      after.shieldCount === 1,
+    'Escape, backdrop input, or focus traversal dismissed the refusal shield.',
+  )
+  assertConsumer(
+    after.dialogsAreOpen && after.closeEvents === 0,
+    'an interaction with the refusal shield closed an author-owned dialog: ' +
+      JSON.stringify(after),
+  )
+  assertConsumer(
+    after.controlClicks === 0,
+    'the refusal shield let a native target or bubble handler on served ' +
+      `content run (${String(after.controlClicks)} interactions).`,
+  )
+  assertConsumer(
+    after.bodyKeyEvents === 0,
+    'keyboard input escaped the refusal shield and reached a stale body ' +
+      `handler (${String(after.bodyKeyEvents)} events).`,
+  )
+  assertConsumer(
+    page.url() === `${ORIGIN}/modal`,
+    `top-layer interaction navigated a refused page to ${page.url()}.`,
+  )
+  const newRequests = requestedPaths.slice(requestsBeforeInteraction)
+  assertConsumer(
+    newRequests.length === 0,
+    `top-layer interaction sent the host ${JSON.stringify(newRequests)}.`,
+  )
+  assertConsumer(
+    after.modalNodesAreConnected &&
+      after.openShadowIdentityIsIntact &&
+      after.frameIdentityIsIntact &&
+      after.customElementIdentityIsIntact &&
+      after.customElementConnections === 1 &&
+      after.customElementDisconnections === 0,
+    'interacting with containment moved, replaced, reconnected, or reloaded ' +
+      'served DOM.',
+  )
+  log(
+    '/modal: light/open/closed-shadow top layers covered without lifecycle ' +
+      'or native interaction',
+  )
+}
+
+// DRIVER
+
+const withTempDir = async (
+  prefix: string,
+  useTempDir: (tempDir: string) => Promise<void>,
+): Promise<void> => {
+  const tempDir = mkdtempSync(join(tmpdir(), prefix))
+  log(`Consumer project: ${tempDir}`)
+  try {
+    await useTempDir(tempDir)
+  } finally {
+    log('Cleaning up the consumer project...')
+    rmSync(tempDir, { recursive: true, force: true })
+  }
+}
+
+const main = async (): Promise<void> => {
+  const tarballPaths: Array<string> = []
+  try {
+    if (!isSkipBuild) {
+      runRequired(
+        'Building foldkit and @foldkit/vite-plugin...',
+        'pnpm',
+        ['--filter', 'foldkit', '--filter', '@foldkit/vite-plugin', 'build'],
+        { inherit: true },
+      )
+    }
+
+    const foldkitTarball = packPackage('Packing foldkit...', FOLDKIT_DIR)
+    tarballPaths.push(foldkitTarball)
+    const pluginTarball = packPackage(
+      'Packing @foldkit/vite-plugin...',
+      PLUGIN_DIR,
+    )
+    tarballPaths.push(pluginTarball)
+
+    await withTempDir('foldkit-packed-ssr-', async projectDir => {
+      writeConsumerProject(projectDir, foldkitTarball, pluginTarball)
+
+      // NOTE: the plugin's `foldkit` peer floor names the first release that
+      // ships the server export, which the packed workspace copy only reaches
+      // once `changeset version` has run. `check-peer-floors.ts` asserts that
+      // floor against the packed manifest; relaxing it here keeps this gate
+      // about externalization rather than about release ordering.
+      runRequired(
+        'Installing the packed tarballs outside the monorepo...',
+        'npm',
+        ['install', '--no-audit', '--no-fund', '--legacy-peer-deps'],
+        { cwd: projectDir, inherit: true },
+      )
+
+      runRequired(
+        'Checking the packed direct entrypoints...',
+        'node',
+        ['scripts/entrypoints.mjs'],
+        { cwd: projectDir },
+      )
+
+      const servedDir = join(projectDir, 'build-served')
+      const currentDir = join(projectDir, 'build-current')
+
+      runRequired(
+        `Building the deployment that served the page (${BUILD_ID_SERVED})...`,
+        'npm',
+        ['run', 'build', '--', 'build-served', '/served/'],
+        {
+          cwd: projectDir,
+          env: { FOLDKIT_BUILD_ID: BUILD_ID_SERVED },
+          inherit: true,
+        },
+      )
+      runRequired(
+        `Building the deployment now live (${BUILD_ID_CURRENT})...`,
+        'npm',
+        ['run', 'build', '--', 'build-current', '/current/'],
+        {
+          cwd: projectDir,
+          env: { FOLDKIT_BUILD_ID: BUILD_ID_CURRENT },
+          inherit: true,
+        },
+      )
+
+      assertServerBundleExternalizesFoldkit(servedDir)
+      assertServerBundleExternalizesFoldkit(currentDir)
+      assertPackedTypesResolve(projectDir)
+      assertNoSourceOracle(servedDir)
+      assertClientCarriesBuildId(servedDir, BUILD_ID_SERVED, BUILD_ID_CURRENT)
+      assertClientCarriesBuildId(currentDir, BUILD_ID_CURRENT, BUILD_ID_SERVED)
+
+      const servedEntry = await loadServerEntry(servedDir)
+      assertConsumer(
+        servedEntry.buildId === BUILD_ID_SERVED,
+        `the server bundle carries build id "${String(servedEntry.buildId)}", ` +
+          `not "${BUILD_ID_SERVED}". An externalized Foldkit never sees the ` +
+          'define, so the entry must read it and pass it explicitly.',
+      )
+
+      const templateOf = (buildDir: string): string =>
+        readFileSync(join(buildDir, 'client/index.html'), 'utf8')
+
+      // The page a visitor already had open: rendered and stamped by the
+      // deployment that served it, then met by the client bundle of the
+      // deployment now live. The template it is injected into is the live one,
+      // so its script tag loads the live client.
+      const same = await servedEntry.renderHtml(templateOf(servedDir))
+      const csp = same
+      const stale = await servedEntry.renderHtml(templateOf(currentDir))
+
+      // The same page, damaged in each of the ways a handoff can fail. The
+      // build id still matches, so what refuses is the handoff itself.
+      const payloadScript =
+        /<script type="application\/json" data-foldkit-flags="app">([^<]*)<\/script>/
+      const flagsPayload = payloadScript.exec(same)?.[0] ?? ''
+      assertConsumer(
+        flagsPayload !== '',
+        'the served page carries no Flags payload, so the handoff-failure ' +
+          'pages below would not be testing anything.',
+      )
+      const noFlags = same.replace(flagsPayload, '')
+      const duplicateFlags = same.replace(
+        flagsPayload,
+        `${flagsPayload}${flagsPayload}`,
+      )
+      const malformedFlags = same.replace(
+        payloadScript,
+        '<script type="application/json" data-foldkit-flags="app">{not json</script>',
+      )
+      const incompatibleFlags = same.replace(
+        payloadScript,
+        '<script type="application/json" data-foldkit-flags="app">{"unrelated":"shape"}</script>',
+      )
+      // Three author-owned modals cover the reachable tree, an open shadow
+      // root, and a closed shadow root. Their close listeners reproduce the
+      // failure mode where sweeping dialogs runs stale author code that reopens
+      // a modal and takes focus after containment. The actions cover native
+      // navigation and form submission plus an authored network request.
+      const modal = stale.replace(
+        '</main>',
+        `<iframe id="modal-frame" src="${FRAME_PATH}"></iframe>` +
+          '<dialog id="light-modal" data-foldkit-refusal-shield data-foldkit-refused><input><a href="/modal-navigated">Navigate</a></dialog>' +
+          '<div id="open-modal-host"></div>' +
+          '<x-closed-modal-host></x-closed-modal-host></main>' +
+          '<script>' +
+          'const events = { bodyKey: 0, cancel: 0, click: 0, close: 0, connected: 0, disconnected: 0, documentInput: 0 };' +
+          'document.addEventListener("pointerdown", () => {' +
+          '  events.documentInput++;' +
+          '});' +
+          'document.body.addEventListener("keydown", () => {' +
+          '  events.bodyKey++;' +
+          '});' +
+          'document.body.addEventListener("keyup", () => {' +
+          '  events.bodyKey++;' +
+          '});' +
+          'const configure = (dialog, field, left) => {' +
+          '  dialog.style.left = left;' +
+          '  dialog.style.margin = "0";' +
+          '  dialog.style.top = "20px";' +
+          '  dialog.addEventListener("cancel", event => {' +
+          '    events.cancel++;' +
+          '    event.preventDefault();' +
+          '  });' +
+          '  dialog.addEventListener("close", () => {' +
+          '    events.close++;' +
+          '    dialog.showModal();' +
+          '    field.focus();' +
+          '  });' +
+          '};' +
+          'const lightDialog = document.getElementById("light-modal");' +
+          'const lightField = lightDialog.querySelector("input");' +
+          'const lightAction = lightDialog.querySelector("a");' +
+          'lightAction.addEventListener("click", () => events.click++);' +
+          'configure(lightDialog, lightField, "20px");' +
+          'lightDialog.showModal();' +
+          'const openHost = document.getElementById("open-modal-host");' +
+          'const openRoot = openHost.attachShadow({ mode: "open" });' +
+          'openRoot.innerHTML = \'<dialog><input><form action="/modal-submitted"><button type="submit">Submit</button></form></dialog>\';' +
+          'const openDialog = openRoot.querySelector("dialog");' +
+          'const openField = openRoot.querySelector("input");' +
+          'const openAction = openRoot.querySelector("button");' +
+          'openAction.addEventListener("click", () => events.click++);' +
+          'configure(openDialog, openField, "260px");' +
+          'openDialog.showModal();' +
+          'let closedDialog;' +
+          'let closedField;' +
+          'let closedAction;' +
+          'class ClosedModalHost extends HTMLElement {' +
+          '  constructor() {' +
+          '    super();' +
+          '    const root = this.attachShadow({ mode: "closed" });' +
+          '    root.innerHTML = \'<dialog><input><button type="button">Fetch</button></dialog>\';' +
+          '    closedDialog = root.querySelector("dialog");' +
+          '    closedField = root.querySelector("input");' +
+          '    closedAction = root.querySelector("button");' +
+          '    closedAction.addEventListener("click", () => {' +
+          '      events.click++;' +
+          '      fetch("/modal-fetched");' +
+          '    });' +
+          '    configure(closedDialog, closedField, "500px");' +
+          '  }' +
+          '  connectedCallback() {' +
+          '    events.connected++;' +
+          '    closedDialog.showModal();' +
+          '  }' +
+          '  disconnectedCallback() {' +
+          '    events.disconnected++;' +
+          '  }' +
+          '}' +
+          'customElements.define("x-closed-modal-host", ClosedModalHost);' +
+          'const closedHost = document.querySelector("x-closed-modal-host");' +
+          'const frame = document.getElementById("modal-frame");' +
+          'window.__topLayerProbe = {' +
+          '  actions: [lightAction, openAction, closedAction],' +
+          '  closedHost,' +
+          '  dialogs: [lightDialog, openDialog, closedDialog],' +
+          '  events,' +
+          '  fields: [lightField, openField, closedField],' +
+          '  frame,' +
+          '  openDialog,' +
+          '  openHost,' +
+          '};' +
+          '</script>',
+      )
+
+      // A root that lost its stamp. The generated client resolves its container
+      // with `document.getElementById('root')`, and template injection has
+      // already put the render where that placeholder was, so neither handle
+      // survives and the failure lands while the container is resolved, before
+      // `Runtime.hydrate` is reached at all.
+      const noStamp = same.replace(` data-foldkit-app="app"`, '')
+
+      // One runtime id claimed twice, and two roots with no container to choose
+      // between them. Both are refused while the container is resolved.
+      const appRoot = /<main [^>]*id="app-root"[^>]*>[\s\S]*?<\/main>/
+      const rootMarkup = appRoot.exec(same)?.[0] ?? ''
+      assertConsumer(
+        rootMarkup !== '',
+        'the served page has no application root to duplicate, so the ' +
+          'duplicate-root pages below would not be testing anything.',
+      )
+      const duplicateRoots = same.replace(
+        rootMarkup,
+        `${rootMarkup}${rootMarkup}`,
+      )
+      const ambiguousRoots = same.replace(
+        rootMarkup,
+        `${rootMarkup}${rootMarkup.replace('data-foldkit-app="app"', 'data-foldkit-app="other"')}`,
+      )
+
+      // What containment must not do to the page it marks. The custom element
+      // records every connection, and the frame's document is counted by the
+      // host: reparenting the root runs `disconnectedCallback` and
+      // `connectedCallback` again and reloads the frame, and the second
+      // connection here opens a modal after containment has already run.
+      const lifecycle = stale.replace(
+        '</main>',
+        `<iframe id="probe-frame" src="${FRAME_PATH}"></iframe>` +
+          '<x-reconnect-probe></x-reconnect-probe></main>' +
+          '<script>' +
+          'window.__connections = 0;' +
+          'class ReconnectProbe extends HTMLElement {' +
+          '  connectedCallback() {' +
+          '    window.__connections++;' +
+          '    if (window.__connections === 2) {' +
+          '      const dialog = document.createElement("dialog");' +
+          '      dialog.id = "reconnect-modal";' +
+          '      dialog.innerHTML = \'<input id="reconnect-field">\';' +
+          '      document.body.appendChild(dialog);' +
+          '      dialog.showModal();' +
+          '    }' +
+          '  }' +
+          '}' +
+          'customElements.define("x-reconnect-probe", ReconnectProbe);' +
+          '</script>',
+      )
+
+      for (const [label, page] of Object.entries({ same, stale })) {
+        assertConsumer(
+          page.includes(`data-foldkit-build="${BUILD_ID_SERVED}"`),
+          `the ${label} page does not carry the served build id on its root.`,
+        )
+      }
+      log(`Served root carries data-foldkit-build="${BUILD_ID_SERVED}"`)
+
+      const missingBuildIdTag = await servedEntry.renderWithoutBuildIdTag()
+      assertConsumer(
+        missingBuildIdTag === 'MissingBuildId',
+        'a hydratable render with no build id produced ' +
+          `"${missingBuildIdTag}" rather than the typed MissingBuildId failure.`,
+      )
+      log('A hydratable render with no build id fails with MissingBuildId')
+
+      const requestedPaths: Array<string> = []
+      const server = await startServer(
+        {
+          same,
+          csp,
+          stale,
+          noFlags,
+          duplicateFlags,
+          malformedFlags,
+          incompatibleFlags,
+          modal,
+          noStamp,
+          duplicateRoots,
+          ambiguousRoots,
+          lifecycle,
+        },
+        {
+          '/served/': join(servedDir, 'client'),
+          '/current/': join(currentDir, 'client'),
+        },
+        requestedPaths,
+      )
+      const chromium = loadChromium()
+      const executablePath = process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE']
+      const browser = await chromium.launch(
+        executablePath === undefined ? {} : { executablePath },
+      )
+      try {
+        const adoptedFramesBefore = requestedPaths.filter(
+          path => path === ADOPTED_FRAME_PATH,
+        ).length
+        const sameReading = await readPage(browser, '/same')
+        const adoptedFramesAfter = requestedPaths.filter(
+          path => path === ADOPTED_FRAME_PATH,
+        ).length
+        assertConsumer(
+          adoptedFramesAfter - adoptedFramesBefore === 1,
+          `agreeing hydration requested its iframe ${String(adoptedFramesAfter - adoptedFramesBefore)} ` +
+            'times instead of once.',
+        )
+        assertAdoptsSameBuild(sameReading.probe)
+        assertConsumer(
+          !sameReading.probe.rootIsContained,
+          'a page from this build was contained. Containment is for a handoff ' +
+            'this client refuses, and firing it on a good page would take a ' +
+            'working application out of reach.',
+        )
+        await assertControlledDomTransitions(browser)
+        assertRefusesOtherBuild(await readPage(browser, '/stale'))
+        await assertPageIsInert(browser, '/stale', requestedPaths)
+
+        for (const [path, expected] of [
+          ['/no-flags', 'server Flags payload is missing'],
+          ['/duplicate-flags', 'multiple server Flags payloads'],
+          ['/malformed-flags', 'could not decode the server'],
+          ['/incompatible-flags', 'could not decode the server'],
+        ]) {
+          const reading = await readPage(browser, String(path))
+          assertConsumer(
+            reading.diagnostics.some(message =>
+              message.includes(String(expected)),
+            ),
+            `${String(path)} produced no "${String(expected)}" diagnostic. ` +
+              `Saw: ${JSON.stringify(reading.diagnostics)}`,
+          )
+          assertConsumer(
+            reading.probe.rootIsContained,
+            `${String(path)} left its root interactive. A handoff that cannot ` +
+              'be read leaves the same live page behind that build skew does.',
+          )
+          await assertPageIsInert(browser, String(path), requestedPaths)
+          log(`${String(path)}: refused and contained`)
+        }
+
+        const modalFramesBefore = requestedPaths.filter(
+          path => path === FRAME_PATH,
+        ).length
+        await assertTopLayerIsContained(browser, requestedPaths)
+        const modalFramesAfter = requestedPaths.filter(
+          path => path === FRAME_PATH,
+        ).length
+        assertConsumer(
+          modalFramesAfter - modalFramesBefore === 1,
+          `containment reloaded the modal probe frame (${String(modalFramesAfter - modalFramesBefore)} ` +
+            'requests, expected 1).',
+        )
+
+        // Refusals that land while the container is being resolved, before
+        // `Runtime.hydrate` runs. The generated client has no handle to the root
+        // in any of them, and the page it leaves behind is as live as any other.
+        for (const [path, expected] of [
+          ['/no-stamp', 'Container is null'],
+          ['/duplicate-roots', 'more than one server-rendered root stamped'],
+          ['/ambiguous-roots', 'no container to disambiguate them'],
+        ]) {
+          const reading = await readPage(browser, String(path))
+          assertConsumer(
+            reading.diagnostics.some(message =>
+              message.includes(String(expected)),
+            ),
+            `${String(path)} produced no "${String(expected)}" diagnostic. ` +
+              `Saw: ${JSON.stringify(reading.diagnostics)}`,
+          )
+          assertConsumer(
+            reading.probe.rootIsContained,
+            `${String(path)} left its page interactive. A refusal that lands ` +
+              'before hydration leaves the same live markup behind as one that ' +
+              'lands after it.',
+          )
+          await assertPageIsInert(browser, String(path), requestedPaths)
+          log(`${String(path)}: refused and contained`)
+        }
+
+        // Containment must mark the page, not move it. Reparenting the root
+        // reconnects every custom element in the subtree and reloads every
+        // frame, and the second connection could run stale author code during
+        // refusal.
+        const framesBefore = requestedPaths.filter(
+          path => path === FRAME_PATH,
+        ).length
+        const lifecycleReading = await readPage(browser, '/lifecycle')
+        const framesAfter = requestedPaths.filter(
+          path => path === FRAME_PATH,
+        ).length
+        assertConsumer(
+          lifecycleReading.probe.rootIsContained,
+          '/lifecycle left its page interactive.',
+        )
+        assertConsumer(
+          lifecycleReading.probe.customElementConnections === 1,
+          'containment reconnected an upgraded custom element ' +
+            `(${String(lifecycleReading.probe.customElementConnections)} ` +
+            'connections). Reparenting the served root disconnects and ' +
+            'reconnects everything inside it.',
+        )
+        assertConsumer(
+          framesAfter - framesBefore === 1,
+          `containment reloaded an embedded document (${String(framesAfter - framesBefore)} ` +
+            'requests for the frame, expected 1). Moving the root reloads every ' +
+            'browsing context inside it.',
+        )
+        assertConsumer(
+          lifecycleReading.probe.reconnectModalIsOpen === false,
+          'a custom element opened a modal from a second connection, which ' +
+            'reaches the top layer above an earlier refusal shield.',
+        )
+        assertConsumer(
+          lifecycleReading.probe.shieldIsVisible,
+          'the refusal shield was not visibly covering served content.',
+        )
+        await assertPageIsInert(browser, '/lifecycle', requestedPaths)
+        log('/lifecycle: nothing reconnected, reloaded, or took focus')
+      } finally {
+        await browser.close()
+        server.close()
+      }
+    })
+  } finally {
+    for (const path of tarballPaths) {
+      rmSync(path, { force: true })
+    }
+  }
+
+  log('PASS')
+}
+
+const messageFor = (error: unknown): string => {
+  if (error instanceof ConsumerCheckError) {
+    return error.message
+  }
+  if (error instanceof Error) {
+    return error.stack ?? error.message
+  }
+  return String(error)
+}
+
+main().catch((error: unknown) => {
+  console.error(`[packed-ssr] FAIL: ${messageFor(error)}`)
+  process.exit(1)
+})

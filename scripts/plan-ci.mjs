@@ -38,6 +38,39 @@ const createFoldkitSmoke =
       'packages/oxlint-plugin-foldkit/',
     ],
   })
+const packedSsrConsumer =
+  fullWorkspaceChecks ||
+  hasChanged({
+    files: ['scripts/check-packed-ssr-consumer.ts'],
+    prefixes: ['packages/foldkit/', 'packages/vite-plugin-foldkit/'],
+  })
+const hostParity =
+  fullWorkspaceChecks ||
+  hasChanged({
+    files: ['scripts/check-host-parity.ts'],
+    prefixes: [
+      'examples/ssr/',
+      'packages/foldkit/',
+      'packages/vite-plugin-foldkit/',
+      'scripts/fixtures/host-parity/',
+    ],
+  })
+const scaffoldServerRendering =
+  fullWorkspaceChecks ||
+  hasChanged({
+    files: ['scripts/check-scaffold-server-rendering.ts'],
+    prefixes: [
+      'packages/create-foldkit-app/',
+      'packages/foldkit/',
+      'packages/vite-plugin-foldkit/',
+    ],
+  })
+const domStateParity =
+  fullWorkspaceChecks ||
+  hasChanged({
+    files: ['scripts/check-dom-state-parity.mts'],
+    prefixes: ['packages/foldkit/'],
+  })
 const typingGame =
   fullWorkspaceChecks ||
   hasChanged({
@@ -53,7 +86,14 @@ const typingGame =
 const website =
   fullWorkspaceChecks ||
   hasChanged({
+    files: [
+      '.github/workflows/deploy-website.yml',
+      'scripts/build-examples.ts',
+      'scripts/check-playground-ssg-build.ts',
+      'scripts/example-bridge.js',
+    ],
     prefixes: [
+      'examples/',
       'packages/website/',
       'packages/foldkit/',
       'packages/ui/',
@@ -77,6 +117,10 @@ const workspacePackages = hasChanged({
 })
 
 process.stdout.write(`create_foldkit_smoke=${createFoldkitSmoke}\n`)
+process.stdout.write(`packed_ssr_consumer=${packedSsrConsumer}\n`)
+process.stdout.write(`scaffold_server_rendering=${scaffoldServerRendering}\n`)
+process.stdout.write(`host_parity=${hostParity}\n`)
+process.stdout.write(`dom_state_parity=${domStateParity}\n`)
 process.stdout.write(`typing_game=${typingGame}\n`)
 process.stdout.write(`website=${website}\n`)
 process.stdout.write(`full_workspace_checks=${fullWorkspaceChecks}\n`)

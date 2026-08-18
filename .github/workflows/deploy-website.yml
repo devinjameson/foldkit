@@ -1,6 +1,13 @@
 name: Deploy Website to Vercel
 
 on:
+  workflow_call:
+    inputs:
+      published_commit:
+        description: Commit whose packages the successful release job published
+        required: false
+        type: string
+        default: ''
   push:
     branches:
       - main
@@ -13,22 +20,71 @@ on:
       - 'packages/vite-plugin-foldkit/**'
       - 'examples/**'
       - 'scripts/build-examples.ts'
+      - 'scripts/check-playground-ssg-build.ts'
+      - 'scripts/check-published-versions.ts'
       - 'scripts/example-bridge.js'
+      - 'scripts/plan-website-deploy.mjs'
       - 'scripts/restore-website-fonts.sh'
+      - '.npmrc'
+      - 'package.json'
       - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'tsconfig.base.json'
       - '.github/workflows/deploy-website.yml'
 
 concurrency:
   group: deploy-website-production
-  cancel-in-progress: true
+  cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
+  authorize:
+    name: Authorize package inputs
+    runs-on: ubuntu-latest
+    outputs:
+      deploy: ${{ steps.authorization.outputs.deploy }}
+      target: ${{ steps.authorization.outputs.target }}
+
+    steps:
+      - name: Checkout code and release tags
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          ref: main
+
+      - name: Match package source to published versions
+        id: authorization
+        env:
+          PUBLISHED_COMMIT: ${{ inputs.published_commit }}
+        run: |
+          target=$(git rev-parse HEAD)
+          if [ -n "${PUBLISHED_COMMIT}" ]; then
+            if ! git merge-base --is-ancestor "${PUBLISHED_COMMIT}" "${target}"; then
+              echo "the published commit ${PUBLISHED_COMMIT} is not an ancestor of latest main ${target}" >&2
+              exit 1
+            fi
+          fi
+
+          result=$(node scripts/plan-website-deploy.mjs "${target}")
+          echo "${result}"
+          deploy=${result#deploy=}
+
+          echo "deploy=${deploy}" >> "${GITHUB_OUTPUT}"
+          echo "target=${target}" >> "${GITHUB_OUTPUT}"
+
   deploy:
+    needs: authorize
+    if: needs.authorize.outputs.deploy == 'true'
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.authorize.outputs.target }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -41,6 +97,16 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --filter . --filter website... --filter '{examples/**}...'
+
+      # NOTE: A playground installs these from npm in a visitor's browser. The
+      # registry may need a short propagation window after Changesets returns,
+      # so this checks the actual artifacts and normal npm peer resolution with
+      # bounded retries before building anything that can reach production.
+      - name: Verify the playground versions and peer ranges are published
+        run: pnpm check:published-versions -- --wait
+
+      - name: Build the exact transformed SSG playground
+        run: pnpm check:playground-ssg-build
 
       - name: Build core packages
         run: pnpm --filter 'website^...' build
@@ -175,3 +241,27 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_WEBSITE_PROJECT_ID }}
+
+      - name: Wait for the deployed website build
+        run: |
+          response_file="${RUNNER_TEMP}/foldkit-release-smoke.html"
+          for attempt in $(seq 1 30); do
+            if curl -fsSL \
+              -H 'Cache-Control: no-cache' \
+              "https://foldkit.dev/playground/ssr?release-smoke=${GITHUB_RUN_ID}-${attempt}" \
+              -o "${response_file}"; then
+              if grep -Fq "data-foldkit-build=\"${{ needs.authorize.outputs.target }}\"" "${response_file}"; then
+                echo "foldkit.dev is serving build ${{ needs.authorize.outputs.target }}"
+                exit 0
+              fi
+            fi
+            echo "foldkit.dev has not reached build ${GITHUB_SHA}; waiting"
+            sleep 5
+          done
+          echo "foldkit.dev did not reach build ${{ needs.authorize.outputs.target }}" >&2
+          exit 1
+
+      - name: Smoke the deployed SSR and SSG playgrounds
+        run: pnpm --filter website exec playwright test
+        env:
+          FOLDKIT_LIVE_WEBSITE_URL: https://foldkit.dev

@@ -1416,6 +1416,18 @@ describe('custom matchers', () => {
     },
     ['Sign in'],
   )
+  const styledElement = Option.getOrThrow(
+    Option.fromNullishOr(
+      inertHtml.div([
+        inertHtml.Style({
+          '--accent': 'blue',
+          WebkitLineClamp: '2',
+          backgroundColor: 'red',
+          cssFloat: 'left',
+        }),
+      ]),
+    ),
+  )
 
   test('toHaveText passes for matching text', () => {
     expect(Option.some(element)).toHaveText('Sign in')
@@ -1449,6 +1461,16 @@ describe('custom matchers', () => {
     expect(() => expect(Option.some(element)).toHaveAttr('name')).toThrow(
       'Expected element to have attribute "name"',
     )
+  })
+
+  test('toHaveStyle normalizes property aliases and declaration names', () => {
+    expect(Option.some(styledElement)).toHaveStyle('backgroundColor', 'red')
+    expect(Option.some(styledElement)).toHaveStyle('background-color', 'red')
+    expect(Option.some(styledElement)).toHaveStyle('cssFloat', 'left')
+    expect(Option.some(styledElement)).toHaveStyle('float', 'left')
+    expect(Option.some(styledElement)).toHaveStyle('WebkitLineClamp', '2')
+    expect(Option.some(styledElement)).toHaveStyle('-webkit-line-clamp', '2')
+    expect(Option.some(styledElement)).toHaveStyle('--accent', 'blue')
   })
 
   test('toExist passes for defined element', () => {
@@ -1936,6 +1958,44 @@ describe('scene with expect', () => {
       { update, view },
       Scene.given(initialModel),
       Scene.expect(Scene.label('Email')).toHaveAttr('type', 'email'),
+    )
+  })
+
+  test('toHaveStyle accepts the same style spellings as the builder', () => {
+    Scene.scene(
+      {
+        update,
+        view: (_model, h) =>
+          h.div([
+            h.Id('styled'),
+            h.Style({
+              '--accent': 'blue',
+              WebkitLineClamp: '2',
+              backgroundColor: 'red',
+              cssFloat: 'left',
+            }),
+          ]),
+      },
+      Scene.given(initialModel),
+      Scene.expect(Scene.selector('#styled')).toHaveStyle(
+        'backgroundColor',
+        'red',
+      ),
+      Scene.expect(Scene.selector('#styled')).toHaveStyle(
+        'background-color',
+        'red',
+      ),
+      Scene.expect(Scene.selector('#styled')).toHaveStyle('cssFloat', 'left'),
+      Scene.expect(Scene.selector('#styled')).toHaveStyle('float', 'left'),
+      Scene.expect(Scene.selector('#styled')).toHaveStyle(
+        'WebkitLineClamp',
+        '2',
+      ),
+      Scene.expect(Scene.selector('#styled')).toHaveStyle(
+        '-webkit-line-clamp',
+        '2',
+      ),
+      Scene.expect(Scene.selector('#styled')).toHaveStyle('--accent', 'blue'),
     )
   })
 
@@ -3920,6 +3980,63 @@ describe('attribute builders map to DOM names', () => {
     value: string
   }>
 
+  const ELEMENT_BY_ATTRIBUTE_LABEL: Readonly<Record<string, string>> = {
+    Placeholder: 'input',
+    Name: 'input',
+    Disabled: 'button',
+    Readonly: 'input',
+    Required: 'input',
+    Multiple: 'input',
+    Type: 'input',
+    Accept: 'input',
+    Autocomplete: 'input',
+    Pattern: 'input',
+    Maxlength: 'input',
+    Minlength: 'input',
+    Size: 'input',
+    Cols: 'textarea',
+    Rows: 'textarea',
+    Max: 'input',
+    Min: 'input',
+    Step: 'input',
+    For: 'label',
+    Action: 'form',
+    Method: 'form',
+    Enctype: 'form',
+    Novalidate: 'form',
+    Formaction: 'button',
+    Formmethod: 'button',
+    Formnovalidate: 'button',
+    Formtarget: 'button',
+    Formenctype: 'button',
+    Wrap: 'textarea',
+    LabelAttr: 'option',
+    High: 'meter',
+    Low: 'meter',
+    Optimum: 'meter',
+    Href: 'a',
+    Target: 'a',
+    Rel: 'a',
+    Download: 'a',
+    Src: 'img',
+    Alt: 'img',
+    Autoplay: 'audio',
+    Controls: 'audio',
+    Loop: 'audio',
+    Muted: 'audio',
+    Poster: 'video',
+    Preload: 'audio',
+    Playsinline: 'video',
+    Ismap: 'img',
+    Colspan: 'td',
+    Rowspan: 'td',
+    Span: 'col',
+    Start: 'ol',
+    Reversed: 'ol',
+    CiteAttr: 'blockquote',
+    Datetime: 'time',
+  }
+
   const ATTRIBUTE_CASES: ReadonlyArray<AttributeCase> = [
     // GLOBAL
     { label: 'Id', attribute: h.Id('main'), domName: 'id', value: 'main' },
@@ -5170,8 +5287,10 @@ describe('attribute builders map to DOM names', () => {
 
   test.each(ATTRIBUTE_CASES)(
     '$label renders as $domName',
-    ({ attribute, domName, value }) => {
-      const model: AttributeModel = { attribute }
+    ({ label, attribute, domName, value }) => {
+      const tagName = ELEMENT_BY_ATTRIBUTE_LABEL[label]
+      const model: AttributeModel =
+        tagName === undefined ? { attribute } : { attribute, tagName }
 
       Scene.scene(
         { update: attributeUpdate, view: attributeView },

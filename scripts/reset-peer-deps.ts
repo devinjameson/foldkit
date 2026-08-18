@@ -1,7 +1,14 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 
+// NOTE: `@foldkit/vite-plugin` is deliberately absent. Its `foldkit` peer
+// declares a real minimum, the first release that ships the server export the
+// plugin imports, so broadening it here would republish the compatibility bug
+// that floor exists to prevent: a plugin that accepts a foldkit without the
+// export and fails at import. That peer is a plain semver range rather than
+// the `workspace:` protocol, so `changeset version` leaves it alone and there
+// is nothing to restore. `check-peer-floors.ts` checks the floor survives into
+// the packed manifest.
 const TARGETS = [
-  { path: 'packages/vite-plugin-foldkit/package.json', dep: 'foldkit' },
   { path: 'packages/devtools-mcp/package.json', dep: 'foldkit' },
   { path: 'packages/ui/package.json', dep: 'foldkit' },
   { path: 'packages/devtools/package.json', dep: 'foldkit' },

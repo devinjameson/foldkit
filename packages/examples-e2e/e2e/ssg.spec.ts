@@ -31,8 +31,10 @@ test.describe('ssg example', () => {
   test('hydrates the generated DOM and navigates as an application', async ({
     page,
   }) => {
+    await Page.captureServerRoot(page)
     await page.goto('/', { waitUntil: 'networkidle' })
 
+    await Page.assertAdoptedServerRoot(page)
     await expect(page.locator('[data-foldkit-app]')).toHaveCount(0)
     await page.getByRole('button', { name: 'Count: 0' }).click()
     await expect(page.getByRole('button', { name: 'Count: 1' })).toBeVisible()

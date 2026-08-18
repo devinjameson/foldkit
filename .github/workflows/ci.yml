@@ -73,6 +73,13 @@ jobs:
       - name: Lint
         run: pnpm --filter @foldkit/oxlint-plugin build && pnpm lint:ci
 
+      # Knip loads Vite configs through published package exports, and
+      # repository scripts import Foldkit through public subpaths. A clean
+      # runner has no dist files until these packages build, so this step must
+      # precede both checks and cannot be change-scoped.
+      - name: Build reusable packages
+        run: pnpm build:packages && pnpm --filter @typing-game/shared build
+
       - name: Check dead code
         run: pnpm check:dead-code
 
@@ -84,10 +91,6 @@ jobs:
 
       - name: Test scripts
         run: pnpm test:scripts
-
-      - name: Build reusable packages
-        if: steps.scope.outputs.workspace_packages == 'true' || steps.scope.outputs.create_foldkit_smoke == 'true' || steps.scope.outputs.website == 'true' || steps.scope.outputs.typing_game == 'true'
-        run: pnpm build:packages && pnpm --filter @typing-game/shared build
 
       - name: Check Effect prebundle namespaces
         run: pnpm check:effect-prebundle
@@ -114,6 +117,58 @@ jobs:
       - name: Smoke test create-foldkit-app
         if: steps.scope.outputs.create_foldkit_smoke == 'true'
         run: pnpm check:create-foldkit-app-smoke:ci
+
+      # A Foldkit installed from a tarball is externalized from a server build,
+      # where the plugin's compile-time define never reaches it. Nothing inside
+      # this workspace has that shape, so the build id contract is only
+      # observable from a project built outside it.
+      - name: Install Playwright chromium for the packed consumer gate
+        if: steps.scope.outputs.packed_ssr_consumer == 'true'
+        run: pnpm --filter @foldkit/examples-e2e exec playwright install --with-deps chromium
+
+      - name: Check packed SSR consumer
+        if: steps.scope.outputs.packed_ssr_consumer == 'true'
+        run: pnpm check:packed-ssr-consumer:ci
+
+      # Generates an SSR and an SSG project and builds each through the command
+      # its own README documents. A generated project has to satisfy the build
+      # id contract before its author has read about it, and only running that
+      # build shows whether it does.
+      - name: Check generated server-rendered projects
+        if: steps.scope.outputs.scaffold_server_rendering == 'true'
+        run: pnpm check:scaffold-server-rendering:ci
+
+      # The Vite dev host and the production example host are different code
+      # reading one server entry. They disagreed about HTTP methods, so a form
+      # action worked in development and failed after deploy.
+      - name: Build the SSR example for host parity
+        if: steps.scope.outputs.host_parity == 'true'
+        run: pnpm -C examples/ssr build
+
+      - name: Check dev and production host parity
+        if: steps.scope.outputs.host_parity == 'true'
+        run: pnpm check:host-parity:ci
+
+      # The server serializer and the client patch describe one element through
+      # two mechanisms, and a browser does not read them the same way
+      # everywhere. This measures both in Chromium rather than reasoning about
+      # the IDL.
+      - name: Install Playwright chromium for the DOM state gate
+        if: steps.scope.outputs.dom_state_parity == 'true' && steps.scope.outputs.packed_ssr_consumer != 'true'
+        run: pnpm --filter @foldkit/examples-e2e exec playwright install --with-deps chromium
+
+      - name: Check server and client DOM state parity
+        if: steps.scope.outputs.dom_state_parity == 'true'
+        run: pnpm check:dom-state-parity
+
+      # The website deploy runs `pnpm build:examples`, which builds a prerendered
+      # example through its own three commands rather than the example's build
+      # script. That path owns the build id itself, and a hydratable render
+      # refuses to run without one, so it is covered here rather than found at
+      # deploy time.
+      - name: Build the prerendered example embed
+        if: steps.scope.outputs.website == 'true'
+        run: pnpm build:examples:prerendered
 
       - name: Build website
         if: steps.scope.outputs.website == 'true'

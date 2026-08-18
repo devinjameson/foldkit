@@ -2,20 +2,24 @@
 
 ## Overview
 
-:::Info{label="Experimental"}
-Server rendering ships from `foldkit/experimental` while the API settles, and any release may change it. Please try it and report what breaks.
+:::Warning{label="Experimental"}
+Server rendering ships from `foldkit/experimental/server` while its API and operational contract settle. It will move to `foldkit/server` once Foldkit can make a stable compatibility commitment to both. It may change in any Foldkit release and has not yet had broad production exposure.
+
+Pin the exact version you deploy and test upgrades against your own SSR or SSG host. For regulated or security-critical workloads, wait for the stable export, or have your security and deployment setup reviewed independently first.
+
+The lowest-risk use today is statically generated public content, which is how this site uses it. Please try it and report what breaks.
 :::
 
-Foldkit renders on the server with the same program the browser runs. `renderToString` resolves `init`, runs the pure view, and returns HTML. `Runtime.hydrate` then adopts that HTML in place. The same init, view, update, and Model work whether the HTML was rendered during a build (SSG) or while handling a request (SSR).
+Foldkit renders on the server with the same program the browser runs. `renderToString` resolves `init`, runs the pure view, and returns HTML. `Runtime.hydrate` then adopts matching HTML in place and rebuilds mismatches. The same init, view, update, and Model work whether the HTML was rendered during a build (SSG) or while handling a request (SSR).
 
-That gives Foldkit one rendering pipeline with two delivery policies:
+One program gives Foldkit one rendering pipeline with two delivery policies:
 
 - **Static site generation (SSG):** a build script renders a finite set of URLs and writes HTML files.
 - **Server-side rendering (SSR):** a server renders a URL when its request arrives.
 
 An application can use either policy, or use SSG for some URLs and SSR for others. The application code does not need a second rendering API.
 
-One page, end to end, grouped by where each step runs and tagged with who supplies it:
+Here is one page from request to live application:
 
 ```diagram
 GET /page  (from the browser)
@@ -32,90 +36,167 @@ GET /page  (from the browser)
    ▼  HTML page + Flags payload
 ── on the browser ──
      Runtime.hydrate [Foldkit]
-        reads the Flags, calls the same init, adopts the DOM
+        reads the Flags, calls the same init
+        adopts matching DOM, rebuilds mismatches
      live application
         listeners and Mounts attach to the existing elements
 ```
 
-Once the live application takes over, the page is an ordinary Foldkit application: routing, update, Commands, and Subscriptions all run in the browser, and navigation moves between routes without contacting the server. The server renders again only on the next full page load, such as a reload or a link the runtime does not handle.
+Once the live application takes over, it behaves like any other Foldkit application. Routing, update, Commands, and Subscriptions run in the browser. Navigation moves between routes without contacting the server. The server renders again only on a full page load, such as a reload or a link the runtime does not handle.
 
-For SSG the picture is identical with one substitution: the host is a build script, and the response is written to a file that a static server or CDN delivers later.
+For SSG, the build script takes the host's place. It writes the response to a file that a static server or CDN delivers later.
 
 ## The server entry
 
-A server entry is the module that sits between the application and its host. It exports a `renderPage` function that accepts a Web `Request` and returns a `Promise<EntryResult>`:
+A server entry connects the application to its host. It exports a `renderPage` function that accepts a Web `Request` and returns a `Promise<EntryResult>`:
 
 ::Snippet{name="serverRenderingServerEntry" label="server entry example"}
 
-The outer `Promise` keeps `renderPage` callable from Vite, build scripts, serverless functions, and long-running Effect HTTP servers without making those hosts provide the application's Effect requirements. The entry uses Effect internally; hosts see only the `Promise`.
+The outer `Promise` keeps `renderPage` callable from Vite, build scripts, serverless functions, and long-running Effect HTTP servers. Those hosts do not need to provide the application's Effect requirements. The entry uses Effect internally; the host sees only the `Promise`.
 
-The entry is application code, so it lives in `src/` (`src/entry.server.ts` in the examples), not in the host's directory. It imports the app's `init`, `view`, and `Flags` and renders them, so it must build into the same module graph as the client. Foldkit's HTML builder uses a module-local render frame, and the view and `renderToString` share that frame only when they resolve to the same Foldkit module instance, which is what bundling the entry with the app guarantees. A host imports the built entry and calls `renderPage`; it never imports the application and renders it itself. The [SSR example](/example-apps/ssr)'s delivery host lives outside `src/`, in `server/`, and does exactly that.
+The entry is application code. Keep it in `src/` (`src/entry.server.ts` in the examples), not in the host's directory. It imports the application's `init`, `view`, and `Flags`, so the server build must compile it with those application imports.
 
-`renderToString` accepts the server-relevant subset of a `makeApplication` config: the `init` and `view` fields, plus `Flags` and `routing` when the application declares them. A full application config satisfies that subset, so an entry may pass the application's config object unchanged. The `container`, `update`, `subscriptions`, and `managedResources` fields do not participate in the server render: the render runs the view once over the Model `init` returns, with no DOM to attach to and no Messages to dispatch.
+The client and server are separate module graphs. Within each graph, the view and the Foldkit runtime that calls it must resolve to one `foldkit` module instance. The HTML builder tracks a render in module-level state. If one render uses two Foldkit copies, the view writes to one copy while the runtime reads the other. The render fails instead of producing the wrong page. Duplicate monorepo installs and aliases that split one graph are common causes.
 
-For a routing application, pass the request URL so `init` receives it exactly as it receives `window.location` in the browser:
+A delivery host imports the built entry and calls `renderPage`. It does not import the application and render it directly. The [SSR example](/example-apps/ssr)'s host lives outside `src/`, in `server/`, and does exactly that.
+
+`renderToString` accepts the server-relevant subset of a `makeApplication` config. That subset contains `init` and `view`, plus `Flags` and `routing` when the application declares them. A full application config satisfies the subset, so an entry can pass it unchanged.
+
+The `container`, `update`, `subscriptions`, and `managedResources` fields do not participate in server rendering. The server runs the view once over the Model returned by `init`. There is no DOM to attach to and no Message to dispatch.
+
+For a routing application, pass the request URL so `init` receives the same value it receives from `window.location` in the browser:
 
 ::Snippet{name="serverRenderingRenderToStringUrl" label="renderToString with url example"}
 
+`request.url` is the public URL. The Vite dev host preserves its configured `base` prefix and the browser's query string when middleware routes the request.
+
 ## The result contract
+
+### Entry results
 
 A server entry returns one of two variants:
 
 - `Server.Rendered(application, options)` asks the host to place Foldkit's rendered application in its HTML template. Its options can carry an HTTP status and headers.
-- `Server.Responded(response)` bypasses template injection with a complete Web `Response`. Use it for redirects and other non-page responses the page request itself resolves without rendering the shell.
+- `Server.Responded(response)` bypasses template insertion with a complete Web `Response`. Use it for redirects and any request that does not render a page.
 
-`Server.toResponse(template, result)` folds either variant into the Web `Response` the host sends, so a request-time host handles both cases with one call instead of matching on the result itself. It injects a `Rendered` application into the template, defaults to status 200 and a UTF-8 HTML content type, and passes a `Responded` response through unchanged.
+`Server.toResponse(template, result)` turns either variant into the Web `Response` the host sends. It inserts a `Rendered` application into the template, defaults to status 200 and a UTF-8 HTML content type, and passes a `Responded` response through unchanged.
 
-The render host serves pages, not a data API. When a client needs JSON, put that endpoint on a separate backend (an Effect `HttpApi` service is the natural fit) rather than answering it from the server entry. Foldkit keeps the line between server and client at the data: the backend returns data, the frontend renders it.
+The render host serves pages, not a data API. Put JSON endpoints on a separate backend, such as an Effect `HttpApi` service.
+
+### Rendered application
 
 The rendered application contains the body markup and the Document's initial head state:
 
 ::Snippet{name="serverRenderingRenderedApplication" label="RenderedApplication type"}
 
-`injectIntoTemplate` places that output into a standard `index.html`. It expects exactly one `<div id="root"></div>` placeholder by default, with no extra attributes or inner whitespace, plus exactly one `<title>` element. Pass `containerId` when the template uses another id. It also stamps language, text direction, canonical URL, and Open Graph URL into matching shell elements.
+`injectIntoTemplate` places that output in a standard `index.html`. The template must contain exactly one `<div id="root"></div>` placeholder. The placeholder has no other attributes and no whitespace inside it. The head must contain exactly one `<title>`. A missing or duplicate placeholder or title produces an error that names the problem.
+
+Pass `containerId` when the template uses another id. The injector also writes the language, text direction, canonical URL, and Open Graph URL into the corresponding shell elements.
+
+### Protocol validation
+
+`RenderedApplication` is public so a host can transport or wrap it. Its `html` field remains protocol data. Pass the value returned by `renderToString` to `injectIntoTemplate` unchanged.
+
+Hydratable HTML must parse as one top-level element with one nonempty application stamp and build stamp. It may be followed by one matching top-level JSON Flags script. Static HTML may contain one element, text, or comment root, or no body output.
+
+Foldkit rejects extra top-level content, ambiguous handoff markers, and source that the HTML parser drops, splits, moves, or reconstructs. It does not insert markup when parsing changes which nodes belong to the application.
+
+### Application ownership
+
+`runtimeId` names one application on the page. It pairs a root with its Flags payload. It also keys the Model and scroll position preserved by hot reloading.
+
+Two roots with the same id are one application claimed twice. The second boot would read the first root's Flags and restore its Model. `injectIntoTemplate` refuses to build that page, and `Runtime.hydrate` refuses one assembled elsewhere. This rule also applies when the applications declare no Flags because hot reloading still uses the id.
+
+Hydrating more than one application on a page is not supported. A page-owning `makeApplication` controls the document title, language, text direction, canonical URL, and Open Graph URL. It also installs document-wide navigation listeners. With two applications, the last render owns the metadata and the first listener handles every link. Distinct ids prevent roots from taking each other's handoff, but they do not divide document ownership. Render one application per page.
+
+### Supported templates and roots
+
+The placeholder's location and the view's root are part of the contract. Browsers move or drop markup that appears in an invalid parser context. Foldkit supports a short list of predictable contexts and refuses the rest. Each error names the rejected tag:
+
+- The placeholder must reach `<body>` through `div`, `main`, `section`, `article`, `aside`, `header`, or `footer`. A placeholder inside `<form>`, `<table>`, `<select>`, SVG or MathML content, or `<template>` content is rejected.
+- Rendered markup cannot declare a shadow root through `<template shadowrootmode>` or the older `shadowroot` attribute. Parsing moves that content out of the light DOM, so the browser tree and the hydration tree would differ. Attach shadow roots from a custom element instead.
+- A view cannot be rooted at `<html>`, `<head>`, `<body>`, or `<frameset>`. `renderToString` rejects those roots for static and hydratable output because the document parser drops, merges, or replaces them. Root the view at an ordinary element such as `<div>` or `<main>`. Set the title, language, and text direction through the `Document` returned by the view.
 
 ## The hydration handoff
 
-A hydratable render carries two markers:
+A hydratable render carries these markers:
 
-- The application root has `data-foldkit-app`. Its value identifies the runtime.
-- A Flags application also emits a JSON script carrying the Schema-encoded Flags that produced the server Model.
+- The application root has `data-foldkit-app`. Its value is the `runtimeId`.
+- The root also has `data-foldkit-build`. Its value identifies the deployment that rendered the page.
+- An application with Flags emits a `<script type="application/json" data-foldkit-flags="...">`. It carries the Schema-encoded Flags that produced the server Model. The attribute value matches the root's `runtimeId`.
+- Keyed elements carry `data-foldkit-key`. Elements with build-assigned view identity carry `data-foldkit-identity`. Both values are digests. The marker contains neither the original key, which may hold an account id or email address, nor the build's source path. Hydration compares each digest and removes the marker as it adopts the element. A render with `isHydratable: false` emits neither marker.
+
+  A digest is a comparison token, not a secret. A reader cannot reverse it directly, but can hash a guessed value and test for a match. Key by values that are safe to publish.
 
 Conceptually, the handoff appears next to the rendered root:
 
 ::Snippet{name="serverRenderingHydrationHandoff" label="hydration handoff markup"}
 
-The script type makes the payload data rather than executable JavaScript. Foldkit escapes values that could close the script element, then parses and Schema-decodes the text during hydration. Flags are public HTML, not a place for secrets.
+The script type makes the payload data rather than executable JavaScript. Foldkit escapes values that could close the script element. Hydration then parses and Schema-decodes the text. Flags are public HTML, not a place for secrets.
 
-The client opts into the handoff explicitly, in the client entry (`src/entry.ts` in the examples):
+### Opting in from the client entry
+
+The client opts into the handoff in its entry (`src/entry.ts` in the examples):
 
 ::Snippet{name="serverRenderingHydrate" label="Runtime.hydrate example"}
 
-`Runtime.run` always builds the DOM fresh. A Flags application supplies its client-only Flags Effect at that boundary:
+`Runtime.run` always builds the DOM from scratch. An application with Flags supplies its client-only Flags Effect at that boundary:
 
 ::Snippet{name="serverRenderingRunWithFlags" label="Runtime.run with flags example"}
 
-`Runtime.hydrate` accepts no client Flags producer. It reads the serialized Flags, calls the same `init`, and adopts matching server DOM nodes rather than replacing them. Element identity, focus, scroll position, and media state survive while listeners and Mounts attach. This adoption is the hydration step. A mismatching subtree rebuilds at the nearest parent, with a development warning that points back to nondeterministic Flags, init, or view output.
+`Runtime.hydrate` accepts no client Flags producer. It reads the serialized Flags, calls the same `init`, and adopts matching server DOM nodes. Element identity, focus, scroll position, and media state survive while listeners and Mounts attach.
 
-Calling `hydrate` declares that a complete server handoff exists. A missing stamped root, missing Flags payload, or undecodable Flags payload terminates startup and leaves the rendered HTML visible but inert. The failure is a descriptive `[foldkit]` error logged through the runtime's error reporting, where the console and error monitoring pick it up; there is no application-level hook because startup never reaches a Model. This catches stale HTML, mismatched client bundles, and deployment mistakes instead of silently booting a different client Model. Use `run` in a separate client entry when a page must support a fresh SPA boot.
+A mismatched subtree is rebuilt from its nearest parent. Rebuilding discards the DOM identity and browser state that adoption preserves. Development logs a warning that points to nondeterministic Flags, `init`, or view output. Production rebuilds silently, so test hydration before shipping.
 
-One development-only exception: when a hot update restarts the runtime, the Model HMR preserved wins and the view rebuilds from it instead of adopting the served DOM, since that DOM was rendered by code from before the update. The handoff contract still holds, so the stamped server root must exist.
+Calling `hydrate` declares that a complete server handoff exists. If the handoff is invalid, startup stops before Foldkit adopts DOM and the page is put out of reach. [What a refusal does](#what-a-refusal-does) describes that state. This is safer than booting a different client Model over the server's HTML.
 
-Commands returned by `init` do not run during `renderToString`. The server output represents the immediate post-`init` Model. After hydration, the browser runs those Commands normally.
+Use `run` from a separate client entry when the page must also support a fresh SPA boot.
 
-## Flags and browser facts
+`isHydratable` defaults to `true` for SSR and SSG. Set `isHydratable: false` only for static markup that no client will hydrate. The output then carries no application stamp, build id, Flags payload, key marker, or identity marker. `Runtime.hydrate` refuses it.
 
-Hydration requires both sides to construct the same first Model. Flags embedded in HTML are the contract that makes this reproducible.
+### Flags and what only the browser knows
 
-For request-time SSR, Flags can come from the request, including the URL, headers, and cookies. For build-time SSG, Flags must be universal and build-stable because one file is served to every visitor.
+Hydration requires the server and browser to build the same first Model. Embedded Flags let the browser call `init` with the values the server used.
+
+Request-time SSR can derive Flags from the request, including the URL, headers, and cookies. Build-time SSG writes one file for every visitor, so its Flags must be universal and fixed at build time.
 
 :::Warning{label="Flags are public"}
 Every serialized Flag ships in the page's HTML. Never place credentials, private tokens, or other secrets in Flags.
 :::
 
-Browser-only facts do not belong in hydratable SSG Flags. For example: a theme stored in `localStorage`, the viewport width, or browser feature detection cannot be known by the build. Start from a neutral Model on both sides, then load those facts through a boot-time Command or Subscription after hydration. If a preference must affect the server HTML, promote it to request-visible data such as a cookie and use request-time SSR for that URL.
+Browser-only facts do not belong in hydratable SSG Flags. For example: a theme stored in `localStorage`, the viewport width, and browser feature detection are unknown during the build. Start with a neutral Model on both sides. Load browser facts through a boot-time Command or Subscription after hydration.
 
-`isHydratable` defaults to `true` for both SSG and SSR. Pass `isHydratable: false` only when producing static markup that will not be hydrated. It is not the normal SSG setting.
+When a preference must affect the server HTML, make it request-visible, such as through a cookie, and use request-time SSR for that URL.
+
+### The build id
+
+The build id does not make hydration correct. It makes hydration refuse when it would otherwise be incorrect.
+
+The server stamps the id on the rendered root. The client bundle carries the same value. Hydration compares them before it accesses the Flags payload text or adopts DOM. Different ids stop startup; matching ids allow hydration to continue.
+
+Most structural mismatches are safe because Foldkit rebuilds the affected subtree. The dangerous case is markup that has the same shape but a different meaning. For example: an old page may place `<input name="email">` where the new build places `<input name="ssn">`. Without a build check, hydration could preserve text entered before startup and submit it under the new field name.
+
+Flags create the same risk. A payload belongs to the deployment that rendered it. A new Schema may accept the old data even when its values now mean something different.
+
+The deployment supplies the id because Foldkit cannot infer it. Imported constants, configuration, and caller arguments can change a view's output without changing the view function. `@foldkit/vite-plugin` compiles the value from its `buildId` option or `FOLDKIT_BUILD_ID` into application code as `import.meta.env.FOLDKIT_BUILD_ID`. The client and server entries pass that value explicitly:
+
+::Snippet{name="serverRenderingBuildId" label="Build id example"}
+
+Whatever value you pick, three things have to be true:
+
+- It is public. The id appears in the HTML sent to every visitor, so it must not contain a secret.
+- It identifies one deployment. Reusing an id makes a stale page look current and produces no warning. A commit or version is insufficient when the same revision can be deployed with different rendering inputs. The `ssr` and `ssg` scaffolds generate a fresh id whenever `FOLDKIT_BUILD_ID` is unset.
+- It reaches both builds. The client and server run as separate commands, so one build script must pass the same value to both. The scaffolds provide this coordination in `scripts/build.mjs`. A unique CI deployment id is a good source. A commit SHA or release tag is enough only when every deployment carrying it has identical rendering inputs.
+
+A hydratable render without an id fails with `MissingBuildId`. `Runtime.hydrate` also requires one. A static render with `isHydratable: false` needs none.
+
+Only a build takes the id from the deployment. The development server compiles the fixed value `development` into its server and client transforms. Development runs one live source session rather than producing independently deployable artifacts, so there is no deployment identity to derive.
+
+### Why view identity cannot replace the build id
+
+A view identity names a module path and function. It does not capture imported constants, configuration, or caller arguments.
+
+View identity also ships in the client bundle. Adding a source hash would expose a digest of that source to every visitor. A reader could test candidates for a low-entropy server-only value by hashing each one, even when the client build removed the value itself. A deployment-supplied build id detects skew without hashing source files.
 
 ## Request-time SSR
 
@@ -123,52 +204,178 @@ In development, enable the Vite host in `vite.config.ts`:
 
 ::Snippet{name="serverRenderingViteSsr" label="Vite SSR config example"}
 
-Vite continues to serve the client entry, HMR, and assets. Requests that reach the Foldkit middleware are converted to Web `Request` values and passed to `renderPage`; the returned Web `Response` supplies the status, headers, and body.
+Vite continues to serve the client entry, HMR, and assets. Requests that reach Foldkit become Web `Request` values and pass to `renderPage`. The returned Web `Response` provides the status, headers, and body.
 
-In production, build the client and the server host separately. The host serves static assets first, imports the built server entry, and sends `Server.toResponse(template, await renderPage(request))`. The [SSR example](https://github.com/foldkit/foldkit/tree/main/examples/ssr) uses an Effect `HttpServer` for that thin delivery layer.
+A hot update does not exercise hydration. HMR preserves the Model but rebuilds the DOM under the root. That DOM came from code that predates the edit. Reload the page to test hydration itself. The stamped root remains required during a hot update; without it, startup fails as it would on a fresh load.
+
+In production, build the client and server host separately. The host serves static assets first, imports the built entry, and sends `Server.toResponse(template, await renderPage(request))`. The [SSR example](https://github.com/foldkit/foldkit/tree/main/examples/ssr) uses an Effect `HttpServer` for this delivery layer.
 
 :::Warning{label="Caching personalized responses"}
-When Flags depend on the request, such as a cookie, an authorization header, or locale, the rendered HTML is specific to that visitor. Set `cache-control` and `vary` so it cannot be stored in a shared cache and served to someone else. The SSR example uses `private, no-store` and `vary: cookie` because its initial count comes from a cookie.
+When Flags depend on the request, such as a cookie, authorization header, or locale, the rendered HTML belongs to that visitor. Set `cache-control` and `vary` so a shared cache cannot serve it to someone else. The SSR example uses `private, no-store` and `vary: cookie` because its initial count comes from a cookie.
 :::
 
 ## Build-time SSG
 
-An SSG host builds the browser bundle and server entry, then calls `renderPage` once for every generated URL from a build script (`scripts/prerender.ts` in the SSG example):
+An SSG host builds the browser bundle and server entry. A build script then calls `renderPage` once for every generated URL (`scripts/prerender.ts` in the SSG example):
 
 ::Snippet{name="serverRenderingSsgLoop" label="SSG render loop example"}
 
-A static file cannot preserve arbitrary response behavior. The build should reject `Responded` results and rendered statuses it cannot reproduce rather than silently discarding them.
+A static file is a body plus whatever headers the file host adds. It cannot carry a redirect, a 404, or per-response headers. Writing a `Responded` result to disk turns a redirect into an ordinary page at that URL. The build should fail on `Responded` and on any rendered status it cannot reproduce.
 
-The [SSG example](https://github.com/foldkit/foldkit/tree/main/examples/ssg) is the minimal reference. This website is the production-scale reference: its prerender host uses the same `renderPage(Request)` contract, seeds route content through universal Flags, and writes every route as hydratable static HTML.
+The [SSG example](https://github.com/foldkit/foldkit/tree/main/examples/ssg) is the minimal reference. This website is the production-scale reference. Its prerender host uses the same `renderPage(Request)` contract, seeds route content through universal Flags, and writes every route as hydratable static HTML.
 
 ## Deploying
 
-A deployed SSG build is static files. Any static host or CDN serves the generated directory as is; the hydration handoff already lives inside the HTML, so nothing beyond serving files is required.
+A deployed SSG build is a directory of static files. Any static host or CDN can serve it as is. The hydration handoff already lives in the HTML.
 
-A deployed SSR application needs a host with two jobs: serve the built client assets, and call `renderPage` for page requests. On Node, the [SSR example's server](https://github.com/foldkit/foldkit/tree/main/examples/ssr/server) is the reference: an Effect `HttpServer` that serves static files first and sends `Server.toResponse(template, await renderPage(request))` for everything else.
+A deployed SSR application needs a host with two jobs: serve the built client assets and call `renderPage` for page requests. On Node, use the [SSR example's server](https://github.com/foldkit/foldkit/tree/main/examples/ssr/server) as the reference. It serves static files first and sends `Server.toResponse(template, await renderPage(request))` for everything else.
 
-Behind a CDN or reverse proxy, a route whose Flags read from the request produces visitor-specific HTML. Keep those responses out of shared caches with `cache-control` and `vary`, so an edge cache never serves one visitor's page to another.
+### Which methods reach the entry
 
-Fetch-native runtimes such as Cloudflare Workers, Deno, and Bun run the entry without an adapter, because those platforms already speak Web `Request` and `Response`:
+These rules apply to request-time SSR. An SSG deployment is a directory of files, so its static host owns method handling.
+
+An SSR host serves static files for `GET` and `HEAD`. Other application methods reach the entry, including `OPTIONS`. Under `vite dev`, a configured proxy route may answer first.
+
+Development and the production SSR host follow the same rule. A form action, `Server.Responded` reply, or CORS preflight should not work during development and fail after deployment.
+
+`OPTIONS` reaches the entry because a preflight concerns one application resource. Only the application knows its policy. The SSR example and scaffold answer with 204 and an `Allow` header as a placeholder. Replace that response with a real CORS policy before deploying.
+
+Preflight ownership follows `Access-Control-Request-Method`, not the URL suffix alone. For example: an `OPTIONS` request for `POST /submit.json` reaches the entry even though a `GET` for that path could name a static asset.
+
+An `OPTIONS` request without both `Origin` and `Access-Control-Request-Method` is not a CORS preflight. It reaches the entry regardless of its path.
+
+Vite still owns configured proxy routes, source modules, assets, and HMR. Its `server.cors` policy applies to those responses. Requests that fall through to Foldkit do not inherit that development-only policy. The entry's response headers therefore predict the deployed host.
+
+The plugin validates the request target before Vite or Foldkit handles it. Proxies still have the opportunity to answer before the server entry. Application `OPTIONS` requests that fall through still reach the entry.
+
+`CONNECT`, `TRACE`, and `TRACK` never reach the entry. The WHATWG `Request` constructor rejects them, so the host answers 405 with `Allow`.
+
+On Node, only `TRACE` reaches that rule. The HTTP parser answers `TRACK` with 400 before a handler runs. `CONNECT` arrives on its own event rather than as an ordinary request.
+
+### Caching
+
+A static build is one file for every visitor, so it caches like any other static asset.
+
+Request-time rendering depends on its Flags. A route with universal Flags can use shared caching. A route whose Flags come from the request produces HTML for one visitor. A CDN or reverse proxy must not serve that response to the next visitor. Set the response headers in the server entry and confirm that every cache in front of it honors them.
+
+### Fetch-native runtimes
+
+Cloudflare Workers, Deno, and Bun already use Web `Request` and `Response`, so they can run the entry without an adapter:
 
 ::Snippet{name="serverRenderingWorkersHost" label="Workers host example"}
 
-The platform serves the built client assets, and the handler covers page requests. The template `import` works because the bundler is told to treat `.html` imports as plain strings; Cloudflare's Wrangler CLI, the tool that builds and deploys Workers, calls this a `Text` module rule. The same built server entry runs unchanged on each of these hosts.
+The platform serves the built client assets, and the handler covers page requests. Configure the bundler to treat the template's `.html` import as a string. Cloudflare's Wrangler CLI calls this a `Text` module rule. The same built server entry runs unchanged on each runtime.
 
-To provision and deploy the host itself, [Alchemy](https://alchemy.run) is the natural fit. It is TypeScript-native infrastructure as code built on Effect, so the Worker and the resources it binds to, such as a database, object storage, or a queue, are declared in the same TypeScript program that ships the entry, with no separate configuration language to keep in sync. Its [Cloudflare support](https://alchemy.run/cloudflare/) deploys the Worker directly, which pairs naturally with the fetch-native host above.
+[Alchemy](https://alchemy.run) can provision and deploy the host. It is TypeScript-native infrastructure as code built on Effect. The Worker and its databases, object storage, or queues live in the same TypeScript program as the entry. Its [Cloudflare support](https://alchemy.run/cloudflare/) deploys the Worker directly.
 
-## One application using both
+## Using SSG and SSR together
 
-SSG and SSR are route delivery policies, not separate Foldkit application types. A hybrid deployment can generate stable routes during the build and send the remaining URLs to a request-time host. Both hosts import the same server entry, and every delivered page hydrates through the same client entry.
+SSG and SSR are delivery policies, not separate Foldkit application types. A hybrid deployment can generate stable routes during the build and send the remaining URLs to a request-time host. Both hosts import the same server entry, and every page hydrates through the same client entry.
 
-For example: product documentation and marketing pages can be generated at build time, while account pages and preview URLs render per request. A route should have one authoritative delivery policy in a deployment so the CDN and runtime server do not disagree about which version owns it.
+For example: documentation and marketing pages can be generated at build time, while account pages and preview URLs render per request. Give each route one authoritative policy. Otherwise, one request may receive a generated page from the CDN and the next may receive a fresh page from the runtime host.
+
+## What a refusal does
+
+Two things happen. Startup stops, and the page is put out of reach.
+
+### Startup stops
+
+Every refusal stops before `init` runs. No Command, Subscription, or ManagedResource from this boot starts.
+
+For a build-id mismatch, Foldkit compares ids before accessing the Flags payload text, parsing its JSON, or Schema-decoding it. Stale Flags belong to the old deployment. Decoding them first would pass those values to current code before Foldkit noticed the mismatch. Flags-related refusals inspect the payload only far enough to identify the reported error.
+
+Every refusal reports a `[foldkit]` error that names the cause. Failures found while `makeApplication` resolves the container and stamped root throw immediately. Failures found after `Runtime.hydrate` starts use Effect's error reporting. Both reach the console and error monitoring. Neither provides an application hook because startup never reaches a Model.
+
+Build skew is one reason to refuse. The same policy also covers:
+
+- A Flags payload that is missing, duplicated, malformed, or rejected by the Schema.
+- A runtime id claimed by two roots.
+- More than one stamped root when no container identifies the one to adopt.
+- A served root that lost its stamp. A generated client reaches this state when template insertion already replaced its `#root` placeholder, leaving neither the stamp nor the placeholder.
+
+One missing-container case is different. If `makeApplication` cannot find its container and the document contains no `data-foldkit-app`, `data-foldkit-build`, or `data-foldkit-flags`, then no server rendered the page. The application's `<div id="root">` is simply absent, usually because of a typo or because the script ran too early. Foldkit reports the setup error and leaves the page alone.
+
+Every other refusal contains the page. This includes calling `Runtime.hydrate` with an existing container that has no stamped root, even on a page that was never server-rendered. Calling `hydrate` is the explicit claim that a handoff exists. Use `Runtime.run` for a fresh client boot.
+
+### Page containment
+
+Foldkit marks the document body with `inert`, `aria-hidden`, and `data-foldkit-refused`. It opens a nondismissable modal shield beside the body and above existing top-layer content, including dialogs in closed shadow roots. The shield takes focus so physical keyboard input cannot reach stale body handlers.
+
+Author-owned dialogs remain open behind the shield. Containment does not call `close()` or dispatch `cancel`, either of which could run a stale listener while startup is failing.
+
+Links, forms, and focusable controls stop responding. The shield asks the visitor to reload. The served DOM remains connected, and `data-foldkit-refused` is available for styling or monitoring. Nothing else in Foldkit sets that attribute.
+
+Nothing moves. Foldkit marks the existing body instead of wrapping the application root. Wrapping would reparent the subtree, call `disconnectedCallback` and then `connectedCallback` on every upgraded custom element, and reload every iframe. Marking the body avoids those lifecycle effects.
+
+The body is the containment boundary because every hydratable root sits inside it. `renderToString` refuses `html`, `head`, and `body` roots, and `hydrate` is reserved for an application that owns the page.
+
+### Limits of containment
+
+Containment starts only after the client detects a refusal. It cannot undo earlier activity:
+
+- The parser may already have fetched subresources or run scripts from the old deployment.
+- A custom element may already have run `connectedCallback`.
+- A visitor may have interacted with the page before the client entry ran. A script can still submit a form programmatically despite `inert`.
+- Containment is not a script or global-event sandbox. Capture listeners on `window` or `document` run before an event reaches the shield. The browser may also dispatch global or top-layer events.
+- A timer or stale listener can open a new dialog after containment. That dialog enters the top layer above the shield. The shield covers top-layer content that existed when refusal began without invoking its lifecycle.
+
+### Stale HTML and caches
+
+The build id acts only when the HTML and client bundle come from different deployments. A page cached whole usually references its original content-hashed bundle. Old HTML then loads old JavaScript, the ids match, and Foldkit does not refuse it.
+
+If the old assets have been deleted, the client script returns 404 and nothing boots. That is not a refusal and produces no `[foldkit]` error because Foldkit never runs.
+
+A mismatch requires stale HTML whose script resolves to current code. Shared caches, partially invalidated CDN nodes, and service workers that retain an application shell can create that pair. A running tab is not rechecked when a deployment lands.
+
+Keep stale HTML out of shared caches. Serve the page and its client bundle from the same deployment.
+
+### Recovering from a refusal
+
+A refresh usually fixes a refusal by fetching HTML from the current deployment.
+
+A refresh cannot help while a CDN node or cache-first service worker keeps returning the old page. Recovery then depends on that cache updating. Foldkit cannot control the service worker lifecycle.
+
+Foldkit does not reload automatically and exposes no refusal hook. The runtime does not exist yet, so [`crash.report`](/core/crash-view#crash-report) never runs. Container-resolution failures throw immediately; later hydration failures use Effect's error reporting.
+
+Automatic reload would also be unsafe. If stale HTML remains in the cache, each reload receives the same dead page and starts another loop.
 
 ## Limitations
 
-- Commands do not run during a server render, so a page whose data arrives through a Command renders the Model's pre-Command state, usually a loading state. Supply the data through Flags when the server HTML must include it.
-- Components that measure the DOM to decide what to render, such as `Ui.VirtualList`, render their initial unmeasured state and fill in after hydration.
-- `makeElement` and `embed` applications do not hydrate yet. Server rendering is for page-owning `makeApplication` programs.
-- A custom element that upgrades before hydration keeps the attributes its `connectedCallback` adds that the view does not declare on the element. When the view drives class and style through `h.Class` and `h.Style`, component-added class tokens and style properties the view does not declare are kept as well; a raw `h.Attribute('class', ...)` or `h.Attribute('style', ...)` instead owns the whole attribute and replaces it, dropping component additions. Component-built light DOM is preserved only when the view declares no children for the element; a view that declares children owns the element's light DOM.
-- Text typed into a controlled input before hydration yields to the Model when controlled values are reasserted. The element, focus, and page scroll survive.
-- Arbitrary properties set through `h.Prop` are client behavior rather than markup, so they take effect after hydration. A `<select>` value comes from its selected `<option>` in server HTML and settles from the Model after hydration.
-- Raw-text elements such as `script` and `style` cannot contain their literal closing-tag sequence. `renderToString` rejects content that would break out of the element.
+### Rendering constraints
+
+Server rendering has no browser and runs only the first view over the initial Model.
+
+- Commands do not run during a server render. Data loaded by a Command therefore appears as the Model's pre-Command state, usually a loading state. Supply the data through Flags when it must appear in the server HTML.
+- Components that measure the DOM before deciding what to render, such as `Ui.VirtualList`, render their initial unmeasured state and fill in after hydration.
+- `makeElement` and `embed` applications do not hydrate. Server rendering supports page-owning `makeApplication` programs.
+- Ordinary element children under `template` cannot be server-rendered because browsers place them in a separate content fragment that the differ does not walk. Element children under `noscript` become raw text while scripting is enabled and cannot hydrate as the declared nodes. Keep template markup in the HTML shell. Use plain text, trusted `h.InnerHTML`, or shell markup for a noscript fallback.
+- Dynamic HTML tag names are normalized to lowercase, matching the elements `document.createElement` produces. SVG and MathML tag names are case-sensitive and must use their canonical spelling. `renderToString` refuses a foreign-content spelling that the HTML parser would adjust because `createElementNS` would preserve the original name on a fresh client render.
+
+### DOM and form ownership
+
+Server HTML and client DOM must give each attribute, property, and content slot one owner.
+
+- `h.Style` owns individual CSS declarations rather than the whole `style` attribute. It accepts known camel-case or declaration names, plus custom properties beginning `--`, with one string value per declaration. It rejects `cssText`, Snabbdom lifecycle keys, duplicate names for one declaration, non-string values, `!important`, and syntax that can escape into another declaration. Server and client renders agree on effective CSS, though not necessarily on the exact attribute bytes or mutation history. Hydration avoids rewriting unchanged declarations. When a strict CSP blocks the parsed style attribute, the client reapplies declared properties through CSSOM.
+- Text entered into a controlled input before hydration yields to the Model when Foldkit reasserts controlled values. Controlled `value`, `checked`, `selected`, and `muted` state owns the corresponding live and default DOM state. Hydration, a fresh render, and `form.reset()` therefore agree. Removing the typed property clears that ownership or restores a remaining raw attribute. Ownership changes are observable DOM writes, so a MutationObserver may report them. Element identity, focus, and page scroll survive.
+- A controlled `h.Value` cannot share a `textarea` or `output` with declared children because both own the element's content. Keep either the controlled value or the children. This rule also applies to client-only rendering.
+- A raw `h.Attribute` and a typed builder cannot name the same attribute on one element. `h.Style` likewise cannot share an element with a raw `style` attribute. Keep one owner for each piece of state.
+- A typed reflected builder is client-only when the HTML element's native interface does not own that property. For example: spreading `h.Type('button')` onto a `div` creates an expando, so server rendering omits it instead of creating an attribute that a fresh client render would not. Use the matching element when the value must appear in markup, or use an intentional raw `h.Attribute`.
+
+### Custom Elements
+
+Custom Elements may upgrade before hydration. These rules divide state between the component and the view.
+
+- Attributes added by a Custom Element's `connectedCallback` survive when the view does not declare them. Component-added class tokens and style properties also survive when the view uses `h.Class` and `h.Style`. A raw `h.Attribute('class', ...)` or `h.Attribute('style', ...)` owns the whole attribute and replaces component additions.
+- Component-built light DOM survives when the view declares no content. Foldkit adopts that childless host. When the view declares text, children, or `h.InnerHTML`, Foldkit replaces the host and builds the declared content while the new element is detached. The old host disconnects, and the new host has a new DOM identity. It connects once with the view content in place, as it does during a fresh render. This boundary is necessary because a browser may connect the old component before parsing its server content. Hydration cannot distinguish that content from nodes the component inserted and retained, and clearing the old host could let a child's `disconnectedCallback` mutate it during reconciliation.
+- Keep lifecycle DOM writes within the Custom Element's own host or shadow root. Hydration resamples view-owned element and text state after lifecycle callbacks. It does not sandbox callback code or rescan structure that a component changes elsewhere.
+- Declared custom-element properties are client behavior, not markup. They apply after hydration and never serialize as attributes. A component property named `id` or `title` stays client-side, while `h.Id` and `h.Title` still serialize the reflected attributes shared by all elements. Native elements continue to reflect their standard properties. For example: a server-rendered `<select>` expresses its value through the selected `<option>` before the Model settles it after hydration. A declared property named `innerHTML` remains a raw HTML sink when assigned on the client. Pass it only trusted markup and do not declare children beside it.
+
+### Raw HTML and security boundaries
+
+`h.InnerHTML` and raw attributes cross the typed builder boundary. Treat their values as trusted input.
+
+- Server rendering rejects every `<script>` inside `h.InnerHTML` because parsed scripts and scripts created by assigning `innerHTML` follow different execution and processing rules. The refusal includes inert data blocks such as JSON-LD. Build scripts as ordinary view elements or place them in the HTML template. Declarative shadow-root templates are rejected for the same parse-equivalence reason, including inside ordinary template content.
+- Raw-text elements such as `script`, `style`, `xmp`, `noembed`, and `noframes` cannot contain their literal closing-tag sequence. Trusted `h.InnerHTML` inside `textarea` or `title` has the same restriction. Script content also cannot contain `<!--`, which changes tokenizer state and can prevent the closing tag from ending the element. `renderToString` rejects content that would escape the element. It also rejects NUL and unpaired surrogate values because they do not survive HTML parsing and UTF-8 encoding unchanged. A carriage return is escaped as `&#13;` in ordinary text and attributes. It is rejected in raw text and comments, where no escape can protect it from input preprocessing.
+- An `h.InnerHTML` fragment cannot reach outside the application root. An `<html>`, `<head>`, `<body>`, or `<frameset>` tag inside one is not rendered where it is written. The browser merges its attributes into the document and hoists its content, so `renderToString` rejects it.
+- A live HTML `<base>` cannot appear in rendered application markup, including through `h.InnerHTML` or a scripting-disabled `<noscript>`. The browser applies it before hydration, so it could redirect the relative client entry that follows the root. Put `<base>` in the template head under host control. An ordinary inert template may contain one.
+- Typed `h.Href`, `h.Src`, `h.Action`, and `h.Formaction` neutralize script URL schemes. A raw `h.Attribute` is an intentional escape hatch and does not sanitize URLs. SVG and MathML use raw attributes for URL-bearing state because their typed HTML properties are not parse-equivalent. Pass only trusted values there.

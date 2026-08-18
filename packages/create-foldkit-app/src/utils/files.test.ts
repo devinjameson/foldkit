@@ -65,21 +65,22 @@ describe('applyPackageManager', () => {
 describe('rendering templates', () => {
   it('ssg overlays the base with a server entry, prerender script, and static build pipeline', () => {
     expect(listTemplateFiles('rendering/ssg')).toEqual([
+      'README.md',
       'package.json',
+      'scripts/build.mjs',
       'scripts/prerender.ts',
       'src/entry.server.ts',
       'src/entry.ts',
       'src/main.ts',
       'src/route.ts',
       'src/scene.test.ts',
+      'src/vite-env.d.ts',
       'tsconfig.json',
       'vite.config.ts',
     ])
 
     const packageJson = readTemplatePackageJson('rendering/ssg/package.json')
-    expect(packageJson.scripts['build']).toBe(
-      'vite build --outDir dist/client && vite build --ssr src/entry.server.ts --outDir dist/server && tsx scripts/prerender.ts',
-    )
+    expect(packageJson.scripts['build']).toBe('node scripts/build.mjs')
     expect(packageJson.scripts['preview']).toBe(
       'vite preview --outDir dist/client',
     )
@@ -91,7 +92,7 @@ describe('rendering templates', () => {
       'export const prerenderPaths',
     )
     expect(readTemplateFile('rendering/ssg/src/entry.ts')).toContain(
-      'Runtime.hydrate(application)',
+      'Runtime.hydrate(application, { buildId: import.meta.env.FOLDKIT_BUILD_ID })',
     )
     expect(readTemplateFile('rendering/ssg/scripts/prerender.ts')).toContain(
       'Server.injectIntoTemplate',
@@ -100,21 +101,22 @@ describe('rendering templates', () => {
 
   it('ssr overlays the base with a server entry, HTTP host, and start script', () => {
     expect(listTemplateFiles('rendering/ssr')).toEqual([
+      'README.md',
       'package.json',
+      'scripts/build.mjs',
       'server/main.ts',
       'src/cookie.ts',
       'src/entry.server.ts',
       'src/entry.ts',
       'src/main.ts',
       'src/scene.test.ts',
+      'src/vite-env.d.ts',
       'tsconfig.json',
       'vite.config.ts',
     ])
 
     const packageJson = readTemplatePackageJson('rendering/ssr/package.json')
-    expect(packageJson.scripts['build']).toBe(
-      'vite build --outDir dist/client && vite build --ssr server/main.ts --outDir dist/server',
-    )
+    expect(packageJson.scripts['build']).toBe('node scripts/build.mjs')
     expect(packageJson.scripts['start']).toBe('node dist/server/main.js')
 
     expect(readTemplateFile('rendering/ssr/vite.config.ts')).toContain(
@@ -124,7 +126,7 @@ describe('rendering templates', () => {
       'flags: flagsForRequest(',
     )
     expect(readTemplateFile('rendering/ssr/src/entry.ts')).toContain(
-      'Runtime.hydrate(application)',
+      'Runtime.hydrate(application, { buildId: import.meta.env.FOLDKIT_BUILD_ID })',
     )
     expect(readTemplateFile('rendering/ssr/server/main.ts')).toContain(
       'HttpServer.serve(handler)',
@@ -168,5 +170,79 @@ describe('rendering templates', () => {
     expect(readTemplateTsconfig('rendering/ssr/tsconfig.json').include).toEqual(
       ['src/**/*', 'server/**/*'],
     )
+  })
+
+  it('gives every step of one build the same generated build id', () => {
+    // A generated project must reach a working hydratable build through its own
+    // documented build command. `renderToString` refuses a hydratable render
+    // with no build id, and hydration rebuilds a page whose id is not the
+    // client's, so the client build and the server build of one run have to be
+    // handed the same value without the author knowing the requirement exists.
+    for (const rendering of ['ssg', 'ssr']) {
+      const buildScript = readTemplateFile(
+        `rendering/${rendering}/scripts/build.mjs`,
+      )
+      expect(buildScript).toContain('randomUUID()')
+      expect(buildScript).toContain(
+        'env: { ...process.env, FOLDKIT_BUILD_ID: buildId },',
+      )
+    }
+  })
+
+  it('takes a build id supplied by the deployment over a generated one', () => {
+    for (const rendering of ['ssg', 'ssr']) {
+      const buildScript = readTemplateFile(
+        `rendering/${rendering}/scripts/build.mjs`,
+      )
+      const generated = buildScript.indexOf('randomUUID()')
+      const supplied = buildScript.indexOf('process.env.FOLDKIT_BUILD_ID')
+      expect(supplied).toBeGreaterThanOrEqual(0)
+      expect(supplied).toBeLessThan(generated)
+    }
+  })
+
+  it('never falls back to a build id two deployments could share', () => {
+    // A constant fallback (`dev`, the project name, a version that only moves on
+    // release) is worse than no id at all: hydration would read two deployments
+    // as one and adopt a stale page's DOM for a client that no longer means the
+    // same thing by it.
+    for (const rendering of ['ssg', 'ssr']) {
+      const code = readTemplateFile(`rendering/${rendering}/scripts/build.mjs`)
+        .split('\n')
+        .filter(line => !line.trimStart().startsWith('//'))
+        .join('\n')
+
+      expect(code).not.toMatch(/FOLDKIT_BUILD_ID[^\n]*\|\|\s*['"`]/)
+      expect(code).not.toMatch(/\?\?\s*['"`]/)
+      expect(code).not.toMatch(/:\s*['"`][^'"`]+['"`]\s*$/m)
+    }
+  })
+
+  it('treats an empty FOLDKIT_BUILD_ID as unset', () => {
+    // The plugin reads an empty string as no id at all, so taking it as a value
+    // here would suppress the generated one and leave the build with none,
+    // failing later at the render rather than here.
+    for (const rendering of ['ssg', 'ssr']) {
+      const buildScript = readTemplateFile(
+        `rendering/${rendering}/scripts/build.mjs`,
+      )
+      expect(buildScript).toContain("supplied === ''")
+    }
+  })
+
+  it('documents the build id contract in the generated README', () => {
+    // The id is a deployment's, not Foldkit's, so a generated project has to say
+    // what it is before its author has to ask.
+    for (const rendering of ['ssg', 'ssr']) {
+      const readme = applyPackageManager(
+        readTemplateFile(`rendering/${rendering}/README.md`),
+        'pnpm',
+      )
+      expect(readme).not.toContain('{{')
+      expect(readme).toContain('pnpm build')
+      expect(readme).toContain('FOLDKIT_BUILD_ID')
+      expect(readme).toMatch(/never contain\s+a secret/)
+      expect(readme).toMatch(/two deployments\s+must/)
+    }
   })
 })

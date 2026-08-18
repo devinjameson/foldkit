@@ -13,7 +13,10 @@ export const renderPage = (request: Request): Promise<Server.EntryResult> =>
     Effect.gen(function* () {
       const renderedApplication = yield* Server.renderToString(
         { Flags, init, view },
-        { flags: flagsForRequest(request) },
+        {
+          flags: flagsForRequest(request),
+          buildId: import.meta.env.FOLDKIT_BUILD_ID,
+        },
       )
 
       return Server.Rendered(renderedApplication, {

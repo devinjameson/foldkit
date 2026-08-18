@@ -2,11 +2,12 @@
 
 Preferences and conventions for coding agents working on this repository. This file is the always-on summary. `CLAUDE.md` is a symlink to it, so every tool that reads either name gets the same rules.
 
-Depth lives in three places:
+Depth lives in these places:
 
 - Website docs at `packages/website/src/page/` (Mount, Command, Subscription, Submodels, OutMessage, best practices).
 - The exemplar files below.
 - The repo-local skills in `skills/`. These target consumer Foldkit apps, not work on this repository. Read them for framework semantics, not as always-on repo-maintenance guidance.
+- `.agents/writing-prose.md`, worked examples for the prose rules below.
 
 Read those when a rule needs context.
 
@@ -51,6 +52,15 @@ The principles below apply broadly. Calibrate to the right context: library desi
 - Wire a child Submodel into the parent update with `Update.foldChild`, not a hand-written `Got*` handler: pass the child `update` function, an `Option`-returning `read`, `write`, `toParentMessage`, and `foldOutMessage` when the child's update returns OutMessages. A parent that is itself a Submodel adds `toParentOutMessage` to lift the child's OutMessage into its own (`() => Option.none()` when nothing passes upward), and its fold returns the three-tuple. Name each fold `fold<Child>` after what it folds (`foldSearch`, `foldHomeKeyPress`). Call the fold data-first in handlers (`foldSearch(model, message)`) and data-last when composing Steps with `Update.combine` (`foldSearch(message)`). Always bind the OutMessage fold as a standalone const named `fold<Child>OutMessage`, built as `M.type<X.OutMessage>().pipe(M.withReturnType<Update.Step<Model, Message>>(), M.tagsExhaustive({ ... }))`. Those two supply the full typing, so do not add a redundant `(outMessage: X.OutMessage) => Update.Step<Model, Message>` annotation on the const. Name the const for what it folds even when every variant is a no-op; it is still a fold, and an `ignore*` name would have to change the day a variant stops being one. When the fold's Step returns a Command that produces the child's Message, take the second parameter and lift with it (annotate the two parameters, `(outMessage: X.OutMessage, { liftCommand }: Update.FoldContext<X.Message, Message>)`, and let `M.withReturnType` carry the return), never a hand-rolled `Command.mapMessage` and never `Effect.map`. The tag-matching rule above applies inside `foldOutMessage`. Route gating and per-dispatch context stay at the call site; close over context in the `update` field. For a child entry point that takes nothing but the child Model (`Dialog.close`, an `informRouteChanged` with no arguments), use `Update.foldChildStep`, which takes the same fields, including the two-parameter `foldOutMessage` and its fold context, and returns the `Update.Step` directly. Never invent a `void` input to force it through `foldChild`.
 
 ## Code Style
+
+Match the implementation style to the subsystem and the behavior being modeled.
+Do not homogenize the repository around a preferred abstraction. Use pure
+transformations for deterministic data work; direct imperative code when DOM
+identity, lifecycle ordering, browser behavior, or host timing are observable;
+and Effect when interruption, resources, services, typed failure, or composition
+justify it. Preserve deliberate non-Effect code, and do not introduce or remove
+Effect solely for stylistic consistency. When styles mix, keep the boundary
+explicit and follow the surrounding module and exemplar code.
 
 - Use Effect's `Match` instead of `switch`. For tagged unions prefer `M.tagsExhaustive({ ... })` over `M.tag(...)` chains.
 - `pipe` is for multi-step data flow. Never `pipe` a single operation; call the function directly.
@@ -128,6 +138,7 @@ If a Mount factory doesn't read or write its element, you've misidentified the c
 - Do not invent broad scopes such as `tooling` or `infrastructure`. Use the literal valid scopes above.
 - Before choosing or amending a commit subject, inspect the full staged diff or the full commit diff with `git diff --cached --stat` / `git diff --cached --name-status` or `git show --stat --name-status HEAD`. The subject must describe the whole change set, not just one file or the most recent edit.
 - After any amend that changes files, re-audit the commit body against `git show --stat --name-status HEAD` and update it in the same amend when the final diff has drifted. Do this even for small follow-ups.
+- Stage the paths you changed, not `git add -A`. Amending with `-A` sweeps whatever else the working tree picked up, including build output a gate wrote, into a commit whose subject does not describe it.
 - Do not co-author or mention AI assistants in commit messages or release notes.
 - Use the repo's commit helper when asked to create a commit: `/commit` in Claude Code, `.agents/skills/commit-changes` in Codex.
 - Squash-merge only. `gh pr merge --squash`.
@@ -135,6 +146,16 @@ If a Mount factory doesn't read or write its element, you've misidentified the c
 ## Editing Rules
 
 When making multi-file edits or refactors, apply changes to ALL relevant files, not just a subset. After refactoring, verify that spacing, margins, and visual formatting haven't regressed.
+
+## Verifying Your Own Work
+
+A gate you just wrote is not evidence until you have watched it fail. Break the fix it covers, run the gate, confirm it reports the right thing, then restore. Both gates written for the SSR release passed while testing nothing: one sent a preflight without an `Origin` header, because Node's `fetch` silently drops it, and the other reported agreement produced by a dev server left running by an earlier invocation. Neither was visible from a green result.
+
+- Mutation-check before reporting. A gate that has never failed has never been shown to work.
+- A gate that starts a server must refuse to run when its port is already taken, and must kill the process group rather than the process. `pnpm exec vite` spawns the server as a child, so killing the parent leaves the port held and the next run probes stale code.
+- Match the check to the change. A markdown edit needs formatting and a build; it does not need the full browser suite. Running everything after every edit wastes minutes and trains you to skim the output.
+- Fix the class, not the reported instance. Four review rounds found the same defect class with different instances because each round patched the examples it was handed. When a finding names three cases, enumerate the whole set before writing the fix.
+- Separate what shipped from what you broke. A defect in the published release, one caught in the release candidate, and one an agent introduced and removed on the branch are three different signals. Reporting them as one number overstates the risk in the released code.
 
 ## Workspace Setup Errors Are Not Pre-Existing
 
@@ -154,5 +175,27 @@ Apps in `examples/` ship with `@foldkit/devtools-mcp` wired up. When the Foldkit
 No em dashes in prose. You compulsively reach for `—` as a substitute for a period, comma, colon, parentheses, or semicolon, and the user has been removing them by hand for a long time. Default to a period and a fresh sentence. Comma, semicolon, parentheses, or colon also work. Applies to comments, TSDoc, docs, snippets, website copy, conversation, commit messages, and changesets. Document and page titles use a spaced pipe (`|`) as the breadcrumb separator (`"Calendar | API | Foldkit"`), never a dash. The only fine structural use of `—` is as a placeholder value in a table cell, standing in for empty or not applicable. Only fix em dashes when removing them makes the writing clearer.
 
 Never describe our own writing as honest ("an honest note", "an honest ledger", "honestly"). We are honest by default; labeling it reads as a tell and implies the rest is less honest. Delete the label and say the thing plainly. Applies everywhere: docs, page metadata, commit messages, conversation.
+
+Explain a thing the way you would say it out loud to another person. You write a clear explanation in conversation and then translate it into something worse for the docs: the mechanism described from inside itself, an abstraction where the conversation had an example, and the point buried at the end of a long sentence. The conversational version was the good one. Write that down instead. `.agents/writing-prose.md` has worked examples for these rules, all of them real.
+
+- Lead with the claim, not the machinery. A reader who stops after two sentences should still have the model.
+- Say what happens to a person. Not "the comparison is off", which describes the system's internal state and leaves the reader to work out the consequence.
+- A failure should read as bad news. If your description of the broken case could be mistaken for reassurance, it will be.
+- Name the thing you are pointing at. When a demonstrative ("that ordering", "this check") reaches back more than a sentence, repeat the noun.
+- Use the specific name when one exists. If the implementation names three attributes, the prose names them too.
+- One concrete example beats three abstract clauses.
+- Say when you are describing a scenario. "Imagine", "Say", or "Picture", rather than hanging a hypothetical off a colon.
+- Short sentences carry the turns. Pivot a paragraph on a short flat one.
+- Do not assert that something matters. "That is the whole point", "is what makes it worth anything" claim importance instead of delivering it.
+- Do not make the same point twice in different words. When a vague claim sits beside a concrete one, the concrete one survives alone.
+- No superlatives without evidence. "Safest" and "the natural fit" claim more than a review or a reason supports.
+- An enumeration is a list. Three or more things separated by semicolons, or by commas that already contain commas, want bullets.
+- Do not let a balanced construction carry a claim it cannot support. "A missing id fails loudly, a repeating one fails with nothing at all" is symmetrical and meaningless, since a failure producing nothing is not a failure. "Only this rule breaks quietly" was symmetrical and false. Check the claim on its own before keeping the shape.
+- Put content where its reader is. A paragraph about hot reloading belongs beside the dev server setup, not at the end of the section on the production handoff. Correct prose in the wrong section reads as the author talking to themselves.
+- Headings are labels, not claims. You reach for a pithy parallel ("One model, two levels", "One application using both") because it sounds like insight, but a heading's job is navigation. Name the topic plainly. If it would work as a talk title, it is wrong for a sidebar.
+- Read each artifact the way a reader meets it: headings alone, callouts without the paragraph above them, bullets without their siblings. Prose that reads fine in place loses its antecedent in isolation, and that is where most surviving problems are.
+- Cut trailing appositives that restate rather than advance.
+
+The test is whether you would say the sentence to a colleague at a whiteboard. If you would not, it is jargon or hedging, and the version you would say is the one to write. That catches word choice too: "three rules govern the value" is stiffer than anything anyone says out loud, where it would be "three things have to be true". Idioms fail from the other side, since "has the most miles" reads fine and does not survive translation.
 
 Write "For example:" when a colon introduces illustrations rather than the complete set. A bare colon reads as an exhaustive enumeration, so a reader takes three illustrations for the only three cases that exist. Use the bare colon when the list really is exhaustive, which is what makes the distinction worth keeping. Applies to docs, TSDoc, changesets, commit messages, and website copy.

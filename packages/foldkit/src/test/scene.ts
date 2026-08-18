@@ -15,6 +15,7 @@ import { dual } from 'effect/Function'
 
 import { kebabToPascal } from '../customElement/index.js'
 import type { CustomElementSpec } from '../customElement/index.js'
+import { serializedStylePropertyName } from '../domReflection.js'
 import type { File } from '../file/index.js'
 import type { FoldkitMountMarker } from '../html/index.js'
 import {
@@ -2304,7 +2305,9 @@ const assertHasStyle = (
 ): SceneAssertion =>
   assertOnElement(
     vnode => {
-      const maybeActualValue = Option.fromNullishOr(vnode.data?.style?.[name])
+      const maybeActualValue = Option.fromNullishOr(
+        vnode.data?.style?.[serializedStylePropertyName(name)],
+      )
       if (Predicate.isUndefined(value)) {
         return {
           pass: Option.isSome(maybeActualValue),
