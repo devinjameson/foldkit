@@ -58,7 +58,11 @@ const hostParity =
 const scaffoldServerRendering =
   fullWorkspaceChecks ||
   hasChanged({
-    files: ['scripts/check-scaffold-server-rendering.ts'],
+    files: [
+      'examples/ssg/package.json',
+      'examples/ssr/package.json',
+      'scripts/check-scaffold-server-rendering.ts',
+    ],
     prefixes: [
       'packages/create-foldkit-app/',
       'packages/foldkit/',
