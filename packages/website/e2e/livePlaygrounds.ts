@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import type { Page } from '@playwright/test'
+import type { FrameLocator, Page } from '@playwright/test'
 
 const PLAYGROUND_BOOT_TIMEOUT_MILLISECONDS = 240_000
 
@@ -12,6 +12,11 @@ const playgroundFrame = async (page: Page, slug: string) => {
   return page.frameLocator('iframe[title="Foldkit Playground"]')
 }
 
+const waitForHydration = (frame: FrameLocator) =>
+  expect(frame.locator('[data-foldkit-build]')).toHaveCount(0, {
+    timeout: PLAYGROUND_BOOT_TIMEOUT_MILLISECONDS,
+  })
+
 test.describe.configure({ mode: 'serial' })
 
 test('deployed SSR playground installs, boots, and hydrates', async ({
@@ -21,6 +26,7 @@ test('deployed SSR playground installs, boots, and hydrates', async ({
   await expect(
     frame.getByRole('heading', { name: 'Server-rendered counter' }),
   ).toBeVisible({ timeout: PLAYGROUND_BOOT_TIMEOUT_MILLISECONDS })
+  await waitForHydration(frame)
 
   const count = frame.locator('#count')
   const initialCount = Number(await count.textContent())
@@ -36,6 +42,7 @@ test('deployed SSG playground installs, boots, and hydrates', async ({
   await expect(
     frame.getByRole('heading', { name: 'Statically generated home' }),
   ).toBeVisible({ timeout: PLAYGROUND_BOOT_TIMEOUT_MILLISECONDS })
+  await waitForHydration(frame)
 
   const count = frame.getByRole('button', { name: 'Count: 0' })
   await count.click()
