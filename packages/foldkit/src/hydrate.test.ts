@@ -2046,6 +2046,62 @@ describe('__hydrateVNode', () => {
     expect(root.style.color).toBe('blue')
   })
 
+  it('preserves raw and typed class ownership after hydration', () => {
+    const initialView = () =>
+      h.div([h.Attribute('class', 'raw-a'), h.Class('typed')], ['content'])
+    const root = mountServerHtml(serializeHydratable(buildView(initialView)))
+    if (!(root instanceof HTMLDivElement)) {
+      throw new Error('expected a div root')
+    }
+
+    const hydrated = buildView(() => hydrateVNode(root, initialView()))
+    const changedRawClass = buildView(() =>
+      patch(
+        hydrated,
+        requireVNode(
+          h.div(
+            [h.Attribute('CLASS', 'raw-b shared'), h.Class('typed')],
+            ['content'],
+          ),
+        ),
+      ),
+    )
+
+    expect(changedRawClass.elm).toBe(root)
+    expect(root.classList.contains('raw-a')).toBe(false)
+    expect(root.classList.contains('raw-b')).toBe(true)
+    expect(root.classList.contains('shared')).toBe(true)
+    expect(root.classList.contains('typed')).toBe(true)
+
+    const sharedClass = buildView(() =>
+      patch(
+        changedRawClass,
+        requireVNode(
+          h.div(
+            [h.Attribute('class', 'raw-b shared'), h.Class('shared')],
+            ['content'],
+          ),
+        ),
+      ),
+    )
+    const rawClassOnly = buildView(() =>
+      patch(
+        sharedClass,
+        requireVNode(
+          h.div(
+            [h.Attribute('class', 'raw-b shared'), h.Class('')],
+            ['content'],
+          ),
+        ),
+      ),
+    )
+
+    expect(rawClassOnly.elm).toBe(root)
+    expect(root.classList.contains('raw-b')).toBe(true)
+    expect(root.classList.contains('shared')).toBe(true)
+    expect(root.classList.contains('typed')).toBe(false)
+  })
+
   it('keeps uppercase raw HTML attributes during hydration', () => {
     const view = () =>
       h.div(
