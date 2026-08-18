@@ -1,5 +1,7 @@
 # @foldkit/ui
 
+## 0.148.0
+
 ## 0.147.0
 
 ### Patch Changes
