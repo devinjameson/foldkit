@@ -8,7 +8,8 @@
         "scripts/fixtures/host-parity/entry.server.ts",
         "scripts/fixtures/host-parity/vite.config.ts"
       ],
-      "project": ["scripts/**"]
+      "project": ["scripts/**"],
+      "ignoreFiles": ["scripts/fixtures/packed-ssr-consumer/**"]
     },
     "packages/foldkit": {
       "entry": [

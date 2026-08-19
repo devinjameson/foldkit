@@ -11,7 +11,7 @@ import {
 import { type Server, createServer } from 'node:http'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
-import { extname, join } from 'node:path'
+import { dirname, extname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 // A Foldkit application built outside this repository, from packed tarballs,
@@ -142,172 +142,13 @@ const packPackage = (label: string, packageDir: string): string => {
   return join(REPO_ROOT, packageDir, filename)
 }
 
-// CONSUMER SOURCES
+// CONSUMER PROJECT FIXTURE
 
-const INDEX_HTML = `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Packed consumer</title>
-    <script>
-      window.__adoptedFrameDocuments = []
-      window.__recordAdoptedFrame = function (frameDocument) {
-        window.__adoptedFrameDocuments.push(frameDocument)
-      }
-      window.__parserOwnedConnectionChildCounts = []
-      window.__parserChildDisconnections = 0
-      class ParserChild extends HTMLElement {
-        connectedCallback() {
-          this.ownerHost = this.parentElement
-        }
-        disconnectedCallback() {
-          window.__parserChildDisconnections++
-          var ownerHost = this.ownerHost
-          if (ownerHost === null || ownerHost === undefined) {
-            return
-          }
-          ownerHost.removeAttribute('title')
-          var reinserted = document.createElement('span')
-          reinserted.setAttribute('data-parser-reinserted', '')
-          ownerHost.appendChild(reinserted)
-        }
-      }
-      customElements.define('x-parser-child', ParserChild)
-      class ParserOwned extends HTMLElement {
-        connectedCallback() {
-          this.ownerParent = this.parentElement
-          this.ownerEarlierSibling = this.previousElementSibling
-          window.__parserOwnedConnectionChildCounts.push(this.childNodes.length)
-          if (this.childNodes.length > 0) {
-            return
-          }
-          var child = document.createElement('x-parser-child')
-          child.id = 'parser-view-child'
-          child.textContent = 'view'
-          this.componentOwnedChild = child
-          this.appendChild(child)
-        }
-        disconnectedCallback() {
-          this.ownerParent?.removeAttribute('title')
-          this.ownerEarlierSibling?.removeAttribute('title')
-          var earlierText = this.ownerEarlierSibling?.firstChild
-          if (earlierText !== null && earlierText !== undefined) {
-            earlierText.data = 'component-mutated'
-          }
-        }
-        mutateOwned() {
-          this.componentOwnedChild.textContent = 'component-mutated'
-        }
-      }
-      customElements.define('x-parser-owned', ParserOwned)
-    </script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script>
-      window.__probe = (function () {
-        var root = document.querySelector('[data-foldkit-app]')
-        var field = document.querySelector('#field')
-        if (field !== null) {
-          field.value = '${TYPED_VALUE}'
-        }
-        window.__observedIdChanges = []
-        window.__customElementConstructions = { holder: 0, inner: 0 }
-        window.__idPropertyWrites = 0
-        window.__innerHtmlPropertyWrites = 0
-        class ObservedId extends HTMLElement {
-          constructor() {
-            super()
-            window.__customElementConstructions.holder++
-          }
-          static get observedAttributes() { return ['id', 'dir'] }
-          get id() { return 'component-id' }
-          set id(value) { window.__idPropertyWrites++ }
-          get innerHTML() { return 'component markup' }
-          set innerHTML(value) { window.__innerHtmlPropertyWrites++ }
-          attributeChangedCallback(name, oldValue, newValue) {
-            window.__observedIdChanges.push([name, oldValue, newValue])
-          }
-        }
-        customElements.define('x-observed-id', ObservedId)
-        class InnerProbe extends HTMLElement {
-          constructor() {
-            super()
-            window.__customElementConstructions.inner++
-          }
-        }
-        customElements.define('x-inner-probe', InnerProbe)
-        var styled = document.querySelector('#styled')
-        window.__styleMutations = []
-        var styleObserver = new MutationObserver(function (records) {
-          window.__styleMutations.push.apply(window.__styleMutations, records)
-        })
-        window.__readStyleMutationCount = function () {
-          window.__styleMutations.push.apply(
-            window.__styleMutations,
-            styleObserver.takeRecords(),
-          )
-          return window.__styleMutations.length
-        }
-        if (styled !== null) {
-          styleObserver.observe(styled, {
-            attributes: true,
-            attributeFilter: ['style'],
-          })
-        }
-        var controlledNodes = {}
-        for (var id of [
-          'equal-value',
-          'equal-checked',
-          'raw-select',
-          'released-textarea',
-          'released-output',
-          'inner-select',
-          'released-file',
-          'released-size',
-          'released-tabindex',
-          'released-dimensions',
-          'released-start',
-          'styled',
-          'observed-id',
-          'custom-inner-probe',
-          'native-inner-html',
-          'native-inner-probe',
-        ]) {
-          controlledNodes[id] = document.getElementById(id)
-        }
-        var parserOwnedHost = document.getElementById('parser-owned')
-        return {
-          root: root,
-          field: field,
-          controlledNodes: controlledNodes,
-          observedIdChangesAtDefinition: window.__observedIdChanges.length,
-          customElementConstructionsAtDefinition: {
-            holder: window.__customElementConstructions.holder,
-            inner: window.__customElementConstructions.inner,
-          },
-          adoptedFrame: document.getElementById('adopted-frame'),
-          parserOwnedHost: parserOwnedHost,
-          parserComponentChild: parserOwnedHost.componentOwnedChild,
-          parserServerChild: parserOwnedHost.lastElementChild,
-          parserChildrenBeforeHydration: parserOwnedHost.childElementCount,
-          styleObserver: styleObserver,
-        }
-      })()
-    </script>
-    <script type="module" src="/src/entry.ts"></script>
-  </body>
-</html>
-`
-
-const VITE_CONFIG = `import { defineConfig } from 'vite'
-
-import { foldkit } from '@foldkit/vite-plugin'
-
-export default defineConfig({
-  plugins: [foldkit({ ssr: { serverEntry: '/src/entry.server.ts' } })],
-})
-`
+const CONSUMER_FIXTURE_DIR = join(
+  REPO_ROOT,
+  'scripts/fixtures/packed-ssr-consumer',
+)
+const TYPESCRIPT_VERSION = '^6.0.3'
 
 // A low-entropy value the build removes from the client. It exists to prove
 // that nothing derived from this module's contents ships: an identity or marker
@@ -315,442 +156,67 @@ export default defineConfig({
 // it, and a four-digit PIN falls to ten thousand guesses.
 const SERVER_ONLY_PIN = '0427'
 
-const MAIN_TS = `import { Match as M, Schema as S } from 'effect'
-import { CustomElement, type Runtime } from 'foldkit'
-import { type Document, type HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
-import { evo } from 'foldkit/struct'
+type FixtureValues = Readonly<Record<string, string>>
 
-export const Model = S.Struct({
-  count: S.Number,
-  formState: S.Literals(['Controlled', 'Released']),
-})
-export type Model = typeof Model.Type
+type ConsumerFixture = Readonly<{
+  path: string
+  values?: FixtureValues
+}>
 
-export const Flags = S.Struct({ start: S.Number })
-export type Flags = typeof Flags.Type
-
-export const ClickedIncrement = m('ClickedIncrement')
-export const ClickedRelease = m('ClickedRelease')
-
-export const Message = S.Union([ClickedIncrement, ClickedRelease])
-export type Message = typeof Message.Type
-
-export const init: Runtime.ApplicationInit<Model, Message, Flags> = flags => [
-  { count: flags.start, formState: 'Controlled' },
-  [],
-]
-
-type UpdateReturn = readonly [Model, ReadonlyArray<never>]
-
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    M.withReturnType<UpdateReturn>(),
-    M.tagsExhaustive({
-      ClickedIncrement: () => [evo(model, { count: count => count + 1 }), []],
-      ClickedRelease: () => [
-        evo(model, { formState: () => 'Released' }),
-        [],
-      ],
-    }),
-  )
-
-const serverOnlyPin = import.meta.env.SSR ? '${SERVER_ONLY_PIN}' : ''
-const observedId = CustomElement.define({
-  tag: 'x-observed-id',
-  properties: {},
-  events: {},
-})
-const parserOwned = CustomElement.define({
-  tag: 'x-parser-owned',
-  properties: {},
-  events: {},
-})
-const parserChild = CustomElement.define({
-  tag: 'x-parser-child',
-  properties: {},
-  events: {},
-})
-
-export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
-  const observedIdElement = observedId.withMessage(h)
-  const parserOwnedElement = parserOwned.withMessage(h)
-  const parserChildElement = parserChild.withMessage(h)
-  return {
-    title: \`Count \${model.count}\`,
-    body: h.main(
-    [h.Id('app-root')],
-    [
-      h.h1([h.Id('heading')], [serverOnlyPin === '' ? 'Packed consumer' : 'Packed consumer']),
-      h.input([h.Id('field'), h.Type('text'), h.Name('email')]),
-      h.iframe([
-        h.Id('adopted-frame'),
-        h.Src('/adopted-frame'),
-        h.Title('Adopted frame'),
-      ]),
-      h.button(
-        [h.Id('increment'), h.OnClick(ClickedIncrement())],
-        [\`Count: \${model.count}\`],
-      ),
-      // Browser behavior that needs no Foldkit listener: a link that
-      // navigates, a form that submits, and a control that takes focus. A page
-      // this build refused must do none of it.
-      h.a([h.Id('native-link'), h.Href('/navigated')], ['Go']),
-      h.form(
-        [h.Id('native-form'), h.Action('/submitted'), h.Method('get')],
-        [
-          h.input([h.Type('hidden'), h.Name('account'), h.Value('old-account')]),
-          h.button([h.Id('native-submit'), h.Type('submit')], ['Send']),
-        ],
-      ),
-      h.form(
-        [h.Id('release-form'), h.Title('form-owned')],
-        [
-          h.input([
-            h.Id('equal-value'),
-            ...(model.formState === 'Released'
-              ? []
-              : [h.Value('same')]),
-          ]),
-          h.input([
-            h.Id('equal-checked'),
-            h.Type('checkbox'),
-            ...(model.formState === 'Released'
-              ? []
-              : [h.Checked(true)]),
-          ]),
-          h.select(
-            model.formState === 'Released'
-              ? [h.Id('raw-select')]
-              : [h.Id('raw-select'), h.Value('a')],
-            [
-              h.option([h.Value('a')], ['A']),
-              h.option(
-                model.formState === 'Released'
-                  ? [h.Value('b'), h.Attribute('selected', '')]
-                  : [h.Value('b')],
-                ['B'],
-              ),
-            ],
-          ),
-          h.textarea(
-            model.formState === 'Released'
-              ? [h.Id('released-textarea'), h.InnerHTML('textarea default')]
-              : [h.Id('released-textarea'), h.Value('controlled')],
-          ),
-          h.output(
-            model.formState === 'Released'
-              ? [
-                  h.Id('released-output'),
-                  h.InnerHTML('<span id="output-child">output default</span>'),
-                ]
-              : [h.Id('released-output'), h.Value('controlled')],
-          ),
-          h.select(
-            model.formState === 'Released'
-              ? [
-                  h.Id('inner-select'),
-                  h.InnerHTML(
-                    '<option value="a" selected>A</option><option value="b">B</option>',
-                  ),
-                ]
-              : [h.Id('inner-select'), h.Value('b')],
-            model.formState === 'Released'
-              ? undefined
-              : [
-                  h.option([h.Value('a')], ['A']),
-                  h.option([h.Value('b')], ['B']),
-                ],
-          ),
-          h.input(
-            model.formState === 'Released'
-              ? [
-                  h.Id('released-file'),
-                  h.Attribute('type', 'FiLe'),
-                  h.Attribute('value', 'default-file-name'),
-                ]
-              : [
-                  h.Id('released-file'),
-                  h.Type('text'),
-                  h.Value('controlled'),
-                ],
-          ),
-          h.input(
-            model.formState === 'Released'
-              ? [h.Id('released-size')]
-              : [h.Id('released-size'), h.Size(3)],
-          ),
-          h.div(
-            model.formState === 'Released'
-              ? [h.Id('released-tabindex')]
-              : [
-                  h.Id('released-tabindex'),
-                  h.Tabindex(4),
-                  h.Title('owned'),
-                ],
-          ),
-          h.textarea(
-            model.formState === 'Released'
-              ? [h.Id('released-dimensions')]
-              : [h.Id('released-dimensions'), h.Cols(4), h.Rows(5)],
-          ),
-          h.ol(
-            model.formState === 'Released'
-              ? [h.Id('released-start')]
-              : [h.Id('released-start'), h.Start(6)],
-            [h.li([], ['item'])],
-          ),
-          h.div([
-            h.Id('styled'),
-            h.Style({
-              '--accent': 'packed',
-              color:
-                model.formState === 'Released' ? '#0000ff' : '#ff0000',
-            }),
-          ]),
-          observedIdElement([
-            h.Id('observed-id'),
-            h.Dir('LTR'),
-            h.InnerHTML(
-              '<x-inner-probe id="custom-inner-probe"></x-inner-probe>',
-            ),
-          ]),
-          h.div([
-            h.Id('native-inner-html'),
-            h.InnerHTML(
-              '<x-inner-probe id="native-inner-probe"></x-inner-probe>',
-            ),
-          ]),
-          h.div(
-            [h.Id('parser-earlier'), h.Title('earlier-owned')],
-            ['earlier-text'],
-          ),
-          parserOwnedElement(
-            [h.Id('parser-owned'), h.Title('view-owned')],
-            [parserChildElement([h.Id('parser-view-child')], ['view'])],
-          ),
-          h.button(
-            [h.Id('release'), h.Type('button'), h.OnClick(ClickedRelease())],
-            ['Release ownership'],
-          ),
-        ],
-      ),
-    ],
-    ),
-  }
-}
-`
-
-const ENTRY_TS = `import { Runtime } from 'foldkit'
-
-import { Flags, Message, Model, init, update, view } from './main'
-
-const application = Runtime.makeApplication({
-  Model,
-  Flags,
-  init,
-  update,
-  view,
-  container: document.getElementById('root'),
-  devTools: { Message },
-})
-
-Runtime.hydrate(application, { buildId: import.meta.env.FOLDKIT_BUILD_ID })
-`
-
-const TYPESCRIPT_VERSION = '^6.0.3'
-
-const CONSUMER_TSCONFIG = `${JSON.stringify(
+const CONSUMER_FIXTURES: ReadonlyArray<ConsumerFixture> = [
   {
-    compilerOptions: {
-      strict: true,
-      noEmit: true,
-      module: 'nodenext',
-      moduleResolution: 'nodenext',
-      target: 'es2022',
-      lib: ['esnext', 'dom'],
-      types: [],
-    },
-    include: ['src/packed-types.ts'],
+    path: 'index.html',
+    values: { TYPED_VALUE },
   },
-  null,
-  2,
-)}\n`
-
-const PACKED_TYPES_TS = `import type {
-  ApplicationConfig,
-  ApplicationConfigWithFlags,
-  EntryResult,
-  HydratableRenderOptions,
-  InjectIntoTemplateOptions,
-  RenderFlagsOptions,
-  RenderOptions,
-  RenderUrlFlagsOptions,
-  RenderUrlOptions,
-  RenderedApplication,
-  RequestClassification,
-  ResponseOptions,
-  StaticRenderOptions,
-} from 'foldkit/experimental/server'
-import type { HydrateOptions } from 'foldkit/runtime'
-
-const hydratable: HydratableRenderOptions = { buildId: 'deployment-1' }
-const staticOnly: StaticRenderOptions = { isHydratable: false }
-const either: ReadonlyArray<RenderOptions> = [hydratable, staticOnly]
-const hydrate: HydrateOptions = { buildId: 'deployment-1' }
-
-export type Used = [
-  ApplicationConfig<never, never>,
-  ApplicationConfigWithFlags<never, never, never>,
-  EntryResult,
-  InjectIntoTemplateOptions,
-  RenderFlagsOptions<never>,
-  RenderUrlFlagsOptions<never>,
-  RenderUrlOptions,
-  RenderedApplication,
-  RequestClassification,
-  ResponseOptions,
+  {
+    path: 'src/main.ts',
+    values: { SERVER_ONLY_PIN },
+  },
+  { path: 'vite.config.ts' },
+  { path: 'scripts/build.mjs' },
+  { path: 'scripts/entrypoints.mjs' },
+  { path: 'src/entry.ts' },
+  { path: 'src/entry.server.ts' },
+  { path: 'src/vite-env.d.ts' },
+  { path: 'src/packed-types.ts' },
+  { path: 'tsconfig.json' },
 ]
 
-export const count = either.length + Number(hydrate.buildId === '')
-`
+const FIXTURE_TOKEN = /\{\{[A-Z0-9_]+\}\}/g
 
-const ENTRY_SERVER_TS = `import { Effect } from 'effect'
-import { Server } from 'foldkit/experimental'
-
-import { Flags, init, view } from './main'
-
-export const buildId = import.meta.env.FOLDKIT_BUILD_ID
-
-export const renderHtml = (template: string): Promise<string> =>
-  Effect.runPromise(
-    Server.renderToString({ Flags, init, view }, { flags: { start: 0 }, buildId }).pipe(
-      Effect.map(rendered =>
-        Server.toResponse(template, Server.Rendered(rendered)),
-      ),
-      Effect.flatMap(response => Effect.promise(() => response.text())),
-    ),
+const readConsumerFixture = ({
+  path,
+  values = {},
+}: ConsumerFixture): string => {
+  let source = readFileSync(join(CONSUMER_FIXTURE_DIR, path), 'utf8')
+  for (const [name, value] of Object.entries(values)) {
+    const marker = `{{${name}}}`
+    const token = [`"${marker}"`, `'${marker}'`].find(candidate =>
+      source.includes(candidate),
+    )
+    assertConsumer(
+      token !== undefined,
+      `the packed consumer fixture ${path} does not contain a quoted ${marker}`,
+    )
+    source = source.replaceAll(token, () => JSON.stringify(value))
+  }
+  const unresolvedTokens = [...source.matchAll(FIXTURE_TOKEN)].map(
+    match => match.at(0) ?? fail('fixture token match had no text'),
   )
-
-export const renderWithoutBuildIdTag = (): Promise<string> =>
-  Effect.runPromise(
-    Effect.map(
-      // NOTE: no buildId, which the types refuse and the runtime has to catch
-      // for a JavaScript caller. Vite does not typecheck, so this reaches the
-      // check it is written for.
-      Effect.flip(
-        Server.renderToString({ Flags, init, view }, { flags: { start: 0 } }),
-      ),
-      error => error._tag,
-    ),
+  assertConsumer(
+    unresolvedTokens.at(0) === undefined,
+    `the packed consumer fixture ${path} has unresolved substitutions: ${unresolvedTokens.join(', ')}`,
   )
-`
+  return source
+}
 
-// Asserted through the subpaths a consumer imports, against the installed
-// package rather than the workspace source. A promoted subpath that omits an
-// export the umbrella namespace has is invisible from inside this repository,
-// where everything resolves to source.
-const ENTRYPOINTS_MJS = `import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
-
-const server = await import('foldkit/experimental/server')
-const runtime = await import('foldkit/runtime')
-const umbrella = await import('foldkit/experimental')
-
-const failures = []
-const check = (condition, message) => {
-  if (!condition) {
-    failures.push(message)
+const writeConsumerFixtures = (projectDir: string): void => {
+  for (const fixture of CONSUMER_FIXTURES) {
+    const target = join(projectDir, fixture.path)
+    mkdirSync(dirname(target), { recursive: true })
+    writeFileSync(target, readConsumerFixture(fixture))
   }
 }
-
-check(
-  typeof server.MissingBuildId === 'function',
-  'foldkit/experimental/server does not export MissingBuildId',
-)
-check(
-  typeof server.renderToString === 'function',
-  'foldkit/experimental/server does not export renderToString',
-)
-check(
-  typeof umbrella.Server?.MissingBuildId === 'function',
-  'foldkit/experimental Server namespace does not expose MissingBuildId',
-)
-check(
-  typeof runtime.hydrate === 'function',
-  'foldkit/runtime does not export hydrate',
-)
-
-// The build id is settled before the view runs, so this view is never called.
-const { Effect } = await import('effect')
-const error = await Effect.runPromise(
-  Effect.flip(
-    server.renderToString({
-      init: () => [{}, []],
-      view: () => ({ title: 't', body: null }),
-    }),
-  ),
-)
-check(
-  error._tag === 'MissingBuildId',
-  'expected MissingBuildId, got ' + String(error._tag),
-)
-check(
-  error instanceof server.MissingBuildId,
-  'the failure is not an instance of the exported MissingBuildId',
-)
-
-// HydrateOptions is a type, so it is asserted through the emitted declarations.
-const runtimeTypes = readFileSync(
-  resolve(process.cwd(), 'node_modules/foldkit/dist/runtime/public.d.ts'),
-  'utf8',
-)
-check(
-  runtimeTypes.includes('HydrateOptions'),
-  'foldkit/runtime declarations do not export HydrateOptions',
-)
-
-if (failures.length > 0) {
-  console.error(failures.join('\\n'))
-  process.exit(1)
-}
-`
-
-const VITE_ENV_D_TS = `/// <reference types="vite/client" />
-
-interface ImportMetaEnv {
-  readonly FOLDKIT_BUILD_ID?: string
-}
-
-interface ImportMeta {
-  readonly env: ImportMetaEnv
-}
-`
-
-const BUILD_MJS = `import { spawnSync } from 'node:child_process'
-import { createHash } from 'node:crypto'
-import { randomUUID } from 'node:crypto'
-
-const buildId = process.env.FOLDKIT_BUILD_ID ?? randomUUID()
-const outRoot = process.argv[2]
-const base = process.argv[3]
-
-const steps = [
-  ['vite', ['build', '--base', base, '--outDir', outRoot + '/client', '--emptyOutDir']],
-  ['vite', ['build', '--ssr', 'src/entry.server.ts', '--outDir', outRoot + '/server', '--emptyOutDir']],
-]
-
-for (const [command, args] of steps) {
-  const { status } = spawnSync(command, args, {
-    stdio: 'inherit',
-    shell: process.platform === 'win32',
-    env: { ...process.env, FOLDKIT_BUILD_ID: buildId },
-  })
-  if (status !== 0) {
-    process.exit(status ?? 1)
-  }
-}
-`
 
 // CONSUMER PROJECT
 
@@ -779,9 +245,6 @@ const writeConsumerProject = (
     'could not read the effect and vite versions the consumer must install',
   )
 
-  mkdirSync(join(projectDir, 'src'), { recursive: true })
-  mkdirSync(join(projectDir, 'scripts'), { recursive: true })
-
   writeFileSync(
     join(projectDir, 'package.json'),
     `${JSON.stringify(
@@ -805,16 +268,7 @@ const writeConsumerProject = (
       2,
     )}\n`,
   )
-  writeFileSync(join(projectDir, 'index.html'), INDEX_HTML)
-  writeFileSync(join(projectDir, 'vite.config.ts'), VITE_CONFIG)
-  writeFileSync(join(projectDir, 'scripts/build.mjs'), BUILD_MJS)
-  writeFileSync(join(projectDir, 'scripts/entrypoints.mjs'), ENTRYPOINTS_MJS)
-  writeFileSync(join(projectDir, 'src/main.ts'), MAIN_TS)
-  writeFileSync(join(projectDir, 'src/entry.ts'), ENTRY_TS)
-  writeFileSync(join(projectDir, 'src/entry.server.ts'), ENTRY_SERVER_TS)
-  writeFileSync(join(projectDir, 'src/vite-env.d.ts'), VITE_ENV_D_TS)
-  writeFileSync(join(projectDir, 'src/packed-types.ts'), PACKED_TYPES_TS)
-  writeFileSync(join(projectDir, 'tsconfig.json'), CONSUMER_TSCONFIG)
+  writeConsumerFixtures(projectDir)
 }
 
 // Every name the published documentation says ships from
@@ -1221,210 +675,16 @@ const loadPlaywright = (): Playwright => {
   return requireFromE2e('playwright')
 }
 
-const PROBE_SCRIPT = `(() => {
-  const probe = window.__probe
-  const field = document.querySelector('#field')
-  const increment = document.querySelector('#increment')
-  const root = document.querySelector('#app-root')
-  const shield = document.querySelector('[data-foldkit-refusal-shield]')
-  const adoptedFrame = document.querySelector('#adopted-frame')
-  const frameDocuments = window.__adoptedFrameDocuments
-  const parserOwnedHost = document.querySelector('#parser-owned')
-  const parserViewChild = parserOwnedHost?.querySelector('#parser-view-child')
-  if (
-    !document.body.hasAttribute('inert') &&
-    typeof probe.parserOwnedHost?.mutateOwned === 'function'
-  ) {
-    probe.parserOwnedHost.mutateOwned()
-  }
-  return {
-    rootIsConnected: probe.root instanceof Element && probe.root.isConnected,
-    fieldIsSameElement: field === probe.field,
-    fieldValue: field === null ? '<no field>' : field.value,
-    adoptedFrameIsSameElement: adoptedFrame === probe.adoptedFrame,
-    adoptedFrameLoads: frameDocuments.length,
-    adoptedFrameDocumentIsSame:
-      adoptedFrame instanceof HTMLIFrameElement &&
-      frameDocuments.length === 1 &&
-      frameDocuments[0] === adoptedFrame.contentDocument,
-    customHolderConstructions:
-      window.__customElementConstructions.holder,
-    innerProbeConstructions: window.__customElementConstructions.inner,
-    idPropertyWrites: window.__idPropertyWrites,
-    innerHtmlPropertyWrites: window.__innerHtmlPropertyWrites,
-    renderedCount: increment === null ? '<no button>' : increment.textContent,
-    // Marked in place, not wrapped. A single marker in the whole document is
-    // what says nothing was reparented: an inserted shield would be a second.
-    rootIsContained:
-      document.body.hasAttribute('inert') &&
-      document.body.getAttribute('aria-hidden') === 'true' &&
-      document.body.hasAttribute('data-foldkit-refused') &&
-      document.querySelectorAll('[data-foldkit-refused]').length === 1 &&
-      document.querySelectorAll('[data-foldkit-refusal-shield]').length === 1 &&
-      shield.open === true &&
-      (root === null || root.isConnected),
-    shieldIsVisible:
-      shield instanceof HTMLDialogElement &&
-      shield.open === true &&
-      shield.getBoundingClientRect().width > 0 &&
-      shield.getBoundingClientRect().height > 0 &&
-      getComputedStyle(shield).visibility === 'visible',
-    customElementConnections:
-      typeof window.__connections === 'number' ? window.__connections : 0,
-    reconnectModalIsOpen: (() => {
-      const dialog = document.querySelector('#reconnect-modal')
-      return dialog === null ? false : dialog.open === true
-    })(),
-    parserConnectionChildCount:
-      window.__parserOwnedConnectionChildCounts[0] ?? -1,
-    parserConnectionCount: window.__parserOwnedConnectionChildCounts.length,
-    parserChildrenBeforeHydration: probe.parserChildrenBeforeHydration,
-    parserOwnedHostIsFresh: parserOwnedHost !== probe.parserOwnedHost,
-    parserOldHostIsDisconnected: probe.parserOwnedHost?.isConnected === false,
-    parserViewChildIsFresh:
-      parserOwnedHost?.childElementCount === 1 &&
-      parserViewChild !== probe.parserComponentChild &&
-      parserViewChild !== probe.parserServerChild,
-    parserComponentChildIsDisconnected:
-      probe.parserComponentChild?.isConnected === false,
-    parserServerChildIsDisconnected:
-      probe.parserServerChild?.isConnected === false,
-    parserLiveTitleIsRestored:
-      parserOwnedHost?.getAttribute('title') === 'view-owned',
-    parserAncestorTitleIsRestored:
-      document.querySelector('#release-form')?.getAttribute('title') ===
-      'form-owned',
-    parserEarlierSiblingTitleIsRestored:
-      document.querySelector('#parser-earlier')?.getAttribute('title') ===
-      'earlier-owned',
-    parserEarlierSiblingTextIsRestored:
-      document.querySelector('#parser-earlier')?.textContent === 'earlier-text',
-    parserDisconnectMutationsAreIsolated:
-      window.__parserChildDisconnections === 2 &&
-      probe.parserOwnedHost?.querySelectorAll('[data-parser-reinserted]').length === 2 &&
-      parserOwnedHost?.querySelector('[data-parser-reinserted]') === null,
-    parserRetainedMutationIsIsolated:
-      probe.parserComponentChild?.textContent === 'component-mutated' &&
-      parserViewChild?.textContent === 'view',
-  }
-})()`
+const readBrowserProgram = (path: string): string => {
+  const program = readConsumerFixture({ path }).trim()
+  return program.startsWith(';') ? program.slice(1) : program
+}
 
-const TOP_LAYER_PROBE_SCRIPT = `(() => {
-  const probe = window.__topLayerProbe
-  const shield = document.querySelector(
-    ':root > dialog[data-foldkit-refusal-shield]',
-  )
-  const pointOf = element => {
-    const bounds = element.getBoundingClientRect()
-    return {
-      x: bounds.left + bounds.width / 2,
-      y: bounds.top + bounds.height / 2,
-    }
-  }
-  return {
-    shieldIsOpen: shield instanceof HTMLDialogElement && shield.open === true,
-    shieldIsVisible:
-      shield instanceof HTMLDialogElement &&
-      shield.getBoundingClientRect().width > 0 &&
-      shield.getBoundingClientRect().height > 0 &&
-      getComputedStyle(shield).visibility === 'visible',
-    shieldHasFocus: document.activeElement === shield,
-    shieldCount:
-      document.querySelectorAll(
-        ':root > dialog[data-foldkit-refusal-shield]',
-      ).length,
-    dialogsAreOpen: probe.dialogs.every(dialog => dialog.open === true),
-    closeEvents: probe.events.close,
-    cancelEvents: probe.events.cancel,
-    controlClicks: probe.events.click,
-    documentInputs: probe.events.documentInput,
-    bodyKeyEvents: probe.events.bodyKey,
-    fieldValues: probe.fields.map(field => field.value),
-    modalNodesAreConnected:
-      probe.dialogs.every(dialog => dialog.isConnected) &&
-      probe.fields.every(field => field.isConnected),
-    openShadowIdentityIsIntact:
-      probe.openHost.shadowRoot.querySelector('dialog') === probe.openDialog,
-    frameIdentityIsIntact:
-      document.querySelector('#modal-frame') === probe.frame,
-    customElementIdentityIsIntact:
-      document.querySelector('x-closed-modal-host') === probe.closedHost,
-    customElementConnections: probe.events.connected,
-    customElementDisconnections: probe.events.disconnected,
-    points: probe.actions.map(pointOf),
-  }
-})()`
-
-const CONTROLLED_DOM_PROBE_SCRIPT = `(() => {
-  const probe = window.__probe
-  const value = document.querySelector('#equal-value')
-  const checked = document.querySelector('#equal-checked')
-  const rawSelect = document.querySelector('#raw-select')
-  const textarea = document.querySelector('#released-textarea')
-  const output = document.querySelector('#released-output')
-  const innerSelect = document.querySelector('#inner-select')
-  const file = document.querySelector('#released-file')
-  const sized = document.querySelector('#released-size')
-  const tabbed = document.querySelector('#released-tabindex')
-  const dimensions = document.querySelector('#released-dimensions')
-  const ordered = document.querySelector('#released-start')
-  const styled = document.querySelector('#styled')
-  return {
-    nodeIdentityIsIntact: Object.keys(probe.controlledNodes)
-      .filter(id => id !== 'observed-id' && id !== 'custom-inner-probe')
-      .every(id => probe.controlledNodes[id] === document.getElementById(id)),
-    customInnerHtmlHostWasRebuilt:
-      probe.controlledNodes['observed-id'] !==
-      document.getElementById('observed-id'),
-    customInnerHtmlWasRebuilt:
-      probe.controlledNodes['custom-inner-probe'] !==
-      document.getElementById('custom-inner-probe'),
-    nativeInnerHtmlWasAdopted:
-      probe.controlledNodes['native-inner-probe'] ===
-      document.getElementById('native-inner-probe'),
-    observedIdChangesAtDefinition: probe.observedIdChangesAtDefinition,
-    observedIdChanges: window.__observedIdChanges.length,
-    observedDirection:
-      document.querySelector('#observed-id')?.getAttribute('dir') ?? null,
-    customHolderConstructions:
-      window.__customElementConstructions.holder,
-    innerProbeConstructions: window.__customElementConstructions.inner,
-    idPropertyWrites: window.__idPropertyWrites,
-    innerHtmlPropertyWrites: window.__innerHtmlPropertyWrites,
-    styleMutations: window.__readStyleMutationCount(),
-    value: value.value,
-    defaultValue: value.defaultValue,
-    valueAttribute: value.getAttribute('value'),
-    checked: checked.checked,
-    defaultChecked: checked.defaultChecked,
-    hasCheckedAttribute: checked.hasAttribute('checked'),
-    rawSelectValue: rawSelect.value,
-    rawSelectIndex: rawSelect.selectedIndex,
-    rawSelectFirstDefault: rawSelect.options.item(0).defaultSelected,
-    rawSelectSecondDefault: rawSelect.options.item(1).defaultSelected,
-    textareaValue: textarea.value,
-    textareaDefaultValue: textarea.defaultValue,
-    outputValue: output.value,
-    outputDefaultValue: output.defaultValue,
-    outputChild: output.querySelector('#output-child')?.textContent ?? null,
-    innerSelectValue: innerSelect.value,
-    innerSelectIndex: innerSelect.selectedIndex,
-    fileType: file.type,
-    fileValue: file.value,
-    fileDefaultValue: file.defaultValue,
-    fileValueAttribute: file.getAttribute('value'),
-    inputSize: sized.size,
-    tabIndex: tabbed.tabIndex,
-    title: tabbed.title,
-    textareaCols: dimensions.cols,
-    textareaRows: dimensions.rows,
-    orderedStart: ordered.start,
-    styleColor: getComputedStyle(styled).color,
-    customStyleValue: styled.style.getPropertyValue('--accent'),
-    valueAfterReset: value.value,
-    checkedAfterReset: checked.checked,
-  }
-})()`
+const PROBE_SCRIPT = readBrowserProgram('probes/hydration.js')
+const TOP_LAYER_PROBE_SCRIPT = readBrowserProgram('probes/top-layer.js')
+const CONTROLLED_DOM_PROBE_SCRIPT = readBrowserProgram(
+  'probes/controlled-dom.js',
+)
 
 const RELEASED_DOM_PROBE_SCRIPT = `(async () => {
   await Promise.resolve()
@@ -2227,91 +1487,14 @@ const main = async (): Promise<void> => {
       // failure mode where sweeping dialogs runs stale author code that reopens
       // a modal and takes focus after containment. The actions cover native
       // navigation and form submission plus an authored network request.
+      const modalBody = readConsumerFixture({
+        path: 'pages/modal-body.html',
+        values: { FRAME_PATH },
+      }).trim()
+      const modalScript = readBrowserProgram('pages/modal-script.js')
       const modal = stale.replace(
         '</main>',
-        `<iframe id="modal-frame" src="${FRAME_PATH}"></iframe>` +
-          '<dialog id="light-modal" data-foldkit-refusal-shield data-foldkit-refused><input><a href="/modal-navigated">Navigate</a></dialog>' +
-          '<div id="open-modal-host"></div>' +
-          '<x-closed-modal-host></x-closed-modal-host></main>' +
-          '<script>' +
-          'const events = { bodyKey: 0, cancel: 0, click: 0, close: 0, connected: 0, disconnected: 0, documentInput: 0 };' +
-          'document.addEventListener("pointerdown", () => {' +
-          '  events.documentInput++;' +
-          '});' +
-          'document.body.addEventListener("keydown", () => {' +
-          '  events.bodyKey++;' +
-          '});' +
-          'document.body.addEventListener("keyup", () => {' +
-          '  events.bodyKey++;' +
-          '});' +
-          'const configure = (dialog, field, left) => {' +
-          '  dialog.style.left = left;' +
-          '  dialog.style.margin = "0";' +
-          '  dialog.style.top = "20px";' +
-          '  dialog.addEventListener("cancel", event => {' +
-          '    events.cancel++;' +
-          '    event.preventDefault();' +
-          '  });' +
-          '  dialog.addEventListener("close", () => {' +
-          '    events.close++;' +
-          '    dialog.showModal();' +
-          '    field.focus();' +
-          '  });' +
-          '};' +
-          'const lightDialog = document.getElementById("light-modal");' +
-          'const lightField = lightDialog.querySelector("input");' +
-          'const lightAction = lightDialog.querySelector("a");' +
-          'lightAction.addEventListener("click", () => events.click++);' +
-          'configure(lightDialog, lightField, "20px");' +
-          'lightDialog.showModal();' +
-          'const openHost = document.getElementById("open-modal-host");' +
-          'const openRoot = openHost.attachShadow({ mode: "open" });' +
-          'openRoot.innerHTML = \'<dialog><input><form action="/modal-submitted"><button type="submit">Submit</button></form></dialog>\';' +
-          'const openDialog = openRoot.querySelector("dialog");' +
-          'const openField = openRoot.querySelector("input");' +
-          'const openAction = openRoot.querySelector("button");' +
-          'openAction.addEventListener("click", () => events.click++);' +
-          'configure(openDialog, openField, "260px");' +
-          'openDialog.showModal();' +
-          'let closedDialog;' +
-          'let closedField;' +
-          'let closedAction;' +
-          'class ClosedModalHost extends HTMLElement {' +
-          '  constructor() {' +
-          '    super();' +
-          '    const root = this.attachShadow({ mode: "closed" });' +
-          '    root.innerHTML = \'<dialog><input><button type="button">Fetch</button></dialog>\';' +
-          '    closedDialog = root.querySelector("dialog");' +
-          '    closedField = root.querySelector("input");' +
-          '    closedAction = root.querySelector("button");' +
-          '    closedAction.addEventListener("click", () => {' +
-          '      events.click++;' +
-          '      fetch("/modal-fetched");' +
-          '    });' +
-          '    configure(closedDialog, closedField, "500px");' +
-          '  }' +
-          '  connectedCallback() {' +
-          '    events.connected++;' +
-          '    closedDialog.showModal();' +
-          '  }' +
-          '  disconnectedCallback() {' +
-          '    events.disconnected++;' +
-          '  }' +
-          '}' +
-          'customElements.define("x-closed-modal-host", ClosedModalHost);' +
-          'const closedHost = document.querySelector("x-closed-modal-host");' +
-          'const frame = document.getElementById("modal-frame");' +
-          'window.__topLayerProbe = {' +
-          '  actions: [lightAction, openAction, closedAction],' +
-          '  closedHost,' +
-          '  dialogs: [lightDialog, openDialog, closedDialog],' +
-          '  events,' +
-          '  fields: [lightField, openField, closedField],' +
-          '  frame,' +
-          '  openDialog,' +
-          '  openHost,' +
-          '};' +
-          '</script>',
+        `${modalBody}</main><script>${modalScript}</script>`,
       )
 
       // A root that lost its stamp. The generated client resolves its container
@@ -2344,26 +1527,14 @@ const main = async (): Promise<void> => {
       // host: reparenting the root runs `disconnectedCallback` and
       // `connectedCallback` again and reloads the frame, and the second
       // connection here opens a modal after containment has already run.
+      const lifecycleBody = readConsumerFixture({
+        path: 'pages/lifecycle-body.html',
+        values: { FRAME_PATH },
+      }).trim()
+      const lifecycleScript = readBrowserProgram('pages/lifecycle-script.js')
       const lifecycle = stale.replace(
         '</main>',
-        `<iframe id="probe-frame" src="${FRAME_PATH}"></iframe>` +
-          '<x-reconnect-probe></x-reconnect-probe></main>' +
-          '<script>' +
-          'window.__connections = 0;' +
-          'class ReconnectProbe extends HTMLElement {' +
-          '  connectedCallback() {' +
-          '    window.__connections++;' +
-          '    if (window.__connections === 2) {' +
-          '      const dialog = document.createElement("dialog");' +
-          '      dialog.id = "reconnect-modal";' +
-          '      dialog.innerHTML = \'<input id="reconnect-field">\';' +
-          '      document.body.appendChild(dialog);' +
-          '      dialog.showModal();' +
-          '    }' +
-          '  }' +
-          '}' +
-          'customElements.define("x-reconnect-probe", ReconnectProbe);' +
-          '</script>',
+        `${lifecycleBody}</main><script>${lifecycleScript}</script>`,
       )
 
       for (const [label, page] of Object.entries({ same, stale })) {

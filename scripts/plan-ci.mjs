@@ -46,7 +46,11 @@ const packedSsrConsumer =
       'packages/examples-e2e/package.json',
       'scripts/check-packed-ssr-consumer.ts',
     ],
-    prefixes: ['packages/foldkit/', 'packages/vite-plugin-foldkit/'],
+    prefixes: [
+      'packages/foldkit/',
+      'packages/vite-plugin-foldkit/',
+      'scripts/fixtures/packed-ssr-consumer/',
+    ],
   })
 const hostParity =
   fullWorkspaceChecks ||
