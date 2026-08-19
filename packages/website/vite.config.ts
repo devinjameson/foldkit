@@ -831,18 +831,20 @@ const embeddedExampleRedirectPlugin = (): Plugin => ({
 // boots in `pnpm dev` and `pnpm preview`. The deployed Vercel config is
 // the source of truth; this is the dev-mode equivalent.
 //
-// CORP same-origin goes on every response (not just /playground/*) so
-// that Monaco's editor and worker scripts loaded by the credentialless
-// /playground/* page satisfy COEP. Workers in credentialless contexts
-// require their script URLs to return a CORP-compatible response, and
-// Vite serves those from non-/playground paths.
+// CORP same-origin goes on every response so Monaco's scripts satisfy
+// the playground page's embedder policy. Monaco worker responses also
+// carry COEP credentialless so their WorkerGlobalScope stays isolated.
 const setIsolationHeaders = (
   url: string | undefined,
   res: { setHeader: (name: string, value: string) => void },
 ) => {
+  const isPlaygroundRequest = url?.startsWith('/playground/') ?? false
+  const isMonacoWorkerRequest = url?.startsWith('/monacoworkers/') ?? false
   res.setHeader('Cross-Origin-Resource-Policy', 'same-origin')
-  if (url?.startsWith('/playground/')) {
+  if (isPlaygroundRequest || isMonacoWorkerRequest) {
     res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless')
+  }
+  if (isPlaygroundRequest) {
     res.setHeader('Cross-Origin-Opener-Policy', 'same-origin')
   }
 }
