@@ -53,14 +53,7 @@ The principles below apply broadly. Calibrate to the right context: library desi
 
 ## Code Style
 
-Match the implementation style to the subsystem and the behavior being modeled.
-Do not homogenize the repository around a preferred abstraction. Use pure
-transformations for deterministic data work; direct imperative code when DOM
-identity, lifecycle ordering, browser behavior, or host timing are observable;
-and Effect when interruption, resources, services, typed failure, or composition
-justify it. Preserve deliberate non-Effect code, and do not introduce or remove
-Effect solely for stylistic consistency. When styles mix, keep the boundary
-explicit and follow the surrounding module and exemplar code.
+Match the implementation style to the subsystem and the behavior being modeled. Do not homogenize the repository around a preferred abstraction. Use pure transformations for deterministic data work; direct imperative code when DOM identity, lifecycle ordering, browser behavior, or host timing are observable; and Effect when interruption, resources, services, typed failure, or composition justify it. Preserve deliberate non-Effect code, and do not introduce or remove Effect solely for stylistic consistency. When styles mix, keep the boundary explicit and follow the surrounding module and exemplar code.
 
 - Use Effect's `Match` instead of `switch`. For tagged unions prefer `M.tagsExhaustive({ ... })` over `M.tag(...)` chains.
 - `pipe` is for multi-step data flow. Never `pipe` a single operation; call the function directly.
