@@ -67,12 +67,6 @@ export const CompletedWaitBeforeHidingCopiedIndicator = m(
   'CompletedWaitBeforeHidingCopiedIndicator',
   { text: S.String },
 )
-export const UpdatedEmailField = m('UpdatedEmailField', { value: S.String })
-export const SubmittedEmailForm = m('SubmittedEmailForm')
-export const SucceededSubscribeToNewsletter = m(
-  'SucceededSubscribeToNewsletter',
-)
-export const FailedSubscribeToNewsletter = m('FailedSubscribeToNewsletter')
 export const GotMobileMenuDialogMessage = m('GotMobileMenuDialogMessage', {
   message: Dialog.Message,
 })
@@ -159,10 +153,6 @@ export const Message = S.Union([
   SucceededCopySnippet,
   FailedCopySnippet,
   CompletedWaitBeforeHidingCopiedIndicator,
-  UpdatedEmailField,
-  SubmittedEmailForm,
-  SucceededSubscribeToNewsletter,
-  FailedSubscribeToNewsletter,
   GotMobileMenuDialogMessage,
   ClickedOpenMobileMenu,
   ToggledMobileTableOfContents,

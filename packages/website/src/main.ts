@@ -11,15 +11,12 @@ import {
   Schema as S,
   pipe,
 } from 'effect'
-import { HttpClient, HttpClientRequest } from 'effect/unstable/http'
 import { KeyValueStore } from 'effect/unstable/persistence'
 import {
   AsyncData,
   Calendar,
   Command,
   Dom,
-  FieldValidation,
-  Http,
   ManagedResource,
   Runtime,
   Subscription,
@@ -59,7 +56,6 @@ import {
   CompletedWaitBeforeHidingCopiedIndicator,
   FailedCopyLink,
   FailedCopySnippet,
-  FailedSubscribeToNewsletter,
   GotApiReferenceMessage,
   GotAsyncCounterDemoMessage,
   GotComingFromReactMessage,
@@ -75,7 +71,6 @@ import {
   ResolvedTheme,
   SucceededCopyLink,
   SucceededCopySnippet,
-  SucceededSubscribeToNewsletter,
   ThemePreference,
 } from './message'
 import * as Page from './page'
@@ -133,19 +128,6 @@ const resolveTheme = (
     M.when('System', () => systemTheme),
     M.exhaustive,
   )
-
-const emailRules = FieldValidation.makeRules({
-  required: 'Email is required',
-  rules: [FieldValidation.Rule.email('Please enter a valid email address')],
-})
-
-const EmailSubscriptionStatus = S.Literals([
-  'Idle',
-  'Submitting',
-  'Succeeded',
-  'Failed',
-])
-export type EmailSubscriptionStatus = typeof EmailSubscriptionStatus.Type
 
 // FLAGS
 
@@ -235,8 +217,6 @@ export const Model = S.Struct({
   route: AppRoute,
   url: Url,
   copiedSnippets: S.HashSet(S.String),
-  emailField: FieldValidation.Field(S.String),
-  emailSubscriptionStatus: EmailSubscriptionStatus,
   maybeGitHubStarCount: S.Option(S.Number),
   currentYear: S.Number,
   mobileMenuDialog: Dialog.Model,
@@ -457,8 +437,6 @@ export const init: Runtime.RoutingApplicationInit<
       route: initialRoute,
       url,
       copiedSnippets: HashSet.empty(),
-      emailField: FieldValidation.NotValidated({ value: '' }),
-      emailSubscriptionStatus: 'Idle',
       maybeGitHubStarCount: Option.fromNullishOr(githubStarCount),
       currentYear: flags.currentYear,
       mobileMenuDialog: Dialog.init({ id: 'mobile-menu' }),
@@ -901,43 +879,6 @@ export const update = (
         [],
       ],
 
-      UpdatedEmailField: ({ value }) => [
-        evo(model, {
-          emailField: () => FieldValidation.NotValidated({ value }),
-          emailSubscriptionStatus: () => 'Idle',
-        }),
-        [],
-      ],
-
-      SubmittedEmailForm: () => {
-        const result = validateEmail(model.emailField.value)
-
-        return result._tag === 'Valid'
-          ? [
-              evo(model, {
-                emailField: () => result,
-                emailSubscriptionStatus: () => 'Submitting',
-              }),
-              [SubscribeToNewsletter({ email: model.emailField.value })],
-            ]
-          : [evo(model, { emailField: () => result }), []]
-      },
-
-      SucceededSubscribeToNewsletter: () => [
-        evo(model, {
-          emailField: () => FieldValidation.NotValidated({ value: '' }),
-          emailSubscriptionStatus: () => 'Succeeded',
-        }),
-        [],
-      ],
-
-      FailedSubscribeToNewsletter: () => [
-        evo(model, {
-          emailSubscriptionStatus: () => 'Failed',
-        }),
-        [],
-      ],
-
       ClickedOpenMobileMenu: () => {
         const [nextMobileMenuDialog, mobileMenuDialogCommands] = Dialog.open(
           model.mobileMenuDialog,
@@ -1262,33 +1203,6 @@ const ApplyTheme = Command.define('ApplyTheme', {
       )
       return CompletedApplyTheme()
     }),
-})
-
-const BUTTONDOWN_SUBSCRIBE_URL =
-  'https://buttondown.com/api/emails/embed-subscribe/foldkit'
-
-const validateEmail = FieldValidation.validate(emailRules)
-
-const SubscribeToNewsletter = Command.define('SubscribeToNewsletter', {
-  args: { email: S.String },
-  messages: [SucceededSubscribeToNewsletter, FailedSubscribeToNewsletter],
-  execute: ({ email }) =>
-    Effect.gen(function* () {
-      const client = yield* HttpClient.HttpClient
-      const request = HttpClientRequest.post(BUTTONDOWN_SUBSCRIBE_URL).pipe(
-        HttpClientRequest.bodyUrlParams({ email }),
-      )
-      const response = yield* client.execute(request)
-
-      if (response.status >= 400) {
-        return yield* Effect.fail('Subscription failed')
-      }
-
-      return SucceededSubscribeToNewsletter()
-    }).pipe(
-      Effect.catch(() => Effect.succeed(FailedSubscribeToNewsletter())),
-      Effect.provide(Http.layer),
-    ),
 })
 
 const SaveThemePreference = Command.define('SaveThemePreference', {

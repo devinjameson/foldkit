@@ -303,12 +303,6 @@ export const landingView = (model: Model, h: HtmlBuilder<Message>) => {
     h,
   ])
 
-  const emailSignupView = emailSignupContentView(
-    model.emailField,
-    model.emailSubscriptionStatus,
-    h,
-  )
-
   const playgroundMenu = withChromeRecommendedHint(
     playgroundMenuView(
       model.playgroundMenu,
@@ -384,7 +378,7 @@ export const landingView = (model: Model, h: HtmlBuilder<Message>) => {
           Page.Landing.view(
             model.copiedSnippets,
             demoTabsView,
-            emailSignupView,
+            emailSignupContentView,
             playgroundMenu,
             model.aiHeadingToggleCount,
             model.maybeGitHubStarCount,
@@ -411,13 +405,7 @@ export const newsletterView = (model: Model, h: HtmlBuilder<Message>) =>
             'flex-1 flex items-center justify-center px-6 pb-20 pt-[calc(var(--header-height)+5rem)] md:px-12 lg:px-20',
           ),
         ],
-        [
-          emailSignupContentView(
-            model.emailField,
-            model.emailSubscriptionStatus,
-            h,
-          ),
-        ],
+        [emailSignupContentView],
       ),
       landingFooter(model.currentYear),
     ],
