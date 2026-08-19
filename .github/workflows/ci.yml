@@ -1,12 +1,12 @@
 name: CI
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
     branches:
       - main
+  merge_group:
+    types:
+      - checks_requested
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -25,8 +25,8 @@ jobs:
       - name: Plan change-scoped checks
         id: scope
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
         run: node scripts/plan-ci.mjs "$BASE_SHA" "$HEAD_SHA" >> "$GITHUB_OUTPUT"
 
       - name: Setup pnpm
@@ -106,7 +106,7 @@ jobs:
       - name: Typecheck affected packages
         if: steps.scope.outputs.full_workspace_checks == 'false'
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
         run: |
           # NOTE: pnpm compares the ref against the working tree, so pass the
           # merge base rather than the base tip. Otherwise a base branch that
@@ -195,7 +195,7 @@ jobs:
       - name: Test affected packages
         if: steps.scope.outputs.full_workspace_checks == 'false'
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
         run: |
           # NOTE: pnpm compares the ref against the working tree, so pass the
           # merge base rather than the base tip. Otherwise a base branch that

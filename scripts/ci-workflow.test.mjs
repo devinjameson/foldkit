@@ -9,9 +9,31 @@ const workflow = readFileSync(
   resolve(REPO_ROOT, '.github/workflows/ci.yml'),
   'utf8',
 )
+const examplesWorkflow = readFileSync(
+  resolve(REPO_ROOT, '.github/workflows/examples-e2e.yml'),
+  'utf8',
+)
 const rootPackage = JSON.parse(
   readFileSync(resolve(REPO_ROOT, 'package.json'), 'utf8'),
 )
+
+test('required workflows check pull requests and merge groups', () => {
+  for (const requiredWorkflow of [workflow, examplesWorkflow]) {
+    assert.match(
+      requiredWorkflow,
+      /on:\n\s+pull_request:\n\s+branches:\n\s+- main\n\s+merge_group:\n\s+types:\n\s+- checks_requested/,
+    )
+    assert.doesNotMatch(requiredWorkflow, /^\s+push:/m)
+    assert.match(
+      requiredWorkflow,
+      /BASE_SHA: \$\{\{ github\.event\.pull_request\.base\.sha \|\| github\.event\.merge_group\.base_sha \}\}/,
+    )
+    assert.match(
+      requiredWorkflow,
+      /HEAD_SHA: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.event\.merge_group\.head_sha \}\}/,
+    )
+  }
+})
 
 test('changeset status receives trusted pull request context', () => {
   assert.match(
