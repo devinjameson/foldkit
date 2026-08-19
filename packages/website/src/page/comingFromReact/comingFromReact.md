@@ -125,7 +125,7 @@ Return a Command from your update function. The runtime runs the Command (an HTT
 :::
 
 :::Faq{id="faq-ssr" question="Does Foldkit do SSR like Next.js?"}
-Yes. [Server rendering](/core/server-rendering) runs the same program on the server that the browser runs: `renderToString` produces the HTML during a build (SSG) or per request (SSR), and `Runtime.hydrate` adopts it in place. There is no separate server component model and no second flavor of data fetching; the same init, view, and Model serve both sides. After hydration the page is an ordinary client-side Foldkit application: routing, update, and Commands run in the browser, and navigation stays client-side until the next full page load. [What about SSR?](/faq/what-about-ssr) covers the philosophy and the boundaries.
+Yes. [Server rendering](/core/server-rendering) runs the same program on the server that the browser runs: `renderToString` produces the HTML during a build (SSG) or per request (SSR), and `Runtime.hydrate` adopts it in place. There is no separate server component model and no second flavor of data fetching; the same init, view, and Model serve both sides. After hydration the page is an ordinary client-side Foldkit application: routing, update, and Commands run in the browser, and navigation stays client-side until the next full page load.
 :::
 
 :::Faq{id="faq-testing" question="How do I test my app?"}

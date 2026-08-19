@@ -87,4 +87,4 @@ What splits today:
 
 What does not split today: the routes of a single app. A Foldkit program is one statically composed Model, update, and view, so the code for every page ships in the initial bundle. Elm shares this property for the same reason. Splitting a program by route would take design work against the single-Model architecture, not a configuration flag.
 
-See [What about SSR?](/faq/what-about-ssr) for first-paint and SEO concerns.
+For first-paint and SEO concerns, see [Server Rendering](/core/server-rendering). Rendering a route on the server or at build time puts real content in the response before the bundle loads.
