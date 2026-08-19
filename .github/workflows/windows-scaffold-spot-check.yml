@@ -1,0 +1,106 @@
+name: Windows Scaffold Spot Check
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/windows-scaffold-spot-check.yml
+
+permissions:
+  contents: read
+
+jobs:
+  build-released-scaffolds:
+    name: Build released SSR and SSG scaffolds
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.2
+
+      - name: Generate and build the released scaffolds
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location $env:RUNNER_TEMP
+
+          npx --yes create-foldkit-app@0.27.1 `
+            --name ssr-app `
+            --rendering ssr `
+            --package-manager npm
+          if ($LASTEXITCODE -ne 0) {
+            throw "SSR generation exited $LASTEXITCODE"
+          }
+
+          Set-Location (Join-Path $env:RUNNER_TEMP 'ssr-app')
+          npm run build
+          if ($LASTEXITCODE -ne 0) {
+            throw "SSR build exited $LASTEXITCODE"
+          }
+          if (-not (Test-Path 'dist/client')) {
+            throw 'SSR build produced no dist/client directory'
+          }
+          if (-not (Test-Path 'dist/server')) {
+            throw 'SSR build produced no dist/server directory'
+          }
+
+          Set-Location $env:RUNNER_TEMP
+          npx --yes create-foldkit-app@0.27.1 `
+            --name ssg-app `
+            --rendering ssg `
+            --package-manager npm
+          if ($LASTEXITCODE -ne 0) {
+            throw "SSG generation exited $LASTEXITCODE"
+          }
+
+          Set-Location (Join-Path $env:RUNNER_TEMP 'ssg-app')
+          npm run build
+          if ($LASTEXITCODE -ne 0) {
+            throw "SSG build exited $LASTEXITCODE"
+          }
+
+          $indexPath = 'dist/client/index.html'
+          $aboutPath = 'dist/client/about/index.html'
+          if (-not (Test-Path $indexPath)) {
+            throw "SSG build produced no $indexPath"
+          }
+          if (-not (Test-Path $aboutPath)) {
+            throw "SSG build produced no $aboutPath"
+          }
+
+          $pattern = 'data-foldkit-build="([^"]+)"'
+          $indexMatch = [regex]::Match((Get-Content $indexPath -Raw), $pattern)
+          $aboutMatch = [regex]::Match((Get-Content $aboutPath -Raw), $pattern)
+          if (-not $indexMatch.Success -or -not $aboutMatch.Success) {
+            throw 'An SSG page carries no nonempty Foldkit build id'
+          }
+
+          $buildId = $indexMatch.Groups[1].Value
+          if ($aboutMatch.Groups[1].Value -ne $buildId) {
+            throw 'The generated SSG pages carry different build ids'
+          }
+
+          $clientBundles = @(Get-ChildItem 'dist/client' -Recurse -Filter '*.js')
+          if ($clientBundles.Count -eq 0) {
+            throw 'The SSG build produced no client JavaScript bundle'
+          }
+          $clientCarriesBuildId = $false
+          foreach ($bundle in $clientBundles) {
+            $bundleCarriesBuildId = Select-String `
+              -Path $bundle.FullName `
+              -Pattern $buildId `
+              -SimpleMatch `
+              -Quiet
+            if ($bundleCarriesBuildId) {
+              $clientCarriesBuildId = $true
+              break
+            }
+          }
+          if (-not $clientCarriesBuildId) {
+            throw 'The SSG client bundle does not carry the page build id'
+          }
+
+          Write-Host "PASS: released SSR and SSG scaffolds build on Windows with id $buildId"
