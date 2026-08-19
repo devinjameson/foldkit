@@ -890,6 +890,10 @@ describe('hydrating boot', () => {
     const servedRoot = document.querySelector('[data-foldkit-app]')
     const dialog = document.createElement('dialog')
     dialog.setAttribute('open', '')
+    const field = document.createElement('input')
+    dialog.appendChild(field)
+    const bodyKeys: Array<string> = []
+    document.body.addEventListener('keydown', () => bodyKeys.push('keydown'))
     const closed: Array<string> = []
     dialog.addEventListener('cancel', () => closed.push('cancel'))
     dialog.addEventListener('close', () => closed.push('close'))
@@ -918,6 +922,15 @@ describe('hydrating boot', () => {
     expect(shield?.open).toBe(true)
     expect(dialog.open).toBe(true)
     expect(closed).toEqual([])
+    field.focus()
+    const keydown = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      key: 'A',
+    })
+    expect(field.dispatchEvent(keydown)).toBe(false)
+    expect(keydown.defaultPrevented).toBe(true)
+    expect(bodyKeys).toEqual([])
     expectContained(servedRoot)
   })
 
