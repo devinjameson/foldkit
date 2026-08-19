@@ -10,6 +10,10 @@ The [embedding example](/example-apps/embedding) runs everything on this page: a
 
 Embedded apps are usually built with `makeElement`: the view returns `Html` and the runtime stays scoped to its container, never touching the document `<head>`, the URL bar, or anything else the host owns. Use `makeApplication` only when the embedded app should own page-level concerns like the document title. `embed` accepts programs from both.
 
+Only one `makeApplication` program can be active in a document. A second startup fails before `init` and leaves the active page unchanged. Separate `makeElement` programs can run in independent connected containers.
+
+`embed` reports an unhandled startup failure through Effect's logger. Interrupting the handle during disposal is normal cleanup and is not reported as an error.
+
 ## Declaring Ports
 
 Ports are declared with `Port.inbound` and `Port.outbound`, grouped in a record, and registered on the program config. The record keys name the ports on the handle:
@@ -46,7 +50,9 @@ When the program runs without an embed handle (started with `Runtime.run`), emit
 
 ::Snippet{name="embeddingHost" label="host wiring example"}
 
-`dispose` ties the runtime to the host’s unmount. It interrupts the runtime and runs all cleanup: Subscriptions, Mounts, and ManagedResources release, in-flight Commands stop, the rendered DOM is removed, and the container element is restored empty in its place, ready for a fresh `embed`. It is idempotent, and sends on a disposed handle are no-ops, so a host that unmounts and remounts in quick succession stays correct. A program can be embedded once at a time; after `dispose`, the same program and container can be embedded again.
+`dispose` ties the runtime to the host's unmount. It interrupts the runtime and runs all cleanup: Subscriptions, Mounts, and ManagedResources release, in-flight Commands stop, the rendered DOM is removed, and the container element is restored empty in its place, ready for a fresh `embed`. It is idempotent, and sends on a disposed handle are no-ops, so a host that unmounts and remounts in quick succession stays correct. A program can be embedded once at a time; after `dispose`, the same program and container can be embedded again.
+
+That sequencing belongs to the program. `dispose` returns no completion handle for immediately starting a different page-owning program in the same document. Reuse the configured program for an immediate remount. Separate `makeElement` programs can run in independent connected containers.
 
 ## The Schema Boundary
 

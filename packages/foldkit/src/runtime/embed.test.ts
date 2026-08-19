@@ -1,4 +1,13 @@
-import { Effect, Exit, Match as M, Queue, Schema as S, Stream } from 'effect'
+import {
+  Effect,
+  Exit,
+  Fiber,
+  Function,
+  Match as M,
+  Queue,
+  Schema as S,
+  Stream,
+} from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as Command from '../command/index.js'
@@ -370,6 +379,148 @@ describe('embed', () => {
       await awaitBodyText('step:4')
     } finally {
       secondHandle.dispose()
+    }
+  })
+
+  it('sequences an immediate remount of the same page-owning program', async () => {
+    let initCount = 0
+    let mountCount = 0
+    let releaseCount = 0
+    let markCleanupStarted = Function.constVoid
+    let finishCleanup = Function.constVoid
+    const cleanupStarted = new Promise<void>(resolve => {
+      markCleanupStarted = resolve
+    })
+    const cleanupGate = new Promise<void>(resolve => {
+      finishCleanup = resolve
+    })
+    const HoldFirstCleanup = Mount.define(
+      'HoldFirstCleanup',
+      CompletedTrackHost,
+    )(() =>
+      Effect.gen(function* () {
+        yield* Effect.acquireRelease(
+          Effect.sync(() => {
+            mountCount += 1
+          }),
+          () =>
+            Effect.gen(function* () {
+              releaseCount += 1
+              if (releaseCount === 1) {
+                markCleanupStarted()
+                yield* Effect.promise(() => cleanupGate)
+              }
+            }),
+        )
+        return CompletedTrackHost()
+      }),
+    )
+    const application = makeApplication({
+      Model,
+      init: () => {
+        initCount += 1
+        return [{ count: 0, step: 1 }, []]
+      },
+      update,
+      view: model => ({
+        title: 'Widget',
+        body: h.div([h.OnMount(HoldFirstCleanup())], [view(model)]),
+      }),
+      subscriptions,
+      ports,
+      container,
+    })
+
+    const firstHandle = embed(application)
+    try {
+      await awaitBodyText('count:0')
+      await vi.waitFor(() => {
+        expect(mountCount).toBe(1)
+      })
+      firstHandle.dispose()
+      await cleanupStarted
+
+      const secondHandle = embed(application)
+      try {
+        expect(initCount).toBe(1)
+        const sendExit = secondHandle.ports.stepChanged.send('6')
+        expect(Exit.isSuccess(sendExit)).toBe(true)
+        finishCleanup()
+        await awaitBodyText('step:6')
+        expect(initCount).toBe(2)
+      } finally {
+        secondHandle.dispose()
+      }
+    } finally {
+      firstHandle.dispose()
+      finishCleanup()
+    }
+    await vi.waitFor(() => {
+      expect(releaseCount).toBe(2)
+    })
+  })
+
+  it('refuses a competing page owner before resolving HMR state', async () => {
+    const HMR_RESOLUTION_WINDOW_MS = 600
+    expect(import.meta.hot).toBeDefined()
+    const secondContainer = document.createElement('div')
+    secondContainer.id = 'competing-page-owner'
+    document.body.appendChild(secondContainer)
+    let secondInitCount = 0
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const errorLog = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const first = makeApplication({
+      Model,
+      init: () => [{ count: 0, step: 1 }, []],
+      update,
+      view: model => ({ title: 'First', body: view(model) }),
+      ports,
+      container,
+    })
+    const second = makeApplication({
+      Model,
+      init: () => {
+        secondInitCount += 1
+        return [{ count: 0, step: 1 }, []]
+      },
+      update,
+      view: model => ({ title: 'Second', body: view(model) }),
+      container: secondContainer,
+    })
+
+    const firstFiber = Effect.runFork(first.start())
+    try {
+      await awaitBodyText('count:0')
+      const secondHandle = embed(second)
+      try {
+        await vi.waitFor(() => {
+          expect(
+            errorLog.mock.calls
+              .flat()
+              .some(value =>
+                String(value).includes(
+                  'already has an active page-owning application',
+                ),
+              ),
+          ).toBe(true)
+        })
+        await new Promise<void>(resolve => {
+          setTimeout(resolve, HMR_RESOLUTION_WINDOW_MS)
+        })
+        expect(warning).not.toHaveBeenCalledWith(
+          expect.stringContaining('No response from @foldkit/vite-plugin'),
+        )
+        expect(secondInitCount).toBe(0)
+
+        clickIncrement()
+        await awaitBodyText('count:1')
+      } finally {
+        secondHandle.dispose()
+      }
+    } finally {
+      await Effect.runPromise(Fiber.interrupt(firstFiber))
+      warning.mockRestore()
+      errorLog.mockRestore()
     }
   })
 

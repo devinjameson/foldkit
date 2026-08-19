@@ -1,4 +1,11 @@
-import { Effect, Match as M, Number, Predicate, Schema as S } from 'effect'
+import {
+  Effect,
+  Fiber,
+  Match as M,
+  Number,
+  Predicate,
+  Schema as S,
+} from 'effect'
 import { describe, it } from 'vitest'
 
 import { Document, __htmlBuilder, __requireDispatch } from '../html/index.js'
@@ -99,30 +106,32 @@ const runOnce = async (messageCount: number): Promise<number> => {
     freezeModel: false,
   })
 
-  Effect.runFork(application.start())
-
-  await new Promise<void>(resolve => {
-    const wait = (): void => {
-      if (capturedDispatch !== null) {
-        resolve()
-      } else {
-        setTimeout(wait, 0)
+  const fiber = Effect.runFork(application.start())
+  try {
+    await new Promise<void>(resolve => {
+      const wait = (): void => {
+        if (capturedDispatch !== null) {
+          resolve()
+        } else {
+          setTimeout(wait, 0)
+        }
       }
+      wait()
+    })
+
+    const dispatch = capturedDispatch!
+
+    const start = performance.now()
+    for (let index = 0; index < messageCount; index++) {
+      dispatch(Increment())
     }
-    wait()
-  })
-
-  const dispatch = capturedDispatch!
-
-  const start = performance.now()
-  for (let index = 0; index < messageCount; index++) {
-    dispatch(Increment())
+    dispatch(Done())
+    await done
+    return performance.now() - start
+  } finally {
+    await Effect.runPromise(Fiber.interrupt(fiber))
+    container.remove()
   }
-  dispatch(Done())
-  await done
-  const elapsed = performance.now() - start
-
-  return elapsed
 }
 
 const summarize = (

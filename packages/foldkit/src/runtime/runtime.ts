@@ -670,7 +670,7 @@ const assertRuntimeIdsAreUnique = (
   for (const root of stampedRoots) {
     const runtimeId = root.getAttribute(FOLDKIT_APP_ATTRIBUTE) ?? ''
     if (runtimeId === '') {
-      containRefusedPage(root.ownerDocument)
+      containRefusedPageWithoutActiveOwner(root.ownerDocument)
       throw new Error(
         '[foldkit] Found a server-rendered root with an empty ' +
           `\`${FOLDKIT_APP_ATTRIBUTE}\` stamp. A hydratable root must carry ` +
@@ -679,7 +679,7 @@ const assertRuntimeIdsAreUnique = (
       )
     }
     if (!root.ownerDocument.body?.contains(root)) {
-      containRefusedPage(root.ownerDocument)
+      containRefusedPageWithoutActiveOwner(root.ownerDocument)
       throw new Error(
         '[foldkit] Found a server-rendered root outside the document body. ' +
           'Runtime.hydrate supports one page-owning application in the ' +
@@ -688,7 +688,7 @@ const assertRuntimeIdsAreUnique = (
       )
     }
     if (seen.has(runtimeId)) {
-      containRefusedPage(root.ownerDocument)
+      containRefusedPageWithoutActiveOwner(root.ownerDocument)
       throw new Error(
         `[foldkit] Found more than one server-rendered root stamped ` +
           `"${runtimeId}". A runtime id names one application for the whole ` +
@@ -706,7 +706,7 @@ const assertSinglePageApplication = (
   stampedRoots: ReadonlyArray<HTMLElement>,
 ): void => {
   if (stampedRoots.length > 1) {
-    containRefusedPage(document)
+    containRefusedPageWithoutActiveOwner(document)
     throw new Error(
       '[foldkit] Found more than one page-owning application stamped with ' +
         `\`${FOLDKIT_APP_ATTRIBUTE}\`. Hydrating multiple applications in ` +
@@ -912,11 +912,20 @@ const containRefusedPage = (ownerDocument: DomDocument): void => {
   installRefusalShield(ownerDocument)
 }
 
+const containRefusedPageWithoutActiveOwner = (
+  ownerDocument: DomDocument,
+): void => {
+  if (!hasActivePageOwner(ownerDocument)) {
+    containRefusedPage(ownerDocument)
+  }
+}
+
 // Whether this page carries anything a Foldkit server render leaves behind. A
 // resolution failure on such a page is a refused handoff, and the markup is
 // contained; the same failure on a page with none of these markers is a client
 // application whose container never existed, where there is no server render to
-// refuse and nothing to take out of reach.
+// refuse and nothing to take out of reach. A construction attempt never
+// contains a document that already has an active page owner.
 const hasServerRenderedMarkup = (ownerDocument: DomDocument): boolean =>
   ownerDocument.querySelector(
     `[${FOLDKIT_APP_ATTRIBUTE}], [${HYDRATION_BUILD_ATTRIBUTE}], ` +
@@ -942,7 +951,7 @@ const findDocumentHydration = (
         onSome: root => root === container,
       })
       if (!isDocumentRoot) {
-        containRefusedPage(container.ownerDocument)
+        containRefusedPageWithoutActiveOwner(container.ownerDocument)
         throw new Error(
           '[foldkit] Runtime.hydrate received a stamped container that is ' +
             'not the single server root in the document light DOM. Hydration ' +
@@ -957,7 +966,7 @@ const findDocumentHydration = (
         if (stampedAncestor === null) {
           return undefined
         }
-        containRefusedPage(container.ownerDocument)
+        containRefusedPageWithoutActiveOwner(container.ownerDocument)
         throw new Error(
           '[foldkit] Runtime.hydrate received a container under a stamped ' +
             'root outside the document body light DOM. Do not hydrate a root ' +
@@ -969,7 +978,7 @@ const findDocumentHydration = (
         if (stampedAncestor === onlyRoot) {
           return hydrationForRoot(onlyRoot, isFlagsRequired)
         }
-        containRefusedPage(container.ownerDocument)
+        containRefusedPageWithoutActiveOwner(container.ownerDocument)
         throw new Error(
           '[foldkit] Runtime.hydrate received a container outside the ' +
             "document's server-rendered application root. A page-owning " +
@@ -1443,12 +1452,12 @@ export type RunOptions<Flags, Resources = never> = Readonly<{
 }>
 
 /** A configured Foldkit runtime returned by `makeApplication` or `makeElement`.
- *  Pass it to `run` to start a page-owning app, or to `embed` to start it under
- *  a host-controlled lifecycle handle. `ports` is the Ports record from the
- *  config (or `undefined` when the config declared none); it types the
- *  `EmbedHandle` that `embed` returns. `Flags` and `Resources` carry the
- *  fresh-boot requirements from `makeApplication` to `run` and `embed`; they
- *  have no runtime representation.
+ *  Pass it to `run` to start it for the document's lifetime, or to `embed` to
+ *  start it under a host-controlled lifecycle handle. `ports` is the Ports
+ *  record from the config (or `undefined` when the config declared none); it
+ *  types the `EmbedHandle` that `embed` returns. `Flags` and `Resources` carry
+ *  the fresh-boot requirements from the factory to `run` and `embed`; they have
+ *  no runtime representation.
  */
 export type MakeRuntimeReturn<
   P extends Ports | undefined = undefined,
@@ -1733,7 +1742,7 @@ const validatePorts = (ports: Ports): void => {
 type RuntimeInternals = {
   startWith: (
     maybeConnector: Option.Option<HostConnector>,
-    hmrModel?: unknown,
+    resolveHmrModelBeforeBoot: Effect.Effect<unknown>,
     bootMode?: BootMode,
     flags?: Effect.Effect<any, never, any>,
     buildId?: string,
@@ -1750,6 +1759,97 @@ type RuntimeProgram = Readonly<{
 }>
 
 const runtimeInternals = new WeakMap<object, RuntimeInternals>()
+
+const ACTIVE_PAGE_OWNER = Symbol.for('@foldkit/runtime/active-page-owner')
+
+const activePageOwner = (ownerDocument: DomDocument): unknown =>
+  Reflect.get(ownerDocument, ACTIVE_PAGE_OWNER)
+
+const hasActivePageOwner = (ownerDocument: DomDocument): boolean =>
+  activePageOwner(ownerDocument) !== undefined
+
+const activePageOwnerError = (): Error =>
+  new Error(
+    '[foldkit] This document already has an active page-owning application. ' +
+      '`makeApplication` owns document metadata and navigation, so only one ' +
+      'can run at a time. Use `makeElement` for another independent root, or ' +
+      'interrupt and await a directly managed runtime fiber. ' +
+      '`Runtime.embed` sequences only an immediate dispose and remount of the same program.',
+  )
+
+const assertNoActivePageOwner = (ownerDocument: DomDocument): void => {
+  if (hasActivePageOwner(ownerDocument)) {
+    throw activePageOwnerError()
+  }
+}
+
+const acquirePageOwnership = (
+  ownerDocument: DomDocument,
+): Effect.Effect<object> =>
+  Effect.sync(() => {
+    assertNoActivePageOwner(ownerDocument)
+    const owner = {}
+    if (
+      !Reflect.defineProperty(ownerDocument, ACTIVE_PAGE_OWNER, {
+        configurable: true,
+        value: owner,
+      })
+    ) {
+      throw new Error(
+        '[foldkit] `makeApplication` could not claim page ownership on ' +
+          'this document, so startup stopped before changing the page.',
+      )
+    }
+    return owner
+  })
+
+const releasePageOwnership = (
+  ownerDocument: DomDocument,
+  owner: object,
+): Effect.Effect<void> =>
+  Effect.sync(() => {
+    if (activePageOwner(ownerDocument) === owner) {
+      Reflect.deleteProperty(ownerDocument, ACTIVE_PAGE_OWNER)
+    }
+  })
+
+const assertRuntimeContainerCanStart = (
+  container: HTMLElement,
+  kind: 'Application' | 'Element',
+  bootMode: BootMode,
+): void => {
+  const runtimeFactory =
+    kind === 'Application' ? '`makeApplication`' : '`makeElement`'
+  const refuseInvalidContainer = (message: string): never => {
+    if (bootMode === 'Hydrate') {
+      containRefusedPage(document)
+    }
+    throw new Error(message)
+  }
+  if (container.ownerDocument !== document) {
+    refuseInvalidContainer(
+      `[foldkit] ${runtimeFactory} received a container owned by another ` +
+        'document. Foldkit runtimes use the current document for DOM ' +
+        'creation and browser services. Pass a container from this document.',
+    )
+  }
+  if (!container.isConnected) {
+    refuseInvalidContainer(
+      `[foldkit] ${runtimeFactory} received a detached container. Connect ` +
+        'the container to the current document before starting the runtime.',
+    )
+  }
+  if (kind === 'Application') {
+    const body = document.body
+    if (body === null || container === body || !body.contains(container)) {
+      refuseInvalidContainer(
+        '[foldkit] `makeApplication` must start in a container under the ' +
+          'current document body light DOM. Do not use the body itself, the ' +
+          'head, or a shadow tree. Use `makeElement` for a scoped root.',
+      )
+    }
+  }
+}
 
 const makeRuntime = <
   Model,
@@ -1890,7 +1990,7 @@ const makeRuntime = <
 
   const startWith = (
     maybeConnector: Option.Option<HostConnector>,
-    hmrModel?: unknown,
+    resolveHmrModelBeforeBoot: Effect.Effect<unknown>,
     bootMode: BootMode = 'Fresh',
     bootFlags?: Effect.Effect<Flags, never, Resources>,
     buildId?: string,
@@ -1901,8 +2001,10 @@ const makeRuntime = <
     // `Render.afterCommit` awaiting inside another.
     const commitNotifier = createCommitNotifier()
 
-    return Effect.scoped(
+    const runtime = Effect.scoped(
       Effect.gen(function* () {
+        assertRuntimeContainerCanStart(container, kind, bootMode)
+
         if (runtimeId === '') {
           return yield* Effect.die(
             new Error(
@@ -1912,6 +2014,8 @@ const makeRuntime = <
             ),
           )
         }
+
+        const hmrModel = yield* resolveHmrModelBeforeBoot
 
         // NOTE: every perpetual fiber (for example, Subscription streams
         // and ManagedResource lifecycles) and every Command fiber forks
@@ -3616,11 +3720,21 @@ const makeRuntime = <
         // or the document goes away.
         yield* Effect.never
       }),
+    )
+
+    return (
+      kind === 'Application'
+        ? Effect.acquireUseRelease(
+            acquirePageOwnership(document),
+            () => runtime,
+            owner => releasePageOwnership(document, owner),
+          )
+        : runtime
     ).pipe(Effect.provideService(RenderCommit, commitNotifier.service))
   }
 
   const start = (hmrModel?: unknown): Effect.Effect<void> =>
-    startWith(Option.none(), hmrModel, 'Fresh')
+    startWith(Option.none(), Effect.succeed(hmrModel), 'Fresh')
 
   const program: MakeRuntimeReturn<P, Flags, Resources, Kind> = {
     runtimeId,
@@ -3628,8 +3742,20 @@ const makeRuntime = <
     ports,
   }
   runtimeInternals.set(program, {
-    startWith: (maybeConnector, hmrModel, bootMode, flags, buildId) =>
-      startWith(maybeConnector, hmrModel, bootMode, flags, buildId),
+    startWith: (
+      maybeConnector,
+      resolveHmrModelBeforeBoot,
+      bootMode,
+      flags,
+      buildId,
+    ) =>
+      startWith(
+        maybeConnector,
+        resolveHmrModelBeforeBoot,
+        bootMode,
+        flags,
+        buildId,
+      ),
     kind,
     isEmbedActive: false,
     maybeActiveFiber: Option.none(),
@@ -3814,9 +3940,11 @@ const renderCrashView = <Model, Message>(
 /** Creates a Foldkit application that owns the page and returns a runtime that
  *  can be passed to `run`. The `view` returns a `Document`, so the runtime
  *  manages `document.title` and the canonical / og:url tags. Add a `routing`
- *  config for URL routing. Use one page-owning application per document. To
- *  mount an app scoped to a node without touching the document `<head>`, use
- *  `makeElement`. */
+ *  config for URL routing. Its container must be connected under the current
+ *  document body light DOM and cannot be the body itself. Foldkit rechecks the
+ *  container when startup begins and permits one active page-owning application
+ *  per document. To mount another app without touching the document `<head>`,
+ *  use `makeElement`. */
 export function makeApplication<
   Model,
   Message extends { _tag: string },
@@ -3932,9 +4060,10 @@ export function makeApplication<
     // template injection put the render where the placeholder was, so
     // `getElementById` finds nothing and the stamp that would have named the
     // root is gone. There is no handoff to refuse further along, and the markup
-    // is as live as any other refused page, so it is contained here.
+    // is as live as any other refused page, so it is contained here unless an
+    // active Foldkit application already owns the document.
     if (hasServerRenderedMarkup(document)) {
-      containRefusedPage(document)
+      containRefusedPageWithoutActiveOwner(document)
     }
     throw new Error(
       '[foldkit] Container is null. Make sure the element exists in the DOM ' +
@@ -4120,7 +4249,9 @@ const toCrashConfig = <Model, Message>(
  * `makeApplication` when the app owns the page and should manage those tags, and
  * `makeElement` when it is one component among others on a page it does not
  * control. Embedded apps do not own the URL bar, so `makeElement` has no
- * `routing` config.
+ * `routing` config. The container must belong to the current document and be
+ * connected when startup begins. Connected shadow-root containers are
+ * supported.
  */
 export function makeElement<
   Model,
@@ -4364,11 +4495,9 @@ const resolveHmrModel = (runtimeId: string): Effect.Effect<unknown> => {
   )
 }
 
-/** Starts a program Effect with explicit boot inputs for runtime tests.
- * @internal */
-export const __startProgram = (
+const startRuntime = (
   program: RuntimeProgram,
-  hmrModel: unknown,
+  resolveHmrModelBeforeBoot: Effect.Effect<unknown>,
   bootMode: BootMode,
   flags?: Effect.Effect<unknown, never, any>,
   buildId?: string,
@@ -4392,8 +4521,25 @@ export const __startProgram = (
     )
   }
 
-  return internals.startWith(Option.none(), hmrModel, bootMode, flags, buildId)
+  return internals.startWith(
+    Option.none(),
+    resolveHmrModelBeforeBoot,
+    bootMode,
+    flags,
+    buildId,
+  )
 }
+
+/** Starts a program Effect with explicit boot inputs for runtime tests.
+ * @internal */
+export const __startProgram = (
+  program: RuntimeProgram,
+  hmrModel: unknown,
+  bootMode: BootMode,
+  flags?: Effect.Effect<unknown, never, any>,
+  buildId?: string,
+): Effect.Effect<void> =>
+  startRuntime(program, Effect.succeed(hmrModel), bootMode, flags, buildId)
 
 // NOTE: deliberately not `BrowserRuntime.runMain`, which interrupts the
 // runtime on `beforeunload`. `beforeunload` is a question, not a commitment:
@@ -4415,18 +4561,37 @@ const startProgram = (
 ): void => {
   runMainWithoutUnloadInterrupt(
     provideBrowserScheduler(
-      Effect.flatMap(resolveHmrModel(program.runtimeId), hmrModel =>
-        __startProgram(program, hmrModel, bootMode, flags, buildId),
+      startRuntime(
+        program,
+        resolveHmrModel(program.runtimeId),
+        bootMode,
+        flags,
+        buildId,
       ),
     ),
   )
 }
 
-/** Starts a Foldkit runtime that owns the page for the page's whole lifetime,
- *  with HMR support for development. The first render builds the DOM fresh in
- *  the container, replacing whatever is there. On a server-rendered page use
- *  `hydrate` instead, which adopts the existing DOM. To start a runtime under a
- *  host-controlled lifecycle, use `embed`. */
+const reportUncaughtEmbedFailure = <A, E>(
+  effect: Effect.Effect<A, E>,
+): Effect.Effect<A, E> =>
+  Effect.tapCause(effect, cause => {
+    if (Cause.hasInterruptsOnly(cause)) {
+      return Effect.void
+    }
+    return Runtime.getErrorReported(Cause.squash(cause))
+      ? Effect.logError(cause)
+      : Effect.void
+  })
+
+/** Starts a Foldkit runtime for the page's whole lifetime, with HMR support for
+ *  development. The first render builds the DOM fresh in the container,
+ *  replacing whatever is there. A `makeApplication` program owns page-level
+ *  metadata and navigation; a `makeElement` program stays scoped to its
+ *  container. On a server-rendered page use `hydrate` instead, which adopts the
+ *  existing DOM. To start a runtime under a host-controlled lifecycle, use
+ *  `embed`. Starting a `makeApplication` program fails while another
+ *  page-owning application is active in the same document. */
 export function run<
   P extends Ports | undefined,
   Resources,
@@ -4486,6 +4651,11 @@ export type HydrateOptions = Readonly<{
  *  top-layer UI. Use `run` in a separate client-only entry when the page should
  *  boot without server output.
  *
+ *  If the document already has an active page-owning application, the second
+ *  startup fails before it reads HMR state, compares build ids, decodes Flags,
+ *  or runs `init`. The active page remains interactive and is not contained.
+ *  Use `makeElement` for another independent root.
+ *
  * @experimental Server rendering and hydration are experimental while their
  * contracts settle. */
 export const hydrate = <P extends Ports | undefined, Flags, Resources>(
@@ -4527,11 +4697,16 @@ const buildPortHandles = <P extends Ports | undefined>(
  * app. The host never touches the Model or dispatches Messages directly; the
  * Schema-typed Ports are the whole boundary.
  *
- * Works with programs from both `makeApplication` and `makeElement`; for a
- * widget on a page the host owns, `makeElement` is the natural fit.
+ * Works with programs from both `makeApplication` and `makeElement`. For a
+ * widget on a page the host owns, use `makeElement`. Only one `makeApplication`
+ * program can be active in a document. Separate `makeElement` programs can run
+ * in independent connected containers.
  *
  * A program can be embedded once at a time (it owns one container). After
- * `dispose`, the same container can be embedded again with a fresh program.
+ * `dispose`, the same program and container can be embedded again. An immediate
+ * remount waits for that program's previous runtime to finish cleanup.
+ * Unhandled startup failures are reported through Effect's logger. Interrupting
+ * the handle during disposal is normal cleanup and is not reported as an error.
  *
  * ```ts
  * const handle = Runtime.embed(element)
@@ -4590,18 +4765,19 @@ export function embed<P extends Ports | undefined = undefined>(
       onNone: () => Effect.void,
       onSome: previousFiber => Effect.asVoid(Fiber.await(previousFiber)),
     }),
-    Effect.andThen(resolveHmrModel(program.runtimeId)),
-    Effect.flatMap(hmrModel =>
+    Effect.andThen(
       internals.startWith(
         Option.some(connector),
-        hmrModel,
+        resolveHmrModel(program.runtimeId),
         'Fresh',
         options?.flags,
       ),
     ),
   )
 
-  const fiber = Effect.runFork(provideBrowserScheduler(startEffect))
+  const fiber = Effect.runFork(
+    provideBrowserScheduler(reportUncaughtEmbedFailure(startEffect)),
+  )
   internals.maybeActiveFiber = Option.some(fiber)
 
   let isHandleDisposed = false

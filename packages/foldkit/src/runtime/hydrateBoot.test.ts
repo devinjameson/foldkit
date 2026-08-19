@@ -178,6 +178,122 @@ describe('hydrating boot', () => {
     }
   })
 
+  it('refuses a second program captured from the same handoff without containing the healthy app', async () => {
+    await renderServerPage({ start: 5 })
+    const servedRoot = document.querySelector<HTMLElement>('[data-foldkit-app]')
+    const servedCount = document.getElementById('count')
+    if (servedRoot === null || servedCount === null) {
+      throw new Error('expected the served root and count')
+    }
+
+    const first = makeClientApplication()
+    const second = makeClientApplication()
+    const firstFiber = Effect.runFork(
+      __startProgram(first, undefined, 'Hydrate', undefined, BUILD_ID),
+    )
+
+    try {
+      await vi.waitFor(() => {
+        expect(servedRoot.hasAttribute('data-foldkit-build')).toBe(false)
+      })
+
+      await expect(
+        Effect.runPromise(
+          __startProgram(
+            second,
+            undefined,
+            'Hydrate',
+            undefined,
+            'another-build',
+          ).pipe(Effect.timeout('250 millis')),
+        ),
+      ).rejects.toThrow('already has an active page-owning application')
+
+      const emptyStamp = document.createElement('div')
+      emptyStamp.setAttribute('data-foldkit-app', '')
+      document.body.appendChild(emptyStamp)
+      expect(() => makeClientApplication()).toThrow(
+        'server-rendered root with an empty',
+      )
+      emptyStamp.remove()
+      expectNotContained()
+
+      const otherRoot = document.createElement('div')
+      otherRoot.setAttribute('data-foldkit-app', 'other')
+      document.body.appendChild(otherRoot)
+      const outsideContainer = document.createElement('div')
+      outsideContainer.id = 'outside-active-root'
+      document.body.appendChild(outsideContainer)
+      expect(() =>
+        makeApplication({
+          Model,
+          Flags,
+          init,
+          update,
+          view,
+          container: outsideContainer,
+        }),
+      ).toThrow("container outside the document's server-rendered application")
+      otherRoot.remove()
+      outsideContainer.remove()
+      expectNotContained()
+
+      const orphanedFlags = document.createElement('script')
+      orphanedFlags.setAttribute('data-foldkit-flags', 'other')
+      document.body.appendChild(orphanedFlags)
+      expect(() => makeClientApplication()).toThrow('Container is null')
+      orphanedFlags.remove()
+
+      expectNotContained()
+      expect(servedRoot.isConnected).toBe(true)
+      expect(document.getElementById('count')).toBe(servedCount)
+
+      document.getElementById('bump')?.click()
+      await awaitBodyText('6')
+      expect(document.getElementById('count')).toBe(servedCount)
+    } finally {
+      await Effect.runPromise(Fiber.interrupt(firstFiber))
+    }
+  })
+
+  it('contains the page when the captured root moves into a shadow tree before hydration starts', async () => {
+    await renderServerPage({ start: 5 })
+    const servedRoot = document.querySelector<HTMLElement>('[data-foldkit-app]')
+    if (servedRoot === null) {
+      throw new Error('expected the served root')
+    }
+    const application = makeClientApplication()
+    const host = document.createElement('div')
+    const shadowRoot = host.attachShadow({ mode: 'open' })
+    document.body.appendChild(host)
+    shadowRoot.appendChild(servedRoot)
+
+    await expect(
+      Effect.runPromise(
+        __startProgram(application, undefined, 'Hydrate', undefined, BUILD_ID),
+      ),
+    ).rejects.toThrow('current document body light DOM')
+    expectContained(servedRoot)
+  })
+
+  it('contains the current page when the captured root moves to another document before hydration starts', async () => {
+    await renderServerPage({ start: 5 })
+    const servedRoot = document.querySelector<HTMLElement>('[data-foldkit-app]')
+    if (servedRoot === null) {
+      throw new Error('expected the served root')
+    }
+    const application = makeClientApplication()
+    const otherDocument = document.implementation.createHTMLDocument('other')
+    otherDocument.body.appendChild(otherDocument.adoptNode(servedRoot))
+
+    await expect(
+      Effect.runPromise(
+        __startProgram(application, undefined, 'Hydrate', undefined, BUILD_ID),
+      ),
+    ).rejects.toThrow('owned by another document')
+    expectContained(null)
+  })
+
   it('round-trips non-JSON-native Schema values through the flags payload', async () => {
     const OptionalFlags = S.Struct({ maybeStart: S.Option(S.Number) })
     type OptionalFlags = typeof OptionalFlags.Type

@@ -24,11 +24,17 @@ The `routing` config has two handlers: `onUrlRequest` is called when a link is c
 
 Your `view` function returns a `Document` rather than bare HTML: the body to render, plus the document-level state the runtime keeps in sync. `makeApplication` owns that state and reapplies it on every render, so the tab title, the `<html>` language and direction, and the canonical and og\:url tags all track your Model. The [View](/core/view#the-document) page lists every field and what to put in it.
 
+One `makeApplication` program can be active in a document. The rule applies whether you start it with `Runtime.run`, `Runtime.hydrate`, `Runtime.embed`, or its `start` Effect. A second startup fails before `init` and leaves the active application unchanged. The claim uses the document, so separately bundled copies that support this rule share it. If you manage the `start` Effect directly, await its interrupted fiber before starting a different program. `Runtime.embed` sequences only an immediate dispose and remount of the same program. Use `makeElement` for another independent root.
+
+Foldkit checks the container when startup begins. A `makeApplication` container must be connected under the current document body's light DOM, and it cannot be the body itself. Startup fails if the container moved into the head, a shadow tree, a detached subtree, or another document after configuration.
+
 ## makeElement {#make-element}
 
 `makeApplication` assumes it owns the page, reapplying on every render whatever document state the view declares. That is what you want for an app that owns its tab, but not for a widget embedded on a page you do not control, where it would clobber the host page metadata.
 
 Use `makeElement` to mount a Foldkit app scoped to its container. Its `view` returns `Html` directly rather than a `Document`, so there is no title to discard, and the runtime never touches the document `<head>` or the `<html>` element. Everything else (Model, `init`, `update`, Commands, Subscriptions, flags, crash handling) works exactly as it does with `makeApplication`. Embedded apps do not own the URL bar, so `makeElement` has no `routing` config.
+
+Separate `makeElement` programs can run in independent containers, including connected shadow roots in the current document. All Foldkit runtimes reject detached containers and containers owned by another document.
 
 ::Snippet{name="runMakeElement" label="makeElement example"}
 

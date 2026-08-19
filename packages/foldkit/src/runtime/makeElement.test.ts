@@ -1,4 +1,11 @@
-import { Effect, Fiber, Match as M, Number, Schema as S } from 'effect'
+import {
+  Effect,
+  Fiber,
+  Function,
+  Match as M,
+  Number,
+  Schema as S,
+} from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { Command } from '../command/index.js'
@@ -7,6 +14,7 @@ import { m } from '../message/index.js'
 import { evo } from '../struct/index.js'
 import {
   __setDevToolsOverlay,
+  __startProgram,
   makeApplication,
   makeElement,
 } from './runtime.js'
@@ -120,6 +128,15 @@ const expectDocumentUntouched = (): void => {
   expect(document.documentElement.hasAttribute('dir')).toBe(false)
 }
 
+const expectStartRejected = async (
+  effect: Effect.Effect<void>,
+  message: string,
+): Promise<void> => {
+  await expect(
+    Effect.runPromise(effect.pipe(Effect.timeout('250 millis'))),
+  ).rejects.toThrow(message)
+}
+
 describe('makeElement', () => {
   it('mounts a registered DevTools overlay when DevTools are active', async () => {
     const mountedOverlays: Array<string> = []
@@ -165,6 +182,63 @@ describe('makeElement', () => {
     } finally {
       await Effect.runPromise(Fiber.interrupt(fiber))
     }
+  })
+
+  it('renders in a connected shadow root from the current document', async () => {
+    const host = document.createElement('div')
+    const shadowRoot = host.attachShadow({ mode: 'open' })
+    const shadowContainer = document.createElement('div')
+    shadowContainer.id = 'shadow-app'
+    shadowRoot.appendChild(shadowContainer)
+    document.body.appendChild(host)
+
+    const element = makeElement({
+      Model,
+      init: () => [{ label: 'inside-shadow' }, []],
+      update,
+      view: model => h.div([], [model.label]),
+      container: shadowContainer,
+    })
+
+    const fiber = Effect.runFork(element.start())
+    try {
+      await vi.waitFor(() => {
+        expect(shadowRoot.textContent).toContain('inside-shadow')
+      })
+      expectDocumentUntouched()
+    } finally {
+      await Effect.runPromise(Fiber.interrupt(fiber))
+    }
+  })
+
+  it('rejects a detached container', async () => {
+    const detached = document.createElement('div')
+    detached.id = 'detached-element'
+    const element = makeElement({
+      Model,
+      init: () => [{ label: 'never-started' }, []],
+      update,
+      view: model => h.div([], [model.label]),
+      container: detached,
+    })
+
+    await expectStartRejected(element.start(), 'received a detached container')
+  })
+
+  it('rejects a foreign-document container', async () => {
+    const otherDocument = document.implementation.createHTMLDocument('other')
+    const foreign = otherDocument.createElement('div')
+    foreign.id = 'foreign-element'
+    otherDocument.body.appendChild(foreign)
+    const element = makeElement({
+      Model,
+      init: () => [{ label: 'never-started' }, []],
+      update,
+      view: model => h.div([], [model.label]),
+      container: foreign,
+    })
+
+    await expectStartRejected(element.start(), 'owned by another document')
   })
 
   it('leaves the document head untouched across re-renders', async () => {
@@ -269,6 +343,280 @@ describe('makeApplication', () => {
     } finally {
       await Effect.runPromise(Fiber.interrupt(fiber))
     }
+  })
+
+  it('refuses a second active page owner before init and leaves the first interactive', async () => {
+    let secondInitCount = 0
+
+    const first = makeApplication({
+      Model,
+      init: () => [{ label: 'first' }, []],
+      update,
+      view: model => ({
+        title: model.label,
+        body: h.div(
+          [],
+          [h.button([h.OnClick(ClickedBump())], ['bump']), model.label],
+        ),
+      }),
+      container,
+    })
+    const second = makeApplication({
+      Model,
+      init: () => {
+        secondInitCount += 1
+        return [{ label: 'second' }, []]
+      },
+      update,
+      view: model => ({ title: model.label, body: h.div([], [model.label]) }),
+      container,
+    })
+
+    const firstFiber = Effect.runFork(first.start())
+    try {
+      await awaitBodyText('first')
+      await expectStartRejected(
+        second.start(),
+        'already has an active page-owning application',
+      )
+
+      const lateContainer = document.createElement('div')
+      lateContainer.id = 'late-app'
+      document.body.appendChild(lateContainer)
+      const late = makeApplication({
+        Model,
+        init: () => [{ label: 'late' }, []],
+        update,
+        view: model => ({
+          title: model.label,
+          body: h.div([], [model.label]),
+        }),
+        container: lateContainer,
+      })
+      await expectStartRejected(
+        late.start(),
+        'already has an active page-owning application',
+      )
+
+      expect(secondInitCount).toBe(0)
+      expect(document.title).toBe('first')
+      expect(document.body.hasAttribute('data-foldkit-refused')).toBe(false)
+      expect(container.isConnected).toBe(false)
+
+      document.body.querySelector('button')?.click()
+      await awaitBodyText('world')
+      expect(document.title).toBe('world')
+    } finally {
+      await Effect.runPromise(Fiber.interrupt(firstFiber))
+    }
+  })
+
+  it('refuses a second execution of the same start Effect', async () => {
+    const application = makeApplication({
+      Model,
+      init: () => [{ label: 'one-owner' }, []],
+      update,
+      view: model => ({ title: model.label, body: h.div([], [model.label]) }),
+      container,
+    })
+    const start = application.start()
+    const firstFiber = Effect.runFork(start)
+
+    try {
+      await awaitBodyText('one-owner')
+      await expectStartRejected(
+        start,
+        'already has an active page-owning application',
+      )
+      expect(document.title).toBe('one-owner')
+    } finally {
+      await Effect.runPromise(Fiber.interrupt(firstFiber))
+    }
+  })
+
+  it('releases page ownership after the runtime finishes cleanup', async () => {
+    const secondContainer = document.createElement('div')
+    secondContainer.id = 'next-app'
+    document.body.appendChild(secondContainer)
+
+    const first = makeApplication({
+      Model,
+      init: () => [{ label: 'first-owner' }, []],
+      update,
+      view: model => ({ title: model.label, body: h.div([], [model.label]) }),
+      container,
+    })
+    const second = makeApplication({
+      Model,
+      init: () => [{ label: 'next-owner' }, []],
+      update,
+      view: model => ({ title: model.label, body: h.div([], [model.label]) }),
+      container: secondContainer,
+    })
+
+    const firstFiber = Effect.runFork(first.start())
+    await awaitBodyText('first-owner')
+    await Effect.runPromise(Fiber.interrupt(firstFiber))
+
+    const secondFiber = Effect.runFork(second.start())
+    try {
+      await awaitBodyText('next-owner')
+      expect(document.title).toBe('next-owner')
+    } finally {
+      await Effect.runPromise(Fiber.interrupt(secondFiber))
+    }
+  })
+
+  it('keeps page ownership until runtime cleanup finishes', async () => {
+    let isCleanupRegistered = false
+    let markCleanupStarted = Function.constVoid
+    let finishCleanup = Function.constVoid
+    const cleanupStarted = new Promise<void>(resolve => {
+      markCleanupStarted = resolve
+    })
+    const cleanupGate = new Promise<void>(resolve => {
+      finishCleanup = resolve
+    })
+    const StartupFlags = S.Struct({ label: S.String })
+    const flags = Effect.acquireRelease(
+      Effect.sync(() => {
+        isCleanupRegistered = true
+        return { label: 'cleaning-up' }
+      }),
+      () =>
+        Effect.sync(markCleanupStarted).pipe(
+          Effect.andThen(Effect.promise(() => cleanupGate)),
+        ),
+    )
+    const secondContainer = document.createElement('div')
+    secondContainer.id = 'after-cleanup'
+    document.body.appendChild(secondContainer)
+    const first = makeApplication({
+      Model,
+      Flags: StartupFlags,
+      init: ({ label }) => [{ label }, []],
+      update,
+      view: model => ({
+        title: model.label,
+        body: h.div([], [model.label]),
+      }),
+      container,
+    })
+    const second = makeApplication({
+      Model,
+      init: () => [{ label: 'after-cleanup' }, []],
+      update,
+      view: model => ({ title: model.label, body: h.div([], [model.label]) }),
+      container: secondContainer,
+    })
+
+    const firstFiber = Effect.runFork(
+      __startProgram(first, undefined, 'Fresh', flags),
+    )
+    await awaitBodyText('cleaning-up')
+    await vi.waitFor(() => {
+      expect(isCleanupRegistered).toBe(true)
+    })
+
+    const interrupted = Effect.runPromise(Fiber.interrupt(firstFiber))
+    await cleanupStarted
+    try {
+      await expectStartRejected(
+        second.start(),
+        'already has an active page-owning application',
+      )
+    } finally {
+      finishCleanup()
+      await interrupted
+    }
+
+    const secondFiber = Effect.runFork(second.start())
+    try {
+      await awaitBodyText('after-cleanup')
+    } finally {
+      await Effect.runPromise(Fiber.interrupt(secondFiber))
+    }
+  })
+
+  it('rejects containers outside the current body light DOM', async () => {
+    const headContainer = document.createElement('div')
+    headContainer.id = 'head-app'
+    document.head.appendChild(headContainer)
+    const host = document.createElement('div')
+    const shadowRoot = host.attachShadow({ mode: 'open' })
+    const shadowContainer = document.createElement('div')
+    shadowContainer.id = 'shadow-page-app'
+    shadowRoot.appendChild(shadowContainer)
+    document.body.appendChild(host)
+    document.body.id = 'body-app'
+
+    try {
+      for (const invalidContainer of [
+        document.body,
+        headContainer,
+        shadowContainer,
+      ]) {
+        const application = makeApplication({
+          Model,
+          init: () => [{ label: 'never-started' }, []],
+          update,
+          view: model => ({
+            title: model.label,
+            body: h.div([], [model.label]),
+          }),
+          container: invalidContainer,
+        })
+
+        await expectStartRejected(
+          application.start(),
+          'must start in a container under the current document body light DOM',
+        )
+      }
+    } finally {
+      document.body.removeAttribute('id')
+      headContainer.remove()
+    }
+  })
+
+  it('rejects detached and foreign-document containers', async () => {
+    const detached = document.createElement('div')
+    detached.id = 'detached-application'
+    const otherDocument = document.implementation.createHTMLDocument('other')
+    const foreign = otherDocument.createElement('div')
+    foreign.id = 'foreign-application'
+    otherDocument.body.appendChild(foreign)
+
+    for (const [invalidContainer, message] of [
+      [detached, 'received a detached container'],
+      [foreign, 'owned by another document'],
+    ] satisfies ReadonlyArray<readonly [HTMLElement, string]>) {
+      const application = makeApplication({
+        Model,
+        init: () => [{ label: 'never-started' }, []],
+        update,
+        view: model => ({ title: model.label, body: h.div([], [model.label]) }),
+        container: invalidContainer,
+      })
+
+      await expectStartRejected(application.start(), message)
+    }
+  })
+
+  it('rechecks the container when it moves after configuration', async () => {
+    const application = makeApplication({
+      Model,
+      init: () => [{ label: 'never-started' }, []],
+      update,
+      view: model => ({ title: model.label, body: h.div([], [model.label]) }),
+      container,
+    })
+    container.remove()
+
+    await expectStartRejected(
+      application.start(),
+      'received a detached container',
+    )
+    expect(document.body.hasAttribute('data-foldkit-refused')).toBe(false)
   })
 
   it('reuses metadata elements and reasserts externally changed values', async () => {

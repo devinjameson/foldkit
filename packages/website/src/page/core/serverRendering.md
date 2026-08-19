@@ -113,6 +113,10 @@ The root stamp must have a nonempty id and name the document's single stamped ro
 
 A page-owning `makeApplication` controls the document title, language, text direction, canonical URL, and Open Graph URL. It also installs document-wide navigation listeners. With two applications, the last render would own the metadata and the first listener would handle every link. Render one application per page.
 
+The ownership rule is broader than hydration. One `makeApplication` program can be active in a document, whether it starts through `Runtime.run`, `Runtime.hydrate`, `Runtime.embed`, or its `start` Effect. A second startup fails before it reads HMR state, compares build ids, decodes Flags, or runs `init`. The active page stays interactive and is not contained. The claim uses the document, so separately bundled copies that support this rule share it. Foldkit releases ownership after the runtime finishes cleanup. Use `makeElement` for another independent root.
+
+A `makeApplication` container must be connected under the current document body's light DOM, and it cannot be the body itself. Foldkit checks again when startup begins. All runtimes reject detached containers and containers owned by another document. `makeElement` can use a connected shadow-root container in the current document.
+
 Static body output carries no handoff stamp. It may coexist with the document's one hydratable application. Each call to `injectIntoTemplate` still applies that render's `Document` head fields, so insertion order decides which render supplies the initial page metadata.
 
 ### Supported templates and roots
@@ -282,15 +286,17 @@ For example: documentation and marketing pages can be generated at build time, w
 
 ## What a refusal does
 
+This section describes a server handoff that Foldkit cannot safely adopt.
+
 Two things happen. Startup stops, and the page is put out of reach.
 
 ### Startup stops
 
-Every refusal stops before `init` runs. No Command, Subscription, or ManagedResource from this boot starts.
+Every handoff refusal stops before `init` runs. No Command, Subscription, or ManagedResource from this boot starts.
 
 For a build-id mismatch, Foldkit compares ids before accessing the Flags payload text, parsing its JSON, or Schema-decoding it. Stale Flags belong to the old deployment. Decoding them first would pass those values to current code before Foldkit noticed the mismatch. Flags-related refusals inspect the payload only far enough to identify the reported error.
 
-Every refusal reports a `[foldkit]` error that names the cause. Failures found while `makeApplication` resolves the container and stamped root throw immediately. Failures found after `Runtime.hydrate` starts use Effect's error reporting. Both reach the console and error monitoring. Neither provides an application hook because startup never reaches a Model.
+Every handoff refusal reports a `[foldkit]` error that names the cause. Failures found while `makeApplication` resolves the container and stamped root throw immediately. Failures found after `Runtime.hydrate` starts use Effect's error reporting. Both reach the console and error monitoring. Neither provides an application hook because startup never reaches a Model.
 
 Build skew is one reason to refuse. The same policy also covers:
 
@@ -301,7 +307,7 @@ Build skew is one reason to refuse. The same policy also covers:
 
 One missing-container case is different. If `makeApplication` cannot find its container and the document contains no `data-foldkit-app`, `data-foldkit-build`, or `data-foldkit-flags`, then no server rendered the page. The application's `<div id="root">` is simply absent, usually because of a typo or because the script ran too early. Foldkit reports the setup error and leaves the page alone.
 
-Every other refusal contains the page. This includes calling `Runtime.hydrate` with an existing container that has no stamped root, even on a page that was never server-rendered. Calling `hydrate` is the explicit claim that a handoff exists. Use `Runtime.run` for a fresh client boot.
+Unless another active application already owns the document, every other handoff refusal contains the page. A competing application reports its setup error and leaves the active page unchanged. Calling `Runtime.hydrate` with an existing container that has no stamped root is contained even on a page that was never server-rendered. Calling `hydrate` is the explicit claim that a handoff exists. Use `Runtime.run` for a fresh client boot.
 
 ### Page containment
 

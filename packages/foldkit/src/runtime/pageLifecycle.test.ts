@@ -100,9 +100,9 @@ describe('run + page lifecycle events', () => {
   // there would leave a live page with an empty container, so the runtime
   // starts with no page-lifecycle interrupt. Clicking after the event proves
   // the runtime is still driving the app, not just that the DOM has not been
-  // emptied yet. Each `run` here outlives its test, since nothing interrupts a
+  // emptied yet. This `run` outlives the test file, since nothing interrupts a
   // page-owning runtime.
-  it('keeps the app rendered and interactive after a beforeunload', async () => {
+  it('keeps the app active through cancelled navigation and bfcache restoration', async () => {
     runApp()
 
     await awaitBodyText(`${APP_TEXT}:0`)
@@ -112,17 +112,6 @@ describe('run + page lifecycle events', () => {
     clickIncrement()
 
     await awaitBodyText(`${APP_TEXT}:1`)
-  })
-
-  it('resumes with its Model when the page is restored from the back/forward cache', async () => {
-    runApp()
-
-    await awaitBodyText(`${APP_TEXT}:0`)
-
-    clickIncrement()
-    await awaitBodyText(`${APP_TEXT}:1`)
-
-    window.dispatchEvent(new Event('beforeunload'))
     dispatchPageShow(true)
 
     expect(reloadSpy).not.toHaveBeenCalled()
