@@ -1,5 +1,11 @@
 # create-foldkit-app
 
+## 0.27.2
+
+### Patch Changes
+
+- 2921c99: Keep the generated SSR and SSG build scripts concise while preserving the one-build-id invariant beside the code.
+
 ## 0.27.1
 
 ### Patch Changes
