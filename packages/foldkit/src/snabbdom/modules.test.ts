@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { attributesModule } from './attributes.js'
 import { classModule } from './class.js'
@@ -124,6 +124,109 @@ describe('classModule', () => {
 
     expect(patchedElement.classList.contains('active')).toBe(false)
     expect(patchedElement.classList.contains('hidden')).toBe(true)
+  })
+
+  it('preserves raw and typed class ownership across patches', () => {
+    const container = document.createElement('div')
+    const typedClass = { typed: true }
+    const mounted = patch(
+      container,
+      h('div', { attrs: { class: 'raw-a' }, class: typedClass }),
+    )
+    const element = elementOf(mounted)
+
+    const changedRawClass = patch(
+      mounted,
+      h('div', { attrs: { CLASS: 'raw-b shared' }, class: typedClass }),
+    )
+
+    expect(elementOf(changedRawClass)).toBe(element)
+    expect(element.classList.contains('raw-a')).toBe(false)
+    expect(element.classList.contains('raw-b')).toBe(true)
+    expect(element.classList.contains('shared')).toBe(true)
+    expect(element.classList.contains('typed')).toBe(true)
+
+    const disabledRawClass = patch(
+      changedRawClass,
+      h('div', { attrs: { class: false }, class: typedClass }),
+    )
+    const absentRawClass = patch(
+      disabledRawClass,
+      h('div', { class: typedClass }),
+    )
+    expect(elementOf(absentRawClass)).toBe(element)
+    expect(element.className).toBe('typed')
+
+    const sharedClass = patch(
+      absentRawClass,
+      h('div', {
+        attrs: { class: 'raw-b shared' },
+        class: { shared: true },
+      }),
+    )
+    const rawClassOnly = patch(
+      sharedClass,
+      h('div', { attrs: { class: 'raw-b shared' }, class: {} }),
+    )
+
+    expect(elementOf(rawClassOnly)).toBe(element)
+    expect(element.classList.contains('raw-b')).toBe(true)
+    expect(element.classList.contains('shared')).toBe(true)
+    expect(element.classList.contains('typed')).toBe(false)
+  })
+
+  it('does not touch typed classes when an unrelated raw attribute changes', () => {
+    const container = document.createElement('div')
+    const typedClass = { typed: true }
+    const mounted = patch(
+      container,
+      h('div', { attrs: { 'data-step': 'one' }, class: typedClass }),
+    )
+    const element = elementOf(mounted)
+    const contains = vi.spyOn(element.classList, 'contains')
+    const add = vi.spyOn(element.classList, 'add')
+    const remove = vi.spyOn(element.classList, 'remove')
+
+    patch(
+      mounted,
+      h('div', { attrs: { 'data-step': 'two' }, class: typedClass }),
+    )
+
+    expect(contains).not.toHaveBeenCalled()
+    expect(add).not.toHaveBeenCalled()
+    expect(remove).not.toHaveBeenCalled()
+  })
+
+  it('normalizes raw class aliases on foreign elements', () => {
+    const namespace = 'http://www.w3.org/2000/svg'
+    const container = document.createElement('div')
+    const typedClass = { typed: true }
+    const mounted = patch(
+      container,
+      h('svg', {
+        ns: namespace,
+        attrs: { CLASS: 'raw-a' },
+        class: typedClass,
+      }),
+    )
+    const element = mounted.elm
+    if (!(element instanceof SVGElement)) {
+      throw new Error('expected an SVG element')
+    }
+
+    const patched = patch(
+      mounted,
+      h('svg', {
+        ns: namespace,
+        attrs: { class: 'raw-b' },
+        class: typedClass,
+      }),
+    )
+
+    expect(patched.elm).toBe(element)
+    expect(element.classList.contains('raw-a')).toBe(false)
+    expect(element.classList.contains('raw-b')).toBe(true)
+    expect(element.classList.contains('typed')).toBe(true)
   })
 })
 
