@@ -981,6 +981,120 @@ describe('one owner for an element\u2019s content', () => {
 })
 
 describe('controlled select selection ownership', () => {
+  const selectLikeDefinition = CustomElement.define({
+    tag: 'x-select-like',
+    properties: { value: S.Unknown },
+    events: {},
+  })
+  const expectClientOnlyValueRefusal = (view: Html, name: string): void => {
+    expect(() => serializeHtml(view), name).toThrow(
+      /client-only value property/,
+    )
+    expect(
+      () => serializeHtml(view, { emitHydrationMarkers: true }),
+      name,
+    ).toThrow(/client-only value property/)
+  }
+
+  it('refuses every client-only value on a native select', () => {
+    const selectLike = selectLikeDefinition.withMessage(h)
+    for (const value of ['b', 1, null, undefined, Symbol('value'), { id: 1 }]) {
+      expectClientOnlyValueRefusal(
+        h.select([selectLike.Value(value)]),
+        `client-only ${typeof value}`,
+      )
+    }
+  })
+
+  it('refuses the client-only value across select arrangements', () => {
+    const selectLike = selectLikeDefinition.withMessage(h)
+    const arrangements: ReadonlyArray<Readonly<{ name: string; view: Html }>> =
+      [
+        {
+          name: 'direct options',
+          view: h.select(
+            [selectLike.Value('b')],
+            [h.option([h.Value('a')], ['A']), h.option([h.Value('b')], ['B'])],
+          ),
+        },
+        {
+          name: 'duplicate option values',
+          view: h.select(
+            [selectLike.Value('b')],
+            [
+              h.option([h.Value('b')], ['First']),
+              h.option([h.Value('b')], ['Second']),
+            ],
+          ),
+        },
+        {
+          name: 'an optgroup descendant',
+          view: h.select(
+            [selectLike.Value('b')],
+            [
+              h.optgroup(
+                [],
+                [
+                  h.option([h.Value('a')], ['A']),
+                  h.option([h.Value('b')], ['B']),
+                ],
+              ),
+            ],
+          ),
+        },
+        {
+          name: 'a multiple select',
+          view: h.select(
+            [selectLike.Value('b'), h.Multiple(true)],
+            [h.option([h.Value('b')], ['B'])],
+          ),
+        },
+        {
+          name: 'a sized select',
+          view: h.select(
+            [selectLike.Value('b'), h.Size(2)],
+            [h.option([h.Value('b')], ['B'])],
+          ),
+        },
+        {
+          name: 'raw value and selected attributes',
+          view: h.select(
+            [h.Attribute('value', 'a'), selectLike.Value('b')],
+            [h.option([h.Value('a'), h.Attribute('selected', '')], ['A'])],
+          ),
+        },
+        {
+          name: 'a dynamic uppercase native select',
+          view: customElement<Message>()('SELECT')(
+            [selectLike.Value('b')],
+            [h.option([h.Value('b')], ['B'])],
+          ),
+        },
+      ]
+
+    for (const { name, view } of arrangements) {
+      expectClientOnlyValueRefusal(view, name)
+    }
+  })
+
+  it('uses the last property builder as the select value owner', () => {
+    const selectLike = selectLikeDefinition.withMessage(h)
+    const options = [
+      h.option([h.Value('a')], ['A']),
+      h.option([h.Value('b')], ['B']),
+    ]
+    expectClientOnlyValueRefusal(
+      h.select([h.Value('a'), selectLike.Value('b')], options),
+      'client-only property written last',
+    )
+    expect(
+      serializeHtml(h.select([selectLike.Value('b'), h.Value('a')], options)),
+    ).toBe(
+      '<select><option value="a" selected="">A</option>' +
+        '<option value="b">B</option></select>',
+    )
+  })
+
   it('canonicalizes a dynamic HTML tag before applying select semantics', () => {
     const dynamicSelect = (): Html =>
       customElement<never>()('SELECT')(
