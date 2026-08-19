@@ -28,7 +28,7 @@ import {
   examples,
   findBySlug,
 } from '../page/example/meta'
-import { coreArchitectureRouter, homeRouter } from '../route'
+import { gettingStartedRouter, homeRouter } from '../route'
 import { headerNavView } from './headerNav'
 import { betaTag, emailSignupContentView, skipNavLink } from './shared'
 import { mobileMenuView } from './sidebar'
@@ -75,12 +75,12 @@ const landingHeaderView = (model: Model, h: HtmlBuilder<Message>) =>
           ),
           h.a(
             [
-              h.Href(coreArchitectureRouter()),
+              h.Href(gettingStartedRouter()),
               h.Class(
                 'inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-accent-600 dark:bg-accent-500 text-white dark:text-accent-900 text-sm font-normal transition hover:bg-accent-700 dark:hover:bg-accent-600',
               ),
             ],
-            ['Dive In', Icon.arrowRight('w-4 h-4')],
+            ['Get started', Icon.arrowRight('w-4 h-4')],
           ),
           h.button(
             [

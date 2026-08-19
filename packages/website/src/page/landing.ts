@@ -15,8 +15,9 @@ import {
   coreManagedResourcesRouter,
   coreServerRenderingRouter,
   coreSubmodelRouter,
-  coreSubscriptionsRouter,
+  effectAtomComparisonRouter,
   examplesRouter,
+  gettingStartedRouter,
   routingAndNavigationRouter,
   testingRouter,
   typingTerminalRouter,
@@ -79,18 +80,17 @@ export const view = (
   return h.div(
     [h.Class('isolate overflow-x-hidden')],
     [
-      heroSection(
-        renderCopyButton,
-        playgroundMenuView,
-        maybeGitHubStarCount,
-        h,
-      ),
+      heroSection(renderCopyButton, playgroundMenuView, h),
       glyph('{ }'),
-      promiseSection(),
-      glyph('=>'),
-      poweredBySection(),
-      glyph('|>', '-translate-y-1/4'),
       demoSection(demoTabsView),
+      glyph('=>'),
+      promiseSection(),
+      glyph('|>', '-translate-y-1/4'),
+      poweredBySection(),
+      glyph('( )'),
+      fitSection(),
+      glyph('...', '-translate-y-1/3'),
+      trustSection(),
       glyph('[ ]'),
       includedSection(),
       glyph('::'),
@@ -99,12 +99,6 @@ export const view = (
       devToolsSection(),
       glyph('~~'),
       aiSection(aiHeadingToggleCount),
-      glyph('< >'),
-      tradeOffsSection(),
-      glyph('( )'),
-      audienceSection(),
-      glyph('...', '-translate-y-1/3'),
-      trustSection(),
       glyph('->'),
       finalCtaSection(emailSignupView, maybeGitHubStarCount),
     ],
@@ -130,7 +124,6 @@ const INSTALL_COMMAND = 'npx create-foldkit-app@latest'
 const heroSection = (
   renderCopyButton: RenderCopyButton,
   playgroundMenuView: Html,
-  maybeGitHubStarCount: Option.Option<number>,
   h: HtmlBuilder<Message>,
 ): Html => {
   return h.section(
@@ -184,7 +177,9 @@ const heroSection = (
                 'mt-6 text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-3xl leading-relaxed',
               ),
             ],
-            ['Built on Effect. Architected like Elm. Written in TypeScript.'],
+            [
+              'Bring Effect’s explicitness to your frontend. Foldkit gives your entire application one architecture with an idiomatic place for every behavior.',
+            ],
           ),
           h.div(
             [h.Class('mt-8')],
@@ -200,12 +195,11 @@ const heroSection = (
           h.div(
             [h.Class('mt-8 flex flex-col sm:flex-row items-start gap-4')],
             [
-              h.a(
-                [h.Href(coreArchitectureRouter()), h.Class('cta-primary')],
-                ['Dive In', Icon.arrowRight('w-5 h-5')],
-              ),
               playgroundMenuView,
-              viewOnGitHubButton(maybeGitHubStarCount),
+              h.a(
+                [h.Href(coreArchitectureRouter()), h.Class('cta-secondary')],
+                ['Learn the architecture', Icon.arrowRight('w-5 h-5')],
+              ),
             ],
           ),
         ],
@@ -265,7 +259,7 @@ const poweredBySection = (): Html =>
               ),
             ],
             [
-              'If you already know Effect, Foldkit feels natural. If you’re new to Effect, Foldkit is a great way to learn it.',
+              'If your backend already uses Effect, Foldkit carries the same tools and patterns into the browser. If Effect is new to your team, it is part of the learning curve.',
             ],
           ),
           ih.ul(
@@ -277,9 +271,9 @@ const poweredBySection = (): Html =>
             ],
             [
               poweredByItem('Every Foldkit application is an Effect'),
-              poweredByItem('All state is a single Schema'),
+              poweredByItem('The entire Model is defined by Schema'),
               poweredByItem(
-                'Side effects are modeled as Effects that never fail',
+                'Commands use Effect for services, interruption, resources, and concurrency',
               ),
             ],
           ),
@@ -346,8 +340,8 @@ const promiseSection = (): Html =>
               ),
               pillarCard(
                 Icon.arrowsPointingOut('w-6 h-6'),
-                'Scales with grace',
-                'Complexity grows linearly, not exponentially. A 50-file app follows the same patterns as a 5-file app, so each feature adds structure instead of entangling with what is already there. New team members read the code and understand it.',
+                'Shared structure',
+                'A 50-file application uses the same Model, Message, update, and Command structure as a 5-file application. New work has a known place, and reviews start from shared conventions.',
               ),
             ],
           ),
@@ -460,7 +454,7 @@ const includedSection = (): Html =>
               ),
             ],
             [
-              'Most frameworks ask you to bring your own routing library, state manager, UI kit, and form validator. Foldkit ships them as one coherent system.',
+              'Routing, server rendering, UI components, composition, and browser lifecycles all use the same Model and Message flow.',
             ],
           ),
           ih.div(
@@ -488,47 +482,16 @@ const includedSection = (): Html =>
                   label: 'Explore server rendering',
                 },
               ),
-              ih.div(
-                [ih.Class('landing-card')],
+              includedFeature(
+                Icon.puzzle('w-6 h-6'),
+                'UI Components',
                 [
-                  ih.div(
-                    [ih.Class('mb-3 text-accent-600 dark:text-accent-500')],
-                    [Icon.puzzle('w-6 h-6')],
-                  ),
-                  ih.h3(
-                    [
-                      ih.Class(
-                        'flex items-center text-xl font-normal text-gray-900 dark:text-white mb-2',
-                      ),
-                    ],
-                    ['UI Components'],
-                  ),
-                  ih.p(
-                    [
-                      ih.Class(
-                        'text-gray-600 dark:text-gray-300 leading-relaxed mb-3',
-                      ),
-                    ],
-                    [
-                      'Accessible components (dialog, menu, tabs, listbox, disclosure, and more) built for The Elm Architecture. Easy to style and customize.',
-                    ],
-                  ),
-                  ih.a(
-                    [
-                      ih.Href(uiOverviewRouter()),
-                      ih.Class(
-                        'text-accent-600 dark:text-accent-500 underline decoration-accent-600/30 dark:decoration-accent-500/30 hover:decoration-accent-600 dark:hover:decoration-accent-500 font-normal',
-                      ),
-                    ],
-                    [
-                      'Browse the components',
-                      ih.span(
-                        [ih.Class('inline-block ml-1')],
-                        [Icon.arrowRight('w-3.5 h-3.5 inline')],
-                      ),
-                    ],
-                  ),
+                  'Accessible dialogs, menus, tabs, listboxes, disclosures, and more. Each stateful component follows The Elm Architecture and stays open to styling and composition.',
                 ],
+                {
+                  href: uiOverviewRouter(),
+                  label: 'Browse the components',
+                },
               ),
               includedFeature(
                 Icon.squareStack('w-6 h-6'),
@@ -543,46 +506,13 @@ const includedSection = (): Html =>
               ),
               includedFeature(
                 Icon.signal('w-6 h-6'),
-                'Subscriptions',
+                'Browser Lifecycles',
                 [
-                  'Bind a slice of the Model to a scoped Stream that may emit Messages. The runtime opens the scope while the slice holds its value and closes it when the slice changes.',
-                ],
-                {
-                  href: coreSubscriptionsRouter(),
-                  label: 'Explore Subscriptions',
-                },
-              ),
-              includedFeature(
-                Icon.circleStack('w-6 h-6'),
-                'Managed Resources',
-                [
-                  'Model-driven lifecycles for long-lived browser resources like WebSockets, AudioContext, and RTCPeerConnection. The runtime acquires when the Model calls for the resource and releases when it no longer does.',
+                  'Subscriptions open scoped event streams while a Model condition holds. Managed Resources acquire stateful handles like WebSockets and AudioContext. The runtime closes both when the Model no longer needs them.',
                 ],
                 {
                   href: coreManagedResourcesRouter(),
-                  label: 'Explore Managed Resources',
-                },
-              ),
-              includedFeature(
-                Icon.checkBadge('w-6 h-6'),
-                'Testing',
-                [
-                  'Two test primitives. Story sends Messages through update and asserts on the resulting Model and Commands. Scene drives the rendered view through accessible locators and asserts on the re-rendered HTML.',
-                ],
-                {
-                  href: testingRouter(),
-                  label: 'Explore testing',
-                },
-              ),
-              includedFeature(
-                Icon.computer('w-6 h-6'),
-                'DevTools',
-                [
-                  'Inspect Messages, Model state, and Commands as your app runs. Time-travel mode rewinds your UI to any past Model. AI agents can connect to the same data over MCP.',
-                ],
-                {
-                  href: coreDevToolsRouter(),
-                  label: 'Explore DevTools',
+                  label: 'Explore browser lifecycles',
                 },
               ),
               includedFeature(
@@ -695,7 +625,7 @@ const devToolsSection = (): Html =>
               ),
             ],
             [
-              'When every state change flows through Messages and a single Model, you get DevTools that would be impossible in a mutable-state framework. Every Message is logged. Every Model state is inspectable. Click any row to see exactly what changed.',
+              'When every state change flows through Messages and one Model, DevTools can show the full history of the program. Every Message is logged. Every Model state is inspectable. Select any row to see what changed, then rewind the UI to that state.',
             ],
           ),
           ih.p(
@@ -705,7 +635,7 @@ const devToolsSection = (): Html =>
               ),
             ],
             [
-              'Plus, AI agents can connect over MCP. They read the current Model, walk Message history, and rewind the UI to past states. Programmatic access to the same data DevTools shows you.',
+              'The same runtime data is available to AI agents over MCP. They can inspect the current Model, walk Message history, rewind the UI to past states, and dispatch Messages.',
             ],
           ),
           ih.p(
@@ -748,140 +678,82 @@ const devToolsSection = (): Html =>
     ],
   )
 
-// TRADE-OFFS & COMPARISON
+// FIT
 
-const tradeOffsSection = (): Html =>
-  ih.section(
-    [ih.Id('whats-the-catch'), ih.Class('landing-section')],
-    [
-      ih.div(
-        [ih.Class('landing-section-narrow')],
-        [
-          ih.div(
-            [ih.Class('grid gap-10 md:grid-cols-2')],
-            [
-              ih.div(
-                [],
-                [
-                  ih.h2(
-                    [
-                      ih.Class(
-                        'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white mb-3 text-balance',
-                      ),
-                    ],
-                    ['What’s the catch?'],
-                  ),
-                  ih.p(
-                    [
-                      ih.Class(
-                        'text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-4',
-                      ),
-                    ],
-                    [
-                      'Foldkit asks you to think about frontend development differently. It uses ',
-                      ih.a(
-                        [
-                          ih.Href(Link.elmArchitecture),
-                          ih.Class(
-                            'text-accent-600 dark:text-accent-500 underline decoration-accent-600/30 dark:decoration-accent-500/30 hover:decoration-accent-600 dark:hover:decoration-accent-500 font-normal',
-                          ),
-                        ],
-                        ['The Elm Architecture'],
-                      ),
-                      ', so there are no components, no hooks, no local state. Everything is declarative and structured. You’ll need to shift how you think about state, effects, and views.',
-                    ],
-                  ),
-                  ih.p(
-                    [
-                      ih.Class(
-                        'text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-8',
-                      ),
-                    ],
-                    ['It’s a discipline. It pays off, but it’s a real ask.'],
-                  ),
-                  ih.a(
-                    [
-                      ih.Href(coreArchitectureRouter()),
-                      ih.Class('cta-secondary'),
-                    ],
-                    ['See how it works', Icon.arrowRight('w-5 h-5')],
-                  ),
-                ],
-              ),
-              ih.div(
-                [ih.Id('foldkit-vs-react')],
-                [
-                  ih.h2(
-                    [
-                      ih.Class(
-                        'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white mb-4 text-balance',
-                      ),
-                    ],
-                    ['How does it compare?'],
-                  ),
-                  ih.p(
-                    [ih.Class('text-lg text-gray-600 dark:text-gray-300 mb-8')],
-                    [
-                      'Foldkit is a different kind of frontend framework. If you’re weighing it against React, Vue, Svelte, or Solid, the key difference isn’t syntax or performance. It’s that Foldkit prescribes the architecture instead of leaving it to you.',
-                    ],
-                  ),
-                  ih.a(
-                    [
-                      ih.Href(comingFromReactRouter()),
-                      ih.Class('cta-secondary'),
-                    ],
-                    ['Compare to React', Icon.arrowRight('w-5 h-5')],
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ],
-      ),
-    ],
-  )
-
-// AUDIENCE
-
-const audienceSection = (): Html =>
+const fitSection = (): Html =>
   ih.section(
     [ih.Id('who-its-for'), ih.Class('landing-section')],
     [
       ih.div(
         [ih.Class('landing-section-narrow')],
         [
+          ih.span([ih.Id('whats-the-catch')]),
+          ih.h2(
+            [
+              ih.Class(
+                'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white mb-3 text-balance',
+              ),
+            ],
+            ['Architectural fit.'],
+          ),
+          ih.p(
+            [
+              ih.Class(
+                'text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-4 max-w-3xl',
+              ),
+            ],
+            [
+              'Foldkit uses ',
+              ih.a(
+                [
+                  ih.Href(Link.elmArchitecture),
+                  ih.Class(
+                    'text-accent-600 dark:text-accent-500 underline decoration-accent-600/30 dark:decoration-accent-500/30 hover:decoration-accent-600 dark:hover:decoration-accent-500 font-normal',
+                  ),
+                ],
+                ['The Elm Architecture'],
+              ),
+              '. Application state does not live in component instances or hook lifecycles. The Model is the single source of truth, and every transition stays visible in update.',
+            ],
+          ),
+          ih.p(
+            [
+              ih.Class(
+                'text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-10 max-w-3xl',
+              ),
+            ],
+            [
+              'That discipline is a real commitment. Foldkit works best when the team wants one architecture across the application and is ready to build on Effect throughout.',
+            ],
+          ),
           ih.div(
             [ih.Class('grid gap-8 md:grid-cols-2')],
             [
               ih.div(
                 [],
                 [
-                  ih.h2(
+                  ih.h3(
                     [
                       ih.Class(
-                        'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white mb-6 text-balance',
+                        'text-2xl font-normal text-gray-900 dark:text-white mb-6 text-balance',
                       ),
                     ],
-                    ['Who it’s for'],
+                    ['A strong fit'],
                   ),
                   ih.ul(
                     [ih.Role('list'), ih.Class('list-none')],
                     [
                       audienceForItem(
                         'Effect developers who need a frontend',
-                        'Your backend already uses Effect. Foldkit is the missing frontend piece: same ecosystem, same patterns, no context switching.',
+                        'Your backend already uses Effect. Foldkit carries Schema, services, Streams, and scoped resources into frontend architecture.',
                       ),
                       audienceForItem(
-                        'Developers who value correctness',
-                        'You want your architecture to prevent bugs, not just catch them.',
+                        'Applications with complex state',
+                        'Auth flows, real-time data, and multi-step forms become explicit states and transitions instead of effects and refs spread across the tree.',
                       ),
                       audienceForItem(
-                        'Teams that need to stay aligned',
-                        'One pattern for state, effects, and views means less disagreement and faster onboarding.',
-                      ),
-                      audienceForItem(
-                        'Projects with complex state',
-                        'Auth flows, real-time data, multi-step forms. Each becomes explicit state and transitions, so the hard parts stay readable instead of hiding in effects and refs.',
+                        'Teams that want shared conventions',
+                        'One pattern for state, effects, and views gives features a known shape and reviews a common vocabulary.',
                       ),
                     ],
                   ),
@@ -890,13 +762,13 @@ const audienceSection = (): Html =>
               ih.div(
                 [],
                 [
-                  ih.h2(
+                  ih.h3(
                     [
                       ih.Class(
-                        'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white mb-6 text-balance',
+                        'text-2xl font-normal text-gray-900 dark:text-white mb-6 text-balance',
                       ),
                     ],
-                    ['Who it’s not for'],
+                    ['Think twice when'],
                   ),
                   ih.ul(
                     [ih.Role('list'), ih.Class('list-none')],
@@ -906,12 +778,8 @@ const audienceSection = (): Html =>
                         'Foldkit isn’t an incremental adoption. It’s a different architecture, and migrating means a rewrite. The middle path is embedding: Runtime.embed runs a Foldkit widget inside an existing app.',
                       ),
                       audienceNotItem(
-                        'Teams not ready to invest in Effect',
-                        'Foldkit leans on pipe, discriminated unions, and Effect throughout. There’s no escape hatch. You’re all in or you’re not.',
-                      ),
-                      audienceNotItem(
                         'Projects that need the React ecosystem',
-                        'No React component libraries, no Next.js, no existing middleware. You’re building on different foundations.',
+                        'The application depends on React component libraries, Next.js, or middleware built for that stack. Foldkit uses different foundations.',
                       ),
                       audienceNotItem(
                         'Sites that are mostly static content',
@@ -919,6 +787,28 @@ const audienceSection = (): Html =>
                       ),
                     ],
                   ),
+                ],
+              ),
+            ],
+          ),
+          ih.div(
+            [
+              ih.Id('foldkit-vs-react'),
+              ih.Class('mt-8 flex flex-col sm:flex-row items-start gap-4'),
+            ],
+            [
+              ih.a(
+                [ih.Href(comingFromReactRouter()), ih.Class('cta-secondary')],
+                ['Compare with React', Icon.arrowRight('w-5 h-5')],
+              ),
+              ih.a(
+                [
+                  ih.Href(effectAtomComparisonRouter()),
+                  ih.Class('cta-secondary'),
+                ],
+                [
+                  'Compare with React + Effect Atom',
+                  Icon.arrowRight('w-5 h-5'),
                 ],
               ),
             ],
@@ -996,10 +886,20 @@ const trustSection = (): Html =>
           ih.h2(
             [
               ih.Class(
-                'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white mb-6 text-balance',
+                'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white mb-3 text-balance',
               ),
             ],
-            ['Proof of life.'],
+            ['Project status.'],
+          ),
+          ih.p(
+            [
+              ih.Class(
+                'text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-10 max-w-3xl',
+              ),
+            ],
+            [
+              'Foldkit is in beta and under active development. The links below show the current version and what is ready to use today.',
+            ],
           ),
           ih.ul(
             [
@@ -1175,7 +1075,7 @@ const aiSection = (aiHeadingToggleCount: number): Html =>
               ),
             ],
             [
-              'Foldkit apps are explicit and predictable. This makes LLMs particularly good at generating Foldkit code. And it makes generated Foldkit code exceptionally easy for humans to review.',
+              'Every feature has the same visible structure: a Schema-defined Model, fact-named Messages, exhaustive update, and explicit Commands. AI-generated changes follow code paths a person can inspect and test.',
             ],
           ),
           ih.p(
@@ -1221,7 +1121,7 @@ const finalCtaSection = (
                         'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white mb-4 text-balance',
                       ),
                     ],
-                    ['Make something correct.'],
+                    ['Start building.'],
                   ),
                   ih.p(
                     [
@@ -1229,7 +1129,9 @@ const finalCtaSection = (
                         'text-lg text-gray-600 dark:text-gray-300 mb-8 max-w-xl',
                       ),
                     ],
-                    ['Describe your app. Let the runtime handle the rest.'],
+                    [
+                      'Scaffold an application, define the Model, and make the first state transition explicit.',
+                    ],
                   ),
                   ih.div(
                     [
@@ -1240,10 +1142,10 @@ const finalCtaSection = (
                     [
                       ih.a(
                         [
-                          ih.Href(coreArchitectureRouter()),
+                          ih.Href(gettingStartedRouter()),
                           ih.Class('cta-primary'),
                         ],
-                        ['Dive In', Icon.arrowRight('w-5 h-5')],
+                        ['Get started', Icon.arrowRight('w-5 h-5')],
                       ),
                       viewOnGitHubButton(maybeGitHubStarCount),
                     ],
