@@ -10,12 +10,22 @@ import * as Page from '../page'
 const readEquivalence = (page: BrowserPage) =>
   page.evaluate(() => {
     const select = document.querySelector('#equivalence-select')
+    const firstOption =
+      select instanceof HTMLSelectElement ? select.options.item(0) : null
+    const secondOption =
+      select instanceof HTMLSelectElement ? select.options.item(1) : null
     const pre = document.querySelector('#equivalence-pre')
     const textarea = document.querySelector('#equivalence-textarea')
     return {
+      firstDefaultSelected: firstOption?.defaultSelected ?? null,
+      firstHasSelected: firstOption?.hasAttribute('selected') ?? null,
+      firstSelected: firstOption?.selected ?? null,
       selectValue: select instanceof HTMLSelectElement ? select.value : null,
       selectedIndex:
         select instanceof HTMLSelectElement ? select.selectedIndex : null,
+      secondDefaultSelected: secondOption?.defaultSelected ?? null,
+      secondHasSelected: secondOption?.hasAttribute('selected') ?? null,
+      secondSelected: secondOption?.selected ?? null,
       preText: pre === null ? null : pre.textContent,
       textareaValue:
         textarea instanceof HTMLTextAreaElement ? textarea.value : null,
@@ -42,6 +52,21 @@ test.describe('ssr example', () => {
     // The select's own value owns the selection, not the later `selected`.
     expect(served.selectValue).toBe('a')
     expect(served.selectedIndex).toBe(0)
+    expect({
+      firstDefaultSelected: served.firstDefaultSelected,
+      firstHasSelected: served.firstHasSelected,
+      firstSelected: served.firstSelected,
+      secondDefaultSelected: served.secondDefaultSelected,
+      secondHasSelected: served.secondHasSelected,
+      secondSelected: served.secondSelected,
+    }).toEqual({
+      firstDefaultSelected: true,
+      firstHasSelected: true,
+      firstSelected: true,
+      secondDefaultSelected: false,
+      secondHasSelected: false,
+      secondSelected: false,
+    })
     // The leading newline survives the parser's strip on both sides.
     expect(served.preText).toBe('\nleading')
     expect(served.textareaValue).toBe('\nleading')

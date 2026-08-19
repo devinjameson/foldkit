@@ -223,6 +223,74 @@ const isControlledCurrentState = (
 
 const STALE_REFLECTED_PROPERTY = Symbol('foldkit/stale-reflected-property')
 
+type AdoptedSignature = Readonly<{ vnode: VNode; server: string }>
+type ControlledSelectState = Readonly<{
+  selectedIndex: number
+  value: string
+}>
+type HydrationStatus = {
+  isMismatchDetected: boolean
+  adoptedSignatures: Map<Element, AdoptedSignature>
+  controlledOptionSelection: Map<Element, boolean>
+  controlledSelectState: Map<Element, ControlledSelectState>
+}
+
+const NO_SELECTED_OPTION = -1
+
+// NOTE: a controlled select owns the effective state of every descendant
+// option. The serializer marks the first matching option, and the browser's
+// value setter does the same during a fresh render. Compare hydration against
+// that parent-owned state instead of each option's shadowed `selected` prop.
+const registerControlledSelectState = (
+  element: Element,
+  vnode: VNode,
+  status: HydrationStatus,
+): void => {
+  const properties = vnode.data?.props
+  const authoredValue = properties?.['value']
+  if (
+    !(element instanceof HTMLSelectElement) ||
+    typeof authoredValue !== 'string' ||
+    isClientOnlyProperty(properties, 'value')
+  ) {
+    return
+  }
+
+  const options = Array.from(element.options)
+  const selectedOption = options.find(option => option.value === authoredValue)
+  for (const option of options) {
+    status.controlledOptionSelection.set(option, option === selectedOption)
+  }
+  status.controlledSelectState.set(element, {
+    selectedIndex: selectedOption?.index ?? NO_SELECTED_OPTION,
+    value: selectedOption?.value ?? '',
+  })
+}
+
+const detectControlledSelectMismatch = (
+  element: Element,
+  status: HydrationStatus,
+): void => {
+  const selectState = status.controlledSelectState.get(element)
+  if (
+    selectState !== undefined &&
+    (Reflect.get(element, 'value') !== selectState.value ||
+      Reflect.get(element, 'selectedIndex') !== selectState.selectedIndex)
+  ) {
+    detectMismatch(status)
+  }
+
+  const isSelected = status.controlledOptionSelection.get(element)
+  if (isSelected !== undefined) {
+    if (
+      Reflect.get(element, 'selected') !== isSelected ||
+      Reflect.get(element, 'defaultSelected') !== isSelected
+    ) {
+      detectMismatch(status)
+    }
+  }
+}
+
 const seedReflectedProperties = (
   element: Element,
   vnode: VNode,
@@ -240,6 +308,13 @@ const seedReflectedProperties = (
     const authored = properties[name]
     const attributeName = reflectedAttributeName(name)
     if (attributeName === undefined) {
+      continue
+    }
+    const isOwnedByControlledSelect =
+      (name === 'value' && status.controlledSelectState.has(element)) ||
+      (name === 'selected' && status.controlledOptionSelection.has(element))
+    if (isOwnedByControlledSelect) {
+      seeded[name] = authored
       continue
     }
     const isEquivalent =
@@ -319,6 +394,7 @@ const seedAdoptedState = (
   status: HydrationStatus,
   isCustomElement: boolean,
 ): void => {
+  detectControlledSelectMismatch(element, status)
   const classOwnedByModule =
     vnode.data?.class !== undefined &&
     htmlAttributeValue(vnode.data?.attrs, 'class') === undefined
@@ -420,12 +496,6 @@ const seedAdoptedState = (
       server: __elementSignature(element, vnode),
     })
   }
-}
-
-type AdoptedSignature = Readonly<{ vnode: VNode; server: string }>
-type HydrationStatus = {
-  isMismatchDetected: boolean
-  adoptedSignatures: Map<Element, AdoptedSignature>
 }
 
 const detectMismatch = (status: HydrationStatus): void => {
@@ -684,6 +754,7 @@ const adoptElement = (
     return clonePreparedTree(replaceHydrationElement(element, vnode))
   }
   const clone = cloneOf(vnode, element)
+  registerControlledSelectState(element, vnode, status)
   // Strip the hydration markers the serializer stamped: they are internal to the
   // handoff, already verified by the parent's positional walk before this call,
   // and must not remain on the adopted element.
@@ -1016,6 +1087,8 @@ export const __hydrateVNode = (
   const status: HydrationStatus = {
     isMismatchDetected: false,
     adoptedSignatures: new Map(),
+    controlledOptionSelection: new Map(),
+    controlledSelectState: new Map(),
   }
 
   // The build token is checked again here, though the runtime has already

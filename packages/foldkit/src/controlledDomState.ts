@@ -74,13 +74,17 @@ export const synchronizeControlledDefault = (
     return
   }
   if (propertyName === 'value' && tagName === 'select') {
+    // NOTE: set the live selection before copying it into the defaults. Two
+    // options can share one value, so `select.value` may already equal the
+    // controlled value while a later child `selected` still owns the live
+    // selection. The value setter gives the first matching option ownership.
+    Reflect.set(element, 'value', value)
     for (const option of element.querySelectorAll('option')) {
       if (option.defaultSelected !== option.selected) {
         option.defaultSelected = option.selected
       }
       setBooleanDefaultAttribute(option, 'selected', option.selected)
     }
-    Reflect.set(element, 'value', value)
   }
 }
 

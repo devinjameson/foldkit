@@ -86,6 +86,23 @@ describe('__hydrateVNode', () => {
     return vnode.elm
   }
 
+  // NOTE: happy-dom reads the selected attribute into `option.selected` but
+  // does not initialize `defaultSelected` or `select.selectedIndex` the way a
+  // browser parser does. Complete that parser-derived state before testing
+  // hydration. The SSR Playwright suite covers the same path in Chromium.
+  const completeParsedSelectState = (select: HTMLSelectElement): void => {
+    const options = Array.from(select.options)
+    const selectedOption = options.find(option =>
+      option.hasAttribute('selected'),
+    )
+    for (const option of options) {
+      const isSelected = option === selectedOption
+      option.defaultSelected = isSelected
+      option.selected = isSelected
+    }
+    select.selectedIndex = selectedOption?.index ?? -1
+  }
+
   beforeEach(() => {
     dispatched = []
     host = document.createElement('div')
@@ -903,6 +920,277 @@ describe('__hydrateVNode', () => {
 
     expect(root.value).toBe('us')
     expect(root.querySelector('option[value="us"]')).toBe(serverOption)
+  })
+
+  it('adopts effective controlled selection without reporting a mismatch', () => {
+    const view = () =>
+      h.div(
+        [],
+        [
+          h.select(
+            [h.Value('a')],
+            [
+              h.option([h.Value('a')], ['A']),
+              h.option([h.Value('b'), h.Selected(true)], ['B']),
+            ],
+          ),
+        ],
+      )
+    const root = mountServerHtml(serializeHydratable(buildView(view)))
+    const select = root.querySelector('select')
+    const firstOption = root.querySelector('option[value="a"]')
+    const secondOption = root.querySelector('option[value="b"]')
+    if (!(select instanceof HTMLSelectElement)) {
+      throw new Error('expected a select')
+    }
+    if (!(firstOption instanceof HTMLOptionElement)) {
+      throw new Error('expected the first option')
+    }
+    if (!(secondOption instanceof HTMLOptionElement)) {
+      throw new Error('expected the second option')
+    }
+    completeParsedSelectState(select)
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    try {
+      const hydrated = buildView(() => hydrateVNode(root, view()))
+
+      expect(hydrated.elm).toBe(root)
+      expect(root.querySelector('select')).toBe(select)
+      expect(root.querySelector('option[value="a"]')).toBe(firstOption)
+      expect(root.querySelector('option[value="b"]')).toBe(secondOption)
+      expect({
+        firstDefaultSelected: firstOption.defaultSelected,
+        firstHasSelected: firstOption.hasAttribute('selected'),
+        firstSelected: firstOption.selected,
+        secondDefaultSelected: secondOption.defaultSelected,
+        secondHasSelected: secondOption.hasAttribute('selected'),
+        secondSelected: secondOption.selected,
+        selectedIndex: select.selectedIndex,
+        value: select.value,
+      }).toEqual({
+        firstDefaultSelected: true,
+        firstHasSelected: true,
+        firstSelected: true,
+        secondDefaultSelected: false,
+        secondHasSelected: false,
+        secondSelected: false,
+        selectedIndex: 0,
+        value: 'a',
+      })
+      expect(warnSpy).not.toHaveBeenCalled()
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
+  it('adopts controlled selection through an optgroup', () => {
+    const view = () =>
+      h.div(
+        [],
+        [
+          h.select(
+            [h.Value('a')],
+            [
+              h.optgroup(
+                [],
+                [
+                  h.option(
+                    [h.Id('first-a'), h.Value('a'), h.Selected(false)],
+                    ['First'],
+                  ),
+                  h.option(
+                    [h.Id('second-b'), h.Value('b'), h.Selected(true)],
+                    ['Second'],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      )
+    const root = mountServerHtml(serializeHydratable(buildView(view)))
+    const select = root.querySelector('select')
+    const firstOption = root.querySelector('#first-a')
+    const secondOption = root.querySelector('#second-b')
+    if (!(select instanceof HTMLSelectElement)) {
+      throw new Error('expected a select')
+    }
+    if (!(firstOption instanceof HTMLOptionElement)) {
+      throw new Error('expected the first option')
+    }
+    if (!(secondOption instanceof HTMLOptionElement)) {
+      throw new Error('expected the second option')
+    }
+    completeParsedSelectState(select)
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    try {
+      buildView(() => hydrateVNode(root, view()))
+
+      expect(root.querySelector('#first-a')).toBe(firstOption)
+      expect(root.querySelector('#second-b')).toBe(secondOption)
+      expect({
+        firstDefaultSelected: firstOption.defaultSelected,
+        firstSelected: firstOption.selected,
+        secondDefaultSelected: secondOption.defaultSelected,
+        secondSelected: secondOption.selected,
+        selectedIndex: select.selectedIndex,
+        value: select.value,
+      }).toEqual({
+        firstDefaultSelected: true,
+        firstSelected: true,
+        secondDefaultSelected: false,
+        secondSelected: false,
+        selectedIndex: 0,
+        value: 'a',
+      })
+      expect(warnSpy).not.toHaveBeenCalled()
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
+  it('adopts an allowed controlled value that matches no option', () => {
+    const view = () =>
+      h.select(
+        [h.Value('missing'), h.Multiple(true)],
+        [h.option([h.Value('a')], ['A'])],
+      )
+    const root = mountServerHtml(serializeHydratable(buildView(view)))
+    if (!(root instanceof HTMLSelectElement)) {
+      throw new Error('expected a select')
+    }
+    completeParsedSelectState(root)
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    try {
+      buildView(() => hydrateVNode(root, view()))
+
+      expect(root.value).toBe('')
+      expect(root.selectedIndex).toBe(-1)
+      expect(warnSpy).not.toHaveBeenCalled()
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
+  it('reports extra selected state beneath a controlled select', () => {
+    const view = () =>
+      h.div(
+        [],
+        [
+          h.select(
+            [h.Value('a'), h.Multiple(true)],
+            [
+              h.option([h.Value('a')], ['A']),
+              h.option([h.Value('b'), h.Selected(false)], ['B']),
+            ],
+          ),
+        ],
+      )
+    const root = mountServerHtml(serializeHydratable(buildView(view)))
+    const select = root.querySelector('select')
+    const firstOption = root.querySelector('option[value="a"]')
+    const secondOption = root.querySelector('option[value="b"]')
+    if (!(select instanceof HTMLSelectElement)) {
+      throw new Error('expected a select')
+    }
+    if (!(secondOption instanceof HTMLOptionElement)) {
+      throw new Error('expected the second option')
+    }
+    if (!(firstOption instanceof HTMLOptionElement)) {
+      throw new Error('expected the first option')
+    }
+    completeParsedSelectState(select)
+    secondOption.selected = true
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    try {
+      buildView(() => hydrateVNode(root, view()))
+
+      expect(select.value).toBe('a')
+      expect(select.selectedIndex).toBe(0)
+      expect(secondOption.selected).toBe(false)
+      expect(warnSpy).toHaveBeenCalledTimes(1)
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'The server DOM did not match the first client view during hydration',
+        ),
+      )
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
+  it('reports stale default selection beneath a controlled select', () => {
+    const view = () =>
+      h.div(
+        [],
+        [
+          h.select(
+            [h.Value('a')],
+            [h.option([h.Value('a')], ['A']), h.option([h.Value('b')], ['B'])],
+          ),
+        ],
+      )
+    const root = mountServerHtml(serializeHydratable(buildView(view)))
+    const select = root.querySelector('select')
+    const secondOption = root.querySelector('option[value="b"]')
+    if (!(select instanceof HTMLSelectElement)) {
+      throw new Error('expected a select')
+    }
+    if (!(secondOption instanceof HTMLOptionElement)) {
+      throw new Error('expected the second option')
+    }
+    completeParsedSelectState(select)
+    secondOption.defaultSelected = true
+    secondOption.selected = false
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    try {
+      buildView(() => hydrateVNode(root, view()))
+
+      expect(secondOption.defaultSelected).toBe(false)
+      expect(secondOption.selected).toBe(false)
+      expect(warnSpy).toHaveBeenCalledTimes(1)
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
+  it('still reports selected state owned by an uncontrolled select', () => {
+    const view = () =>
+      h.div(
+        [],
+        [
+          h.select(
+            [h.Multiple(true)],
+            [h.option([h.Value('a'), h.Selected(false)], ['A'])],
+          ),
+        ],
+      )
+    const root = mountServerHtml(serializeHydratable(buildView(view)))
+    const select = root.querySelector('select')
+    const option = root.querySelector('option')
+    if (!(select instanceof HTMLSelectElement)) {
+      throw new Error('expected a select')
+    }
+    if (!(option instanceof HTMLOptionElement)) {
+      throw new Error('expected an option')
+    }
+    completeParsedSelectState(select)
+    option.selected = true
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    try {
+      buildView(() => hydrateVNode(root, view()))
+
+      expect(option.selected).toBe(false)
+      expect(warnSpy).toHaveBeenCalledTimes(1)
+    } finally {
+      warnSpy.mockRestore()
+    }
   })
 
   it('keeps an adopted innerHTML subtree when the markup round-trips unchanged', () => {
