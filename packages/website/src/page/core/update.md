@@ -1,21 +1,19 @@
 # Update
 
-## Overview
+## One Function Defines Every Transition {#overview}
 
-The update function is the heart of your application logic. It’s a pure function that takes the current Model and a Message, and returns a new Model along with any Commands to execute.
+The update function receives the current Model and a Message, then returns the next Model and any Commands for the runtime to execute. It is the only place application state changes.
 
-In the [restaurant analogy](/core/architecture#the-restaurant-analogy), the update function is the waiter. Something happens (a customer flags them down, the kitchen rings the bell) and the waiter decides what to do next. Update the notebook, maybe write a slip for the kitchen. The waiter doesn’t cook the food or serve it directly. They take in what happened and decide on next steps.
+Update is pure. Given the same Model and Message, it returns the same result. It does not mutate state, call browser APIs, start timers, or make requests. That makes a transition direct to test: pass in the inputs and assert on the returned values.
 
-Pure means predictable: given the same Model and the same Message, update always returns the same result. No hidden state, no ambient mutation, no surprises. This makes every state transition easy to reason about and trivial to test: pass in a Model and a Message, assert on the output.
-
-Foldkit uses [Effect.Match](https://effect.website/docs/code-style/pattern-matching/) for exhaustive pattern matching on Messages. The TypeScript compiler will error if you forget to handle a Message type.
-
-Add a new Message to your app and forget to handle it here? The compiler tells you. No forgotten cases, no `default` branches silently swallowing new Messages (unless you explicitly opt into a catch-all).
+Use [Effect's `Match`](https://effect.website/docs/code-style/pattern-matching/) and `M.tagsExhaustive` to handle the Message union. If you add a Message and omit its branch, TypeScript reports the missing case. No `default` branch silently absorbs a new variant.
 
 ::Snippet{name="counterUpdate" label="update example"}
 
-Each branch builds the next Model with [evo](/best-practices/immutability#immutable-updates), which evolves the Model you already have instead of rebuilding it. Every field you name takes a function from its current value to its next one, and fields you leave out keep their existing references. The counter has a single field today, so there’s nothing else to carry, but the shape stays the same as the Model grows.
+Each branch describes one transition. `ClickedDecrement` and `ClickedIncrement` transform the current count. `ClickedReset` replaces it with zero. All three return an empty Commands array because this version of the counter has no side effects.
 
-Notice that update returns a tuple: the new Model and an array of Commands. Commands represent side effects: HTTP requests, timers, browser API calls. Each Command carries a name for tracing and testing. For the counter, the Commands array is always empty. But when we add a delayed reset on the [Commands](/core/commands) page, that will change.
+The branches build their next Model with [evo](/best-practices/immutability#immutable-updates). Each named field receives a function from its current value to its next value. Omitted fields keep their existing values and references, so the same update style continues to work as the Model grows.
 
-Before we get to side effects, there’s one more piece of the counter to understand: the view function, which turns your Model into what the user sees on screen.
+Update returns a tuple containing the next Model and an array of Commands. A Command describes one side effect, such as an HTTP request, timer, or browser API call. The [Commands](/core/commands) page adds a delayed reset and puts that second tuple element to work.
+
+First, the [view function](/core/view) completes the basic loop by turning the Model into what the user sees.
