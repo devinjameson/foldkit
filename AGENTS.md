@@ -161,6 +161,10 @@ A gate you just wrote is not evidence until you have watched it fail. Break the 
 
 If `pnpm typecheck`, `pnpm lint`, `pnpm build`, or the pre-push hook surfaces errors like `Cannot find module 'foldkit'`, `Cannot find module 'foldkit/html'`, or unexpected `Property X does not exist` against an Effect API, the workspace itself is out of sync. These are not pre-existing branch failures. Run `bash scripts/cloud-session-setup.sh` to reconcile. The SessionStart hook runs this automatically, so it's only relevant if dependencies drift mid-session.
 
+## GitHub CLI Authentication
+
+A sandboxed `gh auth status` result is not evidence that the saved GitHub credential is invalid. The sandbox may block the GitHub API request and `gh` can report that failure as an invalid token. When GitHub authentication matters, rerun `gh auth status` with network access, requesting escalation when the environment requires it. Apply the same retry to an important `gh` command that fails with a likely sandbox or network error. Only ask the user to run `gh auth login` after the network-enabled check also fails.
+
 ## Debugging Example Apps
 
 Apps in `examples/` ship with `@foldkit/devtools-mcp` wired up. When the Foldkit devtools MCP tools are available, reach for the `foldkit_*` tools before adding logs. See `packages/devtools-mcp/README.md` for setup.
