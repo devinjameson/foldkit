@@ -1,7 +1,6 @@
 import { clsx } from 'clsx'
 import { Match as M, Option, String as S } from 'effect'
 import { AsyncData } from 'foldkit'
-import type { Field } from 'foldkit/fieldValidation'
 import {
   Html,
   type HtmlBuilder,
@@ -12,11 +11,7 @@ import {
 import { pageNeighbors } from '../docsNav'
 import { Icon } from '../icon'
 import { Link } from '../link'
-import {
-  type EmailSubscriptionStatus,
-  type Model,
-  type TableOfContentsEntry,
-} from '../main'
+import { type Model, type TableOfContentsEntry } from '../main'
 import {
   ClickedOpenMobileMenu,
   GotApiReferenceMessage,
@@ -170,8 +165,6 @@ export const docsHeaderView = (model: Model, h: HtmlBuilder<Message>) =>
 // DOCS FOOTER
 
 export const docsFooterView = (
-  emailField: Field<string>,
-  emailSubscriptionStatus: EmailSubscriptionStatus,
   currentYear: number,
   h: HtmlBuilder<Message>,
 ): Html =>
@@ -190,26 +183,7 @@ export const docsFooterView = (
         [h.Class('text-sm text-gray-600 dark:text-gray-300 mb-4')],
         ['New releases, patterns, and the occasional deep dive.'],
       ),
-      M.value(emailSubscriptionStatus).pipe(
-        M.withReturnType<Html>(),
-        M.when('Succeeded', () =>
-          h.p(
-            [
-              h.AriaLive('polite'),
-              h.Class('text-accent-600 dark:text-accent-400 font-normal'),
-            ],
-            ['You’re in! Check your email for confirmation.'],
-          ),
-        ),
-        M.orElse(status =>
-          emailFormView(
-            emailField,
-            status,
-            'flex flex-col sm:flex-row gap-3 max-w-md',
-            h,
-          ),
-        ),
-      ),
+      emailFormView,
       h.hr([
         h.Class(
           'my-6 -mx-4 md:-mx-6 border-t border-gray-300 dark:border-gray-800',
@@ -1168,17 +1142,7 @@ export const docsView = (
                   ),
                 ],
               ),
-              h.div(
-                [PagefindIgnore],
-                [
-                  docsFooterView(
-                    model.emailField,
-                    model.emailSubscriptionStatus,
-                    model.currentYear,
-                    h,
-                  ),
-                ],
-              ),
+              h.div([PagefindIgnore], [docsFooterView(model.currentYear, h)]),
             ],
           ),
           Option.match(currentPageTableOfContents, {
