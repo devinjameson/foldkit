@@ -170,7 +170,7 @@ describe('proof pages', () => {
 
   test('commands table of contents', () => {
     expect(tocOf(commandsSource)).toEqual([
-      { level: 'h2', id: 'overview', text: 'Overview' },
+      { level: 'h2', id: 'overview', text: 'One-Shot Effects as Data' },
       { level: 'h2', id: 'anatomy-of-a-command', text: 'Anatomy of a Command' },
       { level: 'h2', id: 'testable-by-design', text: 'Testable by Design' },
       { level: 'h2', id: 'http-requests', text: 'HTTP Requests' },
