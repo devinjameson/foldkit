@@ -48,6 +48,9 @@ const ORIGIN = `http://127.0.0.1:${PORT}`
 const DOM_COMMIT_TIMEOUT_MS = 10_000
 
 const isSkipBuild = process.argv.includes('--skip-build')
+const isCriticalBrowserMatrix = process.argv.includes(
+  '--critical-browser-matrix',
+)
 
 class ConsumerCheckError extends Error {}
 
@@ -1112,6 +1115,7 @@ type TopLayerProbe = Readonly<{
   controlClicks: number
   documentInputs: number
   bodyKeyEvents: number
+  fieldValues: ReadonlyArray<string>
   modalNodesAreConnected: boolean
   openShadowIdentityIsIntact: boolean
   frameIdentityIsIntact: boolean
@@ -1181,7 +1185,10 @@ type PlaywrightPage = Readonly<{
     selector: string,
     options?: { force?: boolean; timeout?: number },
   ) => Promise<unknown>
-  keyboard: Readonly<{ press: (key: string) => Promise<void> }>
+  keyboard: Readonly<{
+    press: (key: string) => Promise<void>
+    type: (text: string) => Promise<void>
+  }>
   mouse: Readonly<{
     click: (x: number, y: number) => Promise<void>
   }>
@@ -1198,16 +1205,20 @@ type PlaywrightBrowserType = Readonly<{
   launch: (options: { executablePath?: string }) => Promise<PlaywrightBrowser>
 }>
 
+type Playwright = Readonly<{
+  chromium: PlaywrightBrowserType
+  firefox: PlaywrightBrowserType
+  webkit: PlaywrightBrowserType
+}>
+
 // Playwright is installed for the browser suites in `packages/examples-e2e`
 // rather than at the root, and it is CommonJS, so it is required from that
 // package rather than imported from here.
-const loadChromium = (): PlaywrightBrowserType => {
+const loadPlaywright = (): Playwright => {
   const requireFromE2e = createRequire(
     join(REPO_ROOT, 'packages/examples-e2e/package.json'),
   )
-  const playwright: Readonly<{ chromium: PlaywrightBrowserType }> =
-    requireFromE2e('playwright')
-  return playwright.chromium
+  return requireFromE2e('playwright')
 }
 
 const PROBE_SCRIPT = `(() => {
@@ -1328,6 +1339,7 @@ const TOP_LAYER_PROBE_SCRIPT = `(() => {
     controlClicks: probe.events.click,
     documentInputs: probe.events.documentInput,
     bodyKeyEvents: probe.events.bodyKey,
+    fieldValues: probe.fields.map(field => field.value),
     modalNodesAreConnected:
       probe.dialogs.every(dialog => dialog.isConnected) &&
       probe.fields.every(field => field.isConnected),
@@ -1432,9 +1444,25 @@ type PageReading = Readonly<{
   diagnostics: ReadonlyArray<string>
 }>
 
+type HydrationOutcome = 'Hydrated' | 'Refused'
+
+const waitForHydrationOutcome = async (
+  page: PlaywrightPage,
+  outcome: HydrationOutcome,
+): Promise<void> => {
+  const completion =
+    outcome === 'Hydrated'
+      ? `document.querySelector('[data-foldkit-app]') === null`
+      : `document.body.hasAttribute('data-foldkit-refused') && document.querySelector('[data-foldkit-refusal-shield]')?.open === true`
+  await page.waitForFunction(completion, undefined, {
+    timeout: DOM_COMMIT_TIMEOUT_MS,
+  })
+}
+
 const readPage = async (
   browser: PlaywrightBrowser,
   path: string,
+  outcome: HydrationOutcome,
 ): Promise<PageReading> => {
   const page = await browser.newPage()
   // Every console level, not only `error`. What matters is that an operator
@@ -1450,6 +1478,7 @@ const readPage = async (
     diagnostics.push(raised.message)
   })
   await page.goto(`${ORIGIN}${path}`, { waitUntil: 'networkidle' })
+  await waitForHydrationOutcome(page, outcome)
   return { probe: await page.evaluate<Probe>(PROBE_SCRIPT), diagnostics }
 }
 
@@ -1546,6 +1575,7 @@ const assertControlledDomTransitions = async (
 ): Promise<void> => {
   const page = await browser.newPage()
   await page.goto(`${ORIGIN}/same`, { waitUntil: 'networkidle' })
+  await waitForHydrationOutcome(page, 'Hydrated')
   const controlled = await page.evaluate<ControlledDomProbe>(
     CONTROLLED_DOM_PROBE_SCRIPT,
   )
@@ -1733,6 +1763,7 @@ const assertPageIsInert = async (
 ): Promise<void> => {
   const page = await browser.newPage()
   await page.goto(`${ORIGIN}${path}`, { waitUntil: 'networkidle' })
+  await waitForHydrationOutcome(page, 'Refused')
   const before = requestedPaths.length
 
   await page.click('#increment', { force: true, timeout: 2_000 })
@@ -1780,6 +1811,7 @@ const assertTopLayerIsContained = async (
 ): Promise<void> => {
   const page = await browser.newPage()
   await page.goto(`${ORIGIN}/modal`, { waitUntil: 'networkidle' })
+  await waitForHydrationOutcome(page, 'Refused')
   const requestsBeforeInteraction = requestedPaths.length
   const before = await page.evaluate<TopLayerProbe>(TOP_LAYER_PROBE_SCRIPT)
 
@@ -1827,15 +1859,14 @@ const assertTopLayerIsContained = async (
       return null
     })()`,
   )
+  await page.keyboard.type('stale input')
   await page.keyboard.press('Tab')
 
   const after = await page.evaluate<TopLayerProbe>(TOP_LAYER_PROBE_SCRIPT)
   assertConsumer(
-    after.shieldIsOpen &&
-      after.shieldIsVisible &&
-      after.shieldHasFocus &&
-      after.shieldCount === 1,
-    'Escape, backdrop input, or focus traversal dismissed the refusal shield.',
+    after.shieldIsOpen && after.shieldIsVisible && after.shieldCount === 1,
+    'Escape, backdrop input, or focus traversal dismissed the refusal shield: ' +
+      JSON.stringify(after),
   )
   assertConsumer(
     after.dialogsAreOpen && after.closeEvents === 0,
@@ -1851,6 +1882,11 @@ const assertTopLayerIsContained = async (
     after.bodyKeyEvents === 0,
     'keyboard input escaped the refusal shield and reached a stale body ' +
       `handler (${String(after.bodyKeyEvents)} events).`,
+  )
+  assertConsumer(
+    after.fieldValues.every(value => value === ''),
+    'keyboard input changed a stale same-document field: ' +
+      JSON.stringify(after.fieldValues),
   )
   assertConsumer(
     page.url() === `${ORIGIN}/modal`,
@@ -1875,6 +1911,184 @@ const assertTopLayerIsContained = async (
     '/modal: light/open/closed-shadow top layers covered without lifecycle ' +
       'or native interaction',
   )
+}
+
+const assertLifecycleIsContained = async (
+  browser: PlaywrightBrowser,
+  requestedPaths: ReadonlyArray<string>,
+): Promise<void> => {
+  const framesBefore = requestedPaths.filter(path => path === FRAME_PATH).length
+  const lifecycleReading = await readPage(browser, '/lifecycle', 'Refused')
+  const framesAfter = requestedPaths.filter(path => path === FRAME_PATH).length
+  assertConsumer(
+    lifecycleReading.probe.rootIsContained,
+    '/lifecycle left its page interactive.',
+  )
+  assertConsumer(
+    lifecycleReading.probe.customElementConnections === 1,
+    'containment reconnected an upgraded custom element ' +
+      `(${String(lifecycleReading.probe.customElementConnections)} ` +
+      'connections). Reparenting the served root disconnects and reconnects ' +
+      'everything inside it.',
+  )
+  assertConsumer(
+    framesAfter - framesBefore === 1,
+    `containment reloaded an embedded document (${String(framesAfter - framesBefore)} ` +
+      'requests for the frame, expected 1). Moving the root reloads every ' +
+      'browsing context inside it.',
+  )
+  assertConsumer(
+    lifecycleReading.probe.reconnectModalIsOpen === false,
+    'a custom element opened a modal from a second connection, which reaches ' +
+      'the top layer above an earlier refusal shield.',
+  )
+  assertConsumer(
+    lifecycleReading.probe.shieldIsVisible,
+    'the refusal shield was not visibly covering served content.',
+  )
+  await assertPageIsInert(browser, '/lifecycle', requestedPaths)
+  log('/lifecycle: nothing reconnected, reloaded, or took focus')
+}
+
+const assertCriticalSameBuild = (browserName: string, probe: Probe): void => {
+  assertConsumer(
+    probe.rootIsConnected && probe.fieldIsSameElement,
+    `${browserName}: agreeing hydration replaced the root or input.`,
+  )
+  assertConsumer(
+    probe.fieldValue === TYPED_VALUE,
+    `${browserName}: agreeing hydration lost the value typed before startup.`,
+  )
+  assertConsumer(
+    probe.adoptedFrameIsSameElement &&
+      probe.adoptedFrameLoads === 1 &&
+      probe.adoptedFrameDocumentIsSame,
+    `${browserName}: agreeing hydration replaced or reloaded its iframe.`,
+  )
+  assertConsumer(
+    probe.parserOwnedHostIsFresh &&
+      probe.parserOldHostIsDisconnected &&
+      probe.parserViewChildIsFresh &&
+      probe.parserComponentChildIsDisconnected &&
+      probe.parserServerChildIsDisconnected &&
+      probe.parserLiveTitleIsRestored &&
+      probe.parserAncestorTitleIsRestored &&
+      probe.parserEarlierSiblingTitleIsRestored &&
+      probe.parserEarlierSiblingTextIsRestored &&
+      probe.parserDisconnectMutationsAreIsolated &&
+      probe.parserRetainedMutationIsIsolated,
+    `${browserName}: a view-owned Custom Element was not rebuilt cleanly ` +
+      `during hydration: ${JSON.stringify(probe)}`,
+  )
+  assertConsumer(
+    probe.renderedCount === 'Count: 0' && !probe.rootIsContained,
+    `${browserName}: agreeing hydration did not start cleanly.`,
+  )
+}
+
+const assertCriticalControlledDomTransitions = async (
+  browserName: string,
+  browser: PlaywrightBrowser,
+): Promise<void> => {
+  const page = await browser.newPage()
+  await page.goto(`${ORIGIN}/same`, { waitUntil: 'networkidle' })
+  await waitForHydrationOutcome(page, 'Hydrated')
+  const controlled = await page.evaluate<ControlledDomProbe>(
+    CONTROLLED_DOM_PROBE_SCRIPT,
+  )
+  assertProbeValues(`${browserName} controlled hydration`, controlled, {
+    nodeIdentityIsIntact: true,
+    customInnerHtmlHostWasRebuilt: true,
+    customInnerHtmlWasRebuilt: true,
+    nativeInnerHtmlWasAdopted: true,
+    value: 'same',
+    defaultValue: 'same',
+    valueAttribute: 'same',
+    checked: true,
+    defaultChecked: true,
+    hasCheckedAttribute: true,
+    rawSelectValue: 'a',
+    rawSelectIndex: 0,
+    rawSelectFirstDefault: true,
+    rawSelectSecondDefault: false,
+    textareaValue: 'controlled',
+    textareaDefaultValue: 'controlled',
+    innerSelectValue: 'b',
+    innerSelectIndex: 1,
+  })
+
+  await releaseControlledDomOwnership(page)
+  const released = await page.evaluate<ControlledDomProbe>(
+    RELEASED_DOM_PROBE_SCRIPT,
+  )
+  assertProbeValues(`${browserName} released ownership`, released, {
+    nodeIdentityIsIntact: true,
+    customInnerHtmlHostWasRebuilt: true,
+    customInnerHtmlWasRebuilt: true,
+    nativeInnerHtmlWasAdopted: true,
+    value: '',
+    defaultValue: '',
+    valueAttribute: null,
+    checked: false,
+    defaultChecked: false,
+    hasCheckedAttribute: false,
+    rawSelectValue: 'b',
+    rawSelectIndex: 1,
+    rawSelectFirstDefault: false,
+    rawSelectSecondDefault: true,
+    textareaValue: 'textarea default',
+    textareaDefaultValue: 'textarea default',
+    innerSelectValue: 'a',
+    innerSelectIndex: 0,
+    valueAfterReset: '',
+    checkedAfterReset: false,
+  })
+}
+
+const runCriticalBrowserChecks = async (
+  browserName: string,
+  browserType: PlaywrightBrowserType,
+  requestedPaths: ReadonlyArray<string>,
+): Promise<void> => {
+  log(`Running the critical server-rendering checks in ${browserName}...`)
+  const browser = await browserType.launch({})
+  try {
+    const adoptedFramesBefore = requestedPaths.filter(
+      path => path === ADOPTED_FRAME_PATH,
+    ).length
+    const sameReading = await readPage(browser, '/same', 'Hydrated')
+    const adoptedFramesAfter = requestedPaths.filter(
+      path => path === ADOPTED_FRAME_PATH,
+    ).length
+    assertConsumer(
+      adoptedFramesAfter - adoptedFramesBefore === 1,
+      `${browserName}: agreeing hydration requested its iframe ` +
+        `${String(adoptedFramesAfter - adoptedFramesBefore)} times.`,
+    )
+    assertCriticalSameBuild(browserName, sameReading.probe)
+    await assertCriticalControlledDomTransitions(browserName, browser)
+
+    const staleReading = await readPage(browser, '/stale', 'Refused')
+    assertRefusesOtherBuild(staleReading)
+    await assertPageIsInert(browser, '/stale', requestedPaths)
+    await assertTopLayerIsContained(browser, requestedPaths)
+    await assertLifecycleIsContained(browser, requestedPaths)
+  } finally {
+    await browser.close()
+  }
+  log(`${browserName}: critical server-rendering checks agree`)
+}
+
+const runCriticalBrowserMatrix = async (
+  playwright: Playwright,
+  requestedPaths: ReadonlyArray<string>,
+): Promise<void> => {
+  for (const [browserName, browserType] of Object.entries({
+    Firefox: playwright.firefox,
+    WebKit: playwright.webkit,
+  })) {
+    await runCriticalBrowserChecks(browserName, browserType, requestedPaths)
+  }
 }
 
 // DRIVER
@@ -2190,138 +2404,107 @@ const main = async (): Promise<void> => {
         },
         requestedPaths,
       )
-      const chromium = loadChromium()
-      const executablePath = process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE']
-      const browser = await chromium.launch(
-        executablePath === undefined ? {} : { executablePath },
-      )
+      const playwright = loadPlaywright()
       try {
-        const adoptedFramesBefore = requestedPaths.filter(
-          path => path === ADOPTED_FRAME_PATH,
-        ).length
-        const sameReading = await readPage(browser, '/same')
-        const adoptedFramesAfter = requestedPaths.filter(
-          path => path === ADOPTED_FRAME_PATH,
-        ).length
-        assertConsumer(
-          adoptedFramesAfter - adoptedFramesBefore === 1,
-          `agreeing hydration requested its iframe ${String(adoptedFramesAfter - adoptedFramesBefore)} ` +
-            'times instead of once.',
+        const executablePath = process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE']
+        const browser = await playwright.chromium.launch(
+          executablePath === undefined ? {} : { executablePath },
         )
-        assertAdoptsSameBuild(sameReading.probe)
-        assertConsumer(
-          !sameReading.probe.rootIsContained,
-          'a page from this build was contained. Containment is for a handoff ' +
-            'this client refuses, and firing it on a good page would take a ' +
-            'working application out of reach.',
-        )
-        await assertControlledDomTransitions(browser)
-        assertRefusesOtherBuild(await readPage(browser, '/stale'))
-        await assertPageIsInert(browser, '/stale', requestedPaths)
+        try {
+          const adoptedFramesBefore = requestedPaths.filter(
+            path => path === ADOPTED_FRAME_PATH,
+          ).length
+          const sameReading = await readPage(browser, '/same', 'Hydrated')
+          const adoptedFramesAfter = requestedPaths.filter(
+            path => path === ADOPTED_FRAME_PATH,
+          ).length
+          assertConsumer(
+            adoptedFramesAfter - adoptedFramesBefore === 1,
+            `agreeing hydration requested its iframe ${String(adoptedFramesAfter - adoptedFramesBefore)} ` +
+              'times instead of once.',
+          )
+          assertAdoptsSameBuild(sameReading.probe)
+          assertConsumer(
+            !sameReading.probe.rootIsContained,
+            'a page from this build was contained. Containment is for a handoff ' +
+              'this client refuses, and firing it on a good page would take a ' +
+              'working application out of reach.',
+          )
+          await assertControlledDomTransitions(browser)
+          assertRefusesOtherBuild(await readPage(browser, '/stale', 'Refused'))
+          await assertPageIsInert(browser, '/stale', requestedPaths)
 
-        for (const [path, expected] of [
-          ['/no-flags', 'server Flags payload is missing'],
-          ['/duplicate-flags', 'multiple server Flags payloads'],
-          ['/malformed-flags', 'could not decode the server'],
-          ['/incompatible-flags', 'could not decode the server'],
-        ]) {
-          const reading = await readPage(browser, String(path))
+          for (const [path, expected] of [
+            ['/no-flags', 'server Flags payload is missing'],
+            ['/duplicate-flags', 'multiple server Flags payloads'],
+            ['/malformed-flags', 'could not decode the server'],
+            ['/incompatible-flags', 'could not decode the server'],
+          ]) {
+            const reading = await readPage(browser, String(path), 'Refused')
+            assertConsumer(
+              reading.diagnostics.some(message =>
+                message.includes(String(expected)),
+              ),
+              `${String(path)} produced no "${String(expected)}" diagnostic. ` +
+                `Saw: ${JSON.stringify(reading.diagnostics)}`,
+            )
+            assertConsumer(
+              reading.probe.rootIsContained,
+              `${String(path)} left its root interactive. A handoff that cannot ` +
+                'be read leaves the same live page behind that build skew does.',
+            )
+            await assertPageIsInert(browser, String(path), requestedPaths)
+            log(`${String(path)}: refused and contained`)
+          }
+
+          const modalFramesBefore = requestedPaths.filter(
+            path => path === FRAME_PATH,
+          ).length
+          await assertTopLayerIsContained(browser, requestedPaths)
+          const modalFramesAfter = requestedPaths.filter(
+            path => path === FRAME_PATH,
+          ).length
           assertConsumer(
-            reading.diagnostics.some(message =>
-              message.includes(String(expected)),
-            ),
-            `${String(path)} produced no "${String(expected)}" diagnostic. ` +
-              `Saw: ${JSON.stringify(reading.diagnostics)}`,
+            modalFramesAfter - modalFramesBefore === 1,
+            `containment reloaded the modal probe frame (${String(modalFramesAfter - modalFramesBefore)} ` +
+              'requests, expected 1).',
           )
-          assertConsumer(
-            reading.probe.rootIsContained,
-            `${String(path)} left its root interactive. A handoff that cannot ` +
-              'be read leaves the same live page behind that build skew does.',
-          )
-          await assertPageIsInert(browser, String(path), requestedPaths)
-          log(`${String(path)}: refused and contained`)
+
+          // Refusals that land while the container is being resolved, before
+          // `Runtime.hydrate` runs. The generated client has no handle to the root
+          // in any of them, and the page it leaves behind is as live as any other.
+          for (const [path, expected] of [
+            ['/no-stamp', 'Container is null'],
+            ['/duplicate-roots', 'more than one server-rendered root stamped'],
+            ['/ambiguous-roots', 'no container to disambiguate them'],
+          ]) {
+            const reading = await readPage(browser, String(path), 'Refused')
+            assertConsumer(
+              reading.diagnostics.some(message =>
+                message.includes(String(expected)),
+              ),
+              `${String(path)} produced no "${String(expected)}" diagnostic. ` +
+                `Saw: ${JSON.stringify(reading.diagnostics)}`,
+            )
+            assertConsumer(
+              reading.probe.rootIsContained,
+              `${String(path)} left its page interactive. A refusal that lands ` +
+                'before hydration leaves the same live markup behind as one that ' +
+                'lands after it.',
+            )
+            await assertPageIsInert(browser, String(path), requestedPaths)
+            log(`${String(path)}: refused and contained`)
+          }
+
+          await assertLifecycleIsContained(browser, requestedPaths)
+        } finally {
+          await browser.close()
         }
 
-        const modalFramesBefore = requestedPaths.filter(
-          path => path === FRAME_PATH,
-        ).length
-        await assertTopLayerIsContained(browser, requestedPaths)
-        const modalFramesAfter = requestedPaths.filter(
-          path => path === FRAME_PATH,
-        ).length
-        assertConsumer(
-          modalFramesAfter - modalFramesBefore === 1,
-          `containment reloaded the modal probe frame (${String(modalFramesAfter - modalFramesBefore)} ` +
-            'requests, expected 1).',
-        )
-
-        // Refusals that land while the container is being resolved, before
-        // `Runtime.hydrate` runs. The generated client has no handle to the root
-        // in any of them, and the page it leaves behind is as live as any other.
-        for (const [path, expected] of [
-          ['/no-stamp', 'Container is null'],
-          ['/duplicate-roots', 'more than one server-rendered root stamped'],
-          ['/ambiguous-roots', 'no container to disambiguate them'],
-        ]) {
-          const reading = await readPage(browser, String(path))
-          assertConsumer(
-            reading.diagnostics.some(message =>
-              message.includes(String(expected)),
-            ),
-            `${String(path)} produced no "${String(expected)}" diagnostic. ` +
-              `Saw: ${JSON.stringify(reading.diagnostics)}`,
-          )
-          assertConsumer(
-            reading.probe.rootIsContained,
-            `${String(path)} left its page interactive. A refusal that lands ` +
-              'before hydration leaves the same live markup behind as one that ' +
-              'lands after it.',
-          )
-          await assertPageIsInert(browser, String(path), requestedPaths)
-          log(`${String(path)}: refused and contained`)
+        if (isCriticalBrowserMatrix) {
+          await runCriticalBrowserMatrix(playwright, requestedPaths)
         }
-
-        // Containment must mark the page, not move it. Reparenting the root
-        // reconnects every custom element in the subtree and reloads every
-        // frame, and the second connection could run stale author code during
-        // refusal.
-        const framesBefore = requestedPaths.filter(
-          path => path === FRAME_PATH,
-        ).length
-        const lifecycleReading = await readPage(browser, '/lifecycle')
-        const framesAfter = requestedPaths.filter(
-          path => path === FRAME_PATH,
-        ).length
-        assertConsumer(
-          lifecycleReading.probe.rootIsContained,
-          '/lifecycle left its page interactive.',
-        )
-        assertConsumer(
-          lifecycleReading.probe.customElementConnections === 1,
-          'containment reconnected an upgraded custom element ' +
-            `(${String(lifecycleReading.probe.customElementConnections)} ` +
-            'connections). Reparenting the served root disconnects and ' +
-            'reconnects everything inside it.',
-        )
-        assertConsumer(
-          framesAfter - framesBefore === 1,
-          `containment reloaded an embedded document (${String(framesAfter - framesBefore)} ` +
-            'requests for the frame, expected 1). Moving the root reloads every ' +
-            'browsing context inside it.',
-        )
-        assertConsumer(
-          lifecycleReading.probe.reconnectModalIsOpen === false,
-          'a custom element opened a modal from a second connection, which ' +
-            'reaches the top layer above an earlier refusal shield.',
-        )
-        assertConsumer(
-          lifecycleReading.probe.shieldIsVisible,
-          'the refusal shield was not visibly covering served content.',
-        )
-        await assertPageIsInert(browser, '/lifecycle', requestedPaths)
-        log('/lifecycle: nothing reconnected, reloaded, or took focus')
       } finally {
-        await browser.close()
         server.close()
       }
     })

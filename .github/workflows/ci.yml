@@ -125,10 +125,12 @@ jobs:
       # A Foldkit installed from a tarball is externalized from a server build,
       # where the plugin's compile-time define never reaches it. Nothing inside
       # this workspace has that shape, so the build id contract is only
-      # observable from a project built outside it.
-      - name: Install Playwright chromium for the packed consumer gate
+      # observable from a project built outside it. Chromium runs the complete
+      # gate; Firefox and WebKit reuse its builds for the browser-sensitive
+      # hydration, form, Custom Element, and refusal checks.
+      - name: Install Playwright browsers for the packed consumer gate
         if: steps.scope.outputs.packed_ssr_consumer == 'true'
-        run: pnpm --filter @foldkit/examples-e2e exec playwright install --with-deps chromium
+        run: pnpm --filter @foldkit/examples-e2e exec playwright install --with-deps chromium firefox webkit
 
       - name: Check packed SSR consumer
         if: steps.scope.outputs.packed_ssr_consumer == 'true'

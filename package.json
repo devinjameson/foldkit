@@ -24,7 +24,7 @@
     "check:create-foldkit-app-smoke": "tsx scripts/check-create-foldkit-app-smoke.ts",
     "check:create-foldkit-app-smoke:ci": "tsx scripts/check-create-foldkit-app-smoke.ts --skip-build",
     "check:packed-ssr-consumer": "tsx scripts/check-packed-ssr-consumer.ts",
-    "check:packed-ssr-consumer:ci": "tsx scripts/check-packed-ssr-consumer.ts --skip-build",
+    "check:packed-ssr-consumer:ci": "tsx scripts/check-packed-ssr-consumer.ts --skip-build --critical-browser-matrix",
     "check:scaffold-server-rendering": "tsx scripts/check-scaffold-server-rendering.ts",
     "check:scaffold-server-rendering:ci": "tsx scripts/check-scaffold-server-rendering.ts --skip-build",
     "check:host-parity": "tsx scripts/check-host-parity.ts",
