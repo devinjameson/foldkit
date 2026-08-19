@@ -6,6 +6,7 @@ import {
   Option,
   Predicate,
   Schema,
+  String,
   pipe,
 } from 'effect'
 import type { DefaultTreeAdapterMap } from 'parse5'
@@ -1410,13 +1411,15 @@ export function renderToString(
     // builds of one deployment or be shared by two that render differently.
     // Refusing is the only honest answer, and it names what to supply.
     const configuredBuildId = options?.buildId
-    if (
-      isHydratable &&
-      (configuredBuildId === undefined || configuredBuildId === '')
-    ) {
+    const isConfiguredBuildId =
+      Predicate.isString(configuredBuildId) &&
+      !String.isEmpty(configuredBuildId)
+
+    if (isHydratable && !isConfiguredBuildId) {
       return yield* Effect.fail(new MissingBuildId())
     }
-    const buildId = configuredBuildId ?? ''
+
+    const buildId = isConfiguredBuildId ? configuredBuildId : ''
 
     const url = hasRouting ? yield* parseUrl(options?.url ?? '') : undefined
 

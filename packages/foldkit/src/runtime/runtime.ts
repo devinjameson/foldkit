@@ -696,10 +696,10 @@ const assertRuntimeIdsAreUnique = (
 // exact case the id exists to refuse.
 const buildSkew = (
   root: HTMLElement,
-  buildId: string | undefined,
+  buildId: unknown,
   runtimeId: string,
 ): Error | undefined => {
-  if (buildId === undefined || buildId === '') {
+  if (!Predicate.isString(buildId) || buildId === '') {
     return new Error(
       '[foldkit] Runtime.hydrate was given no build id. Hydration compares ' +
         'the id the server stamped on the root with this client’s own before ' +
@@ -4423,7 +4423,7 @@ export const hydrate = <P extends Ports | undefined, Flags, Resources>(
   program: MakeRuntimeReturn<P, Flags, Resources, 'Application'>,
   options: HydrateOptions,
 ): void => {
-  startProgram(program, 'Hydrate', undefined, options.buildId)
+  startProgram(program, 'Hydrate', undefined, options?.buildId)
 }
 
 const buildPortHandles = <P extends Ports | undefined>(

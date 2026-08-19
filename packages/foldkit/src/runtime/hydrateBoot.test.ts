@@ -71,6 +71,21 @@ const makeClientApplication = () =>
     container: nullContainer(),
   })
 
+const hydrateUnchecked = (
+  application: ReturnType<typeof makeClientApplication>,
+  optionsArguments: ReadonlyArray<unknown>,
+): void => {
+  Reflect.apply(hydrate, undefined, [application, ...optionsArguments])
+}
+
+/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+const startHydrationUnchecked = (
+  application: ReturnType<typeof makeClientApplication>,
+  buildId: any,
+): Effect.Effect<void> =>
+  /* eslint-disable-next-line @typescript-eslint/no-unsafe-argument */
+  __startProgram(application, undefined, 'Hydrate', undefined, buildId)
+
 const awaitBodyText = (text: string): Promise<void> =>
   vi.waitFor(() => {
     expect(document.body.textContent).toContain(text)
@@ -731,6 +746,78 @@ describe('hydrating boot', () => {
     expect(document.body.hasAttribute('data-foldkit-refused')).toBe(false)
     expect(document.querySelector('[data-foldkit-refusal-shield]')).toBeNull()
   }
+
+  it.each([
+    { name: 'omitted options', optionsArguments: [] },
+    { name: 'undefined options', optionsArguments: [undefined] },
+    { name: 'null options', optionsArguments: [null] },
+  ])(
+    'contains the page when a JavaScript caller supplies $name',
+    async ({ optionsArguments }) => {
+      await renderServerPage({ start: 5 })
+      const servedRoot = document.querySelector('[data-foldkit-app]')
+      const application = makeClientApplication()
+      const runtimeLog = vi.spyOn(console, 'log').mockImplementation(() => {})
+      const hmrWarning = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      try {
+        expect(() =>
+          hydrateUnchecked(application, optionsArguments),
+        ).not.toThrow()
+        await vi.waitFor(() => expectContained(servedRoot))
+      } finally {
+        runtimeLog.mockRestore()
+        hmrWarning.mockRestore()
+      }
+    },
+  )
+
+  it.each([
+    { name: 'null', buildId: null },
+    { name: 'a number', buildId: 0 },
+    { name: 'a boolean', buildId: false },
+    { name: 'an object', buildId: {} },
+  ])('refuses $name as a JavaScript build id', async ({ buildId }) => {
+    await renderServerPage({ start: 5 })
+    const servedRoot = document.querySelector('[data-foldkit-app]')
+    const application = makeClientApplication()
+
+    await expect(
+      Effect.runPromise(startHydrationUnchecked(application, buildId)),
+    ).rejects.toThrow('was given no build id')
+    expectContained(servedRoot)
+  })
+
+  it('refuses a null build id before adopting an unstamped root', async () => {
+    await renderServerPage({ start: 5 })
+    const servedRoot = document.querySelector('[data-foldkit-app]')
+    servedRoot?.removeAttribute('data-foldkit-build')
+    const initAttempts: Array<number> = []
+    const application = makeApplication({
+      Model,
+      Flags,
+      init: (
+        flags: Flags,
+      ): readonly [Model, ReadonlyArray<Command<Message>>] => {
+        initAttempts.push(flags.start)
+        throw new Error('the invalid handoff reached init')
+      },
+      update,
+      view,
+      container: nullContainer(),
+    })
+    const runtimeLog = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const hmrWarning = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    try {
+      hydrateUnchecked(application, [{ buildId: null }])
+      await vi.waitFor(() => expectContained(servedRoot))
+      expect(initAttempts).toEqual([])
+    } finally {
+      runtimeLog.mockRestore()
+      hmrWarning.mockRestore()
+    }
+  })
 
   it('takes a rejected page out of reach before stopping', async () => {
     // Refusing to adopt keeps this build's code off the page, but the markup is
