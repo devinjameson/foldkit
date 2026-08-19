@@ -2476,7 +2476,7 @@ const main = async (): Promise<void> => {
           for (const [path, expected] of [
             ['/no-stamp', 'Container is null'],
             ['/duplicate-roots', 'more than one server-rendered root stamped'],
-            ['/ambiguous-roots', 'no container to disambiguate them'],
+            ['/ambiguous-roots', 'more than one page-owning application'],
           ]) {
             const reading = await readPage(browser, String(path), 'Refused')
             assertConsumer(

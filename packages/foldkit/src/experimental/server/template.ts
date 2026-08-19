@@ -708,7 +708,11 @@ export type InjectIntoTemplateOptions = Readonly<{
  * top-level JSON Flags script. Static output may contain one element, text, or
  * comment root, or no body output. The helper rejects additional top-level
  * content, ambiguous handoff markers, and source that the HTML parser drops,
- * splits, moves, or reconstructs before insertion.
+ * splits, moves, or reconstructs before insertion. It also refuses to place a
+ * hydratable application in a template that already contains one. Static body
+ * output may be inserted beside a hydratable application because no runtime
+ * adopts it. Each insertion still applies that render's `Document` head
+ * fields.
  *
  * This helper is pure with no module state, so a host process may import it
  * directly even when the render itself must stay inside the server entry's
@@ -741,7 +745,7 @@ export const injectIntoTemplate = (
   if (containers.length > 1) {
     throw new Error(
       `[foldkit] injectIntoTemplate found more than one <div id="${containerId}"></div> placeholder in the template. ` +
-        'Keep exactly one placeholder for each application root.',
+        'Keep exactly one placeholder with that id.',
     )
   }
 
@@ -769,8 +773,21 @@ export const injectIntoTemplate = (
           'that id. A runtime id names one application for the whole page: it ' +
           'pairs a root with its Flags payload and keys the Model and scroll ' +
           'position hot reloading preserves, so two roots sharing one would ' +
-          "take each other's state. Give each application its own " +
-          '`runtimeId` when rendering.',
+          "take each other's state. Remove the duplicate root. Foldkit " +
+          'supports one page-owning hydratable application per document.',
+      )
+    }
+    const existingApplications = collectMatching(
+      document,
+      element => attributeValue(element, FOLDKIT_APP_ATTRIBUTE) !== undefined,
+    )
+    if (existingApplications.length > 0) {
+      throw new Error(
+        '[foldkit] injectIntoTemplate is placing a hydratable application, ' +
+          'but the page already holds a server-rendered application. Foldkit ' +
+          'supports one page-owning application per document because each ' +
+          'application owns the document metadata and installs document-wide ' +
+          'navigation listeners. Render one application per page.',
       )
     }
     const existingFlags = collectMatching(

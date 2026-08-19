@@ -83,6 +83,9 @@ const resetRootAttributes = (): void => {
 
 afterEach(() => {
   document.body.innerHTML = ''
+  document.head
+    .querySelectorAll('[data-foldkit-app]')
+    .forEach(root => root.remove())
   document
     .querySelectorAll('[data-foldkit-refusal-shield]')
     .forEach(shield => shield.remove())
@@ -345,28 +348,27 @@ describe('hydrating boot', () => {
     }
   })
 
-  it('fails hydration on an unstamped container without adopting another app root', async () => {
+  it('contains a server-rendered page when the container is outside its root', async () => {
     await renderServerPage({ start: 5 })
     const serverRoot = document.querySelector('[data-foldkit-app]')
     const widgetContainer = document.createElement('div')
     widgetContainer.id = 'widget'
     document.body.appendChild(widgetContainer)
 
-    const widget = makeApplication({
-      Model,
-      Flags,
-      init,
-      update,
-      view,
-      container: document.getElementById('widget'),
-    })
-
-    await expect(
-      Effect.runPromise(__startProgram(widget, undefined, 'Hydrate')),
-    ).rejects.toThrow('could not find a server-rendered root')
+    expect(() =>
+      makeApplication({
+        Model,
+        Flags,
+        init,
+        update,
+        view,
+        container: document.getElementById('widget'),
+      }),
+    ).toThrow("container outside the document's server-rendered application")
     expect(serverRoot?.isConnected).toBe(true)
     expect(serverRoot?.textContent).toContain('5')
     expect(serverRoot?.hasAttribute('data-foldkit-app')).toBe(true)
+    expectContained(serverRoot)
   })
 
   it('hydrates the stamped root when the container id resolves to a rendered descendant', async () => {
@@ -417,7 +419,7 @@ describe('hydrating boot', () => {
     }
   })
 
-  it('does not adopt an outer app root from an unstamped container in a multi-rooted page', async () => {
+  it('refuses a multi-rooted page before resolving an unstamped container', async () => {
     await renderServerPage({ start: 5 })
     const ownRoot = document.querySelector('[data-foldkit-app]')
     const otherRoot = document.createElement('div')
@@ -427,22 +429,19 @@ describe('hydrating boot', () => {
     otherRoot.appendChild(nested)
     document.body.appendChild(otherRoot)
 
-    const application = makeApplication({
-      Model,
-      Flags,
-      init,
-      update,
-      view,
-      container: document.getElementById('nested'),
-    })
-
-    await expect(
-      Effect.runPromise(
-        __startProgram(application, undefined, 'Hydrate', undefined, BUILD_ID),
-      ),
-    ).rejects.toThrow('could not find a server-rendered root')
+    expect(() =>
+      makeApplication({
+        Model,
+        Flags,
+        init,
+        update,
+        view,
+        container: document.getElementById('nested'),
+      }),
+    ).toThrow('more than one page-owning application')
     expect(ownRoot?.isConnected).toBe(true)
     expect(otherRoot.getAttribute('data-foldkit-app')).toBe('other')
+    expectContained(ownRoot)
   })
 
   it('throws when two stamped roots share a runtime id', async () => {
@@ -474,10 +473,8 @@ describe('hydrating boot', () => {
     ).toThrow(/more than one server-rendered root stamped "app"/)
   })
 
-  it('accepts two stamped roots with distinct runtime ids', () => {
-    document.body.innerHTML =
-      '<div data-foldkit-app="alpha" id="alpha"></div>' +
-      '<div data-foldkit-app="beta" id="beta"></div>'
+  it('accepts one stamped root with a nondefault runtime id', () => {
+    document.body.innerHTML = '<div data-foldkit-app="alpha" id="alpha"></div>'
 
     const application = makeApplication({
       Model,
@@ -490,38 +487,17 @@ describe('hydrating boot', () => {
     expect(application.runtimeId).toBe('alpha')
   })
 
-  it('pairs each stamped root with its own Flags payload', async () => {
-    // What distinct ids buy is the pairing: a root reads the payload stamped
-    // with its own id and not the other's. They do not make two hydrated
-    // applications independent, which is why that is unsupported: both own the
-    // document's metadata and its navigation listeners.
-    const alpha = await Effect.runPromise(
-      renderToString(serverConfig, {
-        flags: { start: 1 },
-        buildId: BUILD_ID,
-        runtimeId: 'alpha',
-      }),
-    )
-    const beta = await Effect.runPromise(
+  it('pairs a nondefault runtime id with its Flags payload', async () => {
+    const rendered = await Effect.runPromise(
       renderToString(serverConfig, {
         flags: { start: 7 },
         buildId: BUILD_ID,
         runtimeId: 'beta',
       }),
     )
-    document.body.innerHTML = `${alpha.html}${beta.html}`
-
-    const alphaRoot = document.querySelector('[data-foldkit-app="alpha"]')
+    document.body.innerHTML = rendered.html
     const betaRoot = document.querySelector('[data-foldkit-app="beta"]')
 
-    const alphaApplication = makeApplication({
-      Model,
-      Flags,
-      init,
-      update,
-      view,
-      container: document.querySelector('[data-foldkit-app="alpha"]'),
-    })
     const betaApplication = makeApplication({
       Model,
       Flags,
@@ -531,18 +507,8 @@ describe('hydrating boot', () => {
       container: document.querySelector('[data-foldkit-app="beta"]'),
     })
 
-    expect(alphaApplication.runtimeId).toBe('alpha')
     expect(betaApplication.runtimeId).toBe('beta')
 
-    const alphaFiber = Effect.runFork(
-      __startProgram(
-        alphaApplication,
-        undefined,
-        'Hydrate',
-        undefined,
-        BUILD_ID,
-      ),
-    )
     const betaFiber = Effect.runFork(
       __startProgram(
         betaApplication,
@@ -555,28 +521,22 @@ describe('hydrating boot', () => {
 
     try {
       await vi.waitFor(() => {
-        expect(alphaRoot?.textContent).toContain('1')
         expect(betaRoot?.textContent).toContain('7')
       })
-      // Each adopted its own root rather than replacing the other's. Document
-      // metadata and navigation are not divided between them, so nothing here
-      // asserts that they are.
-      expect(alphaRoot?.isConnected).toBe(true)
       expect(betaRoot?.isConnected).toBe(true)
     } finally {
-      await Effect.runPromise(Fiber.interrupt(alphaFiber))
       await Effect.runPromise(Fiber.interrupt(betaFiber))
     }
   })
 
-  it('throws when multiple stamped roots exist and no container disambiguates', async () => {
+  it('throws when multiple stamped roots exist', async () => {
     await renderServerPage({ start: 5 })
     const secondRoot = document.createElement('div')
     secondRoot.setAttribute('data-foldkit-app', 'other')
     document.body.appendChild(secondRoot)
 
     expect(() => makeClientApplication()).toThrow(
-      'multiple server-rendered roots',
+      'more than one page-owning application',
     )
   })
 
@@ -1076,7 +1036,172 @@ describe('hydrating boot', () => {
         view,
         container: nullContainer(),
       }),
-    ).toThrow('no container to disambiguate them')
+    ).toThrow('more than one page-owning application')
+
+    expectContained(servedRoot)
+  })
+
+  it('contains the page when an explicit container selects one of two roots', async () => {
+    await renderServerPage({ start: 5 })
+    const servedRoot = document.querySelector<HTMLElement>('[data-foldkit-app]')
+    if (servedRoot === null) {
+      throw new Error('expected a served root')
+    }
+    const other = servedRoot.cloneNode(true)
+    if (other instanceof Element) {
+      other.setAttribute('data-foldkit-app', 'other-application')
+    }
+    document.body.appendChild(other)
+
+    expect(() =>
+      makeApplication({
+        Model,
+        Flags,
+        init,
+        update,
+        view,
+        container: servedRoot,
+      }),
+    ).toThrow('more than one page-owning application')
+
+    expectContained(servedRoot)
+  })
+
+  it('contains the page when the root stamp is empty', async () => {
+    await renderServerPage({ start: 5 })
+    const servedRoot = document.querySelector<HTMLElement>('[data-foldkit-app]')
+    servedRoot?.setAttribute('data-foldkit-app', '')
+
+    expect(() =>
+      makeApplication({
+        Model,
+        Flags,
+        init,
+        update,
+        view,
+        container: servedRoot,
+      }),
+    ).toThrow('nonempty runtime id')
+
+    expectContained(servedRoot)
+  })
+
+  it('contains the page when its stamped root is inside a shadow tree', async () => {
+    await renderServerPage({ start: 5 })
+    const servedRoot = document.querySelector<HTMLElement>('[data-foldkit-app]')
+    if (servedRoot === null) {
+      throw new Error('expected a served root')
+    }
+    const host = document.createElement('div')
+    const shadowRoot = host.attachShadow({ mode: 'open' })
+    document.body.appendChild(host)
+    shadowRoot.appendChild(servedRoot)
+
+    expect(() =>
+      makeApplication({
+        Model,
+        Flags,
+        init,
+        update,
+        view,
+        container: servedRoot,
+      }),
+    ).toThrow('document light DOM')
+
+    expectContained(servedRoot)
+  })
+
+  it('contains the page when an unstamped container is under a shadow-tree root', async () => {
+    await renderServerPage({ start: 5 })
+    const servedRoot = document.querySelector<HTMLElement>('[data-foldkit-app]')
+    const container = servedRoot?.querySelector<HTMLElement>('#count')
+    if (servedRoot === null || container == null) {
+      throw new Error('expected a served root and descendant')
+    }
+    const host = document.createElement('div')
+    const shadowRoot = host.attachShadow({ mode: 'closed' })
+    document.body.appendChild(host)
+    shadowRoot.appendChild(servedRoot)
+
+    expect(() =>
+      makeApplication({ Model, Flags, init, update, view, container }),
+    ).toThrow('stamped root outside the document body light DOM')
+
+    expectContained(servedRoot)
+  })
+
+  it('contains the document when an unstamped container is under a detached root', async () => {
+    await renderServerPage({ start: 5 })
+    const servedRoot = document.querySelector<HTMLElement>('[data-foldkit-app]')
+    const container = servedRoot?.querySelector<HTMLElement>('#count')
+    if (servedRoot === null || container == null) {
+      throw new Error('expected a served root and descendant')
+    }
+    servedRoot.remove()
+
+    expect(() =>
+      makeApplication({ Model, Flags, init, update, view, container }),
+    ).toThrow('stamped root outside the document body light DOM')
+
+    expect(servedRoot.isConnected).toBe(false)
+    expectContained(null)
+  })
+
+  it('contains a foreign document when its stamped root owns the container', async () => {
+    await renderServerPage({ start: 5 })
+    const servedRoot = document.querySelector<HTMLElement>('[data-foldkit-app]')
+    if (servedRoot === null) {
+      throw new Error('expected a served root')
+    }
+    const otherDocument = document.implementation.createHTMLDocument('other')
+    const adoptedRoot = otherDocument.adoptNode(servedRoot)
+    otherDocument.body.appendChild(adoptedRoot)
+    const container = adoptedRoot.querySelector<HTMLElement>('#count')
+    if (container === null) {
+      throw new Error('expected a served descendant')
+    }
+
+    const showModal = vi
+      .spyOn(HTMLDialogElement.prototype, 'showModal')
+      .mockImplementation(() => {
+        throw new DOMException('The document is not fully active')
+      })
+    try {
+      expect(() =>
+        makeApplication({ Model, Flags, init, update, view, container }),
+      ).toThrow('another document')
+    } finally {
+      showModal.mockRestore()
+    }
+
+    expect(adoptedRoot.isConnected).toBe(true)
+    expect(otherDocument.body.hasAttribute('inert')).toBe(true)
+    expect(otherDocument.body.getAttribute('aria-hidden')).toBe('true')
+    expect(otherDocument.body.hasAttribute('data-foldkit-refused')).toBe(true)
+    const shield = otherDocument.querySelector<HTMLDialogElement>(
+      ':root > dialog[data-foldkit-refusal-shield]',
+    )
+    expect(shield?.open).toBe(true)
+  })
+
+  it('contains the page when its stamped root is outside the body', async () => {
+    await renderServerPage({ start: 5 })
+    const servedRoot = document.querySelector<HTMLElement>('[data-foldkit-app]')
+    if (servedRoot === null) {
+      throw new Error('expected a served root')
+    }
+    document.head.appendChild(servedRoot)
+
+    expect(() =>
+      makeApplication({
+        Model,
+        Flags,
+        init,
+        update,
+        view,
+        container: servedRoot,
+      }),
+    ).toThrow('outside the document body')
 
     expectContained(servedRoot)
   })
