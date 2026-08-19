@@ -1,5 +1,15 @@
 # foldkit
 
+## 0.148.1
+
+### Patch Changes
+
+- 1ecb97e: Block keyboard input from reaching same-document stale handlers when WebKit lets an older modal reclaim focus during hydration refusal.
+- febdb54: Validate deployment build ids at the JavaScript boundary so missing or non-string client and server values refuse the handoff instead of throwing natively or adopting unstamped HTML.
+- 3d8d80b: Preserve raw style attributes when an element moves from typed style ownership to `h.Attribute('style', ...)`, including hydration updates, CSS shorthands, and custom properties.
+- 21347b7: Preserve tokens from `h.Class` when a raw `class` attribute changes, and keep raw class tokens when typed ownership changes.
+- 3657b1b: Reject `NaN` element keys in hydratable server output because they cannot identify the same element across renders. Hydration key and view-identity markers are now documented as public, non-cryptographic fingerprints rather than one-way digests.
+
 ## 0.148.0
 
 ### Minor Changes
