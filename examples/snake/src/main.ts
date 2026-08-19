@@ -3,6 +3,7 @@ import {
   Duration,
   Effect,
   Match as M,
+  Option,
   Schema as S,
   Stream,
   pipe,
@@ -270,13 +271,12 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
   ),
 
   keyboard: Subscription.persistent(
-    Stream.fromEventListener<KeyboardEvent>(document, 'keydown').pipe(
-      Stream.mapEffect(keyboardEvent =>
-        Effect.sync(() => keyboardEvent.preventDefault()).pipe(
-          Effect.as(PressedKey({ key: keyboardEvent.key })),
-        ),
-      ),
-    ),
+    Subscription.fromEventPreventDefault<KeyboardEvent, Message>({
+      target: document,
+      type: 'keydown',
+      toMessage: keyboardEvent =>
+        Option.some(PressedKey({ key: keyboardEvent.key })),
+    }),
   ),
 }))
 

@@ -19,6 +19,7 @@ import { noHandRolledCommandStruct } from './rules/no-hand-rolled-command-struct
 import { noHardcodedRouteStrings } from './rules/no-hardcoded-route-strings.ts'
 import { noModuleLevelMutableState } from './rules/no-module-level-mutable-state.ts'
 import { noNoopMessage } from './rules/no-noop-message.ts'
+import { noPreventDefaultInStreamOperator } from './rules/no-prevent-default-in-stream-operator.ts'
 import { noRawDomEventAttributes } from './rules/no-raw-dom-event-attributes.ts'
 import { noSpreadInEvo } from './rules/no-spread-in-evo.ts'
 import { preferCallableMessageConstructor } from './rules/prefer-callable-message-constructor.ts'
@@ -49,6 +50,7 @@ const basePlugin = Plugin.define({
     'no-hardcoded-route-strings': noHardcodedRouteStrings,
     'no-module-level-mutable-state': noModuleLevelMutableState,
     'no-noop-message': noNoopMessage,
+    'no-prevent-default-in-stream-operator': noPreventDefaultInStreamOperator,
     'no-raw-dom-event-attributes': noRawDomEventAttributes,
     'no-spread-in-evo': noSpreadInEvo,
     'prefer-callable-message-constructor': preferCallableMessageConstructor,
