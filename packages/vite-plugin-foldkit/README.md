@@ -1,6 +1,6 @@
 # @foldkit/vite-plugin
 
-Vite plugin for Foldkit: view identity branding for the differ, plus hot module reloading with model preservation.
+Vite plugin for Foldkit: view identity branding for the differ, plus hot module reloading with Model preservation.
 
 ## Installation
 
@@ -38,20 +38,20 @@ Foldkit core modules are never instrumented, and functions that never return vno
 
 When you save a file during development, the plugin:
 
-1. Preserves your application's current state (model)
+1. Preserves your application's current Model
 2. Triggers a full page reload
-3. Restores the preserved model after reload
+3. Restores the preserved Model after reload
 
-This means you can make code changes without losing your application's state - forms stay filled, counters keep their values, game positions are maintained, etc.
+Code changes do not reset the application. Forms stay filled, counters keep their values, and games keep their positions.
 
 ## How it works
 
 The plugin uses Vite's WebSocket connection to communicate between the dev server and browser:
 
-- **On file change**: The browser sends the current model to the Vite server for preservation
-- **On reload**: The browser requests the preserved model from the server and initializes the Foldkit runtime with it
+- **On file change**: The browser sends the current Model to the Vite server for preservation.
+- **On reload**: The browser requests the preserved Model from the server and initializes the Foldkit Runtime with it.
 
-Model is preserved across hot reloads but cleared on manual browser refreshes, giving you control over when to reset your app.
+The Model survives hot reloads but clears on a manual browser refresh, so a refresh still resets the application.
 
 ## Server rendering dev host
 
@@ -67,7 +67,11 @@ Vite retains ownership of configured proxy routes before Foldkit handles applica
 
 ## Build id
 
-A server-rendered build carries an id naming the deployment it came from. `renderToString` stamps it on the rendered root and `Runtime.hydrate` compares it before accessing the Flags payload text or adopting DOM, so a page served by an earlier deployment is refused rather than reconciled against a client that no longer means the same thing by it. Startup stops, and the page is contained: the document's body is marked `inert`, and a nondismissable modal shield covers its controls and existing top-layer content without closing author-owned dialogs. Nothing is moved, so no custom element reconnects and no frame reloads. This boundary blocks native page interaction; it is not a script or global-event sandbox. A client already running in an open tab is not rechecked when a deployment lands: the comparison happens when a client boots against a page.
+The build id does not make hydration correct. It makes hydration refuse when it would otherwise be incorrect.
+
+Server-rendered HTML carries the deployment id, and the client bundle carries its own copy. `Runtime.hydrate` compares them before reading the Flags payload or adopting DOM. When they differ, startup stops and the document body is marked `inert`, `aria-hidden`, and `data-foldkit-refused`. A nondismissable modal shield covers its controls and existing top-layer content, then takes focus without closing author-owned dialogs.
+
+Nothing moves, so no custom element reconnects and no frame reloads. The containment blocks native page interaction; it is not a script or global-event sandbox. A client already running in an open tab is not rechecked when a deployment lands because the comparison happens only when a client boots against a page.
 
 The plugin compiles the id into application code as `import.meta.env.FOLDKIT_BUILD_ID`, from its `buildId` option or from the `FOLDKIT_BUILD_ID` environment variable:
 
@@ -88,7 +92,13 @@ Server.renderToString(config, {
 Runtime.hydrate(application, { buildId: import.meta.env.FOLDKIT_BUILD_ID })
 ```
 
-Nothing is derived from the project. Use a value the deployment already has, such as a commit, a release tag, or a container digest. Three rules govern it: the id is published in the HTML every visitor receives, so it must never contain a secret; it must identify one deployment, so two deployments can never share one; and the same value must reach the client build and the server build, which run as separate commands. A hydratable render given no id fails with `MissingBuildId`. Only a build takes the id from the deployment. The dev server compiles a fixed one because one live source session supplies both transforms and has no deployment identity to derive.
+Use a public value the deployment already has, such as a commit, release tag, or container digest. Three things have to be true:
+
+- The id appears in the HTML every visitor receives, so it must never contain a secret.
+- Two deployments must never share an id.
+- The same value must reach the client and server builds, which run as separate commands.
+
+A hydratable render given no id fails with `MissingBuildId`. Only a build takes the id from the deployment. The dev server compiles a fixed one because one live source session supplies both transforms and has no deployment identity to derive.
 
 The standalone `foldkitSsr({ serverEntry, buildId })` export compiles the same define for its server entry. When it runs in development without an explicit value, it uses the fixed development id too. The aggregate `foldkit({ buildId, ssr })` plugin passes its top-level value through automatically.
 
@@ -96,7 +106,7 @@ The standalone `foldkitSsr({ serverEntry, buildId })` export compiles the same d
 
 When `@foldkit/devtools` is installed as a development dependency, the plugin mounts its overlay automatically during development and leaves it out of production builds. No application import or `devTools.overlay` field is needed.
 
-To include the overlay in production, list `@foldkit/devtools` in regular `dependencies` and set `devTools.show` to `'Always'`. Dependency placement controls whether Vite includes the overlay, and `show` controls whether the Foldkit runtime mounts it.
+To include the overlay in production, list `@foldkit/devtools` in regular `dependencies` and set `devTools.show` to `'Always'`. Dependency placement controls whether Vite includes the overlay, and `show` controls whether the Foldkit Runtime mounts it.
 
 ## DevTools MCP relay
 
@@ -106,7 +116,7 @@ Pass `devToolsMcpPort` to enable the relay that exposes your running Foldkit app
 plugins: [foldkit({ devToolsMcpPort: 9988 })]
 ```
 
-When set, the plugin opens a separate WebSocket server on the given port. The MCP server connects to it and forwards typed `Request` and `Response` frames between AI agents and your runtime. Without `devToolsMcpPort` (the default), the relay is not started and the plugin behaves exactly as before.
+When set, the plugin opens a separate WebSocket server on the given port. The MCP server connects to it and forwards typed `Request` and `Response` frames between AI agents and your Runtime. Without `devToolsMcpPort` (the default), the relay is not started and the plugin behaves exactly as before.
 
 See the [DevTools MCP documentation](https://foldkit.dev/ai/mcp) for setup, the available tools, and how dispatch validation works.
 

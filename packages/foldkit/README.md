@@ -18,12 +18,14 @@
 
 ---
 
-Foldkit is a TypeScript frontend framework built on [Effect](https://effect.website/) and architected like [Elm](https://guide.elm-lang.org/architecture/). One Model, one update function, one way to do things. No hooks, no local state, no hidden mutations. It's all in on Effect with no escape hatch, though a program doesn't have to own the whole page: [`Runtime.embed`](https://foldkit.dev/core/embedding) runs a Foldkit widget inside any existing app, React included. The same program also [renders on the server](https://foldkit.dev/core/server-rendering), at build time or per request, and hydrates in place.
+Foldkit is a TypeScript frontend framework built on [Effect](https://effect.website/). It gives your entire application one architecture: a [Schema](https://effect.website/docs/schema/introduction/)-defined Model as the single source of truth, fact-named Messages, an exhaustive update function, and explicit Commands for side effects. Routing, server rendering, UI components, Submodels, and browser lifecycles all use that same Model and Message flow.
 
-Your Model is a [Schema](https://effect.website/docs/schema/introduction/) and side effects are values you return, not callbacks you fire. If you know Effect, Foldkit feels natural. If you're new to it, Foldkit is a good way in. Coming from React? [Start here](https://foldkit.dev/react/coming-from-react), or read the [same pixel-art editor built in both frameworks](https://foldkit.dev/react/foldkit-vs-react-side-by-side).
+Foldkit uses [The Elm Architecture](https://guide.elm-lang.org/architecture/) instead of component-owned state and hook lifecycles. That discipline is a real commitment. Foldkit works best when the team wants shared conventions across the application and is ready to build on Effect throughout. If your backend already uses Effect, Foldkit carries the same tools and patterns into the browser: Schema, services, Streams, and scoped resources.
+
+A Foldkit program can own the whole page or run as a widget inside an existing application, React included, through [`Runtime.embed`](https://foldkit.dev/core/embedding). The same program can [render on the server](https://foldkit.dev/core/server-rendering) at build time or per request, then hydrate in place. Coming from React? [Start here](https://foldkit.dev/react/coming-from-react), or compare the [same pixel-art editor built in both frameworks](https://foldkit.dev/react/foldkit-vs-react-side-by-side).
 
 > [!NOTE]
-> Foldkit is pre-1.0. The core API is stable, but breaking changes may occur in minor releases. See the [changelog](./CHANGELOG.md) for details.
+> Foldkit is in beta and under active development. The core API is stable, but breaking changes may occur in minor releases. See the [changelog](./CHANGELOG.md) for details.
 
 ## Get Started
 
@@ -35,7 +37,7 @@ npx create-foldkit-app@latest
 
 ## Counter
 
-A complete Foldkit program. State lives in a single Model, events become Messages, and a pure function handles every transition. `main.ts` defines the program and `entry.ts` boots the runtime, so `main.ts` stays importable from tests without booting a runtime as a side effect.
+A complete Foldkit program. State lives in a single Model, events become Messages, and a pure function handles every transition. `main.ts` defines the program and `entry.ts` boots the Runtime, so `main.ts` stays importable from tests without booting a Runtime as a side effect.
 
 ```ts
 // src/main.ts
@@ -124,9 +126,9 @@ Source: [examples/counter](https://github.com/foldkit/foldkit/blob/main/examples
 
 ## What Ships With Foldkit
 
-A complete system, not a collection of libraries you stitch together. Each of these is documented in depth at [foldkit.dev](https://foldkit.dev).
+Routing, server rendering, UI components, composition, and browser lifecycles all use the same Model and Message flow. The pieces below ship as one system and are documented in depth at [foldkit.dev](https://foldkit.dev).
 
-- **Commands**: Side effects as named Effects that return Messages and are run by the runtime.
+- **Commands**: Side effects as named Effects that return Messages and are run by the Runtime.
 - **Routing**: Type-safe bidirectional routing from parser combinators. URLs parse to Routes, Routes build URLs.
 - **Subscriptions**: External event streams declared as a function of the Model.
 - **Managed Resources**: Model-driven lifecycle for WebSockets, AudioContext, and other long-lived handles.
@@ -146,9 +148,9 @@ A complete system, not a collection of libraries you stitch together. Each of th
 - **Slow Warnings**: Development warnings when update, view, patch, or Subscription extraction exceeds its budget.
 - **HMR**: Vite plugin with state-preserving hot module replacement. Change your view, keep your state.
 
-## Correctness You (And Your LLM) Can See
+## AI-Assisted Development
 
-Every state change flows through one update function, and every side effect is declared explicitly. You don't have to hold a mental model of what runs when, you can point at it. That's what makes Foldkit unusually AI-friendly: the property that makes the code easy for humans to reason about makes it easy for an LLM to generate and review.
+Every feature has the same visible structure: a Schema-defined Model, fact-named Messages, exhaustive update, and explicit Commands. AI-generated changes follow code paths a person can inspect and test. Foldkit DevTools and its MCP server expose the same Model and Message history while the application runs.
 
 ## Examples
 

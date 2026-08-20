@@ -25,6 +25,15 @@ const GotGridSizeConfirmDialogMessage = m('GotGridSizeConfirmDialogMessage', {
 const GotThemeListboxMessage = m('GotThemeListboxMessage', {
   message: Listbox.Message,
 })
+const GotToolRadioGroupMessage = m('GotToolRadioGroupMessage', {
+  message: RadioGroup.Message,
+})
+const GotGridSizeRadioGroupMessage = m('GotGridSizeRadioGroupMessage', {
+  message: RadioGroup.Message,
+})
+const GotPaletteRadioGroupMessage = m('GotPaletteRadioGroupMessage', {
+  message: RadioGroup.Message,
+})
 const CompletedSaveCanvas = m('CompletedSaveCanvas')
 
 const Message = S.Union([
@@ -47,6 +56,9 @@ const Message = S.Union([
   FailedExportPng,
   GotErrorDialogMessage,
   GotThemeListboxMessage,
+  GotToolRadioGroupMessage,
+  GotGridSizeRadioGroupMessage,
+  GotPaletteRadioGroupMessage,
   ConfirmedGridSizeChange,
   GotGridSizeConfirmDialogMessage,
   CompletedSaveCanvas,

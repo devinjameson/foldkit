@@ -1,6 +1,6 @@
 import { Schema as S } from 'effect'
 
-import { Dialog, Listbox } from '@foldkit/ui'
+import { Dialog, Listbox, RadioGroup } from '@foldkit/ui'
 
 export const Model = S.Struct({
   grid: Grid,
@@ -18,4 +18,7 @@ export const Model = S.Struct({
   gridSizeConfirmDialog: Dialog.Model,
   maybePendingGridSize: S.Option(S.Number),
   themeListbox: Listbox.Model,
+  toolRadioGroup: RadioGroup.Model,
+  gridSizeRadioGroup: RadioGroup.Model,
+  paletteRadioGroup: RadioGroup.Model,
 })

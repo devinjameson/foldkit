@@ -1307,6 +1307,10 @@ const routeTitle = (
     M.tag('Home', () => SITE_NAME),
     M.tag('Newsletter', () => `Newsletter | ${SITE_NAME}`),
     M.tag('Blog', () => `Blog | ${SITE_NAME}`),
+    M.tag('UiOverview', () => `Foldkit UI | ${SITE_NAME}`),
+    M.tag('AiOverview', () => `AI | ${SITE_NAME}`),
+    M.tag('Testing', () => `Testing | ${SITE_NAME}`),
+    M.tag('Examples', () => `Examples | ${SITE_NAME}`),
     M.tag('BlogPost', ({ postSlug }) =>
       Option.match(Page.Blog.findPostBySlug(postSlug), {
         onNone: () => `Not Found | ${SITE_NAME}`,

@@ -1,24 +1,25 @@
-import { Match as M } from 'effect'
-import type { Command } from 'foldkit'
+import { Match as M, Option } from 'effect'
+import { type Command, Update } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
+import { GotSettingsMessage } from '../../message'
+import type { Model as AppModel } from '../../model'
 import type { User } from '../user'
-import { type Message, PersistSettings } from './message'
-import type { Model } from './model'
+import { PersistSettings, type Message as SettingsMessage } from './message'
+import type { Model as SettingsModel } from './model'
 
-// The Context shape is declared by the child. The parent assembles it
-// inline when delegating in its own update handler.
 type Context = Readonly<{
   currentUser: User
 }>
 
-type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
+type UpdateReturn = readonly [
+  SettingsModel,
+  ReadonlyArray<Command.Command<SettingsMessage>>,
+]
 
-// The child's update grows a third `context` argument carrying the
-// parent state it needs.
 export const update = (
-  model: Model,
-  message: Message,
+  model: SettingsModel,
+  message: SettingsMessage,
   context: Context,
 ): UpdateReturn =>
   M.value(message).pipe(
@@ -32,11 +33,17 @@ export const update = (
     }),
   )
 
-// Inside the parent's update handler, assemble the context from the
-// parent Model and pass it through to the child's update:
-GotSettingsMessage: ({ message }) => {
-  const [nextSettings, commands] = Settings.update(model.settings, message, {
-    currentUser: model.currentUser,
+// PARENT UPDATE
+
+const foldSettings = (currentUser: User) =>
+  Update.foldChild({
+    update: (settings: SettingsModel, message: SettingsMessage) =>
+      update(settings, message, { currentUser }),
+    read: (model: AppModel) => Option.some(model.settings),
+    write: (model, nextSettings) =>
+      evo(model, { settings: () => nextSettings }),
+    toParentMessage: message => GotSettingsMessage({ message }),
   })
-  // ...usual wrapping of `commands`
-}
+
+GotSettingsMessage: ({ message }) =>
+  foldSettings(model.currentUser)(model, message)
