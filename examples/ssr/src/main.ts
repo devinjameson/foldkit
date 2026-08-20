@@ -165,7 +165,7 @@ const parseEquivalenceView = (h: HtmlBuilder<Message>): Html =>
         [h.Id('equivalence-select'), h.Value('a')],
         [
           h.option([h.Value('a')], ['A']),
-          h.option([h.Value('b'), h.Selected(true)], ['B']),
+          h.option([h.Value('a'), h.Selected(true)], ['B']),
         ],
       ),
       h.pre([h.Id('equivalence-pre'), h.InnerHTML('\nleading')]),
