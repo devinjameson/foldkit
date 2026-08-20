@@ -56,6 +56,101 @@ export function m(tag: string, fields: S.Struct.Fields = {}): any {
   return makeCallable(S.TaggedStruct(tag, fields))
 }
 
+/** Property names the schema surface already occupies. A variant cannot use
+ *  one, because the constructor attached under that name would shadow it. */
+type ReservedVariantName =
+  | 'Encoded'
+  | 'Iso'
+  | 'Type'
+  | 'annotate'
+  | 'ast'
+  | 'cases'
+  | 'check'
+  | 'guards'
+  | 'isAnyOf'
+  | 'make'
+  | 'makeEffect'
+  | 'makeOption'
+  | 'match'
+  | 'pipe'
+  | 'rebuild'
+
+/** The union `messages` returns. A `Schema.TaggedUnion` that also carries one
+ *  callable constructor per variant, reachable by tag. */
+export type Messages<CasesByTag extends Record<string, S.Struct.Fields>> =
+  S.TaggedUnion<{
+    readonly [Tag in keyof CasesByTag & string]: S.TaggedStruct<
+      Tag,
+      CasesByTag[Tag]
+    >
+  }> & {
+    readonly [Tag in keyof CasesByTag & string]: CallableTaggedStruct<
+      Tag,
+      CasesByTag[Tag]
+    >
+  }
+
+/**
+ * Declares a whole Message union from one record of fields per variant, naming
+ * each variant once instead of once per constructor and once in the union list.
+ *
+ * The result is a `Schema.TaggedUnion`, so it decodes, nests in a Model, and
+ * carries `cases`, `guards`, and `isAnyOf`. Each variant hangs off it as a
+ * callable constructor that is itself a schema, which is what `Command.define`
+ * needs for its `messages` list.
+ *
+ * Matching is unaffected. The values are ordinary tagged objects, so `Match`
+ * keeps working, including the forms `TaggedUnion.match` cannot express, such
+ * as `M.tag` over several tags and `M.tags` with an `M.orElse` fallback.
+ *
+ * A Submodel's OutMessage is declared the same way, with variants of its own. A
+ * Message is a fact the Submodel handles; an OutMessage is a fact it reports to
+ * its parent. Sharing one variant between the two unions puts the child's
+ * internal vocabulary in the parent's contract, so declare them separately even
+ * when a pair happens to carry the same fields.
+ *
+ * `m` still declares a single variant, which is what existing code uses and
+ * what keeps an incremental migration working.
+ *
+ * A variant may not be named after the schema surface it would shadow, such as
+ * `make`, `match`, `cases`, or `ast`. Doing so is a type error.
+ *
+ * @example
+ * ```typescript
+ * export const Message = messages({
+ *   ClickedReset: {},
+ *   ChangedCount: { count: S.Number },
+ * })
+ * export type Message = typeof Message.Type
+ *
+ * Message.ClickedReset() // { _tag: 'ClickedReset' }
+ * Message.ChangedCount({ count: 1 }) // { _tag: 'ChangedCount', count: 1 }
+ * ```
+ */
+export function messages<
+  const CasesByTag extends Record<string, S.Struct.Fields>,
+>(
+  casesByTag: Extract<keyof CasesByTag, ReservedVariantName> extends never
+    ? CasesByTag
+    : never,
+): Messages<CasesByTag> {
+  const union = S.TaggedUnion(casesByTag)
+
+  /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+  const members = union.cases as Record<
+    string,
+    S.TaggedStruct<string, S.Struct.Fields>
+  >
+
+  const callables: Record<string, unknown> = {}
+  for (const [tag, member] of Object.entries(members)) {
+    callables[tag] = makeCallable(member)
+  }
+
+  /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+  return Object.assign(union, callables) as unknown as Messages<CasesByTag>
+}
+
 /**
  * Wraps `Schema.TaggedStruct` to create a route variant you can call directly as a constructor.
  * Use `r` for route types — enabling `Home()` instead of `Home.make()`.

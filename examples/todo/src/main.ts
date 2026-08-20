@@ -12,7 +12,7 @@ import {
 import { KeyValueStore } from 'effect/unstable/persistence'
 import { Command, Runtime } from 'foldkit'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { messages } from 'foldkit/message'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
@@ -61,41 +61,22 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const UpdatedNewTodo = m('UpdatedNewTodo', { text: S.String })
-export const UpdatedEditingTodo = m('UpdatedEditingTodo', { text: S.String })
-export const AddedTodo = m('AddedTodo')
-export const CompletedGenerateTodo = m('CompletedGenerateTodo', {
-  id: S.String,
-  timestamp: S.Number,
-  text: S.String,
+export const Message = messages({
+  UpdatedNewTodo: { text: S.String },
+  UpdatedEditingTodo: { text: S.String },
+  AddedTodo: {},
+  CompletedGenerateTodo: { id: S.String, timestamp: S.Number, text: S.String },
+  DeletedTodo: { id: S.String },
+  ToggledTodo: { id: S.String },
+  StartedEditing: { id: S.String },
+  SavedEdit: {},
+  CancelledEdit: {},
+  ToggledAll: {},
+  ClearedCompleted: {},
+  SelectedFilter: { filter: Filter },
+  SucceededSaveTodos: { todos: Todos },
+  FailedSaveTodos: {},
 })
-export const DeletedTodo = m('DeletedTodo', { id: S.String })
-export const ToggledTodo = m('ToggledTodo', { id: S.String })
-export const StartedEditing = m('StartedEditing', { id: S.String })
-export const SavedEdit = m('SavedEdit')
-export const CancelledEdit = m('CancelledEdit')
-export const ToggledAll = m('ToggledAll')
-export const ClearedCompleted = m('ClearedCompleted')
-export const SelectedFilter = m('SelectedFilter', { filter: Filter })
-export const SucceededSaveTodos = m('SucceededSaveTodos', { todos: Todos })
-export const FailedSaveTodos = m('FailedSaveTodos')
-
-export const Message = S.Union([
-  UpdatedNewTodo,
-  UpdatedEditingTodo,
-  AddedTodo,
-  CompletedGenerateTodo,
-  DeletedTodo,
-  ToggledTodo,
-  StartedEditing,
-  SavedEdit,
-  CancelledEdit,
-  ToggledAll,
-  ClearedCompleted,
-  SelectedFilter,
-  SucceededSaveTodos,
-  FailedSaveTodos,
-])
 export type Message = typeof Message.Type
 
 // FLAGS
@@ -309,20 +290,20 @@ export const update = (
 
 export const GenerateTodo = Command.define('GenerateTodo', {
   args: { text: S.String },
-  messages: [CompletedGenerateTodo],
+  messages: [Message.CompletedGenerateTodo],
   execute: ({ text }) =>
     Effect.gen(function* () {
       const id = yield* Random.nextIntBetween(0, Number.MAX_SAFE_INTEGER).pipe(
         Effect.map(value => value.toString(36)),
       )
       const timestamp = yield* Clock.currentTimeMillis
-      return CompletedGenerateTodo({ id, timestamp, text })
+      return Message.CompletedGenerateTodo({ id, timestamp, text })
     }),
 })
 
 export const SaveTodos = Command.define('SaveTodos', {
   args: { todos: Todos },
-  messages: [SucceededSaveTodos, FailedSaveTodos],
+  messages: [Message.SucceededSaveTodos, Message.FailedSaveTodos],
   execute: ({ todos }) =>
     Effect.gen(function* () {
       const store = yield* KeyValueStore.KeyValueStore
@@ -330,9 +311,9 @@ export const SaveTodos = Command.define('SaveTodos', {
         TODOS_STORAGE_KEY,
         S.encodeSync(S.fromJsonString(Todos))(todos),
       )
-      return SucceededSaveTodos({ todos })
+      return Message.SucceededSaveTodos({ todos })
     }).pipe(
-      Effect.catch(() => Effect.succeed(FailedSaveTodos())),
+      Effect.catch(() => Effect.succeed(Message.FailedSaveTodos())),
       Effect.provide(BrowserKeyValueStore.layerLocalStorage),
     ),
 })
@@ -374,7 +355,7 @@ const editingTodoView = (
         {
           id: `edit-${todo.id}`,
           value: text,
-          onInput: text => UpdatedEditingTodo({ text }),
+          onInput: text => Message.UpdatedEditingTodo({ text }),
           toView: attributes =>
             h.input([
               ...attributes.input,
@@ -388,7 +369,7 @@ const editingTodoView = (
       ),
       Button.view(
         {
-          onClick: SavedEdit(),
+          onClick: Message.SavedEdit(),
           toView: attributes =>
             h.button(
               [
@@ -404,7 +385,7 @@ const editingTodoView = (
       ),
       Button.view(
         {
-          onClick: CancelledEdit(),
+          onClick: Message.CancelledEdit(),
           toView: attributes =>
             h.button(
               [
@@ -436,7 +417,7 @@ const nonEditingTodoView = (todo: Todo, h: HtmlBuilder<Message>): Html =>
         {
           id: `todo-${todo.id}`,
           isChecked: todo.completed,
-          onToggle: () => ToggledTodo({ id: todo.id }),
+          onToggle: () => Message.ToggledTodo({ id: todo.id }),
           toView: attributes =>
             h.div(
               [h.Class('flex items-center')],
@@ -461,13 +442,13 @@ const nonEditingTodoView = (todo: Todo, h: HtmlBuilder<Message>): Html =>
           h.Class(
             `flex-1 ${todo.completed ? 'line-through text-gray-500' : 'text-gray-900'}`,
           ),
-          h.OnClick(StartedEditing({ id: todo.id })),
+          h.OnClick(Message.StartedEditing({ id: todo.id })),
         ],
         [todo.text],
       ),
       Button.view(
         {
-          onClick: DeletedTodo({ id: todo.id }),
+          onClick: Message.DeletedTodo({ id: todo.id }),
           toView: attributes =>
             h.button(
               [
@@ -490,7 +471,7 @@ const filterButtonView =
   (filter: Filter, label: string, h: HtmlBuilder<Message>): Html =>
     Button.view(
       {
-        onClick: SelectedFilter({ filter }),
+        onClick: Message.SelectedFilter({ filter }),
         toView: attributes =>
           h.button(
             [
@@ -543,7 +524,7 @@ const footerView = (
                 onNonEmpty: todos =>
                   Button.view(
                     {
-                      onClick: ToggledAll(),
+                      onClick: Message.ToggledAll(),
                       toView: attributes =>
                         h.button(
                           [
@@ -566,7 +547,7 @@ const footerView = (
               completedCount > 0
                 ? Button.view(
                     {
-                      onClick: ClearedCompleted(),
+                      onClick: Message.ClearedCompleted(),
                       toView: attributes =>
                         h.button(
                           [
@@ -614,7 +595,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
           ),
 
           h.form(
-            [h.Class('mb-6'), h.OnSubmit(AddedTodo())],
+            [h.Class('mb-6'), h.OnSubmit(Message.AddedTodo())],
             [
               h.div(
                 [h.Class('flex gap-3')],
@@ -624,7 +605,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
                       id: 'new-todo',
                       value: model.newTodoText,
                       placeholder: 'What needs to be done?',
-                      onInput: text => UpdatedNewTodo({ text }),
+                      onInput: text => Message.UpdatedNewTodo({ text }),
                       toView: attributes =>
                         h.input([
                           ...attributes.input,
