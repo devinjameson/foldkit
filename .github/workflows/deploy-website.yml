@@ -178,6 +178,13 @@ jobs:
                 "continue": true
               },
               {
+                "src": "^/monacoworkers/.*",
+                "headers": {
+                  "Cross-Origin-Embedder-Policy": "credentialless"
+                },
+                "continue": true
+              },
+              {
                 "src": ".*",
                 "headers": {
                   "Cross-Origin-Resource-Policy": "same-origin"
@@ -262,6 +269,31 @@ jobs:
           done
           echo "foldkit.dev did not reach build ${{ needs.authorize.outputs.target }}" >&2
           exit 1
+
+      - name: Check deployed Monaco worker isolation
+        run: |
+          headers_file="${RUNNER_TEMP}/foldkit-monaco-worker-headers.txt"
+          curl -fsSIL \
+            -H 'Cache-Control: no-cache' \
+            -D "${headers_file}" \
+            -o /dev/null \
+            "https://foldkit.dev/monacoworkers/ts.worker.bundle.js?release-smoke=${GITHUB_RUN_ID}"
+          header_value() {
+            grep -i "^${1}:" "${headers_file}" |
+              sed -E 's/^[^:]+:[[:space:]]*//; s/\r$//'
+          }
+          coep_value="$(header_value 'Cross-Origin-Embedder-Policy' || true)"
+          corp_value="$(header_value 'Cross-Origin-Resource-Policy' || true)"
+          if [[ "${coep_value}" != 'credentialless' ]]; then
+            echo "Expected one COEP credentialless header; received '${coep_value:-<missing>}'." >&2
+            cat "${headers_file}" >&2
+            exit 1
+          fi
+          if [[ "${corp_value}" != 'same-origin' ]]; then
+            echo "Expected one CORP same-origin header; received '${corp_value:-<missing>}'." >&2
+            cat "${headers_file}" >&2
+            exit 1
+          fi
 
       - name: Smoke the deployed SSR and SSG playgrounds
         run: pnpm --filter website exec playwright test
