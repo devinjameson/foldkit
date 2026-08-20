@@ -63,6 +63,10 @@ const packageManager = Flag.choice('package-manager', [
   Flag.optional,
 )
 
+const maybeDependencyManifestsDirectory = Option.fromNullishOr(
+  process.env['CREATE_FOLDKIT_APP_DEPENDENCY_MANIFESTS_DIRECTORY'],
+)
+
 const create = Command.make(
   'create',
   {
@@ -71,7 +75,7 @@ const create = Command.make(
     example,
     packageManager,
   },
-  create_,
+  input => create_({ ...input, maybeDependencyManifestsDirectory }),
 ).pipe(Command.withDescription('Create a new Foldkit application'))
 
 const cli = Command.run(create, {

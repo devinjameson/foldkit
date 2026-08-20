@@ -18,6 +18,7 @@ type CreateInput = Readonly<{
   rendering: Option.Option<Rendering>
   example: Option.Option<Example>
   packageManager: Option.Option<PackageManager>
+  maybeDependencyManifestsDirectory: Option.Option<string>
 }>
 
 const isWindows = process.platform === 'win32'
@@ -149,13 +150,19 @@ const installProjectDependencies = (
   projectPath: string,
   packageManager: PackageManager,
   scaffold: Scaffold,
+  maybeDependencyManifestsDirectory: Option.Option<string>,
 ) =>
   Effect.gen(function* () {
     yield* Console.log(
       chalk.blue(`📦 Installing dependencies with ${packageManager}...`),
     )
 
-    yield* installDependencies(projectPath, packageManager, scaffold)
+    yield* installDependencies(
+      projectPath,
+      packageManager,
+      scaffold,
+      maybeDependencyManifestsDirectory,
+    )
 
     yield* Console.log(chalk.green('✅ Dependencies installed'))
     yield* Console.log('')
@@ -220,11 +227,24 @@ export const create = (input: CreateInput) =>
   Effect.gen(function* () {
     const { name, scaffold, packageManager } = yield* resolveInput(input)
     const path = yield* Path.Path
+    if (
+      Option.isSome(input.maybeDependencyManifestsDirectory) &&
+      !path.isAbsolute(input.maybeDependencyManifestsDirectory.value)
+    ) {
+      return yield* Effect.fail(
+        'CREATE_FOLDKIT_APP_DEPENDENCY_MANIFESTS_DIRECTORY must be an absolute path.',
+      )
+    }
     const projectPath = path.resolve(name)
 
     yield* validateProject(name, projectPath, packageManager)
     yield* setupProject(name, projectPath, scaffold, packageManager)
-    yield* installProjectDependencies(projectPath, packageManager, scaffold)
+    yield* installProjectDependencies(
+      projectPath,
+      packageManager,
+      scaffold,
+      input.maybeDependencyManifestsDirectory,
+    )
     yield* displaySuccessMessage(name, packageManager)
 
     return name

@@ -4,6 +4,7 @@ import {
   Effect,
   FileSystem,
   Match,
+  Option,
   Order,
   Path,
   Record,
@@ -231,6 +232,25 @@ const fetchExamplePackageJson = (example: string) =>
     return yield* Schema.decodeUnknownEffect(PackageJson)(json)
   })
 
+const readExamplePackageJson = (
+  example: string,
+  maybeDependencyManifestsDirectory: Option.Option<string>,
+) =>
+  Option.match(maybeDependencyManifestsDirectory, {
+    onNone: () => fetchExamplePackageJson(example),
+    onSome: directory =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem
+        const path = yield* Path.Path
+        const content = yield* fs.readFileString(
+          path.join(directory, example, 'package.json'),
+        )
+        return yield* Schema.decodeUnknownEffect(PackageJson)(
+          JSON.parse(content),
+        )
+      }),
+  })
+
 const writeManifest = (
   projectPath: string,
   dependencies: Record<string, string>,
@@ -293,10 +313,12 @@ export const installDependencies = (
   projectPath: string,
   packageManager: PackageManager,
   scaffold: Scaffold,
+  maybeDependencyManifestsDirectory: Option.Option<string>,
 ) =>
   Effect.gen(function* () {
-    const examplePackageJson = yield* fetchExamplePackageJson(
+    const examplePackageJson = yield* readExamplePackageJson(
       dependencyExample(scaffold),
+      maybeDependencyManifestsDirectory,
     )
 
     const dependencies = yield* resolveSpecs(
