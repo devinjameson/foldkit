@@ -57,7 +57,7 @@ const typingTerminalRow = (): Html =>
           ih.div(
             [],
             [
-              'A production real-time multiplayer typing speed game. Full stack Effect app with RPC backend and Foldkit frontend.',
+              'A production real-time multiplayer typing speed game. A full-stack Effect application with an RPC backend and Foldkit frontend.',
             ],
           ),
           ih.a(

@@ -1,4 +1,4 @@
-import { Match as M, Option, Schema as S } from 'effect'
+import { Match as M, Option, Schema as S, String } from 'effect'
 import { Command } from 'foldkit'
 import { m } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
@@ -42,7 +42,10 @@ export const update = (
         model,
         [
           PushSearchUrl({
-            searchText: Option.fromNullishOr(model.searchInput || null),
+            searchText: Option.liftPredicate(
+              model.searchInput,
+              String.isNonEmpty,
+            ),
           }),
         ],
       ],

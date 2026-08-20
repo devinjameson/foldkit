@@ -34,6 +34,6 @@ The example provides `KeyValueStore` inside the Flags Effect because that servic
 
 Server rendering provides Flags from the request or build instead of running a client Flags Effect. `renderToString` uses that value to call `init`, encodes it through the Schema, and embeds the result in the HTML. `Runtime.hydrate` decodes the same value and calls the same `init`, so the client reconstructs the Model that produced the server HTML.
 
-A hydrating entry does not provide a client Flags Effect. Missing or invalid handoff data fails startup instead of silently booting a different Model. The [Server Rendering](/core/server-rendering#flags-and-browser-facts) guide explains which data is safe and reproducible across that boundary.
+A hydrating entry does not provide a client Flags Effect. Missing or invalid handoff data fails startup instead of silently booting a different Model. The [Server Rendering](/core/server-rendering#flags-and-what-only-the-browser-knows) guide explains which data is safe and reproducible across that boundary.
 
 Once one Model, Message union, and update function become too large to reason about as a unit, decompose the state machine into [Submodels](/core/submodel). Each child owns its own Model, Messages, update, and Commands behind an explicit parent boundary.
