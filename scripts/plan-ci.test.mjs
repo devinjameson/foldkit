@@ -162,6 +162,7 @@ test('a scaffold or framework change selects the generated-app build gate', () =
   for (const file of [
     'examples/ssg/package.json',
     'examples/ssr/package.json',
+    'packages/examples-e2e/package.json',
     'packages/create-foldkit-app/templates/rendering/ssr/scripts/build.mjs',
     'packages/foldkit/src/experimental/server/server.ts',
     'packages/vite-plugin-foldkit/src/buildToken.ts',

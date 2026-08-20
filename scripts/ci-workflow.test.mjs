@@ -81,3 +81,16 @@ test('peer floor changes run the packed-manifest check before release', () => {
   )
   assert.match(releaseWorkflow, /^\s+- 'scripts\/check-peer-floors\.ts'$/m)
 })
+
+test('browser-backed scaffold checks install Chromium exactly once', () => {
+  assert.ok(
+    workflow.includes(
+      "      - name: Install Chromium for the generated SSR gate\n        if: steps.scope.outputs.scaffold_server_rendering == 'true' && steps.scope.outputs.packed_ssr_consumer != 'true'\n        run: pnpm --filter @foldkit/examples-e2e exec playwright install --with-deps chromium",
+    ),
+  )
+  assert.ok(
+    workflow.includes(
+      "      - name: Install Playwright chromium for the DOM state gate\n        if: steps.scope.outputs.dom_state_parity == 'true' && steps.scope.outputs.packed_ssr_consumer != 'true' && steps.scope.outputs.scaffold_server_rendering != 'true'",
+    ),
+  )
+})

@@ -140,14 +140,20 @@ jobs:
         if: steps.scope.outputs.packed_ssr_consumer == 'true'
         run: pnpm --filter @foldkit/examples-e2e exec playwright install --with-deps chromium firefox webkit
 
+      # The generated-project gate also drives its packed output in Chromium.
+      # Reuse the packed consumer's installation when both gates are selected.
+      - name: Install Chromium for the generated SSR gate
+        if: steps.scope.outputs.scaffold_server_rendering == 'true' && steps.scope.outputs.packed_ssr_consumer != 'true'
+        run: pnpm --filter @foldkit/examples-e2e exec playwright install --with-deps chromium
+
       - name: Check packed SSR consumer
         if: steps.scope.outputs.packed_ssr_consumer == 'true'
         run: pnpm check:packed-ssr-consumer:ci
 
-      # Generates an SSR and an SSG project and builds each through the command
-      # its own README documents. A generated project has to satisfy the build
-      # id contract before its author has read about it, and only running that
-      # build shows whether it does.
+      # Generates an SSR and an SSG project, builds each through the command its
+      # own README documents, and drives the result in Chromium. This proves the
+      # generated build id reaches both sides and hydration adopts the served
+      # DOM before the application responds to input.
       - name: Check generated server-rendered projects
         if: steps.scope.outputs.scaffold_server_rendering == 'true'
         run: pnpm check:scaffold-server-rendering:ci
@@ -168,7 +174,7 @@ jobs:
       # everywhere. This measures both in Chromium rather than reasoning about
       # the IDL.
       - name: Install Playwright chromium for the DOM state gate
-        if: steps.scope.outputs.dom_state_parity == 'true' && steps.scope.outputs.packed_ssr_consumer != 'true'
+        if: steps.scope.outputs.dom_state_parity == 'true' && steps.scope.outputs.packed_ssr_consumer != 'true' && steps.scope.outputs.scaffold_server_rendering != 'true'
         run: pnpm --filter @foldkit/examples-e2e exec playwright install --with-deps chromium
 
       - name: Check server and client DOM state parity
