@@ -20,7 +20,7 @@ export type PageMetadata = Readonly<{
 export type ApiModuleNameResolver = (slug: string) => string
 
 const SITE_DESCRIPTION =
-  'A TypeScript frontend framework built on Effect-TS, using The Elm Architecture (TEA). Single state tree, pure update functions, explicit side effects, and type-safe routing. An alternative to React for teams that value correctness.'
+  'Foldkit is a TypeScript frontend framework built on Effect. One Schema-defined Model, explicit effects, typed routing, server rendering, and accessible UI components.'
 
 const docs = (
   title: string,

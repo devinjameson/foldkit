@@ -91,7 +91,7 @@ describe('injectMetaTags', () => {
 
     it('falls back to the full title for og:image:alt', () => {
       expect(html).toContain(
-        `property="og:image:alt" content="${coverlessPost.frontmatter.title} - Foldkit | Effect-TS Frontend Framework"`,
+        `property="og:image:alt" content="${coverlessPost.frontmatter.title} | Foldkit"`,
       )
     })
   })
@@ -106,7 +106,7 @@ describe('injectMetaTags', () => {
 
     it('uses the full title for og:image:alt', () => {
       expect(html).toContain(
-        'property="og:image:alt" content="Foldkit - TypeScript Frontend Framework Built on Effect-TS | Elm Architecture"',
+        'property="og:image:alt" content="Foldkit | TypeScript Frontend Framework Built on Effect"',
       )
     })
 

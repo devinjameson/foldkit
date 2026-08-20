@@ -463,8 +463,8 @@ export const injectMetaTags = (
   const pageUrl = `${SITE_URL}${urlPath}`
   const fullTitle =
     metadata.title === 'Foldkit'
-      ? 'Foldkit - TypeScript Frontend Framework Built on Effect-TS | Elm Architecture'
-      : `${metadata.title} - Foldkit | Effect-TS Frontend Framework`
+      ? 'Foldkit | TypeScript Frontend Framework Built on Effect'
+      : `${metadata.title} | Foldkit`
 
   const ogImageAlt = pipe(
     maybeRouteCover(route),

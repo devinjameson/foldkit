@@ -5,7 +5,7 @@ test('selects an item from the combobox', async ({ page }) => {
 
   await page
     .getByRole('region', { name: 'Hero' })
-    .getByRole('link', { name: 'Dive In' })
+    .getByRole('link', { name: 'Learn the architecture' })
     .click()
   await expect(page).toHaveURL(/\/core\/architecture$/)
 
