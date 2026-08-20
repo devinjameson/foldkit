@@ -1,5 +1,14 @@
 # foldkit
 
+## 0.148.2
+
+### Patch Changes
+
+- f9f2b22: Align the published READMEs with Foldkit's current positioning, terminology, and documentation links. Clarify the Vite plugin's Model-preserving hot reload and hydration build-id guidance.
+- 50fd51f: Compare controlled select hydration against the effective selection owned by the select value, and synchronize duplicate-valued option defaults after that value takes effect.
+- b927ff7: Refuse server rendering a native `select` controlled through a client-only `CustomElement.define` property named `value`. Foldkit applies the property at different points in a fresh render and hydration, so it cannot describe one portable selection. Use `h.Value` for a server-rendered controlled select.
+- 62813c9: Contain and refuse a server handoff unless it is the document's single nonempty stamped root in the body light DOM. `injectIntoTemplate` now rejects a second hydratable application even when it uses a distinct runtime id. Static body output can still coexist because it carries no handoff stamp. Each insertion still applies its `Document` head fields, so insertion order determines the initial metadata.
+
 ## 0.148.1
 
 ### Patch Changes

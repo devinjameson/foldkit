@@ -1,5 +1,11 @@
 # @foldkit/devtools
 
+## 0.148.2
+
+### Patch Changes
+
+- f9f2b22: Align the published READMEs with Foldkit's current positioning, terminology, and documentation links. Clarify the Vite plugin's Model-preserving hot reload and hydration build-id guidance.
+
 ## 0.148.1
 
 ## 0.148.0
