@@ -27,13 +27,14 @@ import type { FileSystemTree, WebContainer } from '@webcontainer/api'
 import { Icon } from '../icon'
 import { exampleDetailRouter, examplesRouter } from '../route'
 import { type ExampleMeta, findBySlug } from './example/meta'
+import * as PlaygroundPreview from './playgroundPreview'
 
 // MODEL
 
 const PlaygroundStateIdle = ts('PlaygroundStateIdle')
 const PlaygroundStateBooting = ts('PlaygroundStateBooting')
 const PlaygroundStateBooted = ts('PlaygroundStateBooted', {
-  previewUrl: S.String,
+  preview: PlaygroundPreview.State,
 })
 const PlaygroundStateFailed = ts('PlaygroundStateFailed', {
   reason: S.String,
@@ -74,6 +75,9 @@ export const FailedBootPlayground = m('FailedBootPlayground', {
   reason: S.String,
 })
 export const ReleasedPlayground = m('ReleasedPlayground')
+export const LoadedPlaygroundPreview = m('LoadedPlaygroundPreview', {
+  previewUrl: S.String,
+})
 export const GotFileTabsMessage = m('GotFileTabsMessage', {
   message: Tabs.Message,
 })
@@ -96,6 +100,7 @@ export const Message = S.Union([
   BootedPlayground,
   FailedBootPlayground,
   ReleasedPlayground,
+  LoadedPlaygroundPreview,
   GotFileTabsMessage,
   EditedPlaygroundFile,
   SucceededMountPlaygroundEditor,
@@ -623,13 +628,35 @@ const flushDirtyPaths = (
     ),
   )
 
+const markPreviewLoaded = (
+  state: PlaygroundState,
+  previewUrl: string,
+): PlaygroundState =>
+  M.value(state).pipe(
+    M.tag('PlaygroundStateBooted', bootedState => {
+      const nextPreview = PlaygroundPreview.load(
+        bootedState.preview,
+        previewUrl,
+      )
+      if (nextPreview === bootedState.preview) {
+        return state
+      } else {
+        return PlaygroundStateBooted({ preview: nextPreview })
+      }
+    }),
+    M.orElse(() => state),
+  )
+
 export const update = (model: Model, message: Message): UpdateReturn =>
   M.value(message).pipe(
     withUpdateReturn,
     M.tags({
       BootedPlayground: ({ previewUrl }) => [
         evo(model, {
-          state: () => PlaygroundStateBooted({ previewUrl }),
+          state: () =>
+            PlaygroundStateBooted({
+              preview: PlaygroundPreview.start(previewUrl),
+            }),
           dirtyPaths: () => [],
           lastWriteError: () => Option.none(),
         }),
@@ -641,6 +668,10 @@ export const update = (model: Model, message: Message): UpdateReturn =>
       ],
       ReleasedPlayground: () => [
         evo(model, { state: () => PlaygroundStateIdle() }),
+        [],
+      ],
+      LoadedPlaygroundPreview: ({ previewUrl }) => [
+        evo(model, { state: state => markPreviewLoaded(state, previewUrl) }),
         [],
       ],
       GotFileTabsMessage: ({ message: tabsMessage }) => {
@@ -823,16 +854,19 @@ const editorPanelContent = (
     ],
   )
 
-const previewPaneView = (state: PlaygroundState): Html =>
-  ih.div(
+const previewPaneView = (
+  state: PlaygroundState,
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.div(
     [
-      ih.Class(
+      h.Class(
         'flex-1 min-w-0 min-h-0 flex flex-col border-l max-playground-wide:border-l-0 max-playground-wide:border-t border-gray-200 dark:border-gray-800 bg-white',
       ),
     ],
     [
-      ih.div(
-        [ih.Class('flex-1 min-w-0 min-h-0 flex flex-col')],
+      h.div(
+        [h.Class('flex-1 min-w-0 min-h-0 flex flex-col')],
         [
           M.value(state).pipe(
             M.tagsExhaustive({
@@ -846,13 +880,18 @@ const previewPaneView = (state: PlaygroundState): Html =>
                   'Starting playground…',
                   'Hang tight. The preview will appear automatically. First load takes about 30 seconds.',
                 ),
-              PlaygroundStateBooted: ({ previewUrl }) =>
-                ih.iframe([
-                  ih.Src(previewUrl),
-                  ih.Allow('cross-origin-isolated'),
-                  ih.Class('w-full h-full border-0'),
-                  ih.Title('Foldkit Playground'),
-                ]),
+              PlaygroundStateBooted: ({ preview }) =>
+                PlaygroundPreview.view(
+                  preview,
+                  LoadedPlaygroundPreview({
+                    previewUrl: preview.previewUrl,
+                  }),
+                  bootingPanelView(
+                    'Preparing preview…',
+                    'The server is running. The preview will appear when the page finishes loading.',
+                  ),
+                  h,
+                ),
               PlaygroundStateFailed: ({ reason }) => failurePanelView(reason),
             }),
           ),
@@ -984,7 +1023,7 @@ const editorLayoutView = (model: Model, h: HtmlBuilder<Message>): Html => {
             },
             toParentMessage: message => GotFileTabsMessage({ message }),
           }),
-          previewPaneView(model.state),
+          previewPaneView(model.state, h),
         ],
       ),
     ],

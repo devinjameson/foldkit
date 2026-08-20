@@ -3,13 +3,66 @@ import type { FrameLocator, Page } from '@playwright/test'
 
 const PLAYGROUND_BOOT_TIMEOUT_MILLISECONDS = 240_000
 
+const capturePlaygroundFrame = (page: Page) =>
+  page.addInitScript(() => {
+    const findNode = () =>
+      document.querySelector('iframe[title="Foldkit Playground"]')
+    const existingNode = findNode()
+    if (existingNode !== null) {
+      Reflect.set(window, '__foldkitPlaygroundFrame', existingNode)
+      return
+    }
+    const observer = new MutationObserver(() => {
+      const node = findNode()
+      if (node !== null) {
+        Reflect.set(window, '__foldkitPlaygroundFrame', node)
+        observer.disconnect()
+      }
+    })
+    observer.observe(document, { childList: true, subtree: true })
+  })
+
+const assertPlaygroundFrameRemains = async (page: Page) => {
+  const iframeIdentity = await page.evaluate(() => {
+    const capturedFrame = Reflect.get(window, '__foldkitPlaygroundFrame')
+    const current = document.querySelector('iframe[title="Foldkit Playground"]')
+    if (!(capturedFrame instanceof HTMLIFrameElement)) {
+      return 'not captured'
+    }
+    if (!capturedFrame.isConnected) {
+      return 'detached'
+    }
+    return capturedFrame === current ? 'preserved' : 'different'
+  })
+  expect(iframeIdentity).toBe('preserved')
+}
+
 const playgroundFrame = async (page: Page, slug: string) => {
+  await capturePlaygroundFrame(page)
   await page.goto(`/playground/${slug}`, { waitUntil: 'domcontentloaded' })
   const frameElement = page.locator('iframe[title="Foldkit Playground"]')
+  await expect(frameElement).toBeAttached({
+    timeout: PLAYGROUND_BOOT_TIMEOUT_MILLISECONDS,
+  })
+
+  const frame = page.frameLocator('iframe[title="Foldkit Playground"]')
   await expect(frameElement).toBeVisible({
     timeout: PLAYGROUND_BOOT_TIMEOUT_MILLISECONDS,
   })
-  return page.frameLocator('iframe[title="Foldkit Playground"]')
+  await expect(frameElement).toHaveAttribute('aria-hidden', 'false')
+  await expect(frameElement).not.toHaveAttribute('inert')
+  const isInert = await frameElement.evaluate(element => {
+    if (!(element instanceof HTMLIFrameElement)) {
+      throw new Error('The playground preview is not an iframe')
+    } else {
+      return element.inert
+    }
+  })
+  expect(isInert).toBe(false)
+  await expect(frameElement).toHaveAttribute('tabindex', '0')
+  expect(await frame.locator('[data-foldkit-build]').count()).toBe(0)
+  await assertPlaygroundFrameRemains(page)
+  return frame
 }
 
 const waitForHydration = (frame: FrameLocator) =>
