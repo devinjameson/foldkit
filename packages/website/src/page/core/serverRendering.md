@@ -367,6 +367,7 @@ Server HTML and client DOM must give each attribute, property, and content slot 
 - A controlled `h.Value` cannot share a `textarea` or `output` with declared children because both own the element's content. Keep either the controlled value or the children. This rule also applies to client-only rendering.
 - A raw `h.Attribute` and a typed builder cannot name the same attribute on one element. `h.Style` likewise cannot share an element with a raw `style` attribute. Keep one owner for each piece of state.
 - A typed reflected builder is client-only when the HTML element's native interface does not own that property. For example: spreading `h.Type('button')` onto a `div` creates an expando, so server rendering omits it instead of creating an attribute that a fresh client render would not. Use the matching element when the value must appear in markup, or use an intentional raw `h.Attribute`.
+- A `CustomElement.define` property named `value` cannot control a native `select` in a server-rendered view. A fresh client assigns the property before the options exist, while hydration assigns it after the parser has created them. The two writes can select different options. Property factories belong on the Custom Element they declare. Use `h.Value` so a native select has one controlled selection.
 
 ### Custom Elements
 

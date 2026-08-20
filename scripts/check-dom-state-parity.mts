@@ -1,4 +1,5 @@
-import { Effect } from 'effect'
+import { Effect, Schema as S } from 'effect'
+import * as CustomElement from 'foldkit/customElement'
 import { Server } from 'foldkit/experimental'
 import { type Html, type HtmlBuilder } from 'foldkit/html'
 import { createRequire } from 'node:module'
@@ -193,12 +194,28 @@ const STRING_TO_NUMBER_REFUSALS: ReadonlyArray<Refusal> = [
   },
 ]
 
-// A controlled select value naming no option, on an element a browser renders
-// single-line. HTML gives the first option the selection there, so the served
-// page cannot express what the client's `value` assignment produces. Which
-// elements those are is decided by `multiple` and by `size` as a browser parses
-// it, not as `parseInt` reads it.
+// Select property states with no equivalent source markup. Foldkit applies a
+// client-only value property before options exist in a fresh render and after
+// they exist during hydration. A controlled value naming no option disagrees
+// with a single-line element, where HTML selects the first option. Whether an
+// element permits no selection is decided by `multiple` and by `size` as a
+// browser parses it, not as `parseInt` reads it.
 const SELECT_REFUSALS: ReadonlyArray<Refusal> = [
+  {
+    name: 'a native select with a client-only value property',
+    build: h => {
+      const selectLike = CustomElement.define({
+        tag: 'x-select-like',
+        properties: { value: S.Unknown },
+        events: {},
+      }).withMessage(h)
+      return h.select(
+        [selectLike.Value('b')],
+        [h.option([h.Value('a')], ['A']), h.option([h.Value('b')], ['B'])],
+      )
+    },
+    expected: /client-only value property/,
+  },
   {
     name: 'a single-line select whose value names no option',
     build: h => h.select([h.Value('zzz')], [h.option([h.Value('a')], ['A'])]),

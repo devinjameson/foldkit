@@ -721,7 +721,19 @@ const selectValueForChildren = (
   if (tagName !== 'select') {
     return inherited
   }
-  const value = node.data?.props?.['value']
+  const properties = node.data?.props
+  if (isClientOnlyProperty(properties, 'value')) {
+    throw new Error(
+      '[foldkit] Cannot server-render a native <select> with a client-only ' +
+        'value property. Foldkit applies that value before options exist in ' +
+        'a fresh client render and after they exist during hydration, so the ' +
+        'two renders can select different options. CustomElement property ' +
+        'factories belong on their declared Custom Element. Use h.Value(...) ' +
+        'to give a native select one controlled selection to serialize and ' +
+        'hydrate.',
+    )
+  }
+  const value = properties?.['value']
   if (typeof value === 'string') {
     return {
       value,
