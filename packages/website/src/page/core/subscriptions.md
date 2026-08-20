@@ -8,34 +8,34 @@ The first dependency value opens the Stream's initial scope. After every Model u
 
 ```diagram
                              Model
-                               │ modelToDependencies(model)
-                               ▼
+                               | modelToDependencies(model)
+                               v
                           Dependencies
-                               │
-                ┌──────────────┴───────────────┐
-                │                              │
+                               |
+                +--------------+---------------+
+                |                              |
            first value                   later value
-                │                              │
-                │                              ▼
-                │                   compare with previous
-                │                              │
-                │                 ┌────────────┴───────────┐
-                │                 │                        │
-                │              changed                equivalent
-                │                 │                        │
-                │                 ▼                        ▼
-                │         close old scope         keep current scope
-                │          run finalizers                  │
-                │                 │                        │
-                └─────────────────┤                        │
-                                  ▼                        │
-                           open fresh scope                │
-                                  │                        │
-                                  └────────────┬───────────┘
-                                               ▼
+                |                              |
+                |                              v
+                |                   compare with previous
+                |                              |
+                |                 +------------+-----------+
+                |                 |                        |
+                |              changed                equivalent
+                |                 |                        |
+                |                 v                        v
+                |         close old scope         keep current scope
+                |          run finalizers                  |
+                |                 |                        |
+                +-----------------+                        |
+                                  v                        |
+                           open fresh scope                |
+                                  |                        |
+                                  +------------+-----------+
+                                               v
                                     active Stream<Message>
-                                               │
-                                               ▼
+                                               |
+                                               v
                                              update
 ```
 
