@@ -12,17 +12,19 @@ pnpm create foldkit-app
 yarn create foldkit-app
 # or
 bun create foldkit-app
+# or
+deno run -A npm:create-foldkit-app
 ```
 
 The CLI prompts you for a project name, rendering mode, starter example, and package manager. Pass `--name`, `--rendering`, `--example`, and/or `--package-manager` to skip the matching prompts.
 
 ## Rendering
 
-| Mode  | Description                                                                                                                                                                    |
-| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `spa` | Render entirely in the browser. Starts from your choice of starter example below.                                                                                              |
-| `ssg` | Prerender routes to static HTML at build time, then hydrate in the browser. Scaffolds a small routed app with a server entry and a prerender script.                           |
-| `ssr` | Render each request on a Node server, then hydrate in the browser. Scaffolds a counter whose Flags come from the request, plus an Effect HttpServer host and a `start` script. |
+| Mode  | Description                                                                                                                                                               |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `spa` | Render entirely in the browser. Starts from your choice of starter example below.                                                                                         |
+| `ssg` | Prerender routes to static HTML at build time, then hydrate in the browser. Scaffolds a small routed app with a server entry and a prerender script.                      |
+| `ssr` | Render each request on a server, then hydrate in the browser. Scaffolds a counter whose Flags come from the request, plus an Effect HttpServer host and a `start` script. |
 
 The starter examples apply to `spa` rendering. The `ssg` and `ssr` modes scaffold their own starter apps.
 

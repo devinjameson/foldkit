@@ -1,10 +1,12 @@
 import { Array as Array_ } from 'effect'
 import { type ChildProcess, spawn, spawnSync } from 'node:child_process'
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from 'node:fs'
@@ -41,15 +43,45 @@ const EXACT_VERSION = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/
 
 const SSR_PORT = 5312
 const SSG_PORT = 5313
+const DENO_SSR_PORT = 5314
+const DENO_SSG_PORT = 5315
 const BUILD_ID_ATTRIBUTE = /data-foldkit-build="([^"]*)"/
 const EXPECTED_ALLOW = 'GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS'
 const HOST_OUTPUT_LIMIT = 16_000
 const HOST_READY_ATTEMPTS = 60
 const HOST_REQUEST_TIMEOUT_MS = 5_000
 const HOST_STOP_TIMEOUT_MS = 3_000
+const HOST_FLUSH_TIMEOUT_MS = 2_000
 const HYDRATION_TIMEOUT_MS = 10_000
 
 const isSkipBuild = process.argv.includes('--skip-build')
+
+// A Deno scaffold is the only configuration where the generated project runs
+// on something other than Node, so it is the only one that exercises the
+// `deno.json`, the `deno task` wiring, the `@effect/platform-deno` host, and
+// the vite shim the build names by path. CI installs Deno and passes
+// --require-deno so a missing toolchain fails instead of quietly reducing what
+// this gate covers. A local run without Deno says out loud what it skipped.
+const isDenoRequired = process.argv.includes('--require-deno')
+
+type ScaffoldPackageManager = 'npm' | 'deno'
+
+const PACKAGE_MANAGER_LABELS: Readonly<Record<ScaffoldPackageManager, string>> =
+  {
+    npm: 'npm',
+    deno: 'Deno',
+  }
+
+const denoVersion = (): string | undefined => {
+  const result = spawnSync('deno', ['--version'], {
+    encoding: 'utf8',
+    stdio: 'pipe',
+  })
+  if (result.status !== 0) {
+    return undefined
+  }
+  return result.stdout.split('\n')[0]?.trim()
+}
 
 class ScaffoldCheckError extends Error {}
 
@@ -124,6 +156,10 @@ type RunningHost = Readonly<{
   process: ChildProcess
   port: number
   output: () => string
+  // Resolves once the host's stdio has closed, which is after the last write.
+  // A host that exits on startup is usually reporting why on the way out, and
+  // reading `output()` the moment `exitCode` is set races that final write.
+  flushed: Promise<void>
 }>
 
 const activeHosts = new Set<RunningHost>()
@@ -179,10 +215,14 @@ const startHost = (
   host.stdout?.on('data', capture)
   host.stderr?.on('data', capture)
   host.on('error', error => capture(error.message))
+  const flushed = new Promise<void>(resolveFlushed => {
+    host.once('close', () => resolveFlushed())
+  })
   const runningHost = {
     process: host,
     port,
     output: () => output,
+    flushed,
   }
   activeHosts.add(runningHost)
   return runningHost
@@ -262,6 +302,17 @@ const stopForSignal = (exitCode: number): void => {
 process.once('SIGINT', () => stopForSignal(130))
 process.once('SIGTERM', () => stopForSignal(143))
 
+const exitDiagnostic = async (host: RunningHost): Promise<string> => {
+  await Promise.race([
+    host.flushed,
+    new Promise<void>(resolveTimeout =>
+      setTimeout(() => resolveTimeout(), HOST_FLUSH_TIMEOUT_MS),
+    ),
+  ])
+  const output = host.output()
+  return output === '' ? '(the host wrote nothing)' : output
+}
+
 const fetchServedPage = async (
   host: RunningHost,
   origin: string,
@@ -270,7 +321,10 @@ const fetchServedPage = async (
   const url = `${origin}${path}`
   for (let attempt = 0; attempt < HOST_READY_ATTEMPTS; attempt++) {
     if (host.process.exitCode !== null || host.process.signalCode !== null) {
-      fail(`the generated host exited before serving ${url}:\n${host.output()}`)
+      fail(
+        `the generated host exited before serving ${url}:\n` +
+          `${await exitDiagnostic(host)}`,
+      )
     }
     try {
       const response = await fetch(url, {
@@ -289,7 +343,8 @@ const fetchServedPage = async (
     }
   }
   return fail(
-    `the generated host never accepted a connection at ${url}:\n${host.output()}`,
+    `the generated host never accepted a connection at ${url}:\n` +
+      `${await exitDiagnostic(host)}`,
   )
 }
 
@@ -599,6 +654,8 @@ type Tarballs = Readonly<{ cli: string; foldkit: string; plugin: string }>
 type DependencyMap = Readonly<Record<string, string>>
 
 type PackageManifest = Readonly<{
+  name?: string
+  version?: string
   dependencies?: DependencyMap
   devDependencies?: DependencyMap
 }>
@@ -606,48 +663,81 @@ type PackageManifest = Readonly<{
 const readManifest = (path: string): PackageManifest =>
   JSON.parse(readFileSync(path, 'utf8'))
 
-const prepareDependencyManifests = (workspaceDir: string): string => {
-  const manifestDirectory = join(workspaceDir, 'dependency-manifests')
-
-  for (const rendering of ['ssr', 'ssg'] as const) {
-    const source = readManifest(
-      join(REPO_ROOT, 'examples', rendering, 'package.json'),
-    )
-    const effectSpec = source.dependencies?.['effect']
-    assertScaffold(
-      effectSpec !== undefined && EXACT_VERSION.test(effectSpec),
-      `the ${rendering.toUpperCase()} example must pin effect to one exact ` +
-        'version so the scaffold gate can distinguish its local manifest',
-    )
-    const manifest = {
-      ...source,
-      dependencies: { ...source.dependencies, effect: `=${effectSpec}` },
-    }
-    const directory = join(manifestDirectory, rendering)
-    mkdirSync(directory, { recursive: true })
-    writeFileSync(
-      join(directory, 'package.json'),
-      `${JSON.stringify(manifest, null, 2)}\n`,
-    )
+// The `=` prefix marks the manifest as this gate's own copy, so a generated
+// project carrying it proves the CLI read the directory under review instead of
+// fetching the example from GitHub.
+//
+// NOTE: only npm accepts `=1.2.3` as a range. Deno installs and builds with it
+// but `deno run` then refuses the built server with `Invalid package specifier
+// 'npm:effect@=...'`, so the Deno leg gets a verbatim pin. Reading that
+// directory is package-manager independent, and the npm leg above asserts it.
+const prepareDependencyManifests = (
+  workspaceDir: string,
+): Readonly<Record<ScaffoldPackageManager, string>> => {
+  const directories: Record<ScaffoldPackageManager, string> = {
+    npm: join(workspaceDir, 'dependency-manifests/npm'),
+    deno: join(workspaceDir, 'dependency-manifests/deno'),
   }
 
-  return manifestDirectory
+  for (const packageManager of ['npm', 'deno'] as const) {
+    for (const rendering of ['ssr', 'ssg'] as const) {
+      const source = readManifest(
+        join(REPO_ROOT, 'examples', rendering, 'package.json'),
+      )
+      const effectSpec = source.dependencies?.['effect']
+      assertScaffold(
+        effectSpec !== undefined && EXACT_VERSION.test(effectSpec),
+        `the ${rendering.toUpperCase()} example must pin effect to one exact ` +
+          'version so the scaffold gate can distinguish its local manifest',
+      )
+      const manifest = {
+        ...source,
+        dependencies: {
+          ...source.dependencies,
+          effect: packageManager === 'npm' ? `=${effectSpec}` : effectSpec,
+        },
+      }
+      const directory = join(directories[packageManager], rendering)
+      mkdirSync(directory, { recursive: true })
+      writeFileSync(
+        join(directory, 'package.json'),
+        `${JSON.stringify(manifest, null, 2)}\n`,
+      )
+    }
+  }
+
+  return directories
+}
+
+// The packages a package manager deliberately rewrites, which the generic
+// spec comparison below therefore cannot expect to find unchanged.
+// `assertDenoDependencyAdjustments` asserts what replaced each one.
+const rewrittenPackagesFor = (
+  packageManager: ScaffoldPackageManager,
+  rendering: 'ssr' | 'ssg',
+): ReadonlyArray<string> => {
+  if (packageManager !== 'deno') {
+    return []
+  }
+  return rendering === 'ssr' ? ['@effect/platform-node'] : ['tsx']
 }
 
 const assertGeneratedDependencySpecs = (
   rendering: 'ssr' | 'ssg',
   projectDir: string,
   manifestDirectory: string,
+  packageManager: ScaffoldPackageManager,
 ): void => {
   const source = readManifest(
     join(manifestDirectory, rendering, 'package.json'),
   )
   const generated = readManifest(join(projectDir, 'package.json'))
+  const rewritten = rewrittenPackagesFor(packageManager, rendering)
 
   for (const field of ['dependencies', 'devDependencies'] as const) {
     const generatedDependencies = generated[field] ?? {}
     for (const [name, spec] of Object.entries(source[field] ?? {})) {
-      if (spec.includes('workspace:')) {
+      if (spec.includes('workspace:') || rewritten.includes(name)) {
         continue
       }
       assertScaffold(
@@ -660,7 +750,205 @@ const assertGeneratedDependencySpecs = (
     }
   }
   log(
-    `The generated ${rendering.toUpperCase()} dependency specs match the checkout-derived manifest`,
+    `The generated ${PACKAGE_MANAGER_LABELS[packageManager]} ${rendering.toUpperCase()} dependency specs match the checkout-derived manifest`,
+  )
+}
+
+// Deno resolves each npm package through a store under `node_modules/.deno`,
+// with the project's `node_modules/<name>` a symlink into it and the package's
+// own dependencies symlinked alongside it. Replacing the store entry's contents
+// keeps that wiring, so `foldkit`'s peer `effect` still resolves to the one the
+// project installed. Pointing a `file:` dependency at the tarball instead does
+// not work: Deno symlinks `node_modules/foldkit` straight at the `.tgz` and
+// exits 0, leaving an install that cannot resolve `foldkit/experimental`.
+const denoStorePathFor = (projectDir: string, packageName: string): string => {
+  const linkPath = join(projectDir, 'node_modules', packageName)
+  if (!existsSync(linkPath)) {
+    return fail(
+      `the generated Deno project has no node_modules/${packageName}, so ` +
+        'this gate cannot install the workspace build over it',
+    )
+  }
+  return realpathSync(linkPath)
+}
+
+const extractTarballOver = (tarball: string, target: string): void => {
+  rmSync(target, { recursive: true, force: true })
+  mkdirSync(target, { recursive: true })
+  const result = spawnSync(
+    'tar',
+    ['xzf', tarball, '-C', target, '--strip-components=1'],
+    { encoding: 'utf8', stdio: 'pipe' },
+  )
+  assertScaffold(
+    result.status === 0,
+    `extracting ${tarball} into ${target} failed:\n${result.stderr}`,
+  )
+}
+
+// The CLI resolves `foldkit` and `@foldkit/vite-plugin` from the registry, so a
+// generated project installs the published versions. The npm leg installs the
+// tarballs over them with `npm install`; Deno has no equivalent for a local
+// tarball, so the store entries are replaced directly. Without this the Deno
+// leg would gate the last release rather than the one being prepared.
+const installWorkspacePackagesIntoDenoProject = (
+  projectDir: string,
+  tarballs: Tarballs,
+  rendering: 'ssr' | 'ssg',
+): void => {
+  const projectRoot = realpathSync(projectDir)
+  const packages = [
+    { name: 'foldkit', tarball: tarballs.foldkit, sourceDir: FOLDKIT_DIR },
+    {
+      name: '@foldkit/vite-plugin',
+      tarball: tarballs.plugin,
+      sourceDir: PLUGIN_DIR,
+    },
+  ] as const
+
+  for (const { name, tarball, sourceDir } of packages) {
+    const target = denoStorePathFor(projectDir, name)
+    assertScaffold(
+      target.startsWith(projectRoot),
+      `${name} in the generated Deno project resolves to ${target}, outside ` +
+        'the project. Replacing that would edit a shared cache rather than ' +
+        'this run.',
+    )
+    extractTarballOver(tarball, target)
+
+    const expected = readManifest(join(REPO_ROOT, sourceDir, 'package.json'))
+    const installed = readManifest(join(target, 'package.json'))
+    assertScaffold(
+      installed.name === name && installed.version === expected.version,
+      `after replacing the store entry, the generated Deno ` +
+        `${rendering.toUpperCase()} project resolves ${name} to ` +
+        `${String(installed.name)}@${String(installed.version)} instead of ` +
+        `this checkout's ${name}@${String(expected.version)}`,
+    )
+  }
+
+  log(
+    `The generated Deno ${rendering.toUpperCase()} project resolves this workspace's foldkit and vite plugin`,
+  )
+}
+
+// The CLI rewrites two dependencies for Deno. The ssr scaffold serves requests
+// through `@effect/platform-deno`, so the Node platform package is replaced at
+// the same pinned version. The ssg scaffold runs its prerender script under
+// `deno run`, so it needs no `tsx`.
+const assertDenoDependencyAdjustments = (
+  rendering: 'ssr' | 'ssg',
+  projectDir: string,
+  manifestDirectory: string,
+): void => {
+  const source = readManifest(
+    join(manifestDirectory, rendering, 'package.json'),
+  )
+  const generated = readManifest(join(projectDir, 'package.json'))
+  const dependencies = generated.dependencies ?? {}
+  const devDependencies = generated.devDependencies ?? {}
+
+  if (rendering === 'ssr') {
+    const nodeSpec = source.dependencies?.['@effect/platform-node']
+    assertScaffold(
+      nodeSpec !== undefined,
+      'the SSR verification manifest no longer declares ' +
+        '@effect/platform-node, so this assertion cannot tell whether the ' +
+        'Deno swap happened',
+    )
+    assertScaffold(
+      dependencies['@effect/platform-node'] === undefined,
+      'the generated Deno SSR project still depends on ' +
+        '@effect/platform-node, so it would serve requests through the Node ' +
+        'HTTP platform',
+    )
+    assertScaffold(
+      dependencies['@effect/platform-deno'] === nodeSpec,
+      `the generated Deno SSR project declares @effect/platform-deno as ` +
+        `${JSON.stringify(dependencies['@effect/platform-deno'])} instead of ` +
+        `the ${JSON.stringify(nodeSpec)} its Node counterpart is pinned to`,
+    )
+  } else {
+    assertScaffold(
+      source.devDependencies?.['tsx'] !== undefined,
+      'the SSG verification manifest no longer declares tsx, so this ' +
+        'assertion cannot tell whether the Deno adjustment happened',
+    )
+    assertScaffold(
+      devDependencies['tsx'] === undefined,
+      'the generated Deno SSG project still depends on tsx, which nothing in ' +
+        'a Deno build runs',
+    )
+  }
+
+  log(
+    `The generated Deno ${rendering.toUpperCase()} manifest carries the Deno dependency set`,
+  )
+}
+
+// `templates/package-managers/<pm>/` and `templates/rendering/<mode>/` are both
+// copied wholesale into a project, so a rendering overlay parked in either one
+// is written into scaffolds it does not apply to. That shipped a server host
+// into browser-only projects, which is why this asserts on the generated tree
+// and not just on the template layout.
+const assertDenoScaffoldShape = (
+  rendering: 'ssr' | 'ssg',
+  projectDir: string,
+): void => {
+  assertScaffold(
+    existsSync(join(projectDir, 'deno.json')),
+    `the generated Deno ${rendering.toUpperCase()} project has no deno.json`,
+  )
+  assertScaffold(
+    !existsSync(join(projectDir, 'rendering')),
+    `the generated Deno ${rendering.toUpperCase()} project contains a ` +
+      'rendering/ directory, so a package-manager overlay was copied in as a ' +
+      'literal path instead of over the files it replaces',
+  )
+
+  if (rendering === 'ssr') {
+    const main = readFileSync(join(projectDir, 'server/main.ts'), 'utf8')
+    assertScaffold(
+      main.includes('@effect/platform-deno'),
+      'the generated Deno SSR server/main.ts does not import ' +
+        '@effect/platform-deno, so the Deno overlay did not replace the Node ' +
+        'host',
+    )
+    assertScaffold(
+      main.includes("from './handler'"),
+      'the generated Deno SSR server/main.ts does not import its handler, so ' +
+        'the overlay carries its own copy of the request rules and can drift ' +
+        'from the host this gate probes on Node',
+    )
+  }
+
+  log(
+    `The generated Deno ${rendering.toUpperCase()} project has the Deno overlay and no stray template paths`,
+  )
+}
+
+// `deno task build` spawns vite from inside build.mjs, where the package
+// manager's PATH entry for node_modules/.bin is not inherited. Naming the shim
+// by path keeps the build on the vite in package.json; a bare `npm:vite`
+// specifier resolves to whatever the registry calls latest, which the lockfile
+// records as `npm:vite@*`.
+const assertDenoBuildUsedPinnedVite = (
+  rendering: 'ssr' | 'ssg',
+  projectDir: string,
+): void => {
+  const lock: Readonly<{ specifiers?: Readonly<Record<string, string>> }> =
+    JSON.parse(readFileSync(join(projectDir, 'deno.lock'), 'utf8'))
+  const unpinned = Object.keys(lock.specifiers ?? {}).filter(specifier =>
+    specifier.startsWith('npm:vite@*'),
+  )
+  assertScaffold(
+    Array_.isArrayEmpty(unpinned),
+    `the generated Deno ${rendering.toUpperCase()} lockfile records ` +
+      `${JSON.stringify(unpinned)}, so the build resolved vite from the ` +
+      'registry instead of the version the project pins',
+  )
+  log(
+    `The generated Deno ${rendering.toUpperCase()} build ran the vite the project pins`,
   )
 }
 
@@ -669,10 +957,12 @@ const generateProject = (
   rendering: 'ssr' | 'ssg',
   tarballs: Tarballs,
   manifestDirectory: string,
+  packageManager: ScaffoldPackageManager,
 ): string => {
-  const projectName = `my-${rendering}-app`
+  const label = PACKAGE_MANAGER_LABELS[packageManager]
+  const projectName = `my-${rendering}-${packageManager}-app`
   runRequired(
-    `Generating a ${rendering.toUpperCase()} project...`,
+    `Generating a ${label} ${rendering.toUpperCase()} project...`,
     'node',
     [
       join(workspaceDir, 'node_modules/.bin/create-foldkit-app'),
@@ -681,7 +971,7 @@ const generateProject = (
       '--rendering',
       rendering,
       '--package-manager',
-      'npm',
+      packageManager,
     ],
     {
       cwd: workspaceDir,
@@ -692,35 +982,56 @@ const generateProject = (
   )
 
   const projectDir = join(workspaceDir, projectName)
-  assertGeneratedDependencySpecs(rendering, projectDir, manifestDirectory)
-
-  // NOTE: the CLI resolves `foldkit` and `@foldkit/vite-plugin` from the
-  // registry, so a generated project installs the published versions rather
-  // than this workspace's. Installing the tarballs over them is what makes this
-  // a gate on the release being prepared instead of on the last one.
-  // `--legacy-peer-deps` is needed only because the plugin's peer floor names a
-  // version `changeset version` has not produced yet; `check-peer-floors.ts`
-  // asserts that floor separately.
-  runRequired(
-    `Installing this workspace's packages into the ${rendering.toUpperCase()} project...`,
-    'npm',
-    [
-      'install',
-      '--no-audit',
-      '--no-fund',
-      '--legacy-peer-deps',
-      tarballs.foldkit,
-      tarballs.plugin,
-    ],
-    { cwd: projectDir },
+  assertGeneratedDependencySpecs(
+    rendering,
+    projectDir,
+    manifestDirectory,
+    packageManager,
   )
 
+  if (packageManager === 'deno') {
+    assertDenoDependencyAdjustments(rendering, projectDir, manifestDirectory)
+    assertDenoScaffoldShape(rendering, projectDir)
+    installWorkspacePackagesIntoDenoProject(projectDir, tarballs, rendering)
+    runRequired(
+      `Typechecking the generated ${label} ${rendering.toUpperCase()} project...`,
+      'deno',
+      ['task', 'typecheck'],
+      { cwd: projectDir, inherit: true },
+    )
+  } else {
+    // NOTE: the CLI resolves `foldkit` and `@foldkit/vite-plugin` from the
+    // registry, so a generated project installs the published versions rather
+    // than this workspace's. Installing the tarballs over them is what makes
+    // this a gate on the release being prepared instead of on the last one.
+    // `--legacy-peer-deps` is needed only because the plugin's peer floor names
+    // a version `changeset version` has not produced yet;
+    // `check-peer-floors.ts` asserts that floor separately.
+    runRequired(
+      `Installing this workspace's packages into the ${label} ${rendering.toUpperCase()} project...`,
+      'npm',
+      [
+        'install',
+        '--no-audit',
+        '--no-fund',
+        '--legacy-peer-deps',
+        tarballs.foldkit,
+        tarballs.plugin,
+      ],
+      { cwd: projectDir },
+    )
+  }
+
   runRequired(
-    `Building the ${rendering.toUpperCase()} project through its documented build command...`,
-    'npm',
-    ['run', 'build'],
+    `Building the ${label} ${rendering.toUpperCase()} project through its documented build command...`,
+    packageManager,
+    packageManager === 'deno' ? ['task', 'build'] : ['run', 'build'],
     { cwd: projectDir, inherit: true },
   )
+
+  if (packageManager === 'deno') {
+    assertDenoBuildUsedPinnedVite(rendering, projectDir)
+  }
 
   return projectDir
 }
@@ -888,23 +1199,30 @@ const checkSsr = async (
   tarballs: Tarballs,
   manifestDirectory: string,
   browser: PlaywrightBrowser,
+  packageManager: ScaffoldPackageManager,
 ): Promise<void> => {
+  const label = PACKAGE_MANAGER_LABELS[packageManager]
   const projectDir = generateProject(
     workspaceDir,
     'ssr',
     tarballs,
     manifestDirectory,
+    packageManager,
   )
 
-  const origin = `http://127.0.0.1:${String(SSR_PORT)}`
-  const host = startHost('npm', ['run', 'start'], projectDir, SSR_PORT, {
-    PORT: String(SSR_PORT),
-    ORIGIN: origin,
-  })
+  const port = packageManager === 'deno' ? DENO_SSR_PORT : SSR_PORT
+  const origin = `http://127.0.0.1:${String(port)}`
+  const host = startHost(
+    packageManager,
+    packageManager === 'deno' ? ['task', 'start'] : ['run', 'start'],
+    projectDir,
+    port,
+    { PORT: String(port), ORIGIN: origin },
+  )
   try {
     const html = await fetchServedPage(host, origin)
     assertBuildIdReachesBothSides(
-      'The generated SSR host',
+      `The generated ${label} SSR host`,
       html,
       join(projectDir, 'dist/client'),
     )
@@ -920,25 +1238,28 @@ const checkSsg = async (
   tarballs: Tarballs,
   manifestDirectory: string,
   browser: PlaywrightBrowser,
+  packageManager: ScaffoldPackageManager,
 ): Promise<void> => {
+  const label = PACKAGE_MANAGER_LABELS[packageManager]
   const projectDir = generateProject(
     workspaceDir,
     'ssg',
     tarballs,
     manifestDirectory,
+    packageManager,
   )
   const clientDir = join(projectDir, 'dist/client')
 
   const home = readFileSync(join(clientDir, 'index.html'), 'utf8')
   const homeBuildId = assertBuildIdReachesBothSides(
-    'The generated SSG home page',
+    `The generated ${label} SSG home page`,
     home,
     clientDir,
   )
 
   const about = readFileSync(join(clientDir, 'about/index.html'), 'utf8')
   const aboutBuildId = assertBuildIdReachesBothSides(
-    'The generated SSG about page',
+    `The generated ${label} SSG about page`,
     about,
     clientDir,
   )
@@ -950,21 +1271,24 @@ const checkSsg = async (
       'client build was given.',
   )
 
-  const origin = `http://127.0.0.1:${String(SSG_PORT)}`
+  const port = packageManager === 'deno' ? DENO_SSG_PORT : SSG_PORT
+  const origin = `http://127.0.0.1:${String(port)}`
+  // NOTE: `deno task` forwards trailing arguments to the script as they are, so
+  // a `--` separator would reach vite as a literal argument. npm needs it.
+  const previewArgs = [
+    '--host',
+    '127.0.0.1',
+    '--port',
+    String(port),
+    '--strictPort',
+  ]
   const host = startHost(
-    'npm',
-    [
-      'run',
-      'preview',
-      '--',
-      '--host',
-      '127.0.0.1',
-      '--port',
-      String(SSG_PORT),
-      '--strictPort',
-    ],
+    packageManager,
+    packageManager === 'deno'
+      ? ['task', 'preview', ...previewArgs]
+      : ['run', 'preview', '--', ...previewArgs],
     projectDir,
-    SSG_PORT,
+    port,
   )
   try {
     await fetchServedPage(host, origin)
@@ -982,7 +1306,28 @@ const main = async (): Promise<void> => {
   try {
     await assertPortIsFree(SSR_PORT)
     await assertPortIsFree(SSG_PORT)
-    const manifestDirectory = prepareDependencyManifests(workspaceDir)
+    const manifestDirectories = prepareDependencyManifests(workspaceDir)
+
+    const deno = denoVersion()
+    if (deno === undefined && isDenoRequired) {
+      fail(
+        'deno is not on PATH and --require-deno was passed. The Deno leg is ' +
+          'the only coverage of the generated deno.json, the deno task ' +
+          'wiring, the @effect/platform-deno host, and the vite shim the ' +
+          'build names by path.',
+      )
+    }
+    if (deno === undefined) {
+      log(
+        'SKIPPING the Deno leg: deno is not on PATH. Not covered by this run: ' +
+          'deno install, the Deno dependency swap, the Deno SSR host, and the ' +
+          'Deno build. Install Deno to run it.',
+      )
+    } else {
+      await assertPortIsFree(DENO_SSR_PORT)
+      await assertPortIsFree(DENO_SSG_PORT)
+      log(`Deno leg enabled (${deno})`)
+    }
 
     if (!isSkipBuild) {
       runRequired(
@@ -1030,8 +1375,25 @@ const main = async (): Promise<void> => {
       executablePath === undefined ? {} : { executablePath },
     )
     try {
-      await checkSsr(workspaceDir, tarballs, manifestDirectory, browser)
-      await checkSsg(workspaceDir, tarballs, manifestDirectory, browser)
+      for (const packageManager of ['npm', 'deno'] as const) {
+        if (packageManager === 'deno' && deno === undefined) {
+          continue
+        }
+        await checkSsr(
+          workspaceDir,
+          tarballs,
+          manifestDirectories[packageManager],
+          browser,
+          packageManager,
+        )
+        await checkSsg(
+          workspaceDir,
+          tarballs,
+          manifestDirectories[packageManager],
+          browser,
+          packageManager,
+        )
+      }
     } finally {
       await browser.close()
     }

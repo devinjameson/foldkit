@@ -37,7 +37,7 @@ const name = Flag.string('name').pipe(
 const rendering = Flag.choice('rendering', RENDERING_VALUES).pipe(
   Flag.withAlias('r'),
   Flag.withDescription(
-    'How the application renders: spa renders entirely in the browser, ssg prerenders routes to static HTML at build time, ssr renders each request on a Node server',
+    'How the application renders: spa renders entirely in the browser, ssg prerenders routes to static HTML at build time, ssr renders each request on a server',
   ),
   Flag.optional,
 )
@@ -55,6 +55,7 @@ const packageManager = Flag.choice('package-manager', [
   'npm',
   'yarn',
   'bun',
+  'deno',
 ]).pipe(
   Flag.withAlias('p'),
   Flag.withDescription(

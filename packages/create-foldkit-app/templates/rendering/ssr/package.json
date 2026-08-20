@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/build.mjs",
-    "start": "node dist/server/main.js",
+    "build": "{{runtime}} scripts/build.mjs",
+    "start": "{{runtime}} dist/server/main.js",
     "typecheck": "tsc --noEmit",
     "format": "prettier -w .",
     "test": "vitest run",

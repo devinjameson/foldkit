@@ -59,6 +59,11 @@ describe('applyPackageManager', () => {
     expect(pnpm).toContain('pnpm install')
     expect(pnpm).toContain('pnpm dev')
     expect(pnpm).not.toContain('{{')
+
+    const deno = applyPackageManager(templateReadme, 'deno')
+    expect(deno).toContain('deno install')
+    expect(deno).toContain('deno task dev')
+    expect(deno).not.toContain('{{')
   })
 })
 
@@ -80,7 +85,7 @@ describe('rendering templates', () => {
     ])
 
     const packageJson = readTemplatePackageJson('rendering/ssg/package.json')
-    expect(packageJson.scripts['build']).toBe('node scripts/build.mjs')
+    expect(packageJson.scripts['build']).toBe('{{runtime}} scripts/build.mjs')
     expect(packageJson.scripts['preview']).toBe(
       'vite preview --outDir dist/client',
     )
@@ -104,6 +109,7 @@ describe('rendering templates', () => {
       'README.md',
       'package.json',
       'scripts/build.mjs',
+      'server/handler.ts',
       'server/main.ts',
       'src/cookie.ts',
       'src/entry.server.ts',
@@ -116,8 +122,8 @@ describe('rendering templates', () => {
     ])
 
     const packageJson = readTemplatePackageJson('rendering/ssr/package.json')
-    expect(packageJson.scripts['build']).toBe('node scripts/build.mjs')
-    expect(packageJson.scripts['start']).toBe('node dist/server/main.js')
+    expect(packageJson.scripts['build']).toBe('{{runtime}} scripts/build.mjs')
+    expect(packageJson.scripts['start']).toBe('{{runtime}} dist/server/main.js')
 
     expect(readTemplateFile('rendering/ssr/vite.config.ts')).toContain(
       "ssr: { serverEntry: '/src/entry.server.ts' }",
@@ -244,5 +250,87 @@ describe('rendering templates', () => {
       expect(readme).toMatch(/never contain\s+a secret/)
       expect(readme).toMatch(/two deployments\s+must/)
     }
+  })
+
+  it('branches build.mjs to spawn vite (and, for ssg, the prerender script) through Deno', () => {
+    for (const rendering of ['ssg', 'ssr']) {
+      const buildScript = readTemplateFile(
+        `rendering/${rendering}/scripts/build.mjs`,
+      )
+      expect(buildScript).toContain("typeof Deno !== 'undefined'")
+      expect(buildScript).toContain("'node_modules/.bin/vite'")
+      // NOTE: a bare `npm:vite` specifier resolves to whatever the registry
+      // calls latest, so the build would drift off the vite in package.json
+      // the day a new major ships. The shim path is what pins it.
+      expect(buildScript).not.toContain("'npm:vite'")
+    }
+
+    expect(readTemplateFile('rendering/ssg/scripts/build.mjs')).toContain(
+      "'deno', ['run', '-A', 'scripts/prerender.ts']",
+    )
+  })
+})
+
+describe('deno overlay', () => {
+  it('ships a deno.json enabling the local node_modules directory', () => {
+    const denoJson = JSON.parse(
+      readTemplateFile('package-managers/deno/deno.json'),
+    )
+    expect(denoJson).toEqual({ nodeModulesDir: 'auto' })
+  })
+
+  it('keeps the package-manager templates free of rendering overlays', () => {
+    // Both `package-managers/<pm>/` and `rendering/<mode>/` are copied
+    // wholesale into a project, so an ssr overlay parked in either one lands in
+    // scaffolds it does not apply to. A Deno SPA would ship a server host it
+    // has no dependency for. Overlays live in `rendering-overlays/` for that
+    // reason, and these two lists are what keeps them there.
+    expect(listTemplateFiles('package-managers/deno')).toEqual(['deno.json'])
+    expect(listTemplateFiles('package-managers/pnpm')).toEqual([
+      'pnpm-workspace.yaml',
+    ])
+
+    for (const rendering of ['ssg', 'ssr']) {
+      for (const file of listTemplateFiles(`rendering/${rendering}`)) {
+        expect(file).not.toContain('package-manager')
+      }
+    }
+  })
+
+  it('overlays only the ssr platform wiring, leaving the request handling shared', () => {
+    expect(listTemplateFiles('rendering-overlays/deno')).toEqual([
+      'ssr/server/main.ts',
+    ])
+
+    const denoMain = readTemplateFile(
+      'rendering-overlays/deno/ssr/server/main.ts',
+    )
+    expect(denoMain).toContain(
+      "import { DenoHttpServer, DenoRuntime } from '@effect/platform-deno'",
+    )
+    expect(denoMain).toContain('DenoHttpServer.layer({ port })')
+    expect(denoMain).toContain('Layer.provide(DenoHttpServerLive)')
+    expect(denoMain).toContain('DenoRuntime.runMain(Layer.launch(Main))')
+    expect(denoMain).not.toContain('@effect/platform-node')
+    expect(denoMain).not.toContain('node:http')
+
+    // Both hosts import the same handler rather than restating it, so the
+    // request rules the Node host is gated on are the rules the Deno host
+    // serves. An overlay that grew its own copy would drift silently.
+    const nodeMain = readTemplateFile('rendering/ssr/server/main.ts')
+    for (const main of [nodeMain, denoMain]) {
+      expect(main).toContain("import { PORT, makeHandler } from './handler'")
+      expect(main).toContain('HttpServer.serve(handler)')
+      expect(main).not.toContain('renderRequest')
+      expect(main).not.toContain('HttpStaticServer')
+    }
+
+    const handler = readTemplateFile('rendering/ssr/server/handler.ts')
+    expect(handler).toContain('export const PORT')
+    expect(handler).toContain('export const makeHandler')
+    // The Deno host drops @effect/platform-node, which is what pulled
+    // @types/node in transitively, so the node: imports here need the
+    // reference to resolve under `deno task typecheck`.
+    expect(handler).toContain('/// <reference types="node" />')
   })
 })

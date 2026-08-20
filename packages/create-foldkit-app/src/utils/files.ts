@@ -25,6 +25,7 @@ import {
   devCommand,
   installCommand,
   runScriptCommand,
+  runtimeCommand,
 } from './packages.js'
 
 const GITHUB_API_BASE_URL =
@@ -191,6 +192,58 @@ const createRenderingFiles = (projectPath: string, scaffold: Scaffold) =>
     }),
   )
 
+const renderingOverlayDirectory = (
+  scaffold: Scaffold,
+): Option.Option<OverlayDirectory> =>
+  Match.value(scaffold).pipe(
+    Match.tagsExhaustive({
+      Spa: () => Option.none(),
+      Ssg: () => Option.some<OverlayDirectory>('ssg'),
+      Ssr: () => Option.some<OverlayDirectory>('ssr'),
+    }),
+  )
+
+/**
+ * Overlay a package manager's own variant of a rendering scaffold's files, such
+ * as ssr's Deno-native `server/main.ts`, when
+ * `templates/rendering-overlays/<packageManager>/<directory>/` exists. A no-op
+ * for every other scaffold/package-manager combination, since only ssr+deno has
+ * an overlay directory today.
+ *
+ * These live in their own template root rather than under
+ * `templates/package-managers/` or `templates/rendering/`, both of which are
+ * copied wholesale by the walkers above. Nested under either, an ssr overlay
+ * would be written verbatim into projects it does not apply to: a Deno SPA
+ * would ship a server host it has no dependency for.
+ */
+const overlayRenderingFilesForPackageManager = (
+  projectPath: string,
+  scaffold: Scaffold,
+  packageManager: PackageManager,
+) =>
+  Effect.gen(function* () {
+    const maybeDirectory = renderingOverlayDirectory(scaffold)
+    if (Option.isNone(maybeDirectory)) {
+      return
+    }
+
+    const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    const templateRoot = yield* getTemplateRoot
+    const templateDir = path.join(
+      templateRoot,
+      'rendering-overlays',
+      packageManager,
+      maybeDirectory.value,
+    )
+    const isTemplateDirectoryPresent = yield* fs.exists(templateDir)
+
+    if (isTemplateDirectoryPresent) {
+      const overlayFiles = yield* getTemplateFiles(templateDir)
+      yield* createFiles(projectPath, overlayFiles)
+    }
+  })
+
 export const createProject = (
   name: string,
   projectPath: string,
@@ -202,6 +255,11 @@ export const createProject = (
     yield* createRenderingFiles(projectPath, scaffold)
     yield* modifyBaseFiles(projectPath, name, packageManager)
     yield* createPackageManagerFiles(projectPath, packageManager)
+    yield* overlayRenderingFilesForPackageManager(
+      projectPath,
+      scaffold,
+      packageManager,
+    )
     yield* Match.value(scaffold).pipe(
       Match.tagsExhaustive({
         Spa: ({ example }) => createExampleFiles(projectPath, example),
@@ -246,7 +304,11 @@ const modifyBaseFiles = (
     const packageJson = yield* fs.readFileString(packageJsonPath)
     yield* fs.writeFileString(
       packageJsonPath,
-      String.replace('{{name}}', name)(packageJson),
+      pipe(
+        packageJson,
+        String.replace('{{name}}', name),
+        String.replaceAll('{{runtime}}', runtimeCommand(packageManager)),
+      ),
     )
 
     const readmePath = path.join(projectPath, 'README.md')

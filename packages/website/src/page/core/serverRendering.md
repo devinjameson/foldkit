@@ -234,7 +234,7 @@ The [SSG example](https://github.com/foldkit/foldkit/tree/main/examples/ssg) is 
 
 A deployed SSG build is a directory of static files. Any static host or CDN can serve it as is. The hydration handoff already lives in the HTML.
 
-A deployed SSR application needs a host with two jobs: serve the built client assets and call `renderPage` for page requests. On Node, use the [SSR example's server](https://github.com/foldkit/foldkit/tree/main/examples/ssr/server) as the reference. It serves static files first and sends `Server.toResponse(template, await renderPage(request))` for everything else.
+A deployed SSR application needs a host with two jobs: serve the built client assets and call `renderPage` for page requests. On Node, use the [SSR example's server](https://github.com/foldkit/foldkit/tree/main/examples/ssr/server) as the reference. It serves static files first and sends `Server.toResponse(template, await renderPage(request))` for everything else. Scaffolding SSR with `--package-manager deno` generates the same host built on `@effect/platform-deno`'s `DenoHttpServer` instead, so the project runs and deploys on Deno with no Node.js runtime involved.
 
 ### Which methods reach the entry
 

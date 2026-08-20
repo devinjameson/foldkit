@@ -26,7 +26,7 @@
     "check:packed-ssr-consumer": "tsx scripts/check-packed-ssr-consumer.ts",
     "check:packed-ssr-consumer:ci": "tsx scripts/check-packed-ssr-consumer.ts --skip-build --critical-browser-matrix",
     "check:scaffold-server-rendering": "tsx scripts/check-scaffold-server-rendering.ts",
-    "check:scaffold-server-rendering:ci": "tsx scripts/check-scaffold-server-rendering.ts --skip-build",
+    "check:scaffold-server-rendering:ci": "tsx scripts/check-scaffold-server-rendering.ts --skip-build --require-deno",
     "check:host-parity": "tsx scripts/check-host-parity.ts",
     "check:host-parity:ci": "tsx scripts/check-host-parity.ts --skip-build",
     "check:playground-ssg-build": "tsx scripts/check-playground-ssg-build.ts",
