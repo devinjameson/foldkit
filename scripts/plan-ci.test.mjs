@@ -155,6 +155,17 @@ test('peer floor inputs select their packed-manifest gate', () => {
   )
 })
 
+test('a packed consumer fixture change selects only its focused gate', () => {
+  const scopes = planCiForFile(
+    'scripts/fixtures/packed-ssr-consumer/src/entry.server.ts',
+  )
+
+  assert.equal(scopes['packed_ssr_consumer'], 'true')
+  for (const scope of SCOPES.filter(scope => scope !== 'packed_ssr_consumer')) {
+    assert.equal(scopes[scope], 'false', `${scope} should be false`)
+  }
+})
+
 test('a scaffold or framework change selects the generated-app build gate', () => {
   // The scaffold's build command is where the build id contract is kept or
   // lost, and it depends on the templates, on the render that stamps the id,
