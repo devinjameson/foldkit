@@ -84,6 +84,10 @@ jobs:
       - name: Build reusable packages
         run: pnpm build:packages && pnpm --filter @typing-game/shared build
 
+      - name: Check packed peer dependency floors
+        if: steps.scope.outputs.peer_floors == 'true'
+        run: pnpm check:peer-floors
+
       - name: Check dead code
         run: pnpm check:dead-code
 
@@ -117,6 +121,10 @@ jobs:
           # and its own scripts recurse over the whole workspace, so leaving it
           # in runs every package a second time concurrently.
           pnpm -r --filter "...[$base]" --filter '!foldkit-monorepo' run --if-present typecheck
+
+      - name: Typecheck website
+        if: steps.scope.outputs.website == 'true' && steps.scope.outputs.full_workspace_checks == 'false'
+        run: pnpm --filter website typecheck
 
       - name: Smoke test create-foldkit-app
         if: steps.scope.outputs.create_foldkit_smoke == 'true'
@@ -208,6 +216,10 @@ jobs:
           # concurrently with this one. Two `vitest run --coverage` processes
           # in the same package then race on coverage/.tmp.
           pnpm -r --filter "...[$base]" --filter '!foldkit-monorepo' run --if-present test
+
+      - name: Test website
+        if: steps.scope.outputs.website == 'true' && steps.scope.outputs.full_workspace_checks == 'false'
+        run: pnpm --filter website test
 
       - name: Install Playwright browsers
         if: steps.scope.outputs.website == 'true'

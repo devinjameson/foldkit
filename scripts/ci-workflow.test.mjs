@@ -16,6 +16,10 @@ const examplesWorkflow = readFileSync(
 const rootPackage = JSON.parse(
   readFileSync(resolve(REPO_ROOT, 'package.json'), 'utf8'),
 )
+const releaseWorkflow = readFileSync(
+  resolve(REPO_ROOT, '.github/workflows/release.yml'),
+  'utf8',
+)
 
 test('required workflows check pull requests and merge groups', () => {
   for (const requiredWorkflow of [workflow, examplesWorkflow]) {
@@ -51,4 +55,29 @@ test('the packed SSR consumer runs its critical browser matrix in CI', () => {
     rootPackage.scripts['check:packed-ssr-consumer:ci'],
     'tsx scripts/check-packed-ssr-consumer.ts --skip-build --critical-browser-matrix',
   )
+})
+
+test('the website scope runs unit tests and typechecking', () => {
+  const scopedCondition =
+    "steps.scope.outputs.website == 'true' && steps.scope.outputs.full_workspace_checks == 'false'"
+
+  assert.ok(
+    workflow.includes(
+      `      - name: Typecheck website\n        if: ${scopedCondition}\n        run: pnpm --filter website typecheck`,
+    ),
+  )
+  assert.ok(
+    workflow.includes(
+      `      - name: Test website\n        if: ${scopedCondition}\n        run: pnpm --filter website test`,
+    ),
+  )
+})
+
+test('peer floor changes run the packed-manifest check before release', () => {
+  assert.ok(
+    workflow.includes(
+      "      - name: Check packed peer dependency floors\n        if: steps.scope.outputs.peer_floors == 'true'\n        run: pnpm check:peer-floors",
+    ),
+  )
+  assert.match(releaseWorkflow, /^\s+- 'scripts\/check-peer-floors\.ts'$/m)
 })

@@ -19,6 +19,7 @@ on:
       - 'pnpm-workspace.yaml'
       - 'scripts/check-changeset-ignore.ts'
       - 'scripts/check-create-foldkit-app-smoke.ts'
+      - 'scripts/check-peer-floors.ts'
       - 'scripts/reset-peer-deps.ts'
       - '.github/workflows/release.yml'
 
