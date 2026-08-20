@@ -103,11 +103,17 @@ Foldkit rejects extra top-level content, ambiguous handoff markers, and source t
 
 ### Application ownership
 
-`runtimeId` names one application on the page. It pairs a root with its Flags payload. It also keys the Model and scroll position preserved by hot reloading.
+`runtimeId` pairs one hydratable root with its Flags payload. It also keys the Model and scroll position preserved by hot reloading. A nondefault id changes that pairing. It does not create another document owner.
 
-Two roots with the same id are one application claimed twice. The second boot would read the first root's Flags and restore its Model. `injectIntoTemplate` refuses to build that page, and `Runtime.hydrate` refuses one assembled elsewhere. This rule also applies when the applications declare no Flags because hot reloading still uses the id.
+A document may contain one hydratable Foldkit root. `injectIntoTemplate` refuses to insert a hydratable render when the template already contains one, even when the ids differ. `Runtime.hydrate` refuses and contains a page assembled elsewhere when it finds more than one stamped root. An explicit container does not override this rule.
 
-Hydrating more than one application on a page is not supported. A page-owning `makeApplication` controls the document title, language, text direction, canonical URL, and Open Graph URL. It also installs document-wide navigation listeners. With two applications, the last render owns the metadata and the first listener handles every link. Distinct ids prevent roots from taking each other's handoff, but they do not divide document ownership. Render one application per page.
+Two roots with the same id would also read the same Flags and preserved HMR state. Foldkit reports that collision specifically, but distinct ids do not make multiple page-owning applications valid.
+
+The root stamp must have a nonempty id and name the document's single stamped root in the body light DOM. A requested root in `<head>`, a shadow tree, a detached subtree, or another document is refused and the page is contained before startup. When the configured container resolves to an element, it must be that root or one of its descendants.
+
+A page-owning `makeApplication` controls the document title, language, text direction, canonical URL, and Open Graph URL. It also installs document-wide navigation listeners. With two applications, the last render would own the metadata and the first listener would handle every link. Render one application per page.
+
+Static body output carries no handoff stamp. It may coexist with the document's one hydratable application. Each call to `injectIntoTemplate` still applies that render's `Document` head fields, so insertion order decides which render supplies the initial page metadata.
 
 ### Supported templates and roots
 
@@ -289,8 +295,8 @@ Every refusal reports a `[foldkit]` error that names the cause. Failures found w
 Build skew is one reason to refuse. The same policy also covers:
 
 - A Flags payload that is missing, duplicated, malformed, or rejected by the Schema.
-- A runtime id claimed by two roots.
-- More than one stamped root when no container identifies the one to adopt.
+- A runtime id claimed by two roots, or more than one stamped root with distinct ids.
+- An empty root stamp, or a requested stamped root outside the document body light DOM.
 - A served root that lost its stamp. A generated client reaches this state when template insertion already replaced its `#root` placeholder, leaving neither the stamp nor the placeholder.
 
 One missing-container case is different. If `makeApplication` cannot find its container and the document contains no `data-foldkit-app`, `data-foldkit-build`, or `data-foldkit-flags`, then no server rendered the page. The application's `<div id="root">` is simply absent, usually because of a typo or because the script ran too early. Foldkit reports the setup error and leaves the page alone.

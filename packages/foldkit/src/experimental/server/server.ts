@@ -986,9 +986,10 @@ export { FOLDKIT_APP_ATTRIBUTE, FOLDKIT_FLAGS_ATTRIBUTE }
 
 const DEFAULT_RUNTIME_ID = 'app'
 
-/** The server render of one request: the stamped root markup (plus the Flags
- *  payload script when the application declares Flags) and the `Document`
- *  head fields for the host to place into its HTML template.
+/** The server render of one request: the body markup and the `Document` head
+ *  fields for the host to place into its HTML template. Hydratable output
+ *  contains a stamped root and, when the application declares Flags, its
+ *  payload script. Static output carries no handoff markers.
  *
  * @experimental Ships from `foldkit/experimental/server`; expect breaking changes while the API settles.
  */
@@ -1120,10 +1121,10 @@ export type ApplicationConfig<Model, Message> = Readonly<{
 
 // Shared by both render shapes. `runtimeId` names the application in the root
 // stamp and Flags payload; it defaults to `'app'` and must be non-empty. It
-// also keys the Model and scroll position hot reloading preserves, so two roots
-// carrying one id would take each other's state and are refused. Hydrating more
-// than one application on a page is not supported: each owns the document's
-// metadata and its navigation listeners, which distinct ids do not divide.
+// also keys the Model and scroll position hot reloading preserves. A document
+// may contain one hydratable root. Template injection and hydration refuse a
+// second root whether it carries the same id or a distinct one because runtime
+// ids do not divide ownership of document metadata and navigation listeners.
 
 type CommonRenderOptions = Readonly<{
   runtimeId?: string
@@ -1161,6 +1162,8 @@ export type StaticRenderOptions = CommonRenderOptions &
 
 /** Options for {@link renderToString}. `runtimeId` names the application in the
  *  root stamp and Flags payload; it defaults to `'app'` and must be non-empty.
+ *  A nondefault `runtimeId` changes the root, Flags, and HMR pairing. It does
+ *  not permit a second hydratable application in one document.
  *
  *  A hydratable render (the default) requires `buildId`. Pass
  *  `isHydratable: false` for static markup that nothing will hydrate, which
@@ -1327,10 +1330,10 @@ const validateHydrationRoot = (
  *
  * Resolves `init` for the request (with the given Flags and URL when the
  * config declares them), runs the pure `view` under a no-op dispatch frame,
- * and serializes the resulting `Document` body. The root element is stamped
- * with {@link FOLDKIT_APP_ATTRIBUTE} and, when the config declares `Flags`,
- * the Schema-encoded Flags ride along in a JSON script tag so a hydrating
- * client boots from the same Model.
+ * and serializes the resulting `Document` body. For hydratable output, the
+ * root element is stamped with {@link FOLDKIT_APP_ATTRIBUTE} and, when the
+ * config declares `Flags`, the Schema-encoded Flags ride along in a JSON script
+ * tag so a hydrating client boots from the same Model.
  *
  * Commands returned by `init` are not run: the rendered HTML is the
  * post-`init` state, and the client runs those Commands after hydration.

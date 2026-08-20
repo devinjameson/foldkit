@@ -643,14 +643,12 @@ describe('injectIntoTemplate insertion context', () => {
   })
 
   it('does not validate against an earlier same-tag sibling', () => {
-    // The earlier section holds a second application whose root looks like what
-    // the injection should produce. Resolving the path by tag name alone would
-    // find that one and accept a page whose real injection is somewhere else
-    // entirely. It carries its own runtime id, since two roots sharing one is
-    // refused in its own right.
+    // The earlier section holds static markup that looks like the rendered
+    // output. Resolving the path by tag name alone would find that one and
+    // accept a page whose real injection is somewhere else entirely.
     const template =
       '<!doctype html><html lang="en"><head><title>old</title></head>' +
-      '<body><section><div data-foldkit-app="other" data-foldkit-build="build-zero">hi</div></section>' +
+      '<body><section><div class="lookalike">hi</div></section>' +
       '<section><div id="root"></div><p>tail</p></section></body></html>'
 
     const result = injectIntoTemplate(template, rendered())
@@ -777,28 +775,20 @@ describe('injectIntoTemplate insertion context', () => {
     expect(result).toContain('<main><div>static</div></main>')
   })
 
-  it('accepts a second injection beside an existing root with another runtime id', () => {
-    // Structural injection is identified by the position its own placeholder
-    // held, so an unrelated existing marker is not mistaken for this render.
-    // Hydrating multiple page-owning applications remains unsupported.
+  it('rejects a second injection beside an existing hydratable root', () => {
     const template =
       '<!doctype html><html lang="en"><head><title>old</title></head>' +
       '<body><div data-foldkit-app="app-a" data-foldkit-build="build-zero">existing</div>' +
       '<div id="root"></div></body></html>'
 
-    const result = injectIntoTemplate(
-      template,
-      rendered({
-        html: '<div data-foldkit-app="app-b" data-foldkit-build="build-one">hi</div>',
-      }),
-    )
-
-    expect(result).toContain(
-      '<div data-foldkit-app="app-a" data-foldkit-build="build-zero">existing</div>',
-    )
-    expect(result).toContain(
-      '<div data-foldkit-app="app-b" data-foldkit-build="build-one">hi</div>',
-    )
+    expect(() =>
+      injectIntoTemplate(
+        template,
+        rendered({
+          html: '<div data-foldkit-app="app-b" data-foldkit-build="build-one">hi</div>',
+        }),
+      ),
+    ).toThrow('page already holds a server-rendered application')
   })
 })
 
@@ -886,10 +876,7 @@ describe('runtime id uniqueness', () => {
     ).toThrow(/already holds a Flags payload/)
   })
 
-  it('accepts distinct runtime ids, which the pairing needs', () => {
-    // Distinct ids keep two roots from reading each other's Flags. They are not
-    // support for hydrating two page-owning applications, which each rewrite
-    // the document's metadata and own its navigation listeners.
+  it('refuses a second application with a distinct runtime id', () => {
     const first = injectIntoTemplate(
       twoRootTemplate,
       rendered({
@@ -897,29 +884,51 @@ describe('runtime id uniqueness', () => {
       }),
       { containerId: 'first' },
     )
-    const both = injectIntoTemplate(
-      first,
+
+    expect(() =>
+      injectIntoTemplate(
+        first,
+        rendered({
+          html: '<div data-foldkit-app="beta" data-foldkit-build="build-one">second</div>',
+        }),
+        { containerId: 'second' },
+      ),
+    ).toThrow('page already holds a server-rendered application')
+  })
+
+  it('allows static output after one hydratable application', () => {
+    const withApplication = injectIntoTemplate(
+      twoRootTemplate,
       rendered({
-        html: '<div data-foldkit-app="beta" data-foldkit-build="build-one">second</div>',
+        html: '<div data-foldkit-app="app" data-foldkit-build="build-one">application</div>',
       }),
+      { containerId: 'first' },
+    )
+    const injected = injectIntoTemplate(
+      withApplication,
+      rendered({ html: '<div>static</div>' }),
       { containerId: 'second' },
     )
 
-    expect(both).toContain(
-      '<div data-foldkit-app="alpha" data-foldkit-build="build-one">first</div>',
-    )
-    expect(both).toContain(
-      '<div data-foldkit-app="beta" data-foldkit-build="build-one">second</div>',
-    )
+    expect(injected).toContain('>application</div>')
+    expect(injected).toContain('<div>static</div>')
   })
 
-  it('leaves static output alone, which carries no stamp', () => {
-    const injected = injectIntoTemplate(
+  it('allows one hydratable application after static output', () => {
+    const withStaticOutput = injectIntoTemplate(
       twoRootTemplate,
       rendered({ html: '<div>static</div>' }),
       { containerId: 'first' },
     )
+    const injected = injectIntoTemplate(
+      withStaticOutput,
+      rendered({
+        html: '<div data-foldkit-app="app" data-foldkit-build="build-one">application</div>',
+      }),
+      { containerId: 'second' },
+    )
 
     expect(injected).toContain('<div>static</div>')
+    expect(injected).toContain('>application</div>')
   })
 })

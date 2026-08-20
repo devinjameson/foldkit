@@ -649,13 +649,10 @@ const hydrationForRoot = (
 // id (a descendant `id="root"`) and `getElementById` returned that inner element
 // instead of the stamped root above it. That inner element resolves to the app
 // root only when the page has exactly one stamped root and this container sits
-// inside it, so a sibling widget (a stamped root the container is not inside) or
-// an outer application's root (when a nested page carries more than one stamped
-// root) is never wrongly adopted; those fall through to a fresh boot or a hard
-// failure instead. A null container is the replace-parity case, where the server
-// root took the placeholder's place and `getElementById` no longer finds it, so
-// the stamp is the only handle; more than one stamped root is then ambiguous and
-// a hard error rather than a silent wrong-DOM adoption.
+// inside it. A container outside that root is a refused handoff, not a fresh
+// application beside server markup that remains live. A null container is the
+// replace-parity case, where the server root took the placeholder's place and
+// `getElementById` no longer finds it, so the stamp is the only handle.
 // A runtime id names one application for the whole page: it pairs a root with
 // its Flags payload, and it keys the Model and scroll position hot reloading
 // preserves. Two roots sharing one are not two applications but one claimed
@@ -672,6 +669,24 @@ const assertRuntimeIdsAreUnique = (
   const seen = new Set<string>()
   for (const root of stampedRoots) {
     const runtimeId = root.getAttribute(FOLDKIT_APP_ATTRIBUTE) ?? ''
+    if (runtimeId === '') {
+      containRefusedPage(root.ownerDocument)
+      throw new Error(
+        '[foldkit] Found a server-rendered root with an empty ' +
+          `\`${FOLDKIT_APP_ATTRIBUTE}\` stamp. A hydratable root must carry ` +
+          'a nonempty runtime id so the runtime can pair it with its Flags ' +
+          'payload and preserved HMR state.',
+      )
+    }
+    if (!root.ownerDocument.body?.contains(root)) {
+      containRefusedPage(root.ownerDocument)
+      throw new Error(
+        '[foldkit] Found a server-rendered root outside the document body. ' +
+          'Runtime.hydrate supports one page-owning application in the ' +
+          'document light DOM. Do not hydrate a root in the head, a shadow ' +
+          'tree, or a detached subtree.',
+      )
+    }
     if (seen.has(runtimeId)) {
       containRefusedPage(root.ownerDocument)
       throw new Error(
@@ -679,11 +694,26 @@ const assertRuntimeIdsAreUnique = (
           `"${runtimeId}". A runtime id names one application for the whole ` +
           'page: it pairs a root with its Flags payload and keys the Model and ' +
           'scroll position hot reloading preserves, so two roots sharing one ' +
-          "would take each other's state. Render each application with its " +
-          'own `runtimeId`.',
+          "would take each other's state. Remove the duplicate root. Foldkit " +
+          'hydrates one page-owning application per document.',
       )
     }
     seen.add(runtimeId)
+  }
+}
+
+const assertSinglePageApplication = (
+  stampedRoots: ReadonlyArray<HTMLElement>,
+): void => {
+  if (stampedRoots.length > 1) {
+    containRefusedPage(document)
+    throw new Error(
+      '[foldkit] Found more than one page-owning application stamped with ' +
+        `\`${FOLDKIT_APP_ATTRIBUTE}\`. Hydrating multiple applications in ` +
+        'one document is not supported: each application owns the document ' +
+        'metadata and installs document-wide navigation listeners. Render ' +
+        'one application per page.',
+    )
   }
 }
 
@@ -793,15 +823,28 @@ const preventRefusalShieldInteraction = (event: Event): void => {
   event.stopImmediatePropagation()
 }
 
+// NOTE: `showModal` throws when the owning document is not fully active. A
+// foreign or detached document still needs the original Foldkit refusal rather
+// than a browser exception from its containment UI.
+const tryOpenRefusalShieldAsModal = (shield: HTMLDialogElement): boolean => {
+  if (typeof shield.showModal !== 'function') {
+    return false
+  }
+  try {
+    shield.showModal()
+    return true
+  } catch {
+    return false
+  }
+}
+
 const openRefusalShield = (shield: HTMLDialogElement): void => {
   shield.inert = true
   shield.setAttribute('inert', '')
   if (shield.open && typeof shield.close === 'function') {
     shield.close()
   }
-  if (typeof shield.showModal === 'function') {
-    shield.showModal()
-  } else {
+  if (!tryOpenRefusalShieldAsModal(shield)) {
     shield.setAttribute('open', '')
   }
   shield.inert = false
@@ -888,29 +931,53 @@ const findDocumentHydration = (
     document.querySelectorAll<HTMLElement>(`[${FOLDKIT_APP_ATTRIBUTE}]`),
   )
   assertRuntimeIdsAreUnique(stampedRoots)
+  assertSinglePageApplication(stampedRoots)
   if (container !== null) {
+    const stampedAncestor = container.closest<HTMLElement>(
+      `[${FOLDKIT_APP_ATTRIBUTE}]`,
+    )
     if (container.hasAttribute(FOLDKIT_APP_ATTRIBUTE)) {
+      const isDocumentRoot = Option.match(Array.head(stampedRoots), {
+        onNone: () => false,
+        onSome: root => root === container,
+      })
+      if (!isDocumentRoot) {
+        containRefusedPage(container.ownerDocument)
+        throw new Error(
+          '[foldkit] Runtime.hydrate received a stamped container that is ' +
+            'not the single server root in the document light DOM. Hydration ' +
+            'supports one page-owning application under the document body. ' +
+            'Do not hydrate a root in a shadow tree or detached subtree.',
+        )
+      }
       return hydrationForRoot(container, isFlagsRequired)
     }
     return Array.match(stampedRoots, {
-      onEmpty: () => undefined,
+      onEmpty: () => {
+        if (stampedAncestor === null) {
+          return undefined
+        }
+        containRefusedPage(container.ownerDocument)
+        throw new Error(
+          '[foldkit] Runtime.hydrate received a container under a stamped ' +
+            'root outside the document body light DOM. Do not hydrate a root ' +
+            'in a shadow tree, detached subtree, or another document.',
+        )
+      },
       onNonEmpty: roots => {
         const onlyRoot = Array.headNonEmpty(roots)
-        return roots.length === 1 &&
-          container.closest(`[${FOLDKIT_APP_ATTRIBUTE}]`) === onlyRoot
-          ? hydrationForRoot(onlyRoot, isFlagsRequired)
-          : undefined
+        if (stampedAncestor === onlyRoot) {
+          return hydrationForRoot(onlyRoot, isFlagsRequired)
+        }
+        containRefusedPage(container.ownerDocument)
+        throw new Error(
+          '[foldkit] Runtime.hydrate received a container outside the ' +
+            "document's server-rendered application root. A page-owning " +
+            'application must adopt that single root rather than boot beside ' +
+            'server markup it does not own.',
+        )
       },
     })
-  }
-  if (stampedRoots.length > 1) {
-    containRefusedPage(document)
-    throw new Error(
-      '[foldkit] Found multiple server-rendered roots stamped with ' +
-        `\`${FOLDKIT_APP_ATTRIBUTE}\` but no container to disambiguate them. ` +
-        'Give each app its own container element so the runtime can tell ' +
-        'which root to hydrate.',
-    )
   }
   return Option.match(Array.head(stampedRoots), {
     onNone: () => undefined,
@@ -3747,8 +3814,9 @@ const renderCrashView = <Model, Message>(
 /** Creates a Foldkit application that owns the page and returns a runtime that
  *  can be passed to `run`. The `view` returns a `Document`, so the runtime
  *  manages `document.title` and the canonical / og:url tags. Add a `routing`
- *  config for URL routing. To mount an app scoped to a node without touching the
- *  document `<head>`, use `makeElement`. */
+ *  config for URL routing. Use one page-owning application per document. To
+ *  mount an app scoped to a node without touching the document `<head>`, use
+ *  `makeElement`. */
 export function makeApplication<
   Model,
   Message extends { _tag: string },
@@ -4400,10 +4468,11 @@ export type HydrateOptions = Readonly<{
  *  of building it fresh. Use this as the client entry for a page served by
  *  `renderToString`: the first render attaches to the stamped root, keeps the
  *  existing nodes, and reconstructs the Model from the Flags the server
- *  embedded. The handoff is strict: a missing server root, a root stamped more
- *  than once, more than one root with no container to choose between them, a
- *  missing Flags payload, an undecodable payload, or a page from another
- *  deployment terminates startup. Every one of those contains the page first:
+ *  embedded. The handoff is strict: a missing server root, an empty or
+ *  duplicated root stamp, more than one stamped root, a requested root outside
+ *  the document body light DOM, a missing Flags payload, an undecodable
+ *  payload, or a page from another deployment terminates startup. Every one of
+ *  those contains the page first:
  *  the document's body is marked `inert` and a nondismissable modal shield is
  *  opened above existing top-layer content, so pointer and physical keyboard
  *  input do not activate same-document native links, forms, or controls.
