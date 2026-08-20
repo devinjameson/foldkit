@@ -1,5 +1,12 @@
 import { clsx } from 'clsx'
-import { Array, Function, Option, String as String_, pipe } from 'effect'
+import {
+  Array,
+  Function,
+  Option,
+  Predicate,
+  String as String_,
+  pipe,
+} from 'effect'
 import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import { foldkitVersion } from 'virtual:landing-data'
 
@@ -16,6 +23,7 @@ import {
   coreServerRenderingRouter,
   coreSubmodelRouter,
   effectAtomComparisonRouter,
+  exampleDetailRouter,
   examplesRouter,
   gettingStartedRouter,
   routingAndNavigationRouter,
@@ -32,6 +40,11 @@ import {
   highlightedCodeBlock,
 } from '../view/codeBlock'
 import { githubStarBadge } from '../view/shared'
+import {
+  type ExampleMeta,
+  type ExampleSlug,
+  examples as exampleMetas,
+} from './example/meta'
 import { exampleAppCount } from './examples'
 
 // CONSTANTS
@@ -80,7 +93,12 @@ export const view = (
   return h.div(
     [h.Class('isolate overflow-x-hidden')],
     [
-      heroSection(renderCopyButton, playgroundMenuView, h),
+      heroSection(
+        renderCopyButton,
+        playgroundMenuView,
+        maybeGitHubStarCount,
+        h,
+      ),
       glyph('{ }'),
       demoSection(demoTabsView),
       glyph('=>'),
@@ -93,6 +111,8 @@ export const view = (
       trustSection(),
       glyph('[ ]'),
       includedSection(),
+      glyph('[*]'),
+      examplesSection,
       glyph('::'),
       testingSection(renderCopyButton),
       glyph('??'),
@@ -121,9 +141,42 @@ const viewOnGitHubButton = (
 
 const INSTALL_COMMAND = 'npx create-foldkit-app@latest'
 
+const heroProjectLink = (
+  href: string,
+  label: string,
+  icon: Html,
+  trailingContent: ReadonlyArray<Html> = [],
+): Html =>
+  ih.a(
+    [
+      ih.Href(href),
+      ih.Class(
+        'inline-flex items-center gap-1.5 rounded-sm text-sm font-normal text-gray-600 dark:text-gray-300 transition-colors hover:text-gray-900 dark:hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-950',
+      ),
+    ],
+    [icon, ih.span([], [label]), ...trailingContent],
+  )
+
+const heroProjectLinks = (maybeGitHubStarCount: Option.Option<number>): Html =>
+  ih.nav(
+    [
+      ih.AriaLabel('Project links'),
+      ih.Class('mt-5 flex flex-wrap items-center gap-x-5 gap-y-3'),
+    ],
+    [
+      heroProjectLink(Link.github, 'GitHub', Icon.github('w-4 h-4'), [
+        githubStarBadge(maybeGitHubStarCount),
+      ]),
+      heroProjectLink(Link.xSocial, 'X', Icon.xSocial('w-4 h-4')),
+      heroProjectLink(Link.discord, 'Discord', Icon.discord('w-4 h-4')),
+      heroProjectLink(Link.npm, 'npm', Icon.npm('w-5 h-5')),
+    ],
+  )
+
 const heroSection = (
   renderCopyButton: RenderCopyButton,
   playgroundMenuView: Html,
+  maybeGitHubStarCount: Option.Option<number>,
   h: HtmlBuilder<Message>,
 ): Html => {
   return h.section(
@@ -202,6 +255,7 @@ const heroSection = (
               ),
             ],
           ),
+          heroProjectLinks(maybeGitHubStarCount),
         ],
       ),
     ],
@@ -532,6 +586,153 @@ const includedSection = (): Html =>
       ),
     ],
   )
+
+// EXAMPLES
+
+const featuredExampleSlugs: ReadonlyArray<ExampleSlug> = [
+  'generative-art',
+  'state-machine',
+  'pixel-art',
+  'websocket-chat',
+  'kanban',
+  'map',
+  'snake',
+  'ui-showcase',
+  'job-application',
+  'charting',
+]
+
+const isFeaturedExample = (example: ExampleMeta): boolean =>
+  Array.contains(featuredExampleSlugs, example.slug)
+
+const landingExampleMetas = Array.appendAll(
+  Array.flatMap(featuredExampleSlugs, featuredExampleSlug =>
+    Array.filter(exampleMetas, example => example.slug === featuredExampleSlug),
+  ),
+  Array.filter(exampleMetas, Predicate.not(isFeaturedExample)),
+)
+
+const exampleTile = (key: string, title: string, href: string): Html =>
+  ih.keyed('li')(
+    key,
+    [
+      ih.Class(
+        'border-r border-b border-gray-300 dark:border-gray-700 min-w-0',
+      ),
+    ],
+    [
+      ih.a(
+        [
+          ih.Href(href),
+          ih.Class(
+            'group flex min-h-20 md:min-h-24 h-full items-center justify-between gap-3 px-3 py-4 md:px-4 bg-cream dark:bg-gray-900 text-gray-900 dark:text-white transition-colors hover:bg-accent-600 hover:text-white dark:hover:bg-accent-500 dark:hover:text-accent-950 focus-visible:outline-none focus-visible:bg-accent-600 focus-visible:text-white dark:focus-visible:bg-accent-500 dark:focus-visible:text-accent-950',
+          ),
+        ],
+        [
+          ih.h3(
+            [ih.Class('text-sm sm:text-base font-normal leading-tight')],
+            [title],
+          ),
+          ih.span(
+            [
+              ih.AriaHidden(true),
+              ih.Class(
+                'shrink-0 opacity-0 -translate-x-1 transition-all group-hover:opacity-100 group-hover:translate-x-0 group-focus-visible:opacity-100 group-focus-visible:translate-x-0',
+              ),
+            ],
+            [Icon.arrowRight('w-4 h-4')],
+          ),
+        ],
+      ),
+    ],
+  )
+
+const exampleMetaTile = (example: ExampleMeta): Html =>
+  exampleTile(
+    example.slug,
+    example.title,
+    exampleDetailRouter({ exampleSlug: example.slug }),
+  )
+
+const exampleCatalogTile: Html = ih.keyed('li')(
+  'example-catalog',
+  [
+    ih.Class(
+      'col-span-2 sm:col-span-2 lg:col-span-1 border-r border-b border-gray-900 dark:border-white',
+    ),
+  ],
+  [
+    ih.a(
+      [
+        ih.Href(examplesRouter()),
+        ih.Class(
+          'group flex min-h-20 md:min-h-24 h-full items-center justify-between gap-3 px-3 py-4 md:px-4 bg-gray-900 text-white dark:bg-white dark:text-gray-900 transition-colors hover:bg-accent-600 dark:hover:bg-accent-500 dark:hover:text-accent-950 focus-visible:outline-none focus-visible:bg-accent-600 dark:focus-visible:bg-accent-500 dark:focus-visible:text-accent-950',
+        ),
+      ],
+      [
+        ih.span(
+          [ih.Class('text-sm sm:text-base font-normal leading-tight')],
+          ['Explore the catalog'],
+        ),
+        ih.span(
+          [
+            ih.AriaHidden(true),
+            ih.Class(
+              'shrink-0 transition-transform group-hover:translate-x-1 group-focus-visible:translate-x-1',
+            ),
+          ],
+          [Icon.arrowRight('w-4 h-4')],
+        ),
+      ],
+    ),
+  ],
+)
+
+const examplesSection: Html = ih.section(
+  [ih.Id('examples'), ih.Class('landing-section')],
+  [
+    ih.div(
+      [ih.Class('landing-section-narrow')],
+      [
+        ih.h2(
+          [
+            ih.Class(
+              'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white mb-3 text-balance',
+            ),
+          ],
+          ['Example applications.'],
+        ),
+        ih.p(
+          [
+            ih.Class(
+              'text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-10 max-w-3xl',
+            ),
+          ],
+          [
+            'One architecture, many kinds of software. Open any example to run it, see how it is modeled, and read the source.',
+          ],
+        ),
+        ih.ul(
+          [
+            ih.Role('list'),
+            ih.Class(
+              'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 border-t border-l border-gray-300 dark:border-gray-700 list-none',
+            ),
+          ],
+          [
+            ...Array.map(landingExampleMetas, exampleMetaTile),
+            exampleTile(
+              'typing-terminal',
+              'Typing Terminal',
+              typingTerminalRouter(),
+            ),
+            exampleCatalogTile,
+          ],
+        ),
+      ],
+    ),
+  ],
+)
 
 // TESTING
 
