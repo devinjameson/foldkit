@@ -13,6 +13,7 @@ import {
 import { describe, test } from 'vitest'
 
 import { Menu, Tabs } from '@foldkit/ui'
+import { Message as TabsMessage } from '@foldkit/ui/tabs'
 
 import {
   type Model,
@@ -83,7 +84,10 @@ const completeModel: Model = {
   },
 }
 
-const resolveFocusTab = Command.resolve(Tabs.FocusTab, Tabs.CompletedFocusTab())
+const resolveFocusTab = Command.resolve(
+  Tabs.FocusTab,
+  TabsMessage.CompletedFocusTab(),
+)
 
 describe('view', () => {
   test('initial view shows the page heading and the PersonalInfo step', () => {

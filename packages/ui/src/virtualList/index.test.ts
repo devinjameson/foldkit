@@ -4,10 +4,8 @@ import { describe, expect, it } from 'vitest'
 
 import {
   ApplyScroll,
-  CompletedApplyScroll,
-  MeasuredContainer,
+  Message,
   type Model,
-  ScrolledContainer,
   init,
   scrollToIndex,
   scrollToIndexVariable,
@@ -21,7 +19,7 @@ const defaultInit = (): Model => init({ id: 'test', rowHeightPx: 30 })
 const measuredInit = (containerHeight: number): Model => {
   const [measured] = update(
     defaultInit(),
-    MeasuredContainer({ containerHeight }),
+    Message.MeasuredContainer({ containerHeight }),
   )
   return measured
 }
@@ -53,7 +51,7 @@ describe('VirtualList', () => {
       Story.story(
         update,
         Story.given(defaultInit()),
-        Story.message(ScrolledContainer({ scrollTop: 450 })),
+        Story.message(Message.ScrolledContainer({ scrollTop: 450 })),
         Story.model(model => {
           expect(model.scrollTop).toBe(450)
         }),
@@ -66,7 +64,7 @@ describe('VirtualList', () => {
       Story.story(
         update,
         Story.given(defaultInit()),
-        Story.message(MeasuredContainer({ containerHeight: 600 })),
+        Story.message(Message.MeasuredContainer({ containerHeight: 600 })),
         Story.model(model => {
           expect(model.measurement._tag).toBe('Measured')
           if (model.measurement._tag === 'Measured') {
@@ -80,8 +78,8 @@ describe('VirtualList', () => {
       Story.story(
         update,
         Story.given(defaultInit()),
-        Story.message(MeasuredContainer({ containerHeight: 600 })),
-        Story.message(MeasuredContainer({ containerHeight: 720 })),
+        Story.message(Message.MeasuredContainer({ containerHeight: 600 })),
+        Story.message(Message.MeasuredContainer({ containerHeight: 720 })),
         Story.model(model => {
           if (model.measurement._tag === 'Measured') {
             expect(model.measurement.containerHeight).toBe(720)
@@ -94,7 +92,7 @@ describe('VirtualList', () => {
       Story.story(
         update,
         Story.given(defaultInit()),
-        Story.message(MeasuredContainer({ containerHeight: 600 })),
+        Story.message(Message.MeasuredContainer({ containerHeight: 600 })),
         Story.Command.expectNone(),
       )
     })
@@ -105,7 +103,7 @@ describe('VirtualList', () => {
         Story.given(
           init({ id: 'test', rowHeightPx: 30, initialScrollTop: 600 }),
         ),
-        Story.message(MeasuredContainer({ containerHeight: 300 })),
+        Story.message(Message.MeasuredContainer({ containerHeight: 300 })),
         Story.Command.expectHas(ApplyScroll),
         Story.model(model => {
           expect(model.pendingScroll._tag).toBe('ScrollingToIndex')
@@ -116,7 +114,7 @@ describe('VirtualList', () => {
         }),
         Story.Command.resolve(
           ApplyScroll,
-          CompletedApplyScroll({ version: 1 }),
+          Message.CompletedApplyScroll({ version: 1 }),
         ),
       )
     })
@@ -127,12 +125,12 @@ describe('VirtualList', () => {
         Story.given(
           init({ id: 'test', rowHeightPx: 30, initialScrollTop: 600 }),
         ),
-        Story.message(MeasuredContainer({ containerHeight: 300 })),
+        Story.message(Message.MeasuredContainer({ containerHeight: 300 })),
         Story.Command.resolve(
           ApplyScroll,
-          CompletedApplyScroll({ version: 1 }),
+          Message.CompletedApplyScroll({ version: 1 }),
         ),
-        Story.message(MeasuredContainer({ containerHeight: 320 })),
+        Story.message(Message.MeasuredContainer({ containerHeight: 320 })),
         Story.Command.expectNone(),
       )
     })
@@ -146,7 +144,9 @@ describe('VirtualList', () => {
 
       const [resolvedModel] = update(
         scrolledModel,
-        CompletedApplyScroll({ version: scrolledModel.pendingScrollVersion }),
+        Message.CompletedApplyScroll({
+          version: scrolledModel.pendingScrollVersion,
+        }),
       )
       expect(resolvedModel.pendingScroll._tag).toBe('Idle')
     })
@@ -156,7 +156,10 @@ describe('VirtualList', () => {
       const [second] = scrollToIndex(first, 20)
       expect(second.pendingScrollVersion).toBe(2)
 
-      const [unchanged] = update(second, CompletedApplyScroll({ version: 1 }))
+      const [unchanged] = update(
+        second,
+        Message.CompletedApplyScroll({ version: 1 }),
+      )
       expect(unchanged.pendingScroll._tag).toBe('ScrollingToIndex')
       if (unchanged.pendingScroll._tag === 'ScrollingToIndex') {
         expect(unchanged.pendingScroll.version).toBe(2)

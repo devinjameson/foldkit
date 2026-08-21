@@ -6,12 +6,7 @@ import { describe, it } from '@effect/vitest'
 
 import * as Animation from '../animation/index.js'
 import {
-  CompletedWaitBeforeDismissal,
-  Dismissed,
-  DismissedAll,
-  GotAnimationMessage,
-  HoveredEntry,
-  LeftEntry,
+  Message,
   WaitBeforeDismissal,
   make,
   test as toastTest,
@@ -156,7 +151,7 @@ describe('Toast', () => {
           Toast.update,
           Story.given(model),
           Story.message(
-            CompletedWaitBeforeDismissal({
+            Message.CompletedWaitBeforeDismissal({
               entryId: firstEntryId,
               version: STALE_VERSION,
             }),
@@ -178,7 +173,7 @@ describe('Toast', () => {
           Toast.update,
           Story.given(model),
           Story.message(
-            CompletedWaitBeforeDismissal({
+            Message.CompletedWaitBeforeDismissal({
               entryId: firstEntryId,
               version: 0,
             }),
@@ -189,8 +184,11 @@ describe('Toast', () => {
             )
           }),
           Story.Command.resolveAll(
-            [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
-            [Animation.WaitForAnimationSettled, Animation.EndedAnimation()],
+            [Animation.WaitForPaint, Animation.Message.CompletedWaitForPaint()],
+            [
+              Animation.WaitForAnimationSettled,
+              Animation.Message.EndedAnimation(),
+            ],
           ),
         )
       })
@@ -200,7 +198,10 @@ describe('Toast', () => {
           Toast.update,
           givenEmpty,
           Story.message(
-            CompletedWaitBeforeDismissal({ entryId: 'nope', version: 0 }),
+            Message.CompletedWaitBeforeDismissal({
+              entryId: 'nope',
+              version: 0,
+            }),
           ),
           Story.Command.expectNone(),
         )
@@ -217,7 +218,7 @@ describe('Toast', () => {
         Story.story(
           Toast.update,
           Story.given(model),
-          Story.message(HoveredEntry({ entryId: firstEntryId })),
+          Story.message(Message.HoveredEntry({ entryId: firstEntryId })),
           Story.model((next: Model) => {
             const [entry] = next.entries
             expect(entry?.isHovered).toBe(true)
@@ -240,7 +241,7 @@ describe('Toast', () => {
         Story.story(
           Toast.update,
           Story.given(model),
-          Story.message(LeftEntry({ entryId: firstEntryId })),
+          Story.message(Message.LeftEntry({ entryId: firstEntryId })),
           Story.model((next: Model) => {
             const [entry] = next.entries
             expect(entry?.isHovered).toBe(false)
@@ -249,7 +250,7 @@ describe('Toast', () => {
           Story.Command.expectHas(WaitBeforeDismissal),
           Story.Command.resolve(
             WaitBeforeDismissal,
-            CompletedWaitBeforeDismissal({
+            Message.CompletedWaitBeforeDismissal({
               entryId: firstEntryId,
               version: STALE_VERSION,
             }),
@@ -270,7 +271,7 @@ describe('Toast', () => {
         Story.story(
           Toast.update,
           Story.given(model),
-          Story.message(LeftEntry({ entryId: firstEntryId })),
+          Story.message(Message.LeftEntry({ entryId: firstEntryId })),
           Story.Command.expectNone(),
         )
       })
@@ -284,12 +285,12 @@ describe('Toast', () => {
         Story.story(
           Toast.update,
           Story.given(model),
-          Story.message(HoveredEntry({ entryId: firstEntryId })),
+          Story.message(Message.HoveredEntry({ entryId: firstEntryId })),
           Story.model((next: Model) => {
             expect(next.entries[0]?.pendingDismissVersion).toBe(1)
           }),
           Story.message(
-            CompletedWaitBeforeDismissal({
+            Message.CompletedWaitBeforeDismissal({
               entryId: firstEntryId,
               version: 0,
             }),
@@ -308,7 +309,7 @@ describe('Toast', () => {
         Story.story(
           Toast.update,
           givenEmpty,
-          Story.message(Dismissed({ entryId: 'nope' })),
+          Story.message(Message.Dismissed({ entryId: 'nope' })),
           Story.Command.expectNone(),
         )
       })
@@ -317,7 +318,7 @@ describe('Toast', () => {
         Story.story(
           Toast.update,
           givenEmpty,
-          Story.message(HoveredEntry({ entryId: 'nope' })),
+          Story.message(Message.HoveredEntry({ entryId: 'nope' })),
           Story.Command.expectNone(),
         )
       })
@@ -326,7 +327,7 @@ describe('Toast', () => {
         Story.story(
           Toast.update,
           givenEmpty,
-          Story.message(LeftEntry({ entryId: 'nope' })),
+          Story.message(Message.LeftEntry({ entryId: 'nope' })),
           Story.Command.expectNone(),
         )
       })
@@ -342,15 +343,18 @@ describe('Toast', () => {
         Story.story(
           Toast.update,
           Story.given(model),
-          Story.message(Dismissed({ entryId: firstEntryId })),
+          Story.message(Message.Dismissed({ entryId: firstEntryId })),
           Story.model((next: Model) => {
             expect(next.entries[0]?.animation.transitionState).toBe(
               'LeaveStart',
             )
           }),
           Story.Command.resolveAll(
-            [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
-            [Animation.WaitForAnimationSettled, Animation.EndedAnimation()],
+            [Animation.WaitForPaint, Animation.Message.CompletedWaitForPaint()],
+            [
+              Animation.WaitForAnimationSettled,
+              Animation.Message.EndedAnimation(),
+            ],
           ),
           Story.model((next: Model) => {
             expect(next.entries).toHaveLength(0)
@@ -374,7 +378,7 @@ describe('Toast', () => {
         Story.story(
           Toast.update,
           Story.given(model),
-          Story.message(Dismissed({ entryId: firstEntryId })),
+          Story.message(Message.Dismissed({ entryId: firstEntryId })),
           Story.Command.expectNone(),
           Story.model((next: Model) => {
             expect(next).toBe(model)
@@ -399,9 +403,9 @@ describe('Toast', () => {
           Toast.update,
           Story.given(model),
           Story.message(
-            GotAnimationMessage({
+            Message.GotAnimationMessage({
               entryId: firstEntryId,
-              message: Animation.EndedAnimation(),
+              message: Animation.Message.EndedAnimation(),
             }),
           ),
           Story.expectOutMessage(
@@ -436,7 +440,7 @@ describe('Toast', () => {
         Story.story(
           Toast.update,
           Story.given(model),
-          Story.message(DismissedAll()),
+          Story.message(Message.DismissedAll()),
           Story.model((next: Model) => {
             expect(next.entries[0]?.animation.transitionState).toBe(
               'LeaveStart',
@@ -446,15 +450,15 @@ describe('Toast', () => {
             )
           }),
           Story.Command.resolveAll(
-            [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
-            [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
+            [Animation.WaitForPaint, Animation.Message.CompletedWaitForPaint()],
+            [Animation.WaitForPaint, Animation.Message.CompletedWaitForPaint()],
             [
               Animation.WaitForAnimationSettled({ id: 'test-entry-0' }),
-              Animation.EndedAnimation(),
+              Animation.Message.EndedAnimation(),
             ],
             [
               Animation.WaitForAnimationSettled({ id: 'test-entry-1' }),
-              Animation.EndedAnimation(),
+              Animation.Message.EndedAnimation(),
             ],
           ),
           Story.model((next: Model) => {
@@ -475,15 +479,18 @@ describe('Toast', () => {
         givenEmpty,
         Story.message(Toast.Added({ entry })),
         Story.Command.resolveAll(
-          [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
-          [Animation.WaitForAnimationSettled, Animation.EndedAnimation()],
+          [Animation.WaitForPaint, Animation.Message.CompletedWaitForPaint()],
+          [
+            Animation.WaitForAnimationSettled,
+            Animation.Message.EndedAnimation(),
+          ],
         ),
         Story.model((next: Model) => {
           expect(next.entries[0]?.animation.transitionState).toBe('Idle')
         }),
         Story.Command.resolve(
           WaitBeforeDismissal,
-          CompletedWaitBeforeDismissal({
+          Message.CompletedWaitBeforeDismissal({
             entryId: firstEntryId,
             version: 0,
           }),
@@ -492,8 +499,11 @@ describe('Toast', () => {
           expect(next.entries[0]?.animation.transitionState).toBe('LeaveStart')
         }),
         Story.Command.resolveAll(
-          [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
-          [Animation.WaitForAnimationSettled, Animation.EndedAnimation()],
+          [Animation.WaitForPaint, Animation.Message.CompletedWaitForPaint()],
+          [
+            Animation.WaitForAnimationSettled,
+            Animation.Message.EndedAnimation(),
+          ],
         ),
         Story.model((next: Model) => {
           expect(next.entries).toHaveLength(0)

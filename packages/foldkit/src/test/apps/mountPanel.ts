@@ -1,7 +1,7 @@
-import { Effect, Match as M, Option, Schema as S } from 'effect'
+import { Effect, Option, Schema as S } from 'effect'
 
 import type { Html, HtmlBuilder } from '../../html/index.js'
-import { m } from '../../message/index.js'
+import { defineMessageUnion } from '../../message/index.js'
 import * as Mount from '../../mount/index.js'
 
 // MODEL
@@ -15,21 +15,15 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const ClickedToggle = m('ClickedToggle')
-export const MeasuredPanel = m('MeasuredPanel', { width: S.Number })
-export const CompletedFocusButton = m('CompletedFocusButton')
-export const FailedMountSidebar = m('FailedMountSidebar', { reason: S.String })
-export const ClickedIncrement = m('ClickedIncrement')
-export const ScrolledTo = m('ScrolledTo', { offset: S.Number })
+export const Message = defineMessageUnion({
+  ClickedToggle: {},
+  MeasuredPanel: { width: S.Number },
+  CompletedFocusButton: {},
+  FailedMountSidebar: { reason: S.String },
+  ClickedIncrement: {},
+  ScrolledTo: { offset: S.Number },
+})
 
-export const Message = S.Union([
-  ClickedToggle,
-  MeasuredPanel,
-  CompletedFocusButton,
-  FailedMountSidebar,
-  ClickedIncrement,
-  ScrolledTo,
-])
 export type Message = typeof Message.Type
 
 // MOUNT
@@ -43,19 +37,19 @@ export type Message = typeof Message.Type
 
 export const MeasurePanel = Mount.define(
   'MeasurePanel',
-  MeasuredPanel,
-  FailedMountSidebar,
-)(() => Effect.succeed(MeasuredPanel({ width: 320 })))
+  Message.MeasuredPanel,
+  Message.FailedMountSidebar,
+)(() => Effect.succeed(Message.MeasuredPanel({ width: 320 })))
 
 export const FocusButton = Mount.define(
   'FocusButton',
-  CompletedFocusButton,
-)(() => Effect.succeed(CompletedFocusButton()))
+  Message.CompletedFocusButton,
+)(() => Effect.succeed(Message.CompletedFocusButton()))
 
 export const ScrollList = Mount.define(
   'ScrollList',
   { offset: S.Number },
-  ScrolledTo,
+  Message.ScrolledTo,
 )(
   ({ offset }) =>
     element =>
@@ -63,7 +57,7 @@ export const ScrollList = Mount.define(
         if (element instanceof HTMLElement) {
           element.scrollTop = offset
         }
-        return ScrolledTo({ offset })
+        return Message.ScrolledTo({ offset })
       }),
 )
 
@@ -77,24 +71,18 @@ export const initialModel: Model = {
 
 // UPDATE
 
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<never>] =>
-  M.value(message).pipe(
-    M.withReturnType<readonly [Model, ReadonlyArray<never>]>(),
-    M.tagsExhaustive({
-      ClickedToggle: () => [{ ...model, isOpen: !model.isOpen }, []],
-      MeasuredPanel: ({ width }) => [
-        { ...model, measuredWidth: Option.some(width) },
-        [],
-      ],
-      CompletedFocusButton: () => [model, []],
-      FailedMountSidebar: () => [model, []],
-      ClickedIncrement: () => [{ ...model, count: model.count + 1 }, []],
-      ScrolledTo: () => [model, []],
-    }),
-  )
+export const update = (model: Model, message: Message) =>
+  Message.match<readonly [Model, ReadonlyArray<never>]>(message, {
+    ClickedToggle: () => [{ ...model, isOpen: !model.isOpen }, []],
+    MeasuredPanel: ({ width }) => [
+      { ...model, measuredWidth: Option.some(width) },
+      [],
+    ],
+    CompletedFocusButton: () => [model, []],
+    FailedMountSidebar: () => [model, []],
+    ClickedIncrement: () => [{ ...model, count: model.count + 1 }, []],
+    ScrolledTo: () => [model, []],
+  })
 
 // VIEW
 
@@ -103,7 +91,11 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
     [h.Class('panel-test')],
     [
       h.button(
-        [h.Key('toggle'), h.OnClick(ClickedToggle()), h.OnMount(FocusButton())],
+        [
+          h.Key('toggle'),
+          h.OnClick(Message.ClickedToggle()),
+          h.OnMount(FocusButton()),
+        ],
         [model.isOpen ? 'Close' : 'Open'],
       ),
       ...(model.isOpen
@@ -138,7 +130,7 @@ export const twoPanelView = (model: Model, h: HtmlBuilder<Message>): Html => {
       h.div([h.Key('panel-a'), h.OnMount(MeasurePanel())], [h.span([], ['A'])]),
       h.div([h.Key('panel-b'), h.OnMount(MeasurePanel())], [h.span([], ['B'])]),
       h.button(
-        [h.Key('inc'), h.OnClick(ClickedIncrement())],
+        [h.Key('inc'), h.OnClick(Message.ClickedIncrement())],
         [`count: ${model.count}`],
       ),
     ],

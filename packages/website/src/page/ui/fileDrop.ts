@@ -4,11 +4,7 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { FileDrop } from '@foldkit/ui'
 
-import {
-  ClickedRemoveFileDropDemoFile,
-  GotFileDropBasicDemoMessage,
-  type Message,
-} from './message'
+import { Message } from './message'
 import type { Model } from './model'
 
 // DEMO CONTENT
@@ -77,7 +73,8 @@ export const basicDemo = (
                 ],
               ),
           },
-          toParentMessage: message => GotFileDropBasicDemoMessage({ message }),
+          toParentMessage: message =>
+            Message.GotFileDropBasicDemoMessage({ message }),
         }),
         ...Array.match(model.fileDropBasicDemoFiles, {
           onEmpty: () => [],
@@ -99,7 +96,9 @@ export const basicDemo = (
                   h.button(
                     [
                       h.Type('button'),
-                      h.OnClick(ClickedRemoveFileDropDemoFile({ fileIndex })),
+                      h.OnClick(
+                        Message.ClickedRemoveFileDropDemoFile({ fileIndex }),
+                      ),
                       h.Class(removeButtonClassName),
                     ],
                     ['Remove'],

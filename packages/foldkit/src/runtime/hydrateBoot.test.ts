@@ -1,15 +1,16 @@
-import { Effect, Fiber, Match as M, Option, Schema as S } from 'effect'
+import { Effect, Fiber, Option, Schema as S } from 'effect'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { Command } from '../command/index.js'
 import { renderToString } from '../experimental/server/server.js'
 import type { Document } from '../html/index.js'
 import { __htmlBuilder } from '../html/index.js'
-import { m } from '../message/index.js'
+import { defineMessageUnion } from '../message/index.js'
 import { __startProgram, hydrate, makeApplication, run } from './runtime.js'
 
-const ClickedIncrement = m('ClickedIncrement')
-const Message = S.Union([ClickedIncrement])
+const Message = defineMessageUnion({
+  ClickedIncrement: {},
+})
 type Message = typeof Message.Type
 
 const Model = S.Struct({ count: S.Number })
@@ -27,23 +28,17 @@ const init = (
   [],
 ]
 
-const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command<Message>>] =>
-  M.value(message).pipe(
-    M.withReturnType<readonly [Model, ReadonlyArray<Command<Message>>]>(),
-    M.tagsExhaustive({
-      ClickedIncrement: () => [Model.make({ count: model.count + 1 }), []],
-    }),
-  )
+const update = (model: Model, message: Message) =>
+  Message.match<readonly [Model, ReadonlyArray<Command<Message>>]>(message, {
+    ClickedIncrement: () => [Model.make({ count: model.count + 1 }), []],
+  })
 
 const view = (model: Model): Document => ({
   title: `Count ${model.count}`,
   body: h.div(
     [],
     [
-      h.button([h.Id('bump'), h.OnClick(ClickedIncrement())], ['+']),
+      h.button([h.Id('bump'), h.OnClick(Message.ClickedIncrement())], ['+']),
       h.span([h.Id('count')], [String(model.count)]),
     ],
   ),

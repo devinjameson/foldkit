@@ -3,7 +3,7 @@
 // update, and view definitions.
 import { Command } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Popover } from '@foldkit/ui'
@@ -30,15 +30,12 @@ const init = () => [
 ]
 
 // Embed each Popover Message in your parent Message:
-const GotAccountPopoverMessage = m('GotAccountPopoverMessage', {
-  message: Popover.Message,
+const Message = defineMessageUnion({
+  GotAccountPopoverMessage: { message: Popover.Message },
+  GotAccountDetailsPopoverMessage: { message: Popover.Message },
 })
 
-const GotAccountDetailsPopoverMessage = m('GotAccountDetailsPopoverMessage', {
-  message: Popover.Message,
-})
-
-// Inside your update function's M.tagsExhaustive({...}), delegate each
+// Inside your update function's Message.match({...}), delegate each
 // Popover to its own Model field:
 GotAccountPopoverMessage: ({ message }) => {
   const [nextAccountPopover, commands] = Popover.update(
@@ -49,7 +46,7 @@ GotAccountPopoverMessage: ({ message }) => {
   return [
     evo(model, { accountPopover: () => nextAccountPopover }),
     Command.mapMessages(commands, message =>
-      GotAccountPopoverMessage({ message }),
+      Message.GotAccountPopoverMessage({ message }),
     ),
   ]
 }
@@ -63,7 +60,7 @@ GotAccountDetailsPopoverMessage: ({ message }) => {
   return [
     evo(model, { accountDetailsPopover: () => nextAccountDetailsPopover }),
     Command.mapMessages(commands, message =>
-      GotAccountDetailsPopoverMessage({ message }),
+      Message.GotAccountDetailsPopoverMessage({ message }),
     ),
   ]
 }
@@ -109,7 +106,8 @@ const view = (h: HtmlBuilder<Message>) => {
           ],
         ),
     },
-    toParentMessage: message => GotAccountDetailsPopoverMessage({ message }),
+    toParentMessage: message =>
+      Message.GotAccountDetailsPopoverMessage({ message }),
   })
 
   return h.submodel({
@@ -145,6 +143,6 @@ const view = (h: HtmlBuilder<Message>) => {
           ],
         ),
     },
-    toParentMessage: message => GotAccountPopoverMessage({ message }),
+    toParentMessage: message => Message.GotAccountPopoverMessage({ message }),
   })
 }

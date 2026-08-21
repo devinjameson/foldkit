@@ -13,7 +13,7 @@ import {
 import { Command, Runtime, Update } from 'foldkit'
 import { Machine } from 'foldkit/experimental'
 import { otherwise, to, when } from 'foldkit/experimental/machine'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
@@ -98,43 +98,21 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const ClickedContinue = m('ClickedContinue')
-export const ClickedBack = m('ClickedBack')
-export const ClickedCancel = m('ClickedCancel')
-export const ClickedPlaceOrder = m('ClickedPlaceOrder')
-export const ClickedStartOver = m('ClickedStartOver')
-export const ToggledPaymentMethod = m('ToggledPaymentMethod', {
-  isSelected: S.Boolean,
-})
-export const SelectedEdition = m('SelectedEdition', {
-  isShippingRequired: S.Boolean,
-})
-export const GotEditionRadioGroupMessage = m('GotEditionRadioGroupMessage', {
-  message: RadioGroup.Message,
-})
-export const ToggledTermsAccepted = m('ToggledTermsAccepted', {
-  isAccepted: S.Boolean,
-})
-export const UpdatedPromoCode = m('UpdatedPromoCode', { value: S.String })
-export const SubmittedPromoCode = m('SubmittedPromoCode')
-export const SucceededPlaceOrder = m('SucceededPlaceOrder', {
-  orderId: S.String,
+export const Message = defineMessageUnion({
+  ClickedContinue: {},
+  ClickedBack: {},
+  ClickedCancel: {},
+  ClickedPlaceOrder: {},
+  ClickedStartOver: {},
+  ToggledPaymentMethod: { isSelected: S.Boolean },
+  SelectedEdition: { isShippingRequired: S.Boolean },
+  GotEditionRadioGroupMessage: { message: RadioGroup.Message },
+  ToggledTermsAccepted: { isAccepted: S.Boolean },
+  UpdatedPromoCode: { value: S.String },
+  SubmittedPromoCode: {},
+  SucceededPlaceOrder: { orderId: S.String },
 })
 
-export const Message = S.Union([
-  ClickedContinue,
-  ClickedBack,
-  ClickedCancel,
-  ClickedPlaceOrder,
-  ClickedStartOver,
-  ToggledPaymentMethod,
-  SelectedEdition,
-  GotEditionRadioGroupMessage,
-  ToggledTermsAccepted,
-  UpdatedPromoCode,
-  SubmittedPromoCode,
-  SucceededPlaceOrder,
-])
 export type Message = typeof Message.Type
 
 // COMMAND
@@ -143,11 +121,11 @@ const PLACE_ORDER_DELAY = Duration.seconds(1)
 
 export const PlaceOrder = Command.define('PlaceOrder', {
   args: { isShippingRequired: S.Boolean },
-  messages: [SucceededPlaceOrder],
+  messages: [Message.SucceededPlaceOrder],
   execute: ({ isShippingRequired }) =>
     Effect.gen(function* () {
       yield* Effect.sleep(PLACE_ORDER_DELAY)
-      return SucceededPlaceOrder({
+      return Message.SucceededPlaceOrder({
         orderId: isShippingRequired ? 'SHIP-1001' : 'DIGI-1001',
       })
     }),
@@ -416,7 +394,9 @@ const foldEditionRadioGroupOutMessage = M.type<RadioGroup.OutMessage>().pipe(
   M.tagsExhaustive({
     Selected: ({ value }) =>
       stepMachine(
-        SelectedEdition({ isShippingRequired: value === HARDCOVER_EDITION }),
+        Message.SelectedEdition({
+          isShippingRequired: value === HARDCOVER_EDITION,
+        }),
       ),
   }),
 )
@@ -426,7 +406,7 @@ const foldEditionRadioGroup = Update.foldChild({
   read: (model: Model) => Option.some(model.editionRadioGroup),
   write: (model, nextEditionRadioGroup) =>
     evo(model, { editionRadioGroup: () => nextEditionRadioGroup }),
-  toParentMessage: message => GotEditionRadioGroupMessage({ message }),
+  toParentMessage: message => Message.GotEditionRadioGroupMessage({ message }),
   foldOutMessage: foldEditionRadioGroupOutMessage,
 })
 

@@ -1,7 +1,6 @@
 import {
   Array,
   Effect,
-  Match as M,
   Number,
   Option,
   Random,
@@ -10,7 +9,7 @@ import {
 } from 'effect'
 import { Canvas, Command, Runtime, Subscription } from 'foldkit'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Button } from '@foldkit/ui'
@@ -57,26 +56,21 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const TickedFrame = m('TickedFrame', { deltaTime: S.Number })
-export const ClickedCanvas = m('ClickedCanvas', { x: S.Number, y: S.Number })
-export const CompletedGenerateBall = m('CompletedGenerateBall', {
-  x: S.Number,
-  y: S.Number,
-  vx: S.Number,
-  vy: S.Number,
-  radius: S.Number,
-  color: S.String,
+export const Message = defineMessageUnion({
+  TickedFrame: { deltaTime: S.Number },
+  ClickedCanvas: { x: S.Number, y: S.Number },
+  CompletedGenerateBall: {
+    x: S.Number,
+    y: S.Number,
+    vx: S.Number,
+    vy: S.Number,
+    radius: S.Number,
+    color: S.String,
+  },
+  ClickedClear: {},
+  ClickedTogglePlay: {},
 })
-export const ClickedClear = m('ClickedClear')
-export const ClickedTogglePlay = m('ClickedTogglePlay')
 
-export const Message = S.Union([
-  TickedFrame,
-  ClickedCanvas,
-  CompletedGenerateBall,
-  ClickedClear,
-  ClickedTogglePlay,
-])
 export type Message = typeof Message.Type
 
 // INIT
@@ -90,7 +84,7 @@ export const init: Runtime.ApplicationInit<Model, Message> = () => [
 
 export const GenerateBall = Command.define('GenerateBall', {
   args: { x: S.Number, y: S.Number },
-  messages: [CompletedGenerateBall],
+  messages: [Message.CompletedGenerateBall],
   execute: ({ x, y }) =>
     Effect.gen(function* () {
       const angle = yield* Random.nextBetween(0, FULL_CIRCLE_RADIANS)
@@ -104,7 +98,7 @@ export const GenerateBall = Command.define('GenerateBall', {
         Array.get(colorIndex),
         Option.getOrElse(() => FALLBACK_COLOR),
       )
-      return CompletedGenerateBall({
+      return Message.CompletedGenerateBall({
         x,
         y,
         vx: Math.cos(angle) * speed,
@@ -136,15 +130,10 @@ const advanceBall =
     })
   }
 
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] =>
-  M.value(message).pipe(
-    M.withReturnType<
-      readonly [Model, ReadonlyArray<Command.Command<Message>>]
-    >(),
-    M.tagsExhaustive({
+export const update = (model: Model, message: Message) =>
+  Message.match<readonly [Model, ReadonlyArray<Command.Command<Message>>]>(
+    message,
+    {
       TickedFrame: ({ deltaTime }) => [
         evo(model, {
           balls: Array.map(advanceBall(deltaTime / MS_PER_SECOND)),
@@ -171,7 +160,7 @@ export const update = (
         evo(model, { isRunning: running => !running }),
         [],
       ],
-    }),
+    },
   )
 
 // SUBSCRIPTION
@@ -179,7 +168,7 @@ export const update = (
 export const subscriptions = Subscription.make<Model, Message>()(_entry => ({
   frame: Subscription.animationFrame({
     isActive: model => model.isRunning,
-    toMessage: deltaTime => TickedFrame({ deltaTime }),
+    toMessage: deltaTime => Message.TickedFrame({ deltaTime }),
   }),
 }))
 
@@ -212,7 +201,7 @@ const controlsView = (model: Model, h: HtmlBuilder<Message>): Html =>
     [
       Button.view(
         {
-          onClick: ClickedTogglePlay(),
+          onClick: Message.ClickedTogglePlay(),
           toView: attributes =>
             h.button(
               [
@@ -228,7 +217,7 @@ const controlsView = (model: Model, h: HtmlBuilder<Message>): Html =>
       ),
       Button.view(
         {
-          onClick: ClickedClear(),
+          onClick: Message.ClickedClear(),
           toView: attributes =>
             h.button(
               [
@@ -275,7 +264,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
           height: CANVAS_HEIGHT,
           shapes: sceneShapes(model),
           className: 'rounded-lg shadow-2xl cursor-crosshair',
-          onPointerDown: ({ x, y }) => ClickedCanvas({ x, y }),
+          onPointerDown: ({ x, y }) => Message.ClickedCanvas({ x, y }),
         },
         h,
       ),

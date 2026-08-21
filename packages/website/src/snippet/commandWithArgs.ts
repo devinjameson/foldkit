@@ -1,19 +1,19 @@
-import { Effect, Match as M, Schema as S } from 'effect'
+import { Effect, Schema as S } from 'effect'
 import { HttpClient, HttpClientRequest } from 'effect/unstable/http'
 import { Command, Http } from 'foldkit'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 
-const SubmittedWeatherForm = m('SubmittedWeatherForm')
-const SucceededFetchWeather = m('SucceededFetchWeather', {
-  weather: WeatherSchema,
+const Message = defineMessageUnion({
+  SubmittedWeatherForm: {},
+  SucceededFetchWeather: { weather: WeatherSchema },
+  FailedFetchWeather: { error: S.String },
 })
-const FailedFetchWeather = m('FailedFetchWeather', { error: S.String })
 
 const FetchWeather = Command.define('FetchWeather', {
   // Args schema: the per-dispatch inputs the Command needs.
   args: { zipCode: S.String },
   // Every Message this Command can produce.
-  messages: [SucceededFetchWeather, FailedFetchWeather],
+  messages: [Message.SucceededFetchWeather, Message.FailedFetchWeather],
   // The Effect receives a typed args record.
   execute: ({ zipCode }) =>
     Effect.gen(function* () {
@@ -24,24 +24,19 @@ const FetchWeather = Command.define('FetchWeather', {
       const weather = yield* S.decodeUnknownEffect(WeatherSchema)(
         yield* response.json,
       )
-      return SucceededFetchWeather({ weather })
+      return Message.SucceededFetchWeather({ weather })
     }).pipe(
       Effect.catch(error =>
-        Effect.succeed(FailedFetchWeather({ error: String(error) })),
+        Effect.succeed(Message.FailedFetchWeather({ error: String(error) })),
       ),
       Effect.provide(Http.layer),
     ),
 })
 
-const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] =>
-  M.value(message).pipe(
-    M.withReturnType<
-      readonly [Model, ReadonlyArray<Command.Command<Message>>]
-    >(),
-    M.tagsExhaustive({
+const update = (model: Model, message: Message) =>
+  Message.match<readonly [Model, ReadonlyArray<Command.Command<Message>>]>(
+    message,
+    {
       // Pass args when dispatching the Command.
       SubmittedWeatherForm: () => [
         model,
@@ -49,5 +44,5 @@ const update = (
       ],
       SucceededFetchWeather: ({ weather }) => [{ ...model, weather }, []],
       FailedFetchWeather: () => [model, []],
-    }),
+    },
   )

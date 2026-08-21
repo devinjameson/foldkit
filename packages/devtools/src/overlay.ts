@@ -40,7 +40,7 @@ import {
   createKeyedLazy,
   createLazy,
 } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { makeElement } from 'foldkit/runtime'
 import type { DevToolsMode, DevToolsPosition } from 'foldkit/runtime'
 import { ts } from 'foldkit/schema'
@@ -161,76 +161,47 @@ const Flags = S.Struct({
 
 // MESSAGE
 
-const ClickedToggle = m('ClickedToggle')
-const ClickedSettingsToggle = m('ClickedSettingsToggle')
-const ToggledFlatten = m('ToggledFlatten', { isFlattened: S.Boolean })
-const CompletedPersistDevToolsState = m('CompletedPersistDevToolsState')
-const ClickedRow = m('ClickedRow', { index: S.Number })
-const ClickedResume = m('ClickedResume')
-const ClickedClear = m('ClickedClear')
-const CompletedResume = m('CompletedResume')
-const ClickedFollowLatest = m('ClickedFollowLatest')
-const ClickedScrollToTopPill = m('ClickedScrollToTopPill')
-const ScrolledMessageList = m('ScrolledMessageList', { scrollTop: S.Number })
-const CompletedClear = m('CompletedClear')
-const CompletedLockScroll = m('CompletedLockScroll')
-const CompletedUnlockScroll = m('CompletedUnlockScroll')
-const CompletedScrollToTop = m('CompletedScrollToTop')
-const CrossedMobileBreakpoint = m('CrossedMobileBreakpoint', {
-  isMobile: S.Boolean,
-})
-const ReceivedInspectedState = m('ReceivedInspectedState', {
-  model: S.Unknown,
-  maybeMessage: S.Option(S.Unknown),
-  changedPaths: S.HashSet(S.String),
-  affectedPaths: S.HashSet(S.String),
-})
-const ToggledTreeNode = m('ToggledTreeNode', { path: S.String })
-const TickedScrubFrame = m('TickedScrubFrame')
-const GotInspectorTabsMessage = m('GotInspectorTabsMessage', {
-  message: Tabs.Message,
-})
-const ReceivedStoreUpdate = m('ReceivedStoreUpdate', {
-  entries: S.Array(DisplayEntry),
-  initCommands: S.Array(DisplayCommand),
-  initMountStarts: S.Array(DisplayMount),
-  startIndex: S.Number,
-  isPaused: S.Boolean,
-  pausedAtIndex: S.Number,
-})
-const GotSubmodelFilterMessage = m('GotSubmodelFilterMessage', {
-  message: Listbox.Message,
-})
 // NOTE: suspend for the same init-order reason as scrubberSlider above.
-const GotScrubberSliderMessage = m('GotScrubberSliderMessage', {
-  message: S.suspend((): typeof Slider.Message => Slider.Message),
-})
 
-const Message = S.Union([
-  ClickedToggle,
-  ClickedSettingsToggle,
-  ToggledFlatten,
-  CompletedPersistDevToolsState,
-  ClickedRow,
-  ClickedResume,
-  ClickedClear,
-  ClickedFollowLatest,
-  ClickedScrollToTopPill,
-  ScrolledMessageList,
-  CompletedResume,
-  CompletedClear,
-  CompletedLockScroll,
-  CompletedUnlockScroll,
-  CompletedScrollToTop,
-  CrossedMobileBreakpoint,
-  ReceivedInspectedState,
-  ToggledTreeNode,
-  TickedScrubFrame,
-  GotInspectorTabsMessage,
-  ReceivedStoreUpdate,
-  GotSubmodelFilterMessage,
-  GotScrubberSliderMessage,
-])
+const Message = defineMessageUnion({
+  ClickedToggle: {},
+  ClickedSettingsToggle: {},
+  ToggledFlatten: { isFlattened: S.Boolean },
+  CompletedPersistDevToolsState: {},
+  ClickedRow: { index: S.Number },
+  ClickedResume: {},
+  ClickedClear: {},
+  ClickedFollowLatest: {},
+  ClickedScrollToTopPill: {},
+  ScrolledMessageList: { scrollTop: S.Number },
+  CompletedResume: {},
+  CompletedClear: {},
+  CompletedLockScroll: {},
+  CompletedUnlockScroll: {},
+  CompletedScrollToTop: {},
+  CrossedMobileBreakpoint: { isMobile: S.Boolean },
+  ReceivedInspectedState: {
+    model: S.Unknown,
+    maybeMessage: S.Option(S.Unknown),
+    changedPaths: S.HashSet(S.String),
+    affectedPaths: S.HashSet(S.String),
+  },
+  ToggledTreeNode: { path: S.String },
+  TickedScrubFrame: {},
+  GotInspectorTabsMessage: { message: Tabs.Message },
+  ReceivedStoreUpdate: {
+    entries: S.Array(DisplayEntry),
+    initCommands: S.Array(DisplayCommand),
+    initMountStarts: S.Array(DisplayMount),
+    startIndex: S.Number,
+    isPaused: S.Boolean,
+    pausedAtIndex: S.Number,
+  },
+  GotSubmodelFilterMessage: { message: Listbox.Message },
+  GotScrubberSliderMessage: {
+    message: S.suspend((): typeof Slider.Message => Slider.Message),
+  },
+})
 type Message = typeof Message.Type
 
 // HELPERS
@@ -364,13 +335,13 @@ class ShadowRootService extends Context.Service<
 >()('foldkit/DevToolsShadowRoot') {}
 
 export const LockScroll = Command.define('LockScroll', {
-  messages: [CompletedLockScroll],
-  execute: lockScroll.pipe(Effect.as(CompletedLockScroll())),
+  messages: [Message.CompletedLockScroll],
+  execute: lockScroll.pipe(Effect.as(Message.CompletedLockScroll())),
 })
 
 export const UnlockScroll = Command.define('UnlockScroll', {
-  messages: [CompletedUnlockScroll],
-  execute: unlockScroll.pipe(Effect.as(CompletedUnlockScroll())),
+  messages: [Message.CompletedUnlockScroll],
+  execute: unlockScroll.pipe(Effect.as(Message.CompletedUnlockScroll())),
 })
 
 const maybeToggleScrollLock = (isEnabled: boolean, shouldLock: boolean) =>
@@ -405,7 +376,7 @@ const readPersistedState: Effect.Effect<DevToolsPersistedState> = Effect.gen(
 
 export const PersistDevToolsState = Command.define('PersistDevToolsState', {
   args: { isOpen: S.Boolean, isFlattened: S.Boolean },
-  messages: [CompletedPersistDevToolsState],
+  messages: [Message.CompletedPersistDevToolsState],
   execute: ({ isOpen, isFlattened }) =>
     Effect.gen(function* () {
       const store = yield* KeyValueStore.KeyValueStore
@@ -414,9 +385,11 @@ export const PersistDevToolsState = Command.define('PersistDevToolsState', {
         isFlattened,
       })
       yield* store.set(DEVTOOLS_STORAGE_KEY, json)
-      return CompletedPersistDevToolsState()
+      return Message.CompletedPersistDevToolsState()
     }).pipe(
-      Effect.catch(() => Effect.succeed(CompletedPersistDevToolsState())),
+      Effect.catch(() =>
+        Effect.succeed(Message.CompletedPersistDevToolsState()),
+      ),
       Effect.provide(BrowserKeyValueStore.layerLocalStorage),
     ),
 })
@@ -426,7 +399,7 @@ const buildInspectionFromModel = (index: number, model: unknown) =>
     const store = yield* StoreService
     const maybeMessage = yield* store.getMessageAtIndex(index)
     const diff = yield* store.getDiffAtIndex(index)
-    return ReceivedInspectedState({ model, maybeMessage, ...diff })
+    return Message.ReceivedInspectedState({ model, maybeMessage, ...diff })
   })
 
 const buildInspectionEffect = (index: number) =>
@@ -444,7 +417,7 @@ const buildInspectionEffect = (index: number) =>
 // `InspectState`, which resolves once on its own.
 export const JumpToAndInspect = Command.define('JumpToAndInspect', {
   args: { index: S.Number },
-  messages: [ReceivedInspectedState],
+  messages: [Message.ReceivedInspectedState],
   execute: ({ index }) =>
     Effect.gen(function* () {
       const store = yield* StoreService
@@ -455,12 +428,12 @@ export const JumpToAndInspect = Command.define('JumpToAndInspect', {
 
 export const InspectState = Command.define('InspectState', {
   args: { index: S.Number },
-  messages: [ReceivedInspectedState],
+  messages: [Message.ReceivedInspectedState],
   execute: ({ index }) => buildInspectionEffect(index),
 })
 
 export const InspectLatest = Command.define('InspectLatest', {
-  messages: [ReceivedInspectedState],
+  messages: [Message.ReceivedInspectedState],
   execute: Effect.gen(function* () {
     const store = yield* StoreService
     const state = yield* SubscriptionRef.get(store.stateRef)
@@ -469,32 +442,32 @@ export const InspectLatest = Command.define('InspectLatest', {
 })
 
 export const Resume = Command.define('Resume', {
-  messages: [CompletedResume],
+  messages: [Message.CompletedResume],
   execute: Effect.gen(function* () {
     const store = yield* StoreService
     yield* store.resume
-    return CompletedResume()
+    return Message.CompletedResume()
   }),
 })
 
 export const Clear = Command.define('Clear', {
-  messages: [CompletedClear],
+  messages: [Message.CompletedClear],
   execute: Effect.gen(function* () {
     const store = yield* StoreService
     yield* store.clear
-    return CompletedClear()
+    return Message.CompletedClear()
   }),
 })
 
 export const ScrollToTop = Command.define('ScrollToTop', {
-  messages: [CompletedScrollToTop],
+  messages: [Message.CompletedScrollToTop],
   execute: Effect.gen(function* () {
     const shadow = yield* ShadowRootService
     const messageList = shadow.querySelector(MESSAGE_LIST_SELECTOR)
     if (messageList instanceof HTMLElement) {
       messageList.scrollTop = 0
     }
-    return CompletedScrollToTop()
+    return Message.CompletedScrollToTop()
   }),
 })
 
@@ -659,7 +632,7 @@ const makeUpdate = (
               activeInspectorTab: () => nextActiveInspectorTab,
             }),
             Command.mapMessages(tabsCommands, message =>
-              GotInspectorTabsMessage({ message }),
+              Message.GotInspectorTabsMessage({ message }),
             ),
           ]
         },
@@ -746,7 +719,7 @@ const makeUpdate = (
               listboxMessage,
             )
           const mappedCommands = Command.mapMessages(listboxCommands, message =>
-            GotSubmodelFilterMessage({ message }),
+            Message.GotSubmodelFilterMessage({ message }),
           )
 
           return Option.match(maybeOutMessage, {
@@ -777,7 +750,7 @@ const makeUpdate = (
 
           const mappedSliderCommands = Command.mapMessages(
             sliderCommands,
-            message => GotScrubberSliderMessage({ message }),
+            message => Message.GotScrubberSliderMessage({ message }),
           )
 
           // NOTE: the thumb tracks every pointermove (cheap, model-only via
@@ -846,23 +819,25 @@ const makeOverlaySubscriptions = (store: DevToolsStore, shadow: ShadowRoot) => {
     scrubberEscape: sliderSubscriptions.dragEscape,
   })<Model, Message>({
     toChildModel: model => model.scrubberSlider,
-    toParentMessage: message => GotScrubberSliderMessage({ message }),
+    toParentMessage: message => Message.GotScrubberSliderMessage({ message }),
   })
 
   const ownSubscriptions = Subscription.make<Model, Message>()(_entry => ({
     scrubFrame: Subscription.animationFrame<Model, Message>({
       isActive: model => Option.isSome(model.maybePendingScrubIndex),
-      toMessage: () => TickedScrubFrame(),
+      toMessage: () => Message.TickedScrubFrame(),
     }),
     storeUpdates: Subscription.persistent(
       Stream.concat(
         Stream.fromEffect(
           SubscriptionRef.get(store.stateRef).pipe(
-            Effect.map(state => ReceivedStoreUpdate(toDisplayState(state))),
+            Effect.map(state =>
+              Message.ReceivedStoreUpdate(toDisplayState(state)),
+            ),
           ),
         ),
         Stream.map(SubscriptionRef.changes(store.stateRef), state =>
-          ReceivedStoreUpdate(toDisplayState(state)),
+          Message.ReceivedStoreUpdate(toDisplayState(state)),
         ),
       ),
     ),
@@ -874,7 +849,7 @@ const makeOverlaySubscriptions = (store: DevToolsStore, shadow: ShadowRoot) => {
             const handler = (event: MediaQueryListEvent) => {
               Queue.offerUnsafe(
                 queue,
-                CrossedMobileBreakpoint({ isMobile: event.matches }),
+                Message.CrossedMobileBreakpoint({ isMobile: event.matches }),
               )
             }
             mediaQuery.addEventListener('change', handler)
@@ -1202,7 +1177,9 @@ const buildOverlayView = (
           }),
         ),
         indent,
-        ...(isRoot ? [] : [h.OnClick(ToggledTreeNode({ path: treePath }))]),
+        ...(isRoot
+          ? []
+          : [h.OnClick(Message.ToggledTreeNode({ path: treePath }))]),
       ],
       rowSegments.map(segment =>
         h.keyed('li')(
@@ -1738,7 +1715,8 @@ const buildOverlayView = (
                 ],
               ),
           },
-          toParentMessage: message => GotInspectorTabsMessage({ message }),
+          toParentMessage: message =>
+            Message.GotInspectorTabsMessage({ message }),
         }),
       ],
     )
@@ -1756,7 +1734,7 @@ const buildOverlayView = (
           ),
         ),
         h.Style({ width: '22px', height: '56px', fontSize: '10px' }),
-        h.OnClick(ClickedToggle()),
+        h.OnClick(Message.ClickedToggle()),
       ],
       [
         model.isOpen
@@ -1802,7 +1780,7 @@ const buildOverlayView = (
 
   const clearHistoryButton = (): Html =>
     h.button(
-      [h.Class(headerButtonClass), h.OnClick(ClickedClear())],
+      [h.Class(headerButtonClass), h.OnClick(Message.ClickedClear())],
       ['Clear history'],
     )
 
@@ -1856,7 +1834,7 @@ const buildOverlayView = (
 
   const scrollToTopPillView = (): Html =>
     h.button(
-      [h.Class('dt-scroll-pill'), h.OnClick(ClickedScrollToTopPill())],
+      [h.Class('dt-scroll-pill'), h.OnClick(Message.ClickedScrollToTopPill())],
       [
         arrowUpIconView,
         h.span([h.Class('dt-scroll-pill-text')], ['Jump to top']),
@@ -1915,7 +1893,7 @@ const buildOverlayView = (
         className: 'dt-filter-wrapper',
         backdropClassName: 'dt-filter-backdrop',
       },
-      toParentMessage: message => GotSubmodelFilterMessage({ message }),
+      toParentMessage: message => Message.GotSubmodelFilterMessage({ message }),
     })
   }
 
@@ -1926,7 +1904,7 @@ const buildOverlayView = (
       {
         id: FLATTEN_SWITCH_ID,
         isChecked: model.isFlattened,
-        onToggle: isFlattened => ToggledFlatten({ isFlattened }),
+        onToggle: isFlattened => Message.ToggledFlatten({ isFlattened }),
         toView: attributes =>
           h.div(
             [h.Class('dt-settings-row')],
@@ -1989,7 +1967,10 @@ const buildOverlayView = (
               ),
               maybeAction: Option.some(
                 h.button(
-                  [h.Class(actionButtonClass), h.OnClick(ClickedResume())],
+                  [
+                    h.Class(actionButtonClass),
+                    h.OnClick(Message.ClickedResume()),
+                  ],
                   ['Resume →'],
                 ),
               ),
@@ -2014,7 +1995,10 @@ const buildOverlayView = (
         maybeAction: OptionExt.when(
           !model.isFollowingLatest,
           h.button(
-            [h.Class(actionButtonClass), h.OnClick(ClickedFollowLatest())],
+            [
+              h.Class(actionButtonClass),
+              h.OnClick(Message.ClickedFollowLatest()),
+            ],
             ['Follow Latest →'],
           ),
         ),
@@ -2042,7 +2026,7 @@ const buildOverlayView = (
       'init',
       [
         h.Class(clsx(ROW_BASE, { selected: isSelected })),
-        h.OnClick(ClickedRow({ index: INIT_INDEX })),
+        h.OnClick(Message.ClickedRow({ index: INIT_INDEX })),
       ],
       [
         ...OptionExt.when(
@@ -2089,7 +2073,7 @@ const buildOverlayView = (
       String(absoluteIndex),
       [
         h.Class(clsx(ROW_BASE, { selected: isSelected })),
-        h.OnClick(ClickedRow({ index: absoluteIndex })),
+        h.OnClick(Message.ClickedRow({ index: absoluteIndex })),
       ],
       [
         ...OptionExt.when(
@@ -2200,7 +2184,7 @@ const buildOverlayView = (
     return h.ul(
       [
         h.Class('message-list flex-1 overflow-y-auto min-h-0 overscroll-none'),
-        h.OnScroll(scrollTop => ScrolledMessageList({ scrollTop })),
+        h.OnScroll(scrollTop => Message.ScrolledMessageList({ scrollTop })),
       ],
       isFiltered
         ? messageRows
@@ -2283,7 +2267,7 @@ const buildOverlayView = (
             ],
           ),
       },
-      toParentMessage: message => GotScrubberSliderMessage({ message }),
+      toParentMessage: message => Message.GotScrubberSliderMessage({ message }),
     })
 
   // FOOTER
@@ -2351,7 +2335,7 @@ const buildOverlayView = (
         ),
         h.AriaLabel(isSettingsOpen ? 'Close settings' : 'Settings'),
         h.AriaPressed(String(isSettingsOpen)),
-        h.OnClick(ClickedSettingsToggle()),
+        h.OnClick(Message.ClickedSettingsToggle()),
       ],
       [isSettingsOpen ? closeSettingsIconView : gearIconView],
     )

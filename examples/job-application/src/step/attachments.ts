@@ -1,6 +1,6 @@
 import { Array, Match as M, Option, Schema as S, pipe } from 'effect'
 import { Command, File, Update } from 'foldkit'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { FileDrop } from '@foldkit/ui'
@@ -17,24 +17,13 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const GotResumeDropMessage = m('GotResumeDropMessage', {
-  message: FileDrop.Message,
-})
-export const GotAdditionalFilesDropMessage = m(
-  'GotAdditionalFilesDropMessage',
-  { message: FileDrop.Message },
-)
-export const RemovedResume = m('RemovedResume')
-export const RemovedAdditionalFile = m('RemovedAdditionalFile', {
-  fileIndex: S.Number,
+export const Message = defineMessageUnion({
+  GotResumeDropMessage: { message: FileDrop.Message },
+  GotAdditionalFilesDropMessage: { message: FileDrop.Message },
+  RemovedResume: {},
+  RemovedAdditionalFile: { fileIndex: S.Number },
 })
 
-export const Message = S.Union([
-  GotResumeDropMessage,
-  GotAdditionalFilesDropMessage,
-  RemovedResume,
-  RemovedAdditionalFile,
-])
 export type Message = typeof Message.Type
 
 // INIT
@@ -75,7 +64,7 @@ const foldResumeDrop = Update.foldChild({
   read: (model: Model) => Option.some(model.resumeDrop),
   write: (model, nextResumeDrop) =>
     evo(model, { resumeDrop: () => nextResumeDrop }),
-  toParentMessage: message => GotResumeDropMessage({ message }),
+  toParentMessage: message => Message.GotResumeDropMessage({ message }),
   foldOutMessage: foldResumeDropOutMessage,
 })
 
@@ -99,29 +88,24 @@ const foldAdditionalFilesDrop = Update.foldChild({
   read: (model: Model) => Option.some(model.additionalFilesDrop),
   write: (model, nextAdditionalFilesDrop) =>
     evo(model, { additionalFilesDrop: () => nextAdditionalFilesDrop }),
-  toParentMessage: message => GotAdditionalFilesDropMessage({ message }),
+  toParentMessage: message =>
+    Message.GotAdditionalFilesDropMessage({ message }),
   foldOutMessage: foldAdditionalFilesDropOutMessage,
 })
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    M.withReturnType<UpdateReturn>(),
-    M.tagsExhaustive({
-      GotResumeDropMessage: ({ message }) => foldResumeDrop(model, message),
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    GotResumeDropMessage: ({ message }) => foldResumeDrop(model, message),
 
-      GotAdditionalFilesDropMessage: ({ message }) =>
-        foldAdditionalFilesDrop(model, message),
+    GotAdditionalFilesDropMessage: ({ message }) =>
+      foldAdditionalFilesDrop(model, message),
 
-      RemovedResume: () => [
-        evo(model, { maybeResume: () => Option.none() }),
-        [],
-      ],
+    RemovedResume: () => [evo(model, { maybeResume: () => Option.none() }), []],
 
-      RemovedAdditionalFile: ({ fileIndex }) => [
-        evo(model, {
-          additionalFiles: Array.remove(fileIndex),
-        }),
-        [],
-      ],
-    }),
-  )
+    RemovedAdditionalFile: ({ fileIndex }) => [
+      evo(model, {
+        additionalFiles: Array.remove(fileIndex),
+      }),
+      [],
+    ],
+  })

@@ -6,27 +6,23 @@ import { BrowserCrypto, BrowserKeyValueStore } from '@effect/platform-browser'
 
 import { ADD_CARD_INPUT_ID, STORAGE_KEY } from './constant'
 import { Column } from './domain'
-import {
-  CompletedFocusAddCardInput,
-  CompletedGenerateCardId,
-  CompletedSaveBoard,
-} from './message'
+import { Message } from './message'
 import { SavedBoard } from './model'
 
 export const GenerateCardId = Command.define('GenerateCardId', {
   args: { columnId: S.String, title: S.String },
-  messages: [CompletedGenerateCardId],
+  messages: [Message.CompletedGenerateCardId],
   execute: ({ columnId, title }) =>
     Effect.gen(function* () {
       const crypto = yield* Crypto.Crypto
       const cardId = yield* Effect.orDie(crypto.randomUUIDv4)
-      return CompletedGenerateCardId({ cardId, columnId, title })
+      return Message.CompletedGenerateCardId({ cardId, columnId, title })
     }).pipe(Effect.provide(BrowserCrypto.layer)),
 })
 
 export const SaveBoard = Command.define('SaveBoard', {
   args: { columns: S.Array(Column.Column) },
-  messages: [CompletedSaveBoard],
+  messages: [Message.CompletedSaveBoard],
   execute: ({ columns }) =>
     Effect.gen(function* () {
       const store = yield* KeyValueStore.KeyValueStore
@@ -34,17 +30,17 @@ export const SaveBoard = Command.define('SaveBoard', {
         STORAGE_KEY,
         S.encodeSync(S.fromJsonString(SavedBoard))({ columns }),
       )
-      return CompletedSaveBoard()
+      return Message.CompletedSaveBoard()
     }).pipe(
-      Effect.catch(() => Effect.succeed(CompletedSaveBoard())),
+      Effect.catch(() => Effect.succeed(Message.CompletedSaveBoard())),
       Effect.provide(BrowserKeyValueStore.layerLocalStorage),
     ),
 })
 
 export const FocusAddCardInput = Command.define('FocusAddCardInput', {
-  messages: [CompletedFocusAddCardInput],
+  messages: [Message.CompletedFocusAddCardInput],
   execute: Dom.focus(`#${ADD_CARD_INPUT_ID}`).pipe(
     Effect.ignore,
-    Effect.as(CompletedFocusAddCardInput()),
+    Effect.as(Message.CompletedFocusAddCardInput()),
   ),
 })

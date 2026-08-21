@@ -68,7 +68,7 @@ Event handlers in the view dispatch Messages. They don't perform actions directl
 
 ### 3. Commands Catch All Errors
 
-Define Command identities with `Command.define`, whose second argument is a config object: `args` (optional) declares the args Schema, `messages` lists every Message the Command can produce, `execute` holds the Effect, and `interrupt` opts into interruption. Every Command must handle its own errors via `Effect.catch(() => Effect.succeed(FailedX(...)))` and convert them to Messages. Commands never throw, so the app never crashes from an unhandled side effect.
+Define Command identities with `Command.define`, whose second argument is a config object: `args` (optional) declares the args Schema, `messages` lists every Message the Command can produce, `execute` holds the Effect, and `interrupt` opts into interruption. Every Command must handle its own errors via `Effect.catch(() => Effect.succeed(Message.FailedX(...)))` and convert them to Messages. Commands never throw, so the app never crashes from an unhandled side effect.
 
 Always assign definitions to PascalCase constants. Never use `Command.define` inline in a pipe chain. Definitions live where they're produced, colocated with the update function. Let TypeScript infer Command return types. The `messages` array constrains the Effect's return type at the type level.
 
@@ -143,14 +143,18 @@ Messages describe what happened, not what should happen. The update function dec
 
 ```ts
 // WRONG: imperative, tells the system what to do
-const FetchData = m('FetchData')
-const SetFilter = m('SetFilter', { filter: S.String })
-const ShowModal = m('ShowModal')
+const Message = defineMessageUnion({
+  FetchData: {},
+  SetFilter: { filter: S.String },
+  ShowModal: {},
+})
 
 // RIGHT: past-tense, describes what happened
-const ClickedRefresh = m('ClickedRefresh')
-const SelectedFilter = m('SelectedFilter', { filter: S.String })
-const ClickedOpenModal = m('ClickedOpenModal')
+const Message = defineMessageUnion({
+  ClickedRefresh: {},
+  SelectedFilter: { filter: S.String },
+  ClickedOpenModal: {},
+})
 ```
 
 ## The update Return Type
@@ -161,12 +165,16 @@ const ClickedOpenModal = m('ClickedOpenModal')
 import { Update } from 'foldkit'
 
 type UpdateReturn = Update.Return<Model, Message>
-const withUpdateReturn = M.withReturnType<UpdateReturn>()
+
+const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    // ...
+  })
 ```
 
 `Update.ReturnWithOutMessage<Model, Message, OutMessage>` is the Submodel counterpart, adding the `Option<OutMessage>` third element.
 
-The rule that matters is **name the alias once per file**. Several examples still spell the tuple out by hand (`type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]`) and that reads fine; `Update.Return` is the tidier spelling and the right default for new code. What to avoid is skipping the alias and repeating the full tuple at the signature and again inside `M.withReturnType<...>()`.
+The rule that matters is **name the alias once per file**. Several examples still spell the tuple out by hand (`type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]`) and that reads fine; `Update.Return` is the tidier spelling and the right default for new code. `Message.match<UpdateReturn>` constrains the whole function, so do not repeat `: UpdateReturn` on the update signature. Use `M.withReturnType<UpdateReturn>()` only when an Effect `Match` over some other tagged union inside a handler needs the same constraint.
 
 The module also carries two combinators for handlers that fan out after a mutation succeeds:
 
@@ -251,7 +259,7 @@ type UpdateReturn = Update.ReturnWithOutMessage<Model, Message, OutMessage>
 CreatedRoom: ({ roomId, player }) => [
   model,
   [],
-  Option.some(SucceededCreateRoom({ roomId, player })),
+  Option.some(OutMessage.SucceededCreateRoom({ roomId, player })),
 ]
 
 // Parent handles OutMessage
@@ -262,21 +270,18 @@ GotChildMessage: ({ message }) => {
   )
 
   const mappedCommands = Command.mapMessages(childCommands, message =>
-    GotChildMessage({ message }),
+    Message.GotChildMessage({ message }),
   )
 
   return Option.match(maybeOutMessage, {
     onNone: () => [evo(model, { child: () => nextChildModel }), mappedCommands],
     onSome: outMessage =>
-      M.value(outMessage).pipe(
-        withUpdateReturn,
-        M.tagsExhaustive({
-          SucceededCreateRoom: ({ roomId }) => [
-            evo(model, { child: () => nextChildModel }),
-            [...mappedCommands, navigateToRoom(roomId)],
-          ],
-        }),
-      ),
+      Child.OutMessage.match<UpdateReturn>(outMessage, {
+        SucceededCreateRoom: ({ roomId }) => [
+          evo(model, { child: () => nextChildModel }),
+          [...mappedCommands, navigateToRoom(roomId)],
+        ],
+      }),
   })
 }
 ```
@@ -291,12 +296,12 @@ h.submodel({
   slotId: 'submit-section',
   view: Child.view,
   model: model.child,
-  toParentMessage: message => GotChildMessage({ message }),
+  toParentMessage: message => Message.GotChildMessage({ message }),
 })
 
 // Child view, branded with Submodel.defineView
 export const view = Submodel.defineView<Model, Message>((model, h) =>
-  h.button([h.OnClick(ClickedSubmit())], ['Submit']),
+  h.button([h.OnClick(Message.ClickedSubmit())], ['Submit']),
 )
 ```
 
@@ -421,8 +426,8 @@ const application = Runtime.makeApplication({
   view,
   container: document.getElementById('root'),
   routing: {
-    onUrlRequest: request => ClickedLink({ request }),
-    onUrlChange: url => ChangedUrl({ url }),
+    onUrlRequest: request => Message.ClickedLink({ request }),
+    onUrlChange: url => Message.ChangedUrl({ url }),
   },
 })
 

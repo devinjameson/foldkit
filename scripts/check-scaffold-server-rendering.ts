@@ -33,6 +33,7 @@ import { extname, join } from 'node:path'
 const CLI_DIR = 'packages/create-foldkit-app'
 const FOLDKIT_DIR = 'packages/foldkit'
 const PLUGIN_DIR = 'packages/vite-plugin-foldkit'
+const UI_DIR = 'packages/ui'
 const REPO_ROOT = process.cwd()
 
 const DEPENDENCY_MANIFESTS_DIRECTORY_ENV =
@@ -594,7 +595,12 @@ const assertBuildIdReachesBothSides = (
   return buildId
 }
 
-type Tarballs = Readonly<{ cli: string; foldkit: string; plugin: string }>
+type Tarballs = Readonly<{
+  cli: string
+  foldkit: string
+  plugin: string
+  ui: string
+}>
 
 type DependencyMap = Readonly<Record<string, string>>
 
@@ -694,10 +700,11 @@ const generateProject = (
   const projectDir = join(workspaceDir, projectName)
   assertGeneratedDependencySpecs(rendering, projectDir, manifestDirectory)
 
-  // NOTE: the CLI resolves `foldkit` and `@foldkit/vite-plugin` from the
-  // registry, so a generated project installs the published versions rather
-  // than this workspace's. Installing the tarballs over them is what makes this
-  // a gate on the release being prepared instead of on the last one.
+  // NOTE: the CLI resolves `foldkit`, `@foldkit/ui`, and
+  // `@foldkit/vite-plugin` from the registry, so a generated project installs
+  // the published versions rather than this workspace's. Installing the
+  // tarballs over them is what makes this a gate on the release being prepared
+  // instead of on the last one.
   // `--legacy-peer-deps` is needed only because the plugin's peer floor names a
   // version `changeset version` has not produced yet; `check-peer-floors.ts`
   // asserts that floor separately.
@@ -711,6 +718,7 @@ const generateProject = (
       '--legacy-peer-deps',
       tarballs.foldkit,
       tarballs.plugin,
+      tarballs.ui,
     ],
     { cwd: projectDir },
   )
@@ -994,6 +1002,8 @@ const main = async (): Promise<void> => {
           '--filter',
           'foldkit',
           '--filter',
+          '@foldkit/ui',
+          '--filter',
           '@foldkit/vite-plugin',
           'build',
         ],
@@ -1005,8 +1015,14 @@ const main = async (): Promise<void> => {
       cli: packPackage('Packing create-foldkit-app...', CLI_DIR),
       foldkit: packPackage('Packing foldkit...', FOLDKIT_DIR),
       plugin: packPackage('Packing @foldkit/vite-plugin...', PLUGIN_DIR),
+      ui: packPackage('Packing @foldkit/ui...', UI_DIR),
     }
-    tarballPaths.push(tarballs.cli, tarballs.foldkit, tarballs.plugin)
+    tarballPaths.push(
+      tarballs.cli,
+      tarballs.foldkit,
+      tarballs.plugin,
+      tarballs.ui,
+    )
 
     runRequired(
       'Preparing the generation workspace...',

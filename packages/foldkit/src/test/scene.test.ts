@@ -1,4 +1,4 @@
-import { Match as M, Option, pipe } from 'effect'
+import { Option, pipe } from 'effect'
 import { describe, expect, test } from 'vitest'
 
 import {
@@ -36,18 +36,16 @@ import {
   view as contextMenuView,
 } from './apps/contextMenu.js'
 import {
+  Message as CounterMessage,
   FetchCount,
   FetchCountById,
-  PolledCount,
-  SucceededFetchCount,
-  Ticked,
   initialModel as counterInitialModel,
   update as counterUpdate,
   view as counterView,
 } from './apps/counter.js'
 import {
+  Message as DraftsMessage,
   SaveDraft,
-  SucceededSaveDraft,
   update as draftsUpdate,
   view as draftsView,
   initialModel as initialDraftsModel,
@@ -71,33 +69,29 @@ import {
 import { update as keyUpdate, view as keyView } from './apps/keypress.js'
 import {
   Authenticate,
-  FailedAuthenticate,
-  SucceededAuthenticate,
+  Message as LoginMessage,
   initialModel,
   update,
   view,
 } from './apps/login.js'
 import type { Model } from './apps/login.js'
 import {
-  CompletedAction,
-  RequestedLogout,
+  Message as LogoutButtonMessage,
+  OutMessage,
   initialModel as logoutInitialModel,
   update as logoutUpdate,
   view as logoutView,
 } from './apps/logoutButton.js'
-import type {
+import {
   Message as LogoutMessage,
   Model as LogoutModel,
   OutMessage as LogoutOutMessage,
 } from './apps/logoutButton.js'
 import {
-  CompletedFocusButton,
   FocusButton,
   MeasurePanel,
-  MeasuredPanel,
-  type Message as MountPanelMessage,
+  Message as MountPanelMessage,
   ScrollList,
-  ScrolledTo,
   initialModel as mountInitialModel,
   scrollListView as mountScrollListView,
   twoPanelView as mountTwoPanelView,
@@ -115,12 +109,9 @@ import {
   view as pointerView,
 } from './apps/pointer.js'
 import {
-  CancelledSelectResume,
-  CompletedSelectResume,
-  FailedReadPreview,
   ReadResumePreview,
+  Message as ResumeUploadMessage,
   SelectResume,
-  SucceededReadPreview,
   initialModel as resumeInitialModel,
   update as resumeUpdate,
   view as resumeView,
@@ -139,8 +130,8 @@ import {
   view as selectiveKeysView,
 } from './apps/selectiveKeys.js'
 import {
-  SucceededUploadFile,
   UploadFile,
+  Message as UploadsMessage,
   initialModel as initialUploadsModel,
   update as uploadsUpdate,
   view as uploadsView,
@@ -1625,7 +1616,7 @@ describe('scene', () => {
       }),
       Scene.Command.resolve(
         Authenticate,
-        SucceededAuthenticate({ username: 'alice' }),
+        LoginMessage.SucceededAuthenticate({ username: 'alice' }),
       ),
       Scene.expect(Scene.role('status')).toHaveText('Welcome, alice!'),
     )
@@ -1658,7 +1649,7 @@ describe('scene', () => {
       Scene.expect(Scene.role('button')).toHaveText('Signing in...'),
       Scene.Command.resolve(
         Authenticate,
-        SucceededAuthenticate({ username: 'alice' }),
+        LoginMessage.SucceededAuthenticate({ username: 'alice' }),
       ),
       Scene.expect(Scene.role('status')).toHaveText('Welcome, alice!'),
     )
@@ -1691,8 +1682,12 @@ describe('scene', () => {
       Scene.expect(Scene.role('button')).toHaveText('Signing in...'),
       Scene.Command.resolve<
         'Authenticate',
-        typeof SucceededAuthenticate.Type | typeof FailedAuthenticate.Type
-      >(Authenticate, FailedAuthenticate({ error: 'Invalid credentials' })),
+        | typeof LoginMessage.SucceededAuthenticate.Type
+        | typeof LoginMessage.FailedAuthenticate.Type
+      >(
+        Authenticate,
+        LoginMessage.FailedAuthenticate({ error: 'Invalid credentials' }),
+      ),
       Scene.tap(({ html }) => {
         expect(find(html, '[role="alert"]')).toHaveText('Invalid credentials')
         expect(find(html, '.retry')).toExist()
@@ -1706,7 +1701,10 @@ describe('scene', () => {
       Scene.given(initialUploadsModel),
       Scene.click(Scene.role('button', { name: 'Start upload' })),
       Scene.Command.expectExact(UploadFile),
-      Scene.Command.resolve(UploadFile, SucceededUploadFile({ uploadId: 0 })),
+      Scene.Command.resolve(
+        UploadFile,
+        UploadsMessage.SucceededUploadFile({ uploadId: 0 }),
+      ),
       Scene.Command.expectNone(),
       Scene.tap(({ html }) => {
         expect(find(html, 'span')).toHaveText('upload 0: Done')
@@ -1719,7 +1717,10 @@ describe('scene', () => {
       { update: draftsUpdate, view: draftsView },
       Scene.given(initialDraftsModel),
       Scene.click(Scene.role('button', { name: 'Save draft' })),
-      Scene.Command.resolve(SaveDraft, SucceededSaveDraft({ revision: 0 })),
+      Scene.Command.resolve(
+        SaveDraft,
+        DraftsMessage.SucceededSaveDraft({ revision: 0 }),
+      ),
       Scene.Command.expectNone(),
       Scene.tap(({ html }) => {
         expect(find(html, 'span')).toHaveText('draft: Saved')
@@ -1798,7 +1799,7 @@ describe('scene with locators', () => {
       Scene.expect(Scene.role('button')).toHaveText('Signing in...'),
       Scene.Command.resolve(
         Authenticate,
-        SucceededAuthenticate({ username: 'alice' }),
+        LoginMessage.SucceededAuthenticate({ username: 'alice' }),
       ),
     )
   })
@@ -2026,7 +2027,7 @@ describe('scene with expect', () => {
       Scene.expect(Scene.role('button')).toHaveText('Signing in...'),
       Scene.Command.resolve(
         Authenticate,
-        SucceededAuthenticate({ username: 'alice' }),
+        LoginMessage.SucceededAuthenticate({ username: 'alice' }),
       ),
       Scene.expect(Scene.role('status')).toHaveText('Welcome, alice!'),
     )
@@ -2364,13 +2365,13 @@ describe('scene with Command-based file upload flow', () => {
       Scene.click(chooseButton),
       Scene.Command.resolve(
         SelectResume,
-        CompletedSelectResume({ file: resumePdf }),
+        ResumeUploadMessage.CompletedSelectResume({ file: resumePdf }),
       ),
       Scene.expect(Scene.text('resume.pdf')).toExist(),
       Scene.expect(readingStatus).toHaveText('Reading preview...'),
       Scene.Command.resolve(
         ReadResumePreview,
-        SucceededReadPreview({ dataUrl: previewDataUrl }),
+        ResumeUploadMessage.SucceededReadPreview({ dataUrl: previewDataUrl }),
       ),
       Scene.expect(previewImage).toExist(),
       Scene.expect(previewImage).toHaveAttr('src', previewDataUrl),
@@ -2383,7 +2384,10 @@ describe('scene with Command-based file upload flow', () => {
       { update: resumeUpdate, view: resumeView },
       Scene.given(resumeInitialModel),
       Scene.click(chooseButton),
-      Scene.Command.resolve(SelectResume, CancelledSelectResume()),
+      Scene.Command.resolve(
+        SelectResume,
+        ResumeUploadMessage.CancelledSelectResume(),
+      ),
       Scene.expect(chooseButton).toExist(),
       Scene.expect(Scene.text('resume.pdf')).toBeAbsent(),
     )
@@ -2396,9 +2400,12 @@ describe('scene with Command-based file upload flow', () => {
       Scene.click(chooseButton),
       Scene.Command.resolve(
         SelectResume,
-        CompletedSelectResume({ file: resumePdf }),
+        ResumeUploadMessage.CompletedSelectResume({ file: resumePdf }),
       ),
-      Scene.Command.resolve(ReadResumePreview, FailedReadPreview()),
+      Scene.Command.resolve(
+        ReadResumePreview,
+        ResumeUploadMessage.FailedReadPreview(),
+      ),
       Scene.expect(Scene.text('resume.pdf')).toExist(),
       Scene.expect(errorAlert).toHaveText('Could not read preview'),
       Scene.expect(previewImage).toBeAbsent(),
@@ -2430,16 +2437,32 @@ describe('scene with Command-based file upload flow', () => {
       Scene.given(resumeInitialModel),
       Scene.click(chooseButton),
       Scene.Command.resolveAll(
-        [SelectResume, CompletedSelectResume({ file: resumePdf })],
-        [ReadResumePreview, SucceededReadPreview({ dataUrl: previewDataUrl })],
+        [
+          SelectResume,
+          ResumeUploadMessage.CompletedSelectResume({ file: resumePdf }),
+        ],
+        [
+          ReadResumePreview,
+          ResumeUploadMessage.SucceededReadPreview({
+            dataUrl: previewDataUrl,
+          }),
+        ],
       ),
       Scene.expect(Scene.text('resume.pdf')).toExist(),
       Scene.click(removeButton),
       Scene.expect(chooseButton).toExist(),
       Scene.click(chooseButton),
       Scene.Command.resolveAll(
-        [SelectResume, CompletedSelectResume({ file: secondResume })],
-        [ReadResumePreview, SucceededReadPreview({ dataUrl: secondDataUrl })],
+        [
+          SelectResume,
+          ResumeUploadMessage.CompletedSelectResume({ file: secondResume }),
+        ],
+        [
+          ReadResumePreview,
+          ResumeUploadMessage.SucceededReadPreview({
+            dataUrl: secondDataUrl,
+          }),
+        ],
       ),
       Scene.expect(Scene.text('resume-v2.pdf')).toExist(),
       Scene.expect(previewImage).toHaveAttr('src', secondDataUrl),
@@ -2550,8 +2573,11 @@ describe('scene errors', () => {
 
 describe('scene with resolveAll', () => {
   test('requires each result Message to belong to its Command', () => {
-    // @ts-expect-error CompletedAction is not an Authenticate result Message
-    Scene.Command.resolveAll([Authenticate, CompletedAction()])
+    Scene.Command.resolveAll([
+      Authenticate,
+      // @ts-expect-error CompletedAction is not an Authenticate result Message
+      LogoutButtonMessage.CompletedAction(),
+    ])
   })
 
   test('resolveAll works in scene context', () => {
@@ -2561,7 +2587,7 @@ describe('scene with resolveAll', () => {
       Scene.submit(Scene.role('form')),
       Scene.Command.resolveAll([
         Authenticate,
-        SucceededAuthenticate({ username: 'bob' }),
+        LoginMessage.SucceededAuthenticate({ username: 'bob' }),
       ]),
       Scene.expect(Scene.role('status')).toHaveText('Welcome, bob!'),
     )
@@ -2570,8 +2596,11 @@ describe('scene with resolveAll', () => {
 
 describe('scene with resolveAllExact', () => {
   test('requires each result Message to belong to its Command', () => {
-    // @ts-expect-error CompletedAction is not an Authenticate result Message
-    Scene.Command.resolveAllExact([Authenticate, CompletedAction()])
+    Scene.Command.resolveAllExact([
+      Authenticate,
+      // @ts-expect-error CompletedAction is not an Authenticate result Message
+      LogoutButtonMessage.CompletedAction(),
+    ])
   })
 
   test('resolveAllExact works in scene context', () => {
@@ -2581,7 +2610,7 @@ describe('scene with resolveAllExact', () => {
       Scene.submit(Scene.role('form')),
       Scene.Command.resolveAllExact([
         Authenticate,
-        SucceededAuthenticate({ username: 'bob' }),
+        LoginMessage.SucceededAuthenticate({ username: 'bob' }),
       ]),
       Scene.expect(Scene.role('status')).toHaveText('Welcome, bob!'),
     )
@@ -2594,8 +2623,11 @@ describe('scene with resolveAllExact', () => {
         Scene.given(initialModel),
         Scene.submit(Scene.role('form')),
         Scene.Command.resolveAllExact(
-          [Authenticate, SucceededAuthenticate({ username: 'bob' })],
-          [FetchCount, SucceededFetchCount({ count: 1 })],
+          [
+            Authenticate,
+            LoginMessage.SucceededAuthenticate({ username: 'bob' }),
+          ],
+          [FetchCount, CounterMessage.SucceededFetchCount({ count: 1 })],
         ),
       ),
     ).toThrow(
@@ -2612,7 +2644,10 @@ describe('scene with resolve ambiguity', () => {
         { update: counterUpdate, view: counterView },
         Scene.given(counterInitialModel),
         Scene.click(Scene.role('button', { name: 'Start three fetches' })),
-        Scene.Command.resolve(FetchCount, SucceededFetchCount({ count: 42 })),
+        Scene.Command.resolve(
+          FetchCount,
+          CounterMessage.SucceededFetchCount({ count: 42 }),
+        ),
       ),
     ).toThrow(
       'I tried to resolve "FetchCount" but multiple pending Commands match',
@@ -2627,7 +2662,7 @@ describe('scene with resolve ambiguity', () => {
         Scene.click(Scene.role('button', { name: 'Start two fetches by id' })),
         Scene.Command.resolve(
           FetchCountById({ id: 5 }),
-          SucceededFetchCount({ count: 10 }),
+          CounterMessage.SucceededFetchCount({ count: 10 }),
         ),
       ),
     ).toThrow(
@@ -2643,7 +2678,7 @@ describe('scene with outMessage', () => {
       Scene.given(logoutInitialModel),
       Scene.click(Scene.role('button', { name: 'Log out' })),
       Scene.tap(({ outMessage }) => {
-        expect(outMessage).toEqual(Option.some(RequestedLogout()))
+        expect(outMessage).toEqual(Option.some(OutMessage.RequestedLogout()))
       }),
     )
   })
@@ -2655,9 +2690,9 @@ describe('Scene.Subscription.emit', () => {
       { update: counterUpdate, view: counterView },
       Scene.given(counterInitialModel),
       Scene.expect(Scene.role('status')).toHaveText('count: 0'),
-      Scene.Subscription.emit(Ticked()),
+      Scene.Subscription.emit(CounterMessage.Ticked()),
       Scene.expect(Scene.role('status')).toHaveText('count: 1'),
-      Scene.Subscription.emit(Ticked()),
+      Scene.Subscription.emit(CounterMessage.Ticked()),
       Scene.expect(Scene.role('status')).toHaveText('count: 2'),
     )
   })
@@ -2666,9 +2701,12 @@ describe('Scene.Subscription.emit', () => {
     Scene.scene(
       { update: counterUpdate, view: counterView },
       Scene.given(counterInitialModel),
-      Scene.Subscription.emit(PolledCount()),
+      Scene.Subscription.emit(CounterMessage.PolledCount()),
       Scene.Command.expectExact(FetchCount),
-      Scene.Command.resolve(FetchCount, SucceededFetchCount({ count: 7 })),
+      Scene.Command.resolve(
+        FetchCount,
+        CounterMessage.SucceededFetchCount({ count: 7 }),
+      ),
       Scene.expect(Scene.role('status')).toHaveText('count: 7'),
     )
   })
@@ -2679,7 +2717,7 @@ describe('Scene.Subscription.emit', () => {
         { update: counterUpdate, view: counterView },
         Scene.given(counterInitialModel),
         Scene.click(Scene.role('button', { name: 'Start three fetches' })),
-        Scene.Subscription.emit(Ticked()),
+        Scene.Subscription.emit(CounterMessage.Ticked()),
       ),
     ).toThrow(
       'I found unresolved Commands when a Subscription emitted a new Message',
@@ -2692,7 +2730,7 @@ describe('Scene.Subscription.emit', () => {
       Scene.scene(
         { update: mountUpdate, view: mountView },
         Scene.given(openModel),
-        Scene.Subscription.emit(CompletedFocusButton()),
+        Scene.Subscription.emit(MountPanelMessage.CompletedFocusButton()),
       ),
     ).toThrow(
       'I found unresolved Mounts when a Subscription emitted a new Message',
@@ -2705,10 +2743,16 @@ describe('Scene.Subscription.emit', () => {
       Scene.scene(
         { update: mountUpdate, view: mountView },
         Scene.given(openModel),
-        Scene.Mount.resolve(MeasurePanel, MeasuredPanel({ width: 400 })),
-        Scene.Mount.resolve(FocusButton, CompletedFocusButton()),
+        Scene.Mount.resolve(
+          MeasurePanel,
+          MountPanelMessage.MeasuredPanel({ width: 400 }),
+        ),
+        Scene.Mount.resolve(
+          FocusButton,
+          MountPanelMessage.CompletedFocusButton(),
+        ),
         Scene.click(Scene.role('button')),
-        Scene.Subscription.emit(CompletedFocusButton()),
+        Scene.Subscription.emit(MountPanelMessage.CompletedFocusButton()),
       ),
     ).toThrow(
       'I found unacknowledged unmounts when a Subscription emitted a new Message',
@@ -2896,29 +2940,26 @@ const mixedArityUpdate = (
   ReadonlyArray<never>,
   Option.Option<LogoutOutMessage>,
 ] =>
-  M.value(message).pipe(
-    M.withReturnType<
-      readonly [
+  LogoutMessage.match<
+    readonly [
+      LogoutModel,
+      ReadonlyArray<never>,
+      Option.Option<LogoutOutMessage>,
+    ]
+  >(message, {
+    ClickedLogout: () => [model, [], Option.some(OutMessage.RequestedLogout())],
+    CompletedAction: () =>
+      // NOTE: deliberately returns a two-tuple, against the convention that
+      // an OutMessage-returning update keeps every branch on the three-tuple
+      // shape. It pins the latching behavior the OutMessage assertion steps
+      // document: a two-tuple result leaves the previous value in place.
+      /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+      [model, []] as unknown as readonly [
         LogoutModel,
         ReadonlyArray<never>,
         Option.Option<LogoutOutMessage>,
-      ]
-    >(),
-    M.tagsExhaustive({
-      ClickedLogout: () => [model, [], Option.some(RequestedLogout())],
-      CompletedAction: () =>
-        // NOTE: deliberately returns a two-tuple, against the convention that
-        // an OutMessage-returning update keeps every branch on the three-tuple
-        // shape. It pins the latching behavior the OutMessage assertion steps
-        // document: a two-tuple result leaves the previous value in place.
-        /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-        [model, []] as unknown as readonly [
-          LogoutModel,
-          ReadonlyArray<never>,
-          Option.Option<LogoutOutMessage>,
-        ],
-    }),
-  )
+      ],
+  })
 
 describe('Scene.expectOutMessage and Scene.expectNoOutMessage', () => {
   test('assert the OutMessage across steps', () => {
@@ -2927,8 +2968,8 @@ describe('Scene.expectOutMessage and Scene.expectNoOutMessage', () => {
       Scene.given(logoutInitialModel),
       Scene.expectNoOutMessage(),
       Scene.click(Scene.role('button', { name: 'Log out' })),
-      Scene.expectOutMessage(RequestedLogout()),
-      Scene.Subscription.emit(CompletedAction()),
+      Scene.expectOutMessage(OutMessage.RequestedLogout()),
+      Scene.Subscription.emit(LogoutButtonMessage.CompletedAction()),
       Scene.expectNoOutMessage(),
     )
   })
@@ -2938,7 +2979,7 @@ describe('Scene.expectOutMessage and Scene.expectNoOutMessage', () => {
       Scene.scene(
         { update: logoutUpdate, view: logoutView },
         Scene.given(logoutInitialModel),
-        Scene.expectOutMessage(RequestedLogout()),
+        Scene.expectOutMessage(OutMessage.RequestedLogout()),
       ),
     ).toThrow('Expected OutMessage:')
   })
@@ -2949,10 +2990,10 @@ describe('Scene.expectOutMessage and Scene.expectNoOutMessage', () => {
         { update: logoutUpdate, view: logoutView },
         Scene.given(logoutInitialModel),
         Scene.click(Scene.role('button', { name: 'Log out' })),
-        Scene.expectOutMessage(CompletedAction()),
+        Scene.expectOutMessage(LogoutButtonMessage.CompletedAction()),
       ),
     ).toThrow(
-      `Expected OutMessage:\n\n    Some(${JSON.stringify(CompletedAction())})\n\nBut got:\n\n    ${JSON.stringify(Option.some(RequestedLogout()))}`,
+      `Expected OutMessage:\n\n    Some(${JSON.stringify(LogoutButtonMessage.CompletedAction())})\n\nBut got:\n\n    ${JSON.stringify(Option.some(OutMessage.RequestedLogout()))}`,
     )
   })
 
@@ -2972,9 +3013,9 @@ describe('Scene.expectOutMessage and Scene.expectNoOutMessage', () => {
       { update: mixedArityUpdate, view: logoutView },
       Scene.given(logoutInitialModel),
       Scene.click(Scene.role('button', { name: 'Log out' })),
-      Scene.expectOutMessage(RequestedLogout()),
-      Scene.Subscription.emit(CompletedAction()),
-      Scene.expectOutMessage(RequestedLogout()),
+      Scene.expectOutMessage(OutMessage.RequestedLogout()),
+      Scene.Subscription.emit(LogoutButtonMessage.CompletedAction()),
+      Scene.expectOutMessage(OutMessage.RequestedLogout()),
     )
   })
 })
@@ -3563,7 +3604,7 @@ describe('scene with pointer events', () => {
 describe('scene mounts', () => {
   const acknowledgeFocusButton = Scene.Mount.resolve(
     FocusButton,
-    CompletedFocusButton(),
+    MountPanelMessage.CompletedFocusButton(),
   )
 
   test('expectHasMounts succeeds when the named mount is rendered', () => {
@@ -3636,7 +3677,10 @@ describe('scene mounts', () => {
       { update: mountUpdate, view: mountView },
       Scene.given(openModel),
       Scene.Mount.expectHas(MeasurePanel, FocusButton),
-      Scene.Mount.resolve(MeasurePanel, MeasuredPanel({ width: 200 })),
+      Scene.Mount.resolve(
+        MeasurePanel,
+        MountPanelMessage.MeasuredPanel({ width: 200 }),
+      ),
       Scene.tap(({ html }) => {
         expect(textContent(html)).toContain('width: 200')
       }),
@@ -3649,7 +3693,10 @@ describe('scene mounts', () => {
       Scene.scene(
         { update: mountUpdate, view: mountView },
         Scene.given(mountInitialModel),
-        Scene.Mount.resolve(MeasurePanel, MeasuredPanel({ width: 0 })),
+        Scene.Mount.resolve(
+          MeasurePanel,
+          MountPanelMessage.MeasuredPanel({ width: 0 }),
+        ),
       ),
     ).toThrow(/I tried to resolve Mount MeasurePanel/)
   })
@@ -3660,8 +3707,8 @@ describe('scene mounts', () => {
       { update: mountUpdate, view: mountView },
       Scene.given(openModel),
       Scene.Mount.resolveAll(
-        [FocusButton, CompletedFocusButton()],
-        [MeasurePanel, MeasuredPanel({ width: 100 })],
+        [FocusButton, MountPanelMessage.CompletedFocusButton()],
+        [MeasurePanel, MountPanelMessage.MeasuredPanel({ width: 100 })],
       ),
       Scene.tap(({ html }) => {
         expect(textContent(html)).toContain('width: 100')
@@ -3675,7 +3722,10 @@ describe('scene mounts', () => {
       { update: mountUpdate, view: mountView },
       Scene.given(openModel),
       Scene.Mount.expectHas(MeasurePanel, FocusButton),
-      Scene.Mount.resolve(MeasurePanel, MeasuredPanel({ width: 400 })),
+      Scene.Mount.resolve(
+        MeasurePanel,
+        MountPanelMessage.MeasuredPanel({ width: 400 }),
+      ),
       acknowledgeFocusButton,
       Scene.click(Scene.role('button')),
       Scene.Mount.expectEnded(MeasurePanel),
@@ -3709,7 +3759,10 @@ describe('scene mounts', () => {
       { update: mountUpdate, view: mountView },
       Scene.given(openModel),
       acknowledgeFocusButton,
-      Scene.Mount.resolve(MeasurePanel, MeasuredPanel({ width: 50 })),
+      Scene.Mount.resolve(
+        MeasurePanel,
+        MountPanelMessage.MeasuredPanel({ width: 50 }),
+      ),
       Scene.Mount.expectNone(),
     )
   })
@@ -3723,8 +3776,14 @@ describe('scene mounts', () => {
         expect(mounts[0]).toEqual({ name: 'MeasurePanel', occurrence: 0 })
         expect(mounts[1]).toEqual({ name: 'MeasurePanel', occurrence: 1 })
       }),
-      Scene.Mount.resolve(MeasurePanel, MeasuredPanel({ width: 1 })),
-      Scene.Mount.resolve(MeasurePanel, MeasuredPanel({ width: 2 })),
+      Scene.Mount.resolve(
+        MeasurePanel,
+        MountPanelMessage.MeasuredPanel({ width: 1 }),
+      ),
+      Scene.Mount.resolve(
+        MeasurePanel,
+        MountPanelMessage.MeasuredPanel({ width: 2 }),
+      ),
     )
   })
 
@@ -3734,7 +3793,7 @@ describe('scene mounts', () => {
     // ctx.dispatch) in production. resolveMount replays that lift from the
     // chain snapshotted onto the mount marker, so the test resolves the mount
     // with the child's raw result and never restates the wrapping.
-    type ChildMessage = typeof CompletedFocusButton.Type
+    type ChildMessage = typeof MountPanelMessage.CompletedFocusButton.Type
     type ChildModel = { readonly focused: boolean }
     type ParentMessage = Readonly<{
       _tag: 'GotChildMessage'
@@ -3778,7 +3837,10 @@ describe('scene mounts', () => {
       { update: parentUpdate, view: parentView },
       Scene.given({ child: { focused: false } }),
       Scene.Mount.expectHas(FocusButton),
-      Scene.Mount.resolve(FocusButton, CompletedFocusButton()),
+      Scene.Mount.resolve(
+        FocusButton,
+        MountPanelMessage.CompletedFocusButton(),
+      ),
     )
 
     // The child's raw CompletedFocusButton arrived at parent update wrapped as
@@ -3834,7 +3896,10 @@ describe('scene mounts', () => {
       acknowledgeFocusButton,
       Scene.click(Scene.role('button')),
       Scene.Mount.expectExact(MeasurePanel),
-      Scene.Mount.resolve(MeasurePanel, MeasuredPanel({ width: 256 })),
+      Scene.Mount.resolve(
+        MeasurePanel,
+        MountPanelMessage.MeasuredPanel({ width: 256 }),
+      ),
       Scene.tap(({ html }) => {
         expect(textContent(html)).toContain('width: 256')
       }),
@@ -3867,7 +3932,10 @@ describe('scene mounts', () => {
       Scene.scene(
         { update: mountUpdate, view: mountView },
         Scene.given(openModel),
-        Scene.Mount.resolve(MeasurePanel, MeasuredPanel({ width: 200 })),
+        Scene.Mount.resolve(
+          MeasurePanel,
+          MountPanelMessage.MeasuredPanel({ width: 200 }),
+        ),
         acknowledgeFocusButton,
         Scene.click(Scene.role('button')),
       )
@@ -3890,7 +3958,10 @@ describe('scene mounts', () => {
       Scene.scene(
         { update: mountUpdate, view: mountView },
         Scene.given(openModel),
-        Scene.Mount.resolve(MeasurePanel, MeasuredPanel({ width: 200 })),
+        Scene.Mount.resolve(
+          MeasurePanel,
+          MountPanelMessage.MeasuredPanel({ width: 200 }),
+        ),
         acknowledgeFocusButton,
         Scene.click(Scene.role('button')),
         Scene.click(Scene.role('button')),
@@ -3903,13 +3974,19 @@ describe('scene mounts', () => {
     Scene.scene(
       { update: mountUpdate, view: mountView },
       Scene.given(openModel),
-      Scene.Mount.resolve(MeasurePanel, MeasuredPanel({ width: 200 })),
+      Scene.Mount.resolve(
+        MeasurePanel,
+        MountPanelMessage.MeasuredPanel({ width: 200 }),
+      ),
       acknowledgeFocusButton,
       Scene.click(Scene.role('button')),
       Scene.Mount.expectEnded(MeasurePanel),
       Scene.click(Scene.role('button')),
       Scene.Mount.expectExact(MeasurePanel),
-      Scene.Mount.resolve(MeasurePanel, MeasuredPanel({ width: 320 })),
+      Scene.Mount.resolve(
+        MeasurePanel,
+        MountPanelMessage.MeasuredPanel({ width: 320 }),
+      ),
     )
   })
 
@@ -3922,7 +3999,10 @@ describe('scene mounts', () => {
       },
       Scene.given(mountInitialModel),
       Scene.Mount.expectHas(ScrollList({ offset })),
-      Scene.Mount.resolve(ScrollList({ offset }), ScrolledTo({ offset })),
+      Scene.Mount.resolve(
+        ScrollList({ offset }),
+        MountPanelMessage.ScrolledTo({ offset }),
+      ),
     )
   })
 
@@ -3949,7 +4029,7 @@ describe('scene mounts', () => {
       },
       Scene.given(mountInitialModel),
       Scene.Mount.expectHas(ScrollList),
-      Scene.Mount.resolve(ScrollList, ScrolledTo({ offset })),
+      Scene.Mount.resolve(ScrollList, MountPanelMessage.ScrolledTo({ offset })),
     )
   })
 
@@ -3963,7 +4043,7 @@ describe('scene mounts', () => {
         Scene.given(mountInitialModel),
         Scene.Mount.resolve(
           ScrollList({ offset: 999 }),
-          ScrolledTo({ offset: 999 }),
+          MountPanelMessage.ScrolledTo({ offset: 999 }),
         ),
       ),
     ).toThrow(/ScrollList \{"offset":240\}/)

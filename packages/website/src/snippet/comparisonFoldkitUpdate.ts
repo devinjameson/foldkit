@@ -1,10 +1,7 @@
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] =>
-  M.value(message).pipe(
-    withUpdateReturn,
-    M.tagsExhaustive({
+export const update = (model: Model, message: Message) =>
+  Message.match<readonly [Model, ReadonlyArray<Command.Command<Message>>]>(
+    message,
+    {
       PressedCell: ({ x, y }) =>
         M.value(model.tool).pipe(
           withUpdateReturn,
@@ -40,5 +37,5 @@ export const update = (
           },
         }),
       // ... 23 more handlers
-    }),
+    },
   )

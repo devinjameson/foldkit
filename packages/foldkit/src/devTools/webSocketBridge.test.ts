@@ -3,7 +3,6 @@ import {
   Effect,
   Exit,
   Function,
-  Match,
   Number,
   Option,
   Schema,
@@ -12,7 +11,7 @@ import {
 } from 'effect'
 import { describe, expect, it } from 'vitest'
 
-import { m } from '../message/index.js'
+import { defineMessageUnion } from '../message/index.js'
 import { evo } from '../struct/index.js'
 import {
   EventFrame,
@@ -37,23 +36,20 @@ type CounterModel = typeof CounterModel.Type
 
 const initialModel = CounterModel.make({ count: 0 })
 
-const ClickedIncrement = m('ClickedIncrement')
-const ClickedDecrement = m('ClickedDecrement')
-
-const CounterMessage = Schema.Union([ClickedIncrement, ClickedDecrement])
+const CounterMessage = defineMessageUnion({
+  ClickedIncrement: {},
+  ClickedDecrement: {},
+})
 type CounterMessage = typeof CounterMessage.Type
 
-const clickedIncrement = ClickedIncrement()
-const clickedDecrement = ClickedDecrement()
+const clickedIncrement = CounterMessage.ClickedIncrement()
+const clickedDecrement = CounterMessage.ClickedDecrement()
 
 const update = (model: CounterModel, message: CounterMessage): CounterModel =>
-  Match.value(message).pipe(
-    Match.withReturnType<CounterModel>(),
-    Match.tagsExhaustive({
-      ClickedIncrement: () => evo(model, { count: Number.increment }),
-      ClickedDecrement: () => evo(model, { count: Number.decrement }),
-    }),
-  )
+  CounterMessage.match<CounterModel>(message, {
+    ClickedIncrement: () => evo(model, { count: Number.increment }),
+    ClickedDecrement: () => evo(model, { count: Number.decrement }),
+  })
 
 const decodeCounterMessage = Schema.decodeUnknownSync(CounterMessage)
 

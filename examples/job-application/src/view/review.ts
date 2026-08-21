@@ -5,7 +5,7 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 import { Button } from '@foldkit/ui'
 
 import { Step } from '../domain'
-import { ClickedSubmit, type Message } from '../message'
+import { Message } from '../message'
 import type { Model } from '../model'
 import { Education, PersonalInfo, Skills, WorkHistory } from '../step'
 import { employmentRange, pluralize } from './format'
@@ -268,7 +268,7 @@ const submissionSection = (
               : []),
             Button.view(
               {
-                onClick: ClickedSubmit(),
+                onClick: Message.ClickedSubmit(),
                 toView: attributes =>
                   h.button(
                     [...attributes.button, h.Class(submitButtonClass)],
@@ -337,7 +337,7 @@ const submissionSection = (
               : []),
             Button.view(
               {
-                onClick: ClickedSubmit(),
+                onClick: Message.ClickedSubmit(),
                 toView: attributes =>
                   h.button(
                     [...attributes.button, h.Class(submitButtonClass)],

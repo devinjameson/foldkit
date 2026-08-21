@@ -14,12 +14,7 @@ import {
   totalCommits,
   totalDownloads,
 } from '../domain'
-import {
-  GotChartModeRadioGroupMessage,
-  GotPackageRadioGroupMessage,
-  GotPeriodRadioGroupMessage,
-  type Message,
-} from '../message'
+import { Message } from '../message'
 import { type Model } from '../model'
 import {
   ChartModeRadioGroup,
@@ -152,7 +147,7 @@ export const controlPanelView = (model: Model, h: HtmlBuilder<Message>): Html =>
                 ),
             },
             toParentMessage: message =>
-              GotChartModeRadioGroupMessage({ message }),
+              Message.GotChartModeRadioGroupMessage({ message }),
           }),
         ],
       ),
@@ -189,7 +184,7 @@ export const controlPanelView = (model: Model, h: HtmlBuilder<Message>): Html =>
                     ),
                 },
                 toParentMessage: message =>
-                  GotPeriodRadioGroupMessage({ message }),
+                  Message.GotPeriodRadioGroupMessage({ message }),
               }),
             ],
           )
@@ -262,7 +257,7 @@ export const packagePanelView = (
                 ),
             },
             toParentMessage: message =>
-              GotPackageRadioGroupMessage({ message }),
+              Message.GotPackageRadioGroupMessage({ message }),
           }),
         ],
       ),

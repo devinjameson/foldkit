@@ -19,13 +19,11 @@ import {
   ConnectionConnecting,
   ConnectionDisconnected,
   ConnectionError,
+  Message,
   Model,
-  ReceivedMessage,
   SendMessage,
-  SucceededSendMessage,
   TimestampReceivedMessage,
   TimestampSentMessage,
-  TimestampedMessage,
   managedResources,
   update,
   view,
@@ -112,10 +110,13 @@ describe('view', () => {
       type(placeholder('Type a message...'), 'hi there'),
       click(role('button', { name: 'Send' })),
       Command.expectExact(SendMessage({ text: 'hi there' })),
-      Command.resolve(SendMessage, SucceededSendMessage({ text: 'hi there' })),
+      Command.resolve(
+        SendMessage,
+        Message.SucceededSendMessage({ text: 'hi there' }),
+      ),
       Command.resolve(
         TimestampSentMessage,
-        TimestampedMessage({
+        Message.TimestampedMessage({
           text: 'hi there',
           zoned: zonedAt(0),
           isSent: true,
@@ -146,13 +147,13 @@ describe('view', () => {
     scene(
       { update, view },
       given({ ...idleModel, connection: ConnectionConnected() }),
-      Subscription.emit(ReceivedMessage({ text: 'hello from echo' })),
+      Subscription.emit(Message.ReceivedMessage({ text: 'hello from echo' })),
       Command.expectExact(
         TimestampReceivedMessage({ text: 'hello from echo' }),
       ),
       Command.resolve(
         TimestampReceivedMessage,
-        TimestampedMessage({
+        Message.TimestampedMessage({
           text: 'hello from echo',
           zoned: zonedAt(0),
           isSent: false,

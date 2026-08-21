@@ -1,7 +1,7 @@
-import { Match as M, Schema as S } from 'effect'
+import { Schema as S } from 'effect'
 import { CustomElement, type Runtime } from 'foldkit'
 import { type Document, type HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 export const Model = S.Struct({
@@ -13,10 +13,10 @@ export type Model = typeof Model.Type
 export const Flags = S.Struct({ start: S.Number })
 export type Flags = typeof Flags.Type
 
-export const ClickedIncrement = m('ClickedIncrement')
-export const ClickedRelease = m('ClickedRelease')
-
-export const Message = S.Union([ClickedIncrement, ClickedRelease])
+export const Message = defineMessageUnion({
+  ClickedIncrement: {},
+  ClickedRelease: {},
+})
 export type Message = typeof Message.Type
 
 export const init: Runtime.ApplicationInit<Model, Message, Flags> = flags => [
@@ -26,14 +26,11 @@ export const init: Runtime.ApplicationInit<Model, Message, Flags> = flags => [
 
 type UpdateReturn = readonly [Model, ReadonlyArray<never>]
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    M.withReturnType<UpdateReturn>(),
-    M.tagsExhaustive({
-      ClickedIncrement: () => [evo(model, { count: count => count + 1 }), []],
-      ClickedRelease: () => [evo(model, { formState: () => 'Released' }), []],
-    }),
-  )
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    ClickedIncrement: () => [evo(model, { count: count => count + 1 }), []],
+    ClickedRelease: () => [evo(model, { formState: () => 'Released' }), []],
+  })
 
 const serverOnlyPin = import.meta.env.SSR ? '{{SERVER_ONLY_PIN}}' : ''
 const observedId = CustomElement.define({
@@ -72,7 +69,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
           h.Title('Adopted frame'),
         ]),
         h.button(
-          [h.Id('increment'), h.OnClick(ClickedIncrement())],
+          [h.Id('increment'), h.OnClick(Message.ClickedIncrement())],
           [`Count: ${model.count}`],
         ),
         // Browser behavior that needs no Foldkit listener: a link that
@@ -210,7 +207,11 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
               [parserChildElement([h.Id('parser-view-child')], ['view'])],
             ),
             h.button(
-              [h.Id('release'), h.Type('button'), h.OnClick(ClickedRelease())],
+              [
+                h.Id('release'),
+                h.Type('button'),
+                h.OnClick(Message.ClickedRelease()),
+              ],
               ['Release ownership'],
             ),
           ],

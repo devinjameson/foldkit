@@ -35,6 +35,7 @@
     "LiftConfig",
     "LiftedSubscriptions",
     "ManagedResourceTypeId",
+    "MessageSchema",
     "MergeRecords",
     "ParserInput",
     "PrintState",

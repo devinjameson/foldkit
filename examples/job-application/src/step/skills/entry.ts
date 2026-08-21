@@ -8,7 +8,7 @@ import {
   makeRules,
   validate,
 } from 'foldkit/fieldValidation'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { RadioGroup } from '@foldkit/ui'
@@ -42,28 +42,23 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const UpdatedName = m('UpdatedName', { value: S.String })
-export const GotProficiencyRadioGroupMessage = m(
-  'GotProficiencyRadioGroupMessage',
-  { message: RadioGroup.Message },
-)
-export const ClickedRemoveSelf = m('ClickedRemoveSelf')
+export const Message = defineMessageUnion({
+  UpdatedName: { value: S.String },
+  GotProficiencyRadioGroupMessage: { message: RadioGroup.Message },
+  ClickedRemoveSelf: {},
+})
 
-export const Message = S.Union([
-  UpdatedName,
-  GotProficiencyRadioGroupMessage,
-  ClickedRemoveSelf,
-])
 export type Message = typeof Message.Type
 
 // OUT MESSAGE
 
-export const Removed = m('Removed')
+export const OutMessage = defineMessageUnion({
+  Removed: {},
+})
 
-export const OutMessage = S.Union([Removed])
 export type OutMessage = typeof OutMessage.Type
 
-export type Removed = typeof Removed.Type
+export type Removed = typeof OutMessage.Removed.Type
 
 // INIT
 
@@ -100,27 +95,25 @@ const foldProficiencyRadioGroup = Update.foldChild({
   read: (model: Model) => Option.some(model.proficiencyRadioGroup),
   write: (model, nextProficiencyRadioGroup) =>
     evo(model, { proficiencyRadioGroup: () => nextProficiencyRadioGroup }),
-  toParentMessage: message => GotProficiencyRadioGroupMessage({ message }),
+  toParentMessage: message =>
+    Message.GotProficiencyRadioGroupMessage({ message }),
   foldOutMessage: foldProficiencyRadioGroupOutMessage,
   toParentOutMessage: () => Option.none(),
 })
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    M.withReturnType<UpdateReturn>(),
-    M.tagsExhaustive({
-      UpdatedName: ({ value }) => [
-        evo(model, { name: () => validateName(value) }),
-        [],
-        Option.none(),
-      ],
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    UpdatedName: ({ value }) => [
+      evo(model, { name: () => validateName(value) }),
+      [],
+      Option.none(),
+    ],
 
-      GotProficiencyRadioGroupMessage: ({ message }) =>
-        foldProficiencyRadioGroup(model, message),
+    GotProficiencyRadioGroupMessage: ({ message }) =>
+      foldProficiencyRadioGroup(model, message),
 
-      ClickedRemoveSelf: () => [model, [], Option.some(Removed())],
-    }),
-  )
+    ClickedRemoveSelf: () => [model, [], Option.some(OutMessage.Removed())],
+  })
 
 // VALIDATION SUMMARY
 

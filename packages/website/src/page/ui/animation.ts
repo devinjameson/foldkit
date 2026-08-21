@@ -1,8 +1,9 @@
 import type { HtmlBuilder } from 'foldkit/html'
 
 import { Animation } from '@foldkit/ui'
+import { Message as AnimationMessage } from '@foldkit/ui/animation'
 
-import { GotAnimationDemoMessage, type Message } from './message'
+import { Message } from './message'
 
 // DEMO CONTENT
 
@@ -19,8 +20,8 @@ export const animationDemo = (
   h: HtmlBuilder<Message>,
 ) => {
   const toggleMessage = animationModel.isShowing
-    ? Animation.Hid()
-    : Animation.Showed()
+    ? AnimationMessage.Hid()
+    : AnimationMessage.Showed()
 
   return [
     h.div(
@@ -29,7 +30,9 @@ export const animationDemo = (
         h.button(
           [
             h.Class(triggerClassName),
-            h.OnClick(GotAnimationDemoMessage({ message: toggleMessage })),
+            h.OnClick(
+              Message.GotAnimationDemoMessage({ message: toggleMessage }),
+            ),
           ],
           [animationModel.isShowing ? 'Hide Content' : 'Show Content'],
         ),
@@ -47,7 +50,8 @@ export const animationDemo = (
               ],
             ),
           },
-          toParentMessage: message => GotAnimationDemoMessage({ message }),
+          toParentMessage: message =>
+            Message.GotAnimationDemoMessage({ message }),
         }),
       ],
     ),

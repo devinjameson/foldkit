@@ -5,7 +5,6 @@ import {
   Exit,
   Fiber,
   Layer,
-  Match as M,
   Schema as S,
   Stream,
 } from 'effect'
@@ -13,13 +12,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as Command from '../command/index.js'
 import { __htmlBuilder } from '../html/index.js'
-import { m } from '../message/index.js'
+import { defineMessageUnion } from '../message/index.js'
 import * as Subscription from '../subscription/subscription.js'
 import { makeApplication, makeElement, run } from './runtime.js'
 
-const ClickedReadValue = m('ClickedReadValue')
-const SucceededReadValue = m('SucceededReadValue', { value: S.String })
-const Message = S.Union([ClickedReadValue, SucceededReadValue])
+const Message = defineMessageUnion({
+  ClickedReadValue: {},
+  SucceededReadValue: { value: S.String },
+})
 type Message = typeof Message.Type
 
 const Model = S.Struct({ label: S.String })
@@ -35,10 +35,10 @@ class ResourceService extends Context.Service<ResourceService, ResourceShape>()(
 ) {}
 
 const ReadValue = Command.define('ReadValue', {
-  messages: [SucceededReadValue],
+  messages: [Message.SucceededReadValue],
   execute: Effect.gen(function* () {
     const { value } = yield* ResourceService
-    return SucceededReadValue({ value })
+    return Message.SucceededReadValue({ value })
   }),
 })
 
@@ -53,22 +53,22 @@ type UpdateReturn = readonly [
   ReadonlyArray<Command.Command<Message, never, ResourceService>>,
 ]
 
-const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    M.withReturnType<UpdateReturn>(),
-    M.tagsExhaustive({
-      ClickedReadValue: () => [{ label: 'reading' }, [ReadValue()]],
-      SucceededReadValue: ({ value }) => [
-        { label: `${model.label} ${value}` },
-        [],
-      ],
-    }),
-  )
+const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    ClickedReadValue: () => [{ label: 'reading' }, [ReadValue()]],
+    SucceededReadValue: ({ value }) => [
+      { label: `${model.label} ${value}` },
+      [],
+    ],
+  })
 
 const h = __htmlBuilder<Message>()
 
 const view = (model: Model) =>
-  h.div([], [h.button([h.OnClick(ClickedReadValue())], ['read']), model.label])
+  h.div(
+    [],
+    [h.button([h.OnClick(Message.ClickedReadValue())], ['read']), model.label],
+  )
 
 const crash = {
   view: (context: Readonly<{ error: Error }>) =>
@@ -188,7 +188,7 @@ describe('resources', () => {
           Stream.fromEffect(
             Effect.gen(function* () {
               const { value } = yield* ResourceService
-              return SucceededReadValue({ value })
+              return Message.SucceededReadValue({ value })
             }),
           ),
         ),

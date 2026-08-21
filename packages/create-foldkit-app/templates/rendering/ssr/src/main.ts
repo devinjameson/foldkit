@@ -1,7 +1,7 @@
-import { Effect, Match as M, Schema as S } from 'effect'
+import { Effect, Schema as S } from 'effect'
 import { Command, Runtime } from 'foldkit'
 import { type Document, type HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Button } from '@foldkit/ui'
@@ -28,28 +28,20 @@ export type Flags = typeof Flags.Type
 
 // MESSAGE
 
-export const ClickedDecrement = m('ClickedDecrement')
-export const ClickedIncrement = m('ClickedIncrement')
-export const CompletedPersistCount = m('CompletedPersistCount')
+export const Message = defineMessageUnion({
+  ClickedDecrement: {},
+  ClickedIncrement: {},
+  CompletedPersistCount: {},
+})
 
-export const Message = S.Union([
-  ClickedDecrement,
-  ClickedIncrement,
-  CompletedPersistCount,
-])
 export type Message = typeof Message.Type
 
 // UPDATE
 
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] =>
-  M.value(message).pipe(
-    M.withReturnType<
-      readonly [Model, ReadonlyArray<Command.Command<Message>>]
-    >(),
-    M.tagsExhaustive({
+export const update = (model: Model, message: Message) =>
+  Message.match<readonly [Model, ReadonlyArray<Command.Command<Message>>]>(
+    message,
+    {
       ClickedDecrement: () => {
         const nextCount = model.count - 1
         return [
@@ -65,7 +57,7 @@ export const update = (
         ]
       },
       CompletedPersistCount: () => [model, []],
-    }),
+    },
   )
 
 // COMMAND
@@ -74,13 +66,13 @@ const COUNT_COOKIE_MAX_AGE_SECONDS = 31536000
 
 export const PersistCount = Command.define('PersistCount', {
   args: { count: S.Number },
-  messages: [CompletedPersistCount],
+  messages: [Message.CompletedPersistCount],
   execute: ({ count }) =>
     Effect.try(() => {
       document.cookie = `${COUNT_COOKIE}=${count}; path=/; max-age=${COUNT_COOKIE_MAX_AGE_SECONDS}`
     }).pipe(
-      Effect.map(() => CompletedPersistCount()),
-      Effect.catch(() => Effect.succeed(CompletedPersistCount())),
+      Effect.map(() => Message.CompletedPersistCount()),
+      Effect.catch(() => Effect.succeed(Message.CompletedPersistCount())),
     ),
 })
 
@@ -119,7 +111,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
         [
           Button.view(
             {
-              onClick: ClickedDecrement(),
+              onClick: Message.ClickedDecrement(),
               toView: attributes =>
                 h.button([...attributes.button, h.Class(buttonStyle)], ['-']),
             },
@@ -127,7 +119,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
           ),
           Button.view(
             {
-              onClick: ClickedIncrement(),
+              onClick: Message.ClickedIncrement(),
               toView: attributes =>
                 h.button([...attributes.button, h.Class(buttonStyle)], ['+']),
             },

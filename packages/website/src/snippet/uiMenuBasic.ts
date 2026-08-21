@@ -4,7 +4,7 @@
 import { Effect, Match as M, Option } from 'effect'
 import { Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Menu } from '@foldkit/ui'
@@ -25,8 +25,8 @@ const init = () => [
 ]
 
 // Embed the Menu Message in your parent Message:
-const GotMenuMessage = m('GotMenuMessage', {
-  message: Menu.Message,
+const Message = defineMessageUnion({
+  GotMenuMessage: { message: Menu.Message },
 })
 
 type Action = 'Edit' | 'Duplicate' | 'Archive' | 'Delete'
@@ -60,11 +60,11 @@ const foldMenu = Update.foldChild({
   update: ActionMenu.update,
   read: (model: Model) => Option.some(model.menu),
   write: (model, nextMenu) => evo(model, { menu: () => nextMenu }),
-  toParentMessage: message => GotMenuMessage({ message }),
+  toParentMessage: message => Message.GotMenuMessage({ message }),
   foldOutMessage: foldMenuOutMessage,
 })
 
-// Inside your update function's M.tagsExhaustive({...}), call the fold:
+// Inside your update function's Message.match({...}), call the fold:
 GotMenuMessage: ({ message }) => foldMenu(model, message)
 
 // Inside your view function, render the menu via the factory's view. The
@@ -92,5 +92,5 @@ const view = (h: HtmlBuilder<Message>) =>
       backdropClassName: 'fixed inset-0',
       anchor: { placement: 'bottom-start', gap: 4, padding: 8 },
     },
-    toParentMessage: message => GotMenuMessage({ message }),
+    toParentMessage: message => Message.GotMenuMessage({ message }),
   })

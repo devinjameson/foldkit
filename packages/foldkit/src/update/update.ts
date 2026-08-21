@@ -192,17 +192,15 @@ export type ChildFold<
  *  no second copy of the wrapper, and the mapping stays recorded on the
  *  Command for `Story.Command.resolve` and `Scene.Command.resolve`.
  *
- *  The annotated standalone const takes both parameters, so the match
- *  moves from `M.type` to `M.value` on the OutMessage:
+ *  The annotated standalone const takes both parameters, so match the
+ *  OutMessage value directly:
  *
  *  ```ts
  *  const foldLoginOutMessage: (
  *    outMessage: Login.OutMessage,
  *    context: Update.FoldContext<Login.Message, Message>,
  *  ) => Update.Step<Model, Message> = (outMessage, { liftCommand }) =>
- *    M.value(outMessage).pipe(
- *      M.withReturnType<Update.Step<Model, Message>>(),
- *      M.tagsExhaustive({
+ *    Login.OutMessage.match<Update.Step<Model, Message>>(outMessage, {
  *        RequestedMagicLink: ({ email }) => model => [
  *          model,
  *          [
@@ -211,8 +209,7 @@ export type ChildFold<
  *            ),
  *          ],
  *        ],
- *      }),
- *    )
+ *      })
  *  ``` */
 export type FoldContext<ChildMessage, ParentMessage> = Readonly<{
   liftCommand: <E = never, R = never>(

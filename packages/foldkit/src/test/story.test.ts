@@ -3,47 +3,31 @@ import { describe, expect, expectTypeOf, test } from 'vitest'
 
 import * as Interruptible from '../command/interruptible/index.js'
 import {
-  ClickedDecrement,
-  ClickedFetch,
-  ClickedFetchById,
-  ClickedIncrement,
+  Message as CounterMessage,
   FetchCount,
   FetchCountById,
-  StartedMixedFetches,
-  StartedThreeFetches,
-  StartedTwoFetchesById,
-  SucceededFetchCount,
   update,
 } from './apps/counter.js'
 import {
-  ClickedSaveDraft,
+  Message as DraftsMessage,
   SaveDraft,
-  SucceededSaveDraft,
   update as draftsUpdate,
   initialModel as initialDraftsModel,
 } from './apps/drafts.js'
 import {
-  CancelledForm,
-  CompletedResetForm,
-  GotChildMessage,
-  RequestedCancel,
-  RequestedSave,
+  ChildMessage as FormChildJsChildMessage,
+  ChildOutMessage as FormChildJsChildOutMessage,
+  ParentMessage,
   ResetForm,
   SubmitForm,
-  SubmittedForm,
-  SucceededSubmitForm,
   childUpdate,
   initialParentModel,
   parentUpdate,
 } from './apps/formChild.js'
 import {
   CancelUploadFile,
-  ClickedCancelUpload,
-  ClickedRetryUpload,
-  ClickedStartUpload,
-  CompletedCancelUploadFile,
-  SucceededUploadFile,
   UploadFile,
+  Message as UploadsMessage,
   type Model as UploadsModel,
   initialModel as initialUploadsModel,
   update as uploadsUpdate,
@@ -57,9 +41,9 @@ describe('message', () => {
     Story.story(
       update,
       Story.given({ count: 0, log: [] }),
-      Story.message(ClickedIncrement()),
-      Story.message(ClickedIncrement()),
-      Story.message(ClickedDecrement()),
+      Story.message(CounterMessage.ClickedIncrement()),
+      Story.message(CounterMessage.ClickedIncrement()),
+      Story.message(CounterMessage.ClickedDecrement()),
       Story.model(model => {
         expect(model.count).toBe(1)
       }),
@@ -70,11 +54,11 @@ describe('message', () => {
     Story.story(
       update,
       Story.given({ count: 0, log: [] }),
-      Story.message(ClickedFetch()),
+      Story.message(CounterMessage.ClickedFetch()),
       Story.Command.expectHas(FetchCount),
       Story.Command.resolveAll([
         FetchCount,
-        SucceededFetchCount({ count: 42 }),
+        CounterMessage.SucceededFetchCount({ count: 42 }),
       ]),
     )
   })
@@ -86,8 +70,11 @@ describe('resolve', () => {
       Story.story(
         update,
         Story.given({ count: 0, log: [] }),
-        Story.message(ClickedIncrement()),
-        Story.Command.resolve(FetchCount, SucceededFetchCount({ count: 42 })),
+        Story.message(CounterMessage.ClickedIncrement()),
+        Story.Command.resolve(
+          FetchCount,
+          CounterMessage.SucceededFetchCount({ count: 42 }),
+        ),
       ),
     ).toThrow(
       'I tried to resolve "FetchCount" but no matching pending Command was found',
@@ -99,8 +86,11 @@ describe('resolve', () => {
       Story.story(
         update,
         Story.given({ count: 0, log: [] }),
-        Story.message(ClickedFetch()),
-        Story.Command.resolve(SubmitForm, SucceededSubmitForm({ id: 'abc' })),
+        Story.message(CounterMessage.ClickedFetch()),
+        Story.Command.resolve(
+          SubmitForm,
+          FormChildJsChildMessage.SucceededSubmitForm({ id: 'abc' }),
+        ),
       ),
     ).toThrow(
       'I tried to resolve "SubmitForm" but no matching pending Command was found',
@@ -111,11 +101,14 @@ describe('resolve', () => {
     Story.story(
       update,
       Story.given({ count: 0, log: [] }),
-      Story.message(ClickedFetch()),
+      Story.message(CounterMessage.ClickedFetch()),
       Story.model(model => {
         expect(model.count).toBe(0)
       }),
-      Story.Command.resolve(FetchCount, SucceededFetchCount({ count: 42 })),
+      Story.Command.resolve(
+        FetchCount,
+        CounterMessage.SucceededFetchCount({ count: 42 }),
+      ),
       Story.model(model => {
         expect(model.count).toBe(42)
       }),
@@ -127,8 +120,11 @@ describe('resolve', () => {
       Story.story(
         update,
         Story.given({ count: 0, log: [] }),
-        Story.message(StartedThreeFetches()),
-        Story.Command.resolve(FetchCount, SucceededFetchCount({ count: 42 })),
+        Story.message(CounterMessage.StartedThreeFetches()),
+        Story.Command.resolve(
+          FetchCount,
+          CounterMessage.SucceededFetchCount({ count: 42 }),
+        ),
       ),
     ).toThrow(
       'I tried to resolve "FetchCount" but multiple pending Commands match',
@@ -140,10 +136,10 @@ describe('resolve', () => {
       Story.story(
         update,
         Story.given({ count: 0, log: [] }),
-        Story.message(StartedTwoFetchesById()),
+        Story.message(CounterMessage.StartedTwoFetchesById()),
         Story.Command.resolve(
           FetchCountById({ id: 5 }),
-          SucceededFetchCount({ count: 10 }),
+          CounterMessage.SucceededFetchCount({ count: 10 }),
         ),
       ),
     ).toThrow(
@@ -157,10 +153,10 @@ describe('resolveAll', () => {
     Story.story(
       update,
       Story.given({ count: 0, log: [] }),
-      Story.message(ClickedFetch()),
+      Story.message(CounterMessage.ClickedFetch()),
       Story.Command.resolveAll([
         FetchCount,
-        SucceededFetchCount({ count: 42 }),
+        CounterMessage.SucceededFetchCount({ count: 42 }),
       ]),
       Story.model(model => {
         expect(model.count).toBe(42)
@@ -172,10 +168,13 @@ describe('resolveAll', () => {
     Story.story(
       childUpdate,
       Story.given({ status: 'Idle' }),
-      Story.message(SubmittedForm()),
+      Story.message(FormChildJsChildMessage.SubmittedForm()),
       Story.Command.resolveAll(
-        [SubmitForm, SucceededSubmitForm({ id: 'abc' })],
-        [ResetForm, CompletedResetForm()],
+        [
+          SubmitForm,
+          FormChildJsChildMessage.SucceededSubmitForm({ id: 'abc' }),
+        ],
+        [ResetForm, FormChildJsChildMessage.CompletedResetForm()],
       ),
       Story.model(model => {
         expect(model.status).toBe('Idle')
@@ -187,11 +186,11 @@ describe('resolveAll', () => {
     Story.story(
       update,
       Story.given({ count: 0, log: [] }),
-      Story.message(StartedThreeFetches()),
+      Story.message(CounterMessage.StartedThreeFetches()),
       Story.Command.resolveAll(
-        [FetchCount, SucceededFetchCount({ count: 1 })],
-        [FetchCount, SucceededFetchCount({ count: 2 })],
-        [FetchCount, SucceededFetchCount({ count: 3 })],
+        [FetchCount, CounterMessage.SucceededFetchCount({ count: 1 })],
+        [FetchCount, CounterMessage.SucceededFetchCount({ count: 2 })],
+        [FetchCount, CounterMessage.SucceededFetchCount({ count: 3 })],
       ),
       Story.model(model => {
         expect(model.log).toEqual([1, 2, 3])
@@ -204,11 +203,15 @@ describe('resolveAll', () => {
     Story.story(
       update,
       Story.given({ count: 0, log: [] }),
-      Story.message(StartedThreeFetches()),
+      Story.message(CounterMessage.StartedThreeFetches()),
       Story.Command.resolveAll(
         ...Array.makeBy(
           3,
-          () => [FetchCount, SucceededFetchCount({ count: 7 })] as const,
+          () =>
+            [
+              FetchCount,
+              CounterMessage.SucceededFetchCount({ count: 7 }),
+            ] as const,
         ),
       ),
       Story.model(model => {
@@ -222,10 +225,16 @@ describe('resolveAll', () => {
     Story.story(
       update,
       Story.given({ count: 0, log: [] }),
-      Story.message(StartedTwoFetchesById()),
+      Story.message(CounterMessage.StartedTwoFetchesById()),
       Story.Command.resolveAll(
-        [FetchCountById({ id: 5 }), SucceededFetchCount({ count: 10 })],
-        [FetchCountById({ id: 5 }), SucceededFetchCount({ count: 20 })],
+        [
+          FetchCountById({ id: 5 }),
+          CounterMessage.SucceededFetchCount({ count: 10 }),
+        ],
+        [
+          FetchCountById({ id: 5 }),
+          CounterMessage.SucceededFetchCount({ count: 20 }),
+        ],
       ),
       Story.model(model => {
         expect(model.log).toEqual([10, 20])
@@ -237,13 +246,17 @@ describe('resolveAll', () => {
     Story.story(
       update,
       Story.given({ count: 0, log: [] }),
-      Story.message(StartedMixedFetches()),
+      Story.message(CounterMessage.StartedMixedFetches()),
       Story.Command.resolveAll(
-        [FetchCount, SucceededFetchCount({ count: 1 })],
-        [FetchCount, SucceededFetchCount({ count: 2 })],
+        [FetchCount, CounterMessage.SucceededFetchCount({ count: 1 })],
+        [FetchCount, CounterMessage.SucceededFetchCount({ count: 2 })],
         ...Array.makeBy(
           2,
-          () => [FetchCountById, SucceededFetchCount({ count: 99 })] as const,
+          () =>
+            [
+              FetchCountById,
+              CounterMessage.SucceededFetchCount({ count: 99 }),
+            ] as const,
         ),
       ),
       Story.model(model => {
@@ -256,11 +269,11 @@ describe('resolveAll', () => {
     Story.story(
       update,
       Story.given({ count: 0, log: [] }),
-      Story.message(ClickedFetch()),
+      Story.message(CounterMessage.ClickedFetch()),
       Story.Command.resolveAll(
-        [FetchCount, SucceededFetchCount({ count: 1 })],
-        [FetchCount, SucceededFetchCount({ count: 2 })],
-        [FetchCount, SucceededFetchCount({ count: 3 })],
+        [FetchCount, CounterMessage.SucceededFetchCount({ count: 1 })],
+        [FetchCount, CounterMessage.SucceededFetchCount({ count: 2 })],
+        [FetchCount, CounterMessage.SucceededFetchCount({ count: 3 })],
       ),
       Story.model(model => {
         expect(model.log).toEqual([1])
@@ -272,15 +285,15 @@ describe('resolveAll', () => {
     Story.story(
       update,
       Story.given({ count: 0, log: [] }),
-      Story.message(ClickedFetch()),
+      Story.message(CounterMessage.ClickedFetch()),
       Story.Command.resolveAll(
-        [FetchCount, SucceededFetchCount({ count: 1 })],
-        [FetchCount, SucceededFetchCount({ count: 2 })],
+        [FetchCount, CounterMessage.SucceededFetchCount({ count: 1 })],
+        [FetchCount, CounterMessage.SucceededFetchCount({ count: 2 })],
       ),
       Story.model(model => {
         expect(model.log).toEqual([1])
       }),
-      Story.message(ClickedFetch()),
+      Story.message(CounterMessage.ClickedFetch()),
       Story.Command.resolveAll(),
       Story.model(model => {
         expect(model.log).toEqual([1, 2])
@@ -293,10 +306,10 @@ describe('resolveAll', () => {
       Story.story(
         update,
         Story.given({ count: 0, log: [] }),
-        Story.message(StartedThreeFetches()),
+        Story.message(CounterMessage.StartedThreeFetches()),
         Story.Command.resolveAll([
           FetchCount,
-          SucceededFetchCount({ count: 1 }),
+          CounterMessage.SucceededFetchCount({ count: 1 }),
         ]),
       ),
     ).toThrow('I found Commands without resolvers')
@@ -307,11 +320,14 @@ describe('resolveAll', () => {
       update,
       Story.given({ count: 0, log: [] }),
       Story.Command.resolveAll(
-        [FetchCount, SucceededFetchCount({ count: 100 })],
-        [FetchCount, SucceededFetchCount({ count: 200 })],
+        [FetchCount, CounterMessage.SucceededFetchCount({ count: 100 })],
+        [FetchCount, CounterMessage.SucceededFetchCount({ count: 200 })],
       ),
-      Story.message(ClickedFetch()),
-      Story.Command.resolveAll([FetchCount, SucceededFetchCount({ count: 7 })]),
+      Story.message(CounterMessage.ClickedFetch()),
+      Story.Command.resolveAll([
+        FetchCount,
+        CounterMessage.SucceededFetchCount({ count: 7 }),
+      ]),
       Story.model(model => {
         expect(model.log).toEqual([7])
       }),
@@ -319,25 +335,34 @@ describe('resolveAll', () => {
   })
 
   test('requires each result Message to belong to its Command', () => {
-    // @ts-expect-error CompletedResetForm is not a FetchCount result Message
-    Story.Command.resolveAll([FetchCount, CompletedResetForm()])
+    Story.Command.resolveAll([
+      FetchCount,
+      // @ts-expect-error CompletedResetForm is not a FetchCount result Message
+      FormChildJsChildMessage.CompletedResetForm(),
+    ])
   })
 })
 
 describe('resolveAllExact', () => {
   test('requires each result Message to belong to its Command', () => {
-    // @ts-expect-error CompletedResetForm is not a FetchCount result Message
-    Story.Command.resolveAllExact([FetchCount, CompletedResetForm()])
+    Story.Command.resolveAllExact([
+      FetchCount,
+      // @ts-expect-error CompletedResetForm is not a FetchCount result Message
+      FormChildJsChildMessage.CompletedResetForm(),
+    ])
   })
 
   test('resolves cascading Commands', () => {
     Story.story(
       childUpdate,
       Story.given({ status: 'Idle' }),
-      Story.message(SubmittedForm()),
+      Story.message(FormChildJsChildMessage.SubmittedForm()),
       Story.Command.resolveAllExact(
-        [SubmitForm, SucceededSubmitForm({ id: 'abc' })],
-        [ResetForm, CompletedResetForm()],
+        [
+          SubmitForm,
+          FormChildJsChildMessage.SucceededSubmitForm({ id: 'abc' }),
+        ],
+        [ResetForm, FormChildJsChildMessage.CompletedResetForm()],
       ),
       Story.model(model => {
         expect(model.status).toBe('Idle')
@@ -349,11 +374,11 @@ describe('resolveAllExact', () => {
     Story.story(
       update,
       Story.given({ count: 0, log: [] }),
-      Story.message(StartedThreeFetches()),
+      Story.message(CounterMessage.StartedThreeFetches()),
       Story.Command.resolveAllExact(
-        [FetchCount, SucceededFetchCount({ count: 1 })],
-        [FetchCount, SucceededFetchCount({ count: 2 })],
-        [FetchCount, SucceededFetchCount({ count: 3 })],
+        [FetchCount, CounterMessage.SucceededFetchCount({ count: 1 })],
+        [FetchCount, CounterMessage.SucceededFetchCount({ count: 2 })],
+        [FetchCount, CounterMessage.SucceededFetchCount({ count: 3 })],
       ),
       Story.model(model => {
         expect(model.log).toEqual([1, 2, 3])
@@ -366,11 +391,14 @@ describe('resolveAllExact', () => {
       Story.story(
         update,
         Story.given({ count: 0, log: [] }),
-        Story.message(ClickedFetch()),
+        Story.message(CounterMessage.ClickedFetch()),
         Story.Command.resolveAllExact(
-          [FetchCount, SucceededFetchCount({ count: 1 })],
-          [SubmitForm, SucceededSubmitForm({ id: 'abc' })],
-          [ResetForm, CompletedResetForm()],
+          [FetchCount, CounterMessage.SucceededFetchCount({ count: 1 })],
+          [
+            SubmitForm,
+            FormChildJsChildMessage.SucceededSubmitForm({ id: 'abc' }),
+          ],
+          [ResetForm, FormChildJsChildMessage.CompletedResetForm()],
         ),
       ),
     ).toThrow(
@@ -385,10 +413,10 @@ describe('resolveAllExact', () => {
       Story.story(
         update,
         Story.given({ count: 0, log: [] }),
-        Story.message(ClickedFetch()),
+        Story.message(CounterMessage.ClickedFetch()),
         Story.Command.resolveAllExact(
-          [FetchCount, SucceededFetchCount({ count: 1 })],
-          [FetchCount, SucceededFetchCount({ count: 2 })],
+          [FetchCount, CounterMessage.SucceededFetchCount({ count: 1 })],
+          [FetchCount, CounterMessage.SucceededFetchCount({ count: 2 })],
         ),
       ),
     ).toThrow(
@@ -402,10 +430,10 @@ describe('resolveAllExact', () => {
       Story.story(
         update,
         Story.given({ count: 0, log: [] }),
-        Story.message(StartedThreeFetches()),
+        Story.message(CounterMessage.StartedThreeFetches()),
         Story.Command.resolveAllExact(
-          [FetchCount, SucceededFetchCount({ count: 1 })],
-          [FetchCount, SucceededFetchCount({ count: 2 })],
+          [FetchCount, CounterMessage.SucceededFetchCount({ count: 1 })],
+          [FetchCount, CounterMessage.SucceededFetchCount({ count: 2 })],
         ),
       ),
     ).toThrow('I found Commands without resolvers:\n\n    FetchCount')
@@ -417,11 +445,11 @@ describe('expectExactCommands', () => {
     Story.story(
       update,
       Story.given({ count: 0, log: [] }),
-      Story.message(ClickedFetch()),
+      Story.message(CounterMessage.ClickedFetch()),
       Story.Command.expectExact(FetchCount),
       Story.Command.resolveAll([
         FetchCount,
-        SucceededFetchCount({ count: 42 }),
+        CounterMessage.SucceededFetchCount({ count: 42 }),
       ]),
     )
   })
@@ -431,11 +459,11 @@ describe('expectExactCommands', () => {
       Story.story(
         update,
         Story.given({ count: 0, log: [] }),
-        Story.message(ClickedFetch()),
+        Story.message(CounterMessage.ClickedFetch()),
         Story.Command.expectExact(FetchCount, SubmitForm),
         Story.Command.resolveAll([
           FetchCount,
-          SucceededFetchCount({ count: 42 }),
+          CounterMessage.SucceededFetchCount({ count: 42 }),
         ]),
       ),
     ).toThrow('Expected exactly these Commands')
@@ -446,11 +474,11 @@ describe('expectExactCommands', () => {
       Story.story(
         update,
         Story.given({ count: 0, log: [] }),
-        Story.message(ClickedFetch()),
+        Story.message(CounterMessage.ClickedFetch()),
         Story.Command.expectExact(),
         Story.Command.resolveAll([
           FetchCount,
-          SucceededFetchCount({ count: 42 }),
+          CounterMessage.SucceededFetchCount({ count: 42 }),
         ]),
       ),
     ).toThrow('Expected exactly these Commands')
@@ -462,11 +490,11 @@ describe('instance-strict Command matching', () => {
     Story.story(
       update,
       Story.given({ count: 0, log: [] }),
-      Story.message(ClickedFetchById({ id: 7 })),
+      Story.message(CounterMessage.ClickedFetchById({ id: 7 })),
       Story.Command.expectHas(FetchCountById({ id: 7 })),
       Story.Command.resolveAll([
         FetchCountById,
-        SucceededFetchCount({ count: 7 }),
+        CounterMessage.SucceededFetchCount({ count: 7 }),
       ]),
     )
   })
@@ -476,11 +504,11 @@ describe('instance-strict Command matching', () => {
       Story.story(
         update,
         Story.given({ count: 0, log: [] }),
-        Story.message(ClickedFetchById({ id: 7 })),
+        Story.message(CounterMessage.ClickedFetchById({ id: 7 })),
         Story.Command.expectHas(FetchCountById({ id: 99 })),
         Story.Command.resolveAll([
           FetchCountById,
-          SucceededFetchCount({ count: 7 }),
+          CounterMessage.SucceededFetchCount({ count: 7 }),
         ]),
       ),
     ).toThrow('Expected to find Commands')
@@ -490,11 +518,11 @@ describe('instance-strict Command matching', () => {
     Story.story(
       update,
       Story.given({ count: 0, log: [] }),
-      Story.message(ClickedFetchById({ id: 42 })),
+      Story.message(CounterMessage.ClickedFetchById({ id: 42 })),
       Story.Command.expectExact(FetchCountById({ id: 42 })),
       Story.Command.resolveAll([
         FetchCountById,
-        SucceededFetchCount({ count: 42 }),
+        CounterMessage.SucceededFetchCount({ count: 42 }),
       ]),
     )
   })
@@ -504,10 +532,10 @@ describe('instance-strict Command matching', () => {
       Story.story(
         update,
         Story.given({ count: 0, log: [] }),
-        Story.message(ClickedFetchById({ id: 7 })),
+        Story.message(CounterMessage.ClickedFetchById({ id: 7 })),
         Story.Command.resolve(
           FetchCountById({ id: 99 }),
-          SucceededFetchCount({ count: 99 }),
+          CounterMessage.SucceededFetchCount({ count: 99 }),
         ),
       ),
     ).toThrow(
@@ -519,10 +547,10 @@ describe('instance-strict Command matching', () => {
     Story.story(
       update,
       Story.given({ count: 0, log: [] }),
-      Story.message(ClickedFetchById({ id: 42 })),
+      Story.message(CounterMessage.ClickedFetchById({ id: 42 })),
       Story.Command.resolve(
         FetchCountById({ id: 42 }),
-        SucceededFetchCount({ count: 42 }),
+        CounterMessage.SucceededFetchCount({ count: 42 }),
       ),
       Story.model(model => {
         expect(model.count).toBe(42)
@@ -534,15 +562,15 @@ describe('instance-strict Command matching', () => {
     Story.story(
       update,
       Story.given({ count: 0, log: [] }),
-      Story.message(ClickedFetchById({ id: 1 })),
+      Story.message(CounterMessage.ClickedFetchById({ id: 1 })),
       Story.Command.resolveAll([
         FetchCountById({ id: 1 }),
-        SucceededFetchCount({ count: 100 }),
+        CounterMessage.SucceededFetchCount({ count: 100 }),
       ]),
-      Story.message(ClickedFetchById({ id: 2 })),
+      Story.message(CounterMessage.ClickedFetchById({ id: 2 })),
       Story.Command.resolveAll([
         FetchCountById({ id: 2 }),
-        SucceededFetchCount({ count: 200 }),
+        CounterMessage.SucceededFetchCount({ count: 200 }),
       ]),
       Story.model(model => {
         expect(model.count).toBe(200)
@@ -554,10 +582,10 @@ describe('instance-strict Command matching', () => {
     Story.story(
       update,
       Story.given({ count: 0, log: [] }),
-      Story.message(ClickedFetchById({ id: 5 })),
+      Story.message(CounterMessage.ClickedFetchById({ id: 5 })),
       Story.Command.resolveAll([
         FetchCountById,
-        SucceededFetchCount({ count: 5 }),
+        CounterMessage.SucceededFetchCount({ count: 5 }),
       ]),
       Story.model(model => {
         expect(model.count).toBe(5)
@@ -572,7 +600,7 @@ describe('story', () => {
       Story.story(
         update,
         Story.given({ count: 0, log: [] }),
-        Story.message(ClickedFetch()),
+        Story.message(CounterMessage.ClickedFetch()),
       ),
     ).toThrow('I found Commands without resolvers')
   })
@@ -582,8 +610,8 @@ describe('story', () => {
       Story.story(
         update,
         Story.given({ count: 0, log: [] }),
-        Story.message(ClickedFetch()),
-        Story.message(ClickedIncrement()),
+        Story.message(CounterMessage.ClickedFetch()),
+        Story.message(CounterMessage.ClickedIncrement()),
       ),
     ).toThrow('I found unresolved Commands when you sent a new Message')
   })
@@ -592,7 +620,7 @@ describe('story', () => {
     Story.story(
       update,
       Story.given({ count: 0, log: [] }),
-      Story.message(ClickedIncrement()),
+      Story.message(CounterMessage.ClickedIncrement()),
       Story.model(model => {
         expect(model.count).toBe(1)
       }),
@@ -606,12 +634,12 @@ describe('interruptible Commands', () => {
     Story.story(
       uploadsUpdate,
       Story.given(initialUploadsModel),
-      Story.message(ClickedStartUpload()),
+      Story.message(UploadsMessage.ClickedStartUpload()),
       Story.Command.expectHas(UploadFile),
-      Story.message(ClickedCancelUpload({ uploadId: 0 })),
+      Story.message(UploadsMessage.ClickedCancelUpload({ uploadId: 0 })),
       Story.Command.resolve(
         CancelUploadFile({ uploadId: 0 }),
-        CompletedCancelUploadFile({
+        UploadsMessage.CompletedCancelUploadFile({
           uploadId: 0,
           outcome: Interruptible.Interrupted(),
         }),
@@ -627,8 +655,11 @@ describe('interruptible Commands', () => {
     Story.story(
       uploadsUpdate,
       Story.given(initialUploadsModel),
-      Story.message(ClickedStartUpload()),
-      Story.Command.resolve(UploadFile, SucceededUploadFile({ uploadId: 0 })),
+      Story.message(UploadsMessage.ClickedStartUpload()),
+      Story.Command.resolve(
+        UploadFile,
+        UploadsMessage.SucceededUploadFile({ uploadId: 0 }),
+      ),
       Story.model(model => {
         expect(model.uploads).toEqual([{ id: 0, status: 'Done' }])
       }),
@@ -640,8 +671,11 @@ describe('interruptible Commands', () => {
     Story.story(
       draftsUpdate,
       Story.given(initialDraftsModel),
-      Story.message(ClickedSaveDraft()),
-      Story.Command.resolve(SaveDraft, SucceededSaveDraft({ revision: 0 })),
+      Story.message(DraftsMessage.ClickedSaveDraft()),
+      Story.Command.resolve(
+        SaveDraft,
+        DraftsMessage.SucceededSaveDraft({ revision: 0 }),
+      ),
       Story.model(model => {
         expect(model.status).toBe('Saved')
       }),
@@ -653,11 +687,11 @@ describe('interruptible Commands', () => {
     Story.story(
       uploadsUpdate,
       Story.given(initialUploadsModel),
-      Story.message(ClickedStartUpload()),
-      Story.message(ClickedStartUpload()),
+      Story.message(UploadsMessage.ClickedStartUpload()),
+      Story.message(UploadsMessage.ClickedStartUpload()),
       Story.Command.resolveAll(
-        [UploadFile, SucceededUploadFile({ uploadId: 0 })],
-        [UploadFile, SucceededUploadFile({ uploadId: 1 })],
+        [UploadFile, UploadsMessage.SucceededUploadFile({ uploadId: 0 })],
+        [UploadFile, UploadsMessage.SucceededUploadFile({ uploadId: 1 })],
       ),
       Story.model(model => {
         expect(model.uploads).toEqual([
@@ -673,15 +707,15 @@ describe('interruptible Commands', () => {
     Story.story(
       uploadsUpdate,
       Story.given(initialUploadsModel),
-      Story.message(ClickedStartUpload()),
+      Story.message(UploadsMessage.ClickedStartUpload()),
       Story.Command.resolve(
         UploadFile({ uploadId: 0 }),
-        SucceededUploadFile({ uploadId: 0 }),
+        UploadsMessage.SucceededUploadFile({ uploadId: 0 }),
       ),
-      Story.message(ClickedCancelUpload({ uploadId: 0 })),
+      Story.message(UploadsMessage.ClickedCancelUpload({ uploadId: 0 })),
       Story.Command.resolve(
         CancelUploadFile({ uploadId: 0 }),
-        CompletedCancelUploadFile({
+        UploadsMessage.CompletedCancelUploadFile({
           uploadId: 0,
           outcome: Interruptible.NotFound(),
         }),
@@ -696,16 +730,16 @@ describe('interruptible Commands', () => {
     Story.story(
       uploadsUpdate,
       Story.given(initialUploadsModel),
-      Story.message(ClickedStartUpload()),
-      Story.message(ClickedStartUpload()),
+      Story.message(UploadsMessage.ClickedStartUpload()),
+      Story.message(UploadsMessage.ClickedStartUpload()),
       Story.Command.expectHas(
         UploadFile({ uploadId: 0 }),
         UploadFile({ uploadId: 1 }),
       ),
-      Story.message(ClickedCancelUpload({ uploadId: 1 })),
+      Story.message(UploadsMessage.ClickedCancelUpload({ uploadId: 1 })),
       Story.Command.resolve(
         CancelUploadFile({ uploadId: 1 }),
-        CompletedCancelUploadFile({
+        UploadsMessage.CompletedCancelUploadFile({
           uploadId: 1,
           outcome: Interruptible.Interrupted(),
         }),
@@ -713,7 +747,7 @@ describe('interruptible Commands', () => {
       Story.Command.expectExact(UploadFile({ uploadId: 0 })),
       Story.Command.resolve(
         UploadFile({ uploadId: 0 }),
-        SucceededUploadFile({ uploadId: 0 }),
+        UploadsMessage.SucceededUploadFile({ uploadId: 0 }),
       ),
       Story.model((model: UploadsModel) => {
         expect(model.uploads).toEqual([
@@ -728,16 +762,16 @@ describe('interruptible Commands', () => {
     Story.story(
       uploadsUpdate,
       Story.given(initialUploadsModel),
-      Story.message(ClickedStartUpload()),
-      Story.message(ClickedRetryUpload({ uploadId: 0 })),
+      Story.message(UploadsMessage.ClickedStartUpload()),
+      Story.message(UploadsMessage.ClickedRetryUpload({ uploadId: 0 })),
       Story.Command.expectExact(
         UploadFile({ uploadId: 0 }),
         UploadFile({ uploadId: 0 }),
       ),
-      Story.message(ClickedCancelUpload({ uploadId: 0 })),
+      Story.message(UploadsMessage.ClickedCancelUpload({ uploadId: 0 })),
       Story.Command.resolve(
         CancelUploadFile({ uploadId: 0 }),
-        CompletedCancelUploadFile({
+        UploadsMessage.CompletedCancelUploadFile({
           uploadId: 0,
           outcome: Interruptible.Interrupted(),
         }),
@@ -754,7 +788,7 @@ describe('interruptible Commands', () => {
       Story.story(
         uploadsUpdate,
         Story.given(initialUploadsModel),
-        Story.message(ClickedStartUpload()),
+        Story.message(UploadsMessage.ClickedStartUpload()),
       ),
     ).toThrow('I found Commands without resolvers')
   })
@@ -765,11 +799,19 @@ describe('outMessage', () => {
     Story.story(
       childUpdate,
       Story.given({ status: 'Idle' }),
-      Story.message(SubmittedForm()),
+      Story.message(FormChildJsChildMessage.SubmittedForm()),
       Story.expectNoOutMessage(),
-      Story.Command.resolve(SubmitForm, SucceededSubmitForm({ id: 'abc' })),
-      Story.expectOutMessage(RequestedSave({ id: 'abc' })),
-      Story.Command.resolve(ResetForm, CompletedResetForm()),
+      Story.Command.resolve(
+        SubmitForm,
+        FormChildJsChildMessage.SucceededSubmitForm({ id: 'abc' }),
+      ),
+      Story.expectOutMessage(
+        FormChildJsChildOutMessage.RequestedSave({ id: 'abc' }),
+      ),
+      Story.Command.resolve(
+        ResetForm,
+        FormChildJsChildMessage.CompletedResetForm(),
+      ),
       Story.expectNoOutMessage(),
     )
   })
@@ -778,8 +820,8 @@ describe('outMessage', () => {
     Story.story(
       childUpdate,
       Story.given({ status: 'Idle' }),
-      Story.message(CancelledForm()),
-      Story.expectOutMessage(RequestedCancel()),
+      Story.message(FormChildJsChildMessage.CancelledForm()),
+      Story.expectOutMessage(FormChildJsChildOutMessage.RequestedCancel()),
     )
   })
 })
@@ -789,17 +831,27 @@ describe("resolve applies the Command's own message mapping", () => {
     Story.story(
       parentUpdate,
       Story.given(initialParentModel),
-      Story.message(GotChildMessage({ message: SubmittedForm() })),
+      Story.message(
+        ParentMessage.GotChildMessage({
+          message: FormChildJsChildMessage.SubmittedForm(),
+        }),
+      ),
       Story.model(model => {
         expect(model.child.status).toBe('Submitting')
       }),
       Story.Command.expectHas(SubmitForm),
-      Story.Command.resolve(SubmitForm, SucceededSubmitForm({ id: 'abc' })),
+      Story.Command.resolve(
+        SubmitForm,
+        FormChildJsChildMessage.SucceededSubmitForm({ id: 'abc' }),
+      ),
       Story.model(model => {
         expect(model.child.status).toBe('Submitted')
         expect(model.savedIds).toEqual(['abc'])
       }),
-      Story.Command.resolve(ResetForm, CompletedResetForm()),
+      Story.Command.resolve(
+        ResetForm,
+        FormChildJsChildMessage.CompletedResetForm(),
+      ),
       Story.model(model => {
         expect(model.child.status).toBe('Idle')
         expect(model.savedIds).toEqual(['abc'])
@@ -813,13 +865,20 @@ describe("resolveAll applies each Command's own message mapping", () => {
     Story.story(
       parentUpdate,
       Story.given(initialParentModel),
-      Story.message(GotChildMessage({ message: SubmittedForm() })),
+      Story.message(
+        ParentMessage.GotChildMessage({
+          message: FormChildJsChildMessage.SubmittedForm(),
+        }),
+      ),
       Story.model(model => {
         expect(model.child.status).toBe('Submitting')
       }),
       Story.Command.resolveAll(
-        [SubmitForm, SucceededSubmitForm({ id: 'abc' })],
-        [ResetForm, CompletedResetForm()],
+        [
+          SubmitForm,
+          FormChildJsChildMessage.SucceededSubmitForm({ id: 'abc' }),
+        ],
+        [ResetForm, FormChildJsChildMessage.CompletedResetForm()],
       ),
       Story.model(model => {
         expect(model.child.status).toBe('Idle')
@@ -846,7 +905,7 @@ describe('type safety', () => {
   test('resolve constrains the result Message to the Command definition', () => {
     const resolver = Story.Command.resolve(
       FetchCount,
-      SucceededFetchCount({ count: 0 }),
+      CounterMessage.SucceededFetchCount({ count: 0 }),
     )
     expectTypeOf(resolver).toBeFunction()
   })
@@ -854,7 +913,7 @@ describe('type safety', () => {
   test('resolve accepts a bare interruptible Command definition', () => {
     const resolver = Story.Command.resolve(
       UploadFile,
-      SucceededUploadFile({ uploadId: 0 }),
+      UploadsMessage.SucceededUploadFile({ uploadId: 0 }),
     )
     expectTypeOf(resolver).toBeFunction()
   })
@@ -862,7 +921,7 @@ describe('type safety', () => {
   test('resolve accepts a bare name-keyed interruptible Command definition', () => {
     const resolver = Story.Command.resolve(
       SaveDraft,
-      SucceededSaveDraft({ revision: 0 }),
+      DraftsMessage.SucceededSaveDraft({ revision: 0 }),
     )
     expectTypeOf(resolver).toBeFunction()
   })

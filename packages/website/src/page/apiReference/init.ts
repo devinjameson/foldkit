@@ -1,6 +1,6 @@
 import { Command } from 'foldkit'
 
-import { type Message, RequestedApiData } from './message'
+import { Message } from './message'
 import { ApiDataAsyncData, type Model } from './model'
 import { update } from './update'
 
@@ -16,6 +16,6 @@ export const init = (): InitReturn => [
 
 export const boot = (): InitReturn => {
   const [model, initCommands] = init()
-  const [bootedModel, bootCommands] = update(model, RequestedApiData())
+  const [bootedModel, bootCommands] = update(model, Message.RequestedApiData())
   return [bootedModel, [...initCommands, ...bootCommands]]
 }

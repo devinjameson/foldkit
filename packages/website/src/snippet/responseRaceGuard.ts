@@ -1,7 +1,7 @@
-import { Effect, Match as M, Schema as S, pipe } from 'effect'
+import { Effect, Schema as S, pipe } from 'effect'
 import { HttpClient, HttpClientRequest } from 'effect/unstable/http'
 import { AsyncData, Command, Http } from 'foldkit'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 const SearchResult = S.Struct({ id: S.String, title: S.String })
@@ -18,20 +18,20 @@ type Model = typeof Model.Type
 
 // MESSAGE
 
-const UpdatedQuery = m('UpdatedQuery', { query: S.String })
-const SettledSearch = m('SettledSearch', {
-  query: S.String,
-  result: S.Result(S.Array(SearchResult), S.String),
+const Message = defineMessageUnion({
+  UpdatedQuery: { query: S.String },
+  SettledSearch: {
+    query: S.String,
+    result: S.Result(S.Array(SearchResult), S.String),
+  },
 })
-
-const Message = S.Union([UpdatedQuery, SettledSearch])
 type Message = typeof Message.Type
 
 // COMMAND
 
 const Search = Command.define('Search', {
   args: { query: S.String },
-  messages: [SettledSearch],
+  messages: [Message.SettledSearch],
   execute: ({ query }) =>
     pipe(
       Effect.gen(function* () {
@@ -46,22 +46,17 @@ const Search = Command.define('Search', {
       }),
       Effect.mapError(error => String(error)),
       Effect.result,
-      Effect.map(result => SettledSearch({ query, result })),
+      Effect.map(result => Message.SettledSearch({ query, result })),
       Effect.provide(Http.layer),
     ),
 })
 
 // UPDATE
 
-const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] =>
-  M.value(message).pipe(
-    M.withReturnType<
-      readonly [Model, ReadonlyArray<Command.Command<Message>>]
-    >(),
-    M.tagsExhaustive({
+const update = (model: Model, message: Message) =>
+  Message.match<readonly [Model, ReadonlyArray<Command.Command<Message>>]>(
+    message,
+    {
       UpdatedQuery: ({ query }) => [
         evo(model, {
           queryInput: () => query,
@@ -76,5 +71,5 @@ const update = (
         }
         return [evo(model, { searchResults: AsyncData.settle(result) }), []]
       },
-    }),
+    },
   )

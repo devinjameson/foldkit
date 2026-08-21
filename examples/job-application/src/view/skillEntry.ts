@@ -18,7 +18,7 @@ export const skillEntryView = Submodel.defineView<
       id: `${model.id}-name`,
       label: 'Skill',
       field: model.name,
-      onInput: value => Skills.Entry.UpdatedName({ value }),
+      onInput: value => Skills.Entry.Message.UpdatedName({ value }),
       placeholder: 'e.g. TypeScript, React, Effect-TS',
     },
     h,
@@ -58,7 +58,7 @@ export const skillEntryView = Submodel.defineView<
         ),
     },
     toParentMessage: message =>
-      Skills.Entry.GotProficiencyRadioGroupMessage({ message }),
+      Skills.Entry.Message.GotProficiencyRadioGroupMessage({ message }),
   })
 
   return h.keyed('div')(
@@ -81,7 +81,7 @@ export const skillEntryView = Submodel.defineView<
         [
           Button.view(
             {
-              onClick: Skills.Entry.ClickedRemoveSelf(),
+              onClick: Skills.Entry.Message.ClickedRemoveSelf(),
               toView: attributes =>
                 h.button(
                   [

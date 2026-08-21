@@ -1,7 +1,7 @@
-import { Match as M, Schema as S } from 'effect'
+import { Schema as S } from 'effect'
 
 import type { Html, HtmlBuilder } from '../../html/index.js'
-import { m } from '../../message/index.js'
+import { defineMessageUnion } from '../../message/index.js'
 
 // MODEL
 
@@ -10,9 +10,10 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const ClickedFallback = m('ClickedFallback')
+export const Message = defineMessageUnion({
+  ClickedFallback: {},
+})
 
-export const Message = S.Union([ClickedFallback])
 export type Message = typeof Message.Type
 
 // INIT
@@ -21,16 +22,10 @@ export const initialModel: Model = { clicks: 0 }
 
 // UPDATE
 
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<never>] =>
-  M.value(message).pipe(
-    M.withReturnType<readonly [Model, ReadonlyArray<never>]>(),
-    M.tagsExhaustive({
-      ClickedFallback: () => [{ ...model, clicks: model.clicks + 1 }, []],
-    }),
-  )
+export const update = (model: Model, message: Message) =>
+  Message.match<readonly [Model, ReadonlyArray<never>]>(message, {
+    ClickedFallback: () => [{ ...model, clicks: model.clicks + 1 }, []],
+  })
 
 // VIEW
 
@@ -39,7 +34,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
     [],
     [
       h.div(
-        [h.Role('doc-subtitle heading'), h.OnClick(ClickedFallback())],
+        [h.Role('doc-subtitle heading'), h.OnClick(Message.ClickedFallback())],
         [`Fallback element clicks=${model.clicks}`],
       ),
     ],

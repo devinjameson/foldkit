@@ -1,8 +1,8 @@
-import { Effect, Match as M, Number, Option, Schema as S } from 'effect'
+import { Effect, Number, Option, Schema as S } from 'effect'
 
 import * as Command from '../../command/index.js'
 import type { Html, HtmlBuilder } from '../../html/index.js'
-import { m } from '../../message/index.js'
+import { defineMessageUnion } from '../../message/index.js'
 import { evo } from '../../struct/index.js'
 
 // MODEL
@@ -14,18 +14,18 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-const Committed = m('Committed')
-const Reset = m('Reset')
-const CompletedRecordReset = m('CompletedRecordReset')
-
-export const Message = S.Union([Committed, Reset, CompletedRecordReset])
+export const Message = defineMessageUnion({
+  Committed: {},
+  Reset: {},
+  CompletedRecordReset: {},
+})
 export type Message = typeof Message.Type
 
 /** Left unresolved by a test that wants a bookkeeping violation alongside a
  *  fall-through, so the two end-of-scene checks can be ordered. */
 export const RecordReset = Command.define('RecordReset', {
-  messages: [CompletedRecordReset],
-  execute: Effect.sync(() => CompletedRecordReset()),
+  messages: [Message.CompletedRecordReset],
+  execute: Effect.sync(() => Message.CompletedRecordReset()),
 })
 
 // INIT
@@ -36,15 +36,12 @@ export const initialModel: Model = { commits: 0 }
 
 type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    M.withReturnType<UpdateReturn>(),
-    M.tagsExhaustive({
-      Committed: () => [evo(model, { commits: Number.increment }), []],
-      Reset: () => [evo(model, { commits: () => 0 }), [RecordReset()]],
-      CompletedRecordReset: () => [model, []],
-    }),
-  )
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    Committed: () => [evo(model, { commits: Number.increment }), []],
+    Reset: () => [evo(model, { commits: () => 0 }), [RecordReset()]],
+    CompletedRecordReset: () => [model, []],
+  })
 
 // VIEW
 
@@ -56,11 +53,11 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html =>
     [
       h.Id(appId),
       h.OnKeyDownPreventDefault(key =>
-        key === 'Enter' ? Option.some(Committed()) : Option.none(),
+        key === 'Enter' ? Option.some(Message.Committed()) : Option.none(),
       ),
     ],
     [
       h.span([h.Class('commits')], [`${model.commits}`]),
-      h.button([h.Id(resetId), h.OnClick(Reset())], ['Reset']),
+      h.button([h.Id(resetId), h.OnClick(Message.Reset())], ['Reset']),
     ],
   )

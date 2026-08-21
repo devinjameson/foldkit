@@ -10,19 +10,12 @@ import * as Animation from '../animation/index.js'
 import { create, init, update } from './multi.js'
 import type { Model, ViewInputs } from './multi.js'
 import {
-  ActivatedItem,
   AnchorListbox,
-  CompletedAnchorListbox,
-  CompletedFocusItems,
-  CompletedPortalListboxBackdrop,
-  CompletedScrollIntoView,
   FocusItems,
-  type Message,
-  Opened,
+  Message,
+  OutMessage,
   PortalListboxBackdrop,
   ScrollIntoView,
-  Selected,
-  SelectedItem,
   buttonId,
 } from './shared.js'
 
@@ -31,19 +24,19 @@ const view = TestListbox.view
 
 const acknowledgeAnchor = Scene.Mount.resolve(
   AnchorListbox,
-  CompletedAnchorListbox(),
+  Message.CompletedAnchorListbox(),
 )
 const acknowledgeBackdrop = Scene.Mount.resolve(
   PortalListboxBackdrop,
-  CompletedPortalListboxBackdrop(),
+  Message.CompletedPortalListboxBackdrop(),
 )
 
 const givenClosed = Story.given(init({ id: 'test' }))
 
 const givenOpenMulti = flow(
   givenClosed,
-  Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
-  Story.Command.resolve(FocusItems, CompletedFocusItems()),
+  Story.message(Message.Opened({ maybeActiveItemIndex: Option.some(0) })),
+  Story.Command.resolve(FocusItems, Message.CompletedFocusItems()),
 )
 
 describe('Listbox.Multi', () => {
@@ -72,8 +65,8 @@ describe('Listbox.Multi', () => {
         Story.story(
           update,
           givenOpenMulti,
-          Story.message(SelectedItem({ item: 'apple' })),
-          Story.expectOutMessage(Selected({ value: 'apple' })),
+          Story.message(Message.SelectedItem({ item: 'apple' })),
+          Story.expectOutMessage(OutMessage.Selected({ value: 'apple' })),
         )
       })
 
@@ -81,7 +74,7 @@ describe('Listbox.Multi', () => {
         Story.story(
           update,
           givenOpenMulti,
-          Story.message(SelectedItem({ item: 'apple' })),
+          Story.message(Message.SelectedItem({ item: 'apple' })),
           Story.model(model => {
             expect(model.isOpen).toBe(true)
           }),
@@ -92,10 +85,10 @@ describe('Listbox.Multi', () => {
         Story.story(
           update,
           givenOpenMulti,
-          Story.message(SelectedItem({ item: 'apple' })),
-          Story.expectOutMessage(Selected({ value: 'apple' })),
-          Story.message(SelectedItem({ item: 'apple' })),
-          Story.expectOutMessage(Selected({ value: 'apple' })),
+          Story.message(Message.SelectedItem({ item: 'apple' })),
+          Story.expectOutMessage(OutMessage.Selected({ value: 'apple' })),
+          Story.message(Message.SelectedItem({ item: 'apple' })),
+          Story.expectOutMessage(OutMessage.Selected({ value: 'apple' })),
         )
       })
 
@@ -103,10 +96,10 @@ describe('Listbox.Multi', () => {
         Story.story(
           update,
           givenOpenMulti,
-          Story.message(SelectedItem({ item: 'apple' })),
-          Story.expectOutMessage(Selected({ value: 'apple' })),
-          Story.message(SelectedItem({ item: 'banana' })),
-          Story.expectOutMessage(Selected({ value: 'banana' })),
+          Story.message(Message.SelectedItem({ item: 'apple' })),
+          Story.expectOutMessage(OutMessage.Selected({ value: 'apple' })),
+          Story.message(Message.SelectedItem({ item: 'banana' })),
+          Story.expectOutMessage(OutMessage.Selected({ value: 'banana' })),
         )
       })
 
@@ -115,10 +108,13 @@ describe('Listbox.Multi', () => {
           update,
           givenOpenMulti,
           Story.message(
-            ActivatedItem({ index: 2, activationTrigger: 'Keyboard' }),
+            Message.ActivatedItem({ index: 2, activationTrigger: 'Keyboard' }),
           ),
-          Story.Command.resolve(ScrollIntoView, CompletedScrollIntoView()),
-          Story.message(SelectedItem({ item: 'apple' })),
+          Story.Command.resolve(
+            ScrollIntoView,
+            Message.CompletedScrollIntoView(),
+          ),
+          Story.message(Message.SelectedItem({ item: 'apple' })),
           Story.model(model => {
             expect(model.maybeActiveItemIndex).toStrictEqual(Option.some(2))
           }),

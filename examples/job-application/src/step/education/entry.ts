@@ -8,7 +8,7 @@ import {
   makeRules,
   validate,
 } from 'foldkit/fieldValidation'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Listbox } from '@foldkit/ui'
@@ -50,38 +50,26 @@ const GraduationYearListbox = Listbox.create<string>()
 
 // MESSAGE
 
-export const UpdatedSchool = m('UpdatedSchool', { value: S.String })
-export const UpdatedDegree = m('UpdatedDegree', { value: S.String })
-export const UpdatedFieldOfStudy = m('UpdatedFieldOfStudy', {
-  value: S.String,
+export const Message = defineMessageUnion({
+  UpdatedSchool: { value: S.String },
+  UpdatedDegree: { value: S.String },
+  UpdatedFieldOfStudy: { value: S.String },
+  GotGraduationYearListboxMessage: { message: Listbox.Message },
+  ToggledCurrentlyEnrolled: { isChecked: S.Boolean },
+  ClickedRemoveSelf: {},
 })
-export const GotGraduationYearListboxMessage = m(
-  'GotGraduationYearListboxMessage',
-  { message: Listbox.Message },
-)
-export const ToggledCurrentlyEnrolled = m('ToggledCurrentlyEnrolled', {
-  isChecked: S.Boolean,
-})
-export const ClickedRemoveSelf = m('ClickedRemoveSelf')
 
-export const Message = S.Union([
-  UpdatedSchool,
-  UpdatedDegree,
-  UpdatedFieldOfStudy,
-  GotGraduationYearListboxMessage,
-  ToggledCurrentlyEnrolled,
-  ClickedRemoveSelf,
-])
 export type Message = typeof Message.Type
 
 // OUT MESSAGE
 
-export const Removed = m('Removed')
+export const OutMessage = defineMessageUnion({
+  Removed: {},
+})
 
-export const OutMessage = S.Union([Removed])
 export type OutMessage = typeof OutMessage.Type
 
-export type Removed = typeof Removed.Type
+export type Removed = typeof OutMessage.Removed.Type
 
 // INIT
 
@@ -122,45 +110,43 @@ const foldGraduationYearListbox = Update.foldChild({
   read: (model: Model) => Option.some(model.graduationYearListbox),
   write: (model, nextGraduationYearListbox) =>
     evo(model, { graduationYearListbox: () => nextGraduationYearListbox }),
-  toParentMessage: message => GotGraduationYearListboxMessage({ message }),
+  toParentMessage: message =>
+    Message.GotGraduationYearListboxMessage({ message }),
   toParentOutMessage: () => Option.none(),
   foldOutMessage: foldGraduationYearListboxOutMessage,
 })
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    M.withReturnType<UpdateReturn>(),
-    M.tagsExhaustive({
-      UpdatedSchool: ({ value }) => [
-        evo(model, { school: () => validateSchool(value) }),
-        [],
-        Option.none(),
-      ],
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    UpdatedSchool: ({ value }) => [
+      evo(model, { school: () => validateSchool(value) }),
+      [],
+      Option.none(),
+    ],
 
-      UpdatedDegree: ({ value }) => [
-        evo(model, { degree: () => validateDegree(value) }),
-        [],
-        Option.none(),
-      ],
+    UpdatedDegree: ({ value }) => [
+      evo(model, { degree: () => validateDegree(value) }),
+      [],
+      Option.none(),
+    ],
 
-      UpdatedFieldOfStudy: ({ value }) => [
-        evo(model, { fieldOfStudy: () => validateFieldOfStudy(value) }),
-        [],
-        Option.none(),
-      ],
+    UpdatedFieldOfStudy: ({ value }) => [
+      evo(model, { fieldOfStudy: () => validateFieldOfStudy(value) }),
+      [],
+      Option.none(),
+    ],
 
-      GotGraduationYearListboxMessage: ({ message }) =>
-        foldGraduationYearListbox(model, message),
+    GotGraduationYearListboxMessage: ({ message }) =>
+      foldGraduationYearListbox(model, message),
 
-      ToggledCurrentlyEnrolled: ({ isChecked }) => [
-        evo(model, { isCurrentlyEnrolled: () => isChecked }),
-        [],
-        Option.none(),
-      ],
+    ToggledCurrentlyEnrolled: ({ isChecked }) => [
+      evo(model, { isCurrentlyEnrolled: () => isChecked }),
+      [],
+      Option.none(),
+    ],
 
-      ClickedRemoveSelf: () => [model, [], Option.some(Removed())],
-    }),
-  )
+    ClickedRemoveSelf: () => [model, [], Option.some(OutMessage.Removed())],
+  })
 
 // VALIDATION SUMMARY
 

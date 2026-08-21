@@ -31,13 +31,7 @@ import {
   TRAIL_LENGTH,
   TWO_PI,
 } from './constant'
-import {
-  CompletedGenerateAmbientParticle,
-  CompletedGenerateBurstParticle,
-  GotFlowStrengthSliderMessage,
-  GotNoiseScaleSliderMessage,
-  Message,
-} from './message'
+import { Message } from './message'
 import { Model, Particle, Point } from './model'
 import { fractalNoise } from './noise'
 
@@ -206,8 +200,8 @@ const appendGeneratedParticle =
   (model: Model) =>
   (
     generatedParticle:
-      | typeof CompletedGenerateAmbientParticle.Type
-      | typeof CompletedGenerateBurstParticle.Type,
+      | typeof Message.CompletedGenerateAmbientParticle.Type
+      | typeof Message.CompletedGenerateBurstParticle.Type,
   ): UpdateReturn => {
     const newParticle: Particle = {
       id: model.nextId,
@@ -244,7 +238,7 @@ const foldFlowStrengthSlider = Update.foldChild({
   read: (model: Model) => Option.some(model.flowStrengthSlider),
   write: (model, nextFlowStrengthSlider) =>
     evo(model, { flowStrengthSlider: () => nextFlowStrengthSlider }),
-  toParentMessage: message => GotFlowStrengthSliderMessage({ message }),
+  toParentMessage: message => Message.GotFlowStrengthSliderMessage({ message }),
   foldOutMessage: foldFlowStrengthSliderOutMessage,
 })
 
@@ -262,67 +256,64 @@ const foldNoiseScaleSlider = Update.foldChild({
   read: (model: Model) => Option.some(model.noiseScaleSlider),
   write: (model, nextNoiseScaleSlider) =>
     evo(model, { noiseScaleSlider: () => nextNoiseScaleSlider }),
-  toParentMessage: message => GotNoiseScaleSliderMessage({ message }),
+  toParentMessage: message => Message.GotNoiseScaleSliderMessage({ message }),
   foldOutMessage: foldNoiseScaleSliderOutMessage,
 })
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    M.withReturnType<UpdateReturn>(),
-    M.tagsExhaustive({
-      TickedFrame: ({ deltaTimeMs }) => {
-        const deltaSeconds = cappedDeltaSeconds(deltaTimeMs)
-        const nextElapsedSeconds = model.elapsedSeconds + deltaSeconds
-        const advancedParticles = Array.filterMap(
-          model.particles,
-          advanceParticle(
-            deltaSeconds,
-            nextElapsedSeconds,
-            model.flowStrength,
-            model.noiseScale,
-            model.maybeMousePosition,
-          ),
-        )
-        const nextModel = evo(model, {
-          particles: () => advancedParticles,
-          elapsedSeconds: () => nextElapsedSeconds,
-        })
-        return [nextModel, spawnAmbientParticles(advancedParticles.length)]
-      },
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    TickedFrame: ({ deltaTimeMs }) => {
+      const deltaSeconds = cappedDeltaSeconds(deltaTimeMs)
+      const nextElapsedSeconds = model.elapsedSeconds + deltaSeconds
+      const advancedParticles = Array.filterMap(
+        model.particles,
+        advanceParticle(
+          deltaSeconds,
+          nextElapsedSeconds,
+          model.flowStrength,
+          model.noiseScale,
+          model.maybeMousePosition,
+        ),
+      )
+      const nextModel = evo(model, {
+        particles: () => advancedParticles,
+        elapsedSeconds: () => nextElapsedSeconds,
+      })
+      return [nextModel, spawnAmbientParticles(advancedParticles.length)]
+    },
 
-      CompletedGenerateAmbientParticle: appendGeneratedParticle(model),
+    CompletedGenerateAmbientParticle: appendGeneratedParticle(model),
 
-      CompletedGenerateBurstParticle: appendGeneratedParticle(model),
+    CompletedGenerateBurstParticle: appendGeneratedParticle(model),
 
-      PressedCanvas: ({ x, y }) => [
-        model,
-        spawnBurstParticles(x, y, computeBurstHueAnchor(model.elapsedSeconds)),
-      ],
+    PressedCanvas: ({ x, y }) => [
+      model,
+      spawnBurstParticles(x, y, computeBurstHueAnchor(model.elapsedSeconds)),
+    ],
 
-      MovedPointer: ({ x, y }) => [
-        evo(model, {
-          maybeMousePosition: () => Option.some(Point.make({ x, y })),
-        }),
-        [],
-      ],
+    MovedPointer: ({ x, y }) => [
+      evo(model, {
+        maybeMousePosition: () => Option.some(Point.make({ x, y })),
+      }),
+      [],
+    ],
 
-      ClickedTogglePlay: () => [
-        evo(model, { isRunning: running => !running }),
-        [],
-      ],
+    ClickedTogglePlay: () => [
+      evo(model, { isRunning: running => !running }),
+      [],
+    ],
 
-      ClickedReset: () => [
-        evo(model, {
-          particles: () => [],
-          maybeMousePosition: () => Option.none(),
-        }),
-        [],
-      ],
+    ClickedReset: () => [
+      evo(model, {
+        particles: () => [],
+        maybeMousePosition: () => Option.none(),
+      }),
+      [],
+    ],
 
-      GotFlowStrengthSliderMessage: ({ message }) =>
-        foldFlowStrengthSlider(model, message),
+    GotFlowStrengthSliderMessage: ({ message }) =>
+      foldFlowStrengthSlider(model, message),
 
-      GotNoiseScaleSliderMessage: ({ message }) =>
-        foldNoiseScaleSlider(model, message),
-    }),
-  )
+    GotNoiseScaleSliderMessage: ({ message }) =>
+      foldNoiseScaleSlider(model, message),
+  })

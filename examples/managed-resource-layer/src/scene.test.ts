@@ -12,10 +12,10 @@ import {
 import { describe, test } from 'vitest'
 
 import {
-  CompletedCompute,
   Compute,
   EngineOff,
   EngineReady,
+  Message,
   Model,
   managedResources,
   update,
@@ -76,7 +76,7 @@ describe('view', () => {
       given(readyModel),
       click(role('button', { name: 'Compute next square' })),
       Command.expectExact(Compute({ value: 3 })),
-      Command.resolve(Compute, CompletedCompute({ result: 9 })),
+      Command.resolve(Compute, Message.CompletedCompute({ result: 9 })),
       expect(text('Square result: 9')).toExist(),
     )
   })

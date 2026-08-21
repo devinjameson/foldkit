@@ -1,8 +1,7 @@
 import { Match as M } from 'effect'
 import { Command, Runtime, Url } from 'foldkit'
 
-import { GotHomeMessage, GotRoomMessage } from './message'
-import type { Message } from './message'
+import { Message } from './message'
 import { Model } from './model'
 import { Home, Room } from './page'
 import { urlToAppRoute } from './route'
@@ -23,11 +22,11 @@ export const init: Runtime.RoutingApplicationInit<
     M.tagsExhaustive({
       Home: () =>
         Command.mapMessages(homeCommands, message =>
-          GotHomeMessage({ message }),
+          Message.GotHomeMessage({ message }),
         ),
       Room: () =>
         Command.mapMessages(roomCommands, message =>
-          GotRoomMessage({ message }),
+          Message.GotRoomMessage({ message }),
         ),
       NotFound: () => [],
     }),

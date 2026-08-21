@@ -20,7 +20,7 @@ import {
   validate,
 } from 'foldkit/fieldValidation'
 import { Html, HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Button, Input } from '@foldkit/ui'
@@ -46,29 +46,22 @@ export const initModel = (): Model => ({
 
 // MESSAGE
 
-export const ChangedEmail = m('ChangedEmail', { value: S.String })
-export const ChangedPassword = m('ChangedPassword', { value: S.String })
-export const SubmittedForm = m('SubmittedForm')
-export const SucceededSimulateAuthRequest = m('SucceededSimulateAuthRequest', {
-  session: Session,
-})
-export const FailedSimulateAuthRequest = m('FailedSimulateAuthRequest', {
-  error: S.String,
+export const Message = defineMessageUnion({
+  ChangedEmail: { value: S.String },
+  ChangedPassword: { value: S.String },
+  SubmittedForm: {},
+  SucceededSimulateAuthRequest: { session: Session },
+  FailedSimulateAuthRequest: { error: S.String },
 })
 
-export const Message = S.Union([
-  ChangedEmail,
-  ChangedPassword,
-  SubmittedForm,
-  SucceededSimulateAuthRequest,
-  FailedSimulateAuthRequest,
-])
 export type Message = typeof Message.Type
 
 // OUT MESSAGE
 
-export const SucceededLogin = m('SucceededLogin', { session: Session })
-export const OutMessage = S.Union([SucceededLogin])
+export const OutMessage = defineMessageUnion({
+  SucceededLogin: { session: Session },
+})
+
 export type OutMessage = typeof OutMessage.Type
 
 // VALIDATION
@@ -98,17 +91,21 @@ type UpdateReturn = readonly [
   ReadonlyArray<Command.Command<Message>>,
   Option.Option<OutMessage>,
 ]
-const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
 export const SimulateAuthRequest = Command.define('SimulateAuthRequest', {
   args: { email: S.String, password: S.String },
-  messages: [SucceededSimulateAuthRequest, FailedSimulateAuthRequest],
+  messages: [
+    Message.SucceededSimulateAuthRequest,
+    Message.FailedSimulateAuthRequest,
+  ],
   execute: ({ email, password }) =>
     Effect.gen(function* () {
       yield* Effect.sleep(Duration.seconds(1))
 
       if (password !== 'password') {
-        return FailedSimulateAuthRequest({ error: 'Invalid credentials' })
+        return Message.FailedSimulateAuthRequest({
+          error: 'Invalid credentials',
+        })
       }
 
       const name = pipe(
@@ -120,67 +117,64 @@ export const SimulateAuthRequest = Command.define('SimulateAuthRequest', {
 
       const session: Session = { userId: '1', email, name }
 
-      return SucceededSimulateAuthRequest({ session })
+      return Message.SucceededSimulateAuthRequest({ session })
     }),
 })
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    withUpdateReturn,
-    M.tagsExhaustive({
-      ChangedEmail: ({ value }) => [
-        evo(model, { email: () => validateEmail(value) }),
-        [],
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    ChangedEmail: ({ value }) => [
+      evo(model, { email: () => validateEmail(value) }),
+      [],
+      Option.none(),
+    ],
+
+    ChangedPassword: ({ value }) => [
+      evo(model, { password: () => validatePassword(value) }),
+      [],
+      Option.none(),
+    ],
+
+    SubmittedForm: () => {
+      if (model.isSubmitting) {
+        return [model, [], Option.none()]
+      }
+
+      if (!isFormValid(model)) {
+        return [model, [], Option.none()]
+      }
+
+      return [
+        evo(model, { isSubmitting: () => true }),
+        [
+          SimulateAuthRequest({
+            email: model.email.value,
+            password: model.password.value,
+          }),
+        ],
         Option.none(),
-      ],
+      ]
+    },
 
-      ChangedPassword: ({ value }) => [
-        evo(model, { password: () => validatePassword(value) }),
-        [],
-        Option.none(),
-      ],
+    SucceededSimulateAuthRequest: ({ session }) => [
+      model,
+      [],
+      Option.some(OutMessage.SucceededLogin({ session })),
+    ],
 
-      SubmittedForm: () => {
-        if (model.isSubmitting) {
-          return [model, [], Option.none()]
-        }
-
-        if (!isFormValid(model)) {
-          return [model, [], Option.none()]
-        }
-
-        return [
-          evo(model, { isSubmitting: () => true }),
-          [
-            SimulateAuthRequest({
-              email: model.email.value,
-              password: model.password.value,
-            }),
-          ],
-          Option.none(),
-        ]
-      },
-
-      SucceededSimulateAuthRequest: ({ session }) => [
-        model,
-        [],
-        Option.some(SucceededLogin({ session })),
-      ],
-
-      FailedSimulateAuthRequest: ({ error }) => [
-        evo(model, {
-          password: () =>
-            Invalid({
-              value: model.password.value,
-              errors: [error],
-            }),
-          isSubmitting: () => false,
-        }),
-        [],
-        Option.none(),
-      ],
-    }),
-  )
+    FailedSimulateAuthRequest: ({ error }) => [
+      evo(model, {
+        password: () =>
+          Invalid({
+            value: model.password.value,
+            errors: [error],
+          }),
+        isSubmitting: () => false,
+      }),
+      [],
+      Option.none(),
+    ],
+  })
 
 // VIEW
 
@@ -288,13 +282,13 @@ export const view = Submodel.defineView<Model, Message>((model, h) => {
             ],
           ),
           h.form(
-            [h.Class('space-y-6'), h.OnSubmit(SubmittedForm())],
+            [h.Class('space-y-6'), h.OnSubmit(Message.SubmittedForm())],
             [
               fieldView(
                 'email',
                 'Email',
                 model.email,
-                value => ChangedEmail({ value }),
+                value => Message.ChangedEmail({ value }),
                 'email',
                 'you@example.com',
                 h,
@@ -303,7 +297,7 @@ export const view = Submodel.defineView<Model, Message>((model, h) => {
                 'password',
                 'Password',
                 model.password,
-                value => ChangedPassword({ value }),
+                value => Message.ChangedPassword({ value }),
                 'password',
                 'Enter your password',
                 h,

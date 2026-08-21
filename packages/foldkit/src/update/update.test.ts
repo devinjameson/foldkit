@@ -5,7 +5,7 @@ import { describe, it } from '@effect/vitest'
 
 import * as AsyncData from '../asyncData/index.js'
 import { type Command } from '../command/index.js'
-import { m } from '../message/index.js'
+import { defineMessageUnion } from '../message/index.js'
 import { evo } from '../struct/index.js'
 import * as Story from '../test/story.js'
 import {
@@ -22,16 +22,22 @@ import {
   refresh,
 } from './update.js'
 
-const IncrementedCount = m('IncrementedCount')
-const CompletedLoad = m('CompletedLoad')
+const Message = defineMessageUnion({
+  IncrementedCount: {},
+  CompletedLoad: {},
+  BumpedValue: {},
+  CompletedSaveCount: {},
+})
 
-type TestMessage = typeof IncrementedCount.Type | typeof CompletedLoad.Type
+type TestMessage =
+  | typeof Message.IncrementedCount.Type
+  | typeof Message.CompletedLoad.Type
 
 type TestModel = Readonly<{ count: number }>
 
 const makeLoad = (name: string): Command<TestMessage> => ({
   name,
-  effect: Effect.succeed(CompletedLoad()),
+  effect: Effect.succeed(Message.CompletedLoad()),
 })
 
 const loadNotes = makeLoad('LoadNotes')
@@ -232,13 +238,13 @@ describe('refresh', () => {
 
 type CounterModel = Readonly<{ value: number }>
 
-const BumpedValue = m('BumpedValue')
-const CompletedSaveCount = m('CompletedSaveCount')
-type CounterMessage = typeof BumpedValue.Type | typeof CompletedSaveCount.Type
+type CounterMessage =
+  | typeof Message.BumpedValue.Type
+  | typeof Message.CompletedSaveCount.Type
 
 const saveCount: Command<CounterMessage> = {
   name: 'SaveCount',
-  effect: Effect.succeed(CompletedSaveCount()),
+  effect: Effect.succeed(Message.CompletedSaveCount()),
 }
 
 const counterUpdate = (
@@ -339,28 +345,31 @@ const foldGatedCounter = foldChild({
 
 describe('foldChild', () => {
   it('writes the updated child back into the parent Model', () => {
-    const [nextModel, commands] = foldCounter(dashboardModel, BumpedValue())
+    const [nextModel, commands] = foldCounter(
+      dashboardModel,
+      Message.BumpedValue(),
+    )
     expect(nextModel.counter).toEqual({ value: 4 })
     expect(nextModel.lastReportedValue).toBe(0)
     expect(commands.map(command => command.name)).toEqual(['SaveCount'])
   })
 
   it('lifts the child Commands through toParentMessage, preserving name', () => {
-    const [, commands] = foldCounter(dashboardModel, BumpedValue())
+    const [, commands] = foldCounter(dashboardModel, Message.BumpedValue())
 
     const maybeCommand = Array.head(commands)
     expect(Option.isSome(maybeCommand)).toBe(true)
     if (Option.isSome(maybeCommand)) {
       expect(maybeCommand.value.name).toBe('SaveCount')
       expect(Effect.runSync(maybeCommand.value.effect)).toEqual(
-        GotCounterMessage(CompletedSaveCount()),
+        GotCounterMessage(Message.CompletedSaveCount()),
       )
     }
   })
 
   it('is a no-op when read finds no mounted child', () => {
     const model: GatedDashboardModel = { maybeCounter: Option.none() }
-    const [nextModel, commands] = foldGatedCounter(model, BumpedValue())
+    const [nextModel, commands] = foldGatedCounter(model, Message.BumpedValue())
     expect(nextModel).toBe(model)
     expect(commands).toEqual([])
   })
@@ -369,14 +378,14 @@ describe('foldChild', () => {
     const model: GatedDashboardModel = {
       maybeCounter: Option.some({ value: 7 }),
     }
-    const [nextModel] = foldGatedCounter(model, BumpedValue())
+    const [nextModel] = foldGatedCounter(model, Message.BumpedValue())
     expect(nextModel.maybeCounter).toEqual(Option.some({ value: 8 }))
   })
 
   it('skips foldOutMessage when the child emits no OutMessage', () => {
     const [nextModel, commands] = foldReportingCounter(
       dashboardModel,
-      CompletedSaveCount(),
+      Message.CompletedSaveCount(),
     )
     expect(nextModel.counter).toBe(dashboardModel.counter)
     expect(nextModel.lastReportedValue).toBe(0)
@@ -384,13 +393,19 @@ describe('foldChild', () => {
   })
 
   it('runs foldOutMessage against the Model with the child already written', () => {
-    const [nextModel] = foldReportingCounter(dashboardModel, BumpedValue())
+    const [nextModel] = foldReportingCounter(
+      dashboardModel,
+      Message.BumpedValue(),
+    )
     expect(nextModel.counter).toEqual({ value: 4 })
     expect(nextModel.lastReportedValue).toBe(4)
   })
 
   it('appends the OutMessage Step Commands after the mapped child Commands', () => {
-    const [, commands] = foldReportingCounter(dashboardModel, BumpedValue())
+    const [, commands] = foldReportingCounter(
+      dashboardModel,
+      Message.BumpedValue(),
+    )
     expect(commands.map(command => command.name)).toEqual([
       'SaveCount',
       'NotifyValueChanged',
@@ -402,7 +417,9 @@ describe('foldChild', () => {
       counter: CounterModel,
       key: string,
     ): Return<CounterModel, CounterMessage> =>
-      key === 'ArrowUp' ? counterUpdate(counter, BumpedValue()) : [counter, []]
+      key === 'ArrowUp'
+        ? counterUpdate(counter, Message.BumpedValue())
+        : [counter, []]
 
     const foldCounterKeyPress = foldChild({
       update: informPressedKey,
@@ -444,14 +461,14 @@ describe('foldChild', () => {
     >()
 
     const [bumpedModel, bumpedCommands, maybeBumpedOutMessage] =
-      foldCounterInSubmodel(dashboardModel, BumpedValue())
+      foldCounterInSubmodel(dashboardModel, Message.BumpedValue())
     expect(bumpedModel.counter).toEqual({ value: 4 })
     expect(bumpedCommands.map(command => command.name)).toEqual(['SaveCount'])
     expect(maybeBumpedOutMessage).toEqual(Option.some(ReportedValue()))
 
     const [, , maybeSavedOutMessage] = foldCounterInSubmodel(
       dashboardModel,
-      CompletedSaveCount(),
+      Message.CompletedSaveCount(),
     )
     expect(maybeSavedOutMessage).toEqual(Option.none())
   })
@@ -470,7 +487,7 @@ describe('foldChild', () => {
     })
 
     const [nextModel, commands, maybeOutMessage] =
-      foldReportingCounterInSubmodel(dashboardModel, BumpedValue())
+      foldReportingCounterInSubmodel(dashboardModel, Message.BumpedValue())
     expect(nextModel.lastReportedValue).toBe(4)
     expect(commands.map(command => command.name)).toEqual([
       'SaveCount',
@@ -482,10 +499,11 @@ describe('foldChild', () => {
   it('runs the same fold data-first and data-last', () => {
     const [dataFirstModel, dataFirstCommands] = foldReportingCounter(
       dashboardModel,
-      BumpedValue(),
+      Message.BumpedValue(),
     )
-    const [dataLastModel, dataLastCommands] =
-      foldReportingCounter(BumpedValue())(dashboardModel)
+    const [dataLastModel, dataLastCommands] = foldReportingCounter(
+      Message.BumpedValue(),
+    )(dashboardModel)
 
     expect(dataFirstModel).toEqual(dataLastModel)
     expect(dataFirstCommands.map(command => command.name)).toEqual(
@@ -495,8 +513,8 @@ describe('foldChild', () => {
 
   it('composes data-last with combine as an ordinary Step', () => {
     const reportThenBump = combine([
-      foldReportingCounter(BumpedValue()),
-      foldCounter(BumpedValue()),
+      foldReportingCounter(Message.BumpedValue()),
+      foldCounter(Message.BumpedValue()),
     ])
 
     const [nextModel, commands] = reportThenBump(dashboardModel)
@@ -512,12 +530,12 @@ describe('foldChild', () => {
 
 const settleCounter: Command<CounterMessage> = {
   name: 'SettleCounter',
-  effect: Effect.succeed(BumpedValue()),
+  effect: Effect.succeed(Message.BumpedValue()),
 }
 
 const trimCounter: Command<CounterMessage> = {
   name: 'TrimCounter',
-  effect: Effect.succeed(CompletedSaveCount()),
+  effect: Effect.succeed(Message.CompletedSaveCount()),
 }
 
 const foldSettlingCounterOutMessage: (
@@ -554,7 +572,10 @@ const dashboardUpdate = (
 
 describe('foldChild fold context', () => {
   it('lifts a Command the OutMessage Step returns through toParentMessage', () => {
-    const [, commands] = foldSettlingCounter(dashboardModel, BumpedValue())
+    const [, commands] = foldSettlingCounter(
+      dashboardModel,
+      Message.BumpedValue(),
+    )
 
     expect(commands.map(command => command.name)).toEqual([
       'SaveCount',
@@ -565,7 +586,7 @@ describe('foldChild fold context', () => {
     expect(Option.isSome(maybeSettle)).toBe(true)
     if (Option.isSome(maybeSettle)) {
       expect(Effect.runSync(maybeSettle.value.effect)).toEqual(
-        GotCounterMessage(BumpedValue()),
+        GotCounterMessage(Message.BumpedValue()),
       )
     }
   })
@@ -581,7 +602,10 @@ describe('foldChild fold context', () => {
         model => [model, liftCommands([settleCounter, trimCounter])],
     })
 
-    const [, commands] = foldTrimmingCounter(dashboardModel, BumpedValue())
+    const [, commands] = foldTrimmingCounter(
+      dashboardModel,
+      Message.BumpedValue(),
+    )
 
     expect(commands.map(command => command.name)).toEqual([
       'SaveCount',
@@ -589,9 +613,9 @@ describe('foldChild fold context', () => {
       'TrimCounter',
     ])
     expect(commands.map(command => Effect.runSync(command.effect))).toEqual([
-      GotCounterMessage(CompletedSaveCount()),
-      GotCounterMessage(BumpedValue()),
-      GotCounterMessage(CompletedSaveCount()),
+      GotCounterMessage(Message.CompletedSaveCount()),
+      GotCounterMessage(Message.BumpedValue()),
+      GotCounterMessage(Message.CompletedSaveCount()),
     ])
   })
 
@@ -599,18 +623,18 @@ describe('foldChild fold context', () => {
     Story.story(
       dashboardUpdate,
       Story.given(dashboardModel),
-      Story.message(GotCounterMessage(BumpedValue())),
+      Story.message(GotCounterMessage(Message.BumpedValue())),
       Story.model(model => {
         expect(model.counter.value).toBe(4)
       }),
-      Story.Command.resolve(settleCounter, BumpedValue()),
+      Story.Command.resolve(settleCounter, Message.BumpedValue()),
       Story.model(model => {
         expect(model.counter.value).toBe(5)
       }),
       Story.Command.resolveAll(
-        [saveCount, CompletedSaveCount()],
-        [saveCount, CompletedSaveCount()],
-        [settleCounter, CompletedSaveCount()],
+        [saveCount, Message.CompletedSaveCount()],
+        [saveCount, Message.CompletedSaveCount()],
+        [settleCounter, Message.CompletedSaveCount()],
       ),
     )
   })
@@ -642,7 +666,7 @@ describe('foldChild fold context', () => {
 
     const [nextModel, commands] = foldReportedValue(
       dashboardModel,
-      BumpedValue(),
+      Message.BumpedValue(),
     )
     expect(nextModel.lastReportedValue).toBe(4)
     expect(commands.map(command => command.name)).toEqual(['SaveCount'])
@@ -682,7 +706,7 @@ describe('foldChildStep', () => {
     >()
 
     const [nextModel, commands] = combine(dashboardModel, [
-      foldCounter(BumpedValue()),
+      foldCounter(Message.BumpedValue()),
       foldCounterReset,
     ])
 
@@ -757,7 +781,7 @@ describe('foldChildStep', () => {
     expect(Option.isSome(maybeSettle)).toBe(true)
     if (Option.isSome(maybeSettle)) {
       expect(Effect.runSync(maybeSettle.value.effect)).toEqual(
-        GotCounterMessage(BumpedValue()),
+        GotCounterMessage(Message.BumpedValue()),
       )
     }
   })
@@ -872,7 +896,7 @@ describe('types', () => {
 
     const [incrementedModel, incrementedCommands] = update(
       { count: 1 },
-      IncrementedCount(),
+      Message.IncrementedCount(),
     )
     expect(incrementedModel).toEqual({ count: 2 })
     expect(incrementedCommands).toEqual([])
@@ -880,7 +904,7 @@ describe('types', () => {
     const acknowledgedModel: TestModel = { count: 4 }
     const [unchangedModel, unchangedCommands] = update(
       acknowledgedModel,
-      CompletedLoad(),
+      Message.CompletedLoad(),
     )
     expect(unchangedModel).toBe(acknowledgedModel)
     expect(unchangedCommands).toEqual([])

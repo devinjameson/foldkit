@@ -120,9 +120,9 @@ const demoCodePlugin = (
 
 const COUNTER_DEMO_CODE_ID = 'virtual:counter-demo-code'
 
-const DEMO_IMPORTS = `import { Effect, Match as M, Schema as S } from 'effect'
+const DEMO_IMPORTS = `import { Effect, Schema as S } from 'effect'
 import { Command } from 'foldkit'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'`
 
 const DEMO_CODE = `// MODEL
@@ -136,28 +136,24 @@ type Model = typeof Model.Type
 
 // MESSAGE
 
-const ClickedIncrement = m('ClickedIncrement')
-const ChangedResetDuration = m('ChangedResetDuration', {
-  seconds: S.Number,
+const Message = defineMessageUnion({
+  ClickedIncrement: {},
+  ChangedResetDuration: { seconds: S.Number },
+  ClickedResetAfterDelay: {},
+  CompletedDelayReset: {},
 })
-const ClickedResetAfterDelay = m('ClickedResetAfterDelay')
-const CompletedDelayReset = m('CompletedDelayReset')
-
-const Message = S.Union([
-  ClickedIncrement,
-  ChangedResetDuration,
-  ClickedResetAfterDelay,
-  CompletedDelayReset,
-])
 type Message = typeof Message.Type
 
 // COMMAND
 
 const DelayReset = Command.define('DelayReset', {
   args: { seconds: S.Number },
-  messages: [CompletedDelayReset],
+  messages: [Message.CompletedDelayReset],
   execute: ({ seconds }) =>
-    Effect.as(Effect.sleep(\`\${seconds} seconds\`), CompletedDelayReset()),
+    Effect.as(
+      Effect.sleep(\`\${seconds} seconds\`),
+      Message.CompletedDelayReset(),
+    ),
 })
 
 // UPDATE
@@ -166,64 +162,48 @@ type UpdateReturn = readonly [
   Model,
   ReadonlyArray<Command.Command<Message>>,
 ]
-const withUpdateReturn = M.withReturnType<UpdateReturn>()
-
-const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    withUpdateReturn,
-    M.tagsExhaustive({
-      ClickedIncrement: () => [
-        evo(model, { count: count => count + 1 }),
-        [],
-      ],
-      ChangedResetDuration: ({ seconds }) => [
-        evo(model, { resetDuration: () => seconds }),
-        [],
-      ],
-      ClickedResetAfterDelay: () => [
-        evo(model, { isResetting: () => true }),
-        [DelayReset({ seconds: model.resetDuration })],
-      ],
-      CompletedDelayReset: () => [
-        evo(model, { count: () => 0, isResetting: () => false }),
-        [],
-      ],
-    }),
-  )`
+const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    ClickedIncrement: () => [
+      evo(model, { count: count => count + 1 }),
+      [],
+    ],
+    ChangedResetDuration: ({ seconds }) => [
+      evo(model, { resetDuration: () => seconds }),
+      [],
+    ],
+    ClickedResetAfterDelay: () => [
+      evo(model, { isResetting: () => true }),
+      [DelayReset({ seconds: model.resetDuration })],
+    ],
+    CompletedDelayReset: () => [
+      evo(model, { count: () => 0, isResetting: () => false }),
+      [],
+    ],
+  })`
 
 const COUNTER_PHASE_REGIONS: PhaseRegions = {
-  IncrementMessage: [
-    { from: "const ClickedIncrement = m('ClickedIncrement')" },
-  ],
-  IncrementUpdate: [
-    { from: '      ClickedIncrement: () => [', to: '      ],' },
-  ],
+  IncrementMessage: [{ from: '  ClickedIncrement: {},' }],
+  IncrementUpdate: [{ from: '    ClickedIncrement: () => [', to: '    ],' }],
   IncrementModel: [{ from: 'const Model = S.Struct({', to: '})' }],
   DurationMessage: [
     {
-      from: "const ChangedResetDuration = m('ChangedResetDuration', {",
-      to: '})',
+      from: '  ChangedResetDuration: { seconds: S.Number },',
     },
   ],
   DurationUpdate: [
-    { from: '      ChangedResetDuration: ({ seconds }) => [', to: '      ],' },
+    { from: '    ChangedResetDuration: ({ seconds }) => [', to: '    ],' },
   ],
   DurationModel: [{ from: '  resetDuration: S.Number,' }],
-  ResetMessage: [
-    { from: "const ClickedResetAfterDelay = m('ClickedResetAfterDelay')" },
-  ],
-  ResetUpdate: [
-    { from: '      ClickedResetAfterDelay: () => [', to: '      ],' },
-  ],
+  ResetMessage: [{ from: '  ClickedResetAfterDelay: {},' }],
+  ResetUpdate: [{ from: '    ClickedResetAfterDelay: () => [', to: '    ],' }],
   ResetCommand: [
     { from: "const DelayReset = Command.define('DelayReset', {", to: '})' },
-    { from: '        [DelayReset({ seconds: model.resetDuration })],' },
+    { from: '      [DelayReset({ seconds: model.resetDuration })],' },
   ],
-  ResetCommandMessage: [
-    { from: "const CompletedDelayReset = m('CompletedDelayReset')" },
-  ],
+  ResetCommandMessage: [{ from: '  CompletedDelayReset: {},' }],
   ResetCommandUpdate: [
-    { from: '      CompletedDelayReset: () => [', to: '      ],' },
+    { from: '    CompletedDelayReset: () => [', to: '    ],' },
   ],
   ResetModel: [{ from: 'const Model = S.Struct({', to: '})' }],
 }
@@ -249,7 +229,7 @@ const NOTE_PLAYER_DEMO_IMPORTS = `import {
   Schema as S,
 } from 'effect'
 import { Command } from 'foldkit'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'`
 
@@ -272,17 +252,11 @@ type Model = typeof Model.Type
 
 // MESSAGE
 
-const ClickedPlay = m('ClickedPlay')
-const ClickedPause = m('ClickedPause')
-const CompletedPlayNote = m('CompletedPlayNote', {
-  noteIndex: S.Number,
+const Message = defineMessageUnion({
+  ClickedPlay: {},
+  ClickedPause: {},
+  CompletedPlayNote: { noteIndex: S.Number },
 })
-
-const Message = S.Union([
-  ClickedPlay,
-  ClickedPause,
-  CompletedPlayNote,
-])
 type Message = typeof Message.Type
 
 // UPDATE
@@ -311,48 +285,45 @@ const playNoteAt = (
   ],
 ]
 
-const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    withUpdateReturn,
-    M.tagsExhaustive({
-      ClickedPlay: () =>
-        M.value(model.playbackState).pipe(
-          withUpdateReturn,
-          M.tagsExhaustive({
-            Idle: () => playNoteAt(model, 0),
-            Paused: ({ currentNoteIndex }) =>
-              playNoteAt(model, currentNoteIndex),
-            Playing: () => [model, []],
-          }),
-        ),
-      ClickedPause: () =>
-        M.value(model.playbackState).pipe(
-          withUpdateReturn,
-          M.tagsExhaustive({
-            Playing: ({ currentNoteIndex }) => [
-              evo(model, {
-                playbackState: () => Paused({ currentNoteIndex }),
-              }),
-              [],
-            ],
-            Idle: () => [model, []],
-            Paused: () => [model, []],
-          }),
-        ),
-      CompletedPlayNote: ({ noteIndex }) => {
-        const { playbackState, noteSequence } = model
-        const nextCurrentNoteIndex = noteIndex + 1
+const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    ClickedPlay: () =>
+      M.value(model.playbackState).pipe(
+        withUpdateReturn,
+        M.tagsExhaustive({
+          Idle: () => playNoteAt(model, 0),
+          Paused: ({ currentNoteIndex }) =>
+            playNoteAt(model, currentNoteIndex),
+          Playing: () => [model, []],
+        }),
+      ),
+    ClickedPause: () =>
+      M.value(model.playbackState).pipe(
+        withUpdateReturn,
+        M.tagsExhaustive({
+          Playing: ({ currentNoteIndex }) => [
+            evo(model, {
+              playbackState: () => Paused({ currentNoteIndex }),
+            }),
+            [],
+          ],
+          Idle: () => [model, []],
+          Paused: () => [model, []],
+        }),
+      ),
+    CompletedPlayNote: ({ noteIndex }) => {
+      const { playbackState, noteSequence } = model
+      const nextCurrentNoteIndex = noteIndex + 1
 
-        if (playbackState._tag !== 'Playing') {
-          return [model, []]
-        } else if (nextCurrentNoteIndex >= noteSequence.length) {
-          return [evo(model, { playbackState: () => Idle() }), []]
-        } else {
-          return playNoteAt(model, nextCurrentNoteIndex)
-        }
-      },
-    }),
-  )
+      if (playbackState._tag !== 'Playing') {
+        return [model, []]
+      } else if (nextCurrentNoteIndex >= noteSequence.length) {
+        return [evo(model, { playbackState: () => Idle() }), []]
+      } else {
+        return playNoteAt(model, nextCurrentNoteIndex)
+      }
+    },
+  })
 
 // RESOURCE
 
@@ -370,7 +341,7 @@ class AudioContextService extends Context.Service<
 
 const PlayNote = Command.define('PlayNote', {
   args: { note: Note, duration: S.Number, noteIndex: S.Number },
-  messages: [CompletedPlayNote],
+  messages: [Message.CompletedPlayNote],
   execute: ({ note, duration, noteIndex }) =>
     Effect.gen(function* () {
       const audioContext = yield* AudioContextService
@@ -385,24 +356,22 @@ const PlayNote = Command.define('PlayNote', {
         oscillator.start()
         oscillator.stop(audioContext.currentTime + duration)
         oscillator.onended = () =>
-          resume(Effect.succeed(CompletedPlayNote({ noteIndex })))
+          resume(Effect.succeed(Message.CompletedPlayNote({ noteIndex })))
       })
     }),
 })`
 
 const NOTE_PLAYER_PHASE_REGIONS: PhaseRegions = {
-  PlayMessage: [{ from: "const ClickedPlay = m('ClickedPlay')" }],
-  PauseMessage: [{ from: "const ClickedPause = m('ClickedPause')" }],
+  PlayMessage: [{ from: '  ClickedPlay: {},' }],
+  PauseMessage: [{ from: '  ClickedPause: {},' }],
   PlayUpdate: [
-    { from: '      ClickedPlay: () =>', to: '        ),' },
+    { from: '    ClickedPlay: () =>', to: '      ),' },
     { from: 'const playNoteAt = (', to: ']' },
   ],
   PlayModel: [{ from: 'const Model = S.Struct({', to: '})' }],
-  NoteMessage: [
-    { from: "const CompletedPlayNote = m('CompletedPlayNote', {", to: '})' },
-  ],
+  NoteMessage: [{ from: '  CompletedPlayNote: { noteIndex: S.Number },' }],
   NoteUpdate: [
-    { from: '      CompletedPlayNote: ({ noteIndex }) => {', to: '      },' },
+    { from: '    CompletedPlayNote: ({ noteIndex }) => {', to: '    },' },
     { from: 'const playNoteAt = (', to: ']' },
   ],
   NoteModel: [{ from: 'const Model = S.Struct({', to: '})' }],

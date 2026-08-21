@@ -9,7 +9,7 @@ import {
 } from 'effect'
 import { Command, Runtime, Update } from 'foldkit'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { UrlRequest, load, pushUrl } from 'foldkit/navigation'
 import { Transition } from 'foldkit/route'
 import { ts } from 'foldkit/schema'
@@ -75,65 +75,58 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const CompletedNavigateInternal = m('CompletedNavigateInternal')
-export const CompletedLoadExternal = m('CompletedLoadExternal')
-export const ClickedLink = m('ClickedLink', { request: UrlRequest })
-export const ChangedUrl = m('ChangedUrl', { url: Url })
-export const SucceededLoadCatalog = m('SucceededLoadCatalog')
-export const SucceededLoadPainting = m('SucceededLoadPainting', {
-  paintingId: S.Number,
+export const Message = defineMessageUnion({
+  CompletedNavigateInternal: {},
+  CompletedLoadExternal: {},
+  ClickedLink: { request: UrlRequest },
+  ChangedUrl: { url: Url },
+  SucceededLoadCatalog: {},
+  SucceededLoadPainting: { paintingId: S.Number },
+  UpdatedStudioDraft: { value: S.String },
+  SucceededSaveDraft: { draft: S.String },
 })
-export const UpdatedStudioDraft = m('UpdatedStudioDraft', { value: S.String })
-export const SucceededSaveDraft = m('SucceededSaveDraft', { draft: S.String })
 
-export const Message = S.Union([
-  CompletedNavigateInternal,
-  CompletedLoadExternal,
-  ClickedLink,
-  ChangedUrl,
-  SucceededLoadCatalog,
-  SucceededLoadPainting,
-  UpdatedStudioDraft,
-  SucceededSaveDraft,
-])
 export type Message = typeof Message.Type
 
 // COMMAND
 
 const NavigateInternal = Command.define('NavigateInternal', {
   args: { url: S.String },
-  messages: [CompletedNavigateInternal],
+  messages: [Message.CompletedNavigateInternal],
   execute: ({ url }) =>
-    pushUrl(url).pipe(Effect.as(CompletedNavigateInternal())),
+    pushUrl(url).pipe(Effect.as(Message.CompletedNavigateInternal())),
 })
 
 const LoadExternal = Command.define('LoadExternal', {
   args: { href: S.String },
-  messages: [CompletedLoadExternal],
-  execute: ({ href }) => load(href).pipe(Effect.as(CompletedLoadExternal())),
+  messages: [Message.CompletedLoadExternal],
+  execute: ({ href }) =>
+    load(href).pipe(Effect.as(Message.CompletedLoadExternal())),
 })
 
 export const LoadCatalog = Command.define('LoadCatalog', {
-  messages: [SucceededLoadCatalog],
+  messages: [Message.SucceededLoadCatalog],
   execute: Effect.sleep(CATALOG_LATENCY).pipe(
-    Effect.as(SucceededLoadCatalog()),
+    Effect.as(Message.SucceededLoadCatalog()),
   ),
 })
 
 export const LoadPainting = Command.define('LoadPainting', {
   args: { paintingId: S.Number },
-  messages: [SucceededLoadPainting],
+  messages: [Message.SucceededLoadPainting],
   execute: ({ paintingId }) =>
     Effect.sleep(PAINTING_LATENCY).pipe(
-      Effect.as(SucceededLoadPainting({ paintingId })),
+      Effect.as(Message.SucceededLoadPainting({ paintingId })),
     ),
 })
 
 export const SaveDraft = Command.define('SaveDraft', {
   args: { draft: S.String },
-  messages: [SucceededSaveDraft],
+  messages: [Message.SucceededSaveDraft],
   execute: ({ draft }) =>
-    Effect.sleep(SAVE_LATENCY).pipe(Effect.as(SucceededSaveDraft({ draft }))),
+    Effect.sleep(SAVE_LATENCY).pipe(
+      Effect.as(Message.SucceededSaveDraft({ draft })),
+    ),
 })
 
 // UPDATE
@@ -229,61 +222,58 @@ const handleTransition = (
     saveDraftOnStudioExit(transition),
   ])
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    withUpdateReturn,
-    M.tagsExhaustive({
-      CompletedNavigateInternal: () => [model, []],
-      CompletedLoadExternal: () => [model, []],
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    CompletedNavigateInternal: () => [model, []],
+    CompletedLoadExternal: () => [model, []],
 
-      ClickedLink: ({ request }) =>
-        M.value(request).pipe(
-          withUpdateReturn,
-          M.tagsExhaustive({
-            Internal: ({ url }) => [
-              model,
-              [NavigateInternal({ url: urlToString(url) })],
-            ],
-            External: ({ href }) => [model, [LoadExternal({ href })]],
-          }),
-        ),
+    ClickedLink: ({ request }) =>
+      M.value(request).pipe(
+        withUpdateReturn,
+        M.tagsExhaustive({
+          Internal: ({ url }) => [
+            model,
+            [NavigateInternal({ url: urlToString(url) })],
+          ],
+          External: ({ href }) => [model, [LoadExternal({ href })]],
+        }),
+      ),
 
-      ChangedUrl: ({ url }) => {
-        const nextRoute = urlToAppRoute(url)
-        const transition = Transition.make(model.route, nextRoute)
-        return handleTransition(
-          evo(model, { route: () => nextRoute }),
-          transition,
-        )
-      },
+    ChangedUrl: ({ url }) => {
+      const nextRoute = urlToAppRoute(url)
+      const transition = Transition.make(model.route, nextRoute)
+      return handleTransition(
+        evo(model, { route: () => nextRoute }),
+        transition,
+      )
+    },
 
-      SucceededLoadCatalog: () => [
-        evo(model, { catalogStatus: () => 'Ready' }),
-        [],
-      ],
+    SucceededLoadCatalog: () => [
+      evo(model, { catalogStatus: () => 'Ready' }),
+      [],
+    ],
 
-      SucceededLoadPainting: ({ paintingId }) =>
-        model.paintingStatus._tag === 'PaintingLoading' &&
-        model.paintingStatus.paintingId === paintingId
-          ? [
-              evo(model, {
-                paintingStatus: () => PaintingReady({ paintingId }),
-              }),
-              [],
-            ]
-          : [model, []],
+    SucceededLoadPainting: ({ paintingId }) =>
+      model.paintingStatus._tag === 'PaintingLoading' &&
+      model.paintingStatus.paintingId === paintingId
+        ? [
+            evo(model, {
+              paintingStatus: () => PaintingReady({ paintingId }),
+            }),
+            [],
+          ]
+        : [model, []],
 
-      UpdatedStudioDraft: ({ value }) => [
-        evo(model, { studioDraft: () => value }),
-        [],
-      ],
+    UpdatedStudioDraft: ({ value }) => [
+      evo(model, { studioDraft: () => value }),
+      [],
+    ],
 
-      SucceededSaveDraft: ({ draft }) => [
-        evo(model, { maybeSavedDraft: () => Option.some(draft) }),
-        [],
-      ],
-    }),
-  )
+    SucceededSaveDraft: ({ draft }) => [
+      evo(model, { maybeSavedDraft: () => Option.some(draft) }),
+      [],
+    ],
+  })
 
 // INIT
 
@@ -615,7 +605,7 @@ const studioView = (
       ),
       h.textarea([
         h.Value(studioDraft),
-        h.OnInput(value => UpdatedStudioDraft({ value })),
+        h.OnInput(value => Message.UpdatedStudioDraft({ value })),
         h.Placeholder('A half-finished thought…'),
         h.Class(
           'w-full h-40 bg-white border border-gray-300 rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-indigo-500',

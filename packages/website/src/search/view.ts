@@ -7,15 +7,7 @@ import { Dialog } from '@foldkit/ui'
 
 import { Icon } from '../icon'
 import { KEYBOARD_WARMUP_INPUT_ID, SEARCH_INPUT_ID } from './command'
-import {
-  ClearedSearchQuery,
-  GotSearchDialogMessage,
-  type Message,
-  PressedArrowKey,
-  type SearchResult,
-  SelectedSearchResult,
-  UpdatedSearchQuery,
-} from './message'
+import { Message, type SearchResult } from './message'
 import type { Model } from './model'
 import { resultsFromState } from './model'
 
@@ -28,12 +20,14 @@ const handleSearchInputKeyDown = (
 ): Option.Option<Message> =>
   M.value(key).pipe(
     M.when('ArrowDown', () =>
-      Option.some(PressedArrowKey({ direction: 'Down' })),
+      Option.some(Message.PressedArrowKey({ direction: 'Down' })),
     ),
-    M.when('ArrowUp', () => Option.some(PressedArrowKey({ direction: 'Up' }))),
+    M.when('ArrowUp', () =>
+      Option.some(Message.PressedArrowKey({ direction: 'Up' })),
+    ),
     M.when('Escape', () =>
       String.isNonEmpty(model.query)
-        ? Option.some(ClearedSearchQuery())
+        ? Option.some(Message.ClearedSearchQuery())
         : Option.none(),
     ),
     M.when('Enter', () =>
@@ -42,7 +36,9 @@ const handleSearchInputKeyDown = (
             model.searchState,
             resultsFromState,
             Array.get(model.activeResultIndex),
-            Option.map(result => SelectedSearchResult({ url: result.url })),
+            Option.map(result =>
+              Message.SelectedSearchResult({ url: result.url }),
+            ),
           )
         : Option.none(),
     ),
@@ -78,7 +74,7 @@ const searchInputView = (model: Model, h: HtmlBuilder<Message>): Html => {
         h.Class(
           'flex-1 bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none text-base',
         ),
-        h.OnInput(value => UpdatedSearchQuery({ query: value })),
+        h.OnInput(value => Message.UpdatedSearchQuery({ query: value })),
         h.OnKeyDownPreventDefault(key => handleSearchInputKeyDown(key, model)),
       ]),
     ],
@@ -125,7 +121,7 @@ const resultItemView = (
         ),
       ),
       h.DataAttribute('search-result-index', `${index}`),
-      h.OnClick(SelectedSearchResult({ url: result.url })),
+      h.OnClick(Message.SelectedSearchResult({ url: result.url })),
     ],
     [
       h.div(
@@ -297,7 +293,8 @@ export const view = Submodel.defineView<Model, Message>(
                   : [],
               ),
           },
-          toParentMessage: message => GotSearchDialogMessage({ message }),
+          toParentMessage: message =>
+            Message.GotSearchDialogMessage({ message }),
         }),
       ],
     ),

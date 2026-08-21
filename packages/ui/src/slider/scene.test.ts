@@ -5,7 +5,7 @@ import * as Scene from 'foldkit/scene'
 import { describe, it } from '@effect/vitest'
 
 import type { SliderAttributes } from './index.js'
-import { PressedThumb, init, update, view } from './index.js'
+import { Message, init, update, view } from './index.js'
 
 const testToView = (attributes: SliderAttributes) =>
   ih.div(
@@ -121,7 +121,7 @@ describe('Slider', () => {
     it('marks the root, track, and thumb with data-dragging while Dragging', () => {
       const [draggingModel] = update(
         defaultModel,
-        PressedThumb({ originValue: 5 }),
+        Message.PressedThumb({ originValue: 5 }),
       )
       Scene.scene(
         { update, view: sceneView() },

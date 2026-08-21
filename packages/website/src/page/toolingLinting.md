@@ -20,12 +20,6 @@ Rejects catch-all Messages that make update branches and traces less meaningful.
 
 ::Snippet{name="lintNoNoopMessage" label="foldkit/no-noop-message example"}
 
-### foldkit/message-binding-matches-tag {#message-binding-matches-tag}
-
-Keeps a Message binding and its m() tag identical, so renames do not leave misleading traces behind.
-
-::Snippet{name="lintMessageBindingMatchesTag" label="foldkit/message-binding-matches-tag example"}
-
 ### foldkit/no-empty-object-tagged-call {#no-empty-object-tagged-call}
 
 Catches empty-object calls to no-field Message constructors. A no-field Message should be called with no arguments.

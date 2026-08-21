@@ -55,10 +55,9 @@ hits aren't allowed. Phase 4.5 of SKILL.md runs this block; the reviewer in
 Phase 6 runs it again as sanity.
 
 ```bash
-# Empty-object constructor calls. foldkit/no-empty-object-tagged-call covers this
-# ONLY for a bare identifier callee: it bails on `!isIdentifier(node.callee)`, so
-# `Todo.ClickedDelete({})` through a namespace import is unflagged, and namespaced
-# Submodel Messages are the common spelling.
+# Empty-object constructor calls. foldkit/no-empty-object-tagged-call covers bare
+# constructors and `Message.*` calls. Other namespace calls such as
+# `Todo.ClickedDelete({})` are unflagged.
 grep -rn "({})" src/
 
 # External links missing Rel. foldkit/require-rel-for-external-link bails when the
@@ -195,8 +194,8 @@ Alongside the greps, eyeball each file's imports. Every symbol you imported shou
 
 ## Structural completeness
 
-- [ ] Every `m()` declaration is included in the `S.Union`
-- [ ] Every union member has a case in `M.tagsExhaustive` in update
+- [ ] Every Message variant is declared once in `defineMessageUnion()`
+- [ ] Every Message variant has a case in `Message.match` in update
 - [ ] Every route variant has a corresponding view branch
 - [ ] Every `Succeeded*` has a paired `Failed*`
 - [ ] Every discriminated union variant is handled in both update and view
@@ -215,7 +214,7 @@ Alongside the greps, eyeball each file's imports. Every symbol you imported shou
 - [ ] Every Command identity defined with `Command.define` and assigned to a PascalCase constant
 - [ ] No inline `Command.define` in pipe chains. Always stored as a constant
 - [ ] Definitions colocated with the update that produces them
-- [ ] Every _fallible_ Command catches all errors: `Effect.catch(() => Effect.succeed(FailedX(...)))`. Infallible Effects (`Clock.currentTimeMillis`, `Random.nextIntBetween`, `Effect.uuid`, `Calendar.today.local`) do NOT need catch. If the type system shows no error channel, there's nothing to catch, and no paired `Failed*` Message is needed either.
+- [ ] Every _fallible_ Command catches all errors: `Effect.catch(() => Effect.succeed(Message.FailedX(...)))`. Infallible Effects (`Clock.currentTimeMillis`, `Random.nextIntBetween`, `Effect.uuid`, `Calendar.today.local`) do NOT need catch. If the type system shows no error channel, there's nothing to catch, and no paired `Failed*` Message is needed either.
 - [ ] Return types inferred. No explicit `Command<typeof A>` annotations
 - [ ] Factory functions named by action: `fetchWeather`, not `fetchWeatherCommand`
 - [ ] Commands that can't meaningfully fail return `Completed*` Messages, payload-carrying ones included
@@ -263,14 +262,14 @@ Alongside the greps, eyeball each file's imports. Every symbol you imported shou
 - [ ] `Option` for absent fields (not empty strings, null, or zero)
 - [ ] Impossible states are unrepresentable
 - [ ] `ts()` for non-Message tagged structs (Model states, route variants)
-- [ ] `m()` only for Message variants
+- [ ] `defineMessageUnion()` for Message and OutMessage unions
 - [ ] **Remote data uses `AsyncData`, not a hand-rolled union.** `AsyncData.Schema(DataSchema, ErrorSchema)` supplies `Idle`, `Loading`, `Refreshing`, `Failure`, `Stale`, and `Success` plus `match`, `isPending`, `hasData`, `revalidate`, and the rest. A hand-rolled `Idle | Loading | Error | Ok` is missing `Refreshing` and `Stale`, which is what forces a refetch to blank the screen and a failed refetch to discard good data. Reference: `repos/foldkit/examples/weather/src/main.ts`
 
 ## Framework modules over hand-rolled equivalents
 
 Foldkit ships these; reaching past them is a finding, not a style choice.
 
-- [ ] Update return type is aliased once per file, not repeated inline at the signature and again at each `M.withReturnType` site. `Update.Return<Model, Message>` (or `Update.ReturnWithOutMessage<Model, Message, OutMessage>`) is the preferred spelling for new code; a hand-written tuple alias is what most examples still use and is not itself a finding
+- [ ] Update return type is aliased once per file and passed to `Message.match<UpdateReturn>`. The update signature does not repeat `: UpdateReturn`. Use `M.withReturnType<UpdateReturn>()` only for an Effect `Match` over another tagged union inside a handler. `Update.Return<Model, Message>` (or `Update.ReturnWithOutMessage<Model, Message, OutMessage>`) is the preferred alias; a hand-written tuple alias is not itself a finding
 - [ ] Multi-step post-mutation handlers use `Update.combine(model, [...])` and `Update.refresh({ read, revalidate, write, load })` rather than hand-threaded `evo` chains and conditional Command arrays
 - [ ] Child Submodel Commands are re-tagged with `Command.mapMessages(commands, toParentMessage)`
 - [ ] HTTP uses `HttpClient` / `HttpClientRequest` from `effect/unstable/http`, with `Effect.provide(effect, Http.layer)` to supply the client. Not `@effect/platform` (`@effect/platform-browser` is separate and is for `BrowserKeyValueStore` / `BrowserCrypto`)
@@ -279,11 +278,12 @@ Foldkit ships these; reaching past them is a finding, not a style choice.
 ## Effect-TS patterns
 
 - [ ] `pipe()` only for multi-step chains (not single operations)
-- [ ] `M.tagsExhaustive` for all Message/state matching (no switch)
+- [ ] `Message.match` for exhaustive Message matching; Effect `Match` for state unions, partial matches, fallbacks, and shared multi-tag handlers (no switch)
 - [ ] `Array.match({ onEmpty, onNonEmpty })` for branching on a Model array (not `.length === 0` / `.length > 0`, and not `Array.isArrayEmpty` / `Array.isArrayNonEmpty`, which take a mutable `Array<A>` and reject the `ReadonlyArray` that `S.Array(...)` decodes to)
 - [ ] `evo()` for Model updates (not spread)
 - [ ] Callable constructors (not `as` casts or manual `_tag` objects)
-- [ ] No-field tagged structs called with NO argument: `Idle()`, `Work()`, `ClickedSubmit()`. Never `Idle({})`, `Work({})`, `ClickedSubmit({})`
+- [ ] Message and OutMessage constructors stay on their owning namespace; no constructor destructuring
+- [ ] No-field tagged structs called with NO argument: `Idle()`, `Work()`, `Message.ClickedSubmit()`. Never `Idle({})`, `Work({})`, `Message.ClickedSubmit({})`
 - [ ] `Option.match` preferred over `Option.map` + `Option.getOrElse`
 
 ## View
@@ -483,7 +483,7 @@ Items without a tier marker apply universally (even to a 50-line counter). When 
 - [ ] Subscriptions use `Subscription.make<Model, Message>()(entry => ({ key: entry(fields, callbacks) }))`. Each `entry(...)` call takes the bare field map as its first argument (no `S.Struct` wrap) and the `{ modelToDependencies, dependenciesToStream, equivalence? }` callbacks as its second.
 - [ ] `modelToDependencies` extracts exactly the data the stream needs from Model, not the full Model. Wrap absent dependencies in `Option` at the field level when the subscription should stop.
 - [ ] Always-active subscriptions pass `{}` as the `entry` fields argument and return `{}` from `modelToDependencies`.
-- [ ] Message mapping happens inside `Stream.map(event => Effect.succeed(UpdatedX({ data: event })))`, not scattered through update.
+- [ ] Message mapping happens inside `Stream.map(event => Effect.succeed(Message.UpdatedX({ data: event })))`, not scattered through update.
 - [ ] Subscription files live at `src/subscription.ts` (or `src/subscription/` directory for multiple), never inline in `main.ts`.
 
 ## Managed Resources [T7]

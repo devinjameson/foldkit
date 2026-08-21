@@ -15,7 +15,7 @@ import {
 } from 'effect'
 import { Command, ManagedResource, Mount, Submodel } from 'foldkit'
 import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 import filesBySlug from 'virtual:playground-files'
@@ -68,46 +68,18 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const BootedPlayground = m('BootedPlayground', {
-  previewUrl: S.String,
+export const Message = defineMessageUnion({
+  BootedPlayground: { previewUrl: S.String },
+  FailedBootPlayground: { reason: S.String },
+  ReleasedPlayground: {},
+  LoadedPlaygroundPreview: { previewUrl: S.String },
+  GotFileTabsMessage: { message: Tabs.Message },
+  EditedPlaygroundFile: { path: S.String, content: S.String },
+  SucceededMountPlaygroundEditor: {},
+  FailedMountPlaygroundEditor: { reason: S.String },
+  ScheduledWritePlaygroundFile: {},
+  FailedWritePlaygroundFile: { reason: S.String },
 })
-export const FailedBootPlayground = m('FailedBootPlayground', {
-  reason: S.String,
-})
-export const ReleasedPlayground = m('ReleasedPlayground')
-export const LoadedPlaygroundPreview = m('LoadedPlaygroundPreview', {
-  previewUrl: S.String,
-})
-export const GotFileTabsMessage = m('GotFileTabsMessage', {
-  message: Tabs.Message,
-})
-export const EditedPlaygroundFile = m('EditedPlaygroundFile', {
-  path: S.String,
-  content: S.String,
-})
-export const SucceededMountPlaygroundEditor = m(
-  'SucceededMountPlaygroundEditor',
-)
-export const FailedMountPlaygroundEditor = m('FailedMountPlaygroundEditor', {
-  reason: S.String,
-})
-export const ScheduledWritePlaygroundFile = m('ScheduledWritePlaygroundFile')
-export const FailedWritePlaygroundFile = m('FailedWritePlaygroundFile', {
-  reason: S.String,
-})
-
-export const Message = S.Union([
-  BootedPlayground,
-  FailedBootPlayground,
-  ReleasedPlayground,
-  LoadedPlaygroundPreview,
-  GotFileTabsMessage,
-  EditedPlaygroundFile,
-  SucceededMountPlaygroundEditor,
-  FailedMountPlaygroundEditor,
-  ScheduledWritePlaygroundFile,
-  FailedWritePlaygroundFile,
-])
 export type Message = typeof Message.Type
 
 // INIT
@@ -303,10 +275,10 @@ export const managedResources = ManagedResource.make<Model, Message>()(
           }
           yield* Effect.sync(() => container.teardown())
         }),
-      onAcquired: ({ previewUrl }) => BootedPlayground({ previewUrl }),
-      onReleased: () => ReleasedPlayground(),
+      onAcquired: ({ previewUrl }) => Message.BootedPlayground({ previewUrl }),
+      onReleased: () => Message.ReleasedPlayground(),
       onAcquireError: error =>
-        FailedBootPlayground({ reason: reasonFromError(error) }),
+        Message.FailedBootPlayground({ reason: reasonFromError(error) }),
     }),
   }),
 )
@@ -427,16 +399,16 @@ const PlaygroundEditor = Mount.defineStream(
     initialContent: S.String,
     files: S.Record(S.String, S.String),
   },
-  SucceededMountPlaygroundEditor,
-  FailedMountPlaygroundEditor,
-  EditedPlaygroundFile,
+  Message.SucceededMountPlaygroundEditor,
+  Message.FailedMountPlaygroundEditor,
+  Message.EditedPlaygroundFile,
 )(
   ({ path, initialContent, files }) =>
     element =>
       Stream.callback<
-        | typeof SucceededMountPlaygroundEditor.Type
-        | typeof FailedMountPlaygroundEditor.Type
-        | typeof EditedPlaygroundFile.Type
+        | typeof Message.SucceededMountPlaygroundEditor.Type
+        | typeof Message.FailedMountPlaygroundEditor.Type
+        | typeof Message.EditedPlaygroundFile.Type
       >(queue =>
         Effect.acquireRelease(
           Effect.tryPromise(async () => {
@@ -504,13 +476,13 @@ const PlaygroundEditor = Mount.defineStream(
             const changeSubscription = editorModel.onDidChangeContent(() => {
               Queue.offerUnsafe(
                 queue,
-                EditedPlaygroundFile({
+                Message.EditedPlaygroundFile({
                   path,
                   content: editorModel.getValue(),
                 }),
               )
             })
-            Queue.offerUnsafe(queue, SucceededMountPlaygroundEditor())
+            Queue.offerUnsafe(queue, Message.SucceededMountPlaygroundEditor())
             return { editor, editorModel, changeSubscription }
           }),
           ({ editor, editorModel, changeSubscription }) =>
@@ -525,7 +497,7 @@ const PlaygroundEditor = Mount.defineStream(
             Effect.sync(() => {
               Queue.offerUnsafe(
                 queue,
-                FailedMountPlaygroundEditor({
+                Message.FailedMountPlaygroundEditor({
                   reason: reasonFromError(error),
                 }),
               )
@@ -548,7 +520,10 @@ const WRITE_DEBOUNCE_MILLIS = 250
 
 export const WritePlaygroundFile = Command.define('WritePlaygroundFile', {
   args: { path: S.String, content: S.String },
-  messages: [ScheduledWritePlaygroundFile, FailedWritePlaygroundFile],
+  messages: [
+    Message.ScheduledWritePlaygroundFile,
+    Message.FailedWritePlaygroundFile,
+  ],
   execute: ({ path, content }) =>
     Effect.gen(function* () {
       const { container, pendingWrites } = yield* WebContainerPlayground.get
@@ -586,16 +561,18 @@ export const WritePlaygroundFile = Command.define('WritePlaygroundFile', {
         Effect.forkDetach,
       )
       pendingWrites.set(path, fiber)
-      return ScheduledWritePlaygroundFile()
+      return Message.ScheduledWritePlaygroundFile()
     }).pipe(
       Effect.catchTag('ResourceNotAvailable', () =>
         Effect.succeed(
-          FailedWritePlaygroundFile({ reason: 'WebContainer not yet ready' }),
+          Message.FailedWritePlaygroundFile({
+            reason: 'WebContainer not yet ready',
+          }),
         ),
       ),
       Effect.catch(error =>
         Effect.succeed(
-          FailedWritePlaygroundFile({ reason: reasonFromError(error) }),
+          Message.FailedWritePlaygroundFile({ reason: reasonFromError(error) }),
         ),
       ),
     ),
@@ -693,7 +670,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
             activeFilePath: () => nextActiveFilePath,
           }),
           Command.mapMessages(tabsCommands, message =>
-            GotFileTabsMessage({ message }),
+            Message.GotFileTabsMessage({ message }),
           ),
         ]
       },
@@ -883,7 +860,7 @@ const previewPaneView = (
               PlaygroundStateBooted: ({ preview }) =>
                 PlaygroundPreview.view(
                   preview,
-                  LoadedPlaygroundPreview({
+                  Message.LoadedPlaygroundPreview({
                     previewUrl: preview.previewUrl,
                   }),
                   bootingPanelView(
@@ -1021,7 +998,7 @@ const editorLayoutView = (model: Model, h: HtmlBuilder<Message>): Html => {
                   ],
                 ),
             },
-            toParentMessage: message => GotFileTabsMessage({ message }),
+            toParentMessage: message => Message.GotFileTabsMessage({ message }),
           }),
           previewPaneView(model.state, h),
         ],

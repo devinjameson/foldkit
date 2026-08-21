@@ -7,8 +7,7 @@ import { HtmlBuilder } from 'foldkit/html'
 import { removeChart, setChart } from '../chartHost'
 import type { Telemetry } from '../domain'
 import { selectedDatumLabel } from '../echarts'
-import type { Message } from '../message'
-import { FailedMountChart, SucceededMountChart } from '../message'
+import { Message } from '../message'
 import type { Model } from '../model'
 import { formatInteger } from './format'
 
@@ -17,14 +16,14 @@ export const CHART_HOST_ID = 'charting-chart'
 export const MountChart = Mount.define(
   'MountChart',
   { hostId: S.String },
-  SucceededMountChart,
-  FailedMountChart,
+  Message.SucceededMountChart,
+  Message.FailedMountChart,
 )(
   ({ hostId }) =>
     element =>
       Effect.gen(function* () {
         if (!(element instanceof HTMLElement)) {
-          return FailedMountChart({
+          return Message.FailedMountChart({
             reason: 'Chart host is not an HTMLElement.',
           })
         }
@@ -54,9 +53,9 @@ export const MountChart = Mount.define(
               removeChart(hostId)
             }),
         ).pipe(
-          Effect.map(() => SucceededMountChart({ hostId })),
+          Effect.map(() => Message.SucceededMountChart({ hostId })),
           Effect.catch(error =>
-            Effect.succeed(FailedMountChart({ reason: error.message })),
+            Effect.succeed(Message.FailedMountChart({ reason: error.message })),
           ),
         )
       }),

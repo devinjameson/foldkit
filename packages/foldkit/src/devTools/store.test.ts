@@ -11,7 +11,7 @@ import {
 } from 'effect'
 import { describe, expect, it, vi } from 'vitest'
 
-import { m } from '../message/index.js'
+import { defineMessageUnion } from '../message/index.js'
 import { evo } from '../struct/index.js'
 import {
   type Bridge,
@@ -126,10 +126,10 @@ const initialModel = { count: 0 }
 
 const CounterModel = Schema.Struct({ count: Schema.Number })
 
-const ClickedIncrement = m('ClickedIncrement')
-const ClickedDecrement = m('ClickedDecrement')
-
-const CounterMessage = Schema.Union([ClickedIncrement, ClickedDecrement])
+const CounterMessage = defineMessageUnion({
+  ClickedIncrement: {},
+  ClickedDecrement: {},
+})
 
 const counterReplay = (model: unknown, message: unknown): unknown => {
   const counterModel = Schema.decodeUnknownSync(CounterModel)(model)
@@ -163,8 +163,8 @@ const makeBridge = (
   return { bridge, rendered }
 }
 
-const clickedIncrement = ClickedIncrement()
-const clickedDecrement = ClickedDecrement()
+const clickedIncrement = CounterMessage.ClickedIncrement()
+const clickedDecrement = CounterMessage.ClickedDecrement()
 
 const run = <A>(effect: Effect.Effect<A>): A => Effect.runSync(effect)
 

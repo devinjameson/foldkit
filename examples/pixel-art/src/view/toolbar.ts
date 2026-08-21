@@ -5,16 +5,7 @@ import { type Html, type HtmlBuilder, childAttributes } from 'foldkit/html'
 import { Button, Listbox, RadioGroup, Switch } from '@foldkit/ui'
 
 import { EMPTY_COLOR, GRID_SIZE_STRINGS } from '../constant'
-import {
-  ClickedClear,
-  GotGridSizeRadioGroupMessage,
-  GotPaletteRadioGroupMessage,
-  GotThemeListboxMessage,
-  GotToolRadioGroupMessage,
-  type Message,
-  ToggledMirrorHorizontal,
-  ToggledMirrorVertical,
-} from '../message'
+import { Message } from '../message'
 import { type MirrorMode, type PaletteIndex, type Tool } from '../model'
 import { PALETTE_THEMES, type PaletteTheme } from '../palette'
 
@@ -177,7 +168,8 @@ const toolSectionView = (
               }),
             ),
         },
-        toParentMessage: message => GotToolRadioGroupMessage({ message }),
+        toParentMessage: message =>
+          Message.GotToolRadioGroupMessage({ message }),
       }),
     ],
   )
@@ -201,7 +193,7 @@ const mirrorSectionView = (
             {
               id: MIRROR_HORIZONTAL_SWITCH_ID,
               isChecked: isMirrorHorizontal,
-              onToggle: () => ToggledMirrorHorizontal(),
+              onToggle: () => Message.ToggledMirrorHorizontal(),
               toView: ({ button, label }) =>
                 h.div(
                   [h.Class('flex-1')],
@@ -235,7 +227,7 @@ const mirrorSectionView = (
             {
               id: MIRROR_VERTICAL_SWITCH_ID,
               isChecked: isMirrorVertical,
-              onToggle: () => ToggledMirrorVertical(),
+              onToggle: () => Message.ToggledMirrorVertical(),
               toView: ({ button, label }) =>
                 h.div(
                   [h.Class('flex-1')],
@@ -309,7 +301,8 @@ const sizeSectionView = (
               ),
             ),
         },
-        toParentMessage: message => GotGridSizeRadioGroupMessage({ message }),
+        toParentMessage: message =>
+          Message.GotGridSizeRadioGroupMessage({ message }),
       }),
     ],
   )
@@ -369,7 +362,8 @@ const paletteSectionView = (
               }),
             ),
         },
-        toParentMessage: message => GotPaletteRadioGroupMessage({ message }),
+        toParentMessage: message =>
+          Message.GotPaletteRadioGroupMessage({ message }),
       }),
       themeListboxView(themeListbox, theme, paletteThemeIndex, h),
     ],
@@ -426,7 +420,7 @@ const themeListboxView = (
       backdropAttributes: childAttributes([h.Class('fixed inset-0 z-0')]),
       attributes: childAttributes([h.Class('relative w-full mt-3')]),
     },
-    toParentMessage: message => GotThemeListboxMessage({ message }),
+    toParentMessage: message => Message.GotThemeListboxMessage({ message }),
   })
 
 const clearCanvasView = (
@@ -435,7 +429,7 @@ const clearCanvasView = (
 ): Html =>
   Button.view(
     {
-      onClick: ClickedClear(),
+      onClick: Message.ClickedClear(),
       isDisabled: isCanvasEmpty,
       toView: attributes =>
         h.button(

@@ -1,7 +1,7 @@
-import { Match as M, Schema as S } from 'effect'
+import { Schema as S } from 'effect'
 
 import type { Html, HtmlBuilder } from '../../html/index.js'
-import { m } from '../../message/index.js'
+import { defineMessageUnion } from '../../message/index.js'
 
 // MODEL
 
@@ -13,10 +13,10 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-const ClickedContainer = m('ClickedContainer')
-const DoubleClickedContainer = m('DoubleClickedContainer')
-
-const Message = S.Union([ClickedContainer, DoubleClickedContainer])
+const Message = defineMessageUnion({
+  ClickedContainer: {},
+  DoubleClickedContainer: {},
+})
 type Message = typeof Message.Type
 
 // INIT
@@ -28,20 +28,14 @@ export const initialModel: Model = {
 
 // UPDATE
 
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<never>] =>
-  M.value(message).pipe(
-    M.withReturnType<readonly [Model, ReadonlyArray<never>]>(),
-    M.tagsExhaustive({
-      ClickedContainer: () => [{ ...model, clicks: model.clicks + 1 }, []],
-      DoubleClickedContainer: () => [
-        { ...model, doubleClicks: model.doubleClicks + 1 },
-        [],
-      ],
-    }),
-  )
+export const update = (model: Model, message: Message) =>
+  Message.match<readonly [Model, ReadonlyArray<never>]>(message, {
+    ClickedContainer: () => [{ ...model, clicks: model.clicks + 1 }, []],
+    DoubleClickedContainer: () => [
+      { ...model, doubleClicks: model.doubleClicks + 1 },
+      [],
+    ],
+  })
 
 // VIEW
 
@@ -50,11 +44,11 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
     [],
     [
       h.div(
-        [h.Role('option'), h.OnClick(ClickedContainer())],
+        [h.Role('option'), h.OnClick(Message.ClickedContainer())],
         [h.span([], [`clicks=${model.clicks}`])],
       ),
       h.div(
-        [h.Role('listitem'), h.OnDoubleClick(DoubleClickedContainer())],
+        [h.Role('listitem'), h.OnDoubleClick(Message.DoubleClickedContainer())],
         [h.span([], [`dbl=${model.doubleClicks}`])],
       ),
     ],

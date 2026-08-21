@@ -10,7 +10,7 @@ import {
 } from 'effect'
 import { Command, Submodel } from 'foldkit'
 import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 import demoCodeHtml from 'virtual:counter-demo-code'
 
@@ -64,21 +64,13 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const ClickedDemoIncrement = m('ClickedDemoIncrement')
-export const ChangedDemoResetDuration = m('ChangedDemoResetDuration', {
-  seconds: S.Number,
-})
-export const ClickedDemoReset = m('ClickedDemoReset')
-export const CompletedDelayAdvancePhase = m('CompletedDelayAdvancePhase', {
-  generation: S.Number,
+export const Message = defineMessageUnion({
+  ClickedDemoIncrement: {},
+  ChangedDemoResetDuration: { seconds: S.Number },
+  ClickedDemoReset: {},
+  CompletedDelayAdvancePhase: { generation: S.Number },
 })
 
-export const Message = S.Union([
-  ClickedDemoIncrement,
-  ChangedDemoResetDuration,
-  ClickedDemoReset,
-  CompletedDelayAdvancePhase,
-])
 export type Message = typeof Message.Type
 
 // INIT
@@ -105,10 +97,10 @@ const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
 export const DelayAdvancePhase = Command.define('DelayAdvancePhase', {
   args: { generation: S.Number, duration: S.DurationFromMillis },
-  messages: [CompletedDelayAdvancePhase],
+  messages: [Message.CompletedDelayAdvancePhase],
   execute: ({ generation, duration }) =>
     Effect.sleep(duration).pipe(
-      Effect.as(CompletedDelayAdvancePhase({ generation })),
+      Effect.as(Message.CompletedDelayAdvancePhase({ generation })),
     ),
 })
 
@@ -117,181 +109,175 @@ const prependToLog =
   (messageLog: ReadonlyArray<string>): ReadonlyArray<string> =>
     pipe([entry, ...messageLog], Array.take(MAX_LOG_ENTRIES))
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    withUpdateReturn,
-    M.tagsExhaustive({
-      ClickedDemoIncrement: () => {
-        const nextModel = evo(model, {
-          count: N.increment,
-          phase: () => 'IncrementMessage',
-          generation: N.increment,
-          messageLog: prependToLog('ClickedIncrement'),
-        })
-        return [
-          nextModel,
-          [
-            DelayAdvancePhase({
-              generation: nextModel.generation,
-              duration: Duration.fromInputUnsafe(PHASE_DURATION),
-            }),
-          ],
-        ]
-      },
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    ClickedDemoIncrement: () => {
+      const nextModel = evo(model, {
+        count: N.increment,
+        phase: () => 'IncrementMessage',
+        generation: N.increment,
+        messageLog: prependToLog('ClickedIncrement'),
+      })
+      return [
+        nextModel,
+        [
+          DelayAdvancePhase({
+            generation: nextModel.generation,
+            duration: Duration.fromInputUnsafe(PHASE_DURATION),
+          }),
+        ],
+      ]
+    },
 
-      ChangedDemoResetDuration: ({ seconds }) => {
-        const nextModel = evo(model, {
-          resetDuration: () => clampResetSeconds(seconds),
-          phase: () => 'DurationMessage',
-          generation: N.increment,
-          messageLog: prependToLog(
-            `ChangedResetDuration({ seconds: ${seconds} })`,
-          ),
-        })
-        return [
-          nextModel,
-          [
-            DelayAdvancePhase({
-              generation: nextModel.generation,
-              duration: Duration.fromInputUnsafe(PHASE_DURATION),
-            }),
-          ],
-        ]
-      },
+    ChangedDemoResetDuration: ({ seconds }) => {
+      const nextModel = evo(model, {
+        resetDuration: () => clampResetSeconds(seconds),
+        phase: () => 'DurationMessage',
+        generation: N.increment,
+        messageLog: prependToLog(
+          `ChangedResetDuration({ seconds: ${seconds} })`,
+        ),
+      })
+      return [
+        nextModel,
+        [
+          DelayAdvancePhase({
+            generation: nextModel.generation,
+            duration: Duration.fromInputUnsafe(PHASE_DURATION),
+          }),
+        ],
+      ]
+    },
 
-      ClickedDemoReset: () => {
-        const nextModel = evo(model, {
-          isResetting: () => true,
-          phase: () => 'ResetMessage',
-          generation: N.increment,
-          messageLog: prependToLog('ClickedResetAfterDelay'),
-        })
-        return [
-          nextModel,
-          [
-            DelayAdvancePhase({
-              generation: nextModel.generation,
-              duration: Duration.fromInputUnsafe(PHASE_DURATION),
-            }),
-          ],
-        ]
-      },
+    ClickedDemoReset: () => {
+      const nextModel = evo(model, {
+        isResetting: () => true,
+        phase: () => 'ResetMessage',
+        generation: N.increment,
+        messageLog: prependToLog('ClickedResetAfterDelay'),
+      })
+      return [
+        nextModel,
+        [
+          DelayAdvancePhase({
+            generation: nextModel.generation,
+            duration: Duration.fromInputUnsafe(PHASE_DURATION),
+          }),
+        ],
+      ]
+    },
 
-      CompletedDelayAdvancePhase: ({ generation }) => {
-        if (generation !== model.generation) {
-          return [model, []]
-        } else {
-          return M.value(model.phase).pipe(
-            withUpdateReturn,
-            M.when('IncrementMessage', () => [
-              evo(model, { phase: () => 'IncrementUpdate' }),
-              [
-                DelayAdvancePhase({
-                  generation,
-                  duration: Duration.fromInputUnsafe(PHASE_DURATION),
-                }),
-              ],
-            ]),
-            M.when('IncrementUpdate', () => [
-              evo(model, { phase: () => 'IncrementModel' }),
-              [
-                DelayAdvancePhase({
-                  generation,
-                  duration: Duration.fromInputUnsafe(PHASE_DURATION),
-                }),
-              ],
-            ]),
-            M.when('IncrementModel', () => [
-              evo(model, { phase: () => 'Idle' }),
-              [],
-            ]),
-            M.when('DurationMessage', () => [
-              evo(model, { phase: () => 'DurationUpdate' }),
-              [
-                DelayAdvancePhase({
-                  generation,
-                  duration: Duration.fromInputUnsafe(PHASE_DURATION),
-                }),
-              ],
-            ]),
-            M.when('DurationUpdate', () => [
-              evo(model, { phase: () => 'DurationModel' }),
-              [
-                DelayAdvancePhase({
-                  generation,
-                  duration: Duration.fromInputUnsafe(PHASE_DURATION),
-                }),
-              ],
-            ]),
-            M.when('DurationModel', () => [
-              evo(model, { phase: () => 'Idle' }),
-              [],
-            ]),
-            M.when('ResetMessage', () => [
-              evo(model, { phase: () => 'ResetUpdate' }),
-              [
-                DelayAdvancePhase({
-                  generation,
-                  duration: Duration.fromInputUnsafe(PHASE_DURATION),
-                }),
-              ],
-            ]),
-            M.when('ResetUpdate', () => [
-              evo(model, { phase: () => 'ResetCommand' }),
-              [
-                DelayAdvancePhase({
-                  generation,
-                  duration: Duration.fromInputUnsafe(
-                    `${clampResetSeconds(model.resetDuration)} seconds`,
-                  ),
-                }),
-              ],
-            ]),
-            M.when('ResetCommand', () => [
-              evo(model, { phase: () => 'ResetCommandMessage' }),
-              [
-                DelayAdvancePhase({
-                  generation,
-                  duration: Duration.fromInputUnsafe(PHASE_DURATION),
-                }),
-              ],
-            ]),
-            M.when('ResetCommandMessage', () => [
-              evo(model, {
-                phase: () => 'ResetCommandUpdate',
-                messageLog: prependToLog('CompletedDelayReset'),
+    CompletedDelayAdvancePhase: ({ generation }) => {
+      if (generation !== model.generation) {
+        return [model, []]
+      } else {
+        return M.value(model.phase).pipe(
+          withUpdateReturn,
+          M.when('IncrementMessage', () => [
+            evo(model, { phase: () => 'IncrementUpdate' }),
+            [
+              DelayAdvancePhase({
+                generation,
+                duration: Duration.fromInputUnsafe(PHASE_DURATION),
               }),
-              [
-                DelayAdvancePhase({
-                  generation,
-                  duration: Duration.fromInputUnsafe(PHASE_DURATION),
-                }),
-              ],
-            ]),
-            M.when('ResetCommandUpdate', () => [
-              evo(model, {
-                count: () => 0,
-                isResetting: () => false,
-                phase: () => 'ResetModel',
+            ],
+          ]),
+          M.when('IncrementUpdate', () => [
+            evo(model, { phase: () => 'IncrementModel' }),
+            [
+              DelayAdvancePhase({
+                generation,
+                duration: Duration.fromInputUnsafe(PHASE_DURATION),
               }),
-              [
-                DelayAdvancePhase({
-                  generation,
-                  duration: Duration.fromInputUnsafe(PHASE_DURATION),
-                }),
-              ],
-            ]),
-            M.when('ResetModel', () => [
-              evo(model, { phase: () => 'Idle' }),
-              [],
-            ]),
-            M.when('Idle', () => [model, []]),
-            M.exhaustive,
-          )
-        }
-      },
-    }),
-  )
+            ],
+          ]),
+          M.when('IncrementModel', () => [
+            evo(model, { phase: () => 'Idle' }),
+            [],
+          ]),
+          M.when('DurationMessage', () => [
+            evo(model, { phase: () => 'DurationUpdate' }),
+            [
+              DelayAdvancePhase({
+                generation,
+                duration: Duration.fromInputUnsafe(PHASE_DURATION),
+              }),
+            ],
+          ]),
+          M.when('DurationUpdate', () => [
+            evo(model, { phase: () => 'DurationModel' }),
+            [
+              DelayAdvancePhase({
+                generation,
+                duration: Duration.fromInputUnsafe(PHASE_DURATION),
+              }),
+            ],
+          ]),
+          M.when('DurationModel', () => [
+            evo(model, { phase: () => 'Idle' }),
+            [],
+          ]),
+          M.when('ResetMessage', () => [
+            evo(model, { phase: () => 'ResetUpdate' }),
+            [
+              DelayAdvancePhase({
+                generation,
+                duration: Duration.fromInputUnsafe(PHASE_DURATION),
+              }),
+            ],
+          ]),
+          M.when('ResetUpdate', () => [
+            evo(model, { phase: () => 'ResetCommand' }),
+            [
+              DelayAdvancePhase({
+                generation,
+                duration: Duration.fromInputUnsafe(
+                  `${clampResetSeconds(model.resetDuration)} seconds`,
+                ),
+              }),
+            ],
+          ]),
+          M.when('ResetCommand', () => [
+            evo(model, { phase: () => 'ResetCommandMessage' }),
+            [
+              DelayAdvancePhase({
+                generation,
+                duration: Duration.fromInputUnsafe(PHASE_DURATION),
+              }),
+            ],
+          ]),
+          M.when('ResetCommandMessage', () => [
+            evo(model, {
+              phase: () => 'ResetCommandUpdate',
+              messageLog: prependToLog('CompletedDelayReset'),
+            }),
+            [
+              DelayAdvancePhase({
+                generation,
+                duration: Duration.fromInputUnsafe(PHASE_DURATION),
+              }),
+            ],
+          ]),
+          M.when('ResetCommandUpdate', () => [
+            evo(model, {
+              count: () => 0,
+              isResetting: () => false,
+              phase: () => 'ResetModel',
+            }),
+            [
+              DelayAdvancePhase({
+                generation,
+                duration: Duration.fromInputUnsafe(PHASE_DURATION),
+              }),
+            ],
+          ]),
+          M.when('ResetModel', () => [evo(model, { phase: () => 'Idle' }), []]),
+          M.when('Idle', () => [model, []]),
+          M.exhaustive,
+        )
+      }
+    },
+  })
 
 // VIEW
 
@@ -418,7 +404,7 @@ const stepperButton = (
 
   return Button.view(
     {
-      onClick: ChangedDemoResetDuration({ seconds: nextSeconds }),
+      onClick: Message.ChangedDemoResetDuration({ seconds: nextSeconds }),
       isDisabled,
       toView: attributes =>
         h.button(
@@ -462,7 +448,7 @@ const viewAndControlsView = (model: Model, h: HtmlBuilder<Message>): Html =>
       ),
       Button.view(
         {
-          onClick: ClickedDemoIncrement(),
+          onClick: Message.ClickedDemoIncrement(),
           isDisabled: model.isResetting,
           toView: attributes =>
             h.button(
@@ -515,7 +501,7 @@ const viewAndControlsView = (model: Model, h: HtmlBuilder<Message>): Html =>
       ),
       Button.view(
         {
-          onClick: ClickedDemoReset(),
+          onClick: Message.ClickedDemoReset(),
           isDisabled: model.isResetting,
           toView: attributes =>
             h.button(

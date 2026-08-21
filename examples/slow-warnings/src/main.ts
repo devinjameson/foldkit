@@ -9,7 +9,7 @@ import {
 } from 'effect'
 import { Command, Runtime, Subscription } from 'foldkit'
 import { type Document, type Html, HtmlBuilder, createLazy } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 const UPDATE_WORK_MS = 10
@@ -58,25 +58,15 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const ClickedRunUpdateWork = m('ClickedRunUpdateWork')
-export const ClickedRunViewWork = m('ClickedRunViewWork')
-export const ClickedRunPatchWork = m('ClickedRunPatchWork')
-export const ClickedRunSubscriptionDependenciesWork = m(
-  'ClickedRunSubscriptionDependenciesWork',
-)
-export const ClickedClearWarnings = m('ClickedClearWarnings')
-export const RecordedSlowWarning = m('RecordedSlowWarning', {
-  report: SlowWarningReport,
+export const Message = defineMessageUnion({
+  ClickedRunUpdateWork: {},
+  ClickedRunViewWork: {},
+  ClickedRunPatchWork: {},
+  ClickedRunSubscriptionDependenciesWork: {},
+  ClickedClearWarnings: {},
+  RecordedSlowWarning: { report: SlowWarningReport },
 })
 
-export const Message = S.Union([
-  ClickedRunUpdateWork,
-  ClickedRunViewWork,
-  ClickedRunPatchWork,
-  ClickedRunSubscriptionDependenciesWork,
-  ClickedClearWarnings,
-  RecordedSlowWarning,
-])
 export type Message = typeof Message.Type
 
 const slowWarningTarget = new EventTarget()
@@ -172,64 +162,61 @@ const prependWarning =
 
 type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    M.withReturnType<UpdateReturn>(),
-    M.tagsExhaustive({
-      ClickedRunUpdateWork: () => {
-        burnCpu(UPDATE_WORK_MS)
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    ClickedRunUpdateWork: () => {
+      burnCpu(UPDATE_WORK_MS)
 
-        return [
-          evo(model, {
-            activeWorkload: () => 'Update',
-          }),
-          [],
-        ]
-      },
-      ClickedRunViewWork: () => [
+      return [
         evo(model, {
-          activeWorkload: () => 'View',
+          activeWorkload: () => 'Update',
         }),
         [],
-      ],
-      ClickedRunPatchWork: () => [
-        evo(model, {
-          activeWorkload: () => 'Patch',
-          patchRows: () => PATCH_ROW_COUNT,
-          patchRun: Number.increment,
-        }),
-        [],
-      ],
-      ClickedRunSubscriptionDependenciesWork: () => [
-        evo(model, {
-          activeWorkload: () => 'SubscriptionDependencies',
-        }),
-        [],
-      ],
-      ClickedClearWarnings: () => [
+      ]
+    },
+    ClickedRunViewWork: () => [
+      evo(model, {
+        activeWorkload: () => 'View',
+      }),
+      [],
+    ],
+    ClickedRunPatchWork: () => [
+      evo(model, {
+        activeWorkload: () => 'Patch',
+        patchRows: () => PATCH_ROW_COUNT,
+        patchRun: Number.increment,
+      }),
+      [],
+    ],
+    ClickedRunSubscriptionDependenciesWork: () => [
+      evo(model, {
+        activeWorkload: () => 'SubscriptionDependencies',
+      }),
+      [],
+    ],
+    ClickedClearWarnings: () => [
+      evo(model, {
+        activeWorkload: () => 'Idle',
+        warnings: () => [],
+      }),
+      [],
+    ],
+    RecordedSlowWarning: ({ report }) => {
+      const warning: SlowWarning = {
+        id: model.nextWarningId,
+        ...report,
+      }
+
+      return [
         evo(model, {
           activeWorkload: () => 'Idle',
-          warnings: () => [],
+          nextWarningId: Number.increment,
+          warnings: prependWarning(warning),
         }),
         [],
-      ],
-      RecordedSlowWarning: ({ report }) => {
-        const warning: SlowWarning = {
-          id: model.nextWarningId,
-          ...report,
-        }
-
-        return [
-          evo(model, {
-            activeWorkload: () => 'Idle',
-            nextWarningId: Number.increment,
-            warnings: prependWarning(warning),
-          }),
-          [],
-        ]
-      },
-    }),
-  )
+      ]
+    },
+  })
 
 // INIT
 
@@ -250,7 +237,7 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
   slowWarnings: Subscription.persistent(
     Subscription.fromEventFilterMap<
       CustomEvent,
-      typeof RecordedSlowWarning.Type
+      typeof Message.RecordedSlowWarning.Type
     >({
       target: slowWarningTarget,
       type: SLOW_WARNING_EVENT,
@@ -258,7 +245,7 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
         pipe(
           event.detail,
           S.decodeUnknownOption(SlowWarningReport),
-          Option.map(report => RecordedSlowWarning({ report })),
+          Option.map(report => Message.RecordedSlowWarning({ report })),
         ),
     }),
   ),
@@ -410,7 +397,7 @@ const warningsView = (
             [
               h.Type('button'),
               h.Class(secondaryButtonClass),
-              h.OnClick(ClickedClearWarnings()),
+              h.OnClick(Message.ClickedClearWarnings()),
             ],
             ['Clear'],
           ),
@@ -538,7 +525,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
                     title: 'Slow update',
                     body: 'Runs CPU work before returning the next Model.',
                     buttonText: 'Run update work',
-                    message: ClickedRunUpdateWork(),
+                    message: Message.ClickedRunUpdateWork(),
                   },
                   h,
                 ),
@@ -549,7 +536,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
                     title: 'Slow view',
                     body: 'Runs CPU work while the view builds the VNode tree.',
                     buttonText: 'Run view work',
-                    message: ClickedRunViewWork(),
+                    message: Message.ClickedRunViewWork(),
                   },
                   h,
                 ),
@@ -560,7 +547,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
                     title: 'Slow patch',
                     body: 'Mounts thousands of keyed rows into the DOM.',
                     buttonText: 'Run patch work',
-                    message: ClickedRunPatchWork(),
+                    message: Message.ClickedRunPatchWork(),
                   },
                   h,
                 ),
@@ -571,7 +558,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
                     title: 'Slow subscription dependencies',
                     body: 'Burns CPU while deriving subscription dependencies.',
                     buttonText: 'Run dependency extraction',
-                    message: ClickedRunSubscriptionDependenciesWork(),
+                    message: Message.ClickedRunSubscriptionDependenciesWork(),
                   },
                   h,
                 ),

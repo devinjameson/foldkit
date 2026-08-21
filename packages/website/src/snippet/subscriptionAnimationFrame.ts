@@ -1,13 +1,13 @@
 import { Schema as S } from 'effect'
 import { Subscription } from 'foldkit'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 
 // MESSAGE
 
-const TickedFrame = m('TickedFrame', { deltaTime: S.Number })
-const ClickedTogglePlay = m('ClickedTogglePlay')
-
-const Message = S.Union([TickedFrame, ClickedTogglePlay])
+const Message = defineMessageUnion({
+  TickedFrame: { deltaTime: S.Number },
+  ClickedTogglePlay: {},
+})
 type Message = typeof Message.Type
 
 // MODEL
@@ -24,6 +24,6 @@ type Model = typeof Model.Type
 const subscriptions = Subscription.make<Model, Message>()(_entry => ({
   frame: Subscription.animationFrame({
     isActive: model => model.isPlaying,
-    toMessage: deltaTime => TickedFrame({ deltaTime }),
+    toMessage: deltaTime => Message.TickedFrame({ deltaTime }),
   }),
 }))

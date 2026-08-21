@@ -4,7 +4,7 @@
 import { Array, Match as M, Option } from 'effect'
 import { Update } from 'foldkit'
 import { type HtmlBuilder, childAttributes } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Combobox } from '@foldkit/ui'
@@ -35,8 +35,8 @@ const init = () => [
 ]
 
 // Wrap Combobox's Messages so they can flow through your update:
-const GotComboboxMultiMessage = m('GotComboboxMultiMessage', {
-  message: Combobox.Message,
+const Message = defineMessageUnion({
+  GotComboboxMultiMessage: { message: Combobox.Message },
 })
 
 // At module scope, fold the OutMessage into your own Model. Each `Selected`
@@ -72,11 +72,11 @@ const foldComboboxMulti = Update.foldChild({
   read: (model: Model) => Option.some(model.comboboxMulti),
   write: (model, nextComboboxMulti) =>
     evo(model, { comboboxMulti: () => nextComboboxMulti }),
-  toParentMessage: message => GotComboboxMultiMessage({ message }),
+  toParentMessage: message => Message.GotComboboxMultiMessage({ message }),
   foldOutMessage: foldComboboxMultiOutMessage,
 })
 
-// Inside your update function's M.tagsExhaustive({...}), call the fold:
+// Inside your update function's Message.match({...}), call the fold:
 GotComboboxMultiMessage: ({ message }) => foldComboboxMulti(model, message)
 
 const cities: ReadonlyArray<City> = [
@@ -145,7 +145,8 @@ const view = (model: Model, h: HtmlBuilder<Message>) => {
           backdropAttributes: childAttributes([h.Class('fixed inset-0')]),
           anchor: { placement: 'bottom-start', gap: 8, padding: 8 },
         },
-        toParentMessage: message => GotComboboxMultiMessage({ message }),
+        toParentMessage: message =>
+          Message.GotComboboxMultiMessage({ message }),
       }),
     ],
   )

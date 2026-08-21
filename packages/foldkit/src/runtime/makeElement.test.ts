@@ -1,9 +1,9 @@
-import { Effect, Fiber, Match as M, Number, Schema as S } from 'effect'
+import { Effect, Fiber, Number, Schema as S } from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { Command } from '../command/index.js'
 import { TextDirection, __htmlBuilder } from '../html/index.js'
-import { m } from '../message/index.js'
+import { defineMessageUnion } from '../message/index.js'
 import { evo } from '../struct/index.js'
 import {
   __setDevToolsOverlay,
@@ -11,9 +11,10 @@ import {
   makeElement,
 } from './runtime.js'
 
-const Rendered = m('Rendered')
-const ClickedBump = m('ClickedBump')
-const Message = S.Union([Rendered, ClickedBump])
+const Message = defineMessageUnion({
+  Rendered: {},
+  ClickedBump: {},
+})
 type Message = typeof Message.Type
 
 const Model = S.Struct({ label: S.String })
@@ -21,17 +22,11 @@ type Model = typeof Model.Type
 
 const h = __htmlBuilder<Message>()
 
-const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command<Message>>] =>
-  M.value(message).pipe(
-    M.withReturnType<readonly [Model, ReadonlyArray<Command<Message>>]>(),
-    M.tagsExhaustive({
-      Rendered: () => [model, []],
-      ClickedBump: () => [{ label: 'world' }, []],
-    }),
-  )
+const update = (model: Model, message: Message) =>
+  Message.match<readonly [Model, ReadonlyArray<Command<Message>>]>(message, {
+    Rendered: () => [model, []],
+    ClickedBump: () => [{ label: 'world' }, []],
+  })
 
 const LocaleModel = S.Struct({
   lang: S.String,
@@ -47,9 +42,10 @@ const FRENCH_AUTO = LocaleModel.make({
   revision: 0,
 })
 
-const ClickedArabic = m('ClickedArabic')
-const ClickedRerender = m('ClickedRerender')
-const LocaleMessage = S.Union([ClickedArabic, ClickedRerender])
+const LocaleMessage = defineMessageUnion({
+  ClickedArabic: {},
+  ClickedRerender: {},
+})
 type LocaleMessage = typeof LocaleMessage.Type
 
 const localeH = __htmlBuilder<LocaleMessage>()
@@ -58,18 +54,15 @@ const localeUpdate = (
   model: LocaleModel,
   message: LocaleMessage,
 ): readonly [LocaleModel, ReadonlyArray<Command<LocaleMessage>>] =>
-  M.value(message).pipe(
-    M.withReturnType<
-      readonly [LocaleModel, ReadonlyArray<Command<LocaleMessage>>]
-    >(),
-    M.tagsExhaustive({
-      ClickedArabic: () => [
-        evo(model, { lang: () => 'ar', dir: () => 'Rtl' }),
-        [],
-      ],
-      ClickedRerender: () => [evo(model, { revision: Number.increment }), []],
-    }),
-  )
+  LocaleMessage.match<
+    readonly [LocaleModel, ReadonlyArray<Command<LocaleMessage>>]
+  >(message, {
+    ClickedArabic: () => [
+      evo(model, { lang: () => 'ar', dir: () => 'Rtl' }),
+      [],
+    ],
+    ClickedRerender: () => [evo(model, { revision: Number.increment }), []],
+  })
 
 const HOST_TITLE = 'Host Page Title'
 const HOST_LANG = 'en'
@@ -175,7 +168,7 @@ describe('makeElement', () => {
       view: model =>
         h.div(
           [],
-          [h.button([h.OnClick(ClickedBump())], ['bump']), model.label],
+          [h.button([h.OnClick(Message.ClickedBump())], ['bump']), model.label],
         ),
       container,
     })
@@ -283,7 +276,7 @@ describe('makeApplication', () => {
         ogUrl: canonicalUrl,
         body: h.div(
           [],
-          [h.button([h.OnClick(ClickedBump())], ['bump']), model.label],
+          [h.button([h.OnClick(Message.ClickedBump())], ['bump']), model.label],
         ),
       }),
       container,
@@ -432,8 +425,14 @@ describe('makeApplication', () => {
         body: localeH.div(
           [],
           [
-            localeH.button([localeH.OnClick(ClickedArabic())], ['arabic']),
-            localeH.button([localeH.OnClick(ClickedRerender())], ['rerender']),
+            localeH.button(
+              [localeH.OnClick(LocaleMessage.ClickedArabic())],
+              ['arabic'],
+            ),
+            localeH.button(
+              [localeH.OnClick(LocaleMessage.ClickedRerender())],
+              ['rerender'],
+            ),
             `${model.lang}-${model.revision}`,
           ],
         ),

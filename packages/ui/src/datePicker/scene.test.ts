@@ -8,16 +8,16 @@ import { describe, it } from '@effect/vitest'
 
 import * as UiCalendar from '../calendar/index.js'
 import * as Popover from '../popover/public.js'
-import type { Message, Model, ViewInputs } from './index.js'
-import { Opened, init, triggerId, update, view } from './index.js'
+import type { Model, ViewInputs } from './index.js'
+import { Message, init, triggerId, update, view } from './index.js'
 
 const acknowledgeAnchorPopover = Scene.Mount.resolve(
   Popover.AnchorPopover,
-  Popover.CompletedAnchorPopover(),
+  Popover.Message.CompletedAnchorPopover(),
 )
 const acknowledgePopoverBackdrop = Scene.Mount.resolve(
   Popover.PortalPopoverBackdrop,
-  Popover.CompletedPortalPopoverBackdrop(),
+  Popover.Message.CompletedPortalPopoverBackdrop(),
 )
 
 const today = Calendar.make(2026, 4, 13)
@@ -136,7 +136,7 @@ const grid = Scene.role('grid')
 const hiddenInput = Scene.selector('input[type="hidden"]')
 
 const closedModel = init({ id: 'picker', today })
-const [openModel] = update(closedModel, Opened())
+const [openModel] = update(closedModel, Message.Opened())
 
 describe('DatePicker', () => {
   describe('rendering', () => {

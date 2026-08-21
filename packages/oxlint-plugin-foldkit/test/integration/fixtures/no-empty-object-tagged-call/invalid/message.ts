@@ -1,5 +1,8 @@
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 
-const ClickedSave = m('ClickedSave')
+const Message = defineMessageUnion({
+  ClickedSave: {},
+})
 
-const badMessage = ClickedSave({})
+
+const badMessage = Message.ClickedSave({})

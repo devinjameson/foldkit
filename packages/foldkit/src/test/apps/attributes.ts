@@ -1,14 +1,13 @@
-import { Match as M, Schema as S } from 'effect'
-
 import { customElement } from '../../html/index.js'
 import type { Attribute, Html, HtmlBuilder } from '../../html/index.js'
-import { m } from '../../message/index.js'
+import { defineMessageUnion } from '../../message/index.js'
 
 // MESSAGE
 
-export const IgnoredInteraction = m('IgnoredInteraction')
+export const Message = defineMessageUnion({
+  IgnoredInteraction: {},
+})
 
-export const Message = S.Union([IgnoredInteraction])
 export type Message = typeof Message.Type
 
 // MODEL
@@ -20,16 +19,10 @@ export type Model = Readonly<{
 
 // UPDATE
 
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<never>] =>
-  M.value(message).pipe(
-    M.withReturnType<readonly [Model, ReadonlyArray<never>]>(),
-    M.tagsExhaustive({
-      IgnoredInteraction: () => [model, []],
-    }),
-  )
+export const update = (model: Model, message: Message) =>
+  Message.match<readonly [Model, ReadonlyArray<never>]>(message, {
+    IgnoredInteraction: () => [model, []],
+  })
 
 // VIEW
 

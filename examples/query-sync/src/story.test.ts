@@ -4,15 +4,12 @@ import { fromString } from 'foldkit/url'
 import { describe, expect, test } from 'vitest'
 
 import { Listbox } from '@foldkit/ui'
+import { Message as ListboxMessage } from '@foldkit/ui/listbox'
 
 import {
   Ascending,
   BrowseRoute,
-  ChangedSearchInput,
-  ChangedUrl,
-  ClickedColumnHeader,
-  CompletedReplaceFilters,
-  GotDietListboxMessage,
+  Message,
   type Model,
   ReplaceFilters,
   Unsorted,
@@ -43,7 +40,7 @@ describe('update', () => {
         update,
         given(browseModel),
         message(
-          ChangedUrl({
+          Message.ChangedUrl({
             url: urlOrThrow(
               'http://localhost/?search=raptor&sorting=Length:Ascending&diet=Carnivore&period=Cretaceous',
             ),
@@ -68,7 +65,9 @@ describe('update', () => {
         update,
         given(browseModel),
         message(
-          ChangedUrl({ url: urlOrThrow('http://localhost/somewhere/else') }),
+          Message.ChangedUrl({
+            url: urlOrThrow('http://localhost/somewhere/else'),
+          }),
         ),
         model(model => {
           expect(model.route._tag).toBe('NotFound')
@@ -82,9 +81,9 @@ describe('update', () => {
       story(
         update,
         given(browseModel),
-        message(ChangedSearchInput({ value: 'rex' })),
+        message(Message.ChangedSearchInput({ value: 'rex' })),
         Command.expectHas(ReplaceFilters),
-        Command.resolve(ReplaceFilters, CompletedReplaceFilters()),
+        Command.resolve(ReplaceFilters, Message.CompletedReplaceFilters()),
       )
     })
 
@@ -100,9 +99,9 @@ describe('update', () => {
             period: Option.none(),
           }),
         }),
-        message(ChangedSearchInput({ value: '' })),
+        message(Message.ChangedSearchInput({ value: '' })),
         Command.expectHas(ReplaceFilters),
-        Command.resolve(ReplaceFilters, CompletedReplaceFilters()),
+        Command.resolve(ReplaceFilters, Message.CompletedReplaceFilters()),
       )
     })
   })
@@ -112,9 +111,9 @@ describe('update', () => {
       story(
         update,
         given(browseModel),
-        message(ClickedColumnHeader({ column: 'Name' })),
+        message(Message.ClickedColumnHeader({ column: 'Name' })),
         Command.expectHas(ReplaceFilters),
-        Command.resolve(ReplaceFilters, CompletedReplaceFilters()),
+        Command.resolve(ReplaceFilters, Message.CompletedReplaceFilters()),
       )
     })
   })
@@ -125,19 +124,27 @@ describe('update', () => {
         update,
         given(browseModel),
         message(
-          GotDietListboxMessage({
-            message: Listbox.Opened({ maybeActiveItemIndex: Option.none() }),
+          Message.GotDietListboxMessage({
+            message: ListboxMessage.Opened({
+              maybeActiveItemIndex: Option.none(),
+            }),
           }),
         ),
-        Command.resolve(Listbox.FocusItems, Listbox.CompletedFocusItems()),
+        Command.resolve(
+          Listbox.FocusItems,
+          ListboxMessage.CompletedFocusItems(),
+        ),
         message(
-          GotDietListboxMessage({
-            message: Listbox.SelectedItem({ item: 'Carnivore' }),
+          Message.GotDietListboxMessage({
+            message: ListboxMessage.SelectedItem({ item: 'Carnivore' }),
           }),
         ),
-        Command.resolve(Listbox.FocusButton, Listbox.CompletedFocusButton()),
+        Command.resolve(
+          Listbox.FocusButton,
+          ListboxMessage.CompletedFocusButton(),
+        ),
         Command.expectHas(ReplaceFilters),
-        Command.resolve(ReplaceFilters, CompletedReplaceFilters()),
+        Command.resolve(ReplaceFilters, Message.CompletedReplaceFilters()),
       )
     })
   })

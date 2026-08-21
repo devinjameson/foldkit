@@ -1,7 +1,7 @@
-import { Array, Match as M, Option, Schema as S, pipe } from 'effect'
+import { Array, Option, Schema as S, pipe } from 'effect'
 import { Command, Runtime, Update } from 'foldkit'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Button } from '@foldkit/ui'
@@ -24,19 +24,15 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const ClickedAddRow = m('ClickedAddRow')
-export const ClickedRemoveRow = m('ClickedRemoveRow', { id: S.String })
-
-export const GotCounterMessage = m('GotCounterMessage', {
-  id: S.String,
-  message: Counter.Message,
+export const Message = defineMessageUnion({
+  ClickedAddRow: {},
+  ClickedRemoveRow: { id: S.String },
+  GotCounterMessage: {
+    id: S.String,
+    message: Counter.Message,
+  },
 })
 
-export const Message = S.Union([
-  ClickedAddRow,
-  ClickedRemoveRow,
-  GotCounterMessage,
-])
 export type Message = typeof Message.Type
 
 // UPDATE
@@ -55,18 +51,13 @@ const foldCounter = (id: string) =>
           row.id === id ? evo(row, { counter: () => nextCounter }) : row,
         ),
       }),
-    toParentMessage: message => GotCounterMessage({ id, message }),
+    toParentMessage: message => Message.GotCounterMessage({ id, message }),
   })
 
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] =>
-  M.value(message).pipe(
-    M.withReturnType<
-      readonly [Model, ReadonlyArray<Command.Command<Message>>]
-    >(),
-    M.tagsExhaustive({
+export const update = (model: Model, message: Message) =>
+  Message.match<readonly [Model, ReadonlyArray<Command.Command<Message>>]>(
+    message,
+    {
       ClickedAddRow: () => [
         evo(model, {
           rows: Array.append({
@@ -84,7 +75,7 @@ export const update = (
         [],
       ],
       GotCounterMessage: ({ id, message }) => foldCounter(id)(model, message),
-    }),
+    },
   )
 
 // INIT
@@ -116,13 +107,13 @@ const rowView = (row: Row, h: HtmlBuilder<Message>): Html =>
             model: row.counter,
             view: Counter.view,
             toParentMessage: message =>
-              GotCounterMessage({ id: row.id, message }),
+              Message.GotCounterMessage({ id: row.id, message }),
           }),
         ],
       ),
       Button.view(
         {
-          onClick: ClickedRemoveRow({ id: row.id }),
+          onClick: Message.ClickedRemoveRow({ id: row.id }),
           toView: attributes =>
             h.button(
               [
@@ -161,7 +152,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
       ),
       Button.view(
         {
-          onClick: ClickedAddRow(),
+          onClick: Message.ClickedAddRow(),
           toView: attributes =>
             h.button(
               [

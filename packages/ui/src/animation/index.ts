@@ -2,19 +2,7 @@ import { Match as M } from 'effect'
 import type { ChildAttribute, Html, TagName } from 'foldkit/html'
 import { defineView } from 'foldkit/submodel'
 
-import {
-  CompletedWaitForPaint,
-  EndedAnimation,
-  Hid,
-  Message,
-  Model,
-  OutMessage,
-  Showed,
-  StartedLeaveAnimating,
-  TransitionState,
-  TransitionedOut,
-  init,
-} from './schema.js'
+import { Message, Model, OutMessage, TransitionState, init } from './schema.js'
 import {
   WaitForAnimationSettled,
   WaitForPaint,
@@ -22,20 +10,8 @@ import {
   update,
 } from './update.js'
 
-export type { InitConfig } from './schema.js'
-export {
-  CompletedWaitForPaint,
-  EndedAnimation,
-  Hid,
-  init,
-  Message,
-  Model,
-  OutMessage,
-  Showed,
-  StartedLeaveAnimating,
-  TransitionState,
-  TransitionedOut,
-}
+export type { Hid, InitConfig, Showed } from './schema.js'
+export { init, Message, Model, OutMessage, TransitionState }
 
 export { WaitForAnimationSettled, WaitForPaint, defaultLeaveCommand, update }
 

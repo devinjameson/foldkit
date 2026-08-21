@@ -44,7 +44,7 @@ The Foldkit version represents the same actions as Messages:
 
 ::Snippet{name="atomCompareFoldkitState" label="Foldkit state"}
 
-`AddedTodo`, `ClearedDoneTodos`, and `SelectedFilter` appear in DevTools and in Story or Scene tests. “How can the todo list change?” is answered by one Message union and one update function. `M.tagsExhaustive` reports every place that must handle a newly added Message variant.
+`AddedTodo`, `ClearedDoneTodos`, and `SelectedFilter` appear in DevTools and in Story or Scene tests. “How can the todo list change?” is answered by one Message union and one update function. `Message.match` reports every place that must handle a newly added Message variant.
 
 ## Async State
 

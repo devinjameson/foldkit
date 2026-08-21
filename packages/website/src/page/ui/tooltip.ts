@@ -3,7 +3,7 @@ import type { HtmlBuilder } from 'foldkit/html'
 import { Tooltip } from '@foldkit/ui'
 import type { AnchorConfig } from '@foldkit/ui/tooltip'
 
-import { GotTooltipDemoMessage, type Message } from './message'
+import { Message } from './message'
 
 // DEMO CONTENT
 
@@ -63,7 +63,8 @@ export const demo = (tooltipModel: Tooltip.Model, h: HtmlBuilder<Message>) => {
                     ],
                   ),
               },
-              toParentMessage: message => GotTooltipDemoMessage({ message }),
+              toParentMessage: message =>
+                Message.GotTooltipDemoMessage({ message }),
             }),
           ],
         ),

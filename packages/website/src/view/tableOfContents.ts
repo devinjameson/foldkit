@@ -4,12 +4,7 @@ import { type Html, type HtmlBuilder } from 'foldkit/html'
 
 import { Icon } from '../icon'
 import { type TableOfContentsEntry } from '../main'
-import {
-  ChangedActiveSection,
-  ClickedMobileTableOfContentsLink,
-  type Message,
-  ToggledMobileTableOfContents,
-} from '../message'
+import { Message } from '../message'
 
 const tableOfContentsEntryView = (
   entry: TableOfContentsEntry,
@@ -30,7 +25,7 @@ const tableOfContentsEntryView = (
       h.a(
         [
           h.Href(`#${entry.id}`),
-          h.OnClick(ChangedActiveSection({ sectionId: entry.id })),
+          h.OnClick(Message.ChangedActiveSection({ sectionId: entry.id })),
           h.Class(
             clsx('transition block', {
               'text-accent-600 dark:text-accent-400 underline': isActive,
@@ -116,7 +111,9 @@ export const mobileTableOfContentsView = (
     [
       h.Id('mobile-table-of-contents'),
       h.Open(isOpen),
-      h.OnToggle(open => ToggledMobileTableOfContents({ isOpen: open })),
+      h.OnToggle(open =>
+        Message.ToggledMobileTableOfContents({ isOpen: open }),
+      ),
       h.Class(
         'group xl:hidden fixed top-[var(--header-height)] left-0 right-0 md:left-64 z-40 bg-cream dark:bg-gray-900 border-b border-gray-300 dark:border-gray-800',
       ),
@@ -178,7 +175,7 @@ export const mobileTableOfContentsView = (
                     [
                       h.Href(`#${id}`),
                       h.OnClick(
-                        ClickedMobileTableOfContentsLink({
+                        Message.ClickedMobileTableOfContentsLink({
                           sectionId: id,
                         }),
                       ),

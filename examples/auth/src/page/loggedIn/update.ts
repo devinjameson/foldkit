@@ -1,7 +1,7 @@
-import { Match as M, Option } from 'effect'
+import { Option } from 'effect'
 import { Command } from 'foldkit'
 
-import { Message, type OutMessage, RequestedLogout } from './message'
+import { Message, OutMessage } from './message'
 import { Model } from './model'
 
 type UpdateReturn = readonly [
@@ -9,12 +9,8 @@ type UpdateReturn = readonly [
   ReadonlyArray<Command.Command<Message>>,
   Option.Option<OutMessage>,
 ]
-const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    withUpdateReturn,
-    M.tagsExhaustive({
-      ClickedLogout: () => [model, [], Option.some(RequestedLogout())],
-    }),
-  )
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    ClickedLogout: () => [model, [], Option.some(OutMessage.RequestedLogout())],
+  })

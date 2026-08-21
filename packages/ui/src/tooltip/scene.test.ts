@@ -4,11 +4,10 @@ import { expect } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
 
-import type { Message, Model } from './index.js'
+import type { Model } from './index.js'
 import {
   AnchorTooltip,
-  CompletedAnchorTooltip,
-  FocusedTrigger,
+  Message,
   init,
   triggerId,
   update,
@@ -17,7 +16,7 @@ import {
 
 const acknowledgeAnchor = Scene.Mount.resolve(
   AnchorTooltip,
-  CompletedAnchorTooltip(),
+  Message.CompletedAnchorTooltip(),
 )
 
 const sceneView =
@@ -49,7 +48,7 @@ const trigger = Scene.selector('#test-trigger')
 const panel = Scene.selector('#test-panel')
 
 const hiddenModel = init({ id: 'test' })
-const [openModel] = update(init({ id: 'test' }), FocusedTrigger())
+const [openModel] = update(init({ id: 'test' }), Message.FocusedTrigger())
 
 describe('Tooltip', () => {
   describe('view', () => {

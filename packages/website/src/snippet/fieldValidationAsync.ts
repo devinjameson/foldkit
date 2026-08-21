@@ -36,36 +36,34 @@ const CheckEmailAvailable = Command.define('CheckEmailAvailable', {
 })
 
 const update = (model: Model, message: Message) =>
-  M.value(message).pipe(
-    M.tagsExhaustive({
-      ChangedEmail: ({ value }) => {
-        const syncResult = validateEmail(value)
-        const validationId = Number.increment(model.emailValidationId)
+  Message.match(message, {
+    ChangedEmail: ({ value }) => {
+      const syncResult = validateEmail(value)
+      const validationId = Number.increment(model.emailValidationId)
 
-        return M.value(syncResult).pipe(
-          M.tag('Valid', () => [
-            evo(model, {
-              email: () => Validating({ value }),
-              emailValidationId: () => validationId,
-            }),
-            [CheckEmailAvailable({ email: value, validationId })],
-          ]),
-          M.orElse(() => [
-            evo(model, {
-              email: () => syncResult,
-              emailValidationId: () => validationId,
-            }),
-            [],
-          ]),
-        )
-      },
+      return M.value(syncResult).pipe(
+        M.tag('Valid', () => [
+          evo(model, {
+            email: () => Validating({ value }),
+            emailValidationId: () => validationId,
+          }),
+          [CheckEmailAvailable({ email: value, validationId })],
+        ]),
+        M.orElse(() => [
+          evo(model, {
+            email: () => syncResult,
+            emailValidationId: () => validationId,
+          }),
+          [],
+        ]),
+      )
+    },
 
-      CompletedCheckEmailAvailable: ({ validationId, field }) => {
-        if (validationId === model.emailValidationId) {
-          return [evo(model, { email: () => field }), []]
-        } else {
-          return [model, []]
-        }
-      },
-    }),
-  )
+    CompletedCheckEmailAvailable: ({ validationId, field }) => {
+      if (validationId === model.emailValidationId) {
+        return [evo(model, { email: () => field }), []]
+      } else {
+        return [model, []]
+      }
+    },
+  })

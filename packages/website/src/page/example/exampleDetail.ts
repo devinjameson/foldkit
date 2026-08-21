@@ -10,7 +10,7 @@ import {
 } from 'effect'
 import { AsyncData, Command, Mount, Submodel } from 'foldkit'
 import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Disclosure, Tabs } from '@foldkit/ui'
@@ -49,31 +49,15 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-const GotSourceFileTabsMessage = m('GotSourceFileTabsMessage', {
-  message: Tabs.Message,
-})
-export const ChangedExampleUrl = m('ChangedExampleUrl', { url: S.String })
-const ToggledLivePreview = m('ToggledLivePreview', {
-  isOpen: S.Boolean,
-})
-const RequestedExampleSources = m('RequestedExampleSources', {
-  slug: S.String,
-})
-export const SucceededLoadExampleSources = m('SucceededLoadExampleSources', {
-  sources: ExampleSources,
-})
-export const FailedLoadExampleSources = m('FailedLoadExampleSources', {
-  error: S.String,
+export const Message = defineMessageUnion({
+  GotSourceFileTabsMessage: { message: Tabs.Message },
+  ChangedExampleUrl: { url: S.String },
+  ToggledLivePreview: { isOpen: S.Boolean },
+  RequestedExampleSources: { slug: S.String },
+  SucceededLoadExampleSources: { sources: ExampleSources },
+  FailedLoadExampleSources: { error: S.String },
 })
 
-export const Message = S.Union([
-  GotSourceFileTabsMessage,
-  ChangedExampleUrl,
-  ToggledLivePreview,
-  RequestedExampleSources,
-  SucceededLoadExampleSources,
-  FailedLoadExampleSources,
-])
 export type Message = typeof Message.Type
 
 // COMMAND
@@ -83,16 +67,19 @@ export type Message = typeof Message.Type
  *  complete. */
 export const LoadExampleSources = Command.define('LoadExampleSources', {
   args: { slug: S.String },
-  messages: [SucceededLoadExampleSources, FailedLoadExampleSources],
+  messages: [
+    Message.SucceededLoadExampleSources,
+    Message.FailedLoadExampleSources,
+  ],
   execute: ({ slug }) =>
     Effect.tryPromise({
       try: () => loadSourcesForSlug(slug),
       catch: error =>
         error instanceof Error ? error.message : `Unknown example: ${slug}`,
     }).pipe(
-      Effect.map(sources => SucceededLoadExampleSources({ sources })),
+      Effect.map(sources => Message.SucceededLoadExampleSources({ sources })),
       Effect.catch(error =>
-        Effect.succeed(FailedLoadExampleSources({ error })),
+        Effect.succeed(Message.FailedLoadExampleSources({ error })),
       ),
     ),
 })
@@ -119,19 +106,22 @@ const isExampleUrlMessageFromIframe = (
 
 const ObserveExampleUrlMessages = Mount.defineStream(
   'ObserveExampleUrlMessages',
-  ChangedExampleUrl,
+  Message.ChangedExampleUrl,
 )(element => {
   if (!(element instanceof HTMLIFrameElement)) {
     return Stream.empty
   }
-  return Stream.callback<typeof ChangedExampleUrl.Type>(queue =>
+  return Stream.callback<typeof Message.ChangedExampleUrl.Type>(queue =>
     Effect.acquireRelease(
       Effect.sync(() => {
         const handler = (event: MessageEvent) => {
           if (!isExampleUrlMessageFromIframe(event, element)) {
             return
           }
-          Queue.offerUnsafe(queue, ChangedExampleUrl({ url: event.data.url }))
+          Queue.offerUnsafe(
+            queue,
+            Message.ChangedExampleUrl({ url: event.data.url }),
+          )
         }
         window.addEventListener('message', handler)
         return handler
@@ -167,7 +157,7 @@ export const boot = (
     onSome: slug => {
       const [bootedModel, bootCommands] = update(
         model,
-        RequestedExampleSources({ slug }),
+        Message.RequestedExampleSources({ slug }),
       )
       return [bootedModel, [...initCommands, ...bootCommands]]
     },
@@ -176,15 +166,10 @@ export const boot = (
 
 // UPDATE
 
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] =>
-  M.value(message).pipe(
-    M.withReturnType<
-      readonly [Model, ReadonlyArray<Command.Command<Message>>]
-    >(),
-    M.tagsExhaustive({
+export const update = (model: Model, message: Message) =>
+  Message.match<readonly [Model, ReadonlyArray<Command.Command<Message>>]>(
+    message,
+    {
       GotSourceFileTabsMessage: ({ message }) => {
         const [nextTabs, tabsCommands, maybeOutMessage] = SourceFileTabs.update(
           model.sourceFileTabs,
@@ -206,7 +191,7 @@ export const update = (
             maybeActiveSourceFilePath: () => nextMaybeActiveSourceFilePath,
           }),
           Command.mapMessages(tabsCommands, message =>
-            GotSourceFileTabsMessage({ message }),
+            Message.GotSourceFileTabsMessage({ message }),
           ),
         ]
       },
@@ -249,11 +234,11 @@ export const update = (
         }),
         [],
       ],
-    }),
+    },
   )
 
 export const informRouteChanged = (model: Model, slug: string) =>
-  update(model, RequestedExampleSources({ slug }))
+  update(model, Message.RequestedExampleSources({ slug }))
 
 // VIEW
 
@@ -389,7 +374,7 @@ const livePreviewDisclosureView = (
     {
       id: 'live-preview',
       isOpen: isLivePreviewOpen,
-      onToggle: isOpen => ToggledLivePreview({ isOpen }),
+      onToggle: isOpen => Message.ToggledLivePreview({ isOpen }),
       toView: attributes =>
         h.div(
           [],
@@ -546,7 +531,7 @@ const sourceCodeView = (
           ],
         ),
     },
-    toParentMessage: message => GotSourceFileTabsMessage({ message }),
+    toParentMessage: message => Message.GotSourceFileTabsMessage({ message }),
   })
 }
 

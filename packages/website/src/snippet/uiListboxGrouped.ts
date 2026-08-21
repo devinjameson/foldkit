@@ -4,7 +4,7 @@
 import { Match as M, Option } from 'effect'
 import { Update } from 'foldkit'
 import { type HtmlBuilder, childAttributes } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Listbox } from '@foldkit/ui'
@@ -41,8 +41,8 @@ const init = () => [
 ]
 
 // Wrap Listbox's Messages so they can flow through your update:
-const GotListboxMessage = m('GotListboxMessage', {
-  message: Listbox.Message,
+const Message = defineMessageUnion({
+  GotListboxMessage: { message: Listbox.Message },
 })
 
 // At module scope, fold the OutMessage into your own Model. On selection, the
@@ -66,11 +66,11 @@ const foldListbox = Update.foldChild({
   update: CharacterListbox.update,
   read: (model: Model) => Option.some(model.listbox),
   write: (model, nextListbox) => evo(model, { listbox: () => nextListbox }),
-  toParentMessage: message => GotListboxMessage({ message }),
+  toParentMessage: message => Message.GotListboxMessage({ message }),
   foldOutMessage: foldListboxOutMessage,
 })
 
-// Inside your update function's M.tagsExhaustive({...}), call the fold:
+// Inside your update function's Message.match({...}), call the fold:
 GotListboxMessage: ({ message }) => foldListbox(model, message)
 
 const characters: ReadonlyArray<Character> = [
@@ -121,5 +121,5 @@ const view = (model: Model, h: HtmlBuilder<Message>) =>
       backdropClassName: 'fixed inset-0',
       anchor: { placement: 'bottom-start', gap: 4, padding: 8 },
     },
-    toParentMessage: message => GotListboxMessage({ message }),
+    toParentMessage: message => Message.GotListboxMessage({ message }),
   })

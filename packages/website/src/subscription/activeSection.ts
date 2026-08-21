@@ -14,7 +14,7 @@ import {
 import { AsyncData, Render, Subscription } from 'foldkit'
 
 import { type Model } from '../main'
-import { ChangedActiveSection, type Message } from '../message'
+import { Message } from '../message'
 import * as Page from '../page'
 
 export const subscriptions = Subscription.make<Model, Message>()(entry => ({
@@ -158,7 +158,7 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
         }
       },
       dependenciesToStream: ({ sections }) =>
-        Stream.callback<typeof ChangedActiveSection.Type>(queue =>
+        Stream.callback<typeof Message.ChangedActiveSection.Type>(queue =>
           Effect.gen(function* () {
             if (!Array.isReadonlyArrayNonEmpty(sections)) {
               return yield* Effect.never
@@ -193,7 +193,7 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
                       onSome: sectionId => {
                         Queue.offerUnsafe(
                           queue,
-                          ChangedActiveSection({ sectionId }),
+                          Message.ChangedActiveSection({ sectionId }),
                         )
                       },
                     })

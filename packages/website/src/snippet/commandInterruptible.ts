@@ -1,14 +1,16 @@
 import { Array, Effect, Match as M, Schema as S } from 'effect'
 import { Command } from 'foldkit'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
-const ClickedCancelUpload = m('ClickedCancelUpload', { uploadId: S.Number })
-const SucceededUploadFile = m('SucceededUploadFile', { uploadId: S.Number })
-const FailedUploadFile = m('FailedUploadFile', { uploadId: S.Number })
-const CompletedCancelUploadFile = m('CompletedCancelUploadFile', {
-  uploadId: S.Number,
-  outcome: Command.Interruptible.Outcome,
+const Message = defineMessageUnion({
+  ClickedCancelUpload: { uploadId: S.Number },
+  SucceededUploadFile: { uploadId: S.Number },
+  FailedUploadFile: { uploadId: S.Number },
+  CompletedCancelUploadFile: {
+    uploadId: S.Number,
+    outcome: Command.Interruptible.Outcome,
+  },
 })
 
 const UploadKey = S.Struct({ uploadId: S.Number })
@@ -16,7 +18,7 @@ type UploadKey = typeof UploadKey.Type
 
 const UploadFile = Command.define('UploadFile', {
   args: { ...UploadKey.fields, file: S.instanceOf(File) },
-  messages: [SucceededUploadFile, FailedUploadFile],
+  messages: [Message.SucceededUploadFile, Message.FailedUploadFile],
   // The key function maps args to what distinguishes invocations. Foldkit
   // prefixes the Command name automatically, so the full key for upload 7
   // is "UploadFile:7".
@@ -26,8 +28,10 @@ const UploadFile = Command.define('UploadFile', {
   },
   execute: ({ uploadId, file }) =>
     postFile(file).pipe(
-      Effect.as(SucceededUploadFile({ uploadId })),
-      Effect.catch(() => Effect.succeed(FailedUploadFile({ uploadId }))),
+      Effect.as(Message.SucceededUploadFile({ uploadId })),
+      Effect.catch(() =>
+        Effect.succeed(Message.FailedUploadFile({ uploadId })),
+      ),
     ),
 })
 
@@ -36,21 +40,16 @@ const setStatusForId = (uploadId: number, status: UploadStatus) =>
     upload.id === uploadId ? evo(upload, { status: () => status }) : upload,
   )
 
-const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] =>
-  M.value(message).pipe(
-    M.withReturnType<
-      readonly [Model, ReadonlyArray<Command.Command<Message>>]
-    >(),
-    M.tagsExhaustive({
+const update = (model: Model, message: Message) =>
+  Message.match<readonly [Model, ReadonlyArray<Command.Command<Message>>]>(
+    message,
+    {
       // Interrupt only the upload with this uploadId.
       ClickedCancelUpload: ({ uploadId }) => [
         model,
         [
           UploadFile.Interrupt({ uploadId }, outcome =>
-            CompletedCancelUploadFile({ uploadId, outcome }),
+            Message.CompletedCancelUploadFile({ uploadId, outcome }),
           ),
         ],
       ],
@@ -79,5 +78,5 @@ const update = (
         evo(model, { uploads: setStatusForId(uploadId, 'Failed') }),
         [],
       ],
-    }),
+    },
   )

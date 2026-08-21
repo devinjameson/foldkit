@@ -15,6 +15,17 @@ describe('no-empty-object-tagged-call', () => {
     expect(result[0]?.diagnostic.message).toContain('ClickedSave()')
   })
 
+  it('flags empty object calls through a Message namespace', () => {
+    const result = Testing.runRule(
+      noEmptyObjectTaggedCall,
+      'CallExpression',
+      Testing.callOfMember('Message', 'ClickedSave', [Testing.objectExpr([])]),
+    )
+
+    expect(result).toHaveLength(1)
+    expect(result[0]?.diagnostic.message).toContain('Message.ClickedSave()')
+  })
+
   it('does not flag member calls that happen to receive empty objects', () => {
     const result = Testing.runRule(
       noEmptyObjectTaggedCall,

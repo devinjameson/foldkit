@@ -2,12 +2,7 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { Checkbox, Fieldset, Input, Textarea } from '@foldkit/ui'
 
-import {
-  type Message,
-  ToggledFieldsetCheckboxDemo,
-  UpdatedFieldsetInputValue,
-  UpdatedFieldsetTextareaValue,
-} from './message'
+import { Message } from './message'
 import type { Model } from './model'
 
 const FIELDSET_CHECKBOX_DEMO_ID = 'fieldset-checkbox-demo'
@@ -53,7 +48,8 @@ const nameInput = (value: string, h: HtmlBuilder<Message>): Html =>
     {
       id: 'fieldset-name-input',
       value,
-      onInput: inputValue => UpdatedFieldsetInputValue({ value: inputValue }),
+      onInput: inputValue =>
+        Message.UpdatedFieldsetInputValue({ value: inputValue }),
       placeholder: 'Enter your full name',
       toView: attributes =>
         h.div(
@@ -77,7 +73,7 @@ const bioTextarea = (value: string, h: HtmlBuilder<Message>): Html =>
       id: 'fieldset-bio-textarea',
       value,
       onInput: textareaValue =>
-        UpdatedFieldsetTextareaValue({ value: textareaValue }),
+        Message.UpdatedFieldsetTextareaValue({ value: textareaValue }),
       placeholder: 'Tell us about yourself...',
       rows: 3,
       toView: attributes =>
@@ -102,7 +98,7 @@ const termsCheckbox = (isChecked: boolean, h: HtmlBuilder<Message>): Html =>
       id: FIELDSET_CHECKBOX_DEMO_ID,
       isChecked,
       onToggle: nextIsChecked =>
-        ToggledFieldsetCheckboxDemo({ isChecked: nextIsChecked }),
+        Message.ToggledFieldsetCheckboxDemo({ isChecked: nextIsChecked }),
       toView: attributes =>
         h.div(
           [h.Class('flex flex-col gap-1')],
@@ -179,7 +175,7 @@ const disabledTermsCheckbox = (h: HtmlBuilder<Message>): Html =>
       id: FIELDSET_DISABLED_CHECKBOX_ID,
       isChecked: true,
       isDisabled: true,
-      onToggle: isChecked => ToggledFieldsetCheckboxDemo({ isChecked }),
+      onToggle: isChecked => Message.ToggledFieldsetCheckboxDemo({ isChecked }),
       toView: attributes =>
         h.div(
           [h.Class('flex items-center gap-2')],

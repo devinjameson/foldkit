@@ -3,12 +3,7 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { Checkbox, Fieldset, Input, Textarea } from '@foldkit/ui'
 
-import {
-  ToggledFieldsetCheckboxDemo,
-  type UiMessage,
-  UpdatedFieldsetInputValue,
-  UpdatedFieldsetTextareaValue,
-} from '../message'
+import { UiMessage } from '../message'
 import type { UiModel } from '../model'
 
 const FIELDSET_CHECKBOX_DEMO_ID = 'fieldset-checkbox-demo'
@@ -53,7 +48,8 @@ const nameInput = (value: string, h: HtmlBuilder<UiMessage>): Html =>
     {
       id: 'fieldset-name-input',
       value,
-      onInput: inputValue => UpdatedFieldsetInputValue({ value: inputValue }),
+      onInput: inputValue =>
+        UiMessage.UpdatedFieldsetInputValue({ value: inputValue }),
       placeholder: 'Enter your full name',
       toView: attributes =>
         h.div(
@@ -77,7 +73,7 @@ const bioTextarea = (value: string, h: HtmlBuilder<UiMessage>): Html =>
       id: 'fieldset-bio-textarea',
       value,
       onInput: textareaValue =>
-        UpdatedFieldsetTextareaValue({ value: textareaValue }),
+        UiMessage.UpdatedFieldsetTextareaValue({ value: textareaValue }),
       placeholder: 'Tell us about yourself...',
       rows: 3,
       toView: attributes =>
@@ -102,7 +98,7 @@ const termsCheckbox = (isChecked: boolean, h: HtmlBuilder<UiMessage>): Html =>
       id: FIELDSET_CHECKBOX_DEMO_ID,
       isChecked,
       onToggle: nextIsChecked =>
-        ToggledFieldsetCheckboxDemo({ isChecked: nextIsChecked }),
+        UiMessage.ToggledFieldsetCheckboxDemo({ isChecked: nextIsChecked }),
       toView: attributes =>
         h.div(
           [h.Class('flex flex-col gap-1')],
@@ -179,7 +175,8 @@ const disabledTermsCheckbox = (h: HtmlBuilder<UiMessage>): Html =>
       id: FIELDSET_DISABLED_CHECKBOX_ID,
       isChecked: true,
       isDisabled: true,
-      onToggle: isChecked => ToggledFieldsetCheckboxDemo({ isChecked }),
+      onToggle: isChecked =>
+        UiMessage.ToggledFieldsetCheckboxDemo({ isChecked }),
       toView: attributes =>
         h.div(
           [h.Class('flex items-center gap-2')],

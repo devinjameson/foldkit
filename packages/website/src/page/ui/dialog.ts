@@ -4,20 +4,7 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 import { Combobox, Dialog } from '@foldkit/ui'
 
 import { CityCombobox, comboboxViewInputs } from './combobox'
-import {
-  ClickedDeleteProject,
-  ClickedEditFilters,
-  ClickedOpenAnimatedDialog,
-  ClickedOpenDialog,
-  ClickedOpenProjectSettings,
-  GotDialogAnimatedDemoMessage,
-  GotDialogDemoMessage,
-  GotNestedDialogChildDemoMessage,
-  GotNestedDialogParentDemoMessage,
-  GotOverlayComboboxDemoMessage,
-  GotOverlayDialogDemoMessage,
-  type Message,
-} from './message'
+import { Message } from './message'
 import type { City } from './model'
 
 // DEMO CONTENT
@@ -133,7 +120,8 @@ const editFiltersContent = (
           }),
           maybeSelectedValue: maybeSelectedCity,
         },
-        toParentMessage: message => GotOverlayComboboxDemoMessage({ message }),
+        toParentMessage: message =>
+          Message.GotOverlayComboboxDemoMessage({ message }),
       }),
     ],
   )
@@ -159,7 +147,10 @@ const projectSettingsContent = (
         [
           h.button([...closeButton, h.Class(cancelButtonClassName)], ['Close']),
           h.button(
-            [h.Class(dangerButtonClassName), h.OnClick(ClickedDeleteProject())],
+            [
+              h.Class(dangerButtonClassName),
+              h.OnClick(Message.ClickedDeleteProject()),
+            ],
             ['Delete project'],
           ),
         ],
@@ -206,7 +197,7 @@ export const dialogDemo = (
   h: HtmlBuilder<Message>,
 ) => {
   return [
-    trigger('Open Dialog', ClickedOpenDialog(), h),
+    trigger('Open Dialog', Message.ClickedOpenDialog(), h),
     h.submodel({
       slotId: dialogModel.id,
       model: dialogModel,
@@ -242,7 +233,7 @@ export const dialogDemo = (
               : [],
           ),
       },
-      toParentMessage: message => GotDialogDemoMessage({ message }),
+      toParentMessage: message => Message.GotDialogDemoMessage({ message }),
     }),
   ]
 }
@@ -254,7 +245,7 @@ export const overlayDialogDemo = (
   h: HtmlBuilder<Message>,
 ) => {
   return [
-    trigger('Edit filters', ClickedEditFilters(), h),
+    trigger('Edit filters', Message.ClickedEditFilters(), h),
     h.submodel({
       slotId: dialogModel.id,
       model: dialogModel,
@@ -282,7 +273,8 @@ export const overlayDialogDemo = (
               : [],
           ),
       },
-      toParentMessage: message => GotOverlayDialogDemoMessage({ message }),
+      toParentMessage: message =>
+        Message.GotOverlayDialogDemoMessage({ message }),
     }),
   ]
 }
@@ -293,7 +285,7 @@ export const nestedDialogDemo = (
   h: HtmlBuilder<Message>,
 ) => {
   return [
-    trigger('Open project settings', ClickedOpenProjectSettings(), h),
+    trigger('Open project settings', Message.ClickedOpenProjectSettings(), h),
     h.submodel({
       slotId: parentDialogModel.id,
       model: parentDialogModel,
@@ -328,7 +320,8 @@ export const nestedDialogDemo = (
               : [],
           ),
       },
-      toParentMessage: message => GotNestedDialogParentDemoMessage({ message }),
+      toParentMessage: message =>
+        Message.GotNestedDialogParentDemoMessage({ message }),
     }),
     h.submodel({
       slotId: childDialogModel.id,
@@ -357,7 +350,8 @@ export const nestedDialogDemo = (
               : [],
           ),
       },
-      toParentMessage: message => GotNestedDialogChildDemoMessage({ message }),
+      toParentMessage: message =>
+        Message.GotNestedDialogChildDemoMessage({ message }),
     }),
   ]
 }
@@ -367,7 +361,7 @@ export const dialogAnimatedDemo = (
   h: HtmlBuilder<Message>,
 ) => {
   return [
-    trigger('Open Animated Dialog', ClickedOpenAnimatedDialog(), h),
+    trigger('Open Animated Dialog', Message.ClickedOpenAnimatedDialog(), h),
     h.submodel({
       slotId: dialogModel.id,
       model: dialogModel,
@@ -403,7 +397,8 @@ export const dialogAnimatedDemo = (
               : [],
           ),
       },
-      toParentMessage: message => GotDialogAnimatedDemoMessage({ message }),
+      toParentMessage: message =>
+        Message.GotDialogAnimatedDemoMessage({ message }),
     }),
   ]
 }

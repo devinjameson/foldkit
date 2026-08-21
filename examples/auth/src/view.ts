@@ -1,7 +1,7 @@
 import { Match as M } from 'effect'
 import { type Document, HtmlBuilder } from 'foldkit/html'
 
-import { GotLoggedInMessage, GotLoggedOutMessage, Message } from './message'
+import { Message } from './message'
 import { LoggedIn, LoggedOut, Model } from './model'
 
 const title = (model: Model): string =>
@@ -22,14 +22,16 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
               slotId: 'logged-out',
               model: loggedOutModel,
               view: LoggedOut.view,
-              toParentMessage: message => GotLoggedOutMessage({ message }),
+              toParentMessage: message =>
+                Message.GotLoggedOutMessage({ message }),
             }),
           LoggedIn: loggedInModel =>
             h.submodel({
               slotId: 'logged-in',
               model: loggedInModel,
               view: LoggedIn.view,
-              toParentMessage: message => GotLoggedInMessage({ message }),
+              toParentMessage: message =>
+                Message.GotLoggedInMessage({ message }),
             }),
         }),
       ),

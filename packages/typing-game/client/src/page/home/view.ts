@@ -3,15 +3,7 @@ import { Submodel } from 'foldkit'
 import { Html, HtmlBuilder } from 'foldkit/html'
 
 import { ROOM_ID_INPUT_ID, USERNAME_INPUT_ID } from '../../constant'
-import {
-  BlurredRoomIdInput,
-  BlurredUsernameInput,
-  ChangedRoomId,
-  ChangedUsername,
-  SubmittedJoinRoomForm,
-  SubmittedUsernameForm,
-} from './message'
-import type { Message } from './message'
+import { Message } from './message'
 import {
   EnterRoomId,
   EnterUsername,
@@ -60,7 +52,7 @@ const enterUsername = (
   h: HtmlBuilder<Message>,
 ): Html =>
   h.form(
-    [h.OnSubmit(SubmittedUsernameForm())],
+    [h.OnSubmit(Message.SubmittedUsernameForm())],
     [
       h.div(
         [h.Class('flex items-center gap-2')],
@@ -76,8 +68,8 @@ const enterUsername = (
                 h.Type('text'),
                 h.Value(username),
                 h.Class('bg-transparent px-0 py-2 outline-none w-full'),
-                h.OnInput(value => ChangedUsername({ value })),
-                h.OnBlur(BlurredUsernameInput()),
+                h.OnInput(value => Message.ChangedUsername({ value })),
+                h.OnBlur(Message.BlurredUsernameInput()),
                 h.Autocapitalize('none'),
                 h.Spellcheck(false),
                 h.Autocorrect('off'),
@@ -119,7 +111,7 @@ const action =
 
 const enterRoomId = ({ roomId }: EnterRoomId, h: HtmlBuilder<Message>): Html =>
   h.form(
-    [h.OnSubmit(SubmittedJoinRoomForm())],
+    [h.OnSubmit(Message.SubmittedJoinRoomForm())],
     [
       h.div(
         [h.Class('flex items-center gap-2')],
@@ -136,8 +128,8 @@ const enterRoomId = ({ roomId }: EnterRoomId, h: HtmlBuilder<Message>): Html =>
                 h.Type('text'),
                 h.Value(roomId),
                 h.Class('bg-transparent px-0 py-2 outline-none w-full'),
-                h.OnInput(value => ChangedRoomId({ value })),
-                h.OnBlur(BlurredRoomIdInput()),
+                h.OnInput(value => Message.ChangedRoomId({ value })),
+                h.OnBlur(Message.BlurredRoomIdInput()),
                 h.Autocapitalize('none'),
                 h.Spellcheck(false),
                 h.Autocorrect('off'),

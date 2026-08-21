@@ -1,19 +1,11 @@
-import {
-  Context,
-  Effect,
-  Fiber,
-  Layer,
-  Match as M,
-  Option,
-  Schema as S,
-} from 'effect'
+import { Context, Effect, Fiber, Layer, Option, Schema as S } from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as Command from '../command/index.js'
 import { __htmlBuilder } from '../html/index.js'
 import * as ManagedResource from '../managedResource/index.js'
 import { make } from '../managedResource/managedResource.js'
-import { m } from '../message/index.js'
+import { defineMessageUnion } from '../message/index.js'
 import { evo } from '../struct/index.js'
 import { makeElement } from './runtime.js'
 
@@ -52,25 +44,16 @@ const makeEngineLayer = (id: string): Layer.Layer<EngineService, Error> =>
 const Engine = ManagedResource.tag<EngineShape>()('Engine')
 type EngineServiceId = ManagedResource.ServiceOf<typeof Engine>
 
-const RequestedEngine = m('RequestedEngine', { id: S.String })
-const StoppedEngine = m('StoppedEngine')
-const AcquiredEngine = m('AcquiredEngine')
-const ReleasedEngine = m('ReleasedEngine')
-const FailedEngine = m('FailedEngine', { error: S.String })
-const ClickedRead = m('ClickedRead')
-const SucceededRead = m('SucceededRead', { value: S.String })
-const FailedRead = m('FailedRead')
-
-const Message = S.Union([
-  RequestedEngine,
-  StoppedEngine,
-  AcquiredEngine,
-  ReleasedEngine,
-  FailedEngine,
-  ClickedRead,
-  SucceededRead,
-  FailedRead,
-])
+const Message = defineMessageUnion({
+  RequestedEngine: { id: S.String },
+  StoppedEngine: {},
+  AcquiredEngine: {},
+  ReleasedEngine: {},
+  FailedEngine: { error: S.String },
+  ClickedRead: {},
+  SucceededRead: { value: S.String },
+  FailedRead: {},
+})
 type Message = typeof Message.Type
 
 const Model = S.Struct({
@@ -81,10 +64,12 @@ const Model = S.Struct({
 type Model = typeof Model.Type
 
 const ReadEngine = Command.define('ReadEngine', {
-  messages: [SucceededRead, FailedRead],
+  messages: [Message.SucceededRead, Message.FailedRead],
   execute: Engine.get.pipe(
-    Effect.map(({ id }) => SucceededRead({ value: id })),
-    Effect.catchTag('ResourceNotAvailable', () => Effect.succeed(FailedRead())),
+    Effect.map(({ id }) => Message.SucceededRead({ value: id })),
+    Effect.catchTag('ResourceNotAvailable', () =>
+      Effect.succeed(Message.FailedRead()),
+    ),
   ),
 })
 
@@ -93,29 +78,23 @@ type UpdateReturn = readonly [
   ReadonlyArray<Command.Command<Message, never, EngineServiceId>>,
 ]
 
-const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    M.withReturnType<UpdateReturn>(),
-    M.tagsExhaustive({
-      RequestedEngine: ({ id }) => [
-        evo(model, { requested: () => Option.some(id) }),
-        [],
-      ],
-      StoppedEngine: () => [evo(model, { requested: () => Option.none() }), []],
-      AcquiredEngine: () => [evo(model, { status: () => 'acquired' }), []],
-      ReleasedEngine: () => [evo(model, { status: () => 'released' }), []],
-      FailedEngine: ({ error }) => [
-        evo(model, { status: () => `failed:${error}` }),
-        [],
-      ],
-      ClickedRead: () => [model, [ReadEngine()]],
-      SucceededRead: ({ value }) => [
-        evo(model, { readValue: () => value }),
-        [],
-      ],
-      FailedRead: () => [evo(model, { readValue: () => 'unavailable' }), []],
-    }),
-  )
+const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    RequestedEngine: ({ id }) => [
+      evo(model, { requested: () => Option.some(id) }),
+      [],
+    ],
+    StoppedEngine: () => [evo(model, { requested: () => Option.none() }), []],
+    AcquiredEngine: () => [evo(model, { status: () => 'acquired' }), []],
+    ReleasedEngine: () => [evo(model, { status: () => 'released' }), []],
+    FailedEngine: ({ error }) => [
+      evo(model, { status: () => `failed:${error}` }),
+      [],
+    ],
+    ClickedRead: () => [model, [ReadEngine()]],
+    SucceededRead: ({ value }) => [evo(model, { readValue: () => value }), []],
+    FailedRead: () => [evo(model, { readValue: () => 'unavailable' }), []],
+  })
 
 const managedResources = make<Model, Message>()(entry => ({
   engine: entry(S.Option(S.Struct({ id: S.String })), {
@@ -130,9 +109,9 @@ const managedResources = make<Model, Message>()(entry => ({
       Effect.sync(() => {
         log.push('release')
       }),
-    onAcquired: () => AcquiredEngine(),
-    onReleased: () => ReleasedEngine(),
-    onAcquireError: error => FailedEngine({ error: String(error) }),
+    onAcquired: () => Message.AcquiredEngine(),
+    onReleased: () => Message.ReleasedEngine(),
+    onAcquireError: error => Message.FailedEngine({ error: String(error) }),
   }),
 }))
 
@@ -142,9 +121,12 @@ const view = (model: Model) =>
   h.div(
     [],
     [
-      h.button([h.OnClick(RequestedEngine({ id: 'b' }))], ['request-b']),
-      h.button([h.OnClick(StoppedEngine())], ['stop']),
-      h.button([h.OnClick(ClickedRead())], ['read']),
+      h.button(
+        [h.OnClick(Message.RequestedEngine({ id: 'b' }))],
+        ['request-b'],
+      ),
+      h.button([h.OnClick(Message.StoppedEngine())], ['stop']),
+      h.button([h.OnClick(Message.ClickedRead())], ['read']),
       h.div([], [`status:${model.status}`]),
       h.div([], [`value:${model.readValue}`]),
     ],

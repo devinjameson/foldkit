@@ -3,11 +3,7 @@ import { Option } from 'effect'
 import { Html, type HtmlBuilder } from 'foldkit/html'
 
 import { Icon } from '../icon'
-import {
-  type Message,
-  SelectedThemePreference,
-  type ThemePreference,
-} from '../message'
+import { Message, type ThemePreference } from '../message'
 
 export const themeSelector = (
   maybeActivePreference: Option.Option<ThemePreference>,
@@ -70,7 +66,7 @@ const themeSelectorButton = (
         ),
       ),
       h.AriaLabel(label),
-      h.OnClick(SelectedThemePreference({ preference })),
+      h.OnClick(Message.SelectedThemePreference({ preference })),
     ],
     [icon],
   )

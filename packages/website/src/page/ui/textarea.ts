@@ -2,7 +2,7 @@ import type { HtmlBuilder } from 'foldkit/html'
 
 import { Textarea } from '@foldkit/ui'
 
-import { type Message, UpdatedTextareaDemoValue } from './message'
+import { Message } from './message'
 import type { Model } from './model'
 
 // DEMO CONTENT
@@ -26,7 +26,7 @@ export const basicDemo = (model: Model, h: HtmlBuilder<Message>) => {
           {
             id: 'textarea-basic-demo',
             value: model.textareaDemoValue,
-            onInput: value => UpdatedTextareaDemoValue({ value }),
+            onInput: value => Message.UpdatedTextareaDemoValue({ value }),
             placeholder: 'Tell us about yourself...',
             rows: 4,
             toView: attributes =>

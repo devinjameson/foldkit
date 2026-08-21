@@ -2,8 +2,8 @@ import { Effect, Option, Schema as S, Stream } from 'effect'
 import { Subscription } from 'foldkit'
 
 import type { Model } from '../main'
-import { GotSearchMessage, type Message } from '../message'
-import { PressedSearchShortcut } from '../search'
+import { Message } from '../message'
+import { Message as SearchMessage } from '../search'
 
 export const subscriptions = Subscription.make<Model, Message>()(entry => ({
   searchShortcut: entry(
@@ -17,7 +17,7 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
         Stream.when(
           Subscription.fromEventFilterMap<
             KeyboardEvent,
-            typeof GotSearchMessage.Type
+            typeof Message.GotSearchMessage.Type
           >({
             target: document,
             type: 'keydown',
@@ -25,7 +25,9 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
               if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
                 event.preventDefault()
                 return Option.some(
-                  GotSearchMessage({ message: PressedSearchShortcut() }),
+                  Message.GotSearchMessage({
+                    message: SearchMessage.PressedSearchShortcut(),
+                  }),
                 )
               }
               return Option.none()

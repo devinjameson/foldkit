@@ -27,7 +27,6 @@
     ],
     "foldkit/no-noop-message": "error",
     "foldkit/got-submodel-message-name": "error",
-    "foldkit/message-binding-matches-tag": "error",
     "foldkit/got-prefix-requires-submodel-payload": "error",
     "foldkit/no-empty-children-array": "error",
     "foldkit/no-empty-object-tagged-call": "error",

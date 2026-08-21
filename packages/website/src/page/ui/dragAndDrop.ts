@@ -3,7 +3,7 @@ import { type Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 
 import { DragAndDrop } from '@foldkit/ui'
 
-import { GotDragAndDropDemoMessage, type Message } from './message'
+import { Message } from './message'
 import type { Model } from './model'
 import type { DemoCard, DemoColumn } from './model'
 
@@ -58,7 +58,8 @@ const cardView = (
       ...DragAndDrop.draggable(
         {
           model: dragAndDropModel,
-          toParentMessage: message => GotDragAndDropDemoMessage({ message }),
+          toParentMessage: message =>
+            Message.GotDragAndDropDemoMessage({ message }),
           itemId: card.id,
           containerId,
           index,

@@ -14,15 +14,12 @@ import {
   PARTICLE_SPEED_MIN,
   SETTLE_BAND_PX,
 } from './constant'
-import {
-  CompletedGenerateAmbientParticle,
-  CompletedGenerateBurstParticle,
-} from './message'
+import { Message } from './message'
 
 export const GenerateAmbientParticle = Command.define(
   'GenerateAmbientParticle',
   {
-    messages: [CompletedGenerateAmbientParticle],
+    messages: [Message.CompletedGenerateAmbientParticle],
     execute: Effect.gen(function* () {
       const x = yield* Random.nextBetween(
         SETTLE_BAND_PX,
@@ -45,7 +42,7 @@ export const GenerateAmbientParticle = Command.define(
         PARTICLE_SPEED_MIN,
         PARTICLE_SPEED_MAX,
       )
-      return CompletedGenerateAmbientParticle({
+      return Message.CompletedGenerateAmbientParticle({
         x,
         y,
         baseHue,
@@ -67,7 +64,7 @@ const BURST_HUE_JITTER_DEGREES = 30
 
 export const GenerateBurstParticle = Command.define('GenerateBurstParticle', {
   args: { x: S.Number, y: S.Number, angle: S.Number, hueAnchor: S.Number },
-  messages: [CompletedGenerateBurstParticle],
+  messages: [Message.CompletedGenerateBurstParticle],
   execute: ({ x, y, angle, hueAnchor }) =>
     Effect.gen(function* () {
       const jitterX = yield* Random.nextBetween(
@@ -98,7 +95,7 @@ export const GenerateBurstParticle = Command.define('GenerateBurstParticle', {
         BURST_INITIAL_SPEED_SCALE_MIN,
         BURST_INITIAL_SPEED_SCALE_MAX,
       )
-      return CompletedGenerateBurstParticle({
+      return Message.CompletedGenerateBurstParticle({
         x: x + jitterX,
         y: y + jitterY,
         baseHue: (hueAnchor + hueOffset + HUE_MAX) % HUE_MAX,

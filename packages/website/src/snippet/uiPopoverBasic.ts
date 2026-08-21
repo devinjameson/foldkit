@@ -4,7 +4,7 @@
 import { Match as M, Option } from 'effect'
 import { Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Popover } from '@foldkit/ui'
@@ -25,8 +25,8 @@ const init = () => [
 ]
 
 // Embed the Popover Message in your parent Message:
-const GotPopoverMessage = m('GotPopoverMessage', {
-  message: Popover.Message,
+const Message = defineMessageUnion({
+  GotPopoverMessage: { message: Popover.Message },
 })
 
 // At module scope, fold the OutMessage into your own Model. `Opened` and
@@ -55,11 +55,11 @@ const foldPopover = Update.foldChild({
   update: Popover.update,
   read: (model: Model) => Option.some(model.popover),
   write: (model, nextPopover) => evo(model, { popover: () => nextPopover }),
-  toParentMessage: message => GotPopoverMessage({ message }),
+  toParentMessage: message => Message.GotPopoverMessage({ message }),
   foldOutMessage: foldPopoverOutMessage,
 })
 
-// Inside your update function's M.tagsExhaustive({...}), call the fold:
+// Inside your update function's Message.match({...}), call the fold:
 GotPopoverMessage: ({ message }) => foldPopover(model, message)
 
 // Inside your view function, embed the popover via h.submodel. Give the
@@ -113,6 +113,6 @@ const view = (h: HtmlBuilder<Message>) => {
           ],
         ),
     },
-    toParentMessage: message => GotPopoverMessage({ message }),
+    toParentMessage: message => Message.GotPopoverMessage({ message }),
   })
 }
