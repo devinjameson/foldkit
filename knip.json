@@ -13,6 +13,7 @@
     },
     "packages/foldkit": {
       "entry": [
+        "typedoc-entry.ts",
         "src/index.ts",
         "src/brand/public.ts",
         "src/experimental/public.ts",

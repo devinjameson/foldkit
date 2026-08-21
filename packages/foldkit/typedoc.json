@@ -1,7 +1,7 @@
 {
   "$schema": "https://typedoc.org/schema.json",
-  "entryPoints": ["src/index.ts"],
-  "tsconfig": "tsconfig.build.json",
+  "entryPoints": ["typedoc-entry.ts"],
+  "tsconfig": "tsconfig.docs.json",
   "json": "../website/src/generated/api.json",
   "pretty": false,
   "excludePrivate": true,
