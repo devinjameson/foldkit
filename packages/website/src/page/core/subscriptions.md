@@ -7,36 +7,36 @@ A Subscription describes ongoing work whose lifetime comes from the Model. Each 
 The first dependency value opens the Stream's initial scope. After every Model update, Foldkit compares the latest dependencies with the previous value. Equivalent dependencies keep the current Stream alive. A change closes its scope, runs any registered `Effect.acquireRelease` finalizers, and opens a fresh scope with the new dependencies.
 
 ```diagram
-                             Model
-                               | modelToDependencies(model)
-                               v
-                          Dependencies
-                               |
-                +--------------+---------------+
-                |                              |
-           first value                   later value
-                |                              |
-                |                              v
-                |                   compare with previous
-                |                              |
-                |                 +------------+-----------+
-                |                 |                        |
-                |              changed                equivalent
-                |                 |                        |
-                |                 v                        v
-                |         close old scope         keep current scope
-                |          run finalizers                  |
-                |                 |                        |
-                +-----------------+                        |
-                                  v                        |
-                           open fresh scope                |
-                                  |                        |
-                                  +------------+-----------+
-                                               v
-                                    active Stream<Message>
-                                               |
-                                               v
-                                             update
+                  Model
+                    | modelToDependencies(model)
+                    v
+               Dependencies
+                    |
+     +--------------+---------------+
+     |                              |
+first value                   later value
+     |                              |
+     |                              v
+     |                   compare with previous
+     |                              |
+     |                 +------------+-----------+
+     |                 |                        |
+     |              changed                equivalent
+     |                 |                        |
+     |                 v                        v
+     |         close old scope         keep current scope
+     |          run finalizers                  |
+     |                 |                        |
+     +-----------------+                        |
+                       v                        |
+                open fresh scope                |
+                       |                        |
+                       +------------+-----------+
+                                    v
+                         active Stream<Message>
+                                    |
+                                    v
+                                  update
 ```
 
 The Subscription is attached to the Model condition, not to the external source used inside its Stream. A timer, document listener, system theme observer, or `WebSocket` supplies events during that lifetime. Those events flow back into update as Messages.
