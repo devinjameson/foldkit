@@ -179,6 +179,7 @@ const CONSUMER_FIXTURES: ReadonlyArray<ConsumerFixture> = [
   { path: 'src/entry.server.ts' },
   { path: 'src/vite-env.d.ts' },
   { path: 'src/packed-types.ts' },
+  { path: 'src/inferred-program.ts' },
   { path: 'tsconfig.json' },
 ]
 
@@ -276,6 +277,13 @@ const writeConsumerProject = (
 // were documented as shipping from there while the packed declarations omitted
 // them, which nothing inside the workspace could show: a source path resolves
 // them whether or not the barrel re-exports them.
+//
+// The fixture also sets `declaration`, so it covers a consumer that exports a
+// program whose type comes from `makeElement` or `makeApplication`. If a type
+// that foldkit exports has a key the consumer cannot write, that consumer
+// cannot write its own `.d.ts` file at all, and TypeScript reports TS4023.
+// `noEmit` still reports it, but only while `declaration` is set. Without
+// `declaration` the check never runs.
 const assertPackedTypesResolve = (projectDir: string): void => {
   const result = spawnSync('npx', ['tsc', '--noEmit'], {
     cwd: projectDir,
@@ -283,11 +291,12 @@ const assertPackedTypesResolve = (projectDir: string): void => {
   })
   assertConsumer(
     result.status === 0,
-    'a consumer importing the documented types from ' +
-      '`foldkit/experimental/server` does not typecheck against the packed ' +
-      `declarations:\n${result.stdout}${result.stderr}`,
+    'a consumer cannot compile against the packed declarations. It either ' +
+      'imports the documented types from `foldkit/experimental/server`, or ' +
+      'exports a program built with `makeElement` or `makeApplication`:' +
+      `\n${result.stdout}${result.stderr}`,
   )
-  log('Packed declarations carry the documented render option types')
+  log('Packed declarations compile, and a consumer can write its own')
 }
 
 // ASSERTIONS ON THE BUILT ARTIFACTS
