@@ -69,6 +69,7 @@ Match the implementation style to the subsystem and the behavior being modeled. 
 - Capitalize Schema literal strings: `S.Literals(['Horizontal', 'Vertical'])`.
 - Capitalize namespace imports: `import * as Command from './command'`.
 - Use `const`. Only use `let` when mutation is truly unavoidable. Always brace control flow.
+- Use blank lines to show the phases of non-trivial control flow. For example: separate setup, fallback guards, value reads, branching, writes, and the final return instead of presenting them as one uninterrupted block. Do not separate statements that form one operation.
 - Extract magic numbers to named constants.
 - Never use nested ternaries. Use `Match.value`, an `if`/`else` chain, or a named helper.
 - Prefer explicit `if`/`else` when both branches return. Early-return reads as "A is exceptional, B is the default"; reserve it for true guards.
