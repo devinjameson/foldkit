@@ -104,7 +104,7 @@ const landingFooter = (currentYear: number): Html =>
   ih.footer(
     [
       ih.Class(
-        'px-6 py-8 md:px-12 lg:px-20 border-t border-gray-300 dark:border-gray-800 text-sm text-gray-500 dark:text-gray-400',
+        'px-6 pt-8 pb-[calc(2rem+env(safe-area-inset-bottom,0px))] md:px-12 lg:px-20 border-t border-gray-300 dark:border-gray-800 text-sm text-gray-500 dark:text-gray-400',
       ),
     ],
     [

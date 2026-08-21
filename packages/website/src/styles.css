@@ -84,6 +84,7 @@
   }
 
   html {
+    @apply bg-cream dark:bg-gray-900;
     color-scheme: light;
     scroll-padding-top: calc(var(--header-height) + var(--mobile-toc-height));
   }
@@ -94,7 +95,7 @@
   }
 
   body {
-    @apply text-base leading-relaxed font-light tracking-[0.01em] text-gray-800 dark:text-gray-200 bg-cream dark:bg-gray-900;
+    @apply text-base leading-relaxed font-light tracking-[0.01em] text-gray-800 dark:text-gray-200;
   }
 
   strong {
