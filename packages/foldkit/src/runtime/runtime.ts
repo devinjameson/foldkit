@@ -1432,8 +1432,6 @@ export type ElementInit<
 
 type BootMode = 'Fresh' | 'Hydrate'
 
-declare const RuntimeBootTypeId: unique symbol
-
 /** Client-only startup input for an application that declares Flags. Pass it
  *  to `run` or `embed`; `hydrate` instead decodes the exact Flags value
  *  embedded by the server render.
@@ -1459,7 +1457,7 @@ export type MakeRuntimeReturn<
   runtimeId: string
   start: (hmrModel?: unknown) => Effect.Effect<void>
   ports: P
-  [RuntimeBootTypeId]?: Readonly<{
+  '~foldkit/RuntimeBoot'?: Readonly<{
     Flags: (flags: Flags) => Flags
     Resources: (resources: Resources) => Resources
     Kind: Kind

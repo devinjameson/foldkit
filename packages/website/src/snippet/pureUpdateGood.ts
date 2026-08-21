@@ -1,25 +1,14 @@
-import { Effect, Match, Random } from 'effect'
+import { Effect, Match as M, Random } from 'effect'
 import { Command } from 'foldkit'
+import { evo } from 'foldkit/struct'
 
 import { GRID_SIZE } from './constants'
-import {
-  CompletedGenerateApplePosition,
-  Message,
-  RequestedApple,
-} from './message'
-import { Model } from './model'
+import { CompletedGenerateApplePosition, type Message } from './message'
+import type { Model } from './model'
 
-const update = (model: Model, message: Message) =>
-  Match.value(message).pipe(
-    Match.tagsExhaustive({
-      RequestedApple: () => [model, [GenerateApplePosition()]],
-      CompletedGenerateApplePosition: ({ position }) => [
-        { ...model, apple: position },
-        [],
-      ],
-    }),
-  )
+type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
 
+// ✅ Run random work in a Command
 const GenerateApplePosition = Command.define('GenerateApplePosition', {
   messages: [CompletedGenerateApplePosition],
   execute: Effect.gen(function* () {
@@ -29,9 +18,14 @@ const GenerateApplePosition = Command.define('GenerateApplePosition', {
   }),
 })
 
-const model = { snake: [{ x: 0, y: 0 }], apple: { x: 5, y: 5 } }
-const message = RequestedApple()
-
-console.log(update(model, message))
-console.log(update(model, message))
-console.log(update(model, message))
+const update = (model: Model, message: Message) =>
+  M.value(message).pipe(
+    M.withReturnType<UpdateReturn>(),
+    M.tagsExhaustive({
+      RequestedApple: () => [model, [GenerateApplePosition()]],
+      CompletedGenerateApplePosition: ({ position }) => [
+        evo(model, { apple: () => position }),
+        [],
+      ],
+    }),
+  )

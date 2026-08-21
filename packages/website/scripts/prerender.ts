@@ -327,6 +327,11 @@ export const STATIC_ROUTES: ReadonlyArray<AppRoute> = [
   ...Array.map(blogPostSlugs, slug => BlogPostRoute({ postSlug: slug })),
 ]
 
+const PLAYGROUND_ROUTES: ReadonlyArray<AppRoute> = Array.map(
+  exampleSlugs,
+  exampleSlug => PlaygroundRoute({ exampleSlug }),
+)
+
 export const routeToUrlPath = (route: AppRoute): string =>
   M.value(route).pipe(
     M.withReturnType<string>(),
@@ -637,37 +642,58 @@ const prerenderRoute =
       ),
     )
 
-// PLAYGROUND SHELL
+// PLAYGROUND SHELLS
 
 // NOTE: Playground routes are deliberately excluded from STATIC_ROUTES: the
 // WebContainer editor can't be statically rendered per slug, and every entry
-// into it is a full document load for cross-origin isolation. With no file of
-// its own, Vercel's SPA catch-all serves the prerendered home page for
-// `/playground/<slug>`, so the landing view flashes before the app boots and
-// swaps in the editor. Instead, one canonical playground page renders through
-// the server entry and `/playground/*` routes to it (see deploy-website.yml
-// and the preview fallback in vite.config.ts), so the shell carries the
-// `data-foldkit-app` stamp and the Flags payload that `Runtime.hydrate`
-// requires. A visitor loading a different slug hydrates against this shell
-// and the mismatching subtree rebuilds, the designed hydration fallback.
+// into it is a full document load for cross-origin isolation. A single Counter
+// render supplies the app shell and Flags payload that `Runtime.hydrate`
+// requires. Each known slug gets a copy with its own metadata, so direct loads
+// and link previews describe the requested example. Hydrating another example
+// against the Counter shell rebuilds the mismatching subtree, the designed
+// hydration fallback. The canonical Counter copy at `/playground/index.html`
+// remains the fallback for unknown slugs (see deploy-website.yml and the
+// preview fallback in vite.config.ts).
 const PLAYGROUND_SHELL_ROUTE = PlaygroundRoute({ exampleSlug: 'counter' })
 
 const PLAYGROUND_SHELL_OUTPUT_PATH = 'playground/index.html'
 
-const prerenderPlaygroundShell = (
+const prerenderPlaygroundShells = (
   serverEntry: typeof ServerEntry,
   baseHtml: string,
+  resolveApiModuleName: ApiModuleNameResolver,
 ) =>
   Effect.gen(function* () {
     const captured = yield* renderRoutePage(serverEntry, PLAYGROUND_SHELL_ROUTE)
-    const outputHtml = Server.injectIntoTemplate(baseHtml, captured.application)
-    const outputFilePath = resolve(DIST_DIR, PLAYGROUND_SHELL_OUTPUT_PATH)
+    const shellHtml = Server.injectIntoTemplate(baseHtml, captured.application)
 
     const fs = yield* FileSystem.FileSystem
-    yield* fs.makeDirectory(dirname(outputFilePath), { recursive: true })
-    yield* fs.writeFileString(outputFilePath, outputHtml)
+    const writeShell = (route: AppRoute, outputPath: string) => {
+      const urlPath = routeToUrlPath(route)
+      const outputHtml = injectMetaTags(
+        shellHtml,
+        route,
+        urlPath,
+        resolveApiModuleName,
+      )
+      const outputFilePath = resolve(DIST_DIR, outputPath)
 
-    yield* Console.log('  ✓ /playground/* shell')
+      return Effect.gen(function* () {
+        yield* fs.makeDirectory(dirname(outputFilePath), { recursive: true })
+        yield* fs.writeFileString(outputFilePath, outputHtml)
+      })
+    }
+
+    yield* writeShell(PLAYGROUND_SHELL_ROUTE, PLAYGROUND_SHELL_OUTPUT_PATH)
+    yield* Effect.forEach(
+      PLAYGROUND_ROUTES,
+      route => writeShell(route, routeToOutputPath(route)),
+      { concurrency: 4 },
+    )
+
+    yield* Console.log(
+      `  ✓ ${PLAYGROUND_ROUTES.length} /playground/* metadata shells`,
+    )
   })
 
 // SITEMAP
@@ -873,7 +899,7 @@ const program = Effect.scoped(
     const routes = enumerateRoutes(apiModuleSlugs)
 
     yield* generateOgImages(
-      routes,
+      Array.appendAll(routes, PLAYGROUND_ROUTES),
       routeToUrlPath,
       DIST_DIR,
       resolveApiModuleName,
@@ -883,7 +909,11 @@ const program = Effect.scoped(
     const fs = yield* FileSystem.FileSystem
     const baseHtml = yield* fs.readFileString(resolve(DIST_DIR, 'index.html'))
 
-    yield* prerenderPlaygroundShell(serverEntry, baseHtml)
+    yield* prerenderPlaygroundShells(
+      serverEntry,
+      baseHtml,
+      resolveApiModuleName,
+    )
 
     const results = yield* Effect.forEach(
       routes,

@@ -203,7 +203,7 @@ describe('buildLlmsIndex', () => {
     ])
 
     expect(output).toContain('# Foldkit')
-    expect(output).toContain('> Foldkit is a TypeScript frontend framework')
+    expect(output).toMatch(/^# Foldkit\n\n> .+/)
     expect(output).toContain('## Docs')
     expect(output).toContain(
       '- [Getting Started](https://foldkit.dev/getting-started): Set up your first app.',

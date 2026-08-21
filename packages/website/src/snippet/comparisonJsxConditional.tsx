@@ -1,19 +1,18 @@
-import { Data, Match } from 'effect'
+import { Match as M, Schema as S } from 'effect'
 
-type Status = Data.TaggedEnum<{
-  Idle: {}
-  Loading: {}
-  Failed: { error: string }
-  Loaded: { greeting: string }
-}>
+const Idle = S.TaggedStruct('Idle', {})
+const Loading = S.TaggedStruct('Loading', {})
+const Failed = S.TaggedStruct('Failed', { error: S.String })
+const Loaded = S.TaggedStruct('Loaded', { greeting: S.String })
 
-const Status = Data.taggedEnum<Status>()
+const Status = S.Union([Idle, Loading, Failed, Loaded])
+type Status = typeof Status.Type
 
 function Greeting({ status }: { status: Status }) {
   return (
     <div>
-      {Match.value(status).pipe(
-        Match.tagsExhaustive({
+      {M.value(status).pipe(
+        M.tagsExhaustive({
           Idle: () => null,
           Loading: () => <p>Loading…</p>,
           Failed: ({ error }) => <p>Sorry: {error}</p>,

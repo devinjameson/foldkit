@@ -80,7 +80,7 @@ describe('routeToMetadata', () => {
           resolveApiModuleName,
         ),
       ).toEqual({
-        title: `${example.title} playground`,
+        title: `${example.title} Playground`,
         description: `Edit and run the ${example.title} example live in your browser.`,
         section: 'Playground',
       })

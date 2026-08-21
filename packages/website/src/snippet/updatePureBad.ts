@@ -1,18 +1,20 @@
-import { Match } from 'effect'
+import { Match as M } from 'effect'
+import { type Command } from 'foldkit'
+import { evo } from 'foldkit/struct'
 
-import { Message } from './message'
-import { Model } from './model'
+import type { Message } from './message'
+import type { Model } from './model'
+
+type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
 
 // ❌ Don't do this in update
 const update = (model: Model, message: Message) =>
-  Match.value(message).pipe(
-    Match.tagsExhaustive({
-      ClickedFetchUser: () => {
-        // Making HTTP requests directly
-        fetch('/api/user').then(res => {
-          model.user = res.json() // Mutating state!
-        })
-        return [model, []]
+  M.value(message).pipe(
+    M.withReturnType<UpdateReturn>(),
+    M.tagsExhaustive({
+      OpenedDialog: () => {
+        document.querySelector<HTMLInputElement>('#search-input')?.focus()
+        return [evo(model, { dialogState: () => 'Open' }), []]
       },
     }),
   )

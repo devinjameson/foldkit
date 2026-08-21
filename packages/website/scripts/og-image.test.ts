@@ -2,7 +2,12 @@ import { Array, Option } from 'effect'
 import { describe, expect, it } from 'vitest'
 
 import { maybePostCover } from '../src/page/blog/frontmatter'
-import { BlogPostRoute, HomeRoute } from '../src/route'
+import {
+  BlogPostRoute,
+  ExamplesRoute,
+  HomeRoute,
+  PlaygroundRoute,
+} from '../src/route'
 import { blogPosts } from './blogPosts'
 import { injectMetaTags } from './og-image'
 
@@ -24,6 +29,7 @@ const baseHtml = `<html><head>
     <meta name="twitter:title" content="base" />
     <meta name="twitter:description" content="base" />
     <meta name="twitter:image" content="base" />
+    <meta name="twitter:image:alt" content="base" />
   </head><body></body></html>`
 
 const coverPost = Option.getOrThrowWith(
@@ -65,6 +71,7 @@ describe('injectMetaTags', () => {
     it('uses the cover alt text for og:image:alt', () => {
       const cover = Option.getOrThrow(maybePostCover(coverPost.frontmatter))
       expect(html).toContain(`property="og:image:alt" content="${cover.alt}"`)
+      expect(html).toContain(`name="twitter:image:alt" content="${cover.alt}"`)
     })
 
     it('marks the page an article with its publication date', () => {
@@ -72,6 +79,7 @@ describe('injectMetaTags', () => {
       expect(html).toContain(
         `property="article:published_time" content="${coverPost.frontmatter.date}"`,
       )
+      expect(html).toContain('property="article:section" content="Blog"')
     })
 
     it('injects BlogPosting structured data', () => {
@@ -89,9 +97,60 @@ describe('injectMetaTags', () => {
 
     const html = injectMetaTags(baseHtml, route, urlPath, resolveApiModuleName)
 
-    it('falls back to the full title for og:image:alt', () => {
+    it('describes the generated social card', () => {
       expect(html).toContain(
-        `property="og:image:alt" content="${coverlessPost.frontmatter.title} | Foldkit"`,
+        `property="og:image:alt" content="Foldkit social card for ${coverlessPost.frontmatter.title} in Blog."`,
+      )
+      expect(html).toContain(
+        `name="twitter:image:alt" content="Foldkit social card for ${coverlessPost.frontmatter.title} in Blog."`,
+      )
+    })
+  })
+
+  describe('a documentation route', () => {
+    const html = injectMetaTags(
+      baseHtml,
+      ExamplesRoute(),
+      '/example-apps',
+      resolveApiModuleName,
+    )
+
+    it('uses the page title followed by the site name', () => {
+      expect(html).toContain('<title>Examples | Foldkit</title>')
+      expect(html).toContain('property="og:title" content="Examples | Foldkit"')
+      expect(html).toContain(
+        'name="twitter:title" content="Examples | Foldkit"',
+      )
+    })
+
+    it('describes the generated social card', () => {
+      expect(html).toContain(
+        'property="og:image:alt" content="Foldkit social card for Examples."',
+      )
+      expect(html).toContain(
+        'name="twitter:image:alt" content="Foldkit social card for Examples."',
+      )
+    })
+  })
+
+  describe('a Playground route', () => {
+    const html = injectMetaTags(
+      baseHtml,
+      PlaygroundRoute({ exampleSlug: 'counter' }),
+      '/playground/counter',
+      resolveApiModuleName,
+    )
+
+    it('uses Playground-specific titles, copy, and image text', () => {
+      expect(html).toContain('<title>Counter Playground | Foldkit</title>')
+      expect(html).toContain(
+        'name="description" content="Edit and run the Counter example live in your browser."',
+      )
+      expect(html).toContain(
+        'property="og:image:alt" content="Foldkit social card for Counter Playground in Playground."',
+      )
+      expect(html).toContain(
+        'name="twitter:image:alt" content="Foldkit social card for Counter Playground in Playground."',
       )
     })
   })
@@ -104,9 +163,27 @@ describe('injectMetaTags', () => {
       resolveApiModuleName,
     )
 
-    it('uses the full title for og:image:alt', () => {
+    it('uses the landing title and description throughout the head', () => {
+      expect(html).toContain(
+        '<title>Foldkit | TypeScript Frontend Framework Built on Effect</title>',
+      )
+      expect(html).toContain(
+        'name="description" content="Foldkit is a TypeScript frontend framework built on Effect. One Schema-defined Model, explicit effects, typed routing, server rendering, and accessible UI components."',
+      )
+      expect(html).toContain(
+        'property="og:title" content="Foldkit | TypeScript Frontend Framework Built on Effect"',
+      )
+      expect(html).toContain(
+        'name="twitter:title" content="Foldkit | TypeScript Frontend Framework Built on Effect"',
+      )
       expect(html).toContain(
         'property="og:image:alt" content="Foldkit | TypeScript Frontend Framework Built on Effect"',
+      )
+      expect(html).toContain(
+        'name="twitter:image:alt" content="Foldkit | TypeScript Frontend Framework Built on Effect"',
+      )
+      expect(html).toContain(
+        '"description":"Foldkit is a TypeScript frontend framework built on Effect. One Schema-defined Model, explicit effects, typed routing, server rendering, and accessible UI components."',
       )
     })
 

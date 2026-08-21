@@ -1,5 +1,12 @@
 # create-foldkit-app
 
+## 0.27.3
+
+### Patch Changes
+
+- f9f2b22: Align the published READMEs with Foldkit's current positioning, terminology, and documentation links. Clarify the Vite plugin's Model-preserving hot reload and hydration build-id guidance.
+- fca9dc3: Accept an absolute `CREATE_FOLDKIT_APP_DEPENDENCY_MANIFESTS_DIRECTORY` for repository verification. The SSR and SSG scaffold gate now generates from the example manifests in the checkout under test instead of the moving `main` branch.
+
 ## 0.27.2
 
 ### Patch Changes

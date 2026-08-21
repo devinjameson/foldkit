@@ -114,20 +114,4 @@ The iOS keyboard case has one extra constraint: the target must already exist wh
 
 These attributes are narrow browser-integration primitives, not a general escape hatch. Use them only when the browser requires synchronous work inside a gesture. Anything that can wait belongs in the normal lifecycle, usually a Command.
 
-## Trusted Content Boundaries
-
-Typed builders prevent a handler from dispatching the wrong Message. They do not sanitize content that you explicitly ask the browser to interpret as HTML, script, or an executable resource.
-
-:::Warning{label="Raw HTML, script sources, and script attributes need trusted content"}
-Several inputs run whatever you pass them, in the browser and in server-rendered HTML alike:
-
-- `h.InnerHTML` and `h.Srcdoc` render their strings as raw HTML.
-- A raw `onclick`-style attribute runs its string as script.
-- The `src` of a `<script>` or `<iframe>`, and the `data` of an `<object>`, load and run whatever they point at, including an `http(s)` or `data:` URL.
-
-Only pass content you control to these APIs. User input, a URL parameter, or an API response can become a cross-site scripting vector. Build ordinary markup with `h` instead, or sanitize the value before it reaches one of these sinks.
-:::
-
-`h.Href`, `h.Src`, `h.Action`, and `h.Formaction` neutralize `javascript:` and `vbscript:` URLs, including control-character obfuscation, to an empty value. This blocks the classic scheme-based injection on a link or form. It does not make every URL safe. A `<script>` or `<iframe>` still executes an `http(s)` or `data:` source, so any URL that loads code must be trusted.
-
 The basic loop is now complete: a Message reaches update, update returns a Model, and view renders it. The next step is side effects. [Commands](/core/commands) describe one-shot work for the runtime to execute.

@@ -1,5 +1,29 @@
 import { expect, test } from '@playwright/test'
 
+test('renders the experimental API reference', async ({ page }) => {
+  await page.goto('/api-reference/experimental-machine')
+
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Experimental/Machine' }),
+  ).toBeVisible()
+
+  const docsNav = page.getByRole('navigation', { name: 'Documentation' })
+  await expect(
+    docsNav.getByRole('link', {
+      name: 'Experimental/Machine',
+      exact: true,
+    }),
+  ).toBeVisible()
+  await docsNav
+    .getByRole('link', { name: 'Experimental/Server', exact: true })
+    .click()
+
+  await expect(page).toHaveURL(/\/api-reference\/experimental-server$/)
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Experimental/Server' }),
+  ).toBeVisible()
+})
+
 test('selects an item from the combobox', async ({ page }) => {
   await page.goto('/')
 

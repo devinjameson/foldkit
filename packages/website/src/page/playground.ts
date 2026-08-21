@@ -873,12 +873,12 @@ const previewPaneView = (
               PlaygroundStateIdle: () =>
                 bootingPanelView(
                   'Starting playground…',
-                  'Hang tight. The preview will appear automatically.',
+                  'The preview will appear when the development environment is ready.',
                 ),
               PlaygroundStateBooting: () =>
                 bootingPanelView(
                   'Starting playground…',
-                  'Hang tight. The preview will appear automatically. First load takes about 30 seconds.',
+                  'The first load can take about 30 seconds. The preview will appear when the development environment is ready.',
                 ),
               PlaygroundStateBooted: ({ preview }) =>
                 PlaygroundPreview.view(
@@ -932,11 +932,11 @@ const tooNarrowMessageView = (): Html =>
                 'text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2',
               ),
             ],
-            ['Playground needs a wider screen'],
+            ['Use a wider screen'],
           ),
           ih.div(
             [ih.Class('text-sm text-gray-600 dark:text-gray-400')],
-            ['The live editor + preview layout needs a wider screen.'],
+            ['The live editor and preview need more horizontal space.'],
           ),
         ],
       ),

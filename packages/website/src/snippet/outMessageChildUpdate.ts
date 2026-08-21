@@ -4,7 +4,7 @@ import { Command } from 'foldkit'
 export const update = (
   model: Model,
   message: Message,
-): [
+): readonly [
   Model,
   ReadonlyArray<Command.Command<Message>>,
   Option.Option<OutMessage>,

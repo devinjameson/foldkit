@@ -1,4 +1,5 @@
 import { Array, Match as M, Option, Schema as S, pipe } from 'effect'
+import { existsSync } from 'node:fs'
 import { readFile, readdir } from 'node:fs/promises'
 import { basename, extname, join, relative, resolve } from 'node:path'
 import { codeToHtml } from 'shiki'
@@ -867,17 +868,34 @@ const playgroundIsolationHeadersPlugin = (): Plugin => ({
 
 // NOTE: Mirrors the `/playground/(.*)` rewrite in
 // .github/workflows/deploy-website.yml so the prerendered build can be
-// verified with `pnpm preview`. Playground routes aren't prerendered, so the
-// SPA fallback would otherwise serve the home page and flash the landing view
-// before the app boots. `pnpm dev` needs nothing: there's no prerender, so
-// `#root` is empty and there's no landing markup to flash.
+// verified with `pnpm preview`. A prerender writes metadata shells for known
+// Playground slugs; builds without those files and unknown slugs still need
+// the shared shell so the SPA fallback doesn't flash the landing view before
+// the app boots. `pnpm dev` needs nothing: there's no prerender, so `#root` is
+// empty and there's no landing markup to flash.
 const playgroundShellFallbackPlugin = (): Plugin => ({
   name: 'playground-shell-fallback',
   configurePreviewServer(server) {
     server.middlewares.use((req, _res, next) => {
       if (req.url) {
         const { pathname, search } = new URL(req.url, 'http://localhost')
-        if (
+        const isPrerenderedPlaygroundRoute = Array.some(
+          exampleSlugs,
+          exampleSlug =>
+            pathname === `/playground/${exampleSlug}` &&
+            existsSync(
+              resolve(
+                import.meta.dirname,
+                'dist',
+                'playground',
+                exampleSlug,
+                'index.html',
+              ),
+            ),
+        )
+        if (isPrerenderedPlaygroundRoute) {
+          req.url = `${pathname}/index.html${search}`
+        } else if (
           pathname.startsWith('/playground/') &&
           pathname !== '/playground/index.html'
         ) {

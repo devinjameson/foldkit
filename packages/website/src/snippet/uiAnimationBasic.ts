@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Effect, Match as M, Option } from 'effect'
+import { Match as M, Option, Schema as S } from 'effect'
 import { Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
 import { m } from 'foldkit/message'
@@ -34,14 +34,13 @@ const GotAnimationMessage = m('GotAnimationMessage', {
 // lifecycle events Animation can't handle on its own. Most importantly, it
 // tells you when a leave animation has started so you can provide the Command
 // that listens for animation settlement. That Command's result is an Animation
-// Message, so take the fold context's `liftCommand` and wrap it with the same
-// lift the fold gives the Submodel's own Commands. Each arm returns an
-// Update.Step over the parent Model, which already has the next Animation
-// Model written back:
-const foldAnimationOutMessage: (
+// Message, so use `liftCommand` from the fold context to lift it into the
+// parent Message type. Each arm returns an Update.Step over the parent Model,
+// which already has the next Animation Model written back:
+const foldAnimationOutMessage = (
   outMessage: Animation.OutMessage,
-  context: Update.FoldContext<Animation.Message, Message>,
-) => Update.Step<Model, Message> = (outMessage, { liftCommand }) =>
+  { liftCommand }: Update.FoldContext<Animation.Message, Message>,
+) =>
   M.value(outMessage).pipe(
     M.withReturnType<Update.Step<Model, Message>>(),
     M.tagsExhaustive({

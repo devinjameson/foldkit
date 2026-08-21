@@ -22,27 +22,27 @@ An application can use either policy, or use SSG for some URLs and SSR for other
 For an application with Flags, here is the handoff from server input to a live application:
 
 ```diagram
-              SERVER                         BROWSER
+       SERVER OR BUILD                      BROWSER
 
-request or build input                 normal Foldkit app
-         │                                     ▲
-         ▼                                     │
-       Flags                           adopt matching DOM
-         │                                     ▲
-         ▼                                     │
+request or build input                 live Foldkit app
+         |                                     ^
+         v                                     |
+       Flags                           adopts matching DOM
+         |                                     ^
+         v                                     |
         init                                same view
-         │                                     ▲
-         ▼                                     │
+         |                                     ^
+         v                                     |
        Model                          equivalent Model
-         │                                     ▲
-         ▼                                     │
+         |                                     ^
+         v                                     |
         view                               same init
-         │                                     ▲
-         ▼                                     │
-HTML + serialized Flags ────────► Runtime.hydrate reads Flags
+         |                                     ^
+         v                                     |
+HTML + serialized Flags --------> Runtime.hydrate reads Flags
 ```
 
-Once the live application takes over, it behaves like any other Foldkit application. Routing, update, Commands, and Subscriptions run in the browser. Navigation moves between routes without contacting the server. The server renders again only on a full page load, such as a reload or a link the runtime does not handle.
+Once the live application takes over, it behaves like any other Foldkit application. Routing, update, Commands, and Subscriptions run in the browser. A handled navigation does not ask the delivery host to render another document, though the application's Commands may still request data. The server renders the document again only on a full page load, such as a reload or a link the runtime does not handle.
 
 For SSG, the build script takes the host's place. It writes the response to a file that a static server or CDN delivers later.
 
