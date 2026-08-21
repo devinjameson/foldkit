@@ -40,43 +40,11 @@ import {
   allPages,
   findActiveSectionKey,
 } from './docsNav'
-import {
-  CompletedApplyTheme,
-  CompletedInjectAnalytics,
-  CompletedInjectSpeedInsights,
-  CompletedLoadBrowserEnvironment,
-  CompletedLoadExternal,
-  CompletedNavigateInternal,
-  CompletedSaveSidebarState,
-  CompletedSaveThemePreference,
-  CompletedScrollMobileMenuActiveLinkIntoView,
-  CompletedScrollSidebarActiveLinkIntoView,
-  CompletedScrollToAnchor,
-  CompletedScrollToTop,
-  CompletedWaitBeforeHidingCopiedIndicator,
-  FailedCopyLink,
-  FailedCopySnippet,
-  GotApiReferenceMessage,
-  GotAsyncCounterDemoMessage,
-  GotComingFromReactMessage,
-  GotDemoTabsMessage,
-  GotExampleDetailMessage,
-  GotMobileMenuDialogMessage,
-  GotNotePlayerDemoMessage,
-  GotPlaygroundMenuMessage,
-  GotPlaygroundMessage,
-  GotSearchMessage,
-  GotUiPageMessage,
-  Message,
-  ResolvedTheme,
-  SucceededCopyLink,
-  SucceededCopySnippet,
-  ThemePreference,
-} from './message'
+import { Message, ResolvedTheme, ThemePreference } from './message'
 import * as Page from './page'
-import { SucceededLoadApiData } from './page/apiReference/message'
+import { Message as ApiReferenceMessage } from './page/apiReference/message'
 import { ApiData } from './page/apiReference/model'
-import { SucceededLoadExampleSources } from './page/example/exampleDetail'
+import { Message as ExampleDetailMessage } from './page/example/exampleDetail'
 import { type ExampleSlug } from './page/example/meta'
 import { ExampleSources } from './page/example/sources'
 import {
@@ -200,7 +168,7 @@ const loadBrowserEnvironment = Effect.gen(function* () {
 
   const today = yield* Calendar.today.local
 
-  return CompletedLoadBrowserEnvironment({
+  return Message.CompletedLoadBrowserEnvironment({
     maybeThemePreference: themePreference,
     maybeSidebarState,
     systemTheme,
@@ -330,7 +298,7 @@ const initApiReference = (
     onSome: apiData => {
       const [seededApiReference] = Page.ApiReference.update(
         apiReference,
-        SucceededLoadApiData({ apiData }),
+        ApiReferenceMessage.SucceededLoadApiData({ apiData }),
       )
       // NOTE: prerendered module pages seed a per-module slice of the API
       // data, so the boot Commands still run: the full reference replaces
@@ -351,7 +319,7 @@ const initExampleDetail = (
     onSome: sources => {
       const [seededExampleDetail] = Page.Example.ExampleDetail.update(
         exampleDetail,
-        SucceededLoadExampleSources({ sources }),
+        ExampleDetailMessage.SucceededLoadExampleSources({ sources }),
       )
       return [seededExampleDetail, []]
     },
@@ -414,22 +382,22 @@ export const init: Runtime.RoutingApplicationInit<
   )
 
   const mappedUiPagesCommands = Command.mapMessages(uiPagesCommands, message =>
-    GotUiPageMessage({ message }),
+    Message.GotUiPageMessage({ message }),
   )
 
   const mappedComingFromReactCommands = Command.mapMessages(
     comingFromReactCommands,
-    message => GotComingFromReactMessage({ message }),
+    message => Message.GotComingFromReactMessage({ message }),
   )
 
   const mappedApiReferenceCommands = Command.mapMessages(
     apiReferenceCommands,
-    message => GotApiReferenceMessage({ message }),
+    message => Message.GotApiReferenceMessage({ message }),
   )
 
   const mappedExampleDetailCommands = Command.mapMessages(
     exampleDetailCommands,
-    message => GotExampleDetailMessage({ message }),
+    message => Message.GotExampleDetailMessage({ message }),
   )
 
   return [
@@ -513,7 +481,7 @@ const writeMobileMenuDialog = (
 ): Model => evo(model, { mobileMenuDialog: () => nextMobileMenuDialog })
 
 const toGotMobileMenuDialogMessage = (message: Dialog.Message): Message =>
-  GotMobileMenuDialogMessage({ message })
+  Message.GotMobileMenuDialogMessage({ message })
 
 const foldMobileMenuDialog = Update.foldChild({
   update: Dialog.update,
@@ -559,7 +527,7 @@ const foldDemoTabs = Update.foldChild({
   update: DemoTab.DemoTabs.update,
   read: (model: Model) => Option.some(model.demoTabs),
   write: (model, nextDemoTabs) => evo(model, { demoTabs: () => nextDemoTabs }),
-  toParentMessage: message => GotDemoTabsMessage({ message }),
+  toParentMessage: message => Message.GotDemoTabsMessage({ message }),
   foldOutMessage: foldDemoTabsOutMessage,
 })
 
@@ -588,7 +556,7 @@ const foldPlaygroundMenu = Update.foldChild({
   read: (model: Model) => Option.some(model.playgroundMenu),
   write: (model, nextPlaygroundMenu) =>
     evo(model, { playgroundMenu: () => nextPlaygroundMenu }),
-  toParentMessage: message => GotPlaygroundMenuMessage({ message }),
+  toParentMessage: message => Message.GotPlaygroundMenuMessage({ message }),
   foldOutMessage: foldPlaygroundMenuOutMessage,
 })
 
@@ -597,7 +565,7 @@ const foldAsyncCounterDemo = Update.foldChild({
   read: (model: Model) => model.asyncCounterDemo,
   write: (model, nextAsyncCounterDemo) =>
     evo(model, { asyncCounterDemo: () => Option.some(nextAsyncCounterDemo) }),
-  toParentMessage: message => GotAsyncCounterDemoMessage({ message }),
+  toParentMessage: message => Message.GotAsyncCounterDemoMessage({ message }),
 })
 
 const foldNotePlayerDemo = Update.foldChild({
@@ -605,7 +573,7 @@ const foldNotePlayerDemo = Update.foldChild({
   read: (model: Model) => model.notePlayerDemo,
   write: (model, nextNotePlayerDemo) =>
     evo(model, { notePlayerDemo: () => Option.some(nextNotePlayerDemo) }),
-  toParentMessage: message => GotNotePlayerDemoMessage({ message }),
+  toParentMessage: message => Message.GotNotePlayerDemoMessage({ message }),
 })
 
 const foldComingFromReact = Update.foldChild({
@@ -613,7 +581,7 @@ const foldComingFromReact = Update.foldChild({
   read: (model: Model) => Option.some(model.comingFromReact),
   write: (model, nextComingFromReact) =>
     evo(model, { comingFromReact: () => nextComingFromReact }),
-  toParentMessage: message => GotComingFromReactMessage({ message }),
+  toParentMessage: message => Message.GotComingFromReactMessage({ message }),
 })
 
 const readApiReference = (
@@ -627,7 +595,7 @@ const writeApiReference = (
 
 const toGotApiReferenceMessage = (
   message: Page.ApiReference.Message,
-): Message => GotApiReferenceMessage({ message })
+): Message => Message.GotApiReferenceMessage({ message })
 
 const foldApiReference = Update.foldChild({
   update: Page.ApiReference.update,
@@ -647,7 +615,7 @@ const foldUiPages = Update.foldChild({
   update: Page.UiPages.update,
   read: (model: Model) => Option.some(model.uiPages),
   write: (model, nextUiPages) => evo(model, { uiPages: () => nextUiPages }),
-  toParentMessage: message => GotUiPageMessage({ message }),
+  toParentMessage: message => Message.GotUiPageMessage({ message }),
 })
 
 const readExampleDetail = (
@@ -662,7 +630,7 @@ const writeExampleDetail = (
 
 const toGotExampleDetailMessage = (
   message: Page.Example.ExampleDetail.Message,
-): Message => GotExampleDetailMessage({ message })
+): Message => Message.GotExampleDetailMessage({ message })
 
 const foldExampleDetail = Update.foldChild({
   update: Page.Example.ExampleDetail.update,
@@ -685,7 +653,7 @@ const writeSearch = (model: Model, nextSearch: Search.Model): Model =>
   evo(model, { search: () => nextSearch })
 
 const toGotSearchMessage = (message: Search.Message): Message =>
-  GotSearchMessage({ message })
+  Message.GotSearchMessage({ message })
 
 const foldSearch = Update.foldChild({
   update: Search.update,
@@ -706,7 +674,7 @@ const foldPlayground = Update.foldChild({
   read: (model: Model) => model.playground,
   write: (model, nextPlayground) =>
     evo(model, { playground: () => Option.some(nextPlayground) }),
-  toParentMessage: message => GotPlaygroundMessage({ message }),
+  toParentMessage: message => Message.GotPlaygroundMessage({ message }),
 })
 
 export const update = (
@@ -737,8 +705,8 @@ export const update = (
               Model,
               ReadonlyArray<
                 Command.Command<
-                  | typeof CompletedNavigateInternal
-                  | typeof CompletedLoadExternal
+                  | typeof Message.CompletedNavigateInternal
+                  | typeof Message.CompletedLoadExternal
                 >
               >,
             ] => {
@@ -757,7 +725,9 @@ export const update = (
               href,
             }): [
               Model,
-              ReadonlyArray<Command.Command<typeof CompletedLoadExternal>>,
+              ReadonlyArray<
+                Command.Command<typeof Message.CompletedLoadExternal>
+              >,
             ] => [model, [LoadExternal({ href })]],
           }),
         ),
@@ -890,7 +860,7 @@ export const update = (
           }),
           [
             ...Command.mapMessages(mobileMenuDialogCommands, message =>
-              GotMobileMenuDialogMessage({ message }),
+              Message.GotMobileMenuDialogMessage({ message }),
             ),
             ScrollMobileMenuActiveLinkIntoView(),
           ],
@@ -965,7 +935,7 @@ export const update = (
           [
             ApplyTheme({ theme: resolvedTheme }),
             ...Command.mapMessages(uiPagesCommands, message =>
-              GotUiPageMessage({ message }),
+              Message.GotUiPageMessage({ message }),
             ),
           ],
         ]
@@ -1068,47 +1038,47 @@ export const update = (
 // COMMAND
 
 const InjectAnalytics = Command.define('InjectAnalytics', {
-  messages: [CompletedInjectAnalytics],
+  messages: [Message.CompletedInjectAnalytics],
   execute: Effect.sync(() => inject()).pipe(
-    Effect.as(CompletedInjectAnalytics()),
+    Effect.as(Message.CompletedInjectAnalytics()),
   ),
 })
 
 const LoadBrowserEnvironment = Command.define('LoadBrowserEnvironment', {
-  messages: [CompletedLoadBrowserEnvironment],
+  messages: [Message.CompletedLoadBrowserEnvironment],
   execute: loadBrowserEnvironment,
 })
 
 const InjectSpeedInsights = Command.define('InjectSpeedInsights', {
-  messages: [CompletedInjectSpeedInsights],
+  messages: [Message.CompletedInjectSpeedInsights],
   execute: Effect.sync(() => SpeedInsights.injectSpeedInsights()).pipe(
-    Effect.as(CompletedInjectSpeedInsights()),
+    Effect.as(Message.CompletedInjectSpeedInsights()),
   ),
 })
 
 const CopySnippet = Command.define('CopySnippet', {
   args: { text: S.String },
-  messages: [SucceededCopySnippet, FailedCopySnippet],
+  messages: [Message.SucceededCopySnippet, Message.FailedCopySnippet],
   execute: ({ text }) =>
     Effect.tryPromise({
       try: () => navigator.clipboard.writeText(text),
       catch: () => new Error('Failed to copy to clipboard'),
     }).pipe(
-      Effect.as(SucceededCopySnippet({ text })),
-      Effect.catch(() => Effect.succeed(FailedCopySnippet())),
+      Effect.as(Message.SucceededCopySnippet({ text })),
+      Effect.catch(() => Effect.succeed(Message.FailedCopySnippet())),
     ),
 })
 
 const CopyLink = Command.define('CopyLink', {
   args: { url: S.String },
-  messages: [SucceededCopyLink, FailedCopyLink],
+  messages: [Message.SucceededCopyLink, Message.FailedCopyLink],
   execute: ({ url }) =>
     Effect.tryPromise({
       try: () => navigator.clipboard.writeText(url),
       catch: () => new Error('Failed to copy link to clipboard'),
     }).pipe(
-      Effect.as(SucceededCopyLink()),
-      Effect.catch(() => Effect.succeed(FailedCopyLink())),
+      Effect.as(Message.SucceededCopyLink()),
+      Effect.catch(() => Effect.succeed(Message.FailedCopyLink())),
     ),
 })
 
@@ -1118,42 +1088,42 @@ const WaitBeforeHidingCopiedIndicator = Command.define(
   'WaitBeforeHidingCopiedIndicator',
   {
     args: { text: S.String },
-    messages: [CompletedWaitBeforeHidingCopiedIndicator],
+    messages: [Message.CompletedWaitBeforeHidingCopiedIndicator],
     execute: ({ text }) =>
       Effect.sleep(COPY_INDICATOR_DURATION).pipe(
-        Effect.as(CompletedWaitBeforeHidingCopiedIndicator({ text })),
+        Effect.as(Message.CompletedWaitBeforeHidingCopiedIndicator({ text })),
       ),
   },
 )
 
 const ScrollToTop = Command.define('ScrollToTop', {
-  messages: [CompletedScrollToTop],
+  messages: [Message.CompletedScrollToTop],
   execute: Effect.sync(() => {
     window.scrollTo({ top: 0, behavior: 'instant' })
-    return CompletedScrollToTop()
+    return Message.CompletedScrollToTop()
   }),
 })
 
 const ScrollToAnchor = Command.define('ScrollToAnchor', {
   args: { hash: S.String },
-  messages: [CompletedScrollToAnchor],
+  messages: [Message.CompletedScrollToAnchor],
   execute: ({ hash }) =>
     Effect.gen(function* () {
       const target = `#${CSS.escape(hash)}`
       yield* Dom.scrollIntoViewAfterPaint(target, { block: 'start' })
       yield* Dom.focus(target, { preventScroll: true, makeFocusable: true })
-    }).pipe(Effect.ignore, Effect.as(CompletedScrollToAnchor())),
+    }).pipe(Effect.ignore, Effect.as(Message.CompletedScrollToAnchor())),
 })
 
 const ScrollSidebarActiveLinkIntoView = Command.define(
   'ScrollSidebarActiveLinkIntoView',
   {
-    messages: [CompletedScrollSidebarActiveLinkIntoView],
+    messages: [Message.CompletedScrollSidebarActiveLinkIntoView],
     execute: Dom.scrollIntoViewIfNotVisible(
       `#${DOCS_SIDEBAR_NAV_ID} [aria-current="page"]`,
     ).pipe(
       Effect.ignore,
-      Effect.as(CompletedScrollSidebarActiveLinkIntoView()),
+      Effect.as(Message.CompletedScrollSidebarActiveLinkIntoView()),
     ),
   },
 )
@@ -1163,12 +1133,12 @@ const MOBILE_MENU_ACTIVE_LINK = `#${MOBILE_MENU_NAV_ID} [aria-current="page"]`
 const ScrollMobileMenuActiveLinkIntoView = Command.define(
   'ScrollMobileMenuActiveLinkIntoView',
   {
-    messages: [CompletedScrollMobileMenuActiveLinkIntoView],
+    messages: [Message.CompletedScrollMobileMenuActiveLinkIntoView],
     execute: Dom.scrollIntoViewIfNotVisible(MOBILE_MENU_ACTIVE_LINK, {
       when: 'Commit',
     }).pipe(
       Effect.ignore,
-      Effect.as(CompletedScrollMobileMenuActiveLinkIntoView()),
+      Effect.as(Message.CompletedScrollMobileMenuActiveLinkIntoView()),
     ),
   },
 )
@@ -1187,7 +1157,7 @@ const setThemeColorMeta = (color: string): void => {
 
 const ApplyTheme = Command.define('ApplyTheme', {
   args: { theme: ResolvedTheme },
-  messages: [CompletedApplyTheme],
+  messages: [Message.CompletedApplyTheme],
   execute: ({ theme }) =>
     Effect.sync(() => {
       M.value(theme).pipe(
@@ -1201,35 +1171,37 @@ const ApplyTheme = Command.define('ApplyTheme', {
         }),
         M.exhaustive,
       )
-      return CompletedApplyTheme()
+      return Message.CompletedApplyTheme()
     }),
 })
 
 const SaveThemePreference = Command.define('SaveThemePreference', {
   args: { preference: ThemePreference },
-  messages: [CompletedSaveThemePreference],
+  messages: [Message.CompletedSaveThemePreference],
   execute: ({ preference }) =>
     Effect.gen(function* () {
       const store = yield* KeyValueStore.KeyValueStore
       yield* store.set(THEME_STORAGE_KEY, JSON.stringify(preference))
-      return CompletedSaveThemePreference()
+      return Message.CompletedSaveThemePreference()
     }).pipe(
-      Effect.catch(() => Effect.succeed(CompletedSaveThemePreference())),
+      Effect.catch(() =>
+        Effect.succeed(Message.CompletedSaveThemePreference()),
+      ),
       Effect.provide(BrowserKeyValueStore.layerLocalStorage),
     ),
 })
 
 const SaveSidebarState = Command.define('SaveSidebarState', {
   args: { state: SidebarState },
-  messages: [CompletedSaveSidebarState],
+  messages: [Message.CompletedSaveSidebarState],
   execute: ({ state }) =>
     Effect.gen(function* () {
       const store = yield* KeyValueStore.KeyValueStore
       const json = yield* S.encodeEffect(SidebarStateJsonString)(state)
       yield* store.set(SIDEBAR_STORAGE_KEY, json)
-      return CompletedSaveSidebarState()
+      return Message.CompletedSaveSidebarState()
     }).pipe(
-      Effect.catch(() => Effect.succeed(CompletedSaveSidebarState())),
+      Effect.catch(() => Effect.succeed(Message.CompletedSaveSidebarState())),
       Effect.provide(BrowserKeyValueStore.layerSessionStorage),
     ),
 })
@@ -1243,15 +1215,16 @@ const saveSidebarState = (model: Model) =>
 
 const NavigateInternal = Command.define('NavigateInternal', {
   args: { url: S.String },
-  messages: [CompletedNavigateInternal],
+  messages: [Message.CompletedNavigateInternal],
   execute: ({ url }) =>
-    pushUrl(url).pipe(Effect.as(CompletedNavigateInternal())),
+    pushUrl(url).pipe(Effect.as(Message.CompletedNavigateInternal())),
 })
 
 const LoadExternal = Command.define('LoadExternal', {
   args: { href: S.String },
-  messages: [CompletedLoadExternal],
-  execute: ({ href }) => load(href).pipe(Effect.as(CompletedLoadExternal())),
+  messages: [Message.CompletedLoadExternal],
+  execute: ({ href }) =>
+    load(href).pipe(Effect.as(Message.CompletedLoadExternal())),
 })
 
 // VIEW
@@ -1271,7 +1244,8 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
             model: playgroundModel,
             view: Page.Playground.view,
             viewInputs: { maybeIsChromium: model.maybeIsChromium },
-            toParentMessage: message => GotPlaygroundMessage({ message }),
+            toParentMessage: message =>
+              Message.GotPlaygroundMessage({ message }),
           }),
       }),
     ),
@@ -1363,7 +1337,7 @@ const uiPagesSubscriptions = Subscription.lift(Page.UiPages.subscriptions)<
   Message
 >({
   toChildModel: model => model.uiPages,
-  toParentMessage: message => GotUiPageMessage({ message }),
+  toParentMessage: message => Message.GotUiPageMessage({ message }),
 })
 
 export const subscriptions = Subscription.aggregate<Model, Message>()(
@@ -1381,14 +1355,14 @@ const playgroundManagedResources = ManagedResource.lift(
   Page.Playground.managedResources,
 )<Model, Message>({
   toChildModel: model => model.playground,
-  toParentMessage: message => GotPlaygroundMessage({ message }),
+  toParentMessage: message => Message.GotPlaygroundMessage({ message }),
 })
 
 const notePlayerDemoManagedResources = ManagedResource.lift(
   Page.NotePlayerDemo.managedResources,
 )<Model, Message>({
   toChildModel: model => model.notePlayerDemo,
-  toParentMessage: message => GotNotePlayerDemoMessage({ message }),
+  toParentMessage: message => Message.GotNotePlayerDemoMessage({ message }),
 })
 
 export const managedResources = ManagedResource.aggregate<Model, Message>()(

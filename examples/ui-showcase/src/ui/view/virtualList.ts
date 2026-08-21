@@ -4,13 +4,7 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { VirtualList } from '@foldkit/ui'
 
-import {
-  ClickedVirtualListScrollToMiddle,
-  ClickedVirtualListVariableScrollToMiddle,
-  GotVirtualListDemoMessage,
-  GotVirtualListVariableDemoMessage,
-  type UiMessage,
-} from '../message'
+import { UiMessage } from '../message'
 import type { UiModel } from '../model'
 
 type Activity = Readonly<{
@@ -294,7 +288,7 @@ export const view = Submodel.defineView<UiModel, UiMessage>(
                     h.button(
                       [
                         h.Class(buttonClassName),
-                        h.OnClick(ClickedVirtualListScrollToMiddle()),
+                        h.OnClick(UiMessage.ClickedVirtualListScrollToMiddle()),
                       ],
                       ['Jump to middle'],
                     ),
@@ -311,7 +305,7 @@ export const view = Submodel.defineView<UiModel, UiMessage>(
                     containerClassName,
                   },
                   toParentMessage: message =>
-                    GotVirtualListDemoMessage({ message }),
+                    UiMessage.GotVirtualListDemoMessage({ message }),
                 }),
               ],
             ),
@@ -332,7 +326,9 @@ export const view = Submodel.defineView<UiModel, UiMessage>(
                     h.button(
                       [
                         h.Class(buttonClassName),
-                        h.OnClick(ClickedVirtualListVariableScrollToMiddle()),
+                        h.OnClick(
+                          UiMessage.ClickedVirtualListVariableScrollToMiddle(),
+                        ),
                       ],
                       ['Jump to middle'],
                     ),
@@ -353,7 +349,7 @@ export const view = Submodel.defineView<UiModel, UiMessage>(
                     containerClassName,
                   },
                   toParentMessage: message =>
-                    GotVirtualListVariableDemoMessage({ message }),
+                    UiMessage.GotVirtualListVariableDemoMessage({ message }),
                 }),
               ],
             ),

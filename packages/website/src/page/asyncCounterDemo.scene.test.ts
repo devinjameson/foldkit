@@ -3,8 +3,8 @@ import { Command, click, expect, given, role, scene, text } from 'foldkit/scene'
 import { describe, test } from 'vitest'
 
 import {
-  CompletedDelayAdvancePhase,
   DelayAdvancePhase,
+  Message,
   init,
   update,
   view,
@@ -20,7 +20,7 @@ const advancePhases = (steps: number, generation: number) =>
   Array.makeBy(steps, () =>
     Command.resolve(
       DelayAdvancePhase,
-      CompletedDelayAdvancePhase({ generation }),
+      Message.CompletedDelayAdvancePhase({ generation }),
     ),
   )
 

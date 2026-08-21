@@ -4,20 +4,7 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { Combobox, Dialog } from '@foldkit/ui'
 
-import {
-  ClickedDeleteProject,
-  ClickedEditFilters,
-  ClickedOpenAnimatedDialog,
-  ClickedOpenDialog,
-  ClickedOpenProjectSettings,
-  GotDialogAnimatedDemoMessage,
-  GotDialogDemoMessage,
-  GotNestedDialogChildDemoMessage,
-  GotNestedDialogParentDemoMessage,
-  GotOverlayComboboxDemoMessage,
-  GotOverlayDialogDemoMessage,
-  type UiMessage,
-} from '../message'
+import { UiMessage } from '../message'
 import type { City, UiModel } from '../model'
 import { CityCombobox, comboboxInputs } from './combobox'
 
@@ -144,7 +131,8 @@ const editFiltersContent = (
       ),
       maybeSelectedValue: maybeSelectedCity,
     },
-    toParentMessage: message => GotOverlayComboboxDemoMessage({ message }),
+    toParentMessage: message =>
+      UiMessage.GotOverlayComboboxDemoMessage({ message }),
   }),
 ]
 
@@ -166,7 +154,10 @@ const projectSettingsContent = (
     [
       h.button([...closeButton, h.Class(cancelButtonClassName)], ['Close']),
       h.button(
-        [h.Class(dangerButtonClassName), h.OnClick(ClickedDeleteProject())],
+        [
+          h.Class(dangerButtonClassName),
+          h.OnClick(UiMessage.ClickedDeleteProject()),
+        ],
         ['Delete project'],
       ),
     ],
@@ -228,7 +219,7 @@ const basicDemo = (
             : [],
         ),
     },
-    toParentMessage: message => GotDialogDemoMessage({ message }),
+    toParentMessage: message => UiMessage.GotDialogDemoMessage({ message }),
   })
 
 const animatedDemo = (
@@ -262,7 +253,8 @@ const animatedDemo = (
             : [],
         ),
     },
-    toParentMessage: message => GotDialogAnimatedDemoMessage({ message }),
+    toParentMessage: message =>
+      UiMessage.GotDialogAnimatedDemoMessage({ message }),
   })
 
 const overlayDemo = (
@@ -274,7 +266,7 @@ const overlayDemo = (
   h.div(
     [],
     [
-      trigger('Edit filters', ClickedEditFilters(), h),
+      trigger('Edit filters', UiMessage.ClickedEditFilters(), h),
       h.submodel({
         slotId: dialogModel.id,
         model: dialogModel,
@@ -307,7 +299,8 @@ const overlayDemo = (
                 : [],
             ),
         },
-        toParentMessage: message => GotOverlayDialogDemoMessage({ message }),
+        toParentMessage: message =>
+          UiMessage.GotOverlayDialogDemoMessage({ message }),
       }),
     ],
   )
@@ -320,7 +313,11 @@ const nestedDemo = (
   h.div(
     [],
     [
-      trigger('Open project settings', ClickedOpenProjectSettings(), h),
+      trigger(
+        'Open project settings',
+        UiMessage.ClickedOpenProjectSettings(),
+        h,
+      ),
       h.submodel({
         slotId: parentDialogModel.id,
         model: parentDialogModel,
@@ -354,7 +351,7 @@ const nestedDemo = (
             ),
         },
         toParentMessage: message =>
-          GotNestedDialogParentDemoMessage({ message }),
+          UiMessage.GotNestedDialogParentDemoMessage({ message }),
       }),
       h.submodel({
         slotId: childDialogModel.id,
@@ -384,7 +381,7 @@ const nestedDemo = (
             ),
         },
         toParentMessage: message =>
-          GotNestedDialogChildDemoMessage({ message }),
+          UiMessage.GotNestedDialogChildDemoMessage({ message }),
       }),
     ],
   )
@@ -399,11 +396,15 @@ export const view = Submodel.defineView<UiModel, UiMessage>(
         h.h2([h.Class('text-2xl font-bold text-gray-900 mb-6')], ['Dialog']),
 
         h.h3([h.Class(sectionHeadingClassName)], ['Basic']),
-        trigger('Open Dialog', ClickedOpenDialog(), h),
+        trigger('Open Dialog', UiMessage.ClickedOpenDialog(), h),
         basicDemo(model.dialogDemo, h),
 
         h.h3([h.Class(sectionHeadingClassName)], ['Animated']),
-        trigger('Open Animated Dialog', ClickedOpenAnimatedDialog(), h),
+        trigger(
+          'Open Animated Dialog',
+          UiMessage.ClickedOpenAnimatedDialog(),
+          h,
+        ),
         animatedDemo(model.dialogAnimatedDemo, h),
 
         h.h3([h.Class(sectionHeadingClassName)], ['Field']),

@@ -33,13 +33,15 @@ const LINT_SMOKE_SOURCE = `const Command = {
   define: (name: string) => () => ({ name }),
 }
 
-const m = (tag: string, fields?: unknown) => ({ tag, fields })
+const defineMessageUnion = <Cases>(cases: Cases): Cases => cases
 
-const ClickedSave = m('ClickedSave')
-const GotChildMessage = m('GotChildMessage', { message: {} })
+const Message = defineMessageUnion({
+  ClickedSave: {},
+  GotChildMessage: { message: {} },
+})
 const SaveUser = Command.define('SaveUser')()
 
-console.log(ClickedSave, GotChildMessage, SaveUser)
+console.log(Message, SaveUser)
 `
 
 type RunOptions = {

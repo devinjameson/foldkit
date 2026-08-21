@@ -3,22 +3,26 @@ import { expect, expectTypeOf } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
 
-import { m } from '../message/index.js'
+import { defineMessageUnion } from '../message/index.js'
 import * as Command from './index.js'
 
-const CompletedFetchNotes = m('CompletedFetchNotes', { noteCount: S.Number })
-const GotNotesMessage = m('GotNotesMessage', { message: CompletedFetchNotes })
+const ChildMessage = defineMessageUnion({
+  CompletedFetchNotes: { noteCount: S.Number },
+})
+const ParentMessage = defineMessageUnion({
+  GotNotesMessage: { message: ChildMessage },
+})
 
-type ChildMessage = typeof CompletedFetchNotes.Type
-type ParentMessage = typeof GotNotesMessage.Type
+type ChildMessage = typeof ChildMessage.Type
+type ParentMessage = typeof ParentMessage.Type
 
 const FetchNotes = Command.define('FetchNotes', {
-  messages: [CompletedFetchNotes],
-  execute: Effect.succeed(CompletedFetchNotes({ noteCount: 3 })),
+  messages: [ChildMessage.CompletedFetchNotes],
+  execute: Effect.succeed(ChildMessage.CompletedFetchNotes({ noteCount: 3 })),
 })
 
 const toGotNotesMessage = (message: ChildMessage): ParentMessage =>
-  GotNotesMessage({ message })
+  ParentMessage.GotNotesMessage({ message })
 
 // NOTE: These helpers are the regression subjects. Each is generic over the
 // Message types, where Command stays a deferred conditional, so each compiles
@@ -47,7 +51,9 @@ describe('Command.mapMessages', () => {
       Effect.runSync(command.effect),
     )
     expect(dispatchedMessages).toEqual([
-      GotNotesMessage({ message: CompletedFetchNotes({ noteCount: 3 }) }),
+      ParentMessage.GotNotesMessage({
+        message: ChildMessage.CompletedFetchNotes({ noteCount: 3 }),
+      }),
     ])
   })
 
@@ -77,7 +83,9 @@ describe('Command.mapMessage', () => {
 
     expect(mappedCommand.name).toBe('FetchNotes')
     expect(Effect.runSync(mappedCommand.effect)).toEqual(
-      GotNotesMessage({ message: CompletedFetchNotes({ noteCount: 3 }) }),
+      ParentMessage.GotNotesMessage({
+        message: ChildMessage.CompletedFetchNotes({ noteCount: 3 }),
+      }),
     )
   })
 })
@@ -87,7 +95,7 @@ describe('Command.mapEffect', () => {
     const mappedCommand = withCrashOnFailure(FetchNotes())
 
     expect(Effect.runSync(mappedCommand.effect)).toEqual(
-      CompletedFetchNotes({ noteCount: 3 }),
+      ChildMessage.CompletedFetchNotes({ noteCount: 3 }),
     )
   })
 })

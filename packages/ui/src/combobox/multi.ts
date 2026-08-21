@@ -7,12 +7,8 @@ import {
   type BaseInitConfig,
   BaseModel,
   type BaseViewInputs,
-  Closed,
-  type Message,
-  Opened,
-  type OutMessage,
-  SelectedItem,
-  Selected as SharedSelected,
+  Message,
+  OutMessage,
   baseInit,
   closedBaseModel,
   makeUpdate,
@@ -48,12 +44,12 @@ export const update = makeUpdate<Model>({
   handleSelectedItem: (model, item) => [
     model,
     [],
-    Option.some(SharedSelected({ value: item })),
+    Option.some(OutMessage.Selected({ value: item })),
   ],
 
   handleImmediateActivation: (model, item) => [
     model,
-    Option.some(SharedSelected({ value: item })),
+    Option.some(OutMessage.Selected({ value: item })),
   ],
 })
 
@@ -62,18 +58,21 @@ type UpdateReturn = ReturnType<typeof update>
 /** Programmatically opens the combobox, updating the model and returning
  *  focus and modal commands. Use this in domain-event handlers to open the combobox. */
 export const open = (model: Model): UpdateReturn =>
-  update(model, Opened({ maybeActiveItemIndex: Option.none() }))
+  update(model, Message.Opened({ maybeActiveItemIndex: Option.none() }))
 
 /** Programmatically closes the combobox, updating the model and returning
  *  focus and modal commands. The multi-select input always rests empty on
  *  close. Use this in domain-event handlers to close the combobox. */
 export const close = (model: Model): UpdateReturn =>
-  update(model, Closed({ restingInputValue: '', isClearable: true }))
+  update(model, Message.Closed({ restingInputValue: '', isClearable: true }))
 
 /** Programmatically activates an item in the multi-select combobox. Emits
  *  `Selected({ value })`; the parent toggles the value's membership. */
 export const selectItem = (model: Model, item: string): UpdateReturn =>
-  update(model, SelectedItem({ item, displayText: item, wasSelected: false }))
+  update(
+    model,
+    Message.SelectedItem({ item, displayText: item, wasSelected: false }),
+  )
 
 // VIEW
 
@@ -138,11 +137,17 @@ export const create = <Item extends string = string>(): Bundle<Item> => {
     selectItem: (model, item) =>
       typedUpdate(
         model,
-        SelectedItem({ item, displayText: item, wasSelected: false }),
+        Message.SelectedItem({ item, displayText: item, wasSelected: false }),
       ),
     open: model =>
-      typedUpdate(model, Opened({ maybeActiveItemIndex: Option.none() })),
+      typedUpdate(
+        model,
+        Message.Opened({ maybeActiveItemIndex: Option.none() }),
+      ),
     close: model =>
-      typedUpdate(model, Closed({ restingInputValue: '', isClearable: true })),
+      typedUpdate(
+        model,
+        Message.Closed({ restingInputValue: '', isClearable: true }),
+      ),
   }
 }

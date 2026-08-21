@@ -12,10 +12,11 @@ import {
 import { describe, test } from 'vitest'
 
 import { RadioGroup } from '@foldkit/ui'
+import { Message as RadioGroupMessage } from '@foldkit/ui/radioGroup'
 
 import { SyncChart } from './command'
 import { loadingModel, readyModel, sampleTelemetry } from './main.fixtures'
-import { SucceededMountChart, SucceededSyncChart } from './message'
+import { Message } from './message'
 import { TelemetryAsyncData } from './model'
 import { update } from './update'
 import { CHART_HOST_ID, MountChart } from './view/chart'
@@ -23,14 +24,17 @@ import { view } from './view/index'
 
 const acknowledgeChartMount = Mount.resolve(
   MountChart,
-  SucceededMountChart({ hostId: CHART_HOST_ID }),
+  Message.SucceededMountChart({ hostId: CHART_HOST_ID }),
 )
 
-const acknowledgeChartSync = Command.resolve(SyncChart, SucceededSyncChart())
+const acknowledgeChartSync = Command.resolve(
+  SyncChart,
+  Message.SucceededSyncChart(),
+)
 
 const resolveFocusOption = Command.resolve(
   RadioGroup.FocusOption,
-  RadioGroup.CompletedFocusOption(),
+  RadioGroupMessage.CompletedFocusOption(),
 )
 
 describe('view', () => {
@@ -63,7 +67,7 @@ describe('view', () => {
       acknowledgeChartSync,
       click(role('radio', { name: 'Velocity' })),
       resolveFocusOption,
-      Command.resolve(SyncChart, SucceededSyncChart()),
+      Command.resolve(SyncChart, Message.SucceededSyncChart()),
       expect(role('radio', { name: 'Velocity' })).toHaveAttr(
         'aria-checked',
         'true',

@@ -1,6 +1,6 @@
-import { Match as M, Option, Schema as S, String } from 'effect'
+import { Option, Schema as S, String } from 'effect'
 import { Command } from 'foldkit'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { PeopleRoute } from '../route'
@@ -9,66 +9,58 @@ import { PeopleRoute } from '../route'
 
 const Person = S.Struct({ id: S.Number, name: S.String, role: S.String })
 
-const ChangedSearchInput = m('ChangedSearchInput', { value: S.String })
-const SubmittedSearch = m('SubmittedSearch')
-const ChangedRoute = m('ChangedRoute', { route: PeopleRoute })
-const SucceededFetchPeople = m('SucceededFetchPeople', {
-  query: S.String,
-  people: S.Array(Person),
+export const Message = defineMessageUnion({
+  ChangedSearchInput: { value: S.String },
+  SubmittedSearch: {},
+  ChangedRoute: { route: PeopleRoute },
+  SucceededFetchPeople: {
+    query: S.String,
+    people: S.Array(Person),
+  },
 })
-
-export const Message = S.Union([
-  ChangedSearchInput,
-  SubmittedSearch,
-  ChangedRoute,
-  SucceededFetchPeople,
-])
 export type Message = typeof Message.Type
 
 // UPDATE
 
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] =>
-  M.value(message).pipe(
-    M.tagsExhaustive({
-      ChangedSearchInput: ({ value }) => [
-        evo(model, { searchInput: () => value }),
-        [],
-      ],
+type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
 
-      SubmittedSearch: () => [
-        model,
-        [
-          PushSearchUrl({
-            searchText: Option.liftPredicate(
-              model.searchInput,
-              String.isNonEmpty,
-            ),
-          }),
-        ],
-      ],
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    ChangedSearchInput: ({ value }) => [
+      evo(model, { searchInput: () => value }),
+      [],
+    ],
 
-      ChangedRoute: ({ route }) => {
-        const searchText = Option.getOrElse(route.searchText, () => '')
-        return [
-          evo(model, {
-            searchInput: () => searchText,
-            searchHistory: searchHistory =>
-              addSearchToHistory(searchHistory, searchText),
-            results: () => SearchLoading(),
-          }),
-          [FetchPeople({ searchText })],
-        ]
-      },
-
-      SucceededFetchPeople: ({ query, people }) => [
-        evo(model, { results: () => SearchLoaded({ query, people }) }),
-        [],
+    SubmittedSearch: () => [
+      model,
+      [
+        PushSearchUrl({
+          searchText: Option.liftPredicate(
+            model.searchInput,
+            String.isNonEmpty,
+          ),
+        }),
       ],
-    }),
-  )
+    ],
+
+    ChangedRoute: ({ route }) => {
+      const searchText = Option.getOrElse(route.searchText, () => '')
+      return [
+        evo(model, {
+          searchInput: () => searchText,
+          searchHistory: searchHistory =>
+            addSearchToHistory(searchHistory, searchText),
+          results: () => SearchLoading(),
+        }),
+        [FetchPeople({ searchText })],
+      ]
+    },
+
+    SucceededFetchPeople: ({ query, people }) => [
+      evo(model, { results: () => SearchLoaded({ query, people }) }),
+      [],
+    ],
+  })
 
 export const informRouteChanged = (model: Model, route: PeopleRoute) =>
-  update(model, ChangedRoute({ route }))
+  update(model, Message.ChangedRoute({ route }))

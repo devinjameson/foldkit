@@ -6,9 +6,12 @@ import * as Scene from 'foldkit/scene'
 import { describe, it } from '@effect/vitest'
 
 import type { CalendarAttributes } from './index.js'
-import { CompletedFocusGrid, FocusGrid, init, update, view } from './index.js'
+import { FocusGrid, Message, init, update, view } from './index.js'
 
-const resolveFocusGrid = Scene.Command.resolve(FocusGrid, CompletedFocusGrid())
+const resolveFocusGrid = Scene.Command.resolve(
+  FocusGrid,
+  Message.CompletedFocusGrid(),
+)
 
 const today = Calendar.make(2026, 4, 13)
 

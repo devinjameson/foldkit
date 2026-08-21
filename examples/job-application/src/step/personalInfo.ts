@@ -21,7 +21,7 @@ import {
   makeRules,
   validate,
 } from 'foldkit/fieldValidation'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { DatePicker, Listbox } from '@foldkit/ui'
@@ -49,38 +49,21 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const UpdatedFirstName = m('UpdatedFirstName', { value: S.String })
-export const UpdatedLastName = m('UpdatedLastName', { value: S.String })
-export const UpdatedEmail = m('UpdatedEmail', { value: S.String })
-export const CompletedValidateEmailAsync = m('CompletedValidateEmailAsync', {
-  validationId: S.Number,
-  field: Field(S.String),
-})
-export const UpdatedPhone = m('UpdatedPhone', { value: S.String })
-export const GotPronounsMessage = m('GotPronounsMessage', {
-  message: Listbox.Message,
-})
-export const UpdatedCustomPronouns = m('UpdatedCustomPronouns', {
-  value: S.String,
-})
-export const UpdatedPortfolioUrl = m('UpdatedPortfolioUrl', {
-  value: S.String,
-})
-export const GotAvailableDateMessage = m('GotAvailableDateMessage', {
-  message: DatePicker.Message,
+export const Message = defineMessageUnion({
+  UpdatedFirstName: { value: S.String },
+  UpdatedLastName: { value: S.String },
+  UpdatedEmail: { value: S.String },
+  CompletedValidateEmailAsync: {
+    validationId: S.Number,
+    field: Field(S.String),
+  },
+  UpdatedPhone: { value: S.String },
+  GotPronounsMessage: { message: Listbox.Message },
+  UpdatedCustomPronouns: { value: S.String },
+  UpdatedPortfolioUrl: { value: S.String },
+  GotAvailableDateMessage: { message: DatePicker.Message },
 })
 
-export const Message = S.Union([
-  UpdatedFirstName,
-  UpdatedLastName,
-  UpdatedEmail,
-  CompletedValidateEmailAsync,
-  UpdatedPhone,
-  GotPronounsMessage,
-  UpdatedCustomPronouns,
-  UpdatedPortfolioUrl,
-  GotAvailableDateMessage,
-])
 export type Message = typeof Message.Type
 
 // INIT
@@ -158,11 +141,11 @@ const isEmailTaken = (emailInput: string): Effect.Effect<boolean> =>
 
 export const ValidateEmailAsync = Command.define('ValidateEmailAsync', {
   args: { emailInput: S.String, validationId: S.Number },
-  messages: [CompletedValidateEmailAsync],
+  messages: [Message.CompletedValidateEmailAsync],
   execute: ({ emailInput, validationId }) =>
     Effect.gen(function* () {
       if (yield* isEmailTaken(emailInput)) {
-        return CompletedValidateEmailAsync({
+        return Message.CompletedValidateEmailAsync({
           validationId,
           field: Invalid({
             value: emailInput,
@@ -170,7 +153,7 @@ export const ValidateEmailAsync = Command.define('ValidateEmailAsync', {
           }),
         })
       }
-      return CompletedValidateEmailAsync({
+      return Message.CompletedValidateEmailAsync({
         validationId,
         field: Valid({ value: emailInput }),
       })
@@ -197,7 +180,7 @@ const foldPronouns = Update.foldChild({
   update: PronounsListbox.update,
   read: (model: Model) => Option.some(model.pronouns),
   write: (model, nextPronouns) => evo(model, { pronouns: () => nextPronouns }),
-  toParentMessage: message => GotPronounsMessage({ message }),
+  toParentMessage: message => Message.GotPronounsMessage({ message }),
   foldOutMessage: foldPronounsOutMessage,
 })
 
@@ -223,76 +206,72 @@ const foldAvailableDate = Update.foldChild({
   read: (model: Model) => Option.some(model.availableDate),
   write: (model, nextAvailableDate) =>
     evo(model, { availableDate: () => nextAvailableDate }),
-  toParentMessage: message => GotAvailableDateMessage({ message }),
+  toParentMessage: message => Message.GotAvailableDateMessage({ message }),
   foldOutMessage: foldAvailableDateOutMessage,
 })
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    M.withReturnType<UpdateReturn>(),
-    M.tagsExhaustive({
-      UpdatedFirstName: ({ value }) => [
-        evo(model, { firstName: () => validateFirstName(value) }),
-        [],
-      ],
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    UpdatedFirstName: ({ value }) => [
+      evo(model, { firstName: () => validateFirstName(value) }),
+      [],
+    ],
 
-      UpdatedLastName: ({ value }) => [
-        evo(model, { lastName: () => validateLastName(value) }),
-        [],
-      ],
+    UpdatedLastName: ({ value }) => [
+      evo(model, { lastName: () => validateLastName(value) }),
+      [],
+    ],
 
-      UpdatedEmail: ({ value }) => {
-        const validationId = Number.increment(model.emailValidationId)
-        return M.value(validateEmail(value)).pipe(
-          M.withReturnType<UpdateReturn>(),
-          M.tag('Valid', () => [
-            evo(model, {
-              email: () => Validating({ value }),
-              emailValidationId: () => validationId,
-            }),
-            [ValidateEmailAsync({ emailInput: value, validationId })],
-          ]),
-          M.orElse(syncResult => [
-            evo(model, {
-              email: () => syncResult,
-              emailValidationId: () => validationId,
-            }),
-            [],
-          ]),
-        )
-      },
+    UpdatedEmail: ({ value }) => {
+      const validationId = Number.increment(model.emailValidationId)
+      return M.value(validateEmail(value)).pipe(
+        M.withReturnType<UpdateReturn>(),
+        M.tag('Valid', () => [
+          evo(model, {
+            email: () => Validating({ value }),
+            emailValidationId: () => validationId,
+          }),
+          [ValidateEmailAsync({ emailInput: value, validationId })],
+        ]),
+        M.orElse(syncResult => [
+          evo(model, {
+            email: () => syncResult,
+            emailValidationId: () => validationId,
+          }),
+          [],
+        ]),
+      )
+    },
 
-      CompletedValidateEmailAsync: ({ validationId, field }) => {
-        if (validationId === model.emailValidationId) {
-          return [evo(model, { email: () => field }), []]
-        } else {
-          return [model, []]
-        }
-      },
+    CompletedValidateEmailAsync: ({ validationId, field }) => {
+      if (validationId === model.emailValidationId) {
+        return [evo(model, { email: () => field }), []]
+      } else {
+        return [model, []]
+      }
+    },
 
-      UpdatedPhone: ({ value }) => [
-        evo(model, { phone: () => validatePhone(value) }),
-        [],
-      ],
+    UpdatedPhone: ({ value }) => [
+      evo(model, { phone: () => validatePhone(value) }),
+      [],
+    ],
 
-      GotPronounsMessage: ({ message }) => foldPronouns(model, message),
+    GotPronounsMessage: ({ message }) => foldPronouns(model, message),
 
-      UpdatedCustomPronouns: ({ value }) => [
-        evo(model, { customPronouns: () => value }),
-        [],
-      ],
+    UpdatedCustomPronouns: ({ value }) => [
+      evo(model, { customPronouns: () => value }),
+      [],
+    ],
 
-      UpdatedPortfolioUrl: ({ value }) => [
-        evo(model, {
-          portfolioUrl: () => validatePortfolioUrl(value),
-        }),
-        [],
-      ],
+    UpdatedPortfolioUrl: ({ value }) => [
+      evo(model, {
+        portfolioUrl: () => validatePortfolioUrl(value),
+      }),
+      [],
+    ],
 
-      GotAvailableDateMessage: ({ message }) =>
-        foldAvailableDate(model, message),
-    }),
-  )
+    GotAvailableDateMessage: ({ message }) => foldAvailableDate(model, message),
+  })
 
 // VALIDATION SUMMARY
 

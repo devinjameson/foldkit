@@ -10,11 +10,7 @@ import { Menu } from '@foldkit/ui'
 import type { AnchorConfig } from '@foldkit/ui/menu'
 
 import { Icon } from '../../icon'
-import {
-  GotMenuAnimatedDemoMessage,
-  GotMenuBasicDemoMessage,
-  type Message,
-} from './message'
+import { Message } from './message'
 
 // DEMO CONTENT
 
@@ -133,7 +129,8 @@ export const basicDemo = (menuModel: Menu.Model, h: HtmlBuilder<Message>) => {
               viewInputs: {
                 ...menuViewConfig(basicItemsClassName),
               },
-              toParentMessage: message => GotMenuBasicDemoMessage({ message }),
+              toParentMessage: message =>
+                Message.GotMenuBasicDemoMessage({ message }),
             }),
           ],
         ),
@@ -168,7 +165,7 @@ export const animatedDemo = (
                 ...menuViewConfig(animatedItemsClassName),
               },
               toParentMessage: message =>
-                GotMenuAnimatedDemoMessage({ message }),
+                Message.GotMenuAnimatedDemoMessage({ message }),
             }),
           ],
         ),

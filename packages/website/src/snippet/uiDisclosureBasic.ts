@@ -3,7 +3,7 @@
 // update, and view definitions.
 import { Schema as S } from 'effect'
 import type { HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Disclosure } from '@foldkit/ui'
@@ -24,11 +24,12 @@ const init = () => [
 ]
 
 // A verb-first, past-tense Message carries the new open state:
-const ToggledFaq = m('ToggledFaq', { isOpen: S.Boolean })
 
-const Message = S.Union([ToggledFaq])
+const Message = defineMessageUnion({
+  ToggledFaq: { isOpen: S.Boolean },
+})
 
-// Inside your update function's M.tagsExhaustive({...}), store the value.
+// Inside your update function's Message.match({...}), store the value.
 // This is the moment to persist the open state, lazy-load panel content, or
 // log analytics.
 ToggledFaq: ({ isOpen }) => [evo(model, { isFaqOpen: () => isOpen }), []]
@@ -47,7 +48,7 @@ const view = (model, h: HtmlBuilder<Message>) =>
     {
       id: 'faq-1',
       isOpen: model.isFaqOpen,
-      onToggle: isOpen => ToggledFaq({ isOpen }),
+      onToggle: isOpen => Message.ToggledFaq({ isOpen }),
       // ariaLabel: 'What is Foldkit?',
       toView: ({ button, panel, animatePanel }) =>
         h.div(

@@ -9,7 +9,7 @@ import {
 } from 'effect'
 import { Command, Runtime, Subscription } from 'foldkit'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { GAME, GAME_SPEED } from './constants'
@@ -38,24 +38,14 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const TickedClock = m('TickedClock')
-export const PressedKey = m('PressedKey', { key: S.String })
-export const PausedGame = m('PausedGame')
-export const RestartedGame = m('RestartedGame')
-export const CompletedGenerateApplePosition = m(
-  'CompletedGenerateApplePosition',
-  {
-    position: Position.Position,
-  },
-)
+export const Message = defineMessageUnion({
+  TickedClock: {},
+  PressedKey: { key: S.String },
+  PausedGame: {},
+  RestartedGame: {},
+  CompletedGenerateApplePosition: { position: Position.Position },
+})
 
-export const Message = S.Union([
-  TickedClock,
-  PressedKey,
-  PausedGame,
-  RestartedGame,
-  CompletedGenerateApplePosition,
-])
 export type Message = typeof Message.Type
 
 // INIT
@@ -79,15 +69,10 @@ export const init: Runtime.ApplicationInit<Model, Message> = () => {
 
 // UPDATE
 
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] =>
-  M.value(message).pipe(
-    M.withReturnType<
-      readonly [Model, ReadonlyArray<Command.Command<Message>>]
-    >(),
-    M.tagsExhaustive({
+export const update = (model: Model, message: Message) =>
+  Message.match<readonly [Model, ReadonlyArray<Command.Command<Message>>]>(
+    message,
+    {
       PressedKey: ({ key }) =>
         M.value(key).pipe(
           M.withReturnType<
@@ -231,17 +216,19 @@ export const update = (
         }),
         [],
       ],
-    }),
+    },
   )
 
 // COMMAND
 
 export const GenerateApplePosition = Command.define('GenerateApplePosition', {
   args: { snake: Snake.Snake },
-  messages: [CompletedGenerateApplePosition],
+  messages: [Message.CompletedGenerateApplePosition],
   execute: ({ snake }) =>
     Apple.generatePosition(snake).pipe(
-      Effect.map(position => CompletedGenerateApplePosition({ position })),
+      Effect.map(position =>
+        Message.CompletedGenerateApplePosition({ position }),
+      ),
     ),
 })
 
@@ -263,7 +250,9 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
       }),
       dependenciesToStream: ({ isPlaying, interval }) =>
         Stream.when(
-          Stream.tick(Duration.millis(interval)).pipe(Stream.map(TickedClock)),
+          Stream.tick(Duration.millis(interval)).pipe(
+            Stream.map(Message.TickedClock),
+          ),
           Effect.sync(() => isPlaying),
         ),
     },
@@ -273,7 +262,7 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
     Stream.fromEventListener<KeyboardEvent>(document, 'keydown').pipe(
       Stream.mapEffect(keyboardEvent =>
         Effect.sync(() => keyboardEvent.preventDefault()).pipe(
-          Effect.as(PressedKey({ key: keyboardEvent.key })),
+          Effect.as(Message.PressedKey({ key: keyboardEvent.key })),
         ),
       ),
     ),

@@ -43,7 +43,7 @@ export const workEntryView = Submodel.defineView<
           backdropClassName,
         },
         toParentMessage: message =>
-          WorkHistory.Entry.GotStartDateMessage({ message }),
+          WorkHistory.Entry.Message.GotStartDateMessage({ message }),
       }),
     ],
   )
@@ -71,7 +71,7 @@ export const workEntryView = Submodel.defineView<
           backdropClassName,
         },
         toParentMessage: message =>
-          WorkHistory.Entry.GotEndDateMessage({ message }),
+          WorkHistory.Entry.Message.GotEndDateMessage({ message }),
       }),
     ],
   )
@@ -88,7 +88,8 @@ export const workEntryView = Submodel.defineView<
               id: `${model.id}-company`,
               label: 'Company',
               field: model.company,
-              onInput: value => WorkHistory.Entry.UpdatedCompany({ value }),
+              onInput: value =>
+                WorkHistory.Entry.Message.UpdatedCompany({ value }),
               placeholder: 'e.g. Acme Corp',
             },
             h,
@@ -98,7 +99,8 @@ export const workEntryView = Submodel.defineView<
               id: `${model.id}-title`,
               label: 'Job Title',
               field: model.title,
-              onInput: value => WorkHistory.Entry.UpdatedTitle({ value }),
+              onInput: value =>
+                WorkHistory.Entry.Message.UpdatedTitle({ value }),
               placeholder: 'e.g. Senior Engineer',
             },
             h,
@@ -115,7 +117,7 @@ export const workEntryView = Submodel.defineView<
           label: 'I currently work here',
           isChecked: model.isCurrentlyEmployed,
           onToggle: isChecked =>
-            WorkHistory.Entry.ToggledCurrentlyEmployed({ isChecked }),
+            WorkHistory.Entry.Message.ToggledCurrentlyEmployed({ isChecked }),
         },
         h,
       ),
@@ -124,7 +126,8 @@ export const workEntryView = Submodel.defineView<
           id: `${model.id}-description`,
           label: 'Description',
           value: model.description,
-          onInput: value => WorkHistory.Entry.UpdatedDescription({ value }),
+          onInput: value =>
+            WorkHistory.Entry.Message.UpdatedDescription({ value }),
           rows: 3,
           placeholder: 'Describe your role and key accomplishments...',
         },
@@ -135,7 +138,7 @@ export const workEntryView = Submodel.defineView<
         [
           Button.view(
             {
-              onClick: WorkHistory.Entry.ClickedRemoveSelf(),
+              onClick: WorkHistory.Entry.Message.ClickedRemoveSelf(),
               toView: attributes =>
                 h.button(
                   [

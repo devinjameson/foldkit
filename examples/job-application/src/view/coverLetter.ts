@@ -5,6 +5,7 @@ import type { Html } from 'foldkit/html'
 import { Textarea } from '@foldkit/ui'
 
 import { CoverLetter } from '../step'
+import { Message } from '../step/coverLetter'
 
 const MAX_COVER_LETTER_LENGTH = 2000
 const WARNING_THRESHOLD_CHARS = 200
@@ -21,7 +22,7 @@ export const coverLetterView = Submodel.defineView<
     {
       id: 'cover-letter',
       value: model.content,
-      onInput: value => CoverLetter.UpdatedContent({ value }),
+      onInput: value => Message.UpdatedContent({ value }),
       rows: 12,
       placeholder:
         'Tell us why you want to work on Foldkit and what excites you about the Elm Architecture...',

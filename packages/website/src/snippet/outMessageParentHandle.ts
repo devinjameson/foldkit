@@ -1,38 +1,28 @@
-import { Match as M, Option } from 'effect'
+import { Option } from 'effect'
 import { Command } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] =>
-  M.value(message).pipe(
-    M.tagsExhaustive({
-      GotLoginMessage: ({ message }) => {
-        const [nextLogin, commands, maybeOutMessage] = Login.update(
-          model.login,
-          message,
-        )
+export const update = (model: Model, message: Message) =>
+  Message.match(message, {
+    GotLoginMessage: ({ message }) => {
+      const [nextLogin, commands, maybeOutMessage] = Login.update(
+        model.login,
+        message,
+      )
 
-        const mappedCommands = Command.mapMessages(commands, message =>
-          GotLoginMessage({ message }),
-        )
+      const mappedCommands = Command.mapMessages(commands, message =>
+        Message.GotLoginMessage({ message }),
+      )
 
-        return Option.match(maybeOutMessage, {
-          onNone: () => [
-            evo(model, { login: () => nextLogin }),
-            mappedCommands,
-          ],
-          onSome: outMessage =>
-            M.value(outMessage).pipe(
-              M.tagsExhaustive({
-                SucceededLogin: ({ sessionId }) => [
-                  LoggedIn({ sessionId }),
-                  [...mappedCommands, SaveSession(sessionId)],
-                ],
-              }),
-            ),
-        })
-      },
-    }),
-  )
+      return Option.match(maybeOutMessage, {
+        onNone: () => [evo(model, { login: () => nextLogin }), mappedCommands],
+        onSome: outMessage =>
+          Login.OutMessage.match(outMessage, {
+            SucceededLogin: ({ sessionId }) => [
+              LoggedIn({ sessionId }),
+              [...mappedCommands, SaveSession(sessionId)],
+            ],
+          }),
+      })
+    },
+  })

@@ -3,7 +3,7 @@ import type { HtmlBuilder } from 'foldkit/html'
 import { Disclosure } from '@foldkit/ui'
 
 import { Icon } from '../../icon'
-import { type Message, ToggledDisclosureDemo } from './message'
+import { Message } from './message'
 
 export const DISCLOSURE_DEMO_ID = 'disclosure-demo'
 
@@ -38,7 +38,7 @@ export const basicDemo = (
           {
             id: DISCLOSURE_DEMO_ID,
             isOpen: isDisclosureDemoOpen,
-            onToggle: isOpen => ToggledDisclosureDemo({ isOpen }),
+            onToggle: isOpen => Message.ToggledDisclosureDemo({ isOpen }),
             toView: attributes =>
               h.div(
                 [

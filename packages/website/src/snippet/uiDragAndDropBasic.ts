@@ -4,7 +4,7 @@
 import { Effect, Match as M, Option } from 'effect'
 import { Subscription, Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { DragAndDrop } from '@foldkit/ui'
@@ -31,8 +31,8 @@ const init = () => [
 ]
 
 // Embed the DragAndDrop Message in your parent Message:
-const GotDragAndDropMessage = m('GotDragAndDropMessage', {
-  message: DragAndDrop.Message,
+const Message = defineMessageUnion({
+  GotDragAndDropMessage: { message: DragAndDrop.Message },
 })
 
 // At module scope, fold the OutMessage into your own Model. `Reordered`
@@ -67,11 +67,11 @@ const foldDragAndDrop = Update.foldChild({
   read: (model: Model) => Option.some(model.dragAndDrop),
   write: (model, nextDragAndDrop) =>
     evo(model, { dragAndDrop: () => nextDragAndDrop }),
-  toParentMessage: message => GotDragAndDropMessage({ message }),
+  toParentMessage: message => Message.GotDragAndDropMessage({ message }),
   foldOutMessage: foldDragAndDropOutMessage,
 })
 
-// Inside your update function's M.tagsExhaustive({...}), call the fold:
+// Inside your update function's Message.match({...}), call the fold:
 GotDragAndDropMessage: ({ message }) => foldDragAndDrop(model, message)
 
 // In your subscriptions, lift all four document-level listeners through
@@ -83,7 +83,7 @@ const dragAndDropSubscriptions = Subscription.lift({
   autoScroll: DragAndDrop.subscriptions.autoScroll,
 })<Model, Message>({
   toChildModel: model => model.dragAndDrop,
-  toParentMessage: message => GotDragAndDropMessage({ message }),
+  toParentMessage: message => Message.GotDragAndDropMessage({ message }),
 })
 
 const subscriptions = Subscription.aggregate<Model, Message>()(
@@ -105,7 +105,8 @@ const view = (model: Model, h: HtmlBuilder<Message>) =>
           ...DragAndDrop.draggable(
             {
               model: model.dragAndDrop,
-              toParentMessage: message => GotDragAndDropMessage({ message }),
+              toParentMessage: message =>
+                Message.GotDragAndDropMessage({ message }),
               itemId: item.id,
               containerId: 'list',
               index,

@@ -1,10 +1,12 @@
 import { Effect, Schema as S } from 'effect'
 import { Mount } from 'foldkit'
 import type { Html, HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 
-const SucceededMountChart = m('SucceededMountChart')
-const FailedMountChart = m('FailedMountChart', { reason: S.String })
+const Message = defineMessageUnion({
+  SucceededMountChart: {},
+  FailedMountChart: { reason: S.String },
+})
 
 // Mount.define gives the action a name and constrains what Messages it can
 // produce, plus an args record so the chart's per-instance data flows through
@@ -18,8 +20,8 @@ type ChartData = typeof ChartData.Type
 const MountChart = Mount.define(
   'MountChart',
   { data: ChartData },
-  SucceededMountChart,
-  FailedMountChart,
+  Message.SucceededMountChart,
+  Message.FailedMountChart,
 )(
   ({ data }) =>
     element =>
@@ -30,11 +32,11 @@ const MountChart = Mount.define(
           ),
           chart => Effect.sync(() => chart.destroy()),
         )
-        return SucceededMountChart()
+        return Message.SucceededMountChart()
       }).pipe(
         Effect.catch(error =>
           Effect.succeed(
-            FailedMountChart({
+            Message.FailedMountChart({
               reason: error instanceof Error ? error.message : String(error),
             }),
           ),

@@ -5,7 +5,7 @@ import { Calendar, DatePicker } from '@foldkit/ui'
 import type { AnchorConfig } from '@foldkit/ui/popover'
 
 import { Icon } from '../../icon'
-import { GotDatePickerBasicDemoMessage, type Message } from './message'
+import { Message } from './message'
 import type { Model } from './model'
 
 // DEMO CONTENT
@@ -251,7 +251,7 @@ export const basicDemo = (model: Model, h: HtmlBuilder<Message>) => {
             ),
           },
           toParentMessage: message =>
-            GotDatePickerBasicDemoMessage({ message }),
+            Message.GotDatePickerBasicDemoMessage({ message }),
         }),
       ],
     ),

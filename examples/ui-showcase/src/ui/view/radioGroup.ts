@@ -3,11 +3,7 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { RadioGroup } from '@foldkit/ui'
 
-import {
-  GotHorizontalRadioGroupDemoMessage,
-  GotVerticalRadioGroupDemoMessage,
-  type UiMessage,
-} from '../message'
+import { UiMessage } from '../message'
 import { type Plan, type UiModel } from '../model'
 
 export const PlanRadioGroup = RadioGroup.create<Plan>()
@@ -130,7 +126,7 @@ export const view = Submodel.defineView<UiModel, UiMessage>(
               ),
           },
           toParentMessage: message =>
-            GotVerticalRadioGroupDemoMessage({ message }),
+            UiMessage.GotVerticalRadioGroupDemoMessage({ message }),
         }),
 
         h.h3(
@@ -188,7 +184,7 @@ export const view = Submodel.defineView<UiModel, UiMessage>(
               ),
           },
           toParentMessage: message =>
-            GotHorizontalRadioGroupDemoMessage({ message }),
+            UiMessage.GotHorizontalRadioGroupDemoMessage({ message }),
         }),
       ],
     )

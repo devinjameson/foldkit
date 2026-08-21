@@ -4,12 +4,8 @@ import { expect } from 'vitest'
 import { describe, it } from '@effect/vitest'
 
 import {
-  CompletedWaitForPaint,
-  EndedAnimation,
-  Hid,
-  Showed,
-  StartedLeaveAnimating,
-  TransitionedOut,
+  Message,
+  OutMessage,
   WaitForAnimationSettled,
   WaitForPaint,
   init,
@@ -41,17 +37,20 @@ describe('Animation', () => {
         Story.story(
           update,
           Story.given(init({ id: 'test' })),
-          Story.message(Showed()),
+          Story.message(Message.Showed()),
           Story.model(model => {
             expect(model.isShowing).toBe(true)
             expect(model.transitionState).toBe('EnterStart')
           }),
           Story.Command.expectHas(WaitForPaint),
-          Story.Command.resolve(WaitForPaint, CompletedWaitForPaint()),
+          Story.Command.resolve(WaitForPaint, Message.CompletedWaitForPaint()),
           Story.model(model => {
             expect(model.transitionState).toBe('EnterAnimating')
           }),
-          Story.Command.resolve(WaitForAnimationSettled, EndedAnimation()),
+          Story.Command.resolve(
+            WaitForAnimationSettled,
+            Message.EndedAnimation(),
+          ),
           Story.model(model => {
             expect(model.transitionState).toBe('Idle')
           }),
@@ -63,7 +62,7 @@ describe('Animation', () => {
         Story.story(
           update,
           Story.given(init({ id: 'test', isShowing: true })),
-          Story.message(Showed()),
+          Story.message(Message.Showed()),
           Story.model(model => {
             expect(model.isShowing).toBe(true)
             expect(model.transitionState).toBe('Idle')
@@ -79,23 +78,23 @@ describe('Animation', () => {
         Story.story(
           update,
           Story.given(init({ id: 'test', isShowing: true })),
-          Story.message(Hid()),
+          Story.message(Message.Hid()),
           Story.model(model => {
             expect(model.isShowing).toBe(false)
             expect(model.transitionState).toBe('LeaveStart')
           }),
           Story.Command.expectHas(WaitForPaint),
-          Story.Command.resolve(WaitForPaint, CompletedWaitForPaint()),
+          Story.Command.resolve(WaitForPaint, Message.CompletedWaitForPaint()),
           Story.model(model => {
             expect(model.transitionState).toBe('LeaveAnimating')
           }),
           Story.Command.expectNone(),
-          Story.expectOutMessage(StartedLeaveAnimating()),
-          Story.message(EndedAnimation()),
+          Story.expectOutMessage(OutMessage.StartedLeaveAnimating()),
+          Story.message(Message.EndedAnimation()),
           Story.model(model => {
             expect(model.transitionState).toBe('Idle')
           }),
-          Story.expectOutMessage(TransitionedOut()),
+          Story.expectOutMessage(OutMessage.TransitionedOut()),
         )
       })
 
@@ -103,7 +102,7 @@ describe('Animation', () => {
         Story.story(
           update,
           Story.given(init({ id: 'test' })),
-          Story.message(Hid()),
+          Story.message(Message.Hid()),
           Story.model(model => {
             expect(model.isShowing).toBe(false)
           }),
@@ -116,15 +115,15 @@ describe('Animation', () => {
         Story.story(
           update,
           Story.given(init({ id: 'test', isShowing: true })),
-          Story.message(Hid()),
+          Story.message(Message.Hid()),
           Story.Command.expectHas(WaitForPaint),
-          Story.Command.resolve(WaitForPaint, CompletedWaitForPaint()),
+          Story.Command.resolve(WaitForPaint, Message.CompletedWaitForPaint()),
           Story.model(model => {
             expect(model.transitionState).toBe('LeaveAnimating')
           }),
           Story.Command.expectNone(),
-          Story.expectOutMessage(StartedLeaveAnimating()),
-          Story.message(Hid()),
+          Story.expectOutMessage(OutMessage.StartedLeaveAnimating()),
+          Story.message(Message.Hid()),
           Story.model(model => {
             expect(model.transitionState).toBe('LeaveAnimating')
           }),
@@ -139,7 +138,7 @@ describe('Animation', () => {
         Story.story(
           update,
           Story.given(init({ id: 'test' })),
-          Story.message(CompletedWaitForPaint()),
+          Story.message(Message.CompletedWaitForPaint()),
           Story.model(model => {
             expect(model.transitionState).toBe('Idle')
           }),
@@ -153,7 +152,7 @@ describe('Animation', () => {
         Story.story(
           update,
           Story.given(init({ id: 'test' })),
-          Story.message(EndedAnimation()),
+          Story.message(Message.EndedAnimation()),
           Story.model(model => {
             expect(model.transitionState).toBe('Idle')
           }),

@@ -3,13 +3,7 @@ import { type Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import { Popover } from '@foldkit/ui'
 import type { AnchorConfig } from '@foldkit/ui/popover'
 
-import {
-  GotPopoverAnimatedDemoMessage,
-  GotPopoverBasicDemoMessage,
-  GotPopoverNestedChildDemoMessage,
-  GotPopoverNestedParentDemoMessage,
-  type Message,
-} from './message'
+import { Message } from './message'
 
 // DEMO CONTENT
 
@@ -112,7 +106,7 @@ export const basicDemo = (
           [
             popoverDemo(
               popoverModel,
-              message => GotPopoverBasicDemoMessage({ message }),
+              message => Message.GotPopoverBasicDemoMessage({ message }),
               basicPanelClassName,
               h,
             ),
@@ -143,7 +137,7 @@ export const animatedDemo = (
           [
             popoverDemo(
               popoverModel,
-              message => GotPopoverAnimatedDemoMessage({ message }),
+              message => Message.GotPopoverAnimatedDemoMessage({ message }),
               animatedPanelClassName,
               h,
             ),
@@ -200,7 +194,8 @@ const nestedChildPopover = (
           ],
         ),
     },
-    toParentMessage: message => GotPopoverNestedChildDemoMessage({ message }),
+    toParentMessage: message =>
+      Message.GotPopoverNestedChildDemoMessage({ message }),
   })
 
 export const nestedDemo = (
@@ -267,7 +262,7 @@ export const nestedDemo = (
                   ),
               },
               toParentMessage: message =>
-                GotPopoverNestedParentDemoMessage({ message }),
+                Message.GotPopoverNestedParentDemoMessage({ message }),
             }),
           ],
         ),

@@ -3,7 +3,7 @@ import { Subscription } from 'foldkit'
 
 import { capturedKeyDownStream } from '../../keyboard'
 import { RoomsClient } from '../../rpc'
-import { FailedStreamRoom, Message, PressedKey, UpdatedRoom } from './message'
+import { Message } from './message'
 import { Model, capturesKeyboard } from './model'
 
 export const subscriptions = Subscription.make<Model, Message, RoomsClient>()(
@@ -29,11 +29,11 @@ export const subscriptions = Subscription.make<Model, Message, RoomsClient>()(
                 const client = yield* RoomsClient
                 return client.subscribeToRoom({ roomId, playerId }).pipe(
                   Stream.map(({ room, maybePlayerProgress }) =>
-                    UpdatedRoom({ room, maybePlayerProgress }),
+                    Message.UpdatedRoom({ room, maybePlayerProgress }),
                   ),
                   Stream.catchCause(cause =>
                     Stream.make(
-                      FailedStreamRoom({
+                      Message.FailedStreamRoom({
                         error: Option.match(Cause.findErrorOption(cause), {
                           onSome: failure => String(failure),
                           onNone: () => 'Unknown stream error',
@@ -55,7 +55,7 @@ export const subscriptions = Subscription.make<Model, Message, RoomsClient>()(
         }),
         dependenciesToStream: ({ shouldCaptureKeyboard }) =>
           Stream.when(
-            capturedKeyDownStream(key => PressedKey({ key })),
+            capturedKeyDownStream(key => Message.PressedKey({ key })),
             Effect.sync(() => shouldCaptureKeyboard),
           ),
       },

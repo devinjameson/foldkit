@@ -1,15 +1,7 @@
 import { Command, given, message, model, story } from 'foldkit/story'
 import { describe, expect, test } from 'vitest'
 
-import {
-  ChangedStep,
-  ClickedAdvance,
-  CompletedReportCount,
-  type Model,
-  ReportCount,
-  Ticked,
-  update,
-} from './main'
+import { Message, type Model, ReportCount, update } from './main'
 
 const initialModel: Model = { count: 10, step: 1 }
 
@@ -19,12 +11,12 @@ describe('update', () => {
       story(
         update,
         given({ ...initialModel, step: 3 }),
-        message(Ticked()),
+        message(Message.Ticked()),
         model(model => {
           expect(model.count).toBe(13)
         }),
         Command.expectHas(ReportCount),
-        Command.resolve(ReportCount, CompletedReportCount()),
+        Command.resolve(ReportCount, Message.CompletedReportCount()),
       )
     })
 
@@ -32,12 +24,12 @@ describe('update', () => {
       story(
         update,
         given(initialModel),
-        message(ClickedAdvance()),
+        message(Message.ClickedAdvance()),
         model(model => {
           expect(model.count).toBe(11)
         }),
         Command.expectHas(ReportCount),
-        Command.resolve(ReportCount, CompletedReportCount()),
+        Command.resolve(ReportCount, Message.CompletedReportCount()),
       )
     })
   })
@@ -47,7 +39,7 @@ describe('update', () => {
       story(
         update,
         given(initialModel),
-        message(ChangedStep({ step: 7 })),
+        message(Message.ChangedStep({ step: 7 })),
         model(model => {
           expect(model.step).toBe(7)
           expect(model.count).toBe(10)
@@ -60,12 +52,12 @@ describe('update', () => {
       story(
         update,
         given(initialModel),
-        message(ChangedStep({ step: 5 })),
-        message(Ticked()),
+        message(Message.ChangedStep({ step: 5 })),
+        message(Message.Ticked()),
         model(model => {
           expect(model.count).toBe(15)
         }),
-        Command.resolve(ReportCount, CompletedReportCount()),
+        Command.resolve(ReportCount, Message.CompletedReportCount()),
       )
     })
   })

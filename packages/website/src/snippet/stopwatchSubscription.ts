@@ -1,11 +1,12 @@
 import { Duration, Effect, Schema as S, Stream } from 'effect'
 import { Subscription } from 'foldkit'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 
 // MESSAGE
 
-const Ticked = m('Ticked')
-const Message = S.Union([Ticked])
+const Message = defineMessageUnion({
+  Ticked: {},
+})
 type Message = typeof Message.Type
 
 // MODEL
@@ -26,7 +27,7 @@ const subscriptions = Subscription.make<Model, Message>()(entry => ({
       modelToDependencies: model => ({ isRunning: model.isRunning }),
       dependenciesToStream: ({ isRunning }) =>
         Stream.when(
-          Stream.tick(Duration.millis(100)).pipe(Stream.map(Ticked)),
+          Stream.tick(Duration.millis(100)).pipe(Stream.map(Message.Ticked)),
           Effect.sync(() => isRunning),
         ),
     },

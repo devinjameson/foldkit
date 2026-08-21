@@ -3,7 +3,7 @@ import { afterEach, beforeEach, expect, vi } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
 
-import { m } from '../message/index.js'
+import { defineMessageUnion } from '../message/index.js'
 import * as Mount from '../mount/index.js'
 import type { MountAction } from '../mount/index.js'
 import { MountTracker } from '../mount/index.js'
@@ -35,7 +35,9 @@ const patch = init([
   styleModule,
 ])
 
-const MountedRoot = m('MountedRoot')
+const Message = defineMessageUnion({
+  MountedRoot: {},
+})
 
 const WAIT_FOR_INTERRUPT_PROPAGATION_MS = 50
 
@@ -45,20 +47,20 @@ const WAIT_FOR_INTERRUPT_PROPAGATION_MS = 50
  *  definition time) doesn't fit. The runtime only reads `name`, `args`,
  *  and `f` from a MountAction. */
 const makeMounted = <E = never>(
-  f: (element: Element) => Stream.Stream<typeof MountedRoot.Type, E>,
-): MountAction<typeof MountedRoot.Type, E> => ({ name: 'Mounted', f })
+  f: (element: Element) => Stream.Stream<typeof Message.MountedRoot.Type, E>,
+): MountAction<typeof Message.MountedRoot.Type, E> => ({ name: 'Mounted', f })
 
 /** Helper that builds the canonical one-shot-with-cleanup Stream for a Mount
  *  using `Stream.callback` + `Effect.acquireRelease`. Emits the Message once,
  *  registers the cleanup, and keeps the stream's scope open until interrupted. */
 const oneShotStream = (
   cleanup: () => void = () => {},
-): Stream.Stream<typeof MountedRoot.Type> =>
-  Stream.callback<typeof MountedRoot.Type>(queue =>
+): Stream.Stream<typeof Message.MountedRoot.Type> =>
+  Stream.callback<typeof Message.MountedRoot.Type>(queue =>
     Effect.gen(function* () {
       yield* Effect.acquireRelease(
         Effect.sync(() => {
-          Queue.offerUnsafe(queue, MountedRoot())
+          Queue.offerUnsafe(queue, Message.MountedRoot())
         }),
         () => Effect.sync(cleanup),
       )
@@ -113,7 +115,7 @@ describe('OnMount', () => {
   })
 
   it('dispatches the emitted Message when the element mounts', async () => {
-    const h = __htmlBuilder<typeof MountedRoot.Type>()
+    const h = __htmlBuilder<typeof Message.MountedRoot.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
 
     const view = () =>
@@ -123,12 +125,12 @@ describe('OnMount', () => {
     patch(toVNode(makeRootContainer()), vnode)
 
     await vi.waitFor(() => {
-      expect(dispatched).toStrictEqual([MountedRoot()])
+      expect(dispatched).toStrictEqual([Message.MountedRoot()])
     })
   })
 
   it('does not dispatch the emitted Message when rendered with a no-op dispatch', async () => {
-    const h = __htmlBuilder<typeof MountedRoot.Type>()
+    const h = __htmlBuilder<typeof Message.MountedRoot.Type>()
     let streamRan = false
 
     const view = () =>
@@ -155,7 +157,7 @@ describe('OnMount', () => {
   })
 
   it('passes the inserted Element into the Stream factory', async () => {
-    const h = __htmlBuilder<typeof MountedRoot.Type>()
+    const h = __htmlBuilder<typeof Message.MountedRoot.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
     const seenIds: Array<string> = []
 
@@ -179,13 +181,13 @@ describe('OnMount', () => {
     patch(toVNode(makeRootContainer()), vnode)
 
     await vi.waitFor(() => {
-      expect(dispatched).toStrictEqual([MountedRoot()])
+      expect(dispatched).toStrictEqual([Message.MountedRoot()])
     })
     expect(seenIds).toStrictEqual(['mounted'])
   })
 
   it('dispatches every Message a streaming Stream emits over the element lifetime', async () => {
-    const h = __htmlBuilder<typeof MountedRoot.Type>()
+    const h = __htmlBuilder<typeof Message.MountedRoot.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
 
     const view = () =>
@@ -196,9 +198,9 @@ describe('OnMount', () => {
             h.OnMount(
               makeMounted(() =>
                 Stream.fromIterable([
-                  MountedRoot(),
-                  MountedRoot(),
-                  MountedRoot(),
+                  Message.MountedRoot(),
+                  Message.MountedRoot(),
+                  Message.MountedRoot(),
                 ]),
               ),
             ),
@@ -211,15 +213,15 @@ describe('OnMount', () => {
 
     await vi.waitFor(() => {
       expect(dispatched).toStrictEqual([
-        MountedRoot(),
-        MountedRoot(),
-        MountedRoot(),
+        Message.MountedRoot(),
+        Message.MountedRoot(),
+        Message.MountedRoot(),
       ])
     })
   })
 
   it('dispatches async events from a listener attached inside acquireRelease and detaches on destroy', async () => {
-    const h = __htmlBuilder<typeof MountedRoot.Type>()
+    const h = __htmlBuilder<typeof Message.MountedRoot.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
     let listenerAttached = false
     let listenerDetached = false
@@ -232,13 +234,13 @@ describe('OnMount', () => {
           h.span([
             h.OnMount(
               makeMounted(() =>
-                Stream.callback<typeof MountedRoot.Type>(queue =>
+                Stream.callback<typeof Message.MountedRoot.Type>(queue =>
                   Effect.gen(function* () {
                     yield* Effect.acquireRelease(
                       Effect.sync(() => {
                         listenerAttached = true
                         externalEmit = () =>
-                          Queue.offerUnsafe(queue, MountedRoot())
+                          Queue.offerUnsafe(queue, Message.MountedRoot())
                       }),
                       () =>
                         Effect.sync(() => {
@@ -287,7 +289,7 @@ describe('OnMount', () => {
   })
 
   it('runs the cleanup when the element is removed by a key change', async () => {
-    const h = __htmlBuilder<typeof MountedRoot.Type>()
+    const h = __htmlBuilder<typeof Message.MountedRoot.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
     let cleanupCalls = 0
 
@@ -325,7 +327,7 @@ describe('OnMount', () => {
   })
 
   it('runs the cleanup when the element is removed by a parent re-render', async () => {
-    const h = __htmlBuilder<typeof MountedRoot.Type>()
+    const h = __htmlBuilder<typeof Message.MountedRoot.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
     let cleanupCalls = 0
 
@@ -363,7 +365,7 @@ describe('OnMount', () => {
   })
 
   it('logs a failing Stream and dispatches nothing', async () => {
-    const h = __htmlBuilder<typeof MountedRoot.Type>()
+    const h = __htmlBuilder<typeof Message.MountedRoot.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
 
     const view = () =>
@@ -393,7 +395,7 @@ describe('OnMount', () => {
   })
 
   it('runs exactly once across repeated patches of the same element', async () => {
-    const h = __htmlBuilder<typeof MountedRoot.Type>()
+    const h = __htmlBuilder<typeof Message.MountedRoot.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
     let streamRunCount = 0
     let cleanupRunCount = 0
@@ -431,7 +433,7 @@ describe('OnMount', () => {
     await vi.waitFor(() => {
       expect(streamRunCount).toBe(1)
     })
-    expect(dispatched).toStrictEqual([MountedRoot()])
+    expect(dispatched).toStrictEqual([Message.MountedRoot()])
     expect(cleanupRunCount).toBe(0)
   })
 
@@ -442,7 +444,7 @@ describe('OnMount', () => {
     // for async Mount setup. For example, a Mount that dynamically imports
     // a library before constructing a handle: if the element unmounts
     // during the import, there is no handle to destroy.
-    const h = __htmlBuilder<typeof MountedRoot.Type>()
+    const h = __htmlBuilder<typeof Message.MountedRoot.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
     let cleanupCalls = 0
     let acquireCompleted = false
@@ -459,13 +461,13 @@ describe('OnMount', () => {
           h.span([
             h.OnMount(
               makeMounted(() =>
-                Stream.callback<typeof MountedRoot.Type>(queue =>
+                Stream.callback<typeof Message.MountedRoot.Type>(queue =>
                   Effect.gen(function* () {
                     yield* Effect.acquireRelease(
                       Effect.promise(() => acquireGate).pipe(
                         Effect.map(() => {
                           acquireCompleted = true
-                          Queue.offerUnsafe(queue, MountedRoot())
+                          Queue.offerUnsafe(queue, Message.MountedRoot())
                         }),
                       ),
                       () =>
@@ -501,14 +503,14 @@ describe('OnMount', () => {
   })
 
   it('Mount.define wraps an Effect: dispatches the result Message and holds the scope open until destroy for acquireRelease finalizers', async () => {
-    const h = __htmlBuilder<typeof MountedRoot.Type>()
+    const h = __htmlBuilder<typeof Message.MountedRoot.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
     let acquired = false
     let released = false
 
     const WrappedEffect = Mount.define(
       'WrappedEffect',
-      MountedRoot,
+      Message.MountedRoot,
     )(() =>
       Effect.gen(function* () {
         yield* Effect.acquireRelease(
@@ -520,7 +522,7 @@ describe('OnMount', () => {
               released = true
             }),
         )
-        return MountedRoot()
+        return Message.MountedRoot()
       }),
     )
 
@@ -533,7 +535,7 @@ describe('OnMount', () => {
     )
 
     await vi.waitFor(() => {
-      expect(dispatched).toStrictEqual([MountedRoot()])
+      expect(dispatched).toStrictEqual([Message.MountedRoot()])
     })
     expect(acquired).toBe(true)
     expect(released).toBe(false)
@@ -546,7 +548,7 @@ describe('OnMount', () => {
   })
 
   it('runs cleanup on unmount even after multiple re-renders', async () => {
-    const h = __htmlBuilder<typeof MountedRoot.Type>()
+    const h = __htmlBuilder<typeof Message.MountedRoot.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()
     let cleanupRunCount = 0
 

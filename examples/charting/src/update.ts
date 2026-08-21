@@ -6,12 +6,7 @@ import { RadioGroup } from '@foldkit/ui'
 
 import { FetchTelemetry, SyncChart } from './command'
 import type { ChartMode, PackageId, Period } from './domain'
-import {
-  GotChartModeRadioGroupMessage,
-  GotPackageRadioGroupMessage,
-  GotPeriodRadioGroupMessage,
-  type Message,
-} from './message'
+import { Message } from './message'
 import { type Model, TelemetryAsyncData } from './model'
 import {
   ChartModeRadioGroup,
@@ -20,7 +15,6 @@ import {
 } from './radioGroups'
 
 type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
-const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
 const syncChart = (args: {
   maybeChartHostId: Model['maybeChartHostId']
@@ -90,7 +84,8 @@ const foldChartModeRadioGroup = Update.foldChild({
   read: (model: Model) => Option.some(model.chartModeRadioGroup),
   write: (model, nextChartModeRadioGroup) =>
     evo(model, { chartModeRadioGroup: () => nextChartModeRadioGroup }),
-  toParentMessage: message => GotChartModeRadioGroupMessage({ message }),
+  toParentMessage: message =>
+    Message.GotChartModeRadioGroupMessage({ message }),
   foldOutMessage: foldChartModeRadioGroupOutMessage,
 })
 
@@ -108,7 +103,7 @@ const foldPeriodRadioGroup = Update.foldChild({
   read: (model: Model) => Option.some(model.periodRadioGroup),
   write: (model, nextPeriodRadioGroup) =>
     evo(model, { periodRadioGroup: () => nextPeriodRadioGroup }),
-  toParentMessage: message => GotPeriodRadioGroupMessage({ message }),
+  toParentMessage: message => Message.GotPeriodRadioGroupMessage({ message }),
   foldOutMessage: foldPeriodRadioGroupOutMessage,
 })
 
@@ -127,100 +122,96 @@ const foldPackageRadioGroup = Update.foldChild({
   read: (model: Model) => Option.some(model.packageRadioGroup),
   write: (model, nextPackageRadioGroup) =>
     evo(model, { packageRadioGroup: () => nextPackageRadioGroup }),
-  toParentMessage: message => GotPackageRadioGroupMessage({ message }),
+  toParentMessage: message => Message.GotPackageRadioGroupMessage({ message }),
   foldOutMessage: foldPackageRadioGroupOutMessage,
 })
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    withUpdateReturn,
-    M.tagsExhaustive({
-      GotChartModeRadioGroupMessage: ({ message }) =>
-        foldChartModeRadioGroup(model, message),
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    GotChartModeRadioGroupMessage: ({ message }) =>
+      foldChartModeRadioGroup(model, message),
 
-      GotPeriodRadioGroupMessage: ({ message }) =>
-        foldPeriodRadioGroup(model, message),
+    GotPeriodRadioGroupMessage: ({ message }) =>
+      foldPeriodRadioGroup(model, message),
 
-      GotPackageRadioGroupMessage: ({ message }) =>
-        foldPackageRadioGroup(model, message),
+    GotPackageRadioGroupMessage: ({ message }) =>
+      foldPackageRadioGroup(model, message),
 
-      ClickedRefresh: () => refetchTelemetry(model),
+    ClickedRefresh: () => refetchTelemetry(model),
 
-      ClickedRetry: () => refetchTelemetry(model),
+    ClickedRetry: () => refetchTelemetry(model),
 
-      ClickedChartDatum: ({ datumId }) => [
-        evo(model, {
-          maybeSelectedDatumId: () => Option.some(datumId),
-        }),
+    ClickedChartDatum: ({ datumId }) => [
+      evo(model, {
+        maybeSelectedDatumId: () => Option.some(datumId),
+      }),
+      syncChart({
+        maybeChartHostId: model.maybeChartHostId,
+        telemetry: model.telemetry,
+        chartMode: model.chartMode,
+        selectedPackageId: model.selectedPackageId,
+        period: model.period,
+        maybeSelectedDatumId: Option.some(datumId),
+      }),
+    ],
+
+    SucceededFetchTelemetry: ({ telemetry }) => {
+      const nextModel = evo(model, {
+        telemetry: () => TelemetryAsyncData.Success({ data: telemetry }),
+      })
+      return [
+        nextModel,
         syncChart({
-          maybeChartHostId: model.maybeChartHostId,
-          telemetry: model.telemetry,
-          chartMode: model.chartMode,
-          selectedPackageId: model.selectedPackageId,
-          period: model.period,
-          maybeSelectedDatumId: Option.some(datumId),
+          maybeChartHostId: nextModel.maybeChartHostId,
+          telemetry: nextModel.telemetry,
+          chartMode: nextModel.chartMode,
+          selectedPackageId: nextModel.selectedPackageId,
+          period: nextModel.period,
+          maybeSelectedDatumId: nextModel.maybeSelectedDatumId,
         }),
-      ],
+      ]
+    },
 
-      SucceededFetchTelemetry: ({ telemetry }) => {
-        const nextModel = evo(model, {
-          telemetry: () => TelemetryAsyncData.Success({ data: telemetry }),
-        })
-        return [
-          nextModel,
-          syncChart({
-            maybeChartHostId: nextModel.maybeChartHostId,
-            telemetry: nextModel.telemetry,
-            chartMode: nextModel.chartMode,
-            selectedPackageId: nextModel.selectedPackageId,
-            period: nextModel.period,
-            maybeSelectedDatumId: nextModel.maybeSelectedDatumId,
-          }),
-        ]
-      },
+    FailedFetchTelemetry: ({ error }) => [
+      evo(model, {
+        telemetry: () => AsyncData.settle(model.telemetry, Result.fail(error)),
+      }),
+      [],
+    ],
 
-      FailedFetchTelemetry: ({ error }) => [
-        evo(model, {
-          telemetry: () =>
-            AsyncData.settle(model.telemetry, Result.fail(error)),
-        }),
-        [],
-      ],
+    SucceededMountChart: ({ hostId }) => [
+      evo(model, {
+        maybeChartHostId: () => Option.some(hostId),
+        maybeChartError: () => Option.none(),
+      }),
+      syncChart({
+        maybeChartHostId: Option.some(hostId),
+        telemetry: model.telemetry,
+        chartMode: model.chartMode,
+        selectedPackageId: model.selectedPackageId,
+        period: model.period,
+        maybeSelectedDatumId: model.maybeSelectedDatumId,
+      }),
+    ],
 
-      SucceededMountChart: ({ hostId }) => [
-        evo(model, {
-          maybeChartHostId: () => Option.some(hostId),
-          maybeChartError: () => Option.none(),
-        }),
-        syncChart({
-          maybeChartHostId: Option.some(hostId),
-          telemetry: model.telemetry,
-          chartMode: model.chartMode,
-          selectedPackageId: model.selectedPackageId,
-          period: model.period,
-          maybeSelectedDatumId: model.maybeSelectedDatumId,
-        }),
-      ],
+    FailedMountChart: ({ reason }) => [
+      evo(model, {
+        maybeChartError: () => Option.some(reason),
+      }),
+      [],
+    ],
 
-      FailedMountChart: ({ reason }) => [
-        evo(model, {
-          maybeChartError: () => Option.some(reason),
-        }),
-        [],
-      ],
+    SucceededSyncChart: () => [
+      evo(model, {
+        maybeChartError: () => Option.none(),
+      }),
+      [],
+    ],
 
-      SucceededSyncChart: () => [
-        evo(model, {
-          maybeChartError: () => Option.none(),
-        }),
-        [],
-      ],
-
-      FailedSyncChart: ({ reason }) => [
-        evo(model, {
-          maybeChartError: () => Option.some(reason),
-        }),
-        [],
-      ],
-    }),
-  )
+    FailedSyncChart: ({ reason }) => [
+      evo(model, {
+        maybeChartError: () => Option.some(reason),
+      }),
+      [],
+    ],
+  })

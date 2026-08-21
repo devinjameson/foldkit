@@ -1,32 +1,31 @@
-import { Effect, Match as M } from 'effect'
+import { Effect } from 'effect'
 import { Command } from 'foldkit'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
-const ClickedResetAfterDelay = m('ClickedResetAfterDelay')
-const CompletedDelayReset = m('CompletedDelayReset')
+const Message = defineMessageUnion({
+  ClickedResetAfterDelay: {},
+  CompletedDelayReset: {},
+})
 
 const DelayReset = Command.define(
   // The identifier for the Command, surfaces in DevTools and Story/Scene tests
   'DelayReset',
   {
     // Every Message this Command can produce
-    messages: [CompletedDelayReset],
+    messages: [Message.CompletedDelayReset],
     // The Effect
-    execute: Effect.sleep('1 second').pipe(Effect.as(CompletedDelayReset())),
+    execute: Effect.sleep('1 second').pipe(
+      Effect.as(Message.CompletedDelayReset()),
+    ),
   },
 )
 
-const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] =>
-  M.value(message).pipe(
-    M.withReturnType<
-      readonly [Model, ReadonlyArray<Command.Command<Message>>]
-    >(),
-    M.tagsExhaustive({
+const update = (model: Model, message: Message) =>
+  Message.match<readonly [Model, ReadonlyArray<Command.Command<Message>>]>(
+    message,
+    {
       ClickedResetAfterDelay: () => [model, [DelayReset()]],
       CompletedDelayReset: () => [evo(model, { count: () => 0 }), []],
-    }),
+    },
   )

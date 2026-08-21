@@ -10,19 +10,19 @@ const Model = S.Struct({
 
 // MESSAGE
 
-const EnteredPostsRoute = m('EnteredPostsRoute')
-const SettledFetchPosts = m('SettledFetchPosts', {
-  result: S.Result(S.Array(Post), S.String),
+const Message = defineMessageUnion({
+  EnteredPostsRoute: {},
+  SettledFetchPosts: { result: S.Result(S.Array(Post), S.String) },
 })
 
 // COMMAND
 
 const FetchPosts = Command.define('FetchPosts', {
-  messages: [SettledFetchPosts],
+  messages: [Message.SettledFetchPosts],
   execute: pipe(
     fetchPosts,
     Effect.result,
-    Effect.map(result => SettledFetchPosts({ result })),
+    Effect.map(result => Message.SettledFetchPosts({ result })),
   ),
 })
 

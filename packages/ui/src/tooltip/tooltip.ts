@@ -17,20 +17,7 @@ import { type Reflect, defineView } from 'foldkit/submodel'
 
 import { AnchorConfig, anchorSetup } from '../anchor/index.js'
 import * as OptionExt from '../internal/optionExtensions.js'
-import {
-  BlurredTrigger,
-  CompletedAnchorTooltip,
-  CompletedWaitBeforeShowing,
-  EnteredTrigger,
-  FocusedTrigger,
-  Hidden,
-  LeftTrigger,
-  type Message,
-  type OutMessage,
-  PressedEscape,
-  PressedPointerOnTrigger,
-  Shown,
-} from './message.js'
+import { Message, OutMessage } from './message.js'
 
 // MODEL
 
@@ -89,16 +76,15 @@ type InnerUpdateReturn = readonly [
   Model,
   ReadonlyArray<Command.Command<Message>>,
 ]
-const withUpdateReturn = M.withReturnType<InnerUpdateReturn>()
 
 /** Waits for the tooltip's show delay before emitting
  *  `CompletedWaitBeforeShowing`. */
 export const WaitBeforeShowing = Command.define('WaitBeforeShowing', {
   args: { delay: S.DurationFromMillis, version: S.Number },
-  messages: [CompletedWaitBeforeShowing],
+  messages: [Message.CompletedWaitBeforeShowing],
   execute: ({ delay, version }) =>
     Effect.sleep(delay).pipe(
-      Effect.as(CompletedWaitBeforeShowing({ version })),
+      Effect.as(Message.CompletedWaitBeforeShowing({ version })),
     ),
 })
 
@@ -106,7 +92,7 @@ export const WaitBeforeShowing = Command.define('WaitBeforeShowing', {
 export const AnchorTooltip = Mount.define(
   'AnchorTooltip',
   { buttonId: S.String, anchor: AnchorConfig },
-  CompletedAnchorTooltip,
+  Message.CompletedAnchorTooltip,
 )(
   ({ buttonId, anchor }) =>
     element =>
@@ -121,116 +107,113 @@ export const AnchorTooltip = Mount.define(
           ),
           cleanup => Effect.sync(cleanup),
         )
-        return CompletedAnchorTooltip()
+        return Message.CompletedAnchorTooltip()
       }),
 )
 
-const computeUpdate = (model: Model, message: Message): InnerUpdateReturn =>
-  M.value(message).pipe(
-    withUpdateReturn,
-    M.tagsExhaustive({
-      EnteredTrigger: () => {
-        if (model.isOpen || model.isDismissed) {
-          return [evo(model, { isHovered: () => true }), []]
-        }
+const computeUpdate = (model: Model, message: Message) =>
+  Message.match<InnerUpdateReturn>(message, {
+    EnteredTrigger: () => {
+      if (model.isOpen || model.isDismissed) {
+        return [evo(model, { isHovered: () => true }), []]
+      }
 
-        const nextVersion = Number.increment(model.pendingShowVersion)
-        return [
-          evo(model, {
-            isHovered: () => true,
-            pendingShowVersion: () => nextVersion,
-          }),
-          [WaitBeforeShowing({ delay: model.showDelay, version: nextVersion })],
-        ]
-      },
-
-      LeftTrigger: () => [
+      const nextVersion = Number.increment(model.pendingShowVersion)
+      return [
         evo(model, {
-          isHovered: () => false,
-          isOpen: () => model.isFocused && model.isOpen,
-          isDismissed: () => false,
-          pendingShowVersion: Number.increment,
+          isHovered: () => true,
+          pendingShowVersion: () => nextVersion,
         }),
-        [],
-      ],
+        [WaitBeforeShowing({ delay: model.showDelay, version: nextVersion })],
+      ]
+    },
 
-      FocusedTrigger: () => {
-        const isFromMousePress = Option.exists(
-          model.maybeLastPointerType,
-          Equal.equals('mouse'),
-        )
+    LeftTrigger: () => [
+      evo(model, {
+        isHovered: () => false,
+        isOpen: () => model.isFocused && model.isOpen,
+        isDismissed: () => false,
+        pendingShowVersion: Number.increment,
+      }),
+      [],
+    ],
 
-        if (isFromMousePress) {
-          return [
-            evo(model, {
-              maybeLastPointerType: () => Option.none(),
-            }),
-            [],
-          ]
-        }
+    FocusedTrigger: () => {
+      const isFromMousePress = Option.exists(
+        model.maybeLastPointerType,
+        Equal.equals('mouse'),
+      )
 
-        if (model.isDismissed) {
-          return [
-            evo(model, {
-              isFocused: () => true,
-              maybeLastPointerType: () => Option.none(),
-            }),
-            [],
-          ]
-        }
-
+      if (isFromMousePress) {
         return [
           evo(model, {
-            isFocused: () => true,
-            isOpen: () => true,
-            pendingShowVersion: Number.increment,
+            maybeLastPointerType: () => Option.none(),
           }),
           [],
         ]
-      },
+      }
 
-      BlurredTrigger: () => [
+      if (model.isDismissed) {
+        return [
+          evo(model, {
+            isFocused: () => true,
+            maybeLastPointerType: () => Option.none(),
+          }),
+          [],
+        ]
+      }
+
+      return [
         evo(model, {
-          isFocused: () => false,
-          isOpen: () => model.isHovered && model.isOpen,
-          isDismissed: () => false,
+          isFocused: () => true,
+          isOpen: () => true,
           pendingShowVersion: Number.increment,
-          maybeLastPointerType: () => Option.none(),
         }),
         [],
-      ],
+      ]
+    },
 
-      PressedEscape: () => [
-        evo(model, {
-          isOpen: () => false,
-          isDismissed: () => true,
-          pendingShowVersion: Number.increment,
-        }),
-        [],
-      ],
+    BlurredTrigger: () => [
+      evo(model, {
+        isFocused: () => false,
+        isOpen: () => model.isHovered && model.isOpen,
+        isDismissed: () => false,
+        pendingShowVersion: Number.increment,
+        maybeLastPointerType: () => Option.none(),
+      }),
+      [],
+    ],
 
-      PressedPointerOnTrigger: ({ pointerType }) => [
-        evo(model, {
-          maybeLastPointerType: () => Option.some(pointerType),
-        }),
-        [],
-      ],
+    PressedEscape: () => [
+      evo(model, {
+        isOpen: () => false,
+        isDismissed: () => true,
+        pendingShowVersion: Number.increment,
+      }),
+      [],
+    ],
 
-      CompletedWaitBeforeShowing: ({ version }) => {
-        if (version !== model.pendingShowVersion) {
-          return [model, []]
-        }
+    PressedPointerOnTrigger: ({ pointerType }) => [
+      evo(model, {
+        maybeLastPointerType: () => Option.some(pointerType),
+      }),
+      [],
+    ],
 
-        if (!model.isHovered) {
-          return [model, []]
-        }
+    CompletedWaitBeforeShowing: ({ version }) => {
+      if (version !== model.pendingShowVersion) {
+        return [model, []]
+      }
 
-        return [evo(model, { isOpen: () => true }), []]
-      },
+      if (!model.isHovered) {
+        return [model, []]
+      }
 
-      CompletedAnchorTooltip: () => [model, []],
-    }),
-  )
+      return [evo(model, { isOpen: () => true }), []]
+    },
+
+    CompletedAnchorTooltip: () => [model, []],
+  })
 
 type UpdateReturn = readonly [
   Model,
@@ -243,9 +226,9 @@ const toMaybeVisibilityOutMessage = (
   isNextOpen: boolean,
 ): Option.Option<OutMessage> => {
   if (!isOpen && isNextOpen) {
-    return Option.some(Shown())
+    return Option.some(OutMessage.Shown())
   } else if (isOpen && !isNextOpen) {
-    return Option.some(Hidden())
+    return Option.some(OutMessage.Hidden())
   } else {
     return Option.none()
   }
@@ -320,16 +303,18 @@ export const view = defineView<Model, Message, ViewInputs>(
 
     const triggerLabelAttributes = resolveTriggerLabel()
 
-    const handleTriggerKeyDown = (key: string): Option.Option<PressedEscape> =>
+    const handleTriggerKeyDown = (
+      key: string,
+    ): Option.Option<typeof Message.PressedEscape.Type> =>
       M.value(key).pipe(
-        M.when('Escape', () => OptionExt.when(isOpen, PressedEscape())),
+        M.when('Escape', () => OptionExt.when(isOpen, Message.PressedEscape())),
         M.orElse(() => Option.none()),
       )
 
     const handleTriggerPointerDown = (
       pointerType: string,
-    ): Option.Option<PressedPointerOnTrigger> =>
-      Option.some(PressedPointerOnTrigger({ pointerType }))
+    ): Option.Option<typeof Message.PressedPointerOnTrigger.Type> =>
+      Option.some(Message.PressedPointerOnTrigger({ pointerType }))
 
     const triggerAttributes = [
       h.Id(triggerId(id)),
@@ -340,10 +325,10 @@ export const view = defineView<Model, Message, ViewInputs>(
       ...(isDisabled
         ? [h.AriaDisabled(true), h.DataAttribute('disabled', '')]
         : [
-            h.OnMouseEnter(EnteredTrigger()),
-            h.OnMouseLeave(LeftTrigger()),
-            h.OnFocus(FocusedTrigger()),
-            h.OnBlur(BlurredTrigger()),
+            h.OnMouseEnter(Message.EnteredTrigger()),
+            h.OnMouseLeave(Message.LeftTrigger()),
+            h.OnFocus(Message.FocusedTrigger()),
+            h.OnBlur(Message.BlurredTrigger()),
             h.OnKeyDownPreventDefault(handleTriggerKeyDown),
             h.OnPointerDown(handleTriggerPointerDown),
           ]),

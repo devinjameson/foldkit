@@ -17,14 +17,7 @@ import {
   NOISE_SCALE_STEP,
   SPAWN_PER_FRAME_MAX,
 } from './constant'
-import {
-  ClickedReset,
-  ClickedTogglePlay,
-  CompletedGenerateAmbientParticle,
-  CompletedGenerateBurstParticle,
-  MovedPointer,
-  TickedFrame,
-} from './message'
+import { Message } from './message'
 import { type Model, type Particle } from './model'
 import { update } from './update'
 
@@ -68,11 +61,11 @@ describe('update', () => {
     story(
       update,
       given(initialModel),
-      message(ClickedTogglePlay()),
+      message(Message.ClickedTogglePlay()),
       model(model => {
         expect(model.isRunning).toBe(false)
       }),
-      message(ClickedTogglePlay()),
+      message(Message.ClickedTogglePlay()),
       model(model => {
         expect(model.isRunning).toBe(true)
       }),
@@ -87,7 +80,7 @@ describe('update', () => {
         particles: [makeParticle(0, 100, 100), makeParticle(1, 200, 200)],
         maybeMousePosition: Option.some({ x: 300, y: 300 }),
       }),
-      message(ClickedReset()),
+      message(Message.ClickedReset()),
       model(model => {
         expect(model.particles).toHaveLength(0)
         expect(Option.isNone(model.maybeMousePosition)).toBe(true)
@@ -99,7 +92,7 @@ describe('update', () => {
     story(
       update,
       given(initialModel),
-      message(MovedPointer({ x: 250, y: 175 })),
+      message(Message.MovedPointer({ x: 250, y: 175 })),
       model(model => {
         expect(Option.getOrThrow(model.maybeMousePosition)).toEqual({
           x: 250,
@@ -114,7 +107,7 @@ describe('update', () => {
       update,
       given(initialModel),
       message(
-        CompletedGenerateAmbientParticle({
+        Message.CompletedGenerateAmbientParticle({
           x: 50,
           y: 75,
           baseHue: 120,
@@ -146,7 +139,7 @@ describe('update', () => {
         particles: startingParticles,
         nextId: startingParticleCount,
       }),
-      message(TickedFrame({ deltaTimeMs: 16 })),
+      message(Message.TickedFrame({ deltaTimeMs: 16 })),
       model(model => {
         expect(model.elapsedSeconds).toBeGreaterThan(0)
         expect(model.elapsedSeconds).toBeLessThanOrEqual(DELTA_SECONDS_CAP)
@@ -161,7 +154,7 @@ describe('update', () => {
           () =>
             [
               GenerateAmbientParticle,
-              CompletedGenerateAmbientParticle({
+              Message.CompletedGenerateAmbientParticle({
                 x: 50,
                 y: 50,
                 baseHue: 0,
@@ -188,7 +181,7 @@ describe('update', () => {
       update,
       given(initialModel),
       message(
-        CompletedGenerateBurstParticle({
+        Message.CompletedGenerateBurstParticle({
           x: 100,
           y: 100,
           baseHue: 200,

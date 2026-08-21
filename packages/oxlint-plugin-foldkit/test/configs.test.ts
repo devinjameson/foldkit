@@ -17,9 +17,7 @@ describe('configs', () => {
           config.rules['foldkit/no-child-message-construction-in-root'],
         ).toBe('error')
         expect(config.rules['foldkit/no-noop-message']).toBe('error')
-        expect(config.rules['foldkit/message-binding-matches-tag']).toBe(
-          'error',
-        )
+        expect(config.rules['foldkit/got-submodel-message-name']).toBe('error')
       })
 
       it('turns every foldkit rule off in test files', () => {

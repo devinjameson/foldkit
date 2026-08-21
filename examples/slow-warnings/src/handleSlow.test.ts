@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from 'vitest'
 
-import { ClickedRunUpdateWork, type Model, handleSlow } from './main'
+import { Message, type Model, handleSlow } from './main'
 
 const initialModel: Model = {
   activeWorkload: 'Idle',
@@ -24,7 +24,7 @@ describe('handleSlow', () => {
           ...initialModel,
           activeWorkload: 'Update',
         },
-        message: ClickedRunUpdateWork(),
+        message: Message.ClickedRunUpdateWork(),
       })
 
       expect(consoleWarn).toHaveBeenCalledWith(

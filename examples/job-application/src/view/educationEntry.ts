@@ -81,7 +81,7 @@ export const educationEntryView = Submodel.defineView<
           anchor: { placement: 'bottom-start', gap: 4, padding: 8 },
         },
         toParentMessage: message =>
-          Education.Entry.GotGraduationYearListboxMessage({ message }),
+          Education.Entry.Message.GotGraduationYearListboxMessage({ message }),
       }),
     ],
   )
@@ -98,7 +98,8 @@ export const educationEntryView = Submodel.defineView<
               id: `${model.id}-school`,
               label: 'School',
               field: model.school,
-              onInput: value => Education.Entry.UpdatedSchool({ value }),
+              onInput: value =>
+                Education.Entry.Message.UpdatedSchool({ value }),
               placeholder: 'e.g. MIT',
             },
             h,
@@ -108,7 +109,8 @@ export const educationEntryView = Submodel.defineView<
               id: `${model.id}-degree`,
               label: 'Degree',
               field: model.degree,
-              onInput: value => Education.Entry.UpdatedDegree({ value }),
+              onInput: value =>
+                Education.Entry.Message.UpdatedDegree({ value }),
               placeholder: "e.g. Bachelor's, Master's",
             },
             h,
@@ -120,7 +122,8 @@ export const educationEntryView = Submodel.defineView<
           id: `${model.id}-field`,
           label: 'Field of Study',
           field: model.fieldOfStudy,
-          onInput: value => Education.Entry.UpdatedFieldOfStudy({ value }),
+          onInput: value =>
+            Education.Entry.Message.UpdatedFieldOfStudy({ value }),
           placeholder: 'e.g. Computer Science',
         },
         h,
@@ -131,7 +134,7 @@ export const educationEntryView = Submodel.defineView<
           label: 'I’m currently enrolled',
           isChecked: model.isCurrentlyEnrolled,
           onToggle: isChecked =>
-            Education.Entry.ToggledCurrentlyEnrolled({ isChecked }),
+            Education.Entry.Message.ToggledCurrentlyEnrolled({ isChecked }),
         },
         h,
       ),
@@ -141,7 +144,7 @@ export const educationEntryView = Submodel.defineView<
         [
           Button.view(
             {
-              onClick: Education.Entry.ClickedRemoveSelf(),
+              onClick: Education.Entry.Message.ClickedRemoveSelf(),
               toView: attributes =>
                 h.button(
                   [

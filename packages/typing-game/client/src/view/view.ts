@@ -1,7 +1,7 @@
 import { Match as M } from 'effect'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
 
-import { GotHomeMessage, GotRoomMessage, Message } from '../message'
+import { Message } from '../message'
 import { Model } from '../model'
 import { Home, Room } from '../page'
 import { NotFoundRoute } from '../route'
@@ -23,7 +23,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
           slotId: 'home',
           model: model.home,
           view: Home.view,
-          toParentMessage: message => GotHomeMessage({ message }),
+          toParentMessage: message => Message.GotHomeMessage({ message }),
         }),
       Room: ({ roomId }) =>
         h.submodel({
@@ -31,7 +31,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
           model: model.room,
           view: Room.view,
           viewInputs: { roomId },
-          toParentMessage: message => GotRoomMessage({ message }),
+          toParentMessage: message => Message.GotRoomMessage({ message }),
         }),
       NotFound: route => notFound(route, h),
     }),

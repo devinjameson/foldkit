@@ -1,82 +1,36 @@
 import { Schema as S } from 'effect'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 
 import { Dialog, Listbox, RadioGroup } from '@foldkit/ui'
 
 import { PaletteIndex, Tool } from './model'
 
-export const PressedCell = m('PressedCell', { x: S.Number, y: S.Number })
-export const EnteredCell = m('EnteredCell', { x: S.Number, y: S.Number })
-export const LeftCanvas = m('LeftCanvas')
-export const ReleasedMouse = m('ReleasedMouse')
-export const SelectedColor = m('SelectedColor', {
-  colorIndex: PaletteIndex,
+export const Message = defineMessageUnion({
+  PressedCell: { x: S.Number, y: S.Number },
+  EnteredCell: { x: S.Number, y: S.Number },
+  LeftCanvas: {},
+  ReleasedMouse: {},
+  SelectedColor: { colorIndex: PaletteIndex },
+  SelectedTool: { tool: Tool },
+  SelectedGridSize: { size: S.Number },
+  ToggledMirrorHorizontal: {},
+  ToggledMirrorVertical: {},
+  ClickedUndo: {},
+  ClickedRedo: {},
+  ClickedHistoryStep: { stepIndex: S.Number },
+  ClickedRedoStep: { stepIndex: S.Number },
+  ClickedClear: {},
+  ClickedExport: {},
+  SucceededExportPng: {},
+  FailedExportPng: { error: S.String },
+  GotErrorDialogMessage: { message: Dialog.Message },
+  GotThemeListboxMessage: { message: Listbox.Message },
+  GotToolRadioGroupMessage: { message: RadioGroup.Message },
+  GotGridSizeRadioGroupMessage: { message: RadioGroup.Message },
+  GotPaletteRadioGroupMessage: { message: RadioGroup.Message },
+  ConfirmedGridSizeChange: {},
+  GotGridSizeConfirmDialogMessage: { message: Dialog.Message },
+  CompletedSaveCanvas: {},
 })
-export const SelectedTool = m('SelectedTool', { tool: Tool })
-export const SelectedGridSize = m('SelectedGridSize', {
-  size: S.Number,
-})
-export const ToggledMirrorHorizontal = m('ToggledMirrorHorizontal')
-export const ToggledMirrorVertical = m('ToggledMirrorVertical')
-export const ClickedUndo = m('ClickedUndo')
-export const ClickedRedo = m('ClickedRedo')
-export const ClickedHistoryStep = m('ClickedHistoryStep', {
-  stepIndex: S.Number,
-})
-export const ClickedRedoStep = m('ClickedRedoStep', {
-  stepIndex: S.Number,
-})
-export const ClickedClear = m('ClickedClear')
-export const ClickedExport = m('ClickedExport')
-export const SucceededExportPng = m('SucceededExportPng')
-export const FailedExportPng = m('FailedExportPng', { error: S.String })
-export const GotErrorDialogMessage = m('GotErrorDialogMessage', {
-  message: Dialog.Message,
-})
-export const ConfirmedGridSizeChange = m('ConfirmedGridSizeChange')
-export const GotGridSizeConfirmDialogMessage = m(
-  'GotGridSizeConfirmDialogMessage',
-  { message: Dialog.Message },
-)
-export const GotThemeListboxMessage = m('GotThemeListboxMessage', {
-  message: Listbox.Message,
-})
-export const GotToolRadioGroupMessage = m('GotToolRadioGroupMessage', {
-  message: RadioGroup.Message,
-})
-export const GotGridSizeRadioGroupMessage = m('GotGridSizeRadioGroupMessage', {
-  message: RadioGroup.Message,
-})
-export const GotPaletteRadioGroupMessage = m('GotPaletteRadioGroupMessage', {
-  message: RadioGroup.Message,
-})
-export const CompletedSaveCanvas = m('CompletedSaveCanvas')
 
-export const Message = S.Union([
-  PressedCell,
-  EnteredCell,
-  LeftCanvas,
-  ReleasedMouse,
-  SelectedColor,
-  SelectedTool,
-  SelectedGridSize,
-  ToggledMirrorHorizontal,
-  ToggledMirrorVertical,
-  ClickedUndo,
-  ClickedRedo,
-  ClickedHistoryStep,
-  ClickedRedoStep,
-  ClickedClear,
-  ClickedExport,
-  SucceededExportPng,
-  FailedExportPng,
-  GotErrorDialogMessage,
-  GotThemeListboxMessage,
-  GotToolRadioGroupMessage,
-  GotGridSizeRadioGroupMessage,
-  GotPaletteRadioGroupMessage,
-  ConfirmedGridSizeChange,
-  GotGridSizeConfirmDialogMessage,
-  CompletedSaveCanvas,
-])
 export type Message = typeof Message.Type

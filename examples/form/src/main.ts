@@ -20,7 +20,7 @@ import {
   validate,
 } from 'foldkit/fieldValidation'
 import { type Attribute, Document, Html, HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
@@ -65,25 +65,16 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const UpdatedName = m('UpdatedName', { value: S.String })
-export const UpdatedEmail = m('UpdatedEmail', { value: S.String })
-export const CompletedValidateEmail = m('CompletedValidateEmail', {
-  field: Field(S.String),
+export const Message = defineMessageUnion({
+  UpdatedName: { value: S.String },
+  UpdatedEmail: { value: S.String },
+  CompletedValidateEmail: { field: Field(S.String) },
+  UpdatedMessageText: { value: S.String },
+  ClickedFormSubmit: {},
+  SucceededSubmitForm: { name: S.String },
+  FailedSubmitForm: {},
 })
-export const UpdatedMessageText = m('UpdatedMessageText', { value: S.String })
-export const ClickedFormSubmit = m('ClickedFormSubmit')
-export const SucceededSubmitForm = m('SucceededSubmitForm', { name: S.String })
-export const FailedSubmitForm = m('FailedSubmitForm')
 
-export const Message = S.Union([
-  UpdatedName,
-  UpdatedEmail,
-  CompletedValidateEmail,
-  UpdatedMessageText,
-  ClickedFormSubmit,
-  SucceededSubmitForm,
-  FailedSubmitForm,
-])
 export type Message = typeof Message.Type
 
 // INIT
@@ -116,18 +107,18 @@ const isEmailOnWaitlist = (email: string): Effect.Effect<boolean> =>
 
 export const ValidateEmail = Command.define('ValidateEmail', {
   args: { email: S.String },
-  messages: [CompletedValidateEmail],
+  messages: [Message.CompletedValidateEmail],
   execute: ({ email }) =>
     Effect.gen(function* () {
       if (yield* isEmailOnWaitlist(email)) {
-        return CompletedValidateEmail({
+        return Message.CompletedValidateEmail({
           field: Invalid({
             value: email,
             errors: ['This email is already on our waitlist'],
           }),
         })
       } else {
-        return CompletedValidateEmail({
+        return Message.CompletedValidateEmail({
           field: Valid({ value: email }),
         })
       }
@@ -145,15 +136,10 @@ const isFormValid = (model: Model): boolean =>
 
 // UPDATE
 
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] =>
-  M.value(message).pipe(
-    M.withReturnType<
-      readonly [Model, ReadonlyArray<Command.Command<Message>>]
-    >(),
-    M.tagsExhaustive({
+export const update = (model: Model, message: Message) =>
+  Message.match<readonly [Model, ReadonlyArray<Command.Command<Message>>]>(
+    message,
+    {
       UpdatedName: ({ value }) => [
         evo(model, {
           name: () => validateName(value),
@@ -244,7 +230,7 @@ export const update = (
         }),
         [],
       ],
-    }),
+    },
   )
 
 // COMMAND
@@ -253,16 +239,16 @@ const FAKE_API_DELAY_MS = 500
 
 export const SubmitForm = Command.define('SubmitForm', {
   args: { name: S.String, email: S.String, messageText: S.String },
-  messages: [SucceededSubmitForm, FailedSubmitForm],
+  messages: [Message.SucceededSubmitForm, Message.FailedSubmitForm],
   execute: ({ name }) =>
     Effect.gen(function* () {
       yield* Effect.sleep(`${FAKE_API_DELAY_MS} millis`)
 
       const isSuccess = yield* Random.nextBoolean
       if (isSuccess) {
-        return SucceededSubmitForm({ name })
+        return Message.SucceededSubmitForm({ name })
       } else {
-        return FailedSubmitForm()
+        return Message.FailedSubmitForm()
       }
     }),
 })
@@ -417,13 +403,13 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
           ),
 
           h.form(
-            [h.Class('space-y-4'), h.OnSubmit(ClickedFormSubmit())],
+            [h.Class('space-y-4'), h.OnSubmit(Message.ClickedFormSubmit())],
             [
               inputFieldView(
                 'name',
                 'Name',
                 model.name,
-                value => UpdatedName({ value }),
+                value => Message.UpdatedName({ value }),
                 'text',
                 h,
               ),
@@ -431,7 +417,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
                 'email',
                 'Email',
                 model.email,
-                value => UpdatedEmail({ value }),
+                value => Message.UpdatedEmail({ value }),
                 'email',
                 h,
               ),
@@ -439,7 +425,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
                 'message',
                 "Anything you'd like to share with us?",
                 model.messageText,
-                value => UpdatedMessageText({ value }),
+                value => Message.UpdatedMessageText({ value }),
                 h,
               ),
 

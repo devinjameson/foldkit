@@ -1,5 +1,5 @@
 import { Schema as S } from 'effect'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 
 import { Slider } from '@foldkit/ui'
 
@@ -14,43 +14,22 @@ const generatedParticleFields = {
   initialSpeedScale: S.Number,
 }
 
-export const TickedFrame = m('TickedFrame', {
-  deltaTimeMs: S.Number,
-})
-export const CompletedGenerateAmbientParticle = m(
-  'CompletedGenerateAmbientParticle',
-  generatedParticleFields,
-)
-export const CompletedGenerateBurstParticle = m(
-  'CompletedGenerateBurstParticle',
-  generatedParticleFields,
-)
-export const PressedCanvas = m('PressedCanvas', {
-  x: S.Number,
-  y: S.Number,
-})
-export const MovedPointer = m('MovedPointer', {
-  x: S.Number,
-  y: S.Number,
-})
-export const ClickedTogglePlay = m('ClickedTogglePlay')
-export const ClickedReset = m('ClickedReset')
-export const GotFlowStrengthSliderMessage = m('GotFlowStrengthSliderMessage', {
-  message: Slider.Message,
-})
-export const GotNoiseScaleSliderMessage = m('GotNoiseScaleSliderMessage', {
-  message: Slider.Message,
+export const Message = defineMessageUnion({
+  TickedFrame: { deltaTimeMs: S.Number },
+  CompletedGenerateAmbientParticle: generatedParticleFields,
+  CompletedGenerateBurstParticle: generatedParticleFields,
+  PressedCanvas: {
+    x: S.Number,
+    y: S.Number,
+  },
+  MovedPointer: {
+    x: S.Number,
+    y: S.Number,
+  },
+  ClickedTogglePlay: {},
+  ClickedReset: {},
+  GotFlowStrengthSliderMessage: { message: Slider.Message },
+  GotNoiseScaleSliderMessage: { message: Slider.Message },
 })
 
-export const Message = S.Union([
-  TickedFrame,
-  CompletedGenerateAmbientParticle,
-  CompletedGenerateBurstParticle,
-  PressedCanvas,
-  MovedPointer,
-  ClickedTogglePlay,
-  ClickedReset,
-  GotFlowStrengthSliderMessage,
-  GotNoiseScaleSliderMessage,
-])
 export type Message = typeof Message.Type

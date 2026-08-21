@@ -176,6 +176,7 @@ test('a scaffold or framework change selects the generated-app build gate', () =
     'packages/examples-e2e/package.json',
     'packages/create-foldkit-app/templates/rendering/ssr/scripts/build.mjs',
     'packages/foldkit/src/experimental/server/server.ts',
+    'packages/ui/src/button/index.ts',
     'packages/vite-plugin-foldkit/src/buildToken.ts',
   ]) {
     assert.equal(

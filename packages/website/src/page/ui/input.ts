@@ -2,7 +2,7 @@ import type { HtmlBuilder } from 'foldkit/html'
 
 import { Input } from '@foldkit/ui'
 
-import { type Message, UpdatedInputDemoValue } from './message'
+import { Message } from './message'
 import type { Model } from './model'
 
 // DEMO CONTENT
@@ -26,7 +26,7 @@ export const basicDemo = (model: Model, h: HtmlBuilder<Message>) => {
           {
             id: 'input-basic-demo',
             value: model.inputDemoValue,
-            onInput: value => UpdatedInputDemoValue({ value }),
+            onInput: value => Message.UpdatedInputDemoValue({ value }),
             placeholder: 'Enter your full name',
             toView: attributes =>
               h.div(

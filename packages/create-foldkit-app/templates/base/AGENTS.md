@@ -25,7 +25,7 @@ If `foldkit-skills` is installed as a Claude Code plugin, the `generate-program`
 - Foldkit is tightly coupled to the Effect ecosystem. Do not suggest solutions outside of Effect-TS.
 - Model fields must be Schema types (the model is a schema). Plain TypeScript types are fine elsewhere (function return types, local variables, etc.).
 - Use full names like `Message` (not `Msg`), and `withReturnType` (not `as const` or type casting).
-- Use `m()` for message schemas, `ts()` for tagged structs (model states, field validation), and `r()` for route schemas.
+- Use `defineMessageUnion()` for Message unions, `ts()` for tagged structs (Model states, field validation), and `r()` for route schemas.
 - Push back on any direction that violates Elm Architecture principles: unidirectional data flow, messages as facts (not commands), model as single source of truth, side effects confined to commands. If a prompt suggests mutating state, imperative event handlers, or two-way bindings, flag the issue and propose the idiomatic Foldkit approach.
 - Never use `NoOp`. Every message must describe what happened. A command's result message is named from the command, not from the fact it reports, whether or not it carries a payload: `LockScroll` → `CompletedLockScroll`, `DetermineStartTime` → `CompletedDetermineStartTime` (never `DeterminedStartTime`).
 
@@ -37,15 +37,11 @@ If `foldkit-skills` is installed as a Claude Code plugin, the `generate-program`
 
 ```ts
 type UpdateReturn = readonly [Model, ReadonlyArray<Command<Message>>]
-const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
-const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    withUpdateReturn,
-    M.tagsExhaustive({
-      ClickedIncrement: () => [evo(model, { count: count => count + 1 }), []],
-    }),
-  )
+const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    ClickedIncrement: () => [evo(model, { count: count => count + 1 }), []],
+  })
 ```
 
 Use `evo()` from `foldkit/struct` for immutable model updates. Never spread or `Object.assign`.
@@ -60,7 +56,7 @@ Omit the children argument when an element has none: `h.div([h.Class('divider')]
 
 ### Commands
 
-Define a Command with `Command.define(name, { args, messages, execute })`; omit `args` when the Command takes none. Assign definitions to PascalCase constants. Never inline in pipe chains. Name the effect `execute` performs, not the later Model transition caused when update handles its result: a timer that only waits before update starts a dismissal is `WaitBeforeDismissal`, not `DismissAfter`. Commands catch all errors via `Effect.catch(() => Effect.succeed(FailedX(...)))` so side effects never crash the app. Definitions live colocated with the update function that returns them.
+Define a Command with `Command.define(name, { args, messages, execute })`; omit `args` when the Command takes none. Assign definitions to PascalCase constants. Never inline in pipe chains. Name the effect `execute` performs, not the later Model transition caused when update handles its result: a timer that only waits before update starts a dismissal is `WaitBeforeDismissal`, not `DismissAfter`. Commands catch all errors via `Effect.catch(() => Effect.succeed(Message.FailedX(...)))` so side effects never crash the app. Definitions live colocated with the update function that returns them.
 
 For the with-args shape, see `repos/foldkit/examples/weather/src/main.ts` or `repos/foldkit/examples/kanban/src/command.ts`. For an argless DOM-side-effect Command, the argless form in `kanban/src/command.ts` (`FocusAddCardInput`) is the canonical reference.
 
@@ -89,27 +85,29 @@ Scene runs at any level, since a page's own `update`/`view` pair drops into `sce
 - Encode state in discriminated unions, not booleans or nullable fields. `Idle | Loading | Error | Ok`, not `isLoading: boolean`. Make impossible states unrepresentable.
 - Use `Option` instead of `null` or `undefined`. Prefix Option-typed values with `maybe*`. Match with `Option.match`; don't unwrap with `Option.map(...)` + `Option.getOrElse(...)` when you can just match.
 - Use Effect modules over native methods in `pipe` chains (`Array.map`, `String.startsWith`, `Array.findFirst`). Native methods are fine when calling directly on a named variable.
-- Never cast Schema values with `as Type`. Use the callable constructor: `SucceededLogin({ sessionId })`, not `{ _tag: 'SucceededLogin', sessionId } as Message`.
+- Never cast Schema values with `as Type`. Use the callable constructor: `Message.SucceededLogin({ sessionId })`, not `{ _tag: 'SucceededLogin', sessionId } as Message`.
 - Always `Array.isArrayEmpty` / `Array.isArrayNonEmpty` (not `.length === 0` / `.length > 0`). Use `Array.match` when handling both empty and non-empty cases.
 - Never use `for` loops or `let` for iteration. Reach for `Array.map`, `Array.filterMap`, `Array.makeBy`, `Array.reduce`.
 - Never use `T[]`. Always `Array<T>` or `ReadonlyArray<T>`.
-- Always use `Effect.Match`, never `switch`.
+- Use `Message.match` for exhaustive Message matching. Use Effect `Match` for other tagged unions, partial matching, fallbacks, and one handler shared across multiple tags. Never use `switch`.
 - Always use braces for control flow: `if (foo) { return true }`.
 - Don't add inline comments to explain code. Use better names instead. Reserve `// NOTE:` for behavior that would mislead a careful reader.
 
 ## Message Layout
 
-Group all `m()` declarations together, then put `S.Union([...])` and `type Message = typeof Message.Type` on adjacent lines:
+Declare the whole Message union with `defineMessageUnion()`, then put `type Message = typeof Message.Type` on the next line:
 
 ```ts
-const ClickedSubmit = m('ClickedSubmit')
-const UpdatedEmail = m('UpdatedEmail', { value: S.String })
-
-const Message = S.Union([ClickedSubmit, UpdatedEmail])
+const Message = defineMessageUnion({
+  ClickedSubmit: {},
+  UpdatedEmail: { value: S.String },
+})
 type Message = typeof Message.Type
 ```
 
-Keep the declarations in one unbroken block while the union is small, up to roughly a dozen Messages. Past that, blank-line thematic clusters (navigation, session, one per feature) are equally fine, so pick whichever reads better for the union at hand. The `S.Union([...])` and `type Message` pair stays adjacent, directly after the declarations, either way.
+Keep the `defineMessageUnion()` declaration and `type Message` alias adjacent. Construct values through the namespace (`Message.ClickedSubmit()`) and handle the union with `Message.match`. Never destructure constructors from `Message` or `OutMessage`; the owning namespace stays visible at every call site.
+
+Keep each case's payload object on one line when it fits. Let Prettier wrap payloads that need more space, so the declaration remains easy to scan as one variant per line.
 
 Messages are verb-first past-tense. Common prefixes: `Clicked*`, `Updated*` (input changes and external state updates), `Submitted*`, `Pressed*`, `Selected*`, `Succeeded*` / `Failed*` (paired async results), `Completed*` (every other Command result), `Got*` (child OutMessage in the Submodel pattern).
 

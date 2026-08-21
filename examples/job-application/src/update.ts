@@ -6,17 +6,7 @@ import { Menu, Tabs } from '@foldkit/ui'
 
 import { SubmitApplication } from './command'
 import { Step } from './domain'
-import {
-  GotAttachmentsMessage,
-  GotCoverLetterMessage,
-  GotEducationMessage,
-  GotPersonalInfoMessage,
-  GotSkillsMessage,
-  GotStepMenuMessage,
-  GotStepTabsMessage,
-  GotWorkHistoryMessage,
-  type Message,
-} from './message'
+import { Message } from './message'
 import { type Model, SubmitError, SubmitSuccess, Submitting } from './model'
 import {
   Attachments,
@@ -37,7 +27,6 @@ const isApplicationComplete = (model: Model): boolean =>
   Skills.isComplete(model.skills)
 
 type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
-const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
 const toNextStep = (current: Step.Step): Step.Step =>
   pipe(
@@ -58,7 +47,7 @@ const foldPersonalInfo = Update.foldChild({
   read: (model: Model) => Option.some(model.personalInfo),
   write: (model, nextPersonalInfo) =>
     evo(model, { personalInfo: () => nextPersonalInfo }),
-  toParentMessage: message => GotPersonalInfoMessage({ message }),
+  toParentMessage: message => Message.GotPersonalInfoMessage({ message }),
 })
 
 const foldWorkHistory = Update.foldChild({
@@ -66,7 +55,7 @@ const foldWorkHistory = Update.foldChild({
   read: (model: Model) => Option.some(model.workHistory),
   write: (model, nextWorkHistory) =>
     evo(model, { workHistory: () => nextWorkHistory }),
-  toParentMessage: message => GotWorkHistoryMessage({ message }),
+  toParentMessage: message => Message.GotWorkHistoryMessage({ message }),
 })
 
 const foldEducation = Update.foldChild({
@@ -74,14 +63,14 @@ const foldEducation = Update.foldChild({
   read: (model: Model) => Option.some(model.education),
   write: (model, nextEducation) =>
     evo(model, { education: () => nextEducation }),
-  toParentMessage: message => GotEducationMessage({ message }),
+  toParentMessage: message => Message.GotEducationMessage({ message }),
 })
 
 const foldSkills = Update.foldChild({
   update: Skills.update,
   read: (model: Model) => Option.some(model.skills),
   write: (model, nextSkills) => evo(model, { skills: () => nextSkills }),
-  toParentMessage: message => GotSkillsMessage({ message }),
+  toParentMessage: message => Message.GotSkillsMessage({ message }),
 })
 
 const foldCoverLetter = Update.foldChild({
@@ -89,7 +78,7 @@ const foldCoverLetter = Update.foldChild({
   read: (model: Model) => Option.some(model.coverLetter),
   write: (model, nextCoverLetter) =>
     evo(model, { coverLetter: () => nextCoverLetter }),
-  toParentMessage: message => GotCoverLetterMessage({ message }),
+  toParentMessage: message => Message.GotCoverLetterMessage({ message }),
 })
 
 const foldAttachments = Update.foldChild({
@@ -97,7 +86,7 @@ const foldAttachments = Update.foldChild({
   read: (model: Model) => Option.some(model.attachments),
   write: (model, nextAttachments) =>
     evo(model, { attachments: () => nextAttachments }),
-  toParentMessage: message => GotAttachmentsMessage({ message }),
+  toParentMessage: message => Message.GotAttachmentsMessage({ message }),
 })
 
 const foldStepMenuOutMessage = M.type<Menu.OutMessage<Step.Step>>().pipe(
@@ -113,7 +102,7 @@ const foldStepMenu = Update.foldChild({
   update: StepMenu.update,
   read: (model: Model) => Option.some(model.stepMenu),
   write: (model, nextStepMenu) => evo(model, { stepMenu: () => nextStepMenu }),
-  toParentMessage: message => GotStepMenuMessage({ message }),
+  toParentMessage: message => Message.GotStepMenuMessage({ message }),
   foldOutMessage: foldStepMenuOutMessage,
 })
 
@@ -130,68 +119,65 @@ const foldStepTabs = Update.foldChild({
   update: StepTabs.update,
   read: (model: Model) => Option.some(model.stepTabs),
   write: (model, nextStepTabs) => evo(model, { stepTabs: () => nextStepTabs }),
-  toParentMessage: message => GotStepTabsMessage({ message }),
+  toParentMessage: message => Message.GotStepTabsMessage({ message }),
   foldOutMessage: foldStepTabsOutMessage,
 })
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    withUpdateReturn,
-    M.tagsExhaustive({
-      GotPersonalInfoMessage: ({ message }) => foldPersonalInfo(model, message),
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    GotPersonalInfoMessage: ({ message }) => foldPersonalInfo(model, message),
 
-      GotWorkHistoryMessage: ({ message }) => foldWorkHistory(model, message),
+    GotWorkHistoryMessage: ({ message }) => foldWorkHistory(model, message),
 
-      GotEducationMessage: ({ message }) => foldEducation(model, message),
+    GotEducationMessage: ({ message }) => foldEducation(model, message),
 
-      GotSkillsMessage: ({ message }) => foldSkills(model, message),
+    GotSkillsMessage: ({ message }) => foldSkills(model, message),
 
-      GotCoverLetterMessage: ({ message }) => foldCoverLetter(model, message),
+    GotCoverLetterMessage: ({ message }) => foldCoverLetter(model, message),
 
-      GotAttachmentsMessage: ({ message }) => foldAttachments(model, message),
+    GotAttachmentsMessage: ({ message }) => foldAttachments(model, message),
 
-      GotStepMenuMessage: ({ message }) => foldStepMenu(model, message),
+    GotStepMenuMessage: ({ message }) => foldStepMenu(model, message),
 
-      GotStepTabsMessage: ({ message }) => foldStepTabs(model, message),
+    GotStepTabsMessage: ({ message }) => foldStepTabs(model, message),
 
-      NavigatedToStep: ({ step }) => [
-        evo(model, { currentStep: () => step }),
-        [],
-      ],
+    NavigatedToStep: ({ step }) => [
+      evo(model, { currentStep: () => step }),
+      [],
+    ],
 
-      ClickedNext: () => [evo(model, { currentStep: toNextStep }), []],
+    ClickedNext: () => [evo(model, { currentStep: toNextStep }), []],
 
-      ClickedPrevious: () => [evo(model, { currentStep: toPreviousStep }), []],
-      ToggledPreview: () => [
-        evo(model, { isPreviewVisible: isVisible => !isVisible }),
-        [],
-      ],
+    ClickedPrevious: () => [evo(model, { currentStep: toPreviousStep }), []],
+    ToggledPreview: () => [
+      evo(model, { isPreviewVisible: isVisible => !isVisible }),
+      [],
+    ],
 
-      ClickedSubmit: () => {
-        const revealedModel = evo(model, {
-          personalInfo: PersonalInfo.revealErrors,
-          workHistory: WorkHistory.revealErrors,
-          education: Education.revealErrors,
-          skills: Skills.revealErrors,
-          isSubmitAttempted: () => true,
-        })
-        if (isApplicationComplete(revealedModel)) {
-          return [
-            evo(revealedModel, { submission: () => Submitting() }),
-            [SubmitApplication()],
-          ]
-        }
-        return [revealedModel, []]
-      },
+    ClickedSubmit: () => {
+      const revealedModel = evo(model, {
+        personalInfo: PersonalInfo.revealErrors,
+        workHistory: WorkHistory.revealErrors,
+        education: Education.revealErrors,
+        skills: Skills.revealErrors,
+        isSubmitAttempted: () => true,
+      })
+      if (isApplicationComplete(revealedModel)) {
+        return [
+          evo(revealedModel, { submission: () => Submitting() }),
+          [SubmitApplication()],
+        ]
+      }
+      return [revealedModel, []]
+    },
 
-      SucceededSubmitApplication: () => [
-        evo(model, { submission: () => SubmitSuccess() }),
-        [],
-      ],
+    SucceededSubmitApplication: () => [
+      evo(model, { submission: () => SubmitSuccess() }),
+      [],
+    ],
 
-      FailedSubmitApplication: ({ error }) => [
-        evo(model, { submission: () => SubmitError({ error }) }),
-        [],
-      ],
-    }),
-  )
+    FailedSubmitApplication: ({ error }) => [
+      evo(model, { submission: () => SubmitError({ error }) }),
+      [],
+    ],
+  })

@@ -5,13 +5,8 @@ import { describe, expect, test } from 'vitest'
 
 import {
   CancelUploadFile,
-  ClickedCancelAllUploads,
-  ClickedCancelUpload,
-  ClickedRestartUpload,
-  ClickedStartUpload,
-  CompletedCancelUploadFile,
   FAKE_FILES,
-  SucceededUploadFile,
+  Message,
   UploadFile,
   initialModel,
   update,
@@ -25,7 +20,7 @@ describe('update', () => {
     story(
       update,
       given(initialModel),
-      message(ClickedStartUpload()),
+      message(Message.ClickedStartUpload()),
       model(model => {
         expect(model.uploads).toEqual([
           {
@@ -42,7 +37,7 @@ describe('update', () => {
       ),
       Command.resolve(
         UploadFile({ uploadId: 0, sizeMegabytes: firstFile.sizeMegabytes }),
-        SucceededUploadFile({ uploadId: 0 }),
+        Message.SucceededUploadFile({ uploadId: 0 }),
       ),
       model(model => {
         expect(Array.map(model.uploads, upload => upload.status)).toEqual([
@@ -56,11 +51,11 @@ describe('update', () => {
     story(
       update,
       given(initialModel),
-      message(ClickedStartUpload()),
-      message(ClickedCancelUpload({ uploadId: 0 })),
+      message(Message.ClickedStartUpload()),
+      message(Message.ClickedCancelUpload({ uploadId: 0 })),
       Command.resolve(
         CancelUploadFile({ uploadId: 0 }),
-        CompletedCancelUploadFile({
+        Message.CompletedCancelUploadFile({
           uploadId: 0,
           outcome: Interruptible.Interrupted(),
         }),
@@ -78,15 +73,15 @@ describe('update', () => {
     story(
       update,
       given(initialModel),
-      message(ClickedStartUpload()),
+      message(Message.ClickedStartUpload()),
       Command.resolve(
         UploadFile({ uploadId: 0, sizeMegabytes: firstFile.sizeMegabytes }),
-        SucceededUploadFile({ uploadId: 0 }),
+        Message.SucceededUploadFile({ uploadId: 0 }),
       ),
-      message(ClickedCancelUpload({ uploadId: 0 })),
+      message(Message.ClickedCancelUpload({ uploadId: 0 })),
       Command.resolve(
         CancelUploadFile({ uploadId: 0 }),
-        CompletedCancelUploadFile({
+        Message.CompletedCancelUploadFile({
           uploadId: 0,
           outcome: Interruptible.NotFound(),
         }),
@@ -103,12 +98,12 @@ describe('update', () => {
     story(
       update,
       given(initialModel),
-      message(ClickedStartUpload()),
-      message(ClickedStartUpload()),
-      message(ClickedCancelUpload({ uploadId: 0 })),
+      message(Message.ClickedStartUpload()),
+      message(Message.ClickedStartUpload()),
+      message(Message.ClickedCancelUpload({ uploadId: 0 })),
       Command.resolve(
         CancelUploadFile({ uploadId: 0 }),
-        CompletedCancelUploadFile({
+        Message.CompletedCancelUploadFile({
           uploadId: 0,
           outcome: Interruptible.Interrupted(),
         }),
@@ -118,7 +113,7 @@ describe('update', () => {
       ),
       Command.resolve(
         UploadFile({ uploadId: 1, sizeMegabytes: secondFile.sizeMegabytes }),
-        SucceededUploadFile({ uploadId: 1 }),
+        Message.SucceededUploadFile({ uploadId: 1 }),
       ),
       model(model => {
         expect(Array.map(model.uploads, upload => upload.status)).toEqual([
@@ -133,19 +128,19 @@ describe('update', () => {
     story(
       update,
       given(initialModel),
-      message(ClickedStartUpload()),
-      message(ClickedCancelUpload({ uploadId: 0 })),
-      message(ClickedStartUpload()),
+      message(Message.ClickedStartUpload()),
+      message(Message.ClickedCancelUpload({ uploadId: 0 })),
+      message(Message.ClickedStartUpload()),
       Command.resolve(
         CancelUploadFile({ uploadId: 0 }),
-        CompletedCancelUploadFile({
+        Message.CompletedCancelUploadFile({
           uploadId: 0,
           outcome: Interruptible.Interrupted(),
         }),
       ),
       Command.resolve(
         UploadFile({ uploadId: 1, sizeMegabytes: secondFile.sizeMegabytes }),
-        SucceededUploadFile({ uploadId: 1 }),
+        Message.SucceededUploadFile({ uploadId: 1 }),
       ),
       model(model => {
         expect(Array.map(model.uploads, upload => upload.status)).toEqual([
@@ -160,16 +155,16 @@ describe('update', () => {
     story(
       update,
       given(initialModel),
-      message(ClickedStartUpload()),
-      message(ClickedCancelUpload({ uploadId: 0 })),
+      message(Message.ClickedStartUpload()),
+      message(Message.ClickedCancelUpload({ uploadId: 0 })),
       Command.resolve(
         CancelUploadFile({ uploadId: 0 }),
-        CompletedCancelUploadFile({
+        Message.CompletedCancelUploadFile({
           uploadId: 0,
           outcome: Interruptible.Interrupted(),
         }),
       ),
-      message(ClickedRestartUpload({ uploadId: 0 })),
+      message(Message.ClickedRestartUpload({ uploadId: 0 })),
       model(model => {
         expect(Array.map(model.uploads, upload => upload.status)).toEqual([
           'Uploading',
@@ -180,7 +175,7 @@ describe('update', () => {
       ),
       Command.resolve(
         UploadFile({ uploadId: 0, sizeMegabytes: firstFile.sizeMegabytes }),
-        SucceededUploadFile({ uploadId: 0 }),
+        Message.SucceededUploadFile({ uploadId: 0 }),
       ),
       model(model => {
         expect(Array.map(model.uploads, upload => upload.status)).toEqual([
@@ -194,24 +189,24 @@ describe('update', () => {
     story(
       update,
       given(initialModel),
-      message(ClickedStartUpload()),
-      message(ClickedStartUpload()),
-      message(ClickedStartUpload()),
+      message(Message.ClickedStartUpload()),
+      message(Message.ClickedStartUpload()),
+      message(Message.ClickedStartUpload()),
       Command.resolve(
         UploadFile({ uploadId: 1, sizeMegabytes: secondFile.sizeMegabytes }),
-        SucceededUploadFile({ uploadId: 1 }),
+        Message.SucceededUploadFile({ uploadId: 1 }),
       ),
-      message(ClickedCancelAllUploads()),
+      message(Message.ClickedCancelAllUploads()),
       Command.resolve(
         CancelUploadFile({ uploadId: 0 }),
-        CompletedCancelUploadFile({
+        Message.CompletedCancelUploadFile({
           uploadId: 0,
           outcome: Interruptible.Interrupted(),
         }),
       ),
       Command.resolve(
         CancelUploadFile({ uploadId: 2 }),
-        CompletedCancelUploadFile({
+        Message.CompletedCancelUploadFile({
           uploadId: 2,
           outcome: Interruptible.Interrupted(),
         }),

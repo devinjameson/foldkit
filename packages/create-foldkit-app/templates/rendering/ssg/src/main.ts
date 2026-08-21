@@ -1,7 +1,7 @@
 import { Effect, Match as M, Schema as S, pipe } from 'effect'
 import { Command, Runtime } from 'foldkit'
 import { type Document, type Html, type HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { UrlRequest, load, pushUrl } from 'foldkit/navigation'
 import { evo } from 'foldkit/struct'
 import { Url, toString as urlToString } from 'foldkit/url'
@@ -18,19 +18,14 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const ClickedIncrement = m('ClickedIncrement')
-export const ClickedLink = m('ClickedLink', { request: UrlRequest })
-export const ChangedUrl = m('ChangedUrl', { url: Url })
-export const CompletedNavigateInternal = m('CompletedNavigateInternal')
-export const CompletedLoadExternal = m('CompletedLoadExternal')
+export const Message = defineMessageUnion({
+  ClickedIncrement: {},
+  ClickedLink: { request: UrlRequest },
+  ChangedUrl: { url: Url },
+  CompletedNavigateInternal: {},
+  CompletedLoadExternal: {},
+})
 
-export const Message = S.Union([
-  ClickedIncrement,
-  ClickedLink,
-  ChangedUrl,
-  CompletedNavigateInternal,
-  CompletedLoadExternal,
-])
 export type Message = typeof Message.Type
 
 // INIT
@@ -44,15 +39,16 @@ export const init: Runtime.RoutingApplicationInit<Model, Message> = url => [
 
 const NavigateInternal = Command.define('NavigateInternal', {
   args: { url: S.String },
-  messages: [CompletedNavigateInternal],
+  messages: [Message.CompletedNavigateInternal],
   execute: ({ url }) =>
-    pushUrl(url).pipe(Effect.as(CompletedNavigateInternal())),
+    pushUrl(url).pipe(Effect.as(Message.CompletedNavigateInternal())),
 })
 
 const LoadExternal = Command.define('LoadExternal', {
   args: { href: S.String },
-  messages: [CompletedLoadExternal],
-  execute: ({ href }) => load(href).pipe(Effect.as(CompletedLoadExternal())),
+  messages: [Message.CompletedLoadExternal],
+  execute: ({ href }) =>
+    load(href).pipe(Effect.as(Message.CompletedLoadExternal())),
 })
 
 // UPDATE
@@ -60,30 +56,27 @@ const LoadExternal = Command.define('LoadExternal', {
 type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
 const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    withUpdateReturn,
-    M.tagsExhaustive({
-      ClickedIncrement: () => [evo(model, { count: count => count + 1 }), []],
-      ClickedLink: ({ request }) =>
-        M.value(request).pipe(
-          withUpdateReturn,
-          M.tagsExhaustive({
-            Internal: ({ url }) => [
-              model,
-              [NavigateInternal({ url: urlToString(url) })],
-            ],
-            External: ({ href }) => [model, [LoadExternal({ href })]],
-          }),
-        ),
-      ChangedUrl: ({ url }) => [
-        evo(model, { route: () => urlToAppRoute(url) }),
-        [],
-      ],
-      CompletedNavigateInternal: () => [model, []],
-      CompletedLoadExternal: () => [model, []],
-    }),
-  )
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    ClickedIncrement: () => [evo(model, { count: count => count + 1 }), []],
+    ClickedLink: ({ request }) =>
+      M.value(request).pipe(
+        withUpdateReturn,
+        M.tagsExhaustive({
+          Internal: ({ url }) => [
+            model,
+            [NavigateInternal({ url: urlToString(url) })],
+          ],
+          External: ({ href }) => [model, [LoadExternal({ href })]],
+        }),
+      ),
+    ChangedUrl: ({ url }) => [
+      evo(model, { route: () => urlToAppRoute(url) }),
+      [],
+    ],
+    CompletedNavigateInternal: () => [model, []],
+    CompletedLoadExternal: () => [model, []],
+  })
 
 // VIEW
 
@@ -130,7 +123,7 @@ const pageView = (model: Model, h: HtmlBuilder<Message>): Html =>
             ),
             h.button(
               [
-                h.OnClick(ClickedIncrement()),
+                h.OnClick(Message.ClickedIncrement()),
                 h.Class('w-fit bg-black px-4 py-2 text-white'),
               ],
               [`Count: ${model.count}`],

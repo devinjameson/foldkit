@@ -1,5 +1,5 @@
 import { Schema as S } from 'effect'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 
 // TRANSITION STATE
 
@@ -26,37 +26,24 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-/** Sent when the animation should enter (become visible). Starts the enter sequence. */
-export const Showed = m('Showed')
-/** Sent when the animation should leave (become hidden). Starts the leave sequence. */
-export const Hid = m('Hid')
-/** Sent internally when a double-rAF completes, advancing the lifecycle to its animating phase. */
-export const CompletedWaitForPaint = m('CompletedWaitForPaint')
-/** Sent internally when all CSS animations on the element have settled. Covers both CSS transitions and CSS keyframe animations. */
-export const EndedAnimation = m('EndedAnimation')
-
 /** Union of all messages the animation component can produce. */
-export const Message: S.Union<
-  [
-    typeof Showed,
-    typeof Hid,
-    typeof CompletedWaitForPaint,
-    typeof EndedAnimation,
-  ]
-> = S.Union([Showed, Hid, CompletedWaitForPaint, EndedAnimation])
+export const Message = defineMessageUnion({
+  Showed: {},
+  Hid: {},
+  CompletedWaitForPaint: {},
+  EndedAnimation: {},
+})
 export type Message = typeof Message.Type
 
-export type Showed = typeof Showed.Type
-export type Hid = typeof Hid.Type
+export type Showed = typeof Message.Showed.Type
+export type Hid = typeof Message.Hid.Type
 
 // OUT MESSAGE
 
-/** Sent to the parent when the leave sequence advances to LeaveAnimating. The parent is responsible for providing the command that detects when the leave animation completes (e.g. WaitForAnimationSettled or a racing command). Use `defaultLeaveCommand` for the standard behavior. */
-export const StartedLeaveAnimating = m('StartedLeaveAnimating')
-/** Sent to the parent when the leave animation completes. The parent can use this to unmount content or update its own state. */
-export const TransitionedOut = m('TransitionedOut')
-
-export const OutMessage = S.Union([StartedLeaveAnimating, TransitionedOut])
+export const OutMessage = defineMessageUnion({
+  StartedLeaveAnimating: {},
+  TransitionedOut: {},
+})
 export type OutMessage = typeof OutMessage.Type
 
 // INIT

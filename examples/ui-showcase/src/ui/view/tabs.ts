@@ -4,11 +4,7 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { Tabs } from '@foldkit/ui'
 
-import {
-  GotHorizontalTabsDemoMessage,
-  GotVerticalTabsDemoMessage,
-  type UiMessage,
-} from '../message'
+import { UiMessage } from '../message'
 import { type DemoTab, type UiModel } from '../model'
 
 const demoTabs: ReadonlyArray<DemoTab> = ['Foldkit', 'React', 'Elm']
@@ -141,7 +137,8 @@ export const view = Submodel.defineView<UiModel, UiMessage>(
                 ],
               ),
           },
-          toParentMessage: message => GotHorizontalTabsDemoMessage({ message }),
+          toParentMessage: message =>
+            UiMessage.GotHorizontalTabsDemoMessage({ message }),
         }),
 
         h.h3(
@@ -181,7 +178,8 @@ export const view = Submodel.defineView<UiModel, UiMessage>(
                 ],
               ),
           },
-          toParentMessage: message => GotVerticalTabsDemoMessage({ message }),
+          toParentMessage: message =>
+            UiMessage.GotVerticalTabsDemoMessage({ message }),
         }),
       ],
     )

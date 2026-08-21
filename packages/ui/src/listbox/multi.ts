@@ -6,12 +6,8 @@ import {
   type BaseInitConfig,
   BaseModel,
   type BaseViewInputs,
-  Closed,
-  type Message,
-  Opened,
-  type OutMessage,
-  SelectedItem,
-  Selected as SharedSelected,
+  Message,
+  OutMessage,
   baseInit,
   makeUpdate,
   makeView,
@@ -40,7 +36,7 @@ export const init = (config: InitConfig): Model => baseInit(config)
 export const update = makeUpdate<Model>((model, item) => [
   model,
   [],
-  Option.some(SharedSelected({ value: item })),
+  Option.some(OutMessage.Selected({ value: item })),
 ])
 
 type UpdateReturn = ReturnType<typeof update>
@@ -48,17 +44,18 @@ type UpdateReturn = ReturnType<typeof update>
 /** Programmatically opens the listbox, updating the model and returning
  *  focus and modal commands. Use this in domain-event handlers to open the listbox. */
 export const open = (model: Model): UpdateReturn =>
-  update(model, Opened({ maybeActiveItemIndex: Option.none() }))
+  update(model, Message.Opened({ maybeActiveItemIndex: Option.none() }))
 
 /** Programmatically closes the listbox. If it is open, returns the closed Model
  *  with focus and modal Commands. If it is already closed, returns the Model
  *  unchanged with no Commands. Use this in domain-event handlers to close the
  *  listbox. */
-export const close = (model: Model): UpdateReturn => update(model, Closed())
+export const close = (model: Model): UpdateReturn =>
+  update(model, Message.Closed())
 
 /** Programmatically activates an item in the multi-select listbox. Emits `Selected({ value })`; the parent toggles the value's membership. */
 export const selectItem = (model: Model, item: string): UpdateReturn =>
-  update(model, SelectedItem({ item }))
+  update(model, Message.SelectedItem({ item }))
 
 // VIEW
 
@@ -131,9 +128,13 @@ export const create = <
   return {
     view: internalView<Item, Value>(),
     update: typedUpdate,
-    selectItem: (model, item) => typedUpdate(model, SelectedItem({ item })),
+    selectItem: (model, item) =>
+      typedUpdate(model, Message.SelectedItem({ item })),
     open: model =>
-      typedUpdate(model, Opened({ maybeActiveItemIndex: Option.none() })),
-    close: model => typedUpdate(model, Closed()),
+      typedUpdate(
+        model,
+        Message.Opened({ maybeActiveItemIndex: Option.none() }),
+      ),
+    close: model => typedUpdate(model, Message.Closed()),
   }
 }

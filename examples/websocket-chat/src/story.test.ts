@@ -3,22 +3,14 @@ import { Command, given, message, model, story } from 'foldkit/story'
 import { describe, expect, test } from 'vitest'
 
 import {
-  ClickedConnect,
-  Connected,
   ConnectionConnected,
   ConnectionConnecting,
   ConnectionDisconnected,
-  Disconnected,
-  FailedConnect,
+  Message,
   type Model,
-  ReceivedMessage,
   SendMessage,
-  SubmittedMessage,
-  SucceededSendMessage,
   TimestampReceivedMessage,
   TimestampSentMessage,
-  TimestampedMessage,
-  UpdatedMessageInput,
   update,
 } from './main'
 
@@ -41,7 +33,7 @@ describe('update', () => {
       story(
         update,
         given(idleModel),
-        message(ClickedConnect()),
+        message(Message.ClickedConnect()),
         model(model => {
           expect(model.connection._tag).toBe('ConnectionConnecting')
         }),
@@ -52,7 +44,7 @@ describe('update', () => {
       story(
         update,
         given({ ...idleModel, connection: ConnectionConnecting() }),
-        message(Connected()),
+        message(Message.Connected()),
         model(model => {
           expect(model.connection._tag).toBe('ConnectionConnected')
         }),
@@ -66,7 +58,7 @@ describe('update', () => {
           ...connectedModel,
           messages: [{ text: 'old', zoned: zonedNow, isSent: true }],
         }),
-        message(Disconnected()),
+        message(Message.Disconnected()),
         model(model => {
           expect(model.connection._tag).toBe('ConnectionDisconnected')
           expect(model.messages).toHaveLength(0)
@@ -78,7 +70,7 @@ describe('update', () => {
       story(
         update,
         given({ ...idleModel, connection: ConnectionConnecting() }),
-        message(FailedConnect({ error: 'Timeout' })),
+        message(Message.FailedConnect({ error: 'Timeout' })),
         model(model => {
           if (model.connection._tag === 'ConnectionError') {
             expect(model.connection.error).toBe('Timeout')
@@ -95,7 +87,7 @@ describe('update', () => {
       story(
         update,
         given(connectedModel),
-        message(UpdatedMessageInput({ value: 'Hello' })),
+        message(Message.UpdatedMessageInput({ value: 'Hello' })),
         model(model => {
           expect(model.messageInput).toBe('Hello')
         }),
@@ -108,7 +100,7 @@ describe('update', () => {
       story(
         update,
         given({ ...connectedModel, messageInput: '' }),
-        message(SubmittedMessage()),
+        message(Message.SubmittedMessage()),
         Command.expectNone(),
       )
     })
@@ -117,7 +109,7 @@ describe('update', () => {
       story(
         update,
         given({ ...connectedModel, messageInput: '   ' }),
-        message(SubmittedMessage()),
+        message(Message.SubmittedMessage()),
         Command.expectNone(),
       )
     })
@@ -126,19 +118,19 @@ describe('update', () => {
       story(
         update,
         given({ ...connectedModel, messageInput: 'Hello there' }),
-        message(SubmittedMessage()),
+        message(Message.SubmittedMessage()),
         model(model => {
           expect(model.messageInput).toBe('')
         }),
         Command.expectHas(SendMessage),
         Command.resolve(
           SendMessage,
-          SucceededSendMessage({ text: 'Hello there' }),
+          Message.SucceededSendMessage({ text: 'Hello there' }),
         ),
         Command.expectHas(TimestampSentMessage),
         Command.resolve(
           TimestampSentMessage,
-          TimestampedMessage({
+          Message.TimestampedMessage({
             text: 'Hello there',
             zoned: zonedNow,
             isSent: true,
@@ -156,7 +148,7 @@ describe('update', () => {
       story(
         update,
         given({ ...idleModel, messageInput: 'Hello' }),
-        message(SubmittedMessage()),
+        message(Message.SubmittedMessage()),
         Command.expectNone(),
         model(model => {
           expect(model.messageInput).toBe('Hello')
@@ -170,11 +162,11 @@ describe('update', () => {
       story(
         update,
         given(connectedModel),
-        message(ReceivedMessage({ text: 'echo' })),
+        message(Message.ReceivedMessage({ text: 'echo' })),
         Command.expectHas(TimestampReceivedMessage),
         Command.resolve(
           TimestampReceivedMessage,
-          TimestampedMessage({
+          Message.TimestampedMessage({
             text: 'echo',
             zoned: zonedNow,
             isSent: false,

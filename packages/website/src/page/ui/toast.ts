@@ -4,15 +4,7 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 import type { EntryHandlers, Variant } from '@foldkit/ui/toast'
 
 import { Icon } from '../../icon'
-import {
-  ClickedDismissAllToasts,
-  ClickedShowErrorToast,
-  ClickedShowInfoToast,
-  ClickedShowStickyToast,
-  ClickedShowSuccessToast,
-  GotToastDemoMessage,
-  type Message,
-} from './message'
+import { Message } from './message'
 import { Toast } from './toastModule'
 
 type Entry = typeof Toast.Entry.Type
@@ -89,23 +81,35 @@ export const demo = (
       [h.Class('flex flex-wrap gap-2')],
       [
         h.button(
-          [h.Class(buttonClassName), h.OnClick(ClickedShowInfoToast())],
+          [h.Class(buttonClassName), h.OnClick(Message.ClickedShowInfoToast())],
           ['Info'],
         ),
         h.button(
-          [h.Class(buttonClassName), h.OnClick(ClickedShowSuccessToast())],
+          [
+            h.Class(buttonClassName),
+            h.OnClick(Message.ClickedShowSuccessToast()),
+          ],
           ['Success'],
         ),
         h.button(
-          [h.Class(buttonClassName), h.OnClick(ClickedShowErrorToast())],
+          [
+            h.Class(buttonClassName),
+            h.OnClick(Message.ClickedShowErrorToast()),
+          ],
           ['Error'],
         ),
         h.button(
-          [h.Class(buttonClassName), h.OnClick(ClickedShowStickyToast())],
+          [
+            h.Class(buttonClassName),
+            h.OnClick(Message.ClickedShowStickyToast()),
+          ],
           ['Sticky'],
         ),
         h.button(
-          [h.Class(buttonClassName), h.OnClick(ClickedDismissAllToasts())],
+          [
+            h.Class(buttonClassName),
+            h.OnClick(Message.ClickedDismissAllToasts()),
+          ],
           ['Dismiss all'],
         ),
       ],
@@ -135,7 +139,7 @@ export const demo = (
         entryToView: renderToastEntry,
         entryClassName,
       },
-      toParentMessage: message => GotToastDemoMessage({ message }),
+      toParentMessage: message => Message.GotToastDemoMessage({ message }),
     }),
   ]
 }

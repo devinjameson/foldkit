@@ -5,11 +5,7 @@ import { type Html, type HtmlBuilder, childAttributes } from 'foldkit/html'
 import { Menu } from '@foldkit/ui'
 
 import * as Icon from '../../icon'
-import {
-  GotMenuAnimatedDemoMessage,
-  GotMenuBasicDemoMessage,
-  type UiMessage,
-} from '../message'
+import { UiMessage } from '../message'
 import type { UiModel } from '../model'
 
 const triggerClassName =
@@ -138,7 +134,8 @@ export const view = Submodel.defineView<UiModel, UiMessage>(
               viewInputs: {
                 ...menuViewConfig(basicItemsClassName, h),
               },
-              toParentMessage: message => GotMenuBasicDemoMessage({ message }),
+              toParentMessage: message =>
+                UiMessage.GotMenuBasicDemoMessage({ message }),
             }),
           ],
         ),
@@ -165,7 +162,7 @@ export const view = Submodel.defineView<UiModel, UiMessage>(
                 ...menuViewConfig(animatedItemsClassName, h),
               },
               toParentMessage: message =>
-                GotMenuAnimatedDemoMessage({ message }),
+                UiMessage.GotMenuAnimatedDemoMessage({ message }),
             }),
           ],
         ),

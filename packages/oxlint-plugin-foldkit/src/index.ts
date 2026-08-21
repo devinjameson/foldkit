@@ -7,7 +7,6 @@ import { gotSubmodelMessageName } from './rules/got-submodel-message-name.ts'
 import { gotWrapperCarriesOnlyRouting } from './rules/got-wrapper-carries-only-routing.ts'
 import { keyedRequiredForMappedRows } from './rules/keyed-required-for-mapped-rows.ts'
 import { lazyViewStableReferences } from './rules/lazy-view-stable-references.ts'
-import { messageBindingMatchesTag } from './rules/message-binding-matches-tag.ts'
 import { mountFactoryMustUseElement } from './rules/mount-factory-must-use-element.ts'
 import { noArrayIndexViewKeys } from './rules/no-array-index-view-keys.ts'
 import { noChildMessageConstructionInRoot } from './rules/no-child-message-construction-in-root.ts'
@@ -37,7 +36,6 @@ const basePlugin = Plugin.define({
     'got-wrapper-carries-only-routing': gotWrapperCarriesOnlyRouting,
     'keyed-required-for-mapped-rows': keyedRequiredForMappedRows,
     'lazy-view-stable-references': lazyViewStableReferences,
-    'message-binding-matches-tag': messageBindingMatchesTag,
     'mount-factory-must-use-element': mountFactoryMustUseElement,
     'no-array-index-view-keys': noArrayIndexViewKeys,
     'no-child-message-construction-in-root': noChildMessageConstructionInRoot,

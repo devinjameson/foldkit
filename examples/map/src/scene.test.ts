@@ -14,16 +14,12 @@ import {
 import { describe, test } from 'vitest'
 
 import {
-  CompletedLockBodyScroll,
-  CompletedUnlockBodyScroll,
-  FailedGeolocate,
   FlyTo,
   Geolocate,
   GeolocateFailed,
   LockBodyScroll,
+  Message,
   MountMap,
-  SucceededFlyTo,
-  SucceededMountMap,
   UnlockBodyScroll,
   update,
   view,
@@ -32,15 +28,15 @@ import { initialModel, mountedModel } from './main.fixtures'
 
 const acknowledgeMapMount = Mount.resolve(
   MountMap,
-  SucceededMountMap({ hostId: 'test-map-host' }),
+  Message.SucceededMountMap({ hostId: 'test-map-host' }),
 )
 const acknowledgeBodyLock = Command.resolve(
   LockBodyScroll,
-  CompletedLockBodyScroll(),
+  Message.CompletedLockBodyScroll(),
 )
 const acknowledgeBodyUnlock = Command.resolve(
   UnlockBodyScroll,
-  CompletedUnlockBodyScroll(),
+  Message.CompletedUnlockBodyScroll(),
 )
 
 describe('view', () => {
@@ -73,7 +69,7 @@ describe('view', () => {
       acknowledgeMapMount,
       click(role('button', { name: /Eiffel Tower/ })),
       Command.expectHas(FlyTo),
-      Command.resolve(FlyTo, SucceededFlyTo()),
+      Command.resolve(FlyTo, Message.SucceededFlyTo()),
     )
   })
 
@@ -85,7 +81,10 @@ describe('view', () => {
       click(role('button', { name: 'Find my location' })),
       expect(role('button', { name: 'Locating…' })).toExist(),
       acknowledgeBodyLock,
-      Command.resolve(Geolocate, FailedGeolocate({ reason: 'Test cleanup' })),
+      Command.resolve(
+        Geolocate,
+        Message.FailedGeolocate({ reason: 'Test cleanup' }),
+      ),
     )
   })
 

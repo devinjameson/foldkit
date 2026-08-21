@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest'
 
 import * as Command from '../../command/public.js'
 import * as ManagedResource from '../../managedResource/public.js'
-import { m, ts } from '../../schema/index.js'
+import { defineMessageUnion, ts } from '../../schema/index.js'
 import { evo } from '../../struct/index.js'
 import * as Subscription from '../../subscription/public.js'
 import { define, otherwise, to, when } from './machine.js'
@@ -26,17 +26,12 @@ const Ok = ts('Ok', { data: S.String })
 const RemoteData = S.Union([Idle, Loading, Error, Ok])
 type RemoteData = typeof RemoteData.Type
 
-const ClickedFetch = m('ClickedFetch')
-const SucceededFetch = m('SucceededFetch', { data: S.String })
-const FailedFetch = m('FailedFetch', { error: S.String })
-const ClickedRetry = m('ClickedRetry')
-
-const RemoteDataMessage = S.Union([
-  ClickedFetch,
-  SucceededFetch,
-  FailedFetch,
-  ClickedRetry,
-])
+const RemoteDataMessage = defineMessageUnion({
+  ClickedFetch: {},
+  SucceededFetch: { data: S.String },
+  FailedFetch: { error: S.String },
+  ClickedRetry: {},
+})
 type RemoteDataMessage = typeof RemoteDataMessage.Type
 
 const remoteDataMachine = define({
@@ -99,28 +94,19 @@ const ConnectionState = S.Union([
 ])
 type ConnectionState = typeof ConnectionState.Type
 
-const ClickedConnect = m('ClickedConnect')
-const ClickedDisconnect = m('ClickedDisconnect')
-const SocketOpened = m('SocketOpened', { sessionId: S.String })
-const SocketErrored = m('SocketErrored', { reason: S.String })
-const SocketClosed = m('SocketClosed', { reason: S.String })
-const TimedOutBackoff = m('TimedOutBackoff')
-const ReleasedSocket = m('ReleasedSocket')
-const CompletedLogTransition = m('CompletedLogTransition')
-
-const ConnectionMessage = S.Union([
-  ClickedConnect,
-  ClickedDisconnect,
-  SocketOpened,
-  SocketErrored,
-  SocketClosed,
-  TimedOutBackoff,
-  ReleasedSocket,
-  CompletedLogTransition,
-])
+const ConnectionMessage = defineMessageUnion({
+  ClickedConnect: {},
+  ClickedDisconnect: {},
+  SocketOpened: { sessionId: S.String },
+  SocketErrored: { reason: S.String },
+  SocketClosed: { reason: S.String },
+  TimedOutBackoff: {},
+  ReleasedSocket: {},
+  CompletedLogTransition: {},
+})
 type ConnectionMessage = typeof ConnectionMessage.Type
 type ConnectingState = typeof Connecting.Type
-type SocketErroredMessage = typeof SocketErrored.Type
+type SocketErroredMessage = typeof ConnectionMessage.SocketErrored.Type
 
 const connectingToMaybeBackoff = (
   state: ConnectingState,
@@ -145,8 +131,8 @@ const connectingToMaybeNextAttempt = (
 
 const LogTransition = Command.define('LogTransition', {
   args: { description: S.String },
-  messages: [CompletedLogTransition],
-  execute: () => Effect.succeed(CompletedLogTransition()),
+  messages: [ConnectionMessage.CompletedLogTransition],
+  execute: () => Effect.succeed(ConnectionMessage.CompletedLogTransition()),
 })
 
 const connectionMachine = define({
@@ -289,9 +275,11 @@ const managedResources = ManagedResource.make<AppModel, ConnectionMessage>()(
           )
         }),
       release: socket => Effect.sync(() => socket.close()),
-      onAcquired: socket => SocketOpened({ sessionId: socket.url }),
-      onReleased: () => ReleasedSocket(),
-      onAcquireError: error => SocketErrored({ reason: String(error) }),
+      onAcquired: socket =>
+        ConnectionMessage.SocketOpened({ sessionId: socket.url }),
+      onReleased: () => ConnectionMessage.ReleasedSocket(),
+      onAcquireError: error =>
+        ConnectionMessage.SocketErrored({ reason: String(error) }),
     }),
   }),
 )
@@ -321,7 +309,7 @@ const subscriptions = Subscription.make<AppModel, ConnectionMessage>()(
               Stream.fromEffect(
                 Effect.as(
                   Effect.sleep(Duration.millis(delayMillis)),
-                  TimedOutBackoff(),
+                  ConnectionMessage.TimedOutBackoff(),
                 ),
               ),
           }),
@@ -540,32 +528,28 @@ const Submitted = ts('Submitted')
 const SubmitState = S.Union([SubmitIdle, Presigning, Persisting, Submitted])
 type SubmitState = typeof SubmitState.Type
 
-const ClickedSubmit = m('ClickedSubmit')
-const SucceededPresign = m('SucceededPresign', { url: S.String })
-const SucceededPersist = m('SucceededPersist', { id: S.String })
-
-const SubmitMessage = S.Union([
-  ClickedSubmit,
-  SucceededPresign,
-  SucceededPersist,
-])
+const SubmitMessage = defineMessageUnion({
+  ClickedSubmit: {},
+  SucceededPresign: { url: S.String },
+  SucceededPersist: { id: S.String },
+})
 type SubmitMessage = typeof SubmitMessage.Type
 
 const Presign = Command.define('Presign', {
-  messages: [SucceededPresign],
+  messages: [SubmitMessage.SucceededPresign],
   execute: Effect.gen(function* () {
     const client = yield* UploadsClient
     const url = yield* client.presign
-    return SucceededPresign({ url })
+    return SubmitMessage.SucceededPresign({ url })
   }),
 })
 
 const Persist = Command.define('Persist', {
-  messages: [SucceededPersist],
+  messages: [SubmitMessage.SucceededPersist],
   execute: Effect.gen(function* () {
     const client = yield* SaveClient
     const id = yield* client.save
-    return SucceededPersist({ id })
+    return SubmitMessage.SucceededPersist({ id })
   }),
 })
 
@@ -686,31 +670,37 @@ describe('remote data machine', () => {
   })
 
   it('transitions along the obvious edges', () => {
-    const [loading] = remoteDataMachine.transition(Idle(), ClickedFetch())
+    const [loading] = remoteDataMachine.transition(
+      Idle(),
+      RemoteDataMessage.ClickedFetch(),
+    )
     expect(loading).toStrictEqual(Loading())
 
     const [ok] = remoteDataMachine.transition(
       Loading(),
-      SucceededFetch({ data: 'payload' }),
+      RemoteDataMessage.SucceededFetch({ data: 'payload' }),
     )
     expect(ok).toStrictEqual(Ok({ data: 'payload' }))
 
     const [errored] = remoteDataMachine.transition(
       Loading(),
-      FailedFetch({ error: 'boom' }),
+      RemoteDataMessage.FailedFetch({ error: 'boom' }),
     )
     expect(errored).toStrictEqual(Error({ error: 'boom' }))
 
     const [retrying] = remoteDataMachine.transition(
       Error({ error: 'boom' }),
-      ClickedRetry(),
+      RemoteDataMessage.ClickedRetry(),
     )
     expect(retrying).toStrictEqual(Loading())
   })
 
   it('reports unmatched messages as Ignored without changing state', () => {
     const idle = Idle()
-    const result = remoteDataMachine.step(idle, ClickedRetry())
+    const result = remoteDataMachine.step(
+      idle,
+      RemoteDataMessage.ClickedRetry(),
+    )
 
     expect(result).toEqual({
       _tag: 'Ignored',
@@ -721,7 +711,7 @@ describe('remote data machine', () => {
 
     const [unchanged, commands] = remoteDataMachine.transition(
       idle,
-      ClickedRetry(),
+      RemoteDataMessage.ClickedRetry(),
     )
     expect(unchanged).toBe(idle)
     expect(commands).toEqual([])
@@ -792,13 +782,13 @@ describe('connection machine', () => {
   it('walks the happy path and emits the edge command', () => {
     const [connecting] = connectionMachine.transition(
       Disconnected(),
-      ClickedConnect(),
+      ConnectionMessage.ClickedConnect(),
     )
     expect(connecting).toStrictEqual(Connecting({ attemptCount: 1 }))
 
     const result = connectionMachine.step(
       Connecting({ attemptCount: 1 }),
-      SocketOpened({ sessionId: 'abc' }),
+      ConnectionMessage.SocketOpened({ sessionId: 'abc' }),
     )
     expect(result._tag).toBe('Transitioned')
 
@@ -813,14 +803,16 @@ describe('connection machine', () => {
       const commandResults = result.commands.map(command =>
         Effect.runSync(command.effect),
       )
-      expect(commandResults).toEqual([CompletedLogTransition()])
+      expect(commandResults).toEqual([
+        ConnectionMessage.CompletedLogTransition(),
+      ])
     }
   })
 
   it('reconnects with exponential backoff below the attempt limit', () => {
     const [reconnecting] = connectionMachine.transition(
       Connecting({ attemptCount: 4 }),
-      SocketErrored({ reason: 'boom' }),
+      ConnectionMessage.SocketErrored({ reason: 'boom' }),
     )
     expect(reconnecting).toStrictEqual(
       Reconnecting({ attemptCount: 4, delayMillis: 2000 }),
@@ -828,7 +820,7 @@ describe('connection machine', () => {
 
     const [connectingAgain] = connectionMachine.transition(
       Reconnecting({ attemptCount: 4, delayMillis: 2000 }),
-      TimedOutBackoff(),
+      ConnectionMessage.TimedOutBackoff(),
     )
     expect(connectingAgain).toStrictEqual(Connecting({ attemptCount: 5 }))
   })
@@ -836,13 +828,16 @@ describe('connection machine', () => {
   it('fails at the attempt limit via the otherwise guard', () => {
     const [failed] = connectionMachine.transition(
       Connecting({ attemptCount: 5 }),
-      SocketErrored({ reason: 'boom' }),
+      ConnectionMessage.SocketErrored({ reason: 'boom' }),
     )
     expect(failed).toStrictEqual(Failed({ attemptCount: 5, reason: 'boom' }))
   })
 
   it('ignores messages with no edge from the current state', () => {
-    const result = connectionMachine.step(Disconnected(), TimedOutBackoff())
+    const result = connectionMachine.step(
+      Disconnected(),
+      ConnectionMessage.TimedOutBackoff(),
+    )
     expect(result).toEqual({
       _tag: 'Ignored',
       stateTag: 'Disconnected',
@@ -908,7 +903,7 @@ describe('guard lists', () => {
   it('fires a boolean guard on true and falls through to otherwise on false', () => {
     const [reconnecting] = booleanGuardMachine.transition(
       Connecting({ attemptCount: 2 }),
-      SocketErrored({ reason: 'boom' }),
+      ConnectionMessage.SocketErrored({ reason: 'boom' }),
     )
     expect(reconnecting).toStrictEqual(
       Reconnecting({ attemptCount: 2, delayMillis: 500 }),
@@ -916,7 +911,7 @@ describe('guard lists', () => {
 
     const [failed] = booleanGuardMachine.transition(
       Connecting({ attemptCount: MAX_CONNECT_ATTEMPTS }),
-      SocketErrored({ reason: 'boom' }),
+      ConnectionMessage.SocketErrored({ reason: 'boom' }),
     )
     expect(failed).toStrictEqual(
       Failed({ attemptCount: MAX_CONNECT_ATTEMPTS, reason: 'boom' }),
@@ -928,7 +923,7 @@ describe('guard lists', () => {
 
     const result = guardValueMachine.step(
       atLimit,
-      SocketErrored({ reason: 'boom' }),
+      ConnectionMessage.SocketErrored({ reason: 'boom' }),
     )
     expect(result).toEqual({
       _tag: 'Ignored',
@@ -939,7 +934,7 @@ describe('guard lists', () => {
 
     const [unchanged, commands] = guardValueMachine.transition(
       atLimit,
-      SocketErrored({ reason: 'boom' }),
+      ConnectionMessage.SocketErrored({ reason: 'boom' }),
     )
     expect(unchanged).toBe(atLimit)
     expect(commands).toEqual([])
@@ -952,7 +947,7 @@ describe('state tag extraction', () => {
 
     const [active] = plainTagMachine.transition(
       { _tag: 'PlainIdle' },
-      ClickedFetch(),
+      RemoteDataMessage.ClickedFetch(),
     )
     expect(active).toStrictEqual({ _tag: 'PlainActive' })
   })
@@ -962,7 +957,7 @@ describe('type-level guarantees', () => {
   it('narrows state and message to the table position without annotations', () => {
     const [failed] = narrowingMachine.transition(
       Connecting({ attemptCount: 0 }),
-      SocketErrored({ reason: 'boom' }),
+      ConnectionMessage.SocketErrored({ reason: 'boom' }),
     )
     expect(failed).toStrictEqual(
       Failed({ attemptCount: 0, reason: 'Connecting SocketErrored boom' }),
@@ -972,7 +967,7 @@ describe('type-level guarantees', () => {
   it('passes the guard value into the matching edge', () => {
     const [reconnecting] = guardValueMachine.transition(
       Connecting({ attemptCount: 2 }),
-      SocketErrored({ reason: 'offline' }),
+      ConnectionMessage.SocketErrored({ reason: 'offline' }),
     )
 
     expect(reconnecting).toStrictEqual(
@@ -1009,12 +1004,18 @@ describe('integration', () => {
       isDebugPanelOpen: false,
     }
 
-    const [nextModel, commands] = update(model, ClickedConnect())
+    const [nextModel, commands] = update(
+      model,
+      ConnectionMessage.ClickedConnect(),
+    )
     expect(nextModel.connection).toStrictEqual(Connecting({ attemptCount: 1 }))
     expect(nextModel.isDebugPanelOpen).toBe(false)
     expect(commands).toEqual([])
 
-    const [unchangedModel, ignoredCommands] = update(model, ReleasedSocket())
+    const [unchangedModel, ignoredCommands] = update(
+      model,
+      ConnectionMessage.ReleasedSocket(),
+    )
     expect(unchangedModel).toBe(model)
     expect(ignoredCommands).toEqual([])
   })
@@ -1029,7 +1030,7 @@ describe('edge command requirements', () => {
   it('threads a requirement inferred from a single edge command into R', () => {
     const [nextState, commands] = inferredRequirementsMachine.transition(
       SubmitIdle(),
-      ClickedSubmit(),
+      SubmitMessage.ClickedSubmit(),
     )
     expect(nextState).toStrictEqual(Presigning())
 
@@ -1044,13 +1045,15 @@ describe('edge command requirements', () => {
         Effect.provideService(command.effect, UploadsClient, uploads),
       ),
     )
-    expect(messages).toEqual([SucceededPresign({ url: PRESIGNED_URL })])
+    expect(messages).toEqual([
+      SubmitMessage.SucceededPresign({ url: PRESIGNED_URL }),
+    ])
   })
 
   it('threads a requirement inferred from a guard-list edge command', () => {
     const [nextState, commands] = inferredGuardRequirementsMachine.transition(
       SubmitIdle(),
-      ClickedSubmit(),
+      SubmitMessage.ClickedSubmit(),
     )
     expect(nextState).toStrictEqual(Presigning())
 
@@ -1065,14 +1068,16 @@ describe('edge command requirements', () => {
         Effect.provideService(command.effect, UploadsClient, uploads),
       ),
     )
-    expect(messages).toEqual([SucceededPresign({ url: PRESIGNED_URL })])
+    expect(messages).toEqual([
+      SubmitMessage.SucceededPresign({ url: PRESIGNED_URL }),
+    ])
   })
 
   it('threads a requirement inferred from an otherwise fallback command', () => {
     const [nextState, commands] =
       inferredOtherwiseRequirementsMachine.transition(
         SubmitIdle(),
-        ClickedSubmit(),
+        SubmitMessage.ClickedSubmit(),
       )
     expect(nextState).toStrictEqual(Presigning())
 
@@ -1087,11 +1092,16 @@ describe('edge command requirements', () => {
         Effect.provideService(command.effect, UploadsClient, uploads),
       ),
     )
-    expect(messages).toEqual([SucceededPresign({ url: PRESIGNED_URL })])
+    expect(messages).toEqual([
+      SubmitMessage.SucceededPresign({ url: PRESIGNED_URL }),
+    ])
   })
 
   it('leaves R as never when no edge command needs a service', () => {
-    const [, commands] = remoteDataMachine.transition(Idle(), ClickedFetch())
+    const [, commands] = remoteDataMachine.transition(
+      Idle(),
+      RemoteDataMessage.ClickedFetch(),
+    )
 
     const requiresNever: ReadonlyArray<
       Command.Command<RemoteDataMessage, never, never>
@@ -1102,7 +1112,7 @@ describe('edge command requirements', () => {
   it('does not collapse an edge command requirement to never', () => {
     const [, commands] = inferredRequirementsMachine.transition(
       SubmitIdle(),
-      ClickedSubmit(),
+      SubmitMessage.ClickedSubmit(),
     )
 
     // @ts-expect-error the edge command requires UploadsClient, so R is not never
@@ -1117,7 +1127,10 @@ describe('edge command requirements', () => {
     const save: SaveShape = { save: Effect.succeed(PERSISTED_ID) }
 
     const [presigning, presignCommands] =
-      explicitRequirementsMachine.transition(SubmitIdle(), ClickedSubmit())
+      explicitRequirementsMachine.transition(
+        SubmitIdle(),
+        SubmitMessage.ClickedSubmit(),
+      )
     expect(presigning).toStrictEqual(Presigning())
 
     const requiresBoth: ReadonlyArray<
@@ -1133,12 +1146,14 @@ describe('edge command requirements', () => {
         ),
       ),
     )
-    expect(presignMessages).toEqual([SucceededPresign({ url: PRESIGNED_URL })])
+    expect(presignMessages).toEqual([
+      SubmitMessage.SucceededPresign({ url: PRESIGNED_URL }),
+    ])
 
     const [persisting, persistCommands] =
       explicitRequirementsMachine.transition(
         Presigning(),
-        SucceededPresign({ url: PRESIGNED_URL }),
+        SubmitMessage.SucceededPresign({ url: PRESIGNED_URL }),
       )
     expect(persisting).toStrictEqual(Persisting())
 
@@ -1150,6 +1165,8 @@ describe('edge command requirements', () => {
         ),
       ),
     )
-    expect(persistMessages).toEqual([SucceededPersist({ id: PERSISTED_ID })])
+    expect(persistMessages).toEqual([
+      SubmitMessage.SucceededPersist({ id: PERSISTED_ID }),
+    ])
   })
 })

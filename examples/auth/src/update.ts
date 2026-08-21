@@ -5,13 +5,7 @@ import { evo } from 'foldkit/struct'
 import { toString as urlToString } from 'foldkit/url'
 
 import { ClearSession, LogError, SaveSession } from './command'
-import {
-  CompletedLoadExternal,
-  CompletedNavigateInternal,
-  GotLoggedInMessage,
-  GotLoggedOutMessage,
-  Message,
-} from './message'
+import { Message } from './message'
 import { LoggedIn, LoggedOut, Model } from './model'
 import {
   DashboardRoute,
@@ -24,35 +18,36 @@ import {
 
 const NavigateInternal = Command.define('NavigateInternal', {
   args: { url: S.String },
-  messages: [CompletedNavigateInternal],
+  messages: [Message.CompletedNavigateInternal],
   execute: ({ url }) =>
-    pushUrl(url).pipe(Effect.as(CompletedNavigateInternal())),
+    pushUrl(url).pipe(Effect.as(Message.CompletedNavigateInternal())),
 })
 
 const LoadExternal = Command.define('LoadExternal', {
   args: { href: S.String },
-  messages: [CompletedLoadExternal],
-  execute: ({ href }) => load(href).pipe(Effect.as(CompletedLoadExternal())),
+  messages: [Message.CompletedLoadExternal],
+  execute: ({ href }) =>
+    load(href).pipe(Effect.as(Message.CompletedLoadExternal())),
 })
 
 export const RedirectToLogin = Command.define('RedirectToLogin', {
-  messages: [CompletedNavigateInternal],
+  messages: [Message.CompletedNavigateInternal],
   execute: replaceUrl(loginRouter()).pipe(
-    Effect.as(CompletedNavigateInternal()),
+    Effect.as(Message.CompletedNavigateInternal()),
   ),
 })
 
 export const RedirectToDashboard = Command.define('RedirectToDashboard', {
-  messages: [CompletedNavigateInternal],
+  messages: [Message.CompletedNavigateInternal],
   execute: replaceUrl(dashboardRouter()).pipe(
-    Effect.as(CompletedNavigateInternal()),
+    Effect.as(Message.CompletedNavigateInternal()),
   ),
 })
 
 const RedirectToHome = Command.define('RedirectToHome', {
-  messages: [CompletedNavigateInternal],
+  messages: [Message.CompletedNavigateInternal],
   execute: replaceUrl(homeRouter()).pipe(
-    Effect.as(CompletedNavigateInternal()),
+    Effect.as(Message.CompletedNavigateInternal()),
   ),
 })
 
@@ -83,7 +78,7 @@ const foldLoggedOut = Update.foldChild({
       }),
     ),
   write: (_model, nextLoggedOut) => nextLoggedOut,
-  toParentMessage: message => GotLoggedOutMessage({ message }),
+  toParentMessage: message => Message.GotLoggedOutMessage({ message }),
   foldOutMessage: foldLoggedOutOutMessage,
 })
 
@@ -109,7 +104,7 @@ const foldLoggedIn = Update.foldChild({
       }),
     ),
   write: (_model, nextLoggedIn) => nextLoggedIn,
-  toParentMessage: message => GotLoggedInMessage({ message }),
+  toParentMessage: message => Message.GotLoggedInMessage({ message }),
   foldOutMessage: foldLoggedInOutMessage,
 })
 

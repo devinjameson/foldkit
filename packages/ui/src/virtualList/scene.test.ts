@@ -4,10 +4,8 @@ import * as Scene from 'foldkit/scene'
 import { describe, it } from '@effect/vitest'
 
 import {
-  MeasuredContainer,
-  type Message,
+  Message,
   type Model,
-  ScrolledContainer,
   type ViewInputs,
   init,
   update,
@@ -56,7 +54,7 @@ const unmeasuredModel = init({ id: 'test', rowHeightPx: ROW_HEIGHT })
 const measuredModel = (() => {
   const [model] = update(
     unmeasuredModel,
-    MeasuredContainer({ containerHeight: 90 }),
+    Message.MeasuredContainer({ containerHeight: 90 }),
   )
   return model
 })()
@@ -166,7 +164,7 @@ describe('VirtualList', () => {
     it('sets aria-posinset using the logical (data) index, not the slice index, when scrolled', () => {
       const [scrolled] = update(
         measuredModel,
-        ScrolledContainer({ scrollTop: 90 }),
+        Message.ScrolledContainer({ scrollTop: 90 }),
       )
       Scene.scene(
         { update, view: sceneView() },
@@ -203,7 +201,7 @@ describe('VirtualList', () => {
     const variableMeasuredModel = (() => {
       const [model] = update(
         unmeasuredModel,
-        MeasuredContainer({ containerHeight: 90 }),
+        Message.MeasuredContainer({ containerHeight: 90 }),
       )
       return model
     })()

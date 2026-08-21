@@ -2,11 +2,7 @@ import type { HtmlBuilder } from 'foldkit/html'
 
 import { Slider } from '@foldkit/ui'
 
-import {
-  GotSliderRatingDemoMessage,
-  GotSliderVolumeDemoMessage,
-  type Message,
-} from './message'
+import { Message } from './message'
 
 // SHARED STYLES
 
@@ -95,7 +91,8 @@ export const sliderDemo = (
                 ],
               ),
           },
-          toParentMessage: message => GotSliderRatingDemoMessage({ message }),
+          toParentMessage: message =>
+            Message.GotSliderRatingDemoMessage({ message }),
         }),
         h.submodel({
           slotId: volumeModel.id,
@@ -139,7 +136,8 @@ export const sliderDemo = (
                 ],
               ),
           },
-          toParentMessage: message => GotSliderVolumeDemoMessage({ message }),
+          toParentMessage: message =>
+            Message.GotSliderVolumeDemoMessage({ message }),
         }),
       ],
     ),

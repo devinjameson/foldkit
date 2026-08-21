@@ -6,18 +6,9 @@ import { Button, Checkbox, Input, RadioGroup } from '@foldkit/ui'
 
 import * as Icon from './icon'
 import {
-  ClickedBack,
-  ClickedCancel,
-  ClickedContinue,
-  ClickedPlaceOrder,
-  ClickedStartOver,
   EDITIONS,
   EditionRadioGroup,
-  GotEditionRadioGroupMessage,
-  SubmittedPromoCode,
-  ToggledPaymentMethod,
-  ToggledTermsAccepted,
-  UpdatedPromoCode,
+  Message,
   checkoutMachine,
   editionName,
   isReviewReady,
@@ -28,7 +19,6 @@ import type {
   CheckoutState,
   Confirmed,
   Discount,
-  Message,
   Model,
   Payment,
   Review,
@@ -432,7 +422,7 @@ const editionOptionView = (
 const cancelCheckoutButton = (h: HtmlBuilder<Message>): Html =>
   Button.view(
     {
-      onClick: ClickedCancel(),
+      onClick: Message.ClickedCancel(),
       toView: attributes =>
         h.button(
           [...attributes.button, h.Class(cancelButtonClassName)],
@@ -511,7 +501,7 @@ const cartView = (
                 ),
             },
             toParentMessage: message =>
-              GotEditionRadioGroupMessage({ message }),
+              Message.GotEditionRadioGroupMessage({ message }),
           }),
         ],
       ),
@@ -525,7 +515,7 @@ const cartView = (
           cancelCheckoutButton(h),
           Button.view(
             {
-              onClick: ClickedContinue(),
+              onClick: Message.ClickedContinue(),
               toView: attributes =>
                 h.button(
                   [...attributes.button, h.Class(primaryButtonClassName)],
@@ -673,7 +663,7 @@ const shippingView = (h: HtmlBuilder<Message>): Html =>
         [
           Button.view(
             {
-              onClick: ClickedBack(),
+              onClick: Message.ClickedBack(),
               toView: attributes =>
                 h.button(
                   [
@@ -690,7 +680,7 @@ const shippingView = (h: HtmlBuilder<Message>): Html =>
           h.div([h.Class('sm:justify-self-center')], [cancelCheckoutButton(h)]),
           Button.view(
             {
-              onClick: ClickedContinue(),
+              onClick: Message.ClickedContinue(),
               toView: attributes =>
                 h.button(
                   [
@@ -743,7 +733,8 @@ const paymentView = (
             {
               id: 'saved-card',
               isChecked: state.isPaymentMethodSelected,
-              onToggle: isSelected => ToggledPaymentMethod({ isSelected }),
+              onToggle: isSelected =>
+                Message.ToggledPaymentMethod({ isSelected }),
               toView: attributes =>
                 h.div(
                   [
@@ -831,7 +822,7 @@ const paymentView = (
         [
           Button.view(
             {
-              onClick: ClickedBack(),
+              onClick: Message.ClickedBack(),
               toView: attributes =>
                 h.button(
                   [
@@ -852,7 +843,7 @@ const paymentView = (
           h.div([h.Class('sm:justify-self-center')], [cancelCheckoutButton(h)]),
           Button.view(
             {
-              onClick: ClickedContinue(),
+              onClick: Message.ClickedContinue(),
               isDisabled: !state.isPaymentMethodSelected,
               toView: attributes =>
                 h.button(
@@ -979,7 +970,7 @@ const reviewView = (
               ),
               Button.view(
                 {
-                  onClick: ToggledPaymentMethod({
+                  onClick: Message.ToggledPaymentMethod({
                     isSelected: !state.isPaymentMethodSelected,
                   }),
                   toView: attributes =>
@@ -1007,13 +998,16 @@ const reviewView = (
         [h.Class('grid gap-2')],
         [
           h.form(
-            [h.Class('flex items-end gap-3'), h.OnSubmit(SubmittedPromoCode())],
+            [
+              h.Class('flex items-end gap-3'),
+              h.OnSubmit(Message.SubmittedPromoCode()),
+            ],
             [
               Input.view(
                 {
                   id: 'promo-code',
                   value: state.promoCodeInput,
-                  onInput: value => UpdatedPromoCode({ value }),
+                  onInput: value => Message.UpdatedPromoCode({ value }),
                   toView: attributes =>
                     h.div(
                       [h.Class('grid flex-1 gap-2 sm:max-w-xs')],
@@ -1072,7 +1066,7 @@ const reviewView = (
         {
           id: 'accept-terms',
           isChecked: state.isTermsAccepted,
-          onToggle: isAccepted => ToggledTermsAccepted({ isAccepted }),
+          onToggle: isAccepted => Message.ToggledTermsAccepted({ isAccepted }),
           toView: attributes =>
             h.div(
               [
@@ -1108,7 +1102,7 @@ const reviewView = (
                       [
                         ...attributes.description,
                         h.OnClick(
-                          ToggledTermsAccepted({
+                          Message.ToggledTermsAccepted({
                             isAccepted: !state.isTermsAccepted,
                           }),
                         ),
@@ -1136,7 +1130,7 @@ const reviewView = (
         [
           Button.view(
             {
-              onClick: ClickedBack(),
+              onClick: Message.ClickedBack(),
               toView: attributes =>
                 h.button(
                   [
@@ -1153,7 +1147,7 @@ const reviewView = (
           h.div([h.Class('sm:justify-self-center')], [cancelCheckoutButton(h)]),
           Button.view(
             {
-              onClick: ClickedPlaceOrder(),
+              onClick: Message.ClickedPlaceOrder(),
               isDisabled: !isReadyToPlace,
               toView: attributes =>
                 h.button(
@@ -1240,7 +1234,7 @@ const confirmedView = (
       ),
       Button.view(
         {
-          onClick: ClickedStartOver(),
+          onClick: Message.ClickedStartOver(),
           toView: attributes =>
             h.button(
               [
@@ -1280,7 +1274,7 @@ const cancelledView = (h: HtmlBuilder<Message>): Html =>
       ),
       Button.view(
         {
-          onClick: ClickedStartOver(),
+          onClick: Message.ClickedStartOver(),
           toView: attributes =>
             h.button(
               [

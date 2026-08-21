@@ -2,7 +2,7 @@ import { Effect, Option, Queue, Schema as S, Stream } from 'effect'
 import { Subscription } from 'foldkit'
 
 import { type Model } from '../main'
-import { ChangedSystemTheme, type Message } from '../message'
+import { Message } from '../message'
 
 export const subscriptions = Subscription.make<Model, Message>()(entry => ({
   systemTheme: entry(
@@ -16,7 +16,7 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
       }),
       dependenciesToStream: ({ isSystemPreference }) =>
         Stream.when(
-          Stream.callback<typeof ChangedSystemTheme.Type>(queue =>
+          Stream.callback<typeof Message.ChangedSystemTheme.Type>(queue =>
             Effect.acquireRelease(
               Effect.sync(() => {
                 const mediaQuery = window.matchMedia(
@@ -25,7 +25,7 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
                 const handler = (event: MediaQueryListEvent) => {
                   Queue.offerUnsafe(
                     queue,
-                    ChangedSystemTheme({
+                    Message.ChangedSystemTheme({
                       theme: event.matches ? 'Dark' : 'Light',
                     }),
                   )

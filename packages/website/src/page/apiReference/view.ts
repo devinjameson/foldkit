@@ -26,7 +26,7 @@ import {
   scopedId,
   sectionId,
 } from './domain'
-import { type Message, ToggledSignature } from './message'
+import { Message } from './message'
 import type { ApiData, Model } from './model'
 
 type Highlights = ApiData['highlights']
@@ -206,7 +206,7 @@ const signaturesView = (
       {
         id: key,
         isOpen: isSignatureDisclosureOpen,
-        onToggle: isOpen => ToggledSignature({ id: key, isOpen }),
+        onToggle: isOpen => Message.ToggledSignature({ id: key, isOpen }),
         toView: attributes =>
           h.div(
             [],

@@ -3,7 +3,7 @@
 // update, and view definitions.
 import { Schema as S } from 'effect'
 import type { HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Switch } from '@foldkit/ui'
@@ -24,13 +24,12 @@ const init = () => [
 ]
 
 // A verb-first, past-tense Message carries the new checked state:
-const ToggledNotifications = m('ToggledNotifications', {
-  isChecked: S.Boolean,
+
+const Message = defineMessageUnion({
+  ToggledNotifications: { isChecked: S.Boolean },
 })
 
-const Message = S.Union([ToggledNotifications])
-
-// Inside your update function's M.tagsExhaustive({...}), store the value.
+// Inside your update function's Message.match({...}), store the value.
 // This is the moment to persist the preference, sync to a backend, or fire
 // analytics.
 ToggledNotifications: ({ isChecked }) => [
@@ -47,7 +46,7 @@ const view = (model, h: HtmlBuilder<Message>) =>
     {
       id: 'notifications',
       isChecked: model.notificationsEnabled,
-      onToggle: isChecked => ToggledNotifications({ isChecked }),
+      onToggle: isChecked => Message.ToggledNotifications({ isChecked }),
       toView: attributes =>
         h.div(
           [h.Class('flex items-center gap-3')],

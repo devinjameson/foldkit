@@ -2,7 +2,7 @@ import { Array, Effect, Match as M, Option, Schema as S, String } from 'effect'
 import { HttpClient, HttpClientRequest } from 'effect/unstable/http'
 import { AsyncData, Command, Http, Runtime } from 'foldkit'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Button, Input } from '@foldkit/ui'
@@ -30,32 +30,19 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const UpdatedZipCodeInput = m('UpdatedZipCodeInput', {
-  value: S.String,
+export const Message = defineMessageUnion({
+  UpdatedZipCodeInput: { value: S.String },
+  SubmittedWeatherForm: {},
+  SucceededFetchWeather: { weather: WeatherData },
+  FailedFetchWeather: { error: S.String },
 })
-export const SubmittedWeatherForm = m('SubmittedWeatherForm')
-export const SucceededFetchWeather = m('SucceededFetchWeather', {
-  weather: WeatherData,
-})
-export const FailedFetchWeather = m('FailedFetchWeather', { error: S.String })
 
-export const Message = S.Union([
-  UpdatedZipCodeInput,
-  SubmittedWeatherForm,
-  SucceededFetchWeather,
-  FailedFetchWeather,
-])
 export type Message = typeof Message.Type
 
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] =>
-  M.value(message).pipe(
-    M.withReturnType<
-      readonly [Model, ReadonlyArray<Command.Command<Message>>]
-    >(),
-    M.tagsExhaustive({
+export const update = (model: Model, message: Message) =>
+  Message.match<readonly [Model, ReadonlyArray<Command.Command<Message>>]>(
+    message,
+    {
       UpdatedZipCodeInput: ({ value }) => [
         evo(model, {
           zipCodeInput: () => value,
@@ -88,7 +75,7 @@ export const update = (
         }),
         [],
       ],
-    }),
+    },
   )
 
 // INIT
@@ -145,7 +132,7 @@ export const fetchWeatherEffect = (zipCode: string) =>
   Effect.gen(function* () {
     if (String.isEmpty(zipCode.trim())) {
       return yield* Effect.fail(
-        FailedFetchWeather({ error: 'Zip code required' }),
+        Message.FailedFetchWeather({ error: 'Zip code required' }),
       )
     }
 
@@ -163,7 +150,7 @@ export const fetchWeatherEffect = (zipCode: string) =>
 
     if (geocodeResponse.status !== 200) {
       return yield* Effect.fail(
-        FailedFetchWeather({ error: 'Location not found' }),
+        Message.FailedFetchWeather({ error: 'Location not found' }),
       )
     }
 
@@ -175,7 +162,9 @@ export const fetchWeatherEffect = (zipCode: string) =>
       Option.flatMap(Array.head),
       Option.match({
         onNone: () =>
-          Effect.fail(FailedFetchWeather({ error: 'Location not found' })),
+          Effect.fail(
+            Message.FailedFetchWeather({ error: 'Location not found' }),
+          ),
         onSome: Effect.succeed,
       }),
     )
@@ -194,7 +183,7 @@ export const fetchWeatherEffect = (zipCode: string) =>
 
     if (weatherResponse.status !== 200) {
       return yield* Effect.fail(
-        FailedFetchWeather({ error: 'Failed to fetch weather data' }),
+        Message.FailedFetchWeather({ error: 'Failed to fetch weather data' }),
       )
     }
 
@@ -212,19 +201,19 @@ export const fetchWeatherEffect = (zipCode: string) =>
       region: Option.getOrElse(geoResult.admin1, () => ''),
     })
 
-    return SucceededFetchWeather({ weather })
+    return Message.SucceededFetchWeather({ weather })
   }).pipe(
     Effect.catchTag('FailedFetchWeather', error => Effect.succeed(error)),
     Effect.catch(() =>
       Effect.succeed(
-        FailedFetchWeather({ error: 'Failed to fetch weather data' }),
+        Message.FailedFetchWeather({ error: 'Failed to fetch weather data' }),
       ),
     ),
   )
 
 export const FetchWeather = Command.define('FetchWeather', {
   args: { zipCode: S.String },
-  messages: [SucceededFetchWeather, FailedFetchWeather],
+  messages: [Message.SucceededFetchWeather, Message.FailedFetchWeather],
   execute: ({ zipCode }) =>
     Effect.provide(fetchWeatherEffect(zipCode), Http.layer),
 })
@@ -245,7 +234,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
       h.form(
         [
           h.Class('flex flex-col gap-4 items-center w-full max-w-md'),
-          h.OnSubmit(SubmittedWeatherForm()),
+          h.OnSubmit(Message.SubmittedWeatherForm()),
         ],
         [
           Input.view(
@@ -253,7 +242,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
               id: 'location',
               value: model.zipCodeInput,
               placeholder: 'Enter a zip code',
-              onInput: value => UpdatedZipCodeInput({ value }),
+              onInput: value => Message.UpdatedZipCodeInput({ value }),
               toView: attributes =>
                 h.input([
                   ...attributes.input,

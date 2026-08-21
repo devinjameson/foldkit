@@ -1,4 +1,4 @@
-import { Array, Match as M, Option, Record, pipe } from 'effect'
+import { Array, Option, Record, pipe } from 'effect'
 import { AsyncData, Command } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
@@ -8,7 +8,7 @@ import {
   scopedId,
   signaturesLength,
 } from './domain'
-import { type Message, RequestedApiData } from './message'
+import { Message } from './message'
 import {
   type ApiData,
   ApiDataAsyncData,
@@ -20,7 +20,6 @@ export type UpdateReturn = readonly [
   Model,
   ReadonlyArray<Command.Command<Message>>,
 ]
-const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
 const disclosuresForApiData = (apiData: ApiData): Disclosures =>
   pipe(
@@ -41,42 +40,39 @@ const disclosuresForApiData = (apiData: ApiData): Disclosures =>
     Record.fromEntries,
   )
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    withUpdateReturn,
-    M.tagsExhaustive({
-      RequestedApiData: () =>
-        Option.match(AsyncData.loadIfMissing(model.apiData), {
-          onNone: () => [model, []],
-          onSome: apiData => [
-            evo(model, { apiData: () => apiData }),
-            [LoadApiData()],
-          ],
-        }),
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    RequestedApiData: () =>
+      Option.match(AsyncData.loadIfMissing(model.apiData), {
+        onNone: () => [model, []],
+        onSome: apiData => [
+          evo(model, { apiData: () => apiData }),
+          [LoadApiData()],
+        ],
+      }),
 
-      SucceededLoadApiData: ({ apiData }) => [
-        evo(model, {
-          apiData: () => ApiDataAsyncData.Success({ data: apiData }),
-          disclosures: () => disclosuresForApiData(apiData),
-        }),
-        [],
-      ],
+    SucceededLoadApiData: ({ apiData }) => [
+      evo(model, {
+        apiData: () => ApiDataAsyncData.Success({ data: apiData }),
+        disclosures: () => disclosuresForApiData(apiData),
+      }),
+      [],
+    ],
 
-      FailedLoadApiData: ({ error }) => [
-        evo(model, {
-          apiData: () => ApiDataAsyncData.Failure({ error }),
-        }),
-        [],
-      ],
+    FailedLoadApiData: ({ error }) => [
+      evo(model, {
+        apiData: () => ApiDataAsyncData.Failure({ error }),
+      }),
+      [],
+    ],
 
-      ToggledSignature: ({ id, isOpen }) => [
-        evo(model, {
-          disclosures: disclosures => Record.set(disclosures, id, isOpen),
-        }),
-        [],
-      ],
-    }),
-  )
+    ToggledSignature: ({ id, isOpen }) => [
+      evo(model, {
+        disclosures: disclosures => Record.set(disclosures, id, isOpen),
+      }),
+      [],
+    ],
+  })
 
 export const informRouteChanged = (model: Model) =>
-  update(model, RequestedApiData())
+  update(model, Message.RequestedApiData())

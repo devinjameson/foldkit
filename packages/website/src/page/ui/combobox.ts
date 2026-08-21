@@ -10,14 +10,7 @@ import { Combobox } from '@foldkit/ui'
 import type { AnchorConfig } from '@foldkit/ui/combobox'
 
 import { Icon } from '../../icon'
-import {
-  GotComboboxDemoMessage,
-  GotComboboxMultiDemoMessage,
-  GotComboboxNullableDemoMessage,
-  GotComboboxPlacementLockDemoMessage,
-  GotComboboxSelectOnFocusDemoMessage,
-  type Message,
-} from './message'
+import { Message } from './message'
 import type { City } from './model'
 
 // DEMO CONTENT
@@ -146,7 +139,8 @@ export const comboboxDemo = (
                 }),
                 maybeSelectedValue: maybeSelectedCity,
               },
-              toParentMessage: message => GotComboboxDemoMessage({ message }),
+              toParentMessage: message =>
+                Message.GotComboboxDemoMessage({ message }),
             }),
           ],
         ),
@@ -189,7 +183,7 @@ export const nullableDemo = (
                 maybeSelectedValue: maybeSelectedCity,
               },
               toParentMessage: message =>
-                GotComboboxNullableDemoMessage({ message }),
+                Message.GotComboboxNullableDemoMessage({ message }),
             }),
           ],
         ),
@@ -232,7 +226,7 @@ export const selectOnFocusDemo = (
                 maybeSelectedValue: maybeSelectedCity,
               },
               toParentMessage: message =>
-                GotComboboxSelectOnFocusDemoMessage({ message }),
+                Message.GotComboboxSelectOnFocusDemoMessage({ message }),
             }),
           ],
         ),
@@ -287,7 +281,7 @@ export const placementLockDemo = (
                   openOnFocus: true,
                 },
                 toParentMessage: message =>
-                  GotComboboxPlacementLockDemoMessage({ message }),
+                  Message.GotComboboxPlacementLockDemoMessage({ message }),
               }),
             ],
           ),
@@ -345,7 +339,7 @@ export const multiDemo = (
                 selectedValues: selectedCities,
               },
               toParentMessage: message =>
-                GotComboboxMultiDemoMessage({ message }),
+                Message.GotComboboxMultiDemoMessage({ message }),
             }),
           ],
         ),

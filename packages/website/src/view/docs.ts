@@ -12,19 +12,12 @@ import { pageNeighbors } from '../docsNav'
 import { Icon } from '../icon'
 import { Link } from '../link'
 import { type Model, type TableOfContentsEntry } from '../main'
-import {
-  ClickedOpenMobileMenu,
-  GotApiReferenceMessage,
-  GotComingFromReactMessage,
-  GotExampleDetailMessage,
-  GotSearchMessage,
-  GotUiPageMessage,
-  type Message,
-} from '../message'
+import { Message } from '../message'
 import * as Page from '../page'
 import { defaultRenderHeadingLink } from '../prose'
 import { type DocsRoute, homeRouter } from '../route'
 import * as Search from '../search'
+import { Message as SearchMessage } from '../search/message'
 import { defaultRenderCopyButton } from './codeBlock'
 import { headerNavView } from './headerNav'
 import { betaTag, emailFormView, iconLink, skipNavLink } from './shared'
@@ -39,8 +32,8 @@ const PagefindBody = ih.DataAttribute('pagefind-body', '')
 const PagefindIgnore = ih.DataAttribute('pagefind-ignore', '')
 const LlmIgnore = ih.DataAttribute('llm-ignore', '')
 
-const openSearchDialog: Message = GotSearchMessage({
-  message: Search.ClickedOpenSearch(),
+const openSearchDialog: Message = Message.GotSearchMessage({
+  message: SearchMessage.ClickedOpenSearch(),
 })
 
 /**
@@ -55,7 +48,7 @@ export const searchSubmodelView = (
     slotId: 'search',
     model: model.search,
     view: Search.view,
-    toParentMessage: message => GotSearchMessage({ message }),
+    toParentMessage: message => Message.GotSearchMessage({ message }),
   })
 
 const searchKeyboardWarmupSelector = `#${Search.KEYBOARD_WARMUP_INPUT_ID}`
@@ -153,7 +146,7 @@ export const docsHeaderView = (model: Model, h: HtmlBuilder<Message>) =>
               ),
               h.AriaExpanded(model.mobileMenuDialog.isOpen),
               h.AriaLabel('Toggle menu'),
-              h.OnClick(ClickedOpenMobileMenu()),
+              h.OnClick(Message.ClickedOpenMobileMenu()),
             ],
             [Icon.menu('w-6 h-6')],
           ),
@@ -344,10 +337,10 @@ const withoutTableOfContents = (content: Html): DocsPageView => ({
 })
 
 const toApiReferenceMessage = (message: Page.ApiReference.Message): Message =>
-  GotApiReferenceMessage({ message })
+  Message.GotApiReferenceMessage({ message })
 
 const toUiPageMessage = (message: Page.UiPages.Message): Message =>
-  GotUiPageMessage({ message })
+  Message.GotUiPageMessage({ message })
 
 const renderApiReference = (
   apiReference: Page.ApiReference.Model,
@@ -410,7 +403,8 @@ export const docsView = (
             model: model.comingFromReact,
             view: Page.ComingFromReact.view,
             viewInputs: { renderCopyButton, renderHeadingLink },
-            toParentMessage: message => GotComingFromReactMessage({ message }),
+            toParentMessage: message =>
+              Message.GotComingFromReactMessage({ message }),
           }),
           Page.ComingFromReact.tableOfContents,
         ),
@@ -491,7 +485,8 @@ export const docsView = (
               ),
               renderCopyButton,
             },
-            toParentMessage: message => GotExampleDetailMessage({ message }),
+            toParentMessage: message =>
+              Message.GotExampleDetailMessage({ message }),
           }),
         ),
       BestPracticesSideEffects: () =>

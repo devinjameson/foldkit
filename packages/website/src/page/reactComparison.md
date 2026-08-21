@@ -100,7 +100,7 @@ The return type is `[Model, Command[]]`:
 
 ::Snippet{name="comparisonFoldkitUpdate" label="Foldkit update"}
 
-`M.tagsExhaustive` requires a handler for every Message variant. `evo` preserves references for unchanged fields, which supports view memoization. A handler such as `ClickedUndo` returns the next Model and a `SaveCanvas` Command together.
+`Message.match` requires a handler for every Message variant. `evo` preserves references for unchanged fields, which supports view memoization. A handler such as `ClickedUndo` returns the next Model and a `SaveCanvas` Command together.
 
 :::Info{label="What update answers"}
 For any parent Message, update shows the next parent Model and the Commands caused immediately by that Message. Subscriptions and Mounts have their own declarations because their lifetimes are not caused by a single update transition.
@@ -290,7 +290,7 @@ React’s Action union provides the same property for this reducer. It does not 
 
 ### Safe evolution under type pressure {#safe-evolution}
 
-Both versions can exhaustively handle a new union variant in their transition function. Foldkit extends that check across the Runtime channel because every parent state transition uses a Message. Adding a Message makes `M.tagsExhaustive` fail until update handles it.
+Both versions can exhaustively handle a new union variant in their transition function. Foldkit extends that check across the Runtime channel because every parent state transition uses a Message. Adding a Message makes `Message.match` fail until update handles it.
 
 Exhaustiveness catches an omitted branch, not an incorrect branch or a forgotten product requirement. Tests still have to establish what the new case should do.
 

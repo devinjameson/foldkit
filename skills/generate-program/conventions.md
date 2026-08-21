@@ -54,30 +54,32 @@ CompletedItemsFocus
 // RIGHT: the Message is named from the Command that caused it
 Command.define('DetermineStartTime', {
   args: { elapsedMs: S.Number },
-  messages: [CompletedDetermineStartTime],
+  messages: [Message.CompletedDetermineStartTime],
   execute: ({ elapsedMs }) =>
     Clock.currentTimeMillis.pipe(
       Effect.map(now =>
-        CompletedDetermineStartTime({ startTime: now - elapsedMs }),
+        Message.CompletedDetermineStartTime({ startTime: now - elapsedMs }),
       ),
     ),
 })
 Command.define('GenerateCardId', {
   args: { columnId: S.String },
-  messages: [CompletedGenerateCardId],
+  messages: [Message.CompletedGenerateCardId],
   execute: ({ columnId }) =>
     Effect.uuid.pipe(
-      Effect.map(cardId => CompletedGenerateCardId({ cardId, columnId })),
+      Effect.map(cardId =>
+        Message.CompletedGenerateCardId({ cardId, columnId }),
+      ),
     ),
 })
 Command.define('SaveTodos', {
   args: { todos: Todos },
-  messages: [SucceededSaveTodos, FailedSaveTodos],
+  messages: [Message.SucceededSaveTodos, Message.FailedSaveTodos],
   execute: ({ todos }) =>
     saveTodos(todos).pipe(
       Effect.match({
-        onFailure: () => FailedSaveTodos(),
-        onSuccess: () => SucceededSaveTodos({ todos }),
+        onFailure: () => Message.FailedSaveTodos(),
+        onSuccess: () => Message.SucceededSaveTodos({ todos }),
       }),
     ),
 })
@@ -90,13 +92,17 @@ SavedTodos
 
 The exception is a Message with more than one cause. When several Commands resolve to the same Message, or a Command synthesizes a Message that a Subscription also emits, name it for the fact instead: `EndedAnimation` is produced both by the `WaitForAnimationSettled` Command and by each component's `DetectMovementOrAnimationEnd` race, so no single Command owns the name.
 
+Keep each `defineMessageUnion()` case's payload object on one line when it fits. Let Prettier wrap payloads that need more space, so the declaration remains easy to scan as one variant per line.
+
 #### Succeeded/Failed pairing
 
 Every `Succeeded*` must have a corresponding `Failed*`:
 
 ```ts
-const SucceededFetchWeather = m('SucceededFetchWeather', { weather: Weather })
-const FailedFetchWeather = m('FailedFetchWeather', { error: S.String })
+const Message = defineMessageUnion({
+  SucceededFetchWeather: { weather: Weather },
+  FailedFetchWeather: { error: S.String },
+})
 ```
 
 ### Variables and Functions
@@ -168,14 +174,13 @@ switch (message._tag) {
 }
 
 // RIGHT
-M.value(message).pipe(
-  withUpdateReturn,
-  M.tagsExhaustive({
-    ClickedSubmit: () => [model, []],
-    UpdatedEmail: ({ value }) => [evo(model, { email: () => value }), []],
-  }),
-)
+Message.match<UpdateReturn>(message, {
+  ClickedSubmit: () => [model, []],
+  UpdatedEmail: ({ value }) => [evo(model, { email: () => value }), []],
+})
 ```
+
+Use Effect `Match` for non-Message tagged unions, partial matches with a fallback, or one handler shared by several tags.
 
 ### Array module
 
@@ -242,10 +247,10 @@ The "no pipe for a single operation" rule has one exception: **tail operators on
 // RIGHT: the .pipe(...) is a tail suffix, not a wrapper around a single call
 Effect.gen(function* () {
   // ...
-  return SucceededFetchWeather({ data })
+  return Message.SucceededFetchWeather({ data })
 }).pipe(
   Effect.catch(error =>
-    Effect.succeed(FailedFetchWeather({ error: String(error) })),
+    Effect.succeed(Message.FailedFetchWeather({ error: String(error) })),
   ),
   FetchWeather,
 )
@@ -259,19 +264,22 @@ The `.pipe(Effect.catch(...), FetchWeather)` is multi-step (two tail operators) 
 
 ```ts
 // WRONG: pushUrl returns Effect.Effect<void>, no error to ignore
-pushUrl(path).pipe(Effect.ignore, Effect.as(CompletedNavigateInternal()))
+pushUrl(path).pipe(
+  Effect.ignore,
+  Effect.as(Message.CompletedNavigateInternal()),
+)
 
 // RIGHT: directly swap the void for the success Message
-pushUrl(path).pipe(Effect.as(CompletedNavigateInternal()))
+pushUrl(path).pipe(Effect.as(Message.CompletedNavigateInternal()))
 
 // RIGHT: fallible Effect, handle the error then swap
 httpClient.get(url).pipe(
-  Effect.as(SucceededFetch({ data })),
-  Effect.catch(() => Effect.succeed(FailedFetch())),
+  Effect.as(Message.SucceededFetch({ data })),
+  Effect.catch(() => Effect.succeed(Message.FailedFetch())),
 )
 ```
 
-Same goes for `Dom` primitives: `Dom.focus` can fail (element may not exist), so `Dom.focus(selector).pipe(Effect.ignore, Effect.as(CompletedFocusInput()))` is correct. But `pushUrl`, `load`, `back`, and `forward` from `foldkit/navigation` all return `Effect.Effect<void>`. Skip the `ignore`.
+Same goes for `Dom` primitives: `Dom.focus` can fail (element may not exist), so `Dom.focus(selector).pipe(Effect.ignore, Effect.as(Message.CompletedFocusInput()))` is correct. But `pushUrl`, `load`, `back`, and `forward` from `foldkit/navigation` all return `Effect.Effect<void>`. Skip the `ignore`.
 
 ### Iteration
 
@@ -343,7 +351,7 @@ Use callable constructors, never cast:
 { _tag: 'ClickedSubmit' } as Message
 
 // RIGHT: callable constructor
-ClickedSubmit()
+Message.ClickedSubmit()
 
 // WRONG: manual tagged object
 { _tag: 'Loading' } as DataState
@@ -352,28 +360,32 @@ ClickedSubmit()
 Loading()
 
 // With fields
-SucceededFetch({ data: response })
+Message.SucceededFetch({ data: response })
 ```
 
-**No-field tagged structs take no argument, not an empty object.** `ts('Work')` (and `m('Clicked')`) produces a callable that accepts no argument when the struct has no fields:
+Keep Message and OutMessage constructors on their owning namespace. Never
+destructure them into sibling bindings. `Message.ClickedSubmit()` preserves the
+domain at the call site in a way that `ClickedSubmit()` does not.
+
+**No-field tagged structs take no argument, not an empty object.** `ts('Work')` and Message constructors with empty field records produce callables that accept no argument:
 
 ```ts
 const Work = ts('Work')
 const Idle = ts('Idle')
-const ClickedSubmit = m('ClickedSubmit')
+const Message = defineMessageUnion({ ClickedSubmit: {} })
 
 // WRONG: empty object is redundant and non-idiomatic
 Work({})
 Idle({})
-ClickedSubmit({})
+Message.ClickedSubmit({})
 
 // RIGHT: call with no argument
 Work()
 Idle()
-ClickedSubmit()
+Message.ClickedSubmit()
 
 // Only pass an object when the struct has fields
-SucceededFetch({ data: response })
+Message.SucceededFetch({ data: response })
 Paused({ remainingMs: 400_000 })
 ```
 
@@ -510,7 +522,7 @@ import {
   Url,
 } from 'foldkit'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { r } from 'foldkit/route'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
@@ -554,7 +566,7 @@ Notes:
 - Module-by-module reminders, for example: `Calendar` for `Calendar.CalendarDate`, `Calendar.today.local`, `Calendar.make`, `Calendar.addDays` etc., paired with the `Calendar` or `DatePicker` component from `@foldkit/ui` (the component and the `foldkit` date module share the name `Calendar`; they are different things). `Dom` for DOM-side-effect helpers (`Dom.focus`, `Dom.scrollIntoView`, `Dom.showDialog`, `Dom.closeDialog`, `Dom.lockScroll`, `Dom.unlockScroll`, `Dom.waitForAnimationSettled`, etc.). `File` for file upload primitives paired with `FileDrop` from `@foldkit/ui`. `foldkit/fieldValidation` for form validation.
 - For time, randomness, UUIDs, or delays, use Effect's built-ins directly rather than reaching for a Foldkit module: `Clock.currentTimeMillis`, `Random.nextIntBetween`, `Effect.uuid`, `Effect.sleep(Duration.millis(...))`.
 - When an Effect module name collides with a global, alias the Effect import with a trailing underscore: `String as String_`, `Array as Array_`, `Number as Number_`.
-- `Match as M` is Effect's Match module, imported from `effect`. `M.value`, `M.tagsExhaustive`, and `M.withReturnType` are Effect APIs; Foldkit does not wrap or re-export them.
+- `Message.match` is the exhaustive matcher on a union returned by `defineMessageUnion()`. `Match as M` is Effect's Match module for other tagged unions, partial matching, fallbacks, and handlers shared by several tags.
 - **UI components live in a separate package.** Import them by name from `@foldkit/ui`: `import { Dialog, DatePicker, FileDrop, Toast, Tooltip } from '@foldkit/ui'`. Deep imports (`@foldkit/ui/dialog`) work too. There is no `Ui` export on the `foldkit` package, so `Ui.Dialog.view` does not resolve.
 - **`empty` and `keyed` are properties on `h`**, the builder every view receives as its last parameter. They are not top-level exports of `foldkit/html`, so they never belong in that import list. Same for `h.submodel`.
 - `AsyncData` for remote data state, `Update` for the update return type and the `combine` / `refresh` combinators, `Http` for the `layer` that provides `HttpClient` to a Command.

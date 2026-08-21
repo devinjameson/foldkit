@@ -9,7 +9,7 @@ import {
   makeRules,
   validate,
 } from 'foldkit/fieldValidation'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { DatePicker } from '@foldkit/ui'
@@ -46,41 +46,27 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const UpdatedCompany = m('UpdatedCompany', { value: S.String })
-export const UpdatedTitle = m('UpdatedTitle', { value: S.String })
-export const GotStartDateMessage = m('GotStartDateMessage', {
-  message: DatePicker.Message,
+export const Message = defineMessageUnion({
+  UpdatedCompany: { value: S.String },
+  UpdatedTitle: { value: S.String },
+  GotStartDateMessage: { message: DatePicker.Message },
+  GotEndDateMessage: { message: DatePicker.Message },
+  ToggledCurrentlyEmployed: { isChecked: S.Boolean },
+  UpdatedDescription: { value: S.String },
+  ClickedRemoveSelf: {},
 })
-export const GotEndDateMessage = m('GotEndDateMessage', {
-  message: DatePicker.Message,
-})
-export const ToggledCurrentlyEmployed = m('ToggledCurrentlyEmployed', {
-  isChecked: S.Boolean,
-})
-export const UpdatedDescription = m('UpdatedDescription', {
-  value: S.String,
-})
-export const ClickedRemoveSelf = m('ClickedRemoveSelf')
 
-export const Message = S.Union([
-  UpdatedCompany,
-  UpdatedTitle,
-  GotStartDateMessage,
-  GotEndDateMessage,
-  ToggledCurrentlyEmployed,
-  UpdatedDescription,
-  ClickedRemoveSelf,
-])
 export type Message = typeof Message.Type
 
 // OUT MESSAGE
 
-export const Removed = m('Removed')
+export const OutMessage = defineMessageUnion({
+  Removed: {},
+})
 
-export const OutMessage = S.Union([Removed])
 export type OutMessage = typeof OutMessage.Type
 
-export type Removed = typeof Removed.Type
+export type Removed = typeof OutMessage.Removed.Type
 
 // INIT
 
@@ -132,7 +118,7 @@ const foldStartDate = Update.foldChild({
   read: (model: Model) => Option.some(model.startDate),
   write: (model, nextStartDate) =>
     evo(model, { startDate: () => nextStartDate }),
-  toParentMessage: message => GotStartDateMessage({ message }),
+  toParentMessage: message => Message.GotStartDateMessage({ message }),
   toParentOutMessage: () => Option.none(),
   foldOutMessage: foldStartDateOutMessage,
 })
@@ -164,46 +150,43 @@ const foldEndDate = Update.foldChild({
   update: DatePicker.update,
   read: (model: Model) => Option.some(model.endDate),
   write: (model, nextEndDate) => evo(model, { endDate: () => nextEndDate }),
-  toParentMessage: message => GotEndDateMessage({ message }),
+  toParentMessage: message => Message.GotEndDateMessage({ message }),
   toParentOutMessage: () => Option.none(),
   foldOutMessage: foldEndDateOutMessage,
 })
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    M.withReturnType<UpdateReturn>(),
-    M.tagsExhaustive({
-      UpdatedCompany: ({ value }) => [
-        evo(model, { company: () => validateCompany(value) }),
-        [],
-        Option.none(),
-      ],
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    UpdatedCompany: ({ value }) => [
+      evo(model, { company: () => validateCompany(value) }),
+      [],
+      Option.none(),
+    ],
 
-      UpdatedTitle: ({ value }) => [
-        evo(model, { title: () => validateTitle(value) }),
-        [],
-        Option.none(),
-      ],
+    UpdatedTitle: ({ value }) => [
+      evo(model, { title: () => validateTitle(value) }),
+      [],
+      Option.none(),
+    ],
 
-      GotStartDateMessage: ({ message }) => foldStartDate(model, message),
+    GotStartDateMessage: ({ message }) => foldStartDate(model, message),
 
-      GotEndDateMessage: ({ message }) => foldEndDate(model, message),
+    GotEndDateMessage: ({ message }) => foldEndDate(model, message),
 
-      ToggledCurrentlyEmployed: ({ isChecked }) => [
-        evo(model, { isCurrentlyEmployed: () => isChecked }),
-        [],
-        Option.none(),
-      ],
+    ToggledCurrentlyEmployed: ({ isChecked }) => [
+      evo(model, { isCurrentlyEmployed: () => isChecked }),
+      [],
+      Option.none(),
+    ],
 
-      UpdatedDescription: ({ value }) => [
-        evo(model, { description: () => value }),
-        [],
-        Option.none(),
-      ],
+    UpdatedDescription: ({ value }) => [
+      evo(model, { description: () => value }),
+      [],
+      Option.none(),
+    ],
 
-      ClickedRemoveSelf: () => [model, [], Option.some(Removed())],
-    }),
-  )
+    ClickedRemoveSelf: () => [model, [], Option.some(OutMessage.Removed())],
+  })
 
 // VALIDATION SUMMARY
 

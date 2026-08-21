@@ -1,6 +1,6 @@
 import { Schema as S } from 'effect'
 import { Calendar } from 'foldkit'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { UrlRequest } from 'foldkit/navigation'
 import { Url } from 'foldkit/url'
 
@@ -20,18 +20,17 @@ export type ResolvedTheme = typeof ResolvedTheme.Type
 
 // MESSAGE
 
-export const CompletedNavigateInternal = m('CompletedNavigateInternal')
-export const CompletedLoadExternal = m('CompletedLoadExternal')
-export const CompletedInjectAnalytics = m('CompletedInjectAnalytics')
-export const CompletedInjectSpeedInsights = m('CompletedInjectSpeedInsights')
-export const CompletedScrollToTop = m('CompletedScrollToTop')
-export const CompletedScrollToAnchor = m('CompletedScrollToAnchor')
-export const CompletedApplyTheme = m('CompletedApplyTheme')
-export const CompletedSaveThemePreference = m('CompletedSaveThemePreference')
-export const CompletedSaveSidebarState = m('CompletedSaveSidebarState')
-export const CompletedLoadBrowserEnvironment = m(
-  'CompletedLoadBrowserEnvironment',
-  {
+export const Message = defineMessageUnion({
+  CompletedNavigateInternal: {},
+  CompletedLoadExternal: {},
+  CompletedInjectAnalytics: {},
+  CompletedInjectSpeedInsights: {},
+  CompletedScrollToTop: {},
+  CompletedScrollToAnchor: {},
+  CompletedApplyTheme: {},
+  CompletedSaveThemePreference: {},
+  CompletedSaveSidebarState: {},
+  CompletedLoadBrowserEnvironment: {
     maybeThemePreference: S.Option(ThemePreference),
     maybeSidebarState: S.Option(SidebarState),
     systemTheme: ResolvedTheme,
@@ -40,139 +39,37 @@ export const CompletedLoadBrowserEnvironment = m(
     currentYear: S.Number,
     today: Calendar.CalendarDate,
   },
-)
-export const CompletedScrollSidebarActiveLinkIntoView = m(
-  'CompletedScrollSidebarActiveLinkIntoView',
-)
-export const CompletedScrollMobileMenuActiveLinkIntoView = m(
-  'CompletedScrollMobileMenuActiveLinkIntoView',
-)
-export const SucceededCopyLink = m('SucceededCopyLink')
-export const FailedCopyLink = m('FailedCopyLink')
-export const ClickedLink = m('ClickedLink', {
-  request: UrlRequest,
+  CompletedScrollSidebarActiveLinkIntoView: {},
+  CompletedScrollMobileMenuActiveLinkIntoView: {},
+  SucceededCopyLink: {},
+  FailedCopyLink: {},
+  ClickedLink: { request: UrlRequest },
+  ChangedUrl: { url: Url },
+  ClickedCopySnippet: { text: S.String },
+  ClickedCopyLink: { hash: S.String },
+  SucceededCopySnippet: { text: S.String },
+  FailedCopySnippet: {},
+  CompletedWaitBeforeHidingCopiedIndicator: { text: S.String },
+  GotMobileMenuDialogMessage: { message: Dialog.Message },
+  ClickedOpenMobileMenu: {},
+  ToggledMobileTableOfContents: { isOpen: S.Boolean },
+  ClickedMobileTableOfContentsLink: { sectionId: S.String },
+  ChangedActiveSection: { sectionId: S.String },
+  SelectedThemePreference: { preference: ThemePreference },
+  ChangedSystemTheme: { theme: ResolvedTheme },
+  ChangedViewportWidth: { isNarrow: S.Boolean },
+  ToggledAiHeading: {},
+  GotDemoTabsMessage: { message: Tabs.Message },
+  GotPlaygroundMenuMessage: { message: Menu.Message },
+  GotPlaygroundMessage: { message: Page.Playground.Message },
+  GotAsyncCounterDemoMessage: { message: Page.AsyncCounterDemo.Message },
+  GotNotePlayerDemoMessage: { message: Page.NotePlayerDemo.Message },
+  GotComingFromReactMessage: { message: Page.ComingFromReact.Message },
+  GotApiReferenceMessage: { message: Page.ApiReference.Message },
+  GotUiPageMessage: { message: Page.UiPages.Message },
+  ToggledSidebarGroup: { key: GroupKey, isOpen: S.Boolean },
+  GotExampleDetailMessage: { message: Page.Example.ExampleDetail.Message },
+  GotSearchMessage: { message: Search.Message },
+  ToggledMapMessagesUnderHood: { isOpen: S.Boolean },
 })
-export const ChangedUrl = m('ChangedUrl', { url: Url })
-export const ClickedCopySnippet = m('ClickedCopySnippet', {
-  text: S.String,
-})
-export const ClickedCopyLink = m('ClickedCopyLink', {
-  hash: S.String,
-})
-export const SucceededCopySnippet = m('SucceededCopySnippet', {
-  text: S.String,
-})
-export const FailedCopySnippet = m('FailedCopySnippet')
-export const CompletedWaitBeforeHidingCopiedIndicator = m(
-  'CompletedWaitBeforeHidingCopiedIndicator',
-  { text: S.String },
-)
-export const GotMobileMenuDialogMessage = m('GotMobileMenuDialogMessage', {
-  message: Dialog.Message,
-})
-export const ClickedOpenMobileMenu = m('ClickedOpenMobileMenu')
-export const ToggledMobileTableOfContents = m('ToggledMobileTableOfContents', {
-  isOpen: S.Boolean,
-})
-export const ClickedMobileTableOfContentsLink = m(
-  'ClickedMobileTableOfContentsLink',
-  {
-    sectionId: S.String,
-  },
-)
-export const ChangedActiveSection = m('ChangedActiveSection', {
-  sectionId: S.String,
-})
-export const SelectedThemePreference = m('SelectedThemePreference', {
-  preference: ThemePreference,
-})
-export const ChangedSystemTheme = m('ChangedSystemTheme', {
-  theme: ResolvedTheme,
-})
-export const ChangedViewportWidth = m('ChangedViewportWidth', {
-  isNarrow: S.Boolean,
-})
-export const ToggledAiHeading = m('ToggledAiHeading')
-export const GotDemoTabsMessage = m('GotDemoTabsMessage', {
-  message: Tabs.Message,
-})
-export const GotPlaygroundMenuMessage = m('GotPlaygroundMenuMessage', {
-  message: Menu.Message,
-})
-export const GotPlaygroundMessage = m('GotPlaygroundMessage', {
-  message: Page.Playground.Message,
-})
-export const GotAsyncCounterDemoMessage = m('GotAsyncCounterDemoMessage', {
-  message: Page.AsyncCounterDemo.Message,
-})
-export const GotNotePlayerDemoMessage = m('GotNotePlayerDemoMessage', {
-  message: Page.NotePlayerDemo.Message,
-})
-export const GotComingFromReactMessage = m('GotComingFromReactMessage', {
-  message: Page.ComingFromReact.Message,
-})
-export const GotApiReferenceMessage = m('GotApiReferenceMessage', {
-  message: Page.ApiReference.Message,
-})
-export const GotUiPageMessage = m('GotUiPageMessage', {
-  message: Page.UiPages.Message,
-})
-export const ToggledSidebarGroup = m('ToggledSidebarGroup', {
-  key: GroupKey,
-  isOpen: S.Boolean,
-})
-export const GotExampleDetailMessage = m('GotExampleDetailMessage', {
-  message: Page.Example.ExampleDetail.Message,
-})
-export const GotSearchMessage = m('GotSearchMessage', {
-  message: Search.Message,
-})
-export const ToggledMapMessagesUnderHood = m('ToggledMapMessagesUnderHood', {
-  isOpen: S.Boolean,
-})
-
-export const Message = S.Union([
-  CompletedNavigateInternal,
-  CompletedLoadExternal,
-  CompletedInjectAnalytics,
-  CompletedInjectSpeedInsights,
-  CompletedScrollToTop,
-  CompletedScrollToAnchor,
-  CompletedApplyTheme,
-  CompletedSaveThemePreference,
-  CompletedSaveSidebarState,
-  CompletedLoadBrowserEnvironment,
-  CompletedScrollSidebarActiveLinkIntoView,
-  CompletedScrollMobileMenuActiveLinkIntoView,
-  SucceededCopyLink,
-  FailedCopyLink,
-  ClickedLink,
-  ChangedUrl,
-  ClickedCopySnippet,
-  ClickedCopyLink,
-  SucceededCopySnippet,
-  FailedCopySnippet,
-  CompletedWaitBeforeHidingCopiedIndicator,
-  GotMobileMenuDialogMessage,
-  ClickedOpenMobileMenu,
-  ToggledMobileTableOfContents,
-  ClickedMobileTableOfContentsLink,
-  ChangedActiveSection,
-  SelectedThemePreference,
-  ChangedSystemTheme,
-  ChangedViewportWidth,
-  ToggledAiHeading,
-  GotDemoTabsMessage,
-  GotPlaygroundMenuMessage,
-  GotPlaygroundMessage,
-  GotAsyncCounterDemoMessage,
-  GotNotePlayerDemoMessage,
-  GotUiPageMessage,
-  GotComingFromReactMessage,
-  GotApiReferenceMessage,
-  ToggledSidebarGroup,
-  GotExampleDetailMessage,
-  GotSearchMessage,
-  ToggledMapMessagesUnderHood,
-])
 export type Message = typeof Message.Type

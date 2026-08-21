@@ -4,7 +4,7 @@
 import { Match as M, Option } from 'effect'
 import { Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Tabs } from '@foldkit/ui'
@@ -33,8 +33,8 @@ const init = () => [
 ]
 
 // Embed the Tabs Message in your parent Message:
-const GotTabsMessage = m('GotTabsMessage', {
-  message: Tabs.Message,
+const Message = defineMessageUnion({
+  GotTabsMessage: { message: Tabs.Message },
 })
 
 // Declare a typed Tabs factory once at module scope. The Value generic
@@ -76,11 +76,11 @@ const foldTabs = Update.foldChild({
   update: FrameworkTabs.update,
   read: (model: Model) => Option.some(model.tabs),
   write: (model, nextTabs) => evo(model, { tabs: () => nextTabs }),
-  toParentMessage: message => GotTabsMessage({ message }),
+  toParentMessage: message => Message.GotTabsMessage({ message }),
   foldOutMessage: foldTabsOutMessage,
 })
 
-// Inside your update function's M.tagsExhaustive({...}), call the fold:
+// Inside your update function's Message.match({...}), call the fold:
 GotTabsMessage: ({ message }) => foldTabs(model, message)
 
 // Inside your view function, embed the tabs via h.submodel and pass the
@@ -123,5 +123,5 @@ const view = (model: Model, h: HtmlBuilder<Message>) =>
           ],
         ),
     },
-    toParentMessage: message => GotTabsMessage({ message }),
+    toParentMessage: message => Message.GotTabsMessage({ message }),
   })

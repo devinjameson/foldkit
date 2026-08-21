@@ -6,6 +6,7 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 import { Button, FileDrop } from '@foldkit/ui'
 
 import { Attachments } from '../step'
+import { Message } from '../step/attachments'
 
 const BYTES_PER_KB = 1024
 const BYTES_PER_MB = BYTES_PER_KB * BYTES_PER_KB
@@ -58,7 +59,7 @@ const resumeView = (
       ),
       Button.view(
         {
-          onClick: Attachments.RemovedResume(),
+          onClick: Message.RemovedResume(),
           toView: attributes =>
             h.button(
               [
@@ -101,7 +102,7 @@ const additionalFileView = (
       ),
       Button.view(
         {
-          onClick: Attachments.RemovedAdditionalFile({ fileIndex }),
+          onClick: Message.RemovedAdditionalFile({ fileIndex }),
           toView: attributes =>
             h.button(
               [
@@ -157,7 +158,7 @@ export const attachmentsView = Submodel.defineView<
                 ),
             },
             toParentMessage: message =>
-              Attachments.GotResumeDropMessage({ message }),
+              Message.GotResumeDropMessage({ message }),
           }),
         onSome: resume => resumeView(resume, h),
       }),
@@ -194,7 +195,7 @@ export const attachmentsView = Submodel.defineView<
             ),
         },
         toParentMessage: message =>
-          Attachments.GotAdditionalFilesDropMessage({ message }),
+          Message.GotAdditionalFilesDropMessage({ message }),
       }),
       ...Array.match(additionalFiles, {
         onEmpty: () => [],
