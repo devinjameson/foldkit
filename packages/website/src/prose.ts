@@ -4,6 +4,7 @@ import { twMerge } from 'tailwind-merge'
 
 import { Icon } from './icon'
 import { type TableOfContentsEntry } from './main'
+import { dedentDiagram } from './markdown/diagram'
 import { ClickedCopyLink, type Message } from './message'
 
 /**
@@ -300,7 +301,7 @@ export const diagram = (content: string): Html =>
         'mb-4 mx-auto w-fit max-w-full text-[#403d4a] dark:text-[#E0DEE6] text-sm p-4 overflow-x-auto rounded-lg bg-gray-100 dark:bg-[#1c1a20] border border-gray-200 dark:border-gray-700/50',
       ),
     ],
-    [content],
+    [dedentDiagram(content)],
   )
 
 /**
