@@ -128,6 +128,7 @@ const FORCE_INCLUDED_EFFECT_NAMESPACES: ReadonlyArray<string> = [
   'effect/Runtime',
   'effect/Scheduler',
   'effect/Schema',
+  'effect/SchemaAST',
   'effect/SchemaIssue',
   'effect/SchemaTransformation',
   'effect/Scope',
