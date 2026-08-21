@@ -171,7 +171,7 @@ export const docsFooterView = (
   h.footer(
     [
       h.Class(
-        'px-4 py-6 md:px-6 mt-6 border-t border-gray-300 dark:border-gray-800',
+        'px-4 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] md:px-6 mt-6 border-t border-gray-300 dark:border-gray-800',
       ),
     ],
     [
