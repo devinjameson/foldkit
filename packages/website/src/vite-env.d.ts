@@ -134,6 +134,7 @@ interface Navigator {
 // failure past the compiler and into the served page.
 interface ImportMetaEnv {
   readonly FOLDKIT_BUILD_ID: string
+  readonly VITE_FOLDKIT_CANARY_COMMIT?: string
 }
 
 interface ImportMeta {

@@ -9,6 +9,7 @@ import { Calendar } from 'foldkit'
 import { Server } from 'foldkit/experimental'
 import { fromString as urlFromString } from 'foldkit/url'
 
+import { deployment } from './deployment'
 import { Flags, init, view } from './main'
 import { ParsedApiReference } from './page/apiReference/domain'
 import { type ApiData, sliceApiDataToModule } from './page/apiReference/model'
@@ -27,6 +28,7 @@ const baseFlags: Effect.Effect<typeof Flags.Type> = Effect.gen(function* () {
   return Flags.make({
     currentYear,
     today,
+    deployment,
     maybeApiData: Option.none(),
     maybeExampleSources: Option.none(),
   })

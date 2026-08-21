@@ -34,6 +34,7 @@ import { inject } from '@vercel/analytics'
 import * as SpeedInsights from '@vercel/speed-insights'
 
 import * as DemoTab from './demoTab'
+import { Deployment, isTelemetryEnabled } from './deployment'
 import {
   DOCS_SIDEBAR_NAV_ID,
   MOBILE_MENU_NAV_ID,
@@ -95,7 +96,13 @@ import {
   SidebarStateJsonString,
 } from './sidebarStorage'
 import * as Subscriptions from './subscription'
-import { blogView, docsView, landingView, newsletterView } from './view'
+import {
+  blogView,
+  canaryBanner,
+  docsView,
+  landingView,
+  newsletterView,
+} from './view'
 
 export type { Message } from './message'
 
@@ -134,6 +141,7 @@ const resolveTheme = (
 export const Flags = S.Struct({
   currentYear: S.Number,
   today: Calendar.CalendarDate,
+  deployment: Deployment,
   maybeApiData: S.Option(ApiData),
   maybeExampleSources: S.Option(ExampleSources),
 })
@@ -216,6 +224,7 @@ const loadBrowserEnvironment = Effect.gen(function* () {
 export const Model = S.Struct({
   route: AppRoute,
   url: Url,
+  deployment: Deployment,
   copiedSnippets: S.HashSet(S.String),
   maybeGitHubStarCount: S.Option(S.Number),
   currentYear: S.Number,
@@ -432,10 +441,15 @@ export const init: Runtime.RoutingApplicationInit<
     message => GotExampleDetailMessage({ message }),
   )
 
+  const analyticsCommands = isTelemetryEnabled(flags.deployment)
+    ? [InjectAnalytics(), InjectSpeedInsights()]
+    : []
+
   return [
     {
       route: initialRoute,
       url,
+      deployment: flags.deployment,
       copiedSnippets: HashSet.empty(),
       maybeGitHubStarCount: Option.fromNullishOr(githubStarCount),
       currentYear: flags.currentYear,
@@ -471,8 +485,7 @@ export const init: Runtime.RoutingApplicationInit<
     },
     [
       LoadBrowserEnvironment(),
-      InjectAnalytics(),
-      InjectSpeedInsights(),
+      ...analyticsCommands,
       ...mappedUiPagesCommands,
       ...mappedComingFromReactCommands,
       ...mappedApiReferenceCommands,
@@ -1256,9 +1269,8 @@ const LoadExternal = Command.define('LoadExternal', {
 
 // VIEW
 
-export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
-  title: routeTitle(model.route, model.apiReference.apiData),
-  body: M.value(model.route).pipe(
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
+  const body = M.value(model.route).pipe(
     M.tag('Home', () => landingView(model, h)),
     M.tag('Newsletter', () => newsletterView(model, h)),
     M.tag('Blog', 'BlogPost', route => blogView(model, route, h)),
@@ -1276,8 +1288,18 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
       }),
     ),
     M.orElse(route => docsView(model, route, h)),
-  ),
-})
+  )
+
+  return {
+    title: routeTitle(model.route, model.apiReference.apiData),
+    body: M.value(model.deployment).pipe(
+      M.tagsExhaustive({
+        Production: () => body,
+        Canary: ({ commit }) => h.div([], [body, canaryBanner(commit)]),
+      }),
+    ),
+  }
+}
 
 // TITLE
 
