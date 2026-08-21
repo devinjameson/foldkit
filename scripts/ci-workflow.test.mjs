@@ -79,7 +79,11 @@ test('peer floor changes run the packed-manifest check before release', () => {
       "      - name: Check packed peer dependency floors\n        if: steps.scope.outputs.peer_floors == 'true'\n        run: pnpm check:peer-floors",
     ),
   )
-  assert.match(releaseWorkflow, /^\s+- 'scripts\/check-peer-floors\.ts'$/m)
+  assert.match(
+    rootPackage.scripts.release,
+    /^pnpm check:peer-floors && pnpm build:packages && changeset publish$/,
+  )
+  assert.doesNotMatch(releaseWorkflow, /^\s+paths:/m)
 })
 
 test('browser-backed scaffold checks install Chromium exactly once', () => {

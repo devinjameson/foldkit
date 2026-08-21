@@ -1,3 +1,5 @@
+import { Effect, Layer } from 'effect'
+import { HttpClient, HttpClientResponse } from 'effect/unstable/http'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -5,7 +7,9 @@ import { expect } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
 
-import { applyPackageManager } from './files.js'
+import { applyPackageManager, fetchExampleFileList } from './files.js'
+
+const CANARY_COMMIT = '1234567890abcdef1234567890abcdef12345678'
 
 const templatePath = (relativePath: string): string =>
   fileURLToPath(new URL(`../../templates/${relativePath}`, import.meta.url))
@@ -59,6 +63,64 @@ describe('applyPackageManager', () => {
     expect(pnpm).toContain('pnpm install')
     expect(pnpm).toContain('pnpm dev')
     expect(pnpm).not.toContain('{{')
+  })
+})
+
+describe('fetchExampleFileList', () => {
+  it.effect('pins every GitHub Contents request to the canary commit', () => {
+    const requestedUrls: Array<string> = []
+    const nestedUrl =
+      'https://api.github.com/repos/foldkit/foldkit/contents/examples/counter/src/nested'
+    const mainFile = {
+      name: 'main.ts',
+      path: 'examples/counter/src/main.ts',
+      download_url: `https://raw.githubusercontent.com/foldkit/foldkit/${CANARY_COMMIT}/examples/counter/src/main.ts`,
+      type: 'file',
+      url: 'https://api.github.com/main.ts',
+    }
+    const nestedFile = {
+      name: 'view.ts',
+      path: 'examples/counter/src/nested/view.ts',
+      download_url: `https://raw.githubusercontent.com/foldkit/foldkit/${CANARY_COMMIT}/examples/counter/src/nested/view.ts`,
+      type: 'file',
+      url: 'https://api.github.com/view.ts',
+    }
+
+    const mockClient = HttpClient.make(request =>
+      Effect.sync(() => {
+        requestedUrls.push(request.url)
+
+        const responseBody = request.url.startsWith(nestedUrl)
+          ? [nestedFile]
+          : [
+              mainFile,
+              {
+                name: 'nested',
+                path: 'examples/counter/src/nested',
+                download_url: null,
+                type: 'dir',
+                url: nestedUrl,
+              },
+            ]
+
+        return HttpClientResponse.fromWeb(
+          request,
+          new Response(JSON.stringify(responseBody), { status: 200 }),
+        )
+      }),
+    )
+
+    return Effect.gen(function* () {
+      const files = yield* fetchExampleFileList('counter', CANARY_COMMIT).pipe(
+        Effect.provide(Layer.succeed(HttpClient.HttpClient, mockClient)),
+      )
+
+      expect(requestedUrls).toEqual([
+        `https://api.github.com/repos/foldkit/foldkit/contents/examples/counter/src?ref=${CANARY_COMMIT}`,
+        `${nestedUrl}?ref=${CANARY_COMMIT}`,
+      ])
+      expect(files).toEqual([mainFile, nestedFile])
+    })
   })
 })
 

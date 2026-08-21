@@ -82,7 +82,9 @@
     "dev:example:ssr": "pnpm --filter ssr-example dev",
     "changeset": "changeset",
     "version-packages": "changeset version && tsx scripts/reset-peer-deps.ts && pnpm install --no-frozen-lockfile",
+    "version-packages:canary": "node scripts/package-canary.mjs prepare && changeset version --snapshot canary && pnpm install --no-frozen-lockfile",
     "release": "pnpm check:peer-floors && pnpm build:packages && changeset publish",
+    "release:canary": "node scripts/package-canary.mjs publish \"$FOLDKIT_CANARY_COMMIT\" origin/main",
     "check:dom-state-parity": "tsx scripts/check-dom-state-parity.mts",
     "check:published-versions": "tsx scripts/check-published-versions.ts"
   },

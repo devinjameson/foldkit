@@ -1,3 +1,4 @@
+import { Option } from 'effect'
 import { readFileSync } from 'node:fs'
 import { expect } from 'vitest'
 
@@ -9,9 +10,14 @@ import {
   buildUnresolvedDevDeps,
   dependencyExample,
   devCommand,
+  exampleSourceReference,
   installCommand,
+  resolveFoldkitCanaryVersion,
   scaffoldDevDependencies,
 } from './packages.js'
+
+const CANARY_COMMIT = '0123456789abcdef0123456789abcdef01234567'
+const CANARY_VERSION = `0.0.0-canary-${CANARY_COMMIT}-20260821213000`
 
 describe('buildUnresolvedDeps', () => {
   it('keeps third-party versions, resolves Foldkit workspace deps to latest, and drops foreign workspace deps', () => {
@@ -76,6 +82,31 @@ describe('dependencyExample', () => {
     )
     expect(dependencyExample(Scaffold.Ssg())).toBe('ssg')
     expect(dependencyExample(Scaffold.Ssr())).toBe('ssr')
+  })
+})
+
+describe('canary package resolution', () => {
+  it('pins Foldkit packages to the CLI snapshot', () => {
+    expect(resolveFoldkitCanaryVersion(CANARY_VERSION, 'foldkit')).toEqual(
+      Option.some(CANARY_VERSION),
+    )
+    expect(resolveFoldkitCanaryVersion(CANARY_VERSION, '@foldkit/ui')).toEqual(
+      Option.some(CANARY_VERSION),
+    )
+  })
+
+  it('leaves stable and third-party packages on latest resolution', () => {
+    expect(resolveFoldkitCanaryVersion('0.27.3', 'foldkit')).toEqual(
+      Option.none(),
+    )
+    expect(resolveFoldkitCanaryVersion(CANARY_VERSION, 'effect')).toEqual(
+      Option.none(),
+    )
+  })
+
+  it('reads canary examples from the encoded commit', () => {
+    expect(exampleSourceReference(CANARY_VERSION)).toBe(CANARY_COMMIT)
+    expect(exampleSourceReference('0.27.3')).toBe('main')
   })
 })
 

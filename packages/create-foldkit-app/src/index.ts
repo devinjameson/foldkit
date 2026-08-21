@@ -2,7 +2,6 @@
 import { Effect, Layer, Option, Schema } from 'effect'
 import { Command, Flag } from 'effect/unstable/cli'
 import { FetchHttpClient } from 'effect/unstable/http'
-import { createRequire } from 'node:module'
 
 import { NodeRuntime, NodeServices, NodeStdio } from '@effect/platform-node'
 
@@ -10,11 +9,7 @@ import { create as create_ } from './commands/create.js'
 import { EXAMPLE_VALUES } from './examples.js'
 import { RENDERING_VALUES } from './rendering.js'
 import { validateProjectName } from './validateName.js'
-
-/* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-const packageJson = createRequire(import.meta.url)('../package.json') as {
-  version: string
-}
+import { PACKAGE_VERSION } from './version.js'
 
 const nameSchema = Schema.String.pipe(
   Schema.check(
@@ -79,7 +74,7 @@ const create = Command.make(
 ).pipe(Command.withDescription('Create a new Foldkit application'))
 
 const cli = Command.run(create, {
-  version: packageJson.version,
+  version: PACKAGE_VERSION,
 })
 
 cli.pipe(

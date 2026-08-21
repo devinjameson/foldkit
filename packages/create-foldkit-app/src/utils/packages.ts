@@ -16,6 +16,7 @@ import { HttpClient, HttpClientRequest } from 'effect/unstable/http'
 import { spawn } from 'node:child_process'
 
 import { type Scaffold } from '../rendering.js'
+import { PACKAGE_VERSION } from '../version.js'
 
 export type PackageManager = 'pnpm' | 'npm' | 'yarn' | 'bun'
 
@@ -44,12 +45,9 @@ export const runScriptCommand = (
   script: string,
 ): string => `${RUN_SCRIPT_PREFIXES[packageManager]} ${script}`
 
-const GITHUB_RAW_BASE_URL =
-  'https://raw.githubusercontent.com/foldkit/foldkit/main/examples'
-
 const NPM_REGISTRY_BASE_URL = 'https://registry.npmjs.org'
-
 const FOLDKIT_SCOPE_PREFIX = '@foldkit/'
+const CANARY_VERSION_PATTERN = /^0\.0\.0-canary-([0-9a-f]{40})-\d{14}$/
 
 const isWindows = process.platform === 'win32'
 
@@ -92,6 +90,35 @@ const SERVER_RENDERING_DEV_DEPENDENCIES = ['@types/node']
 const isFoldkitPackage = (name: string): boolean =>
   name === 'foldkit' || name.startsWith(FOLDKIT_SCOPE_PREFIX)
 
+const canaryCommit = (packageVersion: string): Option.Option<string> => {
+  const match = Option.fromNullishOr(
+    CANARY_VERSION_PATTERN.exec(packageVersion),
+  )
+
+  return Option.flatMap(match, groups => Array.get(groups, 1))
+}
+
+/**
+ * Resolve a Foldkit dependency to the exact snapshot version when the
+ * scaffolder itself is a canary.
+ */
+export const resolveFoldkitCanaryVersion = (
+  packageVersion: string,
+  name: string,
+): Option.Option<string> => {
+  if (!isFoldkitPackage(name)) {
+    return Option.none()
+  }
+
+  return Option.map(canaryCommit(packageVersion), () => packageVersion)
+}
+
+/** The Git reference that supplies example manifests for this CLI version. */
+export const exampleSourceReference = (packageVersion: string): string =>
+  Option.getOrElse(canaryCommit(packageVersion), () => 'main')
+
+const GITHUB_RAW_BASE_URL = `https://raw.githubusercontent.com/foldkit/foldkit/${exampleSourceReference(PACKAGE_VERSION)}/examples`
+
 type UnresolvedSpec = Data.TaggedEnum<{
   Keep: { readonly version: string }
   Latest: {}
@@ -114,8 +141,8 @@ const toUnresolvedSpec = (
 /**
  * Build the runtime dependency map for a scaffolded project from an example's
  * raw `dependencies`. Concrete versions are kept, Foldkit monorepo packages are
- * marked for latest-version resolution, and any other workspace packages (which
- * are not published) are dropped.
+ * marked for published-version resolution, and any other workspace packages
+ * (which are not published) are dropped.
  */
 export const buildUnresolvedDeps = (
   exampleDeps: Record<string, string>,
@@ -126,7 +153,7 @@ export const buildUnresolvedDeps = (
  * Build the devDependency map for a scaffolded project by merging the always-on
  * template tooling and any extra scaffold devDependencies with the example's
  * own `devDependencies`. A concrete version from the example wins over a
- * latest marker for the same package.
+ * published-version marker for the same package.
  */
 export const buildUnresolvedDevDeps = (
   exampleDevDeps: Record<string, string>,
@@ -190,10 +217,14 @@ const resolveEntry = (name: string, spec: UnresolvedSpec) =>
     Match.tagsExhaustive({
       Keep: ({ version }) => Effect.succeed([name, version] as const),
       Latest: () =>
-        Effect.map(
-          resolveLatestVersion(name),
-          version => [name, version] as const,
-        ),
+        Option.match(resolveFoldkitCanaryVersion(PACKAGE_VERSION, name), {
+          onNone: () =>
+            Effect.map(
+              resolveLatestVersion(name),
+              version => [name, version] as const,
+            ),
+          onSome: version => Effect.succeed([name, version] as const),
+        }),
     }),
   )
 

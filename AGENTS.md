@@ -141,6 +141,7 @@ If a Mount factory doesn't read or write its element, you've misidentified the c
 - Do not co-author or mention AI assistants in commit messages or release notes.
 - Use the repo's commit helper when asked to create a commit: `/commit` in Claude Code, `.agents/skills/commit-changes` in Codex.
 - Treat every pull request title and description as the final squash commit message. The title is the Conventional Commit subject, and the description is the commit body. Keep review-only boilerplate, checklists, generated commit lists, and verification details out of the description. Put verification details in a pull request comment instead.
+- After creating or amending a commit, have a separate agent review the exact committed diff before pushing it or opening a PR. Treat the review as a gate: address every finding, amend the commit, and have the amended commit reviewed again. Only push or open the PR after the latest commit passes review.
 - Squash-merge only. `gh pr merge --squash`.
 
 ## Editing Rules

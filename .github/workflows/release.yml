@@ -4,24 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - '.changeset/**'
-      - 'packages/foldkit/**'
-      - 'packages/ui/**'
-      - 'packages/devtools/**'
-      - 'packages/markdown/**'
-      - 'packages/vite-plugin-foldkit/**'
-      - 'packages/create-foldkit-app/**'
-      - 'packages/oxlint-plugin-foldkit/**'
-      - 'packages/devtools-mcp/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - 'scripts/check-changeset-ignore.ts'
-      - 'scripts/check-create-foldkit-app-smoke.ts'
-      - 'scripts/check-peer-floors.ts'
-      - 'scripts/reset-peer-deps.ts'
-      - '.github/workflows/release.yml'
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -86,3 +68,70 @@ jobs:
     with:
       published_commit: ${{ github.sha }}
     secrets: inherit
+
+  publish-canary:
+    name: Publish package canaries
+    needs: release
+    if: needs.release.outputs.published != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Version package canaries
+        run: pnpm version-packages:canary
+
+      - name: Verify package canary versions
+        id: canary
+        env:
+          CANARY_COMMIT: ${{ github.sha }}
+        run: node scripts/package-canary.mjs inspect "$CANARY_COMMIT" >> "$GITHUB_OUTPUT"
+
+      - name: Build package canaries
+        run: pnpm build:packages
+
+      - name: Verify packed package canaries
+        env:
+          CANARY_COMMIT: ${{ github.sha }}
+        run: node scripts/package-canary.mjs inspect-packed "$CANARY_COMMIT"
+
+      - name: Upgrade npm for OIDC trusted publishing
+        run: |
+          NPM_DIR="$(npm config get prefix)/lib/node_modules/npm"
+          rm -rf "$NPM_DIR"
+          curl -sL https://registry.npmjs.org/npm/-/npm-11.12.1.tgz | tar xz -C "$(dirname "$NPM_DIR")"
+          mv "$(dirname "$NPM_DIR")/package" "$NPM_DIR"
+          npm --version
+
+      - name: Fetch current main
+        run: git fetch --no-tags origin main:refs/remotes/origin/main
+
+      - name: Publish package canaries
+        run: pnpm release:canary
+        env:
+          FOLDKIT_CANARY_COMMIT: ${{ github.sha }}
+          NPM_CONFIG_PROVENANCE: true
+          SKIP_SIMPLE_GIT_HOOKS: '1'
+
+      - name: Summarize package canary
+        env:
+          CANARY_VERSION: ${{ steps.canary.outputs.version }}
+        run: echo "Published the Foldkit canary channel at ${CANARY_VERSION}." >> "$GITHUB_STEP_SUMMARY"

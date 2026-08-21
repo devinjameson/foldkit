@@ -20,9 +20,11 @@ import {
 import { fileURLToPath } from 'node:url'
 
 import { type Scaffold } from '../rendering.js'
+import { PACKAGE_VERSION } from '../version.js'
 import {
   type PackageManager,
   devCommand,
+  exampleSourceReference,
   installCommand,
   runScriptCommand,
 } from './packages.js'
@@ -285,8 +287,13 @@ const createExampleFiles = (projectPath: string, example: string) =>
     )
   })
 
-const fetchExampleFileList = (
+/**
+ * Fetch an example's source-file listing from the Git reference encoded in the
+ * scaffolder version.
+ */
+export const fetchExampleFileList = (
   example: string,
+  sourceReference = exampleSourceReference(PACKAGE_VERSION),
 ): Effect.Effect<
   ReadonlyArray<GitHubFileEntry>,
   HttpClientError.HttpClientError | Schema.SchemaError,
@@ -302,7 +309,10 @@ const fetchExampleFileList = (
       HttpClientError.HttpClientError | Schema.SchemaError
     > =>
       Effect.gen(function* () {
-        const request = HttpClientRequest.get(apiUrl)
+        const requestUrl = new URL(apiUrl)
+        requestUrl.searchParams.set('ref', sourceReference)
+
+        const request = HttpClientRequest.get(requestUrl.href)
         const response = yield* client.execute(request)
         const json = yield* response.json
         const entries = yield* Schema.decodeUnknownEffect(
