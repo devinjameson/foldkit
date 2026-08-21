@@ -18,15 +18,23 @@ Every Foldkit app repeats the same cycle:
 The complete cycle looks like this:
 
 ```diagram
-Message ──▶ update ──▶ Model ──▶ view ──▶ Browser
-  ▲          │          │          │          │
-  │          │          │          │          └─ events ─────┐
-  │          │          │          └─ Mounts ────────────────┤
-  │          │          ├─ Subscriptions ────────────────────┤
-  │          │          └─ ManagedResources ─────────────────┤
-  │          └─ Commands ────────────────────────────────────┤
-  │                                                          ▼
-  └────────────────────────── Runtime ◀──────────────────────┘
++------> update -> Commands -----------+
+|         |                            |
+|         v                            |
+|       Model -> Subscriptions --------+
+|         |                            |
+|         +-> ManagedResources --------+
+|         |                            |
+|         v                            |
+|       view -> Mounts ----------------+
+|         |                            |
+|         v                            |
+|       Browser -> events -------------+
+|                                      v
+|                                   Runtime
+|                                      |
+|                                      v
++<--------------------------------- Message
 ```
 
 Five sources report through the Runtime: Commands, the Browser, Mounts, Subscriptions, and ManagedResources. When one produces a Message, the Runtime dispatches it back into `update`.

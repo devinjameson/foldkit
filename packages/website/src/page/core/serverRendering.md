@@ -25,21 +25,21 @@ For an application with Flags, here is the handoff from server input to a live a
        SERVER OR BUILD                      BROWSER
 
 request or build input                 live Foldkit app
-         │                                     ▲
-         ▼                                     │
+         |                                     ^
+         v                                     |
        Flags                           adopts matching DOM
-         │                                     ▲
-         ▼                                     │
+         |                                     ^
+         v                                     |
         init                                same view
-         │                                     ▲
-         ▼                                     │
+         |                                     ^
+         v                                     |
        Model                          equivalent Model
-         │                                     ▲
-         ▼                                     │
+         |                                     ^
+         v                                     |
         view                               same init
-         │                                     ▲
-         ▼                                     │
-HTML + serialized Flags ────────▶ Runtime.hydrate reads Flags
+         |                                     ^
+         v                                     |
+HTML + serialized Flags --------> Runtime.hydrate reads Flags
 ```
 
 Once the live application takes over, it behaves like any other Foldkit application. Routing, update, Commands, and Subscriptions run in the browser. A handled navigation does not ask the delivery host to render another document, though the application's Commands may still request data. The server renders the document again only on a full page load, such as a reload or a link the runtime does not handle.
