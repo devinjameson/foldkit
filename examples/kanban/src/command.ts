@@ -7,7 +7,7 @@ import { BrowserCrypto, BrowserKeyValueStore } from '@effect/platform-browser'
 import { ADD_CARD_INPUT_ID, STORAGE_KEY } from './constant'
 import { Column } from './domain'
 import { Message } from './message'
-import { SavedBoard } from './model'
+import { SavedBoardJsonString } from './model'
 
 export const GenerateCardId = Command.define('GenerateCardId', {
   args: { columnId: S.String, title: S.String },
@@ -28,7 +28,7 @@ export const SaveBoard = Command.define('SaveBoard', {
       const store = yield* KeyValueStore.KeyValueStore
       yield* store.set(
         STORAGE_KEY,
-        S.encodeSync(S.fromJsonString(SavedBoard))({ columns }),
+        S.encodeSync(SavedBoardJsonString)({ columns }),
       )
       return Message.CompletedSaveBoard()
     }).pipe(

@@ -6,7 +6,7 @@ import { Url } from 'foldkit/url'
 import { BrowserKeyValueStore } from '@effect/platform-browser'
 
 import { SESSION_STORAGE_KEY } from './constant'
-import { Session } from './domain/session'
+import { Session, SessionJsonString } from './domain/session'
 import { Message } from './message'
 import { LoggedIn, LoggedOut, Model } from './model'
 import { DashboardRoute, LoginRoute, urlToAppRoute } from './route'
@@ -24,7 +24,7 @@ export const flags: Effect.Effect<Flags> = Effect.gen(function* () {
     Option.fromNullishOr(yield* store.get(SESSION_STORAGE_KEY)),
   )
 
-  const decodeSession = S.decodeEffect(S.fromJsonString(Session))
+  const decodeSession = S.decodeEffect(SessionJsonString)
   const session = yield* decodeSession(sessionJson)
 
   return Flags.make({ maybeSession: Option.some(session) })

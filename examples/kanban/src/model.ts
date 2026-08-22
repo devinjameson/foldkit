@@ -10,6 +10,8 @@ export const SavedBoard = S.Struct({
 
 export type SavedBoard = typeof SavedBoard.Type
 
+export const SavedBoardJsonString = S.fromJsonString(S.toCodecJson(SavedBoard))
+
 export const Model = S.Struct({
   columns: S.Array(Column.Column),
   dragAndDrop: DragAndDrop.Model,

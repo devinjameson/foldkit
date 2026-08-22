@@ -11,6 +11,8 @@ const Todo = S.Struct({
 
 const Todos = S.Array(Todo)
 
+const TodosJsonString = S.fromJsonString(S.toCodecJson(Todos))
+
 const Flags = S.Struct({
   todos: S.Option(Todos),
 })
@@ -23,7 +25,7 @@ const flags: Effect.Effect<Flags> = Effect.gen(function* () {
     Option.fromNullishOr(yield* store.get('todos')),
   )
 
-  const decodeTodos = S.decodeEffect(S.fromJsonString(Todos))
+  const decodeTodos = S.decodeEffect(TodosJsonString)
   const todos = yield* decodeTodos(todosJson)
 
   return Flags.make({ todos: Option.some(todos) })
