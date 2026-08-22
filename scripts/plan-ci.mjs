@@ -76,7 +76,10 @@ const scaffoldServerRendering =
     ],
     prefixes: [
       'packages/create-foldkit-app/',
+      'packages/devtools/',
+      'packages/devtools-mcp/',
       'packages/foldkit/',
+      'packages/oxlint-plugin-foldkit/',
       'packages/ui/',
       'packages/vite-plugin-foldkit/',
     ],
