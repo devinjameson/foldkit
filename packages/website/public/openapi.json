@@ -1,0 +1,211 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Foldkit Documentation Content API",
+    "version": "1.0.0",
+    "summary": "Read-only content endpoints for the Foldkit documentation site.",
+    "description": "Foldkit is a TypeScript frontend framework built on Effect. This API describes the machine-readable surface of foldkit.dev: a Markdown variant of every documentation page, an agent-oriented page index, a single-file docs concatenation, the sitemap, and the blog feed. Every endpoint is a public, unauthenticated GET. Unknown paths return HTTP 404 with a JSON body when requested with Accept: application/json. The framework itself is consumed as npm packages (foldkit, @foldkit/ui) and scaffolded with `npm create foldkit-app@latest`, not through this HTTP API.",
+    "contact": {
+      "name": "Foldkit",
+      "url": "https://github.com/foldkit/foldkit/issues"
+    },
+    "license": {
+      "name": "MIT",
+      "identifier": "MIT"
+    }
+  },
+  "externalDocs": {
+    "description": "Foldkit documentation",
+    "url": "https://foldkit.dev"
+  },
+  "servers": [
+    {
+      "url": "https://foldkit.dev",
+      "description": "Production documentation site"
+    }
+  ],
+  "paths": {
+    "/llms.txt": {
+      "get": {
+        "operationId": "getLlmsIndex",
+        "summary": "Agent-oriented page index",
+        "description": "Lists every documentation page with a one-line description, grouped by section, in the llms.txt format. Includes guidance on when to use Foldkit and links to the other developer resources. Use this as the entry point for discovering pages, then fetch each page's Markdown variant.",
+        "responses": {
+          "200": {
+            "description": "The llms.txt index as Markdown-formatted plain text.",
+            "content": {
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/MarkdownDocument" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/llms-full.txt": {
+      "get": {
+        "operationId": "getLlmsFull",
+        "summary": "Every documentation page in one file",
+        "description": "The Markdown content of every documentation page concatenated into a single file, each section preceded by its source URL. Suited to loading the full documentation into one context window.",
+        "responses": {
+          "200": {
+            "description": "The concatenated documentation as Markdown-formatted plain text.",
+            "content": {
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/MarkdownDocument" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/{page}.md": {
+      "get": {
+        "operationId": "getPageMarkdown",
+        "summary": "One documentation page as Markdown",
+        "description": "The Markdown variant of a single documentation page. The page parameter is the page's URL path without the leading slash and may contain slashes, for example `get-started/getting-started` or `core/model`. Valid page paths are enumerated in /llms.txt and /sitemap.xml. The same document is returned when the page's HTML URL is requested with an Accept header containing text/markdown.",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "path",
+            "required": true,
+            "description": "The page's URL path without the leading slash, for example `core/model`. May contain slashes. The homepage is `index`.",
+            "schema": {
+              "type": "string",
+              "examples": ["index", "get-started/getting-started", "core/model"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The page content as Markdown.",
+            "content": {
+              "text/markdown": {
+                "schema": { "$ref": "#/components/schemas/MarkdownDocument" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/sitemap.xml": {
+      "get": {
+        "operationId": "getSitemap",
+        "summary": "Sitemap",
+        "description": "Every page URL on the site in the sitemaps.org XML format.",
+        "responses": {
+          "200": {
+            "description": "The sitemap as XML.",
+            "content": {
+              "application/xml": {
+                "schema": { "$ref": "#/components/schemas/XmlDocument" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/blog/rss.xml": {
+      "get": {
+        "operationId": "getBlogFeed",
+        "summary": "Blog RSS feed",
+        "description": "The Foldkit blog as an RSS 2.0 feed, including the full article content of each post.",
+        "responses": {
+          "200": {
+            "description": "The blog feed as RSS XML.",
+            "content": {
+              "application/rss+xml": {
+                "schema": { "$ref": "#/components/schemas/XmlDocument" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "operationId": "getOpenApiDescription",
+        "summary": "This document",
+        "description": "The OpenAPI 3.1 description of the site's machine-readable endpoints.",
+        "responses": {
+          "200": {
+            "description": "This OpenAPI document as JSON.",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    }
+  },
+  "components": {
+    "responses": {
+      "NotFound": {
+        "description": "Nothing exists at the requested path. The body names the error and links the discovery endpoints. Requests without Accept: application/json receive the same information as Markdown instead.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "MarkdownDocument": {
+        "type": "string",
+        "description": "A Markdown document."
+      },
+      "XmlDocument": {
+        "type": "string",
+        "description": "An XML document."
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "description": "The structured error body returned for unknown paths.",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": ["code", "status", "message"],
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "A stable machine-readable error code.",
+                "examples": ["not_found"]
+              },
+              "status": {
+                "type": "integer",
+                "description": "The HTTP status of the response.",
+                "examples": [404]
+              },
+              "message": {
+                "type": "string",
+                "description": "What went wrong, in one sentence."
+              },
+              "hints": {
+                "type": "array",
+                "description": "How to find the resource you were probably looking for.",
+                "items": { "type": "string" }
+              },
+              "links": {
+                "type": "object",
+                "description": "Discovery endpoints, keyed by name.",
+                "additionalProperties": {
+                  "type": "string",
+                  "format": "uri"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

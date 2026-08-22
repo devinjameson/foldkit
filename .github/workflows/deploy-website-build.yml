@@ -112,7 +112,7 @@ jobs:
           DEPLOYMENT_CHANNEL: ${{ inputs.channel }}
         run: |
           mkdir -p .vercel/output/static
-          cp -r packages/website/dist/* .vercel/output/static/
+          cp -r packages/website/dist/. .vercel/output/static/
           node scripts/website-vercel-config.mjs "${DEPLOYMENT_CHANNEL}"
 
       - name: Deploy immutable website build

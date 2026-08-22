@@ -403,6 +403,29 @@ const generatedOgImageAlt = (metadata: PageMetadata): string => {
   }
 }
 
+const ORGANIZATION_ID = `${SITE_URL}/#organization`
+
+export const ORGANIZATION_SCHEMA = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  '@id': ORGANIZATION_ID,
+  name: 'Foldkit',
+  url: SITE_URL,
+  logo: `${SITE_URL}/logo.svg`,
+  description:
+    'Foldkit is an open source TypeScript frontend framework built on Effect, developed in the open on GitHub.',
+  sameAs: [
+    'https://github.com/foldkit/foldkit',
+    'https://www.npmjs.com/package/foldkit',
+  ],
+  contactPoint: {
+    '@type': 'ContactPoint',
+    contactType: 'technical support',
+    url: 'https://github.com/foldkit/foldkit/issues',
+    availableLanguage: 'English',
+  },
+}
+
 const SOFTWARE_APPLICATION_SCHEMA = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
@@ -412,7 +435,7 @@ const SOFTWARE_APPLICATION_SCHEMA = {
   description:
     'Foldkit is a TypeScript frontend framework built on Effect. One Schema-defined Model, explicit effects, typed routing, server rendering, and accessible UI components.',
   url: SITE_URL,
-  author: { '@type': 'Organization', name: 'Foldkit' },
+  author: { '@id': ORGANIZATION_ID },
   programmingLanguage: 'TypeScript',
   offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   license: 'https://opensource.org/licenses/MIT',
@@ -423,6 +446,7 @@ const WEBSITE_SCHEMA = {
   '@type': 'WebSite',
   name: 'Foldkit',
   url: SITE_URL,
+  publisher: { '@id': ORGANIZATION_ID },
   description:
     'Foldkit is a TypeScript frontend framework built on Effect. One Schema-defined Model, explicit effects, typed routing, server rendering, and accessible UI components.',
 }
@@ -431,6 +455,7 @@ const jsonLdTag = (schema: Record<string, unknown>): string =>
   `<script type="application/ld+json">${JSON.stringify(schema)}</script>`
 
 const HOMEPAGE_JSON_LD = [
+  jsonLdTag(ORGANIZATION_SCHEMA),
   jsonLdTag(SOFTWARE_APPLICATION_SCHEMA),
   jsonLdTag(WEBSITE_SCHEMA),
 ].join('\n    ')

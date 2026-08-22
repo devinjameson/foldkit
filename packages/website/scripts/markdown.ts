@@ -336,6 +336,31 @@ const renderIndexSection = (
   return `## ${section}\n\n${Array_.join(lines, '\n')}`
 }
 
+const WHEN_TO_USE = `When to use Foldkit:
+
+- Building a browser single-page application in TypeScript around The Elm Architecture: one Schema-defined Model, Messages as facts, a pure update function, and side effects confined to Commands.
+- Extending a codebase that already uses Effect-TS, since Foldkit shares its idioms (Effect, Schema, Match, Option) and its ecosystem.
+- Applications where agents write or audit significant code. Explicit state transitions and Messages-as-data make programs inspectable, and the Story and Scene test frameworks drive them without a browser.
+- Not a fit for: server-only projects with no browser UI, teams staying on React and JSX idioms, or codebases avoiding the Effect ecosystem.
+
+How an agent works with Foldkit:
+
+- Scaffold a new application with \`npm create foldkit-app@latest\` (pnpm, yarn, and bun equivalents work too).
+- Fetch any page below as Markdown by appending \`.md\` to its URL, or by requesting the page URL with \`Accept: text/markdown\`.
+- Connect to a running app through the DevTools MCP server (\`npx @foldkit/devtools-mcp init\`) to inspect the Model, replay history, and dispatch Messages.
+- Install the repository skills from ${SITE_URL}/ai/skills for architecture guidance, program generation, and application audits.`
+
+const DEVELOPER_RESOURCES_SECTION = `## Developer Resources
+
+- [llms-full.txt](${SITE_URL}/llms-full.txt): Every documentation page concatenated into one Markdown file.
+- [openapi.json](${SITE_URL}/openapi.json): OpenAPI 3.1 description of this site's machine-readable content endpoints.
+- [Sitemap](${SITE_URL}/sitemap.xml): Every page URL on the site.
+- [AI overview](${SITE_URL}/ai/overview): How Foldkit's explicit architecture supports coding agents, and the resources available to them.
+- [Agent skills](${SITE_URL}/ai/skills): Installable repository skills for architecture guidance, program generation, and application audits.
+- [DevTools MCP server](${SITE_URL}/ai/mcp): Connect an agent to a running Foldkit application. Published on npm as @foldkit/devtools-mcp.
+- [GitHub repository](https://github.com/foldkit/foldkit): Source code, issues, and discussions.
+- [Blog RSS feed](${SITE_URL}/blog/rss.xml): Release announcements and deep dives.`
+
 export const buildLlmsIndex = (
   entries: ReadonlyArray<LlmsIndexEntry>,
 ): string => {
@@ -353,9 +378,9 @@ export const buildLlmsIndex = (
     ),
   )
 
-  const header = `# Foldkit\n\n> ${SITE_BLURB}\n\nThis index lists every page on the Foldkit documentation site with a short description. Every page is also available as Markdown by appending \`.md\` to its URL (e.g. ${SITE_URL}/get-started/getting-started.md). A single-file concatenation of every page is available at ${SITE_URL}/llms-full.txt.`
+  const header = `# Foldkit\n\n> ${SITE_BLURB}\n\nThis index lists every page on the Foldkit documentation site with a short description. Every page is also available as Markdown by appending \`.md\` to its URL (e.g. ${SITE_URL}/get-started/getting-started.md). A single-file concatenation of every page is available at ${SITE_URL}/llms-full.txt.\n\n${WHEN_TO_USE}`
 
-  return `${header}\n\n${Array_.join(sectionBlocks, '\n\n')}\n`
+  return `${header}\n\n${DEVELOPER_RESOURCES_SECTION}\n\n${Array_.join(sectionBlocks, '\n\n')}\n`
 }
 
 // FULL

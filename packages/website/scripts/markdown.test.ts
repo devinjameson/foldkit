@@ -230,6 +230,34 @@ describe('buildLlmsIndex', () => {
     const tabsIndex = output.indexOf('[Tabs]')
     expect(dialogIndex).toBeLessThan(tabsIndex)
   })
+
+  it('tells agents when to use Foldkit and how to work with the site', () => {
+    const output = buildLlmsIndex([
+      indexEntry('/manifesto', 'Manifesto', 'Why Foldkit exists.', 'Docs'),
+    ])
+
+    expect(output).toContain('When to use Foldkit:')
+    expect(output).toContain('Not a fit for:')
+    expect(output).toContain('npm create foldkit-app@latest')
+    expect(output).toContain('Accept: text/markdown')
+  })
+
+  it('lists the developer resources before the page sections', () => {
+    const output = buildLlmsIndex([
+      indexEntry('/manifesto', 'Manifesto', 'Why Foldkit exists.', 'Docs'),
+    ])
+
+    const resourcesIndex = output.indexOf('## Developer Resources')
+    const docsIndex = output.indexOf('## Docs')
+    expect(resourcesIndex).toBeGreaterThan(-1)
+    expect(resourcesIndex).toBeLessThan(docsIndex)
+
+    expect(output).toContain('https://foldkit.dev/openapi.json')
+    expect(output).toContain('https://foldkit.dev/llms-full.txt')
+    expect(output).toContain('https://foldkit.dev/sitemap.xml')
+    expect(output).toContain('@foldkit/devtools-mcp')
+    expect(output).toContain('https://github.com/foldkit/foldkit')
+  })
 })
 
 const fullEntry = (
