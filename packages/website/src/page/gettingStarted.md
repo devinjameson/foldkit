@@ -6,6 +6,8 @@ Built on Effect. Architected like Elm. Written in TypeScript. Let’s get your f
 
 Before you begin, install Node.js 22.22.2 or newer and make sure the package manager you want to use is available. The [create-foldkit-app](https://github.com/foldkit/foldkit/tree/main/packages/create-foldkit-app) scaffolder is the recommended way to start.
 
+The scaffolder runs on Node.js whichever package manager you pick. A project scaffolded with Deno needs no Node.js runtime after that: its dev server, build, typecheck, and production host all run through `deno task`.
+
 Run the scaffolder:
 
 ```sh
@@ -16,7 +18,7 @@ The CLI asks for a project name, a rendering mode, and a package manager. If you
 
 - **SPA:** renders entirely in the browser.
 - **[Static generation](/core/server-rendering#build-time-ssg):** prerenders routes to static HTML, then hydrates them in the browser.
-- **[Server rendering](/core/server-rendering):** renders each request on a Node server, then hydrates it in the browser.
+- **[Server rendering](/core/server-rendering):** renders each request on a server, then hydrates it in the browser.
 
 The scaffolder creates the project and installs its dependencies. Move into the new directory, then start the development server with the package manager you selected:
 
@@ -28,6 +30,7 @@ cd your-project
 - npm: `npm run dev`
 - Yarn: `yarn dev`
 - Bun: `bun dev`
+- Deno: `deno task dev`
 
 Vite prints a local URL when the server is ready. Open it in your browser, and your first Foldkit application is running.
 
@@ -49,7 +52,7 @@ In a small starter, `src/main.ts` holds the Model, Messages, update, init, and v
 
 For the Counter starter, `src/entry.ts` imports the application definitions and starts the runtime with `Runtime.makeApplication` and `Runtime.run`. Other starters may compose the application from several modules or start a different host, but they keep runtime startup separate from the pure definitions. That separation lets tests import the application without starting a runtime as a side effect.
 
-The generated project also includes `lint` and `format` scripts. Run them with your selected package manager. For example: `pnpm lint` and `pnpm format`. See [Oxlint Plugin](/tooling/oxlint-plugin) for the Foldkit-specific rules.
+The generated project also includes `lint` and `format` scripts. Run them with your selected package manager. For example: `pnpm lint` and `pnpm format`, or `deno task lint` and `deno task format`. See [Oxlint Plugin](/tooling/oxlint-plugin) for the Foldkit-specific rules.
 
 ## Add Foldkit to an Existing Project {#requirements}
 

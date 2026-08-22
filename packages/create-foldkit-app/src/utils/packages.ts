@@ -17,7 +17,7 @@ import { spawn } from 'node:child_process'
 
 import { type Scaffold } from '../rendering.js'
 
-export type PackageManager = 'pnpm' | 'npm' | 'yarn' | 'bun'
+export type PackageManager = 'pnpm' | 'npm' | 'yarn' | 'bun' | 'deno'
 
 export const installCommand = (packageManager: PackageManager): string =>
   `${packageManager} install`
@@ -27,6 +27,7 @@ const DEV_COMMANDS: Record<PackageManager, string> = {
   npm: 'npm run dev',
   yarn: 'yarn dev',
   bun: 'bun dev',
+  deno: 'deno task dev',
 }
 
 export const devCommand = (packageManager: PackageManager): string =>
@@ -37,12 +38,53 @@ const RUN_SCRIPT_PREFIXES: Record<PackageManager, string> = {
   npm: 'npm run',
   yarn: 'yarn',
   bun: 'bun run',
+  deno: 'deno task',
 }
 
 export const runScriptCommand = (
   packageManager: PackageManager,
   script: string,
 ): string => `${RUN_SCRIPT_PREFIXES[packageManager]} ${script}`
+
+const RUNTIME_COMMANDS: Record<PackageManager, string> = {
+  pnpm: 'node',
+  npm: 'node',
+  yarn: 'node',
+  bun: 'node',
+  deno: 'deno run -A',
+}
+
+/**
+ * The command a scaffold's `build`/`start` scripts use to run a plain
+ * JavaScript entry point, such as `scripts/build.mjs` or the built server
+ * bundle. Every package manager but Deno shells out to `node`; Deno runs the
+ * file itself under `deno run -A`.
+ */
+export const runtimeCommand = (packageManager: PackageManager): string =>
+  RUNTIME_COMMANDS[packageManager]
+
+const INSTALL_ARGS: Record<PackageManager, ReadonlyArray<string>> = {
+  pnpm: ['install'],
+  npm: ['install'],
+  yarn: ['install'],
+  bun: ['install'],
+  deno: ['install', '--min-dep-age=0'],
+}
+
+/**
+ * The arguments the scaffold's own dependency install runs with.
+ *
+ * Deno refuses an npm package published in the last 24 hours by default, and
+ * the versions written just above came from the registry's `latest` tag, so a
+ * Foldkit release earlier the same day would leave `deno install` with no
+ * version that satisfies the manifest and it would fail outright. Waiving the
+ * age check covers this one install; the generated project keeps Deno's default
+ * for anything installed later, and the lockfile this writes means a plain
+ * `deno install` resolves nothing again.
+ */
+export const installArgs = (
+  packageManager: PackageManager,
+): ReadonlyArray<string> => INSTALL_ARGS[packageManager]
 
 const GITHUB_RAW_BASE_URL =
   'https://raw.githubusercontent.com/foldkit/foldkit/main/examples'
@@ -143,6 +185,61 @@ export const buildUnresolvedDevDeps = (
     (_templateSpec, exampleSpec) => exampleSpec,
   )
 }
+
+const PLATFORM_NODE_PACKAGE = '@effect/platform-node'
+const PLATFORM_DENO_PACKAGE = '@effect/platform-deno'
+const TSX_PACKAGE = 'tsx'
+
+/**
+ * Swap the ssr scaffold's Node HTTP platform dependency for the Deno one when
+ * scaffolding onto Deno. The reference example that supplies dependency
+ * versions is Node-only, so this runs after resolution reads it, reusing the
+ * same pinned version since the two packages release in lockstep.
+ */
+export const adjustDependenciesForPackageManager = (
+  scaffold: Scaffold,
+  packageManager: PackageManager,
+  dependencies: Record<string, UnresolvedSpec>,
+): Record<string, UnresolvedSpec> => {
+  const swapPlatformPackage = () =>
+    Option.match(Record.pop(dependencies, PLATFORM_NODE_PACKAGE), {
+      onNone: () => dependencies,
+      onSome: ([spec, remainder]) =>
+        Record.set(remainder, PLATFORM_DENO_PACKAGE, spec),
+    })
+
+  return Match.value(scaffold).pipe(
+    Match.withReturnType<Record<string, UnresolvedSpec>>(),
+    Match.tagsExhaustive({
+      Spa: () => dependencies,
+      Ssg: () => dependencies,
+      Ssr: () =>
+        packageManager === 'deno' ? swapPlatformPackage() : dependencies,
+    }),
+  )
+}
+
+/**
+ * Drop the ssg scaffold's `tsx` devDependency when scaffolding onto Deno.
+ * `build.mjs` runs `prerender.ts` directly under `deno run` there, so no
+ * separate TypeScript executor is needed.
+ */
+export const adjustDevDependenciesForPackageManager = (
+  scaffold: Scaffold,
+  packageManager: PackageManager,
+  devDependencies: Record<string, UnresolvedSpec>,
+): Record<string, UnresolvedSpec> =>
+  Match.value(scaffold).pipe(
+    Match.withReturnType<Record<string, UnresolvedSpec>>(),
+    Match.tagsExhaustive({
+      Spa: () => devDependencies,
+      Ssr: () => devDependencies,
+      Ssg: () =>
+        packageManager === 'deno'
+          ? Record.remove(devDependencies, TSX_PACKAGE)
+          : devDependencies,
+    }),
+  )
 
 /**
  * The repo example whose `package.json` supplies a scaffold's dependency
@@ -322,12 +419,20 @@ export const installDependencies = (
     )
 
     const dependencies = yield* resolveSpecs(
-      buildUnresolvedDeps(examplePackageJson.dependencies),
+      adjustDependenciesForPackageManager(
+        scaffold,
+        packageManager,
+        buildUnresolvedDeps(examplePackageJson.dependencies),
+      ),
     )
     const devDependencies = yield* resolveSpecs(
-      buildUnresolvedDevDeps(
-        examplePackageJson.devDependencies,
-        scaffoldDevDependencies(scaffold),
+      adjustDevDependenciesForPackageManager(
+        scaffold,
+        packageManager,
+        buildUnresolvedDevDeps(
+          examplePackageJson.devDependencies,
+          scaffoldDevDependencies(scaffold),
+        ),
       ),
     )
 
@@ -337,5 +442,5 @@ export const installDependencies = (
       sortDependencies(devDependencies),
     )
 
-    yield* runCommand(packageManager, ['install'], projectPath)
+    yield* runCommand(packageManager, installArgs(packageManager), projectPath)
   })

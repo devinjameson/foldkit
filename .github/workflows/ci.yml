@@ -150,10 +150,22 @@ jobs:
         if: steps.scope.outputs.packed_ssr_consumer == 'true'
         run: pnpm check:packed-ssr-consumer:ci
 
-      # Generates an SSR and an SSG project, builds each through the command its
-      # own README documents, and drives the result in Chromium. This proves the
-      # generated build id reaches both sides and hydration adopts the served
-      # DOM before the application responds to input.
+      # The generated Deno projects are the only ones that run on something
+      # other than Node, so they are the only coverage of the scaffold's
+      # deno.json, its `deno task` wiring, and its @effect/platform-deno host.
+      # The gate is passed --require-deno so a missing toolchain fails here
+      # instead of quietly shrinking what the gate covers.
+      - name: Set up Deno for the generated project gate
+        if: steps.scope.outputs.scaffold_server_rendering == 'true'
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      # Generates an SSR and an SSG project under npm and under Deno, builds
+      # each through the command its own README documents, and drives the result
+      # in Chromium. This proves the generated build id reaches both sides and
+      # hydration adopts the served DOM before the application responds to
+      # input.
       - name: Check generated server-rendered projects
         if: steps.scope.outputs.scaffold_server_rendering == 'true'
         run: pnpm check:scaffold-server-rendering:ci

@@ -57,6 +57,7 @@ const promptForPackageManager = Prompt.select<PackageManager>({
     { value: 'npm', title: 'npm' },
     { value: 'yarn', title: 'yarn' },
     { value: 'bun', title: 'bun' },
+    { value: 'deno', title: 'deno' },
   ],
 })
 

@@ -5,11 +5,16 @@ import { describe, it } from '@effect/vitest'
 
 import { Scaffold } from '../rendering.js'
 import {
+  adjustDependenciesForPackageManager,
+  adjustDevDependenciesForPackageManager,
   buildUnresolvedDeps,
   buildUnresolvedDevDeps,
   dependencyExample,
   devCommand,
+  installArgs,
   installCommand,
+  runScriptCommand,
+  runtimeCommand,
   scaffoldDevDependencies,
 } from './packages.js'
 
@@ -95,6 +100,7 @@ describe('installCommand', () => {
     expect(installCommand('npm')).toBe('npm install')
     expect(installCommand('yarn')).toBe('yarn install')
     expect(installCommand('bun')).toBe('bun install')
+    expect(installCommand('deno')).toBe('deno install')
   })
 })
 
@@ -104,6 +110,120 @@ describe('devCommand', () => {
     expect(devCommand('npm')).toBe('npm run dev')
     expect(devCommand('yarn')).toBe('yarn dev')
     expect(devCommand('bun')).toBe('bun dev')
+    expect(devCommand('deno')).toBe('deno task dev')
+  })
+})
+
+describe('runScriptCommand', () => {
+  it('runs an arbitrary script, prefixing run only where npm and bun need it', () => {
+    expect(runScriptCommand('pnpm', 'build')).toBe('pnpm build')
+    expect(runScriptCommand('npm', 'build')).toBe('npm run build')
+    expect(runScriptCommand('yarn', 'build')).toBe('yarn build')
+    expect(runScriptCommand('bun', 'build')).toBe('bun run build')
+    expect(runScriptCommand('deno', 'build')).toBe('deno task build')
+  })
+})
+
+describe('installArgs', () => {
+  it('waives the Deno dependency-age check for the scaffold install only', () => {
+    expect(installArgs('pnpm')).toEqual(['install'])
+    expect(installArgs('npm')).toEqual(['install'])
+    expect(installArgs('yarn')).toEqual(['install'])
+    expect(installArgs('bun')).toEqual(['install'])
+    // NOTE: without the waiver a Foldkit release published in the last 24
+    // hours makes `deno install` fail outright, because the manifest names the
+    // registry's `latest` and Deno refuses it with nothing to fall back to.
+    expect(installArgs('deno')).toEqual(['install', '--min-dep-age=0'])
+  })
+})
+
+describe('runtimeCommand', () => {
+  it('shells out to node everywhere but deno, which runs the file itself', () => {
+    expect(runtimeCommand('pnpm')).toBe('node')
+    expect(runtimeCommand('npm')).toBe('node')
+    expect(runtimeCommand('yarn')).toBe('node')
+    expect(runtimeCommand('bun')).toBe('node')
+    expect(runtimeCommand('deno')).toBe('deno run -A')
+  })
+})
+
+describe('adjustDependenciesForPackageManager', () => {
+  it('renames the ssr scaffold platform-node dependency to platform-deno on deno, keeping its pinned version', () => {
+    const dependencies = {
+      effect: { _tag: 'Keep' as const, version: '4.0.0-rc.109' },
+      '@effect/platform-node': {
+        _tag: 'Keep' as const,
+        version: '4.0.0-rc.109',
+      },
+    }
+
+    expect(
+      adjustDependenciesForPackageManager(Scaffold.Ssr(), 'deno', dependencies),
+    ).toEqual({
+      effect: { _tag: 'Keep', version: '4.0.0-rc.109' },
+      '@effect/platform-deno': { _tag: 'Keep', version: '4.0.0-rc.109' },
+    })
+  })
+
+  it('leaves dependencies untouched for every other scaffold/package-manager combination', () => {
+    const dependencies = {
+      '@effect/platform-node': {
+        _tag: 'Keep' as const,
+        version: '4.0.0-rc.109',
+      },
+    }
+
+    expect(
+      adjustDependenciesForPackageManager(Scaffold.Ssr(), 'pnpm', dependencies),
+    ).toEqual(dependencies)
+    expect(
+      adjustDependenciesForPackageManager(Scaffold.Ssg(), 'deno', dependencies),
+    ).toEqual(dependencies)
+    expect(
+      adjustDependenciesForPackageManager(
+        Scaffold.Spa({ example: 'counter' }),
+        'deno',
+        dependencies,
+      ),
+    ).toEqual(dependencies)
+  })
+})
+
+describe('adjustDevDependenciesForPackageManager', () => {
+  it('drops the ssg scaffold tsx devDependency on deno', () => {
+    const devDependencies = {
+      tsx: { _tag: 'Keep' as const, version: '^4.22.4' },
+      prettier: { _tag: 'Keep' as const, version: '^3.8.4' },
+    }
+
+    expect(
+      adjustDevDependenciesForPackageManager(
+        Scaffold.Ssg(),
+        'deno',
+        devDependencies,
+      ),
+    ).toEqual({ prettier: { _tag: 'Keep', version: '^3.8.4' } })
+  })
+
+  it('leaves devDependencies untouched for every other scaffold/package-manager combination', () => {
+    const devDependencies = {
+      tsx: { _tag: 'Keep' as const, version: '^4.22.4' },
+    }
+
+    expect(
+      adjustDevDependenciesForPackageManager(
+        Scaffold.Ssg(),
+        'pnpm',
+        devDependencies,
+      ),
+    ).toEqual(devDependencies)
+    expect(
+      adjustDevDependenciesForPackageManager(
+        Scaffold.Ssr(),
+        'deno',
+        devDependencies,
+      ),
+    ).toEqual(devDependencies)
   })
 })
 
