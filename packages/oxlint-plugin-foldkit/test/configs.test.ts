@@ -2,7 +2,22 @@ import { describe, expect, it } from 'vitest'
 
 import plugin from '../src/index.ts'
 
-const testFilePatterns = ['**/*.test.ts', '**/*.test.tsx']
+const testFilePatterns = [
+  '**/*.test.ts',
+  '**/*.test.tsx',
+  '**/*.spec.ts',
+  '**/*.spec.tsx',
+]
+
+const serverFilePatterns = [
+  '**/entry.server.ts',
+  '**/entry.server.tsx',
+  '**/server/**/*.ts',
+  '**/server/**/*.tsx',
+  '**/prerender.ts',
+]
+
+const serverRuleId = 'foldkit/no-nonportable-server-globals'
 
 const presets = [
   { name: 'recommended', config: plugin.configs.recommended },
@@ -20,15 +35,21 @@ describe('configs', () => {
         expect(config.rules['foldkit/got-submodel-message-name']).toBe('error')
       })
 
+      it('scopes the server portability rule to recognized server files', () => {
+        const serverOverride = config.overrides[0]
+
+        expect(config.rules[serverRuleId]).toBe('off')
+        expect(serverOverride?.files).toEqual(serverFilePatterns)
+        expect(serverOverride?.excludeFiles).toEqual(testFilePatterns)
+        expect(serverOverride?.rules).toEqual({ [serverRuleId]: 'error' })
+      })
+
       it('turns every foldkit rule off in test files', () => {
-        expect(config.overrides).toBeInstanceOf(Array)
-        expect(config.overrides).toHaveLength(1)
+        const testOverride = config.overrides[1]
 
-        const override = config.overrides[0]
-        expect(override?.files).toEqual(testFilePatterns)
-
+        expect(testOverride?.files).toEqual(testFilePatterns)
         for (const ruleId of Object.keys(config.rules)) {
-          expect(override?.rules[ruleId]).toBe('off')
+          expect(testOverride?.rules[ruleId]).toBe('off')
         }
       })
     })
