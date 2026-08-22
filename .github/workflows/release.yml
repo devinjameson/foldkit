@@ -20,11 +20,21 @@ on:
       - 'scripts/check-changeset-ignore.mjs'
       - 'scripts/check-create-foldkit-app-smoke.ts'
       - 'scripts/check-peer-floors.ts'
+      - 'scripts/build-examples.ts'
       - 'scripts/build-public-packages.mjs'
+      - 'scripts/check-playground-ssg-build.ts'
       - 'scripts/coherent-release.mjs'
+      - 'scripts/example-bridge.js'
       - 'scripts/lib/coherent-release.mjs'
+      - 'scripts/lib/package-version.mjs'
       - 'scripts/lib/workspace-packages.mjs'
       - 'scripts/reset-peer-deps.ts'
+      - 'scripts/restore-website-fonts.sh'
+      - 'scripts/website-vercel-config.mjs'
+      - '.npmrc'
+      - 'tsconfig.base.json'
+      - '.github/workflows/deploy-website-build.yml'
+      - '.github/workflows/deploy-website-canary.yml'
       - '.github/workflows/release.yml'
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
@@ -120,6 +130,13 @@ jobs:
         env:
           NPM_CONFIG_PROVENANCE: true
           SKIP_SIMPLE_GIT_HOOKS: '1'
+
+  deploy-website-canary:
+    needs: canary
+    uses: ./.github/workflows/deploy-website-canary.yml
+    with:
+      target: ${{ github.sha }}
+    secrets: inherit
 
   finalize:
     name: Verify stable promotion

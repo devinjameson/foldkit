@@ -6,11 +6,14 @@ import { tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
 import semver from 'semver'
 
+import { canaryVersion } from './package-version.mjs'
 import {
   assertCompleteReleaseSet,
   publicWorkspacePackages,
   readWorkspacePackages,
 } from './workspace-packages.mjs'
+
+export { canaryVersion }
 
 export const REGISTRY = 'https://registry.npmjs.org'
 
@@ -76,20 +79,6 @@ export class NpmRegistry {
 
     return response.json()
   }
-}
-
-export const canaryVersion = (version, commit) => {
-  const parsed = semver.parse(version)
-
-  if (parsed === null) {
-    return fail(`cannot create a canary from invalid version ${version}`)
-  }
-
-  if (!/^[0-9a-f]{7,40}$/i.test(commit)) {
-    return fail(`cannot create a canary from invalid commit ${commit}`)
-  }
-
-  return `${parsed.major}.${parsed.minor}.${parsed.patch}-canary.${commit.slice(0, 12)}`
 }
 
 const internalDependencyFields = [

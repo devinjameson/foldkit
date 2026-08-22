@@ -4,6 +4,7 @@ import { dirname, extname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { Plugin } from 'vite'
 
+import { canaryVersion } from '../../../scripts/lib/package-version.mjs'
 import { exampleSlugs } from '../src/page/example/meta'
 
 const SCRIPT_DIRECTORY = dirname(fileURLToPath(import.meta.url))
@@ -131,6 +132,17 @@ const rewriteWorkspaceSpec =
     }
     return versions[name] ?? specifier
   }
+
+const versionForDeployment = (
+  version: string,
+  canaryCommit: string | undefined,
+): string => {
+  if (canaryCommit === undefined) {
+    return version
+  } else {
+    return canaryVersion(version, canaryCommit)
+  }
+}
 
 const rewriteDependencyMap = (
   dependencies: DependencySpec | undefined,
@@ -338,13 +350,18 @@ export const playgroundFilesPlugin = (): Plugin => ({
 export const loadPlaygroundWorkspacePackageVersions = async (): Promise<
   Readonly<Record<string, string>>
 > => {
+  const canaryCommit = process.env['VITE_FOLDKIT_CANARY_COMMIT']
   const entries = await Promise.all(
     Object.entries(WORKSPACE_PACKAGE_JSON_PATHS).map(
       async ([name, packageJsonPath]) => {
         const packageJson: { version: string } = JSON.parse(
           await readFile(packageJsonPath, 'utf-8'),
         )
-        return [name, packageJson.version] as const
+
+        return [
+          name,
+          versionForDeployment(packageJson.version, canaryCommit),
+        ] as const
       },
     ),
   )
