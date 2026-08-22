@@ -82,6 +82,7 @@ import {
   HomeRoute,
   ManifestoRoute,
   NewsletterRoute,
+  NotFoundRoute,
   PatternsInformingSubmodelsRoute,
   PatternsSubscriptionOrganizationRoute,
   PerformanceRoute,
@@ -430,7 +431,7 @@ export const routeToUrlPath = (route: AppRoute): string =>
       Newsletter: () => newsletterRouter(),
       Blog: () => blogRouter(),
       BlogPost: ({ postSlug }) => blogPostRouter({ postSlug }),
-      NotFound: () => '/',
+      NotFound: ({ path }) => path,
     }),
   )
 
@@ -696,6 +697,41 @@ const prerenderPlaygroundShells = (
     )
   })
 
+// NOT FOUND PAGE
+
+// NOTE: the static host serves this file with a real 404 status for every
+// unknown path (see scripts/website-vercel-config.mjs). Without it, unknown
+// paths answer 200 with the app shell and agents conclude every path exists.
+export const NOT_FOUND_ROUTE = NotFoundRoute({ path: '/404' })
+
+export const NOT_FOUND_OUTPUT_PATH = '404.html'
+
+const prerenderNotFoundPage = (
+  serverEntry: typeof ServerEntry,
+  baseHtml: string,
+  resolveApiModuleName: ApiModuleNameResolver,
+) =>
+  Effect.gen(function* () {
+    const captured = yield* renderRoutePage(serverEntry, NOT_FOUND_ROUTE)
+    const injectedHtml = Server.injectIntoTemplate(
+      baseHtml,
+      captured.application,
+    )
+    const outputHtml = injectMetaTags(
+      injectedHtml,
+      NOT_FOUND_ROUTE,
+      routeToUrlPath(NOT_FOUND_ROUTE),
+      resolveApiModuleName,
+    )
+
+    const fs = yield* FileSystem.FileSystem
+    yield* fs.writeFileString(
+      resolve(DIST_DIR, NOT_FOUND_OUTPUT_PATH),
+      outputHtml,
+    )
+    yield* Console.log(`  ✓ /${NOT_FOUND_OUTPUT_PATH}`)
+  })
+
 // SITEMAP
 
 const SITE_URL = 'https://foldkit.dev'
@@ -899,7 +935,11 @@ const program = Effect.scoped(
     const routes = enumerateRoutes(apiModuleSlugs)
 
     yield* generateOgImages(
-      Array.appendAll(routes, PLAYGROUND_ROUTES),
+      pipe(
+        routes,
+        Array.appendAll(PLAYGROUND_ROUTES),
+        Array.append(NOT_FOUND_ROUTE),
+      ),
       routeToUrlPath,
       DIST_DIR,
       resolveApiModuleName,
@@ -914,6 +954,8 @@ const program = Effect.scoped(
       baseHtml,
       resolveApiModuleName,
     )
+
+    yield* prerenderNotFoundPage(serverEntry, baseHtml, resolveApiModuleName)
 
     const results = yield* Effect.forEach(
       routes,

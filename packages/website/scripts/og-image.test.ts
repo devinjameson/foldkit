@@ -6,10 +6,11 @@ import {
   BlogPostRoute,
   ExamplesRoute,
   HomeRoute,
+  NotFoundRoute,
   PlaygroundRoute,
 } from '../src/route'
 import { blogPosts } from './blogPosts'
-import { injectMetaTags } from './og-image'
+import { ORGANIZATION_SCHEMA, injectMetaTags } from './og-image'
 
 const resolveApiModuleName = (slug: string) => slug
 
@@ -191,6 +192,40 @@ describe('injectMetaTags', () => {
       expect(html).toContain('property="og:type" content="website"')
       expect(html).toContain('"@type":"SoftwareApplication"')
       expect(html).not.toContain('article:published_time')
+    })
+
+    it('describes the Foldkit Organization with a contact point', () => {
+      expect(ORGANIZATION_SCHEMA['@type']).toBe('Organization')
+      expect(ORGANIZATION_SCHEMA.url).toBe('https://foldkit.dev')
+      expect(ORGANIZATION_SCHEMA.logo).toBe('https://foldkit.dev/logo.svg')
+      expect(ORGANIZATION_SCHEMA.sameAs).toContain(
+        'https://github.com/foldkit/foldkit',
+      )
+      expect(ORGANIZATION_SCHEMA.contactPoint.contactType).toBe(
+        'technical support',
+      )
+      expect(ORGANIZATION_SCHEMA.contactPoint.url).toBe(
+        'https://github.com/foldkit/foldkit/issues',
+      )
+      expect(html).toContain('"@type":"Organization"')
+      expect(html).toContain('"contactPoint"')
+    })
+  })
+
+  describe('the prerendered 404 page', () => {
+    const html = injectMetaTags(
+      baseHtml,
+      NotFoundRoute({ path: '/404' }),
+      '/404',
+      resolveApiModuleName,
+    )
+
+    it('titles the page and points its social card at the 404 slug', () => {
+      expect(html).toContain('<title>Page Not Found | Foldkit</title>')
+      expect(html).toContain(
+        'property="og:image" content="https://foldkit.dev/og/404.png"',
+      )
+      expect(html).toContain('rel="canonical" href="https://foldkit.dev/404"')
     })
   })
 })

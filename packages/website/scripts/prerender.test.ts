@@ -1,13 +1,16 @@
 import { Option } from 'effect'
 import { describe, expect, it } from 'vitest'
 
-import { SECTION_ORDER } from './markdown'
+import { SECTION_ORDER, shouldExportMarkdown } from './markdown'
 import { routeToMetadata } from './metadata'
 import {
+  NOT_FOUND_OUTPUT_PATH,
+  NOT_FOUND_ROUTE,
   STATIC_ROUTES,
   buildBlogRssFeed,
   enumerateRoutes,
   extractPostArticleHtml,
+  routeToUrlPath,
   toFeedArticleHtml,
 } from './prerender'
 
@@ -28,6 +31,20 @@ describe('enumerateRoutes', () => {
       _tag: 'ApiModule',
       moduleSlug: 'runtime',
     })
+  })
+})
+
+describe('the 404 page', () => {
+  it('prerenders at /404 into a root-level 404.html', () => {
+    expect(NOT_FOUND_ROUTE._tag).toBe('NotFound')
+    expect(routeToUrlPath(NOT_FOUND_ROUTE)).toBe('/404')
+    expect(NOT_FOUND_OUTPUT_PATH).toBe('404.html')
+  })
+
+  it('stays out of the sitemap routes and the markdown exports', () => {
+    const routes = enumerateRoutes(['html'])
+    expect(routes.filter(route => route._tag === 'NotFound')).toEqual([])
+    expect(shouldExportMarkdown(NOT_FOUND_ROUTE)).toBe(false)
   })
 })
 

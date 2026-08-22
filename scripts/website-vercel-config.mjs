@@ -15,6 +15,25 @@ const sharedResponseHeaders = channel => {
   }
 }
 
+const NEGOTIATED_VARY = 'Accept, Accept-Encoding'
+
+const markdownResponseHeaders = {
+  'Content-Type': 'text/markdown; charset=utf-8',
+  Vary: NEGOTIATED_VARY,
+}
+
+const acceptsMediaType = mediaType => [
+  { type: 'header', key: 'accept', value: `.*${mediaType}.*` },
+]
+
+// NOTE: Newsletter and the playground editor render as HTML only; every other
+// extensionless page has a prerendered `.md` sibling. Excluding the two here
+// lets an `Accept: text/markdown` request for them fall back to HTML instead
+// of turning an existing page into a 404. `/404` is excluded so the error
+// document is never served with a 200 status.
+const MARKDOWN_PAGE_PATTERN =
+  '^/(?!playground(?:/|$)|newsletter(?:/|$)|404(?:/|$))([^.]+?)/?$'
+
 export const websiteVercelConfig = channel => {
   if (channel !== 'production' && channel !== 'canary') {
     throw new Error(`Unknown website deployment channel: ${channel}`)
@@ -34,7 +53,22 @@ export const websiteVercelConfig = channel => {
       {
         src: '^/$',
         headers: {
-          Link: '</sitemap.xml>; rel="sitemap", </get-started/manifesto>; rel="about", </get-started/getting-started>; rel="help", </example-apps>; rel="related", </ai/overview>; rel="describedby"',
+          Link: '</sitemap.xml>; rel="sitemap", </get-started/manifesto>; rel="about", </get-started/getting-started>; rel="help", </example-apps>; rel="related", </ai/overview>; rel="describedby", </openapi.json>; rel="service-desc"',
+        },
+        continue: true,
+      },
+      {
+        src: '^/.+\\.md$',
+        headers: {
+          ...markdownResponseHeaders,
+          'Cache-Control': 'public, max-age=0, must-revalidate',
+        },
+        continue: true,
+      },
+      {
+        src: '^/\\.well-known/mcp$',
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
         },
         continue: true,
       },
@@ -69,8 +103,14 @@ export const websiteVercelConfig = channel => {
         src: '^/([^.]*)$',
         headers: {
           'Cache-Control': 'public, max-age=0, must-revalidate',
+          Vary: NEGOTIATED_VARY,
         },
         continue: true,
+      },
+      {
+        src: '^/developers/?$',
+        status: 308,
+        headers: { Location: '/ai/overview' },
       },
       {
         src: '^/manifesto$',
@@ -207,6 +247,18 @@ export const websiteVercelConfig = channel => {
         status: 308,
         headers: { Location: '/blog/foldkit-has-server-rendering.md' },
       },
+      {
+        src: '^/$',
+        has: acceptsMediaType('text/markdown'),
+        dest: '/index.md',
+        headers: markdownResponseHeaders,
+      },
+      {
+        src: MARKDOWN_PAGE_PATTERN,
+        has: acceptsMediaType('text/markdown'),
+        dest: '/$1.md',
+        headers: markdownResponseHeaders,
+      },
       { handle: 'filesystem' },
       {
         src: '/',
@@ -214,7 +266,32 @@ export const websiteVercelConfig = channel => {
         dest: '/example-apps-embed/$slug/index.html',
       },
       { src: '/playground/(.*)', dest: '/playground/index.html' },
-      { src: '/(.*)', dest: '/index.html' },
+      {
+        src: '/(.*)',
+        has: acceptsMediaType('application/json'),
+        dest: '/404.json',
+        status: 404,
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          Vary: NEGOTIATED_VARY,
+        },
+      },
+      {
+        src: '/(.*)',
+        has: acceptsMediaType('text/html'),
+        dest: '/404.html',
+        status: 404,
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          Vary: NEGOTIATED_VARY,
+        },
+      },
+      {
+        src: '/(.*)',
+        dest: '/404.md',
+        status: 404,
+        headers: markdownResponseHeaders,
+      },
     ],
   }
 }

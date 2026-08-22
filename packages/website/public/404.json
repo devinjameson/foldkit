@@ -1,0 +1,19 @@
+{
+  "error": {
+    "code": "not_found",
+    "status": 404,
+    "message": "Nothing exists at this path on foldkit.dev.",
+    "hints": [
+      "Every page is listed with a short description at https://foldkit.dev/llms.txt.",
+      "Fetch any documentation page as Markdown by appending .md to its URL, or by requesting the page URL with Accept: text/markdown.",
+      "The machine-readable endpoints are described at https://foldkit.dev/openapi.json."
+    ],
+    "links": {
+      "llms": "https://foldkit.dev/llms.txt",
+      "llmsFull": "https://foldkit.dev/llms-full.txt",
+      "sitemap": "https://foldkit.dev/sitemap.xml",
+      "openapi": "https://foldkit.dev/openapi.json",
+      "docs": "https://foldkit.dev/get-started/getting-started"
+    }
+  }
+}
