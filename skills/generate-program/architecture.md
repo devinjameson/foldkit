@@ -224,6 +224,14 @@ For a fresh browser boot, Flags are produced by an `Effect<Flags>`. The runtime 
 - Getting the current time
 - Reading browser capabilities (`navigator.language`, `matchMedia`)
 
+When Flags restore a value that a Command saved to storage, define the persistence Schema once next to the saved Schema and use it for both decode and encode:
+
+```ts
+export const SavedBoardJsonString = S.fromJsonString(S.toCodecJson(SavedBoard))
+```
+
+`toCodecJson` turns the domain value into canonical JSON, then `fromJsonString` stringifies it. Leave it out and a field like `S.Option` writes Effect's runtime shape (`{_id:"Option",_tag:"None"}`) to storage. The next boot fails to decode it, the Flags `Effect.catch` falls back to the empty value, and the user's saved data looks gone. For a Schema that is already JSON-native, `toCodecJson` changes nothing on the wire, so composing it every time costs nothing.
+
 Declare the `Flags` Schema on `Runtime.makeApplication`, then pass the Effect to `Runtime.run`:
 
 ```ts

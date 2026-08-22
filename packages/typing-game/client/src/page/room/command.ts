@@ -11,7 +11,7 @@ import {
 } from '../../constant'
 import { RoomsClient } from '../../rpc'
 import { Message } from './message'
-import { RoomPlayerSession } from './model'
+import { RoomPlayerSession, RoomPlayerSessionJsonString } from './model'
 
 export const FetchRoom = Command.define('FetchRoom', {
   args: { roomId: S.String },
@@ -35,7 +35,7 @@ export const LoadSession = Command.define('LoadSession', {
       const sessionJson = yield* Effect.fromOption(
         Option.fromNullishOr(maybeSessionJson),
       )
-      const decodeSession = S.decodeEffect(S.fromJsonString(RoomPlayerSession))
+      const decodeSession = S.decodeEffect(RoomPlayerSessionJsonString)
 
       return yield* decodeSession(sessionJson).pipe(
         Effect.map(session =>
@@ -147,7 +147,7 @@ export const SavePlayerSession = Command.define('SavePlayerSession', {
   execute: ({ session }) =>
     Effect.gen(function* () {
       const store = yield* KeyValueStore.KeyValueStore
-      const encodeSession = S.encodeEffect(S.fromJsonString(RoomPlayerSession))
+      const encodeSession = S.encodeEffect(RoomPlayerSessionJsonString)
       const sessionJson = yield* encodeSession(session)
       yield* store.set(ROOM_PLAYER_SESSION_KEY, sessionJson)
       return Message.CompletedSavePlayerSession()

@@ -7,7 +7,7 @@ import { DragAndDrop } from '@foldkit/ui'
 
 import { DEFAULT_COLUMNS, STORAGE_KEY } from './constant'
 import { Message } from './message'
-import { Model, SavedBoard } from './model'
+import { Model, SavedBoard, SavedBoardJsonString } from './model'
 import { subscriptions } from './subscription'
 import { update } from './update'
 import { view } from './view'
@@ -24,7 +24,7 @@ export const flags: Effect.Effect<Flags> = Effect.gen(function* () {
   const json = yield* Effect.fromOption(
     Option.fromNullishOr(yield* store.get(STORAGE_KEY)),
   )
-  const decoded = yield* S.decodeEffect(S.fromJsonString(SavedBoard))(json)
+  const decoded = yield* S.decodeEffect(SavedBoardJsonString)(json)
   return Flags.make({ maybeSavedBoard: Option.some(decoded) })
 }).pipe(
   Effect.catch(() =>

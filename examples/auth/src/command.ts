@@ -5,7 +5,7 @@ import { Command } from 'foldkit'
 import { BrowserKeyValueStore } from '@effect/platform-browser'
 
 import { SESSION_STORAGE_KEY } from './constant'
-import { Session } from './domain/session'
+import { Session, SessionJsonString } from './domain/session'
 import { Message } from './message'
 
 export const SaveSession = Command.define('SaveSession', {
@@ -16,7 +16,7 @@ export const SaveSession = Command.define('SaveSession', {
       const store = yield* KeyValueStore.KeyValueStore
       yield* store.set(
         SESSION_STORAGE_KEY,
-        S.encodeSync(S.fromJsonString(Session))(session),
+        S.encodeSync(SessionJsonString)(session),
       )
       return Message.SucceededSaveSession()
     }).pipe(

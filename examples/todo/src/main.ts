@@ -36,6 +36,8 @@ type Todo = typeof Todo.Type
 const Todos = S.Array(Todo)
 type Todos = typeof Todos.Type
 
+const TodosJsonString = S.fromJsonString(S.toCodecJson(Todos))
+
 const Filter = S.Literals(['All', 'Active', 'Completed'])
 type Filter = typeof Filter.Type
 
@@ -302,10 +304,7 @@ export const SaveTodos = Command.define('SaveTodos', {
   execute: ({ todos }) =>
     Effect.gen(function* () {
       const store = yield* KeyValueStore.KeyValueStore
-      yield* store.set(
-        TODOS_STORAGE_KEY,
-        S.encodeSync(S.fromJsonString(Todos))(todos),
-      )
+      yield* store.set(TODOS_STORAGE_KEY, S.encodeSync(TodosJsonString)(todos))
       return Message.SucceededSaveTodos({ todos })
     }).pipe(
       Effect.catch(() => Effect.succeed(Message.FailedSaveTodos())),
@@ -672,7 +671,7 @@ export const flags: Effect.Effect<Flags> = Effect.gen(function* () {
     Option.fromNullishOr(yield* store.get(TODOS_STORAGE_KEY)),
   )
 
-  const decodeTodos = S.decodeEffect(S.fromJsonString(Todos))
+  const decodeTodos = S.decodeEffect(TodosJsonString)
   const todos = yield* decodeTodos(todosJson)
 
   return { todos: Option.some(todos) }
