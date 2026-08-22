@@ -56,6 +56,10 @@ jobs:
       # visitor's browser. The registry may need a short propagation window
       # after Changesets returns, so production checks the actual artifacts
       # and normal npm peer resolution before building anything public.
+      - name: Verify the complete promoted package release
+        if: inputs.channel == 'production'
+        run: pnpm release:verify-latest
+
       - name: Verify the playground versions and peer ranges are published
         if: inputs.channel == 'production'
         run: pnpm check:published-versions -- --wait

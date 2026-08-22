@@ -8,12 +8,11 @@ import {
   Order,
   Path,
   Record,
-  Result,
   Schema,
   pipe,
 } from 'effect'
-import { HttpClient, HttpClientRequest } from 'effect/unstable/http'
 import { spawn } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 
 import { type Scaffold } from '../rendering.js'
 
@@ -44,13 +43,6 @@ export const runScriptCommand = (
   script: string,
 ): string => `${RUN_SCRIPT_PREFIXES[packageManager]} ${script}`
 
-const GITHUB_RAW_BASE_URL =
-  'https://raw.githubusercontent.com/foldkit/foldkit/main/examples'
-
-const NPM_REGISTRY_BASE_URL = 'https://registry.npmjs.org'
-
-const FOLDKIT_SCOPE_PREFIX = '@foldkit/'
-
 const isWindows = process.platform === 'win32'
 
 const StringRecord = Schema.Record(Schema.String, Schema.String)
@@ -71,8 +63,12 @@ const ProjectPackageJson = Schema.Struct({
   scripts: StringRecord,
 })
 
-const NpmPackument = Schema.Struct({
-  version: Schema.String,
+const ReleaseManifest = Schema.Struct({
+  schemaVersion: Schema.Literal(1),
+  channel: Schema.Literals(['stable', 'canary']),
+  sourceCommit: Schema.String,
+  packages: StringRecord,
+  dependencies: StringRecord,
 })
 
 const TEMPLATE_DEV_DEPENDENCIES = [
@@ -89,44 +85,43 @@ const TEMPLATE_DEV_DEPENDENCIES = [
 
 const SERVER_RENDERING_DEV_DEPENDENCIES = ['@types/node']
 
-const isFoldkitPackage = (name: string): boolean =>
-  name === 'foldkit' || name.startsWith(FOLDKIT_SCOPE_PREFIX)
-
 type UnresolvedSpec = Data.TaggedEnum<{
   Keep: { readonly version: string }
-  Latest: {}
+  Release: {}
+  Workspace: {}
 }>
 
 const UnresolvedSpec = Data.taggedEnum<UnresolvedSpec>()
-const { Keep, Latest } = UnresolvedSpec
+const { Keep, Release, Workspace } = UnresolvedSpec
 
-const toUnresolvedSpec = (
-  spec: string,
-  name: string,
-): Result.Result<UnresolvedSpec, void> => {
+const toUnresolvedSpec = (spec: string): UnresolvedSpec => {
   if (spec.includes('workspace:')) {
-    return isFoldkitPackage(name) ? Result.succeed(Latest()) : Result.failVoid
+    return Workspace()
   } else {
-    return Result.succeed(Keep({ version: spec }))
+    return Keep({ version: spec })
   }
 }
 
+const preferConcreteSpec = (
+  templateSpec: UnresolvedSpec,
+  exampleSpec: UnresolvedSpec,
+): UnresolvedSpec => (exampleSpec._tag === 'Keep' ? exampleSpec : templateSpec)
+
 /**
  * Build the runtime dependency map for a scaffolded project from an example's
- * raw `dependencies`. Concrete versions are kept, Foldkit monorepo packages are
- * marked for latest-version resolution, and any other workspace packages (which
- * are not published) are dropped.
+ * raw `dependencies`. Concrete versions are kept and workspace versions are
+ * marked for lookup in the CLI release manifest. Workspace packages absent
+ * from that public release set are dropped during resolution.
  */
 export const buildUnresolvedDeps = (
   exampleDeps: Record<string, string>,
-): Record<string, UnresolvedSpec> =>
-  Record.filterMap(exampleDeps, toUnresolvedSpec)
+): Record<string, UnresolvedSpec> => Record.map(exampleDeps, toUnresolvedSpec)
 
 /**
  * Build the devDependency map for a scaffolded project by merging the always-on
  * template tooling and any extra scaffold devDependencies with the example's
  * own `devDependencies`. A concrete version from the example wins over a
- * latest marker for the same package.
+ * release marker for the same package.
  */
 export const buildUnresolvedDevDeps = (
   exampleDevDeps: Record<string, string>,
@@ -134,14 +129,11 @@ export const buildUnresolvedDevDeps = (
 ): Record<string, UnresolvedSpec> => {
   const templateSpecs = Record.fromIterableWith(
     [...TEMPLATE_DEV_DEPENDENCIES, ...extraDevDependencies],
-    name => [name, Latest()],
+    name => [name, Release()],
   )
-  const exampleSpecs = Record.filterMap(exampleDevDeps, toUnresolvedSpec)
-  return Record.union(
-    templateSpecs,
-    exampleSpecs,
-    (_templateSpec, exampleSpec) => exampleSpec,
-  )
+  const exampleSpecs = Record.map(exampleDevDeps, toUnresolvedSpec)
+
+  return Record.union(templateSpecs, exampleSpecs, preferConcreteSpec)
 }
 
 /**
@@ -174,38 +166,83 @@ export const scaffoldDevDependencies = (
     }),
   )
 
-const resolveLatestVersion = (name: string) =>
+const getTemplateRoot = (currentDir: string) =>
   Effect.gen(function* () {
-    const client = yield* HttpClient.HttpClient
-    const encodedName = name.replace('/', '%2F')
-    const url = `${NPM_REGISTRY_BASE_URL}/${encodedName}/latest`
-    const response = yield* client.execute(HttpClientRequest.get(url))
-    const json = yield* response.json
-    const packument = yield* Schema.decodeUnknownEffect(NpmPackument)(json)
-    return `^${packument.version}`
+    const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    const bundledRoot = path.resolve(currentDir, '..', 'templates')
+
+    if (yield* fs.exists(bundledRoot)) {
+      return bundledRoot
+    } else {
+      return path.resolve(currentDir, '..', '..', 'templates')
+    }
   })
 
-const resolveEntry = (name: string, spec: UnresolvedSpec) =>
+const readReleaseManifest = Effect.gen(function* () {
+  const fs = yield* FileSystem.FileSystem
+  const path = yield* Path.Path
+  const currentDir = path.dirname(fileURLToPath(import.meta.url))
+  const templateRoot = yield* getTemplateRoot(currentDir)
+  const content = yield* fs.readFileString(
+    path.join(templateRoot, 'release.json'),
+  )
+
+  return yield* Schema.decodeUnknownEffect(ReleaseManifest)(JSON.parse(content))
+})
+
+const releaseVersions = (manifest: typeof ReleaseManifest.Type) =>
+  Record.union(
+    manifest.dependencies,
+    manifest.packages,
+    (_, version) => version,
+  )
+
+const resolveReleaseVersion = (
+  versions: Record<string, string>,
+  name: string,
+) =>
+  Option.match(Record.get(versions, name), {
+    onNone: () => Effect.fail(`The CLI release does not declare ${name}.`),
+    onSome: Effect.succeed,
+  })
+
+const resolveEntry = (
+  versions: Record<string, string>,
+  name: string,
+  spec: UnresolvedSpec,
+) =>
   Match.value(spec).pipe(
+    Match.withReturnType<
+      Effect.Effect<Option.Option<readonly [string, string]>, string>
+    >(),
     Match.tagsExhaustive({
-      Keep: ({ version }) => Effect.succeed([name, version] as const),
-      Latest: () =>
-        Effect.map(
-          resolveLatestVersion(name),
-          version => [name, version] as const,
+      Keep: ({ version }) => Effect.succeed(Option.some([name, version])),
+      Release: () =>
+        Effect.map(resolveReleaseVersion(versions, name), version =>
+          Option.some([name, version]),
+        ),
+      Workspace: () =>
+        Effect.succeed(
+          Option.map(Record.get(versions, name), version => [name, version]),
         ),
     }),
   )
 
-const resolveSpecs = (unresolved: Record<string, UnresolvedSpec>) =>
+const resolveSpecs = (
+  versions: Record<string, string>,
+  unresolved: Record<string, UnresolvedSpec>,
+) =>
   Effect.gen(function* () {
     const entries = Record.toEntries(unresolved)
+
     const resolved = yield* Effect.forEach(
       entries,
-      ([name, spec]) => resolveEntry(name, spec),
+      ([name, spec]) => resolveEntry(versions, name, spec),
       { concurrency: 'unbounded' },
     )
-    return Record.fromEntries(resolved)
+
+    return Record.fromEntries(Array.getSomes(resolved))
   })
 
 const byPackageName = Order.mapInput(
@@ -223,21 +260,25 @@ const sortDependencies = (
     Record.fromEntries,
   )
 
-const fetchExamplePackageJson = (example: string) =>
-  Effect.gen(function* () {
-    const client = yield* HttpClient.HttpClient
-    const url = `${GITHUB_RAW_BASE_URL}/${example}/package.json`
-    const response = yield* client.execute(HttpClientRequest.get(url))
-    const json = yield* response.json
-    return yield* Schema.decodeUnknownEffect(PackageJson)(json)
-  })
-
 const readExamplePackageJson = (
   example: string,
   maybeDependencyManifestsDirectory: Option.Option<string>,
 ) =>
   Option.match(maybeDependencyManifestsDirectory, {
-    onNone: () => fetchExamplePackageJson(example),
+    onNone: () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem
+        const path = yield* Path.Path
+        const currentDir = path.dirname(fileURLToPath(import.meta.url))
+        const templateRoot = yield* getTemplateRoot(currentDir)
+        const content = yield* fs.readFileString(
+          path.join(templateRoot, 'examples', example, 'package.json'),
+        )
+
+        return yield* Schema.decodeUnknownEffect(PackageJson)(
+          JSON.parse(content),
+        )
+      }),
     onSome: directory =>
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem
@@ -245,6 +286,7 @@ const readExamplePackageJson = (
         const content = yield* fs.readFileString(
           path.join(directory, example, 'package.json'),
         )
+
         return yield* Schema.decodeUnknownEffect(PackageJson)(
           JSON.parse(content),
         )
@@ -290,7 +332,9 @@ const runCommand = (
         shell: isWindows,
         stdio: 'inherit',
       })
+
       child.on('error', error => resume(Effect.fail(error)))
+
       child.on('exit', code => {
         if (code === 0) {
           resume(Effect.void)
@@ -316,15 +360,19 @@ export const installDependencies = (
   maybeDependencyManifestsDirectory: Option.Option<string>,
 ) =>
   Effect.gen(function* () {
+    const releaseManifest = yield* readReleaseManifest
+    const versions = releaseVersions(releaseManifest)
     const examplePackageJson = yield* readExamplePackageJson(
       dependencyExample(scaffold),
       maybeDependencyManifestsDirectory,
     )
 
     const dependencies = yield* resolveSpecs(
+      versions,
       buildUnresolvedDeps(examplePackageJson.dependencies),
     )
     const devDependencies = yield* resolveSpecs(
+      versions,
       buildUnresolvedDevDeps(
         examplePackageJson.devDependencies,
         scaffoldDevDependencies(scaffold),

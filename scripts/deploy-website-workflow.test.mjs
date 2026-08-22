@@ -414,3 +414,10 @@ test('the canary hostname moves only after its staged deployment passes smoke te
     /- name: Verify the playground versions and peer ranges are published\n\s+if: inputs\.channel == 'production'/,
   )
 })
+
+test('production deployment requires the complete promoted npm snapshot', () => {
+  assert.match(
+    buildWorkflow,
+    /- name: Verify the complete promoted package release\n\s+if: inputs\.channel == 'production'\n\s+run: pnpm release:verify-latest/,
+  )
+})
