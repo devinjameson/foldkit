@@ -15,15 +15,7 @@ import {
   pushHistory,
   setPixels,
 } from './grid'
-import {
-  GotErrorDialogMessage,
-  GotGridSizeConfirmDialogMessage,
-  GotGridSizeRadioGroupMessage,
-  GotPaletteRadioGroupMessage,
-  GotThemeListboxMessage,
-  GotToolRadioGroupMessage,
-  type Message,
-} from './message'
+import { Message } from './message'
 import {
   type Model,
   type PaletteIndex,
@@ -75,7 +67,7 @@ const foldErrorDialog = Update.foldChild({
   read: (model: Model) => Option.some(model.errorDialog),
   write: (model, nextErrorDialog) =>
     evo(model, { errorDialog: () => nextErrorDialog }),
-  toParentMessage: message => GotErrorDialogMessage({ message }),
+  toParentMessage: message => Message.GotErrorDialogMessage({ message }),
   foldOutMessage: foldErrorDialogOutMessage,
 })
 
@@ -106,7 +98,7 @@ const foldThemeListbox = Update.foldChild({
   read: (model: Model) => Option.some(model.themeListbox),
   write: (model, nextThemeListbox) =>
     evo(model, { themeListbox: () => nextThemeListbox }),
-  toParentMessage: message => GotThemeListboxMessage({ message }),
+  toParentMessage: message => Message.GotThemeListboxMessage({ message }),
   foldOutMessage: foldThemeListboxOutMessage,
 })
 
@@ -126,7 +118,8 @@ const foldGridSizeConfirmDialog = Update.foldChild({
   read: (model: Model) => Option.some(model.gridSizeConfirmDialog),
   write: (model, nextGridSizeConfirmDialog) =>
     evo(model, { gridSizeConfirmDialog: () => nextGridSizeConfirmDialog }),
-  toParentMessage: message => GotGridSizeConfirmDialogMessage({ message }),
+  toParentMessage: message =>
+    Message.GotGridSizeConfirmDialogMessage({ message }),
   foldOutMessage: foldGridSizeConfirmDialogOutMessage,
 })
 
@@ -155,7 +148,7 @@ const foldToolRadioGroup = Update.foldChild({
   read: (model: Model) => Option.some(model.toolRadioGroup),
   write: (model, nextToolRadioGroup) =>
     evo(model, { toolRadioGroup: () => nextToolRadioGroup }),
-  toParentMessage: message => GotToolRadioGroupMessage({ message }),
+  toParentMessage: message => Message.GotToolRadioGroupMessage({ message }),
   foldOutMessage: foldToolRadioGroupOutMessage,
 })
 
@@ -174,7 +167,7 @@ const foldGridSizeRadioGroup = Update.foldChild({
   read: (model: Model) => Option.some(model.gridSizeRadioGroup),
   write: (model, nextGridSizeRadioGroup) =>
     evo(model, { gridSizeRadioGroup: () => nextGridSizeRadioGroup }),
-  toParentMessage: message => GotGridSizeRadioGroupMessage({ message }),
+  toParentMessage: message => Message.GotGridSizeRadioGroupMessage({ message }),
   foldOutMessage: foldGridSizeRadioGroupOutMessage,
 })
 
@@ -196,254 +189,251 @@ const foldPaletteRadioGroup = Update.foldChild({
   read: (model: Model) => Option.some(model.paletteRadioGroup),
   write: (model, nextPaletteRadioGroup) =>
     evo(model, { paletteRadioGroup: () => nextPaletteRadioGroup }),
-  toParentMessage: message => GotPaletteRadioGroupMessage({ message }),
+  toParentMessage: message => Message.GotPaletteRadioGroupMessage({ message }),
   foldOutMessage: foldPaletteRadioGroupOutMessage,
 })
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    withUpdateReturn,
-    M.tagsExhaustive({
-      PressedCell: ({ x, y }) =>
-        M.value(model.tool).pipe(
-          withUpdateReturn,
-          M.when('Brush', () => [
-            evo(model, {
-              grid: () => applyBrush(model, x, y),
-              undoStack: () => pushHistory(model.undoStack, model.grid),
-              redoStack: () => [],
-              isDrawing: () => true,
-            }),
-            [],
-          ]),
-          M.when('Fill', () => {
-            const nextModel = evo(model, {
-              grid: () => applyFill(model, x, y),
-              undoStack: () => pushHistory(model.undoStack, model.grid),
-              redoStack: () => [],
-            })
-            return [nextModel, [saveCanvas(nextModel)]]
-          }),
-          M.when('Eraser', () => [
-            evo(model, {
-              grid: () => applyEraser(model, x, y),
-              undoStack: () => pushHistory(model.undoStack, model.grid),
-              redoStack: () => [],
-              isDrawing: () => true,
-            }),
-            [],
-          ]),
-          M.exhaustive,
-        ),
-
-      EnteredCell: ({ x, y }) => {
-        const withHover = evo(model, {
-          maybeHoveredCell: () => Option.some({ x, y }),
-        })
-
-        if (model.isDrawing && model.tool === 'Brush') {
-          return [evo(withHover, { grid: () => applyBrush(model, x, y) }), []]
-        }
-
-        if (model.isDrawing && model.tool === 'Eraser') {
-          return [evo(withHover, { grid: () => applyEraser(model, x, y) }), []]
-        }
-
-        return [withHover, []]
-      },
-
-      LeftCanvas: () => [
-        evo(model, { maybeHoveredCell: () => Option.none() }),
-        [],
-      ],
-
-      ReleasedMouse: () => {
-        if (!model.isDrawing) {
-          return [model, []]
-        }
-        const nextModel = evo(model, { isDrawing: () => false })
-        return [nextModel, [saveCanvas(nextModel)]]
-      },
-
-      SelectedColor: ({ colorIndex }) => selectColor(model, colorIndex),
-
-      SelectedTool: ({ tool }) => selectTool(model, tool),
-
-      SelectedGridSize: ({ size }) => requestGridSizeChange(model, size),
-
-      GotToolRadioGroupMessage: ({ message }) =>
-        foldToolRadioGroup(model, message),
-
-      GotGridSizeRadioGroupMessage: ({ message }) =>
-        foldGridSizeRadioGroup(model, message),
-
-      GotPaletteRadioGroupMessage: ({ message }) =>
-        foldPaletteRadioGroup(model, message),
-
-      ToggledMirrorHorizontal: () => {
-        const nextMirrorMode = M.value(model.mirrorMode).pipe(
-          M.when('None', () => 'Horizontal' as const),
-          M.when('Horizontal', () => 'None' as const),
-          M.when('Vertical', () => 'Both' as const),
-          M.when('Both', () => 'Vertical' as const),
-          M.exhaustive,
-        )
-        return [evo(model, { mirrorMode: () => nextMirrorMode }), []]
-      },
-
-      ToggledMirrorVertical: () => {
-        const nextMirrorMode = M.value(model.mirrorMode).pipe(
-          M.when('None', () => 'Vertical' as const),
-          M.when('Vertical', () => 'None' as const),
-          M.when('Horizontal', () => 'Both' as const),
-          M.when('Both', () => 'Horizontal' as const),
-          M.exhaustive,
-        )
-        return [evo(model, { mirrorMode: () => nextMirrorMode }), []]
-      },
-
-      ClickedUndo: () =>
-        Array.match(model.undoStack, {
-          onEmpty: () => [model, []],
-          onNonEmpty: nonEmptyUndoStack => {
-            const nextModel = evo(model, {
-              grid: () => Array.lastNonEmpty(nonEmptyUndoStack),
-              undoStack: () => Array.initNonEmpty(nonEmptyUndoStack),
-              redoStack: () => [...model.redoStack, model.grid],
-            })
-            return [nextModel, [saveCanvas(nextModel)]]
-          },
-        }),
-
-      ClickedRedo: () =>
-        Array.match(model.redoStack, {
-          onEmpty: () => [model, []],
-          onNonEmpty: nonEmptyRedoStack => {
-            const nextModel = evo(model, {
-              grid: () => Array.lastNonEmpty(nonEmptyRedoStack),
-              undoStack: () => [...model.undoStack, model.grid],
-              redoStack: () => Array.initNonEmpty(nonEmptyRedoStack),
-            })
-            return [nextModel, [saveCanvas(nextModel)]]
-          },
-        }),
-
-      ClickedHistoryStep: ({ stepIndex }) => {
-        const targetGrid = model.undoStack[stepIndex]
-        if (targetGrid === undefined) {
-          return [model, []]
-        }
-
-        const statesAfterTarget = Array.drop(model.undoStack, stepIndex + 1)
-
-        const nextModel = evo(model, {
-          grid: () => targetGrid,
-          undoStack: () => Array.take(model.undoStack, stepIndex),
-          redoStack: () => [
-            ...model.redoStack,
-            model.grid,
-            ...Array.reverse(statesAfterTarget),
-          ],
-        })
-
-        return [nextModel, [saveCanvas(nextModel)]]
-      },
-
-      ClickedRedoStep: ({ stepIndex }) => {
-        const targetGrid = model.redoStack[stepIndex]
-        if (targetGrid === undefined) {
-          return [model, []]
-        }
-
-        const statesBetweenCurrentAndTarget = Array.drop(
-          model.redoStack,
-          stepIndex + 1,
-        )
-
-        const nextModel = evo(model, {
-          grid: () => targetGrid,
-          undoStack: () => [
-            ...model.undoStack,
-            model.grid,
-            ...Array.reverse(statesBetweenCurrentAndTarget),
-          ],
-          redoStack: () => Array.take(model.redoStack, stepIndex),
-        })
-
-        return [nextModel, [saveCanvas(nextModel)]]
-      },
-
-      ClickedClear: () => {
-        const nextModel = evo(model, {
-          grid: () => createEmptyGrid(model.gridSize),
-          undoStack: () => pushHistory(model.undoStack, model.grid),
-          redoStack: () => [],
-        })
-        return [nextModel, [saveCanvas(nextModel)]]
-      },
-
-      ClickedExport: () => [
-        model,
-        [
-          ExportPng({
-            grid: model.grid,
-            gridSize: model.gridSize,
-            paletteThemeIndex: model.paletteThemeIndex,
-          }),
-        ],
-      ],
-
-      SucceededExportPng: () => [model, []],
-
-      CompletedSaveCanvas: () => [model, []],
-
-      FailedExportPng: ({ error }) => {
-        const [nextErrorDialog, errorDialogCommands] = Dialog.open(
-          model.errorDialog,
-        )
-
-        return [
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    PressedCell: ({ x, y }) =>
+      M.value(model.tool).pipe(
+        withUpdateReturn,
+        M.when('Brush', () => [
           evo(model, {
-            maybeExportError: () => Option.some(error),
-            errorDialog: () => nextErrorDialog,
+            grid: () => applyBrush(model, x, y),
+            undoStack: () => pushHistory(model.undoStack, model.grid),
+            redoStack: () => [],
+            isDrawing: () => true,
           }),
-          Command.mapMessages(errorDialogCommands, dialogMessage =>
-            GotErrorDialogMessage({ message: dialogMessage }),
-          ),
-        ]
-      },
-
-      GotErrorDialogMessage: ({ message }) => foldErrorDialog(model, message),
-
-      GotThemeListboxMessage: ({ message }) => foldThemeListbox(model, message),
-
-      ConfirmedGridSizeChange: () =>
-        Option.match(model.maybePendingGridSize, {
-          onNone: () => [model, []],
-          onSome: pendingSize => {
-            const [nextDialog, dialogCommands] = Dialog.close(
-              model.gridSizeConfirmDialog,
-            )
-            const mappedDialogCommands = Command.mapMessages(
-              dialogCommands,
-              dialogMessage =>
-                GotGridSizeConfirmDialogMessage({
-                  message: dialogMessage,
-                }),
-            )
-            const [resizedModel] = applyGridSizeChange(model, pendingSize)
-            const nextModel = evo(resizedModel, {
-              gridSizeConfirmDialog: () => nextDialog,
-              maybePendingGridSize: () => Option.none(),
-            })
-            return [nextModel, [...mappedDialogCommands, saveCanvas(nextModel)]]
-          },
+          [],
+        ]),
+        M.when('Fill', () => {
+          const nextModel = evo(model, {
+            grid: () => applyFill(model, x, y),
+            undoStack: () => pushHistory(model.undoStack, model.grid),
+            redoStack: () => [],
+          })
+          return [nextModel, [saveCanvas(nextModel)]]
         }),
+        M.when('Eraser', () => [
+          evo(model, {
+            grid: () => applyEraser(model, x, y),
+            undoStack: () => pushHistory(model.undoStack, model.grid),
+            redoStack: () => [],
+            isDrawing: () => true,
+          }),
+          [],
+        ]),
+        M.exhaustive,
+      ),
 
-      GotGridSizeConfirmDialogMessage: ({ message }) =>
-        foldGridSizeConfirmDialog(model, message),
-    }),
-  )
+    EnteredCell: ({ x, y }) => {
+      const withHover = evo(model, {
+        maybeHoveredCell: () => Option.some({ x, y }),
+      })
+
+      if (model.isDrawing && model.tool === 'Brush') {
+        return [evo(withHover, { grid: () => applyBrush(model, x, y) }), []]
+      }
+
+      if (model.isDrawing && model.tool === 'Eraser') {
+        return [evo(withHover, { grid: () => applyEraser(model, x, y) }), []]
+      }
+
+      return [withHover, []]
+    },
+
+    LeftCanvas: () => [
+      evo(model, { maybeHoveredCell: () => Option.none() }),
+      [],
+    ],
+
+    ReleasedMouse: () => {
+      if (!model.isDrawing) {
+        return [model, []]
+      }
+      const nextModel = evo(model, { isDrawing: () => false })
+      return [nextModel, [saveCanvas(nextModel)]]
+    },
+
+    SelectedColor: ({ colorIndex }) => selectColor(model, colorIndex),
+
+    SelectedTool: ({ tool }) => selectTool(model, tool),
+
+    SelectedGridSize: ({ size }) => requestGridSizeChange(model, size),
+
+    GotToolRadioGroupMessage: ({ message }) =>
+      foldToolRadioGroup(model, message),
+
+    GotGridSizeRadioGroupMessage: ({ message }) =>
+      foldGridSizeRadioGroup(model, message),
+
+    GotPaletteRadioGroupMessage: ({ message }) =>
+      foldPaletteRadioGroup(model, message),
+
+    ToggledMirrorHorizontal: () => {
+      const nextMirrorMode = M.value(model.mirrorMode).pipe(
+        M.when('None', () => 'Horizontal' as const),
+        M.when('Horizontal', () => 'None' as const),
+        M.when('Vertical', () => 'Both' as const),
+        M.when('Both', () => 'Vertical' as const),
+        M.exhaustive,
+      )
+      return [evo(model, { mirrorMode: () => nextMirrorMode }), []]
+    },
+
+    ToggledMirrorVertical: () => {
+      const nextMirrorMode = M.value(model.mirrorMode).pipe(
+        M.when('None', () => 'Vertical' as const),
+        M.when('Vertical', () => 'None' as const),
+        M.when('Horizontal', () => 'Both' as const),
+        M.when('Both', () => 'Horizontal' as const),
+        M.exhaustive,
+      )
+      return [evo(model, { mirrorMode: () => nextMirrorMode }), []]
+    },
+
+    ClickedUndo: () =>
+      Array.match(model.undoStack, {
+        onEmpty: () => [model, []],
+        onNonEmpty: nonEmptyUndoStack => {
+          const nextModel = evo(model, {
+            grid: () => Array.lastNonEmpty(nonEmptyUndoStack),
+            undoStack: () => Array.initNonEmpty(nonEmptyUndoStack),
+            redoStack: () => [...model.redoStack, model.grid],
+          })
+          return [nextModel, [saveCanvas(nextModel)]]
+        },
+      }),
+
+    ClickedRedo: () =>
+      Array.match(model.redoStack, {
+        onEmpty: () => [model, []],
+        onNonEmpty: nonEmptyRedoStack => {
+          const nextModel = evo(model, {
+            grid: () => Array.lastNonEmpty(nonEmptyRedoStack),
+            undoStack: () => [...model.undoStack, model.grid],
+            redoStack: () => Array.initNonEmpty(nonEmptyRedoStack),
+          })
+          return [nextModel, [saveCanvas(nextModel)]]
+        },
+      }),
+
+    ClickedHistoryStep: ({ stepIndex }) => {
+      const targetGrid = model.undoStack[stepIndex]
+      if (targetGrid === undefined) {
+        return [model, []]
+      }
+
+      const statesAfterTarget = Array.drop(model.undoStack, stepIndex + 1)
+
+      const nextModel = evo(model, {
+        grid: () => targetGrid,
+        undoStack: () => Array.take(model.undoStack, stepIndex),
+        redoStack: () => [
+          ...model.redoStack,
+          model.grid,
+          ...Array.reverse(statesAfterTarget),
+        ],
+      })
+
+      return [nextModel, [saveCanvas(nextModel)]]
+    },
+
+    ClickedRedoStep: ({ stepIndex }) => {
+      const targetGrid = model.redoStack[stepIndex]
+      if (targetGrid === undefined) {
+        return [model, []]
+      }
+
+      const statesBetweenCurrentAndTarget = Array.drop(
+        model.redoStack,
+        stepIndex + 1,
+      )
+
+      const nextModel = evo(model, {
+        grid: () => targetGrid,
+        undoStack: () => [
+          ...model.undoStack,
+          model.grid,
+          ...Array.reverse(statesBetweenCurrentAndTarget),
+        ],
+        redoStack: () => Array.take(model.redoStack, stepIndex),
+      })
+
+      return [nextModel, [saveCanvas(nextModel)]]
+    },
+
+    ClickedClear: () => {
+      const nextModel = evo(model, {
+        grid: () => createEmptyGrid(model.gridSize),
+        undoStack: () => pushHistory(model.undoStack, model.grid),
+        redoStack: () => [],
+      })
+      return [nextModel, [saveCanvas(nextModel)]]
+    },
+
+    ClickedExport: () => [
+      model,
+      [
+        ExportPng({
+          grid: model.grid,
+          gridSize: model.gridSize,
+          paletteThemeIndex: model.paletteThemeIndex,
+        }),
+      ],
+    ],
+
+    SucceededExportPng: () => [model, []],
+
+    CompletedSaveCanvas: () => [model, []],
+
+    FailedExportPng: ({ error }) => {
+      const [nextErrorDialog, errorDialogCommands] = Dialog.open(
+        model.errorDialog,
+      )
+
+      return [
+        evo(model, {
+          maybeExportError: () => Option.some(error),
+          errorDialog: () => nextErrorDialog,
+        }),
+        Command.mapMessages(errorDialogCommands, dialogMessage =>
+          Message.GotErrorDialogMessage({ message: dialogMessage }),
+        ),
+      ]
+    },
+
+    GotErrorDialogMessage: ({ message }) => foldErrorDialog(model, message),
+
+    GotThemeListboxMessage: ({ message }) => foldThemeListbox(model, message),
+
+    ConfirmedGridSizeChange: () =>
+      Option.match(model.maybePendingGridSize, {
+        onNone: () => [model, []],
+        onSome: pendingSize => {
+          const [nextDialog, dialogCommands] = Dialog.close(
+            model.gridSizeConfirmDialog,
+          )
+          const mappedDialogCommands = Command.mapMessages(
+            dialogCommands,
+            dialogMessage =>
+              Message.GotGridSizeConfirmDialogMessage({
+                message: dialogMessage,
+              }),
+          )
+          const [resizedModel] = applyGridSizeChange(model, pendingSize)
+          const nextModel = evo(resizedModel, {
+            gridSizeConfirmDialog: () => nextDialog,
+            maybePendingGridSize: () => Option.none(),
+          })
+          return [nextModel, [...mappedDialogCommands, saveCanvas(nextModel)]]
+        },
+      }),
+
+    GotGridSizeConfirmDialogMessage: ({ message }) =>
+      foldGridSizeConfirmDialog(model, message),
+  })
 
 const applyGridSizeChange = (model: Model, size: number): UpdateReturn => [
   evo(model, {
@@ -473,7 +463,7 @@ const requestGridSizeChange = (model: Model, size: number): UpdateReturn => {
       gridSizeConfirmDialog: () => nextDialog,
     }),
     Command.mapMessages(dialogCommands, dialogMessage =>
-      GotGridSizeConfirmDialogMessage({ message: dialogMessage }),
+      Message.GotGridSizeConfirmDialogMessage({ message: dialogMessage }),
     ),
   ]
 }

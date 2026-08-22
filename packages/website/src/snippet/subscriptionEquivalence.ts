@@ -1,10 +1,10 @@
 import { Effect, Equivalence, Queue, Schema as S, Stream } from 'effect'
 import { Subscription } from 'foldkit'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 
-const AdvancedAutoScrollFrame = m('AdvancedAutoScrollFrame')
-
-const Message = S.Union([AdvancedAutoScrollFrame])
+const Message = defineMessageUnion({
+  AdvancedAutoScrollFrame: {},
+})
 type Message = typeof Message.Type
 
 const Model = S.Struct({
@@ -35,14 +35,14 @@ const subscriptions = Subscription.make<Model, Message>()(entry => ({
       // The rAF loop calls readDependencies() each frame to get the current clientY.
       dependenciesToStream: ({ isDragging }, readDependencies) =>
         Stream.when(
-          Stream.callback<typeof AdvancedAutoScrollFrame.Type>(queue =>
+          Stream.callback<typeof Message.AdvancedAutoScrollFrame.Type>(queue =>
             Effect.acquireRelease(
               Effect.sync(() => {
                 const animationFrameIdRef = { current: 0 }
                 const step = () => {
                   const { clientY } = readDependencies()
                   window.scrollBy(0, clientY > window.innerHeight - 40 ? 5 : 0)
-                  Queue.offerUnsafe(queue, AdvancedAutoScrollFrame())
+                  Queue.offerUnsafe(queue, Message.AdvancedAutoScrollFrame())
                   animationFrameIdRef.current = requestAnimationFrame(step)
                 }
                 animationFrameIdRef.current = requestAnimationFrame(step)

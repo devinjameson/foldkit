@@ -3,7 +3,7 @@
 // update, and view definitions.
 import { Command } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Dialog } from '@foldkit/ui'
@@ -25,9 +25,9 @@ const init = () => [
 
 // A fact for the trigger, plus the Dialog Message embedded in your parent
 // Message for the submodel delegation:
-const ClickedOpenDialog = m('ClickedOpenDialog')
-const GotDialogMessage = m('GotDialogMessage', {
-  message: Dialog.Message,
+const Message = defineMessageUnion({
+  ClickedOpenDialog: {},
+  GotDialogMessage: { message: Dialog.Message },
 })
 
 // Open the dialog from your update with Dialog.open. Escape, the backdrop,
@@ -39,7 +39,7 @@ ClickedOpenDialog: () => {
   return [
     evo(model, { dialog: () => nextDialog }),
     Command.mapMessages(dialogCommands, message =>
-      GotDialogMessage({ message }),
+      Message.GotDialogMessage({ message }),
     ),
   ]
 }
@@ -49,7 +49,7 @@ GotDialogMessage: ({ message }) => {
   return [
     evo(model, { dialog: () => nextDialog }),
     Command.mapMessages(dialogCommands, message =>
-      GotDialogMessage({ message }),
+      Message.GotDialogMessage({ message }),
     ),
   ]
 }
@@ -60,7 +60,7 @@ const view = (h: HtmlBuilder<Message>) =>
   h.div(
     [],
     [
-      h.button([h.OnClick(ClickedOpenDialog())], ['Open Dialog']),
+      h.button([h.OnClick(Message.ClickedOpenDialog())], ['Open Dialog']),
       h.submodel({
         slotId: model.dialog.id,
         model: model.dialog,
@@ -104,7 +104,7 @@ const view = (h: HtmlBuilder<Message>) =>
                 : [],
             ),
         },
-        toParentMessage: message => GotDialogMessage({ message }),
+        toParentMessage: message => Message.GotDialogMessage({ message }),
       }),
     ],
   )

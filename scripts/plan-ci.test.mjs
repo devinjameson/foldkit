@@ -176,6 +176,7 @@ test('a scaffold or framework change selects the generated-app build gate', () =
     'packages/examples-e2e/package.json',
     'packages/create-foldkit-app/templates/rendering/ssr/scripts/build.mjs',
     'packages/foldkit/src/experimental/server/server.ts',
+    'packages/ui/src/button/index.ts',
     'packages/vite-plugin-foldkit/src/buildToken.ts',
   ]) {
     assert.equal(
@@ -213,6 +214,16 @@ test('a typing game change stays out of the website scope', () => {
 
   assert.equal(scopes['typing_game'], 'true')
   assert.equal(scopes['website'], 'false')
+})
+
+test('website deployment infrastructure selects the website scope', () => {
+  for (const file of [
+    '.github/workflows/deploy-website-build.yml',
+    '.github/workflows/deploy-website-canary.yml',
+    'scripts/website-vercel-config.mjs',
+  ]) {
+    assert.equal(planCiForFile(file)['website'], 'true', file)
+  }
 })
 
 test('a lockfile change selects everything, including the typing game', () => {

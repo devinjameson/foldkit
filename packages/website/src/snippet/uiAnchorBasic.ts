@@ -4,14 +4,16 @@
 import { Effect, Schema as S } from 'effect'
 import { Mount } from 'foldkit'
 import type { Html, HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 
 import { AnchorConfig, anchorSetup } from '@foldkit/ui/anchor'
 
 // Every Mount Definition declares at least one result Message. Name it after
 // the Definition, the way a Command's result Message is named after the
 // Command:
-const CompletedAnchorPanel = m('CompletedAnchorPanel')
+const Message = defineMessageUnion({
+  CompletedAnchorPanel: {},
+})
 
 // Mount.define takes the Definition name, a Schema for the args captured at
 // mount, and the result Message. anchorSetup is a plain DOM function that
@@ -21,7 +23,7 @@ const CompletedAnchorPanel = m('CompletedAnchorPanel')
 const AnchorPanel = Mount.define(
   'AnchorPanel',
   { buttonId: S.String, anchor: AnchorConfig },
-  CompletedAnchorPanel,
+  Message.CompletedAnchorPanel,
 )(
   ({ buttonId, anchor }) =>
     element =>
@@ -30,7 +32,7 @@ const AnchorPanel = Mount.define(
           Effect.sync(() => anchorSetup(element, { buttonId, anchor })),
           cleanup => Effect.sync(cleanup),
         )
-        return CompletedAnchorPanel()
+        return Message.CompletedAnchorPanel()
       }),
 )
 

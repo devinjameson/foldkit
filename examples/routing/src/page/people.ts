@@ -10,7 +10,7 @@ import {
 } from 'effect'
 import { Command, Submodel } from 'foldkit'
 import { Html, HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { pushUrl } from 'foldkit/navigation'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
@@ -95,22 +95,17 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const ChangedSearchInput = m('ChangedSearchInput', { value: S.String })
-export const SubmittedSearch = m('SubmittedSearch')
-const ChangedRoute = m('ChangedRoute', { route: PeopleRoute })
-export const SucceededFetchPeople = m('SucceededFetchPeople', {
-  query: S.String,
-  people: S.Array(Person),
+export const Message = defineMessageUnion({
+  ChangedSearchInput: { value: S.String },
+  SubmittedSearch: {},
+  ChangedRoute: { route: PeopleRoute },
+  SucceededFetchPeople: {
+    query: S.String,
+    people: S.Array(Person),
+  },
+  CompletedPushSearchUrl: {},
 })
-export const CompletedPushSearchUrl = m('CompletedPushSearchUrl')
 
-export const Message = S.Union([
-  ChangedSearchInput,
-  SubmittedSearch,
-  ChangedRoute,
-  SucceededFetchPeople,
-  CompletedPushSearchUrl,
-])
 export type Message = typeof Message.Type
 
 // INIT
@@ -133,20 +128,20 @@ export const init = (
 
 export const PushSearchUrl = Command.define('PushSearchUrl', {
   args: { searchText: S.Option(S.String) },
-  messages: [CompletedPushSearchUrl],
+  messages: [Message.CompletedPushSearchUrl],
   execute: ({ searchText }) =>
     pushUrl(peopleRouter({ searchText })).pipe(
-      Effect.as(CompletedPushSearchUrl()),
+      Effect.as(Message.CompletedPushSearchUrl()),
     ),
 })
 
 export const FetchPeople = Command.define('FetchPeople', {
   args: { searchText: S.String },
-  messages: [SucceededFetchPeople],
+  messages: [Message.SucceededFetchPeople],
   execute: ({ searchText }) =>
     Effect.sleep(SEARCH_LATENCY).pipe(
       Effect.as(
-        SucceededFetchPeople({
+        Message.SucceededFetchPeople({
           query: searchText,
           people: searchPeople(searchText),
         }),
@@ -160,49 +155,45 @@ export type UpdateReturn = readonly [
   Model,
   ReadonlyArray<Command.Command<Message>>,
 ]
-const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    withUpdateReturn,
-    M.tagsExhaustive({
-      ChangedSearchInput: ({ value }) => [
-        evo(model, { searchInput: () => value }),
-        [],
-      ],
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    ChangedSearchInput: ({ value }) => [
+      evo(model, { searchInput: () => value }),
+      [],
+    ],
 
-      SubmittedSearch: () => [
-        model,
-        [
-          PushSearchUrl({
-            searchText: Option.fromNullishOr(model.searchInput || null),
-          }),
-        ],
-      ],
-
-      ChangedRoute: ({ route }) => {
-        const searchText = routeSearchText(route)
-        return [
-          evo(model, {
-            searchInput: () => searchText,
-            searchHistory: searchHistory =>
-              addSearchToHistory(searchHistory, searchText),
-            results: () => SearchLoading(),
-          }),
-          [FetchPeople({ searchText })],
-        ]
-      },
-
-      SucceededFetchPeople: ({ query, people: fetchedPeople }) => [
-        evo(model, {
-          results: () => SearchLoaded({ query, people: fetchedPeople }),
+    SubmittedSearch: () => [
+      model,
+      [
+        PushSearchUrl({
+          searchText: Option.fromNullishOr(model.searchInput || null),
         }),
-        [],
       ],
+    ],
 
-      CompletedPushSearchUrl: () => [model, []],
-    }),
-  )
+    ChangedRoute: ({ route }) => {
+      const searchText = routeSearchText(route)
+      return [
+        evo(model, {
+          searchInput: () => searchText,
+          searchHistory: searchHistory =>
+            addSearchToHistory(searchHistory, searchText),
+          results: () => SearchLoading(),
+        }),
+        [FetchPeople({ searchText })],
+      ]
+    },
+
+    SucceededFetchPeople: ({ query, people: fetchedPeople }) => [
+      evo(model, {
+        results: () => SearchLoaded({ query, people: fetchedPeople }),
+      }),
+      [],
+    ],
+
+    CompletedPushSearchUrl: () => [model, []],
+  })
 
 /** Tells the People page that the route changed. People does not own the
  *  route; it derives its own state (the search input and history) from the new
@@ -210,7 +201,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
  *  `ChangedUrl` handler. Contrast a `reflect*` setter, which writes a field the
  *  Submodel owns from an external value, with no derivation and no Command. */
 export const informRouteChanged = (model: Model, route: PeopleRoute) =>
-  update(model, ChangedRoute({ route }))
+  update(model, Message.ChangedRoute({ route }))
 
 // VIEW
 
@@ -282,7 +273,7 @@ export const view = Submodel.defineView<Model, Message>(
           [h.Class('mb-6')],
           [
             h.form(
-              [h.OnSubmit(SubmittedSearch()), h.Class('flex gap-2')],
+              [h.OnSubmit(Message.SubmittedSearch()), h.Class('flex gap-2')],
               [
                 Input.view(
                   {
@@ -290,7 +281,7 @@ export const view = Submodel.defineView<Model, Message>(
                     type: 'search',
                     value: model.searchInput,
                     placeholder: 'Search by name or role...',
-                    onInput: value => ChangedSearchInput({ value }),
+                    onInput: value => Message.ChangedSearchInput({ value }),
                     toView: ({ input, label, description }) =>
                       h.div(
                         [h.Class('flex-1')],

@@ -75,6 +75,7 @@ const scaffoldServerRendering =
     prefixes: [
       'packages/create-foldkit-app/',
       'packages/foldkit/',
+      'packages/ui/',
       'packages/vite-plugin-foldkit/',
     ],
   })
@@ -113,10 +114,13 @@ const website =
   fullWorkspaceChecks ||
   hasChanged({
     files: [
+      '.github/workflows/deploy-website-build.yml',
+      '.github/workflows/deploy-website-canary.yml',
       '.github/workflows/deploy-website.yml',
       'scripts/build-examples.ts',
       'scripts/check-playground-ssg-build.ts',
       'scripts/example-bridge.js',
+      'scripts/website-vercel-config.mjs',
     ],
     prefixes: [
       'examples/',

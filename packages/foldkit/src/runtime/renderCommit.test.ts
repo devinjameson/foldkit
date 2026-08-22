@@ -1,9 +1,9 @@
-import { Effect, Fiber, Match as M, Schema as S } from 'effect'
+import { Effect, Fiber, Schema as S } from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as Command from '../command/index.js'
 import { __htmlBuilder } from '../html/index.js'
-import { m } from '../message/index.js'
+import { defineMessageUnion } from '../message/index.js'
 import { RenderCommit, createCommitNotifier } from '../render/commit.js'
 import { afterCommit } from '../render/render.js'
 import { makeElement } from './runtime.js'
@@ -122,9 +122,10 @@ const LABEL_ELEMENT_ID = 'render-commit-label'
 // test is precisely "a waiter never observes the pre-patch tree".
 let observedLabels: Array<string> = []
 
-const ClickedTransition = m('ClickedTransition')
-const CompletedProbeCommittedDom = m('CompletedProbeCommittedDom')
-const Message = S.Union([ClickedTransition, CompletedProbeCommittedDom])
+const Message = defineMessageUnion({
+  ClickedTransition: {},
+  CompletedProbeCommittedDom: {},
+})
 type Message = typeof Message.Type
 
 const Model = S.Struct({ label: S.String })
@@ -133,30 +134,25 @@ type Model = typeof Model.Type
 const h = __htmlBuilder<Message>()
 
 const ProbeCommittedDom = Command.define('ProbeCommittedDom', {
-  messages: [CompletedProbeCommittedDom],
+  messages: [Message.CompletedProbeCommittedDom],
   execute: Effect.gen(function* () {
     yield* afterCommit
     const label = document.getElementById(LABEL_ELEMENT_ID)
     observedLabels.push(label?.textContent ?? '')
-    return CompletedProbeCommittedDom()
+    return Message.CompletedProbeCommittedDom()
   }),
 })
 
-const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] =>
-  M.value(message).pipe(
-    M.withReturnType<
-      readonly [Model, ReadonlyArray<Command.Command<Message>>]
-    >(),
-    M.tagsExhaustive({
+const update = (model: Model, message: Message) =>
+  Message.match<readonly [Model, ReadonlyArray<Command.Command<Message>>]>(
+    message,
+    {
       ClickedTransition: () => [
         { label: 'transitioned' },
         [ProbeCommittedDom()],
       ],
       CompletedProbeCommittedDom: () => [model, []],
-    }),
+    },
   )
 
 describe('Render.afterCommit inside a View Transition', () => {
@@ -184,7 +180,7 @@ describe('Render.afterCommit inside a View Transition', () => {
           h.div(
             [],
             [
-              h.button([h.OnClick(ClickedTransition())], ['go']),
+              h.button([h.OnClick(Message.ClickedTransition())], ['go']),
               h.div([h.Id(LABEL_ELEMENT_ID)], [model.label]),
             ],
           ),
@@ -292,7 +288,7 @@ describe('Render.afterCommit inside a View Transition', () => {
           h.div(
             [],
             [
-              h.button([h.OnClick(ClickedTransition())], ['go']),
+              h.button([h.OnClick(Message.ClickedTransition())], ['go']),
               h.div([h.Id(LABEL_ELEMENT_ID)], [model.label]),
             ],
           ),
@@ -351,7 +347,7 @@ describe('a frame that abandons its render', () => {
           return h.div(
             [],
             [
-              h.button([h.OnClick(ClickedTransition())], ['go']),
+              h.button([h.OnClick(Message.ClickedTransition())], ['go']),
               h.div([h.Id(LABEL_ELEMENT_ID)], [model.label]),
             ],
           )
@@ -394,7 +390,7 @@ describe('a frame that abandons its render', () => {
           h.div(
             [],
             [
-              h.button([h.OnClick(ClickedTransition())], ['go']),
+              h.button([h.OnClick(Message.ClickedTransition())], ['go']),
               h.div([h.Id(LABEL_ELEMENT_ID)], [model.label]),
             ],
           ),

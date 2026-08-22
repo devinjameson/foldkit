@@ -1,8 +1,8 @@
-import { Array, Effect, Match as M, Schema as S } from 'effect'
+import { Array, Effect, Schema as S } from 'effect'
 
 import * as Command from '../../command/index.js'
 import type { Document, HtmlBuilder } from '../../html/index.js'
-import { m } from '../../message/index.js'
+import { defineMessageUnion } from '../../message/index.js'
 import { evo } from '../../struct/index.js'
 
 // MODEL
@@ -29,19 +29,13 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const ClickedReload = m('ClickedReload')
-export const CompletedReloadSources = m('CompletedReloadSources', {
-  sources: S.Array(RawSource),
+export const Message = defineMessageUnion({
+  ClickedReload: {},
+  CompletedReloadSources: { sources: S.Array(RawSource) },
+  SelectedSource: { source: Source },
+  SubmittedNewSourceId: { id: S.String },
 })
-export const SelectedSource = m('SelectedSource', { source: Source })
-export const SubmittedNewSourceId = m('SubmittedNewSourceId', { id: S.String })
 
-export const Message = S.Union([
-  ClickedReload,
-  CompletedReloadSources,
-  SelectedSource,
-  SubmittedNewSourceId,
-])
 export type Message = typeof Message.Type
 
 // COMMAND
@@ -54,8 +48,10 @@ export const reloadedSources: ReadonlyArray<RawSource> = [
 ]
 
 export const ReloadSources = Command.define('ReloadSources', {
-  messages: [CompletedReloadSources],
-  execute: Effect.succeed(CompletedReloadSources({ sources: reloadedSources })),
+  messages: [Message.CompletedReloadSources],
+  execute: Effect.succeed(
+    Message.CompletedReloadSources({ sources: reloadedSources }),
+  ),
 })
 
 // INIT
@@ -72,15 +68,10 @@ export const initialModel: Model = { sources: validSources }
 
 // UPDATE
 
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] =>
-  M.value(message).pipe(
-    M.withReturnType<
-      readonly [Model, ReadonlyArray<Command.Command<Message>>]
-    >(),
-    M.tagsExhaustive({
+export const update = (model: Model, message: Message) =>
+  Message.match<readonly [Model, ReadonlyArray<Command.Command<Message>>]>(
+    message,
+    {
       ClickedReload: () => [model, [ReloadSources()]],
       CompletedReloadSources: ({ sources }) => [
         evo(model, { sources: () => sources }),
@@ -91,7 +82,7 @@ export const update = (
         const source = Source.make({ kind: 'Book', id })
         return [evo(model, { sources: Array.append(source) }), []]
       },
-    }),
+    },
   )
 
 // VIEW
@@ -100,9 +91,12 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
   const body = h.div(
     [],
     [
-      h.button([h.OnClick(ClickedReload()), h.Role('button')], ['Reload']),
       h.button(
-        [h.OnClick(SubmittedNewSourceId({ id: '' })), h.Role('button')],
+        [h.OnClick(Message.ClickedReload()), h.Role('button')],
+        ['Reload'],
+      ),
+      h.button(
+        [h.OnClick(Message.SubmittedNewSourceId({ id: '' })), h.Role('button')],
         ['Add source'],
       ),
       h.ul(
@@ -113,7 +107,10 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
             [],
             [
               h.button(
-                [h.OnClick(SelectedSource({ source })), h.Role('button')],
+                [
+                  h.OnClick(Message.SelectedSource({ source })),
+                  h.Role('button'),
+                ],
                 [`Select ${source.id}`],
               ),
             ],

@@ -16,11 +16,7 @@ import {
 import { Icon } from '../icon'
 import { Link } from '../link'
 import { type Model } from '../main'
-import {
-  GotMobileMenuDialogMessage,
-  type Message,
-  ToggledSidebarGroup,
-} from '../message'
+import { Message } from '../message'
 import {
   ExampleDetailRoute,
   apiModuleRouter,
@@ -197,7 +193,7 @@ const computeNavLinks = (
             label: section.label,
             isOpen: sidebarGroups[section.key],
             onToggle: isOpen =>
-              ToggledSidebarGroup({ key: section.key, isOpen }),
+              Message.ToggledSidebarGroup({ key: section.key, isOpen }),
             isLocked: isLocked(section.key),
             children: h.div(
               [h.Class('divide-y divide-gray-200 dark:divide-gray-800')],
@@ -218,7 +214,7 @@ const computeNavLinks = (
           label: 'API Reference',
           isOpen: sidebarGroups.apiReference,
           onToggle: isOpen =>
-            ToggledSidebarGroup({ key: 'apiReference', isOpen }),
+            Message.ToggledSidebarGroup({ key: 'apiReference', isOpen }),
           isLocked: isLocked('apiReference'),
           children: h.ul(
             [h.Class('space-y-0.5')],
@@ -400,6 +396,6 @@ export const mobileMenuView = (model: Model, h: HtmlBuilder<Message>): Html => {
             : [],
         ),
     },
-    toParentMessage: message => GotMobileMenuDialogMessage({ message }),
+    toParentMessage: message => Message.GotMobileMenuDialogMessage({ message }),
   })
 }

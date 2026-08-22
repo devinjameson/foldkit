@@ -1,7 +1,7 @@
 import { Array, Effect, Match as M, Option, Schema as S, String } from 'effect'
 import { Command, Runtime } from 'foldkit'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { UrlRequest, load, pushUrl } from 'foldkit/navigation'
 import { Transition } from 'foldkit/route'
 import { evo } from 'foldkit/struct'
@@ -22,21 +22,14 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const CompletedNavigateInternal = m('CompletedNavigateInternal')
-export const CompletedLoadExternal = m('CompletedLoadExternal')
-export const ClickedLink = m('ClickedLink', { request: UrlRequest })
-export const ChangedUrl = m('ChangedUrl', { url: Url })
-export const UpdatedFilterText = m('UpdatedFilterText', {
-  filterText: S.String,
+export const Message = defineMessageUnion({
+  CompletedNavigateInternal: {},
+  CompletedLoadExternal: {},
+  ClickedLink: { request: UrlRequest },
+  ChangedUrl: { url: Url },
+  UpdatedFilterText: { filterText: S.String },
 })
 
-export const Message = S.Union([
-  CompletedNavigateInternal,
-  CompletedLoadExternal,
-  ClickedLink,
-  ChangedUrl,
-  UpdatedFilterText,
-])
 export type Message = typeof Message.Type
 
 // INIT
@@ -49,15 +42,16 @@ export const init: Runtime.RoutingApplicationInit<Model, Message> = (
 
 const NavigateInternal = Command.define('NavigateInternal', {
   args: { url: S.String },
-  messages: [CompletedNavigateInternal],
+  messages: [Message.CompletedNavigateInternal],
   execute: ({ url }) =>
-    pushUrl(url).pipe(Effect.as(CompletedNavigateInternal())),
+    pushUrl(url).pipe(Effect.as(Message.CompletedNavigateInternal())),
 })
 
 const LoadExternal = Command.define('LoadExternal', {
   args: { href: S.String },
-  messages: [CompletedLoadExternal],
-  execute: ({ href }) => load(href).pipe(Effect.as(CompletedLoadExternal())),
+  messages: [Message.CompletedLoadExternal],
+  execute: ({ href }) =>
+    load(href).pipe(Effect.as(Message.CompletedLoadExternal())),
 })
 
 // UPDATE
@@ -65,36 +59,33 @@ const LoadExternal = Command.define('LoadExternal', {
 type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
 const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    withUpdateReturn,
-    M.tagsExhaustive({
-      CompletedNavigateInternal: () => [model, []],
-      CompletedLoadExternal: () => [model, []],
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    CompletedNavigateInternal: () => [model, []],
+    CompletedLoadExternal: () => [model, []],
 
-      ClickedLink: ({ request }) =>
-        M.value(request).pipe(
-          withUpdateReturn,
-          M.tagsExhaustive({
-            Internal: ({ url }) => [
-              model,
-              [NavigateInternal({ url: urlToString(url) })],
-            ],
-            External: ({ href }) => [model, [LoadExternal({ href })]],
-          }),
-        ),
+    ClickedLink: ({ request }) =>
+      M.value(request).pipe(
+        withUpdateReturn,
+        M.tagsExhaustive({
+          Internal: ({ url }) => [
+            model,
+            [NavigateInternal({ url: urlToString(url) })],
+          ],
+          External: ({ href }) => [model, [LoadExternal({ href })]],
+        }),
+      ),
 
-      ChangedUrl: ({ url }) => [
-        evo(model, { route: () => urlToAppRoute(url) }),
-        [],
-      ],
+    ChangedUrl: ({ url }) => [
+      evo(model, { route: () => urlToAppRoute(url) }),
+      [],
+    ],
 
-      UpdatedFilterText: ({ filterText }) => [
-        evo(model, { filterText: () => filterText }),
-        [],
-      ],
-    }),
-  )
+    UpdatedFilterText: ({ filterText }) => [
+      evo(model, { filterText: () => filterText }),
+      [],
+    ],
+  })
 
 // NOTE: every arm past the guard is a navigation, so none return `false`.
 // `true` is "animate, with no direction to declare": the root fade in
@@ -186,7 +177,7 @@ const galleryView = (filterText: string, h: HtmlBuilder<Message>): Html =>
         h.Type('search'),
         h.Value(filterText),
         h.Placeholder('Filter by title or medium…'),
-        h.OnInput(value => UpdatedFilterText({ filterText: value })),
+        h.OnInput(value => Message.UpdatedFilterText({ filterText: value })),
         h.Class(
           'mb-8 w-full max-w-md rounded-lg border border-gray-300 bg-white px-4 py-2 focus:ring-2 focus:ring-gray-400 focus:outline-none',
         ),

@@ -1,11 +1,11 @@
-import { Match as M, Option } from 'effect'
+import { Option } from 'effect'
 import { type Command, Update } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
-import { GotSettingsMessage } from '../../message'
+import { Message } from '../../message'
 import type { Model as AppModel } from '../../model'
 import type { User } from '../user'
-import { PersistSettings, type Message as SettingsMessage } from './message'
+import { PersistSettings, Message as SettingsMessage } from './message'
 import type { Model as SettingsModel } from './model'
 
 type Context = Readonly<{
@@ -21,17 +21,14 @@ export const update = (
   model: SettingsModel,
   message: SettingsMessage,
   context: Context,
-): UpdateReturn =>
-  M.value(message).pipe(
-    M.withReturnType<UpdateReturn>(),
-    M.tagsExhaustive({
-      ChangedTheme: ({ theme }) => [
-        evo(model, { theme: () => theme }),
-        [PersistSettings({ userId: context.currentUser.id, theme })],
-      ],
-      // ...other arms
-    }),
-  )
+) =>
+  SettingsMessage.match<UpdateReturn>(message, {
+    ChangedTheme: ({ theme }) => [
+      evo(model, { theme: () => theme }),
+      [PersistSettings({ userId: context.currentUser.id, theme })],
+    ],
+    // ...other arms
+  })
 
 // PARENT UPDATE
 
@@ -42,7 +39,7 @@ const foldSettings = (currentUser: User) =>
     read: (model: AppModel) => Option.some(model.settings),
     write: (model, nextSettings) =>
       evo(model, { settings: () => nextSettings }),
-    toParentMessage: message => GotSettingsMessage({ message }),
+    toParentMessage: message => Message.GotSettingsMessage({ message }),
   })
 
 GotSettingsMessage: ({ message }) =>

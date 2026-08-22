@@ -10,7 +10,7 @@ import {
 } from 'effect'
 import { Command, ManagedResource, Runtime } from 'foldkit'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
@@ -69,39 +69,31 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const ClickedStartEngine = m('ClickedStartEngine')
-export const ClickedStopEngine = m('ClickedStopEngine')
-export const StartedEngine = m('StartedEngine', { engineId: S.String })
-export const StoppedEngine = m('StoppedEngine')
-export const FailedStartEngine = m('FailedStartEngine', { reason: S.String })
-export const ClickedCompute = m('ClickedCompute')
-export const CompletedCompute = m('CompletedCompute', { result: S.Number })
-export const SkippedCompute = m('SkippedCompute')
+export const Message = defineMessageUnion({
+  ClickedStartEngine: {},
+  ClickedStopEngine: {},
+  StartedEngine: { engineId: S.String },
+  StoppedEngine: {},
+  FailedStartEngine: { reason: S.String },
+  ClickedCompute: {},
+  CompletedCompute: { result: S.Number },
+  SkippedCompute: {},
+})
 
-export const Message = S.Union([
-  ClickedStartEngine,
-  ClickedStopEngine,
-  StartedEngine,
-  StoppedEngine,
-  FailedStartEngine,
-  ClickedCompute,
-  CompletedCompute,
-  SkippedCompute,
-])
 export type Message = typeof Message.Type
 
 // COMMAND
 
 export const Compute = Command.define('Compute', {
   args: { value: S.Number },
-  messages: [CompletedCompute, SkippedCompute],
+  messages: [Message.CompletedCompute, Message.SkippedCompute],
   execute: ({ value }) =>
     Effect.gen(function* () {
       const engine = yield* Engine.get
-      return CompletedCompute({ result: engine.square(value) })
+      return Message.CompletedCompute({ result: engine.square(value) })
     }).pipe(
       Effect.catchTag('ResourceNotAvailable', () =>
-        Effect.succeed(SkippedCompute()),
+        Effect.succeed(Message.SkippedCompute()),
       ),
     ),
 })
@@ -113,45 +105,42 @@ type UpdateReturn = readonly [
   ReadonlyArray<Command.Command<Message, never, EngineService>>,
 ]
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    M.withReturnType<UpdateReturn>(),
-    M.tagsExhaustive({
-      ClickedStartEngine: () => [
-        evo(model, { engine: () => EngineBooting() }),
-        [],
-      ],
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    ClickedStartEngine: () => [
+      evo(model, { engine: () => EngineBooting() }),
+      [],
+    ],
 
-      ClickedStopEngine: () => [evo(model, { engine: () => EngineOff() }), []],
+    ClickedStopEngine: () => [evo(model, { engine: () => EngineOff() }), []],
 
-      StartedEngine: ({ engineId }) => [
-        evo(model, { engine: () => EngineReady({ engineId }) }),
-        [],
-      ],
+    StartedEngine: ({ engineId }) => [
+      evo(model, { engine: () => EngineReady({ engineId }) }),
+      [],
+    ],
 
-      StoppedEngine: () => [model, []],
+    StoppedEngine: () => [model, []],
 
-      FailedStartEngine: ({ reason }) => [
-        evo(model, { engine: () => EngineFailed({ reason }) }),
-        [],
-      ],
+    FailedStartEngine: ({ reason }) => [
+      evo(model, { engine: () => EngineFailed({ reason }) }),
+      [],
+    ],
 
-      ClickedCompute: () => {
-        const nextComputeCount = Number.increment(model.computeCount)
-        return [
-          evo(model, { computeCount: () => nextComputeCount }),
-          [Compute({ value: nextComputeCount })],
-        ]
-      },
+    ClickedCompute: () => {
+      const nextComputeCount = Number.increment(model.computeCount)
+      return [
+        evo(model, { computeCount: () => nextComputeCount }),
+        [Compute({ value: nextComputeCount })],
+      ]
+    },
 
-      CompletedCompute: ({ result }) => [
-        evo(model, { maybeSquareResult: () => Option.some(result) }),
-        [],
-      ],
+    CompletedCompute: ({ result }) => [
+      evo(model, { maybeSquareResult: () => Option.some(result) }),
+      [],
+    ],
 
-      SkippedCompute: () => [model, []],
-    }),
-  )
+    SkippedCompute: () => [model, []],
+  })
 
 // INIT
 
@@ -177,9 +166,10 @@ export const managedResources = ManagedResource.make<Model, Message>()(
           Effect.map(context => Context.get(context, ComputeEngineService)),
         ),
       release: () => Effect.void,
-      onAcquired: ({ engineId }) => StartedEngine({ engineId }),
-      onReleased: () => StoppedEngine(),
-      onAcquireError: error => FailedStartEngine({ reason: String(error) }),
+      onAcquired: ({ engineId }) => Message.StartedEngine({ engineId }),
+      onReleased: () => Message.StoppedEngine(),
+      onAcquireError: error =>
+        Message.FailedStartEngine({ reason: String(error) }),
     }),
   }),
 )
@@ -246,12 +236,12 @@ const engineControlsView = (
   const controls = M.value(engine).pipe(
     M.tag('EngineBooting', 'EngineReady', () => ({
       label: 'Stop engine',
-      message: ClickedStopEngine(),
+      message: Message.ClickedStopEngine(),
       colorClassName: 'bg-red-500 hover:bg-red-600',
     })),
     M.tag('EngineOff', 'EngineFailed', () => ({
       label: 'Start engine',
-      message: ClickedStartEngine(),
+      message: Message.ClickedStartEngine(),
       colorClassName: 'bg-green-500 hover:bg-green-600',
     })),
     M.exhaustive,
@@ -305,7 +295,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
             engineControlsView(model.engine, h),
             primaryButton(
               'Compute next square',
-              ClickedCompute(),
+              Message.ClickedCompute(),
               'bg-blue-500 hover:bg-blue-600 data-[disabled]:hover:bg-blue-500',
               isComputeDisabled,
               h,

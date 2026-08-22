@@ -3,14 +3,7 @@ import { HttpClient, HttpClientResponse } from 'effect/unstable/http'
 import { Command, given, message, model, story } from 'foldkit/story'
 import { expect, test } from 'vitest'
 
-import {
-  FailedFetchWeather,
-  FetchWeather,
-  SubmittedWeatherForm,
-  SucceededFetchWeather,
-  fetchWeatherEffect,
-  update,
-} from './main'
+import { FetchWeather, Message, fetchWeatherEffect, update } from './main'
 import {
   mockGeocodingResponse,
   mockWeatherResponse,
@@ -22,13 +15,13 @@ test('submitting the weather form fetches weather and shows result', () => {
   story(
     update,
     given(weatherModel),
-    message(SubmittedWeatherForm()),
+    message(Message.SubmittedWeatherForm()),
     model(model => {
       expect(model.weather._tag).toBe('Loading')
     }),
     Command.resolve(
       FetchWeather,
-      SucceededFetchWeather({ weather: weatherData }),
+      Message.SucceededFetchWeather({ weather: weatherData }),
     ),
     model(model => {
       expect(model.weather._tag).toBe('Success')
@@ -44,10 +37,10 @@ test('failed fetch shows failure state', () => {
   story(
     update,
     given(weatherModel),
-    message(SubmittedWeatherForm()),
+    message(Message.SubmittedWeatherForm()),
     Command.resolve(
       FetchWeather,
-      FailedFetchWeather({ error: 'Network error' }),
+      Message.FailedFetchWeather({ error: 'Network error' }),
     ),
     model(model => {
       expect(model.weather._tag).toBe('Failure')

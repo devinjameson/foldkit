@@ -13,10 +13,8 @@ import {
 import { describe, test } from 'vitest'
 
 import {
-  CompletedValidateEmail,
-  FailedSubmitForm,
+  Message,
   SubmitForm,
-  SucceededSubmitForm,
   ValidateEmail,
   initialModel,
   update,
@@ -73,7 +71,7 @@ describe('view', () => {
       Command.expectExact(ValidateEmail),
       Command.resolve(
         ValidateEmail,
-        CompletedValidateEmail({
+        Message.CompletedValidateEmail({
           field: FieldValidation.Valid({ value: 'alice@example.com' }),
         }),
       ),
@@ -89,7 +87,7 @@ describe('view', () => {
       Command.expectExact(ValidateEmail),
       Command.resolve(
         ValidateEmail,
-        CompletedValidateEmail({
+        Message.CompletedValidateEmail({
           field: FieldValidation.Invalid({
             value: 'test@example.com',
             errors: ['This email is already on our waitlist'],
@@ -129,7 +127,10 @@ describe('view', () => {
       click(role('button', { name: 'Join Waitlist' })),
       expect(role('button', { name: 'Joining...' })).toBeDisabled(),
       Command.expectExact(SubmitForm),
-      Command.resolve(SubmitForm, SucceededSubmitForm({ name: 'Alice' })),
+      Command.resolve(
+        SubmitForm,
+        Message.SucceededSubmitForm({ name: 'Alice' }),
+      ),
       expect(role('status')).toContainText('Welcome to the waitlist, Alice!'),
       expect(role('button', { name: 'Join Waitlist' })).toExist(),
     )
@@ -147,7 +148,7 @@ describe('view', () => {
       given(validModel),
       submit(role('form')),
       Command.expectExact(SubmitForm),
-      Command.resolve(SubmitForm, FailedSubmitForm()),
+      Command.resolve(SubmitForm, Message.FailedSubmitForm()),
       expect(role('alert')).toContainText('Sorry, there was an error'),
     )
   })

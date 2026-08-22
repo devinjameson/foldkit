@@ -1,7 +1,7 @@
 import { Array, Match as M, Option, Schema as S, String } from 'effect'
 import { Command, Runtime } from 'foldkit'
 import { Document, Html, type HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
@@ -43,31 +43,20 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const UpdatedNewTodo = m('UpdatedNewTodo', { text: S.String })
-export const UpdatedEditingTodo = m('UpdatedEditingTodo', { text: S.String })
-export const AddedTodo = m('AddedTodo')
-export const DeletedTodo = m('DeletedTodo', { id: S.String })
-export const ToggledTodo = m('ToggledTodo', { id: S.String })
-export const StartedEditing = m('StartedEditing', { id: S.String })
-export const SavedEdit = m('SavedEdit')
-export const CancelledEdit = m('CancelledEdit')
-export const ToggledAll = m('ToggledAll')
-export const ClearedCompleted = m('ClearedCompleted')
-export const SelectedFilter = m('SelectedFilter', { filter: Filter })
+export const Message = defineMessageUnion({
+  UpdatedNewTodo: { text: S.String },
+  UpdatedEditingTodo: { text: S.String },
+  AddedTodo: {},
+  DeletedTodo: { id: S.String },
+  ToggledTodo: { id: S.String },
+  StartedEditing: { id: S.String },
+  SavedEdit: {},
+  CancelledEdit: {},
+  ToggledAll: {},
+  ClearedCompleted: {},
+  SelectedFilter: { filter: Filter },
+})
 
-export const Message = S.Union([
-  UpdatedNewTodo,
-  UpdatedEditingTodo,
-  AddedTodo,
-  DeletedTodo,
-  ToggledTodo,
-  StartedEditing,
-  SavedEdit,
-  CancelledEdit,
-  ToggledAll,
-  ClearedCompleted,
-  SelectedFilter,
-])
 export type Message = typeof Message.Type
 
 // INIT
@@ -279,15 +268,15 @@ const nonEditingTodoView = (todo: Todo, h: HtmlBuilder<Message>): Html => {
             h.Class('toggle'),
             h.Type('checkbox'),
             h.Checked(todo.completed),
-            h.OnClick(ToggledTodo({ id: todo.id })),
+            h.OnClick(Message.ToggledTodo({ id: todo.id })),
           ]),
           h.label(
-            [h.OnDoubleClick(StartedEditing({ id: todo.id }))],
+            [h.OnDoubleClick(Message.StartedEditing({ id: todo.id }))],
             [todo.text],
           ),
           h.button([
             h.Class('destroy'),
-            h.OnClick(DeletedTodo({ id: todo.id })),
+            h.OnClick(Message.DeletedTodo({ id: todo.id })),
           ]),
         ],
       ),
@@ -310,12 +299,12 @@ const editingTodoView = (
         h.Name('title'),
         h.Id(`todo-${todo.id}`),
         h.Autofocus(true),
-        h.OnInput(text => UpdatedEditingTodo({ text })),
-        h.OnBlur(SavedEdit()),
+        h.OnInput(text => Message.UpdatedEditingTodo({ text })),
+        h.OnBlur(Message.SavedEdit()),
         h.OnKeyDownPreventDefault(key =>
           M.value(key).pipe(
-            M.when('Enter', () => Option.some(SavedEdit())),
-            M.when('Escape', () => Option.some(CancelledEdit())),
+            M.when('Enter', () => Option.some(Message.SavedEdit())),
+            M.when('Escape', () => Option.some(Message.CancelledEdit())),
             M.orElse(() => Option.none()),
           ),
         ),
@@ -360,7 +349,7 @@ const filterItemView =
   (active: Filter, h: HtmlBuilder<Message>) =>
   (filter: Filter, label: string, href: string): Html => {
     return h.li(
-      [h.OnClick(SelectedFilter({ filter }))],
+      [h.OnClick(Message.SelectedFilter({ filter }))],
       [
         h.a(
           [h.Href(href), h.Class(filter === active ? 'selected' : '')],
@@ -389,9 +378,9 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
         h.Autofocus(true),
         h.Value(model.newTodoText),
         h.Name('newTodo'),
-        h.OnInput(text => UpdatedNewTodo({ text })),
+        h.OnInput(text => Message.UpdatedNewTodo({ text })),
         h.OnKeyDownPreventDefault(key =>
-          key === 'Enter' ? Option.some(AddedTodo()) : Option.none(),
+          key === 'Enter' ? Option.some(Message.AddedTodo()) : Option.none(),
         ),
       ]),
     ],
@@ -409,7 +398,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
             h.Type('checkbox'),
             h.Name('toggle'),
             h.Checked(allCompleted),
-            h.OnClick(ToggledAll()),
+            h.OnClick(Message.ToggledAll()),
           ]),
           h.label([h.For('toggle-all')], ['Mark all as complete']),
           h.ul(
@@ -440,7 +429,10 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
           ),
           completedCount > 0
             ? h.button(
-                [h.Class('clear-completed'), h.OnClick(ClearedCompleted())],
+                [
+                  h.Class('clear-completed'),
+                  h.OnClick(Message.ClearedCompleted()),
+                ],
                 [`Clear completed (${completedCount})`],
               )
             : h.empty,

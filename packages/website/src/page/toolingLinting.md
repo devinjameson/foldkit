@@ -6,11 +6,23 @@ Foldkit projects use `oxlint` for general linting and `@foldkit/oxlint-plugin` f
 
 ## Scaffolded Projects
 
-[Create Foldkit app](/get-started/getting-started) includes `.oxlintrc.json`, a `lint` script, `oxlint`, and `@foldkit/oxlint-plugin`. Generated projects enable a starter set of Foldkit rules:
+[Create Foldkit app](/get-started/getting-started) includes `.oxlintrc.json`, a `lint` script, `oxlint`, and `@foldkit/oxlint-plugin`. Generated projects extend the recommended Foldkit preset:
 
 ::Snippet{name="oxlintConfig" label="oxlint config"}
 
-The rest of the plugin's rules are opt-in. Enable one by adding `"foldkit/<rule-name>": "error"` to the `rules` block. The complete rule set is grouped by the part of the architecture it protects below.
+Override an individual rule in the project's `rules` block when an application needs a narrower policy. The complete rule set is grouped by the part of the architecture it protects below.
+
+## Server Portability
+
+### foldkit/no-nonportable-server-globals {#no-nonportable-server-globals}
+
+The recommended and all presets enable this rule in `entry.server.ts`, `entry.server.tsx`, TypeScript files under a `server` directory, and `prerender.ts`. Files ending in `.test.ts`, `.test.tsx`, `.spec.ts`, or `.spec.tsx` are excluded.
+
+The rule catches direct runtime reads of common browser-only globals: `document`, `window`, `navigator`, `localStorage`, `sessionStorage`, `history`, `location`, `alert`, `confirm`, `prompt`, `requestAnimationFrame`, `cancelAnimationFrame`, `requestIdleCallback`, `cancelIdleCallback`, `getComputedStyle`, `matchMedia`, `customElements`, `screen`, `IntersectionObserver`, `ResizeObserver`, and `MutationObserver`. It also catches static property reads and destructuring from the global `globalThis` object.
+
+Local bindings, parameters, and type-only `typeof` queries remain valid. `Request`, `Response`, `Headers`, `fetch`, and `URL` remain available for host code. A host-specific file can use an Oxlint disable comment or a narrower config override when it deliberately depends on one deployment target.
+
+This rule is a portability guardrail, not a security boundary or an exhaustive catalog of browser APIs. It does not follow aliases, resolve dynamic property names, inspect dependencies, or match filenames outside the patterns above.
 
 ## Message Naming and Construction {#message-rules}
 
@@ -19,12 +31,6 @@ The rest of the plugin's rules are opt-in. Enable one by adding `"foldkit/<rule-
 Rejects catch-all Messages that make update branches and traces less meaningful. Name the event that happened instead.
 
 ::Snippet{name="lintNoNoopMessage" label="foldkit/no-noop-message example"}
-
-### foldkit/message-binding-matches-tag {#message-binding-matches-tag}
-
-Keeps a Message binding and its m() tag identical, so renames do not leave misleading traces behind.
-
-::Snippet{name="lintMessageBindingMatchesTag" label="foldkit/message-binding-matches-tag example"}
 
 ### foldkit/no-empty-object-tagged-call {#no-empty-object-tagged-call}
 

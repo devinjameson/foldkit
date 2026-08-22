@@ -6,7 +6,9 @@ The update function receives the current Model and a Message, then returns the n
 
 Update is pure. Given the same Model and Message, it returns the same result. It does not mutate state, call browser APIs, start timers, or make requests. That makes a transition direct to test: pass in the inputs and assert on the returned values.
 
-Use [Effect's `Match`](https://effect.website/docs/code-style/pattern-matching/) and `M.tagsExhaustive` to handle the Message union. If you add a Message and omit its branch, TypeScript reports the missing case. No `default` branch silently absorbs a new variant.
+Use `Message.match` to handle the Message union. If you add a Message and omit its branch, TypeScript reports the missing case. No `default` branch silently absorbs a new variant.
+
+Use [Effect's `Match`](https://effect.website/docs/code-style/pattern-matching/) for other tagged unions, partial matches, fallbacks, and one handler shared across several tags.
 
 ::Snippet{name="counterUpdate" label="update example"}
 

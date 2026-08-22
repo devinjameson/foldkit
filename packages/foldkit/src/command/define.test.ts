@@ -3,15 +3,17 @@ import { expect } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
 
-import { m } from '../message/index.js'
+import { defineMessageUnion } from '../message/index.js'
 import * as Command from './index.js'
 import { __CurrentRegistry, __makeRegistry } from './interruptible/index.js'
 
-const CompletedRunTask = m('CompletedRunTask', { taskId: S.Number })
-const CompletedReadBrowserGlobal = m('CompletedReadBrowserGlobal')
-const CompletedMeasureElement = m('CompletedMeasureElement')
-const CompletedSaveDraft = m('CompletedSaveDraft', { draftId: S.Number })
-const CompletedDoWork = m('CompletedDoWork')
+const Message = defineMessageUnion({
+  CompletedRunTask: { taskId: S.Number },
+  CompletedReadBrowserGlobal: {},
+  CompletedMeasureElement: {},
+  CompletedSaveDraft: { draftId: S.Number },
+  CompletedDoWork: {},
+})
 
 describe('Command.define defers its execute body', () => {
   it('does not run the body of an args Command until the effect runs', () => {
@@ -19,10 +21,10 @@ describe('Command.define defers its execute body', () => {
 
     const RunTask = Command.define('RunTask', {
       args: { taskId: S.Number },
-      messages: [CompletedRunTask],
+      messages: [Message.CompletedRunTask],
       execute: ({ taskId }) => {
         bodyRunCount = bodyRunCount + 1
-        return Effect.succeed(CompletedRunTask({ taskId }))
+        return Effect.succeed(Message.CompletedRunTask({ taskId }))
       },
     })
 
@@ -30,7 +32,7 @@ describe('Command.define defers its execute body', () => {
     expect(bodyRunCount).toBe(0)
 
     expect(Effect.runSync(instance.effect)).toEqual(
-      CompletedRunTask({ taskId: 7 }),
+      Message.CompletedRunTask({ taskId: 7 }),
     )
     expect(bodyRunCount).toBe(1)
   })
@@ -40,10 +42,10 @@ describe('Command.define defers its execute body', () => {
 
     const ReadBrowserGlobal = Command.define('ReadBrowserGlobal', {
       args: { id: S.String },
-      messages: [CompletedReadBrowserGlobal],
+      messages: [Message.CompletedReadBrowserGlobal],
       execute: () => {
         bodyRunCount = bodyRunCount + 1
-        return Effect.succeed(CompletedReadBrowserGlobal())
+        return Effect.succeed(Message.CompletedReadBrowserGlobal())
       },
     })
 
@@ -55,7 +57,7 @@ describe('Command.define defers its execute body', () => {
   it('surfaces a throwing body as an effect failure rather than a construction throw', () => {
     const MeasureElement = Command.define('MeasureElement', {
       args: { id: S.String },
-      messages: [CompletedMeasureElement],
+      messages: [Message.CompletedMeasureElement],
       execute: () => {
         throw new Error('reads a browser global')
       },
@@ -72,14 +74,14 @@ describe('Command.define defers its execute body', () => {
 
     const SaveDraft = Command.define('SaveDraft', {
       args: { draftId: S.Number },
-      messages: [CompletedSaveDraft],
+      messages: [Message.CompletedSaveDraft],
       interrupt: {
         keyFields: ['draftId'],
         toKey: ({ draftId }) => draftId.toString(),
       },
       execute: ({ draftId }) => {
         bodyRunCount = bodyRunCount + 1
-        return Effect.succeed(CompletedSaveDraft({ draftId }))
+        return Effect.succeed(Message.CompletedSaveDraft({ draftId }))
       },
     })
 
@@ -94,7 +96,7 @@ describe('Command.define defers its execute body', () => {
         __makeRegistry(),
       ),
     )
-    expect(result).toEqual(CompletedSaveDraft({ draftId: 3 }))
+    expect(result).toEqual(Message.CompletedSaveDraft({ draftId: 3 }))
     expect(bodyRunCount).toBe(1)
   })
 
@@ -102,17 +104,17 @@ describe('Command.define defers its execute body', () => {
     let effectRunCount = 0
 
     const DoWork = Command.define('DoWork', {
-      messages: [CompletedDoWork],
+      messages: [Message.CompletedDoWork],
       execute: Effect.sync(() => {
         effectRunCount = effectRunCount + 1
-        return CompletedDoWork()
+        return Message.CompletedDoWork()
       }),
     })
 
     const instance = DoWork()
     expect(effectRunCount).toBe(0)
 
-    expect(Effect.runSync(instance.effect)).toEqual(CompletedDoWork())
+    expect(Effect.runSync(instance.effect)).toEqual(Message.CompletedDoWork())
     expect(effectRunCount).toBe(1)
   })
 })

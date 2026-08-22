@@ -7,7 +7,6 @@ import { gotSubmodelMessageName } from './rules/got-submodel-message-name.ts'
 import { gotWrapperCarriesOnlyRouting } from './rules/got-wrapper-carries-only-routing.ts'
 import { keyedRequiredForMappedRows } from './rules/keyed-required-for-mapped-rows.ts'
 import { lazyViewStableReferences } from './rules/lazy-view-stable-references.ts'
-import { messageBindingMatchesTag } from './rules/message-binding-matches-tag.ts'
 import { mountFactoryMustUseElement } from './rules/mount-factory-must-use-element.ts'
 import { noArrayIndexViewKeys } from './rules/no-array-index-view-keys.ts'
 import { noChildMessageConstructionInRoot } from './rules/no-child-message-construction-in-root.ts'
@@ -18,6 +17,7 @@ import { noEmptyObjectTaggedCall } from './rules/no-empty-object-tagged-call.ts'
 import { noHandRolledCommandStruct } from './rules/no-hand-rolled-command-struct.ts'
 import { noHardcodedRouteStrings } from './rules/no-hardcoded-route-strings.ts'
 import { noModuleLevelMutableState } from './rules/no-module-level-mutable-state.ts'
+import { noNonportableServerGlobals } from './rules/no-nonportable-server-globals.ts'
 import { noNoopMessage } from './rules/no-noop-message.ts'
 import { noRawDomEventAttributes } from './rules/no-raw-dom-event-attributes.ts'
 import { noSpreadInEvo } from './rules/no-spread-in-evo.ts'
@@ -37,7 +37,6 @@ const basePlugin = Plugin.define({
     'got-wrapper-carries-only-routing': gotWrapperCarriesOnlyRouting,
     'keyed-required-for-mapped-rows': keyedRequiredForMappedRows,
     'lazy-view-stable-references': lazyViewStableReferences,
-    'message-binding-matches-tag': messageBindingMatchesTag,
     'mount-factory-must-use-element': mountFactoryMustUseElement,
     'no-array-index-view-keys': noArrayIndexViewKeys,
     'no-child-message-construction-in-root': noChildMessageConstructionInRoot,
@@ -48,6 +47,7 @@ const basePlugin = Plugin.define({
     'no-hand-rolled-command-struct': noHandRolledCommandStruct,
     'no-hardcoded-route-strings': noHardcodedRouteStrings,
     'no-module-level-mutable-state': noModuleLevelMutableState,
+    'no-nonportable-server-globals': noNonportableServerGlobals,
     'no-noop-message': noNoopMessage,
     'no-raw-dom-event-attributes': noRawDomEventAttributes,
     'no-spread-in-evo': noSpreadInEvo,
@@ -59,39 +59,67 @@ const basePlugin = Plugin.define({
   },
 })
 
+type Override = Readonly<{
+  files: Array<string>
+  excludeFiles?: Array<string>
+  rules: Record<string, Plugin.RuleSeverity>
+}>
+
 type OverriddenConfig = Plugin.OxlintConfig & {
-  overrides: Array<{
-    files: Array<string>
-    rules: Record<string, Plugin.RuleSeverity>
-  }>
+  overrides: Array<Override>
 }
 
-const testFilePatterns = ['**/*.test.ts', '**/*.test.tsx']
+const testFilePatterns = [
+  '**/*.test.ts',
+  '**/*.test.tsx',
+  '**/*.spec.ts',
+  '**/*.spec.tsx',
+]
+
+const serverFilePatterns = [
+  '**/entry.server.ts',
+  '**/entry.server.tsx',
+  '**/server/**/*.ts',
+  '**/server/**/*.tsx',
+  '**/prerender.ts',
+]
+
+const serverOverride: Override = {
+  files: serverFilePatterns,
+  excludeFiles: testFilePatterns,
+  rules: {
+    'foldkit/no-nonportable-server-globals': 'error',
+  },
+}
 
 // Foldkit rules police application definitions. Tests exercise those
 // definitions rather than write them, so the rules are inert at best and
 // invert at worst (a test may legitimately hardcode a route or hand-roll a
 // Command struct). Scope every foldkit rule off in test files by default; a
 // rule that wants test coverage opts in explicitly.
-const withTestOverride = (config: Plugin.OxlintConfig): OverriddenConfig => ({
+const testOverride = (config: Plugin.OxlintConfig): Override => ({
+  files: testFilePatterns,
+  rules: Object.fromEntries(
+    Object.keys(config.rules).map((id): [string, Plugin.RuleSeverity] => [
+      id,
+      'off',
+    ]),
+  ),
+})
+
+const withOverrides = (config: Plugin.OxlintConfig): OverriddenConfig => ({
   ...config,
-  overrides: [
-    {
-      files: testFilePatterns,
-      rules: Object.fromEntries(
-        Object.keys(config.rules).map((id): [string, Plugin.RuleSeverity] => [
-          id,
-          'off',
-        ]),
-      ),
-    },
-  ],
+  rules: {
+    ...config.rules,
+    'foldkit/no-nonportable-server-globals': 'off',
+  },
+  overrides: [serverOverride, testOverride(config)],
 })
 
 export default {
   ...basePlugin,
   configs: {
-    recommended: withTestOverride(basePlugin.configs.recommended),
-    all: withTestOverride(basePlugin.configs.all),
+    recommended: withOverrides(basePlugin.configs.recommended),
+    all: withOverrides(basePlugin.configs.all),
   },
 }

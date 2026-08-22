@@ -4,12 +4,12 @@ import { describe, expect, test } from 'vitest'
 
 import * as Shared from '@typing-game/shared'
 
-import { GotHomeMessage, GotRoomMessage } from './message'
+import { Message } from './message'
 import { Model } from './model'
 import { Home, Room } from './page'
-import * as HomeMessage from './page/home/message'
+import { Message as HomeMessage } from './page/home/message'
 import { StartGame } from './page/room/command'
-import * as RoomMessage from './page/room/message'
+import { Message as RoomMessage } from './page/room/message'
 import { HomeRoute, RoomRoute } from './route'
 import { update } from './update'
 
@@ -64,7 +64,7 @@ describe('key presses on the Home route', () => {
       update,
       givenHomeRoute(),
       message(
-        GotHomeMessage({
+        Message.GotHomeMessage({
           message: HomeMessage.PressedKey({ key: 'ArrowDown' }),
         }),
       ),
@@ -84,7 +84,9 @@ describe('key presses on the Home route', () => {
       update,
       givenHomeRoute(),
       message(
-        GotRoomMessage({ message: RoomMessage.PressedKey({ key: 'Enter' }) }),
+        Message.GotRoomMessage({
+          message: RoomMessage.PressedKey({ key: 'Enter' }),
+        }),
       ),
       model(model => {
         expect(model.room).toEqual(joinedRoom)
@@ -100,7 +102,9 @@ describe('key presses on the Room route', () => {
       update,
       givenRoomRoute(),
       message(
-        GotRoomMessage({ message: RoomMessage.PressedKey({ key: 'Enter' }) }),
+        Message.GotRoomMessage({
+          message: RoomMessage.PressedKey({ key: 'Enter' }),
+        }),
       ),
       Command.resolve(StartGame, RoomMessage.SucceededStartGame()),
       model(model => {

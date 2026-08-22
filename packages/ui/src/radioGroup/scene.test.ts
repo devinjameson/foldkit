@@ -1,7 +1,7 @@
-import { Match as M, Option, Schema as S } from 'effect'
+import { Match as M, Option } from 'effect'
 import * as Command from 'foldkit/command'
 import type { HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import * as Scene from 'foldkit/scene'
 import { evo } from 'foldkit/struct'
 import * as Update from 'foldkit/update'
@@ -14,7 +14,6 @@ import type {
   ViewInputs,
 } from './index.js'
 import {
-  CompletedFocusOption,
   FocusOption,
   Message as RadioGroupMessage,
   create,
@@ -26,11 +25,9 @@ const options: ReadonlyArray<string> = ['Brush', 'Fill', 'Eraser']
 
 const TestRadioGroup = create()
 
-const GotRadioGroupMessage = m('GotRadioGroupMessage', {
-  message: RadioGroupMessage,
+const Message = defineMessageUnion({
+  GotRadioGroupMessage: { message: RadioGroupMessage },
 })
-
-const Message = S.Union([GotRadioGroupMessage])
 type Message = typeof Message.Type
 
 type Model = Readonly<{
@@ -64,17 +61,14 @@ const foldRadioGroup = Update.foldChild({
   read: (model: Model) => Option.some(model.radioGroup),
   write: (model, nextRadioGroup) =>
     evo(model, { radioGroup: () => nextRadioGroup }),
-  toParentMessage: message => GotRadioGroupMessage({ message }),
+  toParentMessage: message => Message.GotRadioGroupMessage({ message }),
   foldOutMessage: foldRadioGroupOutMessage,
 })
 
-const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    M.withReturnType<UpdateReturn>(),
-    M.tagsExhaustive({
-      GotRadioGroupMessage: ({ message }) => foldRadioGroup(model, message),
-    }),
-  )
+const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    GotRadioGroupMessage: ({ message }) => foldRadioGroup(model, message),
+  })
 
 type Overrides = Omit<
   Partial<ViewInputs>,
@@ -104,12 +98,12 @@ const testView =
             ),
           ),
       },
-      toParentMessage: message => GotRadioGroupMessage({ message }),
+      toParentMessage: message => Message.GotRadioGroupMessage({ message }),
     })
 
 const resolveFocusOption = Scene.Command.resolve(
   FocusOption,
-  CompletedFocusOption(),
+  RadioGroupMessage.CompletedFocusOption(),
 )
 
 const group = Scene.role('radiogroup')

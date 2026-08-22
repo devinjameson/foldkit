@@ -1,78 +1,38 @@
 import { Schema as S } from 'effect'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 
 import * as Shared from '@typing-game/shared'
 
 import { RoomPlayerSession } from './model'
 
-export const CompletedFocusRoomPageUsernameInput = m(
-  'CompletedFocusRoomPageUsernameInput',
-)
-export const CompletedFocusUserGameTextInput = m(
-  'CompletedFocusUserGameTextInput',
-)
-export const CompletedNavigateHome = m('CompletedNavigateHome')
-export const SucceededStartGame = m('SucceededStartGame')
-export const FailedStartGame = m('FailedStartGame')
-export const CompletedUpdatePlayerProgress = m('CompletedUpdatePlayerProgress')
-export const CompletedSavePlayerSession = m('CompletedSavePlayerSession')
-export const CompletedClearSession = m('CompletedClearSession')
-export const FailedJoinRoom = m('FailedJoinRoom')
-export const FailedCopyRoomId = m('FailedCopyRoomId')
-export const PressedKey = m('PressedKey', { key: S.String })
-export const ChangedUserText = m('ChangedUserText', { value: S.String })
-export const BlurredRoomPageUsernameInput = m('BlurredRoomPageUsernameInput')
-export const ChangedRoomPageUsername = m('ChangedRoomPageUsername', {
-  value: S.String,
+export const Message = defineMessageUnion({
+  CompletedFocusRoomPageUsernameInput: {},
+  CompletedFocusUserGameTextInput: {},
+  CompletedNavigateHome: {},
+  SucceededStartGame: {},
+  FailedStartGame: {},
+  CompletedUpdatePlayerProgress: {},
+  CompletedSavePlayerSession: {},
+  CompletedClearSession: {},
+  FailedJoinRoom: {},
+  FailedCopyRoomId: {},
+  PressedKey: { key: S.String },
+  ChangedUserText: { value: S.String },
+  BlurredRoomPageUsernameInput: {},
+  ChangedRoomPageUsername: { value: S.String },
+  SubmittedJoinRoomFromPage: {},
+  UpdatedRoom: {
+    room: Shared.Room,
+    maybePlayerProgress: S.Option(Shared.PlayerProgress),
+  },
+  FailedStreamRoom: { error: S.String },
+  CompletedLoadSession: { maybeSession: S.Option(RoomPlayerSession) },
+  SucceededFetchRoom: { room: Shared.Room },
+  FailedFetchRoom: {},
+  ClickedCopyRoomId: {},
+  SucceededCopyRoomId: {},
+  CompletedWaitBeforeHidingRoomIdCopiedIndicator: {},
+  CompletedWaitForExitCountdownInterval: {},
+  SucceededJoinRoom: { player: Shared.Player },
 })
-export const SubmittedJoinRoomFromPage = m('SubmittedJoinRoomFromPage')
-export const UpdatedRoom = m('UpdatedRoom', {
-  room: Shared.Room,
-  maybePlayerProgress: S.Option(Shared.PlayerProgress),
-})
-export const FailedStreamRoom = m('FailedStreamRoom', { error: S.String })
-export const CompletedLoadSession = m('CompletedLoadSession', {
-  maybeSession: S.Option(RoomPlayerSession),
-})
-export const SucceededFetchRoom = m('SucceededFetchRoom', { room: Shared.Room })
-export const FailedFetchRoom = m('FailedFetchRoom')
-export const ClickedCopyRoomId = m('ClickedCopyRoomId')
-export const SucceededCopyRoomId = m('SucceededCopyRoomId')
-export const CompletedWaitBeforeHidingRoomIdCopiedIndicator = m(
-  'CompletedWaitBeforeHidingRoomIdCopiedIndicator',
-)
-export const CompletedWaitForExitCountdownInterval = m(
-  'CompletedWaitForExitCountdownInterval',
-)
-export const SucceededJoinRoom = m('SucceededJoinRoom', {
-  player: Shared.Player,
-})
-
-export const Message = S.Union([
-  CompletedFocusRoomPageUsernameInput,
-  CompletedFocusUserGameTextInput,
-  CompletedNavigateHome,
-  SucceededStartGame,
-  FailedStartGame,
-  CompletedUpdatePlayerProgress,
-  CompletedSavePlayerSession,
-  CompletedClearSession,
-  FailedJoinRoom,
-  FailedCopyRoomId,
-  PressedKey,
-  ChangedUserText,
-  BlurredRoomPageUsernameInput,
-  ChangedRoomPageUsername,
-  SubmittedJoinRoomFromPage,
-  UpdatedRoom,
-  FailedStreamRoom,
-  CompletedLoadSession,
-  SucceededFetchRoom,
-  FailedFetchRoom,
-  ClickedCopyRoomId,
-  SucceededCopyRoomId,
-  CompletedWaitBeforeHidingRoomIdCopiedIndicator,
-  CompletedWaitForExitCountdownInterval,
-  SucceededJoinRoom,
-])
 export type Message = typeof Message.Type

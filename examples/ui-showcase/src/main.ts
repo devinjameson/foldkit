@@ -10,7 +10,7 @@ import {
   Update,
 } from 'foldkit'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { UrlRequest, load, pushUrl } from 'foldkit/navigation'
 import { literal, r } from 'foldkit/route'
 import { evo } from 'foldkit/struct'
@@ -20,11 +20,7 @@ import { Dialog, Nav } from '@foldkit/ui'
 
 import * as Icon from './icon'
 import { uiInit } from './ui/init'
-import {
-  ClickedOpenMobileMenu,
-  GotMobileMenuDialogMessage,
-  UiMessage,
-} from './ui/message'
+import { UiMessage } from './ui/message'
 import { UiModel } from './ui/model'
 import * as UiSubscriptions from './ui/subscriptions'
 import { uiUpdate } from './ui/update'
@@ -172,38 +168,30 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const CompletedNavigateInternal = m('CompletedNavigateInternal')
-export const CompletedLoadExternal = m('CompletedLoadExternal')
-export const ClickedLink = m('ClickedLink', {
-  request: UrlRequest,
-})
-export const ChangedUrl = m('ChangedUrl', { url: Url })
-export const GotUiMessage = m('GotUiMessage', {
-  message: UiMessage,
+export const Message = defineMessageUnion({
+  CompletedNavigateInternal: {},
+  CompletedLoadExternal: {},
+  ClickedLink: { request: UrlRequest },
+  ChangedUrl: { url: Url },
+  GotUiMessage: { message: UiMessage },
 })
 
-export const Message = S.Union([
-  CompletedNavigateInternal,
-  CompletedLoadExternal,
-  ClickedLink,
-  ChangedUrl,
-  GotUiMessage,
-])
 export type Message = typeof Message.Type
 
 // COMMAND
 
 const NavigateInternal = Command.define('NavigateInternal', {
   args: { url: S.String },
-  messages: [CompletedNavigateInternal],
+  messages: [Message.CompletedNavigateInternal],
   execute: ({ url }) =>
-    pushUrl(url).pipe(Effect.as(CompletedNavigateInternal())),
+    pushUrl(url).pipe(Effect.as(Message.CompletedNavigateInternal())),
 })
 
 const LoadExternal = Command.define('LoadExternal', {
   args: { href: S.String },
-  messages: [CompletedLoadExternal],
-  execute: ({ href }) => load(href).pipe(Effect.as(CompletedLoadExternal())),
+  messages: [Message.CompletedLoadExternal],
+  execute: ({ href }) =>
+    load(href).pipe(Effect.as(Message.CompletedLoadExternal())),
 })
 
 // INIT
@@ -230,17 +218,21 @@ export const init: Runtime.RoutingApplicationInit<Model, Message, Flags> = (
       route: urlToAppRoute(url),
       uiModel: initialUiModel,
     },
-    Command.mapMessages(uiCommands, message => GotUiMessage({ message })),
+    Command.mapMessages(uiCommands, message =>
+      Message.GotUiMessage({ message }),
+    ),
   ]
 }
 
 // UPDATE
 
 const toUiMessage = (message: typeof UiMessage.Type): Message =>
-  GotUiMessage({ message })
+  Message.GotUiMessage({ message })
 
 const toMobileMenuDialogMessage = (message: Dialog.Message): Message =>
-  GotUiMessage({ message: GotMobileMenuDialogMessage({ message }) })
+  Message.GotUiMessage({
+    message: UiMessage.GotMobileMenuDialogMessage({ message }),
+  })
 
 const foldUi = Update.foldChild({
   update: uiUpdate,
@@ -249,15 +241,10 @@ const foldUi = Update.foldChild({
   toParentMessage: toUiMessage,
 })
 
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] =>
-  M.value(message).pipe(
-    M.withReturnType<
-      readonly [Model, ReadonlyArray<Command.Command<Message>>]
-    >(),
-    M.tagsExhaustive({
+export const update = (model: Model, message: Message) =>
+  Message.match<readonly [Model, ReadonlyArray<Command.Command<Message>>]>(
+    message,
+    {
       CompletedNavigateInternal: () => [model, []],
       CompletedLoadExternal: () => [model, []],
 
@@ -268,13 +255,17 @@ export const update = (
               url,
             }): [
               Model,
-              ReadonlyArray<Command.Command<typeof CompletedNavigateInternal>>,
+              ReadonlyArray<
+                Command.Command<typeof Message.CompletedNavigateInternal>
+              >,
             ] => [model, [NavigateInternal({ url: urlToString(url) })]],
             External: ({
               href,
             }): [
               Model,
-              ReadonlyArray<Command.Command<typeof CompletedLoadExternal>>,
+              ReadonlyArray<
+                Command.Command<typeof Message.CompletedLoadExternal>
+              >,
             ] => [model, [LoadExternal({ href })]],
           }),
         ),
@@ -300,7 +291,7 @@ export const update = (
       },
 
       GotUiMessage: ({ message }) => foldUi(model, message),
-    }),
+    },
   )
 
 // VIEW
@@ -533,7 +524,7 @@ const mobileHeaderView = (model: Model, h: HtmlBuilder<Message>): Html =>
           ),
           h.AriaExpanded(model.uiModel.mobileMenuDialog.isOpen),
           h.AriaLabel('Toggle menu'),
-          h.OnClick(toUiMessage(ClickedOpenMobileMenu())),
+          h.OnClick(toUiMessage(UiMessage.ClickedOpenMobileMenu())),
         ],
         [Icon.menu('w-6 h-6')],
       ),
@@ -678,5 +669,5 @@ export const subscriptions = Subscription.lift(UiSubscriptions.subscriptions)<
   Message
 >({
   toChildModel: model => model.uiModel,
-  toParentMessage: message => GotUiMessage({ message }),
+  toParentMessage: message => Message.GotUiMessage({ message }),
 })

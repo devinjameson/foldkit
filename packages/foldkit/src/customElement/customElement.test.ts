@@ -8,7 +8,7 @@ import {
   __clearRuntime as clearHtmlRuntime,
   __setRuntime as setHtmlRuntime,
 } from '../html/index.js'
-import { m } from '../message/index.js'
+import { defineMessageUnion } from '../message/index.js'
 import { MountTracker } from '../mount/index.js'
 import { propsModule } from '../propsModule.js'
 import { Dispatch } from '../runtime/index.js'
@@ -33,11 +33,11 @@ const patch = init([
   styleModule,
 ])
 
-const RatingChanged = m('RatingChanged', { value: S.Number })
-const RatingCleared = m('RatingCleared')
-const ToggledDisabled = m('ToggledDisabled', { value: S.Boolean })
-
-const Message = S.Union([RatingChanged, RatingCleared, ToggledDisabled])
+const Message = defineMessageUnion({
+  RatingChanged: { value: S.Number },
+  RatingCleared: {},
+  ToggledDisabled: { value: S.Boolean },
+})
 type Message = typeof Message.Type
 
 const emojiRating = CustomElement.define({
@@ -136,8 +136,10 @@ describe('CustomElement.define', () => {
 
     const view = () =>
       rating([
-        rating.OnChangeRating(detail => RatingChanged({ value: detail.value })),
-        rating.OnClearRating(() => RatingCleared()),
+        rating.OnChangeRating(detail =>
+          Message.RatingChanged({ value: detail.value }),
+        ),
+        rating.OnClearRating(() => Message.RatingCleared()),
       ])
     const element = patchInto(renderView(view, dispatch))
 
@@ -147,8 +149,8 @@ describe('CustomElement.define', () => {
     element.dispatchEvent(new CustomEvent('clear-rating'))
 
     expect(dispatched).toStrictEqual([
-      RatingChanged({ value: 5 }),
-      RatingCleared(),
+      Message.RatingChanged({ value: 5 }),
+      Message.RatingCleared(),
     ])
   })
 

@@ -3,13 +3,7 @@ import { Command } from 'foldkit'
 import * as Dom from 'foldkit/dom'
 import { pushUrl } from 'foldkit/navigation'
 
-import {
-  CompletedFetchSearchResults,
-  CompletedFocusSearchInput,
-  CompletedNavigateToResult,
-  CompletedScrollToResult,
-  SearchResult,
-} from './message'
+import { Message, SearchResult } from './message'
 
 const MAX_RESULTS = 8
 
@@ -57,7 +51,7 @@ export class PagefindService extends Context.Service<
 
 export const FetchSearchResults = Command.define('FetchSearchResults', {
   args: { query: S.String },
-  messages: [CompletedFetchSearchResults],
+  messages: [Message.CompletedFetchSearchResults],
   execute: ({ query }) =>
     Effect.gen(function* () {
       const pagefind = yield* PagefindService
@@ -84,36 +78,38 @@ export const FetchSearchResults = Command.define('FetchSearchResults', {
         }),
       )
 
-      return CompletedFetchSearchResults({ results, query })
+      return Message.CompletedFetchSearchResults({ results, query })
     }).pipe(
       Effect.catch(() =>
-        Effect.succeed(CompletedFetchSearchResults({ results: [], query })),
+        Effect.succeed(
+          Message.CompletedFetchSearchResults({ results: [], query }),
+        ),
       ),
     ),
 })
 
 export const ScrollToResult = Command.define('ScrollToResult', {
   args: { index: S.Number },
-  messages: [CompletedScrollToResult],
+  messages: [Message.CompletedScrollToResult],
   execute: ({ index }) =>
     Dom.scrollIntoView(`${SEARCH_RESULT_SELECTOR}"${index}"]`).pipe(
       Effect.ignore,
-      Effect.as(CompletedScrollToResult()),
+      Effect.as(Message.CompletedScrollToResult()),
     ),
 })
 
 export const NavigateToResult = Command.define('NavigateToResult', {
   args: { url: S.String },
-  messages: [CompletedNavigateToResult],
+  messages: [Message.CompletedNavigateToResult],
   execute: ({ url }) =>
-    pushUrl(url).pipe(Effect.as(CompletedNavigateToResult())),
+    pushUrl(url).pipe(Effect.as(Message.CompletedNavigateToResult())),
 })
 
 export const FocusSearchInput = Command.define('FocusSearchInput', {
-  messages: [CompletedFocusSearchInput],
+  messages: [Message.CompletedFocusSearchInput],
   execute: Dom.focus(`#${SEARCH_INPUT_ID}`).pipe(
     Effect.ignore,
-    Effect.as(CompletedFocusSearchInput()),
+    Effect.as(Message.CompletedFocusSearchInput()),
   ),
 })
 

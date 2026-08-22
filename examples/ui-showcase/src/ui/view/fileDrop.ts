@@ -4,11 +4,7 @@ import type { Html } from 'foldkit/html'
 
 import { FileDrop } from '@foldkit/ui'
 
-import {
-  ClickedRemoveFileDropDemoFile,
-  GotFileDropBasicDemoMessage,
-  type UiMessage,
-} from '../message'
+import { UiMessage } from '../message'
 import type { UiModel } from '../model'
 
 const dropZoneClassName =
@@ -76,7 +72,7 @@ export const view = Submodel.defineView<UiModel, UiMessage>(
                   ),
               },
               toParentMessage: message =>
-                GotFileDropBasicDemoMessage({ message }),
+                UiMessage.GotFileDropBasicDemoMessage({ message }),
             }),
             ...Array.match(model.fileDropBasicDemoFiles, {
               onEmpty: () => [],
@@ -103,7 +99,9 @@ export const view = Submodel.defineView<UiModel, UiMessage>(
                         [
                           h.Type('button'),
                           h.OnClick(
-                            ClickedRemoveFileDropDemoFile({ fileIndex }),
+                            UiMessage.ClickedRemoveFileDropDemoFile({
+                              fileIndex,
+                            }),
                           ),
                           h.Class(removeButtonClassName),
                         ],

@@ -1,8 +1,6 @@
 import { Runtime } from 'foldkit'
 
 import {
-  ChangedUrl,
-  ClickedLink,
   Flags,
   Message,
   Model,
@@ -22,8 +20,8 @@ const application = Runtime.makeApplication({
   subscriptions,
   container: document.getElementById('root'),
   routing: {
-    onUrlRequest: request => ClickedLink({ request }),
-    onUrlChange: url => ChangedUrl({ url }),
+    onUrlRequest: request => Message.ClickedLink({ request }),
+    onUrlChange: url => Message.ChangedUrl({ url }),
   },
   devTools: {
     Message,

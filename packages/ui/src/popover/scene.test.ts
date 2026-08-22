@@ -4,13 +4,11 @@ import { expect } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
 
-import type { Message, Model, ViewInputs } from './index.js'
+import type { Model, ViewInputs } from './index.js'
 import {
   AnchorPopover,
-  CompletedAnchorPopover,
-  CompletedPortalPopoverBackdrop,
+  Message,
   PortalPopoverBackdrop,
-  RequestedOpen,
   buttonId,
   init,
   update,
@@ -19,11 +17,11 @@ import {
 
 const acknowledgeAnchor = Scene.Mount.resolve(
   AnchorPopover,
-  CompletedAnchorPopover(),
+  Message.CompletedAnchorPopover(),
 )
 const acknowledgeBackdrop = Scene.Mount.resolve(
   PortalPopoverBackdrop,
-  CompletedPortalPopoverBackdrop(),
+  Message.CompletedPortalPopoverBackdrop(),
 )
 
 const sceneView =
@@ -56,10 +54,10 @@ const panel = Scene.selector('[key="test-panel-container"]')
 const backdrop = Scene.selector('[key="test-backdrop"]')
 
 const closedModel = init({ id: 'test' })
-const [openModel] = update(init({ id: 'test' }), RequestedOpen())
+const [openModel] = update(init({ id: 'test' }), Message.RequestedOpen())
 const [openContentFocusModel] = update(
   init({ id: 'test', contentFocus: true }),
-  RequestedOpen(),
+  Message.RequestedOpen(),
 )
 
 describe('Popover', () => {

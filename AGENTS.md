@@ -66,6 +66,11 @@ Match the implementation style to the subsystem and the behavior being modeled. 
 - Never use bracket array indexing (`xs[0]`, `xs[xs.length - 1]`). Use `Array.get`, `Array.head`, `Array.last`, or non-empty variants.
 - Use `Array.isArrayEmpty` / `Array.isArrayNonEmpty`, not `.length === 0` / `.length > 0`. Prefer `Array.match` when handling both cases.
 - Never cast Schema values with `as Type`. Use callable constructors.
+- Never destructure constructors from a Message or OutMessage union. Keep the
+  owning namespace at every call site: `Message.ClickedSubmit()` and
+  `OutMessage.SucceededLogin({ user })`.
+- In a `defineMessageUnion()` case record, keep each payload object on one line
+  when it fits. Let Prettier wrap payloads that need more space.
 - Capitalize Schema literal strings: `S.Literals(['Horizontal', 'Vertical'])`.
 - Capitalize namespace imports: `import * as Command from './command'`.
 - Use `const`. Only use `let` when mutation is truly unavoidable. Always brace control flow.
@@ -95,7 +100,7 @@ Don't add inline or block comments to explain code. If code needs explanation, r
 
 ## File Organization
 
-- `index.ts` is always a barrel; real code lives in a named file. For a module `foo/`, the shape is `foo/foo.ts` for the code and `foo/index.ts` for the barrel. Re-export via `export * from './foo'` and nest children as namespaces via `export * as Child from './child'`.
+- `index.ts` is always a barrel; real code lives in a named file. For a module `foo/`, the shape is `foo/foo.ts` for the code and `foo/index.ts` for the barrel. Re-export the intended public names explicitly so adding an internal export does not silently expand the barrel. Use `export *` only when the whole module surface is intentionally public. Nest children as namespaces via `export * as Child from './child'`.
 - Extract Messages to a dedicated `message.ts` when Commands need Message constructors. This breaks the circular dependency between `command.ts` and `main.ts`.
 - Commands are colocated with the update function that returns them. Never centralize all Commands in one file.
 - Expose a `boot()` helper alongside `init()` when a submodel applies a boot-time Message. `init()` returns clean state with no boot effects. `boot()` applies the boot Message via `update` and returns `[Model, Commands]`.
@@ -135,6 +140,7 @@ If a Mount factory doesn't read or write its element, you've misidentified the c
 - Stage the paths you changed, not `git add -A`. Amending with `-A` sweeps whatever else the working tree picked up, including build output a gate wrote, into a commit whose subject does not describe it.
 - Do not co-author or mention AI assistants in commit messages or release notes.
 - Use the repo's commit helper when asked to create a commit: `/commit` in Claude Code, `.agents/skills/commit-changes` in Codex.
+- Treat every pull request title and description as the final squash commit message. The title is the Conventional Commit subject, and the description is the commit body. Keep review-only boilerplate, checklists, generated commit lists, and verification details out of the description. Put verification details in a pull request comment instead.
 - Squash-merge only. `gh pr merge --squash`.
 
 ## Editing Rules

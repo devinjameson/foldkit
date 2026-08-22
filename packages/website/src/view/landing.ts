@@ -13,14 +13,7 @@ import * as DemoTab from '../demoTab'
 import { Icon } from '../icon'
 import { Link } from '../link'
 import { type Model } from '../main'
-import {
-  ClickedOpenMobileMenu,
-  GotAsyncCounterDemoMessage,
-  GotDemoTabsMessage,
-  GotNotePlayerDemoMessage,
-  GotPlaygroundMenuMessage,
-  type Message,
-} from '../message'
+import { Message } from '../message'
 import * as Page from '../page'
 import {
   type ExampleMeta,
@@ -89,7 +82,7 @@ const landingHeaderView = (model: Model, h: HtmlBuilder<Message>) =>
               ),
               h.AriaExpanded(model.mobileMenuDialog.isOpen),
               h.AriaLabel('Toggle menu'),
-              h.OnClick(ClickedOpenMobileMenu()),
+              h.OnClick(Message.ClickedOpenMobileMenu()),
             ],
             [Icon.menu('w-6 h-6')],
           ),
@@ -138,11 +131,11 @@ const demoTabPanelClassName =
 
 const toAsyncCounterDemoMessage = (
   message: Page.AsyncCounterDemo.Message,
-): Message => GotAsyncCounterDemoMessage({ message })
+): Message => Message.GotAsyncCounterDemoMessage({ message })
 
 const toNotePlayerDemoMessage = (
   message: Page.NotePlayerDemo.Message,
-): Message => GotNotePlayerDemoMessage({ message })
+): Message => Message.GotNotePlayerDemoMessage({ message })
 
 const renderAsyncCounterDemo = (
   maybeAsyncCounterDemo: Option.Option<Page.AsyncCounterDemo.Model>,
@@ -287,7 +280,7 @@ const playgroundMenuView = (
       ]),
       attributes: childAttributes([h.Class('relative inline-block')]),
     },
-    toParentMessage: message => GotPlaygroundMenuMessage({ message }),
+    toParentMessage: message => Message.GotPlaygroundMenuMessage({ message }),
   })
 
 // VIEW
@@ -359,7 +352,7 @@ export const landingView = (model: Model, h: HtmlBuilder<Message>) => {
           ],
         ),
     },
-    toParentMessage: message => GotDemoTabsMessage({ message }),
+    toParentMessage: message => Message.GotDemoTabsMessage({ message }),
   })
 
   return h.div(

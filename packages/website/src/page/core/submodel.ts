@@ -5,7 +5,7 @@ import { Disclosure } from '@foldkit/ui'
 import { Icon } from '../../icon'
 import { type Message } from '../../main'
 import { slotDocPage } from '../../markdown'
-import { ToggledMapMessagesUnderHood } from '../../message'
+import { Message as Message2 } from '../../message'
 import { defaultRenderHeadingLink, inlineCode } from '../../prose'
 import * as Snippet from '../../snippet'
 import {
@@ -35,7 +35,7 @@ const mapMessagesUnderHoodDemo = (
     {
       id: MAP_MESSAGES_DISCLOSURE_ID,
       isOpen: isMapMessagesUnderHoodOpen,
-      onToggle: isOpen => ToggledMapMessagesUnderHood({ isOpen }),
+      onToggle: isOpen => Message2.ToggledMapMessagesUnderHood({ isOpen }),
       toView: attributes =>
         h.div(
           [h.Class('mb-8')],

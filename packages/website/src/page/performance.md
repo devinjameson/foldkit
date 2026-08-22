@@ -21,9 +21,9 @@ The cost model above puts the cost of a Message on your `update` logic. What the
 
 - `Update.foldChild` adds a function call and an arity check over the wiring you would otherwise write by hand. Inside, it does exactly what the hand-written handler does: read the child out of the Model, run its update, write it back, and lift the child’s Commands through `toParentMessage`.
 - `evo` is Effect’s `Struct.evolve` at runtime; the wrapper adds key checking at the type level only. It walks the struct’s own enumerable keys once and applies a transform only where you provided one, copying everything else by reference. The cost is proportional to the Model’s top-level field count, the same as an object spread, and that reference preservation is what lets [createLazy](/core/view-memoization) hit its `===` check.
-- `Match.tagsExhaustive` is the one whose cost scales with your app. The handler object and one closure per arm are allocated on every dispatch, and because the arms close over `model` they cannot be hoisted to module scope.
+- `Message.match` is the one whose cost scales with your app. It dispatches directly on `_tag`, but the handler object and one closure per arm are still allocated on every dispatch. Because the arms close over `model`, they cannot be hoisted to module scope.
 
-Keep `Match.tagsExhaustive` anyway. Its signature requires a handler for every tag in the union, so adding a Message variant fails to compile in every update that does not handle it. That is a correctness guarantee bought with short-lived allocations a young-generation collector does not notice, and an `if`/`else` chain on `_tag` gives it up. If a profile ever puts a genuinely hot update at the top, that trade is available, but it is the last change to reach for rather than the first.
+Keep `Message.match` anyway. Its signature requires a handler for every tag in the union, so adding a Message variant fails to compile in every update that does not handle it. It also avoids the matcher pipeline that Effect `Match` builds for more general pattern matching. An `if`/`else` chain on `_tag` gives up exhaustiveness for less allocation. If a profile ever puts a genuinely hot update at the top, that trade is available, but it is the last change to reach for rather than the first.
 
 ## Benchmarks
 

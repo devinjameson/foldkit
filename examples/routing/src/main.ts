@@ -1,7 +1,7 @@
 import { Array, Effect, Match as M, Option, Schema as S } from 'effect'
 import { Command, Runtime, Update } from 'foldkit'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { UrlRequest, load, pushUrl } from 'foldkit/navigation'
 import { evo } from 'foldkit/struct'
 import { Url, toString as urlToString } from 'foldkit/url'
@@ -47,23 +47,14 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const CompletedNavigateInternal = m('CompletedNavigateInternal')
-export const CompletedLoadExternal = m('CompletedLoadExternal')
-export const ClickedLink = m('ClickedLink', {
-  request: UrlRequest,
-})
-export const ChangedUrl = m('ChangedUrl', { url: Url })
-export const GotPeopleMessage = m('GotPeopleMessage', {
-  message: People.Message,
+export const Message = defineMessageUnion({
+  CompletedNavigateInternal: {},
+  CompletedLoadExternal: {},
+  ClickedLink: { request: UrlRequest },
+  ChangedUrl: { url: Url },
+  GotPeopleMessage: { message: People.Message },
 })
 
-export const Message = S.Union([
-  CompletedNavigateInternal,
-  CompletedLoadExternal,
-  ClickedLink,
-  ChangedUrl,
-  GotPeopleMessage,
-])
 export type Message = typeof Message.Type
 
 // INIT
@@ -83,7 +74,7 @@ export const init: Runtime.RoutingApplicationInit<Model, Message> = (
   return [
     { route, peoplePage },
     Command.mapMessages(peopleCommands, childMessage =>
-      GotPeopleMessage({ message: childMessage }),
+      Message.GotPeopleMessage({ message: childMessage }),
     ),
   ]
 }
@@ -92,15 +83,16 @@ export const init: Runtime.RoutingApplicationInit<Model, Message> = (
 
 const NavigateInternal = Command.define('NavigateInternal', {
   args: { url: S.String },
-  messages: [CompletedNavigateInternal],
+  messages: [Message.CompletedNavigateInternal],
   execute: ({ url }) =>
-    pushUrl(url).pipe(Effect.as(CompletedNavigateInternal())),
+    pushUrl(url).pipe(Effect.as(Message.CompletedNavigateInternal())),
 })
 
 const LoadExternal = Command.define('LoadExternal', {
   args: { href: S.String },
-  messages: [CompletedLoadExternal],
-  execute: ({ href }) => load(href).pipe(Effect.as(CompletedLoadExternal())),
+  messages: [Message.CompletedLoadExternal],
+  execute: ({ href }) =>
+    load(href).pipe(Effect.as(Message.CompletedLoadExternal())),
 })
 
 // UPDATE
@@ -116,7 +108,7 @@ const foldPeopleEntry = <Input>(
     read: model => Option.some(model.peoplePage),
     write: (model, nextPeoplePage) =>
       evo(model, { peoplePage: () => nextPeoplePage }),
-    toParentMessage: message => GotPeopleMessage({ message }),
+    toParentMessage: message => Message.GotPeopleMessage({ message }),
   })
 
 const foldPeople = foldPeopleEntry(People.update)
@@ -127,40 +119,37 @@ const setRoute =
   (nextRoute: AppRoute): Update.Step<Model, Message> =>
   model => [evo(model, { route: () => nextRoute }), []]
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    withUpdateReturn,
-    M.tagsExhaustive({
-      CompletedNavigateInternal: () => [model, []],
-      CompletedLoadExternal: () => [model, []],
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    CompletedNavigateInternal: () => [model, []],
+    CompletedLoadExternal: () => [model, []],
 
-      ClickedLink: ({ request }) =>
-        M.value(request).pipe(
-          withUpdateReturn,
-          M.tagsExhaustive({
-            Internal: ({ url }) => [
-              model,
-              [NavigateInternal({ url: urlToString(url) })],
-            ],
-            External: ({ href }) => [model, [LoadExternal({ href })]],
-          }),
-        ),
+    ClickedLink: ({ request }) =>
+      M.value(request).pipe(
+        withUpdateReturn,
+        M.tagsExhaustive({
+          Internal: ({ url }) => [
+            model,
+            [NavigateInternal({ url: urlToString(url) })],
+          ],
+          External: ({ href }) => [model, [LoadExternal({ href })]],
+        }),
+      ),
 
-      ChangedUrl: ({ url }) => {
-        const nextRoute = urlToAppRoute(url)
+    ChangedUrl: ({ url }) => {
+      const nextRoute = urlToAppRoute(url)
 
-        const routeSteps = M.value(nextRoute).pipe(
-          M.withReturnType<ReadonlyArray<Update.Step<Model, Message>>>(),
-          M.tag('People', peopleRoute => [foldPeopleRouteChanged(peopleRoute)]),
-          M.orElse(() => []),
-        )
+      const routeSteps = M.value(nextRoute).pipe(
+        M.withReturnType<ReadonlyArray<Update.Step<Model, Message>>>(),
+        M.tag('People', peopleRoute => [foldPeopleRouteChanged(peopleRoute)]),
+        M.orElse(() => []),
+      )
 
-        return Update.combine(model, [setRoute(nextRoute), ...routeSteps])
-      },
+      return Update.combine(model, [setRoute(nextRoute), ...routeSteps])
+    },
 
-      GotPeopleMessage: ({ message }) => foldPeople(model, message),
-    }),
-  )
+    GotPeopleMessage: ({ message }) => foldPeople(model, message),
+  })
 
 // VIEW
 
@@ -562,7 +551,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
           slotId: 'people',
           model: model.peoplePage,
           view: People.view,
-          toParentMessage: message => GotPeopleMessage({ message }),
+          toParentMessage: message => Message.GotPeopleMessage({ message }),
         }),
       Person: ({ personId }) => personView(personId, h),
       FilesIndex: () => filesIndexView(h),

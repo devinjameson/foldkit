@@ -3,7 +3,7 @@ import type { HtmlBuilder } from 'foldkit/html'
 import { Select } from '@foldkit/ui'
 
 import { Icon } from '../../icon'
-import { type Message, UpdatedSelectDemoValue } from './message'
+import { Message } from './message'
 import type { Model } from './model'
 
 // DEMO CONTENT
@@ -32,7 +32,7 @@ export const basicDemo = (model: Model, h: HtmlBuilder<Message>) => {
           {
             id: 'select-basic-demo',
             value: model.selectDemoValue,
-            onChange: value => UpdatedSelectDemoValue({ value }),
+            onChange: value => Message.UpdatedSelectDemoValue({ value }),
             toView: attributes =>
               h.div(
                 [h.Class('flex flex-col gap-1.5 w-full')],

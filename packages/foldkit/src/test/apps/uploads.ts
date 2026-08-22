@@ -3,7 +3,7 @@ import { Array, Effect, Match as M, Number, Schema as S } from 'effect'
 import * as Command from '../../command/index.js'
 import * as Interruptible from '../../command/interruptible/index.js'
 import type { Document, HtmlBuilder } from '../../html/index.js'
-import { m } from '../../message/index.js'
+import { defineMessageUnion } from '../../message/index.js'
 import { evo } from '../../struct/index.js'
 
 // MODEL
@@ -30,30 +30,18 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const ClickedStartUpload = m('ClickedStartUpload')
-export const ClickedRetryUpload = m('ClickedRetryUpload', {
-  uploadId: S.Number,
-})
-export const ClickedCancelUpload = m('ClickedCancelUpload', {
-  uploadId: S.Number,
-})
-export const SucceededUploadFile = m('SucceededUploadFile', {
-  uploadId: S.Number,
-})
-export const FailedUploadFile = m('FailedUploadFile', { uploadId: S.Number })
-export const CompletedCancelUploadFile = m('CompletedCancelUploadFile', {
-  uploadId: S.Number,
-  outcome: Interruptible.Outcome,
+export const Message = defineMessageUnion({
+  ClickedStartUpload: {},
+  ClickedRetryUpload: { uploadId: S.Number },
+  ClickedCancelUpload: { uploadId: S.Number },
+  SucceededUploadFile: { uploadId: S.Number },
+  FailedUploadFile: { uploadId: S.Number },
+  CompletedCancelUploadFile: {
+    uploadId: S.Number,
+    outcome: Interruptible.Outcome,
+  },
 })
 
-export const Message = S.Union([
-  ClickedStartUpload,
-  ClickedRetryUpload,
-  ClickedCancelUpload,
-  SucceededUploadFile,
-  FailedUploadFile,
-  CompletedCancelUploadFile,
-])
 export type Message = typeof Message.Type
 
 // COMMAND
@@ -63,18 +51,18 @@ export type UploadFileArgs = typeof UploadFileArgs.Type
 
 export const UploadFile = Command.define('UploadFile', {
   args: UploadFileArgs.fields,
-  messages: [SucceededUploadFile, FailedUploadFile],
+  messages: [Message.SucceededUploadFile, Message.FailedUploadFile],
   interrupt: {
     keyFields: ['uploadId'],
     toKey: ({ uploadId }) => String(uploadId),
   },
   execute: ({ uploadId }) =>
-    Effect.as(Effect.never, SucceededUploadFile({ uploadId })),
+    Effect.as(Effect.never, Message.SucceededUploadFile({ uploadId })),
 })
 
 export const CancelUploadFile = ({ uploadId }: UploadFileArgs) =>
   UploadFile.Interrupt({ uploadId }, outcome =>
-    CompletedCancelUploadFile({ uploadId, outcome }),
+    Message.CompletedCancelUploadFile({ uploadId, outcome }),
   )
 
 // INIT
@@ -88,15 +76,10 @@ const setStatusById = (uploadId: number, status: UploadStatus) =>
     upload.id === uploadId ? evo(upload, { status: () => status }) : upload,
   )
 
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] =>
-  M.value(message).pipe(
-    M.withReturnType<
-      readonly [Model, ReadonlyArray<Command.Command<Message>>]
-    >(),
-    M.tagsExhaustive({
+export const update = (model: Model, message: Message) =>
+  Message.match<readonly [Model, ReadonlyArray<Command.Command<Message>>]>(
+    message,
+    {
       ClickedStartUpload: () => {
         const startedUpload: Upload = {
           id: model.uploadId,
@@ -139,7 +122,7 @@ export const update = (
             NotFound: () => [model, []],
           }),
         ),
-    }),
+    },
   )
 
 // VIEW
@@ -148,7 +131,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
   const body = h.div(
     [],
     [
-      h.button([h.OnClick(ClickedStartUpload())], ['Start upload']),
+      h.button([h.OnClick(Message.ClickedStartUpload())], ['Start upload']),
       h.ul(
         [],
         Array.map(model.uploads, upload =>
@@ -158,7 +141,11 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
             [
               h.span([], [`upload ${upload.id}: ${upload.status}`]),
               h.button(
-                [h.OnClick(ClickedCancelUpload({ uploadId: upload.id }))],
+                [
+                  h.OnClick(
+                    Message.ClickedCancelUpload({ uploadId: upload.id }),
+                  ),
+                ],
                 [`Cancel upload ${upload.id}`],
               ),
             ],

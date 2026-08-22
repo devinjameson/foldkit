@@ -3,11 +3,7 @@ import type { HtmlBuilder } from 'foldkit/html'
 
 import { Tabs } from '@foldkit/ui'
 
-import {
-  GotHorizontalTabsDemoMessage,
-  GotVerticalTabsDemoMessage,
-  type Message,
-} from './message'
+import { Message } from './message'
 import type { DemoTab } from './model'
 
 // DEMO CONTENT
@@ -142,7 +138,8 @@ export const horizontalDemo = (
             ],
           ),
       },
-      toParentMessage: message => GotHorizontalTabsDemoMessage({ message }),
+      toParentMessage: message =>
+        Message.GotHorizontalTabsDemoMessage({ message }),
     }),
   ]
 }
@@ -260,7 +257,8 @@ export const verticalDemo = (
             ],
           ),
       },
-      toParentMessage: message => GotVerticalTabsDemoMessage({ message }),
+      toParentMessage: message =>
+        Message.GotVerticalTabsDemoMessage({ message }),
     }),
   ]
 }

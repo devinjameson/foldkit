@@ -2,8 +2,7 @@ import { Effect, Option, Queue, Schema as S, Stream, pipe } from 'effect'
 import { Subscription } from 'foldkit'
 
 import { getChart } from './chartHost'
-import { ClickedChartDatum } from './message'
-import type { Message } from './message'
+import { Message } from './message'
 import type { Model } from './model'
 
 const ChartClickPayload = S.Struct({
@@ -33,7 +32,7 @@ const chartEvents = (hostId: string): Stream.Stream<Message> =>
             if (Option.isSome(maybeDatumId)) {
               Queue.offerUnsafe(
                 queue,
-                ClickedChartDatum({ datumId: maybeDatumId.value }),
+                Message.ClickedChartDatum({ datumId: maybeDatumId.value }),
               )
             }
           }

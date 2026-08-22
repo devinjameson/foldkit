@@ -5,11 +5,7 @@ import { Command } from 'foldkit'
 import { BrowserKeyValueStore } from '@effect/platform-browser'
 
 import { CANVAS_SIZE_PX, EXPORT_SCALE, STORAGE_KEY } from './constant'
-import {
-  CompletedSaveCanvas,
-  FailedExportPng,
-  SucceededExportPng,
-} from './message'
+import { Message } from './message'
 import type { Model, SavedCanvas } from './model'
 import { Grid, PaletteIndex } from './model'
 import { SavedCanvasJsonString } from './model'
@@ -22,7 +18,7 @@ export const SaveCanvas = Command.define('SaveCanvas', {
     paletteThemeIndex: S.Number,
     selectedColorIndex: PaletteIndex,
   },
-  messages: [CompletedSaveCanvas],
+  messages: [Message.CompletedSaveCanvas],
   execute: ({ grid, gridSize, paletteThemeIndex, selectedColorIndex }) =>
     Effect.gen(function* () {
       const store = yield* KeyValueStore.KeyValueStore
@@ -33,9 +29,9 @@ export const SaveCanvas = Command.define('SaveCanvas', {
         selectedColorIndex,
       }
       yield* store.set(STORAGE_KEY, S.encodeSync(SavedCanvasJsonString)(data))
-      return CompletedSaveCanvas()
+      return Message.CompletedSaveCanvas()
     }).pipe(
-      Effect.catch(() => Effect.succeed(CompletedSaveCanvas())),
+      Effect.catch(() => Effect.succeed(Message.CompletedSaveCanvas())),
       Effect.provide(BrowserKeyValueStore.layerLocalStorage),
     ),
 })
@@ -50,7 +46,7 @@ export const saveCanvas = (model: Model) =>
 
 export const ExportPng = Command.define('ExportPng', {
   args: { grid: Grid, gridSize: S.Number, paletteThemeIndex: S.Number },
-  messages: [SucceededExportPng, FailedExportPng],
+  messages: [Message.SucceededExportPng, Message.FailedExportPng],
   execute: ({ grid, gridSize, paletteThemeIndex }) =>
     Effect.gen(function* () {
       const theme = PALETTE_THEMES[paletteThemeIndex] ?? PALETTE_THEMES[0]
@@ -63,7 +59,7 @@ export const ExportPng = Command.define('ExportPng', {
 
       if (Predicate.isNull(context)) {
         return yield* Effect.fail(
-          FailedExportPng({ error: 'Canvas 2D context not available' }),
+          Message.FailedExportPng({ error: 'Canvas 2D context not available' }),
         )
       }
 
@@ -79,11 +75,13 @@ export const ExportPng = Command.define('ExportPng', {
       link.href = canvas.toDataURL('image/png')
       link.click()
 
-      return SucceededExportPng()
+      return Message.SucceededExportPng()
     }).pipe(
       Effect.catchTag('FailedExportPng', error => Effect.succeed(error)),
       Effect.catch(() =>
-        Effect.succeed(FailedExportPng({ error: 'Failed to export image' })),
+        Effect.succeed(
+          Message.FailedExportPng({ error: 'Failed to export image' }),
+        ),
       ),
     ),
 })

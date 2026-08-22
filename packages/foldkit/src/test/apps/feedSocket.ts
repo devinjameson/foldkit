@@ -1,8 +1,8 @@
-import { Boolean, Effect, Match as M, Option, Schema as S } from 'effect'
+import { Boolean, Effect, Option, Schema as S } from 'effect'
 
 import type { Html, HtmlBuilder } from '../../html/index.js'
 import * as ManagedResource from '../../managedResource/index.js'
-import { m } from '../../message/index.js'
+import { defineMessageUnion } from '../../message/index.js'
 import { evo } from '../../struct/index.js'
 
 // MODEL
@@ -15,21 +15,13 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const ClickedToggleFeed = m('ClickedToggleFeed')
-export const AcquiredFeedSocket = m('AcquiredFeedSocket', {
-  socketId: S.String,
-})
-export const ReleasedFeedSocket = m('ReleasedFeedSocket')
-export const FailedAcquireFeedSocket = m('FailedAcquireFeedSocket', {
-  error: S.String,
+export const Message = defineMessageUnion({
+  ClickedToggleFeed: {},
+  AcquiredFeedSocket: { socketId: S.String },
+  ReleasedFeedSocket: {},
+  FailedAcquireFeedSocket: { error: S.String },
 })
 
-export const Message = S.Union([
-  ClickedToggleFeed,
-  AcquiredFeedSocket,
-  ReleasedFeedSocket,
-  FailedAcquireFeedSocket,
-])
 export type Message = typeof Message.Type
 
 // MANAGED RESOURCE
@@ -47,9 +39,11 @@ export const feedResources = ManagedResource.make<Model, Message>()(entry => ({
       model.isFeedOpen ? Option.some({ channel: 'general' }) : Option.none(),
     acquire: () => Effect.succeed({ socketId: 'live' }),
     release: () => Effect.void,
-    onAcquired: socket => AcquiredFeedSocket({ socketId: socket.socketId }),
-    onReleased: () => ReleasedFeedSocket(),
-    onAcquireError: error => FailedAcquireFeedSocket({ error: String(error) }),
+    onAcquired: socket =>
+      Message.AcquiredFeedSocket({ socketId: socket.socketId }),
+    onReleased: () => Message.ReleasedFeedSocket(),
+    onAcquireError: error =>
+      Message.FailedAcquireFeedSocket({ error: String(error) }),
   }),
   presence: entry(S.Option(S.Null), {
     resource: PresenceResource,
@@ -57,9 +51,10 @@ export const feedResources = ManagedResource.make<Model, Message>()(entry => ({
       model.isFeedOpen ? Option.some(null) : Option.none(),
     acquire: () => Effect.succeed('online'),
     release: () => Effect.void,
-    onAcquired: () => AcquiredFeedSocket({ socketId: 'presence' }),
-    onReleased: () => ReleasedFeedSocket(),
-    onAcquireError: error => FailedAcquireFeedSocket({ error: String(error) }),
+    onAcquired: () => Message.AcquiredFeedSocket({ socketId: 'presence' }),
+    onReleased: () => Message.ReleasedFeedSocket(),
+    onAcquireError: error =>
+      Message.FailedAcquireFeedSocket({ error: String(error) }),
   }),
 }))
 
@@ -72,25 +67,16 @@ export const initialModel = Model.make({
 
 // UPDATE
 
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<never>] =>
-  M.value(message).pipe(
-    M.withReturnType<readonly [Model, ReadonlyArray<never>]>(),
-    M.tagsExhaustive({
-      ClickedToggleFeed: () => [evo(model, { isFeedOpen: Boolean.not }), []],
-      AcquiredFeedSocket: () => [evo(model, { status: () => 'Connected' }), []],
-      ReleasedFeedSocket: () => [
-        evo(model, { status: () => 'Disconnected' }),
-        [],
-      ],
-      FailedAcquireFeedSocket: () => [
-        evo(model, { status: () => 'Failed' }),
-        [],
-      ],
-    }),
-  )
+export const update = (model: Model, message: Message) =>
+  Message.match<readonly [Model, ReadonlyArray<never>]>(message, {
+    ClickedToggleFeed: () => [evo(model, { isFeedOpen: Boolean.not }), []],
+    AcquiredFeedSocket: () => [evo(model, { status: () => 'Connected' }), []],
+    ReleasedFeedSocket: () => [
+      evo(model, { status: () => 'Disconnected' }),
+      [],
+    ],
+    FailedAcquireFeedSocket: () => [evo(model, { status: () => 'Failed' }), []],
+  })
 
 // VIEW
 
@@ -100,7 +86,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html =>
     [
       h.span([h.Role('status')], [model.status]),
       h.button(
-        [h.OnClick(ClickedToggleFeed()), h.Role('button')],
+        [h.OnClick(Message.ClickedToggleFeed()), h.Role('button')],
         [model.isFeedOpen ? 'Close feed' : 'Open feed'],
       ),
     ],

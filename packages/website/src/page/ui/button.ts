@@ -2,7 +2,7 @@ import type { HtmlBuilder } from 'foldkit/html'
 
 import { Button } from '@foldkit/ui'
 
-import { ClickedButtonDemo, type Message } from './message'
+import { Message } from './message'
 import type { Model } from './model'
 
 // DEMO CONTENT
@@ -19,7 +19,7 @@ export const basicDemo = (model: Model, h: HtmlBuilder<Message>) => {
       [
         Button.view(
           {
-            onClick: ClickedButtonDemo(),
+            onClick: Message.ClickedButtonDemo(),
             toView: attributes =>
               h.button(
                 [...attributes.button, h.Class(buttonClassName)],

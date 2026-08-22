@@ -1,6 +1,6 @@
 import { Effect, Match as M, Schema as S, pipe } from 'effect'
 import { Command, Navigation, Route, Url } from 'foldkit'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { int, literal, r, slash } from 'foldkit/route'
 import { evo } from 'foldkit/struct'
 
@@ -28,43 +28,38 @@ type Model = typeof Model.Type
 
 // MESSAGE
 
-const CompletedNavigateInternal = m('CompletedNavigateInternal')
-const CompletedLoadExternal = m('CompletedLoadExternal')
-const ClickedLink = m('ClickedLink', { request: Navigation.UrlRequest })
-const ChangedUrl = m('ChangedUrl', { url: Url.Url })
-
-const Message = S.Union([
-  CompletedNavigateInternal,
-  CompletedLoadExternal,
-  ClickedLink,
-  ChangedUrl,
-])
+const Message = defineMessageUnion({
+  CompletedNavigateInternal: {},
+  CompletedLoadExternal: {},
+  ClickedLink: { request: Navigation.UrlRequest },
+  ChangedUrl: { url: Url.Url },
+})
 type Message = typeof Message.Type
 
 // COMMAND
 
 const NavigateInternal = Command.define('NavigateInternal', {
   args: { url: S.String },
-  messages: [CompletedNavigateInternal],
+  messages: [Message.CompletedNavigateInternal],
   execute: ({ url }) =>
-    Navigation.pushUrl(url).pipe(Effect.as(CompletedNavigateInternal())),
+    Navigation.pushUrl(url).pipe(
+      Effect.as(Message.CompletedNavigateInternal()),
+    ),
 })
 
 const LoadExternal = Command.define('LoadExternal', {
   args: { href: S.String },
-  messages: [CompletedLoadExternal],
+  messages: [Message.CompletedLoadExternal],
   execute: ({ href }) =>
-    Navigation.load(href).pipe(Effect.as(CompletedLoadExternal())),
+    Navigation.load(href).pipe(Effect.as(Message.CompletedLoadExternal())),
 })
 
 // UPDATE
 
 const update = (model: Model, message: Message) =>
-  M.value(message).pipe(
-    M.withReturnType<
-      readonly [Model, ReadonlyArray<Command.Command<Message>>]
-    >(),
-    M.tagsExhaustive({
+  Message.match<readonly [Model, ReadonlyArray<Command.Command<Message>>]>(
+    message,
+    {
       CompletedNavigateInternal: () => [model, []],
       CompletedLoadExternal: () => [model, []],
 
@@ -92,5 +87,5 @@ const update = (model: Model, message: Message) =>
         }),
         [],
       ],
-    }),
+    },
   )

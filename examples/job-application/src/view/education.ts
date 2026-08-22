@@ -5,6 +5,7 @@ import { type Html, type HtmlBuilder, createKeyedLazy } from 'foldkit/html'
 import { Button } from '@foldkit/ui'
 
 import { Education } from '../step'
+import { Message } from '../step/education'
 import { educationEntryView } from './educationEntry'
 
 const lazyEntry = createKeyedLazy()
@@ -20,7 +21,7 @@ const entryView = (
     view: educationEntryView,
     viewInputs: { today },
     toParentMessage: message =>
-      Education.GotEntryMessage({ entryId: entry.id, message }),
+      Message.GotEntryMessage({ entryId: entry.id, message }),
   })
 
 export const educationView = Submodel.defineView<
@@ -43,7 +44,7 @@ export const educationView = Submodel.defineView<
         ),
         Button.view(
           {
-            onClick: Education.ClickedAddEntry(),
+            onClick: Message.ClickedAddEntry(),
             toView: attributes =>
               h.button(
                 [

@@ -11,7 +11,7 @@ import {
 } from 'effect'
 import { Command, Runtime } from 'foldkit'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 // MODEL
@@ -35,30 +35,18 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const ClickedStartUpload = m('ClickedStartUpload')
-export const ClickedCancelUpload = m('ClickedCancelUpload', {
-  uploadId: S.Number,
-})
-export const ClickedCancelAllUploads = m('ClickedCancelAllUploads')
-export const ClickedRestartUpload = m('ClickedRestartUpload', {
-  uploadId: S.Number,
-})
-export const SucceededUploadFile = m('SucceededUploadFile', {
-  uploadId: S.Number,
-})
-export const CompletedCancelUploadFile = m('CompletedCancelUploadFile', {
-  uploadId: S.Number,
-  outcome: Command.Interruptible.Outcome,
+export const Message = defineMessageUnion({
+  ClickedStartUpload: {},
+  ClickedCancelUpload: { uploadId: S.Number },
+  ClickedCancelAllUploads: {},
+  ClickedRestartUpload: { uploadId: S.Number },
+  SucceededUploadFile: { uploadId: S.Number },
+  CompletedCancelUploadFile: {
+    uploadId: S.Number,
+    outcome: Command.Interruptible.Outcome,
+  },
 })
 
-export const Message = S.Union([
-  ClickedStartUpload,
-  ClickedCancelUpload,
-  ClickedCancelAllUploads,
-  ClickedRestartUpload,
-  SucceededUploadFile,
-  CompletedCancelUploadFile,
-])
 export type Message = typeof Message.Type
 
 // INIT
@@ -102,7 +90,7 @@ export type UploadKey = typeof UploadKey.Type
 
 export const UploadFile = Command.define('UploadFile', {
   args: { ...UploadKey.fields, sizeMegabytes: S.Number },
-  messages: [SucceededUploadFile],
+  messages: [Message.SucceededUploadFile],
   interrupt: {
     keyFields: ['uploadId'],
     toKey: ({ uploadId }) => String(uploadId),
@@ -112,13 +100,13 @@ export const UploadFile = Command.define('UploadFile', {
       yield* Effect.sleep(
         Duration.millis(sizeMegabytes * MILLISECONDS_PER_MEGABYTE),
       )
-      return SucceededUploadFile({ uploadId })
+      return Message.SucceededUploadFile({ uploadId })
     }),
 })
 
 export const CancelUploadFile = ({ uploadId }: UploadKey) =>
   UploadFile.Interrupt({ uploadId }, outcome =>
-    CompletedCancelUploadFile({ uploadId, outcome }),
+    Message.CompletedCancelUploadFile({ uploadId, outcome }),
   )
 
 // UPDATE
@@ -128,15 +116,10 @@ const setStatusForId = (uploadId: number, status: UploadStatus) =>
     upload.id === uploadId ? evo(upload, { status: () => status }) : upload,
   )
 
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] =>
-  M.value(message).pipe(
-    M.withReturnType<
-      readonly [Model, ReadonlyArray<Command.Command<Message>>]
-    >(),
-    M.tagsExhaustive({
+export const update = (model: Model, message: Message) =>
+  Message.match<readonly [Model, ReadonlyArray<Command.Command<Message>>]>(
+    message,
+    {
       ClickedStartUpload: () => {
         const fakeFile = fakeFileForUpload(model.uploadId)
         const startedUpload = Upload.make({
@@ -206,7 +189,7 @@ export const update = (
             NotFound: () => [model, []],
           }),
         ),
-    }),
+    },
   )
 
 // VIEW
@@ -228,7 +211,7 @@ const uploadActionView = (upload: Upload, h: HtmlBuilder<Message>): Html =>
       h.keyed('button')(
         'Uploading',
         [
-          h.OnClick(ClickedCancelUpload({ uploadId: upload.id })),
+          h.OnClick(Message.ClickedCancelUpload({ uploadId: upload.id })),
           h.AriaLabel(`Cancel upload ${upload.id}`),
           h.Class(
             clsx(
@@ -244,7 +227,7 @@ const uploadActionView = (upload: Upload, h: HtmlBuilder<Message>): Html =>
       h.keyed('button')(
         'Cancelled',
         [
-          h.OnClick(ClickedRestartUpload({ uploadId: upload.id })),
+          h.OnClick(Message.ClickedRestartUpload({ uploadId: upload.id })),
           h.AriaLabel(`Restart upload ${upload.id}`),
           h.Class(
             clsx(
@@ -327,7 +310,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
             [
               h.button(
                 [
-                  h.OnClick(ClickedStartUpload()),
+                  h.OnClick(Message.ClickedStartUpload()),
                   h.Class(
                     'px-4 py-2 rounded-md bg-blue-500 text-white font-medium hover:bg-blue-600 transition',
                   ),
@@ -338,7 +321,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
                 ? h.keyed('button')(
                     'CancelAll',
                     [
-                      h.OnClick(ClickedCancelAllUploads()),
+                      h.OnClick(Message.ClickedCancelAllUploads()),
                       h.Class(
                         'px-4 py-2 rounded-md border border-red-300 text-red-600 font-medium hover:bg-red-50 transition',
                       ),

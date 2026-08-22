@@ -2,34 +2,23 @@ import { Match as M, Schema as S } from 'effect'
 import { type ChildAttribute, type Html, childAttributes } from 'foldkit/html'
 import { defineView } from 'foldkit/submodel'
 
-import {
+import { Message, Position, Variant } from './schema.js'
+import { WaitBeforeDismissal, makeRuntime } from './update.js'
+
+export type {
   CompletedWaitBeforeDismissal,
   Dismissed,
   DismissedAll,
   GotAnimationMessage,
   HoveredEntry,
+  InitConfig,
   LeftEntry,
-  Position,
-  Variant,
 } from './schema.js'
-import { WaitBeforeDismissal, makeRuntime } from './update.js'
-
-export type { InitConfig } from './schema.js'
 export type { ShowInput } from './update.js'
 
 export * as test from './test.js'
 
-export {
-  Variant,
-  Position,
-  Dismissed,
-  DismissedAll,
-  CompletedWaitBeforeDismissal,
-  HoveredEntry,
-  LeftEntry,
-  GotAnimationMessage,
-  WaitBeforeDismissal,
-}
+export { Message, Variant, Position, WaitBeforeDismissal }
 
 // VIEW
 
@@ -218,15 +207,15 @@ export const make = <A, I>(payloadSchema: S.Codec<A, I>) => {
           h.AriaAtomic(true),
           h.DataAttribute('variant', entry.variant),
           h.Style({ pointerEvents: 'auto' }),
-          h.OnMouseEnter(HoveredEntry({ entryId: entry.id })),
-          h.OnMouseLeave(LeftEntry({ entryId: entry.id })),
+          h.OnMouseEnter(runtime.Message.HoveredEntry({ entryId: entry.id })),
+          h.OnMouseLeave(runtime.Message.LeftEntry({ entryId: entry.id })),
           ...animationAttributes,
           ...(entryClassName ? [h.Class(entryClassName)] : []),
         ]
 
         const handlers: EntryHandlers = {
           dismiss: childAttributes([
-            h.OnClick(Dismissed({ entryId: entry.id })),
+            h.OnClick(runtime.Message.Dismissed({ entryId: entry.id })),
           ]),
         }
 

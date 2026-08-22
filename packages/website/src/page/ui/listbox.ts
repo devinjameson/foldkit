@@ -5,12 +5,7 @@ import { Listbox } from '@foldkit/ui'
 import type { AnchorConfig } from '@foldkit/ui/listbox'
 
 import { Icon } from '../../icon'
-import {
-  GotListboxDemoMessage,
-  GotListboxGroupedDemoMessage,
-  GotListboxMultiDemoMessage,
-  type Message,
-} from './message'
+import { Message } from './message'
 import type { ListboxItem } from './model'
 
 // DEMO CONTENT
@@ -133,7 +128,8 @@ export const basicDemo = (
                 ]),
                 attributes: childAttributes([h.Class(wrapperClassName)]),
               },
-              toParentMessage: message => GotListboxDemoMessage({ message }),
+              toParentMessage: message =>
+                Message.GotListboxDemoMessage({ message }),
             }),
           ],
         ),
@@ -201,7 +197,7 @@ export const multiSelectDemo = (
                 attributes: childAttributes([h.Class(wrapperClassName)]),
               },
               toParentMessage: message =>
-                GotListboxMultiDemoMessage({ message }),
+                Message.GotListboxMultiDemoMessage({ message }),
             }),
           ],
         ),
@@ -275,7 +271,7 @@ export const groupedDemo = (
                 attributes: childAttributes([h.Class(wrapperClassName)]),
               },
               toParentMessage: message =>
-                GotListboxGroupedDemoMessage({ message }),
+                Message.GotListboxGroupedDemoMessage({ message }),
             }),
           ],
         ),

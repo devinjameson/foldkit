@@ -4,26 +4,13 @@ import { Valid, Validating } from 'foldkit/fieldValidation'
 import { Command, given, message, model, story } from 'foldkit/story'
 import { describe, expect, test } from 'vitest'
 
-import { FileDrop, Menu, Tabs } from '@foldkit/ui'
+import { Menu, Tabs } from '@foldkit/ui'
+import { Message as FileDropMessage } from '@foldkit/ui/fileDrop'
+import { Message as MenuMessage } from '@foldkit/ui/menu'
+import { Message as TabsMessage } from '@foldkit/ui/tabs'
 
 import { SubmitApplication } from './command'
-import {
-  ClickedNext,
-  ClickedPrevious,
-  ClickedSubmit,
-  FailedSubmitApplication,
-  GotAttachmentsMessage,
-  GotCoverLetterMessage,
-  GotEducationMessage,
-  GotPersonalInfoMessage,
-  GotSkillsMessage,
-  GotStepMenuMessage,
-  GotStepTabsMessage,
-  GotWorkHistoryMessage,
-  NavigatedToStep,
-  SucceededSubmitApplication,
-  ToggledPreview,
-} from './message'
+import { Message } from './message'
 import { type Model, NotSubmitted, Submitting } from './model'
 import {
   Attachments,
@@ -33,6 +20,12 @@ import {
   Skills,
   WorkHistory,
 } from './step'
+import { Message as AttachmentsMessage } from './step/attachments'
+import { Message as CoverLetterMessage } from './step/coverLetter'
+import { Message as EducationMessage } from './step/education'
+import { Message as PersonalInfoMessage } from './step/personalInfo'
+import { Message as SkillsMessage } from './step/skills'
+import { Message as WorkHistoryMessage } from './step/workHistory'
 import { update } from './update'
 
 const today = Calendar.make(2026, 4, 16)
@@ -88,11 +81,14 @@ const completeModel: Model = {
 
 const givenInitial = given(initialModel)
 
-const resolveFocusTab = Command.resolve(Tabs.FocusTab, Tabs.CompletedFocusTab())
+const resolveFocusTab = Command.resolve(
+  Tabs.FocusTab,
+  TabsMessage.CompletedFocusTab(),
+)
 
 const resolveFocusMenuButton = Command.resolve(
   Menu.FocusButton,
-  Menu.CompletedFocusButton(),
+  MenuMessage.CompletedFocusButton(),
 )
 
 describe('update', () => {
@@ -101,7 +97,7 @@ describe('update', () => {
       story(
         update,
         givenInitial,
-        message(ClickedNext()),
+        message(Message.ClickedNext()),
         Command.expectNone(),
         model(model => {
           expect(model.currentStep).toBe('WorkHistory')
@@ -113,7 +109,7 @@ describe('update', () => {
       story(
         update,
         given({ ...initialModel, currentStep: 'Education' }),
-        message(ClickedPrevious()),
+        message(Message.ClickedPrevious()),
         model(model => {
           expect(model.currentStep).toBe('WorkHistory')
         }),
@@ -124,7 +120,7 @@ describe('update', () => {
       story(
         update,
         givenInitial,
-        message(ClickedPrevious()),
+        message(Message.ClickedPrevious()),
         model(model => {
           expect(model.currentStep).toBe('PersonalInfo')
         }),
@@ -135,7 +131,7 @@ describe('update', () => {
       story(
         update,
         given({ ...initialModel, currentStep: 'Review' }),
-        message(ClickedNext()),
+        message(Message.ClickedNext()),
         model(model => {
           expect(model.currentStep).toBe('Review')
         }),
@@ -146,7 +142,7 @@ describe('update', () => {
       story(
         update,
         givenInitial,
-        message(NavigatedToStep({ step: 'Skills' })),
+        message(Message.NavigatedToStep({ step: 'Skills' })),
         model(model => {
           expect(model.currentStep).toBe('Skills')
         }),
@@ -158,8 +154,8 @@ describe('update', () => {
         update,
         givenInitial,
         message(
-          GotStepTabsMessage({
-            message: Tabs.SelectedTab({ index: 6, value: 'Review' }),
+          Message.GotStepTabsMessage({
+            message: TabsMessage.SelectedTab({ index: 6, value: 'Review' }),
           }),
         ),
         model(model => {
@@ -174,14 +170,19 @@ describe('update', () => {
         update,
         givenInitial,
         message(
-          GotStepMenuMessage({
-            message: Menu.Opened({ maybeActiveItemIndex: Option.none() }),
+          Message.GotStepMenuMessage({
+            message: MenuMessage.Opened({
+              maybeActiveItemIndex: Option.none(),
+            }),
           }),
         ),
-        Command.resolve(Menu.FocusItems, Menu.CompletedFocusItems()),
+        Command.resolve(Menu.FocusItems, MenuMessage.CompletedFocusItems()),
         message(
-          GotStepMenuMessage({
-            message: Menu.SelectedItem({ index: 5, item: 'Attachments' }),
+          Message.GotStepMenuMessage({
+            message: MenuMessage.SelectedItem({
+              index: 5,
+              item: 'Attachments',
+            }),
           }),
         ),
         model(model => {
@@ -197,11 +198,11 @@ describe('update', () => {
       story(
         update,
         givenInitial,
-        message(ToggledPreview()),
+        message(Message.ToggledPreview()),
         model(model => {
           expect(model.isPreviewVisible).toBe(true)
         }),
-        message(ToggledPreview()),
+        message(Message.ToggledPreview()),
         model(model => {
           expect(model.isPreviewVisible).toBe(false)
         }),
@@ -215,8 +216,8 @@ describe('update', () => {
         update,
         givenInitial,
         message(
-          GotPersonalInfoMessage({
-            message: PersonalInfo.UpdatedFirstName({ value: 'Jane' }),
+          Message.GotPersonalInfoMessage({
+            message: PersonalInfoMessage.UpdatedFirstName({ value: 'Jane' }),
           }),
         ),
         model(model => {
@@ -231,8 +232,8 @@ describe('update', () => {
         update,
         givenInitial,
         message(
-          GotPersonalInfoMessage({
-            message: PersonalInfo.UpdatedFirstName({ value: 'J' }),
+          Message.GotPersonalInfoMessage({
+            message: PersonalInfoMessage.UpdatedFirstName({ value: 'J' }),
           }),
         ),
         model(model => {
@@ -246,14 +247,16 @@ describe('update', () => {
         update,
         givenInitial,
         message(
-          GotPersonalInfoMessage({
-            message: PersonalInfo.UpdatedEmail({ value: 'jane@example.com' }),
+          Message.GotPersonalInfoMessage({
+            message: PersonalInfoMessage.UpdatedEmail({
+              value: 'jane@example.com',
+            }),
           }),
         ),
         Command.expectHas(PersonalInfo.ValidateEmailAsync),
         Command.resolve(
           PersonalInfo.ValidateEmailAsync,
-          PersonalInfo.CompletedValidateEmailAsync({
+          PersonalInfoMessage.CompletedValidateEmailAsync({
             validationId: 1,
             field: Valid({ value: 'jane@example.com' }),
           }),
@@ -269,8 +272,8 @@ describe('update', () => {
         update,
         givenInitial,
         message(
-          GotPersonalInfoMessage({
-            message: PersonalInfo.UpdatedEmail({ value: 'not-email' }),
+          Message.GotPersonalInfoMessage({
+            message: PersonalInfoMessage.UpdatedEmail({ value: 'not-email' }),
           }),
         ),
         Command.expectNone(),
@@ -294,8 +297,8 @@ describe('update', () => {
         update,
         given(modelWithInFlightValidation),
         message(
-          GotPersonalInfoMessage({
-            message: PersonalInfo.CompletedValidateEmailAsync({
+          Message.GotPersonalInfoMessage({
+            message: PersonalInfoMessage.CompletedValidateEmailAsync({
               validationId: 3,
               field: Valid({ value: 'old@example.com' }),
             }),
@@ -316,8 +319,8 @@ describe('update', () => {
         update,
         givenInitial,
         message(
-          GotWorkHistoryMessage({
-            message: WorkHistory.SucceededGenerateEntryId({
+          Message.GotWorkHistoryMessage({
+            message: WorkHistoryMessage.SucceededGenerateEntryId({
               entryId: 'test-work-1',
             }),
           }),
@@ -333,8 +336,8 @@ describe('update', () => {
         update,
         givenInitial,
         message(
-          GotWorkHistoryMessage({
-            message: WorkHistory.FailedGenerateEntryId(),
+          Message.GotWorkHistoryMessage({
+            message: WorkHistoryMessage.FailedGenerateEntryId(),
           }),
         ),
         Command.expectNone(),
@@ -353,8 +356,10 @@ describe('update', () => {
         update,
         givenInitial,
         message(
-          GotWorkHistoryMessage({
-            message: WorkHistory.RemovedEntry({ entryId: firstEntry.id }),
+          Message.GotWorkHistoryMessage({
+            message: WorkHistoryMessage.RemovedEntry({
+              entryId: firstEntry.id,
+            }),
           }),
         ),
         model(model => {
@@ -372,10 +377,10 @@ describe('update', () => {
         update,
         givenInitial,
         message(
-          GotWorkHistoryMessage({
-            message: WorkHistory.GotEntryMessage({
+          Message.GotWorkHistoryMessage({
+            message: WorkHistoryMessage.GotEntryMessage({
               entryId: firstEntry.id,
-              message: WorkHistory.Entry.UpdatedCompany({
+              message: WorkHistory.Entry.Message.UpdatedCompany({
                 value: 'Foldkit Inc.',
               }),
             }),
@@ -401,8 +406,8 @@ describe('update', () => {
         update,
         givenInitial,
         message(
-          GotEducationMessage({
-            message: Education.SucceededGenerateEntryId({
+          Message.GotEducationMessage({
+            message: EducationMessage.SucceededGenerateEntryId({
               entryId: 'test-edu-1',
             }),
           }),
@@ -418,8 +423,8 @@ describe('update', () => {
         update,
         givenInitial,
         message(
-          GotEducationMessage({
-            message: Education.FailedGenerateEntryId(),
+          Message.GotEducationMessage({
+            message: EducationMessage.FailedGenerateEntryId(),
           }),
         ),
         Command.expectNone(),
@@ -438,8 +443,8 @@ describe('update', () => {
         update,
         givenInitial,
         message(
-          GotEducationMessage({
-            message: Education.RemovedEntry({ entryId: firstEntry.id }),
+          Message.GotEducationMessage({
+            message: EducationMessage.RemovedEntry({ entryId: firstEntry.id }),
           }),
         ),
         model(model => {
@@ -457,10 +462,10 @@ describe('update', () => {
         update,
         givenInitial,
         message(
-          GotEducationMessage({
-            message: Education.GotEntryMessage({
+          Message.GotEducationMessage({
+            message: EducationMessage.GotEntryMessage({
               entryId: firstEntry.id,
-              message: Education.Entry.UpdatedSchool({ value: 'MIT' }),
+              message: Education.Entry.Message.UpdatedSchool({ value: 'MIT' }),
             }),
           }),
         ),
@@ -486,18 +491,18 @@ describe('update', () => {
         update,
         givenInitial,
         message(
-          GotEducationMessage({
-            message: Education.GotEntryMessage({
+          Message.GotEducationMessage({
+            message: EducationMessage.GotEntryMessage({
               entryId: firstEntry.id,
-              message: Education.Entry.UpdatedSchool({ value: 'MIT' }),
+              message: Education.Entry.Message.UpdatedSchool({ value: 'MIT' }),
             }),
           }),
         ),
         message(
-          GotEducationMessage({
-            message: Education.GotEntryMessage({
+          Message.GotEducationMessage({
+            message: EducationMessage.GotEntryMessage({
               entryId: firstEntry.id,
-              message: Education.Entry.UpdatedSchool({ value: '' }),
+              message: Education.Entry.Message.UpdatedSchool({ value: '' }),
             }),
           }),
         ),
@@ -521,8 +526,8 @@ describe('update', () => {
         update,
         givenInitial,
         message(
-          GotSkillsMessage({
-            message: Skills.SucceededGenerateEntryId({
+          Message.GotSkillsMessage({
+            message: SkillsMessage.SucceededGenerateEntryId({
               entryId: 'test-skill-1',
             }),
           }),
@@ -538,8 +543,8 @@ describe('update', () => {
         update,
         givenInitial,
         message(
-          GotSkillsMessage({
-            message: Skills.FailedGenerateEntryId(),
+          Message.GotSkillsMessage({
+            message: SkillsMessage.FailedGenerateEntryId(),
           }),
         ),
         Command.expectNone(),
@@ -558,10 +563,10 @@ describe('update', () => {
         update,
         givenInitial,
         message(
-          GotSkillsMessage({
-            message: Skills.GotEntryMessage({
+          Message.GotSkillsMessage({
+            message: SkillsMessage.GotEntryMessage({
               entryId: firstEntry.id,
-              message: Skills.Entry.UpdatedName({
+              message: Skills.Entry.Message.UpdatedName({
                 value: 'TypeScript',
               }),
             }),
@@ -587,8 +592,8 @@ describe('update', () => {
         update,
         givenInitial,
         message(
-          GotCoverLetterMessage({
-            message: CoverLetter.UpdatedContent({
+          Message.GotCoverLetterMessage({
+            message: CoverLetterMessage.UpdatedContent({
               value: 'I love the Elm Architecture.',
             }),
           }),
@@ -609,9 +614,9 @@ describe('update', () => {
         update,
         givenInitial,
         message(
-          GotAttachmentsMessage({
-            message: Attachments.GotResumeDropMessage({
-              message: FileDrop.DroppedFiles({ files: [resume] }),
+          Message.GotAttachmentsMessage({
+            message: AttachmentsMessage.GotResumeDropMessage({
+              message: FileDropMessage.DroppedFiles({ files: [resume] }),
             }),
           }),
         ),
@@ -629,9 +634,9 @@ describe('update', () => {
         update,
         givenInitial,
         message(
-          GotAttachmentsMessage({
-            message: Attachments.GotAdditionalFilesDropMessage({
-              message: FileDrop.DroppedFiles({ files: [file] }),
+          Message.GotAttachmentsMessage({
+            message: AttachmentsMessage.GotAdditionalFilesDropMessage({
+              message: FileDropMessage.DroppedFiles({ files: [file] }),
             }),
           }),
         ),
@@ -647,9 +652,12 @@ describe('update', () => {
       story(
         update,
         given({ ...completeModel, currentStep: 'Review' }),
-        message(ClickedSubmit()),
+        message(Message.ClickedSubmit()),
         Command.expectExact(SubmitApplication),
-        Command.resolve(SubmitApplication, SucceededSubmitApplication()),
+        Command.resolve(
+          SubmitApplication,
+          Message.SucceededSubmitApplication(),
+        ),
         model(model => {
           expect(model.submission._tag).toBe('SubmitSuccess')
           expect(model.isSubmitAttempted).toBe(true)
@@ -661,7 +669,7 @@ describe('update', () => {
       story(
         update,
         given({ ...initialModel, currentStep: 'Review' }),
-        message(ClickedSubmit()),
+        message(Message.ClickedSubmit()),
         Command.expectNone(),
         model(model => {
           expect(model.submission._tag).toBe('NotSubmitted')
@@ -708,7 +716,7 @@ describe('update', () => {
             email: Validating({ value: 'jane@example.com' }),
           },
         }),
-        message(ClickedSubmit()),
+        message(Message.ClickedSubmit()),
         Command.expectNone(),
         model(model => {
           expect(model.submission._tag).toBe('NotSubmitted')
@@ -722,8 +730,11 @@ describe('update', () => {
       story(
         update,
         given({ ...completeModel, currentStep: 'Review' }),
-        message(ClickedSubmit()),
-        Command.resolve(SubmitApplication, SucceededSubmitApplication()),
+        message(Message.ClickedSubmit()),
+        Command.resolve(
+          SubmitApplication,
+          Message.SucceededSubmitApplication(),
+        ),
         model(model => {
           expect(model.personalInfo.firstName._tag).toBe('Valid')
           expect(model.personalInfo.firstName.value).toBe('Jane')
@@ -739,7 +750,7 @@ describe('update', () => {
           currentStep: 'Review',
           submission: Submitting(),
         }),
-        message(SucceededSubmitApplication()),
+        message(Message.SucceededSubmitApplication()),
         model(model => {
           expect(model.submission._tag).toBe('SubmitSuccess')
         }),
@@ -754,7 +765,7 @@ describe('update', () => {
           currentStep: 'Review',
           submission: Submitting(),
         }),
-        message(FailedSubmitApplication({ error: 'Server down' })),
+        message(Message.FailedSubmitApplication({ error: 'Server down' })),
         model(model => {
           expect(model.submission._tag).toBe('SubmitError')
         }),

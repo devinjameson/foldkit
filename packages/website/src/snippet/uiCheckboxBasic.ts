@@ -3,7 +3,7 @@
 // update, and view definitions.
 import { Schema as S } from 'effect'
 import type { HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Checkbox } from '@foldkit/ui'
@@ -24,11 +24,12 @@ const init = () => [
 ]
 
 // A verb-first, past-tense Message carries the new checked state:
-const ToggledTerms = m('ToggledTerms', { isChecked: S.Boolean })
 
-const Message = S.Union([ToggledTerms])
+const Message = defineMessageUnion({
+  ToggledTerms: { isChecked: S.Boolean },
+})
 
-// Inside your update function's M.tagsExhaustive({...}), store the value.
+// Inside your update function's Message.match({...}), store the value.
 // This is the moment to fire analytics, validate a form, or push the value
 // to a backend.
 ToggledTerms: ({ isChecked }) => [
@@ -43,7 +44,7 @@ const view = (model, h: HtmlBuilder<Message>) =>
     {
       id: 'accept-terms',
       isChecked: model.acceptedTerms,
-      onToggle: isChecked => ToggledTerms({ isChecked }),
+      onToggle: isChecked => Message.ToggledTerms({ isChecked }),
       toView: attributes =>
         h.div(
           [h.Class('flex flex-col gap-1')],

@@ -7,13 +7,8 @@ import {
   type BaseInitConfig,
   BaseModel,
   type BaseViewInputsCommon,
-  ClearedSelection,
-  Closed,
-  type Message,
-  Opened,
-  type OutMessage,
-  SelectedItem,
-  Selected as SharedSelected,
+  Message,
+  OutMessage,
   baseInit,
   closedBaseModel,
   makeUpdate,
@@ -45,7 +40,7 @@ export const update = makeUpdate<Model>({
     if (isClearable && model.nullable && model.inputValue === '') {
       return [
         evo(closedBaseModel(model), { inputValue: () => '' }),
-        Option.some(ClearedSelection()),
+        Option.some(OutMessage.ClearedSelection()),
       ]
     }
 
@@ -62,13 +57,13 @@ export const update = makeUpdate<Model>({
       evo(closedBaseModel(model), {
         inputValue: () => (nullableDeselect ? '' : displayText),
       }),
-      Option.some(SharedSelected({ value: item })),
+      Option.some(OutMessage.Selected({ value: item })),
     )
   },
 
   handleImmediateActivation: (model, item) => [
     model,
-    Option.some(SharedSelected({ value: item })),
+    Option.some(OutMessage.Selected({ value: item })),
   ],
 })
 
@@ -77,14 +72,14 @@ type UpdateReturn = ReturnType<typeof update>
 /** Programmatically opens the combobox, updating the model and returning
  *  focus and modal commands. Use this in domain-event handlers to open the combobox. */
 export const open = (model: Model): UpdateReturn =>
-  update(model, Opened({ maybeActiveItemIndex: Option.none() }))
+  update(model, Message.Opened({ maybeActiveItemIndex: Option.none() }))
 
 /** Programmatically closes the combobox, updating the model and returning
  *  focus and modal commands. `restingInputValue` is the text the input
  *  returns to (the parent-owned selection's display text, or empty). Use
  *  this in domain-event handlers to close the combobox. */
 export const close = (model: Model, restingInputValue: string): UpdateReturn =>
-  update(model, Closed({ restingInputValue, isClearable: true }))
+  update(model, Message.Closed({ restingInputValue, isClearable: true }))
 
 /** Programmatically selects an item in the single-select combobox, closing
  *  the combobox and emitting `Selected({ value })`. The Submodel treats the
@@ -97,7 +92,7 @@ export const selectItem = (
   item: string,
   displayText: string,
 ): UpdateReturn =>
-  update(model, SelectedItem({ item, displayText, wasSelected: false }))
+  update(model, Message.SelectedItem({ item, displayText, wasSelected: false }))
 
 // VIEW
 
@@ -186,11 +181,17 @@ export const create = <Item extends string = string>(): Bundle<Item> => {
     selectItem: (model, item, displayText) =>
       typedUpdate(
         model,
-        SelectedItem({ item, displayText, wasSelected: false }),
+        Message.SelectedItem({ item, displayText, wasSelected: false }),
       ),
     open: model =>
-      typedUpdate(model, Opened({ maybeActiveItemIndex: Option.none() })),
+      typedUpdate(
+        model,
+        Message.Opened({ maybeActiveItemIndex: Option.none() }),
+      ),
     close: (model, restingInputValue) =>
-      typedUpdate(model, Closed({ restingInputValue, isClearable: true })),
+      typedUpdate(
+        model,
+        Message.Closed({ restingInputValue, isClearable: true }),
+      ),
   }
 }

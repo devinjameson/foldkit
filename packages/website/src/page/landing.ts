@@ -615,17 +615,13 @@ const landingExampleMetas = Array.appendAll(
 const exampleTile = (key: string, title: string, href: string): Html =>
   ih.keyed('li')(
     key,
-    [
-      ih.Class(
-        'border-r border-b border-gray-300 dark:border-gray-700 min-w-0',
-      ),
-    ],
+    [ih.Class('min-w-0')],
     [
       ih.a(
         [
           ih.Href(href),
           ih.Class(
-            'group flex min-h-20 md:min-h-24 h-full items-center justify-between gap-3 px-3 py-4 md:px-4 bg-cream dark:bg-gray-900 text-gray-900 dark:text-white transition-colors hover:bg-accent-600 hover:text-white dark:hover:bg-accent-500 dark:hover:text-accent-950 focus-visible:outline-none focus-visible:bg-accent-600 focus-visible:text-white dark:focus-visible:bg-accent-500 dark:focus-visible:text-accent-950',
+            'group flex min-h-20 md:min-h-24 h-full items-center justify-between gap-3 px-3 py-4 md:px-4 rounded-lg bg-gray-900/4 dark:bg-white/4 text-gray-900 dark:text-white transition-colors hover:bg-accent-200/40 dark:hover:bg-accent-400/12 focus-visible:outline-none focus-visible:bg-accent-200/40 dark:focus-visible:bg-accent-400/12',
           ),
         ],
         [
@@ -656,17 +652,13 @@ const exampleMetaTile = (example: ExampleMeta): Html =>
 
 const exampleCatalogTile: Html = ih.keyed('li')(
   'example-catalog',
-  [
-    ih.Class(
-      'col-span-2 sm:col-span-2 lg:col-span-1 border-r border-b border-gray-900 dark:border-white',
-    ),
-  ],
+  [ih.Class('col-span-2 sm:col-span-2 lg:col-span-1')],
   [
     ih.a(
       [
         ih.Href(examplesRouter()),
         ih.Class(
-          'group flex min-h-20 md:min-h-24 h-full items-center justify-between gap-3 px-3 py-4 md:px-4 bg-gray-900 text-white dark:bg-white dark:text-gray-900 transition-colors hover:bg-accent-600 dark:hover:bg-accent-500 dark:hover:text-accent-950 focus-visible:outline-none focus-visible:bg-accent-600 dark:focus-visible:bg-accent-500 dark:focus-visible:text-accent-950',
+          'group flex min-h-20 md:min-h-24 h-full items-center justify-between gap-3 px-3 py-4 md:px-4 rounded-lg bg-gray-900 text-white dark:bg-white dark:text-gray-900 transition-colors hover:bg-accent-900 dark:hover:bg-accent-100 focus-visible:outline-none focus-visible:bg-accent-900 dark:focus-visible:bg-accent-100',
         ),
       ],
       [
@@ -716,7 +708,7 @@ const examplesSection: Html = ih.section(
           [
             ih.Role('list'),
             ih.Class(
-              'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 border-t border-l border-gray-300 dark:border-gray-700 list-none',
+              'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 list-none',
             ),
           ],
           [

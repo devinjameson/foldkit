@@ -4,10 +4,9 @@ export {
   Model,
   Message,
   OutMessage,
-  Selected,
-  SelectedOption,
-  FocusedOption,
-  CompletedFocusOption,
+  type Selected,
+  type SelectedOption,
+  type FocusedOption,
   FocusOption,
   Orientation,
 } from './index.js'

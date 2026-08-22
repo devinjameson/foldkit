@@ -1,7 +1,7 @@
-import { Match as M, Number, Schema as S } from 'effect'
+import { Number, Schema as S } from 'effect'
 
 import type { Html } from '../../html/index.js'
-import { m } from '../../message/index.js'
+import { defineMessageUnion } from '../../message/index.js'
 import { evo } from '../../struct/index.js'
 import { defineView } from '../../submodel/public.js'
 
@@ -12,9 +12,10 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const ClickedIncrement = m('ClickedIncrement')
+export const Message = defineMessageUnion({
+  ClickedIncrement: {},
+})
 
-export const Message = S.Union([ClickedIncrement])
 export type Message = typeof Message.Type
 
 // INIT
@@ -23,16 +24,10 @@ export const initialModel = Model.make({ score: 0 })
 
 // UPDATE
 
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<never>] =>
-  M.value(message).pipe(
-    M.withReturnType<readonly [Model, ReadonlyArray<never>]>(),
-    M.tagsExhaustive({
-      ClickedIncrement: () => [evo(model, { score: Number.increment }), []],
-    }),
-  )
+export const update = (model: Model, message: Message) =>
+  Message.match<readonly [Model, ReadonlyArray<never>]>(message, {
+    ClickedIncrement: () => [evo(model, { score: Number.increment }), []],
+  })
 
 // VIEW
 
@@ -48,7 +43,7 @@ export const view = defineView<Model, Message, ViewInputs>(
       [
         viewInputs.toView({ label: viewInputs.label, score: model.score }),
         h.button(
-          [h.OnClick(ClickedIncrement()), h.Role('button')],
+          [h.OnClick(Message.ClickedIncrement()), h.Role('button')],
           ['Increment'],
         ),
       ],

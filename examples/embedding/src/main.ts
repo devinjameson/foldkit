@@ -1,7 +1,7 @@
-import { Duration, Effect, Match as M, Schema as S, Stream } from 'effect'
+import { Duration, Effect, Schema as S, Stream } from 'effect'
 import { Command, Port, Runtime, Subscription } from 'foldkit'
 import { Html, HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Button } from '@foldkit/ui'
@@ -13,17 +13,13 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const Ticked = m('Ticked')
-export const ClickedAdvance = m('ClickedAdvance')
-export const ChangedStep = m('ChangedStep', { step: S.Number })
-export const CompletedReportCount = m('CompletedReportCount')
+export const Message = defineMessageUnion({
+  Ticked: {},
+  ClickedAdvance: {},
+  ChangedStep: { step: S.Number },
+  CompletedReportCount: {},
+})
 
-export const Message = S.Union([
-  Ticked,
-  ClickedAdvance,
-  ChangedStep,
-  CompletedReportCount,
-])
 export type Message = typeof Message.Type
 
 // PORT
@@ -47,10 +43,10 @@ export const init: Runtime.ElementInit<Model, Message, Flags> = flags => [
 
 export const ReportCount = Command.define('ReportCount', {
   args: { count: S.Number },
-  messages: [CompletedReportCount],
+  messages: [Message.CompletedReportCount],
   execute: ({ count }) =>
     Port.emit(ports.outbound.countChanged, count).pipe(
-      Effect.as(CompletedReportCount()),
+      Effect.as(Message.CompletedReportCount()),
     ),
 })
 
@@ -63,16 +59,13 @@ const advance = (model: Model): UpdateReturn => {
   return [evo(model, { count: () => count }), [ReportCount({ count })]]
 }
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    M.withReturnType<UpdateReturn>(),
-    M.tagsExhaustive({
-      Ticked: () => advance(model),
-      ClickedAdvance: () => advance(model),
-      ChangedStep: ({ step }) => [evo(model, { step: () => step }), []],
-      CompletedReportCount: () => [model, []],
-    }),
-  )
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    Ticked: () => advance(model),
+    ClickedAdvance: () => advance(model),
+    ChangedStep: ({ step }) => [evo(model, { step: () => step }), []],
+    CompletedReportCount: () => [model, []],
+  })
 
 // SUBSCRIPTION
 
@@ -80,10 +73,10 @@ const TICK_INTERVAL = Duration.seconds(1)
 
 export const subscriptions = Subscription.make<Model, Message>()(_entry => ({
   tick: Subscription.persistent(
-    Stream.tick(TICK_INTERVAL).pipe(Stream.map(Ticked)),
+    Stream.tick(TICK_INTERVAL).pipe(Stream.map(Message.Ticked)),
   ),
   hostStep: Port.subscription(ports.inbound.stepChanged, step =>
-    ChangedStep({ step }),
+    Message.ChangedStep({ step }),
   ),
 }))
 
@@ -115,7 +108,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html =>
       ),
       Button.view(
         {
-          onClick: ClickedAdvance(),
+          onClick: Message.ClickedAdvance(),
           toView: attributes =>
             h.button(
               [

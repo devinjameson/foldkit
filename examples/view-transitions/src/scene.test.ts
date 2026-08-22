@@ -5,11 +5,10 @@ import { describe, expect, test } from 'vitest'
 
 import {
   ArtworkRoute,
-  ChangedUrl,
   GalleryRoute,
+  Message,
   Model,
   NotFoundRoute,
-  UpdatedFilterText,
   update,
   view,
   viewTransition,
@@ -93,7 +92,7 @@ describe('viewTransition', () => {
     const decision = viewTransition({
       previousModel: gallery,
       model: artworkDetail(1),
-      message: ChangedUrl({ url: urlFor('/artwork/1') }),
+      message: Message.ChangedUrl({ url: urlFor('/artwork/1') }),
     })
 
     expect(decision).toEqual({ types: ['to-artwork-detail'] })
@@ -103,7 +102,7 @@ describe('viewTransition', () => {
     const decision = viewTransition({
       previousModel: artworkDetail(1),
       model: gallery,
-      message: ChangedUrl({ url: urlFor('/') }),
+      message: Message.ChangedUrl({ url: urlFor('/') }),
     })
 
     expect(decision).toEqual({ types: ['to-gallery'] })
@@ -113,7 +112,7 @@ describe('viewTransition', () => {
     const decision = viewTransition({
       previousModel: artworkDetail(1),
       model: artworkDetail(2),
-      message: ChangedUrl({ url: urlFor('/artwork/2') }),
+      message: Message.ChangedUrl({ url: urlFor('/artwork/2') }),
     })
 
     expect(decision).toBe(true)
@@ -123,7 +122,7 @@ describe('viewTransition', () => {
     const decision = viewTransition({
       previousModel: gallery,
       model: gallery,
-      message: UpdatedFilterText({ filterText: 'g' }),
+      message: Message.UpdatedFilterText({ filterText: 'g' }),
     })
 
     expect(decision).toBe(false)

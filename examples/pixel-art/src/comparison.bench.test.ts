@@ -12,13 +12,7 @@ import { createEmptyGrid as createReactGrid } from '../../../comparisons/pixel-a
 import { reducer } from '../../../comparisons/pixel-art-react/src/reducer'
 import type { State } from '../../../comparisons/pixel-art-react/src/types'
 import { createEmptyGrid as createFoldkitGrid } from './grid'
-import {
-  ClickedRedo as FoldkitClickedRedo,
-  ClickedUndo as FoldkitClickedUndo,
-  EnteredCell as FoldkitEnteredCell,
-  PressedCell as FoldkitPressedCell,
-  ReleasedMouse as FoldkitReleasedMouse,
-} from './message'
+import { Message } from './message'
 import type { Model } from './model'
 import { update } from './update'
 
@@ -66,8 +60,8 @@ const buildFoldkitHistory = (steps: number): Model => {
   for (let i = 0; i < steps; i++) {
     const x = i % GRID_SIZE
     const y = Math.floor(i / GRID_SIZE) % GRID_SIZE
-    ;[model] = update(model, FoldkitPressedCell({ x, y }))
-    ;[model] = update(model, FoldkitReleasedMouse())
+    ;[model] = update(model, Message.PressedCell({ x, y }))
+    ;[model] = update(model, Message.ReleasedMouse())
   }
   return model
 }
@@ -118,8 +112,8 @@ test('benchmark', () => {
     {
       name: 'Brush stroke',
       foldkit: () => {
-        const [m] = update(foldkitModel, FoldkitPressedCell({ x: 5, y: 5 }))
-        update(m, FoldkitReleasedMouse())
+        const [m] = update(foldkitModel, Message.PressedCell({ x: 5, y: 5 }))
+        update(m, Message.ReleasedMouse())
       },
       react: () => {
         const s = reducer(reactState, { type: 'PressedCell', x: 5, y: 5 })
@@ -129,12 +123,12 @@ test('benchmark', () => {
     {
       name: 'Brush drag (5 cells)',
       foldkit: () => {
-        let [m] = update(foldkitModel, FoldkitPressedCell({ x: 0, y: 0 }))
-        ;[m] = update(m, FoldkitEnteredCell({ x: 1, y: 0 }))
-        ;[m] = update(m, FoldkitEnteredCell({ x: 2, y: 0 }))
-        ;[m] = update(m, FoldkitEnteredCell({ x: 3, y: 0 }))
-        ;[m] = update(m, FoldkitEnteredCell({ x: 4, y: 0 }))
-        update(m, FoldkitReleasedMouse())
+        let [m] = update(foldkitModel, Message.PressedCell({ x: 0, y: 0 }))
+        ;[m] = update(m, Message.EnteredCell({ x: 1, y: 0 }))
+        ;[m] = update(m, Message.EnteredCell({ x: 2, y: 0 }))
+        ;[m] = update(m, Message.EnteredCell({ x: 3, y: 0 }))
+        ;[m] = update(m, Message.EnteredCell({ x: 4, y: 0 }))
+        update(m, Message.ReleasedMouse())
       },
       react: () => {
         let s = reducer(reactState, { type: 'PressedCell', x: 0, y: 0 })
@@ -149,7 +143,7 @@ test('benchmark', () => {
       name: 'Flood fill (16\u00d716)',
       foldkit: () => {
         const m: Model = { ...foldkitModel, tool: 'Fill' as const }
-        update(m, FoldkitPressedCell({ x: 0, y: 0 }))
+        update(m, Message.PressedCell({ x: 0, y: 0 }))
       },
       react: () => {
         const s: State = { ...reactState, tool: 'Fill' }
@@ -159,7 +153,7 @@ test('benchmark', () => {
     {
       name: 'Single undo (20 entries)',
       foldkit: () => {
-        update(foldkitWith20, FoldkitClickedUndo())
+        update(foldkitWith20, Message.ClickedUndo())
       },
       react: () => {
         reducer(reactWith20, { type: 'ClickedUndo' })
@@ -170,10 +164,10 @@ test('benchmark', () => {
       foldkit: () => {
         let m = foldkitWith20
         for (let i = 0; i < 5; i++) {
-          ;[m] = update(m, FoldkitClickedUndo())
+          ;[m] = update(m, Message.ClickedUndo())
         }
         for (let i = 0; i < 5; i++) {
-          ;[m] = update(m, FoldkitClickedRedo())
+          ;[m] = update(m, Message.ClickedRedo())
         }
       },
       react: () => {

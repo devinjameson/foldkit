@@ -3,20 +3,13 @@ import { Command, given, message, model, story } from 'foldkit/story'
 import { describe, expect, test } from 'vitest'
 
 import {
-  ClickedCompute,
-  ClickedStartEngine,
-  ClickedStopEngine,
-  CompletedCompute,
   Compute,
   EngineBooting,
   EngineFailed,
   EngineOff,
   EngineReady,
-  FailedStartEngine,
+  Message,
   type Model,
-  SkippedCompute,
-  StartedEngine,
-  StoppedEngine,
   update,
 } from './main'
 
@@ -38,7 +31,7 @@ describe('update', () => {
       story(
         update,
         given(offModel),
-        message(ClickedStartEngine()),
+        message(Message.ClickedStartEngine()),
         model(model => {
           expect(model.engine._tag).toBe('EngineBooting')
         }),
@@ -49,7 +42,7 @@ describe('update', () => {
       story(
         update,
         given({ ...offModel, engine: EngineBooting() }),
-        message(StartedEngine({ engineId: 'engine-7' })),
+        message(Message.StartedEngine({ engineId: 'engine-7' })),
         model(model => {
           expect(model.engine).toStrictEqual(
             EngineReady({ engineId: 'engine-7' }),
@@ -62,7 +55,7 @@ describe('update', () => {
       story(
         update,
         given(readyModel),
-        message(ClickedStopEngine()),
+        message(Message.ClickedStopEngine()),
         model(model => {
           expect(model.engine._tag).toBe('EngineOff')
         }),
@@ -73,7 +66,7 @@ describe('update', () => {
       story(
         update,
         given(offModel),
-        message(StoppedEngine()),
+        message(Message.StoppedEngine()),
         model(model => {
           expect(model).toStrictEqual(offModel)
         }),
@@ -84,7 +77,7 @@ describe('update', () => {
       story(
         update,
         given({ ...offModel, engine: EngineBooting() }),
-        message(FailedStartEngine({ reason: 'boot timeout' })),
+        message(Message.FailedStartEngine({ reason: 'boot timeout' })),
         model(model => {
           expect(model.engine).toStrictEqual(
             EngineFailed({ reason: 'boot timeout' }),
@@ -99,12 +92,12 @@ describe('update', () => {
       story(
         update,
         given(readyModel),
-        message(ClickedCompute()),
+        message(Message.ClickedCompute()),
         model(model => {
           expect(model.computeCount).toBe(3)
         }),
         Command.expectExact(Compute({ value: 3 })),
-        Command.resolve(Compute, CompletedCompute({ result: 9 })),
+        Command.resolve(Compute, Message.CompletedCompute({ result: 9 })),
         model(model => {
           expect(model.maybeSquareResult).toStrictEqual(Option.some(9))
         }),
@@ -115,7 +108,7 @@ describe('update', () => {
       story(
         update,
         given(readyModel),
-        message(SkippedCompute()),
+        message(Message.SkippedCompute()),
         model(model => {
           expect(model).toStrictEqual(readyModel)
         }),

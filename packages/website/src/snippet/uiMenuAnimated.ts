@@ -2,7 +2,7 @@
 // the basic menu; only init and view change. Each labeled block below is
 // an excerpt.
 import type { HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 
 import { Menu } from '@foldkit/ui'
 
@@ -19,8 +19,8 @@ const init = () => [
 ]
 
 // Embed the Menu Message in your parent Message:
-const GotMenuMessage = m('GotMenuMessage', {
-  message: Menu.Message,
+const Message = defineMessageUnion({
+  GotMenuMessage: { message: Menu.Message },
 })
 
 // Pair view and update behind a single Item-typed factory at module scope:
@@ -45,5 +45,5 @@ const view = (h: HtmlBuilder<Message>) =>
       backdropClassName: 'fixed inset-0',
       anchor: { placement: 'bottom-start', gap: 4, padding: 8 },
     },
-    toParentMessage: message => GotMenuMessage({ message }),
+    toParentMessage: message => Message.GotMenuMessage({ message }),
   })

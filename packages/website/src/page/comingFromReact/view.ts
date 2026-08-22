@@ -9,7 +9,7 @@ import { slotDocPage } from '../../markdown'
 import { type RenderHeadingLink } from '../../prose'
 import { type RenderCopyButton } from '../../view/codeBlock'
 import raw from './comingFromReact.md'
-import { type Message, ToggledFaq } from './message'
+import { Message } from './message'
 import type { Model } from './model'
 
 // FAQ SHELL
@@ -48,7 +48,7 @@ const faqItem = (
         {
           id,
           isOpen: isFaqOpen,
-          onToggle: isOpen => ToggledFaq({ id, isOpen }),
+          onToggle: isOpen => Message.ToggledFaq({ id, isOpen }),
           toView: attributes =>
             h.div(
               [h.Class('mb-2')],

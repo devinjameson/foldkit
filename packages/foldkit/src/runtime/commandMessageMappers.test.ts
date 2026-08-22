@@ -3,24 +3,26 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as Command from '../command/index.js'
 import { __htmlBuilder } from '../html/index.js'
-import { m } from '../message/index.js'
+import { defineMessageUnion } from '../message/index.js'
 import { makeElement } from './runtime.js'
 
 // CHILD
 
-const CompletedDoChildWork = m('CompletedDoChildWork')
-const ChildMessage = S.Union([CompletedDoChildWork])
+const ChildMessage = defineMessageUnion({
+  CompletedDoChildWork: {},
+})
 type ChildMessage = typeof ChildMessage.Type
 
 const DoChildWork = Command.define('DoChildWork', {
-  messages: [CompletedDoChildWork],
-  execute: Effect.succeed(CompletedDoChildWork()),
+  messages: [ChildMessage.CompletedDoChildWork],
+  execute: Effect.succeed(ChildMessage.CompletedDoChildWork()),
 })
 
 // PARENT
 
-const GotChildMessage = m('GotChildMessage', { message: ChildMessage })
-const Message = S.Union([GotChildMessage])
+const Message = defineMessageUnion({
+  GotChildMessage: { message: ChildMessage },
+})
 type Message = typeof Message.Type
 
 const Model = S.Struct({ label: S.String })
@@ -28,19 +30,16 @@ type Model = typeof Model.Type
 
 type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
 
-const update = (_model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    M.withReturnType<UpdateReturn>(),
-    M.tagsExhaustive({
-      GotChildMessage: ({ message: childMessage }) =>
-        M.value(childMessage).pipe(
-          M.withReturnType<UpdateReturn>(),
-          M.tagsExhaustive({
-            CompletedDoChildWork: () => [{ label: 'child done' }, []],
-          }),
-        ),
-    }),
-  )
+const update = (_model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    GotChildMessage: ({ message: childMessage }) =>
+      M.value(childMessage).pipe(
+        M.withReturnType<UpdateReturn>(),
+        M.tagsExhaustive({
+          CompletedDoChildWork: () => [{ label: 'child done' }, []],
+        }),
+      ),
+  })
 
 const h = __htmlBuilder<Message>()
 
@@ -77,7 +76,7 @@ describe('command message mappers', () => {
       init: () => [
         { label: 'start' },
         Command.mapMessages([DoChildWork()], childMessage =>
-          GotChildMessage({ message: childMessage }),
+          Message.GotChildMessage({ message: childMessage }),
         ),
       ],
       update,

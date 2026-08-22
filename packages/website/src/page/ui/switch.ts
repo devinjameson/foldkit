@@ -2,7 +2,7 @@ import type { HtmlBuilder } from 'foldkit/html'
 
 import { Switch } from '@foldkit/ui'
 
-import { type Message, ToggledSwitchDemo } from './message'
+import { Message } from './message'
 
 export const SWITCH_DEMO_ID = 'switch-demo'
 
@@ -36,7 +36,7 @@ export const basicDemo = (
       {
         id: SWITCH_DEMO_ID,
         isChecked: isSwitchDemoChecked,
-        onToggle: isChecked => ToggledSwitchDemo({ isChecked }),
+        onToggle: isChecked => Message.ToggledSwitchDemo({ isChecked }),
         toView: attributes =>
           h.div(
             [h.Class(wrapperClassName)],

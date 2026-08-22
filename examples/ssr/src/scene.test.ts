@@ -1,13 +1,7 @@
 import { Command, click, expect, given, role, scene, text } from 'foldkit/scene'
 import { describe, test } from 'vitest'
 
-import {
-  CompletedPersistCount,
-  Model,
-  PersistCount,
-  update,
-  view,
-} from './main'
+import { Message, Model, PersistCount, update, view } from './main'
 
 const initialModel = Model.make({
   count: 3,
@@ -36,7 +30,10 @@ describe('view', () => {
       click(role('button', { name: '+' })),
       expect(text('4')).toExist(),
       Command.expectHas(PersistCount({ count: 4 })),
-      Command.resolve(PersistCount({ count: 4 }), CompletedPersistCount()),
+      Command.resolve(
+        PersistCount({ count: 4 }),
+        Message.CompletedPersistCount(),
+      ),
       Command.expectNone(),
     )
   })

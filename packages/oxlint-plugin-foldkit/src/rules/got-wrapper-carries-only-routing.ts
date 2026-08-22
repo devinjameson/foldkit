@@ -7,12 +7,8 @@ import {
   RuleContext,
 } from 'effect-oxlint'
 
-import {
-  isCallExpression,
-  isIdentifier,
-  isObjectExpression,
-  isStringLiteral,
-} from '../guards.ts'
+import { isCallExpression, isIdentifier, isStringLiteral } from '../guards.ts'
+import { messageCases, recordFoldkitMessageUnionBindings } from '../message.ts'
 
 const gotWrapperTagPattern = /^Got[A-Z]/
 
@@ -31,10 +27,10 @@ type StaticPropertyKey = Readonly<{
 const staticPropertyKey = (
   property: ESTree.ObjectPropertyKind,
 ): Option.Option<StaticPropertyKey> => {
-  if (property.type !== 'Property' || property.computed) {
+  if (property.type !== 'Property') {
     return Option.none()
   }
-  if (isIdentifier(property.key)) {
+  if (!property.computed && isIdentifier(property.key)) {
     return Option.some({ keyNode: property.key, keyName: property.key.name })
   }
   if (isStringLiteral(property.key)) {
@@ -59,38 +55,45 @@ export const gotWrapperCarriesOnlyRouting = Rule.define({
   }),
   create: function* () {
     const ctx = yield* RuleContext
+    const messageUnionBindings = new Set<string>()
     return {
+      Program: (node: ESTree.Node) => {
+        recordFoldkitMessageUnionBindings(messageUnionBindings, node)
+        return Effect.void
+      },
       CallExpression: (node: ESTree.Node) => {
-        if (!isCallExpression(node) || !isIdentifier(node.callee, 'm')) {
+        if (!isCallExpression(node)) {
           return Effect.void
         }
-        const [tagArgument, fieldsArgument] = node.arguments
-        if (
-          !isStringLiteral(tagArgument) ||
-          !gotWrapperTagPattern.test(tagArgument.value) ||
-          !isObjectExpression(fieldsArgument)
-        ) {
-          return Effect.void
-        }
-        const wrapperTag = tagArgument.value
+
         return Effect.forEach(
-          fieldsArgument.properties,
-          property =>
-            pipe(
-              staticPropertyKey(property),
-              Option.match({
-                onNone: () => Effect.void,
-                onSome: ({ keyNode, keyName }) =>
-                  isRoutingKey(keyName)
-                    ? Effect.void
-                    : ctx.report(
-                        Diagnostic.make({
-                          node: keyNode,
-                          message: extraFieldMessage(wrapperTag, keyName),
-                        }),
-                      ),
-              }),
-            ),
+          messageCases(node, messageUnionBindings),
+          messageCase =>
+            gotWrapperTagPattern.test(messageCase.name)
+              ? Effect.forEach(
+                  messageCase.fields.properties,
+                  property =>
+                    pipe(
+                      staticPropertyKey(property),
+                      Option.match({
+                        onNone: () => Effect.void,
+                        onSome: ({ keyNode, keyName }) =>
+                          isRoutingKey(keyName)
+                            ? Effect.void
+                            : ctx.report(
+                                Diagnostic.make({
+                                  node: keyNode,
+                                  message: extraFieldMessage(
+                                    messageCase.name,
+                                    keyName,
+                                  ),
+                                }),
+                              ),
+                      }),
+                    ),
+                  { discard: true },
+                )
+              : Effect.void,
           { discard: true },
         )
       },

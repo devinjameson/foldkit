@@ -14,7 +14,7 @@ import {
 import { describe, test } from 'vitest'
 
 import {
-  FailedSimulateAuthRequest,
+  Message,
   Model,
   SimulateAuthRequest,
   initModel,
@@ -92,7 +92,7 @@ describe('login', () => {
       Command.expectExact(SimulateAuthRequest),
       Command.resolve(
         SimulateAuthRequest,
-        FailedSimulateAuthRequest({ error: 'Invalid credentials' }),
+        Message.FailedSimulateAuthRequest({ error: 'Invalid credentials' }),
       ),
     )
   })
@@ -105,7 +105,7 @@ describe('login', () => {
       Command.expectExact(SimulateAuthRequest),
       Command.resolve(
         SimulateAuthRequest,
-        FailedSimulateAuthRequest({ error: 'Invalid credentials' }),
+        Message.FailedSimulateAuthRequest({ error: 'Invalid credentials' }),
       ),
       expect(within(role('form'), text('Invalid credentials'))).toExist(),
       expect(submitButton).toBeDisabled(),

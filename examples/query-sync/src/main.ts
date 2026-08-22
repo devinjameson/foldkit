@@ -13,7 +13,7 @@ import {
 } from 'effect'
 import { Command, Route, Runtime, Update } from 'foldkit'
 import { Document, Html, HtmlBuilder, childAttributes } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { UrlRequest, load, pushUrl, replaceUrl } from 'foldkit/navigation'
 import { r } from 'foldkit/route'
 import { ts } from 'foldkit/schema'
@@ -154,33 +154,18 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const CompletedNavigateInternal = m('CompletedNavigateInternal')
-export const CompletedLoadExternal = m('CompletedLoadExternal')
-export const CompletedReplaceFilters = m('CompletedReplaceFilters')
-export const ClickedLink = m('ClickedLink', { request: UrlRequest })
-export const ChangedUrl = m('ChangedUrl', { url: Url })
-export const ChangedSearchInput = m('ChangedSearchInput', { value: S.String })
-export const ClickedColumnHeader = m('ClickedColumnHeader', {
-  column: SortColumn,
-})
-export const GotDietListboxMessage = m('GotDietListboxMessage', {
-  message: Listbox.Message,
-})
-export const GotPeriodListboxMessage = m('GotPeriodListboxMessage', {
-  message: Listbox.Message,
+export const Message = defineMessageUnion({
+  CompletedNavigateInternal: {},
+  CompletedLoadExternal: {},
+  CompletedReplaceFilters: {},
+  ClickedLink: { request: UrlRequest },
+  ChangedUrl: { url: Url },
+  ChangedSearchInput: { value: S.String },
+  ClickedColumnHeader: { column: SortColumn },
+  GotDietListboxMessage: { message: Listbox.Message },
+  GotPeriodListboxMessage: { message: Listbox.Message },
 })
 
-export const Message = S.Union([
-  CompletedNavigateInternal,
-  CompletedLoadExternal,
-  CompletedReplaceFilters,
-  ClickedLink,
-  ChangedUrl,
-  ChangedSearchInput,
-  ClickedColumnHeader,
-  GotDietListboxMessage,
-  GotPeriodListboxMessage,
-])
 export type Message = typeof Message.Type
 
 // INIT
@@ -261,22 +246,25 @@ export const ReplaceFilters = Command.define('ReplaceFilters', {
     diet: S.Option(Diet),
     period: S.Option(Period),
   },
-  messages: [CompletedReplaceFilters],
+  messages: [Message.CompletedReplaceFilters],
   execute: fields =>
-    replaceUrl(browseRouter(fields)).pipe(Effect.as(CompletedReplaceFilters())),
+    replaceUrl(browseRouter(fields)).pipe(
+      Effect.as(Message.CompletedReplaceFilters()),
+    ),
 })
 
 const NavigateInternal = Command.define('NavigateInternal', {
   args: { url: S.String },
-  messages: [CompletedNavigateInternal],
+  messages: [Message.CompletedNavigateInternal],
   execute: ({ url }) =>
-    pushUrl(url).pipe(Effect.as(CompletedNavigateInternal())),
+    pushUrl(url).pipe(Effect.as(Message.CompletedNavigateInternal())),
 })
 
 const LoadExternal = Command.define('LoadExternal', {
   args: { href: S.String },
-  messages: [CompletedLoadExternal],
-  execute: ({ href }) => load(href).pipe(Effect.as(CompletedLoadExternal())),
+  messages: [Message.CompletedLoadExternal],
+  execute: ({ href }) =>
+    load(href).pipe(Effect.as(Message.CompletedLoadExternal())),
 })
 
 type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
@@ -312,7 +300,7 @@ const foldDietListbox = Update.foldChild({
   read: (model: Model) => Option.some(model.dietListbox),
   write: (model, nextDietListbox) =>
     evo(model, { dietListbox: () => nextDietListbox }),
-  toParentMessage: message => GotDietListboxMessage({ message }),
+  toParentMessage: message => Message.GotDietListboxMessage({ message }),
   foldOutMessage: foldDietListboxOutMessage,
 })
 
@@ -343,70 +331,66 @@ const foldPeriodListbox = Update.foldChild({
   read: (model: Model) => Option.some(model.periodListbox),
   write: (model, nextPeriodListbox) =>
     evo(model, { periodListbox: () => nextPeriodListbox }),
-  toParentMessage: message => GotPeriodListboxMessage({ message }),
+  toParentMessage: message => Message.GotPeriodListboxMessage({ message }),
   foldOutMessage: foldPeriodListboxOutMessage,
 })
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    withUpdateReturn,
-    M.tagsExhaustive({
-      CompletedNavigateInternal: () => [model, []],
-      CompletedLoadExternal: () => [model, []],
-      CompletedReplaceFilters: () => [model, []],
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    CompletedNavigateInternal: () => [model, []],
+    CompletedLoadExternal: () => [model, []],
+    CompletedReplaceFilters: () => [model, []],
 
-      ClickedLink: ({ request }) =>
-        M.value(request).pipe(
-          withUpdateReturn,
-          M.tagsExhaustive({
-            Internal: ({ url }) => [
-              model,
-              [NavigateInternal({ url: urlToString(url) })],
-            ],
-            External: ({ href }) => [model, [LoadExternal({ href })]],
+    ClickedLink: ({ request }) =>
+      M.value(request).pipe(
+        withUpdateReturn,
+        M.tagsExhaustive({
+          Internal: ({ url }) => [
+            model,
+            [NavigateInternal({ url: urlToString(url) })],
+          ],
+          External: ({ href }) => [model, [LoadExternal({ href })]],
+        }),
+      ),
+
+    ChangedUrl: ({ url }) => {
+      const nextRoute = urlToAppRoute(url)
+
+      return [evo(model, { route: () => nextRoute }), []]
+    },
+
+    ChangedSearchInput: ({ value }) => {
+      const fields = routeToBrowseFields(model.route)
+
+      return [
+        model,
+        [
+          ReplaceFilters({
+            ...fields,
+            search: Option.liftPredicate(value, String.isNonEmpty),
           }),
-        ),
+        ],
+      ]
+    },
 
-      ChangedUrl: ({ url }) => {
-        const nextRoute = urlToAppRoute(url)
+    ClickedColumnHeader: ({ column }) => {
+      const fields = routeToBrowseFields(model.route)
 
-        return [evo(model, { route: () => nextRoute }), []]
-      },
+      return [
+        model,
+        [
+          ReplaceFilters({
+            ...fields,
+            sorting: nextSorting(fields.sorting, column),
+          }),
+        ],
+      ]
+    },
 
-      ChangedSearchInput: ({ value }) => {
-        const fields = routeToBrowseFields(model.route)
+    GotDietListboxMessage: ({ message }) => foldDietListbox(model, message),
 
-        return [
-          model,
-          [
-            ReplaceFilters({
-              ...fields,
-              search: Option.liftPredicate(value, String.isNonEmpty),
-            }),
-          ],
-        ]
-      },
-
-      ClickedColumnHeader: ({ column }) => {
-        const fields = routeToBrowseFields(model.route)
-
-        return [
-          model,
-          [
-            ReplaceFilters({
-              ...fields,
-              sorting: nextSorting(fields.sorting, column),
-            }),
-          ],
-        ]
-      },
-
-      GotDietListboxMessage: ({ message }) => foldDietListbox(model, message),
-
-      GotPeriodListboxMessage: ({ message }) =>
-        foldPeriodListbox(model, message),
-    }),
-  )
+    GotPeriodListboxMessage: ({ message }) => foldPeriodListbox(model, message),
+  })
 
 // VIEW
 
@@ -560,7 +544,7 @@ const sortableColumnHeader = (
     [
       Button.view(
         {
-          onClick: ClickedColumnHeader({ column }),
+          onClick: Message.ClickedColumnHeader({ column }),
           toView: attributes =>
             h.button(
               [
@@ -691,7 +675,7 @@ const browseView = (
               id: 'dinosaur-search',
               value: Option.getOrElse(fields.search, () => ''),
               placeholder: 'Search by name…',
-              onInput: value => ChangedSearchInput({ value }),
+              onInput: value => Message.ChangedSearchInput({ value }),
               toView: attributes =>
                 h.input([
                   ...attributes.input,
@@ -727,7 +711,8 @@ const browseView = (
               ]),
               attributes: childAttributes([h.Class(listboxWrapperClassName)]),
             },
-            toParentMessage: message => GotDietListboxMessage({ message }),
+            toParentMessage: message =>
+              Message.GotDietListboxMessage({ message }),
           }),
           h.submodel({
             slotId: model.periodListbox.id,
@@ -754,7 +739,8 @@ const browseView = (
               ]),
               attributes: childAttributes([h.Class(listboxWrapperClassName)]),
             },
-            toParentMessage: message => GotPeriodListboxMessage({ message }),
+            toParentMessage: message =>
+              Message.GotPeriodListboxMessage({ message }),
           }),
         ],
       ),

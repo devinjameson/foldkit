@@ -4,7 +4,7 @@ import type { ChildAttribute, Html, HtmlBuilder } from 'foldkit/html'
 import { Calendar } from '@foldkit/ui'
 
 import { Icon } from '../../icon'
-import { GotCalendarBasicDemoMessage, type Message } from './message'
+import { Message } from './message'
 import type { Model } from './model'
 
 // DEMO CONTENT
@@ -191,7 +191,8 @@ export const basicDemo = (model: Model, h: HtmlBuilder<Message>) => {
           }),
         ),
       },
-      toParentMessage: message => GotCalendarBasicDemoMessage({ message }),
+      toParentMessage: message =>
+        Message.GotCalendarBasicDemoMessage({ message }),
     }),
   ]
 }

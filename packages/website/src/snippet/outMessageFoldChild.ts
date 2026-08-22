@@ -19,12 +19,7 @@ const foldLogin = Update.foldChild({
   foldOutMessage: foldLoginOutMessage,
 })
 
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] =>
-  M.value(message).pipe(
-    M.tagsExhaustive({
-      GotLoginMessage: ({ message }) => foldLogin(model, message),
-    }),
-  )
+export const update = (model: Model, message: Message) =>
+  Message.match(message, {
+    GotLoginMessage: ({ message }) => foldLogin(model, message),
+  })

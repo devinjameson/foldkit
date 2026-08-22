@@ -3,15 +3,7 @@ import { describe, expect, test } from 'vitest'
 
 import { FetchSearchResults, NavigateToResult, ScrollToResult } from './command'
 import { init } from './init'
-import {
-  ClearedSearchQuery,
-  CompletedFetchSearchResults,
-  CompletedNavigateToResult,
-  CompletedScrollToResult,
-  PressedArrowKey,
-  SelectedSearchResult,
-  UpdatedSearchQuery,
-} from './message'
+import { Message } from './message'
 import { Ok } from './model'
 import { update } from './update'
 
@@ -39,7 +31,7 @@ describe('search', () => {
     story(
       update,
       given(initialModel),
-      message(UpdatedSearchQuery({ query: 'routing' })),
+      message(Message.UpdatedSearchQuery({ query: 'routing' })),
       model(model => {
         expect(model.query).toBe('routing')
         expect(model.searchState._tag).toBe('Loading')
@@ -47,7 +39,7 @@ describe('search', () => {
       Command.expectHas(FetchSearchResults),
       Command.resolve(
         FetchSearchResults,
-        CompletedFetchSearchResults({
+        Message.CompletedFetchSearchResults({
           results: searchResults,
           query: 'routing',
         }),
@@ -66,7 +58,7 @@ describe('search', () => {
     story(
       update,
       given({ ...initialModel, query: 'routing' }),
-      message(UpdatedSearchQuery({ query: '' })),
+      message(Message.UpdatedSearchQuery({ query: '' })),
       model(model => {
         expect(model.query).toBe('')
         expect(model.searchState._tag).toBe('Idle')
@@ -80,7 +72,7 @@ describe('search', () => {
     story(
       update,
       given({ ...initialModel, query: 'routing' }),
-      message(UpdatedSearchQuery({ query: 'routing' })),
+      message(Message.UpdatedSearchQuery({ query: 'routing' })),
       model(model => {
         expect(model.searchState._tag).toBe('Idle')
       }),
@@ -96,7 +88,7 @@ describe('search', () => {
         query: 'routing',
         searchState: Ok({ results: searchResults }),
       }),
-      message(UpdatedSearchQuery({ query: 'testing' })),
+      message(Message.UpdatedSearchQuery({ query: 'testing' })),
       model(model => {
         expect(model.query).toBe('testing')
         expect(model.searchState._tag).toBe('Loading')
@@ -107,7 +99,7 @@ describe('search', () => {
       }),
       Command.resolve(
         FetchSearchResults,
-        CompletedFetchSearchResults({ results: [], query: 'testing' }),
+        Message.CompletedFetchSearchResults({ results: [], query: 'testing' }),
       ),
     )
   })
@@ -117,7 +109,7 @@ describe('search', () => {
       update,
       given({ ...initialModel, query: 'testing' }),
       message(
-        CompletedFetchSearchResults({
+        Message.CompletedFetchSearchResults({
           results: searchResults,
           query: 'routing',
         }),
@@ -132,13 +124,13 @@ describe('search', () => {
     story(
       update,
       given(initialModel),
-      message(SelectedSearchResult({ url: '/docs/commands' })),
+      message(Message.SelectedSearchResult({ url: '/docs/commands' })),
       model(model => {
         expect(model.query).toBe('')
         expect(model.searchState._tag).toBe('Idle')
       }),
       Command.expectHas(NavigateToResult),
-      Command.resolve(NavigateToResult, CompletedNavigateToResult()),
+      Command.resolve(NavigateToResult, Message.CompletedNavigateToResult()),
       model(model => {
         expect(model.query).toBe('')
       }),
@@ -155,22 +147,22 @@ describe('search', () => {
     story(
       update,
       given(modelWithResults),
-      message(PressedArrowKey({ direction: 'Down' })),
+      message(Message.PressedArrowKey({ direction: 'Down' })),
       model(model => {
         expect(model.activeResultIndex).toBe(1)
       }),
       Command.expectHas(ScrollToResult),
-      Command.resolve(ScrollToResult, CompletedScrollToResult()),
-      message(PressedArrowKey({ direction: 'Down' })),
+      Command.resolve(ScrollToResult, Message.CompletedScrollToResult()),
+      message(Message.PressedArrowKey({ direction: 'Down' })),
       model(model => {
         expect(model.activeResultIndex).toBe(0)
       }),
-      Command.resolve(ScrollToResult, CompletedScrollToResult()),
-      message(PressedArrowKey({ direction: 'Up' })),
+      Command.resolve(ScrollToResult, Message.CompletedScrollToResult()),
+      message(Message.PressedArrowKey({ direction: 'Up' })),
       model(model => {
         expect(model.activeResultIndex).toBe(1)
       }),
-      Command.resolve(ScrollToResult, CompletedScrollToResult()),
+      Command.resolve(ScrollToResult, Message.CompletedScrollToResult()),
     )
   })
 
@@ -183,7 +175,7 @@ describe('search', () => {
         searchState: Ok({ results: searchResults }),
         activeResultIndex: 1,
       }),
-      message(ClearedSearchQuery()),
+      message(Message.ClearedSearchQuery()),
       model(model => {
         expect(model.query).toBe('')
         expect(model.searchState._tag).toBe('Idle')

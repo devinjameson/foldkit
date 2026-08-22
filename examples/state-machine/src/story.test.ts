@@ -6,20 +6,10 @@ import { describe, expect, test } from 'vitest'
 import {
   AppliedPromo,
   Cart,
-  ClickedBack,
-  ClickedCancel,
-  ClickedContinue,
-  ClickedPlaceOrder,
-  ClickedStartOver,
+  Message,
   PlaceOrder,
   RejectedPromo,
-  SelectedEdition,
-  SubmittedPromoCode,
-  SucceededPlaceOrder,
   TRANSITION_LOG_LIMIT,
-  ToggledPaymentMethod,
-  ToggledTermsAccepted,
-  UpdatedPromoCode,
   initialModel,
   update,
 } from './main'
@@ -48,7 +38,7 @@ describe('update', () => {
 
         yield* TestClock.adjust('1 millis')
         expect(yield* Fiber.join(fiber)).toStrictEqual(
-          SucceededPlaceOrder({ orderId: 'DIGI-1001' }),
+          Message.SucceededPlaceOrder({ orderId: 'DIGI-1001' }),
         )
       }).pipe(Effect.scoped, Effect.provide(TestClock.layer())),
     ))
@@ -57,7 +47,7 @@ describe('update', () => {
     story(
       update,
       given(initialModel),
-      message(ClickedContinue()),
+      message(Message.ClickedContinue()),
       Command.expectNone(),
       model(model => {
         expect(model.checkout._tag).toBe('Shipping')
@@ -65,7 +55,7 @@ describe('update', () => {
           Option.some('Cart -> Shipping on ClickedContinue'),
         )
       }),
-      message(ClickedContinue()),
+      message(Message.ClickedContinue()),
       model(model => {
         expect(model.checkout._tag).toBe('Payment')
         expect(Array.map(model.transitionLog, entry => entry.summary)).toEqual([
@@ -80,12 +70,12 @@ describe('update', () => {
     story(
       update,
       given(initialModel),
-      message(SelectedEdition({ isShippingRequired: false })),
-      message(ClickedContinue()),
+      message(Message.SelectedEdition({ isShippingRequired: false })),
+      message(Message.ClickedContinue()),
       model(model => {
         expect(model.checkout._tag).toBe('Payment')
       }),
-      message(ClickedBack()),
+      message(Message.ClickedBack()),
       model(model => {
         expect(model.checkout._tag).toBe('Cart')
       }),
@@ -96,12 +86,12 @@ describe('update', () => {
     story(
       update,
       given(initialModel),
-      message(SelectedEdition({ isShippingRequired: false })),
-      message(ClickedCancel()),
+      message(Message.SelectedEdition({ isShippingRequired: false })),
+      message(Message.ClickedCancel()),
       model(model => {
         expect(model.checkout._tag).toBe('Cancelled')
       }),
-      message(ClickedStartOver()),
+      message(Message.ClickedStartOver()),
       model(model => {
         expect(model.checkout).toStrictEqual(
           Cart({ isShippingRequired: false }),
@@ -114,12 +104,12 @@ describe('update', () => {
     story(
       update,
       given(initialModel),
-      message(SelectedEdition({ isShippingRequired: false })),
-      message(ClickedContinue()),
-      message(ToggledPaymentMethod({ isSelected: true })),
-      message(ClickedContinue()),
-      message(UpdatedPromoCode({ value: ' reader10 ' })),
-      message(SubmittedPromoCode()),
+      message(Message.SelectedEdition({ isShippingRequired: false })),
+      message(Message.ClickedContinue()),
+      message(Message.ToggledPaymentMethod({ isSelected: true })),
+      message(Message.ClickedContinue()),
+      message(Message.UpdatedPromoCode({ value: ' reader10 ' })),
+      message(Message.SubmittedPromoCode()),
       model(model => {
         expect(model.checkout._tag).toBe('Review')
         if (model.checkout._tag === 'Review') {
@@ -128,8 +118,8 @@ describe('update', () => {
           )
         }
       }),
-      message(UpdatedPromoCode({ value: 'BOGUS' })),
-      message(SubmittedPromoCode()),
+      message(Message.UpdatedPromoCode({ value: 'BOGUS' })),
+      message(Message.SubmittedPromoCode()),
       model(model => {
         expect(model.checkout._tag).toBe('Review')
         if (model.checkout._tag === 'Review') {
@@ -146,11 +136,11 @@ describe('update', () => {
     story(
       update,
       given(initialModel),
-      message(SelectedEdition({ isShippingRequired: false })),
-      message(ClickedContinue()),
-      message(ToggledPaymentMethod({ isSelected: true })),
-      message(ClickedContinue()),
-      message(ClickedPlaceOrder()),
+      message(Message.SelectedEdition({ isShippingRequired: false })),
+      message(Message.ClickedContinue()),
+      message(Message.ToggledPaymentMethod({ isSelected: true })),
+      message(Message.ClickedContinue()),
+      message(Message.ClickedPlaceOrder()),
       Command.expectNone(),
       model(model => {
         expect(model.checkout._tag).toBe('Review')
@@ -165,16 +155,16 @@ describe('update', () => {
     story(
       update,
       given(initialModel),
-      message(SelectedEdition({ isShippingRequired: false })),
-      message(ClickedContinue()),
-      message(ToggledPaymentMethod({ isSelected: true })),
-      message(ClickedContinue()),
-      message(ToggledTermsAccepted({ isAccepted: true })),
-      message(ClickedPlaceOrder()),
+      message(Message.SelectedEdition({ isShippingRequired: false })),
+      message(Message.ClickedContinue()),
+      message(Message.ToggledPaymentMethod({ isSelected: true })),
+      message(Message.ClickedContinue()),
+      message(Message.ToggledTermsAccepted({ isAccepted: true })),
+      message(Message.ClickedPlaceOrder()),
       Command.expectExact(PlaceOrder({ isShippingRequired: false })),
       Command.resolve(
         PlaceOrder,
-        SucceededPlaceOrder({ orderId: 'DIGI-1001' }),
+        Message.SucceededPlaceOrder({ orderId: 'DIGI-1001' }),
       ),
       model(model => {
         expect(model.checkout._tag).toBe('Confirmed')
@@ -190,7 +180,7 @@ describe('update', () => {
 
     const finalModel = pipe(
       Array.makeBy(messageCount, index =>
-        SelectedEdition({ isShippingRequired: index % 2 === 0 }),
+        Message.SelectedEdition({ isShippingRequired: index % 2 === 0 }),
       ),
       Array.reduce(initialModel, (model, message) => {
         const [nextModel] = update(model, message)

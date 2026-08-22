@@ -22,14 +22,15 @@ import {
   hydrationIdentityMarker,
   hydrationKeyMarker,
 } from '../../hydrationMarkers.js'
-import { m } from '../../message/index.js'
+import { defineMessageUnion } from '../../message/index.js'
 import { h as snabbdomH } from '../../snabbdom/index.js'
 import type { VNode } from '../../snabbdom/vnode.js'
 import { __patchVNode } from '../../vdom.js'
 import { serializeHtml } from './serialize.js'
 
-const ClickedButton = m('ClickedButton')
-const Message = S.Union([ClickedButton])
+const Message = defineMessageUnion({
+  ClickedButton: {},
+})
 type Message = typeof Message.Type
 
 const h = __htmlBuilder<Message>()
@@ -580,7 +581,7 @@ describe('serializeHtml', () => {
     // hydrate carries none of it either.
     const view = h.keyed('button')(
       'submit',
-      [h.OnClick(ClickedButton()), h.Id('submit')],
+      [h.OnClick(Message.ClickedButton()), h.Id('submit')],
       ['Send'],
     )
     expect(serializeHtml(view)).toBe('<button id="submit">Send</button>')

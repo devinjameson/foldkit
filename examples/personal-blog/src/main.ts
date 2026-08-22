@@ -2,7 +2,7 @@ import { clsx } from 'clsx'
 import { Effect, Match as M, Option, Schema as S } from 'effect'
 import { Command, Runtime, Update } from 'foldkit'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { UrlRequest, load, pushUrl } from 'foldkit/navigation'
 import { evo } from 'foldkit/struct'
 import { Url, toString as urlToString } from 'foldkit/url'
@@ -26,21 +26,14 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const CompletedNavigateInternal = m('CompletedNavigateInternal')
-export const CompletedLoadExternal = m('CompletedLoadExternal')
-export const ClickedLink = m('ClickedLink', { request: UrlRequest })
-export const ChangedUrl = m('ChangedUrl', { url: Url })
-export const GotCounterMessage = m('GotCounterMessage', {
-  message: Counter.Message,
+export const Message = defineMessageUnion({
+  CompletedNavigateInternal: {},
+  CompletedLoadExternal: {},
+  ClickedLink: { request: UrlRequest },
+  ChangedUrl: { url: Url },
+  GotCounterMessage: { message: Counter.Message },
 })
 
-export const Message = S.Union([
-  CompletedNavigateInternal,
-  CompletedLoadExternal,
-  ClickedLink,
-  ChangedUrl,
-  GotCounterMessage,
-])
 export type Message = typeof Message.Type
 
 // INIT
@@ -53,15 +46,16 @@ export const init: Runtime.RoutingApplicationInit<Model, Message> = (
 
 const NavigateInternal = Command.define('NavigateInternal', {
   args: { url: S.String },
-  messages: [CompletedNavigateInternal],
+  messages: [Message.CompletedNavigateInternal],
   execute: ({ url }) =>
-    pushUrl(url).pipe(Effect.as(CompletedNavigateInternal())),
+    pushUrl(url).pipe(Effect.as(Message.CompletedNavigateInternal())),
 })
 
 const LoadExternal = Command.define('LoadExternal', {
   args: { href: S.String },
-  messages: [CompletedLoadExternal],
-  execute: ({ href }) => load(href).pipe(Effect.as(CompletedLoadExternal())),
+  messages: [Message.CompletedLoadExternal],
+  execute: ({ href }) =>
+    load(href).pipe(Effect.as(Message.CompletedLoadExternal())),
 })
 
 // UPDATE
@@ -73,7 +67,7 @@ const foldCounter = Update.foldChild({
   update: Counter.update,
   read: (model: Model) => Option.some(model.counter),
   write: (model, nextCounter) => evo(model, { counter: () => nextCounter }),
-  toParentMessage: message => GotCounterMessage({ message }),
+  toParentMessage: message => Message.GotCounterMessage({ message }),
 })
 
 export const update = (model: Model, message: Message): UpdateReturn =>
@@ -123,7 +117,7 @@ const islandViews = (model: Model, h: HtmlBuilder<Message>): Markdown.Islands =>
             slotId: `counter-${occurrenceIndex}`,
             model: model.counter,
             view: Counter.view,
-            toParentMessage: message => GotCounterMessage({ message }),
+            toParentMessage: message => Message.GotCounterMessage({ message }),
           }),
         ],
       ),

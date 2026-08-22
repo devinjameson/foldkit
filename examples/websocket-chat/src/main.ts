@@ -12,7 +12,7 @@ import {
 } from 'effect'
 import { Command, ManagedResource, Runtime, Subscription } from 'foldkit'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
@@ -61,133 +61,111 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const ClickedConnect = m('ClickedConnect')
-export const Connected = m('Connected')
-export const Disconnected = m('Disconnected')
-export const FailedConnect = m('FailedConnect', { error: S.String })
-export const UpdatedMessageInput = m('UpdatedMessageInput', {
-  value: S.String,
-})
-export const SubmittedMessage = m('SubmittedMessage')
-export const SucceededSendMessage = m('SucceededSendMessage', {
-  text: S.String,
-})
-export const ReceivedMessage = m('ReceivedMessage', { text: S.String })
-export const TimestampedMessage = m('TimestampedMessage', {
-  text: S.String,
-  zoned: S.DateTimeZoned,
-  isSent: S.Boolean,
+export const Message = defineMessageUnion({
+  ClickedConnect: {},
+  Connected: {},
+  Disconnected: {},
+  FailedConnect: { error: S.String },
+  UpdatedMessageInput: { value: S.String },
+  SubmittedMessage: {},
+  SucceededSendMessage: { text: S.String },
+  ReceivedMessage: { text: S.String },
+  TimestampedMessage: {
+    text: S.String,
+    zoned: S.DateTimeZoned,
+    isSent: S.Boolean,
+  },
 })
 
-export const Message = S.Union([
-  ClickedConnect,
-  Connected,
-  Disconnected,
-  FailedConnect,
-  UpdatedMessageInput,
-  SubmittedMessage,
-  SucceededSendMessage,
-  ReceivedMessage,
-  TimestampedMessage,
-])
 export type Message = typeof Message.Type
 
 // UPDATE
 
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [
-  Model,
-  ReadonlyArray<Command.Command<Message, never, ChatSocketService>>,
-] =>
-  M.value(message).pipe(
-    M.withReturnType<
-      [Model, ReadonlyArray<Command.Command<Message, never, ChatSocketService>>]
-    >(),
-    M.tagsExhaustive({
-      ClickedConnect: () => [
-        evo(model, {
-          connection: () => ConnectionConnecting(),
-        }),
-        [],
-      ],
+export const update = (model: Model, message: Message) =>
+  Message.match<
+    [Model, ReadonlyArray<Command.Command<Message, never, ChatSocketService>>]
+  >(message, {
+    ClickedConnect: () => [
+      evo(model, {
+        connection: () => ConnectionConnecting(),
+      }),
+      [],
+    ],
 
-      Connected: () => [
-        evo(model, {
-          connection: () => ConnectionConnected(),
-        }),
-        [],
-      ],
+    Connected: () => [
+      evo(model, {
+        connection: () => ConnectionConnected(),
+      }),
+      [],
+    ],
 
-      Disconnected: () => [
-        evo(model, {
-          connection: () => ConnectionDisconnected(),
-          messages: () => [],
-        }),
-        [],
-      ],
+    Disconnected: () => [
+      evo(model, {
+        connection: () => ConnectionDisconnected(),
+        messages: () => [],
+      }),
+      [],
+    ],
 
-      FailedConnect: ({ error }) => [
-        evo(model, {
-          connection: () => ConnectionError({ error }),
-        }),
-        [],
-      ],
+    FailedConnect: ({ error }) => [
+      evo(model, {
+        connection: () => ConnectionError({ error }),
+      }),
+      [],
+    ],
 
-      UpdatedMessageInput: ({ value }) => [
-        evo(model, {
-          messageInput: () => value,
-        }),
-        [],
-      ],
+    UpdatedMessageInput: ({ value }) => [
+      evo(model, {
+        messageInput: () => value,
+      }),
+      [],
+    ],
 
-      SubmittedMessage: () => {
-        const trimmedMessage = model.messageInput.trim()
+    SubmittedMessage: () => {
+      const trimmedMessage = model.messageInput.trim()
 
-        if (String.isEmpty(trimmedMessage)) {
-          return [model, []]
-        }
+      if (String.isEmpty(trimmedMessage)) {
+        return [model, []]
+      }
 
-        return M.value(model.connection).pipe(
-          M.withReturnType<
-            [
-              Model,
-              ReadonlyArray<Command.Command<Message, never, ChatSocketService>>,
-            ]
-          >(),
-          M.tag('ConnectionConnected', () => [
-            evo(model, {
-              messageInput: () => '',
-            }),
-            [SendMessage({ text: trimmedMessage })],
-          ]),
-          M.orElse(() => [model, []]),
-        )
-      },
-
-      SucceededSendMessage: ({ text }) => [
-        model,
-        [TimestampSentMessage({ text })],
-      ],
-
-      ReceivedMessage: ({ text }) => [
-        model,
-        [TimestampReceivedMessage({ text })],
-      ],
-
-      TimestampedMessage: ({ text, zoned, isSent }) => {
-        const newMessage = ChatMessage.make({ text, zoned, isSent })
-
-        return [
+      return M.value(model.connection).pipe(
+        M.withReturnType<
+          [
+            Model,
+            ReadonlyArray<Command.Command<Message, never, ChatSocketService>>,
+          ]
+        >(),
+        M.tag('ConnectionConnected', () => [
           evo(model, {
-            messages: messages => [...messages, newMessage],
+            messageInput: () => '',
           }),
-          [],
-        ]
-      },
-    }),
-  )
+          [SendMessage({ text: trimmedMessage })],
+        ]),
+        M.orElse(() => [model, []]),
+      )
+    },
+
+    SucceededSendMessage: ({ text }) => [
+      model,
+      [TimestampSentMessage({ text })],
+    ],
+
+    ReceivedMessage: ({ text }) => [
+      model,
+      [TimestampReceivedMessage({ text })],
+    ],
+
+    TimestampedMessage: ({ text, zoned, isSent }) => {
+      const newMessage = ChatMessage.make({ text, zoned, isSent })
+
+      return [
+        evo(model, {
+          messages: messages => [...messages, newMessage],
+        }),
+        [],
+      ]
+    },
+  })
 
 // INIT
 
@@ -204,10 +182,12 @@ export const init: Runtime.ApplicationInit<Model, Message> = () => [
 
 export const TimestampSentMessage = Command.define('TimestampSentMessage', {
   args: { text: S.String },
-  messages: [TimestampedMessage],
+  messages: [Message.TimestampedMessage],
   execute: ({ text }) =>
     getZonedTime.pipe(
-      Effect.map(zoned => TimestampedMessage({ text, zoned, isSent: true })),
+      Effect.map(zoned =>
+        Message.TimestampedMessage({ text, zoned, isSent: true }),
+      ),
     ),
 })
 
@@ -215,27 +195,29 @@ export const TimestampReceivedMessage = Command.define(
   'TimestampReceivedMessage',
   {
     args: { text: S.String },
-    messages: [TimestampedMessage],
+    messages: [Message.TimestampedMessage],
     execute: ({ text }) =>
       getZonedTime.pipe(
-        Effect.map(zoned => TimestampedMessage({ text, zoned, isSent: false })),
+        Effect.map(zoned =>
+          Message.TimestampedMessage({ text, zoned, isSent: false }),
+        ),
       ),
   },
 )
 
 export const SendMessage = Command.define('SendMessage', {
   args: { text: S.String },
-  messages: [SucceededSendMessage, FailedConnect],
+  messages: [Message.SucceededSendMessage, Message.FailedConnect],
   execute: ({ text }) =>
     ChatSocket.get.pipe(
       Effect.flatMap(socket =>
         Effect.sync(() => {
           socket.send(text)
-          return SucceededSendMessage({ text })
+          return Message.SucceededSendMessage({ text })
         }),
       ),
       Effect.catchTag('ResourceNotAvailable', () =>
-        Effect.succeed(FailedConnect({ error: 'Socket unavailable' })),
+        Effect.succeed(Message.FailedConnect({ error: 'Socket unavailable' })),
       ),
     ),
 })
@@ -283,10 +265,10 @@ export const managedResources = ManagedResource.make<Model, Message>()(
         Effect.sync(() => {
           socket.close()
         }),
-      onAcquired: () => Connected(),
-      onReleased: () => Disconnected(),
+      onAcquired: () => Message.Connected(),
+      onReleased: () => Message.Disconnected(),
       onAcquireError: error =>
-        FailedConnect({
+        Message.FailedConnect({
           error: error instanceof Error ? error.message : 'Unknown error',
         }),
     }),
@@ -297,21 +279,27 @@ export const managedResources = ManagedResource.make<Model, Message>()(
 
 const streamChatSocketMessages = (socket: WebSocket) =>
   Stream.callback<
-    | typeof ReceivedMessage.Type
-    | typeof Disconnected.Type
-    | typeof FailedConnect.Type
+    | typeof Message.ReceivedMessage.Type
+    | typeof Message.Disconnected.Type
+    | typeof Message.FailedConnect.Type
   >(queue =>
     Effect.acquireRelease(
       Effect.sync(() => {
         const handleMessage = (event: MessageEvent) => {
-          Queue.offerUnsafe(queue, ReceivedMessage({ text: event.data }))
+          Queue.offerUnsafe(
+            queue,
+            Message.ReceivedMessage({ text: event.data }),
+          )
         }
         const handleClose = () => {
-          Queue.offerUnsafe(queue, Disconnected())
+          Queue.offerUnsafe(queue, Message.Disconnected())
           Queue.endUnsafe(queue)
         }
         const handleError = () => {
-          Queue.offerUnsafe(queue, FailedConnect({ error: 'Connection error' }))
+          Queue.offerUnsafe(
+            queue,
+            Message.FailedConnect({ error: 'Connection error' }),
+          )
           Queue.endUnsafe(queue)
         }
 
@@ -530,7 +518,7 @@ const connectButtonView = (h: HtmlBuilder<Message>): Html =>
     [
       Button.view(
         {
-          onClick: ClickedConnect(),
+          onClick: Message.ClickedConnect(),
           toView: attributes =>
             h.button(
               [
@@ -558,7 +546,10 @@ const messageInputView = (
   h: HtmlBuilder<Message>,
 ): Html =>
   h.form(
-    [h.Class('p-6 border-t border-gray-200'), h.OnSubmit(SubmittedMessage())],
+    [
+      h.Class('p-6 border-t border-gray-200'),
+      h.OnSubmit(Message.SubmittedMessage()),
+    ],
     [
       h.div(
         [h.Class('flex gap-3')],
@@ -568,7 +559,7 @@ const messageInputView = (
               id: 'message',
               value: messageInput,
               placeholder: 'Type a message...',
-              onInput: value => UpdatedMessageInput({ value }),
+              onInput: value => Message.UpdatedMessageInput({ value }),
               toView: attributes =>
                 h.input([
                   ...attributes.input,
@@ -617,7 +608,7 @@ const errorView = (error: string, h: HtmlBuilder<Message>): Html =>
       ),
       Button.view(
         {
-          onClick: ClickedConnect(),
+          onClick: Message.ClickedConnect(),
           toView: attributes =>
             h.button(
               [

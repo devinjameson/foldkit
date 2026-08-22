@@ -4,7 +4,7 @@
 import { Match as M, Option, Schema as S } from 'effect'
 import { Command, Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Toast as UiToast } from '@foldkit/ui'
@@ -43,8 +43,10 @@ const init = () => [
 
 // Embed the Toast Message in your parent Message, plus any domain Messages
 // that should push a toast:
-const GotToastMessage = m('GotToastMessage', { message: Toast.Message })
-const ClickedSave = m('ClickedSave')
+const Message = defineMessageUnion({
+  GotToastMessage: { message: Toast.Message },
+  ClickedSave: {},
+})
 
 // At module scope, fold the OutMessage into your own Model, lifting the
 // DismissedToast event into domain state. The arm returns an Update.Step over
@@ -71,11 +73,11 @@ const foldToast = Update.foldChild({
   update: Toast.update,
   read: (model: Model) => Option.some(model.toast),
   write: (model, nextToast) => evo(model, { toast: () => nextToast }),
-  toParentMessage: message => GotToastMessage({ message }),
+  toParentMessage: message => Message.GotToastMessage({ message }),
   foldOutMessage: foldToastOutMessage,
 })
 
-// Inside your update's M.tagsExhaustive({...}), call the fold:
+// Inside your update's Message.match({...}), call the fold:
 GotToastMessage: ({ message }) => foldToast(model, message)
 
 ClickedSave: () => {
@@ -92,7 +94,9 @@ ClickedSave: () => {
 
   return [
     evo(model, { toast: () => nextToast }),
-    Command.mapMessages(commands, message => GotToastMessage({ message })),
+    Command.mapMessages(commands, message =>
+      Message.GotToastMessage({ message }),
+    ),
   ]
 }
 
@@ -135,5 +139,5 @@ const view = (h: HtmlBuilder<Message>) =>
           ],
         ),
     },
-    toParentMessage: message => GotToastMessage({ message }),
+    toParentMessage: message => Message.GotToastMessage({ message }),
   })

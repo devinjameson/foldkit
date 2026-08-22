@@ -3,7 +3,7 @@ import { HashSet } from 'effect'
 import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 
 import { Icon } from '../icon'
-import { ClickedCopySnippet, type Message } from '../message'
+import { Message } from '../message'
 
 const PagefindIgnore = ih.DataAttribute('pagefind-ignore', '')
 
@@ -54,7 +54,7 @@ const copyButtonWithIndicator = (
         'p-2 rounded transition cursor-pointer border border-gray-300 dark:border-gray-700/50 bg-gray-100 dark:bg-[#1c1a20] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700/30',
       ),
       h.AriaLabel(ariaLabel),
-      h.OnClick(ClickedCopySnippet({ text: textToCopy })),
+      h.OnClick(Message.ClickedCopySnippet({ text: textToCopy })),
     ],
     [Icon.copy()],
   )

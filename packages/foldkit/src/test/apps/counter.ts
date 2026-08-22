@@ -1,8 +1,8 @@
-import { Array, Effect, Match as M, Number, Schema as S } from 'effect'
+import { Array, Effect, Number, Schema as S } from 'effect'
 
 import * as Command from '../../command/index.js'
 import type { Html, HtmlBuilder } from '../../html/index.js'
-import { m } from '../../message/index.js'
+import { defineMessageUnion } from '../../message/index.js'
 import { evo } from '../../struct/index.js'
 
 // MODEL
@@ -15,44 +15,34 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const ClickedIncrement = m('ClickedIncrement')
-export const ClickedDecrement = m('ClickedDecrement')
-export const ClickedFetch = m('ClickedFetch')
-export const ClickedFetchById = m('ClickedFetchById', { id: S.Number })
-export const Ticked = m('Ticked')
-export const PolledCount = m('PolledCount')
-export const StartedThreeFetches = m('StartedThreeFetches')
-export const StartedTwoFetchesById = m('StartedTwoFetchesById')
-export const StartedMixedFetches = m('StartedMixedFetches')
-export const SucceededFetchCount = m('SucceededFetchCount', { count: S.Number })
-export const FailedFetchCount = m('FailedFetchCount', { error: S.String })
+export const Message = defineMessageUnion({
+  ClickedIncrement: {},
+  ClickedDecrement: {},
+  ClickedFetch: {},
+  ClickedFetchById: { id: S.Number },
+  Ticked: {},
+  PolledCount: {},
+  StartedThreeFetches: {},
+  StartedTwoFetchesById: {},
+  StartedMixedFetches: {},
+  SucceededFetchCount: { count: S.Number },
+  FailedFetchCount: { error: S.String },
+})
 
-export const Message = S.Union([
-  ClickedIncrement,
-  ClickedDecrement,
-  ClickedFetch,
-  ClickedFetchById,
-  Ticked,
-  PolledCount,
-  StartedThreeFetches,
-  StartedTwoFetchesById,
-  StartedMixedFetches,
-  SucceededFetchCount,
-  FailedFetchCount,
-])
 export type Message = typeof Message.Type
 
 // COMMAND
 
 export const FetchCount = Command.define('FetchCount', {
-  messages: [SucceededFetchCount, FailedFetchCount],
-  execute: Effect.sync(() => SucceededFetchCount({ count: 0 })),
+  messages: [Message.SucceededFetchCount, Message.FailedFetchCount],
+  execute: Effect.sync(() => Message.SucceededFetchCount({ count: 0 })),
 })
 
 export const FetchCountById = Command.define('FetchCountById', {
   args: { id: S.Number },
-  messages: [SucceededFetchCount, FailedFetchCount],
-  execute: ({ id }) => Effect.sync(() => SucceededFetchCount({ count: id })),
+  messages: [Message.SucceededFetchCount, Message.FailedFetchCount],
+  execute: ({ id }) =>
+    Effect.sync(() => Message.SucceededFetchCount({ count: id })),
 })
 
 // INIT
@@ -61,15 +51,10 @@ export const initialModel: Model = { count: 0, log: [] }
 
 // UPDATE
 
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] =>
-  M.value(message).pipe(
-    M.withReturnType<
-      readonly [Model, ReadonlyArray<Command.Command<Message>>]
-    >(),
-    M.tagsExhaustive({
+export const update = (model: Model, message: Message) =>
+  Message.match<readonly [Model, ReadonlyArray<Command.Command<Message>>]>(
+    message,
+    {
       ClickedIncrement: () => [evo(model, { count: Number.increment }), []],
       ClickedDecrement: () => [evo(model, { count: Number.decrement }), []],
       ClickedFetch: () => [model, [FetchCount()]],
@@ -98,7 +83,7 @@ export const update = (
         [],
       ],
       FailedFetchCount: () => [model, []],
-    }),
+    },
   )
 
 // VIEW
@@ -109,11 +94,11 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
     [
       h.span([h.Role('status')], [`count: ${model.count}`]),
       h.button(
-        [h.OnClick(StartedThreeFetches()), h.Role('button')],
+        [h.OnClick(Message.StartedThreeFetches()), h.Role('button')],
         ['Start three fetches'],
       ),
       h.button(
-        [h.OnClick(StartedTwoFetchesById()), h.Role('button')],
+        [h.OnClick(Message.StartedTwoFetchesById()), h.Role('button')],
         ['Start two fetches by id'],
       ),
     ],

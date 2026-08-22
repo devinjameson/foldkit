@@ -16,7 +16,7 @@ import {
   type TagName,
   childAttributes,
 } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { ts } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 import { type View as SubmodelView, defineView } from 'foldkit/submodel'
@@ -60,33 +60,15 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-/** Sent when the user scrolls the container. Carries the new scroll position
- *  read from the scroll event. */
-export const ScrolledContainer = m('ScrolledContainer', {
-  scrollTop: S.Number,
-})
-/** Sent when the container resizes. Carries the new container height read
- *  from the `ResizeObserver` entry. */
-export const MeasuredContainer = m('MeasuredContainer', {
-  containerHeight: S.Number,
-})
-/** Sent when a `scrollToIndex` Command completes. Carries the version it was
- *  issued with so the update can ignore stale completions. */
-export const CompletedApplyScroll = m('CompletedApplyScroll', {
-  version: S.Number,
-})
-
 /** Union of all messages the virtual list component can produce. */
-export const Message: S.Union<
-  [
-    typeof ScrolledContainer,
-    typeof MeasuredContainer,
-    typeof CompletedApplyScroll,
-  ]
-> = S.Union([ScrolledContainer, MeasuredContainer, CompletedApplyScroll])
+export const Message = defineMessageUnion({
+  ScrolledContainer: { scrollTop: S.Number },
+  MeasuredContainer: { containerHeight: S.Number },
+  CompletedApplyScroll: { version: S.Number },
+})
 
-export type ScrolledContainer = typeof ScrolledContainer.Type
-export type MeasuredContainer = typeof MeasuredContainer.Type
+export type ScrolledContainer = typeof Message.ScrolledContainer.Type
+export type MeasuredContainer = typeof Message.MeasuredContainer.Type
 
 export type Message = typeof Message.Type
 
@@ -115,27 +97,22 @@ export const init = (config: InitConfig): Model => ({
 
 export const ApplyScroll = Command.define('ApplyScroll', {
   args: { id: S.String, scrollTop: S.Number, version: S.Number },
-  messages: [CompletedApplyScroll],
+  messages: [Message.CompletedApplyScroll],
   execute: ({ id, scrollTop, version }) =>
     Effect.sync(() => {
       const element = document.getElementById(id)
       if (element !== null) {
         element.scrollTop = scrollTop
       }
-      return CompletedApplyScroll({ version })
+      return Message.CompletedApplyScroll({ version })
     }),
 })
 
 /** Processes a virtual list message and returns the next model and commands. */
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] =>
-  M.value(message).pipe(
-    M.withReturnType<
-      readonly [Model, ReadonlyArray<Command.Command<Message>>]
-    >(),
-    M.tagsExhaustive({
+export const update = (model: Model, message: Message) =>
+  Message.match<readonly [Model, ReadonlyArray<Command.Command<Message>>]>(
+    message,
+    {
       ScrolledContainer: ({ scrollTop }) => [
         evo(model, { scrollTop: () => scrollTop }),
         [],
@@ -180,7 +157,7 @@ export const update = (
           return [evo(model, { pendingScroll: () => Idle() }), []]
         }
       },
-    }),
+    },
   )
 
 const buildScrollToIndex = (
@@ -457,7 +434,7 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
                 const listener = () =>
                   Queue.offerUnsafe(
                     queue,
-                    ScrolledContainer({ scrollTop: element.scrollTop }),
+                    Message.ScrolledContainer({ scrollTop: element.scrollTop }),
                   )
                 element.addEventListener('scroll', listener, { passive: true })
                 state.scrollListener = listener
@@ -468,7 +445,7 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
                   if (Option.isSome(lastEntry)) {
                     Queue.offerUnsafe(
                       queue,
-                      MeasuredContainer({
+                      Message.MeasuredContainer({
                         containerHeight: lastEntry.value.contentRect.height,
                       }),
                     )

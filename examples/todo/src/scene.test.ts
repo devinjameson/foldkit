@@ -13,13 +13,11 @@ import {
 import { describe, test } from 'vitest'
 
 import {
-  CompletedGenerateTodo,
-  FailedSaveTodos,
   GenerateTodo,
+  Message,
   type Model,
   NotEditing,
   SaveTodos,
-  SucceededSaveTodos,
   update,
   view,
 } from './main'
@@ -77,14 +75,17 @@ describe('view', () => {
       Command.expectExact(GenerateTodo),
       Command.resolve(
         GenerateTodo,
-        CompletedGenerateTodo({
+        Message.CompletedGenerateTodo({
           id: 'new-1',
           timestamp: 5000,
           text: 'Write tests',
         }),
       ),
       Command.expectExact(SaveTodos),
-      Command.resolve(SaveTodos, SucceededSaveTodos({ todos: [addedTodo] })),
+      Command.resolve(
+        SaveTodos,
+        Message.SucceededSaveTodos({ todos: [addedTodo] }),
+      ),
       expect(text('Write tests')).toExist(),
       expect(label('New todo')).toHaveValue(''),
     )
@@ -100,7 +101,10 @@ describe('view', () => {
       given(modelWithTodos),
       click(label('Buy milk')),
       Command.expectExact(SaveTodos),
-      Command.resolve(SaveTodos, SucceededSaveTodos({ todos: toggledTodos })),
+      Command.resolve(
+        SaveTodos,
+        Message.SucceededSaveTodos({ todos: toggledTodos }),
+      ),
       expect(role('status')).toContainText('1 active, 2 completed'),
     )
   })
@@ -113,7 +117,10 @@ describe('view', () => {
       given(modelWithTodos),
       click(role('button', { name: 'Delete Buy milk' })),
       Command.expectExact(SaveTodos),
-      Command.resolve(SaveTodos, SucceededSaveTodos({ todos: remainingTodos })),
+      Command.resolve(
+        SaveTodos,
+        Message.SucceededSaveTodos({ todos: remainingTodos }),
+      ),
       expect(text('Buy milk')).toBeAbsent(),
       expect(text('Walk the dog')).toExist(),
     )
@@ -129,7 +136,10 @@ describe('view', () => {
       given(modelWithTodos),
       click(role('button', { name: 'Clear 1 completed' })),
       Command.expectExact(SaveTodos),
-      Command.resolve(SaveTodos, SucceededSaveTodos({ todos: activeTodos })),
+      Command.resolve(
+        SaveTodos,
+        Message.SucceededSaveTodos({ todos: activeTodos }),
+      ),
       expect(text('Done task')).toBeAbsent(),
       expect(role('status')).toContainText('2 active, 0 completed'),
     )
@@ -148,7 +158,7 @@ describe('view', () => {
       Command.expectExact(SaveTodos),
       Command.resolve(
         SaveTodos,
-        SucceededSaveTodos({ todos: allCompletedTodos }),
+        Message.SucceededSaveTodos({ todos: allCompletedTodos }),
       ),
       expect(role('status')).toContainText('0 active, 3 completed'),
     )
@@ -160,7 +170,7 @@ describe('view', () => {
       given(modelWithTodos),
       click(label('Buy milk')),
       Command.expectExact(SaveTodos),
-      Command.resolve(SaveTodos, FailedSaveTodos()),
+      Command.resolve(SaveTodos, Message.FailedSaveTodos()),
       expect(role('status')).toContainText('1 active, 2 completed'),
     )
   })

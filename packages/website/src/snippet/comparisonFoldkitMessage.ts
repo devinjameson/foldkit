@@ -1,66 +1,28 @@
-const PressedCell = m('PressedCell', { x: S.Number, y: S.Number })
-const EnteredCell = m('EnteredCell', { x: S.Number, y: S.Number })
-const LeftCanvas = m('LeftCanvas')
-const ReleasedMouse = m('ReleasedMouse')
-const SelectedColor = m('SelectedColor', { colorIndex: PaletteIndex })
-const SelectedTool = m('SelectedTool', { tool: Tool })
-const SelectedGridSize = m('SelectedGridSize', { size: S.Number })
-const ToggledMirrorHorizontal = m('ToggledMirrorHorizontal')
-const ToggledMirrorVertical = m('ToggledMirrorVertical')
-const ClickedUndo = m('ClickedUndo')
-const ClickedRedo = m('ClickedRedo')
-const ClickedHistoryStep = m('ClickedHistoryStep', { stepIndex: S.Number })
-const ClickedRedoStep = m('ClickedRedoStep', { stepIndex: S.Number })
-const ClickedClear = m('ClickedClear')
-const ClickedExport = m('ClickedExport')
-const SucceededExportPng = m('SucceededExportPng')
-const FailedExportPng = m('FailedExportPng', { error: S.String })
-const GotErrorDialogMessage = m('GotErrorDialogMessage', {
-  message: Dialog.Message,
+const Message = defineMessageUnion({
+  PressedCell: { x: S.Number, y: S.Number },
+  EnteredCell: { x: S.Number, y: S.Number },
+  LeftCanvas: {},
+  ReleasedMouse: {},
+  SelectedColor: { colorIndex: PaletteIndex },
+  SelectedTool: { tool: Tool },
+  SelectedGridSize: { size: S.Number },
+  ToggledMirrorHorizontal: {},
+  ToggledMirrorVertical: {},
+  ClickedUndo: {},
+  ClickedRedo: {},
+  ClickedHistoryStep: { stepIndex: S.Number },
+  ClickedRedoStep: { stepIndex: S.Number },
+  ClickedClear: {},
+  ClickedExport: {},
+  SucceededExportPng: {},
+  FailedExportPng: { error: S.String },
+  GotErrorDialogMessage: { message: Dialog.Message },
+  GotThemeListboxMessage: { message: Listbox.Message },
+  GotToolRadioGroupMessage: { message: RadioGroup.Message },
+  GotGridSizeRadioGroupMessage: { message: RadioGroup.Message },
+  GotPaletteRadioGroupMessage: { message: RadioGroup.Message },
+  ConfirmedGridSizeChange: {},
+  GotGridSizeConfirmDialogMessage: { message: Dialog.Message },
+  CompletedSaveCanvas: {},
 })
-const ConfirmedGridSizeChange = m('ConfirmedGridSizeChange')
-const GotGridSizeConfirmDialogMessage = m('GotGridSizeConfirmDialogMessage', {
-  message: Dialog.Message,
-})
-const GotThemeListboxMessage = m('GotThemeListboxMessage', {
-  message: Listbox.Message,
-})
-const GotToolRadioGroupMessage = m('GotToolRadioGroupMessage', {
-  message: RadioGroup.Message,
-})
-const GotGridSizeRadioGroupMessage = m('GotGridSizeRadioGroupMessage', {
-  message: RadioGroup.Message,
-})
-const GotPaletteRadioGroupMessage = m('GotPaletteRadioGroupMessage', {
-  message: RadioGroup.Message,
-})
-const CompletedSaveCanvas = m('CompletedSaveCanvas')
-
-const Message = S.Union([
-  PressedCell,
-  EnteredCell,
-  LeftCanvas,
-  ReleasedMouse,
-  SelectedColor,
-  SelectedTool,
-  SelectedGridSize,
-  ToggledMirrorHorizontal,
-  ToggledMirrorVertical,
-  ClickedUndo,
-  ClickedRedo,
-  ClickedHistoryStep,
-  ClickedRedoStep,
-  ClickedClear,
-  ClickedExport,
-  SucceededExportPng,
-  FailedExportPng,
-  GotErrorDialogMessage,
-  GotThemeListboxMessage,
-  GotToolRadioGroupMessage,
-  GotGridSizeRadioGroupMessage,
-  GotPaletteRadioGroupMessage,
-  ConfirmedGridSizeChange,
-  GotGridSizeConfirmDialogMessage,
-  CompletedSaveCanvas,
-])
 type Message = typeof Message.Type
