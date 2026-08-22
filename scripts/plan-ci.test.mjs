@@ -220,6 +220,9 @@ test('website deployment infrastructure selects the website scope', () => {
   for (const file of [
     '.github/workflows/deploy-website-build.yml',
     '.github/workflows/deploy-website-canary.yml',
+    '.github/workflows/release.yml',
+    'scripts/lib/package-version.d.mts',
+    'scripts/lib/package-version.mjs',
     'scripts/website-vercel-config.mjs',
   ]) {
     assert.equal(planCiForFile(file)['website'], 'true', file)

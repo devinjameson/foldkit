@@ -9,7 +9,10 @@
         "scripts/fixtures/host-parity/vite.config.ts"
       ],
       "project": ["scripts/**"],
-      "ignoreFiles": ["scripts/fixtures/packed-ssr-consumer/**"]
+      "ignoreFiles": [
+        "scripts/fixtures/packed-ssr-consumer/**",
+        "scripts/lib/package-version.d.mts"
+      ]
     },
     "packages/foldkit": {
       "entry": [

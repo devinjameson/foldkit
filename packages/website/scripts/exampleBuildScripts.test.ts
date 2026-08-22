@@ -3,6 +3,7 @@ import { dirname, extname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
+import { canaryVersion } from '../../../scripts/lib/package-version.mjs'
 import { EXAMPLE_FILE_EXTENSIONS, EXAMPLE_SOURCE_ROOTS } from '../vite.config'
 import {
   INCLUDED_EXTENSIONS,
@@ -13,6 +14,7 @@ import {
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
 
 const SERVER_RENDERED_EXAMPLES = ['ssr', 'ssg']
+const CANARY_COMMIT = '0123456789abcdef0123456789abcdef01234567'
 
 const buildScriptOf = (slug: string): string => {
   const manifest: Readonly<{ scripts: Readonly<Record<string, string>> }> =
@@ -95,6 +97,48 @@ describe('server-rendered example build scripts', () => {
         if (dependencies[name] !== undefined) {
           expect(dependencies[name], `${slug}: ${name}`).toBe(version)
         }
+      }
+    }
+  })
+
+  it('pins canary playground dependencies to the commit-addressed snapshot', async () => {
+    const previousCanaryCommit = process.env['VITE_FOLDKIT_CANARY_COMMIT']
+    delete process.env['VITE_FOLDKIT_CANARY_COMMIT']
+
+    const stableVersions = await loadPlaygroundWorkspacePackageVersions()
+    process.env['VITE_FOLDKIT_CANARY_COMMIT'] = CANARY_COMMIT
+
+    try {
+      const bySlug = await loadPlaygroundFiles()
+
+      for (const [slug, { files }] of Object.entries(bySlug)) {
+        const source = files['package.json']
+        if (source === undefined) {
+          throw new Error(`the ${slug} playground omits package.json`)
+        }
+
+        const manifest: Readonly<{
+          dependencies?: Readonly<Record<string, string>>
+          devDependencies?: Readonly<Record<string, string>>
+        }> = JSON.parse(source)
+        const dependencies = {
+          ...(manifest.dependencies ?? {}),
+          ...(manifest.devDependencies ?? {}),
+        }
+
+        for (const [name, stableVersion] of Object.entries(stableVersions)) {
+          if (dependencies[name] !== undefined) {
+            expect(dependencies[name], `${slug}: ${name}`).toBe(
+              canaryVersion(stableVersion, CANARY_COMMIT),
+            )
+          }
+        }
+      }
+    } finally {
+      if (previousCanaryCommit === undefined) {
+        delete process.env['VITE_FOLDKIT_CANARY_COMMIT']
+      } else {
+        process.env['VITE_FOLDKIT_CANARY_COMMIT'] = previousCanaryCommit
       }
     }
   })

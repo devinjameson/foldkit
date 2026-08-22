@@ -119,9 +119,12 @@ const website =
       '.github/workflows/deploy-website-build.yml',
       '.github/workflows/deploy-website-canary.yml',
       '.github/workflows/deploy-website.yml',
+      '.github/workflows/release.yml',
       'scripts/build-examples.ts',
       'scripts/check-playground-ssg-build.ts',
       'scripts/example-bridge.js',
+      'scripts/lib/package-version.d.mts',
+      'scripts/lib/package-version.mjs',
       'scripts/website-vercel-config.mjs',
     ],
     prefixes: [
