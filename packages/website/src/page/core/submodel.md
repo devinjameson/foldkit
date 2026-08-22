@@ -318,6 +318,8 @@ Issues new Submodel users hit, and where to read about the fix:
 - **Error names a nested `viewInputs` path:** Move the nested callback to the top level of `viewInputs`.
 - **A long child list rerenders slowly:** Profile it before adding `createKeyedLazy`. See [Memoization](#memoization).
 
+These are the mechanical ones. For the boundary itself weakening, where the wiring compiles and the parent still ends up owning state or vocabulary it should not, see [Anti-patterns](/patterns/anti-patterns).
+
 ## API Reference
 
 ### h.submodel {#api-h-submodel}
