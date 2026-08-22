@@ -5,6 +5,33 @@ import { Html, inertHtml as ih } from 'foldkit/html'
 import { formatStarCount } from '../githubStars'
 import { Icon } from '../icon'
 
+export const canaryBanner = (commit: string): Html => {
+  const shortCommit = commit.slice(0, 7)
+
+  return ih.aside(
+    [
+      ih.AriaLabel('Canary deployment'),
+      ih.Class(
+        'fixed bottom-3 left-1/2 z-[90] -translate-x-1/2 whitespace-nowrap rounded-full border border-amber-300 bg-amber-100/95 px-3 py-1.5 text-xs font-medium text-amber-950 shadow-lg backdrop-blur-sm dark:border-amber-700 dark:bg-amber-950/95 dark:text-amber-100',
+      ),
+    ],
+    [
+      'Canary · Foldkit from main at ',
+      ih.a(
+        [
+          ih.Href(`https://github.com/foldkit/foldkit/commit/${commit}`),
+          ih.Class('font-mono underline hover:no-underline'),
+        ],
+        [shortCommit],
+      ),
+      ih.span(
+        [ih.Class('hidden sm:inline')],
+        [' · Playgrounds install the published release'],
+      ),
+    ],
+  )
+}
+
 export const betaTag: Html = ih.span(
   [
     ih.Class(
