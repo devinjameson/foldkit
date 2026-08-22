@@ -519,6 +519,11 @@ const remoteTags = root => {
 
 const packageTag = pkg => `${pkg.packageJson.name}@${pkg.packageJson.version}`
 
+export const uploadedPackageMessage = (channel, pkg) =>
+  channel === 'stable'
+    ? `Uploaded and verified ${packageTag(pkg)}`
+    : packageTag(pkg)
+
 export const packagesForChannel = (packages, channel, commit) =>
   channel === 'canary' ? canaryPackageJsons(packages, commit) : packages
 
@@ -685,11 +690,7 @@ export const runCoherentUpload = async ({
     )
 
     for (const pkg of packagesToPack) {
-      log(
-        channel === 'stable'
-          ? `New tag: ${packageTag(pkg)}`
-          : `${pkg.packageJson.name}@${pkg.packageJson.version}`,
-      )
+      log(uploadedPackageMessage(channel, pkg))
     }
 
     return { packages: releasePackages, ...result }

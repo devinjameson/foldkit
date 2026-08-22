@@ -25,6 +25,8 @@ const SHARED_PACKAGE_INPUTS = [
 ]
 
 const TARGET = process.argv.at(2) ?? 'HEAD'
+const isHistoricalTargetAllowed =
+  process.argv.at(3) === '--allow-historical-target'
 
 const git = args =>
   spawnSync('git', args, {
@@ -52,6 +54,7 @@ const remoteMain = git([
   'refs/remotes/origin/main^{commit}',
 ])
 if (
+  !isHistoricalTargetAllowed &&
   remoteMain.status === 0 &&
   resolvedTarget.stdout.trim() !== remoteMain.stdout.trim()
 ) {

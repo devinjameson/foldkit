@@ -58,7 +58,7 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
-          ref: main
+          ref: ${{ inputs.published_commit || 'main' }}
 
       - name: Match package source to published versions
         id: authorization
@@ -67,13 +67,19 @@ jobs:
         run: |
           target=$(git rev-parse HEAD)
           if [ -n "${PUBLISHED_COMMIT}" ]; then
-            if ! git merge-base --is-ancestor "${PUBLISHED_COMMIT}" "${target}"; then
-              echo "the published commit ${PUBLISHED_COMMIT} is not an ancestor of latest main ${target}" >&2
+            expected=$(git rev-parse --verify "${PUBLISHED_COMMIT}^{commit}")
+            if [ "${target}" != "${expected}" ]; then
+              echo "the checked-out website commit ${target} is not the published commit ${expected}" >&2
+              exit 1
+            fi
+
+            if ! git merge-base --is-ancestor "${expected}" refs/remotes/origin/main; then
+              echo "the published website commit ${expected} is not on main" >&2
               exit 1
             fi
           fi
 
-          result=$(node scripts/plan-website-deploy.mjs "${target}")
+          result=$(node scripts/plan-website-deploy.mjs "${target}" "${PUBLISHED_COMMIT:+--allow-historical-target}")
           echo "${result}"
           deploy=${result#deploy=}
 

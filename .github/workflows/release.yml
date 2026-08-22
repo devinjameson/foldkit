@@ -24,8 +24,10 @@ on:
       - 'scripts/build-public-packages.mjs'
       - 'scripts/check-playground-ssg-build.ts'
       - 'scripts/coherent-release.mjs'
+      - 'scripts/finalize-github-release.mjs'
       - 'scripts/example-bridge.js'
       - 'scripts/lib/coherent-release.mjs'
+      - 'scripts/lib/github-release.mjs'
       - 'scripts/lib/package-version.mjs'
       - 'scripts/lib/workspace-packages.mjs'
       - 'scripts/reset-peer-deps.ts'
@@ -40,17 +42,56 @@ on:
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 permissions:
-  contents: write
-  pull-requests: write
-  id-token: write
+  contents: read
 
 jobs:
-  release:
-    name: Version or upload stable packages
+  version:
+    name: Create or update the Version Packages pull request
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     outputs:
-      published: ${{ steps.changesets.outputs.published }}
+      has_changesets: ${{ steps.changesets.outputs.hasChangesets }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify changeset ignore list
+        run: pnpm check:changeset-ignore
+
+      - name: Smoke test create-foldkit-app
+        run: pnpm check:create-foldkit-app-smoke
+
+      - name: Create or update the Version Packages pull request
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          version: pnpm version-packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  stable:
+    name: Upload and verify stable packages
+    if: github.event_name == 'push' && needs.version.outputs.has_changesets == 'false'
+    needs: version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -76,20 +117,9 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Verify changeset ignore list
-        run: pnpm check:changeset-ignore
-
-      - name: Smoke test create-foldkit-app
-        run: pnpm check:create-foldkit-app-smoke
-
-      - name: Create Release Pull Request or upload and verify packages
-        id: changesets
-        uses: changesets/action@v1
-        with:
-          version: pnpm version-packages
-          publish: pnpm release
+      - name: Upload and verify stable packages
+        run: pnpm release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
           SKIP_SIMPLE_GIT_HOOKS: '1'
 
@@ -139,16 +169,40 @@ jobs:
     secrets: inherit
 
   finalize:
-    name: Verify stable promotion
+    name: Finalize the promoted stable release
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - name: Checkout the promoted release
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.published_commit }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify the promoted release commit
+        env:
+          PUBLISHED_COMMIT: ${{ inputs.published_commit }}
+        run: |
+          if [[ ! "${PUBLISHED_COMMIT}" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "published_commit must be a full lowercase Git commit SHA" >&2
+            exit 1
+          fi
+
+          resolved=$(git rev-parse --verify "${PUBLISHED_COMMIT}^{commit}")
+          checked_out=$(git rev-parse HEAD)
+
+          if [ "${PUBLISHED_COMMIT}" != "${resolved}" ] || [ "${checked_out}" != "${resolved}" ]; then
+            echo "the checked-out commit ${checked_out} is not the exact published commit ${PUBLISHED_COMMIT}" >&2
+            exit 1
+          fi
+
+          if ! git merge-base --is-ancestor "${resolved}" refs/remotes/origin/main; then
+            echo "the published commit ${resolved} is not on main" >&2
+            exit 1
+          fi
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -164,6 +218,12 @@ jobs:
 
       - name: Verify every stable package and latest tag
         run: pnpm release:verify-latest
+
+      - name: Create matching Git tags and GitHub Releases
+        run: pnpm release:finalize-github
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PUBLISHED_COMMIT: ${{ inputs.published_commit }}
 
   deploy-website:
     name: Deploy the promoted website

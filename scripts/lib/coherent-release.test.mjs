@@ -11,6 +11,7 @@ import {
   uploadArtifacts,
   uploadPlannedArtifacts,
   uploadTag,
+  uploadedPackageMessage,
   verifyRegistrySnapshot,
 } from './coherent-release.mjs'
 
@@ -427,6 +428,15 @@ test('canary versions and internal references are commit-addressed', () => {
     }),
     packages,
   )
+})
+
+test('stable upload output does not use Changesets reserved tag protocol', () => {
+  const pkg = packageFor('foldkit', '1.2.3')
+  const message = uploadedPackageMessage('stable', pkg)
+
+  assert.equal(message, 'Uploaded and verified foldkit@1.2.3')
+  assert.doesNotMatch(message, /^New tag:/)
+  assert.equal(uploadedPackageMessage('canary', pkg), 'foldkit@1.2.3')
 })
 
 test('registry verification requires exact internal canary references', async () => {
