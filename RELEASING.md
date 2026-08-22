@@ -65,6 +65,21 @@ the workflow summary prints every exact package version and the exact
 `create-foldkit-app` command. Rerunning a commit uses the same versions and
 skips artifacts that already match.
 
+For a new project, run the exact `create-foldkit-app` command from the workflow
+summary. For an existing project, install every Foldkit package the project
+uses at the version printed beside that package. For example:
+
+```sh
+pnpm add --save-exact \
+  "foldkit@0.148.2-canary.0123456789ab" \
+  "@foldkit/ui@0.148.2-canary.0123456789ab"
+pnpm add --save-exact -D "@foldkit/vite-plugin@0.16.1-canary.0123456789ab"
+```
+
+The numeric version prefix can differ between packages. The shared commit
+suffix identifies the coherent snapshot, so update every Foldkit package in the
+project together.
+
 ## create-foldkit-app inputs
 
 `create-foldkit-app` carries its scaffold sources in the package tarball. The
