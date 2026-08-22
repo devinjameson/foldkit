@@ -421,3 +421,10 @@ test('production deployment requires the complete promoted npm snapshot', () => 
     /- name: Verify the complete promoted package release\n\s+if: inputs\.channel == 'production'\n\s+run: pnpm release:verify-latest/,
   )
 })
+
+test('the registry-backed SSG playground build runs only for production', () => {
+  assert.match(
+    buildWorkflow,
+    /- name: Build the exact transformed SSG playground\n\s+if: inputs\.channel == 'production'\n\s+run: pnpm check:playground-ssg-build/,
+  )
+})
