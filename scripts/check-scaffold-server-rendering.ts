@@ -16,8 +16,8 @@ import { extname, join } from 'node:path'
 
 // A freshly generated SSR and SSG application, built through the command its
 // own README documents, with this workspace's `foldkit` and
-// `@foldkit/vite-plugin` installed from tarballs over the published versions
-// the CLI resolves.
+// `@foldkit/vite-plugin` installed from tarballs over the exact versions the
+// packed CLI records for its own release.
 //
 // The scaffold's build is where the build id contract is either kept or lost.
 // Hydration needs the client build and the server build of one run to carry the
@@ -79,6 +79,10 @@ type RunOptions = Readonly<{
   env?: Readonly<Record<string, string>>
   inherit?: boolean
   timeoutMs?: number
+}>
+
+type CliReleaseManifest = Readonly<{
+  packages: Readonly<Record<string, string>>
 }>
 
 type RunResult = Readonly<{
@@ -609,8 +613,9 @@ type PackageManifest = Readonly<{
   devDependencies?: DependencyMap
 }>
 
-const readManifest = (path: string): PackageManifest =>
-  JSON.parse(readFileSync(path, 'utf8'))
+const readJson = <T>(path: string): T => JSON.parse(readFileSync(path, 'utf8'))
+
+const readManifest = (path: string): PackageManifest => readJson(path)
 
 const prepareDependencyManifests = (workspaceDir: string): string => {
   const manifestDirectory = join(workspaceDir, 'dependency-manifests')
@@ -620,15 +625,18 @@ const prepareDependencyManifests = (workspaceDir: string): string => {
       join(REPO_ROOT, 'examples', rendering, 'package.json'),
     )
     const effectSpec = source.dependencies?.['effect']
+
     assertScaffold(
       effectSpec !== undefined && EXACT_VERSION.test(effectSpec),
       `the ${rendering.toUpperCase()} example must pin effect to one exact ` +
         'version so the scaffold gate can distinguish its local manifest',
     )
+
     const manifest = {
       ...source,
       dependencies: { ...source.dependencies, effect: `=${effectSpec}` },
     }
+
     const directory = join(manifestDirectory, rendering)
     mkdirSync(directory, { recursive: true })
     writeFileSync(
@@ -644,6 +652,7 @@ const assertGeneratedDependencySpecs = (
   rendering: 'ssr' | 'ssg',
   projectDir: string,
   manifestDirectory: string,
+  cliReleaseManifest: CliReleaseManifest,
 ): void => {
   const source = readManifest(
     join(manifestDirectory, rendering, 'package.json'),
@@ -652,19 +661,22 @@ const assertGeneratedDependencySpecs = (
 
   for (const field of ['dependencies', 'devDependencies'] as const) {
     const generatedDependencies = generated[field] ?? {}
+
     for (const [name, spec] of Object.entries(source[field] ?? {})) {
-      if (spec.includes('workspace:')) {
-        continue
-      }
+      const expected = spec.includes('workspace:')
+        ? cliReleaseManifest.packages[name]
+        : spec
+
       assertScaffold(
-        generatedDependencies[name] === spec,
+        expected !== undefined && generatedDependencies[name] === expected,
         `the generated ${rendering.toUpperCase()} ${field} resolved ${name} ` +
           `to ${JSON.stringify(generatedDependencies[name])}, but the local ` +
-          `verification manifest declares ${JSON.stringify(spec)}. The packed ` +
-          'CLI did not read the dependency manifest under review.',
+          `release inputs require ${JSON.stringify(expected)}. The packed CLI ` +
+          'did not read its immutable dependency inputs.',
       )
     }
   }
+
   log(
     `The generated ${rendering.toUpperCase()} dependency specs match the checkout-derived manifest`,
   )
@@ -677,6 +689,13 @@ const generateProject = (
   manifestDirectory: string,
 ): string => {
   const projectName = `my-${rendering}-app`
+  const cliReleaseManifest = readJson<CliReleaseManifest>(
+    join(
+      workspaceDir,
+      'node_modules/create-foldkit-app/dist/templates/release.json',
+    ),
+  )
+
   runRequired(
     `Generating a ${rendering.toUpperCase()} project...`,
     'node',
@@ -698,13 +717,16 @@ const generateProject = (
   )
 
   const projectDir = join(workspaceDir, projectName)
-  assertGeneratedDependencySpecs(rendering, projectDir, manifestDirectory)
+  assertGeneratedDependencySpecs(
+    rendering,
+    projectDir,
+    manifestDirectory,
+    cliReleaseManifest,
+  )
 
-  // NOTE: the CLI resolves `foldkit`, `@foldkit/ui`, and
-  // `@foldkit/vite-plugin` from the registry, so a generated project installs
-  // the published versions rather than this workspace's. Installing the
-  // tarballs over them is what makes this a gate on the release being prepared
-  // instead of on the last one.
+  // NOTE: the CLI installs the exact `foldkit`, `@foldkit/ui`, and
+  // `@foldkit/vite-plugin` versions in its bundled release manifest. Installing
+  // the tarballs over them makes this a gate on the workspace being prepared.
   // `--legacy-peer-deps` is needed only because the plugin's peer floor names a
   // version `changeset version` has not produced yet; `check-peer-floors.ts`
   // asserts that floor separately.

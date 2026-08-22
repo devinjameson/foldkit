@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import { Effect, Layer, Option, Schema } from 'effect'
 import { Command, Flag } from 'effect/unstable/cli'
-import { FetchHttpClient } from 'effect/unstable/http'
 import { createRequire } from 'node:module'
 
 import { NodeRuntime, NodeServices, NodeStdio } from '@effect/platform-node'
@@ -83,9 +82,6 @@ const cli = Command.run(create, {
 })
 
 cli.pipe(
-  Effect.provide([
-    FetchHttpClient.layer,
-    Layer.mergeAll(NodeServices.layer, NodeStdio.layer),
-  ]),
+  Effect.provide([Layer.mergeAll(NodeServices.layer, NodeStdio.layer)]),
   NodeRuntime.runMain,
 )

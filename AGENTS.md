@@ -74,11 +74,12 @@ Match the implementation style to the subsystem and the behavior being modeled. 
 - Capitalize Schema literal strings: `S.Literals(['Horizontal', 'Vertical'])`.
 - Capitalize namespace imports: `import * as Command from './command'`.
 - Use `const`. Only use `let` when mutation is truly unavoidable. Always brace control flow.
-- Use blank lines to show the phases of non-trivial control flow. For example: separate setup, fallback guards, value reads, branching, writes, and the final return instead of presenting them as one uninterrupted block. Do not separate statements that form one operation.
+- Use blank lines to show the phases of non-trivial control flow, and prefer a blank line when uncertain. Separate setup, a value read from the guard that consumes it, independent guards or validation cases, writes, and the final return. In a loop, give each skip, failure, or mutation condition its own visual paragraph. Keep statements together only when they form one operation or one explicit `if`/`else` chain.
 - Extract magic numbers to named constants.
 - Never use nested ternaries. Use `Match.value`, an `if`/`else` chain, or a named helper.
 - Prefer explicit `if`/`else` when both branches return. Early-return reads as "A is exceptional, B is the default"; reserve it for true guards.
 - Use `Readonly<{...}>` over per-property `readonly` for inline object types.
+- Constrain Match branch returns at the match boundary with `M.withReturnType<...>()` (or `Match.withReturnType` when imported under its full module name). This includes tuple literals nested inside Effect or Option constructors. Never use `as const` inside branches to recover tuple or literal inference.
 - Don't add type annotations or `as const` to callbacks whose return type is constrained by the outer API (e.g. evo callbacks, `Option.match`, `M.tagsExhaustive`). Let inference work.
 - Pass `evo` field transformers point-free when the update depends only on that field's current value: `entries: Array.map(toRow)`, `currentStep: toNextStep`, `priceSlider: Slider.reflectRange(range)`. Use `() => value` when replacing a field with a Message payload, a child update result, a Command result, or a value derived from another field.
 - `Effect.acquireRelease` registers the release only after the acquire body completes. Construct the resource inside the acquire Effect, never before it. Anything else leaks on interruption.

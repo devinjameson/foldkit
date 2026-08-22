@@ -10,7 +10,9 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, relative, sep } from 'node:path'
+
+import { EXAMPLE_VALUES } from '../packages/create-foldkit-app/src/examples.js'
 
 const PACKAGE_DIR = 'packages/create-foldkit-app'
 const OXLINT_PLUGIN_DIR = 'packages/oxlint-plugin-foldkit'
@@ -28,6 +30,7 @@ const PNPM_WORKSPACE_POLICY = `allowBuilds:
   esbuild: true
   msgpackr-extract: false
 `
+const pnpmExecutable = process.env['FOLDKIT_PNPM_EXECUTABLE'] ?? 'pnpm'
 const isSkipBuild = process.argv.includes('--skip-build')
 const LINT_SMOKE_SOURCE = `const Command = {
   define: (name: string) => () => ({ name }),
@@ -46,6 +49,7 @@ console.log(Message, SaveUser)
 
 type RunOptions = {
   readonly cwd?: string
+  readonly env?: Readonly<Record<string, string>>
   readonly inherit?: boolean
   readonly input?: string
   readonly timeoutMs?: number
@@ -71,6 +75,18 @@ type PrettierConfig = {
 
 type PackOutput = ReadonlyArray<{
   readonly filename?: string
+}>
+
+type ReleaseManifest = Readonly<{
+  schemaVersion: number
+  channel: string
+  sourceCommit: string
+  packages: Readonly<Record<string, string>>
+  dependencies: Readonly<Record<string, string>>
+}>
+
+type WorkspaceListEntry = Readonly<{
+  path?: string
 }>
 
 type PackageMetadata = {
@@ -113,6 +129,10 @@ const run = (
   const result = spawnSync(command, [...args], {
     cwd: options.cwd,
     encoding: 'utf-8',
+    env:
+      options.env === undefined
+        ? process.env
+        : { ...process.env, ...options.env },
     input: options.input,
     stdio: options.inherit ? 'inherit' : 'pipe',
     timeout: options.timeoutMs ?? 60_000,
@@ -145,7 +165,7 @@ const packPackage = (label: string, packageDir: string): string => {
     cwd: packageDir,
   })
   const packOutput = parseJson<PackOutput>(result.stdout)
-  const tarballFilename = packOutput[0]?.filename
+  const tarballFilename = packOutput.at(0)?.filename
   assertSmoke(
     tarballFilename !== undefined,
     `${label} did not return a tarball filename`,
@@ -153,6 +173,184 @@ const packPackage = (label: string, packageDir: string): string => {
 
   log(`Created ${tarballFilename}`)
   return join(process.cwd(), packageDir, tarballFilename)
+}
+
+const readTarballFile = (tarballPath: string, path: string): string =>
+  runRequired(`Reading ${path} from packed create-foldkit-app...`, 'tar', [
+    '-xOf',
+    tarballPath,
+    `package/${path}`,
+  ]).stdout
+
+const publicWorkspaceVersions = (): Readonly<Record<string, string>> => {
+  const result = runRequired(
+    'Discovering public workspace packages...',
+    pnpmExecutable,
+    ['ls', '-r', '--depth', '-1', '--json'],
+  )
+  const entries = parseJson<ReadonlyArray<WorkspaceListEntry>>(result.stdout)
+
+  return Object.fromEntries(
+    entries.flatMap(entry => {
+      if (entry.path === undefined) {
+        return []
+      }
+
+      const manifest = readJson<{
+        name?: string
+        version?: string
+        private?: boolean
+      }>(join(entry.path, 'package.json'))
+
+      return manifest.private !== true &&
+        manifest.name !== undefined &&
+        manifest.version !== undefined
+        ? [[manifest.name, manifest.version]]
+        : []
+    }),
+  )
+}
+
+const currentCommit = (): string =>
+  runRequired('Resolving the packed source commit...', 'git', [
+    'rev-parse',
+    'HEAD',
+  ]).stdout.trim()
+
+const listTreeFiles = (root: string): ReadonlyArray<string> => {
+  const files: Array<string> = []
+
+  const walk = (dir: string): void => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name)
+
+      if (entry.isDirectory()) {
+        walk(path)
+      } else if (entry.isFile()) {
+        files.push(relative(root, path).split(sep).join('/'))
+      }
+    }
+  }
+
+  walk(root)
+  return files.sort()
+}
+
+const assertPackedScaffoldSources = (tarballPath: string): void => {
+  withTempDir('create-foldkit-artifact-', tempDir => {
+    runRequired('Extracting packed scaffold sources...', 'tar', [
+      '-xzf',
+      tarballPath,
+      '-C',
+      tempDir,
+    ])
+
+    for (const example of [...EXAMPLE_VALUES, 'ssg', 'ssr']) {
+      const expectedRoot = join('examples', example)
+      const packedRoot = join(
+        tempDir,
+        'package/dist/templates/examples',
+        example,
+      )
+
+      assertSmoke(
+        existsSync(packedRoot),
+        `packed CLI is missing the ${example} scaffold`,
+      )
+
+      const expectedFiles = listTreeFiles(expectedRoot).filter(
+        path => path === 'package.json' || path.startsWith('src/'),
+      )
+      const packedFiles = listTreeFiles(packedRoot)
+      assertSmoke(
+        JSON.stringify(packedFiles) === JSON.stringify(expectedFiles),
+        `packed CLI ${example} scaffold file set does not match the release commit`,
+      )
+
+      for (const path of expectedFiles) {
+        assertSmoke(
+          readFileSync(join(packedRoot, path)).equals(
+            readFileSync(join(expectedRoot, path)),
+          ),
+          `packed CLI ${example}/${path} does not match the release commit`,
+        )
+      }
+    }
+  })
+}
+
+const assertPackedReleaseInputs = (tarballPath: string): void => {
+  log('Checking immutable scaffold inputs in the packed CLI...')
+
+  const releaseManifest = parseJson<ReleaseManifest>(
+    readTarballFile(tarballPath, 'dist/templates/release.json'),
+  )
+  const commit = currentCommit()
+
+  assertSmoke(
+    releaseManifest.schemaVersion === 1 &&
+      releaseManifest.channel === 'stable' &&
+      releaseManifest.sourceCommit === commit,
+    'packed stable CLI release metadata does not identify the commit that built it',
+  )
+
+  const releasedPackages = Object.entries(releaseManifest.packages).sort()
+  const publicPackages = Object.entries(publicWorkspaceVersions()).sort()
+  assertSmoke(
+    JSON.stringify(releasedPackages) === JSON.stringify(publicPackages),
+    'packed CLI release metadata does not cover the complete public workspace package set',
+  )
+
+  assertPackedScaffoldSources(tarballPath)
+
+  const packageRuntime = readTarballFile(tarballPath, 'dist/utils/packages.js')
+  const fileRuntime = readTarballFile(tarballPath, 'dist/utils/files.js')
+  for (const runtime of [packageRuntime, fileRuntime]) {
+    assertSmoke(
+      !runtime.includes('raw.githubusercontent.com') &&
+        !runtime.includes('api.github.com') &&
+        !runtime.includes('registry.npmjs.org'),
+      'packed CLI still fetches a moving scaffold or package source',
+    )
+  }
+}
+
+const canaryReleaseManifest = (): ReleaseManifest => {
+  const commit = currentCommit()
+  const packages = Object.fromEntries(
+    Object.entries(publicWorkspaceVersions()).map(([name, version]) => [
+      name,
+      `${version}-canary.${commit.slice(0, 12)}`,
+    ]),
+  )
+
+  return {
+    schemaVersion: 1,
+    channel: 'canary',
+    sourceCommit: commit,
+    packages,
+    dependencies: {},
+  }
+}
+
+const assertPackedCanaryManifest = (
+  tarballPath: string,
+  expected: ReleaseManifest,
+): void => {
+  log('Checking commit-addressed canary metadata in the packed CLI...')
+
+  const actual = parseJson<ReleaseManifest>(
+    readTarballFile(tarballPath, 'dist/templates/release.json'),
+  )
+
+  assertSmoke(
+    actual.schemaVersion === expected.schemaVersion &&
+      actual.channel === expected.channel &&
+      actual.sourceCommit === expected.sourceCommit &&
+      JSON.stringify(Object.entries(actual.packages).sort()) ===
+        JSON.stringify(Object.entries(expected.packages).sort()),
+    'packed canary CLI does not preserve its commit-addressed package snapshot',
+  )
 }
 
 const assertTemplateTooling = (): void => {
@@ -349,34 +547,72 @@ const cleanupFiles = (paths: ReadonlyArray<string>): void => {
 
 const main = (): void => {
   const tarballPaths: Array<string> = []
+
   try {
     assertTemplateTooling()
     assertPnpmWorkspacePolicy()
+
     if (!isSkipBuild) {
       runRequired(
         'Building create-foldkit-app...',
-        'pnpm',
+        pnpmExecutable,
         ['--filter', 'create-foldkit-app', 'build'],
         { inherit: true },
       )
       runRequired(
         'Building @foldkit/oxlint-plugin...',
-        'pnpm',
+        pnpmExecutable,
         ['--filter', '@foldkit/oxlint-plugin', 'build'],
         { inherit: true },
       )
     }
 
+    withTempDir('create-foldkit-canary-manifest-', tempDir => {
+      const releaseManifest = canaryReleaseManifest()
+      const releaseManifestPath = join(tempDir, 'release.json')
+
+      writeFileSync(
+        releaseManifestPath,
+        `${JSON.stringify(releaseManifest, null, 2)}\n`,
+      )
+
+      try {
+        runRequired(
+          'Building configured canary scaffold inputs...',
+          'node',
+          [join(PACKAGE_DIR, 'scripts/build-templates.mjs')],
+          { env: { FOLDKIT_RELEASE_MANIFEST: releaseManifestPath } },
+        )
+
+        const canaryTarballPath = packPackage(
+          'Packing canary create-foldkit-app tarball...',
+          PACKAGE_DIR,
+        )
+
+        tarballPaths.push(canaryTarballPath)
+
+        assertPackedCanaryManifest(canaryTarballPath, releaseManifest)
+      } finally {
+        runRequired('Restoring stable scaffold inputs...', 'node', [
+          join(PACKAGE_DIR, 'scripts/build-templates.mjs'),
+        ])
+      }
+    })
+
     const tarballPath = packPackage(
       'Packing create-foldkit-app tarball...',
       PACKAGE_DIR,
     )
+
     tarballPaths.push(tarballPath)
+
+    assertPackedReleaseInputs(tarballPath)
 
     const pluginTarballPath = packPackage(
       'Packing @foldkit/oxlint-plugin tarball...',
       OXLINT_PLUGIN_DIR,
     )
+
     tarballPaths.push(pluginTarballPath)
 
     withTempDir('create-foldkit-smoke-', tempDir => {
@@ -401,6 +637,7 @@ try {
       : error instanceof Error
         ? (error.stack ?? error.message)
         : String(error)
+
   console.error(`[smoke] FAIL: ${message}`)
   process.exit(1)
 }

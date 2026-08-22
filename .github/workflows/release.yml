@@ -1,25 +1,29 @@
 name: Release
 
 on:
+  workflow_dispatch:
+    inputs:
+      published_commit:
+        description: Stable release commit whose npm latest tags were promoted
+        required: true
+        type: string
   push:
     branches:
       - main
     paths:
       - '.changeset/**'
-      - 'packages/foldkit/**'
-      - 'packages/ui/**'
-      - 'packages/devtools/**'
-      - 'packages/markdown/**'
-      - 'packages/vite-plugin-foldkit/**'
-      - 'packages/create-foldkit-app/**'
-      - 'packages/oxlint-plugin-foldkit/**'
-      - 'packages/devtools-mcp/**'
+      - 'packages/**'
+      - 'examples/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
-      - 'scripts/check-changeset-ignore.ts'
+      - 'scripts/check-changeset-ignore.mjs'
       - 'scripts/check-create-foldkit-app-smoke.ts'
       - 'scripts/check-peer-floors.ts'
+      - 'scripts/build-public-packages.mjs'
+      - 'scripts/coherent-release.mjs'
+      - 'scripts/lib/coherent-release.mjs'
+      - 'scripts/lib/workspace-packages.mjs'
       - 'scripts/reset-peer-deps.ts'
       - '.github/workflows/release.yml'
 
@@ -32,7 +36,8 @@ permissions:
 
 jobs:
   release:
-    name: Release
+    name: Version or upload stable packages
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     outputs:
       published: ${{ steps.changesets.outputs.published }}
@@ -67,7 +72,7 @@ jobs:
       - name: Smoke test create-foldkit-app
         run: pnpm check:create-foldkit-app-smoke
 
-      - name: Create Release Pull Request or Publish
+      - name: Create Release Pull Request or upload and verify packages
         id: changesets
         uses: changesets/action@v1
         with:
@@ -78,11 +83,76 @@ jobs:
           NPM_CONFIG_PROVENANCE: true
           SKIP_SIMPLE_GIT_HOOKS: '1'
 
+  canary:
+    name: Upload and verify commit-addressed package canary
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Upgrade npm for OIDC trusted publishing
+        run: |
+          NPM_DIR="$(npm config get prefix)/lib/node_modules/npm"
+          rm -rf "$NPM_DIR"
+          curl -sL https://registry.npmjs.org/npm/-/npm-11.12.1.tgz | tar xz -C "$(dirname "$NPM_DIR")"
+          mv "$(dirname "$NPM_DIR")/package" "$NPM_DIR"
+          npm --version
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Upload and verify the canary snapshot
+        run: pnpm release:canary
+        env:
+          NPM_CONFIG_PROVENANCE: true
+          SKIP_SIMPLE_GIT_HOOKS: '1'
+
+  finalize:
+    name: Verify stable promotion
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout the promoted release
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.published_commit }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify every stable package and latest tag
+        run: pnpm release:verify-latest
+
   deploy-website:
-    name: Deploy the published website
-    needs: release
-    if: needs.release.outputs.published == 'true'
+    name: Deploy the promoted website
+    needs: finalize
+    if: github.event_name == 'workflow_dispatch'
     uses: ./.github/workflows/deploy-website.yml
     with:
-      published_commit: ${{ github.sha }}
+      published_commit: ${{ inputs.published_commit }}
     secrets: inherit

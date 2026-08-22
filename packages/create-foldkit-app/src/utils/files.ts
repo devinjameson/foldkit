@@ -3,20 +3,12 @@ import {
   Effect,
   FileSystem,
   Match,
-  Option,
   Path,
   PlatformError,
   Record,
-  Ref,
-  Schema,
   String,
   pipe,
 } from 'effect'
-import {
-  HttpClient,
-  HttpClientError,
-  HttpClientRequest,
-} from 'effect/unstable/http'
 import { fileURLToPath } from 'node:url'
 
 import { type Scaffold } from '../rendering.js'
@@ -27,18 +19,22 @@ import {
   runScriptCommand,
 } from './packages.js'
 
-const GITHUB_API_BASE_URL =
-  'https://api.github.com/repos/foldkit/foldkit/contents/examples'
-
 type FilePath = string
 type FileContent = string
 type FileContentByPath = Record<FilePath, FileContent>
 
 const getTemplateRoot = Effect.gen(function* () {
+  const fs = yield* FileSystem.FileSystem
   const path = yield* Path.Path
 
   const currentDir = path.dirname(fileURLToPath(import.meta.url))
-  return path.resolve(currentDir, '..', '..', 'templates')
+  const bundledRoot = path.resolve(currentDir, '..', 'templates')
+
+  if (yield* fs.exists(bundledRoot)) {
+    return bundledRoot
+  } else {
+    return path.resolve(currentDir, '..', '..', 'templates')
+  }
 })
 
 const getTemplateFiles = (templateDir: string) =>
@@ -46,45 +42,48 @@ const getTemplateFiles = (templateDir: string) =>
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
 
-    const fileContentByPath = yield* Ref.make<FileContentByPath>({})
-
-    const processEntry =
-      (dir: string) =>
-      (entry: string): Effect.Effect<void, PlatformError.PlatformError> =>
-        Effect.gen(function* () {
-          const fullPath = path.join(dir, entry)
-          const stat = yield* fs.stat(fullPath)
-
-          yield* Match.value(stat.type).pipe(
-            Match.when('Directory', () => processDirectory(fullPath)),
-            Match.when('File', () =>
-              Effect.gen(function* () {
-                const content = yield* fs.readFileString(fullPath)
-                const relativePath = path.relative(templateDir, fullPath)
-
-                yield* Ref.update(fileContentByPath, files => ({
-                  ...files,
-                  [relativePath]: content,
-                }))
-              }),
-            ),
-            Match.orElse(() => Effect.void),
-          )
-        })
-
-    const processDirectory = (
+    const readFiles = (
       dir: string,
-    ): Effect.Effect<void, PlatformError.PlatformError> =>
+      relativeDir: string,
+    ): Effect.Effect<
+      ReadonlyArray<readonly [string, string]>,
+      PlatformError.PlatformError
+    > =>
       Effect.gen(function* () {
         const entries = yield* fs.readDirectory(dir)
-        yield* Effect.forEach(entries, processEntry(dir), {
-          concurrency: 'unbounded',
-        })
+        const nested = yield* Effect.forEach(
+          entries,
+          entry =>
+            Effect.gen(function* () {
+              const fullPath = path.join(dir, entry)
+              const relativePath = path.join(relativeDir, entry)
+              const stat = yield* fs.stat(fullPath)
+
+              return yield* Match.value(stat.type).pipe(
+                Match.withReturnType<
+                  Effect.Effect<
+                    ReadonlyArray<readonly [string, string]>,
+                    PlatformError.PlatformError
+                  >
+                >(),
+                Match.when('Directory', () =>
+                  readFiles(fullPath, relativePath),
+                ),
+                Match.when('File', () =>
+                  Effect.map(fs.readFileString(fullPath), content => [
+                    [relativePath, content],
+                  ]),
+                ),
+                Match.orElse(() => Effect.succeed([])),
+              )
+            }),
+          { concurrency: 'unbounded' },
+        )
+
+        return Array.flatten(nested)
       })
 
-    yield* processDirectory(templateDir)
-
-    return yield* Ref.get(fileContentByPath)
+    return Record.fromEntries(yield* readFiles(templateDir, ''))
   })
 
 const getBaseFiles = Effect.gen(function* () {
@@ -139,6 +138,7 @@ const createFiles = (
             )
             const fullPath = path.join(projectPath, targetPath)
             const dirPath = path.dirname(fullPath)
+
             yield* fs.makeDirectory(dirPath, { recursive: true })
             yield* fs.writeFileString(fullPath, content)
           }),
@@ -179,6 +179,7 @@ const overlayRenderingFiles = (
     const renderingFiles = yield* getTemplateFiles(
       path.join(templateRoot, 'rendering', directory),
     )
+
     yield* createFiles(projectPath, renderingFiles)
   })
 
@@ -257,101 +258,14 @@ const modifyBaseFiles = (
     )
   })
 
-const GitHubFileEntry = Schema.Struct({
-  name: Schema.String,
-  path: Schema.String,
-  download_url: Schema.NullOr(Schema.String),
-  type: Schema.String,
-  url: Schema.String,
-})
-
-type GitHubFileEntry = typeof GitHubFileEntry.Type
-
 const createExampleFiles = (projectPath: string, example: string) =>
   Effect.gen(function* () {
-    const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
 
-    const files = yield* fetchExampleFileList(example)
-    const srcPath = path.join(projectPath, 'src')
-    yield* fs.makeDirectory(srcPath, { recursive: true })
-
-    yield* Effect.forEach(
-      files,
-      file => downloadExampleFile(file, projectPath),
-      {
-        concurrency: 'unbounded',
-      },
+    const templateRoot = yield* getTemplateRoot
+    const files = yield* getTemplateFiles(
+      path.join(templateRoot, 'examples', example, 'src'),
     )
-  })
 
-const fetchExampleFileList = (
-  example: string,
-): Effect.Effect<
-  ReadonlyArray<GitHubFileEntry>,
-  HttpClientError.HttpClientError | Schema.SchemaError,
-  HttpClient.HttpClient
-> =>
-  Effect.gen(function* () {
-    const client = yield* HttpClient.HttpClient
-
-    const fetchFilesRecursively = (
-      apiUrl: string,
-    ): Effect.Effect<
-      ReadonlyArray<GitHubFileEntry>,
-      HttpClientError.HttpClientError | Schema.SchemaError
-    > =>
-      Effect.gen(function* () {
-        const request = HttpClientRequest.get(apiUrl)
-        const response = yield* client.execute(request)
-        const json = yield* response.json
-        const entries = yield* Schema.decodeUnknownEffect(
-          Schema.Array(GitHubFileEntry),
-        )(json)
-
-        const results = yield* Effect.forEach(entries, entry =>
-          Match.value(entry.type).pipe(
-            Match.when('file', () => Effect.succeed([entry])),
-            Match.when('dir', () => fetchFilesRecursively(entry.url)),
-            Match.orElse(() => Effect.succeed([])),
-          ),
-        )
-
-        return Array.flatten(results)
-      })
-
-    const githubApiUrl = `${GITHUB_API_BASE_URL}/${example}/src`
-    return yield* fetchFilesRecursively(githubApiUrl)
-  })
-
-const downloadExampleFile = (file: GitHubFileEntry, projectPath: string) =>
-  Effect.gen(function* () {
-    if (!file.download_url) {
-      return yield* Effect.fail(`File ${file.name} has no download URL`)
-    }
-
-    const client = yield* HttpClient.HttpClient
-    const fs = yield* FileSystem.FileSystem
-    const path = yield* Path.Path
-
-    const request = HttpClientRequest.get(file.download_url)
-    const response = yield* client.execute(request)
-    const content = yield* response.text
-
-    const pathParts = String.split(file.path, '/')
-    const srcIndex = Array.findFirstIndex(pathParts, part => part === 'src')
-    const relativePath = pipe(
-      srcIndex,
-      Option.match({
-        onNone: () => file.name,
-        onSome: index =>
-          pipe(pathParts, Array.drop(index + 1), Array.join('/')),
-      }),
-    )
-    const targetPath = path.join(projectPath, 'src', relativePath)
-
-    const dirPath = path.dirname(targetPath)
-    yield* fs.makeDirectory(dirPath, { recursive: true })
-
-    yield* fs.writeFileString(targetPath, content)
+    yield* createFiles(path.join(projectPath, 'src'), files)
   })
