@@ -65,6 +65,7 @@ jobs:
         run: pnpm check:published-versions -- --wait
 
       - name: Build the exact transformed SSG playground
+        if: inputs.channel == 'production'
         run: pnpm check:playground-ssg-build
 
       - name: Build core packages
