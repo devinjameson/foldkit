@@ -167,15 +167,17 @@ test('a packed consumer fixture change selects only its focused gate', () => {
 })
 
 test('a scaffold or framework change selects the generated-app build gate', () => {
-  // The scaffold's build command is where the build id contract is kept or
-  // lost, and it depends on the templates, on the render that stamps the id,
-  // and on the plugin that compiles it in.
+  // The gate installs every Foldkit package in a generated app, then runs the
+  // scaffold's build command where the build id contract is kept or lost.
   for (const file of [
     'examples/ssg/package.json',
     'examples/ssr/package.json',
     'packages/examples-e2e/package.json',
     'packages/create-foldkit-app/templates/rendering/ssr/scripts/build.mjs',
+    'packages/devtools/src/index.ts',
+    'packages/devtools-mcp/src/index.ts',
     'packages/foldkit/src/experimental/server/server.ts',
+    'packages/oxlint-plugin-foldkit/src/index.ts',
     'packages/ui/src/button/index.ts',
     'packages/vite-plugin-foldkit/src/buildToken.ts',
   ]) {

@@ -1,6 +1,8 @@
 import { Array as Array_ } from 'effect'
 import { type ChildProcess, spawn, spawnSync } from 'node:child_process'
 import {
+  chmodSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -12,12 +14,11 @@ import { request } from 'node:http'
 import { createRequire } from 'node:module'
 import { createServer as createNetServer } from 'node:net'
 import { tmpdir } from 'node:os'
-import { extname, join } from 'node:path'
+import { delimiter, extname, join } from 'node:path'
 
 // A freshly generated SSR and SSG application, built through the command its
-// own README documents, with this workspace's `foldkit` and
-// `@foldkit/vite-plugin` installed from tarballs over the exact versions the
-// packed CLI records for its own release.
+// own README documents, with every Foldkit dependency installed from the
+// tarballs in this release snapshot.
 //
 // The scaffold's build is where the build id contract is either kept or lost.
 // Hydration needs the client build and the server build of one run to carry the
@@ -31,10 +32,27 @@ import { extname, join } from 'node:path'
 // generated project's own build command does.
 
 const CLI_DIR = 'packages/create-foldkit-app'
-const FOLDKIT_DIR = 'packages/foldkit'
-const PLUGIN_DIR = 'packages/vite-plugin-foldkit'
-const UI_DIR = 'packages/ui'
 const REPO_ROOT = process.cwd()
+
+type ScaffoldPackage = Readonly<{
+  directory: string
+  name: string
+}>
+
+const SCAFFOLD_PACKAGES: ReadonlyArray<ScaffoldPackage> = [
+  { directory: 'packages/foldkit', name: 'foldkit' },
+  { directory: 'packages/ui', name: '@foldkit/ui' },
+  { directory: 'packages/devtools', name: '@foldkit/devtools' },
+  {
+    directory: 'packages/vite-plugin-foldkit',
+    name: '@foldkit/vite-plugin',
+  },
+  { directory: 'packages/devtools-mcp', name: '@foldkit/devtools-mcp' },
+  {
+    directory: 'packages/oxlint-plugin-foldkit',
+    name: '@foldkit/oxlint-plugin',
+  },
+]
 
 const DEPENDENCY_MANIFESTS_DIRECTORY_ENV =
   'CREATE_FOLDKIT_APP_DEPENDENCY_MANIFESTS_DIRECTORY'
@@ -601,9 +619,7 @@ const assertBuildIdReachesBothSides = (
 
 type Tarballs = Readonly<{
   cli: string
-  foldkit: string
-  plugin: string
-  ui: string
+  packages: ReadonlyArray<string>
 }>
 
 type DependencyMap = Readonly<Record<string, string>>
@@ -648,6 +664,39 @@ const prepareDependencyManifests = (workspaceDir: string): string => {
   return manifestDirectory
 }
 
+type PackageManagerShim = Readonly<{
+  directory: string
+  marker: string
+}>
+
+const preparePackageManagerShim = (
+  workspaceDir: string,
+  projectName: string,
+): PackageManagerShim => {
+  const directory = join(workspaceDir, 'package-manager-shims', projectName)
+  const marker = join(directory, 'attempted-install')
+  const source = `const { writeFileSync } = require('node:fs')
+
+if (process.argv.length !== 3 || process.argv[2] !== 'install') {
+  console.error('Expected exactly one install command')
+  process.exit(1)
+}
+
+writeFileSync(${JSON.stringify(marker)}, '')
+`
+
+  mkdirSync(directory, { recursive: true })
+  writeFileSync(join(directory, 'npm-shim.cjs'), source)
+  writeFileSync(join(directory, 'npm'), `#!/usr/bin/env node\n${source}`)
+  writeFileSync(
+    join(directory, 'npm.cmd'),
+    '@node "%~dp0\\npm-shim.cjs" %*\r\n',
+  )
+  chmodSync(join(directory, 'npm'), 0o755)
+
+  return { directory, marker }
+}
+
 const assertGeneratedDependencySpecs = (
   rendering: 'ssr' | 'ssg',
   projectDir: string,
@@ -689,6 +738,15 @@ const generateProject = (
   manifestDirectory: string,
 ): string => {
   const projectName = `my-${rendering}-app`
+  const environmentPath = process.env['PATH']
+  assertScaffold(
+    environmentPath !== undefined,
+    'the scaffold gate cannot prepare npm without PATH',
+  )
+  const packageManagerShim = preparePackageManagerShim(
+    workspaceDir,
+    projectName,
+  )
   const cliReleaseManifest = readJson<CliReleaseManifest>(
     join(
       workspaceDir,
@@ -712,11 +770,16 @@ const generateProject = (
       cwd: workspaceDir,
       env: {
         [DEPENDENCY_MANIFESTS_DIRECTORY_ENV]: manifestDirectory,
+        PATH: `${packageManagerShim.directory}${delimiter}${environmentPath}`,
       },
     },
   )
 
   const projectDir = join(workspaceDir, projectName)
+  assertScaffold(
+    existsSync(packageManagerShim.marker),
+    `the packed CLI did not ask npm to install the generated ${rendering.toUpperCase()} dependencies`,
+  )
   assertGeneratedDependencySpecs(
     rendering,
     projectDir,
@@ -724,9 +787,11 @@ const generateProject = (
     cliReleaseManifest,
   )
 
-  // NOTE: the CLI installs the exact `foldkit`, `@foldkit/ui`, and
-  // `@foldkit/vite-plugin` versions in its bundled release manifest. Installing
-  // the tarballs over them makes this a gate on the workspace being prepared.
+  // NOTE: the packed CLI records exact versions that do not exist in npm until
+  // its Version Packages PR merges. Generation uses the shim above to prove it
+  // reaches installation without asking the registry for packages that cannot
+  // be published yet. This install exercises the same manifest with the full
+  // local release snapshot.
   // `--legacy-peer-deps` is needed only because the plugin's peer floor names a
   // version `changeset version` has not produced yet; `check-peer-floors.ts`
   // asserts that floor separately.
@@ -737,10 +802,9 @@ const generateProject = (
       'install',
       '--no-audit',
       '--no-fund',
+      '--no-save',
       '--legacy-peer-deps',
-      tarballs.foldkit,
-      tarballs.plugin,
-      tarballs.ui,
+      ...tarballs.packages,
     ],
     { cwd: projectDir },
   )
@@ -1015,36 +1079,26 @@ const main = async (): Promise<void> => {
     const manifestDirectory = prepareDependencyManifests(workspaceDir)
 
     if (!isSkipBuild) {
+      const buildFilters = SCAFFOLD_PACKAGES.flatMap(({ name }) => [
+        '--filter',
+        name,
+      ])
+
       runRequired(
         'Building the packages the generated projects install...',
         'pnpm',
-        [
-          '--filter',
-          'create-foldkit-app',
-          '--filter',
-          'foldkit',
-          '--filter',
-          '@foldkit/ui',
-          '--filter',
-          '@foldkit/vite-plugin',
-          'build',
-        ],
+        ['--filter', 'create-foldkit-app', ...buildFilters, 'build'],
         { inherit: true },
       )
     }
 
     const tarballs: Tarballs = {
       cli: packPackage('Packing create-foldkit-app...', CLI_DIR),
-      foldkit: packPackage('Packing foldkit...', FOLDKIT_DIR),
-      plugin: packPackage('Packing @foldkit/vite-plugin...', PLUGIN_DIR),
-      ui: packPackage('Packing @foldkit/ui...', UI_DIR),
+      packages: SCAFFOLD_PACKAGES.map(({ directory, name }) =>
+        packPackage(`Packing ${name}...`, directory),
+      ),
     }
-    tarballPaths.push(
-      tarballs.cli,
-      tarballs.foldkit,
-      tarballs.plugin,
-      tarballs.ui,
-    )
+    tarballPaths.push(tarballs.cli, ...tarballs.packages)
 
     runRequired(
       'Preparing the generation workspace...',
