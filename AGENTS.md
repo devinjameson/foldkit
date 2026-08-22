@@ -140,6 +140,7 @@ If a Mount factory doesn't read or write its element, you've misidentified the c
 - Stage the paths you changed, not `git add -A`. Amending with `-A` sweeps whatever else the working tree picked up, including build output a gate wrote, into a commit whose subject does not describe it.
 - Do not co-author or mention AI assistants in commit messages or release notes.
 - Use the repo's commit helper when asked to create a commit: `/commit` in Claude Code, `.agents/skills/commit-changes` in Codex.
+- Treat every pull request title and description as the final squash commit message. The title is the Conventional Commit subject, and the description is the commit body. Keep review-only boilerplate, checklists, generated commit lists, and verification details out of the description. Put verification details in a pull request comment instead.
 - Squash-merge only. `gh pr merge --squash`.
 
 ## Editing Rules
