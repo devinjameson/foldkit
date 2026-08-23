@@ -83,6 +83,7 @@ jobs:
           version: pnpm version-packages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SKIP_SIMPLE_GIT_HOOKS: '1'
 
   stable:
     name: Upload and verify stable packages
