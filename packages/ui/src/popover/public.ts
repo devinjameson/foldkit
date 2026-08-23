@@ -5,6 +5,7 @@ export {
   close,
   view,
   buttonId,
+  arrowId,
   Model,
   Message,
   OutMessage,
