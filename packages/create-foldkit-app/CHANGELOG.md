@@ -1,5 +1,13 @@
 # create-foldkit-app
 
+## 0.29.0
+
+### Minor Changes
+
+- 9869cf7: Bump bundled Effect dependencies to `4.0.0-rc.111`. No user-facing changes. Newly scaffolded apps will get the updated pins from the example sources.
+
+  The CLI now pins `effect`, `@effect/platform-node`, and `@effect/platform-node-shared` to exactly `4.0.0-rc.111` to match this release (exact versions, not ranges, while Effect v4 is in prerelease).
+
 ## 0.28.0
 
 ### Minor Changes
