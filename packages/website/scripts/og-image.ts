@@ -417,13 +417,23 @@ export const ORGANIZATION_SCHEMA = {
   sameAs: [
     'https://github.com/foldkit/foldkit',
     'https://www.npmjs.com/package/foldkit',
+    'https://discord.gg/kav8VNxqGm',
+    'https://x.com/devinjameson',
   ],
-  contactPoint: {
-    '@type': 'ContactPoint',
-    contactType: 'technical support',
-    url: 'https://github.com/foldkit/foldkit/issues',
-    availableLanguage: 'English',
-  },
+  contactPoint: [
+    {
+      '@type': 'ContactPoint',
+      contactType: 'technical support',
+      url: 'https://github.com/foldkit/foldkit/issues',
+      availableLanguage: 'English',
+    },
+    {
+      '@type': 'ContactPoint',
+      contactType: 'customer support',
+      url: `${SITE_URL}/contact`,
+      availableLanguage: 'English',
+    },
+  ],
 }
 
 const SOFTWARE_APPLICATION_SCHEMA = {
@@ -441,9 +451,12 @@ const SOFTWARE_APPLICATION_SCHEMA = {
   license: 'https://opensource.org/licenses/MIT',
 }
 
+const WEBSITE_ID = `${SITE_URL}/#website`
+
 const WEBSITE_SCHEMA = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
+  '@id': WEBSITE_ID,
   name: 'Foldkit',
   url: SITE_URL,
   publisher: { '@id': ORGANIZATION_ID },
@@ -459,6 +472,30 @@ const HOMEPAGE_JSON_LD = [
   jsonLdTag(SOFTWARE_APPLICATION_SCHEMA),
   jsonLdTag(WEBSITE_SCHEMA),
 ].join('\n    ')
+
+const sitePageJsonLd = (
+  schemaType: string,
+  pageUrl: string,
+  metadata: PageMetadata,
+): string =>
+  jsonLdTag({
+    '@context': 'https://schema.org',
+    '@type': schemaType,
+    name: metadata.title,
+    description: metadata.description,
+    url: pageUrl,
+    isPartOf: { '@id': WEBSITE_ID },
+    publisher: { '@id': ORGANIZATION_ID },
+  })
+
+const maybeSitePageSchemaType = (route: AppRoute): Option.Option<string> =>
+  M.value(route).pipe(
+    M.withReturnType<Option.Option<string>>(),
+    M.tag('About', () => Option.some('AboutPage')),
+    M.tag('Contact', () => Option.some('ContactPage')),
+    M.tag('Privacy', () => Option.some('WebPage')),
+    M.orElse(() => Option.none()),
+  )
 
 const blogPostingJsonLd = (
   entry: BlogPostEntry,
@@ -529,6 +566,10 @@ export const injectMetaTags = (
 
   const headAppends = [
     ...(metadata.title === 'Foldkit' ? [HOMEPAGE_JSON_LD] : []),
+    ...Option.match(maybeSitePageSchemaType(route), {
+      onNone: () => [],
+      onSome: schemaType => [sitePageJsonLd(schemaType, pageUrl, metadata)],
+    }),
     ...Option.match(maybePostEntry, {
       onNone: () => [],
       onSome: entry => [

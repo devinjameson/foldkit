@@ -20,7 +20,13 @@ import * as Search from '../search'
 import { Message as SearchMessage } from '../search/message'
 import { defaultRenderCopyButton } from './codeBlock'
 import { headerNavView } from './headerNav'
-import { betaTag, emailFormView, iconLink, skipNavLink } from './shared'
+import {
+  betaTag,
+  emailFormView,
+  iconLink,
+  siteLinksView,
+  skipNavLink,
+} from './shared'
 import { mobileMenuView, sidebarView } from './sidebar'
 import {
   mobileTableOfContentsView,
@@ -202,6 +208,7 @@ export const docsFooterView = (
             ],
           ),
           h.p([h.Class('mt-1')], [`© ${currentYear} Devin Jameson`]),
+          siteLinksView,
         ],
       ),
     ],
@@ -1073,6 +1080,17 @@ export const docsView = (
           lazyDocsContent(Page.AiMcp.view, [model.copiedSnippets, h]),
           Page.AiMcp.tableOfContents,
         ),
+      ContentApi: () =>
+        withTableOfContents(
+          lazyDocsContent(Page.ContentApi.view, [model.copiedSnippets, h]),
+          Page.ContentApi.tableOfContents,
+        ),
+      About: () =>
+        withTableOfContents(Page.About.view(h), Page.About.tableOfContents),
+      Contact: () =>
+        withTableOfContents(Page.Contact.view(h), Page.Contact.tableOfContents),
+      Privacy: () =>
+        withTableOfContents(Page.Privacy.view(h), Page.Privacy.tableOfContents),
       NotFound: ({ path }) =>
         withoutTableOfContents(Page.NotFound.view(path, homeRouter())),
     }),

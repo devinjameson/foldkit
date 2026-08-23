@@ -424,6 +424,26 @@ const METADATA_BY_TAG: Record<StaticRouteTag, PageMetadata> = {
     'Connect an agent to a running Foldkit application to inspect Models and Message history, compare states, replay the UI, and dispatch Schema-validated Messages.',
     'AI',
   ),
+  ContentApi: docs(
+    'Foldkit Content API',
+    'The read-only JSON API for this documentation site: endpoints, authentication, versioning and deprecation policy, rate limit headers, and the RFC 9457 error model.',
+    'AI',
+  ),
+  About: docs(
+    'About Foldkit',
+    'What Foldkit is, who builds it, how changes are developed and released, and where the project stands before 1.0.',
+    'Site',
+  ),
+  Contact: docs(
+    'Contact Foldkit',
+    'How to reach the Foldkit project: issues, Discord, security reports, and contributions.',
+    'Site',
+  ),
+  Privacy: docs(
+    'Foldkit Privacy Policy',
+    'What foldkit.dev collects, what stays in your browser, the third parties involved, and the choices you have.',
+    'Site',
+  ),
   NotFound: {
     title: 'Page Not Found',
     description: 'The requested page could not be found.',

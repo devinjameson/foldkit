@@ -3,11 +3,15 @@ import { describe, expect, it } from 'vitest'
 
 import { maybePostCover } from '../src/page/blog/frontmatter'
 import {
+  AboutRoute,
   BlogPostRoute,
+  ContactRoute,
+  CoreModelRoute,
   ExamplesRoute,
   HomeRoute,
   NotFoundRoute,
   PlaygroundRoute,
+  PrivacyRoute,
 } from '../src/route'
 import { blogPosts } from './blogPosts'
 import { ORGANIZATION_SCHEMA, injectMetaTags } from './og-image'
@@ -194,21 +198,73 @@ describe('injectMetaTags', () => {
       expect(html).not.toContain('article:published_time')
     })
 
-    it('describes the Foldkit Organization with a contact point', () => {
+    it('describes the Foldkit Organization with contact points', () => {
       expect(ORGANIZATION_SCHEMA['@type']).toBe('Organization')
       expect(ORGANIZATION_SCHEMA.url).toBe('https://foldkit.dev')
       expect(ORGANIZATION_SCHEMA.logo).toBe('https://foldkit.dev/logo.svg')
       expect(ORGANIZATION_SCHEMA.sameAs).toContain(
         'https://github.com/foldkit/foldkit',
       )
-      expect(ORGANIZATION_SCHEMA.contactPoint.contactType).toBe(
-        'technical support',
-      )
-      expect(ORGANIZATION_SCHEMA.contactPoint.url).toBe(
+      expect(
+        Array.map(
+          ORGANIZATION_SCHEMA.contactPoint,
+          contactPoint => contactPoint.url,
+        ),
+      ).toEqual([
         'https://github.com/foldkit/foldkit/issues',
-      )
+        'https://foldkit.dev/contact',
+      ])
+      expect(
+        Array.map(
+          ORGANIZATION_SCHEMA.contactPoint,
+          contactPoint => contactPoint.contactType,
+        ),
+      ).toContain('technical support')
       expect(html).toContain('"@type":"Organization"')
       expect(html).toContain('"contactPoint"')
+    })
+  })
+
+  describe('the trust anchor pages', () => {
+    it('marks up About, Contact, and Privacy as their schema.org page types', () => {
+      const aboutHtml = injectMetaTags(
+        baseHtml,
+        AboutRoute(),
+        '/about',
+        resolveApiModuleName,
+      )
+      expect(aboutHtml).toContain('"@type":"AboutPage"')
+      expect(aboutHtml).toContain('"url":"https://foldkit.dev/about"')
+      expect(aboutHtml).toContain('"@id":"https://foldkit.dev/#organization"')
+
+      const contactHtml = injectMetaTags(
+        baseHtml,
+        ContactRoute(),
+        '/contact',
+        resolveApiModuleName,
+      )
+      expect(contactHtml).toContain('"@type":"ContactPage"')
+
+      const privacyHtml = injectMetaTags(
+        baseHtml,
+        PrivacyRoute(),
+        '/privacy',
+        resolveApiModuleName,
+      )
+      expect(privacyHtml).toContain('"@type":"WebPage"')
+      expect(privacyHtml).toContain('"name":"Foldkit Privacy Policy"')
+    })
+
+    it('leaves ordinary documentation pages without a page-level schema', () => {
+      const docsHtml = injectMetaTags(
+        baseHtml,
+        CoreModelRoute(),
+        '/core/model',
+        resolveApiModuleName,
+      )
+
+      expect(docsHtml).not.toContain('"@type":"AboutPage"')
+      expect(docsHtml).not.toContain('"@type":"WebPage"')
     })
   })
 
