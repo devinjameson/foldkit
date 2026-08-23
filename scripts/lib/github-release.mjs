@@ -59,14 +59,16 @@ export const extractReleaseNotes = (changelog, version) => {
 }
 
 export class GitRepository {
-  constructor(root) {
+  constructor(root, env = process.env) {
     this.root = root
+    this.env = env
   }
 
   run(args) {
     return spawnSync('git', args, {
       cwd: this.root,
       encoding: 'utf8',
+      env: this.env,
     })
   }
 

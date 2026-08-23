@@ -54,12 +54,21 @@ export const workspacePackagesFromEntries = (root, entries) => {
   return packages
 }
 
-export const readWorkspacePackages = root => {
-  const pnpm = process.env['FOLDKIT_PNPM_EXECUTABLE'] ?? 'pnpm'
+export const readWorkspacePackages = (
+  root,
+  { env = process.env, run = spawnSync } = {},
+) => {
+  const childEnvironment = { ...env }
 
-  const result = spawnSync(pnpm, ['ls', '-r', '--depth', '-1', '--json'], {
+  delete childEnvironment['NPM_CONFIG_OTP']
+  delete childEnvironment['npm_config_otp']
+
+  const pnpm = childEnvironment['FOLDKIT_PNPM_EXECUTABLE'] ?? 'pnpm'
+
+  const result = run(pnpm, ['ls', '-r', '--depth', '-1', '--json'], {
     cwd: root,
     encoding: 'utf8',
+    env: childEnvironment,
   })
 
   if (result.status !== 0) {

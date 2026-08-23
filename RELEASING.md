@@ -25,13 +25,26 @@ set exists. It also keeps a long-lived npm token out of GitHub Actions.
    in a separate workflow step, so its output cannot be mistaken for
    Changesets' tag-push protocol.
 
-4. Check out the release commit and sign in to npm with 2FA. Run:
+4. Check out the exact release commit in a clean worktree and sign in to npm
+   with 2FA. Run:
 
    ```sh
    pnpm release:promote
    ```
 
-   The command repeats the complete registry check and reads every current
+   The command prompts once for an npm one-time password and reuses it for the
+   package tag changes. The password is not echoed or included in command-line
+   arguments. Set `NPM_CONFIG_OTP` before running the command when another
+   secure prompt already supplies it. The promoter removes that value from the
+   environment of its pnpm, Git, and GitHub subprocesses.
+
+   Before changing an npm tag, the promoter refreshes `origin/main`. It checks
+   that the clean checkout is an ancestor of current `main` and derives at
+   least one versioned public package, including its changelog section, from
+   that exact commit. A later website commit or an unpublished local commit
+   therefore stops before npm changes.
+
+   Promotion repeats the complete registry check and reads every current
    `latest` manifest before moving any tag. It computes a promotion path where
    every intermediate mixture of old and new tags satisfies all internal
    dependency and peer ranges. It prefers `create-foldkit-app` first because
@@ -40,17 +53,21 @@ set exists. It also keeps a long-lived npm token out of GitHub Actions.
    release whose ranges accept both snapshots, or keep consumers on exact
    versions until npm supports atomic multi-package promotion.
 
+   npm registry reads can briefly return an older tag after `npm dist-tag`
+   succeeds. The command waits for each planned tag change to become visible
+   before starting the next one. It then polls until the complete `latest`
+   snapshot exposes every intended version and dispatches stable finalization
+   for the exact checked-out commit.
+
    If a command or network request fails after promotion starts, run the same
-   command again. Tags already on the intended version are skipped. A tag on a
-   newer version stops the command before any tag is moved backward.
+   command again. Tags already on the intended version are skipped, so a retry
+   needs no npm one-time password when every tag is already current. A tag on a
+   newer version stops the command before any tag is moved backward. If only
+   the GitHub dispatch failed, the retry verifies npm again and retries that
+   dispatch without republishing or moving a tag.
 
-5. Finalize the release with the command printed by `release:promote`:
-
-   ```sh
-   gh workflow run release.yml -f published_commit=$(git rev-parse HEAD)
-   ```
-
-   The dispatch verifies every registry version and every `latest` tag from
+5. Follow the stable finalization run dispatched by `release:promote`. The
+   workflow verifies every registry version and every `latest` tag from
    scratch. It derives the packages versioned by the release commit, creates
    their missing Git tags at that exact commit, and creates each GitHub Release
    from the matching changelog section. Matching tags and Releases are skipped
@@ -134,6 +151,18 @@ interactive staged approval. See:
 Do not add an npm token to automate promotion without a separate security
 decision. Package upload must continue through the trusted `release.yml`
 workflow so npm generates provenance for each public tarball.
+
+A bypass-2FA granular access token is not an acceptable bridge. It would put a
+long-lived write credential in GitHub Actions, and npm has announced that these
+tokens will lose direct publishing around January 2027. See:
+
+- <https://github.blog/changelog/2026-07-08-npm-install-time-security-and-gat-bypass2fa-deprecation/>
+
+Stable promotion therefore remains one local command with one interactive npm
+one-time password. The rest of the release proceeds automatically after the
+complete `latest` snapshot verifies. A zero-touch stable release can replace
+this step when npm supports OIDC-authenticated tag changes or another coherent
+multi-package promotion mechanism.
 
 ## Website deployment
 

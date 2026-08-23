@@ -4,9 +4,10 @@ import { fileURLToPath } from 'node:url'
 
 import {
   NpmRegistry,
-  promoteCurrentWorkspace,
+  promoteAndFinalizeCurrentWorkspace,
   runCoherentUpload,
   verifyRegistrySnapshot,
+  waitForTaggedSnapshot,
 } from './lib/coherent-release.mjs'
 import {
   publicWorkspacePackages,
@@ -78,14 +79,12 @@ const main = async () => {
   }
 
   if (command === 'promote') {
-    const result = await promoteCurrentWorkspace({ root: REPO_ROOT })
+    const result = await promoteAndFinalizeCurrentWorkspace({ root: REPO_ROOT })
 
     console.log(
       `Promoted ${String(result.promoted.length)} packages; ${String(result.alreadyPromoted.length)} were already current.`,
     )
-    console.log(
-      `Finalize the release with: gh workflow run release.yml -f published_commit=$(git rev-parse HEAD)`,
-    )
+    console.log(`Dispatched stable finalization for ${result.publishedCommit}.`)
 
     return
   }
@@ -101,16 +100,7 @@ const main = async () => {
       new Set(workspacePackages.map(pkg => pkg.packageJson.name)),
     )
 
-    for (const pkg of packages) {
-      const packument = await registry.packument(pkg.packageJson.name)
-      const latest = packument?.['dist-tags']?.latest
-
-      if (latest !== pkg.packageJson.version) {
-        return fail(
-          `${pkg.packageJson.name}@latest is ${String(latest)}, expected ${pkg.packageJson.version}`,
-        )
-      }
-    }
+    await waitForTaggedSnapshot({ packages, tag: 'latest', registry })
 
     console.log('The complete stable package set is published and promoted.')
 

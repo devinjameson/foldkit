@@ -4,8 +4,11 @@ import { createHash } from 'node:crypto'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
+import { createInterface } from 'node:readline/promises'
+import { Writable } from 'node:stream'
 import semver from 'semver'
 
+import { GitRepository, releasePackagesForCommit } from './github-release.mjs'
 import { canaryVersion } from './package-version.mjs'
 import {
   assertCompleteReleaseSet,
@@ -22,6 +25,8 @@ export const uploadTag = (channel, commit) =>
 
 const REGISTRY_ATTEMPTS = 30
 const REGISTRY_DELAY_MILLISECONDS = 10_000
+const REGISTRY_REQUEST_TIMEOUT_MILLISECONDS = 30_000
+const FULL_GIT_COMMIT_PATTERN = /^[0-9a-f]{40}$/
 
 const fail = message => {
   throw new Error(message)
@@ -30,20 +35,42 @@ const fail = message => {
 const encodedPackageName = name => encodeURIComponent(name)
 
 export class NpmRegistry {
-  constructor(baseUrl = REGISTRY) {
+  constructor(
+    baseUrl = REGISTRY,
+    {
+      fetchRegistry = fetch,
+      requestTimeoutMilliseconds = REGISTRY_REQUEST_TIMEOUT_MILLISECONDS,
+    } = {},
+  ) {
     this.baseUrl = baseUrl.replace(/\/$/, '')
+    this.fetchRegistry = fetchRegistry
+    this.requestTimeoutMilliseconds = requestTimeoutMilliseconds
   }
 
-  async packument(name) {
-    const response = await fetch(
-      `${this.baseUrl}/${encodedPackageName(name)}`,
-      {
+  async request(path, description) {
+    const signal = AbortSignal.timeout(this.requestTimeoutMilliseconds)
+
+    try {
+      return await this.fetchRegistry(`${this.baseUrl}/${path}`, {
         headers: {
           accept: 'application/json',
           'cache-control': 'no-cache',
         },
-      },
-    )
+        signal,
+      })
+    } catch (error) {
+      if (signal.aborted) {
+        return fail(`registry request timed out for ${description}`)
+      }
+
+      const detail = error instanceof Error ? error.message : String(error)
+
+      return fail(`registry request failed for ${description}: ${detail}`)
+    }
+  }
+
+  async packument(name) {
+    const response = await this.request(encodedPackageName(name), name)
 
     if (response.status === 404) {
       return undefined
@@ -57,14 +84,9 @@ export class NpmRegistry {
   }
 
   async version(name, version) {
-    const response = await fetch(
-      `${this.baseUrl}/${encodedPackageName(name)}/${version}`,
-      {
-        headers: {
-          accept: 'application/json',
-          'cache-control': 'no-cache',
-        },
-      },
+    const response = await this.request(
+      `${encodedPackageName(name)}/${version}`,
+      `${name}@${version}`,
     )
 
     if (response.status === 404) {
@@ -146,6 +168,171 @@ const runRequired = (command, args, options = {}) => {
   }
 
   return result
+}
+
+const environmentWithoutNpmOtp = env => {
+  const childEnvironment = { ...env }
+
+  delete childEnvironment['NPM_CONFIG_OTP']
+  delete childEnvironment['npm_config_otp']
+
+  return childEnvironment
+}
+
+export const promptForNpmOtp = async ({
+  input = process.stdin,
+  output = process.stderr,
+} = {}) => {
+  if (input.isTTY !== true || typeof input.setRawMode !== 'function') {
+    return fail(
+      'npm promotion requires an interactive terminal or NPM_CONFIG_OTP',
+    )
+  }
+
+  const hiddenOutput = new Writable({
+    write(_chunk, _encoding, complete) {
+      complete()
+    },
+  })
+  const prompt = createInterface({
+    input,
+    output: hiddenOutput,
+    terminal: true,
+    historySize: 0,
+  })
+
+  output.write('npm OTP: ')
+
+  try {
+    const otp = (await prompt.question('')).trim()
+
+    if (otp === '') {
+      return fail('npm OTP cannot be empty')
+    }
+
+    return otp
+  } finally {
+    output.write('\n')
+    prompt.close()
+  }
+}
+
+export const createNpmTagger = ({
+  env = process.env,
+  promptForOtp = promptForNpmOtp,
+  run = runRequired,
+} = {}) => {
+  const childEnvironment = environmentWithoutNpmOtp(env)
+  let otp = env['NPM_CONFIG_OTP'] ?? env['npm_config_otp']
+
+  return async (pkg, tag) => {
+    if (otp === undefined || otp === '') {
+      otp = await promptForOtp()
+    }
+
+    run(
+      'npm',
+      [
+        'dist-tag',
+        'add',
+        `${pkg.packageJson.name}@${pkg.packageJson.version}`,
+        tag,
+      ],
+      {
+        inherit: true,
+        env: { ...childEnvironment, NPM_CONFIG_OTP: otp },
+      },
+    )
+  }
+}
+
+export const resolveReleaseCommit = (
+  root,
+  run = runRequired,
+  env = process.env,
+) => {
+  const childEnvironment = environmentWithoutNpmOtp(env)
+  const status = run('git', ['status', '--short'], {
+    cwd: root,
+    env: childEnvironment,
+  })
+
+  if (status.stdout.trim() !== '') {
+    return fail('release promotion requires a clean checkout')
+  }
+
+  const result = run('git', ['rev-parse', 'HEAD'], {
+    cwd: root,
+    env: childEnvironment,
+  })
+  const commit = result.stdout.trim()
+
+  if (!FULL_GIT_COMMIT_PATTERN.test(commit)) {
+    return fail('release promotion could not resolve an exact Git commit')
+  }
+
+  return commit
+}
+
+export const verifyStableReleaseCommit = ({
+  root,
+  commit,
+  env = process.env,
+  run = runRequired,
+  workspacePackages,
+  git,
+  deriveReleasePackages = releasePackagesForCommit,
+}) => {
+  const childEnvironment = environmentWithoutNpmOtp(env)
+  const packages =
+    workspacePackages ?? readWorkspacePackages(root, { env: childEnvironment })
+  const repository = git ?? new GitRepository(root, childEnvironment)
+
+  run('git', ['fetch', 'origin', '+refs/heads/main:refs/remotes/origin/main'], {
+    cwd: root,
+    env: childEnvironment,
+  })
+
+  const branches = run(
+    'git',
+    ['branch', '--remotes', '--contains', commit, '--format=%(refname:short)'],
+    { cwd: root, env: childEnvironment },
+  )
+    .stdout.split('\n')
+    .map(branch => branch.trim())
+    .filter(branch => branch !== '')
+
+  if (!branches.includes('origin/main')) {
+    return fail(`${commit} is not an ancestor of origin/main`)
+  }
+
+  return deriveReleasePackages({
+    root,
+    publishedCommit: commit,
+    git: repository,
+    workspacePackages: packages,
+  })
+}
+
+export const dispatchReleaseFinalization = (
+  root,
+  commit,
+  run = runRequired,
+  env = process.env,
+) => {
+  if (!FULL_GIT_COMMIT_PATTERN.test(commit)) {
+    return fail('release finalization requires a full lowercase Git commit')
+  }
+
+  run(
+    'gh',
+    ['workflow', 'run', 'release.yml', '-f', `published_commit=${commit}`],
+    {
+      cwd: root,
+      inherit: true,
+      env: environmentWithoutNpmOtp(env),
+    },
+  )
 }
 
 const parsePackFilename = output => {
@@ -860,12 +1047,59 @@ const readTaggedSnapshot = async ({
   return { versions, metadataByName }
 }
 
+export const waitForTaggedSnapshot = async ({
+  packages,
+  tag,
+  registry,
+  attempts = REGISTRY_ATTEMPTS,
+  delayMilliseconds = REGISTRY_DELAY_MILLISECONDS,
+}) => {
+  let mismatches = []
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    mismatches = []
+
+    for (const pkg of packages) {
+      const { name, version } = pkg.packageJson
+
+      try {
+        const packument = await registry.packument(name)
+        const actual = packument?.['dist-tags']?.[tag]
+
+        if (actual !== version) {
+          mismatches.push(
+            `${name}@${tag} is ${String(actual)}, expected ${version}`,
+          )
+        }
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error)
+
+        mismatches.push(`${name}@${tag} could not be read: ${detail}`)
+      }
+    }
+
+    if (Array.isArrayEmpty(mismatches)) {
+      return
+    }
+
+    if (attempt < attempts) {
+      await wait(delayMilliseconds)
+    }
+  }
+
+  return fail(
+    `registry did not expose the complete ${tag} snapshot after promotion: ${mismatches.join('; ')}`,
+  )
+}
+
 export const promoteSnapshot = async ({
   packages,
   tag,
   registry,
   addTag,
   workspacePackageNames = new Set(packages.map(pkg => pkg.packageJson.name)),
+  attempts,
+  delayMilliseconds,
 }) => {
   const targetMetadataByName = await verifyRegistrySnapshot(
     packages,
@@ -950,21 +1184,26 @@ export const promoteSnapshot = async ({
 
     await addTag(pkg, tag)
 
+    await waitForTaggedSnapshot({
+      packages: [pkg],
+      tag,
+      registry,
+      attempts,
+      delayMilliseconds,
+    })
+
     currentSnapshot.versions.set(name, version)
     currentSnapshot.metadataByName.set(name, targetMetadataByName.get(name))
     promoted.push(name)
   }
 
-  for (const pkg of packages) {
-    const packument = await registry.packument(pkg.packageJson.name)
-    const actual = packument?.['dist-tags']?.[tag]
-
-    if (actual !== pkg.packageJson.version) {
-      return fail(
-        `${pkg.packageJson.name}@${tag} is ${String(actual)}, expected ${pkg.packageJson.version}`,
-      )
-    }
-  }
+  await waitForTaggedSnapshot({
+    packages,
+    tag,
+    registry,
+    attempts,
+    delayMilliseconds,
+  })
 
   return { alreadyPromoted, promoted }
 }
@@ -983,19 +1222,26 @@ export const promoteCurrentWorkspace = async ({
     workspacePackageNames: new Set(
       workspacePackages.map(pkg => pkg.packageJson.name),
     ),
-    addTag: pkg => {
-      runRequired(
-        'npm',
-        [
-          'dist-tag',
-          'add',
-          `${pkg.packageJson.name}@${pkg.packageJson.version}`,
-          tag,
-        ],
-        { inherit: true },
-      )
-    },
+    addTag: createNpmTagger(),
   })
 
   return { packages, ...result }
+}
+
+export const promoteAndFinalizeCurrentWorkspace = async ({
+  root,
+  resolveCommit = () => resolveReleaseCommit(root),
+  verifyCommit = commit => verifyStableReleaseCommit({ root, commit }),
+  promote = () => promoteCurrentWorkspace({ root }),
+  dispatch = commit => dispatchReleaseFinalization(root, commit),
+}) => {
+  const publishedCommit = resolveCommit()
+
+  verifyCommit(publishedCommit)
+
+  const result = await promote()
+
+  await dispatch(publishedCommit)
+
+  return { ...result, publishedCommit }
 }
