@@ -26,7 +26,6 @@
     "@foldkit/devtools": "workspace:*",
     "@foldkit/markdown": "workspace:*",
     "@foldkit/ui": "workspace:*",
-    "@tailwindcss/vite": "^4.3.1",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "@webcontainer/api": "^1.6.4",
@@ -35,14 +34,14 @@
     "foldkit": "workspace:*",
     "monaco-editor": "^0.55.1",
     "shiki": "^4.2.0",
-    "tailwind-merge": "^3.6.0",
-    "tailwindcss": "^4.3.1"
+    "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
     "@effect/platform-node": "4.0.0-rc.111",
     "@foldkit/vite-plugin": "workspace:*",
     "@playwright/test": "^1.61.0",
     "@resvg/resvg-js": "^2.6.2",
+    "@tailwindcss/vite": "^4.3.1",
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
     "esbuild": "^0.28.1",
     "happy-dom": "^20.10.4",
@@ -51,6 +50,7 @@
     "playwright": "^1.61.0",
     "prettier": "^3.8.4",
     "satori": "^0.26.0",
+    "tailwindcss": "^4.3.1",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
     "vite": "^8.0.16",
