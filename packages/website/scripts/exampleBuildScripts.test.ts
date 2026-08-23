@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 import { canaryVersion } from '../../../scripts/lib/package-version.mjs'
-import { EXAMPLE_FILE_EXTENSIONS, EXAMPLE_SOURCE_ROOTS } from '../vite.config'
+import { EXAMPLE_FILE_EXTENSIONS, EXAMPLE_ROOT_FILES } from '../vite.config'
 import {
   INCLUDED_EXTENSIONS,
   loadPlaygroundFiles,
@@ -24,34 +24,44 @@ const buildScriptOf = (slug: string): string => {
         'utf8',
       ),
     )
-  const build = manifest.scripts['build'] ?? ''
-  const referenced = build.split(/\s+/).find(token => token.includes('/'))
-  if (referenced === undefined) {
-    throw new Error(`the ${slug} build script references no file: ${build}`)
-  }
-  return referenced
+  return manifest.scripts['build'] ?? ''
 }
 
+const exampleFile = (slug: string, fileName: string): string =>
+  readFileSync(resolve(REPO_ROOT, 'examples', slug, fileName), 'utf8')
+
 // The playground and the example source tabs both publish what an example is
-// made of. A build command naming a file neither of them ships hands a reader a
-// command that cannot run, and hides the script that implements the build id
-// contract.
+// made of. `vite build` reads the config rather than a script, so the config is
+// the file that has to reach both: without it the published command cannot run,
+// and the build id contract it implements is invisible to a reader.
 describe('server-rendered example build scripts', () => {
   for (const slug of SERVER_RENDERED_EXAMPLES) {
-    it(`ships the file the ${slug} build command runs`, () => {
-      const referenced = buildScriptOf(slug)
-      const [root] = referenced.split('/')
+    it(`ships the config the ${slug} build command reads`, () => {
+      expect(buildScriptOf(slug)).toBe('vite build')
 
-      expect(existsSync(resolve(REPO_ROOT, 'examples', slug, referenced))).toBe(
-        true,
-      )
-      expect(EXAMPLE_SOURCE_ROOTS).toContain(root)
-      expect(EXAMPLE_FILE_EXTENSIONS.has(extname(referenced))).toBe(true)
-      expect(INCLUDED_EXTENSIONS.has(extname(referenced))).toBe(true)
+      const configFileName = 'vite.config.ts'
+      expect(
+        existsSync(resolve(REPO_ROOT, 'examples', slug, configFileName)),
+      ).toBe(true)
+      expect(EXAMPLE_ROOT_FILES).toContain(configFileName)
+      expect(EXAMPLE_FILE_EXTENSIONS.has(extname(configFileName))).toBe(true)
+      expect(INCLUDED_EXTENSIONS.has(extname(configFileName))).toBe(true)
+    })
+
+    it(`computes a build id in every ${slug} config it publishes`, () => {
+      // The playground runs a config of its own, written against published
+      // packages. A build id missing there is a playground whose pages refuse
+      // to hydrate, with nothing in the example's own source to explain it.
+      for (const fileName of ['vite.config.ts', 'vite.config.playground.ts']) {
+        const config = exampleFile(slug, fileName)
+        expect(config, fileName).toContain('FOLDKIT_BUILD_ID')
+        expect(config, fileName).toContain('randomUUID()')
+        expect(config, fileName).toContain('buildId,')
+      }
     })
   }
 
-  it('retains every executable the transformed SSG build invokes', async () => {
+  it('retains the executable the transformed SSG build invokes', async () => {
     const bySlug = await loadPlaygroundFiles()
     const ssgEntry = Object.entries(bySlug).find(([slug]) => slug === 'ssg')
     if (ssgEntry === undefined) {
@@ -70,7 +80,6 @@ describe('server-rendered example build scripts', () => {
     const manifest: Readonly<{
       devDependencies?: Readonly<Record<string, string>>
     }> = JSON.parse(packageJson)
-    expect(manifest.devDependencies).toHaveProperty('tsx')
     expect(manifest.devDependencies).toHaveProperty('vite')
   })
 

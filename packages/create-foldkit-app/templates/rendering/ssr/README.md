@@ -16,8 +16,8 @@ A server-rendered Foldkit application built with Effect.
 {{startCommand}}
 ```
 
-The build script runs `scripts/build.mjs`, which builds the client bundle and the
-server bundle and gives both the same build id.
+The build is one `vite build`. `@foldkit/vite-plugin` builds the client bundle
+and the server bundle from that one command, and gives both the same build id.
 
 `PORT` sets the port the server listens on. `ORIGIN` sets the public origin it
 serves, which the server entry sees as `Request.url`; set it when deploying

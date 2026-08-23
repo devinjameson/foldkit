@@ -16,9 +16,9 @@ A statically generated Foldkit application built with Effect.
 {{previewCommand}}
 ```
 
-The build script runs `scripts/build.mjs`, which builds the client bundle, builds
-the server bundle, prerenders every path `src/entry.server.ts` lists, and gives
-all three steps the same build id.
+The build is one `vite build`. `@foldkit/vite-plugin` builds the client bundle,
+builds the server bundle, and generates a page for every path
+`src/entry.server.ts` lists, all from that one command.
 
 ## The build id
 
@@ -41,9 +41,10 @@ puts in that position, carrying what the visitor typed into it.
 The comparison happens when a client boots against a page. A tab whose client
 is already running when a deployment lands is not rechecked.
 
-`scripts/build.mjs` takes care of this: it produces one id per build and passes
-it to every step. Supply `FOLDKIT_BUILD_ID` when those steps run in separate
-jobs, or when you want the served id to name a deployment you can look up later:
+`vite.config.ts` takes care of this: it produces one id per build, and the one
+`vite build` that reads it hands that id to the client and the server alike.
+Supply `FOLDKIT_BUILD_ID` when you want the served id to name a deployment you
+can look up later:
 
 ```bash
 FOLDKIT_BUILD_ID="$CI_DEPLOYMENT_ID" {{buildCommand}}

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/build.mjs",
+    "build": "vite build",
     "start": "node dist/server/main.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
@@ -25,7 +25,6 @@
     "happy-dom": "^20.11.7",
     "prettier": "^3.9.6",
     "tailwindcss": "^4.3.3",
-    "tsx": "^4.23.12",
     "typescript": "^7.0.2",
     "vite": "^8.2.2",
     "vitest": "^4.1.11"

@@ -101,7 +101,7 @@
       ]
     },
     "examples/ssg": {
-      "entry": ["src/entry.server.ts", "scripts/prerender.ts"],
+      "entry": ["src/entry.server.ts"],
       "ignoreFiles": ["vite.config.playground.ts"],
       "ignoreDependencies": [
         "@foldkit/devtools",

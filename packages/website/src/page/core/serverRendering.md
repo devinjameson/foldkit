@@ -192,7 +192,7 @@ Whatever value you pick, three things have to be true:
 
 - It is public. The id appears in the HTML sent to every visitor, so it must not contain a secret.
 - It identifies one deployment. Reusing an id makes a stale page look current and produces no warning. A commit or version is insufficient when the same revision can be deployed with different rendering inputs. The `ssr` and `ssg` scaffolds generate a fresh id whenever `FOLDKIT_BUILD_ID` is unset.
-- It reaches both builds. The client and server run as separate commands, so one build script must pass the same value to both. The scaffolds provide this coordination in `scripts/build.mjs`. A unique CI deployment id is a good source. A commit SHA or release tag is enough only when every deployment carrying it has identical rendering inputs.
+- It reaches both builds. `@foldkit/vite-plugin` builds the client and the server from one `vite build`, which reads the config once, so the id the config computes reaches both. A build split into separate commands has to pass the same value to each itself. A unique CI deployment id is a good source. A commit SHA or release tag is enough only when every deployment carrying it has identical rendering inputs.
 
 A hydratable render without an id fails with `MissingBuildId`. `Runtime.hydrate` also requires one. A static render with `isHydratable: false` needs none.
 
@@ -214,7 +214,9 @@ Vite continues to serve the client entry, HMR, and assets. Requests that reach F
 
 A hot update does not exercise hydration. HMR preserves the Model but rebuilds the DOM under the root. That DOM came from code that predates the edit. Reload the page to test hydration itself. The stamped root remains required during a hot update; without it, startup fails as it would on a fresh load.
 
-In production, build the client and server host separately. The host serves static assets first, imports the built entry, and sends `Server.toResponse(template, await renderPage(request))`. The [SSR example](https://github.com/foldkit/foldkit/tree/main/examples/ssr) uses an Effect `HttpServer` for this delivery layer.
+In production, the host is built alongside the client. Set `ssr.build` in the plugin and `vite build` produces both, with `entry` naming the host module when requests reach one, as they do here. The host serves static assets first, imports the built entry, and sends `Server.toResponse(template, await renderPage(request))`. The [SSR example](https://github.com/foldkit/foldkit/tree/main/examples/ssr) uses an Effect `HttpServer` for this delivery layer:
+
+::Snippet{name="serverRenderingBuildSsr" label="SSR build configuration"}
 
 :::Warning{label="Caching personalized responses"}
 When Flags depend on the request, such as a cookie, authorization header, or locale, the rendered HTML belongs to that visitor. Set `cache-control` and `vary` so a shared cache cannot serve it to someone else. The SSR example uses `private, no-store` and `vary: cookie` because its initial count comes from a cookie.
@@ -222,11 +224,17 @@ When Flags depend on the request, such as a cookie, authorization header, or loc
 
 ## Build-time SSG
 
-An SSG host builds the browser bundle and server entry. A build script then calls `renderPage` once for every generated URL (`scripts/prerender.ts` in the SSG example):
+Generation is part of the build. `ssr.build.prerender` builds the browser bundle and the server entry, then calls `renderPage` once for every path the entry lists and writes each result as a file, all inside one `vite build`:
+
+::Snippet{name="serverRenderingBuildSsg" label="SSG build configuration"}
+
+The template those pages are rendered into comes from the browser build that produced it rather than from the file on disk, so the generated `/`, which replaces `index.html`, cannot become the template a later build reads.
+
+A host that generates its pages itself, as this website does, runs its own loop over the same contract:
 
 ::Snippet{name="serverRenderingSsgLoop" label="SSG render loop example"}
 
-Keep a copy of the template outside the build output, and take the built file as the template only while it still holds the placeholder. The generated `/` replaces `dist/client/index.html`, which is the file the client build left the template in, so a second run against one client build finds no `<div id="root"></div>` there and stops with `injectIntoTemplate found no exact <div id="root"></div> placeholder in the template`. The application's own `index.html` still has its placeholder and is never the file at fault. Reading the template before the loop is not enough on its own, because the loop that destroys it and the run that needs it are different runs.
+A loop of your own has to keep that property itself. Keep a copy of the template outside the build output, and take the built `index.html` as the template only while it still holds the placeholder. The generated `/` replaces that built file, which is where the client build left the template, so a second run against one client build finds no `<div id="root"></div>` there and stops with `injectIntoTemplate found no exact <div id="root"></div> placeholder in the template`. The application's own `index.html` still has its placeholder and is never the file at fault. Reading the template before the loop is not enough on its own, because the loop that destroys it and the run that needs it are different runs.
 
 A static file is a body plus whatever headers the file host adds. It cannot carry a redirect, a 404, or per-response headers. Writing a `Responded` result to disk turns a redirect into an ordinary page at that URL. The build should fail on `Responded` and on any rendered status it cannot reproduce.
 
@@ -235,6 +243,8 @@ The [SSG example](https://github.com/foldkit/foldkit/tree/main/examples/ssg) is 
 ## Deploying
 
 A deployed SSG build is a directory of static files. Any static host or CDN can serve it as is. The hydration handoff already lives in the HTML.
+
+A build that `@foldkit/vite-plugin` owns writes `foldkit.build.json` beside the server bundle, naming the two output directories, the server entry, and every path it generated. A host reads it to decide what its asset layer does with a request matching no file: generated paths are files, anything else reaches the server when there is one. Deriving that from the build is how a deployment target avoids asking for it a second time, in settings whose wrong values serve an empty page at 200.
 
 A deployed SSR application needs a host with two jobs: serve the built client assets and call `renderPage` for page requests. On Node, use the [SSR example's server](https://github.com/foldkit/foldkit/tree/main/examples/ssr/server) as the reference. It serves static files first and sends `Server.toResponse(template, await renderPage(request))` for everything else.
 

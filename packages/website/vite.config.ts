@@ -691,6 +691,10 @@ export const EXAMPLE_SOURCE_ROOTS: ReadonlyArray<string> = [
   'scripts',
 ]
 
+// The build command reads the config, which is where a generated project
+// computes its build id, so a reader of an example's source has to be shown it.
+export const EXAMPLE_ROOT_FILES: ReadonlyArray<string> = ['vite.config.ts']
+
 const collectSourceFiles = async (
   directory: string,
 ): Promise<ReadonlyArray<string>> => {
@@ -795,7 +799,13 @@ const highlightExampleSourcesPlugin = (): Plugin => ({
         collectSourceFiles(join(exampleDirectory, root)),
       ),
     )
-    const sortedFiles = sortExampleFiles(collected.flat(), exampleDirectory)
+    const rootFiles = EXAMPLE_ROOT_FILES.map(fileName =>
+      join(exampleDirectory, fileName),
+    ).filter(filePath => existsSync(filePath))
+    const sortedFiles = sortExampleFiles(
+      [...collected.flat(), ...rootFiles],
+      exampleDirectory,
+    )
 
     const files = await Promise.all(
       sortedFiles.map(filePath =>
