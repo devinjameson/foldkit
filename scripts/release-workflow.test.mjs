@@ -5,6 +5,7 @@ import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const gitignore = readFileSync(resolve(REPO_ROOT, '.gitignore'), 'utf8')
 const workflow = readFileSync(
   resolve(REPO_ROOT, '.github/workflows/release.yml'),
   'utf8',
@@ -18,6 +19,10 @@ const rootPackage = JSON.parse(
 )
 const coherentPublisher = readFileSync(
   resolve(REPO_ROOT, 'scripts/lib/coherent-release.mjs'),
+  'utf8',
+)
+const coherentReleaseCli = readFileSync(
+  resolve(REPO_ROOT, 'scripts/coherent-release.mjs'),
   'utf8',
 )
 
@@ -164,4 +169,21 @@ test('website deployment waits for a separately verified latest promotion', () =
   assert.match(workflow, /finalize:[\s\S]+permissions:\n\s+contents: write/)
   assert.match(workflow, /needs: finalize/)
   assert.doesNotMatch(workflow, /needs: release\n\s+if: needs\.release/)
+})
+
+test('interactive promotion dispatches finalization after registry verification', () => {
+  assert.equal(
+    rootPackage.scripts['release:promote'],
+    'node scripts/coherent-release.mjs promote',
+  )
+  assert.match(
+    coherentReleaseCli,
+    /const result = await promoteAndFinalizeCurrentWorkspace\(\{ root: REPO_ROOT \}\)/,
+  )
+  assert.match(
+    coherentReleaseCli,
+    /Dispatched stable finalization for \$\{result\.publishedCommit\}/,
+  )
+  assert.doesNotMatch(coherentReleaseCli, /Finalize the release with:/)
+  assert.match(gitignore, /^\.pnpm-store\/$/m)
 })
