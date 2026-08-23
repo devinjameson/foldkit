@@ -34,6 +34,15 @@ const acceptsMediaType = mediaType => [
 const MARKDOWN_PAGE_PATTERN =
   '^/(?!playground(?:/|$)|newsletter(?:/|$)|404(?:/|$))([^.]+?)/?$'
 
+// NOTE: OG cards and blog post images render on other origins by design:
+// share-preview testers hotlink the card, and feed readers hotlink the RSS
+// enclosure and article images. The blanket same-origin resource policy makes
+// browsers refuse those loads, so these paths override it. Later `continue`
+// routes win when both match, so the override must sit after the blanket
+// route.
+const EMBEDDABLE_IMAGE_PATTERN =
+  '^/(?:og/.*\\.png|blog/.*\\.(?:avif|gif|jpe?g|png|svg|webp))$'
+
 export const websiteVercelConfig = channel => {
   if (channel !== 'production' && channel !== 'canary') {
     throw new Error(`Unknown website deployment channel: ${channel}`)
@@ -90,6 +99,13 @@ export const websiteVercelConfig = channel => {
       {
         src: '.*',
         headers: sharedResponseHeaders(channel),
+        continue: true,
+      },
+      {
+        src: EMBEDDABLE_IMAGE_PATTERN,
+        headers: {
+          'Cross-Origin-Resource-Policy': 'cross-origin',
+        },
         continue: true,
       },
       {

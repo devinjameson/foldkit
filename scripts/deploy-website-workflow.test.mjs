@@ -53,6 +53,8 @@ const DEPLOYED_FILES = new Set([
   '404.json',
   'core/model/index.html',
   'core/model.md',
+  'og/core-model.png',
+  'blog/dispatch-1/cover.webp',
   'newsletter/index.html',
   'playground/index.html',
   'playground/counter/index.html',
@@ -192,6 +194,32 @@ test('the deployed playground and Monaco workers share an embedder policy', () =
     workerEmbedderRoutes.every(route => route.continue === true),
     true,
   )
+})
+
+test('share images stay embeddable from other origins', () => {
+  const ogCard = resolveRequest(productionConfig, '/og/core-model.png')
+  assert.equal(ogCard.servedFile, 'og/core-model.png')
+  assert.deepEqual(ogCard.headers, {
+    'Content-Type': 'image/png',
+    'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
+    'Cross-Origin-Resource-Policy': 'cross-origin',
+  })
+
+  const canaryOgCard = resolveRequest(canaryConfig, '/og/core-model.png')
+  assert.equal(
+    canaryOgCard.headers['Cross-Origin-Resource-Policy'],
+    'cross-origin',
+  )
+
+  const cover = resolveRequest(productionConfig, '/blog/dispatch-1/cover.webp')
+  assert.equal(cover.servedFile, 'blog/dispatch-1/cover.webp')
+  assert.equal(cover.headers['Cross-Origin-Resource-Policy'], 'cross-origin')
+
+  const page = resolveRequest(productionConfig, '/core/model', 'text/html')
+  assert.equal(page.headers['Cross-Origin-Resource-Policy'], 'same-origin')
+
+  const feed = resolveRequest(productionConfig, '/blog/rss.xml')
+  assert.equal(feed.headers['Cross-Origin-Resource-Policy'], 'same-origin')
 })
 
 test('unknown paths return a real 404 in the format the client asked for', () => {
