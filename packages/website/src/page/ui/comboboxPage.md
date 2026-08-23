@@ -4,9 +4,9 @@
 
 A searchable select with input filtering, keyboard navigation, and anchor positioning. Unlike Listbox (which uses a button trigger), Combobox has a text input for searching. You control the filtering logic: read `model.inputValue` and pass the filtered items array. The parent owns the selection: it passes the chosen value in as `maybeSelectedValue` (multi-select passes `selectedValues`) along with `restingInputValue` (the text the input rests at when closed), and folds the `Selected` and `ClearedSelection` OutMessages into its own state (single-select stores the value, multi-select toggles the value in its array).
 
-Embed Combobox via the [`create<Item>()` factory](/ui/selection-submodels) at module scope: `const CityCombobox = Combobox.create<City>()`. The factory binds the view, update, and imperative helpers to the same `Item` type so the selected value flows through the OutMessage, typed end-to-end. Combobox constrains `Item extends string`.
+Embed Combobox via the [`create<Item>()` factory](/ui/selection-submodels) at module scope: `const CityCombobox = Combobox.create<City>()`. The factory binds the view, update, and programmatic helpers to the same `Item` type, so the `Selected` OutMessage carries a `City`. Combobox constrains `Item extends string`.
 
-For programmatic control in update functions, use `CityCombobox.open(model)`, `CityCombobox.close(model, restingInputValue)`, and `CityCombobox.selectItem(model, item, displayText)`. Each returns `[Model, Commands, Option<OutMessage>]` directly. Single-select `close` takes the resting input text (the selected display text, or empty); `Combobox.Multi` closes with `close(model)` since the multi-select input always rests empty.
+Programmatic helpers are child entry points. Fold `CityCombobox.open` with `Update.foldChildStep`. Fold `CityCombobox.close` and `CityCombobox.selectItem` with `Update.foldChild` because they take additional input. Single-select `close` takes the resting input text (the selected display text, or empty); `Combobox.Multi.close` takes no additional input and uses `Update.foldChildStep` because the multi-select input always rests empty.
 
 What the factory returns is typed [`Combobox.Bundle<Item>`](/ui/selection-submodels#bundle-type) (`Combobox.Multi.Bundle` for the multi-select variant), for the cases where a created bundle has to be named rather than called directly.
 
@@ -161,7 +161,7 @@ Configuration object passed to `CityCombobox.view`.
 
 ### OutMessage {#out-message}
 
-Messages emitted to the parent through the third element of `[Model, Commands, Option<OutMessage>]`. Fold the OutMessage in the `foldOutMessage` of your [`Update.foldChild`](/core/submodel#fold-child) config. The same shape applies to the update returned by `Combobox.Multi.create()`, as in `CitiesCombobox.update`.
+Messages emitted to the parent through the optional `outMessage` field. Fold the OutMessage in the `foldOutMessage` of your [`Update.foldChild`](/core/submodel#fold-child) config. The same shape applies to the update returned by `Combobox.Multi.create()`, as in `CitiesCombobox.update`.
 
 | Name               | Type              | Default | Description                                                                                                                                                                                                                                                                                                                                                                        |
 | ------------------ | ----------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -2,6 +2,8 @@ import { Schema as S } from 'effect'
 
 import type { Html, HtmlBuilder } from '../../html/index.js'
 import { defineMessageUnion } from '../../message/index.js'
+import { evo } from '../../struct/index.js'
+import type * as Update from '../../update/index.js'
 
 // MODEL
 
@@ -31,12 +33,19 @@ export const initialModel: Model = {
 // UPDATE
 
 export const update = (model: Model, message: Message) =>
-  Message.match<readonly [Model, ReadonlyArray<never>]>(message, {
-    PressedKey: ({ key }) => [{ ...model, lastKey: key, isShifted: false }, []],
-    PressedShiftKey: ({ key }) => [
-      { ...model, lastKey: key, isShifted: true },
-      [],
-    ],
+  Message.match<Update.Return<Model, Message>>(message, {
+    PressedKey: ({ key }) => ({
+      model: evo(model, {
+        lastKey: () => key,
+        isShifted: () => false,
+      }),
+    }),
+    PressedShiftKey: ({ key }) => ({
+      model: evo(model, {
+        lastKey: () => key,
+        isShifted: () => true,
+      }),
+    }),
   })
 
 // VIEW

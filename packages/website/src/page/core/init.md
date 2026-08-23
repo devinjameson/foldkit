@@ -2,7 +2,7 @@
 
 ## The First Model {#init}
 
-`init` constructs the first Model and returns any Commands that should run when the application starts. Its result has the same shape as update's result: `[Model, ReadonlyArray<Command<Message>>]`.
+`init` constructs the first Model and returns any Commands that should run when the application starts. It returns `Update.Return<Model, Message>`, the same type as update.
 
 The counter starts at zero and has no startup work:
 

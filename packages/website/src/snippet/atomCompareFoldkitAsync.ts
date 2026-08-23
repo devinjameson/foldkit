@@ -1,5 +1,5 @@
 import { Effect, Schema as S } from 'effect'
-import { AsyncData, Command } from 'foldkit'
+import { AsyncData, Command, type Update } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
 
 import { Api } from './api'
@@ -42,20 +42,15 @@ const FetchUser = Command.define('FetchUser', {
 // UPDATE
 
 export const update = (model: Model, message: Message) =>
-  Message.match<readonly [Model, ReadonlyArray<Command.Command<Message>>]>(
-    message,
-    {
-      ClickedLoadUser: () => [
-        evo(model, { user: () => UserAsyncData.Loading() }),
-        [FetchUser()],
-      ],
-      SucceededLoadUser: ({ user }) => [
-        evo(model, { user: () => UserAsyncData.Success({ data: user }) }),
-        [],
-      ],
-      FailedLoadUser: ({ error }) => [
-        evo(model, { user: () => UserAsyncData.Failure({ error }) }),
-        [],
-      ],
-    },
-  )
+  Message.match<Update.Return<Model, Message>>(message, {
+    ClickedLoadUser: () => ({
+      model: evo(model, { user: () => UserAsyncData.Loading() }),
+      commands: [FetchUser()],
+    }),
+    SucceededLoadUser: ({ user }) => ({
+      model: evo(model, { user: () => UserAsyncData.Success({ data: user }) }),
+    }),
+    FailedLoadUser: ({ error }) => ({
+      model: evo(model, { user: () => UserAsyncData.Failure({ error }) }),
+    }),
+  })

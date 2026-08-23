@@ -3,26 +3,27 @@ import { expect, expectTypeOf } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
 
-import { defineMessageUnion } from '../message/index.js'
 import * as Command from './index.js'
 
-const ChildMessage = defineMessageUnion({
-  CompletedFetchNotes: { noteCount: S.Number },
-})
-const ParentMessage = defineMessageUnion({
-  GotNotesMessage: { message: ChildMessage },
+const CompletedFetchNotes = S.TaggedStruct('CompletedFetchNotes', {
+  noteCount: S.Number,
 })
 
-type ChildMessage = typeof ChildMessage.Type
-type ParentMessage = typeof ParentMessage.Type
+type ChildMessage = typeof CompletedFetchNotes.Type
+type ParentMessage = Readonly<{
+  _tag: 'GotNotesMessage'
+  message: ChildMessage
+}>
 
 const FetchNotes = Command.define('FetchNotes', {
-  messages: [ChildMessage.CompletedFetchNotes],
-  execute: Effect.succeed(ChildMessage.CompletedFetchNotes({ noteCount: 3 })),
+  messages: [CompletedFetchNotes],
+  execute: Effect.succeed(CompletedFetchNotes.make({ noteCount: 3 })),
 })
 
-const toGotNotesMessage = (message: ChildMessage): ParentMessage =>
-  ParentMessage.GotNotesMessage({ message })
+const toGotNotesMessage = (message: ChildMessage): ParentMessage => ({
+  _tag: 'GotNotesMessage',
+  message,
+})
 
 // NOTE: These helpers are the regression subjects. Each is generic over the
 // Message types, where Command stays a deferred conditional, so each compiles
@@ -51,13 +52,14 @@ describe('Command.mapMessages', () => {
       Effect.runSync(command.effect),
     )
     expect(dispatchedMessages).toEqual([
-      ParentMessage.GotNotesMessage({
-        message: ChildMessage.CompletedFetchNotes({ noteCount: 3 }),
-      }),
+      {
+        _tag: 'GotNotesMessage',
+        message: CompletedFetchNotes.make({ noteCount: 3 }),
+      },
     ])
   })
 
-  it('infers the lifted Message type at a concrete data-first call site', () => {
+  it('preserves Message inference for present Commands in the data-first form', () => {
     const mappedCommands = Command.mapMessages(
       [FetchNotes()],
       toGotNotesMessage,
@@ -67,13 +69,31 @@ describe('Command.mapMessages', () => {
     >()
   })
 
-  it('infers the lifted Message type through the curried form', () => {
+  it('preserves Message inference for present Commands in the curried form', () => {
     const mappedCommands = Command.mapMessages(toGotNotesMessage)([
       FetchNotes(),
     ])
     expectTypeOf(mappedCommands).toEqualTypeOf<
       ReadonlyArray<Command.Command<ParentMessage>>
     >()
+  })
+
+  it('maps undefined to a concrete empty array in the data-first form', () => {
+    const mappedCommands = Command.mapMessages(undefined, toGotNotesMessage)
+
+    expectTypeOf(mappedCommands).toEqualTypeOf<
+      ReadonlyArray<Command.Command<ParentMessage>>
+    >()
+    expect(mappedCommands).toEqual([])
+  })
+
+  it('maps undefined to a concrete empty array in the curried form', () => {
+    const mappedCommands = Command.mapMessages(toGotNotesMessage)(undefined)
+
+    expectTypeOf(mappedCommands).toEqualTypeOf<
+      ReadonlyArray<Command.Command<ParentMessage>>
+    >()
+    expect(mappedCommands).toEqual([])
   })
 })
 
@@ -82,11 +102,10 @@ describe('Command.mapMessage', () => {
     const mappedCommand = liftCommand(FetchNotes(), toGotNotesMessage)
 
     expect(mappedCommand.name).toBe('FetchNotes')
-    expect(Effect.runSync(mappedCommand.effect)).toEqual(
-      ParentMessage.GotNotesMessage({
-        message: ChildMessage.CompletedFetchNotes({ noteCount: 3 }),
-      }),
-    )
+    expect(Effect.runSync(mappedCommand.effect)).toEqual({
+      _tag: 'GotNotesMessage',
+      message: CompletedFetchNotes.make({ noteCount: 3 }),
+    })
   })
 })
 
@@ -95,7 +114,7 @@ describe('Command.mapEffect', () => {
     const mappedCommand = withCrashOnFailure(FetchNotes())
 
     expect(Effect.runSync(mappedCommand.effect)).toEqual(
-      ChildMessage.CompletedFetchNotes({ noteCount: 3 }),
+      CompletedFetchNotes.make({ noteCount: 3 }),
     )
   })
 })

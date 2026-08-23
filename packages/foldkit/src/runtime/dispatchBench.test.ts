@@ -4,6 +4,7 @@ import { describe, it } from 'vitest'
 import { Document, __htmlBuilder, __requireDispatch } from '../html/index.js'
 import { defineMessageUnion } from '../message/index.js'
 import { evo } from '../struct/index.js'
+import type * as Update from '../update/index.js'
 import { makeApplication } from './runtime.js'
 
 /**
@@ -58,7 +59,9 @@ const view = (model: Model): Document => {
   }
 }
 
-const init = (): readonly [Model, ReadonlyArray<never>] => [{ count: 0 }, []]
+type UpdateReturn = Update.Return<Model, Message>
+
+const init = (): UpdateReturn => ({ model: { count: 0 } })
 
 const runOnce = async (messageCount: number): Promise<number> => {
   const container = document.createElement('div')
@@ -71,11 +74,11 @@ const runOnce = async (messageCount: number): Promise<number> => {
   })
 
   const update = (model: Model, message: Message) =>
-    Message.match<readonly [Model, ReadonlyArray<never>]>(message, {
-      Increment: () => [evo(model, { count: Number.increment }), []],
+    Message.match<UpdateReturn>(message, {
+      Increment: () => ({ model: evo(model, { count: Number.increment }) }),
       Done: () => {
         resolveDone()
-        return [model, []]
+        return { model }
       },
     })
 

@@ -1,5 +1,5 @@
 import { Option } from 'effect'
-import { Calendar, Command } from 'foldkit'
+import { Calendar, type Update } from 'foldkit'
 
 import {
   Animation,
@@ -23,10 +23,10 @@ import type { UiMessage } from './message'
 import type { UiModel } from './model'
 import { Toast } from './toast'
 
-export const uiInit = (
-  today: Calendar.CalendarDate,
-): [UiModel, ReadonlyArray<Command.Command<UiMessage>>] => [
-  {
+type InitReturn = Update.Return<UiModel, UiMessage>
+
+export const uiInit = (today: Calendar.CalendarDate): InitReturn => ({
+  model: {
     mobileMenuDialog: Dialog.init({ id: 'mobile-menu' }),
     buttonClickCount: 0,
     inputDemoValue: '',
@@ -181,5 +181,4 @@ export const uiInit = (
       rowHeightPx: 56,
     }),
   },
-  [],
-]
+})

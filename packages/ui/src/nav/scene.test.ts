@@ -1,4 +1,5 @@
 import { Schema as S } from 'effect'
+import { type Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 import * as Scene from 'foldkit/scene'
@@ -22,10 +23,12 @@ const Message = defineMessageUnion({
 
 type Message = typeof Message.Type
 
-const update = (model: Model, message: Message): readonly [Model, []] => [
-  evo(model, { current: () => message.section }),
-  [],
-]
+const update = (model: Model, message: Message) =>
+  Message.match<Update.Return<Model, Message>>(message, {
+    ClickedSection: ({ section }) => ({
+      model: evo(model, { current: () => section }),
+    }),
+  })
 
 const sectionToHref = (section: Section): string => `#${section.toLowerCase()}`
 

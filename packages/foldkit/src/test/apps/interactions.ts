@@ -1,7 +1,9 @@
-import { Schema as S } from 'effect'
+import { Number, Schema as S } from 'effect'
 
 import type { Html, HtmlBuilder } from '../../html/index.js'
 import { defineMessageUnion } from '../../message/index.js'
+import { evo } from '../../struct/index.js'
+import type * as Update from '../../update/index.js'
 
 // MODEL
 
@@ -40,16 +42,25 @@ export const initialModel: Model = {
 // UPDATE
 
 export const update = (model: Model, message: Message) =>
-  Message.match<readonly [Model, ReadonlyArray<never>]>(message, {
-    ClickedButton: () => [{ ...model, clicks: model.clicks + 1 }, []],
-    DoubleClickedButton: () => [
-      { ...model, doubleClicks: model.doubleClicks + 1 },
-      [],
-    ],
-    HoveredTarget: () => [{ ...model, hovered: true }, []],
-    FocusedInput: () => [{ ...model, focused: true }, []],
-    BlurredInput: () => [{ ...model, focused: false }, []],
-    ChangedSelect: ({ value }) => [{ ...model, changed: value }, []],
+  Message.match<Update.Return<Model, Message>>(message, {
+    ClickedButton: () => ({
+      model: evo(model, { clicks: Number.increment }),
+    }),
+    DoubleClickedButton: () => ({
+      model: evo(model, { doubleClicks: Number.increment }),
+    }),
+    HoveredTarget: () => ({
+      model: evo(model, { hovered: () => true }),
+    }),
+    FocusedInput: () => ({
+      model: evo(model, { focused: () => true }),
+    }),
+    BlurredInput: () => ({
+      model: evo(model, { focused: () => false }),
+    }),
+    ChangedSelect: ({ value }) => ({
+      model: evo(model, { changed: () => value }),
+    }),
   })
 
 // VIEW

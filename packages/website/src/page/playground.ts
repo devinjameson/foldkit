@@ -13,7 +13,7 @@ import {
   String as String_,
   pipe,
 } from 'effect'
-import { Command, ManagedResource, Mount, Submodel } from 'foldkit'
+import { Command, ManagedResource, Mount, Submodel, Update } from 'foldkit'
 import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 import { ts } from 'foldkit/schema'
@@ -580,12 +580,6 @@ export const WritePlaygroundFile = Command.define('WritePlaygroundFile', {
 
 // UPDATE
 
-type UpdateReturn = readonly [
-  Model,
-  ReadonlyArray<Command.Command<Message, never, WebContainerPlaygroundService>>,
-]
-const withUpdateReturn = M.withReturnType<UpdateReturn>()
-
 const appendDeduped = (
   paths: ReadonlyArray<string>,
   path: string,
@@ -624,12 +618,12 @@ const markPreviewLoaded = (
     M.orElse(() => state),
   )
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    withUpdateReturn,
-    M.tags({
-      BootedPlayground: ({ previewUrl }) => [
-        evo(model, {
+export const update = (model: Model, message: Message) =>
+  Message.match<Update.Return<Model, Message, WebContainerPlaygroundService>>(
+    message,
+    {
+      BootedPlayground: ({ previewUrl }) => ({
+        model: evo(model, {
           state: () =>
             PlaygroundStateBooted({
               preview: PlaygroundPreview.start(previewUrl),
@@ -637,69 +631,43 @@ export const update = (model: Model, message: Message): UpdateReturn =>
           dirtyPaths: () => [],
           lastWriteError: () => Option.none(),
         }),
-        flushDirtyPaths(model),
-      ],
-      FailedBootPlayground: ({ reason }) => [
-        evo(model, { state: () => PlaygroundStateFailed({ reason }) }),
-        [],
-      ],
-      ReleasedPlayground: () => [
-        evo(model, { state: () => PlaygroundStateIdle() }),
-        [],
-      ],
-      LoadedPlaygroundPreview: ({ previewUrl }) => [
-        evo(model, { state: state => markPreviewLoaded(state, previewUrl) }),
-        [],
-      ],
-      GotFileTabsMessage: ({ message: tabsMessage }) => {
-        const [nextTabs, tabsCommands, maybeOutMessage] =
-          PlaygroundFileTabs.update(model.fileTabs, tabsMessage)
-
-        const nextActiveFilePath = Option.match(maybeOutMessage, {
-          onNone: () => model.activeFilePath,
-          onSome: M.type<Tabs.OutMessage>().pipe(
-            M.tagsExhaustive({
-              Selected: ({ value }) => value,
-            }),
-          ),
-        })
-
-        return [
-          evo(model, {
-            fileTabs: () => nextTabs,
-            activeFilePath: () => nextActiveFilePath,
-          }),
-          Command.mapMessages(tabsCommands, message =>
-            Message.GotFileTabsMessage({ message }),
-          ),
-        ]
-      },
+        commands: flushDirtyPaths(model),
+      }),
+      FailedBootPlayground: ({ reason }) => ({
+        model: evo(model, { state: () => PlaygroundStateFailed({ reason }) }),
+      }),
+      ReleasedPlayground: () => ({
+        model: evo(model, { state: () => PlaygroundStateIdle() }),
+      }),
+      LoadedPlaygroundPreview: ({ previewUrl }) => ({
+        model: evo(model, {
+          state: state => markPreviewLoaded(state, previewUrl),
+        }),
+      }),
+      GotFileTabsMessage: ({ message: tabsMessage }) =>
+        foldPlaygroundFileTabs(model, tabsMessage),
       EditedPlaygroundFile: ({ path, content }) => {
         const isBooted = model.state._tag === 'PlaygroundStateBooted'
-        return [
-          evo(model, {
+        return {
+          model: evo(model, {
             files: Record.set(path, content),
             dirtyPaths: existing =>
               isBooted ? existing : appendDeduped(existing, path),
           }),
-          isBooted ? [WritePlaygroundFile({ path, content })] : [],
-        ]
+          commands: isBooted ? [WritePlaygroundFile({ path, content })] : [],
+        }
       },
-      FailedMountPlaygroundEditor: ({ reason }) => [
-        evo(model, { state: () => PlaygroundStateFailed({ reason }) }),
-        [],
-      ],
-      ScheduledWritePlaygroundFile: () => [
-        evo(model, { lastWriteError: () => Option.none() }),
-        [],
-      ],
-      FailedWritePlaygroundFile: ({ reason }) => [
-        evo(model, { lastWriteError: () => Option.some(reason) }),
-        [],
-      ],
-    }),
-    M.tag('SucceededMountPlaygroundEditor', () => [model, []]),
-    M.exhaustive,
+      FailedMountPlaygroundEditor: ({ reason }) => ({
+        model: evo(model, { state: () => PlaygroundStateFailed({ reason }) }),
+      }),
+      ScheduledWritePlaygroundFile: () => ({
+        model: evo(model, { lastWriteError: () => Option.none() }),
+      }),
+      FailedWritePlaygroundFile: ({ reason }) => ({
+        model: evo(model, { lastWriteError: () => Option.some(reason) }),
+      }),
+      SucceededMountPlaygroundEditor: () => ({ model }),
+    },
   )
 
 // VIEW
@@ -933,6 +901,25 @@ const responsiveEditorView = (model: Model, h: HtmlBuilder<Message>): Html =>
   )
 
 const PlaygroundFileTabs = Tabs.create<string>()
+
+const foldPlaygroundFileTabsOutMessage = M.type<Tabs.OutMessage>().pipe(
+  M.withReturnType<Update.Step<Model, Message>>(),
+  M.tagsExhaustive({
+    Selected:
+      ({ value }) =>
+      model => ({
+        model: evo(model, { activeFilePath: () => value }),
+      }),
+  }),
+)
+
+const foldPlaygroundFileTabs = Update.foldChild({
+  update: PlaygroundFileTabs.update,
+  read: (model: Model) => Option.some(model.fileTabs),
+  write: (model, nextFileTabs) => evo(model, { fileTabs: () => nextFileTabs }),
+  toParentMessage: message => Message.GotFileTabsMessage({ message }),
+  foldOutMessage: foldPlaygroundFileTabsOutMessage,
+})
 
 const editorLayoutView = (model: Model, h: HtmlBuilder<Message>): Html => {
   const paths = sortedPaths(model.files)

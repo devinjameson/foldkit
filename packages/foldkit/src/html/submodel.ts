@@ -166,10 +166,10 @@ type ViewMessageOf<View extends AnySubmodelView> = View extends {
  *    (`(message) => GotEntryMessage({ entryId: entry.id, message })`).
  *
  *  High-level events the parent handles declaratively flow through
- *  each Submodel's `OutMessage`. The parent's `GotChildMessage`
- *  handler unpacks the third tuple element of the child's `update`
- *  return and pattern-matches on `Option<OutMessage>`. See `Menu`,
- *  `Listbox`, etc., for examples. */
+ *  each Submodel's `OutMessage`. Use `Update.foldChild` to run the child
+ *  update, lift its Commands, and match the optional OutMessage without
+ *  unpacking the child result by hand. See `Menu`, `Listbox`, etc., for
+ *  examples. */
 export type SubmodelConfig<
   View extends AnySubmodelView,
   ParentMessage,

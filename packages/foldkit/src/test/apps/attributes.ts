@@ -1,6 +1,7 @@
 import { customElement } from '../../html/index.js'
 import type { Attribute, Html, HtmlBuilder } from '../../html/index.js'
 import { defineMessageUnion } from '../../message/index.js'
+import type * as Update from '../../update/index.js'
 
 // MESSAGE
 
@@ -20,8 +21,8 @@ export type Model = Readonly<{
 // UPDATE
 
 export const update = (model: Model, message: Message) =>
-  Message.match<readonly [Model, ReadonlyArray<never>]>(message, {
-    IgnoredInteraction: () => [model, []],
+  Message.match<Update.Return<Model, Message>>(message, {
+    IgnoredInteraction: () => ({ model }),
   })
 
 // VIEW

@@ -211,17 +211,17 @@ export const init: Runtime.RoutingApplicationInit<Model, Message, Flags> = (
   flags: Flags,
   url: Url,
 ) => {
-  const [initialUiModel, uiCommands] = uiInit(flags.today)
+  const uiInit_ = uiInit(flags.today)
 
-  return [
-    {
+  return {
+    model: {
       route: urlToAppRoute(url),
-      uiModel: initialUiModel,
+      uiModel: uiInit_.model,
     },
-    Command.mapMessages(uiCommands, message =>
+    commands: Command.mapMessages(uiInit_.commands, message =>
       Message.GotUiMessage({ message }),
     ),
-  ]
+  }
 }
 
 // UPDATE
@@ -241,58 +241,57 @@ const foldUi = Update.foldChild({
   toParentMessage: toUiMessage,
 })
 
+const foldMobileMenuDialogOutMessage = M.type<Dialog.OutMessage>().pipe(
+  M.withReturnType<Update.Step<Model, Message>>(),
+  M.tagsExhaustive({
+    Opened: () => model => ({ model }),
+    Closed: () => model => ({ model }),
+  }),
+)
+
+const foldMobileMenuDialogClose = Update.foldChildStep({
+  update: Dialog.close,
+  read: (model: Model) => Option.some(model.uiModel.mobileMenuDialog),
+  write: (model, nextMobileMenuDialog) =>
+    evo(model, {
+      uiModel: evo({ mobileMenuDialog: () => nextMobileMenuDialog }),
+    }),
+  toParentMessage: toMobileMenuDialogMessage,
+  foldOutMessage: foldMobileMenuDialogOutMessage,
+})
+
+type UpdateReturn = Update.Return<Model, Message>
+
 export const update = (model: Model, message: Message) =>
-  Message.match<readonly [Model, ReadonlyArray<Command.Command<Message>>]>(
-    message,
-    {
-      CompletedNavigateInternal: () => [model, []],
-      CompletedLoadExternal: () => [model, []],
+  Message.match<UpdateReturn>(message, {
+    CompletedNavigateInternal: () => ({ model }),
+    CompletedLoadExternal: () => ({ model }),
 
-      ClickedLink: ({ request }) =>
-        M.value(request).pipe(
-          M.tagsExhaustive({
-            Internal: ({
-              url,
-            }): [
-              Model,
-              ReadonlyArray<
-                Command.Command<typeof Message.CompletedNavigateInternal>
-              >,
-            ] => [model, [NavigateInternal({ url: urlToString(url) })]],
-            External: ({
-              href,
-            }): [
-              Model,
-              ReadonlyArray<
-                Command.Command<typeof Message.CompletedLoadExternal>
-              >,
-            ] => [model, [LoadExternal({ href })]],
+    ClickedLink: ({ request }) =>
+      M.value(request).pipe(
+        M.withReturnType<UpdateReturn>(),
+        M.tagsExhaustive({
+          Internal: ({ url }) => ({
+            model,
+            commands: [NavigateInternal({ url: urlToString(url) })],
           }),
-        ),
-
-      ChangedUrl: ({ url }) => {
-        const [nextMobileMenuDialog, mobileMenuDialogCommands] = Dialog.close(
-          model.uiModel.mobileMenuDialog,
-        )
-
-        return [
-          evo(model, {
-            route: () => urlToAppRoute(url),
-            uiModel: uiModel =>
-              evo(uiModel, {
-                mobileMenuDialog: () => nextMobileMenuDialog,
-              }),
+          External: ({ href }) => ({
+            model,
+            commands: [LoadExternal({ href })],
           }),
-          Command.mapMessages(
-            mobileMenuDialogCommands,
-            toMobileMenuDialogMessage,
-          ),
-        ]
-      },
+        }),
+      ),
 
-      GotUiMessage: ({ message }) => foldUi(model, message),
-    },
-  )
+    ChangedUrl: ({ url }) =>
+      Update.combine(model, [
+        stepModel => ({
+          model: evo(stepModel, { route: () => urlToAppRoute(url) }),
+        }),
+        foldMobileMenuDialogClose,
+      ]),
+
+    GotUiMessage: ({ message }) => foldUi(model, message),
+  })
 
 // VIEW
 

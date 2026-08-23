@@ -1,7 +1,8 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Command } from 'foldkit'
+import { Match as M, Option, Schema as S } from 'effect'
+import { Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
@@ -14,11 +15,12 @@ const Model = S.Struct({
   accountDetailsPopover: Popover.Model,
   // ...your other fields
 })
+type Model = typeof Model.Type
 
 // The parent uses contentFocus so focus can move into its nested trigger
 // instead of staying on the panel:
-const init = () => [
-  {
+const init = () => ({
+  model: {
     accountPopover: Popover.init({
       id: 'account-popover',
       contentFocus: true,
@@ -26,44 +28,48 @@ const init = () => [
     accountDetailsPopover: Popover.init({ id: 'account-details-popover' }),
     // ...your other fields
   },
-  [],
-]
+})
 
 // Embed each Popover Message in your parent Message:
 const Message = defineMessageUnion({
   GotAccountPopoverMessage: { message: Popover.Message },
   GotAccountDetailsPopoverMessage: { message: Popover.Message },
 })
+type Message = typeof Message.Type
 
-// Inside your update function's Message.match({...}), delegate each
-// Popover to its own Model field:
-GotAccountPopoverMessage: ({ message }) => {
-  const [nextAccountPopover, commands] = Popover.update(
-    model.accountPopover,
-    message,
-  )
+const foldPopoverOutMessage = M.type<Popover.OutMessage>().pipe(
+  M.withReturnType<Update.Step<Model, Message>>(),
+  M.tagsExhaustive({
+    Opened: () => model => ({ model }),
+    Closed: () => model => ({ model }),
+  }),
+)
 
-  return [
+const foldAccountPopover = Update.foldChild({
+  update: Popover.update,
+  read: (model: Model) => Option.some(model.accountPopover),
+  write: (model, nextAccountPopover) =>
     evo(model, { accountPopover: () => nextAccountPopover }),
-    Command.mapMessages(commands, message =>
-      Message.GotAccountPopoverMessage({ message }),
-    ),
-  ]
-}
+  toParentMessage: message => Message.GotAccountPopoverMessage({ message }),
+  foldOutMessage: foldPopoverOutMessage,
+})
 
-GotAccountDetailsPopoverMessage: ({ message }) => {
-  const [nextAccountDetailsPopover, commands] = Popover.update(
-    model.accountDetailsPopover,
-    message,
-  )
-
-  return [
+const foldAccountDetailsPopover = Update.foldChild({
+  update: Popover.update,
+  read: (model: Model) => Option.some(model.accountDetailsPopover),
+  write: (model, nextAccountDetailsPopover) =>
     evo(model, { accountDetailsPopover: () => nextAccountDetailsPopover }),
-    Command.mapMessages(commands, message =>
-      Message.GotAccountDetailsPopoverMessage({ message }),
-    ),
-  ]
-}
+  toParentMessage: message =>
+    Message.GotAccountDetailsPopoverMessage({ message }),
+  foldOutMessage: foldPopoverOutMessage,
+})
+
+// In the corresponding Message.match handlers, delegate each
+// Popover to its own Model field:
+GotAccountPopoverMessage: ({ message }) => foldAccountPopover(model, message)
+
+GotAccountDetailsPopoverMessage: ({ message }) =>
+  foldAccountDetailsPopover(model, message)
 
 // Inside your view function, render the child Popover inside the parent
 // panel. `focusSelector` points at the child trigger, which Popover derives

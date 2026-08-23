@@ -1,7 +1,9 @@
-import { Schema as S } from 'effect'
+import { Number, Schema as S } from 'effect'
 
 import type { Html, HtmlBuilder } from '../../html/index.js'
 import { defineMessageUnion } from '../../message/index.js'
+import { evo } from '../../struct/index.js'
+import type * as Update from '../../update/index.js'
 
 // MODEL
 
@@ -29,12 +31,13 @@ export const initialModel: Model = {
 // UPDATE
 
 export const update = (model: Model, message: Message) =>
-  Message.match<readonly [Model, ReadonlyArray<never>]>(message, {
-    ClickedContainer: () => [{ ...model, clicks: model.clicks + 1 }, []],
-    DoubleClickedContainer: () => [
-      { ...model, doubleClicks: model.doubleClicks + 1 },
-      [],
-    ],
+  Message.match<Update.Return<Model, Message>>(message, {
+    ClickedContainer: () => ({
+      model: evo(model, { clicks: Number.increment }),
+    }),
+    DoubleClickedContainer: () => ({
+      model: evo(model, { doubleClicks: Number.increment }),
+    }),
   })
 
 // VIEW

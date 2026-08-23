@@ -34,7 +34,7 @@ const { Effect } = await import('effect')
 const error = await Effect.runPromise(
   Effect.flip(
     server.renderToString({
-      init: () => [{}, []],
+      init: () => ({ model: {} }),
       view: () => ({ title: 't', body: null }),
     }),
   ),

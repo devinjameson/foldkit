@@ -1,6 +1,6 @@
 import { Effect, Schema as S } from 'effect'
 import { HttpClient, HttpClientRequest } from 'effect/unstable/http'
-import { Command, Http } from 'foldkit'
+import { Command, Http, type Update } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -35,14 +35,10 @@ const FetchCount = Command.define('FetchCount', {
 })
 
 const update = (model: Model, message: Message) =>
-  Message.match<readonly [Model, ReadonlyArray<Command.Command<Message>>]>(
-    message,
-    {
-      ClickedFetchCount: () => [model, [FetchCount()]],
-      SucceededFetchCount: ({ count }) => [
-        evo(model, { count: () => count }),
-        [],
-      ],
-      FailedFetchCount: () => [model, []],
-    },
-  )
+  Message.match<Update.Return<Model, Message>>(message, {
+    ClickedFetchCount: () => ({ model, commands: [FetchCount()] }),
+    SucceededFetchCount: ({ count }) => ({
+      model: evo(model, { count: () => count }),
+    }),
+    FailedFetchCount: () => ({ model }),
+  })

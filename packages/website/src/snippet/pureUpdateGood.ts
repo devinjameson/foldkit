@@ -1,12 +1,10 @@
 import { Effect, Random } from 'effect'
-import { Command } from 'foldkit'
+import { Command, type Update } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
 import { GRID_SIZE } from './constants'
 import { Message } from './message'
 import type { Model } from './model'
-
-type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
 
 // ✅ Run random work in a Command
 const GenerateApplePosition = Command.define('GenerateApplePosition', {
@@ -19,10 +17,9 @@ const GenerateApplePosition = Command.define('GenerateApplePosition', {
 })
 
 const update = (model: Model, message: Message) =>
-  Message.match<UpdateReturn>(message, {
-    RequestedApple: () => [model, [GenerateApplePosition()]],
-    CompletedGenerateApplePosition: ({ position }) => [
-      evo(model, { apple: () => position }),
-      [],
-    ],
+  Message.match<Update.Return<Model, Message>>(message, {
+    RequestedApple: () => ({ model, commands: [GenerateApplePosition()] }),
+    CompletedGenerateApplePosition: ({ position }) => ({
+      model: evo(model, { apple: () => position }),
+    }),
   })

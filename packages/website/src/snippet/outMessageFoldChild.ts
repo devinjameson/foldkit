@@ -1,5 +1,5 @@
 import { Match as M, Option } from 'effect'
-import { Command, Update } from 'foldkit'
+import { Update } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
 const foldLoginOutMessage = M.type<Login.OutMessage>().pipe(
@@ -7,7 +7,10 @@ const foldLoginOutMessage = M.type<Login.OutMessage>().pipe(
   M.tagsExhaustive({
     SucceededLogin:
       ({ sessionId }) =>
-      () => [LoggedIn({ sessionId }), [SaveSession(sessionId)]],
+      () => ({
+        model: LoggedIn({ sessionId }),
+        commands: [SaveSession(sessionId)],
+      }),
   }),
 )
 
@@ -20,6 +23,6 @@ const foldLogin = Update.foldChild({
 })
 
 export const update = (model: Model, message: Message) =>
-  Message.match(message, {
+  Message.match<Update.Return<Model, Message>>(message, {
     GotLoginMessage: ({ message }) => foldLogin(model, message),
   })

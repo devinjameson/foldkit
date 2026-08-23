@@ -36,7 +36,7 @@ There are no escape hatches:
 
 - **Model** is the single source of truth: an Effect Schema struct
 - **Messages** are facts about what happened: past-tense, never imperative
-- **update** is a pure function: `(model, message) → [nextModel, commands]`
+- **update** is a pure function. It receives the current Model and a Message, then returns an `Update.Return<Model, Message>`
 - **view** is a pure function: `(model, h) → Html`, where `h` is the builder the runtime supplies
 - **Commands** are the only place side effects happen. They return Messages
 
@@ -157,29 +157,39 @@ const Message = defineMessageUnion({
 })
 ```
 
-## The update Return Type
+## Update Return Types
 
 `foldkit/update` names the shape so you don't have to:
 
 ```ts
 import { Update } from 'foldkit'
 
-type UpdateReturn = Update.Return<Model, Message>
-
 const update = (model: Model, message: Message) =>
-  Message.match<UpdateReturn>(message, {
+  Message.match<Update.Return<Model, Message>>(message, {
     // ...
   })
 ```
 
-`Update.ReturnWithOutMessage<Model, Message, OutMessage>` is the Submodel counterpart, adding the `Option<OutMessage>` third element.
+`Update.ReturnWithOutMessage<Model, Message, OutMessage>` is the Submodel counterpart, adding an optional `outMessage` field.
 
-The rule that matters is **name the alias once per file**. Several examples still spell the tuple out by hand (`type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]`) and that reads fine; `Update.Return` is the tidier spelling and the right default for new code. `Message.match<UpdateReturn>` constrains the whole function, so do not repeat `: UpdateReturn` on the update signature. Use `M.withReturnType<UpdateReturn>()` only when an Effect `Match` over some other tagged union inside a handler needs the same constraint.
+Update, init, boot, and component helper producers return `{ model }` when they statically create no Commands. When they compute a Commands collection, they return it directly without checking whether it is empty. Never write the literal `commands: []`.
+
+Inline the return type when the matcher is its only use. Create an `UpdateReturn` alias when another matcher, helper, or exported signature reuses it. `Message.match<UpdateReturn>` constrains the whole update function, so do not repeat `: UpdateReturn` on its signature. Use `M.withReturnType<UpdateReturn>()` only when an Effect `Match` over another tagged union inside a handler needs the same constraint.
+
+Use `Update.Return<Model, Message>` for an update that cannot emit an OutMessage. TypeScript rejects assigning a result that may contain an OutMessage to that type. This prevents a caller from keeping the Model and Commands while losing the OutMessage. An API that accepts `Update.ReturnWithOutMessage<Model, Message, OutMessage>` can still accept a plain result because an update is allowed to emit nothing. A hand-written plain-return type must preserve the `outMessage?: never` field.
+
+When composing another update-shaped result, bind the whole result to a value named after the operation and access its fields through that value. Use `homeInit`, `dialogClose`, or a trailing underscore such as `init_` when the operation name collides with the function. Do not destructure or rename `model`, `commands`, or `outMessage`. Dot access does not prevent someone from ignoring `outMessage`; it keeps the operation and all of its returned fields visible together. Name a child fold's `write` parameter after the next child Model, such as `nextSettings`.
+
+Pass optional Commands directly to APIs that accept them, such as `Command.mapMessages(homeInit.commands, toParentMessage)`. Use `result.commands ?? []` only when the next operation requires a concrete array for spreading, concatenating, execution, or an assertion.
+
+Compose two or more sequential operations over the same Model with `Update.combine`. Call a single operation directly. Name an inline Step parameter `stepModel`; it receives the Model from the preceding Step. Manual unpacking of a child result usually means the site should use `Update.foldChild` or `Update.foldChildStep` instead. Independent child inits still need separate Model assembly because they do not update the same Model in sequence.
+
+Use `Update.withOutMessage(updateReturn, outMessage)` or its data-last form when attaching a known or optional OutMessage to an existing plain return. Include `outMessage` directly when constructing a fresh result with a known value. Add `toParentOutMessage` to a child fold only when it forwards at least one child OutMessage from the current Submodel to its parent. Omit it when every child OutMessage is handled locally. Never add `toParentOutMessage: () => undefined` only to change the fold's return type.
 
 The module also carries two combinators for handlers that fan out after a mutation succeeds:
 
 - `Update.combine(model, [step, step, ...])` sequences update steps over one Model, threading the Model through and collecting the Commands.
-- `Update.refresh({ read, revalidate, write, load })` builds a step that reloads a cache **only when it already holds data**. A cache sitting at `Idle` returns `[model, []]`. That one rule is what makes blanket revalidation safe: a `Succeeded*` handler can list every cache that might be affected without refetching ones nobody has looked at.
+- `Update.refresh({ read, revalidate, write, load })` builds a step that reloads a cache **only when it already holds data**. When a cache is `Idle`, the step returns `{ model }` and does not load it. A `Succeeded*` handler can therefore list every possibly affected cache without fetching caches nobody has opened.
 
 ```ts
 SucceededUpdateNote: ({ note }) =>
@@ -200,7 +210,7 @@ When the initial Model needs data from a side effect (current time, localStorage
 ```ts
 // WRONG: module-level side effect (stale on HMR, non-deterministic, untestable)
 const now = Date.now()
-const init = () => [{ createdAt: now }, []]
+const init = () => ({ model: { createdAt: now } })
 
 // RIGHT: Flags run as an Effect before init, result passed in
 const Flags = S.Struct({
@@ -212,10 +222,9 @@ const flags: Effect.Effect<Flags> = Effect.gen(function* () {
   return Flags({ createdAt: now })
 })
 
-const init: Runtime.ApplicationInit<Model, Message, Flags> = (flags) => [
-  { createdAt: flags.createdAt },
-  [],
-]
+const init: Runtime.ApplicationInit<Model, Message, Flags> = flags => ({
+  model: { createdAt: flags.createdAt },
+})
 ```
 
 For a fresh browser boot, Flags are produced by an `Effect<Flags>`. The runtime executes it once before init and passes the result in. This keeps init pure while still allowing side effects to populate the initial Model. Common uses:
@@ -256,42 +265,46 @@ When a module grows too large, extract a Submodel: a child module with its own M
 
 ### Communication
 
-Parent → Child: the parent calls the child's update with child Messages
-Child → Parent: the child returns an `Option<OutMessage>` as a third tuple element
+Parent → Child: the parent routes child Messages or folds an exported child entry point
+Child → Parent: the child returns a record with an optional `outMessage`
 
 ```ts
-// Child update return type
-type UpdateReturn = Update.ReturnWithOutMessage<Model, Message, OutMessage>
-
 // Child signals to parent
-CreatedRoom: ({ roomId, player }) => [
-  model,
-  [],
-  Option.some(OutMessage.SucceededCreateRoom({ roomId, player })),
-]
-
-// Parent handles OutMessage
-GotChildMessage: ({ message }) => {
-  const [nextChildModel, childCommands, maybeOutMessage] = Child.update(
-    model.child,
-    message,
-  )
-
-  const mappedCommands = Command.mapMessages(childCommands, message =>
-    Message.GotChildMessage({ message }),
-  )
-
-  return Option.match(maybeOutMessage, {
-    onNone: () => [evo(model, { child: () => nextChildModel }), mappedCommands],
-    onSome: outMessage =>
-      Child.OutMessage.match<UpdateReturn>(outMessage, {
-        SucceededCreateRoom: ({ roomId }) => [
-          evo(model, { child: () => nextChildModel }),
-          [...mappedCommands, navigateToRoom(roomId)],
-        ],
-      }),
+const update = (model: Model, message: Message) =>
+  Message.match<
+    Update.ReturnWithOutMessage<Model, Message, OutMessage>
+  >(message, {
+    CreatedRoom: ({ roomId, player }) => ({
+      model,
+      outMessage: OutMessage.SucceededCreateRoom({ roomId, player }),
+    }),
   })
-}
+
+// Parent folds the child update and handles its OutMessage
+const foldChildOutMessage = M.type<Child.OutMessage>().pipe(
+  M.withReturnType<Update.Step<ParentModel, ParentMessage>>(),
+  M.tagsExhaustive({
+    SucceededCreateRoom:
+      ({ roomId }) =>
+      model => ({
+        model,
+        commands: [navigateToRoom(roomId)],
+      }),
+  }),
+)
+
+const foldChild = Update.foldChild({
+  update: Child.update,
+  read: (model: ParentModel) => Option.some(model.child),
+  write: (model, nextChild) => evo(model, { child: () => nextChild }),
+  toParentMessage: message => ParentMessage.GotChildMessage({ message }),
+  foldOutMessage: foldChildOutMessage,
+})
+
+const update = (model: ParentModel, message: ParentMessage) =>
+  ParentMessage.match<Update.Return<ParentModel, ParentMessage>>(message, {
+    GotChildMessage: ({ message }) => foldChild(model, message),
+  })
 ```
 
 ### View Delegation

@@ -73,10 +73,9 @@ export const descriptionId = (id: string): string => `${id}-description`
  *  )
  *
  *  // In update:
- *  ToggledNotifications: ({ isChecked }) => [
- *    evo(model, { notificationsEnabled: () => isChecked }),
- *    [],
- *  ],
+ *  ToggledNotifications: ({ isChecked }) => ({
+ *    model: evo(model, { notificationsEnabled: () => isChecked }),
+ *  }),
  *  ``` */
 export const view = <Message>(
   config: ViewConfig<Message>,

@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Effect, Match as M, Option } from 'effect'
+import { Effect, Match as M, Option, Schema as S } from 'effect'
 import { Calendar, Update } from 'foldkit'
 import type { ChildAttribute, Html, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -32,8 +32,8 @@ const flags = Effect.gen(function* () {
 // In your init function, pass the flags-resolved today into UiCalendar.init.
 // `initialViewDate` seeds the month the calendar opens onto (pass your
 // initial selection to open on it). The parent owns the selection itself:
-const init = (flags: Flags) => [
-  {
+const init = (flags: Flags) => ({
+  model: {
     calendarDemo: UiCalendar.init({
       id: 'calendar-demo',
       today: flags.today,
@@ -42,8 +42,7 @@ const init = (flags: Flags) => [
     maybeSelectedDate: Option.none(),
     // ...your other fields
   },
-  [],
-]
+})
 
 // Embed the Calendar Message in your parent Message for navigation and
 // keyboard routing:
@@ -65,11 +64,13 @@ const foldCalendarOutMessage = M.type<UiCalendar.OutMessage>().pipe(
     // source of truth for the selection.
     SelectedDate:
       ({ date }) =>
-      model => [evo(model, { maybeSelectedDate: () => Option.some(date) }), []],
+      model => ({
+        model: evo(model, { maybeSelectedDate: () => Option.some(date) }),
+      }),
     // The child has emitted `ChangedViewMonth`. In this arm the parent can
     // update its own state or dispatch its own Commands, for example
     // prefetch month data, fire analytics, or trigger a downstream Command.
-    ChangedViewMonth: () => model => [model, []],
+    ChangedViewMonth: () => model => ({ model }),
   }),
 )
 
@@ -86,7 +87,7 @@ const foldCalendar = Update.foldChild({
   foldOutMessage: foldCalendarOutMessage,
 })
 
-// Inside your update function's Message.match({...}), call the fold:
+// In the corresponding Message.match handler, call the fold:
 GotCalendarMessage: ({ message }) => foldCalendar(model, message)
 
 // Class names live at module scope, and each view mode gets its own view

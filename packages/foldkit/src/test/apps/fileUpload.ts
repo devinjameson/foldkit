@@ -3,6 +3,7 @@ import { Schema as S } from 'effect'
 import { File } from '../../file/index.js'
 import type { Html, HtmlBuilder } from '../../html/index.js'
 import { defineMessageUnion } from '../../message/index.js'
+import type * as Update from '../../update/index.js'
 
 // MODEL
 
@@ -23,8 +24,10 @@ export type Message = typeof Message.Type
 // UPDATE
 
 export const update = (model: Model, message: Message) =>
-  Message.match<readonly [Model, ReadonlyArray<never>]>(message, {
-    ReceivedFiles: ({ files }) => [{ ...model, receivedFiles: files }, []],
+  Message.match<Update.Return<Model, Message>>(message, {
+    ReceivedFiles: ({ files }) => ({
+      model: { ...model, receivedFiles: files },
+    }),
   })
 
 // VIEW

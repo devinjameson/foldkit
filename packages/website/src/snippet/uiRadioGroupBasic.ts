@@ -24,14 +24,13 @@ type Model = typeof Model.Type
 
 // In your init function, initialize the RadioGroup Submodel with a unique
 // id and start with nothing selected:
-const init = () => [
-  {
+const init = () => ({
+  model: {
     planRadioGroup: RadioGroup.init({ id: 'plan' }),
     maybePlan: Option.none(),
     // ...your other fields
   },
-  [],
-]
+})
 
 // Embed the RadioGroup Message in your parent Message:
 const Message = defineMessageUnion({
@@ -62,7 +61,7 @@ const foldPlanRadioGroupOutMessage = M.type<RadioGroup.OutMessage<Plan>>().pipe(
   M.tagsExhaustive({
     Selected:
       ({ value }) =>
-      model => [evo(model, { maybePlan: () => Option.some(value) }), []],
+      model => ({ model: evo(model, { maybePlan: () => Option.some(value) }) }),
   }),
 )
 
@@ -78,7 +77,7 @@ const foldPlanRadioGroup = Update.foldChild({
   foldOutMessage: foldPlanRadioGroupOutMessage,
 })
 
-// Inside your update function's Message.match({...}), call the fold:
+// In the corresponding Message.match handler, call the fold:
 GotPlanRadioGroupMessage: ({ message }) => foldPlanRadioGroup(model, message)
 
 // Inside your view function, embed the radio group via h.submodel and pass

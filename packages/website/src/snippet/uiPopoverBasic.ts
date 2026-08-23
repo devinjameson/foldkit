@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Match as M, Option } from 'effect'
+import { Match as M, Option, Schema as S } from 'effect'
 import { Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -16,13 +16,12 @@ const Model = S.Struct({
 })
 
 // In your init function, initialize the Popover Submodel with a unique id:
-const init = () => [
-  {
+const init = () => ({
+  model: {
     popover: Popover.init({ id: 'info' }),
     // ...your other fields
   },
-  [],
-]
+})
 
 // Embed the Popover Message in your parent Message:
 const Message = defineMessageUnion({
@@ -40,11 +39,11 @@ const foldPopoverOutMessage = M.type<Popover.OutMessage>().pipe(
     // The child has emitted `Opened`. In this arm the parent can update its
     // own state or dispatch its own Commands, for example lazy-load panel
     // content, log analytics, or trigger a downstream Command.
-    Opened: () => model => [model, []],
+    Opened: () => model => ({ model }),
     // The child has emitted `Closed`. In this arm the parent can update its
     // own state or dispatch its own Commands, for example persist a draft,
     // clear ephemeral state, or trigger a downstream Command.
-    Closed: () => model => [model, []],
+    Closed: () => model => ({ model }),
   }),
 )
 
@@ -59,7 +58,7 @@ const foldPopover = Update.foldChild({
   foldOutMessage: foldPopoverOutMessage,
 })
 
-// Inside your update function's Message.match({...}), call the fold:
+// In the corresponding Message.match handler, call the fold:
 GotPopoverMessage: ({ message }) => foldPopover(model, message)
 
 // Inside your view function, embed the popover via h.submodel. Give the

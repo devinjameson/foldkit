@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { Effect, Fiber, Schema as S } from 'effect'
+import { type Update } from 'foldkit'
 import { brandViewResult } from 'foldkit/brand'
-import type { Command } from 'foldkit/command'
 import { type Html, inertHtml } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 import { makeElement } from 'foldkit/runtime'
@@ -18,16 +18,15 @@ const Message = defineMessageUnion({
 
 type Message = typeof Message.Type
 
-const init = (): readonly [Model, ReadonlyArray<Command<Message>>] => [
-  { mode: 'Viewing' },
-  [],
-]
+const init = (): Update.Return<Model, Message> => ({
+  model: { mode: 'Viewing' },
+})
 
 const update = (model: Model, message: Message) =>
-  Message.match<readonly [Model, ReadonlyArray<Command<Message>>]>(message, {
+  Message.match<Update.Return<Model, Message>>(message, {
     ClickedToggle: () => {
       const nextMode = model.mode === 'Viewing' ? 'Editing' : 'Viewing'
-      return [{ mode: nextMode }, []]
+      return { model: { mode: nextMode } }
     },
   })
 

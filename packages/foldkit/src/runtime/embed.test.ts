@@ -8,6 +8,7 @@ import * as Mount from '../mount/index.js'
 import * as Port from '../port/index.js'
 import { evo } from '../struct/index.js'
 import * as Subscription from '../subscription/subscription.js'
+import type * as Update from '../update/index.js'
 import { embed, makeApplication, makeElement } from './runtime.js'
 
 const Message = defineMessageUnion({
@@ -38,18 +39,19 @@ const ReportCount = Command.define('ReportCount', {
     ),
 })
 
-type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
-
 const update = (model: Model, message: Message) =>
-  Message.match<UpdateReturn>(message, {
-    ChangedStep: ({ step }) => [evo(model, { step: () => step }), []],
+  Message.match<Update.Return<Model, Message>>(message, {
+    ChangedStep: ({ step }) => ({ model: evo(model, { step: () => step }) }),
     ClickedIncrement: () => {
       const count = model.count + model.step
-      return [evo(model, { count: () => count }), [ReportCount({ count })]]
+      return {
+        model: evo(model, { count: () => count }),
+        commands: [ReportCount({ count })],
+      }
     },
-    CompletedReportCount: () => [model, []],
-    CompletedTrackHost: () => [model, []],
-    Ticked: () => [model, []],
+    CompletedReportCount: () => ({ model }),
+    CompletedTrackHost: () => ({ model }),
+    Ticked: () => ({ model }),
   })
 
 let isTickStreamActive = false
@@ -117,7 +119,7 @@ const makeWidget = (
 ) =>
   makeElement({
     Model,
-    init: () => [{ count: 0, step: 1 }, initCommands],
+    init: () => ({ model: { count: 0, step: 1 }, commands: initCommands }),
     update,
     view,
     subscriptions,
@@ -284,7 +286,7 @@ describe('embed', () => {
         Model,
         Flags,
         flags: Effect.succeed({ initialCount: 41 }),
-        init: flags => [{ count: flags.initialCount, step: 1 }, []],
+        init: flags => ({ model: { count: flags.initialCount, step: 1 } }),
         update,
         view,
         subscriptions,
@@ -369,7 +371,7 @@ describe('embed', () => {
     const handle = embed(
       makeApplication({
         Model,
-        init: () => [{ count: 0, step: 1 }, []],
+        init: () => ({ model: { count: 0, step: 1 } }),
         update,
         view: model => ({ title: 'Widget', body: view(model) }),
         subscriptions,

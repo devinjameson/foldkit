@@ -183,8 +183,8 @@ describe('update', () => {
         Message.SelectedEdition({ isShippingRequired: index % 2 === 0 }),
       ),
       Array.reduce(initialModel, (model, message) => {
-        const [nextModel] = update(model, message)
-        return nextModel
+        const messageUpdate = update(model, message)
+        return messageUpdate.model
       }),
     )
 

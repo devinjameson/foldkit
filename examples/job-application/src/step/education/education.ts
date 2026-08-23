@@ -54,20 +54,17 @@ export const GenerateEntryId = Command.define('GenerateEntryId', {
 
 // UPDATE
 
-type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
-
 const foldEntryOutMessage: (
   entryId: string,
 ) => (outMessage: Entry.OutMessage) => Update.Step<Model, Message> = entryId =>
   M.type<Entry.OutMessage>().pipe(
     M.withReturnType<Update.Step<Model, Message>>(),
     M.tagsExhaustive({
-      Removed: () => model => [
-        evo(model, {
+      Removed: () => model => ({
+        model: evo(model, {
           entries: Array.filter(entry => entry.id !== entryId),
         }),
-        [],
-      ],
+      }),
     }),
   )
 
@@ -85,24 +82,22 @@ const foldEntry = (entryId: string) =>
   })
 
 export const update = (model: Model, message: Message) =>
-  Message.match<UpdateReturn>(message, {
-    ClickedAddEntry: () => [model, [GenerateEntryId()]],
+  Message.match<Update.Return<Model, Message>>(message, {
+    ClickedAddEntry: () => ({ model, commands: [GenerateEntryId()] }),
 
-    SucceededGenerateEntryId: ({ entryId }) => [
-      evo(model, {
+    SucceededGenerateEntryId: ({ entryId }) => ({
+      model: evo(model, {
         entries: Array.append(Entry.init(entryId)),
       }),
-      [],
-    ],
+    }),
 
-    FailedGenerateEntryId: () => [model, []],
+    FailedGenerateEntryId: () => ({ model }),
 
-    RemovedEntry: ({ entryId }) => [
-      evo(model, {
+    RemovedEntry: ({ entryId }) => ({
+      model: evo(model, {
         entries: Array.filter(entry => entry.id !== entryId),
       }),
-      [],
-    ],
+    }),
 
     GotEntryMessage: ({ entryId, message }) =>
       foldEntry(entryId)(model, message),

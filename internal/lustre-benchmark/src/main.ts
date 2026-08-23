@@ -1,5 +1,5 @@
 import { Array, Match as M, Option, Schema as S, String } from 'effect'
-import { Command, Runtime } from 'foldkit'
+import { Runtime, type Update } from 'foldkit'
 import { Document, Html, type HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 import { ts } from 'foldkit/schema'
@@ -61,23 +61,21 @@ export type Message = typeof Message.Type
 
 // INIT
 
-export const init: Runtime.ApplicationInit<Model, Message> = () => [
-  {
+export const init: Runtime.ApplicationInit<Model, Message> = () => ({
+  model: {
     todos: [],
     newTodoText: '',
     filter: 'All',
     editing: NotEditing(),
     nextTodoId: 0,
   },
-  [],
-]
+})
 
 // UPDATE
 
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] =>
+type UpdateReturn = Update.Return<Model, Message>
+
+export const update = (model: Model, message: Message): UpdateReturn =>
   /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
   updateHandlers[message._tag](model, message as never)
 
@@ -85,40 +83,36 @@ export const update = (
 // matcher is constructed per call; done per Message it is measurable on the
 // benchmark, so update dispatches through a handler record built once. The
 // mapped type keeps the record exhaustive over the Message union.
-type UpdateResult = readonly [Model, ReadonlyArray<Command.Command<Message>>]
-
 type UpdateHandlers = {
   readonly [Tag in Message['_tag']]: (
     model: Model,
     message: Extract<Message, Readonly<{ _tag: Tag }>>,
-  ) => UpdateResult
+  ) => UpdateReturn
 }
 
 const updateHandlers: UpdateHandlers = {
-  UpdatedNewTodo: (model, { text }) => [
-    evo(model, {
+  UpdatedNewTodo: (model, { text }) => ({
+    model: evo(model, {
       newTodoText: () => text,
     }),
-    [],
-  ],
+  }),
 
   UpdatedEditingTodo: (model, { text }) => {
     if (model.editing._tag === 'NotEditing') {
-      return [model, []]
+      return { model }
     }
     const editingId = model.editing.id
-    return [
-      evo(model, {
+    return {
+      model: evo(model, {
         editing: () => Editing({ id: editingId, text }),
       }),
-      [],
-    ]
+    }
   },
 
   AddedTodo: model => {
     const text = String.trim(model.newTodoText)
     if (String.isEmpty(text)) {
-      return [model, []]
+      return { model }
     }
 
     const newTodo: Todo = {
@@ -127,25 +121,23 @@ const updateHandlers: UpdateHandlers = {
       completed: false,
     }
 
-    return [
-      evo(model, {
+    return {
+      model: evo(model, {
         todos: () => [...model.todos, newTodo],
         newTodoText: () => '',
         nextTodoId: nextTodoId => nextTodoId + 1,
       }),
-      [],
-    ]
+    }
   },
 
-  DeletedTodo: (model, { id }) => [
-    evo(model, {
+  DeletedTodo: (model, { id }) => ({
+    model: evo(model, {
       todos: () => Array.filter(model.todos, todo => todo.id !== id),
     }),
-    [],
-  ],
+  }),
 
-  ToggledTodo: (model, { id }) => [
-    evo(model, {
+  ToggledTodo: (model, { id }) => ({
+    model: evo(model, {
       todos: () =>
         Array.map(model.todos, todo =>
           todo.id === id
@@ -153,13 +145,12 @@ const updateHandlers: UpdateHandlers = {
             : todo,
         ),
     }),
-    [],
-  ],
+  }),
 
   StartedEditing: (model, { id }) => {
     const maybeTodo = Array.findFirst(model.todos, todo => todo.id === id)
-    return [
-      evo(model, {
+    return {
+      model: evo(model, {
         editing: () =>
           Editing({
             id,
@@ -169,49 +160,45 @@ const updateHandlers: UpdateHandlers = {
             }),
           }),
       }),
-      [],
-    ]
+    }
   },
 
   SavedEdit: model => {
     if (model.editing._tag === 'NotEditing') {
-      return [model, []]
+      return { model }
     }
 
     const editingId = model.editing.id
     const text = String.trim(model.editing.text)
     if (String.isEmpty(text)) {
-      return [
-        evo(model, {
+      return {
+        model: evo(model, {
           editing: () => NotEditing(),
         }),
-        [],
-      ]
+      }
     }
 
-    return [
-      evo(model, {
+    return {
+      model: evo(model, {
         todos: () =>
           Array.map(model.todos, todo =>
             todo.id === editingId ? evo(todo, { text: () => text }) : todo,
           ),
         editing: () => NotEditing(),
       }),
-      [],
-    ]
+    }
   },
 
-  CancelledEdit: model => [
-    evo(model, {
+  CancelledEdit: model => ({
+    model: evo(model, {
       editing: () => NotEditing(),
     }),
-    [],
-  ],
+  }),
 
   ToggledAll: model => {
     const allCompleted = Array.every(model.todos, todo => todo.completed)
-    return [
-      evo(model, {
+    return {
+      model: evo(model, {
         todos: () =>
           Array.map(model.todos, todo =>
             evo(todo, {
@@ -219,23 +206,20 @@ const updateHandlers: UpdateHandlers = {
             }),
           ),
       }),
-      [],
-    ]
+    }
   },
 
-  ClearedCompleted: model => [
-    evo(model, {
+  ClearedCompleted: model => ({
+    model: evo(model, {
       todos: () => Array.filter(model.todos, todo => !todo.completed),
     }),
-    [],
-  ],
+  }),
 
-  SelectedFilter: (model, { filter }) => [
-    evo(model, {
+  SelectedFilter: (model, { filter }) => ({
+    model: evo(model, {
       filter: () => filter,
     }),
-    [],
-  ],
+  }),
 }
 
 // VIEW

@@ -46,17 +46,25 @@ export const runOxlint = ({
   cwd,
   configPath,
   target,
+  fix = false,
 }: Readonly<{
   oxlintBin: string
   cwd: string
   configPath: string
   target: string
+  fix?: boolean
 }>): ReadonlyArray<LintDiagnostic> => {
-  const result = spawnSync(
-    process.execPath,
-    [oxlintBin, '--format=json', '--config', configPath, target],
-    { cwd, encoding: 'utf8' },
-  )
+  const args = [
+    '--format=json',
+    ...(fix ? ['--fix'] : []),
+    '--config',
+    configPath,
+    target,
+  ]
+  const result = spawnSync(process.execPath, [oxlintBin, ...args], {
+    cwd,
+    encoding: 'utf8',
+  })
 
   if (result.error !== undefined) {
     throw result.error

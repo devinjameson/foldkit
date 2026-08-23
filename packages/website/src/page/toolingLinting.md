@@ -66,6 +66,16 @@ Rejects Command structs assembled by hand. Command.define attaches the identity,
 
 ## Model Updates {#model-update-rules}
 
+### foldkit/no-empty-commands-array {#no-empty-commands-array}
+
+Catches a literal empty array assigned to `commands`. An ordinary update, init, boot, or component helper omits `commands` when it statically has no Commands. Computed collections remain valid, as does `commands: optionalCommands ?? []` where the next operation requires an array.
+
+The rule can remove the property when doing so will not disturb comments, spreads, or duplicate `commands` keys. It still reports the unsafe cases without a fix.
+
+This is a syntax-only rule. It flags any literal property named `commands`, even when the object is unrelated to an update result. If `commands: []` is genuine domain data, suppress the rule on that property with `// oxlint-disable-next-line foldkit/no-empty-commands-array`.
+
+::Snippet{name="lintNoEmptyCommandsArray" label="foldkit/no-empty-commands-array example"}
+
 ### foldkit/no-spread-in-evo {#no-spread-in-evo}
 
 Rejects object spreads inside an evo updater. Evolve nested fields with a nested evo instead.

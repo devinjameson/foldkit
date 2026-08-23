@@ -91,6 +91,8 @@ const mapMessagesUnderHoodDemo = (
                         'Two small layers compose into ',
                         inlineCode('mapMessages'),
                         '. ',
+                        inlineCode('commands ?? []'),
+                        ' turns an omitted Commands field into a concrete empty array, then ',
                         inlineCode('Array.map'),
                         ' iterates; ',
                         inlineCode('mapMessage'),

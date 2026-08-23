@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Effect, Match as M, Option } from 'effect'
+import { Match as M, Option, Schema as S } from 'effect'
 import { Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -16,13 +16,12 @@ const Model = S.Struct({
 })
 
 // In your init function, initialize the Menu Submodel with a unique id:
-const init = () => [
-  {
+const init = () => ({
+  model: {
     menu: Menu.init({ id: 'actions' }),
     // ...your other fields
   },
-  [],
-]
+})
 
 // Embed the Menu Message in your parent Message:
 const Message = defineMessageUnion({
@@ -49,7 +48,7 @@ const foldMenuOutMessage = M.type<Menu.OutMessage<Action>>().pipe(
     // The child has emitted `Selected`. In this arm the parent can update
     // its own state or dispatch its own Commands, for example transition a
     // page, mutate domain state, or trigger a downstream Command.
-    Selected: () => model => [model, []],
+    Selected: () => model => ({ model }),
   }),
 )
 
@@ -64,7 +63,7 @@ const foldMenu = Update.foldChild({
   foldOutMessage: foldMenuOutMessage,
 })
 
-// Inside your update function's Message.match({...}), call the fold:
+// In the corresponding Message.match handler, call the fold:
 GotMenuMessage: ({ message }) => foldMenu(model, message)
 
 // Inside your view function, render the menu via the factory's view. The

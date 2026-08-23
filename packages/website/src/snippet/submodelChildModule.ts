@@ -1,6 +1,6 @@
 // page/settings.ts
 import { Schema as S } from 'effect'
-import { Command } from 'foldkit'
+import { type Update } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -33,17 +33,14 @@ export type Message = typeof Message.Type
 // UPDATE
 
 export const update = (model: Model, message: Message) =>
-  Message.match<readonly [Model, ReadonlyArray<Command.Command<Message>>]>(
-    message,
-    {
-      ChangedTheme: ({ theme }) => [evo(model, { theme: () => theme }), []],
-      ChangedFontSize: ({ fontSize }) => [
-        evo(model, { fontSize: () => fontSize }),
-        [],
-      ],
-      ToggledNotifications: () => [
-        evo(model, { notificationsEnabled: enabled => !enabled }),
-        [],
-      ],
-    },
-  )
+  Message.match<Update.Return<Model, Message>>(message, {
+    ChangedTheme: ({ theme }) => ({
+      model: evo(model, { theme: () => theme }),
+    }),
+    ChangedFontSize: ({ fontSize }) => ({
+      model: evo(model, { fontSize: () => fontSize }),
+    }),
+    ToggledNotifications: () => ({
+      model: evo(model, { notificationsEnabled: enabled => !enabled }),
+    }),
+  })

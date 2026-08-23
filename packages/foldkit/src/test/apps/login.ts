@@ -3,6 +3,8 @@ import { Effect, Match as M, Schema as S } from 'effect'
 import * as Command from '../../command/index.js'
 import type { Html, HtmlBuilder } from '../../html/index.js'
 import { defineMessageUnion } from '../../message/index.js'
+import { evo } from '../../struct/index.js'
+import type * as Update from '../../update/index.js'
 
 // MODEL
 
@@ -51,29 +53,35 @@ export const initialModel: Model = {
 // UPDATE
 
 export const update = (model: Model, message: Message) =>
-  Message.match<readonly [Model, ReadonlyArray<Command.Command<Message>>]>(
-    message,
-    {
-      UpdatedEmail: ({ value }) => [{ ...model, email: value }, []],
-      UpdatedPassword: ({ value }) => [{ ...model, password: value }, []],
-      SubmittedLogin: () => [
-        { ...model, status: 'Submitting' },
-        [Authenticate()],
-      ],
-      SucceededAuthenticate: ({ username }) => [
-        { ...model, status: 'LoggedIn', username },
-        [],
-      ],
-      FailedAuthenticate: ({ error }) => [
-        { ...model, status: 'Error', error },
-        [],
-      ],
-      ClickedLogout: () => [
-        { ...model, status: 'Idle', username: '', email: '', password: '' },
-        [],
-      ],
-    },
-  )
+  Message.match<Update.Return<Model, Message>>(message, {
+    UpdatedEmail: ({ value }) => ({
+      model: evo(model, { email: () => value }),
+    }),
+    UpdatedPassword: ({ value }) => ({
+      model: evo(model, { password: () => value }),
+    }),
+    SubmittedLogin: () => ({
+      model: evo(model, { status: () => 'Submitting' }),
+      commands: [Authenticate()],
+    }),
+    SucceededAuthenticate: ({ username }) => ({
+      model: evo(model, {
+        status: () => 'LoggedIn',
+        username: () => username,
+      }),
+    }),
+    FailedAuthenticate: ({ error }) => ({
+      model: evo(model, { status: () => 'Error', error: () => error }),
+    }),
+    ClickedLogout: () => ({
+      model: evo(model, {
+        status: () => 'Idle',
+        username: () => '',
+        email: () => '',
+        password: () => '',
+      }),
+    }),
+  })
 
 // VIEW
 

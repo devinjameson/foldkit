@@ -4,6 +4,7 @@ import * as Command from '../../command/index.js'
 import type { Html, HtmlBuilder } from '../../html/index.js'
 import { defineMessageUnion } from '../../message/index.js'
 import { evo } from '../../struct/index.js'
+import type * as Update from '../../update/index.js'
 
 // MODEL
 
@@ -34,13 +35,14 @@ export const initialModel: Model = { commits: 0 }
 
 // UPDATE
 
-type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
-
 export const update = (model: Model, message: Message) =>
-  Message.match<UpdateReturn>(message, {
-    Committed: () => [evo(model, { commits: Number.increment }), []],
-    Reset: () => [evo(model, { commits: () => 0 }), [RecordReset()]],
-    CompletedRecordReset: () => [model, []],
+  Message.match<Update.Return<Model, Message>>(message, {
+    Committed: () => ({ model: evo(model, { commits: Number.increment }) }),
+    Reset: () => ({
+      model: evo(model, { commits: () => 0 }),
+      commands: [RecordReset()],
+    }),
+    CompletedRecordReset: () => ({ model }),
   })
 
 // VIEW

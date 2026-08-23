@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Array, Match as M, Option } from 'effect'
+import { Array, Match as M, Option, Schema as S } from 'effect'
 import { Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -25,14 +25,13 @@ const Model = S.Struct({
 })
 
 // In your init function, initialize the Listbox Submodel with a unique id:
-const init = () => [
-  {
+const init = () => ({
+  model: {
     selectedPeople: [],
     listboxMulti: Listbox.Multi.init({ id: 'people' }),
     // ...your other fields
   },
-  [],
-]
+})
 
 // Wrap Listbox's Messages so they can flow through your update:
 const Message = defineMessageUnion({
@@ -49,15 +48,14 @@ const foldListboxMultiOutMessage = M.type<Listbox.OutMessage<Person>>().pipe(
   M.tagsExhaustive({
     Selected:
       ({ value }) =>
-      model => [
-        evo(model, {
+      model => ({
+        model: evo(model, {
           selectedPeople: () =>
             Array.contains(model.selectedPeople, value)
               ? Array.filter(model.selectedPeople, person => person !== value)
               : Array.append(model.selectedPeople, value),
         }),
-        [],
-      ],
+      }),
   }),
 )
 
@@ -74,7 +72,7 @@ const foldListboxMulti = Update.foldChild({
   foldOutMessage: foldListboxMultiOutMessage,
 })
 
-// Inside your update function's Message.match({...}), call the fold:
+// In the corresponding Message.match handler, call the fold:
 GotListboxMultiMessage: ({ message }) => foldListboxMulti(model, message)
 
 const people: ReadonlyArray<Person> = [

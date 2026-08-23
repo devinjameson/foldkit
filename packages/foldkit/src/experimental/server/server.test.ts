@@ -8,6 +8,7 @@ import type { Document } from '../../html/index.js'
 import type { Html } from '../../html/index.js'
 import { __htmlBuilder, customElement } from '../../html/index.js'
 import type { RoutingApplicationConfigWithFlags } from '../../runtime/runtime.js'
+import type * as Update from '../../update/index.js'
 import type { Url } from '../../url/index.js'
 import type { VNode } from '../../vdom.js'
 import {
@@ -22,6 +23,8 @@ const h = __htmlBuilder<never>()
 // case here supplies through this wrapper so each test keeps exercising what it
 // was written for. The contract itself is covered by its own cases below.
 const BUILD_ID = 'test-build-id'
+
+type InitReturn<Model> = Update.Return<Model, never>
 
 /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
 const renderToString = (config: any, options?: any) =>
@@ -56,10 +59,9 @@ const view = (model: Model): Document => ({
 const routingConfig = {
   Flags,
   routing: {},
-  init: (flags: Flags, url: Url): readonly [Model, ReadonlyArray<never>] => [
-    Model.make({ theme: flags.theme, pathname: url.pathname }),
-    [],
-  ],
+  init: (flags: Flags, url: Url): InitReturn<Model> => ({
+    model: Model.make({ theme: flags.theme, pathname: url.pathname }),
+  }),
   view,
 }
 
@@ -137,7 +139,7 @@ describe('renderToString', () => {
       ]) {
         const error = yield* Effect.flip(
           renderToString({
-            init: (): readonly [null, ReadonlyArray<never>] => [null, []],
+            init: (): InitReturn<null> => ({ model: null }),
             view: () => ({
               title: 'Reserved marker',
               body: h.div([h.Attribute(marker, 'authored')]),
@@ -164,7 +166,7 @@ describe('renderToString', () => {
       ]) {
         const error = yield* Effect.flip(
           renderToString({
-            init: (): readonly [null, ReadonlyArray<never>] => [null, []],
+            init: (): InitReturn<null> => ({ model: null }),
             view: () => ({
               title: 'Reserved marker',
               body: h.div([h.InnerHTML(fragment)]),
@@ -181,7 +183,7 @@ describe('renderToString', () => {
     Effect.gen(function* () {
       const content = '<div data-foldkit-app="text-only"></div>'
       const rendered = yield* renderToString({
-        init: (): readonly [null, ReadonlyArray<never>] => [null, []],
+        init: (): InitReturn<null> => ({ model: null }),
         view: () => ({
           title: 'Raw text context',
           body: customElement<never>()('SCRIPT')([
@@ -268,10 +270,9 @@ describe('renderToString', () => {
     Effect.gen(function* () {
       const rendered = yield* renderToString(
         {
-          init: (): readonly [Model, ReadonlyArray<never>] => [
-            Model.make({ theme: 'plain', pathname: '/' }),
-            [],
-          ],
+          init: (): InitReturn<Model> => ({
+            model: Model.make({ theme: 'plain', pathname: '/' }),
+          }),
           view,
         },
         { runtimeId: 'root' },
@@ -283,10 +284,9 @@ describe('renderToString', () => {
   )
 
   const configWithoutFlags = {
-    init: (): readonly [Model, ReadonlyArray<never>] => [
-      Model.make({ theme: 'plain', pathname: '/' }),
-      [],
-    ],
+    init: (): InitReturn<Model> => ({
+      model: Model.make({ theme: 'plain', pathname: '/' }),
+    }),
     view,
   }
 
@@ -354,10 +354,9 @@ describe('renderToString', () => {
       // build id to protect.
       const rendered = yield* renderToStringWithOptions(
         {
-          init: (): readonly [Model, ReadonlyArray<never>] => [
-            Model.make({ theme: 'plain', pathname: '/' }),
-            [],
-          ],
+          init: (): InitReturn<Model> => ({
+            model: Model.make({ theme: 'plain', pathname: '/' }),
+          }),
           view,
         },
         { isHydratable: false },
@@ -372,10 +371,9 @@ describe('renderToString', () => {
     Effect.gen(function* () {
       const rendered = yield* renderToStringWithOptions(
         {
-          init: (): readonly [Model, ReadonlyArray<never>] => [
-            Model.make({ theme: 'plain', pathname: '/' }),
-            [],
-          ],
+          init: (): InitReturn<Model> => ({
+            model: Model.make({ theme: 'plain', pathname: '/' }),
+          }),
           view,
         },
         { buildId: 'release-2026-08-17' },
@@ -390,10 +388,9 @@ describe('renderToString', () => {
       const error = yield* Effect.flip(
         renderToString(
           {
-            init: (): readonly [Model, ReadonlyArray<never>] => [
-              Model.make({ theme: 'plain', pathname: '/' }),
-              [],
-            ],
+            init: (): InitReturn<Model> => ({
+              model: Model.make({ theme: 'plain', pathname: '/' }),
+            }),
             view,
           },
           { runtimeId: '' },
@@ -455,10 +452,9 @@ describe('renderToString', () => {
       for (const { body, rootKind } of roots) {
         const error = yield* Effect.flip(
           renderToString({
-            init: (): readonly [Model, ReadonlyArray<never>] => [
-              Model.make({ theme: 'plain', pathname: '/' }),
-              [],
-            ],
+            init: (): InitReturn<Model> => ({
+              model: Model.make({ theme: 'plain', pathname: '/' }),
+            }),
             view: () => ({ title: rootKind, body }),
           }),
         )
@@ -475,10 +471,9 @@ describe('renderToString', () => {
     Effect.gen(function* () {
       const error = yield* Effect.flip(
         renderToString({
-          init: (): readonly [Model, ReadonlyArray<never>] => [
-            Model.make({ theme: 'plain', pathname: '/' }),
-            [],
-          ],
+          init: (): InitReturn<Model> => ({
+            model: Model.make({ theme: 'plain', pathname: '/' }),
+          }),
           view: () => ({ title: 'Empty', body: null }),
         }),
       )
@@ -494,10 +489,9 @@ describe('renderToString', () => {
     Effect.gen(function* () {
       const error = yield* Effect.flip(
         renderToString({
-          init: (): readonly [Model, ReadonlyArray<never>] => [
-            Model.make({ theme: 'plain', pathname: '/' }),
-            [],
-          ],
+          init: (): InitReturn<Model> => ({
+            model: Model.make({ theme: 'plain', pathname: '/' }),
+          }),
           view: () => ({
             title: 'Unsafe',
             body: h.script([], ['</script><script>alert(1)</script>']),
@@ -524,10 +518,9 @@ describe('renderToString', () => {
     Effect.gen(function* () {
       const error = yield* Effect.flip(
         renderToString({
-          init: (): readonly [Model, ReadonlyArray<never>] => [
-            Model.make({ theme: 'plain', pathname: '/' }),
-            [],
-          ],
+          init: (): InitReturn<Model> => ({
+            model: Model.make({ theme: 'plain', pathname: '/' }),
+          }),
           view: () => ({ title: 'Escapes', body }),
         }),
       )
@@ -538,10 +531,9 @@ describe('renderToString', () => {
   const rendersHydratable = (body: Document['body'], contains: string) =>
     Effect.gen(function* () {
       const rendered = yield* renderToString({
-        init: (): readonly [Model, ReadonlyArray<never>] => [
-          Model.make({ theme: 'plain', pathname: '/' }),
-          [],
-        ],
+        init: (): InitReturn<Model> => ({
+          model: Model.make({ theme: 'plain', pathname: '/' }),
+        }),
         view: () => ({ title: 'Renders', body }),
       })
 
@@ -596,10 +588,9 @@ describe('renderToString', () => {
   it.effect('renders an element whose only text child is empty', () =>
     Effect.gen(function* () {
       const rendered = yield* renderToString({
-        init: (): readonly [Model, ReadonlyArray<never>] => [
-          Model.make({ theme: 'plain', pathname: '/' }),
-          [],
-        ],
+        init: (): InitReturn<Model> => ({
+          model: Model.make({ theme: 'plain', pathname: '/' }),
+        }),
         view: () => ({
           title: 'Empty text',
           body: h.div([], [h.span([], ['']), h.span([], ['', 'kept', ''])]),
@@ -613,10 +604,9 @@ describe('renderToString', () => {
   it.effect('renders a table with an explicit tbody unchanged', () =>
     Effect.gen(function* () {
       const rendered = yield* renderToString({
-        init: (): readonly [Model, ReadonlyArray<never>] => [
-          Model.make({ theme: 'plain', pathname: '/' }),
-          [],
-        ],
+        init: (): InitReturn<Model> => ({
+          model: Model.make({ theme: 'plain', pathname: '/' }),
+        }),
         view: () => ({
           title: 'Table',
           body: h.table([], [h.tbody([], [h.tr([], [h.td([], ['cell'])])])]),
@@ -681,10 +671,9 @@ describe('renderToString', () => {
   it.effect('renders a valid svg root that parses back to one element', () =>
     Effect.gen(function* () {
       const rendered = yield* renderToString({
-        init: (): readonly [Model, ReadonlyArray<never>] => [
-          Model.make({ theme: 'plain', pathname: '/' }),
-          [],
-        ],
+        init: (): InitReturn<Model> => ({
+          model: Model.make({ theme: 'plain', pathname: '/' }),
+        }),
         view: () => ({
           title: 'Svg',
           body: h.svg([], [h.circle([])]),
@@ -711,10 +700,9 @@ describe('renderToString', () => {
       ]) {
         const error = yield* Effect.flip(
           renderToString({
-            init: (): readonly [Model, ReadonlyArray<never>] => [
-              Model.make({ theme: 'plain', pathname: '/' }),
-              [],
-            ],
+            init: (): InitReturn<Model> => ({
+              model: Model.make({ theme: 'plain', pathname: '/' }),
+            }),
             view: () => ({ title: 'SVG case', body }),
           }),
         )
@@ -737,10 +725,9 @@ describe('renderToString', () => {
       }
       const error = yield* Effect.flip(
         renderToString({
-          init: (): readonly [Model, ReadonlyArray<never>] => [
-            Model.make({ theme: 'plain', pathname: '/' }),
-            [],
-          ],
+          init: (): InitReturn<Model> => ({
+            model: Model.make({ theme: 'plain', pathname: '/' }),
+          }),
           view: () => ({ title: 'SVG root case', body }),
         }),
       )
@@ -753,10 +740,9 @@ describe('renderToString', () => {
   it.effect('renders a math root with MathML-namespaced descendants', () =>
     Effect.gen(function* () {
       const rendered = yield* renderToString({
-        init: (): readonly [Model, ReadonlyArray<never>] => [
-          Model.make({ theme: 'plain', pathname: '/' }),
-          [],
-        ],
+        init: (): InitReturn<Model> => ({
+          model: Model.make({ theme: 'plain', pathname: '/' }),
+        }),
         view: () => ({
           title: 'Math',
           body: h.math([], [h.mrow([], [h.mi([], ['x']), h.mo([], ['='])])]),
@@ -773,10 +759,9 @@ describe('renderToString', () => {
       const body = h.math([], [customElement<never>()('MROW')([])])
       const error = yield* Effect.flip(
         renderToString({
-          init: (): readonly [Model, ReadonlyArray<never>] => [
-            Model.make({ theme: 'plain', pathname: '/' }),
-            [],
-          ],
+          init: (): InitReturn<Model> => ({
+            model: Model.make({ theme: 'plain', pathname: '/' }),
+          }),
           view: () => ({ title: 'MathML case', body }),
         }),
       )
@@ -789,10 +774,9 @@ describe('renderToString', () => {
   it.effect('keeps mglyph in MathML inside a text integration point', () =>
     Effect.gen(function* () {
       const rendered = yield* renderToString({
-        init: (): readonly [Model, ReadonlyArray<never>] => [
-          Model.make({ theme: 'plain', pathname: '/' }),
-          [],
-        ],
+        init: (): InitReturn<Model> => ({
+          model: Model.make({ theme: 'plain', pathname: '/' }),
+        }),
         view: () => ({
           title: 'Math',
           body: h.math([], [h.mi([], [h.mglyph([])])]),
@@ -806,10 +790,9 @@ describe('renderToString', () => {
   it.effect('treats annotation-xml with an HTML encoding as HTML content', () =>
     Effect.gen(function* () {
       const rendered = yield* renderToString({
-        init: (): readonly [Model, ReadonlyArray<never>] => [
-          Model.make({ theme: 'plain', pathname: '/' }),
-          [],
-        ],
+        init: (): InitReturn<Model> => ({
+          model: Model.make({ theme: 'plain', pathname: '/' }),
+        }),
         view: () => ({
           title: 'Math',
           body: h.math(
@@ -833,10 +816,9 @@ describe('renderToString', () => {
   it.effect('matches the annotation-xml encoding case-insensitively', () =>
     Effect.gen(function* () {
       const rendered = yield* renderToString({
-        init: (): readonly [Model, ReadonlyArray<never>] => [
-          Model.make({ theme: 'plain', pathname: '/' }),
-          [],
-        ],
+        init: (): InitReturn<Model> => ({
+          model: Model.make({ theme: 'plain', pathname: '/' }),
+        }),
         view: () => ({
           title: 'Math',
           body: h.math(
@@ -859,10 +841,9 @@ describe('renderToString', () => {
     Effect.gen(function* () {
       const rendered = yield* renderToString(
         {
-          init: (): readonly [Model, ReadonlyArray<never>] => [
-            Model.make({ theme: 'plain', pathname: '/' }),
-            [],
-          ],
+          init: (): InitReturn<Model> => ({
+            model: Model.make({ theme: 'plain', pathname: '/' }),
+          }),
           view: () => ({ title: 'Empty', body: null }),
         },
         { isHydratable: false },
@@ -883,12 +864,9 @@ describe('renderToString', () => {
         const rendered = yield* renderToString(
           {
             Flags: RatioFlags,
-            init: (flags: {
-              ratio: number
-            }): readonly [RatioModel, ReadonlyArray<never>] => [
-              RatioModel.make({ ratio: flags.ratio }),
-              [],
-            ],
+            init: (flags: { ratio: number }): InitReturn<RatioModel> => ({
+              model: RatioModel.make({ ratio: flags.ratio }),
+            }),
             view: (model: RatioModel): Document => ({
               title: 'Ratio',
               body: h.div([], [String(1 / model.ratio)]),
@@ -972,10 +950,9 @@ describe('renderToString', () => {
     () =>
       Effect.gen(function* () {
         const rendered = yield* renderToString({
-          init: (): readonly [Model, ReadonlyArray<never>] => [
-            Model.make({ theme: 'plain', pathname: '/' }),
-            [],
-          ],
+          init: (): InitReturn<Model> => ({
+            model: Model.make({ theme: 'plain', pathname: '/' }),
+          }),
           view: () => ({ title: 'No url', body: h.div([], ['x']) }),
         })
 
@@ -1027,10 +1004,9 @@ describe('renderToString', () => {
     () =>
       Effect.gen(function* () {
         const rendered = yield* renderToString({
-          init: (): readonly [Model, ReadonlyArray<never>] => [
-            Model.make({ theme: 'plain', pathname: '/' }),
-            [],
-          ],
+          init: (): InitReturn<Model> => ({
+            model: Model.make({ theme: 'plain', pathname: '/' }),
+          }),
           view: () => ({ title: 'Output', body: h.output([h.Value('42')]) }),
         })
 
@@ -1044,10 +1020,9 @@ describe('renderToString', () => {
     () =>
       Effect.gen(function* () {
         const rendered = yield* renderToString({
-          init: (): readonly [Model, ReadonlyArray<never>] => [
-            Model.make({ theme: 'plain', pathname: '/' }),
-            [],
-          ],
+          init: (): InitReturn<Model> => ({
+            model: Model.make({ theme: 'plain', pathname: '/' }),
+          }),
           view: () => ({
             title: 'Select',
             body: h.select(
@@ -1103,10 +1078,9 @@ describe('renderToString', () => {
       Effect.gen(function* () {
         const error = yield* Effect.flip(
           renderToString({
-            init: (): readonly [Model, ReadonlyArray<never>] => [
-              Model.make({ theme: 'plain', pathname: '/' }),
-              [],
-            ],
+            init: (): InitReturn<Model> => ({
+              model: Model.make({ theme: 'plain', pathname: '/' }),
+            }),
             view: () => ({
               title: 'Noscript',
               body: h.noscript([], [h.p([], ['Enable JavaScript.'])]),
@@ -1132,10 +1106,9 @@ describe('renderToString', () => {
         for (const fragment of UNTERMINATED_FRAGMENTS) {
           const error = yield* Effect.flip(
             renderToString({
-              init: (): readonly [Model, ReadonlyArray<never>] => [
-                Model.make({ theme: 'plain', pathname: '/' }),
-                [],
-              ],
+              init: (): InitReturn<Model> => ({
+                model: Model.make({ theme: 'plain', pathname: '/' }),
+              }),
               view: () => ({
                 title: 'Fragment',
                 body: h.div([h.InnerHTML(fragment)]),
@@ -1162,10 +1135,9 @@ describe('renderToString', () => {
           const error = yield* Effect.flip(
             renderToString(
               {
-                init: (): readonly [Model, ReadonlyArray<never>] => [
-                  Model.make({ theme: 'plain', pathname: '/' }),
-                  [],
-                ],
+                init: (): InitReturn<Model> => ({
+                  model: Model.make({ theme: 'plain', pathname: '/' }),
+                }),
                 view: () => ({
                   title: 'Fragment',
                   body: h.div([h.InnerHTML(fragment)]),
@@ -1204,10 +1176,9 @@ describe('renderToString', () => {
         const error = yield* Effect.flip(
           renderToString(
             {
-              init: (): readonly [Model, ReadonlyArray<never>] => [
-                Model.make({ theme: 'plain', pathname: '/' }),
-                [],
-              ],
+              init: (): InitReturn<Model> => ({
+                model: Model.make({ theme: 'plain', pathname: '/' }),
+              }),
               view: () => ({ title: 'Static', body }),
             },
             { isHydratable: false },
@@ -1223,10 +1194,9 @@ describe('renderToString', () => {
     Effect.gen(function* () {
       const rendered = yield* renderToString(
         {
-          init: (): readonly [Model, ReadonlyArray<never>] => [
-            Model.make({ theme: 'plain', pathname: '/' }),
-            [],
-          ],
+          init: (): InitReturn<Model> => ({
+            model: Model.make({ theme: 'plain', pathname: '/' }),
+          }),
           view: () => ({
             title: 'Static',
             body: h.table([], [h.tbody([], [h.tr([], [h.td([], ['c'])])])]),
@@ -1255,10 +1225,9 @@ describe('renderToString', () => {
       ]) {
         const error = yield* Effect.flip(
           renderToString({
-            init: (): readonly [Model, ReadonlyArray<never>] => [
-              Model.make({ theme: 'plain', pathname: '/' }),
-              [],
-            ],
+            init: (): InitReturn<Model> => ({
+              model: Model.make({ theme: 'plain', pathname: '/' }),
+            }),
             view: () => ({
               title: 'Escape',
               body: h.div([h.Id('app'), h.InnerHTML(fragment)]),
@@ -1281,10 +1250,9 @@ describe('renderToString', () => {
       const error = yield* Effect.flip(
         renderToString(
           {
-            init: (): readonly [Model, ReadonlyArray<never>] => [
-              Model.make({ theme: 'plain', pathname: '/' }),
-              [],
-            ],
+            init: (): InitReturn<Model> => ({
+              model: Model.make({ theme: 'plain', pathname: '/' }),
+            }),
             view: () => ({
               title: 'Escape',
               body: h.div([h.InnerHTML('<body data-inner-body="yes"></body>')]),
@@ -1301,10 +1269,9 @@ describe('renderToString', () => {
   it.effect('accepts ordinary InnerHTML markup', () =>
     Effect.gen(function* () {
       const rendered = yield* renderToString({
-        init: (): readonly [Model, ReadonlyArray<never>] => [
-          Model.make({ theme: 'plain', pathname: '/' }),
-          [],
-        ],
+        init: (): InitReturn<Model> => ({
+          model: Model.make({ theme: 'plain', pathname: '/' }),
+        }),
         view: () => ({
           title: 'Fragment',
           body: h.div([
@@ -1335,10 +1302,9 @@ describe('renderToString', () => {
           const error = yield* Effect.flip(
             renderToStringWithOptions(
               {
-                init: (): readonly [Model, ReadonlyArray<never>] => [
-                  Model.make({ theme: 'plain', pathname: '/' }),
-                  [],
-                ],
+                init: (): InitReturn<Model> => ({
+                  model: Model.make({ theme: 'plain', pathname: '/' }),
+                }),
                 view: () => ({
                   title: 'Script boundary',
                   body: h.div([h.InnerHTML(fragment)]),
@@ -1377,10 +1343,9 @@ describe('renderToString', () => {
             const error = yield* Effect.flip(
               renderToStringWithOptions(
                 {
-                  init: (): readonly [Model, ReadonlyArray<never>] => [
-                    Model.make({ theme: 'plain', pathname: '/' }),
-                    [],
-                  ],
+                  init: (): InitReturn<Model> => ({
+                    model: Model.make({ theme: 'plain', pathname: '/' }),
+                  }),
                   view: () => ({ title: 'Base boundary', body }),
                 },
                 options,
@@ -1418,10 +1383,9 @@ describe('renderToString', () => {
         const error = yield* Effect.flip(
           renderToStringWithOptions(
             {
-              init: (): readonly [Model, ReadonlyArray<never>] => [
-                Model.make({ theme: 'plain', pathname: '/' }),
-                [],
-              ],
+              init: (): InitReturn<Model> => ({
+                model: Model.make({ theme: 'plain', pathname: '/' }),
+              }),
               view: () => ({
                 title: 'Nested form',
                 body: h.form(
@@ -1465,10 +1429,9 @@ describe('renderToString', () => {
       ]) {
         const error = yield* Effect.flip(
           renderToString({
-            init: (): readonly [Model, ReadonlyArray<never>] => [
-              Model.make({ theme: 'plain', pathname: '/' }),
-              [],
-            ],
+            init: (): InitReturn<Model> => ({
+              model: Model.make({ theme: 'plain', pathname: '/' }),
+            }),
             view: () => ({
               title: 'Shadow',
               body: h.div([h.InnerHTML(fragment)]),
@@ -1500,10 +1463,9 @@ describe('renderToString', () => {
 
       const renderAtDepth = (depth: number) =>
         renderToString({
-          init: (): readonly [Model, ReadonlyArray<never>] => [
-            Model.make({ theme: 'plain', pathname: '/' }),
-            [],
-          ],
+          init: (): InitReturn<Model> => ({
+            model: Model.make({ theme: 'plain', pathname: '/' }),
+          }),
           view: () => ({ title: 'Nested', body: nested(depth) }),
         })
 
@@ -1521,10 +1483,9 @@ describe('renderToString', () => {
   it.effect('accepts an ordinary template in rendered markup', () =>
     Effect.gen(function* () {
       const result = yield* renderToString({
-        init: (): readonly [Model, ReadonlyArray<never>] => [
-          Model.make({ theme: 'plain', pathname: '/' }),
-          [],
-        ],
+        init: (): InitReturn<Model> => ({
+          model: Model.make({ theme: 'plain', pathname: '/' }),
+        }),
         view: () => ({
           title: 'Template',
           body: h.div([h.InnerHTML('<template><span>s</span></template>')]),
@@ -1550,10 +1511,9 @@ describe('renderToString', () => {
       ]) {
         const error = yield* Effect.flip(
           renderToString({
-            init: (): readonly [Model, ReadonlyArray<never>] => [
-              Model.make({ theme: 'plain', pathname: '/' }),
-              [],
-            ],
+            init: (): InitReturn<Model> => ({
+              model: Model.make({ theme: 'plain', pathname: '/' }),
+            }),
             view: () => ({ title: 'Structure', body: root }),
           }),
         )
@@ -1575,10 +1535,9 @@ describe('renderToString', () => {
         const error = yield* Effect.flip(
           renderToString(
             {
-              init: (): readonly [Model, ReadonlyArray<never>] => [
-                Model.make({ theme: 'plain', pathname: '/' }),
-                [],
-              ],
+              init: (): InitReturn<Model> => ({
+                model: Model.make({ theme: 'plain', pathname: '/' }),
+              }),
               view: () => ({
                 title: 'Structure',
                 body: h.body([], [h.p([], ['x'])]),
@@ -1617,10 +1576,9 @@ describe('renderToString', () => {
         ]) {
           const error = yield* Effect.flip(
             renderToString({
-              init: (): readonly [Model, ReadonlyArray<never>] => [
-                Model.make({ theme: 'plain', pathname: '/' }),
-                [],
-              ],
+              init: (): InitReturn<Model> => ({
+                model: Model.make({ theme: 'plain', pathname: '/' }),
+              }),
               view: () => ({
                 title: 'Noscript',
                 body: h.div(
@@ -1651,10 +1609,9 @@ describe('renderToString', () => {
         ]) {
           const error = yield* Effect.flip(
             renderToString({
-              init: (): readonly [Model, ReadonlyArray<never>] => [
-                Model.make({ theme: 'plain', pathname: '/' }),
-                [],
-              ],
+              init: (): InitReturn<Model> => ({
+                model: Model.make({ theme: 'plain', pathname: '/' }),
+              }),
               view: () => ({
                 title: 'Nested',
                 body: h.div([h.InnerHTML(fragment)]),
@@ -1678,10 +1635,9 @@ describe('renderToString', () => {
         // swallows the paragraph that follows it.
         const error = yield* Effect.flip(
           renderToString({
-            init: (): readonly [Model, ReadonlyArray<never>] => [
-              Model.make({ theme: 'plain', pathname: '/' }),
-              [],
-            ],
+            init: (): InitReturn<Model> => ({
+              model: Model.make({ theme: 'plain', pathname: '/' }),
+            }),
             view: () => ({
               title: 'Foreign',
               body: h.div([
@@ -1712,10 +1668,9 @@ describe('renderToString', () => {
         ]) {
           const error = yield* Effect.flip(
             renderToString({
-              init: (): readonly [Model, ReadonlyArray<never>] => [
-                Model.make({ theme: 'plain', pathname: '/' }),
-                [],
-              ],
+              init: (): InitReturn<Model> => ({
+                model: Model.make({ theme: 'plain', pathname: '/' }),
+              }),
               view: () => ({
                 title: 'Template',
                 body: h.div([h.InnerHTML(fragment)]),

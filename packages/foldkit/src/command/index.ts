@@ -482,19 +482,20 @@ export const mapMessage: {
 )
 
 /** Lifts every Command in a list through `f`, transforming the result
- *  Message type from `FromMessage` to `ToMessage`. Reach for this at the
- *  boundary where a child Submodel's `update` returns Commands typed in
- *  the child's Message and the parent needs them typed in the parent's
- *  Message:
+ *  Message type from `FromMessage` to `ToMessage`. When `commands` is
+ *  `undefined`, it returns an empty array. `Update.foldChild` handles
+ *  this mapping for application Submodels. Reach for `mapMessages` in
+ *  lower-level helpers or when mapping an optional update result directly:
  *
  *  ```ts
- *  GotChildMessage: ({ message }) => {
- *    const [nextChild, commands, maybeOutMessage] = Child.update(model.child, message)
- *    const mappedCommands = Command.mapMessages(
- *      commands,
- *      message => GotChildMessage({ message }),
- *    )
- *    // ...
+ *  const homeInit = Home.init()
+ *
+ *  return {
+ *    model: { home: homeInit.model },
+ *    commands: Command.mapMessages(
+ *      homeInit.commands,
+ *      message => Message.GotHomeMessage({ message }),
+ *    ),
  *  }
  *  ```
  *
@@ -511,19 +512,19 @@ export const mapMessage: {
  *  `Command.Command<Message>` directly. */
 export const mapMessages: {
   <FromMessage, ToMessage, E = never, R = never>(
-    commands: ReadonlyArray<Command<FromMessage, E, R>>,
+    commands: ReadonlyArray<Command<FromMessage, E, R>> | undefined,
     f: (message: FromMessage) => ToMessage,
   ): ReadonlyArray<Command<ToMessage, E, R>>
   <FromMessage, ToMessage>(
     f: (message: FromMessage) => ToMessage,
   ): <E = never, R = never>(
-    commands: ReadonlyArray<Command<FromMessage, E, R>>,
+    commands: ReadonlyArray<Command<FromMessage, E, R>> | undefined,
   ) => ReadonlyArray<Command<ToMessage, E, R>>
 } = Function.dual(
   2,
   <FromMessage, ToMessage, E = never, R = never>(
-    commands: ReadonlyArray<Command<FromMessage, E, R>>,
+    commands: ReadonlyArray<Command<FromMessage, E, R>> | undefined,
     f: (message: FromMessage) => ToMessage,
   ): ReadonlyArray<Command<ToMessage, E, R>> =>
-    Array.map(commands, command => mapMessage(command, f)),
+    Array.map(commands ?? [], command => mapMessage(command, f)),
 )

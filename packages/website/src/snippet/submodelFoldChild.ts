@@ -1,5 +1,5 @@
 import { Option } from 'effect'
-import { Command, Update } from 'foldkit'
+import { Update } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
 const foldSettings = Update.foldChild({
@@ -10,6 +10,6 @@ const foldSettings = Update.foldChild({
 })
 
 export const update = (model: Model, message: Message) =>
-  Message.match(message, {
+  Message.match<Update.Return<Model, Message>>(message, {
     GotSettingsMessage: ({ message }) => foldSettings(model, message),
   })

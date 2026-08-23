@@ -46,6 +46,7 @@ import {
 import { hasTrustedInnerHtml } from '../../propertyProvenance.js'
 import type { VNode } from '../../snabbdom/vnode.js'
 import { tagNameFromSelector } from '../../tagName.js'
+import type { Return as UpdateReturn } from '../../update/index.js'
 import { Url, fromString } from '../../url/index.js'
 import {
   controlledValueContent,
@@ -1074,7 +1075,7 @@ export type RenderError =
   | InvalidRuntimeId
   | InvalidHydrationRoot
 
-type InitReturn<Model> = readonly [Model, ReadonlyArray<unknown>]
+type InitReturn<Model, Message> = UpdateReturn<Model, Message, any>
 
 /** Server-side subset of a routing `makeApplication` config with Flags. The
  *  full application config is structurally assignable; `container`, `update`,
@@ -1086,7 +1087,7 @@ export type RoutingApplicationConfigWithFlags<Model, Message, Flags> =
   Readonly<{
     Flags: Schema.Codec<Flags, any, never, never>
     routing: unknown
-    init: (flags: Flags, url: Url) => InitReturn<Model>
+    init: (flags: Flags, url: Url) => InitReturn<Model, Message>
     view: (model: Model, h: HtmlBuilder<Message>) => Document
   }>
 
@@ -1096,7 +1097,7 @@ export type RoutingApplicationConfigWithFlags<Model, Message, Flags> =
  */
 export type RoutingApplicationConfig<Model, Message> = Readonly<{
   routing: unknown
-  init: (url: Url) => InitReturn<Model>
+  init: (url: Url) => InitReturn<Model, Message>
   view: (model: Model, h: HtmlBuilder<Message>) => Document
 }>
 
@@ -1106,7 +1107,7 @@ export type RoutingApplicationConfig<Model, Message> = Readonly<{
  */
 export type ApplicationConfigWithFlags<Model, Message, Flags> = Readonly<{
   Flags: Schema.Codec<Flags, any, never, never>
-  init: (flags: Flags) => InitReturn<Model>
+  init: (flags: Flags) => InitReturn<Model, Message>
   view: (model: Model, h: HtmlBuilder<Message>) => Document
 }>
 
@@ -1115,7 +1116,7 @@ export type ApplicationConfigWithFlags<Model, Message, Flags> = Readonly<{
  * @experimental Ships from `foldkit/experimental/server`; expect breaking changes while the API settles.
  */
 export type ApplicationConfig<Model, Message> = Readonly<{
-  init: () => InitReturn<Model>
+  init: () => InitReturn<Model, Message>
   view: (model: Model, h: HtmlBuilder<Message>) => Document
 }>
 
@@ -1385,7 +1386,7 @@ export function renderToString(
   config: Readonly<{
     Flags?: Schema.Codec<unknown, any, never, never>
     routing?: unknown
-    init: (...initArguments: ReadonlyArray<any>) => InitReturn<unknown>
+    init: (...initArguments: ReadonlyArray<any>) => InitReturn<unknown, any>
     view: (model: any, h: HtmlBuilder<any>) => Document
   }>,
   options?: RenderOptions &
@@ -1433,7 +1434,7 @@ export function renderToString(
     const flagsForInit =
       flagsHandoff !== undefined ? flagsHandoff.hydrationFlags : options?.flags
 
-    const initReturn = ((): InitReturn<unknown> => {
+    const initReturn = ((): InitReturn<unknown, any> => {
       if (FlagsCodec !== undefined) {
         return hasRouting
           ? config.init(flagsForInit, url)
@@ -1441,9 +1442,7 @@ export function renderToString(
       }
       return hasRouting ? config.init(url) : config.init()
     })()
-    const [model] = initReturn
-
-    const nextDocument = runView(config.view, model)
+    const nextDocument = runView(config.view, initReturn.model)
 
     if (isHydratable) {
       yield* validateHydrationRoot(nextDocument.body)

@@ -4,6 +4,7 @@ import type { Html, HtmlBuilder } from '../../html/index.js'
 import { defineMessageUnion } from '../../message/index.js'
 import { ts } from '../../schema/index.js'
 import { evo } from '../../struct/index.js'
+import type * as Update from '../../update/index.js'
 
 // MODEL
 
@@ -40,14 +41,13 @@ export const initialModel = Model.make({
 // UPDATE
 
 export const update = (model: Model, message: Message) =>
-  Message.match<readonly [Model, ReadonlyArray<never>]>(message, {
-    OpenedContextMenu: ({ source }) => [
-      evo(model, {
+  Message.match<Update.Return<Model, Message>>(message, {
+    OpenedContextMenu: ({ source }) => ({
+      model: evo(model, {
         contextMenu: () => Open({ source }),
         openCount: Number.increment,
       }),
-      [],
-    ],
+    }),
   })
 
 // VIEW

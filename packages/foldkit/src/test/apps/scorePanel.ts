@@ -4,6 +4,7 @@ import type { Html } from '../../html/index.js'
 import { defineMessageUnion } from '../../message/index.js'
 import { evo } from '../../struct/index.js'
 import { defineView } from '../../submodel/public.js'
+import type * as Update from '../../update/index.js'
 
 // MODEL
 
@@ -25,8 +26,10 @@ export const initialModel = Model.make({ score: 0 })
 // UPDATE
 
 export const update = (model: Model, message: Message) =>
-  Message.match<readonly [Model, ReadonlyArray<never>]>(message, {
-    ClickedIncrement: () => [evo(model, { score: Number.increment }), []],
+  Message.match<Update.Return<Model, Message>>(message, {
+    ClickedIncrement: () => ({
+      model: evo(model, { score: Number.increment }),
+    }),
   })
 
 // VIEW

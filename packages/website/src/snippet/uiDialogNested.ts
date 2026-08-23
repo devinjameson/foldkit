@@ -1,7 +1,8 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Command } from 'foldkit'
+import { Match as M, Option, Schema as S } from 'effect'
+import { Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
@@ -14,15 +15,15 @@ const Model = S.Struct({
   confirmDialog: Dialog.Model,
   // ...your other fields
 })
+type Model = typeof Model.Type
 
-const init = () => [
-  {
+const init = () => ({
+  model: {
     settingsDialog: Dialog.init({ id: 'settings' }),
     confirmDialog: Dialog.init({ id: 'confirm-delete' }),
     // ...your other fields
   },
-  [],
-]
+})
 
 // Embed each Dialog Message in your parent Message and delegate each to its
 // own Dialog.update (see the basic Dialog example for the delegation).
@@ -32,43 +33,54 @@ const Message = defineMessageUnion({
   ClickedDeleteProject: {},
   ConfirmedDeleteProject: {},
 })
+type Message = typeof Message.Type
+
+const foldConfirmDialogOutMessage = M.type<Dialog.OutMessage>().pipe(
+  M.withReturnType<Update.Step<Model, Message>>(),
+  M.tagsExhaustive({
+    Opened: () => model => ({ model }),
+    Closed: () => model => ({ model }),
+  }),
+)
+
+const readConfirmDialog = (model: Model) => Option.some(model.confirmDialog)
+const writeConfirmDialog = (model: Model, confirmDialog: Dialog.Model): Model =>
+  evo(model, { confirmDialog: () => confirmDialog })
+const toGotConfirmDialogMessage = (message: Dialog.Message): Message =>
+  Message.GotConfirmDialogMessage({ message })
+
+const foldConfirmDialogOpen = Update.foldChildStep({
+  update: Dialog.open,
+  read: readConfirmDialog,
+  write: writeConfirmDialog,
+  toParentMessage: toGotConfirmDialogMessage,
+  foldOutMessage: foldConfirmDialogOutMessage,
+})
+
+const foldConfirmDialogClose = Update.foldChildStep({
+  update: Dialog.close,
+  read: readConfirmDialog,
+  write: writeConfirmDialog,
+  toParentMessage: toGotConfirmDialogMessage,
+  foldOutMessage: foldConfirmDialogOutMessage,
+})
 
 // Opening the confirmation is a parent fact, not a hand-wrapped child message.
 // The button dispatches ClickedDeleteProject; the update opens the confirmation
 // through Dialog.open, keeping Got* for genuine child results.
 
-// ...in your update's Message.match({...}):
-ClickedDeleteProject: () => {
-  const [nextConfirmDialog, confirmDialogCommands] = Dialog.open(
-    model.confirmDialog,
-  )
-  return [
-    evo(model, { confirmDialog: () => nextConfirmDialog }),
-    Command.mapMessages(confirmDialogCommands, message =>
-      Message.GotConfirmDialogMessage({ message }),
-    ),
-  ]
-}
+// In the corresponding Message.match handler:
+ClickedDeleteProject: () => foldConfirmDialogOpen(model)
 
 // Confirming runs the deletion, then closes the confirmation through
 // Dialog.close, the same API the opening fact used.
-ConfirmedDeleteProject: () => {
-  // ...run the deletion here, then:
-  const [nextConfirmDialog, confirmDialogCommands] = Dialog.close(
-    model.confirmDialog,
-  )
-  return [
-    evo(model, { confirmDialog: () => nextConfirmDialog }),
-    Command.mapMessages(confirmDialogCommands, message =>
-      Message.GotConfirmDialogMessage({ message }),
-    ),
-  ]
-}
+// Add the deletion as another Update.combine step when implementing it.
+ConfirmedDeleteProject: () => foldConfirmDialogClose(model)
 
 // Each dialog is its own submodel; the framework stacks them by z-index, traps
 // focus in the topmost, and Escape closes the topmost before the one beneath
-// it. Cancel dismisses the confirmation by spreading the `closeButton` bundle; Delete
-// dispatches a fact that runs the work and closes through Dialog.close.
+// it. Cancel dismisses the confirmation through the `closeButton` bundle.
+// Delete dispatches a fact that runs the work and closes through Dialog.close.
 const view = (h: HtmlBuilder<Message>) => {
   const confirmDialog = h.submodel({
     slotId: model.confirmDialog.id,

@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as Command from '../command/index.js'
 import { __htmlBuilder } from '../html/index.js'
 import { defineMessageUnion } from '../message/index.js'
+import type * as Update from '../update/index.js'
 import { makeElement } from './runtime.js'
 
 // CHILD
@@ -28,7 +29,7 @@ type Message = typeof Message.Type
 const Model = S.Struct({ label: S.String })
 type Model = typeof Model.Type
 
-type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
+type UpdateReturn = Update.Return<Model, Message>
 
 const update = (_model: Model, message: Message) =>
   Message.match<UpdateReturn>(message, {
@@ -36,7 +37,7 @@ const update = (_model: Model, message: Message) =>
       M.value(childMessage).pipe(
         M.withReturnType<UpdateReturn>(),
         M.tagsExhaustive({
-          CompletedDoChildWork: () => [{ label: 'child done' }, []],
+          CompletedDoChildWork: () => ({ model: { label: 'child done' } }),
         }),
       ),
   })
@@ -73,12 +74,12 @@ describe('command message mappers', () => {
   it('dispatches a mapped Command result in the parent Message space', async () => {
     const element = makeElement({
       Model,
-      init: () => [
-        { label: 'start' },
-        Command.mapMessages([DoChildWork()], childMessage =>
+      init: () => ({
+        model: { label: 'start' },
+        commands: Command.mapMessages([DoChildWork()], childMessage =>
           Message.GotChildMessage({ message: childMessage }),
         ),
-      ],
+      }),
       update,
       view,
       crash,

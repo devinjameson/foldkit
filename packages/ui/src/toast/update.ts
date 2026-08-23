@@ -14,6 +14,7 @@ import * as Update from 'foldkit/update'
 
 import {
   Message as AnimationMessage,
+  type Model as AnimationModel,
   OutMessage as AnimationOutMessage,
   init as animationInit,
 } from '../animation/schema.js'
@@ -86,11 +87,7 @@ export const makeRuntime = <A, I>(payloadSchema: S.Codec<A, I>) => {
   type Message = typeof MessageSchema.Type
   type OutMessage = typeof OutMessageSchema.Type
 
-  type UpdateReturn = readonly [
-    Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage>,
-  ]
+  type UpdateReturn = Update.ReturnWithOutMessage<Model, Message, OutMessage>
 
   const updateEntry = (
     model: Model,
@@ -157,15 +154,12 @@ export const makeRuntime = <A, I>(payloadSchema: S.Codec<A, I>) => {
 
   const toDismissedToastOutMessage: (
     payload: A,
-  ) => (
-    outMessage: AnimationOutMessage,
-  ) => Option.Option<OutMessage> = payload =>
+  ) => (outMessage: AnimationOutMessage) => OutMessage | undefined = payload =>
     M.type<AnimationOutMessage>().pipe(
-      M.withReturnType<Option.Option<OutMessage>>(),
+      M.withReturnType<OutMessage | undefined>(),
       M.tagsExhaustive({
-        StartedLeaveAnimating: () => Option.none(),
-        TransitionedOut: () =>
-          Option.some(OutMessageSchema.DismissedToast({ payload })),
+        StartedLeaveAnimating: () => undefined,
+        TransitionedOut: () => OutMessageSchema.DismissedToast({ payload }),
       }),
     )
 
@@ -180,13 +174,15 @@ export const makeRuntime = <A, I>(payloadSchema: S.Codec<A, I>) => {
       AnimationOutMessage.match<Update.Step<Model, Message>>(outMessage, {
         StartedLeaveAnimating: () => model =>
           Option.match(readEntryAnimation(entryId)(model), {
-            onNone: () => [model, []],
-            onSome: animation => [
+            onNone: () => ({ model }),
+            onSome: animation => ({
               model,
-              [liftCommand(animationDefaultLeaveCommand(animation))],
-            ],
+              commands: [liftCommand(animationDefaultLeaveCommand(animation))],
+            }),
           }),
-        TransitionedOut: () => model => [removeEntry(model, entryId), []],
+        TransitionedOut: () => model => ({
+          model: removeEntry(model, entryId),
+        }),
       })
 
   const foldEntryAnimation = (entry: Entry) =>
@@ -199,6 +195,24 @@ export const makeRuntime = <A, I>(payloadSchema: S.Codec<A, I>) => {
       foldOutMessage: foldEntryAnimationOutMessage(entry.id),
     })
 
+  const foldEntryAnimationShow = (entry: Entry) =>
+    Update.foldChildStep({
+      update: (animation: AnimationModel) =>
+        animationUpdate(animation, AnimationMessage.Showed()),
+      read: readEntryAnimation(entry.id),
+      write: writeEntryAnimation(entry.id),
+      toParentMessage: toGotAnimationMessage(entry.id),
+    })
+
+  const foldEntryAnimationHide = (entry: Entry) =>
+    Update.foldChildStep({
+      update: (animation: AnimationModel) =>
+        animationUpdate(animation, AnimationMessage.Hid()),
+      read: readEntryAnimation(entry.id),
+      write: writeEntryAnimation(entry.id),
+      toParentMessage: toGotAnimationMessage(entry.id),
+    })
+
   const delegateToEntryAnimation = (
     model: Model,
     entryId: string,
@@ -207,7 +221,7 @@ export const makeRuntime = <A, I>(payloadSchema: S.Codec<A, I>) => {
     Option.match(
       Array.findFirst(model.entries, ({ id }) => id === entryId),
       {
-        onNone: (): UpdateReturn => [model, [], Option.none()],
+        onNone: (): UpdateReturn => ({ model }),
         onSome: entry => foldEntryAnimation(entry)(model, animationMessage),
       },
     )
@@ -244,38 +258,31 @@ export const makeRuntime = <A, I>(payloadSchema: S.Codec<A, I>) => {
     nextEntryKey: 0,
   })
 
-  /** Processes a toast message and returns the next model, commands, and
-   *  an optional `DismissedToast` OutMessage emitted once an entry has
+  /** Processes a Toast Message and returns the next Model, optional Commands,
+   *  and an optional `DismissedToast` OutMessage emitted once an entry has
    *  finished its leave animation. */
   const update = (model: Model, message: Message) =>
     MessageSchema.match<UpdateReturn>(message, {
       Added: ({ entry }) => {
-        const modelWithEntry = evo(model, {
-          entries: entries => Array.append(entries, entry),
-          nextEntryKey: Number.increment,
-        })
-
-        const [modelAfterShow, showCommands] = delegateToEntryAnimation(
-          modelWithEntry,
-          entry.id,
-          AnimationMessage.Showed(),
-        )
-
-        const postShowEntry = Array.findFirst(
-          modelAfterShow.entries,
-          ({ id }) => id === entry.id,
-        )
-
-        const dismissCommands = Option.match(postShowEntry, {
-          onNone: () => [],
-          onSome: rescheduleDismissCommands,
-        })
-
-        return [
-          modelAfterShow,
-          [...showCommands, ...dismissCommands],
-          Option.none(),
-        ]
+        return Update.combine(model, [
+          stepModel => ({
+            model: evo(stepModel, {
+              entries: entries => Array.append(entries, entry),
+              nextEntryKey: Number.increment,
+            }),
+          }),
+          foldEntryAnimationShow(entry),
+          stepModel => ({
+            model: stepModel,
+            commands: Option.match(
+              Array.findFirst(stepModel.entries, ({ id }) => id === entry.id),
+              {
+                onNone: () => [],
+                onSome: rescheduleDismissCommands,
+              },
+            ),
+          }),
+        ])
       },
 
       Dismissed: ({ entryId }) => {
@@ -285,40 +292,25 @@ export const makeRuntime = <A, I>(payloadSchema: S.Codec<A, I>) => {
         )
 
         return Option.match(maybeEntry, {
-          onNone: (): UpdateReturn => [model, [], Option.none()],
+          onNone: (): UpdateReturn => ({ model }),
           onSome: entry => {
             if (isEntryLeaving(entry)) {
-              return [model, [], Option.none()]
+              return { model }
             } else {
-              return delegateToEntryAnimation(
-                model,
-                entryId,
-                AnimationMessage.Hid(),
-              )
+              return foldEntryAnimationHide(entry)(model)
             }
           },
         })
       },
 
       DismissedAll: () =>
-        Array.reduce<Entry, UpdateReturn>(
-          model.entries,
-          [model, [], Option.none()],
-          ([currentModel, currentCommands, currentOut], entry) => {
-            if (isEntryLeaving(entry)) {
-              return [currentModel, currentCommands, currentOut]
-            }
-            const [nextModel, nextCommands] = delegateToEntryAnimation(
-              currentModel,
-              entry.id,
-              AnimationMessage.Hid(),
-            )
-            return [
-              nextModel,
-              [...currentCommands, ...nextCommands],
-              currentOut,
-            ]
-          },
+        Update.combine(
+          model,
+          pipe(
+            model.entries,
+            Array.filter(entry => !isEntryLeaving(entry)),
+            Array.map(foldEntryAnimationHide),
+          ),
         ),
 
       CompletedWaitBeforeDismissal: ({ entryId, version }) => {
@@ -328,32 +320,26 @@ export const makeRuntime = <A, I>(payloadSchema: S.Codec<A, I>) => {
         )
 
         return Option.match(maybeEntry, {
-          onNone: (): UpdateReturn => [model, [], Option.none()],
+          onNone: (): UpdateReturn => ({ model }),
           onSome: entry => {
             const isStale = version !== entry.pendingDismissVersion
             if (isStale || isEntryLeaving(entry)) {
-              return [model, [], Option.none()]
+              return { model }
             } else {
-              return delegateToEntryAnimation(
-                model,
-                entryId,
-                AnimationMessage.Hid(),
-              )
+              return foldEntryAnimationHide(entry)(model)
             }
           },
         })
       },
 
-      HoveredEntry: ({ entryId }) => [
-        updateEntry(model, entryId, entry =>
+      HoveredEntry: ({ entryId }) => ({
+        model: updateEntry(model, entryId, entry =>
           evo(entry, {
             isHovered: () => true,
             pendingDismissVersion: Number.increment,
           }),
         ),
-        [],
-        Option.none(),
-      ],
+      }),
 
       LeftEntry: ({ entryId }) => {
         const maybeEntry = Array.findFirst(
@@ -362,17 +348,16 @@ export const makeRuntime = <A, I>(payloadSchema: S.Codec<A, I>) => {
         )
 
         return Option.match(maybeEntry, {
-          onNone: (): UpdateReturn => [model, [], Option.none()],
+          onNone: (): UpdateReturn => ({ model }),
           onSome: entry => {
             const nextEntry: Entry = evo(entry, {
               isHovered: () => false,
               pendingDismissVersion: Number.increment,
             })
-            return [
-              updateEntry(model, entryId, () => nextEntry),
-              rescheduleDismissCommands(nextEntry),
-              Option.none(),
-            ]
+            return {
+              model: updateEntry(model, entryId, () => nextEntry),
+              commands: rescheduleDismissCommands(nextEntry),
+            }
           },
         })
       },

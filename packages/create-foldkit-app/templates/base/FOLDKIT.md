@@ -39,16 +39,32 @@ Replace it whenever the project upgrades its Foldkit packages. If `./repos/foldk
 
 ### Update
 
-`init` and `update` both return `[Model, ReadonlyArray<Command<Message>>]`:
+`init` and `update` both return a record with the next Model and optional Commands. Inline the return type when the matcher is its only use:
 
 ```ts
-type UpdateReturn = readonly [Model, ReadonlyArray<Command<Message>>]
-
 const update = (model: Model, message: Message) =>
-  Message.match<UpdateReturn>(message, {
-    ClickedIncrement: () => [evo(model, { count: count => count + 1 }), []],
+  Message.match<Update.Return<Model, Message>>(message, {
+    ClickedIncrement: () => ({
+      model: evo(model, { count: count => count + 1 }),
+    }),
   })
 ```
+
+Create an `UpdateReturn` alias when another matcher, helper, or exported signature reuses the type. The match generic constrains the whole update, so do not repeat the return annotation on the function.
+
+Update, init, boot, and component helper producers return `{ model }` when they statically create no Commands. When they compute a Commands collection, return it directly without checking whether it is empty. Never write the literal `commands: []`; `foldkit/no-empty-commands-array` enforces this producer convention.
+
+When composing one of those results, bind the whole result to a value named after the operation and access its fields through that value. Use `homeInit`, `dialogClose`, or a trailing underscore such as `init_` when the operation name collides with the function. Do not destructure or rename `model`, `commands`, or `outMessage`. Dot access does not prevent someone from ignoring `outMessage`; it keeps the operation and all of its returned fields visible together. Name a child fold's `write` parameter after the next child Model, such as `nextSettings`.
+
+Pass optional Commands directly to APIs that accept them: `Command.mapMessages(homeInit.commands, toParentMessage)`. Use `result.commands ?? []` only when the next operation requires a concrete array for spreading, concatenating, execution, or an assertion.
+
+`Update.Return<Model, Message>` rejects an OutMessage-producing result where an API would consume only its Model and Commands. `Update.ReturnWithOutMessage<Model, Message, OutMessage>` still accepts a result with no `outMessage`, because omission means the update emitted nothing.
+
+Manual unpacking of a child result usually means the site should use `Update.foldChild` or `Update.foldChildStep`.
+
+Compose two or more sequential operations over the same Model with `Update.combine`. Call a single operation directly. Name an inline Step parameter `stepModel`; it contains the Model returned by the preceding Step. Use `Update.withOutMessage(updateReturn, outMessage)` or its data-last form when attaching a known or optional OutMessage to an existing plain return. Include `outMessage` directly when constructing a fresh result with a known value.
+
+Add `toParentOutMessage` only when at least one child OutMessage is forwarded from the current Submodel to its parent. When every child OutMessage is handled locally, omit it. Never write `toParentOutMessage: () => undefined`.
 
 Use `evo()` from `foldkit/struct` for immutable model updates. Never spread or `Object.assign`.
 
@@ -89,7 +105,7 @@ Scene runs at any level, since a page's own `update`/`view` pair drops into `sce
 ## Code Style
 
 - Encode state in discriminated unions, not booleans or nullable fields. `Idle | Loading | Error | Ok`, not `isLoading: boolean`. Make impossible states unrepresentable.
-- Use `Option` instead of `null` or `undefined`. Prefix Option-typed values with `maybe*`. Match with `Option.match`; don't unwrap with `Option.map(...)` + `Option.getOrElse(...)` when you can just match.
+- Use `Option` for absence in the Model and domain values instead of `null` or `undefined`. Foldkit return records are the exception: omit `commands` and `outMessage` when absent. A partial `toParentOutMessage` mapper returns `undefined` for each named child variant that stops at the current parent. Prefix Option-typed values with `maybe*`. Match with `Option.match`; don't unwrap with `Option.map(...)` + `Option.getOrElse(...)` when you can just match.
 - Use Effect modules over native methods in `pipe` chains (`Array.map`, `String.startsWith`, `Array.findFirst`). Native methods are fine when calling directly on a named variable.
 - Never cast Schema values with `as Type`. Use the callable constructor: `Message.SucceededLogin({ sessionId })`, not `{ _tag: 'SucceededLogin', sessionId } as Message`.
 - Always `Array.isArrayEmpty` / `Array.isArrayNonEmpty` (not `.length === 0` / `.length > 0`). Use `Array.match` when handling both empty and non-empty cases.

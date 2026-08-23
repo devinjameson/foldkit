@@ -9,6 +9,7 @@ import {
 import { h } from '../snabbdom/index.js'
 import type { VNode } from '../snabbdom/index.js'
 import { defineView } from '../submodel/public.js'
+import type * as Update from '../update/index.js'
 import {
   testId as attributeTestId,
   update as attributeUpdate,
@@ -2678,7 +2679,7 @@ describe('scene with outMessage', () => {
       Scene.given(logoutInitialModel),
       Scene.click(Scene.role('button', { name: 'Log out' })),
       Scene.tap(({ outMessage }) => {
-        expect(outMessage).toEqual(Option.some(OutMessage.RequestedLogout()))
+        expect(outMessage).toEqual(OutMessage.RequestedLogout())
       }),
     )
   })
@@ -2932,33 +2933,12 @@ describe('Scene.CustomElement.emit', () => {
   })
 })
 
-const mixedArityUpdate = (
-  model: LogoutModel,
-  message: LogoutMessage,
-): readonly [
-  LogoutModel,
-  ReadonlyArray<never>,
-  Option.Option<LogoutOutMessage>,
-] =>
+const mixedArityUpdate = (model: LogoutModel, message: LogoutMessage) =>
   LogoutMessage.match<
-    readonly [
-      LogoutModel,
-      ReadonlyArray<never>,
-      Option.Option<LogoutOutMessage>,
-    ]
+    Update.ReturnWithOutMessage<LogoutModel, LogoutMessage, LogoutOutMessage>
   >(message, {
-    ClickedLogout: () => [model, [], Option.some(OutMessage.RequestedLogout())],
-    CompletedAction: () =>
-      // NOTE: deliberately returns a two-tuple, against the convention that
-      // an OutMessage-returning update keeps every branch on the three-tuple
-      // shape. It pins the latching behavior the OutMessage assertion steps
-      // document: a two-tuple result leaves the previous value in place.
-      /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-      [model, []] as unknown as readonly [
-        LogoutModel,
-        ReadonlyArray<never>,
-        Option.Option<LogoutOutMessage>,
-      ],
+    ClickedLogout: () => ({ model, outMessage: OutMessage.RequestedLogout() }),
+    CompletedAction: () => ({ model }),
   })
 
 describe('Scene.expectOutMessage and Scene.expectNoOutMessage', () => {
@@ -2993,7 +2973,7 @@ describe('Scene.expectOutMessage and Scene.expectNoOutMessage', () => {
         Scene.expectOutMessage(LogoutButtonMessage.CompletedAction()),
       ),
     ).toThrow(
-      `Expected OutMessage:\n\n    Some(${JSON.stringify(LogoutButtonMessage.CompletedAction())})\n\nBut got:\n\n    ${JSON.stringify(Option.some(OutMessage.RequestedLogout()))}`,
+      `Expected OutMessage:\n\n    ${JSON.stringify(LogoutButtonMessage.CompletedAction())}\n\nBut got:\n\n    ${JSON.stringify(OutMessage.RequestedLogout())}`,
     )
   })
 
@@ -3008,14 +2988,14 @@ describe('Scene.expectOutMessage and Scene.expectNoOutMessage', () => {
     ).toThrow('Expected no OutMessage but got:')
   })
 
-  test('a two-tuple update result leaves the previous OutMessage latched', () => {
+  test('an omitted OutMessage clears the previous OutMessage', () => {
     Scene.scene(
       { update: mixedArityUpdate, view: logoutView },
       Scene.given(logoutInitialModel),
       Scene.click(Scene.role('button', { name: 'Log out' })),
       Scene.expectOutMessage(OutMessage.RequestedLogout()),
       Scene.Subscription.emit(LogoutButtonMessage.CompletedAction()),
-      Scene.expectOutMessage(OutMessage.RequestedLogout()),
+      Scene.expectNoOutMessage(),
     )
   })
 })
@@ -3650,10 +3630,10 @@ describe('scene mounts', () => {
   test('expectNoMounts succeeds when no OnMount nodes are rendered', () => {
     Scene.scene(
       {
-        update: (): readonly [
+        update: (): Update.Return<
           typeof mountInitialModel,
-          ReadonlyArray<never>,
-        ] => [mountInitialModel, []],
+          MountPanelMessage
+        > => ({ model: mountInitialModel }),
         view: () => h('div', {}, []),
       },
       Scene.given(mountInitialModel),
@@ -3810,9 +3790,9 @@ describe('scene mounts', () => {
     const parentUpdate = (
       model: ParentModel,
       message: ParentMessage,
-    ): readonly [ParentModel, ReadonlyArray<never>] => {
+    ): Update.Return<ParentModel, ParentMessage> => {
       seen.push(message)
-      return [model, []]
+      return { model }
     }
 
     const parentView = (model: ParentModel) => {
@@ -3873,9 +3853,9 @@ describe('scene mounts', () => {
     const closingUpdate = (
       model: typeof mountInitialModel,
       message: MountPanelMessage,
-    ): readonly [typeof mountInitialModel, ReadonlyArray<never>] =>
+    ): Update.Return<typeof mountInitialModel, MountPanelMessage> =>
       message._tag === 'CompletedFocusButton'
-        ? [{ ...model, isOpen: false }, []]
+        ? { model: { ...model, isOpen: false } }
         : mountUpdate(model, message)
 
     Scene.scene(
@@ -3912,9 +3892,9 @@ describe('scene mounts', () => {
     const closingUpdate = (
       model: typeof mountInitialModel,
       message: MountPanelMessage,
-    ): readonly [typeof mountInitialModel, ReadonlyArray<never>] =>
+    ): Update.Return<typeof mountInitialModel, MountPanelMessage> =>
       message._tag === 'CompletedFocusButton'
-        ? [{ ...model, isOpen: false }, []]
+        ? { model: { ...model, isOpen: false } }
         : mountUpdate(model, message)
 
     expect(() => {

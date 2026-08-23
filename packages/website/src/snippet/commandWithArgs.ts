@@ -1,7 +1,8 @@
 import { Effect, Schema as S } from 'effect'
 import { HttpClient, HttpClientRequest } from 'effect/unstable/http'
-import { Command, Http } from 'foldkit'
+import { Command, Http, type Update } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
+import { evo } from 'foldkit/struct'
 
 const Message = defineMessageUnion({
   SubmittedWeatherForm: {},
@@ -34,15 +35,14 @@ const FetchWeather = Command.define('FetchWeather', {
 })
 
 const update = (model: Model, message: Message) =>
-  Message.match<readonly [Model, ReadonlyArray<Command.Command<Message>>]>(
-    message,
-    {
-      // Pass args when dispatching the Command.
-      SubmittedWeatherForm: () => [
-        model,
-        [FetchWeather({ zipCode: model.zipCodeInput })],
-      ],
-      SucceededFetchWeather: ({ weather }) => [{ ...model, weather }, []],
-      FailedFetchWeather: () => [model, []],
-    },
-  )
+  Message.match<Update.Return<Model, Message>>(message, {
+    // Pass args when dispatching the Command.
+    SubmittedWeatherForm: () => ({
+      model,
+      commands: [FetchWeather({ zipCode: model.zipCodeInput })],
+    }),
+    SucceededFetchWeather: ({ weather }) => ({
+      model: evo(model, { weather: () => weather }),
+    }),
+    FailedFetchWeather: () => ({ model }),
+  })

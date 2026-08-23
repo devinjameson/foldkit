@@ -5,6 +5,7 @@ import * as Interruptible from '../../command/interruptible/index.js'
 import type { Document, HtmlBuilder } from '../../html/index.js'
 import { defineMessageUnion } from '../../message/index.js'
 import { evo } from '../../struct/index.js'
+import type * as Update from '../../update/index.js'
 
 // MODEL
 
@@ -76,54 +77,50 @@ const setStatusById = (uploadId: number, status: UploadStatus) =>
     upload.id === uploadId ? evo(upload, { status: () => status }) : upload,
   )
 
+type UpdateReturn = Update.Return<Model, Message>
+
 export const update = (model: Model, message: Message) =>
-  Message.match<readonly [Model, ReadonlyArray<Command.Command<Message>>]>(
-    message,
-    {
-      ClickedStartUpload: () => {
-        const startedUpload: Upload = {
-          id: model.uploadId,
-          status: 'Uploading',
-        }
-        return [
-          evo(model, {
-            uploadId: Number.increment,
-            uploads: Array.append(startedUpload),
-          }),
-          [UploadFile({ uploadId: model.uploadId })],
-        ]
-      },
-      ClickedRetryUpload: ({ uploadId }) => [
-        evo(model, { uploads: setStatusById(uploadId, 'Uploading') }),
-        [UploadFile({ uploadId })],
-      ],
-      ClickedCancelUpload: ({ uploadId }) => [
-        model,
-        [CancelUploadFile({ uploadId })],
-      ],
-      SucceededUploadFile: ({ uploadId }) => [
-        evo(model, { uploads: setStatusById(uploadId, 'Done') }),
-        [],
-      ],
-      FailedUploadFile: ({ uploadId }) => [
-        evo(model, { uploads: setStatusById(uploadId, 'Failed') }),
-        [],
-      ],
-      CompletedCancelUploadFile: ({ uploadId, outcome }) =>
-        M.value(outcome).pipe(
-          M.withReturnType<
-            readonly [Model, ReadonlyArray<Command.Command<Message>>]
-          >(),
-          M.tagsExhaustive({
-            Interrupted: () => [
-              evo(model, { uploads: setStatusById(uploadId, 'Cancelled') }),
-              [],
-            ],
-            NotFound: () => [model, []],
-          }),
-        ),
+  Message.match<UpdateReturn>(message, {
+    ClickedStartUpload: () => {
+      const startedUpload: Upload = {
+        id: model.uploadId,
+        status: 'Uploading',
+      }
+      return {
+        model: evo(model, {
+          uploadId: Number.increment,
+          uploads: Array.append(startedUpload),
+        }),
+        commands: [UploadFile({ uploadId: model.uploadId })],
+      }
     },
-  )
+    ClickedRetryUpload: ({ uploadId }) => ({
+      model: evo(model, { uploads: setStatusById(uploadId, 'Uploading') }),
+      commands: [UploadFile({ uploadId })],
+    }),
+    ClickedCancelUpload: ({ uploadId }) => ({
+      model,
+      commands: [CancelUploadFile({ uploadId })],
+    }),
+    SucceededUploadFile: ({ uploadId }) => ({
+      model: evo(model, { uploads: setStatusById(uploadId, 'Done') }),
+    }),
+    FailedUploadFile: ({ uploadId }) => ({
+      model: evo(model, { uploads: setStatusById(uploadId, 'Failed') }),
+    }),
+    CompletedCancelUploadFile: ({ uploadId, outcome }) =>
+      M.value(outcome).pipe(
+        M.withReturnType<UpdateReturn>(),
+        M.tagsExhaustive({
+          Interrupted: () => ({
+            model: evo(model, {
+              uploads: setStatusById(uploadId, 'Cancelled'),
+            }),
+          }),
+          NotFound: () => ({ model }),
+        }),
+      ),
+  })
 
 // VIEW
 
