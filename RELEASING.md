@@ -21,7 +21,9 @@ set exists. It also keeps a long-lived npm token out of GitHub Actions.
 3. Check that the stable job passed. The last upload is not enough. The job
    fetches the complete public package set from npm and checks each internal
    dependency and peer range against the versions in this release. Changesets
-   receives its `New tag:` output only after that complete check passes.
+   only creates the Version Packages pull request. The coherent uploader runs
+   in a separate workflow step, so its output cannot be mistaken for
+   Changesets' tag-push protocol.
 
 4. Check out the release commit and sign in to npm with 2FA. Run:
 
@@ -49,7 +51,12 @@ set exists. It also keeps a long-lived npm token out of GitHub Actions.
    ```
 
    The dispatch verifies every registry version and every `latest` tag from
-   scratch. Only then can the production website deployment start.
+   scratch. It derives the packages versioned by the release commit, creates
+   their missing Git tags at that exact commit, and creates each GitHub Release
+   from the matching changelog section. Matching tags and Releases are skipped
+   on a retry. A tag at another commit or conflicting Release metadata stops
+   finalization before it creates anything new. Only then can the matching
+   production website deployment start.
 
 ## Package canaries
 
@@ -132,10 +139,11 @@ workflow so npm generates provenance for each public tarball.
 
 The production website does not deploy when the quarantine upload finishes.
 The finalization dispatch first proves that every intended version is on npm
-and every `latest` tag points to it. The existing website gate then checks the
-playground versions, normal npm peer resolution, package-source release tags,
-the generated SSG project, and the live SSR and SSG playgrounds before the
-deployment completes.
+and every `latest` tag points to it, then finishes the GitHub release metadata.
+The website workflow checks out that exact release commit. Its existing gate
+then checks the playground versions, normal npm peer resolution, package-source
+release tags, the generated SSG project, and the live SSR and SSG playgrounds
+before the deployment completes.
 
 Website-only pushes still use the normal production deployment workflow. Its
 package-source authorization prevents unreleased package work from reaching

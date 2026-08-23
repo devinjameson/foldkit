@@ -94,6 +94,16 @@ const planTarget = (repo, target) =>
     encoding: 'utf8',
   })
 
+const planReleaseTarget = (repo, target) =>
+  spawnSync(
+    process.execPath,
+    [SCRIPT_PATH, target, '--allow-historical-target'],
+    {
+      cwd: repo,
+      encoding: 'utf8',
+    },
+  )
+
 test('allows a website-only commit after the package set was released', () => {
   const repo = makeReleasedRepo()
   try {
@@ -165,6 +175,25 @@ test('refuses an older target after a newer website commit exists', () => {
     assert.equal(result.status, 0, result.stderr)
     assert.equal(result.stdout.trim(), 'deploy=false')
     assert.match(result.stderr, /not the checked-out latest deployment target/)
+  } finally {
+    rmSync(repo, { recursive: true, force: true })
+  }
+})
+
+test('allows an exact historical release target during finalization', () => {
+  const repo = makeReleasedRepo()
+
+  try {
+    const released = run(repo, 'git', ['rev-parse', 'HEAD'])
+
+    write(repo, 'packages/website/page.ts', 'export const page = true\n')
+    commit(repo, 'update website')
+    run(repo, 'git', ['checkout', '-q', released])
+
+    const result = planReleaseTarget(repo, released)
+
+    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.stdout.trim(), 'deploy=true')
   } finally {
     rmSync(repo, { recursive: true, force: true })
   }

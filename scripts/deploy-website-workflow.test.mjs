@@ -422,6 +422,25 @@ test('production deployment requires the complete promoted npm snapshot', () => 
   )
 })
 
+test('stable finalization deploys the exact published website commit', () => {
+  assert.match(
+    productionWorkflow,
+    /ref: \$\{\{ inputs\.published_commit \|\| 'main' \}\}/,
+  )
+  assert.match(
+    productionWorkflow,
+    /node scripts\/plan-website-deploy\.mjs "\$\{target\}" "\$\{PUBLISHED_COMMIT:\+--allow-historical-target\}"/,
+  )
+  assert.match(
+    productionWorkflow,
+    /git merge-base --is-ancestor "\$\{expected\}" refs\/remotes\/origin\/main/,
+  )
+  assert.match(
+    productionWorkflow,
+    /target: \$\{\{ needs\.authorize\.outputs\.target \}\}/,
+  )
+})
+
 test('the registry-backed SSG playground build runs only for production', () => {
   assert.match(
     buildWorkflow,
