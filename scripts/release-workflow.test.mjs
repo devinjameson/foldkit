@@ -52,6 +52,16 @@ test('Changesets only versions packages and cannot parse publisher output', () =
     versionJob,
     /outputs:\n\s+has_changesets: \$\{\{ steps\.changesets\.outputs\.hasChangesets \}\}/,
   )
+  assert.match(
+    versionJob,
+    /uses: changesets\/action@v1\n\s+with:\n\s+version: pnpm version-packages\n\s+env:\n\s+GITHUB_TOKEN: \$\{\{ secrets\.GITHUB_TOKEN \}\}\n\s+SKIP_SIMPLE_GIT_HOOKS: '1'/,
+  )
+  assert.deepEqual(
+    versionJob
+      .split('\n')
+      .filter(line => line.includes('SKIP_SIMPLE_GIT_HOOKS')),
+    ["          SKIP_SIMPLE_GIT_HOOKS: '1'"],
+  )
 
   assert.match(
     stableJob,
