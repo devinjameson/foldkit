@@ -28,6 +28,8 @@ Refresh the subtree when you want the latest source and examples:
 git subtree pull --prefix=repos/foldkit https://github.com/foldkit/foldkit.git main --squash
 ```
 
+`create-foldkit-app` writes `AGENTS.md` only when it creates the project, but the conventions in that file change with the framework. When you upgrade Foldkit, replace `AGENTS.md` from the [current scaffolder template](https://github.com/foldkit/foldkit/blob/main/packages/create-foldkit-app/templates/base/AGENTS.md) too. If you vendor the repository, copy it from `repos/foldkit/packages/create-foldkit-app/templates/base/AGENTS.md`. Keep the existing `subtree_prompted` value and any project-specific notes. A stale copy can steer an agent toward APIs that the installed packages no longer export.
+
 ## Foldkit Skills
 
 Foldkit ships [agent skills](/ai/skills) for Claude Code, Codex, the ChatGPT desktop app, and OpenCode. The skills encode repeatable workflows for building and auditing Foldkit applications. They also direct the agent to the vendored repository when the live source is more authoritative than a written guide.

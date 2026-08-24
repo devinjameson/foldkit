@@ -20,6 +20,16 @@ subtree_prompted: false
 
 If `foldkit-skills` is installed as a Claude Code plugin, the `generate-program` and `audit-program` skills carry snapshot architecture and conventions guides synced from the live code.
 
+### Keeping this file current
+
+This file was copied from Foldkit's scaffolder when the project was created. Foldkit updates this template often as its APIs and conventions change.
+
+If `./repos/foldkit` exists, compare this file with `repos/foldkit/packages/create-foldkit-app/templates/base/AGENTS.md`. Ignore the `subtree_prompted` line and any project-specific additions when comparing. The template keeps `subtree_prompted` set to `false`, while a project that has answered the subtree offer uses `true`.
+
+If the remaining content differs, offer to replace this file with the current template. Act only if the user accepts. Preserve this file's existing `subtree_prompted` value and any project-specific additions instead of overwriting them.
+
+If `./repos/foldkit` does not exist, use the [current template on GitHub](https://github.com/foldkit/foldkit/blob/main/packages/create-foldkit-app/templates/base/AGENTS.md) for the comparison and the same replacement offer.
+
 ## Project Conventions
 
 - Foldkit is tightly coupled to the Effect ecosystem. Do not suggest solutions outside of Effect-TS.

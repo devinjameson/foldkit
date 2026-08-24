@@ -22,6 +22,8 @@ Foldkit is not incremental. There is no React interop, no escape hatch, no "just
 
 The foldkit repo is vendored as a git subtree at `repos/foldkit/` from the project root. It is the source of truth for everything: conventions, framework source, examples, the quality bar. Browse it directly.
 
+A consumer project's `AGENTS.md` is a scaffolder snapshot and can lag behind the installed packages. The current copy is `repos/foldkit/packages/create-foldkit-app/templates/base/AGENTS.md`, or `packages/create-foldkit-app/templates/base/AGENTS.md` when working in the Foldkit repository itself. Compare the consumer project's file with that template while ignoring `subtree_prompted` and any project-specific additions. If the remaining content differs, offer to replace it while preserving both. The Foldkit repository's root `AGENTS.md` is not a scaffold copy; never compare or replace it.
+
 Stable top-level entry points:
 
 - `repos/foldkit/examples/`: runnable example apps spanning every complexity tier. Usually your first stop when looking for a precedent.

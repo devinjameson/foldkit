@@ -43,7 +43,7 @@ The exact files depend on the rendering mode and starter example. A small browse
 - `tsconfig.json`: TypeScript configuration
 - `.oxlintrc.json`: Oxlint configuration
 - `.prettierrc`: Prettier configuration
-- `AGENTS.md`: conventions for AI coding assistants working on the project
+- `AGENTS.md`: conventions for AI coding assistants working on the project; this file is a scaffolder snapshot, so [replace it from the current template when you upgrade Foldkit](/ai/overview)
 
 In a small starter, `src/main.ts` holds the Model, Messages, update, init, and view. Larger examples move those definitions into focused modules as the application grows.
 
