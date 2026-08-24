@@ -127,16 +127,16 @@ const Message = defineMessageUnion({
 
 ### pipe
 
-Use `pipe()` for multi-step data flow. Never use `pipe` with a single operation:
+Use `pipe()` when the value being transformed should remain the subject of clear left-to-right data flow. A single transformation is valid when that order carries meaning:
 
 ```ts
-// WRONG: single operation in pipe
-pipe(value, Option.match({ onNone: () => ..., onSome: (x) => ... }))
-
-// RIGHT: call directly
+// An ordinary function call stays direct.
 Option.match(value, { onNone: () => ..., onSome: (x) => ... })
 
-// RIGHT: multi-step
+// An existing update result remains the subject.
+pipe(dialogClose, Update.withOutMessage(outMessage))
+
+// A multi-step transformation reads left to right.
 pipe(
   maybeRoom,
   Option.flatMap(({ maybeGame }) => maybeGame),
@@ -241,12 +241,11 @@ url.startsWith('http')
 
 The rule of thumb: **Effect `String` in pipes, native methods on named variables.** Don't force the Effect form into a non-composing call site just to avoid the native method.
 
-### Single-op pipe tail operator
+### Effect pipeline tail operators
 
-The "no pipe for a single operation" rule has one exception: **tail operators on an Effect pipeline are fine as a suffix.** This is idiomatic for Commands:
+Tail operators on an Effect pipeline keep the Effect as the subject. This is idiomatic for Commands:
 
 ```ts
-// RIGHT: the .pipe(...) is a tail suffix, not a wrapper around a single call
 Effect.gen(function* () {
   // ...
   return Message.SucceededFetchWeather({ data })
@@ -258,7 +257,7 @@ Effect.gen(function* () {
 )
 ```
 
-The `.pipe(Effect.catch(...), FetchWeather)` is multi-step (two tail operators) and even if it were one, suffix-style `.pipe` on a yielded Effect is the canonical shape. Don't mechanically flatten it to `FetchWeather(Effect.catch(Effect.gen(...), ...))`. That reads inside-out and obscures the pipeline.
+The `.pipe(Effect.catch(...), FetchWeather)` suffix keeps the yielded Effect first. Don't mechanically flatten it to `FetchWeather(Effect.catch(Effect.gen(...), ...))`. That reads inside-out and obscures the pipeline.
 
 ### Effect.ignore only when there's an error channel
 
@@ -374,9 +373,9 @@ When the operation name collides with the function, use a trailing underscore su
 
 Manual unpacking of a child result usually means the site should use `Update.foldChild` for child Messages or `Update.foldChildStep` for no-argument child entry points. Those helpers keep the child Model, lifted Commands, and OutMessage in one fold.
 
-Compose two or more sequential operations over the same Model with `Update.combine`. Call a single operation directly. Name an inline Step parameter `stepModel`; it receives the Model from the preceding Step. Independent child inits need separate Model assembly because they do not update the same Model in sequence.
+Use `Update.combine` when a later Step should receive the Model produced by an earlier Step. It takes two or more Steps. Do not wrap one Step in `Update.combine`; call that operation directly. Name an inline Step parameter `stepModel` when combining several; it receives the Model from the preceding Step. Independent child inits need separate Model assembly because neither init consumes the Model produced by the other.
 
-Use `Update.withOutMessage(updateReturn, outMessage)` or its data-last form when attaching a known or optional OutMessage to an existing plain return. Include `outMessage` directly when constructing a fresh result with a known value. Add `toParentOutMessage` only when it forwards at least one child OutMessage from the current Submodel to its parent. When every child OutMessage is handled locally, omit the lift. Never write `toParentOutMessage: () => undefined`.
+When the OutMessage is already known while constructing a new result, include it directly: `{ model, commands, outMessage }`. Use `Update.withOutMessage` when attaching an OutMessage to an existing plain return or when the value has the type `OutMessage | undefined`. Pipe an existing return into the helper: `pipe(dialogClose, Update.withOutMessage(outMessage))`. When constructing the plain return in the same expression, pass it first: `Update.withOutMessage({ model, commands }, outMessage)`. Add `toParentOutMessage` only when it forwards at least one child OutMessage from the current Submodel to its parent. Omit it when no variant is forwarded. Local handling through `foldOutMessage` is independent, so a forwarded variant may also update the current parent. Never write `toParentOutMessage: () => undefined`.
 
 ## Schema Constructors
 

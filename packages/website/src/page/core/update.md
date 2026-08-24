@@ -24,114 +24,78 @@ An update, init, boot, or component helper that statically creates no Commands o
 
 ## Composing Results
 
+### Keeping Results Together
+
 Keep an update-like result attached to the operation that produced it. Name the value after the operation and use dot access:
 
-```ts
-const homeInit = Home.init()
-
-return {
-  model: { home: homeInit.model },
-  commands: Command.mapMessages(homeInit.commands, message =>
-    Message.GotHomeMessage({ message }),
-  ),
-}
-```
+::Snippet{name="updateResultInit" label="composing an init result"}
 
 The same rule applies when a test consumes an update result:
 
-```ts
-const formSubmit = update(model, Message.SubmittedForm())
-
-expect(formSubmit.model.status).toBe('Submitting')
-expect(formSubmit.commands ?? []).toHaveLength(1)
-```
+::Snippet{name="updateResultTest" label="testing an update result"}
 
 When the operation name collides with the function, use a trailing underscore such as `init_`. Do not destructure or rename `model`, `commands`, or `outMessage`. Dot access does not make an OutMessage impossible to ignore. It keeps the operation and its returned values visibly connected.
 
 Pass optional Commands directly to APIs that accept them, including `Command.mapMessages`. Use `result.commands ?? []` only when the next operation requires an array for spreading, concatenating, execution, or an assertion.
 
+### Composing Update Steps
+
+TypeScript rejects this manual composition when the enclosing update returns `Update.Return<Model, Message>`:
+
+::Snippet{name="updateOptionalCommandsError" label="invalid optional Commands composition"}
+
+Every Foldkit template enables `exactOptionalPropertyTypes`. With that setting, the optional `commands` property may be absent. When the property is present, it must contain Commands. `dialogOpen.commands` has the type `Update.Commands<Message> | undefined`, so TypeScript rejects `commands: dialogOpen.commands`.
+
+This error often points to update results being composed by hand. When both operations update the same Model, express them as Steps and compose them with `Update.combine`:
+
+::Snippet{name="updateCombineOpenDialog" label="composing Update Steps"}
+
 Manual unpacking of a child result usually means the site should use `Update.foldChild` or `Update.foldChildStep`.
 
-Use `Update.combine` when two or more operations update the same Model in sequence. It passes each Step the Model produced by the preceding Step. Name that parameter `stepModel` when an inline Step needs it:
+Use `Update.combine` when two or more operations transform the same Model and a later Step should receive the Model produced by an earlier Step. Name that parameter `stepModel` when an inline Step needs it:
 
-```ts
-return Update.combine(model, [
-  foldDialog(Message.RequestedClose()),
-  stepModel => ({
-    model: evo(stepModel, { isSubmitting: () => false }),
-  }),
-])
-```
+::Snippet{name="updateCombineFoldDialog" label="composing a child fold and another Step"}
 
 `combine` appends the Commands to its returned array in Step order. The runtime forks those Commands independently, so an application must not depend on their execution or completion order.
 
-Call a single operation directly. Independent child inits are also not a sequence because neither child updates the other child's Model. Initialize them separately and assemble the parent Model:
+Do not wrap one Step in `Update.combine`; call that operation directly.
 
-```ts
-const homeInit = Home.init()
-const roomInit = Room.init(route)
+### Combining Independent Results
 
-return {
-  model: {
-    home: homeInit.model,
-    room: roomInit.model,
-  },
-  commands: [
-    ...Command.mapMessages(homeInit.commands, toGotHomeMessage),
-    ...Command.mapMessages(roomInit.commands, toGotRoomMessage),
-  ],
-}
-```
+Independent child inits are not a sequence because neither child updates the other child's Model. Initialize them separately and assemble the parent Model:
+
+::Snippet{name="updateIndependentInits" label="combining independent init results"}
 
 ## Preventing Lost OutMessages
 
 Use `Update.Return<Model, Message>` for an update that cannot emit an OutMessage. TypeScript rejects assigning an OutMessage-producing result to it:
 
-```ts
-const childUpdate: Update.ReturnWithOutMessage<
-  Child.Model,
-  Child.Message,
-  Child.OutMessage
-> = Child.update(model.child, message)
-
-// Type error: childUpdate may contain an OutMessage that this type cannot hold.
-const parentUpdate: Update.Return<Model, Message> = childUpdate
-```
+::Snippet{name="updateRejectLostOutMessage" label="rejected OutMessage-producing result"}
 
 This protects the OutMessage from being lost while a caller keeps only the Model and Commands.
 
 An OutMessage-aware return type also accepts a result that emitted nothing:
 
-```ts
-const plainUpdate: Update.Return<Model, Message> = { model }
-
-const submodelUpdate: Update.ReturnWithOutMessage<Model, Message, OutMessage> =
-  plainUpdate
-```
+::Snippet{name="updateAcceptMissingOutMessage" label="accepted plain update result"}
 
 An OutMessage-aware caller can accept a plain result because an update is allowed to emit nothing.
 
-When an operation has already produced a plain result and another operation decides whether to attach an OutMessage, use `Update.withOutMessage`:
+### Returning an OutMessage
 
-```ts
-const dialogClose = closeDialog(model)
+When the OutMessage is already known while constructing a new result, include it directly:
 
-return pipe(dialogClose, Update.withOutMessage(outMessage))
-```
+::Snippet{name="updateKnownOutMessage" label="returning a known OutMessage"}
+
+Use `Update.withOutMessage` when attaching an OutMessage to an existing plain result or when the value has the type `OutMessage | undefined`. If an operation already produced the plain result, pipe that named result into the helper:
+
+::Snippet{name="updateWithOutMessage" label="attaching an optional OutMessage"}
 
 The object-spread alternative is easy to get wrong:
 
-```ts
-// Avoid: this writes outMessage: undefined and accepts a result that already has an OutMessage.
-return { ...dialogClose, outMessage }
-```
+::Snippet{name="updateAvoidOutMessageSpread" label="invalid OutMessage object spread"}
 
 `Update.withOutMessage` preserves `dialogClose.model` and `dialogClose.commands`. A defined value becomes `outMessage`; `undefined` leaves the property out. The update result must be a plain return, so the helper cannot overwrite an OutMessage another operation emitted.
 
-When constructing a new result with a known OutMessage, include it directly:
-
-```ts
-return { model, outMessage: OutMessage.Closed() }
-```
+When constructing the plain result in the same expression and the value has the type `OutMessage | undefined`, pass the result first: `Update.withOutMessage({ model, commands }, outMessage)`.
 
 First, the [view function](/core/view) completes the basic loop by turning the Model into what the user sees.

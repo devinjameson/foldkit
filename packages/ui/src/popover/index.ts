@@ -270,7 +270,7 @@ export const update = (model: Model, message: Message) => {
         }),
       ])
 
-      return Update.withOutMessage(popoverOpen, OutMessage.Opened())
+      return pipe(popoverOpen, Update.withOutMessage(OutMessage.Opened()))
     }
 
     return {
@@ -347,7 +347,7 @@ export const update = (model: Model, message: Message) => {
           }),
         ])
 
-        return Update.withOutMessage(popoverClose, OutMessage.Closed())
+        return pipe(popoverClose, Update.withOutMessage(OutMessage.Closed()))
       }
 
       return openPopover(withPointerType)

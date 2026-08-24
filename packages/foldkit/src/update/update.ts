@@ -59,9 +59,11 @@ export type ReturnWithOutMessage<
   outMessage?: OutMessage
 }>
 
-/** Adds an OutMessage to a plain update return while preserving its Model and
- *  Commands. `undefined` means that the operation emitted no OutMessage, so
- *  the returned record omits the property.
+/** Adds a known or optional OutMessage to a plain update return while
+ *  preserving its Model and Commands. Use this helper when attaching to an
+ *  existing return or when the value has the type `OutMessage | undefined`.
+ *  `undefined` means that the operation emitted no OutMessage, so the returned
+ *  record omits the property.
  *
  *  The input must be a {@link Return}, so this helper cannot replace an
  *  OutMessage that an update already emitted.
@@ -69,11 +71,13 @@ export type ReturnWithOutMessage<
  *  ```ts
  *  const editorSave = Update.combine(model, [writeDraft, clearErrors])
  *
- *  return pipe(
- *    editorSave,
- *    Update.withOutMessage(outMessage),
- *  )
- *  ``` */
+ *  return pipe(editorSave, Update.withOutMessage(outMessage))
+ *  ```
+ *
+ *  When the OutMessage is already known while constructing a new result,
+ *  include it directly: `{ model, commands, outMessage }`. If the OutMessage
+ *  may be `undefined`, pass the new result first:
+ *  `Update.withOutMessage({ model, commands }, outMessage)`. */
 export const withOutMessage: {
   <OutMessage>(
     outMessage: OutMessage | undefined,
@@ -322,12 +326,12 @@ export type ChildFoldWithOutMessage<
  *    its own state from the child's OutMessage, and is optional here.
  *
  *  Use this shape only when `toParentOutMessage` forwards at least one child
- *  OutMessage from the current Submodel to its parent.
- *  If every child OutMessage is handled by `foldOutMessage`, use
- *  {@link ChildFoldWithOutMessage}. Its plain result is valid wherever the
- *  parent accepts {@link ReturnWithOutMessage}, because emitting no OutMessage
- *  is valid. Omit `toParentOutMessage` when `foldOutMessage` handles every
- *  child OutMessage locally. */
+ *  OutMessage from the current Submodel to its parent. If no child OutMessage
+ *  is forwarded, use {@link ChildFoldWithOutMessage}. Its plain result is
+ *  valid wherever the parent accepts {@link ReturnWithOutMessage}, because
+ *  emitting no OutMessage is valid. Local handling through `foldOutMessage`
+ *  is independent, so a forwarded child OutMessage may also update the
+ *  current parent. */
 export type ChildFoldWithParentOutMessage<
   ParentModel,
   ParentMessage,
@@ -636,8 +640,10 @@ export type ChildStepFoldWithOutMessage<
  *  also updates its own state from the child's OutMessage.
  *
  *  Use this shape only when `toParentOutMessage` forwards at least one child
- *  OutMessage from the current Submodel to its parent. When `foldOutMessage`
- *  handles every variant locally, omit `toParentOutMessage`. */
+ *  OutMessage from the current Submodel to its parent. If no child OutMessage
+ *  is forwarded, use {@link ChildStepFoldWithOutMessage}. Local handling
+ *  through `foldOutMessage` is independent, so a forwarded child OutMessage
+ *  may also update the current parent. */
 export type ChildStepFoldWithParentOutMessage<
   ParentModel,
   ParentMessage,
@@ -713,8 +719,9 @@ type AnyChildStepFold = Readonly<{
  *  A parent that is itself a Submodel adds `toParentOutMessage` when it
  *  forwards at least one child OutMessage to its own parent and receives a
  *  {@link StepWithOutMessage}, just as the input-taking {@link foldChild}
- *  returns a {@link FoldWithOutMessage}. When every child OutMessage is
- *  handled locally, omit the lift and use the plain Step directly. */
+ *  returns a {@link FoldWithOutMessage}. When no child OutMessage is
+ *  forwarded, omit the lift and use the plain Step directly. Local handling
+ *  through `foldOutMessage` is independent of forwarding. */
 export const foldChildStep: {
   <
     ParentModel,

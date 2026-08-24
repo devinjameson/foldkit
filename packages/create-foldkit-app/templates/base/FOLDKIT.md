@@ -62,9 +62,11 @@ Pass optional Commands directly to APIs that accept them: `Command.mapMessages(h
 
 Manual unpacking of a child result usually means the site should use `Update.foldChild` or `Update.foldChildStep`.
 
-Compose two or more sequential operations over the same Model with `Update.combine`. Call a single operation directly. Name an inline Step parameter `stepModel`; it contains the Model returned by the preceding Step. Use `Update.withOutMessage(updateReturn, outMessage)` or its data-last form when attaching a known or optional OutMessage to an existing plain return. Include `outMessage` directly when constructing a fresh result with a known value.
+Use `Update.combine` when a later Step should receive the Model produced by an earlier Step. It takes two or more Steps. Do not wrap one Step in `Update.combine`; call that operation directly. Name an inline Step parameter `stepModel`; it contains the Model produced by the preceding Step.
 
-Add `toParentOutMessage` only when at least one child OutMessage is forwarded from the current Submodel to its parent. When every child OutMessage is handled locally, omit it. Never write `toParentOutMessage: () => undefined`.
+When the OutMessage is already known while constructing a new result, include it directly: `{ model, commands, outMessage }`. Use `Update.withOutMessage` when attaching an OutMessage to an existing plain return or when the value has the type `OutMessage | undefined`. Pipe an existing return into the helper: `pipe(dialogClose, Update.withOutMessage(outMessage))`. When constructing the plain return in the same expression, pass it first: `Update.withOutMessage({ model, commands }, outMessage)`.
+
+Add `toParentOutMessage` only when at least one child OutMessage is forwarded from the current Submodel to its parent. Omit it when no variant is forwarded. Local handling through `foldOutMessage` is independent, so a forwarded variant may also update the current parent. Never write `toParentOutMessage: () => undefined`.
 
 Use `evo()` from `foldkit/struct` for immutable model updates. Never spread or `Object.assign`.
 

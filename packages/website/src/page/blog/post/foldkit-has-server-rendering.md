@@ -65,9 +65,7 @@ There are no server components, no `'use client'` or `'use server'` boundaries, 
 
 Scaffold a Foldkit SSR application:
 
-```sh
-npx create-foldkit-app@latest --rendering ssr
-```
+::Snippet{name="serverRenderingScaffoldSsr" label="create a server-rendered Foldkit project"}
 
 Check it out and let me know what breaks. And don't be a stranger!
 

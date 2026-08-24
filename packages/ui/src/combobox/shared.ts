@@ -393,7 +393,8 @@ export const makeUpdate = <Model extends BaseModel>(
 
       if (didClose && model.isAnimated) {
         return pipe(
-          Update.combine(nextModel, [
+          nextModel,
+          Update.combine([
             stepModel => ({ model: stepModel, commands }),
             foldAnimation(AnimationMessage.Hid()),
           ]),
@@ -438,7 +439,8 @@ export const makeUpdate = <Model extends BaseModel>(
 
       if (model.isAnimated) {
         return pipe(
-          Update.combine(comboboxClose.model, [
+          comboboxClose.model,
+          Update.combine([
             stepModel => ({ model: stepModel, commands }),
             foldAnimation(AnimationMessage.Hid()),
           ]),

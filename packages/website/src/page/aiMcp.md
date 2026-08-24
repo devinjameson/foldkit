@@ -18,17 +18,13 @@ New projects already include `@foldkit/devtools-mcp`, a `.mcp.json` entry named 
 
 Run the init command in the project root:
 
-```sh
-npx @foldkit/devtools-mcp init
-```
+::Snippet{name="aiMcpInit" label="initialize the DevTools MCP server"}
 
 The command creates `.mcp.json`, or updates only the `foldkit-devtools` entry when the file already exists. Other configured MCP servers remain unchanged.
 
 Install the server as a development dependency when you want to avoid an `npx` lookup each time the agent starts:
 
-```sh
-npm install -D @foldkit/devtools-mcp
-```
+::Snippet{name="aiMcpInstall" label="install the DevTools MCP server"}
 
 In `vite.config.ts`, set `devToolsMcpPort` so the Foldkit plugin opens the WebSocket relay:
 

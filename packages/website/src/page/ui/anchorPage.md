@@ -6,16 +6,7 @@ Anchor is the positioning runtime the floating components are built on. [Listbox
 
 It is exported so you can build an anchored component Foldkit does not ship. If one of the six above fits, use it. Reach for this module when the panel you need differs structurally from all of them, for example a virtualized list with group headers, or a multi-select that stages changes against an open-time baseline and commits them with a Done action.
 
-```ts
-import {
-  AnchorConfig,
-  Padding,
-  Placement,
-  anchorSetup,
-  portalToContainingRoot,
-} from '@foldkit/ui/anchor'
-import type { SetupConfig } from '@foldkit/ui/anchor'
-```
+::Snippet{name="uiAnchorExports" label="Anchor imports"}
 
 The module is also exported from the root barrel, as `import { Anchor } from '@foldkit/ui'`.
 

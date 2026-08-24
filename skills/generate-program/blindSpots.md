@@ -69,7 +69,7 @@ Do not destructure or rename `model`, `commands`, or `outMessage` from an update
 
 Dot access does not prevent someone from ignoring `outMessage`; it keeps the operation and all of its returned fields visible together. When the result belongs to a child Submodel, manual unpacking is usually the deeper problem. Use `Update.foldChild` or `Update.foldChildStep` so the child Model, lifted Commands, and OutMessage remain part of one fold.
 
-If a plain `Update.Return<Model, Message>` already exists and an `OutMessage | undefined` value needs to be attached, use `Update.withOutMessage`. Flag local attachment helpers and conditional object spreads that duplicate it. Flag `toParentOutMessage: () => undefined`; a child fold needs `toParentOutMessage` only when it forwards at least one child OutMessage from the current Submodel to its parent.
+When the OutMessage is already known while constructing a new result, include it directly. Use `Update.withOutMessage` when attaching an OutMessage to an existing plain return or when the value has the type `OutMessage | undefined`. Pipe an existing return into the helper, and pass a new result literal first. Flag local attachment helpers and conditional object spreads that duplicate it. Flag `toParentOutMessage: () => undefined`; a child fold needs `toParentOutMessage` only when it forwards at least one child OutMessage from the current Submodel to its parent.
 
 When several operations update the same Model in sequence, use `Update.combine`. Do not apply it to independent init results whose Models are assembled as separate fields.
 

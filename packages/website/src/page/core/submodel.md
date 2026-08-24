@@ -221,7 +221,7 @@ In this example, only the parent knows the redirect Route for `Login.SendMagicLi
 
 A parent Submodel adds `toParentOutMessage` only when it forwards at least one child OutMessage to its own parent. Match every child variant. Return the parent OutMessage when the fact is forwarded, and return `undefined` for a named variant that stops at the current parent. The [Auth example](/example-apps/auth) forwards a successful login through two Submodel levels to the root.
 
-When every child OutMessage is handled locally by `foldOutMessage`, omit `toParentOutMessage`. The plain fold result is valid in an update that returns `Update.ReturnWithOutMessage<ParentModel, ParentMessage, ParentOutMessage>` because emitting no OutMessage is allowed. Do not add `toParentOutMessage: () => undefined` just to change the fold's return type.
+Omit `toParentOutMessage` when no child OutMessage variant is forwarded. The plain fold result is valid in an update that returns `Update.ReturnWithOutMessage<ParentModel, ParentMessage, ParentOutMessage>` because emitting no OutMessage is allowed. Local handling through `foldOutMessage` is independent, so a forwarded variant may also update the current parent. Do not add `toParentOutMessage: () => undefined` just to change the fold's return type.
 
 ## Reflecting External State
 
