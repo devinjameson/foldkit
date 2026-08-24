@@ -435,9 +435,13 @@ export const routeToUrlPath = (route: AppRoute): string =>
     }),
   )
 
+export const INDEX_OUTPUT_PATH = 'index.html'
+
 export const routeToOutputPath = (route: AppRoute): string => {
   const urlPath = routeToUrlPath(route)
-  return urlPath === '/' ? 'index.html' : `${urlPath.slice(1)}/index.html`
+  return urlPath === '/'
+    ? INDEX_OUTPUT_PATH
+    : `${urlPath.slice(1)}/${INDEX_OUTPUT_PATH}`
 }
 
 export const enumerateRoutes = (
@@ -457,15 +461,17 @@ const WEBSITE_DIR = resolve(SCRIPT_DIR, '..')
 const DIST_DIR = resolve(WEBSITE_DIR, 'dist')
 const API_JSON_PATH = resolve(WEBSITE_DIR, 'src/generated/api.json')
 const API_UI_JSON_PATH = resolve(WEBSITE_DIR, 'src/generated/api-ui.json')
-
-// SERVER ENTRY
-
-const SERVER_ENTRY_PATH = resolve(WEBSITE_DIR, 'dist-server/entry.server.js')
-const INDEX_PATH = resolve(DIST_DIR, 'index.html')
+const INDEX_PATH = resolve(DIST_DIR, INDEX_OUTPUT_PATH)
 const TEMPLATE_COPY_PATH = resolve(
   WEBSITE_DIR,
   'node_modules/.cache/foldkit/prerender-template.html',
 )
+const CONTAINER_ID = 'root'
+const CONTAINER_PLACEHOLDER = `<div id="${CONTAINER_ID}"></div>`
+
+// SERVER ENTRY
+
+const SERVER_ENTRY_PATH = resolve(WEBSITE_DIR, 'dist-server/entry.server.js')
 
 // NOTE: the app module graph uses Vite-only specifiers (`virtual:*`, `.md`,
 // `?raw`, `import.meta.glob`), so it cannot be imported by tsx directly. The
@@ -899,12 +905,16 @@ ${items}
 </rss>`
 }
 
+// TEMPLATE
+
 // NOTE: the generated `/` is written over `index.html`, which is also where
 // the client build leaves the template, so reading the template from that file
-// works once and then reads back a page this script generated. The built file
-// is authoritative while it still holds the template, and the cached copy it
-// leaves behind is what lets a re-run against one client build generate the
-// same pages instead of failing on the replaced placeholder.
+// works once and then reads back a page whose placeholder is already replaced.
+// The built file is authoritative while it still holds the placeholder, and
+// the cached copy it leaves behind is what lets a re-run against one client
+// build generate the same pages. The placeholder is the condition
+// `injectIntoTemplate` itself enforces, so a static render, which carries no
+// hydration stamp, is covered by the same test.
 const readTemplate = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem
 
@@ -918,8 +928,8 @@ const readTemplate = Effect.gen(function* () {
   }
 
   const builtIndex = yield* fs.readFileString(INDEX_PATH)
-  const isGeneratedPage = builtIndex.includes(Server.FOLDKIT_APP_ATTRIBUTE)
-  if (!isGeneratedPage) {
+  const isTemplate = builtIndex.includes(CONTAINER_PLACEHOLDER)
+  if (isTemplate) {
     yield* fs.makeDirectory(dirname(TEMPLATE_COPY_PATH), { recursive: true })
     yield* fs.writeFileString(TEMPLATE_COPY_PATH, builtIndex)
     return builtIndex
@@ -929,7 +939,7 @@ const readTemplate = Effect.gen(function* () {
   if (!hasTemplateCopy) {
     return yield* Effect.die(
       new Error(
-        `Cannot prerender: "${INDEX_PATH}" holds a generated page rather than the template, and no copy of the template remains. Run the client build again.`,
+        `Cannot prerender: "${INDEX_PATH}" no longer holds the ${CONTAINER_PLACEHOLDER} placeholder, and no copy of the template remains. Run the client build again.`,
       ),
     )
   }
