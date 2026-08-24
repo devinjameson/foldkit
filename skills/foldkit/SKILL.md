@@ -40,4 +40,6 @@ git subtree add --prefix=repos/foldkit https://github.com/foldkit/foldkit.git ma
 
 Refresh later with `git subtree pull --prefix=repos/foldkit https://github.com/foldkit/foldkit.git main --squash`.
 
+A consumer project's `FOLDKIT.md` is a scaffolder snapshot and can lag behind the packages it has installed. When it does, replace it whole from `repos/foldkit/packages/create-foldkit-app/templates/base/FOLDKIT.md`. That project's `AGENTS.md` belongs to its author; never overwrite it.
+
 When working inside the foldkit repo itself rather than a consumer project, drop the `repos/foldkit/` prefix. The same paths exist at the project root.

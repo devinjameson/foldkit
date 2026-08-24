@@ -20,13 +20,19 @@ git subtree add --prefix=repos/foldkit https://github.com/foldkit/foldkit.git ma
 
 The subtree gives an agent local access to the framework source, runnable examples, this documentation site, and the production apps built with Foldkit. Treat it as read-only reference material. Application imports should still come from the installed npm packages.
 
-Unlike a submodule, a subtree is committed with your repository. Teammates, CI runners, and cloud agents receive the reference source with a normal clone. Projects created with `create-foldkit-app` include an `AGENTS.md` that points agents to these references and a `.ignore` file that keeps `repos/` out of the editor file tree.
+Unlike a submodule, a subtree is committed with your repository. Teammates, CI runners, and cloud agents receive the reference source with a normal clone. Projects created with `create-foldkit-app` include a `FOLDKIT.md` that points agents to these references, an `AGENTS.md` for your own instructions, and a `.ignore` file that keeps `repos/` out of the editor file tree.
 
 Refresh the subtree when you want the latest source and examples:
 
 ```sh
 git subtree pull --prefix=repos/foldkit https://github.com/foldkit/foldkit.git main --squash
 ```
+
+## Keeping FOLDKIT.md Current
+
+`create-foldkit-app` writes `FOLDKIT.md` when it creates the project, and the conventions in it change with the framework. A stale copy can steer an agent toward APIs the installed packages no longer export.
+
+Replace the whole file when you upgrade Foldkit. If you vendor the repository, copy `repos/foldkit/packages/create-foldkit-app/templates/base/FOLDKIT.md` over it. Otherwise take the [current template on GitHub](https://github.com/foldkit/foldkit/blob/main/packages/create-foldkit-app/templates/base/FOLDKIT.md). There is nothing to merge, because your own instructions live in `AGENTS.md`, which the upgrade leaves alone.
 
 ## Foldkit Skills
 
