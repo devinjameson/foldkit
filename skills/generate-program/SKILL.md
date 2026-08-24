@@ -297,7 +297,7 @@ Run with no flags to drop into the interactive prompts; pick the counter example
 - `tsconfig.json` with strict TypeScript settings
 - `index.html` with the root container
 - `src/styles.css` with Tailwind import
-- `AGENTS.md` with Foldkit conventions
+- `FOLDKIT.md` with Foldkit conventions, and an `AGENTS.md` stub pointing at it
 
 ### Offer the Foldkit subtree
 
