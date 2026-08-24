@@ -17,11 +17,11 @@ import {
 const defaultInit = (): Model => init({ id: 'test', rowHeightPx: 30 })
 
 const measuredInit = (containerHeight: number): Model => {
-  const [measured] = update(
+  const measurement = update(
     defaultInit(),
     Message.MeasuredContainer({ containerHeight }),
   )
-  return measured
+  return measurement.model
 }
 
 describe('VirtualList', () => {
@@ -139,53 +139,53 @@ describe('VirtualList', () => {
   describe('CompletedApplyScroll', () => {
     it('clears pendingScroll when the version matches', () => {
       const baseModel = defaultInit()
-      const [scrolledModel] = scrollToIndex(baseModel, 50)
-      expect(scrolledModel.pendingScroll._tag).toBe('ScrollingToIndex')
+      const indexScroll = scrollToIndex(baseModel, 50)
+      expect(indexScroll.model.pendingScroll._tag).toBe('ScrollingToIndex')
 
-      const [resolvedModel] = update(
-        scrolledModel,
+      const completion = update(
+        indexScroll.model,
         Message.CompletedApplyScroll({
-          version: scrolledModel.pendingScrollVersion,
+          version: indexScroll.model.pendingScrollVersion,
         }),
       )
-      expect(resolvedModel.pendingScroll._tag).toBe('Idle')
+      expect(completion.model.pendingScroll._tag).toBe('Idle')
     })
 
     it('ignores a stale completion when a newer scroll is in flight', () => {
-      const [first] = scrollToIndex(defaultInit(), 10)
-      const [second] = scrollToIndex(first, 20)
-      expect(second.pendingScrollVersion).toBe(2)
+      const firstScroll = scrollToIndex(defaultInit(), 10)
+      const secondScroll = scrollToIndex(firstScroll.model, 20)
+      expect(secondScroll.model.pendingScrollVersion).toBe(2)
 
-      const [unchanged] = update(
-        second,
+      const staleCompletion = update(
+        secondScroll.model,
         Message.CompletedApplyScroll({ version: 1 }),
       )
-      expect(unchanged.pendingScroll._tag).toBe('ScrollingToIndex')
-      if (unchanged.pendingScroll._tag === 'ScrollingToIndex') {
-        expect(unchanged.pendingScroll.version).toBe(2)
+      expect(staleCompletion.model.pendingScroll._tag).toBe('ScrollingToIndex')
+      if (staleCompletion.model.pendingScroll._tag === 'ScrollingToIndex') {
+        expect(staleCompletion.model.pendingScroll.version).toBe(2)
       }
     })
   })
 
   describe('scrollToIndex', () => {
     it('bumps the version and stores the target index in pendingScroll', () => {
-      const [model, commands] = scrollToIndex(defaultInit(), 42)
-      expect(model.pendingScrollVersion).toBe(1)
-      expect(model.pendingScroll._tag).toBe('ScrollingToIndex')
-      if (model.pendingScroll._tag === 'ScrollingToIndex') {
-        expect(model.pendingScroll.index).toBe(42)
-        expect(model.pendingScroll.version).toBe(1)
+      const indexScroll = scrollToIndex(defaultInit(), 42)
+      expect(indexScroll.model.pendingScrollVersion).toBe(1)
+      expect(indexScroll.model.pendingScroll._tag).toBe('ScrollingToIndex')
+      if (indexScroll.model.pendingScroll._tag === 'ScrollingToIndex') {
+        expect(indexScroll.model.pendingScroll.index).toBe(42)
+        expect(indexScroll.model.pendingScroll.version).toBe(1)
       }
-      expect(commands).toHaveLength(1)
+      expect(indexScroll.commands ?? []).toHaveLength(1)
     })
 
     it('increments the version monotonically across calls', () => {
-      const [first] = scrollToIndex(defaultInit(), 10)
-      const [second] = scrollToIndex(first, 20)
-      const [third] = scrollToIndex(second, 30)
-      expect(first.pendingScrollVersion).toBe(1)
-      expect(second.pendingScrollVersion).toBe(2)
-      expect(third.pendingScrollVersion).toBe(3)
+      const firstScroll = scrollToIndex(defaultInit(), 10)
+      const secondScroll = scrollToIndex(firstScroll.model, 20)
+      const thirdScroll = scrollToIndex(secondScroll.model, 30)
+      expect(firstScroll.model.pendingScrollVersion).toBe(1)
+      expect(secondScroll.model.pendingScrollVersion).toBe(2)
+      expect(thirdScroll.model.pendingScrollVersion).toBe(3)
     })
   })
 
@@ -353,36 +353,48 @@ describe('VirtualList', () => {
     const heightOf = (row: Row): number => row.height
 
     it('bumps the version and stores the target index in pendingScroll', () => {
-      const [model, commands] = scrollToIndexVariable(
+      const variableIndexScroll = scrollToIndexVariable(
         defaultInit(),
         rows,
         heightOf,
         2,
       )
-      expect(model.pendingScrollVersion).toBe(1)
-      expect(model.pendingScroll._tag).toBe('ScrollingToIndex')
-      if (model.pendingScroll._tag === 'ScrollingToIndex') {
-        expect(model.pendingScroll.index).toBe(2)
-        expect(model.pendingScroll.version).toBe(1)
+      expect(variableIndexScroll.model.pendingScrollVersion).toBe(1)
+      expect(variableIndexScroll.model.pendingScroll._tag).toBe(
+        'ScrollingToIndex',
+      )
+      if (variableIndexScroll.model.pendingScroll._tag === 'ScrollingToIndex') {
+        expect(variableIndexScroll.model.pendingScroll.index).toBe(2)
+        expect(variableIndexScroll.model.pendingScroll.version).toBe(1)
       }
-      expect(commands).toHaveLength(1)
+      expect(variableIndexScroll.commands ?? []).toHaveLength(1)
     })
 
     it('increments the version monotonically across calls', () => {
-      const [first] = scrollToIndexVariable(defaultInit(), rows, heightOf, 1)
-      const [second] = scrollToIndexVariable(first, rows, heightOf, 2)
-      expect(first.pendingScrollVersion).toBe(1)
-      expect(second.pendingScrollVersion).toBe(2)
+      const firstScroll = scrollToIndexVariable(
+        defaultInit(),
+        rows,
+        heightOf,
+        1,
+      )
+      const secondScroll = scrollToIndexVariable(
+        firstScroll.model,
+        rows,
+        heightOf,
+        2,
+      )
+      expect(firstScroll.model.pendingScrollVersion).toBe(1)
+      expect(secondScroll.model.pendingScrollVersion).toBe(2)
     })
 
     it('emits an ApplyScroll Command per call', () => {
-      const [, commands] = scrollToIndexVariable(
+      const variableIndexScroll = scrollToIndexVariable(
         defaultInit(),
         rows,
         heightOf,
         3,
       )
-      expect(commands).toHaveLength(1)
+      expect(variableIndexScroll.commands ?? []).toHaveLength(1)
     })
   })
 

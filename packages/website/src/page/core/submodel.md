@@ -85,9 +85,11 @@ The resulting fold reads the child, runs its update, writes it back, and lifts i
 
 `read` returns an `Option` because a routed page or keyed child may no longer exist when its Message arrives. `None` makes the fold a no-op. An always-present child returns `Option.some(model.settings)`.
 
-The fold is dual. `foldSettings(model, message)` runs it immediately. `foldSettings(message)` returns an `Update.Step` for `Update.combine`. Close over per-dispatch context in the `update` field, and apply route gates before calling the fold.
+The fold is dual. `foldSettings(model, message)` runs it immediately. `foldSettings(message)` returns an `Update.Step<ParentModel, ParentMessage>` for `Update.combine`. Close over per-dispatch context in the `update` field, and apply route gates before calling the fold.
 
-Use `Update.foldChildStep` for an entry point that takes only the child Model, such as `Dialog.close`. It accepts the same boundary fields and returns an `Update.Step` directly.
+Use `Update.foldChildStep` for an entry point that takes only the child Model, such as `Dialog.close`. It accepts the same fields and returns an `Update.Step<ParentModel, ParentMessage>`. Add `toParentOutMessage` when the current Submodel forwards at least one child OutMessage to its parent; the fold then returns an `Update.StepWithOutMessage<ParentModel, ParentMessage, ParentOutMessage>`.
+
+::Snippet{name="submodelFoldChildStep" label="foldChildStep with OutMessage forwarding"}
 
 ### Wiring the View with h.submodel {#wiring-the-view}
 
@@ -185,7 +187,7 @@ Context does not notify the child when a value changes. If the child must react 
 
 Wrapper Messages route child work back into the child update. An OutMessage reports a fact the parent may need to act on, such as a committed date, selected tab, or completed login.
 
-The child update returns `Option<OutMessage>` as a third tuple element. The child describes what happened, and the parent decides the consequence. A Login Submodel can emit `SucceededLogin` without knowing how the root stores a session or changes the URL.
+The child update can include an OutMessage in its optional `outMessage` field. The child describes what happened, and the parent decides the consequence. A Login Submodel can emit `SucceededLogin` without knowing how the root stores a session or changes the URL.
 
 ### Defining OutMessages {#defining-out-messages}
 
@@ -195,7 +197,7 @@ Define OutMessages beside the child Message. Name them as past-tense facts: `Suc
 
 ### Emitting from the Child
 
-The child update returns its Model, Commands, and an `Option<OutMessage>`. Most branches return `Option.none()`. A branch returns `Option.some(...)` only when it has a fact to surface.
+The child update returns its Model, optional Commands, and an optional OutMessage. Most branches omit `outMessage`. A branch includes it only when it has a fact to surface.
 
 ::Snippet{name="outMessageChildUpdate" label="child update"}
 
@@ -203,7 +205,9 @@ The child update returns its Model, Commands, and an `Option<OutMessage>`. Most 
 
 ### Handling in the Parent
 
-Handle the OutMessage through `foldOutMessage` on [Update.foldChild](#fold-child). Bind the fold as a standalone `fold<Child>OutMessage` value and match on every OutMessage tag. The returned `Update.Step` receives the parent Model after the updated child has been written back.
+Handle the OutMessage through `foldOutMessage` on [Update.foldChild](#fold-child). Bind the fold as a standalone `fold<Child>OutMessage` value and match on every OutMessage tag. The returned `Update.Step<ParentModel, ParentMessage>` receives the parent Model after the updated child has been written back.
+
+Do not unpack a child update or helper result by hand. Destructuring `model` and `commands` can leave its `outMessage` behind without a type error. Dot access can still ignore an OutMessage, but an operation-named value keeps all three returned fields visible together. Use `Update.foldChild` or `Update.foldChildStep` so the child Model, lifted Commands, and OutMessage remain part of one fold.
 
 ::Snippet{name="outMessageFoldChild" label="foldChild with foldOutMessage"}
 
@@ -213,9 +217,11 @@ In this example, only the parent knows the redirect Route for `Login.SendMagicLi
 
 ::Snippet{name="outMessageFoldContext" label="foldOutMessage with FoldContext"}
 
-[Update.foldChildStep](#fold-child) supplies the same fold context for no-argument child entry points.
+[Update.foldChildStep](#fold-child) supplies the same fold context for no-argument child entry points. It also accepts `toParentOutMessage` when the current Submodel forwards a child OutMessage to its parent.
 
-A parent that is itself a Submodel adds `toParentOutMessage`. Match the child OutMessage and return `Option.some(parentOutMessage)` when the fact should continue upward, or `Option.none()` when it stops at that level. The [Auth example](/example-apps/auth) carries a successful login through two Submodel levels to the root.
+A parent Submodel adds `toParentOutMessage` only when it forwards at least one child OutMessage to its own parent. Match every child variant. Return the parent OutMessage when the fact is forwarded, and return `undefined` for a named variant that stops at the current parent. The [Auth example](/example-apps/auth) forwards a successful login through two Submodel levels to the root.
+
+When every child OutMessage is handled locally by `foldOutMessage`, omit `toParentOutMessage`. The plain fold result is valid in an update that returns `Update.ReturnWithOutMessage<ParentModel, ParentMessage, ParentOutMessage>` because emitting no OutMessage is allowed. Do not add `toParentOutMessage: () => undefined` just to change the fold's return type.
 
 ## Reflecting External State
 

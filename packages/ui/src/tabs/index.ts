@@ -7,6 +7,7 @@ import {
   String,
   pipe,
 } from 'effect'
+import { type Update } from 'foldkit'
 import * as Command from 'foldkit/command'
 import * as Dom from 'foldkit/dom'
 import { type ChildAttribute, type Html, childAttributes } from 'foldkit/html'
@@ -67,7 +68,8 @@ export type Selected<Value extends string = string> = Readonly<{
   readonly index: number
 }>
 
-/** Union of out-messages the tabs component can produce. Surfaced as the third element of `update`'s return tuple and pattern-matched by the parent. */
+/** Union of OutMessages the tabs component can produce. The parent's
+ *  `Update.foldChild` config handles them through `foldOutMessage`. */
 export const OutMessage = defineMessageUnion({
   Selected: {
     value: S.String,
@@ -114,29 +116,24 @@ export const FocusTab = Command.define('FocusTab', {
     ),
 })
 
-type UpdateReturn = readonly [
-  Model,
-  ReadonlyArray<Command.Command<Message>>,
-  Option.Option<OutMessage>,
-]
+type UpdateReturn = Update.ReturnWithOutMessage<Model, Message, OutMessage>
 
-/** Processes a tabs message and returns the next model, commands, and an
- *  optional OutMessage. `Selected` fires when a tab is committed via click or
- *  keyboard; the parent stores the new value and passes it back in as
+/** Processes a Tabs Message and returns the next Model, optional Commands, and
+ *  an optional OutMessage. `Selected` fires when a tab is committed via click
+ *  or keyboard; the parent stores the new value and passes it back in as
  *  `selectedValue`. */
 export const update = (model: Model, message: Message) =>
   Message.match<UpdateReturn>(message, {
-    SelectedTab: ({ index, value }) => [
-      evo(model, { maybeFocusedIndex: () => Option.none() }),
-      [FocusTab({ id: model.id, index })],
-      Option.some(OutMessage.Selected({ value, index })),
-    ],
-    FocusedTab: ({ index }) => [
-      evo(model, { maybeFocusedIndex: () => Option.some(index) }),
-      [FocusTab({ id: model.id, index })],
-      Option.none(),
-    ],
-    CompletedFocusTab: () => [model, [], Option.none()],
+    SelectedTab: ({ index, value }) => ({
+      model: evo(model, { maybeFocusedIndex: () => Option.none() }),
+      commands: [FocusTab({ id: model.id, index })],
+      outMessage: OutMessage.Selected({ value, index }),
+    }),
+    FocusedTab: ({ index }) => ({
+      model: evo(model, { maybeFocusedIndex: () => Option.some(index) }),
+      commands: [FocusTab({ id: model.id, index })],
+    }),
+    CompletedFocusTab: () => ({ model }),
   })
 
 // VIEW
@@ -354,11 +351,7 @@ export type Bundle<Value extends string = string> = Readonly<{
   update: (
     model: Model,
     message: Message,
-  ) => readonly [
-    Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Value>>,
-  ]
+  ) => Update.ReturnWithOutMessage<Model, Message, OutMessage<Value>>
 }>
 
 /** Pairs the tabs `view` and `update` behind a single Value-typed entry
@@ -372,19 +365,19 @@ export type Bundle<Value extends string = string> = Readonly<{
  *  // In view (selectedValue is the parent-owned active tab):
  *  h.submodel({ view: DemoTabs.view, viewInputs: { selectedValue, ... }, ... })
  *
- *  // In update, fold the Selected OutMessage into your Model:
- *  const [next, commands, maybeOutMessage] = DemoTabs.update(model, message)
+ *  // In the parent update, pass DemoTabs.update to Update.foldChild and
+ *  // fold the Selected OutMessage into your Model.
  *  ```
  *
  *  The internal view stays typed `ReadonlyArray<string>`; consumers can
  *  pass a `ReadonlyArray<MyUnion>` (assignable) and the fenced cast inside
  *  `create` types `TabInfo.value` as `MyUnion`. */
 export const create = <Value extends string = string>(): Bundle<Value> => {
-  type GenericReturn = readonly [
+  type GenericReturn = Update.ReturnWithOutMessage<
     Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Value>>,
-  ]
+    Message,
+    OutMessage<Value>
+  >
   const cast = (result: UpdateReturn): GenericReturn =>
     /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
     result as unknown as GenericReturn

@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit each into your own Model, init, Message,
 // update, subscriptions, and view definitions.
-import { Effect, Match as M, Option } from 'effect'
+import { Match as M, Option, Schema as S } from 'effect'
 import { Subscription, Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -17,8 +17,8 @@ const Model = S.Struct({
 })
 
 // In your init function, initialize the DragAndDrop Submodel with a unique id:
-const init = () => [
-  {
+const init = () => ({
+  model: {
     items: [
       { id: '1', label: 'First' },
       { id: '2', label: 'Second' },
@@ -27,8 +27,7 @@ const init = () => [
     dragAndDrop: DragAndDrop.init({ id: 'sortable-list' }),
     // ...your other fields
   },
-  [],
-]
+})
 
 // Embed the DragAndDrop Message in your parent Message:
 const Message = defineMessageUnion({
@@ -44,17 +43,16 @@ const foldDragAndDropOutMessage = M.type<DragAndDrop.OutMessage>().pipe(
   M.tagsExhaustive({
     Reordered:
       ({ itemId, fromIndex, toIndex }) =>
-      model => [
-        evo(model, {
+      model => ({
+        model: evo(model, {
           // reorder is your own function that moves the item
           items: () => reorder(model.items, itemId, fromIndex, toIndex),
         }),
-        [],
-      ],
+      }),
     // The child has emitted `Cancelled`. In this arm the parent can update
     // its own state or dispatch its own Commands, for example revert an
     // optimistic UI change, log analytics, or trigger a downstream Command.
-    Cancelled: () => model => [model, []],
+    Cancelled: () => model => ({ model }),
   }),
 )
 
@@ -71,7 +69,7 @@ const foldDragAndDrop = Update.foldChild({
   foldOutMessage: foldDragAndDropOutMessage,
 })
 
-// Inside your update function's Message.match({...}), call the fold:
+// In the corresponding Message.match handler, call the fold:
 GotDragAndDropMessage: ({ message }) => foldDragAndDrop(model, message)
 
 // In your subscriptions, lift all four document-level listeners through

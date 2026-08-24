@@ -1,8 +1,10 @@
-import { Effect, Option, Schema as S } from 'effect'
+import { Effect, Number, Option, Schema as S } from 'effect'
 
 import type { Html, HtmlBuilder } from '../../html/index.js'
 import { defineMessageUnion } from '../../message/index.js'
 import * as Mount from '../../mount/index.js'
+import { evo } from '../../struct/index.js'
+import type * as Update from '../../update/index.js'
 
 // MODEL
 
@@ -72,16 +74,19 @@ export const initialModel: Model = {
 // UPDATE
 
 export const update = (model: Model, message: Message) =>
-  Message.match<readonly [Model, ReadonlyArray<never>]>(message, {
-    ClickedToggle: () => [{ ...model, isOpen: !model.isOpen }, []],
-    MeasuredPanel: ({ width }) => [
-      { ...model, measuredWidth: Option.some(width) },
-      [],
-    ],
-    CompletedFocusButton: () => [model, []],
-    FailedMountSidebar: () => [model, []],
-    ClickedIncrement: () => [{ ...model, count: model.count + 1 }, []],
-    ScrolledTo: () => [model, []],
+  Message.match<Update.Return<Model, Message>>(message, {
+    ClickedToggle: () => ({
+      model: evo(model, { isOpen: isOpen => !isOpen }),
+    }),
+    MeasuredPanel: ({ width }) => ({
+      model: evo(model, { measuredWidth: () => Option.some(width) }),
+    }),
+    CompletedFocusButton: () => ({ model }),
+    FailedMountSidebar: () => ({ model }),
+    ClickedIncrement: () => ({
+      model: evo(model, { count: Number.increment }),
+    }),
+    ScrolledTo: () => ({ model }),
   })
 
 // VIEW

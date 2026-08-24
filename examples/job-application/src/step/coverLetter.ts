@@ -1,5 +1,5 @@
 import { Schema as S } from 'effect'
-import { Command } from 'foldkit'
+import { type Update } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -26,9 +26,9 @@ export const init = (): Model => ({
 
 // UPDATE
 
-type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
-
 export const update = (model: Model, message: Message) =>
-  Message.match<UpdateReturn>(message, {
-    UpdatedContent: ({ value }) => [evo(model, { content: () => value }), []],
+  Message.match<Update.Return<Model, Message>>(message, {
+    UpdatedContent: ({ value }) => ({
+      model: evo(model, { content: () => value }),
+    }),
   })

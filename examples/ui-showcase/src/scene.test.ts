@@ -22,11 +22,11 @@ import {
 import { uiInit } from './ui/init'
 
 const today = Calendar.make(2026, 4, 16)
-const [initialUiModel] = uiInit(today)
+const uiInit_ = uiInit(today)
 
 const modelForRoute = (route: Model['route']): Model => ({
   route,
-  uiModel: initialUiModel,
+  uiModel: uiInit_.model,
 })
 
 const homeModel = modelForRoute(HomeRoute())

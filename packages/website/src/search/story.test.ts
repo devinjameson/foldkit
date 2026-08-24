@@ -1,4 +1,5 @@
 import { Command, given, message, model, story } from 'foldkit/story'
+import { evo } from 'foldkit/struct'
 import { describe, expect, test } from 'vitest'
 
 import { FetchSearchResults, NavigateToResult, ScrollToResult } from './command'
@@ -7,7 +8,7 @@ import { Message } from './message'
 import { Ok } from './model'
 import { update } from './update'
 
-const [initialModel] = init()
+const init_ = init()
 
 const searchResults = [
   {
@@ -30,7 +31,7 @@ describe('search', () => {
   test('typing a query starts a search', () => {
     story(
       update,
-      given(initialModel),
+      given(init_.model),
       message(Message.UpdatedSearchQuery({ query: 'routing' })),
       model(model => {
         expect(model.query).toBe('routing')
@@ -57,7 +58,7 @@ describe('search', () => {
   test('clearing the query resets to Idle', () => {
     story(
       update,
-      given({ ...initialModel, query: 'routing' }),
+      given(evo(init_.model, { query: () => 'routing' })),
       message(Message.UpdatedSearchQuery({ query: '' })),
       model(model => {
         expect(model.query).toBe('')
@@ -71,7 +72,7 @@ describe('search', () => {
   test('same query is ignored', () => {
     story(
       update,
-      given({ ...initialModel, query: 'routing' }),
+      given(evo(init_.model, { query: () => 'routing' })),
       message(Message.UpdatedSearchQuery({ query: 'routing' })),
       model(model => {
         expect(model.searchState._tag).toBe('Idle')
@@ -83,11 +84,12 @@ describe('search', () => {
   test('new query preserves previous results in Loading state', () => {
     story(
       update,
-      given({
-        ...initialModel,
-        query: 'routing',
-        searchState: Ok({ results: searchResults }),
-      }),
+      given(
+        evo(init_.model, {
+          query: () => 'routing',
+          searchState: () => Ok({ results: searchResults }),
+        }),
+      ),
       message(Message.UpdatedSearchQuery({ query: 'testing' })),
       model(model => {
         expect(model.query).toBe('testing')
@@ -107,7 +109,7 @@ describe('search', () => {
   test('stale results are ignored', () => {
     story(
       update,
-      given({ ...initialModel, query: 'testing' }),
+      given(evo(init_.model, { query: () => 'testing' })),
       message(
         Message.CompletedFetchSearchResults({
           results: searchResults,
@@ -123,7 +125,7 @@ describe('search', () => {
   test('selecting a result navigates and resets', () => {
     story(
       update,
-      given(initialModel),
+      given(init_.model),
       message(Message.SelectedSearchResult({ url: '/docs/commands' })),
       model(model => {
         expect(model.query).toBe('')
@@ -138,11 +140,10 @@ describe('search', () => {
   })
 
   test('arrow keys cycle through results', () => {
-    const modelWithResults = {
-      ...initialModel,
-      searchState: Ok({ results: searchResults }),
-      activeResultIndex: 0,
-    }
+    const modelWithResults = evo(init_.model, {
+      searchState: () => Ok({ results: searchResults }),
+      activeResultIndex: () => 0,
+    })
 
     story(
       update,
@@ -169,12 +170,13 @@ describe('search', () => {
   test('clearing the query explicitly resets state', () => {
     story(
       update,
-      given({
-        ...initialModel,
-        query: 'routing',
-        searchState: Ok({ results: searchResults }),
-        activeResultIndex: 1,
-      }),
+      given(
+        evo(init_.model, {
+          query: () => 'routing',
+          searchState: () => Ok({ results: searchResults }),
+          activeResultIndex: () => 1,
+        }),
+      ),
       message(Message.ClearedSearchQuery()),
       model(model => {
         expect(model.query).toBe('')

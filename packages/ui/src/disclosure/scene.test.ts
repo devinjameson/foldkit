@@ -1,4 +1,5 @@
 import { Schema as S } from 'effect'
+import { type Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 import * as Scene from 'foldkit/scene'
@@ -15,11 +16,9 @@ type Message = typeof Message.Type
 
 type Model = Readonly<{ isOpen: boolean }>
 
-type UpdateReturn = readonly [Model, ReadonlyArray<never>]
-
 const update = (model: Model, message: Message) =>
-  Message.match<UpdateReturn>(message, {
-    Toggled: ({ isOpen }) => [evo(model, { isOpen: () => isOpen }), []],
+  Message.match<Update.Return<Model, Message>>(message, {
+    Toggled: ({ isOpen }) => ({ model: evo(model, { isOpen: () => isOpen }) }),
   })
 
 const testView =

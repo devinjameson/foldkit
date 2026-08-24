@@ -1,11 +1,11 @@
 import { Effect, Fiber, Option, Schema as S } from 'effect'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import type { Command } from '../command/index.js'
 import { renderToString } from '../experimental/server/server.js'
 import type { Document } from '../html/index.js'
 import { __htmlBuilder } from '../html/index.js'
 import { defineMessageUnion } from '../message/index.js'
+import type * as Update from '../update/index.js'
 import { __startProgram, hydrate, makeApplication, run } from './runtime.js'
 
 const Message = defineMessageUnion({
@@ -21,16 +21,13 @@ type Flags = typeof Flags.Type
 
 const h = __htmlBuilder<Message>()
 
-const init = (
-  flags: Flags,
-): readonly [Model, ReadonlyArray<Command<Message>>] => [
-  Model.make({ count: flags.start }),
-  [],
-]
+const init = (flags: Flags): Update.Return<Model, Message> => ({
+  model: Model.make({ count: flags.start }),
+})
 
 const update = (model: Model, message: Message) =>
-  Message.match<readonly [Model, ReadonlyArray<Command<Message>>]>(message, {
-    ClickedIncrement: () => [Model.make({ count: model.count + 1 }), []],
+  Message.match<Update.Return<Model, Message>>(message, {
+    ClickedIncrement: () => ({ model: Model.make({ count: model.count + 1 }) }),
   })
 
 const view = (model: Model): Document => ({
@@ -193,10 +190,9 @@ describe('hydrating boot', () => {
     type OptionalFlags = typeof OptionalFlags.Type
     const optionalInit = (
       flags: OptionalFlags,
-    ): readonly [Model, ReadonlyArray<Command<Message>>] => [
-      Model.make({ count: Option.getOrElse(flags.maybeStart, () => 0) }),
-      [],
-    ]
+    ): Update.Return<Model, Message> => ({
+      model: Model.make({ count: Option.getOrElse(flags.maybeStart, () => 0) }),
+    })
     const rendered = await Effect.runPromise(
       renderToString(
         { Flags: OptionalFlags, init: optionalInit, view },
@@ -327,7 +323,7 @@ describe('hydrating boot', () => {
     expect(() =>
       makeApplication({
         Model,
-        init: () => [Model.make({ count: 0 }), []],
+        init: () => ({ model: Model.make({ count: 0 }) }),
         update,
         view,
         container: nullContainer(),
@@ -475,7 +471,7 @@ describe('hydrating boot', () => {
     expect(() =>
       makeApplication({
         Model,
-        init: () => [Model.make({ count: 0 }), []],
+        init: () => ({ model: Model.make({ count: 0 }) }),
         update,
         view,
         container: nullContainer(),
@@ -488,7 +484,7 @@ describe('hydrating boot', () => {
 
     const application = makeApplication({
       Model,
-      init: () => [Model.make({ count: 0 }), []],
+      init: () => ({ model: Model.make({ count: 0 }) }),
       update,
       view,
       container: document.getElementById('alpha'),
@@ -647,11 +643,9 @@ describe('hydrating boot', () => {
     // build id can tell them apart. Startup must stop before `init` returns
     // Commands the new code would then run against the old deployment's data.
     const started: Array<number> = []
-    const recordingInit = (
-      flags: Flags,
-    ): readonly [Model, ReadonlyArray<Command<Message>>] => {
+    const recordingInit = (flags: Flags): Update.Return<Model, Message> => {
       started.push(flags.start)
-      return [Model.make({ count: flags.start }), []]
+      return { model: Model.make({ count: flags.start }) }
     }
     await renderServerPage({ start: 5 })
     const servedRoot = document.querySelector('[data-foldkit-app]')
@@ -751,9 +745,7 @@ describe('hydrating boot', () => {
     const application = makeApplication({
       Model,
       Flags,
-      init: (
-        flags: Flags,
-      ): readonly [Model, ReadonlyArray<Command<Message>>] => {
+      init: (flags: Flags): Update.Return<Model, Message> => {
         initAttempts.push(flags.start)
         throw new Error('the invalid handoff reached init')
       },
@@ -904,7 +896,7 @@ describe('hydrating boot', () => {
       const servedRoot = document.querySelector('[data-foldkit-app]')
       const application = makeApplication({
         Model,
-        init: () => [Model.make({ count: 0 }), []],
+        init: () => ({ model: Model.make({ count: 0 }) }),
         update,
         view,
         container: nullContainer(),

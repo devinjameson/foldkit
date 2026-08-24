@@ -1,7 +1,8 @@
-import { Effect, Option, Schema as S } from 'effect'
+import { Effect, Match as M, Option, Schema as S } from 'effect'
 
 import * as Command from '../../command/index.js'
 import { defineMessageUnion } from '../../message/index.js'
+import * as Update from '../../update/index.js'
 
 // CHILD MODEL
 
@@ -57,37 +58,24 @@ export const initialChildModel: ChildModel = { status: 'Idle' }
 
 // CHILD UPDATE
 
-export const childUpdate = (
-  _model: ChildModel,
-  message: ChildMessage,
-): readonly [
-  ChildModel,
-  ReadonlyArray<Command.Command<ChildMessage>>,
-  Option.Option<ChildOutMessage>,
-] =>
+export const childUpdate = (_model: ChildModel, message: ChildMessage) =>
   ChildMessage.match<
-    readonly [
-      ChildModel,
-      ReadonlyArray<Command.Command<ChildMessage>>,
-      Option.Option<ChildOutMessage>,
-    ]
+    Update.ReturnWithOutMessage<ChildModel, ChildMessage, ChildOutMessage>
   >(message, {
-    SubmittedForm: () => [
-      { status: 'Submitting' },
-      [SubmitForm()],
-      Option.none(),
-    ],
-    SucceededSubmitForm: ({ id }) => [
-      { status: 'Submitted' },
-      [ResetForm()],
-      Option.some(ChildOutMessage.RequestedSave({ id })),
-    ],
-    CancelledForm: () => [
-      { status: 'Idle' },
-      [],
-      Option.some(ChildOutMessage.RequestedCancel()),
-    ],
-    CompletedResetForm: () => [{ status: 'Idle' }, [], Option.none()],
+    SubmittedForm: () => ({
+      model: { status: 'Submitting' },
+      commands: [SubmitForm()],
+    }),
+    SucceededSubmitForm: ({ id }) => ({
+      model: { status: 'Submitted' },
+      commands: [ResetForm()],
+      outMessage: ChildOutMessage.RequestedSave({ id }),
+    }),
+    CancelledForm: () => ({
+      model: { status: 'Idle' },
+      outMessage: ChildOutMessage.RequestedCancel(),
+    }),
+    CompletedResetForm: () => ({ model: { status: 'Idle' } }),
   })
 
 // PARENT MODEL
@@ -120,38 +108,34 @@ export const initialParentModel: ParentModel = {
 
 // PARENT UPDATE
 
+const foldChildOutMessage = M.type<ChildOutMessage>().pipe(
+  M.withReturnType<Update.Step<ParentModel, ParentMessage>>(),
+  M.tagsExhaustive({
+    RequestedSave:
+      ({ id }) =>
+      model => ({
+        model: { ...model, savedIds: [...model.savedIds, id] },
+      }),
+    RequestedCancel: () => model => ({
+      model: { ...model, cancelled: true },
+    }),
+  }),
+)
+
+const foldChildUpdate = Update.foldChild({
+  update: childUpdate,
+  read: (model: ParentModel) => Option.some(model.child),
+  write: (model, nextChild) => ({ ...model, child: nextChild }),
+  toParentMessage: message => ParentMessage.GotChildMessage({ message }),
+  foldOutMessage: foldChildOutMessage,
+})
+
 export const parentUpdate = (
   parentModel: ParentModel,
   message: ParentMessage,
-): readonly [ParentModel, ReadonlyArray<Command.Command<ParentMessage>>] =>
-  ParentMessage.match<
-    readonly [ParentModel, ReadonlyArray<Command.Command<ParentMessage>>]
-  >(message, {
-    GotChildMessage: ({ message: childMessage }) => {
-      const [nextChild, commands, maybeOutMessage] = childUpdate(
-        parentModel.child,
-        childMessage,
-      )
-      const nextParent = Option.match(maybeOutMessage, {
-        onNone: () => ({ ...parentModel, child: nextChild }),
-        onSome: outMessage =>
-          ChildOutMessage.match<ParentModel>(outMessage, {
-            RequestedSave: ({ id }) => ({
-              ...parentModel,
-              child: nextChild,
-              savedIds: [...parentModel.savedIds, id],
-            }),
-            RequestedCancel: () => ({
-              ...parentModel,
-              child: nextChild,
-              cancelled: true,
-            }),
-          }),
-      })
-      const mappedCommands = Command.mapMessages(commands, childMessage =>
-        ParentMessage.GotChildMessage({ message: childMessage }),
-      )
-      return [nextParent, mappedCommands]
-    },
-    CompletedParentReset: () => [parentModel, []],
+) =>
+  ParentMessage.match<Update.Return<ParentModel, ParentMessage>>(message, {
+    GotChildMessage: ({ message: childMessage }) =>
+      foldChildUpdate(parentModel, childMessage),
+    CompletedParentReset: () => ({ model: parentModel }),
   })

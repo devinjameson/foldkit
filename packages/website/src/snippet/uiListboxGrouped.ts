@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Match as M, Option } from 'effect'
+import { Match as M, Option, Schema as S } from 'effect'
 import { Update } from 'foldkit'
 import { type HtmlBuilder, childAttributes } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -31,14 +31,13 @@ const Model = S.Struct({
 })
 
 // In your init function, initialize the Listbox Submodel with a unique id:
-const init = () => [
-  {
+const init = () => ({
+  model: {
     maybeCharacter: Option.none(),
     listbox: Listbox.init({ id: 'character' }),
     // ...your other fields
   },
-  [],
-]
+})
 
 // Wrap Listbox's Messages so they can flow through your update:
 const Message = defineMessageUnion({
@@ -54,7 +53,9 @@ const foldListboxOutMessage = M.type<Listbox.OutMessage>().pipe(
   M.tagsExhaustive({
     Selected:
       ({ value }) =>
-      model => [evo(model, { maybeCharacter: () => Option.some(value) }), []],
+      model => ({
+        model: evo(model, { maybeCharacter: () => Option.some(value) }),
+      }),
   }),
 )
 
@@ -70,7 +71,7 @@ const foldListbox = Update.foldChild({
   foldOutMessage: foldListboxOutMessage,
 })
 
-// Inside your update function's Message.match({...}), call the fold:
+// In the corresponding Message.match handler, call the fold:
 GotListboxMessage: ({ message }) => foldListbox(model, message)
 
 const characters: ReadonlyArray<Character> = [

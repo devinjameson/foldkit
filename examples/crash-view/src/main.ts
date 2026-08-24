@@ -1,5 +1,5 @@
 import { Schema } from 'effect'
-import { Command, Runtime } from 'foldkit'
+import { Runtime, type Update } from 'foldkit'
 import { Document, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 
@@ -23,13 +23,15 @@ export type Message = typeof Message.Type
 export const update = (
   _model: Model,
   _message: Message,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] => {
+): Update.Return<Model, Message> => {
   throw new Error('This is a simulated crash!')
 }
 
 // INIT
 
-export const init: Runtime.ApplicationInit<Model, Message> = () => [null, []]
+export const init: Runtime.ApplicationInit<Model, Message> = () => ({
+  model: null,
+})
 
 // VIEW
 

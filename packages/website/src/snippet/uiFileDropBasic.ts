@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Effect, Match as M, Option } from 'effect'
+import { Match as M, Option, Schema as S } from 'effect'
 import { File, Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -17,14 +17,13 @@ const Model = S.Struct({
 })
 
 // Initialize both fields:
-const init = () => [
-  {
+const init = () => ({
+  model: {
     uploader: FileDrop.init({ id: 'uploader' }),
     uploadedFiles: [],
     // ...your other fields
   },
-  [],
-]
+})
 
 // Embed FileDrop's Message in your parent Message:
 const Message = defineMessageUnion({
@@ -40,15 +39,14 @@ const foldFileDropOutMessage = M.type<FileDrop.OutMessage>().pipe(
   M.tagsExhaustive({
     ReceivedFiles:
       ({ files }) =>
-      model => [
-        evo(model, {
+      model => ({
+        model: evo(model, {
           uploadedFiles: () => [...model.uploadedFiles, ...files],
         }),
-        [],
-      ],
+      }),
     // Fires when something is dropped but no files came through (e.g.
     // a drag of text or a URL). Ignore, or show a hint to the user.
-    RejectedNonFiles: () => model => [model, []],
+    RejectedNonFiles: () => model => ({ model }),
   }),
 )
 
@@ -63,7 +61,7 @@ const foldFileDrop = Update.foldChild({
   foldOutMessage: foldFileDropOutMessage,
 })
 
-// Inside your update function's Message.match({...}), call the fold:
+// In the corresponding Message.match handler, call the fold:
 GotFileDropMessage: ({ message }) => foldFileDrop(model, message)
 
 // Render the drop zone. The `toView` callback receives attribute groups.

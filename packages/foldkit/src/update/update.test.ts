@@ -16,10 +16,12 @@ import {
   type Return,
   type ReturnWithOutMessage,
   type Step,
+  type StepWithOutMessage,
   combine,
   foldChild,
   foldChildStep,
   refresh,
+  withOutMessage,
 } from './update.js'
 
 const Message = defineMessageUnion({
@@ -44,84 +46,89 @@ const loadNotes = makeLoad('LoadNotes')
 const loadTags = makeLoad('LoadTags')
 const loadFolders = makeLoad('LoadFolders')
 
-const incrementCount: Step<TestModel, TestMessage> = model => [
-  evo(model, { count: Number.increment }),
-  [],
-]
+const incrementCount: Step<TestModel, TestMessage> = model => ({
+  model: evo(model, { count: Number.increment }),
+})
 
-const doubleCount: Step<TestModel, TestMessage> = model => [
-  evo(model, { count: Number.multiply(2) }),
-  [],
-]
+const doubleCount: Step<TestModel, TestMessage> = model => ({
+  model: evo(model, { count: Number.multiply(2) }),
+})
 
-const emitLoadNotes: Step<TestModel, TestMessage> = model => [
+const emitLoadNotes: Step<TestModel, TestMessage> = model => ({
   model,
-  [loadNotes],
-]
+  commands: [loadNotes],
+})
 
-const emitLoadTagsAndFolders: Step<TestModel, TestMessage> = model => [
+const emitLoadTagsAndFolders: Step<TestModel, TestMessage> = model => ({
   model,
-  [loadTags, loadFolders],
-]
+  commands: [loadTags, loadFolders],
+})
 
-const incrementAndEmitLoadNotes: Step<TestModel, TestMessage> = model => [
-  evo(model, { count: Number.increment }),
-  [loadNotes],
-]
+const incrementAndEmitLoadNotes: Step<TestModel, TestMessage> = model => ({
+  model: evo(model, { count: Number.increment }),
+  commands: [loadNotes],
+})
 
 describe('combine', () => {
   it('threads the model through the steps in order', () => {
-    const [incrementedThenDoubled] = combine([incrementCount, doubleCount])({
+    const combinedUpdate = combine([incrementCount, doubleCount])({
       count: 1,
     })
-    expect(incrementedThenDoubled).toEqual({ count: 4 })
+    expect(combinedUpdate.model).toEqual({ count: 4 })
 
-    const [doubledThenIncremented] = combine([doubleCount, incrementCount])({
+    const doubleThenIncrement = combine([doubleCount, incrementCount])({
       count: 1,
     })
-    expect(doubledThenIncremented).toEqual({ count: 3 })
+    expect(doubleThenIncrement.model).toEqual({ count: 3 })
   })
 
   it('concatenates the commands of every step in step order', () => {
-    const [nextModel, commands] = combine([
-      emitLoadNotes,
-      emitLoadTagsAndFolders,
-    ])({ count: 0 })
-    expect(nextModel).toEqual({ count: 0 })
-    expect(commands).toEqual([loadNotes, loadTags, loadFolders])
+    const combinedCommands = combine([emitLoadNotes, emitLoadTagsAndFolders])({
+      count: 0,
+    })
+    expect(combinedCommands.model).toEqual({ count: 0 })
+    expect(combinedCommands.commands ?? []).toEqual([
+      loadNotes,
+      loadTags,
+      loadFolders,
+    ])
   })
 
   it('returns the model unchanged with no commands for an empty step list', () => {
     const model: TestModel = { count: 5 }
-    const [nextModel, commands] = combine<TestModel, TestMessage>([])(model)
-    expect(nextModel).toBe(model)
-    expect(commands).toEqual([])
+    const emptyCombination = combine<TestModel, TestMessage>([])(model)
+    expect(emptyCombination.model).toBe(model)
+    expect(emptyCombination.commands ?? []).toEqual([])
   })
 
-  it('behaves as the single step for a one-step list', () => {
+  it('preserves a single step and returns its computed Commands collection', () => {
     const model: TestModel = { count: 2 }
-    expect(combine([doubleCount])(model)).toEqual(doubleCount(model))
+    const doubledCount = combine([doubleCount])(model)
+    expect(doubledCount.model).toEqual({ count: 4 })
+    expect(doubledCount.commands).toEqual([])
     expect(combine([emitLoadNotes])(model)).toEqual(emitLoadNotes(model))
   })
 
   it('lets steps with no commands contribute nothing to the batch', () => {
-    const [nextModel, commands] = combine([
-      incrementCount,
-      emitLoadNotes,
-      doubleCount,
-    ])({ count: 1 })
-    expect(nextModel).toEqual({ count: 4 })
-    expect(commands).toEqual([loadNotes])
+    const mixedCommands = combine([incrementCount, emitLoadNotes, doubleCount])(
+      { count: 1 },
+    )
+    expect(mixedCommands.model).toEqual({ count: 4 })
+    expect(mixedCommands.commands ?? []).toEqual([loadNotes])
   })
 
   it('collects a step that both edits the model and emits a command, threading the edit forward', () => {
-    const [nextModel, commands] = combine([
+    const multiCommandUpdate = combine([
       incrementAndEmitLoadNotes,
       emitLoadTagsAndFolders,
       doubleCount,
     ])({ count: 1 })
-    expect(nextModel).toEqual({ count: 4 })
-    expect(commands).toEqual([loadNotes, loadTags, loadFolders])
+    expect(multiCommandUpdate.model).toEqual({ count: 4 })
+    expect(multiCommandUpdate.commands ?? []).toEqual([
+      loadNotes,
+      loadTags,
+      loadFolders,
+    ])
   })
 
   it('runs the steps against the model when called data-first', () => {
@@ -132,6 +139,87 @@ describe('combine', () => {
     ]
     const model: TestModel = { count: 1 }
     expect(combine(model, steps)).toEqual(combine(steps)(model))
+  })
+})
+
+describe('withOutMessage', () => {
+  type TestOutMessage = Readonly<{ _tag: 'ClosedEditor' }>
+  type TestServices = Readonly<{ baseUrl: string }>
+
+  const model: TestModel = { count: 1 }
+  const command: Command<TestMessage, never, TestServices> = {
+    name: 'LoadWithServices',
+    effect: Effect.succeed(Message.CompletedLoad()),
+  }
+  const updateReturn: Return<TestModel, TestMessage, TestServices> = {
+    model,
+    commands: [command],
+  }
+
+  it('adds a defined OutMessage while preserving the Model and Commands', () => {
+    const outMessage: TestOutMessage = { _tag: 'ClosedEditor' }
+    const result = withOutMessage(updateReturn, outMessage)
+
+    expect(result.model).toBe(model)
+    expect(result.commands).toBe(updateReturn.commands)
+    expect(result.outMessage).toBe(outMessage)
+    expect(Object.hasOwn(result, 'outMessage')).toBe(true)
+  })
+
+  it('supports the data-last form', () => {
+    const outMessage: TestOutMessage = { _tag: 'ClosedEditor' }
+    const result = withOutMessage(outMessage)(updateReturn)
+
+    expectTypeOf(result).toEqualTypeOf<
+      ReturnWithOutMessage<TestModel, TestMessage, TestOutMessage, TestServices>
+    >()
+    expect(result.model).toBe(model)
+    expect(result.commands).toBe(updateReturn.commands)
+    expect(result.outMessage).toBe(outMessage)
+  })
+
+  it('omits the outMessage property when the value is undefined', () => {
+    const outMessage: TestOutMessage | undefined = undefined
+    const result = withOutMessage(updateReturn, outMessage)
+
+    expect(result.model).toBe(model)
+    expect(result.commands).toBe(updateReturn.commands)
+    expect(result.outMessage).toBeUndefined()
+    expect(Object.hasOwn(result, 'outMessage')).toBe(false)
+  })
+
+  it('omits the outMessage property in the data-last form', () => {
+    const outMessage: TestOutMessage | undefined = undefined
+    const result = withOutMessage(outMessage)(updateReturn)
+
+    expect(result.model).toBe(model)
+    expect(result.commands).toBe(updateReturn.commands)
+    expect(result.outMessage).toBeUndefined()
+    expect(Object.hasOwn(result, 'outMessage')).toBe(false)
+  })
+
+  it('preserves Command service requirements and Message inference', () => {
+    const outMessage: TestOutMessage = { _tag: 'ClosedEditor' }
+    const result = withOutMessage(updateReturn, outMessage)
+
+    expectTypeOf(result).toEqualTypeOf<
+      ReturnWithOutMessage<TestModel, TestMessage, TestOutMessage, TestServices>
+    >()
+  })
+
+  it('rejects an OutMessage-bearing input', () => {
+    const updateWithOutMessage: ReturnWithOutMessage<
+      TestModel,
+      TestMessage,
+      TestOutMessage,
+      TestServices
+    > = {
+      ...updateReturn,
+      outMessage: { _tag: 'ClosedEditor' },
+    }
+
+    // @ts-expect-error withOutMessage cannot replace an existing OutMessage.
+    withOutMessage(updateWithOutMessage, { _tag: 'ClosedEditor' })
   })
 })
 
@@ -150,14 +238,14 @@ const makeCacheModel = (
 const refreshNotes: Step<CacheModel, TestMessage> = refresh({
   read: (model: CacheModel) => Option.some(model.notes),
   revalidate: AsyncData.revalidate,
-  write: (model, notes) => ({ ...model, notes }),
+  write: (model, nextNotes) => ({ ...model, notes: nextNotes }),
   load: loadNotes,
 })
 
 const refreshOrLoadNotes: Step<CacheModel, TestMessage> = refresh({
   read: (model: CacheModel) => Option.some(model.notes),
   revalidate: AsyncData.revalidateOrLoad,
-  write: (model, notes) => ({ ...model, notes }),
+  write: (model, nextNotes) => ({ ...model, notes: nextNotes }),
   load: loadNotes,
 })
 
@@ -165,9 +253,9 @@ const refreshNoteById = (noteId: string): Step<CacheModel, TestMessage> =>
   refresh({
     read: (model: CacheModel) => HashMap.get(model.notesById, noteId),
     revalidate: AsyncData.revalidate,
-    write: (model, note) => ({
+    write: (model, nextNote) => ({
       ...model,
-      notesById: HashMap.set(model.notesById, noteId, note),
+      notesById: HashMap.set(model.notesById, noteId, nextNote),
     }),
     load: loadNotes,
   })
@@ -175,9 +263,9 @@ const refreshNoteById = (noteId: string): Step<CacheModel, TestMessage> =>
 describe('refresh', () => {
   it('is a no-op when read misses the keyed cache', () => {
     const model = makeCacheModel(AsyncData.Success({ data: 1 }))
-    const [nextModel, commands] = refreshNoteById('missing')(model)
-    expect(nextModel).toBe(model)
-    expect(commands).toEqual([])
+    const missingRefresh = refreshNoteById('missing')(model)
+    expect(missingRefresh.model).toBe(model)
+    expect(missingRefresh.commands ?? []).toEqual([])
   })
 
   it('is a no-op when revalidate declines the states without data', () => {
@@ -191,9 +279,9 @@ describe('refresh', () => {
 
     for (const state of statesWithoutData) {
       const model = makeCacheModel(state)
-      const [nextModel, commands] = refreshNotes(model)
-      expect(nextModel).toBe(model)
-      expect(commands).toEqual([])
+      const notesRefresh = refreshNotes(model)
+      expect(notesRefresh.model).toBe(model)
+      expect(notesRefresh.commands ?? []).toEqual([])
     }
   })
 
@@ -204,9 +292,11 @@ describe('refresh', () => {
     ]
 
     for (const state of loadedStates) {
-      const [nextModel, commands] = refreshNotes(makeCacheModel(state))
-      expect(nextModel.notes).toEqual(AsyncData.Refreshing({ data: 1 }))
-      expect(commands).toEqual([loadNotes])
+      const loadedRefresh = refreshNotes(makeCacheModel(state))
+      expect(loadedRefresh.model.notes).toEqual(
+        AsyncData.Refreshing({ data: 1 }),
+      )
+      expect(loadedRefresh.commands ?? []).toEqual([loadNotes])
     }
   })
 
@@ -219,20 +309,20 @@ describe('refresh', () => {
       notesById: HashMap.fromIterable(entries),
     }
 
-    const [nextModel, commands] = refreshNoteById('note:1')(model)
+    const keyedRefresh = refreshNoteById('note:1')(model)
 
-    expect(HashMap.get(nextModel.notesById, 'note:1')).toEqual(
+    expect(HashMap.get(keyedRefresh.model.notesById, 'note:1')).toEqual(
       Option.some(AsyncData.Refreshing({ data: 1 })),
     )
-    expect(nextModel.notes).toBe(model.notes)
-    expect(commands).toEqual([loadNotes])
+    expect(keyedRefresh.model.notes).toBe(model.notes)
+    expect(keyedRefresh.commands ?? []).toEqual([loadNotes])
   })
 
   it('loads a cold cache on entry when revalidate is revalidateOrLoad', () => {
     const model = makeCacheModel(AsyncData.Idle())
-    const [nextModel, commands] = refreshOrLoadNotes(model)
-    expect(nextModel.notes).toEqual(AsyncData.Loading())
-    expect(commands).toEqual([loadNotes])
+    const notesRefreshOrLoad = refreshOrLoadNotes(model)
+    expect(notesRefreshOrLoad.model.notes).toEqual(AsyncData.Loading())
+    expect(notesRefreshOrLoad.commands ?? []).toEqual([loadNotes])
   })
 })
 
@@ -254,8 +344,11 @@ const counterUpdate = (
   M.value(message).pipe(
     M.withReturnType<Return<CounterModel, CounterMessage>>(),
     M.tagsExhaustive({
-      BumpedValue: () => [evo(model, { value: Number.increment }), [saveCount]],
-      CompletedSaveCount: () => [model, []],
+      BumpedValue: () => ({
+        model: evo(model, { value: Number.increment }),
+        commands: [saveCount],
+      }),
+      CompletedSaveCount: () => ({ model }),
     }),
   )
 
@@ -271,12 +364,12 @@ const counterUpdateWithOutMessage = (
       ReturnWithOutMessage<CounterModel, CounterMessage, ChangedValue>
     >(),
     M.tagsExhaustive({
-      BumpedValue: () => [
-        evo(model, { value: Number.increment }),
-        [saveCount],
-        Option.some(ChangedValue()),
-      ],
-      CompletedSaveCount: () => [model, [], Option.none()],
+      BumpedValue: () => ({
+        model: evo(model, { value: Number.increment }),
+        commands: [saveCount],
+        outMessage: ChangedValue(),
+      }),
+      CompletedSaveCount: () => ({ model }),
     }),
   )
 
@@ -323,10 +416,10 @@ const foldReportingCounter = foldChild({
   read: (model: DashboardModel) => Option.some(model.counter),
   write: (model, nextCounter) => ({ ...model, counter: nextCounter }),
   toParentMessage: GotCounterMessage,
-  foldOutMessage: () => model => [
-    { ...model, lastReportedValue: model.counter.value },
-    [notifyValueChanged],
-  ],
+  foldOutMessage: () => model => ({
+    model: { ...model, lastReportedValue: model.counter.value },
+    commands: [notifyValueChanged],
+  }),
 })
 
 type GatedDashboardModel = Readonly<{
@@ -345,19 +438,21 @@ const foldGatedCounter = foldChild({
 
 describe('foldChild', () => {
   it('writes the updated child back into the parent Model', () => {
-    const [nextModel, commands] = foldCounter(
-      dashboardModel,
-      Message.BumpedValue(),
-    )
-    expect(nextModel.counter).toEqual({ value: 4 })
-    expect(nextModel.lastReportedValue).toBe(0)
-    expect(commands.map(command => command.name)).toEqual(['SaveCount'])
+    const counterFold = foldCounter(dashboardModel, Message.BumpedValue())
+    expect(counterFold.model.counter).toEqual({ value: 4 })
+    expect(counterFold.model.lastReportedValue).toBe(0)
+    expect((counterFold.commands ?? []).map(command => command.name)).toEqual([
+      'SaveCount',
+    ])
   })
 
   it('lifts the child Commands through toParentMessage, preserving name', () => {
-    const [, commands] = foldCounter(dashboardModel, Message.BumpedValue())
+    const counterFoldWithCommand = foldCounter(
+      dashboardModel,
+      Message.BumpedValue(),
+    )
 
-    const maybeCommand = Array.head(commands)
+    const maybeCommand = Array.head(counterFoldWithCommand.commands ?? [])
     expect(Option.isSome(maybeCommand)).toBe(true)
     if (Option.isSome(maybeCommand)) {
       expect(maybeCommand.value.name).toBe('SaveCount')
@@ -369,47 +464,48 @@ describe('foldChild', () => {
 
   it('is a no-op when read finds no mounted child', () => {
     const model: GatedDashboardModel = { maybeCounter: Option.none() }
-    const [nextModel, commands] = foldGatedCounter(model, Message.BumpedValue())
-    expect(nextModel).toBe(model)
-    expect(commands).toEqual([])
+    const gatedCounterFold = foldGatedCounter(model, Message.BumpedValue())
+    expect(gatedCounterFold.model).toBe(model)
+    expect(gatedCounterFold.commands ?? []).toEqual([])
   })
 
   it('folds a mounted gated child and writes it back as Some', () => {
     const model: GatedDashboardModel = {
       maybeCounter: Option.some({ value: 7 }),
     }
-    const [nextModel] = foldGatedCounter(model, Message.BumpedValue())
-    expect(nextModel.maybeCounter).toEqual(Option.some({ value: 8 }))
+    const mountedCounterFold = foldGatedCounter(model, Message.BumpedValue())
+    expect(mountedCounterFold.model.maybeCounter).toEqual(
+      Option.some({ value: 8 }),
+    )
   })
 
   it('skips foldOutMessage when the child emits no OutMessage', () => {
-    const [nextModel, commands] = foldReportingCounter(
+    const reportingCounterFold = foldReportingCounter(
       dashboardModel,
       Message.CompletedSaveCount(),
     )
-    expect(nextModel.counter).toBe(dashboardModel.counter)
-    expect(nextModel.lastReportedValue).toBe(0)
-    expect(commands).toEqual([])
+    expect(reportingCounterFold.model.counter).toBe(dashboardModel.counter)
+    expect(reportingCounterFold.model.lastReportedValue).toBe(0)
+    expect(reportingCounterFold.commands ?? []).toEqual([])
   })
 
   it('runs foldOutMessage against the Model with the child already written', () => {
-    const [nextModel] = foldReportingCounter(
+    const reportingFoldState = foldReportingCounter(
       dashboardModel,
       Message.BumpedValue(),
     )
-    expect(nextModel.counter).toEqual({ value: 4 })
-    expect(nextModel.lastReportedValue).toBe(4)
+    expect(reportingFoldState.model.counter).toEqual({ value: 4 })
+    expect(reportingFoldState.model.lastReportedValue).toBe(4)
   })
 
   it('appends the OutMessage Step Commands after the mapped child Commands', () => {
-    const [, commands] = foldReportingCounter(
+    const reportingFoldCommands = foldReportingCounter(
       dashboardModel,
       Message.BumpedValue(),
     )
-    expect(commands.map(command => command.name)).toEqual([
-      'SaveCount',
-      'NotifyValueChanged',
-    ])
+    expect(
+      (reportingFoldCommands.commands ?? []).map(command => command.name),
+    ).toEqual(['SaveCount', 'NotifyValueChanged'])
   })
 
   it('folds an entry point whose input is not the child Message', () => {
@@ -419,7 +515,7 @@ describe('foldChild', () => {
     ): Return<CounterModel, CounterMessage> =>
       key === 'ArrowUp'
         ? counterUpdate(counter, Message.BumpedValue())
-        : [counter, []]
+        : { model: counter }
 
     const foldCounterKeyPress = foldChild({
       update: informPressedKey,
@@ -432,11 +528,11 @@ describe('foldChild', () => {
       Fold<DashboardModel, GotCounterMessage, string>
     >()
 
-    const [bumpedModel] = foldCounterKeyPress(dashboardModel, 'ArrowUp')
-    expect(bumpedModel.counter).toEqual({ value: 4 })
+    const counterKeyPressFold = foldCounterKeyPress(dashboardModel, 'ArrowUp')
+    expect(counterKeyPressFold.model.counter).toEqual({ value: 4 })
 
-    const [unchangedModel] = foldCounterKeyPress(dashboardModel, 'Escape')
-    expect(unchangedModel.counter).toBe(dashboardModel.counter)
+    const ignoredKeyFold = foldCounterKeyPress(dashboardModel, 'Escape')
+    expect(ignoredKeyFold.model.counter).toBe(dashboardModel.counter)
   })
 
   it('lifts the child OutMessage into a Submodel parent through toParentOutMessage', () => {
@@ -448,7 +544,7 @@ describe('foldChild', () => {
       read: (model: DashboardModel) => Option.some(model.counter),
       write: (model, nextCounter) => ({ ...model, counter: nextCounter }),
       toParentMessage: GotCounterMessage,
-      toParentOutMessage: () => Option.some(ReportedValue()),
+      toParentOutMessage: () => ReportedValue(),
     })
 
     expectTypeOf(foldCounterInSubmodel).toEqualTypeOf<
@@ -460,54 +556,61 @@ describe('foldChild', () => {
       >
     >()
 
-    const [bumpedModel, bumpedCommands, maybeBumpedOutMessage] =
-      foldCounterInSubmodel(dashboardModel, Message.BumpedValue())
-    expect(bumpedModel.counter).toEqual({ value: 4 })
-    expect(bumpedCommands.map(command => command.name)).toEqual(['SaveCount'])
-    expect(maybeBumpedOutMessage).toEqual(Option.some(ReportedValue()))
+    const counterSubmodelFold = foldCounterInSubmodel(
+      dashboardModel,
+      Message.BumpedValue(),
+    )
+    expect(counterSubmodelFold.model.counter).toEqual({ value: 4 })
+    expect(
+      (counterSubmodelFold.commands ?? []).map(command => command.name),
+    ).toEqual(['SaveCount'])
+    expect(counterSubmodelFold.outMessage).toEqual(ReportedValue())
 
-    const [, , maybeSavedOutMessage] = foldCounterInSubmodel(
+    const noOutMessageFold = foldCounterInSubmodel(
       dashboardModel,
       Message.CompletedSaveCount(),
     )
-    expect(maybeSavedOutMessage).toEqual(Option.none())
+    expect(noOutMessageFold.outMessage).toBeUndefined()
   })
 
-  it('pairs toParentOutMessage with foldOutMessage for a Submodel parent that also updates state', () => {
+  it('lets a local OutMessage fold flow into an OutMessage-aware parent without an adapter', () => {
     const foldReportingCounterInSubmodel = foldChild({
       update: counterUpdateWithOutMessage,
       read: (model: DashboardModel) => Option.some(model.counter),
       write: (model, nextCounter) => ({ ...model, counter: nextCounter }),
       toParentMessage: GotCounterMessage,
-      toParentOutMessage: () => Option.none(),
-      foldOutMessage: () => model => [
-        { ...model, lastReportedValue: model.counter.value },
-        [notifyValueChanged],
-      ],
+      foldOutMessage: () => model => ({
+        model: { ...model, lastReportedValue: model.counter.value },
+        commands: [notifyValueChanged],
+      }),
     })
 
-    const [nextModel, commands, maybeOutMessage] =
-      foldReportingCounterInSubmodel(dashboardModel, Message.BumpedValue())
-    expect(nextModel.lastReportedValue).toBe(4)
-    expect(commands.map(command => command.name)).toEqual([
-      'SaveCount',
-      'NotifyValueChanged',
-    ])
-    expect(maybeOutMessage).toEqual(Option.none())
+    const reportingCounterSubmodelFold: ReturnWithOutMessage<
+      DashboardModel,
+      DashboardMessage,
+      NotifiedValueChanged
+    > = foldReportingCounterInSubmodel(dashboardModel, Message.BumpedValue())
+    expect(reportingCounterSubmodelFold.model.lastReportedValue).toBe(4)
+    expect(
+      (reportingCounterSubmodelFold.commands ?? []).map(
+        command => command.name,
+      ),
+    ).toEqual(['SaveCount', 'NotifyValueChanged'])
+    expect(reportingCounterSubmodelFold.outMessage).toBeUndefined()
   })
 
   it('runs the same fold data-first and data-last', () => {
-    const [dataFirstModel, dataFirstCommands] = foldReportingCounter(
+    const dataFirstFold = foldReportingCounter(
       dashboardModel,
       Message.BumpedValue(),
     )
-    const [dataLastModel, dataLastCommands] = foldReportingCounter(
-      Message.BumpedValue(),
-    )(dashboardModel)
+    const dataLastFold = foldReportingCounter(Message.BumpedValue())(
+      dashboardModel,
+    )
 
-    expect(dataFirstModel).toEqual(dataLastModel)
-    expect(dataFirstCommands.map(command => command.name)).toEqual(
-      dataLastCommands.map(command => command.name),
+    expect(dataFirstFold.model).toEqual(dataLastFold.model)
+    expect((dataFirstFold.commands ?? []).map(command => command.name)).toEqual(
+      (dataLastFold.commands ?? []).map(command => command.name),
     )
   })
 
@@ -517,14 +620,12 @@ describe('foldChild', () => {
       foldCounter(Message.BumpedValue()),
     ])
 
-    const [nextModel, commands] = reportThenBump(dashboardModel)
-    expect(nextModel.counter).toEqual({ value: 5 })
-    expect(nextModel.lastReportedValue).toBe(4)
-    expect(commands.map(command => command.name)).toEqual([
-      'SaveCount',
-      'NotifyValueChanged',
-      'SaveCount',
-    ])
+    const reportedThenBumped = reportThenBump(dashboardModel)
+    expect(reportedThenBumped.model.counter).toEqual({ value: 5 })
+    expect(reportedThenBumped.model.lastReportedValue).toBe(4)
+    expect(
+      (reportedThenBumped.commands ?? []).map(command => command.name),
+    ).toEqual(['SaveCount', 'NotifyValueChanged', 'SaveCount'])
   })
 })
 
@@ -545,7 +646,10 @@ const foldSettlingCounterOutMessage: (
   M.value(outMessage).pipe(
     M.withReturnType<Step<DashboardModel, DashboardMessage>>(),
     M.tagsExhaustive({
-      ChangedValue: () => model => [model, [liftCommand(settleCounter)]],
+      ChangedValue: () => model => ({
+        model,
+        commands: [liftCommand(settleCounter)],
+      }),
     }),
   )
 
@@ -566,23 +670,22 @@ const dashboardUpdate = (
     M.tagsExhaustive({
       GotCounterMessage: ({ message: counterMessage }) =>
         foldSettlingCounter(model, counterMessage),
-      NotifiedValueChanged: () => [model, []],
+      NotifiedValueChanged: () => ({ model }),
     }),
   )
 
 describe('foldChild fold context', () => {
   it('lifts a Command the OutMessage Step returns through toParentMessage', () => {
-    const [, commands] = foldSettlingCounter(
+    const settlingCounterFold = foldSettlingCounter(
       dashboardModel,
       Message.BumpedValue(),
     )
 
-    expect(commands.map(command => command.name)).toEqual([
-      'SaveCount',
-      'SettleCounter',
-    ])
+    expect(
+      (settlingCounterFold.commands ?? []).map(command => command.name),
+    ).toEqual(['SaveCount', 'SettleCounter'])
 
-    const maybeSettle = Array.last(commands)
+    const maybeSettle = Array.last(settlingCounterFold.commands ?? [])
     expect(Option.isSome(maybeSettle)).toBe(true)
     if (Option.isSome(maybeSettle)) {
       expect(Effect.runSync(maybeSettle.value.effect)).toEqual(
@@ -599,20 +702,25 @@ describe('foldChild fold context', () => {
       toParentMessage: GotCounterMessage,
       foldOutMessage:
         (_outMessage, { liftCommands }) =>
-        model => [model, liftCommands([settleCounter, trimCounter])],
+        model => ({
+          model,
+          commands: liftCommands([settleCounter, trimCounter]),
+        }),
     })
 
-    const [, commands] = foldTrimmingCounter(
+    const trimmingCounterFold = foldTrimmingCounter(
       dashboardModel,
       Message.BumpedValue(),
     )
 
-    expect(commands.map(command => command.name)).toEqual([
-      'SaveCount',
-      'SettleCounter',
-      'TrimCounter',
-    ])
-    expect(commands.map(command => Effect.runSync(command.effect))).toEqual([
+    expect(
+      (trimmingCounterFold.commands ?? []).map(command => command.name),
+    ).toEqual(['SaveCount', 'SettleCounter', 'TrimCounter'])
+    expect(
+      (trimmingCounterFold.commands ?? []).map(command =>
+        Effect.runSync(command.effect),
+      ),
+    ).toEqual([
       GotCounterMessage(Message.CompletedSaveCount()),
       GotCounterMessage(Message.BumpedValue()),
       GotCounterMessage(Message.CompletedSaveCount()),
@@ -645,10 +753,9 @@ describe('foldChild fold context', () => {
     ) => Step<DashboardModel, DashboardMessage> = M.type<ChangedValue>().pipe(
       M.withReturnType<Step<DashboardModel, DashboardMessage>>(),
       M.tagsExhaustive({
-        ChangedValue: () => model => [
-          { ...model, lastReportedValue: model.counter.value },
-          [],
-        ],
+        ChangedValue: () => model => ({
+          model: { ...model, lastReportedValue: model.counter.value },
+        }),
       }),
     )
 
@@ -664,26 +771,31 @@ describe('foldChild fold context', () => {
       Fold<DashboardModel, DashboardMessage, CounterMessage>
     >()
 
-    const [nextModel, commands] = foldReportedValue(
+    const reportedValueFold = foldReportedValue(
       dashboardModel,
       Message.BumpedValue(),
     )
-    expect(nextModel.lastReportedValue).toBe(4)
-    expect(commands.map(command => command.name)).toEqual(['SaveCount'])
+    expect(reportedValueFold.model.lastReportedValue).toBe(4)
+    expect(
+      (reportedValueFold.commands ?? []).map(command => command.name),
+    ).toEqual(['SaveCount'])
   })
 })
 
 const resetCounter = (
   model: CounterModel,
-): Return<CounterModel, CounterMessage> => [{ ...model, value: 0 }, [saveCount]]
+): Return<CounterModel, CounterMessage> => ({
+  model: { ...model, value: 0 },
+  commands: [saveCount],
+})
 
 const resetCounterWithOutMessage = (
   model: CounterModel,
-): ReturnWithOutMessage<CounterModel, CounterMessage, ChangedValue> => [
-  { ...model, value: 0 },
-  [saveCount],
-  Option.some(ChangedValue()),
-]
+): ReturnWithOutMessage<CounterModel, CounterMessage, ChangedValue> => ({
+  model: { ...model, value: 0 },
+  commands: [saveCount],
+  outMessage: ChangedValue(),
+})
 
 describe('foldChildStep', () => {
   const foldCounterReset = foldChildStep({
@@ -694,10 +806,63 @@ describe('foldChildStep', () => {
   })
 
   it('folds an entry point that takes nothing but the child Model', () => {
-    const [nextModel, commands] = foldCounterReset(dashboardModel)
+    const counterResetFold = foldCounterReset(dashboardModel)
 
-    expect(nextModel.counter).toEqual({ value: 0 })
-    expect(commands.map(command => command.name)).toEqual(['SaveCount'])
+    expect(counterResetFold.model.counter).toEqual({ value: 0 })
+    expect(
+      (counterResetFold.commands ?? []).map(command => command.name),
+    ).toEqual(['SaveCount'])
+  })
+
+  it('lifts the child OutMessage into a Submodel parent through toParentOutMessage', () => {
+    type ReportedValue = Readonly<{ _tag: 'ReportedValue' }>
+    const ReportedValue = (): ReportedValue => ({ _tag: 'ReportedValue' })
+
+    const foldCounterResetInSubmodel = foldChildStep({
+      update: resetCounterWithOutMessage,
+      read: (model: DashboardModel) => Option.some(model.counter),
+      write: (model, nextCounter) => ({ ...model, counter: nextCounter }),
+      toParentMessage: GotCounterMessage,
+      toParentOutMessage: () => ReportedValue(),
+    })
+
+    expectTypeOf(foldCounterResetInSubmodel).toEqualTypeOf<
+      StepWithOutMessage<DashboardModel, GotCounterMessage, ReportedValue>
+    >()
+
+    const counterResetSubmodelFold = foldCounterResetInSubmodel(dashboardModel)
+
+    expect(counterResetSubmodelFold.model.counter).toEqual({ value: 0 })
+    expect(
+      (counterResetSubmodelFold.commands ?? []).map(command => command.name),
+    ).toEqual(['SaveCount'])
+    expect(counterResetSubmodelFold.outMessage).toEqual(ReportedValue())
+  })
+
+  it('lets a local child Step flow into an OutMessage-aware parent without an adapter', () => {
+    const foldReportingCounterResetInSubmodel = foldChildStep({
+      update: resetCounterWithOutMessage,
+      read: (model: DashboardModel) => Option.some(model.counter),
+      write: (model, nextCounter) => ({ ...model, counter: nextCounter }),
+      toParentMessage: GotCounterMessage,
+      foldOutMessage: () => model => ({
+        model: { ...model, lastReportedValue: model.counter.value },
+      }),
+    })
+
+    const parentStep: StepWithOutMessage<
+      DashboardModel,
+      GotCounterMessage,
+      NotifiedValueChanged
+    > = foldReportingCounterResetInSubmodel
+
+    const reportingCounterResetFold = parentStep({
+      ...dashboardModel,
+      lastReportedValue: 9,
+    })
+
+    expect(reportingCounterResetFold.model.lastReportedValue).toBe(0)
+    expect(reportingCounterResetFold.outMessage).toBeUndefined()
   })
 
   it('is an ordinary Step that composes with combine', () => {
@@ -705,16 +870,15 @@ describe('foldChildStep', () => {
       Step<DashboardModel, GotCounterMessage>
     >()
 
-    const [nextModel, commands] = combine(dashboardModel, [
+    const combinedReset = combine(dashboardModel, [
       foldCounter(Message.BumpedValue()),
       foldCounterReset,
     ])
 
-    expect(nextModel.counter).toEqual({ value: 0 })
-    expect(commands.map(command => command.name)).toEqual([
-      'SaveCount',
-      'SaveCount',
-    ])
+    expect(combinedReset.model.counter).toEqual({ value: 0 })
+    expect((combinedReset.commands ?? []).map(command => command.name)).toEqual(
+      ['SaveCount', 'SaveCount'],
+    )
   })
 
   it('is a no-op when read finds no mounted child', () => {
@@ -729,36 +893,35 @@ describe('foldChildStep', () => {
     })
 
     const model: GatedDashboardModel = { maybeCounter: Option.none() }
-    const [nextModel, commands] = foldGatedCounterReset(model)
+    const gatedCounterResetFold = foldGatedCounterReset(model)
 
-    expect(nextModel).toBe(model)
-    expect(commands).toEqual([])
+    expect(gatedCounterResetFold.model).toBe(model)
+    expect(gatedCounterResetFold.commands ?? []).toEqual([])
   })
 
   it('runs foldOutMessage against the Model with the child already written', () => {
     const foldReportingCounterReset = foldChildStep({
-      update: (model: CounterModel) => [
-        { ...model, value: 0 },
-        [saveCount],
-        Option.some(ChangedValue()),
-      ],
+      update: (model: CounterModel) => ({
+        model: { ...model, value: 0 },
+        commands: [saveCount],
+        outMessage: ChangedValue(),
+      }),
       read: (model: DashboardModel) => Option.some(model.counter),
       write: (model, nextCounter) => ({ ...model, counter: nextCounter }),
       toParentMessage: GotCounterMessage,
-      foldOutMessage: () => model => [
-        { ...model, lastReportedValue: model.counter.value },
-        [notifyValueChanged],
-      ],
+      foldOutMessage: () => model => ({
+        model: { ...model, lastReportedValue: model.counter.value },
+        commands: [notifyValueChanged],
+      }),
     })
 
-    const [nextModel, commands] = foldReportingCounterReset(dashboardModel)
+    const reportingCounterResetFold = foldReportingCounterReset(dashboardModel)
 
-    expect(nextModel.counter).toEqual({ value: 0 })
-    expect(nextModel.lastReportedValue).toBe(0)
-    expect(commands.map(command => command.name)).toEqual([
-      'SaveCount',
-      'NotifyValueChanged',
-    ])
+    expect(reportingCounterResetFold.model.counter).toEqual({ value: 0 })
+    expect(reportingCounterResetFold.model.lastReportedValue).toBe(0)
+    expect(
+      (reportingCounterResetFold.commands ?? []).map(command => command.name),
+    ).toEqual(['SaveCount', 'NotifyValueChanged'])
   })
 
   it('lifts a Command the OutMessage Step returns through toParentMessage', () => {
@@ -770,14 +933,13 @@ describe('foldChildStep', () => {
       foldOutMessage: foldSettlingCounterOutMessage,
     })
 
-    const [, commands] = foldSettlingCounterReset(dashboardModel)
+    const settlingCounterResetFold = foldSettlingCounterReset(dashboardModel)
 
-    expect(commands.map(command => command.name)).toEqual([
-      'SaveCount',
-      'SettleCounter',
-    ])
+    expect(
+      (settlingCounterResetFold.commands ?? []).map(command => command.name),
+    ).toEqual(['SaveCount', 'SettleCounter'])
 
-    const maybeSettle = Array.last(commands)
+    const maybeSettle = Array.last(settlingCounterResetFold.commands ?? [])
     expect(Option.isSome(maybeSettle)).toBe(true)
     if (Option.isSome(maybeSettle)) {
       expect(Effect.runSync(maybeSettle.value.effect)).toEqual(
@@ -793,9 +955,13 @@ describe('types', () => {
 
   const baseModel: TestModel = { count: 0 }
 
-  it('Return pairs the Model with the Commands to run', () => {
+  it('Return carries the Model and optional Commands', () => {
     expectTypeOf<Return<TestModel, TestMessage>>().toEqualTypeOf<
-      readonly [TestModel, Commands<TestMessage>]
+      Readonly<{
+        model: TestModel
+        commands?: Commands<TestMessage>
+        outMessage?: never
+      }>
     >()
   })
 
@@ -806,19 +972,76 @@ describe('types', () => {
 
     const toReturnWithServices = (
       command: Command<TestMessage, never, TestServices>,
-    ): Return<TestModel, TestMessage, TestServices> => [baseModel, [command]]
+    ): Return<TestModel, TestMessage, TestServices> => ({
+      model: baseModel,
+      commands: [command],
+    })
 
     expectTypeOf(toReturnWithServices)
       .parameter(0)
       .toEqualTypeOf<Command<TestMessage, never, TestServices>>()
   })
 
-  it('ReturnWithOutMessage carries an Option of the OutMessage as the third element', () => {
+  it('ReturnWithOutMessage carries optional Commands and OutMessage fields', () => {
     expectTypeOf<
       ReturnWithOutMessage<TestModel, TestMessage, TestOutMessage>
     >().toEqualTypeOf<
-      readonly [TestModel, Commands<TestMessage>, Option.Option<TestOutMessage>]
+      Readonly<{
+        model: TestModel
+        commands?: Commands<TestMessage>
+        outMessage?: TestOutMessage
+      }>
     >()
+  })
+
+  it('prevents an OutMessage return from flowing into a Return-only API', () => {
+    const withOutMessage: ReturnWithOutMessage<
+      TestModel,
+      TestMessage,
+      TestOutMessage
+    > = {
+      model: baseModel,
+      outMessage: { _tag: 'ClosedEditor' },
+    }
+
+    // @ts-expect-error A Return-only API would lose this OutMessage.
+    const withoutOutMessage: Return<TestModel, TestMessage> = withOutMessage
+
+    expect(withoutOutMessage.model).toBe(baseModel)
+  })
+
+  it('allows a plain Return where OutMessages are accepted', () => {
+    const plain: Return<TestModel, TestMessage> = { model: baseModel }
+    const outMessageAwareReturn: ReturnWithOutMessage<
+      TestModel,
+      TestMessage,
+      TestOutMessage
+    > = plain
+
+    expect(outMessageAwareReturn.model).toBe(baseModel)
+  })
+
+  it('rejects explicitly undefined Commands', () => {
+    const commands: Commands<TestMessage> | undefined = undefined
+
+    // @ts-expect-error exactOptionalPropertyTypes requires omitting commands or normalizing it.
+    const updateReturn: Return<TestModel, TestMessage> = {
+      model: baseModel,
+      commands,
+    }
+
+    expect(updateReturn.model).toBe(baseModel)
+  })
+
+  it('prevents an OutMessage Step from flowing into combine', () => {
+    const emitOutMessage: StepWithOutMessage<
+      TestModel,
+      TestMessage,
+      TestOutMessage
+    > = model => ({ model, outMessage: { _tag: 'ClosedEditor' } })
+
+    // @ts-expect-error combine would lose this OutMessage.
+    combine([emitOutMessage])
   })
 
   it('Step maps a Model to a Return over the same Model', () => {
@@ -874,39 +1097,28 @@ describe('types', () => {
     })
   })
 
-  it('compiles the app-local withReturnType idiom over a two-variant message union', () => {
-    // NOTE: This test is the factory-cut compile proof. Foldkit does not
-    // export a Match factory for update returns; applications pin the alias
-    // themselves with the two lines below. If M.tagsExhaustive ever stops
-    // reducing its Unify return type to UpdateReturn under the pinned
-    // effect version, this test is the canary.
+  it('compiles the Message.match update idiom', () => {
     type UpdateReturn = Return<TestModel, TestMessage>
-    const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
-    const update = (model: TestModel, message: TestMessage): UpdateReturn =>
-      M.value(message).pipe(
-        withUpdateReturn,
-        M.tagsExhaustive({
-          IncrementedCount: () => [evo(model, { count: Number.increment }), []],
-          CompletedLoad: () => [model, []],
+    const update = (model: TestModel, message: TestMessage) =>
+      Message.match<UpdateReturn>(message, {
+        IncrementedCount: () => ({
+          model: evo(model, { count: Number.increment }),
         }),
-      )
+        CompletedLoad: () => ({ model }),
+        BumpedValue: () => ({ model }),
+        CompletedSaveCount: () => ({ model }),
+      })
 
     expectTypeOf(update).returns.toEqualTypeOf<UpdateReturn>()
 
-    const [incrementedModel, incrementedCommands] = update(
-      { count: 1 },
-      Message.IncrementedCount(),
-    )
-    expect(incrementedModel).toEqual({ count: 2 })
-    expect(incrementedCommands).toEqual([])
+    const increment = update({ count: 1 }, Message.IncrementedCount())
+    expect(increment.model).toEqual({ count: 2 })
+    expect(increment.commands ?? []).toEqual([])
 
     const acknowledgedModel: TestModel = { count: 4 }
-    const [unchangedModel, unchangedCommands] = update(
-      acknowledgedModel,
-      Message.CompletedLoad(),
-    )
-    expect(unchangedModel).toBe(acknowledgedModel)
-    expect(unchangedCommands).toEqual([])
+    const acknowledgment = update(acknowledgedModel, Message.CompletedLoad())
+    expect(acknowledgment.model).toBe(acknowledgedModel)
+    expect(acknowledgment.commands ?? []).toEqual([])
   })
 })

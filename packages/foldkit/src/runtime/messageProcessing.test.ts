@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Command } from '../command/index.js'
 import { __htmlBuilder, __requireDispatch } from '../html/index.js'
 import { defineMessageUnion } from '../message/index.js'
+import type * as Update from '../update/index.js'
 import { makeElement } from './runtime.js'
 
 const Message = defineMessageUnion({
@@ -52,6 +53,8 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
+type UpdateReturn = Update.Return<Model, Message>
+
 describe('message processing', () => {
   it('processes Messages synchronously at dispatch, in arrival order, with Command results following', async () => {
     const processedLog: Array<string> = []
@@ -66,26 +69,26 @@ describe('message processing', () => {
     const update = (model: Model, message: Message) => {
       processedLog.push(message._tag)
       const nextModel = { log: [...model.log, message._tag] }
-      return Message.match<readonly [Model, ReadonlyArray<Command<Message>>]>(
-        message,
-        {
-          AppendedFirst: () => [nextModel, [produceCommandResult]],
-          AppendedSecond: () => [nextModel, []],
-          AppendedCommandResult: () => [nextModel, []],
-          AppendedInitResult: () => [nextModel, []],
-          AppendedChainedResult: () => [nextModel, []],
-          AppendedAfterCrash: () => [nextModel, []],
-          ThrewInUpdate: () => [nextModel, []],
-          RemovedChild: () => [nextModel, []],
-          UnmountedChild: () => [nextModel, []],
-          BurnedBudget: () => [nextModel, []],
-        },
-      )
+      return Message.match<UpdateReturn>(message, {
+        AppendedFirst: () => ({
+          model: nextModel,
+          commands: [produceCommandResult],
+        }),
+        AppendedSecond: () => ({ model: nextModel }),
+        AppendedCommandResult: () => ({ model: nextModel }),
+        AppendedInitResult: () => ({ model: nextModel }),
+        AppendedChainedResult: () => ({ model: nextModel }),
+        AppendedAfterCrash: () => ({ model: nextModel }),
+        ThrewInUpdate: () => ({ model: nextModel }),
+        RemovedChild: () => ({ model: nextModel }),
+        UnmountedChild: () => ({ model: nextModel }),
+        BurnedBudget: () => ({ model: nextModel }),
+      })
     }
 
     const element = makeElement({
       Model,
-      init: () => [{ log: [] }, []],
+      init: () => ({ model: { log: [] } }),
       update,
       view: model => {
         capturedDispatch = __requireDispatch()
@@ -129,22 +132,19 @@ describe('message processing', () => {
       .spyOn(performance, 'now')
       .mockImplementation(() => fakeNow)
 
-    const update = (
-      model: Model,
-      message: Message,
-    ): readonly [Model, ReadonlyArray<Command<Message>>] => {
+    const update = (model: Model, message: Message): UpdateReturn => {
       processedLog.push(
         message._tag === 'BurnedBudget' ? message.label : message._tag,
       )
       if (message._tag === 'BurnedBudget') {
         fakeNow += BURN_MS
       }
-      return [{ log: [...model.log, message._tag] }, []]
+      return { model: { log: [...model.log, message._tag] } }
     }
 
     const element = makeElement({
       Model,
-      init: () => [{ log: [] }, []],
+      init: () => ({ model: { log: [] } }),
       update,
       view: model => {
         capturedDispatch = __requireDispatch()
@@ -188,22 +188,19 @@ describe('message processing', () => {
       .spyOn(performance, 'now')
       .mockImplementation(() => fakeNow)
 
-    const update = (
-      model: Model,
-      message: Message,
-    ): readonly [Model, ReadonlyArray<Command<Message>>] => {
+    const update = (model: Model, message: Message): UpdateReturn => {
       processedLog.push(
         message._tag === 'BurnedBudget' ? message.label : message._tag,
       )
       if (message._tag === 'BurnedBudget') {
         fakeNow += BURN_MS
       }
-      return [{ log: [...model.log, message._tag] }, []]
+      return { model: { log: [...model.log, message._tag] } }
     }
 
     const element = makeElement({
       Model,
-      init: () => [{ log: [] }, []],
+      init: () => ({ model: { log: [] } }),
       update,
       view: model => {
         capturedDispatch = __requireDispatch()
@@ -249,21 +246,18 @@ describe('message processing', () => {
       effect: Effect.succeed(Message.AppendedInitResult()),
     }
 
-    const update = (
-      model: Model,
-      message: Message,
-    ): readonly [Model, ReadonlyArray<Command<Message>>] => {
+    const update = (model: Model, message: Message): UpdateReturn => {
       processedLog.push(message._tag)
       const nextModel = { log: [...model.log, message._tag] }
       if (message._tag === 'AppendedInitResult') {
-        return [nextModel, [chainedCommand]]
+        return { model: nextModel, commands: [chainedCommand] }
       }
-      return [nextModel, []]
+      return { model: nextModel }
     }
 
     const element = makeElement({
       Model,
-      init: () => [{ log: [] }, [initCommand]],
+      init: () => ({ model: { log: [] }, commands: [initCommand] }),
       update,
       view: model => {
         seenViewModels.push(model)
@@ -310,24 +304,21 @@ describe('message processing', () => {
       }),
     }
 
-    const update = (
-      model: Model,
-      message: Message,
-    ): readonly [Model, ReadonlyArray<Command<Message>>] => {
+    const update = (model: Model, message: Message): UpdateReturn => {
       processedLog.push(message._tag)
       if (message._tag === 'ThrewInUpdate') {
         throw new Error('boom in update')
       }
       const nextModel = { log: [...model.log, message._tag] }
       if (message._tag === 'AppendedAfterCrash') {
-        return [nextModel, [spiedCommand]]
+        return { model: nextModel, commands: [spiedCommand] }
       }
-      return [nextModel, []]
+      return { model: nextModel }
     }
 
     const element = makeElement({
       Model,
-      init: () => [{ log: [] }, []],
+      init: () => ({ model: { log: [] } }),
       update,
       view: model => {
         capturedDispatch = __requireDispatch()
@@ -375,23 +366,20 @@ describe('message processing', () => {
       }),
     }
 
-    const update = (
-      model: Model,
-      message: Message,
-    ): readonly [Model, ReadonlyArray<Command<Message>>] => {
+    const update = (model: Model, message: Message): UpdateReturn => {
       if (message._tag === 'ThrewInUpdate') {
         throw new Error('boom in update')
       }
       const nextModel = { log: [...model.log, message._tag] }
       if (message._tag === 'AppendedFirst') {
-        return [nextModel, [spiedCommand]]
+        return { model: nextModel, commands: [spiedCommand] }
       }
-      return [nextModel, []]
+      return { model: nextModel }
     }
 
     const element = makeElement({
       Model,
-      init: () => [{ log: [] }, []],
+      init: () => ({ model: { log: [] } }),
       update,
       view: model => {
         capturedDispatch = __requireDispatch()
@@ -431,20 +419,17 @@ describe('message processing', () => {
     const processedLog: Array<string> = []
     let capturedDispatch: ((message: Message) => void) | null = null
 
-    const update = (
-      model: Model,
-      message: Message,
-    ): readonly [Model, ReadonlyArray<Command<Message>>] => {
+    const update = (model: Model, message: Message): UpdateReturn => {
       processedLog.push(message._tag)
       if (message._tag === 'UnmountedChild') {
         throw new Error('boom from unmount')
       }
-      return [{ log: [...model.log, message._tag] }, []]
+      return { model: { log: [...model.log, message._tag] } }
     }
 
     const element = makeElement({
       Model,
-      init: () => [{ log: [] }, []],
+      init: () => ({ model: { log: [] } }),
       update,
       view: model => {
         capturedDispatch = __requireDispatch()

@@ -13,6 +13,7 @@ import { noChildMessageConstructionInRoot } from './rules/no-child-message-const
 import { noDisablingDevGuardrails } from './rules/no-disabling-dev-guardrails.ts'
 import { noDuplicateOnmountPerElement } from './rules/no-duplicate-onmount-per-element.ts'
 import { noEmptyChildrenArray } from './rules/no-empty-children-array.ts'
+import { noEmptyCommandsArray } from './rules/no-empty-commands-array.ts'
 import { noEmptyObjectTaggedCall } from './rules/no-empty-object-tagged-call.ts'
 import { noHandRolledCommandStruct } from './rules/no-hand-rolled-command-struct.ts'
 import { noHardcodedRouteStrings } from './rules/no-hardcoded-route-strings.ts'
@@ -43,6 +44,7 @@ const basePlugin = Plugin.define({
     'no-disabling-dev-guardrails': noDisablingDevGuardrails,
     'no-duplicate-onmount-per-element': noDuplicateOnmountPerElement,
     'no-empty-children-array': noEmptyChildrenArray,
+    'no-empty-commands-array': noEmptyCommandsArray,
     'no-empty-object-tagged-call': noEmptyObjectTaggedCall,
     'no-hand-rolled-command-struct': noHandRolledCommandStruct,
     'no-hardcoded-route-strings': noHardcodedRouteStrings,

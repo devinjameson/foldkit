@@ -6,6 +6,7 @@ import { __htmlBuilder } from '../html/index.js'
 import { defineMessageUnion } from '../message/index.js'
 import { RenderCommit, createCommitNotifier } from '../render/commit.js'
 import { afterCommit } from '../render/render.js'
+import type * as Update from '../update/index.js'
 import { makeElement } from './runtime.js'
 
 describe('afterCommit', () => {
@@ -144,16 +145,13 @@ const ProbeCommittedDom = Command.define('ProbeCommittedDom', {
 })
 
 const update = (model: Model, message: Message) =>
-  Message.match<readonly [Model, ReadonlyArray<Command.Command<Message>>]>(
-    message,
-    {
-      ClickedTransition: () => [
-        { label: 'transitioned' },
-        [ProbeCommittedDom()],
-      ],
-      CompletedProbeCommittedDom: () => [model, []],
-    },
-  )
+  Message.match<Update.Return<Model, Message>>(message, {
+    ClickedTransition: () => ({
+      model: { label: 'transitioned' },
+      commands: [ProbeCommittedDom()],
+    }),
+    CompletedProbeCommittedDom: () => ({ model }),
+  })
 
 describe('Render.afterCommit inside a View Transition', () => {
   let container: HTMLElement
@@ -174,7 +172,7 @@ describe('Render.afterCommit inside a View Transition', () => {
     Effect.runFork(
       makeElement({
         Model,
-        init: () => [{ label: 'initial' }, []],
+        init: () => ({ model: { label: 'initial' } }),
         update,
         view: model =>
           h.div(
@@ -282,7 +280,7 @@ describe('Render.afterCommit inside a View Transition', () => {
     const fiber = Effect.runFork(
       makeElement({
         Model,
-        init: () => [{ label: 'initial' }, []],
+        init: () => ({ model: { label: 'initial' } }),
         update,
         view: model =>
           h.div(
@@ -338,7 +336,7 @@ describe('a frame that abandons its render', () => {
     const fiber = Effect.runFork(
       makeElement({
         Model,
-        init: () => [{ label: 'initial' }, []],
+        init: () => ({ model: { label: 'initial' } }),
         update,
         view: model => {
           if (model.label === 'transitioned') {
@@ -384,7 +382,7 @@ describe('a frame that abandons its render', () => {
     const fiber = Effect.runFork(
       makeElement({
         Model,
-        init: () => [{ label: 'initial' }, []],
+        init: () => ({ model: { label: 'initial' } }),
         update,
         view: model =>
           h.div(

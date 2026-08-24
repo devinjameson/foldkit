@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Array, Match as M, Option } from 'effect'
+import { Array, Match as M, Option, Schema as S } from 'effect'
 import { Update } from 'foldkit'
 import { type HtmlBuilder, childAttributes } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -25,14 +25,13 @@ const Model = S.Struct({
 })
 
 // In your init function, initialize the Combobox Submodel with a unique id:
-const init = () => [
-  {
+const init = () => ({
+  model: {
     maybeCity: Option.none(),
     combobox: Combobox.init({ id: 'city' }),
     // ...your other fields
   },
-  [],
-]
+})
 
 // Wrap Combobox's Messages so they can flow through your update:
 const Message = defineMessageUnion({
@@ -50,8 +49,8 @@ const foldComboboxOutMessage = M.type<Combobox.OutMessage<City>>().pipe(
   M.tagsExhaustive({
     Selected:
       ({ value }) =>
-      model => [evo(model, { maybeCity: () => Option.some(value) }), []],
-    ClearedSelection: () => model => [model, []],
+      model => ({ model: evo(model, { maybeCity: () => Option.some(value) }) }),
+    ClearedSelection: () => model => ({ model }),
   }),
 )
 
@@ -67,7 +66,7 @@ const foldCombobox = Update.foldChild({
   foldOutMessage: foldComboboxOutMessage,
 })
 
-// Inside your update function's Message.match({...}), call the fold:
+// In the corresponding Message.match handler, call the fold:
 GotComboboxMessage: ({ message }) => foldCombobox(model, message)
 
 const cities: ReadonlyArray<City> = [

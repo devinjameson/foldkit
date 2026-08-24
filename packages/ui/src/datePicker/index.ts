@@ -1,7 +1,6 @@
 import { Function, Match as M, Option, Predicate, Schema as S } from 'effect'
 import * as Calendar from 'foldkit/calendar'
 import type { CalendarDate } from 'foldkit/calendar'
-import * as Command from 'foldkit/command'
 import type { ChildAttribute, Html } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
@@ -105,30 +104,11 @@ export const init = (config: InitConfig): Model => ({
 
 // UPDATE
 
-type UpdateReturn = readonly [
-  Model,
-  ReadonlyArray<Command.Command<Message>>,
-  Option.Option<OutMessage>,
-]
+type UpdateReturn = Update.ReturnWithOutMessage<Model, Message, OutMessage>
 
-const mapCalendarCommands = (
-  commands: ReadonlyArray<Command.Command<UiCalendar.Message>>,
-): ReadonlyArray<Command.Command<Message>> =>
-  Command.mapMessages(commands, message =>
-    Message.GotCalendarMessage({ message }),
-  )
-
-const mapPopoverCommands = (
-  commands: ReadonlyArray<Command.Command<Popover.Message>>,
-): ReadonlyArray<Command.Command<Message>> =>
-  Command.mapMessages(commands, message =>
-    Message.GotPopoverMessage({ message }),
-  )
-
-const dropCalendarToDays: Update.Step<Model, Message> = model => [
-  evo(model, { calendar: () => UiCalendar.dropToDays(model.calendar) }),
-  [],
-]
+const dropCalendarToDays: Update.Step<Model, Message> = model => ({
+  model: evo(model, { calendar: UiCalendar.dropToDays }),
+})
 
 const readPopover = (model: Model): Option.Option<Popover.Model> =>
   Option.some(model.popover)
@@ -152,7 +132,6 @@ const foldPopover = Update.foldChild({
   read: readPopover,
   write: writePopover,
   toParentMessage: toGotPopoverMessage,
-  toParentOutMessage: () => Option.none(),
   foldOutMessage: foldPopoverOutMessage,
 })
 
@@ -175,19 +154,19 @@ const foldPopoverClose = Update.foldChildStep({
 const foldCalendarOutMessage = M.type<UiCalendar.OutMessage>().pipe(
   M.withReturnType<Update.Step<Model, Message>>(),
   M.tagsExhaustive({
-    ChangedViewMonth: () => model => [model, []],
+    ChangedViewMonth: () => model => ({ model }),
     SelectedDate: () => foldPopoverClose,
   }),
 )
 
 const toDatePickerOutMessage: (
   outMessage: UiCalendar.OutMessage,
-) => Option.Option<OutMessage> = M.type<UiCalendar.OutMessage>().pipe(
-  M.withReturnType<Option.Option<OutMessage>>(),
+) => OutMessage = M.type<UiCalendar.OutMessage>().pipe(
+  M.withReturnType<OutMessage>(),
   M.tagsExhaustive({
     ChangedViewMonth: ({ year, month }) =>
-      Option.some(OutMessage.ChangedViewMonth({ year, month })),
-    SelectedDate: ({ date }) => Option.some(OutMessage.SelectedDate({ date })),
+      OutMessage.ChangedViewMonth({ year, month }),
+    SelectedDate: ({ date }) => OutMessage.SelectedDate({ date }),
   }),
 )
 
@@ -200,8 +179,17 @@ const foldCalendar = Update.foldChild({
   foldOutMessage: foldCalendarOutMessage,
 })
 
-/** Processes a date picker message and returns the next model, commands, and
- * optional OutMessage. */
+const foldCalendarSelectDate = Update.foldChild({
+  update: UiCalendar.selectDate,
+  read: (model: Model) => Option.some(model.calendar),
+  write: (model, nextCalendar) => evo(model, { calendar: () => nextCalendar }),
+  toParentMessage: message => Message.GotCalendarMessage({ message }),
+  toParentOutMessage: toDatePickerOutMessage,
+  foldOutMessage: foldCalendarOutMessage,
+})
+
+/** Processes a DatePicker Message and returns the next Model, optional
+ *  Commands, and an optional OutMessage. */
 export const update = (model: Model, message: Message) =>
   Message.match<UpdateReturn>(message, {
     GotCalendarMessage: ({ message: calendarMessage }) =>
@@ -210,40 +198,17 @@ export const update = (model: Model, message: Message) =>
     GotPopoverMessage: ({ message: popoverMessage }) =>
       foldPopover(model, popoverMessage),
 
-    Opened: () => [
-      ...Update.combine(model, [foldPopoverOpen, dropCalendarToDays]),
-      Option.none(),
-    ],
+    Opened: () => Update.combine(model, [foldPopoverOpen, dropCalendarToDays]),
 
-    Closed: () => [
-      ...Update.combine(model, [foldPopoverClose, dropCalendarToDays]),
-      Option.none(),
-    ],
+    Closed: () => Update.combine(model, [foldPopoverClose, dropCalendarToDays]),
 
-    RequestedSelectDate: ({ date }) => {
-      const [nextCalendar, calendarCommands] = UiCalendar.selectDate(
-        model.calendar,
-        date,
-      )
-      const [nextPopover, popoverCommands] = Popover.close(model.popover)
-      return [
-        evo(model, {
-          calendar: () => nextCalendar,
-          popover: () => nextPopover,
-        }),
-        [
-          ...mapCalendarCommands(calendarCommands),
-          ...mapPopoverCommands(popoverCommands),
-        ],
-        Option.some(OutMessage.SelectedDate({ date })),
-      ]
-    },
+    RequestedSelectDate: ({ date }) => foldCalendarSelectDate(model, date),
 
-    Cleared: () => [model, [], Option.some(OutMessage.ClearedDate())],
+    Cleared: () => ({ model, outMessage: OutMessage.ClearedDate() }),
   })
 
-/** Programmatically opens the date picker, updating the model and returning
- * focus and popover commands. Use this in domain-event handlers. */
+/** Programmatically opens the DatePicker, updating the Model and returning
+ *  focus and Popover Commands. Use this in domain-event handlers. */
 export const open = (model: Model): UpdateReturn =>
   update(model, Message.Opened())
 
@@ -263,7 +228,7 @@ export const clear = (model: Model): UpdateReturn =>
  *  the selection (which the parent owns). Use it to navigate the picker onto a
  *  known date, for example after the parent sets its value externally (a URL
  *  parameter, a saved draft) so opening the picker shows that month. Returns
- *  the model directly because it produces no commands and no OutMessage. */
+ *  the Model directly because it produces no Commands and no OutMessage. */
 export const focusDate: Reflect<Model, CalendarDate> = Function.dual(
   2,
   (model: Model, date: CalendarDate): Model =>
@@ -357,9 +322,9 @@ const encodeIsoDate = S.encodeSync(Calendar.CalendarDateFromIsoString)
 /** Per-render view inputs passed to `view` via `h.submodel`'s `viewInputs` field.
  *
  *  The DatePicker emits a `SelectedDate({ date })` OutMessage when the
- *  user commits a date. Consumers pattern-match this in their
- *  `GotDatePickerMessage` handler (third tuple element of
- *  `DatePicker.update`'s return) to lift the date into domain state. */
+ *  user commits a date. Handle it in the `foldOutMessage` of the
+ *  DatePicker's `Update.foldChild` config to lift the date into domain
+ *  state. */
 export type ViewInputs = Readonly<{
   anchor: AnchorConfig
   /** The selected date, read straight from the parent Model. The trigger

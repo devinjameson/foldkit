@@ -7,6 +7,7 @@ import { isClientOnlyProperty } from '../propertyProvenance.js'
 import { Dispatch } from '../runtime/index.js'
 import { embed, makeElement } from '../runtime/runtime.js'
 import { evo } from '../struct/index.js'
+import type * as Update from '../update/index.js'
 import { beginRender, createBoundaryRegistry } from './boundary.js'
 import * as HtmlModule from './index.js'
 import {
@@ -294,14 +295,13 @@ describe('HtmlBuilder runtime guarantees', () => {
 
     const widget = makeElement({
       Model,
-      init: () => [{ count: 0 }, []],
+      init: () => ({ model: { count: 0 } }),
       update: (
         model: Model,
         _message: Message,
-      ): readonly [Model, ReadonlyArray<never>] => [
-        evo(model, { count: Number.increment }),
-        [],
-      ],
+      ): Update.Return<Model, Message> => ({
+        model: evo(model, { count: Number.increment }),
+      }),
       view: (model, h) =>
         h.div(
           [],
@@ -353,11 +353,11 @@ describe('HtmlBuilder runtime guarantees', () => {
 
     const widget = makeElement({
       Model,
-      init: () => [{ ready: true }, []],
+      init: () => ({ model: { ready: true } }),
       update: (
         model: Model,
         _message: Message,
-      ): readonly [Model, ReadonlyArray<never>] => [model, []],
+      ): Update.Return<Model, Message> => ({ model }),
       view: (_model, h) =>
         h.submodel({
           slotId: 'child',

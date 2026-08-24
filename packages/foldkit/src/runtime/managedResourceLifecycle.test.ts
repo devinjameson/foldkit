@@ -7,6 +7,7 @@ import * as ManagedResource from '../managedResource/index.js'
 import { make } from '../managedResource/managedResource.js'
 import { defineMessageUnion } from '../message/index.js'
 import { evo } from '../struct/index.js'
+import type * as Update from '../update/index.js'
 import { makeElement } from './runtime.js'
 
 type EngineShape = Readonly<{ id: string }>
@@ -73,27 +74,26 @@ const ReadEngine = Command.define('ReadEngine', {
   ),
 })
 
-type UpdateReturn = readonly [
-  Model,
-  ReadonlyArray<Command.Command<Message, never, EngineServiceId>>,
-]
-
 const update = (model: Model, message: Message) =>
-  Message.match<UpdateReturn>(message, {
-    RequestedEngine: ({ id }) => [
-      evo(model, { requested: () => Option.some(id) }),
-      [],
-    ],
-    StoppedEngine: () => [evo(model, { requested: () => Option.none() }), []],
-    AcquiredEngine: () => [evo(model, { status: () => 'acquired' }), []],
-    ReleasedEngine: () => [evo(model, { status: () => 'released' }), []],
-    FailedEngine: ({ error }) => [
-      evo(model, { status: () => `failed:${error}` }),
-      [],
-    ],
-    ClickedRead: () => [model, [ReadEngine()]],
-    SucceededRead: ({ value }) => [evo(model, { readValue: () => value }), []],
-    FailedRead: () => [evo(model, { readValue: () => 'unavailable' }), []],
+  Message.match<Update.Return<Model, Message, EngineServiceId>>(message, {
+    RequestedEngine: ({ id }) => ({
+      model: evo(model, { requested: () => Option.some(id) }),
+    }),
+    StoppedEngine: () => ({
+      model: evo(model, { requested: () => Option.none() }),
+    }),
+    AcquiredEngine: () => ({ model: evo(model, { status: () => 'acquired' }) }),
+    ReleasedEngine: () => ({ model: evo(model, { status: () => 'released' }) }),
+    FailedEngine: ({ error }) => ({
+      model: evo(model, { status: () => `failed:${error}` }),
+    }),
+    ClickedRead: () => ({ model, commands: [ReadEngine()] }),
+    SucceededRead: ({ value }) => ({
+      model: evo(model, { readValue: () => value }),
+    }),
+    FailedRead: () => ({
+      model: evo(model, { readValue: () => 'unavailable' }),
+    }),
   })
 
 const managedResources = make<Model, Message>()(entry => ({
@@ -155,10 +155,13 @@ afterEach(() => {
 const startEngineApp = (initialId: string) =>
   makeElement({
     Model,
-    init: () => [
-      { requested: Option.some(initialId), status: 'idle', readValue: 'none' },
-      [],
-    ],
+    init: () => ({
+      model: {
+        requested: Option.some(initialId),
+        status: 'idle',
+        readValue: 'none',
+      },
+    }),
     update,
     view,
     crash,

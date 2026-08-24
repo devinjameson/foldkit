@@ -1,10 +1,10 @@
 import { Effect, Fiber, Number, Schema as S } from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { Command } from '../command/index.js'
 import { TextDirection, __htmlBuilder } from '../html/index.js'
 import { defineMessageUnion } from '../message/index.js'
 import { evo } from '../struct/index.js'
+import type * as Update from '../update/index.js'
 import {
   __setDevToolsOverlay,
   makeApplication,
@@ -23,9 +23,9 @@ type Model = typeof Model.Type
 const h = __htmlBuilder<Message>()
 
 const update = (model: Model, message: Message) =>
-  Message.match<readonly [Model, ReadonlyArray<Command<Message>>]>(message, {
-    Rendered: () => [model, []],
-    ClickedBump: () => [{ label: 'world' }, []],
+  Message.match<Update.Return<Model, Message>>(message, {
+    Rendered: () => ({ model }),
+    ClickedBump: () => ({ model: { label: 'world' } }),
   })
 
 const LocaleModel = S.Struct({
@@ -50,18 +50,14 @@ type LocaleMessage = typeof LocaleMessage.Type
 
 const localeH = __htmlBuilder<LocaleMessage>()
 
-const localeUpdate = (
-  model: LocaleModel,
-  message: LocaleMessage,
-): readonly [LocaleModel, ReadonlyArray<Command<LocaleMessage>>] =>
-  LocaleMessage.match<
-    readonly [LocaleModel, ReadonlyArray<Command<LocaleMessage>>]
-  >(message, {
-    ClickedArabic: () => [
-      evo(model, { lang: () => 'ar', dir: () => 'Rtl' }),
-      [],
-    ],
-    ClickedRerender: () => [evo(model, { revision: Number.increment }), []],
+const localeUpdate = (model: LocaleModel, message: LocaleMessage) =>
+  LocaleMessage.match<Update.Return<LocaleModel, LocaleMessage>>(message, {
+    ClickedArabic: () => ({
+      model: evo(model, { lang: () => 'ar', dir: () => 'Rtl' }),
+    }),
+    ClickedRerender: () => ({
+      model: evo(model, { revision: Number.increment }),
+    }),
   })
 
 const HOST_TITLE = 'Host Page Title'
@@ -123,7 +119,7 @@ describe('makeElement', () => {
 
     const element = makeElement({
       Model,
-      init: () => [{ label: 'hello' }, []],
+      init: () => ({ model: { label: 'hello' } }),
       update,
       view: model => h.div([], [model.label]),
       container,
@@ -144,7 +140,7 @@ describe('makeElement', () => {
   it('renders into its container without touching the document head', async () => {
     const element = makeElement({
       Model,
-      init: () => [{ label: 'hello' }, []],
+      init: () => ({ model: { label: 'hello' } }),
       update,
       view: model => h.div([], [model.label]),
       container,
@@ -163,7 +159,7 @@ describe('makeElement', () => {
   it('leaves the document head untouched across re-renders', async () => {
     const element = makeElement({
       Model,
-      init: () => [{ label: 'hello' }, []],
+      init: () => ({ model: { label: 'hello' } }),
       update,
       view: model =>
         h.div(
@@ -196,7 +192,7 @@ describe('makeElement', () => {
       Model,
       Flags,
       flags: Effect.succeed({ initialLabel: 'from-flags' }),
-      init: flags => [{ label: flags.initialLabel }, []],
+      init: flags => ({ model: { label: flags.initialLabel } }),
       update,
       view: model => h.div([], [model.label]),
       container,
@@ -215,7 +211,7 @@ describe('makeElement', () => {
   it('renders a scoped crash view without touching the document head', async () => {
     const element = makeElement({
       Model,
-      init: () => [{ label: 'hello' }, []],
+      init: () => ({ model: { label: 'hello' } }),
       update,
       view: () => {
         throw new Error('boom from view')
@@ -241,7 +237,7 @@ describe('makeApplication', () => {
   it('owns the document head, applying title and canonical metadata', async () => {
     const application = makeApplication({
       Model,
-      init: () => [{ label: 'hello' }, []],
+      init: () => ({ model: { label: 'hello' } }),
       update,
       view: model => ({ title: model.label, body: h.div([], [model.label]) }),
       container,
@@ -268,7 +264,7 @@ describe('makeApplication', () => {
     const canonicalUrl = 'https://example.com/todos'
     const application = makeApplication({
       Model,
-      init: () => [{ label: 'hello' }, []],
+      init: () => ({ model: { label: 'hello' } }),
       update,
       view: model => ({
         title: model.label,
@@ -344,7 +340,7 @@ describe('makeApplication', () => {
   it('applies lang and dir to the html element', async () => {
     const application = makeApplication({
       Model: LocaleModel,
-      init: () => [FRENCH_AUTO, []],
+      init: () => ({ model: FRENCH_AUTO }),
       update: localeUpdate,
       view: model => ({
         title: 'Localized',
@@ -370,7 +366,7 @@ describe('makeApplication', () => {
   it('leaves lang and dir alone when the view omits them', async () => {
     const application = makeApplication({
       Model,
-      init: () => [{ label: 'hello' }, []],
+      init: () => ({ model: { label: 'hello' } }),
       update,
       view: model => ({ title: model.label, body: h.div([], [model.label]) }),
       container,
@@ -391,7 +387,7 @@ describe('makeApplication', () => {
   it('applies lang without touching dir when the view sets only one', async () => {
     const application = makeApplication({
       Model,
-      init: () => [{ label: 'hello' }, []],
+      init: () => ({ model: { label: 'hello' } }),
       update,
       view: model => ({
         title: model.label,
@@ -416,7 +412,7 @@ describe('makeApplication', () => {
   it('tracks lang and dir across renders, and reasserts them on a later render that leaves both unchanged', async () => {
     const application = makeApplication({
       Model: LocaleModel,
-      init: () => [ENGLISH_LTR, []],
+      init: () => ({ model: ENGLISH_LTR }),
       update: localeUpdate,
       view: model => ({
         title: 'Localized',

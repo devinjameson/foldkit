@@ -1,5 +1,5 @@
 import { Option, Schema as S } from 'effect'
-import type * as Command from 'foldkit/command'
+import { type Update } from 'foldkit'
 import { type View as SubmodelView, defineView } from 'foldkit/submodel'
 
 import {
@@ -33,18 +33,17 @@ export const init = (config: InitConfig): Model => baseInit(config)
 
 // UPDATE
 
-/** Processes a listbox message and returns the next model, commands, and optional OutMessage. Closes the listbox on selection (single-select behavior); emits a `Selected({ value })` OutMessage the parent stores as the selection. */
+/** Processes a Listbox Message and returns the next Model, optional Commands,
+ *  and an optional OutMessage. Selection closes the Listbox and emits
+ *  `Selected({ value })` for the parent to store. */
 export const update = makeUpdate<Model>((model, item, context) =>
-  context.closeWithFocus(
-    model,
-    Option.some(OutMessage.Selected({ value: item })),
-  ),
+  context.closeWithFocus(model, OutMessage.Selected({ value: item })),
 )
 
 type UpdateReturn = ReturnType<typeof update>
 
-/** Programmatically opens the listbox, updating the model and returning
- *  focus and modal commands. Use this in domain-event handlers to open the listbox. */
+/** Programmatically opens the Listbox, updating the Model and returning focus
+ *  and modal Commands. Use this in domain-event handlers. */
 export const open = (model: Model): UpdateReturn =>
   update(model, Message.Opened({ maybeActiveItemIndex: Option.none() }))
 
@@ -92,6 +91,12 @@ const singleViewImpl = defineView<Model, Message, ViewInputs<unknown, string>>(
     ),
 )
 
+type BundleUpdateReturn<Value extends string> = Update.ReturnWithOutMessage<
+  Model,
+  Message,
+  OutMessage<Value>
+>
+
 /** The `view`, `update`, and programmatic helpers that `Listbox.create`
  *  returns, bound to one `Item` and `Value` pair. Name it to annotate a
  *  value that holds a created bundle, such as a field on a config object
@@ -102,36 +107,10 @@ export type Bundle<
   Value extends string = Item extends string ? Item : string,
 > = Readonly<{
   view: SubmodelView<Model, Message, ViewInputs<Item, Value>>
-  update: (
-    model: Model,
-    message: Message,
-  ) => readonly [
-    Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Value>>,
-  ]
-  selectItem: (
-    model: Model,
-    item: Value,
-  ) => readonly [
-    Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Value>>,
-  ]
-  open: (
-    model: Model,
-  ) => readonly [
-    Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Value>>,
-  ]
-  close: (
-    model: Model,
-  ) => readonly [
-    Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Value>>,
-  ]
+  update: (model: Model, message: Message) => BundleUpdateReturn<Value>
+  selectItem: (model: Model, item: Value) => BundleUpdateReturn<Value>
+  open: (model: Model) => BundleUpdateReturn<Value>
+  close: (model: Model) => BundleUpdateReturn<Value>
 }>
 
 /** Pairs the single-select listbox's `view` and `update` (and programmatic
@@ -145,9 +124,8 @@ export type Bundle<
  *  // In view:
  *  h.submodel({ view: ColorListbox.view, ... })
  *
- *  // In update:
- *  const [next, commands, maybeOutMessage] = ColorListbox.update(model, message)
- *  // maybeOutMessage: Option<Listbox.OutMessage<Color>>
+ *  // In the parent update, pass ColorListbox.update to Update.foldChild and
+ *  // handle Listbox.OutMessage<Color> in foldOutMessage.
  *  ```
  *
  *  Two type params support object-typed items with an `itemToValue`
@@ -158,11 +136,11 @@ export const create = <
   Item = string,
   Value extends string = Item extends string ? Item : string,
 >(): Bundle<Item, Value> => {
-  type UpdateReturn = readonly [
+  type UpdateReturn = Update.ReturnWithOutMessage<
     Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Value>>,
-  ]
+    Message,
+    OutMessage<Value>
+  >
   // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
   const typedUpdate = update as (model: Model, message: Message) => UpdateReturn
   const view =

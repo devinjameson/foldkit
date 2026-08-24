@@ -825,10 +825,9 @@ export const all: <
  *  })
  *
  *  // One update arm folds it in, whatever the previous state was:
- *  SettledLoadNotes: ({ result }) => [
- *    evo(model, { notes: AsyncData.settle(result) }),
- *    [],
- *  ]
+ *  SettledLoadNotes: ({ result }) => ({
+ *    model: evo(model, { notes: AsyncData.settle(result) }),
+ *  })
  *  ```
  */
 export const settle: {

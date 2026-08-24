@@ -4,6 +4,7 @@ import type { Html, HtmlBuilder } from '../../html/index.js'
 import * as ManagedResource from '../../managedResource/index.js'
 import { defineMessageUnion } from '../../message/index.js'
 import { evo } from '../../struct/index.js'
+import type * as Update from '../../update/index.js'
 
 // MODEL
 
@@ -68,14 +69,19 @@ export const initialModel = Model.make({
 // UPDATE
 
 export const update = (model: Model, message: Message) =>
-  Message.match<readonly [Model, ReadonlyArray<never>]>(message, {
-    ClickedToggleFeed: () => [evo(model, { isFeedOpen: Boolean.not }), []],
-    AcquiredFeedSocket: () => [evo(model, { status: () => 'Connected' }), []],
-    ReleasedFeedSocket: () => [
-      evo(model, { status: () => 'Disconnected' }),
-      [],
-    ],
-    FailedAcquireFeedSocket: () => [evo(model, { status: () => 'Failed' }), []],
+  Message.match<Update.Return<Model, Message>>(message, {
+    ClickedToggleFeed: () => ({
+      model: evo(model, { isFeedOpen: Boolean.not }),
+    }),
+    AcquiredFeedSocket: () => ({
+      model: evo(model, { status: () => 'Connected' }),
+    }),
+    ReleasedFeedSocket: () => ({
+      model: evo(model, { status: () => 'Disconnected' }),
+    }),
+    FailedAcquireFeedSocket: () => ({
+      model: evo(model, { status: () => 'Failed' }),
+    }),
   })
 
 // VIEW

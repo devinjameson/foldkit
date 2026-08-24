@@ -5,6 +5,7 @@ import * as File from '../../file/index.js'
 import type { Html, HtmlBuilder } from '../../html/index.js'
 import { defineMessageUnion } from '../../message/index.js'
 import { evo } from '../../struct/index.js'
+import type * as Update from '../../update/index.js'
 
 // MODEL
 
@@ -63,36 +64,34 @@ export const initialModel: Model = {
 
 // UPDATE
 
-type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
-
 export const update = (model: Model, message: Message) =>
-  Message.match<UpdateReturn>(message, {
-    ClickedChooseResume: () => [model, [SelectResume()]],
-    CompletedSelectResume: ({ file }) => [
-      evo(model, {
+  Message.match<Update.Return<Model, Message>>(message, {
+    ClickedChooseResume: () => ({ model, commands: [SelectResume()] }),
+    CompletedSelectResume: ({ file }) => ({
+      model: evo(model, {
         maybeResume: () => Option.some(file),
         maybePreviewDataUrl: () => Option.none(),
         readStatus: () => 'Reading',
       }),
-      [ReadResumePreview({ file })],
-    ],
-    CancelledSelectResume: () => [model, []],
-    SucceededReadPreview: ({ dataUrl }) => [
-      evo(model, {
+      commands: [ReadResumePreview({ file })],
+    }),
+    CancelledSelectResume: () => ({ model }),
+    SucceededReadPreview: ({ dataUrl }) => ({
+      model: evo(model, {
         maybePreviewDataUrl: () => Option.some(dataUrl),
         readStatus: () => 'Idle',
       }),
-      [],
-    ],
-    FailedReadPreview: () => [evo(model, { readStatus: () => 'Failed' }), []],
-    ClickedRemoveResume: () => [
-      evo(model, {
+    }),
+    FailedReadPreview: () => ({
+      model: evo(model, { readStatus: () => 'Failed' }),
+    }),
+    ClickedRemoveResume: () => ({
+      model: evo(model, {
         maybeResume: () => Option.none(),
         maybePreviewDataUrl: () => Option.none(),
         readStatus: () => 'Idle',
       }),
-      [],
-    ],
+    }),
   })
 
 // VIEW

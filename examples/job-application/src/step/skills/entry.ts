@@ -1,5 +1,5 @@
 import { Match as M, Option, Schema as S } from 'effect'
-import { Command, Update } from 'foldkit'
+import { Update } from 'foldkit'
 import {
   Field,
   NotValidated,
@@ -73,12 +73,6 @@ export const init = (entryId: string): Model => ({
 
 // UPDATE
 
-type UpdateReturn = readonly [
-  Model,
-  ReadonlyArray<Command.Command<Message>>,
-  Option.Option<OutMessage>,
-]
-
 const foldProficiencyRadioGroupOutMessage = M.type<
   RadioGroup.OutMessage<ProficiencyLevel.ProficiencyLevel>
 >().pipe(
@@ -86,7 +80,7 @@ const foldProficiencyRadioGroupOutMessage = M.type<
   M.tagsExhaustive({
     Selected:
       ({ value }) =>
-      model => [evo(model, { proficiency: () => value }), []],
+      model => ({ model: evo(model, { proficiency: () => value }) }),
   }),
 )
 
@@ -98,22 +92,22 @@ const foldProficiencyRadioGroup = Update.foldChild({
   toParentMessage: message =>
     Message.GotProficiencyRadioGroupMessage({ message }),
   foldOutMessage: foldProficiencyRadioGroupOutMessage,
-  toParentOutMessage: () => Option.none(),
 })
 
 export const update = (model: Model, message: Message) =>
-  Message.match<UpdateReturn>(message, {
-    UpdatedName: ({ value }) => [
-      evo(model, { name: () => validateName(value) }),
-      [],
-      Option.none(),
-    ],
+  Message.match<Update.ReturnWithOutMessage<Model, Message, OutMessage>>(
+    message,
+    {
+      UpdatedName: ({ value }) => ({
+        model: evo(model, { name: () => validateName(value) }),
+      }),
 
-    GotProficiencyRadioGroupMessage: ({ message }) =>
-      foldProficiencyRadioGroup(model, message),
+      GotProficiencyRadioGroupMessage: ({ message }) =>
+        foldProficiencyRadioGroup(model, message),
 
-    ClickedRemoveSelf: () => [model, [], Option.some(OutMessage.Removed())],
-  })
+      ClickedRemoveSelf: () => ({ model, outMessage: OutMessage.Removed() }),
+    },
+  )
 
 // VALIDATION SUMMARY
 

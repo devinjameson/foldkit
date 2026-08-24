@@ -170,13 +170,15 @@ Array.fromOption(maybeCommand) // 0 or 1 command based on Option
 // WRONG
 switch (message._tag) {
   case 'ClickedSubmit':
-    return [model, []]
+    return { model }
 }
 
 // RIGHT
-Message.match<UpdateReturn>(message, {
-  ClickedSubmit: () => [model, []],
-  UpdatedEmail: ({ value }) => [evo(model, { email: () => value }), []],
+Message.match<Update.Return<Model, Message>>(message, {
+  ClickedSubmit: () => ({ model }),
+  UpdatedEmail: ({ value }) => ({
+    model: evo(model, { email: () => value }),
+  }),
 })
 ```
 
@@ -341,6 +343,40 @@ evo(model, { child: () => nextChild })
 This applies to component reflect helpers too, which are dual: called data-last, `Slider.reflectRange({ min: minPrice, max: maxPrice })` returns a setter for the existing `Slider.Model` (mirroring URL-owned price bounds onto the slider), so use it directly in the `priceSlider` field instead of closing over `model.priceSlider`.
 
 Never mutate the model directly. **Never use spread syntax for updates.** `evo` is the canonical pattern. This applies to nested updates too: `evo(model, { newLinkForm: () => ({ ...model.newLinkForm, title: value }) })` is wrong. Use a nested `evo`: `evo(model, { newLinkForm: () => evo(model.newLinkForm, { title: () => value }) })`. The spread-inside-evo pattern is a common mistake. You're using `evo` at the outer level but bypassing it inside, which loses the invariant that all updates go through one codepath.
+
+## Update Results
+
+Update, init, boot, and component helper producers return `{ model }` when they statically create no Commands. When they compute a Commands collection, return it directly without checking whether it is empty. Never write the literal `commands: []`.
+
+Keep an update-shaped result together when composing it into another update. Name the result after the operation and use dot access:
+
+```ts
+const homeInit = Home.init()
+
+return {
+  model: { home: homeInit.model },
+  commands: Command.mapMessages(homeInit.commands, message =>
+    Message.GotHomeMessage({ message }),
+  ),
+}
+```
+
+The same rule applies when a test consumes an update result:
+
+```ts
+const formSubmit = update(model, Message.SubmittedForm())
+
+expect(formSubmit.model.status).toBe('Submitting')
+expect(formSubmit.commands ?? []).toHaveLength(1)
+```
+
+When the operation name collides with the function, use a trailing underscore such as `init_`. Do not destructure or rename `model`, `commands`, or `outMessage` from update-like results. Dot access does not prevent someone from ignoring `outMessage`; it keeps the operation and all of its returned fields visible together. Name a child fold's `write` parameter after the next child Model, such as `nextSettings`. Pass optional Commands directly to APIs that accept them, including `Command.mapMessages`. Use `result.commands ?? []` only when the next operation requires a concrete array for spreading, concatenating, execution, or an assertion.
+
+Manual unpacking of a child result usually means the site should use `Update.foldChild` for child Messages or `Update.foldChildStep` for no-argument child entry points. Those helpers keep the child Model, lifted Commands, and OutMessage in one fold.
+
+Compose two or more sequential operations over the same Model with `Update.combine`. Call a single operation directly. Name an inline Step parameter `stepModel`; it receives the Model from the preceding Step. Independent child inits need separate Model assembly because they do not update the same Model in sequence.
+
+Use `Update.withOutMessage(updateReturn, outMessage)` or its data-last form when attaching a known or optional OutMessage to an existing plain return. Include `outMessage` directly when constructing a fresh result with a known value. Add `toParentOutMessage` only when it forwards at least one child OutMessage from the current Submodel to its parent. When every child OutMessage is handled locally, omit the lift. Never write `toParentOutMessage: () => undefined`.
 
 ## Schema Constructors
 

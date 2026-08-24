@@ -1,7 +1,9 @@
 import { build } from 'esbuild'
 import {
+  copyFileSync,
   existsSync,
   mkdtempSync,
+  readFileSync,
   readdirSync,
   rmSync,
   writeFileSync,
@@ -94,4 +96,36 @@ describe('real-oxlint rule fixtures', () => {
       expect(countDiagnostics(rule, 'valid')).toBe(0)
     })
   }
+
+  it('fixes only structurally safe empty commands properties', () => {
+    const rule = 'no-empty-commands-array'
+    const sourcePath = join(fixturesRoot, rule, 'invalid', 'update.ts')
+    const targetPath = join(workDir, `${rule}.fix.ts`)
+    const configPath = join(workDir, `${rule}.fix.oxlintrc.json`)
+    copyFileSync(sourcePath, targetPath)
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        plugins: ['typescript'],
+        jsPlugins: [
+          { name: 'foldkit', specifier: pathToFileURL(bundlePath).href },
+        ],
+        categories: { correctness: 'off' },
+        rules: { [`foldkit/${rule}`]: 'error' },
+      }),
+    )
+
+    const diagnostics = runOxlint({
+      oxlintBin,
+      cwd: workDir,
+      configPath,
+      target: targetPath,
+      fix: true,
+    })
+    const fixedSource = readFileSync(targetPath, 'utf8')
+
+    expect(diagnostics).toHaveLength(1)
+    expect(fixedSource).not.toContain('commands: []')
+    expect(fixedSource).toContain('// A comment does not make this a Command.')
+  })
 })

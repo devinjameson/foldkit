@@ -9,7 +9,7 @@ import {
   String,
   pipe,
 } from 'effect'
-import { Command, Submodel } from 'foldkit'
+import { Command, Submodel, type Update } from 'foldkit'
 import {
   Field,
   Invalid,
@@ -86,12 +86,6 @@ const isFormValid = (model: Model): boolean =>
 
 // UPDATE
 
-type UpdateReturn = readonly [
-  Model,
-  ReadonlyArray<Command.Command<Message>>,
-  Option.Option<OutMessage>,
-]
-
 export const SimulateAuthRequest = Command.define('SimulateAuthRequest', {
   args: { email: S.String, password: S.String },
   messages: [
@@ -122,59 +116,54 @@ export const SimulateAuthRequest = Command.define('SimulateAuthRequest', {
 })
 
 export const update = (model: Model, message: Message) =>
-  Message.match<UpdateReturn>(message, {
-    ChangedEmail: ({ value }) => [
-      evo(model, { email: () => validateEmail(value) }),
-      [],
-      Option.none(),
-    ],
-
-    ChangedPassword: ({ value }) => [
-      evo(model, { password: () => validatePassword(value) }),
-      [],
-      Option.none(),
-    ],
-
-    SubmittedForm: () => {
-      if (model.isSubmitting) {
-        return [model, [], Option.none()]
-      }
-
-      if (!isFormValid(model)) {
-        return [model, [], Option.none()]
-      }
-
-      return [
-        evo(model, { isSubmitting: () => true }),
-        [
-          SimulateAuthRequest({
-            email: model.email.value,
-            password: model.password.value,
-          }),
-        ],
-        Option.none(),
-      ]
-    },
-
-    SucceededSimulateAuthRequest: ({ session }) => [
-      model,
-      [],
-      Option.some(OutMessage.SucceededLogin({ session })),
-    ],
-
-    FailedSimulateAuthRequest: ({ error }) => [
-      evo(model, {
-        password: () =>
-          Invalid({
-            value: model.password.value,
-            errors: [error],
-          }),
-        isSubmitting: () => false,
+  Message.match<Update.ReturnWithOutMessage<Model, Message, OutMessage>>(
+    message,
+    {
+      ChangedEmail: ({ value }) => ({
+        model: evo(model, { email: () => validateEmail(value) }),
       }),
-      [],
-      Option.none(),
-    ],
-  })
+
+      ChangedPassword: ({ value }) => ({
+        model: evo(model, { password: () => validatePassword(value) }),
+      }),
+
+      SubmittedForm: () => {
+        if (model.isSubmitting) {
+          return { model }
+        }
+
+        if (!isFormValid(model)) {
+          return { model }
+        }
+
+        return {
+          model: evo(model, { isSubmitting: () => true }),
+          commands: [
+            SimulateAuthRequest({
+              email: model.email.value,
+              password: model.password.value,
+            }),
+          ],
+        }
+      },
+
+      SucceededSimulateAuthRequest: ({ session }) => ({
+        model,
+        outMessage: OutMessage.SucceededLogin({ session }),
+      }),
+
+      FailedSimulateAuthRequest: ({ error }) => ({
+        model: evo(model, {
+          password: () =>
+            Invalid({
+              value: model.password.value,
+              errors: [error],
+            }),
+          isSubmitting: () => false,
+        }),
+      }),
+    },
+  )
 
 // VIEW
 

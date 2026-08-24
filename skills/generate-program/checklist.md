@@ -99,12 +99,30 @@ for f in $(grep -rl "HttpClient" src/); do
   grep -q "from 'effect/unstable/http'" "$f" || echo "WRONG HttpClient ORIGIN: $f"
 done
 
-# Update return type written inline at a match site instead of aliased once
-# per file. The alias itself is fine (most examples spell it by hand);
-# repeating the tuple inline is the finding. Two alternatives on purpose:
-# `withReturnType<$` catches the wrapped form where the tuple sits on the next
-# line, and `withReturnType<readonly [` catches the single-line form. Keep both.
-grep -rn "withReturnType<\s*$\|withReturnType<readonly \[" src/
+# Review update return types. Inline Update.Return at a Message.match when that
+# is its only use. Keep an UpdateReturn alias when another matcher, helper, or
+# exported signature reuses it. A hand-written plain type must include
+# outMessage?: never; prefer the framework type instead.
+rg -n 'type [A-Za-z]*UpdateReturn =|Message\.match<Update\.Return' src/
+rg -n -U 'type [A-Za-z]*UpdateReturn\s*=\s*Readonly<\{' src/
+
+# Review destructuring that names an update-result field. Application results
+# should be operation-named values consumed with dot access. Dot access keeps
+# the operation and all of its returned fields visible together, but someone can
+# still ignore outMessage. A plain domain record may be fine.
+rg -n -U 'const\s+\{[^}]*\b(model|commands|outMessage)\b[^}]*\}\s*=' src/
+
+# Literal empty Commands arrays. foldkit/no-empty-commands-array covers source
+# files where the rule is active. Review test files and any disabled paths too.
+# A producer with statically no Commands omits the field. A computed Commands
+# collection is returned directly without checking whether it is empty.
+rg -n -U '\bcommands\s*:\s*\[\s*\]' src/
+
+# Optional update Commands passed through ?? [] before Command.mapMessages.
+# The mapper accepts undefined and returns a concrete array, so pass result.commands
+# directly. Keep ?? [] where spreading, concatenating, executing, or asserting
+# genuinely requires an array.
+rg -n -U 'Command\.mapMessages\([^)]*commands\s*\?\?\s*\[\]' src/
 
 # T[] syntax in the return type: use ReadonlyArray<Command<Message>>
 grep -rn "readonly Command<.*>\[\]" src/
@@ -269,9 +287,16 @@ Alongside the greps, eyeball each file's imports. Every symbol you imported shou
 
 Foldkit ships these; reaching past them is a finding, not a style choice.
 
-- [ ] Update return type is aliased once per file and passed to `Message.match<UpdateReturn>`. The update signature does not repeat `: UpdateReturn`. Use `M.withReturnType<UpdateReturn>()` only for an Effect `Match` over another tagged union inside a handler. `Update.Return<Model, Message>` (or `Update.ReturnWithOutMessage<Model, Message, OutMessage>`) is the preferred alias; a hand-written tuple alias is not itself a finding
-- [ ] Multi-step post-mutation handlers use `Update.combine(model, [...])` and `Update.refresh({ read, revalidate, write, load })` rather than hand-threaded `evo` chains and conditional Command arrays
-- [ ] Child Submodel Commands are re-tagged with `Command.mapMessages(commands, toParentMessage)`
+- [ ] A return type used only at `Message.match` is written inline as `Update.Return<Model, Message>` or `Update.ReturnWithOutMessage<Model, Message, OutMessage>`. An `UpdateReturn` alias exists only when another matcher, helper, or exported signature reuses it. The update signature does not repeat the type already supplied to the match. A hand-written plain-return type includes `outMessage?: never`
+- [ ] Update, init, boot, and component helper producers omit `commands` when they statically create no Commands. They return computed Commands collections directly without checking whether the collection is empty. They never write the literal `commands: []`
+- [ ] Update, init, boot, and component helper results are bound to values named after their operations and consumed with dot access, not destructured or renamed. Name collisions use a trailing underscore such as `init_`; child `write` parameters use `next<Field>`
+- [ ] Optional Commands pass directly to `Command.mapMessages`; `result.commands ?? []` appears only where an operation requires a concrete array
+- [ ] Dot access keeps the operation and all of its returned fields visible together but does not prevent someone from ignoring `outMessage`
+- [ ] Child results use `Update.foldChild` or `Update.foldChildStep` instead of manual unpacking
+- [ ] Known or optional OutMessages attach to an existing plain return with either form of `Update.withOutMessage`; no local equivalent helper or conditional spread duplicates it
+- [ ] Child folds include `toParentOutMessage` only when it forwards at least one child OutMessage from the current Submodel to its parent; no blanket `toParentOutMessage: () => undefined` mapping appears
+- [ ] Two-or-more-step post-mutation handlers use `Update.combine(model, [...])` and `Update.refresh({ read, revalidate, write, load })` rather than hand-threaded `evo` chains and conditional Command arrays. A single operation is called directly, and an inline Step parameter is named `stepModel`
+- [ ] Child Submodel results use `Update.foldChild` or `Update.foldChildStep`, which re-tag Commands through `toParentMessage`; direct `Command.mapMessages` is reserved for lower-level helpers and independent init results
 - [ ] HTTP uses `HttpClient` / `HttpClientRequest` from `effect/unstable/http`, with `Effect.provide(effect, Http.layer)` to supply the client. Not `@effect/platform` (`@effect/platform-browser` is separate and is for `BrowserKeyValueStore` / `BrowserCrypto`)
 - [ ] UI components are imported from `@foldkit/ui` by name (`import { Dialog, Input } from '@foldkit/ui'`). There is no `Ui` namespace on `foldkit`
 

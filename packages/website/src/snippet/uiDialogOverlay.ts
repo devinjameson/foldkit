@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Option } from 'effect'
+import { Option, Schema as S } from 'effect'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 
@@ -17,15 +17,14 @@ const Model = S.Struct({
   // ...your other fields
 })
 
-const init = () => [
-  {
+const init = () => ({
+  model: {
     dialog: Dialog.init({ id: 'edit-filters' }),
     combobox: Combobox.init({ id: 'city' }),
     maybeCity: Option.none(),
     // ...your other fields
   },
-  [],
-]
+})
 
 // Embed each submodel's Message in your parent Message and delegate both to
 // their own update (see the Dialog and Combobox examples for the delegation).

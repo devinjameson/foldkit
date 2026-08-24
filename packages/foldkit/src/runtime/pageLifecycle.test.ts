@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { type Document, __htmlBuilder } from '../html/index.js'
 import { defineMessageUnion } from '../message/index.js'
 import { evo } from '../struct/index.js'
+import type * as Update from '../update/index.js'
 import { makeApplication, run } from './runtime.js'
 
 const Message = defineMessageUnion({
@@ -15,8 +16,10 @@ const Model = S.Struct({ count: S.Number })
 type Model = typeof Model.Type
 
 const update = (model: Model, message: Message) =>
-  Message.match<readonly [Model, ReadonlyArray<never>]>(message, {
-    ClickedIncrement: () => [evo(model, { count: Number.increment }), []],
+  Message.match<Update.Return<Model, Message>>(message, {
+    ClickedIncrement: () => ({
+      model: evo(model, { count: Number.increment }),
+    }),
   })
 
 const APP_TEXT = 'page-lifecycle-app-content'
@@ -68,7 +71,7 @@ describe('run + page lifecycle events', () => {
     run(
       makeApplication({
         Model,
-        init: () => [{ count: 0 }, []],
+        init: () => ({ model: { count: 0 } }),
         update,
         view,
         container,

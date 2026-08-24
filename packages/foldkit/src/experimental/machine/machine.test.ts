@@ -14,6 +14,7 @@ import * as ManagedResource from '../../managedResource/public.js'
 import { defineMessageUnion, ts } from '../../schema/index.js'
 import { evo } from '../../struct/index.js'
 import * as Subscription from '../../subscription/public.js'
+import type * as Update from '../../update/index.js'
 import { define, otherwise, to, when } from './machine.js'
 
 // REMOTE DATA
@@ -218,33 +219,39 @@ const AppModel = S.Struct({
 })
 type AppModel = typeof AppModel.Type
 
-type AppUpdateReturn = [
-  AppModel,
-  ReadonlyArray<Command.Command<ConnectionMessage>>,
-]
-const withAppUpdateReturn = M.withReturnType<AppUpdateReturn>()
+type AppUpdateReturn = Update.Return<AppModel, ConnectionMessage>
 
-const update = (model: AppModel, message: ConnectionMessage): AppUpdateReturn =>
-  M.value(message).pipe(
-    withAppUpdateReturn,
-    M.tag(
-      'ClickedConnect',
-      'ClickedDisconnect',
-      'SocketOpened',
-      'SocketErrored',
-      'SocketClosed',
-      'TimedOutBackoff',
-      connectionMessage => {
-        const [nextConnection, commands] = connectionMachine.transition(
-          model.connection,
-          connectionMessage,
-        )
-        return [evo(model, { connection: () => nextConnection }), commands]
-      },
-    ),
-    M.tag('ReleasedSocket', 'CompletedLogTransition', () => [model, []]),
-    M.exhaustive,
+const updateConnection = (
+  model: AppModel,
+  connectionMessage: ConnectionMessage,
+): AppUpdateReturn => {
+  const [nextConnection, commands] = connectionMachine.transition(
+    model.connection,
+    connectionMessage,
   )
+  return {
+    model: evo(model, { connection: () => nextConnection }),
+    commands,
+  }
+}
+
+const update = (model: AppModel, message: ConnectionMessage) =>
+  ConnectionMessage.match<AppUpdateReturn>(message, {
+    ClickedConnect: connectionMessage =>
+      updateConnection(model, connectionMessage),
+    ClickedDisconnect: connectionMessage =>
+      updateConnection(model, connectionMessage),
+    SocketOpened: connectionMessage =>
+      updateConnection(model, connectionMessage),
+    SocketErrored: connectionMessage =>
+      updateConnection(model, connectionMessage),
+    SocketClosed: connectionMessage =>
+      updateConnection(model, connectionMessage),
+    TimedOutBackoff: connectionMessage =>
+      updateConnection(model, connectionMessage),
+    ReleasedSocket: () => ({ model }),
+    CompletedLogTransition: () => ({ model }),
+  })
 
 // The Machine owns transitions only. Lifecycle effects stay in ordinary
 // primitives gated on the state tag. The socket is a ManagedResource that
@@ -1004,20 +1011,16 @@ describe('integration', () => {
       isDebugPanelOpen: false,
     }
 
-    const [nextModel, commands] = update(
-      model,
-      ConnectionMessage.ClickedConnect(),
+    const connectionUpdate = update(model, ConnectionMessage.ClickedConnect())
+    expect(connectionUpdate.model.connection).toStrictEqual(
+      Connecting({ attemptCount: 1 }),
     )
-    expect(nextModel.connection).toStrictEqual(Connecting({ attemptCount: 1 }))
-    expect(nextModel.isDebugPanelOpen).toBe(false)
-    expect(commands).toEqual([])
+    expect(connectionUpdate.model.isDebugPanelOpen).toBe(false)
+    expect(connectionUpdate.commands ?? []).toEqual([])
 
-    const [unchangedModel, ignoredCommands] = update(
-      model,
-      ConnectionMessage.ReleasedSocket(),
-    )
-    expect(unchangedModel).toBe(model)
-    expect(ignoredCommands).toEqual([])
+    const releaseUpdate = update(model, ConnectionMessage.ReleasedSocket())
+    expect(releaseUpdate.model).toBe(model)
+    expect(releaseUpdate.commands ?? []).toEqual([])
   })
 
   it('wires the gating sketch records', () => {

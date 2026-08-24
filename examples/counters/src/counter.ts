@@ -1,5 +1,5 @@
 import { Schema as S } from 'effect'
-import { Command, Submodel } from 'foldkit'
+import { Submodel, type Update } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
@@ -24,13 +24,14 @@ export type Message = typeof Message.Type
 // UPDATE
 
 export const update = (model: Model, message: Message) =>
-  Message.match<readonly [Model, ReadonlyArray<Command.Command<Message>>]>(
-    message,
-    {
-      ClickedDecrement: () => [evo(model, { count: count => count - 1 }), []],
-      ClickedIncrement: () => [evo(model, { count: count => count + 1 }), []],
-    },
-  )
+  Message.match<Update.Return<Model, Message>>(message, {
+    ClickedDecrement: () => ({
+      model: evo(model, { count: count => count - 1 }),
+    }),
+    ClickedIncrement: () => ({
+      model: evo(model, { count: count => count + 1 }),
+    }),
+  })
 
 // VIEW
 

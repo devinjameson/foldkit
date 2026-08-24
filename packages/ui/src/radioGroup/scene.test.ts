@@ -1,5 +1,4 @@
 import { Match as M, Option } from 'effect'
-import * as Command from 'foldkit/command'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 import * as Scene from 'foldkit/scene'
@@ -42,17 +41,14 @@ const modelWith = (maybeSelectedValue: Option.Option<string>): Model => ({
 
 const nothingSelected = modelWith(Option.none())
 
-type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
-
 const foldRadioGroupOutMessage = M.type<RadioGroupOutMessage>().pipe(
   M.withReturnType<Update.Step<Model, Message>>(),
   M.tagsExhaustive({
     Selected:
       ({ value }) =>
-      model => [
-        evo(model, { maybeSelectedValue: () => Option.some(value) }),
-        [],
-      ],
+      model => ({
+        model: evo(model, { maybeSelectedValue: () => Option.some(value) }),
+      }),
   }),
 )
 
@@ -66,7 +62,7 @@ const foldRadioGroup = Update.foldChild({
 })
 
 const update = (model: Model, message: Message) =>
-  Message.match<UpdateReturn>(message, {
+  Message.match<Update.Return<Model, Message>>(message, {
     GotRadioGroupMessage: ({ message }) => foldRadioGroup(model, message),
   })
 
