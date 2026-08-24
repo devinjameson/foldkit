@@ -2,4 +2,4 @@
 'foldkit': patch
 ---
 
-Infer child update Command and parent `foldOutMessage` Step service requirements independently in `Update.foldChild` and `Update.foldChildStep`.
+Prevent `foldOutMessage` from narrowing the parent Model while combining child-wrapper and OutMessage Step Message and Command service types in `Update.foldChild` and `Update.foldChildStep`.
