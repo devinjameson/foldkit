@@ -9,6 +9,7 @@ import {
 } from 'effect'
 
 import type { Command } from '../../command/index.js'
+import type * as Update from '../../update/index.js'
 
 // STATE
 
@@ -383,10 +384,16 @@ export type Machine<
   initial: State
   stateTags: ReadonlyArray<TagOf<State>>
   edges: ReadonlyArray<EdgeSummary<State, Message>>
+  /** Runs one Message through the Machine as a Foldkit update. The returned
+   * `Update.Return<State, Message, R>` stores the next Machine state in
+   * `model` and any transition-time Commands in `commands`, so `transition`
+   * can be passed directly to `Update.foldChild`. Use `step` when code needs
+   * to distinguish a `Transitioned` result from an `Ignored` result or
+   * inspect Edge metadata. */
   transition: (
     state: State,
     message: Message,
-  ) => [State, ReadonlyArray<Command<Message, never, R>>]
+  ) => Update.Return<State, Message, R>
   step: (state: State, message: Message) => TransitionResult<State, Message, R>
   reachableFrom: (tag: TagOf<State>) => ReadonlySet<TagOf<State>>
   unreachableStates: () => ReadonlyArray<TagOf<State>>
@@ -523,7 +530,7 @@ const extractMemberTag = (member: unknown): Option.Option<string> =>
  *     },
  *   },
  * })
- * // machine.transition(...) returns Commands typed with UploadsClient in R.
+ * // Commands on the return from machine.transition(...) require UploadsClient.
  * ```
  *
  * @experimental Ships from `foldkit/experimental/machine`; expect breaking changes while the API settles.
@@ -697,13 +704,13 @@ export const define =
     const transition = (
       state: State,
       message: Message,
-    ): [State, ReadonlyArray<Command<Message, never, R>>] => {
+    ): Update.Return<State, Message, R> => {
       const result = step(state, message)
 
       if (result._tag === 'Transitioned') {
-        return [result.state, result.commands]
+        return { model: result.state, commands: result.commands }
       } else {
-        return [result.state, []]
+        return { model: result.state }
       }
     }
 
