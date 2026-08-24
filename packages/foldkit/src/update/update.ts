@@ -292,7 +292,9 @@ export type FoldContext<ChildMessage, ParentMessage> = Readonly<{
  *    (`M.tagsExhaustive`), and build a multi-step fold with
  *    {@link combine}. Takes an optional second parameter, a
  *    {@link FoldContext} of lifters bound to `toParentMessage`, for a
- *    Command the Step returns whose result is the child's Message. */
+ *    Command the Step returns whose result is the child's Message. The child
+ *    update and OutMessage Step infer their service requirements independently;
+ *    the resulting Fold requires their union. */
 export type ChildFoldWithOutMessage<
   ParentModel,
   ParentMessage,
@@ -300,19 +302,20 @@ export type ChildFoldWithOutMessage<
   Input,
   ChildMessage,
   ChildOutMessage,
-  R = never,
+  ChildR = never,
+  ParentR = ChildR,
 > = Readonly<{
   update: (
     childModel: ChildModel,
     input: Input,
-  ) => ReturnWithOutMessage<ChildModel, ChildMessage, ChildOutMessage, R>
+  ) => ReturnWithOutMessage<ChildModel, ChildMessage, ChildOutMessage, ChildR>
   read: (model: ParentModel) => Option.Option<ChildModel>
   write: (model: ParentModel, nextChildModel: ChildModel) => ParentModel
   toParentMessage: (message: ChildMessage) => ParentMessage
   foldOutMessage: (
     outMessage: ChildOutMessage,
     context: FoldContext<ChildMessage, ParentMessage>,
-  ) => Step<ParentModel, ParentMessage, R>
+  ) => Step<ParentModel, ParentMessage, ParentR>
 }>
 
 /** {@link ChildFoldWithOutMessage} for a parent that is itself a
@@ -340,12 +343,13 @@ export type ChildFoldWithParentOutMessage<
   ChildMessage,
   ChildOutMessage,
   ParentOutMessage,
-  R = never,
+  ChildR = never,
+  ParentR = ChildR,
 > = Readonly<{
   update: (
     childModel: ChildModel,
     input: Input,
-  ) => ReturnWithOutMessage<ChildModel, ChildMessage, ChildOutMessage, R>
+  ) => ReturnWithOutMessage<ChildModel, ChildMessage, ChildOutMessage, ChildR>
   read: (model: ParentModel) => Option.Option<ChildModel>
   write: (model: ParentModel, nextChildModel: ChildModel) => ParentModel
   toParentMessage: (message: ChildMessage) => ParentMessage
@@ -355,7 +359,7 @@ export type ChildFoldWithParentOutMessage<
   foldOutMessage?: (
     outMessage: ChildOutMessage,
     context: FoldContext<ChildMessage, ParentMessage>,
-  ) => Step<ParentModel, ParentMessage, R>
+  ) => Step<ParentModel, ParentMessage, ParentR>
 }>
 
 /** @internal Implementation-facing view of every {@link ChildFold}
@@ -486,7 +490,8 @@ export const foldChild: {
     ChildMessage,
     ChildOutMessage,
     ParentOutMessage,
-    R = never,
+    ChildR = never,
+    ParentR = ChildR,
   >(
     childFold: ChildFoldWithParentOutMessage<
       ParentModel,
@@ -496,9 +501,16 @@ export const foldChild: {
       ChildMessage,
       ChildOutMessage,
       ParentOutMessage,
-      R
+      ChildR,
+      ParentR
     >,
-  ): FoldWithOutMessage<ParentModel, ParentMessage, Input, ParentOutMessage, R>
+  ): FoldWithOutMessage<
+    ParentModel,
+    ParentMessage,
+    Input,
+    ParentOutMessage,
+    ChildR | ParentR
+  >
   <
     ParentModel,
     ParentMessage,
@@ -506,7 +518,8 @@ export const foldChild: {
     Input,
     ChildMessage,
     ChildOutMessage,
-    R = never,
+    ChildR = never,
+    ParentR = ChildR,
   >(
     childFold: ChildFoldWithOutMessage<
       ParentModel,
@@ -515,9 +528,10 @@ export const foldChild: {
       Input,
       ChildMessage,
       ChildOutMessage,
-      R
+      ChildR,
+      ParentR
     >,
-  ): Fold<ParentModel, ParentMessage, Input, R>
+  ): Fold<ParentModel, ParentMessage, Input, ChildR | ParentR>
   <ParentModel, ParentMessage, ChildModel, Input, ChildMessage, R = never>(
     childFold: ChildFold<
       ParentModel,
@@ -608,29 +622,30 @@ export type ChildStepFold<
   toParentMessage: (message: ChildMessage) => ParentMessage
 }>
 
-/** {@link ChildStepFold} for an entry point that can emit the child's
- *  OutMessage, adding `foldOutMessage`. The function has the same contract as
- *  `foldOutMessage` in {@link ChildFoldWithOutMessage}, including the optional
- *  second parameter: a {@link FoldContext} of lifters bound to
- *  `toParentMessage`. */
+/** {@link ChildStepFold} for an entry point whose return carries the child's
+ *  OutMessage channel, adding `foldOutMessage`. It behaves exactly as it does
+ *  in {@link ChildFoldWithOutMessage}, down to the optional second parameter,
+ *  a {@link FoldContext} of lifters bound to `toParentMessage`, and combines
+ *  the child update and OutMessage Step service requirements. */
 export type ChildStepFoldWithOutMessage<
   ParentModel,
   ParentMessage,
   ChildModel,
   ChildMessage,
   ChildOutMessage,
-  R = never,
+  ChildR = never,
+  ParentR = ChildR,
 > = Readonly<{
   update: (
     childModel: ChildModel,
-  ) => ReturnWithOutMessage<ChildModel, ChildMessage, ChildOutMessage, R>
+  ) => ReturnWithOutMessage<ChildModel, ChildMessage, ChildOutMessage, ChildR>
   read: (model: ParentModel) => Option.Option<ChildModel>
   write: (model: ParentModel, nextChildModel: ChildModel) => ParentModel
   toParentMessage: (message: ChildMessage) => ParentMessage
   foldOutMessage: (
     outMessage: ChildOutMessage,
     context: FoldContext<ChildMessage, ParentMessage>,
-  ) => Step<ParentModel, ParentMessage, R>
+  ) => Step<ParentModel, ParentMessage, ParentR>
 }>
 
 /** {@link ChildStepFoldWithOutMessage} for a parent that is itself a
@@ -651,11 +666,12 @@ export type ChildStepFoldWithParentOutMessage<
   ChildMessage,
   ChildOutMessage,
   ParentOutMessage,
-  R = never,
+  ChildR = never,
+  ParentR = ChildR,
 > = Readonly<{
   update: (
     childModel: ChildModel,
-  ) => ReturnWithOutMessage<ChildModel, ChildMessage, ChildOutMessage, R>
+  ) => ReturnWithOutMessage<ChildModel, ChildMessage, ChildOutMessage, ChildR>
   read: (model: ParentModel) => Option.Option<ChildModel>
   write: (model: ParentModel, nextChildModel: ChildModel) => ParentModel
   toParentMessage: (message: ChildMessage) => ParentMessage
@@ -665,7 +681,7 @@ export type ChildStepFoldWithParentOutMessage<
   foldOutMessage?: (
     outMessage: ChildOutMessage,
     context: FoldContext<ChildMessage, ParentMessage>,
-  ) => Step<ParentModel, ParentMessage, R>
+  ) => Step<ParentModel, ParentMessage, ParentR>
 }>
 
 /** @internal Implementation-facing view of both {@link ChildStepFold}
@@ -730,7 +746,8 @@ export const foldChildStep: {
     ChildMessage,
     ChildOutMessage,
     ParentOutMessage,
-    R = never,
+    ChildR = never,
+    ParentR = ChildR,
   >(
     childFold: ChildStepFoldWithParentOutMessage<
       ParentModel,
@@ -739,16 +756,23 @@ export const foldChildStep: {
       ChildMessage,
       ChildOutMessage,
       ParentOutMessage,
-      R
+      ChildR,
+      ParentR
     >,
-  ): StepWithOutMessage<ParentModel, ParentMessage, ParentOutMessage, R>
+  ): StepWithOutMessage<
+    ParentModel,
+    ParentMessage,
+    ParentOutMessage,
+    ChildR | ParentR
+  >
   <
     ParentModel,
     ParentMessage,
     ChildModel,
     ChildMessage,
     ChildOutMessage,
-    R = never,
+    ChildR = never,
+    ParentR = ChildR,
   >(
     childFold: ChildStepFoldWithOutMessage<
       ParentModel,
@@ -756,9 +780,10 @@ export const foldChildStep: {
       ChildModel,
       ChildMessage,
       ChildOutMessage,
-      R
+      ChildR,
+      ParentR
     >,
-  ): Step<ParentModel, ParentMessage, R>
+  ): Step<ParentModel, ParentMessage, ChildR | ParentR>
   <ParentModel, ParentMessage, ChildModel, ChildMessage, R = never>(
     childFold: ChildStepFold<
       ParentModel,

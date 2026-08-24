@@ -1,4 +1,5 @@
 import { Array, Effect, HashMap, Match as M, Number, Option } from 'effect'
+import * as KeyValueStore from 'effect/unstable/persistence/KeyValueStore'
 import { expect, expectTypeOf } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
@@ -951,9 +952,50 @@ describe('foldChildStep', () => {
 
 describe('types', () => {
   type TestServices = Readonly<{ baseUrl: string }>
+  type PersistenceServices = KeyValueStore.KeyValueStore
   type TestOutMessage = Readonly<{ _tag: 'ClosedEditor' }>
 
   const baseModel: TestModel = { count: 0 }
+  const testOutMessage: TestOutMessage = { _tag: 'ClosedEditor' }
+  const saveWithServices: Command<CounterMessage, never, TestServices> = {
+    name: 'SaveWithServices',
+    effect: Effect.context<TestServices>().pipe(
+      Effect.as(Message.CompletedSaveCount()),
+    ),
+  }
+  const updateCounterWithServices = (
+    model: CounterModel,
+    _message: CounterMessage,
+  ): ReturnWithOutMessage<
+    CounterModel,
+    CounterMessage,
+    ChangedValue,
+    TestServices
+  > => [model, [saveWithServices], Option.some(ChangedValue())]
+  const resetCounterWithServices = (
+    model: CounterModel,
+  ): ReturnWithOutMessage<
+    CounterModel,
+    CounterMessage,
+    ChangedValue,
+    TestServices
+  > => [model, [saveWithServices], Option.some(ChangedValue())]
+  const notifyWithPersistence: Command<
+    TestMessage,
+    never,
+    PersistenceServices
+  > = {
+    name: 'NotifyWithPersistence',
+    effect: Effect.context<PersistenceServices>().pipe(
+      Effect.as(Message.CompletedLoad()),
+    ),
+  }
+  const foldChangedValueWithPersistence = M.type<ChangedValue>().pipe(
+    M.withReturnType<Step<DashboardModel, TestMessage, PersistenceServices>>(),
+    M.tagsExhaustive({
+      ChangedValue: () => model => [model, [notifyWithPersistence]],
+    }),
+  )
 
   it('Return carries the Model and optional Commands', () => {
     expectTypeOf<Return<TestModel, TestMessage>>().toEqualTypeOf<
@@ -1081,6 +1123,60 @@ describe('types', () => {
     >()
     expectTypeOf(handleGotReportingCounterMessage).returns.toEqualTypeOf<
       Return<DashboardModel, DashboardMessage>
+    >()
+  })
+
+  it('foldChild combines child and OutMessage Step service requirements', () => {
+    const foldWithServices = foldChild({
+      update: updateCounterWithServices,
+      read: (model: DashboardModel) => Option.some(model.counter),
+      write: (model, nextCounter) => ({ ...model, counter: nextCounter }),
+      toParentMessage: () => Message.IncrementedCount(),
+      foldOutMessage: foldChangedValueWithPersistence,
+    })
+
+    expectTypeOf(foldWithServices).toEqualTypeOf<
+      Fold<
+        DashboardModel,
+        TestMessage,
+        CounterMessage,
+        TestServices | PersistenceServices
+      >
+    >()
+  })
+
+  it('foldChild combines service requirements when lifting the OutMessage', () => {
+    const foldWithServices = foldChild({
+      update: updateCounterWithServices,
+      read: (model: DashboardModel) => Option.some(model.counter),
+      write: (model, nextCounter) => ({ ...model, counter: nextCounter }),
+      toParentMessage: () => Message.IncrementedCount(),
+      toParentOutMessage: () => Option.some(testOutMessage),
+      foldOutMessage: foldChangedValueWithPersistence,
+    })
+
+    expectTypeOf(foldWithServices).toEqualTypeOf<
+      FoldWithOutMessage<
+        DashboardModel,
+        TestMessage,
+        CounterMessage,
+        TestOutMessage,
+        TestServices | PersistenceServices
+      >
+    >()
+  })
+
+  it('foldChildStep combines child and OutMessage Step service requirements', () => {
+    const foldStepWithServices = foldChildStep({
+      update: resetCounterWithServices,
+      read: (model: DashboardModel) => Option.some(model.counter),
+      write: (model, nextCounter) => ({ ...model, counter: nextCounter }),
+      toParentMessage: () => Message.IncrementedCount(),
+      foldOutMessage: foldChangedValueWithPersistence,
+    })
+
+    expectTypeOf(foldStepWithServices).toEqualTypeOf<
+      Step<DashboardModel, TestMessage, TestServices | PersistenceServices>
     >()
   })
 
