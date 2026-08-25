@@ -118,6 +118,29 @@ test('allows a website-only commit after the package set was released', () => {
   }
 })
 
+test('allows test-only package changes after the package set was released', () => {
+  const repo = makeReleasedRepo()
+  try {
+    for (const path of [
+      'packages/vite-plugin-foldkit/test/viewIdentity.runtime.test.ts',
+      'packages/foldkit/source.test.ts',
+      'packages/devtools/source.spec.ts',
+      'packages/markdown/src/__snapshots__/view.snap',
+      'packages/ui/vitest.config.ts',
+      'packages/ui/tsconfig.test.json',
+    ]) {
+      write(repo, path, 'test input\n')
+    }
+    commit(repo, 'update package tests')
+
+    const result = plan(repo)
+    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.stdout.trim(), 'deploy=true')
+  } finally {
+    rmSync(repo, { recursive: true, force: true })
+  }
+})
+
 test('defers a website deploy while package source is unpublished', () => {
   const repo = makeReleasedRepo()
   try {
