@@ -20,6 +20,12 @@ Update returns a record containing the next Model and, when needed, an array of 
 
 ## Returning Commands
 
+Return Commands beside the next Model from the Message branch that requests the work:
+
+::Snippet{name="updateReturningCommands" label="returning a Command from update"}
+
+`ClickedIncrement` changes the count and asks the runtime to persist it. `CompletedPersistCount` records that the Command finished, but it has no more work to request, so that branch omits `commands`.
+
 An update, init, boot, or component helper that statically creates no Commands omits `commands`. When it computes a Commands collection, it returns that collection directly without checking whether it is empty. The [`foldkit/no-empty-commands-array`](/tooling/oxlint-plugin#no-empty-commands-array) lint rule rejects only a literal `commands: []` property.
 
 ## Composing Results
@@ -97,5 +103,3 @@ The object-spread alternative is easy to get wrong:
 `Update.withOutMessage` preserves `dialogClose.model` and `dialogClose.commands`. A defined value becomes `outMessage`; `undefined` leaves the property out. The update result must be a plain return, so the helper cannot overwrite an OutMessage another operation emitted.
 
 When constructing the plain result in the same expression and the value has the type `OutMessage | undefined`, pass the result first: `Update.withOutMessage({ model, commands }, outMessage)`.
-
-First, the [view function](/core/view) completes the basic loop by turning the Model into what the user sees.
