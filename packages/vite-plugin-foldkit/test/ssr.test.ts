@@ -5,7 +5,14 @@ import {
 } from 'node:http'
 import { createServer as createNetServer } from 'node:net'
 import { resolve } from 'node:path'
-import { type CorsOptions, createServer as createViteServer } from 'vite'
+import {
+  type CorsOptions,
+  DevEnvironment,
+  type Logger,
+  type Plugin,
+  type ResolvedConfig,
+  createServer as createViteServer,
+} from 'vite'
 import { describe, expect, it, onTestFinished } from 'vitest'
 
 import { foldkitSsr } from '../src/ssr.ts'
@@ -67,6 +74,32 @@ const requestWithTarget = (
     }
     clientRequest.end()
   })
+
+// Vite's `DevEnvironment` constructor, as the two installed majors both shape
+// it. Their classes are nominally incompatible for the same reason their
+// `Plugin` types are, so a test that instantiates either one describes the
+// shared shape itself.
+type DevEnvironmentConstructor = new (
+  name: string,
+  config: ResolvedConfig,
+  context: { hot: boolean },
+) => DevEnvironment
+
+// A logger that keeps warnings, so a test can assert what the plugin told the
+// developer rather than only what it did.
+const collectingLogger = (warnings: Array<string>): Logger => ({
+  info: () => {},
+  warn: message => {
+    warnings.push(message)
+  },
+  warnOnce: message => {
+    warnings.push(message)
+  },
+  error: () => {},
+  clearScreen: () => {},
+  hasErrorLogged: () => false,
+  hasWarned: false,
+})
 
 const FIXTURE_ROOT = resolve(import.meta.dirname, 'fixtures/ssr')
 const VITE_MAJORS: ReadonlyArray<7 | 8> = [7, 8]
@@ -160,6 +193,27 @@ const allowedHostsConfiguration = (
   }
 }
 
+// Stands in for a host plugin that backs the `ssr` environment with its own
+// runtime, such as a Workers plugin running the entry in workerd: the
+// environment is a plain `DevEnvironment`, so it has no module runner. The
+// class comes from the same copy of Vite that creates the server, because Vite
+// only accepts its own.
+const nonRunnableSsrPlugin = (
+  DevEnvironmentClass: DevEnvironmentConstructor,
+): Plugin => ({
+  name: 'test:non-runnable-ssr',
+  config: () => ({
+    environments: {
+      ssr: {
+        dev: {
+          createEnvironment: (name: string, config: ResolvedConfig) =>
+            new DevEnvironmentClass(name, config, { hot: false }),
+        },
+      },
+    },
+  }),
+})
+
 const startServer = async (
   options: Readonly<{
     base?: string
@@ -170,24 +224,36 @@ const startServer = async (
     seedVary?: string
     viteMajor?: 7 | 8
     buildId?: string
+    runnableSsr?: false
+    warnings?: Array<string>
   }> = {},
 ) => {
   const port = await findFreePort()
   let createServer = createViteServer
+  let DevEnvironmentClass: DevEnvironmentConstructor =
+    DevEnvironment as unknown as DevEnvironmentConstructor
   if (options.viteMajor === 7) {
     // NOTE: Vite's Plugin type exposes its bundler internals, which changed
     // from Rollup in Vite 7 to Rolldown in Vite 8. The dev-server contract this
     // test exercises is shared, but the otherwise-compatible Plugin types are
     // nominally incompatible across the two installed majors.
-    createServer = (await import('vite7'))
-      .createServer as unknown as typeof createViteServer
+    const vite7 = await import('vite7')
+    createServer = vite7.createServer as unknown as typeof createViteServer
+    DevEnvironmentClass =
+      vite7.DevEnvironment as unknown as DevEnvironmentConstructor
   }
   const server = await createServer({
     root: FIXTURE_ROOT,
     ...(options.base === undefined ? {} : { base: options.base }),
     configFile: false,
     logLevel: 'silent',
+    ...(options.warnings === undefined
+      ? {}
+      : { customLogger: collectingLogger(options.warnings) }),
     plugins: [
+      ...(options.runnableSsr === false
+        ? [nonRunnableSsrPlugin(DevEnvironmentClass)]
+        : []),
       ...(options.seedVary === undefined
         ? []
         : [seedVaryPlugin(options.seedVary)]),
@@ -398,6 +464,38 @@ describe('foldkitSsr', () => {
     expect(response.status).toBe(200)
     expect(response.body).toBe('https://app.example/request-info')
   })
+
+  // A host plugin that backs the `ssr` environment with its own runtime — a
+  // Workers plugin running the entry in workerd — leaves the environment
+  // without a module runner, and serves pages through that runtime itself.
+  // Rendering here would need the runner, so the plugin stands down and lets
+  // the host answer, rather than failing every page request. Both majors are
+  // covered because the check cannot be Vite's own `isRunnableDevEnvironment`:
+  // that is an `instanceof` against the class of whichever copy of Vite the
+  // plugin imported, which is not always the copy that made the server.
+  for (const viteMajor of VITE_MAJORS) {
+    it(`stands down when Vite ${String(viteMajor)} gives the ssr environment no runner`, async () => {
+      const warnings: Array<string> = []
+      const origin = await startServer({
+        viteMajor,
+        runnableSsr: false,
+        warnings,
+      })
+
+      const response = await fetch(`${origin}/rendered`, {
+        headers: { accept: 'text/html' },
+      })
+
+      // Nothing rendered, and nothing failed either: the request reached the
+      // end of the middleware chain, which in this test has no host waiting
+      // behind Foldkit.
+      expect(response.status).toBe(404)
+      expect(await response.text()).not.toContain('data-foldkit-app')
+      expect(warnings.join('\n')).toContain(
+        'the "ssr" environment is not runnable',
+      )
+    })
+  }
 
   for (const viteMajor of VITE_MAJORS) {
     it(`preserves the browser URL across the Vite ${String(viteMajor)} base middleware`, async () => {

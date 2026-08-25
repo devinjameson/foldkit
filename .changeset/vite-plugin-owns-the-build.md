@@ -25,4 +25,6 @@ The build also writes `foldkit.build.json` beside the server bundle, naming the 
 
 Generated pages take their template from the browser build that produced it rather than from `index.html` on disk. The generated `/` replaces that file, so a build that re-read it would parse a generated page as its template on any second pass over one client build.
 
+`ssr.serverEntry` is also safe now under a host plugin that runs the server itself. Dev-time rendering loads the entry through the `ssr` environment's module runner, which a workerd-backed environment does not have, so the plugin stands down and lets that host answer page requests through the same entry rather than failing them. It reports why once, at startup.
+
 Nothing changes for an application that does not set `ssr.build`: `vite build` builds the browser bundle alone, as before.

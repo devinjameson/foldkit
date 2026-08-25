@@ -4,7 +4,13 @@ import { readFile } from 'node:fs/promises'
 import type { ServerResponse } from 'node:http'
 import { resolve } from 'node:path'
 import { Readable } from 'node:stream'
-import type { Connect, Plugin, ProxyOptions, ViteDevServer } from 'vite'
+import type {
+  Connect,
+  DevEnvironment,
+  Plugin,
+  ProxyOptions,
+  ViteDevServer,
+} from 'vite'
 
 import { buildIdForCommand } from './buildToken.js'
 
@@ -46,6 +52,18 @@ export type FoldkitSsrOptions = Readonly<{
    */
   buildId?: string
 }>
+
+// Whether an environment can evaluate modules in this process, which is what
+// loading the server entry needs. Vite's own `isRunnableDevEnvironment` is an
+// `instanceof` check against the `RunnableDevEnvironment` class of whichever
+// copy of Vite the caller imported — and a plugin supporting a range of majors
+// is not always imported by the copy that created the server, so that check
+// reports a perfectly runnable environment as not runnable. The lazily
+// constructed `runner` accessor is the shape every major agrees on, and `in`
+// reads the descriptor rather than invoking the getter, so probing costs
+// nothing.
+const isRunnable = (environment: DevEnvironment): boolean =>
+  'runner' in environment
 
 const isEntryModule = (
   loadedModule: unknown,
@@ -779,6 +797,26 @@ export const foldkitSsr = (options: FoldkitSsrOptions): Plugin => {
       }
     },
     configureServer: server => {
+      // Rendering here loads the server entry through the `ssr` environment's
+      // module runner, which only a runnable environment has. A host plugin
+      // that backs that environment with its own runtime — workerd, under a
+      // Workers plugin — leaves it non-runnable, and that host is already the
+      // one serving pages: its entry imports `renderPage` and answers the
+      // request itself. Standing down hands those requests to it. Rendering
+      // them here instead would run the application in Node, without the
+      // bindings the deployed entry holds, while the deployment it is standing
+      // in for renders in workerd.
+      if (!isRunnable(server.environments.ssr)) {
+        server.config.logger.warn(
+          '[foldkit] the "ssr" environment is not runnable, so another plugin owns' +
+            ' server-side execution. Dev-time server rendering is off and page' +
+            ' requests fall through to that host, which renders through the same' +
+            ' server entry. Remove `ssr.serverEntry` from the foldkit plugin to' +
+            ' silence this.',
+        )
+        return
+      }
+
       const requestUrls = new WeakMap<Connect.IncomingMessage, string>()
       const stateByRequest = new WeakMap<
         Connect.IncomingMessage,
