@@ -134,10 +134,6 @@ const makeCallable = <Tag extends string, Fields extends S.Struct.Fields>(
                 return make(value)
               }
 
-              if (descriptor !== undefined && inputValue === undefined) {
-                assignPlainProperty(output, name, inputValue)
-              }
-
               assignPlainProperty(output, name, tag)
             } else {
               assignPlainProperty(output, name, inputValue)
