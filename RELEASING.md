@@ -11,22 +11,28 @@ set exists. It also keeps a long-lived npm token out of GitHub Actions.
 
 1. Merge the Version Packages pull request.
 
-2. Wait for the Release workflow's stable job. The coherent uploader discovers
-   every public package from the pnpm workspace manifests. It builds and packs
-   every untagged release version, then uploads them one at a time under the
-   commit-specific non-consumer tag such as
-   `foldkit-stable-upload-0123456789ab`. A rerun skips a matching version that
-   npm already has and rejects one whose registry integrity differs.
+2. The Release workflow's stable job discovers every public package from the
+   pnpm workspace manifests. It builds and packs every untagged release
+   version, then uploads them one at a time under the commit-specific
+   non-consumer tag such as `foldkit-stable-upload-0123456789ab`. A rerun skips
+   a matching version that npm already has and rejects one whose registry
+   integrity differs.
 
-3. Check that the stable job passed. The last upload is not enough. The job
+3. Wait for GitHub Actions to mention `@devinjameson` on the merged Version
+   Packages pull request. The stable job posts that comment only after it
    fetches the complete public package set from npm and checks each internal
-   dependency and peer range against the versions in this release. Changesets
-   only creates the Version Packages pull request. The coherent uploader runs
-   in a separate workflow step, so its output cannot be mistaken for
-   Changesets' tag-push protocol.
+   dependency and peer range against the versions in this release. The comment
+   names the exact release commit and gives the local promotion commands. A
+   rerun updates the existing comment instead of posting another notification.
 
-4. Check out the exact release commit in a clean worktree and sign in to npm
-   with 2FA. Run:
+   The last upload is not enough. Changesets only creates the Version Packages
+   pull request. The coherent uploader runs in a separate workflow step, so its
+   output cannot be mistaken for Changesets' tag-push protocol.
+
+4. Follow the commands in the notification from a clean local checkout. Confirm
+   that `npm whoami` and `gh auth status` both succeed, then sign in to npm with
+   2FA. The notification fetches `main`, checks out the exact release commit,
+   and installs its locked dependencies before running:
 
    ```sh
    pnpm release:promote
