@@ -15,6 +15,7 @@ const SCOPES = [
   'scaffold_server_rendering',
   'host_parity',
   'dom_state_parity',
+  'prerender_repeatable',
   'peer_floors',
   'typing_game',
   'website',
