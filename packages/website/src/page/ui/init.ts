@@ -8,6 +8,7 @@ import {
   Dialog,
   DragAndDrop,
   FileDrop,
+  HoverIntent,
   Listbox,
   Menu,
   Popover,
@@ -149,6 +150,8 @@ export const init = (today: Calendar.CalendarDate): InitReturn => ({
     toastDemo: Toast.init({ id: 'toast-demo' }),
     maybeLastDismissedToastTitle: Option.none(),
     tooltipDemo: Tooltip.init({ id: 'tooltip-demo' }),
+    hoverIntentCardDemo: HoverIntent.init(),
+    hoverIntentNavigationDemo: HoverIntent.init(),
     animationDemo: Animation.init({ id: 'animation-demo' }),
     virtualListDemo: VirtualList.init({
       id: 'virtual-list-demo',

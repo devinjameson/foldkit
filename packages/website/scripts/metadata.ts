@@ -357,6 +357,10 @@ const METADATA_BY_TAG: Record<StaticRouteTag, PageMetadata> = {
     'Tooltip',
     'Non-interactive floating label that appears on hover or focus and hides on leave, blur, or Escape.',
   ),
+  UiHoverIntent: ui(
+    'Hover Intent',
+    'Behavior-only Submodel for delayed hover and focus reveal across a trigger and panel.',
+  ),
   UiListbox: ui(
     'Listbox',
     'A selection Submodel with single-select and multi-select modes, keyboard navigation, typeahead, and anchored positioning.',
