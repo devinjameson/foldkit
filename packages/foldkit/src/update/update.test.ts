@@ -1,5 +1,5 @@
 import { Array, Effect, HashMap, Match as M, Number, Option } from 'effect'
-import * as KeyValueStore from 'effect/unstable/persistence/KeyValueStore'
+import type { KeyValueStore } from 'effect/unstable/persistence/KeyValueStore'
 import { expect, expectTypeOf } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
@@ -952,7 +952,7 @@ describe('foldChildStep', () => {
 
 describe('types', () => {
   type TestServices = Readonly<{ baseUrl: string }>
-  type PersistenceServices = KeyValueStore.KeyValueStore
+  type PersistenceServices = KeyValueStore
   type TestOutMessage = Readonly<{ _tag: 'ClosedEditor' }>
   type FoldInferenceModel = Readonly<{
     counter: CounterModel
@@ -1139,7 +1139,7 @@ describe('types', () => {
     const foldWithServices = foldChild({
       update: updateCounterWithServices,
       read: (model: FoldInferenceModel) => Option.some(model.counter),
-      write: (model, nextCounter) => ({ ...model, counter: nextCounter }),
+      write: (model, nextCounter) => evo(model, { counter: () => nextCounter }),
       toParentMessage: GotCounterMessage,
       foldOutMessage: foldChangedValueWithPersistence,
     })
@@ -1158,7 +1158,7 @@ describe('types', () => {
     const foldWithServices = foldChild({
       update: updateCounterWithServices,
       read: (model: FoldInferenceModel) => Option.some(model.counter),
-      write: (model, nextCounter) => ({ ...model, counter: nextCounter }),
+      write: (model, nextCounter) => evo(model, { counter: () => nextCounter }),
       toParentMessage: GotCounterMessage,
       toParentOutMessage: () => testOutMessage,
       foldOutMessage: foldChangedValueWithPersistence,
@@ -1179,7 +1179,7 @@ describe('types', () => {
     const foldStepWithServices = foldChildStep({
       update: resetCounterWithServices,
       read: (model: FoldInferenceModel) => Option.some(model.counter),
-      write: (model, nextCounter) => ({ ...model, counter: nextCounter }),
+      write: (model, nextCounter) => evo(model, { counter: () => nextCounter }),
       toParentMessage: GotCounterMessage,
       foldOutMessage: foldChangedValueWithPersistence,
     })
@@ -1197,7 +1197,7 @@ describe('types', () => {
     const foldStepWithServices = foldChildStep({
       update: resetCounterWithServices,
       read: (model: FoldInferenceModel) => Option.some(model.counter),
-      write: (model, nextCounter) => ({ ...model, counter: nextCounter }),
+      write: (model, nextCounter) => evo(model, { counter: () => nextCounter }),
       toParentMessage: GotCounterMessage,
       toParentOutMessage: () => testOutMessage,
       foldOutMessage: foldChangedValueWithPersistence,
