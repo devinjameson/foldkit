@@ -303,21 +303,30 @@ export type ChildFoldWithOutMessage<
   Input,
   ChildMessage,
   ChildOutMessage,
-  ChildR = never,
-  ParentR = ChildR,
-  OutMessageParentMessage = ParentMessage,
+  ChildRequirements = never,
+  OutMessageStepRequirements = ChildRequirements,
+  OutMessageStepMessage = ParentMessage,
 > = Readonly<{
   update: (
     childModel: ChildModel,
     input: Input,
-  ) => ReturnWithOutMessage<ChildModel, ChildMessage, ChildOutMessage, ChildR>
+  ) => ReturnWithOutMessage<
+    ChildModel,
+    ChildMessage,
+    ChildOutMessage,
+    ChildRequirements
+  >
   read: (model: ParentModel) => Option.Option<ChildModel>
   write: (model: ParentModel, nextChildModel: ChildModel) => ParentModel
   toParentMessage: (message: ChildMessage) => ParentMessage
   foldOutMessage: (
     outMessage: ChildOutMessage,
     context: FoldContext<ChildMessage, ParentMessage>,
-  ) => Step<NoInfer<ParentModel>, OutMessageParentMessage, ParentR>
+  ) => Step<
+    NoInfer<ParentModel>,
+    OutMessageStepMessage,
+    OutMessageStepRequirements
+  >
 }>
 
 /** {@link ChildFoldWithOutMessage} for a parent that is itself a
@@ -345,14 +354,19 @@ export type ChildFoldWithParentOutMessage<
   ChildMessage,
   ChildOutMessage,
   ParentOutMessage,
-  ChildR = never,
-  ParentR = ChildR,
-  OutMessageParentMessage = ParentMessage,
+  ChildRequirements = never,
+  OutMessageStepRequirements = ChildRequirements,
+  OutMessageStepMessage = ParentMessage,
 > = Readonly<{
   update: (
     childModel: ChildModel,
     input: Input,
-  ) => ReturnWithOutMessage<ChildModel, ChildMessage, ChildOutMessage, ChildR>
+  ) => ReturnWithOutMessage<
+    ChildModel,
+    ChildMessage,
+    ChildOutMessage,
+    ChildRequirements
+  >
   read: (model: ParentModel) => Option.Option<ChildModel>
   write: (model: ParentModel, nextChildModel: ChildModel) => ParentModel
   toParentMessage: (message: ChildMessage) => ParentMessage
@@ -362,7 +376,11 @@ export type ChildFoldWithParentOutMessage<
   foldOutMessage?: (
     outMessage: ChildOutMessage,
     context: FoldContext<ChildMessage, ParentMessage>,
-  ) => Step<NoInfer<ParentModel>, OutMessageParentMessage, ParentR>
+  ) => Step<
+    NoInfer<ParentModel>,
+    OutMessageStepMessage,
+    OutMessageStepRequirements
+  >
 }>
 
 /** @internal Implementation-facing view of every {@link ChildFold}
@@ -493,9 +511,9 @@ export const foldChild: {
     ChildMessage,
     ChildOutMessage,
     ParentOutMessage,
-    ChildR = never,
-    ParentR = ChildR,
-    OutMessageParentMessage = ParentMessage,
+    ChildRequirements = never,
+    OutMessageStepRequirements = ChildRequirements,
+    OutMessageStepMessage = ParentMessage,
   >(
     childFold: ChildFoldWithParentOutMessage<
       ParentModel,
@@ -505,16 +523,16 @@ export const foldChild: {
       ChildMessage,
       ChildOutMessage,
       ParentOutMessage,
-      ChildR,
-      ParentR,
-      OutMessageParentMessage
+      ChildRequirements,
+      OutMessageStepRequirements,
+      OutMessageStepMessage
     >,
   ): FoldWithOutMessage<
     ParentModel,
-    ParentMessage | OutMessageParentMessage,
+    ParentMessage | OutMessageStepMessage,
     Input,
     ParentOutMessage,
-    ChildR | ParentR
+    ChildRequirements | OutMessageStepRequirements
   >
   <
     ParentModel,
@@ -523,9 +541,9 @@ export const foldChild: {
     Input,
     ChildMessage,
     ChildOutMessage,
-    ChildR = never,
-    ParentR = ChildR,
-    OutMessageParentMessage = ParentMessage,
+    ChildRequirements = never,
+    OutMessageStepRequirements = ChildRequirements,
+    OutMessageStepMessage = ParentMessage,
   >(
     childFold: ChildFoldWithOutMessage<
       ParentModel,
@@ -534,15 +552,15 @@ export const foldChild: {
       Input,
       ChildMessage,
       ChildOutMessage,
-      ChildR,
-      ParentR,
-      OutMessageParentMessage
+      ChildRequirements,
+      OutMessageStepRequirements,
+      OutMessageStepMessage
     >,
   ): Fold<
     ParentModel,
-    ParentMessage | OutMessageParentMessage,
+    ParentMessage | OutMessageStepMessage,
     Input,
-    ChildR | ParentR
+    ChildRequirements | OutMessageStepRequirements
   >
   <ParentModel, ParentMessage, ChildModel, Input, ChildMessage, R = never>(
     childFold: ChildFold<
@@ -645,20 +663,29 @@ export type ChildStepFoldWithOutMessage<
   ChildModel,
   ChildMessage,
   ChildOutMessage,
-  ChildR = never,
-  ParentR = ChildR,
-  OutMessageParentMessage = ParentMessage,
+  ChildRequirements = never,
+  OutMessageStepRequirements = ChildRequirements,
+  OutMessageStepMessage = ParentMessage,
 > = Readonly<{
   update: (
     childModel: ChildModel,
-  ) => ReturnWithOutMessage<ChildModel, ChildMessage, ChildOutMessage, ChildR>
+  ) => ReturnWithOutMessage<
+    ChildModel,
+    ChildMessage,
+    ChildOutMessage,
+    ChildRequirements
+  >
   read: (model: ParentModel) => Option.Option<ChildModel>
   write: (model: ParentModel, nextChildModel: ChildModel) => ParentModel
   toParentMessage: (message: ChildMessage) => ParentMessage
   foldOutMessage: (
     outMessage: ChildOutMessage,
     context: FoldContext<ChildMessage, ParentMessage>,
-  ) => Step<NoInfer<ParentModel>, OutMessageParentMessage, ParentR>
+  ) => Step<
+    NoInfer<ParentModel>,
+    OutMessageStepMessage,
+    OutMessageStepRequirements
+  >
 }>
 
 /** {@link ChildStepFoldWithOutMessage} for a parent that is itself a
@@ -679,13 +706,18 @@ export type ChildStepFoldWithParentOutMessage<
   ChildMessage,
   ChildOutMessage,
   ParentOutMessage,
-  ChildR = never,
-  ParentR = ChildR,
-  OutMessageParentMessage = ParentMessage,
+  ChildRequirements = never,
+  OutMessageStepRequirements = ChildRequirements,
+  OutMessageStepMessage = ParentMessage,
 > = Readonly<{
   update: (
     childModel: ChildModel,
-  ) => ReturnWithOutMessage<ChildModel, ChildMessage, ChildOutMessage, ChildR>
+  ) => ReturnWithOutMessage<
+    ChildModel,
+    ChildMessage,
+    ChildOutMessage,
+    ChildRequirements
+  >
   read: (model: ParentModel) => Option.Option<ChildModel>
   write: (model: ParentModel, nextChildModel: ChildModel) => ParentModel
   toParentMessage: (message: ChildMessage) => ParentMessage
@@ -695,7 +727,11 @@ export type ChildStepFoldWithParentOutMessage<
   foldOutMessage?: (
     outMessage: ChildOutMessage,
     context: FoldContext<ChildMessage, ParentMessage>,
-  ) => Step<NoInfer<ParentModel>, OutMessageParentMessage, ParentR>
+  ) => Step<
+    NoInfer<ParentModel>,
+    OutMessageStepMessage,
+    OutMessageStepRequirements
+  >
 }>
 
 /** @internal Implementation-facing view of both {@link ChildStepFold}
@@ -760,9 +796,9 @@ export const foldChildStep: {
     ChildMessage,
     ChildOutMessage,
     ParentOutMessage,
-    ChildR = never,
-    ParentR = ChildR,
-    OutMessageParentMessage = ParentMessage,
+    ChildRequirements = never,
+    OutMessageStepRequirements = ChildRequirements,
+    OutMessageStepMessage = ParentMessage,
   >(
     childFold: ChildStepFoldWithParentOutMessage<
       ParentModel,
@@ -771,15 +807,15 @@ export const foldChildStep: {
       ChildMessage,
       ChildOutMessage,
       ParentOutMessage,
-      ChildR,
-      ParentR,
-      OutMessageParentMessage
+      ChildRequirements,
+      OutMessageStepRequirements,
+      OutMessageStepMessage
     >,
   ): StepWithOutMessage<
     ParentModel,
-    ParentMessage | OutMessageParentMessage,
+    ParentMessage | OutMessageStepMessage,
     ParentOutMessage,
-    ChildR | ParentR
+    ChildRequirements | OutMessageStepRequirements
   >
   <
     ParentModel,
@@ -787,9 +823,9 @@ export const foldChildStep: {
     ChildModel,
     ChildMessage,
     ChildOutMessage,
-    ChildR = never,
-    ParentR = ChildR,
-    OutMessageParentMessage = ParentMessage,
+    ChildRequirements = never,
+    OutMessageStepRequirements = ChildRequirements,
+    OutMessageStepMessage = ParentMessage,
   >(
     childFold: ChildStepFoldWithOutMessage<
       ParentModel,
@@ -797,14 +833,14 @@ export const foldChildStep: {
       ChildModel,
       ChildMessage,
       ChildOutMessage,
-      ChildR,
-      ParentR,
-      OutMessageParentMessage
+      ChildRequirements,
+      OutMessageStepRequirements,
+      OutMessageStepMessage
     >,
   ): Step<
     ParentModel,
-    ParentMessage | OutMessageParentMessage,
-    ChildR | ParentR
+    ParentMessage | OutMessageStepMessage,
+    ChildRequirements | OutMessageStepRequirements
   >
   <ParentModel, ParentMessage, ChildModel, ChildMessage, R = never>(
     childFold: ChildStepFold<
