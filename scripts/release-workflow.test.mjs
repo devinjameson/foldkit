@@ -6,6 +6,11 @@ import { fileURLToPath } from 'node:url'
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const gitignore = readFileSync(resolve(REPO_ROOT, '.gitignore'), 'utf8')
+const changesetReadme = readFileSync(
+  resolve(REPO_ROOT, '.changeset/README.md'),
+  'utf8',
+)
+const releasingGuide = readFileSync(resolve(REPO_ROOT, 'RELEASING.md'), 'utf8')
 const workflow = readFileSync(
   resolve(REPO_ROOT, '.github/workflows/release.yml'),
   'utf8',
@@ -73,12 +78,60 @@ test('Changesets only versions packages and cannot parse publisher output', () =
     /if: github\.event_name == 'push' && needs\.version\.outputs\.has_changesets == 'false'/,
   )
   assert.match(stableJob, /\n    needs: version\n/)
-  assert.match(stableJob, /permissions:\n\s+contents: read\n\s+id-token: write/)
-  assert.doesNotMatch(stableJob, /contents: write|pull-requests: write/)
+  assert.match(
+    stableJob,
+    /permissions:\n\s+contents: read\n\s+pull-requests: write\n\s+id-token: write/,
+  )
+  assert.doesNotMatch(stableJob, /contents: write/)
   assert.doesNotMatch(stableJob, /changesets\/action/)
   assert.match(stableJob, /run: pnpm release/)
   assert.doesNotMatch(coherentPublisher, /New tag:/)
   assert.match(stableJob, /NPM_CONFIG_PROVENANCE: true/)
+})
+
+test('stable uploads notify the merged Version Packages pull request', () => {
+  const stableJob = job('stable', 'canary')
+  const upload = stableJob.indexOf('run: pnpm release')
+  const notification = stableJob.indexOf(
+    '- name: Notify the maintainer that promotion is ready',
+  )
+
+  assert.ok(upload > 0)
+  assert.ok(notification > upload)
+  assert.match(stableJob, /uses: actions\/github-script@v9/)
+  assert.match(stableJob, /listPullRequestsAssociatedWithCommit/)
+  assert.match(
+    stableJob,
+    /pullRequest\.head\.ref === 'changeset-release\/main'/,
+  )
+  assert.match(stableJob, /No merged Version Packages pull request/)
+  assert.match(stableJob, /@devinjameson The stable packages/)
+  assert.match(stableJob, /git switch --detach \$\{context\.sha\}/)
+  assert.match(stableJob, /pnpm install --frozen-lockfile/)
+  assert.match(stableJob, /pnpm release:promote/)
+  assert.match(stableJob, /npm OTP/)
+  assert.match(stableJob, /github\.paginate/)
+  assert.match(stableJob, /github\.rest\.issues\.updateComment/)
+  assert.match(stableJob, /github\.rest\.issues\.createComment/)
+
+  assert.match(
+    changesetReadme,
+    /Uploads and verifies the stable package set without moving `latest`/,
+  )
+  assert.match(
+    changesetReadme,
+    /Comments on the merged Version Packages pull request/,
+  )
+  assert.match(changesetReadme, /pnpm release:promote/)
+  assert.match(
+    releasingGuide,
+    /Wait for GitHub Actions to mention `@devinjameson`/,
+  )
+  assert.match(
+    releasingGuide,
+    /A\s+rerun updates the existing comment instead of posting another notification/,
+  )
+  assert.match(releasingGuide, /`npm whoami` and `gh auth status`/)
 })
 
 test('canaries publish from the trusted release workflow and use exact snapshots', () => {
