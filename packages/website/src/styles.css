@@ -132,7 +132,7 @@
   }
 
   pre code {
-    @apply block;
+    @apply block w-max min-w-full;
   }
 
   pre code .line {
@@ -162,7 +162,7 @@
 
   .code-embed {
     pre {
-      @apply rounded-none border-0 text-xs;
+      @apply rounded-none border-0 text-xs pr-18;
 
       code .line {
         @apply leading-5;
