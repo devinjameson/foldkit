@@ -37,9 +37,9 @@ export type Commands<Message, R = never> = ReadonlyArray<
 export type Return<Model, Message, R = never> = Readonly<{
   model: Model
   commands?: Commands<Message, R>
-  /** Marks this as a result that cannot emit an OutMessage. TypeScript rejects
-   *  assigning an OutMessage-producing result to this type, so a caller cannot
-   *  accidentally accept the Model and Commands while losing the OutMessage. */
+  /** This result emits no OutMessage. The field may be omitted but cannot hold
+   *  a value. TypeScript therefore rejects a result containing an OutMessage
+   *  where a caller would keep only the Model and Commands. */
   outMessage?: never
 }>
 
@@ -339,13 +339,11 @@ export type ChildFoldWithOutMessage<
  *  - `foldOutMessage` stays available for a parent that also updates
  *    its own state from the child's OutMessage, and is optional here.
  *
- *  Use this shape only when `toParentOutMessage` forwards at least one child
- *  OutMessage from the current Submodel to its parent. If no child OutMessage
- *  is forwarded, use {@link ChildFoldWithOutMessage}. Its plain result is
- *  valid wherever the parent accepts {@link ReturnWithOutMessage}, because
- *  emitting no OutMessage is valid. Local handling through `foldOutMessage`
- *  is independent, so a forwarded child OutMessage may also update the
- *  current parent. */
+ *  Use this shape only when at least one child OutMessage should continue to
+ *  the current Submodel's parent. If every child OutMessage stops here, use
+ *  {@link ChildFoldWithOutMessage} and omit `toParentOutMessage`.
+ *  When provided, `foldOutMessage` still handles each variant locally,
+ *  including variants that continue upward. */
 export type ChildFoldWithParentOutMessage<
   ParentModel,
   ParentMessage,
@@ -477,9 +475,9 @@ export type FoldWithOutMessage<
  *  A parent that is itself a Submodel passes a
  *  {@link ChildFoldWithParentOutMessage} and receives a
  *  {@link FoldWithOutMessage}, whose results may include the parent's own
- *  OutMessage. Add `toParentOutMessage` only when it forwards at least one
- *  child OutMessage from the current Submodel to its parent. Omit
- *  `toParentOutMessage` when the local `foldOutMessage` handles every variant.
+ *  OutMessage. Add `toParentOutMessage` only when at least one child OutMessage
+ *  should continue to the current Submodel's parent. Omit it when every child
+ *  OutMessage stops here. `foldOutMessage` still runs for forwarded variants.
  *
  *  An entry point that takes nothing but the child Model, such as
  *  `Dialog.close`, has no input to pass: fold it with
@@ -694,11 +692,11 @@ export type ChildStepFoldWithOutMessage<
  *  stops at this parent. `foldOutMessage` remains available when the parent
  *  also updates its own state from the child's OutMessage.
  *
- *  Use this shape only when `toParentOutMessage` forwards at least one child
- *  OutMessage from the current Submodel to its parent. If no child OutMessage
- *  is forwarded, use {@link ChildStepFoldWithOutMessage}. Local handling
- *  through `foldOutMessage` is independent, so a forwarded child OutMessage
- *  may also update the current parent. */
+ *  Use this shape only when at least one child OutMessage should continue to
+ *  the current Submodel's parent. If every child OutMessage stops here, use
+ *  {@link ChildStepFoldWithOutMessage} and omit `toParentOutMessage`. When
+ *  provided, `foldOutMessage` still handles each variant locally, including
+ *  variants that continue upward. */
 export type ChildStepFoldWithParentOutMessage<
   ParentModel,
   ParentMessage,
@@ -782,12 +780,13 @@ type AnyChildStepFold = Readonly<{
  *  `liftCommands` bound to this config's `toParentMessage`, for a Command the
  *  Step returns whose result is the child's Message.
  *
- *  A parent that is itself a Submodel adds `toParentOutMessage` when it
- *  forwards at least one child OutMessage to its own parent and receives a
- *  {@link StepWithOutMessage}, just as the input-taking {@link foldChild}
- *  returns a {@link FoldWithOutMessage}. When no child OutMessage is
- *  forwarded, omit the lift and use the plain Step directly. Local handling
- *  through `foldOutMessage` is independent of forwarding. */
+ *  A parent that is itself a Submodel adds `toParentOutMessage` when at least
+ *  one child OutMessage should continue to its own parent. The fold then
+ *  returns a {@link StepWithOutMessage}, just as the input-taking
+ *  {@link foldChild} returns a {@link FoldWithOutMessage}. If every child
+ *  OutMessage stops here, omit `toParentOutMessage` and use the plain Step.
+ *  When provided, `foldOutMessage` still handles forwarded variants locally.
+ */
 export const foldChildStep: {
   <
     ParentModel,

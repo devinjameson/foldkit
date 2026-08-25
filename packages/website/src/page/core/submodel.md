@@ -87,7 +87,7 @@ The resulting fold reads the child, runs its update, writes it back, and lifts i
 
 The fold is dual. `foldSettings(model, message)` runs it immediately. `foldSettings(message)` returns an `Update.Step<ParentModel, ParentMessage>` for `Update.combine`. Close over per-dispatch context in the `update` field, and apply route gates before calling the fold.
 
-Use `Update.foldChildStep` for an entry point that takes only the child Model, such as `Dialog.close`. It accepts the same fields and returns an `Update.Step<ParentModel, ParentMessage>`. Add `toParentOutMessage` when the current Submodel forwards at least one child OutMessage to its parent; the fold then returns an `Update.StepWithOutMessage<ParentModel, ParentMessage, ParentOutMessage>`.
+Use `Update.foldChildStep` for an entry point that takes only the child Model, such as `Dialog.close`. It accepts the same fields and returns an `Update.Step<ParentModel, ParentMessage>`. Add `toParentOutMessage` when at least one child OutMessage should continue to the current Submodel's parent. The fold then returns an `Update.StepWithOutMessage<ParentModel, ParentMessage, ParentOutMessage>`.
 
 ::Snippet{name="submodelFoldChildStep" label="foldChildStep with OutMessage forwarding"}
 
@@ -219,9 +219,9 @@ In this example, only the parent knows the redirect Route for `Login.SendMagicLi
 
 [Update.foldChildStep](#fold-child) supplies the same fold context for no-argument child entry points. It also accepts `toParentOutMessage` when the current Submodel forwards a child OutMessage to its parent.
 
-A parent Submodel adds `toParentOutMessage` only when it forwards at least one child OutMessage to its own parent. Match every child variant. Return the parent OutMessage when the fact is forwarded, and return `undefined` for a named variant that stops at the current parent. The [Auth example](/example-apps/auth) forwards a successful login through two Submodel levels to the root.
+A parent Submodel adds `toParentOutMessage` only when it passes at least one child OutMessage up to its own parent. Match every child variant. Return the parent's OutMessage for each variant that should continue upward. Return `undefined` for each variant that stops at this Submodel. The [Auth example](/example-apps/auth) forwards a successful login through two Submodel levels to the root.
 
-Omit `toParentOutMessage` when no child OutMessage variant is forwarded. The plain fold result is valid in an update that returns `Update.ReturnWithOutMessage<ParentModel, ParentMessage, ParentOutMessage>` because emitting no OutMessage is allowed. Local handling through `foldOutMessage` is independent, so a forwarded variant may also update the current parent. Do not add `toParentOutMessage: () => undefined` just to change the fold's return type.
+If every child OutMessage stops at this Submodel, omit `toParentOutMessage`. Any `foldOutMessage` handling still runs. A forwarded OutMessage also runs through `foldOutMessage`, so the same event can update this Submodel before it continues upward. Do not add `toParentOutMessage: () => undefined` just to change the fold's return type.
 
 ## Reflecting External State
 

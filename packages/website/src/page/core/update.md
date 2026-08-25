@@ -74,17 +74,17 @@ Independent child inits are not a sequence because neither child updates the oth
 
 ## Preventing Lost OutMessages
 
-Use `Update.Return<Model, Message>` for an update that cannot emit an OutMessage. TypeScript rejects assigning an OutMessage-producing result to it:
+Use `Update.Return<Model, Message>` for an update that cannot emit an OutMessage. It prevents a result containing an OutMessage from entering code that would keep only its Model and Commands:
 
 ::Snippet{name="updateRejectLostOutMessage" label="rejected OutMessage-producing result"}
 
-This protects the OutMessage from being lost while a caller keeps only the Model and Commands.
+Otherwise, that OutMessage would be lost.
 
-An OutMessage-aware return type also accepts a result that emitted nothing:
+A result with no `outMessage` can still be used where `Update.ReturnWithOutMessage<Model, Message, OutMessage>` is expected:
 
 ::Snippet{name="updateAcceptMissingOutMessage" label="accepted plain update result"}
 
-An OutMessage-aware caller can accept a plain result because an update is allowed to emit nothing.
+The missing field means this update emitted no OutMessage.
 
 ### Returning an OutMessage
 
