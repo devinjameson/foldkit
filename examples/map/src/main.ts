@@ -11,12 +11,12 @@ import {
   Stream,
   String,
 } from 'effect'
-import { Command, Mount, Runtime, Subscription, type Update } from 'foldkit'
+import { Command, Mount, Runtime, Subscription, Update } from 'foldkit'
 import * as Dom from 'foldkit/dom'
 import type { Document, Html } from 'foldkit/html'
 import { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
-import { ts } from 'foldkit/schema'
+import { defineTaggedUnion } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 import type { Map as MapInstance } from 'maplibre-gl'
 
@@ -45,16 +45,12 @@ type Bounds = typeof Bounds.Type
 const LngLat = S.Struct({ lng: S.Number, lat: S.Number })
 type LngLat = typeof LngLat.Type
 
-export const GeolocateIdle = ts('GeolocateIdle')
-export const GeolocateLocating = ts('GeolocateLocating')
-export const GeolocateFailed = ts('GeolocateFailed', { reason: S.String })
-
-const GeolocateState = S.Union([
-  GeolocateIdle,
-  GeolocateLocating,
-  GeolocateFailed,
-])
-type GeolocateState = typeof GeolocateState.Type
+export const GeolocateState = defineTaggedUnion({
+  Idle: {},
+  Locating: {},
+  Failed: { reason: S.String },
+})
+export type GeolocateState = typeof GeolocateState.Type
 
 export const Model = S.Struct({
   locations: S.Array(Location),
@@ -254,19 +250,23 @@ export const update = (model: Model, message: Message) =>
     }),
 
     ClickedFindMe: () => ({
-      model: evo(model, { geolocateState: () => GeolocateLocating() }),
+      model: evo(model, {
+        geolocateState: () => GeolocateState.Locating(),
+      }),
       commands: [LockBodyScroll(), Geolocate()],
     }),
 
     DismissedGeolocate: () => ({
-      model: evo(model, { geolocateState: () => GeolocateIdle() }),
+      model: evo(model, {
+        geolocateState: () => GeolocateState.Idle(),
+      }),
       commands: [UnlockBodyScroll()],
     }),
 
     SucceededGeolocate: ({ lng, lat }) => ({
       model: evo(model, {
         maybeUserLocation: () => Option.some({ lng, lat }),
-        geolocateState: () => GeolocateIdle(),
+        geolocateState: () => GeolocateState.Idle(),
       }),
       commands: [
         UnlockBodyScroll(),
@@ -280,7 +280,9 @@ export const update = (model: Model, message: Message) =>
     }),
 
     FailedGeolocate: ({ reason }) => ({
-      model: evo(model, { geolocateState: () => GeolocateFailed({ reason }) }),
+      model: evo(model, {
+        geolocateState: () => GeolocateState.Failed({ reason }),
+      }),
     }),
 
     SucceededFlyTo: () => ({ model }),
@@ -301,7 +303,7 @@ export const init: Runtime.ApplicationInit<Model, Message> = () => ({
     maybeBounds: Option.none(),
     maybeSelectedLocationId: Option.none(),
     maybeUserLocation: Option.none(),
-    geolocateState: GeolocateIdle(),
+    geolocateState: GeolocateState.Idle(),
   },
   commands: [FocusSearchInput()],
 })
@@ -584,7 +586,7 @@ const locationListItemView =
   }
 
 const footerView = (model: Model, h: HtmlBuilder<Message>): Html => {
-  const isLocating = model.geolocateState._tag === 'GeolocateLocating'
+  const isLocating = model.geolocateState._tag === 'Locating'
   return h.div(
     [h.Class('border-t border-slate-200 px-5 py-3 space-y-2')],
     [
@@ -680,10 +682,10 @@ const geolocateOverlayView = (
 ): Html =>
   M.value(state).pipe(
     M.tagsExhaustive({
-      GeolocateIdle: () => h.empty,
-      GeolocateLocating: () =>
+      Idle: () => h.empty,
+      Locating: () =>
         geolocateOverlayShellView(geolocateLocatingContentView(h), h),
-      GeolocateFailed: ({ reason }) =>
+      Failed: ({ reason }) =>
         geolocateOverlayShellView(geolocateFailedContentView(reason, h), h),
     }),
   )

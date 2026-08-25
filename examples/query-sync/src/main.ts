@@ -15,8 +15,8 @@ import { Command, Route, Runtime, Update } from 'foldkit'
 import { Document, Html, HtmlBuilder, childAttributes } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 import { UrlRequest, load, pushUrl, replaceUrl } from 'foldkit/navigation'
-import { r } from 'foldkit/route'
-import { ts } from 'foldkit/schema'
+import { defineRouteUnion } from 'foldkit/route'
+import { defineTaggedUnion } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 import { Url, toString as urlToString } from 'foldkit/url'
 
@@ -30,11 +30,12 @@ const Period = S.Literals(['Triassic', 'Jurassic', 'Cretaceous'])
 const SortColumn = S.Literals(['Name', 'Period', 'Diet', 'Length', 'Weight'])
 type SortColumn = typeof SortColumn.Type
 
-export const Unsorted = ts('Unsorted')
-export const Ascending = ts('Ascending', { column: SortColumn })
-export const Descending = ts('Descending', { column: SortColumn })
-const Sorting = S.Union([Unsorted, Ascending, Descending])
-type Sorting = typeof Sorting.Type
+export const Sorting = defineTaggedUnion({
+  Unsorted: {},
+  Ascending: { column: SortColumn },
+  Descending: { column: SortColumn },
+})
+export type Sorting = typeof Sorting.Type
 
 const dietFilterItems: ReadonlyArray<string> = ['', ...Diet.literals]
 const periodFilterItems: ReadonlyArray<string> = ['', ...Period.literals]
@@ -71,7 +72,7 @@ const sortingFromParam = (() => {
       SchemaTransformation.transform({
         decode: (maybeRaw: Option.Option<string>): Sorting =>
           Option.match(maybeRaw, {
-            onNone: () => Unsorted(),
+            onNone: () => Sorting.Unsorted(),
             onSome: value => {
               const parts = String.split(value, SORT_PARAM_SEPARATOR)
 
@@ -90,12 +91,12 @@ const sortingFromParam = (() => {
                 }),
                 Option.map(({ column, direction }) =>
                   M.value(direction).pipe(
-                    M.when('Ascending', () => Ascending({ column })),
-                    M.when('Descending', () => Descending({ column })),
+                    M.when('Ascending', () => Sorting.Ascending({ column })),
+                    M.when('Descending', () => Sorting.Descending({ column })),
                     M.exhaustive,
                   ),
                 ),
-                Option.getOrElse(() => Unsorted()),
+                Option.getOrElse(() => Sorting.Unsorted()),
               )
             },
           }),
@@ -105,9 +106,13 @@ const sortingFromParam = (() => {
             M.tagsExhaustive({
               Unsorted: () => Option.none(),
               Ascending: ({ column }) =>
-                Option.some(`${column}${SORT_PARAM_SEPARATOR}Ascending`),
+                Option.some(
+                  `${column}${SORT_PARAM_SEPARATOR}Sorting.Ascending`,
+                ),
               Descending: ({ column }) =>
-                Option.some(`${column}${SORT_PARAM_SEPARATOR}Descending`),
+                Option.some(
+                  `${column}${SORT_PARAM_SEPARATOR}Sorting.Descending`,
+                ),
             }),
           ),
       }),
@@ -115,17 +120,17 @@ const sortingFromParam = (() => {
   )
 })()
 
-export const BrowseRoute = r('Browse', {
-  search: S.Option(S.String),
-  sorting: Sorting,
-  diet: S.Option(Diet),
-  period: S.Option(Period),
+export const AppRoute = defineRouteUnion({
+  Browse: {
+    search: S.Option(S.String),
+    sorting: Sorting,
+    diet: S.Option(Diet),
+    period: S.Option(Period),
+  },
+  NotFound: { path: S.String },
 })
 
-export const NotFoundRoute = r('NotFound', { path: S.String })
-
-const AppRoute = S.Union([BrowseRoute, NotFoundRoute])
-type AppRoute = typeof AppRoute.Type
+export type AppRoute = typeof AppRoute.Type
 
 const browseRouter = pipe(
   Route.root,
@@ -137,11 +142,11 @@ const browseRouter = pipe(
       period: optionFromValidParam(Period),
     }),
   ),
-  Route.mapTo(BrowseRoute),
+  Route.mapTo(AppRoute.Browse),
 )
 
 const routeParser = Route.oneOf(browseRouter)
-const urlToAppRoute = Route.parseUrlWithFallback(routeParser, NotFoundRoute)
+const urlToAppRoute = Route.parseUrlWithFallback(routeParser, AppRoute.NotFound)
 
 // MODEL
 
@@ -170,11 +175,11 @@ export type Message = typeof Message.Type
 
 // INIT
 
-type BrowseFields = Omit<typeof BrowseRoute.Type, '_tag'>
+type BrowseFields = Omit<typeof AppRoute.Browse.Type, '_tag'>
 
 const emptyBrowseFields: BrowseFields = {
   search: Option.none(),
-  sorting: Unsorted(),
+  sorting: Sorting.Unsorted(),
   diet: Option.none(),
   period: Option.none(),
 }
@@ -219,9 +224,9 @@ const nextSorting = (sorting: Sorting, column: SortColumn): Sorting =>
   pipe(
     columnSortDirection(sorting, column),
     M.value,
-    M.when('Unsorted', () => Ascending({ column })),
-    M.when('Ascending', () => Descending({ column })),
-    M.when('Descending', () => Unsorted()),
+    M.when('Unsorted', () => Sorting.Ascending({ column })),
+    M.when('Ascending', () => Sorting.Descending({ column })),
+    M.when('Descending', () => Sorting.Unsorted()),
     M.exhaustive,
   )
 
@@ -649,7 +654,7 @@ const periodLabel = (item: string): string =>
 
 const browseView = (
   model: Model,
-  route: typeof BrowseRoute.Type,
+  route: typeof AppRoute.Browse.Type,
   h: HtmlBuilder<Message>,
 ): Html => {
   const fields = routeToBrowseFields(route)

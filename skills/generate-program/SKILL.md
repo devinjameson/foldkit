@@ -22,7 +22,7 @@ Before writing any code, analyze the description to identify:
 8. **Date handling**: birthdays, deadlines, scheduling → `Calendar` module + `DatePicker` or `Calendar` from `@foldkit/ui`
 9. **File handling**: uploads, attachments, images → `File` module + `FileDrop` from `@foldkit/ui`
 10. **Remote data**: anything fetched, cached, refreshed, or revalidated → the `AsyncData` module (see Phase 4). Don't hand-roll a loading/error union
-11. **Multi-state flows**: a described process that moves through several named steps with rules about which step follows which (checkout, onboarding, multi-step approval, a connection lifecycle) → consider the `Machine` module (`foldkit/experimental`). Writing the transitions as a table makes the edge set enumerable, so `unreachableStates()` and `deadTransitions()` catch a missing or unreachable step by computation instead of by review. Raise it as an option in the analysis you present, noting it is under `experimental/`, and let the user choose. Plain `ts()` unions with one `M.tagsExhaustive` are still right for a flow of two or three states. `repos/foldkit/examples/state-machine/` is the reference
+11. **Multi-state flows**: a described process that moves through several named steps with rules about which step follows which (checkout, onboarding, multi-step approval, a connection lifecycle) → consider the `Machine` module (`foldkit/experimental`). Writing the transitions as a table makes the edge set enumerable, so `unreachableStates()` and `deadTransitions()` catch a missing or unreachable step by computation instead of by review. Raise it as an option in the analysis you present, noting it is under `experimental/`, and let the user choose. A plain `defineTaggedUnion` with one `match` is still right for a flow of two or three states. `repos/foldkit/examples/state-machine/` is the reference
 12. **Host embedding**: the program runs inside another app ("a widget in our React app", "embed this in an existing page", "the host needs to control it") → `Runtime.makeElement` plus the `Runtime.embed` lifecycle handle, with Flags for initial data and Ports for ongoing communication in both directions. `repos/foldkit/examples/embedding/` is the canonical reference: a plain TypeScript host driving a Foldkit widget end to end
 
 Present this analysis to the user before proceeding.
@@ -243,7 +243,7 @@ The sketch has five parts. Emit them inline in the conversation, get confirmatio
 1. **File tree**: the exact paths you will create. Match Phase 3's organization.
 2. **Model shape**: the top-level `S.Struct` fields and their types. Not the full schema, just the shape.
 3. **Message list**: every Message you plan to define, grouped by category (clicks, inputs, commands, out-messages).
-4. **Route list**: if routing, every `r('...', {...})` with params and the path each maps to.
+4. **Route list**: if routing, every `defineRouteUnion` variant with its params and the path it maps to.
 5. **Domain operations**: for each file in `domain/`, the operations it will expose (`Link.byNewest`, `Link.filterByTag`, etc.).
 
 Example for a Tier 4 link saver:
@@ -445,7 +445,7 @@ Generate files following the architecture and conventions guides exactly. Write 
 - Use `Option` for fields that may be absent. Never empty strings or null
 - Prefix Option-typed fields with `maybe`: `maybeCurrentUser`, `maybeError`
 - For remote data, use the `AsyncData` module rather than hand-rolling a union. `AsyncData.Schema(WeatherData, S.String)` returns `{ schema, Idle, Loading, Refreshing, Failure, Stale, Success }`; put `schema` in the Model and build values with the constructors. The `Refreshing` and `Stale` states are the point: they let a reload keep the current data on screen, and a failed reload keep it rather than discarding it. `repos/foldkit/examples/weather/src/main.ts` is the canonical use. Read `AsyncData.match`'s signature before calling it: the handlers take bare values (`onSuccess: data => ...`, `onFailure: error => ...`), except `onStale`, which takes `{ error, data }`
-- For non-remote multi-valued state (form steps, editor modes, connection phases), define variants with `ts()` and compose into an `S.Union`. See Discriminated Unions for State in [conventions.md](conventions.md)
+- For non-remote multi-valued state (form steps, editor modes, connection phases), declare the whole union with `defineTaggedUnion()`. See Discriminated Unions for State in [conventions.md](conventions.md)
 - For apps with multiple domain entities referenced across modules, extract shared schemas into `src/domain/` (e.g., `domain/product.ts`, `domain/session.ts`). See the shopping-cart and auth examples for this pattern, and read `${CLAUDE_SKILL_DIR}/../../packages/website/src/page/projectOrganization.ts` for guidance on when and how to structure domain modules
 
 ### Messages
@@ -603,10 +603,10 @@ For file uploads (resumes, images, attachments):
 
 ### Routes (if multi-page)
 
-- Use bidirectional parser: `r()`, `string()`, `int()`, `literal()`, `slash()`, `Route.mapTo()`, `Route.oneOf()`
-- Define route schemas with `r('RouteName', { param: S.String })`
-- **Suffix route variant constants with `Route`**: `HomeRoute`, `NewLinkRoute`, `NotFoundRoute`. Every exemplar (auth, shopping-cart, routing) does this. Disambiguates the route schema from views, models, or UI components with matching tag names.
-- Build each route as a Router: `const homeRouter = pipe(Route.root, Route.mapTo(HomeRoute))`. **Routers are callable**: `homeRouter()` returns `'/'`, `tagFilterRouter({ tag: 'foo' })` returns `'/tag/foo'`. This is the print side of the bidirectional parser.
+- Use bidirectional parser: `defineRouteUnion()`, `string()`, `int()`, `literal()`, `slash()`, `Route.mapTo()`, `Route.oneOf()`
+- Declare every route in one `defineRouteUnion({ Home: {}, NewLink: {}, NotFound: { path: S.String } })` named `AppRoute`, and reach each variant through it: `AppRoute.Home`. Never destructure a variant into a sibling binding. The union namespace is what the old `HomeRoute` suffix was for, so drop the suffix.
+- A page Submodel that owns part of the route tree takes an `S.Union` over the variants it handles as its route type, with every member listed. Never derive a subset by subtracting from `AppRoute`. Export `type PersonRoute = typeof AppRoute.Person.Type` beside the union when a child module needs one variant's type.
+- Build each route as a Router: `const homeRouter = pipe(Route.root, Route.mapTo(AppRoute.Home))`. **Routers are callable**: `homeRouter()` returns `'/'`, `tagFilterRouter({ tag: 'foo' })` returns `'/tag/foo'`. This is the print side of the bidirectional parser.
 - **Never hand-construct paths with template strings.** `Href(homeRouter())` not `Href('/')`. `pushUrl(newLinkRouter())` not `pushUrl('/new')`. `Href(tagFilterRouter({ tag: tagName }))` not ``Href(`/tag/${encodeURIComponent(tagName)}`)``. The router handles encoding and keeps the URL shape in one place so a refactor changes one file, not every call site.
 - Render each route through its own view function; identity handles the switch, so route branches are never keyed. Key by entity id only when one shared view function renders different entities across route params (a detail page across slugs)
 - Use `pushUrl` from `foldkit/navigation` in Commands for programmatic navigation. In the `ClickedLink` handler's `Internal` case, use `urlToString(url)` from `foldkit/url`. Never reconstruct the URL from `url.pathname + search + hash` manually; that path drops the `?` prefix and hash silently.

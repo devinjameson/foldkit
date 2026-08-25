@@ -2,7 +2,7 @@ import { Match as M, Number, Schema as S } from 'effect'
 
 import type { Html, HtmlBuilder } from '../../html/index.js'
 import { defineMessageUnion } from '../../message/index.js'
-import { ts } from '../../schema/index.js'
+import { defineTaggedUnion } from '../../schema/index.js'
 import { evo } from '../../struct/index.js'
 import type * as Update from '../../update/index.js'
 
@@ -10,12 +10,10 @@ import type * as Update from '../../update/index.js'
 
 const ContextMenuSource = S.Literals(['Direct', 'Inner', 'Outer'])
 
-const Closed = ts('Closed')
-const Open = ts('Open', {
-  source: ContextMenuSource,
+const ContextMenuState = defineTaggedUnion({
+  Closed: {},
+  Open: { source: ContextMenuSource },
 })
-
-const ContextMenuState = S.Union([Closed, Open])
 type ContextMenuState = typeof ContextMenuState.Type
 
 export const Model = S.Struct({
@@ -34,7 +32,7 @@ type Message = typeof Message.Type
 // INIT
 
 export const initialModel = Model.make({
-  contextMenu: Closed(),
+  contextMenu: ContextMenuState.Closed(),
   openCount: 0,
 })
 
@@ -44,7 +42,7 @@ export const update = (model: Model, message: Message) =>
   Message.match<Update.Return<Model, Message>>(message, {
     OpenedContextMenu: ({ source }) => ({
       model: evo(model, {
-        contextMenu: () => Open({ source }),
+        contextMenu: () => ContextMenuState.Open({ source }),
         openCount: Number.increment,
       }),
     }),

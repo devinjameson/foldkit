@@ -1,6 +1,6 @@
 import { Function, Option, Predicate, Schema as S } from 'effect'
 import type { Array, SchemaAST } from 'effect'
-import { ts } from 'foldkit/schema'
+import { taggedStruct } from 'foldkit/schema'
 
 // INLINE
 
@@ -80,13 +80,13 @@ export type InlineEncoded =
     }>
 
 /** Schema for {@link Text}. */
-export const Text = ts('Text', { value: S.String })
+export const Text = taggedStruct('Text', { value: S.String })
 
 /** Schema for {@link InlineCode}. */
-export const InlineCode = ts('InlineCode', { value: S.String })
+export const InlineCode = taggedStruct('InlineCode', { value: S.String })
 
 /** Schema for {@link HardBreak}. */
-export const HardBreak = ts('HardBreak')
+export const HardBreak = taggedStruct('HardBreak')
 
 // NOTE: Manual type definitions and the explicit annotation are required
 // because TypeScript cannot infer types for self-recursive schemas built
@@ -109,23 +109,25 @@ export const Inline: S.Codec<Inline, InlineEncoded> = S.suspend(() =>
 )
 
 /** Schema for {@link Emphasis}. */
-export const Emphasis = ts('Emphasis', { content: S.Array(Inline) })
+export const Emphasis = taggedStruct('Emphasis', { content: S.Array(Inline) })
 
 /** Schema for {@link Strong}. */
-export const Strong = ts('Strong', { content: S.Array(Inline) })
+export const Strong = taggedStruct('Strong', { content: S.Array(Inline) })
 
 /** Schema for {@link Strikethrough}. */
-export const Strikethrough = ts('Strikethrough', { content: S.Array(Inline) })
+export const Strikethrough = taggedStruct('Strikethrough', {
+  content: S.Array(Inline),
+})
 
 /** Schema for {@link Link}. */
-export const Link = ts('Link', {
+export const Link = taggedStruct('Link', {
   url: S.String,
   maybeTitle: S.OptionFromNullishOr(S.String, { onNoneEncoding: null }),
   content: S.Array(Inline),
 })
 
 /** Schema for {@link Image}. */
-export const Image = ts('Image', {
+export const Image = taggedStruct('Image', {
   url: S.String,
   alt: S.String,
   maybeTitle: S.OptionFromNullishOr(S.String, { onNoneEncoding: null }),
@@ -302,52 +304,52 @@ export const Block: S.Codec<Block, BlockEncoded> = S.suspend(() =>
 )
 
 /** Schema for {@link Heading}. */
-export const Heading = ts('Heading', {
+export const Heading = taggedStruct('Heading', {
   level: HeadingLevel,
   content: S.Array(Inline),
 })
 
 /** Schema for {@link Paragraph}. */
-export const Paragraph = ts('Paragraph', { content: S.Array(Inline) })
+export const Paragraph = taggedStruct('Paragraph', { content: S.Array(Inline) })
 
 /** Schema for {@link CodeBlock}. */
-export const CodeBlock = ts('CodeBlock', {
+export const CodeBlock = taggedStruct('CodeBlock', {
   maybeLanguage: S.OptionFromNullishOr(S.String, { onNoneEncoding: null }),
   maybeMeta: S.OptionFromNullishOr(S.String, { onNoneEncoding: null }),
   value: S.String,
 })
 
 /** Schema for {@link ListItem}. */
-export const ListItem = ts('ListItem', { blocks: S.Array(Block) })
+export const ListItem = taggedStruct('ListItem', { blocks: S.Array(Block) })
 
 /** Schema for {@link List}. */
-export const List = ts('List', {
+export const List = taggedStruct('List', {
   isOrdered: S.Boolean,
   maybeStartNumber: S.OptionFromNullishOr(S.Number, { onNoneEncoding: null }),
   items: S.NonEmptyArray(ListItem),
 })
 
 /** Schema for {@link Blockquote}. */
-export const Blockquote = ts('Blockquote', { blocks: S.Array(Block) })
+export const Blockquote = taggedStruct('Blockquote', { blocks: S.Array(Block) })
 
 /** Schema for {@link ThematicBreak}. */
-export const ThematicBreak = ts('ThematicBreak')
+export const ThematicBreak = taggedStruct('ThematicBreak')
 
 /** Schema for {@link TableCell}. */
-export const TableCell = ts('TableCell', { content: S.Array(Inline) })
+export const TableCell = taggedStruct('TableCell', { content: S.Array(Inline) })
 
 /** Schema for {@link TableRow}. */
-export const TableRow = ts('TableRow', { cells: S.Array(TableCell) })
+export const TableRow = taggedStruct('TableRow', { cells: S.Array(TableCell) })
 
 /** Schema for {@link Table}. */
-export const Table = ts('Table', {
+export const Table = taggedStruct('Table', {
   alignments: S.Array(Alignment),
   headerRow: TableRow,
   bodyRows: S.Array(TableRow),
 })
 
 /** Schema for {@link Island}. */
-export const Island = ts('Island', {
+export const Island = taggedStruct('Island', {
   name: S.String,
   attributes: S.Record(S.String, S.String),
   blocks: S.Array(Block),

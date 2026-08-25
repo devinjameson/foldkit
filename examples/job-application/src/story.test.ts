@@ -11,7 +11,7 @@ import { Message as TabsMessage } from '@foldkit/ui/tabs'
 
 import { SubmitApplication } from './command'
 import { Message } from './message'
-import { type Model, NotSubmitted, Submitting } from './model'
+import { type Model, Submission } from './model'
 import {
   Attachments,
   CoverLetter,
@@ -39,7 +39,7 @@ const initialModel: Model = {
   coverLetter: CoverLetter.init(),
   attachments: Attachments.init(),
   isPreviewVisible: false,
-  submission: NotSubmitted(),
+  submission: Submission.NotSubmitted(),
   stepMenu: Menu.init({ id: 'step-menu' }),
   stepTabs: Tabs.init({ id: 'step-tabs' }),
   isSubmitAttempted: false,
@@ -748,7 +748,7 @@ describe('update', () => {
         given({
           ...initialModel,
           currentStep: 'Review',
-          submission: Submitting(),
+          submission: Submission.Submitting(),
         }),
         message(Message.SucceededSubmitApplication()),
         model(model => {
@@ -763,7 +763,7 @@ describe('update', () => {
         given({
           ...initialModel,
           currentStep: 'Review',
-          submission: Submitting(),
+          submission: Submission.Submitting(),
         }),
         message(Message.FailedSubmitApplication({ error: 'Server down' })),
         model(model => {

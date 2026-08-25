@@ -5,9 +5,9 @@ import { describe, expect, test } from 'vitest'
 
 import { Counter } from './island'
 import { Message as CounterMessage } from './island/counter'
-import { HomeRoute, Message, Model, update } from './main'
+import { AppRoute, Message, Model, update } from './main'
 
-const home = Model.make({ route: HomeRoute(), counter: Counter.init })
+const home = Model.make({ route: AppRoute.Home(), counter: Counter.init })
 
 const urlOrThrow = (raw: string) =>
   Option.getOrThrowWith(

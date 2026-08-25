@@ -641,7 +641,7 @@ describe('interruptible Commands', () => {
         CancelUploadFile({ uploadId: 0 }),
         UploadsMessage.CompletedCancelUploadFile({
           uploadId: 0,
-          outcome: Interruptible.Interrupted(),
+          outcome: Interruptible.Outcome.Interrupted(),
         }),
       ),
       Story.model((model: UploadsModel) => {
@@ -717,7 +717,7 @@ describe('interruptible Commands', () => {
         CancelUploadFile({ uploadId: 0 }),
         UploadsMessage.CompletedCancelUploadFile({
           uploadId: 0,
-          outcome: Interruptible.NotFound(),
+          outcome: Interruptible.Outcome.NotFound(),
         }),
       ),
       Story.model((model: UploadsModel) => {
@@ -741,7 +741,7 @@ describe('interruptible Commands', () => {
         CancelUploadFile({ uploadId: 1 }),
         UploadsMessage.CompletedCancelUploadFile({
           uploadId: 1,
-          outcome: Interruptible.Interrupted(),
+          outcome: Interruptible.Outcome.Interrupted(),
         }),
       ),
       Story.Command.expectExact(UploadFile({ uploadId: 0 })),
@@ -773,7 +773,7 @@ describe('interruptible Commands', () => {
         CancelUploadFile({ uploadId: 0 }),
         UploadsMessage.CompletedCancelUploadFile({
           uploadId: 0,
-          outcome: Interruptible.Interrupted(),
+          outcome: Interruptible.Outcome.Interrupted(),
         }),
       ),
       Story.Command.expectNone(),

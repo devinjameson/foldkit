@@ -53,7 +53,7 @@ describe('playground preview', () => {
       loading,
     )
     expectValue(loaded).toEqual(
-      PlaygroundPreview.Loaded({ previewUrl: PREVIEW_URL }),
+      PlaygroundPreview.State.Loaded({ previewUrl: PREVIEW_URL }),
     )
     expectValue(PlaygroundPreview.load(loaded, PREVIEW_URL)).toBe(loaded)
   })
@@ -76,7 +76,7 @@ describe('playground preview', () => {
   test('reveals a loaded frame', () => {
     scene(
       previewApp,
-      given(PlaygroundPreview.Loaded({ previewUrl: PREVIEW_URL })),
+      given(PlaygroundPreview.State.Loaded({ previewUrl: PREVIEW_URL })),
       expect(preview).toHaveAttr('inert', 'false'),
       expect(preview).toHaveAttr('aria-hidden', 'false'),
       expect(preview).toHaveAttr('tabIndex', '0'),

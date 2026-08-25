@@ -1,6 +1,6 @@
 import { Schema as S } from 'effect'
 
-import { ts } from '../schema/index.js'
+import { taggedStruct } from '../schema/index.js'
 
 /** A 2D point in canvas-local coordinates. */
 export const Point = S.Struct({ x: S.Number, y: S.Number })
@@ -8,17 +8,17 @@ export const Point = S.Struct({ x: S.Number, y: S.Number })
 export type Point = typeof Point.Type
 
 /** Move the path cursor to a point without drawing. */
-export const MoveTo = ts('MoveTo', { x: S.Number, y: S.Number })
+export const MoveTo = taggedStruct('MoveTo', { x: S.Number, y: S.Number })
 /** Move the path cursor to a point without drawing. */
 export type MoveTo = typeof MoveTo.Type
 
 /** Draw a straight line from the cursor to a point. */
-export const LineTo = ts('LineTo', { x: S.Number, y: S.Number })
+export const LineTo = taggedStruct('LineTo', { x: S.Number, y: S.Number })
 /** Draw a straight line from the cursor to a point. */
 export type LineTo = typeof LineTo.Type
 
 /** Draw a quadratic Bezier curve from the cursor through a control point to an end point. */
-export const QuadTo = ts('QuadTo', {
+export const QuadTo = taggedStruct('QuadTo', {
   cpx: S.Number,
   cpy: S.Number,
   x: S.Number,
@@ -28,7 +28,7 @@ export const QuadTo = ts('QuadTo', {
 export type QuadTo = typeof QuadTo.Type
 
 /** Draw a cubic Bezier curve from the cursor through two control points to an end point. */
-export const BezierTo = ts('BezierTo', {
+export const BezierTo = taggedStruct('BezierTo', {
   cp1x: S.Number,
   cp1y: S.Number,
   cp2x: S.Number,
@@ -40,7 +40,7 @@ export const BezierTo = ts('BezierTo', {
 export type BezierTo = typeof BezierTo.Type
 
 /** Close the current path by drawing a line back to its starting point. */
-export const Close = ts('Close')
+export const Close = taggedStruct('Close')
 /** Close the current path by drawing a line back to its starting point. */
 export type Close = typeof Close.Type
 
@@ -83,7 +83,7 @@ export const TextBaseline = S.Literals([
 export type TextBaseline = typeof TextBaseline.Type
 
 /** An axis-aligned rectangle. */
-export const Rect = ts('Rect', {
+export const Rect = taggedStruct('Rect', {
   x: S.Number,
   y: S.Number,
   width: S.Number,
@@ -96,7 +96,7 @@ export const Rect = ts('Rect', {
 export type Rect = typeof Rect.Type
 
 /** A filled or stroked circle. */
-export const Circle = ts('Circle', {
+export const Circle = taggedStruct('Circle', {
   x: S.Number,
   y: S.Number,
   radius: S.Number,
@@ -108,7 +108,7 @@ export const Circle = ts('Circle', {
 export type Circle = typeof Circle.Type
 
 /** A path built from a sequence of `PathInstruction`s. */
-export const Path = ts('Path', {
+export const Path = taggedStruct('Path', {
   instructions: S.Array(PathInstruction),
   fill: S.optional(S.String),
   stroke: S.optional(S.String),
@@ -120,7 +120,7 @@ export const Path = ts('Path', {
 export type Path = typeof Path.Type
 
 /** A single line of text drawn with a font, fill, and optional stroke. */
-export const Text = ts('Text', {
+export const Text = taggedStruct('Text', {
   x: S.Number,
   y: S.Number,
   content: S.String,
@@ -173,7 +173,7 @@ const Shape: S.Schema<Shape> = S.suspend(
 )
 
 /** Construct a `Group` shape that wraps its children in a transformed scope. */
-export const Group = ts('Group', {
+export const Group = taggedStruct('Group', {
   shapes: S.Array(Shape),
   translate: S.optional(Point),
   rotate: S.optional(S.Number),

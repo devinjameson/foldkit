@@ -1,6 +1,6 @@
 import { Schema as S, pipe } from 'effect'
 import { Route } from 'foldkit'
-import { literal, r, schemaSegment, slash } from 'foldkit/route'
+import { defineRouteUnion, literal, schemaSegment, slash } from 'foldkit/route'
 
 // A refinement, not a transform: the value stays a string, but the route only
 // matches when the segment is actually a UUID. The brand rides along, so the
@@ -12,14 +12,16 @@ const ProductId = S.String.check(S.isPattern(UUID_PATTERN)).pipe(
 )
 type ProductId = typeof ProductId.Type
 
-const ProductRoute = r('Product', { productId: ProductId })
+const AppRoute = defineRouteUnion({
+  Product: { productId: ProductId },
+})
 
 // Matches /products/<uuid>. /products/banana does not match, so in oneOf it
 // falls through to the next route, or to not-found.
 const productRouter = pipe(
   literal('products'),
   slash(schemaSegment('productId', ProductId)),
-  Route.mapTo(ProductRoute),
+  Route.mapTo(AppRoute.Product),
 )
 
 // Building still round-trips: a ProductId prints straight back into the path.

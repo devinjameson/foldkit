@@ -5,7 +5,7 @@ import { BrowserCrypto } from '@effect/platform-browser'
 import { Menu, Tabs } from '@foldkit/ui'
 
 import { Message } from './message'
-import { Model, NotSubmitted } from './model'
+import { Model, Submission } from './model'
 import {
   Attachments,
   CoverLetter,
@@ -58,7 +58,7 @@ export const init: Runtime.ApplicationInit<Model, Message, Flags> = ({
     coverLetter: CoverLetter.init(),
     attachments: Attachments.init(),
     isPreviewVisible: false,
-    submission: NotSubmitted(),
+    submission: Submission.NotSubmitted(),
     stepMenu: Menu.init({ id: 'step-menu' }),
     stepTabs: Tabs.init({ id: 'step-tabs' }),
     isSubmitAttempted: false,

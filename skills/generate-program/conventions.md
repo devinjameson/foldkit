@@ -402,29 +402,32 @@ Keep Message and OutMessage constructors on their owning namespace. Never
 destructure them into sibling bindings. `Message.ClickedSubmit()` preserves the
 domain at the call site in a way that `ClickedSubmit()` does not.
 
-**No-field tagged structs take no argument, not an empty object.** `ts('Work')` and Message constructors with empty field records produce callables that accept no argument:
+**No-field variants take no argument, not an empty object.** A variant declared with an empty field record produces a callable that accepts no argument:
 
 ```ts
-const Work = ts('Work')
-const Idle = ts('Idle')
+const Timer = defineTaggedUnion({
+  Work: {},
+  Idle: {},
+  Paused: { remainingMs: S.Number },
+})
 const Message = defineMessageUnion({ ClickedSubmit: {} })
 
 // WRONG: empty object is redundant and non-idiomatic
-Work({})
-Idle({})
+Timer.Work({})
+Timer.Idle({})
 Message.ClickedSubmit({})
 
 // RIGHT: call with no argument
-Work()
-Idle()
+Timer.Work()
+Timer.Idle()
 Message.ClickedSubmit()
 
-// Only pass an object when the struct has fields
+// Only pass an object when the variant has fields
 Message.SucceededFetch({ data: response })
-Paused({ remainingMs: 400_000 })
+Timer.Paused({ remainingMs: 400_000 })
 ```
 
-This matters for readability: `Work()` reads as "a Work value," while `Work({})` reads as "a Work value with some object in it" and makes the reader wonder what's in the object. The empty-object form compiles and works, but every exemplar in the codebase uses the no-arg form for no-field tagged structs.
+This matters for readability: `Timer.Work()` reads as "a Work value," while `Timer.Work({})` reads as "a Work value with some object in it" and makes the reader wonder what's in the object. The empty-object form compiles and works, but every exemplar in the codebase uses the no-arg form for no-field variants.
 
 ## Discriminated Unions for State
 
@@ -439,16 +442,23 @@ const Model = S.Struct({
 })
 
 // RIGHT
-const Idle = ts('Idle')
-const Loading = ts('Loading')
-const Error = ts('Error', { error: S.String })
-const Ok = ts('Ok', { data: Data })
-const FetchState = S.Union([Idle, Loading, Error, Ok])
+const FetchState = defineTaggedUnion({
+  Idle: {},
+  Loading: {},
+  Error: { error: S.String },
+  Ok: { data: Data },
+})
 
 const Model = S.Struct({
   fetchState: FetchState,
 })
 ```
+
+`defineTaggedUnion` names each variant once. The result is a Schema carrying one
+callable constructor per variant plus exhaustive `match`, so
+`FetchState.Ok({ data })` constructs and `FetchState.match(model.fetchState, { ... })`
+dispatches without an Effect `Match` chain. It also carries `guards` and
+`isAnyOf`.
 
 For **remote data**, don't write that union at all. `AsyncData` ships it, with two states hand-rolled versions always miss:
 
@@ -460,29 +470,33 @@ const Model = S.Struct({
 })
 ```
 
-`Idle | Loading | Refreshing | Failure | Stale | Success`. `Refreshing` holds the previous data during a reload so a refetch doesn't blank the screen; `Stale` holds previous data alongside the new error so a failed reload doesn't throw away what the user was reading. Hand-rolling the four-state version bakes both regressions in. Keep `ts()` unions for state that isn't remote data: form steps, editor modes, connection phases.
+`Idle | Loading | Refreshing | Failure | Stale | Success`. `Refreshing` holds the previous data during a reload so a refetch doesn't blank the screen; `Stale` holds previous data alongside the new error so a failed reload doesn't throw away what the user was reading. Hand-rolling the four-state version bakes both regressions in. Keep `defineTaggedUnion` for state that isn't remote data: form steps, editor modes, connection phases.
 
 For form field validation:
 
 ```ts
-const NotValidated = ts('NotValidated')
-const Validating = ts('Validating')
-const Valid = ts('Valid')
-const Invalid = ts('Invalid', { error: S.String })
-const ValidationState = S.Union([NotValidated, Validating, Valid, Invalid])
+const ValidationState = defineTaggedUnion({
+  NotValidated: {},
+  Validating: {},
+  Valid: {},
+  Invalid: { error: S.String },
+})
 ```
 
 For multi-step flows:
 
 ```ts
-const EnterEmail = ts('EnterEmail', { email: S.String })
-const EnterPassword = ts('EnterPassword', {
-  email: S.String,
-  password: S.String,
+const SignupStep = defineTaggedUnion({
+  EnterEmail: { email: S.String },
+  EnterPassword: { email: S.String, password: S.String },
+  Confirming: { email: S.String },
 })
-const Confirming = ts('Confirming', { email: S.String })
-const SignupStep = S.Union([EnterEmail, EnterPassword, Confirming])
 ```
+
+Reach for `taggedStruct` only where a single record cannot express the shape: a
+union whose variants reference the union itself, a union whose variants each
+belong to a different module, a struct that is a child of another struct rather
+than a variant of a choice, and a variant built inside a generic Schema factory.
 
 ## Code Style
 
@@ -558,8 +572,8 @@ import {
 } from 'foldkit'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
-import { r } from 'foldkit/route'
-import { ts } from 'foldkit/schema'
+import { defineRouteUnion } from 'foldkit/route'
+import { defineTaggedUnion } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
 import { Button, Dialog, Input } from '@foldkit/ui'

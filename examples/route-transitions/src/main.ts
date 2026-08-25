@@ -12,7 +12,7 @@ import { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 import { UrlRequest, load, pushUrl } from 'foldkit/navigation'
 import { Transition } from 'foldkit/route'
-import { ts } from 'foldkit/schema'
+import { defineTaggedUnion } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 import { Url, toString as urlToString } from 'foldkit/url'
 
@@ -26,14 +26,7 @@ import {
   urlToAppRoute,
 } from './route'
 
-export {
-  AppRoute,
-  GalleryRoute,
-  HomeRoute,
-  NotFoundRoute,
-  PaintingRoute,
-  StudioRoute,
-} from './route'
+export { AppRoute } from './route'
 
 const CATALOG_LATENCY = Duration.millis(600)
 const PAINTING_LATENCY = Duration.millis(400)
@@ -45,15 +38,11 @@ const MAX_LOGGED_TRANSITIONS = 20
 export const CatalogStatus = S.Literals(['Idle', 'Loading', 'Ready'])
 export type CatalogStatus = typeof CatalogStatus.Type
 
-export const PaintingIdle = ts('PaintingIdle')
-export const PaintingLoading = ts('PaintingLoading', { paintingId: S.Number })
-export const PaintingReady = ts('PaintingReady', { paintingId: S.Number })
-
-export const PaintingStatus = S.Union([
-  PaintingIdle,
-  PaintingLoading,
-  PaintingReady,
-])
+export const PaintingStatus = defineTaggedUnion({
+  Idle: {},
+  Loading: { paintingId: S.Number },
+  Ready: { paintingId: S.Number },
+})
 export type PaintingStatus = typeof PaintingStatus.Type
 
 export const LoggedTransition = S.Struct({
@@ -180,7 +169,7 @@ const loadPaintingOnEntry =
       onNone: () => ({ model }),
       onSome: ({ paintingId }) => ({
         model: evo(model, {
-          paintingStatus: () => PaintingLoading({ paintingId }),
+          paintingStatus: () => PaintingStatus.Loading({ paintingId }),
         }),
         commands: [LoadPainting({ paintingId })],
       }),
@@ -197,7 +186,9 @@ const reloadPaintingOnIdChange =
           : {
               model: evo(model, {
                 paintingStatus: () =>
-                  PaintingLoading({ paintingId: nextRoute.paintingId }),
+                  PaintingStatus.Loading({
+                    paintingId: nextRoute.paintingId,
+                  }),
               }),
               commands: [LoadPainting({ paintingId: nextRoute.paintingId })],
             },
@@ -260,11 +251,11 @@ export const update = (model: Model, message: Message) =>
     }),
 
     SucceededLoadPainting: ({ paintingId }) =>
-      model.paintingStatus._tag === 'PaintingLoading' &&
+      model.paintingStatus._tag === 'Loading' &&
       model.paintingStatus.paintingId === paintingId
         ? {
             model: evo(model, {
-              paintingStatus: () => PaintingReady({ paintingId }),
+              paintingStatus: () => PaintingStatus.Ready({ paintingId }),
             }),
           }
         : { model },
@@ -288,7 +279,7 @@ export const init: Runtime.RoutingApplicationInit<Model, Message> = (
     route,
     transitionLog: [],
     catalogStatus: 'Idle',
-    paintingStatus: PaintingIdle(),
+    paintingStatus: PaintingStatus.Idle(),
     studioDraft: '',
     maybeSavedDraft: Option.none(),
   })
@@ -544,8 +535,7 @@ const foundPaintingView = (
   h: HtmlBuilder<Message>,
 ): Html => {
   const isPaintingReady =
-    paintingStatus._tag === 'PaintingReady' &&
-    paintingStatus.paintingId === painting.id
+    paintingStatus._tag === 'Ready' && paintingStatus.paintingId === painting.id
 
   return h.div(
     [],

@@ -4,7 +4,7 @@ import { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { Message } from '../message'
 import { Model } from '../model'
 import { Home, Room } from '../page'
-import { NotFoundRoute } from '../route'
+import { AppRoute } from '../route'
 
 const routeTitle = (route: Model['route']): string =>
   M.value(route).pipe(
@@ -65,7 +65,10 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
   }
 }
 
-const notFound = ({ path }: NotFoundRoute, h: HtmlBuilder<Message>): Html =>
+const notFound = (
+  { path }: typeof AppRoute.NotFound.Type,
+  h: HtmlBuilder<Message>,
+): Html =>
   h.section(
     [h.Class('max-w-4xl')],
     [

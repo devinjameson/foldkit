@@ -16,7 +16,7 @@ import {
 import { Command, ManagedResource, Mount, Submodel, Update } from 'foldkit'
 import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
-import { ts } from 'foldkit/schema'
+import { defineTaggedUnion } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 import filesBySlug from 'virtual:playground-files'
 import playgroundTypes from 'virtual:playground-types'
@@ -31,21 +31,12 @@ import * as PlaygroundPreview from './playgroundPreview'
 
 // MODEL
 
-const PlaygroundStateIdle = ts('PlaygroundStateIdle')
-const PlaygroundStateBooting = ts('PlaygroundStateBooting')
-const PlaygroundStateBooted = ts('PlaygroundStateBooted', {
-  preview: PlaygroundPreview.State,
+const PlaygroundState = defineTaggedUnion({
+  Idle: {},
+  Booting: {},
+  Booted: { preview: PlaygroundPreview.State },
+  Failed: { reason: S.String },
 })
-const PlaygroundStateFailed = ts('PlaygroundStateFailed', {
-  reason: S.String,
-})
-
-const PlaygroundState = S.Union([
-  PlaygroundStateIdle,
-  PlaygroundStateBooting,
-  PlaygroundStateBooted,
-  PlaygroundStateFailed,
-])
 type PlaygroundState = typeof PlaygroundState.Type
 
 export const Model = S.Struct({
@@ -113,7 +104,7 @@ export const init = (slug: string): Model => {
   const files = Option.getOrElse(maybeFilesForSlug(slug), () => ({}))
   return {
     slug,
-    state: PlaygroundStateBooting(),
+    state: PlaygroundState.Booting(),
     files,
     fileTabs: Tabs.init({ id: FILE_TABS_ID }),
     activeFilePath: initialActiveFile(files),
@@ -604,7 +595,7 @@ const markPreviewLoaded = (
   previewUrl: string,
 ): PlaygroundState =>
   M.value(state).pipe(
-    M.tag('PlaygroundStateBooted', bootedState => {
+    M.tag('Booted', bootedState => {
       const nextPreview = PlaygroundPreview.load(
         bootedState.preview,
         previewUrl,
@@ -612,7 +603,7 @@ const markPreviewLoaded = (
       if (nextPreview === bootedState.preview) {
         return state
       } else {
-        return PlaygroundStateBooted({ preview: nextPreview })
+        return PlaygroundState.Booted({ preview: nextPreview })
       }
     }),
     M.orElse(() => state),
@@ -625,7 +616,7 @@ export const update = (model: Model, message: Message) =>
       BootedPlayground: ({ previewUrl }) => ({
         model: evo(model, {
           state: () =>
-            PlaygroundStateBooted({
+            PlaygroundState.Booted({
               preview: PlaygroundPreview.start(previewUrl),
             }),
           dirtyPaths: () => [],
@@ -634,10 +625,14 @@ export const update = (model: Model, message: Message) =>
         commands: flushDirtyPaths(model),
       }),
       FailedBootPlayground: ({ reason }) => ({
-        model: evo(model, { state: () => PlaygroundStateFailed({ reason }) }),
+        model: evo(model, {
+          state: () => PlaygroundState.Failed({ reason }),
+        }),
       }),
       ReleasedPlayground: () => ({
-        model: evo(model, { state: () => PlaygroundStateIdle() }),
+        model: evo(model, {
+          state: () => PlaygroundState.Idle(),
+        }),
       }),
       LoadedPlaygroundPreview: ({ previewUrl }) => ({
         model: evo(model, {
@@ -647,7 +642,7 @@ export const update = (model: Model, message: Message) =>
       GotFileTabsMessage: ({ message: tabsMessage }) =>
         foldPlaygroundFileTabs(model, tabsMessage),
       EditedPlaygroundFile: ({ path, content }) => {
-        const isBooted = model.state._tag === 'PlaygroundStateBooted'
+        const isBooted = model.state._tag === 'Booted'
         return {
           model: evo(model, {
             files: Record.set(path, content),
@@ -658,7 +653,9 @@ export const update = (model: Model, message: Message) =>
         }
       },
       FailedMountPlaygroundEditor: ({ reason }) => ({
-        model: evo(model, { state: () => PlaygroundStateFailed({ reason }) }),
+        model: evo(model, {
+          state: () => PlaygroundState.Failed({ reason }),
+        }),
       }),
       ScheduledWritePlaygroundFile: () => ({
         model: evo(model, { lastWriteError: () => Option.none() }),
@@ -815,17 +812,17 @@ const previewPaneView = (
         [
           M.value(state).pipe(
             M.tagsExhaustive({
-              PlaygroundStateIdle: () =>
+              Idle: () =>
                 bootingPanelView(
                   'Starting playground…',
                   'The preview will appear when the development environment is ready.',
                 ),
-              PlaygroundStateBooting: () =>
+              Booting: () =>
                 bootingPanelView(
                   'Starting playground…',
                   'The first load can take about 30 seconds. The preview will appear when the development environment is ready.',
                 ),
-              PlaygroundStateBooted: ({ preview }) =>
+              Booted: ({ preview }) =>
                 PlaygroundPreview.view(
                   preview,
                   Message.LoadedPlaygroundPreview({
@@ -837,7 +834,7 @@ const previewPaneView = (
                   ),
                   h,
                 ),
-              PlaygroundStateFailed: ({ reason }) => failurePanelView(reason),
+              Failed: ({ reason }) => failurePanelView(reason),
             }),
           ),
         ],

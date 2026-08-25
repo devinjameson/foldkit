@@ -13,7 +13,7 @@ import {
 } from './command'
 import { Message } from './message'
 import type { Model } from './model'
-import { Idle, Loading, Ok, resultsFromState } from './model'
+import { SearchState, resultsFromState } from './model'
 
 export type UpdateReturn = Update.Return<Model, Message, PagefindService>
 
@@ -69,7 +69,7 @@ export const update = (model: Model, message: Message) =>
         return {
           model: evo(model, {
             query: () => '',
-            searchState: () => Idle(),
+            searchState: () => SearchState.Idle(),
             activeResultIndex: () => -1,
           }),
         }
@@ -80,7 +80,7 @@ export const update = (model: Model, message: Message) =>
       return {
         model: evo(model, {
           query: () => query,
-          searchState: () => Loading({ results: previousResults }),
+          searchState: () => SearchState.Loading({ results: previousResults }),
           activeResultIndex: () => -1,
         }),
         commands: [FetchSearchResults({ query })],
@@ -94,7 +94,7 @@ export const update = (model: Model, message: Message) =>
 
       return {
         model: evo(model, {
-          searchState: () => Ok({ results }),
+          searchState: () => SearchState.Ok({ results }),
           activeResultIndex: () => 0,
         }),
       }
@@ -103,7 +103,7 @@ export const update = (model: Model, message: Message) =>
     SelectedSearchResult: ({ url }) => ({
       model: evo(model, {
         query: () => '',
-        searchState: () => Idle(),
+        searchState: () => SearchState.Idle(),
         activeResultIndex: () => -1,
       }),
       commands: [NavigateToResult({ url })],
@@ -121,7 +121,7 @@ export const update = (model: Model, message: Message) =>
             ? {
                 model: evo(stepModel, {
                   query: () => '',
-                  searchState: () => Idle(),
+                  searchState: () => SearchState.Idle(),
                   activeResultIndex: () => -1,
                 }),
               }
@@ -131,7 +131,7 @@ export const update = (model: Model, message: Message) =>
     ClearedSearchQuery: () => ({
       model: evo(model, {
         query: () => '',
-        searchState: () => Idle(),
+        searchState: () => SearchState.Idle(),
         activeResultIndex: () => -1,
       }),
     }),

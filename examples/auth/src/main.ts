@@ -9,7 +9,7 @@ import { SESSION_STORAGE_KEY } from './constant'
 import { Session, SessionJsonString } from './domain/session'
 import { Message } from './message'
 import { LoggedIn, LoggedOut, Model } from './model'
-import { DashboardRoute, LoginRoute, urlToAppRoute } from './route'
+import { AppRoute, urlToAppRoute } from './route'
 import { RedirectToDashboard, RedirectToLogin } from './update'
 
 // FLAGS
@@ -56,7 +56,7 @@ export const init: Runtime.RoutingApplicationInit<Model, Message, Flags> = (
           model: LoggedOut.init(route),
         })),
         M.orElse(() => ({
-          model: LoggedOut.init(LoginRoute()),
+          model: LoggedOut.init(AppRoute.Login()),
           commands: [RedirectToLogin()],
         })),
       ),
@@ -68,7 +68,7 @@ export const init: Runtime.RoutingApplicationInit<Model, Message, Flags> = (
           model: LoggedIn.init(route, session),
         })),
         M.orElse(() => ({
-          model: LoggedIn.init(DashboardRoute(), session),
+          model: LoggedIn.init(AppRoute.Dashboard(), session),
           commands: [RedirectToDashboard()],
         })),
       ),

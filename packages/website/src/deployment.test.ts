@@ -1,8 +1,7 @@
 import { describe, expect, test } from 'vitest'
 
 import {
-  Canary,
-  Production,
+  Deployment,
   deploymentFromCanaryCommit,
   isTelemetryEnabled,
 } from './deployment'
@@ -28,7 +27,9 @@ describe('deploymentFromCanaryCommit', () => {
 
 describe('isTelemetryEnabled', () => {
   test('enables telemetry only in production', () => {
-    expect(isTelemetryEnabled(Production())).toBe(true)
-    expect(isTelemetryEnabled(Canary({ commit: 'abc1234' }))).toBe(false)
+    expect(isTelemetryEnabled(Deployment.Production())).toBe(true)
+    expect(isTelemetryEnabled(Deployment.Canary({ commit: 'abc1234' }))).toBe(
+      false,
+    )
   })
 })

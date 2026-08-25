@@ -226,7 +226,7 @@ const NOTE_PLAYER_DEMO_IMPORTS = `import {
 } from 'effect'
 import { Command, Update } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
-import { ts } from 'foldkit/schema'
+import { defineTaggedUnion } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'`
 
 const NOTE_PLAYER_DEMO_CODE = `// MODEL
@@ -234,10 +234,11 @@ const NOTE_PLAYER_DEMO_CODE = `// MODEL
 const Note = S.Literals(['A', 'B', 'C', 'D', 'E', 'F', 'G'])
 type Note = typeof Note.Type
 
-const Idle = ts('Idle')
-const Playing = ts('Playing', { currentNoteIndex: S.Number })
-const Paused = ts('Paused', { currentNoteIndex: S.Number })
-const PlaybackState = S.Union([Idle, Playing, Paused])
+const PlaybackState = defineTaggedUnion({
+  Idle: {},
+  Playing: { currentNoteIndex: S.Number },
+  Paused: { currentNoteIndex: S.Number },
+})
 
 const Model = S.Struct({
   noteSequence: S.Array(Note),
@@ -265,7 +266,7 @@ const playNoteAt = (
   noteIndex: number,
 ): UpdateReturn => ({
   model: evo(model, {
-    playbackState: () => Playing({ currentNoteIndex: noteIndex }),
+    playbackState: () => PlaybackState.Playing({ currentNoteIndex: noteIndex }),
   }),
   commands: [
     PlayNote({
@@ -294,7 +295,7 @@ const update = (model: Model, message: Message) =>
         M.tagsExhaustive({
           Playing: ({ currentNoteIndex }) => ({
             model: evo(model, {
-              playbackState: () => Paused({ currentNoteIndex }),
+              playbackState: () => PlaybackState.Paused({ currentNoteIndex }),
             }),
           }),
           Idle: () => ({ model }),
@@ -308,7 +309,7 @@ const update = (model: Model, message: Message) =>
       if (playbackState._tag !== 'Playing') {
         return { model }
       } else if (nextCurrentNoteIndex >= noteSequence.length) {
-        return { model: evo(model, { playbackState: () => Idle() }) }
+        return { model: evo(model, { playbackState: () => PlaybackState.Idle() }) }
       } else {
         return playNoteAt(model, nextCurrentNoteIndex)
       }

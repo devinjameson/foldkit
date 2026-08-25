@@ -13,7 +13,7 @@ import { KeyValueStore } from 'effect/unstable/persistence'
 import { Command, Runtime, type Update } from 'foldkit'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
-import { ts } from 'foldkit/schema'
+import { defineTaggedUnion } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
 import { BrowserKeyValueStore } from '@effect/platform-browser'
@@ -41,17 +41,11 @@ const TodosJsonString = S.fromJsonString(S.toCodecJson(Todos))
 const Filter = S.Literals(['All', 'Active', 'Completed'])
 type Filter = typeof Filter.Type
 
-export const NotEditing = ts('NotEditing')
-type NotEditing = typeof NotEditing.Type
-
-export const Editing = ts('Editing', {
-  id: S.String,
-  text: S.String,
+export const EditingState = defineTaggedUnion({
+  NotEditing: {},
+  Editing: { id: S.String, text: S.String },
 })
-type Editing = typeof Editing.Type
-
-const EditingState = S.Union([NotEditing, Editing])
-type EditingState = typeof EditingState.Type
+export type EditingState = typeof EditingState.Type
 
 export const Model = S.Struct({
   todos: Todos,
@@ -95,7 +89,7 @@ export const init: Runtime.ApplicationInit<Model, Message, Flags> = flags => ({
     todos: Option.getOrElse(flags.todos, () => []),
     newTodoText: '',
     filter: 'All',
-    editing: NotEditing(),
+    editing: EditingState.NotEditing(),
   },
 })
 
@@ -117,7 +111,7 @@ export const update = (model: Model, message: Message) =>
           M.value(model.editing).pipe(
             M.tagsExhaustive({
               NotEditing: () => model.editing,
-              Editing: ({ id }) => Editing({ id, text }),
+              Editing: ({ id }) => EditingState.Editing({ id, text }),
             }),
           ),
       }),
@@ -184,7 +178,7 @@ export const update = (model: Model, message: Message) =>
       return {
         model: evo(model, {
           editing: () =>
-            Editing({
+            EditingState.Editing({
               id,
               text: Option.match(maybeTodo, {
                 onNone: () => '',
@@ -205,7 +199,7 @@ export const update = (model: Model, message: Message) =>
             if (String.isEmpty(String.trim(text))) {
               return {
                 model: evo(model, {
-                  editing: () => NotEditing(),
+                  editing: () => EditingState.NotEditing(),
                 }),
               }
             }
@@ -219,7 +213,7 @@ export const update = (model: Model, message: Message) =>
             return {
               model: evo(model, {
                 todos: () => updatedTodos,
-                editing: () => NotEditing(),
+                editing: () => EditingState.NotEditing(),
               }),
               commands: [SaveTodos({ todos: updatedTodos })],
             }
@@ -229,7 +223,7 @@ export const update = (model: Model, message: Message) =>
 
     CancelledEdit: () => ({
       model: evo(model, {
-        editing: () => NotEditing(),
+        editing: () => EditingState.NotEditing(),
       }),
     }),
 

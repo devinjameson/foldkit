@@ -9,7 +9,7 @@ import {
 } from 'effect'
 
 import { OptionExt } from '../effectExtensions/index.js'
-import { ts } from '../schema/index.js'
+import { defineTaggedUnion } from '../schema/index.js'
 
 const ROOT = 'root'
 const PATH_SEPARATOR = '.'
@@ -19,25 +19,21 @@ const ARRAY_SAMPLE = 2
 
 // PATH
 
-const Found = ts('Found', {
-  value: S.Unknown,
-  atPath: S.String,
+const PathResolution = defineTaggedUnion({
+  Found: { value: S.Unknown, atPath: S.String },
+  NotFound: {
+    failedAt: S.String,
+    reason: S.String,
+    availableKeys: S.Array(S.String),
+  },
 })
-
-const NotFound = ts('NotFound', {
-  failedAt: S.String,
-  reason: S.String,
-  availableKeys: S.Array(S.String),
-})
-
-const PathResolution = S.Union([Found, NotFound])
 
 /**
  * Result of resolving a dot-string path against a Model snapshot.
  *
  * The path representation matches `SerializedEntry.changedPaths` exactly:
- * dot-separated, anchored at the literal segment `root`. `Found.atPath`
- * echoes the canonicalized path; `NotFound.availableKeys` lists the keys
+ * dot-separated, anchored at the literal segment `root`. `PathResolution.Found.atPath`
+ * echoes the canonicalized path; `PathResolution.NotFound.availableKeys` lists the keys
  * present at the deepest segment that resolved, so an agent can recover with
  * one follow-up call.
  */
@@ -78,14 +74,17 @@ const descend = (parent: unknown, segment: string): Option.Option<unknown> =>
  */
 export const resolvePath = (root: unknown, path: string): PathResolution => {
   if (!isRootAnchored(path)) {
-    return NotFound({
+    return PathResolution.NotFound({
       failedAt: '',
       reason: `Path must start with '${ROOT}'. Received: '${path}'.`,
       availableKeys: [],
     })
   }
 
-  const initial: PathResolution = Found({ value: root, atPath: ROOT })
+  const initial: PathResolution = PathResolution.Found({
+    value: root,
+    atPath: ROOT,
+  })
 
   return Array_.reduce(
     segmentsOf(path),
@@ -96,7 +95,7 @@ export const resolvePath = (root: unknown, path: string): PathResolution => {
       }
       return Option.match(descend(resolution.value, segment), {
         onNone: () =>
-          NotFound({
+          PathResolution.NotFound({
             failedAt: resolution.atPath,
             reason: isExpandable(resolution.value)
               ? `No '${segment}' at '${resolution.atPath}'.`
@@ -104,7 +103,7 @@ export const resolvePath = (root: unknown, path: string): PathResolution => {
             availableKeys: keysOf(resolution.value),
           }),
         onSome: descended =>
-          Found({
+          PathResolution.Found({
             value: descended,
             atPath: `${resolution.atPath}${PATH_SEPARATOR}${segment}`,
           }),

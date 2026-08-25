@@ -8,8 +8,7 @@ import { ClearSession, LogError, SaveSession } from './command'
 import { Message } from './message'
 import { LoggedIn, LoggedOut, Model } from './model'
 import {
-  DashboardRoute,
-  HomeRoute,
+  AppRoute,
   dashboardRouter,
   homeRouter,
   loginRouter,
@@ -62,7 +61,7 @@ const foldLoggedOutOutMessage: (
     SucceededLogin:
       ({ session }) =>
       () => ({
-        model: LoggedIn.init(DashboardRoute(), session),
+        model: LoggedIn.init(AppRoute.Dashboard(), session),
         commands: [SaveSession({ session }), RedirectToDashboard()],
       }),
   }),
@@ -88,7 +87,7 @@ const foldLoggedInOutMessage: (
   M.withReturnType<Update.Step<Model, Message>>(),
   M.tagsExhaustive({
     RequestedLogout: () => () => ({
-      model: LoggedOut.init(HomeRoute()),
+      model: LoggedOut.init(AppRoute.Home()),
       commands: [ClearSession(), RedirectToHome()],
     }),
   }),

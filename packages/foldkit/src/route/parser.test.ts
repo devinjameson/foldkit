@@ -4,7 +4,7 @@ import { expect } from 'vitest'
 import { describe, it } from '@effect/vitest'
 
 import { Url } from '../url/index.js'
-import { r } from './index.js'
+import { defineRouteUnion } from './index.js'
 import {
   __isSingleSegment,
   int,
@@ -194,11 +194,11 @@ describe('schemaSegment', () => {
 
   it.effect('parse then build round-trips a branded id', () =>
     Effect.gen(function* () {
-      const Route = r('Route', { userId: UserId })
+      const AppRoute = defineRouteUnion({ Route: { userId: UserId } })
       const router = pipe(
         literal('users'),
         slash(schemaSegment('userId', UserId)),
-        mapTo(Route),
+        mapTo(AppRoute.Route),
       )
       const [parsed] = yield* router.parse(['users', 'abc'])
       expect(parsed).toStrictEqual({ _tag: 'Route', userId: 'abc' })
@@ -239,9 +239,15 @@ describe('root', () => {
 })
 
 describe('rest', () => {
-  const Files = r('Files', { path: S.NonEmptyArray(S.String) })
+  const AppRoute = defineRouteUnion({
+    Files: { path: S.NonEmptyArray(S.String) },
+  })
 
-  const filesRouter = pipe(literal('files'), slash(rest('path')), mapTo(Files))
+  const filesRouter = pipe(
+    literal('files'),
+    slash(rest('path')),
+    mapTo(AppRoute.Files),
+  )
 
   it.effect('captures all remaining segments as a named non-empty array', () =>
     Effect.gen(function* () {
@@ -327,13 +333,15 @@ describe('rest', () => {
 })
 
 describe('restString', () => {
-  const Vault = r('Vault', { path: S.String })
-  const NotFound = r('NotFound', { path: S.String })
+  const AppRoute = defineRouteUnion({
+    Vault: { path: S.String },
+    NotFound: { path: S.String },
+  })
 
   const vaultRouter = pipe(
     literal('vault'),
     slash(restString('path')),
-    mapTo(Vault),
+    mapTo(AppRoute.Vault),
   )
 
   it.effect('captures all remaining segments as one slash-joined string', () =>
@@ -458,15 +466,18 @@ describe('restString', () => {
     const parser = oneOf(vaultRouter)
     const route = parseUrlWithFallback(
       parser,
-      NotFound,
+      AppRoute.NotFound,
     )(makeUrl('/vault/a/b/c.md'))
-    expect(route).toStrictEqual(Vault.make({ path: 'a/b/c.md' }))
+    expect(route).toStrictEqual(AppRoute.Vault.make({ path: 'a/b/c.md' }))
   })
 
   it('normalizes a trailing slash away', () => {
     const parser = oneOf(vaultRouter)
-    const route = parseUrlWithFallback(parser, NotFound)(makeUrl('/vault/a/b/'))
-    expect(route).toStrictEqual(Vault.make({ path: 'a/b' }))
+    const route = parseUrlWithFallback(
+      parser,
+      AppRoute.NotFound,
+    )(makeUrl('/vault/a/b/'))
+    expect(route).toStrictEqual(AppRoute.Vault.make({ path: 'a/b' }))
   })
 
   it('round-trips a percent-encoded tail unchanged', () => {
@@ -474,9 +485,9 @@ describe('restString', () => {
     const encodedPath = 'a%20b/c.md'
     const route = parseUrlWithFallback(
       parser,
-      NotFound,
+      AppRoute.NotFound,
     )(makeUrl(`/vault/${encodedPath}`))
-    expect(route).toStrictEqual(Vault.make({ path: encodedPath }))
+    expect(route).toStrictEqual(AppRoute.Vault.make({ path: encodedPath }))
     expect(vaultRouter({ path: encodedPath })).toBe(`/vault/${encodedPath}`)
   })
 })
@@ -613,11 +624,13 @@ describe('oneOf', () => {
 
   it.effect('a prefix route listed first does not shadow a rest route', () =>
     Effect.gen(function* () {
-      const FilesIndex = r('FilesIndex')
-      const Files = r('Files', { path: S.NonEmptyArray(S.String) })
+      const AppRoute = defineRouteUnion({
+        FilesIndex: {},
+        Files: { path: S.NonEmptyArray(S.String) },
+      })
       const parser = oneOf(
-        pipe(literal('files'), mapTo(FilesIndex)),
-        pipe(literal('files'), slash(rest('path')), mapTo(Files)),
+        pipe(literal('files'), mapTo(AppRoute.FilesIndex)),
+        pipe(literal('files'), slash(rest('path')), mapTo(AppRoute.Files)),
       )
 
       const [filesValue] = yield* parser.parse(['files', 'a', 'b'])
@@ -630,12 +643,14 @@ describe('oneOf', () => {
 })
 
 describe('mapTo', () => {
-  const Home = r('Home')
-  const UserProfile = r('UserProfile', { id: S.String })
+  const AppRoute = defineRouteUnion({
+    Home: {},
+    UserProfile: { id: S.String },
+  })
 
   it.effect('wraps parsed values with a constructor', () =>
     Effect.gen(function* () {
-      const router = mapTo(Home)(root)
+      const router = mapTo(AppRoute.Home)(root)
       const [result] = yield* router.parse([])
       expect(result).toStrictEqual({ _tag: 'Home' })
     }),
@@ -646,7 +661,7 @@ describe('mapTo', () => {
       const router = pipe(
         literal('users'),
         slash(string('id')),
-        mapTo(UserProfile),
+        mapTo(AppRoute.UserProfile),
       )
       const [result] = yield* router.parse(['users', 'abc'])
       expect(result).toStrictEqual({ _tag: 'UserProfile', id: 'abc' })
@@ -657,7 +672,7 @@ describe('mapTo', () => {
     const router = pipe(
       literal('users'),
       slash(string('id')),
-      mapTo(UserProfile),
+      mapTo(AppRoute.UserProfile),
     )
     const url = router({ id: 'abc' })
     expect(url).toBe('/users/abc')
@@ -665,31 +680,38 @@ describe('mapTo', () => {
 })
 
 describe('parseUrlWithFallback', () => {
-  const Home = r('Home')
-  const NotFound = r('NotFound', { path: S.String })
+  const AppRoute = defineRouteUnion({
+    Home: {},
+    NotFound: { path: S.String },
+  })
 
-  const homeRouter = mapTo(Home)(root)
+  const homeRouter = mapTo(AppRoute.Home)(root)
   const parser = oneOf(homeRouter)
 
   it('parses a matching URL', () => {
-    const result = parseUrlWithFallback(parser, NotFound)(makeUrl('/'))
+    const result = parseUrlWithFallback(parser, AppRoute.NotFound)(makeUrl('/'))
     expect(result).toStrictEqual({ _tag: 'Home' })
   })
 
   it('returns the fallback route for non-matching URLs', () => {
-    const result = parseUrlWithFallback(parser, NotFound)(makeUrl('/unknown'))
+    const result = parseUrlWithFallback(
+      parser,
+      AppRoute.NotFound,
+    )(makeUrl('/unknown'))
     expect(result).toStrictEqual({ _tag: 'NotFound', path: '/unknown' })
   })
 })
 
 describe('round-trip: parse then build', () => {
-  const Route = r('Route', { userId: S.String, postId: S.Number })
+  const AppRoute = defineRouteUnion({
+    Route: { userId: S.String, postId: S.Number },
+  })
 
   const router = pipe(
     literal('users'),
     slash(string('userId')),
     slash(int('postId')),
-    mapTo(Route),
+    mapTo(AppRoute.Route),
   )
 
   it('build produces the expected path', () => {

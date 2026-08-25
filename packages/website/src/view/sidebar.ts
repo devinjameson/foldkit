@@ -18,7 +18,7 @@ import { Link } from '../link'
 import { type Model } from '../main'
 import { Message } from '../message'
 import {
-  ExampleDetailRoute,
+  AppRoute,
   apiModuleRouter,
   blogRouter,
   homeRouter,
@@ -158,7 +158,7 @@ const computeNavLinks = (
   const maybeExampleSlug = pipe(
     route,
     Option.liftPredicate(
-      (route): route is typeof ExampleDetailRoute.Type =>
+      (route): route is typeof AppRoute.ExampleDetail.Type =>
         route._tag === 'ExampleDetail',
     ),
     Option.map(route => route.exampleSlug),

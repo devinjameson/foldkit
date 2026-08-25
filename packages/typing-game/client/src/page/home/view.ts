@@ -5,12 +5,10 @@ import { Html, HtmlBuilder } from 'foldkit/html'
 import { ROOM_ID_INPUT_ID, USERNAME_INPUT_ID } from '../../constant'
 import { Message } from './message'
 import {
-  EnterRoomId,
-  EnterUsername,
   HOME_ACTIONS,
   HomeAction,
+  HomeStep,
   Model,
-  SelectAction,
   homeActionToLabel,
 } from './model'
 
@@ -48,7 +46,7 @@ export const view = Submodel.defineView<Model, Message>((model, h): Html => {
 })
 
 const enterUsername = (
-  { username }: EnterUsername,
+  { username }: typeof HomeStep.EnterUsername.Type,
   h: HtmlBuilder<Message>,
 ): Html =>
   h.form(
@@ -84,7 +82,7 @@ const enterUsername = (
   )
 
 const selectAction = (
-  { selectedAction }: SelectAction,
+  { selectedAction }: typeof HomeStep.SelectAction.Type,
   h: HtmlBuilder<Message>,
 ): Html =>
   h.div(
@@ -109,7 +107,10 @@ const action =
       ],
     )
 
-const enterRoomId = ({ roomId }: EnterRoomId, h: HtmlBuilder<Message>): Html =>
+const enterRoomId = (
+  { roomId }: typeof HomeStep.EnterRoomId.Type,
+  h: HtmlBuilder<Message>,
+): Html =>
   h.form(
     [h.OnSubmit(Message.SubmittedJoinRoomForm())],
     [

@@ -26,35 +26,16 @@ import {
   readSummarizedValueAt,
 } from './historyQuery.js'
 import {
-  type DiffValue,
-  DiffValueAbsent,
-  DiffValuePresent,
-  type Event,
-  EventConnected,
-  EventDisconnected,
+  DiffValue,
+  Event,
   EventFrame,
   KeyframeInfo,
   MAX_DISPATCH_BATCH_SIZE,
-  MessageSchemaDocumentResult,
-  MessageSchemaIndexResult,
+  MessageSchemaResult,
   type Request,
   RequestFrame,
-  type Response,
-  ResponseDispatched,
-  ResponseDispatchedBatch,
-  ResponseError,
+  Response,
   ResponseFrame,
-  ResponseInit,
-  ResponseKeyframes,
-  ResponseMessage,
-  ResponseMessageCounts,
-  ResponseMessageSchema,
-  ResponseMessages,
-  ResponseModel,
-  ResponseModelDiff,
-  ResponseReplayed,
-  ResponseResumed,
-  ResponseRuntimeState,
   RuntimeInfo,
 } from './protocol.js'
 import {
@@ -177,7 +158,7 @@ export const startWebSocketBridge = (
 
     const announceConnected = (): void => {
       sendEvent(
-        EventConnected({
+        Event.EventConnected({
           runtime: RuntimeInfo.make({
             connectionId,
             url: window.location.href,
@@ -228,7 +209,7 @@ export const startWebSocketBridge = (
         return
       }
       hasEmittedDisconnect = true
-      sendEvent(EventDisconnected({ connectionId }))
+      sendEvent(Event.EventDisconnected({ connectionId }))
     }
 
     hot.dispose(() => {
@@ -273,14 +254,14 @@ const presentResolution = (
 ): Response =>
   Match.value(resolution).pipe(
     Match.tag('Found', ({ value, atPath }) =>
-      ResponseModel({
+      Response.ResponseModel({
         value: expand ? value : summarizeValue(value),
         atPath,
         summarized: !expand,
       }),
     ),
     Match.orElse(notFound =>
-      ResponseError({ reason: formatPathNotFound(notFound) }),
+      Response.ResponseError({ reason: formatPathNotFound(notFound) }),
     ),
   )
 
@@ -300,7 +281,7 @@ const readModelResponse = (
   }).pipe(
     Effect.catchCause(cause =>
       Effect.succeed(
-        ResponseError({
+        Response.ResponseError({
           reason: `Failed to read Model at index ${index}: ${Cause.pretty(cause)}`,
         }),
       ),
@@ -314,7 +295,7 @@ const maybePatternError = (
     maybeChangedPathsMatch,
     Option.flatMap(findUnanchoredPattern),
     Option.map(pattern =>
-      ResponseError({
+      Response.ResponseError({
         reason: `Invalid changed_paths_match pattern '${pattern}': patterns must start with 'root' or '*', matching the changedPaths alphabet (e.g. 'root.grid', 'root.cards.*.title').`,
       }),
     ),
@@ -322,21 +303,21 @@ const maybePatternError = (
 
 const toDiffValue = (maybeValue: Option.Option<unknown>): DiffValue =>
   Option.match(maybeValue, {
-    onNone: () => DiffValueAbsent(),
-    onSome: value => DiffValuePresent({ value: value ?? null }),
+    onNone: () => DiffValue.Absent(),
+    onSome: value => DiffValue.Present({ value: value ?? null }),
   })
 
 const indexResponse = (document: unknown): Response =>
   Option.match(indexMessageSchemaDocument(document), {
     onNone: () =>
-      ResponseError({
+      Response.ResponseError({
         reason:
           "Could not index Message Schema: the top-level shape is not a discriminated union of '_tag'-keyed structs. Open an issue if you see this against an Effect Schema released after foldkit's last sync.",
       }),
     onSome: variants =>
-      ResponseMessageSchema({
+      Response.ResponseMessageSchema({
         maybeResult: Option.some(
-          MessageSchemaIndexResult({ index: { variants } }),
+          MessageSchemaResult.MessageSchemaIndexResult({ index: { variants } }),
         ),
       }),
   })
@@ -345,9 +326,11 @@ const narrowResponse = (document: unknown, variantPath: string): Response =>
   Option.match(narrowToVariant(document, variantPath), {
     onNone: () => formatUnknownVariantError(document, variantPath),
     onSome: narrowed =>
-      ResponseMessageSchema({
+      Response.ResponseMessageSchema({
         maybeResult: Option.some(
-          MessageSchemaDocumentResult({ document: narrowed }),
+          MessageSchemaResult.MessageSchemaDocumentResult({
+            document: narrowed,
+          }),
         ),
       }),
   })
@@ -357,7 +340,8 @@ const buildMessageSchemaResponse = (
   maybeVariantTag: Option.Option<string>,
 ): Response =>
   Option.match(maybeJsonSchemaDocument, {
-    onNone: () => ResponseMessageSchema({ maybeResult: Option.none() }),
+    onNone: () =>
+      Response.ResponseMessageSchema({ maybeResult: Option.none() }),
     onSome: document =>
       Option.match(maybeVariantTag, {
         onNone: () => indexResponse(document),
@@ -372,7 +356,7 @@ const formatUnknownVariantError = (
   const segments = splitVariantPath(variantPath)
   return Option.match(diagnoseVariantPath(document, segments), {
     onNone: () =>
-      ResponseError({
+      Response.ResponseError({
         reason: `No Message variant at path '${variantPath}'. The runtime's Message Schema is not a discriminated union of '_tag'-keyed structs.`,
       }),
     onSome: ({ prefix, failingSegment, available }) => {
@@ -386,12 +370,12 @@ const formatUnknownVariantError = (
       const reason = failingIsKnownTag
         ? `No further structure to drill into at path '${variantPath}'. The variant '${failingTag}' at ${prefixLabel} does not carry exactly one tagged-union payload field, which is what the walker steps through. Idiomatic Foldkit Messages have at most one tagged-union field per variant (the 'message' field on Submodel wrappers, or a single value-type union); state surrounding a Submodel call belongs as an argument to the child's update/view, not as a sibling field on the parent Message.`
         : `No Message variant at path '${variantPath}'. Available variants at ${prefixLabel}: ${available.join(', ')}.`
-      return ResponseError({ reason })
+      return Response.ResponseError({ reason })
     },
   })
 }
 
-const missingMessageSchemaResponse = ResponseError({
+const missingMessageSchemaResponse = Response.ResponseError({
   reason:
     'Cannot dispatch: DevToolsConfig.Message not configured. Pass your Message Schema to enable dispatch.',
 })
@@ -424,7 +408,7 @@ export const dispatchRequest = (
         Effect.gen(function* () {
           const state = yield* SubscriptionRef.get(store.stateRef)
           if (!isIndexReadable(state, index)) {
-            return ResponseError({
+            return Response.ResponseError({
               reason: formatIndexNotReadable(state, index),
             })
           }
@@ -439,7 +423,7 @@ export const dispatchRequest = (
       }) =>
         Effect.gen(function* () {
           if (fromEnd && Option.isSome(maybeSinceIndex)) {
-            return ResponseError({
+            return Response.ResponseError({
               reason:
                 'from_end cannot be combined with since_index. Use from_end alone to read the latest entries, or since_index to page forward.',
             })
@@ -464,7 +448,7 @@ export const dispatchRequest = (
             toSerializedEntry(entry, index),
           )
 
-          return ResponseMessages({ entries, maybeNextIndex })
+          return Response.ResponseMessages({ entries, maybeNextIndex })
         }),
 
       RequestCountMessagesByTag: ({
@@ -487,7 +471,7 @@ export const dispatchRequest = (
             Option.getOrElse(maybeSinceIndex, () => state.startIndex),
             state.startIndex,
           )
-          return ResponseMessageCounts({
+          return Response.ResponseMessageCounts({
             counts: countEntriesByTag(candidates),
             totalCount: candidates.length,
             scannedFromIndex,
@@ -508,7 +492,7 @@ export const dispatchRequest = (
             index => !isIndexReadable(state, index),
           )
           if (Option.isSome(maybeUnreadableIndex)) {
-            return ResponseError({
+            return Response.ResponseError({
               reason: formatIndexNotReadable(state, maybeUnreadableIndex.value),
             })
           }
@@ -546,11 +530,11 @@ export const dispatchRequest = (
             })),
           )
 
-          return ResponseModelDiff({ fromIndex, toIndex, changes })
+          return Response.ResponseModelDiff({ fromIndex, toIndex, changes })
         }).pipe(
           Effect.catchCause(cause =>
             Effect.succeed(
-              ResponseError({
+              Response.ResponseError({
                 reason: `Failed to diff Models between ${fromIndex} and ${toIndex}: ${Cause.pretty(cause)}`,
               }),
             ),
@@ -566,13 +550,13 @@ export const dispatchRequest = (
           return yield* Option.match(maybeEntry, {
             onNone: () =>
               Effect.succeed(
-                ResponseError({
+                Response.ResponseError({
                   reason: `No entry at index ${index} (have ${state.startIndex} to ${state.startIndex + state.entries.length - 1})`,
                 }),
               ),
             onSome: entry =>
               Effect.succeed(
-                ResponseMessage({
+                Response.ResponseMessage({
                   entry: toSerializedEntry(entry, index),
                 }),
               ),
@@ -595,7 +579,7 @@ export const dispatchRequest = (
           const keyframes = indicesWithInit.map(index =>
             KeyframeInfo.make({ index }),
           )
-          return ResponseKeyframes({ keyframes })
+          return Response.ResponseKeyframes({ keyframes })
         }),
 
       RequestReplayToKeyframe: ({ keyframeIndex }) =>
@@ -603,17 +587,19 @@ export const dispatchRequest = (
           Effect.gen(function* () {
             const state = yield* SubscriptionRef.get(store.stateRef)
             if (!isIndexReadable(state, keyframeIndex)) {
-              return ResponseError({
+              return Response.ResponseError({
                 reason: formatIndexNotReadable(state, keyframeIndex),
               })
             }
             yield* store.jumpTo(keyframeIndex)
             const model = yield* store.getModelAtIndex(keyframeIndex)
-            return ResponseReplayed({ model: toInspectableValue(model) })
+            return Response.ResponseReplayed({
+              model: toInspectableValue(model),
+            })
           }),
           Effect.catchCause(cause =>
             Effect.succeed(
-              ResponseError({
+              Response.ResponseError({
                 reason: `Failed to replay to keyframe ${keyframeIndex}: ${Cause.pretty(cause)}`,
               }),
             ),
@@ -623,11 +609,11 @@ export const dispatchRequest = (
       RequestResume: () =>
         Effect.gen(function* () {
           yield* store.resume
-          return ResponseResumed()
+          return Response.ResponseResumed()
         }).pipe(
           Effect.catchCause(cause =>
             Effect.succeed(
-              ResponseError({
+              Response.ResponseError({
                 reason: `Failed to resume: ${Cause.pretty(cause)}`,
               }),
             ),
@@ -644,11 +630,11 @@ export const dispatchRequest = (
               const stateBefore = yield* SubscriptionRef.get(store.stateRef)
               const acceptedAtIndex = nextEntryIndex(stateBefore)
               yield* dispatch(decodedMessage)
-              return ResponseDispatched({ acceptedAtIndex })
+              return Response.ResponseDispatched({ acceptedAtIndex })
             }).pipe(
               Effect.catch(error =>
                 Effect.succeed(
-                  ResponseError({
+                  Response.ResponseError({
                     reason: `Invalid Message: ${formatInvalidMessageReason(error, message)}`,
                   }),
                 ),
@@ -659,7 +645,7 @@ export const dispatchRequest = (
       RequestDispatchMessages: ({ messages }) => {
         if (messages.length > MAX_DISPATCH_BATCH_SIZE) {
           return Effect.succeed(
-            ResponseError({
+            Response.ResponseError({
               reason: `Batch too large: ${messages.length} Messages exceeds the limit of ${MAX_DISPATCH_BATCH_SIZE}. No Messages from the batch were dispatched.`,
             }),
           )
@@ -688,11 +674,11 @@ export const dispatchRequest = (
                 decodedMessages,
                 (_decodedMessage, offset) => firstAcceptedIndex + offset,
               )
-              return ResponseDispatchedBatch({ acceptedAtIndices })
+              return Response.ResponseDispatchedBatch({ acceptedAtIndices })
             }).pipe(
               Effect.catch(error =>
                 Effect.succeed(
-                  ResponseError({
+                  Response.ResponseError({
                     reason:
                       error instanceof Error ? error.message : String(error),
                   }),
@@ -709,7 +695,7 @@ export const dispatchRequest = (
 
       RequestListRuntimes: () =>
         Effect.succeed(
-          ResponseError({
+          Response.ResponseError({
             reason:
               'RequestListRuntimes is plugin-handled and should not reach the runtime bridge',
           }),
@@ -718,7 +704,7 @@ export const dispatchRequest = (
       RequestGetInit: () =>
         Effect.gen(function* () {
           const state = yield* SubscriptionRef.get(store.stateRef)
-          return ResponseInit({
+          return Response.ResponseInit({
             maybeModel: Option.map(state.maybeInitModel, toInspectableValue),
             commands: Array.map(state.initCommands, toSerializedCommand),
             mountStarts: Array.map(state.initMountStarts, toSerializedMount),
@@ -729,7 +715,7 @@ export const dispatchRequest = (
         Effect.gen(function* () {
           const state = yield* SubscriptionRef.get(store.stateRef)
           const currentIndex = latestEntryIndex(state)
-          return ResponseRuntimeState({
+          return Response.ResponseRuntimeState({
             currentIndex,
             startIndex: state.startIndex,
             totalEntries: state.entries.length,

@@ -129,7 +129,7 @@ grep -rn "readonly Command<.*>\[\]" src/
 
 # Hand-rolled remote-data union: use AsyncData.Schema(Data, Error).
 # Eyeball each hit; a non-remote state machine with these names is fine.
-grep -rn "ts('Loading')" src/
+grep -rn "Loading: {}" src/
 
 # Stale Effect array predicate names (the real ones are isArrayEmpty /
 # isArrayNonEmpty). Note both real ones take a MUTABLE Array<A>: on a Model
@@ -279,7 +279,7 @@ Alongside the greps, eyeball each file's imports. Every symbol you imported shou
 - [ ] Discriminated unions for multi-valued state (not booleans)
 - [ ] `Option` for absent fields (not empty strings, null, or zero)
 - [ ] Impossible states are unrepresentable
-- [ ] `ts()` for non-Message tagged structs (Model states, route variants)
+- [ ] `defineTaggedUnion()` for non-Message domain unions (Model states), `defineRouteUnion()` for routes, `taggedStruct()` only where a single record cannot express the shape
 - [ ] `defineMessageUnion()` for Message and OutMessage unions
 - [ ] **Remote data uses `AsyncData`, not a hand-rolled union.** `AsyncData.Schema(DataSchema, ErrorSchema)` supplies `Idle`, `Loading`, `Refreshing`, `Failure`, `Stale`, and `Success` plus `match`, `isPending`, `hasData`, `revalidate`, and the rest. A hand-rolled `Idle | Loading | Error | Ok` is missing `Refreshing` and `Stale`, which is what forces a refetch to blank the screen and a failed refetch to discard good data. Reference: `repos/foldkit/examples/weather/src/main.ts`
 

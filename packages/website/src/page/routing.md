@@ -8,21 +8,42 @@ Most routers make you define routes twice: once for matching URLs, and again for
 
 Foldkit’s routing is based on biparsers: parsers that work in both directions. A single route definition handles:
 
-- `/people/42` → `PersonRoute { personId: 42 }` (parsing)
-- `PersonRoute { personId: 42 }` → `/people/42` (building)
+- `/people/42` → `AppRoute.Person { personId: 42 }` (parsing)
+- `AppRoute.Person { personId: 42 }` → `/people/42` (building)
 
 This symmetry means if you can parse a URL into data, you can always build that data back into the same URL.
 
 ## Defining Routes
 
-Routes are defined as tagged unions using [Effect Schema](https://effect.website/docs/schema/introduction/). Each route variant carries the data extracted from the URL.
+`defineRouteUnion` declares every route in one record: the key is the route's tag, the value is the fields that route carries from the URL. The result is an [Effect Schema](https://effect.website/docs/schema/introduction/), so a route nests in the Model and decodes like any other value.
 
 ::Snippet{name="routingDefineRoutes" label="route definitions"}
 
-- `HomeRoute`: no parameters
-- `PersonRoute`: holds a `personId: number`
-- `PeopleRoute`: holds an optional `searchText: Option<string>`
-- `NotFoundRoute`: holds the unmatched `path: string`
+- `AppRoute.Home`: no parameters
+- `AppRoute.Person`: holds a `personId: number`
+- `AppRoute.People`: holds an optional `searchText: Option<string>`
+- `AppRoute.NotFound`: holds the unmatched `path: string`
+
+Each variant is reached through the union rather than imported on its own, the same way Message variants are reached through `Message`. Constructing a route is `AppRoute.Person({ personId: 42 })`, and the variant doubles as the schema `mapTo` needs.
+
+The union also carries `AppRoute.match` for exhaustive dispatch on the current route and `AppRoute.isAnyOf(['Blog', 'BlogPost'])` for a guard over several tags. A page Submodel that owns part of the route tree takes an `S.Union` over the variants it handles as its own route type:
+
+```typescript
+export const LoggedOutRoute = S.Union([
+  AppRoute.Home,
+  AppRoute.Login,
+  AppRoute.NotFound,
+])
+export type LoggedOutRoute = typeof LoggedOutRoute.Type
+```
+
+List the members rather than subtracting from `AppRoute`. Subtraction reverses who decides: a route added to `AppRoute` would join every subset that did not name it.
+
+When a child module needs one variant's type, export an alias for it beside the union:
+
+```typescript
+export type PersonRoute = typeof AppRoute.Person.Type
+```
 
 ## Building Routers
 
@@ -40,7 +61,7 @@ The primitives:
 - `restString('path')`: captures all remaining segments as one path string
 - `slash(...)`: chains path segments together
 - `Route.query(Schema)`: adds query parameter parsing
-- `Route.mapTo(RouteType)`: converts parsed data into a typed route
+- `Route.mapTo(AppRoute.Person)`: converts parsed data into a typed route
 
 ## Parsing URLs
 
@@ -86,7 +107,7 @@ Some routes carry a whole path as data: a file tree, a documentation page, a bre
 
 ::Snippet{name="routingRest" label="rest segments example"}
 
-`rest` requires at least one segment, so the bare prefix `/files` does not match the rest route. Give the prefix its own route, like `FilesIndexRoute` above. The two never overlap: one matches exactly `/files`, the other matches anything beneath it.
+`rest` requires at least one segment, so the bare prefix `/files` does not match the rest route. Give the prefix its own route, like `AppRoute.FilesIndex` above. The two never overlap: one matches exactly `/files`, the other matches anything beneath it.
 
 A specific route under the same prefix is different. The rest route also matches every URL that `literal('files'), slash(literal('shared'))` accepts, so in `oneOf` the specific route must come first.
 

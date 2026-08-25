@@ -14,7 +14,7 @@ import { Counter, islandAttributes } from './island'
 import { proseView } from './prose'
 import * as Route from './route'
 
-export { HomeRoute, NotFoundRoute, PostRoute, PostsRoute } from './route'
+export { AppRoute } from './route'
 
 // MODEL
 

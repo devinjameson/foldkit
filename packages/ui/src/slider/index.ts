@@ -12,7 +12,7 @@ import {
 import { type Update } from 'foldkit'
 import { type ChildAttribute, type Html, childAttributes } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
-import { ts } from 'foldkit/schema'
+import { defineTaggedUnion } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 import { type Reflect, defineView } from 'foldkit/submodel'
 import * as Subscription from 'foldkit/subscription'
@@ -21,10 +21,10 @@ import { attributeSelector } from '../internal/selectors.js'
 
 // MODEL
 
-const Idle = ts('Idle')
-const Dragging = ts('Dragging', { originValue: S.Number })
-
-const DragState = S.Union([Idle, Dragging])
+const DragState = defineTaggedUnion({
+  Idle: {},
+  Dragging: { originValue: S.Number },
+})
 
 /** Schema for the slider component's private interaction state. The current
  *  value is owned by the parent and passed in via `ViewInputs.value`, so it is
@@ -101,7 +101,7 @@ export const init = (config: InitConfig): Model => ({
   min: config.min,
   max: config.max,
   step: config.step,
-  dragState: Idle(),
+  dragState: DragState.Idle(),
 })
 
 // HELPERS
@@ -210,13 +210,15 @@ export const update = (model: Model, message: Message) =>
         withUpdateReturn,
         M.tag('Dragging', () => ({ model })),
         M.orElse(() => ({
-          model: evo(model, { dragState: () => Dragging({ originValue }) }),
+          model: evo(model, {
+            dragState: () => DragState.Dragging({ originValue }),
+          }),
         })),
       ),
 
     // NOTE: the pointerdown event on the thumb bubbles to the track, so a
     // thumb press also dispatches PressedPointer. Short-circuit when already
-    // Dragging so the bubbled track handler cannot shift the value away
+    // DragState.Dragging so the bubbled track handler cannot shift the value away
     // from the thumb's current position. Fine-grained sliders (e.g. step
     // 0.05) see a visible jump without this guard, because the cursor sits
     // off-center on a non-zero-width thumb.
@@ -227,7 +229,9 @@ export const update = (model: Model, message: Message) =>
         M.orElse(() => {
           const snapped = snapAndClamp(value, model.min, model.max, model.step)
           return withChangedValue(
-            evo(model, { dragState: () => Dragging({ originValue }) }),
+            evo(model, {
+              dragState: () => DragState.Dragging({ originValue }),
+            }),
             originValue,
             snapped,
           )
@@ -250,7 +254,7 @@ export const update = (model: Model, message: Message) =>
       M.value(model.dragState).pipe(
         withUpdateReturn,
         M.tag('Dragging', () => ({
-          model: evo(model, { dragState: () => Idle() }),
+          model: evo(model, { dragState: () => DragState.Idle() }),
         })),
         M.orElse(() => ({ model })),
       ),
@@ -259,7 +263,7 @@ export const update = (model: Model, message: Message) =>
       M.value(model.dragState).pipe(
         withUpdateReturn,
         M.tag('Dragging', ({ originValue }) => ({
-          model: evo(model, { dragState: () => Idle() }),
+          model: evo(model, { dragState: () => DragState.Idle() }),
           outMessage: OutMessage.ChangedValue({ value: originValue }),
         })),
         M.orElse(() => ({ model })),

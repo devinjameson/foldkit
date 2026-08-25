@@ -1,7 +1,7 @@
 import { HashMap, Option, Result, Schema as S, pipe } from 'effect'
 import { describe, expect, expectTypeOf, it } from 'vitest'
 
-import { ts } from '../schema/index.js'
+import { taggedStruct } from '../schema/index.js'
 import * as AsyncData from './asyncData.js'
 
 type State = AsyncData.AsyncData<number, string>
@@ -142,10 +142,10 @@ describe('type drift', () => {
     const RawUnion = S.Union([
       AsyncData.Idle,
       AsyncData.Loading,
-      ts('Refreshing', { data: S.Number }),
-      ts('Failure', { error: S.String }),
-      ts('Stale', { error: S.String, data: S.Number }),
-      ts('Success', { data: S.Number }),
+      taggedStruct('Refreshing', { data: S.Number }),
+      taggedStruct('Failure', { error: S.String }),
+      taggedStruct('Stale', { error: S.String, data: S.Number }),
+      taggedStruct('Success', { data: S.Number }),
     ])
     type RawUnionType = typeof RawUnion.Type
 
@@ -286,10 +286,10 @@ describe('types', () => {
     const RawUnion = S.Union([
       AsyncData.Idle,
       AsyncData.Loading,
-      ts('Refreshing', { data: S.Number }),
-      ts('Failure', { error: S.String }),
-      ts('Stale', { error: S.String, data: S.Number }),
-      ts('Success', { data: S.Number }),
+      taggedStruct('Refreshing', { data: S.Number }),
+      taggedStruct('Failure', { error: S.String }),
+      taggedStruct('Stale', { error: S.String, data: S.Number }),
+      taggedStruct('Success', { data: S.Number }),
     ])
     type RawEncoded = typeof RawUnion.Encoded
     type Wire = AsyncData.AsyncDataEncoded<number, string>

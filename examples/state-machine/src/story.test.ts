@@ -4,11 +4,10 @@ import { Command, given, message, model, story } from 'foldkit/story'
 import { describe, expect, test } from 'vitest'
 
 import {
-  AppliedPromo,
-  Cart,
+  CheckoutState,
   Message,
   PlaceOrder,
-  RejectedPromo,
+  Promo,
   TRANSITION_LOG_LIMIT,
   initialModel,
   update,
@@ -94,7 +93,7 @@ describe('update', () => {
       message(Message.ClickedStartOver()),
       model(model => {
         expect(model.checkout).toStrictEqual(
-          Cart({ isShippingRequired: false }),
+          CheckoutState.Cart({ isShippingRequired: false }),
         )
       }),
     )
@@ -114,7 +113,9 @@ describe('update', () => {
         expect(model.checkout._tag).toBe('Review')
         if (model.checkout._tag === 'Review') {
           expect(model.checkout.promo).toEqual(
-            AppliedPromo({ discount: { code: 'READER10', percentOff: 10 } }),
+            Promo.AppliedPromo({
+              discount: { code: 'READER10', percentOff: 10 },
+            }),
           )
         }
       }),
@@ -123,7 +124,7 @@ describe('update', () => {
       model(model => {
         expect(model.checkout._tag).toBe('Review')
         if (model.checkout._tag === 'Review') {
-          expect(model.checkout.promo).toEqual(RejectedPromo())
+          expect(model.checkout.promo).toEqual(Promo.RejectedPromo())
         }
         expect(maybeLatestTransitionSummary(model)).toEqual(
           Option.some('Review -> Review on SubmittedPromoCode'),

@@ -14,7 +14,7 @@ import * as Command from 'foldkit/command'
 import * as Dom from 'foldkit/dom'
 import { type Attribute, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
-import { ts } from 'foldkit/schema'
+import { defineTaggedUnion } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 import * as Subscription from 'foldkit/subscription'
 import * as Update from 'foldkit/update'
@@ -40,33 +40,30 @@ const DropTarget = S.Struct({
   index: S.Number,
 })
 
-const Idle = ts('Idle')
-
-const Pending = ts('Pending', {
-  itemId: S.String,
-  containerId: S.String,
-  index: S.Number,
-  origin: ScreenPoint,
+const DragState = defineTaggedUnion({
+  Idle: {},
+  Pending: {
+    itemId: S.String,
+    containerId: S.String,
+    index: S.Number,
+    origin: ScreenPoint,
+  },
+  Dragging: {
+    itemId: S.String,
+    sourceContainerId: S.String,
+    sourceIndex: S.Number,
+    origin: ScreenPoint,
+    current: ClientPoint,
+    maybeDropTarget: S.Option(DropTarget),
+  },
+  KeyboardDragging: {
+    itemId: S.String,
+    sourceContainerId: S.String,
+    sourceIndex: S.Number,
+    targetContainerId: S.String,
+    targetIndex: S.Number,
+  },
 })
-
-const Dragging = ts('Dragging', {
-  itemId: S.String,
-  sourceContainerId: S.String,
-  sourceIndex: S.Number,
-  origin: ScreenPoint,
-  current: ClientPoint,
-  maybeDropTarget: S.Option(DropTarget),
-})
-
-const KeyboardDragging = ts('KeyboardDragging', {
-  itemId: S.String,
-  sourceContainerId: S.String,
-  sourceIndex: S.Number,
-  targetContainerId: S.String,
-  targetIndex: S.Number,
-})
-
-const DragState = S.Union([Idle, Pending, Dragging, KeyboardDragging])
 
 /** Schema for the drag-and-drop component's state, tracking its unique ID, orientation, and current drag phase. */
 export const Model = S.Struct({
@@ -150,13 +147,13 @@ export type InitConfig = Readonly<{
   activationThreshold?: number
 }>
 
-/** Creates an initial drag-and-drop model. Starts in the Idle state with Vertical orientation and 5px activation threshold by default. */
+/** Creates an initial drag-and-drop model. Starts in the DragState.Idle state with Vertical orientation and 5px activation threshold by default. */
 export const init = (config: InitConfig): Model => ({
   id: config.id,
   orientation: config.orientation ?? 'Vertical',
   activationThreshold:
     config.activationThreshold ?? DEFAULT_ACTIVATION_THRESHOLD_PIXELS,
-  dragState: Idle(),
+  dragState: DragState.Idle(),
 })
 
 // COMMAND
@@ -314,7 +311,7 @@ export const update = (model: Model, message: Message) =>
     PressedDraggable: ({ itemId, containerId, index, screenX, screenY }) => ({
       model: evo(model, {
         dragState: () =>
-          Pending({
+          DragState.Pending({
             itemId,
             containerId,
             index,
@@ -338,7 +335,7 @@ export const update = (model: Model, message: Message) =>
           return {
             model: evo(model, {
               dragState: () =>
-                Dragging({
+                DragState.Dragging({
                   itemId: pending.itemId,
                   sourceContainerId: pending.containerId,
                   sourceIndex: pending.index,
@@ -352,7 +349,7 @@ export const update = (model: Model, message: Message) =>
         M.tag('Dragging', dragging => ({
           model: evo(model, {
             dragState: () =>
-              Dragging({
+              DragState.Dragging({
                 ...dragging,
                 current: { clientX, clientY },
                 maybeDropTarget,
@@ -366,16 +363,16 @@ export const update = (model: Model, message: Message) =>
       M.value(model.dragState).pipe(
         withUpdateReturn,
         M.tag('Pending', () => ({
-          model: evo(model, { dragState: () => Idle() }),
+          model: evo(model, { dragState: () => DragState.Idle() }),
         })),
         M.tag('Dragging', dragging =>
           Option.match(dragging.maybeDropTarget, {
             onNone: () => ({
-              model: evo(model, { dragState: () => Idle() }),
+              model: evo(model, { dragState: () => DragState.Idle() }),
               outMessage: OutMessage.Cancelled(),
             }),
             onSome: dropTarget => ({
-              model: evo(model, { dragState: () => Idle() }),
+              model: evo(model, { dragState: () => DragState.Idle() }),
               outMessage: OutMessage.Reordered({
                 itemId: dragging.itemId,
                 fromContainerId: dragging.sourceContainerId,
@@ -401,7 +398,7 @@ export const update = (model: Model, message: Message) =>
       ).pipe(Option.map(() => OutMessage.Cancelled()))
 
       const dragCancellation: Update.Return<Model, Message> = {
-        model: evo(model, { dragState: () => Idle() }),
+        model: evo(model, { dragState: () => DragState.Idle() }),
         commands: Option.toArray(maybeFocusCommand),
       }
       return pipe(
@@ -413,7 +410,7 @@ export const update = (model: Model, message: Message) =>
     ActivatedKeyboardDrag: ({ itemId, containerId, index }) => ({
       model: evo(model, {
         dragState: () =>
-          KeyboardDragging({
+          DragState.KeyboardDragging({
             itemId,
             sourceContainerId: containerId,
             sourceIndex: index,
@@ -429,7 +426,7 @@ export const update = (model: Model, message: Message) =>
         M.tag('KeyboardDragging', keyboardDragging => ({
           model: evo(model, {
             dragState: () =>
-              KeyboardDragging({
+              DragState.KeyboardDragging({
                 ...keyboardDragging,
                 targetContainerId,
                 targetIndex,
@@ -444,7 +441,7 @@ export const update = (model: Model, message: Message) =>
       M.value(model.dragState).pipe(
         withUpdateReturn,
         M.tag('KeyboardDragging', keyboardDragging => ({
-          model: evo(model, { dragState: () => Idle() }),
+          model: evo(model, { dragState: () => DragState.Idle() }),
           commands: [FocusItem({ itemId: keyboardDragging.itemId })],
           outMessage: OutMessage.Reordered({
             itemId: keyboardDragging.itemId,

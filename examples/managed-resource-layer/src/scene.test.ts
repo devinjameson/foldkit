@@ -13,8 +13,7 @@ import { describe, test } from 'vitest'
 
 import {
   Compute,
-  EngineOff,
-  EngineReady,
+  EngineState,
   Message,
   Model,
   managedResources,
@@ -23,13 +22,13 @@ import {
 } from './main'
 
 const offModel = Model.make({
-  engine: EngineOff(),
+  engine: EngineState.Off(),
   computeCount: 0,
   maybeSquareResult: Option.none(),
 })
 
 const readyModel = Model.make({
-  engine: EngineReady({ engineId: 'engine-1' }),
+  engine: EngineState.Ready({ engineId: 'engine-1' }),
   computeCount: 2,
   maybeSquareResult: Option.none(),
 })

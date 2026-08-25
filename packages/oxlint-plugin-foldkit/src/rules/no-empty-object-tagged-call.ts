@@ -8,17 +8,57 @@ import {
   isObjectExpression,
 } from '../guards.ts'
 
+const PASCAL_CASE = /^[A-Z][A-Za-z0-9]*$/
+
+// Effect and Foldkit namespaces whose PascalCase members are combinators, not
+// union variants. `S` and `M` are excluded by the two-character floor below.
+const NON_UNION_NAMESPACES: ReadonlySet<string> = new Set([
+  'Array',
+  'Chunk',
+  'Command',
+  'Context',
+  'Data',
+  'Duration',
+  'Effect',
+  'Either',
+  'Equal',
+  'Fiber',
+  'Function',
+  'Hash',
+  'HashMap',
+  'HashSet',
+  'Html',
+  'Layer',
+  'Match',
+  'Mount',
+  'Number',
+  'Option',
+  'Order',
+  'Predicate',
+  'Record',
+  'Result',
+  'Schema',
+  'Stream',
+  'String',
+  'Struct',
+  'Subscription',
+  'Update',
+])
+
+const isUnionNamespace = (name: string): boolean =>
+  name.length > 1 && PASCAL_CASE.test(name) && !NON_UNION_NAMESPACES.has(name)
+
 const constructorName = (callee: unknown): string | undefined => {
-  if (isIdentifier(callee) && /^[A-Z][A-Za-z0-9]*$/.test(callee.name)) {
+  if (isIdentifier(callee) && PASCAL_CASE.test(callee.name)) {
     return callee.name
   }
   if (
     isMemberExpression(callee) &&
     callee.computed !== true &&
     isIdentifier(callee.object) &&
-    callee.object.name.endsWith('Message') &&
+    isUnionNamespace(callee.object.name) &&
     isIdentifier(callee.property) &&
-    /^[A-Z][A-Za-z0-9]*$/.test(callee.property.name)
+    PASCAL_CASE.test(callee.property.name)
   ) {
     return `${callee.object.name}.${callee.property.name}`
   }
@@ -26,15 +66,15 @@ const constructorName = (callee: unknown): string | undefined => {
 }
 
 /**
- * Flags calling a no-field Message constructor with an empty object literal
- * instead of no arguments.
+ * Flags calling a no-field union variant constructor with an empty object
+ * literal instead of no arguments.
  */
 export const noEmptyObjectTaggedCall = Rule.define({
   name: 'no-empty-object-tagged-call',
   meta: Rule.meta({
     type: 'suggestion',
     description:
-      'Call no-field Message constructors with no arguments instead of an empty object.',
+      'Call no-field union variant constructors with no arguments instead of an empty object.',
   }),
   create: function* () {
     const ctx = yield* RuleContext
@@ -54,7 +94,7 @@ export const noEmptyObjectTaggedCall = Rule.define({
         return ctx.report(
           Diagnostic.make({
             node,
-            message: `Call no-field Message constructors as ${name}() instead of ${name}({}).`,
+            message: `Call no-field union variant constructors as ${name}() instead of ${name}({}).`,
           }),
         )
       },

@@ -1,27 +1,22 @@
 import { clsx } from 'clsx'
 import { Schema as S } from 'effect'
 import { type Html, type HtmlBuilder } from 'foldkit/html'
-import { ts } from 'foldkit/schema'
+import { defineTaggedUnion } from 'foldkit/schema'
 
-export const Loading = ts('PlaygroundPreviewLoading', {
-  previewUrl: S.String,
+export const State = defineTaggedUnion({
+  Loading: { previewUrl: S.String },
+  Loaded: { previewUrl: S.String },
 })
-export const Loaded = ts('PlaygroundPreviewLoaded', {
-  previewUrl: S.String,
-})
-export const State = S.Union([Loading, Loaded])
 export type State = typeof State.Type
 
-export const start = (previewUrl: string): State => Loading({ previewUrl })
+export const start = (previewUrl: string): State =>
+  State.Loading({ previewUrl })
 
 export const load = (state: State, previewUrl: string): State => {
-  if (
-    state.previewUrl !== previewUrl ||
-    state._tag === 'PlaygroundPreviewLoaded'
-  ) {
+  if (state.previewUrl !== previewUrl || state._tag === 'Loaded') {
     return state
   } else {
-    return Loaded({ previewUrl })
+    return State.Loaded({ previewUrl })
   }
 }
 
@@ -31,7 +26,7 @@ export const view = <Message>(
   loadingView: Html,
   h: HtmlBuilder<Message>,
 ): Html => {
-  const isLoaded = state._tag === 'PlaygroundPreviewLoaded'
+  const isLoaded = state._tag === 'Loaded'
   return h.div(
     [h.Class('relative flex-1 min-w-0 min-h-0'), h.AriaBusy(!isLoaded)],
     [

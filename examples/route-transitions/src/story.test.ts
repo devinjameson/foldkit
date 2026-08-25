@@ -6,18 +6,12 @@ import { describe, expect, test } from 'vitest'
 
 import {
   AppRoute,
-  GalleryRoute,
-  HomeRoute,
   LoadCatalog,
   LoadPainting,
   Message,
   Model,
-  PaintingIdle,
-  PaintingLoading,
-  PaintingReady,
-  PaintingRoute,
+  PaintingStatus,
   SaveDraft,
-  StudioRoute,
   init,
   update,
 } from './main'
@@ -33,7 +27,7 @@ const modelOn = (route: AppRoute): Model =>
     route,
     transitionLog: [],
     catalogStatus: 'Idle',
-    paintingStatus: PaintingIdle(),
+    paintingStatus: PaintingStatus.Idle(),
     studioDraft: '',
     maybeSavedDraft: Option.none(),
   })
@@ -67,7 +61,7 @@ describe('update', () => {
   test('entering the gallery loads the catalog and logs the transition', () => {
     story(
       update,
-      given(modelOn(HomeRoute())),
+      given(modelOn(AppRoute.Home())),
       message(
         Message.ChangedUrl({ url: urlOrThrow('http://localhost/gallery') }),
       ),
@@ -87,7 +81,7 @@ describe('update', () => {
   test('re-entering the gallery while a catalog load is in flight does not fire another', () => {
     story(
       update,
-      given(evo(modelOn(HomeRoute()), { catalogStatus: () => 'Loading' })),
+      given(evo(modelOn(AppRoute.Home()), { catalogStatus: () => 'Loading' })),
       message(
         Message.ChangedUrl({ url: urlOrThrow('http://localhost/gallery') }),
       ),
@@ -101,13 +95,13 @@ describe('update', () => {
   test('entering a painting loads it with the payload from the route', () => {
     story(
       update,
-      given(modelOn(GalleryRoute())),
+      given(modelOn(AppRoute.Gallery())),
       message(
         Message.ChangedUrl({ url: urlOrThrow('http://localhost/gallery/3') }),
       ),
       model(model => {
         expect(model.paintingStatus).toStrictEqual(
-          PaintingLoading({ paintingId: 3 }),
+          PaintingStatus.Loading({ paintingId: 3 }),
         )
       }),
       Command.expectHas(LoadPainting),
@@ -117,7 +111,7 @@ describe('update', () => {
       ),
       model(model => {
         expect(model.paintingStatus).toStrictEqual(
-          PaintingReady({ paintingId: 3 }),
+          PaintingStatus.Ready({ paintingId: 3 }),
         )
       }),
     )
@@ -127,8 +121,8 @@ describe('update', () => {
     story(
       update,
       given(
-        evo(modelOn(PaintingRoute({ paintingId: 1 })), {
-          paintingStatus: () => PaintingReady({ paintingId: 1 }),
+        evo(modelOn(AppRoute.Painting({ paintingId: 1 })), {
+          paintingStatus: () => PaintingStatus.Ready({ paintingId: 1 }),
         }),
       ),
       message(
@@ -136,11 +130,11 @@ describe('update', () => {
       ),
       model(model => {
         expect(model.paintingStatus).toStrictEqual(
-          PaintingLoading({ paintingId: 2 }),
+          PaintingStatus.Loading({ paintingId: 2 }),
         )
         expect(
           Array.map(model.transitionLog, entry => entry.maybePreviousRoute),
-        ).toStrictEqual([Option.some(PaintingRoute({ paintingId: 1 }))])
+        ).toStrictEqual([Option.some(AppRoute.Painting({ paintingId: 1 }))])
       }),
       Command.expectHas(LoadPainting),
       Command.resolve(
@@ -149,7 +143,7 @@ describe('update', () => {
       ),
       model(model => {
         expect(model.paintingStatus).toStrictEqual(
-          PaintingReady({ paintingId: 2 }),
+          PaintingStatus.Ready({ paintingId: 2 }),
         )
       }),
     )
@@ -159,8 +153,8 @@ describe('update', () => {
     story(
       update,
       given(
-        evo(modelOn(PaintingRoute({ paintingId: 1 })), {
-          paintingStatus: () => PaintingReady({ paintingId: 1 }),
+        evo(modelOn(AppRoute.Painting({ paintingId: 1 })), {
+          paintingStatus: () => PaintingStatus.Ready({ paintingId: 1 }),
         }),
       ),
       message(
@@ -169,7 +163,7 @@ describe('update', () => {
       Command.expectNone(),
       model(model => {
         expect(model.paintingStatus).toStrictEqual(
-          PaintingReady({ paintingId: 1 }),
+          PaintingStatus.Ready({ paintingId: 1 }),
         )
       }),
     )
@@ -179,14 +173,14 @@ describe('update', () => {
     story(
       update,
       given(
-        evo(modelOn(PaintingRoute({ paintingId: 2 })), {
-          paintingStatus: () => PaintingLoading({ paintingId: 2 }),
+        evo(modelOn(AppRoute.Painting({ paintingId: 2 })), {
+          paintingStatus: () => PaintingStatus.Loading({ paintingId: 2 }),
         }),
       ),
       message(Message.SucceededLoadPainting({ paintingId: 1 })),
       model(model => {
         expect(model.paintingStatus).toStrictEqual(
-          PaintingLoading({ paintingId: 2 }),
+          PaintingStatus.Loading({ paintingId: 2 }),
         )
       }),
     )
@@ -196,7 +190,7 @@ describe('update', () => {
     story(
       update,
       given(
-        evo(modelOn(StudioRoute()), {
+        evo(modelOn(AppRoute.Studio()), {
           studioDraft: () => 'half-finished thought',
         }),
       ),
@@ -217,7 +211,7 @@ describe('update', () => {
   test('leaving the studio with an empty draft saves nothing', () => {
     story(
       update,
-      given(modelOn(StudioRoute())),
+      given(modelOn(AppRoute.Studio())),
       message(Message.ChangedUrl({ url: urlOrThrow('http://localhost/') })),
       Command.expectNone(),
     )

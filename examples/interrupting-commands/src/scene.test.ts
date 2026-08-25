@@ -52,7 +52,7 @@ describe('view', () => {
         CancelUploadFile({ uploadId: 0 }),
         Message.CompletedCancelUploadFile({
           uploadId: 0,
-          outcome: Interruptible.Interrupted(),
+          outcome: Interruptible.Outcome.Interrupted(),
         }),
       ),
       expect(text('Cancelled')).toExist(),
@@ -79,7 +79,7 @@ describe('view', () => {
         CancelUploadFile({ uploadId: 0 }),
         Message.CompletedCancelUploadFile({
           uploadId: 0,
-          outcome: Interruptible.Interrupted(),
+          outcome: Interruptible.Outcome.Interrupted(),
         }),
       ),
       expect(role('button', { name: 'Cancel all' })).toBeAbsent(),

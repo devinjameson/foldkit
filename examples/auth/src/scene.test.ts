@@ -20,12 +20,12 @@ import {
   SimulateAuthRequest,
   initModel as initLoginModel,
 } from './page/loggedOut/page/login'
-import { LoginRoute } from './route'
+import { AppRoute } from './route'
 import { RedirectToDashboard, update } from './update'
 import { view } from './view'
 
 const validModel = LoggedOut.Model({
-  route: LoginRoute(),
+  route: AppRoute.Login(),
   loginModel: LoginModel.make({
     ...initLoginModel(),
     email: Valid({ value: 'alice@example.com' }),

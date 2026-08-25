@@ -4,19 +4,12 @@ import { describe, test } from 'vitest'
 
 import { Listbox } from '@foldkit/ui'
 
-import {
-  BrowseRoute,
-  type Model,
-  NotFoundRoute,
-  Unsorted,
-  update,
-  view,
-} from './main'
+import { AppRoute, type Model, Sorting, update, view } from './main'
 
 const browseModel: Model = {
-  route: BrowseRoute({
+  route: AppRoute.Browse({
     search: Option.none(),
-    sorting: Unsorted(),
+    sorting: Sorting.Unsorted(),
     diet: Option.none(),
     period: Option.none(),
   }),
@@ -47,9 +40,9 @@ describe('view', () => {
       { update, view },
       given({
         ...browseModel,
-        route: BrowseRoute({
+        route: AppRoute.Browse({
           search: Option.some('Tyranno'),
-          sorting: Unsorted(),
+          sorting: Sorting.Unsorted(),
           diet: Option.none(),
           period: Option.none(),
         }),
@@ -63,9 +56,9 @@ describe('view', () => {
       { update, view },
       given({
         ...browseModel,
-        route: BrowseRoute({
+        route: AppRoute.Browse({
           search: Option.some('zzzNoMatch'),
-          sorting: Unsorted(),
+          sorting: Sorting.Unsorted(),
           diet: Option.none(),
           period: Option.none(),
         }),
@@ -79,7 +72,7 @@ describe('view', () => {
       { update, view },
       given({
         ...browseModel,
-        route: NotFoundRoute({ path: '/oops' }),
+        route: AppRoute.NotFound({ path: '/oops' }),
       }),
       expect(role('heading', { name: '404 — Page Not Found' })).toExist(),
       expect(text('The path "/oops" was not found.')).toExist(),

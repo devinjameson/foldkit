@@ -15,10 +15,7 @@ import {
 import { describe, test } from 'vitest'
 
 import {
-  ConnectionConnected,
-  ConnectionConnecting,
-  ConnectionDisconnected,
-  ConnectionError,
+  ConnectionState,
   Message,
   Model,
   SendMessage,
@@ -30,7 +27,7 @@ import {
 } from './main'
 
 const idleModel = Model.make({
-  connection: ConnectionDisconnected(),
+  connection: ConnectionState.Disconnected(),
   messages: [],
   messageInput: '',
 })
@@ -53,7 +50,10 @@ describe('view', () => {
   test('connecting state renders the Connecting message', () => {
     scene(
       { update, view },
-      given({ ...idleModel, connection: ConnectionConnecting() }),
+      given({
+        ...idleModel,
+        connection: ConnectionState.Connecting(),
+      }),
       expect(text('Connecting...')).toExist(),
     )
   })
@@ -61,7 +61,10 @@ describe('view', () => {
   test('connected state shows the message input and Send button', () => {
     scene(
       { update, view },
-      given({ ...idleModel, connection: ConnectionConnected() }),
+      given({
+        ...idleModel,
+        connection: ConnectionState.Connected(),
+      }),
       expect(placeholder('Type a message...')).toExist(),
       expect(role('button', { name: 'Send' })).toBeDisabled(),
       type(placeholder('Type a message...'), 'hi'),
@@ -74,7 +77,9 @@ describe('view', () => {
       { update, view },
       given({
         ...idleModel,
-        connection: ConnectionError({ error: 'Connection refused' }),
+        connection: ConnectionState.Error({
+          error: 'Connection refused',
+        }),
       }),
       expect(text('Connection Error')).toExist(),
       expect(text('Connection refused')).toExist(),
@@ -87,7 +92,7 @@ describe('view', () => {
       { update, view },
       given({
         ...idleModel,
-        connection: ConnectionConnected(),
+        connection: ConnectionState.Connected(),
         messages: [
           { text: 'Hello there', zoned: zonedAt(0), isSent: true },
           { text: 'General Kenobi', zoned: zonedAt(0), isSent: false },
@@ -146,7 +151,10 @@ describe('view', () => {
   test('a message arriving on the socket Subscription lands in the conversation', () => {
     scene(
       { update, view },
-      given({ ...idleModel, connection: ConnectionConnected() }),
+      given({
+        ...idleModel,
+        connection: ConnectionState.Connected(),
+      }),
       Subscription.emit(Message.ReceivedMessage({ text: 'hello from echo' })),
       Command.expectExact(
         TimestampReceivedMessage({ text: 'hello from echo' }),

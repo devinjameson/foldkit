@@ -12,12 +12,17 @@ import { Command, Submodel, type Update } from 'foldkit'
 import { Html, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 import { pushUrl } from 'foldkit/navigation'
-import { ts } from 'foldkit/schema'
+import { defineTaggedUnion } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
 import { Button, Input } from '@foldkit/ui'
 
-import { PeopleRoute, peopleRouter, personRouter } from '../route'
+import {
+  AppRoute,
+  type PeopleRoute,
+  peopleRouter,
+  personRouter,
+} from '../route'
 
 // DOMAIN
 
@@ -77,13 +82,10 @@ export const findPerson = (id: number) =>
 
 // MODEL
 
-export const SearchLoading = ts('SearchLoading')
-export const SearchLoaded = ts('SearchLoaded', {
-  query: S.String,
-  people: S.Array(Person),
+export const SearchResults = defineTaggedUnion({
+  Loading: {},
+  Loaded: { query: S.String, people: S.Array(Person) },
 })
-
-export const SearchResults = S.Union([SearchLoading, SearchLoaded])
 export type SearchResults = typeof SearchResults.Type
 
 export const Model = S.Struct({
@@ -98,7 +100,7 @@ export type Model = typeof Model.Type
 export const Message = defineMessageUnion({
   ChangedSearchInput: { value: S.String },
   SubmittedSearch: {},
-  ChangedRoute: { route: PeopleRoute },
+  ChangedRoute: { route: AppRoute.People },
   SucceededFetchPeople: {
     query: S.String,
     people: S.Array(Person),
@@ -118,7 +120,7 @@ export const init = (route: PeopleRoute): InitReturn => {
     model: {
       searchInput: searchText,
       searchHistory: addSearchToHistory([], searchText),
-      results: SearchLoading(),
+      results: SearchResults.Loading(),
     },
     commands: [FetchPeople({ searchText })],
   }
@@ -175,7 +177,7 @@ export const update = (model: Model, message: Message) =>
           searchInput: () => searchText,
           searchHistory: searchHistory =>
             addSearchToHistory(searchHistory, searchText),
-          results: () => SearchLoading(),
+          results: () => SearchResults.Loading(),
         }),
         commands: [FetchPeople({ searchText })],
       }
@@ -183,7 +185,7 @@ export const update = (model: Model, message: Message) =>
 
     SucceededFetchPeople: ({ query, people: fetchedPeople }) => ({
       model: evo(model, {
-        results: () => SearchLoaded({ query, people: fetchedPeople }),
+        results: () => SearchResults.Loaded({ query, people: fetchedPeople }),
       }),
     }),
 
@@ -203,8 +205,8 @@ export const informRouteChanged = (model: Model, route: PeopleRoute) =>
 const statusText = (results: SearchResults): string =>
   M.value(results).pipe(
     M.withReturnType<string>(),
-    M.tag('SearchLoading', () => 'Searching…'),
-    M.tag('SearchLoaded', ({ query, people: found }) => {
+    M.tag('Loading', () => 'Searching…'),
+    M.tag('Loaded', ({ query, people: found }) => {
       if (String.isEmpty(query)) {
         return 'Click on any person to view their details:'
       }
@@ -330,8 +332,8 @@ export const view = Submodel.defineView<Model, Message>(
         ),
 
         M.value(model.results).pipe(
-          M.tag('SearchLoading', () => h.empty),
-          M.tag('SearchLoaded', ({ people: results }) =>
+          M.tag('Loading', () => h.empty),
+          M.tag('Loaded', ({ people: results }) =>
             h.ul(
               [h.Class('space-y-3')],
               Array.map(results, person => personListItemView(person, h)),
