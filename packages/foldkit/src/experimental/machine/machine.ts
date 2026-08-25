@@ -760,7 +760,7 @@ export const define =
     const shadowedEdges = (): ReadonlyArray<DeadTransition<State, Message>> =>
       pipe(
         edges,
-        Array.groupBy(
+        Array.groupBy<EdgeSummary<State, Message>, string>(
           edgeSummary => `${edgeSummary.from}|${edgeSummary.messageTag}`,
         ),
         Record.values,
