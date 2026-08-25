@@ -12,10 +12,57 @@ const PROJECT_DIR = resolve(SCRIPT_DIR, '..')
 const CLIENT_DIR = resolve(PROJECT_DIR, 'dist/client')
 const SERVER_ENTRY_PATH = resolve(PROJECT_DIR, 'dist/server/entry.server.js')
 const SITE_ORIGIN = 'https://example.com'
+const INDEX_PATH = resolve(CLIENT_DIR, 'index.html')
+const TEMPLATE_COPY_PATH = resolve(
+  PROJECT_DIR,
+  'node_modules/.cache/foldkit/prerender-template.html',
+)
+const CONTAINER_ID = 'root'
+const CONTAINER_PLACEHOLDER = `<div id="${CONTAINER_ID}"></div>`
 
 const loadServerEntry: Effect.Effect<typeof ServerEntry> = Effect.promise(
   () => import(pathToFileURL(SERVER_ENTRY_PATH).href),
 )
+
+// NOTE: the generated `/` is written over `index.html`, which is also where
+// the client build leaves the template, so reading the template from that file
+// works once and then reads back a page whose placeholder is already replaced.
+// The built file is authoritative while it still holds the placeholder, and
+// the cached copy it leaves behind is what lets a re-run against one client
+// build generate the same pages. The placeholder is the condition
+// `injectIntoTemplate` itself enforces, so a static render, which carries no
+// hydration stamp, is covered by the same test.
+const readTemplate = Effect.gen(function* () {
+  const fs = yield* FileSystem.FileSystem
+
+  const isBuilt = yield* fs.exists(INDEX_PATH)
+  if (!isBuilt) {
+    return yield* Effect.die(
+      new Error(
+        `Cannot prerender without a client build: "${INDEX_PATH}" does not exist.`,
+      ),
+    )
+  }
+
+  const builtIndex = yield* fs.readFileString(INDEX_PATH)
+  const isTemplate = builtIndex.includes(CONTAINER_PLACEHOLDER)
+  if (isTemplate) {
+    yield* fs.makeDirectory(dirname(TEMPLATE_COPY_PATH), { recursive: true })
+    yield* fs.writeFileString(TEMPLATE_COPY_PATH, builtIndex)
+    return builtIndex
+  }
+
+  const hasTemplateCopy = yield* fs.exists(TEMPLATE_COPY_PATH)
+  if (!hasTemplateCopy) {
+    return yield* Effect.die(
+      new Error(
+        `Cannot prerender: "${INDEX_PATH}" no longer holds the ${CONTAINER_PLACEHOLDER} placeholder, and no copy of the template remains. Run the client build again.`,
+      ),
+    )
+  }
+
+  return yield* fs.readFileString(TEMPLATE_COPY_PATH)
+})
 
 const outputFileFor = (path: string): string => {
   const url = new URL(path, SITE_ORIGIN)
@@ -25,13 +72,13 @@ const outputFileFor = (path: string): string => {
     )
   }
   return path === '/'
-    ? resolve(CLIENT_DIR, 'index.html')
+    ? INDEX_PATH
     : resolve(CLIENT_DIR, path.slice(1), 'index.html')
 }
 
 const program = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem
-  const template = yield* fs.readFileString(resolve(CLIENT_DIR, 'index.html'))
+  const template = yield* readTemplate
   const serverEntry = yield* loadServerEntry
 
   for (const path of serverEntry.prerenderPaths) {

@@ -226,6 +226,8 @@ An SSG host builds the browser bundle and server entry. A build script then call
 
 ::Snippet{name="serverRenderingSsgLoop" label="SSG render loop example"}
 
+Keep a copy of the template outside the build output, and take the built file as the template only while it still holds the placeholder. The generated `/` replaces `dist/client/index.html`, which is the file the client build left the template in, so a second run against one client build finds no `<div id="root"></div>` there and stops with `injectIntoTemplate found no exact <div id="root"></div> placeholder in the template`. The application's own `index.html` still has its placeholder and is never the file at fault. Reading the template before the loop is not enough on its own, because the loop that destroys it and the run that needs it are different runs.
+
 A static file is a body plus whatever headers the file host adds. It cannot carry a redirect, a 404, or per-response headers. Writing a `Responded` result to disk turns a redirect into an ordinary page at that URL. The build should fail on `Responded` and on any rendered status it cannot reproduce.
 
 The [SSG example](https://github.com/foldkit/foldkit/tree/main/examples/ssg) is the minimal reference. This website is the production-scale reference. Its prerender host uses the same `renderPage(Request)` contract, seeds route content through universal Flags, and writes every route as hydratable static HTML.
