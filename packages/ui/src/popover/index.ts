@@ -374,49 +374,45 @@ export const update = (model: Model, message: Message) => {
 /** The anchor-positioning Mount this Popover renders on its panel. Exposed so
  *  Scene tests can call `Scene.Mount.resolve(AnchorPopover, CompletedAnchorPopover())`
  *  to acknowledge the mount produced by the rendered panel. */
-export const AnchorPopover = Mount.define(
-  'AnchorPopover',
-  {
+export const AnchorPopover = Mount.define('AnchorPopover', {
+  args: {
     buttonId: S.String,
     anchor: AnchorConfig,
     focusSelector: S.optional(S.String),
   },
-  Message.CompletedAnchorPopover,
-)(
-  ({ buttonId, anchor, focusSelector }) =>
-    element =>
-      Effect.gen(function* () {
-        yield* Effect.acquireRelease(
-          Effect.sync(() =>
-            anchorSetup(element, {
-              buttonId,
-              anchor,
-              interceptTab: false,
-              focusAfterPosition: true,
-              ...(focusSelector !== undefined && { focusSelector }),
-            }),
-          ),
-          cleanup => Effect.sync(cleanup),
-        )
-        return Message.CompletedAnchorPopover()
-      }),
-)
+  messages: [Message.CompletedAnchorPopover],
+  execute: ({ element, buttonId, anchor, focusSelector }) =>
+    Effect.gen(function* () {
+      yield* Effect.acquireRelease(
+        Effect.sync(() =>
+          anchorSetup(element, {
+            buttonId,
+            anchor,
+            interceptTab: false,
+            focusAfterPosition: true,
+            ...(focusSelector !== undefined && { focusSelector }),
+          }),
+        ),
+        cleanup => Effect.sync(cleanup),
+      )
+      return Message.CompletedAnchorPopover()
+    }),
+})
 
 /** The backdrop-portaling Mount this Popover renders. Exposed so Scene tests can
  *  call `Scene.Mount.resolve(PortalPopoverBackdrop, CompletedPortalPopoverBackdrop())` to
  *  acknowledge the mount produced by the rendered backdrop. */
-export const PortalPopoverBackdrop = Mount.define(
-  'PortalPopoverBackdrop',
-  Message.CompletedPortalPopoverBackdrop,
-)(element =>
-  Effect.gen(function* () {
-    yield* Effect.acquireRelease(
-      Effect.sync(() => portalToContainingRoot(element)),
-      cleanup => Effect.sync(cleanup),
-    )
-    return Message.CompletedPortalPopoverBackdrop()
-  }),
-)
+export const PortalPopoverBackdrop = Mount.define('PortalPopoverBackdrop', {
+  messages: [Message.CompletedPortalPopoverBackdrop],
+  execute: ({ element }) =>
+    Effect.gen(function* () {
+      yield* Effect.acquireRelease(
+        Effect.sync(() => portalToContainingRoot(element)),
+        cleanup => Effect.sync(cleanup),
+      )
+      return Message.CompletedPortalPopoverBackdrop()
+    }),
+})
 
 /** Programmatically opens the Popover, updating the Model and returning
  *  focus and modal Commands plus an `Opened` OutMessage. */

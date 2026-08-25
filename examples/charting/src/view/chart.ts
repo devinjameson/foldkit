@@ -13,53 +13,49 @@ import { formatInteger } from './format'
 
 export const CHART_HOST_ID = 'charting-chart'
 
-export const MountChart = Mount.define(
-  'MountChart',
-  { hostId: S.String },
-  Message.SucceededMountChart,
-  Message.FailedMountChart,
-)(
-  ({ hostId }) =>
-    element =>
-      Effect.gen(function* () {
-        if (!(element instanceof HTMLElement)) {
-          return Message.FailedMountChart({
-            reason: 'Chart host is not an HTMLElement.',
-          })
-        }
+export const MountChart = Mount.define('MountChart', {
+  args: { hostId: S.String },
+  messages: [Message.SucceededMountChart, Message.FailedMountChart],
+  execute: ({ element, hostId }) =>
+    Effect.gen(function* () {
+      if (!(element instanceof HTMLElement)) {
+        return Message.FailedMountChart({
+          reason: 'Chart host is not an HTMLElement.',
+        })
+      }
 
-        return yield* Effect.acquireRelease(
-          Effect.try({
-            try: () => {
-              const chart = echarts.init(element, undefined, {
-                renderer: 'canvas',
-              })
-              const resizeObserver = new ResizeObserver(() => chart.resize())
-              resizeObserver.observe(element)
-              const onWindowResize = () => chart.resize()
-              window.addEventListener('resize', onWindowResize)
-              setChart(hostId, chart)
-              return { resizeObserver, onWindowResize }
-            },
-            catch: error =>
-              error instanceof Error
-                ? error
-                : new Error(`Failed to mount chart: ${error}`),
+      return yield* Effect.acquireRelease(
+        Effect.try({
+          try: () => {
+            const chart = echarts.init(element, undefined, {
+              renderer: 'canvas',
+            })
+            const resizeObserver = new ResizeObserver(() => chart.resize())
+            resizeObserver.observe(element)
+            const onWindowResize = () => chart.resize()
+            window.addEventListener('resize', onWindowResize)
+            setChart(hostId, chart)
+            return { resizeObserver, onWindowResize }
+          },
+          catch: error =>
+            error instanceof Error
+              ? error
+              : new Error(`Failed to mount chart: ${error}`),
+        }),
+        ({ resizeObserver, onWindowResize }) =>
+          Effect.sync(() => {
+            resizeObserver.disconnect()
+            window.removeEventListener('resize', onWindowResize)
+            removeChart(hostId)
           }),
-          ({ resizeObserver, onWindowResize }) =>
-            Effect.sync(() => {
-              resizeObserver.disconnect()
-              window.removeEventListener('resize', onWindowResize)
-              removeChart(hostId)
-            }),
-        ).pipe(
-          Effect.map(() => Message.SucceededMountChart({ hostId })),
-          Effect.catch(error =>
-            Effect.succeed(Message.FailedMountChart({ reason: error.message })),
-          ),
-        )
-      }),
-)
+      ).pipe(
+        Effect.map(() => Message.SucceededMountChart({ hostId })),
+        Effect.catch(error =>
+          Effect.succeed(Message.FailedMountChart({ reason: error.message })),
+        ),
+      )
+    }),
+})
 
 export const chartPanelView = (
   model: Model,

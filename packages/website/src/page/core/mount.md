@@ -6,7 +6,7 @@ Most Foldkit code is declarative. The [view](/core/view) is a pure function from
 
 Mount is the escape hatch for work whose cause is a particular element existing in the DOM. `OnMount` supplies the live `Element`, starts the work when that element enters the DOM, and tears it down when the element leaves.
 
-Use `Mount.define` for work that produces one Message when it starts. The returned `Effect<Message>` emits that Message, then its scope remains open until unmount so cleanup registered with `Effect.acquireRelease` runs at the right time. Use `Mount.defineStream` when listeners or observers on the element must emit a continuing `Stream<Message>`.
+Use `Mount.define` for work that produces one Message when it starts. Its `execute` receives the live element and returns an `Effect<Message>` that emits that Message, then its scope remains open until unmount so cleanup registered with `Effect.acquireRelease` runs at the right time. Use `Mount.defineStream` when listeners or observers on the element must emit a continuing `Stream<Message>`.
 
 Both forms require at least one declared result Message. When no result needs to change the Model, return a descriptive `Completed*` Message and leave the Model unchanged in update. The Message keeps the effect visible to DevTools, Scene tests, and replay.
 
@@ -47,7 +47,7 @@ Portal-to-body is a small example. When an overlay enters the DOM, its Mount mov
 ::Snippet{name="mountPortalToBody" label="portal-to-body example"}
 
 :::Info{label="Two rules for Mount work"}
-First, the factory must use the live element. If it does not read or write that element, a Message or Model condition is probably the real cause. Second, the work must be safe to repeat whenever that element is inserted again. DOM measurement, paired DOM manipulation, observers, and element-owned library instances fit these rules.
+First, `execute` must use the live element. If it does not read or write that element, a Message or Model condition is probably the real cause. Second, the work must be safe to repeat whenever that element is inserted again. DOM measurement, paired DOM manipulation, observers, and element-owned library instances fit these rules.
 :::
 
 :::Warning{label="Attach one Mount per element"}
@@ -60,20 +60,20 @@ DevTools re-renders historical Models. Elements inserted during replay run their
 
 ## Per-Instance Args {#args}
 
-Mount factories often need an input that differs by element instance, such as an initial scroll position, chart data, or a stable host id. Declare a Schema record of `args` with the same shape used by [Commands](/core/commands):
+A Mount often needs an input that differs by element instance, such as an initial scroll position, chart data, or a stable host id. Declare those under `args`, using the same Schema record shape a [Command](/core/commands) takes. `args`, `messages`, and `execute` are all named fields on one config object. `execute` receives the live element as `element` alongside the declared args, so an args field named `element` is rejected where you declare it:
 
 ::Snippet{name="mountDefineArgs" label="Mount args definition"}
 
-Calling the Definition with an args record creates the MountAction passed to `OnMount`. `Mount.defineStream` supports the same overload and returns a `Stream<Message>` from its factory instead.
+Calling the Definition with an args record creates the MountAction passed to `OnMount`. That call never runs `execute`. The runtime calls it when the element enters the DOM, so nothing `execute` does happens inside the pure view that built the action. `Mount.defineStream` takes the same fields, and its `execute` returns a `Stream<Message>` instead.
 
-Args are only per-instance inputs. Module constants stay in lexical scope, app-wide services come from Foldkit `Resources`, Model-owned handles come from `ManagedResources`, and Effect services remain available through `yield*` inside the factory.
+Args are only per-instance inputs. Module constants stay in lexical scope, app-wide services come from Foldkit `Resources`, Model-owned handles come from `ManagedResources`, and Effect services remain available through `yield*` inside `execute`.
 
 :::Info{label="Args surface in DevTools and tests"}
 DevTools shows the args beside the Mount name. Scene tests can target one instance by passing the same args record to `Mount.expectHas` or `Mount.resolve`. See [Scene](/testing/scene) for the Definition and instance matcher contract.
 :::
 
 :::Warning{label="Args are captured at mount"}
-The factory receives the args from the render that inserts the element. Later renders create new MountActions, but a reused DOM node does not run the factory again. Name values for that lifecycle, such as `initialScroll` or `seedValue`, rather than implying that they stay current.
+`execute` receives the args from the render that inserts the element. Later renders create new MountActions, but a reused DOM node does not run `execute` again. Name values for that lifecycle, such as `initialScroll` or `seedValue`, rather than implying that they stay current.
 :::
 
 When a later Message changes the Model and should trigger new DOM work, return a Command from that Message's update handler. A Subscription is appropriate when a Model dependency controls the lifetime of an external stream or a paired DOM state, or when a browser event must be handled synchronously, such as calling `preventDefault` inside its listener. Mount args are not reactive properties for either case.

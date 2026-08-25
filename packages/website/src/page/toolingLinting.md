@@ -178,7 +178,7 @@ Requires selection component factories, such as Combobox, Listbox, Menu, and Tab
 
 ### foldkit/mount-factory-must-use-element {#mount-factory-must-use-element}
 
-Requires a Mount factory to read or write its element. If it never touches the element, the cause was misidentified and Mount is the wrong primitive.
+Requires a Mount's `execute` to read or write its element. If it never touches the element, the cause was misidentified and Mount is the wrong primitive.
 
 ::Snippet{name="lintMountFactoryMustUseElement" label="foldkit/mount-factory-must-use-element example"}
 

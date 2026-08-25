@@ -392,120 +392,119 @@ const configureMonaco = async () => {
   }
 }
 
-const PlaygroundEditor = Mount.defineStream(
-  'PlaygroundEditor',
-  {
+const PlaygroundEditor = Mount.defineStream('PlaygroundEditor', {
+  args: {
     path: S.String,
     initialContent: S.String,
     files: S.Record(S.String, S.String),
   },
-  Message.SucceededMountPlaygroundEditor,
-  Message.FailedMountPlaygroundEditor,
-  Message.EditedPlaygroundFile,
-)(
-  ({ path, initialContent, files }) =>
-    element =>
-      Stream.callback<
-        | typeof Message.SucceededMountPlaygroundEditor.Type
-        | typeof Message.FailedMountPlaygroundEditor.Type
-        | typeof Message.EditedPlaygroundFile.Type
-      >(queue =>
-        Effect.acquireRelease(
-          Effect.tryPromise(async () => {
-            await configureMonaco()
-            const monaco = await import('monaco-editor')
-            if (!(element instanceof HTMLElement)) {
-              throw new Error('Playground editor host must be an HTMLElement')
-            }
-            // NOTE: Pre-create Monaco models for every example file so
-            // relative imports between them resolve. Without this, opening
-            // `src/main.ts` and `import './icon'` would fail since
-            // Monaco's TS service only sees the files it has models for.
-            //
-            // We also register each TypeScript file as an extraLib. Monaco's
-            // TS service uses different code paths for resolving against
-            // models vs extraLibs, and Bundler's extension auto-resolution
-            // only kicks in for extraLib paths. Without this, relative
-            // imports like `./ui/message` fail to resolve to the model at
-            // `file:///src/ui/message.ts` despite the model existing.
-            const tsDefaults = monaco.typescript.typescriptDefaults
-            for (const [siblingPath, siblingContent] of Object.entries(files)) {
-              const siblingUri = monaco.Uri.parse(monacoUriForPath(siblingPath))
-              if (monaco.editor.getModel(siblingUri) === null) {
-                monaco.editor.createModel(
-                  siblingContent,
-                  monacoLanguageForPath(siblingPath),
-                  siblingUri,
-                )
-              }
-              if (monacoLanguageForPath(siblingPath) === 'typescript') {
-                tsDefaults.addExtraLib(siblingContent, siblingUri.toString())
-              }
-            }
-            const uri = monaco.Uri.parse(monacoUriForPath(path))
-            const editorModel =
-              monaco.editor.getModel(uri) ??
+  messages: [
+    Message.SucceededMountPlaygroundEditor,
+    Message.FailedMountPlaygroundEditor,
+    Message.EditedPlaygroundFile,
+  ],
+  execute: ({ element, path, initialContent, files }) =>
+    Stream.callback<
+      | typeof Message.SucceededMountPlaygroundEditor.Type
+      | typeof Message.FailedMountPlaygroundEditor.Type
+      | typeof Message.EditedPlaygroundFile.Type
+    >(queue =>
+      Effect.acquireRelease(
+        Effect.tryPromise(async () => {
+          await configureMonaco()
+          const monaco = await import('monaco-editor')
+          if (!(element instanceof HTMLElement)) {
+            throw new Error('Playground editor host must be an HTMLElement')
+          }
+          // NOTE: Pre-create Monaco models for every example file so
+          // relative imports between them resolve. Without this, opening
+          // `src/main.ts` and `import './icon'` would fail since
+          // Monaco's TS service only sees the files it has models for.
+          //
+          // We also register each TypeScript file as an extraLib. Monaco's
+          // TS service uses different code paths for resolving against
+          // models vs extraLibs, and Bundler's extension auto-resolution
+          // only kicks in for extraLib paths. Without this, relative
+          // imports like `./ui/message` fail to resolve to the model at
+          // `file:///src/ui/message.ts` despite the model existing.
+          const tsDefaults = monaco.typescript.typescriptDefaults
+          for (const [siblingPath, siblingContent] of Object.entries(files)) {
+            const siblingUri = monaco.Uri.parse(monacoUriForPath(siblingPath))
+            if (monaco.editor.getModel(siblingUri) === null) {
               monaco.editor.createModel(
-                initialContent,
-                monacoLanguageForPath(path),
-                uri,
+                siblingContent,
+                monacoLanguageForPath(siblingPath),
+                siblingUri,
               )
-            const editor = monaco.editor.create(element, {
-              model: editorModel,
-              theme: FOLDKIT_DARK_THEME,
-              automaticLayout: true,
-              fontSize: 13,
-              fontFamily: 'JetBrains Mono, ui-monospace, monospace',
-              minimap: { enabled: false },
-              scrollBeyondLastLine: false,
-              tabSize: 2,
-              scrollbar: { alwaysConsumeMouseWheel: false },
-              stickyScroll: { enabled: false },
-              contextmenu: false,
-              autoClosingQuotes: 'never',
-              glyphMargin: false,
-              // NOTE: Monaco 0.55 ships an experimental `EditContext`
-              // input path that supersedes the hidden textarea. In our
-              // cross-origin-isolated playground page the EditContext
-              // path silently drops `Cmd+C` copies of selected text.
-              // Forcing the textarea path restores standard clipboard
-              // behavior at the cost of opting out of an in-progress
-              // browser API.
-              editContext: false,
-            })
-            const changeSubscription = editorModel.onDidChangeContent(() => {
-              Queue.offerUnsafe(
-                queue,
-                Message.EditedPlaygroundFile({
-                  path,
-                  content: editorModel.getValue(),
-                }),
-              )
-            })
-            Queue.offerUnsafe(queue, Message.SucceededMountPlaygroundEditor())
-            return { editor, editorModel, changeSubscription }
+            }
+            if (monacoLanguageForPath(siblingPath) === 'typescript') {
+              tsDefaults.addExtraLib(siblingContent, siblingUri.toString())
+            }
+          }
+          const uri = monaco.Uri.parse(monacoUriForPath(path))
+          const editorModel =
+            monaco.editor.getModel(uri) ??
+            monaco.editor.createModel(
+              initialContent,
+              monacoLanguageForPath(path),
+              uri,
+            )
+          const editor = monaco.editor.create(element, {
+            model: editorModel,
+            theme: FOLDKIT_DARK_THEME,
+            automaticLayout: true,
+            fontSize: 13,
+            fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+            minimap: { enabled: false },
+            scrollBeyondLastLine: false,
+            tabSize: 2,
+            scrollbar: { alwaysConsumeMouseWheel: false },
+            stickyScroll: { enabled: false },
+            contextmenu: false,
+            autoClosingQuotes: 'never',
+            glyphMargin: false,
+            // NOTE: Monaco 0.55 ships an experimental `EditContext`
+            // input path that supersedes the hidden textarea. In our
+            // cross-origin-isolated playground page the EditContext
+            // path silently drops `Cmd+C` copies of selected text.
+            // Forcing the textarea path restores standard clipboard
+            // behavior at the cost of opting out of an in-progress
+            // browser API.
+            editContext: false,
+          })
+          const changeSubscription = editorModel.onDidChangeContent(() => {
+            Queue.offerUnsafe(
+              queue,
+              Message.EditedPlaygroundFile({
+                path,
+                content: editorModel.getValue(),
+              }),
+            )
+          })
+          Queue.offerUnsafe(queue, Message.SucceededMountPlaygroundEditor())
+          return { editor, editorModel, changeSubscription }
+        }),
+        ({ editor, editorModel, changeSubscription }) =>
+          Effect.sync(() => {
+            changeSubscription.dispose()
+            editor.dispose()
+            editorModel.dispose()
           }),
-          ({ editor, editorModel, changeSubscription }) =>
-            Effect.sync(() => {
-              changeSubscription.dispose()
-              editor.dispose()
-              editorModel.dispose()
-            }),
-        ).pipe(
-          Effect.flatMap(() => Effect.never),
-          Effect.catch(error =>
-            Effect.sync(() => {
-              Queue.offerUnsafe(
-                queue,
-                Message.FailedMountPlaygroundEditor({
-                  reason: reasonFromError(error),
-                }),
-              )
-            }),
-          ),
+      ).pipe(
+        Effect.flatMap(() => Effect.never),
+        Effect.catch(error =>
+          Effect.sync(() => {
+            Queue.offerUnsafe(
+              queue,
+              Message.FailedMountPlaygroundEditor({
+                reason: reasonFromError(error),
+              }),
+            )
+          }),
         ),
       ),
-)
+    ),
+})
 
 // COMMAND
 

@@ -83,9 +83,9 @@ The exemplar is the comparison target. When you find a pattern that smells off, 
 `@foldkit/oxlint-plugin` ships 24 AST rules covering much of what this audit
 grades: keyed mapped rows, no array-index keys, hard-coded route strings,
 empty-object tagged calls, `Rel` on external links, spread inside `evo`, `Got*`
-wrapping of child output, PascalCase `Command.define` bindings, Mount factories
-that ignore their element, module-level mutable state, and `NoOp` Messages. They
-parse the code, so they catch what a grep misses.
+wrapping of child output, PascalCase `Command.define` bindings, Mounts whose
+`execute` ignores its element, module-level mutable state, and `NoOp` Messages.
+They parse the code, so they catch what a grep misses.
 
 Establish whether the rules are actually **active**, which is not the same as
 finding the package name. **The config is the authority here, not the lint

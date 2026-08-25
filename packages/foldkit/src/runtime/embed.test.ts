@@ -82,23 +82,22 @@ const subscriptions = Subscription.make<Model, Message>()(_entry => ({
   ),
 }))
 
-const TrackHost = Mount.define(
-  'TrackHost',
-  Message.CompletedTrackHost,
-)(() =>
-  Effect.gen(function* () {
-    yield* Effect.acquireRelease(
-      Effect.sync(() => {
-        isMountActive = true
-      }),
-      () =>
+const TrackHost = Mount.define('TrackHost', {
+  messages: [Message.CompletedTrackHost],
+  execute: () =>
+    Effect.gen(function* () {
+      yield* Effect.acquireRelease(
         Effect.sync(() => {
-          isMountActive = false
+          isMountActive = true
         }),
-    )
-    return Message.CompletedTrackHost()
-  }),
-)
+        () =>
+          Effect.sync(() => {
+            isMountActive = false
+          }),
+      )
+      return Message.CompletedTrackHost()
+    }),
+})
 
 const h = __htmlBuilder<Message>()
 
