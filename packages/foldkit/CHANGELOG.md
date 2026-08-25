@@ -1,5 +1,23 @@
 # foldkit
 
+## 0.152.0
+
+### Minor Changes
+
+- da9e505: Bump Effect to `4.0.0-rc.112` (from `4.0.0-rc.111`). Foldkit's `effect` peer dependency now requires `4.0.0-rc.112`, and `@foldkit/devtools` pins its `@effect/platform-browser` peer dependency to the same version.
+
+  Pin your Effect packages to `4.0.0-rc.112` to match this release. While Effect v4 is in prerelease, use exact pins rather than ranges:
+
+  ```sh
+  pnpm add effect@4.0.0-rc.112 @effect/platform-browser@4.0.0-rc.112
+  pnpm add -D @effect/vitest@4.0.0-rc.112
+  ```
+
+### Patch Changes
+
+- 86ef573: Prevent `foldOutMessage` from narrowing the parent Model while combining child-wrapper and OutMessage Step Message and Command service types in `Update.foldChild` and `Update.foldChildStep`.
+- efd64f4: Clarify the public `foldChild` and `foldChildStep` type parameter names so each Message and service requirement identifies its source.
+
 ## 0.151.0
 
 ### Minor Changes
