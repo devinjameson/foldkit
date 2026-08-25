@@ -50,6 +50,9 @@ const highlightLanguage = (filePath: string): string => {
   if (filePath.endsWith('.tsx')) {
     return 'tsx'
   }
+  if (filePath.endsWith('.sh')) {
+    return 'bash'
+  }
   if (filePath.endsWith('.elm')) {
     return 'elm'
   }
@@ -64,6 +67,7 @@ const highlightLanguage = (filePath: string): string => {
 
 const highlightCodePlugin = (): Plugin => ({
   name: 'highlight-code',
+  enforce: 'pre',
   async transform(_code, id) {
     if (!id.includes('?highlighted')) {
       return undefined

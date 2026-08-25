@@ -1,4 +1,4 @@
-import { Effect, Match as M, Option, Schema as S } from 'effect'
+import { Effect, Match as M, Option, Schema as S, pipe } from 'effect'
 import * as Command from 'foldkit/command'
 import * as Dom from 'foldkit/dom'
 import { type ChildAttribute, type Html, childAttributes } from 'foldkit/html'
@@ -217,7 +217,7 @@ export const update = (model: Model, message: Message) =>
         : { model: evo(model, { isOpen: () => true }), commands }
 
       return wasClosed
-        ? Update.withOutMessage(dialogOpen, OutMessage.Opened())
+        ? pipe(dialogOpen, Update.withOutMessage(OutMessage.Opened()))
         : dialogOpen
     },
 
@@ -240,7 +240,7 @@ export const update = (model: Model, message: Message) =>
         ])
 
         return wasOpen
-          ? Update.withOutMessage(dialogClose, OutMessage.Closed())
+          ? pipe(dialogClose, Update.withOutMessage(OutMessage.Closed()))
           : dialogClose
       }
 
@@ -255,7 +255,7 @@ export const update = (model: Model, message: Message) =>
         commands,
       }
       return wasOpen
-        ? Update.withOutMessage(dialogClose, OutMessage.Closed())
+        ? pipe(dialogClose, Update.withOutMessage(OutMessage.Closed()))
         : dialogClose
     },
 

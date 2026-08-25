@@ -8,6 +8,7 @@ import {
   Option,
   Predicate,
   Schema as S,
+  pipe,
 } from 'effect'
 import * as Command from 'foldkit/command'
 import { type ChildAttribute, type Html, childAttributes } from 'foldkit/html'
@@ -233,7 +234,7 @@ export const update = (
     tooltipUpdate.model.isOpen,
   )
 
-  return Update.withOutMessage(tooltipUpdate, outMessage)
+  return pipe(tooltipUpdate, Update.withOutMessage(outMessage))
 }
 
 /** Reflects an externally-sourced hover show-delay onto the Model without

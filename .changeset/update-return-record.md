@@ -14,7 +14,7 @@ If your application uses Foldkit 0.148.x or earlier, upgrade to 0.149.0 and comp
 
 ## Migrate producers
 
-Change each update branch from `[model, commands]` to `{ model, commands }`. Omit `commands` when the branch creates none.
+Change every two-element tuple returned by update, init, boot, or a component helper from `[model, commands]` to `{ model, commands }`. Apply the change to every branch of an update. Omit `commands` wherever the producer statically creates none.
 
 Before:
 
@@ -104,6 +104,32 @@ return {
 
 `Command.mapMessages` accepts an optional Commands field in both call forms and returns an empty array when the field is absent. Pass `homeInit.commands` directly instead of writing `homeInit.commands ?? []`.
 
+TypeScript rejects this manual composition when the enclosing update returns `Update.Return<Model, Message>`:
+
+```typescript
+const dialogOpen = openDialog(model)
+
+return {
+  model: evo(dialogOpen.model, { isSubmitting: () => false }),
+  // Type error: with exactOptionalPropertyTypes, this property must be
+  // omitted when dialogOpen.commands is undefined.
+  commands: dialogOpen.commands,
+}
+```
+
+Every Foldkit template enables `exactOptionalPropertyTypes`. With that setting, the optional `commands` property may be absent. When the property is present, it must contain Commands. `dialogOpen.commands` has the type `Update.Commands<Message> | undefined`, so TypeScript rejects `commands: dialogOpen.commands`.
+
+This error often points to update results being composed by hand. When a later operation needs the Model produced by an earlier operation, express both as Steps and compose them with `Update.combine`:
+
+```typescript
+return Update.combine(model, [
+  openDialog,
+  stepModel => ({
+    model: evo(stepModel, { isSubmitting: () => false }),
+  }),
+])
+```
+
 ## Migrate OutMessages
 
 `Update.ReturnWithOutMessage<Model, Message, OutMessage>` now carries an optional `outMessage` field instead of an `Option<OutMessage>` tuple element. Include `outMessage` when the update emits one and omit the field otherwise.
@@ -139,7 +165,7 @@ const childUpdate: Update.ReturnWithOutMessage<
 > = Child.update(model.child, message)
 
 // Type error: childUpdate may contain an OutMessage.
-const parentUpdate: Update.Return<Model, Message> = childUpdate
+const plainChildUpdate: Update.Return<Child.Model, Child.Message> = childUpdate
 ```
 
 An OutMessage-aware API can still accept a plain result. A missing `outMessage` field means that update emitted nothing:
@@ -151,18 +177,16 @@ const submodelUpdate: Update.ReturnWithOutMessage<Model, Message, OutMessage> =
   plainUpdate
 ```
 
-When an operation has already produced a plain result and another operation decides whether to attach an OutMessage, use `Update.withOutMessage`. It preserves the existing Model and Commands, omits the property for `undefined`, and rejects a result that could already contain an OutMessage.
-
-```typescript
-return pipe(dialogClose, Update.withOutMessage(outMessage))
-```
-
-The data-first form, `Update.withOutMessage(dialogClose, outMessage)`, is also available.
-
-When constructing a new result with a known OutMessage, include it directly:
+When an update definitely emits an OutMessage, include it directly:
 
 ```typescript
 return { model, outMessage: OutMessage.ClearedDate() }
+```
+
+When the OutMessage may be `undefined`, use `Update.withOutMessage`. It omits the property when the update emitted nothing and preserves the Model and Commands of an existing result:
+
+```typescript
+return pipe(dialogClose, Update.withOutMessage(outMessage))
 ```
 
 A child fold's `toParentOutMessage` mapper now returns the parent OutMessage directly. Return `undefined` for each named child variant that stops at the current Submodel.
@@ -191,7 +215,7 @@ const toParentOutMessage = M.type<Child.OutMessage>().pipe(
 )
 ```
 
-Add `toParentOutMessage` only when at least one child OutMessage is forwarded from the current Submodel to its parent. Omit it when `foldOutMessage` handles every variant locally. `Update.foldChildStep` supports the same forwarding for child entry points that take only the child Model.
+Add `toParentOutMessage` only when at least one child OutMessage is forwarded from the current Submodel to its parent. Omit it when no variant is forwarded. A forwarded variant may still be handled locally by `foldOutMessage`. `Update.foldChildStep` supports the same forwarding for child entry points that take only the child Model.
 
 ## Migrate composed operations
 
@@ -234,6 +258,6 @@ return Update.combine(model, [
 ])
 ```
 
-Use `Update.combine` for two or more operations that update the same Model in sequence. Name an inline Step parameter `stepModel`; it contains the Model produced by the preceding Step. Call a single operation directly. Independent child inits do not form a sequence, so initialize them separately and assemble their Models into the parent.
+Use `Update.combine` for two or more Steps when a later Step needs the Model produced by an earlier Step. It collects Commands in Step order, but the Runtime forks them independently after update returns. Name an inline Step parameter `stepModel`; it contains the Model produced by the preceding Step. Call a single operation directly. Independent child inits do not form a sequence, so initialize them separately and assemble their Models into the parent.
 
 Foldkit UI component helpers, the DevTools overlay, the SSR fixtures, and generated `create-foldkit-app` templates now use the same record shape. The [Update guide](https://foldkit.dev/core/update) and [Submodels guide](https://foldkit.dev/core/submodel) cover the permanent authoring conventions in more depth.

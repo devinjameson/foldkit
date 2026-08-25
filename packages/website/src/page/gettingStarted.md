@@ -8,9 +8,7 @@ Before you begin, install Node.js 22.22.2 or newer and make sure the package man
 
 Run the scaffolder:
 
-```sh
-npx create-foldkit-app@latest
-```
+::Snippet{name="gettingStartedCreateProject" label="create a Foldkit project"}
 
 The CLI asks for a project name, a rendering mode, and a package manager. If you choose a browser-only SPA, it also asks which [example](/example-apps) you want to start from. The other rendering modes create their own starter applications:
 
@@ -20,9 +18,7 @@ The CLI asks for a project name, a rendering mode, and a package manager. If you
 
 The scaffolder creates the project and installs its dependencies. Move into the new directory, then start the development server with the package manager you selected:
 
-```sh
-cd your-project
-```
+::Snippet{name="gettingStartedChangeDirectory" label="enter the project directory"}
 
 - pnpm: `pnpm dev`
 - npm: `npm run dev`
@@ -60,15 +56,11 @@ Foldkit currently uses the Effect v4 release candidate and pins its `effect` pee
 
 Install Foldkit together with its pinned peer dependency:
 
-```sh
-npm install foldkit effect@4.0.0-rc.111
-```
+::Snippet{name="gettingStartedInstallFoldkit" label="install Foldkit and Effect"}
 
 `@effect/platform-browser` is a separate package pinned to the same version. Install it when you use `@foldkit/devtools`, which declares it as a peer dependency, or when you need Effect browser services such as `BrowserKeyValueStore` and `BrowserCrypto`:
 
-```sh
-npm install @effect/platform-browser@4.0.0-rc.111
-```
+::Snippet{name="gettingStartedInstallPlatformBrowser" label="install Effect platform browser"}
 
 ## Where to Go Next
 

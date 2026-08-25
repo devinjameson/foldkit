@@ -14,9 +14,7 @@ Architecture is only half of the context. APIs and conventions change, so the ag
 
 Vendor the Foldkit repository into your project as a git subtree:
 
-```sh
-git subtree add --prefix=repos/foldkit https://github.com/foldkit/foldkit.git main --squash
-```
+::Snippet{name="aiOverviewAddSubtree" label="vendor the Foldkit repository"}
 
 The subtree gives an agent local access to the framework source, runnable examples, this documentation site, and the production apps built with Foldkit. Treat it as read-only reference material. Application imports should still come from the installed npm packages.
 
@@ -24,9 +22,7 @@ Unlike a submodule, a subtree is committed with your repository. Teammates, CI r
 
 Refresh the subtree when you want the latest source and examples:
 
-```sh
-git subtree pull --prefix=repos/foldkit https://github.com/foldkit/foldkit.git main --squash
-```
+::Snippet{name="aiOverviewRefreshSubtree" label="refresh the Foldkit repository"}
 
 ## Keeping FOLDKIT.md Current
 

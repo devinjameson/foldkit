@@ -404,9 +404,9 @@ export const update = (model: Model, message: Message) =>
         model: evo(model, { dragState: () => Idle() }),
         commands: Option.toArray(maybeFocusCommand),
       }
-      return Update.withOutMessage(
+      return pipe(
         dragCancellation,
-        Option.getOrUndefined(maybeOutMessage),
+        Update.withOutMessage(Option.getOrUndefined(maybeOutMessage)),
       )
     },
 

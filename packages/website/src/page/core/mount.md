@@ -62,9 +62,7 @@ DevTools re-renders historical Models. Elements inserted during replay run their
 
 Mount factories often need an input that differs by element instance, such as an initial scroll position, chart data, or a stable host id. Declare a Schema record of `args` with the same shape used by [Commands](/core/commands):
 
-```ts
-Mount.define(name, args, ...results)(args => element => Effect<Message>)
-```
+::Snippet{name="mountDefineArgs" label="Mount args definition"}
 
 Calling the Definition with an args record creates the MountAction passed to `OnMount`. `Mount.defineStream` supports the same overload and returns a `Stream<Message>` from its factory instead.
 
