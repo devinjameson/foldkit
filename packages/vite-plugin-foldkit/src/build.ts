@@ -1,7 +1,13 @@
-import { Array } from 'effect'
+import { Array, Schema as S } from 'effect'
 import type { RenderedApplication } from 'foldkit/experimental/server'
 import { mkdir, writeFile } from 'node:fs/promises'
-import { basename, dirname, extname, resolve } from 'node:path'
+import nodePath, {
+  basename,
+  dirname,
+  extname,
+  relative,
+  resolve,
+} from 'node:path'
 import { pathToFileURL } from 'node:url'
 import type {
   BuildEnvironment,
@@ -59,16 +65,51 @@ export type FoldkitBuildOptions = Readonly<{
  * template. Reading it here is how a deployment target gets that right without
  * asking its user to configure it twice.
  */
-export type FoldkitBuildManifest = Readonly<{
-  /** Where the browser build was written, relative to the Vite root. */
-  client: string
-  /** Where the server build was written, relative to the Vite root. */
-  server: string
-  /** The server build's entry file, relative to {@link server}. */
-  serverEntry: string
+export const FoldkitBuildManifest = S.Struct({
+  /**
+   * The shape of this document. A consumer decodes before reading and refuses
+   * a version it does not know, so a manifest written by a newer Foldkit is a
+   * clear refusal rather than a field silently read as undefined.
+   */
+  schemaVersion: S.Literals([1]),
+  /**
+   * Where the browser build was written, as a POSIX path relative to the Vite
+   * root. Relative and normalized so a manifest survives being moved with the
+   * build it describes.
+   */
+  client: S.String,
+  /** Where the server build was written, on the same terms as {@link client}. */
+  server: S.String,
+  /** The server build's entry file, relative to `server`. */
+  serverEntry: S.String,
   /** Every path this build generated a page for, in the order it generated. */
-  prerendered: ReadonlyArray<string>
-}>
+  prerendered: S.Array(S.String),
+})
+
+/**
+ * What the build produced, written beside the server bundle for whatever
+ * deploys it.
+ *
+ * A host has to decide what the asset layer does with a request that matches no
+ * file, and that answer follows from the build rather than from taste: an
+ * application with generated pages and no others wants a miss to stay a miss,
+ * one with a server wants a miss to reach it, and one with neither wants the
+ * template. Reading it here is how a deployment target gets that right without
+ * asking its user to configure it twice.
+ *
+ * It is a file on disk that something else writes the next time it builds, so a
+ * consumer decodes it with this Schema and fails closed rather than trusting
+ * the shape it happens to find.
+ */
+export type FoldkitBuildManifest = typeof FoldkitBuildManifest.Type
+
+const MANIFEST_SCHEMA_VERSION = 1
+
+// Relative and POSIX so the manifest describes a layout rather than this
+// machine: an absolute `clientOutDir` would otherwise be published verbatim and
+// break the moment the build is copied anywhere else.
+const manifestPath = (root: string, directory: string): string =>
+  relative(root, resolve(root, directory)).split(nodePath.sep).join('/')
 
 const MANIFEST_FILE_NAME = 'foldkit.build.json'
 const DEFAULT_CLIENT_OUT_DIR = 'dist/client'
@@ -95,48 +136,36 @@ type ServerEntryModule = {
   readonly prerenderPaths?: ReadonlyArray<string>
 }
 
-// `build` resolves to a watcher when the environment watches, which a
-// production build never does, and to one output set or several otherwise.
-const asOutputs = (result: BuildResult): ReadonlyArray<BuildOutput> => {
-  if (globalThis.Array.isArray(result)) {
-    return result.flatMap(one => one.output)
+// The chunk built from the configured entry, by name rather than by position.
+//
+// An SSR environment can carry more than one input, and prerendering imports
+// whatever this returns, which runs that module's top-level code in the build
+// process. Taking the first entry chunk would execute an unrelated module that
+// happens to sort first, so the chunk is matched to the entry the build was
+// given and anything else is refused.
+const serverEntryFile = (
+  outputs: ReadonlyArray<BuildOutput>,
+  entryName: string,
+): string => {
+  const entries = outputs.filter(file => file.type === 'chunk' && file.isEntry)
+  const named = entries.filter(file => file.name === entryName)
+  if (named.length === 1 && named[0] !== undefined) {
+    return named[0].fileName
   }
-  if ('output' in result) {
-    return result.output
+  if (named.length > 1) {
+    throw new Error(
+      `[foldkit] the server build emitted more than one entry chunk named "${entryName}": ${named
+        .map(file => file.fileName)
+        .join(', ')}. Prerendering cannot choose between them.`,
+    )
   }
   throw new Error(
-    '[foldkit] the build is watching rather than producing output, so there is nothing to generate pages from.',
+    `[foldkit] the server build emitted no entry chunk named "${entryName}"${
+      entries.length === 0
+        ? '.'
+        : `; it emitted ${entries.map(file => file.name).join(', ')}.`
+    }`,
   )
-}
-
-// The template is read out of the build that produced it rather than off disk.
-// The generated `/` is written to the same `index.html` the browser build
-// emits, so a build that re-read that file would parse the page it had just
-// written on any second pass over one client build.
-const templateFrom = (outputs: ReadonlyArray<BuildOutput>): string => {
-  const html = Array.findFirst(
-    outputs,
-    file => file.type === 'asset' && file.fileName === 'index.html',
-  )
-  if (html._tag === 'None' || html.value.type !== 'asset') {
-    throw new Error(
-      '[foldkit] the browser build emitted no index.html to generate pages from. Prerendering needs an HTML entry.',
-    )
-  }
-  return String(html.value.source)
-}
-
-const serverEntryFile = (outputs: ReadonlyArray<BuildOutput>): string => {
-  const entry = Array.findFirst(
-    outputs,
-    file => file.type === 'chunk' && file.isEntry,
-  )
-  if (entry._tag === 'None') {
-    throw new Error(
-      '[foldkit] the server build emitted no entry chunk to generate pages with.',
-    )
-  }
-  return entry.value.fileName
 }
 
 const environmentNamed = (
@@ -152,10 +181,23 @@ const environmentNamed = (
   return environment
 }
 
-const outputFileFor = (
+// The file a generated path is written to.
+//
+// A path reaches here from application code and may come from data, so it is
+// treated as a URL rather than as a filesystem path: `path.slice(1)` is a
+// relative path on POSIX but not on Windows, where `/C:/outside` is
+// drive-absolute and `/D:outside` is drive-relative, and either escapes the
+// build output. The segments are taken from the parsed URL, rejected if any
+// still carries a separator or a dot-segment after decoding, and the resolved
+// file is required to sit under the client directory.
+//
+// `pathApi` is the platform's `path` by default and the parameter exists so a
+// test can run the Windows rules anywhere.
+export const outputFileFor = (
   clientDirectory: string,
   path: string,
   origin: string,
+  pathApi: typeof nodePath = nodePath,
 ): string => {
   const url = new URL(path, origin)
   if (url.origin !== new URL(origin).origin || url.pathname !== path) {
@@ -163,9 +205,41 @@ const outputFileFor = (
       `[foldkit] cannot generate the non-normalized same-origin path "${path}".`,
     )
   }
-  return path === '/'
-    ? resolve(clientDirectory, 'index.html')
-    : resolve(clientDirectory, path.slice(1), 'index.html')
+
+  const segments = url.pathname.split('/').filter(segment => segment !== '')
+  for (const segment of segments) {
+    const decoded = decodeURIComponent(segment)
+    const isTraversal = decoded === '.' || decoded === '..'
+    const carriesSeparator =
+      decoded.includes('/') ||
+      decoded.includes('\\') ||
+      decoded.includes('\u0000')
+    // A colon cannot appear in a Windows path segment, and a bare `C:` is a
+    // drive designator rather than a directory: `path.win32.resolve` re-anchors
+    // the rest of the path onto that drive's current directory.
+    const namesADrive = decoded.includes(':')
+    if (isTraversal || carriesSeparator || namesADrive) {
+      throw new Error(
+        `[foldkit] cannot generate "${path}": the segment "${segment}" does not name a single directory.`,
+      )
+    }
+  }
+
+  const file = pathApi.resolve(
+    clientDirectory,
+    ...segments.map(segment => decodeURIComponent(segment)),
+    'index.html',
+  )
+  const root = pathApi.resolve(clientDirectory)
+  const isContained =
+    file === pathApi.join(root, 'index.html') ||
+    file.startsWith(root.endsWith(pathApi.sep) ? root : `${root}${pathApi.sep}`)
+  if (!isContained) {
+    throw new Error(
+      `[foldkit] cannot generate "${path}": it resolves to "${file}", outside the browser build at "${root}".`,
+    )
+  }
+  return file
 }
 
 // A static file is a body plus whatever headers its host adds, so a result that
@@ -202,6 +276,33 @@ const prerenderOptionsFrom = (
   return prerender === true ? {} : prerender
 }
 
+type Captured = {
+  template?: string
+  serverEntryFile?: string
+}
+
+// Keyed by Vite root plus the output layout, so concurrent builds of different
+// projects in one process never read each other's output.
+//
+// NOTE: the registry hangs off a global symbol rather than module scope. Vite
+// re-bundles a config file for each environment it resolves, and every bundle
+// is a fresh copy of this module with its own module scope, so what the client
+// build recorded would be invisible to the instance that finalizes. The symbol
+// is one registry for the process no matter how many copies of this module it
+// loads.
+const CAPTURES = Symbol.for('foldkit/vite-plugin:build-captures')
+
+const captures = ((): Map<string, Captured> => {
+  const registry = globalThis as unknown as Record<symbol, unknown>
+  const existing = registry[CAPTURES]
+  if (existing instanceof Map) {
+    return existing as Map<string, Captured>
+  }
+  const fresh = new Map<string, Captured>()
+  registry[CAPTURES] = fresh
+  return fresh
+})()
+
 /**
  * Builds the server entry alongside the browser build, and generates static
  * HTML from it, inside one `vite build`.
@@ -221,9 +322,13 @@ export const foldkitBuild = (
   const serverOutDir = options.serverOutDir ?? DEFAULT_SERVER_OUT_DIR
   const prerender = prerenderOptionsFrom(options.prerender ?? false)
 
+  // Prerendering imports the server bundle and runs it in the build process,
+  // with the build's own privileges. That module is the application's own code
+  // and its dependencies, built from the configured entry, and is trusted on
+  // exactly those terms. Nothing here is imported when prerendering is off.
   const generatePages = async (
     builder: ViteBuilder,
-    template: string,
+    template: () => string,
     serverDirectory: string,
     entryFileName: string,
   ): Promise<ReadonlyArray<string>> => {
@@ -233,9 +338,21 @@ export const foldkitBuild = (
 
     const origin = prerender.origin ?? DEFAULT_PRERENDER_ORIGIN
     const clientDirectory = resolve(builder.config.root, clientOutDir)
-    const entry: ServerEntryModule = await import(
-      pathToFileURL(resolve(serverDirectory, entryFileName)).href
-    )
+
+    const entryFile = resolve(serverDirectory, entryFileName)
+    const contained = resolve(serverDirectory)
+    if (!entryFile.startsWith(`${contained}${nodePath.sep}`)) {
+      throw new Error(
+        `[foldkit] the server entry "${entryFileName}" resolves outside the server build at "${contained}".`,
+      )
+    }
+
+    const entry: ServerEntryModule = await import(pathToFileURL(entryFile).href)
+    if (typeof entry.renderPage !== 'function') {
+      throw new Error(
+        `[foldkit] "${entryFileName}" exports no renderPage function, so there is nothing to generate pages with.`,
+      )
+    }
     const paths = prerender.paths ?? entry.prerenderPaths
 
     if (paths === undefined) {
@@ -249,7 +366,7 @@ export const foldkitBuild = (
     for (const path of paths) {
       const result = await entry.renderPage(new Request(`${origin}${path}`))
       const html = injectIntoTemplate(
-        template,
+        template(),
         renderedApplication(path, result),
       )
       const file = outputFileFor(clientDirectory, path, origin)
@@ -268,12 +385,13 @@ export const foldkitBuild = (
     entryFileName: string,
     prerendered: ReadonlyArray<string>,
   ): Promise<void> => {
-    const manifest: FoldkitBuildManifest = {
-      client: clientOutDir,
-      server: serverOutDir,
+    const manifest = S.encodeSync(FoldkitBuildManifest)({
+      schemaVersion: MANIFEST_SCHEMA_VERSION,
+      client: manifestPath(builder.config.root, clientOutDir),
+      server: manifestPath(builder.config.root, serverOutDir),
       serverEntry: entryFileName,
       prerendered,
-    }
+    })
     await writeFile(
       resolve(serverDirectory, MANIFEST_FILE_NAME),
       `${JSON.stringify(manifest, undefined, 2)}\n`,
@@ -281,9 +399,85 @@ export const foldkitBuild = (
     builder.config.logger.info(`  wrote ${MANIFEST_FILE_NAME}`)
   }
 
+  // What each environment emitted, recorded as it is emitted.
+  //
+  // Vite resolves the config once per environment unless `sharedConfigBuild` is
+  // on, so the plugin that finalizes is not necessarily the instance that saw a
+  // given environment build. Keying the record by the output layout it
+  // describes is what lets the finalizing instance read what the others
+  // emitted, and what lets finalization work whether this plugin orchestrates
+  // the environments or a host does.
+  const key = [clientOutDir, serverOutDir, entry].join('\u0000')
+  const captured = (root: string): Captured => {
+    const existing = captures.get(`${root}\u0000${key}`)
+    if (existing !== undefined) {
+      return existing
+    }
+    const fresh: Captured = {}
+    captures.set(`${root}\u0000${key}`, fresh)
+    return fresh
+  }
+
+  const finalize = async (builder: ViteBuilder): Promise<void> => {
+    const state = captured(builder.config.root)
+    const serverDirectory = resolve(builder.config.root, serverOutDir)
+
+    if (state.serverEntryFile === undefined) {
+      throw new Error(
+        '[foldkit] the server environment produced no entry chunk, so there is nothing to deploy or generate from.',
+      )
+    }
+
+    // Read only when a page is actually generated: a build that generates
+    // nothing has no use for an HTML entry and must not require one.
+    const template = (): string => {
+      if (state.template === undefined) {
+        throw new Error(
+          '[foldkit] the browser build emitted no index.html to generate pages from. Prerendering needs an HTML entry.',
+        )
+      }
+      return state.template
+    }
+
+    const prerendered = await generatePages(
+      builder,
+      template,
+      serverDirectory,
+      state.serverEntryFile,
+    )
+
+    await writeManifest(
+      builder,
+      serverDirectory,
+      state.serverEntryFile,
+      prerendered,
+    )
+  }
+
   return {
     name: 'foldkit:build',
     apply: 'build',
+    // NOTE: `writeBundle` rather than `generateBundle`: Vite's own HTML plugin
+    // emits `index.html` from a `generateBundle` hook of its own, and hook
+    // order between plugins decides whether that asset exists yet. By
+    // `writeBundle` the bundle is whatever the environment actually produced.
+    writeBundle(_options, bundle) {
+      const state = captured(this.environment.config.root)
+      const outputs = Object.values(bundle)
+      if (this.environment.name === 'client') {
+        const html = Array.findFirst(
+          outputs,
+          file => file.type === 'asset' && file.fileName === 'index.html',
+        )
+        if (html._tag === 'Some' && html.value.type === 'asset') {
+          state.template = String(html.value.source)
+        }
+        return
+      }
+      if (this.environment.name === 'ssr') {
+        state.serverEntryFile = serverEntryFile(outputs, serverChunkName(entry))
+      }
+    },
     config: userConfig => {
       const client: EnvironmentOptions = {
         build: { outDir: clientOutDir },
@@ -296,39 +490,23 @@ export const foldkitBuild = (
         },
       }
 
+      // NOTE: a host framework that orchestrates its own environments owns the
+      // order they build in, so its `buildApp` runs as written. Foldkit still
+      // has to finish the build afterwards: generated pages and the manifest
+      // are what make the output deployable, and a host that only ordered the
+      // environments has not opted out of them.
+      const hostBuildApp = userConfig.builder?.buildApp
       const buildApp = async (builder: ViteBuilder): Promise<void> => {
-        const clientResult = await builder.build(
-          environmentNamed(builder, 'client'),
-        )
-        const serverResult = await builder.build(
-          environmentNamed(builder, 'ssr'),
-        )
-
-        const template = templateFrom(asOutputs(clientResult))
-        const entryFileName = serverEntryFile(asOutputs(serverResult))
-
-        const serverDirectory = resolve(builder.config.root, serverOutDir)
-        const prerendered = await generatePages(
-          builder,
-          template,
-          serverDirectory,
-          entryFileName,
-        )
-
-        await writeManifest(
-          builder,
-          serverDirectory,
-          entryFileName,
-          prerendered,
-        )
+        if (hostBuildApp === undefined) {
+          await builder.build(environmentNamed(builder, 'client'))
+          await builder.build(environmentNamed(builder, 'ssr'))
+        } else {
+          await hostBuildApp(builder)
+        }
+        await finalize(builder)
       }
 
-      // NOTE: a host framework that orchestrates its own environments owns the
-      // order they build in. Defaulting over it would replace that
-      // orchestration with this one rather than compose with it.
-      return userConfig.builder?.buildApp === undefined
-        ? { environments: { client, ssr }, builder: { buildApp } }
-        : { environments: { client, ssr } }
+      return { environments: { client, ssr }, builder: { buildApp } }
     },
   }
 }

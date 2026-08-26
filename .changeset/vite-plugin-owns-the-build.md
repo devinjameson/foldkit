@@ -7,7 +7,7 @@ Let the plugin own the whole build. `ssr.build` declares the server environment 
 
 A Foldkit application that rendered on the server could not be deployed by anything that runs `vite build`. Its build was three commands a script chained together, and a host that injects its own Vite plugin — a Cloudflare adapter, an infrastructure tool, a platform's build step — can only join the first of them. Such a host built the browser half of the application and deployed it without the server bundle it needed. The build id had the same shape of problem: the client build and the server build were separate processes, so one script had to mint an id and pass it through the environment of each, and a project that built its halves any other way produced pages hydration then refused.
 
-Both follow from the build being one process. Vite reads the config once, so the id it computes there reaches every environment that build produces, and a host plugin composes with all of them.
+A host plugin composes with every environment of one build, which is what makes the deployment possible at all. The id needs one thing more: Vite reads a config file once per environment, so a config that answers with a fresh value each time hands the two bundles different ids. The generated projects store their fallback back into the environment, and every later read resolves the same id.
 
 ```ts
 foldkit({

@@ -44,10 +44,13 @@ puts in that position, carrying what the visitor typed into it.
 The comparison happens when a client boots against a page. A tab whose client
 is already running when a deployment lands is not rechecked.
 
-`scripts/build.mjs` takes care of this: it produces one id per build and passes
-it to both build commands. Supply `FOLDKIT_BUILD_ID` when the two commands run
-in separate jobs, or when you want the served id to name a deployment you can
-look up later:
+`vite.config.ts` takes care of this: it reads `FOLDKIT_BUILD_ID` and generates
+one when the variable is unset, storing it back so every later read of the
+config resolves the same id. Vite reads the config once per environment it
+builds, so a config that generated a fresh id each time would give the browser
+bundle and the server bundle different ids. Supply `FOLDKIT_BUILD_ID` when the
+build runs in separate jobs, or when you want the served id to name a
+deployment you can look up later:
 
 ```bash
 FOLDKIT_BUILD_ID="$CI_DEPLOYMENT_ID" {{buildCommand}}
@@ -57,7 +60,7 @@ The id is public HTML and must never contain a secret or be derived from one.
 The client and server halves of one deployment must share an id. By contrast,
 two deployments must never share one. Reusing an id produces no warning: the
 ids agree, so hydration proceeds. When in doubt, leave `FOLDKIT_BUILD_ID` unset
-and let the build script generate one.
+and let the build generate one.
 
 ## Learn More
 

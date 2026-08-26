@@ -1,12 +1,17 @@
+import { Schema as S } from 'effect'
+import { execFile } from 'node:child_process'
 import { readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
+import { win32 } from 'node:path'
+import { promisify } from 'node:util'
 import { type Plugin, createBuilder } from 'vite'
 import { afterAll, describe, expect, it, onTestFinished } from 'vitest'
 
 import {
-  type FoldkitBuildManifest,
+  FoldkitBuildManifest,
   type FoldkitBuildOptions,
   foldkitBuild,
+  outputFileFor,
 } from '../src/build.ts'
 import { foldkitBuildToken } from '../src/buildToken.ts'
 
@@ -32,8 +37,11 @@ const filesUnder = async (
 // and so one case never reads what another wrote.
 const buildFixture = async (
   name: string,
-  options: Omit<FoldkitBuildOptions, 'clientOutDir' | 'serverOutDir'> = {},
+  options: Omit<FoldkitBuildOptions, 'clientOutDir' | 'serverOutDir'> & {
+    clientOutDir?: string
+  } = {},
   extraPlugins: ReadonlyArray<Plugin> = [],
+  fixtureRoot: string = FIXTURE_ROOT,
 ): Promise<Readonly<{ client: string; server: string }>> => {
   const client = `dist-test/${name}/client`
   const server = `dist-test/${name}/server`
@@ -41,14 +49,14 @@ const buildFixture = async (
   // Registered before the build so a case that asserts a failing build still
   // cleans up what the build wrote before it failed.
   onTestFinished(async () => {
-    await rm(resolve(FIXTURE_ROOT, `dist-test/${name}`), {
+    await rm(resolve(fixtureRoot, `dist-test/${name}`), {
       recursive: true,
       force: true,
     })
   })
 
   const builder = await createBuilder({
-    root: FIXTURE_ROOT,
+    root: fixtureRoot,
     logLevel: 'silent',
     plugins: [
       ...extraPlugins,
@@ -63,8 +71,8 @@ const buildFixture = async (
   await builder.buildApp()
 
   return {
-    client: resolve(FIXTURE_ROOT, client),
-    server: resolve(FIXTURE_ROOT, server),
+    client: resolve(fixtureRoot, options.clientOutDir ?? client),
+    server: resolve(fixtureRoot, server),
   }
 }
 
@@ -222,5 +230,252 @@ describe('foldkitBuild', () => {
     await expect(
       buildFixture('responded', { prerender: { paths: ['/redirect'] } }),
     ).rejects.toThrow(/cannot write the complete Response/)
+  })
+})
+
+// A generated path can come from application data, so it is treated as
+// untrusted input: it names a URL, and the file it writes has to stay inside
+// the browser build no matter which platform's rules apply. The Windows cases
+// run everywhere because `path.slice(1)` is a relative path on POSIX and a
+// drive-absolute or drive-relative path on Windows.
+describe('outputFileFor', () => {
+  const CLIENT = win32.resolve('C:/build/client')
+  const ORIGIN = 'https://app.example'
+
+  const generated = (path: string): string =>
+    outputFileFor(CLIENT, path, ORIGIN, win32)
+
+  it('writes the root path to the browser build index', () => {
+    expect(generated('/')).toBe(win32.join(CLIENT, 'index.html'))
+  })
+
+  it('writes a nested path under the browser build', () => {
+    expect(generated('/docs/api')).toBe(
+      win32.join(CLIENT, 'docs', 'api', 'index.html'),
+    )
+  })
+
+  for (const path of [
+    '/C:/outside',
+    '/D:outside',
+    '/C:/Windows/System32',
+    '//server/share/outside',
+  ]) {
+    it(`refuses the drive or UNC path "${path}"`, () => {
+      expect(() => generated(path)).toThrow(/foldkit/)
+    })
+  }
+
+  for (const path of ['/../outside', '/docs/../../outside', '/./docs']) {
+    it(`refuses the dot-segment path "${path}"`, () => {
+      expect(() => generated(path)).toThrow(/foldkit/)
+    })
+  }
+
+  for (const path of ['/docs?query=1', '/docs#fragment']) {
+    it(`refuses the non-path input "${path}"`, () => {
+      expect(() => generated(path)).toThrow(/foldkit/)
+    })
+  }
+
+  it('refuses a percent-encoded separator', () => {
+    expect(() => generated('/docs%2f..%2foutside')).toThrow(/foldkit/)
+  })
+})
+
+describe('the build manifest', () => {
+  // The manifest is a file something else writes the next time it builds, so a
+  // consumer decodes it rather than trusting the shape it finds.
+  it('decodes what the build writes', async () => {
+    const { server } = await buildFixture('manifest-decode', {
+      prerender: true,
+    })
+
+    const manifest = S.decodeUnknownSync(FoldkitBuildManifest)(
+      JSON.parse(await readFile(resolve(server, 'foldkit.build.json'), 'utf8')),
+    )
+
+    expect(manifest.schemaVersion).toBe(1)
+    expect(manifest.prerendered).toEqual(['/', '/about'])
+  })
+
+  it('refuses a manifest from a version it does not know', () => {
+    const decode = () =>
+      S.decodeUnknownSync(FoldkitBuildManifest)({
+        schemaVersion: 2,
+        client: 'dist/client',
+        server: 'dist/server',
+        serverEntry: 'entry.server.js',
+        prerendered: [],
+      })
+
+    expect(decode).toThrow()
+  })
+
+  it('refuses a manifest missing its version', () => {
+    const decode = () =>
+      S.decodeUnknownSync(FoldkitBuildManifest)({
+        client: 'dist/client',
+        server: 'dist/server',
+        serverEntry: 'entry.server.js',
+        prerendered: [],
+      })
+
+    expect(decode).toThrow()
+  })
+
+  // An absolute output directory describes this machine rather than the build,
+  // and the manifest travels with the build.
+  it('records directories relative to the Vite root', async () => {
+    const { server } = await buildFixture('manifest-absolute', {
+      prerender: true,
+      clientOutDir: resolve(FIXTURE_ROOT, 'dist-test/manifest-absolute/client'),
+    })
+
+    const manifest = S.decodeUnknownSync(FoldkitBuildManifest)(
+      JSON.parse(await readFile(resolve(server, 'foldkit.build.json'), 'utf8')),
+    )
+
+    expect(manifest.client).toBe('dist-test/manifest-absolute/client')
+    expect(manifest.client.startsWith('/')).toBe(false)
+  })
+})
+
+const UNRELATED_ROOT = resolve(import.meta.dirname, 'fixtures/build-unrelated')
+
+describe('foldkitBuild orchestration', () => {
+  // A host framework owns the order its environments build in, but ordering
+  // them is not opting out of what makes the output deployable: without the
+  // generated pages and the manifest the build is only half done, silently.
+  it('finishes the build when a host orchestrates the environments', async () => {
+    const hostOrchestrator: Plugin = {
+      name: 'test:host-build-app',
+      config: () => ({
+        builder: {
+          buildApp: async builder => {
+            for (const environment of Object.values(builder.environments)) {
+              await builder.build(environment)
+            }
+          },
+        },
+      }),
+    }
+
+    const { client, server } = await buildFixture(
+      'host-orchestrated',
+      { prerender: { paths: ['/about'] } },
+      [hostOrchestrator],
+    )
+
+    expect(await filesUnder(client)).toContain('about/index.html')
+    expect(await filesUnder(server)).toContain('foldkit.build.json')
+  })
+
+  // `ssr.build` without prerendering is documented as generating no pages, so
+  // a client that emits no HTML entry is a build this has no opinion about.
+  it('builds without an HTML entry when it generates no pages', async () => {
+    const jsOnlyClient: Plugin = {
+      name: 'test:js-only-client',
+      config: () => ({
+        environments: {
+          client: {
+            build: { rollupOptions: { input: { app: '/entry.client.ts' } } },
+          },
+        },
+      }),
+    }
+
+    const { server } = await buildFixture('js-client', {}, [jsOnlyClient])
+
+    expect(await filesUnder(server)).toContain('entry.server.js')
+  })
+
+  // Prerendering imports what this selects and runs it in the build process, so
+  // it selects the configured entry rather than whichever chunk sorts first.
+  it('imports the configured entry rather than another input', async () => {
+    const secondInput: Plugin = {
+      name: 'test:second-ssr-input',
+      config: () => ({
+        environments: {
+          ssr: {
+            build: {
+              rollupOptions: {
+                input: {
+                  unrelated: '/unrelated.ts',
+                  'entry.server': '/entry.server.ts',
+                },
+              },
+            },
+          },
+        },
+      }),
+    }
+
+    const { client } = await buildFixture(
+      'second-input',
+      { prerender: { paths: ['/about'] } },
+      [secondInput],
+      UNRELATED_ROOT,
+    )
+
+    expect(
+      await readFile(resolve(client, 'about/index.html'), 'utf8'),
+    ).toContain('>/about</main>')
+  })
+
+  // The import runs application code with the build's privileges, so a build
+  // that generates nothing must never reach it.
+  it('imports no server entry when it generates no pages', async () => {
+    const { server } = await buildFixture('no-import', {}, [], UNRELATED_ROOT)
+
+    expect(await filesUnder(server)).toContain('entry.server.js')
+  })
+})
+
+const CONFIG_ROOT = resolve(import.meta.dirname, 'fixtures/build-config')
+const VITE_BIN = resolve(import.meta.dirname, '../node_modules/.bin/vite')
+const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/
+
+// Vite evaluates a config file once per environment it builds, so a config that
+// answers with a fresh id each time compiles one id into the browser bundle and
+// another into the server bundle, and hydration then refuses every page of the
+// deployment that just shipped. Only a real `vite build` reproduces that: an
+// in-process builder evaluates the config once, whatever the environments do.
+describe('the build id across environments', () => {
+  it('compiles one id into both bundles of a single build', async () => {
+    onTestFinished(async () => {
+      await rm(resolve(CONFIG_ROOT, 'dist-test'), {
+        recursive: true,
+        force: true,
+      })
+    })
+
+    const { FOLDKIT_BUILD_ID: _supplied, ...environment } = process.env
+    await promisify(execFile)(VITE_BIN, ['build'], {
+      cwd: CONFIG_ROOT,
+      env: environment,
+    })
+
+    const client = resolve(CONFIG_ROOT, 'dist-test/config/client')
+    const server = resolve(CONFIG_ROOT, 'dist-test/config/server')
+    const clientAssets = await readdir(resolve(client, 'assets'))
+    const clientBundle = await readFile(
+      resolve(
+        client,
+        'assets',
+        clientAssets.filter(f => f.endsWith('.js'))[0] ?? '',
+      ),
+      'utf8',
+    )
+    const serverBundle = await readFile(
+      resolve(server, 'entry.server.js'),
+      'utf8',
+    )
+
+    const inClient = UUID.exec(clientBundle)?.[0]
+    const inServer = UUID.exec(serverBundle)?.[0]
+
+    expect(inClient).toBeDefined()
+    expect(inServer).toBe(inClient)
   })
 })

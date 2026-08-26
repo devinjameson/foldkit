@@ -192,7 +192,7 @@ Whatever value you pick, three things have to be true:
 
 - It is public. The id appears in the HTML sent to every visitor, so it must not contain a secret.
 - It identifies one deployment. Reusing an id makes a stale page look current and produces no warning. A commit or version is insufficient when the same revision can be deployed with different rendering inputs. The `ssr` and `ssg` scaffolds generate a fresh id whenever `FOLDKIT_BUILD_ID` is unset.
-- It reaches both builds. `@foldkit/vite-plugin` builds the client and the server from one `vite build`, which reads the config once, so the id the config computes reaches both. A build split into separate commands has to pass the same value to each itself. A unique CI deployment id is a good source. A commit SHA or release tag is enough only when every deployment carrying it has identical rendering inputs.
+- It reaches both builds. `@foldkit/vite-plugin` builds the client and the server from one `vite build`, but Vite reads the config once per environment it builds, so whatever supplies the id has to answer with the same value each time it is asked. Read it from the environment, or store a generated fallback back into the environment, as the scaffolds do. A config that computes a fresh value per read gives the two bundles different ids, and hydration then refuses every page of the deployment that just shipped. A build split into separate commands has to pass the same value to each itself. A unique CI deployment id is a good source. A commit SHA or release tag is enough only when every deployment carrying it has identical rendering inputs.
 
 A hydratable render without an id fails with `MissingBuildId`. `Runtime.hydrate` also requires one. A static render with `isHydratable: false` needs none.
 

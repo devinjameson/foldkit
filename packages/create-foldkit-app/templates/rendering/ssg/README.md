@@ -54,7 +54,7 @@ The id is public HTML and must never contain a secret or be derived from one.
 Every step of one deployment must share an id. By contrast, two deployments
 must never share one. Reusing an id produces no warning: the ids agree, so
 hydration proceeds. When in doubt, leave `FOLDKIT_BUILD_ID` unset and let the
-build script generate one.
+build generate one.
 
 ## Learn More
 
