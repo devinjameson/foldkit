@@ -6,17 +6,17 @@ import { Button, Checkbox, Input, RadioGroup } from '@foldkit/ui'
 
 import * as Icon from './icon'
 import {
+  CheckoutState,
+  Discount,
   EDITIONS,
   EditionRadioGroup,
   Message,
+  type Model,
   checkoutMachine,
   editionName,
   isReviewReady,
   promoToMaybeDiscount,
 } from './main'
-import type { Model } from './main'
-import { Discount } from './main'
-import { CheckoutState } from './main'
 
 // VIEW
 

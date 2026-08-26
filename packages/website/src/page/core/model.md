@@ -16,15 +16,17 @@ That runtime value matters because TypeScript types disappear after compilation.
 
 ## State with Variants
 
-Use `defineTaggedUnion` when a Model field can be one of several named states. Declare the whole union in one record, then keep its constructors and matching on the union namespace:
+Use `defineTaggedUnion` when a Model field can have several named shapes. Declare every variant together, then construct and match values through the union:
 
 ::Snippet{name="modelTaggedUnion" label="Model state union example"}
 
-`EditorMode` is both the runtime Schema nested in `Model` and the namespace for values such as `EditorMode.Browsing()`. Its `match` method requires a handler for every variant, so adding another editor mode points TypeScript at every place that must handle it.
+`EditorMode` is the Schema stored in `Model` and the namespace used to construct values such as `EditorMode.Browsing()`. Its `match` method requires every variant to be handled. If you add another editor mode, TypeScript finds each match that needs a new branch.
 
-Use `EditorMode.guards.Editing` to narrow one variant or `EditorMode.isAnyOf(['Editing', 'Previewing'])` to narrow a group. `EditorMode.subset(['Editing', 'Previewing'])` returns a Schema that accepts exactly those variants. A later variant cannot join the subset unless its tag is added. There is deliberately no `omit` operation.
+Use `EditorMode.guards.Editing` to check one variant and `EditorMode.isAnyOf(['Editing', 'Previewing'])` to check several.
 
-Reach for `taggedStruct` only when one record cannot express the shape, such as a recursive union or a lone tagged struct that belongs to no union.
+When another Schema accepts only some editor modes, build it with `EditorMode.subset(['Editing', 'Previewing'])`. `subset` includes only the tags you name. If you add another mode later, the smaller Schema will not accept it until you add its tag. There is no `omit`: an exclusion list would silently accept every mode added later.
+
+Use `taggedStruct` only when the variants cannot be declared together. Recursive unions and standalone tagged structs are the common cases.
 
 The counter starts with one field. When automatic counting becomes part of the application state, the Model grows to record it:
 

@@ -115,7 +115,7 @@ An `evo` setter that only transforms that same field should be point-free: `entr
 
 ### `empty-object-constructors`
 
-`foldkit/no-empty-object-tagged-call` catches the bare-identifier form (`Idle({})`), conventional Message, Route, and State namespaces, and unions declared in the same file with `defineMessageUnion`, `defineRouteUnion`, or `defineTaggedUnion`. An imported domain union whose name does not end in one of those conventional suffixes still needs your eyes.
+`foldkit/no-empty-object-tagged-call` catches `Idle({})`, calls through Message, Route, and State namespaces, and unions declared in the same file with Foldkit's union helpers. It cannot recognize an imported domain union such as `Todo` from its name alone, so check those calls by eye.
 
 No-field tagged structs called with `({})`: `Idle({})`, `Work({})`, `Message.ClickedSubmit({})`. Should be `Idle()`, `Work()`, `Message.ClickedSubmit()`. Both compile; exemplars are uniform on the no-arg form.
 

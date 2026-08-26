@@ -77,16 +77,12 @@ const constructorName = (
   return undefined
 }
 
-/**
- * Flags calling a no-field union variant constructor with an empty object
- * literal instead of no arguments.
- */
+/** Reports no-field variant constructors called with an empty object. */
 export const noEmptyObjectTaggedCall = Rule.define({
   name: 'no-empty-object-tagged-call',
   meta: Rule.meta({
     type: 'suggestion',
-    description:
-      'Call no-field union variant constructors with no arguments instead of an empty object.',
+    description: 'Call no-field variant constructors with no arguments.',
   }),
   create: function* () {
     const ctx = yield* RuleContext
@@ -126,7 +122,7 @@ export const noEmptyObjectTaggedCall = Rule.define({
         return ctx.report(
           Diagnostic.make({
             node,
-            message: `Call no-field union variant constructors as ${name}() instead of ${name}({}).`,
+            message: `Call ${name}() with no arguments. ${name}({}) passes an unnecessary empty object.`,
           }),
         )
       },

@@ -427,7 +427,7 @@ Message.SucceededFetch({ data: response })
 Timer.Paused({ remainingMs: 400_000 })
 ```
 
-This matters for readability: `Timer.Work()` reads as "a Work value," while `Timer.Work({})` reads as "a Work value with some object in it" and makes the reader wonder what's in the object. The empty-object form compiles and works, but every exemplar in the codebase uses the no-arg form for no-field variants.
+`Timer.Work()` makes it clear that the variant has no payload. `Timer.Work({})` makes the reader look for fields that are not there. The empty-object form compiles, but Foldkit uses the no-argument form throughout its examples.
 
 ## Discriminated Unions for State
 
@@ -454,11 +454,10 @@ const Model = S.Struct({
 })
 ```
 
-`defineTaggedUnion` names each variant once. The result is a Schema carrying one
-callable constructor per variant plus exhaustive `match`, so
-`FetchState.Ok({ data })` constructs and `FetchState.match(model.fetchState, { ... })`
-dispatches without an Effect `Match` chain. It also carries `guards` and
-`isAnyOf`.
+`defineTaggedUnion` names each variant once. It returns a Schema and a namespace:
+`FetchState.Ok({ data })` constructs a value, while
+`FetchState.match(model.fetchState, { ... })` handles every variant. Use
+`guards` and `isAnyOf` when only selected variants need checking.
 
 For **remote data**, don't write that union at all. `AsyncData` ships it, with two states hand-rolled versions always miss:
 
@@ -493,10 +492,12 @@ const SignupStep = defineTaggedUnion({
 })
 ```
 
-Reach for `taggedStruct` only where a single record cannot express the shape: a
-union whose variants reference the union itself, a union whose variants each
-belong to a different module, a struct that is a child of another struct rather
-than a variant of a choice, and a variant built inside a generic Schema factory.
+Use `taggedStruct` when the variants cannot be declared together:
+
+- A recursive union.
+- A union assembled from variants owned by different modules.
+- A tagged child struct that is not a union variant.
+- A variant created inside a generic Schema factory.
 
 ## Code Style
 

@@ -18,7 +18,7 @@ const init = (): Model => ({
 })
 
 const modeLabel = (mode: EditorMode): string =>
-  EditorMode.match<string>(mode, {
+  EditorMode.match(mode, {
     Browsing: () => 'Browsing notes',
     Editing: ({ noteId }) => `Editing ${noteId}`,
     Previewing: ({ noteId }) => `Previewing ${noteId}`,

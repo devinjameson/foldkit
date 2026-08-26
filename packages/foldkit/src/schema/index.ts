@@ -15,29 +15,6 @@ export type CallableTaggedStruct<
         S.Struct.Type<{ readonly _tag: S.tag<Tag> } & Fields>
       >)
 
-/**
- * A no-field variant's constructor, whatever union it belongs to. Accepts
- * `Message.ClickedSave`, `AppRoute.Home`, and a no-field `defineTaggedUnion`
- * variant alike, and rejects any variant that carries fields.
- *
- * Use it to constrain a helper that can only build a variant carrying no data.
- * A router helper for a literal-only path is the usual case: the path parses
- * nothing, so the route it maps to must need nothing.
- *
- * Prefer this to writing `CallableTaggedStruct<Tag, {}>`. In TypeScript `{}`
- * means any non-nullish value, so that spelling reads as the opposite of what
- * it does.
- *
- * @example
- * ```typescript
- * const page = <Tag extends string>(slug: string, route: NoFields<Tag>) =>
- *   pipe(literal(slug), mapTo(route))
- *
- * const roadmapRouter = page('roadmap', AppRoute.Roadmap)
- * ```
- */
-export type NoFields<Tag extends string> = CallableTaggedStruct<Tag, {}>
-
 const assignPlainProperty = (
   output: Record<PropertyKey, unknown>,
   name: PropertyKey,
@@ -269,7 +246,7 @@ interface RichUnionSchema<
   readonly guards: BaseTaggedUnion<CasesByTag>['guards']
   readonly isAnyOf: BaseTaggedUnion<CasesByTag>['isAnyOf']
   readonly members: ReadonlyArray<TaggedUnionMember<CasesByTag>>
-  /** Builds a Schema that accepts exactly the named variants. */
+  /** Returns a Schema that accepts only the named variants. */
   readonly subset: <
     const Tags extends ReadonlyArray<keyof CasesByTag & string>,
   >(
@@ -277,9 +254,9 @@ interface RichUnionSchema<
   ) => S.Union<TaggedUnionSubsetMembers<CasesByTag, Tags>>
 }
 
-/** A Schema union with exhaustive matching, per-variant guards, an `isAnyOf`
- * guard builder, explicit subsets, member schemas, and one callable constructor
- * per variant, reachable by tag. */
+/** The Schema returned by `defineTaggedUnion`. It includes callable variant
+ * constructors, exhaustive `match`, `guards`, `isAnyOf`, `subset`, and
+ * `members`. */
 export type TaggedUnion<CasesByTag extends Record<string, S.Struct.Fields>> =
   RichUnionSchema<CasesByTag> & {
     readonly [Tag in keyof CasesByTag & string]: CallableTaggedStruct<
@@ -288,8 +265,8 @@ export type TaggedUnion<CasesByTag extends Record<string, S.Struct.Fields>> =
     >
   }
 
-/** The union `defineMessageUnion` returns. A Schema with exhaustive matching
- * and one callable constructor per variant, reachable by tag. */
+/** The Schema returned by `defineMessageUnion`. Each variant is a callable
+ * property on the union, and `match` handles the union exhaustively. */
 export type MessageUnion<CasesByTag extends Record<string, S.Struct.Fields>> =
   UnionSchema<CasesByTag> & {
     readonly [Tag in keyof CasesByTag & string]: CallableTaggedStruct<
@@ -298,9 +275,8 @@ export type MessageUnion<CasesByTag extends Record<string, S.Struct.Fields>> =
     >
   }
 
-/** The union `defineRouteUnion` returns. A Schema with exhaustive matching,
- * per-variant guards, explicit subsets, member schemas, and one callable
- * constructor per variant, reachable by tag. */
+/** The Schema returned by `defineRouteUnion`. It has the same constructors and
+ * helpers as `TaggedUnion`, with a Route-specific name for public signatures. */
 export type RouteUnion<CasesByTag extends Record<string, S.Struct.Fields>> =
   TaggedUnion<CasesByTag>
 
@@ -348,35 +324,34 @@ const defineUnion = <CasesByTag extends Record<string, S.Struct.Fields>>(
 
   /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
   return Object.assign(union, callables, {
-    // NOTE: Schema.TaggedUnion drops the member list that Schema.Union
-    // exposes. Machine.define reads it to enumerate the state tags.
+    // NOTE: Schema.TaggedUnion does not expose the member list that Schema.Union
+    // does. Machine.define uses that list to enumerate the state tags.
     members: Object.values(callables),
     subset,
   }) as unknown as TaggedUnion<CasesByTag>
 }
 
 /**
- * Declares a whole Message union from one record of fields per variant, naming
- * each variant once instead of once per constructor and once in the union list.
+ * Declares every Message variant in one object. Each key is a tag, and its
+ * value lists that Message's fields.
  *
- * The result is a Schema, so it decodes and nests in a Model. Its focused
- * Message surface is exhaustive `match` plus one callable constructor per
- * variant. Each constructor is itself a schema, which is what `Command.define`
- * needs for its `messages` list.
+ * The result is both a Schema and a namespace. Construct a Message with a
+ * variant such as `Message.ClickedReset()`, and handle every variant with
+ * `Message.match`. Each constructor is also a Schema, so it can appear in a
+ * `Command.define` `messages` list.
  *
- * Use `Message.match` for exhaustive dispatch. The values are ordinary tagged
- * objects, so Effect `Match` remains available for partial matching, one
- * handler over several tags, and fallbacks.
+ * Message unions intentionally expose only constructors and exhaustive
+ * `match`. Use Effect `Match` when only some tags need handling or several tags
+ * share one handler.
  *
- * A Submodel's OutMessage is declared the same way, with variants of its own. A
- * Message is a fact the Submodel handles; an OutMessage is a fact it reports to
- * its parent. Sharing one variant between the two unions puts the child's
- * internal vocabulary in the parent's contract, so declare them separately even
- * when a pair happens to carry the same fields.
+ * Declare a Submodel's OutMessages in their own `defineMessageUnion`. Messages
+ * are facts the Submodel handles; OutMessages are facts it reports to its
+ * parent. Keep the two unions separate even when two variants carry the same
+ * fields.
  *
- * A variant may not be named after the union surface it would shadow, such as
- * `make`, `match`, `cases`, `ast`, `members`, or `subset`. TypeScript reports the
- * conflicting names, and untyped calls fail with a runtime error.
+ * A tag cannot use a name already owned by the union, such as `make`, `match`,
+ * `cases`, `ast`, `members`, or `subset`. TypeScript rejects these names, and
+ * untyped calls throw an error.
  *
  * @example
  * ```typescript
@@ -399,27 +374,24 @@ export function defineMessageUnion<
 }
 
 /**
- * Declares a whole tagged union from one record of fields per variant, naming
- * each variant once instead of once per constructor and once in the union list.
+ * Declares every variant of a domain union in one object. Use it for Model
+ * states, submission results, filter modes, and other unions that are not
+ * Messages or Routes.
  *
- * Use this for domain unions that are not Messages or Routes: a Model's state,
- * a submission result, a filter mode. Messages use `defineMessageUnion` and
- * Routes use `defineRouteUnion`, so a reader can tell which kind of union a
- * declaration is from its first line.
+ * The result is both a Schema and a namespace. It provides:
  *
- * The result is a Schema with exhaustive `match`, per-variant `guards`, an
- * `isAnyOf` guard builder, explicit `subset` schemas, its `members`, and one
- * callable constructor per variant, reachable by tag. Each constructor is
- * itself a schema, so the union nests in a Model and its variants serve as
- * Union members.
+ * - One callable Schema constructor per variant.
+ * - `match` for exhaustive handling.
+ * - `guards` and `isAnyOf` for variant checks.
+ * - `subset` for a Schema that accepts only the named variants.
+ * - `members` for APIs such as `Machine.define` that enumerate the union.
  *
- * Reach for `taggedStruct` instead when a variant cannot be declared alongside
- * the others: a union whose variants reference the union itself, or a lone
- * tagged struct that belongs to no union.
+ * Use `taggedStruct` when the variants cannot be declared together. Recursive
+ * unions and standalone tagged structs are the common cases.
  *
- * A variant may not be named after the union surface it would shadow, such as
- * `make`, `match`, `cases`, `ast`, `members`, or `subset`. TypeScript reports the
- * conflicting names, and untyped calls fail with a runtime error.
+ * A tag cannot use a name already owned by the union, such as `make`, `match`,
+ * `cases`, `ast`, `members`, or `subset`. TypeScript rejects these names, and
+ * untyped calls throw an error.
  *
  * @example
  * ```typescript
@@ -444,21 +416,25 @@ export function defineTaggedUnion<
 }
 
 /**
- * Declares a whole Route union from one record of fields per variant, naming
- * each variant once instead of once per constructor and once in the union list.
+ * Declares every application Route in one object. Each key is a tag, and its
+ * value lists the fields parsed from the URL.
  *
- * Each variant is a callable Schema, which is what `mapTo` and
- * `parseUrlWithFallback` need. Routers stay separate, because a Route is the
- * parsed value and a Router is the path that produces it.
+ * The result is both a Schema and the `AppRoute` namespace. Each variant is a
+ * callable Schema, so `AppRoute.Person` works with `mapTo` and
+ * `parseUrlWithFallback`, while `AppRoute.Person({ personId: 42 })` constructs
+ * a value.
  *
- * The result carries exhaustive `match`, per-variant `guards`, an `isAnyOf`
- * guard builder, explicit `subset` schemas, and its `members`. Use `subset`
- * when another Schema accepts only named members of the application Route
- * union. A later Route cannot join that subset unless its tag is added.
+ * Use `match` to handle every Route, `guards` or `isAnyOf` to check selected
+ * tags, and `subset` when another Schema accepts only some Routes. A subset
+ * includes only the tags named in the call. Adding a Route to `AppRoute` does
+ * not change an existing subset.
  *
- * A variant may not be named after the union surface it would shadow, such as
- * `make`, `match`, `cases`, `ast`, `members`, or `subset`. TypeScript reports the
- * conflicting names, and untyped calls fail with a runtime error.
+ * Routers remain separate. A Route is the parsed value; a Router describes the
+ * URL that produces it.
+ *
+ * A tag cannot use a name already owned by the union, such as `make`, `match`,
+ * `cases`, `ast`, `members`, or `subset`. TypeScript rejects these names, and
+ * untyped calls throw an error.
  *
  * @example
  * ```typescript
@@ -491,14 +467,13 @@ export function defineRouteUnion<
 }
 
 /**
- * Declares one tagged struct, callable directly as a constructor: `Loading()`
- * instead of `Loading.make()`.
+ * Declares one tagged struct as a callable Schema. Call `Loading()` instead of
+ * `Loading.make()`.
  *
- * Reach for `defineTaggedUnion` first. Use `taggedStruct` for the shapes a
- * single record cannot express. For example: a union whose variants reference
- * the union itself, a union whose variants each belong to a different module,
- * a struct that is a child of another struct rather than a variant of a
- * choice, and a variant built inside a generic Schema factory.
+ * Prefer `defineTaggedUnion` when every variant can be declared together. Use
+ * `taggedStruct` for a recursive union, a union assembled across modules, a
+ * tagged child struct that is not a union variant, or a variant created inside
+ * a generic Schema factory.
  *
  * @example
  * ```typescript

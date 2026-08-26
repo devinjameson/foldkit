@@ -104,7 +104,7 @@ describe('defineMessageUnion', () => {
     ).toThrowError('Message variant names conflict with union properties: Type')
   })
 
-  it('rejects the Foldkit member-list property at runtime', () => {
+  it('rejects members as a variant name at runtime', () => {
     expect(() =>
       Reflect.apply(defineMessageUnion, undefined, [{ members: {} }]),
     ).toThrowError(
@@ -112,7 +112,7 @@ describe('defineMessageUnion', () => {
     )
   })
 
-  it('rejects the Foldkit subset property at runtime', () => {
+  it('rejects subset as a variant name at runtime', () => {
     expect(() =>
       Reflect.apply(defineMessageUnion, undefined, [{ subset: {} }]),
     ).toThrowError(
@@ -135,9 +135,9 @@ describe('defineMessageUnion', () => {
     defineMessageUnion({ annotateKey: {} })
     // @ts-expect-error Type-only tagged union properties are also reserved
     defineMessageUnion({ Type: {} })
-    // @ts-expect-error The Foldkit member-list property is also reserved
+    // @ts-expect-error members is reserved by Foldkit unions
     defineMessageUnion({ members: {} })
-    // @ts-expect-error The Foldkit subset property is also reserved
+    // @ts-expect-error subset is reserved by Foldkit unions
     defineMessageUnion({ subset: {} })
   }
 

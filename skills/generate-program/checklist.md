@@ -56,8 +56,8 @@ Phase 6 runs it again as sanity.
 
 ```bash
 # Empty-object constructor calls. foldkit/no-empty-object-tagged-call covers bare
-# constructors, conventional Message/Route/State namespaces, and unions declared
-# in this file. Check imported domain unions with other names by eye.
+# constructors, Message/Route/State namespaces, and unions declared in this
+# file. Check imported domain unions with other names by eye.
 grep -rn "({})" src/
 
 # External links missing Rel. foldkit/require-rel-for-external-link bails when the
@@ -279,7 +279,9 @@ Alongside the greps, eyeball each file's imports. Every symbol you imported shou
 - [ ] Discriminated unions for multi-valued state (not booleans)
 - [ ] `Option` for absent fields (not empty strings, null, or zero)
 - [ ] Impossible states are unrepresentable
-- [ ] `defineTaggedUnion()` for non-Message domain unions (Model states), `defineRouteUnion()` for routes, `taggedStruct()` only where a single record cannot express the shape
+- [ ] `defineTaggedUnion()` for non-Message domain unions and Model states
+- [ ] `defineRouteUnion()` for Routes
+- [ ] `taggedStruct()` only when the variants cannot be declared together
 - [ ] `defineMessageUnion()` for Message and OutMessage unions
 - [ ] **Remote data uses `AsyncData`, not a hand-rolled union.** `AsyncData.Schema(DataSchema, ErrorSchema)` supplies `Idle`, `Loading`, `Refreshing`, `Failure`, `Stale`, and `Success` plus `match`, `isPending`, `hasData`, `revalidate`, and the rest. A hand-rolled `Idle | Loading | Error | Ok` is missing `Refreshing` and `Stale`, which is what forces a refetch to blank the screen and a failed refetch to discard good data. Reference: `repos/foldkit/examples/weather/src/main.ts`
 
@@ -494,7 +496,7 @@ Items without a tier marker apply universally (even to a 50-line counter). When 
 - [ ] Section headers present in files that span multiple sections: `// MODEL`, `// MESSAGE`, `// INIT`, `// UPDATE`, `// COMMAND`, `// VIEW`, `// RUN`. Order: Model → Message → Flags (if any) → Init → Update → Command → View → Run.
 - [ ] `index.ts` is always a barrel, never implementation. If a module `foo/` has code, the shape is `foo/foo.ts` for code + `foo/index.ts` for `export * from './foo'` and `export * as Child from './child'`.
 - [ ] Imports ordered: npm packages first (alphabetized), then `foldkit/*`, then relative imports. No mixed groups.
-- [ ] Message definitions exported individually AND as the `Message` union type when used across modules. Internal-only messages stay unexported.
+- [ ] Message unions are exported as values and types when used across modules. Variants stay on the owning namespace: `Message.ClickedSave()`, never a separate `ClickedSave` export. Internal-only Message unions stay unexported.
 
 ## Submodel and Command extraction [T5+]
 

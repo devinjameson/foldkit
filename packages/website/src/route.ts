@@ -10,7 +10,7 @@ import {
   slash,
   string,
 } from 'foldkit/route'
-import type { NoFields } from 'foldkit/schema'
+import type { CallableTaggedStruct } from 'foldkit/schema'
 
 // ROUTE SCHEMAS
 
@@ -234,12 +234,16 @@ export const isDocsSectionRoute = (route: AppRoute): boolean =>
 
 // ROUTERS
 
-const page = <Tag extends string>(slug: string, route: NoFields<Tag>) =>
-  pipe(literal(slug), mapTo(route))
+type StaticRouteConstructor<Tag extends string> = CallableTaggedStruct<Tag, {}>
+
+const staticPage = <Tag extends string>(
+  slug: string,
+  route: StaticRouteConstructor<Tag>,
+) => pipe(literal(slug), mapTo(route))
 
 const section =
   (sectionSlug: string) =>
-  <Tag extends string>(pageSlug: string, route: NoFields<Tag>) =>
+  <Tag extends string>(pageSlug: string, route: StaticRouteConstructor<Tag>) =>
     pipe(literal(sectionSlug), slash(literal(pageSlug)), mapTo(route))
 
 const getStarted = section('get-started')
@@ -262,7 +266,7 @@ export const gettingStartedRouter = getStarted(
   AppRoute.GettingStarted,
 )
 
-export const roadmapRouter = page('roadmap', AppRoute.Roadmap)
+export const roadmapRouter = staticPage('roadmap', AppRoute.Roadmap)
 
 export const whyNoJsxRouter = faq('why-no-jsx', AppRoute.WhyNoJsx)
 export const performanceRouter = faq('performance', AppRoute.Performance)
@@ -297,11 +301,11 @@ export const fieldValidationRouter = core(
   AppRoute.FieldValidation,
 )
 
-export const testingRouter = page('testing', AppRoute.Testing)
+export const testingRouter = staticPage('testing', AppRoute.Testing)
 export const testingStoryRouter = testing('story', AppRoute.TestingStory)
 export const testingSceneRouter = testing('scene', AppRoute.TestingScene)
 
-export const examplesRouter = page('example-apps', AppRoute.Examples)
+export const examplesRouter = staticPage('example-apps', AppRoute.Examples)
 export const exampleDetailRouter = pipe(
   literal('example-apps'),
   slash(string('exampleSlug')),
@@ -458,10 +462,10 @@ export const uiAnimationRouter = ui('animation', AppRoute.UiAnimation)
 export const uiAnchorRouter = ui('anchor', AppRoute.UiAnchor)
 export const uiVirtualListRouter = ui('virtual-list', AppRoute.UiVirtualList)
 
-export const aboutRouter = page('about', AppRoute.About)
-export const contactRouter = page('contact', AppRoute.Contact)
-export const privacyRouter = page('privacy', AppRoute.Privacy)
-export const contentApiRouter = page('api', AppRoute.ContentApi)
+export const aboutRouter = staticPage('about', AppRoute.About)
+export const contactRouter = staticPage('contact', AppRoute.Contact)
+export const privacyRouter = staticPage('privacy', AppRoute.Privacy)
+export const contentApiRouter = staticPage('api', AppRoute.ContentApi)
 
 export const aiOverviewRouter = ai('overview', AppRoute.AiOverview)
 export const aiSkillsRouter = ai('skills', AppRoute.AiSkills)
@@ -601,9 +605,9 @@ const docsParser = oneOf(
   siteParser,
 )
 
-export const newsletterRouter = page('newsletter', AppRoute.Newsletter)
+export const newsletterRouter = staticPage('newsletter', AppRoute.Newsletter)
 
-export const blogRouter = page('blog', AppRoute.Blog)
+export const blogRouter = staticPage('blog', AppRoute.Blog)
 
 // NOTE: post slugs come from markdown filenames and stay kebab-case.
 // Constraining the segment keeps sibling static files like `/blog/rss.xml`

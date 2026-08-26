@@ -1,10 +1,9 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 
-// NOTE: Foldkit peers with real minimums are deliberately absent. Broadening
-// one here would let a package install with a Foldkit release that does not
-// export an API its built code imports. Those peers use plain semver ranges, so
-// `changeset version` leaves them alone. `check-peer-floors.ts` checks every
-// floor survives into the packed manifest.
+// NOTE: Do not add Foldkit peers with real minimums to this list. Resetting one
+// to `workspace:^0` would let the package install with an older Foldkit that
+// does not export an API the package uses. Changesets leaves their plain semver
+// ranges alone, and `check-peer-floors.ts` checks the packed manifests.
 const TARGETS = [
   { path: 'packages/devtools/package.json', dep: '@foldkit/ui' },
 ] as const

@@ -47,9 +47,17 @@ The principles below apply broadly. Calibrate to the right context: library desi
 ## State Modeling
 
 - Encode state in discriminated unions, not booleans or nullable fields. `Idle | Loading | Error | Ok`, not `isLoading`. Make impossible states unrepresentable.
-- Declare a whole union from one record of fields per variant: `defineMessageUnion` for Messages and OutMessages, `defineRouteUnion` for Routes, `defineTaggedUnion` for every other domain union. A Route or domain union's `subset([...])` method builds a Schema from an explicit list of its variants. There is deliberately no `omit` operation: a variant added later must not join an existing subset silently. Reach for `taggedStruct` only where a single record cannot express the shape. For example: a union whose variants reference the union itself (`Canvas.Shape`, the markdown AST), a union whose variants each belong to a different module (the auth example's `Model`), a struct that is a child of another struct rather than a variant of a choice (`TableRow`), and a variant built inside a generic Schema factory (`AsyncData`). A module forced onto `taggedStruct` by recursion keeps its sibling unions on `taggedStruct` too, so one module has one spelling.
-- Never destructure a variant out of any of those unions. Keep the owning namespace at every call site: `AppRoute.Person({ personId })`, `FetchState.Ok({ data })`. Because the namespace disambiguates, a tag does not repeat its union's name: `ConnectionState.Connected`, never `ConnectionState.ConnectionConnected`.
-- Name a Route union `AppRoute`, not `Route`, which is the Foldkit route module. When a Model or another Schema accepts only part of it, use `AppRoute.subset([...])` and list every member. Prefer `AppRoute.isAnyOf([...])` to a hand-written `route is A | B` guard. Export `type PersonRoute = typeof AppRoute.Person.Type` beside the union only when a module needs that variant's type.
+- Declare all variants together: `defineMessageUnion` for Messages and OutMessages, `defineRouteUnion` for Routes, and `defineTaggedUnion` for other domain unions.
+- Use `subset([...])` when a Route or domain Schema accepts only named variants. It includes only the tags named in the call. A variant added to the parent union does not join an existing subset until its tag is added. Do not add `omit`; an exclusion list would silently accept every variant added later.
+- Use `taggedStruct` only when the variants cannot be declared together:
+  - Recursive unions such as `Canvas.Shape` and the markdown AST.
+  - Unions assembled from variants owned by different modules, such as the auth example's `Model`.
+  - Tagged child structs that are not union variants, such as `TableRow`.
+  - Variants created inside generic Schema factories, such as `AsyncData`.
+- If recursion forces one union in a module onto `taggedStruct`, use it for sibling unions in that module too.
+- Access each variant through its union: `AppRoute.Person({ personId })` and `FetchState.Ok({ data })`. Do not destructure constructors into sibling bindings. Do not repeat the union name in a tag: `ConnectionState.Connected`, never `ConnectionState.ConnectionConnected`.
+- Name a Route union `AppRoute`, not `Route`, which is the Foldkit route module. Use `AppRoute.isAnyOf([...])` instead of writing a `route is A | B` guard by hand.
+- Export `type PersonRoute = typeof AppRoute.Person.Type` beside `AppRoute` only when a module needs that variant's type.
 - Use `Option` for model fields that represent absence. Not `''` or `0` as the "none" state. Form inputs that start as `''` are actual values, not absent.
 - Use `Option` at boundaries where the value will be matched or chained (`Option.match`, `Option.map`, `Option.flatMap`). Simple presence checks don't need it. Don't wrap in `Option` just to check `isSome`.
 - Errors in Commands become Messages via `Effect.catch(() => Effect.succeed(ErrorMessage(...)))`. Side effects should never crash the app.

@@ -2,7 +2,6 @@ import { Schema as S } from 'effect'
 import { describe, expect, expectTypeOf, it } from 'vitest'
 
 import { defineRouteUnion, defineTaggedUnion } from './index.js'
-import type { NoFields } from './index.js'
 
 const Submission = defineTaggedUnion({
   NotSubmitted: {},
@@ -113,22 +112,6 @@ describe('subsets', () => {
   }
 })
 
-describe('NoFields', () => {
-  const acceptsNoFields = <Tag extends string>(_variant: NoFields<Tag>) => true
-
-  it('accepts a no-field variant from any union kind', () => {
-    expect(acceptsNoFields(Submission.NotSubmitted)).toBe(true)
-    expect(acceptsNoFields(AppRoute.Home)).toBe(true)
-  })
-
-  it('rejects a variant that carries fields', () => {
-    // @ts-expect-error Failed carries an error field
-    acceptsNoFields(Submission.Failed)
-    // @ts-expect-error Person carries a personId field
-    acceptsNoFields(AppRoute.Person)
-  })
-})
-
 describe('defineRouteUnion', () => {
   it('builds route values that decode as members of the union', () => {
     const person = AppRoute.Person({ personId: 42 })
@@ -146,7 +129,7 @@ describe('defineRouteUnion', () => {
     ).toStrictEqual({ _tag: 'NotFound', path: '/missing' })
   })
 
-  it('derives a Route subset Schema', () => {
+  it('builds a Route subset Schema', () => {
     const PublicRoute = AppRoute.subset(['Home', 'NotFound'])
 
     expect(S.is(PublicRoute)(AppRoute.Home())).toBe(true)
@@ -156,7 +139,7 @@ describe('defineRouteUnion', () => {
     >()
   })
 
-  it('rejects a variant name that shadows the union surface', () => {
+  it('rejects a variant name that conflicts with a union property', () => {
     expect(() =>
       /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
       defineRouteUnion({ members: {}, subset: {} } as never),
@@ -164,13 +147,13 @@ describe('defineRouteUnion', () => {
   })
 
   if (false) {
-    // @ts-expect-error Domain variant names cannot shadow the member list
+    // @ts-expect-error members is reserved by domain unions
     defineTaggedUnion({ members: {} })
-    // @ts-expect-error Route variant names cannot shadow the member list
+    // @ts-expect-error members is reserved by Route unions
     defineRouteUnion({ members: {} })
-    // @ts-expect-error Domain variant names cannot shadow the subset builder
+    // @ts-expect-error subset is reserved by domain unions
     defineTaggedUnion({ subset: {} })
-    // @ts-expect-error Route variant names cannot shadow the subset builder
+    // @ts-expect-error subset is reserved by Route unions
     defineRouteUnion({ subset: {} })
   }
 })

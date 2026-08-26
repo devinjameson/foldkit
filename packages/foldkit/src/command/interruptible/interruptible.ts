@@ -3,17 +3,19 @@ import { Array, Context, Effect, Fiber, Option, Schema } from 'effect'
 import { defineTaggedUnion } from '../../schema/index.js'
 import { CommandDefinitionTypeId, brandAsDefinition } from '../brand.js'
 
-/** The result of an Interrupt Command: `Outcome.Interrupted` when at least one
- *  holder was stopped, `Outcome.NotFound` when nothing held the key.
- *  Interruption itself cannot fail. */
+/** The result of interrupting a key. `Outcome.Interrupted` means at least one
+ * in-flight Command was stopped and will not dispatch its result Message.
+ * `Outcome.NotFound` means no Command held the key. The interrupt operation
+ * itself cannot fail. */
 export const Outcome = defineTaggedUnion({
   Interrupted: {},
   NotFound: {},
 })
 
-/** The result of an Interrupt Command: `Outcome.Interrupted` when at least one
- *  holder was stopped, `Outcome.NotFound` when nothing held the key.
- *  Interruption itself cannot fail. */
+/** The result of interrupting a key. `Outcome.Interrupted` means at least one
+ * in-flight Command was stopped and will not dispatch its result Message.
+ * `Outcome.NotFound` means no Command held the key. The interrupt operation
+ * itself cannot fail. */
 export type Outcome = typeof Outcome.Type
 
 /** @internal The per-runtime-instance map from interrupt key to the fibers

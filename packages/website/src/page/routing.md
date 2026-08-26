@@ -15,7 +15,7 @@ This symmetry means if you can parse a URL into data, you can always build that 
 
 ## Defining Routes
 
-`defineRouteUnion` declares every route in one record: the key is the route's tag, the value is the fields that route carries from the URL. The result is an [Effect Schema](https://effect.website/docs/schema/introduction/), so a route nests in the Model and decodes like any other value.
+`defineRouteUnion` declares every application Route together. Each key is a tag, and its value lists the fields parsed from the URL. `AppRoute` is also an [Effect Schema](https://effect.website/docs/schema/introduction/), so it can be stored in the Model and used to decode unknown values.
 
 ::Snippet{name="routingDefineRoutes" label="route definitions"}
 
@@ -24,15 +24,17 @@ This symmetry means if you can parse a URL into data, you can always build that 
 - `AppRoute.People`: holds an optional `searchText: Option<string>`
 - `AppRoute.NotFound`: holds the unmatched `path: string`
 
-Each variant is reached through the union rather than imported on its own, the same way Message variants are reached through `Message`. Constructing a route is `AppRoute.Person({ personId: 42 })`, and the variant doubles as the schema `mapTo` needs.
+Keep each variant on `AppRoute`, just as Message variants stay on `Message`. `AppRoute.Person({ personId: 42 })` constructs a Route, while `Route.mapTo(AppRoute.Person)` uses the same variant as a Schema.
 
-The union also carries `AppRoute.match` for exhaustive dispatch on the current route and `AppRoute.isAnyOf(['Blog', 'BlogPost'])` for a guard over several tags. When a Model or another Schema accepts only part of `AppRoute`, derive that Schema with `subset`:
+Use `AppRoute.match` when every Route needs a branch. Use `AppRoute.isAnyOf(['Blog', 'BlogPost'])` when one check accepts several tags.
 
-::Snippet{name="routingSubUnion" label="Route subset example"}
+If a Model or Schema accepts only some application Routes, create that Schema with `subset`:
 
-`subset` lists its members positively. A Route added to `AppRoute` cannot join `TopLevelRoute` until its tag is added to the subset. There is deliberately no `omit` operation, because an omitted list would silently accept every Route added later.
+::Snippet{name="routingSubset" label="Route subset example"}
 
-When a module needs one variant's type, export an alias for it beside the union. The snippet names `NewsletterRoute` once instead of repeating `typeof AppRoute.Newsletter.Type` throughout that module.
+`subset` includes only the tags you name. If you add a Route to `AppRoute` later, `TopLevelRoute` will not accept it until you add its tag. There is no `omit`: an exclusion list would silently accept every Route added later.
+
+If a module needs to name one variant's type, add an alias beside `AppRoute`: `export type NewsletterRoute = typeof AppRoute.Newsletter.Type`.
 
 ## Building Routers
 

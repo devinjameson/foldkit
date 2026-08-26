@@ -59,7 +59,9 @@ export type RuntimeInfo = typeof RuntimeInfo.Type
 /** The largest batch `RequestDispatchMessages` accepts. Matches the DevTools store's default history size, so a batch cannot evict its own earliest entries before the caller reads them back. The runtime rejects a larger batch with `ResponseError`, and MCP clients reject it earlier still, at their own input boundary. */
 export const MAX_DISPATCH_BATCH_SIZE = 100
 
-/** A request from the MCP server. Request.RequestListRuntimes is handled at the Vite plugin layer; all other requests are routed to a browser runtime. */
+/** A request from the MCP server. The Vite plugin handles
+ * `Request.RequestListRuntimes`; it forwards every other request to a browser
+ * runtime. */
 export const Request = defineTaggedUnion({
   RequestGetModel: {
     maybePath: S.OptionFromNullOr(S.String),
@@ -111,7 +113,9 @@ export const MessageTagCount = S.Struct({
 /** One row of a Message-tag histogram. */
 export type MessageTagCount = typeof MessageTagCount.Type
 
-/** The value on one side of a Model diff path. */
+/** The value on one side of a Model diff. `DiffValue.Present` carries the
+ * value. `DiffValue.Absent` means the path does not exist on that side, which
+ * keeps a missing path distinct from a path whose value is `null`. */
 export const DiffValue = defineTaggedUnion({
   Absent: {},
   Present: { value: S.Unknown },
@@ -144,12 +148,13 @@ export const MessageSchemaIndex = S.Struct({
 /** A flat directory of every top-level Message variant. */
 export type MessageSchemaIndex = typeof MessageSchemaIndex.Type
 
-/** The result payload carried by `ResponseMessageSchema`. */
+/** The result of requesting the app's Message Schema. It is either a compact
+ * index of Message variants or the JSON Schema document for one variant. */
 export const MessageSchemaResult = defineTaggedUnion({
   MessageSchemaIndexResult: { index: MessageSchemaIndex },
   MessageSchemaDocumentResult: { document: S.Unknown },
 })
-/** The result payload carried by `ResponseMessageSchema`. */
+/** The result of requesting the app's Message Schema. */
 export type MessageSchemaResult = typeof MessageSchemaResult.Type
 
 /** A response replying to a Request. */

@@ -6,13 +6,13 @@ import { describe, expect, test } from 'vitest'
 import {
   CheckoutState,
   Message,
+  type Model,
   PlaceOrder,
   Promo,
   TRANSITION_LOG_LIMIT,
   initialModel,
   update,
 } from './main'
-import type { Model } from './main'
 
 const maybeLatestTransitionSummary = (model: Model): Option.Option<string> =>
   pipe(

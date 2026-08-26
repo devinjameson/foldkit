@@ -29,8 +29,7 @@ const runResetPeerDeps = () => {
 const readManifest = path =>
   JSON.parse(readFileSync(resolve(REPO_ROOT, path), 'utf8'))
 
-// The release workflow runs this script as part of `version-packages`, so every
-// peer floor that names a real minimum must survive it.
+// `version-packages` runs this script. Every Foldkit minimum must survive it.
 test('leaves Foldkit peer floors alone', () => {
   const before = new Map(
     FOLDKIT_FLOOR_MANIFESTS.map(manifest => [
