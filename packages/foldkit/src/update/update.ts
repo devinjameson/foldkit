@@ -105,6 +105,13 @@ export type Step<Model, Message, R = never> = (
   model: Model,
 ) => Return<Model, Message, R>
 
+/** {@link Step} for an update that also surfaces an OutMessage to its
+ *  parent: maps a Model to a {@link ReturnWithOutMessage} over the same
+ *  Model. */
+export type StepWithOutMessage<Model, Message, OutMessage, R = never> = (
+  model: Model,
+) => ReturnWithOutMessage<Model, Message, OutMessage, R>
+
 /** Composes a list of update steps into one. Each step runs against the
  *  Model the previous step produced, and every step's Commands are
  *  concatenated into a single batch, in step order.
@@ -329,22 +336,12 @@ export type ChildFoldWithOutMessage<
   >
 }>
 
-/** {@link ChildFoldWithOutMessage} for a parent that is itself a
- *  Submodel, so the fold can return the parent's own OutMessage. Adds:
- *
- *  - `toParentOutMessage`: lifts the child's OutMessage into the
- *    parent's own OutMessage. Return `undefined` for a named child variant
- *    that stops at this parent. When the child returns no OutMessage, the fold
- *    omits `outMessage`.
- *  - `foldOutMessage` stays available for a parent that also updates
- *    its own state from the child's OutMessage, and is optional here.
- *
- *  Use this shape only when at least one child OutMessage should continue to
- *  the current Submodel's parent. If every child OutMessage stops here, use
- *  {@link ChildFoldWithOutMessage} and omit `toParentOutMessage`.
- *  When provided, `foldOutMessage` still handles each variant locally,
- *  including variants that continue upward. */
-export type ChildFoldWithParentOutMessage<
+/** {@link ChildFoldWithOutMessage} for a parent that derives its own
+ *  OutMessage while folding the child's. The returned
+ *  {@link StepWithOutMessage} receives the parent Model with the child already
+ *  written back. Use this shape when no child OutMessage is forwarded one to
+ *  one, so the fold needs no `toParentOutMessage` adapter. */
+export type ChildFoldWithDerivedParentOutMessage<
   ParentModel,
   ParentMessage,
   ChildModel,
@@ -368,17 +365,80 @@ export type ChildFoldWithParentOutMessage<
   read: (model: ParentModel) => Option.Option<ChildModel>
   write: (model: ParentModel, nextChildModel: ChildModel) => ParentModel
   toParentMessage: (message: ChildMessage) => ParentMessage
+  toParentOutMessage?: never
+  foldOutMessage: (
+    outMessage: ChildOutMessage,
+    context: FoldContext<ChildMessage, ParentMessage>,
+  ) => StepWithOutMessage<
+    NoInfer<ParentModel>,
+    OutMessageStepMessage,
+    ParentOutMessage,
+    OutMessageStepRequirements
+  >
+}>
+
+/** {@link ChildFoldWithOutMessage} for a parent that is itself a
+ *  Submodel, so the fold can return the parent's own OutMessage. Adds:
+ *
+ *  - `toParentOutMessage`: lifts the child's OutMessage into the
+ *    parent's own OutMessage. Return `undefined` for a named child variant
+ *    that stops at this parent. When the child returns no OutMessage, the fold
+ *    omits `outMessage`.
+ *  - `foldOutMessage` stays available for a parent that also updates
+ *    its own state from the child's OutMessage, and is optional here.
+ *    It may emit a derived parent OutMessage. That OutMessage replaces the
+ *    one-to-one lift for the dispatch. When the Step emits nothing, the lift
+ *    runs as usual.
+ *
+ *  Use this shape only when at least one child OutMessage should continue to
+ *  the current Submodel's parent. If every child OutMessage stops here, use
+ *  {@link ChildFoldWithDerivedParentOutMessage} when the fold derives its own
+ *  OutMessage, or {@link ChildFoldWithOutMessage} when it does not. When
+ *  provided, `foldOutMessage` still handles each variant locally, including
+ *  variants that continue upward. */
+export type ChildFoldWithParentOutMessage<
+  ParentModel,
+  ParentMessage,
+  ChildModel,
+  Input,
+  ChildMessage,
+  ChildOutMessage,
+  ParentOutMessage,
+  ChildRequirements = never,
+  OutMessageStepRequirements = ChildRequirements,
+  OutMessageStepMessage = ParentMessage,
+  DerivedParentOutMessage = ParentOutMessage,
+> = Readonly<{
+  update: (
+    childModel: ChildModel,
+    input: Input,
+  ) => ReturnWithOutMessage<
+    ChildModel,
+    ChildMessage,
+    ChildOutMessage,
+    ChildRequirements
+  >
+  read: (model: ParentModel) => Option.Option<ChildModel>
+  write: (model: ParentModel, nextChildModel: ChildModel) => ParentModel
+  toParentMessage: (message: ChildMessage) => ParentMessage
   toParentOutMessage: (
     outMessage: ChildOutMessage,
   ) => ParentOutMessage | undefined
   foldOutMessage?: (
     outMessage: ChildOutMessage,
     context: FoldContext<ChildMessage, ParentMessage>,
-  ) => Step<
+  ) => StepWithOutMessage<
     NoInfer<ParentModel>,
     OutMessageStepMessage,
+    DerivedParentOutMessage,
     OutMessageStepRequirements
   >
+}>
+
+type AnyUpdateReturn = Readonly<{
+  model: any
+  commands?: Commands<any, any>
+  outMessage?: any
 }>
 
 /** @internal Implementation-facing view of every {@link ChildFold}
@@ -386,14 +446,7 @@ export type ChildFoldWithParentOutMessage<
  *  `toParentOutMessage` are optional, and every type parameter is erased.
  *  The overloads on {@link foldChild} carry the public contract. */
 type AnyChildFold = Readonly<{
-  update: (
-    childModel: any,
-    input: any,
-  ) => Readonly<{
-    model: any
-    commands?: Commands<any, any>
-    outMessage?: any
-  }>
+  update: (childModel: any, input: any) => AnyUpdateReturn
   read: (model: any) => Option.Option<any>
   write: (model: any, nextChildModel: any) => any
   toParentMessage: (message: any) => any
@@ -401,15 +454,8 @@ type AnyChildFold = Readonly<{
   foldOutMessage?: (
     outMessage: any,
     context: FoldContext<any, any>,
-  ) => Step<any, any, any>
+  ) => (model: any) => AnyUpdateReturn
 }>
-
-/** {@link Step} for an update that also surfaces an OutMessage to its
- *  parent: maps a Model to a {@link ReturnWithOutMessage} over the same
- *  Model. */
-export type StepWithOutMessage<Model, Message, OutMessage, R = never> = (
-  model: Model,
-) => ReturnWithOutMessage<Model, Message, OutMessage, R>
 
 /** The dual function {@link foldChild} returns. Data-first runs the
  *  fold now (`fold(model, input)` returns a {@link Return}); data-last
@@ -472,12 +518,13 @@ export type FoldWithOutMessage<
  *  Command that produces the child's Message, such as an animating
  *  component's overridable leave Command.
  *
- *  A parent that is itself a Submodel passes a
- *  {@link ChildFoldWithParentOutMessage} and receives a
- *  {@link FoldWithOutMessage}, whose results may include the parent's own
+ *  A parent that is itself a Submodel receives a
+ *  {@link FoldWithOutMessage} when `foldOutMessage` emits a derived parent
  *  OutMessage. Add `toParentOutMessage` only when at least one child OutMessage
- *  should continue to the current Submodel's parent. Omit it when every child
- *  OutMessage stops here. `foldOutMessage` still runs for forwarded variants.
+ *  should continue to the current Submodel's parent. When provided,
+ *  `foldOutMessage` still handles forwarded variants locally. A derived
+ *  OutMessage replaces the one-to-one lift for the dispatch. When the Step
+ *  emits nothing, the lift runs as usual.
  *
  *  An entry point that takes nothing but the child Model, such as
  *  `Dialog.close`, has no input to pass: fold it with
@@ -512,6 +559,7 @@ export const foldChild: {
     ChildRequirements = never,
     OutMessageStepRequirements = ChildRequirements,
     OutMessageStepMessage = ParentMessage,
+    DerivedParentOutMessage = ParentOutMessage,
   >(
     childFold: ChildFoldWithParentOutMessage<
       ParentModel,
@@ -523,13 +571,14 @@ export const foldChild: {
       ParentOutMessage,
       ChildRequirements,
       OutMessageStepRequirements,
-      OutMessageStepMessage
+      OutMessageStepMessage,
+      DerivedParentOutMessage
     >,
   ): FoldWithOutMessage<
     ParentModel,
     ParentMessage | OutMessageStepMessage,
     Input,
-    ParentOutMessage,
+    ParentOutMessage | DerivedParentOutMessage,
     ChildRequirements | OutMessageStepRequirements
   >
   <
@@ -558,6 +607,37 @@ export const foldChild: {
     ParentModel,
     ParentMessage | OutMessageStepMessage,
     Input,
+    ChildRequirements | OutMessageStepRequirements
+  >
+  <
+    ParentModel,
+    ParentMessage,
+    ChildModel,
+    Input,
+    ChildMessage,
+    ChildOutMessage,
+    ParentOutMessage,
+    ChildRequirements = never,
+    OutMessageStepRequirements = ChildRequirements,
+    OutMessageStepMessage = ParentMessage,
+  >(
+    childFold: ChildFoldWithDerivedParentOutMessage<
+      ParentModel,
+      ParentMessage,
+      ChildModel,
+      Input,
+      ChildMessage,
+      ChildOutMessage,
+      ParentOutMessage,
+      ChildRequirements,
+      OutMessageStepRequirements,
+      OutMessageStepMessage
+    >,
+  ): FoldWithOutMessage<
+    ParentModel,
+    ParentMessage | OutMessageStepMessage,
+    Input,
+    ParentOutMessage,
     ChildRequirements | OutMessageStepRequirements
   >
   <ParentModel, ParentMessage, ChildModel, Input, ChildMessage, R = never>(
@@ -604,30 +684,36 @@ const runChildFold = (
           childFold.toParentMessage,
         )
 
-        const update: Return<any, any, any> =
+        const update =
           childFold.foldOutMessage === undefined ||
           childUpdate.outMessage === undefined
             ? { model: modelWithChild, commands: mappedCommands }
-            : combine(modelWithChild, [
-                stepModel => ({
-                  model: stepModel,
-                  commands: mappedCommands,
-                }),
-                childFold.foldOutMessage(childUpdate.outMessage, context),
-              ])
+            : appendOutMessageStep(
+                childFold.foldOutMessage,
+                childUpdate.outMessage,
+                context,
+                modelWithChild,
+                mappedCommands,
+              )
 
-        if (childFold.toParentOutMessage === undefined) {
+        if (update.outMessage !== undefined) {
           return update
         }
 
-        if (childUpdate.outMessage === undefined) {
+        if (
+          childFold.toParentOutMessage === undefined ||
+          childUpdate.outMessage === undefined
+        ) {
           return update
         }
 
         const parentOutMessage = childFold.toParentOutMessage(
           childUpdate.outMessage,
         )
-        return withOutMessage(update, parentOutMessage)
+
+        return parentOutMessage === undefined
+          ? update
+          : { ...update, outMessage: parentOutMessage }
       },
     }),
   )
@@ -686,18 +772,10 @@ export type ChildStepFoldWithOutMessage<
   >
 }>
 
-/** {@link ChildStepFoldWithOutMessage} for a parent that is itself a
- *  Submodel. `toParentOutMessage` turns the child's OutMessage into the
- *  parent's OutMessage. Return `undefined` for a named child variant that
- *  stops at this parent. `foldOutMessage` remains available when the parent
- *  also updates its own state from the child's OutMessage.
- *
- *  Use this shape only when at least one child OutMessage should continue to
- *  the current Submodel's parent. If every child OutMessage stops here, use
- *  {@link ChildStepFoldWithOutMessage} and omit `toParentOutMessage`. When
- *  provided, `foldOutMessage` still handles each variant locally, including
- *  variants that continue upward. */
-export type ChildStepFoldWithParentOutMessage<
+/** {@link ChildStepFoldWithOutMessage} for a parent that derives its own
+ *  OutMessage while folding the child's. This is the no-argument counterpart
+ *  to {@link ChildFoldWithDerivedParentOutMessage}. */
+export type ChildStepFoldWithDerivedParentOutMessage<
   ParentModel,
   ParentMessage,
   ChildModel,
@@ -719,15 +797,65 @@ export type ChildStepFoldWithParentOutMessage<
   read: (model: ParentModel) => Option.Option<ChildModel>
   write: (model: ParentModel, nextChildModel: ChildModel) => ParentModel
   toParentMessage: (message: ChildMessage) => ParentMessage
+  toParentOutMessage?: never
+  foldOutMessage: (
+    outMessage: ChildOutMessage,
+    context: FoldContext<ChildMessage, ParentMessage>,
+  ) => StepWithOutMessage<
+    NoInfer<ParentModel>,
+    OutMessageStepMessage,
+    ParentOutMessage,
+    OutMessageStepRequirements
+  >
+}>
+
+/** {@link ChildStepFoldWithOutMessage} for a parent that is itself a
+ *  Submodel. `toParentOutMessage` turns the child's OutMessage into the
+ *  parent's OutMessage. Return `undefined` for a named child variant that
+ *  stops at this parent. `foldOutMessage` remains available when the parent
+ *  also updates its own state from the child's OutMessage. A derived
+ *  OutMessage from that Step replaces the one-to-one lift for the dispatch.
+ *  When the Step emits nothing, the lift runs as usual.
+ *
+ *  Use this shape only when at least one child OutMessage should continue to
+ *  the current Submodel's parent. If every child OutMessage stops here, use
+ *  {@link ChildStepFoldWithDerivedParentOutMessage} when the fold derives its
+ *  own OutMessage, or {@link ChildStepFoldWithOutMessage} when it does not.
+ *  When provided, `foldOutMessage` still handles each variant locally,
+ *  including variants that continue upward. */
+export type ChildStepFoldWithParentOutMessage<
+  ParentModel,
+  ParentMessage,
+  ChildModel,
+  ChildMessage,
+  ChildOutMessage,
+  ParentOutMessage,
+  ChildRequirements = never,
+  OutMessageStepRequirements = ChildRequirements,
+  OutMessageStepMessage = ParentMessage,
+  DerivedParentOutMessage = ParentOutMessage,
+> = Readonly<{
+  update: (
+    childModel: ChildModel,
+  ) => ReturnWithOutMessage<
+    ChildModel,
+    ChildMessage,
+    ChildOutMessage,
+    ChildRequirements
+  >
+  read: (model: ParentModel) => Option.Option<ChildModel>
+  write: (model: ParentModel, nextChildModel: ChildModel) => ParentModel
+  toParentMessage: (message: ChildMessage) => ParentMessage
   toParentOutMessage: (
     outMessage: ChildOutMessage,
   ) => ParentOutMessage | undefined
   foldOutMessage?: (
     outMessage: ChildOutMessage,
     context: FoldContext<ChildMessage, ParentMessage>,
-  ) => Step<
+  ) => StepWithOutMessage<
     NoInfer<ParentModel>,
     OutMessageStepMessage,
+    DerivedParentOutMessage,
     OutMessageStepRequirements
   >
 }>
@@ -736,11 +864,7 @@ export type ChildStepFoldWithParentOutMessage<
  *  shapes. The overloads on {@link foldChildStep} carry the public
  *  contract. */
 type AnyChildStepFold = Readonly<{
-  update: (childModel: any) => Readonly<{
-    model: any
-    commands?: Commands<any, any>
-    outMessage?: any
-  }>
+  update: (childModel: any) => AnyUpdateReturn
   read: (model: any) => Option.Option<any>
   write: (model: any, nextChildModel: any) => any
   toParentMessage: (message: any) => any
@@ -748,7 +872,7 @@ type AnyChildStepFold = Readonly<{
   foldOutMessage?: (
     outMessage: any,
     context: FoldContext<any, any>,
-  ) => Step<any, any, any>
+  ) => (model: any) => AnyUpdateReturn
 }>
 
 /** Folds a child entry point that takes nothing but the child Model, and
@@ -780,13 +904,13 @@ type AnyChildStepFold = Readonly<{
  *  `liftCommands` bound to this config's `toParentMessage`, for a Command the
  *  Step returns whose result is the child's Message.
  *
- *  A parent that is itself a Submodel adds `toParentOutMessage` when at least
- *  one child OutMessage should continue to its own parent. The fold then
- *  returns a {@link StepWithOutMessage}, just as the input-taking
- *  {@link foldChild} returns a {@link FoldWithOutMessage}. If every child
- *  OutMessage stops here, omit `toParentOutMessage` and use the plain Step.
- *  When provided, `foldOutMessage` still handles forwarded variants locally.
- */
+ *  A parent that is itself a Submodel receives a
+ *  {@link StepWithOutMessage} when `foldOutMessage` emits a derived parent
+ *  OutMessage. Add `toParentOutMessage` only when at least one child OutMessage
+ *  should continue to the current Submodel's parent. When provided,
+ *  `foldOutMessage` still handles forwarded variants locally. A derived
+ *  OutMessage replaces the one-to-one lift for the dispatch. When the Step
+ *  emits nothing, the lift runs as usual. */
 export const foldChildStep: {
   <
     ParentModel,
@@ -798,6 +922,7 @@ export const foldChildStep: {
     ChildRequirements = never,
     OutMessageStepRequirements = ChildRequirements,
     OutMessageStepMessage = ParentMessage,
+    DerivedParentOutMessage = ParentOutMessage,
   >(
     childFold: ChildStepFoldWithParentOutMessage<
       ParentModel,
@@ -808,12 +933,13 @@ export const foldChildStep: {
       ParentOutMessage,
       ChildRequirements,
       OutMessageStepRequirements,
-      OutMessageStepMessage
+      OutMessageStepMessage,
+      DerivedParentOutMessage
     >,
   ): StepWithOutMessage<
     ParentModel,
     ParentMessage | OutMessageStepMessage,
-    ParentOutMessage,
+    ParentOutMessage | DerivedParentOutMessage,
     ChildRequirements | OutMessageStepRequirements
   >
   <
@@ -841,6 +967,34 @@ export const foldChildStep: {
     ParentMessage | OutMessageStepMessage,
     ChildRequirements | OutMessageStepRequirements
   >
+  <
+    ParentModel,
+    ParentMessage,
+    ChildModel,
+    ChildMessage,
+    ChildOutMessage,
+    ParentOutMessage,
+    ChildRequirements = never,
+    OutMessageStepRequirements = ChildRequirements,
+    OutMessageStepMessage = ParentMessage,
+  >(
+    childFold: ChildStepFoldWithDerivedParentOutMessage<
+      ParentModel,
+      ParentMessage,
+      ChildModel,
+      ChildMessage,
+      ChildOutMessage,
+      ParentOutMessage,
+      ChildRequirements,
+      OutMessageStepRequirements,
+      OutMessageStepMessage
+    >,
+  ): StepWithOutMessage<
+    ParentModel,
+    ParentMessage | OutMessageStepMessage,
+    ParentOutMessage,
+    ChildRequirements | OutMessageStepRequirements
+  >
   <ParentModel, ParentMessage, ChildModel, ChildMessage, R = never>(
     childFold: ChildStepFold<
       ParentModel,
@@ -854,4 +1008,20 @@ export const foldChildStep: {
   const context = makeFoldContext(childFold.toParentMessage)
 
   return (model: any) => runChildFold(childFold, context, model, undefined)
+}
+
+const appendOutMessageStep = (
+  foldOutMessage: (
+    outMessage: any,
+    context: FoldContext<any, any>,
+  ) => (model: any) => AnyUpdateReturn,
+  outMessage: any,
+  context: FoldContext<any, any>,
+  modelWithChild: any,
+  mappedCommands: Commands<any, any>,
+): AnyUpdateReturn => {
+  const outMessageFold = foldOutMessage(outMessage, context)(modelWithChild)
+  const commands = [...mappedCommands, ...(outMessageFold.commands ?? [])]
+
+  return { ...outMessageFold, commands }
 }

@@ -600,6 +600,156 @@ describe('foldChild', () => {
     expect(reportingCounterSubmodelFold.outMessage).toBeUndefined()
   })
 
+  it('prefers a derived OutMessage over the toParentOutMessage lift', () => {
+    type ReportedValue = Readonly<{ _tag: 'ReportedValue' }>
+    const ReportedValue = (): ReportedValue => ({ _tag: 'ReportedValue' })
+
+    type ReachedThreshold = Readonly<{ _tag: 'ReachedThreshold' }>
+    const ReachedThreshold = (): ReachedThreshold => ({
+      _tag: 'ReachedThreshold',
+    })
+
+    type DashboardOutMessage = ReportedValue | ReachedThreshold
+
+    const foldThresholdCounterOutMessage = M.type<ChangedValue>().pipe(
+      M.withReturnType<
+        StepWithOutMessage<
+          DashboardModel,
+          DashboardMessage,
+          DashboardOutMessage
+        >
+      >(),
+      M.tagsExhaustive({
+        ChangedValue: () => model => ({
+          model: {
+            ...model,
+            lastReportedValue: model.counter.value,
+          },
+          commands: [notifyValueChanged],
+          outMessage: ReachedThreshold(),
+        }),
+      }),
+    )
+
+    const foldThresholdCounter = foldChild({
+      update: counterUpdateWithOutMessage,
+      read: (model: DashboardModel) => Option.some(model.counter),
+      write: (model, nextCounter) => ({ ...model, counter: nextCounter }),
+      toParentMessage: GotCounterMessage,
+      toParentOutMessage: () => ReportedValue(),
+      foldOutMessage: foldThresholdCounterOutMessage,
+    })
+
+    expectTypeOf(foldThresholdCounter).toEqualTypeOf<
+      FoldWithOutMessage<
+        DashboardModel,
+        DashboardMessage,
+        CounterMessage,
+        DashboardOutMessage
+      >
+    >()
+
+    const thresholdCounterFold = foldThresholdCounter(
+      dashboardModel,
+      Message.BumpedValue(),
+    )
+    expect(thresholdCounterFold.model.counter).toEqual({ value: 4 })
+    expect(thresholdCounterFold.model.lastReportedValue).toBe(4)
+    expect(
+      (thresholdCounterFold.commands ?? []).map(command => command.name),
+    ).toEqual(['SaveCount', 'NotifyValueChanged'])
+    expect(thresholdCounterFold.outMessage).toEqual(ReachedThreshold())
+  })
+
+  it('falls back to the toParentOutMessage lift when the derived Step emits nothing', () => {
+    type ReportedValue = Readonly<{ _tag: 'ReportedValue' }>
+    const ReportedValue = (): ReportedValue => ({ _tag: 'ReportedValue' })
+
+    const foldDeferringCounterOutMessage = M.type<ChangedValue>().pipe(
+      M.withReturnType<
+        StepWithOutMessage<DashboardModel, DashboardMessage, ReportedValue>
+      >(),
+      M.tagsExhaustive({
+        ChangedValue: () => model => ({
+          model: {
+            ...model,
+            lastReportedValue: model.counter.value,
+          },
+          commands: [notifyValueChanged],
+        }),
+      }),
+    )
+
+    const foldDeferringCounter = foldChild({
+      update: counterUpdateWithOutMessage,
+      read: (model: DashboardModel) => Option.some(model.counter),
+      write: (model, nextCounter) => ({ ...model, counter: nextCounter }),
+      toParentMessage: GotCounterMessage,
+      toParentOutMessage: () => ReportedValue(),
+      foldOutMessage: foldDeferringCounterOutMessage,
+    })
+
+    const deferringCounterFold = foldDeferringCounter(
+      dashboardModel,
+      Message.BumpedValue(),
+    )
+    expect(deferringCounterFold.model.lastReportedValue).toBe(4)
+    expect(
+      (deferringCounterFold.commands ?? []).map(command => command.name),
+    ).toEqual(['SaveCount', 'NotifyValueChanged'])
+    expect(deferringCounterFold.outMessage).toEqual(ReportedValue())
+  })
+
+  it('emits a derived parent OutMessage without a toParentOutMessage lift', () => {
+    type ReachedThreshold = Readonly<{ _tag: 'ReachedThreshold' }>
+    const ReachedThreshold = (): ReachedThreshold => ({
+      _tag: 'ReachedThreshold',
+    })
+
+    const foldDerivingCounterOutMessage = M.type<ChangedValue>().pipe(
+      M.withReturnType<
+        StepWithOutMessage<DashboardModel, DashboardMessage, ReachedThreshold>
+      >(),
+      M.tagsExhaustive({
+        ChangedValue: () => model => ({
+          model: {
+            ...model,
+            lastReportedValue: model.counter.value,
+          },
+          commands: [notifyValueChanged],
+          outMessage: ReachedThreshold(),
+        }),
+      }),
+    )
+
+    const foldDerivingCounter = foldChild({
+      update: counterUpdateWithOutMessage,
+      read: (model: DashboardModel) => Option.some(model.counter),
+      write: (model, nextCounter) => ({ ...model, counter: nextCounter }),
+      toParentMessage: GotCounterMessage,
+      foldOutMessage: foldDerivingCounterOutMessage,
+    })
+
+    expectTypeOf(foldDerivingCounter).toEqualTypeOf<
+      FoldWithOutMessage<
+        DashboardModel,
+        DashboardMessage,
+        CounterMessage,
+        ReachedThreshold
+      >
+    >()
+
+    const derivingCounterFold = foldDerivingCounter(
+      dashboardModel,
+      Message.BumpedValue(),
+    )
+    expect(derivingCounterFold.model.lastReportedValue).toBe(4)
+    expect(
+      (derivingCounterFold.commands ?? []).map(command => command.name),
+    ).toEqual(['SaveCount', 'NotifyValueChanged'])
+    expect(derivingCounterFold.outMessage).toEqual(ReachedThreshold())
+  })
+
   it('runs the same fold data-first and data-last', () => {
     const dataFirstFold = foldReportingCounter(
       dashboardModel,
@@ -840,6 +990,46 @@ describe('foldChildStep', () => {
     expect(counterResetSubmodelFold.outMessage).toEqual(ReportedValue())
   })
 
+  it('infers lifted and derived parent OutMessages independently', () => {
+    type ReportedReset = Readonly<{ _tag: 'ReportedReset' }>
+    const ReportedReset = (): ReportedReset => ({ _tag: 'ReportedReset' })
+
+    type ResetDashboard = Readonly<{ _tag: 'ResetDashboard' }>
+    const ResetDashboard = (): ResetDashboard => ({
+      _tag: 'ResetDashboard',
+    })
+
+    type DashboardOutMessage = ReportedReset | ResetDashboard
+
+    const foldCounterResetOutMessage = M.type<ChangedValue>().pipe(
+      M.withReturnType<
+        StepWithOutMessage<DashboardModel, DashboardMessage, ResetDashboard>
+      >(),
+      M.tagsExhaustive({
+        ChangedValue: () => model => ({
+          model,
+          outMessage: ResetDashboard(),
+        }),
+      }),
+    )
+
+    const foldCounterReset = foldChildStep({
+      update: resetCounterWithOutMessage,
+      read: (model: DashboardModel) => Option.some(model.counter),
+      write: (model, nextCounter) => ({ ...model, counter: nextCounter }),
+      toParentMessage: GotCounterMessage,
+      toParentOutMessage: () => ReportedReset(),
+      foldOutMessage: foldCounterResetOutMessage,
+    })
+
+    expectTypeOf(foldCounterReset).toEqualTypeOf<
+      StepWithOutMessage<DashboardModel, GotCounterMessage, DashboardOutMessage>
+    >()
+
+    const counterResetFold = foldCounterReset(dashboardModel)
+    expect(counterResetFold.outMessage).toEqual(ResetDashboard())
+  })
+
   it('lets a local child Step flow into an OutMessage-aware parent without an adapter', () => {
     const foldReportingCounterResetInSubmodel = foldChildStep({
       update: resetCounterWithOutMessage,
@@ -864,6 +1054,45 @@ describe('foldChildStep', () => {
 
     expect(reportingCounterResetFold.model.lastReportedValue).toBe(0)
     expect(reportingCounterResetFold.outMessage).toBeUndefined()
+  })
+
+  it('emits a derived parent OutMessage without a toParentOutMessage lift', () => {
+    type ResetDashboard = Readonly<{ _tag: 'ResetDashboard' }>
+    const ResetDashboard = (): ResetDashboard => ({
+      _tag: 'ResetDashboard',
+    })
+
+    const foldCounterResetOutMessage = M.type<ChangedValue>().pipe(
+      M.withReturnType<
+        StepWithOutMessage<DashboardModel, DashboardMessage, ResetDashboard>
+      >(),
+      M.tagsExhaustive({
+        ChangedValue: () => model => ({
+          model: { ...model, lastReportedValue: model.counter.value },
+          commands: [notifyValueChanged],
+          outMessage: ResetDashboard(),
+        }),
+      }),
+    )
+
+    const foldDerivingCounterReset = foldChildStep({
+      update: resetCounterWithOutMessage,
+      read: (model: DashboardModel) => Option.some(model.counter),
+      write: (model, nextCounter) => ({ ...model, counter: nextCounter }),
+      toParentMessage: GotCounterMessage,
+      foldOutMessage: foldCounterResetOutMessage,
+    })
+
+    expectTypeOf(foldDerivingCounterReset).toEqualTypeOf<
+      StepWithOutMessage<DashboardModel, DashboardMessage, ResetDashboard>
+    >()
+
+    const derivingCounterReset = foldDerivingCounterReset(dashboardModel)
+    expect(derivingCounterReset.model.lastReportedValue).toBe(0)
+    expect(
+      (derivingCounterReset.commands ?? []).map(command => command.name),
+    ).toEqual(['SaveCount', 'NotifyValueChanged'])
+    expect(derivingCounterReset.outMessage).toEqual(ResetDashboard())
   })
 
   it('is an ordinary Step that composes with combine', () => {
@@ -1214,8 +1443,8 @@ describe('types', () => {
   })
 
   it('foldChild rejects an OutMessage child without foldOutMessage', () => {
-    // @ts-expect-error a ReturnWithOutMessage child update requires foldOutMessage
     foldChild({
+      // @ts-expect-error a ReturnWithOutMessage child update requires foldOutMessage
       update: counterUpdateWithOutMessage,
       read: (model: DashboardModel) => Option.some(model.counter),
       write: (model: DashboardModel, nextCounter: CounterModel) => ({

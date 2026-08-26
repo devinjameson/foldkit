@@ -223,6 +223,10 @@ A parent Submodel adds `toParentOutMessage` only when it passes at least one chi
 
 If every child OutMessage stops at this Submodel, omit `toParentOutMessage`. Any `foldOutMessage` handling still runs. A forwarded OutMessage also runs through `foldOutMessage`, so the same event can update this Submodel before it continues upward. Do not add `toParentOutMessage: () => undefined` just to change the fold's return type.
 
+`toParentOutMessage` passes the child's fact upward one to one. When the parent's fact is derived instead, annotate the fold's return type as `Update.StepWithOutMessage` and return the parent OutMessage in `outMessage`. For example, a picker child emits `SelectedDate`, and the parent applies it to its own Model and emits `CompletedRange` only once both dates are set. This path needs no `toParentOutMessage` adapter.
+
+When a fold both derives a parent OutMessage and has a one-to-one lift, the derived OutMessage replaces the lift for that dispatch. If the Step omits `outMessage`, the lift still runs. `Update.foldChildStep` follows the same rule for no-argument child entry points.
+
 ## Reflecting External State
 
 OutMessages move facts from child to parent. A `reflect*` helper handles the inbound direction, when an external source such as the URL, restored storage, or a sibling field requires the child to conform.
