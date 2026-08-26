@@ -4,6 +4,12 @@ import { Html, inertHtml as ih } from 'foldkit/html'
 
 import { formatStarCount } from '../githubStars'
 import { Icon } from '../icon'
+import {
+  aboutRouter,
+  contactRouter,
+  contentApiRouter,
+  privacyRouter,
+} from '../route'
 
 export const canaryBanner = (commit: string): Html => {
   const shortCommit = commit.slice(0, 7)
@@ -134,6 +140,27 @@ export const emailFormView: Html = ih.form(
       ],
       ['Subscribe'],
     ),
+  ],
+)
+
+// SITE LINKS
+
+const siteLinkClassName =
+  'underline decoration-gray-400/40 dark:decoration-gray-500/40 hover:text-gray-700 dark:hover:text-gray-200 hover:decoration-gray-500 dark:hover:decoration-gray-300'
+
+const siteLink = (href: string, label: string): Html =>
+  ih.a([ih.Href(href), ih.Class(siteLinkClassName)], [label])
+
+export const siteLinksView: Html = ih.nav(
+  [
+    ih.AriaLabel('Site information'),
+    ih.Class('mt-2 flex flex-wrap gap-x-4 gap-y-1'),
+  ],
+  [
+    siteLink(aboutRouter(), 'About'),
+    siteLink(contactRouter(), 'Contact'),
+    siteLink(privacyRouter(), 'Privacy'),
+    siteLink(contentApiRouter(), 'Content API'),
   ],
 )
 

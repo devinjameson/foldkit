@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier -w .",
     "test": "vitest run",
+    "openapi": "tsx scripts/openApi.ts",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",

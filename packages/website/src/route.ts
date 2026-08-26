@@ -110,6 +110,11 @@ export const UiAnimationRoute = r('UiAnimation')
 export const UiAnchorRoute = r('UiAnchor')
 export const UiVirtualListRoute = r('UiVirtualList')
 
+export const AboutRoute = r('About')
+export const ContactRoute = r('Contact')
+export const PrivacyRoute = r('Privacy')
+export const ContentApiRoute = r('ContentApi')
+
 export const AiOverviewRoute = r('AiOverview')
 export const AiSkillsRoute = r('AiSkills')
 export const AiMcpRoute = r('AiMcp')
@@ -212,6 +217,10 @@ export const DocsRoute = S.Union([
   AiOverviewRoute,
   AiSkillsRoute,
   AiMcpRoute,
+  AboutRoute,
+  ContactRoute,
+  PrivacyRoute,
+  ContentApiRoute,
   NotFoundRoute,
 ])
 export type DocsRoute = typeof DocsRoute.Type
@@ -468,6 +477,11 @@ export const uiAnimationRouter = ui('animation', UiAnimationRoute)
 export const uiAnchorRouter = ui('anchor', UiAnchorRoute)
 export const uiVirtualListRouter = ui('virtual-list', UiVirtualListRoute)
 
+export const aboutRouter = page('about', AboutRoute)
+export const contactRouter = page('contact', ContactRoute)
+export const privacyRouter = page('privacy', PrivacyRoute)
+export const contentApiRouter = page('api', ContentApiRoute)
+
 export const aiOverviewRouter = ai('overview', AiOverviewRoute)
 export const aiSkillsRouter = ai('skills', AiSkillsRoute)
 export const aiMcpRouter = ai('mcp', AiMcpRoute)
@@ -582,6 +596,13 @@ const uiParser = oneOf(
 
 const aiParser = oneOf(aiOverviewRouter, aiSkillsRouter, aiMcpRouter)
 
+const siteParser = oneOf(
+  aboutRouter,
+  contactRouter,
+  privacyRouter,
+  contentApiRouter,
+)
+
 const docsParser = oneOf(
   getStartedParser,
   roadmapRouter,
@@ -596,6 +617,7 @@ const docsParser = oneOf(
   examplesParser,
   uiParser,
   aiParser,
+  siteParser,
 )
 
 export const newsletterRouter = page('newsletter', NewsletterRoute)

@@ -23,7 +23,12 @@ import {
 } from '../page/example/meta'
 import { gettingStartedRouter, homeRouter } from '../route'
 import { headerNavView } from './headerNav'
-import { betaTag, emailSignupContentView, skipNavLink } from './shared'
+import {
+  betaTag,
+  emailSignupContentView,
+  siteLinksView,
+  skipNavLink,
+} from './shared'
 import { mobileMenuView } from './sidebar'
 import { themeSelector } from './themeSelector'
 
@@ -118,6 +123,7 @@ const landingFooter = (currentYear: number): Html =>
         ],
       ),
       ih.p([ih.Class('mt-1')], [`© ${currentYear} Devin Jameson`]),
+      siteLinksView,
     ],
   )
 

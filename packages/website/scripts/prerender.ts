@@ -28,8 +28,9 @@ import {
 } from '../src/page/apiReference/domain'
 import { TypeDocJson } from '../src/page/apiReference/typedoc'
 import { BLOG_DESCRIPTION, BLOG_RSS_PATH } from '../src/page/blog/meta'
-import { exampleSlugs } from '../src/page/example/meta'
+import { exampleSlugs, examples } from '../src/page/example/meta'
 import {
+  AboutRoute,
   AiMcpRoute,
   AiOverviewRoute,
   AiSkillsRoute,
@@ -44,6 +45,8 @@ import {
   BlogRoute,
   ComingFromReactRoute,
   ComingFromTanStackQueryRoute,
+  ContactRoute,
+  ContentApiRoute,
   CoreArchitectureRoute,
   CoreCanvasRoute,
   CoreCommandsRoute,
@@ -87,6 +90,7 @@ import {
   PatternsSubscriptionOrganizationRoute,
   PerformanceRoute,
   PlaygroundRoute,
+  PrivacyRoute,
   ProjectOrganizationRoute,
   ReactComparisonRoute,
   RoadmapRoute,
@@ -125,6 +129,7 @@ import {
   UiTooltipRoute,
   UiVirtualListRoute,
   WhyNoJsxRoute,
+  aboutRouter,
   aiMcpRouter,
   aiOverviewRouter,
   aiSkillsRouter,
@@ -138,6 +143,8 @@ import {
   blogRouter,
   comingFromReactRouter,
   comingFromTanStackQueryRouter,
+  contactRouter,
+  contentApiRouter,
   coreArchitectureRouter,
   coreCanvasRouter,
   coreCommandsRouter,
@@ -180,6 +187,7 @@ import {
   patternsSubscriptionOrganizationRouter,
   performanceRouter,
   playgroundRouter,
+  privacyRouter,
   projectOrganizationRouter,
   reactComparisonRouter,
   roadmapRouter,
@@ -220,6 +228,11 @@ import {
   whyNoJsxRouter,
 } from '../src/route'
 import { type BlogPostEntry, blogPostSlugs, blogPosts } from './blogPosts'
+import {
+  API_BASE_PATH,
+  type ApiPageEntry,
+  contentApiDocuments,
+} from './contentApi'
 import {
   type LlmsFullEntry,
   type LlmsIndexEntry,
@@ -324,6 +337,10 @@ export const STATIC_ROUTES: ReadonlyArray<AppRoute> = [
   AiOverviewRoute(),
   AiSkillsRoute(),
   AiMcpRoute(),
+  ContentApiRoute(),
+  AboutRoute(),
+  ContactRoute(),
+  PrivacyRoute(),
   BlogRoute(),
   ...Array.map(blogPostSlugs, slug => BlogPostRoute({ postSlug: slug })),
 ]
@@ -427,6 +444,10 @@ export const routeToUrlPath = (route: AppRoute): string =>
       AiSkills: () => aiSkillsRouter(),
       AiMcp: () => aiMcpRouter(),
       ApiModule: ({ moduleSlug }) => apiModuleRouter({ moduleSlug }),
+      ContentApi: () => contentApiRouter(),
+      About: () => aboutRouter(),
+      Contact: () => contactRouter(),
+      Privacy: () => privacyRouter(),
       Playground: ({ exampleSlug }) => playgroundRouter({ exampleSlug }),
       Newsletter: () => newsletterRouter(),
       Blog: () => blogRouter(),
@@ -947,6 +968,46 @@ const readTemplate = Effect.gen(function* () {
   return yield* fs.readFileString(TEMPLATE_COPY_PATH)
 })
 
+// CONTENT API
+
+const writeJsonDocument = (relativePath: string, document: unknown) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const filePath = resolve(DIST_DIR, relativePath.replace(/^\//, ''))
+
+    yield* fs.makeDirectory(dirname(filePath), { recursive: true })
+    yield* fs.writeFileString(
+      filePath,
+      `${JSON.stringify(document, null, 2)}\n`,
+    )
+  })
+
+// NOTE: `404.json` is written here rather than kept in `public/` so the site's
+// JSON error body and the API's own not-found body stay one document. The
+// static host serves it for unknown paths (see scripts/website-vercel-config.mjs).
+const writeContentApi = (
+  entries: ReadonlyArray<ApiPageEntry>,
+  generated: string,
+) =>
+  Effect.gen(function* () {
+    const documents = contentApiDocuments({
+      pages: entries,
+      examples,
+      posts: blogPosts,
+      generated,
+    })
+
+    yield* Effect.forEach(
+      documents,
+      ({ path, document }) => writeJsonDocument(path, document),
+      { concurrency: 8 },
+    )
+
+    yield* Console.log(
+      `  ✓ ${API_BASE_PATH} (${documents.length} JSON documents)`,
+    )
+  })
+
 // PROGRAM
 
 const resultToIndexEntry =
@@ -954,6 +1015,14 @@ const resultToIndexEntry =
   (result: PrerenderResult): LlmsIndexEntry => ({
     urlPath: result.urlPath,
     metadata: routeToMetadata(result.route, resolveApiModuleName),
+  })
+
+const resultToApiPageEntry =
+  (resolveApiModuleName: ApiModuleNameResolver) =>
+  (result: PrerenderResult): ApiPageEntry => ({
+    urlPath: result.urlPath,
+    metadata: routeToMetadata(result.route, resolveApiModuleName),
+    markdown: result.markdown,
   })
 
 const resultToFullEntry =
@@ -1064,6 +1133,11 @@ const program = Effect.scoped(
     yield* fs.writeFileString(
       resolve(DIST_DIR, 'llms-full.txt'),
       buildLlmsFull(fullEntries, lastModification),
+    )
+
+    yield* writeContentApi(
+      Array.map(markdownResults, resultToApiPageEntry(resolveApiModuleName)),
+      lastModification,
     )
 
     yield* Console.log(

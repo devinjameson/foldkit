@@ -37,3 +37,9 @@ Foldkit ships [agent skills](/ai/skills) for Claude Code, Codex, the ChatGPT des
 ## DevTools MCP
 
 Skills and source help an agent understand the code. The [DevTools MCP server](/ai/mcp) exposes an application that is currently running. An agent can inspect the current or historical Model, query Message history, compare states, replay the UI, and dispatch Schema-validated Messages.
+
+## Reading This Site as Data
+
+An agent does not have to scrape these pages. Every page is available as Markdown by appending `.md` to its URL or by requesting it with `Accept: text/markdown`, [llms.txt](https://foldkit.dev/llms.txt) indexes the whole site, and [llms-full.txt](https://foldkit.dev/llms-full.txt) is every page in one file.
+
+For structured access there is a read-only JSON [Content API](/api): the page index, one document per page with its Markdown, the documentation sections, the example applications, and the blog. It is versioned, has a published deprecation policy, advertises its rate limit on every response, and answers failures as RFC 9457 problem documents. Every endpoint is described with a typed schema in [openapi.json](https://foldkit.dev/openapi.json), which is what an agent needs to call it as a tool.
