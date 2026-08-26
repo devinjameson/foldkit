@@ -29,6 +29,12 @@ export type FoldkitPrerenderOptions = Readonly<{
    * a deployment that publishes those should set the origin it publishes.
    */
   origin?: string
+  /**
+   * The `id` of the placeholder element in `index.html` the rendered markup
+   * replaces. Defaults to `'root'`, and the aggregate plugin passes whatever
+   * `ssr.containerId` names, so a renamed container is renamed once.
+   */
+  containerId?: string
 }>
 
 /** How `vite build` builds a server entry and what it generates from it. */
@@ -368,6 +374,9 @@ export const foldkitBuild = (
       const html = injectIntoTemplate(
         template(),
         renderedApplication(path, result),
+        prerender.containerId === undefined
+          ? undefined
+          : { containerId: prerender.containerId },
       )
       const file = outputFileFor(clientDirectory, path, origin)
 

@@ -479,3 +479,21 @@ describe('the build id across environments', () => {
     expect(inServer).toBe(inClient)
   })
 })
+
+const CONTAINER_ROOT = resolve(import.meta.dirname, 'fixtures/build-container')
+
+// A project names its container once and both the dev host and the build have
+// to use that name. Injection defaulting to its own `root` fails the build on
+// an id the project no longer uses.
+it('generates into the container the build names', async () => {
+  const { client } = await buildFixture(
+    'container',
+    { prerender: { paths: ['/'], containerId: 'app-root' } },
+    [],
+    CONTAINER_ROOT,
+  )
+
+  const generated = await readFile(resolve(client, 'index.html'), 'utf8')
+  expect(generated).toContain('>/</main>')
+  expect(generated).not.toContain('<div id="app-root"></div>')
+})

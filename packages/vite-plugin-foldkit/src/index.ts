@@ -711,6 +711,27 @@ const main = (
  * an array; Vite flattens nested plugin arrays, so `plugins: [foldkit()]`
  * keeps working.
  */
+// The container is named once, on `ssr`, and reaches both the dev host and the
+// build from there. A `build.prerender` that names its own wins, so a project
+// that needs them to differ still can.
+const withContainerId = (
+  build: FoldkitBuildOptions | true,
+  containerId: string | undefined,
+): FoldkitBuildOptions => {
+  const options: FoldkitBuildOptions = build === true ? {} : build
+  if (containerId === undefined || options.prerender === undefined) {
+    return options
+  }
+  const prerender = options.prerender === true ? {} : options.prerender
+  if (prerender === false) {
+    return options
+  }
+  return {
+    ...options,
+    prerender: { containerId, ...prerender },
+  }
+}
+
 export const foldkit = (options: FoldkitPluginOptions = {}): Array<Plugin> => {
   const events = Effect.runSync(Queue.unbounded<Event>())
 
@@ -795,6 +816,6 @@ export const foldkit = (options: FoldkitPluginOptions = {}): Array<Plugin> => {
   return [
     ...shared,
     servePages,
-    foldkitBuild(ssr.serverEntry, build === true ? {} : build),
+    foldkitBuild(ssr.serverEntry, withContainerId(build, ssr.containerId)),
   ]
 }
