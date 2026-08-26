@@ -21,7 +21,7 @@ import {
 } from 'foldkit/fieldValidation'
 import { type Attribute, Document, Html, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
-import { ts } from 'foldkit/schema'
+import { defineTaggedUnion } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
 import { Button, Input, Textarea } from '@foldkit/ui'
@@ -37,22 +37,13 @@ const emailRules = makeRules({
 
 // MODEL
 
-const NotSubmitted = ts('NotSubmitted')
-const Submitting = ts('Submitting')
-const SubmitSuccess = ts('SubmitSuccess', { confirmationText: S.String })
-const SubmitError = ts('SubmitError', { error: S.String })
+const Submission = defineTaggedUnion({
+  NotSubmitted: {},
+  Submitting: {},
+  SubmitSuccess: { confirmationText: S.String },
+  SubmitError: { error: S.String },
+})
 
-const Submission = S.Union([
-  NotSubmitted,
-  Submitting,
-  SubmitSuccess,
-  SubmitError,
-])
-
-type NotSubmitted = typeof NotSubmitted.Type
-type Submitting = typeof Submitting.Type
-type SubmitSuccess = typeof SubmitSuccess.Type
-type SubmitError = typeof SubmitError.Type
 type Submission = typeof Submission.Type
 
 export const Model = S.Struct({
@@ -83,7 +74,7 @@ export const initialModel: Model = {
   name: NotValidated({ value: '' }),
   email: NotValidated({ value: '' }),
   messageText: NotValidated({ value: '' }),
-  submission: NotSubmitted(),
+  submission: Submission.NotSubmitted(),
 }
 
 export const init: Runtime.ApplicationInit<Model, Message> = () => ({
@@ -191,7 +182,7 @@ export const update = (model: Model, message: Message) =>
 
       return {
         model: evo(model, {
-          submission: () => Submitting(),
+          submission: () => Submission.Submitting(),
         }),
         commands: [
           SubmitForm({
@@ -206,7 +197,7 @@ export const update = (model: Model, message: Message) =>
     SucceededSubmitForm: ({ name }) => ({
       model: evo(model, {
         submission: () =>
-          SubmitSuccess({
+          Submission.SubmitSuccess({
             confirmationText: `Welcome to the waitlist, ${name}! We'll be in touch soon.`,
           }),
       }),
@@ -215,7 +206,7 @@ export const update = (model: Model, message: Message) =>
     FailedSubmitForm: () => ({
       model: evo(model, {
         submission: () =>
-          SubmitError({
+          Submission.SubmitError({
             error:
               'Sorry, there was an error adding you to the waitlist. Please try again.',
           }),

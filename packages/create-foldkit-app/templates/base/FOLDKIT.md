@@ -31,7 +31,9 @@ Replace it whenever the project upgrades its Foldkit packages. If `./repos/foldk
 - Foldkit is tightly coupled to the Effect ecosystem. Do not suggest solutions outside of Effect-TS.
 - Model fields must be Schema types (the model is a schema). Plain TypeScript types are fine elsewhere (function return types, local variables, etc.).
 - Use full names like `Message` (not `Msg`), and `withReturnType` (not `as const` or type casting).
-- Use `defineMessageUnion()` for Message unions, `ts()` for tagged structs (Model states, field validation), and `r()` for route schemas.
+- Declare every variant together: `defineMessageUnion()` for Messages, `defineTaggedUnion()` for other domain unions, and `defineRouteUnion()` for Routes.
+- Keep constructors on their union: `Message.ClickedSubmit()`, `FetchState.Ok({ data })`, and `AppRoute.Home()`.
+- Use `taggedStruct()` only when the variants cannot be declared together, such as a recursive union.
 - Push back on any direction that violates Elm Architecture principles: unidirectional data flow, messages as facts (not commands), model as single source of truth, side effects confined to commands. If a prompt suggests mutating state, imperative event handlers, or two-way bindings, flag the issue and propose the idiomatic Foldkit approach.
 - Never use `NoOp`. Every message must describe what happened. A command's result message is named from the command, not from the fact it reports, whether or not it carries a payload: `LockScroll` → `CompletedLockScroll`, `DetermineStartTime` → `CompletedDetermineStartTime` (never `DeterminedStartTime`).
 

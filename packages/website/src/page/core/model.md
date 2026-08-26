@@ -14,6 +14,20 @@ The counter defines its Model with [Effect Schema](https://effect.website/docs/s
 
 That runtime value matters because TypeScript types disappear after compilation. Foldkit uses the Model Schema to encode and decode state preserved across hot updates. The same Schema can validate unknown data at application boundaries.
 
+## State with Variants
+
+Use `defineTaggedUnion` when a Model field can have several named shapes. Declare every variant together, then construct and match values through the union:
+
+::Snippet{name="modelTaggedUnion" label="Model state union example"}
+
+`EditorMode` is the Schema stored in `Model` and the namespace used to construct values such as `EditorMode.Browsing()`. Its `match` method requires every variant to be handled. If you add another editor mode, TypeScript finds each match that needs a new branch.
+
+Use `EditorMode.guards.Editing` to check one variant and `EditorMode.isAnyOf(['Editing', 'Previewing'])` to check several.
+
+When another Schema accepts only some editor modes, build it with `EditorMode.subset(['Editing', 'Previewing'])`. `subset` includes only the tags you name. If you add another mode later, the smaller Schema will not accept it until you add its tag. There is no `omit`: an exclusion list would silently accept every mode added later.
+
+Use `taggedStruct` only when the variants cannot be declared together. Recursive unions and standalone tagged structs are the common cases.
+
 The counter starts with one field. When automatic counting becomes part of the application state, the Model grows to record it:
 
 ::Snippet{name="counterModelPreview" label="expanded model example"}

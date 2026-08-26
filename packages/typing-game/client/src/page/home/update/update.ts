@@ -6,7 +6,7 @@ import { optionWhen } from '../../../optionWhen'
 import { RoomsClient } from '../../../rpc'
 import { FocusRoomIdInput, FocusUsernameInput, JoinRoom } from '../command'
 import { Message, OutMessage } from '../message'
-import { EnterRoomId, EnterUsername, Model, SelectAction } from '../model'
+import { HomeStep, Model } from '../model'
 import { handleKeyPressed } from './handleKeyPressed'
 
 export type UpdateReturn = Update.ReturnWithOutMessage<
@@ -30,7 +30,10 @@ export const update = (model: Model, message: Message) =>
           const nextModel = Str.isNonEmpty(username)
             ? evo(model, {
                 homeStep: () =>
-                  SelectAction({ username, selectedAction: 'CreateRoom' }),
+                  HomeStep.SelectAction({
+                    username,
+                    selectedAction: 'CreateRoom',
+                  }),
               })
             : model
 
@@ -46,7 +49,7 @@ export const update = (model: Model, message: Message) =>
         withUpdateReturn,
         M.tag('EnterUsername', () => ({
           model: evo(model, {
-            homeStep: () => EnterUsername({ username: value }),
+            homeStep: () => HomeStep.EnterUsername({ username: value }),
             formError: () => Option.none(),
           }),
         })),
@@ -63,7 +66,7 @@ export const update = (model: Model, message: Message) =>
         M.tag('EnterRoomId', ({ username }) => ({
           model: evo(model, {
             homeStep: () =>
-              EnterRoomId({
+              HomeStep.EnterRoomId({
                 username,
                 roomId: value,
               }),
@@ -81,7 +84,10 @@ export const update = (model: Model, message: Message) =>
             return {
               model: evo(model, {
                 homeStep: () =>
-                  SelectAction({ username, selectedAction: 'JoinRoom' }),
+                  HomeStep.SelectAction({
+                    username,
+                    selectedAction: 'JoinRoom',
+                  }),
               }),
             }
           }

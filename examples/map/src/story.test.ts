@@ -5,8 +5,7 @@ import { expect, test } from 'vitest'
 import {
   FlyTo,
   Geolocate,
-  GeolocateFailed,
-  GeolocateLocating,
+  GeolocateState,
   LockBodyScroll,
   Message,
   UnlockBodyScroll,
@@ -126,7 +125,7 @@ test('clicking find-me transitions to the locating state and emits Geolocate', (
     given(initialModel),
     message(Message.ClickedFindMe()),
     model(model => {
-      expect(model.geolocateState._tag).toBe('GeolocateLocating')
+      expect(model.geolocateState._tag).toBe('Locating')
     }),
     Command.expectHas(LockBodyScroll, Geolocate),
     Command.resolve(LockBodyScroll, Message.CompletedLockBodyScroll()),
@@ -142,11 +141,11 @@ test('a successful geolocation result clears the locating state and flies the ma
     update,
     given({
       ...mountedModel,
-      geolocateState: GeolocateLocating(),
+      geolocateState: GeolocateState.Locating(),
     }),
     message(Message.SucceededGeolocate({ lng: 2.35, lat: 48.85 })),
     model(model => {
-      expect(model.geolocateState._tag).toBe('GeolocateIdle')
+      expect(model.geolocateState._tag).toBe('Idle')
       expect(model.maybeUserLocation).toStrictEqual(
         Option.some({ lng: 2.35, lat: 48.85 }),
       )
@@ -162,12 +161,12 @@ test('a failed geolocation result surfaces the reason in the geolocate state', (
     update,
     given({
       ...initialModel,
-      geolocateState: GeolocateLocating(),
+      geolocateState: GeolocateState.Locating(),
     }),
     message(Message.FailedGeolocate({ reason: 'Permission denied' })),
     model(model => {
-      expect(model.geolocateState._tag).toBe('GeolocateFailed')
-      if (model.geolocateState._tag === 'GeolocateFailed') {
+      expect(model.geolocateState._tag).toBe('Failed')
+      if (model.geolocateState._tag === 'Failed') {
         expect(model.geolocateState.reason).toBe('Permission denied')
       }
     }),
@@ -179,11 +178,11 @@ test('dismissing the geolocate overlay returns to idle', () => {
     update,
     given({
       ...initialModel,
-      geolocateState: GeolocateFailed({ reason: 'Timed out' }),
+      geolocateState: GeolocateState.Failed({ reason: 'Timed out' }),
     }),
     message(Message.DismissedGeolocate()),
     model(model => {
-      expect(model.geolocateState._tag).toBe('GeolocateIdle')
+      expect(model.geolocateState._tag).toBe('Idle')
     }),
     Command.resolve(UnlockBodyScroll, Message.CompletedUnlockBodyScroll()),
   )

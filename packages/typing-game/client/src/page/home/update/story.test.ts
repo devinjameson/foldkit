@@ -16,20 +16,20 @@ import {
   JoinRoom,
 } from '../command'
 import { Message, OutMessage } from '../message'
-import { EnterRoomId, EnterUsername, SelectAction } from '../model'
+import { HomeStep } from '../model'
 import { update } from './update'
 
 const alice = { id: 'p1', username: 'alice' }
 
 const givenEnterUsernameStep = () =>
   given({
-    homeStep: EnterUsername({ username: '' }),
+    homeStep: HomeStep.EnterUsername({ username: '' }),
     formError: Option.none(),
   })
 
 const givenSelectActionStep = () =>
   given({
-    homeStep: SelectAction({
+    homeStep: HomeStep.SelectAction({
       username: 'alice',
       selectedAction: 'CreateRoom',
     }),
@@ -38,7 +38,7 @@ const givenSelectActionStep = () =>
 
 const givenEnterRoomIdStep = () =>
   given({
-    homeStep: EnterRoomId({ username: 'alice', roomId: '' }),
+    homeStep: HomeStep.EnterRoomId({ username: 'alice', roomId: '' }),
     formError: Option.none(),
   })
 
@@ -195,7 +195,7 @@ describe('joining a room', () => {
     story(
       update,
       given({
-        homeStep: EnterRoomId({ username: 'alice', roomId: '' }),
+        homeStep: HomeStep.EnterRoomId({ username: 'alice', roomId: '' }),
         formError: Option.some('Room not found'),
       }),
       message(Message.ChangedRoomId({ value: 'abc' })),

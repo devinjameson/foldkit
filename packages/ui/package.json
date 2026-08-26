@@ -127,7 +127,7 @@
   },
   "peerDependencies": {
     "effect": "4.0.0-rc.112",
-    "foldkit": "workspace:^0"
+    "foldkit": ">=0.153.0"
   },
   "dependencies": {
     "@floating-ui/dom": "^1.7.6"

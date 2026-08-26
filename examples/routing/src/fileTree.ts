@@ -1,5 +1,5 @@
 import { Array, Match as M, Option, Schema as S, pipe } from 'effect'
-import { ts } from 'foldkit/schema'
+import { taggedStruct } from 'foldkit/schema'
 
 export type File = typeof File.Type
 export type Directory = Readonly<{
@@ -9,12 +9,12 @@ export type Directory = Readonly<{
 }>
 export type FileTreeEntry = File | Directory
 
-export const File = ts('File', {
+export const File = taggedStruct('File', {
   name: S.String,
   sizeInBytes: S.Number,
 })
 
-export const Directory = ts('Directory', {
+export const Directory = taggedStruct('Directory', {
   name: S.String,
   entries: S.Array(S.suspend((): S.Codec<FileTreeEntry> => FileTreeEntry)),
 })

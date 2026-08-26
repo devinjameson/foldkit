@@ -1,19 +1,19 @@
 import { Match as M, Schema as S } from 'effect'
-import { ts } from 'foldkit/schema'
+import { defineTaggedUnion } from 'foldkit/schema'
 
-export const Production = ts('Production')
-export const Canary = ts('Canary', { commit: S.NonEmptyString })
-
-export const Deployment = S.Union([Production, Canary])
+export const Deployment = defineTaggedUnion({
+  Production: {},
+  Canary: { commit: S.NonEmptyString },
+})
 export type Deployment = typeof Deployment.Type
 
 export const deploymentFromCanaryCommit = (
   canaryCommit: string | undefined,
 ): Deployment => {
   if (canaryCommit === undefined) {
-    return Production()
+    return Deployment.Production()
   } else {
-    return Canary({
+    return Deployment.Canary({
       commit: S.decodeUnknownSync(S.NonEmptyString)(canaryCommit),
     })
   }

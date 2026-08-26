@@ -93,11 +93,12 @@ const Model = S.Struct({
 })
 
 // RIGHT: each state is a distinct variant
-const Idle = ts('Idle')
-const Loading = ts('Loading')
-const Error = ts('Error', { error: S.String })
-const Ok = ts('Ok', { data: Data })
-const DataState = S.Union([Idle, Loading, Error, Ok])
+const DataState = defineTaggedUnion({
+  Idle: {},
+  Loading: {},
+  Error: { error: S.String },
+  Ok: { data: Data },
+})
 
 const Model = S.Struct({
   dataState: DataState,

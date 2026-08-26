@@ -86,7 +86,7 @@ describe('defineMessageUnion', () => {
     expect(() =>
       Reflect.apply(defineMessageUnion, undefined, [{ match: {} }]),
     ).toThrowError(
-      'Message variant names conflict with Schema.TaggedUnion properties: match',
+      'Message variant names conflict with union properties: match',
     )
   })
 
@@ -94,15 +94,29 @@ describe('defineMessageUnion', () => {
     expect(() =>
       Reflect.apply(defineMessageUnion, undefined, [{ toString: {} }]),
     ).toThrowError(
-      'Message variant names conflict with Schema.TaggedUnion properties: toString',
+      'Message variant names conflict with union properties: toString',
     )
   })
 
   it('rejects type-only tagged union property names at runtime', () => {
     expect(() =>
       Reflect.apply(defineMessageUnion, undefined, [{ Type: {} }]),
+    ).toThrowError('Message variant names conflict with union properties: Type')
+  })
+
+  it('rejects members as a variant name at runtime', () => {
+    expect(() =>
+      Reflect.apply(defineMessageUnion, undefined, [{ members: {} }]),
     ).toThrowError(
-      'Message variant names conflict with Schema.TaggedUnion properties: Type',
+      'Message variant names conflict with union properties: members',
+    )
+  })
+
+  it('rejects subset as a variant name at runtime', () => {
+    expect(() =>
+      Reflect.apply(defineMessageUnion, undefined, [{ subset: {} }]),
+    ).toThrowError(
+      'Message variant names conflict with union properties: subset',
     )
   })
 
@@ -113,12 +127,18 @@ describe('defineMessageUnion', () => {
     Message.guards
     // @ts-expect-error TaggedUnion isAnyOf is not part of the Message API
     Message.isAnyOf
+    // @ts-expect-error TaggedUnion subset is not part of the Message API
+    Message.subset
     // @ts-expect-error Message variant names cannot shadow tagged union properties
     defineMessageUnion({ match: {} })
     // @ts-expect-error The collision check follows additions to the tagged union surface
     defineMessageUnion({ annotateKey: {} })
     // @ts-expect-error Type-only tagged union properties are also reserved
     defineMessageUnion({ Type: {} })
+    // @ts-expect-error members is reserved by Foldkit unions
+    defineMessageUnion({ members: {} })
+    // @ts-expect-error subset is reserved by Foldkit unions
+    defineMessageUnion({ subset: {} })
   }
 
   it('works with a single handler across several tags', () => {

@@ -44,7 +44,7 @@ import {
 import { defineMessageUnion } from 'foldkit/message'
 import { makeElement } from 'foldkit/runtime'
 import type { DevToolsMode, DevToolsPosition } from 'foldkit/runtime'
-import { ts } from 'foldkit/schema'
+import { defineTaggedUnion } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 import * as Subscription from 'foldkit/subscription'
 
@@ -966,21 +966,14 @@ const buildOverlayView = (
   const diffDotView: Html = h.span([h.Class('diff-dot')])
   const inlineDiffDotView: Html = h.span([h.Class('diff-dot-inline')])
 
-  const ArrowSegment = ts('ArrowSegment', { isExpanded: S.Boolean })
-  const DiffDotSegment = ts('DiffDotSegment')
-  const KeyLabelSegment = ts('KeyLabelSegment', { key: S.String })
-  const TagLabelSegment = ts('TagLabelSegment', { tag: S.String })
-  const PreviewSegment = ts('PreviewSegment', { preview: S.String })
-  const LeafValueSegment = ts('LeafValueSegment', { value: S.Unknown })
-
-  const RowSegment = S.Union([
-    ArrowSegment,
-    DiffDotSegment,
-    KeyLabelSegment,
-    TagLabelSegment,
-    PreviewSegment,
-    LeafValueSegment,
-  ])
+  const RowSegment = defineTaggedUnion({
+    ArrowSegment: { isExpanded: S.Boolean },
+    DiffDotSegment: {},
+    KeyLabelSegment: { key: S.String },
+    TagLabelSegment: { tag: S.String },
+    PreviewSegment: { preview: S.String },
+    LeafValueSegment: { value: S.Unknown },
+  })
   type RowSegment = typeof RowSegment.Type
 
   const rowSegmentView = M.type<RowSegment>().pipe(
@@ -1105,9 +1098,11 @@ const buildOverlayView = (
 
     if (!nodeIsExpandable) {
       const rowSegments: Array<RowSegment> = [
-        ...(hasDiffDot ? [DiffDotSegment()] : []),
-        ...(String_.isNonEmpty(key) ? [KeyLabelSegment({ key })] : []),
-        LeafValueSegment({ value }),
+        ...(hasDiffDot ? [RowSegment.DiffDotSegment()] : []),
+        ...(String_.isNonEmpty(key)
+          ? [RowSegment.KeyLabelSegment({ key })]
+          : []),
+        RowSegment.LeafValueSegment({ value }),
       ]
 
       return h.ul(
@@ -1137,11 +1132,11 @@ const buildOverlayView = (
       : collapsedPreview(value)
 
     const rowSegments: Array<RowSegment> = [
-      ...(isRoot ? [] : [ArrowSegment({ isExpanded })]),
-      ...(!isRoot && hasDiffDot ? [DiffDotSegment()] : []),
-      ...(String_.isNonEmpty(key) ? [KeyLabelSegment({ key })] : []),
-      ...(String_.isNonEmpty(tag) ? [TagLabelSegment({ tag })] : []),
-      PreviewSegment({ preview }),
+      ...(isRoot ? [] : [RowSegment.ArrowSegment({ isExpanded })]),
+      ...(!isRoot && hasDiffDot ? [RowSegment.DiffDotSegment()] : []),
+      ...(String_.isNonEmpty(key) ? [RowSegment.KeyLabelSegment({ key })] : []),
+      ...(String_.isNonEmpty(tag) ? [RowSegment.TagLabelSegment({ tag })] : []),
+      RowSegment.PreviewSegment({ preview }),
     ]
 
     return h.ul(

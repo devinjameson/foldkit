@@ -7,7 +7,7 @@ import { Menu, Tabs } from '@foldkit/ui'
 import { SubmitApplication } from './command'
 import { Step } from './domain'
 import { Message } from './message'
-import { type Model, SubmitError, SubmitSuccess, Submitting } from './model'
+import { type Model, Submission } from './model'
 import {
   Attachments,
   CoverLetter,
@@ -163,7 +163,9 @@ export const update = (model: Model, message: Message) =>
       })
       if (isApplicationComplete(revealedModel)) {
         return {
-          model: evo(revealedModel, { submission: () => Submitting() }),
+          model: evo(revealedModel, {
+            submission: () => Submission.Submitting(),
+          }),
           commands: [SubmitApplication()],
         }
       }
@@ -171,10 +173,12 @@ export const update = (model: Model, message: Message) =>
     },
 
     SucceededSubmitApplication: () => ({
-      model: evo(model, { submission: () => SubmitSuccess() }),
+      model: evo(model, { submission: () => Submission.SubmitSuccess() }),
     }),
 
     FailedSubmitApplication: ({ error }) => ({
-      model: evo(model, { submission: () => SubmitError({ error }) }),
+      model: evo(model, {
+        submission: () => Submission.SubmitError({ error }),
+      }),
     }),
   })

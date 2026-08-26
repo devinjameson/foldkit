@@ -5,14 +5,7 @@ import { evo } from 'foldkit/struct'
 import { RoomsClient } from '../../../rpc'
 import { CreateRoom, FocusRoomIdInput, FocusUsernameInput } from '../command'
 import { Message } from '../message'
-import {
-  EnterRoomId,
-  EnterUsername,
-  HOME_ACTIONS,
-  HomeAction,
-  Model,
-  SelectAction,
-} from '../model'
+import { HOME_ACTIONS, HomeAction, HomeStep, Model } from '../model'
 
 type UpdateReturn = Update.Return<Model, Message, RoomsClient>
 const withUpdateReturn = M.withReturnType<UpdateReturn>()
@@ -28,7 +21,7 @@ export const handleKeyPressed =
 
 const whenSelectAction =
   (model: Model, key: string) =>
-  (selectAction: SelectAction): UpdateReturn =>
+  (selectAction: typeof HomeStep.SelectAction.Type): UpdateReturn =>
     M.value(key).pipe(
       withUpdateReturn,
       M.when('ArrowUp', () =>
@@ -43,10 +36,13 @@ const whenSelectAction =
 
 const moveSelection =
   (f: (index: number) => number) =>
-  (model: Model, { username, selectedAction }: SelectAction): UpdateReturn => ({
+  (
+    model: Model,
+    { username, selectedAction }: typeof HomeStep.SelectAction.Type,
+  ): UpdateReturn => ({
     model: evo(model, {
       homeStep: () =>
-        SelectAction({
+        HomeStep.SelectAction({
           username,
           selectedAction: cycleAction(f)(selectedAction),
         }),
@@ -75,7 +71,7 @@ const cycleAction =
 
 const confirmSelection =
   (model: Model) =>
-  (selectAction: SelectAction): UpdateReturn =>
+  (selectAction: typeof HomeStep.SelectAction.Type): UpdateReturn =>
     M.value(selectAction.selectedAction).pipe(
       withUpdateReturn,
       M.when('CreateRoom', () => ({
@@ -85,7 +81,7 @@ const confirmSelection =
       M.when('JoinRoom', () => ({
         model: evo(model, {
           homeStep: () =>
-            EnterRoomId({
+            HomeStep.EnterRoomId({
               username: selectAction.username,
               roomId: '',
             }),
@@ -94,7 +90,7 @@ const confirmSelection =
       })),
       M.when('ChangeUsername', () => ({
         model: evo(model, {
-          homeStep: () => EnterUsername({ username: '' }),
+          homeStep: () => HomeStep.EnterUsername({ username: '' }),
         }),
         commands: [FocusUsernameInput()],
       })),

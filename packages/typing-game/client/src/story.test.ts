@@ -10,7 +10,7 @@ import { Home, Room } from './page'
 import { Message as HomeMessage } from './page/home/message'
 import { StartGame } from './page/room/command'
 import { Message as RoomMessage } from './page/room/message'
-import { HomeRoute, RoomRoute } from './route'
+import { AppRoute } from './route'
 import { update } from './update'
 
 const alice = { id: 'p1', username: 'alice' }
@@ -27,7 +27,7 @@ const waitingRoom: Shared.Room = {
 }
 
 const selectActionHome: Home.Model.Model = {
-  homeStep: Home.Model.SelectAction({
+  homeStep: Home.Model.HomeStep.SelectAction({
     username: 'alice',
     selectedAction: 'CreateRoom',
   }),
@@ -46,14 +46,14 @@ const joinedRoom: Room.Model.Model = {
 
 const givenHomeRoute = () =>
   given<Model>({
-    route: HomeRoute(),
+    route: AppRoute.Home(),
     home: selectActionHome,
     room: joinedRoom,
   })
 
 const givenRoomRoute = () =>
   given<Model>({
-    route: RoomRoute({ roomId: 'r1' }),
+    route: AppRoute.Room({ roomId: 'r1' }),
     home: selectActionHome,
     room: joinedRoom,
   })

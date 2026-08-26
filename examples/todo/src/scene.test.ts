@@ -13,10 +13,10 @@ import {
 import { describe, test } from 'vitest'
 
 import {
+  EditingState,
   GenerateTodo,
   Message,
   type Model,
-  NotEditing,
   SaveTodos,
   update,
   view,
@@ -26,7 +26,7 @@ const emptyModel: Model = {
   todos: [],
   newTodoText: '',
   filter: 'All',
-  editing: NotEditing(),
+  editing: EditingState.NotEditing(),
 }
 
 const modelWithTodos: Model = {

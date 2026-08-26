@@ -2,17 +2,7 @@ import { Array, Option } from 'effect'
 import { describe, expect, it } from 'vitest'
 
 import { maybePostCover } from '../src/page/blog/frontmatter'
-import {
-  AboutRoute,
-  BlogPostRoute,
-  ContactRoute,
-  CoreModelRoute,
-  ExamplesRoute,
-  HomeRoute,
-  NotFoundRoute,
-  PlaygroundRoute,
-  PrivacyRoute,
-} from '../src/route'
+import { AppRoute } from '../src/route'
 import { blogPosts } from './blogPosts'
 import { ORGANIZATION_SCHEMA, injectMetaTags } from './og-image'
 
@@ -53,7 +43,7 @@ const coverlessPost = Option.getOrThrowWith(
 
 describe('injectMetaTags', () => {
   describe('a blog post with a cover', () => {
-    const route = BlogPostRoute({ postSlug: coverPost.slug })
+    const route = AppRoute.BlogPost({ postSlug: coverPost.slug })
     const urlPath = `/blog/${coverPost.slug}`
     const ogSlug = `blog-${coverPost.slug}`
 
@@ -97,7 +87,7 @@ describe('injectMetaTags', () => {
   })
 
   describe('a blog post without a cover', () => {
-    const route = BlogPostRoute({ postSlug: coverlessPost.slug })
+    const route = AppRoute.BlogPost({ postSlug: coverlessPost.slug })
     const urlPath = `/blog/${coverlessPost.slug}`
 
     const html = injectMetaTags(baseHtml, route, urlPath, resolveApiModuleName)
@@ -115,7 +105,7 @@ describe('injectMetaTags', () => {
   describe('a documentation route', () => {
     const html = injectMetaTags(
       baseHtml,
-      ExamplesRoute(),
+      AppRoute.Examples(),
       '/example-apps',
       resolveApiModuleName,
     )
@@ -141,7 +131,7 @@ describe('injectMetaTags', () => {
   describe('a Playground route', () => {
     const html = injectMetaTags(
       baseHtml,
-      PlaygroundRoute({ exampleSlug: 'counter' }),
+      AppRoute.Playground({ exampleSlug: 'counter' }),
       '/playground/counter',
       resolveApiModuleName,
     )
@@ -163,7 +153,7 @@ describe('injectMetaTags', () => {
   describe('a route outside the blog', () => {
     const html = injectMetaTags(
       baseHtml,
-      HomeRoute(),
+      AppRoute.Home(),
       '/',
       resolveApiModuleName,
     )
@@ -229,7 +219,7 @@ describe('injectMetaTags', () => {
     it('marks up About, Contact, and Privacy as their schema.org page types', () => {
       const aboutHtml = injectMetaTags(
         baseHtml,
-        AboutRoute(),
+        AppRoute.About(),
         '/about',
         resolveApiModuleName,
       )
@@ -239,7 +229,7 @@ describe('injectMetaTags', () => {
 
       const contactHtml = injectMetaTags(
         baseHtml,
-        ContactRoute(),
+        AppRoute.Contact(),
         '/contact',
         resolveApiModuleName,
       )
@@ -247,7 +237,7 @@ describe('injectMetaTags', () => {
 
       const privacyHtml = injectMetaTags(
         baseHtml,
-        PrivacyRoute(),
+        AppRoute.Privacy(),
         '/privacy',
         resolveApiModuleName,
       )
@@ -258,7 +248,7 @@ describe('injectMetaTags', () => {
     it('leaves ordinary documentation pages without a page-level schema', () => {
       const docsHtml = injectMetaTags(
         baseHtml,
-        CoreModelRoute(),
+        AppRoute.CoreModel(),
         '/core/model',
         resolveApiModuleName,
       )
@@ -271,7 +261,7 @@ describe('injectMetaTags', () => {
   describe('the prerendered 404 page', () => {
     const html = injectMetaTags(
       baseHtml,
-      NotFoundRoute({ path: '/404' }),
+      AppRoute.NotFound({ path: '/404' }),
       '/404',
       resolveApiModuleName,
     )

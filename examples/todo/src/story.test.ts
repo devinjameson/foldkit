@@ -3,11 +3,10 @@ import { Command, given, message, model, story } from 'foldkit/story'
 import { describe, expect, test } from 'vitest'
 
 import {
-  Editing,
+  EditingState,
   GenerateTodo,
   Message,
   type Model,
-  NotEditing,
   SaveTodos,
   update,
 } from './main'
@@ -16,7 +15,7 @@ const emptyModel: Model = {
   todos: [],
   newTodoText: '',
   filter: 'All',
-  editing: NotEditing(),
+  editing: EditingState.NotEditing(),
 }
 
 const buyMilk = {
@@ -189,7 +188,7 @@ describe('update', () => {
         message(Message.StartedEditing({ id: 'abc' })),
         model(model => {
           expect(model.editing).toStrictEqual(
-            Editing({ id: 'abc', text: 'Buy milk' }),
+            EditingState.Editing({ id: 'abc', text: 'Buy milk' }),
           )
         }),
       )
@@ -198,7 +197,7 @@ describe('update', () => {
     test('UpdatedEditingTodo updates the editing text', () => {
       const editingModel: Model = {
         ...modelWithTodos,
-        editing: Editing({ id: 'abc', text: 'Buy milk' }),
+        editing: EditingState.Editing({ id: 'abc', text: 'Buy milk' }),
       }
 
       story(
@@ -207,7 +206,7 @@ describe('update', () => {
         message(Message.UpdatedEditingTodo({ text: 'Buy oat milk' })),
         model(model => {
           expect(model.editing).toStrictEqual(
-            Editing({ id: 'abc', text: 'Buy oat milk' }),
+            EditingState.Editing({ id: 'abc', text: 'Buy oat milk' }),
           )
         }),
       )
@@ -216,7 +215,7 @@ describe('update', () => {
     test('SavedEdit updates the todo text and exits editing', () => {
       const editingModel: Model = {
         ...modelWithTodos,
-        editing: Editing({ id: 'abc', text: 'Buy oat milk' }),
+        editing: EditingState.Editing({ id: 'abc', text: 'Buy oat milk' }),
       }
 
       const editedTodos = modelWithTodos.todos.map(todo =>
@@ -236,7 +235,7 @@ describe('update', () => {
           expect(Option.map(todo, ({ text }) => text)).toStrictEqual(
             Option.some('Buy oat milk'),
           )
-          expect(model.editing).toStrictEqual(NotEditing())
+          expect(model.editing).toStrictEqual(EditingState.NotEditing())
         }),
       )
     })
@@ -244,7 +243,7 @@ describe('update', () => {
     test('SavedEdit with empty text exits editing without saving', () => {
       const editingModel: Model = {
         ...modelWithTodos,
-        editing: Editing({ id: 'abc', text: '   ' }),
+        editing: EditingState.Editing({ id: 'abc', text: '   ' }),
       }
 
       story(
@@ -256,7 +255,7 @@ describe('update', () => {
           expect(Option.map(todo, ({ text }) => text)).toStrictEqual(
             Option.some('Buy milk'),
           )
-          expect(model.editing).toStrictEqual(NotEditing())
+          expect(model.editing).toStrictEqual(EditingState.NotEditing())
         }),
         Command.expectNone(),
       )
@@ -265,7 +264,7 @@ describe('update', () => {
     test('CancelledEdit exits editing without changes', () => {
       const editingModel: Model = {
         ...modelWithTodos,
-        editing: Editing({ id: 'abc', text: 'Changed text' }),
+        editing: EditingState.Editing({ id: 'abc', text: 'Changed text' }),
       }
 
       story(
@@ -277,7 +276,7 @@ describe('update', () => {
           expect(Option.map(todo, ({ text }) => text)).toStrictEqual(
             Option.some('Buy milk'),
           )
-          expect(model.editing).toStrictEqual(NotEditing())
+          expect(model.editing).toStrictEqual(EditingState.NotEditing())
         }),
       )
     })

@@ -18,15 +18,12 @@ import {
   childAttributes,
 } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
-import { ts } from 'foldkit/schema'
+import { defineTaggedUnion } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 import { type View as SubmodelView, defineView } from 'foldkit/submodel'
 import * as Subscription from 'foldkit/subscription'
 
 // MODEL
-
-const Unmeasured = ts('Unmeasured')
-const Measured = ts('Measured', { containerHeight: S.Number })
 
 /** Measurement state of the virtual list's scrollable container.
  *
@@ -35,16 +32,16 @@ const Measured = ts('Measured', { containerHeight: S.Number })
  * `Unmeasured` explicitly, typically by rendering a placeholder until the
  * first measurement arrives.
  */
-const Measurement = S.Union([Unmeasured, Measured])
-
-const Idle = ts('Idle')
-const ScrollingToIndex = ts('ScrollingToIndex', {
-  index: S.Number,
-  version: S.Number,
+const Measurement = defineTaggedUnion({
+  Unmeasured: {},
+  Measured: { containerHeight: S.Number },
 })
 
 /** State of a programmatic scroll initiated by `scrollToIndex`. */
-const PendingScroll = S.Union([Idle, ScrollingToIndex])
+const PendingScroll = defineTaggedUnion({
+  Idle: {},
+  ScrollingToIndex: { index: S.Number, version: S.Number },
+})
 
 /** Schema for the virtual list's state. Tracks scroll position, container
  *  measurement, and any in-flight programmatic scroll. */
@@ -89,8 +86,8 @@ export const init = (config: InitConfig): Model => ({
   id: config.id,
   rowHeightPx: config.rowHeightPx,
   scrollTop: config.initialScrollTop ?? 0,
-  measurement: Unmeasured(),
-  pendingScroll: Idle(),
+  measurement: Measurement.Unmeasured(),
+  pendingScroll: PendingScroll.Idle(),
   pendingScrollVersion: 0,
 })
 
@@ -124,10 +121,10 @@ export const update = (model: Model, message: Message) =>
         const nextVersion = Number.increment(model.pendingScrollVersion)
         return {
           model: evo(model, {
-            measurement: () => Measured({ containerHeight }),
+            measurement: () => Measurement.Measured({ containerHeight }),
             pendingScrollVersion: () => nextVersion,
             pendingScroll: () =>
-              ScrollingToIndex({
+              PendingScroll.ScrollingToIndex({
                 index: Math.floor(model.scrollTop / model.rowHeightPx),
                 version: nextVersion,
               }),
@@ -143,7 +140,7 @@ export const update = (model: Model, message: Message) =>
       } else {
         return {
           model: evo(model, {
-            measurement: () => Measured({ containerHeight }),
+            measurement: () => Measurement.Measured({ containerHeight }),
           }),
         }
       }
@@ -153,7 +150,9 @@ export const update = (model: Model, message: Message) =>
       if (version !== model.pendingScrollVersion) {
         return { model }
       } else {
-        return { model: evo(model, { pendingScroll: () => Idle() }) }
+        return {
+          model: evo(model, { pendingScroll: () => PendingScroll.Idle() }),
+        }
       }
     },
   })
@@ -169,7 +168,8 @@ const buildScrollToIndex = (
   return {
     model: evo(model, {
       pendingScrollVersion: () => nextVersion,
-      pendingScroll: () => ScrollingToIndex({ index, version: nextVersion }),
+      pendingScroll: () =>
+        PendingScroll.ScrollingToIndex({ index, version: nextVersion }),
     }),
     commands: [
       ApplyScroll({

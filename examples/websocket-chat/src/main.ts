@@ -19,7 +19,7 @@ import {
 } from 'foldkit'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
-import { ts } from 'foldkit/schema'
+import { defineTaggedUnion } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
 import { Button, Input } from '@foldkit/ui'
@@ -44,18 +44,13 @@ type ChatMessage = typeof ChatMessage.Type
 const ChatSocket = ManagedResource.tag<WebSocket>()('ChatSocket')
 type ChatSocketService = ManagedResource.ServiceOf<typeof ChatSocket>
 
-export const ConnectionDisconnected = ts('ConnectionDisconnected')
-export const ConnectionConnecting = ts('ConnectionConnecting')
-export const ConnectionConnected = ts('ConnectionConnected')
-export const ConnectionError = ts('ConnectionError', { error: S.String })
-
-const ConnectionState = S.Union([
-  ConnectionDisconnected,
-  ConnectionConnecting,
-  ConnectionConnected,
-  ConnectionError,
-])
-type ConnectionState = typeof ConnectionState.Type
+export const ConnectionState = defineTaggedUnion({
+  Disconnected: {},
+  Connecting: {},
+  Connected: {},
+  Error: { error: S.String },
+})
+export type ConnectionState = typeof ConnectionState.Type
 
 export const Model = S.Struct({
   connection: ConnectionState,
@@ -93,26 +88,26 @@ export const update = (model: Model, message: Message) =>
   Message.match<UpdateReturn>(message, {
     ClickedConnect: () => ({
       model: evo(model, {
-        connection: () => ConnectionConnecting(),
+        connection: () => ConnectionState.Connecting(),
       }),
     }),
 
     Connected: () => ({
       model: evo(model, {
-        connection: () => ConnectionConnected(),
+        connection: () => ConnectionState.Connected(),
       }),
     }),
 
     Disconnected: () => ({
       model: evo(model, {
-        connection: () => ConnectionDisconnected(),
+        connection: () => ConnectionState.Disconnected(),
         messages: () => [],
       }),
     }),
 
     FailedConnect: ({ error }) => ({
       model: evo(model, {
-        connection: () => ConnectionError({ error }),
+        connection: () => ConnectionState.Error({ error }),
       }),
     }),
 
@@ -131,7 +126,7 @@ export const update = (model: Model, message: Message) =>
 
       return M.value(model.connection).pipe(
         M.withReturnType<UpdateReturn>(),
-        M.tag('ConnectionConnected', () => ({
+        M.tag('Connected', () => ({
           model: evo(model, {
             messageInput: () => '',
           }),
@@ -166,7 +161,7 @@ export const update = (model: Model, message: Message) =>
 
 export const init: Runtime.ApplicationInit<Model, Message> = () => ({
   model: {
-    connection: ConnectionDisconnected(),
+    connection: ConnectionState.Disconnected(),
     messages: [],
     messageInput: '',
   },
@@ -224,8 +219,8 @@ export const managedResources = ManagedResource.make<Model, Message>()(
       resource: ChatSocket,
       modelToMaybeRequirements: model =>
         M.value(model.connection).pipe(
-          M.tag('ConnectionConnecting', () => Option.some(null)),
-          M.tag('ConnectionConnected', () => Option.some(null)),
+          M.tag('Connecting', () => Option.some(null)),
+          M.tag('Connected', () => Option.some(null)),
           M.orElse(() => Option.none()),
         ),
       acquire: () =>
@@ -321,7 +316,7 @@ export const subscriptions = Subscription.make<
     { isConnected: S.Boolean },
     {
       modelToDependencies: model => ({
-        isConnected: model.connection._tag === 'ConnectionConnected',
+        isConnected: model.connection._tag === 'Connected',
       }),
       dependenciesToStream: ({ isConnected }) =>
         Stream.when(
@@ -385,11 +380,10 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
 
           M.value(model.connection).pipe(
             M.tagsExhaustive({
-              ConnectionDisconnected: () => connectButtonView(h),
-              ConnectionConnecting: () => connectingView(h),
-              ConnectionConnected: () =>
-                messageInputView(model.messageInput, h),
-              ConnectionError: ({ error }) => errorView(error, h),
+              Disconnected: () => connectButtonView(h),
+              Connecting: () => connectingView(h),
+              Connected: () => messageInputView(model.messageInput, h),
+              Error: ({ error }) => errorView(error, h),
             }),
           ),
         ],
@@ -407,28 +401,26 @@ const connectionStatusView = (
     [
       M.value(connection).pipe(
         M.tagsExhaustive({
-          ConnectionDisconnected: () =>
+          Disconnected: () =>
             h.div([h.Class('w-3 h-3 rounded-full bg-red-500')]),
-          ConnectionConnecting: () =>
+          Connecting: () =>
             h.div([
               h.Class('w-3 h-3 rounded-full bg-yellow-500 animate-pulse'),
             ]),
-          ConnectionConnected: () =>
+          Connected: () =>
             h.div([h.Class('w-3 h-3 rounded-full bg-green-500')]),
-          ConnectionError: () =>
-            h.div([h.Class('w-3 h-3 rounded-full bg-red-500')]),
+          Error: () => h.div([h.Class('w-3 h-3 rounded-full bg-red-500')]),
         }),
       ),
       M.value(connection).pipe(
         M.tagsExhaustive({
-          ConnectionDisconnected: () =>
+          Disconnected: () =>
             h.span([h.Class('text-sm text-gray-600')], ['Disconnected']),
-          ConnectionConnecting: () =>
+          Connecting: () =>
             h.span([h.Class('text-sm text-gray-600')], ['Connecting...']),
-          ConnectionConnected: () =>
+          Connected: () =>
             h.span([h.Class('text-sm text-gray-600')], ['Connected']),
-          ConnectionError: () =>
-            h.span([h.Class('text-sm text-red-600')], ['Error']),
+          Error: () => h.span([h.Class('text-sm text-red-600')], ['Error']),
         }),
       ),
     ],

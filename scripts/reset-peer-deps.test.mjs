@@ -6,7 +6,13 @@ import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const PLUGIN_MANIFEST = 'packages/vite-plugin-foldkit/package.json'
+const FOLDKIT_FLOOR_MANIFESTS = [
+  'packages/ui/package.json',
+  'packages/devtools/package.json',
+  'packages/devtools-mcp/package.json',
+  'packages/markdown/package.json',
+  'packages/vite-plugin-foldkit/package.json',
+]
 
 const runResetPeerDeps = () => {
   const result = spawnSync('npx', ['tsx', 'scripts/reset-peer-deps.ts'], {
@@ -23,44 +29,52 @@ const runResetPeerDeps = () => {
 const readManifest = path =>
   JSON.parse(readFileSync(resolve(REPO_ROOT, path), 'utf8'))
 
-// The release workflow runs this script as part of `version-packages`, so a
-// package whose peer floor names a real minimum must survive it. Broadening
-// `@foldkit/vite-plugin`'s `foldkit` peer would republish the compatibility bug
-// the floor exists to prevent: a plugin that accepts a foldkit without the
-// `foldkit/experimental/server` export it imports, and fails at import instead.
-test('leaves the vite plugin foldkit peer floor alone', () => {
-  const before = readFileSync(resolve(REPO_ROOT, PLUGIN_MANIFEST), 'utf8')
+// `version-packages` runs this script. Every Foldkit minimum must survive it.
+test('leaves Foldkit peer floors alone', () => {
+  const before = new Map(
+    FOLDKIT_FLOOR_MANIFESTS.map(manifest => [
+      manifest,
+      readFileSync(resolve(REPO_ROOT, manifest), 'utf8'),
+    ]),
+  )
 
   try {
     runResetPeerDeps()
 
-    const peer = readManifest(PLUGIN_MANIFEST).peerDependencies.foldkit
-    assert.match(
-      peer,
-      /^>=\d+\.\d+\.\d+$/,
-      `expected a ">=" floor, got ${peer}`,
-    )
+    for (const manifest of FOLDKIT_FLOOR_MANIFESTS) {
+      const peer = readManifest(manifest).peerDependencies.foldkit
+      assert.match(
+        peer,
+        /^>=\d+\.\d+\.\d+$/,
+        `expected a ">=" floor in ${manifest}, got ${peer}`,
+      )
+    }
   } finally {
-    writeFileSync(resolve(REPO_ROOT, PLUGIN_MANIFEST), before)
+    for (const [manifest, contents] of before) {
+      writeFileSync(resolve(REPO_ROOT, manifest), contents)
+    }
   }
 })
 
 test('restores the broad range on packages that declare one', () => {
-  const path = 'packages/ui/package.json'
-  const before = readFileSync(resolve(REPO_ROOT, path), 'utf8')
+  const manifestPath = 'packages/devtools/package.json'
+  const before = readFileSync(resolve(REPO_ROOT, manifestPath), 'utf8')
 
   try {
-    const manifest = readManifest(path)
-    manifest.peerDependencies.foldkit = '0.147.0'
+    const manifest = readManifest(manifestPath)
+    manifest.peerDependencies['@foldkit/ui'] = '0.147.0'
     writeFileSync(
-      resolve(REPO_ROOT, path),
+      resolve(REPO_ROOT, manifestPath),
       JSON.stringify(manifest, null, 2) + '\n',
     )
 
     runResetPeerDeps()
 
-    assert.equal(readManifest(path).peerDependencies.foldkit, 'workspace:^0')
+    assert.equal(
+      readManifest(manifestPath).peerDependencies['@foldkit/ui'],
+      'workspace:^0',
+    )
   } finally {
-    writeFileSync(resolve(REPO_ROOT, path), before)
+    writeFileSync(resolve(REPO_ROOT, manifestPath), before)
   }
 })

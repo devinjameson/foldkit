@@ -8,7 +8,7 @@ import {
   Schema as S,
 } from 'effect'
 
-import { ts } from '../schema/index.js'
+import { taggedStruct } from '../schema/index.js'
 
 // STATE
 
@@ -62,11 +62,11 @@ export type AsyncData<A, E> =
 
 /** Constructs the `Idle` state. A parameter-free callable Schema, so it can
  *  also serve as a Union member. */
-export const Idle = ts('Idle')
+export const Idle = taggedStruct('Idle')
 
 /** Constructs the `Loading` state. A parameter-free callable Schema, so it
  *  can also serve as a Union member. */
-export const Loading = ts('Loading')
+export const Loading = taggedStruct('Loading')
 
 /** Constructs a `Refreshing` state holding the previous good data. Plain
  *  value builder, generic in `A`; use the `Schema` factory's `Refreshing`
@@ -166,10 +166,13 @@ export const Schema = <A, AI, E, EI>(
   dataSchema: S.Codec<A, AI>,
   errorSchema: S.Codec<E, EI>,
 ): AsyncDataSchema<A, AI, E, EI> => {
-  const RefreshingSchema = ts('Refreshing', { data: dataSchema })
-  const FailureSchema = ts('Failure', { error: errorSchema })
-  const StaleSchema = ts('Stale', { error: errorSchema, data: dataSchema })
-  const SuccessSchema = ts('Success', { data: dataSchema })
+  const RefreshingSchema = taggedStruct('Refreshing', { data: dataSchema })
+  const FailureSchema = taggedStruct('Failure', { error: errorSchema })
+  const StaleSchema = taggedStruct('Stale', {
+    error: errorSchema,
+    data: dataSchema,
+  })
+  const SuccessSchema = taggedStruct('Success', { data: dataSchema })
   const schema = S.Union([
     Idle,
     Loading,

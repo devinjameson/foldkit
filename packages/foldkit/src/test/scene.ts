@@ -7,7 +7,7 @@ import {
   Match as M,
   Option,
   Predicate,
-  type Schema,
+  Schema,
   String as String_,
   pipe,
 } from 'effect'

@@ -1,7 +1,7 @@
 import { Option, String } from 'effect'
 
 import { OptionExt, StringExt } from '../effectExtensions/index.js'
-import { External, Internal } from '../navigation/urlRequest.js'
+import { UrlRequest } from '../navigation/urlRequest.js'
 import { Url } from '../url/index.js'
 import { RoutingConfig } from './runtime.js'
 
@@ -79,12 +79,14 @@ export const addLinkClickListener = <Message>(
     const currentUrl = new URL(window.location.href)
 
     if (linkUrl.origin !== currentUrl.origin) {
-      dispatch(routingConfig.onUrlRequest(External({ href })))
+      dispatch(routingConfig.onUrlRequest(UrlRequest.External({ href })))
       return
     }
 
     dispatch(
-      routingConfig.onUrlRequest(Internal({ url: urlToFoldkitUrl(linkUrl) })),
+      routingConfig.onUrlRequest(
+        UrlRequest.Internal({ url: urlToFoldkitUrl(linkUrl) }),
+      ),
     )
   }
 

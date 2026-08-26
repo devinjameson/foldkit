@@ -6,13 +6,13 @@ import { products } from './data/products'
 import { Cart } from './domain'
 import { type Model, update, view } from './main'
 import { Products } from './page'
-import { CartRoute, CheckoutRoute, NotFoundRoute, ProductsRoute } from './route'
+import { AppRoute } from './route'
 
 const apple = { id: '1', name: 'Apple', price: 1.5 }
 const banana = { id: '2', name: 'Banana', price: 0.75 }
 
 const baseModel: Model = {
-  route: ProductsRoute({ searchText: Option.none() }),
+  route: AppRoute.Products({ searchText: Option.none() }),
   cart: [],
   deliveryInstructions: '',
   orderPlaced: false,
@@ -65,7 +65,7 @@ describe('view', () => {
       { update, view },
       given({
         ...baseModel,
-        route: CartRoute(),
+        route: AppRoute.Cart(),
       }),
       expect(role('heading', { name: 'Shopping Cart' })).toExist(),
       expect(text('Your cart is empty')).toExist(),
@@ -75,7 +75,9 @@ describe('view', () => {
   test('the Cart route renders items and the running total', () => {
     scene(
       { update, view },
-      given(withCart([{ item: apple, quantity: 2 }], { route: CartRoute() })),
+      given(
+        withCart([{ item: apple, quantity: 2 }], { route: AppRoute.Cart() }),
+      ),
       expect(text('Apple')).toExist(),
       expect(text('$1.50 each')).toExist(),
       expect(text('$3.00')).toExist(),
@@ -89,7 +91,7 @@ describe('view', () => {
       { update, view },
       given({
         ...baseModel,
-        route: CheckoutRoute(),
+        route: AppRoute.Checkout(),
       }),
       expect(role('heading', { name: 'Checkout' })).toExist(),
       expect(text('Your cart is empty')).toExist(),
@@ -101,7 +103,7 @@ describe('view', () => {
       { update, view },
       given(
         withCart([{ item: apple, quantity: 2 }], {
-          route: CheckoutRoute(),
+          route: AppRoute.Checkout(),
         }),
       ),
       expect(role('heading', { name: 'Order Summary' })).toExist(),
@@ -116,7 +118,7 @@ describe('view', () => {
       { update, view },
       given(
         withCart([{ item: apple, quantity: 1 }], {
-          route: CheckoutRoute(),
+          route: AppRoute.Checkout(),
         }),
       ),
       click(role('button', { name: 'Place Order' })),
@@ -129,7 +131,7 @@ describe('view', () => {
       { update, view },
       given({
         ...baseModel,
-        route: NotFoundRoute({ path: '/oops' }),
+        route: AppRoute.NotFound({ path: '/oops' }),
       }),
       expect(role('heading', { name: '404 - Page Not Found' })).toExist(),
       expect(text('The path "/oops" was not found.')).toExist(),

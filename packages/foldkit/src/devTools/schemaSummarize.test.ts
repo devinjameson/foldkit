@@ -1,7 +1,7 @@
 import { Option, Schema as S } from 'effect'
 import { describe, expect, it } from 'vitest'
 
-import { defineMessageUnion, ts } from '../schema/index.js'
+import { defineMessageUnion, taggedStruct } from '../schema/index.js'
 import {
   indexMessageSchemaDocument,
   narrowToVariant,
@@ -158,7 +158,7 @@ describe('narrowToVariant', () => {
   })
 
   it('returns None for a variant with multiple tagged-union payload fields', () => {
-    const TwoUnions = ts('TwoUnions', {
+    const TwoUnions = taggedStruct('TwoUnions', {
       message: ChildMessage,
       fallback: ChildMessage,
     })

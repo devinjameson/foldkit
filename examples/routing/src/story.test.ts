@@ -3,7 +3,7 @@ import { Command, given, message, model, story } from 'foldkit/story'
 import { fromString } from 'foldkit/url'
 import { describe, expect, test } from 'vitest'
 
-import { HomeRoute, Message, Model, PeopleRoute, update } from './main'
+import { AppRoute, Message, Model, update } from './main'
 import { People } from './page'
 import { Message as PeopleMessage } from './page/people'
 
@@ -11,7 +11,7 @@ const peoplePageWith = (searchInput: string) =>
   People.Model.make({
     searchInput,
     searchHistory: Array.liftPredicate(String.isNonEmpty)(searchInput),
-    results: People.SearchLoaded({
+    results: People.SearchResults.Loaded({
       query: searchInput,
       people: People.searchPeople(searchInput),
     }),
@@ -19,11 +19,14 @@ const peoplePageWith = (searchInput: string) =>
 
 const initialPeoplePage = peoplePageWith('')
 
-const home = Model.make({ route: HomeRoute(), peoplePage: initialPeoplePage })
+const home = Model.make({
+  route: AppRoute.Home(),
+  peoplePage: initialPeoplePage,
+})
 
 const onPeople = (searchInput: string) =>
   Model.make({
-    route: PeopleRoute({
+    route: AppRoute.People({
       searchText: Option.liftPredicate(String.isNonEmpty)(searchInput),
     }),
     peoplePage: peoplePageWith(searchInput),
@@ -177,12 +180,12 @@ describe('update', () => {
         model(model => {
           expect(model.peoplePage.searchInput).toBe('designer')
           expect(model.peoplePage.searchHistory).toStrictEqual(['designer'])
-          expect(model.peoplePage.results._tag).toBe('SearchLoading')
+          expect(model.peoplePage.results._tag).toBe('Loading')
         }),
         Command.expectHas(People.FetchPeople),
         resolveFetch('designer'),
         model(model => {
-          if (model.peoplePage.results._tag === 'SearchLoaded') {
+          if (model.peoplePage.results._tag === 'Loaded') {
             expect(
               model.peoplePage.results.people.map(person => person.name),
             ).toStrictEqual(['Alice Johnson', 'Eva Brown'])

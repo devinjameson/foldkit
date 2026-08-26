@@ -19,14 +19,6 @@ export const ChildMessage = defineMessageUnion({
   CancelledForm: {},
   CompletedResetForm: {},
 })
-
-export const {
-  SubmittedForm,
-  SucceededSubmitForm,
-  CancelledForm,
-  CompletedResetForm,
-} = ChildMessage
-
 export type ChildMessage = typeof ChildMessage.Type
 
 // CHILD OUT MESSAGE
@@ -35,9 +27,6 @@ export const ChildOutMessage = defineMessageUnion({
   RequestedSave: { id: S.String },
   RequestedCancel: {},
 })
-
-export const { RequestedSave, RequestedCancel } = ChildOutMessage
-
 export type ChildOutMessage = typeof ChildOutMessage.Type
 
 // CHILD COMMAND
@@ -93,9 +82,6 @@ export const ParentMessage = defineMessageUnion({
   GotChildMessage: { message: ChildMessage },
   CompletedParentReset: {},
 })
-
-export const { GotChildMessage, CompletedParentReset } = ParentMessage
-
 export type ParentMessage = typeof ParentMessage.Type
 
 // PARENT INIT

@@ -3,7 +3,7 @@ import { Route } from 'foldkit'
 import { int, literal, slash } from 'foldkit/route'
 
 // Matches: /
-const homeRouter = pipe(Route.root, Route.mapTo(HomeRoute))
+const homeRouter = pipe(Route.root, Route.mapTo(AppRoute.Home))
 
 // Matches: /people or /people?searchText=alice
 const peopleRouter = pipe(
@@ -13,12 +13,12 @@ const peopleRouter = pipe(
       searchText: S.OptionFromOptional(S.String),
     }),
   ),
-  Route.mapTo(PeopleRoute),
+  Route.mapTo(AppRoute.People),
 )
 
 // Matches: /people/42
 const personRouter = pipe(
   literal('people'),
   slash(int('personId')),
-  Route.mapTo(PersonRoute),
+  Route.mapTo(AppRoute.Person),
 )

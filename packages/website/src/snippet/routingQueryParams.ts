@@ -12,11 +12,11 @@ const searchRouter = pipe(
       sort: S.OptionFromOptional(S.Literals(['Asc', 'Desc'])),
     }),
   ),
-  Route.mapTo(SearchRoute),
+  Route.mapTo(AppRoute.Search),
 )
 
 // Parsing /search?q=hello&page=2&sort=asc gives you:
-// → SearchRoute { q: Some('hello'), page: Some(2), sort: Some('Asc') }
+// → AppRoute.Search { q: Some('hello'), page: Some(2), sort: Some('Asc') }
 
 // Building
 const searchUrl = searchRouter({
