@@ -634,6 +634,7 @@ const prerenderRoute =
       const injectedHtml = Server.injectIntoTemplate(
         baseHtml,
         captured.application,
+        { containerId: CONTAINER_ID },
       )
       const outputHtml = injectMetaTags(
         injectedHtml,
@@ -698,7 +699,11 @@ const prerenderPlaygroundShells = (
 ) =>
   Effect.gen(function* () {
     const captured = yield* renderRoutePage(serverEntry, PLAYGROUND_SHELL_ROUTE)
-    const shellHtml = Server.injectIntoTemplate(baseHtml, captured.application)
+    const shellHtml = Server.injectIntoTemplate(
+      baseHtml,
+      captured.application,
+      { containerId: CONTAINER_ID },
+    )
 
     const fs = yield* FileSystem.FileSystem
     const writeShell = (route: AppRoute, outputPath: string) => {
@@ -748,6 +753,7 @@ const prerenderNotFoundPage = (
     const injectedHtml = Server.injectIntoTemplate(
       baseHtml,
       captured.application,
+      { containerId: CONTAINER_ID },
     )
     const outputHtml = injectMetaTags(
       injectedHtml,

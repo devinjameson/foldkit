@@ -84,6 +84,15 @@ jobs:
       - name: Build reusable packages
         run: pnpm build:packages && pnpm --filter @typing-game/shared build
 
+      # The prerender step writes the generated `/` over the same `index.html`
+      # the client build left its template in, so running it twice against one
+      # client build is the case that regressed. Nothing else here builds once
+      # and prerenders twice, so a repeat of that regression would reach a
+      # release unseen.
+      - name: Check the prerender step is repeatable
+        if: steps.scope.outputs.prerender_repeatable == 'true'
+        run: pnpm check:prerender-repeatable
+
       - name: Check packed peer dependency floors
         if: steps.scope.outputs.peer_floors == 'true'
         run: pnpm check:peer-floors
