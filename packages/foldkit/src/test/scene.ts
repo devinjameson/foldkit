@@ -467,6 +467,8 @@ const EVENT_NAMES: Record<string, string> = {
   change: 'OnChange',
   focus: 'OnFocus',
   blur: 'OnBlur',
+  focusin: 'OnFocusEnter',
+  focusout: 'OnFocusLeave',
   mouseenter: 'OnMouseEnter',
   mouseover: 'OnMouseOver',
   keydown: 'OnKeyDown or OnKeyDownPreventDefault',
@@ -1956,6 +1958,26 @@ export const blur =
   ): SceneSimulation<Model, Message, OutMessage> =>
     invokeAndCapture(simulation, target, 'blur', handler => {
       handler({ relatedTarget: null })
+    })
+
+/** Simulates focus entering the subtree of the element matching the target. */
+export const focusEnter =
+  (target: string | Locator) =>
+  <Model, Message, OutMessage = undefined>(
+    simulation: SceneSimulation<Model, Message, OutMessage>,
+  ): SceneSimulation<Model, Message, OutMessage> =>
+    invokeAndCapture(simulation, target, 'focusin', handler => {
+      handler({ currentTarget: null, relatedTarget: null })
+    })
+
+/** Simulates focus leaving the subtree of the element matching the target. */
+export const focusLeave =
+  (target: string | Locator) =>
+  <Model, Message, OutMessage = undefined>(
+    simulation: SceneSimulation<Model, Message, OutMessage>,
+  ): SceneSimulation<Model, Message, OutMessage> =>
+    invokeAndCapture(simulation, target, 'focusout', handler => {
+      handler({ currentTarget: null, relatedTarget: null })
     })
 
 /** Simulates a change event on the element matching the target.

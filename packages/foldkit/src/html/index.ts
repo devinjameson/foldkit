@@ -148,6 +148,14 @@ const keyboardModifiers = (event: KeyboardEvent): KeyboardModifiers => ({
   metaKey: event.metaKey,
 })
 
+const isDevToolsFocusTarget = (target: EventTarget | null): boolean =>
+  target instanceof Element && target.id === DEVTOOLS_HOST_ID
+
+const isFocusInsideCurrentTarget = (event: FocusEvent): boolean =>
+  event.currentTarget instanceof Element &&
+  event.relatedTarget instanceof Node &&
+  event.currentTarget.contains(event.relatedTarget)
+
 /** A virtual DOM element. Constructed synchronously by the element factories
  *  returned from {@link html}. The runtime patches a `VNode` (or `null` to
  *  render nothing) into the application container. */
@@ -564,6 +572,8 @@ export type Attribute<Message> = Data.TaggedEnum<{
   }
   OnFocus: { readonly message: Message }
   OnBlur: { readonly message: Message }
+  OnFocusEnter: { readonly message: Message }
+  OnFocusLeave: { readonly message: Message }
   OnInput: { readonly f: (value: string) => Message }
   OnChange: { readonly f: (value: string) => Message }
   OnFileChange: {
@@ -893,6 +903,8 @@ const {
   OnKeyPress,
   OnFocus,
   OnBlur,
+  OnFocusEnter,
+  OnFocusLeave,
   OnInput,
   OnChange,
   OnFileChange,
@@ -1660,13 +1672,26 @@ const attributeHandlers: AttributeHandlers = {
   OnBlur: ({ message }, ctx: BuildContext) =>
     updateDataOn(ctx, {
       blur: (event: FocusEvent) => {
-        if (
-          event.relatedTarget instanceof Element &&
-          event.relatedTarget.id === DEVTOOLS_HOST_ID
-        ) {
+        if (isDevToolsFocusTarget(event.relatedTarget)) {
           return
         }
         ctx.dispatch(message)
+      },
+    }),
+  OnFocusEnter: ({ message }, ctx: BuildContext) =>
+    updateDataOn(ctx, {
+      focusin: (event: FocusEvent) => {
+        if (!isFocusInsideCurrentTarget(event)) {
+          ctx.dispatch(message)
+        }
+      },
+    }),
+  OnFocusLeave: ({ message }, ctx: BuildContext) =>
+    updateDataOn(ctx, {
+      focusout: (event: FocusEvent) => {
+        if (!isFocusInsideCurrentTarget(event)) {
+          ctx.dispatch(message)
+        }
       },
     }),
   OnInput: ({ f: toMessage }, ctx: BuildContext) =>
@@ -3632,6 +3657,31 @@ type HtmlAttributes<Message> = {
     readonly _tag: 'OnBlur'
     readonly message: Message
   }
+  /**
+   * Dispatches `message` when focus enters this element's subtree from
+   * outside it. Moving focus between descendants does not dispatch.
+   *
+   * This uses the bubbling `focusin` event, so the element itself does not
+   * need to be focusable. Pair it with {@link OnFocusLeave} to model whether
+   * a compound region such as an editor and its toolbar contains focus.
+   */
+  OnFocusEnter: (message: Message) => {
+    readonly _tag: 'OnFocusEnter'
+    readonly message: Message
+  }
+  /**
+   * Dispatches `message` when focus leaves this element's subtree. Moving
+   * focus between descendants does not dispatch.
+   *
+   * This uses the bubbling `focusout` event and compares its related target
+   * with the current element. The element itself does not need to be
+   * focusable. Pair it with {@link OnFocusEnter} to model whether a compound
+   * region such as an editor and its toolbar contains focus.
+   */
+  OnFocusLeave: (message: Message) => {
+    readonly _tag: 'OnFocusLeave'
+    readonly message: Message
+  }
   OnInput: (toMessage: (value: string) => Message) => {
     readonly _tag: 'OnInput'
     readonly f: (value: string) => Message
@@ -4673,6 +4723,8 @@ const htmlAttributes = <Message>(): HtmlAttributes<Message> => ({
   ) => OnKeyPress({ f: toMessage }),
   OnFocus: (message: Message) => OnFocus({ message }),
   OnBlur: (message: Message) => OnBlur({ message }),
+  OnFocusEnter: (message: Message) => OnFocusEnter({ message }),
+  OnFocusLeave: (message: Message) => OnFocusLeave({ message }),
   OnInput: (toMessage: (value: string) => Message) => OnInput({ f: toMessage }),
   OnChange: (toMessage: (value: string) => Message) =>
     OnChange({ f: toMessage }),

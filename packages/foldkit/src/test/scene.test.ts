@@ -63,6 +63,11 @@ import {
   view as fileUploadView,
 } from './apps/fileUpload.js'
 import {
+  initialModel as focusBoundaryInitialModel,
+  update as focusBoundaryUpdate,
+  view as focusBoundaryView,
+} from './apps/focusBoundary.js'
+import {
   initialModel as interactionsInitialModel,
   update as interactionsUpdate,
   view as interactionsView,
@@ -2182,6 +2187,20 @@ describe('scene with extra interactions', () => {
       Scene.given(interactionsInitialModel),
       Scene.focus(Scene.label('name')),
       Scene.blur(Scene.label('name')),
+    )
+  })
+
+  test('focusEnter and focusLeave drive a focus region', () => {
+    const editorRegion = Scene.role('region', { name: 'Editor' })
+
+    Scene.scene(
+      { update: focusBoundaryUpdate, view: focusBoundaryView },
+      Scene.given(focusBoundaryInitialModel),
+      Scene.expect(editorRegion).toContainText('focus=Outside'),
+      Scene.focusEnter(editorRegion),
+      Scene.expect(editorRegion).toContainText('focus=Within'),
+      Scene.focusLeave(editorRegion),
+      Scene.expect(editorRegion).toContainText('focus=Outside'),
     )
   })
 
