@@ -147,7 +147,7 @@ export type InitConfig = Readonly<{
   activationThreshold?: number
 }>
 
-/** Creates an initial drag-and-drop model. Starts in the DragState.Idle state with Vertical orientation and 5px activation threshold by default. */
+/** Creates an initial drag-and-drop model. Starts idle with Vertical orientation and a 5px activation threshold by default. */
 export const init = (config: InitConfig): Model => ({
   id: config.id,
   orientation: config.orientation ?? 'Vertical',

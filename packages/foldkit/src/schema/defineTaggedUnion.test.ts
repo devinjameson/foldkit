@@ -1,5 +1,5 @@
 import { Schema as S } from 'effect'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, expectTypeOf, it } from 'vitest'
 
 import { defineRouteUnion, defineTaggedUnion } from './index.js'
 import type { NoFields } from './index.js'
@@ -66,6 +66,13 @@ describe('defineTaggedUnion', () => {
       Submission.Submitting,
       Submission.Failed,
     ])
+    expectTypeOf(Submission.members).toEqualTypeOf<
+      ReadonlyArray<
+        | typeof Submission.NotSubmitted
+        | typeof Submission.Submitting
+        | typeof Submission.Failed
+      >
+    >()
   })
 
   it('narrows a value with a per-variant guard', () => {
@@ -74,15 +81,36 @@ describe('defineTaggedUnion', () => {
   })
 })
 
-describe('sub-unions', () => {
-  const Settled = S.Union([Submission.NotSubmitted, Submission.Failed])
+describe('subsets', () => {
+  const Settled = Submission.subset(['NotSubmitted', 'Failed'])
 
-  it('decodes only the variants it was given', () => {
+  it('builds a Schema from only the named variants', () => {
     expect(
       S.decodeUnknownSync(Settled)({ _tag: 'Failed', error: 'timeout' }),
     ).toStrictEqual({ _tag: 'Failed', error: 'timeout' })
     expect(() => S.decodeUnknownSync(Settled)({ _tag: 'Submitting' })).toThrow()
+
+    expect(Settled.members).toStrictEqual([
+      Submission.NotSubmitted,
+      Submission.Failed,
+    ])
+    expectTypeOf(Settled.Type).toEqualTypeOf<
+      typeof Submission.NotSubmitted.Type | typeof Submission.Failed.Type
+    >()
   })
+
+  it('rejects unknown and inherited variant names at runtime', () => {
+    for (const tag of ['Unknown', 'toString']) {
+      expect(() =>
+        Reflect.apply(Submission.subset, undefined, [[tag]]),
+      ).toThrow(`Union subset contains an unknown variant: ${tag}`)
+    }
+  })
+
+  if (false) {
+    // @ts-expect-error A subset can contain only variants from its union
+    Submission.subset(['Unknown'])
+  }
 })
 
 describe('NoFields', () => {
@@ -118,10 +146,31 @@ describe('defineRouteUnion', () => {
     ).toStrictEqual({ _tag: 'NotFound', path: '/missing' })
   })
 
+  it('derives a Route subset Schema', () => {
+    const PublicRoute = AppRoute.subset(['Home', 'NotFound'])
+
+    expect(S.is(PublicRoute)(AppRoute.Home())).toBe(true)
+    expect(S.is(PublicRoute)(AppRoute.Person({ personId: 42 }))).toBe(false)
+    expectTypeOf(PublicRoute.Type).toEqualTypeOf<
+      typeof AppRoute.Home.Type | typeof AppRoute.NotFound.Type
+    >()
+  })
+
   it('rejects a variant name that shadows the union surface', () => {
     expect(() =>
       /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-      defineRouteUnion({ members: {} } as never),
-    ).toThrow('Route variant names conflict with Schema.TaggedUnion properties')
+      defineRouteUnion({ members: {}, subset: {} } as never),
+    ).toThrow('Route variant names conflict with union properties')
   })
+
+  if (false) {
+    // @ts-expect-error Domain variant names cannot shadow the member list
+    defineTaggedUnion({ members: {} })
+    // @ts-expect-error Route variant names cannot shadow the member list
+    defineRouteUnion({ members: {} })
+    // @ts-expect-error Domain variant names cannot shadow the subset builder
+    defineTaggedUnion({ subset: {} })
+    // @ts-expect-error Route variant names cannot shadow the subset builder
+    defineRouteUnion({ subset: {} })
+  }
 })

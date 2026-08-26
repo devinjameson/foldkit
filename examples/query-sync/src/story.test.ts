@@ -12,6 +12,7 @@ import {
   type Model,
   ReplaceFilters,
   Sorting,
+  browseRouter,
   update,
 } from './main'
 
@@ -31,6 +32,19 @@ const urlOrThrow = (raw: string) =>
     fromString(raw),
     () => new Error(`Failed to parse url: ${raw}`),
   )
+
+describe('routing', () => {
+  test('prints sorting in the same format the parser accepts', () => {
+    const path = browseRouter({
+      search: Option.none(),
+      sorting: Sorting.Ascending({ column: 'Length' }),
+      diet: Option.none(),
+      period: Option.none(),
+    })
+
+    expect(decodeURIComponent(path)).toBe('/?sorting=Length:Ascending')
+  })
+})
 
 describe('update', () => {
   describe('ChangedUrl', () => {

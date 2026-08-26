@@ -250,9 +250,9 @@ const update = (model: AppModel, message: ConnectionMessage) =>
 
 // The Machine owns transitions only. Lifecycle effects stay in ordinary
 // primitives gated on the state tag. The socket is a ManagedResource that
-// exists while the Machine is in ConnectionState.Connecting or ConnectionState.Connected; its lifecycle
+// exists while the Machine is in Connecting or Connected; its lifecycle
 // Messages feed the Machine: a successful open dispatches SocketOpened
-// (ConnectionState.Connecting to ConnectionState.Connected) and a failed open dispatches SocketErrored,
+// (Connecting to Connected) and a failed open dispatches SocketErrored,
 // which drives the reconnect-or-fail guard.
 
 const SOCKET_URL = 'wss://example.test/socket'
@@ -286,10 +286,10 @@ const managedResources = ManagedResource.make<AppModel, ConnectionMessage>()(
   }),
 )
 
-// The backoff timer is a Subscription gated on the ConnectionState.Reconnecting tag: the
+// The backoff timer is a Subscription gated on the Reconnecting tag: the
 // Stream sleeps for the state's delayMillis, emits TimedOutBackoff (driving
-// ConnectionState.Reconnecting back to ConnectionState.Connecting), and tears down whenever the Machine
-// leaves ConnectionState.Reconnecting.
+// Reconnecting back to Connecting), and tears down whenever the Machine
+// leaves Reconnecting.
 
 const subscriptions = Subscription.make<AppModel, ConnectionMessage>()(
   entry => ({

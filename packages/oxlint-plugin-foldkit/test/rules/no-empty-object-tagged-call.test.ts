@@ -71,4 +71,14 @@ describe('no-empty-object-tagged-call', () => {
 
     expect(result).toHaveLength(0)
   })
+
+  it('does not guess that every PascalCase namespace is a union', () => {
+    const result = Testing.runRule(
+      noEmptyObjectTaggedCall,
+      'CallExpression',
+      Testing.callOfMember('Library', 'Configure', [Testing.objectExpr([])]),
+    )
+
+    expect(result).toHaveLength(0)
+  })
 })

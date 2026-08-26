@@ -26,24 +26,13 @@ This symmetry means if you can parse a URL into data, you can always build that 
 
 Each variant is reached through the union rather than imported on its own, the same way Message variants are reached through `Message`. Constructing a route is `AppRoute.Person({ personId: 42 })`, and the variant doubles as the schema `mapTo` needs.
 
-The union also carries `AppRoute.match` for exhaustive dispatch on the current route and `AppRoute.isAnyOf(['Blog', 'BlogPost'])` for a guard over several tags. A page Submodel that owns part of the route tree takes an `S.Union` over the variants it handles as its own route type:
+The union also carries `AppRoute.match` for exhaustive dispatch on the current route and `AppRoute.isAnyOf(['Blog', 'BlogPost'])` for a guard over several tags. When a Model or another Schema accepts only part of `AppRoute`, derive that Schema with `subset`:
 
-```typescript
-export const LoggedOutRoute = S.Union([
-  AppRoute.Home,
-  AppRoute.Login,
-  AppRoute.NotFound,
-])
-export type LoggedOutRoute = typeof LoggedOutRoute.Type
-```
+::Snippet{name="routingSubUnion" label="Route subset example"}
 
-List the members rather than subtracting from `AppRoute`. Subtraction reverses who decides: a route added to `AppRoute` would join every subset that did not name it.
+`subset` lists its members positively. A Route added to `AppRoute` cannot join `TopLevelRoute` until its tag is added to the subset. There is deliberately no `omit` operation, because an omitted list would silently accept every Route added later.
 
-When a child module needs one variant's type, export an alias for it beside the union:
-
-```typescript
-export type PersonRoute = typeof AppRoute.Person.Type
-```
+When a module needs one variant's type, export an alias for it beside the union. The snippet names `NewsletterRoute` once instead of repeating `typeof AppRoute.Newsletter.Type` throughout that module.
 
 ## Building Routers
 

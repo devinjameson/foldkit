@@ -34,7 +34,7 @@ Rejects catch-all Messages that make update branches and traces less meaningful.
 
 ### foldkit/no-empty-object-tagged-call {#no-empty-object-tagged-call}
 
-Catches empty-object calls to no-field Message constructors. A no-field Message should be called with no arguments.
+Catches empty-object calls to no-field union constructors. This includes Messages, Routes, State unions, and unions declared in the same file with Foldkit's union helpers. A no-field variant should be called with no arguments.
 
 ::Snippet{name="lintNoEmptyObjectTaggedCall" label="foldkit/no-empty-object-tagged-call example"}
 

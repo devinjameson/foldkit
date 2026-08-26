@@ -6,49 +6,60 @@ import {
   isIdentifier,
   isMemberExpression,
   isObjectExpression,
+  isStringLiteral,
+  isVariableDeclarator,
 } from '../guards.ts'
 
 const PASCAL_CASE = /^[A-Z][A-Za-z0-9]*$/
 
-// Effect and Foldkit namespaces whose PascalCase members are combinators, not
-// union variants. `S` and `M` are excluded by the two-character floor below.
-const NON_UNION_NAMESPACES: ReadonlySet<string> = new Set([
-  'Array',
-  'Chunk',
-  'Command',
-  'Context',
-  'Data',
-  'Duration',
-  'Effect',
-  'Either',
-  'Equal',
-  'Fiber',
-  'Function',
-  'Hash',
-  'HashMap',
-  'HashSet',
-  'Html',
-  'Layer',
-  'Match',
-  'Mount',
-  'Number',
-  'Option',
-  'Order',
-  'Predicate',
-  'Record',
-  'Result',
-  'Schema',
-  'Stream',
-  'String',
-  'Struct',
-  'Subscription',
-  'Update',
-])
+const UNION_HELPERS_BY_MODULE: Readonly<Record<string, string>> = {
+  'foldkit/message': 'defineMessageUnion',
+  'foldkit/route': 'defineRouteUnion',
+  'foldkit/schema': 'defineTaggedUnion',
+}
 
-const isUnionNamespace = (name: string): boolean =>
-  name.length > 1 && PASCAL_CASE.test(name) && !NON_UNION_NAMESPACES.has(name)
+const recordUnionHelperBindings = (
+  bindings: Set<string>,
+  node: ESTree.Node,
+): void => {
+  if (node.type !== 'Program') {
+    return
+  }
 
-const constructorName = (callee: unknown): string | undefined => {
+  for (const statement of node.body) {
+    if (
+      statement.type !== 'ImportDeclaration' ||
+      statement.importKind === 'type'
+    ) {
+      continue
+    }
+
+    const helperName = UNION_HELPERS_BY_MODULE[statement.source.value]
+    if (helperName === undefined) {
+      continue
+    }
+
+    for (const specifier of statement.specifiers) {
+      if (
+        specifier.type === 'ImportSpecifier' &&
+        specifier.importKind !== 'type' &&
+        (isIdentifier(specifier.imported, helperName) ||
+          (isStringLiteral(specifier.imported) &&
+            specifier.imported.value === helperName))
+      ) {
+        bindings.add(specifier.local.name)
+      }
+    }
+  }
+}
+
+const isConventionalUnionNamespace = (name: string): boolean =>
+  PASCAL_CASE.test(name) && /(?:Message|Route|State)$/.test(name)
+
+const constructorName = (
+  callee: unknown,
+  unionNamespaces: ReadonlySet<string>,
+): string | undefined => {
   if (isIdentifier(callee) && PASCAL_CASE.test(callee.name)) {
     return callee.name
   }
@@ -56,7 +67,8 @@ const constructorName = (callee: unknown): string | undefined => {
     isMemberExpression(callee) &&
     callee.computed !== true &&
     isIdentifier(callee.object) &&
-    isUnionNamespace(callee.object.name) &&
+    (unionNamespaces.has(callee.object.name) ||
+      isConventionalUnionNamespace(callee.object.name)) &&
     isIdentifier(callee.property) &&
     PASCAL_CASE.test(callee.property.name)
   ) {
@@ -78,12 +90,32 @@ export const noEmptyObjectTaggedCall = Rule.define({
   }),
   create: function* () {
     const ctx = yield* RuleContext
+    const unionHelperBindings = new Set<string>()
+    const unionNamespaces = new Set<string>()
+
     return {
+      Program: (node: ESTree.Node) => {
+        recordUnionHelperBindings(unionHelperBindings, node)
+        return Effect.void
+      },
+      VariableDeclarator: (node: ESTree.Node) => {
+        if (
+          isVariableDeclarator(node) &&
+          isIdentifier(node.id) &&
+          isCallExpression(node.init) &&
+          isIdentifier(node.init.callee) &&
+          unionHelperBindings.has(node.init.callee.name)
+        ) {
+          unionNamespaces.add(node.id.name)
+        }
+
+        return Effect.void
+      },
       CallExpression: (node: ESTree.Node) => {
         if (!isCallExpression(node)) {
           return Effect.void
         }
-        const name = constructorName(node.callee)
+        const name = constructorName(node.callee, unionNamespaces)
         if (name === undefined || node.arguments.length !== 1) {
           return Effect.void
         }

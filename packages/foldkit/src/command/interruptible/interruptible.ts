@@ -3,16 +3,16 @@ import { Array, Context, Effect, Fiber, Option, Schema } from 'effect'
 import { defineTaggedUnion } from '../../schema/index.js'
 import { CommandDefinitionTypeId, brandAsDefinition } from '../brand.js'
 
-/** The result of an Interrupt Command: {@link Outcome.Interrupted} when at least one
- *  holder was stopped, {@link Outcome.NotFound} when nothing held the key.
+/** The result of an Interrupt Command: `Outcome.Interrupted` when at least one
+ *  holder was stopped, `Outcome.NotFound` when nothing held the key.
  *  Interruption itself cannot fail. */
 export const Outcome = defineTaggedUnion({
   Interrupted: {},
   NotFound: {},
 })
 
-/** The result of an Interrupt Command: {@link Outcome.Interrupted} when at least one
- *  holder was stopped, {@link Outcome.NotFound} when nothing held the key.
+/** The result of an Interrupt Command: `Outcome.Interrupted` when at least one
+ *  holder was stopped, `Outcome.NotFound` when nothing held the key.
  *  Interruption itself cannot fail. */
 export type Outcome = typeof Outcome.Type
 

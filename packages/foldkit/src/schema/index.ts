@@ -186,7 +186,9 @@ const makeCallable = <Tag extends string, Fields extends S.Struct.Fields>(
 
 type TaggedUnionProperty = keyof S.TaggedUnion<{}>
 
-const reservedUnionPropertyNames = new Set<string>(['members'])
+type UnionProperty = TaggedUnionProperty | 'members' | 'subset'
+
+const reservedUnionPropertyNames = new Set<string>(['members', 'subset'])
 
 const taggedUnionTypeOnlyPropertyNames = new Set<string>([
   'Rebuild',
@@ -206,11 +208,11 @@ const taggedUnionTypeOnlyPropertyNames = new Set<string>([
 ] satisfies ReadonlyArray<TaggedUnionProperty>)
 
 type VariantNameCollision<Name extends PropertyKey> = Readonly<{
-  'Variant names must not conflict with Schema.TaggedUnion properties': Name
+  'Variant names must not conflict with union properties': Name
 }>
 
 type ValidateVariantNames<CasesByTag extends Record<string, S.Struct.Fields>> =
-  Extract<keyof CasesByTag, TaggedUnionProperty> extends infer Name
+  Extract<keyof CasesByTag, UnionProperty> extends infer Name
     ? [Name] extends [never]
       ? unknown
       : VariantNameCollision<Name & PropertyKey>
@@ -240,16 +242,44 @@ interface UnionSchema<
   readonly match: BaseTaggedUnion<CasesByTag>['match']
 }
 
+type TaggedUnionMemberFor<
+  CasesByTag extends Record<string, S.Struct.Fields>,
+  Tag extends keyof CasesByTag & string,
+> = CallableTaggedStruct<Tag, CasesByTag[Tag]>
+
+type TaggedUnionMember<CasesByTag extends Record<string, S.Struct.Fields>> = {
+  readonly [Tag in keyof CasesByTag & string]: TaggedUnionMemberFor<
+    CasesByTag,
+    Tag
+  >
+}[keyof CasesByTag & string]
+
+type TaggedUnionSubsetMembers<
+  CasesByTag extends Record<string, S.Struct.Fields>,
+  Tags extends ReadonlyArray<keyof CasesByTag & string>,
+> = {
+  readonly [Index in keyof Tags]: Tags[Index] extends keyof CasesByTag & string
+    ? TaggedUnionMemberFor<CasesByTag, Tags[Index]>
+    : never
+}
+
 interface RichUnionSchema<
   CasesByTag extends Record<string, S.Struct.Fields>,
 > extends UnionSchema<CasesByTag> {
   readonly guards: BaseTaggedUnion<CasesByTag>['guards']
   readonly isAnyOf: BaseTaggedUnion<CasesByTag>['isAnyOf']
-  readonly members: ReadonlyArray<S.Top>
+  readonly members: ReadonlyArray<TaggedUnionMember<CasesByTag>>
+  /** Builds a Schema that accepts exactly the named variants. */
+  readonly subset: <
+    const Tags extends ReadonlyArray<keyof CasesByTag & string>,
+  >(
+    tags: Tags,
+  ) => S.Union<TaggedUnionSubsetMembers<CasesByTag, Tags>>
 }
 
-/** A Schema union with exhaustive matching and one callable constructor per
- * variant, reachable by tag. */
+/** A Schema union with exhaustive matching, per-variant guards, an `isAnyOf`
+ * guard builder, explicit subsets, member schemas, and one callable constructor
+ * per variant, reachable by tag. */
 export type TaggedUnion<CasesByTag extends Record<string, S.Struct.Fields>> =
   RichUnionSchema<CasesByTag> & {
     readonly [Tag in keyof CasesByTag & string]: CallableTaggedStruct<
@@ -268,8 +298,9 @@ export type MessageUnion<CasesByTag extends Record<string, S.Struct.Fields>> =
     >
   }
 
-/** The union `defineRouteUnion` returns. A Schema with exhaustive matching
- * and one callable constructor per variant, reachable by tag. */
+/** The union `defineRouteUnion` returns. A Schema with exhaustive matching,
+ * per-variant guards, explicit subsets, member schemas, and one callable
+ * constructor per variant, reachable by tag. */
 export type RouteUnion<CasesByTag extends Record<string, S.Struct.Fields>> =
   TaggedUnion<CasesByTag>
 
@@ -288,20 +319,39 @@ const defineUnion = <CasesByTag extends Record<string, S.Struct.Fields>>(
   )
   if (Array.isArrayNonEmpty(conflictingNames)) {
     throw new Error(
-      `${variantLabel} names conflict with Schema.TaggedUnion properties: ${conflictingNames.join(', ')}`,
+      `${variantLabel} names conflict with union properties: ${conflictingNames.join(', ')}`,
     )
   }
 
-  const callables: Record<string, unknown> = {}
+  const callables: Record<
+    string,
+    CallableTaggedStruct<string, S.Struct.Fields>
+  > = {}
   for (const [tag, fields] of Object.entries<S.Struct.Fields>(casesByTag)) {
     callables[tag] = makeCallable(tag, fields)
   }
 
+  const subset = (tags: ReadonlyArray<string>) => {
+    const members: Array<CallableTaggedStruct<string, S.Struct.Fields>> = []
+
+    for (const tag of tags) {
+      const member = callables[tag]
+      if (!Object.hasOwn(callables, tag) || member === undefined) {
+        throw new Error(`Union subset contains an unknown variant: ${tag}`)
+      }
+
+      members.push(member)
+    }
+
+    return S.Union(members)
+  }
+
   /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
   return Object.assign(union, callables, {
-    // Schema.TaggedUnion drops the member list that Schema.Union exposes.
-    // Machine.define reads it to enumerate the state tags.
+    // NOTE: Schema.TaggedUnion drops the member list that Schema.Union
+    // exposes. Machine.define reads it to enumerate the state tags.
     members: Object.values(callables),
+    subset,
   }) as unknown as TaggedUnion<CasesByTag>
 }
 
@@ -324,9 +374,9 @@ const defineUnion = <CasesByTag extends Record<string, S.Struct.Fields>>(
  * internal vocabulary in the parent's contract, so declare them separately even
  * when a pair happens to carry the same fields.
  *
- * A variant may not be named after the schema surface it would shadow, such as
- * `make`, `match`, `cases`, or `ast`. TypeScript reports the conflicting names,
- * and untyped calls fail with a runtime error.
+ * A variant may not be named after the union surface it would shadow, such as
+ * `make`, `match`, `cases`, `ast`, `members`, or `subset`. TypeScript reports the
+ * conflicting names, and untyped calls fail with a runtime error.
  *
  * @example
  * ```typescript
@@ -357,13 +407,19 @@ export function defineMessageUnion<
  * Routes use `defineRouteUnion`, so a reader can tell which kind of union a
  * declaration is from its first line.
  *
- * The result is a Schema with exhaustive `match` and one callable constructor
- * per variant, reachable by tag. Each constructor is itself a schema, so it
- * nests in a Model and serves as a Union member.
+ * The result is a Schema with exhaustive `match`, per-variant `guards`, an
+ * `isAnyOf` guard builder, explicit `subset` schemas, its `members`, and one
+ * callable constructor per variant, reachable by tag. Each constructor is
+ * itself a schema, so the union nests in a Model and its variants serve as
+ * Union members.
  *
- * Reach for `ts` instead when a variant cannot be declared alongside the
- * others: a union whose variants reference the union itself, or a lone tagged
- * struct that belongs to no union.
+ * Reach for `taggedStruct` instead when a variant cannot be declared alongside
+ * the others: a union whose variants reference the union itself, or a lone
+ * tagged struct that belongs to no union.
+ *
+ * A variant may not be named after the union surface it would shadow, such as
+ * `make`, `match`, `cases`, `ast`, `members`, or `subset`. TypeScript reports the
+ * conflicting names, and untyped calls fail with a runtime error.
  *
  * @example
  * ```typescript
@@ -395,8 +451,14 @@ export function defineTaggedUnion<
  * `parseUrlWithFallback` need. Routers stay separate, because a Route is the
  * parsed value and a Router is the path that produces it.
  *
- * The result carries exhaustive `match`, so a view can dispatch on the current
- * Route without an Effect `Match` chain.
+ * The result carries exhaustive `match`, per-variant `guards`, an `isAnyOf`
+ * guard builder, explicit `subset` schemas, and its `members`. Use `subset`
+ * when another Schema accepts only named members of the application Route
+ * union. A later Route cannot join that subset unless its tag is added.
+ *
+ * A variant may not be named after the union surface it would shadow, such as
+ * `make`, `match`, `cases`, `ast`, `members`, or `subset`. TypeScript reports the
+ * conflicting names, and untyped calls fail with a runtime error.
  *
  * @example
  * ```typescript

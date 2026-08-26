@@ -144,6 +144,7 @@ export const MessageSchemaIndex = S.Struct({
 /** A flat directory of every top-level Message variant. */
 export type MessageSchemaIndex = typeof MessageSchemaIndex.Type
 
+/** The result payload carried by `ResponseMessageSchema`. */
 export const MessageSchemaResult = defineTaggedUnion({
   MessageSchemaIndexResult: { index: MessageSchemaIndex },
   MessageSchemaDocumentResult: { document: S.Unknown },

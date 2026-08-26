@@ -269,10 +269,10 @@ Messages:
   Toggles: ToggledFavorite
 
 Routes:
-  HomeRoute         → /
-  NewLinkRoute      → /new
-  TagFilterRoute    → /tag/:tag
-  NotFoundRoute     → /* fallback
+  AppRoute.Home       → /
+  AppRoute.NewLink    → /new
+  AppRoute.TagFilter  → /tag/:tag
+  AppRoute.NotFound   → /* fallback
 
 Domain:
   Link: schema + byNewest, filterByTag, toggleFavorite, remove, updateById
@@ -330,14 +330,14 @@ For each Foldkit module you plan to use, read the `.d.ts` at the paths below. Re
 # Every app
 <project>/node_modules/foldkit/dist/index.d.ts          # top-level re-exports: the authoritative list of what `foldkit` exposes
 <project>/node_modules/foldkit/dist/html/index.d.ts     # HtmlBuilder<Message>, element signatures, Attribute<Message>, inertHtml
-<project>/node_modules/foldkit/dist/message/index.d.ts  # defineMessageUnion()
-<project>/node_modules/foldkit/dist/schema/index.d.ts   # ts(), r()
+<project>/node_modules/foldkit/dist/message/public.d.ts # defineMessageUnion()
+<project>/node_modules/foldkit/dist/schema/public.d.ts  # defineTaggedUnion(), taggedStruct()
 <project>/node_modules/foldkit/dist/struct/index.d.ts   # evo(): check nested-update signature
 <project>/node_modules/foldkit/dist/update/public.d.ts  # Update.Return, Update.ReturnWithOutMessage, Update.withOutMessage, Update.combine, Update.refresh
 <project>/node_modules/foldkit/dist/runtime/runtime.d.ts # ApplicationInit, RoutingApplicationInit, makeApplication, makeElement
 
 # If using routing
-<project>/node_modules/foldkit/dist/route/parser.d.ts   # literal, slash, string, int, Route.root, Route.mapTo, Route.oneOf, Route.parseUrlWithFallback
+<project>/node_modules/foldkit/dist/route/public.d.ts   # defineRouteUnion, literal, slash, string, int, Route.root, Route.mapTo, Route.oneOf, Route.parseUrlWithFallback
 <project>/node_modules/foldkit/dist/url/index.d.ts      # toString
 <project>/node_modules/foldkit/dist/navigation/index.d.ts # pushUrl, load: all return Effect<void> (no Effect.ignore needed)
 
@@ -416,12 +416,12 @@ Record these in the crib and keep them visible while generating:
 - **`keyed`, `empty` are properties on the builder `h`** the view receives as its last parameter. They are not top-level exports of `foldkit/html`.
 - **Attribute helpers are specific**: `Value(...)`, `Type(...)`, `Placeholder(...)`, `Href(...)`, `Target(...)`, `Rel(...)`, `Rows(n)`, `Id(...)`, `For(...)`, `Role(...)`, `AriaLabel(...)`. There is no generic `Attr('...', '...')`.
 - **`ApplicationInit<Model, Message, Flags>` has no URL parameter.** For routed apps, use `RoutingApplicationInit<Model, Message, Flags>`: the second arg is `url: Url`.
-- **`Route.mapTo` takes the route schema, not a factory function.** `pipe(literal('new'), Route.mapTo(NewLinkRoute))`. NOT `Route.mapTo(() => NewLinkRoute())`.
+- **`Route.mapTo` takes the route schema, not a factory function.** `pipe(literal('new'), Route.mapTo(AppRoute.NewLink))`. NOT `Route.mapTo(() => AppRoute.NewLink())`.
 - **`Effect.ignore` is ONLY for fallible Effects.** `pushUrl(path).pipe(Effect.as(Message()))`. No `Effect.ignore` because `pushUrl` returns `Effect<void>`.
 - **`Command.define` takes a config object with a `messages` array**: `Command.define('Fetch', { messages: [Message.SucceededFetch, Message.FailedFetch], execute })`. `messages` is required and is always an array, even for one Message: `Command.define('ReadClock', { messages: [Message.RecordedTime], execute })`.
 - **`makeRules` takes `{ required?: Rule.RuleMessage, rules: Array<Rule.Rule> }` where `Rule.Rule = [Predicate, Rule.RuleMessage]`**: a tuple, NOT `{ test, message }`. Rule constructors live on the `Rule` namespace (`Rule.url({ message })`, `Rule.email(message?)`, `Rule.minLength(n, message?)`, `Rule.pattern(regex, message?)`, `Rule.fromSchema(schema, message)`).
 - **`Field.Invalid` has `errors: NonEmptyArray<string>`, not `error: string`.** Use `Array.headNonEmpty(errors)` to get the first message; use `Rule.resolveMessage(message, value)` to resolve a rule message to its final string.
-- **Route variants are `HomeRoute`, `NewLinkRoute`, etc., with the `Route` suffix.** Every exemplar uses this convention.
+- **Route variants stay on `AppRoute` and drop the repeated `Route` suffix.** Write `AppRoute.Home` and `AppRoute.NewLink`, not sibling bindings named `HomeRoute` and `NewLinkRoute`.
 - **Routers are callable for printing**: `homeRouter()` returns `'/'`, `tagFilterRouter({ tag: 'foo' })` returns `'/tag/foo'`. Never hand-construct URLs.
 - **UI components come from `@foldkit/ui`, not from a `Ui` namespace on `foldkit`.** `import { Dialog, Input } from '@foldkit/ui'`, then `Dialog.view(...)`. There is no `Ui` export on the `foldkit` package.
 - **`HttpClient` and `HttpClientRequest` come from `effect/unstable/http`**, not `@effect/platform`. Provide the client to the Command's Effect with `Effect.provide(effect, Http.layer)`, where `Http` is imported from `foldkit`. `@effect/platform-browser` is a different thing, used for `BrowserKeyValueStore` and `BrowserCrypto`.
@@ -597,7 +597,7 @@ For file uploads (resumes, images, attachments):
 - Use `Runtime.makeApplication` for apps that own the page. Add `routing: { onUrlRequest, onUrlChange }` for apps with URL routing. The `view` returns a `Document` (`{ title, lang?, dir?, canonical?, ogUrl?, body }`); the runtime applies `title`, the `lang` / `dir` attributes on `<html>`, and the canonical / og:url tags after every render
 - Use `Runtime.makeElement` for a widget embedded on a page it does not own. The `view` returns `Html` and the runtime never touches the document `<head>` or the `<html>` element. No `routing` config
 - See the With and Without URL Routing section in [architecture.md](architecture.md) for the full pattern
-- Include `ClickedLink` and `ChangedUrl` Messages for programs with routing, with proper `InternalUrl`/`ExternalUrl` handling in update
+- Include `ClickedLink` and `ChangedUrl` Messages for programs with routing, with proper `UrlRequest.Internal` / `UrlRequest.External` handling in update
 - Always end with `Runtime.run(application)` for a page-owning app. When a host application controls the program's lifecycle, end with `Runtime.embed(element)` instead and hand the returned handle to the host; mirror `repos/foldkit/examples/embedding/src/host.ts` for the host side and its `main.ts` for the widget side
 - Name the variable holding a `makeApplication` result `application`, and the variable holding a `makeElement` result `element`
 
@@ -605,7 +605,7 @@ For file uploads (resumes, images, attachments):
 
 - Use bidirectional parser: `defineRouteUnion()`, `string()`, `int()`, `literal()`, `slash()`, `Route.mapTo()`, `Route.oneOf()`
 - Declare every route in one `defineRouteUnion({ Home: {}, NewLink: {}, NotFound: { path: S.String } })` named `AppRoute`, and reach each variant through it: `AppRoute.Home`. Never destructure a variant into a sibling binding. The union namespace is what the old `HomeRoute` suffix was for, so drop the suffix.
-- A page Submodel that owns part of the route tree takes an `S.Union` over the variants it handles as its route type, with every member listed. Never derive a subset by subtracting from `AppRoute`. Export `type PersonRoute = typeof AppRoute.Person.Type` beside the union when a child module needs one variant's type.
+- When a Model or another Schema accepts only part of `AppRoute`, derive it with `AppRoute.subset(['Home', 'Person'])`. List every member. There is no `omit` operation, because a Route added later must not join the subset silently. Export `type PersonRoute = typeof AppRoute.Person.Type` beside the union when a module needs one variant's type.
 - Build each route as a Router: `const homeRouter = pipe(Route.root, Route.mapTo(AppRoute.Home))`. **Routers are callable**: `homeRouter()` returns `'/'`, `tagFilterRouter({ tag: 'foo' })` returns `'/tag/foo'`. This is the print side of the bidirectional parser.
 - **Never hand-construct paths with template strings.** `Href(homeRouter())` not `Href('/')`. `pushUrl(newLinkRouter())` not `pushUrl('/new')`. `Href(tagFilterRouter({ tag: tagName }))` not ``Href(`/tag/${encodeURIComponent(tagName)}`)``. The router handles encoding and keeps the URL shape in one place so a refactor changes one file, not every call site.
 - Render each route through its own view function; identity handles the switch, so route branches are never keyed. Key by entity id only when one shared view function renders different entities across route params (a detail page across slugs)

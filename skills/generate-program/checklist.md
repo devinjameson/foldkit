@@ -56,8 +56,8 @@ Phase 6 runs it again as sanity.
 
 ```bash
 # Empty-object constructor calls. foldkit/no-empty-object-tagged-call covers bare
-# constructors and `Message.*` calls. Other namespace calls such as
-# `Todo.ClickedDelete({})` are unflagged.
+# constructors, conventional Message/Route/State namespaces, and unions declared
+# in this file. Check imported domain unions with other names by eye.
 grep -rn "({})" src/
 
 # External links missing Rel. foldkit/require-rel-for-external-link bails when the

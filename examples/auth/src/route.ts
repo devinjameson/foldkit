@@ -12,15 +12,11 @@ export const AppRoute = defineRouteUnion({
 
 export type AppRoute = typeof AppRoute.Type
 
-export const LoggedOutRoute = S.Union([
-  AppRoute.Home,
-  AppRoute.Login,
-  AppRoute.NotFound,
-])
-export const LoggedInRoute = S.Union([
-  AppRoute.Dashboard,
-  AppRoute.Settings,
-  AppRoute.NotFound,
+export const LoggedOutRoute = AppRoute.subset(['Home', 'Login', 'NotFound'])
+export const LoggedInRoute = AppRoute.subset([
+  'Dashboard',
+  'Settings',
+  'NotFound',
 ])
 
 export type LoggedOutRoute = typeof LoggedOutRoute.Type

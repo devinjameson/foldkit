@@ -106,13 +106,9 @@ const sortingFromParam = (() => {
             M.tagsExhaustive({
               Unsorted: () => Option.none(),
               Ascending: ({ column }) =>
-                Option.some(
-                  `${column}${SORT_PARAM_SEPARATOR}Sorting.Ascending`,
-                ),
+                Option.some(`${column}${SORT_PARAM_SEPARATOR}Ascending`),
               Descending: ({ column }) =>
-                Option.some(
-                  `${column}${SORT_PARAM_SEPARATOR}Sorting.Descending`,
-                ),
+                Option.some(`${column}${SORT_PARAM_SEPARATOR}Descending`),
             }),
           ),
       }),
@@ -132,7 +128,7 @@ export const AppRoute = defineRouteUnion({
 
 export type AppRoute = typeof AppRoute.Type
 
-const browseRouter = pipe(
+export const browseRouter = pipe(
   Route.root,
   Route.query(
     S.Struct({

@@ -218,7 +218,7 @@ export const update = (model: Model, message: Message) =>
 
     // NOTE: the pointerdown event on the thumb bubbles to the track, so a
     // thumb press also dispatches PressedPointer. Short-circuit when already
-    // DragState.Dragging so the bubbled track handler cannot shift the value away
+    // Dragging so the bubbled track handler cannot shift the value away
     // from the thumb's current position. Fine-grained sliders (e.g. step
     // 0.05) see a visible jump without this guard, because the cursor sits
     // off-center on a non-zero-width thumb.

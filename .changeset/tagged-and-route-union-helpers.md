@@ -2,13 +2,16 @@
 'foldkit': minor
 '@foldkit/ui': minor
 '@foldkit/devtools': minor
+'@foldkit/devtools-mcp': minor
+'@foldkit/markdown': minor
 '@foldkit/oxlint-plugin': minor
+'@foldkit/vite-plugin': minor
 'create-foldkit-app': minor
 ---
 
 Replace `r` with `defineRouteUnion`, add `defineTaggedUnion`, and rename `ts` to `taggedStruct`. Every union now declares itself from one record of fields per variant, the way `defineMessageUnion` already did for Messages, instead of naming each variant once as a constructor and again in the union list.
 
-`defineRouteUnion` lives in `foldkit/route`, `defineTaggedUnion` and `taggedStruct` live in `foldkit/schema`. Each union is a Schema carrying one callable constructor per variant plus exhaustive `match`. Routes and domain unions also carry `guards` and `isAnyOf`, which Message unions do not: a Message union is closed and handled exhaustively, while a Route union is routinely tested a few tags at a time.
+`defineRouteUnion` lives in `foldkit/route`, `defineTaggedUnion` and `taggedStruct` live in `foldkit/schema`. Each union is a Schema carrying one callable constructor per variant plus exhaustive `match`. Routes and domain unions also carry `guards`, `isAnyOf`, explicit `subset` schemas, and their member Schemas in `members`. `Machine.define` can take a `defineTaggedUnion` result directly. Message unions keep their focused exhaustive surface: a Message union is closed and handled exhaustively, while a Route or domain union is routinely tested a few tags at a time.
 
 ## Migrate Routes
 
@@ -74,9 +77,9 @@ export const urlToAppRoute = parseUrlWithFallback(
 
 The `XxxRoute` suffix existed to disambiguate a flat namespace. The union namespace does that job now, so drop it: `AppRoute.Person({ personId: 42 })` where you wrote `PersonRoute({ personId: 42 })`.
 
-## Migrate a Submodel's sub-union
+## Migrate Route subsets
 
-A page Submodel that owns part of the route tree takes an `S.Union` of the variants it handles. That stays an `S.Union`, now over the parent union's variants.
+Some Models and Schemas accept only part of the application Route union. Derive that Schema from `AppRoute` rather than declaring another Route union.
 
 Before:
 
@@ -92,21 +95,17 @@ export const LoggedInRoute = S.Union([
 After:
 
 ```typescript
-export const LoggedOutRoute = S.Union([
-  AppRoute.Home,
-  AppRoute.Login,
-  AppRoute.NotFound,
-])
-export const LoggedInRoute = S.Union([
-  AppRoute.Dashboard,
-  AppRoute.Settings,
-  AppRoute.NotFound,
+export const LoggedOutRoute = AppRoute.subset(['Home', 'Login', 'NotFound'])
+export const LoggedInRoute = AppRoute.subset([
+  'Dashboard',
+  'Settings',
+  'NotFound',
 ])
 ```
 
-List a sub-union's members rather than deriving it by subtracting from the parent. Subtraction reverses who decides: a route added to the parent joins every derived subset that did not name it, so the website's docs section would start claiming new top-level pages on its own.
+`subset` lists membership positively. A Route added to `AppRoute` cannot join either Schema until its tag is added. There is deliberately no `omit` operation, because an omitted list would silently accept every Route added later.
 
-When a child module needs one variant's type, export an alias for it beside the union. The variant's own type is `typeof AppRoute.Person.Type`, which is worth naming once rather than repeating:
+When a module needs one variant's type, export an alias for it beside the union. The variant's own type is `typeof AppRoute.Person.Type`, which is worth naming once rather than repeating:
 
 ```typescript
 export type PersonRoute = typeof AppRoute.Person.Type
@@ -234,8 +233,10 @@ export const roadmapRouter = page('roadmap', AppRoute.Roadmap)
 
 Prefer it to writing `CallableTaggedStruct<Tag, {}>` by hand. In TypeScript `{}` means any non-nullish value, so that spelling reads as the opposite of what it does.
 
+Upgrade `@foldkit/ui`, `@foldkit/devtools`, `@foldkit/devtools-mcp`, `@foldkit/markdown`, and `@foldkit/vite-plugin` with Foldkit. Their built code now consumes helpers or namespaced protocol constructors introduced in Foldkit 0.153, so each package's Foldkit peer floor is `>=0.153.0`. This release starts new minor lines for all five packages to keep existing pre-1.0 caret consumers on compatible versions.
+
 ## Lint
 
-`@foldkit/oxlint-plugin`'s `no-empty-object-tagged-call` recognized member calls only when the namespace name ended in `Message`. It now covers any union namespace, so `AppRoute.Home({})` and `ConnectionState.Connected({})` are flagged alongside `Message.ClickedSave({})`.
+`@foldkit/oxlint-plugin`'s `no-empty-object-tagged-call` recognized member calls only when the namespace name ended in `Message`. It now recognizes conventional Message, Route, and State namespaces plus unions declared in the same file with `defineMessageUnion`, `defineRouteUnion`, or `defineTaggedUnion`. Calls such as `AppRoute.Home({})` and `ConnectionState.Connected({})` are flagged alongside `Message.ClickedSave({})` without treating every PascalCase library namespace as a Foldkit union.
 
 The [Routing & Navigation guide](https://foldkit.dev/core/routing-and-navigation) covers the route union in depth, and the [Model guide](https://foldkit.dev/core/model) covers state modeling with `defineTaggedUnion`.
