@@ -583,7 +583,13 @@ describe('serializeHtml', () => {
     // hydrate carries none of it either.
     const view = h.keyed('button')(
       'submit',
-      [h.OnClick(Message.ClickedButton()), h.Id('submit')],
+      [
+        h.OnClick(Message.ClickedButton(), {
+          defaultAction: 'Prevent',
+          propagation: 'Stop',
+        }),
+        h.Id('submit'),
+      ],
       ['Send'],
     )
     expect(serializeHtml(view)).toBe('<button id="submit">Send</button>')
