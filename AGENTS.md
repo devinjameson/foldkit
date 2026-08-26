@@ -14,6 +14,7 @@ Read those when a rule needs context.
 ## Project Conventions
 
 - "Foldkit" is always capitalized in prose. The only exception is the npm package name (`foldkit`) and import paths.
+- Evaluate work at framework scale. In-repo consumer count is evidence, not a value heuristic. Foldkit may have only one or two internal consumers for an API, tool, documentation primitive, or shared abstraction that many downstream applications will need. Consider the external consumer base, public surface longevity, consistency costs, and the repository's role as an exemplar before deciding that a change is too narrow. Still require a concrete framework-level use case; do not invoke hypothetical consumers to justify speculative complexity.
 - In prose, capitalize architecture types: Model, Message, Command, Subscription, Mount, ManagedResource, CustomElement, Submodel, OutMessage. Keep lowercase for plain functions: view, update, init.
 - Always use Schema types (not plain TypeScript types), full names like `Message` (not `Msg`), and `withReturnType` (not `as const` or type casting).
 - Foldkit is tightly coupled to Effect-TS. Do not suggest solutions outside the Effect ecosystem. Check existing features in `create-foldkit-app` before suggesting new ones.
