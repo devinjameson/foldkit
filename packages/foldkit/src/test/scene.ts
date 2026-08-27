@@ -196,7 +196,7 @@ type DispatchService = Readonly<{
 
 type CapturingDispatch = Readonly<{
   dispatch: DispatchService
-  getCapturedMessage: () => unknown | undefined
+  getCapturedMessages: () => ReadonlyArray<unknown>
   reset: () => void
 }>
 
@@ -402,18 +402,18 @@ const applyScopeToLocatorAll = (
 // CAPTURING DISPATCH
 
 const createCapturingDispatch = (): CapturingDispatch => {
-  let capturedMessage: unknown | undefined
+  let capturedMessages: Array<unknown> = []
 
   return {
     dispatch: Dispatch.of({
       dispatchAsync: () => Effect.void,
       dispatchSync: (dispatchedMessage: unknown) => {
-        capturedMessage = dispatchedMessage
+        capturedMessages.push(dispatchedMessage)
       },
     }),
-    getCapturedMessage: () => capturedMessage,
+    getCapturedMessages: () => capturedMessages,
     reset: () => {
-      capturedMessage = undefined
+      capturedMessages = []
     },
   }
 }
@@ -497,16 +497,122 @@ const maybeCaptureFromElement = <Model, Message, OutMessage>(
   internal.capturingDispatch.reset()
   // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
   invokeHandler(maybeHandler.value as Function)
+  const capturedMessages = internal.capturingDispatch.getCapturedMessages()
 
-  return Option.map(
-    Option.fromNullishOr(internal.capturingDispatch.getCapturedMessage()),
-    captured =>
-      applyExternalMessage(
-        simulation,
-        captured,
-        'when an interaction dispatched a new Message',
+  return Array.match(capturedMessages, {
+    onEmpty: () => Option.none(),
+    onNonEmpty: messages =>
+      Option.some(
+        applyExternalMessages(
+          simulation,
+          messages,
+          'when an interaction dispatched a new Message',
+        ),
       ),
+  })
+}
+
+const finishCapturedInteraction = <Model, Message, OutMessage>(
+  simulation: SceneSimulation<Model, Message, OutMessage>,
+  description: string,
+  eventName: string,
+): SceneSimulation<Model, Message, OutMessage> => {
+  const capturedMessages =
+    toInternal(simulation).capturingDispatch.getCapturedMessages()
+
+  return Array.match(capturedMessages, {
+    onEmpty: () =>
+      advanceInteraction(
+        simulation,
+        Ignored,
+        Option.some({ eventName, description }),
+      ),
+    onNonEmpty: messages =>
+      advanceInteraction(
+        applyExternalMessages(
+          simulation,
+          messages,
+          'when an interaction dispatched a new Message',
+        ),
+        Handled,
+        Option.none(),
+      ),
+  })
+}
+
+const applyMessageWithoutBoundaryChecks = <Model, Message, OutMessage>(
+  simulation: SceneSimulation<Model, Message, OutMessage>,
+  message: unknown,
+): SceneSimulation<Model, Message, OutMessage> => {
+  const internal = toInternal(simulation)
+
+  /* eslint-disable @typescript-eslint/consistent-type-assertions */
+  const messageAsParent = message as unknown as Message
+  const messageUpdate = internal.updateFn(internal.model, messageAsParent)
+  return {
+    ...internal,
+    model: messageUpdate.model,
+    message: messageAsParent,
+    commands: Array.appendAll(internal.commands, messageUpdate.commands ?? []),
+    outMessage: messageUpdate.outMessage,
+  } as unknown as SceneSimulation<Model, Message, OutMessage>
+  /* eslint-enable @typescript-eslint/consistent-type-assertions */
+}
+
+const applyExternalMessages = <Model, Message, OutMessage>(
+  simulation: SceneSimulation<Model, Message, OutMessage>,
+  messages: ReadonlyArray<unknown>,
+  context: string,
+): SceneSimulation<Model, Message, OutMessage> => {
+  const internal = toInternal(simulation)
+
+  assertNoUnresolvedCommands(internal.commands, context)
+  assertNoUnresolvedMounts(internal.mounts, context)
+  assertNoUnacknowledgedUnmounts(
+    unacknowledgedEndedMountsOf(internal.mountSlots),
+    context,
   )
+
+  const appliedMessages = Array.reduce(
+    messages,
+    {
+      simulation,
+      outMessages: Array.empty<OutMessage>(),
+    },
+    (current, message) => {
+      const nextSimulation = applyMessageWithoutBoundaryChecks(
+        current.simulation,
+        message,
+      )
+      const nextOutMessage = toInternal(nextSimulation).outMessage
+
+      return {
+        simulation: nextSimulation,
+        outMessages: Predicate.isUndefined(nextOutMessage)
+          ? current.outMessages
+          : Array.append(current.outMessages, nextOutMessage),
+      }
+    },
+  )
+
+  if (
+    Array.isReadonlyArrayNonEmpty(Array.drop(appliedMessages.outMessages, 1))
+  ) {
+    throw new Error(
+      'One interaction emitted multiple OutMessages, but Scene can expose only one OutMessage per step.\n\n' +
+        'Split the DOM handlers into separate interactions, or test this composition at the parent boundary where each OutMessage is folded.',
+    )
+  }
+
+  /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+  return {
+    ...toInternal(appliedMessages.simulation),
+    outMessage: pipe(
+      appliedMessages.outMessages,
+      Array.head,
+      Option.getOrUndefined,
+    ),
+  } as unknown as SceneSimulation<Model, Message, OutMessage>
 }
 
 /** Clears the pending fall-through, marking it acknowledged. Paired with
@@ -616,25 +722,80 @@ const invokeAndCapture = <Model, Message, OutMessage>(
   )
 }
 
-const lookupTypeAttribute = (vnode: VNode): string | undefined => {
-  const fromAttrs = vnode.data?.attrs?.['type']
-  const fromProps = vnode.data?.props?.['type']
-  return typeof fromAttrs === 'string'
-    ? fromAttrs
-    : typeof fromProps === 'string'
-      ? fromProps
-      : undefined
+const lookupStringAttribute = (
+  vnode: VNode,
+  name: string,
+): string | undefined => {
+  const fromAttrs = vnode.data?.attrs?.[name]
+  const fromProps = vnode.data?.props?.[name]
+  if (Predicate.isString(fromAttrs)) {
+    return fromAttrs
+  }
+
+  if (Predicate.isString(fromProps)) {
+    return fromProps
+  }
+
+  return undefined
 }
 
 const isSubmitButton = (element: VNode): boolean => {
-  const type = lookupTypeAttribute(element)
+  const maybeType = pipe(
+    lookupStringAttribute(element, 'type'),
+    Option.fromNullishOr,
+    Option.map(String_.toLowerCase),
+  )
+
   if (element.sel === 'button') {
-    return type === undefined || type === 'submit'
+    return Option.match(maybeType, {
+      onNone: () => true,
+      onSome: value => value !== 'button' && value !== 'reset',
+    })
   }
+
   if (element.sel === 'input') {
-    return type === 'submit' || type === 'image'
+    return Option.exists(
+      maybeType,
+      value => value === 'submit' || value === 'image',
+    )
   }
+
   return false
+}
+
+const findElementById = (root: VNode, id: string): Option.Option<VNode> => {
+  if (lookupStringAttribute(root, 'id') === id) {
+    return Option.some(root)
+  }
+
+  for (const child of root.children ?? []) {
+    if (Predicate.isString(child)) {
+      continue
+    }
+
+    const maybeMatch = findElementById(child, id)
+    if (Option.isSome(maybeMatch)) {
+      return maybeMatch
+    }
+  }
+
+  return Option.none()
+}
+
+const formOwnerOf = (root: VNode, submitter: VNode): Option.Option<VNode> => {
+  const formId = lookupStringAttribute(submitter, 'form')
+  if (formId !== undefined) {
+    return pipe(
+      findElementById(root, formId),
+      Option.filter(element => element.sel === 'form'),
+    )
+  }
+
+  return pipe(
+    root,
+    ancestorsOf(submitter),
+    Array.findLast(element => element.sel === 'form'),
+  )
 }
 
 const isElementDisabled = (element: VNode): boolean => {
@@ -996,26 +1157,7 @@ const applyExternalMessage = <Model, Message, OutMessage>(
   message: unknown,
   context: string,
 ): SceneSimulation<Model, Message, OutMessage> => {
-  const internal = toInternal(simulation)
-
-  assertNoUnresolvedCommands(internal.commands, context)
-  assertNoUnresolvedMounts(internal.mounts, context)
-  assertNoUnacknowledgedUnmounts(
-    unacknowledgedEndedMountsOf(internal.mountSlots),
-    context,
-  )
-
-  /* eslint-disable @typescript-eslint/consistent-type-assertions */
-  const messageAsParent = message as unknown as Message
-  const messageUpdate = internal.updateFn(internal.model, messageAsParent)
-  return {
-    ...internal,
-    model: messageUpdate.model,
-    message: messageAsParent,
-    commands: Array.appendAll(internal.commands, messageUpdate.commands ?? []),
-    outMessage: messageUpdate.outMessage,
-  } as unknown as SceneSimulation<Model, Message, OutMessage>
-  /* eslint-enable @typescript-eslint/consistent-type-assertions */
+  return applyExternalMessages(simulation, [message], context)
 }
 
 /** Feeds a Message through update as if a Subscription had emitted it,
@@ -1534,15 +1676,42 @@ const findAncestorWithHandler = (
     Array.findFirst(vnode => vnode.data?.on?.[eventName] !== undefined),
   )
 
+type SimulatedClick = Readonly<{
+  event: Readonly<{
+    preventDefault: () => void
+    stopPropagation: () => void
+  }>
+  isDefaultPrevented: () => boolean
+  isPropagationStopped: () => boolean
+}>
+
+const createSimulatedClick = (): SimulatedClick => {
+  let isDefaultPrevented = false
+  let isPropagationStopped = false
+
+  return {
+    event: {
+      preventDefault: () => {
+        isDefaultPrevented = true
+      },
+      stopPropagation: () => {
+        isPropagationStopped = true
+      },
+    },
+    isDefaultPrevented: () => isDefaultPrevented,
+    isPropagationStopped: () => isPropagationStopped,
+  }
+}
+
 // INTERACTION STEPS
 
 /** Simulates a click on the element matching the target.
- *  When the element has no click handler, the event bubbles up to the
- *  nearest ancestor with one, mirroring browser event propagation.
- *  When the element is a submit button (`<button>` with no type or
- *  `type="submit"`, `<input type="submit">`, `<input type="image">`) with no
- *  click handler in its ancestor chain, the click falls through to the
- *  `submit` handler of the nearest ancestor `<form>`. */
+ *  Runs click handlers from the target through its ancestors until one stops
+ *  propagation, mirroring browser event propagation.
+ *  When the target activates a submit button and no click handler prevents
+ *  the default, the click falls through to the `submit` handler of its form
+ *  owner. Scene honors an explicit `form` attribute before looking for the
+ *  nearest ancestor `<form>`. */
 export const click =
   (target: string | Locator) =>
   <Model, Message, OutMessage = undefined>(
@@ -1563,8 +1732,17 @@ export const click =
     }
 
     const { value: element } = maybeElement
+    const propagationPath = [
+      element,
+      ...pipe(internal.html, ancestorsOf(element), Array.reverse),
+    ]
+    const activationElement = pipe(
+      propagationPath,
+      Array.findFirst(currentElement => currentElement.sel === 'button'),
+      Option.getOrElse(() => element),
+    )
 
-    if (isElementDisabled(element)) {
+    if (isElementDisabled(activationElement)) {
       throw new Error(
         `I found an element matching ${description} but it is disabled.\n\n` +
           'Disabled elements do not receive click events in the browser. ' +
@@ -1574,62 +1752,59 @@ export const click =
       )
     }
 
-    const hasClickHandler = element.data?.on?.['click'] !== undefined
+    const simulatedClick = createSimulatedClick()
+    let isClickHandled = false
+    let isSubmitHandled = false
 
-    if (hasClickHandler) {
-      return captureFromElement(
-        simulation,
-        element,
-        description,
-        'click',
-        handler => {
-          handler()
-        },
+    internal.capturingDispatch.reset()
+
+    for (const currentElement of propagationPath) {
+      const maybeClickHandler = Option.fromNullishOr(
+        currentElement.data?.on?.['click'],
       )
-    }
+      if (Option.isNone(maybeClickHandler)) {
+        continue
+      }
 
-    const maybeAncestor = findAncestorWithHandler(
-      internal.html,
-      element,
-      'click',
-    )
+      isClickHandled = true
+      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+      const clickHandler = maybeClickHandler.value as Function
+      clickHandler(simulatedClick.event)
 
-    if (Option.isSome(maybeAncestor)) {
-      return captureFromElement(
-        simulation,
-        maybeAncestor.value,
-        `ancestor of ${description}`,
-        'click',
-        handler => {
-          handler()
-        },
-      )
-    }
-
-    if (isSubmitButton(element)) {
-      const maybeForm = pipe(
-        internal.html,
-        ancestorsOf(element),
-        Array.findLast(vnode => vnode.sel === 'form'),
-      )
-      if (Option.isSome(maybeForm)) {
-        return captureFromElement(
-          simulation,
-          maybeForm.value,
-          `form containing ${description}`,
-          'submit',
-          handler => {
-            handler({ preventDefault: Function.constVoid })
-          },
-        )
+      if (simulatedClick.isPropagationStopped()) {
+        break
       }
     }
 
-    const attributeName = EVENT_NAMES['click'] ?? 'click'
-    throw new Error(
-      `I found an element matching ${description} but neither it nor any ancestor has a click handler.\n\n` +
-        `Make sure the element or a parent has an ${attributeName} attribute.`,
-    )
+    if (!simulatedClick.isDefaultPrevented()) {
+      const maybeSubmitter = Array.findFirst(propagationPath, isSubmitButton)
+      const maybeForm = pipe(
+        maybeSubmitter,
+        Option.flatMap(submitter => formOwnerOf(internal.html, submitter)),
+      )
+
+      if (Option.isSome(maybeForm)) {
+        const maybeSubmitHandler = Option.fromNullishOr(
+          maybeForm.value.data?.on?.['submit'],
+        )
+        if (Option.isSome(maybeSubmitHandler)) {
+          isSubmitHandled = true
+          // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+          const submitHandler = maybeSubmitHandler.value as Function
+          submitHandler({ preventDefault: Function.constVoid })
+        }
+      }
+    }
+
+    if (!isClickHandled && !isSubmitHandled) {
+      const attributeName = EVENT_NAMES['click'] ?? 'click'
+      throw new Error(
+        `I found an element matching ${description} but neither it nor any ancestor has a click handler.\n\n` +
+          `Make sure the element or a parent has an ${attributeName} attribute.`,
+      )
+    }
+
+    return finishCapturedInteraction(simulation, description, 'click')
   }
 
 /** Simulates a double-click on the element matching the target.

@@ -228,11 +228,11 @@ const resultCountAnnouncement = (model: Model): Html => {
 // synchronously inside the originating user-gesture event handler. The real
 // search input doesn't exist in the DOM until the dialog renders, so it
 // can't be focused inside the gesture. This always-rendered hidden input
-// gives `h.OnClickFocus` (used on the search trigger buttons in
-// `view/docs.ts`) something to focus inside the click handler, which opens
-// the keyboard; the `FocusSearchInput` Command then transfers focus to the
-// real input once the dialog renders, and iOS keeps the keyboard up across
-// a programmatic focus transfer between two text inputs.
+// gives the search trigger's `h.OnClick` focus control something to focus
+// inside the click handler, which opens the keyboard; the `FocusSearchInput`
+// Command then transfers focus to the real input once the dialog renders, and
+// iOS keeps the keyboard up across a programmatic focus transfer between two
+// text inputs.
 const keyboardWarmupInput: Html = ih.input([
   ih.Id(KEYBOARD_WARMUP_INPUT_ID),
   ih.Type('text'),

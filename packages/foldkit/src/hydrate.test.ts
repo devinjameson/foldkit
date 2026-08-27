@@ -139,19 +139,45 @@ describe('__hydrateVNode', () => {
 
   it('attaches event listeners to adopted elements', () => {
     const view = buildView(() =>
-      h.button([h.Id('go'), h.OnClick(Message.ClickedButton())], ['Go']),
+      h.button(
+        [
+          h.Id('go'),
+          h.OnClick(Message.ClickedButton(), {
+            defaultAction: 'Prevent',
+            propagation: 'Stop',
+          }),
+        ],
+        ['Go'],
+      ),
     )
     const root = mountServerHtml(serializeHydratable(view))
 
     buildView(() =>
       hydrateVNode(
         root,
-        h.button([h.Id('go'), h.OnClick(Message.ClickedButton())], ['Go']),
+        h.button(
+          [
+            h.Id('go'),
+            h.OnClick(Message.ClickedButton(), {
+              defaultAction: 'Prevent',
+              propagation: 'Stop',
+            }),
+          ],
+          ['Go'],
+        ),
       ),
     )
 
-    root.dispatchEvent(new MouseEvent('click'))
+    let isBubbleObserved = false
+    host.addEventListener('click', () => {
+      isBubbleObserved = true
+    })
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true })
+    root.dispatchEvent(click)
+
     expect(dispatched).toEqual([Message.ClickedButton()])
+    expect(click.defaultPrevented).toBe(true)
+    expect(isBubbleObserved).toBe(false)
   })
 
   it('attaches focus boundary listeners without replaying existing focus', () => {

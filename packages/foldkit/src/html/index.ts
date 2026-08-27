@@ -162,6 +162,33 @@ const isFocusInsideCurrentTarget = (event: FocusEvent): boolean =>
 export type Html = VNode | null
 export type Child = Html | string
 
+/** Whether an event handler leaves the browser's default action in place or
+ *  prevents it synchronously. */
+export const DefaultAction = S.Literals(['Allow', 'Prevent'])
+/** Whether an event handler leaves the browser's default action in place or
+ *  prevents it synchronously. */
+export type DefaultAction = typeof DefaultAction.Type
+
+/** Whether an event continues through its DOM propagation path or stops after
+ *  the handlers on its current element have run. */
+export const EventPropagation = S.Literals(['Bubble', 'Stop'])
+/** Whether an event continues through its DOM propagation path or stops after
+ *  the handlers on its current element have run. */
+export type EventPropagation = typeof EventPropagation.Type
+
+/** Declarative controls for an `OnClick` handler. Omitted
+ *  fields keep the browser default, allow the click to bubble, and leave focus
+ *  unchanged. */
+export const ClickOptions = S.Struct({
+  defaultAction: S.optional(DefaultAction),
+  propagation: S.optional(EventPropagation),
+  focusSelector: S.optional(S.String),
+})
+/** Declarative controls for an `OnClick` handler. Omitted
+ *  fields keep the browser default, allow the click to bubble, and leave focus
+ *  unchanged. */
+export type ClickOptions = typeof ClickOptions.Type
+
 /** Text direction for the document root, applied to `dir` on the `<html>`
  *  element. `Auto` defers to the browser's first-strong-character heuristic. */
 export const TextDirection = S.Literals(['Ltr', 'Rtl', 'Auto'])
@@ -504,7 +531,7 @@ export type Attribute<Message> = Data.TaggedEnum<{
   Popover: { readonly value: string }
   Popovertarget: { readonly value: string }
   Popovertargetaction: { readonly value: string }
-  OnClick: { readonly message: Message }
+  OnClick: { readonly message: Message; readonly options?: ClickOptions }
   OnClickFocus: { readonly focusSelector: string; readonly message: Message }
   OnDoubleClick: { readonly message: Message }
   OnMouseDown: { readonly message: Message }
@@ -1533,17 +1560,30 @@ const attributeHandlers: AttributeHandlers = {
     setDataAttr(ctx, 'popovertarget', value),
   Popovertargetaction: ({ value }, ctx: BuildContext) =>
     setDataAttr(ctx, 'popovertargetaction', value),
-  OnClick: ({ message }, ctx: BuildContext) =>
-    addDataOn(ctx, 'click', () => ctx.dispatch(message)),
-  OnClickFocus: ({ focusSelector, message }, ctx: BuildContext) =>
-    updateDataOn(ctx, {
-      click: () => {
+  OnClick: ({ message, options }, ctx: BuildContext) =>
+    addDataOn(ctx, 'click', (event: MouseEvent) => {
+      if (options?.defaultAction === 'Prevent') {
+        event.preventDefault()
+      }
+      if (options?.propagation === 'Stop') {
+        event.stopPropagation()
+      }
+      const focusSelector = options?.focusSelector
+      if (focusSelector !== undefined) {
         const focusTarget = document.querySelector(focusSelector)
         if (focusTarget instanceof HTMLElement) {
           focusTarget.focus()
         }
-        ctx.dispatch(message)
-      },
+      }
+      ctx.dispatch(message)
+    }),
+  OnClickFocus: ({ focusSelector, message }, ctx: BuildContext) =>
+    addDataOn(ctx, 'click', () => {
+      const focusTarget = document.querySelector(focusSelector)
+      if (focusTarget instanceof HTMLElement) {
+        focusTarget.focus()
+      }
+      ctx.dispatch(message)
     }),
   OnDoubleClick: ({ message }, ctx: BuildContext) =>
     addDataOn(ctx, 'dblclick', () => ctx.dispatch(message)),
@@ -3493,10 +3533,41 @@ type HtmlAttributes<Message> = {
     readonly _tag: 'Popovertargetaction'
     readonly value: string
   }
-  OnClick: (message: Message) => {
+  /** Dispatches `message` when the element is clicked. The optional controls
+   *  can synchronously prevent the browser default, stop DOM propagation, and
+   *  focus an existing element before dispatch. Omitted controls preserve the
+   *  existing allow-and-bubble behavior.
+   *
+   *  `propagation: 'Stop'` still lets every click handler registered on the
+   *  current element run, matching `Event.stopPropagation()`. It only prevents
+   *  ancestor handlers from receiving the click.
+   *
+   *  `focusSelector` is for browser APIs that require focus during the
+   *  originating user gesture, such as opening the iOS on-screen keyboard. The
+   *  target must already exist. If the real input mounts after the Message
+   *  changes the view, focus an always-present warmup input here, then return a
+   *  `Dom.focus` Command from update to transfer focus after the real input
+   *  mounts.
+   *
+   *  @example
+   *  ```typescript
+   *  h.OnClick(Message.ClickedExpand(), {
+   *    defaultAction: 'Prevent',
+   *    propagation: 'Stop',
+   *  })
+   *  ``` */
+  OnClick: (
+    message: Message,
+    options?: ClickOptions,
+  ) => {
     readonly _tag: 'OnClick'
     readonly message: Message
+    readonly options?: ClickOptions
   }
+  /** Synchronously focuses the element matching `focusSelector`, then
+   *  dispatches `message`.
+   *
+   *  @deprecated Use {@link HtmlBuilder.OnClick} with `focusSelector`. */
   OnClickFocus: (
     focusSelector: string,
     message: Message,
@@ -4602,37 +4673,10 @@ const htmlAttributes = <Message>(): HtmlAttributes<Message> => ({
   Popover: (value: string) => Popover({ value }),
   Popovertarget: (value: string) => Popovertarget({ value }),
   Popovertargetaction: (value: string) => Popovertargetaction({ value }),
-  OnClick: (message: Message) => OnClick({ message }),
-  /**
-   * Click handler that synchronously focuses the element matching
-   * `focusSelector`, then dispatches `message`. Both run inside the originating
-   * click event handler, preserving the user-gesture context.
-   *
-   * Use this when tapping the element must open the on-screen keyboard on
-   * iOS Safari. Safari only opens the keyboard if `.focus()` runs synchronously
-   * inside the originating user-gesture handler, which a Command's `Dom.focus`
-   * cannot satisfy (Commands fork through `Effect.forkDetach` +
-   * `requestAnimationFrame` and resolve after the gesture has expired).
-   *
-   * When the real input only mounts later (a search field inside a dialog,
-   * say), focus it in two steps. First, keep a focusable text input that is
-   * always in the DOM (a visually hidden "keyboard warmup") and point
-   * `focusSelector` at it, so the tap focuses the input (which opens the
-   * keyboard) and dispatches a Message. Second, update's branch for that
-   * Message opens the dialog and returns a `Dom.focus` Command pointed at the
-   * real input; by the time it runs the input has mounted, so focus moves to
-   * it. iOS keeps the keyboard up when focus moves between two text inputs,
-   * so it stays open and now targets the real input.
-   *
-   * Like `OnKeyDownPreventDefault`, the side effect (focusing another
-   * element) lives inside the framework's event handler so user code stays
-   * declarative.
-   *
-   * @example
-   * ```typescript
-   * h.OnClickFocus('#search-keyboard-warmup', ClickedSearch())
-   * ```
-   */
+  OnClick: (message: Message, options?: ClickOptions) =>
+    options === undefined
+      ? OnClick({ message })
+      : OnClick({ message, options }),
   OnClickFocus: (focusSelector: string, message: Message) =>
     OnClickFocus({ focusSelector, message }),
   OnDoubleClick: (message: Message) => OnDoubleClick({ message }),
