@@ -41,9 +41,10 @@ const registry: Record<string, Snippet> = pipe(
   Array.filterMap(([path, raw]) =>
     pipe(
       Option.all([snippetName(path), Record_.get(highlightedByPath, path)]),
-      Option.map(
-        ([name, highlighted]): SnippetEntry => [name, { raw, highlighted }],
-      ),
+      Option.map(([name, highlighted]): SnippetEntry => [
+        name,
+        { raw, highlighted },
+      ]),
       Result.fromOption(() => undefined),
     ),
   ),

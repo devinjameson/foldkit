@@ -49,12 +49,7 @@ function isDocumentFragment(
 }
 
 type ModuleHookName =
-  | 'create'
-  | 'update'
-  | 'remove'
-  | 'destroy'
-  | 'pre'
-  | 'post'
+  'create' | 'update' | 'remove' | 'destroy' | 'pre' | 'post'
 
 type ModuleHooks = {
   [Hook in ModuleHookName]: Array<NonNullable<Module[Hook]>>

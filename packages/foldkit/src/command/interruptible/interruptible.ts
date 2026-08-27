@@ -76,9 +76,8 @@ export const __makeRegistry = (): __Registry => {
       Array.match(lookup(key), {
         onEmpty: () => Effect.succeed<Outcome>(Outcome.NotFound()),
         onNonEmpty: fibers =>
-          Effect.map(
-            Fiber.interruptAll(fibers),
-            (): Outcome => Outcome.Interrupted(),
+          Effect.map(Fiber.interruptAll(fibers), (): Outcome =>
+            Outcome.Interrupted(),
           ),
       }),
     )
@@ -136,7 +135,7 @@ const makeInterruptEffect = <ToMessage>(
  *  to produce a Command that interrupts every holder of the definition's key. */
 export interface InterruptDefinitionNoArgs<Name extends string> {
   readonly [CommandDefinitionTypeId]: CommandDefinitionTypeId
-  readonly name: `${Name}.Interrupt`;
+  readonly name: `${Name}.Interrupt`
   <ToMessage>(toMessage: (outcome: Outcome) => ToMessage): Readonly<{
     name: `${Name}.Interrupt`
     interruptsKey: string
@@ -150,7 +149,7 @@ export interface InterruptDefinitionNoArgs<Name extends string> {
  *  interrupts every holder of the key derived from `keyArgs`. */
 export interface InterruptDefinitionWithArgs<Name extends string, KeyArgs> {
   readonly [CommandDefinitionTypeId]: CommandDefinitionTypeId
-  readonly name: `${Name}.Interrupt`;
+  readonly name: `${Name}.Interrupt`
   <ToMessage>(
     keyArgs: KeyArgs,
     toMessage: (outcome: Outcome) => ToMessage,
@@ -171,7 +170,7 @@ export interface DefinitionNoArgs<
 > {
   readonly [CommandDefinitionTypeId]: CommandDefinitionTypeId
   readonly name: Name
-  readonly Interrupt: InterruptDefinitionNoArgs<Name>;
+  readonly Interrupt: InterruptDefinitionNoArgs<Name>
   (): Readonly<{ name: Name; key: string; effect: Eff }>
 }
 
@@ -187,7 +186,7 @@ export interface DefinitionWithArgs<
 > {
   readonly [CommandDefinitionTypeId]: CommandDefinitionTypeId
   readonly name: Name
-  readonly Interrupt: InterruptDefinitionWithArgs<Name, KeyArgs>;
+  readonly Interrupt: InterruptDefinitionWithArgs<Name, KeyArgs>
   (args: Schema.Schema.Type<Schema.Struct<Fields>>): Readonly<{
     name: Name
     args: Schema.Schema.Type<Schema.Struct<Fields>>
@@ -209,7 +208,7 @@ export interface DefinitionWithArgsNameKeyed<
 > {
   readonly [CommandDefinitionTypeId]: CommandDefinitionTypeId
   readonly name: Name
-  readonly Interrupt: InterruptDefinitionNoArgs<Name>;
+  readonly Interrupt: InterruptDefinitionNoArgs<Name>
   (args: Schema.Schema.Type<Schema.Struct<Fields>>): Readonly<{
     name: Name
     args: Schema.Schema.Type<Schema.Struct<Fields>>

@@ -168,8 +168,8 @@ export type Shape =
  * field so the schema can describe its own children without a forward
  * declaration cycle.
  */
-const Shape: S.Schema<Shape> = S.suspend(
-  (): S.Schema<Shape> => S.Union([Rect, Circle, Path, Text, Group]),
+const Shape: S.Schema<Shape> = S.suspend((): S.Schema<Shape> =>
+  S.Union([Rect, Circle, Path, Text, Group]),
 )
 
 /** Construct a `Group` shape that wraps its children in a transformed scope. */

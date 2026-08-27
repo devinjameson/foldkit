@@ -264,8 +264,7 @@ const collectRenderedSlots = (vnode: VNode): ReadonlyArray<PendingMount> => {
   const walk = (node: VNode): void => {
     /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
     const marker = node.data?.[FOLDKIT_MOUNT_KEY] as
-      | FoldkitMountMarker
-      | undefined
+      FoldkitMountMarker | undefined
     if (marker !== undefined) {
       const occurrence = counts.get(marker.name) ?? 0
       counts.set(marker.name, occurrence + 1)

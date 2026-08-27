@@ -20,14 +20,14 @@
   "devDependencies": {
     "@foldkit/devtools": "workspace:*",
     "@foldkit/vite-plugin": "workspace:*",
-    "@tailwindcss/vite": "^4.3.1",
+    "@tailwindcss/vite": "^4.3.3",
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
-    "happy-dom": "^20.10.4",
-    "prettier": "^3.8.4",
-    "tailwindcss": "^4.3.1",
-    "tsx": "^4.22.4",
+    "happy-dom": "^20.11.7",
+    "prettier": "^3.9.6",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.12",
     "typescript": "^6.0.3",
-    "vite": "^8.0.16",
-    "vitest": "^4.1.9"
+    "vite": "^8.2.2",
+    "vitest": "^4.1.11"
   }
 }

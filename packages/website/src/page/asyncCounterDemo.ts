@@ -327,17 +327,16 @@ const phaseColorClass = (phase: AnimationPhase): string =>
     M.exhaustive,
   )
 
-export const view = Submodel.defineView<Model, Message>(
-  (model, h): Html =>
-    DemoView.demoViewShell(
-      DemoView.codePanelView(
-        'demo-code-panel',
-        'demo-phase',
-        model.phase,
-        demoCodeHtml,
-      ),
-      appPanel(model, h),
+export const view = Submodel.defineView<Model, Message>((model, h): Html =>
+  DemoView.demoViewShell(
+    DemoView.codePanelView(
+      'demo-code-panel',
+      'demo-phase',
+      model.phase,
+      demoCodeHtml,
     ),
+    appPanel(model, h),
+  ),
 )
 
 const appPanel = (model: Model, h: HtmlBuilder<Message>): Html =>

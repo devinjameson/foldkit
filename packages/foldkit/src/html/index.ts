@@ -1350,8 +1350,7 @@ const updateDataOn = (ctx: BuildContext, on: On): void => {
   for (const key of Object.keys(on)) {
     /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
     const existingHandler = (existing as Record<string, unknown>)[key] as
-      | ((...args: ReadonlyArray<unknown>) => void)
-      | undefined
+      ((...args: ReadonlyArray<unknown>) => void) | undefined
     /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
     const newHandler = (on as Record<string, unknown>)[key] as (
       ...args: ReadonlyArray<unknown>
@@ -2563,8 +2562,7 @@ const buildVNodeData = <Message>(
   let mainCtx: BuildContext | undefined
   let boundaryCtxByDispatch: Map<DispatchSync, BuildContext> | undefined
   let sharedPostpatchProps:
-    | Array<Readonly<{ propName: string; value: unknown }>>
-    | undefined
+    Array<Readonly<{ propName: string; value: unknown }>> | undefined
   const getSharedPostpatchProps = (): Array<
     Readonly<{ propName: string; value: unknown }>
   > => (sharedPostpatchProps ??= [])

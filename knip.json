@@ -135,5 +135,5 @@
     "tailwindcss",
     "madge"
   ],
-  "ignoreBinaries": ["taskkill", "typecheck"]
+  "ignoreBinaries": ["typecheck"]
 }

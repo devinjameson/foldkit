@@ -121,10 +121,7 @@ const toCommandRecord = (
 
 /** Position of the DevTools badge and panel on screen. */
 export type DevToolsPosition =
-  | 'BottomRight'
-  | 'BottomLeft'
-  | 'TopRight'
-  | 'TopLeft'
+  'BottomRight' | 'BottomLeft' | 'TopRight' | 'TopLeft'
 
 /** Controls when a feature is shown. */
 export type Visibility = 'Development' | 'Always'
@@ -1432,10 +1429,9 @@ export type OutboundPortHandle<Encoded> = Readonly<{
 export type InboundPortHandles<InboundPorts> =
   InboundPorts extends Readonly<Record<string, Inbound<any, any>>>
     ? {
-        readonly [Name in keyof InboundPorts]: InboundPorts[Name] extends Inbound<
-          any,
-          infer Encoded
-        >
+        readonly [
+          Name in keyof InboundPorts
+        ]: InboundPorts[Name] extends Inbound<any, infer Encoded>
           ? InboundPortHandle<Encoded>
           : never
       }
@@ -1446,10 +1442,9 @@ export type InboundPortHandles<InboundPorts> =
 export type OutboundPortHandles<OutboundPorts> =
   OutboundPorts extends Readonly<Record<string, Outbound<any, any>>>
     ? {
-        readonly [Name in keyof OutboundPorts]: OutboundPorts[Name] extends Outbound<
-          any,
-          infer Encoded
-        >
+        readonly [
+          Name in keyof OutboundPorts
+        ]: OutboundPorts[Name] extends Outbound<any, infer Encoded>
           ? OutboundPortHandle<Encoded>
           : never
       }

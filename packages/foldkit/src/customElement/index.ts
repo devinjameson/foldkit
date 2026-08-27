@@ -34,10 +34,9 @@ type PropertyFactories<
 
 /** @internal */
 type EventFactories<Message, Events extends Record<string, Schema.Top>> = {
-  readonly [K in keyof Events as `On${KebabToPascal<string & K>}`]: EventFactory<
-    Message,
-    Schema.Schema.Type<Events[K]>
-  >
+  readonly [
+    K in keyof Events as `On${KebabToPascal<string & K>}`
+  ]: EventFactory<Message, Schema.Schema.Type<Events[K]>>
 }
 
 /** Typed call site for a defined custom element. The element constructor
@@ -228,8 +227,7 @@ export const define = <
   // factories close over nothing Message-specific, exactly like the html
   // builder singleton.
   let cachedElementBuilder:
-    | ElementBuilder<unknown, Properties, Events>
-    | undefined
+    ElementBuilder<unknown, Properties, Events> | undefined
 
   const withMessage = <Message>(
     _h: HtmlBuilder<Message>,
