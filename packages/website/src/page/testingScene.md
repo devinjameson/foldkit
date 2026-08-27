@@ -77,6 +77,8 @@ An interaction invokes the matched element's event handler. If the handler produ
 | `hover(target)`                    | `OnMouseEnter` (falls back to `OnMouseOver`)                                                     |
 | `focus(target)`                    | `OnFocus`                                                                                        |
 | `blur(target)`                     | `OnBlur`                                                                                         |
+| `focusEnter(target)`               | `OnFocusEnter`                                                                                   |
+| `focusLeave(target)`               | `OnFocusLeave`                                                                                   |
 | `type(target, text)`               | `OnInput` with the given text                                                                    |
 | `change(target, value)`            | `OnChange` with the given value, for `<select>` and similar                                      |
 | `keydown(target, key, modifiers?)` | `OnKeyDown` or `OnKeyDownPreventDefault` with optional `{ shiftKey, ctrlKey, altKey, metaKey }`  |

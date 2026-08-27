@@ -100,6 +100,18 @@ For `OnKeyDownPreventDefault`, returning `Some` claims the key. Foldkit suppress
 
 Handlers never run Effects or decide consequences. The example classifies Enter with an active result as `SelectedResult`; update decides what selection changes. When a translator grows, extract it to a named pure function and pass that function to the attribute.
 
+## Focus Regions
+
+Use `OnFocusEnter` and `OnFocusLeave` when several elements share one focus state. Put both attributes on their common ancestor. Foldkit dispatches when focus crosses that ancestor's boundary and ignores moves between its descendants.
+
+Imagine a text editor and its formatting toolbar. Focusing the editor dispatches `EnteredEditorRegion`. Moving from the editor into a toolbar button dispatches nothing, so the toolbar stays visible. Moving from either one to an element outside the region dispatches `LeftEditorRegion`.
+
+::Snippet{name="eventHandlingFocusBoundary" label="Focus region example"}
+
+The attributes use the bubbling `focusin` and `focusout` events, so the common ancestor does not need a `tabindex`. Foldkit reads the related target and performs the containment check inside its own event handler. View code receives no DOM event or element.
+
+These attributes report transitions only after their listeners attach. Hydration preserves focus on an adopted element, but Foldkit does not invent an `OnFocusEnter` Message for an earlier event it did not observe. Use `:focus-within` when focus only affects presentation. If Model state must reflect focus that may already exist during hydration, reconcile `document.activeElement` from a Mount after the element exists.
+
 ## Event Handler Side Effects
 
 Most side effects can run after the browser event returns, through a Command, Subscription, or Mount. A few browser APIs only work synchronously inside the originating user gesture. Foldkit exposes dedicated attributes for those cases, so the framework still owns the effect and the view callback stays pure.

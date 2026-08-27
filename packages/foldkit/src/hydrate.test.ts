@@ -16,12 +16,16 @@ import {
   setRuntime,
 } from './html/runtimeSingleton.js'
 import { __elementSignature, __hydrateVNode } from './hydrate.js'
+import { defineMessageUnion } from './message/index.js'
 import { type VNode, h as snabbdomH, toVNode } from './snabbdom/index.js'
 import { patch } from './vdom.js'
 
-type Message = Readonly<{ _tag: 'ClickedButton' }>
-
-const ClickedButton = (): Message => ({ _tag: 'ClickedButton' })
+const Message = defineMessageUnion({
+  ClickedButton: {},
+  EnteredFocusRegion: {},
+  LeftFocusRegion: {},
+})
+type Message = typeof Message.Type
 
 const h = __htmlBuilder<Message>()
 
@@ -135,19 +139,59 @@ describe('__hydrateVNode', () => {
 
   it('attaches event listeners to adopted elements', () => {
     const view = buildView(() =>
-      h.button([h.Id('go'), h.OnClick(ClickedButton())], ['Go']),
+      h.button([h.Id('go'), h.OnClick(Message.ClickedButton())], ['Go']),
     )
     const root = mountServerHtml(serializeHydratable(view))
 
     buildView(() =>
       hydrateVNode(
         root,
-        h.button([h.Id('go'), h.OnClick(ClickedButton())], ['Go']),
+        h.button([h.Id('go'), h.OnClick(Message.ClickedButton())], ['Go']),
       ),
     )
 
     root.dispatchEvent(new MouseEvent('click'))
-    expect(dispatched).toEqual([ClickedButton()])
+    expect(dispatched).toEqual([Message.ClickedButton()])
+  })
+
+  it('attaches focus boundary listeners without replaying existing focus', () => {
+    const view = () =>
+      h.div(
+        [
+          h.Id('editor'),
+          h.OnFocusEnter(Message.EnteredFocusRegion()),
+          h.OnFocusLeave(Message.LeftFocusRegion()),
+        ],
+        [h.input([h.Id('editor-input')])],
+      )
+    const root = mountServerHtml(serializeHydratable(buildView(view)))
+    const input = root.querySelector('#editor-input')
+    if (!(input instanceof HTMLInputElement)) {
+      throw new Error('expected the editor input')
+    }
+    input.focus()
+    expect(document.activeElement).toBe(input)
+
+    const hydrated = buildView(() => hydrateVNode(root, view()))
+
+    expect(hydrated.elm).toBe(root)
+    expect(root.querySelector('#editor-input')).toBe(input)
+    expect(document.activeElement).toBe(input)
+    expect(dispatched).toStrictEqual([])
+
+    const outside = document.createElement('button')
+    host.appendChild(outside)
+    input.dispatchEvent(
+      new FocusEvent('focusout', { bubbles: true, relatedTarget: outside }),
+    )
+    input.dispatchEvent(
+      new FocusEvent('focusin', { bubbles: true, relatedTarget: outside }),
+    )
+
+    expect(dispatched).toStrictEqual([
+      Message.LeftFocusRegion(),
+      Message.EnteredFocusRegion(),
+    ])
   })
 
   it('hydrates a table with an explicit tbody and an interactive cell', () => {
@@ -160,7 +204,12 @@ describe('__hydrateVNode', () => {
             [
               h.tr(
                 [],
-                [h.td([], [h.button([h.OnClick(ClickedButton())], ['Go'])])],
+                [
+                  h.td(
+                    [],
+                    [h.button([h.OnClick(Message.ClickedButton())], ['Go'])],
+                  ),
+                ],
               ),
             ],
           ),
@@ -173,7 +222,7 @@ describe('__hydrateVNode', () => {
 
     expect(root.querySelector('button')).toBe(button)
     button?.dispatchEvent(new MouseEvent('click'))
-    expect(dispatched).toEqual([ClickedButton()])
+    expect(dispatched).toEqual([Message.ClickedButton()])
   })
 
   it('splits merged text nodes for adjacent text children', () => {
