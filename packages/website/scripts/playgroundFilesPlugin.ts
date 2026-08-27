@@ -37,9 +37,9 @@ export const INCLUDED_EXTENSIONS: ReadonlySet<string> = new Set([
   '.html',
   '.json',
   '.md',
-  // The server-rendered examples build through `scripts/build.mjs`, and their
-  // package.json names it. A playground that shipped the manifest without the
-  // script would offer a build command that cannot run.
+  // No example ships one today, and an example is free to add one: a
+  // playground that skipped it would offer a project whose files are not all
+  // there.
   '.mjs',
 ])
 const EXPECTED_SKIP_EXTENSIONS = new Set([

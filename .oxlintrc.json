@@ -112,7 +112,6 @@
     "packages/website/test-results/",
     "packages/website/src/snippet/",
     "!packages/website/scripts/prerender.ts",
-    "!examples/*/scripts/prerender.ts",
     "!packages/vite-plugin-foldkit/test/fixtures/"
   ]
 }

@@ -80,7 +80,7 @@ test('a markdown change reaches the website', () => {
 test('an example or playground build change reaches the website', () => {
   for (const fileName of [
     'examples/ssg/package.json',
-    'examples/ssr/scripts/build.mjs',
+    'examples/ssr/vite.config.ts',
     'scripts/build-examples.ts',
     'scripts/check-playground-ssg-build.ts',
   ]) {
@@ -174,7 +174,7 @@ test('a scaffold or framework change selects the generated-app build gate', () =
     'examples/ssg/package.json',
     'examples/ssr/package.json',
     'packages/examples-e2e/package.json',
-    'packages/create-foldkit-app/templates/rendering/ssr/scripts/build.mjs',
+    'packages/create-foldkit-app/templates/rendering/ssr/vite.config.ts',
     'packages/devtools/src/index.ts',
     'packages/devtools-mcp/src/index.ts',
     'packages/foldkit/src/experimental/server/server.ts',

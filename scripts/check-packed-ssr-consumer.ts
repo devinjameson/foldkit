@@ -173,7 +173,6 @@ const CONSUMER_FIXTURES: ReadonlyArray<ConsumerFixture> = [
     values: { SERVER_ONLY_PIN },
   },
   { path: 'vite.config.ts' },
-  { path: 'scripts/build.mjs' },
   { path: 'scripts/entrypoints.mjs' },
   { path: 'src/entry.ts' },
   { path: 'src/entry.server.ts' },
@@ -254,7 +253,7 @@ const writeConsumerProject = (
         private: true,
         version: '0.0.0',
         type: 'module',
-        scripts: { build: 'node scripts/build.mjs' },
+        scripts: { build: 'vite build' },
         dependencies: {
           effect: effectVersion,
           foldkit: `file:${foldkitTarball}`,
@@ -1424,20 +1423,26 @@ const main = async (): Promise<void> => {
       runRequired(
         `Building the deployment that served the page (${BUILD_ID_SERVED})...`,
         'npm',
-        ['run', 'build', '--', 'build-served', '/served/'],
+        ['run', 'build', '--', '--base', '/served/'],
         {
           cwd: projectDir,
-          env: { FOLDKIT_BUILD_ID: BUILD_ID_SERVED },
+          env: {
+            FOLDKIT_BUILD_ID: BUILD_ID_SERVED,
+            CONSUMER_OUT_ROOT: 'build-served',
+          },
           inherit: true,
         },
       )
       runRequired(
         `Building the deployment now live (${BUILD_ID_CURRENT})...`,
         'npm',
-        ['run', 'build', '--', 'build-current', '/current/'],
+        ['run', 'build', '--', '--base', '/current/'],
         {
           cwd: projectDir,
-          env: { FOLDKIT_BUILD_ID: BUILD_ID_CURRENT },
+          env: {
+            FOLDKIT_BUILD_ID: BUILD_ID_CURRENT,
+            CONSUMER_OUT_ROOT: 'build-current',
+          },
           inherit: true,
         },
       )
