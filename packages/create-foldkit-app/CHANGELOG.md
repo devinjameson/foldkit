@@ -1,5 +1,12 @@
 # create-foldkit-app
 
+## 0.31.1
+
+### Patch Changes
+
+- 6716de6: Clarify the generated Foldkit guidance for update returns and child OutMessage forwarding. The revised copy describes the runtime behavior before the supporting TypeScript rules.
+- f59da51: Point each package's npm metadata at its Foldkit documentation page so developers and automated tools can identify the official setup guide.
+
 ## 0.31.0
 
 ### Minor Changes
