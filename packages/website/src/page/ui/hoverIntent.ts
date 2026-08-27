@@ -17,6 +17,11 @@ const navTriggerClassName =
 const navPanelClassName =
   'absolute right-0 top-full z-10 mt-2 grid w-80 gap-1 rounded-lg border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-700 dark:bg-gray-900'
 
+const CARD_TRIGGER_ID = 'hover-intent-card-trigger'
+const CARD_PANEL_ID = 'hover-intent-card-panel'
+const NAVIGATION_TRIGGER_ID = 'hover-intent-navigation-trigger'
+const NAVIGATION_PANEL_ID = 'hover-intent-navigation-panel'
+
 export const demo = (
   model: Model,
   h: HtmlBuilder<Message>,
@@ -29,25 +34,36 @@ export const demo = (
         [
           h.p(
             [h.Class('text-sm text-gray-600 dark:text-gray-400')],
-            ['Hover card — move from the trigger into the interactive panel.'],
+            ['Hover card. Move from the trigger into the interactive panel.'],
           ),
           h.submodel({
             slotId: 'hover-intent-card-demo',
             model: model.hoverIntentCardDemo,
             view: HoverIntent.view,
             viewInputs: {
+              focusTriggerSelector: `#${CARD_TRIGGER_ID}`,
               toView: ({ trigger, panel, isVisible }) =>
                 h.div(
                   [h.Class('relative')],
                   [
                     h.button(
-                      [...trigger, h.Class(cardTriggerClassName)],
+                      [
+                        ...trigger,
+                        h.Id(CARD_TRIGGER_ID),
+                        h.AriaControls(CARD_PANEL_ID),
+                        h.AriaExpanded(isVisible),
+                        h.Class(cardTriggerClassName),
+                      ],
                       ['Preview the release note'],
                     ),
                     ...(isVisible
                       ? [
                           h.div(
-                            [...panel, h.Class(cardPanelClassName)],
+                            [
+                              ...panel,
+                              h.Id(CARD_PANEL_ID),
+                              h.Class(cardPanelClassName),
+                            ],
                             [
                               h.p(
                                 [
@@ -101,9 +117,7 @@ export const demo = (
         [
           h.p(
             [h.Class('text-sm text-gray-600 dark:text-gray-400')],
-            [
-              'Navigation menu — focus or hover Resources, then enter the menu.',
-            ],
+            ['Navigation menu. Focus or hover Resources, then enter the menu.'],
           ),
           h.nav(
             [
@@ -126,18 +140,29 @@ export const demo = (
                 model: model.hoverIntentNavigationDemo,
                 view: HoverIntent.view,
                 viewInputs: {
+                  focusTriggerSelector: `#${NAVIGATION_TRIGGER_ID}`,
                   toView: ({ trigger, panel, isVisible }) =>
                     h.div(
                       [h.Class('relative')],
                       [
                         h.button(
-                          [...trigger, h.Class(navTriggerClassName)],
+                          [
+                            ...trigger,
+                            h.Id(NAVIGATION_TRIGGER_ID),
+                            h.AriaControls(NAVIGATION_PANEL_ID),
+                            h.AriaExpanded(isVisible),
+                            h.Class(navTriggerClassName),
+                          ],
                           ['Resources'],
                         ),
                         ...(isVisible
                           ? [
                               h.div(
-                                [...panel, h.Class(navPanelClassName)],
+                                [
+                                  ...panel,
+                                  h.Id(NAVIGATION_PANEL_ID),
+                                  h.Class(navPanelClassName),
+                                ],
                                 [
                                   h.a(
                                     [

@@ -205,9 +205,11 @@ export const update = (model: Model, message: Message): UpdateReturn =>
 
     BlurredPanel: () => blurred(model),
 
-    PressedEscape: () => {
+    PressedEscape: ({ source, isFocusReturnedToTrigger }) => {
       const dismissedModel = evo(model, {
         isOpen: () => false,
+        isPanelHovered: () => false,
+        isFocused: () => source === 'Trigger' || isFocusReturnedToTrigger,
         isDismissed: () => true,
         pendingOpenVersion: currentVersion => currentVersion + 1,
         pendingCloseVersion: currentVersion => currentVersion + 1,
@@ -256,19 +258,42 @@ export type RenderInfo = Readonly<{
 
 /** Per-render view inputs passed to `view` via `h.submodel`'s `viewInputs` field. */
 export type ViewInputs = Readonly<{
+  focusTriggerSelector?: string
   toView: (render: RenderInfo) => Html
 }>
 
 /** Renders headless hover-intent event bundles. It deliberately owns no markup, ARIA semantics, positioning, or styling. */
 export const view = defineView<Model, Message, ViewInputs>(
-  (model, { toView }, h): Html => {
-    const toPressedEscape = (
-      key: string,
-    ): Option.Option<typeof Message.PressedEscape.Type> =>
-      M.value(key).pipe(
-        M.when('Escape', () => Option.some(Message.PressedEscape())),
-        M.orElse(() => Option.none()),
-      )
+  (model, { focusTriggerSelector, toView }, h): Html => {
+    const toPressedEscape =
+      (source: 'Trigger' | 'Panel', isFocusReturnedToTrigger: boolean) =>
+      (key: string): Option.Option<typeof Message.PressedEscape.Type> =>
+        M.value(key).pipe(
+          M.when('Escape', () =>
+            Option.some(
+              Message.PressedEscape({ source, isFocusReturnedToTrigger }),
+            ),
+          ),
+          M.orElse(() => Option.none()),
+        )
+
+    const panelEscapeHandler =
+      focusTriggerSelector === undefined
+        ? h.OnKeyDownPreventDefault(toPressedEscape('Panel', false))
+        : h.OnKeyDownFocus(key =>
+            M.value(key).pipe(
+              M.when('Escape', () =>
+                Option.some({
+                  focusSelector: focusTriggerSelector,
+                  message: Message.PressedEscape({
+                    source: 'Panel',
+                    isFocusReturnedToTrigger: true,
+                  }),
+                }),
+              ),
+              M.orElse(() => Option.none()),
+            ),
+          )
 
     return toView({
       trigger: childAttributes([
@@ -276,14 +301,14 @@ export const view = defineView<Model, Message, ViewInputs>(
         h.OnMouseLeave(Message.LeftTrigger()),
         h.OnFocus(Message.FocusedTrigger()),
         h.OnBlur(Message.BlurredTrigger()),
-        h.OnKeyDownPreventDefault(toPressedEscape),
+        h.OnKeyDownPreventDefault(toPressedEscape('Trigger', false)),
       ]),
       panel: childAttributes([
         h.OnMouseEnter(Message.EnteredPanel()),
         h.OnMouseLeave(Message.LeftPanel()),
-        h.OnFocusIn(Message.FocusedPanel()),
-        h.OnFocusOut(Message.BlurredPanel()),
-        h.OnKeyDownPreventDefault(toPressedEscape),
+        h.OnFocusEnter(Message.FocusedPanel()),
+        h.OnFocusLeave(Message.BlurredPanel()),
+        panelEscapeHandler,
       ]),
       isVisible: model.isOpen,
     })

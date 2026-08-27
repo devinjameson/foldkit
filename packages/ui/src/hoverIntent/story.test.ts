@@ -217,7 +217,12 @@ describe('HoverIntent', () => {
       Story.story(
         update,
         withPointerOpen,
-        Story.message(Message.PressedEscape()),
+        Story.message(
+          Message.PressedEscape({
+            source: 'Trigger',
+            isFocusReturnedToTrigger: false,
+          }),
+        ),
         Story.expectOutMessage(OutMessage.Closed()),
         Story.message(Message.EnteredTrigger()),
         Story.Command.expectNone(),
@@ -228,12 +233,37 @@ describe('HoverIntent', () => {
       )
     })
 
+    it('clears focused state when Escape dismisses the panel', () => {
+      Story.story(
+        update,
+        withFocusedOpen,
+        Story.message(Message.FocusedPanel()),
+        Story.message(Message.EnteredPanel()),
+        Story.message(
+          Message.PressedEscape({
+            source: 'Panel',
+            isFocusReturnedToTrigger: false,
+          }),
+        ),
+        Story.model(model => {
+          expect(model.isFocused).toBe(false)
+          expect(model.isPanelHovered).toBe(false)
+          expect(model.isDismissed).toBe(true)
+        }),
+      )
+    })
+
     it('clears Escape dismissal only after pointer and focus both disengage', () => {
       Story.story(
         update,
         withFocusedOpen,
         Story.message(Message.EnteredTrigger()),
-        Story.message(Message.PressedEscape()),
+        Story.message(
+          Message.PressedEscape({
+            source: 'Trigger',
+            isFocusReturnedToTrigger: false,
+          }),
+        ),
         Story.message(Message.BlurredTrigger()),
         Story.model(model => {
           expect(model.isDismissed).toBe(true)
@@ -254,7 +284,12 @@ describe('HoverIntent', () => {
         withHidden,
         Story.message(Message.EnteredTrigger()),
         resolveStaleOpen,
-        Story.message(Message.PressedEscape()),
+        Story.message(
+          Message.PressedEscape({
+            source: 'Trigger',
+            isFocusReturnedToTrigger: false,
+          }),
+        ),
         Story.message(Message.CompletedWaitBeforeOpening({ version: 1 })),
         Story.model(model => {
           expect(model.isOpen).toBe(false)

@@ -22,7 +22,7 @@ Pointer entry starts `openDelay`, which defaults to 200 milliseconds. Leaving th
 
 Focus opens immediately. When focus moves from the trigger into the panel, its blur may schedule a close before panel focus arrives. The panel focus handler cancels that close, so keyboard users can enter interactive panel content.
 
-Escape closes immediately. It does not reopen while the pointer or focus still engages the trigger or panel. After both disengage, a fresh entry can open it again.
+Escape closes immediately. When panel content can hold focus, set `focusTriggerSelector` so Escape returns focus to the trigger before removing the panel. It does not reopen while the pointer or focus still engages the trigger or panel. After both disengage, a fresh entry can open it again.
 
 ## API Reference
 
@@ -51,6 +51,13 @@ Processes pointer, focus, Escape, and wait-completion Messages. `Opened` and `Cl
 
 Builds headless trigger and panel event bundles, then calls `ViewInputs.toView`. It does not assign markup, semantics, positioning, or styling.
 
+### ViewInputs {#view-inputs}
+
+| Name                   | Type                           | Description                                                                               |
+| ---------------------- | ------------------------------ | ----------------------------------------------------------------------------------------- |
+| `focusTriggerSelector` | `string \| undefined`          | Selector for the trigger that receives focus when Escape dismisses focused panel content. |
+| `toView`               | `(render: RenderInfo) => Html` | Renders the consumer-owned markup from Hover Intent's event bundles and visibility state. |
+
 ### RenderInfo {#render-info}
 
 | Name        | Type                            | Description                                                                   |
@@ -61,7 +68,7 @@ Builds headless trigger and panel event bundles, then calls `ViewInputs.toView`.
 
 ### Message
 
-`EnteredTrigger`, `LeftTrigger`, `EnteredPanel`, and `LeftPanel` describe pointer movement. `FocusedTrigger`, `BlurredTrigger`, `FocusedPanel`, and `BlurredPanel` describe focus movement. `PressedEscape` dismisses the interaction. `CompletedWaitBeforeOpening` and `CompletedWaitBeforeClosing` are produced only by the exported wait Commands.
+`EnteredTrigger`, `LeftTrigger`, `EnteredPanel`, and `LeftPanel` describe pointer movement. `FocusedTrigger`, `BlurredTrigger`, `FocusedPanel`, and `BlurredPanel` describe focus movement. `PressedEscape` records whether Escape came from the trigger or panel and whether focus returned to the trigger. `CompletedWaitBeforeOpening` and `CompletedWaitBeforeClosing` are produced only by the exported wait Commands.
 
 ### OutMessage {#out-message}
 

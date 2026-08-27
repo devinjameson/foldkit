@@ -50,21 +50,33 @@ GotHoverIntentMessage: ({ message }) => foldHoverIntent(model, message)
 // Spread trigger attributes on the activator. Spread panel attributes on the
 // content. Hover Intent owns events only, so this component chooses the role,
 // anchor, and styles around those elements.
+const triggerId = 'account-preview-trigger'
+const panelId = 'account-preview-panel'
+
 const view = (h: HtmlBuilder<Message>) =>
   h.submodel({
     slotId: 'account-preview',
     model: model.hoverIntent,
     view: HoverIntent.view,
     viewInputs: {
+      focusTriggerSelector: `#${triggerId}`,
       toView: ({ trigger, panel, isVisible }) =>
         h.div(
           [],
           [
-            h.button([...trigger], ['Preview account']),
+            h.button(
+              [
+                ...trigger,
+                h.Id(triggerId),
+                h.AriaControls(panelId),
+                h.AriaExpanded(isVisible),
+              ],
+              ['Preview account'],
+            ),
             ...(isVisible
               ? [
                   h.div(
-                    [...panel],
+                    [...panel, h.Id(panelId)],
                     [h.a([h.Href('/account')], ['Open account'])],
                   ),
                 ]

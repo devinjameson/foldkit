@@ -11,7 +11,10 @@ export const Message = defineMessageUnion({
   BlurredTrigger: {},
   FocusedPanel: {},
   BlurredPanel: {},
-  PressedEscape: {},
+  PressedEscape: {
+    source: S.Literals(['Trigger', 'Panel']),
+    isFocusReturnedToTrigger: S.Boolean,
+  },
   CompletedWaitBeforeOpening: { version: S.Number },
   CompletedWaitBeforeClosing: { version: S.Number },
 })
