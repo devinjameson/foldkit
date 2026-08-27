@@ -10,3 +10,6 @@ Sitemap: https://foldkit.dev/sitemap.xml
 # https://foldkit.dev/llms.txt
 # https://foldkit.dev/llms-full.txt
 # https://foldkit.dev/openapi.json
+#
+# Read-only JSON content API, documented at https://foldkit.dev/api
+# https://foldkit.dev/api/v1

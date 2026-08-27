@@ -3,9 +3,7 @@ import { Command, given, message, model, story } from 'foldkit/story'
 import { describe, expect, test } from 'vitest'
 
 import {
-  ConnectionConnected,
-  ConnectionConnecting,
-  ConnectionDisconnected,
+  ConnectionState,
   Message,
   type Model,
   SendMessage,
@@ -15,43 +13,46 @@ import {
 } from './main'
 
 const idleModel: Model = {
-  connection: ConnectionDisconnected(),
+  connection: ConnectionState.Disconnected(),
   messages: [],
   messageInput: '',
 }
 
 const connectedModel: Model = {
   ...idleModel,
-  connection: ConnectionConnected(),
+  connection: ConnectionState.Connected(),
 }
 
 const zonedNow = DateTime.makeZonedUnsafe(0, { timeZone: 'UTC' })
 
 describe('update', () => {
   describe('connection state', () => {
-    test('ClickedConnect moves into ConnectionConnecting', () => {
+    test('ClickedConnect moves into Connecting', () => {
       story(
         update,
         given(idleModel),
         message(Message.ClickedConnect()),
         model(model => {
-          expect(model.connection._tag).toBe('ConnectionConnecting')
+          expect(model.connection._tag).toBe('Connecting')
         }),
       )
     })
 
-    test('Connected moves into ConnectionConnected', () => {
+    test('Connected moves into Connected', () => {
       story(
         update,
-        given({ ...idleModel, connection: ConnectionConnecting() }),
+        given({
+          ...idleModel,
+          connection: ConnectionState.Connecting(),
+        }),
         message(Message.Connected()),
         model(model => {
-          expect(model.connection._tag).toBe('ConnectionConnected')
+          expect(model.connection._tag).toBe('Connected')
         }),
       )
     })
 
-    test('Disconnected returns to ConnectionDisconnected and clears messages', () => {
+    test('Disconnected returns to Disconnected and clears messages', () => {
       story(
         update,
         given({
@@ -60,7 +61,7 @@ describe('update', () => {
         }),
         message(Message.Disconnected()),
         model(model => {
-          expect(model.connection._tag).toBe('ConnectionDisconnected')
+          expect(model.connection._tag).toBe('Disconnected')
           expect(model.messages).toHaveLength(0)
         }),
       )
@@ -69,13 +70,16 @@ describe('update', () => {
     test('FailedConnect captures the error message', () => {
       story(
         update,
-        given({ ...idleModel, connection: ConnectionConnecting() }),
+        given({
+          ...idleModel,
+          connection: ConnectionState.Connecting(),
+        }),
         message(Message.FailedConnect({ error: 'Timeout' })),
         model(model => {
-          if (model.connection._tag === 'ConnectionError') {
+          if (model.connection._tag === 'Error') {
             expect(model.connection.error).toBe('Timeout')
           } else {
-            throw new Error('Expected ConnectionError')
+            throw new Error('Expected Error')
           }
         }),
       )

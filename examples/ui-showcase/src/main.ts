@@ -12,7 +12,7 @@ import {
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 import { UrlRequest, load, pushUrl } from 'foldkit/navigation'
-import { literal, r } from 'foldkit/route'
+import { defineRouteUnion, literal } from 'foldkit/route'
 import { evo } from 'foldkit/struct'
 import { Url, toString as urlToString } from 'foldkit/url'
 
@@ -28,103 +28,82 @@ import * as View from './ui/view'
 
 // ROUTE
 
-export const HomeRoute = r('Home')
-export const ButtonRoute = r('Button')
-export const CalendarRoute = r('Calendar')
-export const CheckboxRoute = r('Checkbox')
-export const ComboboxRoute = r('Combobox')
-export const DatePickerRoute = r('DatePicker')
-export const DialogRoute = r('Dialog')
-export const DisclosureRoute = r('Disclosure')
-export const DragAndDropRoute = r('DragAndDrop')
-export const FieldsetRoute = r('Fieldset')
-export const FileDropRoute = r('FileDrop')
-export const InputRoute = r('Input')
-export const ListboxRoute = r('Listbox')
-export const MenuRoute = r('Menu')
-export const PopoverRoute = r('Popover')
-export const RadioGroupRoute = r('RadioGroup')
-export const SelectRoute = r('Select')
-export const SliderRoute = r('Slider')
-export const SwitchRoute = r('Switch')
-export const TabsRoute = r('Tabs')
-export const TextareaRoute = r('Textarea')
-export const ToastRoute = r('Toast')
-export const TooltipRoute = r('Tooltip')
-export const AnimationRoute = r('Animation')
-export const VirtualListRoute = r('VirtualList')
-export const NotFoundRoute = r('NotFound', { path: S.String })
+export const AppRoute = defineRouteUnion({
+  Home: {},
+  Button: {},
+  Calendar: {},
+  Checkbox: {},
+  Combobox: {},
+  DatePicker: {},
+  Dialog: {},
+  Disclosure: {},
+  DragAndDrop: {},
+  Fieldset: {},
+  FileDrop: {},
+  Input: {},
+  Listbox: {},
+  Menu: {},
+  Popover: {},
+  RadioGroup: {},
+  Select: {},
+  Slider: {},
+  Switch: {},
+  Tabs: {},
+  Textarea: {},
+  Toast: {},
+  Tooltip: {},
+  Animation: {},
+  VirtualList: {},
+  NotFound: { path: S.String },
+})
 
-const AppRoute = S.Union([
-  HomeRoute,
-  ButtonRoute,
-  CalendarRoute,
-  CheckboxRoute,
-  ComboboxRoute,
-  DatePickerRoute,
-  DialogRoute,
-  DisclosureRoute,
-  DragAndDropRoute,
-  FieldsetRoute,
-  FileDropRoute,
-  InputRoute,
-  ListboxRoute,
-  MenuRoute,
-  PopoverRoute,
-  RadioGroupRoute,
-  SelectRoute,
-  SliderRoute,
-  SwitchRoute,
-  TabsRoute,
-  TextareaRoute,
-  ToastRoute,
-  TooltipRoute,
-  AnimationRoute,
-  VirtualListRoute,
-  NotFoundRoute,
-])
+export type AppRoute = typeof AppRoute.Type
 
-type AppRoute = typeof AppRoute.Type
-
-const homeRouter = pipe(Route.root, Route.mapTo(HomeRoute))
-const buttonRouter = pipe(literal('button'), Route.mapTo(ButtonRoute))
-const calendarRouter = pipe(literal('calendar'), Route.mapTo(CalendarRoute))
-const checkboxRouter = pipe(literal('checkbox'), Route.mapTo(CheckboxRoute))
-const comboboxRouter = pipe(literal('combobox'), Route.mapTo(ComboboxRoute))
+const homeRouter = pipe(Route.root, Route.mapTo(AppRoute.Home))
+const buttonRouter = pipe(literal('button'), Route.mapTo(AppRoute.Button))
+const calendarRouter = pipe(literal('calendar'), Route.mapTo(AppRoute.Calendar))
+const checkboxRouter = pipe(literal('checkbox'), Route.mapTo(AppRoute.Checkbox))
+const comboboxRouter = pipe(literal('combobox'), Route.mapTo(AppRoute.Combobox))
 const datePickerRouter = pipe(
   literal('date-picker'),
-  Route.mapTo(DatePickerRoute),
+  Route.mapTo(AppRoute.DatePicker),
 )
-const dialogRouter = pipe(literal('dialog'), Route.mapTo(DialogRoute))
+const dialogRouter = pipe(literal('dialog'), Route.mapTo(AppRoute.Dialog))
 const disclosureRouter = pipe(
   literal('disclosure'),
-  Route.mapTo(DisclosureRoute),
+  Route.mapTo(AppRoute.Disclosure),
 )
 const dragAndDropRouter = pipe(
   literal('drag-and-drop'),
-  Route.mapTo(DragAndDropRoute),
+  Route.mapTo(AppRoute.DragAndDrop),
 )
-const fieldsetRouter = pipe(literal('fieldset'), Route.mapTo(FieldsetRoute))
-const fileDropRouter = pipe(literal('file-drop'), Route.mapTo(FileDropRoute))
-const inputRouter = pipe(literal('input'), Route.mapTo(InputRoute))
-const listboxRouter = pipe(literal('listbox'), Route.mapTo(ListboxRoute))
-const menuRouter = pipe(literal('menu'), Route.mapTo(MenuRoute))
-const popoverRouter = pipe(literal('popover'), Route.mapTo(PopoverRoute))
+const fieldsetRouter = pipe(literal('fieldset'), Route.mapTo(AppRoute.Fieldset))
+const fileDropRouter = pipe(
+  literal('file-drop'),
+  Route.mapTo(AppRoute.FileDrop),
+)
+const inputRouter = pipe(literal('input'), Route.mapTo(AppRoute.Input))
+const listboxRouter = pipe(literal('listbox'), Route.mapTo(AppRoute.Listbox))
+const menuRouter = pipe(literal('menu'), Route.mapTo(AppRoute.Menu))
+const popoverRouter = pipe(literal('popover'), Route.mapTo(AppRoute.Popover))
 const radioGroupRouter = pipe(
   literal('radio-group'),
-  Route.mapTo(RadioGroupRoute),
+  Route.mapTo(AppRoute.RadioGroup),
 )
-const selectRouter = pipe(literal('select'), Route.mapTo(SelectRoute))
-const sliderRouter = pipe(literal('slider'), Route.mapTo(SliderRoute))
-const switchRouter = pipe(literal('switch'), Route.mapTo(SwitchRoute))
-const tabsRouter = pipe(literal('tabs'), Route.mapTo(TabsRoute))
-const textareaRouter = pipe(literal('textarea'), Route.mapTo(TextareaRoute))
-const toastRouter = pipe(literal('toast'), Route.mapTo(ToastRoute))
-const tooltipRouter = pipe(literal('tooltip'), Route.mapTo(TooltipRoute))
-const animationRouter = pipe(literal('animation'), Route.mapTo(AnimationRoute))
+const selectRouter = pipe(literal('select'), Route.mapTo(AppRoute.Select))
+const sliderRouter = pipe(literal('slider'), Route.mapTo(AppRoute.Slider))
+const switchRouter = pipe(literal('switch'), Route.mapTo(AppRoute.Switch))
+const tabsRouter = pipe(literal('tabs'), Route.mapTo(AppRoute.Tabs))
+const textareaRouter = pipe(literal('textarea'), Route.mapTo(AppRoute.Textarea))
+const toastRouter = pipe(literal('toast'), Route.mapTo(AppRoute.Toast))
+const tooltipRouter = pipe(literal('tooltip'), Route.mapTo(AppRoute.Tooltip))
+const animationRouter = pipe(
+  literal('animation'),
+  Route.mapTo(AppRoute.Animation),
+)
 const virtualListRouter = pipe(
   literal('virtual-list'),
-  Route.mapTo(VirtualListRoute),
+  Route.mapTo(AppRoute.VirtualList),
 )
 
 const routeParser = Route.oneOf(
@@ -155,7 +134,7 @@ const routeParser = Route.oneOf(
   homeRouter,
 )
 
-const urlToAppRoute = Route.parseUrlWithFallback(routeParser, NotFoundRoute)
+const urlToAppRoute = Route.parseUrlWithFallback(routeParser, AppRoute.NotFound)
 
 // MODEL
 

@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier -w .",
     "test": "vitest run",
+    "openapi": "tsx scripts/openApi.ts",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
@@ -22,7 +23,7 @@
     "preview:search": "pnpm build && pnpm prerender && vite preview"
   },
   "dependencies": {
-    "@effect/platform-browser": "4.0.0-rc.111",
+    "@effect/platform-browser": "4.0.0-rc.112",
     "@foldkit/devtools": "workspace:*",
     "@foldkit/markdown": "workspace:*",
     "@foldkit/ui": "workspace:*",
@@ -30,14 +31,14 @@
     "@vercel/speed-insights": "^2.0.0",
     "@webcontainer/api": "^1.6.4",
     "clsx": "^2.1.1",
-    "effect": "4.0.0-rc.111",
+    "effect": "4.0.0-rc.112",
     "foldkit": "workspace:*",
     "monaco-editor": "^0.55.1",
     "shiki": "^4.2.0",
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
-    "@effect/platform-node": "4.0.0-rc.111",
+    "@effect/platform-node": "4.0.0-rc.112",
     "@foldkit/vite-plugin": "workspace:*",
     "@playwright/test": "^1.61.0",
     "@resvg/resvg-js": "^2.6.2",

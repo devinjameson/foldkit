@@ -1,8 +1,8 @@
-import { defineMessageUnion } from 'foldkit/message'
+import { defineTaggedUnion } from 'foldkit/schema'
 
-const Message = defineMessageUnion({
-  ClickedSave: {},
+const Submission = defineTaggedUnion({
+  NotSubmitted: {},
+  Submitting: {},
 })
 
-
-const badMessage = Message.ClickedSave({})
+const badSubmission = Submission.NotSubmitted({})

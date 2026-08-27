@@ -49,6 +49,8 @@ const PortalToBody = Mount.define('PortalToBody', {
 
 `Mount.defineStream` migrates the same way, with `execute` returning a `Stream<Message>`.
 
+`@foldkit/ui` now requires `foldkit` 0.154.0 or newer because its Mount definitions use this config shape.
+
 `foldkit/mount-factory-must-use-element` reads the new shape. It looks for `element` in `execute`'s destructuring pattern, and reports on `execute` itself. A Mount whose `execute` ignores its element is still an error: the element is the reason a Mount exists, and work that does not need it belongs in a Command, Subscription, or ManagedResource.
 
 Destructure `element` and the rule checks the read, reading through a default value so `{ element = document.body }` is still checked. Reading `input.element` off an unpacked parameter is checked too. Hand the whole input somewhere the rule cannot follow, such as `attachObserver(input)` or `input[key]`, and it stops checking rather than reporting a Mount that does use its element. Reading only some other field off that input still reports, and so does an `execute` that never references its parameter at all.

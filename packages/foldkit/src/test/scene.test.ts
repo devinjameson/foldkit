@@ -63,6 +63,11 @@ import {
   view as fileUploadView,
 } from './apps/fileUpload.js'
 import {
+  initialModel as focusBoundaryInitialModel,
+  update as focusBoundaryUpdate,
+  view as focusBoundaryView,
+} from './apps/focusBoundary.js'
+import {
   initialModel as interactionsInitialModel,
   update as interactionsUpdate,
   view as interactionsView,
@@ -2185,6 +2190,20 @@ describe('scene with extra interactions', () => {
     )
   })
 
+  test('focusEnter and focusLeave drive a focus region', () => {
+    const editorRegion = Scene.role('region', { name: 'Editor' })
+
+    Scene.scene(
+      { update: focusBoundaryUpdate, view: focusBoundaryView },
+      Scene.given(focusBoundaryInitialModel),
+      Scene.expect(editorRegion).toContainText('focus=Outside'),
+      Scene.focusEnter(editorRegion),
+      Scene.expect(editorRegion).toContainText('focus=Within'),
+      Scene.focusLeave(editorRegion),
+      Scene.expect(editorRegion).toContainText('focus=Outside'),
+    )
+  })
+
   test('change fires change handler with the new value', () => {
     Scene.scene(
       { update: interactionsUpdate, view: interactionsView },
@@ -2941,6 +2960,24 @@ const mixedArityUpdate = (model: LogoutModel, message: LogoutMessage) =>
     CompletedAction: () => ({ model }),
   })
 
+const outMessageBubblingView = (
+  model: LogoutModel,
+  h: HtmlBuilder<LogoutMessage>,
+) =>
+  h.div(
+    [h.OnClick(LogoutButtonMessage.CompletedAction())],
+    [h.button([h.OnClick(LogoutButtonMessage.ClickedLogout())], [model.label])],
+  )
+
+const multipleOutMessagesView = (
+  model: LogoutModel,
+  h: HtmlBuilder<LogoutMessage>,
+) =>
+  h.div(
+    [h.OnClick(LogoutButtonMessage.ClickedLogout())],
+    [h.button([h.OnClick(LogoutButtonMessage.ClickedLogout())], [model.label])],
+  )
+
 describe('Scene.expectOutMessage and Scene.expectNoOutMessage', () => {
   test('assert the OutMessage across steps', () => {
     Scene.scene(
@@ -2997,6 +3034,25 @@ describe('Scene.expectOutMessage and Scene.expectNoOutMessage', () => {
       Scene.Subscription.emit(LogoutButtonMessage.CompletedAction()),
       Scene.expectNoOutMessage(),
     )
+  })
+
+  test('preserves an OutMessage followed by a Message without one', () => {
+    Scene.scene(
+      { update: mixedArityUpdate, view: outMessageBubblingView },
+      Scene.given(logoutInitialModel),
+      Scene.click(Scene.role('button', { name: 'Log out' })),
+      Scene.expectOutMessage(OutMessage.RequestedLogout()),
+    )
+  })
+
+  test('fails explicitly when one interaction emits multiple OutMessages', () => {
+    expect(() =>
+      Scene.scene(
+        { update: mixedArityUpdate, view: multipleOutMessagesView },
+        Scene.given(logoutInitialModel),
+        Scene.click(Scene.role('button', { name: 'Log out' })),
+      ),
+    ).toThrow('One interaction emitted multiple OutMessages')
   })
 })
 
@@ -3375,6 +3431,66 @@ describe('scene with click bubbling', () => {
       Scene.given(bubblingInitialModel),
       Scene.click(Scene.text('clicks=0')),
       Scene.expect(Scene.text('clicks=1')).toExist(),
+    )
+  })
+
+  test('click invokes handlers on the target and its ancestor', () => {
+    Scene.scene(
+      { update: bubblingUpdate, view: bubblingView },
+      Scene.given(bubblingInitialModel),
+      Scene.click(Scene.role('button', { name: 'Bubbling child' })),
+      Scene.expect(Scene.text('child clicks=1')).toExist(),
+      Scene.expect(Scene.text('clicks=1')).toExist(),
+    )
+  })
+
+  test('click stops before an ancestor when propagation is stopped', () => {
+    Scene.scene(
+      { update: bubblingUpdate, view: bubblingView },
+      Scene.given(bubblingInitialModel),
+      Scene.click(Scene.role('button', { name: 'Stopped child' })),
+      Scene.expect(Scene.text('stopped child clicks=1')).toExist(),
+      Scene.expect(Scene.text('clicks=0')).toExist(),
+    )
+  })
+
+  test('click submits a form when its default action is allowed', () => {
+    Scene.scene(
+      { update: bubblingUpdate, view: bubblingView },
+      Scene.given(bubblingInitialModel),
+      Scene.click(Scene.text('Submit with default')),
+      Scene.expect(Scene.text('child clicks=1')).toExist(),
+      Scene.expect(Scene.text('submissions=1')).toExist(),
+    )
+  })
+
+  test('click uses a submit button explicit form owner', () => {
+    Scene.scene(
+      { update: bubblingUpdate, view: bubblingView },
+      Scene.given(bubblingInitialModel),
+      Scene.click(Scene.role('button', { name: 'Submit through form owner' })),
+      Scene.expect(Scene.text('child clicks=1')).toExist(),
+      Scene.expect(Scene.text('submissions=1')).toExist(),
+    )
+  })
+
+  test('an invalid button type defaults to submit', () => {
+    Scene.scene(
+      { update: bubblingUpdate, view: bubblingView },
+      Scene.given(bubblingInitialModel),
+      Scene.click(Scene.role('button', { name: 'Submit with invalid type' })),
+      Scene.expect(Scene.text('child clicks=1')).toExist(),
+      Scene.expect(Scene.text('submissions=1')).toExist(),
+    )
+  })
+
+  test('click does not submit a form when its default action is prevented', () => {
+    Scene.scene(
+      { update: bubblingUpdate, view: bubblingView },
+      Scene.given(bubblingInitialModel),
+      Scene.click(Scene.role('button', { name: 'Submit without default' })),
+      Scene.expect(Scene.text('child clicks=1')).toExist(),
+      Scene.expect(Scene.text('submissions=0')).toExist(),
     )
   })
 

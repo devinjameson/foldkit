@@ -31,6 +31,7 @@ const isEmptyCommandsProperty = (property: ESTree.ObjectProperty): boolean =>
   Array.isReadonlyArrayEmpty(property.value.elements)
 
 const removalRange = (
+  sourceText: string,
   object: ESTree.ObjectExpression,
   property: ESTree.ObjectProperty,
   index: number,
@@ -45,7 +46,16 @@ const removalRange = (
     return [property.start, maybeNext.value.start]
   }
 
-  return property.range
+  const trailingComma = /^\s*,/.exec(sourceText.slice(property.end, object.end))
+  if (trailingComma === null) {
+    return property.range
+  }
+  const maybeMatchedText = Array.head(trailingComma)
+  if (Option.isNone(maybeMatchedText)) {
+    return property.range
+  }
+
+  return [property.start, property.end + maybeMatchedText.value.length]
 }
 
 const emptyCommandsMessage =
@@ -75,6 +85,13 @@ export const noEmptyCommandsArray = Rule.define({
           node.properties,
           property => property.type === 'SpreadElement',
         )
+        const hasDynamicComputedProperty = Array.some(
+          node.properties,
+          property =>
+            isObjectProperty(property) &&
+            property.computed &&
+            Option.isNone(staticPropertyName(property)),
+        )
         const commandProperties = Array.filter(
           node.properties,
           property =>
@@ -101,6 +118,7 @@ export const noEmptyCommandsArray = Rule.define({
             })
             if (
               hasSpread ||
+              hasDynamicComputedProperty ||
               hasComments ||
               Array.isReadonlyArrayNonEmpty(Array.drop(commandProperties, 1))
             ) {
@@ -109,7 +127,9 @@ export const noEmptyCommandsArray = Rule.define({
 
             return ctx.report(
               Diagnostic.withFix(diagnostic, fixer =>
-                fixer.removeRange(removalRange(node, property, index)),
+                fixer.removeRange(
+                  removalRange(ctx.sourceCode.text, node, property, index),
+                ),
               ),
             )
           },

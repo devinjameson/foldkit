@@ -16,7 +16,6 @@ import {
 import { People } from './page'
 import {
   AppRoute,
-  PeopleRoute,
   filesIndexRouter,
   filesRouter,
   homeRouter,
@@ -25,16 +24,7 @@ import {
   urlToAppRoute,
 } from './route'
 
-export {
-  AppRoute,
-  FilesIndexRoute,
-  FilesRoute,
-  HomeRoute,
-  NestedRoute,
-  NotFoundRoute,
-  PeopleRoute,
-  PersonRoute,
-} from './route'
+export { AppRoute } from './route'
 
 // MODEL
 
@@ -66,7 +56,7 @@ export const init: Runtime.RoutingApplicationInit<Model, Message> = (
 
   const initialPeopleRoute = M.value(route).pipe(
     M.tag('People', peopleRoute => peopleRoute),
-    M.orElse(() => PeopleRoute({ searchText: Option.none() })),
+    M.orElse(() => AppRoute.People({ searchText: Option.none() })),
   )
 
   const peopleInit = People.init(initialPeopleRoute)

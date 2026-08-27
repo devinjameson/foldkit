@@ -20,7 +20,7 @@ import {
 } from 'foldkit'
 import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
-import { ts } from 'foldkit/schema'
+import { defineTaggedUnion } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 import notePlayerDemoCodeHtml from 'virtual:note-player-demo-code'
 
@@ -81,16 +81,11 @@ const noteInputRules = FieldValidation.makeRules({
   ],
 })
 
-const Idle = ts('Idle')
-const Playing = ts('Playing', {
-  noteSequence: S.Array(Note),
-  currentNoteIndex: S.Number,
+const PlaybackState = defineTaggedUnion({
+  Idle: {},
+  Playing: { noteSequence: S.Array(Note), currentNoteIndex: S.Number },
+  Paused: { noteSequence: S.Array(Note), currentNoteIndex: S.Number },
 })
-const Paused = ts('Paused', {
-  noteSequence: S.Array(Note),
-  currentNoteIndex: S.Number,
-})
-const PlaybackState = S.Union([Idle, Playing, Paused])
 
 const NoteHighlightPhase = S.Literals([
   'Idle',
@@ -105,10 +100,11 @@ const NoteHighlightPhase = S.Literals([
 ])
 type NoteHighlightPhase = typeof NoteHighlightPhase.Type
 
-const AudioAcquiring = ts('AudioAcquiring')
-const AudioReady = ts('AudioReady')
-const AudioUnavailable = ts('AudioUnavailable')
-const AudioState = S.Union([AudioAcquiring, AudioReady, AudioUnavailable])
+const AudioState = defineTaggedUnion({
+  Acquiring: {},
+  Ready: {},
+  Unavailable: {},
+})
 type AudioState = typeof AudioState.Type
 
 export const Model = S.Struct({
@@ -169,11 +165,11 @@ export const init = (): UpdateReturn => ({
       id: NOTE_DURATION_RADIO_GROUP_ID,
     }),
     noteDuration: 'Medium',
-    playbackState: Idle(),
+    playbackState: PlaybackState.Idle(),
     highlightPhase: 'Idle',
     generation: 0,
     messageLog: [],
-    audio: AudioAcquiring(),
+    audio: AudioState.Acquiring(),
   },
 })
 
@@ -202,7 +198,7 @@ const enterNoteCommandPhase = (
 ): UpdateReturn => ({
   model: evo(model, {
     playbackState: () =>
-      Playing({
+      PlaybackState.Playing({
         noteSequence,
         currentNoteIndex: noteIndex,
       }),
@@ -253,7 +249,7 @@ export const update = (model: Model, message: Message) =>
       return {
         model: evo(model, {
           noteInput: () => fieldState,
-          playbackState: () => Idle(),
+          playbackState: () => PlaybackState.Idle(),
           highlightPhase: () => 'Idle',
         }),
       }
@@ -272,7 +268,7 @@ export const update = (model: Model, message: Message) =>
           if (resumeIndex >= noteSequence.length) {
             return {
               model: evo(model, {
-                playbackState: () => Idle(),
+                playbackState: () => PlaybackState.Idle(),
                 highlightPhase: () => 'Idle',
                 messageLog: prependToLog('ClickedPlay'),
               }),
@@ -284,7 +280,7 @@ export const update = (model: Model, message: Message) =>
           return {
             model: evo(model, {
               playbackState: () =>
-                Playing({
+                PlaybackState.Playing({
                   noteSequence,
                   currentNoteIndex: resumeIndex,
                 }),
@@ -310,7 +306,7 @@ export const update = (model: Model, message: Message) =>
           return {
             model: evo(model, {
               playbackState: () =>
-                Playing({
+                PlaybackState.Playing({
                   noteSequence,
                   currentNoteIndex: 0,
                 }),
@@ -333,7 +329,7 @@ export const update = (model: Model, message: Message) =>
           return {
             model: evo(model, {
               playbackState: () =>
-                Paused({
+                PlaybackState.Paused({
                   noteSequence,
                   currentNoteIndex,
                 }),
@@ -349,7 +345,7 @@ export const update = (model: Model, message: Message) =>
 
     ClickedStop: () => ({
       model: evo(model, {
-        playbackState: () => Idle(),
+        playbackState: () => PlaybackState.Idle(),
         highlightPhase: () => 'Idle',
         messageLog: prependToLog('ClickedStop'),
       }),
@@ -421,7 +417,7 @@ export const update = (model: Model, message: Message) =>
           if (nextIndex >= noteSequence.length) {
             return {
               model: evo(model, {
-                playbackState: () => Idle(),
+                playbackState: () => PlaybackState.Idle(),
                 highlightPhase: () => 'Idle',
               }),
             }
@@ -435,11 +431,11 @@ export const update = (model: Model, message: Message) =>
     },
 
     SucceededAcquireAudioContext: () => ({
-      model: evo(model, { audio: () => AudioReady() }),
+      model: evo(model, { audio: () => AudioState.Ready() }),
     }),
 
     FailedAcquireAudioContext: () => ({
-      model: evo(model, { audio: () => AudioUnavailable() }),
+      model: evo(model, { audio: () => AudioState.Unavailable() }),
     }),
 
     ReleasedAudioContext: () => ({ model }),
@@ -824,7 +820,7 @@ const playbackControlView = (
 const audioUnavailableNoticeView = (audio: AudioState): ReadonlyArray<Html> =>
   M.value(audio).pipe(
     M.withReturnType<ReadonlyArray<Html>>(),
-    M.tag('AudioUnavailable', () => [
+    M.tag('Unavailable', () => [
       ih.p(
         [ih.Class('text-xs text-amber-600 dark:text-amber-500')],
         ['No audio output in this browser, so playback stays silent.'],
@@ -922,12 +918,12 @@ const playbackStateLabel = (model: Model): string =>
     M.tag(
       'Playing',
       ({ currentNoteIndex, noteSequence }) =>
-        `Playing(${currentNoteIndex + 1}/${noteSequence.length})`,
+        `PlaybackState.Playing(${currentNoteIndex + 1}/${noteSequence.length})`,
     ),
     M.tag(
       'Paused',
       ({ currentNoteIndex, noteSequence }) =>
-        `Paused(${currentNoteIndex + 1}/${noteSequence.length})`,
+        `PlaybackState.Paused(${currentNoteIndex + 1}/${noteSequence.length})`,
     ),
     M.exhaustive,
   )

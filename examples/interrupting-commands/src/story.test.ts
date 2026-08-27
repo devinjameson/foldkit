@@ -57,7 +57,7 @@ describe('update', () => {
         CancelUploadFile({ uploadId: 0 }),
         Message.CompletedCancelUploadFile({
           uploadId: 0,
-          outcome: Interruptible.Interrupted(),
+          outcome: Interruptible.Outcome.Interrupted(),
         }),
       ),
       Command.expectNone(),
@@ -83,7 +83,7 @@ describe('update', () => {
         CancelUploadFile({ uploadId: 0 }),
         Message.CompletedCancelUploadFile({
           uploadId: 0,
-          outcome: Interruptible.NotFound(),
+          outcome: Interruptible.Outcome.NotFound(),
         }),
       ),
       model(model => {
@@ -105,7 +105,7 @@ describe('update', () => {
         CancelUploadFile({ uploadId: 0 }),
         Message.CompletedCancelUploadFile({
           uploadId: 0,
-          outcome: Interruptible.Interrupted(),
+          outcome: Interruptible.Outcome.Interrupted(),
         }),
       ),
       Command.expectExact(
@@ -135,7 +135,7 @@ describe('update', () => {
         CancelUploadFile({ uploadId: 0 }),
         Message.CompletedCancelUploadFile({
           uploadId: 0,
-          outcome: Interruptible.Interrupted(),
+          outcome: Interruptible.Outcome.Interrupted(),
         }),
       ),
       Command.resolve(
@@ -161,7 +161,7 @@ describe('update', () => {
         CancelUploadFile({ uploadId: 0 }),
         Message.CompletedCancelUploadFile({
           uploadId: 0,
-          outcome: Interruptible.Interrupted(),
+          outcome: Interruptible.Outcome.Interrupted(),
         }),
       ),
       message(Message.ClickedRestartUpload({ uploadId: 0 })),
@@ -201,14 +201,14 @@ describe('update', () => {
         CancelUploadFile({ uploadId: 0 }),
         Message.CompletedCancelUploadFile({
           uploadId: 0,
-          outcome: Interruptible.Interrupted(),
+          outcome: Interruptible.Outcome.Interrupted(),
         }),
       ),
       Command.resolve(
         CancelUploadFile({ uploadId: 2 }),
         Message.CompletedCancelUploadFile({
           uploadId: 2,
-          outcome: Interruptible.Interrupted(),
+          outcome: Interruptible.Outcome.Interrupted(),
         }),
       ),
       Command.expectNone(),

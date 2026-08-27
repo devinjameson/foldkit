@@ -19,13 +19,12 @@ import {
   pipe,
 } from 'effect'
 import {
-  type EventConnected,
-  type EventDisconnected,
+  Event as DevToolsEvent,
   EventFrame,
   RequestFrame,
+  Response,
   ResponseFrame,
-  ResponseRuntimes,
-  type RuntimeInfo,
+  RuntimeInfo,
 } from 'foldkit/devtools-protocol'
 import {
   PreserveModelMessage,
@@ -326,7 +325,7 @@ const handleBrowserEventFrameReceived = (
 
 const handleConnectedEvent = (
   state: State,
-  event: typeof EventConnected.Type,
+  event: typeof DevToolsEvent.EventConnected.Type,
   client: WebSocketClient,
 ) =>
   Effect.gen(function* () {
@@ -351,7 +350,7 @@ const handleConnectedEvent = (
 
 const handleDisconnectedEvent = (
   state: State,
-  event: typeof EventDisconnected.Type,
+  event: typeof DevToolsEvent.EventDisconnected.Type,
 ) =>
   Effect.gen(function* () {
     yield* Ref.update(
@@ -470,7 +469,7 @@ const replyListRuntimes = (
     )
     const responseFrame = {
       id: requestId,
-      response: ResponseRuntimes({ runtimes }),
+      response: Response.ResponseRuntimes({ runtimes }),
     }
     yield* Effect.sync(() => {
       if (client.readyState === client.OPEN) {

@@ -5,7 +5,7 @@ import { describe, expect, test } from 'vitest'
 import { FetchSearchResults, NavigateToResult, ScrollToResult } from './command'
 import { init } from './init'
 import { Message } from './message'
-import { Ok } from './model'
+import { SearchState } from './model'
 import { update } from './update'
 
 const init_ = init()
@@ -87,7 +87,7 @@ describe('search', () => {
       given(
         evo(init_.model, {
           query: () => 'routing',
-          searchState: () => Ok({ results: searchResults }),
+          searchState: () => SearchState.Ok({ results: searchResults }),
         }),
       ),
       message(Message.UpdatedSearchQuery({ query: 'testing' })),
@@ -141,7 +141,7 @@ describe('search', () => {
 
   test('arrow keys cycle through results', () => {
     const modelWithResults = evo(init_.model, {
-      searchState: () => Ok({ results: searchResults }),
+      searchState: () => SearchState.Ok({ results: searchResults }),
       activeResultIndex: () => 0,
     })
 
@@ -173,7 +173,7 @@ describe('search', () => {
       given(
         evo(init_.model, {
           query: () => 'routing',
-          searchState: () => Ok({ results: searchResults }),
+          searchState: () => SearchState.Ok({ results: searchResults }),
           activeResultIndex: () => 1,
         }),
       ),

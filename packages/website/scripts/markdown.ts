@@ -299,6 +299,7 @@ export const SECTION_ORDER: ReadonlyArray<string> = [
   'AI',
   'API Reference',
   'Blog',
+  'Site',
 ]
 
 const sectionRank = (section: string): number =>
@@ -353,13 +354,18 @@ How an agent works with Foldkit:
 const DEVELOPER_RESOURCES_SECTION = `## Developer Resources
 
 - [llms-full.txt](${SITE_URL}/llms-full.txt): Every documentation page concatenated into one Markdown file.
-- [openapi.json](${SITE_URL}/openapi.json): OpenAPI 3.1 description of this site's machine-readable content endpoints.
+- [Content API documentation](${SITE_URL}/api): The read-only JSON API for this site: endpoints, authentication, versioning and deprecation policy, rate limit headers, and the error model.
+- [Content API service index](${SITE_URL}/api/v1): The endpoint list and policies as JSON. Pages, sections, examples, and blog posts hang off it.
+- [openapi.json](${SITE_URL}/openapi.json): OpenAPI 3.1 description of this site's machine-readable content endpoints, with a typed schema for every response.
 - [Sitemap](${SITE_URL}/sitemap.xml): Every page URL on the site.
 - [AI overview](${SITE_URL}/ai/overview): How Foldkit's explicit architecture supports coding agents, and the resources available to them.
 - [Agent skills](${SITE_URL}/ai/skills): Installable repository skills for architecture guidance, program generation, and application audits.
 - [DevTools MCP server](${SITE_URL}/ai/mcp): Connect an agent to a running Foldkit application. Published on npm as @foldkit/devtools-mcp.
 - [GitHub repository](https://github.com/foldkit/foldkit): Source code, issues, and discussions.
-- [Blog RSS feed](${SITE_URL}/blog/rss.xml): Release announcements and deep dives.`
+- [Blog RSS feed](${SITE_URL}/blog/rss.xml): Release announcements and deep dives.
+- [About](${SITE_URL}/about): What Foldkit is, who builds it, and how it is released.
+- [Contact](${SITE_URL}/contact): Issues, chat, security reports, and contributions.
+- [Privacy](${SITE_URL}/privacy): What this site collects and what stays in your browser.`
 
 export const buildLlmsIndex = (
   entries: ReadonlyArray<LlmsIndexEntry>,

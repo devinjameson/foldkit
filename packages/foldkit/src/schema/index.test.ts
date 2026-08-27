@@ -1,11 +1,11 @@
 import { Effect, Option, Schema as S } from 'effect'
 import { describe, expect, it } from 'vitest'
 
-import { ts } from './index.js'
+import { taggedStruct } from './index.js'
 
-const ClickedReset = ts('ClickedReset')
-const ClickedItem = ts('ClickedItem', { id: S.String })
-const ExplicitTagField = ts('ExplicitTagField', {
+const ClickedReset = taggedStruct('ClickedReset')
+const ClickedItem = taggedStruct('ClickedItem', { id: S.String })
+const ExplicitTagField = taggedStruct('ExplicitTagField', {
   _tag: S.Literal('ExplicitTagField'),
 })
 
@@ -69,7 +69,7 @@ describe('makeCallable', () => {
   })
 
   it('matches make for a declared __proto__ field', () => {
-    const ChangedPrototypeLabel = ts('ChangedPrototypeLabel', {
+    const ChangedPrototypeLabel = taggedStruct('ChangedPrototypeLabel', {
       ['__proto__']: S.String,
     })
     const input = { ['__proto__']: 'label' }
@@ -228,17 +228,14 @@ describe('makeCallable', () => {
       ])
 
       expect(constructed).toStrictEqual(made)
-      expect(constructed).toStrictEqual({
-        _tag: 'ClickedItem',
-        id: 'item-1',
-      })
+      expect(constructed).toStrictEqual({ id: 'item-1' })
     } finally {
       restoreDescriptor()
     }
   })
 
   it('observes direct properties in the same order as make', () => {
-    const ChangedIndex = ts('ChangedIndex', { 0: S.Number })
+    const ChangedIndex = taggedStruct('ChangedIndex', { 0: S.Number })
     const makeInput = () => {
       const input = { 0: 1, _tag: 'ChangedIndex' }
       return new Proxy(input, {
@@ -359,7 +356,7 @@ describe('makeCallable', () => {
   })
 
   it('falls back to make for a checked field', () => {
-    const ChangedName = ts('ChangedName', { name: S.NonEmptyString })
+    const ChangedName = taggedStruct('ChangedName', { name: S.NonEmptyString })
     const input = { name: '' }
 
     expect(() => Reflect.apply(ChangedName.make, undefined, [input])).toThrow(
@@ -371,7 +368,7 @@ describe('makeCallable', () => {
   })
 
   it('finds a check nested inside a Struct field', () => {
-    const ChangedProfile = ts('ChangedProfile', {
+    const ChangedProfile = taggedStruct('ChangedProfile', {
       profile: S.Struct({ name: S.NonEmptyString }),
     })
     const input = { profile: { name: '' } }
@@ -385,13 +382,13 @@ describe('makeCallable', () => {
   })
 
   it('finds checks nested inside union members, tuple elements, and array rest', () => {
-    const ChangedUnion = ts('ChangedUnion', {
+    const ChangedUnion = taggedStruct('ChangedUnion', {
       value: S.Union([S.NonEmptyString, S.Number]),
     })
-    const ChangedTuple = ts('ChangedTuple', {
+    const ChangedTuple = taggedStruct('ChangedTuple', {
       value: S.Tuple([S.NonEmptyString]),
     })
-    const ChangedArray = ts('ChangedArray', {
+    const ChangedArray = taggedStruct('ChangedArray', {
       value: S.Array(S.NonEmptyString),
     })
 
@@ -407,7 +404,7 @@ describe('makeCallable', () => {
   })
 
   it('keeps an unchecked primitive union on the fast path', () => {
-    const ChangedValue = ts('ChangedValue', {
+    const ChangedValue = taggedStruct('ChangedValue', {
       value: S.Union([S.String, S.Number]),
     })
     const input = { value: true }
@@ -424,15 +421,17 @@ describe('makeCallable', () => {
   it('keeps every identity leaf category on the fast path', () => {
     const uniqueSymbol = Symbol('unique')
     const otherSymbol = Symbol('other')
-    const ChangedSymbol = ts('ChangedSymbol', { value: S.Symbol })
-    const ChangedUniqueSymbol = ts('ChangedUniqueSymbol', {
+    const ChangedSymbol = taggedStruct('ChangedSymbol', { value: S.Symbol })
+    const ChangedUniqueSymbol = taggedStruct('ChangedUniqueSymbol', {
       value: S.UniqueSymbol(uniqueSymbol),
     })
-    const ChangedObject = ts('ChangedObject', { value: S.ObjectKeyword })
-    const ChangedEnum = ts('ChangedEnum', {
+    const ChangedObject = taggedStruct('ChangedObject', {
+      value: S.ObjectKeyword,
+    })
+    const ChangedEnum = taggedStruct('ChangedEnum', {
       value: S.Enum({ Selected: 'Selected' }),
     })
-    const ChangedTemplate = ts('ChangedTemplate', {
+    const ChangedTemplate = taggedStruct('ChangedTemplate', {
       value: S.TemplateLiteral(['item-', S.String]),
     })
 
@@ -454,7 +453,7 @@ describe('makeCallable', () => {
   })
 
   it('falls back for suspended fields', () => {
-    const ChangedValue = ts('ChangedValue', {
+    const ChangedValue = taggedStruct('ChangedValue', {
       value: S.suspend(() => S.String),
     })
     const input = { value: 1 }
@@ -468,7 +467,7 @@ describe('makeCallable', () => {
   })
 
   it('rebuilds plain Struct and Array fields like make', () => {
-    const ChangedProfiles = ts('ChangedProfiles', {
+    const ChangedProfiles = taggedStruct('ChangedProfiles', {
       profile: S.Struct({ name: S.String }),
       profiles: S.Array(S.Struct({ name: S.String })),
     })
@@ -486,7 +485,7 @@ describe('makeCallable', () => {
   })
 
   it('preserves empty Struct identity like make', () => {
-    const ChangedValue = ts('ChangedValue', { value: S.Struct({}) })
+    const ChangedValue = taggedStruct('ChangedValue', { value: S.Struct({}) })
     const value = { extra: true }
     const made = ChangedValue.make({ value })
     const constructed = ChangedValue({ value })
@@ -498,7 +497,7 @@ describe('makeCallable', () => {
   it('rebuilds Array subclasses as plain Arrays like make', () => {
     class ProfileList extends globalThis.Array<{ name: string }> {}
 
-    const ChangedProfiles = ts('ChangedProfiles', {
+    const ChangedProfiles = taggedStruct('ChangedProfiles', {
       profiles: S.Array(S.Struct({ name: S.String })),
     })
     const profiles = new ProfileList()
@@ -511,7 +510,9 @@ describe('makeCallable', () => {
   })
 
   it('rebuilds Arrays from numeric indexes without using a custom iterator', () => {
-    const ChangedValues = ts('ChangedValues', { values: S.Array(S.String) })
+    const ChangedValues = taggedStruct('ChangedValues', {
+      values: S.Array(S.String),
+    })
     const values = ['first', 'second']
     values[Symbol.iterator] = function* () {
       yield 'iterator value'
@@ -526,7 +527,9 @@ describe('makeCallable', () => {
   })
 
   it('snapshots Array length before reading its items', () => {
-    const ChangedValues = ts('ChangedValues', { values: S.Array(S.Unknown) })
+    const ChangedValues = taggedStruct('ChangedValues', {
+      values: S.Array(S.Unknown),
+    })
     const makeValues = () => {
       const values = new globalThis.Array<unknown>(3)
       Object.defineProperty(values, 0, {
@@ -547,7 +550,9 @@ describe('makeCallable', () => {
   })
 
   it('writes Array items without reading Array.prototype.push', () => {
-    const ChangedValues = ts('ChangedValues', { values: S.Array(S.Unknown) })
+    const ChangedValues = taggedStruct('ChangedValues', {
+      values: S.Array(S.Unknown),
+    })
     const originalPush = globalThis.Array.prototype.push
     const makeValues = () => {
       const values = ['first', 'second']
@@ -575,7 +580,9 @@ describe('makeCallable', () => {
   })
 
   it('throws when an Array item cannot be assigned', () => {
-    const ChangedValues = ts('ChangedValues', { values: S.Array(S.Unknown) })
+    const ChangedValues = taggedStruct('ChangedValues', {
+      values: S.Array(S.Unknown),
+    })
     const originalDescriptor = Object.getOwnPropertyDescriptor(
       globalThis.Array.prototype,
       0,
@@ -617,7 +624,7 @@ describe('makeCallable', () => {
   })
 
   it('assigns raw object fields before constructing nested values', () => {
-    const ChangedChild = ts('ChangedChild', {
+    const ChangedChild = taggedStruct('ChangedChild', {
       child: S.Struct({ name: S.String }),
     })
     const originalDescriptor = Object.getOwnPropertyDescriptor(
@@ -649,17 +656,13 @@ describe('makeCallable', () => {
       const constructed = ChangedChild(makeInput())
 
       expect(constructed).toStrictEqual(made)
-      expect(constructed).toStrictEqual({
-        _tag: 'ChangedChild',
-        child: { name: 'Ada' },
-      })
     } finally {
       restoreDescriptor()
     }
   })
 
   it('falls back for structural unions', () => {
-    const ChangedValue = ts('ChangedValue', {
+    const ChangedValue = taggedStruct('ChangedValue', {
       value: S.Union([
         S.Struct({ name: S.String }),
         S.Struct({ count: S.Number }),
@@ -675,7 +678,7 @@ describe('makeCallable', () => {
   })
 
   it('falls back for oneOf unions', () => {
-    const ChangedValue = ts('ChangedValue', {
+    const ChangedValue = taggedStruct('ChangedValue', {
       value: S.Union([S.String, S.String], { mode: 'oneOf' }),
     })
     const input = { value: 'value' }
@@ -685,7 +688,7 @@ describe('makeCallable', () => {
   })
 
   it('falls back for index signatures', () => {
-    const ChangedValues = ts('ChangedValues', {
+    const ChangedValues = taggedStruct('ChangedValues', {
       values: S.Record(S.String, S.String),
     })
     const values = { first: 'one' }
@@ -702,10 +705,10 @@ describe('makeCallable', () => {
       (input): input is string => typeof input === 'string',
       { expected: 'string declaration' },
     )
-    const ChangedDeclaredValue = ts('ChangedDeclaredValue', {
+    const ChangedDeclaredValue = taggedStruct('ChangedDeclaredValue', {
       value: DeclaredString,
     })
-    const SelectedValue = ts('SelectedValue', {
+    const SelectedValue = taggedStruct('SelectedValue', {
       value: S.Option(S.String),
     })
     const invalidInput = { value: 1 }
@@ -721,7 +724,7 @@ describe('makeCallable', () => {
   })
 
   it('falls back to make for field context', () => {
-    const ChangedLabel = ts('ChangedLabel', {
+    const ChangedLabel = taggedStruct('ChangedLabel', {
       label: S.optionalKey(S.String),
     })
 
@@ -734,7 +737,7 @@ describe('makeCallable', () => {
     const profile = S.Struct({ name: S.String }).annotate({
       parseOptions: { onExcessProperty: 'preserve' },
     })
-    const ChangedProfile = ts('ChangedProfile', { profile })
+    const ChangedProfile = taggedStruct('ChangedProfile', { profile })
     const input = { profile: { name: 'Ada', extra: true } }
 
     expect(ChangedProfile(input)).toStrictEqual(ChangedProfile.make(input))
@@ -742,8 +745,10 @@ describe('makeCallable', () => {
   })
 
   it('falls back for child Message fields', () => {
-    const ChildMessage = ts('ChildMessage')
-    const GotChildMessage = ts('GotChildMessage', { message: ChildMessage })
+    const ChildMessage = taggedStruct('ChildMessage')
+    const GotChildMessage = taggedStruct('GotChildMessage', {
+      message: ChildMessage,
+    })
     const input = { message: { _tag: 'Bogus' } }
 
     expect(() =>
@@ -755,8 +760,10 @@ describe('makeCallable', () => {
   })
 
   it('applies a missing child Message tag like make', () => {
-    const ChildMessage = ts('ChildMessage')
-    const GotChildMessage = ts('GotChildMessage', { message: ChildMessage })
+    const ChildMessage = taggedStruct('ChildMessage')
+    const GotChildMessage = taggedStruct('GotChildMessage', {
+      message: ChildMessage,
+    })
     const input = { message: {} }
 
     expect(GotChildMessage(input)).toStrictEqual(GotChildMessage.make(input))
@@ -774,7 +781,7 @@ describe('makeCallable', () => {
         ),
       ),
     })
-    const WrappedChild = ts('WrappedChild', { child: CustomChild })
+    const WrappedChild = taggedStruct('WrappedChild', { child: CustomChild })
     const missingTagInput = { child: {} }
     const undefinedTagInput = { child: { _tag: undefined } }
     const bogusTagInput = { child: { _tag: 'Bogus' } }
@@ -794,10 +801,12 @@ describe('makeCallable', () => {
   })
 
   it('falls back for child Message unions', () => {
-    const SelectedChild = ts('SelectedChild', { id: S.String })
-    const ResetChild = ts('ResetChild')
+    const SelectedChild = taggedStruct('SelectedChild', { id: S.String })
+    const ResetChild = taggedStruct('ResetChild')
     const ChildMessage = S.Union([SelectedChild, ResetChild])
-    const GotChildMessage = ts('GotChildMessage', { message: ChildMessage })
+    const GotChildMessage = taggedStruct('GotChildMessage', {
+      message: ChildMessage,
+    })
     const missingTagInput = { message: { id: 'child-1', extra: true } }
     const undefinedTagInput = { message: { _tag: undefined } }
     const bogusTagInput = { message: { _tag: 'Bogus' } }
@@ -819,10 +828,10 @@ describe('makeCallable', () => {
   })
 
   it('uses child Message union parsing when omitted tags are ambiguous', () => {
-    const SelectedText = ts('SelectedText', { value: S.String })
-    const SelectedCount = ts('SelectedCount', { value: S.Number })
+    const SelectedText = taggedStruct('SelectedText', { value: S.String })
+    const SelectedCount = taggedStruct('SelectedCount', { value: S.Number })
     const ChildMessage = S.Union([SelectedText, SelectedCount])
-    const GotChildMessage = ts('GotChildMessage', {
+    const GotChildMessage = taggedStruct('GotChildMessage', {
       message: ChildMessage,
     })
     const input = { message: { value: 1 } }
@@ -832,13 +841,17 @@ describe('makeCallable', () => {
   })
 
   it('falls back for encoded child Message schemas', () => {
-    const SelectedCount = ts('SelectedCount', { count: S.NumberFromString })
-    const ResetCount = ts('ResetCount')
+    const SelectedCount = taggedStruct('SelectedCount', {
+      count: S.NumberFromString,
+    })
+    const ResetCount = taggedStruct('ResetCount')
     const ChildMessage = S.Union([SelectedCount, ResetCount])
-    const GotSelectedCountMessage = ts('GotSelectedCountMessage', {
+    const GotSelectedCountMessage = taggedStruct('GotSelectedCountMessage', {
       message: SelectedCount,
     })
-    const GotChildMessage = ts('GotChildMessage', { message: ChildMessage })
+    const GotChildMessage = taggedStruct('GotChildMessage', {
+      message: ChildMessage,
+    })
     const input = { message: { _tag: 'Bogus', count: 1 } }
 
     expect(() =>

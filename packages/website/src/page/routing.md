@@ -8,21 +8,33 @@ Most routers make you define routes twice: once for matching URLs, and again for
 
 Foldkit’s routing is based on biparsers: parsers that work in both directions. A single route definition handles:
 
-- `/people/42` → `PersonRoute { personId: 42 }` (parsing)
-- `PersonRoute { personId: 42 }` → `/people/42` (building)
+- `/people/42` → `AppRoute.Person { personId: 42 }` (parsing)
+- `AppRoute.Person { personId: 42 }` → `/people/42` (building)
 
 This symmetry means if you can parse a URL into data, you can always build that data back into the same URL.
 
 ## Defining Routes
 
-Routes are defined as tagged unions using [Effect Schema](https://effect.website/docs/schema/introduction/). Each route variant carries the data extracted from the URL.
+`defineRouteUnion` declares every application Route together. Each key is a tag, and its value lists the fields parsed from the URL. `AppRoute` is also an [Effect Schema](https://effect.website/docs/schema/introduction/), so it can be stored in the Model and used to decode unknown values.
 
 ::Snippet{name="routingDefineRoutes" label="route definitions"}
 
-- `HomeRoute`: no parameters
-- `PersonRoute`: holds a `personId: number`
-- `PeopleRoute`: holds an optional `searchText: Option<string>`
-- `NotFoundRoute`: holds the unmatched `path: string`
+- `AppRoute.Home`: no parameters
+- `AppRoute.Person`: holds a `personId: number`
+- `AppRoute.People`: holds an optional `searchText: Option<string>`
+- `AppRoute.NotFound`: holds the unmatched `path: string`
+
+Keep each variant on `AppRoute`, just as Message variants stay on `Message`. `AppRoute.Person({ personId: 42 })` constructs a Route, while `Route.mapTo(AppRoute.Person)` uses the same variant as a Schema.
+
+Use `AppRoute.match` when every Route needs a branch. Use `AppRoute.isAnyOf(['Blog', 'BlogPost'])` when one check accepts several tags.
+
+If a Model or Schema accepts only some application Routes, create that Schema with `subset`:
+
+::Snippet{name="routingSubset" label="Route subset example"}
+
+`subset` includes only the tags you name. If you add a Route to `AppRoute` later, `TopLevelRoute` will not accept it until you add its tag. There is no `omit`: an exclusion list would silently accept every Route added later.
+
+If a module needs to name one variant's type, add an alias beside `AppRoute`: `export type NewsletterRoute = typeof AppRoute.Newsletter.Type`.
 
 ## Building Routers
 
@@ -40,7 +52,7 @@ The primitives:
 - `restString('path')`: captures all remaining segments as one path string
 - `slash(...)`: chains path segments together
 - `Route.query(Schema)`: adds query parameter parsing
-- `Route.mapTo(RouteType)`: converts parsed data into a typed route
+- `Route.mapTo(AppRoute.Person)`: converts parsed data into a typed route
 
 ## Parsing URLs
 
@@ -86,7 +98,7 @@ Some routes carry a whole path as data: a file tree, a documentation page, a bre
 
 ::Snippet{name="routingRest" label="rest segments example"}
 
-`rest` requires at least one segment, so the bare prefix `/files` does not match the rest route. Give the prefix its own route, like `FilesIndexRoute` above. The two never overlap: one matches exactly `/files`, the other matches anything beneath it.
+`rest` requires at least one segment, so the bare prefix `/files` does not match the rest route. Give the prefix its own route, like `AppRoute.FilesIndex` above. The two never overlap: one matches exactly `/files`, the other matches anything beneath it.
 
 A specific route under the same prefix is different. The rest route also matches every URL that `literal('files'), slash(literal('shared'))` accepts, so in `oneOf` the specific route must come first.
 

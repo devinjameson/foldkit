@@ -2,13 +2,7 @@ import { Array, Option } from 'effect'
 import { describe, expect, it } from 'vitest'
 
 import { maybePostCover } from '../src/page/blog/frontmatter'
-import {
-  BlogPostRoute,
-  ExamplesRoute,
-  HomeRoute,
-  NotFoundRoute,
-  PlaygroundRoute,
-} from '../src/route'
+import { AppRoute } from '../src/route'
 import { blogPosts } from './blogPosts'
 import { ORGANIZATION_SCHEMA, injectMetaTags } from './og-image'
 
@@ -49,7 +43,7 @@ const coverlessPost = Option.getOrThrowWith(
 
 describe('injectMetaTags', () => {
   describe('a blog post with a cover', () => {
-    const route = BlogPostRoute({ postSlug: coverPost.slug })
+    const route = AppRoute.BlogPost({ postSlug: coverPost.slug })
     const urlPath = `/blog/${coverPost.slug}`
     const ogSlug = `blog-${coverPost.slug}`
 
@@ -93,7 +87,7 @@ describe('injectMetaTags', () => {
   })
 
   describe('a blog post without a cover', () => {
-    const route = BlogPostRoute({ postSlug: coverlessPost.slug })
+    const route = AppRoute.BlogPost({ postSlug: coverlessPost.slug })
     const urlPath = `/blog/${coverlessPost.slug}`
 
     const html = injectMetaTags(baseHtml, route, urlPath, resolveApiModuleName)
@@ -111,7 +105,7 @@ describe('injectMetaTags', () => {
   describe('a documentation route', () => {
     const html = injectMetaTags(
       baseHtml,
-      ExamplesRoute(),
+      AppRoute.Examples(),
       '/example-apps',
       resolveApiModuleName,
     )
@@ -137,7 +131,7 @@ describe('injectMetaTags', () => {
   describe('a Playground route', () => {
     const html = injectMetaTags(
       baseHtml,
-      PlaygroundRoute({ exampleSlug: 'counter' }),
+      AppRoute.Playground({ exampleSlug: 'counter' }),
       '/playground/counter',
       resolveApiModuleName,
     )
@@ -159,7 +153,7 @@ describe('injectMetaTags', () => {
   describe('a route outside the blog', () => {
     const html = injectMetaTags(
       baseHtml,
-      HomeRoute(),
+      AppRoute.Home(),
       '/',
       resolveApiModuleName,
     )
@@ -194,28 +188,80 @@ describe('injectMetaTags', () => {
       expect(html).not.toContain('article:published_time')
     })
 
-    it('describes the Foldkit Organization with a contact point', () => {
+    it('describes the Foldkit Organization with contact points', () => {
       expect(ORGANIZATION_SCHEMA['@type']).toBe('Organization')
       expect(ORGANIZATION_SCHEMA.url).toBe('https://foldkit.dev')
       expect(ORGANIZATION_SCHEMA.logo).toBe('https://foldkit.dev/logo.svg')
       expect(ORGANIZATION_SCHEMA.sameAs).toContain(
         'https://github.com/foldkit/foldkit',
       )
-      expect(ORGANIZATION_SCHEMA.contactPoint.contactType).toBe(
-        'technical support',
-      )
-      expect(ORGANIZATION_SCHEMA.contactPoint.url).toBe(
+      expect(
+        Array.map(
+          ORGANIZATION_SCHEMA.contactPoint,
+          contactPoint => contactPoint.url,
+        ),
+      ).toEqual([
         'https://github.com/foldkit/foldkit/issues',
-      )
+        'https://foldkit.dev/contact',
+      ])
+      expect(
+        Array.map(
+          ORGANIZATION_SCHEMA.contactPoint,
+          contactPoint => contactPoint.contactType,
+        ),
+      ).toContain('technical support')
       expect(html).toContain('"@type":"Organization"')
       expect(html).toContain('"contactPoint"')
+    })
+  })
+
+  describe('the trust anchor pages', () => {
+    it('marks up About, Contact, and Privacy as their schema.org page types', () => {
+      const aboutHtml = injectMetaTags(
+        baseHtml,
+        AppRoute.About(),
+        '/about',
+        resolveApiModuleName,
+      )
+      expect(aboutHtml).toContain('"@type":"AboutPage"')
+      expect(aboutHtml).toContain('"url":"https://foldkit.dev/about"')
+      expect(aboutHtml).toContain('"@id":"https://foldkit.dev/#organization"')
+
+      const contactHtml = injectMetaTags(
+        baseHtml,
+        AppRoute.Contact(),
+        '/contact',
+        resolveApiModuleName,
+      )
+      expect(contactHtml).toContain('"@type":"ContactPage"')
+
+      const privacyHtml = injectMetaTags(
+        baseHtml,
+        AppRoute.Privacy(),
+        '/privacy',
+        resolveApiModuleName,
+      )
+      expect(privacyHtml).toContain('"@type":"WebPage"')
+      expect(privacyHtml).toContain('"name":"Foldkit Privacy Policy"')
+    })
+
+    it('leaves ordinary documentation pages without a page-level schema', () => {
+      const docsHtml = injectMetaTags(
+        baseHtml,
+        AppRoute.CoreModel(),
+        '/core/model',
+        resolveApiModuleName,
+      )
+
+      expect(docsHtml).not.toContain('"@type":"AboutPage"')
+      expect(docsHtml).not.toContain('"@type":"WebPage"')
     })
   })
 
   describe('the prerendered 404 page', () => {
     const html = injectMetaTags(
       baseHtml,
-      NotFoundRoute({ path: '/404' }),
+      AppRoute.NotFound({ path: '/404' }),
       '/404',
       resolveApiModuleName,
     )

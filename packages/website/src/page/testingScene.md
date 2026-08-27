@@ -69,7 +69,7 @@ An interaction invokes the matched element's event handler. If the handler produ
 
 | Step                               | Invokes                                                                                          |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `click(target)`                    | `OnClick` (bubbles to ancestors)                                                                 |
+| `click(target)`                    | `OnClick` (runs target and ancestor handlers until propagation stops)                            |
 | `doubleClick(target)`              | `OnDoubleClick` (bubbles to ancestors)                                                           |
 | `contextMenu(target)`              | `OnContextMenu` (bubbles to ancestors)                                                           |
 | `pointerDown(target, options?)`    | `OnPointerDown` with optional `{ pointerType, button, screenX, screenY }` (bubbles to ancestors) |
@@ -77,12 +77,16 @@ An interaction invokes the matched element's event handler. If the handler produ
 | `hover(target)`                    | `OnMouseEnter` (falls back to `OnMouseOver`)                                                     |
 | `focus(target)`                    | `OnFocus`                                                                                        |
 | `blur(target)`                     | `OnBlur`                                                                                         |
+| `focusEnter(target)`               | `OnFocusEnter`                                                                                   |
+| `focusLeave(target)`               | `OnFocusLeave`                                                                                   |
 | `type(target, text)`               | `OnInput` with the given text                                                                    |
 | `change(target, value)`            | `OnChange` with the given value, for `<select>` and similar                                      |
 | `keydown(target, key, modifiers?)` | `OnKeyDown` or `OnKeyDownPreventDefault` with optional `{ shiftKey, ctrlKey, altKey, metaKey }`  |
 | `submit(target)`                   | `OnSubmit`                                                                                       |
 
 `tap(fn)` runs a function for side effects (like ad-hoc assertions on raw VNodes or accumulated Commands) without breaking the step chain.
+
+`click` keeps default action and propagation separate, like the browser. A target `OnClick` with `propagation: 'Stop'` skips ancestor click handlers but still submits a surrounding form when the clicked element is a submit button. Add `defaultAction: 'Prevent'` to suppress that submission. When neither control is present, Scene dispatches every click Message from the target through its ancestor chain, then dispatches the form's submit Message when applicable.
 
 ## Assertions
 

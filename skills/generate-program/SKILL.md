@@ -22,7 +22,7 @@ Before writing any code, analyze the description to identify:
 8. **Date handling**: birthdays, deadlines, scheduling → `Calendar` module + `DatePicker` or `Calendar` from `@foldkit/ui`
 9. **File handling**: uploads, attachments, images → `File` module + `FileDrop` from `@foldkit/ui`
 10. **Remote data**: anything fetched, cached, refreshed, or revalidated → the `AsyncData` module (see Phase 4). Don't hand-roll a loading/error union
-11. **Multi-state flows**: a described process that moves through several named steps with rules about which step follows which (checkout, onboarding, multi-step approval, a connection lifecycle) → consider the `Machine` module (`foldkit/experimental`). Writing the transitions as a table makes the edge set enumerable, so `unreachableStates()` and `deadTransitions()` catch a missing or unreachable step by computation instead of by review. Raise it as an option in the analysis you present, noting it is under `experimental/`, and let the user choose. Plain `ts()` unions with one `M.tagsExhaustive` are still right for a flow of two or three states. `repos/foldkit/examples/state-machine/` is the reference
+11. **Multi-state flows**: a described process that moves through several named steps with rules about which step follows which (checkout, onboarding, multi-step approval, a connection lifecycle) → consider the `Machine` module (`foldkit/experimental`). Writing the transitions as a table lets `unreachableStates()` and `deadTransitions()` find missing or unreachable steps. Present it as an experimental option and let the user choose. For a flow with only two or three states, use `defineTaggedUnion` and one `match`. `repos/foldkit/examples/state-machine/` is the reference
 12. **Host embedding**: the program runs inside another app ("a widget in our React app", "embed this in an existing page", "the host needs to control it") → `Runtime.makeElement` plus the `Runtime.embed` lifecycle handle, with Flags for initial data and Ports for ongoing communication in both directions. `repos/foldkit/examples/embedding/` is the canonical reference: a plain TypeScript host driving a Foldkit widget end to end
 
 Present this analysis to the user before proceeding.
@@ -243,7 +243,7 @@ The sketch has five parts. Emit them inline in the conversation, get confirmatio
 1. **File tree**: the exact paths you will create. Match Phase 3's organization.
 2. **Model shape**: the top-level `S.Struct` fields and their types. Not the full schema, just the shape.
 3. **Message list**: every Message you plan to define, grouped by category (clicks, inputs, commands, out-messages).
-4. **Route list**: if routing, every `r('...', {...})` with params and the path each maps to.
+4. **Route list**: if routing, every `defineRouteUnion` variant with its params and the path it maps to.
 5. **Domain operations**: for each file in `domain/`, the operations it will expose (`Link.byNewest`, `Link.filterByTag`, etc.).
 
 Example for a Tier 4 link saver:
@@ -269,10 +269,10 @@ Messages:
   Toggles: ToggledFavorite
 
 Routes:
-  HomeRoute         → /
-  NewLinkRoute      → /new
-  TagFilterRoute    → /tag/:tag
-  NotFoundRoute     → /* fallback
+  AppRoute.Home       → /
+  AppRoute.NewLink    → /new
+  AppRoute.TagFilter  → /tag/:tag
+  AppRoute.NotFound   → /* fallback
 
 Domain:
   Link: schema + byNewest, filterByTag, toggleFavorite, remove, updateById
@@ -330,14 +330,14 @@ For each Foldkit module you plan to use, read the `.d.ts` at the paths below. Re
 # Every app
 <project>/node_modules/foldkit/dist/index.d.ts          # top-level re-exports: the authoritative list of what `foldkit` exposes
 <project>/node_modules/foldkit/dist/html/index.d.ts     # HtmlBuilder<Message>, element signatures, Attribute<Message>, inertHtml
-<project>/node_modules/foldkit/dist/message/index.d.ts  # defineMessageUnion()
-<project>/node_modules/foldkit/dist/schema/index.d.ts   # ts(), r()
+<project>/node_modules/foldkit/dist/message/public.d.ts # defineMessageUnion()
+<project>/node_modules/foldkit/dist/schema/public.d.ts  # defineTaggedUnion(), taggedStruct()
 <project>/node_modules/foldkit/dist/struct/index.d.ts   # evo(): check nested-update signature
 <project>/node_modules/foldkit/dist/update/public.d.ts  # Update.Return, Update.ReturnWithOutMessage, Update.withOutMessage, Update.combine, Update.refresh
 <project>/node_modules/foldkit/dist/runtime/runtime.d.ts # ApplicationInit, RoutingApplicationInit, makeApplication, makeElement
 
 # If using routing
-<project>/node_modules/foldkit/dist/route/parser.d.ts   # literal, slash, string, int, Route.root, Route.mapTo, Route.oneOf, Route.parseUrlWithFallback
+<project>/node_modules/foldkit/dist/route/public.d.ts   # defineRouteUnion, literal, slash, string, int, Route.root, Route.mapTo, Route.oneOf, Route.parseUrlWithFallback
 <project>/node_modules/foldkit/dist/url/index.d.ts      # toString
 <project>/node_modules/foldkit/dist/navigation/index.d.ts # pushUrl, load: all return Effect<void> (no Effect.ignore needed)
 
@@ -416,21 +416,21 @@ Record these in the crib and keep them visible while generating:
 - **`keyed`, `empty` are properties on the builder `h`** the view receives as its last parameter. They are not top-level exports of `foldkit/html`.
 - **Attribute helpers are specific**: `Value(...)`, `Type(...)`, `Placeholder(...)`, `Href(...)`, `Target(...)`, `Rel(...)`, `Rows(n)`, `Id(...)`, `For(...)`, `Role(...)`, `AriaLabel(...)`. There is no generic `Attr('...', '...')`.
 - **`ApplicationInit<Model, Message, Flags>` has no URL parameter.** For routed apps, use `RoutingApplicationInit<Model, Message, Flags>`: the second arg is `url: Url`.
-- **`Route.mapTo` takes the route schema, not a factory function.** `pipe(literal('new'), Route.mapTo(NewLinkRoute))`. NOT `Route.mapTo(() => NewLinkRoute())`.
+- **`Route.mapTo` takes the route schema, not a factory function.** `pipe(literal('new'), Route.mapTo(AppRoute.NewLink))`. NOT `Route.mapTo(() => AppRoute.NewLink())`.
 - **`Effect.ignore` is ONLY for fallible Effects.** `pushUrl(path).pipe(Effect.as(Message()))`. No `Effect.ignore` because `pushUrl` returns `Effect<void>`.
 - **`Command.define` takes a config object with a `messages` array**: `Command.define('Fetch', { messages: [Message.SucceededFetch, Message.FailedFetch], execute })`. `messages` is required and is always an array, even for one Message: `Command.define('ReadClock', { messages: [Message.RecordedTime], execute })`.
 - **`makeRules` takes `{ required?: Rule.RuleMessage, rules: Array<Rule.Rule> }` where `Rule.Rule = [Predicate, Rule.RuleMessage]`**: a tuple, NOT `{ test, message }`. Rule constructors live on the `Rule` namespace (`Rule.url({ message })`, `Rule.email(message?)`, `Rule.minLength(n, message?)`, `Rule.pattern(regex, message?)`, `Rule.fromSchema(schema, message)`).
 - **`Field.Invalid` has `errors: NonEmptyArray<string>`, not `error: string`.** Use `Array.headNonEmpty(errors)` to get the first message; use `Rule.resolveMessage(message, value)` to resolve a rule message to its final string.
-- **Route variants are `HomeRoute`, `NewLinkRoute`, etc., with the `Route` suffix.** Every exemplar uses this convention.
+- **Route variants stay on `AppRoute` and drop the repeated `Route` suffix.** Write `AppRoute.Home` and `AppRoute.NewLink`, not sibling bindings named `HomeRoute` and `NewLinkRoute`.
 - **Routers are callable for printing**: `homeRouter()` returns `'/'`, `tagFilterRouter({ tag: 'foo' })` returns `'/tag/foo'`. Never hand-construct URLs.
 - **UI components come from `@foldkit/ui`, not from a `Ui` namespace on `foldkit`.** `import { Dialog, Input } from '@foldkit/ui'`, then `Dialog.view(...)`. There is no `Ui` export on the `foldkit` package.
 - **`HttpClient` and `HttpClientRequest` come from `effect/unstable/http`**, not `@effect/platform`. Provide the client to the Command's Effect with `Effect.provide(effect, Http.layer)`, where `Http` is imported from `foldkit`. `@effect/platform-browser` is a different thing, used for `BrowserKeyValueStore` and `BrowserCrypto`.
 - **Use `Update.foldChild` or `Update.foldChildStep` for a child Submodel result.** The fold lifts the child's Commands through `toParentMessage`. Use `Command.mapMessages` directly only for lower-level helpers or independent init results.
 - **Inline a one-use update return type.** Use `Message.match<Update.Return<Model, Message>>` when the matcher is its only use. Create an `UpdateReturn` alias when another matcher, helper, or exported signature reuses the type. The match generic constrains the whole update, so omit a redundant return annotation. Use `M.withReturnType<UpdateReturn>()` only for an Effect `Match` over another tagged union inside a handler.
-- **Preserve the plain-return OutMessage guard.** TypeScript rejects assigning an OutMessage-producing result to `Update.Return<Model, Message>`, so a caller cannot keep the Model and Commands while losing the OutMessage. A result with no OutMessage can be assigned to `Update.ReturnWithOutMessage<Model, Message, OutMessage>` because emitting nothing is valid. A hand-written plain-return type must preserve the `outMessage?: never` field.
+- **Preserve the plain-return OutMessage guard.** Use `Update.Return<Model, Message>` when an update cannot emit an OutMessage. It prevents a result containing an OutMessage from entering code that would keep only its Model and Commands. A result with no `outMessage` can still be used where `Update.ReturnWithOutMessage<Model, Message, OutMessage>` is expected. The missing field means that update emitted no OutMessage. A hand-written plain-return type must preserve the `outMessage?: never` field.
 - **Omit only statically empty Commands.** A producer with statically no Commands omits `commands`. A producer with a computed collection returns it without checking whether it is empty. Never write `commands: []`.
 - **Keep update-like results together.** Bind each result to a value named after the operation and use dot access. Use a trailing underscore such as `init_` when the operation name collides with the function. Do not destructure or rename `model`, `commands`, or `outMessage`. Name a child fold's `write` parameter after the next child Model, such as `nextSettings`. Pass optional Commands directly to `Command.mapMessages`; use `result.commands ?? []` only when the next operation requires a concrete array. Dot access keeps the operation and all of its returned fields visible together but does not prevent someone from ignoring `outMessage`.
-- **Use the update combinators for their full patterns.** Use `Update.combine` when a later Step should receive the Model produced by an earlier Step. It takes two or more Steps. Do not wrap one Step in `Update.combine`; call that operation directly. Name an inline Step parameter `stepModel` when combining several. When the OutMessage is already known while constructing a new result, include it directly. Use `Update.withOutMessage` for an existing plain return or a value with the type `OutMessage | undefined`: pipe an existing return into the helper, and pass a new result literal first. Use `Update.foldChild` or `Update.foldChildStep` for child results. Add `toParentOutMessage` only when it forwards at least one child OutMessage from the current Submodel to its parent; never add `toParentOutMessage: () => undefined`.
+- **Use the update combinators for their full patterns.** Use `Update.combine` when a later Step should receive the Model produced by an earlier Step. It takes two or more Steps. Do not wrap one Step in `Update.combine`; call that operation directly. Name an inline Step parameter `stepModel` when combining several. When the OutMessage is already known while constructing a new result, include it directly. Use `Update.withOutMessage` for an existing plain return or a value with the type `OutMessage | undefined`: pipe an existing return into the helper, and pass a new result literal first. Use `Update.foldChild` or `Update.foldChildStep` for child results. Add `toParentOutMessage` only when at least one child OutMessage should continue to the current Submodel's parent. For partial forwarding, match every child variant and return `undefined` for the variants that stop here. Omit `toParentOutMessage` when every variant stops here. `foldOutMessage` still handles each variant locally, including variants that continue upward. Never add `toParentOutMessage: () => undefined`.
 - **Branch on a Model array with `Array.match`, not the predicates.** `Array.isArrayEmpty` and `Array.isArrayNonEmpty` (note the names: not `isEmptyArray` / `isNonEmptyArray`) take a mutable `Array<A>`, so neither compiles against the `ReadonlyArray` an `S.Array(...)` field decodes to. `Array.match` takes `ReadonlyArray` and is what the exemplars use.
 - **`empty` and `keyed` are properties on `h`**, so they are never in the `foldkit/html` import list. Import the types (`import type { Document, Html, HtmlBuilder } from 'foldkit/html'`) and reach for `h.empty` / `h.keyed` off the view's builder.
 
@@ -445,7 +445,7 @@ Generate files following the architecture and conventions guides exactly. Write 
 - Use `Option` for fields that may be absent. Never empty strings or null
 - Prefix Option-typed fields with `maybe`: `maybeCurrentUser`, `maybeError`
 - For remote data, use the `AsyncData` module rather than hand-rolling a union. `AsyncData.Schema(WeatherData, S.String)` returns `{ schema, Idle, Loading, Refreshing, Failure, Stale, Success }`; put `schema` in the Model and build values with the constructors. The `Refreshing` and `Stale` states are the point: they let a reload keep the current data on screen, and a failed reload keep it rather than discarding it. `repos/foldkit/examples/weather/src/main.ts` is the canonical use. Read `AsyncData.match`'s signature before calling it: the handlers take bare values (`onSuccess: data => ...`, `onFailure: error => ...`), except `onStale`, which takes `{ error, data }`
-- For non-remote multi-valued state (form steps, editor modes, connection phases), define variants with `ts()` and compose into an `S.Union`. See Discriminated Unions for State in [conventions.md](conventions.md)
+- For non-remote multi-valued state (form steps, editor modes, connection phases), declare the whole union with `defineTaggedUnion()`. See Discriminated Unions for State in [conventions.md](conventions.md)
 - For apps with multiple domain entities referenced across modules, extract shared schemas into `src/domain/` (e.g., `domain/product.ts`, `domain/session.ts`). See the shopping-cart and auth examples for this pattern, and read `${CLAUDE_SKILL_DIR}/../../packages/website/src/page/projectOrganization.ts` for guidance on when and how to structure domain modules
 
 ### Messages
@@ -502,7 +502,7 @@ Every message must carry meaning. No `NoOp`.
 - Use `Message.match<Update.Return<Model, Message>>(message, {...})` when the return type appears only at that matcher. Create an `UpdateReturn` alias when another matcher, helper, or exported signature reuses it. `Update.ReturnWithOutMessage<Model, Message, OutMessage>` is the Submodel counterpart. A hand-written plain-return type is equivalent only when it includes `outMessage?: never`. Never switch. Keep Effect `Match` for other tagged unions, partial matches with fallbacks, and handlers shared across several tags
 - Omit `commands` when an update, init, boot, or component helper statically creates no Commands. Return a computed Commands collection directly without checking whether it is empty. Never write the literal `commands: []`
 - When composing an update, init, boot, or component helper result, bind the whole result to a value named after the operation and use dot access. Use a trailing underscore such as `init_` when the name collides with the function. Do not destructure or rename `model`, `commands`, or `outMessage`. Name a child fold's `write` parameter after the next child Model. Pass optional Commands directly to `Command.mapMessages`, and use `result.commands ?? []` only where the next operation requires a concrete array. Dot access keeps the operation and all of its returned fields visible together but does not prevent someone from ignoring `outMessage`. Use `Update.foldChild` or `Update.foldChildStep` instead of manually unpacking a child result
-- Use `Update.combine` when a later Step should receive the Model produced by an earlier Step. It takes two or more Steps. Do not wrap one Step in `Update.combine`; call that operation directly. Name an inline Step parameter `stepModel` when combining several. When the OutMessage is already known while constructing a new result, include it directly. Use `Update.withOutMessage` for an existing plain return or a value with the type `OutMessage | undefined`: pipe an existing return into the helper, and pass a new result literal first. Add `toParentOutMessage` only when it forwards at least one child OutMessage from the current Submodel to its parent; omit it when no variant is forwarded. Local handling through `foldOutMessage` is independent, so a forwarded variant may also update the current parent
+- Use `Update.combine` when a later Step should receive the Model produced by an earlier Step. It takes two or more Steps. Do not wrap one Step in `Update.combine`; call that operation directly. Name an inline Step parameter `stepModel` when combining several. When the OutMessage is already known while constructing a new result, include it directly. Use `Update.withOutMessage` for an existing plain return or a value with the type `OutMessage | undefined`: pipe an existing return into the helper, and pass a new result literal first. Add `toParentOutMessage` only when at least one child OutMessage should continue to the current Submodel's parent. For partial forwarding, match every child variant and return `undefined` for the variants that stop here. Omit `toParentOutMessage` when every variant stops here. `foldOutMessage` still handles each variant locally, including variants that continue upward
 - Use `evo(model, { field: () => newValue })` for immutable updates
 - When a `Succeeded*` handler has to write several caches and kick off refetches, sequence them with `Update.combine(model, [step, step, ...])` and build the refetch steps with `Update.refresh({ read, revalidate, write, load })`, which reloads a cache only when it actually holds data. `examples/route-transitions/src/main.ts` shows both
 - In `evo`, use point-free field transformers when the update only depends on that field's current value: `items: Array.map(updateItem)`, `count: Number.increment`, `priceSlider: Slider.reflectRange({ min: minPrice, max: maxPrice })`. Use `() => value` for replacement values from Messages, child updates, Commands, or other Model fields.
@@ -597,16 +597,16 @@ For file uploads (resumes, images, attachments):
 - Use `Runtime.makeApplication` for apps that own the page. Add `routing: { onUrlRequest, onUrlChange }` for apps with URL routing. The `view` returns a `Document` (`{ title, lang?, dir?, canonical?, ogUrl?, body }`); the runtime applies `title`, the `lang` / `dir` attributes on `<html>`, and the canonical / og:url tags after every render
 - Use `Runtime.makeElement` for a widget embedded on a page it does not own. The `view` returns `Html` and the runtime never touches the document `<head>` or the `<html>` element. No `routing` config
 - See the With and Without URL Routing section in [architecture.md](architecture.md) for the full pattern
-- Include `ClickedLink` and `ChangedUrl` Messages for programs with routing, with proper `InternalUrl`/`ExternalUrl` handling in update
+- Include `ClickedLink` and `ChangedUrl` Messages for programs with routing, with proper `UrlRequest.Internal` / `UrlRequest.External` handling in update
 - Always end with `Runtime.run(application)` for a page-owning app. When a host application controls the program's lifecycle, end with `Runtime.embed(element)` instead and hand the returned handle to the host; mirror `repos/foldkit/examples/embedding/src/host.ts` for the host side and its `main.ts` for the widget side
 - Name the variable holding a `makeApplication` result `application`, and the variable holding a `makeElement` result `element`
 
 ### Routes (if multi-page)
 
-- Use bidirectional parser: `r()`, `string()`, `int()`, `literal()`, `slash()`, `Route.mapTo()`, `Route.oneOf()`
-- Define route schemas with `r('RouteName', { param: S.String })`
-- **Suffix route variant constants with `Route`**: `HomeRoute`, `NewLinkRoute`, `NotFoundRoute`. Every exemplar (auth, shopping-cart, routing) does this. Disambiguates the route schema from views, models, or UI components with matching tag names.
-- Build each route as a Router: `const homeRouter = pipe(Route.root, Route.mapTo(HomeRoute))`. **Routers are callable**: `homeRouter()` returns `'/'`, `tagFilterRouter({ tag: 'foo' })` returns `'/tag/foo'`. This is the print side of the bidirectional parser.
+- Use bidirectional parser: `defineRouteUnion()`, `string()`, `int()`, `literal()`, `slash()`, `Route.mapTo()`, `Route.oneOf()`
+- Declare every route in one `defineRouteUnion({ Home: {}, NewLink: {}, NotFound: { path: S.String } })` named `AppRoute`. Keep each variant on that namespace: `AppRoute.Home`. Do not destructure variants or repeat the old `HomeRoute` suffix.
+- When a Model or Schema accepts only part of `AppRoute`, use `AppRoute.subset(['Home', 'Person'])`. It includes only the tags named in the call. There is no `omit`, because an exclusion list would silently accept every Route added later. Export `type PersonRoute = typeof AppRoute.Person.Type` beside the union when a module needs one variant's type.
+- Build each route as a Router: `const homeRouter = pipe(Route.root, Route.mapTo(AppRoute.Home))`. **Routers are callable**: `homeRouter()` returns `'/'`, `tagFilterRouter({ tag: 'foo' })` returns `'/tag/foo'`. This is the print side of the bidirectional parser.
 - **Never hand-construct paths with template strings.** `Href(homeRouter())` not `Href('/')`. `pushUrl(newLinkRouter())` not `pushUrl('/new')`. `Href(tagFilterRouter({ tag: tagName }))` not ``Href(`/tag/${encodeURIComponent(tagName)}`)``. The router handles encoding and keeps the URL shape in one place so a refactor changes one file, not every call site.
 - Render each route through its own view function; identity handles the switch, so route branches are never keyed. Key by entity id only when one shared view function renders different entities across route params (a detail page across slugs)
 - Use `pushUrl` from `foldkit/navigation` in Commands for programmatic navigation. In the `ClickedLink` handler's `Internal` case, use `urlToString(url)` from `foldkit/url`. Never reconstruct the URL from `url.pathname + search + hash` manually; that path drops the `?` prefix and hash silently.

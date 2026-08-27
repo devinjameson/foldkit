@@ -30,6 +30,8 @@ import { serializeHtml } from './serialize.js'
 
 const Message = defineMessageUnion({
   ClickedButton: {},
+  EnteredFocusRegion: {},
+  LeftFocusRegion: {},
 })
 type Message = typeof Message.Type
 
@@ -581,10 +583,31 @@ describe('serializeHtml', () => {
     // hydrate carries none of it either.
     const view = h.keyed('button')(
       'submit',
-      [h.OnClick(Message.ClickedButton()), h.Id('submit')],
+      [
+        h.OnClick(Message.ClickedButton(), {
+          defaultAction: 'Prevent',
+          propagation: 'Stop',
+        }),
+        h.Id('submit'),
+      ],
       ['Send'],
     )
     expect(serializeHtml(view)).toBe('<button id="submit">Send</button>')
+  })
+
+  it('drops focus boundary handlers', () => {
+    const view = h.div(
+      [
+        h.Id('editor'),
+        h.OnFocusEnter(Message.EnteredFocusRegion()),
+        h.OnFocusLeave(Message.LeftFocusRegion()),
+      ],
+      [h.input([h.AriaLabel('Editor input')])],
+    )
+
+    expect(serializeHtml(view)).toBe(
+      '<div id="editor"><input aria-label="Editor input"></div>',
+    )
   })
 
   it('stamps a hydratable key as a fingerprint rather than the key itself', () => {

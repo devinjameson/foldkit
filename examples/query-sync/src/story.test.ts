@@ -7,19 +7,19 @@ import { Listbox } from '@foldkit/ui'
 import { Message as ListboxMessage } from '@foldkit/ui/listbox'
 
 import {
-  Ascending,
-  BrowseRoute,
+  AppRoute,
   Message,
   type Model,
   ReplaceFilters,
-  Unsorted,
+  Sorting,
+  browseRouter,
   update,
 } from './main'
 
 const browseModel: Model = {
-  route: BrowseRoute({
+  route: AppRoute.Browse({
     search: Option.none(),
-    sorting: Unsorted(),
+    sorting: Sorting.Unsorted(),
     diet: Option.none(),
     period: Option.none(),
   }),
@@ -32,6 +32,19 @@ const urlOrThrow = (raw: string) =>
     fromString(raw),
     () => new Error(`Failed to parse url: ${raw}`),
   )
+
+describe('routing', () => {
+  test('prints sorting in the same format the parser accepts', () => {
+    const path = browseRouter({
+      search: Option.none(),
+      sorting: Sorting.Ascending({ column: 'Length' }),
+      diet: Option.none(),
+      period: Option.none(),
+    })
+
+    expect(decodeURIComponent(path)).toBe('/?sorting=Length:Ascending')
+  })
+})
 
 describe('update', () => {
   describe('ChangedUrl', () => {
@@ -52,7 +65,7 @@ describe('update', () => {
           }
           expect(model.route.search).toStrictEqual(Option.some('raptor'))
           expect(model.route.sorting).toStrictEqual(
-            Ascending({ column: 'Length' }),
+            Sorting.Ascending({ column: 'Length' }),
           )
           expect(model.route.diet).toStrictEqual(Option.some('Carnivore'))
           expect(model.route.period).toStrictEqual(Option.some('Cretaceous'))
@@ -92,9 +105,9 @@ describe('update', () => {
         update,
         given({
           ...browseModel,
-          route: BrowseRoute({
+          route: AppRoute.Browse({
             search: Option.some('foo'),
-            sorting: Unsorted(),
+            sorting: Sorting.Unsorted(),
             diet: Option.none(),
             period: Option.none(),
           }),

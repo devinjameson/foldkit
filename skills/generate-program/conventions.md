@@ -375,7 +375,7 @@ Manual unpacking of a child result usually means the site should use `Update.fol
 
 Use `Update.combine` when a later Step should receive the Model produced by an earlier Step. It takes two or more Steps. Do not wrap one Step in `Update.combine`; call that operation directly. Name an inline Step parameter `stepModel` when combining several; it receives the Model from the preceding Step. Independent child inits need separate Model assembly because neither init consumes the Model produced by the other.
 
-When the OutMessage is already known while constructing a new result, include it directly: `{ model, commands, outMessage }`. Use `Update.withOutMessage` when attaching an OutMessage to an existing plain return or when the value has the type `OutMessage | undefined`. Pipe an existing return into the helper: `pipe(dialogClose, Update.withOutMessage(outMessage))`. When constructing the plain return in the same expression, pass it first: `Update.withOutMessage({ model, commands }, outMessage)`. Add `toParentOutMessage` only when it forwards at least one child OutMessage from the current Submodel to its parent. Omit it when no variant is forwarded. Local handling through `foldOutMessage` is independent, so a forwarded variant may also update the current parent. Never write `toParentOutMessage: () => undefined`.
+When the OutMessage is already known while constructing a new result, include it directly: `{ model, commands, outMessage }`. Use `Update.withOutMessage` when attaching an OutMessage to an existing plain return or when the value has the type `OutMessage | undefined`. Pipe an existing return into the helper: `pipe(dialogClose, Update.withOutMessage(outMessage))`. When constructing the plain return in the same expression, pass it first: `Update.withOutMessage({ model, commands }, outMessage)`. Add `toParentOutMessage` only when at least one child OutMessage should continue to the current Submodel's parent. For partial forwarding, match every child variant and return `undefined` for the variants that stop here. Omit `toParentOutMessage` when every variant stops here. `foldOutMessage` still handles each variant locally, including variants that continue upward. Never write `toParentOutMessage: () => undefined`.
 
 ## Schema Constructors
 
@@ -402,29 +402,32 @@ Keep Message and OutMessage constructors on their owning namespace. Never
 destructure them into sibling bindings. `Message.ClickedSubmit()` preserves the
 domain at the call site in a way that `ClickedSubmit()` does not.
 
-**No-field tagged structs take no argument, not an empty object.** `ts('Work')` and Message constructors with empty field records produce callables that accept no argument:
+**No-field variants take no argument, not an empty object.** A variant declared with an empty field record produces a callable that accepts no argument:
 
 ```ts
-const Work = ts('Work')
-const Idle = ts('Idle')
+const Timer = defineTaggedUnion({
+  Work: {},
+  Idle: {},
+  Paused: { remainingMs: S.Number },
+})
 const Message = defineMessageUnion({ ClickedSubmit: {} })
 
 // WRONG: empty object is redundant and non-idiomatic
-Work({})
-Idle({})
+Timer.Work({})
+Timer.Idle({})
 Message.ClickedSubmit({})
 
 // RIGHT: call with no argument
-Work()
-Idle()
+Timer.Work()
+Timer.Idle()
 Message.ClickedSubmit()
 
-// Only pass an object when the struct has fields
+// Only pass an object when the variant has fields
 Message.SucceededFetch({ data: response })
-Paused({ remainingMs: 400_000 })
+Timer.Paused({ remainingMs: 400_000 })
 ```
 
-This matters for readability: `Work()` reads as "a Work value," while `Work({})` reads as "a Work value with some object in it" and makes the reader wonder what's in the object. The empty-object form compiles and works, but every exemplar in the codebase uses the no-arg form for no-field tagged structs.
+`Timer.Work()` makes it clear that the variant has no payload. `Timer.Work({})` makes the reader look for fields that are not there. The empty-object form compiles, but Foldkit uses the no-argument form throughout its examples.
 
 ## Discriminated Unions for State
 
@@ -439,16 +442,22 @@ const Model = S.Struct({
 })
 
 // RIGHT
-const Idle = ts('Idle')
-const Loading = ts('Loading')
-const Error = ts('Error', { error: S.String })
-const Ok = ts('Ok', { data: Data })
-const FetchState = S.Union([Idle, Loading, Error, Ok])
+const FetchState = defineTaggedUnion({
+  Idle: {},
+  Loading: {},
+  Error: { error: S.String },
+  Ok: { data: Data },
+})
 
 const Model = S.Struct({
   fetchState: FetchState,
 })
 ```
+
+`defineTaggedUnion` names each variant once. It returns a Schema and a namespace:
+`FetchState.Ok({ data })` constructs a value, while
+`FetchState.match(model.fetchState, { ... })` handles every variant. Use
+`guards` and `isAnyOf` when only selected variants need checking.
 
 For **remote data**, don't write that union at all. `AsyncData` ships it, with two states hand-rolled versions always miss:
 
@@ -460,29 +469,35 @@ const Model = S.Struct({
 })
 ```
 
-`Idle | Loading | Refreshing | Failure | Stale | Success`. `Refreshing` holds the previous data during a reload so a refetch doesn't blank the screen; `Stale` holds previous data alongside the new error so a failed reload doesn't throw away what the user was reading. Hand-rolling the four-state version bakes both regressions in. Keep `ts()` unions for state that isn't remote data: form steps, editor modes, connection phases.
+`Idle | Loading | Refreshing | Failure | Stale | Success`. `Refreshing` holds the previous data during a reload so a refetch doesn't blank the screen; `Stale` holds previous data alongside the new error so a failed reload doesn't throw away what the user was reading. Hand-rolling the four-state version bakes both regressions in. Keep `defineTaggedUnion` for state that isn't remote data: form steps, editor modes, connection phases.
 
 For form field validation:
 
 ```ts
-const NotValidated = ts('NotValidated')
-const Validating = ts('Validating')
-const Valid = ts('Valid')
-const Invalid = ts('Invalid', { error: S.String })
-const ValidationState = S.Union([NotValidated, Validating, Valid, Invalid])
+const ValidationState = defineTaggedUnion({
+  NotValidated: {},
+  Validating: {},
+  Valid: {},
+  Invalid: { error: S.String },
+})
 ```
 
 For multi-step flows:
 
 ```ts
-const EnterEmail = ts('EnterEmail', { email: S.String })
-const EnterPassword = ts('EnterPassword', {
-  email: S.String,
-  password: S.String,
+const SignupStep = defineTaggedUnion({
+  EnterEmail: { email: S.String },
+  EnterPassword: { email: S.String, password: S.String },
+  Confirming: { email: S.String },
 })
-const Confirming = ts('Confirming', { email: S.String })
-const SignupStep = S.Union([EnterEmail, EnterPassword, Confirming])
 ```
+
+Use `taggedStruct` when the variants cannot be declared together:
+
+- A recursive union.
+- A union assembled from variants owned by different modules.
+- A tagged child struct that is not a union variant.
+- A variant created inside a generic Schema factory.
 
 ## Code Style
 
@@ -558,8 +573,8 @@ import {
 } from 'foldkit'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
-import { r } from 'foldkit/route'
-import { ts } from 'foldkit/schema'
+import { defineRouteUnion } from 'foldkit/route'
+import { defineTaggedUnion } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
 import { Button, Dialog, Input } from '@foldkit/ui'

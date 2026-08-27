@@ -2,38 +2,29 @@ import { Option } from 'effect'
 import { Command, given, message, model, story } from 'foldkit/story'
 import { describe, expect, test } from 'vitest'
 
-import {
-  Compute,
-  EngineBooting,
-  EngineFailed,
-  EngineOff,
-  EngineReady,
-  Message,
-  type Model,
-  update,
-} from './main'
+import { Compute, EngineState, Message, type Model, update } from './main'
 
 const offModel: Model = {
-  engine: EngineOff(),
+  engine: EngineState.Off(),
   computeCount: 0,
   maybeSquareResult: Option.none(),
 }
 
 const readyModel: Model = {
-  engine: EngineReady({ engineId: 'engine-1' }),
+  engine: EngineState.Ready({ engineId: 'engine-1' }),
   computeCount: 2,
   maybeSquareResult: Option.none(),
 }
 
 describe('update', () => {
   describe('engine lifecycle', () => {
-    test('ClickedStartEngine requests the engine by entering EngineBooting', () => {
+    test('ClickedStartEngine requests the engine by entering Booting', () => {
       story(
         update,
         given(offModel),
         message(Message.ClickedStartEngine()),
         model(model => {
-          expect(model.engine._tag).toBe('EngineBooting')
+          expect(model.engine._tag).toBe('Booting')
         }),
       )
     })
@@ -41,23 +32,23 @@ describe('update', () => {
     test('StartedEngine marks the engine ready with its id', () => {
       story(
         update,
-        given({ ...offModel, engine: EngineBooting() }),
+        given({ ...offModel, engine: EngineState.Booting() }),
         message(Message.StartedEngine({ engineId: 'engine-7' })),
         model(model => {
           expect(model.engine).toStrictEqual(
-            EngineReady({ engineId: 'engine-7' }),
+            EngineState.Ready({ engineId: 'engine-7' }),
           )
         }),
       )
     })
 
-    test('ClickedStopEngine releases the engine by entering EngineOff', () => {
+    test('ClickedStopEngine releases the engine by entering Off', () => {
       story(
         update,
         given(readyModel),
         message(Message.ClickedStopEngine()),
         model(model => {
-          expect(model.engine._tag).toBe('EngineOff')
+          expect(model.engine._tag).toBe('Off')
         }),
       )
     })
@@ -76,11 +67,11 @@ describe('update', () => {
     test('FailedStartEngine records the failure reason', () => {
       story(
         update,
-        given({ ...offModel, engine: EngineBooting() }),
+        given({ ...offModel, engine: EngineState.Booting() }),
         message(Message.FailedStartEngine({ reason: 'boot timeout' })),
         model(model => {
           expect(model.engine).toStrictEqual(
-            EngineFailed({ reason: 'boot timeout' }),
+            EngineState.Failed({ reason: 'boot timeout' }),
           )
         }),
       )

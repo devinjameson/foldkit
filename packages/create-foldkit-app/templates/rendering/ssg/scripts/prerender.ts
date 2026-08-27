@@ -106,7 +106,9 @@ const program = Effect.gen(function* () {
         ),
       )
     }
-    const html = Server.injectIntoTemplate(template, result.application)
+    const html = Server.injectIntoTemplate(template, result.application, {
+      containerId: CONTAINER_ID,
+    })
     const outputFile = outputFileFor(path)
 
     yield* fs.makeDirectory(dirname(outputFile), { recursive: true })

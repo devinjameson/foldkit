@@ -7,13 +7,13 @@ import { products } from './data/products'
 import { Message, type Model, update } from './main'
 import { Products } from './page'
 import { Message as ProductsMessage } from './page/products'
-import { ProductsRoute } from './route'
+import { AppRoute } from './route'
 
 const apple = { id: '1', name: 'Apple', price: 1.5 }
 const banana = { id: '2', name: 'Banana', price: 0.75 }
 
 const baseModel: Model = {
-  route: ProductsRoute({ searchText: Option.none() }),
+  route: AppRoute.Products({ searchText: Option.none() }),
   cart: [],
   deliveryInstructions: '',
   orderPlaced: false,

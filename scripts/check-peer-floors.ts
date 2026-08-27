@@ -11,16 +11,39 @@ import { join } from 'node:path'
 // without the `foldkit/experimental/server` export the plugin imports.
 const FLOORS = [
   {
+    packageDir: 'packages/ui',
+    packageName: '@foldkit/ui',
+    dependency: 'foldkit',
+    minimum: '0.154.0',
+    safePackageVersion: '0.154.0',
+  },
+  {
+    packageDir: 'packages/devtools',
+    packageName: '@foldkit/devtools',
+    dependency: 'foldkit',
+    minimum: '0.153.0',
+    safePackageVersion: '0.153.0',
+  },
+  {
+    packageDir: 'packages/devtools-mcp',
+    packageName: '@foldkit/devtools-mcp',
+    dependency: 'foldkit',
+    minimum: '0.153.0',
+    safePackageVersion: '0.19.0',
+  },
+  {
+    packageDir: 'packages/markdown',
+    packageName: '@foldkit/markdown',
+    dependency: 'foldkit',
+    minimum: '0.153.0',
+    safePackageVersion: '0.8.0',
+  },
+  {
     packageDir: 'packages/vite-plugin-foldkit',
     packageName: '@foldkit/vite-plugin',
     dependency: 'foldkit',
-    // The first release that ships the host helpers the plugin calls
-    // (`resolveRequestUrl`, `classifyRequest`, `varyWith`).
-    minimum: '0.148.0',
-    // NOTE: Raising the floor excludes Foldkit versions that `0.15` accepted.
-    // A new minor line keeps existing `^0.15.0` consumers on the compatible
-    // plugin.
-    safePackageVersion: '0.16.0',
+    minimum: '0.153.0',
+    safePackageVersion: '0.19.0',
   },
 ] as const
 
@@ -134,6 +157,4 @@ if (failures.length > 0) {
   process.exit(1)
 }
 
-console.log(
-  `Packed peer dependency floors hold for ${FLOORS.length === 1 ? '1 package' : `${FLOORS.length} packages`}.`,
-)
+console.log(`Packed peer dependency floors hold for ${FLOORS.length} packages.`)

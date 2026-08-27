@@ -16,7 +16,7 @@ import { describe, test } from 'vitest'
 import {
   FlyTo,
   Geolocate,
-  GeolocateFailed,
+  GeolocateState,
   LockBodyScroll,
   Message,
   MountMap,
@@ -93,7 +93,9 @@ describe('view', () => {
       { update, view },
       given({
         ...mountedModel,
-        geolocateState: GeolocateFailed({ reason: 'Permission denied' }),
+        geolocateState: GeolocateState.Failed({
+          reason: 'Permission denied',
+        }),
       }),
       acknowledgeMapMount,
       expect(role('button', { name: 'Dismiss' })).toExist(),

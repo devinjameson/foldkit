@@ -93,6 +93,17 @@ const domStateParity =
     ],
     prefixes: ['packages/foldkit/'],
   })
+const prerenderRepeatable =
+  fullWorkspaceChecks ||
+  hasChanged({
+    files: ['scripts/check-prerender-repeatable.ts'],
+    prefixes: [
+      'examples/ssg/',
+      'packages/create-foldkit-app/templates/rendering/ssg/',
+      'packages/foldkit/',
+      'packages/vite-plugin-foldkit/',
+    ],
+  })
 const peerFloors =
   fullWorkspaceChecks ||
   hasChanged({
@@ -159,6 +170,7 @@ process.stdout.write(`packed_ssr_consumer=${packedSsrConsumer}\n`)
 process.stdout.write(`scaffold_server_rendering=${scaffoldServerRendering}\n`)
 process.stdout.write(`host_parity=${hostParity}\n`)
 process.stdout.write(`dom_state_parity=${domStateParity}\n`)
+process.stdout.write(`prerender_repeatable=${prerenderRepeatable}\n`)
 process.stdout.write(`peer_floors=${peerFloors}\n`)
 process.stdout.write(`typing_game=${typingGame}\n`)
 process.stdout.write(`website=${website}\n`)

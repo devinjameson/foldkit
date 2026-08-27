@@ -34,7 +34,7 @@ Rejects catch-all Messages that make update branches and traces less meaningful.
 
 ### foldkit/no-empty-object-tagged-call {#no-empty-object-tagged-call}
 
-Catches empty-object calls to no-field Message constructors. A no-field Message should be called with no arguments.
+Catches no-field variants called with an unnecessary empty object. The rule recognizes namespaces whose names end in Message, Route, or State, plus unions declared in the same file with Foldkit's union helpers. Call those constructors with no arguments.
 
 ::Snippet{name="lintNoEmptyObjectTaggedCall" label="foldkit/no-empty-object-tagged-call example"}
 
@@ -137,6 +137,16 @@ Flags turning off the freezeModel or slow dev guardrails. Fix the mutation or sl
 ::Snippet{name="lintNoDisablingDevGuardrails" label="foldkit/no-disabling-dev-guardrails example"}
 
 ## Submodel Wiring {#submodel-rules}
+
+### foldkit/no-empty-to-parent-out-message {#no-empty-to-parent-out-message}
+
+Flags an inline `toParentOutMessage` mapper that directly returns `undefined`. That mapper forwards nothing to the parent, so omit the property.
+
+Partial forwarding is valid. Match every child OutMessage variant. Return a parent OutMessage for each variant you want to forward, and return `undefined` for each variant that stops at this Submodel.
+
+The rule fixes straightforward object literals. If removal could disturb a comment, spread, dynamic computed property, or duplicate `toParentOutMessage` key, it reports the problem without changing the code. It does not inspect async functions, generators, getters, setters, or mappers referenced by name.
+
+::Snippet{name="lintNoEmptyToParentOutMessage" label="foldkit/no-empty-to-parent-out-message example"}
 
 ### foldkit/got-submodel-message-name {#got-submodel-message-name}
 

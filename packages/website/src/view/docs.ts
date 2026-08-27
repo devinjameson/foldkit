@@ -20,7 +20,13 @@ import * as Search from '../search'
 import { Message as SearchMessage } from '../search/message'
 import { defaultRenderCopyButton } from './codeBlock'
 import { headerNavView } from './headerNav'
-import { betaTag, emailFormView, iconLink, skipNavLink } from './shared'
+import {
+  betaTag,
+  emailFormView,
+  iconLink,
+  siteLinksView,
+  skipNavLink,
+} from './shared'
 import { mobileMenuView, sidebarView } from './sidebar'
 import {
   mobileTableOfContentsView,
@@ -91,7 +97,9 @@ export const docsHeaderView = (model: Model, h: HtmlBuilder<Message>) =>
                 'hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400 text-sm hover:border-gray-400 dark:hover:border-gray-600 hover:text-gray-700 dark:hover:text-gray-300 transition cursor-pointer',
               ),
               h.AriaLabel('Search documentation'),
-              h.OnClickFocus(searchKeyboardWarmupSelector, openSearchDialog),
+              h.OnClick(openSearchDialog, {
+                focusSelector: searchKeyboardWarmupSelector,
+              }),
             ],
             [
               Icon.magnifyingGlass('w-4 h-4'),
@@ -135,7 +143,9 @@ export const docsHeaderView = (model: Model, h: HtmlBuilder<Message>) =>
                 'md:hidden p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-700 dark:text-gray-300 cursor-pointer',
               ),
               h.AriaLabel('Search documentation'),
-              h.OnClickFocus(searchKeyboardWarmupSelector, openSearchDialog),
+              h.OnClick(openSearchDialog, {
+                focusSelector: searchKeyboardWarmupSelector,
+              }),
             ],
             [Icon.magnifyingGlass('w-5 h-5')],
           ),
@@ -202,6 +212,7 @@ export const docsFooterView = (
             ],
           ),
           h.p([h.Class('mt-1')], [`© ${currentYear} Devin Jameson`]),
+          siteLinksView,
         ],
       ),
     ],
@@ -1073,6 +1084,17 @@ export const docsView = (
           lazyDocsContent(Page.AiMcp.view, [model.copiedSnippets, h]),
           Page.AiMcp.tableOfContents,
         ),
+      ContentApi: () =>
+        withTableOfContents(
+          lazyDocsContent(Page.ContentApi.view, [model.copiedSnippets, h]),
+          Page.ContentApi.tableOfContents,
+        ),
+      About: () =>
+        withTableOfContents(Page.About.view(h), Page.About.tableOfContents),
+      Contact: () =>
+        withTableOfContents(Page.Contact.view(h), Page.Contact.tableOfContents),
+      Privacy: () =>
+        withTableOfContents(Page.Privacy.view(h), Page.Privacy.tableOfContents),
       NotFound: ({ path }) =>
         withoutTableOfContents(Page.NotFound.view(path, homeRouter())),
     }),

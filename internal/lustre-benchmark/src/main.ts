@@ -2,7 +2,7 @@ import { Array, Match as M, Option, Schema as S, String } from 'effect'
 import { Runtime, type Update } from 'foldkit'
 import { Document, Html, type HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
-import { ts } from 'foldkit/schema'
+import { defineTaggedUnion } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
 // MODEL
@@ -20,16 +20,10 @@ export type Todos = typeof Todos.Type
 const Filter = S.Literals(['All', 'Active', 'Completed'])
 export type Filter = typeof Filter.Type
 
-export const NotEditing = ts('NotEditing')
-type NotEditing = typeof NotEditing.Type
-
-export const Editing = ts('Editing', {
-  id: S.String,
-  text: S.String,
+const EditingState = defineTaggedUnion({
+  NotEditing: {},
+  Editing: { id: S.String, text: S.String },
 })
-type Editing = typeof Editing.Type
-
-const EditingState = S.Union([NotEditing, Editing])
 export type EditingState = typeof EditingState.Type
 
 export const Model = S.Struct({
@@ -66,7 +60,7 @@ export const init: Runtime.ApplicationInit<Model, Message> = () => ({
     todos: [],
     newTodoText: '',
     filter: 'All',
-    editing: NotEditing(),
+    editing: EditingState.NotEditing(),
     nextTodoId: 0,
   },
 })
@@ -104,7 +98,7 @@ const updateHandlers: UpdateHandlers = {
     const editingId = model.editing.id
     return {
       model: evo(model, {
-        editing: () => Editing({ id: editingId, text }),
+        editing: () => EditingState.Editing({ id: editingId, text }),
       }),
     }
   },
@@ -152,7 +146,7 @@ const updateHandlers: UpdateHandlers = {
     return {
       model: evo(model, {
         editing: () =>
-          Editing({
+          EditingState.Editing({
             id,
             text: Option.match(maybeTodo, {
               onNone: () => '',
@@ -173,7 +167,7 @@ const updateHandlers: UpdateHandlers = {
     if (String.isEmpty(text)) {
       return {
         model: evo(model, {
-          editing: () => NotEditing(),
+          editing: () => EditingState.NotEditing(),
         }),
       }
     }
@@ -184,14 +178,14 @@ const updateHandlers: UpdateHandlers = {
           Array.map(model.todos, todo =>
             todo.id === editingId ? evo(todo, { text: () => text }) : todo,
           ),
-        editing: () => NotEditing(),
+        editing: () => EditingState.NotEditing(),
       }),
     }
   },
 
   CancelledEdit: model => ({
     model: evo(model, {
-      editing: () => NotEditing(),
+      editing: () => EditingState.NotEditing(),
     }),
   }),
 

@@ -7,14 +7,14 @@ import { describe, expect, test } from 'vitest'
 import { Dialog } from '@foldkit/ui'
 import { Message as DialogMessage } from '@foldkit/ui/dialog'
 
-import { HomeRoute, Message, type Model, update } from './main'
+import { AppRoute, Message, type Model, update } from './main'
 import { uiInit } from './ui/init'
 
 const today = Calendar.make(2026, 4, 16)
 const uiInit_ = uiInit(today)
 
 const initialModel: Model = {
-  route: HomeRoute(),
+  route: AppRoute.Home(),
   uiModel: uiInit_.model,
 }
 

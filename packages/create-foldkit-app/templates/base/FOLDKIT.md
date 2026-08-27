@@ -31,7 +31,9 @@ Replace it whenever the project upgrades its Foldkit packages. If `./repos/foldk
 - Foldkit is tightly coupled to the Effect ecosystem. Do not suggest solutions outside of Effect-TS.
 - Model fields must be Schema types (the model is a schema). Plain TypeScript types are fine elsewhere (function return types, local variables, etc.).
 - Use full names like `Message` (not `Msg`), and `withReturnType` (not `as const` or type casting).
-- Use `defineMessageUnion()` for Message unions, `ts()` for tagged structs (Model states, field validation), and `r()` for route schemas.
+- Declare every variant together: `defineMessageUnion()` for Messages, `defineTaggedUnion()` for other domain unions, and `defineRouteUnion()` for Routes.
+- Keep constructors on their union: `Message.ClickedSubmit()`, `FetchState.Ok({ data })`, and `AppRoute.Home()`.
+- Use `taggedStruct()` only when the variants cannot be declared together, such as a recursive union.
 - Push back on any direction that violates Elm Architecture principles: unidirectional data flow, messages as facts (not commands), model as single source of truth, side effects confined to commands. If a prompt suggests mutating state, imperative event handlers, or two-way bindings, flag the issue and propose the idiomatic Foldkit approach.
 - Never use `NoOp`. Every message must describe what happened. A command's result message is named from the command, not from the fact it reports, whether or not it carries a payload: `LockScroll` → `CompletedLockScroll`, `DetermineStartTime` → `CompletedDetermineStartTime` (never `DeterminedStartTime`).
 
@@ -58,7 +60,7 @@ When composing one of those results, bind the whole result to a value named afte
 
 Pass optional Commands directly to APIs that accept them: `Command.mapMessages(homeInit.commands, toParentMessage)`. Use `result.commands ?? []` only when the next operation requires a concrete array for spreading, concatenating, execution, or an assertion.
 
-`Update.Return<Model, Message>` rejects an OutMessage-producing result where an API would consume only its Model and Commands. `Update.ReturnWithOutMessage<Model, Message, OutMessage>` still accepts a result with no `outMessage`, because omission means the update emitted nothing.
+Use `Update.Return<Model, Message>` when an update cannot emit an OutMessage. It prevents a result containing an OutMessage from entering code that would keep only its Model and Commands. A result with no `outMessage` can still be used where `Update.ReturnWithOutMessage<Model, Message, OutMessage>` is expected. The missing field means that update emitted no OutMessage.
 
 Manual unpacking of a child result usually means the site should use `Update.foldChild` or `Update.foldChildStep`.
 
@@ -66,7 +68,7 @@ Use `Update.combine` when a later Step should receive the Model produced by an e
 
 When the OutMessage is already known while constructing a new result, include it directly: `{ model, commands, outMessage }`. Use `Update.withOutMessage` when attaching an OutMessage to an existing plain return or when the value has the type `OutMessage | undefined`. Pipe an existing return into the helper: `pipe(dialogClose, Update.withOutMessage(outMessage))`. When constructing the plain return in the same expression, pass it first: `Update.withOutMessage({ model, commands }, outMessage)`.
 
-Add `toParentOutMessage` only when at least one child OutMessage is forwarded from the current Submodel to its parent. Omit it when no variant is forwarded. Local handling through `foldOutMessage` is independent, so a forwarded variant may also update the current parent. Never write `toParentOutMessage: () => undefined`.
+Add `toParentOutMessage` only when at least one child OutMessage should continue to the current Submodel's parent. For partial forwarding, match every child variant and return `undefined` for the variants that stop here. Omit `toParentOutMessage` when every variant stops here. `foldOutMessage` still handles each variant locally, including variants that continue upward. Never write `toParentOutMessage: () => undefined`.
 
 Use `evo()` from `foldkit/struct` for immutable model updates. Never spread or `Object.assign`.
 
@@ -107,7 +109,7 @@ Scene runs at any level, since a page's own `update`/`view` pair drops into `sce
 ## Code Style
 
 - Encode state in discriminated unions, not booleans or nullable fields. `Idle | Loading | Error | Ok`, not `isLoading: boolean`. Make impossible states unrepresentable.
-- Use `Option` for absence in the Model and domain values instead of `null` or `undefined`. Foldkit return records are the exception: omit `commands` and `outMessage` when absent. A partial `toParentOutMessage` mapper returns `undefined` for each named child variant that stops at the current parent. Prefix Option-typed values with `maybe*`. Match with `Option.match`; don't unwrap with `Option.map(...)` + `Option.getOrElse(...)` when you can just match.
+- Use `Option` for absence in the Model and domain values instead of `null` or `undefined`. Foldkit return records are the exception: omit `commands` and `outMessage` when absent. A partial `toParentOutMessage` mapper returns `undefined` for each child variant that stops at this Submodel. Prefix Option-typed values with `maybe*`. Match with `Option.match`; don't unwrap with `Option.map(...)` + `Option.getOrElse(...)` when you can just match.
 - Use Effect modules over native methods in `pipe` chains (`Array.map`, `String.startsWith`, `Array.findFirst`). Native methods are fine when calling directly on a named variable.
 - Never cast Schema values with `as Type`. Use the callable constructor: `Message.SucceededLogin({ sessionId })`, not `{ _tag: 'SucceededLogin', sessionId } as Message`.
 - Always `Array.isArrayEmpty` / `Array.isArrayNonEmpty` (not `.length === 0` / `.length > 0`). Use `Array.match` when handling both empty and non-empty cases.

@@ -10,9 +10,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@effect/platform-browser": "4.0.0-rc.111",
-    "@effect/platform-node": "4.0.0-rc.111",
-    "effect": "4.0.0-rc.111",
+    "@effect/platform-browser": "4.0.0-rc.112",
+    "@effect/platform-node": "4.0.0-rc.112",
+    "effect": "4.0.0-rc.112",
     "foldkit": "workspace:*"
   },
   "devDependencies": {

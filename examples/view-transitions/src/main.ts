@@ -10,7 +10,7 @@ import { Url, toString as urlToString } from 'foldkit/url'
 import { Artwork, artworks, findArtwork } from './artwork'
 import { AppRoute, artworkRouter, galleryRouter, urlToAppRoute } from './route'
 
-export { ArtworkRoute, GalleryRoute, NotFoundRoute } from './route'
+export { AppRoute } from './route'
 
 // MODEL
 

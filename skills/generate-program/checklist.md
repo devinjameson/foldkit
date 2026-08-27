@@ -56,8 +56,8 @@ Phase 6 runs it again as sanity.
 
 ```bash
 # Empty-object constructor calls. foldkit/no-empty-object-tagged-call covers bare
-# constructors and `Message.*` calls. Other namespace calls such as
-# `Todo.ClickedDelete({})` are unflagged.
+# constructors, Message/Route/State namespaces, and unions declared in this
+# file. Check imported domain unions with other names by eye.
 grep -rn "({})" src/
 
 # External links missing Rel. foldkit/require-rel-for-external-link bails when the
@@ -129,7 +129,7 @@ grep -rn "readonly Command<.*>\[\]" src/
 
 # Hand-rolled remote-data union: use AsyncData.Schema(Data, Error).
 # Eyeball each hit; a non-remote state machine with these names is fine.
-grep -rn "ts('Loading')" src/
+grep -rn "Loading: {}" src/
 
 # Stale Effect array predicate names (the real ones are isArrayEmpty /
 # isArrayNonEmpty). Note both real ones take a MUTABLE Array<A>: on a Model
@@ -279,7 +279,9 @@ Alongside the greps, eyeball each file's imports. Every symbol you imported shou
 - [ ] Discriminated unions for multi-valued state (not booleans)
 - [ ] `Option` for absent fields (not empty strings, null, or zero)
 - [ ] Impossible states are unrepresentable
-- [ ] `ts()` for non-Message tagged structs (Model states, route variants)
+- [ ] `defineTaggedUnion()` for non-Message domain unions and Model states
+- [ ] `defineRouteUnion()` for Routes
+- [ ] `taggedStruct()` only when the variants cannot be declared together
 - [ ] `defineMessageUnion()` for Message and OutMessage unions
 - [ ] **Remote data uses `AsyncData`, not a hand-rolled union.** `AsyncData.Schema(DataSchema, ErrorSchema)` supplies `Idle`, `Loading`, `Refreshing`, `Failure`, `Stale`, and `Success` plus `match`, `isPending`, `hasData`, `revalidate`, and the rest. A hand-rolled `Idle | Loading | Error | Ok` is missing `Refreshing` and `Stale`, which is what forces a refetch to blank the screen and a failed refetch to discard good data. Reference: `repos/foldkit/examples/weather/src/main.ts`
 
@@ -294,7 +296,7 @@ Foldkit ships these; reaching past them is a finding, not a style choice.
 - [ ] Dot access keeps the operation and all of its returned fields visible together but does not prevent someone from ignoring `outMessage`
 - [ ] Child results use `Update.foldChild` or `Update.foldChildStep` instead of manual unpacking
 - [ ] An OutMessage that is already known is included directly in a new result. `Update.withOutMessage` is used for an existing plain return or a value with the type `OutMessage | undefined`: an existing return is piped into the helper, while a new result literal is passed first. No local equivalent helper or conditional spread duplicates it
-- [ ] Child folds include `toParentOutMessage` only when it forwards at least one child OutMessage from the current Submodel to its parent; no blanket `toParentOutMessage: () => undefined` mapping appears
+- [ ] Child folds include `toParentOutMessage` only when at least one child OutMessage should continue to the current Submodel's parent. Partial forwarding matches every child variant and returns `undefined` for variants that stop here. The property is omitted when every variant stops here, and no `toParentOutMessage: () => undefined` mapping appears
 - [ ] Two-or-more-step post-mutation handlers use `Update.combine(model, [...])` and `Update.refresh({ read, revalidate, write, load })` rather than hand-threaded `evo` chains and conditional Command arrays. One Step is not wrapped in `Update.combine`, and an inline Step parameter is named `stepModel`
 - [ ] Child Submodel results use `Update.foldChild` or `Update.foldChildStep`, which re-tag Commands through `toParentMessage`; direct `Command.mapMessages` is reserved for lower-level helpers and independent init results
 - [ ] HTTP uses `HttpClient` / `HttpClientRequest` from `effect/unstable/http`, with `Effect.provide(effect, Http.layer)` to supply the client. Not `@effect/platform` (`@effect/platform-browser` is separate and is for `BrowserKeyValueStore` / `BrowserCrypto`)
@@ -494,7 +496,7 @@ Items without a tier marker apply universally (even to a 50-line counter). When 
 - [ ] Section headers present in files that span multiple sections: `// MODEL`, `// MESSAGE`, `// INIT`, `// UPDATE`, `// COMMAND`, `// VIEW`, `// RUN`. Order: Model → Message → Flags (if any) → Init → Update → Command → View → Run.
 - [ ] `index.ts` is always a barrel, never implementation. If a module `foo/` has code, the shape is `foo/foo.ts` for code + `foo/index.ts` for `export * from './foo'` and `export * as Child from './child'`.
 - [ ] Imports ordered: npm packages first (alphabetized), then `foldkit/*`, then relative imports. No mixed groups.
-- [ ] Message definitions exported individually AND as the `Message` union type when used across modules. Internal-only messages stay unexported.
+- [ ] Message unions are exported as values and types when used across modules. Variants stay on the owning namespace: `Message.ClickedSave()`, never a separate `ClickedSave` export. Internal-only Message unions stay unexported.
 
 ## Submodel and Command extraction [T5+]
 

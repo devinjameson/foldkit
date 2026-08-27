@@ -90,6 +90,8 @@ Event attributes return Messages instead of mutating state. Pass a Message direc
 
 `h.OnClick` takes a Message. `h.OnInput` takes a function because the input value becomes part of the Message. Both remain declarative: view reports what happened, and update decides what follows.
 
+Clicks allow the browser default and bubble to ancestors unless you say otherwise. Pass a second argument when the view owns either part of that browser contract. For example, an expand button inside a clickable tree row can use `{ defaultAction: 'Prevent', propagation: 'Stop' }`. The button dispatches its expansion Message without also dispatching the row's selection Message. The controls are independent, so use either one or both.
+
 ## Complex Handlers
 
 A handler can do more than return a one-line Message. The constraint is purity, not size. It may branch on event data, read Model-derived state from view scope, and return `Option<Message>` when only some events should dispatch:
@@ -100,18 +102,30 @@ For `OnKeyDownPreventDefault`, returning `Some` claims the key. Foldkit suppress
 
 Handlers never run Effects or decide consequences. The example classifies Enter with an active result as `SelectedResult`; update decides what selection changes. When a translator grows, extract it to a named pure function and pass that function to the attribute.
 
+## Focus Regions
+
+Use `OnFocusEnter` and `OnFocusLeave` when several elements share one focus state. Put both attributes on their common ancestor. Foldkit dispatches when focus crosses that ancestor's boundary and ignores moves between its descendants.
+
+Imagine a text editor and its formatting toolbar. Focusing the editor dispatches `EnteredEditorRegion`. Moving from the editor into a toolbar button dispatches nothing, so the toolbar stays visible. Moving from either one to an element outside the region dispatches `LeftEditorRegion`.
+
+::Snippet{name="eventHandlingFocusBoundary" label="Focus region example"}
+
+The attributes use the bubbling `focusin` and `focusout` events, so the common ancestor does not need a `tabindex`. Foldkit reads the related target and performs the containment check inside its own event handler. View code receives no DOM event or element.
+
+These attributes report transitions only after their listeners attach. Hydration preserves focus on an adopted element, but Foldkit does not invent an `OnFocusEnter` Message for an earlier event it did not observe. Use `:focus-within` when focus only affects presentation. If Model state must reflect focus that may already exist during hydration, reconcile `document.activeElement` from a Mount after the element exists.
+
 ## Event Handler Side Effects
 
 Most side effects can run after the browser event returns, through a Command, Subscription, or Mount. A few browser APIs only work synchronously inside the originating user gesture. Foldkit exposes dedicated attributes for those cases, so the framework still owns the effect and the view callback stays pure.
 
 Two constraints account for most uses. `event.preventDefault()` must run before the browser commits its default action. On iOS Safari, `.focus()` must run during the gesture to open the on-screen keyboard.
 
-`OnKeyDownPreventDefault` lets a translator decide whether to claim a key event. `OnPastePreventDefault` passes the clipboard's `text/plain` payload to its translator; `Some` suppresses the default insertion and dispatches the Message, while `None` leaves the paste alone. `OnCopyText` and `OnCutText` write Model-derived text to the clipboard and suppress the browser's default payload; the cut variant also dispatches a Message. `OnClickFocus` synchronously focuses the element matching a selector, then dispatches its Message.
+`OnClick` accepts `defaultAction`, `propagation`, and `focusSelector` controls. Foldkit applies them synchronously before dispatching the Message. `OnKeyDownPreventDefault` lets a translator decide whether to claim a key event. `OnPastePreventDefault` passes the clipboard's `text/plain` payload to its translator; `Some` suppresses the default insertion and dispatches the Message, while `None` leaves the paste alone. `OnCopyText` and `OnCutText` write Model-derived text to the clipboard and suppress the browser's default payload; the cut variant also dispatches a Message.
 
 ::Snippet{name="eventHandlerSideEffects" label="event handler side effects example"}
 
-The iOS keyboard case has one extra constraint: the target must already exist when the user taps. An input inside a closed dialog does not. Keep an always-present, visually hidden text input as a keyboard warmup and point `OnClickFocus` at it. The same attribute dispatches the Message that opens the dialog. Update can then return a `Dom.focus` Command to move focus to the real input after it mounts, while iOS keeps the keyboard open.
+The iOS keyboard case has one extra constraint: the target must already exist when the user taps. An input inside a closed dialog does not. Keep an always-present, visually hidden text input as a keyboard warmup and pass its selector as `focusSelector` to `OnClick`. The same attribute dispatches the Message that opens the dialog. Update can then return a `Dom.focus` Command to move focus to the real input after it mounts, while iOS keeps the keyboard open.
 
-These attributes are narrow browser-integration primitives, not a general escape hatch. Use them only when the browser requires synchronous work inside a gesture. Anything that can wait belongs in the normal lifecycle, usually a Command.
+These controls and attributes are narrow browser-integration primitives, not a general escape hatch. Use them only when the browser requires synchronous work inside a gesture. Anything that can wait belongs in the normal lifecycle, usually a Command.
 
 The basic loop is now complete: a Message reaches update, update returns a Model, and view renders it. The next step is side effects. [Commands](/core/commands) describe one-shot work for the runtime to execute.

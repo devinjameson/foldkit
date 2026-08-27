@@ -6,22 +6,16 @@ import { Button, Checkbox, Input, RadioGroup } from '@foldkit/ui'
 
 import * as Icon from './icon'
 import {
+  CheckoutState,
+  Discount,
   EDITIONS,
   EditionRadioGroup,
   Message,
+  type Model,
   checkoutMachine,
   editionName,
   isReviewReady,
   promoToMaybeDiscount,
-} from './main'
-import type {
-  Cart,
-  CheckoutState,
-  Confirmed,
-  Discount,
-  Model,
-  Payment,
-  Review,
 } from './main'
 
 // VIEW
@@ -433,7 +427,7 @@ const cancelCheckoutButton = (h: HtmlBuilder<Message>): Html =>
   )
 
 const cartView = (
-  state: typeof Cart.Type,
+  state: typeof CheckoutState.Cart.Type,
   editionRadioGroup: RadioGroup.Model,
   h: HtmlBuilder<Message>,
 ): Html => {
@@ -700,7 +694,7 @@ const shippingView = (h: HtmlBuilder<Message>): Html =>
   )
 
 const paymentView = (
-  state: typeof Payment.Type,
+  state: typeof CheckoutState.Payment.Type,
   h: HtmlBuilder<Message>,
 ): Html =>
   h.div(
@@ -864,7 +858,7 @@ const paymentView = (
   )
 
 const reviewView = (
-  state: typeof Review.Type,
+  state: typeof CheckoutState.Review.Type,
   h: HtmlBuilder<Message>,
 ): Html => {
   const isReadyToPlace = isReviewReady(state)
@@ -1194,7 +1188,7 @@ const placingView = (h: HtmlBuilder<Message>): Html =>
   )
 
 const confirmedView = (
-  state: typeof Confirmed.Type,
+  state: typeof CheckoutState.Confirmed.Type,
   h: HtmlBuilder<Message>,
 ): Html =>
   h.div(

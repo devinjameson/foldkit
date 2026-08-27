@@ -14,7 +14,7 @@ import { Command, Runtime, Update } from 'foldkit'
 import { Machine } from 'foldkit/experimental'
 import { otherwise, to, when } from 'foldkit/experimental/machine'
 import { defineMessageUnion } from 'foldkit/message'
-import { ts } from 'foldkit/schema'
+import { defineTaggedUnion } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 
 import { RadioGroup } from '@foldkit/ui'
@@ -26,46 +26,34 @@ export const Discount = S.Struct({
   percentOff: S.Number,
 })
 
-export const NoPromo = ts('NoPromo')
-export const AppliedPromo = ts('AppliedPromo', { discount: Discount })
-export const RejectedPromo = ts('RejectedPromo')
+export const Promo = defineTaggedUnion({
+  NoPromo: {},
+  AppliedPromo: { discount: Discount },
+  RejectedPromo: {},
+})
 
-export const Promo = S.Union([NoPromo, AppliedPromo, RejectedPromo])
-
-export const Cart = ts('Cart', { isShippingRequired: S.Boolean })
-export const Shipping = ts('Shipping', { isShippingRequired: S.Boolean })
-export const Payment = ts('Payment', {
-  isPaymentMethodSelected: S.Boolean,
-  isShippingRequired: S.Boolean,
+export const CheckoutState = defineTaggedUnion({
+  Cart: { isShippingRequired: S.Boolean },
+  Shipping: { isShippingRequired: S.Boolean },
+  Payment: {
+    isPaymentMethodSelected: S.Boolean,
+    isShippingRequired: S.Boolean,
+  },
+  Review: {
+    isPaymentMethodSelected: S.Boolean,
+    isShippingRequired: S.Boolean,
+    isTermsAccepted: S.Boolean,
+    promo: Promo,
+    promoCodeInput: S.String,
+  },
+  Placing: { isShippingRequired: S.Boolean, maybeDiscount: S.Option(Discount) },
+  Confirmed: {
+    isShippingRequired: S.Boolean,
+    maybeDiscount: S.Option(Discount),
+    orderId: S.String,
+  },
+  Cancelled: { isShippingRequired: S.Boolean },
 })
-export const Review = ts('Review', {
-  isPaymentMethodSelected: S.Boolean,
-  isShippingRequired: S.Boolean,
-  isTermsAccepted: S.Boolean,
-  promo: Promo,
-  promoCodeInput: S.String,
-})
-export const Placing = ts('Placing', {
-  isShippingRequired: S.Boolean,
-  maybeDiscount: S.Option(Discount),
-})
-export const Confirmed = ts('Confirmed', {
-  isShippingRequired: S.Boolean,
-  maybeDiscount: S.Option(Discount),
-  orderId: S.String,
-})
-export const Cancelled = ts('Cancelled', {
-  isShippingRequired: S.Boolean,
-})
-export const CheckoutState = S.Union([
-  Cart,
-  Shipping,
-  Payment,
-  Review,
-  Placing,
-  Confirmed,
-  Cancelled,
-])
 
 export const TransitionLogEntry = S.Struct({
   id: S.Number,
@@ -146,11 +134,12 @@ export const promoToMaybeDiscount = (
     M.option,
   )
 
-export const isReviewReady = (review: typeof Review.Type): boolean =>
-  review.isPaymentMethodSelected && review.isTermsAccepted
+export const isReviewReady = (
+  review: typeof CheckoutState.Review.Type,
+): boolean => review.isPaymentMethodSelected && review.isTermsAccepted
 
 export const reviewToMaybeDiscount = (
-  review: typeof Review.Type,
+  review: typeof CheckoutState.Review.Type,
 ): Option.Option<typeof Discount.Type> => {
   const normalizedCode = pipe(
     review.promoCodeInput,
@@ -168,7 +157,7 @@ export const checkoutMachine = Machine.define({
   state: CheckoutState,
   message: Message,
 })({
-  initial: Cart({ isShippingRequired: true }),
+  initial: CheckoutState.Cart({ isShippingRequired: true }),
   states: {
     Cart: {
       on: {
@@ -180,11 +169,13 @@ export const checkoutMachine = Machine.define({
             state => state.isShippingRequired,
             'Shipping',
             ({ state }) =>
-              Shipping({ isShippingRequired: state.isShippingRequired }),
+              CheckoutState.Shipping({
+                isShippingRequired: state.isShippingRequired,
+              }),
           ),
           otherwise(
             to('Payment', ({ state }) =>
-              Payment({
+              CheckoutState.Payment({
                 isPaymentMethodSelected: false,
                 isShippingRequired: state.isShippingRequired,
               }),
@@ -192,23 +183,27 @@ export const checkoutMachine = Machine.define({
           ),
         ],
         ClickedCancel: to('Cancelled', ({ state }) =>
-          Cancelled({ isShippingRequired: state.isShippingRequired }),
+          CheckoutState.Cancelled({
+            isShippingRequired: state.isShippingRequired,
+          }),
         ),
       },
     },
     Shipping: {
       on: {
         ClickedContinue: to('Payment', ({ state }) =>
-          Payment({
+          CheckoutState.Payment({
             isPaymentMethodSelected: false,
             isShippingRequired: state.isShippingRequired,
           }),
         ),
         ClickedBack: to('Cart', ({ state }) =>
-          Cart({ isShippingRequired: state.isShippingRequired }),
+          CheckoutState.Cart({ isShippingRequired: state.isShippingRequired }),
         ),
         ClickedCancel: to('Cancelled', ({ state }) =>
-          Cancelled({ isShippingRequired: state.isShippingRequired }),
+          CheckoutState.Cancelled({
+            isShippingRequired: state.isShippingRequired,
+          }),
         ),
       },
     },
@@ -218,11 +213,11 @@ export const checkoutMachine = Machine.define({
           evo(state, { isPaymentMethodSelected: () => message.isSelected }),
         ),
         ClickedContinue: to('Review', ({ state }) =>
-          Review({
+          CheckoutState.Review({
             isPaymentMethodSelected: state.isPaymentMethodSelected,
             isShippingRequired: state.isShippingRequired,
             isTermsAccepted: false,
-            promo: NoPromo(),
+            promo: Promo.NoPromo(),
             promoCodeInput: '',
           }),
         ),
@@ -231,16 +226,22 @@ export const checkoutMachine = Machine.define({
             state => state.isShippingRequired,
             'Shipping',
             ({ state }) =>
-              Shipping({ isShippingRequired: state.isShippingRequired }),
+              CheckoutState.Shipping({
+                isShippingRequired: state.isShippingRequired,
+              }),
           ),
           otherwise(
             to('Cart', ({ state }) =>
-              Cart({ isShippingRequired: state.isShippingRequired }),
+              CheckoutState.Cart({
+                isShippingRequired: state.isShippingRequired,
+              }),
             ),
           ),
         ],
         ClickedCancel: to('Cancelled', ({ state }) =>
-          Cancelled({ isShippingRequired: state.isShippingRequired }),
+          CheckoutState.Cancelled({
+            isShippingRequired: state.isShippingRequired,
+          }),
         ),
       },
     },
@@ -256,7 +257,9 @@ export const checkoutMachine = Machine.define({
           evo(state, {
             promoCodeInput: () => message.value,
             promo: currentPromo =>
-              currentPromo._tag === 'RejectedPromo' ? NoPromo() : currentPromo,
+              currentPromo._tag === 'RejectedPromo'
+                ? Promo.NoPromo()
+                : currentPromo,
           }),
         ),
         SubmittedPromoCode: [
@@ -264,11 +267,11 @@ export const checkoutMachine = Machine.define({
             reviewToMaybeDiscount,
             'Review',
             ({ state, guardValue: discount }) =>
-              evo(state, { promo: () => AppliedPromo({ discount }) }),
+              evo(state, { promo: () => Promo.AppliedPromo({ discount }) }),
           ),
           otherwise(
             to('Review', ({ state }) =>
-              evo(state, { promo: () => RejectedPromo() }),
+              evo(state, { promo: () => Promo.RejectedPromo() }),
             ),
           ),
         ],
@@ -277,7 +280,7 @@ export const checkoutMachine = Machine.define({
             isReviewReady,
             'Placing',
             ({ state }) =>
-              Placing({
+              CheckoutState.Placing({
                 isShippingRequired: state.isShippingRequired,
                 maybeDiscount: promoToMaybeDiscount(state.promo),
               }),
@@ -287,20 +290,22 @@ export const checkoutMachine = Machine.define({
           ),
         ],
         ClickedBack: to('Payment', ({ state }) =>
-          Payment({
+          CheckoutState.Payment({
             isPaymentMethodSelected: state.isPaymentMethodSelected,
             isShippingRequired: state.isShippingRequired,
           }),
         ),
         ClickedCancel: to('Cancelled', ({ state }) =>
-          Cancelled({ isShippingRequired: state.isShippingRequired }),
+          CheckoutState.Cancelled({
+            isShippingRequired: state.isShippingRequired,
+          }),
         ),
       },
     },
     Placing: {
       on: {
         SucceededPlaceOrder: to('Confirmed', ({ state, message }) =>
-          Confirmed({
+          CheckoutState.Confirmed({
             isShippingRequired: state.isShippingRequired,
             maybeDiscount: state.maybeDiscount,
             orderId: message.orderId,
@@ -311,14 +316,14 @@ export const checkoutMachine = Machine.define({
     Confirmed: {
       on: {
         ClickedStartOver: to('Cart', ({ state }) =>
-          Cart({ isShippingRequired: state.isShippingRequired }),
+          CheckoutState.Cart({ isShippingRequired: state.isShippingRequired }),
         ),
       },
     },
     Cancelled: {
       on: {
         ClickedStartOver: to('Cart', ({ state }) =>
-          Cart({ isShippingRequired: state.isShippingRequired }),
+          CheckoutState.Cart({ isShippingRequired: state.isShippingRequired }),
         ),
       },
     },

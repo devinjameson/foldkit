@@ -11,7 +11,7 @@ import { describe, expect, expectTypeOf, it } from 'vitest'
 
 import * as Command from '../../command/public.js'
 import * as ManagedResource from '../../managedResource/public.js'
-import { defineMessageUnion, ts } from '../../schema/index.js'
+import { defineMessageUnion, defineTaggedUnion } from '../../schema/index.js'
 import { evo } from '../../struct/index.js'
 import * as Subscription from '../../subscription/public.js'
 import * as Update from '../../update/index.js'
@@ -19,12 +19,12 @@ import { define, otherwise, to, when } from './machine.js'
 
 // REMOTE DATA
 
-const Idle = ts('Idle')
-const Loading = ts('Loading')
-const Error = ts('Error', { error: S.String })
-const Ok = ts('Ok', { data: S.String })
-
-const RemoteData = S.Union([Idle, Loading, Error, Ok])
+const RemoteData = defineTaggedUnion({
+  Idle: {},
+  Loading: {},
+  Error: { error: S.String },
+  Ok: { data: S.String },
+})
 type RemoteData = typeof RemoteData.Type
 
 const RemoteDataMessage = defineMessageUnion({
@@ -39,29 +39,31 @@ const remoteDataMachine = define({
   state: RemoteData,
   message: RemoteDataMessage,
 })({
-  initial: Idle(),
+  initial: RemoteData.Idle(),
   states: {
     Idle: {
       on: {
-        ClickedFetch: to('Loading', () => Loading()),
+        ClickedFetch: to('Loading', () => RemoteData.Loading()),
       },
     },
     Loading: {
       on: {
-        SucceededFetch: to('Ok', ({ message }) => Ok({ data: message.data })),
+        SucceededFetch: to('Ok', ({ message }) =>
+          RemoteData.Ok({ data: message.data }),
+        ),
         FailedFetch: to('Error', ({ message }) =>
-          Error({ error: message.error }),
+          RemoteData.Error({ error: message.error }),
         ),
       },
     },
     Error: {
       on: {
-        ClickedRetry: to('Loading', () => Loading()),
+        ClickedRetry: to('Loading', () => RemoteData.Loading()),
       },
     },
     Ok: {
       on: {
-        ClickedFetch: to('Loading', () => Loading()),
+        ClickedFetch: to('Loading', () => RemoteData.Loading()),
       },
     },
   },
@@ -75,24 +77,14 @@ const BASE_BACKOFF_DELAY_MILLIS = 250
 const backoffDelayMillis = (attemptCount: number): number =>
   BASE_BACKOFF_DELAY_MILLIS * 2 ** (attemptCount - 1)
 
-const Disconnected = ts('Disconnected')
-const Connecting = ts('Connecting', { attemptCount: S.Number })
-const Connected = ts('Connected', { sessionId: S.String })
-const Reconnecting = ts('Reconnecting', {
-  attemptCount: S.Number,
-  delayMillis: S.Number,
+const ConnectionState = defineTaggedUnion({
+  Disconnected: {},
+  Connecting: { attemptCount: S.Number },
+  Connected: { sessionId: S.String },
+  Reconnecting: { attemptCount: S.Number, delayMillis: S.Number },
+  Failed: { attemptCount: S.Number, reason: S.String },
+  Suspended: {},
 })
-const Failed = ts('Failed', { attemptCount: S.Number, reason: S.String })
-const Suspended = ts('Suspended')
-
-const ConnectionState = S.Union([
-  Disconnected,
-  Connecting,
-  Connected,
-  Reconnecting,
-  Failed,
-  Suspended,
-])
 type ConnectionState = typeof ConnectionState.Type
 
 const ConnectionMessage = defineMessageUnion({
@@ -106,7 +98,7 @@ const ConnectionMessage = defineMessageUnion({
   CompletedLogTransition: {},
 })
 type ConnectionMessage = typeof ConnectionMessage.Type
-type ConnectingState = typeof Connecting.Type
+type ConnectingState = typeof ConnectionState.Connecting.Type
 type SocketErroredMessage = typeof ConnectionMessage.SocketErrored.Type
 
 const connectingToMaybeBackoff = (
@@ -140,18 +132,21 @@ const connectionMachine = define({
   state: ConnectionState,
   message: ConnectionMessage,
 })({
-  initial: Disconnected(),
+  initial: ConnectionState.Disconnected(),
   states: {
     Disconnected: {
       on: {
-        ClickedConnect: to('Connecting', () => Connecting({ attemptCount: 1 })),
+        ClickedConnect: to('Connecting', () =>
+          ConnectionState.Connecting({ attemptCount: 1 }),
+        ),
       },
     },
     Connecting: {
       on: {
         SocketOpened: to(
           'Connected',
-          ({ message }) => Connected({ sessionId: message.sessionId }),
+          ({ message }) =>
+            ConnectionState.Connected({ sessionId: message.sessionId }),
           ({ message }) => [
             LogTransition({
               description: `Opened session ${message.sessionId}`,
@@ -163,14 +158,14 @@ const connectionMachine = define({
             connectingToMaybeBackoff,
             'Reconnecting',
             ({ state, guardValue }) =>
-              Reconnecting({
+              ConnectionState.Reconnecting({
                 attemptCount: state.attemptCount,
                 delayMillis: guardValue.delayMillis,
               }),
           ),
           otherwise(
             to('Failed', ({ state, message }) =>
-              Failed({
+              ConnectionState.Failed({
                 attemptCount: state.attemptCount,
                 reason: message.reason,
               }),
@@ -182,30 +177,38 @@ const connectionMachine = define({
     Connected: {
       on: {
         SocketClosed: to('Reconnecting', () =>
-          Reconnecting({
+          ConnectionState.Reconnecting({
             attemptCount: 1,
             delayMillis: backoffDelayMillis(1),
           }),
         ),
-        ClickedDisconnect: to('Disconnected', () => Disconnected()),
+        ClickedDisconnect: to('Disconnected', () =>
+          ConnectionState.Disconnected(),
+        ),
       },
     },
     Reconnecting: {
       on: {
         TimedOutBackoff: to('Connecting', ({ state }) =>
-          Connecting({ attemptCount: state.attemptCount + 1 }),
+          ConnectionState.Connecting({ attemptCount: state.attemptCount + 1 }),
         ),
-        ClickedDisconnect: to('Disconnected', () => Disconnected()),
+        ClickedDisconnect: to('Disconnected', () =>
+          ConnectionState.Disconnected(),
+        ),
       },
     },
     Failed: {
       on: {
-        ClickedConnect: to('Connecting', () => Connecting({ attemptCount: 1 })),
+        ClickedConnect: to('Connecting', () =>
+          ConnectionState.Connecting({ attemptCount: 1 }),
+        ),
       },
     },
     Suspended: {
       on: {
-        ClickedConnect: to('Connecting', () => Connecting({ attemptCount: 1 })),
+        ClickedConnect: to('Connecting', () =>
+          ConnectionState.Connecting({ attemptCount: 1 }),
+        ),
       },
     },
   },
@@ -323,7 +326,7 @@ const narrowingMachine = define({
   state: ConnectionState,
   message: ConnectionMessage,
 })({
-  initial: Disconnected(),
+  initial: ConnectionState.Disconnected(),
   states: {
     Connecting: {
       on: {
@@ -335,7 +338,7 @@ const narrowingMachine = define({
               const sourceTag: 'Connecting' = guardValue.sourceTag
               const messageTag: 'SocketErrored' = guardValue.messageTag
 
-              return Failed({
+              return ConnectionState.Failed({
                 attemptCount: state.attemptCount,
                 reason: `${sourceTag} ${messageTag} ${message.reason}`,
               })
@@ -351,7 +354,7 @@ const guardValueMachine = define({
   state: ConnectionState,
   message: ConnectionMessage,
 })({
-  initial: Disconnected(),
+  initial: ConnectionState.Disconnected(),
   states: {
     Connecting: {
       on: {
@@ -360,7 +363,7 @@ const guardValueMachine = define({
             connectingToMaybeNextAttempt,
             'Reconnecting',
             ({ state, guardValue }) =>
-              Reconnecting({
+              ConnectionState.Reconnecting({
                 attemptCount: guardValue.nextAttemptCount,
                 delayMillis: backoffDelayMillis(state.attemptCount),
               }),
@@ -375,7 +378,7 @@ const booleanGuardMachine = define({
   state: ConnectionState,
   message: ConnectionMessage,
 })({
-  initial: Disconnected(),
+  initial: ConnectionState.Disconnected(),
   states: {
     Connecting: {
       on: {
@@ -384,14 +387,14 @@ const booleanGuardMachine = define({
             state => state.attemptCount < MAX_CONNECT_ATTEMPTS,
             'Reconnecting',
             ({ state }) =>
-              Reconnecting({
+              ConnectionState.Reconnecting({
                 attemptCount: state.attemptCount,
                 delayMillis: backoffDelayMillis(state.attemptCount),
               }),
           ),
           otherwise(
             to('Failed', ({ state, message }) =>
-              Failed({
+              ConnectionState.Failed({
                 attemptCount: state.attemptCount,
                 reason: message.reason,
               }),
@@ -407,12 +410,12 @@ const wrongVariantMachine = define({
   state: RemoteData,
   message: RemoteDataMessage,
 })({
-  initial: Idle(),
+  initial: RemoteData.Idle(),
   states: {
     Idle: {
       on: {
-        // @ts-expect-error the build function must return the Loading variant named by the target tag
-        ClickedFetch: to('Loading', () => Idle()),
+        // @ts-expect-error the build function must return the RemoteData.Loading variant named by the target tag
+        ClickedFetch: to('Loading', () => RemoteData.Idle()),
       },
     },
   },
@@ -422,12 +425,12 @@ const wrongTargetTagMachine = define({
   state: RemoteData,
   message: RemoteDataMessage,
 })({
-  initial: Idle(),
+  initial: RemoteData.Idle(),
   states: {
     Idle: {
       on: {
         // @ts-expect-error 'Loadingg' is not a state tag
-        ClickedFetch: to('Loadingg', () => Loading()),
+        ClickedFetch: to('Loadingg', () => RemoteData.Loading()),
       },
     },
   },
@@ -437,7 +440,7 @@ const unknownStateTagMachine = define({
   state: RemoteData,
   message: RemoteDataMessage,
 })({
-  initial: Idle(),
+  initial: RemoteData.Idle(),
   states: {
     // @ts-expect-error 'Idl' is not a state tag
     Idl: {
@@ -450,12 +453,12 @@ const unknownMessageTagMachine = define({
   state: RemoteData,
   message: RemoteDataMessage,
 })({
-  initial: Idle(),
+  initial: RemoteData.Idle(),
   states: {
     Idle: {
       on: {
         // @ts-expect-error 'ClickedFetchh' is not a Message tag
-        ClickedFetchh: to('Loading', () => Loading()),
+        ClickedFetchh: to('Loading', () => RemoteData.Loading()),
       },
     },
   },
@@ -465,16 +468,16 @@ const shadowedGuardMachine = define({
   state: RemoteData,
   message: RemoteDataMessage,
 })({
-  initial: Idle(),
+  initial: RemoteData.Idle(),
   states: {
     Idle: {
       on: {
         ClickedFetch: [
-          otherwise(to('Loading', () => Loading())),
+          otherwise(to('Loading', () => RemoteData.Loading())),
           when(
             (_state, message) => Option.some(message),
             'Ok',
-            () => Ok({ data: 'unreachable' }),
+            () => RemoteData.Ok({ data: 'unreachable' }),
           ),
         ],
       },
@@ -519,12 +522,12 @@ class SaveClient extends Context.Service<SaveClient, SaveShape>()(
 const PRESIGNED_URL = 'https://uploads.example.test/presigned'
 const PERSISTED_ID = 'record-1'
 
-const SubmitIdle = ts('SubmitIdle')
-const Presigning = ts('Presigning')
-const Persisting = ts('Persisting')
-const Submitted = ts('Submitted')
-
-const SubmitState = S.Union([SubmitIdle, Presigning, Persisting, Submitted])
+const SubmitState = defineTaggedUnion({
+  Idle: {},
+  Presigning: {},
+  Persisting: {},
+  Submitted: {},
+})
 type SubmitState = typeof SubmitState.Type
 
 const SubmitMessage = defineMessageUnion({
@@ -556,13 +559,13 @@ const inferredRequirementsMachine = define({
   state: SubmitState,
   message: SubmitMessage,
 })({
-  initial: SubmitIdle(),
+  initial: SubmitState.Idle(),
   states: {
-    SubmitIdle: {
+    Idle: {
       on: {
         ClickedSubmit: to(
           'Presigning',
-          () => Presigning(),
+          () => SubmitState.Presigning(),
           () => [Presign()],
         ),
       },
@@ -574,18 +577,18 @@ const inferredGuardRequirementsMachine = define({
   state: SubmitState,
   message: SubmitMessage,
 })({
-  initial: SubmitIdle(),
+  initial: SubmitState.Idle(),
   states: {
-    SubmitIdle: {
+    Idle: {
       on: {
         ClickedSubmit: [
           when(
             () => true,
             'Presigning',
-            () => Presigning(),
+            () => SubmitState.Presigning(),
             () => [Presign()],
           ),
-          otherwise(to('SubmitIdle', () => SubmitIdle())),
+          otherwise(to('Idle', () => SubmitState.Idle())),
         ],
       },
     },
@@ -596,20 +599,20 @@ const inferredOtherwiseRequirementsMachine = define({
   state: SubmitState,
   message: SubmitMessage,
 })({
-  initial: SubmitIdle(),
+  initial: SubmitState.Idle(),
   states: {
-    SubmitIdle: {
+    Idle: {
       on: {
         ClickedSubmit: [
           when(
             () => false,
             'Submitted',
-            () => Submitted(),
+            () => SubmitState.Submitted(),
           ),
           otherwise(
             to(
               'Presigning',
-              () => Presigning(),
+              () => SubmitState.Presigning(),
               () => [Presign()],
             ),
           ),
@@ -623,13 +626,13 @@ const explicitRequirementsMachine = define({
   state: SubmitState,
   message: SubmitMessage,
 })<UploadsClient | SaveClient>({
-  initial: SubmitIdle(),
+  initial: SubmitState.Idle(),
   states: {
-    SubmitIdle: {
+    Idle: {
       on: {
         ClickedSubmit: to(
           'Presigning',
-          () => Presigning(),
+          () => SubmitState.Presigning(),
           () => [Presign()],
         ),
       },
@@ -640,16 +643,16 @@ const explicitRequirementsMachine = define({
           when(
             () => true,
             'Persisting',
-            () => Persisting(),
+            () => SubmitState.Persisting(),
             () => [Persist()],
           ),
-          otherwise(to('SubmitIdle', () => SubmitIdle())),
+          otherwise(to('Idle', () => SubmitState.Idle())),
         ],
       },
     },
     Persisting: {
       on: {
-        SucceededPersist: to('Submitted', () => Submitted()),
+        SucceededPersist: to('Submitted', () => SubmitState.Submitted()),
       },
     },
   },
@@ -659,7 +662,7 @@ const explicitRequirementsMachine = define({
 
 describe('remote data machine', () => {
   it('starts at the initial state with the full tag set from the Schema', () => {
-    expect(remoteDataMachine.initial).toStrictEqual(Idle())
+    expect(remoteDataMachine.initial).toStrictEqual(RemoteData.Idle())
     expect(remoteDataMachine.stateTags).toEqual([
       'Idle',
       'Loading',
@@ -670,35 +673,37 @@ describe('remote data machine', () => {
 
   it('transitions along the obvious edges', () => {
     const fetchClick = remoteDataMachine.transition(
-      Idle(),
+      RemoteData.Idle(),
       RemoteDataMessage.ClickedFetch(),
     )
     expectTypeOf(fetchClick).toEqualTypeOf<
       Update.Return<RemoteData, RemoteDataMessage>
     >()
-    expect(fetchClick.model).toStrictEqual(Loading())
+    expect(fetchClick.model).toStrictEqual(RemoteData.Loading())
 
     const fetchSuccess = remoteDataMachine.transition(
-      Loading(),
+      RemoteData.Loading(),
       RemoteDataMessage.SucceededFetch({ data: 'payload' }),
     )
-    expect(fetchSuccess.model).toStrictEqual(Ok({ data: 'payload' }))
+    expect(fetchSuccess.model).toStrictEqual(RemoteData.Ok({ data: 'payload' }))
 
     const fetchFailure = remoteDataMachine.transition(
-      Loading(),
+      RemoteData.Loading(),
       RemoteDataMessage.FailedFetch({ error: 'boom' }),
     )
-    expect(fetchFailure.model).toStrictEqual(Error({ error: 'boom' }))
+    expect(fetchFailure.model).toStrictEqual(
+      RemoteData.Error({ error: 'boom' }),
+    )
 
     const fetchRetry = remoteDataMachine.transition(
-      Error({ error: 'boom' }),
+      RemoteData.Error({ error: 'boom' }),
       RemoteDataMessage.ClickedRetry(),
     )
-    expect(fetchRetry.model).toStrictEqual(Loading())
+    expect(fetchRetry.model).toStrictEqual(RemoteData.Loading())
   })
 
   it('reports unmatched messages as Ignored without changing state', () => {
-    const idle = Idle()
+    const idle = RemoteData.Idle()
     const result = remoteDataMachine.step(
       idle,
       RemoteDataMessage.ClickedRetry(),
@@ -708,7 +713,7 @@ describe('remote data machine', () => {
       _tag: 'Ignored',
       stateTag: 'Idle',
       messageTag: 'ClickedRetry',
-      state: Idle(),
+      state: RemoteData.Idle(),
     })
 
     const ignoredRetry = remoteDataMachine.transition(
@@ -783,13 +788,15 @@ describe('remote data machine', () => {
 describe('connection machine', () => {
   it('walks the happy path and emits the edge command', () => {
     const connectClick = connectionMachine.transition(
-      Disconnected(),
+      ConnectionState.Disconnected(),
       ConnectionMessage.ClickedConnect(),
     )
-    expect(connectClick.model).toStrictEqual(Connecting({ attemptCount: 1 }))
+    expect(connectClick.model).toStrictEqual(
+      ConnectionState.Connecting({ attemptCount: 1 }),
+    )
 
     const result = connectionMachine.step(
-      Connecting({ attemptCount: 1 }),
+      ConnectionState.Connecting({ attemptCount: 1 }),
       ConnectionMessage.SocketOpened({ sessionId: 'abc' }),
     )
     expect(result._tag).toBe('Transitioned')
@@ -797,7 +804,9 @@ describe('connection machine', () => {
     if (result._tag === 'Transitioned') {
       expect(result.from).toBe('Connecting')
       expect(result.target).toBe('Connected')
-      expect(result.state).toStrictEqual(Connected({ sessionId: 'abc' }))
+      expect(result.state).toStrictEqual(
+        ConnectionState.Connected({ sessionId: 'abc' }),
+      )
 
       const commandNames = result.commands.map(command => command.name)
       expect(commandNames).toEqual(['LogTransition'])
@@ -813,40 +822,42 @@ describe('connection machine', () => {
 
   it('reconnects with exponential backoff below the attempt limit', () => {
     const socketError = connectionMachine.transition(
-      Connecting({ attemptCount: 4 }),
+      ConnectionState.Connecting({ attemptCount: 4 }),
       ConnectionMessage.SocketErrored({ reason: 'boom' }),
     )
     expect(socketError.model).toStrictEqual(
-      Reconnecting({ attemptCount: 4, delayMillis: 2000 }),
+      ConnectionState.Reconnecting({ attemptCount: 4, delayMillis: 2000 }),
     )
 
     const backoffTimeout = connectionMachine.transition(
-      Reconnecting({ attemptCount: 4, delayMillis: 2000 }),
+      ConnectionState.Reconnecting({ attemptCount: 4, delayMillis: 2000 }),
       ConnectionMessage.TimedOutBackoff(),
     )
-    expect(backoffTimeout.model).toStrictEqual(Connecting({ attemptCount: 5 }))
+    expect(backoffTimeout.model).toStrictEqual(
+      ConnectionState.Connecting({ attemptCount: 5 }),
+    )
   })
 
   it('fails at the attempt limit via the otherwise guard', () => {
     const attemptLimitFailure = connectionMachine.transition(
-      Connecting({ attemptCount: 5 }),
+      ConnectionState.Connecting({ attemptCount: 5 }),
       ConnectionMessage.SocketErrored({ reason: 'boom' }),
     )
     expect(attemptLimitFailure.model).toStrictEqual(
-      Failed({ attemptCount: 5, reason: 'boom' }),
+      ConnectionState.Failed({ attemptCount: 5, reason: 'boom' }),
     )
   })
 
   it('ignores messages with no edge from the current state', () => {
     const result = connectionMachine.step(
-      Disconnected(),
+      ConnectionState.Disconnected(),
       ConnectionMessage.TimedOutBackoff(),
     )
     expect(result).toEqual({
       _tag: 'Ignored',
       stateTag: 'Disconnected',
       messageTag: 'TimedOutBackoff',
-      state: Disconnected(),
+      state: ConnectionState.Disconnected(),
     })
   })
 
@@ -906,24 +917,29 @@ describe('connection machine', () => {
 describe('guard lists', () => {
   it('fires a boolean guard on true and falls through to otherwise on false', () => {
     const belowLimitSocketError = booleanGuardMachine.transition(
-      Connecting({ attemptCount: 2 }),
+      ConnectionState.Connecting({ attemptCount: 2 }),
       ConnectionMessage.SocketErrored({ reason: 'boom' }),
     )
     expect(belowLimitSocketError.model).toStrictEqual(
-      Reconnecting({ attemptCount: 2, delayMillis: 500 }),
+      ConnectionState.Reconnecting({ attemptCount: 2, delayMillis: 500 }),
     )
 
     const atLimitSocketError = booleanGuardMachine.transition(
-      Connecting({ attemptCount: MAX_CONNECT_ATTEMPTS }),
+      ConnectionState.Connecting({ attemptCount: MAX_CONNECT_ATTEMPTS }),
       ConnectionMessage.SocketErrored({ reason: 'boom' }),
     )
     expect(atLimitSocketError.model).toStrictEqual(
-      Failed({ attemptCount: MAX_CONNECT_ATTEMPTS, reason: 'boom' }),
+      ConnectionState.Failed({
+        attemptCount: MAX_CONNECT_ATTEMPTS,
+        reason: 'boom',
+      }),
     )
   })
 
   it('ignores the message when every guard declines and no otherwise exists', () => {
-    const atLimit = Connecting({ attemptCount: MAX_CONNECT_ATTEMPTS })
+    const atLimit = ConnectionState.Connecting({
+      attemptCount: MAX_CONNECT_ATTEMPTS,
+    })
 
     const result = guardValueMachine.step(
       atLimit,
@@ -959,30 +975,33 @@ describe('state tag extraction', () => {
 describe('type-level guarantees', () => {
   it('narrows state and message to the table position without annotations', () => {
     const socketError = narrowingMachine.transition(
-      Connecting({ attemptCount: 0 }),
+      ConnectionState.Connecting({ attemptCount: 0 }),
       ConnectionMessage.SocketErrored({ reason: 'boom' }),
     )
     expect(socketError.model).toStrictEqual(
-      Failed({ attemptCount: 0, reason: 'Connecting SocketErrored boom' }),
+      ConnectionState.Failed({
+        attemptCount: 0,
+        reason: 'Connecting SocketErrored boom',
+      }),
     )
   })
 
   it('passes the guard value into the matching edge', () => {
     const socketError = guardValueMachine.transition(
-      Connecting({ attemptCount: 2 }),
+      ConnectionState.Connecting({ attemptCount: 2 }),
       ConnectionMessage.SocketErrored({ reason: 'offline' }),
     )
 
     expect(socketError.model).toStrictEqual(
-      Reconnecting({ attemptCount: 3, delayMillis: 500 }),
+      ConnectionState.Reconnecting({ attemptCount: 3, delayMillis: 500 }),
     )
   })
 
   it('still constructs machines whose tables were rejected at the type level', () => {
-    expect(wrongVariantMachine.initial).toStrictEqual(Idle())
-    expect(wrongTargetTagMachine.initial).toStrictEqual(Idle())
-    expect(unknownStateTagMachine.initial).toStrictEqual(Idle())
-    expect(unknownMessageTagMachine.initial).toStrictEqual(Idle())
+    expect(wrongVariantMachine.initial).toStrictEqual(RemoteData.Idle())
+    expect(wrongTargetTagMachine.initial).toStrictEqual(RemoteData.Idle())
+    expect(unknownStateTagMachine.initial).toStrictEqual(RemoteData.Idle())
+    expect(unknownMessageTagMachine.initial).toStrictEqual(RemoteData.Idle())
   })
 
   it('reports guards listed after otherwise as dead', () => {
@@ -1003,13 +1022,13 @@ describe('type-level guarantees', () => {
 describe('integration', () => {
   it('folds the machine directly into update', () => {
     const model: AppModel = {
-      connection: Disconnected(),
+      connection: ConnectionState.Disconnected(),
       isDebugPanelOpen: false,
     }
 
     const connectionUpdate = update(model, ConnectionMessage.ClickedConnect())
     expect(connectionUpdate.model.connection).toStrictEqual(
-      Connecting({ attemptCount: 1 }),
+      ConnectionState.Connecting({ attemptCount: 1 }),
     )
     expect(connectionUpdate.model.isDebugPanelOpen).toBe(false)
     expect(connectionUpdate.commands ?? []).toEqual([])
@@ -1028,10 +1047,10 @@ describe('integration', () => {
 describe('edge command requirements', () => {
   it('threads a requirement inferred from a single edge command into R', () => {
     const submitClick = inferredRequirementsMachine.transition(
-      SubmitIdle(),
+      SubmitState.Idle(),
       SubmitMessage.ClickedSubmit(),
     )
-    expect(submitClick.model).toStrictEqual(Presigning())
+    expect(submitClick.model).toStrictEqual(SubmitState.Presigning())
 
     expectTypeOf(submitClick.commands).toEqualTypeOf<
       | ReadonlyArray<Command.Command<SubmitMessage, never, UploadsClient>>
@@ -1052,10 +1071,10 @@ describe('edge command requirements', () => {
 
   it('threads a requirement inferred from a guard-list edge command', () => {
     const submitClick = inferredGuardRequirementsMachine.transition(
-      SubmitIdle(),
+      SubmitState.Idle(),
       SubmitMessage.ClickedSubmit(),
     )
-    expect(submitClick.model).toStrictEqual(Presigning())
+    expect(submitClick.model).toStrictEqual(SubmitState.Presigning())
 
     expectTypeOf(submitClick.commands).toEqualTypeOf<
       | ReadonlyArray<Command.Command<SubmitMessage, never, UploadsClient>>
@@ -1076,10 +1095,10 @@ describe('edge command requirements', () => {
 
   it('threads a requirement inferred from an otherwise fallback command', () => {
     const submitClick = inferredOtherwiseRequirementsMachine.transition(
-      SubmitIdle(),
+      SubmitState.Idle(),
       SubmitMessage.ClickedSubmit(),
     )
-    expect(submitClick.model).toStrictEqual(Presigning())
+    expect(submitClick.model).toStrictEqual(SubmitState.Presigning())
 
     expectTypeOf(submitClick.commands).toEqualTypeOf<
       | ReadonlyArray<Command.Command<SubmitMessage, never, UploadsClient>>
@@ -1100,7 +1119,7 @@ describe('edge command requirements', () => {
 
   it('leaves R as never when no edge command needs a service', () => {
     const fetchClick = remoteDataMachine.transition(
-      Idle(),
+      RemoteData.Idle(),
       RemoteDataMessage.ClickedFetch(),
     )
 
@@ -1113,7 +1132,7 @@ describe('edge command requirements', () => {
 
   it('does not collapse an edge command requirement to never', () => {
     const submitClick = inferredRequirementsMachine.transition(
-      SubmitIdle(),
+      SubmitState.Idle(),
       SubmitMessage.ClickedSubmit(),
     )
 
@@ -1129,10 +1148,10 @@ describe('edge command requirements', () => {
     const save: SaveShape = { save: Effect.succeed(PERSISTED_ID) }
 
     const submitClick = explicitRequirementsMachine.transition(
-      SubmitIdle(),
+      SubmitState.Idle(),
       SubmitMessage.ClickedSubmit(),
     )
-    expect(submitClick.model).toStrictEqual(Presigning())
+    expect(submitClick.model).toStrictEqual(SubmitState.Presigning())
 
     expectTypeOf(submitClick.commands).toEqualTypeOf<
       | ReadonlyArray<
@@ -1155,10 +1174,10 @@ describe('edge command requirements', () => {
     ])
 
     const presignSuccess = explicitRequirementsMachine.transition(
-      Presigning(),
+      SubmitState.Presigning(),
       SubmitMessage.SucceededPresign({ url: PRESIGNED_URL }),
     )
-    expect(presignSuccess.model).toStrictEqual(Persisting())
+    expect(presignSuccess.model).toStrictEqual(SubmitState.Persisting())
 
     const persistMessages = (presignSuccess.commands ?? []).map(command =>
       Effect.runSync(

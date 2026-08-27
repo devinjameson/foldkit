@@ -61,7 +61,7 @@ const update = (model: Model, message: Message) =>
 
 Create an `UpdateReturn` alias when another matcher, helper, or exported signature reuses the type. `Update.ReturnWithOutMessage<Model, Message, OutMessage>` is the Submodel counterpart.
 
-**Flag needless scaffolding, repeated types, and a missing guard.** `Update.Return<Model, Message>` is the clearest spelling for an update that cannot emit an OutMessage. Its `outMessage?: never` field may be omitted but cannot contain an OutMessage. TypeScript rejects passing an OutMessage-producing result to an API that consumes only the Model and Commands, where the OutMessage would be lost. An API that accepts `Update.ReturnWithOutMessage<Model, Message, OutMessage>` can still accept a result with no `outMessage`. A hand-written plain-return alias must preserve the same guard. Also flag a full record repeated at the update signature and again inside `Message.match<UpdateReturn>(message, handlers)`, or `: UpdateReturn` repeated on an update already constrained by that match.
+**Flag needless scaffolding, repeated types, and a missing guard.** Use `Update.Return<Model, Message>` when an update cannot emit an OutMessage. A missing `outMessage` field means that update emitted nothing. The `outMessage?: never` guard also prevents a result containing an OutMessage from entering code that would keep only its Model and Commands. Code expecting `Update.ReturnWithOutMessage<Model, Message, OutMessage>` can accept either outcome. A hand-written plain-return alias must preserve the same guard. Also flag a full record repeated at the update signature and again inside `Message.match<UpdateReturn>(message, handlers)`, or `: UpdateReturn` repeated on an update already constrained by that match.
 
 ### `manual-update-return-unpacking`
 
@@ -69,7 +69,9 @@ Do not destructure or rename `model`, `commands`, or `outMessage` from an update
 
 Dot access does not prevent someone from ignoring `outMessage`; it keeps the operation and all of its returned fields visible together. When the result belongs to a child Submodel, manual unpacking is usually the deeper problem. Use `Update.foldChild` or `Update.foldChildStep` so the child Model, lifted Commands, and OutMessage remain part of one fold.
 
-When the OutMessage is already known while constructing a new result, include it directly. Use `Update.withOutMessage` when attaching an OutMessage to an existing plain return or when the value has the type `OutMessage | undefined`. Pipe an existing return into the helper, and pass a new result literal first. Flag local attachment helpers and conditional object spreads that duplicate it. Flag `toParentOutMessage: () => undefined`; a child fold needs `toParentOutMessage` only when it forwards at least one child OutMessage from the current Submodel to its parent.
+When the OutMessage is already known while constructing a new result, include it directly. Use `Update.withOutMessage` when attaching an OutMessage to an existing plain return or when the value has the type `OutMessage | undefined`. Pipe an existing return into the helper, and pass a new result literal first. Flag local attachment helpers and conditional object spreads that duplicate it.
+
+A child fold needs `toParentOutMessage` only when at least one child OutMessage should continue to the current Submodel's parent. For partial forwarding, match every child variant and return `undefined` for the variants that stop here. Omit `toParentOutMessage` when every variant stops here. `foldOutMessage` still handles each variant locally, including variants that continue upward. Flag `toParentOutMessage: () => undefined`.
 
 When several operations update the same Model in sequence, use `Update.combine`. Do not apply it to independent init results whose Models are assembled as separate fields.
 
@@ -115,7 +117,7 @@ An `evo` setter that only transforms that same field should be point-free: `entr
 
 ### `empty-object-constructors`
 
-`foldkit/no-empty-object-tagged-call` catches the bare-identifier form (`Idle({})`). It bails on a member-expression callee, so `Todo.ClickedDelete({})` through a namespace import needs your eyes.
+`foldkit/no-empty-object-tagged-call` catches `Idle({})`, calls through Message, Route, and State namespaces, and unions declared in the same file with Foldkit's union helpers. It cannot recognize an imported domain union such as `Todo` from its name alone, so check those calls by eye.
 
 No-field tagged structs called with `({})`: `Idle({})`, `Work({})`, `Message.ClickedSubmit({})`. Should be `Idle()`, `Work()`, `Message.ClickedSubmit()`. Both compile; exemplars are uniform on the no-arg form.
 

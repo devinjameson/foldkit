@@ -136,6 +136,10 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
             AiOverview: () => Page.AiOverview.tableOfContents,
             AiSkills: () => Page.AiSkills.tableOfContents,
             AiMcp: () => Page.AiMcp.tableOfContents,
+            ContentApi: () => Page.ContentApi.tableOfContents,
+            About: () => Page.About.tableOfContents,
+            Contact: () => Page.Contact.tableOfContents,
+            Privacy: () => Page.Privacy.tableOfContents,
             TypingTerminal: () => Page.TypingTerminal.tableOfContents,
           }),
           M.tag(

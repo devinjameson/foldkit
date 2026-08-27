@@ -1,5 +1,259 @@
 # create-foldkit-app
 
+## 0.31.0
+
+### Minor Changes
+
+- 64387ef: Routes and other tagged unions now use the same one-object declaration as Messages. The old `r` and `ts` helpers are gone:
+
+  - Use `defineRouteUnion` for `AppRoute`.
+  - Use `defineTaggedUnion` for Model states and other domain unions.
+  - Use `taggedStruct` when a tagged struct must be declared on its own.
+
+  Both union helpers return a Schema that also holds the variant constructors. For example, `AppRoute.Person` is the `Person` Schema, and `AppRoute.Person({ personId: 42 })` constructs a value. They also provide `match`, `guards`, `isAnyOf`, `subset`, and `members`. A `defineTaggedUnion` result can be passed directly to `Machine.define`. Message unions still expose only their constructors and exhaustive `match`.
+
+  ## Migrate Routes
+
+  Declare every route in one `AppRoute` object, then use variants through that namespace. Do not name the union `Route`; Foldkit already uses that name for the route module.
+
+  Before:
+
+  ```typescript
+  import { int, literal, mapTo, r, root, slash } from 'foldkit/route'
+
+  export const HomeRoute = r('Home')
+  export const PersonRoute = r('Person', { personId: S.Number })
+  export const NotFoundRoute = r('NotFound', { path: S.String })
+
+  export const AppRoute = S.Union([HomeRoute, PersonRoute, NotFoundRoute])
+
+  export type HomeRoute = typeof HomeRoute.Type
+  export type PersonRoute = typeof PersonRoute.Type
+  export type NotFoundRoute = typeof NotFoundRoute.Type
+  export type AppRoute = typeof AppRoute.Type
+
+  export const homeRouter = pipe(root, mapTo(HomeRoute))
+  export const personRouter = pipe(
+    literal('people'),
+    slash(int('personId')),
+    mapTo(PersonRoute),
+  )
+
+  export const urlToAppRoute = parseUrlWithFallback(routeParser, NotFoundRoute)
+  ```
+
+  After:
+
+  ```typescript
+  import {
+    defineRouteUnion,
+    int,
+    literal,
+    mapTo,
+    root,
+    slash,
+  } from 'foldkit/route'
+
+  export const AppRoute = defineRouteUnion({
+    Home: {},
+    Person: { personId: S.Number },
+    NotFound: { path: S.String },
+  })
+  export type AppRoute = typeof AppRoute.Type
+
+  export const homeRouter = pipe(root, mapTo(AppRoute.Home))
+  export const personRouter = pipe(
+    literal('people'),
+    slash(int('personId')),
+    mapTo(AppRoute.Person),
+  )
+
+  export const urlToAppRoute = parseUrlWithFallback(
+    routeParser,
+    AppRoute.NotFound,
+  )
+  ```
+
+  The old `XxxRoute` suffix kept separate exports from colliding. `AppRoute` now provides that context, so write `AppRoute.Person({ personId: 42 })` instead of `PersonRoute({ personId: 42 })`.
+
+  ## Migrate Route subsets
+
+  Use `subset` when a Model or Schema accepts only some application Routes. This keeps the allowed Routes tied to `AppRoute` without declaring another union.
+
+  Before:
+
+  ```typescript
+  export const LoggedOutRoute = S.Union([HomeRoute, LoginRoute, NotFoundRoute])
+  export const LoggedInRoute = S.Union([
+    DashboardRoute,
+    SettingsRoute,
+    NotFoundRoute,
+  ])
+  ```
+
+  After:
+
+  ```typescript
+  export const LoggedOutRoute = AppRoute.subset(['Home', 'Login', 'NotFound'])
+  export const LoggedInRoute = AppRoute.subset([
+    'Dashboard',
+    'Settings',
+    'NotFound',
+  ])
+  ```
+
+  `subset` includes only the tags you name. If you add a Route to `AppRoute` later, neither Schema above will accept it until you add its tag. There is no `omit`: an exclusion list would silently accept every Route added later.
+
+  If a module needs to name one variant's type, export an alias beside `AppRoute` instead of repeating `typeof AppRoute.Person.Type`:
+
+  ```typescript
+  export type PersonRoute = typeof AppRoute.Person.Type
+  ```
+
+  ## Replace hand-written route guards
+
+  Use `isAnyOf` when one guard accepts several tags.
+
+  Before:
+
+  ```typescript
+  export const isBlogRoute = (
+    route: AppRoute,
+  ): route is BlogRoute | BlogPostRoute =>
+    route._tag === 'Blog' || route._tag === 'BlogPost'
+  ```
+
+  After:
+
+  ```typescript
+  export const isBlogRoute = AppRoute.isAnyOf(['Blog', 'BlogPost'])
+  ```
+
+  ## Migrate domain unions
+
+  Use `defineTaggedUnion` when the variants of a domain union can be declared together.
+
+  Before:
+
+  ```typescript
+  import { ts } from 'foldkit/schema'
+
+  export const NotSubmitted = ts('NotSubmitted')
+  export const Submitting = ts('Submitting')
+  export const SubmitSuccess = ts('SubmitSuccess')
+  export const SubmitError = ts('SubmitError', { error: S.String })
+
+  export const Submission = S.Union([
+    NotSubmitted,
+    Submitting,
+    SubmitSuccess,
+    SubmitError,
+  ])
+  export type Submission = typeof Submission.Type
+  ```
+
+  After:
+
+  ```typescript
+  import { defineTaggedUnion } from 'foldkit/schema'
+
+  export const Submission = defineTaggedUnion({
+    NotSubmitted: {},
+    Submitting: {},
+    SubmitSuccess: {},
+    SubmitError: { error: S.String },
+  })
+  export type Submission = typeof Submission.Type
+  ```
+
+  Use the union's `match` method when every tag must be handled:
+
+  ```typescript
+  // Before
+  M.value(submission).pipe(
+    M.withReturnType<Html>(),
+    M.tagsExhaustive({ ... }),
+  )
+
+  // After
+  Submission.match<Html>(submission, { ... })
+  ```
+
+  Because `match` runs at runtime, a file that calls it must import the union as a value. Keep using Effect `Match` for partial matching, fallbacks, or one handler shared by several tags.
+
+  ## Remove repeated union names from tags
+
+  The union name now provides the context a tag needs. Prefer `ConnectionState.Connected` to `ConnectionState.ConnectionConnected`.
+
+  Renaming a tag also changes its `_tag` value. Do not shorten tags stored in a Model, URL, or wire protocol unless that external value is meant to change.
+
+  ## Rename `ts` to `taggedStruct`
+
+  `taggedStruct` is the new name for `ts`. Most unions should move to `defineTaggedUnion`; `taggedStruct` remains for variants that must be declared separately.
+
+  ```typescript
+  // Before
+  import { ts } from 'foldkit/schema'
+  const TableRow = ts('TableRow', { cells: S.Array(TableCell) })
+
+  // After
+  import { taggedStruct } from 'foldkit/schema'
+  const TableRow = taggedStruct('TableRow', { cells: S.Array(TableCell) })
+  ```
+
+  Use `taggedStruct` in these cases:
+
+  - A recursive union, such as `Canvas.Shape` or the markdown AST.
+  - A union assembled from variants owned by different modules, such as a parent Model built from two Submodel Models.
+  - A tagged child struct that is not one variant of a choice, such as `TableRow`.
+  - A variant created inside a generic Schema factory, such as `AsyncData`.
+
+  If recursion forces one union in a module to use `taggedStruct`, use `taggedStruct` for the module's sibling unions too.
+
+  ## Variants are no longer separate exports
+
+  `Navigation` and `Interruptible` no longer export their variants as separate top-level names. Access each variant through its union instead.
+
+  ```typescript
+  // Before
+  Navigation.Internal({ url })
+  Interruptible.Interrupted()
+
+  // After
+  Navigation.UrlRequest.Internal({ url })
+  Interruptible.Outcome.Interrupted()
+  ```
+
+  The DevTools protocol now follows the same rule. Its variants live under `Request`, `Response`, `Event`, `DiffValue`, and `MessageSchemaResult`. The `_tag` strings did not change, so old and new DevTools clients still speak the same wire protocol.
+
+  `@foldkit/ui`, `@foldkit/devtools`, `@foldkit/devtools-mcp`, `@foldkit/markdown`, and `@foldkit/vite-plugin` now require Foldkit `>=0.153.0` because their published code calls these new APIs. Each gets a minor release so consumers on older pre-1.0 ranges do not receive an incompatible update.
+
+  ## Lint
+
+  `foldkit/no-empty-object-tagged-call` now catches no-field Route and domain constructors as well as Messages. It recognizes namespaces whose names end in Message, Route, or State, plus unions declared in the same file with Foldkit's union helpers. It does not assume every PascalCase namespace is a Foldkit union.
+
+  The [Routing & Navigation guide](https://foldkit.dev/core/routing-and-navigation) covers the route union in depth, and the [Model guide](https://foldkit.dev/core/model) covers state modeling with `defineTaggedUnion`.
+
+## 0.30.1
+
+### Patch Changes
+
+- df045a8: Give the SSG scaffold's `injectIntoTemplate` call the container id the rest of its prerender script already uses. `scripts/prerender.ts` names the container in one `CONTAINER_ID` constant and tests the built `index.html` for that placeholder, but the injection call fell back to its own `root` default. Renaming the container left the guard looking for the new placeholder while injection still demanded `<div id="root"></div>`, so the first prerender failed with an error naming a container id the project no longer used. The constant now drives both.
+
+## 0.30.0
+
+### Minor Changes
+
+- da9e505: Bump bundled Effect dependencies to `4.0.0-rc.112`. No user-facing changes. Newly scaffolded apps will get the updated pins from the example sources.
+
+  The CLI now pins `effect`, `@effect/platform-node`, and `@effect/platform-node-shared` to exactly `4.0.0-rc.112` to match this release (exact versions, not ranges, while Effect v4 is in prerelease).
+
+### Patch Changes
+
+- c170eb6: Make the SSG scaffold's prerender step repeatable. `scripts/prerender.ts` read its template from `dist/client/index.html` and then wrote the generated `/` over that same file, so a second run against one client build parsed a generated page as its template and stopped with `injectIntoTemplate found no exact <div id="root"></div> placeholder in the template`. That error names the application's `index.html`, which was never the problem, so the reported fault and the actual one were in different files.
+
+  The script now takes the built `index.html` as its template only while that file still holds the `<div id="root"></div>` placeholder, and keeps a copy under `node_modules/.cache/foldkit/` that later runs against the same client build read instead. The placeholder is the condition `injectIntoTemplate` enforces, so the test covers a static render (`isHydratable: false`) as well as a hydratable one, where a test for the hydration stamp would have read a generated page as the template and cached it over the good copy. A client build always writes the template back to `index.html`, so the copy can never outlive the assets it names. Running the prerender step twice against one build now generates the same pages both times, and running it with no client build present fails with a message that names the missing build.
+
 ## 0.29.1
 
 ### Patch Changes

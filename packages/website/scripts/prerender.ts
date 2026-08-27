@@ -28,103 +28,10 @@ import {
 } from '../src/page/apiReference/domain'
 import { TypeDocJson } from '../src/page/apiReference/typedoc'
 import { BLOG_DESCRIPTION, BLOG_RSS_PATH } from '../src/page/blog/meta'
-import { exampleSlugs } from '../src/page/example/meta'
+import { exampleSlugs, examples } from '../src/page/example/meta'
 import {
-  AiMcpRoute,
-  AiOverviewRoute,
-  AiSkillsRoute,
-  ApiModuleRoute,
   AppRoute,
-  AsyncDataRoute,
-  BestPracticesImmutabilityRoute,
-  BestPracticesKeyingRoute,
-  BestPracticesMessagesRoute,
-  BestPracticesSideEffectsRoute,
-  BlogPostRoute,
-  BlogRoute,
-  ComingFromReactRoute,
-  ComingFromTanStackQueryRoute,
-  CoreArchitectureRoute,
-  CoreCanvasRoute,
-  CoreCommandsRoute,
-  CoreCounterExampleRoute,
-  CoreCrashViewRoute,
-  CoreCustomElementRoute,
-  CoreDevToolsRoute,
-  CoreDomRoute,
-  CoreEmbeddingRoute,
-  CoreFileRoute,
-  CoreFreezeModelRoute,
-  CoreHttpRoute,
-  CoreInitAndFlagsRoute,
-  CoreManagedResourcesRoute,
-  CoreMessagesRoute,
-  CoreModelRoute,
-  CoreMountRoute,
-  CorePreserveScrollRoute,
-  CoreRenderRoute,
-  CoreResourcesRoute,
-  CoreRuntimeRoute,
-  CoreServerRenderingRoute,
-  CoreSlowWarningsRoute,
-  CoreSubmodelRoute,
-  CoreSubscriptionsRoute,
-  CoreUpdateRoute,
-  CoreViewMemoizationRoute,
-  CoreViewRoute,
-  CoreViewTransitionsRoute,
-  EffectAtomComparisonRoute,
-  ElmComparisonRoute,
-  ExampleDetailRoute,
-  ExamplesRoute,
-  FieldValidationRoute,
-  GettingStartedRoute,
-  HomeRoute,
-  ManifestoRoute,
-  NewsletterRoute,
-  NotFoundRoute,
-  PatternsInformingSubmodelsRoute,
-  PatternsSubscriptionOrganizationRoute,
-  PerformanceRoute,
-  PlaygroundRoute,
-  ProjectOrganizationRoute,
-  ReactComparisonRoute,
-  RoadmapRoute,
-  RoutingAndNavigationRoute,
-  TestingRoute,
-  TestingSceneRoute,
-  TestingStoryRoute,
-  ToolingLintingRoute,
-  TypingTerminalRoute,
-  UiAnchorRoute,
-  UiAnimationRoute,
-  UiButtonRoute,
-  UiCalendarRoute,
-  UiCheckboxRoute,
-  UiComboboxRoute,
-  UiDatePickerRoute,
-  UiDialogRoute,
-  UiDisclosureRoute,
-  UiDragAndDropRoute,
-  UiFieldsetRoute,
-  UiFileDropRoute,
-  UiInputRoute,
-  UiListboxRoute,
-  UiMenuRoute,
-  UiNavRoute,
-  UiOverviewRoute,
-  UiPopoverRoute,
-  UiRadioGroupRoute,
-  UiSelectRoute,
-  UiSelectionSubmodelsRoute,
-  UiSliderRoute,
-  UiSwitchRoute,
-  UiTabsRoute,
-  UiTextareaRoute,
-  UiToastRoute,
-  UiTooltipRoute,
-  UiVirtualListRoute,
-  WhyNoJsxRoute,
+  aboutRouter,
   aiMcpRouter,
   aiOverviewRouter,
   aiSkillsRouter,
@@ -138,6 +45,8 @@ import {
   blogRouter,
   comingFromReactRouter,
   comingFromTanStackQueryRouter,
+  contactRouter,
+  contentApiRouter,
   coreArchitectureRouter,
   coreCanvasRouter,
   coreCommandsRouter,
@@ -180,6 +89,7 @@ import {
   patternsSubscriptionOrganizationRouter,
   performanceRouter,
   playgroundRouter,
+  privacyRouter,
   projectOrganizationRouter,
   reactComparisonRouter,
   roadmapRouter,
@@ -221,6 +131,11 @@ import {
 } from '../src/route'
 import { type BlogPostEntry, blogPostSlugs, blogPosts } from './blogPosts'
 import {
+  API_BASE_PATH,
+  type ApiPageEntry,
+  contentApiDocuments,
+} from './contentApi'
+import {
   type LlmsFullEntry,
   type LlmsIndexEntry,
   buildLlmsFull,
@@ -235,102 +150,108 @@ import { generateOgImages, injectMetaTags } from './og-image'
 // ROUTES
 
 export const STATIC_ROUTES: ReadonlyArray<AppRoute> = [
-  HomeRoute(),
-  NewsletterRoute(),
-  ManifestoRoute(),
-  WhyNoJsxRoute(),
-  PerformanceRoute(),
-  GettingStartedRoute(),
-  RoadmapRoute(),
-  ComingFromReactRoute(),
-  ComingFromTanStackQueryRoute(),
-  ReactComparisonRoute(),
-  EffectAtomComparisonRoute(),
-  ElmComparisonRoute(),
-  RoutingAndNavigationRoute(),
-  FieldValidationRoute(),
-  TestingRoute(),
-  TestingStoryRoute(),
-  TestingSceneRoute(),
-  ExamplesRoute(),
-  ...Array.map(exampleSlugs, slug => ExampleDetailRoute({ exampleSlug: slug })),
-  TypingTerminalRoute(),
-  BestPracticesSideEffectsRoute(),
-  BestPracticesMessagesRoute(),
-  BestPracticesKeyingRoute(),
-  BestPracticesImmutabilityRoute(),
-  ProjectOrganizationRoute(),
-  ToolingLintingRoute(),
-  CoreArchitectureRoute(),
-  CoreCounterExampleRoute(),
-  CoreModelRoute(),
-  CoreMessagesRoute(),
-  CoreUpdateRoute(),
-  CoreViewRoute(),
-  CoreCommandsRoute(),
-  CoreMountRoute(),
-  CoreCustomElementRoute(),
-  CoreSubscriptionsRoute(),
-  CoreInitAndFlagsRoute(),
-  CoreDomRoute(),
-  CoreRenderRoute(),
-  CoreFileRoute(),
-  CoreHttpRoute(),
-  CoreCanvasRoute(),
-  CoreRuntimeRoute(),
-  CoreServerRenderingRoute(),
-  CoreResourcesRoute(),
-  CoreManagedResourcesRoute(),
-  CoreDevToolsRoute(),
-  CoreCrashViewRoute(),
-  CoreViewTransitionsRoute(),
-  CoreSlowWarningsRoute(),
-  CoreFreezeModelRoute(),
-  CorePreserveScrollRoute(),
-  CoreSubmodelRoute(),
-  AsyncDataRoute(),
-  PatternsInformingSubmodelsRoute(),
-  PatternsSubscriptionOrganizationRoute(),
-  CoreViewMemoizationRoute(),
-  CoreEmbeddingRoute(),
-  UiOverviewRoute(),
-  UiSelectionSubmodelsRoute(),
-  UiTabsRoute(),
-  UiNavRoute(),
-  UiDisclosureRoute(),
-  UiDialogRoute(),
-  UiMenuRoute(),
-  UiPopoverRoute(),
-  UiListboxRoute(),
-  UiRadioGroupRoute(),
-  UiSelectRoute(),
-  UiSliderRoute(),
-  UiSwitchRoute(),
-  UiButtonRoute(),
-  UiCalendarRoute(),
-  UiDatePickerRoute(),
-  UiCheckboxRoute(),
-  UiComboboxRoute(),
-  UiInputRoute(),
-  UiTextareaRoute(),
-  UiFieldsetRoute(),
-  UiDragAndDropRoute(),
-  UiFileDropRoute(),
-  UiToastRoute(),
-  UiTooltipRoute(),
-  UiAnimationRoute(),
-  UiAnchorRoute(),
-  UiVirtualListRoute(),
-  AiOverviewRoute(),
-  AiSkillsRoute(),
-  AiMcpRoute(),
-  BlogRoute(),
-  ...Array.map(blogPostSlugs, slug => BlogPostRoute({ postSlug: slug })),
+  AppRoute.Home(),
+  AppRoute.Newsletter(),
+  AppRoute.Manifesto(),
+  AppRoute.WhyNoJsx(),
+  AppRoute.Performance(),
+  AppRoute.GettingStarted(),
+  AppRoute.Roadmap(),
+  AppRoute.ComingFromReact(),
+  AppRoute.ComingFromTanStackQuery(),
+  AppRoute.ReactComparison(),
+  AppRoute.EffectAtomComparison(),
+  AppRoute.ElmComparison(),
+  AppRoute.RoutingAndNavigation(),
+  AppRoute.FieldValidation(),
+  AppRoute.Testing(),
+  AppRoute.TestingStory(),
+  AppRoute.TestingScene(),
+  AppRoute.Examples(),
+  ...Array.map(exampleSlugs, slug =>
+    AppRoute.ExampleDetail({ exampleSlug: slug }),
+  ),
+  AppRoute.TypingTerminal(),
+  AppRoute.BestPracticesSideEffects(),
+  AppRoute.BestPracticesMessages(),
+  AppRoute.BestPracticesKeying(),
+  AppRoute.BestPracticesImmutability(),
+  AppRoute.ProjectOrganization(),
+  AppRoute.ToolingLinting(),
+  AppRoute.CoreArchitecture(),
+  AppRoute.CoreCounterExample(),
+  AppRoute.CoreModel(),
+  AppRoute.CoreMessages(),
+  AppRoute.CoreUpdate(),
+  AppRoute.CoreView(),
+  AppRoute.CoreCommands(),
+  AppRoute.CoreMount(),
+  AppRoute.CoreCustomElement(),
+  AppRoute.CoreSubscriptions(),
+  AppRoute.CoreInitAndFlags(),
+  AppRoute.CoreDom(),
+  AppRoute.CoreRender(),
+  AppRoute.CoreFile(),
+  AppRoute.CoreHttp(),
+  AppRoute.CoreCanvas(),
+  AppRoute.CoreRuntime(),
+  AppRoute.CoreServerRendering(),
+  AppRoute.CoreResources(),
+  AppRoute.CoreManagedResources(),
+  AppRoute.CoreDevTools(),
+  AppRoute.CoreCrashView(),
+  AppRoute.CoreViewTransitions(),
+  AppRoute.CoreSlowWarnings(),
+  AppRoute.CoreFreezeModel(),
+  AppRoute.CorePreserveScroll(),
+  AppRoute.CoreSubmodel(),
+  AppRoute.AsyncData(),
+  AppRoute.PatternsInformingSubmodels(),
+  AppRoute.PatternsSubscriptionOrganization(),
+  AppRoute.CoreViewMemoization(),
+  AppRoute.CoreEmbedding(),
+  AppRoute.UiOverview(),
+  AppRoute.UiSelectionSubmodels(),
+  AppRoute.UiTabs(),
+  AppRoute.UiNav(),
+  AppRoute.UiDisclosure(),
+  AppRoute.UiDialog(),
+  AppRoute.UiMenu(),
+  AppRoute.UiPopover(),
+  AppRoute.UiListbox(),
+  AppRoute.UiRadioGroup(),
+  AppRoute.UiSelect(),
+  AppRoute.UiSlider(),
+  AppRoute.UiSwitch(),
+  AppRoute.UiButton(),
+  AppRoute.UiCalendar(),
+  AppRoute.UiDatePicker(),
+  AppRoute.UiCheckbox(),
+  AppRoute.UiCombobox(),
+  AppRoute.UiInput(),
+  AppRoute.UiTextarea(),
+  AppRoute.UiFieldset(),
+  AppRoute.UiDragAndDrop(),
+  AppRoute.UiFileDrop(),
+  AppRoute.UiToast(),
+  AppRoute.UiTooltip(),
+  AppRoute.UiAnimation(),
+  AppRoute.UiAnchor(),
+  AppRoute.UiVirtualList(),
+  AppRoute.AiOverview(),
+  AppRoute.AiSkills(),
+  AppRoute.AiMcp(),
+  AppRoute.ContentApi(),
+  AppRoute.About(),
+  AppRoute.Contact(),
+  AppRoute.Privacy(),
+  AppRoute.Blog(),
+  ...Array.map(blogPostSlugs, slug => AppRoute.BlogPost({ postSlug: slug })),
 ]
 
 const PLAYGROUND_ROUTES: ReadonlyArray<AppRoute> = Array.map(
   exampleSlugs,
-  exampleSlug => PlaygroundRoute({ exampleSlug }),
+  exampleSlug => AppRoute.Playground({ exampleSlug }),
 )
 
 export const routeToUrlPath = (route: AppRoute): string =>
@@ -427,6 +348,10 @@ export const routeToUrlPath = (route: AppRoute): string =>
       AiSkills: () => aiSkillsRouter(),
       AiMcp: () => aiMcpRouter(),
       ApiModule: ({ moduleSlug }) => apiModuleRouter({ moduleSlug }),
+      ContentApi: () => contentApiRouter(),
+      About: () => aboutRouter(),
+      Contact: () => contactRouter(),
+      Privacy: () => privacyRouter(),
       Playground: ({ exampleSlug }) => playgroundRouter({ exampleSlug }),
       Newsletter: () => newsletterRouter(),
       Blog: () => blogRouter(),
@@ -450,7 +375,9 @@ export const enumerateRoutes = (
   pipe(
     STATIC_ROUTES,
     Array.appendAll(
-      Array.map(apiModuleSlugs, moduleSlug => ApiModuleRoute({ moduleSlug })),
+      Array.map(apiModuleSlugs, moduleSlug =>
+        AppRoute.ApiModule({ moduleSlug }),
+      ),
     ),
   )
 
@@ -613,6 +540,7 @@ const prerenderRoute =
       const injectedHtml = Server.injectIntoTemplate(
         baseHtml,
         captured.application,
+        { containerId: CONTAINER_ID },
       )
       const outputHtml = injectMetaTags(
         injectedHtml,
@@ -666,7 +594,7 @@ const prerenderRoute =
 // hydration fallback. The canonical Counter copy at `/playground/index.html`
 // remains the fallback for unknown slugs (see deploy-website.yml and the
 // preview fallback in vite.config.ts).
-const PLAYGROUND_SHELL_ROUTE = PlaygroundRoute({ exampleSlug: 'counter' })
+const PLAYGROUND_SHELL_ROUTE = AppRoute.Playground({ exampleSlug: 'counter' })
 
 const PLAYGROUND_SHELL_OUTPUT_PATH = 'playground/index.html'
 
@@ -677,7 +605,11 @@ const prerenderPlaygroundShells = (
 ) =>
   Effect.gen(function* () {
     const captured = yield* renderRoutePage(serverEntry, PLAYGROUND_SHELL_ROUTE)
-    const shellHtml = Server.injectIntoTemplate(baseHtml, captured.application)
+    const shellHtml = Server.injectIntoTemplate(
+      baseHtml,
+      captured.application,
+      { containerId: CONTAINER_ID },
+    )
 
     const fs = yield* FileSystem.FileSystem
     const writeShell = (route: AppRoute, outputPath: string) => {
@@ -713,7 +645,7 @@ const prerenderPlaygroundShells = (
 // NOTE: the static host serves this file with a real 404 status for every
 // unknown path (see scripts/website-vercel-config.mjs). Without it, unknown
 // paths answer 200 with the app shell and agents conclude every path exists.
-export const NOT_FOUND_ROUTE = NotFoundRoute({ path: '/404' })
+export const NOT_FOUND_ROUTE = AppRoute.NotFound({ path: '/404' })
 
 export const NOT_FOUND_OUTPUT_PATH = '404.html'
 
@@ -727,6 +659,7 @@ const prerenderNotFoundPage = (
     const injectedHtml = Server.injectIntoTemplate(
       baseHtml,
       captured.application,
+      { containerId: CONTAINER_ID },
     )
     const outputHtml = injectMetaTags(
       injectedHtml,
@@ -947,6 +880,46 @@ const readTemplate = Effect.gen(function* () {
   return yield* fs.readFileString(TEMPLATE_COPY_PATH)
 })
 
+// CONTENT API
+
+const writeJsonDocument = (relativePath: string, document: unknown) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const filePath = resolve(DIST_DIR, relativePath.replace(/^\//, ''))
+
+    yield* fs.makeDirectory(dirname(filePath), { recursive: true })
+    yield* fs.writeFileString(
+      filePath,
+      `${JSON.stringify(document, null, 2)}\n`,
+    )
+  })
+
+// NOTE: `404.json` is written here rather than kept in `public/` so the site's
+// JSON error body and the API's own not-found body stay one document. The
+// static host serves it for unknown paths (see scripts/website-vercel-config.mjs).
+const writeContentApi = (
+  entries: ReadonlyArray<ApiPageEntry>,
+  generated: string,
+) =>
+  Effect.gen(function* () {
+    const documents = contentApiDocuments({
+      pages: entries,
+      examples,
+      posts: blogPosts,
+      generated,
+    })
+
+    yield* Effect.forEach(
+      documents,
+      ({ path, document }) => writeJsonDocument(path, document),
+      { concurrency: 8 },
+    )
+
+    yield* Console.log(
+      `  ✓ ${API_BASE_PATH} (${documents.length} JSON documents)`,
+    )
+  })
+
 // PROGRAM
 
 const resultToIndexEntry =
@@ -954,6 +927,14 @@ const resultToIndexEntry =
   (result: PrerenderResult): LlmsIndexEntry => ({
     urlPath: result.urlPath,
     metadata: routeToMetadata(result.route, resolveApiModuleName),
+  })
+
+const resultToApiPageEntry =
+  (resolveApiModuleName: ApiModuleNameResolver) =>
+  (result: PrerenderResult): ApiPageEntry => ({
+    urlPath: result.urlPath,
+    metadata: routeToMetadata(result.route, resolveApiModuleName),
+    markdown: result.markdown,
   })
 
 const resultToFullEntry =
@@ -1064,6 +1045,11 @@ const program = Effect.scoped(
     yield* fs.writeFileString(
       resolve(DIST_DIR, 'llms-full.txt'),
       buildLlmsFull(fullEntries, lastModification),
+    )
+
+    yield* writeContentApi(
+      Array.map(markdownResults, resultToApiPageEntry(resolveApiModuleName)),
+      lastModification,
     )
 
     yield* Console.log(

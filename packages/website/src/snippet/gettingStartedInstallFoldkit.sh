@@ -1,1 +1,1 @@
-npm install foldkit effect@4.0.0-rc.111
+npm install foldkit effect@4.0.0-rc.112

@@ -1,25 +1,26 @@
 import { Effect, Match as M, Schema as S, pipe } from 'effect'
 import { Command, Navigation, Route, type Update, Url } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
-import { int, literal, r, slash } from 'foldkit/route'
+import { defineRouteUnion, int, literal, slash } from 'foldkit/route'
 import { evo } from 'foldkit/struct'
 
 // ROUTE
 
-const HomeRoute = r('Home')
-const PersonRoute = r('Person', { personId: S.Number })
-const NotFoundRoute = r('NotFound', { path: S.String })
-const AppRoute = S.Union([HomeRoute, PersonRoute, NotFoundRoute])
+const AppRoute = defineRouteUnion({
+  Home: {},
+  Person: { personId: S.Number },
+  NotFound: { path: S.String },
+})
 type AppRoute = typeof AppRoute.Type
 
-const homeRouter = pipe(Route.root, Route.mapTo(HomeRoute))
+const homeRouter = pipe(Route.root, Route.mapTo(AppRoute.Home))
 const personRouter = pipe(
   literal('people'),
   slash(int('personId')),
-  Route.mapTo(PersonRoute),
+  Route.mapTo(AppRoute.Person),
 )
 const routeParser = Route.oneOf(personRouter, homeRouter)
-const urlToAppRoute = Route.parseUrlWithFallback(routeParser, NotFoundRoute)
+const urlToAppRoute = Route.parseUrlWithFallback(routeParser, AppRoute.NotFound)
 
 // MODEL
 
