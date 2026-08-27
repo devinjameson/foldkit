@@ -33,6 +33,9 @@ describe('configs', () => {
         ).toBe('error')
         expect(config.rules['foldkit/no-noop-message']).toBe('error')
         expect(config.rules['foldkit/no-empty-commands-array']).toBe('error')
+        expect(config.rules['foldkit/no-empty-to-parent-out-message']).toBe(
+          'error',
+        )
         expect(config.rules['foldkit/got-submodel-message-name']).toBe('error')
       })
 

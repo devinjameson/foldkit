@@ -15,6 +15,7 @@ import { noDuplicateOnmountPerElement } from './rules/no-duplicate-onmount-per-e
 import { noEmptyChildrenArray } from './rules/no-empty-children-array.ts'
 import { noEmptyCommandsArray } from './rules/no-empty-commands-array.ts'
 import { noEmptyObjectTaggedCall } from './rules/no-empty-object-tagged-call.ts'
+import { noEmptyToParentOutMessage } from './rules/no-empty-to-parent-out-message.ts'
 import { noHandRolledCommandStruct } from './rules/no-hand-rolled-command-struct.ts'
 import { noHardcodedRouteStrings } from './rules/no-hardcoded-route-strings.ts'
 import { noModuleLevelMutableState } from './rules/no-module-level-mutable-state.ts'
@@ -45,6 +46,7 @@ const basePlugin = Plugin.define({
     'no-duplicate-onmount-per-element': noDuplicateOnmountPerElement,
     'no-empty-children-array': noEmptyChildrenArray,
     'no-empty-commands-array': noEmptyCommandsArray,
+    'no-empty-to-parent-out-message': noEmptyToParentOutMessage,
     'no-empty-object-tagged-call': noEmptyObjectTaggedCall,
     'no-hand-rolled-command-struct': noHandRolledCommandStruct,
     'no-hardcoded-route-strings': noHardcodedRouteStrings,

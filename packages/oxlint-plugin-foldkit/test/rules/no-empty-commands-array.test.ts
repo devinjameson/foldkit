@@ -36,16 +36,25 @@ const property = ({
   }
 }
 
-const objectExpression = (properties: ReadonlyArray<unknown>) => ({
-  type: 'ObjectExpression',
-  properties,
-  start: 0,
-  end: 23,
-  range: [0, 23],
-})
+const objectExpression = (
+  properties: ReadonlyArray<unknown>,
+  range: [number, number] = [0, 23],
+) => {
+  const [start, end] = range
 
-const run = (node: unknown) =>
-  Testing.runRule(noEmptyCommandsArray, 'ObjectExpression', node)
+  return {
+    type: 'ObjectExpression',
+    properties,
+    start,
+    end,
+    range,
+  }
+}
+
+const run = (node: unknown, sourceText = '') =>
+  Testing.runRule(noEmptyCommandsArray, 'ObjectExpression', node, {
+    sourceText,
+  })
 
 describe('no-empty-commands-array', () => {
   it('flags a literal empty commands array', () => {
@@ -149,7 +158,28 @@ describe('no-empty-commands-array', () => {
     expect(removeRange).toHaveBeenCalledWith([7, 21])
   })
 
-  it('reports without a fix when a spread or duplicate key makes removal unsafe', () => {
+  it('includes a trailing comma when removing the only property', () => {
+    const sourceText = '{ commands: [], }'
+    const propertyStart = sourceText.indexOf('commands')
+    const propertyEnd = sourceText.indexOf(',')
+    const result = run(
+      objectExpression(
+        [property({ range: [propertyStart, propertyEnd] })],
+        [0, sourceText.length],
+      ),
+      sourceText,
+    )
+    const removeRange = vi.fn(() => ({
+      range: [propertyStart, propertyEnd + 1],
+      text: '',
+    }))
+
+    result[0]?.diagnostic.fix?.({ removeRange } as never)
+
+    expect(removeRange).toHaveBeenCalledWith([propertyStart, propertyEnd + 1])
+  })
+
+  it('reports without a fix when surrounding properties make removal unsafe', () => {
     const spreadResult = run(
       objectExpression([
         {
@@ -167,10 +197,20 @@ describe('no-empty-commands-array', () => {
         property(),
       ]),
     )
+    const dynamicComputedResult = run(
+      objectExpression([
+        property({
+          key: Testing.id('propertyName'),
+          value: Testing.id('computedCommands'),
+          computed: true,
+          range: [2, 31],
+        }),
+        property(),
+      ]),
+    )
 
-    const [reportedSpread] = spreadResult
-    const [reportedDuplicate] = duplicateResult
-    expect(reportedSpread?.diagnostic.fix).toBeUndefined()
-    expect(reportedDuplicate?.diagnostic.fix).toBeUndefined()
+    expect(spreadResult[0]?.diagnostic.fix).toBeUndefined()
+    expect(duplicateResult[0]?.diagnostic.fix).toBeUndefined()
+    expect(dynamicComputedResult[0]?.diagnostic.fix).toBeUndefined()
   })
 })
