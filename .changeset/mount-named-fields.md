@@ -49,7 +49,7 @@ const PortalToBody = Mount.define('PortalToBody', {
 
 `Mount.defineStream` migrates the same way, with `execute` returning a `Stream<Message>`.
 
-`@foldkit/ui` now requires `foldkit` 0.154.0 or newer because its Mount definitions use this config shape.
+`@foldkit/ui` now requires `foldkit` 0.155.0 or newer because its Mount definitions use this config shape.
 
 `foldkit/mount-factory-must-use-element` reads the new shape. It looks for `element` in `execute`'s destructuring pattern, and reports on `execute` itself. A Mount whose `execute` ignores its element is still an error: the element is the reason a Mount exists, and work that does not need it belongs in a Command, Subscription, or ManagedResource.
 
