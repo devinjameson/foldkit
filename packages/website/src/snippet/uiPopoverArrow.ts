@@ -41,7 +41,7 @@ const view = (h: HtmlBuilder<Message>) =>
                     [
                       // Spread the bundle onto your own element, inside the
                       // panel. The fill masks the panel border, while the
-                      // outline draws only the two outward-facing edges:
+                      // nested SVG clips the outline at the panel edge:
                       h.svg(
                         [
                           ...arrow,
@@ -53,10 +53,20 @@ const view = (h: HtmlBuilder<Message>) =>
                             h.Class('popover-arrow-fill'),
                             h.D('M 0.5 8 L 8 0.5 L 15.5 8 V 10 H 0.5 Z'),
                           ]),
-                          h.path([
-                            h.Class('popover-arrow-outline'),
-                            h.D('M 0.5 8 L 8 0.5 L 15.5 8'),
-                          ]),
+                          h.svg(
+                            [
+                              h.Class('popover-arrow-outline-clip'),
+                              h.Width('16'),
+                              h.Height('8'),
+                              h.ViewBox('0 0 16 8'),
+                            ],
+                            [
+                              h.path([
+                                h.Class('popover-arrow-outline'),
+                                h.D('M 0.5 8 L 8 0.5 L 15.5 8'),
+                              ]),
+                            ],
+                          ),
                         ],
                       ),
                       h.h3([h.Class('font-medium')], ['Analytics']),
