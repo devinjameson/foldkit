@@ -11,6 +11,7 @@ import {
   FoldkitBuildManifest,
   type FoldkitBuildOptions,
   foldkitBuild,
+  manifestPath,
   outputFileFor,
 } from '../src/build.ts'
 import { foldkitBuildToken } from '../src/buildToken.ts'
@@ -42,6 +43,7 @@ const buildFixture = async (
   } = {},
   extraPlugins: ReadonlyArray<Plugin> = [],
   fixtureRoot: string = FIXTURE_ROOT,
+  trailingPlugins: ReadonlyArray<Plugin> = [],
 ): Promise<Readonly<{ client: string; server: string }>> => {
   const client = `dist-test/${name}/client`
   const server = `dist-test/${name}/server`
@@ -66,6 +68,7 @@ const buildFixture = async (
         clientOutDir: client,
         serverOutDir: server,
       }),
+      ...trailingPlugins,
     ],
   })
   await builder.buildApp()
@@ -177,6 +180,18 @@ describe('foldkitBuild', () => {
     )
   })
 
+  // The fixture renders `url.pathname` into the page, so a request built by
+  // string concatenation would generate a page reading `//about` here.
+  it('renders the same path it writes when the origin carries a trailing slash', async () => {
+    const { client } = await buildFixture('trailing-origin', {
+      prerender: { paths: ['/about'], origin: 'https://app.example/' },
+    })
+
+    expect(
+      await readFile(resolve(client, 'about/index.html'), 'utf8'),
+    ).toContain('>/about</main>')
+  })
+
   it('renders against the origin the build configures', async () => {
     const { client } = await buildFixture('origin', {
       prerender: { paths: ['/'], origin: 'https://app.example' },
@@ -281,6 +296,27 @@ describe('outputFileFor', () => {
   it('refuses a percent-encoded separator', () => {
     expect(() => generated('/docs%2f..%2foutside')).toThrow(/foldkit/)
   })
+
+  it('refuses a percent-encoded NUL', () => {
+    expect(() => generated('/docs%00evil')).toThrow(/foldkit/)
+  })
+})
+
+describe('manifestPath', () => {
+  // Across drives `path.win32.relative` has no relative answer and returns the
+  // absolute destination — the machine-specific path the manifest must never
+  // carry.
+  it('refuses an output directory on another volume', () => {
+    expect(() =>
+      manifestPath('C:\\project', 'D:\\output\\client', win32),
+    ).toThrow(/foldkit/)
+  })
+
+  it('records a same-volume directory relative to the root', () => {
+    expect(manifestPath('C:\\project', 'dist\\client', win32)).toBe(
+      'dist/client',
+    )
+  })
 })
 
 describe('the build manifest', () => {
@@ -342,29 +378,50 @@ describe('the build manifest', () => {
 })
 
 const UNRELATED_ROOT = resolve(import.meta.dirname, 'fixtures/build-unrelated')
+const EVALUATION_ROOT = resolve(
+  import.meta.dirname,
+  'fixtures/build-evaluation',
+)
 
 describe('foldkitBuild orchestration', () => {
   // A host framework owns the order its environments build in, but ordering
   // them is not opting out of what makes the output deployable: without the
   // generated pages and the manifest the build is only half done, silently.
-  it('finishes the build when a host orchestrates the environments', async () => {
-    const hostOrchestrator: Plugin = {
-      name: 'test:host-build-app',
-      config: () => ({
-        builder: {
-          buildApp: async builder => {
-            for (const environment of Object.values(builder.environments)) {
-              await builder.build(environment)
-            }
-          },
+  const hostOrchestrator = (): Plugin => ({
+    name: 'test:host-build-app',
+    config: () => ({
+      builder: {
+        buildApp: async builder => {
+          for (const environment of Object.values(builder.environments)) {
+            await builder.build(environment)
+          }
         },
-      }),
-    }
+      },
+    }),
+  })
 
+  it('finishes the build when a host orchestrates the environments', async () => {
     const { client, server } = await buildFixture(
       'host-orchestrated',
       { prerender: { paths: ['/about'] } },
-      [hostOrchestrator],
+      [hostOrchestrator()],
+    )
+
+    expect(await filesUnder(client)).toContain('about/index.html')
+    expect(await filesUnder(server)).toContain('foldkit.build.json')
+  })
+
+  // Vite merges each plugin's config in plugin order, so with Foldkit listed
+  // first a later host's `builder.buildApp` replaces whatever Foldkit put
+  // there. Finalization lives in the composable `buildApp` plugin hook for
+  // exactly this reason; both orders have to finish the build.
+  it('finishes the build when the host plugin comes after Foldkit', async () => {
+    const { client, server } = await buildFixture(
+      'host-after',
+      { prerender: { paths: ['/about'] } },
+      [],
+      FIXTURE_ROOT,
+      [hostOrchestrator()],
     )
 
     expect(await filesUnder(client)).toContain('about/index.html')
@@ -424,11 +481,32 @@ describe('foldkitBuild orchestration', () => {
   })
 
   // The import runs application code with the build's privileges, so a build
-  // that generates nothing must never reach it.
+  // that generates nothing must never reach it. The fixture's entry writes a
+  // marker file the moment its module scope runs — asserting on that observes
+  // the evaluation itself, where the bundle exists whether or not anything
+  // imported it.
   it('imports no server entry when it generates no pages', async () => {
-    const { server } = await buildFixture('no-import', {}, [], UNRELATED_ROOT)
+    const { server } = await buildFixture('no-import', {}, [], EVALUATION_ROOT)
 
-    expect(await filesUnder(server)).toContain('entry.server.js')
+    await expect(
+      readFile(resolve(server, 'evaluation-marker.txt'), 'utf8'),
+    ).rejects.toThrow()
+  })
+
+  // The positive control: the same fixture, with generation on, must write the
+  // marker — otherwise the assertion above passes because the marker never
+  // works, not because nothing was imported.
+  it('evaluates the entry exactly when it generates pages', async () => {
+    const { server } = await buildFixture(
+      'with-import',
+      { prerender: true },
+      [],
+      EVALUATION_ROOT,
+    )
+
+    expect(
+      await readFile(resolve(server, 'evaluation-marker.txt'), 'utf8'),
+    ).toBe('evaluated')
   })
 })
 

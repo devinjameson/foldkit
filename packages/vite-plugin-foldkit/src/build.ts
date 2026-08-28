@@ -1,13 +1,7 @@
 import { Array, Schema as S } from 'effect'
 import type { RenderedApplication } from 'foldkit/experimental/server'
 import { mkdir, writeFile } from 'node:fs/promises'
-import nodePath, {
-  basename,
-  dirname,
-  extname,
-  relative,
-  resolve,
-} from 'node:path'
+import nodePath, { basename, dirname, extname, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import type {
   BuildEnvironment,
@@ -114,8 +108,26 @@ const MANIFEST_SCHEMA_VERSION = 1
 // Relative and POSIX so the manifest describes a layout rather than this
 // machine: an absolute `clientOutDir` would otherwise be published verbatim and
 // break the moment the build is copied anywhere else.
-const manifestPath = (root: string, directory: string): string =>
-  relative(root, resolve(root, directory)).split(nodePath.sep).join('/')
+//
+// On Windows, `path.relative` across drives has no relative answer and returns
+// the absolute destination, which is exactly the machine-specific path the
+// manifest must not carry. Refused rather than recorded. `pathApi` exists so a
+// test can run the Windows rules anywhere.
+//
+// @internal Exported for tests.
+export const manifestPath = (
+  root: string,
+  directory: string,
+  pathApi: typeof nodePath = nodePath,
+): string => {
+  const related = pathApi.relative(root, pathApi.resolve(root, directory))
+  if (pathApi.isAbsolute(related)) {
+    throw new Error(
+      `[foldkit] cannot record "${directory}" in the manifest: it has no path relative to the Vite root at "${root}". Keep the output directories on the root's volume.`,
+    )
+  }
+  return related.split(pathApi.sep).join('/')
+}
 
 const MANIFEST_FILE_NAME = 'foldkit.build.json'
 const DEFAULT_CLIENT_OUT_DIR = 'dist/client'
@@ -370,7 +382,11 @@ export const foldkitBuild = (
     const { injectIntoTemplate } = await import('foldkit/experimental/server')
 
     for (const path of paths) {
-      const result = await entry.renderPage(new Request(`${origin}${path}`))
+      // The same resolution the output file is derived from, so what the
+      // entry renders and where it is written can never disagree — string
+      // concatenation handed the entry `//about` when the origin carried a
+      // trailing slash.
+      const result = await entry.renderPage(new Request(new URL(path, origin)))
       const html = injectIntoTemplate(
         template(),
         renderedApplication(path, result),
@@ -499,23 +515,33 @@ export const foldkitBuild = (
         },
       }
 
-      // NOTE: a host framework that orchestrates its own environments owns the
-      // order they build in, so its `buildApp` runs as written. Foldkit still
-      // has to finish the build afterwards: generated pages and the manifest
-      // are what make the output deployable, and a host that only ordered the
-      // environments has not opted out of them.
-      const hostBuildApp = userConfig.builder?.buildApp
-      const buildApp = async (builder: ViteBuilder): Promise<void> => {
-        if (hostBuildApp === undefined) {
-          await builder.build(environmentNamed(builder, 'client'))
-          await builder.build(environmentNamed(builder, 'ssr'))
-        } else {
-          await hostBuildApp(builder)
-        }
-        await finalize(builder)
-      }
-
-      return { environments: { client, ssr }, builder: { buildApp } }
+      // NOTE: a host framework that orchestrates its own environments owns
+      // the order they build in, and Vite's config merge keeps exactly one
+      // `builder.buildApp` — whichever config hook ran last. The default
+      // orchestrator is only offered when nothing else claimed the slot, and
+      // finalization deliberately does not live here: wrapping the host's
+      // orchestrator only works when Foldkit's config hook runs after the
+      // host's, so a project that lists the plugins the other way around
+      // would build and silently never finalize.
+      return userConfig.builder?.buildApp === undefined
+        ? {
+            environments: { client, ssr },
+            builder: {
+              buildApp: async (builder: ViteBuilder): Promise<void> => {
+                await builder.build(environmentNamed(builder, 'client'))
+                await builder.build(environmentNamed(builder, 'ssr'))
+              },
+            },
+          }
+        : { environments: { client, ssr } }
+    },
+    // The composable finalization point. `order: 'post'` runs this after the
+    // config-level orchestrator — the host's, or the default above — no matter
+    // where this plugin sits in the plugin list, which a wrapped
+    // `builder.buildApp` could not guarantee.
+    buildApp: {
+      order: 'post',
+      handler: finalize,
     },
   }
 }
