@@ -546,12 +546,12 @@ describe('resources', () => {
       // infer `ResourceService` from `flags`, leave the optional `resources`
       // absent, and compile. It has to be `makeElement`. `makeApplication` has
       // four overloads, so TypeScript reports only the last one and blames
-      // `init` for an arity mismatch, which a directive here cannot pin.
-      // @ts-expect-error the flags Effect requires ResourceService and no `resources` Layer provides it
+      // `init` for an arity mismatch.
       makeElement({
         Model,
         Flags,
         flags: flagsNeedingResource,
+        // @ts-expect-error the flags Effect requires ResourceService and no `resources` Layer provides it
         init: resourceFreeInit,
         update: resourceFreeUpdate,
         view,
