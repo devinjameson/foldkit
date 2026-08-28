@@ -3601,20 +3601,76 @@ type DocumentMetadataElements = {
   ogUrl?: HTMLMetaElement
 }
 
-const documentMetadataElements = new WeakMap<
+type AppliedDocumentMetadata = Readonly<{
+  title: string
+  lang: string | undefined
+  dir: string | undefined
+  canonical: string
+  ogUrl: string
+}>
+
+type DocumentMetadataMutationState = { isDirty: boolean }
+
+type DocumentMetadataState = {
+  readonly elements: DocumentMetadataElements
+  readonly observer: MutationObserver
+  readonly mutationState: DocumentMetadataMutationState
+  observedHead: HTMLHeadElement
+  applied?: AppliedDocumentMetadata
+  locationHref?: string
+  locationCanonical?: string
+}
+
+const documentMetadataStates = new WeakMap<
   globalThis.Document,
-  DocumentMetadataElements
+  DocumentMetadataState
 >()
 
-const metadataElementsForDocument = (): Readonly<{
+const observeDocumentMetadata = (
+  observer: MutationObserver,
+): HTMLHeadElement => {
+  const observedHead = document.head
+  observer.observe(observedHead, {
+    attributes: true,
+    attributeFilter: ['rel', 'href', 'property', 'content'],
+    childList: true,
+    characterData: true,
+    subtree: true,
+  })
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['lang', 'dir'],
+  })
+  return observedHead
+}
+
+const metadataStateForDocument = (): DocumentMetadataState => {
+  const existing = documentMetadataStates.get(document)
+  if (existing !== undefined) {
+    return existing
+  }
+
+  const mutationState: DocumentMetadataMutationState = { isDirty: true }
+  const observer = new MutationObserver(() => {
+    mutationState.isDirty = true
+  })
+  const state: DocumentMetadataState = {
+    elements: {},
+    observer,
+    mutationState,
+    observedHead: observeDocumentMetadata(observer),
+  }
+  documentMetadataStates.set(document, state)
+  return state
+}
+
+const metadataElementsForDocument = (
+  state: DocumentMetadataState,
+): Readonly<{
   canonical: HTMLLinkElement
   ogUrl: HTMLMetaElement
 }> => {
-  let elements = documentMetadataElements.get(document)
-  if (elements === undefined) {
-    elements = {}
-    documentMetadataElements.set(document, elements)
-  }
+  const { elements } = state
 
   let canonical = elements.canonical
   if (canonical === undefined || canonical.parentNode !== document.head) {
@@ -3635,11 +3691,51 @@ const metadataElementsForDocument = (): Readonly<{
   return { canonical, ogUrl }
 }
 
+const currentLocationUrlForState = (state: DocumentMetadataState): string => {
+  const href = window.location.href
+  if (state.locationHref === href && state.locationCanonical !== undefined) {
+    return state.locationCanonical
+  }
+
+  const canonical = currentLocationUrl()
+  state.locationHref = href
+  state.locationCanonical = canonical
+  return canonical
+}
+
 const applyDocumentMetadata = (
   nextDocument: Document,
   mountedRoot: Node | undefined,
 ): void => {
   if (!mountedRoot || !document.body.contains(mountedRoot)) {
+    return
+  }
+
+  const state = metadataStateForDocument()
+  if (state.observedHead !== document.head) {
+    state.observer.disconnect()
+    state.observedHead = observeDocumentMetadata(state.observer)
+    state.mutationState.isDirty = true
+  }
+  const canonical = nextDocument.canonical ?? currentLocationUrlForState(state)
+  const ogUrl = nextDocument.ogUrl ?? canonical
+  const dir =
+    nextDocument.dir === undefined
+      ? undefined
+      : textDirectionToAttribute(nextDocument.dir)
+  if (Array.isArrayNonEmpty(state.observer.takeRecords())) {
+    state.mutationState.isDirty = true
+  }
+  const applied = state.applied
+  if (
+    !state.mutationState.isDirty &&
+    applied !== undefined &&
+    applied.title === nextDocument.title &&
+    applied.lang === nextDocument.lang &&
+    applied.dir === dir &&
+    applied.canonical === canonical &&
+    applied.ogUrl === ogUrl
+  ) {
     return
   }
 
@@ -3656,16 +3752,11 @@ const applyDocumentMetadata = (
     documentElement.lang = nextDocument.lang
   }
 
-  if (nextDocument.dir !== undefined) {
-    const dir = textDirectionToAttribute(nextDocument.dir)
-    if (documentElement.dir !== dir) {
-      documentElement.dir = dir
-    }
+  if (dir !== undefined && documentElement.dir !== dir) {
+    documentElement.dir = dir
   }
 
-  const canonical = nextDocument.canonical ?? currentLocationUrl()
-  const ogUrl = nextDocument.ogUrl ?? canonical
-  const metadataElements = metadataElementsForDocument()
+  const metadataElements = metadataElementsForDocument(state)
 
   if (metadataElements.canonical.getAttribute('rel') !== 'canonical') {
     metadataElements.canonical.setAttribute('rel', 'canonical')
@@ -3679,6 +3770,18 @@ const applyDocumentMetadata = (
   if (metadataElements.ogUrl.getAttribute('content') !== ogUrl) {
     metadataElements.ogUrl.setAttribute('content', ogUrl)
   }
+  state.applied = {
+    title: nextDocument.title,
+    lang: nextDocument.lang,
+    dir,
+    canonical,
+    ogUrl,
+  }
+  state.mutationState.isDirty = false
+  // NOTE: clear the records produced by Foldkit's own writes before the
+  // observer callback runs. Otherwise the next unchanged render would be
+  // marked dirty and repeat every DOM read this cache is meant to avoid.
+  state.observer.takeRecords()
 }
 
 const renderCrashView = <Model, Message>(
